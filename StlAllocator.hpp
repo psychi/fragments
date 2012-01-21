@@ -23,7 +23,7 @@ class psyq::StlAllocator:
 	 */
 	StlAllocator():
 	Super(),
-	allocator(*psyq::BasicAllocator::get())
+	allocator(*psyq::Allocator::get())
 	{
 		PSYQ_ASSERT(nullptr != &this->get_allocator());
 	}
@@ -31,7 +31,7 @@ class psyq::StlAllocator:
 	/** @param[in] 実際に使うmemory割当子。
 	 */
 	explicit StlAllocator(
-		psyq::BasicAllocator& i_allocator):
+		psyq::Allocator& i_allocator):
 	Super(),
 	allocator(i_allocator)
 	{
@@ -50,7 +50,7 @@ class psyq::StlAllocator:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 代入演算子だが、実際には代入は行われない。
+	/** @brief 代入演算子だが、実際に代入は行われない。
 	    代入元と等値でない場合はassertする。
 	 */
 	This& operator=(
@@ -61,7 +61,7 @@ class psyq::StlAllocator:
 		return *this;
 	}
 
-	/** @brief 代入演算子だが、実際には代入は行われない。
+	/** @brief 代入演算子だが、実際に代入は行われない。
 	    代入元と等値でない場合はassertする。
 	 */
 	template< typename t_other_type, std::size_t t_other_alinment >
@@ -74,33 +74,40 @@ class psyq::StlAllocator:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief instance用memoryを確保する。
+	    @param[in] i_num 確保するinstanceの数。
+	 */
 	pointer allocate(
-		size_type const i_size)
+		size_type const i_num)
 	{
 		return static_cast< pointer >(
 			this->allocator.allocate(
-				i_size * sizeof(t_value_type), t_alignment));
+				i_num * sizeof(t_value_type), t_alignment));
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief instance用memoryを解放する。
+		@param[in] i_memory 解放するmemoryの先頭位置。
+	    @param[in] i_num    解放するinstanceの数。
+	 */
 	void deallocate(
 		pointer const   i_memory,
-		size_type const i_size)
+		size_type const i_num)
 	{
-		this->allocator.deallocate(i_memory, i_size * sizeof(t_value_type));
+		this->allocator.deallocate(i_memory, i_num * sizeof(t_value_type));
 	}
 
 	//-------------------------------------------------------------------------
 	/** @brief 使っているmemory割当子を取得。
 	 */
-	psyq::BasicAllocator& get_allocator()
+	psyq::Allocator& get_allocator()
 	{
 		return this->allocator;
 	}
 
 	/** @brief 使っているmemory割当子を取得。
 	 */
-	psyq::BasicAllocator const& get_allocator() const
+	psyq::Allocator const& get_allocator() const
 	{
 		return this->allocator;
 	}
@@ -123,7 +130,7 @@ class psyq::StlAllocator:
 
 	private:
 	//-------------------------------------------------------------------------
-	psyq::BasicAllocator& allocator;
+	psyq::Allocator& allocator;
 };
 
 #endif // PSYQ_STLALLOCATOR_HPP_

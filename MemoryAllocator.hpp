@@ -8,6 +8,8 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief defaultのmemory割当interface。
+ */
 class psyq::DefaultMemoryInterface
 {
 	public:
@@ -18,7 +20,6 @@ class psyq::DefaultMemoryInterface
 	/** @brief memoryを確保する。
 	    @param[in] i_size      確保するmemoryのbyte単位の大きさ。
 	    @param[in] i_alignment 確保するmemoryのbyte単位の境界値。
-	    @param[in] i_name      確保するmemoryにつける名前。
 	 */
 	static void* malloc(
 		std::size_t const i_size,
@@ -68,6 +69,9 @@ class psyq::DefaultMemoryInterface
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief memory割当関数を設定できるmemory割当子。
+    @tparam t_interface 使用するmemory割当interface。
+ */
 template< typename t_interface = psyq::DefaultMemoryInterface >
 class psyq::MemoryAllocator:
 	public psyq::Allocator
@@ -76,7 +80,7 @@ class psyq::MemoryAllocator:
 	typedef psyq::Allocator Super;
 
 	public:
-	typedef t_interface interface_type;
+	typedef t_interface Interface;
 
 	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
@@ -93,7 +97,7 @@ class psyq::MemoryAllocator:
 	//-------------------------------------------------------------------------
 	/** @brief memoryを解放する。
 	    @param[in] i_memory 解放するmemoryの先頭位置。
-		@param[in] i_size   解放するmemoryのbyte単位の大きさ。
+	    @param[in] i_size   解放するmemoryのbyte単位の大きさ。
 	 */
 	virtual void deallocate(
 		void* const       i_memory,
@@ -101,6 +105,15 @@ class psyq::MemoryAllocator:
 	{
 		(void)i_size;
 		t_interface::free(i_memory);
+	}
+
+	//-------------------------------------------------------------------------
+	virtual bool operator==(
+		psyq::Allocator const& i_right)
+		const
+	{
+		return this == &i_right
+			|| nullptr != dynamic_cast< This const* >(&i_right);
 	}
 };
 

@@ -42,7 +42,7 @@ class psyq::Allocator
 	virtual void* allocate(
 		std::size_t const i_size,
 		std::size_t const i_alignment = sizeof(void*))
-	= 0;
+		= 0;
 
 	//-------------------------------------------------------------------------
 	/** @brief memoryを解放する。
@@ -52,7 +52,19 @@ class psyq::Allocator
 	virtual void deallocate(
 		void* const       i_memory,
 		std::size_t const i_size)
-	= 0;
+		= 0;
+
+	//-------------------------------------------------------------------------
+	virtual bool operator==(
+		This const& i_right)
+		const = 0;
+
+	bool operator!=(
+		psyq::Allocator const& i_right)
+		const
+	{
+		return !this->operator==(i_right);
+	}
 
 	//-------------------------------------------------------------------------
 	/** @brief default-allocatorを取得する。

@@ -7,7 +7,10 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// std::allocator互換のmemory割当子。
+/** @brief std::allocator互換のmemory割当子。
+    @tparam t_value_type 確保するinstanceの型。
+    @tparam t_alignment  確保するinstanceのbyte単位の境界値。
+ */
 template< typename t_value_type, std::size_t t_alignment = sizeof(void*) >
 class psyq::StlAllocator:
 	public std::allocator< t_value_type >
@@ -116,14 +119,17 @@ class psyq::StlAllocator:
 	template< typename t_other_type, std::size_t t_other_alinment >
 	bool operator==(
 		psyq::StlAllocator< t_other_type, t_other_alinment > const& i_right)
-	const
+		const
 	{
-		return &this->get_allocator() == &i_right.get_allocator();
+		psyq::Allocator const& a_left(this->get_allocator());
+		psyq::Allocator const& a_right(i_right.get_allocator());
+		return &a_left == &a_right || a_left == a_right;
 	}
 
 	template< typename t_other_type, std::size_t t_other_alinment >
 	bool operator!=(
 		psyq::StlAllocator< t_other_type, t_other_alinment > const& i_right)
+		const
 	{
 		return !this->operator==(i_right);
 	}

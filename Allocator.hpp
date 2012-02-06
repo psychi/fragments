@@ -1,37 +1,37 @@
-﻿#ifndef PSYQ_ALLOCATOR_HPP_
-#define PSYQ_ALLOCATOR_HPP_
+﻿#ifndef PSYQ_HEAPMEMORY_HPP_
+#define PSYQ_HEAPMEMORY_HPP_
 #define PSYQ_ASSERT assert
 
 namespace psyq
 {
-	class Allocator;
+	class HeapMemory;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// memory割当子の基底class。
-class psyq::Allocator
+/// heap-memory管理の基底class。
+class psyq::HeapMemory
 {
-	typedef psyq::Allocator This;
+	typedef psyq::HeapMemory This;
 
 	public:
+	typedef std::shared_ptr< This > Holder;
+	typedef std::weak_ptr< This > Observer;
+
+	typedef void* (This::*Allocator)(std::size_t const, std::size_t cosnt);
+	typedef void* (This::*Deallocator)(void* const, std::size_t cosnt);
+
 	//-------------------------------------------------------------------------
-	virtual ~Allocator()
+	virtual ~HeapMemory()
 	{
-		// default-allocatorなら、後始末をする。
-		if (this == This::default_allocator())
-		{
-			This::default_allocator() = nullptr;
-		}
+		// pass
 	}
 
 	//-------------------------------------------------------------------------
-	Allocator()
+	HeapMemory():
+	allocator(&This::operator_new),
+	deallocator(&This::operator_delete)
 	{
-		// 最初に構築されたinstanceを、default-allocatorとする。
-		if (nullptr == This::default_allocator())
-		{
-			This::default_allocator() = this;
-		}
+		// pass
 	}
 
 	//-------------------------------------------------------------------------
@@ -39,48 +39,80 @@ class psyq::Allocator
 	    @param[in] i_size      確保するmemoryのbyte単位の大きさ。
 	    @param[in] i_alignment 確保するmemoryのbyte単位の境界値。
 	 */
-	virtual void* allocate(
+	void* allocate(
 		std::size_t const i_size,
 		std::size_t const i_alignment = sizeof(void*))
-		= 0;
+	{
+		return (this->*allocator)(i_size, i_alignment);
+	}
 
 	//-------------------------------------------------------------------------
 	/** @brief memoryを解放する。
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 		@param[in] i_size   解放するmemoryのbyte単位の大きさ。
 	 */
-	virtual void deallocate(
+	void deallocate(
 		void* const       i_memory,
 		std::size_t const i_size)
-		= 0;
+	{
+		return (this->*deallocator)(i_memory, i_size);
+	}
 
 	//-------------------------------------------------------------------------
-	virtual bool operator==(
+	bool operator==(
 		This const& i_right)
-		const = 0;
+		const
+	{
+		return this->allocator == i_right.allocator
+			|| this->deallocator == i_right.deallocator;
+	}
 
 	bool operator!=(
-		psyq::Allocator const& i_right)
+		This const& i_right)
 		const
 	{
 		return !this->operator==(i_right);
 	}
 
+	//.........................................................................
+	protected:
 	//-------------------------------------------------------------------------
-	/** @brief default-allocatorを取得する。
-	 */
-	static This* get()
+	HeapMemory(
+		This::Allocator const   i_allocator,
+		This::Deallocator const i_deallocator):
+	allocator(i_allocator),
+	deallocator(i_deallocator)
 	{
-		return This::default_allocator();
+		// pass
 	}
 
-	private:
 	//-------------------------------------------------------------------------
-	static This*& default_allocator()
+	/** @brief memoryを確保する。
+	    @param[in] i_size      確保するmemoryのbyte単位の大きさ。
+	    @param[in] i_alignment 確保するmemoryのbyte単位の境界値。
+	 */
+	void* operator_new(
+		std::size_t const i_size,
+		std::size_t const i_alignment)
 	{
-		static This* s_default_allocator(nullptr);
-		return s_default_allocator;
+		return operator new(i_size, i_alignment);
 	}
+
+	//-------------------------------------------------------------------------
+	/** @brief memoryを解放する。
+	    @param[in] i_memory 解放するmemoryの先頭位置。
+	 */
+	void operator_delete(
+		void* const i_memory,
+		std::size_t const)
+	{
+		operator delete(i_memory);
+	}
+
+	//.........................................................................
+	private:
+	This::Allocator   allocator;   ///< memoryを確保する関数。
+	This::Deallocator deallocator; ///< memoryを解放する関数。
 };
 
-#endif // PSYQ_ALLOCATOR_HPP_
+#endif // PSYQ_HEAPMEMORY_HPP_

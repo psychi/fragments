@@ -1,6 +1,11 @@
 ﻿#ifndef PSYQ_SINGLETON_HPP_
 #define PSYQ_SINGLETON_HPP_
 
+namespace psyq
+{
+	class singleton;
+}
+
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 class psyq::singleton
 {
@@ -8,22 +13,23 @@ class psyq::singleton
 
 	public:
 	//-------------------------------------------------------------------------
-	/** @brief singleton-instanceを作る。
+	/** @brief singleton-instanceを初期化する。
 	    すでにsingleton-instanceがある場合は、何も行わない。
 	 */
 	template< typename t_value_type >
-	static std::shared_ptr< t_value_type > create(
+	static std::shared_ptr< t_value_type > initialize(
 		t_value_type&& i_source)
 	{
-		if (this_type::instance< t_value_type >().expired())
+		auto a_instance(this_type::instance< t_value_type >().lock());
+		if (nullptr != a_instance.get())
 		{
-			// copy-constructorで作ったsingleton-instanceを返す。
-			return this_type::initialize(std::forward(i_source));
+			// すでにあるsingleton-instanceを返す。
+			return a_instance;
 		}
 		else
 		{
-			// すでにsingleton-instanceがあったら、空の保持子を返す。
-			return std::shared_ptr< t_value_type >();
+			// copy-constructorで作ったsingleton-instanceを返す。
+			return this_type::create(std::move(i_source));
 		}
 	}
 
@@ -43,26 +49,27 @@ class psyq::singleton
 		else
 		{
 			// default-constructorで作ったsingleton-instanceを返す。
-			return this_type::initialize(t_value_type());
+			return this_type::create(t_value_type());
 		}
 	}
 
 	private:
 	//-------------------------------------------------------------------------
-	singleton() = delete;
-	singleton(this_type const&) = delete;
-	this_type& operator=(this_type const&) = delete;
+	singleton();
+	singleton(this_type const&);
+	this_type& operator=(this_type const&);
 
 	//-------------------------------------------------------------------------
 	/** @brief singleton-instanceを作る。
 	 */
 	template< typename t_value_type >
-	static std::shared_ptr< t_value_type > initialize(
+	static std::shared_ptr< t_value_type > create(
 		t_value_type&& i_source)
 	{
 		auto const a_instance(
-			std::allocate_shared(
-				this_type::allocator< t_value_type >(), i_source));
+			std::allocate_shared< t_value_type >(
+				this_type::allocator< t_value_type >(),
+				std::move(i_source)));
 		this_type::instance< t_value_type >() = a_instance;
 		return a_instance;
 	}
@@ -82,10 +89,30 @@ class psyq::singleton
 	class allocator:
 		public std::allocator< t_value_type >
 	{
-		typedef allocator< t_value_type > this_type;
+		typedef psyq::singleton::allocator< t_value_type > this_type;
 		typedef std::allocator< t_value_type > super_type;
 
 		public:
+		template<class t_other_type>
+		struct rebind
+		{
+			typedef psyq::singleton::allocator< t_other_type > other;
+		};
+
+		allocator():
+		super_type()
+		{
+			// pass
+		}
+
+		template< typename t_other_type >
+		allocator(
+			allocator< t_other_type > const& i_source):
+		super_type(i_source)
+		{
+			// pass
+		}
+
 		static pointer allocate(
 			size_type const i_num)
 		{
@@ -93,38 +120,30 @@ class psyq::singleton
 			{
 				return static_cast< pointer >(this_type::storage());
 			}
-			return nullptr;
+			else
+			{
+				PSYQ_ASSERT(false);
+				return nullptr;
+			}
 		}
 
 		static void deallocate(
-			value_type* const i_pointer,
-			size_type const   i_num)
+			pointer const   i_pointer,
+			size_type const i_num)
 		{
+			(void)i_pointer;
+			(void)i_num;
 			PSYQ_ASSERT(this_type::storage() == i_pointer);
 			PSYQ_ASSERT(1 == i_num);
-		}
-
-		static void construct(
-			pointer const i_pointer,
-			value_type&&  i_source)
-		{
-			PSYQ_ASSERT(this_type::storage() == i_pointer);
-			super_type::construct(i_pointer, i_source);
-		}
-
-		static void destroy(
-			pointer i_pointer)
-		{
-			PSYQ_ASSERT(this_type::storage() == i_pointer);
-			super_type::destroy(i_pointer);
 		}
 
 		static void* storage()
 		{
 			static std::aligned_storage<
-				sizeof(value_type), std::alignment_of< value_type >::value >
+				sizeof(value_type),
+				std::alignment_of< value_type >::value >::type
 					s_storage;
-			return s_storage.address();
+			return &s_storage;
 		}
 	};
 };

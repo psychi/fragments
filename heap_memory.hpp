@@ -26,7 +26,7 @@ class psyq::heap_memory
 	//-------------------------------------------------------------------------
 	/** programで最初に構築されたpsyq::heap_memoryのinstanceは、
 	    program全体で使われます。
-		これに対応するため、psyq::heap_memoryもしくは派生させたinstanceを
+	    これに対応するため、psyq::heap_memoryもしくは派生させたinstanceを
 	    main関数の最初でlocal変数として構築するよう実装してください。
 	    program全体で使うinstanceは、get_local関数で取得できます。
 
@@ -42,11 +42,12 @@ class psyq::heap_memory
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief heap_memoryを確保する。
+	/** @brief memoryを確保する。
 	    @param[in] i_size      確保するmemoryのbyte単位の大きさ。
 	    @param[in] i_alignment 確保するmemoryのbyte単位の境界値。
 	    @param[in] i_offset    確保するmemoryのbyte単位の境界offset値。
 	    @param[in] i_name      debugで使うためのmemory識別名。
+	    @return 確保したmemoryの先頭位置。ただしnullptrの場合は失敗。
 	 */
 	virtual void* allocate(
 		std::size_t const i_size,

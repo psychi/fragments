@@ -3,8 +3,193 @@
 
 namespace psyq
 {
+	class listed_singleton;
 	class singleton;
 }
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+class psyq::listed_singleton
+{
+	typedef psyq::listed_singleton this_type;
+
+	public:
+	template< typename t_value_type >
+	static t_value_type* get()
+	{
+		auto a_instance(this_type::instance< t_value_type >());
+		if (!a_instance.is_constructed())
+		{
+			this_type::construct(t_value_type());
+		}
+		return a_instance.get();
+	}
+
+	template< typename t_value_type >
+	static t_value_type* construct(
+		t_value_type&& i_source)
+	{
+		lock_mutex();
+
+		auto a_instance(this_type::instance< t_value_type >());
+		if (!a_instance.is_constructed())
+		{
+			this_type::construct_instance(std::move(i_source));
+		}
+		return a_instance.get();
+	}
+
+	template< typename t_value_type >
+	static void destruct_first()
+	{
+		lock_mutex();
+
+		auto a_instance(this_type::instance< t_value_type >());
+		if (&a_instance != this_type::first_node())
+		{
+		}
+	}
+
+	template< typename t_value_type >
+	static void destruct_last()
+	{
+		lock_mutex();
+
+		auto a_instance(this_type::instance< t_value_type >());
+		if (&a_instance != this_type::first_node())
+		{
+		}
+	}
+
+	static void destruct()
+	{
+		lock_mutex();
+
+		this_type::basic_node* i(this_type::first_node());
+		first_node() = nullptr;
+
+		for (
+			this_type::basic_node* i = this_type::first_node();
+			nullptr != i;
+			i = i->destruct())
+		{
+			// pass
+		}
+		this_type::first_node() = nullptr;
+	}
+
+	private:
+	//-------------------------------------------------------------------------
+	struct basic_node:
+		private boost::noncopyable
+	{
+		typedef basic_node this_type;
+		typedef void (*function)();
+
+		basic_node():
+			destructor(nullptr),
+			next(nullptr)
+		{
+			// pass
+		}
+
+		bool is_constructed() const
+		{
+			return nullptr != this->destructor.load();
+		}
+
+		void construct(
+			this_type* const i_next,
+			function const   i_destructor)
+		{
+			PSYQ_ASSERT(!this->is_constructed());
+			this->destructor.store(i_destructor);
+			this->next = i_next;
+		}
+
+		this_type* destruct()
+		{
+			function const a_destructor(this->destructor.exchage(nullptr));
+			PSYQ_ASSERT(nullptr != a_destructor);
+			(*a_function)();
+
+			auto const a_next(this->next);
+			this->next = nullptr;
+			return a_next;
+		}
+
+		private:
+		std::atomic< function > destructor;
+		this_type* next;
+	};
+
+	//-------------------------------------------------------------------------
+	template< typename t_value_type >
+	struct instance_node:
+		public basic_node
+	{
+		typedef instance_node this_type;
+		typedef basic_node super_type;
+
+		t_value_type* get()
+		{
+			PSYQ_ASSERT(this->is_constructed());
+			return reinterpret_cast< t_value_type* >(&this->storage);
+		}
+
+		void construct(
+			t_value_type&&    i_source,
+			basic_node* const i_next,
+			function const    i_destructor)
+		{
+			PSYQ_ASSERT(!this->is_constructed());
+			new(&this->storage) t_value_type(std::move(i_source));
+			this->super_type::construct(i_next, i_destructor);
+		}
+
+		private:
+		std::aligned_storage<
+			sizeof(t_value_type),
+			std::alignment_of< t_value_type >::value >::type
+				storage;
+	};
+
+	//-------------------------------------------------------------------------
+	template< typename t_value_type >
+	static void construct_instance(
+		t_value_type&& i_source)
+	{
+		auto a_instance(this_type::instance< t_value_type >());
+		a_instance.construct(
+			i_source,
+			this_type::first_node(),
+			&this_type::destruct_instance< t_value_type >);
+		this_type::first_node() = &a_instance;
+	}
+
+	template< typename t_value_type >
+	static void destruct_instance()
+	{
+		auto a_instance(this_type::instance< t_value_type >());
+		a_instance.get()->~t_value_type();
+	}
+
+	//-------------------------------------------------------------------------
+	template< typename t_value_type >
+	static this_type::instance_node< t_value_type >& instance()
+	{
+		static this_type::instance_node< t_value_type > s_instance;
+		return s_instance;
+	}
+
+	//-------------------------------------------------------------------------
+	static basic_node*& first_node()
+	{
+		static basic_node* s_first_node(nullptr);
+		return s_first_node;
+	}
+
+	//-------------------------------------------------------------------------
+};
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 class psyq::singleton

@@ -22,38 +22,34 @@ class psyq::singleton:
 	template< typename t_value_type >
 	static t_value_type& get()
 	{
-		// 最高でも1回しか構築関数を呼び出さない。
-		boost::call_once(
-			this_type::is_constructed< t_value_type >(),
-			boost::bind(
-				&this_type::construct_instance<
-					t_value_type, boost::in_place_factory0 >,
-				boost::cref(boost::in_place_factory0())));
+		return this_type::construct< t_value_type >();
+	}
 
-		// singleton-instanceを参照。
+	//-------------------------------------------------------------------------
+	/** @brief sigleton-instanceをdefault-constructorで構築する。
+	        すでにsingleton-instanceがあるなら、構築は行わず既存のものを返す。
+	    @return singleton-instanceへの参照。
+	 */
+	template< typename t_value_type >
+	static t_value_type& construct()
+	{
+		this_type::construct_once< t_value_type >(boost::in_place());
 		PSYQ_ASSERT(
 			NULL != this_type::instance< t_value_type >().pointer);
 		return *this_type::instance< t_value_type >().pointer;
 	}
 
-	//-------------------------------------------------------------------------
 	/** @brief sigleton-instanceを構築する。
 	        すでにsingleton-instanceがあるなら、構築は行わず既存のものを返す。
 	    @param[in] i_in_place boost::in_placeで構築した初期化factory。
+		@param[in] i_destruct_priority 破棄の優先順位。破棄は昇順に行われる。
 	    @return singleton-instanceへの参照。
 	 */
 	template< typename t_value_type, typename t_in_place >
 	static t_value_type& construct(
 		t_in_place const& i_in_place)
 	{
-		// 最高でも1回しか構築関数を呼び出さない。
-		boost::call_once(
-			this_type::is_constructed< t_value_type >(),
-			boost::bind(
-				&this_type::construct_instance< t_value_type, t_in_place >,
-				boost::cref(i_in_place)));
-
-		// singleton-instanceを参照。
+		this_type::construct_once< t_value_type >(i_in_place);
 		PSYQ_ASSERT(
 			NULL != this_type::instance< t_value_type >().pointer);
 		return *this_type::instance< t_value_type >().pointer;
@@ -69,6 +65,7 @@ class psyq::singleton:
 		private boost::noncopyable
 	{
 		public:
+		//---------------------------------------------------------------------
 		~instance_holder()
 		{
 			// 保持している領域のinstanceを破棄する。
@@ -94,6 +91,7 @@ class psyq::singleton:
 			this->pointer = reinterpret_cast< t_value_type* >(&this->storage);
 		}
 
+		//---------------------------------------------------------------------
 		typename boost::aligned_storage<
 			sizeof(t_value_type),
 			boost::alignment_of< t_value_type >::value >::type
@@ -102,13 +100,18 @@ class psyq::singleton:
 	};
 
 	//-------------------------------------------------------------------------
-	/** @brief singleton-instanceを構築したかどうかのflagを参照する。
+	/** @brief 一度だけ呼び出せるsigleton-instance構築関数を呼び出す。
+	    @param[in] i_in_place boost::in_placeで構築した初期化factory。
 	 */
-	template< typename t_value_type >
-	static boost::once_flag& is_constructed()
+	template< typename t_value_type, typename t_in_place >
+	static void construct_once(
+		t_in_place const& i_in_place)
 	{
-		static boost::once_flag s_constructed = BOOST_ONCE_INIT;
-		return s_constructed;
+		boost::call_once(
+			this_type::is_constructed< t_value_type >(),
+			boost::bind(
+				&this_type::construct_instance< t_value_type, t_in_place >,
+				boost::cref(i_in_place)));
 	}
 
 	/** @brief singleton-instanceを構築する。
@@ -119,6 +122,15 @@ class psyq::singleton:
 		t_in_place const& i_in_place)
 	{
 		this_type::instance< t_value_type >().construct(i_in_place);
+	}
+
+	/** @brief singleton-instanceを構築したかどうかのflagを参照する。
+	 */
+	template< typename t_value_type >
+	static boost::once_flag& is_constructed()
+	{
+		static boost::once_flag s_constructed = BOOST_ONCE_INIT;
+		return s_constructed;
 	}
 
 	/** @brief singleton-instanceを保持する領域を参照する。

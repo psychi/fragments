@@ -7,88 +7,99 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class psyq::ordered_singleton
+class psyq::ordered_singleton:
+	private boost::noncopyable
 {
 	typedef psyq::ordered_singleton this_type;
 
+	//.........................................................................
 	public:
 	//-------------------------------------------------------------------------
-	/** @brief sigleton-instanceを参照。
+	/** @brief sigleton-instanceを参照する。
+	        まだsingleton-instanceがないなら、default-constructorで構築する。
+	    @return singleton-instanceへの参照。
 	 */
 	template< typename t_value_type >
 	static t_value_type& get()
 	{
-		this_type::instance_node< t_value_type >& a_instance(
-			this_type::instance< t_value_type >());
-		if (!a_instance.is_joined())
-		{
-			// instanceが作られてないので、default-constructorを呼び出す。
-			return this_type::construct(t_value_type());
-		}
-		return a_instance.get();
+		return this_type::construct< t_value_type >();
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief sigleton-instanceを作る。
-	    @param[in] i_source   instanceの初期値。
-	    @param[in] i_priority 破棄の優先順位。破棄は昇順に行われる。
+	/** @brief sigleton-instanceをdefault-constructorで構築する。
+	        すでにsingleton-instanceがあるなら、構築は行わず既存のものを返す。
+		@param[in] i_destruct_priority 破棄の優先順位。破棄は昇順に行われる。
+	    @return singleton-instanceへの参照。
 	 */
 	template< typename t_value_type >
 	static t_value_type& construct(
-		t_value_type&& i_source,
-		int const      i_priority = 0)
+		int const i_destruct_priority = 0)
 	{
-		boost::lock_guard< boost::mutex > const a_lock(this_type::mutex());
-
-		this_type::instance_node< t_value_type >& a_instance(
-			this_type::instance< t_value_type >());
-		if (!a_instance.is_joined())
-		{
-			// t_value_typeを構築。
-			this_type::construct_instance(std::move(i_source), i_priority);
-			PSYQ_ASSERT(a_instance.is_joined());
-		}
-		return a_instance.get();
+		this_type::construct_once< t_value_type >(
+			boost::in_place(), i_destruct_priority);
+		PSYQ_ASSERT(
+			NULL != this_type::instance< t_value_type >().pointer);
+		return *this_type::instance< t_value_type >().pointer;
 	}
 
+	/** @brief sigleton-instanceを構築する。
+	        すでにsingleton-instanceがあるなら、構築は行わず既存のものを返す。
+	    @param[in] i_in_place boost::in_placeで構築した初期化factory。
+		@param[in] i_destruct_priority 破棄の優先順位。破棄は昇順に行われる。
+	    @return singleton-instanceへの参照。
+	 */
+	template< typename t_value_type, typename t_in_place >
+	static t_value_type& construct(
+		t_in_place const& i_in_place,
+		int const         i_destruct_priority = 0)
+	{
+		this_type::construct_once< t_value_type >(
+			i_in_place, i_destruct_priority);
+		PSYQ_ASSERT(
+			NULL != this_type::instance< t_value_type >().pointer);
+		return *this_type::instance< t_value_type >().pointer;
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief 破棄の優先順位を取得する。
+	 */
+	template< typename t_value_type >
+	static int get_destruct_priority()
+	{
+		this_type::get< t_value_type >();
+		return this_type::instance< t_value_type >().priority;
+	}
+
+	//.........................................................................
 	private:
 	//-------------------------------------------------------------------------
-	class destructor_node:
+	/** @brief 破棄関数を保持するnode。
+	 */
+	class destruct_node:
 		private boost::noncopyable
 	{
-		typedef destructor_node this_type;
+		typedef destruct_node this_type;
 
 		public:
+		typedef void (*function)(this_type* const);
+
 		//---------------------------------------------------------------------
-		~destructor_node()
+		~destruct_node()
 		{
 			// 破棄listの先頭nodeを破棄。
 			// thisを破棄してはならないことに注意！
 			this_type* const a_node(psyq::ordered_singleton::first_node());
-			PSYQ_ASSERT(nullptr != a_node);
-			psyq::ordered_singleton::first_node() = a_node->get_next();
-			a_node->destruct();
-			a_node->set_next(a_node);
-			////a_node->next.~atomic_pointer();
+			PSYQ_ASSERT(NULL != a_node);
+			psyq::ordered_singleton::first_node() = a_node->next;
+			(*a_node->destructor)(a_node);
 		}
 
-		//---------------------------------------------------------------------
-		destructor_node():
-			priority(0)
+		explicit destruct_node(
+			this_type::function i_destructor):
+		destructor(i_destructor),
+		priority(0)
 		{
-			new(this->atomic_storage) this_type::atomic_pointer;
-			this->set_next(this);
-		}
-
-		//---------------------------------------------------------------------
-		virtual void destruct() = 0;
-
-		//---------------------------------------------------------------------
-		/** @brief 破棄listに登録されているか判定。
-		 */
-		bool is_joined() const
-		{
-			return this != this->get_next();
+			this->next = this;
 		}
 
 		//---------------------------------------------------------------------
@@ -105,7 +116,7 @@ class psyq::ordered_singleton
 			{
 				// 優先順位が最小なら、先頭に挿入する。
 				PSYQ_ASSERT(this != i_first_node);
-				this->set_next(i_first_node);
+				this->next = i_first_node;
 				return this;
 			}
 
@@ -114,37 +125,44 @@ class psyq::ordered_singleton
 			for (;;)
 			{
 				PSYQ_ASSERT(this != a_node);
-				this_type* const a_next(a_node->get_next());
+				this_type* const a_next(a_node->next);
 				if (this_type::less(i_priority, a_next))
 				{
-					a_node->set_next(this);
-					this->set_next(a_next);
+					a_node->next = this;
+					this->next = a_next;
 					return i_first_node;
 				}
 				a_node = a_next;
 			}
 		}
 
-		private:
 		//---------------------------------------------------------------------
-		/** @note
-		    thread-safeのためにdouble-checked-lockingを用いているが、
-		    atomic変数を導入してないので、double-checked-lockingの問題点は
-		    解決していない？
+		/** @brief 破棄listから分離する。
+		    @param[in] i_first_node 破棄listの先頭node。
 		 */
-		typedef this_type* atomic_pointer;
-		////typedef std::atomic< this_type* > atomic_pointer;
-
-		//---------------------------------------------------------------------
-		this_type* get_next() const
+		this_type* unjoin(
+			this_type* const i_first_node)
 		{
-			return this->next;
-		}
+			if (this == i_first_node)
+			{
+				this_type* const a_next(this->next);
+				this->next = this;
+				return a_next;
+			}
 
-		void set_next(
-			this_type* const i_next)
-		{
-			this->next = i_next;
+			this_type* a_node(i_first_node);
+			for (;;)
+			{
+				PSYQ_ASSERT(this != a_node);
+				this_type* const a_next(a_node->next);
+				if (a_next == this)
+				{
+					a_node->next = this->next;
+					this->next = this;
+					return i_first_node;
+				}
+				a_node = a_next;
+			}
 		}
 
 		//---------------------------------------------------------------------
@@ -158,54 +176,112 @@ class psyq::ordered_singleton
 		}
 
 		//---------------------------------------------------------------------
-		union
-		{
-			this_type::atomic_pointer next;
-			std::uint8_t atomic_storage[sizeof(this_type::atomic_pointer)];
-		};
-		int priority;
+		this_type*          next;
+		this_type::function destructor;
+		int                 priority;
 	};
 
 	//-------------------------------------------------------------------------
+	/** @brief singleton-instanceを保持するnode。
+	 */
 	template< typename t_value_type >
 	class instance_node:
-		public destructor_node
+		public destruct_node
 	{
 		typedef instance_node this_type;
-		typedef destructor_node super_type;
+		typedef destruct_node super_type;
 
 		public:
-		virtual void destruct()
+		//---------------------------------------------------------------------
+		instance_node():
+		super_type(&this_type::destruct),
+		pointer(NULL)
 		{
-			this->instance.~t_value_type();
+			// pass
 		}
 
-		t_value_type& get()
+		//---------------------------------------------------------------------
+		/** @brief 保持している領域にinstanceを構築する。
+		    @param[in] i_in_place boost::in_placeで構築した初期化factory。
+		 */
+		template< typename t_in_place >
+		void construct(
+			t_in_place const& i_in_place)
 		{
-			return this->instance;
+			PSYQ_ASSERT(NULL == this->pointer);
+			i_in_place.template apply< t_value_type >(&this->storage);
+			this->pointer = reinterpret_cast< t_value_type* >(&this->storage);
 		}
 
-		private:
-		union
+		/** @brief 保持している領域のinstanceを破棄する。
+		 */
+		static void destruct(
+			super_type* const i_this)
 		{
-			t_value_type instance;
-			char storage[sizeof(t_value_type)];
-		};
+			this_type* const a_this(static_cast< this_type* >(i_this));
+			t_value_type* const a_pointer(a_this->pointer);
+			PSYQ_ASSERT(NULL != a_pointer);
+			a_this->pointer = NULL;
+			a_this->destructor = NULL;
+			a_this->next = a_this;
+			a_pointer->~t_value_type();
+		}
+
+		//---------------------------------------------------------------------
+		t_value_type* pointer;
+		typename boost::aligned_storage<
+			sizeof(t_value_type),
+			boost::alignment_of< t_value_type >::value >::type
+				storage;
 	};
 
 	//-------------------------------------------------------------------------
-	static boost::mutex& mutex()
+	/** @brief 一度だけ呼び出せるsigleton-instance構築関数を呼び出す。
+	    @param[in] i_in_place boost::in_placeで構築した初期化factory。
+		@param[in] i_destruct_priority 破棄の優先順位。破棄は昇順に行われる。
+	 */
+	template< typename t_value_type, typename t_in_place >
+	static void construct_once(
+		t_in_place const& i_in_place,
+		int const         i_destruct_priority)
 	{
-		static boost::mutex s_mutex;
-		return s_mutex;
+		boost::call_once(
+			this_type::is_constructed< t_value_type >(),
+			boost::bind(
+				&this_type::construct_instance< t_value_type, t_in_place >,
+				boost::cref(i_in_place),
+				i_destruct_priority));
 	}
 
-	static destructor_node*& first_node()
+	/** @brief singleton-instanceを構築する。
+	    @param[in] i_in_place boost::in_placeで構築した初期化factory。
+	 */
+	template< typename t_value_type, typename t_in_place >
+	static void construct_instance(
+		t_in_place const& i_in_place,
+		int const         i_destruct_priority)
 	{
-		static destructor_node* s_first_node(nullptr);
-		return s_first_node;
+		// instanceを構築する。
+		this_type::instance_node< t_value_type >& a_instance(
+			this_type::instance< t_value_type >());
+		a_instance.construct(i_in_place);
+
+		// 破棄listに登録する。
+		this_type::first_node() = a_instance.join(
+			this_type::first_node(), i_destruct_priority);
 	}
 
+	/** @brief singleton-instanceを構築したかどうかのflagを参照する。
+	 */
+	template< typename t_value_type >
+	static boost::once_flag& is_constructed()
+	{
+		static boost::once_flag s_constructed = BOOST_ONCE_INIT;
+		return s_constructed;
+	}
+
+	/** @brief singleton-instanceを保持するnodeを参照する。
+	 */
 	template< typename t_value_type >
 	static this_type::instance_node< t_value_type >& instance()
 	{
@@ -213,25 +289,38 @@ class psyq::ordered_singleton
 		return s_instance;
 	}
 
-	template< typename t_value_type >
-	static void construct_instance(
-		t_value_type&& i_source,
-		int const      i_priority)
+	/** @brief 破棄listの先頭nodeへのpointerを参照する。
+	 */
+	static this_type::destruct_node*& first_node()
 	{
-		// instanceを構築。
+		static this_type::destruct_node* s_first_node(NULL);
+		return s_first_node;
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief 破棄の優先順位を設定する。
+		@param[in] i_destruct_priority 破棄の優先順位。破棄は昇順に行われる。
+	    @note mutexなどで排他制御をしないと、thread-safeが保てない。
+	 */
+	template< typename t_value_type >
+	static void set_destruct_priority(
+		int const i_destruct_priority)
+	{
+		this_type::create< t_value_type >(i_destruct_priority);
+
 		this_type::instance_node< t_value_type >& a_instance(
 			this_type::instance< t_value_type >());
-		new(&a_instance.get()) t_value_type(std::move(i_source));
-
-		// 破棄listに登録。
-		this_type::first_node() = a_instance.join(
-			this_type::first_node(), i_priority);
+		if (i_destruct_priority != a_instance.priority)
+		{
+			// 破棄listから取り外した後で、登録する。
+			this_type::first_node() = a_instance.join(
+				a_instance.unjoin(this_type::first_node()),
+				i_destruct_priority);
+		}
 	}
 
 	//-------------------------------------------------------------------------
 	ordered_singleton();
-	ordered_singleton(this_type const&);
-	this_type& operator=(this_type const&);
 };
 
 #endif // PSYQ_ORDERED_SINGLETON_HPP_

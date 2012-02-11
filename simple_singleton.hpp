@@ -33,10 +33,7 @@ class psyq::simple_singleton:
 	template< typename t_value_type >
 	static t_value_type& construct()
 	{
-		this_type::construct_once< t_value_type >(boost::in_place());
-		PSYQ_ASSERT(
-			NULL != this_type::instance< t_value_type >().pointer);
-		return *this_type::instance< t_value_type >().pointer;
+		return this_type::construct_once< t_value_type >(boost::in_place());
 	}
 
 	/** @brief sigleton-instanceを構築する。
@@ -49,10 +46,7 @@ class psyq::simple_singleton:
 	static t_value_type& construct(
 		t_in_place const& i_in_place)
 	{
-		this_type::construct_once< t_value_type >(i_in_place);
-		PSYQ_ASSERT(
-			NULL != this_type::instance< t_value_type >().pointer);
-		return *this_type::instance< t_value_type >().pointer;
+		return this_type::construct_once< t_value_type >(i_in_place);
 	}
 
 	//.........................................................................
@@ -100,18 +94,24 @@ class psyq::simple_singleton:
 	};
 
 	//-------------------------------------------------------------------------
-	/** @brief 一度だけ呼び出せるsigleton-instance構築関数を呼び出す。
+	/** @brief sigleton-instance構築関数を一度だけ呼び出す。
 	    @param[in] i_in_place boost::in_placeで構築した初期化factory。
 	 */
 	template< typename t_value_type, typename t_in_place >
-	static void construct_once(
+	static t_value_type& construct_once(
 		t_in_place const& i_in_place)
 	{
+		// sigleton-instance構築関数を一度だけ呼び出す。
 		boost::call_once(
 			this_type::is_constructed< t_value_type >(),
 			boost::bind(
 				&this_type::construct_instance< t_value_type, t_in_place >,
 				boost::cref(i_in_place)));
+
+		// singleton-instanceを取得。
+		PSYQ_ASSERT(
+			NULL != this_type::instance< t_value_type >().pointer);
+		return *this_type::instance< t_value_type >().pointer;
 	}
 
 	/** @brief singleton-instanceを構築する。

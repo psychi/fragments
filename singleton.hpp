@@ -101,12 +101,12 @@ class psyq::singleton:
 		//---------------------------------------------------------------------
 		~destruct_node()
 		{
-			// 破棄listの先頭nodeを破棄。
+			// 破棄listの先頭nodeを取り外してから破棄。
 			// thisを破棄してないことに注意！
 			this_type* const a_node(psyq::singleton::first_node());
 			PSYQ_ASSERT(NULL != a_node);
 			psyq::singleton::first_node() = a_node->next;
-			(*a_node->destructor)(a_node);
+			a_node->destruct();
 		}
 
 		explicit destruct_node(
@@ -118,6 +118,15 @@ class psyq::singleton:
 		}
 
 		//---------------------------------------------------------------------
+		void destruct()
+		{
+			this_type::function const a_destructor(this->destructor);
+			this->next = this;
+			this->destructor = NULL;
+			(*a_destructor)(this);
+		}
+
+		//---------------------------------------------------------------------
 		/** @brief 破棄listに登録する。
 		    @param[in] i_first_node 破棄listの先頭node。
 		    @param[in] i_priority   破棄する優先順位。
@@ -126,6 +135,8 @@ class psyq::singleton:
 			this_type* const i_first_node,
 			int const        i_priority)
 		{
+			PSYQ_ASSERT(this == this->next);
+
 			this->priority = i_priority;
 			if (this_type::less(i_priority, i_first_node))
 			{
@@ -237,8 +248,6 @@ class psyq::singleton:
 			t_value_type* const a_pointer(a_this->pointer);
 			PSYQ_ASSERT(&a_this->storage == static_cast< void* >(a_pointer));
 			a_this->pointer = NULL;
-			a_this->destructor = NULL;
-			a_this->next = a_this;
 			a_pointer->~t_value_type();
 		}
 

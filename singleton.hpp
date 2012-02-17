@@ -29,6 +29,7 @@ class psyq::singleton_detail::_ordered_destructor:
 	public boost::noncopyable
 {
 	typedef psyq::singleton_detail::_ordered_destructor this_type;
+	template< typename, typename > friend class psyq::singleton;
 
 	//.........................................................................
 	public:
@@ -55,6 +56,21 @@ class psyq::singleton_detail::_ordered_destructor:
 		return this->priority;
 	}
 
+	//.........................................................................
+	protected:
+	typedef void (*function)(this_type* const); ///< 破棄関数の型。
+
+	//-------------------------------------------------------------------------
+	explicit _ordered_destructor(
+		this_type::function i_destructor):
+		destructor(i_destructor),
+		priority(0)
+	{
+		this->next = this;
+	}
+
+	//.........................................................................
+	private:
 	//-------------------------------------------------------------------------
 	/** @brief 破棄関数listに登録する。
 	    @param[in] i_priority 破棄の優先順位。
@@ -123,6 +139,23 @@ class psyq::singleton_detail::_ordered_destructor:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief 優先順位を比較。
+	 */
+	static bool less_equal(
+		int const              i_priority,
+		this_type const* const i_node)
+	{
+		return NULL == i_node || i_priority <= i_node->priority;
+	}
+
+	/** @brief 破棄関数listの先頭nodeへのpointerを参照する。
+	 */
+	static this_type*& first_node()
+	{
+		static this_type* s_first_node(NULL);
+		return s_first_node;
+	}
+
 	/** @brief singletonで使うmutexを参照する。
 	 */
 	#ifndef PSYQ_SINGLETON_DISABLE_THREADS
@@ -132,39 +165,6 @@ class psyq::singleton_detail::_ordered_destructor:
 			return s_mutex;
 		}
 	#endif // !PSYQ_SINGLETON_DISABLE_THREADS
-
-	//.........................................................................
-	protected:
-	typedef void (*function)(this_type* const); ///< 破棄関数の型。
-
-	//-------------------------------------------------------------------------
-	explicit _ordered_destructor(
-		this_type::function i_destructor):
-		destructor(i_destructor),
-		priority(0)
-	{
-		this->next = this;
-	}
-
-	//.........................................................................
-	private:
-	//-------------------------------------------------------------------------
-	/** @brief 破棄関数listの先頭nodeへのpointerを参照する。
-	 */
-	static this_type*& first_node()
-	{
-		static this_type* s_first_node(NULL);
-		return s_first_node;
-	}
-
-	/** @brief 優先順位を比較。
-	 */
-	static bool less_equal(
-		int const              i_priority,
-		this_type const* const i_node)
-	{
-		return NULL == i_node || i_priority <= i_node->priority;
-	}
 
 	//.........................................................................
 	private:
@@ -182,11 +182,14 @@ class psyq::singleton_detail::_ordered_storage:
 {
 	typedef psyq::singleton_detail::_ordered_storage< t_value_type > this_type;
 	typedef psyq::singleton_detail::_ordered_destructor super_type;
+	template< typename, typename > friend class psyq::singleton;
 
 	//.........................................................................
 	public:
 	typedef t_value_type value_type;
 
+	//.........................................................................
+	private:
 	//-------------------------------------------------------------------------
 	_ordered_storage():
 		super_type(&this_type::destruct),
@@ -196,7 +199,7 @@ class psyq::singleton_detail::_ordered_storage:
 	}
 
 	//-------------------------------------------------------------------------
-	t_value_type* get_pointer()
+	t_value_type* get_pointer() const
 	{
 		return this->pointer;
 	}
@@ -214,8 +217,6 @@ class psyq::singleton_detail::_ordered_storage:
 		this->pointer = reinterpret_cast< t_value_type* >(&this->storage);
 	}
 
-	//.........................................................................
-	private:
 	//-------------------------------------------------------------------------
 	/** @brief 保持している領域のinstanceを破棄する。
 	 */
@@ -242,8 +243,8 @@ class psyq::singleton_detail::_ordered_storage:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief singleton管理class。
-    @tparam t_value_type singleton-objectの型。
-    @tparam t_tag 同じ型のsingleton-objectで区別が必要な場合に使う識別用tag。
+    @tparam t_value_type singletonの型。
+    @tparam t_tag 同じ型のsingletonで区別が必要な場合に使うtag。
  */
 template<
 	typename t_value_type,

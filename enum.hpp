@@ -5,7 +5,6 @@
 
 namespace psyq
 {
-	template< typename > class enumeration;
 	template< typename, typename > class enum_element;
 };
 
@@ -21,27 +20,22 @@ namespace psyq
 	    boost-1.47.0では、BOOST_PP_LIMIT_REPEATは256となっている。
  */
 #define PSYQ_ENUM(d_type_name, d_name_type, d_value_type, d_elements)\
-	class d_type_name;\
-	template<>\
-	class psyq::enumeration< d_type_name >\
+	class d_type_name\
 	{\
 		public:\
 		PSYQ_ENUM_ATTRIBUTE_DEFINE(\
 			d_type_name, d_name_type, d_value_type, d_elements);\
-		private:\
-		enumeration();\
-	};\
-	class d_type_name\
-	{\
-		typedef psyq::enumeration< d_type_name > enum_type;\
-		public:\
-		BOOST_PP_REPEAT(\
-			BOOST_PP_SEQ_SIZE(d_elements),\
-			PSYQ_ENUM_ELEMENT_DEFINE,\
-			d_elements);\
+		class element\
+		{\
+			public:\
+			BOOST_PP_REPEAT(\
+				BOOST_PP_SEQ_SIZE(d_elements),\
+				PSYQ_ENUM_ELEMENT_DEFINE,\
+				d_elements);\
+		};\
 		private:\
 		d_type_name();\
-	};
+	};\
 
 
 //-----------------------------------------------------------------------------
@@ -101,9 +95,9 @@ namespace psyq
 	{\
 		public:\
 		enum {ordinal = d_ordinal};\
-		static enum_type::element_type const& get()\
+		static element_type const& get()\
 		{\
-			return *enum_type::find(d_ordinal);\
+			return *find(d_ordinal);\
 		}\
 		private:\
 		BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_elements))();\

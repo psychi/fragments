@@ -5,6 +5,7 @@
 
 namespace psyq
 {
+	template< typename > class enumeration;
 	template< typename, typename > class enum_element;
 };
 
@@ -20,52 +21,57 @@ namespace psyq
 	    boost-1.47.0では、BOOST_PP_LIMIT_REPEATは256となっている。
  */
 #define PSYQ_ENUM(d_type_name, d_name_type, d_value_type, d_elements)\
-	class d_type_name\
+	class d_type_name;\
+	template<>\
+	class psyq::enumeration< d_type_name >\
 	{\
 		public:\
 		PSYQ_ENUM_ATTRIBUTE_DEFINE(\
 			d_type_name, d_name_type, d_value_type, d_elements);\
-		struct element\
-		{\
-			BOOST_PP_REPEAT(\
-				BOOST_PP_SEQ_SIZE(d_elements),\
-				PSYQ_ENUM_ELEMENT_DEFINE,\
-				d_elements);\
-		};\
+		private:\
+		enumeration();\
+	};\
+	class d_type_name\
+	{\
+		typedef psyq::enumeration< d_type_name > enum_type;\
+		public:\
+		BOOST_PP_REPEAT(\
+			BOOST_PP_SEQ_SIZE(d_elements),\
+			PSYQ_ENUM_ELEMENT_DEFINE,\
+			d_elements);\
 		private:\
 		d_type_name();\
 	};
+
 
 //-----------------------------------------------------------------------------
 /** @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
  */
 #define PSYQ_ENUM_ATTRIBUTE_DEFINE(d_type_name, d_name_type, d_value_type, d_elements)\
+	public:\
 	typedef d_name_type name_type;\
 	typedef d_value_type value_type;\
 	typedef psyq::enum_element< d_name_type, d_value_type > element_type;\
 	typedef element_type::ordinal_type ordinal_type;\
 	enum {ordinal_max = BOOST_PP_SEQ_SIZE(d_elements)};\
-	static ordinal_type get_ordinal(name_type const& i_name)\
+	static element_type const* find(name_type const& i_name)\
 	{\
-		return element_type::_get_ordinal(get_elements(), ordinal_max, i_name);\
+		for (ordinal_type i = 0; i < ordinal_max; ++i)\
+		{\
+			element_type const* const a_element(find(i));\
+			if (i_name == a_element->name) return a_element;\
+		}\
+		return NULL;\
 	}\
-	static element_type const* get_element(name_type const& i_name)\
+	static element_type const* find(ordinal_type const i_ordinal)\
 	{\
-		return get_element(get_ordinal(i_name));\
-	}\
-	static element_type const* get_element(ordinal_type const i_ordinal)\
-	{\
-		return i_ordinal < ordinal_max? get_elements() + i_ordinal: NULL;\
-	}\
-	static element_type const* get_elements()\
-	{\
-		static element_type const s_elements[] = {\
+		static element_type const s_elements[ordinal_max] = {\
 			BOOST_PP_REPEAT(\
 				BOOST_PP_SEQ_SIZE(d_elements),\
 				PSYQ_ENUM_ELEMENT_CONSTRUCT,\
 				d_elements)\
 		};\
-		return s_elements;\
+		return i_ordinal < ordinal_max? &s_elements[i_ordinal]: NULL;\
 	}
 
 //-----------------------------------------------------------------------------
@@ -91,22 +97,16 @@ namespace psyq
 /** @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
  */
 #define PSYQ_ENUM_ELEMENT_DEFINE(d_z, d_ordinal, d_elements)\
-	struct BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_elements))\
+	class BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_elements))\
 	{\
+		public:\
 		enum {ordinal = d_ordinal};\
-		static element_type::name_type const& get_name()\
+		static enum_type::element_type const& get()\
 		{\
-			return get_element(d_ordinal)->name;\
+			return *enum_type::find(d_ordinal);\
 		}\
-		BOOST_PP_IF(\
-			BOOST_PP_LESS(\
-				1,\
-				BOOST_PP_SEQ_SIZE(BOOST_PP_SEQ_ELEM(d_ordinal, d_elements))),\
-			static element_type::value_type const& get_value()\
-			{\
-				return get_element(d_ordinal)->value;\
-			},\
-			BOOST_PP_EMPTY())\
+		private:\
+		BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_elements))();\
 	};
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -130,29 +130,6 @@ class psyq::enum_element
 		value(i_value)
 	{
 		// pass
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief 列挙子の名前から序数を取得。userは使用禁止。
-	    @param[in] i_enum 列挙子配列の先頭位置。
-	    @param[in] i_num  列挙子の数。
-	    @param[in] i_name 列挙子の名前。
-	    @return 名前に対応する列挙子の序数。
-	 */
-	static ordinal_type _get_ordinal(
-		this_type const* const i_enum,
-		std::size_t const      i_num,
-		t_name_type const&     i_name)
-	{
-		for (ordinal_type i = 0; i < i_num; ++i)
-		{
-			this_type const& a_element(i_enum[i]);
-			if (a_element.name == i_name)
-			{
-				return i;
-			}
-		}
-		return (std::numeric_limits< ordinal_type >::max)();
 	}
 
 	//-------------------------------------------------------------------------

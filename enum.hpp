@@ -11,9 +11,10 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 //-----------------------------------------------------------------------------
 /** @brief 列挙子を定義。
-    @param d_enum_name     列挙子の型名。
-    @param d_name_type     列挙子が持つ名前文字列の型。
-    @param d_property_type 列挙子が持つ属性値の型。
+    @param d_enum_name 列挙子の型名。
+    @param d_name_type 列挙子が持つ名前文字列の型。
+    @param d_property_type
+        列挙子が持つ属性値の型。列挙子が属性値を持たないなら、voidを指定する。
     @param d_values
         BOOST_PP_SEQ形式で記述した、列挙子要素を定義する配列。
         BOOST_PP_SEQの仕様により、定義できる要素はBOOST_PP_LIMIT_REPEATが最大。
@@ -26,16 +27,17 @@ namespace psyq
 		enum {size = BOOST_PP_SEQ_SIZE(d_values)};\
 		typedef psyq::enum_value< d_enum_name, d_name_type, d_property_type >\
 			value_type;\
-		static value_type const* get(\
+		typedef value_type const* pointer;\
+		static pointer get(\
 			value_type::ordinal_type const i_ordinal)\
 		{\
 			return i_ordinal < size?\
 				psyq::singleton< enum_array >::get().at(i_ordinal): NULL;\
 		}\
-		static value_type const* get(\
+		static pointer get(\
 			value_type::name_type const& i_name)\
 		{\
-			value_type const* const a_values(\
+			pointer const a_values(\
 				psyq::singleton< enum_array >::get().at(0));\
 			for (value_type::ordinal_type i = 0; i < size; ++i)\
 			{\
@@ -104,7 +106,7 @@ namespace psyq
 /** @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
  */
 #define PSYQ_ENUM_VALUE_DEFINE(d_z, d_ordinal, d_values)\
-	static value_type const*\
+	static pointer\
 	BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_values))()\
 	{\
 		return psyq::singleton< enum_array >::get().at(d_ordinal);\

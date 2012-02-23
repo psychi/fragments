@@ -5,135 +5,182 @@
 
 namespace psyq
 {
-	template< typename > class enumeration;
-	template< typename, typename > class enum_element;
+	template< typename, typename > class enum_item;
+	template< typename, std::size_t > class enum_array;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 //-----------------------------------------------------------------------------
 /** @brief 列挙子を定義。
-    @param d_enum_name  列挙子の型名。
-    @param d_name_type  列挙子が持つ名前文字列の型。
-    @param d_value_type 列挙子が持つ値の型。
-    @param d_enum
+    @param d_enum_name     列挙子の型名。
+    @param d_name_type     列挙子が持つ名前文字列の型。
+    @param d_property_type 列挙子が持つ属性値の型。
+    @param d_items
         BOOST_PP_SEQ形式で記述した、列挙子要素を定義する配列。
         BOOST_PP_SEQの仕様により、定義できる要素はBOOST_PP_LIMIT_REPEATが最大。
-	    boost-1.47.0では、BOOST_PP_LIMIT_REPEATは256となっている。
+        boost-1.47.0だと、BOOST_PP_LIMIT_REPEATは256となっている。
  */
-#define PSYQ_ENUMERATION(d_enum_name, d_name_type, d_value_type, d_elements)\
-	class d_enum_name;\
-	template<>\
-	class psyq::enumeration< d_enum_name >:\
-		private boost::noncopyable\
+#define PSYQ_ENUM(d_enum_name, d_name_type, d_property_type, d_items)\
+	class d_enum_name: private boost::noncopyable\
 	{\
 		public:\
-		typedef d_enum_name element_type;\
-		typedef d_name_type name_type;\
-		typedef d_value_type value_type;\
-		typedef psyq::enum_element< name_type, value_type >::ordinal_type ordinal_type;\
-		enum {size = BOOST_PP_SEQ_SIZE(d_elements)};\
-		static element_type const* get(ordinal_type const i_ordinal);\
-		static element_type const* get(name_type const& i_name);\
-		private:\
-		enumeration();\
-	};\
-	class d_enum_name:\
-		public psyq::enum_element< d_name_type, d_value_type >\
-	{\
-		friend psyq::enumeration< d_enum_name >;\
-		public:\
-		BOOST_PP_REPEAT(\
-			BOOST_PP_SEQ_SIZE(d_elements),\
-			PSYQ_ENUM_ELEMENT_DEFINE,\
-			BOOST_PP_SEQ_PUSH_BACK(d_elements, d_enum_name));\
-		private:\
-		d_enum_name(\
-			name_type const&   i_name,\
-			value_type const&  i_value,\
-			ordinal_type const i_ordinal):\
-			psyq::enum_element< d_name_type, d_value_type >(\
-				i_name, i_value, i_ordinal) {}\
-	};\
-	d_enum_name const* psyq::enumeration< d_enum_name >::get(\
-		psyq::enumeration< d_enum_name >::ordinal_type const i_ordinal)\
-	{\
-		static element_type const s_elements[size] = {\
-			BOOST_PP_REPEAT(\
-				BOOST_PP_SEQ_SIZE(d_elements),\
-				PSYQ_ENUM_ELEMENT_CONSTRUCT,\
-				d_elements)\
-		};\
-		return i_ordinal < size? &s_elements[i_ordinal]: NULL;\
-	}\
-	d_enum_name const* psyq::enumeration< d_enum_name >::get(\
-		psyq::enumeration< d_enum_name >::name_type const& i_name)\
-	{\
-		for (ordinal_type i = 0; i < size; ++i)\
+		enum {size = BOOST_PP_SEQ_SIZE(d_items)};\
+		class value_type:\
+			public psyq::enum_item< d_name_type, d_property_type >\
 		{\
-			element_type const* const a_element(get(i));\
-			if (i_name == a_element->name) return a_element;\
+			friend d_enum_name;\
+			friend psyq::enum_array< value_type, size >;\
+			private:\
+			value_type(\
+				name_type const&     i_name,\
+				property_type const& i_property,\
+				ordinal_type const   i_ordinal):\
+				psyq::enum_item< d_name_type, d_property_type >(\
+					i_name, i_property, i_ordinal) {}\
+		};\
+		static value_type const* get(\
+			value_type::ordinal_type const i_ordinal)\
+		{\
+			return i_ordinal < size?\
+				psyq::singleton< enum_array >::get().at(i_ordinal): NULL;\
 		}\
-		return NULL;\
-	}
+		static value_type const* get(\
+			value_type::name_type const& i_name)\
+		{\
+			value_type const* const a_items(\
+				psyq::singleton< enum_array >::get().at(0));\
+			for (value_type::ordinal_type i = 0; i < size; ++i)\
+			{\
+				if (i_name == a_items[i].name) return &a_items[i];\
+			}\
+			return NULL;\
+		}\
+		class value: private boost::noncopyable\
+		{\
+			public: BOOST_PP_REPEAT(\
+				BOOST_PP_SEQ_SIZE(d_items),\
+				PSYQ_ENUM_ITEM_INSTANCE_DEFINE,\
+				d_items)\
+			private: value();\
+		};\
+		class ordinal: private boost::noncopyable\
+		{\
+			public: enum\
+			{\
+				BOOST_PP_REPEAT(\
+					BOOST_PP_SEQ_SIZE(d_items),\
+					PSYQ_ENUM_ITEM_ORDINAL_DEFINE,\
+					d_items)\
+			};\
+			private: ordinal();\
+		};\
+		private:\
+		class enum_array: private boost::noncopyable\
+		{\
+			public:\
+			~enum_array()\
+			{\
+				for (std::size_t i = size; 0 < i;)\
+				{\
+					--i;\
+					this->at(i)->~value_type();\
+				}\
+			}\
+			enum_array()\
+			{\
+				BOOST_PP_REPEAT(\
+					BOOST_PP_SEQ_SIZE(d_items),\
+					PSYQ_ENUM_ITEM_CONSTRUCT,\
+					d_items)\
+			}\
+			value_type* at(\
+				std::size_t const i_index)\
+			{\
+				return reinterpret_cast< value_type* >(&this->storage) + i_index;\
+			}\
+			private:\
+			boost::aligned_storage<\
+				sizeof(value_type[size]),\
+				boost::alignment_of< value_type[size] >::value >::type\
+					storage;\
+		};\
+		class psyq_enum_array: public psyq::enum_array< value_type, size >\
+		{\
+			public: psyq_enum_array()\
+			{\
+				BOOST_PP_REPEAT(\
+					BOOST_PP_SEQ_SIZE(d_items), PSYQ_ENUM_ITEM_ADD, d_items)\
+			}\
+		};\
+		d_enum_name();\
+	};
 
 //-----------------------------------------------------------------------------
 /** @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
  */
-#define PSYQ_ENUM_ELEMENT_CONSTRUCT(d_z, d_ordinal, d_elements)\
-	BOOST_PP_COMMA_IF(BOOST_PP_LESS(0, d_ordinal))\
-	element_type(\
+/** @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
+ */
+#define PSYQ_ENUM_ITEM_INSTANCE_DEFINE(d_z, d_ordinal, d_items)\
+	static value_type const*\
+	BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_items))()\
+	{\
+		return psyq::singleton< enum_array >::get().at(d_ordinal);\
+	}
+
+/** @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
+ */
+#define PSYQ_ENUM_ITEM_ORDINAL_DEFINE(d_z, d_ordinal, d_items)\
+	BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_items)),
+
+/** @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
+ */
+#define PSYQ_ENUM_ITEM_CONSTRUCT(d_z, d_ordinal, d_items)\
+	new(this->at(d_ordinal)) value_type(\
 		BOOST_PP_STRINGIZE(\
-			BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_elements))),\
-		element_type::value_type(\
+			BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_items))),\
+		value_type::property_type(\
 			BOOST_PP_IF(\
 				BOOST_PP_LESS(\
 					1,\
 					BOOST_PP_SEQ_SIZE(\
-						BOOST_PP_SEQ_ELEM(d_ordinal, d_elements))),\
+						BOOST_PP_SEQ_ELEM(d_ordinal, d_items))),\
 				BOOST_PP_SEQ_ELEM(\
-					1, BOOST_PP_SEQ_ELEM(d_ordinal, d_elements)),\
+					1, BOOST_PP_SEQ_ELEM(d_ordinal, d_items)),\
 				BOOST_PP_EMPTY())),\
-		d_ordinal)
+		d_ordinal);
 
-//-----------------------------------------------------------------------------
-/** @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
- */
-#define PSYQ_ENUM_ELEMENT_DEFINE(d_z, d_ordinal, d_elements)\
-	class BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_elements))\
-	{\
-		typedef BOOST_PP_SEQ_ELEM(\
-			BOOST_PP_SUB(BOOST_PP_SEQ_SIZE(d_elements), 1), d_elements)\
-				element_type;\
-		public:\
-		enum {ordinal = d_ordinal};\
-		static element_type const* get()\
-		{\
-			return psyq::enumeration< element_type >::get(d_ordinal);\
-		}\
-		private:\
-		BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_elements))();\
-	};
+#define PSYQ_ENUM_ITEM_ADD(d_z, d_ordinal, d_items)\
+	this->add(\
+		BOOST_PP_STRINGIZE(\
+			BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_items))),\
+		item_type::property_type(\
+			BOOST_PP_IF(\
+				BOOST_PP_LESS(\
+					1,\
+					BOOST_PP_SEQ_SIZE(\
+						BOOST_PP_SEQ_ELEM(d_ordinal, d_items))),\
+				BOOST_PP_SEQ_ELEM(\
+					1, BOOST_PP_SEQ_ELEM(d_ordinal, d_items)),\
+				BOOST_PP_EMPTY())));
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template< typename t_name_type, typename t_value_type >
-class psyq::enum_element:
+template< typename t_name_type, typename t_property_type >
+class psyq::enum_item:
 	private boost::noncopyable
 {
-	typedef psyq::enum_element< t_name_type, t_value_type > this_type;
-
 	public:
 	typedef t_name_type name_type;
-	typedef t_value_type value_type;
+	typedef t_property_type property_type;
 	typedef std::size_t ordinal_type;
 
 	//-------------------------------------------------------------------------
 	protected:
-	enum_element(
-		t_name_type const&  i_name,
-		t_value_type const& i_value,
-		ordinal_type const  i_ordinal):
+	enum_item(
+		t_name_type const&     i_name,
+		t_property_type const& i_property,
+		ordinal_type const     i_ordinal):
 		name(i_name),
-		value(i_value),
+		property(i_property),
 		ordinal(i_ordinal)
 	{
 		// pass
@@ -141,9 +188,85 @@ class psyq::enum_element:
 
 	//-------------------------------------------------------------------------
 	public:
-	t_name_type  name;    ///< 列挙子の名前。
-	t_value_type value;   ///< 列挙子の値。
-	ordinal_type ordinal; ///< 列挙子の序数。
+	t_name_type     name;     ///< 列挙子の名前。
+	t_property_type property; ///< 列挙子の属性。
+	ordinal_type    ordinal;  ///< 列挙子の序数。
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template< typename t_item_type, std::size_t t_capacity >
+class psyq::enum_array:
+	private boost::noncopyable
+{
+	typedef psyq::enum_array< t_item_type, t_capacity > this_type;
+
+	//.........................................................................
+	public:
+	enum {capacity = t_capacity};
+	typedef t_item_type item_type;
+
+	//-------------------------------------------------------------------------
+	~enum_array()
+	{
+		t_item_type* const a_items(this->at(0));
+		for (std::size_t i = this->_size; 0 < i;)
+		{
+			--i;
+			a_items[i].~t_item_type();
+		}
+	}
+
+	//-------------------------------------------------------------------------
+	enum_array():
+	_size(0)
+	{
+		// pass
+	}
+
+	//-------------------------------------------------------------------------
+	std::size_t size() const
+	{
+		return this->_size;
+	}
+
+	//-------------------------------------------------------------------------
+	t_item_type* at(
+		std::size_t const i_index)
+	{
+		return i_index < this->size()?
+			reinterpret_cast< t_item_type* >(&this->_storage) + i_index: NULL;
+	}
+
+	t_item_type const* at(
+		std::size_t const i_index)
+		const
+	{
+		return const_cast< this_type* >(this)->at(i_index);
+	}
+
+	//-------------------------------------------------------------------------
+	t_item_type const* add(
+		typename t_item_type::name_type const&     i_name,
+		typename t_item_type::property_type const& i_property)
+	{
+		std::size_t const a_ordinal(this->size());
+		if (a_ordinal < t_capacity)
+		{
+			++this->_size;
+			return new(this->at(a_ordinal))
+				item_type(i_name, i_property, a_ordinal);
+		}
+		return NULL;
+	}
+
+	//.........................................................................
+	private:
+	//-------------------------------------------------------------------------
+	typename boost::aligned_storage<
+		sizeof(t_item_type[t_capacity]),
+		boost::alignment_of< t_item_type[t_capacity] >::value >::type
+			_storage;
+	std::size_t _size;
 };
 
 #endif // PSYQ_ENUM_HPP_

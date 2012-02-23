@@ -20,55 +20,61 @@ namespace psyq
         BOOST_PP_SEQの仕様により、定義できる要素はBOOST_PP_LIMIT_REPEATが最大。
 	    boost-1.47.0では、BOOST_PP_LIMIT_REPEATは256となっている。
  */
-#define PSYQ_ENUM(d_enum_name, d_name_type, d_value_type, d_elements)\
-	class d_enum_name:\
-		private boost::noncopyable\
-	{\
-		public:\
-		enum\
-		{\
-			BOOST_PP_REPEAT(\
-				BOOST_PP_SEQ_SIZE(d_elements),\
-				PSYQ_ENUM_ELEMENT_DEFINE,\
-				d_elements)\
-		};\
-		private:\
-		d_enum_name();\
-	};\
+#define PSYQ_ENUMERATION(d_enum_name, d_name_type, d_value_type, d_elements)\
+	class d_enum_name;\
 	template<>\
 	class psyq::enumeration< d_enum_name >:\
 		private boost::noncopyable\
 	{\
 		public:\
-		typedef d_enum_name enum_type;\
+		typedef d_enum_name element_type;\
 		typedef d_name_type name_type;\
 		typedef d_value_type value_type;\
-		typedef psyq::enum_element< d_name_type, d_value_type > element_type;\
-		typedef element_type::ordinal_type ordinal_type;\
-		enum {ordinal_max = BOOST_PP_SEQ_SIZE(d_elements)};\
-		static element_type const* get(name_type const& i_name)\
-		{\
-			for (ordinal_type i = 0; i < ordinal_max; ++i)\
-			{\
-				element_type const* const a_element(get(i));\
-				if (i_name == a_element->name) return a_element;\
-			}\
-			return NULL;\
-		}\
-		static element_type const* get(ordinal_type const i_ordinal)\
-		{\
-			static element_type const s_elements[ordinal_max] = {\
-				BOOST_PP_REPEAT(\
-					BOOST_PP_SEQ_SIZE(d_elements),\
-					PSYQ_ENUM_ELEMENT_CONSTRUCT,\
-					d_elements)\
-			};\
-			return i_ordinal < ordinal_max? &s_elements[i_ordinal]: NULL;\
-		}\
+		typedef psyq::enum_element< name_type, value_type >::ordinal_type ordinal_type;\
+		enum {size = BOOST_PP_SEQ_SIZE(d_elements)};\
+		static element_type const* get(ordinal_type const i_ordinal);\
+		static element_type const* get(name_type const& i_name);\
 		private:\
 		enumeration();\
-	};
-
+	};\
+	class d_enum_name:\
+		public psyq::enum_element< d_name_type, d_value_type >\
+	{\
+		friend psyq::enumeration< d_enum_name >;\
+		public:\
+		BOOST_PP_REPEAT(\
+			BOOST_PP_SEQ_SIZE(d_elements),\
+			PSYQ_ENUM_ELEMENT_DEFINE,\
+			BOOST_PP_SEQ_PUSH_BACK(d_elements, d_enum_name));\
+		private:\
+		d_enum_name(\
+			name_type const&   i_name,\
+			value_type const&  i_value,\
+			ordinal_type const i_ordinal):\
+			psyq::enum_element< d_name_type, d_value_type >(\
+				i_name, i_value, i_ordinal) {}\
+	};\
+	d_enum_name const* psyq::enumeration< d_enum_name >::get(\
+		psyq::enumeration< d_enum_name >::ordinal_type const i_ordinal)\
+	{\
+		static element_type const s_elements[size] = {\
+			BOOST_PP_REPEAT(\
+				BOOST_PP_SEQ_SIZE(d_elements),\
+				PSYQ_ENUM_ELEMENT_CONSTRUCT,\
+				d_elements)\
+		};\
+		return i_ordinal < size? &s_elements[i_ordinal]: NULL;\
+	}\
+	d_enum_name const* psyq::enumeration< d_enum_name >::get(\
+		psyq::enumeration< d_enum_name >::name_type const& i_name)\
+	{\
+		for (ordinal_type i = 0; i < size; ++i)\
+		{\
+			element_type const* const a_element(get(i));\
+			if (i_name == a_element->name) return a_element;\
+		}\
+		return NULL;\
+	}
 
 //-----------------------------------------------------------------------------
 /** @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
@@ -76,7 +82,6 @@ namespace psyq
 #define PSYQ_ENUM_ELEMENT_CONSTRUCT(d_z, d_ordinal, d_elements)\
 	BOOST_PP_COMMA_IF(BOOST_PP_LESS(0, d_ordinal))\
 	element_type(\
-		d_ordinal,\
 		BOOST_PP_STRINGIZE(\
 			BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_elements))),\
 		element_type::value_type(\
@@ -87,17 +92,32 @@ namespace psyq
 						BOOST_PP_SEQ_ELEM(d_ordinal, d_elements))),\
 				BOOST_PP_SEQ_ELEM(\
 					1, BOOST_PP_SEQ_ELEM(d_ordinal, d_elements)),\
-				BOOST_PP_EMPTY())))
+				BOOST_PP_EMPTY())),\
+		d_ordinal)
 
 //-----------------------------------------------------------------------------
 /** @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
  */
 #define PSYQ_ENUM_ELEMENT_DEFINE(d_z, d_ordinal, d_elements)\
-	BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_elements)),
+	class BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_elements))\
+	{\
+		typedef BOOST_PP_SEQ_ELEM(\
+			BOOST_PP_SUB(BOOST_PP_SEQ_SIZE(d_elements), 1), d_elements)\
+				element_type;\
+		public:\
+		enum {ordinal = d_ordinal};\
+		static element_type const* get()\
+		{\
+			return psyq::enumeration< element_type >::get(d_ordinal);\
+		}\
+		private:\
+		BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_elements))();\
+	};
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 template< typename t_name_type, typename t_value_type >
-class psyq::enum_element
+class psyq::enum_element:
+	private boost::noncopyable
 {
 	typedef psyq::enum_element< t_name_type, t_value_type > this_type;
 
@@ -107,21 +127,23 @@ class psyq::enum_element
 	typedef std::size_t ordinal_type;
 
 	//-------------------------------------------------------------------------
+	protected:
 	enum_element(
-		ordinal_type const  i_ordinal,
 		t_name_type const&  i_name,
-		t_value_type const& i_value):
-		ordinal(i_ordinal),
+		t_value_type const& i_value,
+		ordinal_type const  i_ordinal):
 		name(i_name),
-		value(i_value)
+		value(i_value),
+		ordinal(i_ordinal)
 	{
 		// pass
 	}
 
 	//-------------------------------------------------------------------------
-	ordinal_type ordinal; ///< 列挙子の序数。
+	public:
 	t_name_type  name;    ///< 列挙子の名前。
 	t_value_type value;   ///< 列挙子の値。
+	ordinal_type ordinal; ///< 列挙子の序数。
 };
 
 #endif // PSYQ_ENUM_HPP_

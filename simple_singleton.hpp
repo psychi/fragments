@@ -1,4 +1,4 @@
-ï»¿#ifndef PSYQ_SIMPLE_SINGLETON_HPP_
+#ifndef PSYQ_SIMPLE_SINGLETON_HPP_
 #define PSYQ_SIMPLE_SINGLETON_HPP_
 
 #include <boost/type_traits/aligned_storage.hpp>
@@ -16,7 +16,7 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 template<
 	typename t_value_type,
-	typename t_tag = psyq::singleton_detail::_default_tag >
+	typename t_tag = psyq::_singleton_default_tag >
 class psyq::simple_singleton:
 	private boost::noncopyable
 {
@@ -28,9 +28,9 @@ class psyq::simple_singleton:
 	typedef t_tag tag;
 
 	//-------------------------------------------------------------------------
-	/** @brief sigleton-instanceã‚’å‚ç…§ã™ã‚‹ã€‚
-	        ã¾ã singleton-instanceãŒãªã„ãªã‚‰ã€default-constructorã§æ§‹ç¯‰ã™ã‚‹ã€‚
-	    @return singleton-instanceã¸ã®å‚ç…§ã€‚
+	/** @brief sigleton-instance‚ğQÆ‚·‚éB
+	        ‚Ü‚¾singleton-instance‚ª‚È‚¢‚È‚çAdefault-constructor‚Å\’z‚·‚éB
+	    @return singleton-instance‚Ö‚ÌQÆB
 	 */
 	static t_value_type& get()
 	{
@@ -38,26 +38,26 @@ class psyq::simple_singleton:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief sigleton-instanceã‚’default-constructorã§æ§‹ç¯‰ã™ã‚‹ã€‚
-	        ã™ã§ã«singleton-instanceãŒã‚ã‚‹ãªã‚‰ã€æ§‹ç¯‰ã¯è¡Œã‚ãšæ—¢å­˜ã®ã‚‚ã®ã‚’è¿”ã™ã€‚
-	    @return singleton-instanceã¸ã®å‚ç…§ã€‚
+	/** @brief sigleton-instance‚ğdefault-constructor‚Å\’z‚·‚éB
+	        ‚·‚Å‚Ésingleton-instance‚ª‚ ‚é‚È‚çA\’z‚Ís‚í‚¸Šù‘¶‚Ì‚à‚Ì‚ğ•Ô‚·B
+	    @return singleton-instance‚Ö‚ÌQÆB
 	 */
 	static t_value_type& construct()
 	{
 		return this_type::construct(boost::in_place());
 	}
 
-	/** @brief sigleton-instanceã‚’æ§‹ç¯‰ã™ã‚‹ã€‚
-	        ã™ã§ã«singleton-instanceãŒã‚ã‚‹ãªã‚‰ã€æ§‹ç¯‰ã¯è¡Œã‚ãšæ—¢å­˜ã®ã‚‚ã®ã‚’è¿”ã™ã€‚
-	    @param[in] i_constructor boost::in_placeã‹ã‚‰å–å¾—ã—ãŸæ§‹ç¯‰é–¢æ•°objectã€‚
-		@param[in] i_destruct_priority ç ´æ£„ã®å„ªå…ˆé †ä½ã€‚ç ´æ£„ã¯æ˜‡é †ã«è¡Œã‚ã‚Œã‚‹ã€‚
-	    @return singleton-instanceã¸ã®å‚ç…§ã€‚
+	/** @brief sigleton-instance‚ğ\’z‚·‚éB
+	        ‚·‚Å‚Ésingleton-instance‚ª‚ ‚é‚È‚çA\’z‚Ís‚í‚¸Šù‘¶‚Ì‚à‚Ì‚ğ•Ô‚·B
+	    @param[in] i_constructor boost::in_place‚©‚çæ“¾‚µ‚½\’zŠÖ”objectB
+		@param[in] i_destruct_priority ”jŠü‚Ì—Dæ‡ˆÊB”jŠü‚Í¸‡‚És‚í‚ê‚éB
+	    @return singleton-instance‚Ö‚ÌQÆB
 	 */
 	template< typename t_constructor >
 	static t_value_type& construct(
 		t_constructor const& i_constructor)
 	{
-		// sigleton-instanceæ§‹ç¯‰é–¢æ•°ã‚’ä¸€åº¦ã ã‘å‘¼ã³å‡ºã™ã€‚
+		// sigleton-instance\’zŠÖ”‚ğˆê“x‚¾‚¯ŒÄ‚Ño‚·B
 		#ifndef PSYQ_SINGLETON_DISABLE_THREADS
 			boost::call_once(
 				this_type::is_constructed(),
@@ -71,7 +71,7 @@ class psyq::simple_singleton:
 			}
 		#endif // PSYQ_SINGLETON_DISABLE_THREADS
 
-		// singleton-instanceã‚’å–å¾—ã€‚
+		// singleton-instance‚ğæ“¾B
 		PSYQ_ASSERT(NULL != this_type::instance().pointer);
 		return *this_type::instance().pointer;
 	}
@@ -79,7 +79,7 @@ class psyq::simple_singleton:
 	//.........................................................................
 	private:
 	//-------------------------------------------------------------------------
-	/** @brief singleton-instanceã‚’ä¿æŒã™ã‚‹ã€‚
+	/** @brief singleton-instance‚ğ•Û‚·‚éB
 	 */
 	class instance_holder:
 		private boost::noncopyable
@@ -88,7 +88,7 @@ class psyq::simple_singleton:
 		//---------------------------------------------------------------------
 		~instance_holder()
 		{
-			// ä¿æŒã—ã¦ã„ã‚‹é ˜åŸŸã®instanceã‚’ç ´æ£„ã™ã‚‹ã€‚
+			// •Û‚µ‚Ä‚¢‚é—Ìˆæ‚Ìinstance‚ğ”jŠü‚·‚éB
 			t_value_type* const a_pointer(this->pointer);
 			PSYQ_ASSERT(NULL != a_pointer);
 			this->pointer = NULL;
@@ -105,7 +105,7 @@ class psyq::simple_singleton:
 		void construct(
 			t_constructor const& i_constructor)
 		{
-			// ä¿æŒã—ã¦ã„ã‚‹é ˜åŸŸã«instanceã‚’æ§‹ç¯‰ã™ã‚‹ã€‚
+			// •Û‚µ‚Ä‚¢‚é—Ìˆæ‚Éinstance‚ğ\’z‚·‚éB
 			PSYQ_ASSERT(NULL == this->pointer);
 			i_constructor.template apply< t_value_type >(&this->storage);
 			this->pointer = reinterpret_cast< t_value_type* >(&this->storage);
@@ -120,8 +120,8 @@ class psyq::simple_singleton:
 	};
 
 	//-------------------------------------------------------------------------
-	/** @brief singleton-instanceã‚’æ§‹ç¯‰ã™ã‚‹ã€‚
-	    @param[in] i_constructor boost::in_placeã‹ã‚‰å–å¾—ã—ãŸæ§‹ç¯‰é–¢æ•°objectã€‚
+	/** @brief singleton-instance‚ğ\’z‚·‚éB
+	    @param[in] i_constructor boost::in_place‚©‚çæ“¾‚µ‚½\’zŠÖ”objectB
 	 */
 	template< typename t_constructor >
 	static void construct_instance(
@@ -130,7 +130,7 @@ class psyq::simple_singleton:
 		this_type::instance().construct(*i_constructor);
 	}
 
-	/** @brief singleton-instanceã‚’æ§‹ç¯‰ã—ãŸã‹ã©ã†ã‹ã®flagã‚’å‚ç…§ã™ã‚‹ã€‚
+	/** @brief singleton-instance‚ğ\’z‚µ‚½‚©‚Ç‚¤‚©‚Ìflag‚ğQÆ‚·‚éB
 	 */
 	#ifndef PSYQ_SINGLETON_DISABLE_THREADS
 		static boost::once_flag& is_constructed()
@@ -146,10 +146,10 @@ class psyq::simple_singleton:
 		}
 	#endif // PSYQ_SINGLETON_DISABLE_THREADS
 
-	/** @brief singleton-instanceã‚’ä¿æŒã™ã‚‹é ˜åŸŸã‚’å‚ç…§ã™ã‚‹ã€‚
-	        é™çš„å±€æ‰€å¤‰æ•°ãªã®ã§ã€æ§‹ç¯‰ã¯æœ€åˆã«ã“ã®é–¢æ•°ãŒå‘¼ã°ã‚ŒãŸæ™‚ç‚¹ã§è¡Œã‚ã‚Œã‚‹ã€‚
-	        æœ€åˆã¯å¿…ãšconstruct_instance()ã‹ã‚‰å‘¼ã°ã‚Œã‚‹ã€‚
-	        ç ´æ£„ã¯ã€main()ã®çµ‚äº†å¾Œã«ã€æ§‹ç¯‰ã—ãŸé †åºã®é€†é †ã§è‡ªå‹•çš„ã«è¡Œã‚ã‚Œã‚‹ã€‚
+	/** @brief singleton-instance‚ğ•Û‚·‚é—Ìˆæ‚ğQÆ‚·‚éB
+	        Ã“I‹ÇŠ•Ï”‚È‚Ì‚ÅA\’z‚ÍÅ‰‚É‚±‚ÌŠÖ”‚ªŒÄ‚Î‚ê‚½“_‚Ås‚í‚ê‚éB
+	        Å‰‚Í•K‚¸construct_instance()‚©‚çŒÄ‚Î‚ê‚éB
+	        ”jŠü‚ÍAmain()‚ÌI—¹Œã‚ÉA\’z‚µ‚½‡˜‚Ì‹t‡‚Å©“®“I‚És‚í‚ê‚éB
 	 */
 	static typename this_type::instance_holder& instance()
 	{

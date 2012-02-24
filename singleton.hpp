@@ -1,4 +1,4 @@
-ï»¿#ifndef PSYQ_SINGLETON_HPP_
+#ifndef PSYQ_SINGLETON_HPP_
 #define PSYQ_SINGLETON_HPP_
 
 #include <boost/type_traits/aligned_storage.hpp>
@@ -12,36 +12,33 @@
 
 namespace psyq
 {
-	namespace singleton_detail
-	{
-		struct _default_tag {};
-		class _ordered_destructor;
-		template< typename > class _ordered_storage;
-	}
-
 	template< typename, typename > class singleton;
+
+	struct _singleton_default_tag {};
+	class _singleteon_ordered_destructor;
+	template< typename > class _singleton_ordered_storage;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief ç ´æ£„é–¢æ•°ã®å˜æ–¹å‘é€£çµlistã€‚
+/** @brief ”jŠüŠÖ”‚Ì’P•ûŒü˜AŒ‹listB
  */
-class psyq::singleton_detail::_ordered_destructor:
+class psyq::_singleteon_ordered_destructor:
 	public boost::noncopyable
 {
-	typedef psyq::singleton_detail::_ordered_destructor this_type;
+	typedef psyq::_singleteon_ordered_destructor this_type;
 	template< typename, typename > friend class psyq::singleton;
 
 	//.........................................................................
 	public:
 	//-------------------------------------------------------------------------
-	~_ordered_destructor()
+	~_singleteon_ordered_destructor()
 	{
-		// listã®å…ˆé ­nodeã‚’åˆ‡ã‚Šé›¢ã™ã€‚
+		// list‚Ìæ“ªnode‚ğØ‚è—£‚·B
 		this_type* const a_node(this_type::first_node());
 		PSYQ_ASSERT(NULL != a_node);
 		this_type::first_node() = a_node->next;
 
-		// åˆ‡ã‚Šé›¢ã—ãŸnodeã‚’ç ´æ£„ã™ã‚‹ã€‚thisã®ç ´æ£„ã§ã¯ãªã„ã“ã¨ã«æ³¨æ„ï¼
+		// Ø‚è—£‚µ‚½node‚ğ”jŠü‚·‚éBthis‚Ì”jŠü‚Å‚Í‚È‚¢‚±‚Æ‚É’ˆÓI
 		this_type::function const a_destructor(a_node->destructor);
 		a_node->next = a_node;
 		a_node->destructor = NULL;
@@ -49,7 +46,7 @@ class psyq::singleton_detail::_ordered_destructor:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief ç ´æ£„ã®å„ªå…ˆé †ä½ã‚’å–å¾—ã™ã‚‹ã€‚
+	/** @brief ”jŠü‚Ì—Dæ‡ˆÊ‚ğæ“¾‚·‚éB
 	 */
 	int get_priority() const
 	{
@@ -58,10 +55,10 @@ class psyq::singleton_detail::_ordered_destructor:
 
 	//.........................................................................
 	protected:
-	typedef void (*function)(this_type* const); ///< ç ´æ£„é–¢æ•°ã®å‹ã€‚
+	typedef void (*function)(this_type* const); ///< ”jŠüŠÖ”‚ÌŒ^B
 
 	//-------------------------------------------------------------------------
-	explicit _ordered_destructor(
+	explicit _singleteon_ordered_destructor(
 		this_type::function i_destructor):
 		destructor(i_destructor),
 		priority(0)
@@ -72,28 +69,28 @@ class psyq::singleton_detail::_ordered_destructor:
 	//.........................................................................
 	private:
 	//-------------------------------------------------------------------------
-	/** @brief ç ´æ£„é–¢æ•°listã«ç™»éŒ²ã™ã‚‹ã€‚
-	    @param[in] i_priority ç ´æ£„ã®å„ªå…ˆé †ä½ã€‚
+	/** @brief ”jŠüŠÖ”list‚É“o˜^‚·‚éB
+	    @param[in] i_priority ”jŠü‚Ì—Dæ‡ˆÊB
 	 */
 	void join(
 		int const i_priority)
 	{
 		PSYQ_ASSERT(this == this->next);
 
-		// å„ªå…ˆé †ä½ã‚’æ›´æ–°ã—ã€listã«æŒ¿å…¥ã™ã‚‹ã€‚
+		// —Dæ‡ˆÊ‚ğXV‚µAlist‚É‘}“ü‚·‚éB
 		this->priority = i_priority;
 		this_type* a_node(this_type::first_node());
 		if (this_type::less_equal(i_priority, a_node))
 		{
 			PSYQ_ASSERT(this != a_node);
 
-			// å„ªå…ˆé †ä½ãŒæœ€å°ãªã®ã§ã€å…ˆé ­ã«æŒ¿å…¥ã™ã‚‹ã€‚
+			// —Dæ‡ˆÊ‚ªÅ¬‚È‚Ì‚ÅAæ“ª‚É‘}“ü‚·‚éB
 			this->next = a_node;
 			this_type::first_node() = this;
 		}
 		else
 		{
-			// æŒ¿å…¥ä½ç½®ã‚’æ¤œç´¢ã—ã¦ã‹ã‚‰æŒ¿å…¥ã™ã‚‹ã€‚
+			// ‘}“üˆÊ’u‚ğŒŸõ‚µ‚Ä‚©‚ç‘}“ü‚·‚éB
 			for (;;)
 			{
 				PSYQ_ASSERT(this != a_node);
@@ -110,14 +107,14 @@ class psyq::singleton_detail::_ordered_destructor:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief ç ´æ£„é–¢æ•°listã‹ã‚‰åˆ†é›¢ã™ã‚‹ã€‚
+	/** @brief ”jŠüŠÖ”list‚©‚ç•ª—£‚·‚éB
 	 */
 	void unjoin()
 	{
 		this_type* a_node(this_type::first_node());
 		if (this == a_node)
 		{
-			// å…ˆé ­ã‹ã‚‰åˆ‡ã‚Šé›¢ã™ã€‚
+			// æ“ª‚©‚çØ‚è—£‚·B
 			this_type::first_node() = this->next;
 		}
 		else if (this != this->next)
@@ -139,7 +136,7 @@ class psyq::singleton_detail::_ordered_destructor:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief å„ªå…ˆé †ä½ã‚’æ¯”è¼ƒã€‚
+	/** @brief —Dæ‡ˆÊ‚ğ”äŠrB
 	 */
 	static bool less_equal(
 		int const              i_priority,
@@ -148,7 +145,7 @@ class psyq::singleton_detail::_ordered_destructor:
 		return NULL == i_node || i_priority <= i_node->priority;
 	}
 
-	/** @brief ç ´æ£„é–¢æ•°listã®å…ˆé ­nodeã¸ã®pointerã‚’å‚ç…§ã™ã‚‹ã€‚
+	/** @brief ”jŠüŠÖ”list‚Ìæ“ªnode‚Ö‚Ìpointer‚ğQÆ‚·‚éB
 	 */
 	static this_type*& first_node()
 	{
@@ -156,7 +153,7 @@ class psyq::singleton_detail::_ordered_destructor:
 		return s_first_node;
 	}
 
-	/** @brief singletonã§ä½¿ã†mutexã‚’å‚ç…§ã™ã‚‹ã€‚
+	/** @brief singleton‚Åg‚¤mutex‚ğQÆ‚·‚éB
 	 */
 	#ifndef PSYQ_SINGLETON_DISABLE_THREADS
 		static boost::mutex& class_mutex()
@@ -168,20 +165,20 @@ class psyq::singleton_detail::_ordered_destructor:
 
 	//.........................................................................
 	private:
-	this_type*          next;       ///< æ¬¡ã®nodeã€‚
-	this_type::function destructor; ///< ç ´æ£„æ™‚ã«å‘¼ã³å‡ºã™é–¢æ•°ã€‚
-	int                 priority;   ///< ç ´æ£„ã®å„ªå…ˆé †ä½ã€‚æ˜‡é †ã«ç ´æ£„ã•ã‚Œã‚‹ã€‚
+	this_type*          next;       ///< Ÿ‚ÌnodeB
+	this_type::function destructor; ///< ”jŠü‚ÉŒÄ‚Ño‚·ŠÖ”B
+	int                 priority;   ///< ”jŠü‚Ì—Dæ‡ˆÊB¸‡‚É”jŠü‚³‚ê‚éB
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief singleton-instanceé ˜åŸŸã®å˜æ–¹å‘é€£çµlistã€‚
+/** @brief singleton-instance—Ìˆæ‚Ì’P•ûŒü˜AŒ‹listB
  */
 template< typename t_value_type >
-class psyq::singleton_detail::_ordered_storage:
-	public psyq::singleton_detail::_ordered_destructor
+class psyq::_singleton_ordered_storage:
+	public psyq::_singleteon_ordered_destructor
 {
-	typedef psyq::singleton_detail::_ordered_storage< t_value_type > this_type;
-	typedef psyq::singleton_detail::_ordered_destructor super_type;
+	typedef psyq::_singleton_ordered_storage< t_value_type > this_type;
+	typedef psyq::_singleteon_ordered_destructor super_type;
 	template< typename, typename > friend class psyq::singleton;
 
 	//.........................................................................
@@ -191,7 +188,7 @@ class psyq::singleton_detail::_ordered_storage:
 	//.........................................................................
 	private:
 	//-------------------------------------------------------------------------
-	_ordered_storage():
+	_singleton_ordered_storage():
 		super_type(&this_type::destruct),
 		pointer(NULL)
 	{
@@ -205,8 +202,8 @@ class psyq::singleton_detail::_ordered_storage:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief ä¿æŒã—ã¦ã„ã‚‹é ˜åŸŸã«instanceã‚’æ§‹ç¯‰ã™ã‚‹ã€‚
-	    @param[in] i_constructor boost::in_placeã‹ã‚‰å–å¾—ã—ãŸæ§‹ç¯‰é–¢æ•°objectã€‚
+	/** @brief •Û‚µ‚Ä‚¢‚é—Ìˆæ‚Éinstance‚ğ\’z‚·‚éB
+	    @param[in] i_constructor boost::in_place‚©‚çæ“¾‚µ‚½\’zŠÖ”objectB
 	 */
 	template< typename t_constructor >
 	void construct(
@@ -218,7 +215,7 @@ class psyq::singleton_detail::_ordered_storage:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief ä¿æŒã—ã¦ã„ã‚‹é ˜åŸŸã®instanceã‚’ç ´æ£„ã™ã‚‹ã€‚
+	/** @brief •Û‚µ‚Ä‚¢‚é—Ìˆæ‚Ìinstance‚ğ”jŠü‚·‚éB
 	 */
 	static void destruct(
 		super_type* const i_instance)
@@ -231,10 +228,10 @@ class psyq::singleton_detail::_ordered_storage:
 	}
 
 	//.........................................................................
-	/// singleton-instanceã¸ã®pointerã€‚
+	/// singleton-instance‚Ö‚ÌpointerB
 	t_value_type* pointer;
 
-	/// singleton-instanceã‚’æ ¼ç´ã™ã‚‹é ˜åŸŸã€‚
+	/// singleton-instance‚ğŠi”[‚·‚é—ÌˆæB
 	typename boost::aligned_storage<
 		sizeof(t_value_type),
 		boost::alignment_of< t_value_type >::value >::type
@@ -242,13 +239,13 @@ class psyq::singleton_detail::_ordered_storage:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief singletonç®¡ç†classã€‚
-    @tparam t_value_type singletonã®å‹ã€‚
-    @tparam t_tag åŒã˜å‹ã®singletonã§åŒºåˆ¥ãŒå¿…è¦ãªå ´åˆã«ä½¿ã†tagã€‚
+/** @brief singletonŠÇ—classB
+    @tparam t_value_type singleton‚ÌŒ^B
+    @tparam t_tag “¯‚¶Œ^‚Ìsingleton‚Å‹æ•Ê‚ª•K—v‚Èê‡‚Ég‚¤tagB
  */
 template<
 	typename t_value_type,
-	typename t_tag = psyq::singleton_detail::_default_tag >
+	typename t_tag = psyq::_singleton_default_tag >
 class psyq::singleton:
 	private boost::noncopyable
 {
@@ -260,9 +257,9 @@ class psyq::singleton:
 	typedef t_tag tag;
 
 	//-------------------------------------------------------------------------
-	/** @brief sigleton-instanceã‚’å‚ç…§ã™ã‚‹ã€‚
-	        ã¾ã singleton-instanceãŒãªã„ãªã‚‰ã€default-constructorã§æ§‹ç¯‰ã™ã‚‹ã€‚
-	    @return singleton-instanceã¸ã®å‚ç…§ã€‚
+	/** @brief sigleton-instance‚ğQÆ‚·‚éB
+	        ‚Ü‚¾singleton-instance‚ª‚È‚¢‚È‚çAdefault-constructor‚Å\’z‚·‚éB
+	    @return singleton-instance‚Ö‚ÌQÆB
 	 */
 	static t_value_type& get()
 	{
@@ -270,10 +267,10 @@ class psyq::singleton:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief sigleton-instanceã‚’default-constructorã§æ§‹ç¯‰ã™ã‚‹ã€‚
-	        ã™ã§ã«singleton-instanceãŒã‚ã‚‹ãªã‚‰ã€ä½•ã‚‚è¡Œã‚ãšã«æ—¢å­˜ã®ã‚‚ã®ã‚’è¿”ã™ã€‚
-	    @param[in] i_destruct_priority ç ´æ£„ã®å„ªå…ˆé †ä½ã€‚ç ´æ£„ã¯æ˜‡é †ã«è¡Œã‚ã‚Œã‚‹ã€‚
-	    @return singleton-instanceã¸ã®å‚ç…§ã€‚
+	/** @brief sigleton-instance‚ğdefault-constructor‚Å\’z‚·‚éB
+	        ‚·‚Å‚Ésingleton-instance‚ª‚ ‚é‚È‚çA‰½‚às‚í‚¸‚ÉŠù‘¶‚Ì‚à‚Ì‚ğ•Ô‚·B
+	    @param[in] i_destruct_priority ”jŠü‚Ì—Dæ‡ˆÊB”jŠü‚Í¸‡‚És‚í‚ê‚éB
+	    @return singleton-instance‚Ö‚ÌQÆB
 	 */
 	static t_value_type& construct(
 		int const i_destruct_priority = 0)
@@ -281,18 +278,18 @@ class psyq::singleton:
 		return this_type::construct(boost::in_place(), i_destruct_priority);
 	}
 
-	/** @brief sigleton-instanceã‚’æ§‹ç¯‰ã™ã‚‹ã€‚
-	        ã™ã§ã«singleton-instanceãŒã‚ã‚‹ãªã‚‰ã€ä½•ã‚‚è¡Œã‚ãšã«æ—¢å­˜ã®ã‚‚ã®ã‚’è¿”ã™ã€‚
-	    @param[in] i_constructor boost::in_placeã‹ã‚‰å–å¾—ã—ãŸæ§‹ç¯‰é–¢æ•°objectã€‚
-	    @param[in] i_destruct_priority ç ´æ£„ã®å„ªå…ˆé †ä½ã€‚ç ´æ£„ã¯æ˜‡é †ã«è¡Œã‚ã‚Œã‚‹ã€‚
-	    @return singleton-instanceã¸ã®å‚ç…§ã€‚
+	/** @brief sigleton-instance‚ğ\’z‚·‚éB
+	        ‚·‚Å‚Ésingleton-instance‚ª‚ ‚é‚È‚çA‰½‚às‚í‚¸‚ÉŠù‘¶‚Ì‚à‚Ì‚ğ•Ô‚·B
+	    @param[in] i_constructor boost::in_place‚©‚çæ“¾‚µ‚½\’zŠÖ”objectB
+	    @param[in] i_destruct_priority ”jŠü‚Ì—Dæ‡ˆÊB”jŠü‚Í¸‡‚És‚í‚ê‚éB
+	    @return singleton-instance‚Ö‚ÌQÆB
 	 */
 	template< typename t_constructor >
 	static t_value_type& construct(
 		t_constructor const& i_constructor,
 		int const            i_destruct_priority = 0)
 	{
-		// sigleton-instanceæ§‹ç¯‰é–¢æ•°ã‚’ä¸€åº¦ã ã‘å‘¼ã³å‡ºã™ã€‚
+		// sigleton-instance\’zŠÖ”‚ğˆê“x‚¾‚¯ŒÄ‚Ño‚·B
 		#ifndef PSYQ_SINGLETON_DISABLE_THREADS
 			boost::call_once(
 				this_type::is_constructed(),
@@ -308,42 +305,42 @@ class psyq::singleton:
 			}
 		#endif // !PSYQ_SINGLETON_NO_THREAD_SAFE
 
-		// singleton-instanceã‚’å–å¾—ã€‚
+		// singleton-instance‚ğæ“¾B
 		typename this_type::storage& a_instance(this_type::instance());
 		PSYQ_ASSERT(NULL != a_instance.get_pointer());
 		return *a_instance.get_pointer();
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief ç ´æ£„ã®å„ªå…ˆé †ä½ã‚’å–å¾—ã™ã‚‹ã€‚
+	/** @brief ”jŠü‚Ì—Dæ‡ˆÊ‚ğæ“¾‚·‚éB
 	 */
 	static int get_destruct_priority()
 	{
-		// ã¾ã singleton-instanceãŒãªã„å ´åˆã¯ã€ã“ã“ã§æ§‹ç¯‰ã—ã¦ãŠãã€‚
+		// ‚Ü‚¾singleton-instance‚ª‚È‚¢ê‡‚ÍA‚±‚±‚Å\’z‚µ‚Ä‚¨‚­B
 		this_type::construct();
 		return this_type::instance().get_priority();
 	}
 
-	/** @brief ç ´æ£„ã®å„ªå…ˆé †ä½ã‚’è¨­å®šã™ã‚‹ã€‚
-	    @param[in] i_destruct_priority ç ´æ£„ã®å„ªå…ˆé †ä½ã€‚ç ´æ£„ã¯æ˜‡é †ã«è¡Œã‚ã‚Œã‚‹ã€‚
+	/** @brief ”jŠü‚Ì—Dæ‡ˆÊ‚ğİ’è‚·‚éB
+	    @param[in] i_destruct_priority ”jŠü‚Ì—Dæ‡ˆÊB”jŠü‚Í¸‡‚És‚í‚ê‚éB
 	 */
 	static void set_destruct_priority(
 		int const i_destruct_priority)
 	{
-		// ã¾ã singleton-instanceãŒãªã„å ´åˆã¯ã€ã“ã“ã§æ§‹ç¯‰ã—ã¦ãŠãã€‚
+		// ‚Ü‚¾singleton-instance‚ª‚È‚¢ê‡‚ÍA‚±‚±‚Å\’z‚µ‚Ä‚¨‚­B
 		this_type::construct(i_destruct_priority);
 
-		// singleton-instanceã‚’å‚ç…§ã™ã‚‹å‰ã«ã€lockã—ã¦ãŠãã€‚
+		// singleton-instance‚ğQÆ‚·‚é‘O‚ÉAlock‚µ‚Ä‚¨‚­B
 		#ifndef PSYQ_SINGLETON_DISABLE_THREADS
 			boost::lock_guard< boost::mutex > const a_lock(
-				psyq::singleton_detail::_ordered_destructor::class_mutex());
+				psyq::_singleteon_ordered_destructor::class_mutex());
 		#endif // !PSYQ_SINGLETON_DISABLE_THREADS
 
-		// ç•°ãªã‚‹å„ªå…ˆé †ä½ãŒè¨­å®šã•ã‚ŒãŸå ´åˆã«ã®ã¿å¤‰æ›´ã™ã‚‹ã€‚
+		// ˆÙ‚È‚é—Dæ‡ˆÊ‚ªİ’è‚³‚ê‚½ê‡‚É‚Ì‚İ•ÏX‚·‚éB
 		typename this_type::storage& a_instance(this_type::instance());
 		if (a_instance.get_priority() != i_destruct_priority)
 		{
-			// ç ´æ£„é–¢æ•°listã‹ã‚‰å–ã‚Šå¤–ã—ãŸå¾Œã§ã€ç™»éŒ²ã™ã‚‹ã€‚
+			// ”jŠüŠÖ”list‚©‚çæ‚èŠO‚µ‚½Œã‚ÅA“o˜^‚·‚éB
 			a_instance.unjoin();
 			a_instance.join(i_destruct_priority);
 		}
@@ -351,10 +348,10 @@ class psyq::singleton:
 
 	//.........................................................................
 	private:
-	typedef psyq::singleton_detail::_ordered_storage< t_value_type > storage;
+	typedef psyq::_singleton_ordered_storage< t_value_type > storage;
 
 	//-------------------------------------------------------------------------
-	/** @brief singleton-instanceé ˜åŸŸã‚’å‚ç…§ã™ã‚‹ã€‚
+	/** @brief singleton-instance—Ìˆæ‚ğQÆ‚·‚éB
 	 */
 	static typename this_type::storage& instance()
 	{
@@ -362,9 +359,9 @@ class psyq::singleton:
 		return s_instance;
 	}
 
-	/** @brief singleton-instanceã‚’æ§‹ç¯‰ã™ã‚‹ã€‚
-	    @param[in] i_constructor boost::in_placeã‹ã‚‰å–å¾—ã—ãŸæ§‹ç¯‰é–¢æ•°objectã€‚
-	    @param[in] i_destruct_priority ç ´æ£„ã®å„ªå…ˆé †ä½ã€‚
+	/** @brief singleton-instance‚ğ\’z‚·‚éB
+	    @param[in] i_constructor boost::in_place‚©‚çæ“¾‚µ‚½\’zŠÖ”objectB
+	    @param[in] i_destruct_priority ”jŠü‚Ì—Dæ‡ˆÊB
 	 */
 	template< typename t_constructor >
 	static void construct_instance(
@@ -372,17 +369,17 @@ class psyq::singleton:
 		int const                  i_destruct_priority)
 	{
 		#ifndef PSYQ_SINGLETON_DISABLE_THREADS
-			// mutexã‚’æ§‹ç¯‰ã™ã‚‹ã€‚
-			psyq::singleton_detail::_ordered_destructor::class_mutex();
+			// mutex‚ğ\’z‚·‚éB
+			psyq::_singleteon_ordered_destructor::class_mutex();
 		#endif // !PSYQ_SINGLETON_DISABLE_THREADS
 
-		// instanceã‚’æ§‹ç¯‰ã—ã€ç ´æ£„é–¢æ•°listã«ç™»éŒ²ã™ã‚‹ã€‚
+		// instance‚ğ\’z‚µA”jŠüŠÖ”list‚É“o˜^‚·‚éB
 		typename this_type::storage& a_instance(this_type::instance());
 		a_instance.construct(*i_constructor);
 		a_instance.join(i_destruct_priority);
 	}
 
-	/** @brief singleton-instanceã‚’æ§‹ç¯‰ã—ãŸã‹ã©ã†ã‹ã®flagã‚’å‚ç…§ã™ã‚‹ã€‚
+	/** @brief singleton-instance‚ğ\’z‚µ‚½‚©‚Ç‚¤‚©‚Ìflag‚ğQÆ‚·‚éB
 	 */
 	#ifndef PSYQ_SINGLETON_DISABLE_THREADS
 		static boost::once_flag& is_constructed()

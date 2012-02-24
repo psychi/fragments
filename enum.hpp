@@ -6,7 +6,7 @@
 namespace psyq
 {
 	template< typename, std::size_t > class enum_container;
-	template< typename, typename, typename > class enum_value;
+	template< typename, typename > class enum_value;
 };
 
 //-----------------------------------------------------------------------------
@@ -16,34 +16,36 @@ namespace psyq
     @param d_property_type
         列挙子が持つ属性値の型。列挙子が属性値を持たないなら、voidを指定する。
     @param d_values
-        BOOST_PP_SEQ形式で記述した、列挙子要素を定義する配列。
-        BOOST_PP_SEQの仕様により、定義できる要素はBOOST_PP_LIMIT_REPEATが最大。
-        boost-1.47.0だと、BOOST_PP_LIMIT_REPEATは256となっている。
+        列挙子を定義する配列。BOOST_PP_SEQ形式で記述する。
+        boostの仕様により、定義できる列挙子の数はBOOST_PP_LIMIT_SEQが最大。
+        boost-1.47.0だと、BOOST_PP_LIMIT_SEQは256となっている。
  */
 #define PSYQ_ENUM(d_enum_name, d_name_type, d_property_type, d_values)\
 	class d_enum_name: private boost::noncopyable\
 	{\
+		private:\
+		d_enum_name() {}\
 		class PSYQ_ENUM_ordinal: private boost::noncopyable\
 		{\
-			public: BOOST_PP_REPEAT(\
+			public:\
+			BOOST_PP_REPEAT(\
 				BOOST_PP_SEQ_SIZE(d_values),\
 				PSYQ_ENUM_ORDINAL_DEFINE,\
 				d_values)\
 			private: PSYQ_ENUM_ordinal();\
 		};\
-		class PSYQ_ENUM_values;\
 		typedef psyq::enum_container<\
-			psyq::enum_value< PSYQ_ENUM_values, d_name_type, d_property_type >,\
+			psyq::enum_value< d_name_type, d_property_type >,\
 			BOOST_PP_SEQ_SIZE(d_values) >\
 				PSYQ_ENUM_container;\
 		class PSYQ_ENUM_values: public PSYQ_ENUM_container\
 		{\
-			friend class d_enum_name;\
-			public: BOOST_PP_REPEAT(\
+			public:\
+			BOOST_PP_REPEAT(\
 				BOOST_PP_SEQ_SIZE(d_values),\
 				PSYQ_ENUM_VALUE_DEFINE,\
 				d_values)\
-			private: PSYQ_ENUM_values(): PSYQ_ENUM_container()\
+			PSYQ_ENUM_values(): PSYQ_ENUM_container()\
 			{\
 				BOOST_PP_REPEAT(\
 					BOOST_PP_SEQ_SIZE(d_values),\
@@ -53,26 +55,18 @@ namespace psyq
 		};\
 		public:\
 		typedef PSYQ_ENUM_ordinal ordinal;\
+		typedef PSYQ_ENUM_values values;\
 		typedef PSYQ_ENUM_container::pointer pointer;\
 		typedef PSYQ_ENUM_container::reference reference;\
-		static pointer get(\
-			PSYQ_ENUM_container::value_type::ordinal_type const i_ordinal)\
-		{\
-			return psyq::singleton< d_enum_name >::get().container(i_ordinal);\
-		}\
-		static pointer get(\
-			PSYQ_ENUM_container::value_type::name_type const& i_name)\
-		{\
-			return psyq::singleton< d_enum_name >::get().container(i_name);\
-		}\
-		static std::size_t const size = PSYQ_ENUM_container::size;\
-		PSYQ_ENUM_values const container;\
-		d_enum_name() {}\
-	};\
+		static PSYQ_ENUM_container::value_type::ordinal_type const\
+			size = PSYQ_ENUM_container::size;\
+	};
 
 //-----------------------------------------------------------------------------
+/** @brief PSYQ_ENUMのd_values引数で、列挙子の定義に使う。
+ */
 #define PSYQ_ENUM_VALUE(d_name, d_property) ((d_name)(d_property))
-#define PSYQ_ENUM_NAME(d_name) ((d_name)(value_type::property_type()))
+#define PSYQ_ENUM_NAME(d_name) ((d_name))
 
 //-----------------------------------------------------------------------------
 /** @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
@@ -85,11 +79,10 @@ namespace psyq
 		BOOST_PP_COMMA_IF(\
 			BOOST_PP_LESS(\
 				1, BOOST_PP_SEQ_SIZE(BOOST_PP_SEQ_ELEM(d_ordinal, d_values))))\
-		BOOST_PP_IF(\
+		BOOST_PP_EXPR_IF(\
 			BOOST_PP_LESS(\
 				1, BOOST_PP_SEQ_SIZE(BOOST_PP_SEQ_ELEM(d_ordinal, d_values))),\
-			BOOST_PP_SEQ_ELEM(1, BOOST_PP_SEQ_ELEM(d_ordinal, d_values)),\
-			BOOST_PP_EMPTY()));
+			BOOST_PP_SEQ_ELEM(1, BOOST_PP_SEQ_ELEM(d_ordinal, d_values))));
 
 /** @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
  */
@@ -121,8 +114,9 @@ namespace psyq
 #endif
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+namespace psyq {
 template< typename t_value_type, std::size_t t_size >
-class psyq::enum_container:
+class enum_container:
 	private boost::noncopyable
 {
 	typedef enum_container< t_value_type, t_size > this_type;
@@ -189,7 +183,7 @@ class psyq::enum_container:
 	{
 		PSYQ_ASSERT(i_index < t_size);
 		return const_cast< typename this_type::value_type* >(
-			reinterpret_cast< value_type const* >(&this->storage)) + i_index;
+			reinterpret_cast< value_type const* >(&this->_storage)) + i_index;
 	}
 
 	//.........................................................................
@@ -200,16 +194,13 @@ class psyq::enum_container:
 	typename boost::aligned_storage<
 		sizeof(value_type[t_size]),
 		boost::alignment_of< value_type[t_size] >::value >::type
-			storage;
+			_storage;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template< typename t_friend_type, typename t_name_type, typename t_property_type >
-class psyq::enum_value:
-	private boost::noncopyable
+template< typename t_name_type, typename t_property_type >
+class enum_value
 {
-	PSYQ_ENUM_TEMPLATE_FRIEND(t_friend_type);
-
 	//.........................................................................
 	public:
 	typedef std::size_t ordinal_type;
@@ -217,7 +208,6 @@ class psyq::enum_value:
 	typedef t_property_type property_type;
 
 	//-------------------------------------------------------------------------
-	private:
 	enum_value(
 		ordinal_type const   i_ordinal,
 		name_type const&     i_name,
@@ -229,41 +219,32 @@ class psyq::enum_value:
 		// pass
 	}
 
-	//.........................................................................
-	public:
+	//-------------------------------------------------------------------------
 	ordinal_type  ordinal;  ///< 列挙子の序数。
 	name_type     name;     ///< 列挙子の名前。
 	property_type property; ///< 列挙子の属性。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-namespace psyq {
-template< typename t_friend_type, typename t_name_type >
-class enum_value< t_friend_type, t_name_type, void >:
-	private boost::noncopyable
+template< typename t_name_type >
+class enum_value< t_name_type, void >
 {
-	PSYQ_ENUM_TEMPLATE_FRIEND(t_friend_type);
-
 	//.........................................................................
 	public:
 	typedef std::size_t ordinal_type;
 	typedef t_name_type name_type;
-	typedef int property_type;
 
-	//.........................................................................
-	private:
+	//-------------------------------------------------------------------------
 	enum_value(
 		ordinal_type const i_ordinal,
-		name_type const&   i_name,
-		property_type const = 0):
+		name_type const&   i_name):
 		ordinal(i_ordinal),
 		name(i_name)
 	{
 		// pass
 	}
 
-	//.........................................................................
-	public:
+	//-------------------------------------------------------------------------
 	ordinal_type ordinal; ///< 列挙子の序数。
 	name_type    name;    ///< 列挙子の名前。
 };

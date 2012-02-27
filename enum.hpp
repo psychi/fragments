@@ -35,13 +35,13 @@ namespace psyq
 			public:\
 			BOOST_PP_REPEAT(\
 				BOOST_PP_SEQ_SIZE(d_values),\
-				PSYQ_ENUM_VALUE_DEFINE,\
+				PSYQ_PRIVATE_ENUM_VALUE_GETTER,\
 				d_values)\
 			PSYQ_ENUM_values(): PSYQ_ENUM_container()\
 			{\
 				BOOST_PP_REPEAT(\
 					BOOST_PP_SEQ_SIZE(d_values),\
-					PSYQ_ENUM_VALUE_CONSTRUCT,\
+					PSYQ_PRIVATE_ENUM_VALUE_CONSTRUCT,\
 					d_values)\
 			}\
 		};\
@@ -50,7 +50,7 @@ namespace psyq
 			public:\
 			BOOST_PP_REPEAT(\
 				BOOST_PP_SEQ_SIZE(d_values),\
-				PSYQ_ENUM_ORDINAL_DEFINE,\
+				PSYQ_PRIVATE_ENUM_ORDINAL_DEFINE,\
 				d_values)\
 			private: PSYQ_ENUM_ordinal();\
 		};\
@@ -65,38 +65,43 @@ namespace psyq
 
 //-----------------------------------------------------------------------------
 /** @brief PSYQ_ENUMのd_values引数で、列挙子の定義に使う。
+    @param d_name     列挙子の名前。
+    @param d_property 列挙子の属性値。
  */
 #define PSYQ_ENUM_VALUE(d_name, d_property) ((d_name)(d_property))
+
+/** @brief PSYQ_ENUMのd_values引数で、属性値のない列挙子の定義に使う。
+    @param d_name 列挙子の名前。
+ */
 #define PSYQ_ENUM_NAME(d_name) ((d_name))
 
 //-----------------------------------------------------------------------------
-/** @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
- */
-#define PSYQ_ENUM_VALUE_CONSTRUCT(d_z, d_ordinal, d_values)\
+/// @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
+#define PSYQ_PRIVATE_ENUM_VALUE_CONSTRUCT(d_z, d_ordinal, d_values)\
 	new(this->PSYQ_ENUM_container::get(d_ordinal)) value_type(\
 		d_ordinal,\
 		BOOST_PP_STRINGIZE(\
 			BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_values)))\
-		BOOST_PP_COMMA_IF(\
-			BOOST_PP_LESS(\
-				1, BOOST_PP_SEQ_SIZE(BOOST_PP_SEQ_ELEM(d_ordinal, d_values))))\
-		BOOST_PP_EXPR_IF(\
+		BOOST_PP_IF(\
 			BOOST_PP_LESS(\
 				1, BOOST_PP_SEQ_SIZE(BOOST_PP_SEQ_ELEM(d_ordinal, d_values))),\
-			BOOST_PP_SEQ_ELEM(1, BOOST_PP_SEQ_ELEM(d_ordinal, d_values))));
+			PSYQ_PRIVATE_ENUM_VALUE_CONSTRUCT_PROPERTY,\
+			BOOST_PP_TUPLE_EAT(2))(d_ordinal, d_values));
 
-/** @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
- */
-#define PSYQ_ENUM_VALUE_DEFINE(d_z, d_ordinal, d_values)\
+/// @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
+#define PSYQ_PRIVATE_ENUM_VALUE_CONSTRUCT_PROPERTY(d_ordinal, d_values)\
+	, BOOST_PP_SEQ_ELEM(1, BOOST_PP_SEQ_ELEM(d_ordinal, d_values))
+
+/// @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
+#define PSYQ_PRIVATE_ENUM_VALUE_GETTER(d_z, d_ordinal, d_values)\
 	PSYQ_ENUM_container::value_type* const\
 	BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_values))() const\
 	{\
 		return this->PSYQ_ENUM_container::get(d_ordinal);\
 	}
 
-/** @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
- */
-#define PSYQ_ENUM_ORDINAL_DEFINE(d_z, d_ordinal, d_values)\
+/// @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
+#define PSYQ_PRIVATE_ENUM_ORDINAL_DEFINE(d_z, d_ordinal, d_values)\
 	static PSYQ_ENUM_container::value_type::ordinal_type const\
 	BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_values)) = d_ordinal;
 

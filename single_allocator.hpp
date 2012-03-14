@@ -14,9 +14,9 @@ namespace psyq
 template<
 	typename    t_memory,
 	std::size_t t_max_size,
-	std::size_t t_chunk_size,
 	std::size_t t_chunk_alignment,
-	std::size_t t_chunk_offset >
+	std::size_t t_chunk_offset,
+	std::size_t t_chunk_size >
 class psyq::_single_allocator_memory:
 	public psyq::fixed_memory< t_memory >
 {
@@ -29,15 +29,15 @@ class psyq::_single_allocator_memory:
 //.............................................................................
 public:
 	_single_allocator_memory():
-	super_type(t_max_size, t_chunk_size, t_chunk_alignment, t_chunk_offset)
+	super_type(t_max_size, t_chunk_alignment, t_chunk_offset, t_chunk_size)
 	{
 		// pass
 	}
 
 	static std::size_t const max_size = t_max_size;
-	static std::size_t const chunk_size = t_chunk_size;
 	static std::size_t const chunk_alignment = t_chunk_alignment;
 	static std::size_t const chunk_offset = t_chunk_offset;
+	static std::size_t const chunk_size = t_chunk_size;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -45,21 +45,21 @@ public:
         配列は確保できない。
     @tparam t_value_type 確保するinstanceの型。
     @tparam t_memory     memory割当policy。
-    @tparam t_chunk_size memory-chunkの最大size。byte単位。
     @tparam t_alignment  instance配置境界値。
     @tparam t_offset     instance配置offset値。
+    @tparam t_chunk_size memory-chunkの最大size。byte単位。
  */
 template<
 	typename    t_value_type,
 	typename    t_memory = psyq::default_memory_policy,
-	std::size_t t_chunk_size = 4096,
 	std::size_t t_alignment = boost::alignment_of< t_value_type >::value,
-	std::size_t t_offset = 0 >
+	std::size_t t_offset = 0,
+	std::size_t t_chunk_size = 4096 >
 class psyq::single_allocator:
 	private std::allocator< t_value_type >
 {
 	typedef psyq::single_allocator<
-		t_value_type, t_memory, t_chunk_size, t_alignment, t_offset >
+		t_value_type, t_memory, t_alignment, t_offset, t_chunk_size >
 			this_type;
 	typedef std::allocator< t_value_type > super_type;
 
@@ -83,18 +83,18 @@ public:
 		typedef single_allocator<
 			t_other_type,
 			t_memory,
-			t_chunk_size,
 			t_other_alignment,
-			t_offset >
+			t_offset,
+			t_chunk_size >
 				other;
 	};
 
 	typedef _single_allocator_memory<
 		t_memory,
 		((sizeof(t_value_type) + t_alignment - 1) / t_alignment) * t_alignment,
-		t_chunk_size,
 		t_alignment,
-		t_offset >
+		t_offset,
+		t_chunk_size >
 			memory;
 
 	//-------------------------------------------------------------------------
@@ -116,9 +116,9 @@ public:
 		single_allocator<
 			t_other_type,
 			t_memory,
-			t_chunk_size,
 			t_other_alignment,
-			t_offset > const&
+			t_offset,
+			t_chunk_size > const&
 				i_source):
 	super_type(i_source)
 	{
@@ -138,9 +138,9 @@ public:
 		single_allocator<
 			t_other_type,
 			t_memory,
-			t_chunk_size,
 			t_other_alignment,
-			t_offset > const&
+			t_offset,
+			t_chunk_size > const&
 				i_source)
 	{
 		this->super_type::operator=(i_source);

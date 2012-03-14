@@ -1,4 +1,4 @@
-ï»¿#ifndef PSYQ_DEFAULT_MEMORY_POLICY_HPP_
+#ifndef PSYQ_DEFAULT_MEMORY_POLICY_HPP_
 #define PSYQ_DEFAULT_MEMORY_POLICY_HPP_
 
 namespace psyq
@@ -7,7 +7,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief memoryå‰²å½“policyã€‚
+/** @brief memoryŠ„“–policyB
  */
 class psyq::default_memory_policy:
 	private boost::noncopyable
@@ -15,12 +15,12 @@ class psyq::default_memory_policy:
 //.............................................................................
 public:
 	//-------------------------------------------------------------------------
-	/** @brief memoryã‚’ç¢ºä¿ã™ã‚‹ã€‚
-	    @param[in] i_size      ç¢ºä¿ã™ã‚‹memoryã®å¤§ãã•ã€‚byteå˜ä½ã€‚
-	    @param[in] i_alignment ç¢ºä¿ã™ã‚‹memoryã®å¢ƒç•Œå€¤ã€‚byteå˜ä½ã€‚
-	    @param[in] i_offset    ç¢ºä¿ã™ã‚‹memoryã®å¢ƒç•Œoffsetå€¤ã€‚byteå˜ä½ã€‚
-	    @param[in] i_name      debugã§ä½¿ã†ãŸã‚ã®memoryè­˜åˆ¥åã€‚
-	    @return ç¢ºä¿ã—ãŸmemoryã®å…ˆé ­ä½ç½®ã€‚ãŸã ã—NULLã®å ´åˆã¯å¤±æ•—ã€‚
+	/** @brief memory‚ğŠm•Û‚·‚éB
+	    @param[in] i_size      Šm•Û‚·‚émemory‚Ì‘å‚«‚³Bbyte’PˆÊB
+	    @param[in] i_alignment Šm•Û‚·‚émemory‚Ì‹«ŠE’lBbyte’PˆÊB
+	    @param[in] i_offset    Šm•Û‚·‚émemory‚Ì‹«ŠEoffset’lBbyte’PˆÊB
+	    @param[in] i_name      debug‚Åg‚¤‚½‚ß‚Ìmemory¯•Ê–¼B
+	    @return Šm•Û‚µ‚½memory‚Ìæ“ªˆÊ’uB‚½‚¾‚µNULL‚Ìê‡‚Í¸”sB
 	 */
 	static void* allocate(
 		std::size_t const i_size,
@@ -30,21 +30,21 @@ public:
 	{
 		(void)i_name;
 
-		// memoryå¢ƒç•Œå€¤ãŒ2ã®ã¹ãä¹—ã‹ç¢ºèªã€‚
+		// memory‹«ŠE’l‚ª2‚Ì‚×‚«æ‚©Šm”FB
 		PSYQ_ASSERT(0 < i_alignment);
 		PSYQ_ASSERT(0 == (i_alignment & (i_alignment - 1)));
 
-		// sizeãŒ0ãªã‚‰memoryç¢ºä¿ã—ãªã„ã€‚
+		// size‚ª0‚È‚çmemoryŠm•Û‚µ‚È‚¢B
 		if (i_size <= 0)
 		{
 			return NULL;
 		}
 
 #ifdef _WIN32
-		// win32ç’°å¢ƒã§ã®memoryç¢ºä¿ã€‚
+		// win32ŠÂ‹«‚Å‚ÌmemoryŠm•ÛB
 		return _aligned_offset_malloc(i_size, i_alignment, i_offset);
 #elif 200112L <= _POSIX_C_SOURCE || 600 <= _XOPEN_SOURCE
-		// posixç’°å¢ƒã§ã®memoryç¢ºä¿ã€‚
+		// posixŠÂ‹«‚Å‚ÌmemoryŠm•ÛB
 		PSYQ_ASSERT(0 == i_offset);
 		void* a_memory(NULL);
 		auto const a_result(
@@ -57,7 +57,7 @@ public:
 			return a_memory;
 		}
 #else
-		// ãã®ä»–ã®ç’°å¢ƒã§ã®memoryç¢ºä¿ã€‚
+		// ‚»‚Ì‘¼‚ÌŠÂ‹«‚Å‚ÌmemoryŠm•ÛB
 		PSYQ_ASSERT(0 == i_offset);
 		PSYQ_ASSERT(i_alignment <= sizeof(void*));
 		(void)i_alignment;
@@ -66,20 +66,20 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief memoryã‚’è§£æ”¾ã™ã‚‹ã€‚
-	    @param[in] i_memory è§£æ”¾ã™ã‚‹memoryã®å…ˆé ­ä½ç½®ã€‚
+	/** @brief memory‚ğ‰ğ•ú‚·‚éB
+	    @param[in] i_memory ‰ğ•ú‚·‚émemory‚Ìæ“ªˆÊ’uB
 	 */
 	static void deallocate(
 		void* const i_memory)
 	{
 #ifdef _WIN32
-		// win32ç’°å¢ƒã§ã®memoryè§£æ”¾ã€‚
+		// win32ŠÂ‹«‚Å‚Ìmemory‰ğ•úB
 		_aligned_free(i_memory);
 #elif 200112L <= _POSIX_C_SOURCE || 600 <= _XOPEN_SOURCE
-		// posixç’°å¢ƒã§ã®memoryè§£æ”¾ã€‚
+		// posixŠÂ‹«‚Å‚Ìmemory‰ğ•úB
 		std::free(i_memory);
 #else
-		// ãã®ä»–ã®ç’°å¢ƒã§ã®memoryè§£æ”¾ã€‚
+		// ‚»‚Ì‘¼‚ÌŠÂ‹«‚Å‚Ìmemory‰ğ•úB
 		std::free(i_memory)
 #endif
 	}

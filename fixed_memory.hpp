@@ -32,15 +32,15 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @param[in] i_block_size      確保するmemoryの大きさ。byte単位。
-	    @param[in] i_chunk_size      memory-chunkの最大値。byte単位。
 	    @param[in] i_chunk_alignment memory-chunkの配置境界値。
 	    @param[in] i_chunk_offset    memory-chunkの配置offset値。
+	    @param[in] i_chunk_size      memory-chunkの最大値。byte単位。
 	 */
 	fixed_memory(
 		std::size_t const i_block_size,
-		std::size_t const i_chunk_size,
 		std::size_t const i_chunk_alignment,
-		std::size_t const i_chunk_offset):
+		std::size_t const i_chunk_offset,
+		std::size_t const i_chunk_size):
 	chunk_begin(NULL),
 	chunk_end(NULL),
 	chunk_limit(NULL),

@@ -7,13 +7,18 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template< typename t_memory = psyq::heap_memory >
+/** @brief 固定sizeのmemory割当子。
+    @tparam t_memory memory割当policy。
+ */
+template< typename t_memory >
 class psyq::fixed_memory
 {
 	typedef psyq::fixed_memory< t_memory > this_type;
 
 //.............................................................................
 public:
+	typedef t_memory memory;
+
 	//-------------------------------------------------------------------------
 	~fixed_memory()
 	{
@@ -53,7 +58,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	std::size_t max_size() const
+	std::size_t get_block_size() const
 	{
 		return this->block_size;
 	}
@@ -409,99 +414,271 @@ private:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 template<
-	typename t_memory,
+	typename    t_memory,
 	std::size_t t_size,
 	std::size_t t_chunk_size,
 	std::size_t t_chunk_alignment,
 	std::size_t t_chunk_offset >
-class _fixed_memory_allocator:
+class _fixed_memory:
+	public boost::noncopyable
+{
+	typedef _fixed_memory<
+		t_memory, t_size, t_chunk_size, t_chunk_alignment, t_chunk_offset >
+			this_type;
+
+//.............................................................................
+public:
+	//-------------------------------------------------------------------------
+	/** @brief memoryを確保する。
+	    @param[in] i_size      確保するmemoryのbyte単位の大きさ。
+	    @param[in] i_alignment 確保するmemoryのbyte単位の境界値。
+	    @param[in] i_offset    確保するmemoryのbyte単位の境界offset値。
+	    @param[in] i_name      debugで使うためのmemory識別名。
+	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
+	 */
+	static void* allocate(
+		std::size_t const i_size,
+		std::size_t const i_alignment = t_chunk_alignment,
+		std::size_t const i_offset = t_chunk_offset,
+		char const* const i_name = NULL)
+	{
+		if (0 == t_chunk_alignment % i_alignment
+			&& t_chunk_offset == i_offset
+			&& i_size <= this_type::max_size())
+		{
+			return this_type::allocate(i_name);
+		}
+		return NULL;
+	}
+
+	static void* allocate(
+		char const* const i_name = NULL)
+	{
+		return this_type::singleton::get().allocate(i_name);
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief memoryを解放する。
+	    @param[in] i_memory 解放するmemoryの先頭位置。
+	 */
+	static void deallocate(
+		void* const i_memory)
+	{
+		return this_type::singleton::get().deallocate(i_memory);
+	}
+
+	//-------------------------------------------------------------------------
+	static std::size_t max_size()
+	{
+		return this_type::singleton::get().get_block_size();
+	}
+
+//.............................................................................
+private:
+	class memory_manager:
+		public psyq::fixed_memory< t_memory >
+	{
+		typedef psyq::fixed_memory< t_memory > super_type;
+
+		public:
+		memory_manager():
+		psyq::fixed_memory< t_memory >(
+			t_size, t_chunk_size, t_chunk_alignment, t_chunk_offset)
+		{
+			// pass
+		}
+	};
+
+	typedef psyq::singleton< typename this_type::memory_manager > singleton;
+
+	_fixed_memory();
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template<
+	typename    t_memory,
+	std::size_t t_max_size,
+	std::size_t t_chunk_size,
+	std::size_t t_chunk_alignment,
+	std::size_t t_chunk_offset >
+class _single_allocator_memory:
 	public psyq::fixed_memory< t_memory >
 {
 	typedef psyq::fixed_memory< t_memory > super_type;
 
+	// memory境界値が2のべき乗か確認。
+	BOOST_STATIC_ASSERT(0 < t_chunk_alignment);
+	BOOST_STATIC_ASSERT(0 == (t_chunk_alignment & (t_chunk_alignment - 1)));
+
 public:
-	_fixed_memory_allocator():
-	super_type(t_size, t_chunk_size, t_chunk_alignment, t_chunk_offset)
+	_single_allocator_memory():
+	super_type(t_max_size, t_chunk_size, t_chunk_alignment, t_chunk_offset)
 	{
 		// pass
 	}
+
+	static std::size_t const max_size = t_max_size;
+	static std::size_t const chunk_size = t_chunk_size;
+	static std::size_t const chunk_alignment = t_chunk_alignment;
+	static std::size_t const chunk_offset = t_chunk_offset;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 一度にひとつのinstanceを確保する、std::allocator互換の割当子。
+        配列は確保できない。
+    @tparam t_value_type 確保するinstanceの型。
+    @tparam t_memory     memory割当policy。
+    @tparam t_chunk_size memory-chunkの最大size。byte単位。
+    @tparam t_alignment  instance配置境界値。
+    @tparam t_offset     instance配置offset値。
+ */
 template<
 	typename    t_value_type,
 	typename    t_memory = psyq::heap_memory,
 	std::size_t t_chunk_size = 4096,
 	std::size_t t_alignment = boost::alignment_of< t_value_type >::value,
 	std::size_t t_offset = 0 >
-class single_object_allocator:
-	public std::allocator< t_value_type >
+class single_allocator:
+	private std::allocator< t_value_type >
 {
-	typedef single_object_allocator<
+	typedef single_allocator<
 		t_value_type, t_memory, t_chunk_size, t_alignment, t_offset >
 			this_type;
 	typedef std::allocator< t_value_type > super_type;
 
 //.............................................................................
 public:
-	typedef t_memory memory;
+	using super_type::pointer;
+	using super_type::const_pointer;
+	using super_type::reference;
+	using super_type::const_reference;
+	using super_type::value_type;
+	using super_type::address;
+	using super_type::construct;
+	using super_type::destroy;
 
 	template< class t_other_type >
 	struct rebind
 	{
-		typedef single_object_allocator<
+		typedef single_allocator<
 			t_other_type, t_memory, t_chunk_size, t_alignment, t_offset >
 				other;
 	};
 
-	single_object_allocator():
-	super_type()
-	{
-		// pass
-	}
-
-	static pointer allocate(
-		size_type const   i_num,
-		char const* const i_name = NULL)
-	{
-		return 1 == i_num?
-			static_cast< pointer >(
-				psyq::singleton< allocator >::get().allocate(i_name)):
-			NULL;
-	}
-
-	static void deallocate(
-		pointer const   i_object,
-		size_type const i_num)
-	{
-		if (1 == i_num)
-		{
-			psyq::singleton< allocator >::get().deallocate(i_object);
-		}
-		else
-		{
-			PSYQ_ASSERT(0 == i_num && NULL == i_object);
-		}
-	}
-
-	static size_type max_size()
-	{
-		return psyq::singleton< allocator >::get().max_size();
-	}
-
-	static std::size_t const chunk_size = t_chunk_size;
-	static std::size_t const alignment = t_alignment;
-	static std::size_t const offset = t_offset;
-
-//.............................................................................
-private:
-	typedef _fixed_memory_allocator<
+	typedef _single_allocator_memory<
 		t_memory,
 		((sizeof(t_value_type) + t_alignment - 1) / t_alignment) * t_alignment,
 		t_chunk_size,
 		t_alignment,
 		t_offset >
-			allocator;
+			memory;
+
+	//-------------------------------------------------------------------------
+	single_allocator():
+	super_type()
+	{
+		// pass
+	}
+
+	single_allocator(
+		this_type const& i_source):
+	super_type(i_source)
+	{
+		// pass
+	}
+
+	template< typename t_other_type >
+	single_allocator(
+		single_allocator<
+			t_other_type,
+			t_memory,
+			t_chunk_size,
+			t_alignment,
+			t_offset > const&
+				i_source):
+	super_type(i_source)
+	{
+		// pass
+	}
+
+	//-------------------------------------------------------------------------
+	this_type& operator=(
+		this_type const& i_source)
+	{
+		this->super_type::operator=(i_source);
+		return *this;
+	}
+
+	template< typename t_other_type >
+	this_type& operator=(
+		single_allocator<
+			t_other_type,
+			t_memory,
+			t_chunk_size,
+			t_alignment,
+			t_offset > const&
+				i_source)
+	{
+		this->super_type::operator=(i_source);
+		return *this;
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief memoryを確保する。
+	    @param[in] i_size      確保するinstanceの数。
+	    @param[in] i_alignment 確保するinstanceの境界値。byte単位。
+	    @param[in] i_offset    確保するinstanceの境界offset値。byte単位。
+	    @param[in] i_name      debugで使うためのmemory識別名。
+	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
+	 */
+	static typename super_type::pointer allocate(
+		typename super_type::size_type const i_num,
+		std::size_t const                    i_alignment = t_alignment,
+		std::size_t const                    i_offset = t_offset,
+		char const* const                    i_name = NULL)
+	{
+		return 1 == i_num
+			&& 0 < i_alignment
+			&& 0 == t_alignment % i_alignment
+			&& t_offset == i_offset?
+				typename this_type::allocate(i_name): NULL;
+	}
+
+	/** @brief instanceに使うmemoryを確保する。
+	    @param[in] i_name debugで使うためのmemory識別名。
+	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
+	 */
+	static typename super_type::pointer allocate(
+		char const* const i_name = NULL)
+	{
+		return static_cast< typename super_type::pointer >(
+			psyq::singleton< typename this_type::memory >::get().allocate(
+				i_name));
+	}
+
+	/** @brief intanceに使っていたmemoryを解放する。
+	    @param[in] i_instance 解放するinstanceの先頭位置。
+	    @param[in] i_num      解放するinstanceの数。
+	 */
+	static void deallocate(
+		typename super_type::pointer const   i_instance,
+		typename super_type::size_type const i_num)
+	{
+		if (1 == i_num)
+		{
+			psyq::singleton< typename this_type::memory >::get().deallocate(
+				i_instance);
+		}
+		else
+		{
+			PSYQ_ASSERT(0 == i_num && NULL == i_instance);
+		}
+	}
+
+	static size_type max_size()
+	{
+		return 1;
+	}
 };
 
 #endif // PSYQ_FIXED_MEMORY_HPP_

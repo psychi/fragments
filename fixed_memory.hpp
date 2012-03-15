@@ -33,11 +33,20 @@ public:
 	~fixed_memory_pool()
 	{
 		// chunkをすべて破棄する。
-		for (boost::uint8_t** i = this->chunk_begin; this->chunk_end != i; ++i)
+		typename this_type::chunk* const a_container(this->chunk_container);
+		for (typename this_type::chunk* i = a_container;;)
 		{
+			typename this_type::chunk* const a_next(i->next);
 			this->destroy_chunk(*i);
+			if (a_container != a_next)
+			{
+				i = a_next;
+			}
+			else
+			{
+				break;
+			}
 		}
-		t_memory_policy::deallocate(this->chunk_begin);
 	}
 
 	//-------------------------------------------------------------------------
@@ -51,11 +60,9 @@ public:
 		std::size_t const i_chunk_alignment,
 		std::size_t const i_chunk_offset,
 		std::size_t const i_chunk_size):
-	chunk_begin(NULL),
-	chunk_end(NULL),
-	chunk_limit(NULL),
-	chunk_allocator(NULL),
-	chunk_deallocator(NULL),
+	chunk_container(NULL),
+	allocator_chunk(NULL),
+	deallocator_chunk(NULL),
 	empty_chunk(NULL),
 	block_size(i_block_size),
 	chunk_alignment(i_chunk_alignment),
@@ -82,27 +89,18 @@ public:
 	void* allocate(
 		char const* const i_name = NULL)
 	{
-		if (NULL != this->chunk_allocator
-			&& 0 < this->get_num_blocks(*this->chunk_allocator))
-		{
-			if (this->chunk_allocator == this->empty_chunk)
-			{
-				// すぐ後でmemoryを確保をして空chunkではなくなるので。
-				this->empty_chunk = NULL;
-			}
-		}
-		else if (NULL != this->empty_chunk)
+		if (NULL == this->allocator_chunk)
 		{
 			// 空chunkがあるなら、memory確保chunkに切り替える。
-			this->chunk_allocator = this->empty_chunk;
+			this->allocator_chunk = this->empty_chunk;
 			this->empty_chunk = NULL;
 		}
-		else if (!this->find_allocator(i_name))
+		else if (this->empty_chunk == this->allocator_chunk)
 		{
-			// 空chunkの確保に失敗した。
-			return NULL;
+			// すぐ後でmemoryを確保をして空chunkではなくなるので。
+			this->empty_chunk = NULL;
 		}
-		return this->allocate_block();
+		return this->allocate_block(i_name);
 	}
 
 	//-------------------------------------------------------------------------
@@ -122,13 +120,6 @@ public:
 				return false;
 			}
 			this->deallocate_block(i_memory);
-
-			// memory解放chunkが空になったら、空chunkに切り替える。
-			PSYQ_ASSERT(NULL != this->chunk_deallocator);
-			if (this->max_blocks <= this->get_num_blocks(*this->chunk_deallocator))
-			{
-				this->destroy_empty_chunk();
-			}
 		}
 		return true;
 	}
@@ -163,26 +154,18 @@ private:
 	//-------------------------------------------------------------------------
 	/** @brief memory-blockを、memory確保chunkから確保する。
 	 */
-	void* allocate_block() const
+	void* allocate_block(
+		char const* const i_name)
 	{
-		PSYQ_ASSERT(NULL != this->chunk_allocator);
-		boost::uint8_t* const a_chunk(*this->chunk_allocator);
-		boost::uint8_t& a_first_block(this->get_first_block(a_chunk));
-		boost::uint8_t& a_num_blocks(this->get_num_blocks(a_chunk));
-		PSYQ_ASSERT(0 < a_num_blocks);
-
-		// 空block-listから先頭のblockを取り出す。
-		boost::uint8_t* const a_block(
-			a_chunk + a_first_block * this->block_size);
-		a_first_block = *a_block;
-		--a_num_blocks;
-		return a_block;
-	}
-
-	void* _allocate_block() const
-	{
-		PSYQ_ASSERT(NULL != this->chunk_allocator);
-		typename this_type::chunk& a_chunk(*this->chunk_allocator);
+		// memory確保chunkを決定。
+		if (NULL == this->allocator_chunk
+			&& !this->find_allocator()
+			&& !this->create_chunk(i_name))
+		{
+			return NULL;
+		}
+		PSYQ_ASSERT(NULL != this->allocator_chunk);
+		typename this_type::chunk& a_chunk(*this->allocator_chunk);
 		PSYQ_ASSERT(0 < a_chunk.num_blocks);
 
 		// 空block-listから先頭のblockを取り出す。
@@ -191,6 +174,12 @@ private:
 				+ a_chunk.first_block * this->block_size);
 		a_chunk.first_block = *a_block;
 		--a_chunk.num_blocks;
+
+		// 空blockがなくなったら、memory確保chunkを無効にする。
+		if (a_chunk.num_blocks <= 0)
+		{
+			this->allocator_chunk = NULL;
+		}
 		return a_block;
 	}
 
@@ -199,37 +188,9 @@ private:
 	 */
 	void deallocate_block(
 		void* const i_block)
-	const
 	{
-		PSYQ_ASSERT(NULL != this->chunk_deallocator);
-		boost::uint8_t* a_chunk(*this->chunk_deallocator);
-		boost::uint8_t& a_first_block(this->get_first_block(a_chunk));
-		boost::uint8_t& a_num_blocks(this->get_num_blocks(a_chunk));
-		PSYQ_ASSERT(this->has_block(a_chunk, i_block));
-		PSYQ_ASSERT(!this->find_empty_block(a_chunk, i_block));
-		PSYQ_ASSERT(a_num_blocks < this->max_blocks);
-
-		// 解放するblockのindex番号を取得。
-		boost::uint8_t* const a_block(static_cast< boost::uint8_t* >(i_block));
-		std::size_t const a_distance(a_block - a_chunk);
-		PSYQ_ASSERT(a_distance % this->block_size == 0);
-		boost::uint8_t const a_index(
-			static_cast< boost::uint8_t >(a_distance / this->block_size));
-		PSYQ_ASSERT(a_distance / this->block_size == a_index);
-		PSYQ_ASSERT(0 == a_num_blocks || a_index != a_first_block);
-
-		// 解放するblockを空block-listの先頭に挿入。
-		*a_block = a_first_block;
-		a_first_block = a_index;
-		++a_num_blocks;
-	}
-
-	void _deallocate_block(
-		void* const i_block)
-	const
-	{
-		PSYQ_ASSERT(NULL != this->_chunk_deallocator);
-		typename this_type::chunk& a_chunk(*this->chunk_deallocator);
+		PSYQ_ASSERT(NULL != this->deallocator_chunk);
+		typename this_type::chunk& a_chunk(*this->deallocator_chunk);
 		PSYQ_ASSERT(this->has_block(a_chunk, i_block));
 		PSYQ_ASSERT(!this->find_empty_block(a_chunk, i_block));
 		PSYQ_ASSERT(a_chunk.num_blocks < this->max_blocks);
@@ -241,51 +202,43 @@ private:
 		boost::uint8_t const a_index(
 			static_cast< boost::uint8_t >(a_distance / this->block_size));
 		PSYQ_ASSERT(a_distance / this->block_size == a_index);
-		PSYQ_ASSERT(0 == a_num_blocks || a_index != a_first_block);
+		PSYQ_ASSERT(0 == a_chunk.num_blocks || a_index != a_chunk.first_block);
 
 		// 解放するblockを空block-listの先頭に挿入。
 		*a_block = a_chunk.first_block;
 		a_chunk.first_block = a_index;
 		++a_chunk.num_blocks;
+
+		// memory解放chunkが空になったら、空chunkに切り替える。
+		if (this->max_blocks <= a_chunk.num_blocks)
+		{
+			this->destroy_empty_chunk();
+		}
 	}
 
 	//-------------------------------------------------------------------------
 	/** @brief 空blockのあるchunkを探す。
 	 */
-	bool find_allocator(
-		char const* const i_name)
+	bool find_allocator()
 	{
 		// 空blockのあるchunkを探す。
-		for (boost::uint8_t** i = this->chunk_begin; this->chunk_end != i; ++i)
+		if (NULL != this->chunk_container)
 		{
-			if (0 < this->get_num_blocks(*i))
+			for (typename this_type::chunk* i = this->chunk_container;;)
 			{
-				this->chunk_allocator = i;
-				return true;
+				if (0 < i->num_blocks)
+				{
+					this->allocator_chunk = i;
+					return true;
+				}
+				i = i->next;
+				if (i == this->chunk_container)
+				{
+					break;
+				}
 			}
 		}
-
-		// chunk-containerがいっぱいなら、拡張する。
-		if (this->chunk_limit == this->chunk_end)
-		{
-			std::size_t const a_num(this->chunk_end - this->chunk_begin);
-			std::size_t const a_capacity(0 < a_num? a_num * 3 / 2: 4);
-			if (!this->create_chunk_container(a_capacity, i_name))
-			{
-				return false;
-			}
-		}
-
-		// chunk-containerに、空chunkを追加する。
-		*this->chunk_end = this->create_chunk(i_name);
-		if (NULL == *this->chunk_end)
-		{
-			return false;
-		}
-		this->chunk_allocator = this->chunk_end;
-		this->chunk_deallocator = this->chunk_begin;
-		++this->chunk_end;
-		return true;
+		return false;
 	}
 
 	/** @brief memory解放chunkを探す。
@@ -294,73 +247,27 @@ private:
 	bool find_deallocator(
 		void const* const i_memory)
 	{
-		PSYQ_ASSERT(NULL != this->chunk_deallocator);
-		if (this->has_block(*this->chunk_deallocator, i_memory))
+		if (NULL != this->deallocator_chunk
+			&& this->has_block(*this->deallocator_chunk, i_memory))
 		{
 			return true;
 		}
 
 		// 解放するmemoryを含むchunkを、chunk-containerから探す。
-		for (boost::uint8_t** i = this->chunk_begin; this->chunk_end != i; ++i)
+		typename this_type::chunk* const a_container(this->chunk_container);
+		for (typename this_type::chunk* i = a_container;;)
 		{
 			if (this->has_block(*i, i_memory))
 			{
-				this->chunk_deallocator = i;
+				this->deallocator_chunk = i;
 				return true;
 			}
+			i = i->next;
+			if (i == a_container)
+			{
+				return false;
+			}
 		}
-		return false;
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief chunk-containerを作る。
-	    @param[in] i_capacity chunk-containerの最大容量。
-	    @param[in] i_name     debugで使うためのmemory識別名。
-	 */
-	bool create_chunk_container(
-		std::size_t const i_capacity,
-		char const* const i_name)
-	{
-		// 新しいchunk_containerで使うmemoryを確保する。
-		PSYQ_ASSERT(0 < i_capacity);
-		boost::uint8_t** const a_begin = static_cast< boost::uint8_t** >(
-			t_memory_policy::allocate(
-				i_capacity * sizeof(boost::uint8_t*),
-				boost::alignment_of< boost::uint8_t* >::value,
-				0,
-				i_name));
-		if (NULL == a_begin)
-		{
-			PSYQ_ASSERT(false);
-			return false;
-		}
-
-		// 現在のchunk-containerから移し替える。
-		std::size_t const a_num(this->chunk_end - this->chunk_begin);
-		for (std::size_t i = 0; i < a_num; ++i)
-		{
-			a_begin[i] = this->chunk_begin[i];
-		}
-		t_memory_policy::deallocate(this->chunk_begin);
-
-		// 新しいchunk-containreを構築する。
-		std::size_t const a_distance(a_begin - this->chunk_begin);
-		if (NULL != this->chunk_allocator)
-		{
-			this->chunk_allocator += a_distance;
-		}
-		if (NULL != this->chunk_deallocator)
-		{
-			this->chunk_deallocator += a_distance;
-		}
-		if (NULL != this->empty_chunk)
-		{
-			this->empty_chunk += a_distance;
-		}
-		this->chunk_begin = a_begin;
-		this->chunk_end = a_begin + a_num;
-		this->chunk_limit = a_begin + i_capacity;
-		return true;
 	}
 
 	//-------------------------------------------------------------------------
@@ -368,37 +275,25 @@ private:
 	 */
 	void destroy_empty_chunk()
 	{
-		PSYQ_ASSERT(this->empty_chunk != this->chunk_deallocator);
+		PSYQ_ASSERT(this->deallocator_chunk != this->empty_chunk);
 		if (NULL != this->empty_chunk)
 		{
-			// 空chunkをchunk-containerの末尾に移動。
-			PSYQ_ASSERT(NULL != this->chunk_end);
-			boost::uint8_t** const a_last_chunk = this->chunk_end - 1;
-			if (a_last_chunk == this->chunk_deallocator)
+			// 空chunkをchunk-containerから切り離し、破棄する。
+			this->empty_chunk->prev->next = this->empty_chunk->next;
+			this->empty_chunk->next->prev = this->empty_chunk->prev;
+			this->destroy_chunk(*this->empty_chunk);
+			if (this->empty_chunk == this->allocator_chunk)
 			{
-				this->chunk_deallocator = this->empty_chunk;
-			}
-			else if (a_last_chunk != this->empty_chunk)
-			{
-				std::swap(*this->empty_chunk, *a_last_chunk);
-			}
-
-			// chunk-containerの末尾を破棄。
-			this->destroy_chunk(*a_last_chunk);
-			--this->chunk_end;
-			PSYQ_ASSERT(NULL != this->chunk_allocator);
-			if (a_last_chunk == this->chunk_allocator
-				|| this->get_num_blocks(*this->chunk_allocator) <= 0)
-			{
-				this->chunk_allocator = this->chunk_deallocator;
+				this->allocator_chunk = this->deallocator_chunk;
 			}
 		}
-		this->empty_chunk = this->chunk_deallocator;
+		this->empty_chunk = this->deallocator_chunk;
+		this->deallocator_chunk = NULL;
 	}
 
 	//-------------------------------------------------------------------------
-	typename this_type::chunk* _create_chunk(
-		char const* const i_name) const
+	bool create_chunk(
+		char const* const i_name)
 	{
 		// chunkに使うmemoryを確保。
 		void* const a_buffer(
@@ -410,18 +305,29 @@ private:
 		if (NULL == a_buffer)
 		{
 			PSYQ_ASSERT(false);
-			return NULL;
+			return false;
 		}
 
-		// chunkを構築。
+		// chunkを構築し、chunk-containerの先頭に挿入。
 		boost::uint8_t* a_block(static_cast< boost::uint8_t* >(a_buffer));
 		typename this_type::chunk& a_chunk(
 			*reinterpret_cast< typename this_type::chunk* >(
 				a_block + this->chunk_size));
 		a_chunk.first_block = 0;
-		a_chunk.num_blocks = this->max_blocks;
-		a_chunk.next = &a_chunk;
-		a_chunk.prev = &a_chunk;
+		a_chunk.num_blocks = static_cast< boost::uint8_t >(this->max_blocks);
+		if (NULL != this->chunk_container)
+		{
+			a_chunk.next = this->chunk_container;
+			a_chunk.prev = this->chunk_container->prev;
+			this->chunk_container->prev->next = &a_chunk;
+			this->chunk_container->prev = &a_chunk;
+		}
+		else
+		{
+			a_chunk.next = &a_chunk;
+			a_chunk.prev = &a_chunk;
+		}
+		this->chunk_container = &a_chunk;
 
 		// 空block-listを構築。
 		for (
@@ -432,17 +338,25 @@ private:
 			++i;
 			*a_block = i;
 		}
-		return &a_chunk;
+		this->allocator_chunk = &a_chunk;
+		return true;
 	}
 
-	void _destroy_chunk(
+	void destroy_chunk(
 		typename this_type::chunk& i_chunk)
 	{
 		PSYQ_ASSERT(this->max_blocks <= i_chunk.num_blocks);
-		i_chunk.prev->next = i_chunk.next;
-		i_chunk.next->prev = i_chunk.prev;
 		t_memory_policy::deallocate(
 			reinterpret_cast< boost::uint8_t* >(&i_chunk) - this->chunk_size);
+	}
+
+	//-------------------------------------------------------------------------
+	bool has_block(
+		typename this_type::chunk& i_chunk,
+		void const* const          i_block)
+	const
+	{
+		return this->get_chunk_begin(i_chunk) <= i_block && i_block < &i_chunk;
 	}
 
 	boost::uint8_t* get_chunk_begin(
@@ -452,86 +366,16 @@ private:
 		return reinterpret_cast< boost::uint8_t* >(&i_chunk) - this->chunk_size;
 	}
 
-	//-------------------------------------------------------------------------
-	boost::uint8_t* create_chunk(
-		char const* const i_name) const
-	{
-		// chunkに使うmemoryを確保。
-		boost::uint8_t* const a_chunk(
-			static_cast< boost::uint8_t* >(
-				t_memory_policy::allocate(
-					this->block_size * this->max_blocks
-						+ psyq::_fixed_memory_pool_chunk_info_size,
-					this->chunk_alignment,
-					this->chunk_offset,
-					i_name)));
-		if (NULL == a_chunk)
-		{
-			PSYQ_ASSERT(false);
-			return NULL;
-		}
-
-		// 空block-listを構築。
-		this->get_first_block(a_chunk) = 0;
-		this->get_num_blocks(a_chunk) =
-			static_cast< boost::uint8_t >(this->max_blocks);
-		boost::uint8_t* a_block(a_chunk);
-		for (
-			boost::uint8_t i = 0;
-			i < this->max_blocks;
-			a_block += this->block_size)
-		{
-			++i;
-			*a_block = i;
-		}
-		return a_chunk;
-	}
-
-	void destroy_chunk(
-		boost::uint8_t* const i_chunk)
-	const
-	{
-		PSYQ_ASSERT(this->max_blocks <= this->get_num_blocks(i_chunk));
-		t_memory_policy::deallocate(i_chunk);
-	}
-
-	//-------------------------------------------------------------------------
-	boost::uint8_t& get_num_blocks(
-		boost::uint8_t* const i_chunk)
-	const
-	{
-		PSYQ_ASSERT(NULL != i_chunk);
-		return i_chunk[this->block_size * this->max_blocks + 0];
-	}
-
-	boost::uint8_t& get_first_block(
-		boost::uint8_t* const i_chunk)
-	const
-	{
-		PSYQ_ASSERT(NULL != i_chunk);
-		return i_chunk[this->block_size * this->max_blocks + 1];
-	}
-
-	bool has_block(
-		boost::uint8_t* const i_chunk,
-		void const* const     i_block)
-	const
-	{
-		PSYQ_ASSERT(NULL != i_chunk);
-		return i_chunk <= i_block
-			&& i_block < i_chunk + this->block_size * this->max_blocks;
-	}
-
 	bool find_empty_block(
-		boost::uint8_t* const i_chunk,
-		void const* const     i_block)
+		typename this_type::chunk& i_chunk,
+		void const* const          i_block)
 	const
 	{
-		std::size_t a_index(this->get_first_block(i_chunk));
-		for (std::size_t i = this->get_num_blocks(i_chunk); 0 < i; --i)
+		std::size_t a_index(i_chunk.first_block);
+		for (std::size_t i = i_chunk.num_blocks; 0 < i; --i)
 		{
 			boost::uint8_t const* const a_block(
-				i_chunk + this->block_size * a_index);
+				this->get_chunk_begin(i_chunk) + this->block_size * a_index);
 			if (i_block != a_block)
 			{
 				a_index = *a_block;
@@ -545,17 +389,15 @@ private:
 	}
 
 	//-------------------------------------------------------------------------
-	boost::uint8_t** chunk_begin;       ///< chunk_containerの先頭位置。
-	boost::uint8_t** chunk_end;         ///< chunk_containerの末尾位置。
-	boost::uint8_t** chunk_limit;       ///< chunk_containerの限界位置。
-	boost::uint8_t** chunk_allocator;   ///< 最後にblockを確保したchunk。
-	boost::uint8_t** chunk_deallocator; ///< 最後にblockを解放したchunk。
-	boost::uint8_t** empty_chunk;       ///< 全blockが空になっているchunk。
-	std::size_t      block_size;        ///< blockの大きさ。byte単位。
-	std::size_t      max_blocks;        ///< chunkが持つblockの最大数。
-	std::size_t      chunk_alignment;
-	std::size_t      chunk_offset;
-	std::size_t      chunk_size;
+	typename this_type::chunk* chunk_container;
+	typename this_type::chunk* allocator_chunk;
+	typename this_type::chunk* deallocator_chunk;
+	typename this_type::chunk* empty_chunk;
+	std::size_t                block_size;
+	std::size_t                max_blocks;
+	std::size_t                chunk_alignment;
+	std::size_t                chunk_offset;
+	std::size_t                chunk_size;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

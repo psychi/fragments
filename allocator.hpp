@@ -8,36 +8,28 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::allocator互換のinstance割当子。
-    @tparam t_value_type 割り当てるinstanceの型。
-    @tparam t_memory     memory割当policy。
+    @tparam t_value_type    割り当てるinstanceの型。
+    @tparam t_memory_policy memory割当policy。
  */
 template<
 	typename t_value_type,
-	typename t_memory = psyq::default_memory_policy >
+	typename t_memory_policy = PSYQ_MEMORY_POLICY_DEFAULT >
 class psyq::allocator:
-	private std::allocator< t_value_type >
+	public std::allocator< t_value_type >
 {
-	typedef psyq::allocator< t_value_type, t_memory > this_type;
+	typedef psyq::allocator< t_value_type, t_memory_policy > this_type;
 	typedef std::allocator< t_value_type > super_type;
 
 //.............................................................................
 public:
-	using super_type::pointer;
-	using super_type::const_pointer;
-	using super_type::reference;
-	using super_type::const_reference;
-	using super_type::value_type;
-	using super_type::address;
-	using super_type::construct;
-	using super_type::destroy;
-	using super_type::max_size;
+	typedef t_memory_policy memory_policy;
 
-	typedef t_memory memory;
-
-	template< typename t_other_type >
+	template<
+		typename t_other_type,
+		typename t_other_memory = t_memory_policy >
 	struct rebind
 	{
-		typedef psyq::allocator< t_other_type, t_memory > other;
+		typedef psyq::allocator< t_other_type, t_other_memory > other;
 	};
 
 	//-------------------------------------------------------------------------
@@ -54,9 +46,9 @@ public:
 		// pass
 	}
 
-	template< typename t_other_type >
+	template< typename t_other_type, typename t_other_memory >
 	allocator(
-		allocator< t_other_type, t_memory > const& i_source):
+		psyq::allocator< t_other_type, t_other_memory > const& i_source):
 	super_type(i_source)
 	{
 		// pass
@@ -70,9 +62,9 @@ public:
 		return *this;
 	}
 
-	template< typename t_other_type >
+	template< typename t_other_type, typename t_other_memory >
 	this_type& operator=(
-		allocator< t_other_type, t_memory > const& i_source)
+		psyq::allocator< t_other_type, t_other_memory > const& i_source)
 	{
 		this->super_type::operator=(i_source);
 		return *this;
@@ -93,7 +85,7 @@ public:
 		std::size_t const                      i_offset = 0,
 		char const* const                      i_name = NULL)
 	{
-		return t_memory::allocate(
+		return t_memory_policy::allocate(
 			i_num * sizeof(t_value_type), i_alignment, i_offset, i_name);
 	}
 
@@ -106,7 +98,13 @@ public:
 		typename super_type::size_type const i_num)
 	{
 		(void)i_num;
-		t_memory::deallocate(i_instance);
+		t_memory_policy::deallocate(i_instance);
+	}
+
+	//-------------------------------------------------------------------------
+	static typename super_type::size_type max_size()
+	{
+		return t_memory_policy::max_size() / sizeof(t_value_type);
 	}
 };
 

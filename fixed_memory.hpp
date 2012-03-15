@@ -1,33 +1,42 @@
 #ifndef PSYQ_FIXED_MEMORY_HPP_
 #define PSYQ_FIXED_MEMORY_HPP_
 
+#ifndef PSYQ_FIXED_MEMORY_POLICY_CHUNK_SIZE_DEFAULT
+#define PSYQ_FIXED_MEMORY_POLICY_CHUNK_SIZE_DEFAULT 4096
+#endif // !PSYQ_FIXED_MEMORY_POLICY_CHUNK_SIZE_DEFAULT
+
 namespace psyq
 {
-	template< typename > class fixed_memory;
+	template< typename > class fixed_memory_pool;
+
+	template< std::size_t, std::size_t, std::size_t, std::size_t, typename >
+		class fixed_memory_policy;
+
+	static std::size_t const _fixed_memory_pool_chunk_info_size = 2;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 固定sizeのmemory割当子。
-    @tparam t_memory memory割当policy。
+/** @brief 固定sizeのmemory割当pool。
+    @tparam t_memory_policy memory割当policy。
  */
-template< typename t_memory = psyq::default_memory_policy >
-class psyq::fixed_memory
+template< typename t_memory_policy = PSYQ_MEMORY_POLICY_DEFAULT >
+class psyq::fixed_memory_pool
 {
-	typedef psyq::fixed_memory< t_memory > this_type;
+	typedef psyq::fixed_memory_pool< t_memory_policy > this_type;
 
 //.............................................................................
 public:
-	typedef t_memory memory;
+	typedef t_memory_policy memory_policy;
 
 	//-------------------------------------------------------------------------
-	~fixed_memory()
+	~fixed_memory_pool()
 	{
 		// chunkをすべて破棄する。
 		for (boost::uint8_t** i = this->chunk_begin; this->chunk_end != i; ++i)
 		{
 			this->destroy_chunk(*i);
 		}
-		t_memory::deallocate(this->chunk_begin);
+		t_memory_policy::deallocate(this->chunk_begin);
 	}
 
 	//-------------------------------------------------------------------------
@@ -36,7 +45,7 @@ public:
 	    @param[in] i_chunk_offset    memory-chunkの配置offset値。
 	    @param[in] i_chunk_size      memory-chunkの最大値。byte単位。
 	 */
-	fixed_memory(
+	fixed_memory_pool(
 		std::size_t const i_block_size,
 		std::size_t const i_chunk_alignment,
 		std::size_t const i_chunk_offset,
@@ -52,7 +61,8 @@ public:
 	chunk_offset(i_chunk_offset)
 	{
 		std::size_t const a_max_blocks(
-			(i_chunk_size - this_type::CHUNK_INFO_SIZE) / this->block_size);
+			(i_chunk_size - psyq::_fixed_memory_pool_chunk_info_size)
+				/ this->block_size);
 		this->max_blocks = static_cast< boost::uint8_t >(
 			a_max_blocks <= 0xff? a_max_blocks: 0xff);
 	}
@@ -123,11 +133,6 @@ public:
 
 //.............................................................................
 private:
-	enum
-	{
-		CHUNK_INFO_SIZE = 2
-	};
-
 	//-------------------------------------------------------------------------
 	/** @brief memory-blockを、memory確保chunkから確保する。
 	 */
@@ -197,7 +202,8 @@ private:
 		if (this->chunk_limit == this->chunk_end)
 		{
 			std::size_t const a_num(this->chunk_end - this->chunk_begin);
-			if (!this->create_chunk_container(0 < a_num? a_num * 3 / 2: 4, i_name))
+			std::size_t const a_capacity(0 < a_num? a_num * 3 / 2: 4);
+			if (!this->create_chunk_container(a_capacity, i_name))
 			{
 				return false;
 			}
@@ -205,6 +211,10 @@ private:
 
 		// chunk-containerに、空chunkを追加する。
 		*this->chunk_end = this->create_chunk(i_name);
+		if (NULL == *this->chunk_end)
+		{
+			return false;
+		}
 		this->chunk_allocator = this->chunk_end;
 		this->chunk_deallocator = this->chunk_begin;
 		++this->chunk_end;
@@ -223,6 +233,7 @@ private:
 			return true;
 		}
 
+		// 解放するmemoryを含むchunkを、chunk-containerから探す。
 		for (boost::uint8_t** i = this->chunk_begin; this->chunk_end != i; ++i)
 		{
 			if (this->has_block(*i, i_memory))
@@ -242,13 +253,14 @@ private:
 		// 新しいchunk_containerで使うmemoryを確保する。
 		PSYQ_ASSERT(0 < i_capacity);
 		boost::uint8_t** const a_begin = static_cast< boost::uint8_t** >(
-			t_memory::allocate(
+			t_memory_policy::allocate(
 				i_capacity * sizeof(boost::uint8_t*),
 				boost::alignment_of< boost::uint8_t* >::value,
 				0,
 				i_name));
 		if (NULL == a_begin)
 		{
+			PSYQ_ASSERT(false);
 			return false;
 		}
 
@@ -258,7 +270,7 @@ private:
 		{
 			a_begin[i] = this->chunk_begin[i];
 		}
-		t_memory::deallocate(this->chunk_begin);
+		t_memory_policy::deallocate(this->chunk_begin);
 
 		// 新しいchunk-containreを構築する。
 		std::size_t const a_distance(a_begin - this->chunk_begin);
@@ -317,14 +329,20 @@ private:
 	boost::uint8_t* create_chunk(
 		char const* const i_name) const
 	{
+		// chunkに使うmemoryを確保。
 		boost::uint8_t* const a_chunk(
 			static_cast< boost::uint8_t* >(
-				t_memory::allocate(
+				t_memory_policy::allocate(
 					this->block_size * this->max_blocks
-						+ this_type::CHUNK_INFO_SIZE,
+						+ psyq::_fixed_memory_pool_chunk_info_size,
 					this->chunk_alignment,
 					this->chunk_offset,
 					i_name)));
+		if (NULL == a_chunk)
+		{
+			PSYQ_ASSERT(false);
+			return NULL;
+		}
 
 		// 空block-listを構築。
 		this->get_first_block(a_chunk) = 0;
@@ -347,7 +365,7 @@ private:
 	const
 	{
 		PSYQ_ASSERT(this->max_blocks <= this->get_num_blocks(i_chunk));
-		t_memory::deallocate(i_chunk);
+		t_memory_policy::deallocate(i_chunk);
 	}
 
 	//-------------------------------------------------------------------------
@@ -410,6 +428,113 @@ private:
 	std::size_t      max_blocks;        ///< chunkが持つblockの最大数。
 	std::size_t      chunk_alignment;
 	std::size_t      chunk_offset;
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 固定sizeのmemory割当policy。
+    @tparam t_block_size      割り当てるmemoryの大きさ。byte単位。
+    @tparam t_chunk_alignment memory-chunkの配置境界値。byte単位。
+    @tparam t_chunk_offset    memory-cnunkの配置offset値。byte単位。
+    @tparam t_chunk_size      memory-chunkの最大size。byte単位。
+    @tparam t_memory_policy   memory割当policy。
+ */
+template<
+	std::size_t t_block_size,
+	std::size_t t_chunk_alignment = sizeof(void*),
+	std::size_t t_chunk_offset = 0,
+	std::size_t t_chunk_size = PSYQ_FIXED_MEMORY_POLICY_CHUNK_SIZE_DEFAULT,
+	typename    t_memory_policy = PSYQ_MEMORY_POLICY_DEFAULT >
+class psyq::fixed_memory_policy:
+	private boost::noncopyable
+{
+	typedef fixed_memory_policy<
+		t_block_size,
+		t_chunk_alignment,
+		t_chunk_offset,
+		t_chunk_size,
+		t_memory_policy >
+			this_type;
+
+	// memory配置境界値が2のべき乗か確認。
+	BOOST_STATIC_ASSERT(0 == (t_chunk_alignment & (t_chunk_alignment - 1)));
+	BOOST_STATIC_ASSERT(0 < t_chunk_alignment);
+
+	// 割り当てるmemoryがchunkに収まるか確認。
+	BOOST_STATIC_ASSERT(
+		t_block_size <= t_chunk_size
+			- psyq::_fixed_memory_pool_chunk_info_size);
+
+//.............................................................................
+public:
+	typedef t_memory_policy memory_policy;
+
+	//-------------------------------------------------------------------------
+	static std::size_t const block_size = t_block_size;
+	static std::size_t const chunk_alignment = t_chunk_alignment;
+	static std::size_t const chunk_offset = t_chunk_offset;
+	static std::size_t const chunk_size = t_chunk_size;
+
+	//-------------------------------------------------------------------------
+	/** @brief memoryを確保する。
+	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
+	    @param[in] i_alignment 確保するmemoryの境界値。byte単位。
+	    @param[in] i_offset    確保するmemoryの境界offset値。byte単位。
+	    @param[in] i_name      debugで使うためのmemory識別名。
+	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
+	 */
+	static void* allocate(
+		std::size_t const i_size,
+		std::size_t const i_alignment = sizeof(void*),
+		std::size_t const i_offset = t_chunk_offset,
+		char const* const i_name = NULL)
+	{
+		return i_size <= t_block_size
+			&& 0 < i_size
+			&& 0 < i_alignment
+			&& 0 == t_chunk_alignment % i_alignment
+			&& 0 == t_block_size % i_alignment
+			&& t_chunk_offset == i_offset?
+				this_type::allocate(i_name): NULL;
+	}
+
+	/** @brief memoryを確保する。
+	    @param[in] i_name debugで使うためのmemory識別名。
+	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
+	 */
+	static void* allocate(
+		char const* const i_name = NULL)
+	{
+		return this_type::get_memory_pool().allocate(i_name);
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief memoryを解放する。
+	    @param[in] i_memory 解放するmemoryの先頭位置。
+	 */
+	static void deallocate(
+		void* const i_memory)
+	{
+		this_type::get_memory_pool().deallocate(i_memory);
+	}
+
+	//-------------------------------------------------------------------------
+	static std::size_t max_size()
+	{
+		return t_block_size;
+	}
+
+//.............................................................................
+private:
+	typedef psyq::fixed_memory_pool< t_memory_policy > memory_pool;
+
+	static typename this_type::memory_pool& get_memory_pool()
+	{
+		return psyq::singleton< typename this_type::memory_pool >::construct(
+			boost::in_place(
+				t_block_size, t_chunk_alignment, t_chunk_offset, t_chunk_size));
+	}
+
+	fixed_memory_policy();
 };
 
 #endif // PSYQ_FIXED_MEMORY_HPP_

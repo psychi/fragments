@@ -1,15 +1,19 @@
-#ifndef PSYQ_DEFAULT_MEMORY_POLICY_HPP_
-#define PSYQ_DEFAULT_MEMORY_POLICY_HPP_
+#ifndef PSYQ_MEMORY_POLICY_HPP_
+#define PSYQ_MEMORY_POLICY_HPP_
+
+#ifndef PSYQ_MEMORY_POLICY_DEFAULT
+#define PSYQ_MEMORY_POLICY_DEFAULT psyq::memory_policy
+#endif // !PSYQ_MEMORY_POLICY_DEFAULT
 
 namespace psyq
 {
-	class default_memory_policy;
+	class memory_policy;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief memory割当policy。
  */
-class psyq::default_memory_policy:
+class psyq::memory_policy:
 	private boost::noncopyable
 {
 //.............................................................................
@@ -47,15 +51,12 @@ public:
 		// posix環境でのmemory確保。
 		PSYQ_ASSERT(0 == i_offset);
 		void* a_memory(NULL);
-		auto const a_result(
+		int const a_result(
 			posix_memalign(
 				&a_memory,
 				sizeof(void*) <= i_alignment? i_alignment: sizeof(void*),
 				i_size));
-		if (0 == a_result)
-		{
-			return a_memory;
-		}
+		return 0 == a_result? a_memory: NULL;
 #else
 		// その他の環境でのmemory確保。
 		PSYQ_ASSERT(0 == i_offset);
@@ -84,9 +85,15 @@ public:
 #endif
 	}
 
+	//-------------------------------------------------------------------------
+	static std::size_t max_size()
+	{
+		return static_cast< std::size_t >(-1);
+	}
+
 //.............................................................................
 private:
-	default_memory_policy();
+	memory_policy();
 };
 
-#endif // PSYQ_DEFAULT_MEMORY_POLICY_HPP_
+#endif // PSYQ_MEMORY_POLICY_HPP_

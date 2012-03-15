@@ -100,26 +100,75 @@ public:
 			// すぐ後でmemoryを確保をして空chunkではなくなるので。
 			this->empty_chunk = NULL;
 		}
-		return this->allocate_block(i_name);
+
+		// memory確保chunkを決定。
+		if (NULL == this->allocator_chunk
+			&& !this->find_allocator()
+			&& !this->create_chunk(i_name))
+		{
+			return NULL;
+		}
+		PSYQ_ASSERT(NULL != this->allocator_chunk);
+		typename this_type::chunk& a_chunk(*this->allocator_chunk);
+		PSYQ_ASSERT(0 < a_chunk.num_blocks);
+
+		// 空block-listから先頭のblockを取り出す。
+		boost::uint8_t* const a_block(
+			this->get_chunk_begin(a_chunk)
+				+ a_chunk.first_block * this->block_size);
+		a_chunk.first_block = *a_block;
+		--a_chunk.num_blocks;
+
+		// 空blockがなくなったら、memory確保chunkを無効にする。
+		if (a_chunk.num_blocks <= 0)
+		{
+			this->allocator_chunk = NULL;
+		}
+		return a_block;
 	}
 
 	//-------------------------------------------------------------------------
 	/** @brief memoryを解放する。
 	    @param[in] i_memory 解放するmemoryの先頭位置。
-	    @param[in] i_hint
 	 */
 	bool deallocate(
 		void* const i_memory)
 	{
-		if (NULL != i_memory)
+		if (NULL == i_memory)
 		{
-			// memory解放chunkを探し、memoryを解放する。
-			if (!this->find_deallocator(i_memory))
-			{
-				PSYQ_ASSERT(false);
-				return false;
-			}
-			this->deallocate_block(i_memory);
+			return true;
+		}
+
+		// memory解放chunkを決定。
+		if (!this->find_deallocator(i_memory))
+		{
+			PSYQ_ASSERT(false);
+			return false;
+		}
+		PSYQ_ASSERT(NULL != this->deallocator_chunk);
+		typename this_type::chunk& a_chunk(*this->deallocator_chunk);
+		PSYQ_ASSERT(this->has_block(a_chunk, i_memory));
+		PSYQ_ASSERT(!this->find_empty_block(a_chunk, i_memory));
+		PSYQ_ASSERT(a_chunk.num_blocks < this->max_blocks);
+
+		// 解放するblockのindex番号を取得。
+		boost::uint8_t* const a_block(static_cast< boost::uint8_t* >(i_memory));
+		std::size_t const a_distance(a_block - this->get_chunk_begin(a_chunk));
+		PSYQ_ASSERT(a_distance % this->block_size == 0);
+		boost::uint8_t const a_index(
+			static_cast< boost::uint8_t >(a_distance / this->block_size));
+		PSYQ_ASSERT(a_distance / this->block_size == a_index);
+		PSYQ_ASSERT(0 == a_chunk.num_blocks || a_index != a_chunk.first_block);
+
+		// 解放するblockを空block-listの先頭に挿入。
+		*a_block = a_chunk.first_block;
+		a_chunk.first_block = a_index;
+		++a_chunk.num_blocks;
+
+		// memory解放chunkが空になったら、空chunkに切り替える。
+		if (this->max_blocks <= a_chunk.num_blocks)
+		{
+			this->destroy_empty_chunk();
 		}
 		return true;
 	}
@@ -152,71 +201,6 @@ private:
 	};
 
 	//-------------------------------------------------------------------------
-	/** @brief memory-blockを、memory確保chunkから確保する。
-	 */
-	void* allocate_block(
-		char const* const i_name)
-	{
-		// memory確保chunkを決定。
-		if (NULL == this->allocator_chunk
-			&& !this->find_allocator()
-			&& !this->create_chunk(i_name))
-		{
-			return NULL;
-		}
-		PSYQ_ASSERT(NULL != this->allocator_chunk);
-		typename this_type::chunk& a_chunk(*this->allocator_chunk);
-		PSYQ_ASSERT(0 < a_chunk.num_blocks);
-
-		// 空block-listから先頭のblockを取り出す。
-		boost::uint8_t* const a_block(
-			this->get_chunk_begin(a_chunk)
-				+ a_chunk.first_block * this->block_size);
-		a_chunk.first_block = *a_block;
-		--a_chunk.num_blocks;
-
-		// 空blockがなくなったら、memory確保chunkを無効にする。
-		if (a_chunk.num_blocks <= 0)
-		{
-			this->allocator_chunk = NULL;
-		}
-		return a_block;
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief memory-blockを、memory解放chunkに戻す。
-	 */
-	void deallocate_block(
-		void* const i_block)
-	{
-		PSYQ_ASSERT(NULL != this->deallocator_chunk);
-		typename this_type::chunk& a_chunk(*this->deallocator_chunk);
-		PSYQ_ASSERT(this->has_block(a_chunk, i_block));
-		PSYQ_ASSERT(!this->find_empty_block(a_chunk, i_block));
-		PSYQ_ASSERT(a_chunk.num_blocks < this->max_blocks);
-
-		// 解放するblockのindex番号を取得。
-		boost::uint8_t* const a_block(static_cast< boost::uint8_t* >(i_block));
-		std::size_t const a_distance(a_block - this->get_chunk_begin(a_chunk));
-		PSYQ_ASSERT(a_distance % this->block_size == 0);
-		boost::uint8_t const a_index(
-			static_cast< boost::uint8_t >(a_distance / this->block_size));
-		PSYQ_ASSERT(a_distance / this->block_size == a_index);
-		PSYQ_ASSERT(0 == a_chunk.num_blocks || a_index != a_chunk.first_block);
-
-		// 解放するblockを空block-listの先頭に挿入。
-		*a_block = a_chunk.first_block;
-		a_chunk.first_block = a_index;
-		++a_chunk.num_blocks;
-
-		// memory解放chunkが空になったら、空chunkに切り替える。
-		if (this->max_blocks <= a_chunk.num_blocks)
-		{
-			this->destroy_empty_chunk();
-		}
-	}
-
-	//-------------------------------------------------------------------------
 	/** @brief 空blockのあるchunkを探す。
 	 */
 	bool find_allocator()
@@ -241,6 +225,7 @@ private:
 		return false;
 	}
 
+	//-------------------------------------------------------------------------
 	/** @brief memory解放chunkを探す。
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	 */
@@ -342,6 +327,7 @@ private:
 		return true;
 	}
 
+	//-------------------------------------------------------------------------
 	void destroy_chunk(
 		typename this_type::chunk& i_chunk)
 	{

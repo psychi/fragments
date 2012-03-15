@@ -151,6 +151,7 @@ public:
 			this_type::memory_policy::allocate(i_name));
 	}
 
+	//-------------------------------------------------------------------------
 	/** @brief intanceに使っていたmemoryを解放する。
 	    @param[in] i_instance 解放するinstanceの先頭位置。
 	    @param[in] i_num      解放するinstanceの数。
@@ -169,10 +170,22 @@ public:
 		}
 	}
 
+	//-------------------------------------------------------------------------
+	/** @brief 確保できるinstanceの最大数を返す。
+	    @warning
+	      C++の仕様では、allocate()で指定できる最大のinstance数を返すはず。
+	      ところがVC10以前のMicrosoft実装のSTLではそうなっておらず、
+	      memory上に存在できるinstanceの最大数として実装されているっぽい。
+	      http://msdn.microsoft.com/en-us/library/h36se6sf.aspx
+	      このためVCの場合は、std::allocatorのmax_size()をそのまま用いる
+	      ことにしておく。
+	 */
+#ifndef _MSC_VER
 	static typename super_type::size_type max_size()
 	{
 		return 1;
 	}
+#endif // _MSC_VER
 };
 
 #endif // PSYQ_SINGLE_ALLOCATOR_HPP_

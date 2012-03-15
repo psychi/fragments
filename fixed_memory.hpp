@@ -253,14 +253,19 @@ private:
 		PSYQ_ASSERT(this->deallocator_chunk != this->empty_chunk);
 		if (NULL != this->empty_chunk)
 		{
-			// ‹óchunk‚ðchunk-container‚©‚çØ‚è—£‚µA”jŠü‚·‚éB
-			this->empty_chunk->prev->next = this->empty_chunk->next;
-			this->empty_chunk->next->prev = this->empty_chunk->prev;
-			this->destroy_chunk(*this->empty_chunk);
+			if (this->empty_chunk == this->chunk_container)
+			{
+				this->chunk_container = this->chunk_container->next;
+			}
 			if (this->empty_chunk == this->allocator_chunk)
 			{
 				this->allocator_chunk = this->deallocator_chunk;
 			}
+
+			// ‹óchunk‚ðchunk-container‚©‚çØ‚è—£‚µA”jŠü‚·‚éB
+			this->empty_chunk->prev->next = this->empty_chunk->next;
+			this->empty_chunk->next->prev = this->empty_chunk->prev;
+			this->destroy_chunk(*this->empty_chunk);
 		}
 		this->empty_chunk = this->deallocator_chunk;
 		this->deallocator_chunk = NULL;
@@ -470,7 +475,7 @@ public:
 	}
 
 //.............................................................................
-private:
+//private:
 	typedef psyq::fixed_memory_pool< t_memory_policy > memory_pool;
 
 	static typename this_type::memory_pool& get_pool()

@@ -20,7 +20,8 @@ namespace psyq
     @tparam t_memory_policy memory割当policy。
  */
 template< typename t_memory_policy = PSYQ_MEMORY_POLICY_DEFAULT >
-class psyq::fixed_memory_pool
+class psyq::fixed_memory_pool:
+	private boost::noncopyable
 {
 	typedef psyq::fixed_memory_pool< t_memory_policy > this_type;
 
@@ -65,12 +66,6 @@ public:
 				/ this->block_size);
 		this->max_blocks = static_cast< boost::uint8_t >(
 			a_max_blocks <= 0xff? a_max_blocks: 0xff);
-	}
-
-	//-------------------------------------------------------------------------
-	std::size_t get_block_size() const
-	{
-		return this->block_size;
 	}
 
 	//-------------------------------------------------------------------------
@@ -129,6 +124,22 @@ public:
 			}
 		}
 		return true;
+	}
+
+	//-------------------------------------------------------------------------
+	std::size_t get_block_size() const
+	{
+		return this->block_size;
+	}
+
+	std::size_t get_chunk_alignment() const
+	{
+		return this->chunk_alignment;
+	}
+
+	std::size_t get_chunk_offset() const
+	{
+		return this->chunk_offset;
 	}
 
 //.............................................................................
@@ -246,6 +257,10 @@ private:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief chunk-containerを作る。
+	    @param[in] i_capacity chunk-containerの最大容量。
+	    @param[in] i_name     debugで使うためのmemory識別名。
+	 */
 	bool create_chunk_container(
 		std::size_t const i_capacity,
 		char const* const i_name)
@@ -504,7 +519,7 @@ public:
 	static void* allocate(
 		char const* const i_name = NULL)
 	{
-		return this_type::get_memory_pool().allocate(i_name);
+		return this_type::get_pool().allocate(i_name);
 	}
 
 	//-------------------------------------------------------------------------
@@ -514,7 +529,7 @@ public:
 	static void deallocate(
 		void* const i_memory)
 	{
-		this_type::get_memory_pool().deallocate(i_memory);
+		this_type::get_pool().deallocate(i_memory);
 	}
 
 	//-------------------------------------------------------------------------
@@ -527,11 +542,16 @@ public:
 private:
 	typedef psyq::fixed_memory_pool< t_memory_policy > memory_pool;
 
-	static typename this_type::memory_pool& get_memory_pool()
+	static typename this_type::memory_pool& get_pool()
 	{
-		return psyq::singleton< typename this_type::memory_pool >::construct(
+		typedef psyq::singleton< typename this_type::memory_pool, this_type >
+			singleton;
+		return *singleton::construct(
 			boost::in_place(
-				t_block_size, t_chunk_alignment, t_chunk_offset, t_chunk_size));
+				t_block_size,
+				t_chunk_alignment,
+				t_chunk_offset,
+				t_chunk_size));
 	}
 
 	fixed_memory_policy();

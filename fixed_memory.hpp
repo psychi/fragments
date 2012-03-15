@@ -89,22 +89,22 @@ public:
 	void* allocate(
 		char const* const i_name = NULL)
 	{
-		if (NULL == this->allocator_chunk)
+		// memory確保chunkを決定。
+		if (NULL != this->allocator_chunk)
+		{
+			if (this->empty_chunk == this->allocator_chunk)
+			{
+				// すぐ後でmemoryを確保をして空chunkではなくなるので。
+				this->empty_chunk = NULL;
+			}
+		}
+		else if (NULL != this->empty_chunk)
 		{
 			// 空chunkがあるなら、memory確保chunkに切り替える。
 			this->allocator_chunk = this->empty_chunk;
 			this->empty_chunk = NULL;
 		}
-		else if (this->empty_chunk == this->allocator_chunk)
-		{
-			// すぐ後でmemoryを確保をして空chunkではなくなるので。
-			this->empty_chunk = NULL;
-		}
-
-		// memory確保chunkを決定。
-		if (NULL == this->allocator_chunk
-			&& !this->find_allocator()
-			&& !this->create_chunk(i_name))
+		else if (!this->find_allocator() && !this->create_chunk(i_name))
 		{
 			return NULL;
 		}
@@ -147,7 +147,6 @@ public:
 		}
 		PSYQ_ASSERT(NULL != this->deallocator_chunk);
 		typename this_type::chunk& a_chunk(*this->deallocator_chunk);
-		PSYQ_ASSERT(this->has_block(a_chunk, i_memory));
 		PSYQ_ASSERT(!this->find_empty_block(a_chunk, i_memory));
 		PSYQ_ASSERT(a_chunk.num_blocks < this->max_blocks);
 

@@ -16,7 +16,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 固定sizeのmemory割当pool。
+/** @brief 固定sizeのmemory-pool。
     @tparam t_memory_policy memory割当policy。
  */
 template< typename t_memory_policy = PSYQ_MEMORY_POLICY_DEFAULT >
@@ -61,11 +61,18 @@ public:
 	chunk_alignment(i_chunk_alignment),
 	chunk_offset(i_chunk_offset)
 	{
+		// chunkが持つblockの数を決定。
 		std::size_t const a_max_blocks(
 			(i_chunk_size - psyq::_fixed_memory_pool_chunk_info_size)
 				/ this->block_size);
 		this->max_blocks = static_cast< boost::uint8_t >(
 			a_max_blocks <= 0xff? a_max_blocks: 0xff);
+
+		// chunkの大きさを決定。
+		std::size_t const a_alignment(boost::alignment_of< chunk >::value);
+		this->chunk_size = i_chunk_offset + a_alignment * (
+			(this->max_blocks * i_block_size + a_alignment - 1 - i_chunk_offset)
+				/ a_alignment);
 	}
 
 	//-------------------------------------------------------------------------
@@ -145,6 +152,15 @@ public:
 //.............................................................................
 private:
 	//-------------------------------------------------------------------------
+	struct chunk
+	{
+		chunk*         next;
+		chunk*         prev;
+		boost::uint8_t num_blocks;
+		boost::uint8_t first_block;
+	};
+
+	//-------------------------------------------------------------------------
 	/** @brief memory-blockを、memory確保chunkから確保する。
 	 */
 	void* allocate_block() const
@@ -160,6 +176,21 @@ private:
 			a_chunk + a_first_block * this->block_size);
 		a_first_block = *a_block;
 		--a_num_blocks;
+		return a_block;
+	}
+
+	void* _allocate_block() const
+	{
+		PSYQ_ASSERT(NULL != this->chunk_allocator);
+		typename this_type::chunk& a_chunk(*this->chunk_allocator);
+		PSYQ_ASSERT(0 < a_chunk.num_blocks);
+
+		// 空block-listから先頭のblockを取り出す。
+		boost::uint8_t* const a_block(
+			this->get_chunk_begin(a_chunk)
+				+ a_chunk.first_block * this->block_size);
+		a_chunk.first_block = *a_block;
+		--a_chunk.num_blocks;
 		return a_block;
 	}
 
@@ -191,6 +222,31 @@ private:
 		*a_block = a_first_block;
 		a_first_block = a_index;
 		++a_num_blocks;
+	}
+
+	void _deallocate_block(
+		void* const i_block)
+	const
+	{
+		PSYQ_ASSERT(NULL != this->_chunk_deallocator);
+		typename this_type::chunk& a_chunk(*this->chunk_deallocator);
+		PSYQ_ASSERT(this->has_block(a_chunk, i_block));
+		PSYQ_ASSERT(!this->find_empty_block(a_chunk, i_block));
+		PSYQ_ASSERT(a_chunk.num_blocks < this->max_blocks);
+
+		// 解放するblockのindex番号を取得。
+		boost::uint8_t* const a_block(static_cast< boost::uint8_t* >(i_block));
+		std::size_t const a_distance(a_block - this->get_chunk_begin(a_chunk));
+		PSYQ_ASSERT(a_distance % this->block_size == 0);
+		boost::uint8_t const a_index(
+			static_cast< boost::uint8_t >(a_distance / this->block_size));
+		PSYQ_ASSERT(a_distance / this->block_size == a_index);
+		PSYQ_ASSERT(0 == a_num_blocks || a_index != a_first_block);
+
+		// 解放するblockを空block-listの先頭に挿入。
+		*a_block = a_chunk.first_block;
+		a_chunk.first_block = a_index;
+		++a_chunk.num_blocks;
 	}
 
 	//-------------------------------------------------------------------------
@@ -341,6 +397,62 @@ private:
 	}
 
 	//-------------------------------------------------------------------------
+	typename this_type::chunk* _create_chunk(
+		char const* const i_name) const
+	{
+		// chunkに使うmemoryを確保。
+		void* const a_buffer(
+			t_memory_policy::allocate(
+				this->chunk_size + sizeof(typename this_type::chunk),
+				this->chunk_alignment,
+				this->chunk_offset,
+				i_name));
+		if (NULL == a_buffer)
+		{
+			PSYQ_ASSERT(false);
+			return NULL;
+		}
+
+		// chunkを構築。
+		boost::uint8_t* a_block(static_cast< boost::uint8_t* >(a_buffer));
+		typename this_type::chunk& a_chunk(
+			*reinterpret_cast< typename this_type::chunk* >(
+				a_block + this->chunk_size));
+		a_chunk.first_block = 0;
+		a_chunk.num_blocks = this->max_blocks;
+		a_chunk.next = &a_chunk;
+		a_chunk.prev = &a_chunk;
+
+		// 空block-listを構築。
+		for (
+			boost::uint8_t i = 0;
+			i < this->max_blocks;
+			a_block += this->block_size)
+		{
+			++i;
+			*a_block = i;
+		}
+		return &a_chunk;
+	}
+
+	void _destroy_chunk(
+		typename this_type::chunk& i_chunk)
+	{
+		PSYQ_ASSERT(this->max_blocks <= i_chunk.num_blocks);
+		i_chunk.prev->next = i_chunk.next;
+		i_chunk.next->prev = i_chunk.prev;
+		t_memory_policy::deallocate(
+			reinterpret_cast< boost::uint8_t* >(&i_chunk) - this->chunk_size);
+	}
+
+	boost::uint8_t* get_chunk_begin(
+		typename this_type::chunk& i_chunk)
+	const
+	{
+		return reinterpret_cast< boost::uint8_t* >(&i_chunk) - this->chunk_size;
+	}
+
+	//-------------------------------------------------------------------------
 	boost::uint8_t* create_chunk(
 		char const* const i_name) const
 	{
@@ -443,6 +555,7 @@ private:
 	std::size_t      max_blocks;        ///< chunkが持つblockの最大数。
 	std::size_t      chunk_alignment;
 	std::size_t      chunk_offset;
+	std::size_t      chunk_size;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -451,7 +564,7 @@ private:
     @tparam t_chunk_alignment memory-chunkの配置境界値。byte単位。
     @tparam t_chunk_offset    memory-cnunkの配置offset値。byte単位。
     @tparam t_chunk_size      memory-chunkの最大size。byte単位。
-    @tparam t_memory_policy   memory割当policy。
+    @tparam t_memory_policy   実際に使うmemory割当policy。
  */
 template<
 	std::size_t t_block_size,

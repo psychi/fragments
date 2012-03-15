@@ -14,7 +14,7 @@ namespace psyq
     @tparam t_alignment     instance配置境界値。
     @tparam t_offset        instance配置offset値。
     @tparam t_chunk_size    memory-chunkの最大size。byte単位。
-    @tparam t_memory_policy memory割当policy。
+    @tparam t_memory_policy 実際に使うmemory割当policy。
  */
 template<
 	typename    t_value_type,
@@ -34,7 +34,8 @@ class psyq::single_allocator:
 public:
 	template<
 		typename    t_other_type,
-		std::size_t t_other_alignment = boost::alignment_of< t_other_type >::value,
+		std::size_t t_other_alignment =
+			boost::alignment_of< t_other_type >::value,
 		std::size_t t_other_offset = t_offset,
 		std::size_t t_other_chunk = t_chunk_size,
 		typename    t_other_memory = t_memory_policy>

@@ -32,20 +32,11 @@ public:
 	//-------------------------------------------------------------------------
 	~fixed_memory_pool()
 	{
-		// chunk‚ğ‚·‚×‚Ä”jŠü‚·‚éB
-		typename this_type::chunk* const a_container(this->chunk_container);
-		for (typename this_type::chunk* i = a_container;;)
+		if (NULL != this->chunk_container)
 		{
-			typename this_type::chunk* const a_next(i->next);
-			this->destroy_chunk(*i);
-			if (a_container != a_next)
-			{
-				i = a_next;
-			}
-			else
-			{
-				break;
-			}
+			// ‹óchunk‚ğ”jŠü‚·‚éB
+			PSYQ_ASSERT(this->chunk_container->next == this->chunk_container);
+			this->destroy_chunk(*this->chunk_container);
 		}
 	}
 

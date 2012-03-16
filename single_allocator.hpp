@@ -37,8 +37,7 @@ public:
 		std::size_t t_other_alignment =
 			boost::alignment_of< t_other_type >::value,
 		std::size_t t_other_offset = t_offset,
-		std::size_t t_other_chunk = t_chunk_size,
-		typename    t_other_memory = t_memory_policy>
+		std::size_t t_other_chunk = t_chunk_size >
 	struct rebind
 	{
 		typedef single_allocator<
@@ -46,7 +45,7 @@ public:
 			t_other_alignment,
 			t_other_offset,
 			t_other_chunk,
-			t_other_memory >
+			t_memory_policy >
 				other;
 	};
 
@@ -76,15 +75,14 @@ public:
 		typename    t_other_type,
 		std::size_t t_other_alignment,
 		std::size_t t_other_offset,
-		std::size_t t_other_chunk,
-		typename    t_other_memory >
+		std::size_t t_other_chunk >
 	single_allocator(
 		psyq::single_allocator<
 			t_other_type,
 			t_other_alignment,
 			t_other_offset,
 			t_other_chunk,
-			t_other_memory > const&
+			t_memory_policy > const&
 				i_source):
 	super_type(i_source)
 	{
@@ -103,15 +101,14 @@ public:
 		typename    t_other_type,
 		std::size_t t_other_alignment,
 		std::size_t t_other_offset,
-		std::size_t t_other_chunk,
-		typename    t_other_memory >
+		std::size_t t_other_chunk >
 	this_type& operator=(
 		psyq::single_allocator<
 			t_other_type,
 			t_other_alignment,
 			t_other_offset,
 			t_other_chunk,
-			t_other_memory > const&
+			t_memory_policy > const&
 				i_source)
 	{
 		this->super_type::operator=(i_source);
@@ -120,7 +117,7 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief instanceに使うmemoryを確保する。
-	    @param[in] i_size      確保するinstanceの数。
+	    @param[in] i_num       確保するinstanceの数。
 	    @param[in] i_alignment 確保するinstanceの境界値。byte単位。
 	    @param[in] i_offset    確保するinstanceの境界offset値。byte単位。
 	    @param[in] i_name      debugで使うためのmemory識別名。
@@ -173,19 +170,19 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief 確保できるinstanceの最大数を返す。
 	    @warning
-	      C++の仕様では、allocate()で指定できる最大のinstance数を返すはず。
-	      ところがVC10以前のMicrosoft実装のSTLではそうなっておらず、
-	      memory上に存在できるinstanceの最大数として実装されているっぽい。
+	      max_size()の返り値は、allocate()で指定できるinstance数の最大値と
+	      C++の仕様で決められている。
+	      ところがVC++に添付されてるSTLの実装はそのようになっておらず、
+	      memory上に存在できるinstanceの最大数を返すように実装されている。
+	      このためVC++の場合は、std::allocator::max_size()を使うことにする。
 	      http://msdn.microsoft.com/en-us/library/h36se6sf.aspx
-	      このためVCの場合は、std::allocatorのmax_size()をそのまま用いる
-	      ことにしておく。
 	 */
 #ifndef _MSC_VER
 	static typename super_type::size_type max_size()
 	{
 		return 1;
 	}
-#endif // _MSC_VER
+#endif // !_MSC_VER
 };
 
 #endif // PSYQ_SINGLE_ALLOCATOR_HPP_

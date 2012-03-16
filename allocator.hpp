@@ -24,12 +24,10 @@ class psyq::allocator:
 public:
 	typedef t_memory_policy memory_policy;
 
-	template<
-		typename t_other_type,
-		typename t_other_memory = t_memory_policy >
+	template< typename t_other_type >
 	struct rebind
 	{
-		typedef psyq::allocator< t_other_type, t_other_memory > other;
+		typedef psyq::allocator< t_other_type, t_memory_policy > other;
 	};
 
 	//-------------------------------------------------------------------------
@@ -46,9 +44,9 @@ public:
 		// pass
 	}
 
-	template< typename t_other_type, typename t_other_memory >
+	template< typename t_other_type >
 	allocator(
-		psyq::allocator< t_other_type, t_other_memory > const& i_source):
+		psyq::allocator< t_other_type, t_memory_policy > const& i_source):
 	super_type(i_source)
 	{
 		// pass
@@ -62,9 +60,9 @@ public:
 		return *this;
 	}
 
-	template< typename t_other_type, typename t_other_memory >
+	template< typename t_other_type >
 	this_type& operator=(
-		psyq::allocator< t_other_type, t_other_memory > const& i_source)
+		psyq::allocator< t_other_type, t_memory_policy > const& i_source)
 	{
 		this->super_type::operator=(i_source);
 		return *this;

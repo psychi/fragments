@@ -95,6 +95,11 @@ public:
 			this->allocator_chunk = this->empty_chunk;
 			this->empty_chunk = NULL;
 		}
+		else if (NULL != this->deallocator_chunk)
+		{
+			PSYQ_ASSERT(0 < this->deallocator_chunk->num_blocks);
+			this->allocator_chunk = this->deallocator_chunk;
+		}
 		else if (!this->find_allocator() && !this->create_chunk(i_name))
 		{
 			return NULL;
@@ -195,24 +200,26 @@ private:
 	 */
 	bool find_allocator()
 	{
-		// 空blockのあるchunkを探す。
-		if (NULL != this->chunk_container)
+		typename this_type::chunk* const a_first(this->chunk_container);
+		if (NULL == a_first)
 		{
-			for (typename this_type::chunk* i = this->chunk_container;;)
+			return false;
+		}
+
+		// chunk-containerをすべて走査して探す。
+		for (typename this_type::chunk* i = a_first;;)
+		{
+			if (0 < i->num_blocks)
 			{
-				if (0 < i->num_blocks)
-				{
-					this->allocator_chunk = i;
-					return true;
-				}
-				i = i->next;
-				if (i == this->chunk_container)
-				{
-					break;
-				}
+				this->allocator_chunk = i;
+				return true;
+			}
+			i = i->next;
+			if (a_first == i)
+			{
+				return false;
 			}
 		}
-		return false;
 	}
 
 	//-------------------------------------------------------------------------
@@ -222,26 +229,42 @@ private:
 	bool find_deallocator(
 		void const* const i_memory)
 	{
+		typename this_type::chunk* a_next(this->chunk_container);
+		if (NULL == a_next)
+		{
+			return false;
+		}
 		if (NULL != this->deallocator_chunk
 			&& this->has_block(*this->deallocator_chunk, i_memory))
 		{
 			return true;
 		}
 
-		// 解放するmemoryを含むchunkを、chunk-containerから探す。
-		typename this_type::chunk* const a_container(this->chunk_container);
-		for (typename this_type::chunk* i = a_container;;)
+		// 解放するmemoryを含むchunkを、chunk-containerから双方向に探す。
+		typename this_type::chunk* a_prev(a_next->prev);
+		for (;;)
 		{
-			if (this->has_block(*i, i_memory))
+			if (this->has_block(*a_next, i_memory))
 			{
-				this->deallocator_chunk = i;
+				this->deallocator_chunk = a_next;
 				return true;
 			}
-			i = i->next;
-			if (i == a_container)
+			else if (a_next == a_prev)
 			{
 				return false;
 			}
+			a_next = a_next->next;
+
+			if (this->has_block(*a_prev, i_memory))
+			{
+				this->deallocator_chunk = a_prev;
+				return true;
+			}
+			else if (a_prev == a_next)
+			{
+				return false;
+			}
+			a_prev = a_prev->prev;
 		}
 	}
 
@@ -288,13 +311,15 @@ private:
 			return false;
 		}
 
-		// chunkを構築し、chunk-containerの先頭に挿入。
+		// chunkを構築。
 		boost::uint8_t* a_block(static_cast< boost::uint8_t* >(a_buffer));
 		typename this_type::chunk& a_chunk(
 			*reinterpret_cast< typename this_type::chunk* >(
 				a_block + this->chunk_size));
 		a_chunk.first_block = 0;
 		a_chunk.num_blocks = static_cast< boost::uint8_t >(this->max_blocks);
+
+		// chunk-containerの先頭に挿入。
 		if (NULL != this->chunk_container)
 		{
 			a_chunk.next = this->chunk_container;
@@ -332,6 +357,8 @@ private:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief memory-chunkに含まれているmemory-blockか判定。
+	 */
 	bool has_block(
 		typename this_type::chunk& i_chunk,
 		void const* const          i_block)
@@ -340,13 +367,8 @@ private:
 		return this->get_chunk_begin(i_chunk) <= i_block && i_block < &i_chunk;
 	}
 
-	boost::uint8_t* get_chunk_begin(
-		typename this_type::chunk& i_chunk)
-	const
-	{
-		return reinterpret_cast< boost::uint8_t* >(&i_chunk) - this->chunk_size;
-	}
-
+	/** @brief memory-chunkに含まれている空memory-blockか判定。
+	 */
 	bool find_empty_block(
 		typename this_type::chunk& i_chunk,
 		void const* const          i_block)
@@ -367,6 +389,15 @@ private:
 			}
 		}
 		return false;
+	}
+
+	/** @brief memory-chunkの先頭位置を取得。
+	 */
+	boost::uint8_t* get_chunk_begin(
+		typename this_type::chunk& i_chunk)
+	const
+	{
+		return reinterpret_cast< boost::uint8_t* >(&i_chunk) - this->chunk_size;
 	}
 
 	//-------------------------------------------------------------------------
@@ -475,7 +506,7 @@ public:
 	}
 
 //.............................................................................
-//private:
+private:
 	typedef psyq::fixed_memory_pool< t_memory_policy > memory_pool;
 
 	static typename this_type::memory_pool& get_pool()

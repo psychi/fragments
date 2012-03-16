@@ -75,8 +75,7 @@ public:
 	/** @brief memoryを確保する。
 	    @param[in] i_name debugで使うためのmemory識別名。
 	 */
-	void* allocate(
-		char const* const i_name = NULL)
+	void* allocate(char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)
 	{
 		// memory確保chunkを決定。
 		if (NULL != this->allocator_chunk)
@@ -120,8 +119,7 @@ public:
 	/** @brief memoryを解放する。
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	 */
-	bool deallocate(
-		void* const i_memory)
+	bool deallocate(void* const i_memory)
 	{
 		if (NULL == i_memory)
 		{
@@ -223,8 +221,7 @@ private:
 	/** @brief memory解放chunkを探す。
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	 */
-	bool find_deallocator(
-		void const* const i_memory)
+	bool find_deallocator(void const* const i_memory)
 	{
 		if (NULL == this->chunk_container)
 		{
@@ -288,8 +285,7 @@ private:
 	}
 
 	//-------------------------------------------------------------------------
-	bool create_chunk(
-		char const* const i_name)
+	bool create_chunk(char const* const i_name)
 	{
 		// chunkに使うmemoryを確保。
 		void* const a_memory(
@@ -343,8 +339,7 @@ private:
 	}
 
 	//-------------------------------------------------------------------------
-	void destroy_chunk(
-		typename this_type::chunk& i_chunk)
+	void destroy_chunk(typename this_type::chunk& i_chunk)
 	{
 		PSYQ_ASSERT(this->max_blocks <= i_chunk.num_blocks);
 		t_memory_policy::deallocate(
@@ -388,9 +383,7 @@ private:
 
 	/** @brief memory-chunkの先頭位置を取得。
 	 */
-	boost::uint8_t* get_chunk_begin(
-		typename this_type::chunk& i_chunk)
-	const
+	boost::uint8_t* get_chunk_begin(typename this_type::chunk& i_chunk) const
 	{
 		return reinterpret_cast< boost::uint8_t* >(&i_chunk) - this->chunk_size;
 	}
@@ -462,7 +455,7 @@ public:
 		std::size_t const i_size,
 		std::size_t const i_alignment = sizeof(void*),
 		std::size_t const i_offset = t_chunk_offset,
-		char const* const i_name = NULL)
+		char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)
 	{
 		return i_size <= t_block_size
 			&& 0 < i_size
@@ -477,8 +470,7 @@ public:
 	    @param[in] i_name debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	static void* allocate(
-		char const* const i_name = NULL)
+	static void* allocate(char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)
 	{
 		return this_type::get_pool().allocate(i_name);
 	}
@@ -487,8 +479,7 @@ public:
 	/** @brief memoryを解放する。
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	 */
-	static void deallocate(
-		void* const i_memory)
+	static void deallocate(void* const i_memory)
 	{
 		this_type::get_pool().deallocate(i_memory);
 	}

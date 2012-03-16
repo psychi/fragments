@@ -23,12 +23,12 @@ template<
 	std::size_t t_chunk_size = PSYQ_FIXED_MEMORY_POLICY_CHUNK_SIZE_DEFAULT,
 	typename    t_memory_policy = PSYQ_MEMORY_POLICY_DEFAULT >
 class psyq::single_allocator:
-	public std::allocator< t_value_type >
+	public psyq::allocator< t_value_type, t_memory_policy >
 {
 	typedef psyq::single_allocator<
 		t_value_type, t_alignment, t_offset, t_chunk_size, t_memory_policy >
 			this_type;
-	typedef std::allocator< t_value_type > super_type;
+	typedef psyq::allocator< t_value_type, t_memory_policy > super_type;
 
 //.............................................................................
 public:
@@ -58,14 +58,14 @@ public:
 			memory_policy;
 
 	//-------------------------------------------------------------------------
-	single_allocator():
-	super_type()
+	explicit single_allocator(
+		char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT):
+	super_type(i_name)
 	{
 		// pass
 	}
 
-	single_allocator(
-		this_type const& i_source):
+	single_allocator(this_type const& i_source):
 	super_type(i_source)
 	{
 		// pass
@@ -90,8 +90,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	this_type& operator=(
-		this_type const& i_source)
+	this_type& operator=(this_type const& i_source)
 	{
 		this->super_type::operator=(i_source);
 		return *this;
@@ -120,32 +119,29 @@ public:
 	    @param[in] i_num       確保するinstanceの数。
 	    @param[in] i_alignment 確保するinstanceの境界値。byte単位。
 	    @param[in] i_offset    確保するinstanceの境界offset値。byte単位。
-	    @param[in] i_name      debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	static typename super_type::pointer allocate(
+	typename super_type::pointer allocate(
 		typename super_type::size_type const i_num,
 		std::size_t const                    i_alignment = t_alignment,
-		std::size_t const                    i_offset = t_offset,
-		char const* const                    i_name = NULL)
+		std::size_t const                    i_offset = t_offset)
 	{
 		return 1 == i_num
 			&& 0 < i_alignment
 			&& 0 == t_alignment % i_alignment
 			&& 0 == this_type::memory_policy::block_size % i_alignment
 			&& t_offset == i_offset?
-				this_type::allocate(i_name): NULL;
+				this_type::allocate(): NULL;
 	}
 
 	/** @brief instanceに使うmemoryを確保する。
 	    @param[in] i_name debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	static typename super_type::pointer allocate(
-		char const* const i_name = NULL)
+	typename super_type::pointer allocate()
 	{
 		return static_cast< typename super_type::pointer >(
-			this_type::memory_policy::allocate(i_name));
+			this_type::memory_policy::allocate(this->get_name()));
 	}
 
 	//-------------------------------------------------------------------------
@@ -153,7 +149,7 @@ public:
 	    @param[in] i_instance 解放するinstanceの先頭位置。
 	    @param[in] i_num      解放するinstanceの数。
 	 */
-	static void deallocate(
+	void deallocate(
 		typename super_type::pointer const   i_instance,
 		typename super_type::size_type const i_num = 1)
 	{
@@ -174,7 +170,7 @@ public:
 	      C++の仕様で決められている。
 	      ところがVC++に添付されてるSTLの実装はそのようになっておらず、
 	      memory上に存在できるinstanceの最大数を返すように実装されている。
-	      このためVC++の場合は、std::allocator::max_size()を使うことにする。
+	      このためVC++の場合は、super_type:::max_size()を使うことにする。
 	      http://msdn.microsoft.com/en-us/library/h36se6sf.aspx
 	 */
 #ifndef _MSC_VER

@@ -1,6 +1,10 @@
 #ifndef PSYQ_MEMORY_POLICY_HPP_
 #define PSYQ_MEMORY_POLICY_HPP_
 
+#ifndef PSYQ_MEMORY_NAME_DEFAULT
+#define PSYQ_MEMORY_NAME_DEFAULT "PSYQ"
+#endif // !PSYQ_MEMORY_NAME_DEFAULT
+
 #ifndef PSYQ_MEMORY_POLICY_DEFAULT
 #define PSYQ_MEMORY_POLICY_DEFAULT psyq::memory_policy
 #endif // !PSYQ_MEMORY_POLICY_DEFAULT
@@ -30,7 +34,7 @@ public:
 		std::size_t const i_size,
 		std::size_t const i_alignment = sizeof(void*),
 		std::size_t const i_offset = 0,
-		char const* const i_name = NULL)
+		char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)
 	{
 		(void)i_name;
 

@@ -11,8 +11,6 @@ namespace psyq
 
 	template< std::size_t, std::size_t, std::size_t, std::size_t, typename >
 		class fixed_memory_policy;
-
-	static std::size_t const _fixed_memory_pool_chunk_info_size = 2;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -61,7 +59,7 @@ public:
 	{
 		// chunkが持つblockの数を決定。
 		std::size_t const a_max_blocks(
-			(i_chunk_size - psyq::_fixed_memory_pool_chunk_info_size)
+			(i_chunk_size - sizeof(typename this_type::chunk))
 				/ this->block_size);
 		this->max_blocks = static_cast< boost::uint8_t >(
 			a_max_blocks <= 0xff? a_max_blocks: 0xff);
@@ -94,11 +92,6 @@ public:
 			// 空chunkがあるなら、memory確保chunkに切り替える。
 			this->allocator_chunk = this->empty_chunk;
 			this->empty_chunk = NULL;
-		}
-		else if (NULL != this->deallocator_chunk)
-		{
-			PSYQ_ASSERT(0 < this->deallocator_chunk->num_blocks);
-			this->allocator_chunk = this->deallocator_chunk;
 		}
 		else if (!this->find_allocator() && !this->create_chunk(i_name))
 		{
@@ -160,10 +153,12 @@ public:
 		a_chunk.first_block = a_index;
 		++a_chunk.num_blocks;
 
-		// memory解放chunkが空になったら、空chunkに切り替える。
-		if (this->max_blocks <= a_chunk.num_blocks)
+		// memory解放chunkが空になったら、空chunkに転用する。
+		if (&a_chunk != this->empty_chunk
+			&& this->max_blocks <= a_chunk.num_blocks)
 		{
 			this->destroy_empty_chunk();
+			this->empty_chunk = &a_chunk;
 		}
 		return true;
 	}
@@ -200,13 +195,15 @@ private:
 	 */
 	bool find_allocator()
 	{
-		typename this_type::chunk* const a_first(this->chunk_container);
-		if (NULL == a_first)
+		if (NULL == this->chunk_container)
 		{
 			return false;
 		}
 
 		// chunk-containerをすべて走査して探す。
+		typename this_type::chunk* const a_first(
+			NULL != this->deallocator_chunk?
+				this->deallocator_chunk: this->chunk_container);
 		for (typename this_type::chunk* i = a_first;;)
 		{
 			if (0 < i->num_blocks)
@@ -229,21 +226,19 @@ private:
 	bool find_deallocator(
 		void const* const i_memory)
 	{
-		typename this_type::chunk* a_next(this->chunk_container);
-		if (NULL == a_next)
+		if (NULL == this->chunk_container)
 		{
 			return false;
 		}
-		if (NULL != this->deallocator_chunk
-			&& this->has_block(*this->deallocator_chunk, i_memory))
-		{
-			return true;
-		}
 
 		// 解放するmemoryを含むchunkを、chunk-containerから双方向に探す。
+		typename this_type::chunk* a_next(
+			NULL != this->deallocator_chunk?
+				this->deallocator_chunk: this->chunk_container);
 		typename this_type::chunk* a_prev(a_next->prev);
 		for (;;)
 		{
+			// 正方向に検索。
 			if (this->has_block(*a_next, i_memory))
 			{
 				this->deallocator_chunk = a_next;
@@ -255,6 +250,7 @@ private:
 			}
 			a_next = a_next->next;
 
+			// 逆方向に検索。
 			if (this->has_block(*a_prev, i_memory))
 			{
 				this->deallocator_chunk = a_prev;
@@ -273,7 +269,6 @@ private:
 	 */
 	void destroy_empty_chunk()
 	{
-		PSYQ_ASSERT(this->deallocator_chunk != this->empty_chunk);
 		if (NULL != this->empty_chunk)
 		{
 			if (this->empty_chunk == this->chunk_container)
@@ -290,8 +285,6 @@ private:
 			this->empty_chunk->next->prev = this->empty_chunk->prev;
 			this->destroy_chunk(*this->empty_chunk);
 		}
-		this->empty_chunk = this->deallocator_chunk;
-		this->deallocator_chunk = NULL;
 	}
 
 	//-------------------------------------------------------------------------
@@ -299,25 +292,37 @@ private:
 		char const* const i_name)
 	{
 		// chunkに使うmemoryを確保。
-		void* const a_buffer(
+		void* const a_memory(
 			t_memory_policy::allocate(
 				this->chunk_size + sizeof(typename this_type::chunk),
 				this->chunk_alignment,
 				this->chunk_offset,
 				i_name));
-		if (NULL == a_buffer)
+		if (NULL == a_memory)
 		{
 			PSYQ_ASSERT(false);
 			return false;
 		}
 
 		// chunkを構築。
-		boost::uint8_t* a_block(static_cast< boost::uint8_t* >(a_buffer));
+		boost::uint8_t* a_block(static_cast< boost::uint8_t* >(a_memory));
 		typename this_type::chunk& a_chunk(
-			*reinterpret_cast< typename this_type::chunk* >(
-				a_block + this->chunk_size));
+			*static_cast< typename this_type::chunk* >(
+				static_cast< void* >(a_block + this->chunk_size)));
+		PSYQ_ASSERT(
+			0 == reinterpret_cast< std::size_t >(&a_chunk)
+				% boost::alignment_of< chunk >::value);
 		a_chunk.first_block = 0;
 		a_chunk.num_blocks = static_cast< boost::uint8_t >(this->max_blocks);
+
+		// 空block-listを構築。
+		std::size_t const a_max_blocks(this->max_blocks);
+		std::size_t const a_block_size(this->block_size);
+		for (boost::uint8_t i = 0; i < a_max_blocks; a_block += a_block_size)
+		{
+			++i;
+			*a_block = i;
+		}
 
 		// chunk-containerの先頭に挿入。
 		if (NULL != this->chunk_container)
@@ -333,16 +338,6 @@ private:
 			a_chunk.prev = &a_chunk;
 		}
 		this->chunk_container = &a_chunk;
-
-		// 空block-listを構築。
-		for (
-			boost::uint8_t i = 0;
-			i < this->max_blocks;
-			a_block += this->block_size)
-		{
-			++i;
-			*a_block = i;
-		}
 		this->allocator_chunk = &a_chunk;
 		return true;
 	}
@@ -442,13 +437,12 @@ class psyq::fixed_memory_policy:
 	BOOST_STATIC_ASSERT(0 < t_chunk_alignment);
 
 	// 割り当てるmemoryがchunkに収まるか確認。
-	BOOST_STATIC_ASSERT(
-		t_block_size <= t_chunk_size
-			- psyq::_fixed_memory_pool_chunk_info_size);
-
+	////BOOST_STATIC_ASSERT(
+	////	t_block_size <= t_chunk_size - sizeof(typename this_type::pool::chunk));
 //.............................................................................
 public:
 	typedef t_memory_policy memory_policy;
+	typedef psyq::fixed_memory_pool< t_memory_policy > pool;
 
 	//-------------------------------------------------------------------------
 	static std::size_t const block_size = t_block_size;
@@ -500,18 +494,19 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief 一度に確保できるmemoryの最大sizeを取得。
+	 */
 	static std::size_t max_size()
 	{
 		return t_block_size;
 	}
 
-//.............................................................................
-private:
-	typedef psyq::fixed_memory_pool< t_memory_policy > memory_pool;
-
-	static typename this_type::memory_pool& get_pool()
+	//-------------------------------------------------------------------------
+	/** @brief memory管理に使っているsingleton-poolを取得。
+	 */
+	static typename this_type::pool& get_pool()
 	{
-		typedef psyq::singleton< typename this_type::memory_pool, this_type >
+		typedef psyq::singleton< typename this_type::pool, this_type >
 			singleton;
 		return *singleton::construct(
 			boost::in_place(
@@ -521,6 +516,8 @@ private:
 				t_chunk_size));
 	}
 
+//.............................................................................
+private:
 	fixed_memory_policy();
 };
 

@@ -183,6 +183,14 @@ public:
 		return 1;
 	}
 #endif // !_MSC_VER
+
+	//-------------------------------------------------------------------------
+	/** @brief memoryŠÇ—‚Ég‚Á‚Ä‚¢‚ésingleton-pool‚ğæ“¾B
+	 */
+	static typename this_type::memory_policy::pool& get_pool()
+	{
+		return this_type::memory_policy::get_pool();
+	}
 };
 
 #endif // PSYQ_SINGLE_ALLOCATOR_HPP_

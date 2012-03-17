@@ -23,12 +23,29 @@ template<
 	std::size_t t_chunk_size = PSYQ_FIXED_MEMORY_POLICY_CHUNK_SIZE_DEFAULT,
 	typename    t_memory_policy = PSYQ_MEMORY_POLICY_DEFAULT >
 class psyq::single_allocator:
-	public psyq::allocator< t_value_type, t_memory_policy >
+	public psyq::allocator<
+		t_value_type,
+		psyq::fixed_memory_policy<
+			((sizeof(t_value_type) + t_alignment - 1) / t_alignment)
+				* t_alignment,
+			t_alignment,
+			t_offset,
+			t_chunk_size,
+			t_memory_policy > >
 {
 	typedef psyq::single_allocator<
 		t_value_type, t_alignment, t_offset, t_chunk_size, t_memory_policy >
 			this_type;
-	typedef psyq::allocator< t_value_type, t_memory_policy > super_type;
+	typedef public psyq::allocator<
+		t_value_type,
+		psyq::fixed_memory_policy<
+			((sizeof(t_value_type) + t_alignment - 1) / t_alignment)
+				* t_alignment,
+			t_alignment,
+			t_offset,
+			t_chunk_size,
+			t_memory_policy > >
+				super_type;
 
 //.............................................................................
 public:
@@ -49,14 +66,6 @@ public:
 			t_other_memory >
 				other;
 	};
-
-	typedef psyq::fixed_memory_policy<
-		((sizeof(t_value_type) + t_alignment - 1) / t_alignment) * t_alignment,
-		t_alignment,
-		t_offset,
-		t_chunk_size,
-		t_memory_policy >
-			memory_policy;
 
 	//-------------------------------------------------------------------------
 	explicit single_allocator(
@@ -129,12 +138,7 @@ public:
 		std::size_t const                    i_alignment = t_alignment,
 		std::size_t const                    i_offset = t_offset)
 	{
-		return 1 == i_num
-			&& 0 < i_alignment
-			&& 0 == t_alignment % i_alignment
-			&& 0 == this_type::memory_policy::block_size % i_alignment
-			&& t_offset == i_offset?
-				this_type::allocate(): NULL;
+		return this->super_type::allocate(i_num, i_alignment, i_offset);
 	}
 
 	/** @brief instanceに使うmemoryを確保する。
@@ -173,7 +177,7 @@ public:
 	      C++の仕様で決められている。
 	      ところがVC++に添付されてるSTLの実装はそのようになっておらず、
 	      memory上に存在できるinstanceの最大数を返すように実装されている。
-	      このためVC++の場合は、super_type::max_size()を使うことにする。
+	      このためVC++の場合は、専用のmax_size()を使うことにする。
 	      http://msdn.microsoft.com/en-us/library/h36se6sf.aspx
 	 */
 #ifndef _MSC_VER
@@ -181,12 +185,18 @@ public:
 	{
 		return 1;
 	}
+#else
+	static typename super_type::size_type max_size()
+	{
+		return (std::numeric_limits< std::size_t >::max)()
+			/ sizeof(t_value_type);
+	}
 #endif // !_MSC_VER
 
 	//-------------------------------------------------------------------------
 	/** @brief memory管理に使っているsingleton-poolを取得。
 	 */
-	static typename this_type::memory_policy::pool& get_pool()
+	static typename super_type::memory_policy::pool& get_pool()
 	{
 		return this_type::memory_policy::get_pool();
 	}

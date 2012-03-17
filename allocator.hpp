@@ -109,11 +109,12 @@ public:
 			boost::alignment_of< t_value_type >::value,
 		std::size_t const                      i_offset = 0)
 	{
-		return t_memory_policy::allocate(
-			i_num * sizeof(t_value_type),
-			i_alignment,
-			i_offset,
-			this->get_name());
+		return static_cast< typename this_type::pointer >(
+			t_memory_policy::allocate(
+				i_num * sizeof(t_value_type),
+				i_alignment,
+				i_offset,
+				this->get_name()));
 	}
 
 	/** @brief instance‚Ég‚Á‚Ä‚¢‚½memory‚ğ‰ğ•ú‚·‚éB

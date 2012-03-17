@@ -14,81 +14,62 @@ namespace psyq
 template<
 	typename t_value_type,
 	typename t_memory_policy = PSYQ_MEMORY_POLICY_DEFAULT >
-class psyq::allocator:
-	private std::allocator< t_value_type >
+class psyq::allocator
 {
 	typedef psyq::allocator< t_value_type, t_memory_policy > this_type;
-	typedef std::allocator< t_value_type > super_type;
-
-	template< typename t_other_type, typename t_other_memory >
-		friend class psyq::allocator;
 
 //.............................................................................
 public:
-	using super_type::size_type;
-	using super_type::difference_type;
-	using super_type::pointer;
-	using super_type::const_pointer;
-	using super_type::reference;
-	using super_type::const_reference;
-	using super_type::value_type;
-	using super_type::address;
-	using super_type::construct;
-	using super_type::destroy;
+	typedef t_memory_policy     memory_policy;
+	typedef std::size_t         size_type;
+	typedef std::ptrdiff_t      difference_type;
+	typedef t_value_type*       pointer;
+	typedef const t_value_type* const_pointer;
+	typedef t_value_type&       reference;
+	typedef const t_value_type& const_reference;
+	typedef t_value_type        value_type;
 
-	typedef t_memory_policy memory_policy;
-
-	template< typename t_other_type >
+	//-------------------------------------------------------------------------
+	template<
+		typename t_other_type,
+		typename t_other_policy = t_memory_policy >
 	struct rebind
 	{
-		typedef psyq::allocator< t_other_type, t_memory_policy > other;
+		typedef psyq::allocator< t_other_type, t_other_policy > other;
 	};
 
 	//-------------------------------------------------------------------------
 	explicit allocator(char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT):
-	super_type(),
 	name(i_name)
 	{
 		// pass
 	}
 
-	allocator(this_type const& i_source):
-	super_type(i_source),
-	name(i_source.get_name())
-	{
-		// pass
-	}
+	//allocator(this_type const&) = default;
 
 	template< typename t_other_type, typename t_other_memory >
 	allocator(
 		psyq::allocator< t_other_type, t_other_memory > const& i_source):
-	super_type(i_source),
 	name(i_source.get_name())
 	{
 		// pass
 	}
 
 	//-------------------------------------------------------------------------
-	this_type& operator=(this_type const& i_source)
-	{
-		this->set_name(i_source.get_name());
-		this->super_type::operator=(i_source);
-		return *this;
-	}
+	//this_type& operator=(this_type const&) = default;
 
 	template< typename t_other_type, typename t_other_memory >
 	this_type& operator=(
 		psyq::allocator< t_other_type, t_other_memory > const& i_source)
 	{
 		this->set_name(i_source.get_name());
-		this->super_type::operator=(i_source);
 		return *this;
 	}
 
 	//-------------------------------------------------------------------------
-	bool operator==(this_type const& i_right) const
+	bool operator==(this_type const&) const
 	{
-		return *static_cast< super_type const* >(this) == i_right;
+		return true;
 	}
 
 	bool operator!=(this_type const& i_right) const
@@ -103,8 +84,8 @@ public:
 	    @param[in] i_offset    確保するinstanceの境界offset値。byte単位。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	typename super_type::pointer allocate(
-		typename super_type::size_type const   i_num,
+	typename this_type::pointer allocate(
+		typename this_type::size_type const   i_num,
 		std::size_t const                      i_alignment =
 			boost::alignment_of< t_value_type >::value,
 		std::size_t const                      i_offset = 0)
@@ -122,15 +103,41 @@ public:
 	    @param[in] i_num      解放するinstanceの数。
 	 */
 	void deallocate(
-		typename super_type::pointer const   i_instance,
-		typename super_type::size_type const i_num)
+		typename this_type::pointer const   i_instance,
+		typename this_type::size_type const i_num)
 	{
 		(void)i_num;
 		t_memory_policy::deallocate(i_instance);
 	}
 
 	//-------------------------------------------------------------------------
-	static typename super_type::size_type max_size()
+	static typename this_type::pointer address(
+		typename this_type::reference i_value)
+	{
+		return &i_value;
+	}
+
+	static typename this_type::const_pointer address(
+		typename this_type::const_reference i_value)
+	{
+		return &i_value;
+	}
+
+	static void construct(
+		typename this_type::pointer const    i_pointer,
+		typename this_type::const_reference& i_value)
+    {
+		new (i_pointer) t_value_type(i_value);
+	}
+
+	static void destroy(
+		typename this_type::pointer const i_pointer)
+    {
+		i_pointer->~t_value_type();
+		(void)i_pointer;
+	}
+
+	static typename this_type::size_type max_size()
 	{
 		return t_memory_policy::max_size() / sizeof(t_value_type);
 	}

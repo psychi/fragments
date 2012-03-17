@@ -75,11 +75,7 @@ public:
 		// pass
 	}
 
-	single_allocator(this_type const& i_source):
-	super_type(i_source)
-	{
-		// pass
-	}
+	//single_allocator(this_type const&) = default;
 
 	template<
 		typename    t_other_type,
@@ -101,11 +97,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	this_type& operator=(this_type const& i_source)
-	{
-		this->super_type::operator=(i_source);
-		return *this;
-	}
+	//this_type& operator=(this_type const&) = default;
 
 	template<
 		typename    t_other_type,
@@ -148,7 +140,7 @@ public:
 	typename super_type::pointer allocate()
 	{
 		return static_cast< typename super_type::pointer >(
-			this_type::memory_policy::allocate(this->get_name()));
+			super_type::memory_policy::allocate(this->get_name()));
 	}
 
 	//-------------------------------------------------------------------------
@@ -180,18 +172,13 @@ public:
 	      このためVC++の場合は、専用のmax_size()を使うことにする。
 	      http://msdn.microsoft.com/en-us/library/h36se6sf.aspx
 	 */
-#ifndef _MSC_VER
-	static typename super_type::size_type max_size()
-	{
-		return 1;
-	}
-#else
+#ifdef _MSC_VER
 	static typename super_type::size_type max_size()
 	{
 		return (std::numeric_limits< std::size_t >::max)()
 			/ sizeof(t_value_type);
 	}
-#endif // !_MSC_VER
+#endif // _MSC_VER
 
 	//-------------------------------------------------------------------------
 	/** @brief memory管理に使っているsingleton-poolを取得。

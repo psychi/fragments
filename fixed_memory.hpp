@@ -57,18 +57,29 @@ public:
 	chunk_alignment(i_chunk_alignment),
 	chunk_offset(i_chunk_offset)
 	{
+		PSYQ_ASSERT(0 < i_block_size);
+		std::size_t const a_alignment(
+			boost::alignment_of< typename this_type::chunk >::value);
+		std::size_t a_chunk_size(
+			i_chunk_offset - sizeof(typename this_type::chunk)
+				+ a_alignment * (
+					(i_chunk_size - i_chunk_offset) / a_alignment));
+		PSYQ_ASSERT(a_chunk_size <= i_chunk_size);
+
 		// chunkが持つblockの数を決定。
-		std::size_t const a_max_blocks(
-			(i_chunk_size - sizeof(typename this_type::chunk))
-				/ this->block_size);
+		std::size_t const a_max_blocks(a_chunk_size / this->block_size);
+		PSYQ_ASSERT(0 < a_max_blocks);
 		this->max_blocks = static_cast< boost::uint8_t >(
 			a_max_blocks <= 0xff? a_max_blocks: 0xff);
 
 		// chunkの大きさを決定。
-		std::size_t const a_alignment(boost::alignment_of< chunk >::value);
+		a_chunk_size = this->max_blocks * i_block_size;
+		PSYQ_ASSERT(i_chunk_offset < a_chunk_size);
 		this->chunk_size = i_chunk_offset + a_alignment * (
-			(this->max_blocks * i_block_size + a_alignment - 1 - i_chunk_offset)
-				/ a_alignment);
+			(a_chunk_size - i_chunk_offset + a_alignment - 1) / a_alignment);
+		PSYQ_ASSERT(
+			this->chunk_size <= i_chunk_size
+				- sizeof(typename this_type::chunk));
 	}
 
 	//-------------------------------------------------------------------------
@@ -429,8 +440,9 @@ class psyq::fixed_memory_policy:
 	BOOST_STATIC_ASSERT(0 == (t_chunk_alignment & (t_chunk_alignment - 1)));
 	BOOST_STATIC_ASSERT(0 < t_chunk_alignment);
 
-#if 0
 	// 割り当てるmemoryがchunkに収まるか確認。
+	BOOST_STATIC_ASSERT(t_chunk_offset < t_chunk_size);
+#if 0
 	BOOST_STATIC_ASSERT(
 		t_block_size <= t_chunk_size
 			- sizeof(typename this_type::pool::chunk));

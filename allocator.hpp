@@ -15,13 +15,27 @@ template<
 	typename t_value_type,
 	typename t_memory_policy = PSYQ_MEMORY_POLICY_DEFAULT >
 class psyq::allocator:
-	public std::allocator< t_value_type >
+	private std::allocator< t_value_type >
 {
 	typedef psyq::allocator< t_value_type, t_memory_policy > this_type;
 	typedef std::allocator< t_value_type > super_type;
 
+	template< typename t_other_type, typename t_other_memory >
+		friend class psyq::allocator;
+
 //.............................................................................
 public:
+	using super_type::size_type;
+	using super_type::difference_type;
+	using super_type::pointer;
+	using super_type::const_pointer;
+	using super_type::reference;
+	using super_type::const_reference;
+	using super_type::value_type;
+	using super_type::address;
+	using super_type::construct;
+	using super_type::destroy;
+
 	typedef t_memory_policy memory_policy;
 
 	template< typename t_other_type >
@@ -45,9 +59,9 @@ public:
 		// pass
 	}
 
-	template< typename t_other_type >
+	template< typename t_other_type, typename t_other_memory >
 	allocator(
-		psyq::allocator< t_other_type, t_memory_policy > const& i_source):
+		psyq::allocator< t_other_type, t_other_memory > const& i_source):
 	super_type(i_source),
 	name(i_source.get_name())
 	{
@@ -57,33 +71,27 @@ public:
 	//-------------------------------------------------------------------------
 	this_type& operator=(this_type const& i_source)
 	{
-		this->name = i_source.get_name();
+		this->set_name(i_source.get_name());
 		this->super_type::operator=(i_source);
 		return *this;
 	}
 
-	template< typename t_other_type >
+	template< typename t_other_type, typename t_other_memory >
 	this_type& operator=(
-		psyq::allocator< t_other_type, t_memory_policy > const& i_source)
+		psyq::allocator< t_other_type, t_other_memory > const& i_source)
 	{
-		this->name = i_source.get_name();
+		this->set_name(i_source.get_name());
 		this->super_type::operator=(i_source);
 		return *this;
 	}
 
 	//-------------------------------------------------------------------------
-	template< typename t_other_type >
-	bool operator==(
-		psyq::allocator< t_other_type, t_memory_policy > const& i_right)
-	const
+	bool operator==(this_type const& i_right) const
 	{
-		return *static_cast< super_type* >(this) == i_right;
+		return *static_cast< super_type const* >(this) == i_right;
 	}
 
-	template< typename t_other_type >
-	bool operator!=(
-		psyq::allocator< t_other_type, t_memory_policy > const& i_right)
-	const
+	bool operator!=(this_type const& i_right) const
 	{
 		return !this->operator==(i_right);
 	}

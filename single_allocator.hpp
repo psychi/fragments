@@ -37,7 +37,8 @@ public:
 		std::size_t t_other_alignment =
 			boost::alignment_of< t_other_type >::value,
 		std::size_t t_other_offset = t_offset,
-		std::size_t t_other_chunk = t_chunk_size >
+		std::size_t t_other_chunk = t_chunk_size,
+		typename    t_other_memory = t_memory_policy >
 	struct rebind
 	{
 		typedef single_allocator<
@@ -45,7 +46,7 @@ public:
 			t_other_alignment,
 			t_other_offset,
 			t_other_chunk,
-			t_memory_policy >
+			t_other_memory >
 				other;
 	};
 
@@ -75,14 +76,15 @@ public:
 		typename    t_other_type,
 		std::size_t t_other_alignment,
 		std::size_t t_other_offset,
-		std::size_t t_other_chunk >
+		std::size_t t_other_chunk,
+		typename    t_other_memory >
 	single_allocator(
 		psyq::single_allocator<
 			t_other_type,
 			t_other_alignment,
 			t_other_offset,
 			t_other_chunk,
-			t_memory_policy > const&
+			t_other_memory > const&
 				i_source):
 	super_type(i_source)
 	{
@@ -100,14 +102,15 @@ public:
 		typename    t_other_type,
 		std::size_t t_other_alignment,
 		std::size_t t_other_offset,
-		std::size_t t_other_chunk >
+		std::size_t t_other_chunk,
+		typename    t_other_memory >
 	this_type& operator=(
 		psyq::single_allocator<
 			t_other_type,
 			t_other_alignment,
 			t_other_offset,
 			t_other_chunk,
-			t_memory_policy > const&
+			t_other_memory > const&
 				i_source)
 	{
 		this->super_type::operator=(i_source);
@@ -170,7 +173,7 @@ public:
 	      C++の仕様で決められている。
 	      ところがVC++に添付されてるSTLの実装はそのようになっておらず、
 	      memory上に存在できるinstanceの最大数を返すように実装されている。
-	      このためVC++の場合は、super_type:::max_size()を使うことにする。
+	      このためVC++の場合は、super_type::max_size()を使うことにする。
 	      http://msdn.microsoft.com/en-us/library/h36se6sf.aspx
 	 */
 #ifndef _MSC_VER

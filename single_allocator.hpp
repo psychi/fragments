@@ -36,7 +36,7 @@ class psyq::single_allocator:
 	typedef psyq::single_allocator<
 		t_value_type, t_alignment, t_offset, t_chunk_size, t_memory_policy >
 			this_type;
-	typedef public psyq::allocator<
+	typedef psyq::allocator<
 		t_value_type,
 		psyq::fixed_memory_policy<
 			((sizeof(t_value_type) + t_alignment - 1) / t_alignment)
@@ -58,7 +58,7 @@ public:
 		typename    t_other_memory = t_memory_policy >
 	struct rebind
 	{
-		typedef single_allocator<
+		typedef psyq::single_allocator<
 			t_other_type,
 			t_other_alignment,
 			t_other_offset,
@@ -77,20 +77,9 @@ public:
 
 	//single_allocator(this_type const&) = default;
 
-	template<
-		typename    t_other_type,
-		std::size_t t_other_alignment,
-		std::size_t t_other_offset,
-		std::size_t t_other_chunk,
-		typename    t_other_memory >
+	template< typename t_other_type, typename t_other_memory >
 	single_allocator(
-		psyq::single_allocator<
-			t_other_type,
-			t_other_alignment,
-			t_other_offset,
-			t_other_chunk,
-			t_other_memory > const&
-				i_source):
+		psyq::allocator< t_other_type, t_other_memory > const& i_source):
 	super_type(i_source)
 	{
 		// pass
@@ -99,23 +88,15 @@ public:
 	//-------------------------------------------------------------------------
 	//this_type& operator=(this_type const&) = default;
 
-	template<
-		typename    t_other_type,
-		std::size_t t_other_alignment,
-		std::size_t t_other_offset,
-		std::size_t t_other_chunk,
-		typename    t_other_memory >
-	this_type& operator=(
-		psyq::single_allocator<
-			t_other_type,
-			t_other_alignment,
-			t_other_offset,
-			t_other_chunk,
-			t_other_memory > const&
-				i_source)
+	//-------------------------------------------------------------------------
+	bool operator==(this_type const&) const
 	{
-		this->super_type::operator=(i_source);
-		return *this;
+		return true;
+	}
+
+	bool operator!=(this_type const& i_right) const
+	{
+		return !this->operator==(i_right);
 	}
 
 	//-------------------------------------------------------------------------
@@ -154,7 +135,8 @@ public:
 	{
 		if (1 == i_num)
 		{
-			this_type::memory_policy::deallocate(i_instance);
+			this_type::memory_policy::deallocate(
+				i_instance, i_num * sizeof(t_value_type));
 		}
 		else
 		{

@@ -20,6 +20,8 @@ namespace psyq
 class psyq::memory_policy:
 	private boost::noncopyable
 {
+	typedef psyq::memory_policy this_type;
+
 //.............................................................................
 public:
 	//-------------------------------------------------------------------------
@@ -73,10 +75,14 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief memoryを解放する。
 	    @param[in] i_memory 解放するmemoryの先頭位置。
+	    @param[in] i_size   解放するmemoryの大きさ。byte単位。
 	 */
 	static void deallocate(
-		void* const i_memory)
+		void* const       i_memory,
+		std::size_t const i_size)
 	{
+		(void)i_size;
+
 #ifdef _WIN32
 		// win32環境でのmemory解放。
 		_aligned_free(i_memory);

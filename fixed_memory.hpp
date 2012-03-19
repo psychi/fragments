@@ -354,7 +354,8 @@ private:
 	{
 		PSYQ_ASSERT(this->max_blocks <= i_chunk.num_blocks);
 		t_memory_policy::deallocate(
-			reinterpret_cast< boost::uint8_t* >(&i_chunk) - this->chunk_size);
+			reinterpret_cast< boost::uint8_t* >(&i_chunk) - this->chunk_size,
+			this->chunk_size + sizeof(typename this_type::chunk));
 	}
 
 	//-------------------------------------------------------------------------
@@ -469,7 +470,8 @@ public:
 	 */
 	static void* allocate(
 		std::size_t const i_size,
-		std::size_t const i_alignment = sizeof(void*),
+		std::size_t const i_alignment =
+			t_block_size < sizeof(void*)? t_block_size: sizeof(void*),
 		std::size_t const i_offset = t_chunk_offset,
 		char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)
 	{
@@ -488,16 +490,35 @@ public:
 	 */
 	static void* allocate(char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)
 	{
-		return this_type::get_pool().allocate(i_name);
+		return this_type::get_pool()->allocate(i_name);
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief instanceに使っていたmemoryを解放する。
+	    @param[in] i_instance 解放するinstanceの先頭位置。
+	    @param[in] i_num      解放するinstanceの数。
+	 */
+	static void deallocate(
+		void* const       i_memory,
+		std::size_t const i_size)
+	{
+		if (0 < i_size)
+		{
+			PSYQ_ASSERT(i_size <= t_block_size);
+			this_type::deallocate(i_memory);
+		}
+		else
+		{
+			PSYQ_ASSERT(NULL == i_memory);
+		}
+	}
+
 	/** @brief memoryを解放する。
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	 */
 	static void deallocate(void* const i_memory)
 	{
-		this_type::get_pool().deallocate(i_memory);
+		this_type::get_pool()->deallocate(i_memory);
 	}
 
 	//-------------------------------------------------------------------------
@@ -511,11 +532,11 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief memory管理に使っているsingleton-poolを取得。
 	 */
-	static typename this_type::pool& get_pool()
+	static typename this_type::pool* get_pool()
 	{
 		typedef psyq::singleton< typename this_type::pool, this_type >
 			singleton;
-		return *singleton::construct(
+		return singleton::construct(
 			boost::in_place(
 				t_block_size,
 				t_chunk_alignment,

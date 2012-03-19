@@ -85,10 +85,10 @@ public:
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
 	typename this_type::pointer allocate(
-		typename this_type::size_type const   i_num,
-		std::size_t const                      i_alignment =
+		typename this_type::size_type const i_num,
+		std::size_t const                   i_alignment =
 			boost::alignment_of< t_value_type >::value,
-		std::size_t const                      i_offset = 0)
+		std::size_t const                   i_offset = 0)
 	{
 		return static_cast< typename this_type::pointer >(
 			t_memory_policy::allocate(
@@ -106,8 +106,7 @@ public:
 		typename this_type::pointer const   i_instance,
 		typename this_type::size_type const i_num)
 	{
-		(void)i_num;
-		t_memory_policy::deallocate(i_instance);
+		t_memory_policy::deallocate(i_instance, i_num * sizeof(t_value_type));
 	}
 
 	//-------------------------------------------------------------------------
@@ -124,8 +123,8 @@ public:
 	}
 
 	static void construct(
-		typename this_type::pointer const    i_pointer,
-		typename this_type::const_reference& i_value)
+		typename this_type::pointer const   i_pointer,
+		typename this_type::const_reference i_value)
     {
 		new (i_pointer) t_value_type(i_value);
 	}

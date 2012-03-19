@@ -36,6 +36,8 @@ class psyq::small_memory_policy:
 		t_small_size, t_alignment, t_offset, t_chunk_size, t_memory_policy >
 			this_type;
 
+	BOOST_STATIC_ASSERT(0 < t_small_size);
+
 //.............................................................................
 public:
 	typedef t_memory_policy memory_policy;
@@ -109,10 +111,12 @@ public:
 				this_type::get_pool(i_size));
 			if (NULL != a_pool)
 			{
+				// 小規模sizeのpoolでmemoryを解放。
 				a_pool->deallocate(i_memory);
 			}
 			else
 			{
+				// 小規模sizeより大きいmemoryは、t_memory_policyで解放。
 				t_memory_policy::deallocate(i_memory, i_size);
 			}
 		}
@@ -164,7 +168,7 @@ private:
 				t_alignment,
 				t_offset,
 				t_chunk_size,
-				t_memory_policy>::get_pool();
+				t_memory_policy >::get_pool();
 		}
 
 		psyq::fixed_memory_pool< t_memory_policy >** pools;
@@ -301,7 +305,7 @@ public:
 	{
 		return static_cast< typename super_type::pointer >(
 			typename super_type::memory_policy::allocate(
-				i_num * sizeof(t_value_type), i_alignment));
+				i_num * sizeof(t_value_type), i_alignment, this->get_name()));
 	}
 
 	/** @brief memoryを確保する。

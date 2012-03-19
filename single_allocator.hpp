@@ -11,8 +11,8 @@ namespace psyq
 /** @brief 一度にひとつのinstanceを確保する、std::allocator互換の割当子。
         配列は確保できない。
     @tparam t_value_type    確保するinstanceの型。
-    @tparam t_alignment     instance配置境界値。
-    @tparam t_offset        instance配置offset値。
+    @tparam t_alignment     instanceの配置境界値。byte単位。
+    @tparam t_offset        instanceの配置offset値。byte単位。
     @tparam t_chunk_size    memory-chunkの最大size。byte単位。
     @tparam t_memory_policy 実際に使うmemory割当policy。
  */
@@ -68,6 +68,8 @@ public:
 	};
 
 	//-------------------------------------------------------------------------
+	/** @param[in] i_name debugで使うためのmemory識別名。
+	 */
 	explicit single_allocator(
 		char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT):
 	super_type(i_name)
@@ -77,6 +79,8 @@ public:
 
 	//single_allocator(this_type const&) = default;
 
+	/** @param[in] i_source copy元instance。
+	 */
 	template< typename t_other_type, typename t_other_memory >
 	single_allocator(
 		psyq::allocator< t_other_type, t_other_memory > const& i_source):
@@ -89,9 +93,9 @@ public:
 	//this_type& operator=(this_type const&) = default;
 
 	//-------------------------------------------------------------------------
-	bool operator==(this_type const&) const
+	bool operator==(this_type const& i_right) const
 	{
-		return true;
+		return super_type::operator==(i_right);
 	}
 
 	bool operator!=(this_type const& i_right) const

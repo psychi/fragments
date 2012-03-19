@@ -39,6 +39,8 @@ public:
 	};
 
 	//-------------------------------------------------------------------------
+	/** @param[in] i_name debugÇ≈égÇ§ÇΩÇﬂÇÃmemoryéØï ñºÅB
+	 */
 	explicit allocator(char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT):
 	name(i_name)
 	{
@@ -47,6 +49,8 @@ public:
 
 	//allocator(this_type const&) = default;
 
+	/** @param[in] i_source copyå≥instanceÅB
+	 */
 	template< typename t_other_type, typename t_other_memory >
 	allocator(
 		psyq::allocator< t_other_type, t_other_memory > const& i_source):

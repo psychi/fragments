@@ -96,6 +96,8 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief 一度に確保できるmemoryの最大sizeを取得。byte単位。
+	 */
 	static std::size_t max_size()
 	{
 		return (std::numeric_limits< std::size_t >::max)();

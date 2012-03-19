@@ -2,7 +2,7 @@
 #define PSYQ_SMALL_ALLOCATOR_HPP_
 
 #ifndef PSYQ_SMALL_MEMORY_POLICY_SMALL_SIZE_DEFAULT
-#define PSYQ_SMALL_MEMORY_POLICY_SMALL_SIZE_DEFAULT 256
+#define PSYQ_SMALL_MEMORY_POLICY_SMALL_SIZE_DEFAULT 64
 #endif // !PSYQ_SMALL_MEMORY_POLICY_SMALL_SIZE_DEFAULT
 
 namespace psyq
@@ -139,7 +139,7 @@ public:
 			{
 				typename this_type::pool_table& a_table(
 					*psyq::singleton< pool_table >::construct());
-				return (*a_table.pools[a_index])();
+				return a_table.pools[a_index];
 			}
 		}
 		return NULL;
@@ -147,11 +147,10 @@ public:
 
 //.............................................................................
 private:
-	typedef psyq::fixed_memory_pool< t_memory_policy >* (*get_pool_functor)();
-
 	struct set_pools
 	{
-		explicit set_pools(get_pool_functor* const i_pools):
+		explicit set_pools(
+			psyq::fixed_memory_pool< t_memory_policy >** const i_pools):
 		pools(i_pools)
 		{
 			// pass
@@ -160,15 +159,15 @@ private:
 		template< typename t_index >
 		void operator()(t_index)
 		{
-			this->pools[t_index::value] = &psyq::fixed_memory_policy<
+			this->pools[t_index::value] = psyq::fixed_memory_policy<
 				t_alignment * (1 + t_index::value),
 				t_alignment,
 				t_offset,
 				t_chunk_size,
-				t_memory_policy>::get_pool;
+				t_memory_policy>::get_pool();
 		}
 
-		get_pool_functor* pools;
+		psyq::fixed_memory_pool< t_memory_policy >** pools;
 	};
 
 	struct pool_table
@@ -176,13 +175,13 @@ private:
 		pool_table()
 		{
 			typedef boost::mpl::range_c< std::size_t, 0, size > range;
-			boost::mpl::for_each< range >(set_pools(this->pools));
+			boost::mpl::for_each< range >(set_pools(&this->pools[0]));
 		}
 
 		static std::size_t const size =
 			t_alignment < t_small_size? t_small_size / t_alignment: 1;
 
-		get_pool_functor pools[size];
+		psyq::fixed_memory_pool< t_memory_policy >* pools[size];
 	};
 
 	small_memory_policy();

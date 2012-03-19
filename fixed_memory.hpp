@@ -442,6 +442,7 @@ class psyq::fixed_memory_policy:
 	BOOST_STATIC_ASSERT(0 < t_chunk_alignment);
 
 	// Š„‚è“–‚Ä‚émemory‚ªchunk‚ÉŽû‚Ü‚é‚©Šm”FB
+	BOOST_STATIC_ASSERT(0 < t_block_size);
 	BOOST_STATIC_ASSERT(t_chunk_offset < t_chunk_size);
 #if 0
 	BOOST_STATIC_ASSERT(

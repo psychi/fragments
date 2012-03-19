@@ -54,7 +54,7 @@ public:
 			else
 			{
 				return t_memory_policy::allocate(
-					i_size, i_alignment, i_offset, i_name);
+					i_size, i_alignment, t_offset, i_name);
 			}
 		}
 		return NULL;
@@ -140,7 +140,7 @@ private:
 		void operator()(t_index)
 		{
 			this->pools[t_index::value] = &psyq::fixed_memory_policy<
-				t_alignment * t_index::value,
+				t_alignment * (1 + t_index::value),
 				t_alignment,
 				t_offset,
 				t_chunk_size,
@@ -176,6 +176,7 @@ template<
 	typename    t_memory_policy = PSYQ_MEMORY_POLICY_DEFAULT >
 class psyq::small_allocator:
 	public psyq::allocator<
+		t_value_type,
 		psyq::small_memory_policy<
 			t_small_size,
 			t_alignment,
@@ -192,6 +193,7 @@ class psyq::small_allocator:
 		t_memory_policy >
 			this_type;
 	typedef psyq::allocator<
+		t_value_type,
 		psyq::small_memory_policy<
 			t_small_size,
 			t_alignment,

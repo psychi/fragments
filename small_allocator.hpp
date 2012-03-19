@@ -146,7 +146,8 @@ private:
 				t_chunk_size,
 				t_memory_policy>::get_pool;
 		}
-		get_pool_functor* const pools;
+
+		get_pool_functor* pools;
 	};
 
 	struct pool_table

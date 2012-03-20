@@ -319,7 +319,7 @@ public:
 		std::size_t const                    i_alignment,
 		std::size_t const                    i_offset)
 	{
-		return typename super_type::allocate(i_num, i_alignment, i_offset);
+		return this->super_type::allocate(i_num, i_alignment, i_offset);
 	}
 };
 

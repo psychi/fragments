@@ -38,11 +38,10 @@ public:
 	 */
 	void* allocate(
 		std::size_t const i_size,
-		std::size_t const i_alignment,
-		char const* const i_name)
+		char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)
 	const
 	{
-		if (0 < i_size && 0 < i_alignment && this->alignment % i_alignment == 0)
+		if (0 < i_size)
 		{
 			psyq::fixed_memory_pool< t_memory_policy >* const a_pool(
 				this->get_pool(i_size));
@@ -55,10 +54,23 @@ public:
 			{
 				// 小規模sizeより大きいmemoryは、t_memory_policyから確保。
 				return t_memory_policy::allocate(
-					i_size, i_alignment, this->offset, i_name);
+					i_size, this->get_alignment(), this->offset, i_name);
 			}
 		}
 		return NULL;
+	}
+
+	void* allocate(
+		std::size_t const i_size,
+		std::size_t const i_alignment,
+		std::size_t const i_offset = 0,
+		char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)
+	const
+	{
+		return i_offset == this->offset
+			&& 0 < i_alignment
+			&& this->get_alignment() % i_alignment == 0?
+				this->allocate(i_size, i_name): NULL;
 	}
 
 	//-------------------------------------------------------------------------
@@ -102,6 +114,11 @@ public:
 			}
 		}
 		return NULL;
+	}
+
+	std::size_t get_alignment() const
+	{
+		return this->alignment;
 	}
 
 //.............................................................................
@@ -167,10 +184,9 @@ public:
 	 */
 	static void* allocate(
 		std::size_t const i_size,
-		std::size_t const i_alignment = t_alignment,
 		char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)
 	{
-		return this_type::_get_table()->allocate(i_size, i_alignment, i_name);
+		return this_type::_get_table()->allocate(i_size, i_name);
 	}
 
 	/** @brief memoryを確保する。
@@ -183,11 +199,11 @@ public:
 	static void* allocate(
 		std::size_t const i_size,
 		std::size_t const i_alignment,
-		std::size_t const i_offset,
+		std::size_t const i_offset = t_offset,
 		char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)
 	{
-		return t_offset == i_offset?
-			this_type::allocate(i_size, i_alignment, i_name): NULL;
+		return this_type::_get_table()->allocate(
+			i_size, i_alignment, i_offset, i_name);
 	}
 
 	//-------------------------------------------------------------------------
@@ -226,7 +242,7 @@ private:
 			psyq::fixed_memory_pool< t_memory_policy >** const i_pools):
 		pools(i_pools)
 		{
-		// pass
+			// pass
 		}
 
 		template< typename t_index >
@@ -240,6 +256,7 @@ private:
 				t_memory_policy >::_get_pool();
 		}
 
+	private:
 		psyq::fixed_memory_pool< t_memory_policy >** pools;
 	};
 
@@ -360,7 +377,7 @@ public:
 				i_source):
 	super_type(i_source),
 	table(
-		t_other_alignment % t_alignment == 0?
+		i_source._get_table()->get_alignment() % t_alignment == 0?
 			const_cast< psyq::_small_memory_table< t_memory_policy >* >(
 				i_source._get_table()):
 			super_type::memory_policy::_get_table())
@@ -430,14 +447,11 @@ public:
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
 	typename super_type::pointer allocate(
-		typename super_type::size_type const i_num,
-		std::size_t const                    i_alignment = t_alignment)
+		typename super_type::size_type const i_num)
 	{
 		return static_cast< typename super_type::pointer >(
 			this->_get_table()->allocate(
-				i_num * sizeof(t_value_type),
-				i_alignment,
-				this->get_name()));
+				i_num * sizeof(t_value_type), this->get_name()));
 	}
 
 	/** @brief memoryを確保する。
@@ -449,9 +463,14 @@ public:
 	typename super_type::pointer allocate(
 		typename super_type::size_type const i_num,
 		std::size_t const                    i_alignment,
-		std::size_t const                    i_offset)
+		std::size_t const                    i_offset = 0)
 	{
-		return t_offset == i_offset? this->allocate(i_num, i_alignment): NULL;
+		return static_cast< typename super_type::pointer >(
+			this->_get_table()->allocate(
+				i_num * sizeof(t_value_type),
+				i_alignment,
+				i_offset,
+				this->get_name()));
 	}
 
 	//-------------------------------------------------------------------------

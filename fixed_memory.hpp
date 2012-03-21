@@ -84,6 +84,28 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
+	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
+	    @param[in] i_alignment 確保するmemoryの境界値。byte単位。
+	    @param[in] i_offset    確保するmemoryの境界offset値。byte単位。
+	    @param[in] i_name      debugで使うためのmemory識別名。
+	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
+	 */
+	void* allocate(
+		std::size_t const i_size,
+		std::size_t const i_alignment,
+		std::size_t const i_offset,
+		char const* const i_name)
+	{
+		return i_size <= this->get_block_size()
+			&& 0 < i_size
+			&& 0 < i_alignment
+			&& 0 == this->get_chunk_alignment() % i_alignment
+			&& 0 == this->get_block_size() % i_alignment
+			&& this->get_chunk_offset() == i_offset?
+				this->allocate(i_name): NULL;
+	}
+
+	/** @brief memoryを確保する。
 	    @param[in] i_name debugで使うためのmemory識別名。
 	 */
 	void* allocate(char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)

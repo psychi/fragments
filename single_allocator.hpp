@@ -93,8 +93,8 @@ public:
 				i_source):
 	super_type(i_source.get_name()),
 	pool(
-		t_other_alignment % t_alignment == 0
-		&& sizeof(t_value_type) <= sizeof(t_other_type)?
+		i_source._get_pool()->get_chunk_alignment() % t_alignment == 0
+		&& sizeof(t_value_type) <= i_source._get_pool()->get_block_size()?
 			const_cast< psyq::fixed_memory_pool< t_memory_policy >* >(
 				i_source._get_pool()):
 			super_type::memory_policy::_get_pool())
@@ -105,7 +105,7 @@ public:
 	//-------------------------------------------------------------------------
 	this_type& operator=(this_type const& i_source)
 	{
-		PSYQ_ASSERT (this->_get_pool() == i_source._get_pool());
+		PSYQ_ASSERT (*this == i_source);
 		this->super_type::operator=(i_source);
 		return *this;
 	}
@@ -120,7 +120,7 @@ public:
 			t_memory_policy > const&
 				i_source)
 	{
-		PSYQ_ASSERT (this->_get_pool() == i_source._get_pool());
+		PSYQ_ASSERT (*this == i_source);
 		this->super_type::operator=(i_source);
 		return *this;
 	}
@@ -167,11 +167,12 @@ public:
 		std::size_t const                    i_alignment = t_alignment,
 		std::size_t const                    i_offset = t_offset)
 	{
-		return 1 == i_num
-			&& 0 < i_alignment
-			&& 0 == t_alignment % i_alignment
-			&& t_offset == i_offset?
-				this->allocate(): NULL;
+		return static_cast< typename super_type::pointer >(
+			this->pool->allocate(
+				i_num * sizeof(t_value_type),
+				i_alignment,
+				i_offset,
+				this->get_name()));
 	}
 
 	/** @brief instanceÇ…égÇ§memoryÇämï€Ç∑ÇÈÅB
@@ -191,9 +192,9 @@ public:
 	 */
 	void deallocate(
 		typename super_type::pointer const   i_instance,
-		typename super_type::size_type const i_num = 1)
+		typename super_type::size_type const i_num)
 	{
-		if (1 == i_num)
+		if (i_num * sizeof(t_value_type) <= this->pool->get_block_size())
 		{
 			this->pool->deallocate(i_instance);
 		}

@@ -371,7 +371,7 @@ public:
 	//-------------------------------------------------------------------------
 	this_type& operator=(this_type const& i_source)
 	{
-		PSYQ_ASSERT(this->_get_table() == i_source._get_table());
+		PSYQ_ASSERT(*this == i_source);
 		this->super_type::operator=(i_source);
 		return *this;
 	}
@@ -387,7 +387,7 @@ public:
 			t_memory_policy > const&
 				i_source)
 	{
-		PSYQ_ASSERT(this->_get_table() == i_source._get_table());
+		PSYQ_ASSERT(*this == i_source);
 		this->super_type::operator=(i_source);
 		return *this;
 	}

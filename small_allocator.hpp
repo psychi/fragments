@@ -7,6 +7,9 @@
 
 namespace psyq
 {
+	template< typename > class small_memory_table;
+	template< std::size_t, std::size_t, std::size_t, std::size_t, typename >
+		class small_memory_policy;
 	template<
 		typename,
 		std::size_t,
@@ -15,16 +18,11 @@ namespace psyq
 		std::size_t,
 		typename >
 			class small_allocator;
-
-	template< std::size_t, std::size_t, std::size_t, std::size_t, typename >
-		class small_memory_policy;
-
-	template< typename > class _small_memory_table;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 template< typename t_memory_policy >
-class psyq::_small_memory_table:
+class psyq::small_memory_table:
 	private boost::noncopyable
 {
 //.............................................................................
@@ -41,7 +39,6 @@ public:
 		std::size_t const i_alignment,
 		std::size_t const i_offset,
 		char const* const i_name)
-	const
 	{
 		return i_offset == this->offset
 			&& 0 < i_alignment
@@ -52,7 +49,6 @@ public:
 	void* allocate(
 		std::size_t const i_size,
 		char const* const i_name)
-	const
 	{
 		if (0 < i_size)
 		{
@@ -81,7 +77,6 @@ public:
 	void deallocate(
 		void* const       i_memory,
 		std::size_t const i_size)
-	const
 	{
 		if (0 < i_size && NULL != i_memory)
 		{
@@ -101,9 +96,15 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	psyq::fixed_memory_pool< t_memory_policy >* get_pool(
+	psyq::fixed_memory_pool< t_memory_policy > const* get_pool(
 		std::size_t const i_size)
 	const
+	{
+		return const_cast< this_type* >(this)->get_pool(i_size);
+	}
+
+	psyq::fixed_memory_pool< t_memory_policy >* get_pool(
+		std::size_t const i_size)
 	{
 		if (0 < i_size)
 		{
@@ -116,14 +117,20 @@ public:
 		return NULL;
 	}
 
+	//-------------------------------------------------------------------------
 	std::size_t get_alignment() const
 	{
 		return this->alignment;
 	}
 
+	std::size_t get_offset() const
+	{
+		return this->offset;
+	}
+
 //.............................................................................
 protected:
-	_small_memory_table(
+	small_memory_table(
 		psyq::fixed_memory_pool< t_memory_policy >** const i_pools,
 		std::size_t const                                  i_num_pools,
 		std::size_t const                                  i_alignment,
@@ -189,7 +196,7 @@ public:
 		std::size_t const i_offset,
 		char const* const i_name)
 	{
-		return this_type::_get_table()->allocate(
+		return this_type::get_table()->allocate(
 			i_size, i_alignment, i_offset, i_name);
 	}
 
@@ -202,7 +209,7 @@ public:
 		void* const       i_memory,
 		std::size_t const i_size)
 	{
-		this_type::_get_table()->deallocate(i_memory, i_size);
+		this_type::get_table()->deallocate(i_memory, i_size);
 	}
 
 	//-------------------------------------------------------------------------
@@ -214,7 +221,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	static psyq::_small_memory_table< t_memory_policy >* _get_table()
+	static psyq::small_memory_table< t_memory_policy >* get_table()
 	{
 		return psyq::singleton< typename this_type::pool_table >::construct();
 	}
@@ -233,14 +240,14 @@ private:
 		}
 
 		template< typename t_index >
-			void operator()(t_index)
-			{
-				this->pools[t_index::value] = psyq::fixed_memory_policy<
+		void operator()(t_index)
+		{
+			this->pools[t_index::value] = psyq::fixed_memory_policy<
 				t_alignment * (1 + t_index::value),
 				t_alignment,
 				t_offset,
 				t_chunk_size,
-				t_memory_policy >::_get_pool();
+				t_memory_policy >::get_pool();
 		}
 
 	private:
@@ -249,11 +256,11 @@ private:
 
 	//-------------------------------------------------------------------------
  	class pool_table:
-		public psyq::_small_memory_table< t_memory_policy >
+		public psyq::small_memory_table< t_memory_policy >
 	{
 	public:
 		pool_table():
-		psyq::_small_memory_table< t_memory_policy >(
+		psyq::small_memory_table< t_memory_policy >(
 			pools, num_pools, t_alignment, t_offset)
 		{
 			typedef boost::mpl::range_c< std::size_t, 0, num_pools > range;
@@ -343,7 +350,7 @@ public:
 	explicit small_allocator(
 		char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT):
 	super_type(i_name),
-	table(super_type::memory_policy::_get_table())
+	table(super_type::memory_policy::get_table())
 	{
 		// pass
 	}
@@ -364,10 +371,10 @@ public:
 				i_source):
 	super_type(i_source),
 	table(
-		i_source._get_table()->get_alignment() % t_alignment == 0?
-			const_cast< psyq::_small_memory_table< t_memory_policy >* >(
-				i_source._get_table()):
-			super_type::memory_policy::_get_table())
+		i_source.get_table()->get_alignment() % t_alignment == 0?
+			const_cast< psyq::small_memory_table< t_memory_policy >* >(
+				i_source.get_table()):
+			super_type::memory_policy::get_table())
 	{
 		// pass
 	}
@@ -410,7 +417,7 @@ public:
 	const
 	{
 		return this->super_type::operator==(i_right)
-			&& this->_get_table() == i_right._get_table();
+			&& this->get_table() == i_right.get_table();
 	}
 
 	template< typename t_other_type >
@@ -437,7 +444,7 @@ public:
 		typename super_type::size_type const i_num)
 	{
 		return static_cast< typename super_type::pointer >(
-			this->_get_table()->allocate(
+			this->get_table()->allocate(
 				i_num * sizeof(t_value_type), this->get_name()));
 	}
 
@@ -453,7 +460,7 @@ public:
 		std::size_t const                    i_offset = 0)
 	{
 		return static_cast< typename super_type::pointer >(
-			this->_get_table()->allocate(
+			this->get_table()->allocate(
 				i_num * sizeof(t_value_type),
 				i_alignment,
 				i_offset,
@@ -469,19 +476,24 @@ public:
 		typename super_type::pointer const   i_instance,
 		typename super_type::size_type const i_num)
 	{
-		this->_get_table()->deallocate(
+		this->get_table()->deallocate(
 			i_instance, i_num * sizeof(t_value_type));
 	}
 
 	//-------------------------------------------------------------------------
-	psyq::_small_memory_table< t_memory_policy > const* _get_table() const
+	psyq::small_memory_table< t_memory_policy >* get_table()
+	{
+		return this->table;
+	}
+
+	psyq::small_memory_table< t_memory_policy > const* get_table() const
 	{
 		return this->table;
 	}
 
 //.............................................................................
 private:
-	psyq::_small_memory_table< t_memory_policy >* const table;
+	psyq::small_memory_table< t_memory_policy >* const table;
 };
 
 #endif // PSYQ_SMALL_ALLOCATOR_HPP_

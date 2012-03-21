@@ -488,13 +488,12 @@ class psyq::fixed_memory_policy:
 #if 0
 	BOOST_STATIC_ASSERT(
 		t_block_size <= t_chunk_size
-			- sizeof(typename this_type::pool::chunk));
+			- sizeof(psyq::fixed_memory_pool< t_memory_policy >::chunk));
 #endif // 0
 
 //.............................................................................
 public:
 	typedef t_memory_policy memory_policy;
-	typedef psyq::fixed_memory_pool< t_memory_policy > pool;
 
 	//-------------------------------------------------------------------------
 	static std::size_t const block_size = t_block_size;
@@ -516,7 +515,7 @@ public:
 		std::size_t const i_offset,
 		char const* const i_name)
 	{
-		return this_type::_get_pool()->allocate(
+		return this_type::get_pool()->allocate(
 			i_size, i_alignment, i_offset, i_name);
 	}
 
@@ -529,7 +528,7 @@ public:
 		void* const       i_memory,
 		std::size_t const i_size)
 	{
-		this_type::_get_pool()->deallocate(i_memory, i_size);
+		this_type::get_pool()->deallocate(i_memory, i_size);
 	}
 
 	//-------------------------------------------------------------------------
@@ -543,10 +542,11 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief memoryä«óùÇ…égÇ¡ÇƒÇ¢ÇÈsingleton-poolÇéÊìæÅB
 	 */
-	static typename this_type::pool* _get_pool()
+	static psyq::fixed_memory_pool< t_memory_policy >* get_pool()
 	{
-		typedef psyq::singleton< typename this_type::pool, this_type >
-			singleton;
+		typedef psyq::singleton<
+			psyq::fixed_memory_pool< t_memory_policy >, this_type >
+				singleton;
 		return singleton::construct(
 			boost::in_place(
 				t_block_size,

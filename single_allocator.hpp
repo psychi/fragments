@@ -73,7 +73,7 @@ public:
 	explicit single_allocator(
 		char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT):
 	super_type(i_name),
-	pool(this_type::memory_policy::get_pool())
+	pool(super_type::memory_policy::_get_pool())
 	{
 		// pass
 	}
@@ -91,13 +91,13 @@ public:
 			t_chunk_size,
 			t_memory_policy > const&
 				i_source):
-	super_type(i_source),
+	super_type(i_source.get_name()),
 	pool(
 		t_other_alignment % t_alignment == 0
 		&& sizeof(t_value_type) <= sizeof(t_other_type)?
 			const_cast< psyq::fixed_memory_pool< t_memory_policy >* >(
-				i_source.get_pool()):
-			this_type::memory_policy::get_pool())
+				i_source._get_pool()):
+			super_type::memory_policy::_get_pool())
 	{
 		// pass
 	}
@@ -105,7 +105,7 @@ public:
 	//-------------------------------------------------------------------------
 	this_type& operator=(this_type const& i_source)
 	{
-		PSYQ_ASSERT (this->get_pool() == i_source.get_pool());
+		PSYQ_ASSERT (this->_get_pool() == i_source._get_pool());
 		this->super_type::operator=(i_source);
 		return *this;
 	}
@@ -120,7 +120,7 @@ public:
 			t_memory_policy > const&
 				i_source)
 	{
-		PSYQ_ASSERT (this->get_pool() == i_source.get_pool());
+		PSYQ_ASSERT (this->_get_pool() == i_source._get_pool());
 		this->super_type::operator=(i_source);
 		return *this;
 	}
@@ -138,7 +138,7 @@ public:
 	const
 	{
 		return this->super_type::operator==(i_right)
-			&& this->get_pool() == i_right.get_pool();
+			&& this->_get_pool() == i_right._get_pool();
 	}
 
 	template< typename t_other_type, std::size_t t_other_alignment >
@@ -222,12 +222,7 @@ public:
 #endif // _MSC_VER
 
 	//-------------------------------------------------------------------------
-	psyq::fixed_memory_pool< t_memory_policy >* get_pool()
-	{
-		return this->pool;
-	}
-
-	psyq::fixed_memory_pool< t_memory_policy > const* get_pool() const
+	psyq::fixed_memory_pool< t_memory_policy > const* _get_pool() const
 	{
 		return this->pool;
 	}

@@ -533,7 +533,7 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief memoryŠÇ—‚Ég‚Á‚Ä‚¢‚ésingleton-pool‚ğæ“¾B
 	 */
-	static typename this_type::pool* get_pool()
+	static typename this_type::pool* _get_pool()
 	{
 		typedef psyq::singleton< typename this_type::pool, this_type >
 			singleton;

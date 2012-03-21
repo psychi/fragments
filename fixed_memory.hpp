@@ -108,7 +108,7 @@ public:
 	/** @brief memoryを確保する。
 	    @param[in] i_name debugで使うためのmemory識別名。
 	 */
-	void* allocate(char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)
+	void* allocate(char const* const i_name)
 	{
 		// memory確保chunkを決定。
 		if (NULL != this->allocator_chunk)

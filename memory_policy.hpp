@@ -34,9 +34,9 @@ public:
 	 */
 	static void* allocate(
 		std::size_t const i_size,
-		std::size_t const i_alignment = sizeof(void*),
-		std::size_t const i_offset = 0,
-		char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)
+		std::size_t const i_alignment,
+		std::size_t const i_offset,
+		char const* const i_name)
 	{
 		(void)i_name;
 

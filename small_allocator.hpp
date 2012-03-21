@@ -38,7 +38,20 @@ public:
 	 */
 	void* allocate(
 		std::size_t const i_size,
-		char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)
+		std::size_t const i_alignment,
+		std::size_t const i_offset,
+		char const* const i_name)
+	const
+	{
+		return i_offset == this->offset
+			&& 0 < i_alignment
+			&& this->get_alignment() % i_alignment == 0?
+				this->allocate(i_size, i_name): NULL;
+	}
+
+	void* allocate(
+		std::size_t const i_size,
+		char const* const i_name)
 	const
 	{
 		if (0 < i_size)
@@ -58,19 +71,6 @@ public:
 			}
 		}
 		return NULL;
-	}
-
-	void* allocate(
-		std::size_t const i_size,
-		std::size_t const i_alignment,
-		std::size_t const i_offset = 0,
-		char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)
-	const
-	{
-		return i_offset == this->offset
-			&& 0 < i_alignment
-			&& this->get_alignment() % i_alignment == 0?
-				this->allocate(i_size, i_name): NULL;
 	}
 
 	//-------------------------------------------------------------------------
@@ -179,19 +179,6 @@ public:
 	/** @brief memoryを確保する。
 	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
 	    @param[in] i_alignment 確保するmemoryの境界値。byte単位。
-	    @param[in] i_name      debugで使うためのmemory識別名。
-	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
-	 */
-	static void* allocate(
-		std::size_t const i_size,
-		char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)
-	{
-		return this_type::_get_table()->allocate(i_size, i_name);
-	}
-
-	/** @brief memoryを確保する。
-	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
-	    @param[in] i_alignment 確保するmemoryの境界値。byte単位。
 	    @param[in] i_offset    確保するmemoryの境界offset値。byte単位。
 	    @param[in] i_name      debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
@@ -199,11 +186,23 @@ public:
 	static void* allocate(
 		std::size_t const i_size,
 		std::size_t const i_alignment,
-		std::size_t const i_offset = t_offset,
-		char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)
+		std::size_t const i_offset,
+		char const* const i_name)
 	{
 		return this_type::_get_table()->allocate(
 			i_size, i_alignment, i_offset, i_name);
+	}
+
+	/** @brief memoryを確保する。
+	    @param[in] i_size 確保するmemoryの大きさ。byte単位。
+	    @param[in] i_name debugで使うためのmemory識別名。
+	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
+	 */
+	static void* allocate(
+		std::size_t const i_size,
+		char const* const i_name)
+	{
+		return this_type::_get_table()->allocate(i_size, i_name);
 	}
 
 	//-------------------------------------------------------------------------

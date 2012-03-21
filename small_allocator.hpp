@@ -467,7 +467,7 @@ public:
 	 */
 	void deallocate(
 		typename super_type::pointer const   i_instance,
-		typename super_type::size_type const i_num = 1)
+		typename super_type::size_type const i_num)
 	{
 		this->_get_table()->deallocate(
 			i_instance, i_num * sizeof(t_value_type));

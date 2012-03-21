@@ -197,6 +197,12 @@ public:
 		this->pool->deallocate(i_instance, i_num * sizeof(t_value_type));
 	}
 
+	void deallocate(
+		typename super_type::pointer const i_instance)
+	{
+		this->pool->deallocate(i_instance);
+	}
+
 	//-------------------------------------------------------------------------
 	/** @brief Šm•Û‚Å‚«‚éinstance‚ÌÅ‘å”‚ğ•Ô‚·B
 	    @warning

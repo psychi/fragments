@@ -194,14 +194,7 @@ public:
 		typename super_type::pointer const   i_instance,
 		typename super_type::size_type const i_num)
 	{
-		if (i_num * sizeof(t_value_type) <= this->pool->get_block_size())
-		{
-			this->pool->deallocate(i_instance);
-		}
-		else
-		{
-			PSYQ_ASSERT(0 == i_num && NULL == i_instance);
-		}
+		this->pool->deallocate(i_instance, i_num * sizeof(t_value_type));
 	}
 
 	//-------------------------------------------------------------------------

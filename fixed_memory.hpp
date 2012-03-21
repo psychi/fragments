@@ -149,6 +149,25 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief instanceに使っていたmemoryを解放する。
+	    @param[in] i_instance 解放するinstanceの先頭位置。
+	    @param[in] i_num      解放するinstanceの数。
+	 */
+	bool deallocate(
+		void* const       i_memory,
+		std::size_t const i_size)
+	{
+		if (0 < i_size && i_size <= this->get_block_size())
+		{
+			return this->deallocate(i_memory);
+		}
+		else
+		{
+			PSYQ_ASSERT(0 == i_size && NULL == i_memory);
+			return false;
+		}
+	}
+
 	/** @brief memoryを解放する。
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	 */
@@ -497,13 +516,8 @@ public:
 		std::size_t const i_offset,
 		char const* const i_name)
 	{
-		return i_size <= t_block_size
-			&& 0 < i_size
-			&& 0 < i_alignment
-			&& 0 == t_chunk_alignment % i_alignment
-			&& 0 == t_block_size % i_alignment
-			&& t_chunk_offset == i_offset?
-				this_type::allocate(i_name): NULL;
+		return this_type::_get_pool()->allocate(
+			i_size, i_alignment, i_offset, i_name);
 	}
 
 	//-------------------------------------------------------------------------
@@ -515,23 +529,7 @@ public:
 		void* const       i_memory,
 		std::size_t const i_size)
 	{
-		if (0 < i_size)
-		{
-			PSYQ_ASSERT(i_size <= t_block_size);
-			this_type::deallocate(i_memory);
-		}
-		else
-		{
-			PSYQ_ASSERT(NULL == i_memory);
-		}
-	}
-
-	/** @brief memoryを解放する。
-	    @param[in] i_memory 解放するmemoryの先頭位置。
-	 */
-	static void deallocate(void* const i_memory)
-	{
-		this_type::get_pool()->deallocate(i_memory);
+		this_type::_get_pool()->deallocate(i_memory, i_size);
 	}
 
 	//-------------------------------------------------------------------------

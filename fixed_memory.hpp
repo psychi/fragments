@@ -493,10 +493,9 @@ public:
 	 */
 	static void* allocate(
 		std::size_t const i_size,
-		std::size_t const i_alignment =
-			t_block_size < sizeof(void*)? t_block_size: sizeof(void*),
-		std::size_t const i_offset = t_chunk_offset,
-		char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)
+		std::size_t const i_alignment,
+		std::size_t const i_offset,
+		char const* const i_name)
 	{
 		return i_size <= t_block_size
 			&& 0 < i_size
@@ -505,15 +504,6 @@ public:
 			&& 0 == t_block_size % i_alignment
 			&& t_chunk_offset == i_offset?
 				this_type::allocate(i_name): NULL;
-	}
-
-	/** @brief memoryを確保する。
-	    @param[in] i_name debugで使うためのmemory識別名。
-	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
-	 */
-	static void* allocate(char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT)
-	{
-		return this_type::get_pool()->allocate(i_name);
 	}
 
 	//-------------------------------------------------------------------------

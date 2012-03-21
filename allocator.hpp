@@ -51,9 +51,9 @@ public:
 
 	/** @param[in] i_source copyå≥instanceÅB
 	 */
-	template< typename t_other_type, typename t_other_memory >
+	template< typename t_other_type >
 	allocator(
-		psyq::allocator< t_other_type, t_other_memory > const& i_source):
+		psyq::allocator< t_other_type, t_memory_policy > const& i_source):
 	name(i_source.get_name())
 	{
 		// pass
@@ -62,9 +62,9 @@ public:
 	//-------------------------------------------------------------------------
 	//this_type& operator=(this_type const&) = default;
 
-	template< typename t_other_type, typename t_other_memory >
+	template< typename t_other_type >
 	this_type& operator=(
-		psyq::allocator< t_other_type, t_other_memory > const& i_source)
+		psyq::allocator< t_other_type, t_memory_policy > const& i_source)
 	{
 		this->set_name(i_source.get_name());
 		return *this;
@@ -159,6 +159,18 @@ public:
 	{
 		this->name = i_name;
 		return i_name;
+	}
+
+//.............................................................................
+protected:
+	/** @param[in] i_source copyå≥instanceÅB
+	 */
+	template< typename t_other_type, typename t_other_memory >
+	explicit allocator(
+		psyq::allocator< t_other_type, t_other_memory > const& i_source):
+	name(i_source.get_name())
+	{
+		// pass
 	}
 
 //.............................................................................

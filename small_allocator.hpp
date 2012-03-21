@@ -17,23 +17,23 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 小規模memory割当policy。
-    @tparam t_small_size    扱う小規模sizeの最大値。byte単位。
     @tparam t_alignment     確保するmemoryの配置境界値。byte単位。
     @tparam t_offset        確保するmemoryの配置offset値。byte単位。
     @tparam t_chunk_size    memory-chunkの最大size。byte単位。
+    @tparam t_small_size    扱う小規模sizeの最大値。byte単位。
     @tparam t_memory_policy 実際に使うmemory割当policy。
  */
 template<
-	std::size_t t_small_size = PSYQ_SMALL_MEMORY_POLICY_SMALL_SIZE_DEFAULT,
 	std::size_t t_alignment = sizeof(void*),
 	std::size_t t_offset = 0,
 	std::size_t t_chunk_size = PSYQ_FIXED_MEMORY_POLICY_CHUNK_SIZE_DEFAULT,
+	std::size_t t_small_size = PSYQ_SMALL_MEMORY_POLICY_SMALL_SIZE_DEFAULT,
 	typename    t_memory_policy = PSYQ_MEMORY_POLICY_DEFAULT >
 class psyq::small_memory_policy:
 	private boost::noncopyable
 {
 	typedef psyq::small_memory_policy<
-		t_small_size, t_alignment, t_offset, t_chunk_size, t_memory_policy >
+		t_alignment, t_offset, t_chunk_size, t_small_size, t_memory_policy >
 			this_type;
 
 	BOOST_STATIC_ASSERT(0 < t_small_size);
@@ -43,10 +43,10 @@ public:
 	typedef t_memory_policy memory_policy;
 
 	//-------------------------------------------------------------------------
-	static std::size_t const small_size = t_small_size;
 	static std::size_t const alignment = t_alignment;
 	static std::size_t const offset = t_offset;
 	static std::size_t const chunk_size = t_chunk_size;
+	static std::size_t const small_size = t_small_size;
 
 	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
@@ -194,44 +194,44 @@ private:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 小規模instance割当子。
     @tparam t_value_type    確保するinstanceの型。
-	@tparam t_small_size    扱う小規模sizeの最大値。byte単位。
     @tparam t_alignment     instanceの配置境界値。byte単位。
     @tparam t_offset        instanceの配置offset値。byte単位。
     @tparam t_chunk_size    memory-chunkの最大size。byte単位。
+	@tparam t_small_size    扱う小規模sizeの最大値。byte単位。
     @tparam t_memory_policy 実際に使うmemory割当policy。
  */
 template<
 	typename    t_value_type,
-	std::size_t t_small_size = PSYQ_SMALL_MEMORY_POLICY_SMALL_SIZE_DEFAULT,
 	std::size_t t_alignment = boost::alignment_of< t_value_type >::value,
 	std::size_t t_offset = 0,
 	std::size_t t_chunk_size = PSYQ_FIXED_MEMORY_POLICY_CHUNK_SIZE_DEFAULT,
+	std::size_t t_small_size = PSYQ_SMALL_MEMORY_POLICY_SMALL_SIZE_DEFAULT,
 	typename    t_memory_policy = PSYQ_MEMORY_POLICY_DEFAULT >
 class psyq::small_allocator:
 	public psyq::allocator<
 		t_value_type,
 		psyq::small_memory_policy<
-			t_small_size,
 			t_alignment,
 			t_offset,
 			t_chunk_size,
+			t_small_size,
 			t_memory_policy > >
 {
 	typedef psyq::small_allocator<
 		t_value_type,
-		t_small_size,
 		t_alignment,
 		t_offset,
 		t_chunk_size,
+		t_small_size,
 		t_memory_policy >
 			this_type;
 	typedef psyq::allocator<
 		t_value_type,
 		psyq::small_memory_policy<
-			t_small_size,
 			t_alignment,
 			t_offset,
 			t_chunk_size,
+			t_small_size,
 			t_memory_policy > >
 				super_type;
 
@@ -239,20 +239,20 @@ class psyq::small_allocator:
 public:
 	template<
 		typename    t_other_type,
-		std::size_t t_other_small = t_small_size,
 		std::size_t t_other_alignment =
 			boost::alignment_of< t_other_type >::value,
 		std::size_t t_other_offset = t_offset,
 		std::size_t t_other_chunk = t_chunk_size,
+		std::size_t t_other_small = t_small_size,
 		typename    t_other_memory = t_memory_policy >
 	struct rebind
 	{
 		typedef psyq::small_allocator<
 			t_other_type,
-			t_other_small,
 			t_other_alignment,
 			t_other_offset,
 			t_other_chunk,
+			t_other_small,
 			t_other_memory >
 				other;
 	};
@@ -271,9 +271,16 @@ public:
 
 	/** @param[in] i_source copy元instance。
 	 */
-	template< typename t_other_type, typename t_other_memory >
+	template< typename t_other_type >
 	small_allocator(
-		psyq::allocator< t_other_type, t_other_memory > const& i_source):
+		psyq::small_allocator<
+			t_other_type,
+			t_alignment,
+			t_offset,
+			t_chunk_size,
+			t_small_size,
+			t_memory_policy > const&
+				i_source):
 	super_type(i_source)
 	{
 		// pass
@@ -282,13 +289,48 @@ public:
 	//-------------------------------------------------------------------------
 	//this_type& operator=(this_type const&) = default;
 
-	//-------------------------------------------------------------------------
-	bool operator==(this_type const& i_right) const
+	template< typename t_other_type >
+	this_type& operator=(
+		psyq::small_allocator<
+			t_other_type,
+			t_alignment,
+			t_offset,
+			t_chunk_size,
+			t_small_size,
+			t_memory_policy > const&
+				i_source)
+	const
 	{
-		return super_type::operator==(i_right);
+		this->super_type::operator=(i_source);
+		return *this;
 	}
 
-	bool operator!=(this_type const& i_right) const
+	//-------------------------------------------------------------------------
+	template< typename t_other_type >
+	bool operator==(
+		psyq::small_allocator<
+			t_other_type,
+			t_alignment,
+			t_offset,
+			t_chunk_size,
+			t_small_size,
+			t_memory_policy > const&
+				i_right)
+	const
+	{
+		return this->super_type::operator==(i_right);
+	}
+
+	template< typename t_other_type >
+	bool operator!=(
+		psyq::small_allocator<
+			t_other_type,
+			t_alignment,
+			t_offset,
+			t_chunk_size,
+			t_small_size,
+			t_memory_policy > const&
+				i_right)
 	{
 		return !this->operator==(i_right);
 	}
@@ -304,7 +346,7 @@ public:
 		std::size_t const                    i_alignment = t_alignment)
 	{
 		return static_cast< typename super_type::pointer >(
-			typename super_type::memory_policy::allocate(
+			super_type::memory_policy::allocate(
 				i_num * sizeof(t_value_type), i_alignment, this->get_name()));
 	}
 

@@ -1,6 +1,10 @@
 #ifndef PSYQ_SINGLE_ALLOCATOR_HPP_
 #define PSYQ_SINGLE_ALLOCATOR_HPP_
 
+#ifndef PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT
+#define PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT 4096
+#endif // !PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT
+
 namespace psyq
 {
 	template< std::size_t, std::size_t, std::size_t, std::size_t, typename >
@@ -286,8 +290,7 @@ public:
 		typename super_type::pointer const   i_instance,
 		typename super_type::size_type const i_num)
 	{
-		super_type::allocator_policy::deallocate(
-			i_instance, i_num * sizeof(t_value_type));
+		this->super_type::deallocate(i_instance, i_num);
 	}
 
 	void deallocate(

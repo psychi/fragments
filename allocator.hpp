@@ -1,26 +1,129 @@
 #ifndef PSYQ_ALLOCATOR_HPP_
 #define PSYQ_ALLOCATOR_HPP_
 
+#ifndef PSYQ_ALLOCATOR_POLICY_DEFAULT
+#define PSYQ_ALLOCATOR_POLICY_DEFAULT psyq::allocator_policy
+#endif // !PSYQ_ALLOCATOR_POLICY_DEFAULT
+
+#ifndef PSYQ_ALLOCATOR_NAME_DEFAULT
+#define PSYQ_ALLOCATOR_NAME_DEFAULT "PSYQ"
+#endif // !PSYQ_ALLOCATOR_NAME_DEFAULT
+
 namespace psyq
 {
+	class allocator_policy;
 	template< typename, typename > class allocator;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::allocator互換のinstance割当子。
-    @tparam t_value_type    割り当てるinstanceの型。
-    @tparam t_memory_policy memory割当policy。
+/** @brief memory割当policy。
  */
-template<
-	typename t_value_type,
-	typename t_memory_policy = PSYQ_MEMORY_POLICY_DEFAULT >
-class psyq::allocator
+class psyq::allocator_policy:
+	private boost::noncopyable
 {
-	typedef psyq::allocator< t_value_type, t_memory_policy > this_type;
+	typedef psyq::allocator_policy this_type;
 
 //.............................................................................
 public:
-	typedef t_memory_policy     memory_policy;
+	//-------------------------------------------------------------------------
+	/** @brief memoryを確保する。
+	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
+	    @param[in] i_alignment 確保するmemoryの境界値。byte単位。
+	    @param[in] i_offset    確保するmemoryの境界offset値。byte単位。
+	    @param[in] i_name      debugで使うためのmemory識別名。
+	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
+	 */
+	static void* allocate(
+		std::size_t const i_size,
+		std::size_t const i_alignment,
+		std::size_t const i_offset,
+		char const* const i_name)
+	{
+		(void)i_name;
+
+		// memory境界値が2のべき乗か確認。
+		PSYQ_ASSERT(0 < i_alignment);
+		PSYQ_ASSERT(0 == (i_alignment & (i_alignment - 1)));
+
+		// sizeが0ならmemory確保しない。
+		if (i_size <= 0)
+		{
+			return NULL;
+		}
+
+#ifdef _WIN32
+		// win32環境でのmemory確保。
+		return _aligned_offset_malloc(i_size, i_alignment, i_offset);
+#elif 200112L <= _POSIX_C_SOURCE || 600 <= _XOPEN_SOURCE
+		// posix環境でのmemory確保。
+		PSYQ_ASSERT(0 == i_offset);
+		void* a_memory(NULL);
+		int const a_result(
+			posix_memalign(
+				&a_memory,
+				sizeof(void*) <= i_alignment? i_alignment: sizeof(void*),
+				i_size));
+		return 0 == a_result? a_memory: NULL;
+#else
+		// その他の環境でのmemory確保。
+		PSYQ_ASSERT(0 == i_offset);
+		PSYQ_ASSERT(i_alignment <= sizeof(void*));
+		(void)i_alignment;
+		return std::malloc(i_size);
+#endif // _WIN32
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief memoryを解放する。
+	    @param[in] i_memory 解放するmemoryの先頭位置。
+	    @param[in] i_size   解放するmemoryの大きさ。byte単位。
+	 */
+	static void deallocate(
+		void* const       i_memory,
+		std::size_t const i_size)
+	{
+		(void)i_size;
+
+#ifdef _WIN32
+		// win32環境でのmemory解放。
+		_aligned_free(i_memory);
+#elif 200112L <= _POSIX_C_SOURCE || 600 <= _XOPEN_SOURCE
+		// posix環境でのmemory解放。
+		std::free(i_memory);
+#else
+		// その他の環境でのmemory解放。
+		std::free(i_memory)
+#endif
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief 一度に確保できるmemoryの最大sizeを取得。byte単位。
+	 */
+	static std::size_t max_size()
+	{
+		return (std::numeric_limits< std::size_t >::max)();
+	}
+
+//.............................................................................
+private:
+	allocator_policy();
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief std::allocator互換のinstance割当子。
+    @tparam t_value_type       割り当てるinstanceの型。
+    @tparam t_allocator_policy memory割当policy。
+ */
+template<
+	typename t_value_type,
+	typename t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT >
+class psyq::allocator
+{
+	typedef psyq::allocator< t_value_type, t_allocator_policy > this_type;
+
+//.............................................................................
+public:
+	typedef t_allocator_policy  allocator_policy;
 	typedef std::size_t         size_type;
 	typedef std::ptrdiff_t      difference_type;
 	typedef t_value_type*       pointer;
@@ -32,7 +135,7 @@ public:
 	//-------------------------------------------------------------------------
 	template<
 		typename t_other_type,
-		typename t_other_policy = t_memory_policy >
+		typename t_other_policy = t_allocator_policy >
 	struct rebind
 	{
 		typedef psyq::allocator< t_other_type, t_other_policy > other;
@@ -41,7 +144,7 @@ public:
 	//-------------------------------------------------------------------------
 	/** @param[in] i_name debugで使うためのmemory識別名。
 	 */
-	explicit allocator(char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT):
+	explicit allocator(char const* const i_name = PSYQ_ALLOCATOR_NAME_DEFAULT):
 	name(i_name)
 	{
 		// pass
@@ -53,7 +156,7 @@ public:
 	 */
 	template< typename t_other_type >
 	allocator(
-		psyq::allocator< t_other_type, t_memory_policy > const& i_source):
+		psyq::allocator< t_other_type, t_allocator_policy > const& i_source):
 	name(i_source.get_name())
 	{
 		// pass
@@ -64,19 +167,25 @@ public:
 
 	template< typename t_other_type >
 	this_type& operator=(
-		psyq::allocator< t_other_type, t_memory_policy > const& i_source)
+		psyq::allocator< t_other_type, t_allocator_policy > const& i_source)
 	{
 		this->set_name(i_source.get_name());
 		return *this;
 	}
 
 	//-------------------------------------------------------------------------
-	bool operator==(this_type const&) const
+	template< typename t_other_type >
+	bool operator==(
+		psyq::allocator< t_other_type, t_allocator_policy > const&)
+	const
 	{
 		return true;
 	}
 
-	bool operator!=(this_type const& i_right) const
+	template< typename t_other_type >
+	bool operator!=(
+		psyq::allocator< t_other_type, t_allocator_policy > const& i_right)
+	const
 	{
 		return !this->operator==(i_right);
 	}
@@ -95,7 +204,7 @@ public:
 		std::size_t const                   i_offset = 0)
 	{
 		return static_cast< typename this_type::pointer >(
-			t_memory_policy::allocate(
+			t_allocator_policy::allocate(
 				i_num * sizeof(t_value_type),
 				i_alignment,
 				i_offset,
@@ -110,7 +219,8 @@ public:
 		typename this_type::pointer const   i_instance,
 		typename this_type::size_type const i_num)
 	{
-		t_memory_policy::deallocate(i_instance, i_num * sizeof(t_value_type));
+		t_allocator_policy::deallocate(
+			i_instance, i_num * sizeof(t_value_type));
 	}
 
 	//-------------------------------------------------------------------------
@@ -142,7 +252,7 @@ public:
 
 	static typename this_type::size_type max_size()
 	{
-		return t_memory_policy::max_size() / sizeof(t_value_type);
+		return t_allocator_policy::max_size() / sizeof(t_value_type);
 	}
 
 	//-------------------------------------------------------------------------
@@ -165,9 +275,9 @@ public:
 protected:
 	/** @param[in] i_source copy元instance。
 	 */
-	template< typename t_other_type, typename t_other_memory >
+	template< typename t_other_type, typename t_other_policy >
 	explicit allocator(
-		psyq::allocator< t_other_type, t_other_memory > const& i_source):
+		psyq::allocator< t_other_type, t_other_policy > const& i_source):
 	name(i_source.get_name())
 	{
 		// pass

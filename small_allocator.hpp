@@ -25,27 +25,16 @@ template< typename t_memory_policy >
 class psyq::small_memory_table:
 	private boost::noncopyable
 {
+	typedef psyq::small_memory_table< t_memory_policy > this_type;
+
 //.............................................................................
 public:
 	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
-	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
-	    @param[in] i_alignment 確保するmemoryの境界値。byte単位。
-	    @param[in] i_name      debugで使うためのmemory識別名。
+	    @param[in] i_size 確保するmemoryの大きさ。byte単位。
+	    @param[in] i_name debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	void* allocate(
-		std::size_t const i_size,
-		std::size_t const i_alignment,
-		std::size_t const i_offset,
-		char const* const i_name)
-	{
-		return i_offset == this->offset
-			&& 0 < i_alignment
-			&& this->get_alignment() % i_alignment == 0?
-				this->allocate(i_size, i_name): NULL;
-	}
-
 	void* allocate(
 		std::size_t const i_size,
 		char const* const i_name)
@@ -100,12 +89,6 @@ public:
 		std::size_t const i_size)
 	const
 	{
-		return const_cast< this_type* >(this)->get_pool(i_size);
-	}
-
-	psyq::fixed_memory_pool< t_memory_policy >* get_pool(
-		std::size_t const i_size)
-	{
 		if (0 < i_size)
 		{
 			std::size_t const a_index((i_size - 1) / this->alignment);
@@ -115,6 +98,13 @@ public:
 			}
 		}
 		return NULL;
+	}
+
+	psyq::fixed_memory_pool< t_memory_policy >* get_pool(
+		std::size_t const i_size)
+	{
+		return const_cast< psyq::fixed_memory_pool< t_memory_policy >* >(
+			const_cast< this_type const* >(this)->get_pool(i_size));
 	}
 
 	//-------------------------------------------------------------------------
@@ -196,8 +186,24 @@ public:
 		std::size_t const i_offset,
 		char const* const i_name)
 	{
-		return this_type::get_table()->allocate(
-			i_size, i_alignment, i_offset, i_name);
+		psyq::small_memory_table< t_memory_policy >& a_table(
+			*this_type::get_table());
+		return i_offset == a_table.get_offset()
+			&& 0 < i_alignment
+			&& a_table.get_alignment() % i_alignment == 0?
+				a_table.allocate(i_size, i_name): NULL;
+	}
+
+	/** @brief memoryを確保する。
+	    @param[in] i_size 確保するmemoryの大きさ。byte単位。
+	    @param[in] i_name debugで使うためのmemory識別名。
+	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
+	 */
+	static void* allocate(
+		std::size_t const i_size,
+		char const* const i_name)
+	{
+		return this_type::get_table()->allocate(i_size, i_name);
 	}
 
 	//-------------------------------------------------------------------------
@@ -349,13 +355,12 @@ public:
 	 */
 	explicit small_allocator(
 		char const* const i_name = PSYQ_MEMORY_NAME_DEFAULT):
-	super_type(i_name),
-	table(super_type::memory_policy::get_table())
+	super_type(i_name)
 	{
 		// pass
 	}
 
-	//single_allocator(this_type const&) = default;
+	//small_allocator(this_type const&) = default;
 
 	/** @param[in] i_source copy元instance。
 	 */
@@ -369,59 +374,16 @@ public:
 			t_small_size,
 			t_memory_policy > const&
 				i_source):
-	super_type(i_source),
-	table(
-		i_source.get_table()->get_alignment() % t_alignment == 0?
-			const_cast< psyq::small_memory_table< t_memory_policy >* >(
-				i_source.get_table()):
-			super_type::memory_policy::get_table())
+	super_type(i_source)
 	{
 		// pass
 	}
 
 	//-------------------------------------------------------------------------
-	this_type& operator=(this_type const& i_source)
-	{
-		PSYQ_ASSERT(*this == i_source);
-		this->super_type::operator=(i_source);
-		return *this;
-	}
-
-	template< typename t_other_type, std::size_t t_other_alignment >
-	this_type& operator=(
-		psyq::small_allocator<
-			t_other_type,
-			t_other_alignment,
-			t_offset,
-			t_chunk_size,
-			t_small_size,
-			t_memory_policy > const&
-				i_source)
-	{
-		PSYQ_ASSERT(*this == i_source);
-		this->super_type::operator=(i_source);
-		return *this;
-	}
-
-	//-------------------------------------------------------------------------
-	template< typename t_other_type,std::size_t t_other_alignment >
-	bool operator==(
-		psyq::small_allocator<
-			t_other_type,
-			t_other_alignment,
-			t_offset,
-			t_chunk_size,
-			t_small_size,
-			t_memory_policy > const&
-				i_right)
-	const
-	{
-		return this->super_type::operator==(i_right)
-			&& this->get_table() == i_right.get_table();
-	}
+	//this_type& operator=(this_type const&) = default;
 
 	template< typename t_other_type >
-	bool operator!=(
+	this_type& operator=(
 		psyq::small_allocator<
 			t_other_type,
 			t_alignment,
@@ -429,9 +391,10 @@ public:
 			t_chunk_size,
 			t_small_size,
 			t_memory_policy > const&
-				i_right)
+				i_source)
 	{
-		return !this->operator==(i_right);
+		this->super_type::operator=(i_source);
+		return *this;
 	}
 
 	//-------------------------------------------------------------------------
@@ -444,7 +407,7 @@ public:
 		typename super_type::size_type const i_num)
 	{
 		return static_cast< typename super_type::pointer >(
-			this->get_table()->allocate(
+			super_type::memory_policy::allocate(
 				i_num * sizeof(t_value_type), this->get_name()));
 	}
 
@@ -460,7 +423,7 @@ public:
 		std::size_t const                    i_offset = 0)
 	{
 		return static_cast< typename super_type::pointer >(
-			this->get_table()->allocate(
+			super_type::memory_policy::allocate(
 				i_num * sizeof(t_value_type),
 				i_alignment,
 				i_offset,
@@ -476,24 +439,9 @@ public:
 		typename super_type::pointer const   i_instance,
 		typename super_type::size_type const i_num)
 	{
-		this->get_table()->deallocate(
+		super_type::memory_policy::deallocate(
 			i_instance, i_num * sizeof(t_value_type));
 	}
-
-	//-------------------------------------------------------------------------
-	psyq::small_memory_table< t_memory_policy >* get_table()
-	{
-		return this->table;
-	}
-
-	psyq::small_memory_table< t_memory_policy > const* get_table() const
-	{
-		return this->table;
-	}
-
-//.............................................................................
-private:
-	psyq::small_memory_table< t_memory_policy >* const table;
 };
 
 #endif // PSYQ_SMALL_ALLOCATOR_HPP_

@@ -84,28 +84,6 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
-	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
-	    @param[in] i_alignment 確保するmemoryの境界値。byte単位。
-	    @param[in] i_offset    確保するmemoryの境界offset値。byte単位。
-	    @param[in] i_name      debugで使うためのmemory識別名。
-	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
-	 */
-	void* allocate(
-		std::size_t const i_size,
-		std::size_t const i_alignment,
-		std::size_t const i_offset,
-		char const* const i_name)
-	{
-		return i_size <= this->get_block_size()
-			&& 0 < i_size
-			&& 0 < i_alignment
-			&& 0 == this->get_chunk_alignment() % i_alignment
-			&& 0 == this->get_block_size() % i_alignment
-			&& this->get_chunk_offset() == i_offset?
-				this->allocate(i_name): NULL;
-	}
-
-	/** @brief memoryを確保する。
 	    @param[in] i_name debugで使うためのmemory識別名。
 	 */
 	void* allocate(char const* const i_name)
@@ -149,25 +127,6 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief instanceに使っていたmemoryを解放する。
-	    @param[in] i_instance 解放するinstanceの先頭位置。
-	    @param[in] i_num      解放するinstanceの数。
-	 */
-	bool deallocate(
-		void* const       i_memory,
-		std::size_t const i_size)
-	{
-		if (0 < i_size && i_size <= this->get_block_size())
-		{
-			return this->deallocate(i_memory);
-		}
-		else
-		{
-			PSYQ_ASSERT(0 == i_size && NULL == i_memory);
-			return false;
-		}
-	}
-
 	/** @brief memoryを解放する。
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	 */
@@ -515,8 +474,25 @@ public:
 		std::size_t const i_offset,
 		char const* const i_name)
 	{
-		return this_type::get_pool()->allocate(
-			i_size, i_alignment, i_offset, i_name);
+		psyq::fixed_memory_pool< t_memory_policy >& a_pool(
+			*this_type::get_pool());
+		return i_size <= a_pool.get_block_size()
+			&& 0 < i_size
+			&& 0 < i_alignment
+			&& 0 == a_pool.get_chunk_alignment() % i_alignment
+			&& 0 == a_pool.get_block_size() % i_alignment
+			&& a_pool.get_chunk_offset() == i_offset?
+				a_pool.allocate(i_name): NULL;
+	}
+
+	/** @brief memoryを確保する。
+	    @param[in] i_name debugで使うためのmemory識別名。
+	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
+	 */
+	static void* allocate(
+		char const* const i_name)
+	{
+		return this_type::get_pool()->allocate(i_name);
 	}
 
 	//-------------------------------------------------------------------------
@@ -528,7 +504,22 @@ public:
 		void* const       i_memory,
 		std::size_t const i_size)
 	{
-		this_type::get_pool()->deallocate(i_memory, i_size);
+		psyq::fixed_memory_pool< t_memory_policy >& a_pool(
+			*this_type::get_pool());
+		if (0 < i_size && i_size <= a_pool.get_block_size())
+		{
+			a_pool.deallocate(i_memory);
+		}
+		else
+		{
+			PSYQ_ASSERT(0 == i_size && NULL == i_memory);
+		}
+	}
+
+	static void deallocate(
+		void* const i_memory)
+	{
+		this_type::get_pool()->deallocate(i_memory);
 	}
 
 	//-------------------------------------------------------------------------

@@ -192,7 +192,7 @@ public:
 
 	template< typename t_other_type, typename t_other_policy >
 	bool operator!=(
-		psyq::allocator< t_other_type, t_other_policy > const&)
+		psyq::allocator< t_other_type, t_other_policy > const& i_right)
 	const
 	{
 		return !this->operator==(i_right);

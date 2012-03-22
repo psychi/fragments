@@ -165,14 +165,6 @@ public:
 	//-------------------------------------------------------------------------
 	//this_type& operator=(this_type const&) = default;
 
-	template< typename t_other_type >
-	this_type& operator=(
-		psyq::allocator< t_other_type, t_allocator_policy > const& i_source)
-	{
-		this->set_name(i_source.get_name());
-		return *this;
-	}
-
 	//-------------------------------------------------------------------------
 	template< typename t_other_type >
 	bool operator==(
@@ -182,9 +174,25 @@ public:
 		return true;
 	}
 
+	template< typename t_other_type, typename t_other_policy >
+	bool operator==(
+		psyq::allocator< t_other_type, t_other_policy > const&)
+	const
+	{
+		return false;
+	}
+
 	template< typename t_other_type >
 	bool operator!=(
 		psyq::allocator< t_other_type, t_allocator_policy > const& i_right)
+	const
+	{
+		return !this->operator==(i_right);
+	}
+
+	template< typename t_other_type, typename t_other_policy >
+	bool operator!=(
+		psyq::allocator< t_other_type, t_other_policy > const&)
 	const
 	{
 		return !this->operator==(i_right);

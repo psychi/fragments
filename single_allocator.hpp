@@ -242,20 +242,6 @@ public:
 	//-------------------------------------------------------------------------
 	//this_type& operator=(this_type const&) = default;
 
-	template< typename t_other_type >
-	this_type& operator=(
-		psyq::single_allocator<
-			t_other_type,
-			t_alignment,
-			t_offset,
-			t_chunk_size,
-			t_allocator_policy > const&
-				i_source)
-	{
-		this->super_type::operator=(i_source);
-		return *this;
-	}
-
 	//-------------------------------------------------------------------------
 	/** @brief instanceに使うmemoryを確保する。
 	    @param[in] i_num       確保するinstanceの数。

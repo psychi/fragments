@@ -32,6 +32,12 @@ public:
 	typedef t_allocator_policy allocator_policy;
 
 	//-------------------------------------------------------------------------
+	virtual ~fixed_memory_table()
+	{
+		// pass
+	}
+
+	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
 	    @param[in] i_size 確保するmemoryの大きさ。byte単位。
 	    @param[in] i_name debugで使うためのmemory識別名。
@@ -41,21 +47,18 @@ public:
 		std::size_t const i_size,
 		char const* const i_name)
 	{
-		if (0 < i_size)
+		psyq::fixed_memory_pool< t_allocator_policy >* const a_pool(
+			this->get_pool(this->get_pool_index(i_size)));
+		if (NULL != a_pool)
 		{
-			psyq::fixed_memory_pool< t_allocator_policy >* const a_pool(
-				this->get_pool(i_size));
-			if (NULL != a_pool)
-			{
-				// 小規模sizeのpoolからmemoryを確保。
-				return a_pool->allocate(i_name);
-			}
-			else
-			{
-				// 小規模sizeより大きいmemoryは、t_allocator_policyから確保。
-				return t_allocator_policy::allocate(
-					i_size, this->get_alignment(), this->get_offset(), i_name);
-			}
+			// 小規模sizeのpoolからmemoryを確保。
+			return a_pool->allocate(i_name);
+		}
+		else if (0 < i_size)
+		{
+			// 小規模sizeより大きいmemoryは、t_allocator_policyから確保。
+			return t_allocator_policy::allocate(
+				i_size, this->get_alignment(), this->get_offset(), i_name);
 		}
 		return NULL;
 	}
@@ -69,80 +72,57 @@ public:
 		void* const       i_memory,
 		std::size_t const i_size)
 	{
-		if (0 < i_size)
+		psyq::fixed_memory_pool< t_allocator_policy >* const a_pool(
+			this->get_pool(this->get_pool_index(i_size)));
+		if (NULL != a_pool)
 		{
-			psyq::fixed_memory_pool< t_allocator_policy >* const a_pool(
-				this->get_pool(i_size));
-			if (NULL != a_pool)
-			{
-				// 小規模sizeのpoolでmemoryを解放。
-				a_pool->deallocate(i_memory);
-			}
-			else
-			{
-				// 小規模sizeより大きいmemoryは、t_allocator_policyで解放。
-				t_allocator_policy::deallocate(i_memory, i_size);
-			}
+			// 小規模sizeのpoolでmemoryを解放。
+			a_pool->deallocate(i_memory);
+		}
+		else if (0 < i_size)
+		{
+			// 小規模sizeより大きいmemoryは、t_allocator_policyで解放。
+			t_allocator_policy::deallocate(i_memory, i_size);
 		}
 	}
 
 	//-------------------------------------------------------------------------
-	psyq::fixed_memory_pool< t_allocator_policy > const* get_pool(
-		std::size_t const i_size)
-	const
+	std::size_t get_pool_index(std::size_t const i_size) const
 	{
 		if (0 < i_size)
 		{
-			std::size_t const a_index((i_size - 1) / this->alignment);
-			if (a_index < this->num_pools)
+			std::size_t const a_index((i_size - 1) / this->get_alignment());
+			if (a_index < this->get_num_pools())
 			{
-				return this->pools[a_index];
+				return a_index;
 			}
 		}
-		return NULL;
+		return (std::numeric_limits< std::size_t >::max)();
 	}
+
+	//-------------------------------------------------------------------------
+	virtual psyq::fixed_memory_pool< t_allocator_policy > const* get_pool(
+		std::size_t const i_index)
+	const = 0;
 
 	psyq::fixed_memory_pool< t_allocator_policy >* get_pool(
-		std::size_t const i_size)
+		std::size_t const i_index)
 	{
 		return const_cast< psyq::fixed_memory_pool< t_allocator_policy >* >(
-			const_cast< this_type const* >(this)->get_pool(i_size));
+			const_cast< this_type const* >(this)->get_pool(i_index));
 	}
 
 	//-------------------------------------------------------------------------
-	std::size_t get_alignment() const
-	{
-		return this->alignment;
-	}
-
-	std::size_t get_offset() const
-	{
-		return this->offset;
-	}
+	virtual std::size_t get_alignment() const = 0;
+	virtual std::size_t get_offset() const = 0;
+	virtual std::size_t get_num_pools() const = 0;
 
 //.............................................................................
 protected:
-	fixed_memory_table(
-		psyq::fixed_memory_pool< t_allocator_policy >** const i_pools,
-		std::size_t const                                  i_num_pools,
-		std::size_t const                                  i_alignment,
-		std::size_t const                                  i_offset):
-	pools(i_pools),
-	num_pools(i_num_pools),
-	alignment(i_alignment),
-	offset(i_offset)
+	fixed_memory_table()
 	{
-		PSYQ_ASSERT(NULL != i_pools);
-		PSYQ_ASSERT(0 < i_num_pools);
-		PSYQ_ASSERT(0 < i_alignment);
+		// pass
 	}
-
-//.............................................................................
-private:
-	psyq::fixed_memory_pool< t_allocator_policy >** pools;
-	std::size_t                                  num_pools;
-	std::size_t                                  alignment;
-	std::size_t                                  offset;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -270,11 +250,33 @@ private:
 	{
 	public:
 		pool_table():
-		psyq::fixed_memory_table< t_allocator_policy >(
-			pools, num_pools, t_alignment, t_offset)
+		psyq::fixed_memory_table< t_allocator_policy >()
 		{
 			typedef boost::mpl::range_c< std::size_t, 0, num_pools > range;
 			boost::mpl::for_each< range >(set_pools(this->pools));
+		}
+
+		//-------------------------------------------------------------------------
+		virtual std::size_t get_alignment() const
+		{
+			return t_alignment;
+		}
+
+		virtual std::size_t get_offset() const
+		{
+			return t_offset;
+		}
+
+		virtual std::size_t get_num_pools() const
+		{
+			return num_pools;
+		}
+
+		virtual psyq::fixed_memory_pool< t_allocator_policy > const* get_pool(
+			std::size_t const i_index)
+		const
+		{
+			return i_index < num_pools? this->pools[i_index]: NULL;
 		}
 
 	private:

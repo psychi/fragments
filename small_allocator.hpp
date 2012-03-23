@@ -307,6 +307,8 @@ template<
 class psyq::small_allocator:
 	public psyq::allocator<
 		t_value_type,
+		t_alignment,
+		t_offset,
 		psyq::small_allocator_policy<
 			t_alignment,
 			t_offset,
@@ -324,6 +326,8 @@ class psyq::small_allocator:
 			this_type;
 	typedef psyq::allocator<
 		t_value_type,
+		t_alignment,
+		t_offset,
 		psyq::small_allocator_policy<
 			t_alignment,
 			t_offset,
@@ -398,32 +402,6 @@ public:
 		return static_cast< typename super_type::pointer >(
 			super_type::allocator_policy::allocate(
 				i_num * sizeof(t_value_type), this->get_name()));
-	}
-
-	/** @brief memoryを確保する。
-	    @param[in] i_num       確保するinstanceの数。
-	    @param[in] i_alignment 確保するinstanceの境界値。byte単位。
-	    @param[in] i_offset    確保するinstanceの境界offset値。byte単位。
-	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
-	 */
-	typename super_type::pointer allocate(
-		typename super_type::size_type const i_num,
-		std::size_t const                    i_alignment,
-		std::size_t const                    i_offset = t_offset)
-	{
-		return this->super_type::allocate(i_num, i_alignment, i_offset);
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief intanceに使っていたmemoryを解放する。
-	    @param[in] i_instance 解放するinstanceの先頭位置。
-	    @param[in] i_num      解放するinstanceの数。
-	 */
-	void deallocate(
-		typename super_type::pointer const   i_instance,
-		typename super_type::size_type const i_num)
-	{
-		this->super_type::deallocate(i_instance, i_num);
 	}
 };
 

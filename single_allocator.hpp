@@ -169,6 +169,8 @@ template<
 class psyq::single_allocator:
 	public psyq::allocator<
 		t_value_type,
+		t_alignment,
+		t_offset,
 		psyq::fixed_allocator_policy<
 			((sizeof(t_value_type) + t_alignment - 1) / t_alignment)
 				* t_alignment,
@@ -182,6 +184,8 @@ class psyq::single_allocator:
 			this_type;
 	typedef psyq::allocator<
 		t_value_type,
+		t_alignment,
+		t_offset,
 		psyq::fixed_allocator_policy<
 			((sizeof(t_value_type) + t_alignment - 1) / t_alignment)
 				* t_alignment,
@@ -250,11 +254,9 @@ public:
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
 	typename super_type::pointer allocate(
-		typename super_type::size_type const i_num,
-		std::size_t const                    i_alignment = t_alignment,
-		std::size_t const                    i_offset = t_offset)
+		typename super_type::size_type const i_num)
 	{
-		return this->super_type::allocate(i_num, i_alignment, i_offset);
+		return this->super_type::allocate(i_num);
 	}
 
 	/** @brief instanceに使うmemoryを確保する。

@@ -12,7 +12,7 @@
 namespace psyq
 {
 	class allocator_policy;
-	template< typename, typename > class allocator;
+	template< typename, std::size_t, std::size_t, typename > class allocator;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -112,14 +112,24 @@ private:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::allocator互換のinstance割当子。
     @tparam t_value_type       割り当てるinstanceの型。
+    @tparam t_alignment        instanceの配置境界値。byte単位。
+    @tparam t_offset           instanceの配置offset値。byte単位。
     @tparam t_allocator_policy memory割当policy。
  */
 template<
-	typename t_value_type,
-	typename t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT >
+	typename    t_value_type,
+	std::size_t t_alignment = boost::alignment_of< t_value_type >::value,
+	std::size_t t_offset = 0,
+	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT >
 class psyq::allocator
 {
-	typedef psyq::allocator< t_value_type, t_allocator_policy > this_type;
+	typedef psyq::allocator<
+		t_value_type, t_alignment, t_offset, t_allocator_policy >
+			this_type;
+
+	// 配置境界値が2のべき乗か確認。
+	BOOST_STATIC_ASSERT(0 == (t_alignment & (t_alignment - 1)));
+	BOOST_STATIC_ASSERT(0 < t_alignment);
 
 //.............................................................................
 public:
@@ -132,13 +142,21 @@ public:
 	typedef const t_value_type& const_reference;
 	typedef t_value_type        value_type;
 
+	static std::size_t const alignment = t_alignment;
+	static std::size_t const offset = t_offset;
+
 	//-------------------------------------------------------------------------
 	template<
-		typename t_other_type,
-		typename t_other_policy = t_allocator_policy >
+		typename    t_other_type,
+		std::size_t t_other_alignment =
+			boost::alignment_of< t_other_type >::value,
+		std::size_t t_other_offset = t_offset,
+		typename    t_other_policy = t_allocator_policy >
 	struct rebind
 	{
-		typedef psyq::allocator< t_other_type, t_other_policy > other;
+		typedef psyq::allocator<
+			t_other_type, t_other_alignment, t_other_offset, t_other_policy >
+				other;
 	};
 
 	//-------------------------------------------------------------------------
@@ -154,9 +172,18 @@ public:
 
 	/** @param[in] i_source copy元instance。
 	 */
-	template< typename t_other_type >
+	template<
+		typename    t_other_type,
+		std::size_t t_other_alignment,
+		std::size_t t_other_offset,
+		typename    t_other_policy >
 	allocator(
-		psyq::allocator< t_other_type, t_allocator_policy > const& i_source):
+		psyq::allocator<
+			t_other_type,
+			t_other_alignment,
+			t_other_offset,
+			t_other_policy > const&
+				i_source):
 	name(i_source.get_name())
 	{
 		// pass
@@ -166,33 +193,49 @@ public:
 	//this_type& operator=(this_type const&) = default;
 
 	//-------------------------------------------------------------------------
-	template< typename t_other_type >
+	template<
+		typename    t_other_type,
+		std::size_t t_other_alignment,
+		std::size_t t_other_offset >
 	bool operator==(
-		psyq::allocator< t_other_type, t_allocator_policy > const&)
+		psyq::allocator<
+			t_other_type,
+			t_other_alignment,
+			t_other_offset,
+			t_allocator_policy > const&)
 	const
 	{
 		return true;
 	}
 
-	template< typename t_other_type, typename t_other_policy >
+	template<
+		typename    t_other_type,
+		std::size_t t_other_alignment,
+		std::size_t t_other_offset,
+		typename    t_other_policy >
 	bool operator==(
-		psyq::allocator< t_other_type, t_other_policy > const&)
+		psyq::allocator<
+			t_other_type,
+			t_other_alignment,
+			t_other_offset,
+			t_other_policy > const&)
 	const
 	{
 		return false;
 	}
 
-	template< typename t_other_type >
+	template<
+		typename    t_other_type,
+		std::size_t t_other_alignment,
+		std::size_t t_other_offset,
+		typename    t_other_policy >
 	bool operator!=(
-		psyq::allocator< t_other_type, t_allocator_policy > const& i_right)
-	const
-	{
-		return !this->operator==(i_right);
-	}
-
-	template< typename t_other_type, typename t_other_policy >
-	bool operator!=(
-		psyq::allocator< t_other_type, t_other_policy > const& i_right)
+		psyq::allocator<
+			t_other_type,
+			t_other_alignment,
+			t_other_offset,
+			t_other_policy > const&
+				i_right)
 	const
 	{
 		return !this->operator==(i_right);
@@ -206,16 +249,13 @@ public:
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
 	typename this_type::pointer allocate(
-		typename this_type::size_type const i_num,
-		std::size_t const                   i_alignment =
-			boost::alignment_of< t_value_type >::value,
-		std::size_t const                   i_offset = 0)
+		typename this_type::size_type const i_num)
 	{
 		return static_cast< typename this_type::pointer >(
 			t_allocator_policy::allocate(
 				i_num * sizeof(t_value_type),
-				i_alignment,
-				i_offset,
+				t_alignment,
+				t_offset,
 				this->get_name()));
 	}
 
@@ -277,18 +317,6 @@ public:
 	{
 		this->name = i_name;
 		return i_name;
-	}
-
-//.............................................................................
-protected:
-	/** @param[in] i_source copy元instance。
-	 */
-	template< typename t_other_type, typename t_other_policy >
-	explicit allocator(
-		psyq::allocator< t_other_type, t_other_policy > const& i_source):
-	name(i_source.get_name())
-	{
-		// pass
 	}
 
 //.............................................................................

@@ -256,7 +256,6 @@ private:
 			boost::mpl::for_each< range >(set_pools(this->pools));
 		}
 
-		//-------------------------------------------------------------------------
 		virtual std::size_t get_alignment() const
 		{
 			return t_alignment;

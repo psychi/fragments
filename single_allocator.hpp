@@ -16,15 +16,15 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 固定sizeのmemory割当policy。
     @tparam t_block_size       割り当てるmemoryの大きさ。byte単位。
-    @tparam t_chunk_alignment  memory-chunkの配置境界値。byte単位。
-    @tparam t_chunk_offset     memory-cnunkの配置offset値。byte単位。
+    @tparam t_alignment        memoryの配置境界値。byte単位。
+    @tparam t_offset           memoryの配置offset値。byte単位。
     @tparam t_chunk_size       memory-chunkの最大size。byte単位。
     @tparam t_allocator_policy 実際に使うmemory割当policy。
  */
 template<
 	std::size_t t_block_size,
-	std::size_t t_chunk_alignment = sizeof(void*),
-	std::size_t t_chunk_offset = 0,
+	std::size_t t_alignment = sizeof(void*),
+	std::size_t t_offset = 0,
 	std::size_t t_chunk_size = PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT,
 	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT >
 class psyq::fixed_allocator_policy:
@@ -32,19 +32,20 @@ class psyq::fixed_allocator_policy:
 {
 	typedef fixed_allocator_policy<
 		t_block_size,
-		t_chunk_alignment,
-		t_chunk_offset,
+		t_alignment,
+		t_offset,
 		t_chunk_size,
 		t_allocator_policy >
 			this_type;
 
 	// memory配置境界値が2のべき乗か確認。
-	BOOST_STATIC_ASSERT(0 == (t_chunk_alignment & (t_chunk_alignment - 1)));
-	BOOST_STATIC_ASSERT(0 < t_chunk_alignment);
+	BOOST_STATIC_ASSERT(0 == (t_alignment & (t_alignment - 1)));
+	BOOST_STATIC_ASSERT(0 < t_alignment);
+	BOOST_STATIC_ASSERT(t_block_size % t_alignment == 0);
 
 	// 割り当てるmemoryがchunkに収まるか確認。
 	BOOST_STATIC_ASSERT(0 < t_block_size);
-	BOOST_STATIC_ASSERT(t_chunk_offset < t_chunk_size);
+	BOOST_STATIC_ASSERT(t_offset < t_chunk_size);
 #if 0
 	BOOST_STATIC_ASSERT(
 		t_block_size <= t_chunk_size
@@ -57,8 +58,8 @@ public:
 
 	//-------------------------------------------------------------------------
 	static std::size_t const block_size = t_block_size;
-	static std::size_t const chunk_alignment = t_chunk_alignment;
-	static std::size_t const chunk_offset = t_chunk_offset;
+	static std::size_t const alignment  = t_alignment;
+	static std::size_t const offset     = t_offset;
 	static std::size_t const chunk_size = t_chunk_size;
 
 	//-------------------------------------------------------------------------
@@ -77,9 +78,9 @@ public:
 	{
 		return 0 < i_size
 			&& 0 < i_alignment
-			&& t_chunk_offset == i_offset
+			&& t_offset == i_offset
 			&& i_size <= t_block_size
-			&& t_chunk_alignment % i_alignment == 0
+			&& t_alignment % i_alignment == 0
 			&& t_block_size % i_alignment == 0?
 				this_type::allocate(i_name): NULL;
 	}
@@ -140,10 +141,7 @@ public:
 				singleton;
 		return singleton::construct(
 			boost::in_place(
-				t_block_size,
-				t_chunk_alignment,
-				t_chunk_offset,
-				t_chunk_size));
+				t_block_size, t_alignment, t_offset, t_chunk_size));
 	}
 
 //.............................................................................

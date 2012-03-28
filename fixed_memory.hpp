@@ -32,47 +32,43 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @param[in] i_block_size      確保するmemoryの大きさ。byte単位。
-	    @param[in] i_chunk_alignment memory-chunkの配置境界値。
-	    @param[in] i_chunk_offset    memory-chunkの配置offset値。
-	    @param[in] i_chunk_size      memory-chunkの最大値。byte単位。
+	/** @param[in] i_block_size 確保するmemoryの大きさ。byte単位。
+	    @param[in] i_alignment  memoryの配置境界値。
+	    @param[in] i_offset     memoryの配置offset値。
+	    @param[in] i_chunk_size memory-chunkの最大値。byte単位。
 	 */
 	fixed_memory_pool(
 		std::size_t const i_block_size,
-		std::size_t const i_chunk_alignment,
-		std::size_t const i_chunk_offset,
+		std::size_t const i_alignment,
+		std::size_t const i_offset,
 		std::size_t const i_chunk_size):
 	chunk_container(NULL),
 	allocator_chunk(NULL),
 	deallocator_chunk(NULL),
 	empty_chunk(NULL),
 	block_size(i_block_size),
-	chunk_alignment(i_chunk_alignment),
-	chunk_offset(i_chunk_offset)
+	alignment(i_alignment),
+	offset(i_offset)
 	{
-		PSYQ_ASSERT(0 < i_block_size);
-		std::size_t const a_alignment(
-			boost::alignment_of< typename this_type::chunk >::value);
-		std::size_t a_chunk_size(
-			i_chunk_offset - sizeof(typename this_type::chunk)
-				+ a_alignment * (
-					(i_chunk_size - i_chunk_offset) / a_alignment));
-		PSYQ_ASSERT(a_chunk_size <= i_chunk_size);
+		PSYQ_ASSERT(0 == (i_alignment & (i_alignment - 1)));
+		PSYQ_ASSERT(0 < i_alignment);
+		PSYQ_ASSERT(i_block_size % i_alignment == 0);
 
 		// chunkが持つblockの数を決定。
-		std::size_t const a_max_blocks(a_chunk_size / this->block_size);
-		PSYQ_ASSERT(0 < a_max_blocks);
+		PSYQ_ASSERT(0 < i_block_size);
+		PSYQ_ASSERT(i_block_size <= i_chunk_size);
+		std::size_t const a_max_blocks(i_chunk_size / i_block_size);
 		this->max_blocks = static_cast< boost::uint8_t >(
 			a_max_blocks <= 0xff? a_max_blocks: 0xff);
 
 		// chunkの大きさを決定。
-		a_chunk_size = this->max_blocks * i_block_size;
-		PSYQ_ASSERT(i_chunk_offset < a_chunk_size);
-		this->chunk_size = i_chunk_offset + a_alignment * (
-			(a_chunk_size - i_chunk_offset + a_alignment - 1) / a_alignment);
+		std::size_t const a_alignment(
+			boost::alignment_of< typename this_type::chunk >::value);
 		PSYQ_ASSERT(
-			this->chunk_size <= i_chunk_size
-				- sizeof(typename this_type::chunk));
+			i_alignment % a_alignment == 0 || a_alignment % i_alignment == 0);
+		this->chunk_size = i_offset + a_alignment * (
+			(this->max_blocks * i_block_size - i_offset + a_alignment - 1)
+			/ a_alignment);
 	}
 
 	//-------------------------------------------------------------------------
@@ -173,14 +169,14 @@ public:
 		return this->block_size;
 	}
 
-	std::size_t get_chunk_alignment() const
+	std::size_t get_alignment() const
 	{
-		return this->chunk_alignment;
+		return this->alignment;
 	}
 
-	std::size_t get_chunk_offset() const
+	std::size_t get_offset() const
 	{
-		return this->chunk_offset;
+		return this->offset;
 	}
 
 //.............................................................................
@@ -294,11 +290,13 @@ private:
 	bool create_chunk(char const* const i_name)
 	{
 		// chunkに使うmemoryを確保。
+		std::size_t const a_alignment(
+			boost::alignment_of< typename this_type::chunk >::value);
 		void* const a_memory(
 			t_allocator_policy::allocate(
 				this->chunk_size + sizeof(typename this_type::chunk),
-				this->chunk_alignment,
-				this->chunk_offset,
+				this->alignment < a_alignment? a_alignment: this->alignment,
+				this->offset,
 				i_name));
 		if (NULL == a_memory)
 		{
@@ -402,47 +400,9 @@ private:
 	typename this_type::chunk* empty_chunk;
 	std::size_t                block_size;
 	std::size_t                max_blocks;
-	std::size_t                chunk_alignment;
-	std::size_t                chunk_offset;
+	std::size_t                alignment;
+	std::size_t                offset;
 	std::size_t                chunk_size;
 };
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 指定した値以上の最小の2のべき乗を決定。
- */
-#if 0
-template< std::size_t t_value >
-struct psyq_roundup_2n
-{
-private:
-	template< std::size_t t_shift >
-	struct calc
-	{
-		static std::size_t const value = calc< t_shift / 2 >::value
-			| (calc< t_shift / 2 >::value >> t_shift);
-	};
-
-	template<>
-	struct calc< 1 >
-	{
-		static std::size_t const value = (t_value - 1) | ((t_value - 1) >> 1);
-	};
-
-public:
-	static std::size_t const value = calc< 16 >::value + 1;
-};
-
-std::size_t psyq_roundup_2n_calc(
-	std::size_t const i_value)
-{
-	std::size_t a_value(i_value - 1);
-	a_value |= (a_value >> 1);
-	a_value |= (a_value >> 2);
-	a_value |= (a_value >> 4);
-	a_value |= (a_value >> 8);
-	a_value |= (a_value >> 16);
-	return a_value + 1;
-}
-#endif
 
 #endif // PSYQ_FIXED_MEMORY_HPP_

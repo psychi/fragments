@@ -15,40 +15,41 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 固定sizeのmemory割当policy。
-    @tparam t_block_size       割り当てるmemoryの大きさ。byte単位。
+    @tparam t_max_size         割り当てるmemoryの大きさ。byte単位。
     @tparam t_alignment        memoryの配置境界値。byte単位。
     @tparam t_offset           memoryの配置offset値。byte単位。
     @tparam t_chunk_size       memory-chunkの最大size。byte単位。
     @tparam t_allocator_policy 実際に使うmemory割当policy。
  */
 template<
-	std::size_t t_block_size,
+	std::size_t t_max_size,
 	std::size_t t_alignment = sizeof(void*),
 	std::size_t t_offset = 0,
 	std::size_t t_chunk_size = PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT,
 	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT >
 class psyq::fixed_allocator_policy:
-	private boost::noncopyable
+	public t_allocator_policy
 {
 	typedef fixed_allocator_policy<
-		t_block_size,
+		t_max_size,
 		t_alignment,
 		t_offset,
 		t_chunk_size,
 		t_allocator_policy >
 			this_type;
+	typedef t_allocator_policy super_type;
 
 	// memory配置境界値が2のべき乗か確認。
 	BOOST_STATIC_ASSERT(0 == (t_alignment & (t_alignment - 1)));
 	BOOST_STATIC_ASSERT(0 < t_alignment);
-	BOOST_STATIC_ASSERT(t_block_size % t_alignment == 0);
+	BOOST_STATIC_ASSERT(t_max_size % t_alignment == 0);
 
 	// 割り当てるmemoryがchunkに収まるか確認。
-	BOOST_STATIC_ASSERT(0 < t_block_size);
+	BOOST_STATIC_ASSERT(0 < t_max_size);
 	BOOST_STATIC_ASSERT(t_offset < t_chunk_size);
 #if 0
 	BOOST_STATIC_ASSERT(
-		t_block_size <= t_chunk_size
+		t_max_size <= t_chunk_size
 			- sizeof(psyq::fixed_memory_pool< t_allocator_policy >::chunk));
 #endif // 0
 
@@ -57,10 +58,30 @@ public:
 	typedef t_allocator_policy allocator_policy;
 
 	//-------------------------------------------------------------------------
-	static std::size_t const block_size = t_block_size;
+	static std::size_t const max_size   = t_max_size;
 	static std::size_t const alignment  = t_alignment;
 	static std::size_t const offset     = t_offset;
 	static std::size_t const chunk_size = t_chunk_size;
+
+	//-------------------------------------------------------------------------
+	/** @brief 抽象allocator-policyを作る。
+	 */
+	static psyq::allocator_policy::holder create()
+	{
+		typedef super_type::implement< this_type > policy;
+		return this_type::create(psyq::single_allocator< policy >());
+	}
+
+	/** @brief 抽象allocator-policyを作る。
+	    @param[in] i_allocator allocator-policyの確保に使う割当子。
+	 */
+	template< typename t_allocator >
+	static psyq::allocator_policy::holder create(
+		t_allocator const& i_allocator)
+	{
+		typedef super_type::implement< this_type > policy;
+		return boost::allocate_shared< policy >(i_allocator);
+	}
 
 	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
@@ -70,7 +91,7 @@ public:
 	    @param[in] i_name      debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	static void* allocate(
+	static void* (malloc)(
 		std::size_t const i_size,
 		std::size_t const i_alignment,
 		std::size_t const i_offset,
@@ -79,17 +100,17 @@ public:
 		return 0 < i_size
 			&& 0 < i_alignment
 			&& t_offset == i_offset
-			&& i_size <= t_block_size
+			&& i_size <= t_max_size
 			&& t_alignment % i_alignment == 0
-			&& t_block_size % i_alignment == 0?
-				this_type::allocate(i_name): NULL;
+			&& t_max_size % i_alignment == 0?
+				(this_type::malloc)(i_name): NULL;
 	}
 
 	/** @brief memoryを確保する。
 	    @param[in] i_name debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	static void* allocate(
+	static void* (malloc)(
 		char const* const i_name)
 	{
 		return this_type::get_pool()->allocate(i_name);
@@ -100,13 +121,13 @@ public:
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	    @param[in] i_size   解放するmemoryの大きさ。byte単位。
 	 */
-	static void deallocate(
+	static void (free)(
 		void* const       i_memory,
 		std::size_t const i_size)
 	{
-		if (0 < i_size && i_size <= t_block_size)
+		if (0 < i_size && i_size <= t_max_size)
 		{
-			this_type::deallocate(i_memory);
+			(this_type::free)(i_memory);
 		}
 		else
 		{
@@ -117,18 +138,10 @@ public:
 	/** @brief memoryを解放する。
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	 */
-	static void deallocate(
+	static void (free)(
 		void* const i_memory)
 	{
 		this_type::get_pool()->deallocate(i_memory);
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief 一度に確保できるmemoryの最大sizeを取得。byte単位。
-	 */
-	static std::size_t max_size()
-	{
-		return t_block_size;
 	}
 
 	//-------------------------------------------------------------------------
@@ -141,21 +154,25 @@ public:
 				singleton;
 		return singleton::construct(
 			boost::in_place(
-				t_block_size, t_alignment, t_offset, t_chunk_size));
+				t_max_size, t_alignment, t_offset, t_chunk_size));
 	}
 
 //.............................................................................
-private:
-	fixed_allocator_policy();
+protected:
+	fixed_allocator_policy():
+	super_type()
+	{
+		// pass
+	}
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 一度にひとつのinstanceを確保する、std::allocator互換の割当子。
         配列は確保できない。
-    @tparam t_value_type    確保するinstanceの型。
-    @tparam t_alignment     instanceの配置境界値。byte単位。
-    @tparam t_offset        instanceの配置offset値。byte単位。
-    @tparam t_chunk_size    memory-chunkの最大size。byte単位。
+    @tparam t_value_type        確保するinstanceの型。
+    @tparam t_alignment         instanceの配置境界値。byte単位。
+    @tparam t_offset            instanceの配置offset値。byte単位。
+    @tparam t_chunk_size        memory-chunkの最大size。byte単位。
     @tparam t_allocator_policy 実際に使うmemory割当policy。
  */
 template<
@@ -262,7 +279,7 @@ public:
 	typename super_type::pointer allocate()
 	{
 		return static_cast< typename super_type::pointer >(
-			super_type::allocator_policy::allocate(this->get_name()));
+			(super_type::allocator_policy::malloc)(this->get_name()));
 	}
 
 	//-------------------------------------------------------------------------
@@ -296,7 +313,7 @@ public:
 #ifdef _MSC_VER
 	static typename super_type::size_type max_size()
 	{
-		return t_allocator_policy::max_size() / sizeof(t_value_type);
+		return t_allocator_policy::max_size / sizeof(t_value_type);
 	}
 #endif // _MSC_VER
 };

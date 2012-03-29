@@ -293,7 +293,7 @@ private:
 		std::size_t const a_alignment(
 			boost::alignment_of< typename this_type::chunk >::value);
 		void* const a_memory(
-			t_allocator_policy::allocate(
+			(t_allocator_policy::malloc)(
 				this->chunk_size + sizeof(typename this_type::chunk),
 				this->alignment < a_alignment? a_alignment: this->alignment,
 				this->offset,
@@ -346,7 +346,7 @@ private:
 	void destroy_chunk(typename this_type::chunk& i_chunk)
 	{
 		PSYQ_ASSERT(this->max_blocks <= i_chunk.num_blocks);
-		t_allocator_policy::deallocate(
+		(t_allocator_policy::free)(
 			reinterpret_cast< boost::uint8_t* >(&i_chunk) - this->chunk_size,
 			this->chunk_size + sizeof(typename this_type::chunk));
 	}

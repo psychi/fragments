@@ -397,8 +397,10 @@ public:
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
 	typename super_type::pointer allocate(
-		typename super_type::size_type const i_num)
+		typename super_type::size_type const i_num,
+		void const* const                    i_hint = NULL)
 	{
+		(void)i_hint;
 		return static_cast< typename super_type::pointer >(
 			super_type::allocator_policy::allocate(
 				i_num * sizeof(t_value_type), this->get_name()));

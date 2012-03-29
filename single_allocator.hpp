@@ -250,9 +250,10 @@ public:
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
 	typename super_type::pointer allocate(
-		typename super_type::size_type const i_num)
+		typename super_type::size_type const i_num,
+		void const* const                    i_hint = NULL)
 	{
-		return this->super_type::allocate(i_num);
+		return this->super_type::allocate(i_num, i_hint);
 	}
 
 	/** @brief instanceに使うmemoryを確保する。

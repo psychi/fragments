@@ -11,9 +11,98 @@
 
 namespace psyq
 {
+	template< typename, std::size_t, std::size_t > class _allocator_traits;
 	template< typename, std::size_t, std::size_t, typename > class allocator;
 	class allocator_policy;
 }
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template<
+	typename    t_value_type,
+	std::size_t t_alignment,
+	std::size_t t_offset >
+class psyq::_allocator_traits:
+	public std::allocator< t_value_type >
+{
+	typedef psyq::_allocator_traits< t_value_type, t_alignment, t_offset >
+		this_type;
+	typedef std::allocator< t_value_type > super_type;
+
+	// 配置境界値が2のべき乗か確認。
+	BOOST_STATIC_ASSERT(0 == (t_alignment & (t_alignment - 1)));
+	BOOST_STATIC_ASSERT(0 < t_alignment);
+
+//.............................................................................
+public:
+	//-------------------------------------------------------------------------
+	static std::size_t const alignment = t_alignment;
+	static std::size_t const offset = t_offset;
+
+	//-------------------------------------------------------------------------
+	/** @brief memory識別名を取得。
+	 */
+	char const* get_name() const
+	{
+		return this->name;
+	}
+
+	/** @brief memory識別名を設定。
+	    @param[in] i_name 設定するmemory識別名の文字列。
+	 */
+	char const* set_name(char const* const i_name)
+	{
+		this->name = i_name;
+		return i_name;
+	}
+
+	//this_type& operator=(this_type const&) = default;
+
+//.............................................................................
+protected:
+	//-------------------------------------------------------------------------
+	/** @param[in] i_name debugで使うためのmemory識別名。
+	 */
+	explicit _allocator_traits(char const* const i_name):
+	super_type(),
+	name(i_name)
+	{
+		// pass
+	}
+
+	/** @param[in] i_source copy元instance。
+	 */
+	_allocator_traits(this_type const& i_source):
+	super_type(i_source),
+	name(i_source.get_name())
+	{
+		// pass
+	}
+
+	/** @param[in] i_source copy元instance。
+	 */
+	template<
+		typename    t_other_type,
+		std::size_t t_other_alignment,
+		std::size_t t_other_offset >
+	explicit _allocator_traits(
+		psyq::_allocator_traits<
+			t_other_type, t_other_alignment, t_other_offset > const&
+				i_source):
+	super_type(i_source),
+	name(i_source.get_name())
+	{
+		// pass
+	}
+
+//.............................................................................
+private:
+	void allocate();
+	void deallocate();
+
+//.............................................................................
+private:
+	char const* name; ///< debugで使うためのmemory識別名。
+};
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::allocator互換のinstance割当子。
@@ -27,29 +116,18 @@ template<
 	std::size_t t_alignment = boost::alignment_of< t_value_type >::value,
 	std::size_t t_offset = 0,
 	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT >
-class psyq::allocator
+class psyq::allocator:
+	public psyq::_allocator_traits< t_value_type, t_alignment, t_offset >
 {
 	typedef psyq::allocator<
 		t_value_type, t_alignment, t_offset, t_allocator_policy >
 			this_type;
-
-	// 配置境界値が2のべき乗か確認。
-	BOOST_STATIC_ASSERT(0 == (t_alignment & (t_alignment - 1)));
-	BOOST_STATIC_ASSERT(0 < t_alignment);
+	typedef psyq::_allocator_traits< t_value_type, t_alignment, t_offset >
+		super_type;
 
 //.............................................................................
 public:
-	typedef t_allocator_policy  allocator_policy;
-	typedef std::size_t         size_type;
-	typedef std::ptrdiff_t      difference_type;
-	typedef t_value_type*       pointer;
-	typedef const t_value_type* const_pointer;
-	typedef t_value_type&       reference;
-	typedef const t_value_type& const_reference;
-	typedef t_value_type        value_type;
-
-	static std::size_t const alignment = t_alignment;
-	static std::size_t const offset = t_offset;
+	typedef t_allocator_policy allocator_policy;
 
 	//-------------------------------------------------------------------------
 	template<
@@ -69,7 +147,7 @@ public:
 	/** @param[in] i_name debugで使うためのmemory識別名。
 	 */
 	explicit allocator(char const* const i_name = PSYQ_ALLOCATOR_NAME_DEFAULT):
-	name(i_name)
+	super_type(i_name)
 	{
 		// pass
 	}
@@ -90,7 +168,7 @@ public:
 			t_other_offset,
 			t_other_policy > const&
 				i_source):
-	name(i_source.get_name())
+	super_type(i_source)
 	{
 		// pass
 	}
@@ -160,7 +238,7 @@ public:
 	{
 		(void)i_hint;
 		return static_cast< typename this_type::pointer >(
-			(t_allocator_policy::malloc)(
+			t_allocator_policy::allocate(
 				i_num * sizeof(t_value_type),
 				t_alignment,
 				t_offset,
@@ -175,60 +253,9 @@ public:
 		typename this_type::pointer const   i_instance,
 		typename this_type::size_type const i_num)
 	{
-		(t_allocator_policy::free)(i_instance, i_num * sizeof(t_value_type));
+		t_allocator_policy::deallocate(
+			i_instance, i_num * sizeof(t_value_type));
 	}
-
-	//-------------------------------------------------------------------------
-	static typename this_type::pointer address(
-		typename this_type::reference i_value)
-	{
-		return &i_value;
-	}
-
-	static typename this_type::const_pointer address(
-		typename this_type::const_reference i_value)
-	{
-		return &i_value;
-	}
-
-	static void construct(
-		typename this_type::pointer const   i_pointer,
-		typename this_type::const_reference i_value)
-    {
-		new (i_pointer) t_value_type(i_value);
-	}
-
-	static void destroy(
-		typename this_type::pointer const i_pointer)
-    {
-		i_pointer->~t_value_type();
-		(void)i_pointer;
-	}
-
-	static typename this_type::size_type max_size()
-	{
-		return t_allocator_policy::max_size / sizeof(t_value_type);
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief memory識別名を取得。
-	 */
-	char const* get_name() const
-	{
-		return this->name;
-	}
-
-	/** @brief memory識別名を設定。
-	 */
-	char const* set_name(char const* const i_name)
-	{
-		this->name = i_name;
-		return i_name;
-	}
-
-//.............................................................................
-private:
-	char const* name; ///< debugで使うためのmemory識別名。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -245,16 +272,6 @@ public:
 	static std::size_t const max_size = static_cast< std::size_t >(-1);
 
 	//-------------------------------------------------------------------------
-	typedef boost::shared_ptr< this_type > holder;
-	typedef boost::weak_ptr< this_type > observer;
-
-	//-------------------------------------------------------------------------
-	virtual ~allocator_policy()
-	{
-		// pass
-	}
-
-	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
 	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
 	    @param[in] i_alignment 確保するmemoryの境界値。byte単位。
@@ -262,53 +279,7 @@ public:
 	    @param[in] i_name      debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	virtual void* allocate(
-		std::size_t const i_size,
-		std::size_t const i_alignment = sizeof(void*),
-		std::size_t const i_offset = 0,
-		char const* const i_name = PSYQ_ALLOCATOR_NAME_DEFAULT) = 0;
-
-	/** @brief memoryを解放する。
-	    @param[in] i_memory 解放するmemoryの先頭位置。
-	    @param[in] i_size   解放するmemoryの大きさ。byte単位。
-	 */
-	virtual void deallocate(
-		void* const       i_memory,
-		std::size_t const i_size) = 0;
-
-	/** @brief 一度に確保できるmemoryの最大sizeを取得。byte単位。
-	 */
-	virtual std::size_t get_max_size() const = 0;
-
-	//-------------------------------------------------------------------------
-	/** @brief 抽象allocator-policyを作る。
-	 */
-	static psyq::allocator_policy::holder create()
-	{
-		typedef this_type::implement< this_type > policy;
-		return this_type::create(psyq::allocator< policy >());
-	}
-
-	/** @brief 抽象allocator-policyを作る。
-	    @param[in] i_allocator allocator-policyの確保に使う割当子。
-	 */
-	template< typename t_allocator >
-	static psyq::allocator_policy::holder create(
-		t_allocator const& i_allocator)
-	{
-		typedef this_type::implement< this_type > policy;
-		return boost::allocate_shared< policy >(i_allocator);
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief memoryを確保する。
-	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
-	    @param[in] i_alignment 確保するmemoryの境界値。byte単位。
-	    @param[in] i_offset    確保するmemoryの境界offset値。byte単位。
-	    @param[in] i_name      debugで使うためのmemory識別名。
-	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
-	 */
-	static void* (malloc)(
+	static void* allocate(
 		std::size_t const i_size,
 		std::size_t const i_alignment,
 		std::size_t const i_offset,
@@ -353,7 +324,7 @@ public:
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	    @param[in] i_size   解放するmemoryの大きさ。byte単位。
 	 */
-	static void (free)(
+	static void deallocate(
 		void* const       i_memory,
 		std::size_t const i_size)
 	{
@@ -370,504 +341,6 @@ public:
 		std::free(i_memory)
 #endif
 	}
-
-//.............................................................................
-protected:
-	template< typename t_other_policy >
-	class implement:
-		public t_other_policy
-	{
-	public:
-		virtual void* allocate(
-			std::size_t const i_size,
-			std::size_t const i_alignment,
-			std::size_t const i_offset,
-			char const* const i_name)
-		{
-			return (t_other_policy::malloc)(
-				i_size, i_alignment, i_offset, i_name);
-		}
-
-		virtual void deallocate(
-			void* const       i_memory,
-			std::size_t const i_size)
-		{
-			(t_other_policy::free)(i_memory, i_size);
-		}
-
-		virtual std::size_t get_max_size() const
-		{
-			return t_other_policy::max_size;
-		}
-	};
-
-	//-------------------------------------------------------------------------
-	allocator_policy()
-	{
-		// pass
-	}
 };
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template< typename t_value_type >
-class psyq_virtual_allocator:
-	public std::allocator< t_value_type >
-{
-	typedef psyq_virtual_allocator this_type;
-	typedef std::allocator< t_value_type > super_type;
-
-public:
-	//-------------------------------------------------------------------------
-	typedef boost::shared_ptr< this_type > holder;
-	typedef boost::weak_ptr< this_type > observer;
-
-	//-------------------------------------------------------------------------
-	psyq_virtual_allocator()
-	{
-		// pass
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief instanceに使うmemoryを確保する。
-	    @param[in] i_num  確保するinstanceの数。
-	    @param[in] i_hint 
-	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
-	 */
-	virtual typename super_type::pointer allocate(
-		typename super_type::size_type const i_num,
-		void const* const                    i_hint = NULL) = 0;
-
-	/** @brief instanceに使っていたmemoryを解放する。
-	    @param[in] i_instance 解放するinstanceの先頭位置。
-	    @param[in] i_num      解放するinstanceの数。
-	 */
-	virtual void deallocate(
-		typename super_type::pointer const   i_instance,
-		typename super_type::size_type const i_num) = 0;
-
-	/** @brief 一度に確保できるinstanceの最大数を取得。
-	 */
-	virtual typename super_type::size_type max_size() const = 0;
-
-	//-------------------------------------------------------------------------
-	template< typename t_allocator >
-	static typename this_type::holder create(
-		char const* const i_name = PSYQ_ALLOCATOR_NAME_DEFAULT)
-	{
-		t_allocator a_allocator(i_name);
-		return this_type::create(a_allocator, a_allocator);
-	}
-
-	template< typename t_allocator, typename t_other_allocator >
-	static typename this_type::holder create(
-		char const* const i_name = PSYQ_ALLOCATOR_NAME_DEFAULT)
-	{
-		return this_type::create(
-			t_allocator(i_name), t_other_allocator(i_name));
-	}
-
-	template< typename t_allocator >
-	static typename this_type::holder create(
-		t_allocator const& i_allocator)
-	{
-		return this_type::create(i_allocator, i_allocator);
-	}
-
-	template< typename t_allocator, typename t_other_allocator >
-	static typename this_type::holder create(
-		t_allocator const&        i_allocator,
-		t_other_allocator const&  i_other_allocator)
-	{
-		typedef typename this_type::implement<
-			t_other_allocator::template rebind< t_value_type >::other >
-				allocator;
-		return boost::allocate_shared< allocator >(
-			i_allocator, i_other_allocator);
-	}
-
-private:
-	template< typename t_allocator >
-	class implement:
-		public psyq_virtual_allocator< t_value_type >
-	{
-	public:
-		virtual ~implement()
-		{
-			// pass
-		}
-
-		template< typename t_other_allocator >
-		explicit implement(
-			t_other_allocator const& i_allocator):
-		psyq_virtual_allocator< t_value_type >(),
-		allocator(i_allocator)
-		{
-			// pass
-		}
-
-		virtual typename super_type::pointer allocate(
-			typename super_type::size_type const i_num,
-			void const* const                    i_hint)
-		{
-			return this->allocator.allocate(i_num, i_hint);
-		}
-
-		virtual void deallocate(
-			typename super_type::pointer const   i_instance,
-			typename super_type::size_type const i_num)
-		{
-			return this->allocator.deallocate(i_instance, i_num);
-		}
-
-		virtual typename super_type::size_type max_size() const
-		{
-			return this->allocator.max_size();
-		}
-
-	private:
-		t_allocator allocator;
-	};
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template<
-	typename    t_value_type,
-	std::size_t t_alignment = boost::alignment_of< t_value_type >::value,
-	std::size_t t_offset = 0,
-	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT >
-class virtual_allocator:
-	public psyq::allocator< t_value_type, t_alignment, t_offset >
-{
-	typedef virtual_allocator<
-		t_value_type, t_alignment, t_offset, t_allocator_policy >
-			this_type;
-	typedef psyq::allocator<
-		t_value_type, t_alignment, t_offset, t_allocator_policy >
-			super_type;
-
-public:
-	//-------------------------------------------------------------------------
-	explicit virtual_allocator(
-		psyq::allocator_policy::holder const& i_policy,
-		char const* const                     i_name
-			= PSYQ_ALLOCATOR_NAME_DEFAULT):
-	super_type(i_name),
-	policy(i_policy)
-	{
-		PSYQ_ASSERT(NULL != i_policy.get());
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief instanceに使うmemoryを確保する。
-	    @param[in] i_num       確保するinstanceの数。
-	    @param[in] i_alignment 確保するinstanceの境界値。byte単位。
-	    @param[in] i_offset    確保するinstanceの境界offset値。byte単位。
-	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
-	 */
-	typename this_type::pointer allocate(
-		typename this_type::size_type const i_num,
-		void const* const                   i_hint = NULL)
-	{
-		(void)i_hint;
-		return static_cast< typename this_type::pointer >(
-			this->policy->allocate(
-				i_num * sizeof(t_value_type),
-				t_alignment,
-				t_offset,
-				this->get_name()));
-	}
-
-	/** @brief instanceに使っていたmemoryを解放する。
-	    @param[in] i_instance 解放するinstanceの先頭位置。
-	    @param[in] i_num      解放するinstanceの数。
-	 */
-	void deallocate(
-		typename this_type::pointer const   i_instance,
-		typename this_type::size_type const i_num)
-	{
-		this->policy->deallocate(i_instance, i_num * sizeof(t_value_type));
-	}
-
-	typename this_type::size_type max_size()
-	{
-		return this->policy->get_max_size() / sizeof(t_value_type);
-	}
-
-	//-------------------------------------------------------------------------
-	psyq::allocator_policy::holder const& get_policy() const
-	{
-		return this->policy;
-	}
-
-private:
-	psyq::allocator_policy::holder policy;
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class std_file:
-	private boost::noncopyable
-{
-	typedef std_file this_type;
-
-public:
-	typedef boost::shared_ptr< this_type > holder;
-	typedef boost::weak_ptr< this_type > observer;
-
-	enum flag
-	{
-		flag_READ   = 1 << 0,
-		flag_WRITE  = 1 << 1,
-		flag_BINARY = 1 << 2,
-	};
-
-	~std_file()
-	{
-		if (NULL != this->handle)
-		{
-			std::fclose(this->handle);
-		}
-	}
-
-	explicit std_file(
-		std::FILE* const i_handle):
-	handle(i_handle)
-	{
-		// pass
-	}
-
-	bool read(
-		void* const       o_buffer,
-		std::size_t const i_size,
-		std::size_t const i_offset)
-	{
-		if (NULL == o_buffer || NULL == this->handle)
-		{
-			return false;
-		}
-
-		std::fseek(this->handle, i_offset, SEEK_SET);
-		std::size_t const a_count(1);
-		return a_count == std::fread(o_buffer, i_size, a_count, this->handle);
-	}
-
-	std::size_t get_size() const
-	{
-		return NULL != this->handle
-			&& 0 == std::fseek(this->handle, 0, SEEK_END)?
-				std::ftell(this->handle): 0;
-	}
-
-	template< typename t_allocator >
-	static this_type::holder create(
-		t_allocator&       io_allocator,
-		char const* const  i_path,
-		unsigned const     i_flags)
-	{
-		if (NULL != i_path)
-		{
-			char a_flags[4];
-			std::size_t a_num_flags(0);
-			if (0 != (i_flags & this_type::flag_READ))
-			{
-				PSYQ_ASSERT(a_num_flags < sizeof(a_flags));
-				a_flags[a_num_flags] = 'r';
-				++a_num_flags;
-			}
-			if (0 != (i_flags & this_type::flag_WRITE))
-			{
-				PSYQ_ASSERT(a_num_flags < sizeof(a_flags));
-				a_flags[a_num_flags] = 'w';
-				++a_num_flags;
-			}
-			if (0 != (i_flags & this_type::flag_BINARY))
-			{
-				PSYQ_ASSERT(a_num_flags < sizeof(a_flags));
-				a_flags[a_num_flags] = 'b';
-				++a_num_flags;
-			}
-			a_flags[a_num_flags] = 0;
-
-			// fileを開く。
-			std::FILE* const a_handle(std::fopen(i_path, a_flags));
-			if (NULL != a_handle)
-			{
-				return boost::allocate_shared< this_type >(
-					io_allocator, a_handle);
-			}
-		}
-		return this_type::holder();
-	}
-
-private:
-	std::FILE* handle;
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-#if 0
-class file_task
-{
-	typedef file_task this_type;
-
-public:
-	typedef std::tr1::shared_ptr< this_type > holder;
-	typedef std::tr1::weak_ptr< this_type > observer;
-
-	enum state
-	{
-		state_EXECUTING = 0,
-		state_SUCCESS = 1,
-	};
-
-	virtual ~file_task()
-	{
-		// pass
-	}
-
-	virtual int execute() = 0;
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class file_read_task:
-	public file_task
-{
-public:
-	typedef std::tr1::shared_ptr< this_type > holder;
-	typedef std::tr1::weak_ptr< this_type > observer;
-
-	enum state
-	{
-		state_READ_ERROR = -0x80000000,
-	};
-
-	virtual ~file_read_task()
-	{
- 		std::size_t const a_unit_size(sizeof(typename t_allocator::value_type));
-		this->allocator.deallocate(
-			this->buffer, (this->size + a_unit_size - 1) / a_unit_size);
-	}
-
-	template< typename t_other_allocator >
-	static this_type::holder create(
-		t_other_allocator&      io_allocator,
-		std_file::holder const& i_file,
-		std::size_t const       i_read_size,
-		std::size_t const       i_read_offset,
-		t_allocator const&      i_buffer_allocator = io_allocator)
-	{
-		std_file* const a_file(i_file.get());
-		if (NULL != a_file)
-		{
-			return boost::allocate_shared(
-				io_allocator,
-				i_file,
-				i_read_size,
-				i_read_offset,
-				i_buffer_allocator);
-		}
-		return this_type::holder();
-	}
-
-	template< typename t_other_allocator >
-	static this_type::holder create(
-		t_other_allocator&      io_allocator,
-		std_file::holder const& i_file,
-		t_allocator const&      i_buffer_allocator = io_allocator)
-	{
-		std_file* const a_file(i_file.get());
-		if (NULL != a_file)
-		{
-			return this_type::create(
-				io_allocator,
-				i_file,
-				a_file->get_size(),
-				0,
-				i_buffer_allocator);
-		}
-		return this_type::holder();
-	}
-
-	file_read_task(
-		std_file::holder const& i_file,
-		std::size_t const       i_size,
-		std::size_t const       i_offset,
-		t_allocator const&      i_allocator):
-	file(i_file),
-	size(i_size),
-	offset(i_offset),
-	allocator(i_allocator)
-	{
-		std::size_t const a_unit_size(sizeof(typename t_allocator::value_type));
-		this->buffer = this->allocator.allocate(
-			(i_size + a_unit_size - 1) / a_unit_size);
-		PSYQ_ASSERT(NULL != this->buffer);
-	}
-
-	virtual int execute()
-	{
-		return this->file->read(this->buffer, this->size, this->offset)?
-			this_type::state_SUCCESS: this_type::state_READ_ERROR;
-	}
-
-private:
-	std_file::holder file;
-	std::size_t      size;
-	std::size_t      offset;
-	t_allocator      allocator;
-	void*            buffer;
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class file_server
-{
-public:
-	file_task::holder read(
-		std_file::holder const& i_file,
-		std::size_t const       i_size,
-		std::size_t const       i_offset)
-	{
-	}
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class tcpip_file
-{
-	typedef tcpip_file this_type;
-
-public:
-	typedef std::tr1::shared_ptr< this_type > holder;
-	typedef std::tr1::weak_ptr< this_type > observer;
-
-	static this_type::holder create(
-		boost::asio::io_service&        io_service,
-		boost::asio::ip::tcp::endpoint& i_endpoint)
-	{
-	}
-
-private:
-	boost::asio::ip::tcp::socket socket;
-};
-
-class windows_file
-{
-	typedef windows_file this_type;
-
-public:
-	typedef std::tr1::shared_ptr< this_type > holder;
-	typedef std::tr1::weak_ptr< this_type > observer;
-
-	~windows_file()
-	{
-		::CloseHandle(this->handle);
-	}
-
-	HANDLE get_handle() const
-	{
-		return this->handle;
-	}
-
-private:
-	HANDLE handle;
-};
-#endif // 0
 
 #endif // PSYQ_ALLOCATOR_HPP_

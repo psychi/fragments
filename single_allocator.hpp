@@ -28,7 +28,7 @@ template<
 	std::size_t t_chunk_size = PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT,
 	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT >
 class psyq::fixed_allocator_policy:
-	public t_allocator_policy
+	public boost::noncopyable
 {
 	typedef fixed_allocator_policy<
 		t_max_size,
@@ -37,7 +37,6 @@ class psyq::fixed_allocator_policy:
 		t_chunk_size,
 		t_allocator_policy >
 			this_type;
-	typedef t_allocator_policy super_type;
 
 	// memory配置境界値が2のべき乗か確認。
 	BOOST_STATIC_ASSERT(0 == (t_alignment & (t_alignment - 1)));
@@ -64,26 +63,6 @@ public:
 	static std::size_t const chunk_size = t_chunk_size;
 
 	//-------------------------------------------------------------------------
-	/** @brief 抽象allocator-policyを作る。
-	 */
-	static psyq::allocator_policy::holder create()
-	{
-		typedef super_type::implement< this_type > policy;
-		return this_type::create(psyq::single_allocator< policy >());
-	}
-
-	/** @brief 抽象allocator-policyを作る。
-	    @param[in] i_allocator allocator-policyの確保に使う割当子。
-	 */
-	template< typename t_allocator >
-	static psyq::allocator_policy::holder create(
-		t_allocator const& i_allocator)
-	{
-		typedef super_type::implement< this_type > policy;
-		return boost::allocate_shared< policy >(i_allocator);
-	}
-
-	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
 	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
 	    @param[in] i_alignment 確保するmemoryの境界値。byte単位。
@@ -91,7 +70,7 @@ public:
 	    @param[in] i_name      debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	static void* (malloc)(
+	static void* allocate(
 		std::size_t const i_size,
 		std::size_t const i_alignment,
 		std::size_t const i_offset,
@@ -103,14 +82,14 @@ public:
 			&& i_size <= t_max_size
 			&& t_alignment % i_alignment == 0
 			&& t_max_size % i_alignment == 0?
-				(this_type::malloc)(i_name): NULL;
+				this_type::allocate(i_name): NULL;
 	}
 
 	/** @brief memoryを確保する。
 	    @param[in] i_name debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	static void* (malloc)(
+	static void* allocate(
 		char const* const i_name)
 	{
 		return this_type::get_pool()->allocate(i_name);
@@ -121,13 +100,13 @@ public:
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	    @param[in] i_size   解放するmemoryの大きさ。byte単位。
 	 */
-	static void (free)(
+	static void deallocate(
 		void* const       i_memory,
 		std::size_t const i_size)
 	{
 		if (0 < i_size && i_size <= t_max_size)
 		{
-			(this_type::free)(i_memory);
+			this_type::deallocate(i_memory);
 		}
 		else
 		{
@@ -138,7 +117,7 @@ public:
 	/** @brief memoryを解放する。
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	 */
-	static void (free)(
+	static void deallocate(
 		void* const i_memory)
 	{
 		this_type::get_pool()->deallocate(i_memory);
@@ -155,14 +134,6 @@ public:
 		return singleton::construct(
 			boost::in_place(
 				t_max_size, t_alignment, t_offset, t_chunk_size));
-	}
-
-//.............................................................................
-protected:
-	fixed_allocator_policy():
-	super_type()
-	{
-		// pass
 	}
 };
 
@@ -279,7 +250,7 @@ public:
 	typename super_type::pointer allocate()
 	{
 		return static_cast< typename super_type::pointer >(
-			(super_type::allocator_policy::malloc)(this->get_name()));
+			super_type::allocator_policy::allocate(this->get_name()));
 	}
 
 	//-------------------------------------------------------------------------

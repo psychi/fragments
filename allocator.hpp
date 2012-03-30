@@ -35,15 +35,11 @@ class psyq::_allocator_traits:
 //.............................................................................
 public:
 	//-------------------------------------------------------------------------
-	static std::size_t const alignment = t_alignment;
-	static std::size_t const offset = t_offset;
-
-	//-------------------------------------------------------------------------
 	/** @brief memory識別名を取得。
 	 */
 	char const* get_name() const
 	{
-		return this->name;
+		return this->name_;
 	}
 
 	/** @brief memory識別名を設定。
@@ -51,7 +47,7 @@ public:
 	 */
 	char const* set_name(char const* const i_name)
 	{
-		this->name = i_name;
+		this->name_ = i_name;
 		return i_name;
 	}
 
@@ -64,7 +60,7 @@ protected:
 	 */
 	explicit _allocator_traits(char const* const i_name):
 	super_type(),
-	name(i_name)
+	name_(i_name)
 	{
 		// pass
 	}
@@ -73,7 +69,7 @@ protected:
 	 */
 	_allocator_traits(this_type const& i_source):
 	super_type(i_source),
-	name(i_source.get_name())
+	name_(i_source.get_name())
 	{
 		// pass
 	}
@@ -89,7 +85,7 @@ protected:
 			t_other_type, t_other_alignment, t_other_offset > const&
 				i_source):
 	super_type(i_source),
-	name(i_source.get_name())
+	name_(i_source.get_name())
 	{
 		// pass
 	}
@@ -100,8 +96,12 @@ private:
 	void deallocate();
 
 //.............................................................................
+public:
+	static std::size_t const alignment = t_alignment;
+	static std::size_t const offset = t_offset;
+
 private:
-	char const* name; ///< debugで使うためのmemory識別名。
+	char const* name_; ///< debugで使うためのmemory識別名。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

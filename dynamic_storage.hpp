@@ -34,16 +34,32 @@ public:
 		// pass
 	}
 
+	/** @param[in] i_size      確保するmemoryの大きさ。byte単位。
+	    @param[in] i_allocator memoryの確保に使う割当子。
+	 */
+	template< typename t_allocator >
+	dynamic_storage(
+		std::size_t const  i_size,
+		t_allocator const& i_allocator)
+	{
+		new(this) this_type(
+			i_size,
+			t_allocator::alignment,
+			t_allocator::offset,
+			i_allocator.get_name(),
+			boost::type< typename t_allocator::allocator_policy >());
+	}
+
 	//-------------------------------------------------------------------------
 	/** @brief memoryを確保して、保持する。
-	    @param[in] i_allocator memoryの確保に使う割当子。
 	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
+	    @param[in] i_allocator memoryの確保に使う割当子。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
 	template< typename t_allocator >
 	void* allocate(
-		t_allocator const& i_allocator,
-		std::size_t const  i_size)
+		std::size_t const  i_size,
+		t_allocator const& i_allocator)
 	{
 		return this->allocate< typename t_allocator::allocator_policy >(
 			i_size,
@@ -68,16 +84,16 @@ public:
 	{
 		if (0 < i_size)
 		{
-			void* a_begin(
-				t_allocator_policy::allocate(
-					i_size, i_alignment, i_offset, i_name));
-			if (NULL != a_begin)
+			this_type a_storage(
+				i_size,
+				i_alignment,
+				i_offset,
+				i_name,
+				boost::type< t_allocator_policy >());
+			if (NULL != a_storage.begin())
 			{
-				this->~this_type();
-				this->deallocator_ = &t_allocator_policy::deallocate;
-				this->begin_ = a_begin;
-				this->size_ = i_size;
-				return a_begin;
+				this->swap(a_storage);
+				return this->begin();
 			}
 		}
 		else
@@ -146,6 +162,33 @@ public:
 		std::swap(this->deallocator_, io_target.deallocator_);
 		std::swap(this->begin_, io_target.begin_);
 		std::swap(this->size_, io_target.size_);
+	}
+
+//.............................................................................
+private:
+	template< typename t_allocator_policy >
+	dynamic_storage(
+		std::size_t       i_size,
+		std::size_t       i_alignment,
+		std::size_t       i_offset,
+		char const* const i_name,
+		boost::type< t_allocator_policy > const&)
+	{
+		if (0 < i_size)
+		{
+			this->begin_ = t_allocator_policy::allocate(
+				i_size, i_alignment, i_offset, i_name);
+			if (NULL != this->begin())
+			{
+				this->size_ = i_size;
+				this->deallocator_ = &t_allocator_policy::deallocate;
+				return;
+			}
+			PSYQ_ASSERT(false);
+		}
+		this->deallocator_ = NULL;
+		this->begin_ = NULL;
+		this->size_ = 0;
 	}
 
 //.............................................................................
@@ -302,36 +345,47 @@ public:
 			i_allocator, i_allocator, i_file, i_read_size, i_read_offset);
 	}
 
-	template< typename t_holder_allocator, typename t_storage_allocator >
+	template< typename t_storage_allocator, typename t_holder_allocator >
 	static this_type::holder create(
-		t_holder_allocator const&  i_holder_allocator,
 		t_storage_allocator const& i_storage_allocator,
+		t_holder_allocator const&  i_holder_allocator,
 		std_file::holder const&    i_file,
 		std::size_t const          i_read_size = i_file->get_size(),
 		std::size_t const          i_read_offset = 0)
+	{
+		return this_type::create(
+			psyq::dynamic_storage(i_storage_allocator, i_read_size),
+			i_holder_allocator,
+			i_file,
+			i_read_offset);
+	}
+
+	template< typename t_allocator >
+	static this_type::holder create(
+		psyq::dynamic_storage&  io_storage,
+		t_allocator const&      i_allocator,
+		std_file::holder const& i_file,
+		std::size_t const       i_read_offset = 0)
 	{
 		std_file* const a_file(i_file.get());
 		if (NULL != a_file)
 		{
 			// 読み込みbufferの大きさを決定。
 			std::size_t a_size(a_file->get_size());
-			if (i_read_size < a_size)
+			if (io_storage.size() < a_size)
 			{
-				a_size = i_read_size;
+				a_size = io_storage.size();
 			}
 
 			// taskを生成。
 			this_type::holder const a_task(
 				boost::allocate_shared< this_type >(
-					i_holder_allocator, i_file, a_size));
+					i_allocator, i_file, a_size));
 			if (NULL != a_task.get())
 			{
-				// 読み込みbufferを確保。
-				psyq::dynamic_storage& a_storage(a_task->storage_);
-				if (NULL != a_storage.allocate(i_storage_allocator, a_size))
-				{
-					return a_task;
-				}
+				io_storage.swap(a_task->storage_);
+				io_storage.deallocate();
+				return a_task;
 			}
 		}
 		return this_type::holder();

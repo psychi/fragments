@@ -114,7 +114,7 @@ public:
 	/** @brief 保持しているmemoryの大きさをbyte単位で取得。
 	    @return 保持しているmemoryの大きさ。byte単位。
 	 */
-	std::size_t size() const
+	std::size_t get_size() const
 	{
 		return this->size_;
 	}
@@ -122,7 +122,7 @@ public:
 	/** @brief 保持しているmemoryの先頭位置を取得。
 	    @return 保持しているmemoryの先頭位置。
 	 */
-	void const* begin() const
+	void const* get_begin() const
 	{
 		return this->begin_;
 	}
@@ -130,27 +130,27 @@ public:
 	/** @brief 保持しているmemoryの先頭位置を取得。
 	    @return 保持しているmemoryの先頭位置。
 	 */
-	void* begin()
+	void* get_begin()
 	{
 		return const_cast< void* >(
-			const_cast< this_type const* >(this)->begin());
+			const_cast< this_type const* >(this)->get_begin());
 	}
 
 	/** @brief 保持しているmemoryの末尾位置を取得。
 	    @return 保持しているmemoryの末尾位置。
 	 */
-	void const* end() const
+	void const* get_end() const
 	{
-		return static_cast< char const* >(this->begin()) + this->size();
+		return static_cast< char const* >(this->get_begin()) + this->get_size();
 	}
 
 	/** @brief 保持しているmemoryの末尾位置を取得。
 	    @return 保持しているmemoryの末尾位置。
 	 */
-	void* end()
+	void* get_end()
 	{
 		return const_cast< void* >(
-			const_cast< this_type const* >(this)->end());
+			const_cast< this_type const* >(this)->get_end());
 	}
 
 	/** @brief 保持しているmemoryを交換。
@@ -168,9 +168,9 @@ public:
 private:
 	template< typename t_allocator_policy >
 	dynamic_storage(
-		std::size_t       i_size,
-		std::size_t       i_alignment,
-		std::size_t       i_offset,
+		std::size_t const i_size,
+		std::size_t const i_alignment,
+		std::size_t const i_offset,
 		char const* const i_name,
 		boost::type< t_allocator_policy > const&)
 	{
@@ -235,6 +235,10 @@ public:
 		std::size_t const i_size,
 		std::size_t const i_offset)
 	{
+#if 0// PSYQ_FILE_DISABLE_THREADS
+		boost::lock_guard< boost::mutex > const a_lock(this->mutex_);
+#endif // !PSYQ_FILE_DISABLE_THREADS
+
 		if (NULL == o_buffer || NULL == this->handle_)
 		{
 			return false;
@@ -247,6 +251,10 @@ public:
 
 	std::size_t get_size() const
 	{
+#if 0// PSYQ_FILE_DISABLE_THREADS
+		boost::lock_guard< boost::mutex > const a_lock(this->mutex_);
+#endif // !PSYQ_FILE_DISABLE_THREADS
+
 		return NULL != this->handle_
 			&& 0 == std::fseek(this->handle_, 0, SEEK_END)?
 				std::ftell(this->handle_): 0;
@@ -370,22 +378,26 @@ public:
 		std_file* const a_file(i_file.get());
 		if (NULL != a_file)
 		{
-			// 読み込みbufferの大きさを決定。
 			std::size_t a_size(a_file->get_size());
-			if (io_storage.size() < a_size)
+			if (i_read_offset < a_size)
 			{
-				a_size = io_storage.size();
-			}
+				// 読み込みbufferの大きさを決定。
+				a_size -= i_read_offset;
+				if (io_storage.size() < a_size)
+				{
+					a_size = io_storage.size();
+				}
 
-			// taskを生成。
-			this_type::holder const a_task(
-				boost::allocate_shared< this_type >(
-					i_allocator, i_file, a_size));
-			if (NULL != a_task.get())
-			{
-				io_storage.swap(a_task->storage_);
-				io_storage.deallocate();
-				return a_task;
+				// taskを生成。
+				this_type::holder const a_task(
+					boost::allocate_shared< this_type >(
+						i_allocator, i_file, a_size));
+				if (NULL != a_task.get())
+				{
+					io_storage.swap(a_task->storage_);
+					io_storage.deallocate();
+					return a_task;
+				}
 			}
 		}
 		return this_type::holder();

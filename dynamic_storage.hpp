@@ -22,13 +22,13 @@ public:
 		// 保持しているmemoryを解放。
 		if (NULL != this->deallocator_)
 		{
-			(*this->deallocator_)(this->begin(), this->size());
+			(*this->deallocator_)(this->get_address(), this->get_size());
 		}
 	}
 
 	dynamic_storage():
 	deallocator_(NULL),
-	begin_(NULL),
+	address_(NULL),
 	size_(0)
 	{
 		// pass
@@ -90,10 +90,10 @@ public:
 				i_offset,
 				i_name,
 				boost::type< t_allocator_policy >());
-			if (NULL != a_storage.begin())
+			if (NULL != a_storage.get_address())
 			{
 				this->swap(a_storage);
-				return this->begin();
+				return this->get_address();
 			}
 		}
 		else
@@ -122,37 +122,21 @@ public:
 	/** @brief 保持しているmemoryの先頭位置を取得。
 	    @return 保持しているmemoryの先頭位置。
 	 */
-	void const* get_begin() const
+	void const* get_address() const
 	{
-		return this->begin_;
+		return this->address_;
 	}
 
 	/** @brief 保持しているmemoryの先頭位置を取得。
 	    @return 保持しているmemoryの先頭位置。
 	 */
-	void* get_begin()
+	void* get_address()
 	{
 		return const_cast< void* >(
-			const_cast< this_type const* >(this)->get_begin());
+			const_cast< this_type const* >(this)->get_address());
 	}
 
-	/** @brief 保持しているmemoryの末尾位置を取得。
-	    @return 保持しているmemoryの末尾位置。
-	 */
-	void const* get_end() const
-	{
-		return static_cast< char const* >(this->get_begin()) + this->get_size();
-	}
-
-	/** @brief 保持しているmemoryの末尾位置を取得。
-	    @return 保持しているmemoryの末尾位置。
-	 */
-	void* get_end()
-	{
-		return const_cast< void* >(
-			const_cast< this_type const* >(this)->get_end());
-	}
-
+	//-------------------------------------------------------------------------
 	/** @brief 保持しているmemoryを交換。
 	    @param[in,out] io_target 交換する対象。
 	 */
@@ -160,7 +144,7 @@ public:
 		this_type& io_target)
 	{
 		std::swap(this->deallocator_, io_target.deallocator_);
-		std::swap(this->begin_, io_target.begin_);
+		std::swap(this->address_, io_target.address_);
 		std::swap(this->size_, io_target.size_);
 	}
 
@@ -176,9 +160,9 @@ private:
 	{
 		if (0 < i_size)
 		{
-			this->begin_ = t_allocator_policy::allocate(
+			this->address_ = t_allocator_policy::allocate(
 				i_size, i_alignment, i_offset, i_name);
-			if (NULL != this->begin())
+			if (NULL != this->get_address())
 			{
 				this->size_ = i_size;
 				this->deallocator_ = &t_allocator_policy::deallocate;
@@ -187,14 +171,14 @@ private:
 			PSYQ_ASSERT(false);
 		}
 		this->deallocator_ = NULL;
-		this->begin_ = NULL;
+		this->address_ = NULL;
 		this->size_ = 0;
 	}
 
 //.............................................................................
 private:
 	void        (*deallocator_)(void* const, std::size_t const);
-	void*       begin_;
+	void*       address_;
 	std::size_t size_;
 };
 

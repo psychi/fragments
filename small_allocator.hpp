@@ -392,9 +392,11 @@ public:
 		void const* const                    i_hint = NULL)
 	{
 		(void)i_hint;
-		return static_cast< typename super_type::pointer >(
+		void* const a_memory(
 			super_type::allocator_policy::allocate(
 				i_num * sizeof(t_value_type), this->get_name()));
+		PSYQ_ASSERT(NULL != a_memory);
+		return static_cast< typename super_type::pointer >(a_memory);
 	}
 };
 

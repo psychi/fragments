@@ -163,25 +163,27 @@ public:
 
 	//-------------------------------------------------------------------------
 	explicit virtual_allocator(
-		psyq::virtual_allocator_policy::holder const& i_policy,
+		psyq::virtual_allocator_policy::holder const& i_allocator_policy,
 		char const* const i_name = PSYQ_ALLOCATOR_NAME_DEFAULT):
 	super_type(i_name),
-	policy_(i_policy)
+	allocator_policy_(i_allocator_policy)
 	{
-		PSYQ_ASSERT(NULL != i_policy.get());
+		PSYQ_ASSERT(NULL != this->get_allocator_policy().get());
 	}
 
 	/** @param[in] i_source copy元instance。
 	 */
 	template< typename t_other_type, std::size_t t_other_alignment >
 	virtual_allocator(
-		psyq::virtual_allocator< t_other_type, t_other_alignment > const&
-			i_source):
+		psyq::virtual_allocator<
+			t_other_type, t_other_alignment, t_offset > const&
+				i_source):
 	super_type(i_source),
-	policy_(i_source.get_policy())
+	allocator_policy_(i_source.get_allocator_policy())
 	{
 		BOOST_STATIC_ASSERT(t_other_alignment % t_alignment == 0);
-		PSYQ_ASSERT(sizeof(t_value_type) <= this->get_policy()->max_size());
+		PSYQ_ASSERT(
+			sizeof(t_value_type) <= this->get_allocator_policy()->max_size());
 	}
 
 	//-------------------------------------------------------------------------
@@ -196,7 +198,11 @@ public:
 			t_other_offset > const& i_right)
 	const
 	{
-		return *this->get_policy() == *i_right.get_policy();
+		psyq::virtual_allocator_policy const& a_left(
+			*this->get_allocator_policy());
+		psyq::virtual_allocator_policy const& a_right(
+			*i_right.get_allocator_policy());
+		return &a_left == &a_right || a_left == a_right;
 	}
 
 	template<
@@ -225,41 +231,44 @@ public:
 		typename super_type::size_type const i_num,
 		void const* const                    i_hint = NULL)
 	{
-		return this->policy_->allcoate(
-			i_num * sizeof(t_value_type),
-			t_alignment,
-			t_offset,
-			this->get_name());
+		void* const a_memory(
+			this->allocator_policy_->allcoate(
+				i_num * sizeof(t_value_type),
+				t_alignment,
+				t_offset,
+				this->get_name()));
+		PSYQ_ASSERT(NULL != a_memory);
+		return static_cast< typename super_type::pointer >(a_memory);
 	}
 
 	/** @brief intanceに使っていたmemoryを解放する。
-	    @param[in] i_instance 解放するinstanceの先頭位置。
-	    @param[in] i_num      解放するinstanceの数。
+	    @param[in] i_memory 解放するinstanceの先頭位置。
+	    @param[in] i_num    解放するinstanceの数。
 	 */
 	void deallocate(
-		typename super_type::pointer const   i_instance,
+		typename super_type::pointer const   i_memory,
 		typename super_type::size_type const i_num)
 	{
-		return this->policy_->deallocate(
-			i_instance, i_num * sizeof(t_value_type));
+		return this->allocator_policy_->deallocate(
+			i_memory, i_num * sizeof(t_value_type));
 	}
 
 	/** @brief 一度に確保できるinstanceの最大数を取得。
 	 */
 	typename super_type::size_type max_size() const
 	{
-		return this->policy_->max_size() / sizeof(t_value_type);
+		return this->allocator_policy_->max_size() / sizeof(t_value_type);
 	}
 
 	//-------------------------------------------------------------------------
-	psyq::virtual_allocator_policy::holder const& get_policy() const
+	psyq::virtual_allocator_policy::holder const& get_allocator_policy() const
 	{
-		return this->policy_;
+		return this->allocator_policy_;
 	}
 
 //.............................................................................
 private:
-	psyq::virtual_allocator_policy::holder policy_;
+	psyq::virtual_allocator_policy::holder allocator_policy_;
 };
 
 #endif // PSYQ_VIRTUAL_ALLOCATOR_HPP_

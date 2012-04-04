@@ -237,24 +237,26 @@ public:
 		void const* const                   i_hint = NULL)
 	{
 		(void)i_hint;
-		return static_cast< typename this_type::pointer >(
+		void* const a_memory(
 			t_allocator_policy::allocate(
 				i_num * sizeof(t_value_type),
 				t_alignment,
 				t_offset,
 				this->get_name()));
+		PSYQ_ASSERT(NULL != a_memory);
+		return static_cast< typename this_type::pointer >(a_memory);
 	}
 
 	/** @brief instanceに使っていたmemoryを解放する。
-	    @param[in] i_instance 解放するinstanceの先頭位置。
-	    @param[in] i_num      解放するinstanceの数。
+	    @param[in] i_memory 解放するinstanceの先頭位置。
+	    @param[in] i_num    解放するinstanceの数。
 	 */
 	void deallocate(
-		typename this_type::pointer const   i_instance,
+		typename this_type::pointer const   i_memory,
 		typename this_type::size_type const i_num)
 	{
 		t_allocator_policy::deallocate(
-			i_instance, i_num * sizeof(t_value_type));
+			i_memory, i_num * sizeof(t_value_type));
 	}
 };
 

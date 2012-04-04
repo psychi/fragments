@@ -249,26 +249,28 @@ public:
 	 */
 	typename super_type::pointer allocate()
 	{
-		return static_cast< typename super_type::pointer >(
+		void* const a_memory(
 			super_type::allocator_policy::allocate(this->get_name()));
+		PSYQ_ASSERT(NULL != a_memory);
+		return static_cast< typename super_type::pointer >(a_memory);
 	}
 
 	//-------------------------------------------------------------------------
 	/** @brief intanceに使っていたmemoryを解放する。
-	    @param[in] i_instance 解放するinstanceの先頭位置。
-	    @param[in] i_num      解放するinstanceの数。
+	    @param[in] i_memory 解放するinstanceの先頭位置。
+	    @param[in] i_num    解放するinstanceの数。
 	 */
 	void deallocate(
-		typename super_type::pointer const   i_instance,
+		typename super_type::pointer const   i_memory,
 		typename super_type::size_type const i_num)
 	{
-		this->super_type::deallocate(i_instance, i_num);
+		this->super_type::deallocate(i_memory, i_num);
 	}
 
 	void deallocate(
-		typename super_type::pointer const i_instance)
+		typename super_type::pointer const i_memory)
 	{
-		super_type::allocator_policy::get_pool()->deallocate(i_instance);
+		super_type::allocator_policy::get_pool()->deallocate(i_memory);
 	}
 
 	//-------------------------------------------------------------------------

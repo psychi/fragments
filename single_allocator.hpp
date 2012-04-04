@@ -28,7 +28,7 @@ template<
 	std::size_t t_chunk_size = PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT,
 	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT >
 class psyq::fixed_allocator_policy:
-	public boost::noncopyable
+	public psyq::_allocator_policy_base
 {
 	typedef fixed_allocator_policy<
 		t_max_size,
@@ -37,6 +37,7 @@ class psyq::fixed_allocator_policy:
 		t_chunk_size,
 		t_allocator_policy >
 			this_type;
+	typedef psyq::_allocator_policy_base super_type;
 
 	// memory配置境界値が2のべき乗か確認。
 	BOOST_STATIC_ASSERT(0 == (t_alignment & (t_alignment - 1)));
@@ -57,12 +58,6 @@ public:
 	typedef t_allocator_policy allocator_policy;
 
 	//-------------------------------------------------------------------------
-	static std::size_t const max_size   = t_max_size;
-	static std::size_t const alignment  = t_alignment;
-	static std::size_t const offset     = t_offset;
-	static std::size_t const chunk_size = t_chunk_size;
-
-	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
 	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
 	    @param[in] i_alignment 確保するmemoryの境界値。byte単位。
@@ -70,7 +65,7 @@ public:
 	    @param[in] i_name      debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	static void* allocate(
+	static void* (malloc)(
 		std::size_t const i_size,
 		std::size_t const i_alignment,
 		std::size_t const i_offset,
@@ -82,14 +77,14 @@ public:
 			&& i_size <= t_max_size
 			&& t_alignment % i_alignment == 0
 			&& t_max_size % i_alignment == 0?
-				this_type::allocate(i_name): NULL;
+				(this_type::malloc)(i_name): NULL;
 	}
 
 	/** @brief memoryを確保する。
 	    @param[in] i_name debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	static void* allocate(
+	static void* (malloc)(
 		char const* const i_name)
 	{
 		return this_type::get_pool()->allocate(i_name);
@@ -100,13 +95,13 @@ public:
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	    @param[in] i_size   解放するmemoryの大きさ。byte単位。
 	 */
-	static void deallocate(
+	static void (free)(
 		void* const       i_memory,
 		std::size_t const i_size)
 	{
 		if (0 < i_size && i_size <= t_max_size)
 		{
-			this_type::deallocate(i_memory);
+			(this_type::free)(i_memory);
 		}
 		else
 		{
@@ -117,7 +112,7 @@ public:
 	/** @brief memoryを解放する。
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	 */
-	static void deallocate(
+	static void (free)(
 		void* const i_memory)
 	{
 		this_type::get_pool()->deallocate(i_memory);
@@ -135,6 +130,33 @@ public:
 			boost::in_place(
 				t_max_size, t_alignment, t_offset, t_chunk_size));
 	}
+
+	//-------------------------------------------------------------------------
+	/** @brief 一度に確保できるmemoryの最大sizeを取得。byte単位。
+	 */
+	virtual std::size_t get_max_size() const
+	{
+		return this_type::max_size;
+	}
+
+//.............................................................................
+protected:
+	virtual typename super_type::malloc_function get_malloc() const
+	{
+		return &this_type::malloc;
+	}
+
+	virtual typename super_type::free_function get_free() const
+	{
+		return &this_type::free;
+	}
+
+//.............................................................................
+public:
+	static std::size_t const max_size   = t_max_size;
+	static std::size_t const alignment  = t_alignment;
+	static std::size_t const offset     = t_offset;
+	static std::size_t const chunk_size = t_chunk_size;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -250,7 +272,7 @@ public:
 	typename super_type::pointer allocate()
 	{
 		void* const a_memory(
-			super_type::allocator_policy::allocate(this->get_name()));
+			(super_type::allocator_policy::malloc)(this->get_name()));
 		PSYQ_ASSERT(NULL != a_memory);
 		return static_cast< typename super_type::pointer >(a_memory);
 	}

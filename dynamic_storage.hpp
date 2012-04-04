@@ -160,12 +160,12 @@ private:
 	{
 		if (0 < i_size)
 		{
-			this->address_ = t_allocator_policy::allocate(
+			this->address_ = (t_allocator_policy::malloc)(
 				i_size, i_alignment, i_offset, i_name);
 			if (NULL != this->get_address())
 			{
 				this->size_ = i_size;
-				this->deallocator_ = &t_allocator_policy::deallocate;
+				this->deallocator_ = &t_allocator_policy::free;
 				return;
 			}
 			PSYQ_ASSERT(false);

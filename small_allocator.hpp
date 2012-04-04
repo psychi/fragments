@@ -57,7 +57,7 @@ public:
 		else if (0 < i_size)
 		{
 			// 小規模sizeより大きいmemoryは、t_allocator_policyから確保。
-			return t_allocator_policy::allocate(
+			return (t_allocator_policy::malloc)(
 				i_size, this->get_alignment(), this->get_offset(), i_name);
 		}
 		return NULL;
@@ -82,7 +82,7 @@ public:
 		else if (0 < i_size)
 		{
 			// 小規模sizeより大きいmemoryは、t_allocator_policyで解放。
-			t_allocator_policy::deallocate(i_memory, i_size);
+			(t_allocator_policy::free)(i_memory, i_size);
 		}
 	}
 
@@ -140,25 +140,18 @@ template<
 	std::size_t t_small_size = PSYQ_SMALL_ALLOCATOR_POLICY_SMALL_SIZE_DEFAULT,
 	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT >
 class psyq::small_allocator_policy:
-	public boost::noncopyable
+	public psyq::_allocator_policy_base
 {
 	typedef psyq::small_allocator_policy<
 		t_alignment, t_offset, t_chunk_size, t_small_size, t_allocator_policy >
 			this_type;
-	typedef t_allocator_policy super_type;
+	typedef psyq::_allocator_policy_base super_type;
 
 	BOOST_STATIC_ASSERT(0 < t_small_size);
 
 //.............................................................................
 public:
 	typedef t_allocator_policy allocator_policy;
-
-	//-------------------------------------------------------------------------
-	static std::size_t const max_size = t_allocator_policy::max_size;
-	static std::size_t const alignment = t_alignment;
-	static std::size_t const offset = t_offset;
-	static std::size_t const chunk_size = t_chunk_size;
-	static std::size_t const small_size = t_small_size;
 
 	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
@@ -168,7 +161,7 @@ public:
 	    @param[in] i_name      debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	static void* allocate(
+	static void* (malloc)(
 		std::size_t const i_size,
 		std::size_t const i_alignment,
 		std::size_t const i_offset,
@@ -177,7 +170,7 @@ public:
 		return 0 < i_alignment
 			&& t_offset == i_offset
 			&& t_alignment % i_alignment == 0?
-				this_type::allocate(i_size, i_name): NULL;
+				(this_type::malloc)(i_size, i_name): NULL;
 	}
 
 	/** @brief memoryを確保する。
@@ -185,7 +178,7 @@ public:
 	    @param[in] i_name debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	static void* allocate(
+	static void* (malloc)(
 		std::size_t const i_size,
 		char const* const i_name)
 	{
@@ -197,7 +190,7 @@ public:
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	    @param[in] i_size   解放するmemoryの大きさ。byte単位。
 	 */
-	static void deallocate(
+	static void (free)(
 		void* const       i_memory,
 		std::size_t const i_size)
 	{
@@ -208,6 +201,26 @@ public:
 	static psyq::fixed_memory_table< t_allocator_policy >* get_table()
 	{
 		return psyq::singleton< typename this_type::pool_table >::construct();
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief 一度に確保できるmemoryの最大sizeを取得。byte単位。
+	 */
+	virtual std::size_t get_max_size() const
+	{
+		return this_type::max_size;
+	}
+
+//.............................................................................
+protected:
+	virtual typename super_type::malloc_function get_malloc() const
+	{
+		return &this_type::malloc;
+	}
+
+	virtual typename super_type::free_function get_free() const
+	{
+		return &this_type::free;
 	}
 
 //.............................................................................
@@ -278,6 +291,14 @@ private:
 
 		psyq::fixed_memory_pool< t_allocator_policy >* pools[num_pools];
 	};
+
+//.............................................................................
+public:
+	static std::size_t const max_size = t_allocator_policy::max_size;
+	static std::size_t const alignment = t_alignment;
+	static std::size_t const offset = t_offset;
+	static std::size_t const chunk_size = t_chunk_size;
+	static std::size_t const small_size = t_small_size;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -393,7 +414,7 @@ public:
 	{
 		(void)i_hint;
 		void* const a_memory(
-			super_type::allocator_policy::allocate(
+			(super_type::allocator_policy::malloc)(
 				i_num * sizeof(t_value_type), this->get_name()));
 		PSYQ_ASSERT(NULL != a_memory);
 		return static_cast< typename super_type::pointer >(a_memory);

@@ -140,12 +140,12 @@ template<
 	std::size_t t_small_size = PSYQ_SMALL_ALLOCATOR_POLICY_SMALL_SIZE_DEFAULT,
 	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT >
 class psyq::small_allocator_policy:
-	public psyq::_allocator_policy_base
+	public psyq::allocator_policy
 {
 	typedef psyq::small_allocator_policy<
 		t_alignment, t_offset, t_chunk_size, t_small_size, t_allocator_policy >
 			this_type;
-	typedef psyq::_allocator_policy_base super_type;
+	typedef psyq::allocator_policy super_type;
 
 	BOOST_STATIC_ASSERT(0 < t_small_size);
 
@@ -421,4 +421,4 @@ public:
 	}
 };
 
-#endif // PSYQ_SMALL_ALLOCATOR_HPP_
+#endif // !PSYQ_SMALL_ALLOCATOR_HPP_

@@ -28,7 +28,7 @@ template<
 	std::size_t t_chunk_size = PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT,
 	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT >
 class psyq::fixed_allocator_policy:
-	public psyq::_allocator_policy_base
+	public psyq::allocator_policy
 {
 	typedef fixed_allocator_policy<
 		t_max_size,
@@ -37,7 +37,7 @@ class psyq::fixed_allocator_policy:
 		t_chunk_size,
 		t_allocator_policy >
 			this_type;
-	typedef psyq::_allocator_policy_base super_type;
+	typedef psyq::allocator_policy super_type;
 
 	// memory配置境界値が2のべき乗か確認。
 	BOOST_STATIC_ASSERT(0 == (t_alignment & (t_alignment - 1)));
@@ -313,4 +313,4 @@ public:
 #endif // _MSC_VER
 };
 
-#endif // PSYQ_SINGLE_ALLOCATOR_HPP_
+#endif // !PSYQ_SINGLE_ALLOCATOR_HPP_

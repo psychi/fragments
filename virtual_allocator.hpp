@@ -40,7 +40,7 @@ public:
 	super_type(i_name),
 	allocator_policy_(i_allocator_policy)
 	{
-		PSYQ_ASSERT(NULL != this->get_policy().get());
+		PSYQ_ASSERT(NULL != this->get_allocator_policy().get());
 	}
 
 	/** @param[in] i_source copyŒ³instanceB
@@ -51,11 +51,12 @@ public:
 			t_other_type, t_other_alignment, t_offset > const&
 				i_source):
 	super_type(i_source),
-	allocator_policy_(i_source.get_policy())
+	allocator_policy_(i_source.get_allocator_policy())
 	{
 		BOOST_STATIC_ASSERT(t_other_alignment % t_alignment == 0);
 		PSYQ_ASSERT(
-			sizeof(t_value_type) <= this->get_policy()->get_max_size());
+			sizeof(t_value_type)
+				<= this->get_allocator_policy()->get_max_size());
 	}
 
 	//-------------------------------------------------------------------------
@@ -70,8 +71,10 @@ public:
 			t_other_offset > const& i_right)
 	const
 	{
-		psyq::allocator_policy const& a_left(*this->get_policy());
-		psyq::allocator_policy const& a_right(*i_right.get_policy());
+		psyq::allocator_policy const& a_left(
+			*this->get_allocator_policy());
+		psyq::allocator_policy const& a_right(
+			*i_right.get_allocator_policy());
 		return &a_left == &a_right || a_left == a_right;
 	}
 
@@ -131,7 +134,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	psyq::allocator_policy::holder const& get_policy() const
+	psyq::allocator_policy::holder const& get_allocator_policy() const
 	{
 		return this->allocator_policy_;
 	}

@@ -4,7 +4,7 @@
 namespace psyq
 {
 	template< typename > class fixed_pool;
-	template< typename > class fixed_pool_table;
+	template< typename > class fixed_pool_set;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -408,17 +408,17 @@ private:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 template< typename t_allocator_policy >
-class psyq::fixed_pool_table:
+class psyq::fixed_pool_set:
 	private boost::noncopyable
 {
-	typedef psyq::fixed_pool_table< t_allocator_policy > this_type;
+	typedef psyq::fixed_pool_set< t_allocator_policy > this_type;
 
 //.............................................................................
 public:
 	typedef t_allocator_policy allocator_policy;
 
 	//-------------------------------------------------------------------------
-	virtual ~fixed_pool_table()
+	virtual ~fixed_pool_set()
 	{
 		// pass
 	}
@@ -434,7 +434,7 @@ public:
 		char const* const i_name)
 	{
 		psyq::fixed_pool< t_allocator_policy >* const a_pool(
-			this->get_pool(this->get_pool_index(i_size)));
+			this->get_pool(this->get_index(i_size)));
 		if (NULL != a_pool)
 		{
 			// 小規模sizeのpoolからmemoryを確保。
@@ -459,7 +459,7 @@ public:
 		std::size_t const i_size)
 	{
 		psyq::fixed_pool< t_allocator_policy >* const a_pool(
-			this->get_pool(this->get_pool_index(i_size)));
+			this->get_pool(this->get_index(i_size)));
 		if (NULL != a_pool)
 		{
 			// 小規模sizeのpoolでmemoryを解放。
@@ -473,7 +473,10 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	std::size_t get_pool_index(std::size_t const i_size) const
+	/** @brief 指定した小規模sizeを確保するmemory-poolのindex番号を取得。
+	    @param[in] i_size byte単位の大きさ。
+	 */
+	std::size_t get_index(std::size_t const i_size) const
 	{
 		if (0 < i_size)
 		{
@@ -487,6 +490,9 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief memory-poolを取得。
+	    @param[in] i_index memory-poolのindex番号。
+	 */
 	virtual psyq::fixed_pool< t_allocator_policy > const* get_pool(
 		std::size_t const i_index)
 	const = 0;
@@ -505,7 +511,7 @@ public:
 
 //.............................................................................
 protected:
-	fixed_pool_table()
+	fixed_pool_set()
 	{
 		// pass
 	}

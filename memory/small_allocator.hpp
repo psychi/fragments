@@ -92,7 +92,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	static psyq::fixed_memory_table< t_allocator_policy >* get_table()
+	static psyq::fixed_pool_table< t_allocator_policy >* get_table()
 	{
 		return psyq::singleton< typename this_type::pool_table >::construct();
 	}
@@ -124,7 +124,7 @@ private:
 	{
 	public:
 		explicit set_pools(
-			psyq::fixed_memory_pool< t_allocator_policy >** const i_pools):
+			psyq::fixed_pool< t_allocator_policy >** const i_pools):
 		pools(i_pools)
 		{
 			// pass
@@ -142,16 +142,16 @@ private:
 		}
 
 	private:
-		psyq::fixed_memory_pool< t_allocator_policy >** pools;
+		psyq::fixed_pool< t_allocator_policy >** pools;
 	};
 
 	//-------------------------------------------------------------------------
  	class pool_table:
-		public psyq::fixed_memory_table< t_allocator_policy >
+		public psyq::fixed_pool_table< t_allocator_policy >
 	{
 	public:
 		pool_table():
-		psyq::fixed_memory_table< t_allocator_policy >()
+		psyq::fixed_pool_table< t_allocator_policy >()
 		{
 			typedef boost::mpl::range_c< std::size_t, 0, num_pools > range;
 			boost::mpl::for_each< range >(set_pools(this->pools));
@@ -172,7 +172,7 @@ private:
 			return num_pools;
 		}
 
-		virtual psyq::fixed_memory_pool< t_allocator_policy > const* get_pool(
+		virtual psyq::fixed_pool< t_allocator_policy > const* get_pool(
 			std::size_t const i_index)
 		const
 		{
@@ -183,7 +183,7 @@ private:
 		static std::size_t const num_pools =
 			t_alignment < t_small_size? t_small_size / t_alignment: 1;
 
-		psyq::fixed_memory_pool< t_allocator_policy >* pools[num_pools];
+		psyq::fixed_pool< t_allocator_policy >* pools[num_pools];
 	};
 
 //.............................................................................

@@ -48,7 +48,7 @@ class psyq::fixed_allocator_policy:
 #if 0
 	BOOST_STATIC_ASSERT(
 		t_max_size <= t_chunk_size
-			- sizeof(psyq::fixed_memory_pool< t_allocator_policy >::chunk));
+			- sizeof(psyq::fixed_pool< t_allocator_policy >::chunk));
 #endif // 0
 
 //.............................................................................
@@ -119,10 +119,10 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief memoryä«óùÇ…égÇ¡ÇƒÇ¢ÇÈsingleton-poolÇéÊìæÅB
 	 */
-	static psyq::fixed_memory_pool< t_allocator_policy >* get_pool()
+	static psyq::fixed_pool< t_allocator_policy >* get_pool()
 	{
 		typedef psyq::singleton<
-			psyq::fixed_memory_pool< t_allocator_policy >, this_type >
+			psyq::fixed_pool< t_allocator_policy >, this_type >
 				singleton;
 		return singleton::construct(
 			boost::in_place(

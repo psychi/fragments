@@ -10,10 +10,10 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 一度にひとつのinstanceを確保する、std::allocator互換の割当子。
         配列は確保できない。
-    @tparam t_value_type        確保するinstanceの型。
-    @tparam t_alignment         instanceの配置境界値。byte単位。
-    @tparam t_offset            instanceの配置offset値。byte単位。
-    @tparam t_chunk_size        memory-chunkの最大size。byte単位。
+    @tparam t_value_type       確保するinstanceの型。
+    @tparam t_alignment        instanceの配置境界値。byte単位。
+    @tparam t_offset           instanceの配置offset値。byte単位。
+    @tparam t_chunk_size       memory-chunkの最大size。byte単位。
     @tparam t_allocator_policy 実際に使うmemory割当policy。
  */
 template<
@@ -126,7 +126,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief intanceに使っていたmemoryを解放する。
+	/** @brief instanceに使っていたmemoryを解放する。
 	    @param[in] i_memory 解放するinstanceの先頭位置。
 	    @param[in] i_num    解放するinstanceの数。
 	 */
@@ -140,7 +140,7 @@ public:
 	void deallocate(
 		typename super_type::pointer const i_memory)
 	{
-		super_type::allocator_policy::get_pool()->deallocate(i_memory);
+		(super_type::allocator_policy::free)(i_memory);
 	}
 
 	//-------------------------------------------------------------------------

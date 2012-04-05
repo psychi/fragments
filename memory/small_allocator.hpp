@@ -7,6 +7,7 @@
 
 namespace psyq
 {
+	template< typename > class small_pools;
 	template< std::size_t, std::size_t, std::size_t, std::size_t, typename >
 		class small_allocator_policy;
 	template<
@@ -20,11 +21,127 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 小規模memory割当policy。
-    @tparam t_alignment     確保するmemoryの配置境界値。byte単位。
-    @tparam t_offset        確保するmemoryの配置offset値。byte単位。
-    @tparam t_chunk_size    memory-chunkの最大size。byte単位。
-    @tparam t_small_size    扱う小規模sizeの最大値。byte単位。
+/** @brief 小規模sizeのmemory-pool集合。
+    @tparam t_allocator_policy 実際に使うmemory割当policy。
+ */
+template< typename t_allocator_policy >
+class psyq::small_pools:
+	private boost::noncopyable
+{
+	typedef psyq::small_pools< t_allocator_policy > this_type;
+
+//.............................................................................
+public:
+	typedef t_allocator_policy allocator_policy;
+
+	//-------------------------------------------------------------------------
+	virtual ~small_pools()
+	{
+		// pass
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief memoryを確保する。
+	    @param[in] i_size 確保するmemoryの大きさ。byte単位。
+	    @param[in] i_name debugで使うためのmemory識別名。
+	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
+	 */
+	void* allocate(
+		std::size_t const i_size,
+		char const* const i_name)
+	{
+		// sizeに対応するmemory-poolを取得。
+		psyq::fixed_pool< t_allocator_policy >* const a_pool(
+			this->get_pool(this->get_index(i_size)));
+		if (NULL != a_pool)
+		{
+			// memory-poolから確保。
+			return a_pool->allocate(i_name);
+		}
+		else if (0 < i_size)
+		{
+			// 対応するmemory-poolがなければ、t_allocator_policyから確保。
+			return (t_allocator_policy::malloc)(
+				i_size, this->get_alignment(), this->get_offset(), i_name);
+		}
+		return NULL;
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief memoryを解放する。
+	    @param[in] i_memory 解放するmemoryの先頭位置。
+	    @param[in] i_size   解放するmemoryの大きさ。byte単位。
+	 */
+	void deallocate(
+		void* const       i_memory,
+		std::size_t const i_size)
+	{
+		// sizeに対応するmemory-poolを取得。
+		psyq::fixed_pool< t_allocator_policy >* const a_pool(
+			this->get_pool(this->get_index(i_size)));
+		if (NULL != a_pool)
+		{
+			// memory-poolで解放。
+			a_pool->deallocate(i_memory);
+		}
+		else if (0 < i_size)
+		{
+			// 対応するmemory-poolがなければ、t_allocator_policyで解放。
+			(t_allocator_policy::free)(i_memory, i_size);
+		}
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief 指定したsizeを確保するmemory-poolのindex番号を取得。
+	    @param[in] i_size byte単位の大きさ。
+	 */
+	std::size_t get_index(std::size_t const i_size) const
+	{
+		if (0 < i_size)
+		{
+			std::size_t const a_index((i_size - 1) / this->get_alignment());
+			if (a_index < this->get_num_pools())
+			{
+				return a_index;
+			}
+		}
+		return (std::numeric_limits< std::size_t >::max)();
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief memory-poolを取得。
+	    @param[in] i_index memory-poolのindex番号。
+	 */
+	virtual psyq::fixed_pool< t_allocator_policy > const* get_pool(
+		std::size_t const i_index)
+	const = 0;
+
+	psyq::fixed_pool< t_allocator_policy >* get_pool(
+		std::size_t const i_index)
+	{
+		return const_cast< psyq::fixed_pool< t_allocator_policy >* >(
+			const_cast< this_type const* >(this)->get_pool(i_index));
+	}
+
+	//-------------------------------------------------------------------------
+	virtual std::size_t get_alignment() const = 0;
+	virtual std::size_t get_offset() const = 0;
+	virtual std::size_t get_num_pools() const = 0;
+
+//.............................................................................
+protected:
+	small_pools()
+	{
+		// pass
+	}
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 小規模sizeのmemory割当policy。
+    @tparam t_alignment        確保するmemoryの配置境界値。byte単位。
+    @tparam t_offset           確保するmemoryの配置offset値。byte単位。
+    @tparam t_chunk_size       memory-chunkの最大size。byte単位。
+    @tparam t_small_size       扱う小規模sizeの最大値。byte単位。
     @tparam t_allocator_policy 実際に使うmemory割当policy。
  */
 template<
@@ -76,7 +193,7 @@ public:
 		std::size_t const i_size,
 		char const* const i_name)
 	{
-		return this_type::get_pool_set()->allocate(i_size, i_name);
+		return this_type::get_pools()->allocate(i_size, i_name);
 	}
 
 	//-------------------------------------------------------------------------
@@ -88,13 +205,13 @@ public:
 		void* const       i_memory,
 		std::size_t const i_size)
 	{
-		this_type::get_pool_set()->deallocate(i_memory, i_size);
+		this_type::get_pools()->deallocate(i_memory, i_size);
 	}
 
 	//-------------------------------------------------------------------------
-	static psyq::fixed_pool_set< t_allocator_policy >* get_pool_set()
+	static psyq::small_pools< t_allocator_policy >* get_pools()
 	{
-		return psyq::singleton< typename this_type::pool_set >::construct();
+		return psyq::singleton< typename this_type::pools >::construct();
 	}
 
 	//-------------------------------------------------------------------------
@@ -125,7 +242,7 @@ private:
 	public:
 		explicit set_pool(
 			psyq::fixed_pool< t_allocator_policy >** const i_pools):
-		pools(i_pools)
+		pools_(i_pools)
 		{
 			// pass
 		}
@@ -133,7 +250,7 @@ private:
 		template< typename t_index >
 		void operator()(t_index)
 		{
-			this->pools[t_index::value] = psyq::fixed_allocator_policy<
+			this->pools_[t_index::value] = psyq::fixed_allocator_policy<
 				t_alignment * (1 + t_index::value),
 				t_alignment,
 				t_offset,
@@ -142,19 +259,19 @@ private:
 		}
 
 	private:
-		psyq::fixed_pool< t_allocator_policy >** pools;
+		psyq::fixed_pool< t_allocator_policy >** pools_;
 	};
 
 	//-------------------------------------------------------------------------
- 	class pool_set:
-		public psyq::fixed_pool_set< t_allocator_policy >
+ 	class pools:
+		public psyq::small_pools< t_allocator_policy >
 	{
 	public:
-		pool_set():
-		psyq::fixed_pool_set< t_allocator_policy >()
+		pools():
+		psyq::small_pools< t_allocator_policy >()
 		{
 			typedef boost::mpl::range_c< std::size_t, 0, num_pools > range;
-			boost::mpl::for_each< range >(set_pool(this->pools));
+			boost::mpl::for_each< range >(set_pool(this->pointers_));
 		}
 
 		virtual std::size_t get_alignment() const
@@ -176,14 +293,14 @@ private:
 			std::size_t const i_index)
 		const
 		{
-			return i_index < num_pools? this->pools[i_index]: NULL;
+			return i_index < num_pools? this->pointers_[i_index]: NULL;
 		}
 
 	private:
 		static std::size_t const num_pools =
 			t_alignment < t_small_size? t_small_size / t_alignment: 1;
 
-		psyq::fixed_pool< t_allocator_policy >* pools[num_pools];
+		psyq::fixed_pool< t_allocator_policy >* pointers_[num_pools];
 	};
 
 //.............................................................................
@@ -196,7 +313,7 @@ public:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 小規模instance割当子。
+/** @brief 小規模sizeのinstance割当子。
     @tparam t_value_type    確保するinstanceの型。
     @tparam t_alignment     instanceの配置境界値。byte単位。
     @tparam t_offset        instanceの配置offset値。byte単位。

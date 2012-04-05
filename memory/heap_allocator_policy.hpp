@@ -1,6 +1,10 @@
 #ifndef PSYQ_HEAP_ALLOCATOR_POLICY_HPP_
 #define PSYQ_HEAP_ALLOCATOR_POLICY_HPP_
 
+#ifndef PSYQ_ALLOCATOR_POLICY_DEFAULT
+#define PSYQ_ALLOCATOR_POLICY_DEFAULT psyq::heap_allocator_policy
+#endif // !PSYQ_ALLOCATOR_POLICY_DEFAULT
+
 namespace psyq
 {
 	class heap_allocator_policy;
@@ -110,7 +114,7 @@ protected:
 
 //.............................................................................
 public:
-	/// 一度に確保できるmemoryの最大sizeを取得。byte単位。
+	/// 一度に確保できるmemoryの最大size。byte単位。
 	static std::size_t const max_size = static_cast< std::size_t >(-1);
 };
 

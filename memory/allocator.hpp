@@ -1,10 +1,6 @@
 #ifndef PSYQ_ALLOCATOR_HPP_
 #define PSYQ_ALLOCATOR_HPP_
 
-#ifndef PSYQ_ALLOCATOR_POLICY_DEFAULT
-#define PSYQ_ALLOCATOR_POLICY_DEFAULT psyq::heap_allocator_policy
-#endif // !PSYQ_ALLOCATOR_POLICY_DEFAULT
-
 #ifndef PSYQ_ALLOCATOR_NAME_DEFAULT
 #define PSYQ_ALLOCATOR_NAME_DEFAULT "PSYQ"
 #endif // !PSYQ_ALLOCATOR_NAME_DEFAULT
@@ -226,9 +222,8 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief instanceに使うmemoryを確保する。
-	    @param[in] i_num       確保するinstanceの数。
-	    @param[in] i_alignment 確保するinstanceの境界値。byte単位。
-	    @param[in] i_offset    確保するinstanceの境界offset値。byte単位。
+	    @param[in] i_num  確保するinstanceの数。
+	    @param[in] i_hint 最適化のためのhint。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
 	typename this_type::pointer allocate(

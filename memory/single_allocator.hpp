@@ -104,7 +104,8 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief instanceに使うmemoryを確保する。
-	    @param[in] i_num 確保するinstanceの数。
+	    @param[in] i_num  確保するinstanceの数。
+	    @param[in] i_hint 最適化のためのhint。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
 	typename super_type::pointer allocate(

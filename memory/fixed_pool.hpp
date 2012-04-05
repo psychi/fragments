@@ -164,16 +164,25 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief 確保するmemoryの大きさを取得。
+		@return 確保するmemoryの大きさ。byte単位。
+	 */
 	std::size_t get_block_size() const
 	{
 		return this->block_size_;
 	}
 
+	/** @brief 確保するmemoryの配置境界値を取得。
+		@return 確保するmemoryの配置境界値。byte単位。
+	 */
 	std::size_t get_alignment() const
 	{
 		return this->alignment_;
 	}
 
+	/** @brief 確保するmemoryの配置offset値を取得。
+	    @return 確保するmemoryの配置offset値。byte単位。
+	 */
 	std::size_t get_offset() const
 	{
 		return this->offset_;
@@ -405,4 +414,4 @@ private:
 	std::size_t                chunk_size_;
 };
 
-#endif // PSYQ_FIXED_POOL_HPP_
+#endif // !PSYQ_FIXED_POOL_HPP_

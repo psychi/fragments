@@ -108,7 +108,31 @@ public:
 		return (std::numeric_limits< std::size_t >::max)();
 	}
 
+	/** @brief 確保するmemoryの配置境界値を取得。
+		@return 確保するmemoryの配置境界値。byte単位。
+	 */
+	std::size_t get_alignment() const
+	{
+		psyq::fixed_pool< t_allocator_policy > const* const a_pool(
+			this->get_pool(0));
+		return NULL != a_pool? a_pool->get_alignment(): 0;
+	}
+
+	/** @brief 確保するmemoryの配置offset値を取得。
+	    @return 確保するmemoryの配置offset値。byte単位。
+	 */
+	std::size_t get_offset() const
+	{
+		psyq::fixed_pool< t_allocator_policy > const* const a_pool(
+			this->get_pool(0));
+		return NULL != a_pool? a_pool->get_offset(): 0;
+	}
+
 	//-------------------------------------------------------------------------
+	/** @brief memory-poolの数を取得。
+	 */
+	virtual std::size_t get_num_pools() const = 0;
+
 	/** @brief memory-poolを取得。
 	    @param[in] i_index memory-poolのindex番号。
 	 */
@@ -116,17 +140,15 @@ public:
 		std::size_t const i_index)
 	const = 0;
 
+	/** @brief memory-poolを取得。
+	    @param[in] i_index memory-poolのindex番号。
+	 */
 	psyq::fixed_pool< t_allocator_policy >* get_pool(
 		std::size_t const i_index)
 	{
 		return const_cast< psyq::fixed_pool< t_allocator_policy >* >(
 			const_cast< this_type const* >(this)->get_pool(i_index));
 	}
-
-	//-------------------------------------------------------------------------
-	virtual std::size_t get_alignment() const = 0;
-	virtual std::size_t get_offset() const = 0;
-	virtual std::size_t get_num_pools() const = 0;
 
 //.............................................................................
 protected:
@@ -271,17 +293,7 @@ private:
 		psyq::small_pools< t_allocator_policy >()
 		{
 			typedef boost::mpl::range_c< std::size_t, 0, num_pools > range;
-			boost::mpl::for_each< range >(set_pool(this->pointers_));
-		}
-
-		virtual std::size_t get_alignment() const
-		{
-			return t_alignment;
-		}
-
-		virtual std::size_t get_offset() const
-		{
-			return t_offset;
+			boost::mpl::for_each< range >(set_pool(this->pools_));
 		}
 
 		virtual std::size_t get_num_pools() const
@@ -293,14 +305,14 @@ private:
 			std::size_t const i_index)
 		const
 		{
-			return i_index < num_pools? this->pointers_[i_index]: NULL;
+			return i_index < num_pools? this->pools_[i_index]: NULL;
 		}
 
 	private:
 		static std::size_t const num_pools =
 			t_alignment < t_small_size? t_small_size / t_alignment: 1;
 
-		psyq::fixed_pool< t_allocator_policy >* pointers_[num_pools];
+		psyq::fixed_pool< t_allocator_policy >* pools_[num_pools];
 	};
 
 //.............................................................................
@@ -416,7 +428,8 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
-	    @param[in] i_num 確保するinstanceの数。
+	    @param[in] i_num  確保するinstanceの数。
+	    @param[in] i_hint 最適化のためのhint。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
 	typename super_type::pointer allocate(

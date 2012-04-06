@@ -1,6 +1,9 @@
 #ifndef PSYQ_ALLOCATOR_HPP_
 #define PSYQ_ALLOCATOR_HPP_
 
+#include <memory>
+#include <boost/type_traits/alignment_of.hpp>
+
 #ifndef PSYQ_ALLOCATOR_NAME_DEFAULT
 #define PSYQ_ALLOCATOR_NAME_DEFAULT "PSYQ"
 #endif // !PSYQ_ALLOCATOR_NAME_DEFAULT

@@ -1,6 +1,9 @@
 #ifndef PSYQ_DYNAMIC_STORAGE_HPP_
 #define PSYQ_DYNAMIC_STORAGE_HPP_
 
+#include <boost/noncopyable.hpp>
+#include <boost/type.hpp>
+
 namespace psyq
 {
 	class dynamic_storage;

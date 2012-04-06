@@ -1,6 +1,9 @@
 #ifndef PSYQ_VIRTUAL_ALLOCATOR_HPP_
 #define PSYQ_VIRTUAL_ALLOCATOR_HPP_
 
+//#include <psyq/memory/allocator.hpp>
+//#include <psyq/memory/allocator_policy.hpp>
+
 namespace psyq
 {
 	template< typename, std::size_t, std::size_t > class virtual_allocator;

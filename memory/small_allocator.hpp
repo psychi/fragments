@@ -1,6 +1,11 @@
 #ifndef PSYQ_SMALL_ALLOCATOR_HPP_
 #define PSYQ_SMALL_ALLOCATOR_HPP_
 
+#include <boost/mpl/range_c.hpp>
+#include <boost/mpl/for_each.hpp>
+//#include <psyq/memory/allocator.hpp>
+//#include <psyq/memory/fixed_allocator_policy.hpp>
+
 #ifndef PSYQ_SMALL_ALLOCATOR_POLICY_SMALL_SIZE_DEFAULT
 #define PSYQ_SMALL_ALLOCATOR_POLICY_SMALL_SIZE_DEFAULT 64
 #endif // !PSYQ_SMALL_ALLOCATOR_POLICY_SMALL_SIZE_DEFAULT

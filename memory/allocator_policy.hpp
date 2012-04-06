@@ -1,6 +1,10 @@
 #ifndef PSYQ_ALLOCATOR_POLICY_HPP_
 #define PSYQ_ALLOCATOR_POLICY_HPP_
 
+#include <boost/noncopyable.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/weak_ptr.hpp>
+
 namespace psyq
 {
 	class allocator_policy;

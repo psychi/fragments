@@ -1,6 +1,8 @@
 #ifndef PSYQ_HEAP_ALLOCATOR_POLICY_HPP_
 #define PSYQ_HEAP_ALLOCATOR_POLICY_HPP_
 
+//#include <psyq/memory/allocator_policy.hpp>
+
 #ifndef PSYQ_ALLOCATOR_POLICY_DEFAULT
 #define PSYQ_ALLOCATOR_POLICY_DEFAULT psyq::heap_allocator_policy
 #endif // !PSYQ_ALLOCATOR_POLICY_DEFAULT

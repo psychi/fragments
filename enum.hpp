@@ -1,7 +1,10 @@
 #ifndef PSYQ_ENUM_HPP_
 #define PSYQ_ENUM_HPP_
 
+#include <boost/noncopyable.hpp>
 #include <boost/preprocessor.hpp>
+#include <boost/type_traits/aligned_storage.hpp>
+#include <boost/type_traits/alignment_of.hpp>
 
 namespace psyq
 {

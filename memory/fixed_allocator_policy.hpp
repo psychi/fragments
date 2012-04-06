@@ -1,6 +1,10 @@
 #ifndef PSYQ_FIXED_ALLOCATOR_POLICY_HPP_
 #define PSYQ_FIXED_ALLOCATOR_POLICY_HPP_
 
+//#include <psyq/singleton.hpp>
+//#include <psyq/memory/fixed_pool.hpp>
+//#include <psyq/memory/allocator_policy.hpp>
+
 #ifndef PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT
 #define PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT 4096
 #endif // !PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT

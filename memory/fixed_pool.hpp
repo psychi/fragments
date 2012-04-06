@@ -1,6 +1,9 @@
 #ifndef PSYQ_FIXED_POOL_HPP_
 #define PSYQ_FIXED_POOL_HPP_
 
+#include <boost/noncopyable.hpp>
+#include <boost/cstdint.hpp>
+
 namespace psyq
 {
 	template< typename > class fixed_pool;

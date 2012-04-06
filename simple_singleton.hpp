@@ -1,8 +1,10 @@
 #ifndef PSYQ_SIMPLE_SINGLETON_HPP_
 #define PSYQ_SIMPLE_SINGLETON_HPP_
 
+#include <boost/noncopyable.hpp>
 #include <boost/type_traits/aligned_storage.hpp>
 #include <boost/type_traits/alignment_of.hpp>
+#include <boost/utility/in_place_factory.hpp>
 #ifndef PSYQ_SINGLETON_DISABLE_THREADS
 	#include <boost/bind.hpp>
 	#include <boost/thread/once.hpp>

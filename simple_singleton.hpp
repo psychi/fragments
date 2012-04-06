@@ -17,12 +17,12 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 template<
 	typename t_value_type,
-	typename t_tag = psyq::_singleton_default_tag,
-	typename t_mutex = PSYQ_MUTEX_DEFAULT >
+	typename t_mutex = PSYQ_MUTEX_DEFAULT,
+	typename t_tag = t_value_type >
 class psyq::simple_singleton:
 	private boost::noncopyable
 {
-	typedef simple_singleton< t_value_type, t_tag, t_mutex > this_type;
+	typedef simple_singleton< t_value_type, t_mutex, t_tag > this_type;
 
 //.............................................................................
 public:

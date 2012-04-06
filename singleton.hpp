@@ -21,7 +21,6 @@ namespace psyq
 {
 	template< typename, typename, typename > class singleton;
 
-	struct _singleton_default_tag {};
 	template< typename > class _singleton_ordered_destructor;
 	template< typename, typename > class _singleton_ordered_storage;
 	class _dummy_mutex;
@@ -261,17 +260,17 @@ public:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief singleton管理class。
     @tparam t_value_type singletonの型。
-    @tparam t_tag        同じ型のsingletonで区別が必要な場合に使うtag。
     @tparam t_mutex      multi-thread対応に使うmutexの型。
+    @tparam t_tag        同じ型のsingletonで、区別が必要な場合に使うtag。
  */
 template<
 	typename t_value_type,
-	typename t_tag = psyq::_singleton_default_tag,
-	typename t_mutex = PSYQ_MUTEX_DEFAULT >
+	typename t_mutex = PSYQ_MUTEX_DEFAULT,
+	typename t_tag = t_value_type >
 class psyq::singleton:
 	private boost::noncopyable
 {
-	typedef psyq::singleton< t_value_type, t_tag, t_mutex > this_type;
+	typedef psyq::singleton< t_value_type, t_mutex, t_tag > this_type;
 
 //.............................................................................
 public:

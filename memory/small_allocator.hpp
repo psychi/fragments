@@ -253,9 +253,8 @@ public:
 	//-------------------------------------------------------------------------
 	static psyq::small_pools< t_arena, t_mutex >* get_pools()
 	{
-		typedef psyq::singleton<
-			typename this_type::pools, psyq::_singleton_default_tag, t_mutex >
-				pools_singleton;
+		typedef psyq::singleton< typename this_type::pools, t_mutex >
+			pools_singleton;
 		return pools_singleton::construct();
 	}
 

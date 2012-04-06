@@ -5,35 +5,48 @@
 #include <boost/type_traits/aligned_storage.hpp>
 #include <boost/type_traits/alignment_of.hpp>
 #include <boost/utility/in_place_factory.hpp>
-#ifndef PSYQ_SINGLETON_DISABLE_THREADS
-	#include <boost/bind.hpp>
-	#include <boost/thread/locks.hpp>
-	#include <boost/thread/mutex.hpp>
-	#include <boost/thread/once.hpp>
-#endif // !PSYQ_SINGLETON_DISABLE_THREADS
+#include <boost/bind.hpp>
+#include <boost/thread/locks.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/once.hpp>
+#ifdef PSYQ_SINGLETON_DISABLE_THREADS
+	#undef PSYQ_SINGLETON_MUTEX_DEFAULT
+	#define PSYQ_SINGLETON_MUTEX_DEFAULT psyq::_dummy_mutex
+#elif !defined(PSYQ_SINGLETON_MUTEX_DEFAULT)
+	#define PSYQ_SINGLETON_MUTEX_DEFAULT boost::mutex
+#endif // PSYQ_SINGLETON_DISABLE_THREADS
+
 
 namespace psyq
 {
-	template< typename, typename > class singleton;
+	template< typename, typename, typename > class singleton;
 
 	struct _singleton_default_tag {};
-	class _singleteon_ordered_destructor;
-	template< typename > class _singleton_ordered_storage;
+	template< typename > class _singleton_ordered_destructor;
+	template< typename, typename > class _singleton_ordered_storage;
+	class _dummy_mutex;
 }
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+class psyq::_dummy_mutex:
+	private boost::noncopyable
+{
+};
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 破棄関数の単方向連結list。
  */
-class psyq::_singleteon_ordered_destructor:
+template< typename t_mutex >
+class psyq::_singleton_ordered_destructor:
 	public boost::noncopyable
 {
-	typedef psyq::_singleteon_ordered_destructor this_type;
-	template< typename, typename > friend class psyq::singleton;
+	typedef psyq::_singleton_ordered_destructor< t_mutex > this_type;
+	template< typename, typename, typename > friend class psyq::singleton;
 
 //.............................................................................
 public:
 	//-------------------------------------------------------------------------
-	~_singleteon_ordered_destructor()
+	~_singleton_ordered_destructor()
 	{
 		// listの先頭nodeを切り離す。
 		this_type* const a_node(this_type::first_node());
@@ -41,7 +54,7 @@ public:
 		this_type::first_node() = a_node->next;
 
 		// 切り離したnodeを破棄する。thisの破棄ではないことに注意！
-		this_type::function const a_destructor(a_node->destructor);
+		typename this_type::function const a_destructor(a_node->destructor);
 		a_node->next = a_node;
 		a_node->destructor = NULL;
 		(*a_destructor)(a_node);
@@ -60,8 +73,8 @@ protected:
 	typedef void (*function)(this_type* const); ///< 破棄関数の型。
 
 	//-------------------------------------------------------------------------
-	explicit _singleteon_ordered_destructor(
-		this_type::function i_destructor):
+	explicit _singleton_ordered_destructor(
+		typename this_type::function i_destructor):
 		destructor(i_destructor),
 		priority(0)
 	{
@@ -157,31 +170,29 @@ private:
 
 	/** @brief singletonで使うmutexを参照する。
 	 */
-#ifndef PSYQ_SINGLETON_DISABLE_THREADS
-	static boost::mutex& class_mutex()
+	static t_mutex& class_mutex()
 	{
-		static boost::mutex s_mutex;
+		static t_mutex s_mutex;
 		return s_mutex;
 	}
-#endif // !PSYQ_SINGLETON_DISABLE_THREADS
 
 //.............................................................................
 private:
-	this_type*          next;       ///< 次のnode。
-	this_type::function destructor; ///< 破棄時に呼び出す関数。
-	int                 priority;   ///< 破棄の優先順位。昇順に破棄される。
+	this_type*                   next;       ///< 次のnode。
+	typename this_type::function destructor; ///< 破棄時に呼び出す関数。
+	int                          priority;   ///< 破棄の優先順位。昇順に破棄される。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief singleton-instance領域の単方向連結list。
  */
-template< typename t_value_type >
+template< typename t_value_type, typename t_mutex >
 class psyq::_singleton_ordered_storage:
-	public psyq::_singleteon_ordered_destructor
+	public psyq::_singleton_ordered_destructor< t_mutex >
 {
-	typedef psyq::_singleton_ordered_storage< t_value_type > this_type;
-	typedef psyq::_singleteon_ordered_destructor super_type;
-	template< typename, typename > friend class psyq::singleton;
+	typedef psyq::_singleton_ordered_storage< t_value_type, t_mutex > this_type;
+	typedef psyq::_singleton_ordered_destructor< t_mutex > super_type;
+	template< typename, typename, typename > friend class psyq::singleton;
 
 //.............................................................................
 public:
@@ -248,11 +259,12 @@ public:
  */
 template<
 	typename t_value_type,
-	typename t_tag = psyq::_singleton_default_tag >
+	typename t_tag = psyq::_singleton_default_tag,
+	typename t_mutex = PSYQ_SINGLETON_MUTEX_DEFAULT >
 class psyq::singleton:
 	private boost::noncopyable
 {
-	typedef psyq::singleton< t_value_type, t_tag > this_type;
+	typedef psyq::singleton< t_value_type, t_tag, t_mutex > this_type;
 
 //.............................................................................
 public:
@@ -266,16 +278,7 @@ public:
 	 */
 	static t_value_type* get()
 	{
-#ifndef PSYQ_SINGLETON_DISABLE_THREADS
-		if (this_type::construct_flag().count <= 0)
-		{
-			return NULL;
-		}
-		else
-#endif // !PSYQ_SINGLETON_DISABLE_THREADS
-		{
-			return this_type::instance().get_pointer();
-		}
+		return this_type::get(boost::type< t_mutex >());
 	}
 
 	//-------------------------------------------------------------------------
@@ -301,26 +304,8 @@ public:
 		t_constructor const& i_constructor,
 		int const            i_destruct_priority = 0)
 	{
-		// sigleton-instance構築関数を一度だけ呼び出す。
-#ifndef PSYQ_SINGLETON_DISABLE_THREADS
-		boost::call_once(
-			this_type::construct_flag(),
-			boost::bind(
-				&construct_instance< t_constructor >,
-				&i_constructor,
-				i_destruct_priority));
-		typename this_type::storage& a_instance(this_type::instance());
-#else
-		typename this_type::storage& a_instance(this_type::instance());
-		if (NULL == a_instance.get_pointer())
-		{
-			construct_instance(&i_constructor, i_destruct_priority);
-		}
-#endif // !PSYQ_SINGLETON_NO_THREAD_SAFE
-
-		// singleton-instanceを取得。
-		PSYQ_ASSERT(NULL != a_instance.get_pointer());
-		return a_instance.get_pointer();
+		return this_type::construct_once(
+			i_constructor, i_destruct_priority, boost::type< t_mutex >());
 	}
 
 	//-------------------------------------------------------------------------
@@ -343,10 +328,8 @@ public:
 		this_type::construct(i_destruct_priority);
 
 		// singleton-instanceを参照する前に、lockしておく。
-#ifndef PSYQ_SINGLETON_DISABLE_THREADS
-		boost::lock_guard< boost::mutex > const a_lock(
-			psyq::_singleteon_ordered_destructor::class_mutex());
-#endif // !PSYQ_SINGLETON_DISABLE_THREADS
+		boost::lock_guard< t_mutex > const a_lock(
+			psyq::_singleton_ordered_destructor< t_mutex >::class_mutex());
 
 		// 異なる優先順位が設定された場合にのみ変更する。
 		typename this_type::storage& a_instance(this_type::instance());
@@ -360,15 +343,63 @@ public:
 
 //.............................................................................
 private:
-	typedef psyq::_singleton_ordered_storage< t_value_type > storage;
+	typedef psyq::_singleton_ordered_storage< t_value_type, t_mutex > storage;
 
 	//-------------------------------------------------------------------------
-	/** @brief singleton-instance領域を参照する。
-	 */
-	static typename this_type::storage& instance()
+	template< typename t_mutex_policy >
+	static t_value_type* get(boost::type< t_mutex_policy > const&)
 	{
-		static typename this_type::storage s_instance;
-		return s_instance;
+		if (this_type::construct_flag().count <= 0)
+		{
+			return NULL;
+		}
+		else
+		{
+			return this_type::instance().get_pointer();
+		}
+	}
+
+	static t_value_type* get(boost::type< psyq::_dummy_mutex > const&)
+	{
+		return this_type::instance().get_pointer();
+	}
+
+	//-------------------------------------------------------------------------
+	template< typename t_constructor, typename t_mutex_policy >
+	static t_value_type* construct_once(
+		t_constructor const& i_constructor,
+		int const            i_destruct_priority,
+		boost::type< t_mutex_policy > const&)
+	{
+		// sigleton-instance構築関数を一度だけ呼び出す。
+		boost::call_once(
+			this_type::construct_flag(),
+			boost::bind(
+				&construct_instance< t_constructor >,
+				&i_constructor,
+				i_destruct_priority));
+
+		// singleton-instanceを取得。
+		PSYQ_ASSERT(NULL != this_type::instance().get_pointer());
+		return  this_type::instance().get_pointer();
+	}
+
+	template< typename t_constructor >
+	static t_value_type* construct_once(
+		t_constructor const& i_constructor,
+		int const            i_destruct_priority,
+		boost::type< psyq::_dummy_mutex > const&)
+	{
+		typename this_type::storage& a_instance(this_type::instance());
+		if (NULL == a_instance.get_pointer())
+		{
+			a_instance.construct(i_constructor);
+			a_instance.join(i_destruct_priority);
+		}
+
+		// singleton-instanceを取得。
+		PSYQ_ASSERT(NULL != a_instance.get_pointer());
+		return a_instance.get_pointer();
 	}
 
 	/** @brief singleton-instanceを構築する。
@@ -380,10 +411,8 @@ private:
 		t_constructor const* const i_constructor,
 		int const                  i_destruct_priority)
 	{
-#ifndef PSYQ_SINGLETON_DISABLE_THREADS
 		// mutexを構築する。
-		psyq::_singleteon_ordered_destructor::class_mutex();
-#endif // !PSYQ_SINGLETON_DISABLE_THREADS
+		psyq::_singleton_ordered_destructor< t_mutex >::class_mutex();
 
 		// instanceを構築し、破棄関数listに登録する。
 		typename this_type::storage& a_instance(this_type::instance());
@@ -393,13 +422,20 @@ private:
 
 	/** @brief singleton-instanceを構築したかどうかのflagを参照する。
 	 */
-#ifndef PSYQ_SINGLETON_DISABLE_THREADS
 	static boost::once_flag& construct_flag()
 	{
 		static boost::once_flag s_constructed = BOOST_ONCE_INIT;
 		return s_constructed;
 	}
-#endif // !PSYQ_SINGLETON_DISABLE_THREADS
+
+	//-------------------------------------------------------------------------
+	/** @brief singleton-instance領域を参照する。
+	 */
+	static typename this_type::storage& instance()
+	{
+		static typename this_type::storage s_instance;
+		return s_instance;
+	}
 
 	//-------------------------------------------------------------------------
 	singleton();

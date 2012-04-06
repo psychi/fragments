@@ -259,9 +259,9 @@ public:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief singleton管理class。
-    @tparam t_value_type singletonの型。
+    @tparam t_value_type singleton-instanceの型。
     @tparam t_mutex      multi-thread対応に使うmutexの型。
-    @tparam t_tag        同じ型のsingletonで、区別が必要な場合に使うtag。
+    @tparam t_tag        同じ型のsingleton-instanceで、区別が必要な場合に使う。
  */
 template<
 	typename t_value_type,
@@ -280,7 +280,7 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief sigleton-instanceを取得する。
 	    @return singleton-instanceへのpointer。
-	        ただしsingleton-instanceがまだ構築されてない場合は、NULLを返す。
+	        ただしsingleton-instanceをまだ構築してない場合は、NULLを返す。
 	 */
 	static t_value_type* get()
 	{
@@ -317,7 +317,7 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief 破棄の優先順位を取得する。
 	    @return singleton-instanceの破棄の優先順位。
-	        ただし、まだsingleton-instanceを構築してない場合は、0を返す。
+	        ただしsingleton-instanceをまだ構築してない場合は、0を返す。
 	 */
 	static int get_destruct_priority()
 	{
@@ -329,7 +329,7 @@ public:
 	}
 
 	/** @brief 破棄の優先順位を設定する。
-	        ただし、まだsingleton-instanceを構築してない場合は、何も行わない。
+	        ただしsingleton-instanceをまだ構築してない場合は、何も行わない。
 	    @param[in] i_destruct_priority 破棄の優先順位。破棄は昇順に行われる。
 	 */
 	static void set_destruct_priority(
@@ -402,8 +402,9 @@ private:
 		typename this_type::storage& a_instance(this_type::instance());
 		if (NULL == a_instance.get_pointer())
 		{
-			a_instance.construct(i_constructor);
+			// instanceを破棄関数listに登録してから構築する。
 			a_instance.join(i_destruct_priority);
+			a_instance.construct(i_constructor);
 		}
 
 		// singleton-instanceを取得。
@@ -423,10 +424,10 @@ private:
 		// mutexを構築する。
 		psyq::_singleton_ordered_destructor< t_mutex >::class_mutex();
 
-		// instanceを構築し、破棄関数listに登録する。
+		// instanceを破棄関数listに登録してから構築する。
 		typename this_type::storage& a_instance(this_type::instance());
-		a_instance.construct(*i_constructor);
 		a_instance.join(i_destruct_priority);
+		a_instance.construct(*i_constructor);
 	}
 
 	/** @brief singleton-instanceを構築したかどうかのflagを参照する。

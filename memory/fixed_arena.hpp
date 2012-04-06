@@ -67,6 +67,9 @@ class psyq::fixed_arena:
 //.............................................................................
 public:
 	typedef t_arena arena;
+	typedef psyq::singleton<
+		psyq::fixed_pool< t_arena, t_mutex >, t_mutex, this_type >
+			pool_singleton;
 
 	//-------------------------------------------------------------------------
 	/** @brief memoryÇämï€Ç∑ÇÈÅB
@@ -134,10 +137,7 @@ public:
 	 */
 	static psyq::fixed_pool< t_arena, t_mutex >* get_pool()
 	{
-		typedef psyq::singleton<
-			psyq::fixed_pool< t_arena, t_mutex >, t_mutex, this_type >
-				pool_singleton;
-		return pool_singleton::construct(
+		return typename this_type::pool_singleton::construct(
 			boost::in_place(t_max_size, t_alignment, t_offset, t_chunk_size));
 	}
 

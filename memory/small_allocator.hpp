@@ -199,12 +199,15 @@ class psyq::small_arena:
 		t_mutex >
 			this_type;
 	typedef psyq::arena super_type;
+	class pools;
 
 	BOOST_STATIC_ASSERT(0 < t_small_size);
 
 //.............................................................................
 public:
 	typedef t_arena arena;
+	typedef psyq::singleton< typename this_type::pools, t_mutex >
+		pools_singleton;
 
 	//-------------------------------------------------------------------------
 	/** @brief memoryÇämï€Ç∑ÇÈÅB
@@ -253,9 +256,7 @@ public:
 	//-------------------------------------------------------------------------
 	static psyq::small_pools< t_arena, t_mutex >* get_pools()
 	{
-		typedef psyq::singleton< typename this_type::pools, t_mutex >
-			pools_singleton;
-		return pools_singleton::construct();
+		return typename this_type::pools_singleton::construct();
 	}
 
 	//-------------------------------------------------------------------------

@@ -117,9 +117,8 @@ template<
 class psyq::allocator:
 	public psyq::_allocator_base< t_value_type, t_alignment, t_offset >
 {
-	typedef psyq::allocator<
-		t_value_type, t_alignment, t_offset, t_arena >
-			this_type;
+	typedef psyq::allocator< t_value_type, t_alignment, t_offset, t_arena >
+		this_type;
 	typedef psyq::_allocator_base< t_value_type, t_alignment, t_offset >
 		super_type;
 

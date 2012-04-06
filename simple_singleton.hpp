@@ -115,14 +115,11 @@ private:
 	template< typename t_mutex_policy >
 	static t_value_type* get(boost::type< t_mutex_policy > const&)
 	{
-		if (this_type::construct_flag().count <= 0)
-		{
-			return NULL;
-		}
-		else
+		if (0 < this_type::construct_flag().count)
 		{
 			return this_type::instance().get_pointer();
 		}
+		return NULL;
 	}
 
 	static t_value_type* get(boost::type< psyq::_dummy_mutex > const&)

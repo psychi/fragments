@@ -317,34 +317,39 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief 破棄の優先順位を取得する。
+	    @return singleton-instanceの破棄の優先順位。
+	        ただし、まだsingleton-instanceを構築してない場合は、0を返す。
 	 */
 	static int get_destruct_priority()
 	{
-		// まだsingleton-instanceがない場合は、ここで構築しておく。
-		this_type::construct();
-		return this_type::instance().get_priority();
+		if (NULL != this_type::get())
+		{
+			return this_type::instance().get_priority();
+		}
+		return 0;
 	}
 
 	/** @brief 破棄の優先順位を設定する。
+	        ただし、まだsingleton-instanceを構築してない場合は、何も行わない。
 	    @param[in] i_destruct_priority 破棄の優先順位。破棄は昇順に行われる。
 	 */
 	static void set_destruct_priority(
 		int const i_destruct_priority)
 	{
-		// まだsingleton-instanceがない場合は、ここで構築しておく。
-		this_type::construct(i_destruct_priority);
-
-		// singleton-instanceを参照する前に、lockしておく。
-		boost::lock_guard< t_mutex > const a_lock(
-			psyq::_singleton_ordered_destructor< t_mutex >::class_mutex());
-
-		// 異なる優先順位が設定された場合にのみ変更する。
-		typename this_type::storage& a_instance(this_type::instance());
-		if (a_instance.get_priority() != i_destruct_priority)
+		if (NULL != this_type::get())
 		{
-			// 破棄関数listから取り外した後で、登録する。
-			a_instance.unjoin();
-			a_instance.join(i_destruct_priority);
+			// singleton-instanceを参照する前に、lockしておく。
+			boost::lock_guard< t_mutex > const a_lock(
+				this_type::storage::class_mutex());
+
+			// 異なる優先順位が設定された場合にのみ変更する。
+			typename this_type::storage& a_instance(this_type::instance());
+			if (a_instance.get_priority() != i_destruct_priority)
+			{
+				// 破棄関数listから取り外した後で、登録する。
+				a_instance.unjoin();
+				a_instance.join(i_destruct_priority);
+			}
 		}
 	}
 

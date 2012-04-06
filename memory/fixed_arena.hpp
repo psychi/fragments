@@ -28,7 +28,7 @@ namespace psyq
     @tparam t_offset     memoryの配置offset値。byte単位。
     @tparam t_chunk_size memory-chunkの最大size。byte単位。
     @tparam t_arena      実際に使うmemory割当policy。
-	@tparam t_mutex      multi-thread対応に使うmutexの型。
+    @tparam t_mutex      multi-thread対応に使うmutexの型。
  */
 template<
 	std::size_t t_max_size,

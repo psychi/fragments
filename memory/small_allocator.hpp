@@ -35,7 +35,7 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 小規模sizeのmemory-pool集合。
     @tparam t_arena 実際に使うmemory割当policy。
-    @tparam t_mutex  multi-thread対応に使うmutexの型。
+    @tparam t_mutex multi-thread対応に使うmutexの型。
  */
 template< typename t_arena, typename t_mutex >
 class psyq::small_pools:

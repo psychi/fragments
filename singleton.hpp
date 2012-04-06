@@ -337,18 +337,8 @@ public:
 	{
 		if (NULL != this_type::get())
 		{
-			// singleton-instanceを参照する前に、lockしておく。
-			boost::lock_guard< t_mutex > const a_lock(
-				this_type::storage::class_mutex());
-
-			// 異なる優先順位が設定された場合にのみ変更する。
-			typename this_type::storage& a_instance(this_type::instance());
-			if (a_instance.get_priority() != i_destruct_priority)
-			{
-				// 破棄関数listから取り外した後で、登録する。
-				a_instance.unjoin();
-				a_instance.join(i_destruct_priority);
-			}
+			this_type::set_destruct_priority(
+				i_destruct_priority, boost::type< t_mutex >());
 		}
 	}
 
@@ -436,6 +426,33 @@ private:
 	{
 		static boost::once_flag s_constructed = BOOST_ONCE_INIT;
 		return s_constructed;
+	}
+
+	//-------------------------------------------------------------------------
+	template< typename t_mutex_policy >
+	static void set_destruct_priority(
+		int const i_destruct_priority,
+		boost::type< t_mutex_policy > const&)
+	{
+		// lockしてから優先順位を変更する。
+		boost::lock_guard< t_mutex > const a_lock(
+			this_type::storage::class_mutex());
+		this_type::set_destruct_priority(
+			i_destruct_priority, boost::type< psyq::_dummy_mutex >());
+	}
+
+	static void set_destruct_priority(
+		int const i_destruct_priority,
+		boost::type< psyq::_dummy_mutex > const&)
+	{
+		// 異なる優先順位が設定された場合にのみ変更する。
+		typename this_type::storage& a_instance(this_type::instance());
+		if (a_instance.get_priority() != i_destruct_priority)
+		{
+			// 破棄関数listから取り外した後で、登録する。
+			a_instance.unjoin();
+			a_instance.join(i_destruct_priority);
+		}
 	}
 
 	//-------------------------------------------------------------------------

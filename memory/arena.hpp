@@ -1,5 +1,5 @@
-#ifndef PSYQ_ALLOCATOR_POLICY_HPP_
-#define PSYQ_ALLOCATOR_POLICY_HPP_
+#ifndef PSYQ_ARENA_HPP_
+#define PSYQ_ARENA_HPP_
 
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
@@ -7,16 +7,16 @@
 
 namespace psyq
 {
-	class allocator_policy;
+	class arena;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief memoryäÑìñpolicyäÓíÍclassÅB
  */
-class psyq::allocator_policy:
+class psyq::arena:
 	private boost::noncopyable
 {
-	typedef psyq::allocator_policy this_type;
+	typedef psyq::arena this_type;
 
 //.............................................................................
 public:
@@ -24,7 +24,7 @@ public:
 	typedef boost::weak_ptr< this_type > observer;
 
 	//-------------------------------------------------------------------------
-	virtual ~allocator_policy()
+	virtual ~arena()
 	{
 		// pass
 	}
@@ -89,4 +89,4 @@ protected:
 	virtual this_type::free_function get_free() const = 0;
 };
 
-#endif // !PSYQ_ALLOCATOR_POLICY_HPP_
+#endif // !PSYQ_ARENA_HPP_

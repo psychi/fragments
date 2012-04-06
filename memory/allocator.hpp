@@ -104,28 +104,28 @@ private:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::allocator互換のinstance割当子。
-    @tparam t_value_type       割り当てるinstanceの型。
-    @tparam t_alignment        instanceの配置境界値。byte単位。
-    @tparam t_offset           instanceの配置offset値。byte単位。
-    @tparam t_allocator_policy memory割当policy。
+    @tparam t_value_type 割り当てるinstanceの型。
+    @tparam t_alignment  instanceの配置境界値。byte単位。
+    @tparam t_offset     instanceの配置offset値。byte単位。
+    @tparam t_arena      memory割当policy。
  */
 template<
 	typename    t_value_type,
 	std::size_t t_alignment = boost::alignment_of< t_value_type >::value,
 	std::size_t t_offset = 0,
-	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT >
+	typename    t_arena = PSYQ_ARENA_DEFAULT >
 class psyq::allocator:
 	public psyq::_allocator_base< t_value_type, t_alignment, t_offset >
 {
 	typedef psyq::allocator<
-		t_value_type, t_alignment, t_offset, t_allocator_policy >
+		t_value_type, t_alignment, t_offset, t_arena >
 			this_type;
 	typedef psyq::_allocator_base< t_value_type, t_alignment, t_offset >
 		super_type;
 
 //.............................................................................
 public:
-	typedef t_allocator_policy allocator_policy;
+	typedef t_arena arena;
 
 	//-------------------------------------------------------------------------
 	template<
@@ -133,11 +133,11 @@ public:
 		std::size_t t_other_alignment =
 			boost::alignment_of< t_other_type >::value,
 		std::size_t t_other_offset = t_offset,
-		typename    t_other_policy = t_allocator_policy >
+		typename    t_other_arena = t_arena >
 	struct rebind
 	{
 		typedef psyq::allocator<
-			t_other_type, t_other_alignment, t_other_offset, t_other_policy >
+			t_other_type, t_other_alignment, t_other_offset, t_other_arena >
 				other;
 	};
 
@@ -158,13 +158,13 @@ public:
 		typename    t_other_type,
 		std::size_t t_other_alignment,
 		std::size_t t_other_offset,
-		typename    t_other_policy >
+		typename    t_other_arena >
 	allocator(
 		psyq::allocator<
 			t_other_type,
 			t_other_alignment,
 			t_other_offset,
-			t_other_policy > const&
+			t_other_arena > const&
 				i_source):
 	super_type(i_source)
 	{
@@ -184,7 +184,7 @@ public:
 			t_other_type,
 			t_other_alignment,
 			t_other_offset,
-			t_allocator_policy > const&)
+			t_arena > const&)
 	const
 	{
 		return true;
@@ -194,13 +194,13 @@ public:
 		typename    t_other_type,
 		std::size_t t_other_alignment,
 		std::size_t t_other_offset,
-		typename    t_other_policy >
+		typename    t_other_arena >
 	bool operator==(
 		psyq::allocator<
 			t_other_type,
 			t_other_alignment,
 			t_other_offset,
-			t_other_policy > const&)
+			t_other_arena > const&)
 	const
 	{
 		return false;
@@ -210,13 +210,13 @@ public:
 		typename    t_other_type,
 		std::size_t t_other_alignment,
 		std::size_t t_other_offset,
-		typename    t_other_policy >
+		typename    t_other_arena >
 	bool operator!=(
 		psyq::allocator<
 			t_other_type,
 			t_other_alignment,
 			t_other_offset,
-			t_other_policy > const&
+			t_other_arena > const&
 				i_right)
 	const
 	{
@@ -235,7 +235,7 @@ public:
 	{
 		(void)i_hint;
 		void* const a_memory(
-			(t_allocator_policy::malloc)(
+			(t_arena::malloc)(
 				i_num * sizeof(t_value_type),
 				t_alignment,
 				t_offset,
@@ -252,7 +252,7 @@ public:
 		typename this_type::pointer const   i_memory,
 		typename this_type::size_type const i_num)
 	{
-		(t_allocator_policy::free)(i_memory, i_num * sizeof(t_value_type));
+		(t_arena::free)(i_memory, i_num * sizeof(t_value_type));
 	}
 };
 

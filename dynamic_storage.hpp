@@ -50,7 +50,7 @@ public:
 			t_allocator::alignment,
 			t_allocator::offset,
 			i_allocator.get_name(),
-			boost::type< typename t_allocator::allocator_policy >());
+			boost::type< typename t_allocator::arena >());
 	}
 
 	//-------------------------------------------------------------------------
@@ -64,7 +64,7 @@ public:
 		std::size_t const  i_size,
 		t_allocator const& i_allocator)
 	{
-		return this->allocate< typename t_allocator::allocator_policy >(
+		return this->allocate< typename t_allocator::arena >(
 			i_size,
 			t_allocator::alignment,
 			t_allocator::offset,
@@ -78,7 +78,7 @@ public:
 	    @param[in] i_name      debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	template< typename t_allocator_policy >
+	template< typename t_arena >
 	void* allocate(
 		std::size_t       i_size,
 		std::size_t       i_alignment,
@@ -92,7 +92,7 @@ public:
 				i_alignment,
 				i_offset,
 				i_name,
-				boost::type< t_allocator_policy >());
+				boost::type< t_arena >());
 			if (NULL != a_storage.get_address())
 			{
 				this->swap(a_storage);
@@ -153,22 +153,22 @@ public:
 
 //.............................................................................
 private:
-	template< typename t_allocator_policy >
+	template< typename t_arena >
 	dynamic_storage(
 		std::size_t const i_size,
 		std::size_t const i_alignment,
 		std::size_t const i_offset,
 		char const* const i_name,
-		boost::type< t_allocator_policy > const&)
+		boost::type< t_arena > const&)
 	{
 		if (0 < i_size)
 		{
-			this->address_ = (t_allocator_policy::malloc)(
+			this->address_ = (t_arena::malloc)(
 				i_size, i_alignment, i_offset, i_name);
 			if (NULL != this->get_address())
 			{
 				this->size_ = i_size;
-				this->deallocator_ = &t_allocator_policy::free;
+				this->deallocator_ = &t_arena::free;
 				return;
 			}
 			PSYQ_ASSERT(false);
@@ -469,6 +469,41 @@ public:
 private:
 	HANDLE handle;
 };
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+class no_mutex
+{
+};
+
+template< typename t_mutex = boost::mutex >
+class lock_guard
+{
+public:
+	typedef t_mutex mutex;
+
+	explicit boost_lock(mutex& i_mutex):
+	lock_(i_mutex)
+	{
+		// pass
+	}
+
+private:
+	boost::lock_guard< mutex > lock_;
+};
+
+
+template< typename t_value_type >
+class class_mutex
+{
+public:
+	class lock
+	{
+	public:
+	private:
+		boost::lock_guard< boost::mutex > lock_;
+	};
+};
+
 #endif // 0
 
 #endif // PSYQ_DYNAMIC_STORAGE_HPP_

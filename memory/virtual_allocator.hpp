@@ -2,7 +2,7 @@
 #define PSYQ_VIRTUAL_ALLOCATOR_HPP_
 
 //#include <psyq/memory/allocator.hpp>
-//#include <psyq/memory/allocator_policy.hpp>
+//#include <psyq/memory/arena.hpp>
 
 namespace psyq
 {
@@ -38,12 +38,12 @@ public:
 
 	//-------------------------------------------------------------------------
 	explicit virtual_allocator(
-		psyq::allocator_policy::holder const& i_allocator_policy,
+		psyq::arena::holder const& i_arena,
 		char const* const i_name = PSYQ_ALLOCATOR_NAME_DEFAULT):
 	super_type(i_name),
-	allocator_policy_(i_allocator_policy)
+	arena_(i_arena)
 	{
-		PSYQ_ASSERT(NULL != this->get_allocator_policy().get());
+		PSYQ_ASSERT(NULL != this->get_arena().get());
 	}
 
 	/** @param[in] i_source copyŒ³instanceB
@@ -54,12 +54,12 @@ public:
 			t_other_type, t_other_alignment, t_offset > const&
 				i_source):
 	super_type(i_source),
-	allocator_policy_(i_source.get_allocator_policy())
+	arena_(i_source.get_arena())
 	{
 		BOOST_STATIC_ASSERT(t_other_alignment % t_alignment == 0);
 		PSYQ_ASSERT(
 			sizeof(t_value_type)
-				<= this->get_allocator_policy()->get_max_size());
+				<= this->get_arena()->get_max_size());
 	}
 
 	//-------------------------------------------------------------------------
@@ -74,10 +74,8 @@ public:
 			t_other_offset > const& i_right)
 	const
 	{
-		psyq::allocator_policy const& a_left(
-			*this->get_allocator_policy());
-		psyq::allocator_policy const& a_right(
-			*i_right.get_allocator_policy());
+		psyq::arena const& a_left(*this->get_arena());
+		psyq::arena const& a_right(*i_right.get_arena());
 		return &a_left == &a_right || a_left == a_right;
 	}
 
@@ -108,7 +106,7 @@ public:
 		void const* const                    i_hint = NULL)
 	{
 		void* const a_memory(
-			this->allocator_policy_->allcoate(
+			this->arena_->allcoate(
 				i_num * sizeof(t_value_type),
 				t_alignment,
 				t_offset,
@@ -125,7 +123,7 @@ public:
 		typename super_type::pointer const   i_memory,
 		typename super_type::size_type const i_num)
 	{
-		return this->allocator_policy_->deallocate(
+		return this->arena_->deallocate(
 			i_memory, i_num * sizeof(t_value_type));
 	}
 
@@ -133,18 +131,18 @@ public:
 	 */
 	typename super_type::size_type max_size() const
 	{
-		return this->allocator_policy_->get_max_size() / sizeof(t_value_type);
+		return this->arena_->get_max_size() / sizeof(t_value_type);
 	}
 
 	//-------------------------------------------------------------------------
-	psyq::allocator_policy::holder const& get_allocator_policy() const
+	psyq::arena::holder const& get_arena() const
 	{
-		return this->allocator_policy_;
+		return this->arena_;
 	}
 
 //.............................................................................
 private:
-	psyq::allocator_policy::holder allocator_policy_;
+	psyq::arena::holder arena_;
 };
 
 #endif // PSYQ_VIRTUAL_ALLOCATOR_HPP_

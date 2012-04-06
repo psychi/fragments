@@ -13,17 +13,18 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 固定sizeのmemory-pool。
-    @tparam t_allocator_policy memory割当policy。
+    @tparam t_arena memory割当policy。
+    @tparam t_mutex multi-thread対応に使うmutexの型。
  */
-template< typename t_allocator_policy, typename t_mutex >
+template< typename t_arena, typename t_mutex >
 class psyq::fixed_pool:
 	private boost::noncopyable
 {
-	typedef psyq::fixed_pool< t_allocator_policy, t_mutex > this_type;
+	typedef psyq::fixed_pool< t_arena, t_mutex > this_type;
 
 //.............................................................................
 public:
-	typedef t_allocator_policy allocator_policy;
+	typedef t_arena arena;
 
 	//-------------------------------------------------------------------------
 	~fixed_pool()
@@ -310,7 +311,7 @@ private:
 		std::size_t const a_alignment(
 			boost::alignment_of< typename this_type::chunk >::value);
 		void* const a_memory(
-			(t_allocator_policy::malloc)(
+			(t_arena::malloc)(
 				this->chunk_size_ + sizeof(typename this_type::chunk),
 				this->alignment_ < a_alignment? a_alignment: this->alignment_,
 				this->offset_,
@@ -363,7 +364,7 @@ private:
 	void destroy_chunk(typename this_type::chunk& i_chunk)
 	{
 		PSYQ_ASSERT(this->max_blocks_ <= i_chunk.num_blocks);
-		(t_allocator_policy::free)(
+		(t_arena::free)(
 			reinterpret_cast< boost::uint8_t* >(&i_chunk) - this->chunk_size_,
 			this->chunk_size_ + sizeof(typename this_type::chunk));
 	}

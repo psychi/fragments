@@ -2,7 +2,7 @@
 #define PSYQ_SINGLE_ALLOCATOR_HPP_
 
 //#include <psyq/memory/allocator.hpp>
-//#include <psyq/memory/fixed_allocator_policy.hpp>
+//#include <psyq/memory/fixed_arena.hpp>
 
 namespace psyq
 {
@@ -14,32 +14,32 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 一度にひとつのinstanceを確保する、std::allocator互換の割当子。
         配列は確保できない。
-    @tparam t_value_type       確保するinstanceの型。
-    @tparam t_alignment        instanceの配置境界値。byte単位。
-    @tparam t_offset           instanceの配置offset値。byte単位。
-    @tparam t_chunk_size       memory-chunkの最大size。byte単位。
-    @tparam t_allocator_policy 実際に使うmemory割当policy。
-	@tparam t_mutex            multi-thread対応に使うmutexの型。
+    @tparam t_value_type 確保するinstanceの型。
+    @tparam t_alignment  instanceの配置境界値。byte単位。
+    @tparam t_offset     instanceの配置offset値。byte単位。
+    @tparam t_chunk_size memory-chunkの最大size。byte単位。
+    @tparam t_arena      実際に使うmemory割当policy。
+	@tparam t_mutex      multi-thread対応に使うmutexの型。
  */
 template<
 	typename    t_value_type,
 	std::size_t t_alignment = boost::alignment_of< t_value_type >::value,
 	std::size_t t_offset = 0,
-	std::size_t t_chunk_size = PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT,
-	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT,
+	std::size_t t_chunk_size = PSYQ_FIXED_ARENA_CHUNK_SIZE_DEFAULT,
+	typename    t_arena = PSYQ_ARENA_DEFAULT,
 	typename    t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::single_allocator:
 	public psyq::allocator<
 		t_value_type,
 		t_alignment,
 		t_offset,
-		psyq::fixed_allocator_policy<
+		psyq::fixed_arena<
 			((sizeof(t_value_type) + t_alignment - 1) / t_alignment)
 				* t_alignment,
 			t_alignment,
 			t_offset,
 			t_chunk_size,
-			t_allocator_policy,
+			t_arena,
 			t_mutex > >
 {
 	typedef psyq::single_allocator<
@@ -47,20 +47,20 @@ class psyq::single_allocator:
 		t_alignment,
 		t_offset,
 		t_chunk_size,
-		t_allocator_policy,
+		t_arena,
 		t_mutex >
 			this_type;
 	typedef psyq::allocator<
 		t_value_type,
 		t_alignment,
 		t_offset,
-		psyq::fixed_allocator_policy<
+		psyq::fixed_arena<
 			((sizeof(t_value_type) + t_alignment - 1) / t_alignment)
 				* t_alignment,
 			t_alignment,
 			t_offset,
 			t_chunk_size,
-			t_allocator_policy,
+			t_arena,
 			t_mutex > >
 				super_type;
 
@@ -72,7 +72,7 @@ public:
 			boost::alignment_of< t_other_type >::value,
 		std::size_t t_other_offset = t_offset,
 		std::size_t t_other_chunk = t_chunk_size,
-		typename    t_other_policy = t_allocator_policy,
+		typename    t_other_arena = t_arena,
 		typename    t_other_mutex = t_mutex >
 	struct rebind
 	{
@@ -81,7 +81,7 @@ public:
 			t_other_alignment,
 			t_other_offset,
 			t_other_chunk,
-			t_other_policy,
+			t_other_arena,
 			t_other_mutex >
 				other;
 	};
@@ -107,7 +107,7 @@ public:
 			t_other_alignment,
 			t_offset,
 			t_chunk_size,
-			t_allocator_policy,
+			t_arena,
 			t_mutex > const&
 				i_source):
 	super_type(i_source)
@@ -136,8 +136,7 @@ public:
 	 */
 	typename super_type::pointer allocate()
 	{
-		void* const a_memory(
-			(super_type::allocator_policy::malloc)(this->get_name()));
+		void* const a_memory((super_type::arena::malloc)(this->get_name()));
 		PSYQ_ASSERT(NULL != a_memory);
 		return static_cast< typename super_type::pointer >(a_memory);
 	}
@@ -157,7 +156,7 @@ public:
 	void deallocate(
 		typename super_type::pointer const i_memory)
 	{
-		(super_type::allocator_policy::free)(i_memory);
+		(super_type::arena::free)(i_memory);
 	}
 
 	//-------------------------------------------------------------------------
@@ -173,7 +172,7 @@ public:
 #ifdef _MSC_VER
 	static typename super_type::size_type max_size()
 	{
-		return t_allocator_policy::max_size / sizeof(t_value_type);
+		return t_arena::max_size / sizeof(t_value_type);
 	}
 #endif // _MSC_VER
 };

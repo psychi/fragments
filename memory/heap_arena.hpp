@@ -1,25 +1,25 @@
-#ifndef PSYQ_HEAP_ALLOCATOR_POLICY_HPP_
-#define PSYQ_HEAP_ALLOCATOR_POLICY_HPP_
+#ifndef PSYQ_HEAP_ARENA_HPP_
+#define PSYQ_HEAP_ARENA_HPP_
 
-//#include <psyq/memory/allocator_policy.hpp>
+//#include <psyq/memory/arena.hpp>
 
 #ifndef PSYQ_ALLOCATOR_POLICY_DEFAULT
-#define PSYQ_ALLOCATOR_POLICY_DEFAULT psyq::heap_allocator_policy
+#define PSYQ_ARENA_DEFAULT psyq::heap_arena
 #endif // !PSYQ_ALLOCATOR_POLICY_DEFAULT
 
 namespace psyq
 {
-	class heap_allocator_policy;
+	class heap_arena;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief heap-memoryäÑìñpolicyÅB
  */
-class psyq::heap_allocator_policy:
-	public psyq::allocator_policy
+class psyq::heap_arena:
+	public psyq::arena
 {
-	typedef psyq::heap_allocator_policy this_type;
-	typedef psyq::allocator_policy super_type;
+	typedef psyq::heap_arena this_type;
+	typedef psyq::arena super_type;
 
 //.............................................................................
 public:
@@ -121,4 +121,4 @@ public:
 	static std::size_t const max_size = static_cast< std::size_t >(-1);
 };
 
-#endif // !PSYQ_HEAP_ALLOCATOR_POLICY_HPP_
+#endif // !PSYQ_HEAP_ARENA_HPP_

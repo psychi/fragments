@@ -1,13 +1,13 @@
-#ifndef PSYQ_FIXED_ALLOCATOR_POLICY_HPP_
-#define PSYQ_FIXED_ALLOCATOR_POLICY_HPP_
+#ifndef PSYQ_FIXED_ARENA_HPP_
+#define PSYQ_FIXED_ARENA_HPP_
 
 //#include <psyq/singleton.hpp>
 //#include <psyq/memory/fixed_pool.hpp>
-//#include <psyq/memory/allocator_policy.hpp>
+//#include <psyq/memory/arena.hpp>
 
-#ifndef PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT
-#define PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT 4096
-#endif // !PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT
+#ifndef PSYQ_FIXED_ARENA_CHUNK_SIZE_DEFAULT
+#define PSYQ_FIXED_ARENA_CHUNK_SIZE_DEFAULT 4096
+#endif // !PSYQ_FIXED_ARENA_CHUNK_SIZE_DEFAULT
 
 namespace psyq
 {
@@ -18,37 +18,37 @@ namespace psyq
 		std::size_t,
 		typename,
 		typename >
-			class fixed_allocator_policy;
+			class fixed_arena;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 固定sizeのmemory割当policy。
-    @tparam t_max_size         割り当てるmemoryの大きさ。byte単位。
-    @tparam t_alignment        memoryの配置境界値。byte単位。
-    @tparam t_offset           memoryの配置offset値。byte単位。
-    @tparam t_chunk_size       memory-chunkの最大size。byte単位。
-    @tparam t_allocator_policy 実際に使うmemory割当policy。
-	@tparam t_mutex            multi-thread対応に使うmutexの型。
+    @tparam t_max_size   割り当てるmemoryの大きさ。byte単位。
+    @tparam t_alignment  memoryの配置境界値。byte単位。
+    @tparam t_offset     memoryの配置offset値。byte単位。
+    @tparam t_chunk_size memory-chunkの最大size。byte単位。
+    @tparam t_arena      実際に使うmemory割当policy。
+	@tparam t_mutex      multi-thread対応に使うmutexの型。
  */
 template<
 	std::size_t t_max_size,
 	std::size_t t_alignment = sizeof(void*),
 	std::size_t t_offset = 0,
-	std::size_t t_chunk_size = PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT,
-	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT,
+	std::size_t t_chunk_size = PSYQ_FIXED_ARENA_CHUNK_SIZE_DEFAULT,
+	typename    t_arena = PSYQ_ARENA_DEFAULT,
 	typename    t_mutex = PSYQ_MUTEX_DEFAULT >
-class psyq::fixed_allocator_policy:
-	public psyq::allocator_policy
+class psyq::fixed_arena:
+	public psyq::arena
 {
-	typedef fixed_allocator_policy<
+	typedef fixed_arena<
 		t_max_size,
 		t_alignment,
 		t_offset,
 		t_chunk_size,
-		t_allocator_policy,
+		t_arena,
 		t_mutex >
 			this_type;
-	typedef psyq::allocator_policy super_type;
+	typedef psyq::arena super_type;
 
 	// memory配置境界値が2のべき乗か確認。
 	BOOST_STATIC_ASSERT(0 == (t_alignment & (t_alignment - 1)));
@@ -61,12 +61,12 @@ class psyq::fixed_allocator_policy:
 #if 0
 	BOOST_STATIC_ASSERT(
 		t_max_size <= t_chunk_size
-			- sizeof(psyq::fixed_pool< t_allocator_policy, t_mutex >::chunk));
+			- sizeof(psyq::fixed_pool< t_arena, t_mutex >::chunk));
 #endif // 0
 
 //.............................................................................
 public:
-	typedef t_allocator_policy allocator_policy;
+	typedef t_arena arena;
 
 	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
@@ -132,10 +132,10 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief memory管理に使っているsingleton-poolを取得。
 	 */
-	static psyq::fixed_pool< t_allocator_policy, t_mutex >* get_pool()
+	static psyq::fixed_pool< t_arena, t_mutex >* get_pool()
 	{
 		typedef psyq::singleton<
-			psyq::fixed_pool< t_allocator_policy, t_mutex >,
+			psyq::fixed_pool< t_arena, t_mutex >,
 			this_type,
 			t_mutex >
 				singleton;
@@ -173,4 +173,4 @@ public:
 	static std::size_t const chunk_size = t_chunk_size;
 };
 
-#endif // !PSYQ_FIXED_ALLOCATOR_POLICY_HPP_
+#endif // !PSYQ_FIXED_ARENA_HPP_

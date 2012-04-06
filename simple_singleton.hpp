@@ -18,7 +18,7 @@ namespace psyq
 template<
 	typename t_value_type,
 	typename t_tag = psyq::_singleton_default_tag,
-	typename t_mutex = PSYQ_SINGLETON_MUTEX_DEFAULT >
+	typename t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::simple_singleton:
 	private boost::noncopyable
 {

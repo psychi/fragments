@@ -12,15 +12,22 @@
 
 namespace psyq
 {
-	template< typename > class small_pools;
-	template< std::size_t, std::size_t, std::size_t, std::size_t, typename >
-		class small_allocator_policy;
+	template< typename, typename > class small_pools;
+	template<
+		std::size_t,
+		std::size_t,
+		std::size_t,
+		std::size_t,
+		typename,
+		typename >
+			class small_allocator_policy;
 	template<
 		typename,
 		std::size_t,
 		std::size_t,
 		std::size_t,
 		std::size_t,
+		typename,
 		typename >
 			class small_allocator;
 }
@@ -28,12 +35,13 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 小規模sizeのmemory-pool集合。
     @tparam t_allocator_policy 実際に使うmemory割当policy。
+    @tparam t_mutex            multi-thread対応に使うmutexの型。
  */
-template< typename t_allocator_policy >
+template< typename t_allocator_policy, typename t_mutex >
 class psyq::small_pools:
 	private boost::noncopyable
 {
-	typedef psyq::small_pools< t_allocator_policy > this_type;
+	typedef psyq::small_pools< t_allocator_policy, t_mutex > this_type;
 
 //.............................................................................
 public:
@@ -56,7 +64,7 @@ public:
 		char const* const i_name)
 	{
 		// sizeに対応するmemory-poolを取得。
-		psyq::fixed_pool< t_allocator_policy >* const a_pool(
+		psyq::fixed_pool< t_allocator_policy, t_mutex >* const a_pool(
 			this->get_pool(this->get_index(i_size)));
 		if (NULL != a_pool)
 		{
@@ -82,7 +90,7 @@ public:
 		std::size_t const i_size)
 	{
 		// sizeに対応するmemory-poolを取得。
-		psyq::fixed_pool< t_allocator_policy >* const a_pool(
+		psyq::fixed_pool< t_allocator_policy, t_mutex >* const a_pool(
 			this->get_pool(this->get_index(i_size)));
 		if (NULL != a_pool)
 		{
@@ -118,7 +126,7 @@ public:
 	 */
 	std::size_t get_alignment() const
 	{
-		psyq::fixed_pool< t_allocator_policy > const* const a_pool(
+		psyq::fixed_pool< t_allocator_policy, t_mutex > const* const a_pool(
 			this->get_pool(0));
 		return NULL != a_pool? a_pool->get_alignment(): 0;
 	}
@@ -128,7 +136,7 @@ public:
 	 */
 	std::size_t get_offset() const
 	{
-		psyq::fixed_pool< t_allocator_policy > const* const a_pool(
+		psyq::fixed_pool< t_allocator_policy, t_mutex > const* const a_pool(
 			this->get_pool(0));
 		return NULL != a_pool? a_pool->get_offset(): 0;
 	}
@@ -141,17 +149,17 @@ public:
 	/** @brief memory-poolを取得。
 	    @param[in] i_index memory-poolのindex番号。
 	 */
-	virtual psyq::fixed_pool< t_allocator_policy > const* get_pool(
+	virtual psyq::fixed_pool< t_allocator_policy, t_mutex > const* get_pool(
 		std::size_t const i_index)
 	const = 0;
 
 	/** @brief memory-poolを取得。
 	    @param[in] i_index memory-poolのindex番号。
 	 */
-	psyq::fixed_pool< t_allocator_policy >* get_pool(
+	psyq::fixed_pool< t_allocator_policy, t_mutex >* get_pool(
 		std::size_t const i_index)
 	{
-		return const_cast< psyq::fixed_pool< t_allocator_policy >* >(
+		return const_cast< psyq::fixed_pool< t_allocator_policy, t_mutex >* >(
 			const_cast< this_type const* >(this)->get_pool(i_index));
 	}
 
@@ -170,18 +178,25 @@ protected:
     @tparam t_chunk_size       memory-chunkの最大size。byte単位。
     @tparam t_small_size       扱う小規模sizeの最大値。byte単位。
     @tparam t_allocator_policy 実際に使うmemory割当policy。
+    @tparam t_mutex            multi-thread対応に使うmutexの型。
  */
 template<
 	std::size_t t_alignment = sizeof(void*),
 	std::size_t t_offset = 0,
 	std::size_t t_chunk_size = PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT,
 	std::size_t t_small_size = PSYQ_SMALL_ALLOCATOR_POLICY_SMALL_SIZE_DEFAULT,
-	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT >
+	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT,
+	typename    t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::small_allocator_policy:
 	public psyq::allocator_policy
 {
 	typedef psyq::small_allocator_policy<
-		t_alignment, t_offset, t_chunk_size, t_small_size, t_allocator_policy >
+		t_alignment,
+		t_offset,
+		t_chunk_size,
+		t_small_size,
+		t_allocator_policy,
+		t_mutex >
 			this_type;
 	typedef psyq::allocator_policy super_type;
 
@@ -236,9 +251,9 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	static psyq::small_pools< t_allocator_policy >* get_pools()
+	static psyq::small_pools< t_allocator_policy, t_mutex >* get_pools()
 	{
-		return psyq::singleton< typename this_type::pools >::construct();
+		return psyq::singleton< typename this_type::pools, t_mutex >::construct();
 	}
 
 	//-------------------------------------------------------------------------
@@ -268,7 +283,7 @@ private:
 	{
 	public:
 		explicit set_pool(
-			psyq::fixed_pool< t_allocator_policy >** const i_pools):
+			psyq::fixed_pool< t_allocator_policy, t_mutex >** const i_pools):
 		pools_(i_pools)
 		{
 			// pass
@@ -282,20 +297,21 @@ private:
 				t_alignment,
 				t_offset,
 				t_chunk_size,
-				t_allocator_policy >::get_pool();
+				t_allocator_policy,
+				t_mutex >::get_pool();
 		}
 
 	private:
-		psyq::fixed_pool< t_allocator_policy >** pools_;
+		psyq::fixed_pool< t_allocator_policy, t_mutex >** pools_;
 	};
 
 	//-------------------------------------------------------------------------
  	class pools:
-		public psyq::small_pools< t_allocator_policy >
+		public psyq::small_pools< t_allocator_policy, t_mutex >
 	{
 	public:
 		pools():
-		psyq::small_pools< t_allocator_policy >()
+		psyq::small_pools< t_allocator_policy, t_mutex >()
 		{
 			typedef boost::mpl::range_c< std::size_t, 0, num_pools > range;
 			boost::mpl::for_each< range >(set_pool(this->pools_));
@@ -306,7 +322,7 @@ private:
 			return num_pools;
 		}
 
-		virtual psyq::fixed_pool< t_allocator_policy > const* get_pool(
+		virtual psyq::fixed_pool< t_allocator_policy, t_mutex > const* get_pool(
 			std::size_t const i_index)
 		const
 		{
@@ -317,7 +333,7 @@ private:
 		static std::size_t const num_pools =
 			t_alignment < t_small_size? t_small_size / t_alignment: 1;
 
-		psyq::fixed_pool< t_allocator_policy >* pools_[num_pools];
+		psyq::fixed_pool< t_allocator_policy, t_mutex >* pools_[num_pools];
 	};
 
 //.............................................................................
@@ -331,12 +347,13 @@ public:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 小規模sizeのinstance割当子。
-    @tparam t_value_type    確保するinstanceの型。
-    @tparam t_alignment     instanceの配置境界値。byte単位。
-    @tparam t_offset        instanceの配置offset値。byte単位。
-    @tparam t_chunk_size    memory-chunkの最大size。byte単位。
-	@tparam t_small_size    扱う小規模sizeの最大値。byte単位。
+    @tparam t_value_type       確保するinstanceの型。
+    @tparam t_alignment        instanceの配置境界値。byte単位。
+    @tparam t_offset           instanceの配置offset値。byte単位。
+    @tparam t_chunk_size       memory-chunkの最大size。byte単位。
+	@tparam t_small_size       扱う小規模sizeの最大値。byte単位。
     @tparam t_allocator_policy 実際に使うmemory割当policy。
+    @tparam t_mutex            multi-thread対応に使うmutexの型。
  */
 template<
 	typename    t_value_type,
@@ -344,7 +361,8 @@ template<
 	std::size_t t_offset = 0,
 	std::size_t t_chunk_size = PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT,
 	std::size_t t_small_size = PSYQ_SMALL_ALLOCATOR_POLICY_SMALL_SIZE_DEFAULT,
-	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT >
+	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT,
+	typename    t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::small_allocator:
 	public psyq::allocator<
 		t_value_type,
@@ -355,7 +373,8 @@ class psyq::small_allocator:
 			t_offset,
 			t_chunk_size,
 			t_small_size,
-			t_allocator_policy > >
+			t_allocator_policy,
+		   	t_mutex > >
 {
 	typedef psyq::small_allocator<
 		t_value_type,
@@ -363,7 +382,8 @@ class psyq::small_allocator:
 		t_offset,
 		t_chunk_size,
 		t_small_size,
-		t_allocator_policy >
+		t_allocator_policy,
+		t_mutex >
 			this_type;
 	typedef psyq::allocator<
 		t_value_type,
@@ -374,7 +394,8 @@ class psyq::small_allocator:
 			t_offset,
 			t_chunk_size,
 			t_small_size,
-			t_allocator_policy > >
+			t_allocator_policy,
+			t_mutex > >
 				super_type;
 
 //.............................................................................
@@ -386,7 +407,8 @@ public:
 		std::size_t t_other_offset = t_offset,
 		std::size_t t_other_chunk = t_chunk_size,
 		std::size_t t_other_small = t_small_size,
-		typename    t_other_policy = t_allocator_policy >
+		typename    t_other_policy = t_allocator_policy,
+		typename    t_other_mutex = t_mutex >
 	struct rebind
 	{
 		typedef psyq::small_allocator<
@@ -395,7 +417,8 @@ public:
 			t_other_offset,
 			t_other_chunk,
 			t_other_small,
-			t_other_policy >
+			t_other_policy,
+			t_other_mutex >
 				other;
 	};
 
@@ -421,7 +444,8 @@ public:
 			t_offset,
 			t_chunk_size,
 			t_small_size,
-			t_allocator_policy > const&
+			t_allocator_policy,
+			t_mutex > const&
 				i_source):
 	super_type(i_source)
 	{

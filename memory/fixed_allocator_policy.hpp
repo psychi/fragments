@@ -11,8 +11,14 @@
 
 namespace psyq
 {
-	template< std::size_t, std::size_t, std::size_t, std::size_t, typename >
-		class fixed_allocator_policy;
+	template<
+		std::size_t,
+		std::size_t,
+		std::size_t,
+		std::size_t,
+		typename,
+		typename >
+			class fixed_allocator_policy;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -22,13 +28,15 @@ namespace psyq
     @tparam t_offset           memoryの配置offset値。byte単位。
     @tparam t_chunk_size       memory-chunkの最大size。byte単位。
     @tparam t_allocator_policy 実際に使うmemory割当policy。
+	@tparam t_mutex            multi-thread対応に使うmutexの型。
  */
 template<
 	std::size_t t_max_size,
 	std::size_t t_alignment = sizeof(void*),
 	std::size_t t_offset = 0,
 	std::size_t t_chunk_size = PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT,
-	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT >
+	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT,
+	typename    t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::fixed_allocator_policy:
 	public psyq::allocator_policy
 {
@@ -37,7 +45,8 @@ class psyq::fixed_allocator_policy:
 		t_alignment,
 		t_offset,
 		t_chunk_size,
-		t_allocator_policy >
+		t_allocator_policy,
+		t_mutex >
 			this_type;
 	typedef psyq::allocator_policy super_type;
 
@@ -52,7 +61,7 @@ class psyq::fixed_allocator_policy:
 #if 0
 	BOOST_STATIC_ASSERT(
 		t_max_size <= t_chunk_size
-			- sizeof(psyq::fixed_pool< t_allocator_policy >::chunk));
+			- sizeof(psyq::fixed_pool< t_allocator_policy, t_mutex >::chunk));
 #endif // 0
 
 //.............................................................................
@@ -123,10 +132,12 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief memory管理に使っているsingleton-poolを取得。
 	 */
-	static psyq::fixed_pool< t_allocator_policy >* get_pool()
+	static psyq::fixed_pool< t_allocator_policy, t_mutex >* get_pool()
 	{
 		typedef psyq::singleton<
-			psyq::fixed_pool< t_allocator_policy >, this_type >
+			psyq::fixed_pool< t_allocator_policy, t_mutex >,
+			this_type,
+			t_mutex >
 				singleton;
 		return singleton::construct(
 			boost::in_place(
@@ -134,7 +145,8 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 一度に確保できるmemoryの最大sizeを取得。byte単位。
+	/** @brief malloc()に指定できるmemoryの最大sizeを取得。
+	    @return malloc()に指定できる確保できるmemoryの最大size。byte単位。
 	 */
 	virtual std::size_t get_max_size() const
 	{

@@ -3,21 +3,23 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/cstdint.hpp>
+#include <boost/thread/locks.hpp>
+#include <boost/thread/mutex.hpp>
 
 namespace psyq
 {
-	template< typename > class fixed_pool;
+	template< typename, typename > class fixed_pool;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 固定sizeのmemory-pool。
     @tparam t_allocator_policy memory割当policy。
  */
-template< typename t_allocator_policy >
+template< typename t_allocator_policy, typename t_mutex >
 class psyq::fixed_pool:
 	private boost::noncopyable
 {
-	typedef psyq::fixed_pool< t_allocator_policy > this_type;
+	typedef psyq::fixed_pool< t_allocator_policy, t_mutex > this_type;
 
 //.............................................................................
 public:
@@ -80,6 +82,8 @@ public:
 	 */
 	void* allocate(char const* const i_name)
 	{
+		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
+
 		// memory確保chunkを決定。
 		if (NULL != this->allocator_chunk_)
 		{
@@ -128,6 +132,7 @@ public:
 		{
 			return true;
 		}
+		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
 
 		// memory解放chunkを決定。
 		if (!this->find_deallocator(i_memory))
@@ -415,6 +420,7 @@ private:
 	std::size_t                alignment_;
 	std::size_t                offset_;
 	std::size_t                chunk_size_;
+	t_mutex                    mutex_;
 };
 
 #endif // !PSYQ_FIXED_POOL_HPP_

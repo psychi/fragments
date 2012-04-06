@@ -6,8 +6,9 @@
 
 namespace psyq
 {
-	template< typename, std::size_t, std::size_t, std::size_t, typename >
-		class single_allocator;
+	template<
+		typename, std::size_t, std::size_t, std::size_t, typename, typename >
+			class single_allocator;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -18,13 +19,15 @@ namespace psyq
     @tparam t_offset           instanceの配置offset値。byte単位。
     @tparam t_chunk_size       memory-chunkの最大size。byte単位。
     @tparam t_allocator_policy 実際に使うmemory割当policy。
+	@tparam t_mutex            multi-thread対応に使うmutexの型。
  */
 template<
 	typename    t_value_type,
 	std::size_t t_alignment = boost::alignment_of< t_value_type >::value,
 	std::size_t t_offset = 0,
 	std::size_t t_chunk_size = PSYQ_FIXED_ALLOCATOR_POLICY_CHUNK_SIZE_DEFAULT,
-	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT >
+	typename    t_allocator_policy = PSYQ_ALLOCATOR_POLICY_DEFAULT,
+	typename    t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::single_allocator:
 	public psyq::allocator<
 		t_value_type,
@@ -36,10 +39,16 @@ class psyq::single_allocator:
 			t_alignment,
 			t_offset,
 			t_chunk_size,
-			t_allocator_policy > >
+			t_allocator_policy,
+			t_mutex > >
 {
 	typedef psyq::single_allocator<
-		t_value_type, t_alignment, t_offset, t_chunk_size, t_allocator_policy >
+		t_value_type,
+		t_alignment,
+		t_offset,
+		t_chunk_size,
+		t_allocator_policy,
+		t_mutex >
 			this_type;
 	typedef psyq::allocator<
 		t_value_type,
@@ -51,7 +60,8 @@ class psyq::single_allocator:
 			t_alignment,
 			t_offset,
 			t_chunk_size,
-			t_allocator_policy > >
+			t_allocator_policy,
+			t_mutex > >
 				super_type;
 
 //.............................................................................
@@ -62,7 +72,8 @@ public:
 			boost::alignment_of< t_other_type >::value,
 		std::size_t t_other_offset = t_offset,
 		std::size_t t_other_chunk = t_chunk_size,
-		typename    t_other_policy = t_allocator_policy >
+		typename    t_other_policy = t_allocator_policy,
+		typename    t_other_mutex = t_mutex >
 	struct rebind
 	{
 		typedef psyq::single_allocator<
@@ -70,7 +81,8 @@ public:
 			t_other_alignment,
 			t_other_offset,
 			t_other_chunk,
-			t_other_policy >
+			t_other_policy,
+			t_other_mutex >
 				other;
 	};
 
@@ -95,7 +107,8 @@ public:
 			t_other_alignment,
 			t_offset,
 			t_chunk_size,
-			t_allocator_policy > const&
+			t_allocator_policy,
+			t_mutex > const&
 				i_source):
 	super_type(i_source)
 	{

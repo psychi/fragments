@@ -95,7 +95,8 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 一度に確保できるmemoryの最大sizeを取得。byte単位。
+	/** @brief malloc()に指定できるmemoryの最大sizeを取得。
+	    @return malloc()に指定できる確保できるmemoryの最大size。byte単位。
 	 */
 	virtual std::size_t get_max_size() const
 	{

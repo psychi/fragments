@@ -9,13 +9,13 @@
 #include <boost/thread/locks.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/once.hpp>
-#ifdef PSYQ_SINGLETON_DISABLE_THREADS
-	#undef PSYQ_SINGLETON_MUTEX_DEFAULT
-	#define PSYQ_SINGLETON_MUTEX_DEFAULT psyq::_dummy_mutex
-#elif !defined(PSYQ_SINGLETON_MUTEX_DEFAULT)
-	#define PSYQ_SINGLETON_MUTEX_DEFAULT boost::mutex
-#endif // PSYQ_SINGLETON_DISABLE_THREADS
 
+#ifdef PSYQ_DISABLE_THREADS
+	#undef PSYQ_MUTEX_DEFAULT
+	#define PSYQ_MUTEX_DEFAULT psyq::_dummy_mutex
+#elif !defined(PSYQ_MUTEX_DEFAULT)
+	#define PSYQ_MUTEX_DEFAULT boost::mutex
+#endif // PSYQ_DISABLE_THREADS
 
 namespace psyq
 {
@@ -31,10 +31,14 @@ namespace psyq
 class psyq::_dummy_mutex:
 	private boost::noncopyable
 {
+public:
+	void lock() const {}
+	void unlock() const {}
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 破棄関数の単方向連結list。
+    @tparam t_mutex multi-thread対応に使うmutexの型。
  */
 template< typename t_mutex >
 class psyq::_singleton_ordered_destructor:
@@ -185,6 +189,8 @@ private:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief singleton-instance領域の単方向連結list。
+    @tparam t_value_type singleton-instanceの型。
+    @tparam t_mutex      multi-thread対応に使うmutexの型。
  */
 template< typename t_value_type, typename t_mutex >
 class psyq::_singleton_ordered_storage:
@@ -255,12 +261,13 @@ public:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief singleton管理class。
     @tparam t_value_type singletonの型。
-    @tparam t_tag 同じ型のsingletonで区別が必要な場合に使うtag。
+    @tparam t_tag        同じ型のsingletonで区別が必要な場合に使うtag。
+    @tparam t_mutex      multi-thread対応に使うmutexの型。
  */
 template<
 	typename t_value_type,
 	typename t_tag = psyq::_singleton_default_tag,
-	typename t_mutex = PSYQ_SINGLETON_MUTEX_DEFAULT >
+	typename t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::singleton:
 	private boost::noncopyable
 {
@@ -349,14 +356,11 @@ private:
 	template< typename t_mutex_policy >
 	static t_value_type* get(boost::type< t_mutex_policy > const&)
 	{
-		if (this_type::construct_flag().count <= 0)
-		{
-			return NULL;
-		}
-		else
+		if (0 < this_type::construct_flag().count)
 		{
 			return this_type::instance().get_pointer();
 		}
+		return NULL;
 	}
 
 	static t_value_type* get(boost::type< psyq::_dummy_mutex > const&)
@@ -390,6 +394,7 @@ private:
 		int const            i_destruct_priority,
 		boost::type< psyq::_dummy_mutex > const&)
 	{
+		// sigleton-instance構築関数を一度だけ呼び出す。
 		typename this_type::storage& a_instance(this_type::instance());
 		if (NULL == a_instance.get_pointer())
 		{

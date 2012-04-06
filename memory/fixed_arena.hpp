@@ -135,13 +135,10 @@ public:
 	static psyq::fixed_pool< t_arena, t_mutex >* get_pool()
 	{
 		typedef psyq::singleton<
-			psyq::fixed_pool< t_arena, t_mutex >,
-			this_type,
-			t_mutex >
-				singleton;
-		return singleton::construct(
-			boost::in_place(
-				t_max_size, t_alignment, t_offset, t_chunk_size));
+			psyq::fixed_pool< t_arena, t_mutex >, this_type, t_mutex >
+				pool_singleton;
+		return pool_singleton::construct(
+			boost::in_place(t_max_size, t_alignment, t_offset, t_chunk_size));
 	}
 
 	//-------------------------------------------------------------------------

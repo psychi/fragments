@@ -3,9 +3,9 @@
 
 //#include <psyq/memory/arena.hpp>
 
-#ifndef PSYQ_ALLOCATOR_POLICY_DEFAULT
+#ifndef PSYQ_ARENA_DEFAULT
 #define PSYQ_ARENA_DEFAULT psyq::heap_arena
-#endif // !PSYQ_ALLOCATOR_POLICY_DEFAULT
+#endif // !PSYQ_ARENA_DEFAULT
 
 namespace psyq
 {

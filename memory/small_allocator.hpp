@@ -253,7 +253,10 @@ public:
 	//-------------------------------------------------------------------------
 	static psyq::small_pools< t_arena, t_mutex >* get_pools()
 	{
-		return psyq::singleton< typename this_type::pools, t_mutex >::construct();
+		typedef psyq::singleton<
+			typename this_type::pools, psyq::_singleton_default_tag, t_mutex >
+				pools_singleton;
+		return pools_singleton::construct();
 	}
 
 	//-------------------------------------------------------------------------
@@ -386,17 +389,8 @@ class psyq::small_allocator:
 		t_mutex >
 			this_type;
 	typedef psyq::allocator<
-		t_value_type,
-		t_alignment,
-		t_offset,
-		psyq::small_arena<
-			t_alignment,
-			t_offset,
-			t_chunk_size,
-			t_small_size,
-			t_arena,
-			t_mutex > >
-				super_type;
+		t_value_type, t_alignment, t_offset, typename this_type::arena >
+			super_type;
 
 //.............................................................................
 public:

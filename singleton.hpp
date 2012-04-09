@@ -21,9 +21,9 @@ namespace psyq
 {
 	template< typename, typename, typename > class singleton;
 
+	class _dummy_mutex;
 	template< typename > class _singleton_ordered_destructor;
 	template< typename, typename > class _singleton_ordered_storage;
-	class _dummy_mutex;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -90,8 +90,7 @@ private:
 	/** @brief ”jŠüŠÖ”list‚É“o˜^‚·‚éB
 	    @param[in] i_priority ”jŠü‚Ì—Dæ‡ˆÊB
 	 */
-	void join(
-		int const i_priority)
+	void join(int const i_priority)
 	{
 		PSYQ_ASSERT(this == this->next);
 
@@ -155,10 +154,10 @@ private:
 
 	//-------------------------------------------------------------------------
 	/** @brief —Dæ‡ˆÊ‚ğ”äŠrB
+	    @param[in] i_priority ¶•Ó‚Ì—Dæ‡ˆÊB
+	    @param[in] i_node     ‰E•Ó‚ÌnodeB
 	 */
-	static bool less_equal(
-		int const              i_priority,
-		this_type const* const i_node)
+	static bool less_equal(int const i_priority, this_type const* const i_node)
 	{
 		return NULL == i_node || i_priority <= i_node->priority;
 	}
@@ -224,8 +223,7 @@ public:
 	    @param[in] i_constructor boost::in_place‚©‚çæ“¾‚µ‚½\’zŠÖ”objectB
 	 */
 	template< typename t_constructor >
-	void construct(
-		t_constructor const& i_constructor)
+	void construct(t_constructor const& i_constructor)
 	{
 		PSYQ_ASSERT(NULL == this->get_pointer());
 		i_constructor.template apply< t_value_type >(&this->storage);
@@ -235,8 +233,7 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief •Û‚µ‚Ä‚¢‚é—Ìˆæ‚Ìinstance‚ğ”jŠü‚·‚éB
 	 */
-	static void destruct(
-		super_type* const i_instance)
+	static void destruct(super_type* const i_instance)
 	{
 		this_type* const a_instance(static_cast< this_type* >(i_instance));
 		t_value_type* const a_pointer(a_instance->get_pointer());
@@ -293,8 +290,7 @@ public:
 	    @param[in] i_destruct_priority ”jŠü‚Ì—Dæ‡ˆÊB”jŠü‚Í¸‡‚És‚í‚ê‚éB
 	    @return singleton-instance‚Ö‚ÌpointerB
 	 */
-	static t_value_type* construct(
-		int const i_destruct_priority = 0)
+	static t_value_type* construct(int const i_destruct_priority = 0)
 	{
 		return this_type::construct(boost::in_place(), i_destruct_priority);
 	}
@@ -330,16 +326,17 @@ public:
 
 	/** @brief ”jŠü‚Ì—Dæ‡ˆÊ‚ğİ’è‚·‚éB
 	        ‚½‚¾‚µsingleton-instance‚ğ‚Ü‚¾\’z‚µ‚Ä‚È‚¢ê‡‚ÍA‰½‚às‚í‚È‚¢B
-	    @param[in] i_destruct_priority ”jŠü‚Ì—Dæ‡ˆÊB”jŠü‚Í¸‡‚És‚í‚ê‚éB
+	    @param[in] i_priority ”jŠü‚Ì—Dæ‡ˆÊB”jŠü‚Í¸‡‚És‚í‚ê‚éB
+	    @return i_priority‚ğ‚»‚Ì‚Ü‚Ü•Ô‚·B
 	 */
-	static void set_destruct_priority(
-		int const i_destruct_priority)
+	static int set_destruct_priority(int const i_priority)
 	{
 		if (NULL != this_type::get())
 		{
 			this_type::set_destruct_priority(
-				i_destruct_priority, boost::type< t_mutex >());
+				i_priority, boost::type< t_mutex >());
 		}
+		return i_priority;
 	}
 
 //.............................................................................
@@ -347,6 +344,14 @@ private:
 	typedef psyq::_singleton_ordered_storage< t_value_type, t_mutex > storage;
 
 	//-------------------------------------------------------------------------
+	/** @brief singleton-instance—Ìˆæ‚ğQÆ‚·‚éB
+	 */
+	static typename this_type::storage& instance()
+	{
+		static typename this_type::storage s_instance;
+		return s_instance;
+	}
+
 	template< typename t_mutex_policy >
 	static t_value_type* get(boost::type< t_mutex_policy > const&)
 	{
@@ -366,7 +371,7 @@ private:
 	template< typename t_constructor, typename t_mutex_policy >
 	static t_value_type* construct_once(
 		t_constructor const& i_constructor,
-		int const            i_destruct_priority,
+		int const            i_priority,
 		boost::type< t_mutex_policy > const&)
 	{
 		// sigleton-instance\’zŠÖ”‚ğˆê“x‚¾‚¯ŒÄ‚Ño‚·B
@@ -375,7 +380,7 @@ private:
 			boost::bind(
 				&construct_instance< t_constructor >,
 				&i_constructor,
-				i_destruct_priority));
+				i_priority));
 
 		// singleton-instance‚ğæ“¾B
 		PSYQ_ASSERT(NULL != this_type::instance().get_pointer());
@@ -385,7 +390,7 @@ private:
 	template< typename t_constructor >
 	static t_value_type* construct_once(
 		t_constructor const& i_constructor,
-		int const            i_destruct_priority,
+		int const            i_priority,
 		boost::type< psyq::_dummy_mutex > const&)
 	{
 		// sigleton-instance\’zŠÖ”‚ğˆê“x‚¾‚¯ŒÄ‚Ño‚·B
@@ -393,7 +398,7 @@ private:
 		if (NULL == a_instance.get_pointer())
 		{
 			// instance‚ğ”jŠüŠÖ”list‚É“o˜^‚µ‚Ä‚©‚ç\’z‚·‚éB
-			a_instance.join(i_destruct_priority);
+			a_instance.join(i_priority);
 			a_instance.construct(i_constructor);
 		}
 
@@ -404,19 +409,19 @@ private:
 
 	/** @brief singleton-instance‚ğ\’z‚·‚éB
 	    @param[in] i_constructor boost::in_place‚©‚çæ“¾‚µ‚½\’zŠÖ”objectB
-	    @param[in] i_destruct_priority ”jŠü‚Ì—Dæ‡ˆÊB
+	    @param[in] i_priority ”jŠü‚Ì—Dæ‡ˆÊB
 	 */
 	template< typename t_constructor >
 	static void construct_instance(
 		t_constructor const* const i_constructor,
-		int const                  i_destruct_priority)
+		int const                  i_priority)
 	{
 		// mutex‚ğ\’z‚·‚éB
 		psyq::_singleton_ordered_destructor< t_mutex >::class_mutex();
 
 		// instance‚ğ”jŠüŠÖ”list‚É“o˜^‚µ‚Ä‚©‚ç\’z‚·‚éB
 		typename this_type::storage& a_instance(this_type::instance());
-		a_instance.join(i_destruct_priority);
+		a_instance.join(i_priority);
 		a_instance.construct(*i_constructor);
 	}
 
@@ -431,37 +436,28 @@ private:
 	//-------------------------------------------------------------------------
 	template< typename t_mutex_policy >
 	static void set_destruct_priority(
-		int const i_destruct_priority,
+		int const i_priority,
 		boost::type< t_mutex_policy > const&)
 	{
 		// lock‚µ‚Ä‚©‚ç—Dæ‡ˆÊ‚ğ•ÏX‚·‚éB
 		boost::lock_guard< t_mutex > const a_lock(
 			this_type::storage::class_mutex());
 		this_type::set_destruct_priority(
-			i_destruct_priority, boost::type< psyq::_dummy_mutex >());
+			i_priority, boost::type< psyq::_dummy_mutex >());
 	}
 
 	static void set_destruct_priority(
-		int const i_destruct_priority,
+		int const i_priority,
 		boost::type< psyq::_dummy_mutex > const&)
 	{
 		// ˆÙ‚È‚é—Dæ‡ˆÊ‚ªİ’è‚³‚ê‚½ê‡‚É‚Ì‚İ•ÏX‚·‚éB
 		typename this_type::storage& a_instance(this_type::instance());
-		if (a_instance.get_priority() != i_destruct_priority)
+		if (a_instance.get_priority() != i_priority)
 		{
 			// ”jŠüŠÖ”list‚©‚çæ‚èŠO‚µ‚½Œã‚ÅA“o˜^‚·‚éB
 			a_instance.unjoin();
-			a_instance.join(i_destruct_priority);
+			a_instance.join(i_priority);
 		}
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief singleton-instance—Ìˆæ‚ğQÆ‚·‚éB
-	 */
-	static typename this_type::storage& instance()
-	{
-		static typename this_type::storage s_instance;
-		return s_instance;
 	}
 
 	//-------------------------------------------------------------------------

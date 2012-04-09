@@ -62,9 +62,7 @@ public:
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	    @param[in] i_size   解放するmemoryの大きさ。byte単位。
 	 */
-	void deallocate(
-		void* const       i_memory,
-		std::size_t const i_size)
+	void deallocate(void* const i_memory, std::size_t const i_size)
 	{
 		(*this->get_free())(i_memory, i_size);
 	}

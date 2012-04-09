@@ -174,7 +174,7 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief 確保するmemoryの大きさを取得。
-		@return 確保するmemoryの大きさ。byte単位。
+	    @return 確保するmemoryの大きさ。byte単位。
 	 */
 	std::size_t get_block_size() const
 	{
@@ -182,7 +182,7 @@ public:
 	}
 
 	/** @brief 確保するmemoryの配置境界値を取得。
-		@return 確保するmemoryの配置境界値。byte単位。
+	    @return 確保するmemoryの配置境界値。byte単位。
 	 */
 	std::size_t get_alignment() const
 	{

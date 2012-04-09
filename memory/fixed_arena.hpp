@@ -69,6 +69,8 @@ public:
 	typedef t_arena arena;
 
 	//-------------------------------------------------------------------------
+	/** @brief singletonとして使う、固定sizeのmemory-pool。
+	 */
 	class pool:
 		public psyq::fixed_pool< t_arena, t_mutex >
 	{
@@ -110,8 +112,7 @@ public:
 	    @param[in] i_name debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	static void* (malloc)(
-		char const* const i_name)
+	static void* (malloc)(char const* const i_name)
 	{
 		return this_type::pool::singleton::construct()->allocate(i_name);
 	}
@@ -121,9 +122,7 @@ public:
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	    @param[in] i_size   解放するmemoryの大きさ。byte単位。
 	 */
-	static void (free)(
-		void* const       i_memory,
-		std::size_t const i_size)
+	static void (free)(void* const i_memory, std::size_t const i_size)
 	{
 		if (0 < i_size && i_size <= t_max_size)
 		{
@@ -138,8 +137,7 @@ public:
 	/** @brief memoryを解放する。
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	 */
-	static void (free)(
-		void* const i_memory)
+	static void (free)(void* const i_memory)
 	{
 		this_type::pool::singleton::construct()->deallocate(i_memory);
 	}

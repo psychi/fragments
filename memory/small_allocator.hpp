@@ -59,9 +59,7 @@ public:
 	    @param[in] i_name debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	void* allocate(
-		std::size_t const i_size,
-		char const* const i_name)
+	void* allocate(std::size_t const i_size, char const* const i_name)
 	{
 		// sizeに対応するmemory-poolを取得。
 		psyq::fixed_pool< t_arena, t_mutex >* const a_pool(
@@ -85,9 +83,7 @@ public:
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	    @param[in] i_size   解放するmemoryの大きさ。byte単位。
 	 */
-	void deallocate(
-		void* const       i_memory,
-		std::size_t const i_size)
+	void deallocate(void* const i_memory, std::size_t const i_size)
 	{
 		// sizeに対応するmemory-poolを取得。
 		psyq::fixed_pool< t_arena, t_mutex >* const a_pool(
@@ -207,7 +203,9 @@ public:
 	typedef t_arena arena;
 
 	//-------------------------------------------------------------------------
- 	class pools:
+	/** @brief singletonとして使う、小規模sizeのmemory-pool集合。
+	 */
+	class pools:
 		public psyq::small_pools< t_arena, t_mutex >
 	{
 	public:
@@ -264,9 +262,7 @@ public:
 	    @param[in] i_name debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	static void* (malloc)(
-		std::size_t const i_size,
-		char const* const i_name)
+	static void* (malloc)(std::size_t const i_size, char const* const i_name)
 	{
 		return this_type::pools::singleton::construct()->allocate(
 			i_size, i_name);
@@ -277,9 +273,7 @@ public:
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	    @param[in] i_size   解放するmemoryの大きさ。byte単位。
 	 */
-	static void (free)(
-		void* const       i_memory,
-		std::size_t const i_size)
+	static void (free)(void* const i_memory, std::size_t const i_size)
 	{
 		this_type::pools::singleton::construct()->deallocate(i_memory, i_size);
 	}
@@ -373,7 +367,7 @@ class psyq::small_allocator:
 			t_chunk_size,
 			t_small_size,
 			t_arena,
-		   	t_mutex > >
+			t_mutex > >
 {
 	typedef psyq::small_allocator<
 		t_value_type,

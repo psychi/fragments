@@ -76,9 +76,7 @@ public:
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	    @param[in] i_size   解放するmemoryの大きさ。byte単位。
 	 */
-	static void (free)(
-		void* const       i_memory,
-		std::size_t const i_size)
+	static void (free)(void* const i_memory, std::size_t const i_size)
 	{
 		(void)i_size;
 

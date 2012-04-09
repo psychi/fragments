@@ -143,8 +143,7 @@ public:
 		this->super_type::deallocate(i_memory, i_num);
 	}
 
-	void deallocate(
-		typename super_type::pointer const i_memory)
+	void deallocate(typename super_type::pointer const i_memory)
 	{
 		(super_type::arena::free)(i_memory);
 	}

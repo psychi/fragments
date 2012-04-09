@@ -292,8 +292,158 @@ private:
 	std::FILE* handle_;
 };
 
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 #if 0
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+class file_task
+{
+	typedef file_task this_type;
+
+public:
+	typedef boost::shared_ptr< this_type > holder;
+	typedef boost::weak_ptr< this_type > observer;
+
+	enum State
+	{
+		State_IDLE,
+		State_BUSY,
+	};
+
+	this_type::State get_state() const
+	{
+		if (NULL != this->lock_.get())
+		{
+			PSYQ_ASSERT(this == this->lock_.get());
+			return this_type::State_BUSY;
+		}
+		else if (NULL != this->next_)
+		{
+			PSYQ_ASSERT(this == this->next_);
+			return this_type::State_IDLE;
+		}
+		else
+		{
+			return this_type::State_IDLE;
+		}
+	}
+
+protected:
+	file_task():
+	next_(NULL)
+	{
+		// pass
+	}
+
+private:
+	this_type::holder lock_;
+	this_type*        next_;
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+class file_server
+{
+public:
+	void add(
+		file_task::holder const& i_task)
+	{
+		file_task* const a_task(i_task.get());
+		if (NULL == a_task || NULL != a_task->lock_.get())
+		{
+			return;
+		}
+
+		// taskを予約行列に挿入。
+		file_task* const a_back(this->reserve_line_);
+		if (NULL != a_back)
+		{
+			a_task->next_ = a_back->next_;
+			a_back->next_ = a_task;
+		}
+		else
+		{
+			a_task->next_ = a_task;
+		}
+		this->reserve_line_ = a_task;
+		a_task->lock_ = i_task;
+	}
+
+	void update()
+	{
+		if (NULL != this->reserve_line_)
+		{
+			boost::lock_guard< t_mutex > a_lock(this->mutex_);
+
+			// 予約行列を待機行列に移動。
+			file_task* const a_reserve_line(this->reserve_line_);
+			file_task* const a_wait_line(this->wait_line_);
+			this->reserve_line_ = NULL;
+			this->wait_line_ = a_reserve_line;
+			if (NULL != a_wait_line)
+			{
+				file_task* const a_running_front(a_wait_line->next_);
+				a_wait_line->next_ = a_reserve_line->next_;
+				a_reserve_line->next_ = a_running_front;
+			}
+			else
+			{
+				// 待機行列が空だったので、threadを起動。
+				this->condition_.notify();
+			}
+		}
+	}
+
+private:
+	void run_other_thread()
+	{
+		for (;;)
+		{
+			file_task* const a_task(this->eject_wait_task());
+			if (NULL != a_task)
+			{
+				a_task->run();
+				a_task->next_ = a_task;
+				a_task->lock_.reset();
+			}
+			else if (!this->stop_)
+			{
+				this->condition_.wait();
+			}
+			else
+			{
+				break;
+			}
+		}
+	}
+
+	file_task* eject_wait_task()
+	{
+		if (NULL == this->wait_line_)
+		{
+			return NULL;
+		}
+
+		boost::lock_guard< t_mutex > a_lock(this->mutex_);
+		file_task* const a_task(this->wait_line_->next_);
+		if (a_task != a_task->next_)
+		{
+			this->wait_line_->next_ = a_task->next_;
+			a_task->next_ = a_task;
+		}
+		else
+		{
+			this->wait_line_ = NULL;
+		}
+		return a_task;
+	}
+
+private:
+	file_task* reserve_line_;
+	file_task* wait_line_;
+	boost::condition condition_
+	t_mutex    mutex_;
+	bool       stop_;
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 class file_task
 {
 	typedef file_task this_type;

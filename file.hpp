@@ -48,7 +48,7 @@ public:
 	}
 
 	file_server():
-	line_(NULL),
+	queue_(NULL),
 	stop_(false)
 	{
 		static boost::once_flag s_constructed = BOOST_ONCE_INIT;
@@ -70,11 +70,7 @@ public:
 		this->stop_ = true;
 		if (i_sync)
 		{
-			{
-				boost::lock_guard< boost::mutex > const a_lock(
-					this_type::class_mutex());
-				this->condition_.notify_all();
-			}
+			this->condition_.notify_all();
 			this->thread_.join();
 		}
 	}
@@ -90,21 +86,22 @@ public:
 		{
 			boost::lock_guard< boost::mutex > const a_lock(
 				this_type::class_mutex());
+
+			// file-taskをlockする。
 			a_task->lock_ = i_task;
-			file_task* const a_back(this->line_);
+
+			// file-taskを待ち行列の末尾に挿入。
+			file_task* const a_back(this->queue_);
+			this->queue_ = a_task;
 			if (NULL != a_back)
 			{
-				// 待ち行列の末尾に挿入。
 				a_task->next_ = a_back->next_;
 				a_back->next_ = a_task;
-				this->line_ = a_task;
 			}
 			else
 			{
-				a_task->next_ = a_task;
-				this->line_ = a_task;
-
 				// 待ち行列が空だったので、threadを起動。
+				a_task->next_ = a_task;
 				this->condition_.notify_all();
 			}
 		}
@@ -117,7 +114,7 @@ private:
 	{
 		while (!this->stop_)
 		{
-			file_task::holder const a_task(this->eject_wait_task());
+			file_task::holder const a_task(this->pop_front());
 			if (!a_task.unique() && NULL != a_task.get())
 			{
 				a_task->run();
@@ -128,30 +125,32 @@ private:
 	//-------------------------------------------------------------------------
 	/** @brief 待ち行列の先頭を取り出す。
 	 */
-	file_task::holder eject_wait_task()
+	file_task::holder pop_front()
 	{
 		boost::unique_lock< boost::mutex > a_lock(this_type::class_mutex());
-		if (NULL == this->line_)
+		if (NULL == this->queue_)
 		{
 			// 待ち行列が空だったので、状態が変わるまで待機。
 			this->condition_.wait(a_lock);
-			if (NULL == this->line_)
+			if (NULL == this->queue_)
 			{
 				return file_task::holder();
 			}
 		}
 
 		// 待ち行列の先頭を取り出す。
-		file_task* const a_task(this->line_->next_);
+		file_task* const a_task(this->queue_->next_);
 		if (a_task != a_task->next_)
 		{
-			this->line_->next_ = a_task->next_;
+			this->queue_->next_ = a_task->next_;
 			a_task->next_ = a_task;
 		}
 		else
 		{
-			this->line_ = NULL;
+			this->queue_ = NULL;
 		}
+
+		// file-taskのlockを解除。
 		file_task::holder a_holder;
 		a_holder.swap(a_task->lock_);
 		return a_holder;
@@ -173,7 +172,7 @@ private:
 private:
 	boost::thread    thread_;
 	boost::condition condition_;
-	file_task*       line_;
+	file_task*       queue_;
 	bool             stop_;
 };
 

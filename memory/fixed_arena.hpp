@@ -113,7 +113,7 @@ public:
 	static void* (malloc)(
 		char const* const i_name)
 	{
-		return this_type::get_pool()->allocate(i_name);
+		return this_type::pool::singleton::construct()->allocate(i_name);
 	}
 
 	//-------------------------------------------------------------------------
@@ -141,15 +141,7 @@ public:
 	static void (free)(
 		void* const i_memory)
 	{
-		this_type::get_pool()->deallocate(i_memory);
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief memoryŠÇ—‚ÉŽg‚Á‚Ä‚¢‚ésingleton-pool‚ðŽæ“¾B
-	 */
-	static typename this_type::pool* get_pool()
-	{
-		return this_type::pool::singleton::construct();
+		this_type::pool::singleton::construct()->deallocate(i_memory);
 	}
 
 	//-------------------------------------------------------------------------

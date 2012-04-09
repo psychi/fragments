@@ -268,7 +268,8 @@ public:
 		std::size_t const i_size,
 		char const* const i_name)
 	{
-		return this_type::get_pools()->allocate(i_size, i_name);
+		return this_type::pools::singleton::construct()->allocate(
+			i_size, i_name);
 	}
 
 	//-------------------------------------------------------------------------
@@ -280,13 +281,7 @@ public:
 		void* const       i_memory,
 		std::size_t const i_size)
 	{
-		this_type::get_pools()->deallocate(i_memory, i_size);
-	}
-
-	//-------------------------------------------------------------------------
-	static typename this_type::pools* get_pools()
-	{
-		return this_type::pools::singleton::construct();
+		this_type::pools::singleton::construct()->deallocate(i_memory, i_size);
 	}
 
 	//-------------------------------------------------------------------------
@@ -325,13 +320,15 @@ private:
 		template< typename t_index >
 		void operator()(t_index)
 		{
-			this->pools_[t_index::value] = psyq::fixed_arena<
+			typedef typename psyq::fixed_arena<
 				t_alignment * (1 + t_index::value),
 				t_alignment,
 				t_offset,
 				t_chunk_size,
 				t_arena,
-				t_mutex >::get_pool();
+				t_mutex >::pool::singleton
+					singleton_pool;
+			this->pools_[t_index::value] = singleton_pool::construct();
 		}
 
 	private:

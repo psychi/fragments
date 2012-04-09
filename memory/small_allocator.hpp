@@ -199,15 +199,45 @@ class psyq::small_arena:
 		t_mutex >
 			this_type;
 	typedef psyq::arena super_type;
-	class pools;
 
 	BOOST_STATIC_ASSERT(0 < t_small_size);
 
 //.............................................................................
 public:
 	typedef t_arena arena;
-	typedef psyq::singleton< typename this_type::pools, t_mutex >
-		singleton_pools;
+
+	//-------------------------------------------------------------------------
+ 	class pools:
+		public psyq::small_pools< t_arena, t_mutex >
+	{
+	public:
+		typedef psyq::singleton< pools, t_mutex > singleton;
+
+		pools():
+		psyq::small_pools< t_arena, t_mutex >()
+		{
+			typedef boost::mpl::range_c< std::size_t, 0, num_pools > range;
+			boost::mpl::for_each< range >(set_pool(this->pools_));
+		}
+
+		virtual std::size_t get_num_pools() const
+		{
+			return num_pools;
+		}
+
+		virtual psyq::fixed_pool< t_arena, t_mutex > const* get_pool(
+			std::size_t const i_index)
+		const
+		{
+			return i_index < num_pools? this->pools_[i_index]: NULL;
+		}
+
+		static std::size_t const num_pools =
+			t_alignment < t_small_size? t_small_size / t_alignment: 1;
+
+	private:
+		psyq::fixed_pool< t_arena, t_mutex >* pools_[num_pools];
+	};
 
 	//-------------------------------------------------------------------------
 	/** @brief memoryÇämï€Ç∑ÇÈÅB
@@ -254,9 +284,9 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	static psyq::small_pools< t_arena, t_mutex >* get_pools()
+	static typename this_type::pools* get_pools()
 	{
-		return this_type::singleton_pools::construct();
+		return this_type::pools::singleton::construct();
 	}
 
 	//-------------------------------------------------------------------------
@@ -306,39 +336,6 @@ private:
 
 	private:
 		psyq::fixed_pool< t_arena, t_mutex >** pools_;
-	};
-
-	//-------------------------------------------------------------------------
- 	class pools:
-		public psyq::small_pools< t_arena, t_mutex >
-	{
-		friend class boost::in_place_factory0;
-
-	public:
-		virtual std::size_t get_num_pools() const
-		{
-			return num_pools;
-		}
-
-		virtual psyq::fixed_pool< t_arena, t_mutex > const* get_pool(
-			std::size_t const i_index)
-		const
-		{
-			return i_index < num_pools? this->pools_[i_index]: NULL;
-		}
-
-	private:
-		pools():
-		psyq::small_pools< t_arena, t_mutex >()
-		{
-			typedef boost::mpl::range_c< std::size_t, 0, num_pools > range;
-			boost::mpl::for_each< range >(set_pool(this->pools_));
-		}
-
-		static std::size_t const num_pools =
-			t_alignment < t_small_size? t_small_size / t_alignment: 1;
-
-		psyq::fixed_pool< t_arena, t_mutex >* pools_[num_pools];
 	};
 
 //.............................................................................
@@ -403,7 +400,7 @@ public:
 		std::size_t t_other_offset = t_offset,
 		std::size_t t_other_chunk = t_chunk_size,
 		std::size_t t_other_small = t_small_size,
-		typename    t_other_policy = t_arena,
+		typename    t_other_arena = t_arena,
 		typename    t_other_mutex = t_mutex >
 	struct rebind
 	{
@@ -413,7 +410,7 @@ public:
 			t_other_offset,
 			t_other_chunk,
 			t_other_small,
-			t_other_policy,
+			t_other_arena,
 			t_other_mutex >
 				other;
 	};

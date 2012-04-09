@@ -49,7 +49,6 @@ class psyq::fixed_arena:
 		t_mutex >
 			this_type;
 	typedef psyq::arena super_type;
-	class pool;
 
 	// memory配置境界値が2のべき乗か確認。
 	BOOST_STATIC_ASSERT(0 == (t_alignment & (t_alignment - 1)));
@@ -68,8 +67,21 @@ class psyq::fixed_arena:
 //.............................................................................
 public:
 	typedef t_arena arena;
-	typedef psyq::singleton< typename this_type::pool, t_mutex >
-		singleton_pool;
+
+	//-------------------------------------------------------------------------
+	class pool:
+		public psyq::fixed_pool< t_arena, t_mutex >
+	{
+	public:
+		typedef psyq::singleton< pool, t_mutex > singleton;
+
+		pool():
+		psyq::fixed_pool< t_arena, t_mutex >(
+			t_max_size, t_alignment, t_offset, t_chunk_size)
+		{
+			// pass
+		}
+	};
 
 	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
@@ -135,9 +147,9 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief memory管理に使っているsingleton-poolを取得。
 	 */
-	static psyq::fixed_pool< t_arena, t_mutex >* get_pool()
+	static typename this_type::pool* get_pool()
 	{
-		return this_type::singleton_pool::construct();
+		return this_type::pool::singleton::construct();
 	}
 
 	//-------------------------------------------------------------------------
@@ -160,22 +172,6 @@ protected:
 	{
 		return &this_type::free;
 	}
-
-//.............................................................................
-private:
-	class pool:
-		public psyq::fixed_pool< t_arena, t_mutex >
-	{
-		friend class boost::in_place_factory0;
-
-	private:
-		pool():
-		psyq::fixed_pool< t_arena, t_mutex >(
-			t_max_size, t_alignment, t_offset, t_chunk_size)
-		{
-			// pass
-		}
-	};
 
 //.............................................................................
 public:

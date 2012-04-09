@@ -207,7 +207,7 @@ class psyq::small_arena:
 public:
 	typedef t_arena arena;
 	typedef psyq::singleton< typename this_type::pools, t_mutex >
-		pools_singleton;
+		singleton_pools;
 
 	//-------------------------------------------------------------------------
 	/** @brief memoryÇämï€Ç∑ÇÈÅB
@@ -256,7 +256,7 @@ public:
 	//-------------------------------------------------------------------------
 	static psyq::small_pools< t_arena, t_mutex >* get_pools()
 	{
-		return typename this_type::pools_singleton::construct();
+		return this_type::singleton_pools::construct();
 	}
 
 	//-------------------------------------------------------------------------
@@ -312,14 +312,9 @@ private:
  	class pools:
 		public psyq::small_pools< t_arena, t_mutex >
 	{
-	public:
-		pools():
-		psyq::small_pools< t_arena, t_mutex >()
-		{
-			typedef boost::mpl::range_c< std::size_t, 0, num_pools > range;
-			boost::mpl::for_each< range >(set_pool(this->pools_));
-		}
+		friend class boost::in_place_factory0;
 
+	public:
 		virtual std::size_t get_num_pools() const
 		{
 			return num_pools;
@@ -333,6 +328,13 @@ private:
 		}
 
 	private:
+		pools():
+		psyq::small_pools< t_arena, t_mutex >()
+		{
+			typedef boost::mpl::range_c< std::size_t, 0, num_pools > range;
+			boost::mpl::for_each< range >(set_pool(this->pools_));
+		}
+
 		static std::size_t const num_pools =
 			t_alignment < t_small_size? t_small_size / t_alignment: 1;
 

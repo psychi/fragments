@@ -137,8 +137,7 @@ public:
 	 */
 	static psyq::fixed_pool< t_arena, t_mutex >* get_pool()
 	{
-		return this_type::singleton_pool::construct(
-			boost::in_place(t_max_size, t_alignment, t_offset, t_chunk_size));
+		return this_type::singleton_pool::construct();
 	}
 
 	//-------------------------------------------------------------------------
@@ -167,17 +166,12 @@ private:
 	class pool:
 		public psyq::fixed_pool< t_arena, t_mutex >
 	{
-		friend class boost::in_place_factory4<
-			std::size_t, std::size_t, std::size_t, std::size_t >;
+		friend class boost::in_place_factory0;
 
 	private:
-		pool(
-			std::size_t const i_block_size,
-			std::size_t const i_alignment,
-			std::size_t const i_offset,
-			std::size_t const i_chunk_size):
+		pool():
 		psyq::fixed_pool< t_arena, t_mutex >(
-			i_block_size, i_alignment, i_offset, i_chunk_size)
+			t_max_size, t_alignment, t_offset, t_chunk_size)
 		{
 			// pass
 		}

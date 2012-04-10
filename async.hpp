@@ -7,12 +7,20 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/once.hpp>
 
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class async_node
+namespace psyq
 {
-	typedef async_node this_type;
+	class async_node;
+	class async_server;
+	class async_functor;
+}
 
-	friend class async_server;
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+class psyq::async_node:
+	private boost::noncopyable
+{
+	typedef psyq::async_node this_type;
+
+	friend class psyq::async_server;
 
 //.............................................................................
 public:
@@ -21,10 +29,9 @@ public:
 
 	enum state
 	{
-		state_IDLE,
 		state_BUSY,
-		state_ABORTED,
 		state_FINISHED,
+		state_ABORTED,
 		state_end
 	};
 
@@ -42,7 +49,7 @@ public:
 protected:
 	async_node():
 	next_(NULL),
-	state_(this_type::state_IDLE)
+	state_(this_type::state_FINISHED)
 	{
 		// pass
 	}
@@ -57,9 +64,10 @@ private:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class async_server
+class psyq::async_server:
+	private boost::noncopyable
 {
-	typedef async_server this_type;
+	typedef psyq::async_server this_type;
 
 //.............................................................................
 public:
@@ -68,73 +76,77 @@ public:
 	{
 		this->stop(true);
 
+		// queueを破棄。
 		boost::lock_guard< boost::mutex > const a_lock(
 			this_type::class_mutex());
-		if (NULL != this->busy_line_)
+		if (NULL != this->queue_)
 		{
-			this_type::clear_line(*this->busy_line_);
-		}
-		if (NULL != this->wait_line_)
-		{
-			this_type::clear_line(*this->wait_line_);
+			this_type::clear_queue(*this->queue_);
 		}
 	}
 
 	async_server():
-	busy_line_(NULL),
-	wait_line_(NULL),
+	queue_(NULL),
 	stop_(false)
 	{
+		/** @todo 2012-04-10
+		    thisを静的局所変数として構築した場合、class_mutex()のほうが先に
+			破棄されることがあるので、何か対策をしないと。
+		 */
 		static boost::once_flag s_constructed = BOOST_ONCE_INIT;
 		boost::call_once(&this_type::construct_class_mutex, s_constructed);
 		this->start();
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief async-nodeを追加。
-	    @param[in] i_node 追加するnode。
+	/** @brief async-nodeを登録。
+	    @param[in] i_node 登録するnode。
+	    @return 登録したasync-nodeの数。
 	 */
-	unsigned add(async_node::holder const& i_node)
+	unsigned add(psyq::async_node::holder const& i_node)
 	{
 		return this->add(&i_node, &i_node + 1);
 	}
 
-	/** @brief async-nodeをまとめて追加。
-	    @param[in] i_begin 追加するcontainerの先頭位置。
-	    @param[in] i_end   追加するcontainerの末尾位置。
+	/** @brief async-nodeをまとめて登録。
+	    @param[in] i_begin 登録するcontainerの先頭位置。
+	    @param[in] i_end   登録するcontainerの末尾位置。
+	    @return 登録したasync-nodeの数。
 	 */
 	template< typename t_iterator >
 	unsigned add(t_iterator const i_begin, t_iterator const i_end)
 	{
+		// containerを走査し、queueの末尾にnodeを挿入していく。
 		boost::lock_guard< boost::mutex > const a_lock(
 			this_type::class_mutex());
-		async_node* a_wait_line(this->wait_line_);
+		psyq::async_node* a_queue(this->queue_);
 		unsigned a_count(0);
 		for (t_iterator i = i_begin; i_end != i; ++i)
 		{
-			async_node* const a_node(i->get());
+			// すでにbusy状態のnodeは登録できない。
+			psyq::async_node* const a_node(i->get());
 			if (NULL != a_node
-				&& async_node::state_BUSY != a_node->get_state())
+				&& psyq::async_node::state_BUSY != a_node->get_state())
 			{
-				// 待機行列の末尾に挿入。
-				if (NULL != a_wait_line)
+				// queueの末尾に挿入。
+				if (NULL != a_queue)
 				{
-					a_node->next_ = a_wait_line->next_;
-					a_wait_line->next_ = a_node;
+					a_node->next_ = a_queue->next_;
+					a_queue->next_ = a_node;
 				}
 				else
 				{
 					a_node->next_ = a_node;
 				}
-				a_wait_line = a_node;
+				a_queue = a_node;
 
-				// nodeをlockする。
-				a_node->state_ = async_node::state_BUSY;
+				// nodeをbusy状態にする。
+				a_node->state_ = psyq::async_node::state_BUSY;
 				a_node->lock_ = *i;
 				++a_count;
 			}
 		}
-		this->wait_line_ = a_wait_line;
+		this->queue_ = a_queue;
 		this->condition_.notify_all();
 		return a_count;
 	}
@@ -166,16 +178,33 @@ private:
 	//-------------------------------------------------------------------------
 	void run()
 	{
-		bool a_reduce(false);
-		while (this->stop_)
+		while (!this->stop_)
 		{
-			this->merge_line(a_reduce);
-			if (NULL != this->busy_line_)
+			// 実行する範囲を決定。
+			psyq::async_node* a_first(NULL);
+			psyq::async_node* a_last(NULL);
 			{
-				a_reduce = this_type::run_line(*this->busy_line_);
+				boost::lock_guard< boost::mutex > const a_lock(
+					this_type::class_mutex());
+				if (NULL != this->queue_)
+				{
+					this->queue_ = this_type::reduce_queue(*this->queue_);
+				}
+				a_last = this->queue_;
+				if (NULL != a_last)
+				{
+					a_first = a_last->next_;
+				}
+			}
+
+			// queueを走査して実行。
+			if (NULL != a_first)
+			{
+				this_type::run_queue(*a_first, *a_last);
 			}
 			else
 			{
+				// queueが空になったので待機。
 				boost::unique_lock< boost::mutex > a_lock(
 					this_type::class_mutex());
 				this->condition_.wait(a_lock);
@@ -183,57 +212,36 @@ private:
 		}
 	}
 
-	void merge_line(bool const i_reduce)
-	{
-		boost::lock_guard< boost::mutex > const a_lock(
-			this_type::class_mutex());
-		if (i_reduce && NULL != this->busy_line_)
-		{
-			this->busy_line_ = this_type::reduce_line(*this->busy_line_);
-		}
-		if (NULL != this->wait_line_)
-		{
-			// 待機行列を稼働行列に合成する。
-			if (NULL != this->busy_line_)
-			{
-				std::swap(this->wait_line_->next_, this->busy_line_->next_);
-			}
-			this->busy_line_ = this->wait_line_;
-			this->wait_line_ = NULL;
-		}
-	}
-
 	//-------------------------------------------------------------------------
-	static bool run_line(async_node& i_back)
+	static void run_queue(
+		psyq::async_node&       i_first,
+		psyq::async_node const& i_last)
 	{
-		bool a_reduce(false);
-		async_node* a_node(i_back.next_);
+		psyq::async_node* a_node(&i_first);
 		for (;;)
 		{
 			a_node->state_ = a_node->run();
-			a_reduce = (
-				a_reduce || async_node::state_BUSY != a_node->get_state());
-			if (&i_back != a_node)
+			if (&i_last != a_node)
 			{
 				a_node = a_node->next_;
 			}
 			else
 			{
-				return a_reduce;
+				break;
 			}
 		}
 	}
 
-	static void clear_line(async_node& i_back)
+	static void clear_queue(psyq::async_node& i_last)
 	{
-		async_node* a_node(i_back.next_);
+		psyq::async_node* a_node(i_last.next_);
 		for (;;)
 		{
-			async_node* const a_next(a_node->next_);
-			a_node->state_ = async_node::state_ABORTED;
+			psyq::async_node* const a_next(a_node->next_);
+			a_node->state_ = psyq::async_node::state_ABORTED;
 			a_node->next_ = NULL;
 			a_node->lock_.reset();
-			if (&i_back != a_node)
+			if (&i_last != a_node)
 			{
 				a_node = a_next;
 			}
@@ -244,14 +252,14 @@ private:
 		}
 	}
 
-	static async_node* reduce_line(async_node& i_back)
+	static psyq::async_node* reduce_queue(psyq::async_node& i_last)
 	{
-		async_node* a_last_node(&i_back);
+		psyq::async_node* a_last_node(&i_last);
 		bool a_empty(true);
 		for (;;)
 		{
-			async_node* const a_node(a_last_node->next_);
-			if (async_node::state_BUSY != a_node->get_state())
+			psyq::async_node* const a_node(a_last_node->next_);
+			if (psyq::async_node::state_BUSY != a_node->get_state())
 			{
 				a_last_node->next_ = a_node->next_;
 				a_node->next_ = NULL;
@@ -262,7 +270,7 @@ private:
 				a_empty = false;
 				a_last_node = a_node;
 			}
-			if (&i_back == a_node)
+			if (&i_last == a_node)
 			{
 				return a_empty? NULL: a_last_node;
 			}
@@ -283,11 +291,48 @@ private:
 
 //.............................................................................
 private:
-	boost::thread    thread_;
-	boost::condition condition_;
-	async_node*      busy_line_;
-	async_node*      wait_line_;
-	bool             stop_;
+	boost::thread     thread_;
+	boost::condition  condition_;
+	psyq::async_node* queue_;
+	bool              stop_;
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+class psyq::async_functor:
+	private boost::noncopyable
+{
+public:
+	template< typename t_value_type, typename t_allocator >
+	static psyq::async_node::holder create(
+		t_value_type const& i_functor,
+		t_allocator const&  i_allocator)
+	{
+		return boost::allocate_shared< wrapper< t_value_type > >(
+			i_allocator, i_functor);
+	}
+
+private:
+	template< typename t_value_type >
+	class wrapper:
+		public psyq::async_node
+	{
+	public:
+		explicit wrapper(
+			t_value_type const& i_functor):
+		psyq::async_node(),
+		functor_(i_functor)
+		{
+			// pass
+		}
+
+		virtual boost::int32_t run()
+		{
+			return this->functor_();
+		}
+
+	private:
+		t_value_type functor_;
+	};
 };
 
 #endif // !PSYQ_ASYNC_HPP_

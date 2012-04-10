@@ -1,5 +1,5 @@
-#ifndef PSYQ_FILE_HPP_
-#define PSYQ_FILE_HPP_
+#ifndef PSYQ_ASYNC_HPP_
+#define PSYQ_ASYNC_HPP_
 
 #include <boost/bind/bind.hpp>
 #include <boost/thread/thread.hpp>
@@ -8,11 +8,11 @@
 #include <boost/thread/once.hpp>
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class file_task
+class async_node
 {
-	typedef file_task this_type;
+	typedef async_node this_type;
 
-	friend class file_server;
+	friend class async_server;
 
 //.............................................................................
 public:
@@ -28,7 +28,7 @@ public:
 		state_end
 	};
 
-	virtual ~file_task()
+	virtual ~async_node()
 	{
 		PSYQ_ASSERT(this_type::state_BUSY != this->get_state());
 	}
@@ -40,7 +40,7 @@ public:
 
 //.............................................................................
 protected:
-	file_task():
+	async_node():
 	next_(NULL),
 	state_(this_type::state_IDLE)
 	{
@@ -57,21 +57,32 @@ private:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class file_server
+class async_server
 {
-	typedef file_server this_type;
+	typedef async_server this_type;
 
 //.............................................................................
 public:
 	//-------------------------------------------------------------------------
-	~file_server()
+	~async_server()
 	{
 		this->stop(true);
-		PSYQ_ASSERT(NULL == this->queue_);
+
+		boost::lock_guard< boost::mutex > const a_lock(
+			this_type::class_mutex());
+		if (NULL != this->busy_line_)
+		{
+			this_type::clear_line(*this->busy_line_);
+		}
+		if (NULL != this->wait_line_)
+		{
+			this_type::clear_line(*this->wait_line_);
+		}
 	}
 
-	file_server():
-	queue_(NULL),
+	async_server():
+	busy_line_(NULL),
+	wait_line_(NULL),
 	stop_(false)
 	{
 		static boost::once_flag s_constructed = BOOST_ONCE_INIT;
@@ -80,36 +91,52 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief file-taskを追加。
-	    @param[in] i_task 追加するfile-task。
+	/** @brief async-nodeを追加。
+	    @param[in] i_node 追加するnode。
 	 */
-	void add(file_task::holder const& i_task)
+	unsigned add(async_node::holder const& i_node)
 	{
-		this->add(&i_task, &i_task + 1);
+		return this->add(&i_node, &i_node + 1);
 	}
 
-	/** @brief file-taskを追加。
-	    @param[in] i_begin 追加するfile-task-containerの先頭位置。
-	    @param[in] i_end   追加するfile-task-containerの末尾位置。
+	/** @brief async-nodeをまとめて追加。
+	    @param[in] i_begin 追加するcontainerの先頭位置。
+	    @param[in] i_end   追加するcontainerの末尾位置。
 	 */
 	template< typename t_iterator >
-	void add(t_iterator const i_begin, t_iterator const i_end)
+	unsigned add(t_iterator const i_begin, t_iterator const i_end)
 	{
-		if (i_begin != i_end)
+		boost::lock_guard< boost::mutex > const a_lock(
+			this_type::class_mutex());
+		async_node* a_wait_line(this->wait_line_);
+		unsigned a_count(0);
+		for (t_iterator i = i_begin; i_end != i; ++i)
 		{
-			boost::lock_guard< boost::mutex > const a_lock(
-				this_type::class_mutex());
-			bool const a_notify(NULL == this->queue_);
-			for (t_iterator i = i_begin; i_end != i; ++i)
+			async_node* const a_node(i->get());
+			if (NULL != a_node
+				&& async_node::state_BUSY != a_node->get_state())
 			{
-				this->queue_ = this_type::push_back(this->queue_, *i);
-			}
-			if (a_notify)
-			{
-				// 待ち行列が空だったので、threadを起動。
-				this->condition_.notify_all();
+				// 待機行列の末尾に挿入。
+				if (NULL != a_wait_line)
+				{
+					a_node->next_ = a_wait_line->next_;
+					a_wait_line->next_ = a_node;
+				}
+				else
+				{
+					a_node->next_ = a_node;
+				}
+				a_wait_line = a_node;
+
+				// nodeをlockする。
+				a_node->state_ = async_node::state_BUSY;
+				a_node->lock_ = *i;
+				++a_count;
 			}
 		}
+		this->wait_line_ = a_wait_line;
+		this->condition_.notify_all();
+		return a_count;
 	}
 
 //.............................................................................
@@ -137,82 +164,107 @@ private:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 待ち行列の末尾に挿入。
-	 */
-	static file_task* push_back(
-		file_task* const         i_back,
-		file_task::holder const& i_task)
+	void run()
 	{
-		// file-taskをlockする。
-		file_task* const a_task(i_task.get());
-		if (NULL == a_task)
+		bool a_reduce(false);
+		while (this->stop_)
 		{
-			return i_back;
-		}
-		a_task->lock_ = i_task;
-		a_task->state_ = file_task::state_BUSY;
-
-		// file-taskを待ち行列の末尾に挿入。
-		if (NULL != i_back)
-		{
-			a_task->next_ = i_back->next_;
-			i_back->next_ = a_task;
-		}
-		else
-		{
-			a_task->next_ = a_task;
-		}
-		return a_task;
-	}
-
-	/** @brief 待ち行列の先頭を取り出す。
-	 */
-	file_task::holder pop_front()
-	{
-		boost::unique_lock< boost::mutex > a_lock(this_type::class_mutex());
-		if (NULL == this->queue_)
-		{
-			// 待ち行列が空だったので、状態が変わるまで待機。
-			this->condition_.wait(a_lock);
-			if (NULL == this->queue_)
+			this->merge_line(a_reduce);
+			if (NULL != this->busy_line_)
 			{
-				return file_task::holder();
+				a_reduce = this_type::run_line(*this->busy_line_);
+			}
+			else
+			{
+				boost::unique_lock< boost::mutex > a_lock(
+					this_type::class_mutex());
+				this->condition_.wait(a_lock);
 			}
 		}
+	}
 
-		// 待ち行列の先頭を取り出す。
-		file_task* const a_task(this->queue_->next_);
-		if (a_task != a_task->next_)
+	void merge_line(bool const i_reduce)
+	{
+		boost::lock_guard< boost::mutex > const a_lock(
+			this_type::class_mutex());
+		if (i_reduce && NULL != this->busy_line_)
 		{
-			this->queue_->next_ = a_task->next_;
-			a_task->next_ = a_task;
+			this->busy_line_ = this_type::reduce_line(*this->busy_line_);
 		}
-		else
+		if (NULL != this->wait_line_)
 		{
-			this->queue_ = NULL;
+			// 待機行列を稼働行列に合成する。
+			if (NULL != this->busy_line_)
+			{
+				std::swap(this->wait_line_->next_, this->busy_line_->next_);
+			}
+			this->busy_line_ = this->wait_line_;
+			this->wait_line_ = NULL;
 		}
-
-		// file-taskのlockを解除。
-		file_task::holder a_holder;
-		a_holder.swap(a_task->lock_);
-		return a_holder;
 	}
 
 	//-------------------------------------------------------------------------
-	void run()
+	static bool run_line(async_node& i_back)
 	{
+		bool a_reduce(false);
+		async_node* a_node(i_back.next_);
 		for (;;)
 		{
-			// 待ち行列の先頭を取り出し、実行する。
-			file_task::holder const a_task(this->pop_front());
-			if (NULL != a_task.get())
+			a_node->state_ = a_node->run();
+			a_reduce = (
+				a_reduce || async_node::state_BUSY != a_node->get_state());
+			if (&i_back != a_node)
 			{
-				a_task->state_ = a_task.unique()?
-					file_task::state_ABORTED: a_task->run();
+				a_node = a_node->next_;
 			}
-			else if (this->stop_)
+			else
+			{
+				return a_reduce;
+			}
+		}
+	}
+
+	static void clear_line(async_node& i_back)
+	{
+		async_node* a_node(i_back.next_);
+		for (;;)
+		{
+			async_node* const a_next(a_node->next_);
+			a_node->state_ = async_node::state_ABORTED;
+			a_node->next_ = NULL;
+			a_node->lock_.reset();
+			if (&i_back != a_node)
+			{
+				a_node = a_next;
+			}
+			else
 			{
 				break;
+			}
+		}
+	}
+
+	static async_node* reduce_line(async_node& i_back)
+	{
+		async_node* a_last_node(&i_back);
+		bool a_empty(true);
+		for (;;)
+		{
+			async_node* const a_node(a_last_node->next_);
+			if (async_node::state_BUSY != a_node->get_state())
+			{
+				a_last_node->next_ = a_node->next_;
+				a_node->next_ = NULL;
+				a_node->lock_.reset();
+			}
+			else
+			{
+				a_empty = false;
+				a_last_node = a_node;
+			}
+			if (&i_back == a_node)
+			{
+				return a_empty? NULL: a_last_node;
 			}
 		}
 	}
@@ -233,8 +285,9 @@ private:
 private:
 	boost::thread    thread_;
 	boost::condition condition_;
-	file_task*       queue_;
+	async_node*      busy_line_;
+	async_node*      wait_line_;
 	bool             stop_;
 };
 
-#endif // !PSYQ_FILE_HPP_
+#endif // !PSYQ_ASYNC_HPP_

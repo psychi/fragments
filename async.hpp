@@ -125,8 +125,11 @@ public:
 		{
 			// ‚·‚Å‚Ébusyó‘Ô‚Ìnode‚Í“o˜^‚Å‚«‚È‚¢B
 			psyq::async_node* const a_node(i->get());
-			if (NULL != a_node
-				&& psyq::async_node::state_BUSY != a_node->get_state())
+			/** @todo 2012-04-10
+			    busyó‘Ô‚Å‚Í‚È‚¢‚ªAqueue‚É“o˜^‚³‚ê‚½‚Ü‚Ü‚Ìnode‚à‚ ‚é‚Ì‚ÅA
+			    ‚±‚Ì‚Ü‚Ü‚Å‚Í‚æ‚­‚È‚¢B
+			 */
+			if (NULL != a_node && NULL == a_node->next_)
 			{
 				// queue‚Ì––”ö‚É‘}“üB
 				if (NULL != a_queue)
@@ -217,15 +220,10 @@ private:
 		psyq::async_node&       i_first,
 		psyq::async_node const& i_last)
 	{
-		psyq::async_node* a_node(&i_first);
-		for (;;)
+		for (psyq::async_node* i = &i_first; ; i = i->next_)
 		{
-			a_node->state_ = a_node->run();
-			if (&i_last != a_node)
-			{
-				a_node = a_node->next_;
-			}
-			else
+			i->state_ = i->run();
+			if (&i_last == i)
 			{
 				break;
 			}

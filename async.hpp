@@ -125,7 +125,7 @@ public:
 	template< typename t_iterator >
 	std::size_t add(t_iterator const i_begin, t_iterator const i_end)
 	{
-		// 現在のqueueを取り出す。
+		// 元のqueueを取り出す。
 		boost::unique_lock< boost::mutex > a_lock(this->mutex_);
 		this_type::client_ptr* const a_last_queue(this->queue_begin_);
 		std::size_t const a_last_capacity(this->queue_capacity_);
@@ -145,7 +145,7 @@ public:
 				a_last_size,
 				a_last_capacity));
 
-		// containerを新しいqueueにcopy。
+		// containerが持つ非同期処理clientを、新しいqueueにcopy。
 		std::size_t a_count(0);
 		t_iterator a_iterator(i_begin);
 		for (std::size_t i = a_last_size; i < a_capacity; ++i, ++a_iterator)
@@ -219,14 +219,14 @@ private:
 		this_type::client_ptr* a_queue(NULL);
 		std::size_t a_size(0);
 		std::size_t a_capacity(0);
+		psyq::arena& a_arena(*this->arena_);
 		boost::unique_lock< boost::mutex > a_lock(this->mutex_);
 		while (!this->stop_)
 		{
-			// queueの大きさを更新。
+			// queueが空になったら待機。
 			this->queue_size_ = a_size;
 			if (a_size <= 0 && NULL == this->queue_begin_)
 			{
-				// queueが空になったら待機。
 				this->condition_.wait(a_lock);
 			}
 
@@ -253,7 +253,7 @@ private:
 
 				// 元のqueueを破棄。
 				this_type::destroy_queue(
-					*this->arena_, a_last_queue, a_last_capacity);
+					a_arena, a_last_queue, a_last_capacity);
 			}
 
 			// mutexをunlockしてから、queueを実行。
@@ -262,13 +262,13 @@ private:
 			if (a_size <= 0)
 			{
 				// queueが空になったので破棄。
-				this_type::destroy_queue(*this->arena_, a_queue, a_capacity);
+				this_type::destroy_queue(a_arena, a_queue, a_capacity);
 				a_queue = NULL;
 				a_capacity = 0;
 			}
 			a_lock.lock();
 		}
-		this_type::destroy_queue(*this->arena_, a_queue, a_capacity);
+		this_type::destroy_queue(a_arena, a_queue, a_capacity);
 	}
 
 	//-------------------------------------------------------------------------
@@ -353,18 +353,18 @@ private:
 	    @param[in] io_queue   queueの先頭位置。
 	    @param[in] i_capacity queueが持つ非同期処理clientの数。
 	 */
+	template< typename t_smart_ptr >
 	static void destroy_queue(
-		psyq::arena&                 i_arena,
-		this_type::client_ptr* const io_queue,
-		std::size_t const            i_capacity)
+		psyq::arena&       i_arena,
+		t_smart_ptr* const io_queue,
+		std::size_t const  i_capacity)
 	{
 		PSYQ_ASSERT(NULL != io_queue || i_capacity <= 0);
 		for (std::size_t i = 0; i < i_capacity; ++i)
 		{
-			io_queue[i].~weak_ptr();
+			io_queue[i].~t_smart_ptr();
 		}
-		i_arena.deallocate(
-			io_queue, sizeof(this_type::client_ptr) * i_capacity);
+		i_arena.deallocate(io_queue, sizeof(t_smart_ptr) * i_capacity);
 	}
 
 //.............................................................................

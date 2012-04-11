@@ -45,6 +45,11 @@ public:
 		return this->state_;
 	}
 
+	bool is_locked() const
+	{
+		return this->lock_;
+	}
+
 //.............................................................................
 protected:
 	async_node():
@@ -55,6 +60,47 @@ protected:
 	}
 
 	virtual boost::int32_t run() = 0;
+
+//.............................................................................
+private:
+	static this_type* insert(
+		this_type* const         io_position,
+		this_type::holder const& i_node)
+	{
+		// ‚·‚Å‚Élock‚³‚ê‚Ä‚¢‚énode‚Í‘}“ü‚Å‚«‚È‚¢B
+		psyq::async_node* const a_node(psyq::async_node::lock(i_node));
+		if (NULL != a_node)
+		{
+			if (NULL != io_position)
+			{
+				a_node->next_ = io_position->next_;
+				io_position->next_ = a_node;
+			}
+			else
+			{
+				a_node->next_ = a_node;
+			}
+		}
+		return a_node;
+	}
+
+	static this_type* lock(this_type::holder const& i_holder)
+	{
+		this_type* const a_node(i_holder.get());
+		if (NULL == a_node || a_node->is_locked())
+		{
+			return NULL;
+		}
+		a_node->state_ = this_type::state_BUSY;
+		a_node->lock_ = i_holder;
+		return a_node;
+	}
+
+	void unlock()
+	{
+		this->next_ = NULL;
+		this->lock_.reset();
+	}
 
 //.............................................................................
 private:
@@ -123,29 +169,11 @@ public:
 		unsigned a_count(0);
 		for (t_iterator i = i_begin; i_end != i; ++i)
 		{
-			// ‚·‚Å‚Ébusyó‘Ô‚Ìnode‚Í“o˜^‚Å‚«‚È‚¢B
-			psyq::async_node* const a_node(i->get());
-			/** @todo 2012-04-10
-			    busyó‘Ô‚Å‚Í‚È‚¢‚ªAqueue‚É“o˜^‚³‚ê‚½‚Ü‚Ü‚Ìnode‚à‚ ‚é‚Ì‚ÅA
-			    ‚±‚Ì‚Ü‚Ü‚Å‚Í‚æ‚­‚È‚¢B
-			 */
-			if (NULL != a_node && NULL == a_node->next_)
+			psyq::async_node* const a_last(
+				psyq::async_node::insert(a_queue, *i));
+			if (NULL != a_last)
 			{
-				// queue‚Ì––”ö‚É‘}“üB
-				if (NULL != a_queue)
-				{
-					a_node->next_ = a_queue->next_;
-					a_queue->next_ = a_node;
-				}
-				else
-				{
-					a_node->next_ = a_node;
-				}
-				a_queue = a_node;
-
-				// node‚ðbusyó‘Ô‚É‚·‚éB
-				a_node->state_ = psyq::async_node::state_BUSY;
-				a_node->lock_ = *i;
+				a_queue = a_last;
 				++a_count;
 			}
 		}
@@ -201,8 +229,9 @@ private:
 			}
 
 			// queue‚ð‘–¸‚µ‚ÄŽÀsB
-			if (NULL != a_first)
+			if (NULL != a_last)
 			{
+				PSYQ_ASSERT(NULL != a_first);
 				this_type::run_queue(*a_first, *a_last);
 			}
 			else
@@ -259,9 +288,9 @@ private:
 			psyq::async_node* const a_node(a_last_node->next_);
 			if (psyq::async_node::state_BUSY != a_node->get_state())
 			{
+				// queue‚©‚çnode‚ðŽæ‚èœ‚«Aunlock‚·‚éB
 				a_last_node->next_ = a_node->next_;
-				a_node->next_ = NULL;
-				a_node->lock_.reset();
+				a_node->unlock();
 			}
 			else
 			{

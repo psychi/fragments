@@ -111,7 +111,8 @@ public:
 	    @param[in] i_client 登録する非同期処理client。
 	    @return 登録した非同期処理clientの数。
 	 */
-	std::size_t add(psyq::async_client::shared_ptr const& i_client)
+	template< typename t_pointer >
+	std::size_t add(t_pointer const& i_client)
 	{
 		return this->add(&i_client, &i_client + 1);
 	}
@@ -126,10 +127,9 @@ public:
 	{
 		// 現在のqueueを取り出す。
 		boost::unique_lock< boost::mutex > a_lock(this->mutex_);
-		psyq::async_client::weak_ptr* const a_last_queue(this->queue_begin_);
+		this_type::client_ptr* const a_last_queue(this->queue_begin_);
 		std::size_t const a_last_capacity(this->queue_capacity_);
-		std::size_t const a_last_size(
-			NULL != a_last_queue? a_last_capacity: this->queue_size_);
+		std::size_t const a_last_size(this->queue_size_);
 		this->queue_begin_ = NULL;
 		this->queue_capacity_ = 0;
 		a_lock.unlock();
@@ -137,7 +137,7 @@ public:
 		// 新しいqueueを構築。
 		std::size_t const a_capacity(
 			a_last_size + std::distance(i_begin, i_end));
-		psyq::async_client::weak_ptr* const a_queue(
+		this_type::client_ptr* const a_queue(
 			this_type::resize_queue(
 				*this->arena_,
 				a_capacity,
@@ -150,18 +150,18 @@ public:
 		t_iterator a_iterator(i_begin);
 		for (std::size_t i = a_last_size; i < a_capacity; ++i, ++a_iterator)
 		{
-			psyq::async_client::shared_ptr const& a_holder(*a_iterator);
+			psyq::async_client::shared_ptr const a_holder(*a_iterator);
 			psyq::async_client* const a_client(a_holder.get());
 			if (NULL != a_client
 				&& a_client->set_state(psyq::async_client::state_BUSY))
 			{
 				// busy状態ではない非同期処理clientだけが登録できる。
-				new(&a_queue[i]) psyq::async_client::weak_ptr(a_holder);
+				new(&a_queue[i]) this_type::client_ptr(a_holder);
 				++a_count;
 			}
 			else
 			{
-				new(&a_queue[i]) psyq::async_client::weak_ptr();
+				new(&a_queue[i]) this_type::client_ptr();
 			}
 		}
 
@@ -173,6 +173,15 @@ public:
 		return a_count;
 	}
 
+	/** @brief queueの大きさを必要最低限にする。
+	 */
+	void shrink_queue()
+	{
+		this->add(
+			static_cast< psyq::async_client::shared_ptr* >(NULL),
+			static_cast< psyq::async_client::shared_ptr* >(NULL));
+	}
+
 	//-------------------------------------------------------------------------
 	psyq::arena::shared_ptr const& get_arena() const
 	{
@@ -181,6 +190,8 @@ public:
 
 //.............................................................................
 private:
+	typedef psyq::async_client::weak_ptr client_ptr;
+
 	//-------------------------------------------------------------------------
 	void start()
 	{
@@ -205,7 +216,7 @@ private:
 
 	void run()
 	{
-		psyq::async_client::weak_ptr* a_queue(NULL);
+		this_type::client_ptr* a_queue(NULL);
 		std::size_t a_size(0);
 		std::size_t a_capacity(0);
 		boost::unique_lock< boost::mutex > a_lock(this->mutex_);
@@ -223,7 +234,7 @@ private:
 			if (NULL != this->queue_begin_)
 			{
 				// 新しいqueueを取り出す。
-				psyq::async_client::weak_ptr* const a_last_queue(a_queue);
+				this_type::client_ptr* const a_last_queue(a_queue);
 				std::size_t const a_last_capacity(a_capacity);
 				a_queue = this->queue_begin_;
 				a_capacity = this->queue_capacity_;
@@ -248,12 +259,12 @@ private:
 			// mutexをunlockしてから、queueを実行。
 			a_lock.unlock();
 			a_size = this_type::run_queue(a_queue, a_size);
-			if (a_size <= 0 || a_size < a_capacity / 2)
+			if (a_size <= 0)
 			{
-				// queueの大きさがcapacityの半分になったので、縮小する。
-				a_queue = this_type::resize_queue(
-					*this->arena_, a_size, a_queue, a_size, a_capacity);
-				a_capacity = a_size;
+				// queueが空になったので破棄。
+				this_type::destroy_queue(*this->arena_, a_queue, a_capacity);
+				a_queue = NULL;
+				a_capacity = 0;
 			}
 			a_lock.lock();
 		}
@@ -267,8 +278,8 @@ private:
 	    @return queueが持つ非同期処理clientの数。
 	 */
 	static std::size_t run_queue(
-		psyq::async_client::weak_ptr* const io_queue,
-		std::size_t const                   i_size)
+		this_type::client_ptr* const io_queue,
+		std::size_t const            i_size)
 	{
 		std::size_t a_size(0);
 		for (std::size_t i = 0; i < i_size; ++i)
@@ -300,19 +311,19 @@ private:
 	    @param[in] i_last_capacity   元のqueueの最大要素数。
 		@return 新しいqueueの先頭位置。
 	 */
-	static psyq::async_client::weak_ptr* resize_queue(
-		psyq::arena&                        i_arena,
-		std::size_t const                   i_capacity,
-		psyq::async_client::weak_ptr* const io_last_queue,
-		std::size_t const                   i_last_size,
-		std::size_t const                   i_last_capacity)
+	static this_type::client_ptr* resize_queue(
+		psyq::arena&                 i_arena,
+		std::size_t const            i_capacity,
+		this_type::client_ptr* const io_last_queue,
+		std::size_t const            i_last_size,
+		std::size_t const            i_last_capacity)
 	{
 		// 新しいqueueを確保。
-		psyq::async_client::weak_ptr* const a_queue(
-			static_cast< psyq::async_client::weak_ptr* >(
+		this_type::client_ptr* const a_queue(
+			static_cast< this_type::client_ptr* >(
 				i_arena.allocate(
-					i_capacity * sizeof(psyq::async_client::weak_ptr),
-					boost::alignment_of< psyq::async_client::weak_ptr >::value,
+					i_capacity * sizeof(this_type::client_ptr),
+					boost::alignment_of< this_type::client_ptr >::value,
 					0)));
 		if (NULL != a_queue)
 		{
@@ -320,7 +331,7 @@ private:
 			PSYQ_ASSERT(i_last_size <= i_capacity);
 			for (std::size_t i = 0; i < i_last_size; ++i)
 			{
-				new(&a_queue[i]) psyq::async_client::weak_ptr();
+				new(&a_queue[i]) this_type::client_ptr();
 				if (NULL != io_last_queue)
 				{
 					a_queue[i].swap(io_last_queue[i]);
@@ -343,9 +354,9 @@ private:
 	    @param[in] i_capacity queueが持つ非同期処理clientの数。
 	 */
 	static void destroy_queue(
-		psyq::arena&                        i_arena,
-		psyq::async_client::weak_ptr* const io_queue,
-		std::size_t const                   i_capacity)
+		psyq::arena&                 i_arena,
+		this_type::client_ptr* const io_queue,
+		std::size_t const            i_capacity)
 	{
 		PSYQ_ASSERT(NULL != io_queue || i_capacity <= 0);
 		for (std::size_t i = 0; i < i_capacity; ++i)
@@ -353,19 +364,19 @@ private:
 			io_queue[i].~weak_ptr();
 		}
 		i_arena.deallocate(
-			io_queue, sizeof(psyq::async_client::weak_ptr) * i_capacity);
+			io_queue, sizeof(this_type::client_ptr) * i_capacity);
 	}
 
 //.............................................................................
 private:
-	boost::thread                 thread_;
-	boost::condition              condition_;
-	boost::mutex                  mutex_;
-	psyq::arena::shared_ptr       arena_;
-	psyq::async_client::weak_ptr* queue_begin_;
-	std::size_t                   queue_capacity_;
-	std::size_t                   queue_size_;
-	bool                          stop_;
+	boost::thread           thread_;
+	boost::condition        condition_;
+	boost::mutex            mutex_;
+	psyq::arena::shared_ptr arena_;
+	this_type::client_ptr*  queue_begin_;
+	std::size_t             queue_capacity_;
+	std::size_t             queue_size_;
+	bool                    stop_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

@@ -91,7 +91,7 @@ public:
 	~async_server()
 	{
 		this->stop(true);
-		this_type::destroy_queue(
+		this_type::abort_queue(
 			*this->arena_, this->queue_begin_, this->queue_capacity_);
 	}
 
@@ -111,8 +111,7 @@ public:
 	    @param[in] i_client 登録する非同期処理clientを指すsmart-pointer。
 	    @return 登録した非同期処理clientの数。
 	 */
-	template< typename t_smart_ptr >
-	std::size_t add(t_smart_ptr const& i_client)
+	std::size_t add(psyq::async_client::shared_ptr const& i_client)
 	{
 		return this->add(&i_client, &i_client + 1);
 	}
@@ -150,7 +149,7 @@ public:
 		t_iterator a_iterator(i_begin);
 		for (std::size_t i = a_last_size; i < a_capacity; ++i, ++a_iterator)
 		{
-			psyq::async_client::shared_ptr const a_holder(*a_iterator);
+			psyq::async_client::shared_ptr const& a_holder(*a_iterator);
 			psyq::async_client* const a_client(a_holder.get());
 			if (NULL != a_client
 				&& a_client->set_locked_state(psyq::async_client::state_BUSY))
@@ -268,7 +267,7 @@ private:
 			}
 			a_lock.lock();
 		}
-		this_type::destroy_queue(a_arena, a_queue, a_capacity);
+		this_type::abort_queue(a_arena, a_queue, a_capacity);
 	}
 
 	//-------------------------------------------------------------------------
@@ -348,23 +347,47 @@ private:
 		return a_queue;
 	}
 
+	/** @brief 非同期処理client行列を途中終了する。
+	    @param[in] i_arena    破棄に使うmemory-arena。
+	    @param[in] io_queue   queueの先頭位置。
+	    @param[in] i_capacity queueが持つ非同期処理clientの数。
+	 */
+	static void abort_queue(
+		psyq::arena&                 i_arena,
+		this_type::client_ptr* const io_queue,
+		std::size_t const            i_capacity)
+	{
+		for (std::size_t i = 0; i < i_capacity; ++i)
+		{
+			psyq::async_client::shared_ptr const a_holder(io_queue[i].lock());
+			psyq::async_client* const a_client(a_holder.get());
+			if (NULL != a_client
+				&& psyq::async_client::state_BUSY == a_client->get_state())
+			{
+				a_client->set_unlocked_state(
+					psyq::async_client::state_ABORTED);
+			}
+		}
+		this_type::destroy_queue(i_arena, io_queue, i_capacity);
+	}
+
 	/** @brief 非同期処理client行列を破棄する。
 	    @param[in] i_arena    破棄に使うmemory-arena。
 	    @param[in] io_queue   queueの先頭位置。
 	    @param[in] i_capacity queueが持つ非同期処理clientの数。
 	 */
-	template< typename t_smart_ptr >
 	static void destroy_queue(
-		psyq::arena&       i_arena,
-		t_smart_ptr* const io_queue,
-		std::size_t const  i_capacity)
+		psyq::arena&                 i_arena,
+		this_type::client_ptr* const io_queue,
+		std::size_t const            i_capacity)
 	{
 		PSYQ_ASSERT(NULL != io_queue || i_capacity <= 0);
 		for (std::size_t i = 0; i < i_capacity; ++i)
 		{
-			io_queue[i].~t_smart_ptr();
+			io_queue[i].~weak_ptr();
 		}
-		i_arena.deallocate(io_queue, sizeof(t_smart_ptr) * i_capacity);
+		i_arena.deallocate(
+			io_queue, sizeof(this_type::client_ptr) * i_capacity);
 	}
 
 //.............................................................................
@@ -399,8 +422,7 @@ private:
 		public psyq::async_client
 	{
 	public:
-		explicit wrapper(
-			t_value_type const& i_functor):
+		explicit wrapper(t_value_type const& i_functor):
 		psyq::async_client(),
 		functor_(i_functor)
 		{

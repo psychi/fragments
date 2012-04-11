@@ -224,7 +224,7 @@ private:
 		{
 			// queueの大きさを更新。
 			this->queue_size_ = a_size;
-			if (a_size <= 0)
+			if (a_size <= 0 && NULL == this->queue_begin_)
 			{
 				// queueが空になったら待機。
 				this->condition_.wait(a_lock);

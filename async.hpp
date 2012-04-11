@@ -283,7 +283,7 @@ private:
 		std::size_t a_size(0);
 		for (std::size_t i = 0; i < i_size; ++i)
 		{
-			psyq::async_client::shared_ptr const a_holder(io_queue[i]);
+			psyq::async_client::shared_ptr const a_holder(io_queue[i].lock());
 			psyq::async_client* const a_client(a_holder.get());
 			if (NULL != a_client
 				&& psyq::async_client::state_BUSY == a_client->get_state())

@@ -238,6 +238,14 @@ public:
 	};
 
 	//-------------------------------------------------------------------------
+	explicit small_arena(
+		char const* const i_name = PSYQ_ARENA_NAME_DEFAULT):
+	super_type(i_name)
+	{
+		// pass
+	}
+
+	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
 	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
 	    @param[in] i_alignment 確保するmemoryの境界値。byte単位。
@@ -410,7 +418,7 @@ public:
 	/** @param[in] i_name debugで使うためのmemory識別名。
 	 */
 	explicit small_allocator(
-		char const* const i_name = PSYQ_ALLOCATOR_NAME_DEFAULT):
+		char const* const i_name = PSYQ_ARENA_NAME_DEFAULT):
 	super_type(i_name)
 	{
 		// pass

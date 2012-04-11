@@ -86,6 +86,14 @@ public:
 	};
 
 	//-------------------------------------------------------------------------
+	explicit fixed_arena(
+		char const* const i_name = PSYQ_ARENA_NAME_DEFAULT):
+	super_type(i_name)
+	{
+		// pass
+	}
+
+	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
 	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
 	    @param[in] i_alignment 確保するmemoryの境界値。byte単位。

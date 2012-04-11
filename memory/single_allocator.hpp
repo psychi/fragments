@@ -80,7 +80,7 @@ public:
 	/** @param[in] i_name debugÇ≈égÇ§ÇΩÇﬂÇÃmemoryéØï ñºÅB
 	 */
 	explicit single_allocator(
-		char const* const i_name = PSYQ_ALLOCATOR_NAME_DEFAULT):
+		char const* const i_name = PSYQ_ARENA_NAME_DEFAULT):
 	super_type(i_name)
 	{
 		// pass

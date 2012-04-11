@@ -3,10 +3,7 @@
 
 #include <memory>
 #include <boost/type_traits/alignment_of.hpp>
-
-#ifndef PSYQ_ALLOCATOR_NAME_DEFAULT
-#define PSYQ_ALLOCATOR_NAME_DEFAULT "PSYQ"
-#endif // !PSYQ_ALLOCATOR_NAME_DEFAULT
+//#include <psyq/memory/arena.hpp>
 
 namespace psyq
 {
@@ -43,10 +40,9 @@ public:
 	/** @brief memory識別名を設定。
 	    @param[in] i_name 設定するmemory識別名の文字列。
 	 */
-	char const* set_name(char const* const i_name)
+	void set_name(char const* const i_name)
 	{
 		this->name_ = i_name;
-		return i_name;
 	}
 
 	//this_type& operator=(this_type const&) = default;
@@ -143,7 +139,7 @@ public:
 	//-------------------------------------------------------------------------
 	/** @param[in] i_name debugで使うためのmemory識別名。
 	 */
-	explicit allocator(char const* const i_name = PSYQ_ALLOCATOR_NAME_DEFAULT):
+	explicit allocator(char const* const i_name = PSYQ_ARENA_NAME_DEFAULT):
 	super_type(i_name)
 	{
 		// pass

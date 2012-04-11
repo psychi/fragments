@@ -5,6 +5,10 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 
+#ifndef PSYQ_ARENA_NAME_DEFAULT
+#define PSYQ_ARENA_NAME_DEFAULT "PSYQ"
+#endif // !PSYQ_ALLOCATOR_NAME_DEFAULT
+
 namespace psyq
 {
 	class arena;
@@ -25,6 +29,12 @@ public:
 
 	//-------------------------------------------------------------------------
 	virtual ~arena()
+	{
+		// pass
+	}
+
+	explicit arena(char const* const i_name = PSYQ_ARENA_NAME_DEFAULT):
+	name_(i_name)
 	{
 		// pass
 	}
@@ -52,10 +62,10 @@ public:
 	void* allocate(
 		std::size_t const i_size,
 		std::size_t const i_alignment,
-		std::size_t const i_offset,
-		char const* const i_name)
+		std::size_t const i_offset)
 	{
-		return (*this->get_malloc())(i_size, i_alignment, i_offset, i_name);
+		return (*this->get_malloc())(
+			i_size, i_alignment, i_offset, this->get_name());
 	}
 
 	/** @brief memoryを解放する。
@@ -65,6 +75,22 @@ public:
 	void deallocate(void* const i_memory, std::size_t const i_size)
 	{
 		(*this->get_free())(i_memory, i_size);
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief memory識別名を取得。
+	 */
+	char const* get_name() const
+	{
+		return this->name_;
+	}
+
+	/** @brief memory識別名を設定。
+	    @param[in] i_name 設定するmemory識別名の文字列。
+	 */
+	void set_name(char const* const i_name)
+	{
+		this->name_ = i_name;
 	}
 
 	//-------------------------------------------------------------------------
@@ -85,6 +111,10 @@ protected:
 	virtual this_type::malloc_function get_malloc() const = 0;
 
 	virtual this_type::free_function get_free() const = 0;
+
+//.............................................................................
+private:
+	char const* name_;
 };
 
 #endif // !PSYQ_ARENA_HPP_

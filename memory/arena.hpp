@@ -24,8 +24,8 @@ class psyq::arena:
 
 //.............................................................................
 public:
-	typedef boost::shared_ptr< this_type > holder;
-	typedef boost::weak_ptr< this_type > observer;
+	typedef boost::shared_ptr< this_type > shared_ptr;
+	typedef boost::weak_ptr< this_type > weak_ptr;
 
 	//-------------------------------------------------------------------------
 	virtual ~arena()
@@ -56,7 +56,6 @@ public:
 	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
 	    @param[in] i_alignment 確保するmemoryの境界値。byte単位。
 	    @param[in] i_offset    確保するmemoryの境界offset値。byte単位。
-	    @param[in] i_name      debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
 	void* allocate(

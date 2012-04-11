@@ -38,7 +38,7 @@ public:
 
 	//-------------------------------------------------------------------------
 	explicit virtual_allocator(
-		psyq::arena::holder const& i_arena,
+		psyq::arena::shared_ptr const& i_arena,
 		char const* const i_name = PSYQ_ARENA_NAME_DEFAULT):
 	super_type(i_name),
 	arena_(i_arena)
@@ -135,14 +135,14 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	psyq::arena::holder const& get_arena() const
+	psyq::arena::shared_ptr const& get_arena() const
 	{
 		return this->arena_;
 	}
 
 //.............................................................................
 private:
-	psyq::arena::holder arena_;
+	psyq::arena::shared_ptr arena_;
 };
 
 #endif // PSYQ_VIRTUAL_ALLOCATOR_HPP_

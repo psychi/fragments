@@ -5,20 +5,20 @@
 #include <boost/thread/thread.hpp>
 #include <boost/thread/condition.hpp>
 #include <boost/thread/mutex.hpp>
-#include <boost/thread/once.hpp>
+//#include <psyq/memory/arena.hpp>
 
 namespace psyq
 {
-	class async_node;
+	class async_client;
 	class async_server;
 	class async_functor;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class psyq::async_node:
+class psyq::async_client:
 	private boost::noncopyable
 {
-	typedef psyq::async_node this_type;
+	typedef psyq::async_client this_type;
 
 	friend class psyq::async_server;
 
@@ -35,9 +35,9 @@ public:
 		state_end
 	};
 
-	virtual ~async_node()
+	virtual ~async_client()
 	{
-		PSYQ_ASSERT(this_type::state_BUSY != this->get_state());
+		// pass
 	}
 
 	boost::int32_t get_state() const
@@ -45,15 +45,9 @@ public:
 		return this->state_;
 	}
 
-	bool is_locked() const
-	{
-		return this->lock_;
-	}
-
 //.............................................................................
 protected:
-	async_node():
-	next_(NULL),
+	async_client():
 	state_(this_type::state_FINISHED)
 	{
 		// pass
@@ -63,50 +57,26 @@ protected:
 
 //.............................................................................
 private:
-	static this_type* insert(
-		this_type* const         io_position,
-		this_type::holder const& i_node)
+	bool set_state(boost::int32_t const i_state)
 	{
-		// すでにlockされているnodeは挿入できない。
-		psyq::async_node* const a_node(psyq::async_node::lock(i_node));
-		if (NULL != a_node)
+		boost::lock_guard< boost::mutex > const a_lock(this->mutex_);
+		if (this_type::state_BUSY != this->state_)
 		{
-			if (NULL != io_position)
-			{
-				a_node->next_ = io_position->next_;
-				io_position->next_ = a_node;
-			}
-			else
-			{
-				a_node->next_ = a_node;
-			}
+			this->state_ = i_state;
+			return true;
 		}
-		return a_node;
+		return false;
 	}
 
-	static this_type* lock(this_type::holder const& i_holder)
+	void set_state_unlocked(boost::int32_t const i_state)
 	{
-		this_type* const a_node(i_holder.get());
-		if (NULL == a_node || a_node->is_locked())
-		{
-			return NULL;
-		}
-		a_node->state_ = this_type::state_BUSY;
-		a_node->lock_ = i_holder;
-		return a_node;
-	}
-
-	void unlock()
-	{
-		this->next_ = NULL;
-		this->lock_.reset();
+		this->state_ = i_state;
 	}
 
 //.............................................................................
 private:
-	this_type::holder lock_;
-	this_type*        next_;
-	boost::int32_t    state_;
+	boost::mutex   mutex_;
+	boost::int32_t state_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -121,65 +91,106 @@ public:
 	~async_server()
 	{
 		this->stop(true);
-
-		// queueを破棄。
-		boost::lock_guard< boost::mutex > const a_lock(
-			this_type::class_mutex());
-		if (NULL != this->queue_)
-		{
-			this_type::clear_queue(*this->queue_);
-		}
+		this_type::destroy_queue(
+			this->queue_begin_, this->queue_capacity_, *this->arena_);
 	}
 
-	async_server():
-	queue_(NULL),
+	explicit async_server(psyq::arena::holder const& i_arena):
+	arena_(i_arena),
+	queue_begin_(NULL),
+	queue_capacity_(0),
+	queue_size_(0),
 	stop_(false)
 	{
-		/** @todo 2012-04-10
-		    thisを静的局所変数として構築した場合、class_mutex()のほうが先に
-			破棄されることがあるので、何か対策をしないと。
-		 */
-		static boost::once_flag s_constructed = BOOST_ONCE_INIT;
-		boost::call_once(&this_type::construct_class_mutex, s_constructed);
+		PSYQ_ASSERT(NULL != i_arena.get());
 		this->start();
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief async-nodeを登録。
-	    @param[in] i_node 登録するnode。
-	    @return 登録したasync-nodeの数。
+	/** @brief 非同期処理clientを登録。
+	    @param[in] i_client 登録する非同期処理client。
+	    @return 登録した非同期処理clientの数。
 	 */
-	unsigned add(psyq::async_node::holder const& i_node)
+	std::size_t add(psyq::async_client::holder const& i_client)
 	{
-		return this->add(&i_node, &i_node + 1);
+		return this->add(&i_client, &i_client + 1);
 	}
 
-	/** @brief async-nodeをまとめて登録。
-	    @param[in] i_begin 登録するcontainerの先頭位置。
-	    @param[in] i_end   登録するcontainerの末尾位置。
-	    @return 登録したasync-nodeの数。
+	/** @brief containerが持つ非同期処理clientをまとめて登録。
+	    @param[in] i_begin containerの先頭位置。
+	    @param[in] i_end   containerの末尾位置。
+	    @return 登録した非同期処理clientの数。
 	 */
 	template< typename t_iterator >
-	unsigned add(t_iterator const i_begin, t_iterator const i_end)
+	std::size_t add(t_iterator const i_begin, t_iterator const i_end)
 	{
-		// containerを走査し、queueの末尾にnodeを挿入していく。
-		boost::lock_guard< boost::mutex > const a_lock(
-			this_type::class_mutex());
-		psyq::async_node* a_queue(this->queue_);
-		unsigned a_count(0);
-		for (t_iterator i = i_begin; i_end != i; ++i)
+		// 現在のqueueを取り出す。
+		boost::unique_lock< boost::mutex > a_lock(this->mutex_);
+		psyq::async_client::observer* const a_last_queue(this->queue_begin_);
+		std::size_t const a_last_capacity(
+			NULL != a_last_queue? this->queue_capacity_: this->queue_size_);
+		this->queue_begin_ = NULL;
+		this->queue_capacity_ = 0;
+		a_lock.unlock();
+
+		// 新しいqueueを確保。
+		std::size_t const a_capacity(
+			a_last_capacity + std::distance(i_begin, i_end));
+		psyq::async_client::observer* const a_queue(
+			static_cast< psyq::async_client::observer* >(
+				this->arena_->allocate(
+					a_capacity * sizeof(psyq::async_client::observer),
+					boost::alignment_of< psyq::async_client::observer >::value,
+					0)));
+
+		// 現在のqueueが使う領域を初期化。
+		for (std::size_t i = 0; i < a_last_capacity; ++i)
 		{
-			psyq::async_node* const a_last(
-				psyq::async_node::insert(a_queue, *i));
-			if (NULL != a_last)
+			new(&a_queue[i]) psyq::async_client::observer();
+		}
+		if (NULL != a_last_queue)
+		{
+			// 現在のqueueを新しいqueueに移動してから、現在のqueueを破棄。
+			for (std::size_t i = 0; i < a_last_capacity; ++i)
 			{
-				a_queue = a_last;
+				a_last_queue[i].swap(a_queue[i]);
+			}
+			this_type::destroy_queue(
+				a_last_queue, a_last_capacity, *this->arena_);
+		}
+
+		// containerを新しいqueueにcopy。
+		std::size_t a_count(0);
+		t_iterator a_iterator(i_begin);
+		for (std::size_t i = a_last_capacity; i < a_capacity; ++i, ++a_iterator)
+		{
+			psyq::async_client::holder const& a_holder(*a_iterator);
+			psyq::async_client* const a_client(a_holder.get());
+			if (NULL != a_client
+				&& a_client->set_state(psyq::async_client::state_BUSY))
+			{
+				// busy状態ではない非同期処理clientだけが登録できる。
+				new(&a_queue[i]) psyq::async_client::observer(a_holder);
 				++a_count;
 			}
+			else
+			{
+				new(&a_queue[i]) psyq::async_client::observer();
+			}
 		}
-		this->queue_ = a_queue;
+
+		// 新しいqueueに差し替えてから通知。
+		a_lock.lock();
+		this->queue_begin_ = a_queue;
+		this->queue_capacity_ = a_capacity;
 		this->condition_.notify_all();
 		return a_count;
+	}
+
+	//-------------------------------------------------------------------------
+	psyq::arena::holder const& get_arena() const
+	{
+		return this->arena_;
 	}
 
 //.............................................................................
@@ -206,122 +217,114 @@ private:
 		}
 	}
 
-	//-------------------------------------------------------------------------
 	void run()
 	{
+		psyq::async_client::observer* a_queue(NULL);
+		std::size_t a_size(0);
+		std::size_t a_capacity(0);
+		boost::unique_lock< boost::mutex > a_lock(this->mutex_);
 		while (!this->stop_)
 		{
-			// 実行する範囲を決定。
-			psyq::async_node* a_first(NULL);
-			psyq::async_node* a_last(NULL);
+			// queueの大きさを更新。
+			this->queue_size_ = a_size;
+			if (a_size <= 0)
 			{
-				boost::lock_guard< boost::mutex > const a_lock(
-					this_type::class_mutex());
-				if (NULL != this->queue_)
-				{
-					this->queue_ = this_type::reduce_queue(*this->queue_);
-				}
-				a_last = this->queue_;
-				if (NULL != a_last)
-				{
-					a_first = a_last->next_;
-				}
-			}
-
-			// queueを走査して実行。
-			if (NULL != a_last)
-			{
-				PSYQ_ASSERT(NULL != a_first);
-				this_type::run_queue(*a_first, *a_last);
-			}
-			else
-			{
-				// queueが空になったので待機。
-				boost::unique_lock< boost::mutex > a_lock(
-					this_type::class_mutex());
+				// queueが空になったら、queueを破棄してから待機。
+				this_type::destroy_queue(a_queue, a_capacity, *this->arena_);
+				a_queue = NULL;
+				a_capacity = 0;
 				this->condition_.wait(a_lock);
 			}
+
+			// queueを更新。
+			if (NULL != this->queue_begin_)
+			{
+				// 現在のqueueを新しいqueueに移動。
+				PSYQ_ASSERT(a_size <= this->queue_capacity_);
+				for (std::size_t i = 0; i < a_size; ++i)
+				{
+					PSYQ_ASSERT(this->queue_begin_[i].expired());
+					this->queue_begin_[i].swap(a_queue[i]);
+				}
+				this_type::destroy_queue(a_queue, a_capacity, *this->arena_);
+				a_size = this->queue_capacity_;
+
+				// 新しいqueueを取り出す。
+				a_queue = this->queue_begin_;
+				a_capacity = this->queue_capacity_;
+				this->queue_begin_ = NULL;
+				this->queue_capacity_ = 0;
+			}
+
+			// mutexをunlockしてから、queueを実行。
+			a_lock.unlock();
+			a_size = this_type::run_queue(a_queue, a_size);
+			a_lock.lock();
 		}
+		this_type::destroy_queue(a_queue, a_capacity, *this->arena_);
 	}
 
 	//-------------------------------------------------------------------------
-	static void run_queue(
-		psyq::async_node&       i_first,
-		psyq::async_node const& i_last)
+	/** @brief queueが持つ非同期処理clientを実行する。
+	    @param[in] io_queue queueの先頭位置。
+	    @param[in] i_size   queueが持つ非同期処理clientの数。
+	    @return queueが持つ非同期処理clientの数。
+	 */
+	static std::size_t run_queue(
+		psyq::async_client::observer* const io_queue,
+		std::size_t const                   i_size)
 	{
-		for (psyq::async_node* i = &i_first; ; i = i->next_)
+		std::size_t a_size(0);
+		for (std::size_t i = 0; i < i_size; ++i)
 		{
-			i->state_ = i->run();
-			if (&i_last == i)
+			psyq::async_client::holder const a_holder(io_queue[i]);
+			psyq::async_client* const a_client(a_holder.get());
+			if (NULL != a_client
+				&& psyq::async_client::state_BUSY == a_client->get_state())
 			{
-				break;
+				boost::int32_t const a_state(a_client->run());
+				if (psyq::async_client::state_BUSY == a_state)
+				{
+					io_queue[a_size].swap(io_queue[i]);
+					++a_size;
+					continue;
+				}
+				a_client->set_state_unlocked(a_state);
 			}
+			io_queue[i].reset();
 		}
+		return a_size;
 	}
 
-	static void clear_queue(psyq::async_node& i_last)
+	/** @brief 非同期処理client行列を破棄する。
+	    @param[in] io_queue queueの先頭位置。
+	    @param[in] i_size   queueが持つ非同期処理clientの数。
+	    @param[in] i_arena  破棄に使うmemory-arena。
+	 */
+	static void destroy_queue(
+		psyq::async_client::observer* const io_queue,
+		std::size_t const                   i_size,
+		psyq::arena&                        i_arena)
 	{
-		psyq::async_node* a_node(i_last.next_);
-		for (;;)
+		PSYQ_ASSERT(NULL != io_queue || i_size <= 0);
+		for (std::size_t i = 0; i < i_size; ++i)
 		{
-			psyq::async_node* const a_next(a_node->next_);
-			a_node->state_ = psyq::async_node::state_ABORTED;
-			a_node->next_ = NULL;
-			a_node->lock_.reset();
-			if (&i_last != a_node)
-			{
-				a_node = a_next;
-			}
-			else
-			{
-				break;
-			}
+			io_queue[i].~weak_ptr();
 		}
-	}
-
-	static psyq::async_node* reduce_queue(psyq::async_node& i_last)
-	{
-		psyq::async_node* a_last_node(&i_last);
-		bool a_empty(true);
-		for (;;)
-		{
-			psyq::async_node* const a_node(a_last_node->next_);
-			if (psyq::async_node::state_BUSY != a_node->get_state())
-			{
-				// queueからnodeを取り除き、unlockする。
-				a_last_node->next_ = a_node->next_;
-				a_node->unlock();
-			}
-			else
-			{
-				a_empty = false;
-				a_last_node = a_node;
-			}
-			if (&i_last == a_node)
-			{
-				return a_empty? NULL: a_last_node;
-			}
-		}
-	}
-
-	//-------------------------------------------------------------------------
-	static boost::mutex& class_mutex()
-	{
-		static boost::mutex s_mutex;
-		return s_mutex;
-	}
-
-	static void construct_class_mutex()
-	{
-		this_type::class_mutex();
+		i_arena.deallocate(
+			io_queue, sizeof(psyq::async_client::observer) * i_size);
 	}
 
 //.............................................................................
 private:
-	boost::thread     thread_;
-	boost::condition  condition_;
-	psyq::async_node* queue_;
-	bool              stop_;
+	boost::thread                 thread_;
+	boost::condition              condition_;
+	boost::mutex                  mutex_;
+	psyq::arena::holder           arena_;
+	psyq::async_client::observer* queue_begin_;
+	std::size_t                   queue_capacity_;
+	std::size_t                   queue_size_;
+	bool                          stop_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -330,9 +333,9 @@ class psyq::async_functor:
 {
 public:
 	template< typename t_value_type, typename t_allocator >
-	static psyq::async_node::holder create(
-		t_value_type const& i_functor,
-		t_allocator const&  i_allocator)
+	static psyq::async_client::holder create(
+		t_allocator const&  i_allocator,
+		t_value_type const& i_functor)
 	{
 		return boost::allocate_shared< wrapper< t_value_type > >(
 			i_allocator, i_functor);
@@ -341,12 +344,12 @@ public:
 private:
 	template< typename t_value_type >
 	class wrapper:
-		public psyq::async_node
+		public psyq::async_client
 	{
 	public:
 		explicit wrapper(
 			t_value_type const& i_functor):
-		psyq::async_node(),
+		psyq::async_client(),
 		functor_(i_functor)
 		{
 			// pass

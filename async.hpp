@@ -57,7 +57,7 @@ protected:
 
 //.............................................................................
 private:
-	bool set_state(boost::int32_t const i_state)
+	bool set_locked_state(boost::int32_t const i_state)
 	{
 		boost::lock_guard< boost::mutex > const a_lock(this->mutex_);
 		if (this_type::state_BUSY != this->state_)
@@ -68,7 +68,7 @@ private:
 		return false;
 	}
 
-	void set_state_unlocked(boost::int32_t const i_state)
+	void set_unlocked_state(boost::int32_t const i_state)
 	{
 		this->state_ = i_state;
 	}
@@ -108,11 +108,11 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief ”ñ“¯Šúˆ—client‚ğ“o˜^B
-	    @param[in] i_client “o˜^‚·‚é”ñ“¯Šúˆ—clientB
+	    @param[in] i_client “o˜^‚·‚é”ñ“¯Šúˆ—client‚ğw‚·smart-pointerB
 	    @return “o˜^‚µ‚½”ñ“¯Šúˆ—client‚Ì”B
 	 */
-	template< typename t_pointer >
-	std::size_t add(t_pointer const& i_client)
+	template< typename t_smart_ptr >
+	std::size_t add(t_smart_ptr const& i_client)
 	{
 		return this->add(&i_client, &i_client + 1);
 	}
@@ -153,7 +153,7 @@ public:
 			psyq::async_client::shared_ptr const a_holder(*a_iterator);
 			psyq::async_client* const a_client(a_holder.get());
 			if (NULL != a_client
-				&& a_client->set_state(psyq::async_client::state_BUSY))
+				&& a_client->set_locked_state(psyq::async_client::state_BUSY))
 			{
 				// busyó‘Ô‚Å‚Í‚È‚¢”ñ“¯Šúˆ—client‚¾‚¯‚ª“o˜^‚Å‚«‚éB
 				new(&a_queue[i]) this_type::client_ptr(a_holder);
@@ -296,7 +296,7 @@ private:
 					++a_size;
 					continue;
 				}
-				a_client->set_state_unlocked(a_state);
+				a_client->set_unlocked_state(a_state);
 			}
 			io_queue[i].reset();
 		}

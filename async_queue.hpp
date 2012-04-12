@@ -62,13 +62,13 @@ public:
 	std::size_t add(t_iterator const i_begin, t_iterator const i_end)
 	{
 		// 予約queueを取り出す。
-		boost::unique_lock< boost::mutex > a_lock(this->mutex_);
+		boost::lock_guard< boost::mutex > const a_lock(this->mutex_);
 		this_type::task_ptr* const a_last_tasks(this->reserve_tasks_);
 		std::size_t const a_last_capacity(this->reserve_capacity_);
 		std::size_t const a_last_size(this->running_size_);
 		this->reserve_tasks_ = NULL;
 		this->reserve_capacity_ = 0;
-		a_lock.unlock();
+		////a_lock.unlock();
 
 		// 新しいqueueを構築。
 		std::size_t const a_capacity(
@@ -101,7 +101,7 @@ public:
 		}
 
 		// 新しいqueueを予約queueに差し替えてから通知。
-		a_lock.lock();
+		////a_lock.lock();
 		this->reserve_tasks_ = a_tasks;
 		this->reserve_capacity_ = a_capacity;
 		this->condition_.notify_all();
@@ -158,25 +158,20 @@ private:
 		boost::unique_lock< boost::mutex > a_lock(this->mutex_);
 		while (!this->stop_)
 		{
-			// queueが空になったら待機。
+			// 実行queueを更新。
 			this->running_size_ = a_size;
-			if (a_size <= 0 && NULL == this->reserve_tasks_)
-			{
-				this->condition_.wait(a_lock);
-			}
-
-			// queueを更新。
 			if (NULL != this->reserve_tasks_)
 			{
-				// 予約queueを、新しいqueueとして取り出す。
+				// 予約queueを、新しい実行queueとして取り出す。
 				this_type::task_ptr* const a_last_tasks(a_tasks);
 				std::size_t const a_last_capacity(a_capacity);
 				a_tasks = this->reserve_tasks_;
 				a_capacity = this->reserve_capacity_;
 				this->reserve_tasks_ = NULL;
 				this->reserve_capacity_ = 0;
+				a_lock.unlock();
 
-				// 元のqueueが持つ非同期処理taskを、新しいqueueに移動。
+				// 元の実行queueが持つtaskを、新しい実行queueに移動。
 				std::size_t const a_last_size(a_size);
 				PSYQ_ASSERT(a_last_size <= a_capacity);
 				for (std::size_t i = 0; i < a_last_size; ++i)
@@ -186,17 +181,26 @@ private:
 				}
 				a_size = a_capacity;
 
-				// 元のqueueを破棄。
+				// 元の実行queueを破棄。
 				this_type::destroy_tasks(
 					a_arena, a_last_tasks, a_last_capacity);
 			}
+			else if (NULL != a_tasks)
+			{
+				a_lock.unlock();
+			}
+			else
+			{
+				// 予約queueと実行queueが空になったので待機。
+				this->condition_.wait(a_lock);
+				continue;
+			}
 
-			// mutexをunlockしてから、queueを実行。
-			a_lock.unlock();
+			// 実行queueのtaskを呼び出す。
 			a_size = this_type::run_tasks(a_tasks, a_size);
 			if (a_size <= 0)
 			{
-				// queueが空になったので破棄。
+				// 実行queueが空になったので破棄。
 				this_type::destroy_tasks(a_arena, a_tasks, a_capacity);
 				a_tasks = NULL;
 				a_capacity = 0;

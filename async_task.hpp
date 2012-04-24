@@ -39,6 +39,20 @@ public:
 	};
 
 	//-------------------------------------------------------------------------
+	/** @brief 関数objectを呼び出す非同期処理taskを生成。
+	    @param[in] i_allocator memory割当に使うallocator。
+	    @param[in] i_functor   呼び出す関数object。
+	 */
+	template< typename t_allocator, typename t_functor >
+	static psyq::async_task::shared_ptr create(
+		t_allocator const& i_allocator,
+		t_functor const&   i_functor)
+	{
+		return boost::allocate_shared< function_wrapper< t_functor > >(
+			i_allocator, i_functor);
+	}
+
+	//-------------------------------------------------------------------------
 	virtual ~async_task()
 	{
 		// pass
@@ -75,6 +89,8 @@ protected:
 
 //.............................................................................
 private:
+	template< typename > class function_wrapper;
+
 	bool set_locked_state(boost::int32_t const i_state)
 	{
 		boost::lock_guard< boost::mutex > const a_lock(this->mutex_);
@@ -100,46 +116,87 @@ private:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 関数objectを呼び出す非同期処理task。
  */
-class psyq::async_functor:
-	private boost::noncopyable
+template< typename t_functor >
+class psyq::async_task::function_wrapper:
+	public psyq::async_task
 {
+
 //.............................................................................
 public:
-	/** @brief 関数objectを呼び出す非同期処理taskを生成。
-	    @param[in] i_allocator memory割当に使うallocator。
-	    @param[in] i_functor   呼び出す関数object。
-	 */
-	template< typename t_value_type, typename t_allocator >
-	static psyq::async_task::shared_ptr create(
-		t_allocator const&  i_allocator,
-		t_value_type const& i_functor)
+	explicit function_wrapper(t_functor const& i_functor):
+	psyq::async_task(),
+	functor_(i_functor)
 	{
-		return boost::allocate_shared< wrapper< t_value_type > >(
-			i_allocator, i_functor);
+		// pass
+	}
+
+	virtual boost::int32_t run()
+	{
+		return this->functor_();
 	}
 
 //.............................................................................
 private:
-	template< typename t_value_type >
-	class wrapper:
-		public psyq::async_task
+	t_functor functor_;
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+class fnv_hash
+{
+	typedef fnv_hash this_type;
+
+public:
+	static boost::uint32_t const offset32 = 0x811c9dc5;
+	static boost::uint32_t const prime32 = 0x1000193;
+	static boost::uint64_t const offset64 = 0xcbf29ce484222325ULL;
+	static boost::uint64_t const prime64 = 0x100000001b3ULL;
+
+	//---------------------------------------------------------------------
+	/** @brief FNV(Fowler-Noll-Vo)hash関数
+	    http://www.radiumsoftware.com/0605.html#060526
+	    http://d.hatena.ne.jp/jonosuke/20100406/p1
+	    @param[in] i_begin  hash化するbyte配列の先頭位置。
+	    @param[in] i_size   hash化するbyte数。
+	    @param[in] i_offset hash開始値。
+	    @param[in] i_prime  fnv-hash素数。
+	 */
+	template< typename t_value_type>
+	t_value_type make(
+		void const* const  i_begin,
+		std::size_t const  i_size,
+		t_value_type const i_offset,
+		t_value_type const i_prime)
 	{
-	public:
-		explicit wrapper(t_value_type const& i_functor):
-		psyq::async_task(),
-		functor_(i_functor)
+		t_value_type a_hash(i_offset);
+		if (NULL != i_begin)
 		{
-			// pass
+			boost::uint8_t const* a_iterator(
+				static_cast< boost::uint8_t const* >(i_begin));
+			boost::uint8_t const* const a_end(a_iterator + i_size);
+			while (a_iterator < a_end)
+			{
+				a_hash = (a_hash * i_prime) ^ *a_iterator;
+				++a_iterator;
+			}
 		}
+		return a_hash;
+	}
 
-		virtual boost::int32_t run()
-		{
-			return this->functor_();
-		}
+	boost::uint32_t make32(
+		void const* const     i_begin,
+		std::size_t const     i_size,
+		boost::uint32_t const i_offset = this_type::offset32)
+	{
+		return this_type::make(i_begin, i_size, i_offset, this_type::prime32);
+	}
 
-	private:
-		t_value_type functor_;
-	};
+	boost::uint64_t make64(
+		void const* const     i_begin,
+		std::size_t const     i_size,
+		boost::uint64_t const i_offset = this_type::offset64)
+	{
+		return this_type::make(i_begin, i_size, i_offset, this_type::prime64);
+	}
 };
 
 #endif // !PSYQ_ASYNC_TASK_HPP_

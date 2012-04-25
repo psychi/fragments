@@ -36,7 +36,7 @@ public:
 	 */
 	basic_const_string(
 		typename this_type::const_pointer const i_string = NULL):
-	begin_(i_string),
+	data_(i_string),
 	length_(NULL != i_string? t_traits_type::length(i_string): 0)
 	{
 		// pass
@@ -48,7 +48,7 @@ public:
 	basic_const_string(
 		typename this_type::const_pointer const i_string,
 		typename this_type::size_type const     i_length):
-	begin_(i_string),
+	data_(i_string),
 	length_(i_length)
 	{
 		PSYQ_ASSERT(i_length <= this_type::trim_length(i_string, i_length));
@@ -67,9 +67,8 @@ public:
 	/** @param[in] i_string 基準となる文字列。
 	    @param[in] i_offset 文字列の開始位置。
 	 */
-	template< typename t_string >
 	basic_const_string(
-		t_string const&                     i_string,
+		this_type const&                    i_string,
 		typename this_type::size_type const i_offset = 0)
 	{
 		new(this) this_type(i_string, i_offset, i_string.length() - i_offset);
@@ -79,21 +78,25 @@ public:
 	    @param[in] i_offset 文字列の開始位置。
 	    @param[in] i_count  文字数。
 	 */
-	template< typename t_string >
 	basic_const_string(
-		t_string const&                     i_string,
+		this_type const&                    i_string,
 		typename this_type::size_type const i_offset,
 		typename this_type::size_type const i_count):
-	begin_(i_string.c_str() + i_offset),
+	data_(i_string.data() + i_offset),
 	length_(this_type::trim_length(i_offset, i_count, i_string.length()))
 	{
 		// pass
 	}
 
 	//-------------------------------------------------------------------------
+	typename this_type::const_pointer data() const
+	{
+		return this->data_;
+	}
+
 	typename this_type::const_iterator begin() const
 	{
-		return this->begin_;
+		return this->data();
 	}
 
 	typename this_type::const_iterator end() const
@@ -111,9 +114,14 @@ public:
 		return this->end();
 	}
 
-	typename this_type::const_pointer c_str() const
+	typename this_type::const_reference front() const
 	{
-		return this->begin();
+		return (*this)[0];
+	}
+
+	typename this_type::const_reference back() const
+	{
+		return (*this)[this->length() - 1];
 	}
 
 	typename this_type::size_type length() const
@@ -132,55 +140,66 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	typename this_type::value_type at(
+	typename this_type::const_reference at(
 		typename this_type::size_type const i_index)
 	const
 	{
-		return i_index < this->length()? *(this->begin_ + i_index): 0;
+		if (this->length() <= i_index)
+		{
+			//throw std::out_of_range;
+			static this_type::value_type const s_empty(0);
+			return s_empty;
+		}
+		return *(this->data() + i_index);
 	}
 
-	typename this_type::value_type operator[](
+	typename this_type::const_reference operator[](
 		typename this_type::size_type const i_index)
 	const
 	{
 		PSYQ_ASSERT(i_index < this->length());
-		return *(this->begin_ + i_index);
+		return *(this->data() + i_index);
 	}
 
 	//-------------------------------------------------------------------------
-	bool operator==(this_type const& i_right) const
+	template< typename t_string >
+	bool operator==(t_string const& i_right) const
 	{
 		return this->length() == i_right.length()
 			&& 0 == t_traits_type::compare(
-				this->c_str(), i_right.c_str(), this->length());
+				this->data(), i_right.data(), this->length());
 	}
 
-	bool operator!=(this_type const& i_right) const
+	template< typename t_string >
+	bool operator!=(t_string const& i_right) const
 	{
 		return !this->operator==(i_right);
 	}
 
 	//-------------------------------------------------------------------------
-	int compare(this_type const& i_right) const
+	template< typename t_string >
+	int compare(t_string const& i_right) const
 	{
 		return this->compare(
-			0, this->length(), i_right.c_str(), i_right.length());
+			0, this->length(), i_right.data(), i_right.length());
 	}
 
+	template< typename t_string >
 	int compare(
 		typename this_type::size_type const     i_left_offset,
 		typename this_type::size_type const     i_left_count,
-		this_type const&                        i_right)
+		t_string const&                         i_right)
 	const
 	{
 		return this->compare(
-			i_left_offset, i_left_count, i_right.c_str(), i_right.length());
+			i_left_offset, i_left_count, i_right.data(), i_right.length());
 	}
 
+	template< typename t_string >
 	int compare(
 		typename this_type::size_type const     i_left_offset,
 		typename this_type::size_type const     i_left_count,
-		this_type const&                        i_right,
+		t_string const&                         i_right,
 		typename this_type::size_type const     i_right_offset,
 		typename this_type::size_type const     i_right_count)
 	const
@@ -188,7 +207,7 @@ public:
 		return this->compare(
 			i_left_offset,
 			i_left_count,
-			i_right.c_str() + i_right_offset,
+			i_right.data() + i_right_offset,
 			this_type::trim_length(
 				i_right_offset, i_right_count, i_right.length()));
 	}
@@ -229,7 +248,7 @@ public:
 				i_left_offset, i_left_count, this->length()));
 		int const a_result(
 			t_traits_type::compare(
-				this->c_str() + i_left_offset,
+				this->data() + i_left_offset,
 				i_right_string,
 				a_left_length < i_right_length?
 					a_left_length: i_right_length));
@@ -261,16 +280,13 @@ public:
 		return *new(this) this_type(i_begin, i_end);
 	}
 
-	template< typename t_string >
-	this_type& assign(
-		t_string const& i_string)
+	this_type& assign(this_type const& i_string)
 	{
 		return *new(this) this_type(i_string);
 	}
 
-	template< typename t_string >
 	this_type& assign(
-		t_string const&                     i_string,
+		this_type const&                    i_string,
 		typename this_type::size_type const i_offset,
 		typename this_type::size_type const i_count)
 	{
@@ -291,6 +307,25 @@ public:
 		return this_type(*this, i_offset, i_count);
 	}
 
+	template< typename t_string >
+	t_string substr(
+		typename this_type::size_type const i_offset = 0)
+	const
+	{
+		return this->create(i_offset, this->length() - i_offset);
+	}
+
+	template< typename t_string >
+	t_string substr(
+		typename this_type::size_type const i_offset,
+		typename this_type::size_type const i_count)
+	const
+	{
+		return t_string(
+			this->data() + i_offset,
+			this_type::trim_length(i_offset, i_count, this->length()));
+	}
+
 	//-------------------------------------------------------------------------
 	void clear()
 	{
@@ -300,7 +335,7 @@ public:
 	void swap(
 		this_type& io_target)
 	{
-		std::swap(this->begin_, io_target.begin_);
+		std::swap(this->data_, io_target.data_);
 		std::swap(this->length_, io_target.length_);
 	}
 
@@ -335,7 +370,7 @@ private:
 
 //.............................................................................
 private:
-	t_value_type const* begin_;
+	t_value_type const* data_;
 	std::size_t         length_;
 };
 

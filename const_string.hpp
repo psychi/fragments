@@ -186,9 +186,9 @@ public:
 
 	template< typename t_string >
 	int compare(
-		typename this_type::size_type const     i_left_offset,
-		typename this_type::size_type const     i_left_count,
-		t_string const&                         i_right)
+		typename this_type::size_type const i_left_offset,
+		typename this_type::size_type const i_left_count,
+		t_string const&                     i_right)
 	const
 	{
 		return this->compare(
@@ -197,11 +197,11 @@ public:
 
 	template< typename t_string >
 	int compare(
-		typename this_type::size_type const     i_left_offset,
-		typename this_type::size_type const     i_left_count,
-		t_string const&                         i_right,
-		typename this_type::size_type const     i_right_offset,
-		typename this_type::size_type const     i_right_count)
+		typename this_type::size_type const i_left_offset,
+		typename this_type::size_type const i_left_count,
+		t_string const&                     i_right,
+		typename this_type::size_type const i_right_offset,
+		typename this_type::size_type const i_right_count)
 	const
 	{
 		return this->compare(
@@ -212,9 +212,7 @@ public:
 				i_right_offset, i_right_count, i_right.length()));
 	}
 
-	int compare(
-		typename this_type::const_pointer const i_right_string)
-	const
+	int compare(typename this_type::const_pointer const i_right_string) const
 	{
 		return this->compare(0, this->length(), i_right_string);
 	}
@@ -240,9 +238,6 @@ public:
 		typename this_type::size_type const     i_right_length)
 	const
 	{
-		PSYQ_ASSERT(
-			i_right_length <= this_type::trim_length(
-				i_right_string, i_right_length));
 		std::size_t const a_left_length(
 			this_type::trim_length(
 				i_left_offset, i_left_count, this->length()));
@@ -260,8 +255,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	this_type& assign(
-		typename this_type::const_pointer const i_string)
+	this_type& assign(typename this_type::const_pointer const i_string)
 	{
 		return *new(this) this_type(i_string);
 	}
@@ -308,9 +302,7 @@ public:
 	}
 
 	template< typename t_string >
-	t_string substr(
-		typename this_type::size_type const i_offset = 0)
-	const
+	t_string substr(typename this_type::size_type const i_offset = 0) const
 	{
 		return this->create(i_offset, this->length() - i_offset);
 	}
@@ -332,8 +324,7 @@ public:
 		new(this) this_type();
 	}
 
-	void swap(
-		this_type& io_target)
+	void swap(this_type& io_target)
 	{
 		std::swap(this->data_, io_target.data_);
 		std::swap(this->length_, io_target.length_);

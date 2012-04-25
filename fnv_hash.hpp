@@ -44,16 +44,16 @@ public:
 	    @param[in] i_offset fnv-hash開始値。
 	    @param[in] i_prime  fnv-hash素数。
 	 */
-	template< typename t_char_type >
+	template< typename t_char >
 	static typename t_traits::value_type generate(
-		t_char_type const* const            i_string,
+		t_char const* const            i_string,
 		typename t_traits::value_type const i_offset = t_traits::EMPTY,
 		typename t_traits::value_type const i_prime = t_traits::PRIME)
 	{
 		if (NULL != i_string)
 		{
 			std::size_t const a_length(
-				std::char_traits< t_char_type >::length(i_string));
+				std::char_traits< t_char >::length(i_string));
 			return t_generator::generate(
 				i_string, i_string + a_length, i_offset, i_prime);
 		}
@@ -65,13 +65,13 @@ public:
 	    @param[in] i_offset fnv-hash開始値。
 	    @param[in] i_prime  fnv-hash素数。
 	 */
-	template< typename t_string_type >
+	template< typename t_string >
 	static typename t_traits::value_type generate(
-		t_string_type const&                i_string,
+		t_string const&                     i_string,
 		typename t_traits::value_type const i_offset = t_traits::EMPTY,
 		typename t_traits::value_type const i_prime = t_traits::PRIME)
 	{
-		typename t_string_type::const_pointer const a_begin(i_string.c_str());
+		typename t_string::const_pointer const a_begin(i_string.c_str());
 		return t_generator::generate(
 			a_begin, a_begin + i_string.length(), i_offset, i_prime);
 	}
@@ -88,9 +88,9 @@ class psyq::_fnv1_generator:
 //.............................................................................
 public:
 	//-------------------------------------------------------------------------
-	/** @brief hash値を生成。
-	    @param[in] i_begin  hash化するbyte配列の先頭位置。
-	    @param[in] i_end    hash化するbyte配列の末尾位置。
+	/** @brief byte配列のhash値を生成。
+	    @param[in] i_begin  byte配列の先頭位置。
+	    @param[in] i_end    byte配列の末尾位置。
 	    @param[in] i_offset hash開始値。
 	    @param[in] i_prime  fnv-hash素数。
 	 */
@@ -128,10 +128,10 @@ class psyq::_fnv1a_generator:
 //.............................................................................
 public:
 	//-------------------------------------------------------------------------
-	/** @brief hash値を生成。
-	    @param[in] i_begin  hash化するbyte配列の先頭位置。
-	    @param[in] i_begin  hash化するbyte配列の末尾位置。
-	    @param[in] i_offset hash開始値。
+	/** @brief byte配列のhash値を生成。
+	    @param[in] i_begin  byte配列の先頭位置。
+	    @param[in] i_begin  byte配列の末尾位置。
+	    @param[in] i_offset fnv-hash開始値。
 	    @param[in] i_prime  fnv-hash素数。
 	 */
 	template< typename t_value_type >

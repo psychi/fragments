@@ -60,8 +60,8 @@ namespace psyq
 		public:\
 		typedef PSYQ_ENUM_ordinal ordinal;\
 		typedef PSYQ_ENUM_values values;\
-		typedef PSYQ_ENUM_container::pointer pointer;\
-		typedef PSYQ_ENUM_container::reference reference;\
+		typedef PSYQ_ENUM_container::const_pointer const_pointer;\
+		typedef PSYQ_ENUM_container::const_reference const_reference;\
 		static PSYQ_ENUM_container::value_type::ordinal_type const\
 			size = PSYQ_ENUM_container::size;\
 	};
@@ -125,8 +125,8 @@ class _enum_container:
 	//.........................................................................
 	public:
 	typedef t_value_type value_type;
-	typedef value_type const* pointer;
-	typedef value_type const& reference;
+	typedef value_type const* const_pointer;
+	typedef value_type const& const_reference;
 
 	//-------------------------------------------------------------------------
 	~_enum_container()
@@ -143,7 +143,7 @@ class _enum_container:
 	    @param[in] i_ordinal 取得する列挙子の序数。
 	    @retrun 列挙子へのpointer。ただし、対応する列挙子がない場合はNULL。
 	 */
-	typename this_type::pointer operator()(
+	typename this_type::const_pointer operator()(
 		typename t_value_type::ordinal_type const i_ordinal)
 		const
 	{
@@ -154,11 +154,11 @@ class _enum_container:
 	    @param[in] i_name 取得する列挙子の名前。
 	    @retrun 列挙子へのpointer。ただし、対応する列挙子がない場合はNULL。
 	 */
-	typename this_type::pointer operator()(
+	typename this_type::const_pointer operator()(
 		typename t_value_type::name_type const& i_name)
 		const
 	{
-		pointer const a_values(this->get(0));
+		const_pointer const a_values(this->get(0));
 		for (typename t_value_type::ordinal_type i = 0; i < t_size; ++i)
 		{
 			if (i_name == a_values[i].name)
@@ -174,7 +174,7 @@ class _enum_container:
 	    @param[in] i_ordinal 参照する列挙子の序数。
 	    @retrun 列挙子への参照。
 	 */
-	typename this_type::reference operator[](
+	typename this_type::const_reference operator[](
 		typename t_value_type::ordinal_type const i_ordinal)
 		const
 	{

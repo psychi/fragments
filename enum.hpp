@@ -73,6 +73,12 @@ namespace psyq
  */
 #define PSYQ_ENUM_VALUE(d_name, d_property) ((d_name)(d_property))
 
+/** @brief PSYQ_ENUMのd_values引数で、列挙子の定義に使う。
+    @param d_name 列挙子の名前。
+ */
+#define PSYQ_ENUM_FNV1_HASH32(d_name)\
+	((d_name)(psyq::fnv1_hash32::generate(BOOST_PP_STRINGIZE(d_name))))
+
 /** @brief PSYQ_ENUMのd_values引数で、属性値のない列挙子の定義に使う。
     @param d_name 列挙子の名前。
  */
@@ -125,10 +131,10 @@ class _enum_container:
 	//-------------------------------------------------------------------------
 	~_enum_container()
 	{
-		for (typename this_type::value_type::ordinal_type i = t_size; 0 < i;)
+		for (typename t_value_type::ordinal_type i = t_size; 0 < i;)
 		{
 			--i;
-			this->get(i)->~value_type();
+			this->get(i)->~t_value_type();
 		}
 	}
 
@@ -138,7 +144,7 @@ class _enum_container:
 	    @retrun 列挙子へのpointer。ただし、対応する列挙子がない場合はNULL。
 	 */
 	typename this_type::pointer operator()(
-		typename this_type::value_type::ordinal_type const i_ordinal)
+		typename t_value_type::ordinal_type const i_ordinal)
 		const
 	{
 		return i_ordinal < t_size? this->get(i_ordinal): NULL;
@@ -149,11 +155,11 @@ class _enum_container:
 	    @retrun 列挙子へのpointer。ただし、対応する列挙子がない場合はNULL。
 	 */
 	typename this_type::pointer operator()(
-		typename this_type::value_type::name_type const& i_name)
+		typename t_value_type::name_type const& i_name)
 		const
 	{
 		pointer const a_values(this->get(0));
-		for (typename this_type::value_type::ordinal_type i = 0; i < t_size; ++i)
+		for (typename t_value_type::ordinal_type i = 0; i < t_size; ++i)
 		{
 			if (i_name == a_values[i].name)
 			{
@@ -169,7 +175,7 @@ class _enum_container:
 	    @retrun 列挙子への参照。
 	 */
 	typename this_type::reference operator[](
-		typename this_type::value_type::ordinal_type const i_ordinal)
+		typename t_value_type::ordinal_type const i_ordinal)
 		const
 	{
 		return *(this->get(i_ordinal));
@@ -184,24 +190,24 @@ class _enum_container:
 	}
 
 	//-------------------------------------------------------------------------
-	value_type* get(
-		typename this_type::value_type::ordinal_type const i_index)
+	t_value_type* get(
+		typename t_value_type::ordinal_type const i_index)
 		const
 	{
 		PSYQ_ASSERT(i_index < t_size);
-		return const_cast< typename this_type::value_type* >(
-			reinterpret_cast< value_type const* >(&this->_storage)) + i_index;
+		return const_cast< t_value_type* >(
+			reinterpret_cast< t_value_type const* >(&this->_storage)) + i_index;
 	}
 
 	//.........................................................................
 	public:
 	/// 保持している列挙子の数。
-	static typename this_type::value_type::ordinal_type const size = t_size;
+	static typename t_value_type::ordinal_type const size = t_size;
 
 	private:
 	typename boost::aligned_storage<
-		sizeof(value_type[t_size]),
-		boost::alignment_of< value_type[t_size] >::value >::type
+		sizeof(t_value_type[t_size]),
+		boost::alignment_of< t_value_type[t_size] >::value >::type
 			_storage;
 };
 
@@ -220,17 +226,17 @@ class _enum_value
 		ordinal_type const   i_ordinal,
 		name_type const&     i_name,
 		property_type const& i_property = property_type()):
-		ordinal(i_ordinal),
-		name(i_name),
-		property(i_property)
+	name(i_name),
+	property(i_property),
+	ordinal(i_ordinal)
 	{
 		// pass
 	}
 
 	//-------------------------------------------------------------------------
-	ordinal_type  ordinal;  ///< 列挙子の序数。
 	name_type     name;     ///< 列挙子の名前。
 	property_type property; ///< 列挙子の属性。
+	ordinal_type  ordinal;  ///< 列挙子の序数。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -246,15 +252,15 @@ class _enum_value< t_name_type, void >
 	_enum_value(
 		ordinal_type const i_ordinal,
 		name_type const&   i_name):
-		ordinal(i_ordinal),
-		name(i_name)
+	name(i_name),
+	ordinal(i_ordinal)
 	{
 		// pass
 	}
 
 	//-------------------------------------------------------------------------
-	ordinal_type ordinal; ///< 列挙子の序数。
 	name_type    name;    ///< 列挙子の名前。
+	ordinal_type ordinal; ///< 列挙子の序数。
 };
 } // namespace psyq
 

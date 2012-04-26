@@ -177,8 +177,8 @@ public:
 		return (*this)[0];
 	}
 
-	/** @brief 文字列の最終文字を参照。
-	    @return 文字列の最終文字への参照。
+	/** @brief 文字列の末尾文字を参照。
+	    @return 文字列の末尾文字への参照。
 	 */
 	typename this_type::const_reference back() const
 	{
@@ -311,11 +311,23 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	int compare(typename this_type::const_pointer const i_right_string) const
+	/** @brief 文字列を比較。
+	    @param[in] i_right 右辺の文字列の先頭位置。必ずNULL文字で終わる。
+	    @retval 負 右辺のほうが大きい。
+	    @retval 正 左辺のほうが大きい。
+	    @retval  0 左辺と右辺は等価。
+	 */
+	int compare(typename this_type::const_pointer const i_right) const
 	{
-		return this->compare(0, this->length(), i_right_string);
+		return this->compare(0, this->length(), i_right);
 	}
 
+	/** @brief 文字列を比較。
+	    @param[in] i_right 右辺の文字列。
+	    @retval 負 右辺のほうが大きい。
+	    @retval 正 左辺のほうが大きい。
+	    @retval  0 左辺と右辺は等価。
+	 */
 	template< typename t_string >
 	int compare(t_string const& i_right) const
 	{
@@ -323,20 +335,35 @@ public:
 			0, this->length(), i_right.data(), i_right.length());
 	}
 
+	/** @brief 文字列を比較。
+	    @param[in] i_left_offset 左辺の文字列の開始位置。
+	    @param[in] i_left_count  左辺の文字列の文字数。
+	    @param[in] i_right       右辺の文字列の先頭位置。必ずNULL文字で終わる。
+	    @retval 負 右辺のほうが大きい。
+	    @retval 正 左辺のほうが大きい。
+	    @retval  0 左辺と右辺は等価。
+	 */
 	int compare(
 		typename this_type::size_type const     i_left_offset,
 		typename this_type::size_type const     i_left_count,
-		typename this_type::const_pointer const i_right_string)
+		typename this_type::const_pointer const i_right)
 	const
 	{
 		return this->compare(
 			i_left_offset,
 			i_left_count,
-			i_right_string,
-			NULL != i_right_string?
-				t_traits::length(i_right_string): 0);
+			i_right,
+			NULL != i_right? t_traits::length(i_right): 0);
 	}
 
+	/** @brief 文字列を比較。
+	    @param[in] i_left_offset 左辺の文字列の開始位置。
+	    @param[in] i_left_count  左辺の文字列の文字数。
+	    @param[in] i_right       右辺の文字列。
+	    @retval 負 右辺のほうが大きい。
+	    @retval 正 左辺のほうが大きい。
+	    @retval  0 左辺と右辺は等価。
+	 */
 	template< typename t_string >
 	int compare(
 		typename this_type::size_type const i_left_offset,
@@ -348,6 +375,15 @@ public:
 			i_left_offset, i_left_count, i_right.data(), i_right.length());
 	}
 
+	/** @brief 文字列を比較。
+	    @param[in] i_left_offset  左辺の文字列の開始位置。
+	    @param[in] i_left_count   左辺の文字列の文字数。
+	    @param[in] i_right_string 右辺の文字列の先頭位置。
+	    @param[in] i_right_length 右辺の文字列の長さ。
+	    @retval 負 右辺のほうが大きい。
+	    @retval 正 左辺のほうが大きい。
+	    @retval  0 左辺と右辺は等価。
+	 */
 	int compare(
 		typename this_type::size_type const     i_left_offset,
 		typename this_type::size_type const     i_left_count,
@@ -371,6 +407,16 @@ public:
 				i_right_length < a_left_length? 1: 0;
 	}
 
+	/** @brief 文字列を比較。
+	    @param[in] i_left_offset  左辺の文字列の開始位置。
+	    @param[in] i_left_count   左辺の文字列の文字数。
+	    @param[in] i_right        右辺の文字列。
+	    @param[in] i_right_offset 左辺の文字列の開始位置。
+	    @param[in] i_right_count  右辺の文字列の文字数。
+	    @retval 負 右辺のほうが大きい。
+	    @retval 正 左辺のほうが大きい。
+	    @retval  0 左辺と右辺は等価。
+	 */
 	template< typename t_string >
 	int compare(
 		typename this_type::size_type const i_left_offset,
@@ -389,7 +435,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 文字を検索する。
+	/** @brief 文字を検索。
 	    @param[in] i_char   検索文字。
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字が見つかった位置。見つからない場合はnposを返す。
@@ -414,7 +460,7 @@ public:
 		return this_type::npos;
 	}
 
-	/** @brief 文字列を検索する。
+	/** @brief 文字列を検索。
 	    @param[in] i_string 検索文字列の先頭位置。必ずNULL文字で終わる。
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字列が見つかった位置。見つからない場合はnposを返す。
@@ -425,10 +471,12 @@ public:
 	const
 	{
 		return this->find(
-			i_string, i_offset, this_type::traits_type::length(i_string));
+			i_string,
+			i_offset,
+			NULL != i_string? this_type::traits_type::length(i_string): 0);
 	}
 
-	/** @brief 文字列を検索する。
+	/** @brief 文字列を検索。
 	    @param[in] i_string 検索文字列。
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字列が見つかった位置。見つからない場合はnposを返す。
@@ -442,7 +490,7 @@ public:
 		return this->find(i_string.data(), i_offset, i_string.length());
 	}
 
-	/** @brief 文字列を検索する。
+	/** @brief 文字列を検索。
 	    @param[in] i_begin  検索文字列の先頭位置。
 	    @param[in] i_offset 検索を開始する位置。
 	    @param[in] i_length 検索文字列の長さ。
@@ -496,7 +544,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 文字を後ろから検索する。
+	/** @brief 文字を後ろから検索。
 	    @param[in] i_char   検索文字。
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字が見つかった位置。見つからない場合はnposを返す。
@@ -522,7 +570,7 @@ public:
 		return this_type::npos;
 	}
 
-	/** @brief 文字列を後ろから検索する。
+	/** @brief 文字列を後ろから検索。
 	    @param[in] i_string 検索文字列の先頭位置。必ずNULL文字で終わる。
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字列が見つかった位置。見つからない場合はnposを返す。
@@ -538,7 +586,7 @@ public:
 			NULL != i_string? this_type::traits_type::length(i_string): 0);
 	}
 
-	/** @brief 文字列を後ろから検索する。
+	/** @brief 文字列を後ろから検索。
 	    @param[in] i_string 検索文字列。
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字列が見つかった位置。見つからない場合はnposを返す。
@@ -552,7 +600,7 @@ public:
 		return this->rfind(i_string.data(), i_offset, i_string.length());
 	}
 
-	/** @brief 文字列を後ろから検索する。
+	/** @brief 文字列を後ろから検索。
 	    @param[in] i_begin  検索文字列の先頭位置。
 	    @param[in] i_offset 検索を開始する位置。
 	    @param[in] i_length 検索文字列の長さ。

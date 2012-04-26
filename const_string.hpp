@@ -181,6 +181,30 @@ public:
 		return !this->operator==(i_right);
 	}
 
+	template< typename t_string >
+	bool operator<(t_string const& i_right) const
+	{
+		return this->compare(i_right) < 0;
+	}
+
+	template< typename t_string >
+	bool operator<=(t_string const& i_right) const
+	{
+		return this->compare(i_right) <= 0;
+	}
+
+	template< typename t_string >
+	bool operator>(t_string const& i_right) const
+	{
+		return 0 < this->compare(i_right);
+	}
+
+	template< typename t_string >
+	bool operator>=(t_string const& i_right) const
+	{
+		return 0 <= this->compare(i_right);
+	}
+
 	//-------------------------------------------------------------------------
 	int compare(typename this_type::const_pointer const i_right_string) const
 	{
@@ -295,7 +319,7 @@ public:
 	//-------------------------------------------------------------------------
 	this_type substr(typename this_type::size_type const i_offset = 0) const
 	{
-		return this_type(*this, i_offset);
+		return this->substr< this_type >(i_offset);
 	}
 
 	this_type substr(
@@ -303,7 +327,7 @@ public:
 		typename this_type::size_type const i_count)
 	const
 	{
-		return this_type(*this, i_offset, i_count);
+		return this->substr< this_type >(i_offset, i_count);
 	}
 
 	template< typename t_string >
@@ -342,7 +366,11 @@ private:
 		typename this_type::size_type const i_count,
 		typename this_type::size_type const i_length)
 	{
-		PSYQ_ASSERT(i_offset <= i_length);
+		if (i_length < i_offset)
+		{
+			PSYQ_ASSERT(false);
+			return 0;
+		}
 		this_type::size_type const a_limit(i_length - i_offset);
 		return i_count <= a_limit? i_count: a_limit;
 	}
@@ -367,8 +395,57 @@ private:
 
 //.............................................................................
 private:
-	t_value const* data_;
-	std::size_t    length_;
+	t_value const*                data_;
+	typename this_type::size_type length_;
 };
+
+//.............................................................................
+template< typename t_string, typename t_value, typename t_traits >
+bool operator==(
+	t_string const&                                      i_left,
+	psyq::basic_const_string< t_value, t_traits > const& i_right)
+{
+	return i_right == i_left;
+}
+
+template< typename t_string, typename t_value, typename t_traits >
+bool operator!=(
+	t_string const&                                      i_left,
+	psyq::basic_const_string< t_value, t_traits > const& i_right)
+{
+	return i_right != i_left;
+}
+
+template< typename t_string, typename t_value, typename t_traits >
+bool operator<(
+	t_string const&                                      i_left,
+	psyq::basic_const_string< t_value, t_traits > const& i_right)
+{
+	return i_right > i_left;
+}
+
+template< typename t_string, typename t_value, typename t_traits >
+bool operator<=(
+	t_string const&                                      i_left,
+	psyq::basic_const_string< t_value, t_traits > const& i_right)
+{
+	return i_right >= i_left;
+}
+
+template< typename t_string, typename t_value, typename t_traits >
+bool operator>(
+	t_string const&                                      i_left,
+	psyq::basic_const_string< t_value, t_traits > const& i_right)
+{
+	return i_right < i_left;
+}
+
+template< typename t_string, typename t_value, typename t_traits >
+bool operator>=(
+	t_string const&                                      i_left,
+	psyq::basic_const_string< t_value, t_traits > const& i_right)
+{
+	return i_right <= i_left;
+}
 
 #endif // PSYQ_CONST_STRING_HPP_

@@ -1,6 +1,9 @@
 #ifndef PSYQ_CONST_STRING_HPP_
 #define PSYQ_CONST_STRING_HPP_
 
+#include <iosfwd>
+#include <iterator>
+
 namespace psyq
 {
 	template<
@@ -33,7 +36,7 @@ public:
 	typedef typename this_type::const_iterator iterator;
 
 	//-------------------------------------------------------------------------
-	/** @param[in] i_string 文字列の先頭位置。
+	/** @param[in] i_string NULL終端文字列の先頭位置。
 	 */
 	basic_const_string(
 		typename this_type::const_pointer const i_string = NULL):
@@ -53,16 +56,16 @@ public:
 		new(this) this_type(i_string, i_offset, i_string.length() - i_offset);
 	}
 
-	/** @param[in] i_string 文字列の先頭位置。
+	/** @param[in] i_string NULL終端文字列の先頭位置。
 	    @param[in] i_length 文字数。
 	 */
 	basic_const_string(
 		typename this_type::const_pointer const i_string,
 		typename this_type::size_type const     i_length):
 	data_(i_string),
-	length_(i_length)
+	length_(this_type::trim_length(i_string, i_length))
 	{
-		PSYQ_ASSERT(i_length <= this_type::trim_length(i_string, i_length));
+		// pass
 	}
 
 	/** @param[in] i_begin 文字列の先頭位置。
@@ -70,9 +73,11 @@ public:
 	 */
 	basic_const_string(
 		typename this_type::const_iterator const i_begin,
-		typename this_type::const_iterator const i_end)
+		typename this_type::const_iterator const i_end):
+	data_(i_begin),
+	length_(std::distance(i_begin, i_end))
 	{
-		new(this) this_type(i_begin, std::distance(i_begin, i_end));
+		// pass
 	}
 
 	/** @param[in] i_string 基準となる文字列。
@@ -338,7 +343,8 @@ private:
 		typename this_type::size_type const i_length)
 	{
 		PSYQ_ASSERT(i_offset <= i_length);
-		return i_offset + i_count <= i_length? i_count: i_length - i_offset;
+		this_type::size_type const a_limit(i_length - i_offset);
+		return i_count <= a_limit? i_count: a_limit;
 	}
 
 	static typename this_type::size_type trim_length(

@@ -14,23 +14,22 @@ namespace psyq
 
 //-----------------------------------------------------------------------------
 /** @brief 列挙子を定義。
-    @param d_enum_name 列挙子の型名。
-    @param d_name_type 列挙子が持つ名前文字列の型。
-    @param d_value_type
-        列挙子が持つ値の型。列挙子が値を持たないなら、voidを指定する。
+    @param d_enum  列挙子の型名。
+    @param d_name  列挙子が持つ名前文字列の型。
+    @param d_value 列挙子が持つ値の型。値を持たない場合は、voidを指定する。
     @param d_items
         列挙子の名前と値を定義した配列。BOOST_PP_SEQ形式で記述する。
         PSYQ_ENUM_VALUEかPSYQ_ENUM_NAMEを使うと、記述を簡略化できる。
         boostの仕様により、定義できる列挙子の数はBOOST_PP_LIMIT_SEQが最大。
         boost-1.47.0だと、BOOST_PP_LIMIT_SEQは256となっている。
  */
-#define PSYQ_ENUM(d_enum_name, d_name_type, d_value_type, d_items)\
-	class d_enum_name: private boost::noncopyable\
+#define PSYQ_ENUM(d_enum, d_name, d_value, d_items)\
+	class d_enum: private boost::noncopyable\
 	{\
 		private:\
-		d_enum_name() {}\
+		d_enum();\
 		typedef psyq::_enumeration<\
-			psyq::_enum_item< d_name_type, d_value_type >,\
+			psyq::_enum_item< d_name, d_value >,\
 			BOOST_PP_SEQ_SIZE(d_items) >\
 				PSYQ_ENUM_basic_enumeration;\
 		class PSYQ_ENUM_enumeration: public PSYQ_ENUM_basic_enumeration\
@@ -61,8 +60,8 @@ namespace psyq
 		typedef PSYQ_ENUM_ordinal ordinal;\
 		typedef PSYQ_ENUM_enumeration enumeration;\
 		typedef PSYQ_ENUM_basic_enumeration::item item;\
-		static PSYQ_ENUM_basic_enumeration::item::ordinal const\
-			size = PSYQ_ENUM_basic_enumeration::size;\
+		static PSYQ_ENUM_basic_enumeration::item::ordinal const size =\
+			PSYQ_ENUM_basic_enumeration::size;\
 	};
 
 //-----------------------------------------------------------------------------
@@ -72,16 +71,16 @@ namespace psyq
  */
 #define PSYQ_ENUM_VALUE(d_name, d_value) ((d_name)(d_value))
 
-/** @brief PSYQ_ENUMのd_items引数で、列挙子の定義に使う。
-    @param d_name 列挙子の名前。
- */
-#define PSYQ_ENUM_FNV1_HASH32(d_name)\
-	((d_name)(psyq::fnv1_hash32::generate(BOOST_PP_STRINGIZE(d_name))))
-
 /** @brief PSYQ_ENUMのd_items引数で、値のない列挙子の定義に使う。
     @param d_name 列挙子の名前。
  */
 #define PSYQ_ENUM_NAME(d_name) ((d_name))
+
+/** @brief PSYQ_ENUMのd_items引数で、FNV-1 hash値を持つ列挙子の定義に使う。
+    @param d_name 列挙子の名前。
+ */
+#define PSYQ_ENUM_NAME_FNV1_HASH32(d_name)\
+	((d_name)(psyq::fnv1_hash32::generate(BOOST_PP_STRINGIZE(d_name))))
 
 //-----------------------------------------------------------------------------
 /// @brief PSYQ_ENUMで使われるmacro。userは使用禁止。
@@ -188,7 +187,7 @@ protected:
 	{
 		PSYQ_ASSERT(i_index < t_size);
 		return const_cast< t_item* >(
-			reinterpret_cast< t_item const* >(&this->_storage)) + i_index;
+			reinterpret_cast< t_item const* >(&this->storage_)) + i_index;
 	}
 
 //.............................................................................
@@ -196,11 +195,11 @@ public:
 	/// 保持している列挙子の数。
 	static typename t_item::ordinal const size = t_size;
 
-	private:
+private:
 	typename boost::aligned_storage<
 		sizeof(t_item[t_size]),
 		boost::alignment_of< t_item[t_size] >::value >::type
-			_storage;
+			storage_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -227,6 +226,7 @@ public:
 		// pass
 	}
 
+	//-------------------------------------------------------------------------
 	typename this_type::ordinal get_ordinal() const
 	{
 		return this->ordinal_;
@@ -242,7 +242,8 @@ public:
 		return this->value_;
 	}
 
-	//-------------------------------------------------------------------------
+//.............................................................................
+private:
 	t_name                      name_;    ///< 列挙子の名前。
 	t_value                     value_;   ///< 列挙子の値。
 	typename this_type::ordinal ordinal_; ///< 列挙子の序数。
@@ -269,6 +270,7 @@ public:
 		// pass
 	}
 
+	//-------------------------------------------------------------------------
 	typename this_type::ordinal get_ordinal() const
 	{
 		return this->ordinal_;

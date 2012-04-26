@@ -214,27 +214,27 @@ public:
 		pools():
 		psyq::small_pools< t_arena, t_mutex >()
 		{
-			typedef boost::mpl::range_c< std::size_t, 0, num_pools > range;
+			typedef boost::mpl::range_c< std::size_t, 0, NUM_POOLS > range;
 			boost::mpl::for_each< range >(set_pool(this->pools_));
 		}
 
 		virtual std::size_t get_num_pools() const
 		{
-			return num_pools;
+			return NUM_POOLS;
 		}
 
 		virtual psyq::fixed_pool< t_arena, t_mutex > const* get_pool(
 			std::size_t const i_index)
 		const
 		{
-			return i_index < num_pools? this->pools_[i_index]: NULL;
+			return i_index < NUM_POOLS? this->pools_[i_index]: NULL;
 		}
 
-		static std::size_t const num_pools =
+		static std::size_t const NUM_POOLS =
 			t_alignment < t_small_size? t_small_size / t_alignment: 1;
 
 	private:
-		psyq::fixed_pool< t_arena, t_mutex >* pools_[num_pools];
+		psyq::fixed_pool< t_arena, t_mutex >* pools_[NUM_POOLS];
 	};
 
 	//-------------------------------------------------------------------------
@@ -291,7 +291,7 @@ public:
 	 */
 	virtual std::size_t get_max_size() const
 	{
-		return this_type::max_size;
+		return this_type::MAX_SIZE;
 	}
 
 //.............................................................................
@@ -339,11 +339,11 @@ private:
 
 //.............................................................................
 public:
-	static std::size_t const max_size = t_arena::max_size;
-	static std::size_t const alignment = t_alignment;
-	static std::size_t const offset = t_offset;
-	static std::size_t const chunk_size = t_chunk_size;
-	static std::size_t const small_size = t_small_size;
+	static std::size_t const MAX_SIZE = t_arena::max_size;
+	static std::size_t const ALIGNMENT = t_alignment;
+	static std::size_t const OFFSET = t_offset;
+	static std::size_t const CHUNK_SIZE = t_chunk_size;
+	static std::size_t const SMALL_SIZE = t_small_size;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

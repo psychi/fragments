@@ -60,8 +60,8 @@ namespace psyq
 		typedef PSYQ_ENUM_ordinal ordinal;\
 		typedef PSYQ_ENUM_enumeration enumeration;\
 		typedef PSYQ_ENUM_basic_enumeration::item item;\
-		static PSYQ_ENUM_basic_enumeration::item::ordinal const size =\
-			PSYQ_ENUM_basic_enumeration::size;\
+		static PSYQ_ENUM_basic_enumeration::item::ordinal const SIZE =\
+			PSYQ_ENUM_basic_enumeration::SIZE;\
 	};
 
 //-----------------------------------------------------------------------------
@@ -193,7 +193,7 @@ protected:
 //.............................................................................
 public:
 	/// •Û‚µ‚Ä‚¢‚é—ñ‹“q‚Ì”B
-	static typename t_item::ordinal const size = t_size;
+	static typename t_item::ordinal const SIZE = t_size;
 
 private:
 	typename boost::aligned_storage<

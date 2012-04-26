@@ -156,7 +156,7 @@ public:
 	 */
 	virtual std::size_t get_max_size() const
 	{
-		return this_type::max_size;
+		return this_type::MAX_SIZE;
 	}
 
 //.............................................................................
@@ -173,10 +173,10 @@ protected:
 
 //.............................................................................
 public:
-	static std::size_t const max_size   = t_max_size;
-	static std::size_t const alignment  = t_alignment;
-	static std::size_t const offset     = t_offset;
-	static std::size_t const chunk_size = t_chunk_size;
+	static std::size_t const MAX_SIZE   = t_max_size;
+	static std::size_t const ALIGNMENT  = t_alignment;
+	static std::size_t const OFFSET     = t_offset;
+	static std::size_t const CHUNK_SIZE = t_chunk_size;
 };
 
 #endif // !PSYQ_FIXED_ARENA_HPP_

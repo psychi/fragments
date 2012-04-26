@@ -13,15 +13,15 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 template<
-	typename    t_value_type,
+	typename    t_value,
 	std::size_t t_alignment,
 	std::size_t t_offset >
 class psyq::_allocator_base:
-	public std::allocator< t_value_type >
+	public std::allocator< t_value >
 {
-	typedef psyq::_allocator_base< t_value_type, t_alignment, t_offset >
+	typedef psyq::_allocator_base< t_value, t_alignment, t_offset >
 		this_type;
-	typedef std::allocator< t_value_type > super_type;
+	typedef std::allocator< t_value > super_type;
 
 	// 配置境界値が2のべき乗か確認。
 	BOOST_STATIC_ASSERT(0 == (t_alignment & (t_alignment - 1)));
@@ -100,22 +100,22 @@ private:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::allocator互換のinstance割当子。
-    @tparam t_value_type 割り当てるinstanceの型。
+    @tparam t_value      割り当てるinstanceの型。
     @tparam t_alignment  instanceの配置境界値。byte単位。
     @tparam t_offset     instanceの配置offset値。byte単位。
     @tparam t_arena      memory割当policy。
  */
 template<
-	typename    t_value_type,
-	std::size_t t_alignment = boost::alignment_of< t_value_type >::value,
+	typename    t_value,
+	std::size_t t_alignment = boost::alignment_of< t_value >::value,
 	std::size_t t_offset = 0,
 	typename    t_arena = PSYQ_ARENA_DEFAULT >
 class psyq::allocator:
-	public psyq::_allocator_base< t_value_type, t_alignment, t_offset >
+	public psyq::_allocator_base< t_value, t_alignment, t_offset >
 {
-	typedef psyq::allocator< t_value_type, t_alignment, t_offset, t_arena >
+	typedef psyq::allocator< t_value, t_alignment, t_offset, t_arena >
 		this_type;
-	typedef psyq::_allocator_base< t_value_type, t_alignment, t_offset >
+	typedef psyq::_allocator_base< t_value, t_alignment, t_offset >
 		super_type;
 
 //.............................................................................
@@ -231,7 +231,7 @@ public:
 		(void)i_hint;
 		void* const a_memory(
 			(t_arena::malloc)(
-				i_num * sizeof(t_value_type),
+				i_num * sizeof(t_value),
 				t_alignment,
 				t_offset,
 				this->get_name()));
@@ -247,7 +247,7 @@ public:
 		typename this_type::pointer const   i_memory,
 		typename this_type::size_type const i_num)
 	{
-		(t_arena::free)(i_memory, i_num * sizeof(t_value_type));
+		(t_arena::free)(i_memory, i_num * sizeof(t_value));
 	}
 };
 

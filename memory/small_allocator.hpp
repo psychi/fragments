@@ -348,7 +348,7 @@ public:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 小規模sizeのinstance割当子。
-    @tparam t_value_type 確保するinstanceの型。
+    @tparam t_value      確保するinstanceの型。
     @tparam t_alignment  instanceの配置境界値。byte単位。
     @tparam t_offset     instanceの配置offset値。byte単位。
     @tparam t_chunk_size memory-chunkの最大size。byte単位。
@@ -357,8 +357,8 @@ public:
     @tparam t_mutex      multi-thread対応に使うmutexの型。
  */
 template<
-	typename    t_value_type,
-	std::size_t t_alignment = boost::alignment_of< t_value_type >::value,
+	typename    t_value,
+	std::size_t t_alignment = boost::alignment_of< t_value >::value,
 	std::size_t t_offset = 0,
 	std::size_t t_chunk_size = PSYQ_FIXED_ARENA_CHUNK_SIZE_DEFAULT,
 	std::size_t t_small_size = PSYQ_SMALL_ARENA_SMALL_SIZE_DEFAULT,
@@ -366,7 +366,7 @@ template<
 	typename    t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::small_allocator:
 	public psyq::allocator<
-		t_value_type,
+		t_value,
 		t_alignment,
 		t_offset,
 		psyq::small_arena<
@@ -378,7 +378,7 @@ class psyq::small_allocator:
 			t_mutex > >
 {
 	typedef psyq::small_allocator<
-		t_value_type,
+		t_value,
 		t_alignment,
 		t_offset,
 		t_chunk_size,
@@ -387,7 +387,7 @@ class psyq::small_allocator:
 		t_mutex >
 			this_type;
 	typedef psyq::allocator<
-		t_value_type, t_alignment, t_offset, typename this_type::arena >
+		t_value, t_alignment, t_offset, typename this_type::arena >
 			super_type;
 
 //.............................................................................
@@ -460,7 +460,7 @@ public:
 		(void)i_hint;
 		void* const a_memory(
 			(super_type::arena::malloc)(
-				i_num * sizeof(t_value_type), this->get_name()));
+				i_num * sizeof(t_value), this->get_name()));
 		PSYQ_ASSERT(NULL != a_memory);
 		return static_cast< typename super_type::pointer >(a_memory);
 	}

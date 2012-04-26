@@ -11,15 +11,15 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 template<
-	typename    t_value_type,
-	std::size_t t_alignment = boost::alignment_of< t_value_type >::value,
+	typename    t_value,
+	std::size_t t_alignment = boost::alignment_of< t_value >::value,
 	std::size_t t_offset = 0 >
 class psyq::virtual_allocator:
-	public psyq::_allocator_base< t_value_type, t_alignment, t_offset >
+	public psyq::_allocator_base< t_value, t_alignment, t_offset >
 {
-	typedef psyq::virtual_allocator< t_value_type, t_alignment, t_offset >
+	typedef psyq::virtual_allocator< t_value, t_alignment, t_offset >
 		this_type;
-	typedef psyq::_allocator_base< t_value_type, t_alignment, t_offset >
+	typedef psyq::_allocator_base< t_value, t_alignment, t_offset >
 		super_type;
 
 //.............................................................................
@@ -57,9 +57,7 @@ public:
 	arena_(i_source.get_arena())
 	{
 		BOOST_STATIC_ASSERT(t_other_alignment % t_alignment == 0);
-		PSYQ_ASSERT(
-			sizeof(t_value_type)
-				<= this->get_arena()->get_max_size());
+		PSYQ_ASSERT(sizeof(t_value) <= this->get_arena()->get_max_size());
 	}
 
 	//-------------------------------------------------------------------------
@@ -107,7 +105,7 @@ public:
 	{
 		void* const a_memory(
 			this->arena_->allcoate(
-				i_num * sizeof(t_value_type),
+				i_num * sizeof(t_value),
 				t_alignment,
 				t_offset,
 				this->get_name()));
@@ -124,14 +122,14 @@ public:
 		typename super_type::size_type const i_num)
 	{
 		return this->arena_->deallocate(
-			i_memory, i_num * sizeof(t_value_type));
+			i_memory, i_num * sizeof(t_value));
 	}
 
 	/** @brief ˆê“x‚ÉŠm•Û‚Å‚«‚éinstance‚ÌÅ‘å”‚ðŽæ“¾B
 	 */
 	typename super_type::size_type max_size() const
 	{
-		return this->arena_->get_max_size() / sizeof(t_value_type);
+		return this->arena_->get_max_size() / sizeof(t_value);
 	}
 
 	//-------------------------------------------------------------------------

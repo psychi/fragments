@@ -14,7 +14,7 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 一度にひとつのinstanceを確保する、std::allocator互換の割当子。
         配列は確保できない。
-    @tparam t_value_type 確保するinstanceの型。
+    @tparam t_value      確保するinstanceの型。
     @tparam t_alignment  instanceの配置境界値。byte単位。
     @tparam t_offset     instanceの配置offset値。byte単位。
     @tparam t_chunk_size memory-chunkの最大size。byte単位。
@@ -22,19 +22,19 @@ namespace psyq
 	@tparam t_mutex      multi-thread対応に使うmutexの型。
  */
 template<
-	typename    t_value_type,
-	std::size_t t_alignment = boost::alignment_of< t_value_type >::value,
+	typename    t_value,
+	std::size_t t_alignment = boost::alignment_of< t_value >::value,
 	std::size_t t_offset = 0,
 	std::size_t t_chunk_size = PSYQ_FIXED_ARENA_CHUNK_SIZE_DEFAULT,
 	typename    t_arena = PSYQ_ARENA_DEFAULT,
 	typename    t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::single_allocator:
 	public psyq::allocator<
-		t_value_type,
+		t_value,
 		t_alignment,
 		t_offset,
 		psyq::fixed_arena<
-			((sizeof(t_value_type) + t_alignment - 1) / t_alignment)
+			((sizeof(t_value) + t_alignment - 1) / t_alignment)
 				* t_alignment,
 			t_alignment,
 			t_offset,
@@ -43,7 +43,7 @@ class psyq::single_allocator:
 			t_mutex > >
 {
 	typedef psyq::single_allocator<
-		t_value_type,
+		t_value,
 		t_alignment,
 		t_offset,
 		t_chunk_size,
@@ -51,7 +51,7 @@ class psyq::single_allocator:
 		t_mutex >
 			this_type;
 	typedef psyq::allocator<
-		t_value_type, t_alignment, t_offset, typename this_type::arena >
+		t_value, t_alignment, t_offset, typename this_type::arena >
 			super_type;
 
 //.............................................................................
@@ -161,7 +161,7 @@ public:
 #ifdef _MSC_VER
 	static typename super_type::size_type max_size()
 	{
-		return t_arena::max_size / sizeof(t_value_type);
+		return t_arena::max_size / sizeof(t_value);
 	}
 #endif // _MSC_VER
 };

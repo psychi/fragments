@@ -16,17 +16,17 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 template<
-	typename t_value_type,
+	typename t_value,
 	typename t_mutex = PSYQ_MUTEX_DEFAULT,
-	typename t_tag = t_value_type >
+	typename t_tag = t_value >
 class psyq::simple_singleton:
 	private boost::noncopyable
 {
-	typedef simple_singleton< t_value_type, t_mutex, t_tag > this_type;
+	typedef simple_singleton< t_value, t_mutex, t_tag > this_type;
 
 //.............................................................................
 public:
-	typedef t_value_type value_type;
+	typedef t_value value_type;
 	typedef t_tag tag;
 
 	//-------------------------------------------------------------------------
@@ -34,7 +34,7 @@ public:
 	        まだsingleton-instanceがないなら、default-constructorで構築する。
 	    @return singleton-instanceへの参照。
 	 */
-	static t_value_type* get()
+	static t_value* get()
 	{
 		return this_type::get(boost::type< t_mutex >());
 	}
@@ -44,7 +44,7 @@ public:
 	        すでにsingleton-instanceがあるなら、構築は行わず既存のものを返す。
 	    @return singleton-instanceへの参照。
 	 */
-	static t_value_type* construct()
+	static t_value* construct()
 	{
 		return this_type::construct(boost::in_place());
 	}
@@ -56,7 +56,7 @@ public:
 	    @return singleton-instanceへの参照。
 	 */
 	template< typename t_constructor >
-	static t_value_type* construct(
+	static t_value* construct(
 		t_constructor const& i_constructor)
 	{
 		return this_type::construct_once(
@@ -76,10 +76,10 @@ private:
 		~instance_holder()
 		{
 			// 保持している領域のinstanceを破棄する。
-			t_value_type* const a_pointer(this->pointer);
+			t_value* const a_pointer(this->pointer);
 			PSYQ_ASSERT(NULL != a_pointer);
 			this->pointer = NULL;
-			a_pointer->~t_value_type();
+			a_pointer->~t_value();
 		}
 
 		instance_holder():
@@ -88,7 +88,7 @@ private:
 			// pass
 		}
 
-		t_value_type* get_pointer() const
+		t_value* get_pointer() const
 		{
 			return this->pointer;
 		}
@@ -99,21 +99,21 @@ private:
 		{
 			// 保持している領域にinstanceを構築する。
 			PSYQ_ASSERT(NULL == this->pointer);
-			i_constructor.template apply< t_value_type >(&this->storage);
-			this->pointer = reinterpret_cast< t_value_type* >(&this->storage);
+			i_constructor.template apply< t_value >(&this->storage);
+			this->pointer = reinterpret_cast< t_value* >(&this->storage);
 		}
 
 	private:
 		typename boost::aligned_storage<
-			sizeof(t_value_type),
-			boost::alignment_of< t_value_type >::value >::type
+			sizeof(t_value),
+			boost::alignment_of< t_value >::value >::type
 				storage;
-		t_value_type* pointer;
+		t_value* pointer;
 	};
 
 	//-------------------------------------------------------------------------
 	template< typename t_mutex_policy >
-	static t_value_type* get(boost::type< t_mutex_policy > const&)
+	static t_value* get(boost::type< t_mutex_policy > const&)
 	{
 		if (0 < this_type::construct_flag().count)
 		{
@@ -122,14 +122,14 @@ private:
 		return NULL;
 	}
 
-	static t_value_type* get(boost::type< psyq::_dummy_mutex > const&)
+	static t_value* get(boost::type< psyq::_dummy_mutex > const&)
 	{
 		return this_type::instance().get_pointer();
 	}
 
 	//-------------------------------------------------------------------------
 	template< typename t_constructor, typename t_mutex_policy >
-	static t_value_type* construct_once(
+	static t_value* construct_once(
 		t_constructor const& i_constructor,
 		boost::type< t_mutex_policy > const&)
 	{
@@ -145,7 +145,7 @@ private:
 	}
 
 	template< typename t_constructor >
-	static t_value_type* construct_once(
+	static t_value* construct_once(
 		t_constructor const& i_constructor,
 		boost::type< psyq::_dummy_mutex > const&)
 	{

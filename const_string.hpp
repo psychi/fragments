@@ -4,8 +4,7 @@
 namespace psyq
 {
 	template<
-		typename t_value_type,
-		typename = std::char_traits< t_value_type > >
+		typename t_value, typename t_traits = std::char_traits< t_value > >
 			class basic_const_string;
 	typedef psyq::basic_const_string< char > const_string;
 	typedef psyq::basic_const_string< wchar_t > const_wstring;
@@ -13,20 +12,22 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_stringに準拠した文字列定数。
+    @param t_value  文字の型。
+    @param t_traits 文字特性の型。
  */
-template< typename t_value_type, typename t_traits_type >
+template< typename t_value, typename t_traits >
 class psyq::basic_const_string
 {
-	typedef psyq::basic_const_string< t_value_type, t_traits_type > this_type;
+	typedef psyq::basic_const_string< t_value, t_traits > this_type;
 
 //.............................................................................
 public:
-	typedef t_value_type value_type;
-	typedef t_traits_type traits_type;
+	typedef t_value value_type;
+	typedef t_traits traits_type;
 	typedef std::size_t size_type;
-	typedef t_value_type const* const_pointer;
+	typedef t_value const* const_pointer;
 	typedef typename this_type::const_pointer pointer;
-	typedef t_value_type const& const_reference;
+	typedef t_value const& const_reference;
 	typedef typename this_type::const_reference reference;
 	typedef typename this_type::const_pointer const_iterator;
 	typedef typename this_type::const_iterator iterator;
@@ -37,9 +38,19 @@ public:
 	basic_const_string(
 		typename this_type::const_pointer const i_string = NULL):
 	data_(i_string),
-	length_(NULL != i_string? t_traits_type::length(i_string): 0)
+	length_(NULL != i_string? t_traits::length(i_string): 0)
 	{
 		// pass
+	}
+
+	/** @param[in] i_string 基準となる文字列。
+	    @param[in] i_offset 文字列の開始位置。
+	 */
+	basic_const_string(
+		this_type const&                    i_string,
+		typename this_type::size_type const i_offset = 0)
+	{
+		new(this) this_type(i_string, i_offset, i_string.length() - i_offset);
 	}
 
 	/** @param[in] i_string 文字列の先頭位置。
@@ -62,16 +73,6 @@ public:
 		typename this_type::const_iterator const i_end)
 	{
 		new(this) this_type(i_begin, std::distance(i_begin, i_end));
-	}
-
-	/** @param[in] i_string 基準となる文字列。
-	    @param[in] i_offset 文字列の開始位置。
-	 */
-	basic_const_string(
-		this_type const&                    i_string,
-		typename this_type::size_type const i_offset = 0)
-	{
-		new(this) this_type(i_string, i_offset, i_string.length() - i_offset);
 	}
 
 	/** @param[in] i_string 基準となる文字列。
@@ -146,9 +147,8 @@ public:
 	{
 		if (this->length() <= i_index)
 		{
-			//throw std::out_of_range;
-			static this_type::value_type const s_empty(0);
-			return s_empty;
+			PSYQ_ASSERT(false);
+			//throw std::out_of_range; // 例外は使いたくない。
 		}
 		return *(this->data() + i_index);
 	}
@@ -166,7 +166,7 @@ public:
 	bool operator==(t_string const& i_right) const
 	{
 		return this->length() == i_right.length()
-			&& 0 == t_traits_type::compare(
+			&& 0 == t_traits::compare(
 				this->data(), i_right.data(), this->length());
 	}
 
@@ -177,11 +177,30 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	int compare(typename this_type::const_pointer const i_right_string) const
+	{
+		return this->compare(0, this->length(), i_right_string);
+	}
+
 	template< typename t_string >
 	int compare(t_string const& i_right) const
 	{
 		return this->compare(
 			0, this->length(), i_right.data(), i_right.length());
+	}
+
+	int compare(
+		typename this_type::size_type const     i_left_offset,
+		typename this_type::size_type const     i_left_count,
+		typename this_type::const_pointer const i_right_string)
+	const
+	{
+		return this->compare(
+			i_left_offset,
+			i_left_count,
+			i_right_string,
+			NULL != i_right_string?
+				t_traits::length(i_right_string): 0);
 	}
 
 	template< typename t_string >
@@ -193,6 +212,29 @@ public:
 	{
 		return this->compare(
 			i_left_offset, i_left_count, i_right.data(), i_right.length());
+	}
+
+	int compare(
+		typename this_type::size_type const     i_left_offset,
+		typename this_type::size_type const     i_left_count,
+		typename this_type::const_pointer const i_right_string,
+		typename this_type::size_type const     i_right_length)
+	const
+	{
+		std::size_t const a_left_length(
+			this_type::trim_length(
+				i_left_offset, i_left_count, this->length()));
+		int const a_result(
+			t_traits::compare(
+				this->data() + i_left_offset,
+				i_right_string,
+				a_left_length < i_right_length?
+					a_left_length: i_right_length));
+		return 0 != a_result?
+			a_result:
+			a_left_length < i_right_length?
+				-1:
+				i_right_length < a_left_length? 1: 0;
 	}
 
 	template< typename t_string >
@@ -212,50 +254,13 @@ public:
 				i_right_offset, i_right_count, i_right.length()));
 	}
 
-	int compare(typename this_type::const_pointer const i_right_string) const
-	{
-		return this->compare(0, this->length(), i_right_string);
-	}
-
-	int compare(
-		typename this_type::size_type const     i_left_offset,
-		typename this_type::size_type const     i_left_count,
-		typename this_type::const_pointer const i_right_string)
-	const
-	{
-		return this->compare(
-			i_left_offset,
-			i_left_count,
-			i_right_string,
-			NULL != i_right_string?
-				t_traits_type::length(i_right_string): 0);
-	}
-
-	int compare(
-		typename this_type::size_type const     i_left_offset,
-		typename this_type::size_type const     i_left_count,
-		typename this_type::const_pointer const i_right_string,
-		typename this_type::size_type const     i_right_length)
-	const
-	{
-		std::size_t const a_left_length(
-			this_type::trim_length(
-				i_left_offset, i_left_count, this->length()));
-		int const a_result(
-			t_traits_type::compare(
-				this->data() + i_left_offset,
-				i_right_string,
-				a_left_length < i_right_length?
-					a_left_length: i_right_length));
-		return 0 != a_result?
-			a_result:
-			a_left_length < i_right_length?
-				-1:
-				i_right_length < a_left_length? 1: 0;
-	}
-
 	//-------------------------------------------------------------------------
 	this_type& assign(typename this_type::const_pointer const i_string)
+	{
+		return *new(this) this_type(i_string);
+	}
+
+	this_type& assign(this_type const& i_string)
 	{
 		return *new(this) this_type(i_string);
 	}
@@ -272,11 +277,6 @@ public:
 		typename this_type::const_iterator const i_end)
 	{
 		return *new(this) this_type(i_begin, i_end);
-	}
-
-	this_type& assign(this_type const& i_string)
-	{
-		return *new(this) this_type(i_string);
 	}
 
 	this_type& assign(
@@ -304,7 +304,7 @@ public:
 	template< typename t_string >
 	t_string substr(typename this_type::size_type const i_offset = 0) const
 	{
-		return this->create(i_offset, this->length() - i_offset);
+		return this->substr< t_string >(i_offset, this->length() - i_offset);
 	}
 
 	template< typename t_string >
@@ -349,7 +349,7 @@ private:
 		{
 			return 0;
 		}
-		for (std::size_t i = 0; i < i_length; ++i)
+		for (typename this_type::size_type i = 0; i < i_length; ++i)
 		{
 			if (0 == i_string[i])
 			{
@@ -361,8 +361,8 @@ private:
 
 //.............................................................................
 private:
-	t_value_type const* data_;
-	std::size_t         length_;
+	t_value const* data_;
+	std::size_t    length_;
 };
 
 #endif // PSYQ_CONST_STRING_HPP_

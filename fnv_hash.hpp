@@ -46,7 +46,7 @@ public:
 	 */
 	template< typename t_char >
 	static typename t_traits::value_type generate(
-		t_char const* const            i_string,
+		t_char const* const                 i_string,
 		typename t_traits::value_type const i_offset = t_traits::EMPTY,
 		typename t_traits::value_type const i_prime = t_traits::PRIME)
 	{
@@ -71,9 +71,9 @@ public:
 		typename t_traits::value_type const i_offset = t_traits::EMPTY,
 		typename t_traits::value_type const i_prime = t_traits::PRIME)
 	{
-		typename t_string::const_pointer const a_begin(i_string.c_str());
+		typename t_string::const_pointer const a_data(i_string.data());
 		return t_generator::generate(
-			a_begin, a_begin + i_string.length(), i_offset, i_prime);
+			a_data, a_data + i_string.length(), i_offset, i_prime);
 	}
 };
 

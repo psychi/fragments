@@ -314,6 +314,31 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief 文字を検索する。
+	    @param[in] i_char   検索文字。
+	    @param[in] i_offset 検索を開始する位置。
+		@return 検索する文字が見つかった位置。見つからない場合はnposを返す。
+	 */
+	typename this_type::size_type find(
+		typename this_type::value_type const i_char,
+		typename this_type::size_type const  i_offset = 0)
+	const
+	{
+		if (i_offset < this->length())
+		{
+			typename this_type::const_pointer const a_find(
+				this_type::traits_type::find(
+					this->data() + i_offset,
+					this->length() - i_offset,
+					i_char));
+			if (NULL != a_find)
+			{
+				return a_find - this->data();
+			}
+		}
+		return this_type::npos;
+	}
+
 	/** @brief 文字列を検索する。
 	    @param[in] i_string NULL終端の検索文字列の先頭位置。
 	    @param[in] i_offset 検索を開始する位置。
@@ -349,9 +374,9 @@ public:
 		@return 検索文字列が見つかった位置。見つからない場合はnposを返す。
 	 */
 	typename this_type::size_type find(
-		typename this_type::const_iterator const i_begin,
-		typename this_type::size_type const      i_offset,
-		typename this_type::size_type const      i_length)
+		typename this_type::const_pointer const i_begin,
+		typename this_type::size_type const     i_offset,
+		typename this_type::size_type const     i_length)
 	const
 	{
 		if (0 < i_length)
@@ -395,32 +420,33 @@ public:
 		return this_type::npos;
 	}
 
-	/** @brief 文字を検索する。
+	//-------------------------------------------------------------------------
+	/** @brief 文字を後ろから検索する。
 	    @param[in] i_char   検索文字。
 	    @param[in] i_offset 検索を開始する位置。
 		@return 検索する文字が見つかった位置。見つからない場合はnposを返す。
 	 */
-	typename this_type::size_type find(
+	typename this_type::size_type rfind(
 		typename this_type::value_type const i_char,
-		typename this_type::size_type const  i_offset = 0)
+		typename this_type::size_type const  i_offset = this_type::npos)
 	const
 	{
-		if (i_offset < this->length())
+		if (!this->empty())
 		{
-			typename this_type::const_pointer const a_find(
-				this_type::traits_type::find(
-					this->data() + i_offset,
-					this->length() - i_offset,
-					i_char));
-			if (NULL != a_find)
+			typename this_type::size_type a_back(this->length() - 1);
+			typename this_type::const_pointer i(
+				this->data() + (i_offset < a_back? i_offset: a_back));
+			for (; this->data() <= i; --i)
 			{
-				return a_find - this->data();
+				if (this_type::traits_type::eq(i_char, *i))
+				{
+					return i - this->data();
+				}
 			}
 		}
 		return this_type::npos;
 	}
 
-	//-------------------------------------------------------------------------
 	/** @brief 文字列を後ろから検索する。
 	    @param[in] i_string NULL終端の検索文字列の先頭位置。
 	    @param[in] i_offset 検索を開始する位置。
@@ -458,9 +484,9 @@ public:
 		@return 検索文字列が見つかった位置。見つからない場合はnposを返す。
 	 */
 	typename this_type::size_type rfind(
-		typename this_type::const_iterator const i_begin,
-		typename this_type::size_type const      i_offset,
-		typename this_type::size_type const      i_length)
+		typename this_type::const_pointer const i_begin,
+		typename this_type::size_type const     i_offset,
+		typename this_type::size_type const     i_length)
 	const
 	{
 		if (i_length <= 0)
@@ -491,24 +517,53 @@ public:
 		return this_type::npos;
 	}
 
-	/** @brief 文字を後ろから検索する。
-	    @param[in] i_char   検索文字。
-	    @param[in] i_offset 検索を開始する位置。
-		@return 検索する文字が見つかった位置。見つからない場合はnposを返す。
-	 */
-	typename this_type::size_type rfind(
+	//-------------------------------------------------------------------------
+	typename this_type::size_type find_first_of(
 		typename this_type::value_type const i_char,
-		typename this_type::size_type const  i_offset = this_type::npos)
+		typename this_type::size_type const  i_offset = 0)
 	const
 	{
-		if (!this->empty())
+		return this->find(i_char, i_offset);
+	}
+
+	typename this_type::size_type find_first_of(
+		typename this_type::const_pointer const i_string,
+		typename this_type::size_type const     i_offset = 0)
+	const
+	{
+		return this->find_first_of(
+			i_string,
+			i_offset,
+			NULL != i_string? this_type::traits_type::length(i_string): 0);
+	}
+
+	template< typename t_string >
+	typename this_type::size_type find_first_of(
+		t_string const&                     i_string,
+		typename this_type::size_type const i_offset = 0)
+	const
+	{
+		return this->find_first_of(
+			i_string.data(), i_offset, i_string.length());
+	}
+
+	typename this_type::size_type find_first_of(
+		typename this_type::const_pointer const i_string,
+		typename this_type::size_type const     i_offset,
+		typename this_type::size_type const     i_length)
+	const
+	{
+		PSYQ_ASSERT(i_length <= 0 || NULL != i_string);
+		if (0 < i_length && i_offset < this->length())
 		{
-			typename this_type::size_type a_back(this->length() - 1);
-			typename this_type::const_pointer i(
-				this->data() + (i_offset < a_back? i_offset: a_back));
-			for (; this->data() <= i; --i)
+			typename this_type::const_pointer const a_end(
+				this->data() + this->length());
+			for (
+				typename this_type::const_pointer i = this->data() + i_offset;
+				i < a_end;
+				++i)
 			{
-				if (this_type::traits_type::eq(i_char, *i))
+				if (NULL != this_type::traits_type::find(i_string, i_length, *i))
 				{
 					return i - this->data();
 				}

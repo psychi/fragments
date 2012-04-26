@@ -34,9 +34,11 @@ public:
 	typedef typename this_type::const_reference reference;
 	typedef typename this_type::const_pointer const_iterator;
 	typedef typename this_type::const_iterator iterator;
+	typedef std::reverse_iterator< const_iterator > const_reverse_iterator;
+	typedef typename this_type::const_reverse_iterator reverse_iterator;
 
 	//-------------------------------------------------------------------------
-	/** @param[in] i_string NULL終端文字列の先頭位置。
+	/** @param[in] i_string 参照する文字列の先頭位置。NULL終端。
 	 */
 	basic_const_string(
 		typename this_type::const_pointer const i_string = NULL):
@@ -46,7 +48,7 @@ public:
 		// pass
 	}
 
-	/** @param[in] i_string 基準となる文字列。
+	/** @param[in] i_string 参照する文字列。
 	    @param[in] i_offset 文字列の開始位置。
 	 */
 	basic_const_string(
@@ -56,7 +58,7 @@ public:
 		new(this) this_type(i_string, i_offset, i_string.length() - i_offset);
 	}
 
-	/** @param[in] i_string NULL終端文字列の先頭位置。
+	/** @param[in] i_string 参照する文字列の先頭位置。NULL終端。
 	    @param[in] i_length 文字数。
 	 */
 	basic_const_string(
@@ -68,8 +70,8 @@ public:
 		// pass
 	}
 
-	/** @param[in] i_begin 文字列の先頭位置。
-	    @param[in] i_end   文字列の末尾位置。
+	/** @param[in] i_begin 参照する文字列の先頭位置。
+	    @param[in] i_end   参照する文字列の末尾位置。
 	 */
 	basic_const_string(
 		typename this_type::const_iterator const i_begin,
@@ -77,10 +79,10 @@ public:
 	data_(i_begin),
 	length_(std::distance(i_begin, i_end))
 	{
-		// pass
+		PSYQ_ASSERT(i_begin <= i_end);
 	}
 
-	/** @param[in] i_string 基準となる文字列。
+	/** @param[in] i_string 参照する文字列。
 	    @param[in] i_offset 文字列の開始位置。
 	    @param[in] i_count  文字数。
 	 */
@@ -120,6 +122,27 @@ public:
 		return this->end();
 	}
 
+	typename this_type::const_reverse_iterator rbegin() const
+	{
+		return typename this_type::const_reverse_iterator(
+			this->data() + this->length());
+	}
+
+	typename this_type::const_reverse_iterator rend() const
+	{
+		return typename this_type::const_reverse_iterator(this->data());
+	}
+
+	typename this_type::const_reverse_iterator crbegin() const
+	{
+		return this->rbegin();
+	}
+
+	typename this_type::const_reverse_iterator crend() const
+	{
+		return this->rend();
+	}
+
 	typename this_type::const_reference front() const
 	{
 		return (*this)[0];
@@ -136,6 +159,16 @@ public:
 	}
 
 	typename this_type::size_type size() const
+	{
+		return this->length();
+	}
+
+	typename this_type::size_type max_size() const
+	{
+		return this->length();
+	}
+
+	typename this_type::size_type capacity() const
 	{
 		return this->length();
 	}

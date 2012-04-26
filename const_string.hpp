@@ -630,6 +630,60 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	typename this_type::size_type find_first_not_of(
+		typename this_type::value_type const i_char,
+		typename this_type::size_type const  i_offset = 0)
+	const
+	{
+		return this->find_first_not_of(&i_char, i_offset, 1);
+	}
+
+	typename this_type::size_type find_first_not_of(
+		typename this_type::const_pointer const i_string,
+		typename this_type::size_type const     i_offset = 0)
+	const
+	{
+		return this->find_first_not_of(
+			i_string,
+			i_offset,
+			NULL != i_string? this_type::traits_type::length(i_string): 0);
+	}
+
+	typename this_type::size_type find_first_not_of(
+		this_type const&                    i_string,
+		typename this_type::size_type const i_offset = 0)
+	const
+	{
+		return this->find_first_not_of(
+			i_string.data(), i_offset, i_string.length());
+	}
+
+	typename this_type::size_type find_first_not_of(
+		typename this_type::const_pointer const i_begin,
+		typename this_type::size_type const     i_offset,
+		typename this_type::size_type const     i_length)
+	const
+	{
+		PSYQ_ASSERT(i_length <= 0 || NULL != i_begin);
+		if (i_offset < this->length())
+		{
+			typename this_type::const_pointer const a_end(
+				this->data() + this->length());
+			for (
+				typename this_type::const_pointer i = this->data() + i_offset;
+				i < a_end;
+				++i)
+			{
+				if (NULL == this_type::traits_type::find(i_begin, i_length, *i))
+				{
+					return i - this->data();
+				}
+			}
+		}
+		return this_type::npos;
+	}
+
+	//-------------------------------------------------------------------------
 	this_type& assign(typename this_type::const_pointer const i_string)
 	{
 		return *new(this) this_type(i_string);

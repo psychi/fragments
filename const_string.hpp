@@ -38,7 +38,7 @@ public:
 	typedef typename this_type::const_reverse_iterator reverse_iterator;
 
 	//-------------------------------------------------------------------------
-	/** @param[in] i_string 参照する文字列の先頭位置。NULL終端。
+	/** @param[in] i_string 割り当てる文字列の先頭位置。必ずNULL文字で終わる。
 	 */
 	basic_const_string(
 		typename this_type::const_pointer const i_string = NULL):
@@ -48,7 +48,7 @@ public:
 		// pass
 	}
 
-	/** @param[in] i_string 参照する文字列。
+	/** @param[in] i_string 割り当てる文字列。
 	    @param[in] i_offset 文字列の開始位置。
 	 */
 	basic_const_string(
@@ -58,7 +58,7 @@ public:
 		new(this) this_type(i_string, i_offset, i_string.length() - i_offset);
 	}
 
-	/** @param[in] i_string 参照する文字列の先頭位置。NULL終端。
+	/** @param[in] i_string 割り当てる文字列の先頭位置。必ずNULL文字で終わる。
 	    @param[in] i_length 文字数。
 	 */
 	basic_const_string(
@@ -70,8 +70,8 @@ public:
 		// pass
 	}
 
-	/** @param[in] i_begin 参照する文字列の先頭位置。
-	    @param[in] i_end   参照する文字列の末尾位置。
+	/** @param[in] i_begin 割り当てる文字列の先頭位置。
+	    @param[in] i_end   割り当てる文字列の末尾位置。
 	 */
 	basic_const_string(
 		typename this_type::const_iterator const i_begin,
@@ -82,7 +82,7 @@ public:
 		PSYQ_ASSERT(i_begin <= i_end);
 	}
 
-	/** @param[in] i_string 参照する文字列。
+	/** @param[in] i_string 割り当てる文字列。
 	    @param[in] i_offset 文字列の開始位置。
 	    @param[in] i_count  文字数。
 	 */
@@ -97,67 +97,105 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief 文字列の先頭の文字へのpointerを取得。
+	    @return 先頭文字へのpointer。
+	 */
 	typename this_type::const_pointer data() const
 	{
 		return this->data_;
 	}
 
+	/** @brief 文字列の先頭位置を取得。
+	    @return 文字列の先頭位置。
+	 */
 	typename this_type::const_iterator begin() const
 	{
 		return this->data();
 	}
 
+	/** @brief 文字列の末尾位置を取得。
+	    @return 文字列の末尾位置。
+	 */
 	typename this_type::const_iterator end() const
 	{
 		return this->begin() + this->length();
 	}
 
+	/** @brief 文字列の先頭位置を取得。
+	    @return 文字列の先頭位置。
+	 */
 	typename this_type::const_iterator cbegin() const
 	{
 		return this->begin();
 	}
 
+	/** @brief 文字列の末尾位置を取得。
+	    @return 文字列の末尾位置。
+	 */
 	typename this_type::const_iterator cend() const
 	{
 		return this->end();
 	}
 
+	/** @brief 文字列の逆先頭位置を取得。
+	    @return 文字列の逆先頭位置。
+	 */
 	typename this_type::const_reverse_iterator rbegin() const
 	{
-		return typename this_type::const_reverse_iterator(
-			this->data() + this->length());
+		return typename this_type::const_reverse_iterator(this->end());
 	}
 
+	/** @brief 文字列の逆末尾位置を取得。
+	    @return 文字列の逆末尾位置。
+	 */
 	typename this_type::const_reverse_iterator rend() const
 	{
-		return typename this_type::const_reverse_iterator(this->data());
+		return typename this_type::const_reverse_iterator(this->begin());
 	}
 
+	/** @brief 文字列の逆先頭位置を取得。
+	    @return 文字列の逆先頭位置。
+	 */
 	typename this_type::const_reverse_iterator crbegin() const
 	{
 		return this->rbegin();
 	}
 
+	/** @brief 文字列の逆末尾位置を取得。
+	    @return 文字列の逆末尾位置。
+	 */
 	typename this_type::const_reverse_iterator crend() const
 	{
 		return this->rend();
 	}
 
+	/** @brief 文字列の先頭文字を参照。
+	    @return 文字列の先頭文字への参照。
+	 */
 	typename this_type::const_reference front() const
 	{
 		return (*this)[0];
 	}
 
+	/** @brief 文字列の最終文字を参照。
+	    @return 文字列の最終文字への参照。
+	 */
 	typename this_type::const_reference back() const
 	{
 		return (*this)[this->length() - 1];
 	}
 
+	/** @brief 文字列の長さを取得。
+	    @return 文字列の長さ。
+	 */
 	typename this_type::size_type length() const
 	{
 		return this->length_;
 	}
 
+	/** @brief 文字列の長さを取得。
+	    @return 文字列の長さ。
+	 */
 	typename this_type::size_type size() const
 	{
 		return this->length();
@@ -173,6 +211,10 @@ public:
 		return this->length();
 	}
 
+	/** @brief 文字列が空か判定。
+	    @retval true  文字列は空。
+	    @retval false 文字列は空ではない。
+	 */
 	bool empty() const
 	{
 		return this->length() <= 0;
@@ -350,7 +392,7 @@ public:
 	/** @brief 文字を検索する。
 	    @param[in] i_char   検索文字。
 	    @param[in] i_offset 検索を開始する位置。
-		@return 検索する文字が見つかった位置。見つからない場合はnposを返す。
+	    @return 検索文字が見つかった位置。見つからない場合はnposを返す。
 	 */
 	typename this_type::size_type find(
 		typename this_type::value_type const i_char,
@@ -373,9 +415,9 @@ public:
 	}
 
 	/** @brief 文字列を検索する。
-	    @param[in] i_string NULL終端の検索文字列の先頭位置。
+	    @param[in] i_string 検索文字列の先頭位置。必ずNULL文字で終わる。
 	    @param[in] i_offset 検索を開始する位置。
-		@return 検索する文字列が見つかった位置。見つからない場合はnposを返す。
+	    @return 検索文字列が見つかった位置。見つからない場合はnposを返す。
 	 */
 	typename this_type::size_type find(
 		typename this_type::const_pointer const i_string,
@@ -389,7 +431,7 @@ public:
 	/** @brief 文字列を検索する。
 	    @param[in] i_string 検索文字列。
 	    @param[in] i_offset 検索を開始する位置。
-		@return 検索文字列が見つかった位置。見つからない場合はnposを返す。
+	    @return 検索文字列が見つかった位置。見つからない場合はnposを返す。
 	 */
 	template< typename t_string >
 	typename this_type::size_type find(
@@ -404,7 +446,7 @@ public:
 	    @param[in] i_begin  検索文字列の先頭位置。
 	    @param[in] i_offset 検索を開始する位置。
 	    @param[in] i_length 検索文字列の長さ。
-		@return 検索文字列が見つかった位置。見つからない場合はnposを返す。
+	    @return 検索文字列が見つかった位置。見つからない場合はnposを返す。
 	 */
 	typename this_type::size_type find(
 		typename this_type::const_pointer const i_begin,
@@ -457,7 +499,7 @@ public:
 	/** @brief 文字を後ろから検索する。
 	    @param[in] i_char   検索文字。
 	    @param[in] i_offset 検索を開始する位置。
-		@return 検索する文字が見つかった位置。見つからない場合はnposを返す。
+	    @return 検索文字が見つかった位置。見つからない場合はnposを返す。
 	 */
 	typename this_type::size_type rfind(
 		typename this_type::value_type const i_char,
@@ -481,9 +523,9 @@ public:
 	}
 
 	/** @brief 文字列を後ろから検索する。
-	    @param[in] i_string NULL終端の検索文字列の先頭位置。
+	    @param[in] i_string 検索文字列の先頭位置。必ずNULL文字で終わる。
 	    @param[in] i_offset 検索を開始する位置。
-		@return 検索文字列が見つかった位置。見つからない場合はnposを返す。
+	    @return 検索文字列が見つかった位置。見つからない場合はnposを返す。
 	 */
 	typename this_type::size_type rfind(
 		typename this_type::const_pointer const i_string,
@@ -499,7 +541,7 @@ public:
 	/** @brief 文字列を後ろから検索する。
 	    @param[in] i_string 検索文字列。
 	    @param[in] i_offset 検索を開始する位置。
-		@return 検索する文字列が見つかった位置。見つからない場合はnposを返す。
+	    @return 検索文字列が見つかった位置。見つからない場合はnposを返す。
 	 */
 	template< typename t_string >
 	typename this_type::size_type rfind(
@@ -514,7 +556,7 @@ public:
 	    @param[in] i_begin  検索文字列の先頭位置。
 	    @param[in] i_offset 検索を開始する位置。
 	    @param[in] i_length 検索文字列の長さ。
-		@return 検索文字列が見つかった位置。見つからない場合はnposを返す。
+	    @return 検索文字列が見つかった位置。見つからない場合はnposを返す。
 	 */
 	typename this_type::size_type rfind(
 		typename this_type::const_pointer const i_begin,
@@ -775,16 +817,29 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief 文字列を割り当てる。
+	    @param[in] i_string 割り当てる文字列の先頭位置。必ずNULL文字で終わる。
+	 */
 	this_type& assign(typename this_type::const_pointer const i_string)
 	{
 		return *new(this) this_type(i_string);
 	}
 
-	this_type& assign(this_type const& i_string)
+	/** @brief 文字列を割り当てる。
+	    @param[in] i_string 割り当てる文字列。
+	    @param[in] i_offset 文字列の開始位置。
+	 */
+	this_type& assign(
+		this_type const&                    i_string,
+		typename this_type::size_type const i_offset = 0)
 	{
-		return *new(this) this_type(i_string);
+		return *new(this) this_type(i_string, i_offset);
 	}
 
+	/** @brief 文字列を割り当てる。
+	    @param[in] i_string 割り当てる文字列の先頭位置。必ずNULL文字で終わる。
+	    @param[in] i_length 文字数。
+	 */
 	this_type& assign(
 		typename this_type::const_pointer const i_string,
 		typename this_type::size_type const     i_length)
@@ -792,6 +847,10 @@ public:
 		return *new(this) this_type(i_string, i_length);
 	}
 
+	/** @brief 文字列を割り当てる。
+	    @param[in] i_begin 割り当てる文字列の先頭位置。
+	    @param[in] i_end   割り当てる文字列の末尾位置。
+	 */
 	this_type& assign(
 		typename this_type::const_iterator const i_begin,
 		typename this_type::const_iterator const i_end)
@@ -799,6 +858,11 @@ public:
 		return *new(this) this_type(i_begin, i_end);
 	}
 
+	/** @brief 文字列を割り当てる。
+	    @param[in] i_string 割り当てる文字列。
+	    @param[in] i_offset 文字列の開始位置。
+	    @param[in] i_count  文字数。
+	 */
 	this_type& assign(
 		this_type const&                    i_string,
 		typename this_type::size_type const i_offset,
@@ -808,11 +872,20 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief 部分文字列を構築。
+	    @param[in] i_offset 文字列の開始位置。
+	    @return 構築した部分文字列。
+	 */
 	this_type substr(typename this_type::size_type const i_offset = 0) const
 	{
 		return this->substr< this_type >(i_offset);
 	}
 
+	/** @brief 部分文字列を構築。
+	    @param[in] i_offset 文字列の開始位置。
+	    @param[in] i_count  文字数。
+	    @return 構築した部分文字列。
+	 */
 	this_type substr(
 		typename this_type::size_type const i_offset,
 		typename this_type::size_type const i_count)
@@ -821,12 +894,21 @@ public:
 		return this->substr< this_type >(i_offset, i_count);
 	}
 
+	/** @brief 部分文字列を構築。
+	    @param[in] i_offset 文字列の開始位置。
+	    @return 構築した部分文字列。
+	 */
 	template< typename t_string >
 	t_string substr(typename this_type::size_type const i_offset = 0) const
 	{
 		return this->substr< t_string >(i_offset, this->length() - i_offset);
 	}
 
+	/** @brief 部分文字列を構築。
+	    @param[in] i_offset 文字列の開始位置。
+	    @param[in] i_count  文字数。
+	    @return 構築した部分文字列。
+	 */
 	template< typename t_string >
 	t_string substr(
 		typename this_type::size_type const i_offset,

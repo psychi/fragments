@@ -167,6 +167,11 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	bool operator==(this_type const& i_right) const
+	{
+		return this->operator==< this_type >(i_right);
+	}
+
 	template< typename t_string >
 	bool operator==(t_string const& i_right) const
 	{
@@ -175,10 +180,20 @@ public:
 				this->data(), i_right.data(), this->length());
 	}
 
+	bool operator!=(this_type const& i_right) const
+	{
+		return !this->operator==(i_right);
+	}
+
 	template< typename t_string >
 	bool operator!=(t_string const& i_right) const
 	{
 		return !this->operator==(i_right);
+	}
+
+	bool operator<(this_type const& i_right) const
+	{
+		return this->compare(i_right) < 0;
 	}
 
 	template< typename t_string >
@@ -187,16 +202,31 @@ public:
 		return this->compare(i_right) < 0;
 	}
 
+	bool operator<=(this_type const& i_right) const
+	{
+		return this->compare(i_right) <= 0;
+	}
+
 	template< typename t_string >
 	bool operator<=(t_string const& i_right) const
 	{
 		return this->compare(i_right) <= 0;
 	}
 
+	bool operator>(this_type const& i_right) const
+	{
+		return 0 < this->compare(i_right);
+	}
+
 	template< typename t_string >
 	bool operator>(t_string const& i_right) const
 	{
 		return 0 < this->compare(i_right);
+	}
+
+	bool operator>=(this_type const& i_right) const
+	{
+		return 0 <= this->compare(i_right);
 	}
 
 	template< typename t_string >
@@ -371,7 +401,7 @@ private:
 			PSYQ_ASSERT(false);
 			return 0;
 		}
-		this_type::size_type const a_limit(i_length - i_offset);
+		typename this_type::size_type const a_limit(i_length - i_offset);
 		return i_count <= a_limit? i_count: a_limit;
 	}
 

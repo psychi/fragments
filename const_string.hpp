@@ -314,6 +314,109 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief 文字列を検索する。
+	    @param[in] i_string   検索するNULL終端文字列の先頭位置。
+	    @param[in] i_position 検索を開始する位置。
+		@return 検索する文字列が見つかった位置。見つからない場合はnposを返す。
+	 */
+	typename this_type::size_type find(
+		typename this_type::const_pointer const i_string,
+		typename this_type::size_type const     i_position = 0)
+	const
+	{
+		return this->find(
+			i_string, i_position, this_type::traits_type::length(i_string));
+	}
+
+	/** @brief 文字列を検索する。
+	    @param[in] i_string   検索する文字列の先頭位置。
+	    @param[in] i_position 検索を開始する位置。
+		@return 検索する文字列が見つかった位置。見つからない場合はnposを返す。
+	 */
+	template< typename t_string >
+	typename this_type::size_type find(
+		t_string const&               i_string,
+		typename this_type::size_type i_position = 0)
+	const
+	{
+		return this->find(i_string.data(), i_position, i_string.length());
+	}
+
+	/** @brief 文字列を検索する。
+	    @param[in] i_begin    検索する文字列の先頭位置。
+	    @param[in] i_position 検索を開始する位置。
+	    @param[in] i_length   検索する文字列の長さ。
+		@return 検索する文字列が見つかった位置。見つからない場合はnposを返す。
+	 */
+	typename this_type::size_type find(
+		typename this_type::const_iterator const i_begin,
+		typename this_type::size_type const      i_position,
+		typename this_type::size_type const      i_length)
+	const
+	{
+		if (i_length <= 0 && i_position <= this->length())
+		{
+			return i_position;
+		}
+
+		typename this_type::size_type a_rest_length(
+			this->length() - i_position);
+		if (i_position < this->length() && i_length <= a_rest_length)
+		{
+			a_rest_length -= i_length - 1;
+			typename this_type::const_pointer a_rest_string(
+				this->data() + i_position);
+			for (;;)
+			{
+				// 検索文字列の先頭文字と合致する位置を見つける。
+				typename this_type::const_pointer const a_find(
+					this_type::traits_type::find(
+						a_rest_string, a_rest_length, *i_begin));
+				if (NULL == a_find)
+				{
+					break;
+				}
+
+				// 検索文字列と合致するか判定。
+				if (0 == this_type::traits_type::compare(a_find, i_begin, i_length))
+				{
+					return a_find - this->data();
+				}
+
+				// 次の候補へ。
+				a_rest_length -= a_find + 1 - a_rest_string;
+				a_rest_string = a_find + 1;
+			}
+		}
+		return this_type::npos;
+	}
+
+	/** @brief 文字を検索する。
+	    @param[in] i_char     検索する文字。
+	    @param[in] i_position 検索を開始する位置。
+		@return 検索する文字が見つかった位置。見つからない場合はnposを返す。
+	 */
+	typename this_type::size_type find(
+		typename this_type::value_type const i_char,
+		typename this_type::size_type const  i_position = 0)
+	const
+	{
+		if (i_position < this->length())
+		{
+			typename this_type::const_pointer const a_find(
+				this_type::traits_type::find(
+					this->data() + i_position,
+					this->length() - i_position,
+					i_char));
+			if (NULL != a_find)
+			{
+				return a_find - this->data();
+			}
+		}
+		return this_type::npos;
+	}
+
+	//-------------------------------------------------------------------------
 	this_type& assign(typename this_type::const_pointer const i_string)
 	{
 		return *new(this) this_type(i_string);
@@ -424,6 +527,10 @@ private:
 	}
 
 //.............................................................................
+public:
+	static typename this_type::size_type const npos =
+		static_cast< typename this_type::size_type >(-1);
+
 private:
 	t_value const*                data_;
 	typename this_type::size_type length_;

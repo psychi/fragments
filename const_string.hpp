@@ -548,12 +548,12 @@ public:
 	}
 
 	typename this_type::size_type find_first_of(
-		typename this_type::const_pointer const i_string,
+		typename this_type::const_pointer const i_begin,
 		typename this_type::size_type const     i_offset,
 		typename this_type::size_type const     i_length)
 	const
 	{
-		PSYQ_ASSERT(i_length <= 0 || NULL != i_string);
+		PSYQ_ASSERT(i_length <= 0 || NULL != i_begin);
 		if (0 < i_length && i_offset < this->length())
 		{
 			typename this_type::const_pointer const a_end(
@@ -563,9 +563,66 @@ public:
 				i < a_end;
 				++i)
 			{
-				if (NULL != this_type::traits_type::find(i_string, i_length, *i))
+				if (NULL != this_type::traits_type::find(i_begin, i_length, *i))
 				{
 					return i - this->data();
+				}
+			}
+		}
+		return this_type::npos;
+	}
+
+	//-------------------------------------------------------------------------
+	typename this_type::size_type find_last_of(
+		typename this_type::value_type const i_char,
+		typename this_type::size_type const  i_offset = this_type::npos)
+	const
+	{
+		return this->rfind(i_char, i_offset);
+	}
+
+	typename this_type::size_type find_last_of(
+		typename this_type::const_pointer const i_string,
+		typename this_type::size_type const     i_offset = this_type::npos)
+	const
+	{
+		return this->find_last_of(
+			i_string,
+			i_offset,
+			NULL != i_string? this_type::traits_type::length(i_string): 0);
+	}
+
+	template< typename t_string >
+	typename this_type::size_type find_last_of(
+		t_string const&                     i_string,
+		typename this_type::size_type const i_offset = this_type::npos)
+	const
+	{
+		return this->find_last_of(
+			i_string.data(), i_offset, i_string.length());
+	}
+
+	typename this_type::size_type find_last_of(
+		typename this_type::const_pointer const i_begin,
+		typename this_type::size_type const     i_offset,
+		typename this_type::size_type const     i_length)
+	const
+	{
+		PSYQ_ASSERT(i_length <= 0 || NULL != i_begin);
+		if (0 < i_length && 0 < this->length())
+		{
+			typename this_type::const_pointer i(
+				this->data() + (
+					i_offset < this->length()? i_offset: this->length() - 1));
+			for (;; --i)
+			{
+				if (NULL != this_type::traits_type::find(i_begin, i_length, *i))
+				{
+					return i - this->data();
+				}
+				if (i <= this->data())
+				{
+					break;
 				}
 			}
 		}

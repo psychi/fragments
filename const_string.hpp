@@ -565,7 +565,7 @@ public:
 				this->data() + (i_offset < a_back? i_offset: a_back));
 			for (; this->data() <= i; --i)
 			{
-				if (this_type::traits_type::eq(i_char, *i))
+				if (this_type::traits_type::eq(*i, i_char))
 				{
 					return i - this->data();
 				}
@@ -809,7 +809,19 @@ public:
 		typename this_type::size_type const  i_offset = 0)
 	const
 	{
-		return this->find_first_not_of(&i_char, i_offset, 1);
+		typename this_type::const_pointer const a_end(
+			this->data() + this->length());
+		for (
+			typename this_type::const_pointer i = this->data() + i_offset;
+			i < a_end;
+			++i)
+		{
+			if (!this_type::traits_type::eq(*i, i_char))
+			{
+				return i - this->data();
+			}
+		}
+		return this_type::npos;
 	}
 
 	/** @brief 検索文字列に含まれない文字を検索。
@@ -885,7 +897,20 @@ public:
 		typename this_type::size_type const  i_offset = this_type::npos)
 	const
 	{
-		return this->find_last_not_of(&i_char, i_offset, 1);
+		if (!this->empty())
+		{
+			typename this_type::size_type a_back(this->length() - 1);
+			typename this_type::const_pointer i(
+				this->data() + (i_offset < a_back? i_offset: a_back));
+			for (; this->data() <= i; --i)
+			{
+				if (!this_type::traits_type::eq(*i, i_char))
+				{
+					return i - this->data();
+				}
+			}
+		}
+		return this_type::npos;
 	}
 
 	/** @brief 検索文字列に含まれない文字を検索。
@@ -977,8 +1002,8 @@ public:
 	    @param[in] i_end   割り当てる文字列の末尾位置。
 	 */
 	this_type& assign(
-		typename this_type::const_iterator const i_begin,
-		typename this_type::const_iterator const i_end)
+		typename this_type::const_pointer const i_begin,
+		typename this_type::const_pointer const i_end)
 	{
 		return *new(this) this_type(i_begin, i_end);
 	}

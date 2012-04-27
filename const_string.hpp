@@ -67,6 +67,7 @@ public:
 		typename this_type::const_pointer const i_begin,
 		typename this_type::const_pointer const i_end)
 	{
+		PSYQ_ASSERT(i_begin <= i_end);
 		new(this) this_type(i_begin, std::distance(i_begin, i_end));
 	}
 
@@ -79,7 +80,7 @@ public:
 		typename this_type::size_type const i_offset = 0,
 		typename this_type::size_type const i_count = this_type::npos):
 	data_(i_string.data() + i_offset),
-	length_(this_type::trim_length(i_offset, i_count, i_string.length()))
+	length_(i_string.trim_length(i_offset, i_count))
 	{
 		// pass
 	}
@@ -396,19 +397,22 @@ public:
 	const
 	{
 		std::size_t const a_left_length(
-			this_type::trim_length(
-				i_left_offset, i_left_count, this->length()));
-		int const a_result(
+			this->trim_length(i_left_offset, i_left_count));
+		bool const a_less(a_left_length < i_right_length);
+		int const a_compare(
 			t_traits::compare(
 				this->data() + i_left_offset,
 				i_right,
-				a_left_length < i_right_length?
-					a_left_length: i_right_length));
-		return 0 != a_result?
-			a_result:
-			a_left_length < i_right_length?
-				-1:
-				i_right_length < a_left_length? 1: 0;
+				a_less? a_left_length: i_right_length));
+		if (0 != a_compare)
+		{
+			return a_compare;
+		}
+		if (a_less)
+		{
+			return -1;
+		}
+		return i_right_length < a_left_length? 1: 0;
 	}
 
 	/** @brief 文字列を比較。
@@ -434,8 +438,7 @@ public:
 			i_left_offset,
 			i_left_count,
 			i_right.data() + i_right_offset,
-			this_type::trim_length(
-				i_right_offset, i_right_count, i_right.length()));
+			i_right.trim_length(i_right_offset, i_right_count));
 	}
 
 	//-------------------------------------------------------------------------
@@ -503,14 +506,11 @@ public:
 		typename this_type::size_type const     i_length)
 	const
 	{
-		if (0 < i_length)
+		if (i_length <= 0)
 		{
-			PSYQ_ASSERT(NULL != i_string);
+			return i_offset <= this->length()? i_offset: this_type::npos;
 		}
-		else if (i_offset <= this->length())
-		{
-			return i_offset;
-		}
+		PSYQ_ASSERT(NULL != i_string);
 
 		typename this_type::size_type a_rest_length(
 			this->length() - i_offset);
@@ -545,7 +545,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 文字を後ろから検索。
+	/** @brief 後ろから文字を検索。
 	    @param[in] i_char   検索文字。
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字が現れた位置。現れない場合はnposを返す。
@@ -573,7 +573,7 @@ public:
 		return this_type::npos;
 	}
 
-	/** @brief 文字列を後ろから検索。
+	/** @brief 後ろから文字列を検索。
 	    @param[in] i_string 検索文字列の先頭位置。必ずNULL文字で終わる。
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字列が現れた位置。現れない場合はnposを返す。
@@ -586,7 +586,7 @@ public:
 		return this->rfind(i_string, i_offset, this_type::find_null(i_string));
 	}
 
-	/** @brief 文字列を後ろから検索。
+	/** @brief 後ろから文字列を検索。
 	    @param[in] i_string 検索文字列。
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字列が現れた位置。現れない場合はnposを返す。
@@ -600,7 +600,7 @@ public:
 		return this->rfind(i_string.data(), i_offset, i_string.length());
 	}
 
-	/** @brief 文字列を後ろから検索。
+	/** @brief 後ろから文字列を検索。
 	    @param[in] i_string 検索文字列の先頭位置。
 	    @param[in] i_offset 検索を開始する位置。
 	    @param[in] i_length 検索文字列の長さ。
@@ -856,10 +856,8 @@ public:
 		{
 			typename this_type::const_pointer const a_end(
 				this->data() + this->length());
-			for (
-				typename this_type::const_pointer i = this->data() + i_offset;
-				i < a_end;
-				++i)
+			typename this_type::const_pointer i(this->data() + i_offset);
+			for (; i < a_end; ++i)
 			{
 				if (NULL == this_type::traits_type::find(i_string, i_length, *i))
 				{
@@ -941,7 +939,7 @@ public:
 	const
 	{
 		PSYQ_ASSERT(i_length <= 0 || NULL != i_string);
-		if (0 < this->length())
+		if (!this->empty())
 		{
 			typename this_type::const_pointer i(this->trim_pointer(i_offset));
 			for (;; --i)
@@ -1030,8 +1028,7 @@ public:
 	const
 	{
 		return t_string(
-			this->data() + i_offset,
-			this_type::trim_length(i_offset, i_count, this->length()));
+			this->data() + i_offset, this->trim_length(i_offset, i_count));
 	}
 
 	//-------------------------------------------------------------------------
@@ -1061,36 +1058,18 @@ private:
 			i_offset < this->length()? i_offset: this->length() - 1);
 	}
 
-	static typename this_type::size_type trim_length(
-		typename this_type::const_pointer const i_string,
-		typename this_type::size_type const     i_length)
-	{
-		if (NULL == i_string)
-		{
-			return 0;
-		}
-		for (typename this_type::size_type i = 0; i < i_length; ++i)
-		{
-			if (0 == i_string[i])
-			{
-				return i;
-			}
-		}
-		return i_length;
-	}
-
-	static typename this_type::size_type trim_length(
+	typename this_type::size_type trim_length(
 		typename this_type::size_type const i_offset,
-		typename this_type::size_type const i_count,
-		typename this_type::size_type const i_length)
+		typename this_type::size_type const i_count)
+	const
 	{
-		if (i_length < i_offset)
+		if (this->length() < i_offset)
 		{
 			PSYQ_ASSERT(false);
 			return 0;
 		}
-		typename this_type::size_type const a_limit(i_length - i_offset);
-		return i_count <= a_limit? i_count: a_limit;
+		typename this_type::size_type const a_limit(this->length() - i_offset);
+		return i_count < a_limit? i_count: a_limit;
 	}
 
 	static typename this_type::size_type find_null(

@@ -43,7 +43,7 @@ public:
 	basic_const_string(
 		typename this_type::const_pointer const i_string = NULL):
 	data_(i_string),
-	length_(NULL != i_string? t_traits::length(i_string): 0)
+	length_(this_type::find_null(i_string))
 	{
 		// pass
 	}
@@ -357,7 +357,7 @@ public:
 			i_left_offset,
 			i_left_count,
 			i_right,
-			NULL != i_right? t_traits::length(i_right): 0);
+			this_type::find_null(i_right));
 	}
 
 	/** @brief 文字列を比較。
@@ -474,10 +474,7 @@ public:
 		typename this_type::size_type const     i_offset = 0)
 	const
 	{
-		return this->find(
-			i_string,
-			i_offset,
-			NULL != i_string? this_type::traits_type::length(i_string): 0);
+		return this->find(i_string, i_offset, this_type::find_null(i_string));
 	}
 
 	/** @brief 文字列を検索。
@@ -560,14 +557,16 @@ public:
 	{
 		if (!this->empty())
 		{
-			typename this_type::size_type a_back(this->length() - 1);
-			typename this_type::const_pointer i(
-				this->data() + (i_offset < a_back? i_offset: a_back));
-			for (; this->data() <= i; --i)
+			typename this_type::const_pointer i(this->trim_pointer(i_offset));
+			for (;; --i)
 			{
 				if (this_type::traits_type::eq(*i, i_char))
 				{
 					return i - this->data();
+				}
+				if (i <= this->data())
+				{
+					break;
 				}
 			}
 		}
@@ -584,10 +583,7 @@ public:
 		typename this_type::size_type const     i_offset = this_type::npos)
 	const
 	{
-		return this->rfind(
-			i_string,
-			i_offset,
-			NULL != i_string? this_type::traits_type::length(i_string): 0);
+		return this->rfind(i_string, i_offset, this_type::find_null(i_string));
 	}
 
 	/** @brief 文字列を後ろから検索。
@@ -669,9 +665,7 @@ public:
 	const
 	{
 		return this->find_first_of(
-			i_string,
-			i_offset,
-			NULL != i_string? this_type::traits_type::length(i_string): 0);
+			i_string, i_offset, this_type::find_null(i_string));
 	}
 
 	/** @brief 検索文字列に含まれるいずれかの文字を検索。
@@ -706,10 +700,8 @@ public:
 		{
 			typename this_type::const_pointer const a_end(
 				this->data() + this->length());
-			for (
-				typename this_type::const_pointer i = this->data() + i_offset;
-				i < a_end;
-				++i)
+			typename this_type::const_pointer i(this->data() + i_offset);
+			for (; i < a_end; ++i)
 			{
 				if (NULL != this_type::traits_type::find(i_string, i_length, *i))
 				{
@@ -745,9 +737,7 @@ public:
 	const
 	{
 		return this->find_last_of(
-			i_string,
-			i_offset,
-			NULL != i_string? this_type::traits_type::length(i_string): 0);
+			i_string, i_offset, this_type::find_null(i_string));
 	}
 
 	/** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索。
@@ -780,9 +770,7 @@ public:
 		PSYQ_ASSERT(i_length <= 0 || NULL != i_string);
 		if (0 < i_length && 0 < this->length())
 		{
-			typename this_type::const_pointer i(
-				this->data() + (
-					i_offset < this->length()? i_offset: this->length() - 1));
+			typename this_type::const_pointer i(this->trim_pointer(i_offset));
 			for (;; --i)
 			{
 				if (NULL != this_type::traits_type::find(i_string, i_length, *i))
@@ -811,10 +799,8 @@ public:
 	{
 		typename this_type::const_pointer const a_end(
 			this->data() + this->length());
-		for (
-			typename this_type::const_pointer i = this->data() + i_offset;
-			i < a_end;
-			++i)
+		typename this_type::const_pointer i(this->data() + i_offset);
+		for (; i < a_end; ++i)
 		{
 			if (!this_type::traits_type::eq(*i, i_char))
 			{
@@ -835,9 +821,7 @@ public:
 	const
 	{
 		return this->find_first_not_of(
-			i_string,
-			i_offset,
-			NULL != i_string? this_type::traits_type::length(i_string): 0);
+			i_string, i_offset, this_type::find_null(i_string));
 	}
 
 	/** @brief 検索文字列に含まれない文字を検索。
@@ -899,14 +883,16 @@ public:
 	{
 		if (!this->empty())
 		{
-			typename this_type::size_type a_back(this->length() - 1);
-			typename this_type::const_pointer i(
-				this->data() + (i_offset < a_back? i_offset: a_back));
-			for (; this->data() <= i; --i)
+			typename this_type::const_pointer i(this->trim_pointer(i_offset));
+			for (;; --i)
 			{
 				if (!this_type::traits_type::eq(*i, i_char))
 				{
 					return i - this->data();
+				}
+				if (i <= this->data())
+				{
+					break;
 				}
 			}
 		}
@@ -924,9 +910,7 @@ public:
 	const
 	{
 		return this->find_last_not_of(
-			i_string,
-			i_offset,
-			NULL != i_string? this_type::traits_type::length(i_string): 0);
+			i_string, i_offset, this_type::find_null(i_string));
 	}
 
 	/** @brief 検索文字列に含まれない文字を検索。
@@ -959,9 +943,7 @@ public:
 		PSYQ_ASSERT(i_length <= 0 || NULL != i_string);
 		if (0 < this->length())
 		{
-			typename this_type::const_pointer i(
-				this->data() + (
-					i_offset < this->length()? i_offset: this->length() - 1));
+			typename this_type::const_pointer i(this->trim_pointer(i_offset));
 			for (;; --i)
 			{
 				if (NULL == this_type::traits_type::find(i_string, i_length, *i))
@@ -1071,18 +1053,12 @@ public:
 
 //.............................................................................
 private:
-	static typename this_type::size_type trim_length(
-		typename this_type::size_type const i_offset,
-		typename this_type::size_type const i_count,
-		typename this_type::size_type const i_length)
+	typename this_type::const_pointer trim_pointer(
+		typename this_type::size_type const i_offset)
+	const
 	{
-		if (i_length < i_offset)
-		{
-			PSYQ_ASSERT(false);
-			return 0;
-		}
-		typename this_type::size_type const a_limit(i_length - i_offset);
-		return i_count <= a_limit? i_count: a_limit;
+		return this->data() + (
+			i_offset < this->length()? i_offset: this->length() - 1);
 	}
 
 	static typename this_type::size_type trim_length(
@@ -1101,6 +1077,26 @@ private:
 			}
 		}
 		return i_length;
+	}
+
+	static typename this_type::size_type trim_length(
+		typename this_type::size_type const i_offset,
+		typename this_type::size_type const i_count,
+		typename this_type::size_type const i_length)
+	{
+		if (i_length < i_offset)
+		{
+			PSYQ_ASSERT(false);
+			return 0;
+		}
+		typename this_type::size_type const a_limit(i_length - i_offset);
+		return i_count <= a_limit? i_count: a_limit;
+	}
+
+	static typename this_type::size_type find_null(
+		typename this_type::const_pointer const i_string)
+	{
+		return NULL != i_string? t_traits::length(i_string): 0;
 	}
 
 //.............................................................................

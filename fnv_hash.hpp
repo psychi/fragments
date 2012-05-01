@@ -18,10 +18,13 @@ template< typename t_generator, typename t_traits >
 class psyq::_fnv_hash:
 	public t_generator, public t_traits
 {
+	typedef psyq::_fnv_hash< t_generator, t_traits > this_type;
+
 //.............................................................................
 public:
-	typedef t_generator generator;
-	typedef t_traits traits;
+	typedef typename t_traits::value_type value_type;
+	static typename t_traits::value_type const EMPTY = t_traits::EMPTY;
+	static typename t_traits::value_type const PRIME = t_traits::PRIME;
 
 	//-------------------------------------------------------------------------
 	/** @brief byte配列のhash値を生成。
@@ -30,11 +33,11 @@ public:
 	    @param[in] i_offset fvn-hash開始値。
 	    @param[in] i_prime  fnv-hash素数。
 	 */
-	static typename t_traits::value_type generate(
-		void const* const                   i_begin,
-		void const* const                   i_end,
-		typename t_traits::value_type const i_offset = t_traits::EMPTY,
-		typename t_traits::value_type const i_prime = t_traits::PRIME)
+	static typename this_type::value_type generate(
+		void const* const                    i_begin,
+		void const* const                    i_end,
+		typename this_type::value_type const i_offset = this_type::EMPTY,
+		typename this_type::value_type const i_prime = this_type::PRIME)
 	{
 		return t_generator::generate(i_begin, i_end, i_offset, i_prime);
 	}
@@ -45,10 +48,10 @@ public:
 	    @param[in] i_prime  fnv-hash素数。
 	 */
 	template< typename t_char >
-	static typename t_traits::value_type generate(
-		t_char const* const                 i_string,
-		typename t_traits::value_type const i_offset = t_traits::EMPTY,
-		typename t_traits::value_type const i_prime = t_traits::PRIME)
+	static typename this_type::value_type generate(
+		t_char const* const                  i_string,
+		typename this_type::value_type const i_offset = this_type::EMPTY,
+		typename this_type::value_type const i_prime = this_type::PRIME)
 	{
 		if (NULL != i_string)
 		{
@@ -66,10 +69,10 @@ public:
 	    @param[in] i_prime  fnv-hash素数。
 	 */
 	template< typename t_string >
-	static typename t_traits::value_type generate(
-		t_string const&                     i_string,
-		typename t_traits::value_type const i_offset = t_traits::EMPTY,
-		typename t_traits::value_type const i_prime = t_traits::PRIME)
+	static typename this_type::value_type generate(
+		t_string const&                      i_string,
+		typename this_type::value_type const i_offset = this_type::EMPTY,
+		typename this_type::value_type const i_prime = this_type::PRIME)
 	{
 		typename t_string::const_pointer const a_data(i_string.data());
 		return t_generator::generate(

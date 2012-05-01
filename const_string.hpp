@@ -448,14 +448,14 @@ public:
 	    @return 検索文字が現れた位置。現れない場合はnposを返す。
 	 */
 	typename this_type::size_type find(
-		typename this_type::value_type const i_char,
-		typename this_type::size_type const  i_offset = 0)
+		t_value const                       i_char,
+		typename this_type::size_type const i_offset = 0)
 	const
 	{
 		if (i_offset < this->length())
 		{
 			typename this_type::const_pointer const a_find(
-				this_type::traits_type::find(
+				t_traits::find(
 					this->data() + i_offset,
 					this->length() - i_offset,
 					i_char));
@@ -523,15 +523,14 @@ public:
 			{
 				// 検索文字列の先頭文字と合致する位置を見つける。
 				typename this_type::const_pointer const a_find(
-					this_type::traits_type::find(
-						a_rest_string, a_rest_length, *i_string));
+					t_traits::find(a_rest_string, a_rest_length, *i_string));
 				if (NULL == a_find)
 				{
 					break;
 				}
 
 				// 検索文字列と合致するか判定。
-				if (0 == this_type::traits_type::compare(a_find, i_string, i_length))
+				if (0 == t_traits::compare(a_find, i_string, i_length))
 				{
 					return a_find - this->data();
 				}
@@ -551,8 +550,8 @@ public:
 	    @return 検索文字が現れた位置。現れない場合はnposを返す。
 	 */
 	typename this_type::size_type rfind(
-		typename this_type::value_type const i_char,
-		typename this_type::size_type const  i_offset = this_type::npos)
+		t_value const                       i_char,
+		typename this_type::size_type const i_offset = this_type::npos)
 	const
 	{
 		if (!this->empty())
@@ -560,7 +559,7 @@ public:
 			typename this_type::const_pointer i(this->trim_pointer(i_offset));
 			for (;; --i)
 			{
-				if (this_type::traits_type::eq(*i, i_char))
+				if (t_traits::eq(*i, i_char))
 				{
 					return i - this->data();
 				}
@@ -626,8 +625,8 @@ public:
 				this->data() + (i_offset < a_rest? i_offset: a_rest));
 			for (;; --i)
 			{
-				if (this_type::traits_type::eq(*i, *i_string)
-					&& 0 == this_type::traits_type::compare(i, i_string, i_length))
+				if (t_traits::eq(*i, *i_string)
+					&& 0 == t_traits::compare(i, i_string, i_length))
 				{
 					return i - this->data();
 				}
@@ -647,8 +646,8 @@ public:
 	    @return 検索文字が見つけた位置。現れない場合はnposを返す。
 	 */
 	typename this_type::size_type find_first_of(
-		typename this_type::value_type const i_char,
-		typename this_type::size_type const  i_offset = 0)
+		t_value const                       i_char,
+		typename this_type::size_type const i_offset = 0)
 	const
 	{
 		return this->find(i_char, i_offset);
@@ -703,7 +702,7 @@ public:
 			typename this_type::const_pointer i(this->data() + i_offset);
 			for (; i < a_end; ++i)
 			{
-				if (NULL != this_type::traits_type::find(i_string, i_length, *i))
+				if (NULL != t_traits::find(i_string, i_length, *i))
 				{
 					return i - this->data();
 				}
@@ -719,8 +718,8 @@ public:
 	    @return 検索文字が現れた位置。現れない場合はnposを返す。
 	 */
 	typename this_type::size_type find_last_of(
-		typename this_type::value_type const i_char,
-		typename this_type::size_type const  i_offset = this_type::npos)
+		t_value const                       i_char,
+		typename this_type::size_type const i_offset = this_type::npos)
 	const
 	{
 		return this->rfind(i_char, i_offset);
@@ -773,7 +772,7 @@ public:
 			typename this_type::const_pointer i(this->trim_pointer(i_offset));
 			for (;; --i)
 			{
-				if (NULL != this_type::traits_type::find(i_string, i_length, *i))
+				if (NULL != t_traits::find(i_string, i_length, *i))
 				{
 					return i - this->data();
 				}
@@ -793,8 +792,8 @@ public:
 	    @return 検索文字以外の文字が現れた位置。現れない場合はnposを返す。
 	 */
 	typename this_type::size_type find_first_not_of(
-		typename this_type::value_type const i_char,
-		typename this_type::size_type const  i_offset = 0)
+		t_value const                       i_char,
+		typename this_type::size_type const i_offset = 0)
 	const
 	{
 		typename this_type::const_pointer const a_end(
@@ -802,7 +801,7 @@ public:
 		typename this_type::const_pointer i(this->data() + i_offset);
 		for (; i < a_end; ++i)
 		{
-			if (!this_type::traits_type::eq(*i, i_char))
+			if (!t_traits::eq(*i, i_char))
 			{
 				return i - this->data();
 			}
@@ -859,7 +858,7 @@ public:
 			typename this_type::const_pointer i(this->data() + i_offset);
 			for (; i < a_end; ++i)
 			{
-				if (NULL == this_type::traits_type::find(i_string, i_length, *i))
+				if (NULL == t_traits::find(i_string, i_length, *i))
 				{
 					return i - this->data();
 				}
@@ -875,8 +874,8 @@ public:
 	    @return 検索文字以外の文字が現れた位置。現れない場合はnposを返す。
 	 */
 	typename this_type::size_type find_last_not_of(
-		typename this_type::value_type const i_char,
-		typename this_type::size_type const  i_offset = this_type::npos)
+		t_value const                       i_char,
+		typename this_type::size_type const i_offset = this_type::npos)
 	const
 	{
 		if (!this->empty())
@@ -884,7 +883,7 @@ public:
 			typename this_type::const_pointer i(this->trim_pointer(i_offset));
 			for (;; --i)
 			{
-				if (!this_type::traits_type::eq(*i, i_char))
+				if (!t_traits::eq(*i, i_char))
 				{
 					return i - this->data();
 				}
@@ -944,7 +943,7 @@ public:
 			typename this_type::const_pointer i(this->trim_pointer(i_offset));
 			for (;; --i)
 			{
-				if (NULL == this_type::traits_type::find(i_string, i_length, *i))
+				if (NULL == t_traits::find(i_string, i_length, *i))
 				{
 					return i - this->data();
 				}

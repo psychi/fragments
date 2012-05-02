@@ -161,7 +161,7 @@ public:
 #ifdef _MSC_VER
 	static typename super_type::size_type max_size()
 	{
-		return t_arena::max_size / sizeof(t_value);
+		return t_arena::MAX_SIZE / sizeof(t_value);
 	}
 #endif // _MSC_VER
 };

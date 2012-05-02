@@ -339,7 +339,7 @@ private:
 
 //.............................................................................
 public:
-	static std::size_t const MAX_SIZE = t_arena::max_size;
+	static std::size_t const MAX_SIZE = t_arena::MAX_SIZE;
 	static std::size_t const ALIGNMENT = t_alignment;
 	static std::size_t const OFFSET = t_offset;
 	static std::size_t const CHUNK_SIZE = t_chunk_size;

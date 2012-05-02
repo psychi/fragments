@@ -98,7 +98,7 @@ public:
 	 */
 	virtual std::size_t get_max_size() const
 	{
-		return this_type::max_size;
+		return this_type::MAX_SIZE;
 	}
 
 //.............................................................................
@@ -116,7 +116,7 @@ protected:
 //.............................................................................
 public:
 	/// 一度に確保できるmemoryの最大size。byte単位。
-	static std::size_t const max_size = static_cast< std::size_t >(-1);
+	static std::size_t const MAX_SIZE = static_cast< std::size_t >(-1);
 };
 
 #endif // !PSYQ_HEAP_ARENA_HPP_

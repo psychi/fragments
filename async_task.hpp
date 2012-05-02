@@ -148,18 +148,26 @@ private:
 #endif // _WIN32
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class binary_read_descriptor:
+class binary_file_descriptor:
 	private boost::noncopyable
 {
-	typedef binary_read_descriptor this_type;
+	typedef binary_file_descriptor this_type;
 
 //.............................................................................
 public:
 	typedef boost::shared_ptr< this_type > shared_ptr;
 	typedef boost::weak_ptr< this_type > weak_ptr;
 
+	enum open_flag
+	{
+		open_REWRITE = 1 << 0,
+		open_CREATE  = 2 << 0,
+		open_WRITE   = 3 << 0,
+		open_READ    = 1 << 2,
+	};
+
 	//-------------------------------------------------------------------------
-	~binary_read_descriptor()
+	~binary_file_descriptor()
 	{
 		int const a_error(this->close());
 		if (0 != a_error)
@@ -169,7 +177,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	binary_read_descriptor():
+	binary_file_descriptor():
 	descriptor_(-1)
 	{
 		// pass
@@ -177,10 +185,13 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief fileを開く。
-	    @param[in] i_path fileのpath名。必ずNULL文字で終わる。
+	    @param[in] i_path  fileのpath名。必ずNULL文字で終わる。
+	    @param[in] i_flags 許可する操作。
 	    @return 結果のerror番号。0なら成功。
 	 */
-	int open(char const* const i_path)
+	int open(
+		char const* const i_path,
+		int const         i_flags)
 	{
 		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
 		int const a_error(this->close_file());
@@ -190,15 +201,71 @@ public:
 		}
 
 #ifdef _WIN32
-		::_sopen_s(
-			&this->descriptor_,
-			i_path,
-			_O_RDONLY | _O_BINARY,
-			_SH_DENYWR,
-			_S_IREAD);
+		int a_mode;
+		int a_share;
+		int a_flags(_O_BINARY);
+		if (0 == (i_flags & this_type::open_WRITE))
+		{
+			a_mode = _S_IREAD;
+			a_share = _SH_DENYWR;
+			a_flags |= _O_RDONLY;
+		}
+		else
+		{
+			a_mode = _S_IWRITE;
+			if (0 != (i_flags & this_type::open_READ))
+			{
+				a_mode |= _S_IREAD;
+				a_share = _SH_DENYRW;
+				a_flags |= _O_RDWR;
+			}
+			else
+			{
+				a_share = _SH_DENYRD;
+				a_flags |= _O_WRONLY;
+			}
+			if (0 != (i_flags & this_type::open_CREATE))
+			{
+				// fileがなければ作る。
+				a_flags |= _O_CREAT;
+				if (0 == (i_flags & this_type::open_REWRITE))
+				{
+					// fileがあれば失敗。
+					a_flags |= _O_EXCL;
+				}
+			}
+		}
+		::_sopen_s(&this->descriptor_, i_path, a_flags, a_share, a_mode);
 #else
-		this->descriptor_ = ::open(i_path, O_RDWR);
+		int a_flags(0);
+		if (0 == (i_flags & this_type::open_flag_WRITE))
+		{
+			a_flags |= O_RDONLY;
+		}
+		else
+		{
+			if (0 != (i_flags & this_type::open_flag_READ))
+			{
+				a_flags |= O_RDWR;
+			}
+			else
+			{
+				a_flags |= O_WRONLY;
+			}
+			if (0 != (i_flags & this_type::open_flag_CREATE))
+			{
+				// fileがなければ作る。
+				a_flags |= O_CREAT;
+				if (0 == (i_flags & this_type::open_flag_REWRITE))
+				{
+					// fileがあれば失敗。
+					a_flags |= O_EXCL;
+				}
+			}
+		}
+		this->descriptor_ = ::open(i_path, a_flags);
 #endif // _WIN32
+
 		return this->is_open()? 0: errno;
 	}
 
@@ -264,27 +331,31 @@ public:
 	{
 		int a_error;
 		std::size_t const a_size(
-			this->read(i_buffer, i_size, i_offset, a_error));
+			this->read(a_error, i_buffer, i_size, i_offset));
 		PSYQ_ASSERT(0 == a_error);
 		return a_size;
 	}
 
 	/** @brief fileを読み込む。
+	    @param[out] o_error 結果のerror番号。0なら成功。
 	    @param[in] i_buffer 読み込みbufferの先頭位置。
 	    @param[in] i_size   読み込みbufferのbyte単位の大きさ。
 	    @param[in] i_offset fileの読み込み開始位置。
-	    @param[out] o_error 結果のerror番号。0なら成功。
 	    @return 読み込んだbyte数。
 	 */
 	std::size_t read(
+		int&              o_error,
 		void* const       i_buffer,
 		std::size_t const i_size,
-		std::size_t const i_offset,
-		int&              o_error)
+		std::size_t const i_offset)
 	const
 	{
 		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
-		if (NULL == i_buffer)
+		if (i_size <= 0)
+		{
+			o_error = 0;
+		}
+		else if (NULL == i_buffer)
 		{
 			o_error = EFAULT;
 		}
@@ -304,20 +375,82 @@ public:
 			else
 			{
 #ifdef _WIN32
-				std::size_t const a_size(
-					::_read(this->descriptor_, i_buffer, i_size));
+				int const a_size(::_read(this->descriptor_, i_buffer, i_size));
 #else
-				std::size_t const a_size(
-					::read(this->descriptor_, i_buffer, i_size));
+				int const a_size(::read(this->descriptor_, i_buffer, i_size));
 #endif //_WIN32
-				if (static_cast< std::size_t >(-1) != a_size)
+				if (-1 != a_size)
 				{
 					o_error = 0;
-					return a_size;
+					return static_cast< std::size_t >(a_size);
 				}
 				o_error = errno;
 			}
 		}
+		return 0;
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief fileに書き込む。
+	    @param[in] i_buffer 書き込みbufferの先頭位置。
+	    @param[in] i_size   書き込みbufferのbyte単位の大きさ。
+	    @param[in] i_offset fileの書き込み開始位置。
+	    @return 書き込んだbyte数。
+	 */
+	std::size_t write(
+		void* const       i_buffer,
+		std::size_t const i_size,
+		std::size_t const i_offset =
+			(std::numeric_limits< std::size_t >::max)())
+	const
+	{
+		int a_error;
+		std::size_t const a_size(
+			this->write(a_error, i_buffer, i_size, i_offset));
+		PSYQ_ASSERT(0 == a_error);
+		return a_size;
+	}
+
+	/** @brief fileに書き込む。
+	    @param[out] o_error 結果のerror番号。0なら成功。
+	    @param[in] i_buffer 書き込みbufferの先頭位置。
+	    @param[in] i_size   書き込みbufferのbyte単位の大きさ。
+	    @param[in] i_offset fileの書き込み開始位置。
+	    @return 書き込んだbyte数。
+	 */
+	std::size_t write(
+		int&              o_error,
+		void const* const i_buffer,
+		std::size_t const i_size,
+		std::size_t const i_offset =
+			(std::numeric_limits< std::size_t >::max)())
+	const
+	{
+		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
+
+		std::size_t a_file_size(0);
+		int a_error(this->seek_file(0, SEEK_END, a_file_size));
+		if (0 == a_error && i_offset < a_file_size)
+		{
+			a_error = this->seek_file(i_offset, SEEK_SET);
+		}
+		if (0 == a_error)
+		{
+#ifdef _WIN32
+			int const a_size(
+				::_write(this->descriptor_, i_buffer, i_size));
+#else
+			int const a_size(
+				::write(this->descriptor_, i_buffer, i_size));
+#endif // _WIN32
+			if (-1 != a_size)
+			{
+				o_error = 0;
+				return static_cast< std::size_t >(a_size);
+			}
+			a_error = errno;
+		}
+		o_error = a_error;
 		return 0;
 	}
 
@@ -493,10 +626,10 @@ private:
 			this->buffer_begin_ = (t_arena::malloc)(
 				this->buffer_size_, t_alignment, t_offset, this->arena_name_);
 			this->read_size_ = this->file_->read(
+				this->error_,
 				this->buffer_begin_,
 				this->buffer_size_,
-				this->read_offset_,
-				this->error_);
+				this->read_offset_);
 		}
 		return super_type::state_FINISHED;
 	}

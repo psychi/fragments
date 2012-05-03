@@ -49,6 +49,34 @@ public:
 		// pass
 	}
 
+	/** @param[in] i_path  fileのpath名。必ずNULL文字で終わる。
+	    @param[in] i_flags 許可する操作。this_type::open_flagの論理和。
+	 */
+	file_descriptor(
+		char const* const i_path,
+		int const         i_flags):
+	descriptor_(-1)
+	{
+		int const a_error(this->open_file(i_path, i_flags));
+		if (0 != a_error)
+		{
+			PSYQ_ASSERT(false);
+		}
+	}
+
+	/** @param[out] o_error 結果のerror番号。0なら成功。
+	    @param[in] i_path   fileのpath名。必ずNULL文字で終わる。
+	    @param[in] i_flags  許可する操作。this_type::open_flagの論理和。
+	 */
+	file_descriptor(
+		int&              o_error,
+		char const* const i_path,
+		int const         i_flags):
+	descriptor_(-1)
+	{
+		o_error = this->open_file(i_path, i_flags);
+	}
+
 	//-------------------------------------------------------------------------
 	/** @brief fileを開く。
 	    @param[in] i_path  fileのpath名。必ずNULL文字で終わる。
@@ -61,102 +89,7 @@ public:
 	{
 		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
 		int const a_error(this->close_file());
-		if (0 != a_error)
-		{
-			return a_error;
-		}
-
-		int a_flags(0);
-#ifdef _WIN32
-		int a_mode(0);
-		int a_share(0);
-		if (0 != (i_flags & this_type::open_READ))
-		{
-			a_mode = _S_IREAD;
-			a_share = _SH_DENYWR;
-			a_flags = _O_RDONLY;
-		}
-		if (0 != (i_flags & (this_type::open_CREATE | this_type::open_WRITE)))
-		{
-			a_mode = _S_IWRITE;
-			if (0 != (i_flags & this_type::open_READ))
-			{
-				a_mode |= _S_IREAD;
-				a_share = _SH_DENYRW;
-				a_flags = _O_RDWR;
-			}
-			else
-			{
-				a_share = _SH_DENYRD;
-				a_flags = _O_WRONLY;
-			}
-			if (0 != (i_flags & this_type::open_CREATE))
-			{
-				// fileがなければ作る。
-				a_flags |= _O_CREAT;
-				if (0 == (i_flags & this_type::open_WRITE))
-				{
-					// fileがあれば失敗。
-					a_flags |= _O_EXCL;
-				}
-			}
-			if (0 != (i_flags & this_type::open_TRUNCATE))
-			{
-				a_flags |= _O_TRUNC;
-			}
-		}
-		if (0 != a_flags)
-		{
-			a_flags |= _O_BINARY;
-			::_sopen_s(&this->descriptor_, i_path, a_flags, a_share, a_mode);
-		}
-		else
-		{
-			PSYQ_ASSERT(false);
-			return 0;
-		}
-#else
-		if (0 != (i_flags & this_type::open_READ))
-		{
-			a_flags = O_RDONLY;
-		}
-		if (0 != (i_flags & (this_type::open_CREATE | this_type::open_WRITE)))
-		{
-			if (0 != (i_flags & this_type::open_READ))
-			{
-				a_flags = O_RDWR;
-			}
-			else
-			{
-				a_flags = O_WRONLY;
-			}
-			if (0 != (i_flags & this_type::open_CREATE))
-			{
-				// fileがなければ作る。
-				a_flags |= O_CREAT;
-				if (0 == (i_flags & this_type::open_WRITE))
-				{
-					// fileがあれば失敗。
-					a_flags |= O_EXCL;
-				}
-			}
-			if (0 != (i_flags & this_type::open_TRUNCATE))
-			{
-				a_flags |= O_TRUNC;
-			}
-		}
-		if (0 != a_flags)
-		{
-			this->descriptor_ = ::open(i_path, a_flags);
-		}
-		else
-		{
-			PSYQ_ASSERT(false);
-			return 0;
-		}
-#endif // _WIN32
-
-		return this->is_open()? 0: errno;
+		return 0 == a_error? this->open_file(i_path, i_flags): a_error;
 	}
 
 	/** @brief fileを閉じる。fileを開いてないなら、何も行わない。
@@ -351,6 +284,102 @@ public:
 //.............................................................................
 private:
 	//-------------------------------------------------------------------------
+	int open_file(
+		char const* const i_path,
+		int const         i_flags)
+	{
+		int a_flags(0);
+#ifdef _WIN32
+		int a_mode(0);
+		int a_share(0);
+		if (0 != (i_flags & this_type::open_READ))
+		{
+			a_mode = _S_IREAD;
+			a_share = _SH_DENYWR;
+			a_flags = _O_RDONLY;
+		}
+		if (0 != (i_flags & (this_type::open_CREATE | this_type::open_WRITE)))
+		{
+			a_mode = _S_IWRITE;
+			if (0 != (i_flags & this_type::open_READ))
+			{
+				a_mode |= _S_IREAD;
+				a_share = _SH_DENYRW;
+				a_flags = _O_RDWR;
+			}
+			else
+			{
+				a_share = _SH_DENYRD;
+				a_flags = _O_WRONLY;
+			}
+			if (0 != (i_flags & this_type::open_CREATE))
+			{
+				// fileがなければ作る。
+				a_flags |= _O_CREAT;
+				if (0 == (i_flags & this_type::open_WRITE))
+				{
+					// fileがあれば失敗。
+					a_flags |= _O_EXCL;
+				}
+			}
+			if (0 != (i_flags & this_type::open_TRUNCATE))
+			{
+				a_flags |= _O_TRUNC;
+			}
+		}
+		if (0 != a_flags)
+		{
+			a_flags |= _O_BINARY;
+			::_sopen_s(&this->descriptor_, i_path, a_flags, a_share, a_mode);
+		}
+		else
+		{
+			PSYQ_ASSERT(false);
+			return 0;
+		}
+#else
+		if (0 != (i_flags & this_type::open_READ))
+		{
+			a_flags = O_RDONLY;
+		}
+		if (0 != (i_flags & (this_type::open_CREATE | this_type::open_WRITE)))
+		{
+			if (0 != (i_flags & this_type::open_READ))
+			{
+				a_flags = O_RDWR;
+			}
+			else
+			{
+				a_flags = O_WRONLY;
+			}
+			if (0 != (i_flags & this_type::open_CREATE))
+			{
+				// fileがなければ作る。
+				a_flags |= O_CREAT;
+				if (0 == (i_flags & this_type::open_WRITE))
+				{
+					// fileがあれば失敗。
+					a_flags |= O_EXCL;
+				}
+			}
+			if (0 != (i_flags & this_type::open_TRUNCATE))
+			{
+				a_flags |= O_TRUNC;
+			}
+		}
+		if (0 != a_flags)
+		{
+			this->descriptor_ = ::open(i_path, a_flags);
+		}
+		else
+		{
+			PSYQ_ASSERT(false);
+			return 0;
+		}
+#endif // _WIN32
+		return this->is_open()? 0: errno;
+	}
+
 	int close_file() const
 	{
 		if (this->is_open())

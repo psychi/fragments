@@ -29,10 +29,11 @@ public:
 
 	enum open_flag
 	{
-		open_REWRITE = 1 << 0, ///< fileがあれば上書き。なければ失敗。
-		open_CREATE  = 2 << 0, ///< fileがあれば失敗。なければ作る。
-		open_WRITE   = 3 << 0, ///< fileがあれば空にする。なければ作る。
-		open_READ    = 1 << 2, ///< fileがあれば読み込み。なければ失敗。
+		open_REWRITE  = 1 << 0, ///< fileがあれば上書き。なければ失敗。
+		open_CREATE   = 2 << 0, ///< fileがあれば失敗。なければ作る。
+		open_WRITE    = 3 << 0, ///< fileがあれば空にする。なければ作る。
+		open_READ     = 1 << 2, ///< fileがあれば読み込み。なければ失敗。
+		open_TRUNCATE = 1 << 3,
 	};
 
 	//-------------------------------------------------------------------------
@@ -96,12 +97,16 @@ public:
 			if (0 != (i_flags & this_type::open_CREATE))
 			{
 				// fileがなければ作る。
-				a_flags |= _O_CREAT | _O_TRUNC;
+				a_flags |= _O_CREAT;
 				if (0 == (i_flags & this_type::open_REWRITE))
 				{
 					// fileがあれば失敗。
 					a_flags |= _O_EXCL;
 				}
+			}
+			if (0 != (i_flags & this_type::open_TRUNCATE))
+			{
+				a_flags |= _O_TRUNC;
 			}
 		}
 		::_sopen_s(&this->descriptor_, i_path, a_flags, a_share, a_mode);
@@ -124,12 +129,16 @@ public:
 			if (0 != (i_flags & this_type::open_CREATE))
 			{
 				// fileがなければ作る。
-				a_flags |= O_CREAT | O_TRUNC;
+				a_flags |= O_CREAT;
 				if (0 == (i_flags & this_type::open_REWRITE))
 				{
 					// fileがあれば失敗。
 					a_flags |= O_EXCL;
 				}
+			}
+			if (0 != (i_flags & this_type::open_TRUNCATE))
+			{
+				a_flags |= O_TRUNC;
 			}
 		}
 		this->descriptor_ = ::open(i_path, a_flags);

@@ -35,7 +35,7 @@ public:
 	//-------------------------------------------------------------------------
 	~file_descriptor()
 	{
-		int const a_error(this->close());
+		int const a_error(this->close_file());
 		if (0 != a_error)
 		{
 			PSYQ_ASSERT(false);
@@ -44,7 +44,8 @@ public:
 
 	//-------------------------------------------------------------------------
 	file_descriptor():
-	descriptor_(-1)
+	descriptor_(-1),
+	block_size_(0)
 	{
 		// pass
 	}
@@ -55,7 +56,8 @@ public:
 	file_descriptor(
 		char const* const i_path,
 		int const         i_flags):
-	descriptor_(-1)
+	descriptor_(-1),
+	block_size_(0)
 	{
 		int const a_error(this->open_file(i_path, i_flags));
 		if (0 != a_error)
@@ -72,7 +74,8 @@ public:
 		int&              o_error,
 		char const* const i_path,
 		int const         i_flags):
-	descriptor_(-1)
+	descriptor_(-1),
+	block_size_(0)
 	{
 		o_error = this->open_file(i_path, i_flags);
 	}
@@ -113,6 +116,13 @@ public:
 	bool is_open() const
 	{
 		return 0 <= this->descriptor_;
+	}
+
+	/** @brief fileの論理block-sizeを取得。
+	 */
+	std::size_t get_block_size() const
+	{
+		return this->block_size_;
 	}
 
 	//-------------------------------------------------------------------------
@@ -329,6 +339,34 @@ private:
 		}
 		if (0 != a_flags)
 		{
+			// block-sizeを取得。
+			/** @note 2012-05-04
+			    fileの存在するvolumeをpath名から判断している。
+			    このためpathにsymbolic-linkが含まれている場合は、
+			    正しいvolumeが取得できない。
+			 */
+			struct _stat64 a_status;
+			::_stat64(i_path, &a_status);
+			char a_root_path[] = "a:\\";
+			a_root_path[0] += static_cast< char >(a_status.st_dev);
+			DWORD a_sector_per_cluster;
+			DWORD a_bytes_per_sector;
+			DWORD a_number_of_free_clusters;
+			DWORD a_total_number_of_clusters;
+			BOOL const a_result(
+				GetDiskFreeSpaceA(
+					a_root_path,
+					&a_sector_per_cluster,
+					&a_bytes_per_sector,
+					&a_number_of_free_clusters,
+					&a_total_number_of_clusters));
+			if (0 == a_result)
+			{
+				return ::GetLastError();
+			}
+			this->block_size_ = a_bytes_per_sector * a_sector_per_cluster;
+
+			// fileを開く。
 			a_flags |= _O_BINARY;
 			::_sopen_s(&this->descriptor_, i_path, a_flags, a_share, a_mode);
 		}
@@ -369,6 +407,15 @@ private:
 		}
 		if (0 != a_flags)
 		{
+			// block-sizeを取得。
+			struct stat a_status;
+			if (0 != ::stat(i_path, &a_status))
+			{
+				return errno;
+			}
+			this->block_size_ = a_status.st_blksize;
+
+			// fileを開く。
 			this->descriptor_ = ::open(i_path, a_flags);
 		}
 		else
@@ -433,7 +480,8 @@ private:
 
 //.............................................................................
 private:
-	int descriptor_;
+	int         descriptor_;
+	std::size_t block_size_;
 };
 
 #endif // !PSYQ_FILE_DESCRIPTOR_HPP_

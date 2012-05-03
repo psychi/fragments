@@ -122,6 +122,7 @@ private:
 				this->buffer_size_,
 				this->read_offset_);
 #if 0
+			//this->buffer_alignment_;
 			//this->read_alignment_;
 			//this->read_offset_;
 			//this->read_size_;
@@ -136,7 +137,10 @@ private:
 					a_temp_capacity / this->read_alignment_));
 			file_buffer a_buffer;
 			a_buffer_.allocate< t_arena >(
-				a_capacity, this->read_alignment_, 0, this->arena_name_);
+				a_capacity,
+				(std::max)(this->read_alignment_, this->buffer_alignment_),
+				0,
+				this->arena_name_);
 			std::size_t const a_read_size(
 				this->file_->read(
 					this->error_,

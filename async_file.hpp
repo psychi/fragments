@@ -29,10 +29,9 @@ public:
 
 	enum open_flag
 	{
-		open_REWRITE  = 1 << 0, ///< fileがあれば上書き。なければ失敗。
-		open_CREATE   = 2 << 0, ///< fileがあれば失敗。なければ作る。
-		open_WRITE    = 3 << 0, ///< fileがあれば空にする。なければ作る。
-		open_READ     = 1 << 2, ///< fileがあれば読み込み。なければ失敗。
+		open_READ     = 1 << 0,
+		open_WRITE    = 1 << 1,
+		open_CREATE   = 1 << 2,
 		open_TRUNCATE = 1 << 3,
 	};
 
@@ -71,34 +70,34 @@ public:
 		}
 
 #ifdef _WIN32
-		int a_mode;
-		int a_share;
-		int a_flags(_O_BINARY);
-		if (0 == (i_flags & this_type::open_WRITE))
+		int a_mode(0);
+		int a_share(0);
+		int a_flags(0);
+		if (0 != (i_flags & this_type::open_READ))
 		{
 			a_mode = _S_IREAD;
 			a_share = _SH_DENYWR;
-			a_flags |= _O_RDONLY;
+			a_flags = _O_RDONLY;
 		}
-		else
+		if (0 != (i_flags & (this_type::open_CREATE | this_type::open_WRITE)))
 		{
 			a_mode = _S_IWRITE;
 			if (0 != (i_flags & this_type::open_READ))
 			{
 				a_mode |= _S_IREAD;
 				a_share = _SH_DENYRW;
-				a_flags |= _O_RDWR;
+				a_flags = _O_RDWR;
 			}
 			else
 			{
 				a_share = _SH_DENYRD;
-				a_flags |= _O_WRONLY;
+				a_flags = _O_WRONLY;
 			}
 			if (0 != (i_flags & this_type::open_CREATE))
 			{
 				// fileがなければ作る。
 				a_flags |= _O_CREAT;
-				if (0 == (i_flags & this_type::open_REWRITE))
+				if (0 == (i_flags & this_type::open_WRITE))
 				{
 					// fileがあれば失敗。
 					a_flags |= _O_EXCL;
@@ -109,28 +108,37 @@ public:
 				a_flags |= _O_TRUNC;
 			}
 		}
-		::_sopen_s(&this->descriptor_, i_path, a_flags, a_share, a_mode);
-#else
-		int a_flags(0);
-		if (0 == (i_flags & this_type::open_WRITE))
+		if (0 != a_flags)
 		{
-			a_flags |= O_RDONLY;
+			a_flags |= _O_BINARY;
+			::_sopen_s(&this->descriptor_, i_path, a_flags, a_share, a_mode);
 		}
 		else
 		{
+			PSYQ_ASSERT(false);
+			return 0;
+		}
+#else
+		int a_flags(0);
+		if (0 != (i_flags & this_type::open_READ))
+		{
+			a_flags = O_RDONLY;
+		}
+		if (0 != (i_flags & (this_type::open_CREATE | this_type::open_WRITE)))
+		{
 			if (0 != (i_flags & this_type::open_READ))
 			{
-				a_flags |= O_RDWR;
+				a_flags = O_RDWR;
 			}
 			else
 			{
-				a_flags |= O_WRONLY;
+				a_flags = O_WRONLY;
 			}
 			if (0 != (i_flags & this_type::open_CREATE))
 			{
 				// fileがなければ作る。
 				a_flags |= O_CREAT;
-				if (0 == (i_flags & this_type::open_REWRITE))
+				if (0 == (i_flags & this_type::open_WRITE))
 				{
 					// fileがあれば失敗。
 					a_flags |= O_EXCL;
@@ -141,7 +149,15 @@ public:
 				a_flags |= O_TRUNC;
 			}
 		}
-		this->descriptor_ = ::open(i_path, a_flags);
+		if (0 != a_flags)
+		{
+			this->descriptor_ = ::open(i_path, a_flags);
+		}
+		else
+		{
+			PSYQ_ASSERT(false);
+			return 0;
+		}
 #endif // _WIN32
 
 		return this->is_open()? 0: errno;

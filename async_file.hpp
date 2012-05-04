@@ -39,8 +39,12 @@ public:
 		// pass
 	}
 
-	/** @param[in] i_position  fileの先頭位置からのoffset値。
-	    @param[in] i_capacity  確保するmemoryの大きさ。byte単位。
+	/** @param[in] i_position
+	        fileの先頭位置からのoffset値。
+	        fileの論理block-sizeの整数倍である必要がある。
+	    @param[in] i_capacity
+	        確保するmemoryの大きさ。byte単位。
+	        fileの論理block-sizeの整数倍である必要がある。
 	    @param[in] i_allocator memoryの確保に使う割当子。
 	 */
 	template< typename t_allocator >
@@ -58,8 +62,12 @@ public:
 			boost::type< typename t_allocator::arena >());
 	}
 
-	/** @param[in] i_position  fileの先頭位置からのoffset値。
-	    @param[in] i_capacity  確保するmemoryの大きさ。byte単位。
+	/** @param[in] i_position
+	        fileの先頭位置からのoffset値。
+	        fileの論理block-sizeの整数倍である必要がある。
+	    @param[in] i_capacity
+	        確保するmemoryの大きさ。byte単位。
+	        fileの論理block-sizeの整数倍である必要がある。
 	    @param[in] i_alignment 確保するmemoryの配置境界値。
 	    @param[in] i_offset    確保するmemoryの配置offset値。
 	    @param[in] i_name      debugで使うためのmemory識別名。
@@ -113,9 +121,10 @@ public:
 	{
 		std::swap(this->deallocator_, io_target.deallocator_);
 		std::swap(this->storage_, io_target.storage_);
+		std::swap(this->position_, io_target.position_);
+		std::swap(this->capacity_, io_target.capacity_);
 		std::swap(this->offset_, io_target.offset_);
 		std::swap(this->size_, io_target.size_);
-		std::swap(this->capacity_, io_target.capacity_);
 	}
 
 	//-------------------------------------------------------------------------
@@ -175,8 +184,8 @@ public:
 	    @param[in] i_read_size   読み込むbyte数。
 	    @param[in] i_buffer_alignment
 	        読み込みbufferのmemory配置境界値。
-	        ただしfile-block-sizeのほうが大きい場合は、
-	        file-block-sizeがmemory配置境界値となる。
+	        ただしfileの論理block-sizeのほうが大きい場合は、
+	        fileの論理block-sizeがmemory配置境界値となる。
 	    @param[in] i_arena_name
 	        読み込みbufferのmemory識別名。debugでのみ使う。
 	 */

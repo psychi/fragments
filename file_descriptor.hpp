@@ -346,7 +346,10 @@ private:
 			    正しいvolumeが取得できない。
 			 */
 			struct _stat64 a_status;
-			::_stat64(i_path, &a_status);
+			if (0 != ::_stat64(i_path, &a_status))
+			{
+				return errno;
+			}
 			char a_root_path[] = "a:\\";
 			a_root_path[0] += static_cast< char >(a_status.st_dev);
 			DWORD a_sector_per_cluster;
@@ -365,6 +368,7 @@ private:
 				return ::GetLastError();
 			}
 			this->block_size_ = a_bytes_per_sector * a_sector_per_cluster;
+			PSYQ_ASSERT(0 < this->block_size_);
 
 			// fileを開く。
 			a_flags |= _O_BINARY;
@@ -414,6 +418,7 @@ private:
 				return errno;
 			}
 			this->block_size_ = a_status.st_blksize;
+			PSYQ_ASSERT(0 < this->block_size_);
 
 			// fileを開く。
 			this->descriptor_ = ::open(i_path, a_flags);

@@ -6,20 +6,145 @@
 
 namespace psyq
 {
+	class file_buffer;
 	class async_file_mapper;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template<
-	typename    t_file,
-	typename    t_arena = psyq::heap_arena,
-	std::size_t t_alignment = sizeof(void*),
-	std::size_t t_offset = 0 >
+class psyq::file_buffer
+{
+	typedef psyq::file_buffer this_type;
+
+//.............................................................................
+public:
+	//-------------------------------------------------------------------------
+	~file_buffer()
+	{
+		// 保持しているmemoryを解放。
+		if (NULL != this->deallocator_)
+		{
+			(*this->deallocator_)(this->get_storage(), this->get_capacity());
+		}
+	}
+
+	file_buffer():
+	deallocator_(NULL),
+	storage_(NULL),
+	capacity_(0),
+	offset_(0),
+	size_(0)
+	{
+		// pass
+	}
+
+	/** @param[in] i_capacity  確保するmemoryの大きさ。byte単位。
+	    @param[in] i_allocator memoryの確保に使う割当子。
+	 */
+	template< typename t_allocator >
+	file_buffer(
+		std::size_t const  i_capacity,
+		t_allocator const& i_allocator)
+	{
+		new(this) this_type(
+			i_capacity,
+			t_allocator::alignment,
+			t_allocator::offset,
+			i_allocator.get_name(),
+			boost::type< typename t_allocator::arena >());
+	}
+
+	/** @param[in] i_capacity  確保するmemoryの大きさ。byte単位。
+	    @param[in] i_alignment 確保するmemoryの配置境界値。
+	    @param[in] i_offset    確保するmemoryの配置offset値。
+	    @param[in] i_name      debugで使うためのmemory識別名。
+	 */
+	template< typename t_arena >
+	file_buffer(
+		boost::type< t_arena > const&,
+		std::size_t const i_capacity,
+		std::size_t const i_alignment,
+		std::size_t const i_offset,
+		char const* const i_name = PSYQ_ARENA_NAME_DEFAULT):
+	offset_(0),
+	size_(0)
+	{
+		if (0 < i_capacity)
+		{
+			this->storage_ = (t_arena::malloc)(
+				i_capacity, i_alignment, i_offset, i_name);
+			if (NULL != this->get_storage())
+			{
+				this->deallocator_ = &t_arena::free;
+				this->capacity_ = i_capacity;
+				return;
+			}
+			PSYQ_ASSERT(false);
+		}
+		this->deallocator_ = NULL;
+		this->storage_ = NULL;
+		this->capacity_ = 0;
+	}
+
+	//-------------------------------------------------------------------------
+	std::size_t get_offset() const
+	{
+		return this->offset_;
+	}
+
+	std::size_t get_size() const
+	{
+		return this->size_;
+	}
+
+	void* get_address() const
+	{
+		return static_cast< char* >(this->get_storage()) + this->get_offset();
+	}
+
+	void swap(this_type& io_target)
+	{
+		std::swap(this->deallocator_, io_target.deallocator_);
+		std::swap(this->storage_, io_target.storage_);
+		std::swap(this->offset_, io_target.offset_);
+		std::swap(this->size_, io_target.size_);
+		std::swap(this->capacity_, io_target.capacity_);
+	}
+
+	//-------------------------------------------------------------------------
+	void* get_storage() const
+	{
+		return this->storage_;
+	}
+
+	std::size_t get_capacity() const
+	{
+		return this->capacity_;
+	}
+
+	void set_region(
+		std::size_t const i_offset,
+		std::size_t const i_size)
+	{
+		this->offset_ = (std::min)(i_offset, this->get_capacity());
+		this->size_ = (std::min)(
+			i_size, this->get_capacity() - this->get_offset());
+	}
+
+//.............................................................................
+private:
+	void        (*deallocator_)(void* const, std::size_t const);
+	void*       storage_;
+	std::size_t capacity_;
+	std::size_t offset_;
+	std::size_t size_;
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template< typename t_file, typename t_arena = psyq::heap_arena >
 class async_file_reader:
 	public psyq::async_task
 {
-	typedef async_file_reader< t_file, t_arena, t_alignment, t_offset >
-		this_type;
+	typedef async_file_reader< t_file, t_arena > this_type;
 	typedef psyq::async_task super_type;
 
 //.............................................................................
@@ -30,45 +155,34 @@ public:
 	typedef t_file file;
 	typedef t_arena arena;
 
-	static std::size_t const BUFFER_ALIGNMENT = t_alignment;
-	static std::size_t const BUFFER_OFFSET = t_offset;
-
-	virtual ~async_file_reader()
-	{
-		if (NULL != this->buffer_begin_)
-		{
-			(t_arena::free)(this->buffer_begin_, this->buffer_size_);
-		}
-	}
-
 	explicit async_file_reader(
 		typename t_file::shared_ptr const& i_file,
-		std::size_t const                  i_size =
-			(std::numeric_limits< std::size_t >::max)(),
 		std::size_t const                  i_read_offset = 0,
-		const char* const                  i_arena_name =
-			PSYQ_ARENA_NAME_DEFAULT):
+		std::size_t const                  i_read_size
+			= (std::numeric_limits< std::size_t >::max)(),
+		std::size_t const                  i_buffer_alignment = 0,
+		const char* const                  i_arena_name
+			= PSYQ_ARENA_NAME_DEFAULT):
 	file_(i_file),
-	arena_name_(i_arena_name),
-	buffer_begin_(NULL),
-	buffer_size_(i_size),
-	read_size_(0),
-	read_offset_(i_read_offset)
+	buffer_alignment_(i_buffer_alignment),
+	read_offset_(i_read_offset),
+	read_size_(i_read_size),
+	arena_name_(i_arena_name)
 	{
 		PSYQ_ASSERT(NULL != i_file.get());
 		PSYQ_ASSERT(i_file->is_open());
 	}
 
-	void* get_buffer() const
+	psyq::file_buffer const* get_buffer() const
 	{
 		return super_type::state_BUSY != this->get_state()?
-			this->buffer_begin_: NULL;
+			&this->buffer_: NULL;
 	}
 
-	std::size_t get_size() const
+	psyq::file_buffer* get_buffer()
 	{
-		return super_type::state_BUSY != this->get_state()?
-			this->read_size_: 0;
+		return const_cast< psyq::file_buffer* >(
+			const_cast< this_type const* >(this)->get_buffer());
 	}
 
 	int get_error() const
@@ -82,13 +196,13 @@ public:
 		if (super_type::state_BUSY != this->get_state()
 			&& super_type::state_BUSY != io_target.get_state())
 		{
-			this->file_->swap(io_target.file_);
-			std::swap(this->arena_name_, io_target.arena_name_);
-			std::swap(this->buffer_begin_, io_target.buffer_begin_);
-			std::swap(this->buffer_size_, io_target.buffer_size_);
-			std::swap(this->read_size_, io_target.read_size_);
+			this->file_.swap(io_target.file_);
+			this->buffer_.swap(io_target.buffer_);
+			std::swap(this->buffer_alignment_, io_target.buffer_alignment_);
 			std::swap(this->read_offset_, io_target.read_offset_);
+			std::swap(this->read_size_, io_target.read_size_);
 			std::swap(this->error_, io_target.error_);
+			std::swap(this->arena_name_, io_target.arena_name_);
 		}
 		else
 		{
@@ -103,56 +217,34 @@ private:
 		std::size_t const a_file_size(this->file_->get_size(this->error_));
 		if (0 == this->error_)
 		{
-			if (NULL != this->buffer_begin_)
-			{
-				(t_arena::free)(this->buffer_begin_, this->buffer_size_);
-			}
-			std::size_t const a_size(
-				this->read_offset_ < a_file_size?
-					a_file_size - this->read_offset_: 0);
-			if (a_size < this->buffer_size_)
-			{
-				this->buffer_size_ = a_size;
-			}
-			this->buffer_begin_ = (t_arena::malloc)(
-				this->buffer_size_, t_alignment, t_offset, this->arena_name_);
-			this->read_size_ = this->file_->read(
-				this->error_,
-				this->buffer_begin_,
-				this->buffer_size_,
-				this->read_offset_);
-#if 0
-			//this->buffer_alignment_;
-			//this->read_alignment_;
-			//this->read_offset_;
-			//this->read_size_;
+			// 読み込みbufferを確保。
 			std::size_t const a_read_offset(
-				this->read_alignment_ * (
-					this->read_offset_ / this->read_alignment_));
+				(std::min)(this->read_offset_, a_file_size));
+			std::size_t const a_buffer_size(
+				(std::min)(this->read_size_, a_file_size - a_read_offset));
+			std::size_t const a_block_size(this->file_->get_block_size());
+			std::size_t const a_aligned_offset(
+				a_block_size * (a_read_offset / a_block_size));
+			std::size_t const a_buffer_offset(a_read_offset - a_aligned_offset);
 			std::size_t const a_temp_capacity(
-				this->read_offset_ - a_read_offset + this->read_size_
-				+ this->read_alignment_ - 1);
-			std::size_t const a_capacity(
-				this->read_alignment_ * (
-					a_temp_capacity / this->read_alignment_));
-			file_buffer a_buffer;
-			a_buffer_.allocate< t_arena >(
-				a_capacity,
-				(std::max)(this->read_alignment_, this->buffer_alignment_),
+				a_buffer_offset + a_buffer_size + a_block_size - 1);
+			psyq::file_buffer a_buffer(
+				boost::type< t_arena >(),
+				a_block_size * (a_temp_capacity / a_block_size),
+				(std::max)(a_block_size, this->buffer_alignment_),
 				0,
 				this->arena_name_);
+
+			// fileを読み込む。
 			std::size_t const a_read_size(
 				this->file_->read(
 					this->error_,
-					this->buffer_.get_address(),
-					this->buffer_.get_capacity(),
-					a_read_offset));
+					a_buffer.get_storage(),
+					a_buffer.get_capacity(),
+					a_aligned_offset));
 			a_buffer.set_region(
-				this->read_offset_ - a_read_offset,
-				this->read_size_ - (
-					this->buffer_.get_capacity() - a_read_size));
-			this->buffer_.swap(a_buffer);
-#endif // 0
+				a_buffer_offset, (std::min)(a_buffer_size, a_read_size));
+			a_buffer.swap(this->buffer_);
 		}
 		return super_type::state_FINISHED;
 	}
@@ -160,12 +252,12 @@ private:
 //.............................................................................
 private:
 	typename t_file::shared_ptr file_;
-	char const*                 arena_name_;
-	void*                       buffer_begin_;
-	std::size_t                 buffer_size_;
-	std::size_t                 read_size_;
+	psyq::file_buffer           buffer_;
+	std::size_t                 buffer_alignment_;
 	std::size_t                 read_offset_;
+	std::size_t                 read_size_;
 	int                         error_;
+	char const*                 arena_name_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

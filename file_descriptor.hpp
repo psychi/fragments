@@ -432,6 +432,7 @@ private:
 		return this->is_open()? 0: errno;
 	}
 
+	//-------------------------------------------------------------------------
 	int close_file() const
 	{
 		if (this->is_open())
@@ -481,6 +482,45 @@ private:
 		}
 		o_position = static_cast< std::size_t >(a_position);
 		return 0;
+	}
+
+	//-------------------------------------------------------------------------
+	int truncate(std::size_t const i_size) const
+	{
+#ifdef _WIN32
+		if (this->descriptor_ < 0)
+		{
+			return EBADF;
+		}
+
+		::HANDLE const a_handle(
+			reinterpret_cast< HANDLE >(_get_osfhandle(this->descriptor_)));
+		::LARGE_INTEGER const a_size = { i_size };
+		if (0 != ::SetFilePointerEx(a_handle, a_size, NULL, FILE_BEGIN)
+			&& 0 != ::SetEndOfFile(a_handle))
+		{
+			return 0;
+		}
+
+		int const a_error(::GetLastError());
+		switch (a_error)
+		{
+		case ERROR_INVALID_HANDLE:
+			return EBADF;
+		case ERROR_USER_MAPPED_FILE:
+			/** @note 2012-05-04
+			    CreateFileMapping‚ÅŠ„‚è“–‚Ä‚½—Ìˆæ‚ÍSetEndOfFile()‚Åí‚ê‚È‚¢B
+			    ‚±‚Ìê‡‚Ì‘Îˆ‚Í‚Ç‚¤‚µ‚æ‚¤H
+				http://fallabs.com/blog-ja/promenade.cgi?id=76
+			 */
+		default:
+			return EIO;
+		}
+#elif _BSD_SOURCE || 500 <= _XOPEN_SOURCE || _XOPEN_SOURCE && _XOPEN_SOURCE_EXTENDED
+		return 0 == ::ftruncate(this->descriptor_, i_size)? 0: errno;
+#else
+		return EPERM;
+#endif // _WIN32
 	}
 
 //.............................................................................

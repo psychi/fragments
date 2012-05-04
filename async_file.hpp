@@ -44,9 +44,9 @@ public:
 	        fileの先頭位置からのoffset値。
 	        fileの論理block-sizeの整数倍である必要がある。
 	    @param[in] i_capacity
-	        確保するmemoryの大きさ。byte単位。
+	        確保するbufferの大きさ。byte単位。
 	        fileの論理block-sizeの整数倍である必要がある。
-	    @param[in] i_allocator memoryの確保に使う割当子。
+	    @param[in] i_allocator bufferの確保に使う割当子。
 	 */
 	template< typename t_allocator >
 	file_buffer(
@@ -67,10 +67,10 @@ public:
 	        fileの先頭位置からのoffset値。
 	        fileの論理block-sizeの整数倍である必要がある。
 	    @param[in] i_capacity
-	        確保するmemoryの大きさ。byte単位。
+	        確保するbufferの大きさ。byte単位。
 	        fileの論理block-sizeの整数倍である必要がある。
-	    @param[in] i_alignment 確保するmemoryの配置境界値。
-	    @param[in] i_offset    確保するmemoryの配置offset値。
+	    @param[in] i_alignment 確保するbufferのmemory配置境界値。
+	    @param[in] i_offset    確保するbufferのmemory配置offset値。
 	    @param[in] i_name      debugで使うためのmemory識別名。
 	 */
 	template< typename t_arena >
@@ -103,21 +103,29 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief buffer先頭位置からregion先頭位置へのoffset値を取得。
+	 */
 	std::size_t get_offset() const
 	{
 		return this->offset_;
 	}
 
+	/** @brief regionの大きさをbyte単位で取得。
+	 */
 	std::size_t get_size() const
 	{
 		return this->size_;
 	}
 
+	/** @brief regionの先頭位置を取得。
+	 */
 	void* get_address() const
 	{
 		return static_cast< char* >(this->get_storage()) + this->get_offset();
 	}
 
+	/** @brief 値を交換。
+	 */
 	void swap(this_type& io_target)
 	{
 		std::swap(this->deallocator_, io_target.deallocator_);
@@ -129,21 +137,31 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief bufferの先頭位置を取得。
+	 */
 	void* get_storage() const
 	{
 		return this->storage_;
 	}
 
+	/** @brief file先頭位置からbuffer先頭位置へのoffset値を取得。
+	 */
 	std::size_t get_position() const
 	{
 		return this->position_;
 	}
 
+	/** @brief bufferの大きさをbyte単位で取得。
+	 */
 	std::size_t get_capacity() const
 	{
 		return this->capacity_;
 	}
 
+	/** @brief regionを設定。
+	    @param[in] i_offset buffer先頭位置からregion先頭位置へのoffset値。
+	    @param[in] i_size   regionの大きさ。byte単位。
+	 */
 	void set_region(
 		std::size_t const i_offset,
 		std::size_t const i_size)

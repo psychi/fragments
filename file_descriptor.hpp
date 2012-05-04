@@ -81,34 +81,6 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief fileを開く。
-	    @param[in] i_path  fileのpath名。必ずNULL文字で終わる。
-	    @param[in] i_flags 許可する操作。this_type::open_flagの論理和。
-	    @return 結果のerror番号。0なら成功。
-	 */
-	int open(
-		char const* const i_path,
-		int const         i_flags)
-	{
-		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
-		int const a_error(this->close_file());
-		return 0 == a_error? this->open_file(i_path, i_flags): a_error;
-	}
-
-	/** @brief fileを閉じる。fileを開いてないなら、何も行わない。
-	    @return 結果のerror番号。0なら成功。
-	 */
-	int close()
-	{
-		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
-		int const a_error(this->close_file());
-		if (0 == a_error)
-		{
-			this->descriptor_ = -1;
-		}
-		return a_error;
-	}
-
 	/** @brief fileを開いているか判定。
 	    @retval true  fileを開いている。
 	    @retval false fileを開いてない。
@@ -116,13 +88,6 @@ public:
 	bool is_open() const
 	{
 		return 0 <= this->descriptor_;
-	}
-
-	/** @brief fileの論理block-sizeを取得。
-	 */
-	std::size_t get_block_size() const
-	{
-		return this->block_size_;
 	}
 
 	//-------------------------------------------------------------------------
@@ -147,6 +112,14 @@ public:
 		std::size_t a_size(0);
 		o_error = this->seek_file(a_size, 0, SEEK_END);
 		return a_size;
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief fileの論理block-sizeを取得。
+	 */
+	std::size_t get_block_size() const
+	{
+		return this->block_size_;
 	}
 
 	//-------------------------------------------------------------------------
@@ -260,7 +233,6 @@ public:
 	const
 	{
 		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
-
 		std::size_t a_file_size(0);
 		int a_error(this->seek_file(a_file_size, 0, SEEK_END));
 		if (0 == a_error && i_offset < a_file_size)
@@ -485,7 +457,7 @@ private:
 	}
 
 	//-------------------------------------------------------------------------
-	int truncate(std::size_t const i_size) const
+	int truncate_file(std::size_t const i_size) const
 	{
 #ifdef _WIN32
 		if (this->descriptor_ < 0)
@@ -519,6 +491,7 @@ private:
 #elif _BSD_SOURCE || 500 <= _XOPEN_SOURCE || _XOPEN_SOURCE && _XOPEN_SOURCE_EXTENDED
 		return 0 == ::ftruncate(this->descriptor_, i_size)? 0: errno;
 #else
+		PSYQ_ASSERT(false); // 未対応なので。
 		return EPERM;
 #endif // _WIN32
 	}

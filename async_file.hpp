@@ -370,16 +370,16 @@ private:
 		psyq::file_buffer& a_buffer(this->buffer_);
 		//boost::lock_guard< typename t_file::mutex > const a_lock(a_file.get_mutex());
 		std::size_t const a_file_size(a_file.get_region_size());
-		std::size_t const a_storage_end(
-			a_buffer.get_region_offset() + a_buffer.get_region_size());
 		std::size_t const a_region_end(
-			a_buffer.get_mapped_offset() + a_source_end);
+			a_buffer.get_region_offset() + a_buffer.get_region_size());
+		std::size_t const a_mapped_end(
+			a_buffer.get_mapped_offset() + a_region_end);
 #if 1
 		this->write_size_ = a_file.write(
 			this->error_,
 			a_buffer.get_mapped_address(),
-			a_region_end < a_file_size?
-				a_storage_end: a_buffer.get_mapped_size(),
+			a_mapped_end < a_file_size?
+				a_region_end: a_buffer.get_mapped_size(),
 			a_buffer.get_mapped_offset());
 #else
 		/** @note 2012-05-05
@@ -390,9 +390,9 @@ private:
 			a_buffer.get_mapped_address(),
 			a_buffer.get_mapped_size(),
 			a_buffer.get_mapped_offset());
-		if (a_region_end < a_file_size)
+		if (a_mapped_end < a_file_size)
 		{
-			a_file.truncate(a_region_end);
+			a_file.truncate(a_mapped_end);
 		}
 #endif // 1
 		return super_type::state_FINISHED;

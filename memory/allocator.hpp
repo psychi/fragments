@@ -91,8 +91,8 @@ private:
 
 //.............................................................................
 public:
-	static std::size_t const alignment = t_alignment;
-	static std::size_t const offset = t_offset;
+	static std::size_t const ALIGNMENT = t_alignment;
+	static std::size_t const OFFSET = t_offset;
 
 private:
 	char const* name_; ///< debug‚ÅŽg‚¤‚½‚ß‚ÌmemoryŽ¯•Ê–¼B

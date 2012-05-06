@@ -26,137 +26,105 @@ public:
 		// 保持しているmemoryを解放。
 		if (NULL != this->deallocator_)
 		{
-			(*this->deallocator_)(this->get_storage(), this->get_capacity());
+			(*this->deallocator_)(
+				this->get_mapped_address(), this->get_mapped_size());
 		}
 	}
 
 	file_buffer():
 	deallocator_(NULL),
 	storage_(NULL),
-	position_(0),
-	capacity_(0),
-	offset_(0),
-	size_(0)
+	mapped_offset_(0),
+	mapped_size_(0),
+	region_offset_(0),
+	region_size_(0)
 	{
 		// pass
 	}
 
-	/** @param[in] i_position
+	/** @param[in] i_offset
 	        fileの先頭位置からのoffset値。
 	        fileの論理block-sizeの整数倍である必要がある。
-	    @param[in] i_capacity
+	    @param[in] i_size
 	        確保するbufferの大きさ。byte単位。
 	        fileの論理block-sizeの整数倍である必要がある。
 	    @param[in] i_allocator bufferの確保に使う割当子。
 	 */
 	template< typename t_allocator >
 	file_buffer(
-		std::size_t const  i_position,
-		std::size_t const  i_capacity,
+		std::size_t const  i_offset,
+		std::size_t const  i_size,
 		t_allocator const& i_allocator)
 	{
 		new(this) this_type(
-			i_capacity,
-			i_position,
-			t_allocator::alignment,
-			t_allocator::offset,
+			i_size,
+			i_offset,
+			t_allocator::ALIGNMENT,
+			t_allocator::OFFSET,
 			i_allocator.get_name(),
 			boost::type< typename t_allocator::arena >());
 	}
 
-	/** @param[in] i_position
+	/** @param[in] i_offset
 	        fileの先頭位置からのoffset値。
 	        fileの論理block-sizeの整数倍である必要がある。
-	    @param[in] i_capacity
+	    @param[in] i_size
 	        確保するbufferの大きさ。byte単位。
 	        fileの論理block-sizeの整数倍である必要がある。
-	    @param[in] i_alignment 確保するbufferのmemory配置境界値。
-	    @param[in] i_offset    確保するbufferのmemory配置offset値。
-	    @param[in] i_name      debugで使うためのmemory識別名。
+	    @param[in] i_memory_alignment 確保するbufferのmemory配置境界値。
+	    @param[in] i_memory_offset    確保するbufferのmemory配置offset値。
+	    @param[in] i_name             debugで使うためのmemory識別名。
 	 */
 	template< typename t_arena >
 	file_buffer(
 		boost::type< t_arena > const&,
-		std::size_t const i_position,
-		std::size_t const i_capacity,
-		std::size_t const i_alignment,
 		std::size_t const i_offset,
+		std::size_t const i_size,
+		std::size_t const i_memory_alignment,
+		std::size_t const i_memory_offset = 0,
 		char const* const i_name = PSYQ_ARENA_NAME_DEFAULT):
-	position_(i_position),
-	offset_(0),
-	size_(0)
+	mapped_offset_(i_offset),
+	mapped_size_(i_size),
+	region_offset_(0),
+	region_size_(0)
 	{
-		if (0 < i_capacity)
+		if (0 < i_size)
 		{
 			this->storage_ = (t_arena::malloc)(
-				i_capacity, i_alignment, i_offset, i_name);
-			if (NULL != this->get_storage())
+				i_size, i_memory_alignment, i_memory_offset, i_name);
+			if (NULL != this->get_mapped_address())
 			{
 				this->deallocator_ = &t_arena::free;
-				this->capacity_ = i_capacity;
 				return;
 			}
 			PSYQ_ASSERT(false);
+			this->mapped_size_ = 0;
 		}
 		this->deallocator_ = NULL;
 		this->storage_ = NULL;
-		this->capacity_ = 0;
 	}
 
 	//-------------------------------------------------------------------------
 	/** @brief buffer先頭位置からregion先頭位置へのoffset値を取得。
 	 */
-	std::size_t get_offset() const
+	std::size_t get_region_offset() const
 	{
-		return this->offset_;
+		return this->region_offset_;
 	}
 
 	/** @brief regionの大きさをbyte単位で取得。
 	 */
-	std::size_t get_size() const
+	std::size_t get_region_size() const
 	{
-		return this->size_;
+		return this->region_size_;
 	}
 
 	/** @brief regionの先頭位置を取得。
 	 */
-	void* get_address() const
+	void* get_region_address() const
 	{
-		return static_cast< char* >(this->get_storage()) + this->get_offset();
-	}
-
-	/** @brief 値を交換。
-	 */
-	void swap(this_type& io_target)
-	{
-		std::swap(this->deallocator_, io_target.deallocator_);
-		std::swap(this->storage_, io_target.storage_);
-		std::swap(this->position_, io_target.position_);
-		std::swap(this->capacity_, io_target.capacity_);
-		std::swap(this->offset_, io_target.offset_);
-		std::swap(this->size_, io_target.size_);
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief bufferの先頭位置を取得。
-	 */
-	void* get_storage() const
-	{
-		return this->storage_;
-	}
-
-	/** @brief file先頭位置からbuffer先頭位置へのoffset値を取得。
-	 */
-	std::size_t get_position() const
-	{
-		return this->position_;
-	}
-
-	/** @brief bufferの大きさをbyte単位で取得。
-	 */
-	std::size_t get_capacity() const
-	{
-		return this->capacity_;
+		return static_cast< char* >(this->get_mapped_address())
+			+ this->get_region_offset();
 	}
 
 	/** @brief regionを設定。
@@ -167,19 +135,53 @@ public:
 		std::size_t const i_offset,
 		std::size_t const i_size)
 	{
-		this->offset_ = (std::min)(i_offset, this->get_capacity());
-		this->size_ = (std::min)(
-			i_size, this->get_capacity() - this->get_offset());
+		this->region_offset_ = (std::min)(i_offset, this->get_mapped_size());
+		this->region_size_ = (std::min)(
+			i_size, this->get_mapped_size() - this->get_region_offset());
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief bufferの先頭位置を取得。
+	 */
+	void* get_mapped_address() const
+	{
+		return this->storage_;
+	}
+
+	/** @brief file先頭位置からbuffer先頭位置へのoffset値を取得。
+	 */
+	std::size_t get_mapped_offset() const
+	{
+		return this->mapped_offset_;
+	}
+
+	/** @brief bufferの大きさをbyte単位で取得。
+	 */
+	std::size_t get_mapped_size() const
+	{
+		return this->mapped_size_;
+	}
+
+	/** @brief 値を交換。
+	 */
+	void swap(this_type& io_target)
+	{
+		std::swap(this->deallocator_, io_target.deallocator_);
+		std::swap(this->storage_, io_target.storage_);
+		std::swap(this->mapped_offset_, io_target.mapped_offset_);
+		std::swap(this->mapped_size_, io_target.mapped_size_);
+		std::swap(this->region_offset_, io_target.region_offset_);
+		std::swap(this->region_size_, io_target.region_size_);
 	}
 
 //.............................................................................
 private:
 	void        (*deallocator_)(void* const, std::size_t const);
 	void*       storage_;
-	std::size_t position_;
-	std::size_t capacity_;
-	std::size_t offset_;
-	std::size_t size_;
+	std::size_t mapped_offset_;
+	std::size_t mapped_size_;
+	std::size_t region_offset_;
+	std::size_t region_size_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -298,18 +300,18 @@ private:
 			// 読み込みbufferを確保。
 			std::size_t const a_read_offset(
 				(std::min)(this->read_offset_, a_file_size));
-			std::size_t const a_buffer_size(
+			std::size_t const a_region_size(
 				(std::min)(this->read_size_, a_file_size - a_read_offset));
 			std::size_t const a_block_size(a_file.get_block_size());
-			std::size_t const a_read_position(
+			std::size_t const a_mapped_offset(
 				a_block_size * (a_read_offset / a_block_size));
-			std::size_t const a_buffer_offset(a_read_offset - a_read_position);
-			std::size_t const a_temp_capacity(
-				a_buffer_offset + a_buffer_size + a_block_size - 1);
+			std::size_t const a_region_offset(a_read_offset - a_mapped_offset);
+			std::size_t const a_temp_size(
+				a_region_offset + a_region_size + a_block_size - 1);
 			psyq::file_buffer a_buffer(
 				boost::type< t_arena >(),
-				a_read_position,
-				a_block_size * (a_temp_capacity / a_block_size),
+				a_mapped_offset,
+				a_block_size * (a_temp_size / a_block_size),
 				(std::max)(a_block_size, this->buffer_alignment_),
 				0,
 				this->arena_name_);
@@ -318,11 +320,11 @@ private:
 			std::size_t const a_read_size(
 				a_file.read(
 					this->error_,
-					a_buffer.get_storage(),
-					a_buffer.get_capacity(),
-					a_buffer.get_position()));
+					a_buffer.get_mapped_address(),
+					a_buffer.get_mapped_size(),
+					a_buffer.get_mapped_offset()));
 			a_buffer.set_region(
-				a_buffer_offset, (std::min)(a_buffer_size, a_read_size));
+				a_region_offset, (std::min)(a_region_size, a_read_size));
 			a_buffer.swap(this->buffer_);
 		}
 		return super_type::state_FINISHED;
@@ -353,6 +355,10 @@ public:
 	super_type(i_file),
 	write_size_(0)
 	{
+		PSYQ_ASSERT(
+			0 == io_buffer.get_mapped_offset() % i_file->get_block_size());
+		PSYQ_ASSERT(
+			0 == io_buffer.get_mapped_size() % i_file->get_block_size());
 		this->buffer_.swap(io_buffer);
 	}
 
@@ -361,29 +367,29 @@ private:
 	virtual boost::int32_t run()
 	{
 		t_file const& a_file(*this->get_file());
-		//boost::lock_guard< typename t_file::mutex > const a_lock(a_file.get_mutex());
 		psyq::file_buffer& a_buffer(this->buffer_);
-		std::size_t const a_file_size(a_file.get_size());
+		//boost::lock_guard< typename t_file::mutex > const a_lock(a_file.get_mutex());
+		std::size_t const a_file_size(a_file.get_region_size());
 		std::size_t const a_storage_end(
-			a_buffer.get_offset() + a_buffer.get_size());
+			a_buffer.get_region_offset() + a_buffer.get_region_size());
 		std::size_t const a_region_end(
-			a_buffer.get_position() + a_source_end);
+			a_buffer.get_mapped_offset() + a_source_end);
 #if 1
 		this->write_size_ = a_file.write(
 			this->error_,
-			a_buffer.get_storage(),
+			a_buffer.get_mapped_address(),
 			a_region_end < a_file_size?
-				a_storage_end: a_buffer.get_capacity(),
-			a_buffer.get_position());
+				a_storage_end: a_buffer.get_mapped_size(),
+			a_buffer.get_mapped_offset());
 #else
 		/** @note 2012-05-05
 		    fileの論理block-sizeで書き出すほうが、実行効率が良いかも？
 		 */
 		this->write_size_ = a_file.write(
 			this->error_,
-			a_buffer.get_storage(),
-			a_buffer.get_capacity(),
-			a_buffer.get_position());
+			a_buffer.get_mapped_address(),
+			a_buffer.get_mapped_size(),
+			a_buffer.get_mapped_offset());
 		if (a_region_end < a_file_size)
 		{
 			a_file.truncate(a_region_end);

@@ -47,8 +47,8 @@ public:
 	{
 		new(this) this_type(
 			i_size,
-			t_allocator::alignment,
-			t_allocator::offset,
+			t_allocator::ALIGNMENT,
+			t_allocator::OFFSET,
 			i_allocator.get_name(),
 			boost::type< typename t_allocator::arena >());
 	}
@@ -66,8 +66,8 @@ public:
 	{
 		return this->allocate< typename t_allocator::arena >(
 			i_size,
-			t_allocator::alignment,
-			t_allocator::offset,
+			t_allocator::ALIGNMENT,
+			t_allocator::OFFSET,
 			i_allocator.get_name());
 	}
 

@@ -33,6 +33,7 @@ public:
 	file_buffer():
 	deallocator_(NULL),
 	storage_(NULL),
+	position_(0),
 	capacity_(0),
 	offset_(0),
 	size_(0)
@@ -289,7 +290,8 @@ public:
 private:
 	virtual boost::int32_t run()
 	{
-		t_file& a_file(*this->file_);
+		t_file const& a_file(*this->get_file());
+		//boost::lock_guard< typename t_file::mutex > const a_lock(a_file.get_mutex());
 		std::size_t const a_file_size(a_file.get_size(this->error_));
 		if (0 == this->error_)
 		{
@@ -358,11 +360,35 @@ public:
 private:
 	virtual boost::int32_t run()
 	{
-		this->write_size_ = this->file_->write(
+		t_file const& a_file(*this->get_file());
+		//boost::lock_guard< typename t_file::mutex > const a_lock(a_file.get_mutex());
+		psyq::file_buffer& a_buffer(this->buffer_);
+		std::size_t const a_file_size(a_file.get_size());
+		std::size_t const a_storage_end(
+			a_buffer.get_offset() + a_buffer.get_size());
+		std::size_t const a_region_end(
+			a_buffer.get_position() + a_source_end);
+#if 1
+		this->write_size_ = a_file.write(
 			this->error_,
-			this->buffer_.get_storage(),
-			this->buffer_.get_offset() + this->buffer_.get_size(),
-			this->buffer_.get_position());
+			a_buffer.get_storage(),
+			a_region_end < a_file_size?
+				a_storage_end: a_buffer.get_capacity(),
+			a_buffer.get_position());
+#else
+		/** @note 2012-05-05
+		    fileの論理block-sizeで書き出すほうが、実行効率が良いかも？
+		 */
+		this->write_size_ = a_file.write(
+			this->error_,
+			a_buffer.get_storage(),
+			a_buffer.get_capacity(),
+			a_buffer.get_position());
+		if (a_region_end < a_file_size)
+		{
+			a_file.truncate(a_region_end);
+		}
+#endif // 1
 		return super_type::state_FINISHED;
 	}
 
@@ -422,7 +448,7 @@ private:
 	virtual boost::int32_t run()
 	{
 		boost::interprocess::mapped_region(
-			*this->file_,
+			*this->get_file(),
 			this->mode_,
 			this->offset_,
 			this->size_,

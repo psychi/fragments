@@ -309,48 +309,41 @@ private:
 				a_flags |= _O_TRUNC;
 			}
 		}
-		if (0 != a_flags)
-		{
-			// block-sizeを取得。
-			/** @note 2012-05-04
-			    fileの存在するvolumeをpath名から判断している。
-			    このためpathにsymbolic-linkが含まれている場合は、
-			    正しいvolumeが取得できない。
-			 */
-			struct _stat64 a_status;
-			if (0 != ::_stat64(i_path, &a_status))
-			{
-				return errno;
-			}
-			char a_root_path[] = "a:\\";
-			a_root_path[0] += static_cast< char >(a_status.st_dev);
-			DWORD a_sector_per_cluster;
-			DWORD a_bytes_per_sector;
-			DWORD a_number_of_free_clusters;
-			DWORD a_total_number_of_clusters;
-			BOOL const a_result(
-				GetDiskFreeSpaceA(
-					a_root_path,
-					&a_sector_per_cluster,
-					&a_bytes_per_sector,
-					&a_number_of_free_clusters,
-					&a_total_number_of_clusters));
-			if (0 == a_result)
-			{
-				return ::GetLastError();
-			}
-			this->block_size_ = a_bytes_per_sector * a_sector_per_cluster;
-			PSYQ_ASSERT(0 < this->block_size_);
 
-			// fileを開く。
-			a_flags |= _O_BINARY;
-			::_sopen_s(&this->descriptor_, i_path, a_flags, a_share, a_mode);
-		}
-		else
+		// block-sizeを取得。
+		/** @note 2012-05-04
+		    fileの存在するvolumeをpath名から判断している。
+		    このためpathにsymbolic-linkが含まれている場合は、
+		    正しいvolumeが取得できない。
+		 */
+		struct _stat64 a_status;
+		if (0 != ::_stat64(i_path, &a_status))
 		{
-			PSYQ_ASSERT(false);
-			return 0;
+			return errno;
 		}
+		char a_root_path[] = "a:\\";
+		a_root_path[0] += static_cast< char >(a_status.st_dev);
+		DWORD a_sector_per_cluster;
+		DWORD a_bytes_per_sector;
+		DWORD a_number_of_free_clusters;
+		DWORD a_total_number_of_clusters;
+		BOOL const a_result(
+			GetDiskFreeSpaceA(
+				a_root_path,
+				&a_sector_per_cluster,
+				&a_bytes_per_sector,
+				&a_number_of_free_clusters,
+				&a_total_number_of_clusters));
+		if (0 == a_result)
+		{
+			return ::GetLastError();
+		}
+		this->block_size_ = a_bytes_per_sector * a_sector_per_cluster;
+		PSYQ_ASSERT(0 < this->block_size_);
+
+		// fileを開く。
+		a_flags |= _O_BINARY;
+		::_sopen_s(&this->descriptor_, i_path, a_flags, a_share, a_mode);
 #else
 		if (0 != (i_flags & this_type::open_READ))
 		{
@@ -381,25 +374,18 @@ private:
 				a_flags |= O_TRUNC;
 			}
 		}
-		if (0 != a_flags)
-		{
-			// block-sizeを取得。
-			struct stat a_status;
-			if (0 != ::stat(i_path, &a_status))
-			{
-				return errno;
-			}
-			this->block_size_ = a_status.st_blksize;
-			PSYQ_ASSERT(0 < this->block_size_);
 
-			// fileを開く。
-			this->descriptor_ = ::open(i_path, a_flags);
-		}
-		else
+		// block-sizeを取得。
+		struct stat a_status;
+		if (0 != ::stat(i_path, &a_status))
 		{
-			PSYQ_ASSERT(false);
-			return 0;
+			return errno;
 		}
+		this->block_size_ = a_status.st_blksize;
+		PSYQ_ASSERT(0 < this->block_size_);
+
+		// fileを開く。
+		this->descriptor_ = ::open(i_path, a_flags);
 #endif // _WIN32
 		return this->is_open()? 0: errno;
 	}
@@ -421,6 +407,7 @@ private:
 		return 0;
 	}
 
+	//-------------------------------------------------------------------------
 	int seek_file(
 		std::size_t const i_offset,
 		int const         i_origin)

@@ -52,17 +52,17 @@ public:
 	 */
 	template< typename t_allocator >
 	file_buffer(
+		t_allocator const& i_allocator,
 		std::size_t const  i_offset,
-		std::size_t const  i_size,
-		t_allocator const& i_allocator)
+		std::size_t const  i_size)
 	{
 		new(this) this_type(
-			i_size,
+			boost::type< typename t_allocator::arena >(),
 			i_offset,
+			i_size,
 			t_allocator::ALIGNMENT,
 			t_allocator::OFFSET,
-			i_allocator.get_name(),
-			boost::type< typename t_allocator::arena >());
+			i_allocator.get_name());
 	}
 
 	/** @param[in] i_offset
@@ -73,7 +73,7 @@ public:
 	        fileの論理block-sizeの整数倍である必要がある。
 	    @param[in] i_memory_alignment 確保するbufferのmemory配置境界値。
 	    @param[in] i_memory_offset    確保するbufferのmemory配置offset値。
-	    @param[in] i_name             debugで使うためのmemory識別名。
+	    @param[in] i_memory_name      debugで使うためのmemory識別名。
 	 */
 	template< typename t_arena >
 	file_buffer(
@@ -82,7 +82,7 @@ public:
 		std::size_t const i_size,
 		std::size_t const i_memory_alignment,
 		std::size_t const i_memory_offset = 0,
-		char const* const i_name = PSYQ_ARENA_NAME_DEFAULT):
+		char const* const i_memory_name = PSYQ_ARENA_NAME_DEFAULT):
 	mapped_offset_(i_offset),
 	mapped_size_(i_size),
 	region_offset_(0),
@@ -91,7 +91,7 @@ public:
 		if (0 < i_size)
 		{
 			this->storage_ = (t_arena::malloc)(
-				i_size, i_memory_alignment, i_memory_offset, i_name);
+				i_size, i_memory_alignment, i_memory_offset, i_memory_name);
 			if (NULL != this->get_mapped_address())
 			{
 				this->deallocator_ = &t_arena::free;
@@ -162,6 +162,7 @@ public:
 		return this->mapped_size_;
 	}
 
+	//-------------------------------------------------------------------------
 	/** @brief 値を交換。
 	 */
 	void swap(this_type& io_target)
@@ -294,8 +295,9 @@ private:
 	{
 		t_file const& a_file(*this->get_file());
 		//boost::lock_guard< typename t_file::mutex > const a_lock(a_file.get_mutex());
-		std::size_t const a_file_size(a_file.get_size(this->error_));
-		if (0 == this->error_)
+		int a_error;
+		std::size_t const a_file_size(a_file.get_size(a_error));
+		if (0 == a_error)
 		{
 			// 読み込みbufferを確保。
 			std::size_t const a_read_offset(
@@ -319,14 +321,18 @@ private:
 			// fileを読み込む。
 			std::size_t const a_read_size(
 				a_file.read(
-					this->error_,
+					a_error,
 					a_buffer.get_mapped_address(),
 					a_buffer.get_mapped_size(),
 					a_buffer.get_mapped_offset()));
-			a_buffer.set_region(
-				a_region_offset, (std::min)(a_region_size, a_read_size));
-			a_buffer.swap(this->buffer_);
+			if (0 == a_error)
+			{
+				a_buffer.set_region(
+					a_region_offset, (std::min)(a_region_size, a_read_size));
+				a_buffer.swap(this->buffer_);
+			}
 		}
+		this->error_ = a_error;
 		return super_type::state_FINISHED;
 	}
 
@@ -367,34 +373,39 @@ private:
 	virtual boost::int32_t run()
 	{
 		t_file const& a_file(*this->get_file());
-		psyq::file_buffer& a_buffer(this->buffer_);
+		psyq::file_buffer const& a_buffer(this->buffer_);
 		//boost::lock_guard< typename t_file::mutex > const a_lock(a_file.get_mutex());
-		std::size_t const a_file_size(a_file.get_region_size());
-		std::size_t const a_region_end(
-			a_buffer.get_region_offset() + a_buffer.get_region_size());
-		std::size_t const a_mapped_end(
-			a_buffer.get_mapped_offset() + a_region_end);
-#if 1
-		this->write_size_ = a_file.write(
-			this->error_,
-			a_buffer.get_mapped_address(),
-			a_mapped_end < a_file_size?
-				a_region_end: a_buffer.get_mapped_size(),
-			a_buffer.get_mapped_offset());
-#else
-		/** @note 2012-05-05
-		    fileの論理block-sizeで書き出すほうが、実行効率が良いかも？
-		 */
-		this->write_size_ = a_file.write(
-			this->error_,
-			a_buffer.get_mapped_address(),
-			a_buffer.get_mapped_size(),
-			a_buffer.get_mapped_offset());
-		if (a_mapped_end < a_file_size)
+		int a_error;
+		std::size_t const a_file_size(a_file.get_size(a_error));
+		if (0 == a_error)
 		{
-			a_file.truncate(a_mapped_end);
-		}
+			std::size_t const a_region_end(
+				a_buffer.get_region_offset() + a_buffer.get_region_size());
+			std::size_t const a_mapped_end(
+				a_buffer.get_mapped_offset() + a_region_end);
+#if 1
+			this->write_size_ = a_file.write(
+				a_error,
+				a_buffer.get_mapped_address(),
+				a_mapped_end < a_file_size?
+					a_region_end: a_buffer.get_mapped_size(),
+				a_buffer.get_mapped_offset());
+#else
+			/** @note 2012-05-05
+		        fileの論理block-sizeで書き出すほうが、実行効率が良いかも？
+			 */
+			this->write_size_ = a_file.write(
+				a_error,
+				a_buffer.get_mapped_address(),
+				a_buffer.get_mapped_size(),
+				a_buffer.get_mapped_offset());
+			if (0 == a_error && a_mapped_end < a_file_size)
+			{
+				a_error = a_file.truncate(a_mapped_end);
+			}
 #endif // 1
+		}
+		this->error_ = a_error;
 		return super_type::state_FINISHED;
 	}
 

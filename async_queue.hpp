@@ -8,38 +8,48 @@
 
 namespace psyq
 {
-	class async_queue;
+	template < typename > class async_queue;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 非同期処理task-queue。
  */
+template< typename t_arena >
 class psyq::async_queue:
 	private boost::noncopyable
 {
-	typedef psyq::async_queue this_type;
+	typedef psyq::async_queue< t_arena > this_type;
 
 //.............................................................................
 public:
+	typedef t_arena arena;
+
 	//-------------------------------------------------------------------------
 	~async_queue()
 	{
 		this->stop(true);
-		this_type::abort_tasks(
-			*this->arena_, this->reserve_tasks_, this->reserve_capacity_);
+		this_type::abort_tasks(this->reserve_tasks_, this->reserve_capacity_);
 	}
 
-	/** @param[in] i_arena memory割当に使うarena。
+	/** @param[in] i_memory_name debugで使うためのmemory識別名。
 	 */
-	explicit async_queue(psyq::arena::shared_ptr const& i_arena):
-	arena_(i_arena),
+	explicit async_queue(
+		char const* const i_memory_name = PSYQ_ARENA_NAME_DEFAULT):
+	arena_name_(i_memory_name),
 	reserve_tasks_(NULL),
 	reserve_capacity_(0),
 	running_size_(0),
 	stop_(false)
 	{
-		PSYQ_ASSERT(NULL != i_arena.get());
 		this->start();
+	}
+
+	//-------------------------------------------------------------------------
+	bool is_empty() const
+	{
+		boost::lock_guard< boost::mutex > const a_lock(
+			const_cast< boost::mutex& >(this->mutex_));
+		return this->reserve_capacity_ <= 0 && this->running_size_ <= 0;
 	}
 
 	//-------------------------------------------------------------------------
@@ -63,23 +73,21 @@ public:
 	{
 		// 予約queueを取り出す。
 		boost::lock_guard< boost::mutex > const a_lock(this->mutex_);
-		this_type::task_ptr* const a_last_tasks(this->reserve_tasks_);
+		typename this_type::task_ptr* const a_last_tasks(this->reserve_tasks_);
 		std::size_t const a_last_capacity(this->reserve_capacity_);
-		std::size_t const a_last_size(this->running_size_);
-		this->reserve_tasks_ = NULL;
-		this->reserve_capacity_ = 0;
-		////a_lock.unlock();
+		std::size_t const a_last_size(
+			0 < a_last_capacity? a_last_capacity: this->running_size_);
 
 		// 新しいqueueを構築。
 		std::size_t const a_capacity(
 			a_last_size + std::distance(i_begin, i_end));
-		this_type::task_ptr* const a_tasks(
+		typename this_type::task_ptr* const a_tasks(
 			this_type::resize_tasks(
-				*this->arena_,
 				a_capacity,
 				a_last_tasks,
 				a_last_size,
-				a_last_capacity));
+				a_last_capacity,
+				this->arena_name_));
 
 		// containerが持つ非同期処理taskを、新しいqueueにcopy。
 		std::size_t a_count(0);
@@ -91,17 +99,16 @@ public:
 				&& a_task->set_locked_state(psyq::async_task::state_BUSY))
 			{
 				// busy状態ではない非同期処理taskだけが登録できる。
-				new(&a_tasks[i]) this_type::task_ptr(*a_iterator);
+				new(&a_tasks[i]) typename this_type::task_ptr(*a_iterator);
 				++a_count;
 			}
 			else
 			{
-				new(&a_tasks[i]) this_type::task_ptr();
+				new(&a_tasks[i]) typename this_type::task_ptr();
 			}
 		}
 
 		// 新しいqueueを予約queueに差し替えてから通知。
-		////a_lock.lock();
 		this->reserve_tasks_ = a_tasks;
 		this->reserve_capacity_ = a_capacity;
 		this->condition_.notify_all();
@@ -117,12 +124,6 @@ public:
 			static_cast< psyq::async_task::shared_ptr const* >(NULL));
 	}
 
-	//-------------------------------------------------------------------------
-	psyq::arena::shared_ptr const& get_arena() const
-	{
-		return this->arena_;
-	}
-
 //.............................................................................
 private:
 	typedef psyq::async_task::weak_ptr task_ptr;
@@ -132,6 +133,7 @@ private:
 	{
 		if (!this->thread_.joinable())
 		{
+			this->stop_ = false;
 			boost::thread(boost::bind(&this_type::run, this)).swap(
 				this->thread_);
 		}
@@ -151,22 +153,21 @@ private:
 
 	void run()
 	{
-		this_type::task_ptr* a_tasks(NULL);
+		typename this_type::task_ptr* a_tasks(NULL);
 		std::size_t a_size(0);
 		std::size_t a_capacity(0);
-		psyq::arena& a_arena(*this->arena_);
 		boost::unique_lock< boost::mutex > a_lock(this->mutex_);
 		while (!this->stop_)
 		{
 			// 実行queueを更新。
-			this->running_size_ = a_size;
-			if (NULL != this->reserve_tasks_)
+			if (0 < this->reserve_capacity_)
 			{
 				// 予約queueを、新しい実行queueとして取り出す。
-				this_type::task_ptr* const a_last_tasks(a_tasks);
+				typename this_type::task_ptr* const a_last_tasks(a_tasks);
 				std::size_t const a_last_capacity(a_capacity);
 				a_tasks = this->reserve_tasks_;
 				a_capacity = this->reserve_capacity_;
+				this->running_size_ = this->reserve_capacity_;
 				this->reserve_tasks_ = NULL;
 				this->reserve_capacity_ = 0;
 				a_lock.unlock();
@@ -182,16 +183,17 @@ private:
 				a_size = a_capacity;
 
 				// 元の実行queueを破棄。
-				this_type::destroy_tasks(
-					a_arena, a_last_tasks, a_last_capacity);
+				this_type::destroy_tasks(a_last_tasks, a_last_capacity);
 			}
-			else if (NULL != a_tasks)
+			else if (0 < a_size)
 			{
+				this->running_size_ = a_size;
 				a_lock.unlock();
 			}
 			else
 			{
 				// 予約queueと実行queueが空になったので待機。
+				this->running_size_ = 0;
 				this->condition_.wait(a_lock);
 				continue;
 			}
@@ -201,13 +203,13 @@ private:
 			if (a_size <= 0)
 			{
 				// 実行queueが空になったので破棄。
-				this_type::destroy_tasks(a_arena, a_tasks, a_capacity);
+				this_type::destroy_tasks(a_tasks, a_capacity);
 				a_tasks = NULL;
 				a_capacity = 0;
 			}
 			a_lock.lock();
 		}
-		this_type::abort_tasks(a_arena, a_tasks, a_capacity);
+		this_type::abort_tasks(a_tasks, a_capacity);
 	}
 
 	//-------------------------------------------------------------------------
@@ -217,8 +219,8 @@ private:
 	    @return queueが持つ非同期処理taskの数。
 	 */
 	static std::size_t run_tasks(
-		this_type::task_ptr* const io_tasks,
-		std::size_t const          i_size)
+		typename this_type::task_ptr* const io_tasks,
+		std::size_t const                   i_size)
 	{
 		std::size_t a_size(0);
 		for (std::size_t i = 0; i < i_size; ++i)
@@ -243,34 +245,34 @@ private:
 	}
 
 	/** @brief queueの大きさを変更する。
-	    @param[in] i_arena           memory割当に使うarena。
 	    @param[in] i_capacity        新しいqueueの最大要素数。
 	    @param[in,out] io_last_tasks 元のqueueの先頭位置。
 	    @param[in] i_last_size       元のqueueの要素数。
 	    @param[in] i_last_capacity   元のqueueの最大要素数。
 		@return 新しいqueueの先頭位置。
 	 */
-	static this_type::task_ptr* resize_tasks(
-		psyq::arena&               i_arena,
-		std::size_t const          i_capacity,
-		this_type::task_ptr* const io_last_tasks,
-		std::size_t const          i_last_size,
-		std::size_t const          i_last_capacity)
+	static typename this_type::task_ptr* resize_tasks(
+		std::size_t const                   i_capacity,
+		typename this_type::task_ptr* const io_last_tasks,
+		std::size_t const                   i_last_size,
+		std::size_t const                   i_last_capacity,
+		char const* const                   i_memory_name)
 	{
 		// 新しいqueueを確保。
-		this_type::task_ptr* const a_tasks(
-			static_cast< this_type::task_ptr* >(
-				i_arena.allocate(
-					i_capacity * sizeof(this_type::task_ptr),
-					boost::alignment_of< this_type::task_ptr >::value,
-					0)));
+		typename this_type::task_ptr* const a_tasks(
+			static_cast< typename this_type::task_ptr* >(
+				(t_arena::malloc)(
+					i_capacity * sizeof(typename this_type::task_ptr),
+					boost::alignment_of< typename this_type::task_ptr >::value,
+					0,
+					i_memory_name)));
 		if (NULL != a_tasks)
 		{
 			// 元のqueueが持つ非同期処理taskを、新しいqueueに移動。
 			PSYQ_ASSERT(i_last_size <= i_capacity);
 			for (std::size_t i = 0; i < i_last_size; ++i)
 			{
-				new(&a_tasks[i]) this_type::task_ptr();
+				new(&a_tasks[i]) typename this_type::task_ptr();
 				if (NULL != io_last_tasks)
 				{
 					a_tasks[i].swap(io_last_tasks[i]);
@@ -283,19 +285,17 @@ private:
 		}
 
 		// 元のqueueを破棄。
-		this_type::destroy_tasks(i_arena, io_last_tasks, i_last_capacity);
+		this_type::destroy_tasks(io_last_tasks, i_last_capacity);
 		return a_tasks;
 	}
 
 	/** @brief 非同期処理task行列を途中終了する。
-	    @param[in] i_arena    破棄に使うmemory-arena。
 	    @param[in] io_tasks   queueの先頭位置。
 	    @param[in] i_capacity queueが持つ非同期処理taskの数。
 	 */
 	static void abort_tasks(
-		psyq::arena&               i_arena,
-		this_type::task_ptr* const io_tasks,
-		std::size_t const          i_capacity)
+		typename this_type::task_ptr* const io_tasks,
+		std::size_t const                   i_capacity)
 	{
 		for (std::size_t i = 0; i < i_capacity; ++i)
 		{
@@ -308,37 +308,36 @@ private:
 					psyq::async_task::state_ABORTED);
 			}
 		}
-		this_type::destroy_tasks(i_arena, io_tasks, i_capacity);
+		this_type::destroy_tasks(io_tasks, i_capacity);
 	}
 
 	/** @brief 非同期処理task行列を破棄する。
-	    @param[in] i_arena    破棄に使うmemory-arena。
 	    @param[in] io_tasks   queueの先頭位置。
 	    @param[in] i_capacity queueが持つ非同期処理taskの数。
 	 */
+	template< typename t_value_type >
 	static void destroy_tasks(
-		psyq::arena&               i_arena,
-		this_type::task_ptr* const io_tasks,
-		std::size_t const          i_capacity)
+		t_value_type* const io_tasks,
+		std::size_t const   i_capacity)
 	{
 		PSYQ_ASSERT(NULL != io_tasks || i_capacity <= 0);
 		for (std::size_t i = 0; i < i_capacity; ++i)
 		{
-			io_tasks[i].~weak_ptr();
+			io_tasks[i].~t_value_type();
 		}
-		i_arena.deallocate(io_tasks, sizeof(this_type::task_ptr) * i_capacity);
+		(t_arena::free)(io_tasks, sizeof(t_value_type) * i_capacity);
 	}
 
 //.............................................................................
 private:
-	boost::thread           thread_;
-	boost::condition        condition_;
-	boost::mutex            mutex_;
-	psyq::arena::shared_ptr arena_;
-	this_type::task_ptr*    reserve_tasks_;    ///< 予約queueの先頭位置。
-	std::size_t             reserve_capacity_; ///< 予約queueの最大容量。
-	std::size_t             running_size_;     ///< 実行queueの要素数。
-	bool                    stop_;
+	boost::thread                 thread_;
+	boost::condition              condition_;
+	boost::mutex                  mutex_;
+	char const*                   arena_name_;
+	typename this_type::task_ptr* reserve_tasks_;    ///< 予約queueの先頭位置。
+	std::size_t                   reserve_capacity_; ///< 予約queueの最大容量。
+	std::size_t                   running_size_;     ///< 実行queueの要素数。
+	bool                          stop_;
 };
 
 #endif // !PSYQ_ASYNC_QUEUE_HPP_

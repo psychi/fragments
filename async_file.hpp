@@ -4,6 +4,10 @@
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 
+#ifndef PSYQ_ASYNC_FILE_BLOCK_SIZE
+//#define PSYQ_ASYNC_FILE_BLOCK_SIZE 4096
+#endif // !PSYQ_ASYNC_FILE_BLOCK_SIZE
+
 namespace psyq
 {
 	class file_buffer;
@@ -234,12 +238,39 @@ public:
 
 //.............................................................................
 protected:
+	//-------------------------------------------------------------------------
 	explicit _async_file_task(typename t_file::shared_ptr const& i_file):
 	file_(i_file),
 	error_(0)
 	{
 		PSYQ_ASSERT(NULL != i_file.get());
 		PSYQ_ASSERT(i_file->is_open());
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief fileの論理block-sizeをbyte単位で取得。
+		@note 2012-05-10
+	        本来はfileの論理block-sizeを返す必要があるが、
+	        fileの存在するdeviceによって論理block-sizeが異なるので、
+	        簡便化のために一律でpage-sizeを使うことにする。
+	 */
+	static std::size_t get_block_size()
+	{
+#ifdef PSYQ_ASYNC_FILE_BLOCK_SIZE
+		return PSYQ_ASYNC_FILE_BLOCK_SIZE;
+#elif defined(_WIN32)
+		SYSTEM_INFO a_info;
+		::GetSystemInfo(&a_info);
+		return a_info.dwPageSize;
+#else
+		std::size_t const a_page_size(::sysconf(_SC_PAGESIZE));
+		if (static_cast< std::size_t >(-1) == a_page_size)
+		{
+			PSYQ_ASSERT(false);
+			return 0;
+		}
+		return a_page_size;
+#endif // PSYQ_ASYNC_FILE_BLOCK_SIZE
 	}
 
 //.............................................................................
@@ -269,7 +300,7 @@ public:
 	        読み込みbufferのmemory配置境界値。
 	        ただしfileの論理block-sizeのほうが大きい場合は、
 	        fileの論理block-sizeがmemory配置境界値となる。
-	    @param[in] i_arena_name
+	    @param[in] i_buffer_name
 	        読み込みbufferのmemory識別名。debugでのみ使う。
 	 */
 	explicit async_file_reader(
@@ -278,10 +309,10 @@ public:
 		std::size_t const                  i_read_size
 			= (std::numeric_limits< std::size_t >::max)(),
 		std::size_t const                  i_buffer_alignment = 0,
-		const char* const                  i_arena_name
+		const char* const                  i_buffer_name
 			= PSYQ_ARENA_NAME_DEFAULT):
 	super_type(i_file),
-	arena_name_(i_arena_name),
+	buffer_name_(i_buffer_name),
 	buffer_alignment_(i_buffer_alignment),
 	read_offset_(i_read_offset),
 	read_size_(i_read_size)
@@ -293,44 +324,42 @@ public:
 private:
 	virtual boost::int32_t run()
 	{
-		t_file const& a_file(*this->get_file());
+		t_file& a_file(*this->get_file());
 		//boost::lock_guard< typename t_file::mutex > const a_lock(a_file.get_mutex());
+		std::size_t const a_file_size(a_file.get_size());
+
+		// 読み込みbufferを確保。
+		std::size_t const a_read_offset(
+			(std::min)(this->read_offset_, a_file_size));
+		std::size_t const a_region_size(
+			(std::min)(this->read_size_, a_file_size - a_read_offset));
+		std::size_t const a_block_size(super_type::get_block_size());
+		std::size_t const a_mapped_offset(
+			a_block_size * (a_read_offset / a_block_size));
+		std::size_t const a_region_offset(a_read_offset - a_mapped_offset);
+		std::size_t const a_temp_size(
+			a_region_offset + a_region_size + a_block_size - 1);
+		psyq::file_buffer a_buffer(
+			boost::type< t_arena >(),
+			a_mapped_offset,
+			a_block_size * (a_temp_size / a_block_size),
+			(std::max)(a_block_size, this->buffer_alignment_),
+			0,
+			this->buffer_name_);
+
+		// fileを読み込む。
 		int a_error;
-		std::size_t const a_file_size(a_file.get_size(a_error));
+		std::size_t const a_read_size(
+			a_file.read(
+				a_error,
+				a_buffer.get_mapped_offset(),
+				a_buffer.get_mapped_size(),
+				a_buffer.get_mapped_address()));
 		if (0 == a_error)
 		{
-			// 読み込みbufferを確保。
-			std::size_t const a_read_offset(
-				(std::min)(this->read_offset_, a_file_size));
-			std::size_t const a_region_size(
-				(std::min)(this->read_size_, a_file_size - a_read_offset));
-			std::size_t const a_block_size(a_file.get_block_size());
-			std::size_t const a_mapped_offset(
-				a_block_size * (a_read_offset / a_block_size));
-			std::size_t const a_region_offset(a_read_offset - a_mapped_offset);
-			std::size_t const a_temp_size(
-				a_region_offset + a_region_size + a_block_size - 1);
-			psyq::file_buffer a_buffer(
-				boost::type< t_arena >(),
-				a_mapped_offset,
-				a_block_size * (a_temp_size / a_block_size),
-				(std::max)(a_block_size, this->buffer_alignment_),
-				0,
-				this->arena_name_);
-
-			// fileを読み込む。
-			std::size_t const a_read_size(
-				a_file.read(
-					a_error,
-					a_buffer.get_mapped_address(),
-					a_buffer.get_mapped_size(),
-					a_buffer.get_mapped_offset()));
-			if (0 == a_error)
-			{
-				a_buffer.set_region(
-					a_region_offset, (std::min)(a_region_size, a_read_size));
-				a_buffer.swap(this->buffer_);
-			}
+			a_buffer.set_region(
+				a_region_offset, (std::min)(a_region_size, a_read_size));
+			a_buffer.swap(this->buffer_);
 		}
 		this->error_ = a_error;
 		return super_type::state_FINISHED;
@@ -338,7 +367,7 @@ private:
 
 //.............................................................................
 private:
-	char const* arena_name_;
+	char const* buffer_name_;
 	std::size_t buffer_alignment_;
 	std::size_t read_offset_;
 	std::size_t read_size_;
@@ -362,9 +391,9 @@ public:
 	write_size_(0)
 	{
 		PSYQ_ASSERT(
-			0 == io_buffer.get_mapped_offset() % i_file->get_block_size());
+			0 == io_buffer.get_mapped_offset() % super_type::get_block_size());
 		PSYQ_ASSERT(
-			0 == io_buffer.get_mapped_size() % i_file->get_block_size());
+			0 == io_buffer.get_mapped_size() % super_type::get_block_size());
 		this->buffer_.swap(io_buffer);
 	}
 
@@ -372,38 +401,24 @@ public:
 private:
 	virtual boost::int32_t run()
 	{
-		t_file const& a_file(*this->get_file());
+		t_file& a_file(*this->get_file());
 		psyq::file_buffer const& a_buffer(this->buffer_);
 		//boost::lock_guard< typename t_file::mutex > const a_lock(a_file.get_mutex());
+		std::size_t const a_file_size(a_file.get_size());
 		int a_error;
-		std::size_t const a_file_size(a_file.get_size(a_error));
-		if (0 == a_error)
+		this->write_size_ = a_file.write(
+			a_error,
+			a_buffer.get_mapped_offset(),
+			a_buffer.get_mapped_size(),
+			a_buffer.get_mapped_address());
+		std::size_t const a_mapped_end(
+			a_buffer.get_mapped_offset() + a_buffer.get_mapped_size());
+		if (a_file_size < a_mapped_end && 0 == a_error)
 		{
-			std::size_t const a_region_end(
-				a_buffer.get_region_offset() + a_buffer.get_region_size());
-			std::size_t const a_mapped_end(
-				a_buffer.get_mapped_offset() + a_region_end);
-#if 1
-			this->write_size_ = a_file.write(
-				a_error,
-				a_buffer.get_mapped_address(),
-				a_mapped_end < a_file_size?
-					a_region_end: a_buffer.get_mapped_size(),
-				a_buffer.get_mapped_offset());
-#else
-			/** @note 2012-05-05
-		        fileの論理block-sizeで書き出すほうが、実行効率が良いかも？
-			 */
-			this->write_size_ = a_file.write(
-				a_error,
-				a_buffer.get_mapped_address(),
-				a_buffer.get_mapped_size(),
-				a_buffer.get_mapped_offset());
-			if (0 == a_error && a_mapped_end < a_file_size)
-			{
-				a_error = a_file.truncate(a_mapped_end);
-			}
-#endif // 1
+			// file-sizeを調整。
+			a_error = a_file.truncate(
+				a_buffer.get_mapped_offset() + a_buffer.get_region_offset()
+				+ a_buffer.get_region_size());
 		}
 		this->error_ = a_error;
 		return super_type::state_FINISHED;

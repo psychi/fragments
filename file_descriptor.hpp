@@ -44,8 +44,7 @@ public:
 
 	//-------------------------------------------------------------------------
 	file_descriptor():
-	descriptor_(-1),
-	block_size_(0)
+	descriptor_(-1)
 	{
 		// pass
 	}
@@ -53,11 +52,8 @@ public:
 	/** @param[in] i_path  fileのpath名。必ずNULL文字で終わる。
 	    @param[in] i_flags 許可する操作。this_type::open_flagの論理和。
 	 */
-	file_descriptor(
-		char const* const i_path,
-		int const         i_flags):
-	descriptor_(-1),
-	block_size_(0)
+	file_descriptor(char const* const i_path, int const i_flags):
+	descriptor_(-1)
 	{
 		int const a_error(this->open_file(i_path, i_flags));
 		if (0 != a_error)
@@ -74,8 +70,7 @@ public:
 		int&              o_error,
 		char const* const i_path,
 		int const         i_flags):
-	descriptor_(-1),
-	block_size_(0)
+	descriptor_(-1)
 	{
 		o_error = this->open_file(i_path, i_flags);
 	}
@@ -115,46 +110,36 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief fileの論理block-sizeを取得。
-	 */
-	std::size_t get_block_size() const
-	{
-		return this->block_size_;
-	}
-
-	//-------------------------------------------------------------------------
 	/** @brief fileを読み込む。
-	    @param[in] i_buffer 読み込みbufferの先頭位置。
-	    @param[in] i_size   読み込みbufferのbyte単位の大きさ。
 	    @param[in] i_offset fileの読み込み開始位置。
+	    @param[in] i_size   読み込みbufferのbyte単位の大きさ。
+	    @param[in] i_buffer 読み込みbufferの先頭位置。
 	    @return 読み込んだbyte数。
 	 */
 	std::size_t read(
-		void* const       i_buffer,
+		std::size_t const i_offset,
 		std::size_t const i_size,
-		std::size_t const i_offset = 0)
-	const
+		void* const       i_buffer)
 	{
 		int a_error;
 		std::size_t const a_size(
-			this->read(a_error, i_buffer, i_size, i_offset));
+			this->read(a_error, i_offset, i_size, i_buffer));
 		PSYQ_ASSERT(0 == a_error);
 		return a_size;
 	}
 
 	/** @brief fileを読み込む。
 	    @param[out] o_error 結果のerror番号。0なら成功。
-	    @param[in] i_buffer 読み込みbufferの先頭位置。
-	    @param[in] i_size   読み込みbufferのbyte単位の大きさ。
 	    @param[in] i_offset fileの読み込み開始位置。
+	    @param[in] i_size   読み込みbufferのbyte単位の大きさ。
+	    @param[in] i_buffer 読み込みbufferの先頭位置。
 	    @return 読み込んだbyte数。
 	 */
 	std::size_t read(
 		int&              o_error,
-		void* const       i_buffer,
+		std::size_t const i_offset,
 		std::size_t const i_size,
-		std::size_t const i_offset = 0)
-	const
+		void* const       i_buffer)
 	{
 		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
 		if (i_size <= 0)
@@ -198,47 +183,38 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief fileに書き込む。
-	    @param[in] i_buffer 書き込みbufferの先頭位置。
-	    @param[in] i_size   書き込みbufferのbyte単位の大きさ。
 	    @param[in] i_offset fileの書き込み開始位置。
+	    @param[in] i_size   書き込みbufferのbyte単位の大きさ。
+	    @param[in] i_buffer 書き込みbufferの先頭位置。
 	    @return 書き込んだbyte数。
 	 */
 	std::size_t write(
-		void* const       i_buffer,
+		std::size_t const i_offset,
 		std::size_t const i_size,
-		std::size_t const i_offset =
-			(std::numeric_limits< std::size_t >::max)())
-	const
+		void* const       i_buffer)
 	{
 		int a_error;
 		std::size_t const a_size(
-			this->write(a_error, i_buffer, i_size, i_offset));
+			this->write(a_error, i_offset, i_size, i_buffer));
 		PSYQ_ASSERT(0 == a_error);
 		return a_size;
 	}
 
 	/** @brief fileに書き込む。
 	    @param[out] o_error 結果のerror番号。0なら成功。
-	    @param[in] i_buffer 書き込みbufferの先頭位置。
-	    @param[in] i_size   書き込みbufferのbyte単位の大きさ。
 	    @param[in] i_offset fileの書き込み開始位置。
+	    @param[in] i_size   書き込みbufferのbyte単位の大きさ。
+	    @param[in] i_buffer 書き込みbufferの先頭位置。
 	    @return 書き込んだbyte数。
 	 */
 	std::size_t write(
 		int&              o_error,
-		void const* const i_buffer,
+		std::size_t const i_offset,
 		std::size_t const i_size,
-		std::size_t const i_offset =
-			(std::numeric_limits< std::size_t >::max)())
-	const
+		void const* const i_buffer)
 	{
 		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
-		std::size_t a_file_size(0);
-		int a_error(this->seek_file(a_file_size, 0, SEEK_END));
-		if (0 == a_error && i_offset < a_file_size)
-		{
-			a_error = this->seek_file(i_offset, SEEK_SET);
-		}
+		int a_error(this->seek_file(i_offset, SEEK_END));
 		if (0 == a_error)
 		{
 #ifdef _WIN32
@@ -255,6 +231,46 @@ public:
 		}
 		o_error = a_error;
 		return 0;
+	}
+
+	//-------------------------------------------------------------------------
+	int truncate(std::size_t const i_size) const
+	{
+#ifdef _WIN32
+		if (this->descriptor_ < 0)
+		{
+			return EBADF;
+		}
+
+		::HANDLE const a_handle(
+			reinterpret_cast< HANDLE >(_get_osfhandle(this->descriptor_)));
+		::LARGE_INTEGER const a_size = { i_size };
+		if (0 != ::SetFilePointerEx(a_handle, a_size, NULL, FILE_BEGIN)
+			&& 0 != ::SetEndOfFile(a_handle))
+		{
+			return 0;
+		}
+
+		int const a_error(::GetLastError());
+		switch (a_error)
+		{
+		case ERROR_INVALID_HANDLE:
+			return EBADF;
+		case ERROR_USER_MAPPED_FILE:
+			/** @note 2012-05-04
+			    CreateFileMappingで割り当てた領域はSetEndOfFile()で削れない。
+			    この場合の対処はどうしよう？
+				http://fallabs.com/blog-ja/promenade.cgi?id=76
+			 */
+		default:
+			return EIO;
+		}
+#elif _BSD_SOURCE || 500 <= _XOPEN_SOURCE || _XOPEN_SOURCE && _XOPEN_SOURCE_EXTENDED
+		return 0 == ::ftruncate(this->descriptor_, i_size)? 0: errno;
+#else
+		PSYQ_ASSERT(false); // 未対応なので。
+		return EPERM;
+#endif // _WIN32
 	}
 
 	//-------------------------------------------------------------------------
@@ -310,37 +326,6 @@ private:
 			}
 		}
 
-		// block-sizeを取得。
-		/** @note 2012-05-04
-		    fileの存在するvolumeをpath名から判断している。
-		    このためpathにsymbolic-linkが含まれている場合は、
-		    正しいvolumeが取得できない。
-		 */
-		struct _stat64 a_status;
-		if (0 != ::_stat64(i_path, &a_status))
-		{
-			return errno;
-		}
-		char a_root_path[] = "a:\\";
-		a_root_path[0] += static_cast< char >(a_status.st_dev);
-		DWORD a_sector_per_cluster;
-		DWORD a_bytes_per_sector;
-		DWORD a_number_of_free_clusters;
-		DWORD a_total_number_of_clusters;
-		BOOL const a_result(
-			GetDiskFreeSpaceA(
-				a_root_path,
-				&a_sector_per_cluster,
-				&a_bytes_per_sector,
-				&a_number_of_free_clusters,
-				&a_total_number_of_clusters));
-		if (0 == a_result)
-		{
-			return ::GetLastError();
-		}
-		this->block_size_ = a_bytes_per_sector * a_sector_per_cluster;
-		PSYQ_ASSERT(0 < this->block_size_);
-
 		// fileを開く。
 		a_flags |= _O_BINARY;
 		::_sopen_s(&this->descriptor_, i_path, a_flags, a_share, a_mode);
@@ -374,15 +359,6 @@ private:
 				a_flags |= O_TRUNC;
 			}
 		}
-
-		// block-sizeを取得。
-		struct stat a_status;
-		if (0 != ::stat(i_path, &a_status))
-		{
-			return errno;
-		}
-		this->block_size_ = a_status.st_blksize;
-		PSYQ_ASSERT(0 < this->block_size_);
 
 		// fileを開く。
 		this->descriptor_ = ::open(i_path, a_flags);
@@ -443,50 +419,9 @@ private:
 		return 0;
 	}
 
-	//-------------------------------------------------------------------------
-	int truncate_file(std::size_t const i_size) const
-	{
-#ifdef _WIN32
-		if (this->descriptor_ < 0)
-		{
-			return EBADF;
-		}
-
-		::HANDLE const a_handle(
-			reinterpret_cast< HANDLE >(_get_osfhandle(this->descriptor_)));
-		::LARGE_INTEGER const a_size = { i_size };
-		if (0 != ::SetFilePointerEx(a_handle, a_size, NULL, FILE_BEGIN)
-			&& 0 != ::SetEndOfFile(a_handle))
-		{
-			return 0;
-		}
-
-		int const a_error(::GetLastError());
-		switch (a_error)
-		{
-		case ERROR_INVALID_HANDLE:
-			return EBADF;
-		case ERROR_USER_MAPPED_FILE:
-			/** @note 2012-05-04
-			    CreateFileMappingで割り当てた領域はSetEndOfFile()で削れない。
-			    この場合の対処はどうしよう？
-				http://fallabs.com/blog-ja/promenade.cgi?id=76
-			 */
-		default:
-			return EIO;
-		}
-#elif _BSD_SOURCE || 500 <= _XOPEN_SOURCE || _XOPEN_SOURCE && _XOPEN_SOURCE_EXTENDED
-		return 0 == ::ftruncate(this->descriptor_, i_size)? 0: errno;
-#else
-		PSYQ_ASSERT(false); // 未対応なので。
-		return EPERM;
-#endif // _WIN32
-	}
-
 //.............................................................................
 private:
-	int         descriptor_;
-	std::size_t block_size_;
+	int descriptor_;
 };
 
 #endif // !PSYQ_FILE_DESCRIPTOR_HPP_

@@ -330,7 +330,7 @@ public:
 			// ì«Ç›çûÇ›bufferÇämï€ÅB
 			psyq::file_buffer::offset const a_read_offset(
 				(std::min)(i_offset, a_file_size));
-			std::size_t a_rest_size(
+			std::size_t const a_rest_size(
 				static_cast< std::size_t >(a_file_size - a_read_offset));
 			PSYQ_ASSERT(a_file_size - a_read_offset == a_rest_size);
 			std::size_t const a_region_size((std::min)(i_size, a_rest_size));
@@ -692,10 +692,7 @@ private:
 			return EIO;
 		}
 #elif _BSD_SOURCE || 500 <= _XOPEN_SOURCE || _XOPEN_SOURCE && _XOPEN_SOURCE_EXTENDED
-		PSYQ_ASSERT(i_size <= (std::numeric_limits< std::size_t >::max)());
-		return 0 == ::ftruncate(
-			this->descriptor_, static_cast< std::size_t >(i_size))?
-				0: errno;
+		return 0 == ::ftruncate64(this->descriptor_, i_size)? 0: errno;
 #else
 		PSYQ_ASSERT(false); // ñ¢ëŒâûÇ»ÇÃÇ≈ÅB
 		return EPERM;

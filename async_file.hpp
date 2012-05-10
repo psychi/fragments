@@ -4,10 +4,6 @@
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 
-#ifndef PSYQ_ASYNC_FILE_BLOCK_SIZE
-//#define PSYQ_ASYNC_FILE_BLOCK_SIZE 4096
-#endif // !PSYQ_ASYNC_FILE_BLOCK_SIZE
-
 namespace psyq
 {
 	template< typename > class _async_file_task;

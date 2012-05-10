@@ -8,6 +8,10 @@
 #include <io.h>
 #endif // _WIN32
 
+#ifndef PSYQ_FILE_BLOCK_SIZE
+//#define PSYQ_FILE_BLOCK_SIZE 4096
+#endif // !PSYQ_FILE_BLOCK_SIZE
+
 namespace psyq
 {
 	class file_buffer;
@@ -278,9 +282,7 @@ public:
 	std::size_t get_size(int& o_error) const
 	{
 		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
-		std::size_t a_size(0);
-		o_error = this->seek_file(a_size, 0, SEEK_END);
-		return a_size;
+		return this->seek_file(o_error, 0, SEEK_END);
 	}
 
 	//-------------------------------------------------------------------------
@@ -317,8 +319,8 @@ public:
 		char const* const  i_name = PSYQ_ARENA_NAME_DEFAULT)
 	{
 		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
-		std::size_t a_file_size(0);
-		int a_error(this->seek_file(a_file_size, 0, SEEK_END));
+		int a_error;
+		std::size_t const a_file_size(this->seek_file(a_error, 0, SEEK_END));
 		if (0 == a_error)
 		{
 			// ì«Ç›çûÇ›bufferÇämï€ÅB
@@ -384,8 +386,8 @@ public:
 			0 == i_buffer.get_mapped_size() % this_type::get_block_size());
 
 		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
-		std::size_t a_file_size(0);
-		int a_error(this->seek_file(a_file_size, 0, SEEK_END));
+		int a_error;
+		std::size_t const a_file_size(this->seek_file(a_error, 0, SEEK_END));
 		if (0 == a_error)
 		{
 			o_size = this->write_file(
@@ -518,17 +520,8 @@ private:
 	}
 
 	//-------------------------------------------------------------------------
-	int seek_file(
-		std::size_t const i_offset,
-		int const         i_origin)
-	const
-	{
-		std::size_t a_position;
-		return this->seek_file(a_position, i_offset, i_origin);
-	}
-
-	int seek_file(
-		std::size_t&      o_position,
+	std::size_t seek_file(
+		int&              o_error,
 		std::size_t const i_offset,
 		int const         i_origin)
 	const
@@ -543,13 +536,17 @@ private:
 		if (-1 == a_position)
 #endif // _WIN32
 		{
-			return errno;
+			o_error = errno;
 		}
 		else if ((std::numeric_limits< std::size_t >::max)() < a_position)
 		{
-			return EFBIG;
+			o_error = EFBIG;
 		}
-		o_position = static_cast< std::size_t >(a_position);
+		else
+		{
+			o_error = 0;
+			return static_cast< std::size_t >(a_position);
+		}
 		return 0;
 	}
 
@@ -568,7 +565,6 @@ private:
 		void* const       i_buffer)
 	const
 	{
-		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
 		if (i_size <= 0)
 		{
 			o_error = 0;
@@ -585,7 +581,8 @@ private:
 #endif // !WIN32
 		else
 		{
-			int const a_error(this->seek_file(i_offset, SEEK_SET));
+			int a_error;
+			this->seek_file(a_error, i_offset, SEEK_SET);
 			if (0 != a_error)
 			{
 				o_error = a_error;
@@ -623,7 +620,8 @@ private:
 		void const* const i_buffer)
 	const
 	{
-		int a_error(this->seek_file(i_offset, SEEK_END));
+		int a_error;
+		this->seek_file(a_error, i_offset, SEEK_END);
 		if (0 == a_error)
 		{
 #ifdef _WIN32
@@ -691,8 +689,8 @@ private:
 	 */
 	static std::size_t get_block_size()
 	{
-#ifdef PSYQ_ASYNC_FILE_BLOCK_SIZE
-		return PSYQ_ASYNC_FILE_BLOCK_SIZE;
+#ifdef PSYQ_FILE_BLOCK_SIZE
+		return PSYQ_FILE_BLOCK_SIZE;
 #elif defined(_WIN32)
 		SYSTEM_INFO a_info;
 		::GetSystemInfo(&a_info);
@@ -705,7 +703,7 @@ private:
 			return 0;
 		}
 		return a_page_size;
-#endif // PSYQ_ASYNC_FILE_BLOCK_SIZE
+#endif // PSYQ_FILE_BLOCK_SIZE
 	}
 
 //.............................................................................

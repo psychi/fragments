@@ -102,9 +102,9 @@ public:
 	 */
 	explicit async_file_reader(
 		typename t_file::shared_ptr const& i_file,
-		psyq::file_buffer::size_type const i_read_offset = 0,
-		psyq::file_buffer::size_type const i_read_size
-			= (std::numeric_limits< psyq::file_buffer::size_type >::max)(),
+		psyq::file_buffer::offset const    i_read_offset = 0,
+		std::size_t const                  i_read_size
+			= (std::numeric_limits< std::size_t >::max)(),
 		std::size_t const                  i_buffer_alignment = 0,
 		const char* const                  i_buffer_name
 			= PSYQ_ARENA_NAME_DEFAULT):
@@ -132,10 +132,10 @@ private:
 
 //.............................................................................
 private:
-	psyq::file_buffer::size_type read_offset_;
-	psyq::file_buffer::size_type read_size_;
-	char const*                  buffer_name_;
-	std::size_t                  buffer_alignment_;
+	psyq::file_buffer::offset read_offset_;
+	std::size_t               read_size_;
+	char const*               buffer_name_;
+	std::size_t               buffer_alignment_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -169,7 +169,7 @@ private:
 
 //.............................................................................
 private:
-	psyq::file_buffer::size_type write_size_;
+	std::size_t write_size_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

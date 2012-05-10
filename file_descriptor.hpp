@@ -26,8 +26,8 @@ class psyq::file_buffer:
 
 //.............................................................................
 public:
-	//typedef boost::uint64_t size_type;
-	typedef boost::uint32_t size_type;
+	typedef boost::uint64_t offset;
+	//typedef boost::uint32_t offset;
 
 	//-------------------------------------------------------------------------
 	~file_buffer()
@@ -36,8 +36,7 @@ public:
 		if (NULL != this->deallocator_)
 		{
 			(*this->deallocator_)(
-				this->get_mapped_address(),
-				static_cast< std::size_t >(this->get_mapped_size()));
+				this->get_mapped_address(), this->get_mapped_size());
 		}
 	}
 
@@ -62,9 +61,9 @@ public:
 	 */
 	template< typename t_allocator >
 	file_buffer(
-		t_allocator const&         i_allocator,
-		this_type::size_type const i_offset,
-		this_type::size_type const i_size)
+		t_allocator const&      i_allocator,
+		this_type::offset const i_offset,
+		std::size_t const       i_size)
 	{
 		new(this) this_type(
 			boost::type< typename t_allocator::arena >(),
@@ -88,11 +87,11 @@ public:
 	template< typename t_arena >
 	file_buffer(
 		boost::type< t_arena > const&,
-		this_type::size_type const i_offset,
-		this_type::size_type const i_size,
-		std::size_t const          i_memory_alignment,
-		std::size_t const          i_memory_offset = 0,
-		char const* const          i_memory_name = PSYQ_ARENA_NAME_DEFAULT):
+		this_type::offset const i_offset,
+		std::size_t const       i_size,
+		std::size_t const       i_memory_alignment,
+		std::size_t const       i_memory_offset = 0,
+		char const* const       i_memory_name = PSYQ_ARENA_NAME_DEFAULT):
 	mapped_offset_(i_offset),
 	mapped_size_(i_size),
 	region_offset_(0),
@@ -100,12 +99,8 @@ public:
 	{
 		if (0 < i_size)
 		{
-			PSYQ_ASSERT(i_size <= (std::numeric_limits< std::size_t >::max)());
 			this->storage_ = (t_arena::malloc)(
-				static_cast< std::size_t >(i_size),
-				i_memory_alignment,
-				i_memory_offset,
-				i_memory_name);
+				i_size, i_memory_alignment, i_memory_offset, i_memory_name);
 			if (NULL != this->get_mapped_address())
 			{
 				this->deallocator_ = &t_arena::free;
@@ -121,14 +116,14 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief buffer先頭位置からregion先頭位置へのoffset値を取得。
 	 */
-	this_type::size_type get_region_offset() const
+	std::size_t get_region_offset() const
 	{
 		return this->region_offset_;
 	}
 
 	/** @brief regionの大きさをbyte単位で取得。
 	 */
-	this_type::size_type get_region_size() const
+	std::size_t get_region_size() const
 	{
 		return this->region_size_;
 	}
@@ -146,8 +141,8 @@ public:
 	    @param[in] i_size   regionの大きさ。byte単位。
 	 */
 	void set_region(
-		this_type::size_type const i_offset,
-		this_type::size_type const i_size)
+		std::size_t const i_offset,
+		std::size_t const i_size)
 	{
 		this->region_offset_ = (std::min)(i_offset, this->get_mapped_size());
 		this->region_size_ = (std::min)(
@@ -164,14 +159,14 @@ public:
 
 	/** @brief file先頭位置からbuffer先頭位置へのoffset値を取得。
 	 */
-	this_type::size_type get_mapped_offset() const
+	this_type::offset get_mapped_offset() const
 	{
 		return this->mapped_offset_;
 	}
 
 	/** @brief bufferの大きさをbyte単位で取得。
 	 */
-	this_type::size_type get_mapped_size() const
+	std::size_t get_mapped_size() const
 	{
 		return this->mapped_size_;
 	}
@@ -191,12 +186,12 @@ public:
 
 //.............................................................................
 private:
-	void                 (*deallocator_)(void* const, std::size_t const);
-	void*                storage_;
-	this_type::size_type mapped_offset_;
-	this_type::size_type mapped_size_;
-	this_type::size_type region_offset_;
-	this_type::size_type region_size_;
+	void              (*deallocator_)(void* const, std::size_t const);
+	void*             storage_;
+	this_type::offset mapped_offset_;
+	std::size_t       mapped_size_;
+	std::size_t       region_offset_;
+	std::size_t       region_size_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -275,10 +270,10 @@ public:
 	/** @brief fileの大きさをbyte単位で取得。
 	    @return fileのbyte単位の大きさ。
 	 */
-	psyq::file_buffer::size_type get_size() const
+	psyq::file_buffer::offset get_size() const
 	{
 		int a_error;
-		psyq::file_buffer::size_type const a_size(this->get_size(a_error));
+		psyq::file_buffer::offset const a_size(this->get_size(a_error));
 		PSYQ_ASSERT(0 == a_error);
 		return a_size;
 	}
@@ -287,7 +282,7 @@ public:
 	    @param[out] o_error 結果のerror番号。0なら成功。
 	    @return fileのbyte単位の大きさ。
 	 */
-	psyq::file_buffer::size_type get_size(int& o_error) const
+	psyq::file_buffer::offset get_size(int& o_error) const
 	{
 		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
 		return this->seek_file(o_error, 0, SEEK_END);
@@ -302,10 +297,10 @@ public:
 	 */
 	template< typename t_arena >
 	int read(
-		psyq::file_buffer&                 o_buffer,
-		psyq::file_buffer::size_type const i_offset,
-		psyq::file_buffer::size_type const i_size,
-		char const* const                  i_name = PSYQ_ARENA_NAME_DEFAULT)
+		psyq::file_buffer&              o_buffer,
+		psyq::file_buffer::offset const i_offset,
+		std::size_t const               i_size,
+		char const* const               i_name = PSYQ_ARENA_NAME_DEFAULT)
 	{
 		return this->read(
 			o_buffer, i_offset, i_size, this_type::get_block_size(), i_name);
@@ -320,31 +315,38 @@ public:
 	 */
 	template< typename t_arena >
 	int read(
-		psyq::file_buffer&                 o_buffer,
-		psyq::file_buffer::size_type const i_offset,
-		psyq::file_buffer::size_type const i_size,
-		std::size_t const                  i_alignment,
-		char const* const                  i_name = PSYQ_ARENA_NAME_DEFAULT)
+		psyq::file_buffer&              o_buffer,
+		psyq::file_buffer::offset const i_offset,
+		std::size_t const               i_size,
+		std::size_t const               i_alignment,
+		char const* const               i_name = PSYQ_ARENA_NAME_DEFAULT)
 	{
 		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
 		int a_error;
-		psyq::file_buffer::size_type const a_file_size(
+		psyq::file_buffer::offset const a_file_size(
 			this->seek_file(a_error, 0, SEEK_END));
 		if (0 == a_error)
 		{
 			// 読み込みbufferを確保。
-			psyq::file_buffer::size_type const a_read_offset(
+			psyq::file_buffer::offset const a_read_offset(
 				(std::min)(i_offset, a_file_size));
-			psyq::file_buffer::size_type const a_region_size(
-				(std::min)(i_size, a_file_size - a_read_offset));
+			std::size_t a_rest_size(
+				static_cast< std::size_t >(a_file_size - a_read_offset));
+			PSYQ_ASSERT(a_file_size - a_read_offset == a_rest_size);
+			std::size_t const a_region_size((std::min)(i_size, a_rest_size));
 			std::size_t const a_alignment(
 				(std::max)(i_alignment, this_type::get_block_size()));
-			psyq::file_buffer::size_type const a_mapped_offset(
+			psyq::file_buffer::offset const a_mapped_offset(
 				a_alignment * (a_read_offset / a_alignment));
-			psyq::file_buffer::size_type const a_region_offset(
-				a_read_offset - a_mapped_offset);
-			psyq::file_buffer::size_type const a_temp_size(
+			std::size_t const a_region_offset(
+				static_cast< std::size_t >(a_read_offset - a_mapped_offset));
+			PSYQ_ASSERT(a_read_offset - a_mapped_offset == a_region_offset);
+			std::size_t const a_temp_size(
 				a_region_offset + a_region_size + a_alignment - 1);
+			PSYQ_ASSERT(
+				a_temp_size + 1 == (
+					static_cast< psyq::file_buffer::offset >(a_region_offset)
+					+ a_region_size + a_alignment));
 			psyq::file_buffer a_buffer(
 				boost::type< t_arena >(),
 				a_mapped_offset,
@@ -354,7 +356,7 @@ public:
 				i_name);
 
 			// fileを読み込む。
-			psyq::file_buffer::size_type const a_read_size(
+			std::size_t const a_read_size(
 				this->read_file(
 					a_error,
 					a_buffer.get_mapped_offset(),
@@ -378,7 +380,7 @@ public:
 	 */
 	int write(psyq::file_buffer const& i_buffer)
 	{
-		psyq::file_buffer::size_type a_size;
+		std::size_t a_size;
 		return this->write(a_size, i_buffer);
 	}
 
@@ -388,8 +390,8 @@ public:
 	    @return 結果のerror番号。0なら成功。
 	 */
 	int write(
-		psyq::file_buffer::size_type& o_size,
-		psyq::file_buffer const&      i_buffer)
+		std::size_t&             o_size,
+		psyq::file_buffer const& i_buffer)
 	{
 		PSYQ_ASSERT(
 			0 == i_buffer.get_mapped_offset() % this_type::get_block_size());
@@ -398,7 +400,7 @@ public:
 
 		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
 		int a_error;
-		psyq::file_buffer::size_type const a_file_size(
+		psyq::file_buffer::offset const a_file_size(
 			this->seek_file(a_error, 0, SEEK_END));
 		if (0 == a_error)
 		{
@@ -407,7 +409,7 @@ public:
 				i_buffer.get_mapped_offset(),
 				i_buffer.get_mapped_size(),
 				i_buffer.get_mapped_address());
-			psyq::file_buffer::size_type const a_mapped_end(
+			psyq::file_buffer::offset const a_mapped_end(
 				i_buffer.get_mapped_offset() + i_buffer.get_mapped_size());
 			if (a_file_size < a_mapped_end && 0 == a_error)
 			{
@@ -532,10 +534,10 @@ private:
 	}
 
 	//-------------------------------------------------------------------------
-	psyq::file_buffer::size_type seek_file(
-		int&                               o_error,
-		psyq::file_buffer::size_type const i_offset,
-		int const                          i_origin)
+	psyq::file_buffer::offset seek_file(
+		int&                            o_error,
+		psyq::file_buffer::offset const i_offset,
+		int const                       i_origin)
 	const
 	{
 #ifdef _WIN32
@@ -557,7 +559,7 @@ private:
 		else
 		{
 			o_error = 0;
-			return static_cast< psyq::file_buffer::size_type >(a_position);
+			return static_cast< psyq::file_buffer::offset >(a_position);
 		}
 		return 0;
 	}
@@ -570,11 +572,11 @@ private:
 	    @param[in] i_buffer 読み込みbufferの先頭位置。
 	    @return 読み込んだbyte数。
 	 */
-	psyq::file_buffer::size_type read_file(
-		int&                               o_error,
-		psyq::file_buffer::size_type const i_offset,
-		psyq::file_buffer::size_type const i_size,
-		void* const                        i_buffer)
+	std::size_t read_file(
+		int&                            o_error,
+		psyq::file_buffer::offset const i_offset,
+		std::size_t const               i_size,
+		void* const                     i_buffer)
 	const
 	{
 		if (i_size <= 0)
@@ -601,25 +603,17 @@ private:
 			}
 			else
 			{
-				PSYQ_ASSERT(
-					i_size <= (std::numeric_limits< std::size_t >::max)());
 #ifdef _WIN32
-				int const a_size(
-					::_read(
-						this->descriptor_,
-						i_buffer,
-						static_cast< std::size_t >(i_size)));
+				std::size_t const a_size(
+					::_read(this->descriptor_, i_buffer, i_size));
 #else
-				int const a_size(
-					::read(
-						this->descriptor_,
-						i_buffer,
-						static_cast< std::size_t >(i_size)));
+				std::size_t const a_size(
+					::read(this->descriptor_, i_buffer, i_size));
 #endif //_WIN32
-				if (-1 != a_size)
+				if (0 != a_size + 1)
 				{
 					o_error = 0;
-					return static_cast< psyq::file_buffer::size_type >(a_size);
+					return a_size;
 				}
 				o_error = errno;
 			}
@@ -635,36 +629,28 @@ private:
 	    @param[in] i_buffer 書き込みbufferの先頭位置。
 	    @return 書き込んだbyte数。
 	 */
-	psyq::file_buffer::size_type write_file(
-		int&                               o_error,
-		psyq::file_buffer::size_type const i_offset,
-		psyq::file_buffer::size_type const i_size,
-		void const* const                  i_buffer)
+	std::size_t write_file(
+		int&                            o_error,
+		psyq::file_buffer::offset const i_offset,
+		std::size_t const               i_size,
+		void const* const               i_buffer)
 	const
 	{
 		int a_error;
 		this->seek_file(a_error, i_offset, SEEK_END);
 		if (0 == a_error)
 		{
-			PSYQ_ASSERT(
-				i_size <= (std::numeric_limits< std::size_t >::max)());
 #ifdef _WIN32
-			int const a_size(
-				::_write(
-					this->descriptor_,
-					i_buffer,
-					static_cast< std::size_t >(i_size)));
+			std::size_t const a_size(
+				::_write(this->descriptor_, i_buffer, i_size));
 #else
-			int const a_size(
-				::write(
-					this->descriptor_,
-					i_buffer,
-					static_cast< std::size_t >(i_size)));
+			std::size_t const a_size(
+				::write(this->descriptor_, i_buffer, i_size));
 #endif // _WIN32
-			if (-1 != a_size)
+			if (0 != a_size + 1)
 			{
 				o_error = 0;
-				return static_cast< psyq::file_buffer::size_type >(a_size);
+				return a_size;
 			}
 			a_error = errno;
 		}
@@ -673,7 +659,7 @@ private:
 	}
 
 	//-------------------------------------------------------------------------
-	int truncate_file(psyq::file_buffer::size_type const i_size) const
+	int truncate_file(psyq::file_buffer::offset const i_size) const
 	{
 #ifdef _WIN32
 		if (this->descriptor_ < 0)
@@ -706,7 +692,10 @@ private:
 			return EIO;
 		}
 #elif _BSD_SOURCE || 500 <= _XOPEN_SOURCE || _XOPEN_SOURCE && _XOPEN_SOURCE_EXTENDED
-		return 0 == ::ftruncate(this->descriptor_, i_size)? 0: errno;
+		PSYQ_ASSERT(i_size <= (std::numeric_limits< std::size_t >::max)());
+		return 0 == ::ftruncate(
+			this->descriptor_, static_cast< std::size_t >(i_size))?
+				0: errno;
 #else
 		PSYQ_ASSERT(false); // 未対応なので。
 		return EPERM;
@@ -729,8 +718,7 @@ private:
 		::GetSystemInfo(&a_info);
 		return a_info.dwPageSize;
 #else
-		std::size_t const a_page_size(
-			::sysconf(_SC_PAGESIZE));
+		std::size_t const a_page_size(::sysconf(_SC_PAGESIZE));
 		if (0 == a_page_size + 1)
 		{
 			PSYQ_ASSERT(false);

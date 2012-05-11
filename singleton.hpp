@@ -33,6 +33,7 @@ class psyq::_dummy_mutex:
 public:
 	void lock() const {}
 	void unlock() const {}
+	bool try_lock() const {return true;}
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

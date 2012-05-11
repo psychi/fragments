@@ -109,10 +109,10 @@ public:
 		const char* const                  i_buffer_name
 			= PSYQ_ARENA_NAME_DEFAULT):
 	super_type(i_file),
-	read_offset_(i_read_offset),
-	read_size_(i_read_size),
+	buffer_alignment_(i_buffer_alignment),
 	buffer_name_(i_buffer_name),
-	buffer_alignment_(i_buffer_alignment)
+	read_offset_(i_read_offset),
+	read_size_(i_read_size)
 	{
 		// pass
 	}
@@ -121,7 +121,7 @@ public:
 private:
 	virtual boost::int32_t run()
 	{
-		this->error_ = this->get_file()->read< t_arena >(
+		this->error_ = this->get_file()->template read< t_arena >(
 			this->buffer_,
 			this->read_offset_,
 			this->read_size_,
@@ -132,10 +132,10 @@ private:
 
 //.............................................................................
 private:
+	std::size_t               buffer_alignment_;
+	char const*               buffer_name_;
 	psyq::file_buffer::offset read_offset_;
 	std::size_t               read_size_;
-	char const*               buffer_name_;
-	std::size_t               buffer_alignment_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

@@ -6,6 +6,8 @@
 #include <sys/stat.h>
 #ifdef _WIN32
 #include <io.h>
+#else
+#include <unistd.h>
 #endif // _WIN32
 
 #ifndef PSYQ_FILE_BLOCK_SIZE
@@ -15,10 +17,13 @@
 namespace psyq
 {
 	class file_buffer;
-	class file_descriptor;
+	template< typename > class basic_file_descriptor;
+	typedef basic_file_descriptor< PSYQ_MUTEX_DEFAULT > file_descriptor;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief file操作に使うbuffer。
+ */
 class psyq::file_buffer:
 	private boost::noncopyable
 {
@@ -27,7 +32,6 @@ class psyq::file_buffer:
 //.............................................................................
 public:
 	typedef boost::uint64_t offset;
-	//typedef boost::uint32_t offset;
 
 	//-------------------------------------------------------------------------
 	~file_buffer()
@@ -195,13 +199,17 @@ private:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class psyq::file_descriptor:
+/** @brief C標準関数を用いたfile記述子。
+ */
+template< typename t_mutex >
+class psyq::basic_file_descriptor:
 	private boost::noncopyable
 {
-	typedef psyq::file_descriptor this_type;
+	typedef psyq::basic_file_descriptor< t_mutex > this_type;
 
 //.............................................................................
 public:
+	typedef t_mutex mutex;
 	typedef boost::shared_ptr< this_type > shared_ptr;
 	typedef boost::weak_ptr< this_type > weak_ptr;
 
@@ -214,7 +222,7 @@ public:
 	};
 
 	//-------------------------------------------------------------------------
-	~file_descriptor()
+	~basic_file_descriptor()
 	{
 		int const a_error(this->close_file());
 		if (0 != a_error)
@@ -224,7 +232,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	file_descriptor():
+	basic_file_descriptor():
 	descriptor_(-1)
 	{
 		// pass
@@ -233,7 +241,7 @@ public:
 	/** @param[in] i_path  fileのpath名。必ずNULL文字で終わる。
 	    @param[in] i_flags 許可する操作。this_type::open_flagの論理和。
 	 */
-	file_descriptor(char const* const i_path, int const i_flags):
+	basic_file_descriptor(char const* const i_path, int const i_flags):
 	descriptor_(-1)
 	{
 		int const a_error(this->open_file(i_path, i_flags));
@@ -247,7 +255,7 @@ public:
 	    @param[in] i_path   fileのpath名。必ずNULL文字で終わる。
 	    @param[in] i_flags  許可する操作。this_type::open_flagの論理和。
 	 */
-	file_descriptor(
+	basic_file_descriptor(
 		int&              o_error,
 		char const* const i_path,
 		int const         i_flags):
@@ -284,7 +292,7 @@ public:
 	 */
 	psyq::file_buffer::offset get_size(int& o_error) const
 	{
-		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
+		boost::lock_guard< t_mutex > const a_lock(const_cast< t_mutex& >(this->mutex_));
 		return this->seek_file(o_error, 0, SEEK_END);
 	}
 
@@ -298,11 +306,12 @@ public:
 	template< typename t_arena >
 	int read(
 		psyq::file_buffer&              o_buffer,
-		psyq::file_buffer::offset const i_offset,
-		std::size_t const               i_size,
+		psyq::file_buffer::offset const i_offset = 0,
+		std::size_t const               i_size
+			= (std::numeric_limits< std::size_t >::max)(),
 		char const* const               i_name = PSYQ_ARENA_NAME_DEFAULT)
 	{
-		return this->read(
+		return this->template read< t_arena >(
 			o_buffer, i_offset, i_size, this_type::get_block_size(), i_name);
 	}
 
@@ -321,7 +330,7 @@ public:
 		std::size_t const               i_alignment,
 		char const* const               i_name = PSYQ_ARENA_NAME_DEFAULT)
 	{
-		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
+		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
 		int a_error;
 		psyq::file_buffer::offset const a_file_size(
 			this->seek_file(a_error, 0, SEEK_END));
@@ -344,9 +353,9 @@ public:
 			std::size_t const a_temp_size(
 				a_region_offset + a_region_size + a_alignment - 1);
 			PSYQ_ASSERT(
-				a_temp_size + 1 == (
+				a_temp_size == (
 					static_cast< psyq::file_buffer::offset >(a_region_offset)
-					+ a_region_size + a_alignment));
+					+ a_region_size + a_alignment - 1));
 			psyq::file_buffer a_buffer(
 				boost::type< t_arena >(),
 				a_mapped_offset,
@@ -398,7 +407,7 @@ public:
 		PSYQ_ASSERT(
 			0 == i_buffer.get_mapped_size() % this_type::get_block_size());
 
-		//boost::lock_guard< t_mutex > const a_lock(this->mutex_);
+		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
 		int a_error;
 		psyq::file_buffer::offset const a_file_size(
 			this->seek_file(a_error, 0, SEEK_END));
@@ -426,7 +435,15 @@ public:
 	//-------------------------------------------------------------------------
 	void swap(this_type& io_target)
 	{
-		std::swap(this->descriptor_, io_target.descriptor_);
+		if (&io_target != this)
+		{
+			boost::unique_lock< t_mutex > a_this_lock(
+				this->mutex_, boost::defer_lock);
+			boost::unique_lock< t_mutex > a_target_lock(
+				io_target.mutex_, boost::defer_lock);
+			boost::lock(a_this_lock, a_target_lock);
+			std::swap(this->descriptor_, io_target.descriptor_);
+		}
 	}
 
 //.............................................................................
@@ -543,24 +560,16 @@ private:
 #ifdef _WIN32
 		__int64 const a_position(
 			::_lseeki64(this->descriptor_, i_offset, i_origin));
-		if (a_position < 0)
 #else
 		off64_t const a_position(
 			::lseek64(this->descriptor_, i_offset, i_origin));
-		if (-1 == a_position)
 #endif // _WIN32
-		{
-			o_error = errno;
-		}
-		else if (0 == a_position + 1)
-		{
-			o_error = EFBIG;
-		}
-		else
+		if (-1 != a_position)
 		{
 			o_error = 0;
 			return static_cast< psyq::file_buffer::offset >(a_position);
 		}
+		o_error = errno;
 		return 0;
 	}
 
@@ -587,35 +596,29 @@ private:
 		{
 			o_error = EFAULT;
 		}
-#ifndef _WIN32
-		else if (SSIZE_MAX < i_size)
-		{
-			o_error = EFBIG;
-		}
-#endif // !WIN32
 		else
 		{
 			int a_error;
 			this->seek_file(a_error, i_offset, SEEK_SET);
-			if (0 != a_error)
-			{
-				o_error = a_error;
-			}
-			else
+			if (0 == a_error)
 			{
 #ifdef _WIN32
-				std::size_t const a_size(
+				int const a_size(
 					::_read(this->descriptor_, i_buffer, i_size));
 #else
-				std::size_t const a_size(
+				::ssize_t const a_size(
 					::read(this->descriptor_, i_buffer, i_size));
 #endif //_WIN32
-				if (0 != a_size + 1)
+				if (-1 != a_size)
 				{
 					o_error = 0;
 					return a_size;
 				}
 				o_error = errno;
+			}
+			else
+			{
+				o_error = a_error;
 			}
 		}
 		return 0;
@@ -641,20 +644,23 @@ private:
 		if (0 == a_error)
 		{
 #ifdef _WIN32
-			std::size_t const a_size(
+			int const a_size(
 				::_write(this->descriptor_, i_buffer, i_size));
 #else
-			std::size_t const a_size(
+			ssize_t const a_size(
 				::write(this->descriptor_, i_buffer, i_size));
 #endif // _WIN32
-			if (0 != a_size + 1)
+			if (-1 != a_size)
 			{
 				o_error = 0;
 				return a_size;
 			}
-			a_error = errno;
+			o_error = errno;
 		}
-		o_error = a_error;
+		else
+		{
+			o_error = a_error;
+		}
 		return 0;
 	}
 
@@ -715,19 +721,20 @@ private:
 		::GetSystemInfo(&a_info);
 		return a_info.dwPageSize;
 #else
-		std::size_t const a_page_size(::sysconf(_SC_PAGESIZE));
-		if (0 == a_page_size + 1)
+		long const a_page_size(::sysconf(_SC_PAGESIZE));
+		if (-1 != a_page_size)
 		{
-			PSYQ_ASSERT(false);
-			return 0;
+			return a_page_size;
 		}
-		return a_page_size;
+		PSYQ_ASSERT(false);
+		return 0;
 #endif // PSYQ_FILE_BLOCK_SIZE
 	}
 
 //.............................................................................
 private:
-	int descriptor_;
+	int     descriptor_;
+	t_mutex mutex_;
 };
 
 #endif // !PSYQ_FILE_DESCRIPTOR_HPP_

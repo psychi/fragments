@@ -11,7 +11,7 @@
 namespace psyq
 {
 	class async_task;
-	template < typename > class async_queue;
+	class async_queue;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -22,7 +22,7 @@ class psyq::async_task:
 {
 	typedef psyq::async_task this_type;
 
-	template< typename > friend class psyq::async_queue;
+	friend class psyq::async_queue;
 
 //.............................................................................
 public:

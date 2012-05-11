@@ -29,6 +29,7 @@ public:
 		}
 	}
 
+	//-------------------------------------------------------------------------
 	dynamic_storage():
 	deallocator_(NULL),
 	address_(NULL),
@@ -42,15 +43,45 @@ public:
 	 */
 	template< typename t_allocator >
 	dynamic_storage(
-		std::size_t const  i_size,
-		t_allocator const& i_allocator)
+		t_allocator const& i_allocator,
+		std::size_t const  i_size)
 	{
 		new(this) this_type(
+			boost::type< typename t_allocator::arena >(),
 			i_size,
 			t_allocator::ALIGNMENT,
 			t_allocator::OFFSET,
-			i_allocator.get_name(),
-			boost::type< typename t_allocator::arena >());
+			i_allocator.get_name());
+	}
+
+	/** @param[in] i_size	   確保するmemoryの大きさ。byte単位。
+	    @param[in] i_alignment 確保するmemoryの配置境界値。
+	    @param[in] i_offset    確保するmemoryの配置offset値。
+	    @param[in] i_name      debugで使うためのmemory識別名。
+	 */
+	template< typename t_arena >
+	dynamic_storage(
+		boost::type< t_arena > const&,
+		std::size_t const i_size,
+		std::size_t const i_alignment,
+		std::size_t const i_offset,
+		char const* const i_name)
+	{
+		if (0 < i_size)
+		{
+			this->address_ = (t_arena::malloc)(
+				i_size, i_alignment, i_offset, i_name);
+			if (NULL != this->get_address())
+			{
+				this->size_ = i_size;
+				this->deallocator_ = &t_arena::free;
+				return;
+			}
+			PSYQ_ASSERT(false);
+		}
+		this->deallocator_ = NULL;
+		this->address_ = NULL;
+		this->size_ = 0;
 	}
 
 	//-------------------------------------------------------------------------
@@ -143,39 +174,11 @@ public:
 	/** @brief 保持しているmemoryを交換。
 	    @param[in,out] io_target 交換する対象。
 	 */
-	void swap(
-		this_type& io_target)
+	void swap(this_type& io_target)
 	{
 		std::swap(this->deallocator_, io_target.deallocator_);
 		std::swap(this->address_, io_target.address_);
 		std::swap(this->size_, io_target.size_);
-	}
-
-//.............................................................................
-private:
-	template< typename t_arena >
-	dynamic_storage(
-		std::size_t const i_size,
-		std::size_t const i_alignment,
-		std::size_t const i_offset,
-		char const* const i_name,
-		boost::type< t_arena > const&)
-	{
-		if (0 < i_size)
-		{
-			this->address_ = (t_arena::malloc)(
-				i_size, i_alignment, i_offset, i_name);
-			if (NULL != this->get_address())
-			{
-				this->size_ = i_size;
-				this->deallocator_ = &t_arena::free;
-				return;
-			}
-			PSYQ_ASSERT(false);
-		}
-		this->deallocator_ = NULL;
-		this->address_ = NULL;
-		this->size_ = 0;
 	}
 
 //.............................................................................

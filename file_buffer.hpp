@@ -3,6 +3,7 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/cstdint.hpp>
+//#include <psyq/dynamic_storage.hpp>
 
 namespace psyq
 {
@@ -13,30 +14,19 @@ namespace psyq
 /** @brief file操作に使うbuffer。
  */
 class psyq::file_buffer:
-	private boost::noncopyable
+	private psyq::dynamic_storage
 {
 	typedef psyq::file_buffer this_type;
+	typedef psyq::dynamic_storage super_type;
 
 //.............................................................................
 public:
 	typedef boost::uint64_t offset;
 
 	//-------------------------------------------------------------------------
-	~file_buffer()
-	{
-		// 保持しているmemoryを解放。
-		if (NULL != this->deallocator_)
-		{
-			(*this->deallocator_)(
-				this->get_mapped_address(), this->get_mapped_size());
-		}
-	}
-
 	file_buffer():
-	deallocator_(NULL),
-	storage_(NULL),
+	super_type(),
 	mapped_offset_(0),
-	mapped_size_(0),
 	region_offset_(0),
 	region_size_(0)
 	{
@@ -55,15 +45,13 @@ public:
 	file_buffer(
 		t_allocator const&      i_allocator,
 		this_type::offset const i_offset,
-		std::size_t const       i_size)
+		std::size_t const       i_size):
+	super_type(i_allocator, i_size),
+	region_offset_(0),
+	mapped_offset_(i_offset),
+	region_size_(0)
 	{
-		new(this) this_type(
-			boost::type< typename t_allocator::arena >(),
-			i_offset,
-			i_size,
-			t_allocator::ALIGNMENT,
-			t_allocator::OFFSET,
-			i_allocator.get_name());
+		// pass
 	}
 
 	/** @param[in] i_offset
@@ -78,31 +66,19 @@ public:
 	 */
 	template< typename t_arena >
 	file_buffer(
-		boost::type< t_arena > const&,
-		this_type::offset const i_offset,
-		std::size_t const       i_size,
-		std::size_t const       i_memory_alignment,
-		std::size_t const       i_memory_offset = 0,
-		char const* const       i_memory_name = PSYQ_ARENA_NAME_DEFAULT):
-	mapped_offset_(i_offset),
-	mapped_size_(i_size),
+		boost::type< t_arena > const& i_type,
+		this_type::offset const       i_offset,
+		std::size_t const             i_size,
+		std::size_t const             i_memory_alignment,
+		std::size_t const             i_memory_offset = 0,
+		char const* const             i_memory_name = PSYQ_ARENA_NAME_DEFAULT):
+	super_type(
+		i_type, i_size, i_memory_alignment, i_memory_offset, i_memory_name),
 	region_offset_(0),
+	mapped_offset_(i_offset),
 	region_size_(0)
 	{
-		if (0 < i_size)
-		{
-			this->storage_ = (t_arena::malloc)(
-				i_size, i_memory_alignment, i_memory_offset, i_memory_name);
-			if (NULL != this->get_mapped_address())
-			{
-				this->deallocator_ = &t_arena::free;
-				return;
-			}
-			PSYQ_ASSERT(false);
-			this->mapped_size_ = 0;
-		}
-		this->deallocator_ = NULL;
-		this->storage_ = NULL;
+		// pass
 	}
 
 	//-------------------------------------------------------------------------
@@ -122,10 +98,16 @@ public:
 
 	/** @brief regionの先頭位置を取得。
 	 */
-	void* get_region_address() const
+	void const* get_region_address() const
 	{
-		return static_cast< char* >(this->get_mapped_address())
+		return static_cast< char const* >(this->get_mapped_address())
 			+ this->get_region_offset();
+	}
+
+	void* get_region_address()
+	{
+		return const_cast< void* >(
+			const_cast< this_type const* >(this)->get_region_address());
 	}
 
 	/** @brief regionを設定。
@@ -142,13 +124,6 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief bufferの先頭位置を取得。
-	 */
-	void* get_mapped_address() const
-	{
-		return this->storage_;
-	}
-
 	/** @brief file先頭位置からbuffer先頭位置へのoffset値を取得。
 	 */
 	this_type::offset get_mapped_offset() const
@@ -160,29 +135,36 @@ public:
 	 */
 	std::size_t get_mapped_size() const
 	{
-		return this->mapped_size_;
+		return this->super_type::get_size();
 	}
 
+	/** @brief bufferの先頭位置を取得。
+	 */
+	void const* get_mapped_address() const
+	{
+		return this->super_type::get_address();
+	}
+
+	void* get_mapped_address()
+	{
+		return const_cast< void* >(
+			const_cast< this_type const* >(this)->get_mapped_address());
+	}
 	//-------------------------------------------------------------------------
 	/** @brief 値を交換。
 	 */
 	void swap(this_type& io_target)
 	{
-		std::swap(this->deallocator_, io_target.deallocator_);
-		std::swap(this->storage_, io_target.storage_);
+		this->super_type::swap(io_target);
 		std::swap(this->mapped_offset_, io_target.mapped_offset_);
-		std::swap(this->mapped_size_, io_target.mapped_size_);
 		std::swap(this->region_offset_, io_target.region_offset_);
 		std::swap(this->region_size_, io_target.region_size_);
 	}
 
 //.............................................................................
 private:
-	void              (*deallocator_)(void* const, std::size_t const);
-	void*             storage_;
-	this_type::offset mapped_offset_;
-	std::size_t       mapped_size_;
 	std::size_t       region_offset_;
+	this_type::offset mapped_offset_;
 	std::size_t       region_size_;
 };
 

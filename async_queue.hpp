@@ -79,28 +79,26 @@ public:
 			a_queue.is_empty()? this->running_size_: a_queue.get_size());
 
 		// 新しいqueueを構築。
-		std::size_t const a_new_capacity(
-			a_last_size + std::distance(i_begin, i_end));
-		this_type::task_ptr* const a_new_tasks(
-			a_queue.template resize< t_arena >(
-				a_last_size, a_new_capacity, i_name));
-
-		// containerが持つ非同期処理taskを、新しいqueueにcopy。
+		this_type::task_ptr* a_new_task(
+			a_last_size + a_queue.template resize< t_arena >(
+				a_last_size,
+				a_last_size + std::distance(i_begin, i_end),
+				i_name));
 		std::size_t a_count(0);
-		t_iterator a_iterator(i_begin);
-		for (std::size_t i = a_last_size; i < a_new_capacity; ++i, ++a_iterator)
+		for (t_iterator i = i_begin; i_end != i; ++i, ++a_new_task)
 		{
-			psyq::async_task* const a_task(a_iterator->get());
+			// containerが持つ非同期処理taskのうち、
+			// busy状態ではない非同期処理taskだけを新しいqueueに登録する。
+			psyq::async_task* const a_task(i->get());
 			if (NULL != a_task
 				&& a_task->set_locked_state(psyq::async_task::state_BUSY))
 			{
-				// busy状態ではない非同期処理taskだけが登録できる。
-				new(&a_new_tasks[i]) this_type::task_ptr(*a_iterator);
+				new(a_new_task) this_type::task_ptr(*i);
 				++a_count;
 			}
 			else
 			{
-				new(&a_new_tasks[i]) this_type::task_ptr();
+				new(a_new_task) this_type::task_ptr();
 			}
 		}
 
@@ -128,14 +126,14 @@ private:
 
 	//-------------------------------------------------------------------------
 	template< typename t_value >
-	class container:
+	class array:
 		private psyq::dynamic_storage
 	{
-		typedef container this_type;
+		typedef array this_type;
 		typedef psyq::dynamic_storage super_type;
 
 	public:
-		~container()
+		~array()
 		{
 			t_value* const a_tasks(this->get_address());
 			std::size_t const a_size(this->get_size());
@@ -145,7 +143,7 @@ private:
 			}
 		}
 
-		container():
+		array():
 		super_type()
 		{
 			// pass
@@ -171,35 +169,35 @@ private:
 			return this->super_type::get_size() <= 0;
 		}
 
-		/** @brief containerの大きさを変更する。
-		    @param[in] i_last_size    元のcontainerの要素数。
-		    @param[in] i_new_capacity 新しいcontainerの最大要素数。
-			@param[in] i_memory_name  確保するmemoryの識別名。debugでのみ使う。
-		    @return 新しいcontainerの先頭位置。
+		/** @brief arrayの大きさを変更する。
+		    @param[in] i_last_size   元のarrayの要素数。
+		    @param[in] i_new_size    新しいarrayの要素数。
+			@param[in] i_memory_name 確保するmemoryの識別名。debugでのみ使う。
+		    @return 新しいarrayの先頭位置。
 		 */
 		template< typename t_arena >
 		t_value* resize(
 			std::size_t const i_last_size,
-			std::size_t const i_new_capacity,
+			std::size_t const i_new_size,
 			char const* const i_memory_name)
 		{
-			PSYQ_ASSERT(i_last_size <= i_new_capacity);
+			PSYQ_ASSERT(i_last_size <= i_new_size);
 
-			// 新しいcontainerを確保。
-			this_type a_container(
+			// 新しいarrayを確保。
+			this_type a_array(
 				boost::type< t_arena >(),
-				i_new_capacity * sizeof(t_value),
+				i_new_size * sizeof(t_value),
 				boost::alignment_of< t_value >::value,
 				0,
 				i_memory_name);
-			t_value* const a_new_tasks(a_container.get_address());
+			t_value* const a_new_tasks(a_array.get_address());
 			if (NULL != a_new_tasks)
 			{
-				// 元のcontainerが持つ非同期処理taskを、新しいcontainerに移動。
+				// 元のarrayが持つ非同期処理taskを、新しいarrayに移動。
 				t_value* const a_last_tasks(this->get_address());
 				for (std::size_t i = 0; i < i_last_size; ++i)
 				{
-					new(&a_new_tasks[i]) typename t_value();
+					new(&a_new_tasks[i]) t_value();
 					if (NULL != a_last_tasks)
 					{
 						a_new_tasks[i].swap(a_last_tasks[i]);
@@ -208,15 +206,15 @@ private:
 			}
 			else
 			{
-				PSYQ_ASSERT(i_new_capacity <= 0);
+				PSYQ_ASSERT(i_new_size <= 0);
 			}
-			this->swap(a_container);
+			this->swap(a_array);
 			return a_new_tasks;
 		}
 
-		/** @brief containerが持つ非同期処理taskを実行する。
-		    @param[in] i_size containerが持つ非同期処理taskの数。
-		    @return containerが持つ非同期処理taskの数。
+		/** @brief arrayが持つ非同期処理taskを実行する。
+		    @param[in] i_size arrayが持つ非同期処理taskの数。
+		    @return arrayが持つ非同期処理taskの数。
 		 */
 		std::size_t run(std::size_t const i_size)
 		{
@@ -243,7 +241,7 @@ private:
 			return a_size;
 		}
 
-		/** @brief containerが持つ非同期処理taskを途中終了する。
+		/** @brief arrayが持つ非同期処理taskを途中終了する。
 		 */
 		void abort()
 		{
@@ -263,7 +261,7 @@ private:
 
 	private:
 		template< typename t_arena >
-		container(
+		array(
 			boost::type< t_arena > const& i_type,
 			std::size_t const             i_size,
 			std::size_t const             i_alignment,
@@ -274,7 +272,7 @@ private:
 			// pass
 		}
 	};
-	typedef this_type::container< this_type::task_ptr > task_queue;
+	typedef this_type::array< this_type::task_ptr > task_queue;
 
 	//-------------------------------------------------------------------------
 	void start()
@@ -312,7 +310,7 @@ private:
 				// 予約queueを、新しい実行queueとして取り出す。
 				this_type::task_queue a_last_queue;
 				a_last_queue.swap(a_queue);
-				this->reserve_queue_.swap(a_queue);
+				a_queue.swap(this->reserve_queue_);
 				std::size_t const a_last_size(a_size);
 				a_size = a_queue.get_size();
 				PSYQ_ASSERT(this->running_size_ <= a_size);
@@ -322,16 +320,16 @@ private:
 				a_lock.unlock();
 
 				// 元の実行queueが持つtaskを、新しい実行queueに移動。
-				this_type::task_ptr* const a_new_tasks(
-					static_cast< this_type::task_ptr* >(
-						a_queue.get_address()));
 				this_type::task_ptr* const a_last_tasks(
 					static_cast< this_type::task_ptr* >(
 						a_last_queue.get_address()));
+				this_type::task_ptr* const a_tasks(
+					static_cast< this_type::task_ptr* >(
+						a_queue.get_address()));
 				for (std::size_t i = 0; i < a_last_size; ++i)
 				{
-					PSYQ_ASSERT(a_new_tasks[i].expired());
-					a_new_tasks[i].swap(a_last_tasks[i]);
+					PSYQ_ASSERT(a_tasks[i].expired());
+					a_tasks[i].swap(a_last_tasks[i]);
 				}
 			}
 			else if (0 < a_size)

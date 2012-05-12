@@ -86,14 +86,14 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief memoryを確保して、保持する。
-	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
 	    @param[in] i_allocator memoryの確保に使う割当子。
+	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
 	template< typename t_allocator >
 	void* allocate(
-		std::size_t const  i_size,
-		t_allocator const& i_allocator)
+		t_allocator const& i_allocator,
+		std::size_t const  i_size)
 	{
 		return this->allocate< typename t_allocator::arena >(
 			i_size,

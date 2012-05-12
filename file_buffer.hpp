@@ -62,7 +62,7 @@ public:
 	        fileの論理block-sizeの整数倍である必要がある。
 	    @param[in] i_memory_alignment 確保するbufferのmemory配置境界値。
 	    @param[in] i_memory_offset    確保するbufferのmemory配置offset値。
-	    @param[in] i_memory_name      debugで使うためのmemory識別名。
+	    @param[in] i_memory_name      確保するmemoryの識別名。debugでのみ使う。
 	 */
 	template< typename t_arena >
 	file_buffer(

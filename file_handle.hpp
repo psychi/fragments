@@ -64,6 +64,23 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief handleを交換。
+	    @param[in,out] io_target 交換するhandle。
+	 */
+	void swap(this_type& io_target)
+	{
+		if (&io_target != this)
+		{
+			boost::unique_lock< t_mutex > a_this_lock(
+				this->mutex_, boost::defer_lock);
+			boost::unique_lock< t_mutex > a_target_lock(
+				io_target.mutex_, boost::defer_lock);
+			boost::lock(a_this_lock, a_target_lock);
+			this->descriptor_.swap(io_target.descriptor_);
+		}
+	}
+
+	//-------------------------------------------------------------------------
 	/** @brief fileを開いているか判定。
 	    @retval true  fileを開いている。
 	    @retval false fileを開いてない。
@@ -225,23 +242,6 @@ public:
 			}
 		}
 		return a_error;
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief 値を交換。
-	    @param[in,out] io_target 交換する対象。
-	 */
-	void swap(this_type& io_target)
-	{
-		if (&io_target != this)
-		{
-			boost::unique_lock< t_mutex > a_this_lock(
-				this->mutex_, boost::defer_lock);
-			boost::unique_lock< t_mutex > a_target_lock(
-				io_target.mutex_, boost::defer_lock);
-			boost::lock(a_this_lock, a_target_lock);
-			this->descriptor_.swap(io_target.descriptor_);
-		}
 	}
 
 //.............................................................................

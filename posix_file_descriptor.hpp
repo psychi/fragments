@@ -52,8 +52,8 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 値を交換。
-	    @param[in,out] io_target 交換する対象。
+	/** @brief file記述子を交換。
+	    @param[in,out] io_target 交換するfile記述子。
 	 */
 	void swap(this_type& io_target)
 	{

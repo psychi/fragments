@@ -86,6 +86,16 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief 文字列を交換。
+		@param[in,out] io_target 交換する文字列。
+	 */
+	void swap(this_type& io_target)
+	{
+		std::swap(this->data_, io_target.data_);
+		std::swap(this->length_, io_target.length_);
+	}
+
+	//-------------------------------------------------------------------------
 	/** @brief 文字列の先頭位置を取得。
 	    @return 文字列の先頭位置。
 	 */
@@ -1036,15 +1046,6 @@ public:
 	void clear()
 	{
 		new(this) this_type();
-	}
-
-	/** @brief 文字列を交換。
-		@param[in,out] io_target 交換する文字列。
-	 */
-	void swap(this_type& io_target)
-	{
-		std::swap(this->data_, io_target.data_);
-		std::swap(this->length_, io_target.length_);
 	}
 
 //.............................................................................

@@ -186,7 +186,7 @@ private:
 			// êVÇµÇ¢arrayÇämï€ÅB
 			this_type a_array(
 				boost::type< t_arena >(),
-				i_new_size * sizeof(t_value),
+				i_new_size,
 				boost::alignment_of< t_value >::value,
 				0,
 				i_memory_name);
@@ -267,7 +267,8 @@ private:
 			std::size_t const             i_alignment,
 			std::size_t const             i_offset,
 			char const* const             i_name):
-		super_type(i_type, i_size, i_alignment, i_offset, i_name)
+		super_type(
+			i_type, i_size * sizeof(t_value), i_alignment, i_offset, i_name)
 		{
 			// pass
 		}

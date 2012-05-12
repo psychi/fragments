@@ -85,6 +85,17 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief 保持しているmemoryを交換。
+	    @param[in,out] io_target 交換する対象。
+	 */
+	void swap(this_type& io_target)
+	{
+		std::swap(this->deallocator_, io_target.deallocator_);
+		std::swap(this->address_, io_target.address_);
+		std::swap(this->size_, io_target.size_);
+	}
+
+	//-------------------------------------------------------------------------
 	/** @brief memoryを確保して、保持する。
 	    @param[in] i_allocator memoryの確保に使う割当子。
 	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
@@ -168,17 +179,6 @@ public:
 	{
 		return const_cast< void* >(
 			const_cast< this_type const* >(this)->get_address());
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief 保持しているmemoryを交換。
-	    @param[in,out] io_target 交換する対象。
-	 */
-	void swap(this_type& io_target)
-	{
-		std::swap(this->deallocator_, io_target.deallocator_);
-		std::swap(this->address_, io_target.address_);
-		std::swap(this->size_, io_target.size_);
 	}
 
 //.............................................................................

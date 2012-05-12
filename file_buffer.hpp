@@ -82,6 +82,18 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief 保持しているbufferを交換。
+	    @param[in,out] io_target 交換するbuffer。
+	 */
+	void swap(this_type& io_target)
+	{
+		this->super_type::swap(io_target);
+		std::swap(this->mapped_offset_, io_target.mapped_offset_);
+		std::swap(this->region_offset_, io_target.region_offset_);
+		std::swap(this->region_size_, io_target.region_size_);
+	}
+
+	//-------------------------------------------------------------------------
 	/** @brief buffer先頭位置からregion先頭位置へのoffset値を取得。
 	 */
 	std::size_t get_region_offset() const
@@ -149,16 +161,6 @@ public:
 	{
 		return const_cast< void* >(
 			const_cast< this_type const* >(this)->get_mapped_address());
-	}
-	//-------------------------------------------------------------------------
-	/** @brief 値を交換。
-	 */
-	void swap(this_type& io_target)
-	{
-		this->super_type::swap(io_target);
-		std::swap(this->mapped_offset_, io_target.mapped_offset_);
-		std::swap(this->region_offset_, io_target.region_offset_);
-		std::swap(this->region_size_, io_target.region_size_);
 	}
 
 //.............................................................................

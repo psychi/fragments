@@ -44,8 +44,36 @@ public:
 		return this->reserve_queue_.is_empty() && this->running_size_ <= 0;
 	}
 
+	std::size_t get_size() const
+	{
+		return this->running_size_;
+	}
+
+	std::size_t get_capacity() const
+	{
+		boost::lock_guard< boost::mutex > const a_lock(
+			const_cast< boost::mutex& >(this->mutex_));
+		return (std::max)(
+			this->reserve_queue_.get_size(), this->running_size_);
+	}
+
 	//-------------------------------------------------------------------------
 	/** @brief 非同期処理taskを登録。
+	    @param[in] i_allocator memory確保に使う割当子。
+	    @param[in] i_task      登録する非同期処理taskを指すsmart-pointer。
+	    @return 登録した非同期処理taskの数。
+	 */
+	template< typename t_allocator >
+	std::size_t add(
+		t_allocator const&                  i_allocator,
+		psyq::async_task::shared_ptr const& i_task)
+	{
+		return this->add< typename t_allocator::arena >(
+			i_task, i_allocator.get_name());
+	}
+
+	/** @brief 非同期処理taskを登録。
+	    @tparam t_arena   memory確保に使うmemory-arenaの型。
 	    @param[in] i_task 登録する非同期処理taskを指すsmart-pointer。
 	    @param[in] i_name 確保するmemoryの識別名。debugでのみ使う。
 	    @return 登録した非同期処理taskの数。
@@ -59,7 +87,24 @@ public:
 	}
 
 	/** @brief containerが持つ非同期処理taskをまとめて登録。
-	    @tparam t_iterator shared_ptr型のcontainerのiterator型。
+		@param[in] i_allocator memory確保に使う割当子。
+	    @param[in] i_begin     containerの先頭位置。
+	    @param[in] i_end       containerの末尾位置。
+	    @return 登録した非同期処理taskの数。
+	 */
+	template< typename t_allocator, typename t_iterator >
+	std::size_t add(
+		t_allocator const& i_allocator,
+		t_iterator const   i_begin,
+		t_iterator const   i_end)
+	{
+		return this->add< typename t_allocator::arena >(
+			i_begin, i_end, i_allocator.get_name());
+	}
+
+	/** @brief containerが持つ非同期処理taskをまとめて登録。
+	    @tparam t_arena    memory確保に使うmemory-arenaの型。
+	    @tparam t_iterator shared_ptr型containerのiterator型。
 	    @param[in] i_begin containerの先頭位置。
 	    @param[in] i_end   containerの末尾位置。
 	    @param[in] i_name  確保するmemoryの識別名。debugでのみ使う。
@@ -80,7 +125,7 @@ public:
 
 		// 新しいqueueを構築。
 		this_type::task_ptr* a_new_task(
-			a_last_size + a_queue.template resize< t_arena >(
+			a_last_size + a_queue.resize< t_arena >(
 				a_last_size,
 				a_last_size + std::distance(i_begin, i_end),
 				i_name));
@@ -106,6 +151,16 @@ public:
 		this->reserve_queue_.swap(a_queue);
 		this->condition_.notify_all();
 		return a_count;
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief queueの大きさを必要最低限にする。
+	    @param[in] i_allocator memory確保に使う割当子。
+	 */
+	template< typename t_allocator >
+	void shrink(t_allocator const& i_allocator)
+	{
+		this->shrink< typename t_allocator::arena >(i_allocator.get_name());
 	}
 
 	/** @brief queueの大きさを必要最低限にする。
@@ -316,8 +371,8 @@ private:
 				a_size = a_queue.get_size();
 				PSYQ_ASSERT(this->running_size_ <= a_size);
 				PSYQ_ASSERT(a_last_size <= a_size);
-				this->running_size_
-					= a_last_size + a_size - this->running_size_;
+				this->running_size_	=
+					a_last_size + a_size - this->running_size_;
 				a_lock.unlock();
 
 				// 元の実行queueが持つtaskを、新しい実行queueに移動。

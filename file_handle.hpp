@@ -214,10 +214,12 @@ public:
 				static_cast< std::size_t >(a_file_size - a_read_offset));
 			PSYQ_ASSERT(a_file_size - a_read_offset == a_rest_size);
 			std::size_t const a_region_size((std::min)(i_size, a_rest_size));
-			std::size_t const a_alignment(
-				(std::max)(i_alignment, this->get_block_size(a_error)));
+			std::size_t const a_block_size(this->get_block_size(a_error));
 			if (0 == a_error)
 			{
+				std::size_t const a_alignment(
+					(std::max)(i_alignment, a_block_size));
+				PSYQ_ASSERT(0 == a_alignment % a_block_size);
 				psyq::file_buffer::offset const a_mapped_offset(
 					a_alignment * (a_read_offset / a_alignment));
 				std::size_t const a_region_offset(
@@ -232,7 +234,7 @@ public:
 						static_cast< psyq::file_buffer::offset >(-1) +
 						a_region_offset + a_region_size + a_alignment));
 
-				// 論理block-size単位で、読み込みbufferを確保。
+				// 論理block-size単位で読み込みbufferを確保し、fileを読み込む。
 				psyq::file_buffer a_buffer(
 					boost::type< t_arena >(),
 					a_mapped_offset,
@@ -240,8 +242,6 @@ public:
 					a_alignment,
 					0,
 					i_name);
-
-				// 論理block-size単位で、fileを読み込む。
 				std::size_t const a_read_size(
 					this->descriptor_.read(
 						a_error,

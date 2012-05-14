@@ -6,10 +6,6 @@
 //#include <psyq/file_buffer.hpp>
 //#include <psyq/posix_file_descriptor.hpp>
 
-#ifndef PSYQ_FILE_BLOCK_SIZE
-//#define PSYQ_FILE_BLOCK_SIZE 4096
-#endif // !PSYQ_FILE_BLOCK_SIZE
-
 namespace psyq
 {
 	template< typename, typename > class basic_file_handle;
@@ -85,8 +81,9 @@ public:
 	    @retval true  fileを開いている。
 	    @retval false fileを開いてない。
 	 */
-	bool is_open() const
+	bool is_open()
 	{
+		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
 		return this->descriptor_.is_open();
 	}
 
@@ -96,8 +93,10 @@ public:
 	 */
 	psyq::file_buffer::offset get_size()
 	{
-		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
-		return this->descriptor_.get_size();
+		int a_error;
+		psyq::file_buffer::offset const a_size(this->get_size(a_error));
+		PSYQ_ASSERT(0 == a_error);
+		return a_size;
 	}
 
 	/** @brief fileの大きさをbyte単位で取得。
@@ -111,7 +110,65 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief fileの論理block-sizeをbyte単位で取得。
+	 */
+	std::size_t get_block_size() const
+	{
+		int a_error;
+		std::size_t const a_size(this->descriptor_.get_block_size(a_error));
+		PSYQ_ASSERT(0 == a_error);
+		return a_size;
+	}
+
+	/** @brief fileの論理block-sizeをbyte単位で取得。
+	 */
+	std::size_t get_block_size(int& o_error) const
+	{
+		return this->descriptor_.get_block_size(o_error);
+	}
+
+	//-------------------------------------------------------------------------
 	/** @brief fileを読み込む。
+	    @param[out] o_buffer   生成した読み込みbufferの格納先。
+	    @param[in] i_allocator memory確保に使う割当子。
+	    @param[in] i_offset    fileの読み込み開始位置。
+	    @param[in] i_size      読み込みbufferのbyte単位の大きさ。
+	    @return 結果のerror番号。0なら成功。
+	 */
+	template< typename t_allocator >
+	int read(
+		psyq::file_buffer&              o_buffer,
+		t_allocator const&              i_allocator,
+		psyq::file_buffer::offset const i_offset = 0,
+		std::size_t const               i_size
+			= (std::numeric_limits< std::size_t >::max)())
+	{
+		return this->read< typename t_allocator::arena >(
+			o_buffer, i_offset, i_size, i_allocator.get_name());
+	}
+
+	/** @brief fileを読み込む。
+	    @param[out] o_buffer   生成した読み込みbufferの格納先。
+	    @param[in] i_allocator memory確保に使う割当子。
+	    @param[in] i_offset    fileの読み込み開始位置。
+	    @param[in] i_size      読み込みbufferのbyte単位の大きさ。
+	    @param[in] i_alignment 読み込みbufferのmemory配置境界値。
+	    @return 結果のerror番号。0なら成功。
+	 */
+	template< typename t_allocator >
+	int read(
+		psyq::file_buffer&              o_buffer,
+		t_allocator const&              i_allocator,
+		psyq::file_buffer::offset const i_offset,
+		std::size_t const               i_size,
+		std::size_t const               i_alignment)
+	{
+		return this->read< typename t_allocator::arena >(
+			o_buffer, i_offset, i_size, i_alignment, i_allocator.get_name());
+	}
+
+	/** @brief fileを読み込む。
+		@tparam t_arena      memory確保に使うmemory-arenaの型。
 	    @param[out] o_buffer 生成した読み込みbufferの格納先。
 	    @param[in] i_offset  fileの読み込み開始位置。
 	    @param[in] i_size    読み込みbufferのbyte単位の大きさ。
@@ -125,11 +182,12 @@ public:
 			= (std::numeric_limits< std::size_t >::max)(),
 		char const* const               i_name = PSYQ_ARENA_NAME_DEFAULT)
 	{
-		return this->template read< t_arena >(
-			o_buffer, i_offset, i_size, this_type::get_block_size(), i_name);
+		return this->read< t_arena >(
+			o_buffer, i_offset, i_size, this->get_block_size(), i_name);
 	}
 
 	/** @brief fileを読み込む。
+		@tparam t_arena        memory確保に使うmemory-arenaの型。
 	    @param[out] o_buffer   生成した読み込みbufferの格納先。
 	    @param[in] i_offset    fileの読み込み開始位置。
 	    @param[in] i_size      読み込みbufferのbyte単位の大きさ。
@@ -150,7 +208,6 @@ public:
 			this->descriptor_.get_size(a_error));
 		if (0 == a_error)
 		{
-			// 読み込みbufferを確保。
 			psyq::file_buffer::offset const a_read_offset(
 				(std::min)(i_offset, a_file_size));
 			std::size_t const a_rest_size(
@@ -158,39 +215,47 @@ public:
 			PSYQ_ASSERT(a_file_size - a_read_offset == a_rest_size);
 			std::size_t const a_region_size((std::min)(i_size, a_rest_size));
 			std::size_t const a_alignment(
-				(std::max)(i_alignment, this_type::get_block_size()));
-			psyq::file_buffer::offset const a_mapped_offset(
-				a_alignment * (a_read_offset / a_alignment));
-			std::size_t const a_region_offset(
-				static_cast< std::size_t >(a_read_offset - a_mapped_offset));
-			PSYQ_ASSERT(a_read_offset - a_mapped_offset == a_region_offset);
-			std::size_t const a_temp_size(
-				a_region_offset + a_region_size + a_alignment - 1);
-			PSYQ_ASSERT(
-				a_temp_size == (
-					static_cast< psyq::file_buffer::offset >(a_region_offset)
-					+ a_region_size + a_alignment - 1));
-			psyq::file_buffer a_buffer(
-				boost::type< t_arena >(),
-				a_mapped_offset,
-				a_alignment * (a_temp_size / a_alignment),
-				a_alignment,
-				0,
-				i_name);
-
-			// fileを読み込む。
-			std::size_t const a_read_size(
-				this->descriptor_.read(
-					a_error,
-					a_buffer.get_mapped_offset(),
-					a_buffer.get_mapped_size(),
-					a_buffer.get_mapped_address()));
+				(std::max)(i_alignment, this->get_block_size(a_error)));
 			if (0 == a_error)
 			{
-				a_buffer.set_region(
-					a_region_offset,
-					(std::min)(a_region_size, a_read_size - a_region_offset));
-				a_buffer.swap(o_buffer);
+				psyq::file_buffer::offset const a_mapped_offset(
+					a_alignment * (a_read_offset / a_alignment));
+				std::size_t const a_region_offset(
+					static_cast< std::size_t >(
+						a_read_offset - a_mapped_offset));
+				PSYQ_ASSERT(
+					a_read_offset - a_mapped_offset == a_region_offset);
+				std::size_t const a_temp_size(
+					a_region_offset + a_region_size + a_alignment - 1);
+				PSYQ_ASSERT(
+					a_temp_size == (
+						static_cast< psyq::file_buffer::offset >(-1) +
+						a_region_offset + a_region_size + a_alignment));
+
+				// 論理block-size単位で、読み込みbufferを確保。
+				psyq::file_buffer a_buffer(
+					boost::type< t_arena >(),
+					a_mapped_offset,
+					a_alignment * (a_temp_size / a_alignment),
+					a_alignment,
+					0,
+					i_name);
+
+				// 論理block-size単位で、fileを読み込む。
+				std::size_t const a_read_size(
+					this->descriptor_.read(
+						a_error,
+						a_buffer.get_mapped_offset(),
+						a_buffer.get_mapped_size(),
+						a_buffer.get_mapped_address()));
+				if (0 == a_error)
+				{
+					a_buffer.set_region(
+						a_region_offset,
+						(std::min)(
+							a_region_size, a_read_size - a_region_offset));
+					a_buffer.swap(o_buffer);
+				}
 			}
 		}
 		return a_error;
@@ -215,9 +280,9 @@ public:
 	int write(std::size_t& o_size, psyq::file_buffer const& i_buffer)
 	{
 		PSYQ_ASSERT(
-			0 == i_buffer.get_mapped_offset() % this_type::get_block_size());
+			0 == i_buffer.get_mapped_offset() % this->get_block_size());
 		PSYQ_ASSERT(
-			0 == i_buffer.get_mapped_size() % this_type::get_block_size());
+			0 == i_buffer.get_mapped_size() % this->get_block_size());
 
 		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
 		int a_error;
@@ -225,51 +290,25 @@ public:
 			this->descriptor_.get_size(a_error));
 		if (0 == a_error)
 		{
+			// 論理block-size単位で、fileに書き出す。
 			o_size = this->descriptor_.write(
 				a_error,
 				i_buffer.get_mapped_offset(),
 				i_buffer.get_mapped_size(),
 				i_buffer.get_mapped_address());
+
+			// fileの大きさを調整。
 			psyq::file_buffer::offset const a_mapped_end(
 				i_buffer.get_mapped_offset() + i_buffer.get_mapped_size());
-			if (a_file_size < a_mapped_end && 0 == a_error)
+			if (0 == a_error && a_file_size < a_mapped_end)
 			{
-				// file-sizeを調整。
 				a_error = this->descriptor_.resize(
-					i_buffer.get_mapped_offset()
-					+ i_buffer.get_region_offset()
-					+ i_buffer.get_region_size());
+					i_buffer.get_mapped_offset() +
+					i_buffer.get_region_offset() +
+					i_buffer.get_region_size());
 			}
 		}
 		return a_error;
-	}
-
-//.............................................................................
-private:
-	//-------------------------------------------------------------------------
-	/** @brief fileの論理block-sizeをbyte単位で取得。
-		@note 2012-05-10
-	        本来はfileの論理block-sizeを返す必要があるが、
-	        fileの存在するdeviceによって論理block-sizeが異なるので、
-	        簡便化のために一律でpage-sizeを使うことにする。
-	 */
-	static std::size_t get_block_size()
-	{
-#ifdef PSYQ_FILE_BLOCK_SIZE
-		return PSYQ_FILE_BLOCK_SIZE;
-#elif defined(_WIN32)
-		SYSTEM_INFO a_info;
-		::GetSystemInfo(&a_info);
-		return a_info.dwPageSize;
-#else
-		long const a_page_size(::sysconf(_SC_PAGESIZE));
-		if (-1 != a_page_size)
-		{
-			return a_page_size;
-		}
-		PSYQ_ASSERT(false);
-		return 0;
-#endif // PSYQ_FILE_BLOCK_SIZE
 	}
 
 //.............................................................................

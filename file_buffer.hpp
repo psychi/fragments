@@ -26,8 +26,8 @@ public:
 	//-------------------------------------------------------------------------
 	file_buffer():
 	super_type(),
-	mapped_offset_(0),
 	region_offset_(0),
+	mapped_offset_(0),
 	region_size_(0)
 	{
 		// pass

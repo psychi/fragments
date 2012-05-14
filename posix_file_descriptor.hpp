@@ -11,6 +11,10 @@
 #endif // _WIN32
 //#include <psyq/file_buffer.hpp>
 
+#ifndef PSYQ_POSIX_FILE_BLOCK_SIZE
+//#define PSYQ_POSIX_FILE_BLOCK_SIZE 4096
+#endif // !PSYQ_POSIX_FILE_BLOCK_SIZE
+
 namespace psyq
 {
 	class posix_file_descriptor;
@@ -28,10 +32,17 @@ class psyq::posix_file_descriptor:
 public:
 	enum open_flag
 	{
-		open_READ     = 1 << 0,
-		open_WRITE    = 1 << 1,
-		open_CREATE   = 1 << 2,
-		open_TRUNCATE = 1 << 3,
+#ifdef _WIN32
+		open_READ     = _O_RDWR,   ///< このflagは、win32と互換性がない。
+		open_WRITE    = _O_WRONLY, ///< このflagは、win32と互換性がない。
+		open_CREATE   = _O_CREAT,
+		open_TRUNCATE = _O_TRUNC,
+#else
+		open_READ     = O_RDWR,   ///< このflagは、posixと互換性がない。
+		open_WRITE    = O_WRONLY, ///< このflagは、posixと互換性がない。
+		open_CREATE   = O_CREAT,
+		open_TRUNCATE = O_TRUNC,
+#endif // _WIN32
 	};
 
 	//-------------------------------------------------------------------------
@@ -84,77 +95,57 @@ public:
 			return a_error;
 		}
 
-		int a_flags(0);
+		int a_flags(~(this_type::open_READ | this_type::open_WRITE) & i_flags);
 #ifdef _WIN32
 		int a_mode(0);
 		int a_share(0);
-		if (0 != (i_flags & this_type::open_READ))
+		if (0 != (this_type::open_READ & i_flags))
 		{
 			a_mode = _S_IREAD;
 			a_share = _SH_DENYWR;
-			a_flags = _O_RDONLY;
 		}
-		if (0 != (i_flags & (this_type::open_CREATE | this_type::open_WRITE)))
+		if (0 != ((this_type::open_CREATE | this_type::open_WRITE) & i_flags))
 		{
 			a_mode = _S_IWRITE;
-			if (0 != (i_flags & this_type::open_READ))
+			if (0 != (this_type::open_READ & i_flags))
 			{
+				a_flags |= _O_RDWR;
 				a_mode |= _S_IREAD;
 				a_share = _SH_DENYRW;
-				a_flags = _O_RDWR;
 			}
 			else
 			{
+				a_flags |= _O_WRONLY;
 				a_share = _SH_DENYRD;
-				a_flags = _O_WRONLY;
 			}
-			if (0 != (i_flags & this_type::open_CREATE))
+			if (0 == (this_type::open_WRITE & i_flags))
 			{
-				// fileがなければ作る。
-				a_flags |= _O_CREAT;
-				if (0 == (i_flags & this_type::open_WRITE))
-				{
-					// fileがあれば失敗。
-					a_flags |= _O_EXCL;
-				}
-			}
-			if (0 != (i_flags & this_type::open_TRUNCATE))
-			{
-				a_flags |= _O_TRUNC;
+				// fileがなければ作るが、fileがあれば失敗。
+				a_flags |= _O_EXCL;
 			}
 		}
 
 		// fileを開く。
-		a_flags |= _O_BINARY;
+		if (0 == ((_O_TEXT | _O_WTEXT | _O_U8TEXT | _O_U16TEXT) & i_flags))
+		{
+			a_flags |= _O_BINARY;
+		}
 		::_sopen_s(&this->descriptor_, i_path, a_flags, a_share, a_mode);
 #else
-		if (0 != (i_flags & this_type::open_READ))
+		if (0 != ((this_type::open_CREATE | this_type::open_WRITE) & i_flags))
 		{
-			a_flags = O_RDONLY;
-		}
-		if (0 != (i_flags & (this_type::open_CREATE | this_type::open_WRITE)))
-		{
-			if (0 != (i_flags & this_type::open_READ))
+			if (0 != (this_type::open_READ & i_flags))
 			{
-				a_flags = O_RDWR;
+				a_flags |= O_RDWR;
 			}
 			else
 			{
-				a_flags = O_WRONLY;
+				a_flags |= O_WRONLY;
 			}
-			if (0 != (i_flags & this_type::open_CREATE))
+			if (0 == (this_type::open_WRITE & i_flags))
 			{
-				// fileがなければ作る。
-				a_flags |= O_CREAT;
-				if (0 == (i_flags & this_type::open_WRITE))
-				{
-					// fileがあれば失敗。
-					a_flags |= O_EXCL;
-				}
-			}
-			if (0 != (i_flags & this_type::open_TRUNCATE))
-			{
-				a_flags |= O_TRUNC;
+				// fileがなければ作るが、あれば失敗。
+				a_flags |= O_EXCL;
 			}
 		}
 
@@ -276,38 +267,6 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief fileの大きさをbyte単位で取得。
-	    @return fileのbyte単位の大きさ。
-	 */
-	psyq::file_buffer::offset get_size() const
-	{
-		int a_error;
-		psyq::file_buffer::offset const a_size(this->get_size(a_error));
-		PSYQ_ASSERT(0 == a_error);
-		return a_size;
-	}
-
-	/** @brief fileの大きさをbyte単位で取得。
-	    @param[out] o_error 結果のerror番号。0なら成功。
-	    @return fileのbyte単位の大きさ。
-	 */
-	psyq::file_buffer::offset get_size(int& o_error) const
-	{
-#ifdef _WIN32
-		__int64 const a_size(::_filelengthi64(this->descriptor_));
-		if (-1 != a_size)
-		{
-			o_error = 0;
-			return a_size;
-		}
-		o_error = errno;
-		return 0;
-#else
-		return this->seek(o_error, 0, this_type::seek_END);
-#endif // _WIN32
-	}
-
-	//-------------------------------------------------------------------------
 	/** @brief fileの大きさを変更。
 	    @param[in] i_size fileのbyte単位の大きさ。
 	    @return 結果のerror番号。0なら成功。
@@ -319,6 +278,59 @@ public:
 #else
 		return 0 == ::ftruncate64(this->descriptor_, i_size)? 0: errno;
 #endif // _WIN32
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief fileの大きさをbyte単位で取得。
+	    @param[out] o_error 結果のerror番号。0なら成功。
+	    @return fileのbyte単位の大きさ。
+	 */
+	psyq::file_buffer::offset get_size(int& o_error) const
+	{
+#ifdef _WIN32
+		__int64 const a_size(::_filelengthi64(this->descriptor_));
+		if (-1 != a_size)
+		{
+			o_error = 0;
+			PSYQ_ASSERT(
+				a_size == static_cast< __int64 >(
+					static_cast< psyq::file_buffer::offset >(a_size)));
+			return static_cast< psyq::file_buffer::offset >(a_size);
+		}
+		o_error = errno;
+		return 0;
+#else
+		return this->seek(o_error, 0, this_type::seek_END);
+#endif // _WIN32
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief fileの論理block-sizeをbyte単位で取得。
+	    @note 2012-05-10
+	        本来はfileの論理block-sizeを返す必要があるが、
+	        fileの存在するdeviceによって論理block-sizeが異なるので、
+	        簡便化のために一律でpage-sizeを使うことにする。
+	 */
+	std::size_t get_block_size(int& o_error) const
+	{
+#ifdef PSYQ_POSIX_FILE_BLOCK_SIZE
+		o_error = 0;
+		return PSYQ_POSIX_FILE_BLOCK_SIZE;
+#elif defined(_WIN32)
+		SYSTEM_INFO a_info;
+		::GetSystemInfo(&a_info);
+		o_error = 0;
+		return a_info.dwPageSize;
+#else
+		long const a_page_size(::sysconf(_SC_PAGESIZE));
+		if (-1 != a_page_size)
+		{
+			o_error = 0;
+			return a_page_size;
+		}
+		o_error = errno;
+		return 0;
+#endif // PSYQ_POSIX_FILE_BLOCK_SIZE
 	}
 
 //.............................................................................
@@ -343,16 +355,21 @@ private:
 	const
 	{
 #ifdef _WIN32
-		__int64 const a_position(
+		typedef __int64 _offset;
+		_offset const a_position(
 			::_lseeki64(this->descriptor_, i_offset, i_origin));
 #else
-		off64_t const a_position(
+		typedef off64_t _offset;
+		_offset const a_position(
 			::lseek64(this->descriptor_, i_offset, i_origin));
 #endif // _WIN32
 		if (-1 != a_position)
 		{
 			o_error = 0;
-			return a_position;
+			PSYQ_ASSERT(
+				a_position == static_cast< _offset >(
+					static_cast< psyq::file_buffer::offset >(a_position)));
+			return static_cast< psyq::file_buffer::offset >(a_position);
 		}
 		o_error = errno;
 		return 0;

@@ -8,9 +8,8 @@
 
 namespace psyq
 {
-	template< typename, typename > class basic_file_handle;
-	typedef basic_file_handle< posix_file_descriptor, PSYQ_MUTEX_DEFAULT >
-		file_handle;
+	template< typename, typename = PSYQ_MUTEX_DEFAULT > class basic_file_handle;
+	typedef basic_file_handle< posix_file_descriptor > file_handle;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

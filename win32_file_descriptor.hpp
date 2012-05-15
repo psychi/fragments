@@ -1,6 +1,8 @@
 #ifndef PSYQ_WIN32_FILE_DESCRIPTOR_HPP_
 #define PSYQ_WIN32_FILE_DESCRIPTOR_HPP_
 
+//#include <psyq/file_buffer.hpp>
+
 #ifndef PSYQ_WIN32_FILE_BLOCK_SIZE
 //#define PSYQ_WIN32_FILE_BLOCK_SIZE 4096
 #endif // !PSYQ_WIN32_FILE_BLOCK_SIZE
@@ -88,26 +90,28 @@ public:
 		if (0 != ((this_type::open_WRITE | this_type::open_CREATE) & i_flags))
 		{
 			a_access |= GENERIC_WRITE;
+			a_share = 0;
 			if (0 == (this_type::open_CREATE & i_flags))
 			{
 				if (0 != (this_type::open_TRUNCATE & i_flags))
 				{
+					// fileがあれば空にする。なければ失敗。
 					a_creation = TRUNCATE_EXISTING;
 				}
 			}
 			else if (0 == (this_type::open_WRITE & i_flags))
 			{
-				// fileがなければ作るが、fileがあれば失敗。
+				// fileがあれば失敗。なければ作る。
 				a_creation = CREATE_NEW;
 			}
 			else if (0 == (this_type::open_TRUNCATE & i_flags))
 			{
-				// fileがなければ作るが、fileがあればそのまま開く。
+				// fileがあれば開く。なければ作る。
 				a_creation = OPEN_ALWAYS;
 			}
 			else
 			{
-				// 必ずfileを作る。
+				// fileがあれば空にする。なければ作る。
 				a_creation = CREATE_ALWAYS;
 			}
 		}
@@ -255,10 +259,8 @@ public:
 		o_error = 0;
 		return PSYQ_WIN32_FILE_BLOCK_SIZE;
 #else
-		SYSTEM_INFO a_info;
-		::GetSystemInfo(&a_info);
 		o_error = 0;
-		return a_info.dwPageSize;
+		return psyq::file_buffer::_get_page_size();
 #endif // PSYQ_WIN32_FILE_BLOCK_SIZE
 	}
 

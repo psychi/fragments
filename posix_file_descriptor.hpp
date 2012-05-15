@@ -317,19 +317,12 @@ public:
 		o_error = 0;
 		return PSYQ_POSIX_FILE_BLOCK_SIZE;
 #elif defined(_WIN32)
-		SYSTEM_INFO a_info;
-		::GetSystemInfo(&a_info);
 		o_error = 0;
-		return a_info.dwPageSize;
+		return psyq::file_buffer::_get_page_size();
 #else
-		long const a_page_size(::sysconf(_SC_PAGESIZE));
-		if (-1 != a_page_size)
-		{
-			o_error = 0;
-			return a_page_size;
-		}
-		o_error = errno;
-		return 0;
+		std::size_t const a_page_size(psyq::file_buffer::_get_page_size());
+		o_error = (0 != a_page_size? 0: errno);
+		return a_page_size;
 #endif // PSYQ_POSIX_FILE_BLOCK_SIZE
 	}
 

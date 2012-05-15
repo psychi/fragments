@@ -1,7 +1,6 @@
 #ifndef PSYQ_FILE_BUFFER_HPP_
 #define PSYQ_FILE_BUFFER_HPP_
 
-#include <boost/noncopyable.hpp>
 #include <boost/cstdint.hpp>
 //#include <psyq/dynamic_storage.hpp>
 
@@ -11,7 +10,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief file操作に使うbuffer。
+/** @brief fileのread/writeに使うbuffer。
  */
 class psyq::file_buffer:
 	private psyq::dynamic_storage
@@ -157,10 +156,27 @@ public:
 		return this->super_type::get_address();
 	}
 
+	/** @brief bufferの先頭位置を取得。
+	 */
 	void* get_mapped_address()
 	{
 		return const_cast< void* >(
 			const_cast< this_type const* >(this)->get_mapped_address());
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief memory-page-sizeを取得。userからは使用禁止。
+	 */
+	static std::size_t _get_page_size()
+	{
+#if defined(_WIN32)
+		SYSTEM_INFO a_info;
+		::GetSystemInfo(&a_info);
+		return a_info.dwPageSize;
+#else
+		long const a_page_size(::sysconf(_SC_PAGESIZE));
+		return -1 != a_page_size? a_page_size: 0;
+#endif // _WIN32
 	}
 
 //.............................................................................

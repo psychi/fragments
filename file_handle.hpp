@@ -4,20 +4,22 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 //#include <psyq/file_buffer.hpp>
-//#include <psyq/posix_file_descriptor.hpp>
 
 namespace psyq
 {
-	template< typename, typename = PSYQ_MUTEX_DEFAULT > class basic_file_handle;
-	typedef basic_file_handle< posix_file_descriptor > file_handle;
+	template< typename, typename > class file_handle;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template< typename t_descriptor, typename t_mutex >
-class psyq::basic_file_handle:
+/** @brief file操作を抽象化したhandle。
+    @tparam t_descriptor 実際のfile操作を行うfile記述子の型。
+    @tparam t_mutex      multi-thread対応に使うmutexの型。
+ */
+template< typename t_descriptor, typename t_mutex = PSYQ_MUTEX_DEFAULT >
+class psyq::file_handle:
 	private boost::noncopyable
 {
-	typedef psyq::basic_file_handle< t_descriptor, t_mutex > this_type;
+	typedef psyq::file_handle< t_descriptor, t_mutex > this_type;
 
 //.............................................................................
 public:
@@ -27,7 +29,7 @@ public:
 	typedef boost::weak_ptr< this_type > weak_ptr;
 
 	//-------------------------------------------------------------------------
-	basic_file_handle()
+	file_handle()
 	{
 		// pass
 	}
@@ -36,7 +38,7 @@ public:
 	    @param[in] i_path  開くfileのpath名。必ずNULL文字で終わる。
 	    @param[in] i_flags 許可する操作。t_descriptor::open_flagの論理和。
 	 */
-	basic_file_handle(char const* const i_path, int const i_flags)
+	file_handle(char const* const i_path, int const i_flags)
 	{
 		int const a_error(this->descriptor_.open(i_path, i_flags));
 		if (0 != a_error)
@@ -50,7 +52,7 @@ public:
 	    @param[in] i_path   開くfileのpath名。必ずNULL文字で終わる。
 	    @param[in] i_flags  許可する操作。t_descriptor::open_flagの論理和。
 	 */
-	basic_file_handle(
+	file_handle(
 		int&              o_error,
 		char const* const i_path,
 		int const         i_flags)
@@ -114,7 +116,7 @@ public:
 	std::size_t get_block_size() const
 	{
 		int a_error;
-		std::size_t const a_size(this->descriptor_.get_block_size(a_error));
+		std::size_t const a_size(this->get_block_size(a_error));
 		PSYQ_ASSERT(0 == a_error);
 		return a_size;
 	}

@@ -138,12 +138,8 @@ public:
 			if (NULL != a_task
 				&& a_task->set_locked_state(psyq::async_task::state_BUSY))
 			{
-				new(a_new_task) this_type::task_ptr(*i);
+				*a_new_task = *i;
 				++a_count;
-			}
-			else
-			{
-				new(a_new_task) this_type::task_ptr();
 			}
 		}
 
@@ -248,12 +244,16 @@ private:
 			t_value* const a_new_tasks(a_array.get_address());
 			if (NULL != a_new_tasks)
 			{
-				// 元のarrayが持つ非同期処理taskを、新しいarrayに移動。
-				t_value* const a_last_tasks(this->get_address());
-				for (std::size_t i = 0; i < i_last_size; ++i)
+				for (std::size_t i = 0; i < i_new_size; ++i)
 				{
 					new(&a_new_tasks[i]) t_value();
-					if (NULL != a_last_tasks)
+				}
+
+				// 元のarrayが持つ非同期処理taskを、新しいarrayに移動。
+				t_value* const a_last_tasks(this->get_address());
+				if (NULL != a_last_tasks)
+				{
+					for (std::size_t i = 0; i < i_last_size; ++i)
 					{
 						a_new_tasks[i].swap(a_last_tasks[i]);
 					}

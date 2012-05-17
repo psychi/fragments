@@ -70,7 +70,8 @@ public:
 	    @param[in] i_flags 許可する操作。this_type::open_flagの論理和。
 	    @return 結果のerror番号。0なら成功。
 	 */
-	int open(char const* const i_path, int const i_flags)
+	template< typename t_char >
+	int open(t_char const* const i_path, ::DWORD const i_flags)
 	{
 		int const a_error(this->close());
 		if (0 != a_error)
@@ -78,10 +79,10 @@ public:
 			return a_error;
 		}
 
-		DWORD a_access(0);
-		DWORD a_share(0);
-		DWORD a_creation(OPEN_EXISTING);
-		DWORD a_attributes((i_flags & 0xfff80000) | FILE_ATTRIBUTE_NORMAL);
+		::DWORD a_access(0);
+		::DWORD a_share(0);
+		::DWORD a_creation(OPEN_EXISTING);
+		::DWORD a_attributes((i_flags & 0xfff80000) | FILE_ATTRIBUTE_NORMAL);
 		if (0 != (this_type::open_READ & i_flags))
 		{
 			a_access |= GENERIC_READ;
@@ -116,7 +117,7 @@ public:
 			}
 		}
 		//a_attributes |= FILE_FLAG_NO_BUFFERING;
-		this->handle_ = ::CreateFileA(
+		this->handle_ = this_type::create_file(
 			i_path, a_access, a_share, NULL, a_creation, a_attributes, NULL);
 		return INVALID_HANDLE_VALUE != this->handle_? 0: ::GetLastError();
 	}
@@ -154,7 +155,7 @@ public:
 		this->seek(a_error, i_offset, this_type::seek_BEGIN);
 		if (0 == a_error)
 		{
-			DWORD a_read_size;
+			::DWORD a_read_size;
 			bool const a_success(
 				0 != ::ReadFile(
 					this->handle_, i_buffer, i_size, &a_read_size, NULL));
@@ -191,7 +192,7 @@ public:
 		this->seek(a_error, i_offset, this_type::seek_BEGIN);
 		if (0 == a_error)
 		{
-			DWORD a_write_size;
+			::DWORD a_write_size;
 			bool const a_success(
 				0 != ::WriteFile(
 					this->handle_, i_buffer, i_size, &a_write_size, NULL));
@@ -301,9 +302,48 @@ private:
 		return 0;
 	}
 
+	//-------------------------------------------------------------------------
+	static ::HANDLE create_file(
+		::LPCSTR const                i_file_path,
+		::DWORD const                 i_desired_access,
+		::DWORD const                 i_share_mode,
+		::LPSECURITY_ATTRIBUTES const i_security_attributes,
+		::DWORD const                 i_creation_disposition,
+		::DWORD const                 i_flags_and_attributes,
+		::HANDLE const                i_template_file)
+	{
+		return ::CreateFileA(
+			i_file_path,
+			i_desired_access,
+			i_share_mode,
+			i_security_attributes,
+			i_creation_disposition,
+			i_flags_and_attributes,
+			i_template_file);
+	}
+
+	static ::HANDLE create_file(
+		::LPCWSTR const               i_file_path,
+		::DWORD const                 i_desired_access,
+		::DWORD const                 i_share_mode,
+		::LPSECURITY_ATTRIBUTES const i_security_attributes,
+		::DWORD const                 i_creation_disposition,
+		::DWORD const                 i_flags_and_attributes,
+		::HANDLE const                i_template_file)
+	{
+		return ::CreateFileW(
+			i_file_path,
+			i_desired_access,
+			i_share_mode,
+			i_security_attributes,
+			i_creation_disposition,
+			i_flags_and_attributes,
+			i_template_file);
+	}
+
 //.............................................................................
 private:
-	HANDLE handle_;
+	::HANDLE handle_;
 };
 
 #endif // !PSYQ_WIN32_FILE_DESCRIPTOR_HPP_

@@ -26,12 +26,11 @@ public:
 	~async_queue()
 	{
 		this->stop(true);
-		this->reserve_queue_.abort();
 	}
 
-	explicit async_queue():
+	async_queue():
 	running_size_(0),
-	stop_(false)
+	stop_request_(false)
 	{
 		this->start();
 	}
@@ -41,7 +40,7 @@ public:
 	{
 		boost::lock_guard< boost::mutex > const a_lock(
 			const_cast< boost::mutex& >(this->mutex_));
-		return this->reserve_queue_.is_empty() && this->running_size_ <= 0;
+		return this->reserve_tasks_.is_empty() && this->running_size_ <= 0;
 	}
 
 	std::size_t get_size() const
@@ -54,7 +53,30 @@ public:
 		boost::lock_guard< boost::mutex > const a_lock(
 			const_cast< boost::mutex& >(this->mutex_));
 		return (std::max)(
-			this->reserve_queue_.get_size(), this->running_size_);
+			this->reserve_tasks_.get_size(), this->running_size_);
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief 非同期処理を停止。
+	    @param[in] i_block 非同期処理が停止するまで待機するかどうか。
+	 */
+	void stop(bool const i_block)
+	{
+		// 終了flagを有効化。
+		this->stop_request_ = true;
+		if (i_block)
+		{
+			// threadが終了するまで待機。
+			this->condition_.notify_all();
+			this->thread_.join();
+		}
+	}
+
+	/** @brief 非同期処理を実行中か判定。
+	 */
+	bool is_running() const
+	{
+		return this->thread_.joinable();
 	}
 
 	//-------------------------------------------------------------------------
@@ -116,16 +138,15 @@ public:
 		t_iterator const  i_end,
 		char const* const i_name = PSYQ_ARENA_NAME_DEFAULT)
 	{
-		// 予約queueを取り出す。
-		this_type::task_queue a_queue;
+		// 予約task配列を取り出す。
 		boost::lock_guard< boost::mutex > const a_lock(this->mutex_);
-		this->reserve_queue_.swap(a_queue);
 		std::size_t const a_last_size(
-			a_queue.is_empty()? this->running_size_: a_queue.get_size());
+			this->reserve_tasks_.is_empty()?
+				this->running_size_: this->reserve_tasks_.get_size());
 
-		// 新しいqueueを構築。
+		// 新しいtask配列を構築。
 		this_type::task_ptr* a_new_task(
-			a_last_size + a_queue.resize< t_arena >(
+			a_last_size + this->reserve_tasks_.resize< t_arena >(
 				a_last_size,
 				a_last_size + std::distance(i_begin, i_end),
 				i_name));
@@ -143,8 +164,7 @@ public:
 			}
 		}
 
-		// 新しいqueueを予約queueに差し替えてから通知。
-		this->reserve_queue_.swap(a_queue);
+		// 予約task配列を更新したので通知。
 		this->condition_.notify_all();
 		return a_count;
 	}
@@ -328,89 +348,79 @@ private:
 			// pass
 		}
 	};
-	typedef this_type::array< this_type::task_ptr > task_queue;
+	typedef this_type::array< this_type::task_ptr > task_array;
 
 	//-------------------------------------------------------------------------
 	void start()
 	{
 		if (!this->thread_.joinable())
 		{
-			this->stop_ = false;
+			this->stop_request_ = false;
 			boost::thread(boost::bind(&this_type::run, this)).swap(
 				this->thread_);
 		}
 	}
 
-	void stop(bool const i_sync = true)
-	{
-		// 終了flagを有効化。
-		this->stop_ = true;
-		if (i_sync)
-		{
-			// threadの終了まで待つ。
-			this->condition_.notify_all();
-			this->thread_.join();
-		}
-	}
-
 	void run()
 	{
-		this_type::task_queue a_queue;
+		this_type::task_array a_tasks;
 		std::size_t a_size(0);
 		boost::unique_lock< boost::mutex > a_lock(this->mutex_);
-		while (!this->stop_)
+		while (!this->stop_request_)
 		{
-			// 実行queueを更新。
-			if (!this->reserve_queue_.is_empty())
+			// 予約task配列があるなら、実行task配列を更新。
+			if (!this->reserve_tasks_.is_empty())
 			{
-				// 予約queueを、新しい実行queueとして取り出す。
-				this_type::task_queue a_last_queue;
-				a_last_queue.swap(a_queue);
-				a_queue.swap(this->reserve_queue_);
+				// 予約task配列を、新しい実行task配列として取り出す。
+				this_type::task_array a_last_tasks;
+				a_last_tasks.swap(a_tasks);
+				a_tasks.swap(this->reserve_tasks_);
 				std::size_t const a_last_size(a_size);
-				a_size = a_queue.get_size();
+				a_size = a_tasks.get_size();
 				PSYQ_ASSERT(this->running_size_ <= a_size);
 				PSYQ_ASSERT(a_last_size <= a_size);
 				this->running_size_	=
 					a_last_size + a_size - this->running_size_;
 				a_lock.unlock();
 
-				// 元の実行queueが持つtaskを、新しい実行queueに移動。
-				this_type::task_ptr* const a_last_tasks(
+				// 元の実行task配列が持つtaskを、新しい実行task配列に移動。
+				this_type::task_ptr* const a_last_front(
 					static_cast< this_type::task_ptr* >(
-						a_last_queue.get_address()));
-				this_type::task_ptr* const a_tasks(
+						a_last_tasks.get_address()));
+				this_type::task_ptr* const a_front(
 					static_cast< this_type::task_ptr* >(
-						a_queue.get_address()));
+						a_tasks.get_address()));
 				for (std::size_t i = 0; i < a_last_size; ++i)
 				{
-					PSYQ_ASSERT(a_tasks[i].expired());
-					a_tasks[i].swap(a_last_tasks[i]);
+					PSYQ_ASSERT(a_front[i].expired());
+					a_front[i].swap(a_last_front[i]);
 				}
 			}
 			else if (0 < a_size)
 			{
+				// 実行task配列の大きさを更新。
 				this->running_size_ = a_size;
 				a_lock.unlock();
 			}
 			else
 			{
-				// 予約queueと実行queueが空になったので待機。
+				// 予約task配列と実行task配列が空になったので待機。
 				this->running_size_ = 0;
 				this->condition_.wait(a_lock);
 				continue;
 			}
 
-			// 実行queueのtaskを呼び出す。
-			a_size = a_queue.run(a_size);
+			// 実行task配列のtaskを呼び出す。
+			a_size = a_tasks.run(a_size);
 			if (a_size <= 0)
 			{
-				// 実行queueが空になったので破棄。
-				this_type::task_queue().swap(a_queue);
+				// 実行task配列が空になったので破棄。
+				this_type::task_array().swap(a_tasks);
 			}
 			a_lock.lock();
 		}
-		a_queue.abort();
+		a_tasks.abort();
+		this->reserve_tasks_.abort();
 	}
 
 //.............................................................................
@@ -418,9 +428,9 @@ private:
 	boost::thread         thread_;
 	boost::condition      condition_;
 	boost::mutex          mutex_;
-	this_type::task_queue reserve_queue_; ///< 予約task-queue。
-	std::size_t           running_size_;  ///< 実行task-queueの要素数。
-	bool                  stop_;
+	this_type::task_array reserve_tasks_; ///< 予約task配列。
+	std::size_t           running_size_;  ///< 実行task配列の要素数。
+	bool                  stop_request_;  ///< 実行停止要求。
 };
 
 #endif // !PSYQ_ASYNC_QUEUE_HPP_

@@ -146,28 +146,13 @@ public:
 		std::size_t const               i_size
 			= (std::numeric_limits< std::size_t >::max)())
 	{
+		BOOST_STATIC_ASSERT(0 == t_allocator::OFFSET);
 		return this->read< typename t_allocator::arena >(
-			o_buffer, i_offset, i_size, i_allocator.get_name());
-	}
-
-	/** @brief fileを読み込む。
-	    @param[out] o_buffer   生成した読み込みbufferの格納先。
-	    @param[in] i_allocator memory確保に使う割当子。
-	    @param[in] i_offset    fileの読み込みoffset位置。
-	    @param[in] i_size      読み込み領域のbyte単位の大きさ。
-	    @param[in] i_alignment 読み込みbufferのmemory配置境界値。
-	    @return 結果のerror番号。0なら成功。
-	 */
-	template< typename t_allocator >
-	int read(
-		psyq::file_buffer&              o_buffer,
-		t_allocator const&              i_allocator,
-		psyq::file_buffer::offset const i_offset,
-		std::size_t const               i_size,
-		std::size_t const               i_alignment)
-	{
-		return this->read< typename t_allocator::arena >(
-			o_buffer, i_offset, i_size, i_alignment, i_allocator.get_name());
+			o_buffer,
+			i_offset,
+			i_size,
+			t_allocator::ALIGNMENT,
+			i_allocator.get_name());
 	}
 
 	/** @brief fileを読み込む。

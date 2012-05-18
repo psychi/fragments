@@ -66,6 +66,7 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief fileを開く。
+	    @tparam    t_char  i_pathの文字の型。char型とwchar_t型にのみ対応。
 	    @param[in] i_path  fileのpath名。必ずNULL文字で終わる。
 	    @param[in] i_flags 許可する操作。this_type::open_flagの論理和。
 	    @return 結果のerror番号。0なら成功。
@@ -81,8 +82,8 @@ public:
 
 		::DWORD a_access(0);
 		::DWORD a_share(0);
-		::DWORD a_creation(OPEN_EXISTING);
-		::DWORD a_attributes((i_flags & 0xfff80000) | FILE_ATTRIBUTE_NORMAL);
+		::DWORD a_creation(OPEN_EXISTING); // fileがあれば開く。なければ失敗。
+		::DWORD a_flags((i_flags & 0xfff80000) | FILE_ATTRIBUTE_NORMAL);
 		if (0 != (this_type::open_READ & i_flags))
 		{
 			a_access |= GENERIC_READ;
@@ -116,9 +117,9 @@ public:
 				a_creation = CREATE_ALWAYS;
 			}
 		}
-		//a_attributes |= FILE_FLAG_NO_BUFFERING;
+		//a_flags |= FILE_FLAG_NO_BUFFERING;
 		this->handle_ = this_type::create_file(
-			i_path, a_access, a_share, NULL, a_creation, a_attributes, NULL);
+			i_path, a_access, a_share, NULL, a_creation, a_flags, NULL);
 		return INVALID_HANDLE_VALUE != this->handle_? 0: ::GetLastError();
 	}
 

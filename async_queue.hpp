@@ -36,13 +36,6 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	bool is_empty() const
-	{
-		boost::lock_guard< boost::mutex > const a_lock(
-			const_cast< boost::mutex& >(this->mutex_));
-		return this->reserve_tasks_.is_empty() && this->running_size_ <= 0;
-	}
-
 	std::size_t get_size() const
 	{
 		return this->running_size_;
@@ -58,11 +51,11 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief 非同期処理を停止。
-	    @param[in] i_block 非同期処理が停止するまで待機するかどうか。
+	    @param[in] i_block 非同期処理が停止するまでblockするかどうか。
 	 */
 	void stop(bool const i_block)
 	{
-		// 終了flagを有効化。
+		// 終了要求flagを有効化。
 		this->stop_request_ = true;
 		if (i_block)
 		{
@@ -138,23 +131,23 @@ public:
 		t_iterator const  i_end,
 		char const* const i_name = PSYQ_ARENA_NAME_DEFAULT)
 	{
-		// 予約task配列を取り出す。
 		boost::lock_guard< boost::mutex > const a_lock(this->mutex_);
+
+		// 予約task配列を拡張。
 		std::size_t const a_last_size(
 			this->reserve_tasks_.is_empty()?
 				this->running_size_: this->reserve_tasks_.get_size());
-
-		// 新しいtask配列を構築。
 		this_type::task_ptr* a_new_task(
 			a_last_size + this->reserve_tasks_.resize< t_arena >(
 				a_last_size,
 				a_last_size + std::distance(i_begin, i_end),
 				i_name));
+
+		// containerが持つ非同期処理taskのうち、
+		// busy状態ではない非同期処理taskだけを予約task配列にcopyする。
 		std::size_t a_count(0);
 		for (t_iterator i = i_begin; i_end != i; ++i, ++a_new_task)
 		{
-			// containerが持つ非同期処理taskのうち、
-			// busy状態ではない非同期処理taskだけを新しいqueueに登録する。
 			psyq::async_task* const a_task(i->get());
 			if (NULL != a_task
 				&& a_task->set_locked_state(psyq::async_task::state_BUSY))
@@ -353,7 +346,7 @@ private:
 	//-------------------------------------------------------------------------
 	void start()
 	{
-		if (!this->thread_.joinable())
+		if (!this->is_running())
 		{
 			this->stop_request_ = false;
 			boost::thread(boost::bind(&this_type::run, this)).swap(
@@ -371,11 +364,13 @@ private:
 			// 予約task配列があるなら、実行task配列を更新。
 			if (!this->reserve_tasks_.is_empty())
 			{
-				// 予約task配列を、新しい実行task配列として取り出す。
+				// 現在の実行task配列を、元の実行task配列として取り出す。
 				this_type::task_array a_last_tasks;
 				a_last_tasks.swap(a_tasks);
-				a_tasks.swap(this->reserve_tasks_);
 				std::size_t const a_last_size(a_size);
+
+				// 予約task配列を、新しい実行task配列として取り出す。
+				a_tasks.swap(this->reserve_tasks_);
 				a_size = a_tasks.get_size();
 				PSYQ_ASSERT(this->running_size_ <= a_size);
 				PSYQ_ASSERT(a_last_size <= a_size);
@@ -419,8 +414,10 @@ private:
 			}
 			a_lock.lock();
 		}
-		a_tasks.abort();
+		this->running_size_ = 0;
 		this->reserve_tasks_.abort();
+		this_type::task_array().swap(this->reserve_tasks_);
+		a_tasks.abort();
 	}
 
 //.............................................................................

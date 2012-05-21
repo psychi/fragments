@@ -6,19 +6,19 @@
 
 namespace psyq
 {
-	template< typename > class _async_file_task;
-	template< typename, typename > class async_file_reader;
-	template< typename > class async_file_writer;
-	class async_file_mapper;
+	template< typename, typename > class _async_file_task;
+	template< typename, typename, typename > class async_file_reader;
+	template< typename, typename > class async_file_writer;
+	template< typename > class async_file_mapper;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template< typename t_file >
+template< typename t_file, typename t_mutex >
 class psyq::_async_file_task:
-	public psyq::async_task
+	public psyq::lockable_async_task< t_mutex >
 {
-	typedef psyq::_async_file_task< t_file > this_type;
-	typedef psyq::async_task super_type;
+	typedef psyq::_async_file_task< t_file, t_mutex > this_type;
+	typedef psyq::lockable_async_task< t_mutex > super_type;
 
 //.............................................................................
 public:
@@ -78,12 +78,15 @@ protected:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template< typename t_file, typename t_arena = psyq::heap_arena >
+template<
+	typename t_file,
+	typename t_arena = PSYQ_ARENA_DEFAULT,
+	typename t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::async_file_reader:
-	public psyq::_async_file_task< t_file >
+	public psyq::_async_file_task< t_file, t_mutex >
 {
-	typedef psyq::async_file_reader< t_file, t_arena > this_type;
-	typedef psyq::_async_file_task< t_file > super_type;
+	typedef psyq::async_file_reader< t_file, t_arena, t_mutex > this_type;
+	typedef psyq::_async_file_task< t_file, t_mutex > super_type;
 
 //.............................................................................
 public:
@@ -119,7 +122,7 @@ public:
 
 //.............................................................................
 private:
-	virtual boost::int32_t run()
+	virtual boost::uint32_t run()
 	{
 		this->error_ = this->get_file()->template read< t_arena >(
 			this->buffer_,
@@ -139,12 +142,12 @@ private:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template< typename t_file >
+template< typename t_file, typename t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::async_file_writer:
-	public psyq::_async_file_task< t_file >
+	public psyq::_async_file_task< t_file, t_mutex >
 {
 	typedef psyq::async_file_writer< t_file > this_type;
-	typedef psyq::_async_file_task< t_file > super_type;
+	typedef psyq::_async_file_task< t_file, t_mutex > super_type;
 
 //.............................................................................
 public:
@@ -160,7 +163,7 @@ public:
 
 //.............................................................................
 private:
-	virtual boost::int32_t run()
+	virtual boost::uint32_t run()
 	{
 		this->error_ = this->get_file()->write(
 			this->write_size_, this->buffer_);
@@ -173,11 +176,12 @@ private:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template< typename t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::async_file_mapper:
-	public psyq::async_task
+	public psyq::lockable_async_task< t_mutex >
 {
-	typedef psyq::async_file_mapper this_type;
-	typedef psyq::async_task super_type;
+	typedef psyq::async_file_mapper< t_mutex > this_type;
+	typedef psyq::lockable_async_task< t_mutex > super_type;
 
 //.............................................................................
 public:
@@ -187,11 +191,11 @@ public:
 		file_weak_ptr;
 
 	async_file_mapper(
-		this_type::file_shared_ptr const&   i_file,
-		boost::interprocess::mode_t const   i_mode,
-		boost::interprocess::offset_t const i_offset = 0,
-		std::size_t const                   i_size = 0,
-		void const* const                   i_address = NULL):
+		typename this_type::file_shared_ptr const& i_file,
+		boost::interprocess::mode_t const          i_mode,
+		boost::interprocess::offset_t const        i_offset = 0,
+		std::size_t const                          i_size = 0,
+		void const* const                          i_address = NULL):
 	file_(i_file),
 	mode_(i_mode),
 	offset_(i_offset),
@@ -201,7 +205,7 @@ public:
 		PSYQ_ASSERT(NULL != i_file.get());
 	}
 
-	this_type::file_shared_ptr const& get_file() const
+	typename this_type::file_shared_ptr const& get_file() const
 	{
 		return this->file_;
 	}
@@ -220,7 +224,7 @@ public:
 
 //.............................................................................
 private:
-	virtual boost::int32_t run()
+	virtual boost::uint32_t run()
 	{
 		boost::interprocess::mapped_region(
 			*this->get_file(),
@@ -233,12 +237,12 @@ private:
 
 //.............................................................................
 private:
-	this_type::file_shared_ptr         file_;
-	boost::interprocess::mapped_region region_;
-	boost::interprocess::mode_t        mode_;
-	boost::interprocess::offset_t      offset_;
-	std::size_t                        size_;
-	void const*                        address_;
+	typename this_type::file_shared_ptr file_;
+	boost::interprocess::mapped_region  region_;
+	boost::interprocess::mode_t         mode_;
+	boost::interprocess::offset_t       offset_;
+	std::size_t                         size_;
+	void const*                         address_;
 };
 
 #endif // !PSYQ_ASYNC_FILE_HPP_

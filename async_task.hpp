@@ -5,13 +5,12 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
-#include <boost/bind/bind.hpp>
-#include <boost/thread/mutex.hpp>
+#include <boost/thread/locks.hpp>
 
 namespace psyq
 {
 	class async_task;
-	class async_queue;
+	template< typename > class lockable_async_task;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -22,7 +21,7 @@ class psyq::async_task:
 {
 	typedef psyq::async_task this_type;
 
-	friend class psyq::async_queue;
+	template< typename > friend class async_queue;
 
 //.............................................................................
 public:
@@ -43,12 +42,24 @@ public:
 	    @param[in] i_functor   呼び出す関数object。
 	 */
 	template< typename t_allocator, typename t_functor >
-	static psyq::async_task::shared_ptr create(
+	static typename this_type::shared_ptr create(
 		t_allocator const& i_allocator,
 		t_functor const&   i_functor)
 	{
-		return boost::allocate_shared< function_wrapper< t_functor > >(
-			i_allocator, i_functor);
+		return this_type::create< PSYQ_MUTEX_DEFAULT >(i_allocator, i_functor);
+	}
+
+	/** @brief 関数objectを呼び出す非同期処理taskを生成。
+	    @param[in] i_allocator memory割当に使うallocator。
+	    @param[in] i_functor   呼び出す関数object。
+	 */
+	template< typename t_mutex, typename t_allocator, typename t_functor >
+	static typename this_type::shared_ptr create(
+		t_allocator const& i_allocator,
+		t_functor const&   i_functor)
+	{
+		typedef this_type::function_wrapper< t_functor, t_mutex > _task;
+		return boost::allocate_shared< _task >(i_allocator, i_functor);
 	}
 
 	//-------------------------------------------------------------------------
@@ -60,7 +71,7 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief 状態値を取得。
 	 */
-	boost::int32_t get_state() const
+	boost::uint32_t get_state() const
 	{
 		return this->state_;
 	}
@@ -69,7 +80,7 @@ public:
 	    @param[in] i_state 設定するstate_BUSY以外の状態値。
 	    @return trueなら成功。falseなら失敗。
 	 */
-	bool set_state(boost::int32_t const i_state)
+	bool set_state(boost::uint32_t const i_state)
 	{
 		// busy状態には設定できない。
 		return this_type::state_BUSY != i_state?
@@ -84,52 +95,80 @@ protected:
 		// pass
 	}
 
-	virtual boost::int32_t run() = 0;
+	virtual boost::uint32_t run() = 0;
+	virtual bool set_locked_state(boost::uint32_t const i_state) = 0;
 
-//.............................................................................
-private:
-	template< typename > class function_wrapper;
-
-	bool set_locked_state(boost::int32_t const i_state)
-	{
-		boost::lock_guard< boost::mutex > const a_lock(this->mutex_);
-		if (this_type::state_BUSY != this->state_)
-		{
-			this->state_ = i_state;
-			return true;
-		}
-		return false;
-	}
-
-	void set_unlocked_state(boost::int32_t const i_state)
+	void set_unlocked_state(boost::uint32_t const i_state)
 	{
 		this->state_ = i_state;
 	}
 
 //.............................................................................
 private:
-	boost::mutex   mutex_;
-	boost::int32_t state_;
+	template< typename, typename > class function_wrapper;
+
+//.............................................................................
+private:
+	boost::uint32_t state_;
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief mutexを持つ非同期処理task基底class。
+ */
+template< typename t_mutex >
+class psyq::lockable_async_task:
+	public psyq::async_task
+{
+	typedef psyq::lockable_async_task< t_mutex > this_type;
+	typedef psyq::async_task super_type;
+
+//.............................................................................
+public:
+	typedef t_mutex mutex;
+
+//.............................................................................
+protected:
+	lockable_async_task():
+	super_type()
+	{
+		// pass
+	}
+
+	virtual bool set_locked_state(boost::uint32_t const i_state)
+	{
+		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
+		if (super_type::state_BUSY != this->get_state())
+		{
+			this->set_unlocked_state(i_state);
+			return true;
+		}
+		return false;
+	}
+
+//.............................................................................
+private:
+	t_mutex mutex_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 関数objectを呼び出す非同期処理task。
  */
-template< typename t_functor >
+template< typename t_functor, typename t_mutex >
 class psyq::async_task::function_wrapper:
-	public psyq::async_task
+	public psyq::lockable_async_task< t_mutex >
 {
-
 //.............................................................................
 public:
 	explicit function_wrapper(t_functor const& i_functor):
-	psyq::async_task(),
+	psyq::lockable_async_task< t_mutex >(),
 	functor_(i_functor)
 	{
 		// pass
 	}
 
-	virtual boost::int32_t run()
+//.............................................................................
+protected:
+	virtual boost::uint32_t run()
 	{
 		return this->functor_();
 	}

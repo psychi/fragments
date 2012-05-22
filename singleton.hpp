@@ -5,36 +5,17 @@
 #include <boost/type_traits/aligned_storage.hpp>
 #include <boost/type_traits/alignment_of.hpp>
 #include <boost/utility/in_place_factory.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/thread/locks.hpp>
-#include <boost/thread/mutex.hpp>
 #include <boost/thread/once.hpp>
-
-#ifdef PSYQ_DISABLE_THREADS
-	#undef PSYQ_MUTEX_DEFAULT
-	#define PSYQ_MUTEX_DEFAULT psyq::_dummy_mutex
-#elif !defined(PSYQ_MUTEX_DEFAULT)
-	#define PSYQ_MUTEX_DEFAULT boost::mutex
-#endif // PSYQ_DISABLE_THREADS
 
 namespace psyq
 {
 	template< typename, typename, typename > class singleton;
 
-	class _dummy_mutex;
 	template< typename > class _singleton_ordered_destructor;
 	template< typename, typename > class _singleton_ordered_storage;
 }
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class psyq::_dummy_mutex:
-	private boost::noncopyable
-{
-public:
-	void lock() const {}
-	void unlock() const {}
-	bool try_lock() const {return true;}
-};
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief îjä¸ä÷êîÇÃíPï˚å¸òAåãlistÅB

@@ -1,20 +1,25 @@
 #ifndef PSYQ_ASYNC_QUEUE_HPP_
 #define PSYQ_ASYNC_QUEUE_HPP_
 
-#include <boost/thread/condition.hpp>
-#include <boost/thread/thread.hpp>
+#include <boost/bind/bind.hpp>
 //#include <psyq/async_task.hpp>
 //#include <psyq/memory/dynamic_storage.hpp>
 
 namespace psyq
 {
-	template< typename > class async_queue;
+	template< typename, typename, typename > class async_queue;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 非同期処理task-queue。
+    @tparam t_mutex     使用するmutexの型。
+    @tparam t_condition 使用するの条件変数の型。
+    @tparam t_thread    使用するthread-handleの型。
  */
-template< typename t_mutex = PSYQ_MUTEX_DEFAULT >
+template<
+	typename t_mutex = PSYQ_MUTEX_DEFAULT,
+	typename t_condition = PSYQ_CONDITION_DEFAULT,
+	typename t_thread = PSYQ_THREAD_DEFAULT >
 class psyq::async_queue:
 	private boost::noncopyable
 {
@@ -23,6 +28,8 @@ class psyq::async_queue:
 //.............................................................................
 public:
 	typedef t_mutex mutex;
+	typedef t_condition condition;
+	typedef t_thread thread;
 
 	//-------------------------------------------------------------------------
 	~async_queue()
@@ -30,19 +37,28 @@ public:
 		this->stop(true);
 	}
 
-	async_queue():
+	explicit async_queue(bool const i_start = true):
 	running_size_(0),
 	stop_request_(false)
 	{
-		this->start();
+		if (i_start)
+		{
+			// 非同期処理threadを起動。
+			t_thread a_thread(boost::bind(&this_type::run, this));
+			this->thread_.swap(a_thread);
+		}
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief 実行中の非同期処理taskの数を取得。
+	 */
 	std::size_t get_size() const
 	{
 		return this->running_size_;
 	}
 
+	/** @brief 非同期処理task配列の容量を取得。
+	 */
 	std::size_t get_capacity() const
 	{
 		boost::lock_guard< t_mutex > const a_lock(
@@ -146,7 +162,7 @@ public:
 				i_name));
 
 		// containerが持つ非同期処理taskのうち、
-		// busy状態ではない非同期処理taskだけを予約task配列にcopyする。
+		// busy状態ではない非同期処理taskだけを、予約task配列にcopyする。
 		std::size_t a_count(0);
 		for (t_iterator i = i_begin; i_end != i; ++i, ++a_new_task)
 		{
@@ -188,8 +204,6 @@ public:
 
 //.............................................................................
 private:
-	typedef psyq::async_task::weak_ptr task_ptr;
-
 	//-------------------------------------------------------------------------
 	template< typename t_value >
 	class array:
@@ -297,7 +311,7 @@ private:
 				if (NULL != a_task &&
 					psyq::async_task::state_BUSY == a_task->get_state())
 				{
-					boost::int32_t const a_state(a_task->run());
+					boost::uint32_t const a_state(a_task->run());
 					if (psyq::async_task::state_BUSY == a_state)
 					{
 						a_tasks[a_size].swap(a_tasks[i]);
@@ -343,21 +357,28 @@ private:
 			// pass
 		}
 	};
-
+	typedef psyq::async_task::weak_ptr task_ptr;
 	typedef typename this_type::template array< typename this_type::task_ptr >
 		task_array;
 
 	//-------------------------------------------------------------------------
-	void start()
+	/** @brief 非同期処理を開始。
+	 */
+	bool start()
 	{
+		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
 		if (!this->is_running())
 		{
 			this->stop_request_ = false;
-			boost::thread(boost::bind(&this_type::run, this)).swap(
-				this->thread_);
+			t_thread a_thread(boost::bind(&this_type::run, this));
+			this->thread_.swap(a_thread);
+			return true;
 		}
+		return false;
 	}
 
+	/** @brief 非同期処理のmain-loop。
+	 */
 	void run()
 	{
 		typename this_type::task_array a_tasks;
@@ -427,8 +448,8 @@ private:
 //.............................................................................
 private:
 	t_mutex                        mutex_;
-	boost::thread                  thread_;
-	boost::condition               condition_;
+	t_thread                       thread_;
+	t_condition                    condition_;
 	typename this_type::task_array reserve_tasks_; ///< 予約task配列。
 	std::size_t                    running_size_;  ///< 実行task配列の要素数。
 	bool                           stop_request_;  ///< 実行停止要求。

@@ -21,7 +21,7 @@ class psyq::async_task:
 {
 	typedef psyq::async_task this_type;
 
-	template< typename > friend class async_queue;
+	template< typename, typename, typename > friend class async_queue;
 
 //.............................................................................
 public:

@@ -78,6 +78,7 @@ public:
 		if (i_block)
 		{
 			// threadが終了するまで待機。
+			boost::lock_guard< t_mutex > const a_lock(this->mutex_);
 			this->condition_.notify_all();
 			this->thread_.join();
 		}
@@ -155,29 +156,27 @@ public:
 		std::size_t const a_last_size(
 			this->reserve_tasks_.is_empty()?
 				this->running_size_: this->reserve_tasks_.get_size());
-		typename this_type::task_ptr* a_new_task(
-			a_last_size + this->reserve_tasks_.template resize< t_arena >(
-				a_last_size,
-				a_last_size + std::distance(i_begin, i_end),
-				i_name));
+		this->reserve_tasks_.template resize< t_arena >(
+			a_last_size, a_last_size + std::distance(i_begin, i_end), i_name);
 
 		// containerが持つ非同期処理taskのうち、
 		// busy状態ではない非同期処理taskだけを、予約task配列にcopyする。
-		std::size_t a_count(0);
-		for (t_iterator i = i_begin; i_end != i; ++i, ++a_new_task)
+		typename this_type::task_ptr* a_new_task(
+			this->reserve_tasks_.get_address() + a_last_size);
+		for (t_iterator i = i_begin; i_end != i; ++i)
 		{
 			psyq::async_task* const a_task(i->get());
 			if (NULL != a_task &&
 				a_task->set_locked_state(psyq::async_task::state_BUSY))
 			{
 				*a_new_task = *i;
-				++a_count;
+				++a_new_task;
 			}
 		}
 
 		// 予約task配列を更新したので通知。
 		this->condition_.notify_all();
-		return a_count;
+		return a_new_task - this->reserve_tasks_.get_address() - a_last_size;
 	}
 
 	//-------------------------------------------------------------------------
@@ -253,10 +252,9 @@ private:
 		    @param[in] i_last_size   元のarrayの要素数。
 		    @param[in] i_new_size    新しいarrayの要素数。
 			@param[in] i_memory_name 確保するmemoryの識別名。debugでのみ使う。
-		    @return 新しいarrayの先頭位置。
 		 */
 		template< typename t_arena >
-		t_value* resize(
+		void resize(
 			std::size_t const i_last_size,
 			std::size_t const i_new_size,
 			char const* const i_memory_name)
@@ -293,7 +291,6 @@ private:
 				PSYQ_ASSERT(i_new_size <= 0);
 			}
 			this->swap(a_array);
-			return a_new_tasks;
 		}
 
 		/** @brief arrayが持つ非同期処理taskを実行する。

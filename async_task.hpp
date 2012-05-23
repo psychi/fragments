@@ -6,6 +6,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/thread/locks.hpp>
+//#include <psyq/thread.hpp>
 
 namespace psyq
 {

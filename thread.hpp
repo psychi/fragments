@@ -6,23 +6,21 @@
 #include <boost/thread/thread.hpp>
 
 #ifdef PSYQ_DISABLE_THREADS
-	#undef PSYQ_MUTEX_DEFAULT
-	#define PSYQ_MUTEX_DEFAULT psyq::_dummy_mutex
-	#undef PSYQ_CONDITION_DEFAULT
-	#define PSYQ_CONDITION_DEFAULT boost::condition_variable_any
-	#undef PSYQ_THREAD_DEFAULT
-	#define PSYQ_THREAD_DEFAULT boost::thread
+#	undef PSYQ_MUTEX_DEFAULT
+#	define PSYQ_MUTEX_DEFAULT psyq::_dummy_mutex
 #else
-	#if !defined(PSYQ_MUTEX_DEFAULT)
-		#define PSYQ_MUTEX_DEFAULT boost::mutex
-	#endif // !PSYQ_MUTEX_DEFAULT
-	#ifndef PSYQ_CONDITION_DEFAULT
-		#define PSYQ_CONDITION_DEFAULT boost::condition_variable_any
-	#endif // !PSYQ_CONDITION_DEFAULT
-	#ifndef PSYQ_THREAD_DEFAULT
-		#define PSYQ_THREAD_DEFAULT boost::thread
-	#endif // !PSYQ_THREAD_DEFAULT
+#	ifndef PSYQ_MUTEX_DEFAULT
+#		define PSYQ_MUTEX_DEFAULT boost::mutex
+#	endif // !PSYQ_MUTEX_DEFAULT
 #endif // PSYQ_DISABLE_THREADS
+
+#ifndef PSYQ_CONDITION_DEFAULT
+#	define PSYQ_CONDITION_DEFAULT boost::condition_variable_any
+#endif // !PSYQ_CONDITION_DEFAULT
+
+#ifndef PSYQ_THREAD_DEFAULT
+#	define PSYQ_THREAD_DEFAULT boost::thread
+#endif // !PSYQ_THREAD_DEFAULT
 
 namespace psyq
 {

@@ -23,8 +23,8 @@ class psyq::_async_file_task:
 //.............................................................................
 public:
 	typedef t_file file;
-	typedef boost::shared_ptr< this_type > shared_ptr;
-	typedef boost::weak_ptr< this_type > weak_ptr;
+	typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
+	typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
 
 	//-------------------------------------------------------------------------
 	/** @brief fileÇéÊìæÅB
@@ -185,9 +185,9 @@ class psyq::async_file_mapper:
 
 //.............................................................................
 public:
-	typedef boost::shared_ptr< boost::interprocess::file_mapping >
+	typedef PSYQ_SHARED_PTR< boost::interprocess::file_mapping >
 		file_shared_ptr;
-	typedef boost::weak_ptr< boost::interprocess::file_mapping >
+	typedef PSYQ_WEAK_PTR< boost::interprocess::file_mapping >
 		file_weak_ptr;
 
 	async_file_mapper(

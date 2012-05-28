@@ -2,12 +2,27 @@
 #define PSYQ_ARENA_HPP_
 
 #include <boost/noncopyable.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/weak_ptr.hpp>
 
 #ifndef PSYQ_ARENA_NAME_DEFAULT
-#define PSYQ_ARENA_NAME_DEFAULT "PSYQ"
+#	define PSYQ_ARENA_NAME_DEFAULT "PSYQ"
 #endif // !PSYQ_ALLOCATOR_NAME_DEFAULT
+
+#ifdef PSYQ_USER_DEFINED_MEMORY
+#elif defined(PSYQ_CPP11)
+#	include <memory>
+#	define PSYQ_SHARED_PTR std::shared_ptr
+#	define PSYQ_WEAK_PTR std::weak_ptr
+#	define PSYQ_ALLOCATE_SHARED std::allocate_shared
+#	define PSYQ_MAKE_SHARED std::make_shared
+#else
+#	include <boost/smart_ptr/shared_ptr.hpp>
+#	include <boost/smart_ptr/weak_ptr.hpp>
+#	include <boost/smart_ptr/make_shared.hpp>
+#	define PSYQ_SHARED_PTR boost::shared_ptr
+#	define PSYQ_WEAK_PTR boost::weak_ptr
+#	define PSYQ_ALLOCATE_SHARED boost::allocate_shared
+#	define PSYQ_MAKE_SHARED boost::make_shared
+#endif // PSYQ_USER_DEFINED_MEMORY
 
 namespace psyq
 {
@@ -24,8 +39,8 @@ class psyq::arena:
 
 //.............................................................................
 public:
-	typedef boost::shared_ptr< this_type > shared_ptr;
-	typedef boost::weak_ptr< this_type > weak_ptr;
+	typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
+	typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
 
 	//-------------------------------------------------------------------------
 	virtual ~arena()

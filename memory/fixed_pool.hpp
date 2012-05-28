@@ -83,7 +83,7 @@ public:
 	 */
 	void* allocate(char const* const i_name)
 	{
-		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
+		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
 
 		// memoryŠm•Ûchunk‚ðŒˆ’èB
 		if (NULL != this->allocator_chunk_)
@@ -133,7 +133,7 @@ public:
 		{
 			return true;
 		}
-		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
+		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
 
 		// memory‰ð•úchunk‚ðŒˆ’èB
 		if (!this->find_deallocator(i_memory))

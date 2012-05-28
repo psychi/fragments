@@ -61,7 +61,7 @@ public:
 	 */
 	std::size_t get_capacity() const
 	{
-		boost::lock_guard< t_mutex > const a_lock(
+		PSYQ_LOCK_GUARD< t_mutex > const a_lock(
 			const_cast< this_type* >(this)->mutex_);
 		return (std::max)(
 			this->reserve_tasks_.get_size(), this->running_size_);
@@ -78,7 +78,7 @@ public:
 		if (i_block)
 		{
 			// threadが終了するまで待機。
-			boost::lock_guard< t_mutex > const a_lock(this->mutex_);
+			PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
 			this->condition_.notify_all();
 			this->thread_.join();
 		}
@@ -150,7 +150,7 @@ public:
 		t_iterator const  i_end,
 		char const* const i_name = PSYQ_ARENA_NAME_DEFAULT)
 	{
-		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
+		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
 
 		// 予約task配列を拡張。
 		std::size_t const a_last_size(
@@ -363,7 +363,7 @@ private:
 	 */
 	bool start()
 	{
-		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
+		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
 		if (!this->is_running())
 		{
 			this->stop_request_ = false;
@@ -380,7 +380,7 @@ private:
 	{
 		typename this_type::task_array a_tasks;
 		std::size_t a_size(0);
-		boost::unique_lock< t_mutex > a_lock(this->mutex_);
+		PSYQ_UNIQUE_LOCK< t_mutex > a_lock(this->mutex_);
 		while (!this->stop_request_)
 		{
 			// 予約task配列があるなら、実行task配列を更新。

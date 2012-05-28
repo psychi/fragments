@@ -356,7 +356,7 @@ private:
 		boost::type< t_mutex_policy > const&)
 	{
 		// sigleton-instance構築関数を一度だけ呼び出す。
-		boost::call_once(
+		PSYQ_CALL_ONCE(
 			this_type::construct_flag(),
 			boost::bind(
 				&construct_instance< t_constructor >,
@@ -421,7 +421,7 @@ private:
 		boost::type< t_mutex_policy > const&)
 	{
 		// lockしてから優先順位を変更する。
-		boost::lock_guard< t_mutex > const a_lock(
+		PSYQ_LOCK_GUARD< t_mutex > const a_lock(
 			this_type::storage::class_mutex());
 		this_type::set_destruct_priority(
 			i_priority, boost::type< psyq::_dummy_mutex >());

@@ -1,8 +1,6 @@
 #ifndef PSYQ_FILE_HANDLE_HPP_
 #define PSYQ_FILE_HANDLE_HPP_
 
-#include <boost/shared_ptr.hpp>
-#include <boost/weak_ptr.hpp>
 //#include <psyq/file_buffer.hpp>
 
 namespace psyq
@@ -25,8 +23,8 @@ class psyq::file_handle:
 public:
 	typedef t_descriptor descriptor;
 	typedef t_mutex mutex;
-	typedef boost::shared_ptr< this_type > shared_ptr;
-	typedef boost::weak_ptr< this_type > weak_ptr;
+	typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
+	typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
 
 	//-------------------------------------------------------------------------
 	/** @brief ãÛÇÃfile-handleÇç\ízÅB
@@ -69,11 +67,11 @@ public:
 	{
 		if (&io_target != this)
 		{
-			boost::unique_lock< t_mutex > a_this_lock(
-				this->mutex_, boost::defer_lock);
-			boost::unique_lock< t_mutex > a_target_lock(
-				io_target.mutex_, boost::defer_lock);
-			boost::lock(a_this_lock, a_target_lock);
+			PSYQ_UNIQUE_LOCK< t_mutex > a_this_lock(
+				this->mutex_, PSYQ_DEFER_LOCK);
+			PSYQ_UNIQUE_LOCK< t_mutex > a_target_lock(
+				io_target.mutex_, PSYQ_DEFER_LOCK);
+			PSYQ_LOCK(a_this_lock, a_target_lock);
 			this->descriptor_.swap(io_target.descriptor_);
 		}
 	}
@@ -85,7 +83,7 @@ public:
 	 */
 	bool is_open()
 	{
-		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
+		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
 		return this->descriptor_.is_open();
 	}
 
@@ -107,7 +105,7 @@ public:
 	 */
 	psyq::file_buffer::offset get_size(int& o_error) const
 	{
-		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
+		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
 		return this->descriptor_.get_size(o_error);
 	}
 
@@ -126,7 +124,7 @@ public:
 	 */
 	std::size_t get_block_size(int& o_error) const
 	{
-		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
+		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
 		return this->descriptor_.get_block_size(o_error);
 	}
 
@@ -194,7 +192,7 @@ public:
 		std::size_t const               i_alignment,
 		char const* const               i_name = PSYQ_ARENA_NAME_DEFAULT)
 	{
-		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
+		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
 
 		// fileÇÃëÂÇ´Ç≥ÇéÊìæÅB
 		int a_error;
@@ -296,7 +294,7 @@ public:
 		PSYQ_ASSERT(0 == i_buffer.get_mapped_offset() % a_block_size);
 		PSYQ_ASSERT(0 == i_buffer.get_mapped_size() % a_block_size);
 
-		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
+		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
 		psyq::file_buffer::offset const a_file_size(
 			this->descriptor_.get_size(a_error));
 		if (0 == a_error)

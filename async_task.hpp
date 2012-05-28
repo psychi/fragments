@@ -3,9 +3,6 @@
 
 #include <boost/cstdint.hpp>
 #include <boost/noncopyable.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/weak_ptr.hpp>
-#include <boost/thread/locks.hpp>
 //#include <psyq/thread.hpp>
 
 namespace psyq
@@ -26,8 +23,8 @@ class psyq::async_task:
 
 //.............................................................................
 public:
-	typedef boost::shared_ptr< this_type > shared_ptr;
-	typedef boost::weak_ptr< this_type > weak_ptr;
+	typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
+	typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
 
 	enum state
 	{
@@ -60,7 +57,7 @@ public:
 		t_functor const&   i_functor)
 	{
 		typedef this_type::function_wrapper< t_functor, t_mutex > _task;
-		return boost::allocate_shared< _task >(i_allocator, i_functor);
+		return PSYQ_ALLOCATE_SHARED< _task >(i_allocator, i_functor);
 	}
 
 	//-------------------------------------------------------------------------
@@ -137,7 +134,7 @@ protected:
 
 	virtual bool set_locked_state(boost::uint32_t const i_state)
 	{
-		boost::lock_guard< t_mutex > const a_lock(this->mutex_);
+		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
 		if (super_type::state_BUSY != this->get_state())
 		{
 			this->set_unlocked_state(i_state);

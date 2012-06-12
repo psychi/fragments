@@ -4,7 +4,7 @@
 //#include <psyq/memory/arena.hpp>
 
 #ifndef PSYQ_ARENA_DEFAULT
-#define PSYQ_ARENA_DEFAULT psyq::heap_arena
+#	define PSYQ_ARENA_DEFAULT psyq::heap_arena
 #endif // !PSYQ_ARENA_DEFAULT
 
 namespace psyq

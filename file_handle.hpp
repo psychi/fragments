@@ -154,30 +154,7 @@ public:
 	}
 
 	/** @brief fileを読み込む。
-		@tparam t_arena      memory確保に使うmemory-arenaの型。
-	    @param[out] o_buffer 生成した読み込みbufferの格納先。
-	    @param[in] i_offset  fileの読み込みoffset位置。
-	    @param[in] i_size    読み込み領域のbyte単位の大きさ。
-	    @return 結果のerror番号。0なら成功。
-	 */
-	template< typename t_arena >
-	int read(
-		psyq::file_buffer&              o_buffer,
-		psyq::file_buffer::offset const i_offset = 0,
-		std::size_t const               i_size
-			= (std::numeric_limits< std::size_t >::max)(),
-		char const* const               i_name = PSYQ_ARENA_NAME_DEFAULT)
-	{
-		return this->read< t_arena >(
-			o_buffer,
-			i_offset,
-			i_size,
-			this->descriptor_.get_block_size(),
-			i_name);
-	}
-
-	/** @brief fileを読み込む。
-		@tparam t_arena        memory確保に使うmemory-arenaの型。
+	    @tparam t_arena        memory確保に使うmemory-arenaの型。
 	    @param[out] o_buffer   生成した読み込みbufferの格納先。
 	    @param[in] i_offset    fileの読み込みoffset位置。
 	    @param[in] i_size      読み込み領域のbyte単位の大きさ。
@@ -187,9 +164,10 @@ public:
 	template< typename t_arena >
 	int read(
 		psyq::file_buffer&              o_buffer,
-		psyq::file_buffer::offset const i_offset,
-		std::size_t const               i_size,
-		std::size_t const               i_alignment,
+		psyq::file_buffer::offset const i_offset = 0,
+		std::size_t const               i_size
+			= (std::numeric_limits< std::size_t >::max)(),
+		std::size_t const               i_alignment = 0,
 		char const* const               i_name = PSYQ_ARENA_NAME_DEFAULT)
 	{
 		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
@@ -289,10 +267,10 @@ public:
 		std::size_t const a_block_size(
 			this->descriptor_.get_block_size(a_error));
 		PSYQ_ASSERT(0 < a_block_size);
-#endif // NDEBUG
 		PSYQ_ASSERT(0 == a_error);
 		PSYQ_ASSERT(0 == i_buffer.get_mapped_offset() % a_block_size);
 		PSYQ_ASSERT(0 == i_buffer.get_mapped_size() % a_block_size);
+#endif // NDEBUG
 
 		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
 		psyq::file_buffer::offset const a_file_size(

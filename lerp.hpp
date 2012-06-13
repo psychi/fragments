@@ -25,10 +25,10 @@ public:
 	/** @param i_current ‰Šú’lB
 	 */
 	explicit lerp(t_value const& i_current = t_value(0)):
-	end_value_(i_current),
 	value_diff_(0),
-	rest_time_(0),
-	time_diff_(1)
+	end_value_(i_current),
+	time_diff_(1),
+	rest_time_(0)
 	{
 		// pass
 	}
@@ -69,8 +69,8 @@ public:
 	 */
 	t_value current() const
 	{
-		return this->end_value_ -
-			(this->rest_time_ * this->value_diff_) / this->time_diff_;
+		return this->end_value_ - static_cast< t_value >(
+			(this->value_diff_ * this->rest_time_) / this->time_diff_);
 	}
 
 	//-------------------------------------------------------------------------

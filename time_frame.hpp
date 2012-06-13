@@ -31,20 +31,12 @@ public:
 	super_(i_super),
 	scale_(i_scale),
 	current_(i_scale.current()),
-	count_(this_type::frame_count())
+	count_(this_type::counter())
 	{
 		this_type* const a_super(i_super.get());
 		if (NULL != a_super)
 		{
-			if (a_super->find_super(*this))
-			{
-				PSYQ_ASSERT(false);
-				this->super_.reset();
-			}
-			else
-			{
-				this->current_ *= a_super->get_scale();
-			}
+			this->current_ *= a_super->get_scale();
 		}
 	}
 
@@ -52,62 +44,61 @@ public:
 	void reset(typename this_type::lerp const& i_scale)
 	{
 		this->scale_ = i_scale;
-		this->current_ = this->scale_.current();
+		this->count_ = this_type::counter();
+		this->current_ = i_scale.current();
 		this_type* const a_super(this->super_.get());
 		if (NULL != a_super)
 		{
 			this->current_ *= a_super->get_scale();
-			this->count_ = a_super->count_;
 		}
 	}
 
-	void reset(typename this_type::shared_ptr const& i_super)
+	bool reset(typename this_type::shared_ptr const& i_super)
 	{
-		this_type* const a_super(i_super.get());
-		if (NULL != a_super)
+		this_type const* const a_super(i_super.get());
+		if (NULL != a_super && a_super->find_super(*this))
 		{
-			this->current_ = this->get_scale() * a_super->get_scale();
-			this->count_ = a_super->count_;
-			this->super_ = i_super;
+			return false;
 		}
-		else
-		{
-			this->super_.reset();
-		}
+		this->super_ = i_super;
+		return true;
 	}
 
-	void reset(
+	bool reset(
 		typename this_type::lerp const&       i_scale,
 		typename this_type::shared_ptr const& i_super)
 	{
-		this->~time_frame();
-		new(this) this_type(i_scale, i_super);
+		this_type* const a_super(i_super.get());
+		if (NULL == a_super)
+		{
+			this->current_ = i_scale.current();
+		}
+		else if (a_super->find_super(*this))
+		{
+			return false;
+		}
+		else
+		{
+			this->current_ = i_scale.current() * a_super->get_scale();
+		}
+		this->super_ = i_super;
+		this->scale_ = i_scale;
+		this->count_ = this_type::counter();
+		return true;
 	}
 
 	//-------------------------------------------------------------------------
 	t_scale get_scale()
 	{
-		// 上位instanceのscaleとcountを取得。
-		this_type* const a_super(this->super_.get());
-		float a_scale;
-		t_count a_count;
-		if (NULL != a_super)
-		{
-			a_scale = a_super->get_scale();
-			a_count = a_super->count_;
-		}
-		else
-		{
-			a_scale = 1;
-			a_count = this_type::frame_count();
-		}
-
-		// count値が異なっていたら更新する。
+		t_count const a_count(this_type::counter());
 		if (a_count != this->count_)
 		{
+			// count値が異なっていたら更新する。
 			this->scale_.update(a_count - this->count_);
+			this_type* const a_super(this->super_.get());
+			this->current_ = this->scale_.current() * (
+				NULL != a_super? a_super->get_scale(): 1);
 			this->count_ = a_count;
-			this->current_ = this->scale_.current() * a_scale;
 		}
 		return this->current_;
 	}
@@ -115,12 +106,12 @@ public:
 	//-------------------------------------------------------------------------
 	static t_count get_count()
 	{
-		return this_type::frame_count();
+		return this_type::counter();
 	}
 
 	static t_count update_count()
 	{
-		return ++this_type::frame_count();
+		return ++this_type::counter();
 	}
 
 //.............................................................................
@@ -135,7 +126,7 @@ private:
 		return true;
 	}
 
-	static t_count& frame_count()
+	static t_count& counter()
 	{
 		static t_count s_count(0);
 		return s_count;

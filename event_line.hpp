@@ -17,7 +17,8 @@ public:
 	typedef t_hash hash;
 	typedef t_real real;
 	typedef typename t_hash::value_type integer;
-	typedef psyq::layered_scale< t_real > time_scale;
+	typedef psyq::layered_scale< t_real, typename this_type::integer >
+		time_scale;
 
 	//-------------------------------------------------------------------------
 	struct item
@@ -98,8 +99,8 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief 再生開始時間を任意の位置に設定。
-		@param[in] i_time   基準からの相対時間。
-		@param[in] i_origin 基準となる時間。
+	    @param[in] i_time   基準からの相対時間。
+	    @param[in] i_origin 基準となる時間。C標準libralyのSEEK定数を使う。
 	 */
 	void seek(t_real const i_time, int const i_origin)
 	{
@@ -128,7 +129,8 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief eventを更新。
 	 */
-	void dispatch()
+	template< typename t_dispatcher >
+	void dispatch(t_dispatcher const& i_dispatcher)
 	{
 		if (NULL == this->last_event_)
 		{
@@ -164,7 +166,7 @@ public:
 			a_end != i;
 			++i, a_rest_time = i->time)
 		{
-			////io_functions.apply(*i, a_cache_time);
+			i_dispatcher(*i, a_cache_time);
 			a_cache_time -= a_rest_time;
 			PSYQ_ASSERT(0 <= a_cache_time);
 		}

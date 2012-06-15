@@ -11,6 +11,8 @@ namespace psyq
 
 	typedef psyq::_fnv_hash< psyq::_fnv1_generator, psyq::_fnv_traits32 >
 		fnv1_hash32;
+	typedef psyq::_fnv_hash< psyq::_fnv1_generator, psyq::_fnv_traits64 >
+		fnv1_hash64;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

@@ -94,8 +94,57 @@ public:
 		return NULL;
 	}
 
+	//-------------------------------------------------------------------------
+	/** @brief 文字列の'('と')'に囲まれた単語を置換し、hash値を算出。
+	    @param[in] i_map   置換する単語をkeyとする辞書。
+	    @param[in] i_begin 置換する文字列の先頭位置。
+	    @param[in] i_end   置換する文字列の末尾位置。
+	 */
+	template< typename t_map >
+	static typename t_hash::value_type make_hash(
+		t_map const&                                     i_map,
+		typename t_map::mapped_type::const_pointer const i_begin,
+		typename t_map::mapped_type::const_pointer const i_end)
+	{
+		typedef typename t_map::mapped_type::value_type char_type;
+		char_type const* a_last_end(i_begin);
+		std::basic_string< char_type > a_string;
+		for (;;)
+		{
+			std::pair< char_type const*, char_type const* > const a_range(
+				this_type::find_word(a_last_end, i_end));
+			if (a_range.first == a_range.second)
+			{
+				a_string.append(a_last_end, i_end);
+				return t_hash::generate(a_string.begin(), a_string.end());
+			}
+
+			// 辞書から置換語を検索。
+			typename t_map::const_iterator a_position(
+				i_map.find(
+					typename t_map::mapped_type(
+						a_range.first + 1,
+						a_range.second - a_range.first - 2)));
+			if (i_map.end() != a_position)
+			{
+				// 辞書にある単語で置換する。
+				a_string.append(a_last_end, a_range.first);
+				a_string.append(
+					a_position->second.data(),
+					a_position->second.length());
+			}
+			else
+			{
+				// 置換語ではなかったので、元の文字列のままにしておく。
+				a_string.append(a_last_end, a_range.second - a_last_end);
+			}
+			a_last_end = a_range.second;
+		}
+	}
+
 //.............................................................................
 private:
+	//-------------------------------------------------------------------------
 	struct item_compare_by_name
 	{
 		bool operator()(
@@ -106,6 +155,33 @@ private:
 			return i_left.name < i_right.name;
 		}
 	};
+
+	//-------------------------------------------------------------------------
+	/** @biref 文字列から'('と')'で囲まれた単語を検索。
+	 */
+	template< typename t_char >
+	static std::pair< t_char const*, t_char const* > find_word(
+		t_char const* const i_begin,
+		t_char const* const i_end)
+	{
+		t_char const* a_word_begin(i_end);
+		for (t_char* i = i_begin; i_end != i; ++i)
+		{
+			switch (*i)
+			{
+			case t_char('('):
+				a_word_begin = i;
+				break;
+			case t_char(')'):
+				if (i_end != a_word_begin)
+				{
+					return std::make_pair(a_word_begin, i + 1);
+				}
+				break;
+			}
+		}
+		return std::make_pair(i_end, i_end);
+	}
 };
 
 #endif // !PSYQ_EVENT_ARCHIVE_HPP_

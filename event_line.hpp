@@ -18,7 +18,7 @@ public:
 	typedef t_real real;
 	typedef typename t_hash::value_type integer;
 	typedef psyq::layered_scale< t_real, typename this_type::integer >
-		time_scale;
+		layered_scale;
 
 	//-------------------------------------------------------------------------
 	struct item
@@ -42,6 +42,9 @@ public:
 		// pass
 	}
 
+	/** @param[in] i_archive 適用するevent-lineが保存されている書庫。
+	    @param[in] i_name    適用するevent-lineの名前。
+	 */
 	event_line(
 		PSYQ_SHARED_PTR< psyq::file_buffer > const& i_archive,
 		typename t_hash::value_type const           i_name)
@@ -53,8 +56,8 @@ public:
 	//-------------------------------------------------------------------------
 	void swap(this_type& io_target)
 	{
+		this->time_scale.swap(io_target.time_scale);
 		this->archive_.swap(io_target.archive_);
-		this->time_scale_.swap(io_target.time_scale_);
 		std::swap(this->first_event_, io_target.first_event_);
 		std::swap(this->last_event_, io_target.last_event_);
 		std::swap(this->cache_time_, io_target.cache_time_);
@@ -67,6 +70,10 @@ public:
 		this_type().swap(*this);
 	}
 
+	/** @brief event-lineを初期化。
+	    @param[in] i_archive 適用するevent-lineが保存されている書庫。
+	    @param[in] i_name    適用するevent-lineの名前。
+	 */
 	bool reset(
 		PSYQ_SHARED_PTR< psyq::file_buffer > const& i_archive,
 		typename t_hash::value_type const           i_name)
@@ -107,8 +114,8 @@ public:
 		if (NULL != this->last_event_)
 		{
 			t_real const a_time(
-				NULL != this->time_scale_.get()?
-					i_time * this->time_scale_->get_scale(): i_time);
+				NULL != this->time_scale.get()?
+					i_time * this->time_scale->get_scale(): i_time);
 			switch (i_origin)
 			{
 			case SEEK_SET: // 先頭が基準時間。
@@ -174,6 +181,8 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief event-lineが停止しているか判定。
+	 */
 	bool is_stop() const
 	{
 		return NULL == this->last_event_ || (
@@ -182,15 +191,9 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	typename this_type::time_scale::shared_ptr const& get_time_scale() const
+	PSYQ_SHARED_PTR< psyq::file_buffer > const& get_archive() const
 	{
-		return this->time_scale_;
-	}
-
-	void set_time_scale(
-		typename this_type::time_scale::shared_ptr const& i_scale)
-	{
-		this->time_scale_ = i_scale;
+		return this->archive_;
 	}
 
 //.............................................................................
@@ -270,10 +273,11 @@ private:
 	}
 
 //.............................................................................
+public:
+	typename this_type::layered_scale::shared_ptr time_scale;
+
 private:
 	PSYQ_SHARED_PTR< psyq::file_buffer > archive_;
-
-	typename this_type::time_scale::shared_ptr time_scale_;
 
 	/// event配列の先頭位置。
 	typename this_type::item const* first_event_;

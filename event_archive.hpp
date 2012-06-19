@@ -95,14 +95,23 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	template< typename t_map >
+	static typename t_hash::value_type make_hash(
+		t_map const&                       i_dictionary,
+		typename t_map::mapped_type const& i_string)
+	{
+		return this_type::make_hash(
+			i_dictionary, i_string.data(), i_string.data() + i_string.length());
+	}
+
 	/** @brief 文字列の'('と')'に囲まれた単語を置換し、hash値を算出。
-	    @param[in] i_map   置換する単語をkeyとする辞書。
-	    @param[in] i_begin 置換する文字列の先頭位置。
-	    @param[in] i_end   置換する文字列の末尾位置。
+	    @param[in] i_dictionary 置換する単語をkeyとする辞書。
+	    @param[in] i_begin      置換する文字列の先頭位置。
+	    @param[in] i_end        置換する文字列の末尾位置。
 	 */
 	template< typename t_map >
 	static typename t_hash::value_type make_hash(
-		t_map const&                                     i_map,
+		t_map const&                                     i_dictionary,
 		typename t_map::mapped_type::const_pointer const i_begin,
 		typename t_map::mapped_type::const_pointer const i_end)
 	{
@@ -116,27 +125,27 @@ public:
 			if (a_range.first == a_range.second)
 			{
 				a_string.append(a_last_end, i_end);
-				return t_hash::generate(a_string.begin(), a_string.end());
+				return t_hash::generate(
+					a_string.data(), a_string.data() + a_string.length());
 			}
 
 			// 辞書から置換語を検索。
 			typename t_map::const_iterator a_position(
-				i_map.find(
+				i_dictionary.find(
 					typename t_map::mapped_type(
-						a_range.first + 1,
-						a_range.second - a_range.first - 2)));
-			if (i_map.end() != a_position)
+						a_range.first + 1, a_range.second - 1)));
+			if (i_dictionary.end() != a_position)
 			{
 				// 辞書にある単語で置換する。
 				a_string.append(a_last_end, a_range.first);
 				a_string.append(
-					a_position->second.data(),
-					a_position->second.length());
+					a_position->second.begin(),
+					a_position->second.end());
 			}
 			else
 			{
 				// 置換語ではなかったので、元の文字列のままにしておく。
-				a_string.append(a_last_end, a_range.second - a_last_end);
+				a_string.append(a_last_end, a_range.second);
 			}
 			a_last_end = a_range.second;
 		}
@@ -165,7 +174,7 @@ private:
 		t_char const* const i_end)
 	{
 		t_char const* a_word_begin(i_end);
-		for (t_char* i = i_begin; i_end != i; ++i)
+		for (t_char const* i = i_begin; i_end != i; ++i)
 		{
 			switch (*i)
 			{

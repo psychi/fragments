@@ -10,7 +10,7 @@ namespace psyq
 template< typename t_hash, typename t_real = float >
 class psyq::event_line
 {
-	typedef psyq::event_line< t_hash > this_type;
+	typedef psyq::event_line< t_hash, t_real > this_type;
 
 //.............................................................................
 public:
@@ -18,7 +18,8 @@ public:
 	typedef t_real real;
 	typedef typename t_hash::value_type integer;
 	typedef psyq::layered_scale< t_real, typename this_type::integer >
-		layered_scale;
+		time_scale;
+	typedef typename psyq::event_item< t_hash >::archive archive;
 
 	//-------------------------------------------------------------------------
 	struct item
@@ -46,8 +47,8 @@ public:
 	    @param[in] i_name    適用するevent-lineの名前。
 	 */
 	event_line(
-		PSYQ_SHARED_PTR< psyq::file_buffer > const& i_archive,
-		typename t_hash::value_type const           i_name)
+		PSYQ_SHARED_PTR< typename this_type::archive const > const& i_archive,
+		typename t_hash::value_type const                           i_name)
 	{
 		new(this) this_type();
 		this->reset(i_archive, i_name);
@@ -56,7 +57,7 @@ public:
 	//-------------------------------------------------------------------------
 	void swap(this_type& io_target)
 	{
-		this->time_scale.swap(io_target.time_scale);
+		this->time_scale_.swap(io_target.time_scale_);
 		this->archive_.swap(io_target.archive_);
 		std::swap(this->first_event_, io_target.first_event_);
 		std::swap(this->last_event_, io_target.last_event_);
@@ -75,18 +76,18 @@ public:
 	    @param[in] i_name    適用するevent-lineの名前。
 	 */
 	bool reset(
-		PSYQ_SHARED_PTR< psyq::file_buffer > const& i_archive,
-		typename t_hash::value_type const           i_name)
+		PSYQ_SHARED_PTR< typename this_type::archive const > const& i_archive,
+		typename t_hash::value_type const                           i_name)
 	{
-		psyq::file_buffer const* const a_archive(i_archive.get());
+		typename this_type::archive const* const a_archive(i_archive.get());
 		if (NULL != a_archive)
 		{
-			typename psyq::event_archive< t_hash >::item const* const a_item(
-				psyq::event_archive< t_hash >::find_item(*a_archive, i_name));
+			typename psyq::event_item< t_hash > const* const a_item(
+				psyq::event_item< t_hash >::find(*a_archive, i_name));
 			if (NULL != a_item)
 			{
 				typename this_type::item const* const a_first_event(
-					psyq::event_archive< t_hash >::get_address< this_type::item >(
+					psyq::event_item< t_hash >::get_address< this_type::item >(
 						*a_archive, a_item->offset));
 				if (NULL != a_first_event)
 				{
@@ -114,8 +115,8 @@ public:
 		if (NULL != this->last_event_)
 		{
 			t_real const a_time(
-				NULL != this->time_scale.get()?
-					i_time * this->time_scale->get_scale(): i_time);
+				NULL != this->time_scale_.get()?
+					i_time * this->time_scale_->get_scale(): i_time);
 			switch (i_origin)
 			{
 			case SEEK_SET: // 先頭が基準時間。
@@ -135,6 +136,7 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief eventを更新。
+	    @param[in] i_dispatcher eventが発生した時に呼び出す関数。
 	 */
 	template< typename t_dispatcher >
 	void dispatch(t_dispatcher const& i_dispatcher)
@@ -191,7 +193,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	PSYQ_SHARED_PTR< psyq::file_buffer > const& get_archive() const
+	PSYQ_SHARED_PTR< psyq::file_buffer const > const& get_archive() const
 	{
 		return this->archive_;
 	}
@@ -274,10 +276,10 @@ private:
 
 //.............................................................................
 public:
-	typename this_type::layered_scale::shared_ptr time_scale;
+	typename this_type::time_scale::shared_ptr time_scale_;
 
 private:
-	PSYQ_SHARED_PTR< psyq::file_buffer > archive_;
+	PSYQ_SHARED_PTR< psyq::file_buffer const > archive_;
 
 	/// event配列の先頭位置。
 	typename this_type::item const* first_event_;

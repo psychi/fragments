@@ -24,6 +24,8 @@ public:
 	typedef t_tag tag;
 	typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
 	typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
+	typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
+	typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
 	typedef psyq::lerp< t_value, t_count > lerp;
 
 	//-------------------------------------------------------------------------

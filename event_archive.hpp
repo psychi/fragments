@@ -95,35 +95,45 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	template< typename t_map >
+	/** @brief 文字列の'('と')'に囲まれた単語を置換し、hash値を算出。
+	    @tparam t_map
+	        置換する単語の辞書。t_map::key_typeにはt_hash::value_type型を、
+	        t_map::mapped_typeにはstd::basic_string互換の型を指定すること。
+	    @param[in] i_dictionary 置換する単語のhash値をkeyとする辞書。
+	    @param[in] i_string     置換される文字列。
+	 */
+	template< typename t_map, typename t_string >
 	static typename t_hash::value_type make_hash(
-		t_map const&                       i_dictionary,
-		typename t_map::mapped_type const& i_string)
+		t_map const&    i_dictionary,
+		t_string const& i_string)
 	{
 		return this_type::make_hash(
-			i_dictionary, i_string.data(), i_string.data() + i_string.length());
+			i_dictionary, i_string.begin(), i_string.end());
 	}
 
 	/** @brief 文字列の'('と')'に囲まれた単語を置換し、hash値を算出。
-	    @param[in] i_dictionary 置換する単語をkeyとする辞書。
-	    @param[in] i_begin      置換する文字列の先頭位置。
-	    @param[in] i_end        置換する文字列の末尾位置。
+	    @tparam t_map
+	        std::map互換の型。t_map::key_typeにはt_hash::value_type型、
+	        t_map::mapped_typeにはstd::basic_string互換の型である必要がある。
+	    @param[in] i_dictionary 置換する単語のhash値をkeyとする辞書。
+	    @param[in] i_begin      置換される文字列の先頭位置。
+	    @param[in] i_end        置換される文字列の末尾位置。
 	 */
-	template< typename t_map >
+	template< typename t_map, typename t_iterator >
 	static typename t_hash::value_type make_hash(
-		t_map const&                                     i_dictionary,
-		typename t_map::mapped_type::const_pointer const i_begin,
-		typename t_map::mapped_type::const_pointer const i_end)
+		t_map const&     i_dictionary,
+		t_iterator const i_begin,
+		t_iterator const i_end)
 	{
-		typedef typename t_map::mapped_type::value_type char_type;
-		char_type const* a_last_end(i_begin);
-		std::basic_string< char_type > a_string;
+		t_iterator a_last_end(i_begin);
+		std::basic_string< typename t_map::mapped_type::value_type > a_string;
 		for (;;)
 		{
-			std::pair< char_type const*, char_type const* > const a_range(
+			std::pair< t_iterator, t_iterator > const a_range(
 				this_type::find_word(a_last_end, i_end));
 			if (a_range.first == a_range.second)
 			{
+				// すべての単語を置換したので、hash値を算出。
 				a_string.append(a_last_end, i_end);
 				return t_hash::generate(
 					a_string.data(), a_string.data() + a_string.length());
@@ -132,8 +142,7 @@ public:
 			// 辞書から置換語を検索。
 			typename t_map::const_iterator a_position(
 				i_dictionary.find(
-					typename t_map::mapped_type(
-						a_range.first + 1, a_range.second - 1)));
+					t_hash::generate(a_range.first + 1, a_range.second - 1)));
 			if (i_dictionary.end() != a_position)
 			{
 				// 辞書にある単語で置換する。
@@ -144,7 +153,7 @@ public:
 			}
 			else
 			{
-				// 置換語ではなかったので、元の文字列のままにしておく。
+				// 置換語ではなかったので、元のままにしておく。
 				a_string.append(a_last_end, a_range.second);
 			}
 			a_last_end = a_range.second;
@@ -168,20 +177,20 @@ private:
 	//-------------------------------------------------------------------------
 	/** @biref 文字列から'('と')'で囲まれた単語を検索。
 	 */
-	template< typename t_char >
-	static std::pair< t_char const*, t_char const* > find_word(
-		t_char const* const i_begin,
-		t_char const* const i_end)
+	template< typename t_iterator >
+	static std::pair< t_iterator, t_iterator > find_word(
+		t_iterator const i_begin,
+		t_iterator const i_end)
 	{
-		t_char const* a_word_begin(i_end);
-		for (t_char const* i = i_begin; i_end != i; ++i)
+		t_iterator a_word_begin(i_end);
+		for (t_iterator i = i_begin; i_end != i; ++i)
 		{
 			switch (*i)
 			{
-			case t_char('('):
+			case '(':
 				a_word_begin = i;
 				break;
-			case t_char(')'):
+			case ')':
 				if (i_end != a_word_begin)
 				{
 					return std::make_pair(a_word_begin, i + 1);

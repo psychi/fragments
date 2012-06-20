@@ -29,23 +29,8 @@ public:
 	static typename t_traits::value_type const PRIME = t_traits::PRIME;
 
 	//-------------------------------------------------------------------------
-	/** @brief byte配列のhash値を生成。
-	    @param[in] i_begin  byte配列の先頭位置。
-	    @param[in] i_begin  byte配列の末尾位置。
-	    @param[in] i_offset fvn-hash開始値。
-	    @param[in] i_prime  fnv-hash素数。
-	 */
-	static typename this_type::value_type generate(
-		void const* const                    i_begin,
-		void const* const                    i_end,
-		typename this_type::value_type const i_offset = this_type::EMPTY,
-		typename this_type::value_type const i_prime = this_type::PRIME)
-	{
-		return t_generator::generate(i_begin, i_end, i_offset, i_prime);
-	}
-
 	/** @brief 文字列のhash値を生成。
-	    @param[in] i_string 文字列の先頭位置。
+	    @param[in] i_string NULL文字で終了する文字列の先頭位置。
 	    @param[in] i_offset fnv-hash開始値。
 	    @param[in] i_prime  fnv-hash素数。
 	 */
@@ -65,6 +50,23 @@ public:
 		return i_offset;
 	}
 
+	/** @brief byte配列のhash値を生成。
+	    @param[in] i_begin  byte配列の先頭位置。
+	    @param[in] i_end    byte配列の末尾位置。
+	    @param[in] i_offset fvn-hash開始値。
+	    @param[in] i_prime  fnv-hash素数。
+	 */
+	template< typename t_char >
+	static typename this_type::value_type generate(
+		t_char const* const                  i_begin,
+		t_char const* const                  i_end,
+		typename this_type::value_type const i_offset = this_type::EMPTY,
+		typename this_type::value_type const i_prime = this_type::PRIME)
+	{
+		return i_begin < i_end?
+			t_generator::generate(i_begin, i_end, i_offset, i_prime): i_offset;
+	}
+
 	/** @brief 文字列のhash値を生成。
 	    @param[in] i_string std::basic_string互換の文字列。
 	    @param[in] i_offset fnv-hash開始値。
@@ -76,9 +78,29 @@ public:
 		typename this_type::value_type const i_offset = this_type::EMPTY,
 		typename this_type::value_type const i_prime = this_type::PRIME)
 	{
-		typename t_string::const_pointer const a_data(i_string.data());
-		return t_generator::generate(
-			a_data, a_data + i_string.length(), i_offset, i_prime);
+		return this_type::generate(
+			i_string.begin(), i_string.end(), i_offset, i_prime);
+	}
+
+	/** @brief 文字列のhash値を生成。
+	    @param[in] i_begin  文字列の先頭位置。
+	    @param[in] i_end    文字列の末尾位置。
+	    @param[in] i_offset fnv-hash開始値。
+	    @param[in] i_prime  fnv-hash素数。
+	 */
+	template< typename t_iterator >
+	static typename this_type::value_type generate(
+		t_iterator const                     i_begin,
+		t_iterator const                     i_end,
+		typename this_type::value_type const i_offset = this_type::EMPTY,
+		typename this_type::value_type const i_prime = this_type::PRIME)
+	{
+		typename this_type::value_type a_hash(i_offset);
+		for (t_iterator i = i_begin; i_end != i; ++i)
+		{
+			a_hash = t_generator::generate(&(*i), &(*i) + 1, a_hash, i_prime);
+		}
+		return a_hash;
 	}
 };
 
@@ -99,14 +121,14 @@ public:
 	    @param[in] i_offset hash開始値。
 	    @param[in] i_prime  fnv-hash素数。
 	 */
-	template< typename t_value_type >
-	static t_value_type generate(
-		void const* const  i_begin,
-		void const* const  i_end,
-		t_value_type const i_offset,
-		t_value_type const i_prime)
+	template< typename t_value >
+	static t_value generate(
+		void const* const i_begin,
+		void const* const i_end,
+		t_value const     i_offset,
+		t_value const     i_prime)
 	{
-		t_value_type a_hash(i_offset);
+		t_value a_hash(i_offset);
 		boost::uint8_t const* a_iterator(
 			static_cast< boost::uint8_t const* >(i_begin));
 		while (i_end != a_iterator)
@@ -139,14 +161,14 @@ public:
 	    @param[in] i_offset fnv-hash開始値。
 	    @param[in] i_prime  fnv-hash素数。
 	 */
-	template< typename t_value_type >
-	static t_value_type generate(
-		void const* const  i_begin,
-		void const* const  i_end,
-		t_value_type const i_offset,
-		t_value_type const i_prime)
+	template< typename t_value >
+	static t_value generate(
+		void const* const i_begin,
+		void const* const i_end,
+		t_value const     i_offset,
+		t_value const     i_prime)
 	{
-		t_value_type a_hash(i_offset);
+		t_value a_hash(i_offset);
 		boost::uint8_t const* a_iterator(
 			static_cast< boost::uint8_t const* >(i_begin));
 		while (i_end != a_iterator)

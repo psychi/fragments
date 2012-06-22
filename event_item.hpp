@@ -1,5 +1,5 @@
-#ifndef PSYQ_EVENT_ARCHIVE_HPP_
-#define PSYQ_EVENT_ARCHIVE_HPP_
+#ifndef PSYQ_EVENT_ITEM_HPP_
+#define PSYQ_EVENT_ITEM_HPP_
 
 namespace psyq
 {
@@ -82,41 +82,48 @@ public:
 		typename this_type::archive const& i_archive,
 		typename this_type::offset const   i_offset)
 	{
-		return 0 < i_offset && i_offset < i_archive.get_region_size()?
-			static_cast< t_value const* >(
-				static_cast< void const* >(
-					i_offset + static_cast< char const* >(
-						i_archive.get_region_address()))):
-			NULL;
+		if (0 < i_offset && i_offset < i_archive.get_region_size())
+		{
+			void const* const a_address(
+				i_offset + static_cast< char const* >(
+					i_archive.get_region_address()));
+			std::size_t const a_alignment(
+				boost::alignment_of< t_value >::value);
+			if (0 == reinterpret_cast< std::size_t >(a_address) % a_alignment)
+			{
+				return static_cast< t_value const* >(a_address);
+			}
+			PSYQ_ASSERT(false);
+		}
+		return NULL;
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 文字列の'('と')'に囲まれた単語を置換し、hash値を生成。
+	/** @brief 文字列の'('と')'に囲まれた単語を置換し、文字列を生成。
 	    @tparam t_map
 	        std::map互換の型。t_map::key_typeにはt_hash::value_type型、
 	        t_map::mapped_typeにはstd::basic_string互換の型である必要がある。
 	    @param[in] i_dictionary 置換する単語のhash値をkeyとする辞書。
 	    @param[in] i_string     置換元となる文字列。
 	 */
-	template< typename t_map, typename t_string >
-	static typename t_hash::value_type generate_hash(
-		t_map const&    i_dictionary,
-		t_string const& i_string)
+	template< typename t_out_string, typename t_map, typename t_in_string >
+	static t_out_string generate_string(
+		t_map const&       i_dictionary,
+		t_in_string const& i_string)
 	{
-		typename t_string::const_iterator a_last_end(i_string.begin());
-		std::basic_string< typename t_map::mapped_type::value_type > a_string;
+		typename t_in_string::const_iterator a_last_end(i_string.begin());
+		t_out_string a_string;
 		for (;;)
 		{
 			const std::pair<
-				typename t_string::const_iterator,
-				typename t_string::const_iterator >
+				typename t_in_string::const_iterator,
+				typename t_in_string::const_iterator >
 					a_range(this_type::find_word(a_last_end, i_string.end()));
 			if (a_range.first == a_range.second)
 			{
-				// すべての単語を置換したので、hash値を算出。
+				// すべての単語を置換した。
 				a_string.append(a_last_end, i_string.end());
-				return t_hash::generate(
-					a_string.data(), a_string.data() + a_string.length());
+				return a_string;
 			}
 
 			// 辞書から置換語を検索。
@@ -188,4 +195,4 @@ public:
 	typename this_type::offset  begin; ///< itemの先頭位置の書庫内offset値。
 };
 
-#endif // !PSYQ_EVENT_ARCHIVE_HPP_
+#endif // !PSYQ_EVENT_ITEM_HPP_

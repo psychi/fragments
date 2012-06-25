@@ -59,7 +59,7 @@ public:
 						a_begin,
 						a_end,
 						a_key,
-						this_type::item_compare_by_name()));
+						item_compare_by_name()));
 				if (a_end != a_position && a_position->name == i_name)
 				{
 					return a_position;

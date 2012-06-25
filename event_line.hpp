@@ -3,8 +3,22 @@
 
 namespace psyq
 {
+	template< typename, typename > struct event_point;
 	template< typename, typename > class event_line;
 }
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template< typename t_hash, typename t_real = float >
+struct psyq::event_point
+{
+	typename t_hash::value_type type; ///< eventの種別。
+	t_real                      time; ///< eventが発生するまでの時間。
+	union
+	{
+		typename t_hash::value_type integer; ///< 整数型の引数。
+		t_real                      real;    ///< 浮動小数点型の引数。
+	};
+};
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 template< typename t_hash, typename t_real = float >
@@ -19,19 +33,8 @@ public:
 	typedef typename t_hash::value_type integer;
 	typedef psyq::layered_scale< t_real, typename this_type::integer >
 		time_scale;
+	typedef psyq::event_point< t_hash, t_real > point;
 	typedef typename psyq::event_item< t_hash >::archive archive;
-
-	//-------------------------------------------------------------------------
-	struct item
-	{
-		typename t_hash::value_type type; ///< eventの種別。
-		t_real                      time; ///< eventが発生するまでの時間。
-		union
-		{
-			typename this_type::integer integer; ///< 整数型の引数。
-			t_real                      real;    ///< 浮動小数点型の引数。
-		};
-	};
 
 	//-------------------------------------------------------------------------
 	event_line():
@@ -67,13 +70,6 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief event-lineを初期化。
-	 */
-	void reset()
-	{
-		this_type().swap(*this);
-	}
-
-	/** @brief event-lineを初期化。
 	    @param[in] i_archive 適用するevent-lineが保存されている書庫。
 	    @param[in] i_name    適用するevent-lineの名前。
 	 */
@@ -88,9 +84,9 @@ public:
 				psyq::event_item< t_hash >::find(*a_archive, i_name));
 			if (NULL != a_item)
 			{
-				typename this_type::item const* const a_first_event(
-					psyq::event_item< t_hash >::get_address< this_type::item >(
-						*a_archive, a_item->offset));
+				typename this_type::point const* const a_first_event(
+					psyq::event_item< t_hash >::get_address< this_type::point >(
+						*a_archive, a_item->begin));
 				if (NULL != a_first_event)
 				{
 					this->archive_ = i_archive;
@@ -138,10 +134,10 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief eventを更新。
-	    @param[in] i_dispatcher eventが発生した時に呼び出す関数。
+	    @param[in,out] io_container 発生したeventを登録するcontainer。
 	 */
-	template< typename t_dispatcher >
-	void dispatch(t_dispatcher const& i_dispatcher)
+	template< typename t_container >
+	void dispatch(t_container& io_container)
 	{
 		if (NULL == this->last_event_)
 		{
@@ -167,17 +163,18 @@ public:
 		}
 
 		// 今回の更新で発生するeventの先頭位置と末尾位置を決定。
-		typename this_type::item const* const a_begin(this->last_event_);
+		typename this_type::point const* const a_begin(this->last_event_);
 		this->forward_time(a_cache_time);
-		typename this_type::item const* const a_end(this->last_event_);
+		typename this_type::point const* const a_end(this->last_event_);
 
-		// eventを発生。
+		// 今回の発生するeventをdispatch-containerに登録。
 		for (
-			typename this_type::item const* i = a_begin;
+			typename this_type::point const* i = a_begin;
 			a_end != i;
 			++i, a_rest_time = i->time)
 		{
-			i_dispatcher(*i, a_cache_time);
+			io_container.insert(
+				typename t_container::value_type(a_cache_time, i));
 			a_cache_time -= a_rest_time;
 			PSYQ_ASSERT(0 <= a_cache_time);
 		}
@@ -209,7 +206,7 @@ private:
 	 */
 	void forward_time(t_real const i_time)
 	{
-		typename this_type::item const* a_event(this->last_event_);
+		typename this_type::point const* a_event(this->last_event_);
 		if (0 <= i_time && NULL != a_event)
 		{
 			t_real a_rest_time(this->rest_time_ - i_time);
@@ -243,10 +240,10 @@ private:
 	/** @brief 開始時間を基準としたevent発生時間を取得。
 	 */
 	t_real get_dispatch_time(
-		typename this_type::item const* const i_event)
+		typename this_type::point const* const i_event)
 	const
 	{
-		typename this_type::item const* a_event(this->first_event_);
+		typename this_type::point const* a_event(this->first_event_);
 		t_real a_time(0);
 		if (NULL != a_event)
 		{
@@ -269,7 +266,7 @@ private:
 	//-------------------------------------------------------------------------
 	/** @brief 最後のeventか判定。
 	 */
-	static bool is_last_event(typename this_type::item const* const i_event)
+	static bool is_last_event(typename this_type::point const* const i_event)
 	{
 		PSYQ_ASSERT(NULL != i_event);
 		return t_hash::EMPTY == i_event->type &&
@@ -284,10 +281,10 @@ private:
 	PSYQ_SHARED_PTR< psyq::file_buffer const > archive_;
 
 	/// event配列の先頭位置。
-	typename this_type::item const* first_event_;
+	typename this_type::point const* first_event_;
 
 	/// すでに発生したevent配列の末尾位置。
-	typename this_type::item const* last_event_;
+	typename this_type::point const* last_event_;
 
 	/// 更新する時間。
 	t_real cache_time_;

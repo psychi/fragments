@@ -77,16 +77,18 @@ public:
 		PSYQ_SHARED_PTR< typename this_type::archive const > const& i_archive,
 		typename t_hash::value_type const                           i_name)
 	{
+		typedef psyq::event_item< t_hash > item;
 		typename this_type::archive const* const a_archive(i_archive.get());
 		if (NULL != a_archive)
 		{
-			typename psyq::event_item< t_hash > const* const a_item(
-				psyq::event_item< t_hash >::find(*a_archive, i_name));
+			item const* const a_item(item::find(*a_archive, i_name));
 			if (NULL != a_item)
 			{
 				typename this_type::point const* const a_first_event(
-					psyq::event_item< t_hash >::get_address< this_type::point >(
-						*a_archive, a_item->begin));
+					item::get_address(
+						boost::type< typename this_type::point >(),
+						*a_archive,
+						a_item->begin));
 				if (NULL != a_first_event)
 				{
 					this->archive_ = i_archive;
@@ -133,8 +135,8 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief eventを更新。
-	    @param[in,out] io_container 発生したeventを登録するcontainer。
+	/** @brief 発生するeventを登録。
+	    @param[in,out] io_container 発生するeventを登録するcontainer。
 	 */
 	template< typename t_container >
 	void dispatch(t_container& io_container)
@@ -167,7 +169,7 @@ public:
 		this->forward_time(a_cache_time);
 		typename this_type::point const* const a_end(this->last_event_);
 
-		// 今回の発生するeventをdispatch-containerに登録。
+		// 今回の発生するeventをcontainerに登録。
 		for (
 			typename this_type::point const* i = a_begin;
 			a_end != i;
@@ -201,8 +203,7 @@ public:
 private:
 	//-------------------------------------------------------------------------
 	/** @brief 時間を進める。
-		@param[in] i_time 進める時間。
-		@return 時間を進めることで発生したevent配列の先頭位置。
+	    @param[in] i_time 進める時間。
 	 */
 	void forward_time(t_real const i_time)
 	{

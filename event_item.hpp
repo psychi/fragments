@@ -98,6 +98,15 @@ public:
 		return NULL;
 	}
 
+	template< typename t_value >
+	static t_value const* get_address(
+		boost::type< t_value > const&,
+		typename this_type::archive const& i_archive,
+		typename this_type::offset const   i_offset)
+	{
+		return get_address< t_value >(i_archive, i_offset);
+	}
+
 	//-------------------------------------------------------------------------
 	/** @brief 文字列の'('と')'に囲まれた単語を置換し、文字列を生成。
 	    @tparam t_map

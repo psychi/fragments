@@ -38,12 +38,9 @@ public:
 	typedef typename this_type::const_reverse_iterator reverse_iterator;
 
 	//-------------------------------------------------------------------------
-	/** @param[in] i_string 割り当てる文字列の先頭位置。必ずNULL文字で終わる。
-	 */
-	basic_const_string(
-		typename this_type::const_pointer const i_string = NULL):
-	data_(i_string),
-	length_(this_type::find_null(i_string))
+	basic_const_string():
+	data_(NULL),
+	length_(0)
 	{
 		// pass
 	}

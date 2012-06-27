@@ -27,6 +27,15 @@
 namespace psyq
 {
 	class arena;
+
+	/** @brief 固定長配列の要素数を取得。
+	    @return 固定長配列の要素数。
+	 */
+	template < typename t_value, std::size_t t_number >
+	inline std::size_t numberof(t_value const (&)[t_number])
+	{
+		return t_number;
+	}
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

@@ -38,23 +38,23 @@ public:
 
 	//-------------------------------------------------------------------------
 	event_line():
-	first_event_(NULL),
-	last_event_(NULL),
+	first_point_(NULL),
+	last_point_(NULL),
 	cache_time_(0),
 	rest_time_(0)
 	{
 		// pass
 	}
 
-	/** @param[in] i_archive 適用するevent-lineが保存されている書庫。
-	    @param[in] i_name    適用するevent-lineの名前。
+	/** @param[in] i_archive event-point配列が保存されている書庫。
+	    @param[in] i_points  event-point配列の名前hash値。
 	 */
 	event_line(
 		PSYQ_SHARED_PTR< typename this_type::archive const > const& i_archive,
-		typename t_hash::value_type const                           i_name)
+		typename t_hash::value_type const                           i_points)
 	{
 		new(this) this_type();
-		this->reset(i_archive, i_name);
+		this->reset(i_archive, i_points);
 	}
 
 	//-------------------------------------------------------------------------
@@ -62,42 +62,42 @@ public:
 	{
 		this->time_scale_.swap(io_target.time_scale_);
 		this->archive_.swap(io_target.archive_);
-		std::swap(this->first_event_, io_target.first_event_);
-		std::swap(this->last_event_, io_target.last_event_);
+		std::swap(this->first_point_, io_target.first_point_);
+		std::swap(this->last_point_, io_target.last_point_);
 		std::swap(this->cache_time_, io_target.cache_time_);
 		std::swap(this->rest_time_, io_target.rest_time_);
 	}
 
 	//-------------------------------------------------------------------------
 	/** @brief event-lineを初期化。
-	    @param[in] i_archive 適用するevent-lineが保存されている書庫。
-	    @param[in] i_name    適用するevent-lineの名前。
+	    @param[in] i_archive event-point配列が保存されている書庫。
+	    @param[in] i_points  event-point配列の名前hash値。
 	 */
 	bool reset(
 		PSYQ_SHARED_PTR< typename this_type::archive const > const& i_archive,
-		typename t_hash::value_type const                           i_name)
+		typename t_hash::value_type const                           i_points)
 	{
 		typedef psyq::event_item< t_hash > item;
 		typename this_type::archive const* const a_archive(i_archive.get());
 		if (NULL != a_archive)
 		{
-			item const* const a_item(item::find(*a_archive, i_name));
+			item const* const a_item(item::find(*a_archive, i_points));
 			if (NULL != a_item)
 			{
-				typename this_type::point const* const a_first_event(
+				typename this_type::point const* const a_first_point(
 					item::get_address(
 						boost::type< typename this_type::point >(),
 						*a_archive,
 						a_item->begin));
-				if (NULL != a_first_event)
+				if (NULL != a_first_point)
 				{
 					this->archive_ = i_archive;
 
-					// event配列を初期化。
-					this->first_event_ = a_first_event;
-					this->last_event_ = a_first_event;
+					// event-lineを初期化。
+					this->first_point_ = a_first_point;
+					this->last_point_ = a_first_point;
 					this->cache_time_ = 0;
-					this->rest_time_ = a_first_event->time;
+					this->rest_time_ = a_first_point->time;
 					return true;
 				}
 			}
@@ -112,7 +112,7 @@ public:
 	 */
 	void seek(t_real const i_time, int const i_origin)
 	{
-		if (NULL != this->last_event_)
+		if (NULL != this->last_point_)
 		{
 			t_real const a_time(
 				NULL != this->time_scale_.get()?
@@ -141,7 +141,7 @@ public:
 	template< typename t_container >
 	void dispatch(t_container& io_container)
 	{
-		if (NULL == this->last_event_)
+		if (NULL == this->last_point_)
 		{
 			return;
 		}
@@ -152,7 +152,7 @@ public:
 		{
 			// 時間を巻き戻す。
 			a_cache_time +=
-				this->get_dispatch_time(this->last_event_) - a_rest_time;
+				this->get_dispatch_time(this->last_point_) - a_rest_time;
 			if (0 <= a_cache_time)
 			{
 				this->seek_front(a_cache_time);
@@ -165,9 +165,9 @@ public:
 		}
 
 		// 今回の更新で発生するeventの先頭位置と末尾位置を決定。
-		typename this_type::point const* const a_begin(this->last_event_);
+		typename this_type::point const* const a_begin(this->last_point_);
 		this->forward_time(a_cache_time);
-		typename this_type::point const* const a_end(this->last_event_);
+		typename this_type::point const* const a_end(this->last_point_);
 
 		// 今回の発生するeventをcontainerに登録。
 		for (
@@ -188,13 +188,13 @@ public:
 	 */
 	bool is_stop() const
 	{
-		return NULL == this->last_event_ || (
+		return NULL == this->last_point_ || (
 			this->rest_time_ <= 0 &&
-			this_type::is_last_event(this->last_event_));
+			this_type::is_last(this->last_point_));
 	}
 
 	//-------------------------------------------------------------------------
-	PSYQ_SHARED_PTR< psyq::file_buffer const > const& get_archive() const
+	PSYQ_SHARED_PTR< typename this_type::archive const > const& get_archive() const
 	{
 		return this->archive_;
 	}
@@ -207,13 +207,13 @@ private:
 	 */
 	void forward_time(t_real const i_time)
 	{
-		typename this_type::point const* a_event(this->last_event_);
+		typename this_type::point const* a_event(this->last_point_);
 		if (0 <= i_time && NULL != a_event)
 		{
 			t_real a_rest_time(this->rest_time_ - i_time);
 			while (a_rest_time <= 0)
 			{
-				if (this_type::is_last_event(a_event))
+				if (this_type::is_last(a_event))
 				{
 					a_rest_time = 0;
 					break;
@@ -225,16 +225,16 @@ private:
 				}
 			}
 			this->rest_time_ = a_rest_time;
-			this->last_event_ = a_event;
+			this->last_point_ = a_event;
 		}
 	}
 
 	//-------------------------------------------------------------------------
 	void seek_front(t_real const i_time)
 	{
-		this->last_event_ = this->first_event_;
+		this->last_point_ = this->first_point_;
 		this->cache_time_ = i_time;
-		this->rest_time_ = this->first_event_->time;
+		this->rest_time_ = this->first_point_->time;
 	}
 
 	//-------------------------------------------------------------------------
@@ -244,14 +244,14 @@ private:
 		typename this_type::point const* const i_event)
 	const
 	{
-		typename this_type::point const* a_event(this->first_event_);
+		typename this_type::point const* a_event(this->first_point_);
 		t_real a_time(0);
 		if (NULL != a_event)
 		{
 			for (;;)
 			{
 				a_time += a_event->time;
-				if (i_event == a_event || this_type::is_last_event(a_event))
+				if (i_event == a_event || this_type::is_last(a_event))
 				{
 					break;
 				}
@@ -267,7 +267,7 @@ private:
 	//-------------------------------------------------------------------------
 	/** @brief 最後のeventか判定。
 	 */
-	static bool is_last_event(typename this_type::point const* const i_event)
+	static bool is_last(typename this_type::point const* const i_event)
 	{
 		PSYQ_ASSERT(NULL != i_event);
 		return t_hash::EMPTY == i_event->type &&
@@ -279,13 +279,13 @@ public:
 	typename this_type::time_scale::shared_ptr time_scale_;
 
 private:
-	PSYQ_SHARED_PTR< psyq::file_buffer const > archive_;
+	PSYQ_SHARED_PTR< typename this_type::archive const > archive_;
 
 	/// event配列の先頭位置。
-	typename this_type::point const* first_event_;
+	typename this_type::point const* first_point_;
 
 	/// すでに発生したevent配列の末尾位置。
-	typename this_type::point const* last_event_;
+	typename this_type::point const* last_point_;
 
 	/// 更新する時間。
 	t_real cache_time_;

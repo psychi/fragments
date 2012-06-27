@@ -113,25 +113,26 @@ public:
 	        std::map互換の型。t_map::key_typeにはt_hash::value_type型、
 	        t_map::mapped_typeにはstd::basic_string互換の型である必要がある。
 	    @param[in] i_dictionary 置換する単語のhash値をkeyとする辞書。
-	    @param[in] i_string     置換元となる文字列。
+	    @param[in] i_source     置換元となる文字列。
 	 */
 	template< typename t_out_string, typename t_map, typename t_in_string >
-	static t_out_string generate_string(
+	static t_out_string replace_word(
 		t_map const&       i_dictionary,
-		t_in_string const& i_string)
+		t_in_string const& i_source)
 	{
-		typename t_in_string::const_iterator a_last_end(i_string.begin());
+		typename t_in_string::const_iterator a_last_end(i_source.begin());
 		t_out_string a_string;
 		for (;;)
 		{
-			const std::pair<
+			std::pair<
 				typename t_in_string::const_iterator,
 				typename t_in_string::const_iterator >
-					a_range(this_type::find_word(a_last_end, i_string.end()));
+					const a_range(
+						this_type::find_word(a_last_end, i_source.end()));
 			if (a_range.first == a_range.second)
 			{
 				// すべての単語を置換した。
-				a_string.append(a_last_end, i_string.end());
+				a_string.append(a_last_end, i_source.end());
 				return a_string;
 			}
 

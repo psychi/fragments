@@ -45,24 +45,22 @@ public:
 		// pass
 	}
 
+	basic_const_string(t_value const (&i_string)[1])
+	{
+		PSYQ_ASSERT(0 == i_string[0]);
+		this->data_ = NULL;
+		this->length_ = 0;
+	}
+
 	/** @tparam    t_length 文字列literalの要素数。
 	    @param[in] i_string 文字列literal。
 	 */
 	template < std::size_t t_length >
 	basic_const_string(t_value const (&i_string)[t_length])
 	{
-		if (1 < t_length)
-		{
-			PSYQ_ASSERT(0 == i_string[t_length - 1]);
-			this->data_ = &i_string[0];
-			this->length_ = t_length - 1;
-		}
-		else
-		{
-			PSYQ_ASSERT(0 < t_length && 0 == i_string[0]);
-			this->data_ = NULL;
-			this->length_ = 0;
-		}
+		PSYQ_ASSERT(0 < t_length && 0 == i_string[t_length - 1]);
+		this->data_ = &i_string[0];
+		this->length_ = t_length - 1;
 	}
 
 	/** @param[in] i_string 割り当てる文字列の先頭位置。

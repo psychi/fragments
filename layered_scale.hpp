@@ -19,7 +19,7 @@ class psyq::layered_scale
 
 //.............................................................................
 public:
-	typedef t_value value_type;
+	typedef t_value value;
 	typedef t_count count;
 	typedef t_tag tag;
 	typedef PSYQ_SHARED_PTR< this_type > shared_ptr;

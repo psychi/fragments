@@ -24,9 +24,9 @@ class psyq::_fnv_hash:
 
 //.............................................................................
 public:
-	typedef typename t_traits::value_type value_type;
-	static typename t_traits::value_type const EMPTY = t_traits::EMPTY;
-	static typename t_traits::value_type const PRIME = t_traits::PRIME;
+	typedef typename t_traits::value value;
+	static typename t_traits::value const EMPTY = t_traits::EMPTY;
+	static typename t_traits::value const PRIME = t_traits::PRIME;
 
 	//-------------------------------------------------------------------------
 	/** @brief ï∂éöóÒÇÃhashílÇê∂ê¨ÅB
@@ -35,12 +35,12 @@ public:
 	    @param[in] i_prime  fnv-hashëfêîÅB
 	 */
 	template< typename t_char >
-	static typename this_type::value_type generate(
-		t_char const* const                  i_string,
-		typename this_type::value_type const i_offset = this_type::EMPTY,
-		typename this_type::value_type const i_prime = this_type::PRIME)
+	static typename this_type::value generate(
+		t_char const* const             i_string,
+		typename this_type::value const i_offset = this_type::EMPTY,
+		typename this_type::value const i_prime = this_type::PRIME)
 	{
-		typename this_type::value_type a_hash(i_offset);
+		typename this_type::value a_hash(i_offset);
 		if (NULL != i_string)
 		{
 			for (t_char const* i = i_string; 0 != *i; ++i)
@@ -58,11 +58,11 @@ public:
 	    @param[in] i_prime  fnv-hashëfêîÅB
 	 */
 	template< typename t_value >
-	static typename this_type::value_type generate(
-		t_value const* const                 i_begin,
-		t_value const* const                 i_end,
-		typename this_type::value_type const i_offset = this_type::EMPTY,
-		typename this_type::value_type const i_prime = this_type::PRIME)
+	static typename this_type::value generate(
+		t_value const* const            i_begin,
+		t_value const* const            i_end,
+		typename this_type::value const i_offset = this_type::EMPTY,
+		typename this_type::value const i_prime = this_type::PRIME)
 	{
 		return t_generator::generate(i_begin, i_end, i_offset, i_prime);
 	}
@@ -73,10 +73,10 @@ public:
 	    @param[in] i_prime  fnv-hashëfêîÅB
 	 */
 	template< typename t_string >
-	static typename this_type::value_type generate(
-		t_string const&                      i_string,
-		typename this_type::value_type const i_offset = this_type::EMPTY,
-		typename this_type::value_type const i_prime = this_type::PRIME)
+	static typename this_type::value generate(
+		t_string const&                 i_string,
+		typename this_type::value const i_offset = this_type::EMPTY,
+		typename this_type::value const i_prime = this_type::PRIME)
 	{
 		typename t_string::const_pointer const a_data(i_string.data());
 		return this_type::generate(
@@ -90,13 +90,13 @@ public:
 	    @param[in] i_prime  fnv-hashëfêîÅB
 	 */
 	template< typename t_iterator >
-	static typename this_type::value_type generate(
-		t_iterator const                     i_begin,
-		t_iterator const                     i_end,
-		typename this_type::value_type const i_offset = this_type::EMPTY,
-		typename this_type::value_type const i_prime = this_type::PRIME)
+	static typename this_type::value generate(
+		t_iterator const                i_begin,
+		t_iterator const                i_end,
+		typename this_type::value const i_offset = this_type::EMPTY,
+		typename this_type::value const i_prime = this_type::PRIME)
 	{
-		typename this_type::value_type a_hash(i_offset);
+		typename this_type::value a_hash(i_offset);
 		for (t_iterator i = i_begin; i_end != i; ++i)
 		{
 			a_hash = t_generator::generate(&(*i), &(*i) + 1, a_hash, i_prime);
@@ -193,9 +193,9 @@ class psyq::_fnv_traits32:
 {
 //.............................................................................
 public:
-	typedef boost::uint32_t value_type;
-	static value_type const EMPTY = 0x811c9dc5;
-	static value_type const PRIME = 0x1000193;
+	typedef boost::uint32_t value;
+	static value const EMPTY = 0x811c9dc5;
+	static value const PRIME = 0x1000193;
 
 //.............................................................................
 private:
@@ -208,9 +208,9 @@ class psyq::_fnv_traits64:
 {
 //.............................................................................
 public:
-	typedef boost::uint64_t value_type;
-	static value_type const EMPTY = 0xcbf29ce484222325ULL;
-	static value_type const PRIME = 0x100000001b3ULL;
+	typedef boost::uint64_t value;
+	static value const EMPTY = 0xcbf29ce484222325ULL;
+	static value const PRIME = 0x100000001b3ULL;
 
 //.............................................................................
 private:

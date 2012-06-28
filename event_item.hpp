@@ -19,7 +19,7 @@ private:
 //.............................................................................
 public:
 	typedef t_hash hash;
-	typedef typename t_hash::value_type offset;
+	typedef typename t_hash::value offset;
 	typedef psyq::file_buffer archive;
 
 	//-------------------------------------------------------------------------
@@ -31,7 +31,7 @@ public:
 	 */
 	static this_type const* find(
 		typename this_type::archive const& i_archive,
-		typename t_hash::value_type const  i_name)
+		typename t_hash::value const       i_name)
 	{
 		// item配列の先頭位置を取得。
 		std::size_t const a_offset(
@@ -71,6 +71,22 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief 書庫内に存在するinstanceへのpointerを取得。
+	    @param[in] i_archive 書庫。
+	    @param[in] i_offset  書庫先頭位置からのoffset値。
+	    @retval !=NULL instanceへのpointer。
+	    @retval ==NULL instanceは見つからなかった。
+	 */
+	static void const* get_address(
+		typename this_type::archive const& i_archive,
+		typename this_type::offset const   i_offset)
+	{
+		return 0 < i_offset && i_offset < i_archive.get_region_size()?
+			i_offset + static_cast< char const* >(
+				i_archive.get_region_address()):
+			NULL;
+	}
+
+	/** @brief 書庫内に存在するinstanceへのpointerを取得。
 		@tparam t_value      instanceの型。
 	    @param[in] i_archive 書庫。
 	    @param[in] i_offset  書庫先頭位置からのoffset値。
@@ -82,35 +98,20 @@ public:
 		typename this_type::archive const& i_archive,
 		typename this_type::offset const   i_offset)
 	{
-		if (0 < i_offset && i_offset < i_archive.get_region_size())
+		void const* const a_address(this_type::get_address(i_archive, i_offset));
+		std::size_t const a_alignment(boost::alignment_of< t_value >::value);
+		if (0 != reinterpret_cast< std::size_t >(a_address) % a_alignment)
 		{
-			void const* const a_address(
-				i_offset + static_cast< char const* >(
-					i_archive.get_region_address()));
-			std::size_t const a_alignment(
-				boost::alignment_of< t_value >::value);
-			if (0 == reinterpret_cast< std::size_t >(a_address) % a_alignment)
-			{
-				return static_cast< t_value const* >(a_address);
-			}
 			PSYQ_ASSERT(false);
+			return NULL;
 		}
-		return NULL;
-	}
-
-	template< typename t_value >
-	static t_value const* get_address(
-		boost::type< t_value > const&,
-		typename this_type::archive const& i_archive,
-		typename this_type::offset const   i_offset)
-	{
-		return get_address< t_value >(i_archive, i_offset);
+		return static_cast< t_value const* >(a_address);
 	}
 
 	//-------------------------------------------------------------------------
 	/** @brief 文字列の'('と')'に囲まれた単語を置換し、文字列を生成。
 	    @tparam t_map
-	        std::map互換の型。t_map::key_typeにはt_hash::value_type型、
+	        std::map互換の型。t_map::key_typeにはt_hash::value型、
 	        t_map::mapped_typeにはstd::basic_string互換の型である必要がある。
 	    @param[in] i_dictionary 置換する単語のhash値をkeyとする辞書。
 	    @param[in] i_source     置換元となる文字列。
@@ -120,8 +121,25 @@ public:
 		t_map const&       i_dictionary,
 		t_in_string const& i_source)
 	{
+		return replace_word< t_out_string >(
+			i_dictionary, i_source, i_dictionary.get_allocator());
+	}
+
+	/** @brief 文字列の'('と')'に囲まれた単語を置換し、文字列を生成。
+	    @tparam t_map
+	        std::map互換の型。t_map::key_typeにはt_hash::value型、
+	        t_map::mapped_typeにはstd::basic_string互換の型である必要がある。
+	    @param[in] i_dictionary 置換する単語のhash値をkeyとする辞書。
+	    @param[in] i_source     置換元となる文字列。
+	 */
+	template< typename t_out_string, typename t_map, typename t_in_string >
+	static t_out_string replace_word(
+		t_map const&                                 i_dictionary,
+		t_in_string const&                           i_source,
+		typename t_out_string::allocator_type const& i_allocator)
+	{
 		typename t_in_string::const_iterator a_last_end(i_source.begin());
-		t_out_string a_string;
+		t_out_string a_string(i_allocator);
 		for (;;)
 		{
 			std::pair<
@@ -200,9 +218,9 @@ private:
 
 //.............................................................................
 public:
-	typename t_hash::value_type name;  ///< itemの名前。
-	typename t_hash::value_type type;  ///< itemの型名。
-	typename this_type::offset  begin; ///< itemの先頭位置の書庫内offset値。
+	typename t_hash::value     name;  ///< itemの名前。
+	typename t_hash::value     type;  ///< itemの型名。
+	typename this_type::offset begin; ///< itemの先頭位置の書庫内offset値。
 };
 
 #endif // !PSYQ_EVENT_ITEM_HPP_

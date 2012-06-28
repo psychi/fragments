@@ -11,12 +11,12 @@ namespace psyq
 template< typename t_hash, typename t_real = float >
 struct psyq::event_point
 {
-	typename t_hash::value_type type; ///< eventの種別。
-	t_real                      time; ///< eventが発生するまでの時間。
+	typename t_hash::value type; ///< eventの種別。
+	t_real                 time; ///< eventが発生するまでの時間。
 	union
 	{
-		typename t_hash::value_type integer; ///< 整数型の引数。
-		t_real                      real;    ///< 浮動小数点型の引数。
+		typename t_hash::value integer; ///< 整数型の引数。
+		t_real                 real;    ///< 浮動小数点型の引数。
 	};
 };
 
@@ -30,7 +30,7 @@ class psyq::event_line
 public:
 	typedef t_hash hash;
 	typedef t_real real;
-	typedef typename t_hash::value_type integer;
+	typedef typename t_hash::value integer;
 	typedef psyq::layered_scale< t_real, typename this_type::integer >
 		time_scale;
 	typedef psyq::event_point< t_hash, t_real > point;
@@ -51,7 +51,7 @@ public:
 	 */
 	event_line(
 		PSYQ_SHARED_PTR< typename this_type::archive const > const& i_archive,
-		typename t_hash::value_type const                           i_points)
+		typename t_hash::value const                                i_points)
 	{
 		new(this) this_type();
 		this->reset(i_archive, i_points);
@@ -75,7 +75,7 @@ public:
 	 */
 	bool reset(
 		PSYQ_SHARED_PTR< typename this_type::archive const > const& i_archive,
-		typename t_hash::value_type const                           i_points)
+		typename t_hash::value const                                i_points)
 	{
 		typedef psyq::event_item< t_hash > item;
 		typename this_type::archive const* const a_archive(i_archive.get());
@@ -85,10 +85,10 @@ public:
 			if (NULL != a_item)
 			{
 				typename this_type::point const* const a_first_point(
-					item::get_address(
-						boost::type< typename this_type::point >(),
-						*a_archive,
-						a_item->begin));
+					////item::get_address< this_type::point >(
+					////	*a_archive, a_item->begin));
+					static_cast< typename this_type::point const* >(
+						item::get_address(*a_archive, a_item->begin)));
 				if (NULL != a_first_point)
 				{
 					this->archive_ = i_archive;

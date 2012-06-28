@@ -28,7 +28,7 @@ public:
 
 	//-------------------------------------------------------------------------
 	virtual void apply(
-		scene_world&              io_world,
+		psyq::scene_world&              io_world,
 		psyq::scene_event::point const& i_point,
 		psyq::scene_event::line::time_scale::value const)
 	{
@@ -81,7 +81,7 @@ public:
 
 	//-------------------------------------------------------------------------
 	virtual void apply(
-		scene_world&              io_world,
+		psyq::scene_world&              io_world,
 		psyq::scene_event::point const& i_point,
 		psyq::scene_event::line::time_scale::value const)
 	{
@@ -90,17 +90,17 @@ public:
 				i_point.integer));
 		if (NULL != a_parameters)
 		{
-			scene_world::package_map::const_iterator const
+			psyq::scene_world::package_map::const_iterator const
 				a_position(
 					io_world.packages_.find(
 						io_world.event_.replace_hash(a_parameters->package)));
-			scene_package const* const a_package(
+			psyq::scene_package const* const a_package(
 				io_world.packages_.end() != a_position?
 					a_position->second.get(): NULL);
 			if (NULL != a_package)
 			{
 				// scene-token‚ðŽæ“¾B
-				scene_token::shared_ptr const a_token(
+				psyq::scene_token::shared_ptr const a_token(
 					io_world.add_token(
 						io_world.event_.replace_hash(a_parameters->token)));
 				if (NULL != a_token.get())
@@ -147,7 +147,7 @@ public:
 
 	//-------------------------------------------------------------------------
 	virtual void apply(
-		scene_world&              io_world,
+		psyq::scene_world&              io_world,
 		psyq::scene_event::point const& i_point,
 		psyq::scene_event::line::time_scale::value const)
 	{
@@ -156,12 +156,12 @@ public:
 				i_point.integer));
 		if (NULL != a_parameters)
 		{
-			scene_section::shared_ptr const a_section(
+			psyq::scene_section::shared_ptr const a_section(
 				io_world.add_section(
 					io_world.event_.replace_hash(a_parameters->section)));
 			if (NULL != a_section.get())
 			{
-				scene_token::shared_ptr a_token(
+				psyq::scene_token::shared_ptr a_token(
 					io_world.add_token(
 						io_world.event_.replace_hash(a_parameters->token)));
 				if (NULL != a_token.get())
@@ -198,7 +198,7 @@ public:
 
 	//-------------------------------------------------------------------------
 	virtual void apply(
-		scene_world&              io_world,
+		psyq::scene_world&              io_world,
 		psyq::scene_event::point const& i_point,
 		psyq::scene_event::line::time_scale::value const)
 	{
@@ -250,7 +250,7 @@ public:
 
 	//-------------------------------------------------------------------------
 	virtual void apply(
-		scene_world&              io_world,
+		psyq::scene_world&              io_world,
 		psyq::scene_event::point const& i_point,
 		psyq::scene_event::line::time_scale::value const)
 	{

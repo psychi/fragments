@@ -2,7 +2,7 @@
 #define DSSG_SCENE_EVENT_ACTION_HPP_
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief scene-package‚ðfile‚©‚ç“Ç‚Ýž‚ÞeventB
+/// @brief file‚©‚çscene-package‚ð“Ç‚Ýž‚ÞeventB
 class event_LOAD_PACKAGE:
 	public psyq::scene_event::action
 {
@@ -37,11 +37,12 @@ public:
 				i_point.integer));
 		if (NULL != a_parameters)
 		{
-			io_world.load_package(
+			io_world.add_package(
 				io_world.event_.replace_hash(a_parameters->package_name),
-				io_world.event_.get_string(a_parameters->scene_path),
-				io_world.event_.get_string(a_parameters->shader_path),
-				io_world.event_.get_string(a_parameters->texture_path));
+				psyq::scene_package::load(
+					io_world.event_.replace_string(a_parameters->scene_path),
+					io_world.event_.replace_string(a_parameters->shader_path),
+					io_world.event_.replace_string(a_parameters->texture_path)));
 		}
 	}
 };
@@ -90,21 +91,17 @@ public:
 				i_point.integer));
 		if (NULL != a_parameters)
 		{
-			psyq::scene_world::package_map::const_iterator const
-				a_position(
-					io_world.packages_.find(
-						io_world.event_.replace_hash(a_parameters->package)));
-			psyq::scene_package const* const a_package(
-				io_world.packages_.end() != a_position?
-					a_position->second.get(): NULL);
+			psyq::scene_package* const a_package(
+				io_world.find_package(
+					io_world.event_.replace_hash(a_parameters->package)).get());
 			if (NULL != a_package)
 			{
-				// scene-token‚ðŽæ“¾B
-				psyq::scene_token::shared_ptr const a_token(
+				psyq::scene_token* const a_token(
 					io_world.add_token(
-						io_world.event_.replace_hash(a_parameters->token)));
-				if (NULL != a_token.get())
+						io_world.event_.replace_hash(a_parameters->token)).get());
+				if (NULL != a_token)
 				{
+					psyq_extern::set_model(a_token->scene_, *a_package);
 				}
 			}
 		}

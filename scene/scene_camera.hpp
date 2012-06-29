@@ -56,7 +56,7 @@ public:
 		if (NULL != a_token)
 		{
 			psyq_extern::scene_node* const a_node(
-				psyq_extern::find_camera_node(*a_token, i_name));
+				psyq_extern::find_camera_node(a_token->scene_, i_name));
 			if (NULL != a_node)
 			{
 				this->camera_token_ = i_token;
@@ -68,7 +68,7 @@ public:
 		return NULL;
 	}
 
-	psyq_extern::scene_node const* get_node()
+	psyq_extern::scene_node const* get_node() const
 	{
 		return this->camera_node_;
 	}
@@ -87,7 +87,7 @@ public:
 		if (NULL != i_name && NULL != a_token)
 		{
 			psyq_extern::scene_node* const a_node(
-				psyq_extern::find_node(*a_token, i_name));
+				psyq_extern::find_node(a_token->scene_, i_name));
 			if (NULL != a_node)
 			{
 				this->focus_token_ = i_token;

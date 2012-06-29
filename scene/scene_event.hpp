@@ -15,7 +15,7 @@ class psyq::scene_event
 //.............................................................................
 public:
 	//-------------------------------------------------------------------------
-	typedef std::allocator< void* > allocator;
+	typedef psyq_extern::allocator allocator;
 
 	//-------------------------------------------------------------------------
 	typedef psyq::file_buffer archive;      ///< ‘ŒÉB
@@ -134,7 +134,7 @@ public:
 	    @param[in] i_key    event-lineŽ«‘‚É“o˜^‚·‚éÛ‚ÌkeyB
 	 */
 	this_type::line* add_line(
-		this_type::hash::value const   i_points,
+		this_type::hash::value const        i_points,
 		this_type::line_map::key_type const i_key)
 	{
 		this_type::line_map::iterator a_position(
@@ -156,11 +156,11 @@ public:
 		return &a_position->second;
 	}
 
-	template< typename t_event >
+	template< typename t_action >
 	void add_action()
 	{
-		this->actions_[t_event::get_hash()] =
-			PSYQ_ALLOCATE_SHARED< t_event >(this->actions_.get_allocator());
+		this->actions_[t_action::get_hash()] =
+			PSYQ_ALLOCATE_SHARED< t_action >(this->actions_.get_allocator());
 	}
 
 	//-------------------------------------------------------------------------

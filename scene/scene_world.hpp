@@ -131,15 +131,7 @@ public:
 	scene_section::shared_ptr remove_section(
 		psyq::scene_event::hash::value const i_name)
 	{
-		scene_section::shared_ptr a_section;
-		this_type::section_map::iterator const a_position(
-			this->sections_.find(i_name));
-		if (this->sections_.end() != a_position)
-		{
-			a_section.swap(a_position->second);
-			this->sections_.erase(a_position);
-		}
-		return a_section;
+		return this_type::remove_element(this->sections_, i_name);
 	}
 
 	//-------------------------------------------------------------------------
@@ -264,69 +256,39 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief fileからpackageを読み込む。
-	    @param[in] i_name         読み込んだpackageにつける名前hash値。
-	    @param[in] i_scene_path   scene-packageのpath名。
-	    @param[in] i_shader_path  scene-packageのpath名。
-	    @param[in] i_texture_path scene-packageのpath名。
+	/** @brief scene-packageを追加。
+	    @param[in] i_name    追加するscene-packageの名前hash値。
+	    @param[in] i_package 追加するscene-package。
 	 */
-	scene_package::shared_ptr load_package(
+	scene_package::shared_ptr const& add_package(
 		psyq::scene_event::hash::value const   i_name,
-		psyq::scene_event::const_string const& i_scene_path,
-		psyq::scene_event::const_string const& i_shader_path,
-		psyq::scene_event::const_string const& i_texture_path)
+		psyq::scene_package::shared_ptr const& i_package)
 	{
-		psyq::scene_event::string const a_scene_path(
-			this->event_.replace_string(i_scene_path));
-		if (psyq::scene_event::hash::EMPTY != i_name && !a_scene_path.empty())
+		if (NULL != i_package.get())
 		{
-			// textureをfileから読み込む。
-			psyq::scene_event::string const a_texture_path(
-				this->event_.replace_string(i_texture_path));
-			texture_package::shared_ptr a_texture;
-			if (!a_texture_path.empty())
-			{
-				this_type::load_file< texture_package >(
-					a_texture_path).swap(a_texture);
-				if (NULL == a_texture.get())
-				{
-					// textureが読み込めなかった。
-					PSYQ_ASSERT(false);
-					return  scene_package::shared_ptr();
-				}
-			}
-
-			// shaderをfileから読み込む。
-			psyq::scene_event::string const a_shader_path(
-				this->event_.replace_string(i_shader_path));
-			shader_package::shared_ptr a_shader;
-			if (!a_shader_path.empty())
-			{
-				this_type::load_file< shader_package >(
-					a_shader_path).swap(a_shader);
-				if (NULL == a_shader.get())
-				{
-					// shaderが読み込めなかった。
-					PSYQ_ASSERT(false);
-					return scene_package::shared_ptr();
-				}
-			}
-
-			// sceneをfileから読み込む。
-			scene_package::shared_ptr const a_scene(
-				this_type::load_file< scene_package >(a_scene_path));
-			if (NULL != a_scene.get())
-			{
-				// scene-package辞書に登録。
-				this->packages_[i_name] = a_scene;
-				return a_scene;
-			}
-			else
-			{
-				PSYQ_ASSERT(false);
-			}
+			this->packages_[i_name] = i_package;
 		}
-		return scene_package::shared_ptr();
+		return i_package;
+	}
+
+	/** @brief scene-packageを検索。
+	    @param[in] i_name 検索するscene-packageの名前hash値。
+	 */
+	scene_package::shared_ptr find_package(
+		psyq::scene_event::hash::value const i_name)
+	const
+	{
+		return this_type::find_element(this->packages_, i_name);
+	}
+
+	/** @brief scene-packageを削除。
+	    @param[in] i_name 削除するscene-packageの名前hash値。
+	    @return 削除したscene-package。
+	 */
+	scene_package::shared_ptr remove_package(
+		psyq::scene_event::hash::value const i_name)
+	{
+		return this_type::remove_element(this->packages_, i_name);
 	}
 
 //.............................................................................
@@ -351,8 +313,8 @@ private:
 
 	//-------------------------------------------------------------------------
 	/** @brief containerから要素を検索。
-	    @param[in] i_container 検索するcontainer。
-	    @param[in] i_name      検索名の名前hash値。
+	    @param[in] i_container 対象となるcontainer。
+	    @param[in] i_name      削除する要素の名前hash値。
 	 */
 	template< typename t_container >
 	static typename t_container::mapped_type find_element(
@@ -363,6 +325,26 @@ private:
 			i_container.find(i_name));
 		return i_container.end() != a_position?
 			a_position->second: typename t_container::mapped_type();
+	}
+
+	/** @brief containerから要素を削除。
+	    @param[in] i_container 対象となるcontainer。
+	    @param[in] i_name      削除する要素の名前hash値。
+	 */
+	template< typename t_container >
+	static typename t_container::mapped_type remove_element(
+		t_container&                         io_container,
+		psyq::scene_event::hash::value const i_name)
+	{
+		typename t_container::mapped_type a_mapped;
+		typename t_container::iterator const a_position(
+			io_container.find(i_name));
+		if (io_container.end() != a_position)
+		{
+			a_mapped.swap(a_position->second);
+			io_container.erase(a_position);
+		}
+		return a_mapped;
 	}
 
 	//-------------------------------------------------------------------------

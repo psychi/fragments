@@ -50,7 +50,7 @@ public:
 		switch (this->get_draw_type())
 		{
 		case this_type::type_FRAME_BUFFER:
-			this->clear_buffer();
+			this->_clear_buffer();
 			break;
 
 		case this_type::type_TEXTURE:
@@ -60,7 +60,7 @@ public:
 				return false;
 			}
 			psyq_extern::bind_texture(*this->texture_);
-			this->clear_buffer();
+			this->_clear_buffer();
 			break;
 
 		case this_type::type_CUBE_TEXTURE:
@@ -204,19 +204,6 @@ public:
 		return true;
 	}
 
-	void bind_cube_texture(
-		psyq_extern::math_matrix4 const& i_view,
-		unsigned const            i_face)
-	const
-	{
-		psyq_extern::render_texture* const a_cube_texture(this->get_cube_texture());
-		if (NULL != a_cube_texture)
-		{
-			psyq_extern::bind_cube_texture(*a_cube_texture, i_view, i_face);
-			this->clear_buffer();
-		}
-	}
-
 	//-------------------------------------------------------------------------
 	psyq_extern::post_effect* get_post_effect() const
 	{
@@ -292,12 +279,22 @@ public:
 		this->clear_buffer_ &= ~psyq_extern::surface_STENCIL;
 	}
 
+	//-------------------------------------------------------------------------
+	void _clear_buffer() const
+	{
+		psyq_extern::clear_render_target(
+			this->clear_buffer_,
+			this->clear_color_,
+			this->clear_depth_,
+			this->clear_stencil_);
+	}
+
 //.............................................................................
 private:
 	enum flag
 	{
-		flag_TYPE    = 0x07,
-		flag_DRAWING = 0x80,
+		flag_TYPE    = 0x7,
+		flag_DRAWING = 0x8,
 	};
 
 	//-------------------------------------------------------------------------
@@ -309,15 +306,6 @@ private:
 	void set_draw_type(this_type::type const i_type)
 	{
 		this->flags_ = (~this_type::flag_TYPE & this->flags_) | i_type;
-	}
-
-	void clear_buffer() const
-	{
-		psyq_extern::clear_render_target(
-			this->clear_buffer_,
-			this->clear_color_,
-			this->clear_depth_,
-			this->clear_stencil_);
 	}
 
 	void release_post_effect()

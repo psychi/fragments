@@ -83,168 +83,209 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief scene-sectionを追加。すでにある場合は、追加しない。
-	    @param[in] i_name 追加するscene-sectionの名前hash値。
-	    @return 名前hash値に対応するscene-section。
+	/** @brief packageを追加。
+	    @param[in] i_name    追加するpackageの名前hash値。
+	    @param[in] i_package 追加するpackage。
+	    @return 追加したpackage。追加に失敗した場合は空。
 	 */
-	scene_section::shared_ptr add_section(
-		psyq::scene_event::hash::value const i_name)
+	psyq::scene_package::shared_ptr add_package(
+		psyq::scene_event::hash::value const   i_name,
+		psyq::scene_package::shared_ptr const& i_package)
 	{
-		if (psyq::scene_event::hash::EMPTY == i_name)
-		{
-			return scene_section::shared_ptr();
-		}
-		this_type::section_map::iterator a_position(
-			this->sections_.lower_bound(i_name));
-		if (this->sections_.end() == a_position ||
-			a_position->first != i_name)
-		{
-			// 対象となるscene-sectionがないので、新たに作る。
-			a_position = this->sections_.insert(
-				a_position,
-				this_type::section_map::value_type(
-					i_name,
-					PSYQ_ALLOCATE_SHARED< scene_section >(
-						this->sections_.get_allocator(),
-						this->sections_.get_allocator())));
-			PSYQ_ASSERT(this->sections_.end() != a_position);
-		}
-		PSYQ_ASSERT(NULL != a_position->second.get());
-		return a_position->second;
+		return this_type::add_element(this->packages_, i_name, i_package);
 	}
 
-	/** @brief scene-sectionを検索。
-	    @param[in] i_name 検索するscene-sectionの名前hash値。
-	    @return 見つかったscene-section。
+	/** @brief packageを検索。
+	    @param[in] i_name 検索するpackageの名前hash値。
+		@return 見つけたpacakge。見つからなかった場合は空。
 	 */
-	scene_section::shared_ptr find_section(
+	psyq::scene_package::shared_ptr find_package(
+		psyq::scene_event::hash::value const i_name)
+	const
+	{
+		return this_type::find_element(this->packages_, i_name);
+	}
+
+	/** @brief packageを削除。
+	    @param[in] i_name 削除するpackageの名前hash値。
+	    @return 削除したpackage。削除しなかった場合は空。
+	 */
+	psyq::scene_package::shared_ptr remove_package(
+		psyq::scene_event::hash::value const i_name)
+	{
+		return this_type::remove_element(this->packages_, i_name);
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief sectionを追加。
+	    section名に対応するsectionが存在しない場合は、新たにsectionを作る。
+	    section名に対応するsectionがすでに存在する場合は、追加は行われない。
+	    @param[in] i_name 追加するsectionの名前hash値。
+	    @return section名に対応するsection。追加に失敗した場合は空。
+	 */
+	psyq::scene_section::shared_ptr add_section(
+		psyq::scene_event::hash::value const i_name)
+	{
+		
+		if (psyq::scene_event::hash::EMPTY == i_name)
+		{
+			// 空hash値だと追加に失敗する。
+			return scene_section::shared_ptr();
+		}
+		psyq::scene_section::shared_ptr& a_section(this->sections_[i_name]);
+		if (NULL == a_section.get())
+		{
+			PSYQ_ALLOCATE_SHARED< psyq::scene_section >(
+				this->sections_.get_allocator(),
+				this->sections_.get_allocator()).swap(a_section);
+			PSYQ_ASSERT(NULL != a_section.get());
+		}
+		return a_section;
+	}
+
+	/** @brief sectionを検索。
+	    @param[in] i_name 検索するsectionの名前hash値。
+	    @return 見つかったsection。見つからなかった場合は空。
+	 */
+	psyq::scene_section::shared_ptr find_section(
 		psyq::scene_event::hash::value const i_name)
 	const
 	{
 		return this_type::find_element(this->sections_, i_name);
 	}
 
-	/** @brief scene-sectionを削除。
-	    @param[in] i_name 削除するscene-sectionの名前hash値。
-	    @return 削除したscene-section。
+	/** @brief sectionを削除。
+	    @param[in] i_name 削除するsectionの名前hash値。
+	    @return 削除したsection。削除しなかった場合は空。
 	 */
-	scene_section::shared_ptr remove_section(
+	psyq::scene_section::shared_ptr remove_section(
 		psyq::scene_event::hash::value const i_name)
 	{
 		return this_type::remove_element(this->sections_, i_name);
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief worldにscene-tokenを追加。
-	    @param[in] i_token 追加するscene-tokenの名前hash値。
+	/** @brief worldにtokenを追加。
+	    token名に対応するtokenが存在しない場合は、新たにtokenを作る。
+	    token名に対応するtokenがすでに存在する場合は、追加は行われない。
+	    @param[in] i_token 追加するtokenの名前hash値。
+		@return token名に対応するtoken。
 	 */
-	scene_token::shared_ptr add_token(
+	psyq::scene_token::shared_ptr add_token(
 		psyq::scene_event::hash::value const i_name)
 	{
 		if (psyq::scene_event::hash::EMPTY == i_name)
 		{
+			// 空hash値だと追加に失敗する。
 			return scene_token::shared_ptr();
 		}
-		this_type::token_map::iterator a_position(
-			this->tokens_.lower_bound(i_name));
-		if (this->tokens_.end() == a_position || a_position->first != i_name)
+		psyq::scene_token::shared_ptr& a_token(this->tokens_[i_name]);
+		if (NULL == a_token.get())
 		{
-			a_position = this->tokens_.insert(
-				a_position,
-				this_type::token_map::value_type(
-					i_name,
-					PSYQ_ALLOCATE_SHARED< scene_token >(
-						this->tokens_.get_allocator())));
-			PSYQ_ASSERT(this->tokens_.end() != a_position);
+			PSYQ_ALLOCATE_SHARED< psyq::scene_token >(
+				this->tokens_.get_allocator()).swap(a_token);
+			PSYQ_ASSERT(NULL != a_token.get());
 		}
-		PSYQ_ASSERT(NULL != a_position->second.get());
-		return a_position->second;
+		return a_token;
 	}
 
-	/** @brief scene-sectionにscene-tokenを追加。
-	    @param[in] i_name    追加するscene-tokenの名前hash値。
-	    @param[in] i_section 対象となるscene-sectionの名前hash値。
+
+	/** @brief sectionにtokenを追加。
+	    token名に対応するtokenが存在しない場合は、新たにtokenを作る。
+	    token名に対応するtokenがすでに存在する場合は、追加は行われない。
+	    section名に対応するsectionが存在しない場合は、新たにsectionを作る。
+	    @param[in] i_name    追加するtokenの名前hash値。
+	    @param[in] i_section 対象となるsectionの名前hash値。
+		@return token名に対応するtoken。追加に失敗した場合は空。
 	 */
-	scene_token::shared_ptr add_token(
+	psyq::scene_token::shared_ptr add_token(
 		psyq::scene_event::hash::value const i_name,
 		psyq::scene_event::hash::value const i_section)
 	{
-		scene_section::shared_ptr const a_section(this->add_section(i_section));
+		// 対象となるsectionを取得。
+		psyq::scene_section::shared_ptr const a_section(
+			this->add_section(i_section));
 		if (NULL != a_section.get())
 		{
-			scene_token::shared_ptr const a_token(this->add_token(i_name));
+			// worldにtokenを追加。
+			psyq::scene_token::shared_ptr const a_token(
+				this->add_token(i_name));
 			if (NULL != a_token.get())
 			{
+				// sectionにtokenを追加。
 				a_section->add_token(a_token);
 				return a_token;
 			}
 		}
-		return scene_token::shared_ptr();
+		return psyq::scene_token::shared_ptr();
 	}
 
-	/** @brief scene-worldからscene-tokenを検索。
-	    @param[in] i_name 検索するscene-tokenの名前hash値。
+	/** @brief worldからtokenを検索。
+	    @param[in] i_name 検索するtokenの名前hash値。
+	    @return 見つけたtoken。見つからなかった場合は空。
 	 */
-	scene_token::shared_ptr find_token(
+	psyq::scene_token::shared_ptr find_token(
 		psyq::scene_event::hash::value const i_name)
 	const
 	{
 		return this_type::find_element(this->tokens_, i_name);
 	}
 
-	/** @brief scene-worldからscene-tokenを削除。
-	    @param[in] i_name 削除するscene-tokenの名前hash値。
+	/** @brief worldからtokenを削除。
+	    @param[in] i_name 削除するtokenの名前hash値。
+	    @return 削除したtoken。削除しなかった場合は空。
 	 */
-	scene_token::shared_ptr remove_token(
+	psyq::scene_token::shared_ptr remove_token(
 		psyq::scene_event::hash::value const i_name)
 	{
-		scene_token::shared_ptr a_token;
+		psyq::scene_token::shared_ptr a_token;
 
-		// scene-tokenを取得。
+		// tokenを取得。
 		this_type::token_map::iterator const a_token_pos(
 			this->tokens_.find(i_name));
 		if (this->tokens_.end() != a_token_pos)
 		{
-			// すべてのscene-sectionから、scene-tokenを削除。
+			// すべてのsectionからtokenを削除。
 			for (
 				this_type::section_map::const_iterator i =
 					this->sections_.begin();
 				this->sections_.end() != i;
 				++i)
 			{
-				scene_section* const a_section(i->second.get());
+				psyq::scene_section* const a_section(i->second.get());
 				if (NULL != a_section)
 				{
 					a_section->remove_token(a_token_pos->second);
 				}
 			}
 
-			// scene-worldから、scene-tokenを削除。
+			// worldからtokenを削除。
 			a_token.swap(a_token_pos->second);
 			this->tokens_.erase(a_token_pos);
 		}
 		return a_token;
 	}
 
-	/** @brief scene-sectionからscene-tokenを削除。
-	    @param[in] i_name    削除するscene-tokenの名前hash値。
-	    @param[in] i_section 対象となるscene-sectionの名前hash値。
+	/** @brief sectionからtokenを削除。
+	    @param[in] i_name    削除するtokenの名前hash値。
+	    @param[in] i_section 対象となるsectionの名前hash値。
 	 */
-	scene_token::shared_ptr remove_token(
+	psyq::scene_token::shared_ptr remove_token(
 		psyq::scene_event::hash::value const i_name,
 		psyq::scene_event::hash::value const i_section)
 	{
-		// scene-tokenを取得。
+		// tokenを取得。
 		this_type::token_map::const_iterator const a_token_pos(
 			this->tokens_.find(i_name));
 		if (this->tokens_.end() != a_token_pos)
 		{
-			// scene-sectionから、scene-tokenを削除。
+			// sectionから、tokenを削除。
 			this_type::section_map::const_iterator const a_section_pos(
 				this->sections_.find(i_section));
 			if (this->sections_.end() != a_section_pos)
 			{
-				scene_section* const a_section(a_section_pos->second.get());
+				psyq::scene_section* const a_section(
+					a_section_pos->second.get());
 				if (NULL != a_section)
 				{
 					a_section->remove_token(a_token_pos->second);
@@ -253,42 +294,6 @@ public:
 			}
 		}
 		return scene_token::shared_ptr();
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief scene-packageを追加。
-	    @param[in] i_name    追加するscene-packageの名前hash値。
-	    @param[in] i_package 追加するscene-package。
-	 */
-	scene_package::shared_ptr const& add_package(
-		psyq::scene_event::hash::value const   i_name,
-		psyq::scene_package::shared_ptr const& i_package)
-	{
-		if (NULL != i_package.get())
-		{
-			this->packages_[i_name] = i_package;
-		}
-		return i_package;
-	}
-
-	/** @brief scene-packageを検索。
-	    @param[in] i_name 検索するscene-packageの名前hash値。
-	 */
-	scene_package::shared_ptr find_package(
-		psyq::scene_event::hash::value const i_name)
-	const
-	{
-		return this_type::find_element(this->packages_, i_name);
-	}
-
-	/** @brief scene-packageを削除。
-	    @param[in] i_name 削除するscene-packageの名前hash値。
-	    @return 削除したscene-package。
-	 */
-	scene_package::shared_ptr remove_package(
-		psyq::scene_event::hash::value const i_name)
-	{
-		return this_type::remove_element(this->packages_, i_name);
 	}
 
 //.............................................................................
@@ -312,6 +317,25 @@ private:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief containerに要素を追加。
+	    @param[in] i_container 対象となるcontainer。
+	    @param[in] i_name      追加する要素の名前hash値。
+	    @param[in] i_mapped    追加する要素。
+	 */
+	template< typename t_container >
+	static typename t_container::mapped_type add_element(
+		t_container&                             io_container,
+		typename t_container::key_type const     i_name,
+		typename t_container::mapped_type const& i_mapped)
+	{
+		if (psyq::scene_event::hash::EMPTY == i_name || NULL == i_mapped.get())
+		{
+			return typename t_container::mapped_type();
+		}
+		io_container[i_name] = i_mapped;
+		return i_mapped;
+	}
+
 	/** @brief containerから要素を検索。
 	    @param[in] i_container 対象となるcontainer。
 	    @param[in] i_name      削除する要素の名前hash値。
@@ -386,7 +410,7 @@ private:
 			i_tokens.end() != i;
 			++i)
 		{
-			scene_token* const a_token(i->second.get());
+			psyq::scene_token* const a_token(i->second.get());
 			if (NULL != a_token)
 			{
 				psyq_extern::update_scene_unit(a_token->scene_);

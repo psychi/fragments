@@ -46,7 +46,9 @@ public:
 	typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
 
 	//-------------------------------------------------------------------------
+	template< typename t_allocator >
 	static this_type::shared_ptr load(
+		t_allocator const&               i_allocator,
 		psyq::scene_event::string const& i_scene_path,
 		psyq::scene_event::string const& i_shader_path,
 		psyq::scene_event::string const& i_texture_path)
@@ -54,11 +56,14 @@ public:
 		if (!i_scene_path.empty())
 		{
 			// textureをfileから読み込む。
-			texture_package::shared_ptr a_texture;
+			psyq::texture_package::shared_ptr a_texture;
 			if (!i_texture_path.empty())
 			{
-				this_type::load_file< texture_package >(
-					i_texture_path).swap(a_texture);
+				typename t_allocator::template
+					rebind< psyq::texture_package >::other a_allocator(
+						i_allocator);
+				this_type::load_file(
+					a_allocator, i_texture_path).swap(a_texture);
 				if (NULL == a_texture.get())
 				{
 					// textureが読み込めなかった。
@@ -68,11 +73,14 @@ public:
 			}
 
 			// shaderをfileから読み込む。
-			shader_package::shared_ptr a_shader;
+			psyq::shader_package::shared_ptr a_shader;
 			if (!i_shader_path.empty())
 			{
-				this_type::load_file< shader_package >(
-					i_shader_path).swap(a_shader);
+				typename t_allocator::template
+					rebind< psyq::shader_package >::other a_allocator(
+						i_allocator);
+				this_type::load_file(
+					a_allocator, i_shader_path).swap(a_shader);
 				if (NULL == a_shader.get())
 				{
 					// shaderが読み込めなかった。
@@ -82,8 +90,10 @@ public:
 			}
 
 			// sceneをfileから読み込む。
+			typename t_allocator::template
+				rebind< psyq::scene_package >::other a_allocator(i_allocator);
 			this_type::shared_ptr const a_scene(
-				this_type::load_file< this_type >(i_scene_path));
+				this_type::load_file(a_allocator, i_scene_path));
 			if (NULL != a_scene.get())
 			{
 				a_scene->shader_.swap(a_shader);
@@ -95,17 +105,20 @@ public:
 				PSYQ_ASSERT(false);
 			}
 		}
-		return scene_package::shared_ptr();
+		return this_type::shared_ptr();
 	}
 
 //.............................................................................
 private:
 	//-------------------------------------------------------------------------
-	template< typename t_value, typename t_string >
-	static PSYQ_SHARED_PTR< t_value > load_file(t_string const& i_path)
+	template< typename t_allocator, typename t_string >
+	static PSYQ_SHARED_PTR< typename t_allocator::value_type > load_file(
+		t_allocator&    io_allocator,
+		t_string const& i_path)
 	{
+		io_allocator.max_size();
 		i_path.length();
-		return PSYQ_SHARED_PTR< t_value >(); // 未実装なので。
+		return PSYQ_SHARED_PTR< typename t_allocator::value_type >(); // 未実装なので。
 	}
 
 //.............................................................................

@@ -84,15 +84,25 @@ public:
 
 	//-------------------------------------------------------------------------
 	/** @brief packageを追加。
-	    @param[in] i_name    追加するpackageの名前hash値。
-	    @param[in] i_package 追加するpackage。
-	    @return 追加したpackage。追加に失敗した場合は空。
+	    package名に対応するpackageが存在しない場合は、fileから読み込んで追加。
+	    package名に対応するpackageがすでに存在する場合は、追加は行われない。
+	    @param[in] i_name 追加するpackageの名前hash値。
+	    @return package名に対応するpackage。追加に失敗した場合は空。
 	 */
 	psyq::scene_package::shared_ptr add_package(
-		psyq::scene_event::hash::value const   i_name,
-		psyq::scene_package::shared_ptr const& i_package)
+		psyq::scene_event::hash::value const i_name)
 	{
-		return this_type::add_element(this->packages_, i_name, i_package);
+		if (psyq::scene_event::hash::EMPTY != i_name)
+		{
+			psyq::scene_package::shared_ptr& a_package(this->packages_[i_name]);
+			if (NULL != a_package.get() || this->load_package(a_package, i_name))
+			{
+				return a_package;
+			}
+			PSYQ_ASSERT(false);
+			this->packages_.erase(i_name);
+		}
+		return scene_package::shared_ptr();
 	}
 
 	/** @brief packageを検索。
@@ -126,21 +136,28 @@ public:
 	psyq::scene_section::shared_ptr add_section(
 		psyq::scene_event::hash::value const i_name)
 	{
-		
-		if (psyq::scene_event::hash::EMPTY == i_name)
+		if (psyq::scene_event::hash::EMPTY != i_name)
 		{
-			// 空hash値だと追加に失敗する。
-			return scene_section::shared_ptr();
-		}
-		psyq::scene_section::shared_ptr& a_section(this->sections_[i_name]);
-		if (NULL == a_section.get())
-		{
+			// 既存のsectionから検索。
+			psyq::scene_section::shared_ptr& a_section(
+				this->sections_[i_name]);
+			if (NULL != a_section.get())
+			{
+				return a_section;
+			}
+
+			// 新たにsectionを作る。
 			PSYQ_ALLOCATE_SHARED< psyq::scene_section >(
 				this->sections_.get_allocator(),
 				this->sections_.get_allocator()).swap(a_section);
-			PSYQ_ASSERT(NULL != a_section.get());
+			if (NULL != a_section.get())
+			{
+				return a_section;
+			}
+			PSYQ_ASSERT(false);
+			this->sections_.erase(i_name);
 		}
-		return a_section;
+		return psyq::scene_section::shared_ptr();
 	}
 
 	/** @brief sectionを検索。
@@ -174,21 +191,27 @@ public:
 	psyq::scene_token::shared_ptr add_token(
 		psyq::scene_event::hash::value const i_name)
 	{
-		if (psyq::scene_event::hash::EMPTY == i_name)
+		if (psyq::scene_event::hash::EMPTY != i_name)
 		{
-			// 空hash値だと追加に失敗する。
-			return scene_token::shared_ptr();
-		}
-		psyq::scene_token::shared_ptr& a_token(this->tokens_[i_name]);
-		if (NULL == a_token.get())
-		{
+			// 既存のtokenから検索。
+			psyq::scene_token::shared_ptr& a_token(this->tokens_[i_name]);
+			if (NULL != a_token.get())
+			{
+				return a_token;
+			}
+
+			// 新たにtokenを作る。
 			PSYQ_ALLOCATE_SHARED< psyq::scene_token >(
 				this->tokens_.get_allocator()).swap(a_token);
-			PSYQ_ASSERT(NULL != a_token.get());
+			if (NULL != a_token.get())
+			{
+				return a_token;
+			}
+			PSYQ_ASSERT(false);
+			this->tokens_.erase(i_name);
 		}
-		return a_token;
+		return psyq::scene_token::shared_ptr();
 	}
-
 
 	/** @brief sectionにtokenを追加。
 	    token名に対応するtokenが存在しない場合は、新たにtokenを作る。
@@ -298,6 +321,14 @@ public:
 
 //.............................................................................
 private:
+	//-------------------------------------------------------------------------
+	struct package_path
+	{
+		psyq::scene_event::item::offset scene;   ///< sceneのpath名の書庫offset値。
+		psyq::scene_event::item::offset shader;  ///< shaderのpath名の書庫offset値。
+		psyq::scene_event::item::offset texture; ///< textureのpath名の書庫offset値。
+	};
+
 	typedef std::multimap<
 		psyq::scene_event::time_scale::value,
 		psyq::scene_event::point const*,
@@ -309,33 +340,6 @@ private:
 					dispatch_map;
 
 	//-------------------------------------------------------------------------
-	template< typename t_value, typename t_string >
-	static PSYQ_SHARED_PTR< t_value > load_file(t_string const& i_path)
-	{
-		i_path.length();
-		return PSYQ_SHARED_PTR< t_value >(); // 未実装なので。
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief containerに要素を追加。
-	    @param[in] i_container 対象となるcontainer。
-	    @param[in] i_name      追加する要素の名前hash値。
-	    @param[in] i_mapped    追加する要素。
-	 */
-	template< typename t_container >
-	static typename t_container::mapped_type add_element(
-		t_container&                             io_container,
-		typename t_container::key_type const     i_name,
-		typename t_container::mapped_type const& i_mapped)
-	{
-		if (psyq::scene_event::hash::EMPTY == i_name || NULL == i_mapped.get())
-		{
-			return typename t_container::mapped_type();
-		}
-		io_container[i_name] = i_mapped;
-		return i_mapped;
-	}
-
 	/** @brief containerから要素を検索。
 	    @param[in] i_container 対象となるcontainer。
 	    @param[in] i_name      削除する要素の名前hash値。
@@ -369,6 +373,42 @@ private:
 			io_container.erase(a_position);
 		}
 		return a_mapped;
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief pacakgeを読み込む。
+	    @param[out] o_package 読み込んだpackageを格納する。
+	    @param[in]  i_name    packageの名前hash値。
+	 */
+	bool load_package(
+		psyq::scene_package::shared_ptr&     o_package,
+		psyq::scene_event::hash::value const i_name)
+	const
+	{
+		psyq::scene_event::item const* const a_item(
+			psyq::scene_event::item::find(
+				*this->event_.get_archive(), i_name));
+		if (NULL != a_item)
+		{
+			this_type::package_path const* const a_path(
+				this->event_.get_address< this_type::package_path >(
+					a_item->begin));
+			if (NULL != a_path)
+			{
+				psyq::scene_package::shared_ptr a_package(
+					psyq::scene_package::load(
+						this->packages_.get_allocator(),
+						this->event_.replace_string(a_path->scene),
+						this->event_.replace_string(a_path->shader),
+						this->event_.replace_string(a_path->texture)));
+				if (NULL != a_package.get())
+				{
+					o_package.swap(a_package);
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	//-------------------------------------------------------------------------

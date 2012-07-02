@@ -12,18 +12,44 @@ class event_LOAD_PACKAGE:
 //.............................................................................
 public:
 	//-------------------------------------------------------------------------
+	static psyq::scene_event::hash::value get_hash()
+	{
+		return psyq::scene_event::hash::generate("LOAD_PACKAGE");
+	}
+
+	//-------------------------------------------------------------------------
+	virtual void apply(
+		psyq::scene_world&              io_world,
+		psyq::scene_event::point const& i_point,
+		psyq::scene_event::line::time_scale::value const)
+	{
+		io_world.add_package(io_world.event_.replace_hash(i_point.integer));
+	}
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief scene-tokenにanimationを設定するevent。
+class event_SET_TOKEN_ANIMATION:
+	public psyq::scene_event::action
+{
+	typedef event_SET_TOKEN_ANIMATION this_type;
+	typedef psyq::scene_event::action super_type;
+
+//.............................................................................
+public:
+	//-------------------------------------------------------------------------
 	struct parameters
 	{
-		psyq::scene_event::item::offset package_name; ///< package名の書庫offset値。
-		psyq::scene_event::item::offset scene_path;   ///< sceneのpath名の書庫offset値。
-		psyq::scene_event::item::offset shader_path;  ///< shaderのpath名の書庫offset値。
-		psyq::scene_event::item::offset texture_path; ///< textureのpath名の書庫offset値。
+		psyq::scene_event::item::offset token;
+		psyq::scene_event::item::offset package;
+		psyq::scene_event::item::offset flags;
+		psyq::scene_event::real         start;
 	};
 
 	//-------------------------------------------------------------------------
 	static psyq::scene_event::hash::value get_hash()
 	{
-		return psyq::scene_event::hash::generate("LOAD_PACKAGE");
+		return psyq::scene_event::hash::generate("SET_TOKEN_ANIMATION");
 	}
 
 	//-------------------------------------------------------------------------
@@ -37,24 +63,23 @@ public:
 				i_point.integer));
 		if (NULL != a_parameters)
 		{
-			io_world.add_package(
-				io_world.event_.replace_hash(a_parameters->package_name),
-				psyq::scene_package::load(
-					io_world.event_.replace_string(a_parameters->scene_path),
-					io_world.event_.replace_string(a_parameters->shader_path),
-					io_world.event_.replace_string(a_parameters->texture_path)));
+			psyq::scene_package* const a_package(
+				io_world.add_package(
+					io_world.event_.replace_hash(
+						a_parameters->package)).get());
+			if (NULL != a_package)
+			{
+				psyq::scene_token* const a_token(
+					io_world.add_token(
+						io_world.event_.replace_hash(
+							a_parameters->token)).get());
+				if (NULL != a_token)
+				{
+					//psyq_extern::set_animation(a_token->scene_, *a_package);
+				}
+			}
 		}
 	}
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief scene-tokenにanimationを設定するevent。
-struct event_SET_TOKEN_ANIMATION
-{
-	psyq::scene_event::item::offset token;
-	psyq::scene_event::item::offset package;
-	psyq::scene_event::item::offset flags;
-	psyq::scene_event::real         start;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -92,13 +117,15 @@ public:
 		if (NULL != a_parameters)
 		{
 			psyq::scene_package* const a_package(
-				io_world.find_package(
-					io_world.event_.replace_hash(a_parameters->package)).get());
+				io_world.add_package(
+					io_world.event_.replace_hash(
+						a_parameters->package)).get());
 			if (NULL != a_package)
 			{
 				psyq::scene_token* const a_token(
 					io_world.add_token(
-						io_world.event_.replace_hash(a_parameters->token)).get());
+						io_world.event_.replace_hash(
+							a_parameters->token)).get());
 				if (NULL != a_token)
 				{
 					psyq_extern::set_model(a_token->scene_, *a_package);

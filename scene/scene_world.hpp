@@ -67,7 +67,7 @@ public:
 		psyq_extern::scene_time const&             i_frame_time,
 		psyq::scene_event::time_scale::value const i_frame_count = 1)
 	{
-		// dssg-sceneの時間を更新。
+		// sceneの時間を更新。
 		this_type::forward_scenes(this->tokens_, i_frame_time, i_frame_count);
 
 		// eventを更新。
@@ -78,7 +78,7 @@ public:
 			a_dispatch, this->event_.lines_, i_frame_count);
 		this_type::apply_events(*this, a_dispatch, this->event_.actions_);
 
-		// dssg-sceneを更新。
+		// sceneを更新。
 		this_type::update_scenes(this->tokens_);
 	}
 
@@ -114,7 +114,7 @@ public:
 
 	/** @brief packageを検索。
 	    @param[in] i_name 検索するpackageの名前hash値。
-		@return 見つけたpacakge。見つからなかった場合は空。
+	    @return 見つけたpacakge。見つからなかった場合は空。
 	 */
 	psyq::scene_package::shared_ptr const& find_package(
 		psyq::scene_event::hash::value const i_name)
@@ -188,10 +188,10 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief worldが持つtokenを取得。
+	/** @brief worldからtokenを取得。
 	    token名に対応するtokenが存在しない場合は、新たにtokenを作る。
 	    @param[in] i_token 取得するtokenの名前hash値。
-		@return token名に対応するtoken。取得に失敗した場合は空。
+	    @return token名に対応するtoken。取得に失敗した場合は空。
 	 */
 	psyq::scene_token::shared_ptr const& get_token(
 		psyq::scene_event::hash::value const i_name)
@@ -221,30 +221,22 @@ public:
 	/** @brief sectionからtokenを取得。
 	    token名に対応するtokenが存在しない場合は、新たにtokenを作る。
 	    section名に対応するsectionが存在しない場合は、新たにsectionを作る。
-	    @param[in] i_name    取得するtokenの名前hash値。
+	    sectionにtokenがない場合は、sectionにtokenを追加する。
+	    @param[in] i_token   取得するtokenの名前hash値。
 	    @param[in] i_section 対象となるsectionの名前hash値。
-		@return token名に対応するtoken。取得に失敗した場合は空。
+	    @return token名に対応するtoken。取得に失敗した場合は空。
 	 */
 	psyq::scene_token::shared_ptr const& get_token(
-		psyq::scene_event::hash::value const i_name,
+		psyq::scene_event::hash::value const i_token,
 		psyq::scene_event::hash::value const i_section)
 	{
-		// 対象となるsectionを取得。
-		psyq::scene_section* const a_section(
-			this->get_section(i_section).get());
-		if (NULL != a_section)
-		{
-			// worldにtokenを追加。
-			psyq::scene_token::shared_ptr const& a_token(
-				this->get_token(i_name));
-			if (NULL != a_token.get())
-			{
-				// sectionにtokenを追加。
-				a_section->add_token(a_token);
-				return a_token;
-			}
-		}
-		return this_type::get_null_ptr< psyq::scene_token >();
+		// tokenとsectionを取得。
+		psyq::scene_token::shared_ptr const& a_token(this->get_token(i_token));
+		psyq::scene_section* const a_section(this->get_section(i_section).get());
+
+		// sectionにtokenを追加。
+		return NULL != a_section && a_section->add_token(a_token)?
+			a_token: this_type::get_null_ptr< psyq::scene_token >();
 	}
 
 	/** @brief worldからtokenを検索。
@@ -258,7 +250,7 @@ public:
 		return this_type::find_element(this->tokens_, i_name);
 	}
 
-	/** @brief worldからtokenを削除。
+	/** @brief worldとsectionからtokenを削除。
 	    @param[in] i_name 削除するtokenの名前hash値。
 	    @return 削除したtoken。削除しなかった場合は空。
 	 */
@@ -272,6 +264,10 @@ public:
 			this->tokens_.find(i_name));
 		if (this->tokens_.end() != a_token_pos)
 		{
+			// worldからtokenを削除。
+			a_token.swap(a_token_pos->second);
+			this->tokens_.erase(a_token_pos);
+
 			// すべてのsectionからtokenを削除。
 			for (
 				this_type::section_map::const_iterator i =
@@ -282,45 +278,43 @@ public:
 				psyq::scene_section* const a_section(i->second.get());
 				if (NULL != a_section)
 				{
-					a_section->remove_token(a_token_pos->second);
+					a_section->remove_token(a_token);
 				}
 			}
-
-			// worldからtokenを削除。
-			a_token.swap(a_token_pos->second);
-			this->tokens_.erase(a_token_pos);
 		}
 		return a_token;
 	}
 
 	/** @brief sectionからtokenを削除。
-	    @param[in] i_name    削除するtokenの名前hash値。
+	    @param[in] i_token   削除するtokenの名前hash値。
 	    @param[in] i_section 対象となるsectionの名前hash値。
+	    @return 削除したtoken。削除しなかった場合は空。
 	 */
-	psyq::scene_token::shared_ptr remove_token(
-		psyq::scene_event::hash::value const i_name,
+	psyq::scene_token::shared_ptr const& remove_token(
+		psyq::scene_event::hash::value const i_token,
 		psyq::scene_event::hash::value const i_section)
 	{
-		// tokenを取得。
-		this_type::token_map::const_iterator const a_token_pos(
-			this->tokens_.find(i_name));
-		if (this->tokens_.end() != a_token_pos)
+		// sectionを検索。
+		this_type::section_map::const_iterator const a_section_pos(
+			this->sections_.find(i_section));
+		if (this->sections_.end() != a_section_pos)
 		{
-			// sectionから、tokenを削除。
-			this_type::section_map::const_iterator const a_section_pos(
-				this->sections_.find(i_section));
-			if (this->sections_.end() != a_section_pos)
+			// tokenを検索。
+			this_type::token_map::const_iterator const a_token_pos(
+				this->tokens_.find(i_token));
+			if (this->tokens_.end() != a_token_pos)
 			{
+				// sectionから、tokenを削除。
 				psyq::scene_section* const a_section(
 					a_section_pos->second.get());
-				if (NULL != a_section)
+				if (NULL != a_section &&
+					a_section->remove_token(a_token_pos->second))
 				{
-					a_section->remove_token(a_token_pos->second);
 					return a_token_pos->second;
 				}
 			}
 		}
-		return psyq::scene_token::shared_ptr();
+		return this_type::get_null_ptr< psyq::scene_token >();
 	}
 
 //.............................................................................
@@ -370,21 +364,20 @@ private:
 		t_container&                         io_container,
 		psyq::scene_event::hash::value const i_name)
 	{
-		typename t_container::mapped_type a_mapped;
+		typename t_container::mapped_type a_element;
 		typename t_container::iterator const a_position(
 			io_container.find(i_name));
 		if (io_container.end() != a_position)
 		{
-			a_mapped.swap(a_position->second);
+			a_element.swap(a_position->second);
 			io_container.erase(a_position);
 		}
-		return a_mapped;
+		return a_element;
 	}
 
 	//-------------------------------------------------------------------------
 	/** @brief fileからpacakgeを読み込む。
-	    @param[out] o_package 読み込んだpackageを格納する。
-	    @param[in]  i_name    packageの名前hash値。
+	    @param[in] i_name packageの名前hash値。
 	 */
 	psyq::scene_package::shared_ptr load_package(
 		psyq::scene_event::hash::value const i_name)
@@ -418,8 +411,8 @@ private:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief dssg-sceneの時間を更新。
-	    @param[in] i_tokens      dssg-sceneを持つtokenの辞書。
+	/** @brief sceneの時間を更新。
+	    @param[in] i_tokens      sceneを持つtokenの辞書。
 	    @param[in] i_frame_time  1frameあたりの時間。
 	    @param[in] i_frame_count 進めるframe数。
 	 */
@@ -446,8 +439,8 @@ private:
 		}
 	}
 
-	/** @brief dssg-sceneを更新。
-	    @param[in] i_tokens dssg-sceneを持つtokenの辞書。
+	/** @brief sceneを更新。
+	    @param[in] i_tokens sceneを持つtokenの辞書。
 	 */
 	static void update_scenes(this_type::token_map const& i_tokens)
 	{
@@ -537,4 +530,4 @@ public:
 	this_type::token_map    tokens_;   ///< scene-tokenの辞書。
 };
 
-#endif // !DSSG_SCENE_WORLD_HPP_
+#endif // !PSYQ_SCENE_WORLD_HPP_

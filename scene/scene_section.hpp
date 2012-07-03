@@ -31,11 +31,14 @@ public:
 	 */
 	bool add_token(psyq::scene_token::shared_ptr const& i_token)
 	{
-		if (NULL == i_token.get() || this->find_token(i_token))
+		if (NULL == i_token.get())
 		{
 			return false;
 		}
-		this->tokens_.push_back(i_token);
+		if (!this->find_token(i_token))
+		{
+			this->tokens_.push_back(i_token);
+		}
 		return true;
 	}
 
@@ -51,14 +54,16 @@ public:
 	/** @brief scene-token‚ðíœB
 	    @param[in] i_token íœ‚·‚éscene-tokenB
 	 */
-	void remove_token(psyq::scene_token::shared_ptr const& i_token)
+	bool remove_token(psyq::scene_token::shared_ptr const& i_token)
 	{
 		std::size_t const a_index(this->find_token_index(i_token.get()));
 		if (a_index < this->tokens_.size())
 		{
 			this->tokens_.at(a_index).swap(this->tokens_.back());
 			this->tokens_.pop_back();
+			return true;
 		}
+		return false;
 	}
 
 	//-------------------------------------------------------------------------
@@ -93,8 +98,8 @@ public:
 //.............................................................................
 private:
 	typedef std::vector<
-		scene_token::shared_ptr,
-		scene_event::allocator::rebind< scene_token::shared_ptr >::other >
+		psyq::scene_token::shared_ptr,
+		psyq_extern::allocator::rebind< scene_token::shared_ptr >::other >
 			token_container;
 
 	//-------------------------------------------------------------------------

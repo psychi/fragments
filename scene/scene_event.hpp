@@ -34,7 +34,7 @@ public:
 	typedef std::basic_string<
 		this_type::letter,
 		std::char_traits< this_type::letter >,
-		allocator::rebind< this_type::letter >::other >
+		this_type::allocator::rebind< this_type::letter >::other >
 			string;
 	typedef psyq::basic_const_string< this_type::letter > const_string;
 

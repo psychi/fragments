@@ -125,4 +125,4 @@ private:
 	psyq_extern::scene_node const* focus_node_;
 };
 
-#endif // DSSG_SCENE_CAMERA_HPP_
+#endif // PSYQ_SCENE_CAMERA_HPP_

@@ -1,12 +1,12 @@
-#ifndef DSSG_SCENE_EVENT_ACTION_HPP_
-#define DSSG_SCENE_EVENT_ACTION_HPP_
+#ifndef PSYQ_SCENE_EVENT_ACTION_HPP_
+#define PSYQ_SCENE_EVENT_ACTION_HPP_
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief fileからscene-packageを読み込むevent。
-class event_LOAD_PACKAGE:
+/// @brief scene-packageを用意するevent。
+class event_RESERVE_PACKAGE:
 	public psyq::scene_event::action
 {
-	typedef event_LOAD_PACKAGE this_type;
+	typedef event_RESERVE_PACKAGE this_type;
 	typedef psyq::scene_event::action super_type;
 
 //.............................................................................
@@ -14,7 +14,7 @@ public:
 	//-------------------------------------------------------------------------
 	static psyq::scene_event::hash::value get_hash()
 	{
-		return psyq::scene_event::hash::generate("LOAD_PACKAGE");
+		return psyq::scene_event::hash::generate("RESERVE_PACKAGE");
 	}
 
 	//-------------------------------------------------------------------------
@@ -29,10 +29,10 @@ public:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenにanimationを設定するevent。
-class event_SET_TOKEN_ANIMATION:
+class event_SET_SCENE_ANIMATION:
 	public psyq::scene_event::action
 {
-	typedef event_SET_TOKEN_ANIMATION this_type;
+	typedef event_SET_SCENE_ANIMATION this_type;
 	typedef psyq::scene_event::action super_type;
 
 //.............................................................................
@@ -49,7 +49,7 @@ public:
 	//-------------------------------------------------------------------------
 	static psyq::scene_event::hash::value get_hash()
 	{
-		return psyq::scene_event::hash::generate("SET_TOKEN_ANIMATION");
+		return psyq::scene_event::hash::generate("SET_SCENE_ANIMATION");
 	}
 
 	//-------------------------------------------------------------------------
@@ -84,10 +84,10 @@ public:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenにmodelを設定するevent。
-class event_SET_TOKEN_MODEL:
+class event_SET_SCENE_MODEL:
 	public psyq::scene_event::action
 {
-	typedef event_SET_TOKEN_MODEL this_type;
+	typedef event_SET_SCENE_MODEL this_type;
 	typedef psyq::scene_event::action super_type;
 
 //.............................................................................
@@ -102,7 +102,7 @@ public:
 	//-------------------------------------------------------------------------
 	static psyq::scene_event::hash::value get_hash()
 	{
-		return psyq::scene_event::hash::generate("SET_TOKEN_MODEL");
+		return psyq::scene_event::hash::generate("SET_SCENE_MODEL");
 	}
 
 	//-------------------------------------------------------------------------
@@ -180,17 +180,17 @@ public:
 				i_point.integer));
 		if (NULL != a_parameters)
 		{
-			psyq::scene_section::shared_ptr const a_section(
+			psyq::scene_section* const a_section(
 				io_world.get_section(
-					io_world.event_.replace_hash(a_parameters->section)));
-			if (NULL != a_section.get())
+					io_world.event_.replace_hash(a_parameters->section)).get());
+			if (NULL != a_section)
 			{
-				psyq::scene_token::shared_ptr a_token(
+				psyq::scene_token::shared_ptr const& a_token(
 					io_world.get_token(
 						io_world.event_.replace_hash(a_parameters->token)));
 				if (NULL != a_token.get())
 				{
-					a_section->light_.swap(a_token);
+					a_section->light_ = a_token;
 				}
 			}
 		}
@@ -198,11 +198,11 @@ public:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief scene-tokenを追加するevent。
-class event_ADD_TOKEN:
+/// @brief scene-tokenを用意するevent。
+class event_RESERVE_TOKEN:
 	public psyq::scene_event::action
 {
-	typedef event_ADD_TOKEN this_type;
+	typedef event_RESERVE_TOKEN this_type;
 	typedef psyq::scene_event::action super_type;
 
 //.............................................................................
@@ -217,7 +217,7 @@ public:
 	//-------------------------------------------------------------------------
 	static psyq::scene_event::hash::value get_hash()
 	{
-		return psyq::scene_event::hash::generate("ADD_TOKEN");
+		return psyq::scene_event::hash::generate("RESERVE_TOKEN");
 	}
 
 	//-------------------------------------------------------------------------
@@ -231,20 +231,9 @@ public:
 				i_point.integer));
 		if (NULL != a_parameters)
 		{
-			psyq::scene_event::hash::value const a_token(
-				io_world.event_.replace_hash(a_parameters->token));
-			psyq::scene_event::hash::value const a_section(
+			io_world.get_token(
+				io_world.event_.replace_hash(a_parameters->token),
 				io_world.event_.replace_hash(a_parameters->section));
-			if (psyq::scene_event::hash::EMPTY != a_section)
-			{
-				// sectionにtokenを追加。
-				io_world.get_token(a_token, a_section);
-			}
-			else
-			{
-				// worldにtokenを追加。
-				io_world.get_token(a_token);
-			}
 		}
 	}
 };
@@ -301,4 +290,4 @@ public:
 	}
 };
 
-#endif // !DSSG_SCENE_EVENT_ACTION_HPP_
+#endif // !PSYQ_SCENE_EVENT_ACTION_HPP_

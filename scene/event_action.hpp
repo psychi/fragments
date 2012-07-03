@@ -23,7 +23,7 @@ public:
 		psyq::scene_event::point const& i_point,
 		psyq::scene_event::line::time_scale::value const)
 	{
-		io_world.add_package(io_world.event_.replace_hash(i_point.integer));
+		io_world.get_package(io_world.event_.replace_hash(i_point.integer));
 	}
 };
 
@@ -64,13 +64,13 @@ public:
 		if (NULL != a_parameters)
 		{
 			psyq::scene_package* const a_package(
-				io_world.add_package(
+				io_world.get_package(
 					io_world.event_.replace_hash(
 						a_parameters->package)).get());
 			if (NULL != a_package)
 			{
 				psyq::scene_token* const a_token(
-					io_world.add_token(
+					io_world.get_token(
 						io_world.event_.replace_hash(
 							a_parameters->token)).get());
 				if (NULL != a_token)
@@ -117,13 +117,13 @@ public:
 		if (NULL != a_parameters)
 		{
 			psyq::scene_package* const a_package(
-				io_world.add_package(
+				io_world.get_package(
 					io_world.event_.replace_hash(
 						a_parameters->package)).get());
 			if (NULL != a_package)
 			{
 				psyq::scene_token* const a_token(
-					io_world.add_token(
+					io_world.get_token(
 						io_world.event_.replace_hash(
 							a_parameters->token)).get());
 				if (NULL != a_token)
@@ -181,12 +181,12 @@ public:
 		if (NULL != a_parameters)
 		{
 			psyq::scene_section::shared_ptr const a_section(
-				io_world.add_section(
+				io_world.get_section(
 					io_world.event_.replace_hash(a_parameters->section)));
 			if (NULL != a_section.get())
 			{
 				psyq::scene_token::shared_ptr a_token(
-					io_world.add_token(
+					io_world.get_token(
 						io_world.event_.replace_hash(a_parameters->token)));
 				if (NULL != a_token.get())
 				{
@@ -238,12 +238,12 @@ public:
 			if (psyq::scene_event::hash::EMPTY != a_section)
 			{
 				// section‚Étoken‚ğ’Ç‰ÁB
-				io_world.add_token(a_token, a_section);
+				io_world.get_token(a_token, a_section);
 			}
 			else
 			{
 				// world‚Étoken‚ğ’Ç‰ÁB
-				io_world.add_token(a_token);
+				io_world.get_token(a_token);
 			}
 		}
 	}

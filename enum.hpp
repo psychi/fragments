@@ -33,10 +33,6 @@ namespace psyq
 				PSYQ_ENUM_basic_set;\
 		private: class PSYQ_ENUM_set: public PSYQ_ENUM_basic_set\
 		{\
-			public: BOOST_PP_REPEAT(\
-				BOOST_PP_SEQ_SIZE(d_items),\
-				PSYQ_PRIVATE_ENUM_VALUE_GETTER,\
-				d_items)\
 			public: PSYQ_ENUM_set(): PSYQ_ENUM_basic_set()\
 			{\
 				BOOST_PP_REPEAT(\
@@ -44,6 +40,10 @@ namespace psyq
 					PSYQ_PRIVATE_ENUM_VALUE_CONSTRUCT,\
 					d_items)\
 			}\
+			public: BOOST_PP_REPEAT(\
+				BOOST_PP_SEQ_SIZE(d_items),\
+				PSYQ_PRIVATE_ENUM_VALUE_GETTER,\
+				d_items)\
 		};\
 		private: class PSYQ_ENUM_ordinal: private boost::noncopyable\
 		{\
@@ -56,9 +56,9 @@ namespace psyq
 		public: typedef PSYQ_ENUM_ordinal ordinal;\
 		public: typedef PSYQ_ENUM_set enumeration;\
 		public: typedef PSYQ_ENUM_basic_set::item item;\
-		private: d_enum();\
 		public: static PSYQ_ENUM_basic_set::item::ordinal const SIZE =\
 			PSYQ_ENUM_basic_set::SIZE;\
+		private: d_enum();\
 	};
 
 //-----------------------------------------------------------------------------
@@ -110,7 +110,7 @@ namespace psyq
 	BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(d_ordinal, d_items)) = d_ordinal;
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 列挙型の基底class。
+/** @brief 列挙型の基底class。userは使用禁止。
     @tparam t_item 列挙子の型。
     @tparam t_size 列挙子の数。
  */
@@ -122,6 +122,10 @@ class psyq::_enum_set:
 
 	//-------------------------------------------------------------------------
 	public: typedef t_item item;
+
+	//-------------------------------------------------------------------------
+	/// 保持している列挙子の数。
+	public: static typename t_item::ordinal const SIZE = t_size;
 
 	//-------------------------------------------------------------------------
 	protected: _enum_set()
@@ -189,9 +193,6 @@ class psyq::_enum_set:
 	}
 
 	//-------------------------------------------------------------------------
-	/// 保持している列挙子の数。
-	public: static typename t_item::ordinal const SIZE = t_size;
-
 	/// memory領域。
 	private: typename boost::aligned_storage<
 		sizeof(t_item[t_size]),
@@ -200,7 +201,7 @@ class psyq::_enum_set:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 列挙子。
+/** @brief 列挙子。userは使用禁止。
     @tparam t_name     列挙子の名前の型。
     @tparam t_property 列挙子が持つ値の型。
  */

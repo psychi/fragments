@@ -27,10 +27,10 @@ class event_RESERVE_PACKAGE:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenÇ…animationÇê›íËÇ∑ÇÈeventÅB
-class event_SET_SCENE_ANIMATION:
+class event_SET_TOKEN_ANIMATION:
 	public psyq::scene_event::action
 {
-	typedef event_SET_SCENE_ANIMATION this_type;
+	typedef event_SET_TOKEN_ANIMATION this_type;
 	typedef psyq::scene_event::action super_type;
 
 	//-------------------------------------------------------------------------
@@ -45,7 +45,7 @@ class event_SET_SCENE_ANIMATION:
 	//-------------------------------------------------------------------------
 	public: static psyq::scene_event::hash::value get_hash()
 	{
-		return psyq::scene_event::hash::generate("SET_SCENE_ANIMATION");
+		return psyq::scene_event::hash::generate("SET_TOKEN_ANIMATION");
 	}
 
 	//-------------------------------------------------------------------------
@@ -80,10 +80,10 @@ class event_SET_SCENE_ANIMATION:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenÇ…modelÇê›íËÇ∑ÇÈeventÅB
-class event_SET_SCENE_MODEL:
+class event_SET_TOKEN_MODEL:
 	public psyq::scene_event::action
 {
-	typedef event_SET_SCENE_MODEL this_type;
+	typedef event_SET_TOKEN_MODEL this_type;
 	typedef psyq::scene_event::action super_type;
 
 	//-------------------------------------------------------------------------
@@ -96,7 +96,7 @@ class event_SET_SCENE_MODEL:
 	//-------------------------------------------------------------------------
 	public: static psyq::scene_event::hash::value get_hash()
 	{
-		return psyq::scene_event::hash::generate("SET_SCENE_MODEL");
+		return psyq::scene_event::hash::generate("SET_TOKEN_MODEL");
 	}
 
 	//-------------------------------------------------------------------------

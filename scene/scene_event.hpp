@@ -31,11 +31,14 @@ class psyq::scene_event
 	public: typedef this_type::line::time_scale time_scale;
 
 	//-------------------------------------------------------------------------
+	/// 文字列の型。
 	public: typedef std::basic_string<
 		this_type::letter,
 		std::char_traits< this_type::letter >,
 		this_type::allocator::rebind< this_type::letter >::other >
 			string;
+
+	/// 定数文字列の型。
 	public: typedef psyq::basic_const_string< this_type::letter > const_string;
 
 	//-------------------------------------------------------------------------
@@ -49,10 +52,8 @@ class psyq::scene_event
 		public: typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
 		public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
 
-		public: virtual ~action()
-		{
-			// pass
-		}
+		protected: action() {}
+		public: virtual ~action() {}
 
 		/** event-actionを適用。
 	    @param[in,out] io_world 適用対象のscene-world。
@@ -63,11 +64,6 @@ class psyq::scene_event
 			psyq::scene_world&                         io_world,
 			psyq::scene_event::point const&            i_point,
 			psyq::scene_event::time_scale::value const i_time) = 0;
-
-		protected: action()
-		{
-			// pass
-		}
 	};
 
 	//-------------------------------------------------------------------------
@@ -105,6 +101,9 @@ class psyq::scene_event
 					action_map;
 
 	//-------------------------------------------------------------------------
+	/** @brief 空のscene-eventを構築。
+	    @param[in] i_allocator 初期化に使うmemory割当子。
+	 */
 	public: template< typename t_allocator >
 	explicit scene_event(t_allocator const& i_allocator):
 	words_(this_type::word_map::key_compare(), i_allocator),
@@ -118,18 +117,22 @@ class psyq::scene_event
 	/** @brief event置換語を追加。
 	    @param[in] i_key  置換される単語。
 	    @param[in] i_word 置換した後の単語。
+	    @return event置換語。
 	 */
-	public: void add_word(
+	public: this_type::string const& add_word(
 		this_type::const_string const& i_key,
-		this_type::const_string const& i_word)
+		this_type::string const&       i_word)
 	{
-		this->words_[this_type::hash::generate(i_key)].assign(
-			i_word.data(), i_word.length());
+		this_type::string& a_word(
+			this->words_[this_type::hash::generate(i_key)]);
+		a_word = i_word;
+		return a_word;
 	}
 
 	/** @brief event-lineを追加。
 	    @param[in] i_points 書庫にあるevent-point配列の名前hash値。
 	    @param[in] i_key    event-line辞書に登録する際のkey。
+	    @return 追加したevent-lineへのpointer。
 	 */
 	public: this_type::line* add_line(
 		this_type::hash::value const        i_points,
@@ -154,11 +157,18 @@ class psyq::scene_event
 		return &a_position->second;
 	}
 
+	/** @brief event-actionを追加。
+	    @param t_action 追加するevent-actionの型。
+	    @return 追加したevent-actionへの共有pointer。
+	 */
 	public: template< typename t_action >
-	void add_action()
+	this_type::action::shared_ptr const& add_action()
 	{
-		this->actions_[t_action::get_hash()] =
-			PSYQ_ALLOCATE_SHARED< t_action >(this->actions_.get_allocator());
+		this_type::action::shared_ptr& a_action(
+			this->actions_[t_action::get_hash()]);
+		a_action = PSYQ_ALLOCATE_SHARED< t_action >(
+			this->actions_.get_allocator());
+		return a_action;
 	}
 
 	//-------------------------------------------------------------------------
@@ -244,7 +254,8 @@ class psyq::scene_event
 	//-------------------------------------------------------------------------
 	/** @brief event書庫を取得。
 	 */
-	public: PSYQ_SHARED_PTR< this_type::archive const > const& get_archive() const
+	public: PSYQ_SHARED_PTR< this_type::archive const > const& get_archive()
+	const
 	{
 		return this->archive_;
 	}

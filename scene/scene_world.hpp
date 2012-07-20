@@ -102,7 +102,8 @@ class psyq::scene_world
 
 	//-------------------------------------------------------------------------
 	/** @brief packageを取得。
-	    package名に対応するpackageが存在しない場合は、fileから読み込んで追加する。
+	    package名に対応するpackageが存在しない場合は、
+	    fileから読み込んで追加する。
 	    @param[in] i_name 取得するpackageの名前hash値。
 	    @return package名に対応するpackage。取得に失敗した場合は空。
 	 */
@@ -521,10 +522,10 @@ class psyq::scene_world
 	}
 
 	//-------------------------------------------------------------------------
-	public: psyq::scene_event       event_;
-	public: this_type::package_map  packages_; ///< scene-packageの辞書。
-	public: this_type::section_map  sections_; ///< scene-sectionの辞書。
-	public: this_type::token_map    tokens_;   ///< scene-tokenの辞書。
+	public: psyq::scene_event      event_;    ///< scene-eventの管理。
+	public: this_type::package_map packages_; ///< scene-packageの辞書。
+	public: this_type::section_map sections_; ///< scene-sectionの辞書。
+	public: this_type::token_map   tokens_;   ///< scene-tokenの辞書。
 };
 
 #endif // !PSYQ_SCENE_WORLD_HPP_

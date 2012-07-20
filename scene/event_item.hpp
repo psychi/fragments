@@ -13,14 +13,24 @@ namespace psyq
 template< typename t_hash = psyq::fnv1_hash32 >
 struct psyq::event_item
 {
-private:
-	typedef psyq::event_item< t_hash > this_type;
+	private: typedef psyq::event_item< t_hash > this_type;
 
-//.............................................................................
-public:
-	typedef t_hash hash;
-	typedef typename t_hash::value offset;
-	typedef psyq::file_buffer archive;
+	//-------------------------------------------------------------------------
+	public: typedef t_hash hash;
+	public: typedef typename t_hash::value offset;
+	public: typedef psyq::file_buffer archive;
+
+	//-------------------------------------------------------------------------
+	private: struct item_compare_by_name
+	{
+		bool operator()(
+			this_type const& i_left,
+			this_type const& i_right)
+		const
+		{
+			return i_left.name < i_right.name;
+		}
+	};
 
 	//-------------------------------------------------------------------------
 	/** @brief 書庫からitemを検索。
@@ -29,7 +39,7 @@ public:
 	    @retval !=NULL 見つけたitemへのpointer。
 	    @retval ==NULL 該当するitemは見つからなかった。
 	 */
-	static this_type const* find(
+	public: static this_type const* find(
 		typename this_type::archive const& i_archive,
 		typename t_hash::value const       i_name)
 	{
@@ -76,7 +86,7 @@ public:
 	    @retval !=NULL instanceへのpointer。
 	    @retval ==NULL instanceは見つからなかった。
 	 */
-	static void const* get_address(
+	public: static void const* get_address(
 		typename this_type::archive const& i_archive,
 		typename this_type::offset const   i_offset)
 	{
@@ -93,12 +103,13 @@ public:
 	    @retval !=NULL instanceへのpointer。
 	    @retval ==NULL instanceは見つからなかった。
 	 */
-	template< typename t_value >
+	public: template< typename t_value >
 	static t_value const* get_address(
 		typename this_type::archive const& i_archive,
 		typename this_type::offset const   i_offset)
 	{
-		void const* const a_address(this_type::get_address(i_archive, i_offset));
+		void const* const a_address(
+			this_type::get_address(i_archive, i_offset));
 		std::size_t const a_alignment(boost::alignment_of< t_value >::value);
 		if (0 != reinterpret_cast< std::size_t >(a_address) % a_alignment)
 		{
@@ -116,7 +127,10 @@ public:
 	    @param[in] i_dictionary 置換する単語のhash値をkeyとする辞書。
 	    @param[in] i_source     置換元となる文字列。
 	 */
-	template< typename t_out_string, typename t_map, typename t_in_string >
+	public: template<
+		typename t_out_string,
+		typename t_map,
+		typename t_in_string >
 	static t_out_string replace_word(
 		t_map const&       i_dictionary,
 		t_in_string const& i_source)
@@ -132,7 +146,10 @@ public:
 	    @param[in] i_dictionary 置換する単語のhash値をkeyとする辞書。
 	    @param[in] i_source     置換元となる文字列。
 	 */
-	template< typename t_out_string, typename t_map, typename t_in_string >
+	public: template<
+		typename t_out_string,
+		typename t_map,
+		typename t_in_string >
 	static t_out_string replace_word(
 		t_map const&                                 i_dictionary,
 		t_in_string const&                           i_source,
@@ -175,24 +192,10 @@ public:
 		}
 	}
 
-//.............................................................................
-private:
-	//-------------------------------------------------------------------------
-	struct item_compare_by_name
-	{
-		bool operator()(
-			this_type const& i_left,
-			this_type const& i_right)
-		const
-		{
-			return i_left.name < i_right.name;
-		}
-	};
-
 	//-------------------------------------------------------------------------
 	/** @biref 文字列から'('と')'で囲まれた単語を検索。
 	 */
-	template< typename t_iterator >
+	private: template< typename t_iterator >
 	static std::pair< t_iterator, t_iterator > find_word(
 		t_iterator const i_begin,
 		t_iterator const i_end)
@@ -216,11 +219,10 @@ private:
 		return std::make_pair(i_end, i_end);
 	}
 
-//.............................................................................
-public:
-	typename t_hash::value     name;  ///< itemの名前。
-	typename t_hash::value     type;  ///< itemの型名。
-	typename this_type::offset begin; ///< itemの先頭位置の書庫内offset値。
+	//-------------------------------------------------------------------------
+	public: typename t_hash::value     name;  ///< itemの名前。
+	public: typename t_hash::value     type;  ///< itemの型名。
+	public: typename this_type::offset begin; ///< itemの先頭位置の書庫内offset値。
 };
 
 #endif // !PSYQ_EVENT_ITEM_HPP_

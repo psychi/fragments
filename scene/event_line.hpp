@@ -193,7 +193,8 @@ class psyq::event_line
 	}
 
 	//-------------------------------------------------------------------------
-	public: PSYQ_SHARED_PTR< typename this_type::archive const > const& get_archive() const
+	public: PSYQ_SHARED_PTR< typename this_type::archive const > const&
+	get_archive() const
 	{
 		return this->archive_;
 	}
@@ -264,7 +265,8 @@ class psyq::event_line
 	//-------------------------------------------------------------------------
 	/** @brief ÅŒã‚Ìevent‚©”»’èB
 	 */
-	private: static bool is_last(typename this_type::point const* const i_event)
+	private: static bool is_last(
+		typename this_type::point const* const i_event)
 	{
 		PSYQ_ASSERT(NULL != i_event);
 		return t_hash::EMPTY == i_event->type &&

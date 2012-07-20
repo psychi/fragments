@@ -57,10 +57,9 @@ namespace psyq
 class psyq::_dummy_mutex:
 	private boost::noncopyable
 {
-public:
-	void lock() const {}
-	void unlock() const {}
-	bool try_lock() const {return true;}
+	public: void lock() const {}
+	public: void unlock() const {}
+	public: bool try_lock() const {return true;}
 };
 
 #endif // !PSYQ_THREAD_HPP_

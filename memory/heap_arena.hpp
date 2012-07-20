@@ -21,8 +21,10 @@ class psyq::heap_arena:
 	typedef psyq::heap_arena this_type;
 	typedef psyq::arena super_type;
 
-//.............................................................................
-public:
+	//-------------------------------------------------------------------------
+	/// 一度に確保できるmemoryの最大size。byte単位。
+	public: static std::size_t const MAX_SIZE = static_cast< std::size_t >(-1);
+
 	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
 	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
@@ -31,7 +33,7 @@ public:
 	    @param[in] i_name      debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	static void* (malloc)(
+	public: static void* (malloc)(
 		std::size_t const i_size,
 		std::size_t const i_alignment,
 		std::size_t const i_offset,
@@ -76,7 +78,7 @@ public:
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	    @param[in] i_size   解放するmemoryの大きさ。byte単位。
 	 */
-	static void (free)(void* const i_memory, std::size_t const i_size)
+	public: static void (free)(void* const i_memory, std::size_t const i_size)
 	{
 		(void)i_size;
 
@@ -96,27 +98,21 @@ public:
 	/** @brief malloc()に指定できるmemoryの最大sizeを取得。
 	    @return malloc()に指定できる確保できるmemoryの最大size。byte単位。
 	 */
-	virtual std::size_t get_max_size() const
+	public: virtual std::size_t get_max_size() const
 	{
 		return this_type::MAX_SIZE;
 	}
 
-//.............................................................................
-protected:
-	virtual super_type::malloc_function get_malloc() const
+	//-------------------------------------------------------------------------
+	protected: virtual super_type::malloc_function get_malloc() const
 	{
 		return &this_type::malloc;
 	}
 
-	virtual super_type::free_function get_free() const
+	protected: virtual super_type::free_function get_free() const
 	{
 		return &this_type::free;
 	}
-
-//.............................................................................
-public:
-	/// 一度に確保できるmemoryの最大size。byte単位。
-	static std::size_t const MAX_SIZE = static_cast< std::size_t >(-1);
 };
 
 #endif // !PSYQ_HEAP_ARENA_HPP_

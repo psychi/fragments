@@ -18,9 +18,8 @@ class psyq::win32_file_descriptor:
 {
 	typedef psyq::win32_file_descriptor this_type;
 
-//.............................................................................
-public:
-	enum open_flag
+	//-------------------------------------------------------------------------
+	public: enum open_flag
 	{
 		open_READ     = 1 << 0,
 		open_WRITE    = 1 << 1,
@@ -29,7 +28,22 @@ public:
 	};
 
 	//-------------------------------------------------------------------------
-	~win32_file_descriptor()
+	private: enum seek_origin
+	{
+		seek_BEGIN   = FILE_BEGIN,
+		seek_END     = FILE_END,
+		seek_CURRENT = FILE_CURRENT,
+	};
+
+	//-------------------------------------------------------------------------
+	public: win32_file_descriptor():
+	handle_(INVALID_HANDLE_VALUE)
+	{
+		// pass
+	}
+
+	//-------------------------------------------------------------------------
+	public: ~win32_file_descriptor()
 	{
 		int const a_error(this->close());
 		if (0 != a_error)
@@ -39,17 +53,10 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	win32_file_descriptor():
-	handle_(INVALID_HANDLE_VALUE)
-	{
-		// pass
-	}
-
-	//-------------------------------------------------------------------------
 	/** @brief file記述子を交換。
 	    @param[in,out] io_target 交換するfile記述子。
 	 */
-	void swap(this_type& io_target)
+	public: void swap(this_type& io_target)
 	{
 		std::swap(this->handle_, io_target.handle_);
 	}
@@ -59,7 +66,7 @@ public:
 	    @retval true  fileは開いている。
 	    @retval false fileは開いてない。
 	 */
-	bool is_open() const
+	public: bool is_open() const
 	{
 		return INVALID_HANDLE_VALUE != this->handle_;
 	}
@@ -71,7 +78,7 @@ public:
 	    @param[in] i_flags 許可する操作。this_type::open_flagの論理和。
 	    @return 結果のerror番号。0なら成功。
 	 */
-	template< typename t_char >
+	public: template< typename t_char >
 	int open(t_char const* const i_path, ::DWORD const i_flags)
 	{
 		int const a_error(this->close());
@@ -124,7 +131,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	int close()
+	public: int close()
 	{
 		if (INVALID_HANDLE_VALUE != this->handle_)
 		{
@@ -145,7 +152,7 @@ public:
 	    @param[in] i_buffer 読み込みbufferの先頭位置。
 	    @return 読み込んだbyte数。
 	 */
-	std::size_t read(
+	public: std::size_t read(
 		int&                            o_error,
 		psyq::file_buffer::offset const i_offset,
 		std::size_t const               i_size,
@@ -182,7 +189,7 @@ public:
 	    @param[in] i_buffer 書き出しbufferの先頭位置。
 	    @return 書き出したbyte数。
 	 */
-	std::size_t write(
+	public: std::size_t write(
 		int&                            o_error,
 		psyq::file_buffer::offset const i_offset,
 		std::size_t const               i_size,
@@ -216,7 +223,7 @@ public:
 	    @param[in] i_size fileのbyte単位の大きさ。
 	    @return 結果のerror番号。0なら成功。
 	 */
-	int resize(psyq::file_buffer::offset const i_size) const
+	public: int resize(psyq::file_buffer::offset const i_size) const
 	{
 		int a_error;
 		this->seek(a_error, i_size, this_type::seek_BEGIN);
@@ -236,7 +243,7 @@ public:
 	    @param[out] o_error 結果のerror番号。0なら成功。
 	    @return fileのbyte単位の大きさ。
 	 */
-	psyq::file_buffer::offset get_size(int& o_error) const
+	public: psyq::file_buffer::offset get_size(int& o_error) const
 	{
 		::LARGE_INTEGER a_size;
 		if (0 != ::GetFileSizeEx(this->handle_, &a_size))
@@ -255,7 +262,7 @@ public:
 	        fileの存在するdeviceによって論理block-sizeが異なるので、
 	        簡便化のために一律でpage-sizeを使うことにする。
 	 */
-	std::size_t get_block_size(int& o_error) const
+	public: std::size_t get_block_size(int& o_error) const
 	{
 #ifdef PSYQ_WIN32_FILE_BLOCK_SIZE
 		o_error = 0;
@@ -266,22 +273,13 @@ public:
 #endif // PSYQ_WIN32_FILE_BLOCK_SIZE
 	}
 
-//.............................................................................
-private:
-	enum seek_origin
-	{
-		seek_BEGIN   = FILE_BEGIN,
-		seek_END     = FILE_END,
-		seek_CURRENT = FILE_CURRENT,
-	};
-
 	//-------------------------------------------------------------------------
 	/** @brief file読み書きoffset位置を設定。
 	    @param[out] o_error 結果のerror番号。0なら成功。
 	    @param[in] i_offset 設定するfile読み書きoffset位置。
 	    @param[in] i_origin file読み書きの基準位置。
 	 */
-	psyq::file_buffer::offset seek(
+	private: psyq::file_buffer::offset seek(
 		int&                            o_error,
 		psyq::file_buffer::offset const i_offset,
 		this_type::seek_origin const    i_origin)
@@ -304,7 +302,7 @@ private:
 	}
 
 	//-------------------------------------------------------------------------
-	static ::HANDLE create_file(
+	private: static ::HANDLE create_file(
 		::LPCSTR const                i_file_path,
 		::DWORD const                 i_desired_access,
 		::DWORD const                 i_share_mode,
@@ -323,7 +321,7 @@ private:
 			i_template_file);
 	}
 
-	static ::HANDLE create_file(
+	private: static ::HANDLE create_file(
 		::LPCWSTR const               i_file_path,
 		::DWORD const                 i_desired_access,
 		::DWORD const                 i_share_mode,
@@ -342,9 +340,8 @@ private:
 			i_template_file);
 	}
 
-//.............................................................................
-private:
-	::HANDLE handle_;
+	//-------------------------------------------------------------------------
+	private: ::HANDLE handle_;
 };
 
 #endif // !PSYQ_WIN32_FILE_DESCRIPTOR_HPP_

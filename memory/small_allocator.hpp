@@ -43,12 +43,16 @@ class psyq::small_pools:
 {
 	typedef psyq::small_pools< t_arena, t_mutex > this_type;
 
-//.............................................................................
-public:
-	typedef t_arena arena;
+	//-------------------------------------------------------------------------
+	public: typedef t_arena arena;
 
 	//-------------------------------------------------------------------------
-	virtual ~small_pools()
+	protected: small_pools()
+	{
+		// pass
+	}
+
+	public: virtual ~small_pools()
 	{
 		// pass
 	}
@@ -59,7 +63,7 @@ public:
 	    @param[in] i_name debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	void* allocate(std::size_t const i_size, char const* const i_name)
+	public: void* allocate(std::size_t const i_size, char const* const i_name)
 	{
 		// sizeに対応するmemory-poolを取得。
 		psyq::fixed_pool< t_arena, t_mutex >* const a_pool(
@@ -83,7 +87,7 @@ public:
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	    @param[in] i_size   解放するmemoryの大きさ。byte単位。
 	 */
-	void deallocate(void* const i_memory, std::size_t const i_size)
+	public: void deallocate(void* const i_memory, std::size_t const i_size)
 	{
 		// sizeに対応するmemory-poolを取得。
 		psyq::fixed_pool< t_arena, t_mutex >* const a_pool(
@@ -104,7 +108,7 @@ public:
 	/** @brief 指定したsizeを確保するmemory-poolのindex番号を取得。
 	    @param[in] i_size byte単位の大きさ。
 	 */
-	std::size_t get_index(std::size_t const i_size) const
+	public: std::size_t get_index(std::size_t const i_size) const
 	{
 		if (0 < i_size)
 		{
@@ -120,7 +124,7 @@ public:
 	/** @brief 確保するmemoryの配置境界値を取得。
 		@return 確保するmemoryの配置境界値。byte単位。
 	 */
-	std::size_t get_alignment() const
+	public: std::size_t get_alignment() const
 	{
 		psyq::fixed_pool< t_arena, t_mutex > const* const a_pool(
 			this->get_pool(0));
@@ -130,7 +134,7 @@ public:
 	/** @brief 確保するmemoryの配置offset値を取得。
 	    @return 確保するmemoryの配置offset値。byte単位。
 	 */
-	std::size_t get_offset() const
+	public: std::size_t get_offset() const
 	{
 		psyq::fixed_pool< t_arena, t_mutex > const* const a_pool(
 			this->get_pool(0));
@@ -140,30 +144,23 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief memory-poolの数を取得。
 	 */
-	virtual std::size_t get_num_pools() const = 0;
+	public: virtual std::size_t get_num_pools() const = 0;
 
 	/** @brief memory-poolを取得。
 	    @param[in] i_index memory-poolのindex番号。
 	 */
-	virtual psyq::fixed_pool< t_arena, t_mutex > const* get_pool(
+	public: virtual psyq::fixed_pool< t_arena, t_mutex > const* get_pool(
 		std::size_t const i_index)
 	const = 0;
 
 	/** @brief memory-poolを取得。
 	    @param[in] i_index memory-poolのindex番号。
 	 */
-	psyq::fixed_pool< t_arena, t_mutex >* get_pool(
+	public: psyq::fixed_pool< t_arena, t_mutex >* get_pool(
 		std::size_t const i_index)
 	{
 		return const_cast< psyq::fixed_pool< t_arena, t_mutex >* >(
 			const_cast< this_type const* >(this)->get_pool(i_index));
-	}
-
-//.............................................................................
-protected:
-	small_pools()
-	{
-		// pass
 	}
 };
 
@@ -198,47 +195,79 @@ class psyq::small_arena:
 
 	BOOST_STATIC_ASSERT(0 < t_small_size);
 
-//.............................................................................
-public:
-	typedef t_arena arena;
+	//-------------------------------------------------------------------------
+	public: typedef t_arena arena;
 
 	//-------------------------------------------------------------------------
 	/** @brief singletonとして使う、小規模sizeのmemory-pool集合。
 	 */
-	class pools:
+	public: class pools:
 		public psyq::small_pools< t_arena, t_mutex >
 	{
-	public:
-		typedef psyq::singleton< pools, t_mutex > singleton;
+		public: typedef psyq::singleton< pools, t_mutex > singleton;
 
-		pools():
+		public: pools():
 		psyq::small_pools< t_arena, t_mutex >()
 		{
 			typedef boost::mpl::range_c< std::size_t, 0, NUM_POOLS > range;
 			boost::mpl::for_each< range >(set_pool(this->pools_));
 		}
 
-		virtual std::size_t get_num_pools() const
+		public: virtual std::size_t get_num_pools() const
 		{
 			return NUM_POOLS;
 		}
 
-		virtual psyq::fixed_pool< t_arena, t_mutex > const* get_pool(
+		public: virtual psyq::fixed_pool< t_arena, t_mutex > const* get_pool(
 			std::size_t const i_index)
 		const
 		{
 			return i_index < NUM_POOLS? this->pools_[i_index]: NULL;
 		}
 
-		static std::size_t const NUM_POOLS =
+		public: static std::size_t const NUM_POOLS =
 			t_alignment < t_small_size? t_small_size / t_alignment: 1;
 
-	private:
-		psyq::fixed_pool< t_arena, t_mutex >* pools_[NUM_POOLS];
+		private: psyq::fixed_pool< t_arena, t_mutex >* pools_[NUM_POOLS];
+	};
+
+
+	//-------------------------------------------------------------------------
+	private: class set_pool
+	{
+		public:	explicit set_pool(
+			psyq::fixed_pool< t_arena, t_mutex >** const i_pools):
+		pools_(i_pools)
+		{
+			// pass
+		}
+
+		public:	template< typename t_index >
+		void operator()(t_index)
+		{
+			typedef typename psyq::fixed_arena<
+				t_alignment * (1 + t_index::value),
+				t_alignment,
+				t_offset,
+				t_chunk_size,
+				t_arena,
+				t_mutex >::pool::singleton
+					singleton_pool;
+			this->pools_[t_index::value] = singleton_pool::construct();
+		}
+
+		private: psyq::fixed_pool< t_arena, t_mutex >** pools_;
 	};
 
 	//-------------------------------------------------------------------------
-	explicit small_arena(
+	public: static std::size_t const MAX_SIZE = t_arena::MAX_SIZE;
+	public: static std::size_t const ALIGNMENT = t_alignment;
+	public: static std::size_t const OFFSET = t_offset;
+	public: static std::size_t const CHUNK_SIZE = t_chunk_size;
+	public: static std::size_t const SMALL_SIZE = t_small_size;
+
+	//-------------------------------------------------------------------------
+	public: explicit small_arena(
 		char const* const i_name = PSYQ_ARENA_NAME_DEFAULT):
 	super_type(i_name)
 	{
@@ -253,7 +282,7 @@ public:
 	    @param[in] i_name      debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	static void* (malloc)(
+	public: static void* (malloc)(
 		std::size_t const i_size,
 		std::size_t const i_alignment,
 		std::size_t const i_offset,
@@ -270,7 +299,9 @@ public:
 	    @param[in] i_name debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	static void* (malloc)(std::size_t const i_size, char const* const i_name)
+	public: static void* (malloc)(
+		std::size_t const i_size,
+		char const* const i_name)
 	{
 		return this_type::pools::singleton::construct()->allocate(
 			i_size, i_name);
@@ -281,7 +312,7 @@ public:
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	    @param[in] i_size   解放するmemoryの大きさ。byte単位。
 	 */
-	static void (free)(void* const i_memory, std::size_t const i_size)
+	public: static void (free)(void* const i_memory, std::size_t const i_size)
 	{
 		this_type::pools::singleton::construct()->deallocate(i_memory, i_size);
 	}
@@ -289,61 +320,21 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief 一度に確保できるmemoryの最大sizeを取得。byte単位。
 	 */
-	virtual std::size_t get_max_size() const
+	public: virtual std::size_t get_max_size() const
 	{
 		return this_type::MAX_SIZE;
 	}
 
-//.............................................................................
-protected:
-	virtual typename super_type::malloc_function get_malloc() const
+	//-------------------------------------------------------------------------
+	protected: virtual typename super_type::malloc_function get_malloc() const
 	{
 		return &this_type::malloc;
 	}
 
-	virtual typename super_type::free_function get_free() const
+	protected: virtual typename super_type::free_function get_free() const
 	{
 		return &this_type::free;
 	}
-
-//.............................................................................
-private:
-	//-------------------------------------------------------------------------
-	class set_pool
-	{
-	public:
-		explicit set_pool(
-			psyq::fixed_pool< t_arena, t_mutex >** const i_pools):
-		pools_(i_pools)
-		{
-			// pass
-		}
-
-		template< typename t_index >
-		void operator()(t_index)
-		{
-			typedef typename psyq::fixed_arena<
-				t_alignment * (1 + t_index::value),
-				t_alignment,
-				t_offset,
-				t_chunk_size,
-				t_arena,
-				t_mutex >::pool::singleton
-					singleton_pool;
-			this->pools_[t_index::value] = singleton_pool::construct();
-		}
-
-	private:
-		psyq::fixed_pool< t_arena, t_mutex >** pools_;
-	};
-
-//.............................................................................
-public:
-	static std::size_t const MAX_SIZE = t_arena::MAX_SIZE;
-	static std::size_t const ALIGNMENT = t_alignment;
-	static std::size_t const OFFSET = t_offset;
-	static std::size_t const CHUNK_SIZE = t_chunk_size;
-	static std::size_t const SMALL_SIZE = t_small_size;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -390,9 +381,8 @@ class psyq::small_allocator:
 		t_value, t_alignment, t_offset, typename this_type::arena >
 			super_type;
 
-//.............................................................................
-public:
-	template<
+	//-------------------------------------------------------------------------
+	public: template<
 		typename    t_other_type,
 		std::size_t t_other_alignment =
 			boost::alignment_of< t_other_type >::value,
@@ -417,18 +407,18 @@ public:
 	//-------------------------------------------------------------------------
 	/** @param[in] i_name debugで使うためのmemory識別名。
 	 */
-	explicit small_allocator(
+	public: explicit small_allocator(
 		char const* const i_name = PSYQ_ARENA_NAME_DEFAULT):
 	super_type(i_name)
 	{
 		// pass
 	}
 
-	//small_allocator(this_type const&) = default;
+	//public: small_allocator(this_type const&) = default;
 
 	/** @param[in] i_source copy元instance。
 	 */
-	template< typename t_other_type, std::size_t t_other_alignment >
+	public: template< typename t_other_type, std::size_t t_other_alignment >
 	small_allocator(
 		psyq::small_allocator<
 			t_other_type,
@@ -445,7 +435,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	//this_type& operator=(this_type const&) = default;
+	//public: this_type& operator=(this_type const&) = default;
 
 	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
@@ -453,7 +443,7 @@ public:
 	    @param[in] i_hint 最適化のためのhint。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	typename super_type::pointer allocate(
+	public: typename super_type::pointer allocate(
 		typename super_type::size_type const i_num,
 		void const* const                    i_hint = NULL)
 	{

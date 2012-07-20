@@ -14,11 +14,10 @@ class psyq::texture_package
 {
 	typedef psyq::texture_package this_type;
 
-public:
-	typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
-	typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
-	typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
-	typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
+	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
+	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
+	public: typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
+	public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -26,11 +25,10 @@ class psyq::shader_package
 {
 	typedef psyq::shader_package this_type;
 
-public:
-	typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
-	typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
-	typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
-	typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
+	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
+	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
+	public: typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
+	public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -38,15 +36,14 @@ class psyq::scene_package
 {
 	typedef psyq::scene_package this_type;
 
-//.............................................................................
-public:
-	typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
-	typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
-	typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
-	typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
+	//-------------------------------------------------------------------------
+	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
+	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
+	public: typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
+	public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
 
 	//-------------------------------------------------------------------------
-	template< typename t_allocator >
+	public: template< typename t_allocator >
 	static this_type::shared_ptr load(
 		t_allocator const&               i_allocator,
 		psyq::scene_event::string const& i_scene_path,
@@ -108,10 +105,8 @@ public:
 		return this_type::shared_ptr();
 	}
 
-//.............................................................................
-private:
 	//-------------------------------------------------------------------------
-	template< typename t_allocator, typename t_string >
+	private: template< typename t_allocator, typename t_string >
 	static PSYQ_SHARED_PTR< typename t_allocator::value_type > load_file(
 		t_allocator&    io_allocator,
 		t_string const& i_path)
@@ -121,10 +116,9 @@ private:
 		return PSYQ_SHARED_PTR< typename t_allocator::value_type >(); // ñ¢é¿ëïÇ»ÇÃÇ≈ÅB
 	}
 
-//.............................................................................
-private:
-	psyq::shader_package::shared_ptr  shader_;
-	psyq::texture_package::shared_ptr texture_;
+	//-------------------------------------------------------------------------
+	private: psyq::shader_package::shared_ptr  shader_;
+	private: psyq::texture_package::shared_ptr texture_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -132,17 +126,15 @@ class psyq::scene_token
 {
 	typedef psyq::scene_token this_type;
 
-//.............................................................................
-public:
-	typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
-	typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
-	typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
-	typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
+	//-------------------------------------------------------------------------
+	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
+	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
+	public: typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
+	public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
 
-//.............................................................................
-public:
-	psyq_extern::scene_unit                   scene_;
-	psyq::scene_event::time_scale::shared_ptr time_scale_;
+	//-------------------------------------------------------------------------
+	public: psyq_extern::scene_unit                   scene_;
+	public: psyq::scene_event::time_scale::shared_ptr time_scale_;
 };
 
 #endif // !PSYQ_SCENE_TOKEN_HPP_

@@ -9,16 +9,14 @@ class event_RESERVE_PACKAGE:
 	typedef event_RESERVE_PACKAGE this_type;
 	typedef psyq::scene_event::action super_type;
 
-//.............................................................................
-public:
 	//-------------------------------------------------------------------------
-	static psyq::scene_event::hash::value get_hash()
+	public: static psyq::scene_event::hash::value get_hash()
 	{
 		return psyq::scene_event::hash::generate("RESERVE_PACKAGE");
 	}
 
 	//-------------------------------------------------------------------------
-	virtual void apply(
+	public: virtual void apply(
 		psyq::scene_world&              io_world,
 		psyq::scene_event::point const& i_point,
 		psyq::scene_event::line::time_scale::value const)
@@ -35,10 +33,8 @@ class event_SET_SCENE_ANIMATION:
 	typedef event_SET_SCENE_ANIMATION this_type;
 	typedef psyq::scene_event::action super_type;
 
-//.............................................................................
-public:
 	//-------------------------------------------------------------------------
-	struct parameters
+	public: struct parameters
 	{
 		psyq::scene_event::item::offset token;
 		psyq::scene_event::item::offset package;
@@ -47,13 +43,13 @@ public:
 	};
 
 	//-------------------------------------------------------------------------
-	static psyq::scene_event::hash::value get_hash()
+	public: static psyq::scene_event::hash::value get_hash()
 	{
 		return psyq::scene_event::hash::generate("SET_SCENE_ANIMATION");
 	}
 
 	//-------------------------------------------------------------------------
-	virtual void apply(
+	public: virtual void apply(
 		psyq::scene_world&              io_world,
 		psyq::scene_event::point const& i_point,
 		psyq::scene_event::line::time_scale::value const)
@@ -90,23 +86,21 @@ class event_SET_SCENE_MODEL:
 	typedef event_SET_SCENE_MODEL this_type;
 	typedef psyq::scene_event::action super_type;
 
-//.............................................................................
-public:
 	//-------------------------------------------------------------------------
-	struct parameters
+	public: struct parameters
 	{
 		psyq::scene_event::item::offset token;   ///< token名の書庫offset値。
 		psyq::scene_event::item::offset package; ///< package名の書庫offset値。
 	};
 
 	//-------------------------------------------------------------------------
-	static psyq::scene_event::hash::value get_hash()
+	public: static psyq::scene_event::hash::value get_hash()
 	{
 		return psyq::scene_event::hash::generate("SET_SCENE_MODEL");
 	}
 
 	//-------------------------------------------------------------------------
-	virtual void apply(
+	public: virtual void apply(
 		psyq::scene_world&              io_world,
 		psyq::scene_event::point const& i_point,
 		psyq::scene_event::line::time_scale::value const)
@@ -154,23 +148,21 @@ class event_SET_SECTION_LIGHT:
 	typedef event_SET_SECTION_LIGHT this_type;
 	typedef psyq::scene_event::action super_type;
 
-//.............................................................................
-public:
 	//-------------------------------------------------------------------------
-	struct parameters
+	public: struct parameters
 	{
 		psyq::scene_event::item::offset section; ///< sectionの名前。
 		psyq::scene_event::item::offset token;   ///< lightとして使うtokenの名前。
 	};
 
 	//-------------------------------------------------------------------------
-	static psyq::scene_event::hash::value get_hash()
+	public: static psyq::scene_event::hash::value get_hash()
 	{
 		return psyq::scene_event::hash::generate("SET_SECTION_LIGHT");
 	}
 
 	//-------------------------------------------------------------------------
-	virtual void apply(
+	public: virtual void apply(
 		psyq::scene_world&              io_world,
 		psyq::scene_event::point const& i_point,
 		psyq::scene_event::line::time_scale::value const)
@@ -205,23 +197,21 @@ class event_RESERVE_TOKEN:
 	typedef event_RESERVE_TOKEN this_type;
 	typedef psyq::scene_event::action super_type;
 
-//.............................................................................
-public:
 	//-------------------------------------------------------------------------
-	struct parameters
+	public: struct parameters
 	{
 		psyq::scene_event::item::offset section; ///< section名の書庫offset値。
 		psyq::scene_event::item::offset token;   ///< 追加するtoken名の書庫offset値。
 	};
 
 	//-------------------------------------------------------------------------
-	static psyq::scene_event::hash::value get_hash()
+	public: static psyq::scene_event::hash::value get_hash()
 	{
 		return psyq::scene_event::hash::generate("RESERVE_TOKEN");
 	}
 
 	//-------------------------------------------------------------------------
-	virtual void apply(
+	public: virtual void apply(
 		psyq::scene_world&              io_world,
 		psyq::scene_event::point const& i_point,
 		psyq::scene_event::line::time_scale::value const)
@@ -246,23 +236,21 @@ class event_REMOVE_TOKEN:
 	typedef event_REMOVE_TOKEN this_type;
 	typedef psyq::scene_event::action super_type;
 
-//.............................................................................
-public:
 	//-------------------------------------------------------------------------
-	struct parameters
+	public: struct parameters
 	{
 		psyq::scene_event::item::offset section; ///< section名の書庫offset値。
 		psyq::scene_event::item::offset token;   ///< 削除するtoken名の書庫offset値。
 	};
 
 	//-------------------------------------------------------------------------
-	static psyq::scene_event::hash::value get_hash()
+	public: static psyq::scene_event::hash::value get_hash()
 	{
 		return psyq::scene_event::hash::generate("REMOVE_TOKEN");
 	}
 
 	//-------------------------------------------------------------------------
-	virtual void apply(
+	public: virtual void apply(
 		psyq::scene_world&              io_world,
 		psyq::scene_event::point const& i_point,
 		psyq::scene_event::line::time_scale::value const)

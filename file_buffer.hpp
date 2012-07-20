@@ -18,12 +18,11 @@ class psyq::file_buffer:
 	typedef psyq::file_buffer this_type;
 	typedef psyq::dynamic_storage super_type;
 
-//.............................................................................
-public:
-	typedef boost::uint64_t offset;
+	//-------------------------------------------------------------------------
+	public: typedef boost::uint64_t offset;
 
 	//-------------------------------------------------------------------------
-	file_buffer():
+	public: file_buffer():
 	super_type(),
 	region_offset_(0),
 	mapped_offset_(0),
@@ -40,7 +39,7 @@ public:
 	        fileの論理block-sizeの整数倍である必要がある。
 	    @param[in] i_allocator bufferの確保に使う割当子。
 	 */
-	template< typename t_allocator >
+	public: template< typename t_allocator >
 	file_buffer(
 		t_allocator const&      i_allocator,
 		this_type::offset const i_offset,
@@ -63,7 +62,7 @@ public:
 	    @param[in] i_memory_offset    確保するbufferのmemory配置offset値。
 	    @param[in] i_memory_name      確保するmemoryの識別名。debugでのみ使う。
 	 */
-	template< typename t_arena >
+	public: template< typename t_arena >
 	file_buffer(
 		boost::type< t_arena > const& i_type,
 		this_type::offset const       i_offset,
@@ -84,7 +83,7 @@ public:
 	/** @brief 保持しているbufferを交換。
 	    @param[in,out] io_target 交換するbuffer。
 	 */
-	void swap(this_type& io_target)
+	public: void swap(this_type& io_target)
 	{
 		this->super_type::swap(io_target);
 		std::swap(this->mapped_offset_, io_target.mapped_offset_);
@@ -95,27 +94,27 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief buffer先頭位置からregion先頭位置へのoffset値を取得。
 	 */
-	std::size_t get_region_offset() const
+	public: std::size_t get_region_offset() const
 	{
 		return this->region_offset_;
 	}
 
 	/** @brief regionの大きさをbyte単位で取得。
 	 */
-	std::size_t get_region_size() const
+	public: std::size_t get_region_size() const
 	{
 		return this->region_size_;
 	}
 
 	/** @brief regionの先頭位置を取得。
 	 */
-	void const* get_region_address() const
+	public: void const* get_region_address() const
 	{
 		return static_cast< char const* >(this->get_mapped_address())
 			+ this->get_region_offset();
 	}
 
-	void* get_region_address()
+	public: void* get_region_address()
 	{
 		return const_cast< void* >(
 			const_cast< this_type const* >(this)->get_region_address());
@@ -125,7 +124,7 @@ public:
 	    @param[in] i_offset buffer先頭位置からregion先頭位置へのoffset値。
 	    @param[in] i_size   regionの大きさ。byte単位。
 	 */
-	void set_region(
+	public: void set_region(
 		std::size_t const i_offset,
 		std::size_t const i_size)
 	{
@@ -137,28 +136,28 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief file先頭位置からbuffer先頭位置へのoffset値を取得。
 	 */
-	this_type::offset get_mapped_offset() const
+	public: this_type::offset get_mapped_offset() const
 	{
 		return this->mapped_offset_;
 	}
 
 	/** @brief bufferの大きさをbyte単位で取得。
 	 */
-	std::size_t get_mapped_size() const
+	public: std::size_t get_mapped_size() const
 	{
 		return this->super_type::get_size();
 	}
 
 	/** @brief bufferの先頭位置を取得。
 	 */
-	void const* get_mapped_address() const
+	public: void const* get_mapped_address() const
 	{
 		return this->super_type::get_address();
 	}
 
 	/** @brief bufferの先頭位置を取得。
 	 */
-	void* get_mapped_address()
+	public: void* get_mapped_address()
 	{
 		return const_cast< void* >(
 			const_cast< this_type const* >(this)->get_mapped_address());
@@ -167,7 +166,7 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief memory-page-sizeを取得。userからは使用禁止。
 	 */
-	static std::size_t _get_page_size()
+	public: static std::size_t _get_page_size()
 	{
 #if defined(_WIN32)
 		SYSTEM_INFO a_info;
@@ -179,11 +178,10 @@ public:
 #endif // _WIN32
 	}
 
-//.............................................................................
-private:
-	std::size_t       region_offset_;
-	this_type::offset mapped_offset_;
-	std::size_t       region_size_;
+	//-------------------------------------------------------------------------
+	private: std::size_t       region_offset_;
+	private: this_type::offset mapped_offset_;
+	private: std::size_t       region_size_;
 };
 
 #endif // !PSYQ_FILE_BUFFER_HPP_

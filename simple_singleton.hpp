@@ -24,17 +24,64 @@ class psyq::simple_singleton:
 {
 	typedef simple_singleton< t_value, t_mutex, t_tag > this_type;
 
-//.............................................................................
-public:
-	typedef t_value value_type;
-	typedef t_tag tag;
+	//-------------------------------------------------------------------------
+	public: typedef t_value value_type;
+	public: typedef t_tag tag;
+
+	//-------------------------------------------------------------------------
+	/** @brief singleton-instanceを保持する。
+	 */
+	private: class instance_holder:
+		private boost::noncopyable
+	{
+		//---------------------------------------------------------------------
+		public: ~instance_holder()
+		{
+			// 保持している領域のinstanceを破棄する。
+			t_value* const a_pointer(this->pointer);
+			PSYQ_ASSERT(NULL != a_pointer);
+			this->pointer = NULL;
+			a_pointer->~t_value();
+		}
+
+		public: instance_holder():
+		pointer(NULL)
+		{
+			// pass
+		}
+
+		public: t_value* get_pointer() const
+		{
+			return this->pointer;
+		}
+
+		public: template< typename t_constructor >
+		void construct(
+			t_constructor const& i_constructor)
+		{
+			// 保持している領域にinstanceを構築する。
+			PSYQ_ASSERT(NULL == this->pointer);
+			i_constructor.template apply< t_value >(&this->storage);
+			this->pointer = reinterpret_cast< t_value* >(&this->storage);
+		}
+
+		//---------------------------------------------------------------------
+		private: typename boost::aligned_storage<
+			sizeof(t_value),
+			boost::alignment_of< t_value >::value >::type
+				storage;
+		private: t_value* pointer;
+	};
+
+	//-------------------------------------------------------------------------
+	private: simple_singleton();
 
 	//-------------------------------------------------------------------------
 	/** @brief sigleton-instanceを参照する。
 	        まだsingleton-instanceがないなら、default-constructorで構築する。
 	    @return singleton-instanceへの参照。
 	 */
-	static t_value* get()
+	public: static t_value* get()
 	{
 		return this_type::get(boost::type< t_mutex >());
 	}
@@ -44,7 +91,7 @@ public:
 	        すでにsingleton-instanceがあるなら、構築は行わず既存のものを返す。
 	    @return singleton-instanceへの参照。
 	 */
-	static t_value* construct()
+	public: static t_value* construct()
 	{
 		return this_type::construct(boost::in_place());
 	}
@@ -55,7 +102,7 @@ public:
 		@param[in] i_destruct_priority 破棄の優先順位。破棄は昇順に行われる。
 	    @return singleton-instanceへの参照。
 	 */
-	template< typename t_constructor >
+	public: template< typename t_constructor >
 	static t_value* construct(
 		t_constructor const& i_constructor)
 	{
@@ -63,56 +110,8 @@ public:
 			i_constructor, boost::type< t_mutex >());
 	}
 
-//.............................................................................
-private:
 	//-------------------------------------------------------------------------
-	/** @brief singleton-instanceを保持する。
-	 */
-	class instance_holder:
-		private boost::noncopyable
-	{
-	public:
-		//---------------------------------------------------------------------
-		~instance_holder()
-		{
-			// 保持している領域のinstanceを破棄する。
-			t_value* const a_pointer(this->pointer);
-			PSYQ_ASSERT(NULL != a_pointer);
-			this->pointer = NULL;
-			a_pointer->~t_value();
-		}
-
-		instance_holder():
-		pointer(NULL)
-		{
-			// pass
-		}
-
-		t_value* get_pointer() const
-		{
-			return this->pointer;
-		}
-
-		template< typename t_constructor >
-		void construct(
-			t_constructor const& i_constructor)
-		{
-			// 保持している領域にinstanceを構築する。
-			PSYQ_ASSERT(NULL == this->pointer);
-			i_constructor.template apply< t_value >(&this->storage);
-			this->pointer = reinterpret_cast< t_value* >(&this->storage);
-		}
-
-	private:
-		typename boost::aligned_storage<
-			sizeof(t_value),
-			boost::alignment_of< t_value >::value >::type
-				storage;
-		t_value* pointer;
-	};
-
-	//-------------------------------------------------------------------------
-	template< typename t_mutex_policy >
+	private: template< typename t_mutex_policy >
 	static t_value* get(boost::type< t_mutex_policy > const&)
 	{
 		if (0 < this_type::construct_flag().count)
@@ -122,13 +121,13 @@ private:
 		return NULL;
 	}
 
-	static t_value* get(boost::type< psyq::_dummy_mutex > const&)
+	private: static t_value* get(boost::type< psyq::_dummy_mutex > const&)
 	{
 		return this_type::instance().get_pointer();
 	}
 
 	//-------------------------------------------------------------------------
-	template< typename t_constructor, typename t_mutex_policy >
+	private: template< typename t_constructor, typename t_mutex_policy >
 	static t_value* construct_once(
 		t_constructor const& i_constructor,
 		boost::type< t_mutex_policy > const&)
@@ -144,7 +143,7 @@ private:
 		return this_type::instance().get_pointer();
 	}
 
-	template< typename t_constructor >
+	private: template< typename t_constructor >
 	static t_value* construct_once(
 		t_constructor const& i_constructor,
 		boost::type< psyq::_dummy_mutex > const&)
@@ -163,7 +162,7 @@ private:
 	/** @brief singleton-instanceを構築する。
 	    @param[in] i_constructor boost::in_placeから取得した構築関数object。
 	 */
-	template< typename t_constructor >
+	private: template< typename t_constructor >
 	static void construct_instance(
 		t_constructor const* const i_constructor)
 	{
@@ -172,7 +171,7 @@ private:
 
 	/** @brief singleton-instanceを構築したかどうかのflagを参照する。
 	 */
-	static boost::once_flag& construct_flag()
+	private: static boost::once_flag& construct_flag()
 	{
 		static boost::once_flag s_constructed = BOOST_ONCE_INIT;
 		return s_constructed;
@@ -184,14 +183,11 @@ private:
 	        最初は必ずconstruct_instance()から呼ばれる。
 	        破棄は、main()の終了後に、構築した順序の逆順で自動的に行われる。
 	 */
-	static typename this_type::instance_holder& instance()
+	private: static typename this_type::instance_holder& instance()
 	{
 		static typename this_type::instance_holder s_instance;
 		return s_instance;
 	}
-
-	//-------------------------------------------------------------------------
-	simple_singleton();
 };
 
 #endif // PSYQ_SIMPLE_SINGLETON_HPP_

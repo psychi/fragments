@@ -19,17 +19,16 @@ class psyq::file_handle:
 {
 	typedef psyq::file_handle< t_descriptor, t_mutex > this_type;
 
-//.............................................................................
-public:
-	typedef t_descriptor descriptor;
-	typedef t_mutex mutex;
-	typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
-	typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
+	//-------------------------------------------------------------------------
+	public: typedef t_descriptor descriptor;
+	public: typedef t_mutex mutex;
+	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
+	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
 
 	//-------------------------------------------------------------------------
 	/** @brief 空のfile-handleを構築。
 	 */
-	file_handle()
+	public: file_handle()
 	{
 		// pass
 	}
@@ -38,7 +37,7 @@ public:
 	    @param[in] i_path  開くfileのpath名。
 	    @param[in] i_flags 許可する操作。t_descriptor::open_flagの論理和。
 	 */
-	template< typename t_path, typename t_flags >
+	public: template< typename t_path, typename t_flags >
 	file_handle(t_path const& i_path, t_flags const& i_flags)
 	{
 		int const a_error(this->descriptor_.open(i_path, i_flags));
@@ -53,7 +52,7 @@ public:
 	    @param[in] i_path   開くfileのpath名。
 	    @param[in] i_flags  許可する操作。t_descriptor::open_flagの論理和。
 	 */
-	template< typename t_path, typename t_flags >
+	public: template< typename t_path, typename t_flags >
 	file_handle(int& o_error, t_path const& i_path, t_flags const& i_flags)
 	{
 		o_error = this->descriptor_.open(i_path, i_flags);
@@ -63,7 +62,7 @@ public:
 	/** @brief handleを交換。
 	    @param[in,out] io_target 交換するhandle。
 	 */
-	void swap(this_type& io_target)
+	public: void swap(this_type& io_target)
 	{
 		if (&io_target != this)
 		{
@@ -81,7 +80,7 @@ public:
 	    @retval true  fileを開いている。
 	    @retval false fileを開いてない。
 	 */
-	bool is_open()
+	public: bool is_open()
 	{
 		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
 		return this->descriptor_.is_open();
@@ -91,7 +90,7 @@ public:
 	/** @brief fileの大きさをbyte単位で取得。
 	    @return fileのbyte単位の大きさ。
 	 */
-	psyq::file_buffer::offset get_size() const
+	public: psyq::file_buffer::offset get_size() const
 	{
 		int a_error;
 		psyq::file_buffer::offset const a_size(this->get_size(a_error));
@@ -103,7 +102,7 @@ public:
 	    @param[out] o_error 結果のerror番号。0なら成功。
 	    @return fileのbyte単位の大きさ。
 	 */
-	psyq::file_buffer::offset get_size(int& o_error) const
+	public: psyq::file_buffer::offset get_size(int& o_error) const
 	{
 		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
 		return this->descriptor_.get_size(o_error);
@@ -112,7 +111,7 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief fileの論理block-sizeをbyte単位で取得。
 	 */
-	std::size_t get_block_size() const
+	public: std::size_t get_block_size() const
 	{
 		int a_error;
 		std::size_t const a_size(this->get_block_size(a_error));
@@ -122,7 +121,7 @@ public:
 
 	/** @brief fileの論理block-sizeをbyte単位で取得。
 	 */
-	std::size_t get_block_size(int& o_error) const
+	public: std::size_t get_block_size(int& o_error) const
 	{
 		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
 		return this->descriptor_.get_block_size(o_error);
@@ -136,7 +135,7 @@ public:
 	    @param[in] i_size      読み込み領域のbyte単位の大きさ。
 	    @return 結果のerror番号。0なら成功。
 	 */
-	template< typename t_allocator >
+	public: template< typename t_allocator >
 	int read(
 		psyq::file_buffer&              o_buffer,
 		t_allocator const&              i_allocator,
@@ -161,7 +160,7 @@ public:
 	    @param[in] i_alignment 読み込みbufferのmemory配置境界値。
 	    @return 結果のerror番号。0なら成功。
 	 */
-	template< typename t_arena >
+	public: template< typename t_arena >
 	int read(
 		psyq::file_buffer&              o_buffer,
 		psyq::file_buffer::offset const i_offset = 0,
@@ -249,7 +248,7 @@ public:
 	    @param[in] i_buffer 書き出すbuffer。
 	    @return 結果のerror番号。0なら成功。
 	 */
-	int write(psyq::file_buffer const& i_buffer)
+	public: int write(psyq::file_buffer const& i_buffer)
 	{
 		std::size_t a_size;
 		return this->write(a_size, i_buffer);
@@ -260,7 +259,7 @@ public:
 	    @param[in] i_buffer 書き出すbuffer。
 	    @return 結果のerror番号。0なら成功。
 	 */
-	int write(std::size_t& o_size, psyq::file_buffer const& i_buffer)
+	public: int write(std::size_t& o_size, psyq::file_buffer const& i_buffer)
 	{
 		int a_error;
 #ifndef NDEBUG
@@ -298,10 +297,9 @@ public:
 		return a_error;
 	}
 
-//.............................................................................
-private:
-	t_mutex mutable mutex_;
-	t_descriptor    descriptor_;
+	//-------------------------------------------------------------------------
+	private: t_mutex mutable mutex_;
+	private: t_descriptor    descriptor_;
 };
 
 #endif // !PSYQ_FILE_HANDLE_HPP_

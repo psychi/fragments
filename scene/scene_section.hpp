@@ -12,13 +12,18 @@ class psyq::scene_section:
 {
 	typedef psyq::scene_section this_type;
 
-//.............................................................................
-public:
-	typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
-	typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
+	//-------------------------------------------------------------------------
+	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
+	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
 
 	//-------------------------------------------------------------------------
-	template< typename t_allocator >
+	private: typedef std::vector<
+		psyq::scene_token::shared_ptr,
+		psyq_extern::allocator::rebind< scene_token::shared_ptr >::other >
+			token_container;
+
+	//-------------------------------------------------------------------------
+	public: template< typename t_allocator >
 	explicit scene_section(t_allocator const& i_allocator):
 	tokens_(i_allocator)
 	{
@@ -29,7 +34,7 @@ public:
 	/** @brief scene-tokenを追加。
 	    @param[in] i_token 追加するscene-token。
 	 */
-	bool add_token(psyq::scene_token::shared_ptr const& i_token)
+	public: bool add_token(psyq::scene_token::shared_ptr const& i_token)
 	{
 		if (NULL == i_token.get())
 		{
@@ -46,7 +51,7 @@ public:
 	    @param[in] i_token 検索するscene-token。
 	    @return trueなら見つかった。falseなら見つからなかった。
 	 */
-	bool find_token(psyq::scene_token::shared_ptr const& i_token) const
+	public: bool find_token(psyq::scene_token::shared_ptr const& i_token) const
 	{
 		return this->find_token_index(i_token.get()) < this->tokens_.size();
 	}
@@ -54,7 +59,7 @@ public:
 	/** @brief scene-tokenを削除。
 	    @param[in] i_token 削除するscene-token。
 	 */
-	bool remove_token(psyq::scene_token::shared_ptr const& i_token)
+	public: bool remove_token(psyq::scene_token::shared_ptr const& i_token)
 	{
 		std::size_t const a_index(this->find_token_index(i_token.get()));
 		if (a_index < this->tokens_.size())
@@ -74,7 +79,7 @@ public:
 	    @param[in] i_light
 	        描画に使うlight。NULLの場合はset_light()で指定されたlightを使う。
 	 */
-	void draw(
+	public: void draw(
 		psyq::render_target const&           i_target,
 		psyq_extern::scene_node const* const i_camera = NULL,
 		psyq_extern::scene_unit const* const i_light = NULL)
@@ -95,15 +100,8 @@ public:
 		}
 	}
 
-//.............................................................................
-private:
-	typedef std::vector<
-		psyq::scene_token::shared_ptr,
-		psyq_extern::allocator::rebind< scene_token::shared_ptr >::other >
-			token_container;
-
 	//-------------------------------------------------------------------------
-	std::size_t find_token_index(scene_token const* const i_token) const
+	private: std::size_t find_token_index(scene_token const* const i_token) const
 	{
 		if (NULL != i_token)
 		{
@@ -118,13 +116,10 @@ private:
 		return (std::numeric_limits< std::size_t >::max)();
 	}
 
-//.............................................................................
-public:
-	psyq::scene_camera::shared_ptr camera_;
-	psyq::scene_token::shared_ptr  light_;
-
-private:
-	this_type::token_container tokens_;
+	//-------------------------------------------------------------------------
+	public:  psyq::scene_camera::shared_ptr camera_;
+	public:  psyq::scene_token::shared_ptr  light_;
+	private: this_type::token_container     tokens_;
 };
 
 #endif // !PSYQ_SCENE_SECTION_HPP_

@@ -22,11 +22,10 @@ class psyq::_fnv_hash:
 {
 	typedef psyq::_fnv_hash< t_generator, t_traits > this_type;
 
-//.............................................................................
-public:
-	typedef typename t_traits::value value;
-	static typename t_traits::value const EMPTY = t_traits::EMPTY;
-	static typename t_traits::value const PRIME = t_traits::PRIME;
+	//-------------------------------------------------------------------------
+	public: typedef typename t_traits::value value;
+	public: static typename t_traits::value const EMPTY = t_traits::EMPTY;
+	public: static typename t_traits::value const PRIME = t_traits::PRIME;
 
 	//-------------------------------------------------------------------------
 	/** @brief 文字列のhash値を生成。
@@ -34,7 +33,7 @@ public:
 	    @param[in] i_offset fnv-hash開始値。
 	    @param[in] i_prime  fnv-hash素数。
 	 */
-	template< typename t_char >
+	public: template< typename t_char >
 	static typename this_type::value generate(
 		t_char const* const             i_string,
 		typename this_type::value const i_offset = this_type::EMPTY,
@@ -57,7 +56,7 @@ public:
 	    @param[in] i_offset fnv-hash開始値。
 	    @param[in] i_prime  fnv-hash素数。
 	 */
-	template< typename t_value >
+	public: template< typename t_value >
 	static typename this_type::value generate(
 		t_value const* const            i_begin,
 		t_value const* const            i_end,
@@ -72,7 +71,7 @@ public:
 	    @param[in] i_offset fnv-hash開始値。
 	    @param[in] i_prime  fnv-hash素数。
 	 */
-	template< typename t_string >
+	public: template< typename t_string >
 	static typename this_type::value generate(
 		t_string const&                 i_string,
 		typename this_type::value const i_offset = this_type::EMPTY,
@@ -89,7 +88,7 @@ public:
 	    @param[in] i_offset fnv-hash開始値。
 	    @param[in] i_prime  fnv-hash素数。
 	 */
-	template< typename t_iterator >
+	public: template< typename t_iterator >
 	static typename this_type::value generate(
 		t_iterator const                i_begin,
 		t_iterator const                i_end,
@@ -113,8 +112,9 @@ public:
 class psyq::_fnv1_generator:
 	private boost::noncopyable
 {
-//.............................................................................
-public:
+	//-------------------------------------------------------------------------
+	private: _fnv1_generator();
+
 	//-------------------------------------------------------------------------
 	/** @brief byte配列のhash値を生成。
 	    @param[in] i_begin  byte配列の先頭位置。
@@ -122,7 +122,7 @@ public:
 	    @param[in] i_offset hash開始値。
 	    @param[in] i_prime  fnv-hash素数。
 	 */
-	template< typename t_value >
+	public: template< typename t_value >
 	static t_value generate(
 		void const* const i_begin,
 		void const* const i_end,
@@ -140,10 +140,6 @@ public:
 		}
 		return a_hash;
 	}
-
-//.............................................................................
-private:
-	_fnv1_generator();
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -154,8 +150,9 @@ private:
 class psyq::_fnv1a_generator:
 	private boost::noncopyable
 {
-//.............................................................................
-public:
+	//-------------------------------------------------------------------------
+	private: _fnv1a_generator();
+
 	//-------------------------------------------------------------------------
 	/** @brief byte配列のhash値を生成。
 	    @param[in] i_begin  byte配列の先頭位置。
@@ -163,7 +160,7 @@ public:
 	    @param[in] i_offset fnv-hash開始値。
 	    @param[in] i_prime  fnv-hash素数。
 	 */
-	template< typename t_value >
+	public: template< typename t_value >
 	static t_value generate(
 		void const* const i_begin,
 		void const* const i_end,
@@ -181,40 +178,26 @@ public:
 		}
 		return a_hash;
 	}
-
-//.............................................................................
-private:
-	_fnv1a_generator();
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 class psyq::_fnv_traits32:
 	private boost::noncopyable
 {
-//.............................................................................
-public:
-	typedef boost::uint32_t value;
-	static value const EMPTY = 0x811c9dc5;
-	static value const PRIME = 0x1000193;
-
-//.............................................................................
-private:
-	_fnv_traits32();
+	public: typedef boost::uint32_t value;
+	public: static value const EMPTY = 0x811c9dc5;
+	public: static value const PRIME = 0x1000193;
+	private: _fnv_traits32();
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 class psyq::_fnv_traits64:
 	private boost::noncopyable
 {
-//.............................................................................
-public:
-	typedef boost::uint64_t value;
-	static value const EMPTY = 0xcbf29ce484222325ULL;
-	static value const PRIME = 0x100000001b3ULL;
-
-//.............................................................................
-private:
-	_fnv_traits64();
+	public: typedef boost::uint64_t value;
+	public: static value const EMPTY = 0xcbf29ce484222325ULL;
+	public: static value const PRIME = 0x100000001b3ULL;
+	private: _fnv_traits64();
 };
 
 #endif // PSYQ_FNV_HASH_HPP_

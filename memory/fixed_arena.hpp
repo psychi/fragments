@@ -64,20 +64,18 @@ class psyq::fixed_arena:
 			- sizeof(psyq::fixed_pool< t_arena, t_mutex >::chunk));
 #endif // 0
 
-//.............................................................................
-public:
-	typedef t_arena arena;
+	//-------------------------------------------------------------------------
+	public: typedef t_arena arena;
 
 	//-------------------------------------------------------------------------
 	/** @brief singletonとして使う、固定sizeのmemory-pool。
 	 */
-	class pool:
+	public: class pool:
 		public psyq::fixed_pool< t_arena, t_mutex >
 	{
-	public:
-		typedef psyq::singleton< pool, t_mutex > singleton;
+		public: typedef psyq::singleton< pool, t_mutex > singleton;
 
-		pool():
+		public: pool():
 		psyq::fixed_pool< t_arena, t_mutex >(
 			t_max_size, t_alignment, t_offset, t_chunk_size)
 		{
@@ -86,7 +84,13 @@ public:
 	};
 
 	//-------------------------------------------------------------------------
-	explicit fixed_arena(
+	public: static std::size_t const MAX_SIZE   = t_max_size;
+	public: static std::size_t const ALIGNMENT  = t_alignment;
+	public: static std::size_t const OFFSET     = t_offset;
+	public: static std::size_t const CHUNK_SIZE = t_chunk_size;
+
+	//-------------------------------------------------------------------------
+	public: explicit fixed_arena(
 		char const* const i_name = PSYQ_ARENA_NAME_DEFAULT):
 	super_type(i_name)
 	{
@@ -101,7 +105,7 @@ public:
 	    @param[in] i_name      debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	static void* (malloc)(
+	public: static void* (malloc)(
 		std::size_t const i_size,
 		std::size_t const i_alignment,
 		std::size_t const i_offset,
@@ -120,7 +124,7 @@ public:
 	    @param[in] i_name debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	static void* (malloc)(char const* const i_name)
+	public: static void* (malloc)(char const* const i_name)
 	{
 		return this_type::pool::singleton::construct()->allocate(i_name);
 	}
@@ -130,7 +134,7 @@ public:
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	    @param[in] i_size   解放するmemoryの大きさ。byte単位。
 	 */
-	static void (free)(void* const i_memory, std::size_t const i_size)
+	public: static void (free)(void* const i_memory, std::size_t const i_size)
 	{
 		if (0 < i_size && i_size <= t_max_size)
 		{
@@ -145,7 +149,7 @@ public:
 	/** @brief memoryを解放する。
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	 */
-	static void (free)(void* const i_memory)
+	public: static void (free)(void* const i_memory)
 	{
 		this_type::pool::singleton::construct()->deallocate(i_memory);
 	}
@@ -154,29 +158,21 @@ public:
 	/** @brief malloc()に指定できるmemoryの最大sizeを取得。
 	    @return malloc()に指定できる確保できるmemoryの最大size。byte単位。
 	 */
-	virtual std::size_t get_max_size() const
+	public: virtual std::size_t get_max_size() const
 	{
 		return this_type::MAX_SIZE;
 	}
 
-//.............................................................................
-protected:
-	virtual typename super_type::malloc_function get_malloc() const
+	//-------------------------------------------------------------------------
+	protected: virtual typename super_type::malloc_function get_malloc() const
 	{
 		return &this_type::malloc;
 	}
 
-	virtual typename super_type::free_function get_free() const
+	protected: virtual typename super_type::free_function get_free() const
 	{
 		return &this_type::free;
 	}
-
-//.............................................................................
-public:
-	static std::size_t const MAX_SIZE   = t_max_size;
-	static std::size_t const ALIGNMENT  = t_alignment;
-	static std::size_t const OFFSET     = t_offset;
-	static std::size_t const CHUNK_SIZE = t_chunk_size;
 };
 
 #endif // !PSYQ_FIXED_ARENA_HPP_

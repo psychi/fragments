@@ -155,7 +155,7 @@ public:
 			}
 
 			// «‘‚©‚ç’uŠ·Œê‚ğŒŸõB
-			typename t_map::const_iterator a_position(
+			typename t_map::const_iterator const a_position(
 				i_dictionary.find(
 					t_hash::generate(a_range.first + 1, a_range.second - 1)));
 			if (i_dictionary.end() != a_position)

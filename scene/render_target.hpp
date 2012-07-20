@@ -12,9 +12,8 @@ class psyq::render_target:
 {
 	typedef psyq::render_target this_type;
 
-//.............................................................................
-public:
-	enum type
+	//-------------------------------------------------------------------------
+	public: enum type
 	{
 		type_NONE,
 		type_FRAME_BUFFER,
@@ -24,14 +23,14 @@ public:
 	};
 
 	//-------------------------------------------------------------------------
-	~render_target()
+	private: enum flag
 	{
-		this->end_draw();
-		this->reset_post_effect();
-		this->release_post_effect();
-	}
+		flag_TYPE    = 0x7,
+		flag_DRAWING = 0x8,
+	};
 
-	render_target():
+	//-------------------------------------------------------------------------
+	public: render_target():
 	//glare_(NULL),
 	//tonemap_(NULL),
 	//dof_(NULL),
@@ -44,16 +43,23 @@ public:
 		this->texture_ = NULL;
 	}
 
+	public: ~render_target()
+	{
+		this->end_draw();
+		this->reset_post_effect();
+		this->release_post_effect();
+	}
+
 	//-------------------------------------------------------------------------
-	bool begin_draw()
+	public: bool begin_draw()
 	{
 		switch (this->get_draw_type())
 		{
-		case this_type::type_FRAME_BUFFER:
+			case this_type::type_FRAME_BUFFER:
 			this->_clear_buffer();
 			break;
 
-		case this_type::type_TEXTURE:
+			case this_type::type_TEXTURE:
 			if (NULL == this->texture_)
 			{
 				PSYQ_ASSERT(false);
@@ -63,7 +69,7 @@ public:
 			this->_clear_buffer();
 			break;
 
-		case this_type::type_CUBE_TEXTURE:
+			case this_type::type_CUBE_TEXTURE:
 			if (NULL == this->texture_)
 			{
 				PSYQ_ASSERT(false);
@@ -71,7 +77,7 @@ public:
 			}
 			break;
 
-		case this_type::type_POST_EFFECT:
+			case this_type::type_POST_EFFECT:
 			if (NULL != this->post_effect_)
 			{
 				//psyq_extern::apply_post_effect(*this->post_effect_, i_camera, i_focus);
@@ -85,7 +91,7 @@ public:
 			}
 			break;
 
-		default:
+			default:
 			return false;
 		}
 
@@ -94,26 +100,26 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	bool end_draw()
+	public: bool end_draw()
 	{
 		switch (this->get_draw_type())
 		{
-		case this_type::flag_DRAWING | this_type::type_FRAME_BUFFER:
+			case this_type::flag_DRAWING | this_type::type_FRAME_BUFFER:
 			break;
 
-		case this_type::flag_DRAWING | this_type::type_TEXTURE:
-		case this_type::flag_DRAWING | this_type::type_CUBE_TEXTURE:
+			case this_type::flag_DRAWING | this_type::type_TEXTURE:
+			case this_type::flag_DRAWING | this_type::type_CUBE_TEXTURE:
 			psyq_extern::bind_frame_buffer();
 			break;
 
-		case this_type::flag_DRAWING | this_type::type_POST_EFFECT:
+			case this_type::flag_DRAWING | this_type::type_POST_EFFECT:
 			if (NULL != this->post_effect_)
 			{
 				psyq_extern::end_post_effect(*this->post_effect_);
 			}
 			break;
 
-		default:
+			default:
 			return false;
 		}
 
@@ -122,13 +128,13 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	this_type::type get_type() const
+	public: this_type::type get_type() const
 	{
 		return static_cast< this_type::type >(
 			this_type::flag_TYPE & this->flags_);
 	}
 
-	bool is_drawing() const
+	public: bool is_drawing() const
 	{
 		return 0 != (this->flags_ & this_type::flag_DRAWING);
 	}
@@ -136,14 +142,14 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief render-targetにdefaultのframe-bufferが設定されているか判定。
 	 */
-	bool is_frame_buffer() const
+	public: bool is_frame_buffer() const
 	{
 		return this_type::type_FRAME_BUFFER == this->get_type();
 	}
 
 	/** @brief defaultのframe-bufferをrender-targetに設定。
 	 */
-	bool set_frame_buffer()
+	public: bool set_frame_buffer()
 	{
 		if (this->is_drawing())
 		{
@@ -159,7 +165,7 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief render-targetに設定されているtextureを取得。
 	 */
-	psyq_extern::render_texture* get_texture()
+	public: psyq_extern::render_texture* get_texture()
 	{
 		return this_type::type_TEXTURE == this->get_type()?
 			this->texture_: NULL;
@@ -168,7 +174,7 @@ public:
 	/** @brief textureをrender-targetに設定。
 		@param[in] i_texture 設定するtexture。
 	 */
-	bool set_texture(psyq_extern::render_texture* const i_texture)
+	public: bool set_texture(psyq_extern::render_texture* const i_texture)
 	{
 		if (this->is_drawing() || NULL == i_texture)
 		{
@@ -182,7 +188,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	psyq_extern::render_texture* get_cube_texture() const
+	public: psyq_extern::render_texture* get_cube_texture() const
 	{
 		return this_type::type_CUBE_TEXTURE == this->get_type()?
 			this->texture_: NULL;
@@ -191,7 +197,7 @@ public:
 	/** @brief cube-textureをrender-targetに設定。
 		@param[in] i_texture 設定するcube-texture。
 	 */
-	bool set_cube_texture(psyq_extern::render_texture* const i_texture)
+	public: bool set_cube_texture(psyq_extern::render_texture* const i_texture)
 	{
 		if (this->is_drawing() || NULL == i_texture)
 		{
@@ -205,7 +211,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	psyq_extern::post_effect* get_post_effect() const
+	public: psyq_extern::post_effect* get_post_effect() const
 	{
 		return this_type::type_POST_EFFECT == this->get_type()?
 			this->post_effect_: NULL;
@@ -214,7 +220,7 @@ public:
 	/** @brief post-effectをrender-targetに設定。
 		@param[in,out] i_post_effect 設定するpost-effect。
 	 */
-	bool set_post_effect(psyq_extern::post_effect* const io_post_effect)
+	public: bool set_post_effect(psyq_extern::post_effect* const io_post_effect)
 	{
 		if (this->is_drawing())
 		{
@@ -234,7 +240,7 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief color-bufferのclear値を設定。
 	 */
-	void set_clear_color(psyq_extern::math_vector4 const& i_color)
+	public: void set_clear_color(psyq_extern::math_vector4 const& i_color)
 	{
 		this->clear_buffer_ |= psyq_extern::surface_COLOR;
 		this->clear_color_ = i_color;
@@ -242,7 +248,7 @@ public:
 
 	/** @brief color-bufferのclearを解除。
 	 */
-	void reset_clear_color()
+	public: void reset_clear_color()
 	{
 		this->clear_buffer_ &= ~psyq_extern::surface_COLOR;
 	}
@@ -250,7 +256,7 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief depth-bufferのclear値を設定。
 	 */
-	void set_clear_depth(float const i_depth)
+	public: void set_clear_depth(float const i_depth)
 	{
 		this->clear_buffer_ |= psyq_extern::surface_DEPTH;
 		this->clear_depth_ = i_depth;
@@ -258,7 +264,7 @@ public:
 
 	/** @brief depth-bufferのclearを解除。
 	 */
-	void reset_clear_depth()
+	public: void reset_clear_depth()
 	{
 		this->clear_buffer_ &= ~psyq_extern::surface_DEPTH;
 	}
@@ -266,7 +272,7 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief stencil-bufferのclear値を設定。
 	 */
-	void set_clear_stencil(boost::uint32_t i_stencil)
+	public: void set_clear_stencil(boost::uint32_t i_stencil)
 	{
 		this->clear_buffer_ |= psyq_extern::surface_STENCIL;
 		this->clear_stencil_ = i_stencil;
@@ -274,13 +280,13 @@ public:
 
 	/** @brief stencil-bufferのclearを解除。
 	 */
-	void reset_clear_stencil()
+	public: void reset_clear_stencil()
 	{
 		this->clear_buffer_ &= ~psyq_extern::surface_STENCIL;
 	}
 
 	//-------------------------------------------------------------------------
-	void _clear_buffer() const
+	public: void _clear_buffer() const
 	{
 		psyq_extern::clear_render_target(
 			this->clear_buffer_,
@@ -289,26 +295,18 @@ public:
 			this->clear_stencil_);
 	}
 
-//.............................................................................
-private:
-	enum flag
-	{
-		flag_TYPE    = 0x7,
-		flag_DRAWING = 0x8,
-	};
-
 	//-------------------------------------------------------------------------
-	unsigned get_draw_type() const
+	private: unsigned get_draw_type() const
 	{
 		return (this_type::flag_DRAWING | this_type::flag_TYPE) & this->flags_;
 	}
 
-	void set_draw_type(this_type::type const i_type)
+	private: void set_draw_type(this_type::type const i_type)
 	{
 		this->flags_ = (~this_type::flag_TYPE & this->flags_) | i_type;
 	}
 
-	void release_post_effect()
+	private: void release_post_effect()
 	{
 		if (NULL!= this->post_effect_ &&
 			this_type::type_POST_EFFECT == this->get_type())
@@ -317,7 +315,7 @@ private:
 		}
 	}
 
-	void reset_post_effect()
+	private: void reset_post_effect()
 	{
 		/*
 		this->reset_glare();
@@ -327,22 +325,21 @@ private:
 		 */
 	}
 
-//.............................................................................
-private:
-	union
+	//-------------------------------------------------------------------------
+	private: union
 	{
 		psyq_extern::render_texture* texture_;
 		psyq_extern::post_effect*    post_effect_;
 	};
-	//pfx_glare*                glare_;
-	//pfx_tonemap*              tonemap_;
-	//pfx_dof*                  dof_;
-	//this_type::color_matrices color_matrices_;
-	psyq_extern::math_vector4  clear_color_;
-	float                      clear_depth_;
-	boost::uint32_t            clear_stencil_;
-	boost::uint32_t            clear_buffer_;
-	boost::uint32_t            flags_;
+	//private: pfx_glare*                glare_;
+	//private: pfx_tonemap*              tonemap_;
+	//private: pfx_dof*                  dof_;
+	//private: this_type::color_matrices color_matrices_;
+	private: psyq_extern::math_vector4  clear_color_;
+	private: float                      clear_depth_;
+	private: boost::uint32_t            clear_stencil_;
+	private: boost::uint32_t            clear_buffer_;
+	private: boost::uint32_t            flags_;
 };
 
 #endif // !PSYQ_SCENE_RENDER_TARGET_HPP_

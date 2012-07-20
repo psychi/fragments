@@ -12,27 +12,26 @@ class psyq::scene_camera:
 {
 	typedef psyq::scene_camera this_type;
 
-//.............................................................................
-public:
-	typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
-	typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
+	//-------------------------------------------------------------------------
+	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
+	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
 
 	//-------------------------------------------------------------------------
-	scene_camera():
+	public: scene_camera():
 	camera_node_(NULL),
 	focus_node_(NULL)
 	{
 		// pass
 	}
 
-	explicit scene_camera(
+	public: explicit scene_camera(
 		psyq::scene_token::shared_ptr const& i_token,
 		char const* const                    i_name = NULL)
 	{
 		this->set_node(i_token, i_name);
 	}
 
-	scene_camera(
+	public: scene_camera(
 		psyq::scene_token::shared_ptr const& i_camera_token,
 		char const* const                    i_camera_name,
 		psyq::scene_token::shared_ptr const& i_focus_token,
@@ -47,7 +46,7 @@ public:
 	    @param[in] i_token cameraとして使うscene-token。
 	    @param[in] i_name  cameraとして使うnodeのID文字列。
 	 */
-	psyq_extern::scene_node const* set_node(
+	public: psyq_extern::scene_node const* set_node(
 		psyq::scene_token::shared_ptr const& i_token,
 		char const* const                    i_name = NULL,
 		char const* const                    i_focus = NULL)
@@ -68,18 +67,18 @@ public:
 		return NULL;
 	}
 
-	psyq_extern::scene_node const* get_node() const
+	public: psyq_extern::scene_node const* get_node() const
 	{
 		return this->camera_node_;
 	}
 
-	psyq::scene_token::shared_ptr const& get_token() const
+	public: psyq::scene_token::shared_ptr const& get_token() const
 	{
 		return this->camera_token_;
 	}
 
 	//-------------------------------------------------------------------------
-	psyq_extern::scene_node const* set_focus_node(
+	public: psyq_extern::scene_node const* set_focus_node(
 		psyq::scene_token::shared_ptr const& i_token,
 		char const* const                    i_name)
 	{
@@ -98,17 +97,17 @@ public:
 		return NULL;
 	}
 
-	psyq_extern::scene_node const* get_focus_node()
+	public: psyq_extern::scene_node const* get_focus_node()
 	{
 		return this->focus_node_;
 	}
 
-	psyq::scene_token::shared_ptr const& get_focus_token() const
+	public: psyq::scene_token::shared_ptr const& get_focus_token() const
 	{
 		return this->focus_token_;
 	}
 
-	float get_focus_distance() const
+	public: float get_focus_distance() const
 	{
 		if (NULL == this->camera_node_ || NULL == this->focus_node_)
 		{
@@ -117,12 +116,11 @@ public:
 		return psyq_extern::distance(*this->camera_node_, *this->focus_node_);
 	}
 
-//.............................................................................
-private:
-	psyq::scene_token::shared_ptr  camera_token_;
-	psyq_extern::scene_node const* camera_node_;
-	psyq::scene_token::shared_ptr  focus_token_;
-	psyq_extern::scene_node const* focus_node_;
+	//-------------------------------------------------------------------------
+	private: psyq::scene_token::shared_ptr  camera_token_;
+	private: psyq_extern::scene_node const* camera_node_;
+	private: psyq::scene_token::shared_ptr  focus_token_;
+	private: psyq_extern::scene_node const* focus_node_;
 };
 
 #endif // PSYQ_SCENE_CAMERA_HPP_

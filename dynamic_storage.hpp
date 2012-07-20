@@ -17,20 +17,8 @@ class psyq::dynamic_storage:
 {
 	typedef psyq::dynamic_storage this_type;
 
-//.............................................................................
-public:
 	//-------------------------------------------------------------------------
-	~dynamic_storage()
-	{
-		// 保持しているmemoryを解放。
-		if (NULL != this->deallocator_)
-		{
-			(*this->deallocator_)(this->get_address(), this->get_size());
-		}
-	}
-
-	//-------------------------------------------------------------------------
-	dynamic_storage():
+	public: dynamic_storage():
 	deallocator_(NULL),
 	address_(NULL),
 	size_(0)
@@ -41,7 +29,7 @@ public:
 	/** @param[in] i_size      確保するmemoryの大きさ。byte単位。
 	    @param[in] i_allocator memoryの確保に使う割当子。
 	 */
-	template< typename t_allocator >
+	public: template< typename t_allocator >
 	dynamic_storage(
 		t_allocator const& i_allocator,
 		std::size_t const  i_size)
@@ -59,7 +47,7 @@ public:
 	    @param[in] i_offset    確保するmemoryの配置offset値。
 	    @param[in] i_name      debugで使うためのmemory識別名。
 	 */
-	template< typename t_arena >
+	public: template< typename t_arena >
 	dynamic_storage(
 		boost::type< t_arena > const&,
 		std::size_t const i_size,
@@ -85,10 +73,20 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	public: ~dynamic_storage()
+	{
+		// 保持しているmemoryを解放。
+		if (NULL != this->deallocator_)
+		{
+			(*this->deallocator_)(this->get_address(), this->get_size());
+		}
+	}
+
+	//-------------------------------------------------------------------------
 	/** @brief 保持しているmemoryを交換。
 	    @param[in,out] io_target 交換する対象。
 	 */
-	void swap(this_type& io_target)
+	public: void swap(this_type& io_target)
 	{
 		std::swap(this->deallocator_, io_target.deallocator_);
 		std::swap(this->address_, io_target.address_);
@@ -101,7 +99,7 @@ public:
 	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	template< typename t_allocator >
+	public: template< typename t_allocator >
 	void* allocate(
 		t_allocator const& i_allocator,
 		std::size_t const  i_size)
@@ -120,7 +118,7 @@ public:
 	    @param[in] i_name      debugで使うためのmemory識別名。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	template< typename t_arena >
+	public: template< typename t_arena >
 	void* allocate(
 		std::size_t       i_size,
 		std::size_t       i_alignment,
@@ -150,7 +148,7 @@ public:
 
 	/** @brief 保持しているmemoryを解放。
 	 */
-	void deallocate()
+	public: void deallocate()
 	{
 		this_type().swap(*this);
 	}
@@ -159,7 +157,7 @@ public:
 	/** @brief 保持しているmemoryの大きさをbyte単位で取得。
 	    @return 保持しているmemoryの大きさ。byte単位。
 	 */
-	std::size_t get_size() const
+	public: std::size_t get_size() const
 	{
 		return this->size_;
 	}
@@ -167,7 +165,7 @@ public:
 	/** @brief 保持しているmemoryの先頭位置を取得。
 	    @return 保持しているmemoryの先頭位置。
 	 */
-	void const* get_address() const
+	public: void const* get_address() const
 	{
 		return this->address_;
 	}
@@ -175,17 +173,16 @@ public:
 	/** @brief 保持しているmemoryの先頭位置を取得。
 	    @return 保持しているmemoryの先頭位置。
 	 */
-	void* get_address()
+	public: void* get_address()
 	{
 		return const_cast< void* >(
 			const_cast< this_type const* >(this)->get_address());
 	}
 
-//.............................................................................
-private:
-	void        (*deallocator_)(void* const, std::size_t const);
-	void*       address_;
-	std::size_t size_;
+	//-------------------------------------------------------------------------
+	private: void        (*deallocator_)(void* const, std::size_t const);
+	private: void*       address_;
+	private: std::size_t size_;
 };
 
 #endif // PSYQ_DYNAMIC_STORAGE_HPP_

@@ -26,18 +26,17 @@ class psyq::event_line
 {
 	typedef psyq::event_line< t_hash, t_real > this_type;
 
-//.............................................................................
-public:
-	typedef t_hash hash;
-	typedef t_real real;
-	typedef typename t_hash::value integer;
-	typedef psyq::layered_scale< t_real, typename this_type::integer >
+	//-------------------------------------------------------------------------
+	public: typedef t_hash hash;
+	public: typedef t_real real;
+	public: typedef typename t_hash::value integer;
+	public: typedef psyq::layered_scale< t_real, typename this_type::integer >
 		time_scale;
-	typedef psyq::event_point< t_hash, t_real > point;
-	typedef typename psyq::event_item< t_hash >::archive archive;
+	public: typedef psyq::event_point< t_hash, t_real > point;
+	public: typedef typename psyq::event_item< t_hash >::archive archive;
 
 	//-------------------------------------------------------------------------
-	event_line():
+	public: event_line():
 	first_point_(NULL),
 	last_point_(NULL),
 	cache_time_(0),
@@ -49,7 +48,7 @@ public:
 	/** @param[in] i_archive event-point配列が保存されている書庫。
 	    @param[in] i_points  event-point配列の名前hash値。
 	 */
-	event_line(
+	public: event_line(
 		PSYQ_SHARED_PTR< typename this_type::archive const > const& i_archive,
 		typename t_hash::value const                                i_points)
 	{
@@ -58,7 +57,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	void swap(this_type& io_target)
+	public: void swap(this_type& io_target)
 	{
 		this->time_scale_.swap(io_target.time_scale_);
 		this->archive_.swap(io_target.archive_);
@@ -73,7 +72,7 @@ public:
 	    @param[in] i_archive event-point配列が保存されている書庫。
 	    @param[in] i_points  event-point配列の名前hash値。
 	 */
-	bool reset(
+	public: bool reset(
 		PSYQ_SHARED_PTR< typename this_type::archive const > const& i_archive,
 		typename t_hash::value const                                i_points)
 	{
@@ -110,7 +109,7 @@ public:
 	    @param[in] i_time   基準からの相対時間。
 	    @param[in] i_origin 基準となる時間。C標準libralyのSEEK定数を使う。
 	 */
-	void seek(t_real const i_time, int const i_origin)
+	public: void seek(t_real const i_time, int const i_origin)
 	{
 		if (NULL != this->last_point_)
 		{
@@ -138,7 +137,7 @@ public:
 	/** @brief 発生するeventを登録。
 	    @param[in,out] io_container 発生するeventを登録するcontainer。
 	 */
-	template< typename t_container >
+	public: template< typename t_container >
 	void dispatch(t_container& io_container)
 	{
 		if (NULL == this->last_point_)
@@ -186,7 +185,7 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief event-lineが停止しているか判定。
 	 */
-	bool is_stop() const
+	public: bool is_stop() const
 	{
 		return NULL == this->last_point_ || (
 			this->rest_time_ <= 0 &&
@@ -194,18 +193,16 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	PSYQ_SHARED_PTR< typename this_type::archive const > const& get_archive() const
+	public: PSYQ_SHARED_PTR< typename this_type::archive const > const& get_archive() const
 	{
 		return this->archive_;
 	}
 
-//.............................................................................
-private:
 	//-------------------------------------------------------------------------
 	/** @brief 時間を進める。
 	    @param[in] i_time 進める時間。
 	 */
-	void forward_time(t_real const i_time)
+	private: void forward_time(t_real const i_time)
 	{
 		typename this_type::point const* a_event(this->last_point_);
 		if (0 <= i_time && NULL != a_event)
@@ -230,7 +227,7 @@ private:
 	}
 
 	//-------------------------------------------------------------------------
-	void seek_front(t_real const i_time)
+	private: void seek_front(t_real const i_time)
 	{
 		this->last_point_ = this->first_point_;
 		this->cache_time_ = i_time;
@@ -240,7 +237,7 @@ private:
 	//-------------------------------------------------------------------------
 	/** @brief 開始時間を基準としたevent発生時間を取得。
 	 */
-	t_real get_dispatch_time(
+	private: t_real get_dispatch_time(
 		typename this_type::point const* const i_event)
 	const
 	{
@@ -267,31 +264,30 @@ private:
 	//-------------------------------------------------------------------------
 	/** @brief 最後のeventか判定。
 	 */
-	static bool is_last(typename this_type::point const* const i_event)
+	private: static bool is_last(typename this_type::point const* const i_event)
 	{
 		PSYQ_ASSERT(NULL != i_event);
 		return t_hash::EMPTY == i_event->type &&
 			t_hash::EMPTY == i_event->integer;
 	}
 
-//.............................................................................
-public:
-	typename this_type::time_scale::shared_ptr time_scale_;
+	//-------------------------------------------------------------------------
+	public: typename this_type::time_scale::shared_ptr time_scale_;
 
-private:
-	PSYQ_SHARED_PTR< typename this_type::archive const > archive_;
+	/// 参照しているevent書庫。
+	private: PSYQ_SHARED_PTR< typename this_type::archive const > archive_;
 
 	/// event配列の先頭位置。
-	typename this_type::point const* first_point_;
+	private: typename this_type::point const* first_point_;
 
 	/// すでに発生したevent配列の末尾位置。
-	typename this_type::point const* last_point_;
+	private: typename this_type::point const* last_point_;
 
 	/// 更新する時間。
-	t_real cache_time_;
+	private: t_real cache_time_;
 
 	/// 次のeventが発生するまでの時間。
-	t_real rest_time_;
+	private: t_real rest_time_;
 };
 
 #endif // !PSYQ_EVENT_LINE_HPP_

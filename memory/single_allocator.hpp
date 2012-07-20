@@ -54,9 +54,8 @@ class psyq::single_allocator:
 		t_value, t_alignment, t_offset, typename this_type::arena >
 			super_type;
 
-//.............................................................................
-public:
-	template<
+	//-------------------------------------------------------------------------
+	public: template<
 		typename    t_other_type,
 		std::size_t t_other_alignment =
 			boost::alignment_of< t_other_type >::value,
@@ -79,7 +78,7 @@ public:
 	//-------------------------------------------------------------------------
 	/** @param[in] i_name debugで使うためのmemory識別名。
 	 */
-	explicit single_allocator(
+	public: explicit single_allocator(
 		char const* const i_name = PSYQ_ARENA_NAME_DEFAULT):
 	super_type(i_name)
 	{
@@ -90,7 +89,7 @@ public:
 
 	/** @param[in] i_source copy元instance。
 	 */
-	template< typename t_other_type, std::size_t t_other_alignment >
+	public: template< typename t_other_type, std::size_t t_other_alignment >
 	single_allocator(
 		psyq::single_allocator<
 			t_other_type,
@@ -106,7 +105,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	//this_type& operator=(this_type const&) = default;
+	//public: this_type& operator=(this_type const&) = default;
 
 	//-------------------------------------------------------------------------
 	/** @brief instanceに使うmemoryを確保する。
@@ -114,7 +113,7 @@ public:
 	    @param[in] i_hint 最適化のためのhint。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	typename super_type::pointer allocate(
+	public: typename super_type::pointer allocate(
 		typename super_type::size_type const i_num,
 		void const* const                    i_hint = NULL)
 	{
@@ -124,7 +123,7 @@ public:
 	/** @brief instanceに使うmemoryを確保する。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	typename super_type::pointer allocate()
+	public: typename super_type::pointer allocate()
 	{
 		void* const a_memory((super_type::arena::malloc)(this->get_name()));
 		PSYQ_ASSERT(NULL != a_memory);
@@ -136,14 +135,14 @@ public:
 	    @param[in] i_memory 解放するinstanceの先頭位置。
 	    @param[in] i_num    解放するinstanceの数。
 	 */
-	void deallocate(
+	public: void deallocate(
 		typename super_type::pointer const   i_memory,
 		typename super_type::size_type const i_num)
 	{
 		this->super_type::deallocate(i_memory, i_num);
 	}
 
-	void deallocate(typename super_type::pointer const i_memory)
+	public: void deallocate(typename super_type::pointer const i_memory)
 	{
 		(super_type::arena::free)(i_memory);
 	}
@@ -159,7 +158,7 @@ public:
 	      http://msdn.microsoft.com/en-us/library/h36se6sf.aspx
 	 */
 #ifdef _MSC_VER
-	static typename super_type::size_type max_size()
+	public: static typename super_type::size_type max_size()
 	{
 		return t_arena::MAX_SIZE / sizeof(t_value);
 	}

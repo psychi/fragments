@@ -7,15 +7,15 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief scene全体を管理する。
+ */
 class psyq::scene_world
 {
 	typedef psyq::scene_world this_type;
 
-//.............................................................................
-public:
 	//-------------------------------------------------------------------------
 	// scene-packageの辞書。
-	typedef std::map<
+	public: typedef std::map<
 		psyq::scene_event::hash::value,
 		scene_package::shared_ptr,
 		std::less< psyq::scene_event::hash::value >,
@@ -26,7 +26,7 @@ public:
 					package_map;
 
 	/// scene-tokenの辞書。
-	typedef std::map<
+	public: typedef std::map<
 		psyq::scene_event::hash::value,
 		scene_token::shared_ptr,
 		std::less< psyq::scene_event::hash::value >,
@@ -37,7 +37,7 @@ public:
 					token_map;
 
 	/// scene-sectionの辞書。
-	typedef std::map<
+	public: typedef std::map<
 		psyq::scene_event::hash::value,
 		scene_section::shared_ptr,
 		std::less< psyq::scene_event::hash::value >,
@@ -48,7 +48,25 @@ public:
 					section_map;
 
 	//-------------------------------------------------------------------------
-	template< typename t_allocator >
+	private: struct package_path
+	{
+		psyq::scene_event::item::offset scene;   ///< sceneのpath名の書庫offset値。
+		psyq::scene_event::item::offset shader;  ///< shaderのpath名の書庫offset値。
+		psyq::scene_event::item::offset texture; ///< textureのpath名の書庫offset値。
+	};
+
+	private: typedef std::multimap<
+		psyq::scene_event::time_scale::value,
+		psyq::scene_event::point const*,
+		std::greater< psyq::scene_event::time_scale::value >,
+		psyq::scene_event::allocator::rebind<
+			std::pair<
+				psyq::scene_event::time_scale::value const,
+				psyq::scene_event::point const* > >::other >
+					dispatch_map;
+
+	//-------------------------------------------------------------------------
+	public: template< typename t_allocator >
 	explicit scene_world(t_allocator const& i_allocator):
 	event_(i_allocator),
 	packages_(this_type::package_map::key_compare(), i_allocator),
@@ -63,7 +81,7 @@ public:
 	    @param[in] i_frame_time  1frameあたりの時間。
 	    @param[in] i_frame_count 進めるframe数。
 	 */
-	void update(
+	public: void update(
 		psyq_extern::scene_time const&             i_frame_time,
 		psyq::scene_event::time_scale::value const i_frame_count = 1)
 	{
@@ -88,7 +106,7 @@ public:
 	    @param[in] i_name 取得するpackageの名前hash値。
 	    @return package名に対応するpackage。取得に失敗した場合は空。
 	 */
-	psyq::scene_package::shared_ptr const& get_package(
+	public: psyq::scene_package::shared_ptr const& get_package(
 		psyq::scene_event::hash::value const i_name)
 	{
 		if (psyq::scene_event::hash::EMPTY != i_name)
@@ -116,7 +134,7 @@ public:
 	    @param[in] i_name 検索するpackageの名前hash値。
 	    @return 見つけたpacakge。見つからなかった場合は空。
 	 */
-	psyq::scene_package::shared_ptr const& find_package(
+	public: psyq::scene_package::shared_ptr const& find_package(
 		psyq::scene_event::hash::value const i_name)
 	const
 	{
@@ -127,7 +145,7 @@ public:
 	    @param[in] i_name 削除するpackageの名前hash値。
 	    @return 削除したpackage。削除しなかった場合は空。
 	 */
-	psyq::scene_package::shared_ptr remove_package(
+	public: psyq::scene_package::shared_ptr remove_package(
 		psyq::scene_event::hash::value const i_name)
 	{
 		return this_type::remove_element(this->packages_, i_name);
@@ -139,7 +157,7 @@ public:
 	    @param[in] i_name 取得するsectionの名前hash値。
 	    @return section名に対応するsection。取得に失敗した場合は空。
 	 */
-	psyq::scene_section::shared_ptr const& get_section(
+	public: psyq::scene_section::shared_ptr const& get_section(
 		psyq::scene_event::hash::value const i_name)
 	{
 		if (psyq::scene_event::hash::EMPTY != i_name)
@@ -170,7 +188,7 @@ public:
 	    @param[in] i_name 検索するsectionの名前hash値。
 	    @return 見つかったsection。見つからなかった場合は空。
 	 */
-	psyq::scene_section::shared_ptr const& find_section(
+	public: psyq::scene_section::shared_ptr const& find_section(
 		psyq::scene_event::hash::value const i_name)
 	const
 	{
@@ -181,7 +199,7 @@ public:
 	    @param[in] i_name 削除するsectionの名前hash値。
 	    @return 削除したsection。削除しなかった場合は空。
 	 */
-	psyq::scene_section::shared_ptr remove_section(
+	public: psyq::scene_section::shared_ptr remove_section(
 		psyq::scene_event::hash::value const i_name)
 	{
 		return this_type::remove_element(this->sections_, i_name);
@@ -193,7 +211,7 @@ public:
 	    @param[in] i_token 取得するtokenの名前hash値。
 	    @return token名に対応するtoken。取得に失敗した場合は空。
 	 */
-	psyq::scene_token::shared_ptr const& get_token(
+	public: psyq::scene_token::shared_ptr const& get_token(
 		psyq::scene_event::hash::value const i_name)
 	{
 		if (psyq::scene_event::hash::EMPTY != i_name)
@@ -226,7 +244,7 @@ public:
 	    @param[in] i_section 対象となるsectionの名前hash値。
 	    @return token名に対応するtoken。取得に失敗した場合は空。
 	 */
-	psyq::scene_token::shared_ptr const& get_token(
+	public: psyq::scene_token::shared_ptr const& get_token(
 		psyq::scene_event::hash::value const i_token,
 		psyq::scene_event::hash::value const i_section)
 	{
@@ -243,7 +261,7 @@ public:
 	    @param[in] i_name 検索するtokenの名前hash値。
 	    @return 見つけたtoken。見つからなかった場合は空。
 	 */
-	psyq::scene_token::shared_ptr const& find_token(
+	public: psyq::scene_token::shared_ptr const& find_token(
 		psyq::scene_event::hash::value const i_name)
 	const
 	{
@@ -254,7 +272,7 @@ public:
 	    @param[in] i_name 削除するtokenの名前hash値。
 	    @return 削除したtoken。削除しなかった場合は空。
 	 */
-	psyq::scene_token::shared_ptr remove_token(
+	public: psyq::scene_token::shared_ptr remove_token(
 		psyq::scene_event::hash::value const i_name)
 	{
 		psyq::scene_token::shared_ptr a_token;
@@ -290,7 +308,7 @@ public:
 	    @param[in] i_section 対象となるsectionの名前hash値。
 	    @return 削除したtoken。削除しなかった場合は空。
 	 */
-	psyq::scene_token::shared_ptr const& remove_token(
+	public: psyq::scene_token::shared_ptr const& remove_token(
 		psyq::scene_event::hash::value const i_token,
 		psyq::scene_event::hash::value const i_section)
 	{
@@ -317,32 +335,12 @@ public:
 		return this_type::get_null_ptr< psyq::scene_token >();
 	}
 
-//.............................................................................
-private:
-	//-------------------------------------------------------------------------
-	struct package_path
-	{
-		psyq::scene_event::item::offset scene;   ///< sceneのpath名の書庫offset値。
-		psyq::scene_event::item::offset shader;  ///< shaderのpath名の書庫offset値。
-		psyq::scene_event::item::offset texture; ///< textureのpath名の書庫offset値。
-	};
-
-	typedef std::multimap<
-		psyq::scene_event::time_scale::value,
-		psyq::scene_event::point const*,
-		std::greater< psyq::scene_event::time_scale::value >,
-		psyq::scene_event::allocator::rebind<
-			std::pair<
-				psyq::scene_event::time_scale::value const,
-				psyq::scene_event::point const* > >::other >
-					dispatch_map;
-
 	//-------------------------------------------------------------------------
 	/** @brief containerから要素を検索。
 	    @param[in] i_container 対象となるcontainer。
 	    @param[in] i_name      削除する要素の名前hash値。
 	 */
-	template< typename t_container >
+	private: template< typename t_container >
 	static typename t_container::mapped_type const& find_element(
 		t_container const&                   i_container,
 		psyq::scene_event::hash::value const i_name)
@@ -359,7 +357,7 @@ private:
 	    @param[in] i_container 対象となるcontainer。
 	    @param[in] i_name      削除する要素の名前hash値。
 	 */
-	template< typename t_container >
+	private: template< typename t_container >
 	static typename t_container::mapped_type remove_element(
 		t_container&                         io_container,
 		psyq::scene_event::hash::value const i_name)
@@ -379,7 +377,7 @@ private:
 	/** @brief fileからpacakgeを読み込む。
 	    @param[in] i_name packageの名前hash値。
 	 */
-	psyq::scene_package::shared_ptr load_package(
+	private: psyq::scene_package::shared_ptr load_package(
 		psyq::scene_event::hash::value const i_name)
 	const
 	{
@@ -416,7 +414,7 @@ private:
 	    @param[in] i_frame_time  1frameあたりの時間。
 	    @param[in] i_frame_count 進めるframe数。
 	 */
-	static void forward_scenes(
+	private: static void forward_scenes(
 		this_type::token_map const&                i_tokens,
 		psyq_extern::scene_time const&             i_frame_time,
 		psyq::scene_event::time_scale::value const i_frame_count)
@@ -442,7 +440,7 @@ private:
 	/** @brief sceneを更新。
 	    @param[in] i_tokens sceneを持つtokenの辞書。
 	 */
-	static void update_scenes(this_type::token_map const& i_tokens)
+	private: static void update_scenes(this_type::token_map const& i_tokens)
 	{
 		for (
 			this_type::token_map::const_iterator i = i_tokens.begin();
@@ -463,7 +461,7 @@ private:
 	    @param[in]     i_lines       更新するevent-lineの辞書。
 	    @param[in]     i_frame_count 進めるframe数。
 	 */
-	static void forward_events(
+	private: static void forward_events(
 		this_type::dispatch_map&                   io_dispatch,
 		psyq::scene_event::line_map const&         i_lines,
 		psyq::scene_event::time_scale::value const i_frame_count)
@@ -486,7 +484,7 @@ private:
 	    @param[in]     i_dispatch 発生したeventが登録されているcontainer。
 	    @param[in]     i_actions  event-actionの辞書。
 	 */
-	static void apply_events(
+	private: static void apply_events(
 		this_type&                           io_world,
 		this_type::dispatch_map const&       i_dispatch,
 		psyq::scene_event::action_map const& i_actions)
@@ -515,19 +513,18 @@ private:
 	}
 
 	//-------------------------------------------------------------------------
-	template< typename t_value >
+	private: template< typename t_value >
 	static PSYQ_SHARED_PTR< t_value > const& get_null_ptr()
 	{
 		static PSYQ_SHARED_PTR< t_value > const s_null_ptr;
 		return s_null_ptr;
 	}
 
-//.............................................................................
-public:
-	psyq::scene_event       event_;
-	this_type::package_map  packages_; ///< scene-packageの辞書。
-	this_type::section_map  sections_; ///< scene-sectionの辞書。
-	this_type::token_map    tokens_;   ///< scene-tokenの辞書。
+	//-------------------------------------------------------------------------
+	public: psyq::scene_event       event_;
+	public: this_type::package_map  packages_; ///< scene-packageの辞書。
+	public: this_type::section_map  sections_; ///< scene-sectionの辞書。
+	public: this_type::token_map    tokens_;   ///< scene-tokenの辞書。
 };
 
 #endif // !PSYQ_SCENE_WORLD_HPP_

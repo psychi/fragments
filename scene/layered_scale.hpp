@@ -17,22 +17,21 @@ class psyq::layered_scale
 {
 	typedef psyq::layered_scale< t_value, t_count, t_tag > this_type;
 
-//.............................................................................
-public:
-	typedef t_value value;
-	typedef t_count count;
-	typedef t_tag tag;
-	typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
-	typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
-	typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
-	typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
-	typedef psyq::lerp< t_value, t_count > lerp;
+	//-------------------------------------------------------------------------
+	public: typedef t_value value;
+	public: typedef t_count count;
+	public: typedef t_tag tag;
+	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
+	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
+	public: typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
+	public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
+	public: typedef psyq::lerp< t_value, t_count > lerp;
 
 	//-------------------------------------------------------------------------
 	/** @param[in] i_scale 線形補間scale値。
 	    @param[in] i_super 上位階層scale。最上位の場合は空を指定する。
 	 */
-	explicit layered_scale(
+	public: explicit layered_scale(
 		typename this_type::lerp const&       i_scale = lerp(1),
 		typename this_type::shared_ptr const& i_super = shared_ptr()):
 	super_scale_(i_super),
@@ -51,7 +50,7 @@ public:
 	/** @brief scale値を設定。
 	    @param[in] i_scale 新たな線形補間scale値。
 	 */
-	void reset(typename this_type::lerp const& i_scale)
+	public: void reset(typename this_type::lerp const& i_scale)
 	{
 		this->lerp_scale_ = i_scale;
 		this->last_count_ = this_type::counter();
@@ -66,7 +65,7 @@ public:
 	/** @brief 上位階層scaleを設定。
 	    @param[in] i_super 新たな上位階層scale。最上位の場合は空を指定する。
 	 */
-	bool reset(typename this_type::shared_ptr const& i_super)
+	public: bool reset(typename this_type::shared_ptr const& i_super)
 	{
 		this_type const* const a_super(i_super.get());
 		if (NULL != a_super && a_super->find_super(*this))
@@ -81,7 +80,7 @@ public:
 	    @param[in] i_scale 新たな線形補間scale値。
 	    @param[in] i_super 新たな上位階層scale。最上位の場合は空を指定する。
 	 */
-	bool reset(
+	public: bool reset(
 		typename this_type::lerp const&       i_scale,
 		typename this_type::shared_ptr const& i_super)
 	{
@@ -107,7 +106,7 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief 現在のscale値を取得。
 	 */
-	t_value get_scale()
+	public: t_value get_scale()
 	{
 		t_count const a_count(this_type::counter());
 		if (a_count != this->last_count_)
@@ -125,21 +124,20 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief 現在のcount値を取得。
 	 */
-	static t_count get_count()
+	public: static t_count get_count()
 	{
 		return this_type::counter();
 	}
 
 	/** @brief count値を更新。
 	 */
-	static t_count update_count()
+	public: static t_count update_count()
 	{
 		return ++this_type::counter();
 	}
 
-//.............................................................................
-private:
-	bool find_super(this_type const& i_timer) const
+	//-------------------------------------------------------------------------
+	private: bool find_super(this_type const& i_timer) const
 	{
 		if (&i_timer != this)
 		{
@@ -149,18 +147,17 @@ private:
 		return true;
 	}
 
-	static t_count& counter()
+	private: static t_count& counter()
 	{
 		static t_count s_count(0);
 		return s_count;
 	}
 
-//.............................................................................
-private:
-	typename this_type::shared_ptr super_scale_; ///< 上位階層のscale。
-	typename this_type::lerp       lerp_scale_;  ///< 線形補間scale値。
-	t_value                        last_scale_;  ///< 最後に更新したscale値。
-	t_count                        last_count_;  ///< 最後に更新したcount値。
+	//-------------------------------------------------------------------------
+	private: typename this_type::shared_ptr super_scale_; ///< 上位階層のscale。
+	private: typename this_type::lerp       lerp_scale_;  ///< 線形補間scale値。
+	private: t_value                        last_scale_;  ///< 最後に更新したscale値。
+	private: t_count                        last_count_;  ///< 最後に更新したcount値。
 };
 
 #endif // !PSYQ_LAYERED_SCALE_HPP_

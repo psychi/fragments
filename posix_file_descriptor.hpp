@@ -28,9 +28,8 @@ class psyq::posix_file_descriptor:
 {
 	typedef psyq::posix_file_descriptor this_type;
 
-//.............................................................................
-public:
-	enum open_flag
+	//-------------------------------------------------------------------------
+	public: enum open_flag
 	{
 #ifdef _WIN32
 		open_READ     = _O_RDWR,   ///< このflagは、win32と互換性がない。
@@ -46,7 +45,21 @@ public:
 	};
 
 	//-------------------------------------------------------------------------
-	~posix_file_descriptor()
+	private: enum seek_origin
+	{
+		seek_BEGIN   = SEEK_SET,
+		seek_END     = SEEK_END,
+		seek_CURRENT = SEEK_CUR,
+	};
+
+	//-------------------------------------------------------------------------
+	public: posix_file_descriptor():
+	descriptor_(-1)
+	{
+		// pass
+	}
+
+	public: ~posix_file_descriptor()
 	{
 		int const a_error(this->close());
 		if (0 != a_error)
@@ -56,17 +69,10 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	posix_file_descriptor():
-	descriptor_(-1)
-	{
-		// pass
-	}
-
-	//-------------------------------------------------------------------------
 	/** @brief file記述子を交換。
 	    @param[in,out] io_target 交換するfile記述子。
 	 */
-	void swap(this_type& io_target)
+	public: void swap(this_type& io_target)
 	{
 		std::swap(this->descriptor_, io_target.descriptor_);
 	}
@@ -76,7 +82,7 @@ public:
 	    @retval true  fileは開いている。
 	    @retval false fileは開いてない。
 	 */
-	bool is_open() const
+	public: bool is_open() const
 	{
 		return 0 <= this->descriptor_;
 	}
@@ -87,7 +93,7 @@ public:
 	    @param[in] i_flags 許可する操作。this_type::open_flagの論理和。
 	    @return 結果のerror番号。0なら成功。
 	 */
-	int open(char const* const i_path, int const i_flags)
+	public: int open(char const* const i_path, int const i_flags)
 	{
 		int const a_error(this->close());
 		if (0 != a_error)
@@ -159,7 +165,7 @@ public:
 	/** @brief fileを閉じる。
 	    @return 結果のerror番号。0なら成功。
 	 */
-	int close()
+	public: int close()
 	{
 		if (this->is_open())
 		{
@@ -184,7 +190,7 @@ public:
 	    @param[in] i_buffer 読み込みbufferの先頭位置。
 	    @return 読み込んだbyte数。
 	 */
-	std::size_t read(
+	public: std::size_t read(
 		int&                            o_error,
 		psyq::file_buffer::offset const i_offset,
 		std::size_t const               i_size,
@@ -229,7 +235,7 @@ public:
 	    @param[in] i_buffer 書き出しbufferの先頭位置。
 	    @return 書き出したbyte数。
 	 */
-	std::size_t write(
+	public: std::size_t write(
 		int&                            o_error,
 		psyq::file_buffer::offset const i_offset,
 		std::size_t const               i_size,
@@ -271,7 +277,7 @@ public:
 	    @param[in] i_size fileのbyte単位の大きさ。
 	    @return 結果のerror番号。0なら成功。
 	 */
-	int resize(psyq::file_buffer::offset const i_size) const
+	public: int resize(psyq::file_buffer::offset const i_size) const
 	{
 #ifdef _WIN32
 		return 0 == ::_chsize_s(this->descriptor_, i_size)? 0: errno;
@@ -285,7 +291,7 @@ public:
 	    @param[out] o_error 結果のerror番号。0なら成功。
 	    @return fileのbyte単位の大きさ。
 	 */
-	psyq::file_buffer::offset get_size(int& o_error) const
+	public: psyq::file_buffer::offset get_size(int& o_error) const
 	{
 #ifdef _WIN32
 		__int64 const a_size(::_filelengthi64(this->descriptor_));
@@ -311,7 +317,7 @@ public:
 	        fileの存在するdeviceによって論理block-sizeが異なるので、
 	        簡便化のために一律でpage-sizeを使うことにする。
 	 */
-	std::size_t get_block_size(int& o_error) const
+	public: std::size_t get_block_size(int& o_error) const
 	{
 #ifdef PSYQ_POSIX_FILE_BLOCK_SIZE
 		o_error = 0;
@@ -326,22 +332,13 @@ public:
 #endif // PSYQ_POSIX_FILE_BLOCK_SIZE
 	}
 
-//.............................................................................
-private:
-	enum seek_origin
-	{
-		seek_BEGIN   = SEEK_SET,
-		seek_END     = SEEK_END,
-		seek_CURRENT = SEEK_CUR,
-	};
-
 	//-------------------------------------------------------------------------
 	/** @brief file読み書きoffset位置を設定。
 	    @param[out] o_error 結果のerror番号。0なら成功。
 	    @param[in] i_offset 設定するfile読み書きoffset位置。
 	    @param[in] i_origin file読み書きの基準位置。
 	 */
-	psyq::file_buffer::offset seek(
+	private: psyq::file_buffer::offset seek(
 		int&                            o_error,
 		psyq::file_buffer::offset const i_offset,
 		this_type::seek_origin const    i_origin)
@@ -368,9 +365,8 @@ private:
 		return 0;
 	}
 
-//.............................................................................
-private:
-	int descriptor_;
+	//-------------------------------------------------------------------------
+	private: int descriptor_;
 };
 
 #endif // !PSYQ_POSIX_FILE_DESCRIPTOR_HPP_

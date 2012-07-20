@@ -23,29 +23,30 @@ class psyq::basic_const_string
 {
 	typedef psyq::basic_const_string< t_value, t_traits > this_type;
 
-//.............................................................................
-public:
-	typedef t_value value_type;
-	typedef t_traits traits_type;
-	typedef std::size_t size_type;
-	typedef t_value const* const_pointer;
-	typedef typename this_type::const_pointer pointer;
-	typedef t_value const& const_reference;
-	typedef typename this_type::const_reference reference;
-	typedef typename this_type::const_pointer const_iterator;
-	typedef typename this_type::const_iterator iterator;
-	typedef std::reverse_iterator< const_iterator > const_reverse_iterator;
-	typedef typename this_type::const_reverse_iterator reverse_iterator;
+	//-------------------------------------------------------------------------
+	public: typedef t_value value_type;
+	public: typedef t_traits traits_type;
+	public: typedef std::size_t size_type;
+	public: typedef t_value const* const_pointer;
+	public: typedef typename this_type::const_pointer pointer;
+	public: typedef t_value const& const_reference;
+	public: typedef typename this_type::const_reference reference;
+	public: typedef typename this_type::const_pointer const_iterator;
+	public: typedef typename this_type::const_iterator iterator;
+	public: typedef std::reverse_iterator< const_iterator >
+		const_reverse_iterator;
+	public: typedef typename this_type::const_reverse_iterator
+		reverse_iterator;
 
 	//-------------------------------------------------------------------------
-	basic_const_string():
+	public: basic_const_string():
 	data_(NULL),
 	length_(0)
 	{
 		// pass
 	}
 
-	basic_const_string(t_value const (&i_string)[1])
+	public: basic_const_string(t_value const (&i_string)[1])
 	{
 		PSYQ_ASSERT(0 == i_string[0]);
 		this->data_ = NULL;
@@ -55,7 +56,7 @@ public:
 	/** @tparam    t_length 文字列literalの要素数。
 	    @param[in] i_string 文字列literal。
 	 */
-	template < std::size_t t_length >
+	public: template < std::size_t t_length >
 	basic_const_string(t_value const (&i_string)[t_length])
 	{
 		PSYQ_ASSERT(0 < t_length && 0 == i_string[t_length - 1]);
@@ -66,7 +67,7 @@ public:
 	/** @param[in] i_string 割り当てる文字列の先頭位置。
 	    @param[in] i_length 割り当てる文字列の長さ。
 	 */
-	basic_const_string(
+	public: basic_const_string(
 		typename this_type::const_pointer const i_string,
 		typename this_type::size_type const     i_length):
 	data_(i_string),
@@ -78,7 +79,7 @@ public:
 	/** @param[in] i_begin 割り当てる文字列の先頭位置。
 	    @param[in] i_end   割り当てる文字列の末尾位置。
 	 */
-	basic_const_string(
+	public: basic_const_string(
 		typename this_type::const_pointer const i_begin,
 		typename this_type::const_pointer const i_end)
 	{
@@ -90,7 +91,7 @@ public:
 	    @param[in] i_offset 文字列の開始位置。
 	    @param[in] i_count  文字数。
 	 */
-	basic_const_string(
+	public: basic_const_string(
 		this_type const&                    i_string,
 		typename this_type::size_type const i_offset = 0,
 		typename this_type::size_type const i_count = this_type::npos):
@@ -104,7 +105,7 @@ public:
 	/** @brief 文字列を交換。
 		@param[in,out] io_target 交換する文字列。
 	 */
-	void swap(this_type& io_target)
+	public: void swap(this_type& io_target)
 	{
 		std::swap(this->data_, io_target.data_);
 		std::swap(this->length_, io_target.length_);
@@ -114,7 +115,7 @@ public:
 	/** @brief 文字列の先頭位置を取得。
 	    @return 文字列の先頭位置。
 	 */
-	typename this_type::const_pointer data() const
+	public: typename this_type::const_pointer data() const
 	{
 		return this->data_;
 	}
@@ -122,7 +123,7 @@ public:
 	/** @brief 文字列の先頭位置を取得。
 	    @return 文字列の先頭位置への反復子。
 	 */
-	typename this_type::const_iterator begin() const
+	public: typename this_type::const_iterator begin() const
 	{
 		return this->data();
 	}
@@ -130,7 +131,7 @@ public:
 	/** @brief 文字列の末尾位置を取得。
 	    @return 文字列の末尾位置への反復子。
 	 */
-	typename this_type::const_iterator end() const
+	public: typename this_type::const_iterator end() const
 	{
 		return this->begin() + this->length();
 	}
@@ -138,7 +139,7 @@ public:
 	/** @brief 文字列の先頭位置を取得。
 	    @return 文字列の先頭位置への反復子。
 	 */
-	typename this_type::const_iterator cbegin() const
+	public: typename this_type::const_iterator cbegin() const
 	{
 		return this->begin();
 	}
@@ -146,7 +147,7 @@ public:
 	/** @brief 文字列の末尾位置を取得。
 	    @return 文字列の末尾位置への反復子。
 	 */
-	typename this_type::const_iterator cend() const
+	public: typename this_type::const_iterator cend() const
 	{
 		return this->end();
 	}
@@ -154,7 +155,7 @@ public:
 	/** @brief 文字列の末尾位置を取得。
 	    @return 文字列の末尾位置への逆反復子。
 	 */
-	typename this_type::const_reverse_iterator rbegin() const
+	public: typename this_type::const_reverse_iterator rbegin() const
 	{
 		return typename this_type::const_reverse_iterator(this->end());
 	}
@@ -162,7 +163,7 @@ public:
 	/** @brief 文字列の先頭位置を取得。
 	    @return 文字列の先頭位置への逆反復子。
 	 */
-	typename this_type::const_reverse_iterator rend() const
+	public: typename this_type::const_reverse_iterator rend() const
 	{
 		return typename this_type::const_reverse_iterator(this->begin());
 	}
@@ -170,7 +171,7 @@ public:
 	/** @brief 文字列の末尾位置を取得。
 	    @return 文字列の末尾位置への逆反復子。
 	 */
-	typename this_type::const_reverse_iterator crbegin() const
+	public: typename this_type::const_reverse_iterator crbegin() const
 	{
 		return this->rbegin();
 	}
@@ -178,7 +179,7 @@ public:
 	/** @brief 文字列の先頭位置を取得。
 	    @return 文字列の先頭位置への逆反復子。
 	 */
-	typename this_type::const_reverse_iterator crend() const
+	public: typename this_type::const_reverse_iterator crend() const
 	{
 		return this->rend();
 	}
@@ -194,7 +195,7 @@ public:
 	/** @brief 文字列の末尾文字を参照。
 	    @return 文字列の末尾文字への参照。
 	 */
-	typename this_type::const_reference back() const
+	public: typename this_type::const_reference back() const
 	{
 		return (*this)[this->length() - 1];
 	}
@@ -202,7 +203,7 @@ public:
 	/** @brief 文字列の長さを取得。
 	    @return 文字列の長さ。
 	 */
-	typename this_type::size_type length() const
+	public: typename this_type::size_type length() const
 	{
 		return this->length_;
 	}
@@ -210,7 +211,7 @@ public:
 	/** @brief 文字列の長さを取得。
 	    @return 文字列の長さ。
 	 */
-	typename this_type::size_type size() const
+	public: typename this_type::size_type size() const
 	{
 		return this->length();
 	}
@@ -219,7 +220,7 @@ public:
 	    @return 文字列の最大長。
 		    文字列の加工ができないので、文字列の長さと同じ値になる。
 	 */
-	typename this_type::size_type max_size() const
+	public: typename this_type::size_type max_size() const
 	{
 		return this->length();
 	}
@@ -228,7 +229,7 @@ public:
 	    @return 文字列の容量。
 		   文字列の加工ができないので、文字列の長さと同じ値になる。
 	 */
-	typename this_type::size_type capacity() const
+	public: typename this_type::size_type capacity() const
 	{
 		return this->length();
 	}
@@ -237,7 +238,7 @@ public:
 	    @retval true  文字列は空。
 	    @retval false 文字列は空ではない。
 	 */
-	bool empty() const
+	public: bool empty() const
 	{
 		return this->length() <= 0;
 	}
@@ -247,7 +248,7 @@ public:
 	    @param[in] i_index 文字のindex番号。
 	    @return 文字への参照。
 	 */
-	typename this_type::const_reference at(
+	public: typename this_type::const_reference at(
 		typename this_type::size_type const i_index)
 	const
 	{
@@ -263,7 +264,7 @@ public:
 	    @param[in] i_index 文字のindex番号。
 	    @return 文字への参照。
 	 */
-	typename this_type::const_reference operator[](
+   public: typename this_type::const_reference operator[](
 		typename this_type::size_type const i_index)
 	const
 	{
@@ -272,12 +273,12 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	bool operator==(this_type const& i_right) const
+	public: bool operator==(this_type const& i_right) const
 	{
 		return this->operator==< this_type >(i_right);
 	}
 
-	template< typename t_string >
+	public: template< typename t_string >
 	bool operator==(t_string const& i_right) const
 	{
 		return this->length() == i_right.length()
@@ -285,56 +286,56 @@ public:
 				this->data(), i_right.data(), this->length());
 	}
 
-	bool operator!=(this_type const& i_right) const
+	public: bool operator!=(this_type const& i_right) const
 	{
 		return !this->operator==(i_right);
 	}
 
-	template< typename t_string >
+	public: template< typename t_string >
 	bool operator!=(t_string const& i_right) const
 	{
 		return !this->operator==(i_right);
 	}
 
-	bool operator<(this_type const& i_right) const
+	public: bool operator<(this_type const& i_right) const
 	{
 		return this->compare(i_right) < 0;
 	}
 
-	template< typename t_string >
+	public: template< typename t_string >
 	bool operator<(t_string const& i_right) const
 	{
 		return this->compare(i_right) < 0;
 	}
 
-	bool operator<=(this_type const& i_right) const
+	public: bool operator<=(this_type const& i_right) const
 	{
 		return this->compare(i_right) <= 0;
 	}
 
-	template< typename t_string >
+	public: template< typename t_string >
 	bool operator<=(t_string const& i_right) const
 	{
 		return this->compare(i_right) <= 0;
 	}
 
-	bool operator>(this_type const& i_right) const
+	public: bool operator>(this_type const& i_right) const
 	{
 		return 0 < this->compare(i_right);
 	}
 
-	template< typename t_string >
+	public: template< typename t_string >
 	bool operator>(t_string const& i_right) const
 	{
 		return 0 < this->compare(i_right);
 	}
 
-	bool operator>=(this_type const& i_right) const
+	public: bool operator>=(this_type const& i_right) const
 	{
 		return 0 <= this->compare(i_right);
 	}
 
-	template< typename t_string >
+	public: template< typename t_string >
 	bool operator>=(t_string const& i_right) const
 	{
 		return 0 <= this->compare(i_right);
@@ -347,7 +348,7 @@ public:
 	    @retval 正 左辺のほうが大きい。
 	    @retval 0  左辺と右辺は等価。
 	 */
-	int compare(typename this_type::const_pointer const i_right) const
+	public: int compare(typename this_type::const_pointer const i_right) const
 	{
 		return this->compare(0, this->length(), i_right);
 	}
@@ -358,7 +359,7 @@ public:
 	    @retval 正 左辺のほうが大きい。
 	    @retval 0  左辺と右辺は等価。
 	 */
-	template< typename t_string >
+	public: template< typename t_string >
 	int compare(t_string const& i_right) const
 	{
 		return this->compare(
@@ -373,7 +374,7 @@ public:
 	    @retval 正 左辺のほうが大きい。
 	    @retval 0  左辺と右辺は等価。
 	 */
-	int compare(
+	public: int compare(
 		typename this_type::size_type const     i_left_offset,
 		typename this_type::size_type const     i_left_count,
 		typename this_type::const_pointer const i_right)
@@ -394,7 +395,7 @@ public:
 	    @retval 正 左辺のほうが大きい。
 	    @retval 0  左辺と右辺は等価。
 	 */
-	template< typename t_string >
+	public: template< typename t_string >
 	int compare(
 		typename this_type::size_type const i_left_offset,
 		typename this_type::size_type const i_left_count,
@@ -414,7 +415,7 @@ public:
 	    @retval 正 左辺のほうが大きい。
 	    @retval 0  左辺と右辺は等価。
 	 */
-	int compare(
+	public: int compare(
 		typename this_type::size_type const     i_left_offset,
 		typename this_type::size_type const     i_left_count,
 		typename this_type::const_pointer const i_right,
@@ -450,7 +451,7 @@ public:
 	    @retval 正 左辺のほうが大きい。
 	    @retval 0  左辺と右辺は等価。
 	 */
-	template< typename t_string >
+	public: template< typename t_string >
 	int compare(
 		typename this_type::size_type const i_left_offset,
 		typename this_type::size_type const i_left_count,
@@ -472,7 +473,7 @@ public:
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字が現れた位置。現れない場合はnposを返す。
 	 */
-	typename this_type::size_type find(
+	public: typename this_type::size_type find(
 		t_value const                       i_char,
 		typename this_type::size_type const i_offset = 0)
 	const
@@ -497,7 +498,7 @@ public:
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字列が現れた位置。現れない場合はnposを返す。
 	 */
-	typename this_type::size_type find(
+	public: typename this_type::size_type find(
 		typename this_type::const_pointer const i_string,
 		typename this_type::size_type const     i_offset = 0)
 	const
@@ -510,7 +511,7 @@ public:
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字列が現れた位置。現れない場合はnposを返す。
 	 */
-	template< typename t_string >
+	public: template< typename t_string >
 	typename this_type::size_type find(
 		t_string const&               i_string,
 		typename this_type::size_type i_offset = 0)
@@ -525,7 +526,7 @@ public:
 	    @param[in] i_length 検索文字列の長さ。
 	    @return 検索文字列が現れた位置。現れない場合はnposを返す。
 	 */
-	typename this_type::size_type find(
+	public: typename this_type::size_type find(
 		typename this_type::const_pointer const i_string,
 		typename this_type::size_type const     i_offset,
 		typename this_type::size_type const     i_length)
@@ -574,7 +575,7 @@ public:
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字が現れた位置。現れない場合はnposを返す。
 	 */
-	typename this_type::size_type rfind(
+	public: typename this_type::size_type rfind(
 		t_value const                       i_char,
 		typename this_type::size_type const i_offset = this_type::npos)
 	const
@@ -602,7 +603,7 @@ public:
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字列が現れた位置。現れない場合はnposを返す。
 	 */
-	typename this_type::size_type rfind(
+	public: typename this_type::size_type rfind(
 		typename this_type::const_pointer const i_string,
 		typename this_type::size_type const     i_offset = this_type::npos)
 	const
@@ -615,7 +616,7 @@ public:
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字列が現れた位置。現れない場合はnposを返す。
 	 */
-	template< typename t_string >
+	public: template< typename t_string >
 	typename this_type::size_type rfind(
 		t_string const&                     i_string,
 		typename this_type::size_type const i_offset = this_type::npos)
@@ -630,7 +631,7 @@ public:
 	    @param[in] i_length 検索文字列の長さ。
 	    @return 検索文字列が現れた位置。現れない場合はnposを返す。
 	 */
-	typename this_type::size_type rfind(
+	public: typename this_type::size_type rfind(
 		typename this_type::const_pointer const i_string,
 		typename this_type::size_type const     i_offset,
 		typename this_type::size_type const     i_length)
@@ -670,7 +671,7 @@ public:
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字が見つけた位置。現れない場合はnposを返す。
 	 */
-	typename this_type::size_type find_first_of(
+	public: typename this_type::size_type find_first_of(
 		t_value const                       i_char,
 		typename this_type::size_type const i_offset = 0)
 	const
@@ -683,7 +684,7 @@ public:
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字が現れた位置。現れない場合はnposを返す。
 	 */
-	typename this_type::size_type find_first_of(
+	public: typename this_type::size_type find_first_of(
 		typename this_type::const_pointer const i_string,
 		typename this_type::size_type const     i_offset = 0)
 	const
@@ -697,7 +698,7 @@ public:
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字が現れた位置。現れない場合はnposを返す。
 	 */
-	template< typename t_string >
+	public: template< typename t_string >
 	typename this_type::size_type find_first_of(
 		t_string const&                     i_string,
 		typename this_type::size_type const i_offset = 0)
@@ -713,7 +714,7 @@ public:
 	    @param[in] i_length 検索文字列の長さ。
 	    @return 検索文字が現れた位置。現れない場合はnposを返す。
 	 */
-	typename this_type::size_type find_first_of(
+	public: typename this_type::size_type find_first_of(
 		typename this_type::const_pointer const i_string,
 		typename this_type::size_type const     i_offset,
 		typename this_type::size_type const     i_length)
@@ -742,7 +743,7 @@ public:
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字が現れた位置。現れない場合はnposを返す。
 	 */
-	typename this_type::size_type find_last_of(
+	public: typename this_type::size_type find_last_of(
 		t_value const                       i_char,
 		typename this_type::size_type const i_offset = this_type::npos)
 	const
@@ -755,7 +756,7 @@ public:
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字が現れた位置。現れない場合はnposを返す。
 	 */
-	typename this_type::size_type find_last_of(
+	public: typename this_type::size_type find_last_of(
 		typename this_type::const_pointer const i_string,
 		typename this_type::size_type const     i_offset = this_type::npos)
 	const
@@ -769,7 +770,7 @@ public:
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字が現れた位置。現れない場合はnposを返す。
 	 */
-	template< typename t_string >
+	public: template< typename t_string >
 	typename this_type::size_type find_last_of(
 		t_string const&                     i_string,
 		typename this_type::size_type const i_offset = this_type::npos)
@@ -785,7 +786,7 @@ public:
 	    @param[in] i_length 検索文字列の長さ。
 	    @return 検索文字が現れた位置。現れない場合はnposを返す。
 	 */
-	typename this_type::size_type find_last_of(
+	public: typename this_type::size_type find_last_of(
 		typename this_type::const_pointer const i_string,
 		typename this_type::size_type const     i_offset,
 		typename this_type::size_type const     i_length)
@@ -816,7 +817,7 @@ public:
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字以外の文字が現れた位置。現れない場合はnposを返す。
 	 */
-	typename this_type::size_type find_first_not_of(
+	public: typename this_type::size_type find_first_not_of(
 		t_value const                       i_char,
 		typename this_type::size_type const i_offset = 0)
 	const
@@ -839,7 +840,7 @@ public:
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字以外の文字が現れた位置。現れない場合はnposを返す。
 	 */
-	typename this_type::size_type find_first_not_of(
+	public: typename this_type::size_type find_first_not_of(
 		typename this_type::const_pointer const i_string,
 		typename this_type::size_type const     i_offset = 0)
 	const
@@ -853,7 +854,7 @@ public:
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字以外の文字が現れた位置。現れない場合はnposを返す。
 	 */
-	template< typename t_string >
+	public: template< typename t_string >
 	typename this_type::size_type find_first_not_of(
 		t_string const&                     i_string,
 		typename this_type::size_type const i_offset = 0)
@@ -869,7 +870,7 @@ public:
 	    @param[in] i_length 検索文字列の長さ。
 	    @return 検索文字以外の文字が現れた位置。現れない場合はnposを返す。
 	 */
-	typename this_type::size_type find_first_not_of(
+	public: typename this_type::size_type find_first_not_of(
 		typename this_type::const_pointer const i_string,
 		typename this_type::size_type const     i_offset,
 		typename this_type::size_type const     i_length)
@@ -898,7 +899,7 @@ public:
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字以外の文字が現れた位置。現れない場合はnposを返す。
 	 */
-	typename this_type::size_type find_last_not_of(
+	public: typename this_type::size_type find_last_not_of(
 		t_value const                       i_char,
 		typename this_type::size_type const i_offset = this_type::npos)
 	const
@@ -926,7 +927,7 @@ public:
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字以外の文字が現れた位置。現れない場合はnposを返す。
 	 */
-	typename this_type::size_type find_last_not_of(
+	public: typename this_type::size_type find_last_not_of(
 		typename this_type::const_pointer const i_string,
 		typename this_type::size_type const     i_offset = this_type::npos)
 	const
@@ -940,7 +941,7 @@ public:
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字以外の文字が現れた位置。現れない場合はnposを返す。
 	 */
-	template< typename t_string >
+	public: template< typename t_string >
 	typename this_type::size_type find_last_not_of(
 		t_string const&                     i_string,
 		typename this_type::size_type const i_offset = this_type::npos)
@@ -956,7 +957,7 @@ public:
 	    @param[in] i_length 検索文字列の長さ。
 	    @return 検索文字以外の文字が現れた位置。現れない場合はnposを返す。
 	 */
-	typename this_type::size_type find_last_not_of(
+	public: typename this_type::size_type find_last_not_of(
 		typename this_type::const_pointer const i_string,
 		typename this_type::size_type const     i_offset,
 		typename this_type::size_type const     i_length)
@@ -985,7 +986,7 @@ public:
 	/** @brief 文字列を割り当てる。
 	    @param[in] i_string 割り当てる文字列の先頭位置。必ずNULL文字で終わる。
 	 */
-	this_type& assign(typename this_type::const_pointer const i_string)
+	public: this_type& assign(typename this_type::const_pointer const i_string)
 	{
 		return *new(this) this_type(i_string);
 	}
@@ -994,7 +995,7 @@ public:
 	    @param[in] i_string 割り当てる文字列の先頭位置。
 	    @param[in] i_length 割り当てる文字列の長さ。
 	 */
-	this_type& assign(
+	public: this_type& assign(
 		typename this_type::const_pointer const i_string,
 		typename this_type::size_type const     i_length)
 	{
@@ -1005,7 +1006,7 @@ public:
 	    @param[in] i_begin 割り当てる文字列の先頭位置。
 	    @param[in] i_end   割り当てる文字列の末尾位置。
 	 */
-	this_type& assign(
+	public: this_type& assign(
 		typename this_type::const_pointer const i_begin,
 		typename this_type::const_pointer const i_end)
 	{
@@ -1017,7 +1018,7 @@ public:
 	    @param[in] i_offset 文字列の開始位置。
 	    @param[in] i_count  文字数。
 	 */
-	this_type& assign(
+	public: this_type& assign(
 		this_type const&                    i_string,
 		typename this_type::size_type const i_offset = 0,
 		typename this_type::size_type const i_count = this_type::npos)
@@ -1031,7 +1032,7 @@ public:
 	    @param[in] i_count  文字数。
 	    @return 構築した部分文字列。
 	 */
-	this_type substr(
+	public: this_type substr(
 		typename this_type::size_type const i_offset = 0,
 		typename this_type::size_type const i_count = this_type::npos)
 	const
@@ -1045,7 +1046,7 @@ public:
 	    @param[in] i_count  文字数。
 	    @return 構築した部分文字列。
 	 */
-	template< typename t_string >
+	public: template< typename t_string >
 	t_string substr(
 		typename this_type::size_type const i_offset = 0,
 		typename this_type::size_type const i_count = this_type::npos)
@@ -1058,14 +1059,13 @@ public:
 	//-------------------------------------------------------------------------
 	/** @brief 文字列を空にする。
 	 */
-	void clear()
+	public: void clear()
 	{
 		new(this) this_type();
 	}
 
-//.............................................................................
-private:
-	typename this_type::const_pointer trim_pointer(
+	//-------------------------------------------------------------------------
+	private: typename this_type::const_pointer trim_pointer(
 		typename this_type::size_type const i_offset)
 	const
 	{
@@ -1073,7 +1073,7 @@ private:
 			i_offset < this->length()? i_offset: this->length() - 1);
 	}
 
-	typename this_type::size_type trim_length(
+	private: typename this_type::size_type trim_length(
 		typename this_type::size_type const i_offset,
 		typename this_type::size_type const i_count)
 	const
@@ -1087,20 +1087,19 @@ private:
 		return i_count < a_limit? i_count: a_limit;
 	}
 
-	static typename this_type::size_type find_null(
+	private: static typename this_type::size_type find_null(
 		typename this_type::const_pointer const i_string)
 	{
 		return NULL != i_string? t_traits::length(i_string): 0;
 	}
 
-//.............................................................................
-public:
-	static typename this_type::size_type const npos =
+	//-------------------------------------------------------------------------
+	public: static typename this_type::size_type const npos =
 		static_cast< typename this_type::size_type >(-1);
 
-private:
-	t_value const*                data_;
-	typename this_type::size_type length_;
+	//-------------------------------------------------------------------------
+	private: t_value const*                data_;
+	private: typename this_type::size_type length_;
 };
 
 //.............................................................................

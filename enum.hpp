@@ -27,19 +27,17 @@ namespace psyq
 #define PSYQ_ENUM(d_enum, d_name, d_value, d_items)\
 	class d_enum: private boost::noncopyable\
 	{\
-	private:\
-		typedef psyq::_enum_set<\
+		private: typedef psyq::_enum_set<\
 			psyq::_enum_item< d_name, d_value >,\
 			BOOST_PP_SEQ_SIZE(d_items) >\
 				PSYQ_ENUM_basic_set;\
-		class PSYQ_ENUM_set: public PSYQ_ENUM_basic_set\
+		private: class PSYQ_ENUM_set: public PSYQ_ENUM_basic_set\
 		{\
-			public:\
-			BOOST_PP_REPEAT(\
+			public: BOOST_PP_REPEAT(\
 				BOOST_PP_SEQ_SIZE(d_items),\
 				PSYQ_PRIVATE_ENUM_VALUE_GETTER,\
 				d_items)\
-			PSYQ_ENUM_set(): PSYQ_ENUM_basic_set()\
+			public: PSYQ_ENUM_set(): PSYQ_ENUM_basic_set()\
 			{\
 				BOOST_PP_REPEAT(\
 					BOOST_PP_SEQ_SIZE(d_items),\
@@ -47,21 +45,19 @@ namespace psyq
 					d_items)\
 			}\
 		};\
-		class PSYQ_ENUM_ordinal: private boost::noncopyable\
+		private: class PSYQ_ENUM_ordinal: private boost::noncopyable\
 		{\
-			public:\
-			BOOST_PP_REPEAT(\
+			public: BOOST_PP_REPEAT(\
 				BOOST_PP_SEQ_SIZE(d_items),\
 				PSYQ_PRIVATE_ENUM_ORDINAL_DEFINE,\
 				d_items)\
 			private: PSYQ_ENUM_ordinal();\
 		};\
-		d_enum();\
-	public:\
-		typedef PSYQ_ENUM_ordinal ordinal;\
-		typedef PSYQ_ENUM_set enumeration;\
-		typedef PSYQ_ENUM_basic_set::item item;\
-		static PSYQ_ENUM_basic_set::item::ordinal const SIZE =\
+		public: typedef PSYQ_ENUM_ordinal ordinal;\
+		public: typedef PSYQ_ENUM_set enumeration;\
+		public: typedef PSYQ_ENUM_basic_set::item item;\
+		private: d_enum();\
+		public: static PSYQ_ENUM_basic_set::item::ordinal const SIZE =\
 			PSYQ_ENUM_basic_set::SIZE;\
 	};
 
@@ -124,12 +120,17 @@ class psyq::_enum_set:
 {
 	typedef psyq::_enum_set< t_item, t_size > this_type;
 
-//.............................................................................
-public:
-	typedef t_item item;
+	//-------------------------------------------------------------------------
+	public: typedef t_item item;
 
 	//-------------------------------------------------------------------------
-	~_enum_set()
+	protected: _enum_set()
+	{
+		// pass
+	}
+
+	//-------------------------------------------------------------------------
+	public: ~_enum_set()
 	{
 		for (typename t_item::ordinal i = t_size; 0 < i;)
 		{
@@ -143,7 +144,9 @@ public:
 	    @param[in] i_ordinal 取得する列挙子の序数。
 	    @retrun 列挙子へのpointer。ただし、対応する列挙子がない場合はNULL。
 	 */
-	t_item const* operator()(typename t_item::ordinal const i_ordinal) const
+	public: t_item const* operator()(
+		typename t_item::ordinal const i_ordinal)
+	const
 	{
 		return i_ordinal < t_size? this->get(i_ordinal): NULL;
 	}
@@ -152,7 +155,7 @@ public:
 	    @param[in] i_name 取得する列挙子の名前。
 	    @retrun 列挙子へのpointer。ただし、対応する列挙子がない場合はNULL。
 	 */
-	t_item const* operator()(typename t_item::name const& i_name) const
+	public: t_item const* operator()(typename t_item::name const& i_name) const
 	{
 		t_item const* const a_items(this->get(0));
 		for (typename t_item::ordinal i = 0; i < t_size; ++i)
@@ -170,34 +173,27 @@ public:
 	    @param[in] i_ordinal 参照する列挙子の序数。
 	    @retrun 列挙子への参照。
 	 */
-	t_item const& operator[](typename t_item::ordinal const i_ordinal) const
+	public: t_item const& operator[](
+		typename t_item::ordinal const i_ordinal)
+	const
 	{
 		return *(this->get(i_ordinal));
 	}
 
-//.............................................................................
-protected:
 	//-------------------------------------------------------------------------
-	_enum_set()
-	{
-		// pass
-	}
-
-	//-------------------------------------------------------------------------
-	t_item* get(typename t_item::ordinal const i_index) const
+	protected: t_item* get(typename t_item::ordinal const i_index) const
 	{
 		PSYQ_ASSERT(i_index < t_size);
 		return const_cast< t_item* >(
 			reinterpret_cast< t_item const* >(&this->storage_)) + i_index;
 	}
 
-//.............................................................................
-public:
+	//-------------------------------------------------------------------------
 	/// 保持している列挙子の数。
-	static typename t_item::ordinal const SIZE = t_size;
+	public: static typename t_item::ordinal const SIZE = t_size;
 
-private:
-	typename boost::aligned_storage<
+	/// memory領域。
+	private: typename boost::aligned_storage<
 		sizeof(t_item[t_size]),
 		boost::alignment_of< t_item[t_size] >::value >::type
 			storage_;
@@ -213,14 +209,13 @@ class psyq::_enum_item
 {
 	typedef psyq::_enum_item< t_name, t_property > this_type;
 
-//.............................................................................
-public:
-	typedef std::size_t ordinal;
-	typedef t_name name;
-	typedef t_property property;
+	//-------------------------------------------------------------------------
+	public: typedef std::size_t ordinal;
+	public: typedef t_name name;
+	public: typedef t_property property;
 
 	//-------------------------------------------------------------------------
-	_enum_item(
+	public: _enum_item(
 		typename this_type::ordinal const i_ordinal,
 		t_name const&                     i_name,
 		t_property const&                 i_property = t_property()):
@@ -235,7 +230,7 @@ public:
 	/** @brief 列挙子の序数を取得。
 	    @return 列挙子の序数。
 	 */
-	typename this_type::ordinal get_ordinal() const
+	public: typename this_type::ordinal get_ordinal() const
 	{
 		return this->ordinal_;
 	}
@@ -243,7 +238,7 @@ public:
 	/** @brief 列挙子の名前を取得。
 	    @return 列挙子の名前。
 	 */
-	t_name const& get_name() const
+	public: t_name const& get_name() const
 	{
 		return this->name_;
 	}
@@ -251,16 +246,15 @@ public:
 	/** @brief 列挙子が持つ値を取得。
 	    @return 列挙子が持つ値。
 	 */
-	t_property const& get_property() const
+	public: t_property const& get_property() const
 	{
 		return this->property_;
 	}
 
-//.............................................................................
-private:
-	t_name                      name_;     ///< 列挙子の名前。
-	typename this_type::ordinal ordinal_;  ///< 列挙子の序数。
-	t_property                  property_; ///< 列挙子の値。
+	//-------------------------------------------------------------------------
+	private: t_name                      name_;     ///< 列挙子の名前。
+	private: typename this_type::ordinal ordinal_;  ///< 列挙子の序数。
+	private: t_property                  property_; ///< 列挙子の値。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -272,13 +266,12 @@ class psyq::_enum_item< t_name, void >
 {
 	typedef psyq::_enum_item< t_name, void > this_type;
 
-//.............................................................................
-public:
-	typedef std::size_t ordinal;
-	typedef t_name name;
+	//-------------------------------------------------------------------------
+	public: typedef std::size_t ordinal;
+	public: typedef t_name name;
 
 	//-------------------------------------------------------------------------
-	_enum_item(
+	public: _enum_item(
 		typename this_type::ordinal const i_ordinal,
 		typename this_type::name const&   i_name):
 	name_(i_name),
@@ -291,7 +284,7 @@ public:
 	/** @brief 列挙子の序数を取得。
 	    @return 列挙子の序数。
 	 */
-	typename this_type::ordinal get_ordinal() const
+	public: typename this_type::ordinal get_ordinal() const
 	{
 		return this->ordinal_;
 	}
@@ -299,15 +292,14 @@ public:
 	/** @brief 列挙子の名前を取得。
 	    @return 列挙子の名前。
 	 */
-	t_name const& get_name() const
+	public: t_name const& get_name() const
 	{
 		return this->name_;
 	}
 
-//.............................................................................
-private:
-	t_name                      name_;    ///< 列挙子の名前。
-	typename this_type::ordinal ordinal_; ///< 列挙子の序数。
+	//-------------------------------------------------------------------------
+	private: t_name                      name_;    ///< 列挙子の名前。
+	private: typename this_type::ordinal ordinal_; ///< 列挙子の序数。
 };
 
 #endif // PSYQ_ENUM_HPP_

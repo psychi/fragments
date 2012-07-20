@@ -22,20 +22,17 @@ class psyq::fixed_pool:
 {
 	typedef psyq::fixed_pool< t_arena, t_mutex > this_type;
 
-//.............................................................................
-public:
-	typedef t_arena arena;
+	//-------------------------------------------------------------------------
+	public: typedef t_arena arena;
 
 	//-------------------------------------------------------------------------
-	~fixed_pool()
+	private: struct chunk
 	{
-		if (NULL != this->chunk_container_)
-		{
-			// 空chunkを破棄する。
-			PSYQ_ASSERT(this->chunk_container_->next == this->chunk_container_);
-			this->destroy_chunk(*this->chunk_container_);
-		}
-	}
+		chunk*         next;
+		chunk*         prev;
+		boost::uint8_t num_blocks;
+		boost::uint8_t first_block;
+	};
 
 	//-------------------------------------------------------------------------
 	/** @param[in] i_block_size 確保するmemoryの大きさ。byte単位。
@@ -43,7 +40,7 @@ public:
 	    @param[in] i_offset     memoryの配置offset値。
 	    @param[in] i_chunk_size memory-chunkの最大値。byte単位。
 	 */
-	fixed_pool(
+	public: fixed_pool(
 		std::size_t const i_block_size,
 		std::size_t const i_alignment,
 		std::size_t const i_offset,
@@ -78,10 +75,21 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
+	public: ~fixed_pool()
+	{
+		if (NULL != this->chunk_container_)
+		{
+			// 空chunkを破棄する。
+			PSYQ_ASSERT(this->chunk_container_->next == this->chunk_container_);
+			this->destroy_chunk(*this->chunk_container_);
+		}
+	}
+
+	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
 	    @param[in] i_name debugで使うためのmemory識別名。
 	 */
-	void* allocate(char const* const i_name)
+	public: void* allocate(char const* const i_name)
 	{
 		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
 
@@ -127,7 +135,7 @@ public:
 	/** @brief memoryを解放する。
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	 */
-	bool deallocate(void* const i_memory)
+	public: bool deallocate(void* const i_memory)
 	{
 		if (NULL == i_memory)
 		{
@@ -166,7 +174,7 @@ public:
 		if (&a_chunk != this->empty_chunk_
 			&& this->max_blocks_ <= a_chunk.num_blocks)
 		{
-			this->destroy_empty_chunk_();
+			this->destroy_empty_chunk();
 			this->empty_chunk_ = &a_chunk;
 		}
 		return true;
@@ -176,7 +184,7 @@ public:
 	/** @brief 確保するmemoryの大きさを取得。
 	    @return 確保するmemoryの大きさ。byte単位。
 	 */
-	std::size_t get_block_size() const
+	public: std::size_t get_block_size() const
 	{
 		return this->block_size_;
 	}
@@ -184,7 +192,7 @@ public:
 	/** @brief 確保するmemoryの配置境界値を取得。
 	    @return 確保するmemoryの配置境界値。byte単位。
 	 */
-	std::size_t get_alignment() const
+	public: std::size_t get_alignment() const
 	{
 		return this->alignment_;
 	}
@@ -192,26 +200,15 @@ public:
 	/** @brief 確保するmemoryの配置offset値を取得。
 	    @return 確保するmemoryの配置offset値。byte単位。
 	 */
-	std::size_t get_offset() const
+	public: std::size_t get_offset() const
 	{
 		return this->offset_;
 	}
 
-//.............................................................................
-private:
-	//-------------------------------------------------------------------------
-	struct chunk
-	{
-		chunk*         next;
-		chunk*         prev;
-		boost::uint8_t num_blocks;
-		boost::uint8_t first_block;
-	};
-
 	//-------------------------------------------------------------------------
 	/** @brief 空blockのあるchunkを探す。
 	 */
-	bool find_allocator()
+	private: bool find_allocator()
 	{
 		if (NULL == this->chunk_container_)
 		{
@@ -241,7 +238,7 @@ private:
 	/** @brief memory解放chunkを探す。
 	    @param[in] i_memory 解放するmemoryの先頭位置。
 	 */
-	bool find_deallocator(void const* const i_memory)
+	private: bool find_deallocator(void const* const i_memory)
 	{
 		if (NULL == this->chunk_container_)
 		{
@@ -284,7 +281,7 @@ private:
 	//-------------------------------------------------------------------------
 	/** @brief 空chunkを破棄する。
 	 */
-	void destroy_empty_chunk_()
+	private: void destroy_empty_chunk()
 	{
 		if (NULL != this->empty_chunk_)
 		{
@@ -305,7 +302,7 @@ private:
 	}
 
 	//-------------------------------------------------------------------------
-	bool create_chunk(char const* const i_name)
+	private: bool create_chunk(char const* const i_name)
 	{
 		// chunkに使うmemoryを確保。
 		std::size_t const a_alignment(
@@ -361,7 +358,7 @@ private:
 	}
 
 	//-------------------------------------------------------------------------
-	void destroy_chunk(typename this_type::chunk& i_chunk)
+	private: void destroy_chunk(typename this_type::chunk& i_chunk)
 	{
 		PSYQ_ASSERT(this->max_blocks_ <= i_chunk.num_blocks);
 		(t_arena::free)(
@@ -372,7 +369,7 @@ private:
 	//-------------------------------------------------------------------------
 	/** @brief memory-chunkに含まれているmemory-blockか判定。
 	 */
-	bool has_block(
+	private: bool has_block(
 		typename this_type::chunk& i_chunk,
 		void const* const          i_block)
 	const
@@ -382,7 +379,7 @@ private:
 
 	/** @brief memory-chunkに含まれている空memory-blockか判定。
 	 */
-	bool find_empty_block(
+	private: bool find_empty_block(
 		typename this_type::chunk& i_chunk,
 		void const* const          i_block)
 	const
@@ -406,22 +403,22 @@ private:
 
 	/** @brief memory-chunkの先頭位置を取得。
 	 */
-	boost::uint8_t* get_chunk_begin(typename this_type::chunk& i_chunk) const
+	private: boost::uint8_t* get_chunk_begin(typename this_type::chunk& i_chunk) const
 	{
 		return reinterpret_cast< boost::uint8_t* >(&i_chunk) - this->chunk_size_;
 	}
 
 	//-------------------------------------------------------------------------
-	typename this_type::chunk* chunk_container_;
-	typename this_type::chunk* allocator_chunk_;
-	typename this_type::chunk* deallocator_chunk_;
-	typename this_type::chunk* empty_chunk_;
-	std::size_t                block_size_;
-	std::size_t                max_blocks_;
-	std::size_t                alignment_;
-	std::size_t                offset_;
-	std::size_t                chunk_size_;
-	t_mutex                    mutex_;
+	private: typename this_type::chunk* chunk_container_;
+	private: typename this_type::chunk* allocator_chunk_;
+	private: typename this_type::chunk* deallocator_chunk_;
+	private: typename this_type::chunk* empty_chunk_;
+	private: std::size_t                block_size_;
+	private: std::size_t                max_blocks_;
+	private: std::size_t                alignment_;
+	private: std::size_t                offset_;
+	private: std::size_t                chunk_size_;
+	private: t_mutex                    mutex_;
 };
 
 #endif // !PSYQ_FIXED_POOL_HPP_

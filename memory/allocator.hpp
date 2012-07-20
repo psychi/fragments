@@ -27,32 +27,14 @@ class psyq::_allocator_base:
 	BOOST_STATIC_ASSERT(0 == (t_alignment & (t_alignment - 1)));
 	BOOST_STATIC_ASSERT(0 < t_alignment);
 
-//.............................................................................
-public:
 	//-------------------------------------------------------------------------
-	/** @brief memory識別名を取得。
-	 */
-	char const* get_name() const
-	{
-		return this->name_;
-	}
+	public: static std::size_t const ALIGNMENT = t_alignment;
+	public: static std::size_t const OFFSET = t_offset;
 
-	/** @brief memory識別名を設定。
-	    @param[in] i_name 設定するmemory識別名の文字列。
-	 */
-	void set_name(char const* const i_name)
-	{
-		this->name_ = i_name;
-	}
-
-	//this_type& operator=(this_type const&) = default;
-
-//.............................................................................
-protected:
 	//-------------------------------------------------------------------------
 	/** @param[in] i_name debugで使うためのmemory識別名。
 	 */
-	explicit _allocator_base(char const* const i_name):
+	protected: explicit _allocator_base(char const* const i_name):
 	super_type(),
 	name_(i_name)
 	{
@@ -61,7 +43,7 @@ protected:
 
 	/** @param[in] i_source copy元instance。
 	 */
-	_allocator_base(this_type const& i_source):
+	protected: _allocator_base(this_type const& i_source):
 	super_type(i_source),
 	name_(i_source.get_name())
 	{
@@ -70,7 +52,7 @@ protected:
 
 	/** @param[in] i_source copy元instance。
 	 */
-	template<
+	protected: template<
 		typename    t_other_type,
 		std::size_t t_other_alignment,
 		std::size_t t_other_offset >
@@ -84,18 +66,31 @@ protected:
 		// pass
 	}
 
-//.............................................................................
-private:
-	void allocate();
-	void deallocate();
+	//-------------------------------------------------------------------------
+	//public: this_type& operator=(this_type const&) = default;
 
-//.............................................................................
-public:
-	static std::size_t const ALIGNMENT = t_alignment;
-	static std::size_t const OFFSET = t_offset;
+	//-------------------------------------------------------------------------
+	/** @brief memory識別名を取得。
+	 */
+	public: char const* get_name() const
+	{
+		return this->name_;
+	}
 
-private:
-	char const* name_; ///< debugで使うためのmemory識別名。
+	/** @brief memory識別名を設定。
+	    @param[in] i_name 設定するmemory識別名の文字列。
+	 */
+	public: void set_name(char const* const i_name)
+	{
+		this->name_ = i_name;
+	}
+
+	//-------------------------------------------------------------------------
+	private: void allocate();
+	private: void deallocate();
+
+	//-------------------------------------------------------------------------
+	private: char const* name_; ///< debugで使うためのmemory識別名。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -118,12 +113,11 @@ class psyq::allocator:
 	typedef psyq::_allocator_base< t_value, t_alignment, t_offset >
 		super_type;
 
-//.............................................................................
-public:
-	typedef t_arena arena;
+	//-------------------------------------------------------------------------
+	public: typedef t_arena arena;
 
 	//-------------------------------------------------------------------------
-	template<
+	public: template<
 		typename    t_other_type,
 		std::size_t t_other_alignment =
 			boost::alignment_of< t_other_type >::value,
@@ -139,7 +133,7 @@ public:
 	//-------------------------------------------------------------------------
 	/** @param[in] i_name debugで使うためのmemory識別名。
 	 */
-	explicit allocator(char const* const i_name = PSYQ_ARENA_NAME_DEFAULT):
+	public: explicit allocator(char const* const i_name = PSYQ_ARENA_NAME_DEFAULT):
 	super_type(i_name)
 	{
 		// pass
@@ -149,7 +143,7 @@ public:
 
 	/** @param[in] i_source copy元instance。
 	 */
-	template<
+	public: template<
 		typename    t_other_type,
 		std::size_t t_other_alignment,
 		std::size_t t_other_offset,
@@ -167,10 +161,10 @@ public:
 	}
 
 	//-------------------------------------------------------------------------
-	//this_type& operator=(this_type const&) = default;
+	//public: this_type& operator=(this_type const&) = default;
 
 	//-------------------------------------------------------------------------
-	template<
+	public: template<
 		typename    t_other_type,
 		std::size_t t_other_alignment,
 		std::size_t t_other_offset >
@@ -185,7 +179,7 @@ public:
 		return true;
 	}
 
-	template<
+	public: template<
 		typename    t_other_type,
 		std::size_t t_other_alignment,
 		std::size_t t_other_offset,
@@ -201,7 +195,7 @@ public:
 		return false;
 	}
 
-	template<
+	public: template<
 		typename    t_other_type,
 		std::size_t t_other_alignment,
 		std::size_t t_other_offset,
@@ -224,7 +218,7 @@ public:
 	    @param[in] i_hint 最適化のためのhint。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
-	typename this_type::pointer allocate(
+	public: typename this_type::pointer allocate(
 		typename this_type::size_type const i_num,
 		void const* const                   i_hint = NULL)
 	{
@@ -243,7 +237,7 @@ public:
 	    @param[in] i_memory 解放するinstanceの先頭位置。
 	    @param[in] i_num    解放するinstanceの数。
 	 */
-	void deallocate(
+	public: void deallocate(
 		typename this_type::pointer const   i_memory,
 		typename this_type::size_type const i_num)
 	{

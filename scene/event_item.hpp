@@ -7,7 +7,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief event書庫。
+/** @brief event書庫が持つ項目。
     @tparam t_hash event書庫で使う文字列hash。
  */
 template< typename t_hash = psyq::fnv1_hash32 >
@@ -33,7 +33,7 @@ struct psyq::event_item
 	};
 
 	//-------------------------------------------------------------------------
-	/** @brief 書庫からitemを検索。
+	/** @brief 書庫からevent-itemを検索。
 	    @param[in] i_archive 書庫。
 	    @param[in] i_name    検索するitemの名前hash値。
 	    @retval !=NULL 見つけたitemへのpointer。
@@ -121,53 +121,57 @@ struct psyq::event_item
 
 	//-------------------------------------------------------------------------
 	/** @brief 文字列の'('と')'に囲まれた単語を置換し、文字列を生成。
+		@tparam t_string 出力する文字列の型。
 	    @tparam t_map
 	        std::map互換の型。t_map::key_typeにはt_hash::value型、
 	        t_map::mapped_typeにはstd::basic_string互換の型である必要がある。
 	    @param[in] i_dictionary 置換する単語のhash値をkeyとする辞書。
-	    @param[in] i_source     置換元となる文字列。
+	    @param[in] i_begin      置換元となる文字列の開始文字位置。
+	    @param[in] i_end        置換元となる文字列の末尾文字位置。
 	 */
 	public: template<
-		typename t_out_string,
+		typename t_string,
 		typename t_map,
-		typename t_in_string >
-	static t_out_string replace_word(
-		t_map const&       i_dictionary,
-		t_in_string const& i_source)
+		typename t_iterator >
+	static t_string replace_word(
+		t_map const&     i_dictionary,
+		t_iterator const i_begin,
+		t_iterator const i_end)
 	{
-		return replace_word< t_out_string >(
-			i_dictionary, i_source, i_dictionary.get_allocator());
+		return replace_word< t_string >(
+			i_dictionary, i_begin, i_end, i_dictionary.get_allocator());
 	}
 
 	/** @brief 文字列の'('と')'に囲まれた単語を置換し、文字列を生成。
+		@tparam t_string 出力する文字列の型。
 	    @tparam t_map
 	        std::map互換の型。t_map::key_typeにはt_hash::value型、
 	        t_map::mapped_typeにはstd::basic_string互換の型である必要がある。
 	    @param[in] i_dictionary 置換する単語のhash値をkeyとする辞書。
-	    @param[in] i_source     置換元となる文字列。
+	    @param[in] i_begin      置換元となる文字列の開始文字位置。
+	    @param[in] i_end        置換元となる文字列の末尾文字位置。
+	    @param[in] i_allocator  出力文字列のmemory割当子。
 	 */
 	public: template<
-		typename t_out_string,
+		typename t_string,
 		typename t_map,
-		typename t_in_string >
-	static t_out_string replace_word(
-		t_map const&                                 i_dictionary,
-		t_in_string const&                           i_source,
-		typename t_out_string::allocator_type const& i_allocator)
+		typename t_iterator >
+	static t_string replace_word(
+		t_map const&                             i_dictionary,
+		t_iterator const                         i_begin,
+		t_iterator const                         i_end,
+		typename t_string::allocator_type const& i_allocator)
 	{
-		typename t_in_string::const_iterator a_last_end(i_source.begin());
-		t_out_string a_string(i_allocator);
+		t_iterator a_last_end(i_begin);
+		t_string a_string(i_allocator);
 		for (;;)
 		{
-			std::pair<
-				typename t_in_string::const_iterator,
-				typename t_in_string::const_iterator >
-					const a_range(
-						this_type::find_word(a_last_end, i_source.end()));
+			std::pair< t_iterator, t_iterator > const a_range(
+				this_type::find_word(a_last_end, i_end));
 			if (a_range.first == a_range.second)
 			{
 				// すべての単語を置換した。
-				a_string.append(a_last_end, i_source.end());
+				a_string.append(a_last_end, i_end);
 				return a_string;
 			}
 
@@ -205,10 +209,12 @@ struct psyq::event_item
 		{
 			switch (*i)
 			{
-			case '(':
+				case '(':
 				a_word_begin = i;
 				break;
-			case ')':
+
+				case ')':
+				// 対応する'('があれば、単語の範囲を返す。
 				if (i_end != a_word_begin)
 				{
 					return std::make_pair(a_word_begin, i + 1);

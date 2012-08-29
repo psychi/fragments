@@ -113,7 +113,9 @@ class psyq::scene_package
 	{
 		io_allocator.max_size();
 		i_path.length();
-		return PSYQ_SHARED_PTR< typename t_allocator::value_type >(); // ñ¢é¿ëïÇ»ÇÃÇ≈ÅB
+
+		// ñ¢é¿ëïÇ»ÇÃÇ≈ÅB
+		return PSYQ_SHARED_PTR< typename t_allocator::value_type >();
 	}
 
 	//-------------------------------------------------------------------------

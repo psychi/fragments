@@ -113,9 +113,11 @@ class psyq::scene_world
 		if (psyq::scene_event::hash::EMPTY != i_name)
 		{
 			// 既存のpackaeを検索。
-			psyq::scene_package::shared_ptr& a_package(this->packages_[i_name]);
+			psyq::scene_package::shared_ptr& a_package(
+				this->packages_[i_name]);
 			if (NULL != a_package.get())
 			{
+				// packageの取得に成功。
 				return a_package;
 			}
 
@@ -123,11 +125,14 @@ class psyq::scene_world
 			this->load_package(i_name).swap(a_package);
 			if (NULL != a_package.get())
 			{
+				// packageの取得に成功。
 				return a_package;
 			}
 			PSYQ_ASSERT(false);
 			this->packages_.erase(i_name);
 		}
+
+		// packageの取得に失敗。
 		return this_type::get_null_ptr< psyq::scene_package >();
 	}
 
@@ -168,6 +173,7 @@ class psyq::scene_world
 				this->sections_[i_name]);
 			if (NULL != a_section.get())
 			{
+				// sectionの取得に成功。
 				return a_section;
 			}
 
@@ -177,11 +183,14 @@ class psyq::scene_world
 				this->sections_.get_allocator()).swap(a_section);
 			if (NULL != a_section.get())
 			{
+				// sectionの取得に成功。
 				return a_section;
 			}
 			PSYQ_ASSERT(false);
 			this->sections_.erase(i_name);
 		}
+
+		// sectionの取得に失敗。
 		return this_type::get_null_ptr< psyq::scene_section >();
 	}
 
@@ -251,7 +260,8 @@ class psyq::scene_world
 	{
 		// tokenとsectionを取得。
 		psyq::scene_token::shared_ptr const& a_token(this->get_token(i_token));
-		psyq::scene_section* const a_section(this->get_section(i_section).get());
+		psyq::scene_section* const a_section(
+			this->get_section(i_section).get());
 
 		// sectionにtokenを追加。
 		return NULL != a_section && a_section->add_token(a_token)?

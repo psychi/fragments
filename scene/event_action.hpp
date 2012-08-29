@@ -21,6 +21,7 @@ class event_RESERVE_PACKAGE:
 		psyq::scene_event::point const& i_point,
 		psyq::scene_event::line::time_scale::value const)
 	{
+		// worldにpackageを用意。
 		io_world.get_package(io_world.event_.replace_hash(i_point.integer));
 	}
 };
@@ -54,17 +55,20 @@ class event_SET_TOKEN_ANIMATION:
 		psyq::scene_event::point const& i_point,
 		psyq::scene_event::line::time_scale::value const)
 	{
+		// 書庫から引数を取得。
 		this_type::parameters const* const a_parameters(
 			io_world.event_.get_address< this_type::parameters >(
 				i_point.integer));
 		if (NULL != a_parameters)
 		{
+			// worldからanimation-packageを取得。
 			psyq::scene_package* const a_package(
 				io_world.get_package(
 					io_world.event_.replace_hash(
 						a_parameters->package)).get());
 			if (NULL != a_package)
 			{
+				// worldからtokenを取得し、animationを設定。
 				psyq::scene_token* const a_token(
 					io_world.get_token(
 						io_world.event_.replace_hash(
@@ -105,17 +109,20 @@ class event_SET_TOKEN_MODEL:
 		psyq::scene_event::point const& i_point,
 		psyq::scene_event::line::time_scale::value const)
 	{
+		// 書庫から引数を取得。
 		this_type::parameters const* const a_parameters(
 			io_world.event_.get_address< this_type::parameters >(
 				i_point.integer));
 		if (NULL != a_parameters)
 		{
+			// worldからmodel-packageを取得。
 			psyq::scene_package* const a_package(
 				io_world.get_package(
 					io_world.event_.replace_hash(
 						a_parameters->package)).get());
 			if (NULL != a_package)
 			{
+				// worldからtokenを取得し、modelを設定。
 				psyq::scene_token* const a_token(
 					io_world.get_token(
 						io_world.event_.replace_hash(
@@ -167,16 +174,19 @@ class event_SET_SECTION_LIGHT:
 		psyq::scene_event::point const& i_point,
 		psyq::scene_event::line::time_scale::value const)
 	{
+		// 書庫から引数を取得。
 		this_type::parameters const* const a_parameters(
 			io_world.event_.get_address< this_type::parameters >(
 				i_point.integer));
 		if (NULL != a_parameters)
 		{
+			// worldからsectionを取得。
 			psyq::scene_section* const a_section(
 				io_world.get_section(
 					io_world.event_.replace_hash(a_parameters->section)).get());
 			if (NULL != a_section)
 			{
+				// worldからlight-tokenを検索し、sectionに設定。
 				psyq::scene_token::shared_ptr const& a_token(
 					io_world.get_token(
 						io_world.event_.replace_hash(a_parameters->token)));
@@ -216,11 +226,13 @@ class event_RESERVE_TOKEN:
 		psyq::scene_event::point const& i_point,
 		psyq::scene_event::line::time_scale::value const)
 	{
+		// 書庫から引数を取得。
 		this_type::parameters const* const a_parameters(
 			io_world.event_.get_address< this_type::parameters >(
 				i_point.integer));
 		if (NULL != a_parameters)
 		{
+			// sectionとtokenをworldに用意。
 			io_world.get_token(
 				io_world.event_.replace_hash(a_parameters->token),
 				io_world.event_.replace_hash(a_parameters->section));
@@ -255,6 +267,7 @@ class event_REMOVE_TOKEN:
 		psyq::scene_event::point const& i_point,
 		psyq::scene_event::line::time_scale::value const)
 	{
+		// 書庫から引数を取得。
 		this_type::parameters const* const a_parameters(
 			io_world.event_.get_address< this_type::parameters >(
 				i_point.integer));

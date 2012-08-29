@@ -73,7 +73,7 @@ class psyq::basic_const_string
 	data_(i_string),
 	length_(NULL != i_string? i_length: 0)
 	{
-		// pass
+		PSYQ_ASSERT(NULL != i_string || 0 == i_length);
 	}
 
 	/** @param[in] i_begin Š„‚è“–‚Ä‚é•¶š—ñ‚Ìæ“ªˆÊ’uB

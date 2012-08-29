@@ -31,6 +31,11 @@ class psyq::scene_camera:
 		this->set_node(i_token, i_name);
 	}
 
+	/** @param[in] i_camera_token cameraとして使うscene-token。
+	    @param[in] i_camera_name  cameraとして使うnodeのID文字列。
+		@param[in] i_focus_token  焦点として使うscene-token。
+	    @param[in] i_focus_name   焦点として使うnodeのID文字列。
+	 */
 	public: scene_camera(
 		psyq::scene_token::shared_ptr const& i_camera_token,
 		char const* const                    i_camera_name,
@@ -43,7 +48,7 @@ class psyq::scene_camera:
 
 	//-------------------------------------------------------------------------
 	/** @brief cameraを設定。
-	    @param[in] i_token cameraとして使うscene-token。
+	    @param[in] i_token camera-nodeを持つscene-token。
 	    @param[in] i_name  cameraとして使うnodeのID文字列。
 	 */
 	public: psyq_extern::scene_node const* set_node(
@@ -67,17 +72,25 @@ class psyq::scene_camera:
 		return NULL;
 	}
 
+	/** @brief camera-nodeを取得。
+	 */
 	public: psyq_extern::scene_node const* get_node() const
 	{
 		return this->camera_node_;
 	}
 
+	/** @brief camera-nodeを持つscene-tokenを取得。
+	 */
 	public: psyq::scene_token::shared_ptr const& get_token() const
 	{
 		return this->camera_token_;
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief 焦点を設定。
+	    @param[in] i_token 焦点nodeを持つscene-token。
+	    @param[in] i_name  焦点として使うnodeのID文字列。
+	 */
 	public: psyq_extern::scene_node const* set_focus_node(
 		psyq::scene_token::shared_ptr const& i_token,
 		char const* const                    i_name)
@@ -97,23 +110,26 @@ class psyq::scene_camera:
 		return NULL;
 	}
 
+	/** @brief 焦点nodeを取得。
+	 */
 	public: psyq_extern::scene_node const* get_focus_node()
 	{
 		return this->focus_node_;
 	}
 
+	/** @brief 焦点nodeを持つscene-tokenを取得。
+	 */
 	public: psyq::scene_token::shared_ptr const& get_focus_token() const
 	{
 		return this->focus_token_;
 	}
 
+	/** @brief 焦点距離を取得。
+	 */
 	public: float get_focus_distance() const
 	{
-		if (NULL == this->camera_node_ || NULL == this->focus_node_)
-		{
-			return 0;
-		}
-		return psyq_extern::distance(*this->camera_node_, *this->focus_node_);
+		return NULL != this->camera_node_ && NULL != this->focus_node_?
+			psyq_extern::distance(*this->camera_node_, *this->focus_node_): 0;
 	}
 
 	//-------------------------------------------------------------------------

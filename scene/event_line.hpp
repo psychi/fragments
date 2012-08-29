@@ -70,19 +70,22 @@ class psyq::event_line
 	//-------------------------------------------------------------------------
 	/** @brief event-lineを初期化。
 	    @param[in] i_archive event-point配列が保存されている書庫。
-	    @param[in] i_points  event-point配列の名前hash値。
+	    @param[in] i_name    event-point配列の名前hash値。
 	 */
 	public: bool reset(
 		PSYQ_SHARED_PTR< typename this_type::archive const > const& i_archive,
-		typename t_hash::value const                                i_points)
+		typename t_hash::value const                                i_name)
 	{
+		// 書庫を取得。
 		typedef psyq::event_item< t_hash > item;
 		typename this_type::archive const* const a_archive(i_archive.get());
 		if (NULL != a_archive)
 		{
-			item const* const a_item(item::find(*a_archive, i_points));
+			// 書庫から項目を取得。
+			item const* const a_item(item::find(*a_archive, i_name));
 			if (NULL != a_item)
 			{
+				// 項目からevent-point配列の先頭位置を取得。
 				typename this_type::point const* const a_first_point(
 					////item::get_address< this_type::point >(
 					////	*a_archive, a_item->begin));
@@ -118,15 +121,15 @@ class psyq::event_line
 					i_time * this->time_scale_->get_scale(): i_time);
 			switch (i_origin)
 			{
-			case SEEK_SET: // 先頭が基準時間。
+				case SEEK_SET: // 先頭が基準時間。
 				this->seek_front(a_time);
 				break;
 
-			case SEEK_END: // 末尾が基準時間。
+				case SEEK_END: // 末尾が基準時間。
 				this->seek_front(a_time + this->get_dispatch_time(NULL));
 				break;
 
-			case SEEK_CUR: // 現在が基準時間。
+				case SEEK_CUR: // 現在が基準時間。
 				this->cache_time_ += a_time;
 				break;
 			}

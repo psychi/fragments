@@ -138,10 +138,12 @@ class psyq::scene_event
 		this_type::hash::value const        i_points,
 		this_type::line_map::key_type const i_key)
 	{
+		// 既存のevent-lineを辞書から検索。
 		this_type::line_map::iterator a_position(
 			this->lines_.lower_bound(i_key));
 		if (this->lines_.end() == a_position || a_position->first != i_key)
 		{
+			// 新たなevent-lineを辞書に追加。
 			this_type::line a_line(this->archive_, i_points);
 			if (a_line.is_stop())
 			{
@@ -152,6 +154,7 @@ class psyq::scene_event
 		}
 		else if (!a_position->second.reset(this->archive_, i_points))
 		{
+			// 既存のevent-lineの初期化に失敗。
 			return NULL;
 		}
 		return &a_position->second;
@@ -215,7 +218,7 @@ class psyq::scene_event
 	const
 	{
 		return this_type::item::replace_word< this_type::string >(
-			this->words_, i_source);
+			this->words_, i_source.begin(), i_source.end());
 	}
 
 	//-------------------------------------------------------------------------
@@ -226,14 +229,23 @@ class psyq::scene_event
 		this_type::item::offset const i_offset)
 	const
 	{
-		this_type::const_string::const_pointer const a_string(
+		this_type::const_string::const_pointer const a_begin(
 			this->get_address< this_type::const_string::value_type >(
 				i_offset));
-		return NULL != a_string?
-			this_type::const_string(
-				a_string,
-				this_type::const_string::traits_type::length(a_string)):
-			this_type::const_string();
+		if (NULL == a_begin)
+		{
+			return this_type::const_string();
+		}
+
+		// 文字数を取得。
+		std::size_t a_length(*a_begin);
+		if (a_length <= 0)
+		{
+			// 文字数が0の場合は、NULL文字まで数える。
+			a_length = this_type::const_string::traits_type::length(
+				a_begin + 1);
+		}
+		return this_type::const_string(a_begin + 1, a_length);
 	}
 
 	//-------------------------------------------------------------------------

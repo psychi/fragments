@@ -6,7 +6,6 @@
 #include <boost/type_traits/alignment_of.hpp>
 #include <boost/utility/in_place_factory.hpp>
 #include <boost/bind.hpp>
-#include <boost/thread/once.hpp>
 //#include <psyq/singleton.hpp>
 
 namespace psyq
@@ -38,39 +37,37 @@ class psyq::simple_singleton:
 		public: ~instance_holder()
 		{
 			// 保持している領域のinstanceを破棄する。
-			t_value* const a_pointer(this->pointer);
+			t_value* const a_pointer(*(this->pointer_));
 			PSYQ_ASSERT(NULL != a_pointer);
-			this->pointer = NULL;
+			*(this->pointer_) = NULL;
+			this->pointer_ = NULL;
 			a_pointer->~t_value();
 		}
 
 		public: instance_holder():
-		pointer(NULL)
+		pointer_(NULL)
 		{
 			// pass
 		}
 
-		public: t_value* get_pointer() const
-		{
-			return this->pointer;
-		}
-
 		public: template< typename t_constructor >
 		void construct(
+			t_value*&            io_pointer,
 			t_constructor const& i_constructor)
 		{
 			// 保持している領域にinstanceを構築する。
-			PSYQ_ASSERT(NULL == this->pointer);
-			i_constructor.template apply< t_value >(&this->storage);
-			this->pointer = reinterpret_cast< t_value* >(&this->storage);
+			PSYQ_ASSERT(NULL == this->pointer_);
+			i_constructor.template apply< t_value >(&this->storage_);
+			io_pointer = reinterpret_cast< t_value* >(&this->storage_);
+			this->pointer_ = &io_pointer;
 		}
 
 		//---------------------------------------------------------------------
+		private: t_value** pointer_;
 		private: typename boost::aligned_storage<
 			sizeof(t_value),
 			boost::alignment_of< t_value >::value >::type
-				storage;
-		private: t_value* pointer;
+				storage_;
 	};
 
 	//-------------------------------------------------------------------------
@@ -83,7 +80,7 @@ class psyq::simple_singleton:
 	 */
 	public: static t_value* get()
 	{
-		return this_type::get(boost::type< t_mutex >());
+		return this_type::pointer();
 	}
 
 	//-------------------------------------------------------------------------
@@ -103,62 +100,20 @@ class psyq::simple_singleton:
 	    @return singleton-instanceへの参照。
 	 */
 	public: template< typename t_constructor >
-	static t_value* construct(
-		t_constructor const& i_constructor)
-	{
-		return this_type::construct_once(
-			i_constructor, boost::type< t_mutex >());
-	}
-
-	//-------------------------------------------------------------------------
-	private: template< typename t_mutex_policy >
-	static t_value* get(boost::type< t_mutex_policy > const&)
-	{
-		if (0 < this_type::construct_flag().count)
-		{
-			return this_type::instance().get_pointer();
-		}
-		return NULL;
-	}
-
-	private: static t_value* get(boost::type< psyq::_dummy_mutex > const&)
-	{
-		return this_type::instance().get_pointer();
-	}
-
-	//-------------------------------------------------------------------------
-	private: template< typename t_constructor, typename t_mutex_policy >
-	static t_value* construct_once(
-		t_constructor const& i_constructor,
-		boost::type< t_mutex_policy > const&)
+	static t_value* construct(t_constructor const& i_constructor)
 	{
 		// sigleton-instance構築関数を一度だけ呼び出す。
-		boost::call_once(
+		PSYQ_CALL_ONCE(
 			this_type::construct_flag(),
 			boost::bind(
 				&construct_instance< t_constructor >, &i_constructor));
 
 		// singleton-instanceを取得。
 		PSYQ_ASSERT(NULL != this_type::instance().pointer);
-		return this_type::instance().get_pointer();
+		return this_type::pointer();
 	}
 
-	private: template< typename t_constructor >
-	static t_value* construct_once(
-		t_constructor const& i_constructor,
-		boost::type< psyq::_dummy_mutex > const&)
-	{
-		typename this_type::storage& a_instance(this_type::instance());
-		if (NULL == a_instance.get_pointer())
-		{
-			a_instance.construct(i_constructor);
-		}
-
-		// singleton-instanceを取得。
-		PSYQ_ASSERT(NULL != a_instance.get_pointer());
-		return a_instance.get_pointer();
-	}
-
+	//-------------------------------------------------------------------------
 	/** @brief singleton-instanceを構築する。
 	    @param[in] i_constructor boost::in_placeから取得した構築関数object。
 	 */
@@ -166,18 +121,26 @@ class psyq::simple_singleton:
 	static void construct_instance(
 		t_constructor const* const i_constructor)
 	{
-		this_type::instance().construct(*i_constructor);
+		this_type::instance().construct(this_type::pointer(), *i_constructor);
 	}
 
 	/** @brief singleton-instanceを構築したかどうかのflagを参照する。
 	 */
 	private: static boost::once_flag& construct_flag()
 	{
-		static boost::once_flag s_constructed = BOOST_ONCE_INIT;
-		return s_constructed;
+		PSYQ_ONCE_FLAG_INIT(s_construct_flag);
+		return s_construct_flag;
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief singleton-instanceへのpointerを参照する。
+	 */
+	private: static t_value*& pointer()
+	{
+		static t_value* s_pointer(NULL);
+		return s_pointer;
+	}
+
 	/** @brief singleton-instanceを保持する領域を参照する。
 	        静的局所変数なので、構築は最初にこの関数が呼ばれた時点で行われる。
 	        最初は必ずconstruct_instance()から呼ばれる。

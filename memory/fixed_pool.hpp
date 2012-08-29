@@ -3,8 +3,6 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/cstdint.hpp>
-#include <boost/thread/locks.hpp>
-#include <boost/thread/mutex.hpp>
 
 namespace psyq
 {

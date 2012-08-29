@@ -6,8 +6,6 @@
 #include <boost/type_traits/alignment_of.hpp>
 #include <boost/utility/in_place_factory.hpp>
 #include <boost/bind/bind.hpp>
-#include <boost/thread/locks.hpp>
-#include <boost/thread/once.hpp>
 
 namespace psyq
 {
@@ -34,10 +32,10 @@ class psyq::_singleton_ordered_destructor:
 	//-------------------------------------------------------------------------
 	protected: explicit _singleton_ordered_destructor(
 		typename this_type::function i_destructor):
-		destructor(i_destructor),
-		priority(0)
+	destructor_(i_destructor),
+	priority_(0)
 	{
-		this->next = this;
+		this->next_ = this;
 	}
 
 	//-------------------------------------------------------------------------
@@ -46,12 +44,12 @@ class psyq::_singleton_ordered_destructor:
 		// listの先頭nodeを切り離す。
 		this_type* const a_node(this_type::first_node());
 		PSYQ_ASSERT(NULL != a_node);
-		this_type::first_node() = a_node->next;
+		this_type::first_node() = a_node->next_;
 
 		// 切り離したnodeを破棄する。thisの破棄ではないことに注意！
-		typename this_type::function const a_destructor(a_node->destructor);
-		a_node->next = a_node;
-		a_node->destructor = NULL;
+		typename this_type::function const a_destructor(a_node->destructor_);
+		a_node->next_ = a_node;
+		a_node->destructor_ = NULL;
 		(*a_destructor)(a_node);
 	}
 
@@ -60,7 +58,7 @@ class psyq::_singleton_ordered_destructor:
 	 */
 	public: int get_priority() const
 	{
-		return this->priority;
+		return this->priority_;
 	}
 
 	//-------------------------------------------------------------------------
@@ -69,17 +67,17 @@ class psyq::_singleton_ordered_destructor:
 	 */
 	private: void join(int const i_priority)
 	{
-		PSYQ_ASSERT(this == this->next);
+		PSYQ_ASSERT(this == this->next_);
 
 		// 優先順位を更新し、listに挿入する。
-		this->priority = i_priority;
+		this->priority_ = i_priority;
 		this_type* a_node(this_type::first_node());
 		if (this_type::less_equal(i_priority, a_node))
 		{
 			PSYQ_ASSERT(this != a_node);
 
 			// 優先順位が最小なので、先頭に挿入する。
-			this->next = a_node;
+			this->next_ = a_node;
 			this_type::first_node() = this;
 		}
 		else
@@ -88,11 +86,11 @@ class psyq::_singleton_ordered_destructor:
 			for (;;)
 			{
 				PSYQ_ASSERT(this != a_node);
-				this_type* const a_next(a_node->next);
+				this_type* const a_next(a_node->next_);
 				if (this_type::less_equal(i_priority, a_next))
 				{
-					a_node->next = this;
-					this->next = a_next;
+					a_node->next_ = this;
+					this->next_ = a_next;
 					break;
 				}
 				a_node = a_next;
@@ -109,24 +107,24 @@ class psyq::_singleton_ordered_destructor:
 		if (this == a_node)
 		{
 			// 先頭から切り離す。
-			this_type::first_node() = this->next;
+			this_type::first_node() = this->next_;
 		}
-		else if (this != this->next)
+		else if (this != this->next_)
 		{
 			for (;;)
 			{
 				PSYQ_ASSERT(NULL != a_node);
 				PSYQ_ASSERT(this != a_node);
-				this_type* const a_next(a_node->next);
+				this_type* const a_next(a_node->next_);
 				if (a_next == this)
 				{
-					a_node->next = this->next;
+					a_node->next_ = this->next_;
 					break;
 				}
 				a_node = a_next;
 			}
 		}
-		this->next = this;
+		this->next_ = this;
 	}
 
 	//-------------------------------------------------------------------------
@@ -138,7 +136,7 @@ class psyq::_singleton_ordered_destructor:
 		int const              i_priority,
 		this_type const* const i_node)
 	{
-		return NULL == i_node || i_priority <= i_node->priority;
+		return NULL == i_node || i_priority <= i_node->priority_;
 	}
 
 	/** @brief 破棄関数listの先頭nodeへのpointerを参照する。
@@ -158,9 +156,9 @@ class psyq::_singleton_ordered_destructor:
 	}
 
 	//-------------------------------------------------------------------------
-	private: this_type*                   next;       ///< 次のnode。
-	private: typename this_type::function destructor; ///< 破棄時に呼び出す関数。
-	private: int                          priority;   ///< 破棄の優先順位。昇順に破棄される。
+	private: this_type*                   next_;       ///< 次のnode。
+	private: typename this_type::function destructor_; ///< 破棄時に呼び出す関数。
+	private: int                          priority_;   ///< 破棄の優先順位。昇順に破棄される。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -182,15 +180,9 @@ class psyq::_singleton_ordered_storage:
 	//-------------------------------------------------------------------------
 	private: _singleton_ordered_storage():
 		super_type(&this_type::destruct),
-		pointer(NULL)
+		pointer_(NULL)
 	{
 		// pass
-	}
-
-	//-------------------------------------------------------------------------
-	private: t_value* get_pointer() const
-	{
-		return this->pointer;
 	}
 
 	//-------------------------------------------------------------------------
@@ -198,11 +190,15 @@ class psyq::_singleton_ordered_storage:
 	    @param[in] i_constructor boost::in_placeから取得した構築関数object。
 	 */
 	private: template< typename t_constructor >
-	void construct(t_constructor const& i_constructor)
+	void construct(
+		t_value*&            io_pointer,
+		t_constructor const& i_constructor)
 	{
-		PSYQ_ASSERT(NULL == this->get_pointer());
-		i_constructor.template apply< t_value >(&this->storage);
-		this->pointer = reinterpret_cast< t_value* >(&this->storage);
+		PSYQ_ASSERT(NULL == io_pointer);
+		PSYQ_ASSERT(NULL == this->pointer_);
+		i_constructor.template apply< t_value >(&this->storage_);
+		io_pointer = reinterpret_cast< t_value* >(&this->storage_);
+		this->pointer_ = &io_pointer;
 	}
 
 	//-------------------------------------------------------------------------
@@ -211,20 +207,21 @@ class psyq::_singleton_ordered_storage:
 	private: static void destruct(super_type* const i_instance)
 	{
 		this_type* const a_instance(static_cast< this_type* >(i_instance));
-		t_value* const a_pointer(a_instance->get_pointer());
-		PSYQ_ASSERT(static_cast< void* >(&a_instance->storage) == a_pointer);
-		a_instance->pointer = NULL;
+		t_value* const a_pointer(*(a_instance->pointer_));
+		PSYQ_ASSERT(static_cast< void* >(&a_instance->storage_) == a_pointer);
+		*(a_instance->pointer_) = NULL;
+		a_instance->pointer_ = NULL;
 		a_pointer->~t_value();
 	}
 
 	//-------------------------------------------------------------------------
 	/// singleton-instanceへのpointer。
-	private: t_value* pointer;
+	private: t_value** pointer_;
 
 	/// singleton-instanceを格納する領域。
 	private: typename boost::aligned_storage<
 		sizeof(t_value), boost::alignment_of< t_value >::value >::type
-			storage;
+			storage_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -258,7 +255,7 @@ class psyq::singleton:
 	 */
 	public: static t_value* get()
 	{
-		return this_type::get(boost::type< t_mutex >());
+		return this_type::pointer();
 	}
 
 	//-------------------------------------------------------------------------
@@ -283,8 +280,17 @@ class psyq::singleton:
 		t_constructor const& i_constructor,
 		int const            i_destruct_priority = 0)
 	{
-		return this_type::construct_once(
-			i_constructor, i_destruct_priority, boost::type< t_mutex >());
+		// sigleton-instance構築関数を一度だけ呼び出す。
+		PSYQ_CALL_ONCE(
+			this_type::construct_flag(),
+			boost::bind(
+				&construct_instance< t_constructor >,
+				&i_constructor,
+				i_destruct_priority));
+
+		// singleton-instanceを取得。
+		PSYQ_ASSERT(NULL != this_type::pointer());
+		return this_type::pointer();
 	}
 
 	//-------------------------------------------------------------------------
@@ -317,69 +323,6 @@ class psyq::singleton:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief singleton-instance領域を参照する。
-	 */
-	private: static typename this_type::storage& instance()
-	{
-		static typename this_type::storage s_instance;
-		return s_instance;
-	}
-
-	private: template< typename t_mutex_policy >
-	static t_value* get(boost::type< t_mutex_policy > const&)
-	{
-		if (0 < this_type::construct_flag().count)
-		{
-			return this_type::instance().get_pointer();
-		}
-		return NULL;
-	}
-
-	private: static t_value* get(boost::type< psyq::_dummy_mutex > const&)
-	{
-		return this_type::instance().get_pointer();
-	}
-
-	//-------------------------------------------------------------------------
-	private: template< typename t_constructor, typename t_mutex_policy >
-	static t_value* construct_once(
-		t_constructor const& i_constructor,
-		int const            i_priority,
-		boost::type< t_mutex_policy > const&)
-	{
-		// sigleton-instance構築関数を一度だけ呼び出す。
-		PSYQ_CALL_ONCE(
-			this_type::construct_flag(),
-			boost::bind(
-				&construct_instance< t_constructor >,
-				&i_constructor,
-				i_priority));
-
-		// singleton-instanceを取得。
-		PSYQ_ASSERT(NULL != this_type::instance().get_pointer());
-		return  this_type::instance().get_pointer();
-	}
-
-	private: template< typename t_constructor >
-	static t_value* construct_once(
-		t_constructor const& i_constructor,
-		int const            i_priority,
-		boost::type< psyq::_dummy_mutex > const&)
-	{
-		// sigleton-instance構築関数を一度だけ呼び出す。
-		typename this_type::storage& a_instance(this_type::instance());
-		if (NULL == a_instance.get_pointer())
-		{
-			// instanceを破棄関数listに登録してから構築する。
-			a_instance.join(i_priority);
-			a_instance.construct(i_constructor);
-		}
-
-		// singleton-instanceを取得。
-		PSYQ_ASSERT(NULL != a_instance.get_pointer());
-		return a_instance.get_pointer();
-	}
-
 	/** @brief singleton-instanceを構築する。
 	    @param[in] i_constructor boost::in_placeから取得した構築関数object。
 	    @param[in] i_priority 破棄の優先順位。
@@ -395,15 +338,34 @@ class psyq::singleton:
 		// instanceを破棄関数listに登録してから構築する。
 		typename this_type::storage& a_instance(this_type::instance());
 		a_instance.join(i_priority);
-		a_instance.construct(*i_constructor);
+		a_instance.construct(this_type::pointer(), *i_constructor);
 	}
 
 	/** @brief singleton-instanceを構築したかどうかのflagを参照する。
 	 */
-	private: static boost::once_flag& construct_flag()
+	private: static PSYQ_ONCE_FLAG& construct_flag()
 	{
-		static boost::once_flag s_constructed = BOOST_ONCE_INIT;
-		return s_constructed;
+		PSYQ_ONCE_FLAG_INIT(s_construct_flag);
+		return s_construct_flag;
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief singleton-instanceへのpointerを参照する。
+	 */
+	private: static t_value*& pointer()
+	{
+		static t_value* s_pointer(NULL);
+		return s_pointer;
+	}
+
+	/** @brief singleton-instance領域を参照する。
+	        静的局所変数なので、構築は最初にこの関数が呼ばれた時点で行われる。
+	        最初は必ずconstruct_instance()から呼ばれる。
+	 */
+	private: static typename this_type::storage& instance()
+	{
+		static typename this_type::storage s_instance;
+		return s_instance;
 	}
 
 	//-------------------------------------------------------------------------

@@ -2,14 +2,14 @@
 #define PSYQ_THREAD_HPP_
 
 #ifdef PSYQ_USER_DEFINED_THREAD
-#elif defined(PSYQ_CPP11)
+#elif defined(PSYQ_THREAD_CPP11)
 #	include <mutex>
-#	ifdef PSYQ_DISABLE_THREADS
+#	ifdef PSYQ_MUTEX_DISABLE
 #		undef PSYQ_MUTEX_DEFAULT
 #		define PSYQ_MUTEX_DEFAULT psyq::_dummy_mutex
 #	elif !defined(PSYQ_MUTEX_DEFAULT)
 #		define PSYQ_MUTEX_DEFAULT std::mutex
-#	endif // PSYQ_DISABLE_THREADS
+#	endif // PSYQ_MUTEX_DISABLE
 #	ifndef PSYQ_CONDITION_DEFAULT
 #		include <condition_variable_any>
 #		define PSYQ_CONDITION_DEFAULT std::condition_variable_any
@@ -23,16 +23,18 @@
 #	define PSYQ_DEFER_LOCK std::defer_lock
 #	define PSYQ_LOCK std::lock
 #	define PSYQ_CALL_ONCE std::call_once
-#else
+#   define PSYQ_ONCE_FLAG std::once_flag
+#   define PSYQ_ONCE_FLAG_INIT(d_name) static PSYQ_ONCE_FLAG d_name
+#elif defined(PSYQ_THREAD_BOOST)
 #	include <boost/thread/locks.hpp>
 #	include <boost/thread/once.hpp>
-#	ifdef PSYQ_DISABLE_THREADS
+#	ifdef PSYQ_MUTEX_DISABLE
 #		undef PSYQ_MUTEX_DEFAULT
 #		define PSYQ_MUTEX_DEFAULT psyq::_dummy_mutex
 #	elif !defined(PSYQ_MUTEX_DEFAULT)
 #		include <boost/thread/mutex.hpp>
 #		define PSYQ_MUTEX_DEFAULT boost::mutex
-#	endif // PSYQ_DISABLE_THREADS
+#	endif // PSYQ_MUTEX_DISABLE
 #	ifndef PSYQ_CONDITION_DEFAULT
 #		include <boost/thread/condition_variable.hpp>
 #		define PSYQ_CONDITION_DEFAULT boost::condition_variable_any
@@ -46,6 +48,9 @@
 #	define PSYQ_DEFER_LOCK boost::defer_lock
 #	define PSYQ_LOCK boost::lock
 #	define PSYQ_CALL_ONCE boost::call_once
+#   define PSYQ_ONCE_FLAG boost::once_flag
+#   define PSYQ_ONCE_FLAG_INIT(d_name)\
+		static PSYQ_ONCE_FLAG d_name = BOOST_ONCE_INIT
 #endif // PSYQ_USER_DEFINED_THREAD
 
 namespace psyq

@@ -233,8 +233,10 @@ class psyq::async_queue:
 		if (i_block)
 		{
 			// threadÇ™èIóπÇ∑ÇÈÇ‹Ç≈ë“ã@ÅB
-			PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
-			this->condition_.notify_all();
+			{
+				PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
+				this->condition_.notify_all();
+			}
 			this->thread_.join();
 		}
 	}

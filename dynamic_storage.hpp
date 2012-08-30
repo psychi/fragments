@@ -185,4 +185,14 @@ class psyq::dynamic_storage:
 	private: std::size_t size_;
 };
 
+namespace std
+{
+	void swap(
+		psyq::dynamic_storage& io_left,
+		psyq::dynamic_storage& io_right)
+	{
+		io_left.swap(io_right);
+	}
+}
+
 #endif // PSYQ_DYNAMIC_STORAGE_HPP_

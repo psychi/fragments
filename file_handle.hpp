@@ -302,4 +302,15 @@ class psyq::file_handle:
 	private: t_descriptor    descriptor_;
 };
 
+namespace std
+{
+	template< typename t_descriptor, typename t_mutex >
+	void swap(
+		psyq::file_handle< t_descriptor, t_mutex >& io_left,
+		psyq::file_handle< t_descriptor, t_mutex >& io_right)
+	{
+		io_left.swap(io_right);
+	}
+}
+
 #endif // !PSYQ_FILE_HANDLE_HPP_

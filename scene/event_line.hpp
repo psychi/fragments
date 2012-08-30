@@ -295,4 +295,15 @@ class psyq::event_line
 	private: t_real rest_time_;
 };
 
+namespace std
+{
+	template< typename t_hash, typename t_real >
+	void swap(
+		psyq::event_line< t_hash, t_real >& io_left,
+		psyq::event_line< t_hash, t_real >& io_right)
+	{
+		io_left.swap(io_right);
+	}
+}
+
 #endif // !PSYQ_EVENT_LINE_HPP_

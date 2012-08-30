@@ -344,4 +344,14 @@ class psyq::win32_file_descriptor:
 	private: ::HANDLE handle_;
 };
 
+namespace std
+{
+	void swap(
+		psyq::win32_file_descriptor& io_left,
+		psyq::win32_file_descriptor& io_right)
+	{
+		io_left.swap(io_right);
+	}
+}
+
 #endif // !PSYQ_WIN32_FILE_DESCRIPTOR_HPP_

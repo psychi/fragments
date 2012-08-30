@@ -369,4 +369,14 @@ class psyq::posix_file_descriptor:
 	private: int descriptor_;
 };
 
+namespace std
+{
+	void swap(
+		psyq::posix_file_descriptor& io_left,
+		psyq::posix_file_descriptor& io_right)
+	{
+		io_left.swap(io_right);
+	}
+}
+
 #endif // !PSYQ_POSIX_FILE_DESCRIPTOR_HPP_

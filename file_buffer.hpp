@@ -184,4 +184,14 @@ class psyq::file_buffer:
 	private: std::size_t       region_size_;
 };
 
+namespace std
+{
+	void swap(
+		psyq::file_buffer& io_left,
+		psyq::file_buffer& io_right)
+	{
+		io_left.swap(io_right);
+	}
+}
+
 #endif // !PSYQ_FILE_BUFFER_HPP_

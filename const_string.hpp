@@ -1151,4 +1151,15 @@ bool operator>=(
 	return i_right <= i_left;
 }
 
+namespace std
+{
+	template< typename t_value, typename t_traits >
+	void swap(
+		psyq::basic_const_string< t_value, t_traits >& io_left,
+		psyq::basic_const_string< t_value, t_traits >& io_right)
+	{
+		io_left.swap(io_right);
+	}
+};
+
 #endif // PSYQ_CONST_STRING_HPP_

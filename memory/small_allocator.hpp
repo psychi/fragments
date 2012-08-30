@@ -33,7 +33,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 小規模sizeのmemory-pool集合。
+/** @brief 小規模sizeのfixed-pool集合。
     @tparam t_arena 実際に使うmemory割当policy。
     @tparam t_mutex multi-thread対応に使うmutexの型。
  */
@@ -65,17 +65,17 @@ class psyq::small_pools:
 	 */
 	public: void* allocate(std::size_t const i_size, char const* const i_name)
 	{
-		// sizeに対応するmemory-poolを取得。
+		// sizeに対応するfiexed-poolを取得。
 		psyq::fixed_pool< t_arena, t_mutex >* const a_pool(
 			this->get_pool(this->get_index(i_size)));
 		if (NULL != a_pool)
 		{
-			// memory-poolから確保。
+			// fixed-poolから確保。
 			return a_pool->allocate(i_name);
 		}
 		else if (0 < i_size)
 		{
-			// 対応するmemory-poolがなければ、t_arenaから確保。
+			// 対応するfixed-poolがなければ、t_arenaから確保。
 			return (t_arena::malloc)(
 				i_size, this->get_alignment(), this->get_offset(), i_name);
 		}
@@ -89,23 +89,23 @@ class psyq::small_pools:
 	 */
 	public: void deallocate(void* const i_memory, std::size_t const i_size)
 	{
-		// sizeに対応するmemory-poolを取得。
+		// sizeに対応するfixed-poolを取得。
 		psyq::fixed_pool< t_arena, t_mutex >* const a_pool(
 			this->get_pool(this->get_index(i_size)));
 		if (NULL != a_pool)
 		{
-			// memory-poolで解放。
+			// fixed-poolで解放。
 			a_pool->deallocate(i_memory);
 		}
 		else if (0 < i_size)
 		{
-			// 対応するmemory-poolがなければ、t_arenaで解放。
+			// 対応するfixed-poolがなければ、t_arenaで解放。
 			(t_arena::free)(i_memory, i_size);
 		}
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 指定したsizeを確保するmemory-poolのindex番号を取得。
+	/** @brief 指定したsizeを確保するfixed-poolのindex番号を取得。
 	    @param[in] i_size byte単位の大きさ。
 	 */
 	public: std::size_t get_index(std::size_t const i_size) const
@@ -142,19 +142,19 @@ class psyq::small_pools:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief memory-poolの数を取得。
+	/** @brief fixed-poolの数を取得。
 	 */
 	public: virtual std::size_t get_num_pools() const = 0;
 
-	/** @brief memory-poolを取得。
-	    @param[in] i_index memory-poolのindex番号。
+	/** @brief fixed-poolを取得。
+	    @param[in] i_index fixed-poolのindex番号。
 	 */
 	public: virtual psyq::fixed_pool< t_arena, t_mutex > const* get_pool(
 		std::size_t const i_index)
 	const = 0;
 
-	/** @brief memory-poolを取得。
-	    @param[in] i_index memory-poolのindex番号。
+	/** @brief fixed-poolを取得。
+	    @param[in] i_index fixed-poolのindex番号。
 	 */
 	public: psyq::fixed_pool< t_arena, t_mutex >* get_pool(
 		std::size_t const i_index)
@@ -199,7 +199,7 @@ class psyq::small_arena:
 	public: typedef t_arena arena;
 
 	//-------------------------------------------------------------------------
-	/** @brief singletonとして使う、小規模sizeのmemory-pool集合。
+	/** @brief 小規模sizeのfixed-pool集合。
 	 */
 	public: class pools:
 		public psyq::small_pools< t_arena, t_mutex >
@@ -209,8 +209,9 @@ class psyq::small_arena:
 		public: pools():
 		psyq::small_pools< t_arena, t_mutex >()
 		{
+			// boost::mplを使ってfixed-pool配列を構築。
 			typedef boost::mpl::range_c< std::size_t, 0, NUM_POOLS > range;
-			boost::mpl::for_each< range >(set_pool(this->pools_));
+			boost::mpl::for_each< range >(set_pool(this->pointers_, 0));
 		}
 
 		public: virtual std::size_t get_num_pools() const
@@ -222,28 +223,37 @@ class psyq::small_arena:
 			std::size_t const i_index)
 		const
 		{
-			return i_index < NUM_POOLS? this->pools_[i_index]: NULL;
+			return i_index < NUM_POOLS? this->pointers_[i_index]: NULL;
 		}
 
 		public: static std::size_t const NUM_POOLS =
 			t_alignment < t_small_size? t_small_size / t_alignment: 1;
 
-		private: psyq::fixed_pool< t_arena, t_mutex >* pools_[NUM_POOLS];
+		private: psyq::fixed_pool< t_arena, t_mutex >* pointers_[NUM_POOLS];
 	};
 
 
 	//-------------------------------------------------------------------------
+	/** @brief singleton-fixed-poolを構築する関数object。
+	 */
 	private: class set_pool
 	{
-		public:	explicit set_pool(
-			psyq::fixed_pool< t_arena, t_mutex >** const i_pools):
-		pools_(i_pools)
+		/** @param[in] i_pools 構築したfixed-poolのpointerを格納する配列。
+		 */
+		public:	set_pool(
+			psyq::fixed_pool< t_arena, t_mutex >** const i_pointers,
+			int const                                    i_destruct_priority):
+		pointers_(i_pointers),
+		destruct_priority_(i_destruct_priority)
 		{
 			// pass
 		}
 
+		/** @brief singleton-fixed-poolを構築。
+		    @tparam t_index 構築したfixed-poolのpointerを格納するindex番号。
+		 */
 		public:	template< typename t_index >
-		void operator()(t_index)
+		void operator()(t_index const) const
 		{
 			typedef typename psyq::fixed_arena<
 				t_alignment * (1 + t_index::value),
@@ -253,10 +263,12 @@ class psyq::small_arena:
 				t_arena,
 				t_mutex >::pool::singleton
 					singleton_pool;
-			this->pools_[t_index::value] = singleton_pool::construct();
+			this->pointers_[t_index::value] = singleton_pool::construct(
+				this->destruct_priority_);
 		}
 
-		private: psyq::fixed_pool< t_arena, t_mutex >** pools_;
+		private: psyq::fixed_pool< t_arena, t_mutex >** pointers_;
+		private: int                                    destruct_priority_;
 	};
 
 	//-------------------------------------------------------------------------

@@ -37,9 +37,9 @@ class psyq::simple_singleton:
 		public: ~instance_holder()
 		{
 			// •Û‚µ‚Ä‚¢‚é—Ìˆæ‚Ìinstance‚ğ”jŠü‚·‚éB
-			t_value* const a_pointer(*(this->pointer_));
+			t_value* const a_pointer(*this->pointer_);
 			PSYQ_ASSERT(NULL != a_pointer);
-			*(this->pointer_) = NULL;
+			*this->pointer_ = NULL;
 			this->pointer_ = NULL;
 			a_pointer->~t_value();
 		}
@@ -63,11 +63,13 @@ class psyq::simple_singleton:
 		}
 
 		//---------------------------------------------------------------------
-		private: t_value** pointer_;
+		/// singleton-instance‚ğŠi”[‚·‚é—ÌˆæB
 		private: typename boost::aligned_storage<
-			sizeof(t_value),
-			boost::alignment_of< t_value >::value >::type
+			sizeof(t_value), boost::alignment_of< t_value >::value >::type
 				storage_;
+
+		/// singleton-instance‚Ö‚Ìpointer‚ÌŠi”[êŠB
+		private: t_value** pointer_;
 	};
 
 	//-------------------------------------------------------------------------
@@ -126,7 +128,7 @@ class psyq::simple_singleton:
 
 	/** @brief singleton-instance‚ğ\’z‚µ‚½‚©‚Ç‚¤‚©‚Ìflag‚ğQÆ‚·‚éB
 	 */
-	private: static boost::once_flag& construct_flag()
+	private: static PSYQ_ONCE_FLAG& construct_flag()
 	{
 		PSYQ_ONCE_FLAG_INIT(s_construct_flag);
 		return s_construct_flag;

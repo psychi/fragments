@@ -7,14 +7,7 @@
 #	define PSYQ_ARENA_NAME_DEFAULT "PSYQ"
 #endif // !PSYQ_ALLOCATOR_NAME_DEFAULT
 
-#ifdef PSYQ_USER_DEFINED_MEMORY
-#elif defined(PSYQ_CPP11)
-#	include <memory>
-#	define PSYQ_SHARED_PTR std::shared_ptr
-#	define PSYQ_WEAK_PTR std::weak_ptr
-#	define PSYQ_ALLOCATE_SHARED std::allocate_shared
-#	define PSYQ_MAKE_SHARED std::make_shared
-#else
+#if defined(PSYQ_USE_BOOST)
 #	include <boost/smart_ptr/shared_ptr.hpp>
 #	include <boost/smart_ptr/weak_ptr.hpp>
 #	include <boost/smart_ptr/make_shared.hpp>
@@ -22,7 +15,15 @@
 #	define PSYQ_WEAK_PTR boost::weak_ptr
 #	define PSYQ_ALLOCATE_SHARED boost::allocate_shared
 #	define PSYQ_MAKE_SHARED boost::make_shared
-#endif // PSYQ_USER_DEFINED_MEMORY
+#elif defined(PSYQ_USE_CPP11)
+#	include <memory>
+#	define PSYQ_SHARED_PTR std::shared_ptr
+#	define PSYQ_WEAK_PTR std::weak_ptr
+#	define PSYQ_ALLOCATE_SHARED std::allocate_shared
+#	define PSYQ_MAKE_SHARED std::make_shared
+#else
+#	error
+#endif // PSYQ_USE_CPP11
 
 namespace psyq
 {

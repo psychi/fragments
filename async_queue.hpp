@@ -194,8 +194,12 @@ class psyq::async_queue:
 		if (i_start)
 		{
 			// ”ñ“¯Šúˆ—thread‚ð‹N“®B
+#ifndef PSYQ_USE_CLX
 			t_thread a_thread(boost::bind(&this_type::run, this));
 			this->thread_.swap(a_thread);
+#else
+			this->thread_.start(boost::bind(&this_type::run, this));
+#endif // !PSYQ_USE_CLX
 		}
 	}
 

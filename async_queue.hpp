@@ -23,7 +23,7 @@ template<
 class psyq::async_queue:
 	private boost::noncopyable
 {
-	typedef psyq::async_queue< t_mutex > this_type;
+	typedef psyq::async_queue< t_mutex, t_condition, t_thread > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_mutex mutex;
@@ -263,8 +263,7 @@ class psyq::async_queue:
 		t_allocator const&                  i_allocator,
 		psyq::async_task::shared_ptr const& i_task)
 	{
-		return this->add< typename t_allocator::arena >(
-			i_task, i_allocator.get_name());
+		return this->add(i_allocator, &i_task, &i_task + 1);
 	}
 
 	/** @brief ”ñ“¯Šúˆ—task‚ğ“o˜^B

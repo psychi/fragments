@@ -10,18 +10,19 @@
 
 namespace psyq
 {
-	template< typename, typename, typename > class simple_singleton;
+	template< typename, typename > class simple_singleton;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template<
-	typename t_value,
-	typename t_mutex = PSYQ_MUTEX_DEFAULT,
-	typename t_tag = t_value >
+/** @brief singleton管理class。破棄は構築した逆順で行われる。
+    @tparam t_value singleton-instanceの型。
+    @tparam t_tag   同じ型のsingleton-instanceで、区別が必要な場合に使う。
+ */
+template< typename t_value, typename t_tag = t_value >
 class psyq::simple_singleton:
 	private boost::noncopyable
 {
-	typedef simple_singleton< t_value, t_mutex, t_tag > this_type;
+	typedef simple_singleton< t_value, t_tag > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_value value_type;

@@ -228,23 +228,24 @@ class psyq::_singleton_ordered_holder:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief singleton管理class。
+/** @brief 破棄順番が可変のsingleton管理class。
     @tparam t_value singleton-instanceの型。
-    @tparam t_mutex      multi-thread対応に使うmutexの型。
-    @tparam t_tag        同じ型のsingleton-instanceで、区別が必要な場合に使う。
+    @tparam t_tag   同じ型のsingleton-instanceで、区別が必要な場合に使う。
+    @tparam t_mutex multi-thread対応に使うmutexの型。
  */
 template<
 	typename t_value,
-	typename t_mutex = PSYQ_MUTEX_DEFAULT,
-	typename t_tag = t_value >
+	typename t_tag = t_value,
+	typename t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::singleton:
 	private boost::noncopyable
 {
-	typedef psyq::singleton< t_value, t_mutex, t_tag > this_type;
+	typedef psyq::singleton< t_value, t_tag, t_mutex > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_value value_type;
 	public: typedef t_tag tag;
+	public: typedef t_mutex mutex;
 	private: typedef psyq::_singleton_ordered_holder< t_value, t_mutex >
 		instance_holder;
 

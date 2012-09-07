@@ -3,18 +3,24 @@
 
 namespace psyq
 {
-	class scene_camera;
+	template< typename, typename > class scene_camera;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template< typename t_hash, typename t_real >
 class psyq::scene_camera:
 	private boost::noncopyable
 {
-	typedef psyq::scene_camera this_type;
+	typedef psyq::scene_camera< t_hash, t_real > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
 	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
+
+	//-------------------------------------------------------------------------
+	public: typedef t_hash hash;
+	public: typedef t_real real;
+	public: typedef psyq::scene_token< t_hash, t_real > token;
 
 	//-------------------------------------------------------------------------
 	public: scene_camera():
@@ -25,8 +31,8 @@ class psyq::scene_camera:
 	}
 
 	public: explicit scene_camera(
-		psyq::scene_token::shared_ptr const& i_token,
-		char const* const                    i_name = NULL)
+		typename this_type::token::shared_ptr const& i_token,
+		char const* const                            i_name = NULL)
 	{
 		this->set_node(i_token, i_name);
 	}
@@ -37,10 +43,10 @@ class psyq::scene_camera:
 	    @param[in] i_focus_name   焦点として使うnodeのID文字列。
 	 */
 	public: scene_camera(
-		psyq::scene_token::shared_ptr const& i_camera_token,
-		char const* const                    i_camera_name,
-		psyq::scene_token::shared_ptr const& i_focus_token,
-		char const* const                    i_focus_name)
+		typename this_type::token::shared_ptr const& i_camera_token,
+		char const* const                            i_camera_name,
+		typename this_type::token::shared_ptr const& i_focus_token,
+		char const* const                            i_focus_name)
 	{
 		this->set_node(i_camera_token, i_camera_name);
 		this->set_focus_node(i_focus_token, i_focus_name);
@@ -52,11 +58,11 @@ class psyq::scene_camera:
 	    @param[in] i_name  cameraとして使うnodeのID文字列。
 	 */
 	public: psyq_extern::scene_node const* set_node(
-		psyq::scene_token::shared_ptr const& i_token,
-		char const* const                    i_name = NULL,
-		char const* const                    i_focus = NULL)
+		typename this_type::token::shared_ptr const& i_token,
+		char const* const                            i_name = NULL,
+		char const* const                            i_focus = NULL)
 	{
-		psyq::scene_token* const a_token(i_token.get());
+		typename this_type::token* const a_token(i_token.get());
 		if (NULL != a_token)
 		{
 			psyq_extern::scene_node* const a_node(
@@ -81,7 +87,7 @@ class psyq::scene_camera:
 
 	/** @brief camera-nodeを持つscene-tokenを取得。
 	 */
-	public: psyq::scene_token::shared_ptr const& get_token() const
+	public: typename this_type::token::shared_ptr const& get_token() const
 	{
 		return this->camera_token_;
 	}
@@ -92,10 +98,10 @@ class psyq::scene_camera:
 	    @param[in] i_name  焦点として使うnodeのID文字列。
 	 */
 	public: psyq_extern::scene_node const* set_focus_node(
-		psyq::scene_token::shared_ptr const& i_token,
+		typename this_type::token::shared_ptr const& i_token,
 		char const* const                    i_name)
 	{
-		psyq::scene_token* const a_token(i_token.get());
+		typename this_type::token* const a_token(i_token.get());
 		if (NULL != i_name && NULL != a_token)
 		{
 			psyq_extern::scene_node* const a_node(
@@ -119,7 +125,7 @@ class psyq::scene_camera:
 
 	/** @brief 焦点nodeを持つscene-tokenを取得。
 	 */
-	public: psyq::scene_token::shared_ptr const& get_focus_token() const
+	public: typename this_type::token::shared_ptr const& get_focus_token() const
 	{
 		return this->focus_token_;
 	}
@@ -133,10 +139,10 @@ class psyq::scene_camera:
 	}
 
 	//-------------------------------------------------------------------------
-	private: psyq::scene_token::shared_ptr  camera_token_;
-	private: psyq_extern::scene_node const* camera_node_;
-	private: psyq::scene_token::shared_ptr  focus_token_;
-	private: psyq_extern::scene_node const* focus_node_;
+	private: typename this_type::token::shared_ptr camera_token_;
+	private: psyq_extern::scene_node const*        camera_node_;
+	private: typename this_type::token::shared_ptr focus_token_;
+	private: psyq_extern::scene_node const*        focus_node_;
 };
 
 #endif // PSYQ_SCENE_CAMERA_HPP_

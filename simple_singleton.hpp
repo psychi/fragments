@@ -112,7 +112,7 @@ class psyq::simple_singleton:
 				&construct_instance< t_constructor >, &i_constructor));
 
 		// singleton-instance‚ğæ“¾B
-		PSYQ_ASSERT(NULL != this_type::instance().pointer);
+		PSYQ_ASSERT(NULL != this_type::pointer());
 		return this_type::pointer();
 	}
 

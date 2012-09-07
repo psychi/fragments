@@ -4,22 +4,22 @@
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-packageを用意するevent。
 class event_RESERVE_PACKAGE:
-	public psyq::scene_event::action
+	public psyq::scene_world::event::action
 {
 	typedef event_RESERVE_PACKAGE this_type;
-	typedef psyq::scene_event::action super_type;
+	typedef psyq::scene_world::event::action super_type;
 
 	//-------------------------------------------------------------------------
-	public: static psyq::scene_event::hash::value get_hash()
+	public: static psyq::scene_world::event::hash::value get_hash()
 	{
-		return psyq::scene_event::hash::generate("RESERVE_PACKAGE");
+		return psyq::scene_world::event::hash::generate("RESERVE_PACKAGE");
 	}
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		psyq::scene_world&              io_world,
-		psyq::scene_event::point const& i_point,
-		psyq::scene_event::line::time_scale::value const)
+		psyq::scene_world&                     io_world,
+		psyq::scene_world::event::point const& i_point,
+		psyq::scene_world::event::line::scale::value const)
 	{
 		// worldにpackageを用意。
 		io_world.get_package(io_world.event_.replace_hash(i_point.integer));
@@ -29,31 +29,31 @@ class event_RESERVE_PACKAGE:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenにanimationを設定するevent。
 class event_SET_TOKEN_ANIMATION:
-	public psyq::scene_event::action
+	public psyq::scene_world::event::action
 {
 	typedef event_SET_TOKEN_ANIMATION this_type;
-	typedef psyq::scene_event::action super_type;
+	typedef psyq::scene_world::event::action super_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		psyq::scene_event::item::offset token;
-		psyq::scene_event::item::offset package;
-		psyq::scene_event::item::offset flags;
-		psyq::scene_event::real         start;
+		psyq::scene_world::event::item::offset token;
+		psyq::scene_world::event::item::offset package;
+		psyq::scene_world::event::item::offset flags;
+		psyq::scene_world::event::real         start;
 	};
 
 	//-------------------------------------------------------------------------
-	public: static psyq::scene_event::hash::value get_hash()
+	public: static psyq::scene_world::event::hash::value get_hash()
 	{
-		return psyq::scene_event::hash::generate("SET_TOKEN_ANIMATION");
+		return psyq::scene_world::event::hash::generate("SET_TOKEN_ANIMATION");
 	}
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		psyq::scene_world&              io_world,
-		psyq::scene_event::point const& i_point,
-		psyq::scene_event::line::time_scale::value const)
+		psyq::scene_world&                     io_world,
+		psyq::scene_world::event::point const& i_point,
+		psyq::scene_world::event::line::scale::value const)
 	{
 		// 書庫から引数を取得。
 		this_type::parameters const* const a_parameters(
@@ -69,7 +69,7 @@ class event_SET_TOKEN_ANIMATION:
 			if (NULL != a_package)
 			{
 				// worldからtokenを取得し、animationを設定。
-				psyq::scene_token* const a_token(
+				psyq::scene_world::token* const a_token(
 					io_world.get_token(
 						io_world.event_.replace_hash(
 							a_parameters->token)).get());
@@ -85,29 +85,29 @@ class event_SET_TOKEN_ANIMATION:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenにmodelを設定するevent。
 class event_SET_TOKEN_MODEL:
-	public psyq::scene_event::action
+	public psyq::scene_world::event::action
 {
 	typedef event_SET_TOKEN_MODEL this_type;
-	typedef psyq::scene_event::action super_type;
+	typedef psyq::scene_world::event::action super_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		psyq::scene_event::item::offset token;   ///< token名の書庫offset値。
-		psyq::scene_event::item::offset package; ///< package名の書庫offset値。
+		psyq::scene_world::event::item::offset token;   ///< token名の書庫offset値。
+		psyq::scene_world::event::item::offset package; ///< package名の書庫offset値。
 	};
 
 	//-------------------------------------------------------------------------
-	public: static psyq::scene_event::hash::value get_hash()
+	public: static psyq::scene_world::event::hash::value get_hash()
 	{
-		return psyq::scene_event::hash::generate("SET_TOKEN_MODEL");
+		return psyq::scene_world::event::hash::generate("SET_TOKEN_MODEL");
 	}
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		psyq::scene_world&              io_world,
-		psyq::scene_event::point const& i_point,
-		psyq::scene_event::line::time_scale::value const)
+		psyq::scene_world&                     io_world,
+		psyq::scene_world::event::point const& i_point,
+		psyq::scene_world::event::line::scale::value const)
 	{
 		// 書庫から引数を取得。
 		this_type::parameters const* const a_parameters(
@@ -123,7 +123,7 @@ class event_SET_TOKEN_MODEL:
 			if (NULL != a_package)
 			{
 				// worldからtokenを取得し、modelを設定。
-				psyq::scene_token* const a_token(
+				psyq::scene_world::token* const a_token(
 					io_world.get_token(
 						io_world.event_.replace_hash(
 							a_parameters->token)).get());
@@ -140,39 +140,39 @@ class event_SET_TOKEN_MODEL:
 /// @brief scene-sectionにcameraを設定するevent。
 struct event_SET_SECTION_CAMERA
 {
-	psyq::scene_event::item::offset section;      ///< section名の書庫offset値。
-	psyq::scene_event::item::offset camera_token; ///< cameraに使うtoken名の書庫offset値。
-	psyq::scene_event::item::offset camera_node;  ///< cameraに使うnode名の書庫offset値。
-	psyq::scene_event::item::offset focus_token;  ///< focusに使うtoken名の書庫offset値。
-	psyq::scene_event::item::offset focus_node;   ///< focusに使うnode名の書庫offset値。
+	psyq::scene_world::event::item::offset section;      ///< section名の書庫offset値。
+	psyq::scene_world::event::item::offset camera_token; ///< cameraに使うtoken名の書庫offset値。
+	psyq::scene_world::event::item::offset camera_node;  ///< cameraに使うnode名の書庫offset値。
+	psyq::scene_world::event::item::offset focus_token;  ///< focusに使うtoken名の書庫offset値。
+	psyq::scene_world::event::item::offset focus_node;   ///< focusに使うnode名の書庫offset値。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-sectionにlightを設定するevent。
 class event_SET_SECTION_LIGHT:
-	public psyq::scene_event::action
+	public psyq::scene_world::event::action
 {
 	typedef event_SET_SECTION_LIGHT this_type;
-	typedef psyq::scene_event::action super_type;
+	typedef psyq::scene_world::event::action super_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		psyq::scene_event::item::offset section; ///< sectionの名前。
-		psyq::scene_event::item::offset token;   ///< lightとして使うtokenの名前。
+		psyq::scene_world::event::item::offset section; ///< sectionの名前。
+		psyq::scene_world::event::item::offset token;   ///< lightとして使うtokenの名前。
 	};
 
 	//-------------------------------------------------------------------------
-	public: static psyq::scene_event::hash::value get_hash()
+	public: static psyq::scene_world::event::hash::value get_hash()
 	{
-		return psyq::scene_event::hash::generate("SET_SECTION_LIGHT");
+		return psyq::scene_world::event::hash::generate("SET_SECTION_LIGHT");
 	}
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		psyq::scene_world&              io_world,
-		psyq::scene_event::point const& i_point,
-		psyq::scene_event::line::time_scale::value const)
+		psyq::scene_world&                     io_world,
+		psyq::scene_world::event::point const& i_point,
+		psyq::scene_world::event::line::scale::value const)
 	{
 		// 書庫から引数を取得。
 		this_type::parameters const* const a_parameters(
@@ -181,13 +181,13 @@ class event_SET_SECTION_LIGHT:
 		if (NULL != a_parameters)
 		{
 			// worldからsectionを取得。
-			psyq::scene_section* const a_section(
+			psyq::scene_world::section* const a_section(
 				io_world.get_section(
 					io_world.event_.replace_hash(a_parameters->section)).get());
 			if (NULL != a_section)
 			{
 				// worldからlight-tokenを検索し、sectionに設定。
-				psyq::scene_token::shared_ptr const& a_token(
+				psyq::scene_world::token::shared_ptr const& a_token(
 					io_world.get_token(
 						io_world.event_.replace_hash(a_parameters->token)));
 				if (NULL != a_token.get())
@@ -202,29 +202,29 @@ class event_SET_SECTION_LIGHT:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenを用意するevent。
 class event_RESERVE_TOKEN:
-	public psyq::scene_event::action
+	public psyq::scene_world::event::action
 {
 	typedef event_RESERVE_TOKEN this_type;
-	typedef psyq::scene_event::action super_type;
+	typedef psyq::scene_world::event::action super_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		psyq::scene_event::item::offset section; ///< section名の書庫offset値。
-		psyq::scene_event::item::offset token;   ///< 追加するtoken名の書庫offset値。
+		psyq::scene_world::event::item::offset section; ///< section名の書庫offset値。
+		psyq::scene_world::event::item::offset token;   ///< 追加するtoken名の書庫offset値。
 	};
 
 	//-------------------------------------------------------------------------
-	public: static psyq::scene_event::hash::value get_hash()
+	public: static psyq::scene_world::event::hash::value get_hash()
 	{
-		return psyq::scene_event::hash::generate("RESERVE_TOKEN");
+		return psyq::scene_world::event::hash::generate("RESERVE_TOKEN");
 	}
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		psyq::scene_world&              io_world,
-		psyq::scene_event::point const& i_point,
-		psyq::scene_event::line::time_scale::value const)
+		psyq::scene_world&                     io_world,
+		psyq::scene_world::event::point const& i_point,
+		psyq::scene_world::event::line::scale::value const)
 	{
 		// 書庫から引数を取得。
 		this_type::parameters const* const a_parameters(
@@ -243,29 +243,29 @@ class event_RESERVE_TOKEN:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenを削除するevent。
 class event_REMOVE_TOKEN:
-	public psyq::scene_event::action
+	public psyq::scene_world::event::action
 {
 	typedef event_REMOVE_TOKEN this_type;
-	typedef psyq::scene_event::action super_type;
+	typedef psyq::scene_world::event::action super_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		psyq::scene_event::item::offset section; ///< section名の書庫offset値。
-		psyq::scene_event::item::offset token;   ///< 削除するtoken名の書庫offset値。
+		psyq::scene_world::event::item::offset section; ///< section名の書庫offset値。
+		psyq::scene_world::event::item::offset token;   ///< 削除するtoken名の書庫offset値。
 	};
 
 	//-------------------------------------------------------------------------
-	public: static psyq::scene_event::hash::value get_hash()
+	public: static psyq::scene_world::event::hash::value get_hash()
 	{
-		return psyq::scene_event::hash::generate("REMOVE_TOKEN");
+		return psyq::scene_world::event::hash::generate("REMOVE_TOKEN");
 	}
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		psyq::scene_world&              io_world,
-		psyq::scene_event::point const& i_point,
-		psyq::scene_event::line::time_scale::value const)
+		psyq::scene_world&                     io_world,
+		psyq::scene_world::event::point const& i_point,
+		psyq::scene_world::event::line::scale::value const)
 	{
 		// 書庫から引数を取得。
 		this_type::parameters const* const a_parameters(
@@ -273,11 +273,11 @@ class event_REMOVE_TOKEN:
 				i_point.integer));
 		if (NULL != a_parameters)
 		{
-			psyq::scene_event::hash::value const a_token(
+			psyq::scene_world::event::hash::value const a_token(
 				io_world.event_.replace_hash(a_parameters->token));
-			psyq::scene_event::hash::value const a_section(
+			psyq::scene_world::event::hash::value const a_section(
 				io_world.event_.replace_hash(a_parameters->section));
-			if (psyq::scene_event::hash::EMPTY != a_section)
+			if (psyq::scene_world::event::hash::EMPTY != a_section)
 			{
 				// sectionからtokenを削除。
 				io_world.remove_token(a_token, a_section);

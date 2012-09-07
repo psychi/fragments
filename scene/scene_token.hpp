@@ -6,7 +6,7 @@ namespace psyq
 	class texture_package;
 	class shader_package;
 	class scene_package;
-	class scene_token;
+	template< typename, typename > class scene_token;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -43,12 +43,12 @@ class psyq::scene_package
 	public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
 
 	//-------------------------------------------------------------------------
-	public: template< typename t_allocator >
+	public: template< typename t_allocator, typename t_string >
 	static this_type::shared_ptr load(
-		t_allocator const&               i_allocator,
-		psyq::scene_event::string const& i_scene_path,
-		psyq::scene_event::string const& i_shader_path,
-		psyq::scene_event::string const& i_texture_path)
+		t_allocator const& i_allocator,
+		t_string const&    i_scene_path,
+		t_string const&    i_shader_path,
+		t_string const&    i_texture_path)
 	{
 		if (!i_scene_path.empty())
 		{
@@ -124,9 +124,10 @@ class psyq::scene_package
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template< typename t_hash, typename t_real >
 class psyq::scene_token
 {
-	typedef psyq::scene_token this_type;
+	typedef psyq::scene_token< t_hash, t_real > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
@@ -135,8 +136,13 @@ class psyq::scene_token
 	public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
 
 	//-------------------------------------------------------------------------
-	public: psyq_extern::scene_unit                   scene_;
-	public: psyq::scene_event::time_scale::shared_ptr time_scale_;
+	public: typedef t_hash hash;
+	public: typedef t_real real;
+
+	//-------------------------------------------------------------------------
+	public: psyq_extern::scene_unit scene_;
+	public: typename psyq::event_line< t_hash, t_real >::scale::shared_ptr
+		time_scale_;
 };
 
 #endif // !PSYQ_SCENE_TOKEN_HPP_

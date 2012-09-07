@@ -10,7 +10,7 @@ namespace psyq
 /** @brief event‘ŒÉ‚ª‚Â€–ÚB
     @tparam t_hash event‘ŒÉ‚Åg‚¤•¶š—ñhashB
  */
-template< typename t_hash = psyq::fnv1_hash32 >
+template< typename t_hash >
 struct psyq::event_item
 {
 	private: typedef psyq::event_item< t_hash > this_type;

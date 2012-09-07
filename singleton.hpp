@@ -304,7 +304,7 @@ class psyq::singleton:
 	 */
 	public: static int get_destruct_priority()
 	{
-		if (NULL != this_type::get())
+		if (NULL != this_type::pointer())
 		{
 			return this_type::instance().get_priority();
 		}
@@ -318,7 +318,7 @@ class psyq::singleton:
 	 */
 	public: static int set_destruct_priority(int const i_priority)
 	{
-		if (NULL != this_type::get())
+		if (NULL != this_type::pointer())
 		{
 			// lock‚µ‚Ä‚©‚ç—Dæ‡ˆÊ‚ğ•ÏX‚·‚éB
 			PSYQ_LOCK_GUARD< t_mutex > const a_lock(

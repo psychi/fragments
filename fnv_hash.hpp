@@ -28,6 +28,9 @@ class psyq::_fnv_hash:
 	public: static typename t_traits::value const PRIME = t_traits::PRIME;
 
 	//-------------------------------------------------------------------------
+	private: _fnv_hash();
+
+	//-------------------------------------------------------------------------
 	/** @brief 文字列のhash値を生成。
 	    @param[in] i_string NULL文字で終了する文字列の先頭位置。
 	    @param[in] i_offset fnv-hash開始値。

@@ -10,36 +10,31 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief sceneのevent全体を管理する。
  */
+//template< typename t_hash, typename t_real, typename t_string >
 class psyq::scene_event
 {
 	typedef psyq::scene_event this_type;
 
 	//-------------------------------------------------------------------------
-	public: typedef psyq_extern::allocator allocator;
+	private: typedef psyq::fnv1_hash32 t_hash;
+	private: typedef float t_real;
+	private: typedef std::basic_string<
+		char,
+		std::char_traits< char >,
+		psyq_extern::allocator::rebind< char >::other >
+			t_string;
 
 	//-------------------------------------------------------------------------
-	public: typedef psyq::file_buffer archive;      ///< 書庫。
-	public: typedef psyq::fnv1_hash32 hash;         ///< 書庫で使われているhash関数。
-	public: typedef this_type::hash::value integer; ///< 書庫で使われている整数の型。
-	public: typedef float real;                     ///< 書庫で使われている実数の型。
-	public: typedef char letter;                    ///< 書庫で使われている文字の型。
-
-	//-------------------------------------------------------------------------
-	public: typedef psyq::event_item< this_type::hash > item;
-	public: typedef psyq::event_point< this_type::hash, this_type::real > point;
-	public: typedef psyq::event_line< this_type::hash, this_type::real > line;
-	public: typedef this_type::line::time_scale time_scale;
-
-	//-------------------------------------------------------------------------
-	/// 文字列の型。
-	public: typedef std::basic_string<
-		this_type::letter,
-		std::char_traits< this_type::letter >,
-		this_type::allocator::rebind< this_type::letter >::other >
-			string;
-
-	/// 定数文字列の型。
-	public: typedef psyq::basic_const_string< this_type::letter > const_string;
+	public: typedef t_hash hash; ///< event書庫で使われているhash関数。
+	public: typedef t_real real; ///< event書庫で使われている実数の型。
+	public: typedef t_string string; ///< 文字列の型。
+	public: typedef psyq::basic_const_string< t_string::value_type >
+		const_string; ///< 文字列定数の型。
+	public: typedef t_string::allocator_type allocator;
+	public: typedef psyq::file_buffer archive; ///< event書庫。
+	public: typedef psyq::event_item< t_hash > item;
+	public: typedef psyq::event_point< t_hash, t_real > point;
+	public: typedef psyq::event_line< t_hash, t_real > line;
 
 	//-------------------------------------------------------------------------
 	/// event-actionの基底class。
@@ -61,56 +56,67 @@ class psyq::scene_event
 	    @param[in]     i_time   eventを適用したあとに経過する時間。
 		 */
 		public: virtual void apply(
-			psyq::scene_world&                         io_world,
-			psyq::scene_event::point const&            i_point,
-			psyq::scene_event::time_scale::value const i_time) = 0;
+			psyq::scene_world&                          io_world,
+			psyq::scene_event::point const&             i_point,
+			psyq::scene_event::line::scale::value const i_time) = 0;
 	};
 
 	//-------------------------------------------------------------------------
 	// event置換語の辞書。
 	public: typedef std::map<
-		this_type::hash::value,
-		this_type::string,
-		std::less< this_type::hash::value >,
+		t_hash::value,
+		t_string,
+		std::less< t_hash::value >,
 		this_type::allocator::rebind<
-			std::pair<
-				this_type::hash::value const,
-				this_type::string > >::other >
-					word_map;
+			std::pair< t_hash::value const, t_string > >::other >
+				word_map;
 
 	// event-lineの辞書。
 	public: typedef std::map<
-		this_type::hash::value,
+		t_hash::value,
 		this_type::line,
-		std::less< this_type::hash::value >,
+		std::less< t_hash::value >,
 		this_type::allocator::rebind<
-			std::pair<
-				this_type::hash::value const,
-				this_type::line > >::other >
-					line_map;
+			std::pair< t_hash::value const, this_type::line > >::other >
+				line_map;
 
 	/// event-actionの辞書。
 	public: typedef std::map<
-		this_type::hash::value,
+		t_hash::value,
 		this_type::action::shared_ptr,
-		std::less< this_type::hash::value >,
+		std::less< t_hash::value >,
 		this_type::allocator::rebind<
 			std::pair<
-				this_type::hash::value const,
-				this_type::action::shared_ptr > >::other >
+				t_hash::value const, this_type::action::shared_ptr > >::other >
 					action_map;
 
 	//-------------------------------------------------------------------------
-	/** @brief 空のscene-eventを構築。
+	/** @brief scene-eventを構築。
+	    @param[in] i_archive   使用するevent書庫。
 	    @param[in] i_allocator 初期化に使うmemory割当子。
 	 */
-	public: template< typename t_allocator >
-	explicit scene_event(t_allocator const& i_allocator):
+	public: template< typename t_other_allocator >
+	scene_event(
+		PSYQ_SHARED_PTR< this_type::archive const > const& i_archive,
+		t_other_allocator const&                           i_allocator):
 	words_(this_type::word_map::key_compare(), i_allocator),
 	lines_(this_type::line_map::key_compare(), i_allocator),
-	actions_(this_type::action_map::key_compare(), i_allocator)
+	actions_(this_type::action_map::key_compare(), i_allocator),
+	archive_(i_archive)
 	{
 		// pass
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief event全体を交換。
+	    @param[in,out] io_target 交換するevent全体。
+	 */
+	public: void swap(this_type& io_target)
+	{
+		this->words_.swap(io_target.words_);
+		this->lines_.swap(io_target.lines_);
+		this->actions_.swap(io_target.actions_);
+		this->archive_.swap(io_target.archive_);
 	}
 
 	//-------------------------------------------------------------------------
@@ -119,12 +125,11 @@ class psyq::scene_event
 	    @param[in] i_word 置換した後の単語。
 	    @return event置換語。
 	 */
-	public: this_type::string const& add_word(
+	public: t_string const& add_word(
 		this_type::const_string const& i_key,
-		this_type::string const&       i_word)
+		t_string const&                i_word)
 	{
-		this_type::string& a_word(
-			this->words_[this_type::hash::generate(i_key)]);
+		t_string& a_word(this->words_[t_hash::generate(i_key)]);
 		a_word = i_word;
 		return a_word;
 	}
@@ -135,7 +140,7 @@ class psyq::scene_event
 	    @return 追加したevent-lineへのpointer。
 	 */
 	public: this_type::line* add_line(
-		this_type::hash::value const        i_points,
+		t_hash::value const                 i_points,
 		this_type::line_map::key_type const i_key)
 	{
 		// 既存のevent-lineを辞書から検索。
@@ -179,22 +184,22 @@ class psyq::scene_event
 	    @param[in] i_offset 変換する文字列の書庫内offset値。
 	    @return 置換後の文字列のhash値。
 	 */
-	public: this_type::hash::value replace_hash(
+	public: t_hash::value replace_hash(
 		this_type::item::offset const i_offset)
 	const
 	{
-		return this_type::hash::generate(this->replace_string(i_offset));
+		return t_hash::generate(this->replace_string(i_offset));
 	}
 
 	/** @brief 置換語辞書を介して文字列を置換し、hash値を取得。
 	    @param[in] i_source 置換される文字列。
 	    @return 置換後の文字列のhash値。
 	 */
-	public: this_type::hash::value replace_hash(
+	public: t_hash::value replace_hash(
 		this_type::const_string const& i_source)
 	const
 	{
-		return this_type::hash::generate(this->replace_string(i_source));
+		return t_hash::generate(this->replace_string(i_source));
 	}
 
 	//-------------------------------------------------------------------------
@@ -202,8 +207,7 @@ class psyq::scene_event
 	    @param[in] i_offset 変換する文字列のevent書庫内offset値。
 	    @return 置換後の文字列。
 	 */
-	public: this_type::string replace_string(
-		this_type::item::offset const i_offset)
+	public: t_string replace_string(this_type::item::offset const i_offset)
 	const
 	{
 		return this->replace_string(this->get_string(i_offset));
@@ -213,11 +217,10 @@ class psyq::scene_event
 	    @param[in] i_string 置換される文字列。
 	    @return 置換後の文字列。
 	 */
-	public: this_type::string replace_string(
-		this_type::const_string const& i_source)
+	public: t_string replace_string(this_type::const_string const& i_source)
 	const
 	{
-		return this_type::item::replace_word< this_type::string >(
+		return this_type::item::replace_word< t_string >(
 			this->words_, i_source.begin(), i_source.end());
 	}
 
@@ -229,9 +232,9 @@ class psyq::scene_event
 		this_type::item::offset const i_offset)
 	const
 	{
-		this_type::const_string::const_pointer const a_begin(
-			this->get_address< this_type::const_string::value_type >(
-				i_offset));
+		// 文字列の先頭位置を取得。
+		t_string::const_pointer const a_begin(
+			this->get_address< t_string::value_type >(i_offset));
 		if (NULL == a_begin)
 		{
 			return this_type::const_string();
@@ -242,8 +245,7 @@ class psyq::scene_event
 		if (a_length <= 0)
 		{
 			// 文字数が0の場合は、NULL文字まで数える。
-			a_length = this_type::const_string::traits_type::length(
-				a_begin + 1);
+			a_length = t_string::traits_type::length(a_begin + 1);
 		}
 		return this_type::const_string(a_begin + 1, a_length);
 	}
@@ -254,12 +256,14 @@ class psyq::scene_event
 	    @param[in] i_offset 値のevent書庫offset値。
 	 */
 	public: template< typename t_value >
-	t_value const* get_address(this_type::item::offset const i_offset) const
+	t_value const* get_address(
+		this_type::item::offset const i_offset) const
 	{
 		this_type::item::archive const* const a_archive(
 			this->archive_.get());
 		return NULL != a_archive?
-			this_type::item::get_address< t_value >(*a_archive, i_offset):
+			this_type::item::get_address< t_value >(
+				*a_archive, i_offset):
 			NULL;
 	}
 
@@ -273,12 +277,21 @@ class psyq::scene_event
 	}
 
 	//-------------------------------------------------------------------------
+	/// event書庫。
+	private: PSYQ_SHARED_PTR< this_type::archive const > archive_;
+
 	public: this_type::word_map   words_;   ///< event置換語の辞書。
 	public: this_type::line_map   lines_;   ///< event-lineの辞書。
 	public: this_type::action_map actions_; ///< event-actionの辞書。
+};
 
-	/// event書庫。
-	private: PSYQ_SHARED_PTR< this_type::archive const > archive_;
+//-----------------------------------------------------------------------------
+namespace std
+{
+	void swap(psyq::scene_event& io_left, psyq::scene_event& io_right)
+	{
+		io_left.swap(io_right);
+	}
 };
 
 #endif // !PSYQ_SCENE_EVENT_BOOK_HPP_

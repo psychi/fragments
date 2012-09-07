@@ -3,24 +3,32 @@
 
 namespace psyq
 {
-	class scene_section;
+	template< typename, typename > class scene_section;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template< typename t_hash, typename t_real >
 class psyq::scene_section:
 	private boost::noncopyable
 {
-	typedef psyq::scene_section this_type;
+	typedef psyq::scene_section< t_hash, t_real > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
 	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
 
 	//-------------------------------------------------------------------------
+	public: typedef t_hash hash;
+	public: typedef t_real real;
+	public: typedef psyq::scene_token< t_hash, t_real > token;
+	public: typedef psyq::scene_camera< t_hash, t_real > camera;
+
+	//-------------------------------------------------------------------------
 	private: typedef std::vector<
-		psyq::scene_token::shared_ptr,
-		psyq_extern::allocator::rebind< scene_token::shared_ptr >::other >
-			token_container;
+		typename this_type::token::shared_ptr,
+		typename psyq_extern::allocator::template rebind<
+			typename this_type::token::shared_ptr >::other >
+				token_container;
 
 	//-------------------------------------------------------------------------
 	public: template< typename t_allocator >
@@ -34,7 +42,8 @@ class psyq::scene_section:
 	/** @brief scene-tokenを追加。
 	    @param[in] i_token 追加するscene-token。
 	 */
-	public: bool add_token(psyq::scene_token::shared_ptr const& i_token)
+	public: bool add_token(
+		typename this_type::token::shared_ptr const& i_token)
 	{
 		if (NULL == i_token.get())
 		{
@@ -51,7 +60,9 @@ class psyq::scene_section:
 	    @param[in] i_token 検索するscene-token。
 	    @return trueなら見つかった。falseなら見つからなかった。
 	 */
-	public: bool find_token(psyq::scene_token::shared_ptr const& i_token) const
+	public: bool find_token(
+		typename this_type::token::shared_ptr const& i_token)
+	const
 	{
 		return this->find_token_index(i_token.get()) < this->tokens_.size();
 	}
@@ -59,7 +70,8 @@ class psyq::scene_section:
 	/** @brief scene-tokenを削除。
 	    @param[in] i_token 削除するscene-token。
 	 */
-	public: bool remove_token(psyq::scene_token::shared_ptr const& i_token)
+	public: bool remove_token(
+		typename this_type::token::shared_ptr const& i_token)
 	{
 		std::size_t const a_index(this->find_token_index(i_token.get()));
 		if (a_index < this->tokens_.size())
@@ -101,7 +113,9 @@ class psyq::scene_section:
 	}
 
 	//-------------------------------------------------------------------------
-	private: std::size_t find_token_index(scene_token const* const i_token) const
+	private: std::size_t find_token_index(
+		typename this_type::token const* const i_token)
+	const
 	{
 		if (NULL != i_token)
 		{
@@ -117,9 +131,9 @@ class psyq::scene_section:
 	}
 
 	//-------------------------------------------------------------------------
-	public:  psyq::scene_camera::shared_ptr camera_;
-	public:  psyq::scene_token::shared_ptr  light_;
-	private: this_type::token_container     tokens_;
+	public:  typename this_type::camera::shared_ptr camera_;
+	public:  typename this_type::token::shared_ptr  light_;
+	private: typename this_type::token_container    tokens_;
 };
 
 #endif // !PSYQ_SCENE_SECTION_HPP_

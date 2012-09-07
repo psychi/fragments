@@ -8,7 +8,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template< typename t_hash, typename t_real = float >
+template< typename t_hash, typename t_real >
 struct psyq::event_point
 {
 	typename t_hash::value type; ///< eventの種別。
@@ -21,7 +21,7 @@ struct psyq::event_point
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template< typename t_hash, typename t_real = float >
+template< typename t_hash, typename t_real >
 class psyq::event_line
 {
 	typedef psyq::event_line< t_hash, t_real > this_type;
@@ -31,7 +31,7 @@ class psyq::event_line
 	public: typedef t_real real;
 	public: typedef typename t_hash::value integer;
 	public: typedef psyq::layered_scale< t_real, typename this_type::integer >
-		time_scale;
+		scale;
 	public: typedef psyq::event_point< t_hash, t_real > point;
 	public: typedef typename psyq::event_item< t_hash >::archive archive;
 
@@ -59,7 +59,7 @@ class psyq::event_line
 	//-------------------------------------------------------------------------
 	public: void swap(this_type& io_target)
 	{
-		this->time_scale_.swap(io_target.time_scale_);
+		this->scale_.swap(io_target.scale_);
 		this->archive_.swap(io_target.archive_);
 		std::swap(this->first_point_, io_target.first_point_);
 		std::swap(this->last_point_, io_target.last_point_);
@@ -117,8 +117,8 @@ class psyq::event_line
 		if (NULL != this->last_point_)
 		{
 			t_real const a_time(
-				NULL != this->time_scale_.get()?
-					i_time * this->time_scale_->get_scale(): i_time);
+				NULL != this->scale_.get()?
+					i_time * this->scale_->get_scale(): i_time);
 			switch (i_origin)
 			{
 				case SEEK_SET: // 先頭が基準時間。
@@ -277,7 +277,7 @@ class psyq::event_line
 	}
 
 	//-------------------------------------------------------------------------
-	public: typename this_type::time_scale::shared_ptr time_scale_;
+	public: typename this_type::scale::shared_ptr scale_;
 
 	/// 参照しているevent書庫。
 	private: PSYQ_SHARED_PTR< typename this_type::archive const > archive_;

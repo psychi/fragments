@@ -186,9 +186,7 @@ class psyq::file_buffer:
 
 namespace std
 {
-	void swap(
-		psyq::file_buffer& io_left,
-		psyq::file_buffer& io_right)
+	void swap(psyq::file_buffer& io_left, psyq::file_buffer& io_right)
 	{
 		io_left.swap(io_right);
 	}

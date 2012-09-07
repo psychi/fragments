@@ -26,8 +26,8 @@ class psyq::dynamic_storage:
 		// pass
 	}
 
-	/** @param[in] i_size      確保するmemoryの大きさ。byte単位。
-	    @param[in] i_allocator memoryの確保に使う割当子。
+	/** @param[in] i_allocator memoryの確保に使う割当子。
+	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
 	 */
 	public: template< typename t_allocator >
 	dynamic_storage(
@@ -187,9 +187,7 @@ class psyq::dynamic_storage:
 
 namespace std
 {
-	void swap(
-		psyq::dynamic_storage& io_left,
-		psyq::dynamic_storage& io_right)
+	void swap(psyq::dynamic_storage& io_left, psyq::dynamic_storage& io_right)
 	{
 		io_left.swap(io_right);
 	}

@@ -148,6 +148,7 @@ class psyq::event_line
 			return;
 		}
 
+		// i‚ß‚éŽžŠÔ‚ðŒˆ’èB
 		t_real a_cache_time(this->cache_time_);
 		t_real a_rest_time(this->rest_time_);
 		if (a_cache_time < 0)
@@ -231,6 +232,8 @@ class psyq::event_line
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief 0‚ðŠî€‚ÉŽžŠÔ‚ðÝ’èB
+	 */
 	private: void seek_front(t_real const i_time)
 	{
 		this->last_point_ = this->first_point_;

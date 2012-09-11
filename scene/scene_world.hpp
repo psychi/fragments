@@ -14,7 +14,16 @@ class psyq::scene_world
 	typedef psyq::scene_world this_type;
 
 	//-------------------------------------------------------------------------
-	public: typedef psyq::scene_event event;
+	private: typedef psyq::fnv1_hash32 t_hash;
+	private: typedef float t_real;
+	private: typedef std::basic_string<
+		char,
+		std::char_traits< char >,
+		psyq_extern::allocator::rebind< char >::other >
+			t_string;
+
+	//-------------------------------------------------------------------------
+	public: typedef psyq::scene_event< t_hash, t_real, t_string > event;
 	public: typedef psyq::scene_token<
 		this_type::event::hash, this_type::event::real >
 			token;

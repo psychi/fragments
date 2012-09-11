@@ -49,8 +49,7 @@ class psyq::basic_const_string
 	public: basic_const_string(t_value const (&i_string)[1])
 	{
 		PSYQ_ASSERT(0 == i_string[0]);
-		this->data_ = NULL;
-		this->length_ = 0;
+		new(this) this_type();
 	}
 
 	/** @tparam    t_length 文字列literalの要素数。
@@ -1098,8 +1097,8 @@ class psyq::basic_const_string
 		static_cast< typename this_type::size_type >(-1);
 
 	//-------------------------------------------------------------------------
-	private: t_value const*                data_;
-	private: typename this_type::size_type length_;
+	private: t_value const*                data_;   ///< 文字列の先頭位置。
+	private: typename this_type::size_type length_; ///< 文字数。
 };
 
 //.............................................................................

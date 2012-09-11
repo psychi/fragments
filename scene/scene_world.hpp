@@ -1,6 +1,8 @@
 #ifndef PSYQ_SCENE_WORLD_HPP_
 #define PSYQ_SCENE_WORLD_HPP_
 
+//#include <psyq/scene/scene_event.hpp>
+
 namespace psyq
 {
 	class scene_world;
@@ -86,8 +88,8 @@ class psyq::scene_world
 	//-------------------------------------------------------------------------
 	public: template< typename t_allocator >
 	scene_world(
-		PSYQ_SHARED_PTR< this_type::event::archive const > const& i_archive,
-		t_allocator const&                                        i_allocator):
+		PSYQ_SHARED_PTR< psyq::event_archive const > const& i_archive,
+		t_allocator const&                                  i_allocator):
 	event_(i_archive, i_allocator),
 	packages_(this_type::package_map::key_compare(), i_allocator),
 	sections_(this_type::section_map::key_compare(), i_allocator),

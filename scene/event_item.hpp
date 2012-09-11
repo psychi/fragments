@@ -1,8 +1,9 @@
-#ifndef PSYQ_EVENT_ITEM_HPP_
-#define PSYQ_EVENT_ITEM_HPP_
+#ifndef PSYQ_SCENE_EVENT_ITEM_HPP_
+#define PSYQ_SCENE_EVENT_ITEM_HPP_
 
 namespace psyq
 {
+	typedef psyq::file_buffer event_archive;
 	template< typename > struct event_item;
 }
 
@@ -18,7 +19,6 @@ struct psyq::event_item
 	//-------------------------------------------------------------------------
 	public: typedef t_hash hash;
 	public: typedef typename t_hash::value offset;
-	public: typedef psyq::file_buffer archive;
 
 	//-------------------------------------------------------------------------
 	private: struct item_compare_by_name
@@ -40,8 +40,8 @@ struct psyq::event_item
 	    @retval ==NULL 該当するitemは見つからなかった。
 	 */
 	public: static this_type const* find(
-		typename this_type::archive const& i_archive,
-		typename t_hash::value const       i_name)
+		psyq::event_archive const&   i_archive,
+		typename t_hash::value const i_name)
 	{
 		// item配列の先頭位置を取得。
 		std::size_t const a_offset(
@@ -87,8 +87,8 @@ struct psyq::event_item
 	    @retval ==NULL instanceは見つからなかった。
 	 */
 	public: static void const* get_address(
-		typename this_type::archive const& i_archive,
-		typename this_type::offset const   i_offset)
+		psyq::event_archive const&       i_archive,
+		typename this_type::offset const i_offset)
 	{
 		return 0 < i_offset && i_offset < i_archive.get_region_size()?
 			i_offset + static_cast< char const* >(
@@ -105,8 +105,8 @@ struct psyq::event_item
 	 */
 	public: template< typename t_value >
 	static t_value const* get_address(
-		typename this_type::archive const& i_archive,
-		typename this_type::offset const   i_offset)
+		psyq::event_archive const&       i_archive,
+		typename this_type::offset const i_offset)
 	{
 		void const* const a_address(
 			this_type::get_address(i_archive, i_offset));
@@ -129,10 +129,7 @@ struct psyq::event_item
 	    @param[in] i_begin      置換元となる文字列の開始文字位置。
 	    @param[in] i_end        置換元となる文字列の末尾文字位置。
 	 */
-	public: template<
-		typename t_string,
-		typename t_map,
-		typename t_iterator >
+	public: template< typename t_string, typename t_map, typename t_iterator >
 	static t_string replace_word(
 		t_map const&     i_dictionary,
 		t_iterator const i_begin,
@@ -152,10 +149,7 @@ struct psyq::event_item
 	    @param[in] i_end        置換元となる文字列の末尾文字位置。
 	    @param[in] i_allocator  出力文字列のmemory割当子。
 	 */
-	public: template<
-		typename t_string,
-		typename t_map,
-		typename t_iterator >
+	public: template< typename t_string, typename t_map, typename t_iterator >
 	static t_string replace_word(
 		t_map const&                             i_dictionary,
 		t_iterator const                         i_begin,
@@ -166,6 +160,7 @@ struct psyq::event_item
 		t_string a_string(i_allocator);
 		for (;;)
 		{
+			// 文字列から'('と')'で囲まれた範囲を検索。 
 			std::pair< t_iterator, t_iterator > const a_range(
 				this_type::find_word(a_last_end, i_end));
 			if (a_range.first == a_range.second)
@@ -231,4 +226,4 @@ struct psyq::event_item
 	public: typename this_type::offset begin; ///< itemの先頭位置の書庫内offset値。
 };
 
-#endif // !PSYQ_EVENT_ITEM_HPP_
+#endif // !PSYQ_SCENE_EVENT_ITEM_HPP_

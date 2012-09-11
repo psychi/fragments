@@ -1,50 +1,13 @@
 #ifndef PSYQ_SCENE_EVENT_HPP_
 #define PSYQ_SCENE_EVENT_HPP_
 
+//#include <psyq/const_string.hpp>
+//#include <psyq/scene/event_action.hpp>
+
 namespace psyq
 {
-	class scene_world;
-	template< typename, typename, typename > class event_action;
 	template< typename, typename, typename > class scene_event;
 }
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// event-actionの基底class。
-template< typename t_hash, typename t_real, typename t_string >
-class psyq::event_action
-{
-	typedef psyq::event_action< t_hash, t_real, t_string > this_type;
-
-	public: typedef t_hash hash; ///< event書庫で使われているhash関数。
-	public: typedef t_real real; ///< event書庫で使われている実数の型。
-	public: typedef t_string string; ///< 文字列の型。
-	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
-	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
-	public: typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
-	public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
-
-	// 用意されているevent-action。
-	public: class reserve_package;
-	public: class set_token_animation;
-	public: class set_token_model;
-	public: class set_section_camera;
-	public: class set_section_light;
-	public: class reserve_token;
-	public: class remove_token;
-
-	protected: event_action() {}
-	public: virtual ~event_action() {}
-
-	/** event-actionを適用。
-	    @param[in,out] io_world 適用対象のscene-world。
-	    @param[in]     i_point  eventを発生させたpoint。
-	    @param[in]     i_time   eventを適用したあとに経過する時間。
-	 */
-	public: virtual void apply(
-		psyq::scene_world&                         io_world,
-		psyq::event_point< t_hash, t_real > const& i_point,
-		t_real const                               i_time) = 0;
-};
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief sceneのevent全体を管理する。
@@ -61,12 +24,11 @@ class psyq::scene_event
 	public: typedef psyq::basic_const_string<
 		typename t_string::value_type, typename t_string::traits_type >
 			const_string; ///< 文字列定数の型。
-	public: typedef typename t_string::allocator_type allocator;
-	public: typedef psyq::file_buffer archive; ///< event書庫。
 	public: typedef psyq::event_item< t_hash > item;
 	public: typedef psyq::event_point< t_hash, t_real > point;
 	public: typedef psyq::event_line< t_hash, t_real > line;
 	public: typedef psyq::event_action< t_hash, t_real, t_string > action;
+	public: typedef typename t_string::allocator_type allocator;
 
 	//-------------------------------------------------------------------------
 	// event置換語の辞書。
@@ -74,7 +36,7 @@ class psyq::scene_event
 		typename t_hash::value,
 		t_string,
 		std::less< typename t_hash::value >,
-		typename this_type::allocator::rebind<
+		typename this_type::allocator::template rebind<
 			std::pair< typename t_hash::value const, t_string > >::other >
 				word_map;
 
@@ -83,7 +45,7 @@ class psyq::scene_event
 		typename t_hash::value,
 		typename this_type::line,
 		std::less< typename t_hash::value >,
-		typename this_type::allocator::rebind<
+		typename this_type::allocator::template rebind<
 			std::pair<
 				typename t_hash::value const,
 				typename this_type::line > >::other >
@@ -94,7 +56,7 @@ class psyq::scene_event
 		typename t_hash::value,
 		typename this_type::action::shared_ptr,
 		std::less< typename t_hash::value >,
-		typename this_type::allocator::rebind<
+		typename this_type::allocator::template rebind<
 			std::pair<
 				typename t_hash::value const,
 				typename this_type::action::shared_ptr > >::other >
@@ -107,8 +69,8 @@ class psyq::scene_event
 	 */
 	public: template< typename t_other_allocator >
 	scene_event(
-		PSYQ_SHARED_PTR< typename this_type::archive const > const& i_archive,
-		t_other_allocator const&                                    i_allocator):
+		PSYQ_SHARED_PTR< psyq::event_archive const > const& i_archive,
+		t_other_allocator const&                            i_allocator):
 	archive_(i_archive),
 	words_(typename this_type::word_map::key_compare(), i_allocator),
 	lines_(typename this_type::line_map::key_compare(), i_allocator),
@@ -233,7 +195,7 @@ class psyq::scene_event
 		typename this_type::const_string const& i_source)
 	const
 	{
-		return typename this_type::item::replace_word< t_string >(
+		return this_type::item::template replace_word< t_string >(
 			this->words_, i_source.begin(), i_source.end());
 	}
 
@@ -246,8 +208,8 @@ class psyq::scene_event
 	const
 	{
 		// 文字列の先頭位置を取得。
-		t_string::const_pointer const a_begin(
-			this->get_address< t_string::value_type >(i_offset));
+		typename t_string::const_pointer const a_begin(
+			this->get_address< typename t_string::value_type >(i_offset));
 		if (NULL == a_begin)
 		{
 			return typename this_type::const_string();
@@ -272,10 +234,9 @@ class psyq::scene_event
 	t_value const* get_address(
 		typename this_type::item::offset const i_offset) const
 	{
-		typename this_type::item::archive const* const a_archive(
-			this->archive_.get());
+		psyq::event_archive const* const a_archive(this->archive_.get());
 		return NULL != a_archive?
-			typename this_type::item::get_address< t_value >(
+			this_type::item::template get_address< t_value >(
 				*a_archive, i_offset):
 			NULL;
 	}
@@ -283,7 +244,7 @@ class psyq::scene_event
 	//-------------------------------------------------------------------------
 	/** @brief event書庫を取得。
 	 */
-	public: PSYQ_SHARED_PTR< typename this_type::archive const > const&
+	public: PSYQ_SHARED_PTR< psyq::event_archive const > const&
 	get_archive() const
 	{
 		return this->archive_;
@@ -291,7 +252,7 @@ class psyq::scene_event
 
 	//-------------------------------------------------------------------------
 	/// event書庫。
-	private: PSYQ_SHARED_PTR< typename this_type::archive const > archive_;
+	private: PSYQ_SHARED_PTR< psyq::event_archive const > archive_;
 
 	public: typename this_type::word_map   words_;   ///< event置換語の辞書。
 	public: typename this_type::line_map   lines_;   ///< event-lineの辞書。

@@ -1,5 +1,8 @@
-#ifndef PSYQ_EVENT_LINE_HPP_
-#define PSYQ_EVENT_LINE_HPP_
+#ifndef PSYQ_SCENE_EVENT_LINE_HPP_
+#define PSYQ_SCENE_EVENT_LINE_HPP_
+
+//#include <psyq/layered_scale.hpp>
+//#include <psyq/scene/event_item.hpp>
 
 namespace psyq
 {
@@ -33,7 +36,6 @@ class psyq::event_line
 	public: typedef psyq::layered_scale< t_real, typename this_type::integer >
 		scale;
 	public: typedef psyq::event_point< t_hash, t_real > point;
-	public: typedef typename psyq::event_item< t_hash >::archive archive;
 
 	//-------------------------------------------------------------------------
 	public: event_line():
@@ -49,8 +51,8 @@ class psyq::event_line
 	    @param[in] i_points  event-point配列の名前hash値。
 	 */
 	public: event_line(
-		PSYQ_SHARED_PTR< typename this_type::archive const > const& i_archive,
-		typename t_hash::value const                                i_points)
+		PSYQ_SHARED_PTR< psyq::event_archive const > const& i_archive,
+		typename t_hash::value const                        i_points)
 	{
 		new(this) this_type();
 		this->reset(i_archive, i_points);
@@ -73,12 +75,12 @@ class psyq::event_line
 	    @param[in] i_name    event-point配列の名前hash値。
 	 */
 	public: bool reset(
-		PSYQ_SHARED_PTR< typename this_type::archive const > const& i_archive,
-		typename t_hash::value const                                i_name)
+		PSYQ_SHARED_PTR< psyq::event_archive const > const& i_archive,
+		typename t_hash::value const                        i_name)
 	{
 		// 書庫を取得。
 		typedef psyq::event_item< t_hash > item;
-		typename this_type::archive const* const a_archive(i_archive.get());
+		psyq::event_archive const* const a_archive(i_archive.get());
 		if (NULL != a_archive)
 		{
 			// 書庫から項目を取得。
@@ -197,7 +199,7 @@ class psyq::event_line
 	}
 
 	//-------------------------------------------------------------------------
-	public: PSYQ_SHARED_PTR< typename this_type::archive const > const&
+	public: PSYQ_SHARED_PTR< psyq::event_archive const > const&
 	get_archive() const
 	{
 		return this->archive_;
@@ -283,7 +285,7 @@ class psyq::event_line
 	public: typename this_type::scale::shared_ptr scale_;
 
 	/// 参照しているevent書庫。
-	private: PSYQ_SHARED_PTR< typename this_type::archive const > archive_;
+	private: PSYQ_SHARED_PTR< psyq::event_archive const > archive_;
 
 	/// event配列の先頭位置。
 	private: typename this_type::point const* first_point_;
@@ -309,4 +311,4 @@ namespace std
 	}
 }
 
-#endif // !PSYQ_EVENT_LINE_HPP_
+#endif // !PSYQ_SCENE_EVENT_LINE_HPP_

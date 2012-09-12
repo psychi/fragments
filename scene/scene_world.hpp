@@ -438,9 +438,8 @@ class psyq::scene_world
 			if (NULL != a_token)
 			{
 				t_real const a_time_scale(
-					NULL != a_token->time_scale_.get()?
-						i_frame_count * a_token->time_scale_->get_scale():
-						i_frame_count);
+					this_type::event::line::scale::get_scale(
+						a_token->time_scale_, i_frame_count));
 				psyq_extern::forward_scene_unit(
 					a_token->scene_, i_frame_time, a_time_scale);
 			}
@@ -470,12 +469,12 @@ class psyq::scene_world
 	/** @brief event-lineの時間を更新し、発生したeventをcontainerに登録。
 	    @param[in,out] io_dispatch   発生したeventを登録するcontainer。
 	    @param[in]     i_lines       更新するevent-lineの辞書。
-	    @param[in]     i_frame_count 進めるframe数。
+	    @param[in]     i_time        進める時間。
 	 */
 	private: static void forward_events(
 		this_type::dispatch_map&          io_dispatch,
 		this_type::event::line_map const& i_lines,
-		t_real const                      i_frame_count)
+		t_real const                      i_time)
 	{
 		for (
 			this_type::event::line_map::const_iterator i = i_lines.begin();
@@ -485,7 +484,7 @@ class psyq::scene_world
 			this_type::event::line_map::mapped_type& a_line(
 				const_cast< this_type::event::line_map::mapped_type& >(
 					i->second));
-			a_line.seek(i_frame_count, SEEK_CUR);
+			a_line.seek(i_time, SEEK_CUR);
 			a_line._dispatch(io_dispatch);
 		}
 	}

@@ -105,6 +105,14 @@ class psyq::layered_scale
 	}
 
 	//-------------------------------------------------------------------------
+	public: static t_value get_scale(
+		typename this_type::shared_ptr const& i_scale,
+		t_value const                         i_base = 1)
+	{
+		this_type* const a_scale(i_scale.get());
+		return NULL != a_scale? a_scale->get_scale() * i_base: i_base;
+	}
+
 	/** @brief 現在のscale値を取得。
 	 */
 	public: t_value get_scale()
@@ -115,9 +123,8 @@ class psyq::layered_scale
 			// count値が異なっていたら更新する。
 			this->lerp_scale_.update(a_count - this->last_count_);
 			this->last_count_ = a_count;
-			this_type* const a_super(this->super_scale_.get());
-			this->last_scale_ = this->lerp_scale_.current() * (
-				NULL != a_super? a_super->get_scale(): 1);
+			this->last_scale_ = this_type::get_scale(
+				this->super_scale_, this->lerp_scale_.current());
 		}
 		return this->last_scale_;
 	}

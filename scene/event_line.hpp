@@ -126,8 +126,7 @@ class psyq::event_line
 		if (NULL != this->last_point_)
 		{
 			t_real const a_time(
-				NULL != this->scale_.get()?
-					i_time * this->scale_->get_scale(): i_time);
+				this_type::scale::get_scale(this->scale_, i_time));
 			switch (i_origin)
 			{
 				case SEEK_SET: // æ“ª‚ªŠî€ŠÔB

@@ -185,8 +185,11 @@ class psyq::event_action< t_hash, t_real, t_string >::set_token_animation:
 							a_parameters->token)).get());
 				if (NULL != a_token)
 				{
-					//psyq_extern::set_animation(
-					//	a_token->scene_, *a_package, i_time);
+					psyq_extern::set_animation(
+						a_token->scene_,
+						*a_package,
+						psyq::scene_world::event::line::scale::get_scale(
+							a_token->time_scale_, i_time));
 				}
 			}
 		}
@@ -342,7 +345,7 @@ class psyq::event_action< t_hash, t_real, t_string >::set_event_line:
 	public: virtual void apply(
 		psyq::scene_world&                         io_world,
 		psyq::event_point< t_hash, t_real > const& i_point,
-		t_real const)
+		t_real const                               i_time)
 	{
 		// ‘ŒÉ‚©‚çˆø”‚ğæ“¾B
 		typename this_type::parameters const* const a_parameters(
@@ -366,6 +369,7 @@ class psyq::event_action< t_hash, t_real, t_string >::set_event_line:
 				// event-line‚Étime-scale‚ğİ’èB
 				a_line->scale_ = io_world.event_.get_scale(
 					io_world.event_.replace_hash(a_parameters->scale));
+				a_line->seek(i_time, SEEK_CUR);
 			}
 		}
 	}

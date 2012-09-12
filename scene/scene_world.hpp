@@ -114,21 +114,16 @@ class psyq::scene_world
 	    @param[in] i_fps   1秒あたりのframe数。
 	    @param[in] i_count 進めるframe数。
 	 */
-	public: void update(t_real i_fps, unsigned const i_count = 1)
+	public: void update(t_real const i_fps, unsigned const i_count = 1)
 	{
-		t_real a_count;
-		if (0 < i_fps)
+		if (i_fps <= 0)
 		{
-			a_count = static_cast< t_real >(i_count);
-		}
-		else
-		{
-			a_count = 0;
-			i_fps = 1;
+			return;
 		}
 
 		// sceneの時間を更新。
 		this_type::event::line::scale::update_count(i_count);
+		t_real const a_count(static_cast< t_real >(i_count));
 		this_type::forward_scenes(this->tokens_, i_fps, a_count);
 
 		// eventを更新。

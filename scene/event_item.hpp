@@ -3,13 +3,13 @@
 
 namespace psyq
 {
-	typedef psyq::file_buffer event_archive;
+	typedef psyq::file_buffer event_package;
 	template< typename > struct event_item;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief event書庫が持つ項目。
-    @tparam t_hash event書庫で使う文字列hash。
+/** @brief event-packageが持つ項目。
+    @tparam t_hash event-packageで使う文字列hash。
  */
 template< typename t_hash >
 struct psyq::event_item
@@ -33,33 +33,33 @@ struct psyq::event_item
 	};
 
 	//-------------------------------------------------------------------------
-	/** @brief 書庫からevent-itemを検索。
-	    @param[in] i_archive 書庫。
+	/** @brief event-packageからevent-itemを検索。
+	    @param[in] i_package event-package。
 	    @param[in] i_name    検索するitemの名前hash値。
 	    @retval !=NULL 見つけたitemへのpointer。
 	    @retval ==NULL 該当するitemは見つからなかった。
 	 */
 	public: static this_type const* find(
-		psyq::event_archive const&   i_archive,
+		psyq::event_package const&   i_package,
 		typename t_hash::value const i_name)
 	{
 		// item配列の先頭位置を取得。
 		std::size_t const a_offset(
 			*static_cast< typename this_type::offset const* >(
-				i_archive.get_region_address()));
+				i_package.get_region_address()));
 		if (sizeof(typename this_type::offset) <= a_offset)
 		{
 			this_type const* const a_begin(
-				this_type::get_address< this_type >(i_archive, a_offset));
+				this_type::get_address< this_type >(i_package, a_offset));
 			if (NULL != a_begin)
 			{
 				// item配列の末尾位置を取得。
 				this_type const* const a_end(
 					static_cast< this_type const* >(
 						static_cast< void const* >(
-							i_archive.get_region_size() +
+							i_package.get_region_size() +
 							static_cast< char const* >(
-								i_archive.get_region_address()))));
+								i_package.get_region_address()))));
 
 				// item配列から、名前に合致するものを検索。
 				this_type a_key;
@@ -80,36 +80,36 @@ struct psyq::event_item
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 書庫内に存在するinstanceへのpointerを取得。
-	    @param[in] i_archive 書庫。
-	    @param[in] i_offset  書庫先頭位置からのoffset値。
+	/** @brief event-package内に存在するinstanceへのpointerを取得。
+	    @param[in] i_package event-package。
+	    @param[in] i_offset  event-package先頭位置からのoffset値。
 	    @retval !=NULL instanceへのpointer。
 	    @retval ==NULL instanceは見つからなかった。
 	 */
 	public: static void const* get_address(
-		psyq::event_archive const&       i_archive,
+		psyq::event_package const&       i_package,
 		typename this_type::offset const i_offset)
 	{
-		return 0 < i_offset && i_offset < i_archive.get_region_size()?
+		return 0 < i_offset && i_offset < i_package.get_region_size()?
 			i_offset + static_cast< char const* >(
-				i_archive.get_region_address()):
+				i_package.get_region_address()):
 			NULL;
 	}
 
-	/** @brief 書庫内に存在するinstanceへのpointerを取得。
+	/** @brief event-package内に存在するinstanceへのpointerを取得。
 		@tparam t_value      instanceの型。
-	    @param[in] i_archive 書庫。
-	    @param[in] i_offset  書庫先頭位置からのoffset値。
+	    @param[in] i_package event-package。
+	    @param[in] i_offset  event-package先頭位置からのoffset値。
 	    @retval !=NULL instanceへのpointer。
 	    @retval ==NULL instanceは見つからなかった。
 	 */
 	public: template< typename t_value >
 	static t_value const* get_address(
-		psyq::event_archive const&       i_archive,
+		psyq::event_package const&       i_package,
 		typename this_type::offset const i_offset)
 	{
 		void const* const a_address(
-			this_type::get_address(i_archive, i_offset));
+			this_type::get_address(i_package, i_offset));
 		std::size_t const a_alignment(boost::alignment_of< t_value >::value);
 		if (0 != reinterpret_cast< std::size_t >(a_address) % a_alignment)
 		{
@@ -221,9 +221,9 @@ struct psyq::event_item
 	}
 
 	//-------------------------------------------------------------------------
-	public: typename t_hash::value     name;  ///< itemの名前。
-	public: typename t_hash::value     type;  ///< itemの型名。
-	public: typename this_type::offset begin; ///< itemの先頭位置の書庫内offset値。
+	public: typename t_hash::value     name;  ///< itemの名前hash値。
+	public: typename t_hash::value     type;  ///< itemの型名hash値。
+	public: typename this_type::offset begin; ///< itemの先頭位置のevent-package内offset値。
 };
 
 #endif // !PSYQ_SCENE_EVENT_ITEM_HPP_

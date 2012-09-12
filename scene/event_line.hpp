@@ -47,22 +47,22 @@ class psyq::event_line
 		// pass
 	}
 
-	/** @param[in] i_archive event-point配列が保存されている書庫。
+	/** @param[in] i_package event-point配列が保存されているevent-package。
 	    @param[in] i_points  event-point配列の名前hash値。
 	 */
 	public: event_line(
-		PSYQ_SHARED_PTR< psyq::event_archive const > const& i_archive,
+		PSYQ_SHARED_PTR< psyq::event_package const > const& i_package,
 		typename t_hash::value const                        i_points)
 	{
 		new(this) this_type();
-		this->reset(i_archive, i_points);
+		this->reset(i_package, i_points);
 	}
 
 	//-------------------------------------------------------------------------
 	public: void swap(this_type& io_target)
 	{
 		this->scale_.swap(io_target.scale_);
-		this->archive_.swap(io_target.archive_);
+		this->package_.swap(io_target.package_);
 		std::swap(this->first_point_, io_target.first_point_);
 		std::swap(this->last_point_, io_target.last_point_);
 		std::swap(this->cache_time_, io_target.cache_time_);
@@ -71,29 +71,29 @@ class psyq::event_line
 
 	//-------------------------------------------------------------------------
 	/** @brief event-lineを初期化。
-	    @param[in] i_archive event-point配列が保存されている書庫。
+	    @param[in] i_package event-point配列が保存されているevent-package。
 	    @param[in] i_name    event-point配列の名前hash値。
 	 */
 	public: bool reset(
-		PSYQ_SHARED_PTR< psyq::event_archive const > const& i_archive,
+		PSYQ_SHARED_PTR< psyq::event_package const > const& i_package,
 		typename t_hash::value const                        i_points)
 	{
-		// 書庫を取得。
+		// event-packageを取得。
 		typedef psyq::event_item< t_hash > item;
-		psyq::event_archive const* const a_archive(i_archive.get());
-		if (NULL != a_archive)
+		psyq::event_package const* const a_package(i_package.get());
+		if (NULL != a_package)
 		{
-			// 書庫から項目を取得。
-			item const* const a_item(item::find(*a_archive, i_points));
+			// event-packageからevent項目を取得。
+			item const* const a_item(item::find(*a_package, i_points));
 			if (NULL != a_item)
 			{
 				// 項目からevent-point配列の先頭位置を取得。
 				typename this_type::point const* const a_first_point(
 					item::template get_address< typename this_type::point >(
-						*a_archive, a_item->begin));
+						*a_package, a_item->begin));
 				if (NULL != a_first_point)
 				{
-					this->archive_ = i_archive;
+					this->package_ = i_package;
 
 					// event-lineを初期化。
 					this->first_point_ = a_first_point;
@@ -197,10 +197,12 @@ class psyq::event_line
 	}
 
 	//-------------------------------------------------------------------------
-	public: PSYQ_SHARED_PTR< psyq::event_archive const > const&
-	get_archive() const
+	/** @brief event-packageを取得。
+	 */
+	public: PSYQ_SHARED_PTR< psyq::event_package const > const& get_package()
+	const
 	{
-		return this->archive_;
+		return this->package_;
 	}
 
 	//-------------------------------------------------------------------------
@@ -282,8 +284,8 @@ class psyq::event_line
 	//-------------------------------------------------------------------------
 	public: typename this_type::scale::shared_ptr scale_;
 
-	/// 参照しているevent書庫。
-	private: PSYQ_SHARED_PTR< psyq::event_archive const > archive_;
+	/// 参照しているevent-package。
+	private: PSYQ_SHARED_PTR< psyq::event_package const > package_;
 
 	/// event配列の先頭位置。
 	private: typename this_type::point const* first_point_;

@@ -18,8 +18,8 @@ class psyq::scene_event
 	typedef psyq::scene_event< t_hash, t_real, t_string > this_type;
 
 	//-------------------------------------------------------------------------
-	public: typedef t_hash hash; ///< event書庫で使われているhash関数。
-	public: typedef t_real real; ///< event書庫で使われている実数の型。
+	public: typedef t_hash hash; ///< event-packageで使われているhash関数。
+	public: typedef t_real real; ///< event-packageで使われている実数の型。
 	public: typedef t_string string; ///< 文字列の型。
 	public: typedef psyq::basic_const_string<
 		typename t_string::value_type, typename t_string::traits_type >
@@ -75,14 +75,14 @@ class psyq::scene_event
 
 	//-------------------------------------------------------------------------
 	/** @brief scene-eventを構築。
-	    @param[in] i_archive   使用するevent書庫。
+	    @param[in] i_package   使用するevent-package。
 	    @param[in] i_allocator 初期化に使うmemory割当子。
 	 */
 	public: template< typename t_other_allocator >
 	scene_event(
-		PSYQ_SHARED_PTR< psyq::event_archive const > const& i_archive,
+		PSYQ_SHARED_PTR< psyq::event_package const > const& i_package,
 		t_other_allocator const&                            i_allocator):
-	archive_(i_archive),
+	package_(i_package),
 	actions_(typename this_type::action_map::key_compare(), i_allocator),
 	words_(typename this_type::word_map::key_compare(), i_allocator),
 	lines_(typename this_type::line_map::key_compare(), i_allocator),
@@ -97,7 +97,7 @@ class psyq::scene_event
 	 */
 	public: void swap(this_type& io_target)
 	{
-		this->archive_.swap(io_target.archive_);
+		this->package_.swap(io_target.package_);
 		this->actions_.swap(io_target.actions_);
 		this->words_.swap(io_target.words_);
 		this->lines_.swap(io_target.lines_);
@@ -150,7 +150,7 @@ class psyq::scene_event
 		if (this->lines_.end() == a_position || a_position->first != i_line)
 		{
 			// 新たなevent-lineを辞書に追加。
-			typename this_type::line a_line(this->archive_, i_points);
+			typename this_type::line a_line(this->package_, i_points);
 			if (a_line.is_stop())
 			{
 				return NULL;
@@ -159,7 +159,7 @@ class psyq::scene_event
 				a_position,
 				typename this_type::line_map::value_type(i_line, a_line));
 		}
-		else if (!a_position->second.reset(this->archive_, i_points))
+		else if (!a_position->second.reset(this->package_, i_points))
 		{
 			// 既存のevent-lineの初期化に失敗。
 			return NULL;
@@ -221,7 +221,7 @@ class psyq::scene_event
 
 	//-------------------------------------------------------------------------
 	/** @brief 置換語辞書を介して、書庫に存在する文字列を置換。
-	    @param[in] i_offset 変換する文字列のevent書庫内offset値。
+	    @param[in] i_offset 変換する文字列のevent-package内offset値。
 	    @return 置換後の文字列。
 	 */
 	public: t_string replace_string(
@@ -245,7 +245,7 @@ class psyq::scene_event
 
 	//-------------------------------------------------------------------------
 	/** @brief 書庫に存在する文字列を取得。
-	    @param[in] i_offset 文字列のevent書庫内offset値。
+	    @param[in] i_offset 文字列のevent-package内offset値。
 	 */
 	public: typename this_type::const_string get_string(
 		typename this_type::item::offset const i_offset)
@@ -270,33 +270,32 @@ class psyq::scene_event
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief event書庫に存在する値へのpointerを取得。
+	/** @brief event-packageに存在する値へのpointerを取得。
 	    @tparam    t_value  値の型。
-	    @param[in] i_offset 値のevent書庫offset値。
+	    @param[in] i_offset 値のevent-packageoffset値。
 	 */
 	public: template< typename t_value >
 	t_value const* get_address(
 		typename this_type::item::offset const i_offset) const
 	{
-		psyq::event_archive const* const a_archive(this->archive_.get());
-		return NULL != a_archive?
+		psyq::event_package const* const a_package(this->package_.get());
+		return NULL != a_package?
 			this_type::item::template get_address< t_value >(
-				*a_archive, i_offset):
+				*a_package, i_offset):
 			NULL;
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief event書庫を取得。
+	/** @brief event-packageを取得。
 	 */
-	public: PSYQ_SHARED_PTR< psyq::event_archive const > const&
-	get_archive() const
+	public: PSYQ_SHARED_PTR< psyq::event_package const > const& get_package()
+	const
 	{
-		return this->archive_;
+		return this->package_;
 	}
 
 	//-------------------------------------------------------------------------
-	/// event書庫。
-	private: PSYQ_SHARED_PTR< psyq::event_archive const > archive_;
+	private: PSYQ_SHARED_PTR< psyq::event_package const > package_;
 
 	public: typename this_type::action_map actions_; ///< event-actionの辞書。
 	public: typename this_type::word_map   words_;   ///< event置換語の辞書。

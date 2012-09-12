@@ -82,11 +82,14 @@ class psyq::scene_world
 					dispatch_map;
 
 	//-------------------------------------------------------------------------
+	/** @param[in] i_package   使用するevent-package。
+	    @param[in] i_allocator 初期化に使用するmemory割当子。
+	 */
 	public: template< typename t_allocator >
 	scene_world(
-		PSYQ_SHARED_PTR< psyq::event_archive const > const& i_archive,
+		PSYQ_SHARED_PTR< psyq::event_package const > const& i_package,
 		t_allocator const&                                  i_allocator):
-	event_(i_archive, i_allocator),
+	event_(i_package, i_allocator),
 	packages_(this_type::package_map::key_compare(), i_allocator),
 	sections_(this_type::section_map::key_compare(), i_allocator),
 	tokens_(this_type::token_map::key_compare(), i_allocator)
@@ -131,43 +134,43 @@ class psyq::scene_world
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief packageを取得。
-	    package名に対応するpackageが存在しない場合は、
+	/** @brief scene-packageを取得。
+	    package名に対応するscene-packageが存在しない場合は、
 	    fileから読み込んで追加する。
-	    @param[in] i_name 取得するpackageの名前hash値。
-	    @return package名に対応するpackage。取得に失敗した場合は空。
+	    @param[in] i_name 取得するscene-packageの名前hash値。
+	    @return package名に対応するscene-package。取得に失敗した場合は空。
 	 */
 	public: psyq::scene_package::shared_ptr const& get_package(
 		t_hash::value const i_name)
 	{
 		if (t_hash::EMPTY != i_name)
 		{
-			// 既存のpackaeを検索。
+			// 既存のscene-packaeを検索。
 			psyq::scene_package::shared_ptr& a_package(
 				this->packages_[i_name]);
 			if (NULL != a_package.get())
 			{
-				// packageの取得に成功。
+				// scene-packageの取得に成功。
 				return a_package;
 			}
 
-			// fileからpackageを読み込む。
+			// fileからscene-packageを読み込む。
 			this->load_package(i_name).swap(a_package);
 			if (NULL != a_package.get())
 			{
-				// packageの取得に成功。
+				// scene-packageの取得に成功。
 				return a_package;
 			}
 			PSYQ_ASSERT(false);
 			this->packages_.erase(i_name);
 		}
 
-		// packageの取得に失敗。
+		// scene-packageの取得に失敗。
 		return psyq::_get_null_shared_ptr< psyq::scene_package >();
 	}
 
-	/** @brief packageを検索。
-	    @param[in] i_name 検索するpackageの名前hash値。
+	/** @brief scene-packageを検索。
+	    @param[in] i_name 検索するscene-packageの名前hash値。
 	    @return 見つけたpacakge。見つからなかった場合は空。
 	 */
 	public: psyq::scene_package::shared_ptr const& find_package(
@@ -177,9 +180,9 @@ class psyq::scene_world
 		return this_type::find_element(this->packages_, i_name);
 	}
 
-	/** @brief packageを削除。
-	    @param[in] i_name 削除するpackageの名前hash値。
-	    @return 削除したpackage。削除しなかった場合は空。
+	/** @brief scene-packageを削除。
+	    @param[in] i_name 削除するscene-packageの名前hash値。
+	    @return 削除したscene-package。削除しなかった場合は空。
 	 */
 	public: psyq::scene_package::shared_ptr remove_package(
 		t_hash::value const i_name)
@@ -419,8 +422,8 @@ class psyq::scene_world
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief fileからpacakgeを読み込む。
-	    @param[in] i_name packageの名前hash値。
+	/** @brief fileからscene-pacakgeを読み込む。
+	    @param[in] i_name scene-packageの名前hash値。
 	 */
 	private: psyq::scene_package::shared_ptr load_package(
 		t_hash::value const i_name)
@@ -429,7 +432,7 @@ class psyq::scene_world
 		// 書庫からpackage-pathを検索。
 		this_type::event::item const* const a_item(
 			this_type::event::item::find(
-				*this->event_.get_archive(), i_name));
+				*this->event_.get_package(), i_name));
 		if (NULL != a_item)
 		{
 			this_type::package_path const* const a_path(
@@ -437,7 +440,7 @@ class psyq::scene_world
 					a_item->begin));
 			if (NULL != a_path)
 			{
-				// fileからpackageを読み込む。
+				// fileからscene-packageを読み込む。
 				psyq::scene_package::shared_ptr const a_package(
 					psyq::scene_package::load(
 						this->packages_.get_allocator(),

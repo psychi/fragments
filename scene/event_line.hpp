@@ -76,7 +76,7 @@ class psyq::event_line
 	 */
 	public: bool reset(
 		PSYQ_SHARED_PTR< psyq::event_archive const > const& i_archive,
-		typename t_hash::value const                        i_name)
+		typename t_hash::value const                        i_points)
 	{
 		// 書庫を取得。
 		typedef psyq::event_item< t_hash > item;
@@ -84,15 +84,13 @@ class psyq::event_line
 		if (NULL != a_archive)
 		{
 			// 書庫から項目を取得。
-			item const* const a_item(item::find(*a_archive, i_name));
+			item const* const a_item(item::find(*a_archive, i_points));
 			if (NULL != a_item)
 			{
 				// 項目からevent-point配列の先頭位置を取得。
 				typename this_type::point const* const a_first_point(
-					////item::get_address< this_type::point >(
-					////	*a_archive, a_item->begin));
-					static_cast< typename this_type::point const* >(
-						item::get_address(*a_archive, a_item->begin)));
+					item::template get_address< typename this_type::point >(
+						*a_archive, a_item->begin));
 				if (NULL != a_first_point)
 				{
 					this->archive_ = i_archive;

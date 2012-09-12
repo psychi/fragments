@@ -62,6 +62,17 @@ class psyq::scene_event
 				typename this_type::action::shared_ptr > >::other >
 					action_map;
 
+	/// time-scaleの辞書。
+	public: typedef std::map<
+		typename t_hash::value,
+		typename this_type::line::scale::shared_ptr,
+		std::less< typename t_hash::value >,
+		typename this_type::allocator::template rebind<
+			std::pair<
+				typename t_hash::value const,
+				typename this_type::line::scale::shared_ptr > >::other >
+					scale_map;
+
 	//-------------------------------------------------------------------------
 	/** @brief scene-eventを構築。
 	    @param[in] i_archive   使用するevent書庫。
@@ -72,9 +83,10 @@ class psyq::scene_event
 		PSYQ_SHARED_PTR< psyq::event_archive const > const& i_archive,
 		t_other_allocator const&                            i_allocator):
 	archive_(i_archive),
+	actions_(typename this_type::action_map::key_compare(), i_allocator),
 	words_(typename this_type::word_map::key_compare(), i_allocator),
 	lines_(typename this_type::line_map::key_compare(), i_allocator),
-	actions_(typename this_type::action_map::key_compare(), i_allocator)
+	scales_(typename this_type::scale_map::key_compare(), i_allocator)
 	{
 		// pass
 	}
@@ -85,15 +97,30 @@ class psyq::scene_event
 	 */
 	public: void swap(this_type& io_target)
 	{
+		this->archive_.swap(io_target.archive_);
+		this->actions_.swap(io_target.actions_);
 		this->words_.swap(io_target.words_);
 		this->lines_.swap(io_target.lines_);
-		this->actions_.swap(io_target.actions_);
-		this->archive_.swap(io_target.archive_);
+		this->scales_.swap(io_target.scales_);
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief event-actionを追加。
+	    @param t_action 追加するevent-actionの型。
+	    @return 追加したevent-actionへの共有pointer。
+	 */
+	public: template< typename t_action >
+	typename this_type::action::shared_ptr const& add_action()
+	{
+		typename this_type::action::shared_ptr& a_action(
+			this->actions_[t_action::get_hash()]);
+		a_action = PSYQ_ALLOCATE_SHARED< t_action >(
+			this->actions_.get_allocator());
+		return a_action;
+	}
+
 	/** @brief event置換語を追加。
-	    @param[in] i_key  置換される単語。
+	    @param[in] i_key  置換される単語のhash値。
 	    @param[in] i_word 置換した後の単語。
 	    @return event置換語。
 	 */
@@ -107,18 +134,20 @@ class psyq::scene_event
 	}
 
 	/** @brief event-lineを追加。
+	    @param[in] i_key    event-line辞書に登録するkeyとなる名前hash値。
 	    @param[in] i_points 書庫にあるevent-point配列の名前hash値。
-	    @param[in] i_key    event-line辞書に登録する際のkey。
+		@param[in] i_scale  event-lineに設定するtime-scaleの名前hash値。
 	    @return 追加したevent-lineへのpointer。
 	 */
 	public: typename this_type::line* add_line(
-		typename t_hash::value const                 i_points,
-		typename this_type::line_map::key_type const i_key)
+		typename this_type::line_map::key_type const  i_line,
+		typename t_hash::value const                  i_points,
+		typename this_type::scale_map::key_type const i_scale = t_hash::EMPTY)
 	{
 		// 既存のevent-lineを辞書から検索。
 		typename this_type::line_map::iterator a_position(
-			this->lines_.lower_bound(i_key));
-		if (this->lines_.end() == a_position || a_position->first != i_key)
+			this->lines_.lower_bound(i_line));
+		if (this->lines_.end() == a_position || a_position->first != i_line)
 		{
 			// 新たなevent-lineを辞書に追加。
 			typename this_type::line a_line(this->archive_, i_points);
@@ -128,28 +157,43 @@ class psyq::scene_event
 			}
 			a_position = this->lines_.insert(
 				a_position,
-				typename this_type::line_map::value_type(i_key, a_line));
+				typename this_type::line_map::value_type(i_line, a_line));
 		}
 		else if (!a_position->second.reset(this->archive_, i_points))
 		{
 			// 既存のevent-lineの初期化に失敗。
 			return NULL;
 		}
+
+		// event-lineにtime-scaleを設定。
+		if (t_hash::EMPTY != i_scale)
+		{
+			a_position->second.scale_ = this->get_scale(i_scale);
+		}
 		return &a_position->second;
 	}
 
-	/** @brief event-actionを追加。
-	    @param t_action 追加するevent-actionの型。
-	    @return 追加したevent-actionへの共有pointer。
+	/** @brief time-scaleを取得。
+	    @param[in] i_scale time-scaleの名前hash値。
+	    @return time-scaleへの共有pointer。
 	 */
-	public: template< typename t_action >
-	typename this_type::action::shared_ptr const& add_action()
+	typename this_type::line::scale::shared_ptr const& get_scale(
+		typename this_type::scale_map::key_type const i_scale)
 	{
-		typename this_type::action::shared_ptr& a_action(
-			this->actions_[t_action::get_hash()]);
-		a_action = PSYQ_ALLOCATE_SHARED< t_action >(
-			this->actions_.get_allocator());
-		return a_action;
+		if (t_hash::EMPTY == i_scale)
+		{
+			return psyq::_get_null_shared_ptr<
+				typename this_type::line::scale >();
+		}
+
+		typename this_type::line::scale::shared_ptr& a_scale(
+			this->scales_[i_scale]);
+		if (NULL == a_scale.get())
+		{
+			PSYQ_ALLOCATE_SHARED< typename this_type::line::scale >(
+				this->scales_.get_allocator()).swap(a_scale);
+		}
+		return a_scale;
 	}
 
 	//-------------------------------------------------------------------------
@@ -254,9 +298,10 @@ class psyq::scene_event
 	/// event書庫。
 	private: PSYQ_SHARED_PTR< psyq::event_archive const > archive_;
 
+	public: typename this_type::action_map actions_; ///< event-actionの辞書。
 	public: typename this_type::word_map   words_;   ///< event置換語の辞書。
 	public: typename this_type::line_map   lines_;   ///< event-lineの辞書。
-	public: typename this_type::action_map actions_; ///< event-actionの辞書。
+	public: typename this_type::scale_map  scales_;  ///< time-scaleの辞書。
 };
 
 //-----------------------------------------------------------------------------

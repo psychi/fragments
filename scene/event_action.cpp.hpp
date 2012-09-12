@@ -6,16 +6,16 @@
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-packageを用意するevent。
 template< typename t_hash, typename t_real, typename t_string >
-class psyq::event_action< t_hash, t_real, t_string >::reserve_package:
+class psyq::event_action< t_hash, t_real, t_string >::load_package:
 	public psyq::event_action< t_hash, t_real, t_string >
 {
 	typedef typename psyq::event_action< t_hash, t_real, t_string > super_type;
-	typedef typename super_type::reserve_package this_type;
+	typedef typename super_type::load_package this_type;
 
 	//-------------------------------------------------------------------------
 	public: static typename t_hash::value get_hash()
 	{
-		return t_hash::generate("reserve_package");
+		return t_hash::generate("load_package");
 	}
 
 	//-------------------------------------------------------------------------
@@ -26,6 +26,112 @@ class psyq::event_action< t_hash, t_real, t_string >::reserve_package:
 	{
 		// worldにpackageを用意。
 		io_world.get_package(io_world.event_.replace_hash(i_point.integer));
+	}
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief scene-tokenを用意するevent。
+template< typename t_hash, typename t_real, typename t_string >
+class psyq::event_action< t_hash, t_real, t_string >::load_token:
+	public psyq::event_action< t_hash, t_real, t_string >
+{
+	typedef typename psyq::event_action< t_hash, t_real, t_string > super_type;
+	typedef typename super_type::load_token this_type;
+
+	//-------------------------------------------------------------------------
+	public: struct parameters
+	{
+		typename psyq::event_item< t_hash >::offset section; ///< section名の書庫offset値。
+		typename psyq::event_item< t_hash >::offset token;   ///< 追加するtoken名の書庫offset値。
+		typename psyq::event_item< t_hash >::offset scale;   ///< 設定するtime-scale名の書庫offset値。
+	};
+
+	//-------------------------------------------------------------------------
+	public: static typename t_hash::value get_hash()
+	{
+		return t_hash::generate("load_token");
+	}
+
+	//-------------------------------------------------------------------------
+	public: virtual void apply(
+		psyq::scene_world&                         io_world,
+		psyq::event_point< t_hash, t_real > const& i_point,
+		t_real const)
+	{
+		// 書庫から引数を取得。
+		typename this_type::parameters const* const a_parameters(
+			io_world.event_.get_address< typename this_type::parameters >(
+				i_point.integer));
+		if (NULL != a_parameters)
+		{
+			// sectionとtokenをworldに用意。
+			psyq::scene_world::token* const a_token(
+				io_world.get_token(
+					io_world.event_.replace_hash(a_parameters->token),
+					io_world.event_.replace_hash(a_parameters->section)).get());
+			if (NULL != a_token)
+			{
+				// tokenにtime-scaleを設定。
+				typename t_hash::value const a_scale(
+					io_world.event_.replace_hash(a_parameters->scale));
+				if (t_hash::EMPTY != a_scale)
+				{
+					a_token->time_scale_ = io_world.event_.get_scale(a_scale);
+				}
+			}
+		}
+	}
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief scene-tokenを削除するevent。
+template< typename t_hash, typename t_real, typename t_string >
+class psyq::event_action< t_hash, t_real, t_string >::unload_token:
+	public psyq::event_action< t_hash, t_real, t_string >
+{
+	typedef typename psyq::event_action< t_hash, t_real, t_string > super_type;
+	typedef typename super_type::unload_token this_type;
+
+	//-------------------------------------------------------------------------
+	public: struct parameters
+	{
+		typename psyq::event_item< t_hash >::offset section; ///< section名の書庫offset値。
+		typename psyq::event_item< t_hash >::offset token;   ///< 削除するtoken名の書庫offset値。
+	};
+
+	//-------------------------------------------------------------------------
+	public: static typename t_hash::value get_hash()
+	{
+		return t_hash::generate("unload_token");
+	}
+
+	//-------------------------------------------------------------------------
+	public: virtual void apply(
+		psyq::scene_world&                         io_world,
+		psyq::event_point< t_hash, t_real > const& i_point,
+		t_real const)
+	{
+		// 書庫から引数を取得。
+		typename this_type::parameters const* const a_parameters(
+			io_world.event_.get_address< typename this_type::parameters >(
+				i_point.integer));
+		if (NULL != a_parameters)
+		{
+			typename t_hash::value const a_token(
+				io_world.event_.replace_hash(a_parameters->token));
+			typename t_hash::value const a_section(
+				io_world.event_.replace_hash(a_parameters->section));
+			if (t_hash::EMPTY != a_section)
+			{
+				// sectionからtokenを削除。
+				io_world.remove_token(a_token, a_section);
+			}
+			else
+			{
+				// すべてのsectionからtokenを削除。
+				io_world.remove_token(a_token);
+			}
+		}
 	}
 };
 
@@ -202,100 +308,6 @@ class psyq::event_action< t_hash, t_real, t_string >::set_section_light:
 				{
 					a_section->light_ = a_token;
 				}
-			}
-		}
-	}
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief scene-tokenを用意するevent。
-template< typename t_hash, typename t_real, typename t_string >
-class psyq::event_action< t_hash, t_real, t_string >::reserve_token:
-	public psyq::event_action< t_hash, t_real, t_string >
-{
-	typedef typename psyq::event_action< t_hash, t_real, t_string > super_type;
-	typedef typename super_type::reserve_token this_type;
-
-	//-------------------------------------------------------------------------
-	public: struct parameters
-	{
-		typename psyq::event_item< t_hash >::offset section; ///< section名の書庫offset値。
-		typename psyq::event_item< t_hash >::offset token;   ///< 追加するtoken名の書庫offset値。
-	};
-
-	//-------------------------------------------------------------------------
-	public: static typename t_hash::value get_hash()
-	{
-		return t_hash::generate("reserve_token");
-	}
-
-	//-------------------------------------------------------------------------
-	public: virtual void apply(
-		psyq::scene_world&                         io_world,
-		psyq::event_point< t_hash, t_real > const& i_point,
-		t_real const)
-	{
-		// 書庫から引数を取得。
-		typename this_type::parameters const* const a_parameters(
-			io_world.event_.get_address< typename this_type::parameters >(
-				i_point.integer));
-		if (NULL != a_parameters)
-		{
-			// sectionとtokenをworldに用意。
-			io_world.get_token(
-				io_world.event_.replace_hash(a_parameters->token),
-				io_world.event_.replace_hash(a_parameters->section));
-		}
-	}
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief scene-tokenを削除するevent。
-template< typename t_hash, typename t_real, typename t_string >
-class psyq::event_action< t_hash, t_real, t_string >::remove_token:
-	public psyq::event_action< t_hash, t_real, t_string >
-{
-	typedef typename psyq::event_action< t_hash, t_real, t_string > super_type;
-	typedef typename super_type::remove_token this_type;
-
-	//-------------------------------------------------------------------------
-	public: struct parameters
-	{
-		typename psyq::event_item< t_hash >::offset section; ///< section名の書庫offset値。
-		typename psyq::event_item< t_hash >::offset token;   ///< 削除するtoken名の書庫offset値。
-	};
-
-	//-------------------------------------------------------------------------
-	public: static typename t_hash::value get_hash()
-	{
-		return t_hash::generate("remove_token");
-	}
-
-	//-------------------------------------------------------------------------
-	public: virtual void apply(
-		psyq::scene_world&                         io_world,
-		psyq::event_point< t_hash, t_real > const& i_point,
-		t_real const)
-	{
-		// 書庫から引数を取得。
-		typename this_type::parameters const* const a_parameters(
-			io_world.event_.get_address< typename this_type::parameters >(
-				i_point.integer));
-		if (NULL != a_parameters)
-		{
-			typename t_hash::value const a_token(
-				io_world.event_.replace_hash(a_parameters->token));
-			typename t_hash::value const a_section(
-				io_world.event_.replace_hash(a_parameters->section));
-			if (t_hash::EMPTY != a_section)
-			{
-				// sectionからtokenを削除。
-				io_world.remove_token(a_token, a_section);
-			}
-			else
-			{
-				// すべてのsectionからtokenを削除。
-				io_world.remove_token(a_token);
 			}
 		}
 	}

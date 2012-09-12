@@ -26,44 +26,40 @@ class psyq::scene_world
 
 	//-------------------------------------------------------------------------
 	public: typedef psyq::scene_event< t_hash, t_real, t_string > event;
-	public: typedef psyq::scene_token<
-		this_type::event::hash, this_type::event::real >
-			token;
-	public: typedef psyq::scene_section<
-		this_type::event::hash, this_type::event::real >
-			section;
+	public: typedef psyq::scene_token< t_hash, t_real > token;
+	public: typedef psyq::scene_section< t_hash, t_real > section;
 
 	//-------------------------------------------------------------------------
 	/// scene-packageの辞書。
 	public: typedef std::map<
-		this_type::event::hash::value,
+		t_hash::value,
 		psyq::scene_package::shared_ptr,
-		std::less< this_type::event::hash::value >,
+		std::less< t_hash::value >,
 		this_type::event::allocator::rebind<
 			std::pair<
-				this_type::event::hash::value const,
+				t_hash::value const,
 				psyq::scene_package::shared_ptr > >::other >
 					package_map;
 
 	/// scene-tokenの辞書。
 	public: typedef std::map<
-		this_type::event::hash::value,
+		t_hash::value,
 		this_type::token::shared_ptr,
-		std::less< this_type::event::hash::value >,
+		std::less< t_hash::value >,
 		this_type::event::allocator::rebind<
 			std::pair<
-				this_type::event::hash::value const,
+				t_hash::value const,
 				this_type::token::shared_ptr > >::other >
 					token_map;
 
 	/// scene-sectionの辞書。
 	public: typedef std::map<
-		this_type::event::hash::value,
+		t_hash::value,
 		this_type::section::shared_ptr,
-		std::less< this_type::event::hash::value >,
+		std::less< t_hash::value >,
 		this_type::event::allocator::rebind<
 			std::pair<
-				this_type::event::hash::value const,
+				t_hash::value const,
 				this_type::section::shared_ptr > >::other >
 					section_map;
 
@@ -142,9 +138,9 @@ class psyq::scene_world
 	    @return package名に対応するpackage。取得に失敗した場合は空。
 	 */
 	public: psyq::scene_package::shared_ptr const& get_package(
-		this_type::event::hash::value const i_name)
+		t_hash::value const i_name)
 	{
-		if (this_type::event::hash::EMPTY != i_name)
+		if (t_hash::EMPTY != i_name)
 		{
 			// 既存のpackaeを検索。
 			psyq::scene_package::shared_ptr& a_package(
@@ -167,7 +163,7 @@ class psyq::scene_world
 		}
 
 		// packageの取得に失敗。
-		return this_type::get_null_ptr< psyq::scene_package >();
+		return psyq::_get_null_shared_ptr< psyq::scene_package >();
 	}
 
 	/** @brief packageを検索。
@@ -175,7 +171,7 @@ class psyq::scene_world
 	    @return 見つけたpacakge。見つからなかった場合は空。
 	 */
 	public: psyq::scene_package::shared_ptr const& find_package(
-		this_type::event::hash::value const i_name)
+		t_hash::value const i_name)
 	const
 	{
 		return this_type::find_element(this->packages_, i_name);
@@ -186,7 +182,7 @@ class psyq::scene_world
 	    @return 削除したpackage。削除しなかった場合は空。
 	 */
 	public: psyq::scene_package::shared_ptr remove_package(
-		this_type::event::hash::value const i_name)
+		t_hash::value const i_name)
 	{
 		return this_type::remove_element(this->packages_, i_name);
 	}
@@ -198,9 +194,9 @@ class psyq::scene_world
 	    @return section名に対応するsection。取得に失敗した場合は空。
 	 */
 	public: this_type::section::shared_ptr const& get_section(
-		this_type::event::hash::value const i_name)
+		t_hash::value const i_name)
 	{
-		if (this_type::event::hash::EMPTY != i_name)
+		if (t_hash::EMPTY != i_name)
 		{
 			// 既存のsectionから検索。
 			this_type::section::shared_ptr& a_section(
@@ -225,7 +221,7 @@ class psyq::scene_world
 		}
 
 		// sectionの取得に失敗。
-		return this_type::get_null_ptr< this_type::section >();
+		return psyq::_get_null_shared_ptr< this_type::section >();
 	}
 
 	/** @brief sectionを検索。
@@ -233,7 +229,7 @@ class psyq::scene_world
 	    @return 見つかったsection。見つからなかった場合は空。
 	 */
 	public: this_type::section::shared_ptr const& find_section(
-		this_type::event::hash::value const i_name)
+		t_hash::value const i_name)
 	const
 	{
 		return this_type::find_element(this->sections_, i_name);
@@ -244,7 +240,7 @@ class psyq::scene_world
 	    @return 削除したsection。削除しなかった場合は空。
 	 */
 	public: this_type::section::shared_ptr remove_section(
-		this_type::event::hash::value const i_name)
+		t_hash::value const i_name)
 	{
 		return this_type::remove_element(this->sections_, i_name);
 	}
@@ -256,9 +252,9 @@ class psyq::scene_world
 	    @return token名に対応するtoken。取得に失敗した場合は空。
 	 */
 	public: this_type::token::shared_ptr const& get_token(
-		this_type::event::hash::value const i_name)
+		t_hash::value const i_name)
 	{
-		if (this_type::event::hash::EMPTY != i_name)
+		if (t_hash::EMPTY != i_name)
 		{
 			// 既存のtokenから検索。
 			this_type::token::shared_ptr& a_token(this->tokens_[i_name]);
@@ -277,7 +273,7 @@ class psyq::scene_world
 			PSYQ_ASSERT(false);
 			this->tokens_.erase(i_name);
 		}
-		return this_type::get_null_ptr< this_type::token >();
+		return psyq::_get_null_shared_ptr< this_type::token >();
 	}
 
 	/** @brief sectionからtokenを取得。
@@ -289,17 +285,21 @@ class psyq::scene_world
 	    @return token名に対応するtoken。取得に失敗した場合は空。
 	 */
 	public: this_type::token::shared_ptr const& get_token(
-		this_type::event::hash::value const i_token,
-		this_type::event::hash::value const i_section)
+		t_hash::value const i_token,
+		t_hash::value const i_section)
 	{
 		// tokenとsectionを取得。
-		this_type::token::shared_ptr const& a_token(this->get_token(i_token));
+		this_type::token::shared_ptr const& a_token(
+			this->get_token(i_token));
 		this_type::section* const a_section(
 			this->get_section(i_section).get());
 
-		// sectionにtokenを追加。
-		return NULL != a_section && a_section->add_token(a_token)?
-			a_token: this_type::get_null_ptr< this_type::token >();
+		// tokenをsectionに追加。
+		if (NULL != a_section)
+		{
+			a_section->add_token(a_token);
+		}
+		return a_token;
 	}
 
 	/** @brief worldからtokenを検索。
@@ -307,7 +307,7 @@ class psyq::scene_world
 	    @return 見つけたtoken。見つからなかった場合は空。
 	 */
 	public: this_type::token::shared_ptr const& find_token(
-		this_type::event::hash::value const i_name)
+		t_hash::value const i_name)
 	const
 	{
 		return this_type::find_element(this->tokens_, i_name);
@@ -318,7 +318,7 @@ class psyq::scene_world
 	    @return 削除したtoken。削除しなかった場合は空。
 	 */
 	public: this_type::token::shared_ptr remove_token(
-		this_type::event::hash::value const i_name)
+		t_hash::value const i_name)
 	{
 		this_type::token::shared_ptr a_token;
 
@@ -354,8 +354,8 @@ class psyq::scene_world
 	    @return 削除したtoken。削除しなかった場合は空。
 	 */
 	public: this_type::token::shared_ptr const& remove_token(
-		this_type::event::hash::value const i_token,
-		this_type::event::hash::value const i_section)
+		t_hash::value const i_token,
+		t_hash::value const i_section)
 	{
 		// sectionを検索。
 		this_type::section_map::const_iterator const a_section_pos(
@@ -377,7 +377,7 @@ class psyq::scene_world
 				}
 			}
 		}
-		return this_type::get_null_ptr< this_type::token >();
+		return psyq::_get_null_shared_ptr< this_type::token >();
 	}
 
 	//-------------------------------------------------------------------------
@@ -387,14 +387,14 @@ class psyq::scene_world
 	 */
 	private: template< typename t_container >
 	static typename t_container::mapped_type const& find_element(
-		t_container const&                  i_container,
-		this_type::event::hash::value const i_name)
+		t_container const&  i_container,
+		t_hash::value const i_name)
 	{
 		typename t_container::const_iterator const a_position(
 			i_container.find(i_name));
 		return i_container.end() != a_position?
 			a_position->second:
-			this_type::get_null_ptr<
+			psyq::_get_null_shared_ptr<
 				typename t_container::mapped_type::element_type >();
 	}
 
@@ -404,8 +404,8 @@ class psyq::scene_world
 	 */
 	private: template< typename t_container >
 	static typename t_container::mapped_type remove_element(
-		t_container&                        io_container,
-		this_type::event::hash::value const i_name)
+		t_container&        io_container,
+		t_hash::value const i_name)
 	{
 		typename t_container::mapped_type a_element;
 		typename t_container::iterator const a_position(
@@ -423,7 +423,7 @@ class psyq::scene_world
 	    @param[in] i_name packageの名前hash値。
 	 */
 	private: psyq::scene_package::shared_ptr load_package(
-		this_type::event::hash::value const i_name)
+		t_hash::value const i_name)
 	const
 	{
 		// 書庫からpackage-pathを検索。
@@ -450,7 +450,7 @@ class psyq::scene_world
 				}
 			}
 		}
-		return this_type::get_null_ptr< psyq::scene_package >();
+		return psyq::_get_null_shared_ptr< psyq::scene_package >();
 	}
 
 	//-------------------------------------------------------------------------
@@ -556,14 +556,6 @@ class psyq::scene_world
 				}
 			}
 		}
-	}
-
-	//-------------------------------------------------------------------------
-	private: template< typename t_value >
-	static PSYQ_SHARED_PTR< t_value > const& get_null_ptr()
-	{
-		static PSYQ_SHARED_PTR< t_value > const s_null_ptr;
-		return s_null_ptr;
 	}
 
 	//-------------------------------------------------------------------------

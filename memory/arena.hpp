@@ -37,6 +37,13 @@ namespace psyq
 	{
 		return t_number;
 	}
+
+	template< typename t_value >
+	inline PSYQ_SHARED_PTR< t_value > const& _get_null_shared_ptr()
+	{
+		static PSYQ_SHARED_PTR< t_value > const s_null_ptr;
+		return s_null_ptr;
+	}
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

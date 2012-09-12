@@ -25,13 +25,13 @@ class psyq::event_action
 	public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
 
 	// ópà”Ç≥ÇÍÇƒÇ¢ÇÈevent-actionÅB
-	public: class reserve_package;
+	public: class load_package;
+	public: class load_token;
+	public: class unload_token;
 	public: class set_token_animation;
 	public: class set_token_model;
 	public: class set_section_camera;
 	public: class set_section_light;
-	public: class reserve_token;
-	public: class remove_token;
 
 	protected: event_action() {}
 	public: virtual ~event_action() {}

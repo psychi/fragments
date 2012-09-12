@@ -313,4 +313,62 @@ class psyq::event_action< t_hash, t_real, t_string >::set_section_light:
 	}
 };
 
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief event-lineを開始するevent。
+template< typename t_hash, typename t_real, typename t_string >
+class psyq::event_action< t_hash, t_real, t_string >::set_event_line:
+	public psyq::event_action< t_hash, t_real, t_string >
+{
+	typedef typename psyq::event_action< t_hash, t_real, t_string > super_type;
+	typedef typename super_type::set_event_line this_type;
+
+	//-------------------------------------------------------------------------
+	public: struct parameters
+	{
+		typename psyq::event_item< t_hash >::offset line;
+		typename psyq::event_item< t_hash >::offset points;
+		typename psyq::event_item< t_hash >::offset scale;
+		t_real                                      start_frame;
+		typename t_hash::value                      start_origin;
+	};
+
+	//-------------------------------------------------------------------------
+	public: static typename t_hash::value get_hash()
+	{
+		return t_hash::generate("set_event_line");
+	}
+
+	//-------------------------------------------------------------------------
+	public: virtual void apply(
+		psyq::scene_world&                         io_world,
+		psyq::event_point< t_hash, t_real > const& i_point,
+		t_real const)
+	{
+		// 書庫から引数を取得。
+		typename this_type::parameters const* const a_parameters(
+			io_world.event_.get_address< typename this_type::parameters >(
+				i_point.integer));
+		if (NULL != a_parameters)
+		{
+			// scene-eventにevent-lineを登録。
+			psyq::scene_world::event::line* const a_line(
+				io_world.event_.reset_line(
+					io_world.event_.replace_hash(a_parameters->line),
+					io_world.event_.replace_hash(a_parameters->points)));
+			if (NULL != a_line)
+			{
+				// time-scaleのない状態でevent-lineに開始frameを設定。
+				a_line->scale_.reset();
+				a_line->seek(
+					a_parameters->start_frame,
+					0 == a_parameters->start_origin? SEEK_SET: SEEK_END);
+
+				// event-lineにtime-scaleを設定。
+				a_line->scale_ = io_world.event_.get_scale(
+					io_world.event_.replace_hash(a_parameters->scale));
+			}
+		}
+	}
+};
+
 #endif // !PSYQ_SCENE_EVENT_ACTION_CPP_HPP_

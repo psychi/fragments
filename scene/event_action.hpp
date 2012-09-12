@@ -32,6 +32,7 @@ class psyq::event_action
 	public: class set_token_model;
 	public: class set_section_camera;
 	public: class set_section_light;
+	public: class set_event_line;
 
 	protected: event_action() {}
 	public: virtual ~event_action() {}

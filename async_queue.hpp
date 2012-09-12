@@ -259,11 +259,11 @@ class psyq::async_queue:
 	    @return “o˜^‚µ‚½”ñ“¯Šúˆ—task‚Ì”B
 	 */
 	public: template< typename t_allocator >
-	std::size_t add(
+	std::size_t insert(
 		t_allocator const&                  i_allocator,
 		psyq::async_task::shared_ptr const& i_task)
 	{
-		return this->add(i_allocator, &i_task, &i_task + 1);
+		return this->insert(i_allocator, &i_task, &i_task + 1);
 	}
 
 	/** @brief ”ñ“¯Šúˆ—task‚ğ“o˜^B
@@ -273,11 +273,11 @@ class psyq::async_queue:
 	    @return “o˜^‚µ‚½”ñ“¯Šúˆ—task‚Ì”B
 	 */
 	public: template< typename t_arena >
-	std::size_t add(
+	std::size_t insert(
 		psyq::async_task::shared_ptr const& i_task,
 		char const* const                   i_name = PSYQ_ARENA_NAME_DEFAULT)
 	{
-		return this->template add< t_arena >(&i_task, &i_task + 1, i_name);
+		return this->template insert< t_arena >(&i_task, &i_task + 1, i_name);
 	}
 
 	/** @brief container‚ª‚Â”ñ“¯Šúˆ—task‚ğ‚Ü‚Æ‚ß‚Ä“o˜^B
@@ -287,12 +287,12 @@ class psyq::async_queue:
 	    @return “o˜^‚µ‚½”ñ“¯Šúˆ—task‚Ì”B
 	 */
 	public: template< typename t_allocator, typename t_iterator >
-	std::size_t add(
+	std::size_t insert(
 		t_allocator const& i_allocator,
 		t_iterator const   i_begin,
 		t_iterator const   i_end)
 	{
-		return this->template add< typename t_allocator::arena >(
+		return this->template insert< typename t_allocator::arena >(
 			i_begin, i_end, i_allocator.get_name());
 	}
 
@@ -305,7 +305,7 @@ class psyq::async_queue:
 	    @return “o˜^‚µ‚½”ñ“¯Šúˆ—task‚Ì”B
 	 */
 	public: template< typename t_arena, typename t_iterator >
-	std::size_t add(
+	std::size_t insert(
 		t_iterator const  i_begin,
 		t_iterator const  i_end,
 		char const* const i_name = PSYQ_ARENA_NAME_DEFAULT)
@@ -355,7 +355,7 @@ class psyq::async_queue:
 	public: template< typename t_arena >
 	void shrink(char const* const i_name = PSYQ_ARENA_NAME_DEFAULT)
 	{
-		this->template add< t_arena >(
+		this->template insert< t_arena >(
 			static_cast< psyq::async_task::shared_ptr const* >(NULL),
 			static_cast< psyq::async_task::shared_ptr const* >(NULL),
 			i_name);

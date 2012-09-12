@@ -72,12 +72,12 @@ class psyq::scene_world
 	};
 
 	private: typedef std::multimap<
-		this_type::event::line::scale::value,
+		t_real,
 		this_type::event::point const*,
-		std::greater< this_type::event::line::scale::value >,
+		std::greater< t_real >,
 		this_type::event::allocator::rebind<
 			std::pair<
-				this_type::event::line::scale::value const,
+				t_real const,
 				this_type::event::point const* > >::other >
 					dispatch_map;
 
@@ -115,8 +115,8 @@ class psyq::scene_world
 	    @param[in] i_frame_count 進めるframe数。
 	 */
 	public: void update(
-		psyq_extern::scene_time const&             i_frame_time,
-		this_type::event::line::scale::value const i_frame_count = 1)
+		psyq_extern::scene_time const& i_frame_time,
+		t_real const                   i_frame_count = 1)
 	{
 		// sceneの時間を更新。
 		this_type::forward_scenes(this->tokens_, i_frame_time, i_frame_count);
@@ -141,13 +141,13 @@ class psyq::scene_world
 	    @return package名に対応するscene-package。取得に失敗した場合は空。
 	 */
 	public: psyq::scene_package::shared_ptr const& get_package(
-		t_hash::value const i_name)
+		t_hash::value const i_package)
 	{
-		if (t_hash::EMPTY != i_name)
+		if (t_hash::EMPTY != i_package)
 		{
 			// 既存のscene-packaeを検索。
 			psyq::scene_package::shared_ptr& a_package(
-				this->packages_[i_name]);
+				this->packages_[i_package]);
 			if (NULL != a_package.get())
 			{
 				// scene-packageの取得に成功。
@@ -155,14 +155,14 @@ class psyq::scene_world
 			}
 
 			// fileからscene-packageを読み込む。
-			this->load_package(i_name).swap(a_package);
+			this->load_package(i_package).swap(a_package);
 			if (NULL != a_package.get())
 			{
 				// scene-packageの取得に成功。
 				return a_package;
 			}
 			PSYQ_ASSERT(false);
-			this->packages_.erase(i_name);
+			this->packages_.erase(i_package);
 		}
 
 		// scene-packageの取得に失敗。
@@ -170,40 +170,74 @@ class psyq::scene_world
 	}
 
 	/** @brief scene-packageを検索。
-	    @param[in] i_name 検索するscene-packageの名前hash値。
-	    @return 見つけたpacakge。見つからなかった場合は空。
+	    @param[in] i_package 検索するscene-packageの名前hash値。
+	    @return 見つけたscene-pacakge。見つからなかった場合は空。
 	 */
 	public: psyq::scene_package::shared_ptr const& find_package(
-		t_hash::value const i_name)
+		t_hash::value const i_package)
 	const
 	{
-		return this_type::find_element(this->packages_, i_name);
+		return this_type::event::_find_element(this->packages_, i_package);
 	}
 
 	/** @brief scene-packageを削除。
-	    @param[in] i_name 削除するscene-packageの名前hash値。
+	    @param[in] i_package 削除するscene-packageの名前hash値。
 	    @return 削除したscene-package。削除しなかった場合は空。
 	 */
-	public: psyq::scene_package::shared_ptr remove_package(
-		t_hash::value const i_name)
+	public: psyq::scene_package::shared_ptr erase_package(
+		t_hash::value const i_package)
 	{
-		return this_type::remove_element(this->packages_, i_name);
+		return this_type::event::_erase_element(this->packages_, i_package);
+	}
+
+	/** @brief fileからscene-pacakgeを読み込む。
+	    @param[in] i_package scene-packageの名前hash値。
+	 */
+	private: psyq::scene_package::shared_ptr load_package(
+		t_hash::value const i_package)
+	const
+	{
+		// 書庫からpackage-pathを検索。
+		this_type::event::item const* const a_item(
+			this_type::event::item::find(
+				*this->event_.get_package(), i_package));
+		if (NULL != a_item)
+		{
+			this_type::package_path const* const a_path(
+				this->event_.get_address< this_type::package_path >(
+					a_item->begin));
+			if (NULL != a_path)
+			{
+				// fileからscene-packageを読み込む。
+				psyq::scene_package::shared_ptr const a_package(
+					psyq::scene_package::load(
+						this->packages_.get_allocator(),
+						this->event_.replace_string(a_path->scene),
+						this->event_.replace_string(a_path->shader),
+						this->event_.replace_string(a_path->texture)));
+				if (NULL != a_package.get())
+				{
+					return a_package;
+				}
+			}
+		}
+		return psyq::_get_null_shared_ptr< psyq::scene_package >();
 	}
 
 	//-------------------------------------------------------------------------
 	/** @brief sectionを取得。
 	    section名に対応するsectionが存在しない場合は、新たにsectionを作る。
-	    @param[in] i_name 取得するsectionの名前hash値。
+	    @param[in] i_section 取得するsectionの名前hash値。
 	    @return section名に対応するsection。取得に失敗した場合は空。
 	 */
 	public: this_type::section::shared_ptr const& get_section(
-		t_hash::value const i_name)
+		t_hash::value const i_section)
 	{
-		if (t_hash::EMPTY != i_name)
+		if (t_hash::EMPTY != i_section)
 		{
 			// 既存のsectionから検索。
 			this_type::section::shared_ptr& a_section(
-				this->sections_[i_name]);
+				this->sections_[i_section]);
 			if (NULL != a_section.get())
 			{
 				// sectionの取得に成功。
@@ -220,7 +254,7 @@ class psyq::scene_world
 				return a_section;
 			}
 			PSYQ_ASSERT(false);
-			this->sections_.erase(i_name);
+			this->sections_.erase(i_section);
 		}
 
 		// sectionの取得に失敗。
@@ -228,24 +262,24 @@ class psyq::scene_world
 	}
 
 	/** @brief sectionを検索。
-	    @param[in] i_name 検索するsectionの名前hash値。
+	    @param[in] i_section 検索するsectionの名前hash値。
 	    @return 見つかったsection。見つからなかった場合は空。
 	 */
 	public: this_type::section::shared_ptr const& find_section(
-		t_hash::value const i_name)
+		t_hash::value const i_section)
 	const
 	{
-		return this_type::find_element(this->sections_, i_name);
+		return this_type::event::_find_element(this->sections_, i_section);
 	}
 
 	/** @brief sectionを削除。
-	    @param[in] i_name 削除するsectionの名前hash値。
+	    @param[in] i_section 削除するsectionの名前hash値。
 	    @return 削除したsection。削除しなかった場合は空。
 	 */
-	public: this_type::section::shared_ptr remove_section(
-		t_hash::value const i_name)
+	public: this_type::section::shared_ptr erase_section(
+		t_hash::value const i_section)
 	{
-		return this_type::remove_element(this->sections_, i_name);
+		return this_type::event::_erase_element(this->sections_, i_section);
 	}
 
 	//-------------------------------------------------------------------------
@@ -255,12 +289,12 @@ class psyq::scene_world
 	    @return token名に対応するtoken。取得に失敗した場合は空。
 	 */
 	public: this_type::token::shared_ptr const& get_token(
-		t_hash::value const i_name)
+		t_hash::value const i_token)
 	{
-		if (t_hash::EMPTY != i_name)
+		if (t_hash::EMPTY != i_token)
 		{
 			// 既存のtokenから検索。
-			this_type::token::shared_ptr& a_token(this->tokens_[i_name]);
+			this_type::token::shared_ptr& a_token(this->tokens_[i_token]);
 			if (NULL != a_token.get())
 			{
 				return a_token;
@@ -274,7 +308,7 @@ class psyq::scene_world
 				return a_token;
 			}
 			PSYQ_ASSERT(false);
-			this->tokens_.erase(i_name);
+			this->tokens_.erase(i_token);
 		}
 		return psyq::_get_null_shared_ptr< this_type::token >();
 	}
@@ -300,34 +334,34 @@ class psyq::scene_world
 		// tokenをsectionに追加。
 		if (NULL != a_section)
 		{
-			a_section->add_token(a_token);
+			a_section->insert_token(a_token);
 		}
 		return a_token;
 	}
 
 	/** @brief worldからtokenを検索。
-	    @param[in] i_name 検索するtokenの名前hash値。
+	    @param[in] i_token 検索するtokenの名前hash値。
 	    @return 見つけたtoken。見つからなかった場合は空。
 	 */
 	public: this_type::token::shared_ptr const& find_token(
-		t_hash::value const i_name)
+		t_hash::value const i_token)
 	const
 	{
-		return this_type::find_element(this->tokens_, i_name);
+		return this_type::event::_find_element(this->tokens_, i_token);
 	}
 
 	/** @brief worldとsectionからtokenを削除。
-	    @param[in] i_name 削除するtokenの名前hash値。
+	    @param[in] i_token 削除するtokenの名前hash値。
 	    @return 削除したtoken。削除しなかった場合は空。
 	 */
-	public: this_type::token::shared_ptr remove_token(
-		t_hash::value const i_name)
+	public: this_type::token::shared_ptr erase_token(
+		t_hash::value const i_token)
 	{
 		this_type::token::shared_ptr a_token;
 
 		// tokenを取得。
 		this_type::token_map::iterator const a_token_pos(
-			this->tokens_.find(i_name));
+			this->tokens_.find(i_token));
 		if (this->tokens_.end() != a_token_pos)
 		{
 			// worldからtokenを削除。
@@ -344,7 +378,7 @@ class psyq::scene_world
 				this_type::section* const a_section(i->second.get());
 				if (NULL != a_section)
 				{
-					a_section->remove_token(a_token);
+					a_section->erase_token(a_token);
 				}
 			}
 		}
@@ -356,7 +390,7 @@ class psyq::scene_world
 	    @param[in] i_section 対象となるsectionの名前hash値。
 	    @return 削除したtoken。削除しなかった場合は空。
 	 */
-	public: this_type::token::shared_ptr const& remove_token(
+	public: this_type::token::shared_ptr const& erase_token(
 		t_hash::value const i_token,
 		t_hash::value const i_section)
 	{
@@ -374,7 +408,7 @@ class psyq::scene_world
 				this_type::section* const a_section(
 					a_section_pos->second.get());
 				if (NULL != a_section &&
-					a_section->remove_token(a_token_pos->second))
+					a_section->erase_token(a_token_pos->second))
 				{
 					return a_token_pos->second;
 				}
@@ -384,88 +418,15 @@ class psyq::scene_world
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief containerから要素を検索。
-	    @param[in] i_container 対象となるcontainer。
-	    @param[in] i_name      削除する要素の名前hash値。
-	 */
-	private: template< typename t_container >
-	static typename t_container::mapped_type const& find_element(
-		t_container const&  i_container,
-		t_hash::value const i_name)
-	{
-		typename t_container::const_iterator const a_position(
-			i_container.find(i_name));
-		return i_container.end() != a_position?
-			a_position->second:
-			psyq::_get_null_shared_ptr<
-				typename t_container::mapped_type::element_type >();
-	}
-
-	/** @brief containerから要素を削除。
-	    @param[in] i_container 対象となるcontainer。
-	    @param[in] i_name      削除する要素の名前hash値。
-	 */
-	private: template< typename t_container >
-	static typename t_container::mapped_type remove_element(
-		t_container&        io_container,
-		t_hash::value const i_name)
-	{
-		typename t_container::mapped_type a_element;
-		typename t_container::iterator const a_position(
-			io_container.find(i_name));
-		if (io_container.end() != a_position)
-		{
-			a_element.swap(a_position->second);
-			io_container.erase(a_position);
-		}
-		return a_element;
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief fileからscene-pacakgeを読み込む。
-	    @param[in] i_name scene-packageの名前hash値。
-	 */
-	private: psyq::scene_package::shared_ptr load_package(
-		t_hash::value const i_name)
-	const
-	{
-		// 書庫からpackage-pathを検索。
-		this_type::event::item const* const a_item(
-			this_type::event::item::find(
-				*this->event_.get_package(), i_name));
-		if (NULL != a_item)
-		{
-			this_type::package_path const* const a_path(
-				this->event_.get_address< this_type::package_path >(
-					a_item->begin));
-			if (NULL != a_path)
-			{
-				// fileからscene-packageを読み込む。
-				psyq::scene_package::shared_ptr const a_package(
-					psyq::scene_package::load(
-						this->packages_.get_allocator(),
-						this->event_.replace_string(a_path->scene),
-						this->event_.replace_string(a_path->shader),
-						this->event_.replace_string(a_path->texture)));
-				if (NULL != a_package.get())
-				{
-					return a_package;
-				}
-			}
-		}
-		return psyq::_get_null_shared_ptr< psyq::scene_package >();
-	}
-
-	//-------------------------------------------------------------------------
 	/** @brief sceneの時間を更新。
 	    @param[in] i_tokens      sceneを持つtokenの辞書。
 	    @param[in] i_frame_time  1frameあたりの時間。
 	    @param[in] i_frame_count 進めるframe数。
 	 */
 	private: static void forward_scenes(
-		this_type::token_map const&                i_tokens,
-		psyq_extern::scene_time const&             i_frame_time,
-		this_type::event::line::scale::value const i_frame_count)
+		this_type::token_map const&    i_tokens,
+		psyq_extern::scene_time const& i_frame_time,
+		t_real const                   i_frame_count)
 	{
 		for (
 			this_type::token_map::const_iterator i = i_tokens.begin();
@@ -475,7 +436,7 @@ class psyq::scene_world
 			this_type::token* const a_token(i->second.get());
 			if (NULL != a_token)
 			{
-				this_type::event::line::scale::value const a_time_scale(
+				t_real const a_time_scale(
 					NULL != a_token->time_scale_.get()?
 						i_frame_count * a_token->time_scale_->get_scale():
 						i_frame_count);
@@ -511,9 +472,9 @@ class psyq::scene_world
 	    @param[in]     i_frame_count 進めるframe数。
 	 */
 	private: static void forward_events(
-		this_type::dispatch_map&                   io_dispatch,
-		this_type::event::line_map const&          i_lines,
-		this_type::event::line::scale::value const i_frame_count)
+		this_type::dispatch_map&          io_dispatch,
+		this_type::event::line_map const& i_lines,
+		t_real const                      i_frame_count)
 	{
 		for (
 			this_type::event::line_map::const_iterator i = i_lines.begin();

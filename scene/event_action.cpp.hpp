@@ -124,12 +124,12 @@ class psyq::event_action< t_hash, t_real, t_string >::unload_token:
 			if (t_hash::EMPTY != a_section)
 			{
 				// section‚©‚çtoken‚ğíœB
-				io_world.remove_token(a_token, a_section);
+				io_world.erase_token(a_token, a_section);
 			}
 			else
 			{
 				// ‚·‚×‚Ä‚Ìsection‚©‚çtoken‚ğíœB
-				io_world.remove_token(a_token);
+				io_world.erase_token(a_token);
 			}
 		}
 	}

@@ -9,7 +9,7 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief event-packageが持つ項目。
-    @tparam t_hash event-packageで使う文字列hash。
+    @tparam t_hash event-packageで使われているhash関数。
  */
 template< typename t_hash >
 struct psyq::event_item
@@ -120,7 +120,7 @@ struct psyq::event_item
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 文字列の'('と')'に囲まれた単語を置換し、文字列を生成。
+	/** @brief 文字列の'('と')'に囲まれた単語を置換した、文字列を生成。
 		@tparam t_string 出力する文字列の型。
 	    @tparam t_map
 	        std::map互換の型。t_map::key_typeにはt_hash::value型、
@@ -128,18 +128,19 @@ struct psyq::event_item
 	    @param[in] i_dictionary 置換する単語のhash値をkeyとする辞書。
 	    @param[in] i_begin      置換元となる文字列の開始文字位置。
 	    @param[in] i_end        置換元となる文字列の末尾文字位置。
+		@return 置換後の文字列。
 	 */
 	public: template< typename t_string, typename t_map, typename t_iterator >
-	static t_string replace_word(
+	static t_string replace_string(
 		t_map const&     i_dictionary,
 		t_iterator const i_begin,
 		t_iterator const i_end)
 	{
-		return replace_word< t_string >(
+		return replace_string< t_string >(
 			i_dictionary, i_begin, i_end, i_dictionary.get_allocator());
 	}
 
-	/** @brief 文字列の'('と')'に囲まれた単語を置換し、文字列を生成。
+	/** @brief 文字列の'('と')'に囲まれた単語を置換した、文字列を生成。
 		@tparam t_string 出力する文字列の型。
 	    @tparam t_map
 	        std::map互換の型。t_map::key_typeにはt_hash::value型、
@@ -148,9 +149,10 @@ struct psyq::event_item
 	    @param[in] i_begin      置換元となる文字列の開始文字位置。
 	    @param[in] i_end        置換元となる文字列の末尾文字位置。
 	    @param[in] i_allocator  出力文字列のmemory割当子。
+		@return 置換後の文字列。
 	 */
 	public: template< typename t_string, typename t_map, typename t_iterator >
-	static t_string replace_word(
+	static t_string replace_string(
 		t_map const&                             i_dictionary,
 		t_iterator const                         i_begin,
 		t_iterator const                         i_end,
@@ -221,8 +223,8 @@ struct psyq::event_item
 	}
 
 	//-------------------------------------------------------------------------
-	public: typename t_hash::value     name;  ///< itemの名前hash値。
 	public: typename t_hash::value     type;  ///< itemの型名hash値。
+	public: typename t_hash::value     name;  ///< itemの名前hash値。
 	public: typename this_type::offset begin; ///< itemの先頭位置のevent-package内offset値。
 };
 

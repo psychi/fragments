@@ -11,6 +11,9 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief sceneのevent全体を管理する。
+    @tparam t_hash   event-packageで使われているhash関数。
+    @tparam t_real   event-packageで使われている実数の型。
+    @tparam t_string std::basic_string互換の文字列の型。
  */
 template< typename t_hash, typename t_real, typename t_string >
 class psyq::scene_event
@@ -18,9 +21,9 @@ class psyq::scene_event
 	typedef psyq::scene_event< t_hash, t_real, t_string > this_type;
 
 	//-------------------------------------------------------------------------
-	public: typedef t_hash hash; ///< event-packageで使われているhash関数。
-	public: typedef t_real real; ///< event-packageで使われている実数の型。
-	public: typedef t_string string; ///< 文字列の型。
+	public: typedef t_hash hash;
+	public: typedef t_real real;
+	public: typedef t_string string;
 	public: typedef psyq::basic_const_string<
 		typename t_string::value_type, typename t_string::traits_type >
 			const_string; ///< 文字列定数の型。
@@ -105,12 +108,12 @@ class psyq::scene_event
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief event-actionを追加。
-	    @param t_action 追加するevent-actionの型。
+	/** @brief event-actionを初期化。
+	    @param t_action 初期化するevent-actionの型。
 	    @return 追加したevent-actionへの共有pointer。
 	 */
 	public: template< typename t_action >
-	typename this_type::action::shared_ptr const& add_action()
+	typename this_type::action::shared_ptr const& reset_action()
 	{
 		typename this_type::action::shared_ptr& a_action(
 			this->actions_[t_action::get_hash()]);
@@ -119,30 +122,35 @@ class psyq::scene_event
 		return a_action;
 	}
 
-	/** @brief event置換語を追加。
-	    @param[in] i_key  置換される単語のhash値。
-	    @param[in] i_word 置換した後の単語。
-	    @return event置換語。
+	/** @brief event-actionを検索。
+	    @tparam t_action 検索するevent-actionの型。
+	    @return 見つけたevent-action。見つからなかった場合は空。
 	 */
-	public: t_string const& add_word(
-		typename this_type::const_string const& i_key,
-		typename this_type::const_string const& i_word)
+	public: template< typename t_action >
+	typename this_type::action::shared_ptr const& find_action() const
 	{
-		t_string& a_word(this->words_[t_hash::generate(i_key)]);
-		t_string(i_word.data(), i_word.length()).swap(a_word);
-		return a_word;
+		return this_type::_find_element(this->actions_, t_action::get_hash());
 	}
 
-	/** @brief event-lineを追加。
-	    @param[in] i_key    event-line辞書に登録するkeyとなる名前hash値。
-	    @param[in] i_points 書庫にあるevent-point配列の名前hash値。
-		@param[in] i_scale  event-lineに設定するtime-scaleの名前hash値。
-	    @return 追加したevent-lineへのpointer。
+	/** @brief event-actionを削除。
+	    @tparam t_action 検索するevent-actionの型。
+	    @return 削除したevent-action。削除しなかった場合は空。
 	 */
-	public: typename this_type::line* add_line(
-		typename this_type::line_map::key_type const  i_line,
-		typename t_hash::value const                  i_points,
-		typename this_type::scale_map::key_type const i_scale = t_hash::EMPTY)
+	public: template< typename t_action >
+	typename this_type::action::shared_ptr const& erase_action() const
+	{
+		return this_type::_erase_element(this->actions_, t_action::get_hash());
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief event-lineを初期化。
+	    @param[in] i_line   event-line辞書に登録するkeyとなる名前hash値。
+	    @param[in] i_points event-packageにあるevent-point配列の名前hash値。
+	    @return 初期化したevent-lineへのpointer。
+	 */
+	public: typename this_type::line* reset_line(
+		typename t_hash::value const i_line,
+		typename t_hash::value const i_points)
 	{
 		// 既存のevent-lineを辞書から検索。
 		typename this_type::line_map::iterator a_position(
@@ -164,21 +172,31 @@ class psyq::scene_event
 			// 既存のevent-lineの初期化に失敗。
 			return NULL;
 		}
-
-		// event-lineにtime-scaleを設定。
-		if (t_hash::EMPTY != i_scale)
-		{
-			a_position->second.scale_ = this->get_scale(i_scale);
-		}
 		return &a_position->second;
 	}
 
+	/** @brief event-lineを検索。
+	    @param[in] i_line 検索するevent-lineの名前hash値。
+	    @return 見つけたevent-lineへのpointer。見つからなかった場合はNULL。
+	 */
+	public: typename this_type::line* find_line(
+		typename t_hash::value const i_line)
+	const
+	{
+		typename this_type::line_map::const_iterator const a_position(
+			this->lines_.find(i_line));
+		return this->lines_.end() != a_position?
+			const_cast< typename this_type::line* >(&a_position->second):
+			NULL;
+	}
+
+	//-------------------------------------------------------------------------
 	/** @brief time-scaleを取得。
 	    @param[in] i_scale time-scaleの名前hash値。
 	    @return time-scaleへの共有pointer。
 	 */
-	typename this_type::line::scale::shared_ptr const& get_scale(
-		typename this_type::scale_map::key_type const i_scale)
+	public: typename this_type::line::scale::shared_ptr const& get_scale(
+		typename t_hash::value const i_scale)
 	{
 		if (t_hash::EMPTY == i_scale)
 		{
@@ -196,9 +214,45 @@ class psyq::scene_event
 		return a_scale;
 	}
 
+	/** @brief time-scaleを検索。
+	    @param[in] i_name 検索するtime-scaleの名前hash値。
+	    @return 見つけたtime-scale。見つからなかった場合は空。
+	 */
+	public: typename this_type::line::scale::shared_ptr const& find_scale(
+		typename t_hash::value const i_scale)
+	const
+	{
+		return this_type::_find_element(this->scales_, i_scale);
+	}
+
+	/** @brief time-scaleを削除。
+	    @param[in] i_scale 削除するtime-scaleの名前hash値。
+	    @return 削除したtime-scale。削除しなかった場合は空。
+	 */
+	public: typename this_type::line::scale::shared_ptr const& erase_scale(
+		typename t_hash::value const i_scale)
+	{
+		return this_type::_erase_element(this->scales_, i_scale);
+	}
+
 	//-------------------------------------------------------------------------
-	/** @brief 置換語辞書を介して書庫に存在する文字列を置換し、hash値を取得。
-	    @param[in] i_offset 変換する文字列の書庫内offset値。
+	/** @brief event置換語を登録。
+	    @param[in] i_key  置換される単語のhash値。
+	    @param[in] i_word 置換した後の単語。
+	    @return 置換した後の単語。
+	 */
+	public: t_string const& replace_word(
+		typename this_type::const_string const& i_key,
+		typename this_type::const_string const& i_word)
+	{
+		t_string& a_word(this->words_[t_hash::generate(i_key)]);
+		t_string(i_word.data(), i_word.length()).swap(a_word);
+		return a_word;
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief 置換語辞書を介してevent-packageに存在する文字列を置換し、hash値を取得。
+	    @param[in] i_offset 変換する文字列のevent-package内offset値。
 	    @return 置換後の文字列のhash値。
 	 */
 	public: typename t_hash::value replace_hash(
@@ -220,8 +274,8 @@ class psyq::scene_event
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 置換語辞書を介して、書庫に存在する文字列を置換。
-	    @param[in] i_offset 変換する文字列のevent-package内offset値。
+	/** @brief 置換語辞書を介して、event-packageに存在する文字列を置換。
+	    @param[in] i_offset 置換元となる文字列のevent-package内offset値。
 	    @return 置換後の文字列。
 	 */
 	public: t_string replace_string(
@@ -232,19 +286,19 @@ class psyq::scene_event
 	}
 
 	/** @brief 置換語辞書を介して、文字列を置換。
-	    @param[in] i_string 置換される文字列。
+	    @param[in] i_string 置換元となる文字列。
 	    @return 置換後の文字列。
 	 */
 	public: t_string replace_string(
 		typename this_type::const_string const& i_source)
 	const
 	{
-		return this_type::item::template replace_word< t_string >(
+		return this_type::item::template replace_string< t_string >(
 			this->words_, i_source.begin(), i_source.end());
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 書庫に存在する文字列を取得。
+	/** @brief event-packageに存在する文字列を取得。
 	    @param[in] i_offset 文字列のevent-package内offset値。
 	 */
 	public: typename this_type::const_string get_string(
@@ -292,6 +346,44 @@ class psyq::scene_event
 	const
 	{
 		return this->package_;
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief containerから要素を検索。
+	    @param[in] i_container 対象となるcontainer。
+	    @param[in] i_name      削除する要素の名前hash値。
+	 */
+	public: template< typename t_container >
+	static typename t_container::mapped_type const& _find_element(
+		t_container const&           i_container,
+		typename t_hash::value const i_name)
+	{
+		typename t_container::const_iterator const a_position(
+			i_container.find(i_name));
+		return i_container.end() != a_position?
+			a_position->second:
+			psyq::_get_null_shared_ptr<
+				typename t_container::mapped_type::element_type >();
+	}
+
+	/** @brief containerから要素を削除。
+	    @param[in] i_container 対象となるcontainer。
+	    @param[in] i_name      削除する要素の名前hash値。
+	 */
+	public: template< typename t_container >
+	static typename t_container::mapped_type _erase_element(
+		t_container&                 io_container,
+		typename t_hash::value const i_name)
+	{
+		typename t_container::mapped_type a_element;
+		typename t_container::iterator const a_position(
+			io_container.find(i_name));
+		if (io_container.end() != a_position)
+		{
+			a_element.swap(a_position->second);
+			io_container.erase(a_position);
+		}
+		return a_element;
 	}
 
 	//-------------------------------------------------------------------------

@@ -11,6 +11,10 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 時間軸上のevent発生点。
+    @tparam t_hash event-packageで使われているhash関数。
+    @tparam t_real event-packageで使われている実数の型。
+ */
 template< typename t_hash, typename t_real >
 struct psyq::event_point
 {
@@ -24,6 +28,10 @@ struct psyq::event_point
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief event時間軸の管理。
+    @tparam t_hash event-packageで使われているhash関数。
+    @tparam t_real event-packageで使われている実数の型。
+ */
 template< typename t_hash, typename t_real >
 class psyq::event_line
 {
@@ -211,25 +219,25 @@ class psyq::event_line
 	 */
 	private: void forward_time(t_real const i_time)
 	{
-		typename this_type::point const* a_event(this->last_point_);
-		if (0 <= i_time && NULL != a_event)
+		typename this_type::point const* a_point(this->last_point_);
+		if (0 <= i_time && NULL != a_point)
 		{
 			t_real a_rest_time(this->rest_time_ - i_time);
 			while (a_rest_time <= 0)
 			{
-				if (this_type::is_last(a_event))
+				if (this_type::is_last(a_point))
 				{
 					a_rest_time = 0;
 					break;
 				}
 				else
 				{
-					++a_event;
-					a_rest_time += a_event->time;
+					++a_point;
+					a_rest_time += a_point->time;
 				}
 			}
 			this->rest_time_ = a_rest_time;
-			this->last_point_ = a_event;
+			this->last_point_ = a_point;
 		}
 	}
 
@@ -250,20 +258,20 @@ class psyq::event_line
 		typename this_type::point const* const i_event)
 	const
 	{
-		typename this_type::point const* a_event(this->first_point_);
+		typename this_type::point const* a_point(this->first_point_);
 		t_real a_time(0);
-		if (NULL != a_event)
+		if (NULL != a_point)
 		{
 			for (;;)
 			{
-				a_time += a_event->time;
-				if (i_event == a_event || this_type::is_last(a_event))
+				a_time += a_point->time;
+				if (i_event == a_point || this_type::is_last(a_point))
 				{
 					break;
 				}
 				else
 				{
-					++a_event;
+					++a_point;
 				}
 			}
 		}

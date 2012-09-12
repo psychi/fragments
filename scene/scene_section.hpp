@@ -42,7 +42,7 @@ class psyq::scene_section:
 	/** @brief scene-tokenを追加。
 	    @param[in] i_token 追加するscene-token。
 	 */
-	public: bool add_token(
+	public: bool insert_token(
 		typename this_type::token::shared_ptr const& i_token)
 	{
 		if (NULL == i_token.get())
@@ -70,7 +70,7 @@ class psyq::scene_section:
 	/** @brief scene-tokenを削除。
 	    @param[in] i_token 削除するscene-token。
 	 */
-	public: bool remove_token(
+	public: bool erase_token(
 		typename this_type::token::shared_ptr const& i_token)
 	{
 		std::size_t const a_index(this->find_token_index(i_token.get()));

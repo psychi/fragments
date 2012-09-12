@@ -131,6 +131,7 @@ class psyq::scene_world
 
 		// scene‚ðXVB
 		this_type::update_scenes(this->tokens_);
+		//this_type::event::line::scale::update_count();
 	}
 
 	//-------------------------------------------------------------------------
@@ -485,7 +486,7 @@ class psyq::scene_world
 				const_cast< this_type::event::line_map::mapped_type& >(
 					i->second));
 			a_line.seek(i_frame_count, SEEK_CUR);
-			a_line.dispatch(io_dispatch);
+			a_line._dispatch(io_dispatch);
 		}
 	}
 

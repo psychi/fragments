@@ -41,8 +41,9 @@ class psyq::event_line
 	public: typedef t_hash hash;
 	public: typedef t_real real;
 	public: typedef typename t_hash::value integer;
-	public: typedef psyq::layered_scale< t_real, typename this_type::integer >
-		scale;
+	public: typedef psyq::layered_scale<
+		t_real, typename this_type::integer, this_type >
+			scale;
 	public: typedef psyq::event_point< t_hash, t_real > point;
 
 	//-------------------------------------------------------------------------
@@ -149,7 +150,7 @@ class psyq::event_line
 	    @param[in,out] io_container ”­¶‚·‚éevent‚ğ“o˜^‚·‚écontainerB
 	 */
 	public: template< typename t_container >
-	void dispatch(t_container& io_container)
+	void _dispatch(t_container& io_container)
 	{
 		if (NULL == this->last_point_)
 		{
@@ -285,8 +286,7 @@ class psyq::event_line
 		typename this_type::point const* const i_event)
 	{
 		PSYQ_ASSERT(NULL != i_event);
-		return t_hash::EMPTY == i_event->type &&
-			t_hash::EMPTY == i_event->integer;
+		return t_hash::EMPTY == i_event->type && 0 == i_event->integer;
 	}
 
 	//-------------------------------------------------------------------------

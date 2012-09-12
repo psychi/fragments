@@ -116,9 +116,10 @@ class psyq::scene_world
 	 */
 	public: void update(
 		psyq_extern::scene_time const& i_frame_time,
-		t_real const                   i_frame_count = 1)
+		unsigned const                 i_frame_count = 1)
 	{
 		// sceneの時間を更新。
+		this_type::event::line::scale::update_count(i_frame_count);
 		this_type::forward_scenes(this->tokens_, i_frame_time, i_frame_count);
 
 		// eventを更新。
@@ -131,7 +132,6 @@ class psyq::scene_world
 
 		// sceneを更新。
 		this_type::update_scenes(this->tokens_);
-		//this_type::event::line::scale::update_count();
 	}
 
 	//-------------------------------------------------------------------------

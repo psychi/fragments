@@ -132,9 +132,9 @@ class psyq::layered_scale
 
 	/** @brief count値を更新。
 	 */
-	public: static t_count update_count()
+	public: static t_count update_count(t_count const i_count = 1)
 	{
-		return ++this_type::counter();
+		return this_type::counter() += i_count;
 	}
 
 	//-------------------------------------------------------------------------

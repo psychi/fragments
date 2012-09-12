@@ -123,10 +123,25 @@ class psyq::event_line
 	 */
 	public: void seek(t_real const i_time, int const i_origin)
 	{
+		this->seek(1, i_time, i_origin);
+	}
+
+	/** @brief 再生開始時間を任意の位置に設定。
+	    @param[in] i_fps    1秒あたりのframe数。
+	    @param[in] i_count  進めるframe数。
+	    @param[in] i_origin 基準となる時間。C標準libralyのSEEK定数を使う。
+	 */
+	public: void seek(
+		t_real const i_fps,
+		t_real const i_count,
+		int const    i_origin)
+	{
 		if (NULL != this->last_point_)
 		{
 			t_real const a_time(
-				this_type::scale::get_scale(this->scale_, i_time));
+				i_fps < 0 || 0 < i_fps?
+					this_type::scale::get_scale(this->scale_, i_count) / i_fps:
+					0);
 			switch (i_origin)
 			{
 				case SEEK_SET: // 先頭が基準時間。

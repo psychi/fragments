@@ -111,23 +111,32 @@ class psyq::scene_world
 
 	//-------------------------------------------------------------------------
 	/** @brief 更新。
-	    @param[in] i_frame_time  1frameあたりの時間。
-	    @param[in] i_frame_count 進めるframe数。
+	    @param[in] i_fps   1秒あたりのframe数。
+	    @param[in] i_count 進めるframe数。
 	 */
-	public: void update(
-		psyq_extern::scene_time const& i_frame_time,
-		unsigned const                 i_frame_count = 1)
+	public: void update(t_real i_fps, unsigned const i_count = 1)
 	{
+		t_real a_count;
+		if (0 < i_fps)
+		{
+			a_count = static_cast< t_real >(i_count);
+		}
+		else
+		{
+			a_count = 0;
+			i_fps = 1;
+		}
+
 		// sceneの時間を更新。
-		this_type::event::line::scale::update_count(i_frame_count);
-		this_type::forward_scenes(this->tokens_, i_frame_time, i_frame_count);
+		this_type::event::line::scale::update_count(i_count);
+		this_type::forward_scenes(this->tokens_, i_fps, a_count);
 
 		// eventを更新。
 		this_type::dispatch_map a_dispatch(
 			this_type::dispatch_map::key_compare(),
 			this->event_.lines_.get_allocator());
 		this_type::forward_events(
-			a_dispatch, this->event_.lines_, i_frame_count);
+			a_dispatch, this->event_.lines_, i_fps, a_count);
 		this_type::apply_events(*this, a_dispatch, this->event_.actions_);
 
 		// sceneを更新。
@@ -420,14 +429,14 @@ class psyq::scene_world
 
 	//-------------------------------------------------------------------------
 	/** @brief sceneの時間を更新。
-	    @param[in] i_tokens      sceneを持つtokenの辞書。
-	    @param[in] i_frame_time  1frameあたりの時間。
-	    @param[in] i_frame_count 進めるframe数。
+	    @param[in] i_tokens scene-token辞書。
+	    @param[in] i_fps    1秒あたりのframe数。
+	    @param[in] i_count  進めるframe数。
 	 */
 	private: static void forward_scenes(
-		this_type::token_map const&    i_tokens,
-		psyq_extern::scene_time const& i_frame_time,
-		t_real const                   i_frame_count)
+		this_type::token_map const& i_tokens,
+		t_real const                i_fps,
+		t_real const                i_count)
 	{
 		for (
 			this_type::token_map::const_iterator i = i_tokens.begin();
@@ -437,11 +446,11 @@ class psyq::scene_world
 			this_type::token* const a_token(i->second.get());
 			if (NULL != a_token)
 			{
-				t_real const a_time_scale(
-					this_type::event::line::scale::get_scale(
-						a_token->time_scale_, i_frame_count));
 				psyq_extern::forward_scene_unit(
-					a_token->scene_, i_frame_time, a_time_scale);
+					a_token->scene_,
+					i_fps,
+					this_type::event::line::scale::get_scale(
+						a_token->time_scale_, i_count));
 			}
 		}
 	}
@@ -467,14 +476,16 @@ class psyq::scene_world
 
 	//-------------------------------------------------------------------------
 	/** @brief event-lineの時間を更新し、発生したeventをcontainerに登録。
-	    @param[in,out] io_dispatch   発生したeventを登録するcontainer。
-	    @param[in]     i_lines       更新するevent-lineの辞書。
-	    @param[in]     i_time        進める時間。
+	    @param[in,out] io_dispatch 発生したeventを登録するcontainer。
+	    @param[in]     i_lines     更新するevent-lineの辞書。
+	    @param[in]     i_fps       1秒あたりのframe数。
+	    @param[in]     i_count     進めるframe数。
 	 */
 	private: static void forward_events(
 		this_type::dispatch_map&          io_dispatch,
 		this_type::event::line_map const& i_lines,
-		t_real const                      i_time)
+		t_real const                      i_fps,
+		t_real const                      i_count)
 	{
 		for (
 			this_type::event::line_map::const_iterator i = i_lines.begin();
@@ -484,7 +495,7 @@ class psyq::scene_world
 			this_type::event::line_map::mapped_type& a_line(
 				const_cast< this_type::event::line_map::mapped_type& >(
 					i->second));
-			a_line.seek(i_time, SEEK_CUR);
+			a_line.seek(i_fps, i_count, SEEK_CUR);
 			a_line._dispatch(io_dispatch);
 		}
 	}

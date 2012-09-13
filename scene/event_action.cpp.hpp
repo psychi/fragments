@@ -1,6 +1,7 @@
 #ifndef PSYQ_SCENE_EVENT_ACTION_CPP_HPP_
 #define PSYQ_SCENE_EVENT_ACTION_CPP_HPP_
 
+#include <boost/math/special_functions/fpclassify.hpp>
 //#include <psyq/scene/scene_world.hpp>
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -370,6 +371,72 @@ class psyq::event_action< t_hash, t_real, t_string >::set_event_line:
 				a_line->scale_ = io_world.event_.get_scale(
 					io_world.event_.replace_hash(a_parameters->scale));
 				a_line->seek(i_time, SEEK_CUR);
+			}
+		}
+	}
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief time-scaleを設定するevent。
+template< typename t_hash, typename t_real, typename t_string >
+class psyq::event_action< t_hash, t_real, t_string >::set_time_scale:
+	public psyq::event_action< t_hash, t_real, t_string >
+{
+	typedef typename psyq::event_action< t_hash, t_real, t_string > super_type;
+	typedef typename super_type::set_time_scale this_type;
+
+	//-------------------------------------------------------------------------
+	public: struct parameters
+	{
+		typename psyq::event_item< t_hash >::offset name;  ///< time-scale名文字列の先頭offset値。
+		typename psyq::event_item< t_hash >::offset super; ///< 上位time-scale名文字列の先頭offset値。
+		typename t_hash::value                      frame;
+		t_real                                      start;
+		t_real                                      end;
+	};
+
+	//-------------------------------------------------------------------------
+	public: static typename t_hash::value get_hash()
+	{
+		return t_hash::generate("set_time_scale");
+	}
+
+	//-------------------------------------------------------------------------
+	public: virtual void apply(
+		psyq::scene_world&                         io_world,
+		psyq::event_point< t_hash, t_real > const& i_point,
+		t_real const)
+	{
+		// 書庫から引数を取得。
+		typename this_type::parameters const* const a_parameters(
+			io_world.event_.get_address< typename this_type::parameters >(
+				i_point.integer));
+		if (NULL != a_parameters)
+		{
+			// scene-eventからtime-scaleを取得。
+			psyq::scene_world::event::line::scale* const a_scale(
+				io_world.event_.get_scale(
+					io_world.event_.replace_hash(a_parameters->name)).get());
+			if (NULL != a_scale)
+			{
+				psyq::scene_world::event::line::scale::lerp const a_lerp(
+					a_parameters->frame,
+					boost::math::isnan(a_parameters->start)?
+						a_scale->get_scale(): a_parameters->start,
+					a_parameters->end);
+				typename t_hash::value const a_super_hash(
+					io_world.event_.replace_hash(a_parameters->super));
+				if (t_hash::EMPTY != a_super_hash)
+				{
+					// scale値と上位scaleを設定。
+					a_scale->reset(
+						a_lerp, io_world.event_.get_scale(a_super_hash));
+				}
+				else
+				{
+					// scale値のみを設定。
+					a_scale->reset(a_lerp);
+				}
 			}
 		}
 	}

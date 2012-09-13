@@ -50,7 +50,7 @@ class psyq::lerp
 		}
 		else
 		{
-			this->speed_ = t_value(0);
+			this->value_diff_ = t_value(0);
 			this->rest_time_ = t_time(0);
 			this->time_diff_ = t_time(1);
 		}

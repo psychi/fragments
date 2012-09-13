@@ -116,26 +116,24 @@ class psyq::scene_world
 	 */
 	public: void update(t_real const i_fps, unsigned const i_count = 1)
 	{
-		if (i_fps <= 0)
+		if (0 < i_fps)
 		{
-			return;
+			// sceneの時間を更新。
+			this_type::event::line::scale::update_count(i_count);
+			t_real const a_count(static_cast< t_real >(i_count));
+			this_type::forward_scenes(this->tokens_, i_fps, a_count);
+
+			// eventを更新。
+			this_type::dispatch_map a_dispatch(
+				this_type::dispatch_map::key_compare(),
+				this->event_.lines_.get_allocator());
+			this_type::forward_events(
+				a_dispatch, this->event_.lines_, i_fps, a_count);
+			this_type::apply_events(*this, a_dispatch, this->event_.actions_);
+
+			// sceneを更新。
+			this_type::update_scenes(this->tokens_);
 		}
-
-		// sceneの時間を更新。
-		this_type::event::line::scale::update_count(i_count);
-		t_real const a_count(static_cast< t_real >(i_count));
-		this_type::forward_scenes(this->tokens_, i_fps, a_count);
-
-		// eventを更新。
-		this_type::dispatch_map a_dispatch(
-			this_type::dispatch_map::key_compare(),
-			this->event_.lines_.get_allocator());
-		this_type::forward_events(
-			a_dispatch, this->event_.lines_, i_fps, a_count);
-		this_type::apply_events(*this, a_dispatch, this->event_.actions_);
-
-		// sceneを更新。
-		this_type::update_scenes(this->tokens_);
 	}
 
 	//-------------------------------------------------------------------------

@@ -351,15 +351,15 @@ class psyq::scene_event
 	//-------------------------------------------------------------------------
 	/** @brief containerから要素を検索。
 	    @param[in] i_container 対象となるcontainer。
-	    @param[in] i_name      削除する要素の名前hash値。
+	    @param[in] i_key      削除する要素のkey。
 	 */
 	public: template< typename t_container >
 	static typename t_container::mapped_type const& _find_element(
-		t_container const&           i_container,
-		typename t_hash::value const i_name)
+		t_container const&                   i_container,
+		typename t_container::key_type const i_key)
 	{
 		typename t_container::const_iterator const a_position(
-			i_container.find(i_name));
+			i_container.find(i_key));
 		return i_container.end() != a_position?
 			a_position->second:
 			psyq::_get_null_shared_ptr<
@@ -368,16 +368,16 @@ class psyq::scene_event
 
 	/** @brief containerから要素を削除。
 	    @param[in] i_container 対象となるcontainer。
-	    @param[in] i_name      削除する要素の名前hash値。
+	    @param[in] i_key       削除する要素のkey。
 	 */
 	public: template< typename t_container >
 	static typename t_container::mapped_type _erase_element(
-		t_container&                 io_container,
-		typename t_hash::value const i_name)
+		t_container&                         io_container,
+		typename t_container::key_type const i_key)
 	{
 		typename t_container::mapped_type a_element;
 		typename t_container::iterator const a_position(
-			io_container.find(i_name));
+			io_container.find(i_key));
 		if (io_container.end() != a_position)
 		{
 			a_element.swap(a_position->second);

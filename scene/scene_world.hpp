@@ -129,7 +129,7 @@ class psyq::scene_world
 				this->event_.lines_.get_allocator());
 			this_type::forward_events(
 				a_dispatch, this->event_.lines_, i_fps, a_count);
-			this_type::apply_events(*this, a_dispatch, this->event_.actions_);
+			this->apply_events(a_dispatch);
 
 			// sceneを更新。
 			this_type::update_scenes(this->tokens_);
@@ -451,8 +451,7 @@ class psyq::scene_world
 	/** @brief sceneを更新。
 	    @param[in] i_tokens sceneを持つtokenの辞書。
 	 */
-	private: static void update_scenes(
-		this_type::token_map const& i_tokens)
+	private: static void update_scenes(this_type::token_map const& i_tokens)
 	{
 		for (
 			this_type::token_map::const_iterator i = i_tokens.begin();
@@ -485,43 +484,40 @@ class psyq::scene_world
 			i_lines.end() != i;
 			++i)
 		{
+			// event-lineの時間を更新。
 			this_type::event::line_map::mapped_type& a_line(
 				const_cast< this_type::event::line_map::mapped_type& >(
 					i->second));
 			a_line.seek(i_fps, i_count, SEEK_CUR);
+
+			// 発生したeventをcontainerに登録。
 			a_line._dispatch(io_dispatch);
 		}
 	}
 
 	/** @brief containerに登録されているeventに対応する関数を呼び出す。
-	    @param[in,out] io_world   event適用対象のworld。
-	    @param[in]     i_dispatch 発生したeventが登録されているcontainer。
-	    @param[in]     i_actions  event-actionの辞書。
+	    @param[in] i_dispatch 発生したeventが登録されているcontainer。
 	 */
-	private: static void apply_events(
-		this_type&                          io_world,
-		this_type::dispatch_map const&      i_dispatch,
-		this_type::event::action_map const& i_actions)
+	private: void apply_events(this_type::dispatch_map const& i_dispatch)
 	{
 		for (
 			this_type::dispatch_map::const_iterator i = i_dispatch.begin();
 			i_dispatch.end() != i;
 			++i)
 		{
-			// event-pointに対応するevent関数objectを検索。
+			// event-pointを取得。
 			PSYQ_ASSERT(NULL != i->second);
 			this_type::event::point const& a_point(*i->second);
-			this_type::event::action_map::const_iterator const a_position(
-				i_actions.find(a_point.type));
-			if (i_actions.end() != a_position)
+
+			// event-pointに対応するevent関数objectを検索。
+			this_type::event::action* const a_action(
+				this_type::event::_find_element(
+					this->event_.actions_, a_point.type).get());
+
+			// event関数objectを適用。
+			if (NULL != a_action)
 			{
-				this_type::event::action* const a_action(
-					a_position->second.get());
-				if (NULL != a_action)
-				{
-					// eventを適用。
-					a_action->apply(io_world, a_point, i->first);
-				}
+				a_action->apply(*this, a_point, i->first);
 			}
 		}
 	}

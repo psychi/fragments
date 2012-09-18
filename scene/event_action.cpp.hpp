@@ -1,7 +1,7 @@
 #ifndef PSYQ_SCENE_EVENT_ACTION_CPP_HPP_
 #define PSYQ_SCENE_EVENT_ACTION_CPP_HPP_
 
-#include <boost/math/special_functions/fpclassify.hpp>
+#include <cmath>
 //#include <psyq/scene/scene_world.hpp>
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -421,7 +421,11 @@ class psyq::event_action< t_hash, t_real, t_string >::set_time_scale:
 			{
 				psyq::scene_world::event::line::scale::lerp const a_lerp(
 					a_parameters->frame,
-					boost::math::isnan(a_parameters->start)?
+#ifdef _WIN32
+					::_isnan(a_parameters->start)?
+#else
+					std::isnan(a_parameters->start)?
+#endif // _WIN32
 						a_scale->get_scale(): a_parameters->start,
 					a_parameters->end);
 				typename t_hash::value const a_super_hash(

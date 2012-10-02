@@ -6,19 +6,21 @@
 namespace psyq
 {
 	class scene_world;
-	template< typename, typename, typename > class event_action;
+	template< typename, typename > class event_action;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// event-actionの基底class。
-template< typename t_hash, typename t_real, typename t_string >
+/** @brief event-actionの基底class。
+    @tparam t_hash eventで使うhash関数。
+    @tparam t_real eventで使う実数の型。
+ */
+template< typename t_hash, typename t_real >
 class psyq::event_action
 {
-	typedef psyq::event_action< t_hash, t_real, t_string > this_type;
+	typedef psyq::event_action< t_hash, t_real > this_type;
 
 	public: typedef t_hash hash; ///< event書庫で使われているhash関数。
 	public: typedef t_real real; ///< event書庫で使われている実数の型。
-	public: typedef t_string string; ///< 文字列の型。
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
 	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
 	public: typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;

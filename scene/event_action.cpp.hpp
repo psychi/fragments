@@ -6,11 +6,11 @@
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-packageを用意するevent。
-template< typename t_hash, typename t_real, typename t_string >
-class psyq::event_action< t_hash, t_real, t_string >::load_package:
-	public psyq::event_action< t_hash, t_real, t_string >
+template< typename t_hash, typename t_real >
+class psyq::event_action< t_hash, t_real >::load_package:
+	public psyq::event_action< t_hash, t_real >
 {
-	typedef typename psyq::event_action< t_hash, t_real, t_string > super_type;
+	typedef typename psyq::event_action< t_hash, t_real > super_type;
 	typedef typename super_type::load_package this_type;
 
 	//-------------------------------------------------------------------------
@@ -32,11 +32,11 @@ class psyq::event_action< t_hash, t_real, t_string >::load_package:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenを用意するevent。
-template< typename t_hash, typename t_real, typename t_string >
-class psyq::event_action< t_hash, t_real, t_string >::load_token:
-	public psyq::event_action< t_hash, t_real, t_string >
+template< typename t_hash, typename t_real >
+class psyq::event_action< t_hash, t_real >::load_token:
+	public psyq::event_action< t_hash, t_real >
 {
-	typedef typename psyq::event_action< t_hash, t_real, t_string > super_type;
+	typedef typename psyq::event_action< t_hash, t_real > super_type;
 	typedef typename super_type::load_token this_type;
 
 	//-------------------------------------------------------------------------
@@ -86,11 +86,11 @@ class psyq::event_action< t_hash, t_real, t_string >::load_token:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenを削除するevent。
-template< typename t_hash, typename t_real, typename t_string >
-class psyq::event_action< t_hash, t_real, t_string >::unload_token:
-	public psyq::event_action< t_hash, t_real, t_string >
+template< typename t_hash, typename t_real >
+class psyq::event_action< t_hash, t_real >::unload_token:
+	public psyq::event_action< t_hash, t_real >
 {
-	typedef typename psyq::event_action< t_hash, t_real, t_string > super_type;
+	typedef typename psyq::event_action< t_hash, t_real > super_type;
 	typedef typename super_type::unload_token this_type;
 
 	//-------------------------------------------------------------------------
@@ -138,11 +138,11 @@ class psyq::event_action< t_hash, t_real, t_string >::unload_token:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenにanimationを設定するevent。
-template< typename t_hash, typename t_real, typename t_string >
-class psyq::event_action< t_hash, t_real, t_string >::set_token_animation:
-	public psyq::event_action< t_hash, t_real, t_string >
+template< typename t_hash, typename t_real >
+class psyq::event_action< t_hash, t_real >::set_token_animation:
+	public psyq::event_action< t_hash, t_real >
 {
-	typedef typename psyq::event_action< t_hash, t_real, t_string > super_type;
+	typedef typename psyq::event_action< t_hash, t_real > super_type;
 	typedef typename super_type::set_token_animation this_type;
 
 	//-------------------------------------------------------------------------
@@ -199,11 +199,11 @@ class psyq::event_action< t_hash, t_real, t_string >::set_token_animation:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenにmodelを設定するevent。
-template< typename t_hash, typename t_real, typename t_string >
-class psyq::event_action< t_hash, t_real, t_string >::set_token_model:
-	public psyq::event_action< t_hash, t_real, t_string >
+template< typename t_hash, typename t_real >
+class psyq::event_action< t_hash, t_real >::set_token_model:
+	public psyq::event_action< t_hash, t_real >
 {
-	typedef typename psyq::event_action< t_hash, t_real, t_string > super_type;
+	typedef typename psyq::event_action< t_hash, t_real > super_type;
 	typedef typename super_type::set_token_model this_type;
 
 	//-------------------------------------------------------------------------
@@ -254,8 +254,8 @@ class psyq::event_action< t_hash, t_real, t_string >::set_token_model:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-sectionにcameraを設定するevent。
-template< typename t_hash, typename t_real, typename t_string >
-class psyq::event_action< t_hash, t_real, t_string >::set_section_camera
+template< typename t_hash, typename t_real >
+class psyq::event_action< t_hash, t_real >::set_section_camera
 {
 	typename psyq::event_item< t_hash >::offset section;      ///< section名の書庫offset値。
 	typename psyq::event_item< t_hash >::offset camera_token; ///< cameraに使うtoken名の書庫offset値。
@@ -266,11 +266,11 @@ class psyq::event_action< t_hash, t_real, t_string >::set_section_camera
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-sectionにlightを設定するevent。
-template< typename t_hash, typename t_real, typename t_string >
-class psyq::event_action< t_hash, t_real, t_string >::set_section_light:
-	public psyq::event_action< t_hash, t_real, t_string >
+template< typename t_hash, typename t_real >
+class psyq::event_action< t_hash, t_real >::set_section_light:
+	public psyq::event_action< t_hash, t_real >
 {
-	typedef typename psyq::event_action< t_hash, t_real, t_string > super_type;
+	typedef typename psyq::event_action< t_hash, t_real > super_type;
 	typedef typename super_type::set_section_light this_type;
 
 	//-------------------------------------------------------------------------
@@ -319,11 +319,11 @@ class psyq::event_action< t_hash, t_real, t_string >::set_section_light:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief event-lineを開始するevent。
-template< typename t_hash, typename t_real, typename t_string >
-class psyq::event_action< t_hash, t_real, t_string >::set_event_line:
-	public psyq::event_action< t_hash, t_real, t_string >
+template< typename t_hash, typename t_real >
+class psyq::event_action< t_hash, t_real >::set_event_line:
+	public psyq::event_action< t_hash, t_real >
 {
-	typedef typename psyq::event_action< t_hash, t_real, t_string > super_type;
+	typedef typename psyq::event_action< t_hash, t_real > super_type;
 	typedef typename super_type::set_event_line this_type;
 
 	//-------------------------------------------------------------------------
@@ -378,11 +378,11 @@ class psyq::event_action< t_hash, t_real, t_string >::set_event_line:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief time-scaleを設定するevent。
-template< typename t_hash, typename t_real, typename t_string >
-class psyq::event_action< t_hash, t_real, t_string >::set_time_scale:
-	public psyq::event_action< t_hash, t_real, t_string >
+template< typename t_hash, typename t_real >
+class psyq::event_action< t_hash, t_real >::set_time_scale:
+	public psyq::event_action< t_hash, t_real >
 {
-	typedef typename psyq::event_action< t_hash, t_real, t_string > super_type;
+	typedef typename psyq::event_action< t_hash, t_real > super_type;
 	typedef typename super_type::set_time_scale this_type;
 
 	//-------------------------------------------------------------------------

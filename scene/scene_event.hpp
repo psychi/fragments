@@ -6,35 +6,41 @@
 
 namespace psyq
 {
-	template< typename, typename, typename > class scene_event;
+	template< typename, typename, typename, typename > class scene_event;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief sceneのevent全体を管理する。
-    @tparam t_hash   event-packageで使われているhash関数。
-    @tparam t_real   event-packageで使われている実数の型。
-    @tparam t_string std::basic_string互換の文字列の型。
+    @tparam t_hash      event-packageで使われているhash関数。
+    @tparam t_real      event-packageで使われている実数の型。
+    @tparam t_string    event置換語に使う文字列の型。std::basic_string互換。
+	@tparam t_allocator containerに使うmemory割当子の型。
  */
-template< typename t_hash, typename t_real, typename t_string >
+template<
+	typename t_hash,
+	typename t_real,
+	typename t_string,
+	typename t_allocator = typename t_string::allocator_type >
 class psyq::scene_event
 {
-	typedef psyq::scene_event< t_hash, t_real, t_string > this_type;
+	typedef psyq::scene_event< t_hash, t_real, t_string, t_allocator >
+		this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_hash hash;
 	public: typedef t_real real;
 	public: typedef t_string string;
+	public: typedef t_allocator allocator;
 	public: typedef psyq::basic_const_string<
 		typename t_string::value_type, typename t_string::traits_type >
 			const_string; ///< 文字列定数の型。
 	public: typedef psyq::event_item< t_hash > item;
 	public: typedef psyq::event_point< t_hash, t_real > point;
 	public: typedef psyq::event_line< t_hash, t_real > line;
-	public: typedef psyq::event_action< t_hash, t_real, t_string > action;
-	public: typedef typename t_string::allocator_type allocator;
+	public: typedef psyq::event_action< t_hash, t_real > action;
 
 	//-------------------------------------------------------------------------
-	// event置換語の辞書。
+	/// event置換語の辞書。
 	public: typedef std::map<
 		typename t_hash::value,
 		t_string,
@@ -43,7 +49,7 @@ class psyq::scene_event
 			std::pair< typename t_hash::value const, t_string > >::other >
 				word_map;
 
-	// event-lineの辞書。
+	/// event-lineの辞書。
 	public: typedef std::map<
 		typename t_hash::value,
 		typename this_type::line,

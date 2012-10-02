@@ -23,9 +23,11 @@ class psyq::scene_world
 		std::char_traits< char >,
 		psyq_extern::allocator::rebind< char >::other >
 			t_string;
+	private: typedef t_string::allocator_type t_allocator;
 
 	//-------------------------------------------------------------------------
-	public: typedef psyq::scene_event< t_hash, t_real, t_string > event;
+	public: typedef psyq::scene_event< t_hash, t_real, t_string, t_allocator >
+		event;
 	public: typedef psyq::scene_token< t_hash, t_real > token;
 	public: typedef psyq::scene_section< t_hash, t_real > section;
 

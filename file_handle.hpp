@@ -17,7 +17,7 @@ template< typename t_descriptor, typename t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::file_handle:
 	private boost::noncopyable
 {
-	typedef psyq::file_handle< t_descriptor, t_mutex > this_type;
+	public: typedef psyq::file_handle< t_descriptor, t_mutex > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_descriptor descriptor;

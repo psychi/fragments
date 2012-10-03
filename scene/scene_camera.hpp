@@ -21,7 +21,7 @@ template<
 class psyq::scene_camera:
 	private boost::noncopyable
 {
-	typedef psyq::scene_camera< t_hash, t_real, t_name, t_allocator >
+	public: typedef psyq::scene_camera< t_hash, t_real, t_name, t_allocator >
 		this_type;
 
 	//-------------------------------------------------------------------------

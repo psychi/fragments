@@ -21,7 +21,7 @@ namespace psyq
 template< typename t_value, typename t_traits >
 class psyq::basic_const_string
 {
-	typedef psyq::basic_const_string< t_value, t_traits > this_type;
+	public: typedef psyq::basic_const_string< t_value, t_traits > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_value value_type;

@@ -12,7 +12,7 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 class psyq::texture_package
 {
-	typedef psyq::texture_package this_type;
+	public: typedef psyq::texture_package this_type;
 
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
 	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
@@ -23,7 +23,7 @@ class psyq::texture_package
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 class psyq::shader_package
 {
-	typedef psyq::shader_package this_type;
+	public: typedef psyq::shader_package this_type;
 
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
 	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
@@ -34,7 +34,7 @@ class psyq::shader_package
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 class psyq::scene_package
 {
-	typedef psyq::scene_package this_type;
+	public: typedef psyq::scene_package this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
@@ -127,7 +127,7 @@ class psyq::scene_package
 template< typename t_hash, typename t_real >
 class psyq::scene_token
 {
-	typedef psyq::scene_token< t_hash, t_real > this_type;
+	public: typedef psyq::scene_token< t_hash, t_real > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;

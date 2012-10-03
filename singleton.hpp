@@ -23,7 +23,7 @@ template< typename t_mutex >
 class psyq::_singleton_ordered_destructor:
 	public boost::noncopyable
 {
-	typedef psyq::_singleton_ordered_destructor< t_mutex > this_type;
+	public: typedef psyq::_singleton_ordered_destructor< t_mutex > this_type;
 	template< typename, typename, typename > friend class psyq::singleton;
 
 	//-------------------------------------------------------------------------
@@ -171,8 +171,9 @@ template< typename t_value, typename t_mutex >
 class psyq::_singleton_ordered_holder:
 	public psyq::_singleton_ordered_destructor< t_mutex >
 {
-	typedef psyq::_singleton_ordered_holder< t_value, t_mutex > this_type;
-	typedef psyq::_singleton_ordered_destructor< t_mutex > super_type;
+	public: typedef psyq::_singleton_ordered_holder< t_value, t_mutex >
+		this_type;
+	public: typedef psyq::_singleton_ordered_destructor< t_mutex > super_type;
 	template< typename, typename, typename > friend class psyq::singleton;
 
 	//-------------------------------------------------------------------------
@@ -240,7 +241,7 @@ template<
 class psyq::singleton:
 	private boost::noncopyable
 {
-	typedef psyq::singleton< t_value, t_tag, t_mutex > this_type;
+	public: typedef psyq::singleton< t_value, t_tag, t_mutex > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_value value_type;

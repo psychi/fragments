@@ -118,7 +118,7 @@ template< typename t_item, std::size_t t_size >
 class psyq::_enum_set:
 	private boost::noncopyable
 {
-	typedef psyq::_enum_set< t_item, t_size > this_type;
+	public: typedef psyq::_enum_set< t_item, t_size > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_item item;

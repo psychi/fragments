@@ -23,7 +23,7 @@ template<
 	typename t_allocator >
 class psyq::event_stage
 {
-	typedef psyq::event_stage< t_hash, t_real, t_string, t_allocator >
+	public: typedef psyq::event_stage< t_hash, t_real, t_string, t_allocator >
 		this_type;
 
 	//-------------------------------------------------------------------------

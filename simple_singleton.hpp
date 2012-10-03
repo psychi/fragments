@@ -22,7 +22,7 @@ template< typename t_value, typename t_tag = t_value >
 class psyq::simple_singleton:
 	private boost::noncopyable
 {
-	typedef simple_singleton< t_value, t_tag > this_type;
+	public: typedef simple_singleton< t_value, t_tag > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_value value_type;

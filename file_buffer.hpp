@@ -15,8 +15,8 @@ namespace psyq
 class psyq::file_buffer:
 	private psyq::dynamic_storage
 {
-	typedef psyq::file_buffer this_type;
-	typedef psyq::dynamic_storage super_type;
+	public: typedef psyq::file_buffer this_type;
+	private: typedef psyq::dynamic_storage super_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef boost::uint64_t offset;

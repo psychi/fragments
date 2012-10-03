@@ -23,7 +23,8 @@ template<
 class psyq::async_queue:
 	private boost::noncopyable
 {
-	typedef psyq::async_queue< t_mutex, t_condition, t_thread > this_type;
+	public: typedef psyq::async_queue< t_mutex, t_condition, t_thread >
+		this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_mutex mutex;

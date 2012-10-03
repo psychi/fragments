@@ -21,7 +21,7 @@ template<
 	typename t_allocator = typename t_string::allocator_type >
 class psyq::scene_stage
 {
-	typedef psyq::scene_stage< t_hash, t_real, t_string, t_allocator >
+	public: typedef psyq::scene_stage< t_hash, t_real, t_string, t_allocator >
 		this_type;
 
 	//-------------------------------------------------------------------------
@@ -74,6 +74,12 @@ class psyq::scene_stage
 	public: class action:
 		public this_type::event::action
 	{
+		protected: typedef
+			psyq::scene_stage< t_hash, t_real, t_string, t_allocator >
+				stage;
+		public: typedef typename stage::action this_type;
+		public: typedef typename stage::event::action super_type;
+
 		public: class load_package;
 		public: class load_token;
 		public: class unload_token;
@@ -84,18 +90,18 @@ class psyq::scene_stage
 		public: class set_event_line;
 		public: class set_time_scale;
 
-		protected: typedef
-			psyq::scene_stage< t_hash, t_real, t_string, t_allocator >
-				stage;
-
 		public: class apply_parameters:
-			public event::action::apply_parameters
+			public this_type::stage::event::action::apply_parameters
 		{
+			//public: apply_parameters this_type;
+			public: typename stage::event::action::apply_parameters
+				super_type;
+
 			public: apply_parameters(
-				stage&                       io_stage,
-				typename event::point const& i_point,
-				typename event::real const   i_time):
-			event::action::apply_parameters(i_point, i_time),
+				stage&                              io_stage,
+				typename stage::event::point const& i_point,
+				typename stage::event::real const   i_time):
+			super_type(i_point, i_time),
 			stage_(io_stage)
 			{
 				// pass

@@ -14,8 +14,8 @@ template<
 class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::load_package:
 	public psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action
 {
-	typedef typename stage::action super_type;
-	typedef typename super_type::load_package this_type;
+	public: typedef typename stage::action super_type;
+	public: typedef typename super_type::load_package this_type;
 
 	//-------------------------------------------------------------------------
 	public: static typename super_type::stage::event::hash::value get_hash()
@@ -46,8 +46,8 @@ template<
 class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::load_token:
 	public psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action
 {
-	typedef typename stage::action super_type;
-	typedef typename super_type::load_token this_type;
+	public: typedef typename stage::action super_type;
+	public: typedef typename super_type::load_token this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
@@ -105,8 +105,8 @@ template<
 class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::unload_token:
 	public psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action
 {
-	typedef typename stage::action super_type;
-	typedef typename super_type::unload_token this_type;
+	public: typedef typename stage::action super_type;
+	public: typedef typename super_type::unload_token this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
@@ -162,8 +162,8 @@ template<
 class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_token_animation:
 	public psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action
 {
-	typedef typename stage::action super_type;
-	typedef typename super_type::set_token_animation this_type;
+	public: typedef typename stage::action super_type;
+	public: typedef typename super_type::set_token_animation this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
@@ -228,8 +228,8 @@ template<
 class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_token_model:
 	public psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action
 {
-	typedef typename stage::action super_type;
-	typedef typename super_type::set_token_model this_type;
+	public: typedef typename stage::action super_type;
+	public: typedef typename super_type::set_token_model this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
@@ -305,8 +305,8 @@ template<
 class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_section_light:
 	public psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action
 {
-	typedef typename stage::action super_type;
-	typedef typename super_type::set_section_light this_type;
+	public: typedef typename stage::action super_type;
+	public: typedef typename super_type::set_section_light this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
@@ -363,8 +363,8 @@ template<
 class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_event_line:
 	public psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action
 {
-	typedef typename stage::action super_type;
-	typedef typename super_type::set_event_line this_type;
+	public: typedef typename stage::action super_type;
+	public: typedef typename super_type::set_event_line this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
@@ -427,8 +427,8 @@ template<
 class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_time_scale:
 	public psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action
 {
-	typedef typename stage::action super_type;
-	typedef typename super_type::set_time_scale this_type;
+	public: typedef typename stage::action super_type;
+	public: typedef typename super_type::set_time_scale this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters

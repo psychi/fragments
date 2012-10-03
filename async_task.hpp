@@ -17,7 +17,7 @@ namespace psyq
 class psyq::async_task:
 	private boost::noncopyable
 {
-	typedef psyq::async_task this_type;
+	public: typedef psyq::async_task this_type;
 	template< typename, typename, typename > friend class async_queue;
 
 	//-------------------------------------------------------------------------
@@ -115,8 +115,8 @@ template< typename t_mutex >
 class psyq::lockable_async_task:
 	public psyq::async_task
 {
-	typedef psyq::lockable_async_task< t_mutex > this_type;
-	typedef psyq::async_task super_type;
+	public: typedef psyq::lockable_async_task< t_mutex > this_type;
+	public: typedef psyq::async_task super_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_mutex mutex;
@@ -150,6 +150,10 @@ template< typename t_functor, typename t_mutex >
 class psyq::async_task::function_wrapper:
 	public psyq::lockable_async_task< t_mutex >
 {
+	public: typedef psyq::async_task::function_wrapper< t_functor, t_mutex >
+		this_type;
+	public: typedef psyq::lockable_async_task< t_mutex > super_type;
+
 	//-------------------------------------------------------------------------
 	public: explicit function_wrapper(t_functor const& i_functor):
 	psyq::lockable_async_task< t_mutex >(),

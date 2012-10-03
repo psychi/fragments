@@ -18,8 +18,8 @@ template< typename t_file, typename t_mutex >
 class psyq::_async_file_task:
 	public psyq::lockable_async_task< t_mutex >
 {
-	typedef psyq::_async_file_task< t_file, t_mutex > this_type;
-	typedef psyq::lockable_async_task< t_mutex > super_type;
+	public: typedef psyq::_async_file_task< t_file, t_mutex > this_type;
+	public: typedef psyq::lockable_async_task< t_mutex > super_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_file file;
@@ -83,8 +83,9 @@ template<
 class psyq::async_file_reader:
 	public psyq::_async_file_task< t_file, t_mutex >
 {
-	typedef psyq::async_file_reader< t_file, t_arena, t_mutex > this_type;
-	typedef psyq::_async_file_task< t_file, t_mutex > super_type;
+	public: typedef psyq::async_file_reader< t_file, t_arena, t_mutex >
+		this_type;
+	public: typedef psyq::_async_file_task< t_file, t_mutex > super_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_arena arena;
@@ -140,8 +141,8 @@ template< typename t_file, typename t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::async_file_writer:
 	public psyq::_async_file_task< t_file, t_mutex >
 {
-	typedef psyq::async_file_writer< t_file > this_type;
-	typedef psyq::_async_file_task< t_file, t_mutex > super_type;
+	public: typedef psyq::async_file_writer< t_file > this_type;
+	public: typedef psyq::_async_file_task< t_file, t_mutex > super_type;
 
 	//-------------------------------------------------------------------------
 	public: async_file_writer(
@@ -170,8 +171,8 @@ template< typename t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::async_file_mapper:
 	public psyq::lockable_async_task< t_mutex >
 {
-	typedef psyq::async_file_mapper< t_mutex > this_type;
-	typedef psyq::lockable_async_task< t_mutex > super_type;
+	public: typedef psyq::async_file_mapper< t_mutex > this_type;
+	public: typedef psyq::lockable_async_task< t_mutex > super_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef PSYQ_SHARED_PTR< boost::interprocess::file_mapping >

@@ -15,7 +15,7 @@ namespace psyq
 class psyq::dynamic_storage:
 	private boost::noncopyable
 {
-	typedef psyq::dynamic_storage this_type;
+	public: typedef psyq::dynamic_storage this_type;
 
 	//-------------------------------------------------------------------------
 	public: dynamic_storage():

@@ -20,7 +20,7 @@ template< typename t_generator, typename t_traits >
 class psyq::_fnv_hash:
 	public t_generator, public t_traits
 {
-	typedef psyq::_fnv_hash< t_generator, t_traits > this_type;
+	public: typedef psyq::_fnv_hash< t_generator, t_traits > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef typename t_traits::value value;

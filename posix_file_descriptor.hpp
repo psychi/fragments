@@ -26,7 +26,7 @@ namespace psyq
 class psyq::posix_file_descriptor:
 	private boost::noncopyable
 {
-	typedef psyq::posix_file_descriptor this_type;
+	public: typedef psyq::posix_file_descriptor this_type;
 
 	//-------------------------------------------------------------------------
 	public: enum open_flag

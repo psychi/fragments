@@ -35,7 +35,7 @@ struct psyq::event_point
 template< typename t_hash, typename t_real >
 class psyq::event_line
 {
-	typedef psyq::event_line< t_hash, t_real > this_type;
+	public: typedef psyq::event_line< t_hash, t_real > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_hash hash;

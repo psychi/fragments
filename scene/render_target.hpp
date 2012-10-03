@@ -10,7 +10,7 @@ namespace psyq
 class psyq::render_target:
 	private boost::noncopyable
 {
-	typedef psyq::render_target this_type;
+	public: typedef psyq::render_target this_type;
 
 	//-------------------------------------------------------------------------
 	public: enum type

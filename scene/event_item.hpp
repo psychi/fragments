@@ -14,7 +14,7 @@ namespace psyq
 template< typename t_hash >
 struct psyq::event_item
 {
-	private: typedef psyq::event_item< t_hash > this_type;
+	public: typedef psyq::event_item< t_hash > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_hash hash;

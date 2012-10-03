@@ -16,8 +16,9 @@ namespace psyq
 template< typename t_hash, typename t_real >
 class psyq::event_action
 {
-	typedef psyq::event_action< t_hash, t_real > this_type;
+	public: typedef psyq::event_action< t_hash, t_real > this_type;
 
+	//-------------------------------------------------------------------------
 	public: typedef t_hash hash; ///< event書庫で使われているhash関数。
 	public: typedef t_real real; ///< event書庫で使われている実数の型。
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
@@ -25,6 +26,7 @@ class psyq::event_action
 	public: typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
 	public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
 
+	//-------------------------------------------------------------------------
 	public: class apply_parameters:
 		private boost::noncopyable
 	{
@@ -41,6 +43,7 @@ class psyq::event_action
 		public: t_real                                     time_;
 	};
 
+	//-------------------------------------------------------------------------
 	public: virtual ~event_action() {}
 
 	/** event-actionを適用。

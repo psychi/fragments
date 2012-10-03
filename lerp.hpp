@@ -14,7 +14,7 @@ namespace psyq
 template< typename t_value, typename t_time >
 class psyq::lerp
 {
-	typedef psyq::lerp< t_value, t_time > this_type;
+	public: typedef psyq::lerp< t_value, t_time > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_value value_type; ///< üŒ`•âŠÔ‚·‚é’l‚ÌŒ^B

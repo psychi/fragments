@@ -1,7 +1,7 @@
 #ifndef PSYQ_SCENE_WORLD_HPP_
 #define PSYQ_SCENE_WORLD_HPP_
 
-//#include <psyq/scene/scene_event.hpp>
+//#include <psyq/scene/event_registry.hpp>
 
 namespace psyq
 {
@@ -26,8 +26,9 @@ class psyq::scene_world
 	private: typedef t_string::allocator_type t_allocator;
 
 	//-------------------------------------------------------------------------
-	public: typedef psyq::scene_event< t_hash, t_real, t_string, t_allocator >
-		event;
+	public: typedef psyq::event_registry<
+		t_hash, t_real, t_string, t_allocator >
+			event;
 	public: typedef psyq::scene_token< t_hash, t_real > token;
 	public: typedef psyq::scene_section< t_hash, t_real > section;
 
@@ -525,7 +526,7 @@ class psyq::scene_world
 	}
 
 	//-------------------------------------------------------------------------
-	public: this_type::event       event_;    ///< scene-eventの管理。
+	public: this_type::event       event_;    ///< event登記簿。
 	public: this_type::package_map packages_; ///< scene-packageの辞書。
 	public: this_type::section_map sections_; ///< scene-sectionの辞書。
 	public: this_type::token_map   tokens_;   ///< scene-tokenの辞書。

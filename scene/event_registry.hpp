@@ -1,29 +1,29 @@
-#ifndef PSYQ_SCENE_EVENT_HPP_
-#define PSYQ_SCENE_EVENT_HPP_
+#ifndef PSYQ_SCENE_EVENT_REGISTRY_HPP_
+#define PSYQ_SCENE_EVENT_REGISTRY_HPP_
 
 //#include <psyq/const_string.hpp>
 //#include <psyq/scene/event_action.hpp>
 
 namespace psyq
 {
-	template< typename, typename, typename, typename > class scene_event;
+	template< typename, typename, typename, typename > class event_registry;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief sceneのevent全体を管理する。
+/** @brief eventで使うobjectの登記簿。
     @tparam t_hash      event-packageで使われているhash関数。
     @tparam t_real      event-packageで使われている実数の型。
     @tparam t_string    event置換語に使う文字列の型。std::basic_string互換。
-	@tparam t_allocator containerに使うmemory割当子の型。
+    @tparam t_allocator 登記簿で使うmemory割当子の型。
  */
 template<
 	typename t_hash,
 	typename t_real,
 	typename t_string,
 	typename t_allocator = typename t_string::allocator_type >
-class psyq::scene_event
+class psyq::event_registry
 {
-	typedef psyq::scene_event< t_hash, t_real, t_string, t_allocator >
+	typedef psyq::event_registry< t_hash, t_real, t_string, t_allocator >
 		this_type;
 
 	//-------------------------------------------------------------------------
@@ -31,13 +31,13 @@ class psyq::scene_event
 	public: typedef t_real real;
 	public: typedef t_string string;
 	public: typedef t_allocator allocator;
-	public: typedef psyq::basic_const_string<
-		typename t_string::value_type, typename t_string::traits_type >
-			const_string; ///< 文字列定数の型。
 	public: typedef psyq::event_item< t_hash > item;
 	public: typedef psyq::event_point< t_hash, t_real > point;
 	public: typedef psyq::event_line< t_hash, t_real > line;
 	public: typedef psyq::event_action< t_hash, t_real > action;
+	public: typedef psyq::basic_const_string<
+		typename t_string::value_type, typename t_string::traits_type >
+			const_string; ///< 文字列定数の型。
 
 	//-------------------------------------------------------------------------
 	/// event置換語の辞書。
@@ -45,7 +45,7 @@ class psyq::scene_event
 		typename t_hash::value,
 		t_string,
 		std::less< typename t_hash::value >,
-		typename this_type::allocator::template rebind<
+		typename t_allocator::template rebind<
 			std::pair< typename t_hash::value const, t_string > >::other >
 				word_map;
 
@@ -54,7 +54,7 @@ class psyq::scene_event
 		typename t_hash::value,
 		typename this_type::line,
 		std::less< typename t_hash::value >,
-		typename this_type::allocator::template rebind<
+		typename t_allocator::template rebind<
 			std::pair<
 				typename t_hash::value const,
 				typename this_type::line > >::other >
@@ -65,7 +65,7 @@ class psyq::scene_event
 		typename t_hash::value,
 		typename this_type::action::shared_ptr,
 		std::less< typename t_hash::value >,
-		typename this_type::allocator::template rebind<
+		typename t_allocator::template rebind<
 			std::pair<
 				typename t_hash::value const,
 				typename this_type::action::shared_ptr > >::other >
@@ -76,19 +76,19 @@ class psyq::scene_event
 		typename t_hash::value,
 		typename this_type::line::scale::shared_ptr,
 		std::less< typename t_hash::value >,
-		typename this_type::allocator::template rebind<
+		typename t_allocator::template rebind<
 			std::pair<
 				typename t_hash::value const,
 				typename this_type::line::scale::shared_ptr > >::other >
 					scale_map;
 
 	//-------------------------------------------------------------------------
-	/** @brief scene-eventを構築。
-	    @param[in] i_package   使用するevent-package。
+	/** @brief event登記簿を構築。
+	    @param[in] i_package   event登記簿が使うevent-package。
 	    @param[in] i_allocator 初期化に使うmemory割当子。
 	 */
 	public: template< typename t_other_allocator >
-	scene_event(
+	event_registry(
 		PSYQ_SHARED_PTR< psyq::event_package const > const& i_package,
 		t_other_allocator const&                            i_allocator):
 	package_(i_package),
@@ -101,8 +101,8 @@ class psyq::scene_event
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief event全体を交換。
-	    @param[in,out] io_target 交換するevent全体。
+	/** @brief event登記簿を交換。
+	    @param[in,out] io_target 交換するevent登記簿。
 	 */
 	public: void swap(this_type& io_target)
 	{
@@ -125,6 +125,29 @@ class psyq::scene_event
 			this->actions_[t_action::get_hash()]);
 		a_action = PSYQ_ALLOCATE_SHARED< t_action >(
 			this->actions_.get_allocator());
+		return a_action;
+	}
+
+	public: template< typename t_action, typename t_param0 >
+	typename this_type::action::shared_ptr const& reset_action(
+		t_param0 const& i_param0)
+	{
+		typename this_type::action::shared_ptr& a_action(
+			this->actions_[t_action::get_hash()]);
+		a_action = PSYQ_ALLOCATE_SHARED< t_action >(
+			this->actions_.get_allocator(), i_param0);
+		return a_action;
+	}
+
+	public: template< typename t_action, typename t_param0, typename t_param1 >
+	typename this_type::action::shared_ptr const& reset_action(
+		t_param0 const& i_param0,
+		t_param1 const& i_param1)
+	{
+		typename this_type::action::shared_ptr& a_action(
+			this->actions_[t_action::get_hash()]);
+		a_action = PSYQ_ALLOCATE_SHARED< t_action >(
+			this->actions_.get_allocator(), i_param0, i_param1);
 		return a_action;
 	}
 
@@ -406,11 +429,11 @@ namespace std
 {
 	template< typename t_hash, typename t_real, typename t_string >
 	void swap(
-		psyq::scene_event< t_hash, t_real, t_string >& io_left,
-		psyq::scene_event< t_hash, t_real, t_string >& io_right)
+		psyq::event_registry< t_hash, t_real, t_string >& io_left,
+		psyq::event_registry< t_hash, t_real, t_string >& io_right)
 	{
 		io_left.swap(io_right);
 	}
 };
 
-#endif // !PSYQ_SCENE_EVENT_HPP_
+#endif // !PSYQ_SCENE_EVENT_REGISTRY_HPP_

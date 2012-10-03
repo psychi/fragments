@@ -93,8 +93,8 @@ class psyq::scene_stage
 		public: class apply_parameters:
 			public this_type::stage::event::action::apply_parameters
 		{
-			//public: apply_parameters this_type;
-			public: typename stage::event::action::apply_parameters
+			public: typedef apply_parameters this_type;
+			public: typedef typename stage::event::action::apply_parameters
 				super_type;
 
 			public: apply_parameters(
@@ -345,7 +345,8 @@ class psyq::scene_stage
 		if (t_hash::EMPTY != i_token)
 		{
 			// 既存のtokenから検索。
-			typename this_type::token::shared_ptr& a_token(this->tokens_[i_token]);
+			typename this_type::token::shared_ptr& a_token(
+				this->tokens_[i_token]);
 			if (NULL != a_token.get())
 			{
 				return a_token;
@@ -377,8 +378,10 @@ class psyq::scene_stage
 		typename t_hash::value const i_camera)
 	{
 		// tokenとcameraを取得。
-		typename this_type::token::shared_ptr const& a_token(this->get_token(i_token));
-		typename this_type::camera* const a_camera(this->get_camera(i_camera).get());
+		typename this_type::token::shared_ptr const& a_token(
+			this->get_token(i_token));
+		typename this_type::camera* const a_camera(
+			this->get_camera(i_camera).get());
 
 		// tokenをcameraに追加。
 		if (NULL != a_camera)
@@ -454,7 +457,8 @@ class psyq::scene_stage
 			if (this->tokens_.end() != a_token_pos)
 			{
 				// cameraから、tokenを削除。
-				typename this_type::camera* const a_camera(a_camera_pos->second.get());
+				typename this_type::camera* const a_camera(
+					a_camera_pos->second.get());
 				if (NULL != a_camera &&
 					a_camera->erase_token(a_token_pos->second))
 				{
@@ -496,7 +500,8 @@ class psyq::scene_stage
 	/** @brief sceneを更新。
 	    @param[in] i_tokens sceneを持つtokenの辞書。
 	 */
-	private: static void update_scenes(typename this_type::token_map const& i_tokens)
+	private: static void update_scenes(
+		typename this_type::token_map const& i_tokens)
 	{
 		for (
 			typename this_type::token_map::const_iterator i = i_tokens.begin();
@@ -525,14 +530,16 @@ class psyq::scene_stage
 		t_real const                      i_count)
 	{
 		for (
-			typename this_type::event::line_map::const_iterator i = i_lines.begin();
+			typename this_type::event::line_map::const_iterator i =
+				i_lines.begin();
 			i_lines.end() != i;
 			++i)
 		{
 			// event-lineの時間を更新。
 			typename this_type::event::line_map::mapped_type& a_line(
-				const_cast< typename this_type::event::line_map::mapped_type& >(
-					i->second));
+				const_cast<
+					typename this_type::event::line_map::mapped_type& >(
+						i->second));
 			a_line.seek(i_fps, i_count, SEEK_CUR);
 
 			// 発生したeventをcontainerに登録。
@@ -543,10 +550,12 @@ class psyq::scene_stage
 	/** @brief containerに登録されているeventに対応する関数を呼び出す。
 	    @param[in] i_dispatch 発生したeventが登録されているcontainer。
 	 */
-	private: void apply_events(typename this_type::dispatch_map const& i_dispatch)
+	private: void apply_events(
+		typename this_type::dispatch_map const& i_dispatch)
 	{
 		for (
-			typename this_type::dispatch_map::const_iterator i = i_dispatch.begin();
+			typename this_type::dispatch_map::const_iterator i =
+				i_dispatch.begin();
 			i_dispatch.end() != i;
 			++i)
 		{
@@ -562,7 +571,8 @@ class psyq::scene_stage
 			// event関数objectを適用。
 			if (NULL != a_action)
 			{
-				typename this_type::action< t_hash, t_real, t_string, t_allocator >::apply_parameters a_apply(*this, a_point, i->first);
+				typename this_type::action::apply_parameters a_apply(
+					*this, a_point, i->first);
 				a_action->apply(a_apply);
 			}
 		}

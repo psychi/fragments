@@ -3,20 +3,26 @@
 
 namespace psyq
 {
-	template< typename, typename, typename > class scene_camera;
+	template< typename, typename, typename, typename > class scene_camera;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief sceneで使うcamera。
-    @tparam t_hash event-packageで使われているhash関数。
-    @tparam t_real event-packageで使われている実数の型。
-    @tparam t_name scene-nodeの名前の型。
+/** @brief scene-worldに配置するcamera。
+    @tparam t_hash      event-packageで使われているhash関数。
+    @tparam t_real      event-packageで使われている実数の型。
+    @tparam t_name      scene-nodeの名前の型。
+    @tparam t_allocator 使用するmemory割当子の型。
  */
-template< typename t_hash, typename t_real, typename t_name >
+template<
+	typename t_hash,
+	typename t_real,
+	typename t_name,
+	typename t_allocator >
 class psyq::scene_camera:
 	private boost::noncopyable
 {
-	typedef psyq::scene_camera< t_hash, t_real, t_name > this_type;
+	typedef psyq::scene_camera< t_hash, t_real, t_name, t_allocator >
+		this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
@@ -26,10 +32,20 @@ class psyq::scene_camera:
 	public: typedef t_hash hash;
 	public: typedef t_real real;
 	public: typedef t_name name;
+	public: typedef t_allocator allocator;
 	public: typedef psyq::scene_token< t_hash, t_real > token;
 
 	//-------------------------------------------------------------------------
-	public: scene_camera():
+	private: typedef std::vector<
+		typename this_type::token::shared_ptr,
+		typename t_allocator::template rebind<
+			typename this_type::token::shared_ptr >::other >
+				token_container;
+
+	//-------------------------------------------------------------------------
+	public: template< typename t_allocator >
+	explicit scene_camera(t_allocator const& i_allocator):
+	tokens_(i_allocator),
 	camera_node_(NULL),
 	focus_node_(NULL)
 	{
@@ -54,20 +70,18 @@ class psyq::scene_camera:
 		typename this_type::token::shared_ptr const& i_focus_token,
 		t_name const                                 i_focus_name)
 	{
-		this->set_node(i_camera_token, i_camera_name);
-		this->set_focus_node(i_focus_token, i_focus_name);
+		this->set_node(
+			i_camera_token, i_camera_name, i_focus_token, i_focus_name);
 	}
 
 	//-------------------------------------------------------------------------
 	/** @brief cameraを設定。
 	    @param[in] i_token camera-nodeを持つscene-token。
 	    @param[in] i_name  cameraとして使うnodeのID名。
-	    @param[in] i_focus 焦点として使うnodeのID名。
 	 */
 	public: psyq_extern::scene_node const* set_node(
 		typename this_type::token::shared_ptr const& i_token,
-		t_name const                                 i_name,
-		t_name const                                 i_focus)
+		t_name const                                 i_name)
 	{
 		typename this_type::token* const a_token(i_token.get());
 		if (NULL != a_token)
@@ -76,11 +90,45 @@ class psyq::scene_camera:
 				psyq_extern::find_camera_node(a_token->scene_, i_name));
 			if (NULL != a_node)
 			{
-				this->camera_token_ = i_token;
+				this->camera_token_ = i_camera_token;
 				this->camera_node_ = a_node;
-				this->set_focus_node(i_token, i_focus);
 				return a_node;
 			}
+		}
+		return NULL;
+	}
+
+	/** @brief cameraと焦点を設定。
+	    @param[in] i_token  camera-nodeを持つscene-token。
+	    @param[in] i_camera cameraとして使うnodeのID名。
+	    @param[in] i_focus  焦点として使うnodeのID名。
+	 */
+	public: psyq_extern::scene_node const* set_node(
+		typename this_type::token::shared_ptr const& i_token,
+		t_name const                                 i_camera,
+		t_name const                                 i_focus)
+	{
+		return this->set_node(i_token, i_camera, i_token, i_focus);
+	}
+
+	/** @brief cameraと焦点を設定。
+	    @param[in] i_camera_token camera-nodeを持つscene-token。
+	    @param[in] i_camera_name  cameraとして使うnodeのID名。
+	    @param[in] i_focus_token  焦点nodeを持つscene-token。
+	    @param[in] i_focus_name   焦点として使うnodeのID名。
+	 */
+	public: psyq_extern::scene_node const* set_node(
+		typename this_type::token::shared_ptr const& i_camera_token,
+		t_name const                                 i_camera_name,
+		typename this_type::token::shared_ptr const& i_focus_token,
+		t_name const                                 i_focus_name)
+	{
+		psyq_extern::scene_node* const a_node(
+			this->set_node(i_camera_token, i_camera_name));
+		if (NULL != a_node)
+		{
+			this->set_focus_node(i_focus_token, i_focus_name);
+			return a_node;
 		}
 		return NULL;
 	}
@@ -146,6 +194,100 @@ class psyq::scene_camera:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief scene-tokenを追加。
+	    @param[in] i_token 追加するscene-token。
+	 */
+	public: bool insert_token(
+		typename this_type::token::shared_ptr const& i_token)
+	{
+		if (NULL == i_token.get())
+		{
+			return false;
+		}
+		if (!this->find_token(i_token))
+		{
+			this->tokens_.push_back(i_token);
+		}
+		return true;
+	}
+
+	/** @brief scene-tokensを検索。
+	    @param[in] i_token 検索するscene-token。
+	    @return trueなら見つかった。falseなら見つからなかった。
+	 */
+	public: bool find_token(
+		typename this_type::token::shared_ptr const& i_token)
+	const
+	{
+		return this->find_token_index(i_token.get()) < this->tokens_.size();
+	}
+
+	/** @brief scene-tokenを削除。
+	    @param[in] i_token 削除するscene-token。
+	 */
+	public: bool erase_token(
+		typename this_type::token::shared_ptr const& i_token)
+	{
+		std::size_t const a_index(this->find_token_index(i_token.get()));
+		if (a_index < this->tokens_.size())
+		{
+			this->tokens_.at(a_index).swap(this->tokens_.back());
+			this->tokens_.pop_back();
+			return true;
+		}
+		return false;
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief render-targetに描画する。
+	    @param[in] i_target 描画先render-target。
+	    @param[in] i_camera
+	        描画に使うcamera。NULLの場合はset_camera()で指定されたcameraを使う。
+	    @param[in] i_light
+	        描画に使うlight。NULLの場合はset_light()で指定されたlightを使う。
+	 */
+	public: void draw(
+		psyq::render_target const&           i_target,
+		psyq_extern::scene_node const* const i_camera = NULL,
+		psyq_extern::scene_unit const* const i_light = NULL)
+	{
+		PSYQ_ASSERT(i_target.is_drawing());
+
+		// cameraを設定。
+		psyq_extern::scene_node const* const a_camera(
+			psyq_extern::set_camera(i_camera, this->camera_.get()));
+
+		// lightを設定。
+		psyq_extern::set_light(i_light, this->light_.get());
+
+		// 描画。
+		if (NULL != a_camera)
+		{
+			psyq_extern::draw_tokens(this->tokens_, i_target);
+		}
+	}
+
+	//-------------------------------------------------------------------------
+	private: std::size_t find_token_index(
+		typename this_type::token const* const i_token)
+	const
+	{
+		if (NULL != i_token)
+		{
+			for (std::size_t i = 0; i < this->tokens_.size(); ++i)
+			{
+				if (this->tokens_.at(i).get() == i_token)
+				{
+					return i;
+				}
+			}
+		}
+		return (std::numeric_limits< std::size_t >::max)();
+	}
+
+	//-------------------------------------------------------------------------
+	public:  typename this_type::token::shared_ptr light_;
+	private: typename this_type::token_container   tokens_;
 	private: typename this_type::token::shared_ptr camera_token_;
 	private: psyq_extern::scene_node const*        camera_node_;
 	private: typename this_type::token::shared_ptr focus_token_;

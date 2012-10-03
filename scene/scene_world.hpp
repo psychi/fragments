@@ -29,11 +29,10 @@ class psyq::scene_world
 	public: typedef psyq::event_registry<
 		t_hash, t_real, t_string, t_allocator >
 			event;
-	public: typedef psyq::scene_section<
-		t_hash, t_real, t_string::const_pointer >
-			section;
-	public: typedef this_type::section::camera camera;
-	public: typedef this_type::section::token token;
+	public: typedef psyq::scene_camera<
+		t_hash, t_real, t_string::const_pointer, t_allocator >
+			camera;
+	public: typedef this_type::camera::token token;
 
 	//-------------------------------------------------------------------------
 	/// scene-packageの辞書。
@@ -58,16 +57,16 @@ class psyq::scene_world
 				this_type::token::shared_ptr > >::other >
 					token_map;
 
-	/// scene-sectionの辞書。
+	/// scene-cameraの辞書。
 	public: typedef std::map<
 		t_hash::value,
-		this_type::section::shared_ptr,
+		this_type::camera::shared_ptr,
 		std::less< t_hash::value >,
 		this_type::event::allocator::rebind<
 			std::pair<
 				t_hash::value const,
-				this_type::section::shared_ptr > >::other >
-					section_map;
+				this_type::camera::shared_ptr > >::other >
+					camera_map;
 
 	//-------------------------------------------------------------------------
 	public: class event_apply_parameters:
@@ -117,7 +116,7 @@ class psyq::scene_world
 		t_allocator const&                                  i_allocator):
 	event_(i_package, i_allocator),
 	packages_(this_type::package_map::key_compare(), i_allocator),
-	sections_(this_type::section_map::key_compare(), i_allocator),
+	cameras_(this_type::camera_map::key_compare(), i_allocator),
 	tokens_(this_type::token_map::key_compare(), i_allocator)
 	{
 		// pass
@@ -131,7 +130,7 @@ class psyq::scene_world
 	{
 		this->event_.swap(io_target.event_);
 		this->packages_.swap(io_target.packages_);
-		this->sections_.swap(io_target.sections_);
+		this->cameras_.swap(io_target.cameras_);
 		this->tokens_.swap(io_target.tokens_);
 	}
 
@@ -254,61 +253,61 @@ class psyq::scene_world
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief sectionを取得。
-	    section名に対応するsectionが存在しない場合は、新たにsectionを作る。
-	    @param[in] i_section 取得するsectionの名前hash値。
-	    @return section名に対応するsection。取得に失敗した場合は空。
+	/** @brief cameraを取得。
+	    camera名に対応するcameraが存在しない場合は、新たにcameraを作る。
+	    @param[in] i_camera 取得するcameraの名前hash値。
+	    @return camera名に対応するcamera。取得に失敗した場合は空。
 	 */
-	public: this_type::section::shared_ptr const& get_section(
-		t_hash::value const i_section)
+	public: this_type::camera::shared_ptr const& get_camera(
+		t_hash::value const i_camera)
 	{
-		if (t_hash::EMPTY != i_section)
+		if (t_hash::EMPTY != i_camera)
 		{
-			// 既存のsectionから検索。
-			this_type::section::shared_ptr& a_section(
-				this->sections_[i_section]);
-			if (NULL != a_section.get())
+			// 既存のcameraから検索。
+			this_type::camera::shared_ptr& a_camera(
+				this->cameras_[i_camera]);
+			if (NULL != a_camera.get())
 			{
-				// sectionの取得に成功。
-				return a_section;
+				// cameraの取得に成功。
+				return a_camera;
 			}
 
-			// 新たにsectionを作る。
-			PSYQ_ALLOCATE_SHARED< this_type::section >(
-				this->sections_.get_allocator(),
-				this->sections_.get_allocator()).swap(a_section);
-			if (NULL != a_section.get())
+			// 新たにcameraを作る。
+			PSYQ_ALLOCATE_SHARED< this_type::camera >(
+				this->cameras_.get_allocator(),
+				this->cameras_.get_allocator()).swap(a_camera);
+			if (NULL != a_camera.get())
 			{
-				// sectionの取得に成功。
-				return a_section;
+				// cameraの取得に成功。
+				return a_camera;
 			}
 			PSYQ_ASSERT(false);
-			this->sections_.erase(i_section);
+			this->cameras_.erase(i_camera);
 		}
 
-		// sectionの取得に失敗。
-		return psyq::_get_null_shared_ptr< this_type::section >();
+		// cameraの取得に失敗。
+		return psyq::_get_null_shared_ptr< this_type::camera >();
 	}
 
-	/** @brief sectionを検索。
-	    @param[in] i_section 検索するsectionの名前hash値。
-	    @return 見つかったsection。見つからなかった場合は空。
+	/** @brief cameraを検索。
+	    @param[in] i_camera 検索するcameraの名前hash値。
+	    @return 見つかったcamera。見つからなかった場合は空。
 	 */
-	public: this_type::section::shared_ptr const& find_section(
-		t_hash::value const i_section)
+	public: this_type::camera::shared_ptr const& find_camera(
+		t_hash::value const i_camera)
 	const
 	{
-		return this_type::event::_find_element(this->sections_, i_section);
+		return this_type::event::_find_element(this->cameras_, i_camera);
 	}
 
-	/** @brief sectionを削除。
-	    @param[in] i_section 削除するsectionの名前hash値。
-	    @return 削除したsection。削除しなかった場合は空。
+	/** @brief cameraを削除。
+	    @param[in] i_camera 削除するcameraの名前hash値。
+	    @return 削除したcamera。削除しなかった場合は空。
 	 */
-	public: this_type::section::shared_ptr erase_section(
-		t_hash::value const i_section)
+	public: this_type::camera::shared_ptr erase_camera(
+		t_hash::value const i_camera)
 	{
-		return this_type::event::_erase_element(this->sections_, i_section);
+		return this_type::event::_erase_element(this->cameras_, i_camera);
 	}
 
 	//-------------------------------------------------------------------------
@@ -342,28 +341,26 @@ class psyq::scene_world
 		return psyq::_get_null_shared_ptr< this_type::token >();
 	}
 
-	/** @brief sectionからtokenを取得。
+	/** @brief cameraからtokenを取得。
 	    token名に対応するtokenが存在しない場合は、新たにtokenを作る。
-	    section名に対応するsectionが存在しない場合は、新たにsectionを作る。
-	    sectionにtokenがない場合は、sectionにtokenを追加する。
-	    @param[in] i_token   取得するtokenの名前hash値。
-	    @param[in] i_section 対象となるsectionの名前hash値。
+	    camera名に対応するcameraが存在しない場合は、新たにcameraを作る。
+	    cameraにtokenがない場合は、cameraにtokenを追加する。
+	    @param[in] i_token  取得するtokenの名前hash値。
+	    @param[in] i_camera 対象となるcameraの名前hash値。
 	    @return token名に対応するtoken。取得に失敗した場合は空。
 	 */
 	public: this_type::token::shared_ptr const& get_token(
 		t_hash::value const i_token,
-		t_hash::value const i_section)
+		t_hash::value const i_camera)
 	{
-		// tokenとsectionを取得。
-		this_type::token::shared_ptr const& a_token(
-			this->get_token(i_token));
-		this_type::section* const a_section(
-			this->get_section(i_section).get());
+		// tokenとcameraを取得。
+		this_type::token::shared_ptr const& a_token(this->get_token(i_token));
+		this_type::camera* const a_camera(this->get_camera(i_camera).get());
 
-		// tokenをsectionに追加。
-		if (NULL != a_section)
+		// tokenをcameraに追加。
+		if (NULL != a_camera)
 		{
-			a_section->insert_token(a_token);
+			a_camera->insert_token(a_token);
 		}
 		return a_token;
 	}
@@ -379,7 +376,7 @@ class psyq::scene_world
 		return this_type::event::_find_element(this->tokens_, i_token);
 	}
 
-	/** @brief worldとsectionからtokenを削除。
+	/** @brief worldとcameraからtokenを削除。
 	    @param[in] i_token 削除するtokenの名前hash値。
 	    @return 削除したtoken。削除しなかった場合は空。
 	 */
@@ -397,47 +394,46 @@ class psyq::scene_world
 			a_token.swap(a_token_pos->second);
 			this->tokens_.erase(a_token_pos);
 
-			// すべてのsectionからtokenを削除。
+			// すべてのcameraからtokenを削除。
 			for (
-				this_type::section_map::const_iterator i =
-					this->sections_.begin();
-				this->sections_.end() != i;
+				this_type::camera_map::const_iterator i =
+					this->cameras_.begin();
+				this->cameras_.end() != i;
 				++i)
 			{
-				this_type::section* const a_section(i->second.get());
-				if (NULL != a_section)
+				this_type::camera* const a_camera(i->second.get());
+				if (NULL != a_camera)
 				{
-					a_section->erase_token(a_token);
+					a_camera->erase_token(a_token);
 				}
 			}
 		}
 		return a_token;
 	}
 
-	/** @brief sectionからtokenを削除。
-	    @param[in] i_token   削除するtokenの名前hash値。
-	    @param[in] i_section 対象となるsectionの名前hash値。
+	/** @brief cameraからtokenを削除。
+	    @param[in] i_token  削除するtokenの名前hash値。
+	    @param[in] i_camera 対象となるcameraの名前hash値。
 	    @return 削除したtoken。削除しなかった場合は空。
 	 */
 	public: this_type::token::shared_ptr const& erase_token(
 		t_hash::value const i_token,
-		t_hash::value const i_section)
+		t_hash::value const i_camera)
 	{
-		// sectionを検索。
-		this_type::section_map::const_iterator const a_section_pos(
-			this->sections_.find(i_section));
-		if (this->sections_.end() != a_section_pos)
+		// cameraを検索。
+		this_type::camera_map::const_iterator const a_camera_pos(
+			this->cameras_.find(i_camera));
+		if (this->cameras_.end() != a_camera_pos)
 		{
 			// tokenを検索。
 			this_type::token_map::const_iterator const a_token_pos(
 				this->tokens_.find(i_token));
 			if (this->tokens_.end() != a_token_pos)
 			{
-				// sectionから、tokenを削除。
-				this_type::section* const a_section(
-					a_section_pos->second.get());
-				if (NULL != a_section &&
-					a_section->erase_token(a_token_pos->second))
+				// cameraから、tokenを削除。
+				this_type::camera* const a_camera(a_camera_pos->second.get());
+				if (NULL != a_camera &&
+					a_camera->erase_token(a_token_pos->second))
 				{
 					return a_token_pos->second;
 				}
@@ -552,7 +548,7 @@ class psyq::scene_world
 	//-------------------------------------------------------------------------
 	public: this_type::event       event_;    ///< event登記簿。
 	public: this_type::package_map packages_; ///< scene-packageの辞書。
-	public: this_type::section_map sections_; ///< scene-sectionの辞書。
+	public: this_type::camera_map  cameras_;  ///< scene-cameraの辞書。
 	public: this_type::token_map   tokens_;   ///< scene-tokenの辞書。
 };
 

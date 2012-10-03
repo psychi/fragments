@@ -14,7 +14,7 @@ namespace psyq
     @tparam t_hash      event-packageで使われているhash関数。
     @tparam t_real      event-packageで使われている実数の型。
     @tparam t_string    event置換語に使う文字列の型。std::basic_string互換。
-    @tparam t_allocator 登記簿で使うmemory割当子の型。
+    @tparam t_allocator 使用するmemory割当子の型。
  */
 template<
 	typename t_hash,

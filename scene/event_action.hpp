@@ -36,7 +36,8 @@ class psyq::event_action
 	public: class set_event_line;
 	public: class set_time_scale;
 
-	public: class apply_parameters
+	public: class apply_parameters:
+		private boost::noncopyable
 	{
 		public: apply_parameters(
 			psyq::event_point< t_hash, t_real > const& i_point,

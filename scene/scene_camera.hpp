@@ -7,7 +7,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief scene-worldに配置するcamera。
+/** @brief scene-stageに配置するcamera。
     @tparam t_hash      event-packageで使われているhash関数。
     @tparam t_real      event-packageで使われている実数の型。
     @tparam t_name      scene-nodeの名前の型。
@@ -194,7 +194,7 @@ class psyq::scene_camera:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief scene-tokenを追加。
+	/** @brief 描画scene-tokenを追加。
 	    @param[in] i_token 追加するscene-token。
 	 */
 	public: bool insert_token(
@@ -211,7 +211,7 @@ class psyq::scene_camera:
 		return true;
 	}
 
-	/** @brief scene-tokensを検索。
+	/** @brief 描画scene-tokensを検索。
 	    @param[in] i_token 検索するscene-token。
 	    @return trueなら見つかった。falseなら見つからなかった。
 	 */
@@ -222,7 +222,7 @@ class psyq::scene_camera:
 		return this->find_token_index(i_token.get()) < this->tokens_.size();
 	}
 
-	/** @brief scene-tokenを削除。
+	/** @brief 描画scene-tokenを削除。
 	    @param[in] i_token 削除するscene-token。
 	 */
 	public: bool erase_token(

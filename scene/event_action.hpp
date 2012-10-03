@@ -56,12 +56,10 @@ class psyq::event_action
 	public: virtual ~event_action() {}
 
 	/** event-actionを適用。
-	    @param[in,out] io_world 適用対象のscene-world。
-	    @param[in]     i_point  eventを発生させたpoint。
-	    @param[in]     i_time   eventを適用したあとに経過する時間。
+		@param[in] i_apply 適用する引数。
 	 */
 	public: virtual void apply(
-		typename this_type::apply_parameters const& i_parameters) = 0;
+		typename this_type::apply_parameters const& i_apply) = 0;
 };
 
 #endif // !PSYQ_SCENE_EVENT_ACTION_HPP_

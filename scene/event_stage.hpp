@@ -1,16 +1,16 @@
-#ifndef PSYQ_SCENE_EVENT_REGISTRY_HPP_
-#define PSYQ_SCENE_EVENT_REGISTRY_HPP_
+#ifndef PSYQ_SCENE_EVENT_STAGE_HPP_
+#define PSYQ_SCENE_EVENT_STAGE_HPP_
 
 //#include <psyq/const_string.hpp>
 //#include <psyq/scene/event_action.hpp>
 
 namespace psyq
 {
-	template< typename, typename, typename, typename > class event_registry;
+	template< typename, typename, typename, typename > class event_stage;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief eventで使うobjectの登記簿。
+/** @brief eventで使うobjectを配置する場。
     @tparam t_hash      event-packageで使われているhash関数。
     @tparam t_real      event-packageで使われている実数の型。
     @tparam t_string    event置換語に使う文字列の型。std::basic_string互換。
@@ -21,9 +21,9 @@ template<
 	typename t_real,
 	typename t_string,
 	typename t_allocator = typename t_string::allocator_type >
-class psyq::event_registry
+class psyq::event_stage
 {
-	typedef psyq::event_registry< t_hash, t_real, t_string, t_allocator >
+	typedef psyq::event_stage< t_hash, t_real, t_string, t_allocator >
 		this_type;
 
 	//-------------------------------------------------------------------------
@@ -88,7 +88,7 @@ class psyq::event_registry
 	    @param[in] i_allocator 初期化に使うmemory割当子。
 	 */
 	public: template< typename t_other_allocator >
-	event_registry(
+	event_stage(
 		PSYQ_SHARED_PTR< psyq::event_package const > const& i_package,
 		t_other_allocator const&                            i_allocator):
 	package_(i_package),
@@ -429,11 +429,11 @@ namespace std
 {
 	template< typename t_hash, typename t_real, typename t_string >
 	void swap(
-		psyq::event_registry< t_hash, t_real, t_string >& io_left,
-		psyq::event_registry< t_hash, t_real, t_string >& io_right)
+		psyq::event_stage< t_hash, t_real, t_string >& io_left,
+		psyq::event_stage< t_hash, t_real, t_string >& io_right)
 	{
 		io_left.swap(io_right);
 	}
 };
 
-#endif // !PSYQ_SCENE_EVENT_REGISTRY_HPP_
+#endif // !PSYQ_SCENE_EVENT_STAGE_HPP_

@@ -1,19 +1,19 @@
 #ifndef PSYQ_SCENE_WORLD_HPP_
 #define PSYQ_SCENE_WORLD_HPP_
 
-//#include <psyq/scene/event_registry.hpp>
+//#include <psyq/scene/event_stage.hpp>
 
 namespace psyq
 {
-	class scene_world;
+	class scene_stage;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief scene全体を管理する。
+/** @brief sceneで使うobjectを配置する場。
  */
-class psyq::scene_world
+class psyq::scene_stage
 {
-	typedef psyq::scene_world this_type;
+	typedef psyq::scene_stage this_type;
 
 	//-------------------------------------------------------------------------
 	private: typedef psyq::fnv1_hash32 t_hash;
@@ -26,9 +26,8 @@ class psyq::scene_world
 	private: typedef t_string::allocator_type t_allocator;
 
 	//-------------------------------------------------------------------------
-	public: typedef psyq::event_registry<
-		t_hash, t_real, t_string, t_allocator >
-			event;
+	public: typedef psyq::event_stage< t_hash, t_real, t_string, t_allocator >
+		event;
 	public: typedef psyq::scene_camera<
 		t_hash, t_real, t_string::const_pointer, t_allocator >
 			camera;
@@ -73,19 +72,19 @@ class psyq::scene_world
 		public this_type::event::action::apply_parameters
 	{
 		typedef event_apply_parameters this_type;
-		typedef psyq::scene_world::event::action::apply_parameters super_type;
+		typedef psyq::scene_stage::event::action::apply_parameters super_type;
 
 		public: event_apply_parameters(
-			psyq::scene_world&                         io_world,
+			psyq::scene_stage&                         io_stage,
 			psyq::event_point< t_hash, t_real > const& i_point,
 			t_real const                               i_time):
 		super_type(i_point, i_time),
-		world_(io_world)
+		stage_(io_stage)
 		{
 			// pass
 		}
 
-		public: psyq::scene_world& world_;
+		public: psyq::scene_stage& stage_;
 	};
 
 	//-------------------------------------------------------------------------
@@ -111,7 +110,7 @@ class psyq::scene_world
 	    @param[in] i_allocator 初期化に使用するmemory割当子。
 	 */
 	public: template< typename t_allocator >
-	scene_world(
+	scene_stage(
 		PSYQ_SHARED_PTR< psyq::event_package const > const& i_package,
 		t_allocator const&                                  i_allocator):
 	event_(i_package, i_allocator),
@@ -123,8 +122,8 @@ class psyq::scene_world
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief world全体を交換。
-	    @param[in,out] io_target 交換するworld全体。
+	/** @brief stage全体を交換。
+	    @param[in,out] io_target 交換するstage全体。
 	 */
 	public: void swap(this_type& io_target)
 	{
@@ -311,7 +310,7 @@ class psyq::scene_world
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief worldからtokenを取得。
+	/** @brief stageからtokenを取得。
 	    token名に対応するtokenが存在しない場合は、新たにtokenを作る。
 	    @param[in] i_token 取得するtokenの名前hash値。
 	    @return token名に対応するtoken。取得に失敗した場合は空。
@@ -365,7 +364,7 @@ class psyq::scene_world
 		return a_token;
 	}
 
-	/** @brief worldからtokenを検索。
+	/** @brief stageからtokenを検索。
 	    @param[in] i_token 検索するtokenの名前hash値。
 	    @return 見つけたtoken。見つからなかった場合は空。
 	 */
@@ -376,7 +375,7 @@ class psyq::scene_world
 		return this_type::event::_find_element(this->tokens_, i_token);
 	}
 
-	/** @brief worldとcameraからtokenを削除。
+	/** @brief stageとcameraからtokenを削除。
 	    @param[in] i_token 削除するtokenの名前hash値。
 	    @return 削除したtoken。削除しなかった場合は空。
 	 */
@@ -390,7 +389,7 @@ class psyq::scene_world
 			this->tokens_.find(i_token));
 		if (this->tokens_.end() != a_token_pos)
 		{
-			// worldからtokenを削除。
+			// stageからtokenを削除。
 			a_token.swap(a_token_pos->second);
 			this->tokens_.erase(a_token_pos);
 
@@ -555,7 +554,7 @@ class psyq::scene_world
 //-----------------------------------------------------------------------------
 namespace std
 {
-	void swap(psyq::scene_world& io_left, psyq::scene_world& io_right)
+	void swap(psyq::scene_stage& io_left, psyq::scene_stage& io_right)
 	{
 		io_left.swap(io_right);
 	}

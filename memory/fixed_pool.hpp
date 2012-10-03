@@ -18,7 +18,7 @@ template< typename t_arena, typename t_mutex >
 class psyq::fixed_pool:
 	private boost::noncopyable
 {
-	typedef psyq::fixed_pool< t_arena, t_mutex > this_type;
+	public: typedef psyq::fixed_pool< t_arena, t_mutex > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_arena arena;

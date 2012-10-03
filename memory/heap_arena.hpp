@@ -18,8 +18,8 @@ namespace psyq
 class psyq::heap_arena:
 	public psyq::arena
 {
-	typedef psyq::heap_arena this_type;
-	typedef psyq::arena super_type;
+	public: typedef psyq::heap_arena this_type;
+	public: typedef psyq::arena super_type;
 
 	//-------------------------------------------------------------------------
 	/// 一度に確保できるmemoryの最大size。byte単位。

@@ -19,9 +19,9 @@ template<
 class psyq::_allocator_base:
 	public std::allocator< t_value >
 {
-	typedef psyq::_allocator_base< t_value, t_alignment, t_offset >
+	public: typedef psyq::_allocator_base< t_value, t_alignment, t_offset >
 		this_type;
-	typedef std::allocator< t_value > super_type;
+	public: typedef std::allocator< t_value > super_type;
 
 	// 配置境界値が2のべき乗か確認。
 	BOOST_STATIC_ASSERT(0 == (t_alignment & (t_alignment - 1)));

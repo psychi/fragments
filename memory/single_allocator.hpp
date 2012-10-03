@@ -42,7 +42,7 @@ class psyq::single_allocator:
 			t_arena,
 			t_mutex > >
 {
-	typedef psyq::single_allocator<
+	public: typedef psyq::single_allocator<
 		t_value,
 		t_alignment,
 		t_offset,
@@ -50,7 +50,7 @@ class psyq::single_allocator:
 		t_arena,
 		t_mutex >
 			this_type;
-	typedef psyq::allocator<
+	public: typedef psyq::allocator<
 		t_value, t_alignment, t_offset, typename this_type::arena >
 			super_type;
 

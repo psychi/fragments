@@ -41,7 +41,7 @@ template< typename t_arena, typename t_mutex >
 class psyq::small_pools:
 	private boost::noncopyable
 {
-	typedef psyq::small_pools< t_arena, t_mutex > this_type;
+	public: typedef psyq::small_pools< t_arena, t_mutex > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_arena arena;
@@ -183,7 +183,7 @@ template<
 class psyq::small_arena:
 	public psyq::arena
 {
-	typedef psyq::small_arena<
+	public: typedef psyq::small_arena<
 		t_alignment,
 		t_offset,
 		t_chunk_size,
@@ -191,7 +191,7 @@ class psyq::small_arena:
 		t_arena,
 		t_mutex >
 			this_type;
-	typedef psyq::arena super_type;
+	public: typedef psyq::arena super_type;
 
 	BOOST_STATIC_ASSERT(0 < t_small_size);
 

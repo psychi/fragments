@@ -17,9 +17,9 @@ template<
 class psyq::virtual_allocator:
 	public psyq::_allocator_base< t_value, t_alignment, t_offset >
 {
-	typedef psyq::virtual_allocator< t_value, t_alignment, t_offset >
+	public: typedef psyq::virtual_allocator< t_value, t_alignment, t_offset >
 		this_type;
-	typedef psyq::_allocator_base< t_value, t_alignment, t_offset >
+	public: typedef psyq::_allocator_base< t_value, t_alignment, t_offset >
 		super_type;
 
 //.............................................................................

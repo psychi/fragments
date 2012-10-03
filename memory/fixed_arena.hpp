@@ -40,7 +40,7 @@ template<
 class psyq::fixed_arena:
 	public psyq::arena
 {
-	typedef fixed_arena<
+	public: typedef fixed_arena<
 		t_max_size,
 		t_alignment,
 		t_offset,
@@ -48,7 +48,7 @@ class psyq::fixed_arena:
 		t_arena,
 		t_mutex >
 			this_type;
-	typedef psyq::arena super_type;
+	public: typedef psyq::arena super_type;
 
 	// memory配置境界値が2のべき乗か確認。
 	BOOST_STATIC_ASSERT(0 == (t_alignment & (t_alignment - 1)));

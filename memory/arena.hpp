@@ -52,7 +52,7 @@ namespace psyq
 class psyq::arena:
 	private boost::noncopyable
 {
-	typedef psyq::arena this_type;
+	public: typedef psyq::arena this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;

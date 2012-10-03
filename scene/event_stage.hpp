@@ -20,7 +20,7 @@ template<
 	typename t_hash,
 	typename t_real,
 	typename t_string,
-	typename t_allocator = typename t_string::allocator_type >
+	typename t_allocator >
 class psyq::event_stage
 {
 	typedef psyq::event_stage< t_hash, t_real, t_string, t_allocator >
@@ -427,10 +427,14 @@ class psyq::event_stage
 //-----------------------------------------------------------------------------
 namespace std
 {
-	template< typename t_hash, typename t_real, typename t_string >
+	template<
+		typename t_hash,
+		typename t_real,
+		typename t_string,
+		typename t_allocator >
 	void swap(
-		psyq::event_stage< t_hash, t_real, t_string >& io_left,
-		psyq::event_stage< t_hash, t_real, t_string >& io_right)
+		psyq::event_stage< t_hash, t_real, t_string, t_allocator >& io_left,
+		psyq::event_stage< t_hash, t_real, t_string, t_allocator >& io_right)
 	{
 		io_left.swap(io_right);
 	}

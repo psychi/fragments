@@ -25,17 +25,6 @@ class psyq::event_action
 	public: typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
 	public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
 
-	// 用意されているevent-action。
-	public: class load_package;
-	public: class load_token;
-	public: class unload_token;
-	public: class set_token_animation;
-	public: class set_token_model;
-	public: class set_section_camera;
-	public: class set_section_light;
-	public: class set_event_line;
-	public: class set_time_scale;
-
 	public: class apply_parameters:
 		private boost::noncopyable
 	{
@@ -52,7 +41,6 @@ class psyq::event_action
 		public: t_real                                     time_;
 	};
 
-	protected: event_action() {}
 	public: virtual ~event_action() {}
 
 	/** event-actionを適用。

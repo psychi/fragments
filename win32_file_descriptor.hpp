@@ -16,7 +16,7 @@ namespace psyq
 class psyq::win32_file_descriptor:
 	private boost::noncopyable
 {
-	typedef psyq::win32_file_descriptor this_type;
+	public: typedef psyq::win32_file_descriptor this_type;
 
 	//-------------------------------------------------------------------------
 	public: enum open_flag

@@ -3,15 +3,20 @@
 
 namespace psyq
 {
-	template< typename, typename > class scene_camera;
+	template< typename, typename, typename > class scene_camera;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template< typename t_hash, typename t_real >
+/** @brief sceneで使うcamera。
+    @tparam t_hash event-packageで使われているhash関数。
+    @tparam t_real event-packageで使われている実数の型。
+    @tparam t_name scene-nodeの名前の型。
+ */
+template< typename t_hash, typename t_real, typename t_name >
 class psyq::scene_camera:
 	private boost::noncopyable
 {
-	typedef psyq::scene_camera< t_hash, t_real > this_type;
+	typedef psyq::scene_camera< t_hash, t_real, t_name > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
@@ -20,6 +25,7 @@ class psyq::scene_camera:
 	//-------------------------------------------------------------------------
 	public: typedef t_hash hash;
 	public: typedef t_real real;
+	public: typedef t_name name;
 	public: typedef psyq::scene_token< t_hash, t_real > token;
 
 	//-------------------------------------------------------------------------
@@ -32,7 +38,7 @@ class psyq::scene_camera:
 
 	public: explicit scene_camera(
 		typename this_type::token::shared_ptr const& i_token,
-		char const* const                            i_name = NULL)
+		t_name const                                 i_name)
 	{
 		this->set_node(i_token, i_name);
 	}
@@ -44,9 +50,9 @@ class psyq::scene_camera:
 	 */
 	public: scene_camera(
 		typename this_type::token::shared_ptr const& i_camera_token,
-		char const* const                            i_camera_name,
+		t_name const                                 i_camera_name,
 		typename this_type::token::shared_ptr const& i_focus_token,
-		char const* const                            i_focus_name)
+		t_name const                                 i_focus_name)
 	{
 		this->set_node(i_camera_token, i_camera_name);
 		this->set_focus_node(i_focus_token, i_focus_name);
@@ -55,12 +61,13 @@ class psyq::scene_camera:
 	//-------------------------------------------------------------------------
 	/** @brief cameraを設定。
 	    @param[in] i_token camera-nodeを持つscene-token。
-	    @param[in] i_name  cameraとして使うnodeのID文字列。
+	    @param[in] i_name  cameraとして使うnodeのID名。
+	    @param[in] i_focus 焦点として使うnodeのID名。
 	 */
 	public: psyq_extern::scene_node const* set_node(
 		typename this_type::token::shared_ptr const& i_token,
-		char const* const                            i_name = NULL,
-		char const* const                            i_focus = NULL)
+		t_name const                                 i_name,
+		t_name const                                 i_focus)
 	{
 		typename this_type::token* const a_token(i_token.get());
 		if (NULL != a_token)
@@ -99,7 +106,7 @@ class psyq::scene_camera:
 	 */
 	public: psyq_extern::scene_node const* set_focus_node(
 		typename this_type::token::shared_ptr const& i_token,
-		char const* const                    i_name)
+		t_name const                                 i_name)
 	{
 		typename this_type::token* const a_token(i_token.get());
 		if (NULL != i_name && NULL != a_token)

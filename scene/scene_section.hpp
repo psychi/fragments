@@ -3,25 +3,23 @@
 
 namespace psyq
 {
-	template< typename, typename > class scene_section;
+	template< typename, typename, typename > class scene_section;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template< typename t_hash, typename t_real >
+template< typename t_hash, typename t_real, typename t_name >
 class psyq::scene_section:
 	private boost::noncopyable
 {
-	typedef psyq::scene_section< t_hash, t_real > this_type;
+	typedef psyq::scene_section< t_hash, t_real, t_name > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
 	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
 
 	//-------------------------------------------------------------------------
-	public: typedef t_hash hash;
-	public: typedef t_real real;
-	public: typedef psyq::scene_token< t_hash, t_real > token;
-	public: typedef psyq::scene_camera< t_hash, t_real > camera;
+	public: typedef psyq::scene_camera< t_hash, t_real, t_name > camera;
+	public: typedef typename this_type::camera::token token;
 
 	//-------------------------------------------------------------------------
 	private: typedef std::vector<

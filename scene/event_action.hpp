@@ -5,7 +5,6 @@
 
 namespace psyq
 {
-	class scene_world;
 	template< typename, typename > class event_action;
 }
 
@@ -37,6 +36,21 @@ class psyq::event_action
 	public: class set_event_line;
 	public: class set_time_scale;
 
+	public: class apply_parameters
+	{
+		public: apply_parameters(
+			psyq::event_point< t_hash, t_real > const& i_point,
+			t_real const                               i_time):
+		point_(i_point),
+		time_(i_time)
+		{
+			// pass
+		}
+
+		public: psyq::event_point< t_hash, t_real > const& point_;
+		public: t_real                                     time_;
+	};
+
 	protected: event_action() {}
 	public: virtual ~event_action() {}
 
@@ -46,9 +60,7 @@ class psyq::event_action
 	    @param[in]     i_time   eventを適用したあとに経過する時間。
 	 */
 	public: virtual void apply(
-		psyq::scene_world&                         io_world,
-		psyq::event_point< t_hash, t_real > const& i_point,
-		t_real const                               i_time) = 0;
+		typename this_type::apply_parameters const& i_parameters) = 0;
 };
 
 #endif // !PSYQ_SCENE_EVENT_ACTION_HPP_

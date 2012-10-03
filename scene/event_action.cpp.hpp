@@ -21,12 +21,14 @@ class psyq::event_action< t_hash, t_real >::load_package:
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		psyq::scene_world&                         io_world,
-		psyq::event_point< t_hash, t_real > const& i_point,
-		t_real const)
+		super_type::apply_parameters const& i_apply)
 	{
 		// worldにpackageを用意。
-		io_world.get_package(io_world.event_.replace_hash(i_point.integer));
+		psyq::scene_world& a_world(
+			static_cast< psyq::scene_world::event_apply_parameters const& >(
+				i_apply).world_);
+		a_world.get_package(
+			a_world.event_.replace_hash(i_apply.point_.integer));
 	}
 };
 
@@ -55,29 +57,30 @@ class psyq::event_action< t_hash, t_real >::load_token:
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		psyq::scene_world&                         io_world,
-		psyq::event_point< t_hash, t_real > const& i_point,
-		t_real const)
+		super_type::apply_parameters const& i_apply)
 	{
 		// 書庫から引数を取得。
+		psyq::scene_world& a_world(
+			static_cast< psyq::scene_world::event_apply_parameters const& >(
+				i_apply).world_);
 		typename this_type::parameters const* const a_parameters(
-			io_world.event_.get_address< typename this_type::parameters >(
-				i_point.integer));
+			a_world.event_.get_address< typename this_type::parameters >(
+				i_apply.point_.integer));
 		if (NULL != a_parameters)
 		{
 			// sectionとtokenをworldに用意。
 			psyq::scene_world::token* const a_token(
-				io_world.get_token(
-					io_world.event_.replace_hash(a_parameters->token),
-					io_world.event_.replace_hash(a_parameters->section)).get());
+				a_world.get_token(
+					a_world.event_.replace_hash(a_parameters->token),
+					a_world.event_.replace_hash(a_parameters->section)).get());
 			if (NULL != a_token)
 			{
 				// tokenにtime-scaleを設定。
 				typename t_hash::value const a_scale(
-					io_world.event_.replace_hash(a_parameters->scale));
+					a_world.event_.replace_hash(a_parameters->scale));
 				if (t_hash::EMPTY != a_scale)
 				{
-					a_token->time_scale_ = io_world.event_.get_scale(a_scale);
+					a_token->time_scale_ = a_world.event_.get_scale(a_scale);
 				}
 			}
 		}
@@ -108,29 +111,30 @@ class psyq::event_action< t_hash, t_real >::unload_token:
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		psyq::scene_world&                         io_world,
-		psyq::event_point< t_hash, t_real > const& i_point,
-		t_real const)
+		super_type::apply_parameters const& i_apply)
 	{
 		// 書庫から引数を取得。
+		psyq::scene_world& a_world(
+			static_cast< psyq::scene_world::event_apply_parameters const& >(
+				i_apply).world_);
 		typename this_type::parameters const* const a_parameters(
-			io_world.event_.get_address< typename this_type::parameters >(
-				i_point.integer));
+			a_world.event_.get_address< typename this_type::parameters >(
+				i_apply.point_.integer));
 		if (NULL != a_parameters)
 		{
 			typename t_hash::value const a_token(
-				io_world.event_.replace_hash(a_parameters->token));
+				a_world.event_.replace_hash(a_parameters->token));
 			typename t_hash::value const a_section(
-				io_world.event_.replace_hash(a_parameters->section));
+				a_world.event_.replace_hash(a_parameters->section));
 			if (t_hash::EMPTY != a_section)
 			{
 				// sectionからtokenを削除。
-				io_world.erase_token(a_token, a_section);
+				a_world.erase_token(a_token, a_section);
 			}
 			else
 			{
 				// すべてのsectionからtokenを削除。
-				io_world.erase_token(a_token);
+				a_world.erase_token(a_token);
 			}
 		}
 	}
@@ -162,27 +166,28 @@ class psyq::event_action< t_hash, t_real >::set_token_animation:
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		psyq::scene_world&                         io_world,
-		psyq::event_point< t_hash, t_real > const& i_point,
-		t_real const                               i_time)
+		super_type::apply_parameters const& i_apply)
 	{
 		// 書庫から引数を取得。
+		psyq::scene_world& a_world(
+			static_cast< psyq::scene_world::event_apply_parameters const& >(
+				i_apply).world_);
 		typename this_type::parameters const* const a_parameters(
-			io_world.event_.get_address< typename this_type::parameters >(
-				i_point.integer));
+			a_world.event_.get_address< typename this_type::parameters >(
+				i_apply.point_.integer));
 		if (NULL != a_parameters)
 		{
 			// worldからanimation-packageを取得。
 			psyq::scene_package* const a_package(
-				io_world.get_package(
-					io_world.event_.replace_hash(
+				a_world.get_package(
+					a_world.event_.replace_hash(
 						a_parameters->package)).get());
 			if (NULL != a_package)
 			{
 				// worldからtokenを取得し、animationを設定。
 				psyq::scene_world::token* const a_token(
-					io_world.get_token(
-						io_world.event_.replace_hash(
+					a_world.get_token(
+						a_world.event_.replace_hash(
 							a_parameters->token)).get());
 				if (NULL != a_token)
 				{
@@ -190,7 +195,7 @@ class psyq::event_action< t_hash, t_real >::set_token_animation:
 						a_token->scene_,
 						*a_package,
 						psyq::scene_world::event::line::scale::get_scale(
-							a_token->time_scale_, i_time));
+							a_token->time_scale_, i_apply.time_));
 				}
 			}
 		}
@@ -221,27 +226,28 @@ class psyq::event_action< t_hash, t_real >::set_token_model:
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		psyq::scene_world&                         io_world,
-		psyq::event_point< t_hash, t_real > const& i_point,
-		t_real const)
+		super_type::apply_parameters const& i_apply)
 	{
 		// 書庫から引数を取得。
+		psyq::scene_world& a_world(
+			static_cast< psyq::scene_world::event_apply_parameters const& >(
+				i_apply).world_);
 		typename this_type::parameters const* const a_parameters(
-			io_world.event_.get_address< typename this_type::parameters >(
-				i_point.integer));
+			a_world.event_.get_address< typename this_type::parameters >(
+				i_apply.point_.integer));
 		if (NULL != a_parameters)
 		{
 			// worldからmodel-packageを取得。
 			psyq::scene_package* const a_package(
-				io_world.get_package(
-					io_world.event_.replace_hash(
+				a_world.get_package(
+					a_world.event_.replace_hash(
 						a_parameters->package)).get());
 			if (NULL != a_package)
 			{
 				// worldからtokenを取得し、modelを設定。
 				psyq::scene_world::token* const a_token(
-					io_world.get_token(
-						io_world.event_.replace_hash(
+					a_world.get_token(
+						a_world.event_.replace_hash(
 							a_parameters->token)).get());
 				if (NULL != a_token)
 				{
@@ -288,26 +294,27 @@ class psyq::event_action< t_hash, t_real >::set_section_light:
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		psyq::scene_world&                         io_world,
-		psyq::event_point< t_hash, t_real > const& i_point,
-		t_real const)
+		super_type::apply_parameters const& i_apply)
 	{
 		// 書庫から引数を取得。
+		psyq::scene_world& a_world(
+			static_cast< psyq::scene_world::event_apply_parameters const& >(
+				i_apply).world_);
 		typename this_type::parameters const* const a_parameters(
-			io_world.event_.get_address< typename this_type::parameters >(
-				i_point.integer));
+			a_world.event_.get_address< typename this_type::parameters >(
+				i_apply.point_.integer));
 		if (NULL != a_parameters)
 		{
 			// worldからsectionを取得。
 			psyq::scene_world::section* const a_section(
-				io_world.get_section(
-					io_world.event_.replace_hash(a_parameters->section)).get());
+				a_world.get_section(
+					a_world.event_.replace_hash(a_parameters->section)).get());
 			if (NULL != a_section)
 			{
 				// worldからlight-tokenを検索し、sectionに設定。
 				psyq::scene_world::token::shared_ptr const& a_token(
-					io_world.get_token(
-						io_world.event_.replace_hash(a_parameters->token)));
+					a_world.get_token(
+						a_world.event_.replace_hash(a_parameters->token)));
 				if (NULL != a_token.get())
 				{
 					a_section->light_ = a_token;
@@ -344,21 +351,22 @@ class psyq::event_action< t_hash, t_real >::set_event_line:
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		psyq::scene_world&                         io_world,
-		psyq::event_point< t_hash, t_real > const& i_point,
-		t_real const                               i_time)
+		super_type::apply_parameters const& i_apply)
 	{
 		// 書庫から引数を取得。
+		psyq::scene_world& a_world(
+			static_cast< psyq::scene_world::event_apply_parameters const& >(
+				i_apply).world_);
 		typename this_type::parameters const* const a_parameters(
-			io_world.event_.get_address< typename this_type::parameters >(
-				i_point.integer));
+			a_world.event_.get_address< typename this_type::parameters >(
+				i_apply.point_.integer));
 		if (NULL != a_parameters)
 		{
 			// scene-eventにevent-lineを登録。
 			psyq::scene_world::event::line* const a_line(
-				io_world.event_.reset_line(
-					io_world.event_.replace_hash(a_parameters->line),
-					io_world.event_.replace_hash(a_parameters->points)));
+				a_world.event_.reset_line(
+					a_world.event_.replace_hash(a_parameters->line),
+					a_world.event_.replace_hash(a_parameters->points)));
 			if (NULL != a_line)
 			{
 				// time-scaleのない状態でevent-lineに開始frameを設定。
@@ -368,9 +376,9 @@ class psyq::event_action< t_hash, t_real >::set_event_line:
 					0 == a_parameters->start_origin? SEEK_SET: SEEK_END);
 
 				// event-lineにtime-scaleを設定。
-				a_line->scale_ = io_world.event_.get_scale(
-					io_world.event_.replace_hash(a_parameters->scale));
-				a_line->seek(i_time, SEEK_CUR);
+				a_line->scale_ = a_world.event_.get_scale(
+					a_world.event_.replace_hash(a_parameters->scale));
+				a_line->seek(i_apply.time_, SEEK_CUR);
 			}
 		}
 	}
@@ -403,20 +411,21 @@ class psyq::event_action< t_hash, t_real >::set_time_scale:
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		psyq::scene_world&                         io_world,
-		psyq::event_point< t_hash, t_real > const& i_point,
-		t_real const)
+		super_type::apply_parameters const& i_apply)
 	{
 		// 書庫から引数を取得。
+		psyq::scene_world& a_world(
+			static_cast< psyq::scene_world::event_apply_parameters const& >(
+				i_apply).world_);
 		typename this_type::parameters const* const a_parameters(
-			io_world.event_.get_address< typename this_type::parameters >(
-				i_point.integer));
+			a_world.event_.get_address< typename this_type::parameters >(
+				i_apply.point_.integer));
 		if (NULL != a_parameters)
 		{
 			// scene-eventからtime-scaleを取得。
 			psyq::scene_world::event::line::scale* const a_scale(
-				io_world.event_.get_scale(
-					io_world.event_.replace_hash(a_parameters->name)).get());
+				a_world.event_.get_scale(
+					a_world.event_.replace_hash(a_parameters->name)).get());
 			if (NULL != a_scale)
 			{
 				psyq::scene_world::event::line::scale::lerp const a_lerp(
@@ -429,12 +438,12 @@ class psyq::event_action< t_hash, t_real >::set_time_scale:
 						a_scale->get_scale(): a_parameters->start,
 					a_parameters->end);
 				typename t_hash::value const a_super_hash(
-					io_world.event_.replace_hash(a_parameters->super));
+					a_world.event_.replace_hash(a_parameters->super));
 				if (t_hash::EMPTY != a_super_hash)
 				{
 					// scale値と上位scaleを設定。
 					a_scale->reset(
-						a_lerp, io_world.event_.get_scale(a_super_hash));
+						a_lerp, a_world.event_.get_scale(a_super_hash));
 				}
 				else
 				{

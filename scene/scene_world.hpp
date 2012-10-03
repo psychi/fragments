@@ -29,8 +29,11 @@ class psyq::scene_world
 	public: typedef psyq::event_registry<
 		t_hash, t_real, t_string, t_allocator >
 			event;
-	public: typedef psyq::scene_token< t_hash, t_real > token;
-	public: typedef psyq::scene_section< t_hash, t_real > section;
+	public: typedef psyq::scene_section<
+		t_hash, t_real, t_string::const_pointer >
+			section;
+	public: typedef this_type::section::camera camera;
+	public: typedef this_type::section::token token;
 
 	//-------------------------------------------------------------------------
 	/// scene-packageの辞書。
@@ -65,6 +68,26 @@ class psyq::scene_world
 				t_hash::value const,
 				this_type::section::shared_ptr > >::other >
 					section_map;
+
+	//-------------------------------------------------------------------------
+	public: class event_apply_parameters:
+		public this_type::event::action::apply_parameters
+	{
+		typedef event_apply_parameters this_type;
+		typedef psyq::scene_world::event::action::apply_parameters super_type;
+
+		public: event_apply_parameters(
+			psyq::scene_world&                         io_world,
+			psyq::event_point< t_hash, t_real > const& i_point,
+			t_real const                               i_time):
+		super_type(i_point, i_time),
+		world_(io_world)
+		{
+			// pass
+		}
+
+		public: psyq::scene_world& world_;
+	};
 
 	//-------------------------------------------------------------------------
 	private: struct package_path
@@ -203,7 +226,7 @@ class psyq::scene_world
 		t_hash::value const i_package)
 	const
 	{
-		// 書庫からpackage-pathを検索。
+		// event-packageからscene-package-pathを検索。
 		this_type::event::item const* const a_item(
 			this_type::event::item::find(
 				*this->event_.get_package(), i_package));
@@ -520,7 +543,8 @@ class psyq::scene_world
 			// event関数objectを適用。
 			if (NULL != a_action)
 			{
-				a_action->apply(*this, a_point, i->first);
+				this_type::event_apply_parameters a_apply(*this, a_point, i->first);
+				a_action->apply(a_apply);
 			}
 		}
 	}

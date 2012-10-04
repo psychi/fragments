@@ -71,47 +71,6 @@ class psyq::scene_stage
 					camera_map;
 
 	//-------------------------------------------------------------------------
-	public: class action:
-		public this_type::event::action
-	{
-		protected: typedef
-			psyq::scene_stage< t_hash, t_real, t_string, t_allocator >
-				stage;
-		public: typedef typename stage::action this_type;
-		public: typedef typename stage::event::action super_type;
-
-		public: class load_package;
-		public: class load_token;
-		public: class unload_token;
-		public: class set_token_animation;
-		public: class set_token_model;
-		public: class set_camera;
-		public: class set_camera_light;
-		public: class set_event_line;
-		public: class set_time_scale;
-
-		public: class apply_parameters:
-			public this_type::stage::event::action::apply_parameters
-		{
-			public: typedef apply_parameters this_type;
-			public: typedef typename stage::event::action::apply_parameters
-				super_type;
-
-			public: apply_parameters(
-				stage&                              io_stage,
-				typename stage::event::point const& i_point,
-				typename stage::event::real const   i_time):
-			super_type(i_point, i_time),
-			stage_(io_stage)
-			{
-				// pass
-			}
-
-			public: stage& stage_;
-		};
-	};
-
-	//-------------------------------------------------------------------------
 	private: struct package_path
 	{
 		typename this_type::event::item::offset scene;   ///< sceneのpath名の書庫offset値。
@@ -516,6 +475,11 @@ class psyq::scene_stage
 	}
 
 	//-------------------------------------------------------------------------
+	protected: virtual void apply_event(
+		typename this_type::event::action&      io_action,
+		typename this_type::event::point const& i_point,
+		t_real const                            i_time);
+
 	/** @brief event-lineの時間を更新し、発生したeventをcontainerに登録。
 	    @param[in,out] io_dispatch 発生したeventを登録するcontainer。
 	    @param[in]     i_lines     更新するevent-lineの辞書。
@@ -570,9 +534,7 @@ class psyq::scene_stage
 			// event関数objectを適用。
 			if (NULL != a_action)
 			{
-				typename this_type::action::apply_parameters a_apply(
-					*this, a_point, i->first);
-				a_action->apply(a_apply);
+				this->apply_event(*a_action, a_point, i->first);
 			}
 		}
 	}

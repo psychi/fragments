@@ -1,5 +1,5 @@
-#ifndef PSYQ_SCENE_EVENT_ACTION_CPP_HPP_
-#define PSYQ_SCENE_EVENT_ACTION_CPP_HPP_
+#ifndef PSYQ_SCENE_ACTION_HPP_
+#define PSYQ_SCENE_ACTION_HPP_
 
 #include <cmath>
 //#include <psyq/scene/scene_stage.hpp>
@@ -16,18 +16,22 @@ class psyq::scene_action:
 {
 	public: typedef psyq::scene_action< t_stage > this_type;
 	public: typedef typename t_stage::event::action super_type;
+
+	//-------------------------------------------------------------------------
 	public: typedef t_stage stage;
 
+	//-------------------------------------------------------------------------
 	public: class load_package;
 	public: class load_token;
 	public: class unload_token;
 	public: class set_token_animation;
 	public: class set_token_model;
-	public: class set_section_camera;
-	public: class set_section_light;
+	public: class set_camera;
+	public: class set_camera_light;
 	public: class set_event_line;
 	public: class set_time_scale;
 
+	//-------------------------------------------------------------------------
 	public: class apply_parameters:
 		public t_stage::event::action::apply_parameters
 	{
@@ -50,30 +54,42 @@ class psyq::scene_action:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief scene-packageを用意するevent。
 template<
 	typename t_hash,
 	typename t_real,
 	typename t_string,
 	typename t_allocator >
-class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::load_package:
-	public psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action
+void psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::apply_event(
+	typename this_type::event::action&      io_action,
+	typename this_type::event::point const& i_point,
+	t_real const                            i_time)
 {
-	public: typedef typename stage::action super_type;
+	io_action.apply(
+		typename psyq::scene_action< this_type >::apply_parameters(
+			*this, i_point, i_time));
+}
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief scene-packageを用意するevent。
+template< typename t_stage >
+class psyq::scene_action< t_stage >::load_package:
+	public psyq::scene_action< t_stage >
+{
+	public: typedef psyq::scene_action< t_stage > super_type;
 	public: typedef typename super_type::load_package this_type;
 
 	//-------------------------------------------------------------------------
-	public: static typename super_type::stage::event::hash::value get_hash()
+	public: static typename t_stage::event::hash::value get_hash()
 	{
-		return super_type::stage::event::hash::generate("load_package");
+		return t_stage::event::hash::generate("load_package");
 	}
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		typename super_type::stage::event::action::apply_parameters const& i_apply)
+		typename t_stage::event::action::apply_parameters const& i_apply)
 	{
 		// stageにpackageを用意。
-		typename super_type::stage& a_stage(
+		t_stage& a_stage(
 			static_cast< typename super_type::apply_parameters const& >(
 				i_apply).stage_);
 		a_stage.get_package(
@@ -83,37 +99,33 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::load_p
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenを用意するevent。
-template<
-	typename t_hash,
-	typename t_real,
-	typename t_string,
-	typename t_allocator >
-class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::load_token:
-	public psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action
+template< typename t_stage >
+class psyq::scene_action< t_stage >::load_token:
+	public psyq::scene_action< t_stage >
 {
-	public: typedef typename stage::action super_type;
+	public: typedef psyq::scene_action< t_stage > super_type;
 	public: typedef typename super_type::load_token this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename super_type::stage::event::item::offset camera; ///< camera名の書庫offset値。
-		typename super_type::stage::event::item::offset token;   ///< 追加するtoken名の書庫offset値。
-		typename super_type::stage::event::item::offset scale;   ///< 設定するtime-scale名の書庫offset値。
+		typename t_stage::event::item::offset camera; ///< camera名の書庫offset値。
+		typename t_stage::event::item::offset token;  ///< 用意するtoken名の書庫offset値。
+		typename t_stage::event::item::offset scale;  ///< tokenに設定するtime-scale名の書庫offset値。
 	};
 
 	//-------------------------------------------------------------------------
-	public: static typename super_type::stage::event::hash::value get_hash()
+	public: static typename t_stage::event::hash::value get_hash()
 	{
-		return super_type::stage::event::hash::generate("load_token");
+		return t_stage::event::hash::generate("load_token");
 	}
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		typename super_type::stage::event::action::apply_parameters const& i_apply)
+		typename t_stage::event::action::apply_parameters const& i_apply)
 	{
 		// 書庫から引数を取得。
-		typename super_type::stage& a_stage(
+		t_stage& a_stage(
 			static_cast< typename super_type::apply_parameters const& >(
 				i_apply).stage_);
 		typename this_type::parameters const* const a_parameters(
@@ -122,16 +134,16 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::load_t
 		if (NULL != a_parameters)
 		{
 			// cameraとtokenをstageに用意。
-			typename super_type::stage::token* const a_token(
+			typename t_stage::token* const a_token(
 				a_stage.get_token(
 					a_stage.event_.replace_hash(a_parameters->token),
 					a_stage.event_.replace_hash(a_parameters->camera)).get());
 			if (NULL != a_token)
 			{
 				// tokenにtime-scaleを設定。
-				typename super_type::stage::event::hash::value const a_scale(
+				typename t_stage::event::hash::value const a_scale(
 					a_stage.event_.replace_hash(a_parameters->scale));
-				if (super_type::stage::event::hash::EMPTY != a_scale)
+				if (t_stage::event::hash::EMPTY != a_scale)
 				{
 					a_token->time_scale_ = a_stage.event_.get_scale(a_scale);
 				}
@@ -142,36 +154,32 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::load_t
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenを削除するevent。
-template<
-	typename t_hash,
-	typename t_real,
-	typename t_string,
-	typename t_allocator >
-class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::unload_token:
-	public psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action
+template< typename t_stage >
+class psyq::scene_action< t_stage >::unload_token:
+	public psyq::scene_action< t_stage >
 {
-	public: typedef typename stage::action super_type;
+	public: typedef psyq::scene_action< t_stage > super_type;
 	public: typedef typename super_type::unload_token this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename super_type::stage::event::item::offset camera; ///< camera名の書庫offset値。
-		typename super_type::stage::event::item::offset token;   ///< 削除するtoken名の書庫offset値。
+		typename t_stage::event::item::offset camera; ///< camera名の書庫offset値。
+		typename t_stage::event::item::offset token;   ///< 削除するtoken名の書庫offset値。
 	};
 
 	//-------------------------------------------------------------------------
-	public: static typename super_type::stage::event::hash::value get_hash()
+	public: static typename t_stage::event::hash::value get_hash()
 	{
-		return super_type::stage::event::hash::generate("unload_token");
+		return t_stage::event::hash::generate("unload_token");
 	}
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		typename super_type::stage::event::action::apply_parameters const& i_apply)
+		typename t_stage::event::action::apply_parameters const& i_apply)
 	{
 		// 書庫から引数を取得。
-		typename super_type::stage& a_stage(
+		t_stage& a_stage(
 			static_cast< typename super_type::apply_parameters const& >(
 				i_apply).stage_);
 		typename this_type::parameters const* const a_parameters(
@@ -179,11 +187,11 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::unload
 				< typename this_type::parameters >(i_apply.point_.integer));
 		if (NULL != a_parameters)
 		{
-			typename super_type::stage::event::hash::value const a_token(
+			typename t_stage::event::hash::value const a_token(
 				a_stage.event_.replace_hash(a_parameters->token));
-			typename super_type::stage::event::hash::value const a_camera(
+			typename t_stage::event::hash::value const a_camera(
 				a_stage.event_.replace_hash(a_parameters->camera));
-			if (super_type::stage::event::hash::EMPTY != a_camera)
+			if (t_stage::event::hash::EMPTY != a_camera)
 			{
 				// cameraからtokenを削除。
 				a_stage.erase_token(a_token, a_camera);
@@ -199,38 +207,34 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::unload
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenにanimationを設定するevent。
-template<
-	typename t_hash,
-	typename t_real,
-	typename t_string,
-	typename t_allocator >
-class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_token_animation:
-	public psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action
+template< typename t_stage >
+class psyq::scene_action< t_stage >::set_token_animation:
+	public psyq::scene_action< t_stage >
 {
-	public: typedef typename stage::action super_type;
+	public: typedef psyq::scene_action< t_stage > super_type;
 	public: typedef typename super_type::set_token_animation this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename super_type::stage::event::item::offset token;
-		typename super_type::stage::event::item::offset package;
-		typename super_type::stage::event::item::offset flags;
-		typename super_type::stage::event::real         start;
+		typename t_stage::event::item::offset token;
+		typename t_stage::event::item::offset package;
+		typename t_stage::event::item::offset flags;
+		typename t_stage::event::real         start;
 	};
 
 	//-------------------------------------------------------------------------
-	public: static typename super_type::stage::event::hash::value get_hash()
+	public: static typename t_stage::event::hash::value get_hash()
 	{
-		return super_type::stage::event::hash::generate("set_token_animation");
+		return t_stage::event::hash::generate("set_token_animation");
 	}
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		typename super_type::stage::event::action::apply_parameters const& i_apply)
+		typename t_stage::event::action::apply_parameters const& i_apply)
 	{
 		// 書庫から引数を取得。
-		typename super_type::stage& a_stage(
+		t_stage& a_stage(
 			static_cast< typename super_type::apply_parameters const& >(
 				i_apply).stage_);
 		typename this_type::parameters const* const a_parameters(
@@ -246,7 +250,7 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_to
 			if (NULL != a_package)
 			{
 				// stageからtokenを取得し、animationを設定。
-				typename super_type::stage::token* const a_token(
+				typename t_stage::token* const a_token(
 					a_stage.get_token(
 						a_stage.event_.replace_hash(
 							a_parameters->token)).get());
@@ -255,7 +259,7 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_to
 					psyq_extern::set_animation(
 						a_token->scene_,
 						*a_package,
-						super_type::stage::event::line::scale::get_scale(
+						t_stage::event::line::scale::get_scale(
 							a_token->time_scale_, i_apply.time_));
 				}
 			}
@@ -265,36 +269,32 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_to
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenにmodelを設定するevent。
-template<
-	typename t_hash,
-	typename t_real,
-	typename t_string,
-	typename t_allocator >
-class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_token_model:
-	public psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action
+template< typename t_stage >
+class psyq::scene_action< t_stage >::set_token_model:
+	public psyq::scene_action< t_stage >
 {
-	public: typedef typename stage::action super_type;
+	public: typedef psyq::scene_action< t_stage > super_type;
 	public: typedef typename super_type::set_token_model this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename super_type::stage::event::item::offset token;   ///< token名の書庫offset値。
-		typename super_type::stage::event::item::offset package; ///< package名の書庫offset値。
+		typename t_stage::event::item::offset token;   ///< token名の書庫offset値。
+		typename t_stage::event::item::offset package; ///< package名の書庫offset値。
 	};
 
 	//-------------------------------------------------------------------------
-	public: static typename super_type::stage::event::hash::value get_hash()
+	public: static typename t_stage::event::hash::value get_hash()
 	{
-		return super_type::stage::event::hash::generate("set_token_model");
+		return t_stage::event::hash::generate("set_token_model");
 	}
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		typename super_type::stage::event::action::apply_parameters const& i_apply)
+		typename t_stage::event::action::apply_parameters const& i_apply)
 	{
 		// 書庫から引数を取得。
-		typename super_type::stage& a_stage(
+		t_stage& a_stage(
 			static_cast< typename super_type::apply_parameters const& >(
 				i_apply).stage_);
 		typename this_type::parameters const* const a_parameters(
@@ -310,7 +310,7 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_to
 			if (NULL != a_package)
 			{
 				// stageからtokenを取得し、modelを設定。
-				typename super_type::stage::token* const a_token(
+				typename t_stage::token* const a_token(
 					a_stage.get_token(
 						a_stage.event_.replace_hash(
 							a_parameters->token)).get());
@@ -327,51 +327,46 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_to
 /// @brief scene-sectionにcameraを設定するevent。
 /*
 template< typename t_stage >
-class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_section_camera
+class psyq::scene_action< t_stage >::set_camera
 {
 	public: struct parameters
 	{
-		typename super_type::stage::event::item::offset section;      ///< section名の書庫offset値。
-		typename super_type::stage::event::item::offset camera_token; ///< cameraに使うtoken名の書庫offset値。
-		typename super_type::stage::event::item::offset camera_node;  ///< cameraに使うnode名の書庫offset値。
-		typename super_type::stage::event::item::offset focus_token;  ///< focusに使うtoken名の書庫offset値。
-		typename super_type::stage::event::item::offset focus_node;   ///< focusに使うnode名の書庫offset値。
+		typename t_stage::event::item::offset camera_token; ///< cameraに使うtoken名の書庫offset値。
+		typename t_stage::event::item::offset camera_node;  ///< cameraに使うnode名の書庫offset値。
+		typename t_stage::event::item::offset focus_token;  ///< focusに使うtoken名の書庫offset値。
+		typename t_stage::event::item::offset focus_node;   ///< focusに使うnode名の書庫offset値。
 	}
 };
  */
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-cameraにlightを設定するevent。
-template<
-	typename t_hash,
-	typename t_real,
-	typename t_string,
-	typename t_allocator >
-class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_camera_light:
-	public psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action
+template< typename t_stage >
+class psyq::scene_action< t_stage >::set_camera_light:
+	public psyq::scene_action< t_stage >
 {
-	public: typedef typename stage::action super_type;
+	public: typedef psyq::scene_action< t_stage > super_type;
 	public: typedef typename super_type::set_camera_light this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename super_type::stage::event::item::offset camera; ///< cameraの名前。
-		typename super_type::stage::event::item::offset token;   ///< lightとして使うtokenの名前。
+		typename t_stage::event::item::offset camera; ///< cameraの名前。
+		typename t_stage::event::item::offset token;   ///< lightとして使うtokenの名前。
 	};
 
 	//-------------------------------------------------------------------------
-	public: static typename super_type::stage::event::hash::value get_hash()
+	public: static typename t_stage::event::hash::value get_hash()
 	{
-		return super_type::stage::event::hash::generate("set_camera_light");
+		return t_stage::event::hash::generate("set_camera_light");
 	}
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		typename super_type::stage::event::action::apply_parameters const& i_apply)
+		typename t_stage::event::action::apply_parameters const& i_apply)
 	{
 		// 書庫から引数を取得。
-		typename super_type::stage& a_stage(
+		t_stage& a_stage(
 			static_cast< typename super_type::apply_parameters const& >(
 				i_apply).stage_);
 		typename this_type::parameters const* const a_parameters(
@@ -380,13 +375,13 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_ca
 		if (NULL != a_parameters)
 		{
 			// stageからcameraを取得。
-			typename super_type::stage::camera* const a_camera(
+			typename t_stage::camera* const a_camera(
 				a_stage.get_camera(
 					a_stage.event_.replace_hash(a_parameters->camera)).get());
 			if (NULL != a_camera)
 			{
 				// stageからlight-tokenを検索し、cameraに設定。
-				typename super_type::stage::token::shared_ptr const& a_token(
+				typename t_stage::token::shared_ptr const& a_token(
 					a_stage.get_token(
 						a_stage.event_.replace_hash(a_parameters->token)));
 				if (NULL != a_token.get())
@@ -400,39 +395,35 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_ca
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief event-lineを開始するevent。
-template<
-	typename t_hash,
-	typename t_real,
-	typename t_string,
-	typename t_allocator >
-class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_event_line:
-	public psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action
+template< typename t_stage >
+class psyq::scene_action< t_stage >::set_event_line:
+	public psyq::scene_action< t_stage >
 {
-	public: typedef typename stage::action super_type;
+	public: typedef psyq::scene_action< t_stage > super_type;
 	public: typedef typename super_type::set_event_line this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename super_type::stage::event::item::offset line;
-		typename super_type::stage::event::item::offset points;
-		typename super_type::stage::event::item::offset scale;
-		typename super_type::stage::event::real         start_frame;
-		typename super_type::stage::event::hash::value  start_origin;
+		typename t_stage::event::item::offset line;
+		typename t_stage::event::item::offset points;
+		typename t_stage::event::item::offset scale;
+		typename t_stage::event::real         start_frame;
+		typename t_stage::event::hash::value  start_origin;
 	};
 
 	//-------------------------------------------------------------------------
-	public: static typename super_type::stage::event::hash::value get_hash()
+	public: static typename t_stage::event::hash::value get_hash()
 	{
-		return super_type::stage::event::hash::generate("set_event_line");
+		return t_stage::event::hash::generate("set_event_line");
 	}
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		typename super_type::stage::event::action::apply_parameters const& i_apply)
+		typename t_stage::event::action::apply_parameters const& i_apply)
 	{
 		// 書庫から引数を取得。
-		typename super_type::stage& a_stage(
+		t_stage& a_stage(
 			static_cast< typename super_type::apply_parameters const& >(
 				i_apply).stage_);
 		typename this_type::parameters const* const a_parameters(
@@ -441,7 +432,7 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_ev
 		if (NULL != a_parameters)
 		{
 			// scene-eventにevent-lineを登録。
-			typename super_type::stage::event::line* const a_line(
+			typename t_stage::event::line* const a_line(
 				a_stage.event_.reset_line(
 					a_stage.event_.replace_hash(a_parameters->line),
 					a_stage.event_.replace_hash(a_parameters->points)));
@@ -464,39 +455,35 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_ev
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief time-scaleを設定するevent。
-template<
-	typename t_hash,
-	typename t_real,
-	typename t_string,
-	typename t_allocator >
-class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_time_scale:
-	public psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action
+template< typename t_stage >
+class psyq::scene_action< t_stage >::set_time_scale:
+	public psyq::scene_action< t_stage >
 {
-	public: typedef typename stage::action super_type;
+	public: typedef psyq::scene_action< t_stage > super_type;
 	public: typedef typename super_type::set_time_scale this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename super_type::stage::event::item::offset name;  ///< time-scale名文字列の先頭offset値。
-		typename super_type::stage::event::item::offset super; ///< 上位time-scale名文字列の先頭offset値。
-		typename super_type::stage::event::hash::value  frame;
-		typename super_type::stage::event::real         start;
-		typename super_type::stage::event::real         end;
+		typename t_stage::event::item::offset name;  ///< time-scale名文字列の先頭offset値。
+		typename t_stage::event::item::offset super; ///< 上位time-scale名文字列の先頭offset値。
+		typename t_stage::event::hash::value  frame;
+		typename t_stage::event::real         start;
+		typename t_stage::event::real         end;
 	};
 
 	//-------------------------------------------------------------------------
-	public: static typename super_type::stage::event::hash::value get_hash()
+	public: static typename t_stage::event::hash::value get_hash()
 	{
-		return super_type::stage::event::hash::generate("set_time_scale");
+		return t_stage::event::hash::generate("set_time_scale");
 	}
 
 	//-------------------------------------------------------------------------
 	public: virtual void apply(
-		typename super_type::stage::event::action::apply_parameters const& i_apply)
+		typename t_stage::event::action::apply_parameters const& i_apply)
 	{
 		// 書庫から引数を取得。
-		typename super_type::stage& a_stage(
+		t_stage& a_stage(
 			static_cast< typename super_type::apply_parameters const& >(
 				i_apply).stage_);
 		typename this_type::parameters const* const a_parameters(
@@ -505,12 +492,12 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_ti
 		if (NULL != a_parameters)
 		{
 			// scene-eventからtime-scaleを取得。
-			typename super_type::stage::event::line::scale* const a_scale(
+			typename t_stage::event::line::scale* const a_scale(
 				a_stage.event_.get_scale(
 					a_stage.event_.replace_hash(a_parameters->name)).get());
 			if (NULL != a_scale)
 			{
-				typename super_type::stage::event::line::scale::lerp const
+				typename t_stage::event::line::scale::lerp const
 					a_lerp(
 						a_parameters->frame,
 #ifdef _WIN32
@@ -520,9 +507,9 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_ti
 #endif // _WIN32
 							a_scale->get_scale(): a_parameters->start,
 						a_parameters->end);
-				typename super_type::stage::event::hash::value const a_super_hash(
+				typename t_stage::event::hash::value const a_super_hash(
 					a_stage.event_.replace_hash(a_parameters->super));
-				if (super_type::stage::event::hash::EMPTY != a_super_hash)
+				if (t_stage::event::hash::EMPTY != a_super_hash)
 				{
 					// scale値と上位scaleを設定。
 					a_scale->reset(
@@ -538,4 +525,4 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_ti
 	}
 };
 
-#endif // !PSYQ_SCENE_EVENT_ACTION_CPP_HPP_
+#endif // !PSYQ_SCENE_ACTION_HPP_

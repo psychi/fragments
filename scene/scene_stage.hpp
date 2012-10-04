@@ -42,7 +42,7 @@ class psyq::scene_stage
 		typename t_hash::value,
 		psyq::scene_package::shared_ptr,
 		std::less< typename t_hash::value >,
-		typename this_type::event::allocator::rebind<
+		typename this_type::event::allocator::template rebind<
 			std::pair<
 				typename t_hash::value const,
 				psyq::scene_package::shared_ptr > >::other >
@@ -53,7 +53,7 @@ class psyq::scene_stage
 		typename t_hash::value,
 		typename this_type::token::shared_ptr,
 		std::less< typename t_hash::value >,
-		typename this_type::event::allocator::rebind<
+		typename this_type::event::allocator::template rebind<
 			std::pair<
 				typename t_hash::value const,
 				typename this_type::token::shared_ptr > >::other >
@@ -64,7 +64,7 @@ class psyq::scene_stage
 		typename t_hash::value,
 		typename this_type::camera::shared_ptr,
 		std::less< typename t_hash::value >,
-		typename this_type::event::allocator::rebind<
+		typename this_type::event::allocator::template rebind<
 			std::pair<
 				typename t_hash::value const,
 				typename this_type::camera::shared_ptr > >::other >
@@ -85,8 +85,8 @@ class psyq::scene_stage
 		public: class unload_token;
 		public: class set_token_animation;
 		public: class set_token_model;
-		public: class set_section_camera;
-		public: class set_section_light;
+		public: class set_camera;
+		public: class set_camera_light;
 		public: class set_event_line;
 		public: class set_time_scale;
 
@@ -123,7 +123,7 @@ class psyq::scene_stage
 		t_real,
 		typename this_type::event::point const*,
 		std::greater< t_real >,
-		typename this_type::event::allocator::rebind<
+		typename this_type::event::allocator::template rebind<
 			std::pair<
 				t_real const,
 				typename this_type::event::point const* > >::other >
@@ -133,8 +133,7 @@ class psyq::scene_stage
 	/** @param[in] i_package   使用するevent-package。
 	    @param[in] i_allocator 初期化に使用するmemory割当子。
 	 */
-	public: template< typename t_allocator >
-	scene_stage(
+	public: scene_stage(
 		PSYQ_SHARED_PTR< psyq::event_package const > const& i_package,
 		t_allocator const&                                  i_allocator):
 	event_(i_package, i_allocator),
@@ -167,15 +166,15 @@ class psyq::scene_stage
 		if (0 < i_fps)
 		{
 			// sceneの時間を更新。
-			typename this_type::event::line::scale::update_count(i_count);
+			this_type::event::line::scale::update_count(i_count);
 			t_real const a_count(static_cast< t_real >(i_count));
-			typename this_type::forward_scenes(this->tokens_, i_fps, a_count);
+			this_type::forward_scenes(this->tokens_, i_fps, a_count);
 
 			// eventを更新。
 			typename this_type::dispatch_map a_dispatch(
 				typename this_type::dispatch_map::key_compare(),
 				this->event_.lines_.get_allocator());
-			typename this_type::forward_events(
+			this_type::forward_events(
 				a_dispatch, this->event_.lines_, i_fps, a_count);
 			this->apply_events(a_dispatch);
 
@@ -255,7 +254,7 @@ class psyq::scene_stage
 		if (NULL != a_item)
 		{
 			typename this_type::package_path const* const a_path(
-				this->event_.get_address< typename this_type::package_path >(
+				this->event_.template get_address< typename this_type::package_path >(
 					a_item->begin));
 			if (NULL != a_path)
 			{

@@ -43,8 +43,7 @@ class psyq::scene_camera:
 				token_container;
 
 	//-------------------------------------------------------------------------
-	public: template< typename t_allocator >
-	explicit scene_camera(t_allocator const& i_allocator):
+	public: explicit scene_camera(t_allocator const& i_allocator):
 	tokens_(i_allocator),
 	camera_node_(NULL),
 	focus_node_(NULL)
@@ -90,7 +89,7 @@ class psyq::scene_camera:
 				psyq_extern::find_camera_node(a_token->scene_, i_name));
 			if (NULL != a_node)
 			{
-				this->camera_token_ = i_camera_token;
+				this->camera_token_ = i_token;
 				this->camera_node_ = a_node;
 				return a_node;
 			}

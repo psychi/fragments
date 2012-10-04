@@ -87,10 +87,9 @@ class psyq::event_stage
 	    @param[in] i_package   event登記簿が使うevent-package。
 	    @param[in] i_allocator 初期化に使うmemory割当子。
 	 */
-	public: template< typename t_other_allocator >
-	event_stage(
+	public: event_stage(
 		PSYQ_SHARED_PTR< psyq::event_package const > const& i_package,
-		t_other_allocator const&                            i_allocator):
+		t_allocator const&                                  i_allocator):
 	package_(i_package),
 	actions_(typename this_type::action_map::key_compare(), i_allocator),
 	words_(typename this_type::word_map::key_compare(), i_allocator),

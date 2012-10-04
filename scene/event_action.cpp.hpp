@@ -4,6 +4,51 @@
 #include <cmath>
 //#include <psyq/scene/scene_stage.hpp>
 
+namespace psyq
+{
+	template< typename > class scene_action;
+}
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template< typename t_stage >
+class psyq::scene_action:
+	public t_stage::event::action
+{
+	public: typedef psyq::scene_action< t_stage > this_type;
+	public: typedef typename t_stage::event::action super_type;
+	public: typedef t_stage stage;
+
+	public: class load_package;
+	public: class load_token;
+	public: class unload_token;
+	public: class set_token_animation;
+	public: class set_token_model;
+	public: class set_section_camera;
+	public: class set_section_light;
+	public: class set_event_line;
+	public: class set_time_scale;
+
+	public: class apply_parameters:
+		public t_stage::event::action::apply_parameters
+	{
+		public: typedef apply_parameters this_type;
+		public: typedef typename t_stage::event::action::apply_parameters
+			super_type;
+
+		public: apply_parameters(
+			t_stage&                              io_stage,
+			typename t_stage::event::point const& i_point,
+			typename t_stage::event::real const   i_time):
+		super_type(i_point, i_time),
+		stage_(io_stage)
+		{
+			// pass
+		}
+
+		public: t_stage& stage_;
+	};
+};
+
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-packageを用意するevent。
 template<
@@ -52,7 +97,7 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::load_t
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename super_type::stage::event::item::offset section; ///< section名の書庫offset値。
+		typename super_type::stage::event::item::offset camera; ///< camera名の書庫offset値。
 		typename super_type::stage::event::item::offset token;   ///< 追加するtoken名の書庫offset値。
 		typename super_type::stage::event::item::offset scale;   ///< 設定するtime-scale名の書庫offset値。
 	};
@@ -72,15 +117,15 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::load_t
 			static_cast< typename super_type::apply_parameters const& >(
 				i_apply).stage_);
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.get_address< typename this_type::parameters >(
-				i_apply.point_.integer));
+			a_stage.event_.template get_address
+				< typename this_type::parameters >(i_apply.point_.integer));
 		if (NULL != a_parameters)
 		{
-			// sectionとtokenをstageに用意。
+			// cameraとtokenをstageに用意。
 			typename super_type::stage::token* const a_token(
 				a_stage.get_token(
 					a_stage.event_.replace_hash(a_parameters->token),
-					a_stage.event_.replace_hash(a_parameters->section)).get());
+					a_stage.event_.replace_hash(a_parameters->camera)).get());
 			if (NULL != a_token)
 			{
 				// tokenにtime-scaleを設定。
@@ -111,7 +156,7 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::unload
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename super_type::stage::event::item::offset section; ///< section名の書庫offset値。
+		typename super_type::stage::event::item::offset camera; ///< camera名の書庫offset値。
 		typename super_type::stage::event::item::offset token;   ///< 削除するtoken名の書庫offset値。
 	};
 
@@ -130,22 +175,22 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::unload
 			static_cast< typename super_type::apply_parameters const& >(
 				i_apply).stage_);
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.get_address< typename this_type::parameters >(
-				i_apply.point_.integer));
+			a_stage.event_.template get_address
+				< typename this_type::parameters >(i_apply.point_.integer));
 		if (NULL != a_parameters)
 		{
 			typename super_type::stage::event::hash::value const a_token(
 				a_stage.event_.replace_hash(a_parameters->token));
-			typename super_type::stage::event::hash::value const a_section(
-				a_stage.event_.replace_hash(a_parameters->section));
-			if (super_type::stage::event::hash::EMPTY != a_section)
+			typename super_type::stage::event::hash::value const a_camera(
+				a_stage.event_.replace_hash(a_parameters->camera));
+			if (super_type::stage::event::hash::EMPTY != a_camera)
 			{
-				// sectionからtokenを削除。
-				a_stage.erase_token(a_token, a_section);
+				// cameraからtokenを削除。
+				a_stage.erase_token(a_token, a_camera);
 			}
 			else
 			{
-				// すべてのsectionからtokenを削除。
+				// すべてのcameraからtokenを削除。
 				a_stage.erase_token(a_token);
 			}
 		}
@@ -189,8 +234,8 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_to
 			static_cast< typename super_type::apply_parameters const& >(
 				i_apply).stage_);
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.get_address< typename this_type::parameters >(
-				i_apply.point_.integer));
+			a_stage.event_.template get_address
+				< typename this_type::parameters >(i_apply.point_.integer));
 		if (NULL != a_parameters)
 		{
 			// stageからanimation-packageを取得。
@@ -253,8 +298,8 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_to
 			static_cast< typename super_type::apply_parameters const& >(
 				i_apply).stage_);
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.get_address< typename this_type::parameters >(
-				i_apply.point_.integer));
+			a_stage.event_.template get_address
+				< typename this_type::parameters >(i_apply.point_.integer));
 		if (NULL != a_parameters)
 		{
 			// stageからmodel-packageを取得。
@@ -296,29 +341,29 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_se
  */
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief scene-sectionにlightを設定するevent。
+/// @brief scene-cameraにlightを設定するevent。
 template<
 	typename t_hash,
 	typename t_real,
 	typename t_string,
 	typename t_allocator >
-class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_section_light:
+class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_camera_light:
 	public psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action
 {
 	public: typedef typename stage::action super_type;
-	public: typedef typename super_type::set_section_light this_type;
+	public: typedef typename super_type::set_camera_light this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename super_type::stage::event::item::offset section; ///< sectionの名前。
+		typename super_type::stage::event::item::offset camera; ///< cameraの名前。
 		typename super_type::stage::event::item::offset token;   ///< lightとして使うtokenの名前。
 	};
 
 	//-------------------------------------------------------------------------
 	public: static typename super_type::stage::event::hash::value get_hash()
 	{
-		return super_type::stage::event::hash::generate("set_section_light");
+		return super_type::stage::event::hash::generate("set_camera_light");
 	}
 
 	//-------------------------------------------------------------------------
@@ -330,23 +375,23 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_se
 			static_cast< typename super_type::apply_parameters const& >(
 				i_apply).stage_);
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.get_address< typename this_type::parameters >(
-				i_apply.point_.integer));
+			a_stage.event_.template get_address
+				< typename this_type::parameters >(i_apply.point_.integer));
 		if (NULL != a_parameters)
 		{
-			// stageからsectionを取得。
-			typename super_type::stage::section* const a_section(
-				a_stage.get_section(
-					a_stage.event_.replace_hash(a_parameters->section)).get());
-			if (NULL != a_section)
+			// stageからcameraを取得。
+			typename super_type::stage::camera* const a_camera(
+				a_stage.get_camera(
+					a_stage.event_.replace_hash(a_parameters->camera)).get());
+			if (NULL != a_camera)
 			{
-				// stageからlight-tokenを検索し、sectionに設定。
+				// stageからlight-tokenを検索し、cameraに設定。
 				typename super_type::stage::token::shared_ptr const& a_token(
 					a_stage.get_token(
 						a_stage.event_.replace_hash(a_parameters->token)));
 				if (NULL != a_token.get())
 				{
-					a_section->light_ = a_token;
+					a_camera->light_ = a_token;
 				}
 			}
 		}
@@ -391,12 +436,12 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_ev
 			static_cast< typename super_type::apply_parameters const& >(
 				i_apply).stage_);
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.get_address< typename this_type::parameters >(
-				i_apply.point_.integer));
+			a_stage.event_.template get_address
+				< typename this_type::parameters >(i_apply.point_.integer));
 		if (NULL != a_parameters)
 		{
 			// scene-eventにevent-lineを登録。
-			super_type::stage::event::line* const a_line(
+			typename super_type::stage::event::line* const a_line(
 				a_stage.event_.reset_line(
 					a_stage.event_.replace_hash(a_parameters->line),
 					a_stage.event_.replace_hash(a_parameters->points)));
@@ -455,8 +500,8 @@ class psyq::scene_stage< t_hash, t_real, t_string, t_allocator >::action::set_ti
 			static_cast< typename super_type::apply_parameters const& >(
 				i_apply).stage_);
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.get_address< typename this_type::parameters >(
-				i_apply.point_.integer));
+			a_stage.event_.template get_address
+				< typename this_type::parameters >(i_apply.point_.integer));
 		if (NULL != a_parameters)
 		{
 			// scene-eventからtime-scaleを取得。

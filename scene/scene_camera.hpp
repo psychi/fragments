@@ -122,12 +122,18 @@ class psyq::scene_camera:
 		typename this_type::token::shared_ptr const& i_focus_token,
 		t_name const                                 i_focus_name)
 	{
-		psyq_extern::scene_node* const a_node(
-			this->set_node(i_camera_token, i_camera_name));
-		if (NULL != a_node)
+		psyq_extern::scene_node* const a_focus_node(
+			this_type::find_focus_node(i_focus_token, i_focus_name));
+		if (NULL != a_focus_node)
 		{
-			this->set_focus_node(i_focus_token, i_focus_name);
-			return a_node;
+			psyq_extern::scene_node* const a_camera_node(
+				this->set_node(i_camera_token, i_camera_name));
+			if (NULL != a_camera_node)
+			{
+				this->focus_token_ = i_focus_token;
+				this->focus_node_ = a_focus_node;
+				return a_camera_node;
+			}
 		}
 		return NULL;
 	}
@@ -155,17 +161,13 @@ class psyq::scene_camera:
 		typename this_type::token::shared_ptr const& i_token,
 		t_name const                                 i_name)
 	{
-		typename this_type::token* const a_token(i_token.get());
-		if (NULL != i_name && NULL != a_token)
+		psyq_extern::scene_node* const a_node(
+			this_type::find_focus_node(i_token, i_name));
+		if (NULL != a_node)
 		{
-			psyq_extern::scene_node* const a_node(
-				psyq_extern::find_node(a_token->scene_, i_name));
-			if (NULL != a_node)
-			{
-				this->focus_token_ = i_token;
-				this->focus_node_ = a_node;
-				return a_node;
-			}
+			this->focus_token_ = i_token;
+			this->focus_node_ = a_node;
+			return a_node;
 		}
 		return NULL;
 	}
@@ -190,6 +192,15 @@ class psyq::scene_camera:
 	{
 		return NULL != this->camera_node_ && NULL != this->focus_node_?
 			psyq_extern::distance(*this->camera_node_, *this->focus_node_): 0;
+	}
+
+	private: static psyq_extern::scene_node const* find_focus_node(
+		typename this_type::token::shared_ptr const& i_token,
+		t_name const                                 i_name)
+	{
+		typename this_type::token* const a_token(i_token.get());
+		return NULL != i_name && NULL != a_token?
+			psyq_extern::find_node(a_token->scene_, i_name): NULL;
 	}
 
 	//-------------------------------------------------------------------------

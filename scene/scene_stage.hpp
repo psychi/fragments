@@ -2,6 +2,7 @@
 #define PSYQ_SCENE_STAGE_HPP_
 
 //#include <psyq/scene/event_stage.hpp>
+//#include <psyq/scene/scene_action.hpp>
 
 namespace psyq
 {
@@ -122,6 +123,20 @@ class psyq::scene_stage
 	 */
 	public: void update(t_real const i_fps, unsigned const i_count = 1)
 	{
+		typename psyq::scene_action< this_type >::update_parameters a_update;
+		this->update(a_update, i_fps, i_count);
+	}
+
+	/** @brief 更新。
+	    @param[in,out] io_update event-actionのupdate関数に渡す引数。
+	    @param[in]     i_fps     1秒あたりのframe数。
+	    @param[in]     i_count   進めるframe数。
+	 */
+	private: void update(
+		typename psyq::scene_action< this_type >::update_parameters& io_update,
+		t_real const                                                 i_fps,
+		unsigned const                                               i_count = 1)
+	{
 		if (0 < i_fps)
 		{
 			// sceneの時間を更新。
@@ -130,12 +145,12 @@ class psyq::scene_stage
 			this_type::forward_scenes(this->tokens_, i_fps, a_count);
 
 			// eventを更新。
-			typename this_type::dispatch_map a_dispatch(
+			typename this_type::dispatch_map a_points(
 				typename this_type::dispatch_map::key_compare(),
 				this->event_.lines_.get_allocator());
 			this_type::forward_events(
-				a_dispatch, this->event_.lines_, i_fps, a_count);
-			this->apply_events(a_dispatch);
+				a_points, this->event_.lines_, i_fps, a_count);
+			this->update_events(io_update, a_points);
 
 			// sceneを更新。
 			this_type::update_scenes(this->tokens_);
@@ -435,8 +450,8 @@ class psyq::scene_stage
 	 */
 	private: static void forward_scenes(
 		typename this_type::token_map const& i_tokens,
-		t_real const                i_fps,
-		t_real const                i_count)
+		t_real const                         i_fps,
+		t_real const                         i_count)
 	{
 		for (
 			typename this_type::token_map::const_iterator i = i_tokens.begin();
@@ -475,22 +490,17 @@ class psyq::scene_stage
 	}
 
 	//-------------------------------------------------------------------------
-	protected: virtual void apply_event(
-		typename this_type::event::action&      io_action,
-		typename this_type::event::point const& i_point,
-		t_real const                            i_time);
-
-	/** @brief event-lineの時間を更新し、発生したeventをcontainerに登録。
-	    @param[in,out] io_dispatch 発生したeventを登録するcontainer。
-	    @param[in]     i_lines     更新するevent-lineの辞書。
-	    @param[in]     i_fps       1秒あたりのframe数。
-	    @param[in]     i_count     進めるframe数。
+	/** @brief event-lineの時間を更新し、発生したevent-pointをcontainerに登録。
+	    @param[in,out] io_points 発生したevent-pointを登録するcontainer。
+	    @param[in]     i_lines   更新するevent-lineの辞書。
+	    @param[in]     i_fps     1秒あたりのframe数。
+	    @param[in]     i_count   進めるframe数。
 	 */
 	private: static void forward_events(
-		typename this_type::dispatch_map&          io_dispatch,
+		typename this_type::dispatch_map&          io_points,
 		typename this_type::event::line_map const& i_lines,
-		t_real const                      i_fps,
-		t_real const                      i_count)
+		t_real const                               i_fps,
+		t_real const                               i_count)
 	{
 		for (
 			typename this_type::event::line_map::const_iterator i =
@@ -505,28 +515,30 @@ class psyq::scene_stage
 						i->second));
 			a_line.seek(i_fps, i_count, SEEK_CUR);
 
-			// 発生したeventをcontainerに登録。
-			a_line._dispatch(io_dispatch);
+			// 発生したevent-pointをcontainerに登録。
+			a_line._dispatch(io_points);
 		}
 	}
 
 	/** @brief containerに登録されているeventに対応する関数を呼び出す。
-	    @param[in] i_dispatch 発生したeventが登録されているcontainer。
+	    @param[in] io_update event-actionのupdate関数に渡す引数。
+	    @param[in] i_points  発生したevent-pointが登録されているcontainer。
 	 */
-	private: void apply_events(
-		typename this_type::dispatch_map const& i_dispatch)
+	private: void update_events(
+		typename psyq::scene_action< this_type >::update_parameters& io_update,
+		typename this_type::dispatch_map const&                      i_points)
 	{
 		for (
 			typename this_type::dispatch_map::const_iterator i =
-				i_dispatch.begin();
-			i_dispatch.end() != i;
+				i_points.begin();
+			i_points.end() != i;
 			++i)
 		{
 			// event-pointを取得。
 			PSYQ_ASSERT(NULL != i->second);
 			typename this_type::event::point const& a_point(*i->second);
 
-			// event-pointに対応するevent関数objectを検索。
+			// event-pointに対応するevent-actionを検索。
 			typename this_type::event::action* const a_action(
 				this_type::event::_find_element(
 					this->event_.actions_, a_point.type).get());
@@ -534,7 +546,8 @@ class psyq::scene_stage
 			// event関数objectを適用。
 			if (NULL != a_action)
 			{
-				this->apply_event(*a_action, a_point, i->first);
+				io_update.reset(*this, a_point, i->first);
+				a_action->update(io_update);
 			}
 		}
 	}

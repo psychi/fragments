@@ -161,10 +161,10 @@ class psyq::event_line
 
 	//-------------------------------------------------------------------------
 	/** @brief ”­¶‚·‚éevent‚ğ“o˜^B
-	    @param[in,out] io_container ”­¶‚·‚éevent‚ğ“o˜^‚·‚écontainerB
+	    @param[in,out] io_points ”­¶‚·‚éevent-point‚ğ“o˜^‚·‚écontainerB
 	 */
 	public: template< typename t_container >
-	void _dispatch(t_container& io_container)
+	void _dispatch(t_container& io_points)
 	{
 		if (NULL == this->last_point_)
 		{
@@ -201,7 +201,7 @@ class psyq::event_line
 			a_end != i;
 			++i, a_rest_time = i->time)
 		{
-			io_container.insert(
+			io_points.insert(
 				typename t_container::value_type(a_cache_time, i));
 			a_cache_time -= a_rest_time;
 			PSYQ_ASSERT(0 <= a_cache_time);

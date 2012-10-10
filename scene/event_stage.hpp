@@ -118,7 +118,7 @@ class psyq::event_stage
 	    @return 追加したevent-actionへの共有pointer。
 	 */
 	public: template< typename t_action >
-	typename this_type::action::shared_ptr const& reset_action()
+	typename this_type::action::shared_ptr const& make_action()
 	{
 		typename this_type::action::shared_ptr& a_action(
 			this->actions_[t_action::get_hash()]);
@@ -128,7 +128,7 @@ class psyq::event_stage
 	}
 
 	public: template< typename t_action, typename t_param0 >
-	typename this_type::action::shared_ptr const& reset_action(
+	typename this_type::action::shared_ptr const& make_action(
 		t_param0 const& i_param0)
 	{
 		typename this_type::action::shared_ptr& a_action(
@@ -139,7 +139,7 @@ class psyq::event_stage
 	}
 
 	public: template< typename t_action, typename t_param0, typename t_param1 >
-	typename this_type::action::shared_ptr const& reset_action(
+	typename this_type::action::shared_ptr const& make_action(
 		t_param0 const& i_param0,
 		t_param1 const& i_param1)
 	{
@@ -160,9 +160,9 @@ class psyq::event_stage
 		return this_type::_find_element(this->actions_, t_action::get_hash());
 	}
 
-	/** @brief event-actionを削除。
+	/** @brief event-actionを取り除く。
 	    @tparam t_action 検索するevent-actionの型。
-	    @return 削除したevent-action。削除しなかった場合は空。
+	    @return 取り除いたevent-action。取り除かなかった場合は空。
 	 */
 	public: template< typename t_action >
 	typename this_type::action::shared_ptr const& erase_action() const
@@ -253,9 +253,9 @@ class psyq::event_stage
 		return this_type::_find_element(this->scales_, i_scale);
 	}
 
-	/** @brief time-scaleを削除。
-	    @param[in] i_scale 削除するtime-scaleの名前hash値。
-	    @return 削除したtime-scale。削除しなかった場合は空。
+	/** @brief time-scaleを取り除く。
+	    @param[in] i_scale 取り除くtime-scaleの名前hash値。
+	    @return 取り除いたtime-scale。取り除かなかった場合は空。
 	 */
 	public: typename this_type::line::scale::shared_ptr const& erase_scale(
 		typename t_hash::value const i_scale)
@@ -379,37 +379,45 @@ class psyq::event_stage
 	//-------------------------------------------------------------------------
 	/** @brief containerから要素を検索。
 	    @param[in] i_container 対象となるcontainer。
-	    @param[in] i_key      削除する要素のkey。
+	    @param[in] i_key       検索する要素のkey。
 	 */
 	public: template< typename t_container >
 	static typename t_container::mapped_type const& _find_element(
-		t_container const&                   i_container,
-		typename t_container::key_type const i_key)
+		t_container const&           i_container,
+		typename t_hash::value const i_key)
 	{
-		typename t_container::const_iterator const a_position(
-			i_container.find(i_key));
-		return i_container.end() != a_position?
-			a_position->second:
-			psyq::_get_null_shared_ptr<
-				typename t_container::mapped_type::element_type >();
+		if (t_hash::EMPTY != i_key)
+		{
+			typename t_container::const_iterator const a_position(
+				i_container.find(i_key));
+			if (i_container.end() != a_position)
+			{
+				return a_position->second;
+			}
+		}
+		return psyq::_get_null_shared_ptr<
+			typename t_container::mapped_type::element_type >();
 	}
 
-	/** @brief containerから要素を削除。
+	/** @brief containerから要素を取り除く。
 	    @param[in] i_container 対象となるcontainer。
-	    @param[in] i_key       削除する要素のkey。
+	    @param[in] i_key       取り除く要素のkey。
 	 */
 	public: template< typename t_container >
 	static typename t_container::mapped_type _erase_element(
-		t_container&                         io_container,
-		typename t_container::key_type const i_key)
+		t_container&                 io_container,
+		typename t_hash::value const i_key)
 	{
 		typename t_container::mapped_type a_element;
-		typename t_container::iterator const a_position(
-			io_container.find(i_key));
-		if (io_container.end() != a_position)
+		if (t_hash::EMPTY != i_key)
 		{
-			a_element.swap(a_position->second);
-			io_container.erase(a_position);
+			typename t_container::iterator const a_position(
+				io_container.find(i_key));
+			if (io_container.end() != a_position)
+			{
+				a_element.swap(a_position->second);
+				io_container.erase(a_position);
+			}
 		}
 		return a_element;
 	}

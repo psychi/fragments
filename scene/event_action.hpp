@@ -36,6 +36,10 @@ class psyq::event_action
 			// pass
 		}
 
+		/** @brief event-actionのupdate関数で使う引数を設定。
+		    @param[in] i_point eventが発生したpoint。
+		    @param[in] i_time  eventが発生した後に経過した時間。
+		 */
 		public: void reset(
 			psyq::event_point< t_hash, t_real > const& i_point,
 			t_real const                               i_time)

@@ -3,6 +3,7 @@
 
 //#include <psyq/scene/event_stage.hpp>
 //#include <psyq/scene/scene_action.hpp>
+//#include <psyq/scene/scene_screen.hpp>
 
 namespace psyq
 {
@@ -32,10 +33,10 @@ class psyq::scene_stage
 	public: typedef t_allocator allocator;
 	public: typedef psyq::event_stage< t_hash, t_real, t_string, t_allocator >
 		event;
-	public: typedef psyq::scene_camera<
+	public: typedef psyq::scene_screen<
 		t_hash, t_real, typename t_string::const_pointer, t_allocator >
-			camera;
-	public: typedef typename this_type::camera::token token;
+			screen;
+	public: typedef typename this_type::screen::token token;
 
 	//-------------------------------------------------------------------------
 	/// scene-packageの辞書。
@@ -60,16 +61,16 @@ class psyq::scene_stage
 				typename this_type::token::shared_ptr > >::other >
 					token_map;
 
-	/// scene-cameraの辞書。
+	/// scene-screenの辞書。
 	public: typedef std::map<
 		typename t_hash::value,
-		typename this_type::camera::shared_ptr,
+		typename this_type::screen::shared_ptr,
 		std::less< typename t_hash::value >,
 		typename this_type::event::allocator::template rebind<
 			std::pair<
 				typename t_hash::value const,
-				typename this_type::camera::shared_ptr > >::other >
-					camera_map;
+				typename this_type::screen::shared_ptr > >::other >
+					screen_map;
 
 	//-------------------------------------------------------------------------
 	private: struct package_path
@@ -91,14 +92,15 @@ class psyq::scene_stage
 
 	//-------------------------------------------------------------------------
 	/** @param[in] i_package   使用するevent-package。
-	    @param[in] i_allocator 初期化に使用するmemory割当子。
+	    @param[in] i_allocator 初期化に使うmemory割当子。
 	 */
-	public: scene_stage(
+	public: explicit scene_stage(
 		PSYQ_SHARED_PTR< psyq::event_package const > const& i_package,
-		t_allocator const&                                  i_allocator):
+		t_allocator const&                                  i_allocator =
+			t_allocator()):
 	event_(i_package, i_allocator),
 	packages_(typename this_type::package_map::key_compare(), i_allocator),
-	cameras_(typename this_type::camera_map::key_compare(), i_allocator),
+	screens_(typename this_type::screen_map::key_compare(), i_allocator),
 	tokens_(typename this_type::token_map::key_compare(), i_allocator)
 	{
 		// pass
@@ -106,13 +108,13 @@ class psyq::scene_stage
 
 	//-------------------------------------------------------------------------
 	/** @brief stage全体を交換。
-	    @param[in,out] io_target 交換するstage全体。
+	    @param[in,out] io_target 交換するstage。
 	 */
 	public: void swap(this_type& io_target)
 	{
 		this->event_.swap(io_target.event_);
 		this->packages_.swap(io_target.packages_);
-		this->cameras_.swap(io_target.cameras_);
+		this->screens_.swap(io_target.screens_);
 		this->tokens_.swap(io_target.tokens_);
 	}
 
@@ -164,7 +166,7 @@ class psyq::scene_stage
 	    @param[in] i_name 取得するscene-packageの名前hash値。
 	    @return package名に対応するscene-package。取得に失敗した場合は空。
 	 */
-	public: psyq::scene_package::shared_ptr const& get_package(
+	public: psyq::scene_package::shared_ptr const& load_package(
 		typename t_hash::value const i_package)
 	{
 		if (t_hash::EMPTY != i_package)
@@ -178,8 +180,8 @@ class psyq::scene_stage
 				return a_package;
 			}
 
-			// fileからscene-packageを読み込む。
-			this->load_package(i_package).swap(a_package);
+			// fileを読み込んでscene-packageを構築。
+			this->make_package(i_package).swap(a_package);
 			if (NULL != a_package.get())
 			{
 				// scene-packageの取得に成功。
@@ -204,11 +206,11 @@ class psyq::scene_stage
 		return this_type::event::_find_element(this->packages_, i_package);
 	}
 
-	/** @brief scene-packageを削除。
-	    @param[in] i_package 削除するscene-packageの名前hash値。
-	    @return 削除したscene-package。削除しなかった場合は空。
+	/** @brief scene-packageを取り除く。
+	    @param[in] i_package 取り除くscene-packageの名前hash値。
+	    @return 取り除いたscene-package。取り除かなかった場合は空。
 	 */
-	public: psyq::scene_package::shared_ptr erase_package(
+	public: psyq::scene_package::shared_ptr unload_package(
 		typename t_hash::value const i_package)
 	{
 		return this_type::event::_erase_element(this->packages_, i_package);
@@ -217,7 +219,7 @@ class psyq::scene_stage
 	/** @brief fileからscene-pacakgeを読み込む。
 	    @param[in] i_package scene-packageの名前hash値。
 	 */
-	private: psyq::scene_package::shared_ptr load_package(
+	private: psyq::scene_package::shared_ptr make_package(
 		typename t_hash::value const i_package)
 	const
 	{
@@ -228,13 +230,14 @@ class psyq::scene_stage
 		if (NULL != a_item)
 		{
 			typename this_type::package_path const* const a_path(
-				this->event_.template get_address< typename this_type::package_path >(
-					a_item->begin));
+				this->event_.template get_address<
+					typename this_type::package_path >(
+						a_item->begin));
 			if (NULL != a_path)
 			{
 				// fileからscene-packageを読み込む。
 				psyq::scene_package::shared_ptr const a_package(
-					psyq::scene_package::load(
+					psyq::scene_package::make(
 						this->packages_.get_allocator(),
 						this->event_.replace_string(a_path->scene),
 						this->event_.replace_string(a_path->shader),
@@ -249,61 +252,61 @@ class psyq::scene_stage
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief cameraを取得。
-	    camera名に対応するcameraが存在しない場合は、新たにcameraを作る。
-	    @param[in] i_camera 取得するcameraの名前hash値。
-	    @return camera名に対応するcamera。取得に失敗した場合は空。
+	/** @brief screenを取得。
+	    screen名に対応するscreenが存在しない場合は、新たにscreenを作る。
+	    @param[in] i_screen 取得するscreenの名前hash値。
+	    @return screen名に対応するscreen。取得に失敗した場合は空。
 	 */
-	public: typename this_type::camera::shared_ptr const& get_camera(
-		typename t_hash::value const i_camera)
+	public: typename this_type::screen::shared_ptr const& load_screen(
+		typename t_hash::value const i_screen)
 	{
-		if (t_hash::EMPTY != i_camera)
+		if (t_hash::EMPTY != i_screen)
 		{
-			// 既存のcameraから検索。
-			typename this_type::camera::shared_ptr& a_camera(
-				this->cameras_[i_camera]);
-			if (NULL != a_camera.get())
+			// 既存のscreenから検索。
+			typename this_type::screen::shared_ptr& a_screen(
+				this->screens_[i_screen]);
+			if (NULL != a_screen.get())
 			{
-				// cameraの取得に成功。
-				return a_camera;
+				// screenの取得に成功。
+				return a_screen;
 			}
 
-			// 新たにcameraを作る。
-			PSYQ_ALLOCATE_SHARED< typename this_type::camera >(
-				this->cameras_.get_allocator(),
-				this->cameras_.get_allocator()).swap(a_camera);
-			if (NULL != a_camera.get())
+			// 新たにscreenを作る。
+			PSYQ_ALLOCATE_SHARED< typename this_type::screen >(
+				this->screens_.get_allocator(),
+				this->screens_.get_allocator()).swap(a_screen);
+			if (NULL != a_screen.get())
 			{
-				// cameraの取得に成功。
-				return a_camera;
+				// screenの取得に成功。
+				return a_screen;
 			}
 			PSYQ_ASSERT(false);
-			this->cameras_.erase(i_camera);
+			this->screens_.erase(i_screen);
 		}
 
-		// cameraの取得に失敗。
-		return psyq::_get_null_shared_ptr< typename this_type::camera >();
+		// screenの取得に失敗。
+		return psyq::_get_null_shared_ptr< typename this_type::screen >();
 	}
 
-	/** @brief cameraを検索。
-	    @param[in] i_camera 検索するcameraの名前hash値。
-	    @return 見つかったcamera。見つからなかった場合は空。
+	/** @brief screenを検索。
+	    @param[in] i_screen 検索するscreenの名前hash値。
+	    @return 見つかったscreen。見つからなかった場合は空。
 	 */
-	public: typename this_type::camera::shared_ptr const& find_camera(
-		typename t_hash::value const i_camera)
+	public: typename this_type::screen::shared_ptr const& find_screen(
+		typename t_hash::value const i_screen)
 	const
 	{
-		return this_type::event::_find_element(this->cameras_, i_camera);
+		return this_type::event::_find_element(this->screens_, i_screen);
 	}
 
-	/** @brief cameraを削除。
-	    @param[in] i_camera 削除するcameraの名前hash値。
-	    @return 削除したcamera。削除しなかった場合は空。
+	/** @brief screenを取り除く。
+	    @param[in] i_screen 取り除くscreenの名前hash値。
+	    @return 取り除いたscreen。取り除かなかった場合は空。
 	 */
-	public: typename this_type::camera::shared_ptr erase_camera(
-		typename t_hash::value const i_camera)
+	public: typename this_type::screen::shared_ptr unload_screen(
+		typename t_hash::value const i_screen)
 	{
-		return this_type::event::_erase_element(this->cameras_, i_camera);
+		return this_type::event::_erase_element(this->screens_, i_screen);
 	}
 
 	//-------------------------------------------------------------------------
@@ -312,7 +315,7 @@ class psyq::scene_stage
 	    @param[in] i_token 取得するtokenの名前hash値。
 	    @return token名に対応するtoken。取得に失敗した場合は空。
 	 */
-	public: typename this_type::token::shared_ptr const& get_token(
+	public: typename this_type::token::shared_ptr const& load_token(
 		typename t_hash::value const i_token)
 	{
 		if (t_hash::EMPTY != i_token)
@@ -338,28 +341,28 @@ class psyq::scene_stage
 		return psyq::_get_null_shared_ptr< typename this_type::token >();
 	}
 
-	/** @brief cameraからtokenを取得。
+	/** @brief screenからtokenを取得。
 	    token名に対応するtokenが存在しない場合は、新たにtokenを作る。
-	    camera名に対応するcameraが存在しない場合は、新たにcameraを作る。
-	    cameraにtokenがない場合は、cameraにtokenを追加する。
+	    screen名に対応するscreenが存在しない場合は、新たにscreenを作る。
+	    screenにtokenがない場合は、screenにtokenを追加する。
 	    @param[in] i_token  取得するtokenの名前hash値。
-	    @param[in] i_camera 対象となるcameraの名前hash値。
+	    @param[in] i_screen 対象となるscreenの名前hash値。
 	    @return token名に対応するtoken。取得に失敗した場合は空。
 	 */
-	public: typename this_type::token::shared_ptr const& get_token(
+	public: typename this_type::token::shared_ptr const& load_token(
 		typename t_hash::value const i_token,
-		typename t_hash::value const i_camera)
+		typename t_hash::value const i_screen)
 	{
-		// tokenとcameraを取得。
+		// tokenとscreenを取得。
 		typename this_type::token::shared_ptr const& a_token(
-			this->get_token(i_token));
-		typename this_type::camera* const a_camera(
-			this->get_camera(i_camera).get());
+			this->load_token(i_token));
+		typename this_type::screen* const a_screen(
+			this->load_screen(i_screen).get());
 
-		// tokenをcameraに追加。
-		if (NULL != a_camera)
+		// tokenをscreenに追加。
+		if (NULL != a_screen)
 		{
-			a_camera->insert_token(a_token);
+			a_screen->insert_token(a_token);
 		}
 		return a_token;
 	}
@@ -375,67 +378,73 @@ class psyq::scene_stage
 		return this_type::event::_find_element(this->tokens_, i_token);
 	}
 
-	/** @brief stageとcameraからtokenを削除。
-	    @param[in] i_token 削除するtokenの名前hash値。
-	    @return 削除したtoken。削除しなかった場合は空。
+	/** @brief stageと全てのscreenからtokenを取り除く。
+	    @param[in] i_token 取り除くtokenの名前hash値。
+	    @return 取り除いたtoken。取り除かなかった場合は空。
 	 */
-	public: typename this_type::token::shared_ptr erase_token(
+	public: typename this_type::token::shared_ptr unload_token(
 		typename t_hash::value const i_token)
 	{
 		typename this_type::token::shared_ptr a_token;
-
-		// tokenを取得。
-		typename this_type::token_map::iterator const a_token_pos(
-			this->tokens_.find(i_token));
-		if (this->tokens_.end() != a_token_pos)
+		if (t_hash::EMPTY != i_token)
 		{
-			// stageからtokenを削除。
-			a_token.swap(a_token_pos->second);
-			this->tokens_.erase(a_token_pos);
-
-			// すべてのcameraからtokenを削除。
-			for (
-				typename this_type::camera_map::const_iterator i =
-					this->cameras_.begin();
-				this->cameras_.end() != i;
-				++i)
+			// tokenを取得。
+			typename this_type::token_map::iterator const a_token_pos(
+				this->tokens_.find(i_token));
+			if (this->tokens_.end() != a_token_pos)
 			{
-				typename this_type::camera* const a_camera(i->second.get());
-				if (NULL != a_camera)
+				// stageからtokenを取り除く。
+				a_token.swap(a_token_pos->second);
+				this->tokens_.erase(a_token_pos);
+
+				// すべてのscreenからtokenを取り除く。
+				for (
+					typename this_type::screen_map::const_iterator i =
+						this->screens_.begin();
+					this->screens_.end() != i;
+					++i)
 				{
-					a_camera->erase_token(a_token);
+					typename this_type::screen* const a_screen(
+						i->second.get());
+					if (NULL != a_screen)
+					{
+						a_screen->erase_token(a_token);
+					}
 				}
 			}
 		}
 		return a_token;
 	}
 
-	/** @brief cameraからtokenを削除。
-	    @param[in] i_token  削除するtokenの名前hash値。
-	    @param[in] i_camera 対象となるcameraの名前hash値。
-	    @return 削除したtoken。削除しなかった場合は空。
+	/** @brief screenからtokenを取り除く。
+	    @param[in] i_token  取り除くtokenの名前hash値。
+	    @param[in] i_screen 対象となるscreenの名前hash値。
+	    @return 取り除いたtoken。取り除かなかった場合は空。
 	 */
-	public: typename this_type::token::shared_ptr const& erase_token(
+	public: typename this_type::token::shared_ptr const& unload_token(
 		typename t_hash::value const i_token,
-		typename t_hash::value const i_camera)
+		typename t_hash::value const i_screen)
 	{
-		// cameraを検索。
-		typename this_type::camera_map::const_iterator const a_camera_pos(
-			this->cameras_.find(i_camera));
-		if (this->cameras_.end() != a_camera_pos)
+		if (t_hash::EMPTY != i_token && t_hash::EMPTY != i_screen)
 		{
-			// tokenを検索。
-			typename this_type::token_map::const_iterator const a_token_pos(
-				this->tokens_.find(i_token));
-			if (this->tokens_.end() != a_token_pos)
+			// screenを検索。
+			typename this_type::screen_map::const_iterator const a_screen_pos(
+				this->screens_.find(i_screen));
+			if (this->screens_.end() != a_screen_pos)
 			{
-				// cameraから、tokenを削除。
-				typename this_type::camera* const a_camera(
-					a_camera_pos->second.get());
-				if (NULL != a_camera &&
-					a_camera->erase_token(a_token_pos->second))
+				// tokenを検索。
+				typename this_type::token_map::const_iterator const
+					a_token_pos(this->tokens_.find(i_token));
+				if (this->tokens_.end() != a_token_pos)
 				{
-					return a_token_pos->second;
+					// screenから、tokenを取り除く。
+					typename this_type::screen* const a_screen(
+						a_screen_pos->second.get());
+					if (NULL != a_screen &&
+						a_screen->erase_token(a_token_pos->second))
+					{
+						return a_token_pos->second;
+					}
 				}
 			}
 		}
@@ -555,7 +564,7 @@ class psyq::scene_stage
 	//-------------------------------------------------------------------------
 	public: typename this_type::event       event_;    ///< event登記簿。
 	public: typename this_type::package_map packages_; ///< scene-packageの辞書。
-	public: typename this_type::camera_map  cameras_;  ///< scene-cameraの辞書。
+	public: typename this_type::screen_map  screens_;  ///< scene-screenの辞書。
 	public: typename this_type::token_map   tokens_;   ///< scene-tokenの辞書。
 };
 

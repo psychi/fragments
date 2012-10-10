@@ -21,12 +21,12 @@ class psyq::scene_action:
 
 	//-------------------------------------------------------------------------
 	public: class load_package;
-	public: class set_token;
-	public: class erase_token;
+	public: class load_token;
+	public: class unload_token;
 	public: class set_token_animation;
 	public: class set_token_model;
-	public: class set_camera;
-	public: class erase_camera;
+	public: class set_screen_camera;
+	public: class set_screen_light;
 	public: class set_event_line;
 	public: class set_time_scale;
 
@@ -45,6 +45,11 @@ class psyq::scene_action:
 			// pass
 		}
 
+		/** @brief event-actionのupdate関数で使う引数を設定。
+		    @param[in,out] io_stage 更新するstage。
+		    @param[in]     i_point  eventが発生したpoint。
+		    @param[in]     i_time   eventが発生した後に経過した時間。
+		 */
 		public: void reset(
 			t_stage&                              io_stage,
 			typename t_stage::event::point const& i_point,
@@ -87,7 +92,7 @@ class psyq::scene_action< t_stage >::load_package:
 			static_cast< typename super_type::update_parameters const& >(
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
-		a_stage.get_package(
+		a_stage.load_package(
 			a_stage.event_.replace_hash(i_update.get_point()->integer));
 	}
 };
@@ -95,24 +100,24 @@ class psyq::scene_action< t_stage >::load_package:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenを用意するevent。
 template< typename t_stage >
-class psyq::scene_action< t_stage >::set_token:
+class psyq::scene_action< t_stage >::load_token:
 	public psyq::scene_action< t_stage >
 {
 	public: typedef psyq::scene_action< t_stage > super_type;
-	public: typedef typename super_type::set_token this_type;
+	public: typedef typename super_type::load_token this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename t_stage::event::item::offset camera; ///< camera名の書庫offset値。
 		typename t_stage::event::item::offset token;  ///< 用意するtoken名の書庫offset値。
+		typename t_stage::event::item::offset screen; ///< screen名の書庫offset値。
 		typename t_stage::event::item::offset scale;  ///< tokenに設定するtime-scale名の書庫offset値。
 	};
 
 	//-------------------------------------------------------------------------
 	public: static typename t_stage::event::hash::value get_hash()
 	{
-		return t_stage::event::hash::generate("set_token");
+		return t_stage::event::hash::generate("load_token");
 	}
 
 	//-------------------------------------------------------------------------
@@ -125,49 +130,51 @@ class psyq::scene_action< t_stage >::set_token:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_address
-				< typename this_type::parameters >(i_update.get_point()->integer));
-		if (NULL != a_parameters)
+			a_stage.event_.template get_address<
+				typename this_type::parameters >(
+					i_update.get_point()->integer));
+		if (NULL != a_parameters && 0 != a_parameters->token)
 		{
-			// cameraとtokenをstageに用意。
+			// stageにtokenを配置。
+			typename t_stage::event::hash::value const a_token_name(
+				a_stage.event_.replace_hash(a_parameters->token));
 			typename t_stage::token* const a_token(
-				a_stage.get_token(
-					a_stage.event_.replace_hash(a_parameters->token),
-					a_stage.event_.replace_hash(a_parameters->camera)).get());
-			if (NULL != a_token)
+				0 != a_parameters->screen?
+				a_stage.load_token(
+					a_token_name,
+					a_stage.event_.replace_hash(a_parameters->screen)).get():
+				a_stage.load_token(a_token_name).get());
+
+			// tokenにtime-scaleを設定。
+			if (NULL != a_token && 0 != a_parameters->scale)
 			{
-				// tokenにtime-scaleを設定。
-				typename t_stage::event::hash::value const a_scale(
+				a_token->time_scale_ = a_stage.event_.get_scale(
 					a_stage.event_.replace_hash(a_parameters->scale));
-				if (t_stage::event::hash::EMPTY != a_scale)
-				{
-					a_token->time_scale_ = a_stage.event_.get_scale(a_scale);
-				}
 			}
 		}
 	}
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief scene-tokenを削除するevent。
+/// @brief scene-tokenを取り除くevent。
 template< typename t_stage >
-class psyq::scene_action< t_stage >::erase_token:
+class psyq::scene_action< t_stage >::unload_token:
 	public psyq::scene_action< t_stage >
 {
 	public: typedef psyq::scene_action< t_stage > super_type;
-	public: typedef typename super_type::erase_token this_type;
+	public: typedef typename super_type::unload_token this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename t_stage::event::item::offset camera; ///< camera名の書庫offset値。
-		typename t_stage::event::item::offset token;   ///< 削除するtoken名の書庫offset値。
+		typename t_stage::event::item::offset token;  ///< 取り除くtoken名の書庫offset値。
+		typename t_stage::event::item::offset screen; ///< screen名の書庫offset値。
 	};
 
 	//-------------------------------------------------------------------------
 	public: static typename t_stage::event::hash::value get_hash()
 	{
-		return t_stage::event::hash::generate("erase_token");
+		return t_stage::event::hash::generate("unload_token");
 	}
 
 	//-------------------------------------------------------------------------
@@ -186,17 +193,17 @@ class psyq::scene_action< t_stage >::erase_token:
 		{
 			typename t_stage::event::hash::value const a_token(
 				a_stage.event_.replace_hash(a_parameters->token));
-			typename t_stage::event::hash::value const a_camera(
-				a_stage.event_.replace_hash(a_parameters->camera));
-			if (t_stage::event::hash::EMPTY != a_camera)
+			if (0 != a_parameters->screen)
 			{
-				// cameraからtokenを削除。
-				a_stage.erase_token(a_token, a_camera);
+				// screenからtokenを取り除く。
+				a_stage.unload_token(
+					a_token,
+					a_stage.event_.replace_hash(a_parameters->screen));
 			}
 			else
 			{
-				// すべてのcameraからtokenを削除。
-				a_stage.erase_token(a_token);
+				// すべてのscreenからtokenを取り除く。
+				a_stage.unload_token(a_token);
 			}
 		}
 	}
@@ -242,14 +249,14 @@ class psyq::scene_action< t_stage >::set_token_animation:
 		{
 			// stageからanimation-packageを取得。
 			psyq::scene_package* const a_package(
-				a_stage.get_package(
+				a_stage.load_package(
 					a_stage.event_.replace_hash(
 						a_parameters->package)).get());
 			if (NULL != a_package)
 			{
 				// stageからtokenを取得し、animationを設定。
 				typename t_stage::token* const a_token(
-					a_stage.get_token(
+					a_stage.find_token(
 						a_stage.event_.replace_hash(
 							a_parameters->token)).get());
 				if (NULL != a_token)
@@ -303,14 +310,14 @@ class psyq::scene_action< t_stage >::set_token_model:
 		{
 			// stageからmodel-packageを取得。
 			psyq::scene_package* const a_package(
-				a_stage.get_package(
+				a_stage.load_package(
 					a_stage.event_.replace_hash(
 						a_parameters->package)).get());
 			if (NULL != a_package)
 			{
 				// stageからtokenを取得し、modelを設定。
 				typename t_stage::token* const a_token(
-					a_stage.get_token(
+					a_stage.find_token(
 						a_stage.event_.replace_hash(
 							a_parameters->token)).get());
 				if (NULL != a_token)
@@ -323,27 +330,28 @@ class psyq::scene_action< t_stage >::set_token_model:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief scene-cameraを設定するevent。
+/// @brief screenにcameraを設定するevent。
 template< typename t_stage >
-class psyq::scene_action< t_stage >::set_camera:
+class psyq::scene_action< t_stage >::set_screen_camera:
 	public psyq::scene_action< t_stage >
 {
 	public: typedef psyq::scene_action< t_stage > super_type;
-	public: typedef typename super_type::set_camera this_type;
+	public: typedef typename super_type::set_screen_camera this_type;
 
+	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
+		typename t_stage::event::item::offset screen;       ///< cameraを設定するscreen名の書庫offset値。
 		typename t_stage::event::item::offset camera_token; ///< cameraに使うtoken名の書庫offset値。
 		typename t_stage::event::item::offset camera_node;  ///< cameraに使うnode名の書庫offset値。
 		typename t_stage::event::item::offset focus_token;  ///< focusに使うtoken名の書庫offset値。
 		typename t_stage::event::item::offset focus_node;   ///< focusに使うnode名の書庫offset値。
-		typename t_stage::event::item::offset light;        ///< cameraに設定するlight名の書庫offset値。
 	};
 
 	//-------------------------------------------------------------------------
 	public: static typename t_stage::event::hash::value get_hash()
 	{
-		return t_stage::event::hash::generate("set_camera");
+		return t_stage::event::hash::generate("set_screen_camera");
 	}
 
 	//-------------------------------------------------------------------------
@@ -357,80 +365,107 @@ class psyq::scene_action< t_stage >::set_camera:
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
 			a_stage.event_.template get_address
-				< typename this_type::parameters >(i_update.get_point()->integer));
+				< typename this_type::parameters >(
+					i_update.get_point()->integer));
 		if (NULL != a_parameters)
 		{
-			// stageからcameraを取得。
-			typename t_stage::camera* const a_camera(
-				a_stage.get_camera(
-					a_stage.event_.replace_hash(a_parameters->camera)).get());
-			if (NULL != a_camera)
+			// stageからscreenを取得。
+			typename t_stage::screen* const a_screen(
+				a_stage.find_screen(
+					a_stage.event_.replace_hash(a_parameters->screen)).get());
+			if (NULL != a_screen)
 			{
 				if (0 != a_parameters->camera_token)
 				{
-					this->update_camera(a_stage, *a_camera, *a_parameters);
+					// screenにcameraを設定。
+					typename t_stage::token::shared_ptr const& a_token(
+						a_stage.find_token(
+							a_stage.event_.replace_hash(
+								a_parameters->camera_token)));
+					typename t_stage::event::string const a_name(
+						a_stage.event_.replace_string(
+							a_parameters->camera_node));
+					psyq_extern::scene_node const* const a_node(
+						a_screen->set_camera(
+							a_token, a_name.empty()? NULL: a_name.c_str()));
+					if(	NULL == a_node)
+					{
+						a_screen->erase_camera();
+					}
 				}
-				if (0 != a_parameters->light)
+				if (0 != a_parameters->focus_token)
 				{
-					// stageからlight-tokenを検索し、cameraに設定。
-					a_camera->light_ = a_stage.get_token(
-						a_stage.event_.replace_hash(a_parameters->light));
+					// screenに焦点を設定。
+					typename t_stage::token::shared_ptr const& a_token(
+						a_stage.find_token(
+							a_stage.event_.replace_hash(
+								a_parameters->focus_token)));
+					typename t_stage::event::string const a_name(
+						a_stage.event_.replace_string(
+							a_parameters->focus_node));
+					psyq_extern::scene_node const* const a_node(
+						a_screen->set_focus(
+							a_token, a_name.empty()? NULL: a_name.c_str()));
+					if (NULL == a_node)
+					{
+						a_screen->erase_focus();
+					}
 				}
+			}
+		}
+	}
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief scene-cameraを設定するevent。
+template< typename t_stage >
+class psyq::scene_action< t_stage >::set_screen_light:
+	public psyq::scene_action< t_stage >
+{
+	public: typedef psyq::scene_action< t_stage > super_type;
+	public: typedef typename super_type::set_screen_light this_type;
+
+	//-------------------------------------------------------------------------
+	public: struct parameters
+	{
+		typename t_stage::event::item::offset screen; ///< lightを設定するscreen名の書庫offset値。
+		typename t_stage::event::item::offset light;  ///< screenに設定するlight名の書庫offset値。
+	};
+
+	//-------------------------------------------------------------------------
+	public: static typename t_stage::event::hash::value get_hash()
+	{
+		return t_stage::event::hash::generate("set_screen_light");
+	}
+
+	//-------------------------------------------------------------------------
+	public: virtual void update(
+		typename t_stage::event::action::update_parameters const& i_update)
+	{
+		// 書庫から引数を取得。
+		typename super_type::update_parameters const& a_update(
+			static_cast< typename super_type::update_parameters const& >(
+				i_update));
+		t_stage& a_stage(*a_update.get_stage());
+		typename this_type::parameters const* const a_parameters(
+			a_stage.event_.template get_address
+				< typename this_type::parameters >(
+					i_update.get_point()->integer));
+		if (NULL != a_parameters)
+		{
+			// stageからscreenを取得。
+			typename t_stage::screen* const a_screen(
+				a_stage.find_screen(
+					a_stage.event_.replace_hash(a_parameters->screen)).get());
+			if (NULL != a_screen && 0 != a_parameters->light)
+			{
+				// stageからlight-tokenを検索し、cameraに設定。
+				a_screen->light_ = a_stage.find_token(
+					a_stage.event_.replace_hash(a_parameters->light));
 			}
 		}
 	}
 
-	/** @brief cameraにnodeと焦点を設定。
-	 */
-	private: void update_camera(
-		t_stage const&                        i_stage,
-		typename t_stage::camera&             io_camera,
-		typename this_type::parameters const& i_parameters)
-	const
-	{
-		typename t_stage::token::shared_ptr const& a_camera_token(
-			i_stage.get_token(
-				i_stage.event_.replace_hash(i_parameters.camera_token)));
-		typename t_stage::event::string const a_camera_name(
-			i_stage.event_.replace_string(i_parameters.camera_node));
-		typename t_stage::event::string const a_focus_name(
-			i_stage.event_.replace_string(i_parameters.focus_node));
-		bool a_reset(false);
-		if (0 != i_parameters.focus_token)
-		{
-			typename t_stage::token::shared_ptr const& a_focus_token(
-				i_stage.get_token(
-					i_stage.event_.replace_hash(i_parameters.focus_token)));
-			if (0 != i_parameters.camera_token)
-			{
-				// cameraと焦点を設定。
-				a_reset = (
-					NULL == io_camera.set_node(
-						a_camera_token,
-						a_camera_name,
-						a_focus_token,
-						a_focus_name));
-			}
-			else
-			{
-				// 焦点nodeだけを設定。
-				a_reset = (
-					NULL == io_camera.set_focus_node(
-						a_focus_token, a_focus_name));
-			}
-		}
-		else if (0 != i_parameters.camera_token)
-		{
-			// cameraと焦点を設定。
-			a_reset = (
-				NULL == io_camera.set_node(
-					a_camera_token, a_camera_name, a_focus_name));
-		}
-		if (a_reset)
-		{
-			//a_camera->reset_node();
-		}
-	}
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

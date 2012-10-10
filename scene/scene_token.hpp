@@ -1,6 +1,8 @@
 #ifndef PSYQ_SCENE_TOKEN_HPP_
 #define PSYQ_SCENE_TOKEN_HPP_
 
+//#include <psyq/scene/event_line.hpp>
+
 namespace psyq
 {
 	class texture_package;
@@ -43,8 +45,14 @@ class psyq::scene_package
 	public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
 
 	//-------------------------------------------------------------------------
+	/** @brief fileを読み込んでscene-packageを構築。
+	    @param[in] i_allocator    使用するmemory割当子。
+	    @param[in] i_scene_path   scene-fileのpath名。
+	    @param[in] i_shader_path  shared-fileのpath名。
+	    @param[in] i_texture_path texture-fileのpath名。
+	 */
 	public: template< typename t_allocator, typename t_string >
-	static this_type::shared_ptr load(
+	static this_type::shared_ptr make(
 		t_allocator const& i_allocator,
 		t_string const&    i_scene_path,
 		t_string const&    i_shader_path,
@@ -59,7 +67,7 @@ class psyq::scene_package
 				typename t_allocator::template
 					rebind< psyq::texture_package >::other a_allocator(
 						i_allocator);
-				this_type::load_file(
+				this_type::read_file(
 					a_allocator, i_texture_path).swap(a_texture);
 				if (NULL == a_texture.get())
 				{
@@ -76,7 +84,7 @@ class psyq::scene_package
 				typename t_allocator::template
 					rebind< psyq::shader_package >::other a_allocator(
 						i_allocator);
-				this_type::load_file(
+				this_type::read_file(
 					a_allocator, i_shader_path).swap(a_shader);
 				if (NULL == a_shader.get())
 				{
@@ -90,7 +98,7 @@ class psyq::scene_package
 			typename t_allocator::template
 				rebind< psyq::scene_package >::other a_allocator(i_allocator);
 			this_type::shared_ptr const a_scene(
-				this_type::load_file(a_allocator, i_scene_path));
+				this_type::read_file(a_allocator, i_scene_path));
 			if (NULL != a_scene.get())
 			{
 				a_scene->shader_.swap(a_shader);
@@ -107,7 +115,7 @@ class psyq::scene_package
 
 	//-------------------------------------------------------------------------
 	private: template< typename t_allocator, typename t_string >
-	static PSYQ_SHARED_PTR< typename t_allocator::value_type > load_file(
+	static PSYQ_SHARED_PTR< typename t_allocator::value_type > read_file(
 		t_allocator&    io_allocator,
 		t_string const& i_path)
 	{

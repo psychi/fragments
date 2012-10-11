@@ -140,7 +140,7 @@ class psyq::event_line
 		{
 			t_real const a_time(
 				i_fps < 0 || 0 < i_fps?
-					this_type::scale::get_scale(this->scale_, i_count) / i_fps:
+					this_type::scale::get_current(this->scale_, i_count) / i_fps:
 					0);
 			switch (i_origin)
 			{

@@ -20,14 +20,15 @@ class psyq::scene_action:
 	public: typedef t_stage stage;
 
 	//-------------------------------------------------------------------------
-	public: class load_package;
-	public: class load_token;
-	public: class unload_token;
+	public: class set_package;
+	public: class set_token;
+	public: class remove_token;
+	public: class set_event_line;
+	public: class remove_event_line;
 	public: class set_token_animation;
 	public: class set_token_model;
 	public: class set_screen_camera;
 	public: class set_screen_light;
-	public: class set_event_line;
 	public: class set_time_scale;
 
 	//-------------------------------------------------------------------------
@@ -71,16 +72,16 @@ class psyq::scene_action:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-packageを用意するevent。
 template< typename t_stage >
-class psyq::scene_action< t_stage >::load_package:
+class psyq::scene_action< t_stage >::set_package:
 	public psyq::scene_action< t_stage >
 {
 	public: typedef psyq::scene_action< t_stage > super_type;
-	public: typedef typename super_type::load_package this_type;
+	public: typedef typename super_type::set_package this_type;
 
 	//-------------------------------------------------------------------------
 	public: static typename t_stage::event::hash::value get_hash()
 	{
-		return t_stage::event::hash::generate("load_package");
+		return t_stage::event::hash::generate("set_package");
 	}
 
 	//-------------------------------------------------------------------------
@@ -92,7 +93,7 @@ class psyq::scene_action< t_stage >::load_package:
 			static_cast< typename super_type::update_parameters const& >(
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
-		a_stage.load_package(
+		a_stage.get_package(
 			a_stage.event_.replace_hash(i_update.get_point()->integer));
 	}
 };
@@ -100,11 +101,11 @@ class psyq::scene_action< t_stage >::load_package:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenを用意するevent。
 template< typename t_stage >
-class psyq::scene_action< t_stage >::load_token:
+class psyq::scene_action< t_stage >::set_token:
 	public psyq::scene_action< t_stage >
 {
 	public: typedef psyq::scene_action< t_stage > super_type;
-	public: typedef typename super_type::load_token this_type;
+	public: typedef typename super_type::set_token this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
@@ -117,7 +118,7 @@ class psyq::scene_action< t_stage >::load_token:
 	//-------------------------------------------------------------------------
 	public: static typename t_stage::event::hash::value get_hash()
 	{
-		return t_stage::event::hash::generate("load_token");
+		return t_stage::event::hash::generate("set_token");
 	}
 
 	//-------------------------------------------------------------------------
@@ -140,15 +141,15 @@ class psyq::scene_action< t_stage >::load_token:
 				a_stage.event_.replace_hash(a_parameters->token));
 			typename t_stage::token* const a_token(
 				0 != a_parameters->screen?
-				a_stage.load_token(
-					a_token_name,
-					a_stage.event_.replace_hash(a_parameters->screen)).get():
-				a_stage.load_token(a_token_name).get());
+				a_stage.get_screen_token(
+					a_stage.event_.replace_hash(a_parameters->screen),
+					a_token_name).get():
+				a_stage.get_token(a_token_name).get());
 
 			// tokenにtime-scaleを設定。
 			if (NULL != a_token && 0 != a_parameters->scale)
 			{
-				a_token->time_scale_ = a_stage.event_.get_scale(
+				a_token->time_scale_ = a_stage.event_.find_scale(
 					a_stage.event_.replace_hash(a_parameters->scale));
 			}
 		}
@@ -158,11 +159,11 @@ class psyq::scene_action< t_stage >::load_token:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenを取り除くevent。
 template< typename t_stage >
-class psyq::scene_action< t_stage >::unload_token:
+class psyq::scene_action< t_stage >::remove_token:
 	public psyq::scene_action< t_stage >
 {
 	public: typedef psyq::scene_action< t_stage > super_type;
-	public: typedef typename super_type::unload_token this_type;
+	public: typedef typename super_type::remove_token this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
@@ -174,7 +175,7 @@ class psyq::scene_action< t_stage >::unload_token:
 	//-------------------------------------------------------------------------
 	public: static typename t_stage::event::hash::value get_hash()
 	{
-		return t_stage::event::hash::generate("unload_token");
+		return t_stage::event::hash::generate("remove_token");
 	}
 
 	//-------------------------------------------------------------------------
@@ -196,14 +197,103 @@ class psyq::scene_action< t_stage >::unload_token:
 			if (0 != a_parameters->screen)
 			{
 				// screenからtokenを取り除く。
-				a_stage.unload_token(
-					a_token,
-					a_stage.event_.replace_hash(a_parameters->screen));
+				a_stage.remove_screen_token(
+					a_stage.event_.replace_hash(a_parameters->screen),
+					a_token);
 			}
 			else
 			{
 				// すべてのscreenからtokenを取り除く。
-				a_stage.unload_token(a_token);
+				a_stage.remove_token(a_token);
+			}
+		}
+	}
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief event-lineを開始するevent。
+template< typename t_stage >
+class psyq::scene_action< t_stage >::set_event_line:
+	public psyq::scene_action< t_stage >
+{
+	public: typedef psyq::scene_action< t_stage > super_type;
+	public: typedef typename super_type::set_event_line this_type;
+
+	//-------------------------------------------------------------------------
+	public: struct parameters
+	{
+		typename t_stage::event::item::offset line;
+		typename t_stage::event::item::offset points;
+		typename t_stage::event::item::offset scale;
+		typename t_stage::event::real         time;
+		typename t_stage::event::hash::value  origin;
+	};
+
+	//-------------------------------------------------------------------------
+	public: static typename t_stage::event::hash::value get_hash()
+	{
+		return t_stage::event::hash::generate("set_event_line");
+	}
+
+	//-------------------------------------------------------------------------
+	public: virtual void update(
+		typename t_stage::event::action::update_parameters const& i_update)
+	{
+		// 書庫から引数を取得。
+		typename super_type::update_parameters const& a_update(
+			static_cast< typename super_type::update_parameters const& >(
+				i_update));
+		t_stage& a_stage(*a_update.get_stage());
+		typename this_type::parameters const* const a_parameters(
+			a_stage.event_.template get_address<
+				typename this_type::parameters >(
+					i_update.get_point()->integer));
+		if (NULL != a_parameters && 0 != a_parameters->line)
+		{
+			// event-lineを取得。
+			typename t_stage::event::line* const a_line(
+				a_stage.event_.get_line(
+					a_stage.event_.replace_hash(a_parameters->line)));
+			if (NULL != a_line)
+			{
+				// event-lineを初期化。
+				if (0 != a_parameters->points)
+				{
+					a_line->reset(
+						a_stage.event_.get_package(),
+						a_stage.event_.replace_hash(a_parameters->points));
+				}
+
+				// event-lineに時間を設定。
+				typename t_stage::event::line::scale::shared_ptr a_scale;
+				a_scale.swap(a_line->scale_);
+				int a_origin(a_parameters->origin);
+				switch (a_origin)
+				{
+					case 0:
+					a_origin = SEEK_SET;
+					goto SEEK;
+
+					case 1:
+					a_origin = SEEK_CUR;
+					goto SEEK;
+
+					case 2:
+					a_origin = SEEK_END;
+					goto SEEK;
+
+					SEEK:
+					a_line->seek(a_parameters->time, a_origin);
+					break;
+				}
+				if (0 != a_parameters->scale)
+				{
+					// event-lineにtime-scaleを設定。
+					a_scale = a_stage.event_.get_scale(
+						a_stage.event_.replace_hash(a_parameters->scale));
+				}
+				a_line->scale_.swap(a_scale);
+				a_line->seek(i_update.get_time(), SEEK_CUR);
 			}
 		}
 	}
@@ -249,7 +339,7 @@ class psyq::scene_action< t_stage >::set_token_animation:
 		{
 			// stageからanimation-packageを取得。
 			psyq::scene_package* const a_package(
-				a_stage.load_package(
+				a_stage.get_package(
 					a_stage.event_.replace_hash(
 						a_parameters->package)).get());
 			if (NULL != a_package)
@@ -264,7 +354,7 @@ class psyq::scene_action< t_stage >::set_token_animation:
 					psyq_extern::set_animation(
 						a_token->scene_,
 						*a_package,
-						t_stage::event::line::scale::get_scale(
+						t_stage::event::line::scale::get_current(
 							a_token->time_scale_, i_update.get_time()));
 				}
 			}
@@ -310,7 +400,7 @@ class psyq::scene_action< t_stage >::set_token_model:
 		{
 			// stageからmodel-packageを取得。
 			psyq::scene_package* const a_package(
-				a_stage.load_package(
+				a_stage.get_package(
 					a_stage.event_.replace_hash(
 						a_parameters->package)).get());
 			if (NULL != a_package)
@@ -390,7 +480,7 @@ class psyq::scene_action< t_stage >::set_screen_camera:
 							a_token, a_name.empty()? NULL: a_name.c_str()));
 					if(	NULL == a_node)
 					{
-						a_screen->erase_camera();
+						a_screen->remove_camera();
 					}
 				}
 				if (0 != a_parameters->focus_token)
@@ -408,7 +498,7 @@ class psyq::scene_action< t_stage >::set_screen_camera:
 							a_token, a_name.empty()? NULL: a_name.c_str()));
 					if (NULL == a_node)
 					{
-						a_screen->erase_focus();
+						a_screen->remove_focus();
 					}
 				}
 			}
@@ -451,13 +541,13 @@ class psyq::scene_action< t_stage >::set_screen_light:
 			a_stage.event_.template get_address
 				< typename this_type::parameters >(
 					i_update.get_point()->integer));
-		if (NULL != a_parameters)
+		if (NULL != a_parameters && 0 != a_parameters->light)
 		{
 			// stageからscreenを取得。
 			typename t_stage::screen* const a_screen(
 				a_stage.find_screen(
 					a_stage.event_.replace_hash(a_parameters->screen)).get());
-			if (NULL != a_screen && 0 != a_parameters->light)
+			if (NULL != a_screen)
 			{
 				// stageからlight-tokenを検索し、cameraに設定。
 				a_screen->light_ = a_stage.find_token(
@@ -466,67 +556,6 @@ class psyq::scene_action< t_stage >::set_screen_light:
 		}
 	}
 
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief event-lineを開始するevent。
-template< typename t_stage >
-class psyq::scene_action< t_stage >::set_event_line:
-	public psyq::scene_action< t_stage >
-{
-	public: typedef psyq::scene_action< t_stage > super_type;
-	public: typedef typename super_type::set_event_line this_type;
-
-	//-------------------------------------------------------------------------
-	public: struct parameters
-	{
-		typename t_stage::event::item::offset line;
-		typename t_stage::event::item::offset points;
-		typename t_stage::event::item::offset scale;
-		typename t_stage::event::real         start_frame;
-		typename t_stage::event::hash::value  start_origin;
-	};
-
-	//-------------------------------------------------------------------------
-	public: static typename t_stage::event::hash::value get_hash()
-	{
-		return t_stage::event::hash::generate("set_event_line");
-	}
-
-	//-------------------------------------------------------------------------
-	public: virtual void update(
-		typename t_stage::event::action::update_parameters const& i_update)
-	{
-		// 書庫から引数を取得。
-		typename super_type::update_parameters const& a_update(
-			static_cast< typename super_type::update_parameters const& >(
-				i_update));
-		t_stage& a_stage(*a_update.get_stage());
-		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_address
-				< typename this_type::parameters >(i_update.get_point()->integer));
-		if (NULL != a_parameters)
-		{
-			// scene-eventにevent-lineを登録。
-			typename t_stage::event::line* const a_line(
-				a_stage.event_.reset_line(
-					a_stage.event_.replace_hash(a_parameters->line),
-					a_stage.event_.replace_hash(a_parameters->points)));
-			if (NULL != a_line)
-			{
-				// time-scaleのない状態でevent-lineに開始frameを設定。
-				a_line->scale_.reset();
-				a_line->seek(
-					a_parameters->start_frame,
-					0 == a_parameters->start_origin? SEEK_SET: SEEK_END);
-
-				// event-lineにtime-scaleを設定。
-				a_line->scale_ = a_stage.event_.get_scale(
-					a_stage.event_.replace_hash(a_parameters->scale));
-				a_line->seek(i_update.get_time(), SEEK_CUR);
-			}
-		}
-	}
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -566,7 +595,7 @@ class psyq::scene_action< t_stage >::set_time_scale:
 		typename this_type::parameters const* const a_parameters(
 			a_stage.event_.template get_address
 				< typename this_type::parameters >(i_update.get_point()->integer));
-		if (NULL != a_parameters)
+		if (NULL != a_parameters && 0 != a_parameters->name)
 		{
 			// scene-eventからtime-scaleを取得。
 			typename t_stage::event::line::scale* const a_scale(
@@ -577,20 +606,16 @@ class psyq::scene_action< t_stage >::set_time_scale:
 				typename t_stage::event::line::scale::lerp const
 					a_lerp(
 						a_parameters->frame,
-#ifdef _WIN32
-						::_isnan(a_parameters->start)?
-#else
-						std::isnan(a_parameters->start)?
-#endif // _WIN32
-							a_scale->get_scale(): a_parameters->start,
+						this_type::is_nan(a_parameters->start)?
+							a_scale->get_current(): a_parameters->start,
 						a_parameters->end);
-				typename t_stage::event::hash::value const a_super_hash(
-					a_stage.event_.replace_hash(a_parameters->super));
-				if (t_stage::event::hash::EMPTY != a_super_hash)
+				if (0 != a_parameters->super)
 				{
 					// scale値と上位scaleを設定。
 					a_scale->reset(
-						a_lerp, a_stage.event_.get_scale(a_super_hash));
+						a_lerp,
+						a_stage.event_.get_scale(
+							a_stage.event_.replace_hash(a_parameters->super)));
 				}
 				else
 				{
@@ -599,6 +624,15 @@ class psyq::scene_action< t_stage >::set_time_scale:
 				}
 			}
 		}
+	}
+
+	private: static bool is_nan(float const i_value)
+	{
+#ifdef _WIN32
+		return 0 != ::_isnan(i_value);
+#else
+		return std::isnan(i_value);
+#endif // _WIN32
 	}
 };
 

@@ -136,7 +136,7 @@ class psyq::scene_screen:
 	    @retval !=false 成功。
 	    @retval ==false 失敗。取り除くtokenが見つからなかった。
 	 */
-	public: bool erase_token(
+	public: bool remove_token(
 		typename this_type::token::shared_ptr const& i_token)
 	{
 		std::size_t const a_index(this->find_token_index(i_token.get()));
@@ -151,7 +151,7 @@ class psyq::scene_screen:
 
 	/** @brief 描画するscene-tokenをすべて取り除く。
 	 */
-	public: void erase_tokens()
+	public: void remove_tokens()
 	{
 		typename this_type::token_container().swap(this->tokens_);
 	}
@@ -219,7 +219,7 @@ class psyq::scene_screen:
 
 	/** @brief cameraを取り除く。
 	 */
-	public: void erase_camera()
+	public: void remove_camera()
 	{
 		this->camera_token_.reset();
 		this->camera_node_ = NULL;
@@ -287,7 +287,7 @@ class psyq::scene_screen:
 
 	/** @brief 焦点を取り除く。
 	 */
-	public: void erase_focus()
+	public: void remove_focus()
 	{
 		this->focus_token_.reset();
 		this->focus_node_ = NULL;

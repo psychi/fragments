@@ -56,8 +56,7 @@ namespace psyq
 		public: typedef PSYQ_ENUM_ordinal ordinal;\
 		public: typedef PSYQ_ENUM_set enumeration;\
 		public: typedef PSYQ_ENUM_basic_set::item item;\
-		public: static PSYQ_ENUM_basic_set::item::ordinal const SIZE =\
-			PSYQ_ENUM_basic_set::SIZE;\
+		public: static std::size_t const SIZE = PSYQ_ENUM_basic_set::SIZE;\
 		private: d_enum();\
 	};
 

@@ -240,10 +240,30 @@ class psyq::event_stage
 	    @param[in] i_scale 取り除くtime-scaleの名前hash値。
 	    @return 取り除いたtime-scale。取り除かなかった場合は空。
 	 */
-	public: typename this_type::line::scale::shared_ptr const& remove_scale(
+	public: typename this_type::line::scale::shared_ptr const remove_scale(
 		typename t_hash::value const i_scale)
 	{
-		return this_type::_remove_element(this->scales_, i_scale);
+		typename this_type::line::scale::shared_ptr const a_scale(
+			this_type::_remove_element(this->scales_, i_scale));
+		if (NULL != a_scale.get())
+		{
+			typename this_type::line_map::const_iterator const a_end(
+				this->lines_.end());
+			for (
+				typename this_type::line_map::const_iterator i =
+					this->lines_.begin();
+				i != a_end;
+				++i)
+			{
+				typename this_type::line& a_line(
+					const_cast< typename this_type::line& >(i->second));
+				if (a_scale == a_line.scale_)
+				{
+					a_line.scale_.reset();
+				}
+			}
+		}
+		return a_scale;
 	}
 
 	//-------------------------------------------------------------------------

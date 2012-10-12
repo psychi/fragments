@@ -37,6 +37,7 @@ class psyq::scene_stage
 		t_hash, t_real, typename t_string::const_pointer, t_allocator >
 			screen;
 	public: typedef typename this_type::screen::token token;
+	public: typedef typename this_type::event::const_string const_string;
 
 	//-------------------------------------------------------------------------
 	/// scene-packageの辞書。
@@ -450,6 +451,34 @@ class psyq::scene_stage
 			}
 		}
 		return a_token;
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief time-scaleを取り除く。
+	    @param[in] i_scale 取り除くtime-scaleの名前hash値。
+	    @return 取り除いたtime-scale。取り除かなかった場合は空。
+	 */
+	public: typename this_type::event::line::scale::shared_ptr const
+		remove_time_scale(typename t_hash::value const i_scale)
+	{
+		typename this_type::event::line::scale::shared_ptr const a_scale(
+			this->event_.remove_scale(i_scale));
+		if (NULL != a_scale.get())
+		{
+			for (
+				typename this_type::token_map::const_iterator i =
+					this->tokens_.begin();
+				i != this->tokens_.end();
+				++i)
+			{
+				typename this_type::token* const a_token(i->second.get());
+				if (NULL != a_token && a_scale == a_token->time_scale_)
+				{
+					a_token->time_scale_.reset();
+				}
+			}
+		}
+		return a_scale;
 	}
 
 	//-------------------------------------------------------------------------

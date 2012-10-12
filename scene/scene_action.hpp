@@ -30,6 +30,7 @@ class psyq::scene_action:
 	public: class set_screen_camera;
 	public: class set_screen_light;
 	public: class set_time_scale;
+	public: class remove_stage_element;
 
 	//-------------------------------------------------------------------------
 	public: class update_parameters:
@@ -660,6 +661,71 @@ class psyq::scene_action< t_stage >::set_time_scale:
 #else
 		return std::isnan(i_value);
 #endif // _WIN32
+	}
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief sceneで使っている要素を取り除くevent。
+template< typename t_stage >
+class psyq::scene_action< t_stage >::remove_stage_element:
+	public psyq::scene_action< t_stage >
+{
+	public: typedef psyq::scene_action< t_stage > super_type;
+	public: typedef typename super_type::remove_stage_element this_type;
+
+	//-------------------------------------------------------------------------
+	public: struct parameters
+	{
+		typename t_stage::event::item::offset kind; ///< 取り除く要素の型名の先頭offset値。
+		typename t_stage::event::item::offset name; ///< 取り除く要素の名前の先頭offset値。
+	};
+
+	//-------------------------------------------------------------------------
+	public: static typename t_stage::hash::value get_hash()
+	{
+		return t_stage::hash::generate("remove_stage_element");
+	}
+
+	//-------------------------------------------------------------------------
+	public: virtual void update(
+		typename t_stage::event::action::update_parameters const& i_update)
+	{
+		// 書庫から引数を取得。
+		typename super_type::update_parameters const& a_update(
+			static_cast< typename super_type::update_parameters const& >(
+				i_update));
+		t_stage& a_stage(*a_update.get_stage());
+		typename this_type::parameters const* const a_parameters(
+			a_stage.event_.template get_address<
+				typename this_type::parameters >(
+					i_update.get_point()->integer));
+		if (NULL != a_parameters)
+		{
+			// stageからtime-scaleを取得。
+			typename t_stage::hash::value const a_name(
+				a_stage.event_.replace_hash(a_parameters->name));
+			if (t_stage::hash::EMPTY != a_name)
+			{
+				typename t_stage::hash::value const a_kind(
+					a_stage.event_.replace_hash(a_parameters->kind));
+				if (t_stage::hash::generate("scene_token") == a_kind)
+				{
+					a_stage.remove_token(a_name);
+				}
+				else if (t_stage::hash::generate("scene_screen") == a_kind)
+				{
+					a_stage.screens_.erase(a_name);
+				}
+				else if (t_stage::hash::generate("event_line") == a_kind)
+				{
+					a_stage.event_.lines_.erase(a_name);
+				}
+				else if (t_stage::hash::generate("time_scale") == a_kind)
+				{
+					a_stage.remove_time_scale(a_name);
+				}
+			}
+		}
 	}
 };
 

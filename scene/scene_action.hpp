@@ -53,9 +53,9 @@ class psyq::scene_action:
 		    @param[in]     i_time   event‚ª”­¶‚µ‚½Œã‚ÉŒo‰ß‚µ‚½ŽžŠÔB
 		 */
 		public: void reset(
-			t_stage&                              io_stage,
-			typename t_stage::event::point const& i_point,
-			typename t_stage::real const          i_time)
+			t_stage&                                      io_stage,
+			typename t_stage::event::action::point const& i_point,
+			typename t_stage::real const                  i_time)
 		{
 			this->stage_ = &io_stage;
 			this->super_type::reset(i_point, i_time);
@@ -722,7 +722,7 @@ class psyq::scene_action< t_stage >::remove_stage_element:
 				}
 				else if (t_stage::hash::generate("time_scale") == a_kind)
 				{
-					a_stage.remove_time_scale(a_name);
+					a_stage.remove_scale(a_name);
 				}
 			}
 		}

@@ -2,7 +2,7 @@
 #define PSYQ_SCENE_EVENT_STAGE_HPP_
 
 //#include <psyq/const_string.hpp>
-//#include <psyq/scene/event_action.hpp>
+//#include <psyq/scene/event_line.hpp>
 
 namespace psyq
 {
@@ -32,7 +32,6 @@ class psyq::event_stage
 	public: typedef t_string string;
 	public: typedef t_allocator allocator;
 	public: typedef psyq::event_item< t_hash > item;
-	public: typedef psyq::event_point< t_hash, t_real > point;
 	public: typedef psyq::event_line< t_hash, t_real > line;
 	public: typedef psyq::event_action< t_hash, t_real > action;
 	public: typedef psyq::basic_const_string<
@@ -83,8 +82,7 @@ class psyq::event_stage
 					scale_map;
 
 	//-------------------------------------------------------------------------
-	/** @brief event登記簿を構築。
-	    @param[in] i_package   event登記簿が使うevent-package。
+	/** @param[in] i_package   event-stageが使うevent-package。
 	    @param[in] i_allocator 初期化に使うmemory割当子。
 	 */
 	public: event_stage(
@@ -100,8 +98,8 @@ class psyq::event_stage
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief event登記簿を交換。
-	    @param[in,out] io_target 交換するevent登記簿。
+	/** @brief event-stageを交換。
+	    @param[in,out] io_target 交換するstage。
 	 */
 	public: void swap(this_type& io_target)
 	{
@@ -200,6 +198,14 @@ class psyq::event_stage
 			NULL;
 	}
 
+	/** @brief event-lineを取り除く。
+	    @param[in] i_line 取り除くevent-lineの名前hash値。
+	 */
+	public: void remove_line(typename t_hash::value const i_line)
+	{
+		this->lines_.erase(i_line);
+	}
+
 	//-------------------------------------------------------------------------
 	/** @brief time-scaleを取得。
 	    名前に対応するtime-scaleが存在しない場合は、新たに作る。
@@ -247,6 +253,7 @@ class psyq::event_stage
 			this_type::_remove_element(this->scales_, i_scale));
 		if (NULL != a_scale.get())
 		{
+			// event-line集合からtime-scaleを取り除く。
 			typename this_type::line_map::const_iterator const a_end(
 				this->lines_.end());
 			for (
@@ -282,7 +289,7 @@ class psyq::event_stage
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 置換語辞書を介してevent-packageに存在する文字列を置換し、hash値を取得。
+	/** @brief event置換語辞書を介してevent-packageに存在する文字列を置換し、hash値を取得。
 	    @param[in] i_offset 変換する文字列のevent-package内offset値。
 	    @return 置換後の文字列のhash値。
 	 */
@@ -293,7 +300,7 @@ class psyq::event_stage
 		return t_hash::generate(this->replace_string(i_offset));
 	}
 
-	/** @brief 置換語辞書を介して文字列を置換し、hash値を取得。
+	/** @brief event置換語辞書を介して文字列を置換し、hash値を取得。
 	    @param[in] i_source 置換される文字列。
 	    @return 置換後の文字列のhash値。
 	 */
@@ -305,7 +312,7 @@ class psyq::event_stage
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 置換語辞書を介して、event-packageに存在する文字列を置換。
+	/** @brief event置換語辞書を介して、event-packageに存在する文字列を置換。
 	    @param[in] i_offset 置換元となる文字列のevent-package内offset値。
 	    @return 置換後の文字列。
 	 */
@@ -316,7 +323,7 @@ class psyq::event_stage
 		return this->replace_string(this->get_string(i_offset));
 	}
 
-	/** @brief 置換語辞書を介して、文字列を置換。
+	/** @brief event置換語辞書を介して、文字列を置換。
 	    @param[in] i_string 置換元となる文字列。
 	    @return 置換後の文字列。
 	 */
@@ -361,7 +368,8 @@ class psyq::event_stage
 	 */
 	public: template< typename t_value >
 	t_value const* get_address(
-		typename this_type::item::offset const i_offset) const
+		typename this_type::item::offset const i_offset)
+	const
 	{
 		psyq::event_package const* const a_package(this->package_.get());
 		return NULL != a_package?

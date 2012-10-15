@@ -3,29 +3,13 @@
 
 //#include <psyq/layered_scale.hpp>
 //#include <psyq/scene/event_item.hpp>
+//#include <psyq/scene/event_action.hpp>
 
 namespace psyq
 {
 	template< typename, typename > struct event_point;
 	template< typename, typename > class event_line;
 }
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 時間軸上のevent発生点。
-    @tparam t_hash event-packageで使われているhash関数。
-    @tparam t_real event-packageで使われている実数の型。
- */
-template< typename t_hash, typename t_real >
-struct psyq::event_point
-{
-	typename t_hash::value type; ///< eventの種別。
-	t_real                 time; ///< eventが発生するまでの時間。
-	union
-	{
-		typename t_hash::value integer; ///< 整数型の引数。
-		t_real                 real;    ///< 浮動小数点型の引数。
-	};
-};
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief event時間軸の管理。
@@ -44,7 +28,8 @@ class psyq::event_line
 	public: typedef psyq::layered_scale<
 		t_real, typename this_type::integer, this_type >
 			scale;
-	public: typedef psyq::event_point< t_hash, t_real > point;
+	private: typedef typename psyq::event_action< t_hash, t_real >::point
+		point;
 
 	//-------------------------------------------------------------------------
 	public: event_line():
@@ -304,6 +289,7 @@ class psyq::event_line
 	}
 
 	//-------------------------------------------------------------------------
+	/// 時間の縮尺率。
 	public: typename this_type::scale::shared_ptr scale_;
 
 	/// 参照しているevent-package。

@@ -1,7 +1,7 @@
 #ifndef PSYQ_SCENE_EVENT_ACTION_HPP_
 #define PSYQ_SCENE_EVENT_ACTION_HPP_
 
-//#include <psyq/scene/event_line.hpp>
+//#include <psyq/arena.hpp>
 
 namespace psyq
 {
@@ -27,6 +27,20 @@ class psyq::event_action
 	public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
 
 	//-------------------------------------------------------------------------
+	/// @brief event-actionの発生点。
+	public: struct point
+	{
+		typename t_hash::value type; ///< eventの種別。
+		t_real                 time; ///< eventが発生するまでの時間。
+		union
+		{
+			typename t_hash::value integer; ///< 整数型の引数。
+			t_real                 real;    ///< 浮動小数点型の引数。
+		};
+	};
+
+	//-------------------------------------------------------------------------
+	/// @brief event更新関数の引数。
 	public: class update_parameters
 	{
 		public: update_parameters():
@@ -41,14 +55,14 @@ class psyq::event_action
 		    @param[in] i_time  eventが発生した後に経過した時間。
 		 */
 		public: void reset(
-			psyq::event_point< t_hash, t_real > const& i_point,
-			t_real const                               i_time)
+			point const& i_point,
+			t_real const i_time)
 		{
 			this->point_ = &i_point;
 			this->time_ = i_time;
 		}
 
-		public: psyq::event_point< t_hash, t_real > const* get_point() const
+		public: point const* get_point() const
 		{
 			return this->point_;
 		}
@@ -58,8 +72,8 @@ class psyq::event_action
 			return this->time_;
 		}
 
-		private: psyq::event_point< t_hash, t_real > const* point_;
-		private: t_real                                     time_;
+		private: point const* point_;
+		private: t_real       time_;
 	};
 
 	//-------------------------------------------------------------------------

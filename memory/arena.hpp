@@ -15,12 +15,16 @@
 #	define PSYQ_WEAK_PTR boost::weak_ptr
 #	define PSYQ_ALLOCATE_SHARED boost::allocate_shared
 #	define PSYQ_MAKE_SHARED boost::make_shared
+#	define PSYQ_DYNAMIC_POINTER_CAST boost::dynamic_pointer_cast
+#	define PSYQ_STATIC_POINTER_CAST boost::static_pointer_cast
 #elif defined(PSYQ_USE_CPP11)
 #	include <memory>
 #	define PSYQ_SHARED_PTR std::shared_ptr
 #	define PSYQ_WEAK_PTR std::weak_ptr
 #	define PSYQ_ALLOCATE_SHARED std::allocate_shared
 #	define PSYQ_MAKE_SHARED std::make_shared
+#	define PSYQ_DYNAMIC_POINTER_CAST std::dynamic_pointer_cast
+#	define PSYQ_STATIC_POINTER_CAST std::static_pointer_cast
 #else
 #	error
 #endif // PSYQ_USE_CPP11

@@ -111,9 +111,9 @@ class psyq::scene_action< t_stage >::set_token:
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename t_stage::event::item::offset token;  ///< 用意するtoken名の書庫offset値。
-		typename t_stage::event::item::offset screen; ///< screen名の書庫offset値。
-		typename t_stage::event::item::offset scale;  ///< tokenに設定するtime-scale名の書庫offset値。
+		typename t_stage::event::package::offset token;  ///< 用意するtoken名の書庫offset値。
+		typename t_stage::event::package::offset screen; ///< screen名の書庫offset値。
+		typename t_stage::event::package::offset scale;  ///< tokenに設定するtime-scale名の書庫offset値。
 	};
 
 	//-------------------------------------------------------------------------
@@ -132,7 +132,7 @@ class psyq::scene_action< t_stage >::set_token:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_address<
+			a_stage.event_.template get_package<
 				typename this_type::parameters >(
 					i_update.get_point()->integer));
 		if (NULL != a_parameters)
@@ -177,8 +177,8 @@ class psyq::scene_action< t_stage >::remove_token:
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename t_stage::event::item::offset token;  ///< 取り除くtoken名の書庫offset値。
-		typename t_stage::event::item::offset screen; ///< screen名の書庫offset値。
+		typename t_stage::event::package::offset token;  ///< 取り除くtoken名の書庫offset値。
+		typename t_stage::event::package::offset screen; ///< screen名の書庫offset値。
 	};
 
 	//-------------------------------------------------------------------------
@@ -197,7 +197,7 @@ class psyq::scene_action< t_stage >::remove_token:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_address<
+			a_stage.event_.template get_package<
 				typename this_type::parameters >(
 					i_update.get_point()->integer));
 		if (NULL != a_parameters)
@@ -232,9 +232,9 @@ class psyq::scene_action< t_stage >::set_event_line:
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename t_stage::event::item::offset line;
-		typename t_stage::event::item::offset points;
-		typename t_stage::event::item::offset scale;
+		typename t_stage::event::package::offset line;
+		typename t_stage::event::package::offset points;
+		typename t_stage::event::package::offset scale;
 		typename t_stage::real                time;
 		typename t_stage::hash::value         origin;
 	};
@@ -255,7 +255,7 @@ class psyq::scene_action< t_stage >::set_event_line:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_address<
+			a_stage.event_.template get_package<
 				typename this_type::parameters >(
 					i_update.get_point()->integer));
 		if (NULL != a_parameters)
@@ -326,9 +326,9 @@ class psyq::scene_action< t_stage >::set_token_animation:
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename t_stage::event::item::offset token;
-		typename t_stage::event::item::offset package;
-		typename t_stage::event::item::offset flags;
+		typename t_stage::event::package::offset token;
+		typename t_stage::event::package::offset package;
+		typename t_stage::event::package::offset flags;
 		typename t_stage::real                start;
 	};
 
@@ -348,7 +348,7 @@ class psyq::scene_action< t_stage >::set_token_animation:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_address<
+			a_stage.event_.template get_package<
 				typename this_type::parameters >(
 					i_update.get_point()->integer));
 		if (NULL != a_parameters)
@@ -390,8 +390,8 @@ class psyq::scene_action< t_stage >::set_token_model:
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename t_stage::event::item::offset token;   ///< token名の書庫offset値。
-		typename t_stage::event::item::offset package; ///< package名の書庫offset値。
+		typename t_stage::event::package::offset token;   ///< token名の書庫offset値。
+		typename t_stage::event::package::offset package; ///< package名の書庫offset値。
 	};
 
 	//-------------------------------------------------------------------------
@@ -410,8 +410,9 @@ class psyq::scene_action< t_stage >::set_token_model:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_address
-				< typename this_type::parameters >(i_update.get_point()->integer));
+			a_stage.event_.template get_package<
+				typename this_type::parameters >(
+					i_update.get_point()->integer));
 		if (NULL != a_parameters)
 		{
 			// stageからmodel-packageを取得。
@@ -447,11 +448,11 @@ class psyq::scene_action< t_stage >::set_screen_camera:
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename t_stage::event::item::offset screen;       ///< cameraを設定するscreen名の書庫offset値。
-		typename t_stage::event::item::offset camera_token; ///< cameraに使うtoken名の書庫offset値。
-		typename t_stage::event::item::offset camera_node;  ///< cameraに使うnode名の書庫offset値。
-		typename t_stage::event::item::offset focus_token;  ///< focusに使うtoken名の書庫offset値。
-		typename t_stage::event::item::offset focus_node;   ///< focusに使うnode名の書庫offset値。
+		typename t_stage::event::package::offset screen;       ///< cameraを設定するscreen名の書庫offset値。
+		typename t_stage::event::package::offset camera_token; ///< cameraに使うtoken名の書庫offset値。
+		typename t_stage::event::package::offset camera_node;  ///< cameraに使うnode名の書庫offset値。
+		typename t_stage::event::package::offset focus_token;  ///< focusに使うtoken名の書庫offset値。
+		typename t_stage::event::package::offset focus_node;   ///< focusに使うnode名の書庫offset値。
 	};
 
 	//-------------------------------------------------------------------------
@@ -470,7 +471,7 @@ class psyq::scene_action< t_stage >::set_screen_camera:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_address<
+			a_stage.event_.template get_package<
 				typename this_type::parameters >(
 					i_update.get_point()->integer));
 		if (NULL != a_parameters)
@@ -534,8 +535,8 @@ class psyq::scene_action< t_stage >::set_screen_light:
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename t_stage::event::item::offset screen; ///< lightを設定するscreen名の書庫offset値。
-		typename t_stage::event::item::offset light;  ///< screenに設定するlight名の書庫offset値。
+		typename t_stage::event::package::offset screen; ///< lightを設定するscreen名の書庫offset値。
+		typename t_stage::event::package::offset light;  ///< screenに設定するlight名の書庫offset値。
 	};
 
 	//-------------------------------------------------------------------------
@@ -554,8 +555,8 @@ class psyq::scene_action< t_stage >::set_screen_light:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_address
-				< typename this_type::parameters >(
+			a_stage.event_.template get_package<
+				typename this_type::parameters >(
 					i_update.get_point()->integer));
 		if (NULL != a_parameters)
 		{
@@ -591,8 +592,8 @@ class psyq::scene_action< t_stage >::set_time_scale:
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename t_stage::event::item::offset name;  ///< time-scale名文字列の先頭offset値。
-		typename t_stage::event::item::offset super; ///< 上位time-scale名文字列の先頭offset値。
+		typename t_stage::event::package::offset name;  ///< time-scale名文字列の先頭offset値。
+		typename t_stage::event::package::offset super; ///< 上位time-scale名文字列の先頭offset値。
 		typename t_stage::hash::value         frame;
 		typename t_stage::real                start;
 		typename t_stage::real                end;
@@ -614,7 +615,7 @@ class psyq::scene_action< t_stage >::set_time_scale:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_address<
+			a_stage.event_.template get_package<
 				typename this_type::parameters >(
 					i_update.get_point()->integer));
 		if (NULL != a_parameters)
@@ -676,8 +677,8 @@ class psyq::scene_action< t_stage >::remove_stage_element:
 	//-------------------------------------------------------------------------
 	public: struct parameters
 	{
-		typename t_stage::event::item::offset kind; ///< 取り除く要素の型名の先頭offset値。
-		typename t_stage::event::item::offset name; ///< 取り除く要素の名前の先頭offset値。
+		typename t_stage::event::package::offset kind; ///< 取り除く要素の型名の先頭offset値。
+		typename t_stage::event::package::offset name; ///< 取り除く要素の名前の先頭offset値。
 	};
 
 	//-------------------------------------------------------------------------
@@ -696,7 +697,7 @@ class psyq::scene_action< t_stage >::remove_stage_element:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_address<
+			a_stage.event_.template get_package<
 				typename this_type::parameters >(
 					i_update.get_point()->integer));
 		if (NULL != a_parameters)

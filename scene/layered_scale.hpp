@@ -22,11 +22,11 @@ class psyq::layered_scale
 	public: typedef t_value value;
 	public: typedef t_count count;
 	public: typedef t_tag tag;
+	public: typedef psyq::lerp< t_value, t_count > lerp;
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
 	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
 	public: typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
 	public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
-	public: typedef psyq::lerp< t_value, t_count > lerp;
 
 	//-------------------------------------------------------------------------
 	/** @param[in] i_scale ê¸å`ï‚ä‘scaleílÅB

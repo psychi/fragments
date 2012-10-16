@@ -31,7 +31,7 @@ class psyq::event_stage
 	public: typedef t_real real;
 	public: typedef t_string string;
 	public: typedef t_allocator allocator;
-	public: typedef psyq::event_item< t_hash > item;
+	public: typedef psyq::event_package< t_hash > package;
 	public: typedef psyq::event_line< t_hash, t_real > line;
 	public: typedef psyq::event_action< t_hash, t_real > action;
 	public: typedef psyq::basic_const_string<
@@ -86,8 +86,8 @@ class psyq::event_stage
 	    @param[in] i_allocator 初期化に使うmemory割当子。
 	 */
 	public: event_stage(
-		PSYQ_SHARED_PTR< psyq::event_package const > const& i_package,
-		t_allocator const&                                  i_allocator):
+		typename this_type::package::const_shared_ptr const& i_package,
+		t_allocator const&                                   i_allocator):
 	package_(i_package),
 	actions_(typename this_type::action_map::key_compare(), i_allocator),
 	words_(typename this_type::word_map::key_compare(), i_allocator),
@@ -98,8 +98,8 @@ class psyq::event_stage
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief event-stageを交換。
-	    @param[in,out] io_target 交換するstage。
+	/** @brief 値を交換。
+	    @param[in,out] 交換する対象。
 	 */
 	public: void swap(this_type& io_target)
 	{
@@ -294,7 +294,7 @@ class psyq::event_stage
 	    @return 置換後の文字列のhash値。
 	 */
 	public: typename t_hash::value replace_hash(
-		typename this_type::item::offset const i_offset)
+		typename this_type::package::offset const i_offset)
 	const
 	{
 		return t_hash::generate(this->replace_string(i_offset));
@@ -317,7 +317,7 @@ class psyq::event_stage
 	    @return 置換後の文字列。
 	 */
 	public: t_string replace_string(
-		typename this_type::item::offset const i_offset)
+		typename this_type::package::offset const i_offset)
 	const
 	{
 		return this->replace_string(this->get_string(i_offset));
@@ -331,7 +331,7 @@ class psyq::event_stage
 		typename this_type::const_string const& i_source)
 	const
 	{
-		return this_type::item::template replace_string< t_string >(
+		return this_type::package::template replace_string< t_string >(
 			this->words_, i_source.begin(), i_source.end());
 	}
 
@@ -340,12 +340,12 @@ class psyq::event_stage
 	    @param[in] i_offset 文字列のevent-package内offset値。
 	 */
 	public: typename this_type::const_string get_string(
-		typename this_type::item::offset const i_offset)
+		typename this_type::package::offset const i_offset)
 	const
 	{
 		// 文字列の先頭位置を取得。
 		typename t_string::const_pointer const a_begin(
-			this->get_address< typename t_string::value_type >(i_offset));
+			this->get_package< typename t_string::value_type >(i_offset));
 		if (NULL == a_begin)
 		{
 			return typename this_type::const_string();
@@ -362,29 +362,38 @@ class psyq::event_stage
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief event-packageに存在する値へのpointerを取得。
-	    @tparam    t_value  値の型。
-	    @param[in] i_offset 値のevent-packageoffset値。
-	 */
-	public: template< typename t_value >
-	t_value const* get_address(
-		typename this_type::item::offset const i_offset)
-	const
-	{
-		psyq::event_package const* const a_package(this->package_.get());
-		return NULL != a_package?
-			this_type::item::template get_address< t_value >(
-				*a_package, i_offset):
-			NULL;
-	}
-
-	//-------------------------------------------------------------------------
 	/** @brief event-packageを取得。
 	 */
-	public: PSYQ_SHARED_PTR< psyq::event_package const > const& get_package()
-	const
+	public:
+	typename this_type::package::const_shared_ptr const& get_package() const
 	{
 		return this->package_;
+	}
+
+	/** @brief event-package内に存在する値へのpointerを取得。
+	    @tparam    t_value  値の型。
+	    @param[in] i_offset 値のevent-package内offset値。
+	 */
+	public: template< typename t_value >
+	t_value const* get_package(
+		typename this_type::package::offset const i_offset)
+	const
+	{
+		typename this_type::package const* const a_package(this->package_.get());
+		return NULL != a_package?
+			a_package->template get_address< t_value >(i_offset): NULL;
+	}
+
+	/** @brief event-package内に存在する値へのpointerを取得。
+	    @tparam    t_value 値の型。
+	    @param[in] i_name  値の名前hash値。
+	 */
+	public: template< typename t_value >
+	t_value const* find_package(typename t_hash::value const i_name) const
+	{
+		typename this_type::package const* const a_package(this->package_.get());
+		return NULL != a_package?
+			a_package->template find_address< t_value >(i_name): NULL;
 	}
 
 	//-------------------------------------------------------------------------
@@ -436,7 +445,7 @@ class psyq::event_stage
 	}
 
 	//-------------------------------------------------------------------------
-	private: PSYQ_SHARED_PTR< psyq::event_package const > package_;
+	private: typename this_type::package::const_shared_ptr package_;
 
 	public: typename this_type::action_map actions_; ///< event-actionの辞書。
 	public: typename this_type::word_map   words_;   ///< event置換語の辞書。

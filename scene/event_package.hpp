@@ -1,83 +1,48 @@
-#ifndef PSYQ_SCENE_EVENT_ITEM_HPP_
-#define PSYQ_SCENE_EVENT_ITEM_HPP_
+#ifndef PSYQ_SCENE_EVENT_PACKAGE_HPP_
+#define PSYQ_SCENE_EVENT_PACKAGE_HPP_
 
 namespace psyq
 {
-	typedef psyq::file_buffer event_package;
-	template< typename > struct event_item;
+	template< typename > class event_package;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief event-packageが持つ項目。
-    @tparam t_hash event-packageで使われているhash関数。
+/** @brief eventで使うresourceをまとめたpackage。
+    @tparam t_hash event-package内で使われているhash関数。
  */
 template< typename t_hash >
-struct psyq::event_item
+class psyq::event_package:
+	private psyq::file_buffer
 {
-	public: typedef psyq::event_item< t_hash > this_type;
+	public: typedef psyq::event_package< t_hash > this_type;
+	private: typedef psyq::file_buffer super_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef t_hash hash;
 	public: typedef typename t_hash::value offset;
+	public: typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
+	public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
 
 	//-------------------------------------------------------------------------
-	private: struct item_compare_by_name
+	private: struct item
 	{
-		bool operator()(
-			this_type const& i_left,
-			this_type const& i_right)
-		const
+		bool operator<(item const& i_right) const
 		{
-			return i_left.name < i_right.name;
+			return this->name < i_right.name;
 		}
+
+		typename t_hash::value name;     ///< itemの名前hash値。
+		typename t_hash::value position; ///< itemの先頭位置のevent-package内offset値。
 	};
 
 	//-------------------------------------------------------------------------
-	/** @brief event-packageからevent-itemを検索。
-	    @param[in] i_package event-package。
-	    @param[in] i_name    検索するitemの名前hash値。
-	    @retval !=NULL 見つけたitemへのpointer。
-	    @retval ==NULL 該当するitemは見つからなかった。
-	 */
-	public: static this_type const* find(
-		psyq::event_package const&   i_package,
-		typename t_hash::value const i_name)
+	public: static typename this_type::const_shared_ptr make(
+		PSYQ_SHARED_PTR< psyq::file_buffer const > const& i_package)
 	{
-		// item配列の先頭位置を取得。
-		std::size_t const a_offset(
-			*static_cast< typename this_type::offset const* >(
-				i_package.get_region_address()));
-		if (sizeof(typename this_type::offset) <= a_offset)
-		{
-			this_type const* const a_begin(
-				this_type::get_address< this_type >(i_package, a_offset));
-			if (NULL != a_begin)
-			{
-				// item配列の末尾位置を取得。
-				this_type const* const a_end(
-					static_cast< this_type const* >(
-						static_cast< void const* >(
-							i_package.get_region_size() +
-							static_cast< char const* >(
-								i_package.get_region_address()))));
-
-				// item配列から、名前に合致するものを検索。
-				this_type a_key;
-				a_key.name = i_name;
-				this_type const* const a_position(
-					std::lower_bound(
-						a_begin,
-						a_end,
-						a_key,
-						item_compare_by_name()));
-				if (a_end != a_position && a_position->name == i_name)
-				{
-					return a_position;
-				}
-			}
-		}
-		return NULL;
+		return PSYQ_STATIC_POINTER_CAST< this_type >(i_package);
 	}
+
+	private: event_package();
 
 	//-------------------------------------------------------------------------
 	/** @brief event-package内に存在するinstanceへのpointerを取得。
@@ -86,30 +51,25 @@ struct psyq::event_item
 	    @retval !=NULL instanceへのpointer。
 	    @retval ==NULL instanceは見つからなかった。
 	 */
-	public: static void const* get_address(
-		psyq::event_package const&       i_package,
-		typename this_type::offset const i_offset)
+	public: void const* get_address(typename this_type::offset const i_offset)
+	const
 	{
-		return 0 < i_offset && i_offset < i_package.get_region_size()?
-			i_offset + static_cast< char const* >(
-				i_package.get_region_address()):
+		return 0 < i_offset && i_offset < this->get_region_size()?
+			i_offset + static_cast< char const* >(this->get_region_address()):
 			NULL;
 	}
 
 	/** @brief event-package内に存在するinstanceへのpointerを取得。
 		@tparam t_value      instanceの型。
-	    @param[in] i_package event-package。
+	    @param[in] i_package 対象となるevent-package。
 	    @param[in] i_offset  event-package先頭位置からのoffset値。
 	    @retval !=NULL instanceへのpointer。
 	    @retval ==NULL instanceは見つからなかった。
 	 */
 	public: template< typename t_value >
-	static t_value const* get_address(
-		psyq::event_package const&       i_package,
-		typename this_type::offset const i_offset)
+	t_value const* get_address(typename this_type::offset const i_offset) const
 	{
-		void const* const a_address(
-			this_type::get_address(i_package, i_offset));
+		void const* const a_address(this->get_address(i_offset));
 		std::size_t const a_alignment(boost::alignment_of< t_value >::value);
 		if (0 != reinterpret_cast< std::size_t >(a_address) % a_alignment)
 		{
@@ -117,6 +77,25 @@ struct psyq::event_item
 			return NULL;
 		}
 		return static_cast< t_value const* >(a_address);
+	}
+
+	/** @brief event-package内に存在するinstanceへのpointerを取得。
+		@tparam t_value      instanceの型。
+	    @param[in] i_package 対象となるevent-package。
+	    @param[in] i_name    instanceの名前hash値。
+	    @retval !=NULL instanceへのpointer。
+	    @retval ==NULL instanceは見つからなかった。
+	 */
+	public: template< typename t_value >
+	t_value const* find_address(typename t_hash::value const i_name) const
+	{
+		// event-packageからevent項目を取得。
+		typename this_type::item const* const a_item(this->find_item(i_name));
+		if (NULL != a_item)
+		{
+			return this->get_address< t_value >(a_item->position);
+		}
+		return NULL;
 	}
 
 	//-------------------------------------------------------------------------
@@ -194,6 +173,52 @@ struct psyq::event_item
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief event-packageからevent-itemを検索。
+	    @param[in] i_package event-package。
+	    @param[in] i_name    検索するitemの名前hash値。
+	    @retval !=NULL 見つけたitemへのpointer。
+	    @retval ==NULL 該当するitemは見つからなかった。
+	 */
+	private: typename this_type::item const* find_item(
+		typename t_hash::value const i_name)
+	const
+	{
+		// item配列の先頭位置を取得。
+		std::size_t const a_offset(
+			*static_cast< typename this_type::offset const* >(
+				this->get_region_address()));
+		if (sizeof(typename this_type::offset) <= a_offset)
+		{
+			typename this_type::item const* const a_begin(
+				this->get_address< typename this_type::item >(a_offset));
+			if (NULL != a_begin)
+			{
+				// item配列の末尾位置を取得。
+				typename this_type::item const* const a_end(
+					static_cast< typename this_type::item const* >(
+						static_cast< void const* >(
+							this->get_region_size() +
+							static_cast< char const* >(
+								this->get_region_address()))));
+
+				// item配列から、名前に合致するものを検索。
+				typename this_type::item a_key;
+				a_key.name = i_name;
+				typename this_type::item const* const a_position(
+					std::lower_bound(
+						a_begin,
+						a_end,
+						a_key));
+				if (a_end != a_position && a_position->name == i_name)
+				{
+					return a_position;
+				}
+			}
+		}
+		return NULL;
+	}
+
+	//-------------------------------------------------------------------------
 	/** @biref 文字列から'('と')'で囲まれた単語を検索。
 	 */
 	private: template< typename t_iterator >
@@ -221,11 +246,6 @@ struct psyq::event_item
 		}
 		return std::make_pair(i_end, i_end);
 	}
-
-	//-------------------------------------------------------------------------
-	public: typename t_hash::value     type;  ///< itemの型名hash値。
-	public: typename t_hash::value     name;  ///< itemの名前hash値。
-	public: typename this_type::offset begin; ///< itemの先頭位置のevent-package内offset値。
 };
 
-#endif // !PSYQ_SCENE_EVENT_ITEM_HPP_
+#endif // !PSYQ_SCENE_EVENT_PACKAGE_HPP_

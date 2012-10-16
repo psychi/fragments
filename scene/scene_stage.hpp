@@ -12,6 +12,10 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief sceneで使うobjectを配置する場。
+    @tparam t_hash      event-packageで使われているhash関数。
+    @tparam t_real      event-packageで使われている実数の型。
+    @tparam t_string    event置換語に使う文字列の型。std::basic_string互換。
+    @tparam t_allocator 使用するmemory割当子の型。
  */
 template<
 	typename t_hash = psyq::fnv1_hash32,
@@ -76,9 +80,9 @@ class psyq::scene_stage
 	//-------------------------------------------------------------------------
 	private: struct package_path
 	{
-		typename this_type::event::item::offset scene;   ///< sceneのpath名の書庫offset値。
-		typename this_type::event::item::offset shader;  ///< shaderのpath名の書庫offset値。
-		typename this_type::event::item::offset texture; ///< textureのpath名の書庫offset値。
+		typename this_type::event::package::offset scene;   ///< sceneのpath名の書庫offset値。
+		typename this_type::event::package::offset shader;  ///< shaderのpath名の書庫offset値。
+		typename this_type::event::package::offset texture; ///< textureのpath名の書庫offset値。
 	};
 
 	private: typedef std::multimap<
@@ -96,8 +100,8 @@ class psyq::scene_stage
 	    @param[in] i_allocator 初期化に使うmemory割当子。
 	 */
 	public: explicit scene_stage(
-		PSYQ_SHARED_PTR< psyq::event_package const > const& i_package,
-		t_allocator const&                                  i_allocator =
+		typename this_type::event::package::const_shared_ptr const& i_package,
+		t_allocator const&                                          i_allocator =
 			t_allocator()):
 	event_(i_package, i_allocator),
 	packages_(typename this_type::package_map::key_compare(), i_allocator),
@@ -108,8 +112,8 @@ class psyq::scene_stage
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief stage全体を交換。
-	    @param[in,out] io_target 交換するstage。
+	/** @brief 値を交換。
+	    @param[in,out] 交換する対象。
 	 */
 	public: void swap(this_type& io_target)
 	{
@@ -224,29 +228,22 @@ class psyq::scene_stage
 		typename t_hash::value const i_package)
 	const
 	{
-		// event-packageからscene-package-pathを検索。
-		typename this_type::event::item const* const a_item(
-			this_type::event::item::find(
-				*this->event_.get_package(), i_package));
-		if (NULL != a_item)
+		// event-packageからpackage-pathを検索。
+		typename this_type::package_path const* const a_path(
+			this->event_.template
+				find_package< typename this_type::package_path >(i_package));
+		if (NULL != a_path)
 		{
-			typename this_type::package_path const* const a_path(
-				this->event_.template get_address<
-					typename this_type::package_path >(
-						a_item->begin));
-			if (NULL != a_path)
+			// fileからscene-packageを読み込む。
+			psyq::scene_package::shared_ptr const a_package(
+				psyq::scene_package::make(
+					this->packages_.get_allocator(),
+					this->event_.replace_string(a_path->scene),
+					this->event_.replace_string(a_path->shader),
+					this->event_.replace_string(a_path->texture)));
+			if (NULL != a_package.get())
 			{
-				// fileからscene-packageを読み込む。
-				psyq::scene_package::shared_ptr const a_package(
-					psyq::scene_package::make(
-						this->packages_.get_allocator(),
-						this->event_.replace_string(a_path->scene),
-						this->event_.replace_string(a_path->shader),
-						this->event_.replace_string(a_path->texture)));
-				if (NULL != a_package.get())
-				{
-					return a_package;
-				}
+				return a_package;
 			}
 		}
 		return psyq::_get_null_shared_ptr< psyq::scene_package >();

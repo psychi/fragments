@@ -83,7 +83,7 @@ class psyq::event_line
 		{
 			// €–Ú‚©‚çevent-point”z—ñ‚Ìæ“ªˆÊ’u‚ðŽæ“¾B
 			typename this_type::point const* const a_first_point(
-				a_package->template find_address< typename this_type::point >(
+				a_package->template find_value< typename this_type::point >(
 					i_points));
 			if (NULL != a_first_point)
 			{

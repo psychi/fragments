@@ -67,7 +67,7 @@ class psyq::event_package:
 	    @retval ==NULL instanceは見つからなかった。
 	 */
 	public: template< typename t_value >
-	t_value const* get_address(typename this_type::offset const i_offset) const
+	t_value const* get_value(typename this_type::offset const i_offset) const
 	{
 		void const* const a_address(this->get_address(i_offset));
 		std::size_t const a_alignment(boost::alignment_of< t_value >::value);
@@ -87,13 +87,13 @@ class psyq::event_package:
 	    @retval ==NULL instanceは見つからなかった。
 	 */
 	public: template< typename t_value >
-	t_value const* find_address(typename t_hash::value const i_name) const
+	t_value const* find_value(typename t_hash::value const i_name) const
 	{
 		// event-packageからevent項目を取得。
 		typename this_type::item const* const a_item(this->find_item(i_name));
 		if (NULL != a_item)
 		{
-			return this->get_address< t_value >(a_item->position);
+			return this->get_value< t_value >(a_item->position);
 		}
 		return NULL;
 	}
@@ -115,7 +115,7 @@ class psyq::event_package:
 		t_iterator const i_begin,
 		t_iterator const i_end)
 	{
-		return replace_string< t_string >(
+		return this_type::template replace_string< t_string >(
 			i_dictionary, i_begin, i_end, i_dictionary.get_allocator());
 	}
 
@@ -190,7 +190,7 @@ class psyq::event_package:
 		if (sizeof(typename this_type::offset) <= a_offset)
 		{
 			typename this_type::item const* const a_begin(
-				this->get_address< typename this_type::item >(a_offset));
+				this->get_value< typename this_type::item >(a_offset));
 			if (NULL != a_begin)
 			{
 				// item配列の末尾位置を取得。
@@ -205,10 +205,7 @@ class psyq::event_package:
 				typename this_type::item a_key;
 				a_key.name = i_name;
 				typename this_type::item const* const a_position(
-					std::lower_bound(
-						a_begin,
-						a_end,
-						a_key));
+					std::lower_bound(a_begin, a_end, a_key));
 				if (a_end != a_position && a_position->name == i_name)
 				{
 					return a_position;

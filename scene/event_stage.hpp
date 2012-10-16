@@ -381,7 +381,7 @@ class psyq::event_stage
 	{
 		typename this_type::package const* const a_package(this->package_.get());
 		return NULL != a_package?
-			a_package->template get_address< t_value >(i_offset): NULL;
+			a_package->template get_value< t_value >(i_offset): NULL;
 	}
 
 	/** @brief event-package“à‚É‘¶Ý‚·‚é’l‚Ö‚Ìpointer‚ðŽæ“¾B
@@ -393,7 +393,7 @@ class psyq::event_stage
 	{
 		typename this_type::package const* const a_package(this->package_.get());
 		return NULL != a_package?
-			a_package->template find_address< t_value >(i_name): NULL;
+			a_package->template find_value< t_value >(i_name): NULL;
 	}
 
 	//-------------------------------------------------------------------------

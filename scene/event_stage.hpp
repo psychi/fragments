@@ -92,7 +92,8 @@ class psyq::event_stage
 	actions_(typename this_type::action_map::key_compare(), i_allocator),
 	words_(typename this_type::word_map::key_compare(), i_allocator),
 	lines_(typename this_type::line_map::key_compare(), i_allocator),
-	scales_(typename this_type::scale_map::key_compare(), i_allocator)
+	scales_(typename this_type::scale_map::key_compare(), i_allocator),
+	null_string_(i_allocator)
 	{
 		// pass
 	}
@@ -302,13 +303,13 @@ class psyq::event_stage
 	    @param[in] i_word 置換した後の単語。
 	    @return 置換した後の単語。
 	 */
-	public: t_string make_word(
+	public: t_string const& make_word(
 		typename t_hash::value const            i_key,
 		typename this_type::const_string const& i_word)
 	{
 		if (t_hash::EMPTY == i_key)
 		{
-			return t_string(this->words_.get_allocator());
+			return this->null_string_;
 		}
 
 		t_string& a_word(this->words_[i_key]);
@@ -324,13 +325,13 @@ class psyq::event_stage
 	    @param[in] i_word 置換した後の単語。
 	    @return 置換した後の単語。
 	 */
-	public: t_string make_word(
+	public: t_string const& make_word(
 		typename t_hash::value const      i_key,
 		typename this_type::string const& i_word)
 	{
 		if (t_hash::EMPTY == i_key)
 		{
-			return t_string(this->words_.get_allocator());
+			return this->null_string_;
 		}
 
 		t_string& a_word(this->words_[i_key]);
@@ -342,12 +343,12 @@ class psyq::event_stage
 	    @param[in] i_key  置換される単語のhash値。
 	    @return 置換した後の単語。
 	 */
-	public: t_string find_word(typename t_hash::value const i_key) const
+	public: t_string const& find_word(typename t_hash::value const i_key) const
 	{
 		typename this_type::word_map::const_iterator const a_position(
 			this->words_.find(i_key));
 		return this->words_.end() != a_position?
-			a_position->second: t_string(this->words_.get_allocator());
+			a_position->second: this->null_string_;
 	}
 
 	/** @brief event置換語を取り除く。
@@ -356,7 +357,7 @@ class psyq::event_stage
 	 */
 	public: t_string remove_word(typename t_hash::value const i_key)
 	{
-		t_string a_word(this->words_.get_allocator());
+		t_string a_word(this->null_string_);
 		if (t_hash::EMPTY != i_key)
 		{
 			typename this_type::word_map::iterator const a_position(
@@ -567,6 +568,8 @@ class psyq::event_stage
 	public: typename this_type::word_map   words_;   ///< event置換語の辞書。
 	public: typename this_type::line_map   lines_;   ///< event-lineの辞書。
 	public: typename this_type::scale_map  scales_;  ///< time-scaleの辞書。
+
+	private: t_string null_string_;
 };
 
 //-----------------------------------------------------------------------------

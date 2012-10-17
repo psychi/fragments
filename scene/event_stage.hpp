@@ -298,7 +298,7 @@ class psyq::event_stage
 
 	//-------------------------------------------------------------------------
 	/** @brief event置換語を登録。
-	    @param[in] i_key  置換される単語。
+	    @param[in] i_key  置換される単語のhash値。
 	    @param[in] i_word 置換した後の単語。
 	    @return 置換される単語のhash値。
 	 */
@@ -332,6 +332,28 @@ class psyq::event_stage
 		return a_key;
 	}
 
+	/** @brief event置換語を検索。
+	    @param[in] i_key  置換される単語のhash値。
+	    @return 置換した後の単語。
+	 */
+	public: t_string find_word(typename t_hash::value const i_key) const
+	{
+		typename this_type::word_map::const_iterator const a_position(
+			this->words_.find(i_key));
+		return this->words_.end() != a_position?
+			a_position->second: t_string(this->words_.get_allocator());
+	}
+
+	/** @brief event置換語を検索。
+	    @param[in] i_key  置換される単語。
+	    @return 置換した後の単語。
+	 */
+	public: template< typename t_other_string >
+	t_string find_word(t_other_string const& i_key) const
+	{
+		return this->find_word(t_hash::generate(i_key));
+	}
+
 	/** @brief event置換語を取り除く。
 	    @param[in] i_key  取り除く置換語のhash値。
 	    @return 取り除いた置換語。
@@ -341,7 +363,7 @@ class psyq::event_stage
 		t_string a_string(this->words_.get_allocator());
 		if (t_hash::EMPTY != i_key)
 		{
-			typename this_type::word_map::iterator a_position(
+			typename this_type::word_map::iterator const a_position(
 				this->words_.find(i_key));
 			if (this->words_.end() != a_position)
 			{

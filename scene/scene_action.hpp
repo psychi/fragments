@@ -20,8 +20,8 @@ class psyq::scene_action:
 	public: typedef t_stage stage;
 
 	//-------------------------------------------------------------------------
-	public: class set_scene_token;
-	public: class remove_scene_token;
+	public: class set_screen_token;
+	public: class remove_screen_token;
 	public: class set_event_line;
 	public: class set_scene_package;
 	public: class set_scene_animation;
@@ -72,11 +72,11 @@ class psyq::scene_action:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief scene-tokenを設定するevent。
 template< typename t_stage >
-class psyq::scene_action< t_stage >::set_scene_token:
+class psyq::scene_action< t_stage >::set_screen_token:
 	public psyq::scene_action< t_stage >
 {
 	public: typedef psyq::scene_action< t_stage > super_type;
-	public: typedef typename super_type::set_scene_token this_type;
+	public: typedef typename super_type::set_screen_token this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
@@ -94,7 +94,7 @@ class psyq::scene_action< t_stage >::set_scene_token:
 	//-------------------------------------------------------------------------
 	public: static typename t_stage::hash::value get_hash()
 	{
-		return t_stage::hash::make("set_scene_token");
+		return t_stage::hash::make("set_screen_token");
 	}
 
 	//-------------------------------------------------------------------------
@@ -145,13 +145,13 @@ class psyq::scene_action< t_stage >::set_scene_token:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief scene-tokenを取り除くevent。
+/// @brief screenからtokenを取り除くevent。
 template< typename t_stage >
-class psyq::scene_action< t_stage >::remove_scene_token:
+class psyq::scene_action< t_stage >::remove_screen_token:
 	public psyq::scene_action< t_stage >
 {
 	public: typedef psyq::scene_action< t_stage > super_type;
-	public: typedef typename super_type::remove_scene_token this_type;
+	public: typedef typename super_type::remove_screen_token this_type;
 
 	//-------------------------------------------------------------------------
 	public: struct parameters
@@ -166,7 +166,7 @@ class psyq::scene_action< t_stage >::remove_scene_token:
 	//-------------------------------------------------------------------------
 	public: static typename t_stage::hash::value get_hash()
 	{
-		return t_stage::hash::make("remove_scene_token");
+		return t_stage::hash::make("remove_screen_token");
 	}
 
 	//-------------------------------------------------------------------------
@@ -195,8 +195,8 @@ class psyq::scene_action< t_stage >::remove_scene_token:
 			}
 			else
 			{
-				// stageとすべてのscreenからtokenを取り除く。
-				a_stage.remove_token(a_token_name);
+				// すべてのscreenからtokenを取り除く。
+				a_stage.remove_screen_token(a_token_name);
 			}
 		}
 	}

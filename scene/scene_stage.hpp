@@ -380,6 +380,52 @@ class psyq::scene_stage
 		return psyq::_get_null_shared_ptr< typename this_type::token >();
 	}
 
+	/** @brief すべてのscreenからtokenを取り除く。
+	    @param[in] i_token 取り除くtokenの名前hash値。
+	    @return 取り除いたtoken。取り除かなかった場合は空。
+	 */
+	public: typename this_type::token::shared_ptr const& remove_screen_token(
+		typename t_hash::value const i_token)
+	{
+		if (t_hash::EMPTY != i_token)
+		{
+			// tokenを取得。
+			typename this_type::token_map::iterator const a_token_pos(
+				this->tokens_.find(i_token));
+			if (this->tokens_.end() != a_token_pos)
+			{
+				// すべてのscreenからtokenを取り除く。
+				this->remove_screen_token(a_token_pos->second);
+				return a_token_pos->second;
+			}
+		}
+		return psyq::_get_null_shared_ptr< typename this_type::token >();
+	}
+
+	/** @brief すべてのscreenからtokenを取り除く。
+	    @param[in] i_token 取り除くtoken。
+	    @return 取り除いたtoken。取り除かなかった場合は空。
+	 */
+	public: typename this_type::token::shared_ptr remove_screen_token(
+		typename this_type::token::shared_ptr const& i_token)
+	{
+		// すべてのscreenからtokenを取り除く。
+		for (
+			typename this_type::screen_map::const_iterator i =
+				this->screens_.begin();
+			this->screens_.end() != i;
+			++i)
+		{
+			typename this_type::screen* const a_screen(
+				i->second.get());
+			if (NULL != a_screen)
+			{
+				a_screen->remove_token(i_token);
+			}
+		}
+		return i_token;
+	}
+
 	//-------------------------------------------------------------------------
 	/** @brief tokenを挿入。
 	    @param[in] i_name  挿入するtokenの名前hash値。
@@ -457,19 +503,7 @@ class psyq::scene_stage
 				this->tokens_.erase(a_token_pos);
 
 				// すべてのscreenからtokenを取り除く。
-				for (
-					typename this_type::screen_map::const_iterator i =
-						this->screens_.begin();
-					this->screens_.end() != i;
-					++i)
-				{
-					typename this_type::screen* const a_screen(
-						i->second.get());
-					if (NULL != a_screen)
-					{
-						a_screen->remove_token(a_token);
-					}
-				}
+				this->remove_screen_token(a_token);
 			}
 		}
 		return a_token;

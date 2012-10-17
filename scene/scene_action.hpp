@@ -107,7 +107,7 @@ class psyq::scene_action< t_stage >::set_scene_token:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_package_value<
+			a_stage.event_.template get_value<
 				typename this_type::parameters >(
 					i_update.get_point()->integer));
 		if (NULL != a_parameters)
@@ -119,7 +119,7 @@ class psyq::scene_action< t_stage >::set_scene_token:
 				a_stage.event_.make_hash(a_parameters->screen));
 			typename t_stage::token* const a_token(
 				t_stage::hash::EMPTY != a_screen_name?
-					a_stage.get_screen_token(
+					a_stage.insert_screen_token(
 						a_screen_name, a_token_name).get():
 					a_stage.get_token(a_token_name).get());
 			if (NULL != a_token)
@@ -172,7 +172,7 @@ class psyq::scene_action< t_stage >::remove_scene_token:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_package_value<
+			a_stage.event_.template get_value<
 				typename this_type::parameters >(
 					i_update.get_point()->integer));
 		if (NULL != a_parameters)
@@ -239,7 +239,7 @@ class psyq::scene_action< t_stage >::set_event_line:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_package_value<
+			a_stage.event_.template get_value<
 				typename this_type::parameters >(
 					i_update.get_point()->integer));
 		if (NULL != a_parameters)
@@ -367,7 +367,7 @@ class psyq::scene_action< t_stage >::set_scene_animation:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_package_value<
+			a_stage.event_.template get_value<
 				typename this_type::parameters >(
 					i_update.get_point()->integer));
 		if (NULL != a_parameters)
@@ -430,7 +430,7 @@ class psyq::scene_action< t_stage >::set_scene_model:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_package_value<
+			a_stage.event_.template get_value<
 				typename this_type::parameters >(
 					i_update.get_point()->integer));
 		if (NULL != a_parameters)
@@ -498,7 +498,7 @@ class psyq::scene_action< t_stage >::set_screen_camera:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_package_value<
+			a_stage.event_.template get_value<
 				typename this_type::parameters >(
 					i_update.get_point()->integer));
 		if (NULL != a_parameters)
@@ -583,7 +583,7 @@ class psyq::scene_action< t_stage >::set_screen_light:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_package_value<
+			a_stage.event_.template get_value<
 				typename this_type::parameters >(
 					i_update.get_point()->integer));
 		if (NULL != a_parameters)
@@ -652,7 +652,7 @@ class psyq::scene_action< t_stage >::set_time_scale:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_package_value<
+			a_stage.event_.template get_value<
 				typename this_type::parameters >(
 					i_update.get_point()->integer));
 		if (NULL != a_parameters)
@@ -732,7 +732,7 @@ class psyq::scene_action< t_stage >::remove_stage_element:
 				i_update));
 		t_stage& a_stage(*a_update.get_stage());
 		typename this_type::parameters const* const a_parameters(
-			a_stage.event_.template get_package_value<
+			a_stage.event_.template get_value<
 				typename this_type::parameters >(
 					i_update.get_point()->integer));
 		if (NULL != a_parameters)

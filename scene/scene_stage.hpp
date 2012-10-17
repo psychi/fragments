@@ -80,9 +80,14 @@ class psyq::scene_stage
 	//-------------------------------------------------------------------------
 	private: struct package_path
 	{
-		typename this_type::event::package::offset scene;   ///< sceneのpath名の書庫offset値。
-		typename this_type::event::package::offset shader;  ///< shaderのpath名の書庫offset値。
-		typename this_type::event::package::offset texture; ///< textureのpath名の書庫offset値。
+		/// sceneのpath名のpackage-offset値。
+		typename this_type::event::package::offset scene;
+
+		/// shaderのpath名のpackage-offset値。
+		typename this_type::event::package::offset shader;
+
+		/// textureのpath名のpackage-offset値。
+		typename this_type::event::package::offset texture;
 	};
 
 	private: typedef std::multimap<
@@ -100,9 +105,9 @@ class psyq::scene_stage
 	    @param[in] i_allocator 初期化に使うmemory割当子。
 	 */
 	public: explicit scene_stage(
-		typename this_type::event::package::const_shared_ptr const& i_package,
-		t_allocator const&                                          i_allocator =
-			t_allocator()):
+		typename this_type::event::package::const_shared_ptr const&
+			i_package,
+		t_allocator const& i_allocator = t_allocator()):
 	event_(i_package, i_allocator),
 	packages_(typename this_type::package_map::key_compare(), i_allocator),
 	screens_(typename this_type::screen_map::key_compare(), i_allocator),
@@ -141,8 +146,8 @@ class psyq::scene_stage
 	 */
 	private: void update(
 		typename psyq::scene_action< this_type >::update_parameters& io_update,
-		t_real const                                                 i_fps,
-		unsigned const                                               i_count = 1)
+		t_real const   i_fps,
+		unsigned const i_count = 1)
 	{
 		if (0 < i_fps)
 		{
@@ -168,7 +173,7 @@ class psyq::scene_stage
 	/** @brief scene-packageを取得。
 	    package名に対応するscene-packageが存在しない場合は、
 	    fileから読み込んで追加する。
-	    @param[in] i_name 取得するscene-packageの名前hash値。
+	    @param[in] i_package 取得するscene-packageの名前hash値。
 	    @return package名に対応するscene-package。取得に失敗した場合は空。
 	 */
 	public: psyq::scene_package::shared_ptr const& get_package(
@@ -309,62 +314,47 @@ class psyq::scene_stage
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief screenからtokenを取得。
+	/** @brief screenにtokenを挿入。
 	    screen名に対応するscreenが存在しない場合は、新たにscreenを作る。
 	    token名に対応するtokenが存在しない場合は、新たにtokenを作る。
 	    screenにtokenがない場合は、screenにtokenを追加する。
-	    @param[in] i_screen 対象となるscreenの名前hash値。
+	    @param[in] i_screen screenの名前hash値。
 	    @param[in] i_token  取得するtokenの名前hash値。
-	    @return token名に対応するtoken。取得に失敗した場合は空。
+	    @return 挿入したtoken。失敗した場合は空。
 	 */
-	public: typename this_type::token::shared_ptr const& get_screen_token(
+	public: typename this_type::token::shared_ptr const& insert_screen_token(
 		typename t_hash::value const i_screen,
 		typename t_hash::value const i_token)
 	{
-		// tokenとscreenを取得。
-		typename this_type::token::shared_ptr const& a_token(
-			this->get_token(i_token));
+		// tokenを取得し、screenに挿入。
 		typename this_type::screen* const a_screen(
 			this->get_screen(i_screen).get());
-
-		// tokenをscreenに追加。
-		if (NULL != a_screen)
-		{
-			a_screen->insert_token(a_token);
-		}
-		return a_token;
+		typename this_type::token::shared_ptr const& a_token(
+			this->get_token(i_token));
+		return NULL != a_screen && a_screen->insert_token(a_token)?
+			a_token: psyq::_get_null_shared_ptr< typename this_type::token >();
 	}
 
 	/** @brief screenからtokenを取り除く。
+	    @param[in] i_screen screenの名前hash値。
 	    @param[in] i_token  取り除くtokenの名前hash値。
-	    @param[in] i_screen 対象となるscreenの名前hash値。
 	    @return 取り除いたtoken。取り除かなかった場合は空。
 	 */
 	public: typename this_type::token::shared_ptr const& remove_screen_token(
 		typename t_hash::value const i_screen,
 		typename t_hash::value const i_token)
 	{
-		if (t_hash::EMPTY != i_token && t_hash::EMPTY != i_screen)
+		// screenを検索。
+		typename this_type::screen* const a_screen(
+			this->find_screen(i_screen).get());
+		if (NULL != a_screen)
 		{
-			// screenを検索。
-			typename this_type::screen_map::const_iterator const a_screen_pos(
-				this->screens_.find(i_screen));
-			if (this->screens_.end() != a_screen_pos)
+			// tokenを検索し、screenから取り除く。
+			typename this_type::token::shared_ptr const& a_token(
+				this->find_token(i_token));
+			if (a_screen->remove_token(a_token))
 			{
-				// tokenを検索。
-				typename this_type::token_map::const_iterator const
-					a_token_pos(this->tokens_.find(i_token));
-				if (this->tokens_.end() != a_token_pos)
-				{
-					// screenから、tokenを取り除く。
-					typename this_type::screen* const a_screen(
-						a_screen_pos->second.get());
-					if (NULL != a_screen &&
-						a_screen->remove_token(a_token_pos->second))
-					{
-						return a_token_pos->second;
-					}
-				}
+				return a_token;
 			}
 		}
 		return psyq::_get_null_shared_ptr< typename this_type::token >();
@@ -592,7 +582,7 @@ class psyq::scene_stage
 	}
 
 	//-------------------------------------------------------------------------
-	public: typename this_type::event       event_;    ///< event登記簿。
+	public: typename this_type::event       event_;    ///< event-stage。
 	public: typename this_type::package_map packages_; ///< scene-packageの辞書。
 	public: typename this_type::screen_map  screens_;  ///< scene-screenの辞書。
 	public: typename this_type::token_map   tokens_;   ///< scene-tokenの辞書。

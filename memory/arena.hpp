@@ -17,6 +17,7 @@
 #	define PSYQ_MAKE_SHARED boost::make_shared
 #	define PSYQ_DYNAMIC_POINTER_CAST boost::dynamic_pointer_cast
 #	define PSYQ_STATIC_POINTER_CAST boost::static_pointer_cast
+#	include <boost/type_traits/make_unsigned.hpp>
 #	define PSYQ_MAKE_UNSIGNED boost::make_unsigned
 #elif defined(PSYQ_USE_CPP11)
 #	include <memory>

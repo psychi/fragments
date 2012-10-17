@@ -155,7 +155,8 @@ class psyq::event_stage
 	public: template< typename t_action >
 	typename this_type::action::shared_ptr const& find_action() const
 	{
-		return this_type::_find_element(this->actions_, t_action::get_hash());
+		return this_type::package::_find_shared_ptr(
+			this->actions_, t_action::get_hash());
 	}
 
 	/** @brief event-actionを取り除く。
@@ -165,7 +166,7 @@ class psyq::event_stage
 	public: template< typename t_action >
 	typename this_type::action::shared_ptr const remove_action() const
 	{
-		return this_type::_remove_element(
+		return this_type::package::_remove_shared_ptr(
 			this->actions_, t_action::get_hash());
 	}
 
@@ -239,7 +240,7 @@ class psyq::event_stage
 		typename t_hash::value const i_scale)
 	const
 	{
-		return this_type::_find_element(this->scales_, i_scale);
+		return this_type::package::_find_shared_ptr(this->scales_, i_scale);
 	}
 
 	/** @brief time-scaleを取り除く。
@@ -250,7 +251,7 @@ class psyq::event_stage
 		typename t_hash::value const i_scale)
 	{
 		typename this_type::line::scale::shared_ptr const a_scale(
-			this_type::_remove_element(this->scales_, i_scale));
+			this_type::package::_remove_shared_ptr(this->scales_, i_scale));
 		if (NULL != a_scale.get())
 		{
 			// event-line集合からtime-scaleを取り除く。
@@ -396,54 +397,6 @@ class psyq::event_stage
 			this->package_.get());
 		return NULL != a_package?
 			a_package->template find_value< t_value >(i_name): NULL;
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief containerから要素を検索。
-	    @param[in] i_container 対象となるcontainer。
-	    @param[in] i_key       検索する要素のkey。
-	    @return 検索した要素が持つ値。
-	 */
-	public: template< typename t_container >
-	static typename t_container::mapped_type const& _find_element(
-		t_container const&           i_container,
-		typename t_hash::value const i_key)
-	{
-		if (t_hash::EMPTY != i_key)
-		{
-			typename t_container::const_iterator const a_position(
-				i_container.find(i_key));
-			if (i_container.end() != a_position)
-			{
-				return a_position->second;
-			}
-		}
-		return psyq::_get_null_shared_ptr<
-			typename t_container::mapped_type::element_type >();
-	}
-
-	/** @brief containerから要素を取り除く。
-	    @param[in] i_container 対象となるcontainer。
-	    @param[in] i_key       取り除く要素のkey。
-	    @return 取り除いた要素が持っていた値。
-	 */
-	public: template< typename t_container >
-	static typename t_container::mapped_type _remove_element(
-		t_container&                 io_container,
-		typename t_hash::value const i_key)
-	{
-		typename t_container::mapped_type a_element;
-		if (t_hash::EMPTY != i_key)
-		{
-			typename t_container::iterator const a_position(
-				io_container.find(i_key));
-			if (io_container.end() != a_position)
-			{
-				a_element.swap(a_position->second);
-				io_container.erase(a_position);
-			}
-		}
-		return a_element;
 	}
 
 	//-------------------------------------------------------------------------

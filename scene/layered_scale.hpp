@@ -1,7 +1,7 @@
 #ifndef PSYQ_LAYERED_SCALE_HPP_
 #define PSYQ_LAYERED_SCALE_HPP_
 
-//#include <psyq/arena.hpp>
+//#include <psyq/memory/arena.hpp>
 //#include <psyq/lerp.hpp>
 
 namespace psyq

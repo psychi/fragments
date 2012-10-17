@@ -1,6 +1,8 @@
 #ifndef PSYQ_SCENE_EVENT_PACKAGE_HPP_
 #define PSYQ_SCENE_EVENT_PACKAGE_HPP_
 
+//#include <psyq/memory/arena.hpp>
+
 namespace psyq
 {
 	template< typename > class event_package;
@@ -116,6 +118,77 @@ class psyq::event_package:
 			}
 		}
 		return NULL;
+	}
+
+	//-------------------------------------------------------------------------
+	/** @brief container‚É—v‘f‚ğ‘}“üB
+	    @param[in,out] io_container —v‘f‚ğ‘}“ü‚·‚écontainerB
+	    @param[in] i_key            ‘}“ü‚·‚é—v‘f‚ÌkeyB
+	    @param[in] i_shared_ptr     ‘}“ü‚·‚é—v‘fB
+	    @return ‘}“ü‚µ‚½’lB‘}“ü‚É¸”s‚µ‚½ê‡‚Í‹óB
+	 */
+	public: template< typename t_container >
+	static typename t_container::mapped_type const& _insert_shared_ptr(
+		t_container&                             io_container,
+		typename t_hash::value const             i_key,
+		typename t_container::mapped_type const& i_shared_ptr)
+	{
+		if (t_hash::EMPTY != i_key && NULL != i_shared_ptr.get())
+		{
+			typename t_container::mapped_type& a_shared_ptr(
+				io_container[i_key]);
+			a_shared_ptr = i_shared_ptr;
+			return a_shared_ptr;
+		}
+		return psyq::_get_null_shared_ptr<
+			typename t_container::mapped_type::element_type >();
+	}
+
+	/** @brief container‚©‚ç—v‘f‚ğŒŸõB
+	    @param[in] i_container —v‘f‚ğŒŸõ‚·‚écontainerB
+	    @param[in] i_key       ŒŸõ‚·‚é—v‘f‚ÌkeyB
+	    @return ŒŸõ‚µ‚½—v‘f‚ª‚Â’lB
+	 */
+	public: template< typename t_container >
+	static typename t_container::mapped_type const& _find_shared_ptr(
+		t_container const&           i_container,
+		typename t_hash::value const i_key)
+	{
+		if (t_hash::EMPTY != i_key)
+		{
+			typename t_container::const_iterator const a_position(
+				i_container.find(i_key));
+			if (i_container.end() != a_position)
+			{
+				return a_position->second;
+			}
+		}
+		return psyq::_get_null_shared_ptr<
+			typename t_container::mapped_type::element_type >();
+	}
+
+	/** @brief container‚©‚ç—v‘f‚ğæ‚èœ‚­B
+	    @param[in] i_container —v‘f‚ğæ‚èœ‚­containerB
+	    @param[in] i_key       æ‚èœ‚­—v‘f‚ÌkeyB
+	    @return æ‚èœ‚¢‚½—v‘f‚ª‚Á‚Ä‚¢‚½’lB
+	 */
+	public: template< typename t_container >
+	static typename t_container::mapped_type _remove_shared_ptr(
+		t_container&                 io_container,
+		typename t_hash::value const i_key)
+	{
+		typename t_container::mapped_type a_shared_ptr;
+		if (t_hash::EMPTY != i_key)
+		{
+			typename t_container::iterator const a_position(
+				io_container.find(i_key));
+			if (io_container.end() != a_position)
+			{
+				a_shared_ptr.swap(a_position->second);
+				io_container.erase(a_position);
+			}
+		}
+		return a_shared_ptr;
 	}
 };
 

@@ -213,7 +213,8 @@ class psyq::scene_stage
 		typename t_hash::value const i_package)
 	const
 	{
-		return this_type::event::_find_element(this->packages_, i_package);
+		return this_type::event::pacakge::_find_shared_ptr(
+			this->packages_, i_package);
 	}
 
 	/** @brief scene-packageを取り除く。
@@ -223,7 +224,8 @@ class psyq::scene_stage
 	public: psyq::scene_package::shared_ptr remove_package(
 		typename t_hash::value const i_package)
 	{
-		return this_type::event::_remove_element(this->packages_, i_package);
+		return this_type::event::package::_remove_shared_ptr(
+			this->packages_, i_package);
 	}
 
 	/** @brief fileからscene-pacakgeを読み込む。
@@ -256,6 +258,19 @@ class psyq::scene_stage
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief screenを挿入。
+	    @param[in] i_name   挿入するscreenの名前hash値。
+		@param[in] i_screen 挿入するscreen。
+	    @return 挿入したscreen。挿入に失敗した場合は空。
+	 */
+	public: typename this_type::screen::shared_ptr const& insert_screen(
+		typename t_hash::value const                  i_name,
+		typename this_type::screen::shared_ptr const& i_screen)
+	{
+		return this_type::event::package::_insert_shared_ptr(
+			this->screens_, i_name, i_screen);
+	}
+
 	/** @brief screenを取得。
 	    screen名に対応するscreenが存在しない場合は、新たにscreenを作る。
 	    @param[in] i_screen 取得するscreenの名前hash値。
@@ -300,7 +315,8 @@ class psyq::scene_stage
 		typename t_hash::value const i_screen)
 	const
 	{
-		return this_type::event::_find_element(this->screens_, i_screen);
+		return this_type::event::package::_find_shared_ptr(
+			this->screens_, i_screen);
 	}
 
 	/** @brief screenを取り除く。
@@ -310,16 +326,14 @@ class psyq::scene_stage
 	public: typename this_type::screen::shared_ptr remove_screen(
 		typename t_hash::value const i_screen)
 	{
-		return this_type::event::_remove_element(this->screens_, i_screen);
+		return this_type::event::package::_remove_shared_ptr(
+			this->screens_, i_screen);
 	}
 
 	//-------------------------------------------------------------------------
 	/** @brief screenにtokenを挿入。
-	    screen名に対応するscreenが存在しない場合は、新たにscreenを作る。
-	    token名に対応するtokenが存在しない場合は、新たにtokenを作る。
-	    screenにtokenがない場合は、screenにtokenを追加する。
 	    @param[in] i_screen screenの名前hash値。
-	    @param[in] i_token  取得するtokenの名前hash値。
+	    @param[in] i_token  挿入するtokenの名前hash値。
 	    @return 挿入したtoken。失敗した場合は空。
 	 */
 	public: typename this_type::token::shared_ptr const& insert_screen_token(
@@ -328,11 +342,17 @@ class psyq::scene_stage
 	{
 		// tokenを取得し、screenに挿入。
 		typename this_type::screen* const a_screen(
-			this->get_screen(i_screen).get());
-		typename this_type::token::shared_ptr const& a_token(
-			this->get_token(i_token));
-		return NULL != a_screen && a_screen->insert_token(a_token)?
-			a_token: psyq::_get_null_shared_ptr< typename this_type::token >();
+			this->find_screen(i_screen).get());
+		if (NULL != a_screen)
+		{
+			typename this_type::token::shared_ptr const& a_token(
+				this->find_token(i_token));
+			if (a_screen->insert_token(a_token))
+			{
+				return a_token;
+			}
+		}
+		return psyq::_get_null_shared_ptr< typename this_type::token >();
 	}
 
 	/** @brief screenからtokenを取り除く。
@@ -361,7 +381,20 @@ class psyq::scene_stage
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief stageからtokenを取得。
+	/** @brief tokenを挿入。
+	    @param[in] i_name  挿入するtokenの名前hash値。
+		@param[in] i_token 挿入するtoken。
+	    @return 挿入したtoken。取得に失敗した場合は空。
+	 */
+	public: typename this_type::token::shared_ptr const& insert_token(
+		typename t_hash::value const                 i_name,
+		typename this_type::token::shared_ptr const& i_token)
+	{
+		return this_type::event::package::_insert_shared_ptr(
+			this->tokens_, i_name, i_token);
+	}
+
+	/** @brief tokenを取得。
 	    token名に対応するtokenが存在しない場合は、新たにtokenを作る。
 	    @param[in] i_token 取得するtokenの名前hash値。
 	    @return token名に対応するtoken。取得に失敗した場合は空。
@@ -392,7 +425,7 @@ class psyq::scene_stage
 		return psyq::_get_null_shared_ptr< typename this_type::token >();
 	}
 
-	/** @brief stageからtokenを検索。
+	/** @brief tokenを検索。
 	    @param[in] i_token 検索するtokenの名前hash値。
 	    @return 見つけたtoken。見つからなかった場合は空。
 	 */
@@ -400,7 +433,8 @@ class psyq::scene_stage
 		typename t_hash::value const i_token)
 	const
 	{
-		return this_type::event::_find_element(this->tokens_, i_token);
+		return this_type::event::package::_find_shared_ptr(
+			this->tokens_, i_token);
 	}
 
 	/** @brief stageと全てのscreenからtokenを取り除く。
@@ -569,7 +603,7 @@ class psyq::scene_stage
 
 			// event-pointに対応するevent-actionを検索。
 			typename this_type::event::action* const a_action(
-				this_type::event::_find_element(
+				this_type::event::package::_find_shared_ptr(
 					this->event_.actions_, a_point.type).get());
 
 			// event関数objectを適用。

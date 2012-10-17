@@ -1,7 +1,7 @@
 #ifndef PSYQ_SCENE_EVENT_ACTION_HPP_
 #define PSYQ_SCENE_EVENT_ACTION_HPP_
 
-//#include <psyq/arena.hpp>
+//#include <psyq/memory/arena.hpp>
 
 namespace psyq
 {

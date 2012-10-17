@@ -113,16 +113,10 @@ class psyq::scene_action< t_stage >::set_scene_token:
 		if (NULL != a_parameters)
 		{
 			// stage‚Étoken‚ğİ’èB
-			typename t_stage::hash::value const a_token_name(
-				a_stage.event_.make_hash(a_parameters->token));
-			typename t_stage::hash::value const a_screen_name(
-				a_stage.event_.make_hash(a_parameters->screen));
-			typename t_stage::token* const a_token(
-				t_stage::hash::EMPTY != a_screen_name?
-					a_stage.insert_screen_token(
-						a_screen_name, a_token_name).get():
-					a_stage.get_token(a_token_name).get());
-			if (NULL != a_token)
+			typename t_stage::token::shared_ptr const& a_token(
+				a_stage.get_token(
+					a_stage.event_.make_hash(a_parameters->token)));
+			if (NULL != a_token.get())
 			{
 				// token‚Étime-scale‚ğİ’èB
 				typename t_stage::hash::value const a_scale_name(
@@ -131,6 +125,19 @@ class psyq::scene_action< t_stage >::set_scene_token:
 				{
 					a_token->time_scale_ = a_stage.event_.find_scale(
 						a_scale_name);
+				}
+
+				// screen‚Étoken‚ğİ’èB
+				typename t_stage::hash::value const a_screen_name(
+					a_stage.event_.make_hash(a_parameters->screen));
+				if (t_stage::hash::EMPTY != a_screen_name)
+				{
+					typename t_stage::screen* const a_screen(
+						a_stage.get_screen(a_screen_name).get());
+					if (NULL != a_screen)
+					{
+						a_screen->insert_token(a_token);
+					}
 				}
 			}
 		}

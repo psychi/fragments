@@ -279,7 +279,7 @@ class psyq::event_stage
 	    @param[in] i_word 置換した後の単語。
 	    @return 置換した後の単語。
 	 */
-	public: t_string const& replace_word(
+	public: t_string const& make_word(
 		typename this_type::const_string const& i_key,
 		typename this_type::const_string const& i_word)
 	{
@@ -289,78 +289,49 @@ class psyq::event_stage
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief event置換語辞書を介してevent-package内に存在する文字列を置換し、hash値を取得。
+	/** @brief event-package内の文字列を、event置換語辞書で置換し、hash値を取得。
 	    @param[in] i_offset 置換元となる文字列のevent-package内offset値。
 	    @return 置換後の文字列のhash値。
 	 */
-	public: typename t_hash::value replace_hash(
+	public: typename t_hash::value make_hash(
 		typename this_type::package::offset const i_offset)
 	const
 	{
-		return t_hash::generate(this->replace_string(i_offset));
+		return t_hash::generate(this->make_string(i_offset));
 	}
 
-	/** @brief event置換語辞書を介して文字列を置換し、hash値を取得。
+	/** @brief 任意の文字列を、event置換語辞書で置換し、hash値を取得。
 	    @param[in] i_source 置換元となる文字列。
 	    @return 置換後の文字列のhash値。
 	 */
-	public: typename t_hash::value replace_hash(
+	public: typename t_hash::value make_hash(
 		typename this_type::const_string const& i_source)
 	const
 	{
-		return t_hash::generate(this->replace_string(i_source));
+		return t_hash::generate(this->make_string(i_source));
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief event置換語辞書を介して、event-package内に存在する文字列を置換。
+	/** @brief event-package内の文字列を、event置換語辞書で置換し、置換後の文字列を取得。
 	    @param[in] i_offset 置換元となる文字列のevent-package内offset値。
 	    @return 置換後の文字列。
 	 */
-	public: t_string replace_string(
+	public: t_string make_string(
 		typename this_type::package::offset const i_offset)
 	const
 	{
-		return this->replace_string(this->get_string(i_offset));
+		return this->make_string(this->get_package_string(i_offset));
 	}
 
-	/** @brief event置換語辞書を介して、文字列を置換。
+	/** @brief 任意の文字列を、event置換語辞書で置換し、置換後の文字列を取得。
 	    @param[in] i_string 置換元となる文字列。
 	    @return 置換後の文字列。
 	 */
-	public: t_string replace_string(
+	public: t_string make_string(
 		typename this_type::const_string const& i_string)
 	const
 	{
 		return this_type::replace_string_word(i_string, this->words_);
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief event-package内に存在する文字列を取得。
-	    @param[in] i_offset 文字列のevent-package内offset値。
-	    @return event-package内に存在する文字列。
-	 */
-	public: typename this_type::const_string get_string(
-		typename this_type::package::offset const i_offset)
-	const
-	{
-		// 文字列の先頭位置を取得。
-		typename t_string::const_pointer const a_begin(
-			this->get_package< typename t_string::value_type >(i_offset));
-		if (NULL == a_begin)
-		{
-			return typename this_type::const_string();
-		}
-
-		// 文字数を取得し、文字列を返す。
-		// 文字数が0の場合は、NULL文字まで数える。
-		typedef typename
-			PSYQ_MAKE_UNSIGNED< typename t_string::value_type >::type
-				unsigned_type;
-		return typename this_type::const_string(
-			a_begin + 1,
-			0 != *a_begin?
-				static_cast< unsigned_type >(*a_begin):
-				t_string::traits_type::length(a_begin + 1));
 	}
 
 	//-------------------------------------------------------------------------
@@ -372,12 +343,33 @@ class psyq::event_stage
 		return this->package_;
 	}
 
-	/** @brief event-package内に存在する値へのpointerを取得。
+	/** @brief event-package内の文字列を取得。
+	    @param[in] i_offset 文字列のevent-package内offset値。
+	    @return event-package内の文字列。
+	 */
+	public: typename this_type::const_string get_package_string(
+		typename this_type::package::offset const i_offset)
+	const
+	{
+		// 文字数を取得し、文字列を返す。
+		typedef typename PSYQ_MAKE_UNSIGNED< typename t_hash::value >::type
+			length_type;
+		length_type const* const a_length(
+			this->get_package_value< length_type >(i_offset));
+		return NULL != a_length?
+			typename this_type::const_string(
+				reinterpret_cast< typename t_string::const_pointer >(
+					a_length + 1),
+				*a_length):
+			typename this_type::const_string();
+	}
+
+	/** @brief event-package内の値へのpointerを取得。
 	    @tparam    t_value  値の型。
 	    @param[in] i_offset 値のevent-package内offset値。
 	 */
 	public: template< typename t_value >
-	t_value const* get_package(
+	t_value const* get_package_value(
 		typename this_type::package::offset const i_offset)
 	const
 	{
@@ -387,12 +379,14 @@ class psyq::event_stage
 			a_package->template get_value< t_value >(i_offset): NULL;
 	}
 
-	/** @brief event-package内に存在する値へのpointerを取得。
+	/** @brief event-package内の値へのpointerを取得。
 	    @tparam    t_value 値の型。
 	    @param[in] i_name  値の名前hash値。
 	 */
 	public: template< typename t_value >
-	t_value const* find_package(typename t_hash::value const i_name) const
+	t_value const* find_package_value(
+		typename t_hash::value const i_name)
+	const
 	{
 		typename this_type::package const* const a_package(
 			this->package_.get());

@@ -231,16 +231,17 @@ class psyq::scene_stage
 		// event-package‚©‚çpackage-path‚ğŒŸõB
 		typename this_type::package_path const* const a_path(
 			this->event_.template
-				find_package< typename this_type::package_path >(i_package));
+				find_package_value< typename this_type::package_path >(
+					i_package));
 		if (NULL != a_path)
 		{
 			// file‚©‚çscene-package‚ğ“Ç‚İ‚ŞB
 			psyq::scene_package::shared_ptr const a_package(
 				psyq::scene_package::make(
 					this->packages_.get_allocator(),
-					this->event_.replace_string(a_path->scene),
-					this->event_.replace_string(a_path->shader),
-					this->event_.replace_string(a_path->texture)));
+					this->event_.make_string(a_path->scene),
+					this->event_.make_string(a_path->shader),
+					this->event_.make_string(a_path->texture)));
 			if (NULL != a_package.get())
 			{
 				return a_package;

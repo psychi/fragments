@@ -111,6 +111,19 @@ class psyq::event_stage
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief event-actionを挿入。
+	    @param[in] i_name   挿入するevent-actionの名前hash値。
+		@param[in] i_action 挿入するevent-action。
+	    @return 挿入したtime-scale。挿入に失敗した場合は空。
+	 */
+	public: typename this_type::action::shared_ptr const& insert_action(
+		typename t_hash::value const                  i_name,
+		typename this_type::action::shared_ptr const& i_action)
+	{
+		return this_type::package::_insert_shared_ptr(
+			this->actions_, i_name, i_action);
+	}
+
 	/** @brief event-actionを初期化。
 	    @param t_action 初期化するevent-actionの型。
 	    @return 追加したevent-actionへの共有pointer。
@@ -118,22 +131,19 @@ class psyq::event_stage
 	public: template< typename t_action >
 	typename this_type::action::shared_ptr const& make_action()
 	{
-		typename this_type::action::shared_ptr& a_action(
-			this->actions_[t_action::get_hash()]);
-		a_action = PSYQ_ALLOCATE_SHARED< t_action >(
-			this->actions_.get_allocator());
-		return a_action;
+		return this->insert_action(
+			t_action::get_hash(),
+			PSYQ_ALLOCATE_SHARED< t_action >(this->actions_.get_allocator()));
 	}
 
 	public: template< typename t_action, typename t_param0 >
 	typename this_type::action::shared_ptr const& make_action(
 		t_param0 const& i_param0)
 	{
-		typename this_type::action::shared_ptr& a_action(
-			this->actions_[t_action::get_hash()]);
-		a_action = PSYQ_ALLOCATE_SHARED< t_action >(
-			this->actions_.get_allocator(), i_param0);
-		return a_action;
+		return this->insert_action(
+			t_action::get_hash(),
+			PSYQ_ALLOCATE_SHARED< t_action >(
+				this->actions_.get_allocator(), i_param0));
 	}
 
 	public: template< typename t_action, typename t_param0, typename t_param1 >
@@ -141,11 +151,10 @@ class psyq::event_stage
 		t_param0 const& i_param0,
 		t_param1 const& i_param1)
 	{
-		typename this_type::action::shared_ptr& a_action(
-			this->actions_[t_action::get_hash()]);
-		a_action = PSYQ_ALLOCATE_SHARED< t_action >(
-			this->actions_.get_allocator(), i_param0, i_param1);
-		return a_action;
+		return this->insert_action(
+			t_action::get_hash(),
+			PSYQ_ALLOCATE_SHARED< t_action >(
+				this->actions_.get_allocator(), i_param0, i_param1));
 	}
 
 	/** @brief event-actionを検索。
@@ -208,6 +217,19 @@ class psyq::event_stage
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief time-scaleを挿入。
+	    @param[in] i_name   挿入するtime-scaleの名前hash値。
+		@param[in] i_screen 挿入するtime-scale。
+	    @return 挿入したtime-scale。挿入に失敗した場合は空。
+	 */
+	public: typename this_type::line::scale::shared_ptr const& insert_scale(
+		typename t_hash::value const                       i_name,
+		typename this_type::line::scale::shared_ptr const& i_scale)
+	{
+		return this_type::event::package::_insert_shared_ptr(
+			this->scales_, i_name, i_scale);
+	}
+
 	/** @brief time-scaleを取得。
 	    名前に対応するtime-scaleが存在しない場合は、新たに作る。
 	    @param[in] i_scale time-scaleの名前hash値。
@@ -276,17 +298,38 @@ class psyq::event_stage
 
 	//-------------------------------------------------------------------------
 	/** @brief event置換語を登録。
-	    @param[in] i_key  置換される単語のhash値。
+	    @param[in] i_key  置換される単語。
 	    @param[in] i_word 置換した後の単語。
-	    @return 置換した後の単語。
+	    @return 置換される単語のhash値。
 	 */
-	public: t_string const& make_word(
+	public: typename t_hash::value make_word(
 		typename this_type::const_string const& i_key,
 		typename this_type::const_string const& i_word)
 	{
-		t_string& a_word(this->words_[t_hash::generate(i_key)]);
-		t_string(i_word.data(), i_word.length()).swap(a_word);
-		return a_word;
+		typename t_hash::value const a_key(t_hash::generate(i_key));
+		if (t_hash::EMPTY != a_key)
+		{
+			this->words_[a_key].assign(i_word.data(), i_word.length());
+		}
+		return a_key;
+	}
+
+	/** @brief event置換語を登録。
+	    @param[in] i_key  置換される単語。
+	    @param[in] i_word 置換した後の単語。
+	    @return 置換される単語のhash値。
+	 */
+	public: template< typename t_other_string >
+	typename t_hash::value make_word(
+		typename t_other_string const&    i_key,
+		typename this_type::string const& i_word)
+	{
+		typename t_hash::value const a_key(t_hash::generate(i_key));
+		if (t_hash::EMPTY != a_key)
+		{
+			this->words_[a_key] = i_word;
+		}
+		return a_key;
 	}
 
 	//-------------------------------------------------------------------------

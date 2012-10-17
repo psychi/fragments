@@ -384,7 +384,7 @@ class psyq::event_stage
 	    @param[in] i_end   検索範囲の末尾位置。
 	    @return '('と')'で囲まれた単語。
 	 */
-	static typename this_type::const_string find_word(
+	private: static typename this_type::const_string find_word(
 		typename this_type::const_string::const_iterator const i_begin,
 		typename this_type::const_string::const_iterator const i_end)
 	{
@@ -430,27 +430,16 @@ class psyq::event_stage
 			return typename this_type::const_string();
 		}
 
-		// 文字数を取得。
-		std::size_t a_length;
-		if (0 < *a_begin)
-		{
-			a_length = *a_begin;
-		}
-		else if (0 == *a_begin)
-		{
-			// 文字数が0の場合は、NULL文字まで数える。
-			a_length = t_string::traits_type::length(a_begin + 1);
-		}
-		else
-		{
-			// 負値の場合は、正値に変換。
-			a_length = static_cast< std::size_t >(
-				(std::numeric_limits< t_string::value_type >::max)())
-				- *a_begin;
-		}
-
-		// 文字列を返す。
-		return typename this_type::const_string(a_begin + 1, a_length);
+		// 文字数を取得し、文字列を返す。
+		// 文字数が0の場合は、NULL文字まで数える。
+		typedef typename
+			PSYQ_MAKE_UNSIGNED< typename t_string::value_type >::type
+				unsigned_type;
+		return typename this_type::const_string(
+			a_begin + 1,
+			0 != *a_begin?
+				static_cast< unsigned_type >(*a_begin):
+				t_string::traits_type::length(a_begin + 1));
 	}
 
 	//-------------------------------------------------------------------------

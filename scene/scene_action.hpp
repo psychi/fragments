@@ -94,7 +94,7 @@ class psyq::scene_action< t_stage >::set_scene_token:
 	//-------------------------------------------------------------------------
 	public: static typename t_stage::hash::value get_hash()
 	{
-		return t_stage::hash::generate("set_scene_token");
+		return t_stage::hash::make("set_scene_token");
 	}
 
 	//-------------------------------------------------------------------------
@@ -166,7 +166,7 @@ class psyq::scene_action< t_stage >::remove_scene_token:
 	//-------------------------------------------------------------------------
 	public: static typename t_stage::hash::value get_hash()
 	{
-		return t_stage::hash::generate("remove_scene_token");
+		return t_stage::hash::make("remove_scene_token");
 	}
 
 	//-------------------------------------------------------------------------
@@ -233,7 +233,7 @@ class psyq::scene_action< t_stage >::set_event_line:
 	//-------------------------------------------------------------------------
 	public: static typename t_stage::hash::value get_hash()
 	{
-		return t_stage::hash::generate("set_event_line");
+		return t_stage::hash::make("set_event_line");
 	}
 
 	//-------------------------------------------------------------------------
@@ -315,7 +315,7 @@ class psyq::scene_action< t_stage >::set_scene_package:
 	//-------------------------------------------------------------------------
 	public: static typename t_stage::hash::value get_hash()
 	{
-		return t_stage::hash::generate("set_scene_package");
+		return t_stage::hash::make("set_scene_package");
 	}
 
 	//-------------------------------------------------------------------------
@@ -361,7 +361,7 @@ class psyq::scene_action< t_stage >::set_scene_animation:
 	//-------------------------------------------------------------------------
 	public: static typename t_stage::hash::value get_hash()
 	{
-		return t_stage::hash::generate("set_scene_animation");
+		return t_stage::hash::make("set_scene_animation");
 	}
 
 	//-------------------------------------------------------------------------
@@ -424,7 +424,7 @@ class psyq::scene_action< t_stage >::set_scene_model:
 	//-------------------------------------------------------------------------
 	public: static typename t_stage::hash::value get_hash()
 	{
-		return t_stage::hash::generate("set_scene_model");
+		return t_stage::hash::make("set_scene_model");
 	}
 
 	//-------------------------------------------------------------------------
@@ -492,7 +492,7 @@ class psyq::scene_action< t_stage >::set_screen_camera:
 	//-------------------------------------------------------------------------
 	public: static typename t_stage::hash::value get_hash()
 	{
-		return t_stage::hash::generate("set_screen_camera");
+		return t_stage::hash::make("set_screen_camera");
 	}
 
 	//-------------------------------------------------------------------------
@@ -577,7 +577,7 @@ class psyq::scene_action< t_stage >::set_screen_light:
 	//-------------------------------------------------------------------------
 	public: static typename t_stage::hash::value get_hash()
 	{
-		return t_stage::hash::generate("set_screen_light");
+		return t_stage::hash::make("set_screen_light");
 	}
 
 	//-------------------------------------------------------------------------
@@ -646,7 +646,7 @@ class psyq::scene_action< t_stage >::set_time_scale:
 	//-------------------------------------------------------------------------
 	public: static typename t_stage::hash::value get_hash()
 	{
-		return t_stage::hash::generate("set_time_scale");
+		return t_stage::hash::make("set_time_scale");
 	}
 
 	//-------------------------------------------------------------------------
@@ -726,7 +726,7 @@ class psyq::scene_action< t_stage >::remove_stage_element:
 	//-------------------------------------------------------------------------
 	public: static typename t_stage::hash::value get_hash()
 	{
-		return t_stage::hash::generate("remove_stage_element");
+		return t_stage::hash::make("remove_stage_element");
 	}
 
 	//-------------------------------------------------------------------------
@@ -751,19 +751,19 @@ class psyq::scene_action< t_stage >::remove_stage_element:
 			{
 				typename t_stage::hash::value const a_kind(
 					a_stage.event_.make_hash(a_parameters->kind));
-				if (t_stage::hash::generate("scene_token") == a_kind)
+				if (t_stage::hash::make("scene_token") == a_kind)
 				{
 					a_stage.remove_token(a_name);
 				}
-				else if (t_stage::hash::generate("scene_screen") == a_kind)
+				else if (t_stage::hash::make("scene_screen") == a_kind)
 				{
 					a_stage.screens_.erase(a_name);
 				}
-				else if (t_stage::hash::generate("event_line") == a_kind)
+				else if (t_stage::hash::make("event_line") == a_kind)
 				{
 					a_stage.event_.lines_.erase(a_name);
 				}
-				else if (t_stage::hash::generate("time_scale") == a_kind)
+				else if (t_stage::hash::make("time_scale") == a_kind)
 				{
 					a_stage.remove_scale(a_name);
 				}

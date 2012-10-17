@@ -303,15 +303,14 @@ class psyq::event_stage
 	    @return 置換される単語のhash値。
 	 */
 	public: typename t_hash::value make_word(
-		typename this_type::const_string const& i_key,
+		typename t_hash::value const            i_key,
 		typename this_type::const_string const& i_word)
 	{
-		typename t_hash::value const a_key(t_hash::generate(i_key));
-		if (t_hash::EMPTY != a_key)
+		if (t_hash::EMPTY != i_key)
 		{
-			this->words_[a_key].assign(i_word.data(), i_word.length());
+			this->words_[i_key].assign(i_word.data(), i_word.length());
 		}
-		return a_key;
+		return i_key;
 	}
 
 	/** @brief event置換語を登録。
@@ -319,17 +318,15 @@ class psyq::event_stage
 	    @param[in] i_word 置換した後の単語。
 	    @return 置換される単語のhash値。
 	 */
-	public: template< typename t_other_string >
-	typename t_hash::value make_word(
-		t_other_string const&             i_key,
+	public: typename t_hash::value make_word(
+		typename t_hash::value const      i_key,
 		typename this_type::string const& i_word)
 	{
-		typename t_hash::value const a_key(t_hash::generate(i_key));
-		if (t_hash::EMPTY != a_key)
+		if (t_hash::EMPTY != i_key)
 		{
-			this->words_[a_key] = i_word;
+			this->words_[i_key] = i_word;
 		}
-		return a_key;
+		return i_key;
 	}
 
 	/** @brief event置換語を検索。
@@ -342,16 +339,6 @@ class psyq::event_stage
 			this->words_.find(i_key));
 		return this->words_.end() != a_position?
 			a_position->second: t_string(this->words_.get_allocator());
-	}
-
-	/** @brief event置換語を検索。
-	    @param[in] i_key  置換される単語。
-	    @return 置換した後の単語。
-	 */
-	public: template< typename t_other_string >
-	t_string find_word(t_other_string const& i_key) const
-	{
-		return this->find_word(t_hash::generate(i_key));
 	}
 
 	/** @brief event置換語を取り除く。
@@ -374,16 +361,6 @@ class psyq::event_stage
 		return a_string;
 	}
 
-	/** @brief event置換語を取り除く。
-	    @param[in] i_key  取り除く置換語。
-	    @return 取り除いた置換語。
-	 */
-	public: template< typename t_other_string >
-	t_string remove_word(t_other_string const& i_key)
-	{
-		return this->remove_word(t_hash::generate(i_key));
-	}
-
 	//-------------------------------------------------------------------------
 	/** @brief event-package内の文字列を、event置換語辞書で置換した文字列のhash値を取得。
 	    @param[in] i_offset 置換元となる文字列のevent-package内offset値。
@@ -393,7 +370,7 @@ class psyq::event_stage
 		typename this_type::package::offset const i_offset)
 	const
 	{
-		return t_hash::generate(this->make_string(i_offset));
+		return t_hash::make(this->make_string(i_offset));
 	}
 
 	/** @brief 任意の文字列を、event置換語辞書で置換した文字列のhash値を取得。
@@ -404,7 +381,7 @@ class psyq::event_stage
 		typename this_type::const_string const& i_source)
 	const
 	{
-		return t_hash::generate(this->make_string(i_source));
+		return t_hash::make(this->make_string(i_source));
 	}
 
 	//-------------------------------------------------------------------------
@@ -522,7 +499,7 @@ class psyq::event_stage
 			// 辞書から置換語を検索。
 			typename this_type::word_map::const_iterator const a_position(
 				i_words.find(
-					t_hash::generate(a_word.begin() + 1, a_word.end() - 1)));
+					t_hash::make(a_word.begin() + 1, a_word.end() - 1)));
 			if (i_words.end() != a_position)
 			{
 				// 辞書にある単語で置換する。

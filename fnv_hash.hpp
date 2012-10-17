@@ -4,23 +4,23 @@
 namespace psyq
 {
 	template< typename, typename > class _fnv_hash;
-	class _fnv1_generator;
-	class _fnv1a_generator;
+	class _fnv1_maker;
+	class _fnv1a_maker;
 	class _fnv_traits32;
 	class _fnv_traits64;
 
-	typedef psyq::_fnv_hash< psyq::_fnv1_generator, psyq::_fnv_traits32 >
+	typedef psyq::_fnv_hash< psyq::_fnv1_maker, psyq::_fnv_traits32 >
 		fnv1_hash32;
-	typedef psyq::_fnv_hash< psyq::_fnv1_generator, psyq::_fnv_traits64 >
+	typedef psyq::_fnv_hash< psyq::_fnv1_maker, psyq::_fnv_traits64 >
 		fnv1_hash64;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template< typename t_generator, typename t_traits >
+template< typename t_maker, typename t_traits >
 class psyq::_fnv_hash:
-	public t_generator, public t_traits
+	public t_maker, public t_traits
 {
-	public: typedef psyq::_fnv_hash< t_generator, t_traits > this_type;
+	public: typedef psyq::_fnv_hash< t_maker, t_traits > this_type;
 
 	//-------------------------------------------------------------------------
 	public: typedef typename t_traits::value value;
@@ -37,7 +37,7 @@ class psyq::_fnv_hash:
 	    @param[in] i_prime  fnv-hash素数。
 	 */
 	public: template< typename t_char >
-	static typename this_type::value generate(
+	static typename this_type::value make(
 		t_char const* const             i_string,
 		typename this_type::value const i_offset = this_type::EMPTY,
 		typename this_type::value const i_prime = this_type::PRIME)
@@ -47,7 +47,7 @@ class psyq::_fnv_hash:
 		{
 			for (t_char const* i = i_string; 0 != *i; ++i)
 			{
-				a_hash = t_generator::generate(i, i + 1, a_hash, i_prime);
+				a_hash = t_maker::make(i, i + 1, a_hash, i_prime);
 			}
 		}
 		return a_hash;
@@ -60,13 +60,13 @@ class psyq::_fnv_hash:
 	    @param[in] i_prime  fnv-hash素数。
 	 */
 	public: template< typename t_value >
-	static typename this_type::value generate(
+	static typename this_type::value make(
 		t_value const* const            i_begin,
 		t_value const* const            i_end,
 		typename this_type::value const i_offset = this_type::EMPTY,
 		typename this_type::value const i_prime = this_type::PRIME)
 	{
-		return t_generator::generate(i_begin, i_end, i_offset, i_prime);
+		return t_maker::make(i_begin, i_end, i_offset, i_prime);
 	}
 
 	/** @brief 文字列のhash値を生成。
@@ -75,13 +75,13 @@ class psyq::_fnv_hash:
 	    @param[in] i_prime  fnv-hash素数。
 	 */
 	public: template< typename t_string >
-	static typename this_type::value generate(
+	static typename this_type::value make(
 		t_string const&                 i_string,
 		typename this_type::value const i_offset = this_type::EMPTY,
 		typename this_type::value const i_prime = this_type::PRIME)
 	{
 		typename t_string::const_pointer const a_data(i_string.data());
-		return this_type::generate(
+		return this_type::make(
 			a_data, a_data + i_string.length(), i_offset, i_prime);
 	}
 
@@ -92,7 +92,7 @@ class psyq::_fnv_hash:
 	    @param[in] i_prime  fnv-hash素数。
 	 */
 	public: template< typename t_iterator >
-	static typename this_type::value generate(
+	static typename this_type::value make(
 		t_iterator const                i_begin,
 		t_iterator const                i_end,
 		typename this_type::value const i_offset = this_type::EMPTY,
@@ -101,7 +101,7 @@ class psyq::_fnv_hash:
 		typename this_type::value a_hash(i_offset);
 		for (t_iterator i = i_begin; i_end != i; ++i)
 		{
-			a_hash = t_generator::generate(&(*i), &(*i) + 1, a_hash, i_prime);
+			a_hash = t_maker::make(&(*i), &(*i) + 1, a_hash, i_prime);
 		}
 		return a_hash;
 	}
@@ -112,11 +112,11 @@ class psyq::_fnv_hash:
     http://www.radiumsoftware.com/0605.html#060526
     http://d.hatena.ne.jp/jonosuke/20100406/p1
  */
-class psyq::_fnv1_generator:
+class psyq::_fnv1_maker:
 	private boost::noncopyable
 {
 	//-------------------------------------------------------------------------
-	private: _fnv1_generator();
+	private: _fnv1_maker();
 
 	//-------------------------------------------------------------------------
 	/** @brief byte配列のhash値を生成。
@@ -126,7 +126,7 @@ class psyq::_fnv1_generator:
 	    @param[in] i_prime  fnv-hash素数。
 	 */
 	public: template< typename t_value >
-	static t_value generate(
+	static t_value make(
 		void const* const i_begin,
 		void const* const i_end,
 		t_value const     i_offset,
@@ -150,11 +150,11 @@ class psyq::_fnv1_generator:
     http://www.radiumsoftware.com/0605.html#060526
     http://d.hatena.ne.jp/jonosuke/20100406/p1
  */
-class psyq::_fnv1a_generator:
+class psyq::_fnv1a_maker:
 	private boost::noncopyable
 {
 	//-------------------------------------------------------------------------
-	private: _fnv1a_generator();
+	private: _fnv1a_maker();
 
 	//-------------------------------------------------------------------------
 	/** @brief byte配列のhash値を生成。
@@ -164,7 +164,7 @@ class psyq::_fnv1a_generator:
 	    @param[in] i_prime  fnv-hash素数。
 	 */
 	public: template< typename t_value >
-	static t_value generate(
+	static t_value make(
 		void const* const i_begin,
 		void const* const i_end,
 		t_value const     i_offset,

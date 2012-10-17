@@ -76,7 +76,7 @@ namespace psyq
     @param d_name 列挙子の名前。
  */
 #define PSYQ_ENUM_NAME_FNV1_HASH32(d_name)\
-	((d_name)(psyq::fnv1_hash32::generate(BOOST_PP_STRINGIZE(d_name))))
+	((d_name)(psyq::fnv1_hash32::make(BOOST_PP_STRINGIZE(d_name))))
 
 //-----------------------------------------------------------------------------
 /// @brief PSYQ_ENUMで使われるmacro。userは使用禁止。

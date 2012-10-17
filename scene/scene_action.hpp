@@ -283,8 +283,8 @@ class psyq::scene_action< t_stage >::set_event_line:
 				// time-scale‚È‚µ‚Åevent-line‚ÉŽžŠÔ‚ðÝ’èB
 				typename t_stage::event::line::scale::shared_ptr a_scale;
 				a_scale.swap(a_line->scale_);
-				int a_origin(a_parameters->origin);
-				switch (a_origin)
+				int a_origin;
+				switch (a_parameters->origin)
 				{
 					case 0:
 					a_origin = SEEK_SET;
@@ -297,6 +297,10 @@ class psyq::scene_action< t_stage >::set_event_line:
 					case 2:
 					a_origin = SEEK_END;
 					goto SEEK;
+
+					default:
+					a_origin = SEEK_CUR;
+					break;
 
 					SEEK:
 					a_line->seek(a_parameters->time, a_origin);
@@ -312,6 +316,10 @@ class psyq::scene_action< t_stage >::set_event_line:
 					a_scale = a_stage.event_.find_scale(a_scale_name);
 				}
 				a_line->scale_.swap(a_scale);
+				if (SEEK_CUR != a_origin)
+				{
+					a_line->seek(i_update.get_time(), SEEK_CUR);
+				}
 			}
 		}
 	}

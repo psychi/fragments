@@ -321,7 +321,7 @@ class psyq::event_stage
 	 */
 	public: template< typename t_other_string >
 	typename t_hash::value make_word(
-		typename t_other_string const&    i_key,
+		t_other_string const&             i_key,
 		typename this_type::string const& i_word)
 	{
 		typename t_hash::value const a_key(t_hash::generate(i_key));
@@ -330,6 +330,36 @@ class psyq::event_stage
 			this->words_[a_key] = i_word;
 		}
 		return a_key;
+	}
+
+	/** @brief event置換語を取り除く。
+	    @param[in] i_key  取り除く置換語のhash値。
+	    @return 取り除いた置換語。
+	 */
+	public: t_string remove_word(typename t_hash::value const i_key)
+	{
+		t_string a_string(this->words_.get_allocator());
+		if (t_hash::EMPTY != i_key)
+		{
+			typename this_type::word_map::iterator a_position(
+				this->words_.find(i_key));
+			if (this->words_.end() != a_position)
+			{
+				a_string.swap(a_position->second);
+				this->words_.erase(a_position);
+			}
+		}
+		return a_string;
+	}
+
+	/** @brief event置換語を取り除く。
+	    @param[in] i_key  取り除く置換語。
+	    @return 取り除いた置換語。
+	 */
+	public: template< typename t_other_string >
+	t_string remove_word(t_other_string const& i_key)
+	{
+		return this->remove_word(t_hash::generate(i_key));
 	}
 
 	//-------------------------------------------------------------------------

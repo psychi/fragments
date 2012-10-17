@@ -289,8 +289,8 @@ class psyq::event_stage
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief event置換語辞書を介してevent-packageに存在する文字列を置換し、hash値を取得。
-	    @param[in] i_offset 変換する文字列のevent-package内offset値。
+	/** @brief event置換語辞書を介してevent-package内に存在する文字列を置換し、hash値を取得。
+	    @param[in] i_offset 置換元となる文字列のevent-package内offset値。
 	    @return 置換後の文字列のhash値。
 	 */
 	public: typename t_hash::value replace_hash(
@@ -301,7 +301,7 @@ class psyq::event_stage
 	}
 
 	/** @brief event置換語辞書を介して文字列を置換し、hash値を取得。
-	    @param[in] i_source 置換される文字列。
+	    @param[in] i_source 置換元となる文字列。
 	    @return 置換後の文字列のhash値。
 	 */
 	public: typename t_hash::value replace_hash(
@@ -312,7 +312,7 @@ class psyq::event_stage
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief event置換語辞書を介して、event-packageに存在する文字列を置換。
+	/** @brief event置換語辞書を介して、event-package内に存在する文字列を置換。
 	    @param[in] i_offset 置換元となる文字列のevent-package内offset値。
 	    @return 置換後の文字列。
 	 */
@@ -328,16 +328,95 @@ class psyq::event_stage
 	    @return 置換後の文字列。
 	 */
 	public: t_string replace_string(
-		typename this_type::const_string const& i_source)
+		typename this_type::const_string const& i_string)
 	const
 	{
-		return this_type::package::template replace_string< t_string >(
-			this->words_, i_source.begin(), i_source.end());
+		return this_type::replace_string(i_string, this->words_);
+	}
+
+	/** @brief event置換語辞書を介して、文字列を置換。
+	    @param[in] i_string 置換元となる文字列。
+	    @param[in] i_words  置換語辞書。
+	    @return 置換後の文字列。
+	 */
+	private: static t_string replace_string(
+		typename this_type::const_string const& i_string,
+		typename this_type::word_map const&     i_words)
+	{
+		t_string a_string(i_words.get_allocator());
+		typename this_type::const_string::const_iterator a_last_end(
+			i_string.begin());
+		for (;;)
+		{
+			// 置換元となる文字列から、'('と')'で囲まれた範囲を検索。
+			typename this_type::const_string const a_word(
+				this_type::find_word(a_last_end, i_string.end()));
+			if (a_word.empty())
+			{
+				// すべての単語を置換した。
+				a_string.append(a_last_end, i_string.end());
+				return a_string;
+			}
+
+			// 辞書から置換語を検索。
+			typename this_type::word_map::const_iterator const a_position(
+				i_words.find(
+					t_hash::generate(a_word.begin() + 1, a_word.end() - 1)));
+			if (i_words.end() != a_position)
+			{
+				// 辞書にある単語で置換する。
+				a_string.append(a_last_end, a_word.begin());
+				a_string.append(
+					a_position->second.begin(),
+					a_position->second.end());
+			}
+			else
+			{
+				// 置換語ではなかったので、元のままにしておく。
+				a_string.append(a_last_end, a_word.end());
+			}
+			a_last_end = a_word.end();
+		}
+	}
+
+	/** @biref 文字列から'('と')'で囲まれた単語を検索。
+	    @param[in] i_begin 検索範囲の先頭位置。
+	    @param[in] i_end   検索範囲の末尾位置。
+	    @return '('と')'で囲まれた単語。
+	 */
+	static typename this_type::const_string find_word(
+		typename this_type::const_string::const_iterator const i_begin,
+		typename this_type::const_string::const_iterator const i_end)
+	{
+		typename this_type::const_string::const_iterator a_word_begin(i_end);
+		for (
+			typename this_type::const_string::const_iterator i = i_begin;
+			i_end != i;
+			++i)
+		{
+			switch (*i)
+			{
+				case '(':
+				a_word_begin = i;
+				break;
+
+				case ')':
+				// 対応する'('があれば、単語の範囲を返す。
+				if (i_end != a_word_begin)
+				{
+					return typename this_type::const_string(
+						a_word_begin, i + 1);
+				}
+				break;
+			}
+		}
+		return typename this_type::const_string(i_end, i_end);
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief event-packageに存在する文字列を取得。
+	/** @brief event-package内に存在する文字列を取得。
 	    @param[in] i_offset 文字列のevent-package内offset値。
+	    @return event-package内に存在する文字列。
 	 */
 	public: typename this_type::const_string get_string(
 		typename this_type::package::offset const i_offset)
@@ -352,12 +431,25 @@ class psyq::event_stage
 		}
 
 		// 文字数を取得。
-		std::size_t a_length(*a_begin);
-		if (a_length <= 0)
+		std::size_t a_length;
+		if (0 < *a_begin)
+		{
+			a_length = *a_begin;
+		}
+		else if (0 == *a_begin)
 		{
 			// 文字数が0の場合は、NULL文字まで数える。
 			a_length = t_string::traits_type::length(a_begin + 1);
 		}
+		else
+		{
+			// 負値の場合は、正値に変換。
+			a_length = static_cast< std::size_t >(
+				(std::numeric_limits< t_string::value_type >::max)())
+				- *a_begin;
+		}
+
+		// 文字列を返す。
 		return typename this_type::const_string(a_begin + 1, a_length);
 	}
 
@@ -379,7 +471,8 @@ class psyq::event_stage
 		typename this_type::package::offset const i_offset)
 	const
 	{
-		typename this_type::package const* const a_package(this->package_.get());
+		typename this_type::package const* const a_package(
+			this->package_.get());
 		return NULL != a_package?
 			a_package->template get_value< t_value >(i_offset): NULL;
 	}
@@ -391,7 +484,8 @@ class psyq::event_stage
 	public: template< typename t_value >
 	t_value const* find_package(typename t_hash::value const i_name) const
 	{
-		typename this_type::package const* const a_package(this->package_.get());
+		typename this_type::package const* const a_package(
+			this->package_.get());
 		return NULL != a_package?
 			a_package->template find_value< t_value >(i_name): NULL;
 	}

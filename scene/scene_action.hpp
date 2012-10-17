@@ -188,15 +188,29 @@ class psyq::scene_action< t_stage >::remove_screen_token:
 				a_stage.event_.make_hash(a_parameters->token));
 			typename t_stage::hash::value const a_screen_name(
 				a_stage.event_.make_hash(a_parameters->screen));
-			if (t_stage::hash::EMPTY != a_screen_name)
-			{
-				// screenからtokenを取り除く。
-				a_stage.remove_screen_token(a_screen_name, a_token_name);
-			}
-			else
+			if (t_stage::hash::EMPTY == a_screen_name)
 			{
 				// すべてのscreenからtokenを取り除く。
 				a_stage.remove_screen_token(a_token_name);
+			}
+			else
+			{
+				t_stage::screen* const a_screen(
+					a_stage.find_screen(a_screen_name).get());
+				if (NULL != a_screen)
+				{
+					if (t_stage::hash::EMPTY == a_token_name)
+					{
+						// screenからすべてのtokenを取り除く。
+						a_screen->remove_tokens();
+					}
+					else
+					{
+						// screenからtokenを取り除く。
+						a_screen->remove_token(
+							a_stage.find_token(a_token_name));
+					}
+				}
 			}
 		}
 	}

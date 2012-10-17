@@ -409,18 +409,21 @@ class psyq::scene_stage
 	public: typename this_type::token::shared_ptr remove_screen_token(
 		typename this_type::token::shared_ptr const& i_token)
 	{
-		// ‚·‚×‚Ä‚Ìscreen‚©‚çtoken‚ðŽæ‚èœ‚­B
-		for (
-			typename this_type::screen_map::const_iterator i =
-				this->screens_.begin();
-			this->screens_.end() != i;
-			++i)
+		if (NULL != i_token.get())
 		{
-			typename this_type::screen* const a_screen(
-				i->second.get());
-			if (NULL != a_screen)
+			// ‚·‚×‚Ä‚Ìscreen‚©‚çtoken‚ðŽæ‚èœ‚­B
+			for (
+				typename this_type::screen_map::const_iterator i =
+					this->screens_.begin();
+				this->screens_.end() != i;
+				++i)
 			{
-				a_screen->remove_token(i_token);
+				typename this_type::screen* const a_screen(
+					i->second.get());
+				if (NULL != a_screen)
+				{
+					a_screen->remove_token(i_token);
+				}
 			}
 		}
 		return i_token;

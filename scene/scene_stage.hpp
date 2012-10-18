@@ -213,7 +213,7 @@ class psyq::scene_stage
 		typename t_hash::value const i_package)
 	const
 	{
-		return this_type::event::pacakge::_find_shared_ptr(
+		return this_type::event::package::_find_shared_ptr(
 			this->packages_, i_package);
 	}
 
@@ -238,8 +238,7 @@ class psyq::scene_stage
 		// event-package‚©‚çpackage-path‚ğŒŸõB
 		typename this_type::package_path const* const a_path(
 			this->event_.template
-				find_package_value< typename this_type::package_path >(
-					i_package));
+				find_value< typename this_type::package_path >(i_package));
 		if (NULL != a_path)
 		{
 			// file‚©‚çscene-package‚ğ“Ç‚İ‚ŞB

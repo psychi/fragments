@@ -109,6 +109,7 @@ class psyq::event_stage
 		this->words_.swap(io_target.words_);
 		this->lines_.swap(io_target.lines_);
 		this->scales_.swap(io_target.scales_);
+		this->null_string_.swap(io_target.null_string_);
 	}
 
 	//-------------------------------------------------------------------------
@@ -299,28 +300,6 @@ class psyq::event_stage
 
 	//-------------------------------------------------------------------------
 	/** @brief event置換語を登録。
-	    @param[in] i_key  置換される単語のhash値。
-	    @param[in] i_word 置換した後の単語。
-	    @return 置換した後の単語。
-	 */
-	public: t_string const& make_word(
-		typename t_hash::value const            i_key,
-		typename this_type::const_string const& i_word)
-	{
-		if (t_hash::EMPTY == i_key)
-		{
-			return this->null_string_;
-		}
-
-		t_string& a_word(this->words_[i_key]);
-		t_string(
-			i_word.data(),
-			i_word.length(),
-			this->words_.get_allocator()).swap(a_word);
-		return a_word;
-	}
-
-	/** @brief event置換語を登録。
 	    @param[in] i_key  置換される単語。
 	    @param[in] i_word 置換した後の単語。
 	    @return 置換した後の単語。
@@ -340,7 +319,7 @@ class psyq::event_stage
 	}
 
 	/** @brief event置換語を検索。
-	    @param[in] i_key  置換される単語のhash値。
+	    @param[in] i_key 置換される単語のhash値。
 	    @return 置換した後の単語。
 	 */
 	public: t_string const& find_word(typename t_hash::value const i_key) const
@@ -352,7 +331,7 @@ class psyq::event_stage
 	}
 
 	/** @brief event置換語を取り除く。
-	    @param[in] i_key  取り除く置換語のhash値。
+	    @param[in] i_key 取り除く置換語のhash値。
 	    @return 取り除いた置換語。
 	 */
 	public: t_string remove_word(typename t_hash::value const i_key)

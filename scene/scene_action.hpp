@@ -23,6 +23,7 @@ class psyq::scene_action:
 	public: class set_screen_token;
 	public: class remove_screen_token;
 	public: class set_event_line;
+	public: class set_event_word;
 	public: class set_scene_package;
 	public: class set_scene_animation;
 	public: class set_scene_model;
@@ -126,18 +127,19 @@ class psyq::scene_action< t_stage >::set_screen_token:
 					a_token->time_scale_ = a_stage.event_.find_scale(
 						a_scale_name);
 				}
+			}
 
-				// screenにtokenを設定。
-				typename t_stage::hash::value const a_screen_name(
-					a_stage.event_.make_hash(a_parameters->screen));
-				if (t_stage::hash::EMPTY != a_screen_name)
+			// stageにscreenを設定。
+			typename t_stage::hash::value const a_screen_name(
+				a_stage.event_.make_hash(a_parameters->screen));
+			if (t_stage::hash::EMPTY != a_screen_name)
+			{
+				typename t_stage::screen* const a_screen(
+					a_stage.get_screen(a_screen_name).get());
+				if (NULL != a_screen)
 				{
-					typename t_stage::screen* const a_screen(
-						a_stage.get_screen(a_screen_name).get());
-					if (NULL != a_screen)
-					{
-						a_screen->insert_token(a_token);
-					}
+					// screenにtokenを設定。
+					a_screen->insert_token(a_token);
 				}
 			}
 		}
@@ -195,7 +197,7 @@ class psyq::scene_action< t_stage >::remove_screen_token:
 			}
 			else
 			{
-				t_stage::screen* const a_screen(
+				typename t_stage::screen* const a_screen(
 					a_stage.find_screen(a_screen_name).get());
 				if (NULL != a_screen)
 				{
@@ -321,6 +323,53 @@ class psyq::scene_action< t_stage >::set_event_line:
 					a_line->seek(i_update.get_time(), SEEK_CUR);
 				}
 			}
+		}
+	}
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief event-wordを設定するevent。
+template< typename t_stage >
+class psyq::scene_action< t_stage >::set_event_word:
+	public psyq::scene_action< t_stage >
+{
+	public: typedef psyq::scene_action< t_stage > super_type;
+	public: typedef typename super_type::set_event_word this_type;
+
+	//-------------------------------------------------------------------------
+	public: struct parameters
+	{
+		/// 置換される語のpackage-offset値。
+		typename t_stage::event::package::offset before;
+
+		/// 置換した後の語のpackage-offset値。
+		typename t_stage::event::package::offset after;
+	};
+
+	//-------------------------------------------------------------------------
+	public: static typename t_stage::hash::value get_hash()
+	{
+		return t_stage::hash::make("set_event_word");
+	}
+
+	//-------------------------------------------------------------------------
+	public: virtual void update(
+		typename t_stage::event::action::update_parameters const& i_update)
+	{
+		// packageから引数を取得。
+		typename super_type::update_parameters const& a_update(
+			static_cast< typename super_type::update_parameters const& >(
+				i_update));
+		t_stage& a_stage(*a_update.get_stage());
+		typename this_type::parameters const* const a_parameters(
+			a_stage.event_.template get_value<
+				typename this_type::parameters >(
+					i_update.get_point()->integer));
+		if (NULL != a_parameters)
+		{
+			a_stage.event_.make_word(
+				a_stage.event_.make_hash(a_parameters->before),
+				a_stage.event_.make_string(a_parameters->after));
 		}
 	}
 };
@@ -766,11 +815,11 @@ class psyq::scene_action< t_stage >::remove_stage_element:
 					i_update.get_point()->integer));
 		if (NULL != a_parameters)
 		{
-			// stageからtime-scaleを取得。
 			typename t_stage::hash::value const a_name(
 				a_stage.event_.make_hash(a_parameters->name));
 			if (t_stage::hash::EMPTY != a_name)
 			{
+				// stageから要素を削除。
 				typename t_stage::hash::value const a_kind(
 					a_stage.event_.make_hash(a_parameters->kind));
 				if (t_stage::hash::make("scene_token") == a_kind)
@@ -779,15 +828,19 @@ class psyq::scene_action< t_stage >::remove_stage_element:
 				}
 				else if (t_stage::hash::make("scene_screen") == a_kind)
 				{
-					a_stage.screens_.erase(a_name);
-				}
-				else if (t_stage::hash::make("event_line") == a_kind)
-				{
-					a_stage.event_.lines_.erase(a_name);
+					a_stage.remove_screen(a_name);
 				}
 				else if (t_stage::hash::make("time_scale") == a_kind)
 				{
 					a_stage.remove_scale(a_name);
+				}
+				else if (t_stage::hash::make("event_line") == a_kind)
+				{
+					a_stage.event_.remove_line(a_name);
+				}
+				else if (t_stage::hash::make("event_word") == a_kind)
+				{
+					a_stage.event_.remove_word(a_name);
 				}
 			}
 		}

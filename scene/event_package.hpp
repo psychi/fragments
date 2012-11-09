@@ -190,6 +190,27 @@ class psyq::event_package:
 		}
 		return a_shared_ptr;
 	}
+
+	public: template< typename t_container >
+	static typename t_container::mapped_type _remove_shared_ptr(
+		t_container&                             io_container,
+		typename t_container::mapped_type const& i_mapped)
+	{
+		for (
+			typename t_container::iterator i = io_container.begin();
+			io_container.end() != i;)
+		{
+			if (i_mapped != i->second)
+			{
+				++i;
+			}
+			else
+			{
+				i = io_container.erase(i);
+			}
+		}
+		return i_mapped;
+	}
 };
 
 #endif // !PSYQ_SCENE_EVENT_PACKAGE_HPP_

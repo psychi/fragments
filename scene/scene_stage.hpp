@@ -90,6 +90,12 @@ class psyq::scene_stage
 		typename this_type::event::package::offset texture;
 	};
 
+	private: typedef std::vector<
+		typename this_type::string,
+		typename this_type::event::allocator::template rebind<
+			typename this_type::string > >
+				string_vector;
+
 	private: typedef std::multimap<
 		t_real,
 		typename this_type::event::action::point const*,
@@ -256,10 +262,38 @@ class psyq::scene_stage
 		return psyq::_get_null_shared_ptr< psyq::scene_package >();
 	}
 
+	private: typename this_type::string_vector make_string_vector(
+		typename this_type::event::package::offset const i_position)
+	const
+	{
+		typename this_type::string_vector a_strings(
+			this->packages_.get_allocator());
+
+		// 文字列offset配列を取得。
+		typename this_type::event::package::offset const* const a_offsets(
+			this->event_.template get_value<
+				typename this_type::event::package::offset >(
+					i_position));
+		if (NULL != a_offsets)
+		{
+			// 文字列offset配列の要素数を取得。
+			std::size_t const a_num_strings(a_offsets[0]);
+			a_strings.reserve(a_num_strings);
+
+			// 文字列offsetから文字列を取得。
+			for (std::size_t i = 0; i < a_num_strings; ++i)
+			{
+				a_strings.push_back(
+					this->event_.make_string(a_offsets[1 + i]));
+			}
+		}
+		return a_strings;
+	}
+
 	//-------------------------------------------------------------------------
 	/** @brief screenを挿入。
 	    @param[in] i_name   挿入するscreenの名前hash値。
-		@param[in] i_screen 挿入するscreen。
+	    @param[in] i_screen 挿入するscreen。
 	    @return 挿入したscreen。挿入に失敗した場合は空。
 	 */
 	public: typename this_type::screen::shared_ptr const& insert_screen(
@@ -386,26 +420,14 @@ class psyq::scene_stage
 	public: typename this_type::token::shared_ptr const& remove_screen_token(
 		typename t_hash::value const i_token)
 	{
-		if (t_hash::EMPTY != i_token)
-		{
-			// tokenを取得。
-			typename this_type::token_map::iterator const a_token_pos(
-				this->tokens_.find(i_token));
-			if (this->tokens_.end() != a_token_pos)
-			{
-				// すべてのscreenからtokenを取り除く。
-				this->remove_screen_token(a_token_pos->second);
-				return a_token_pos->second;
-			}
-		}
-		return psyq::_get_null_shared_ptr< typename this_type::token >();
+		return this->remove_screen_token(this->find_token(i_token));
 	}
 
 	/** @brief すべてのscreenからtokenを取り除く。
 	    @param[in] i_token 取り除くtoken。
 	    @return 取り除いたtoken。取り除かなかった場合は空。
 	 */
-	public: typename this_type::token::shared_ptr remove_screen_token(
+	public: typename this_type::token::shared_ptr const& remove_screen_token(
 		typename this_type::token::shared_ptr const& i_token)
 	{
 		if (NULL != i_token.get())
@@ -496,13 +518,13 @@ class psyq::scene_stage
 		if (t_hash::EMPTY != i_token)
 		{
 			// tokenを取得。
-			typename this_type::token_map::iterator const a_token_pos(
+			typename this_type::token_map::iterator const a_position(
 				this->tokens_.find(i_token));
-			if (this->tokens_.end() != a_token_pos)
+			if (this->tokens_.end() != a_position)
 			{
 				// stageからtokenを取り除く。
-				a_token.swap(a_token_pos->second);
-				this->tokens_.erase(a_token_pos);
+				a_token.swap(a_position->second);
+				this->tokens_.erase(a_position);
 
 				// すべてのscreenからtokenを取り除く。
 				this->remove_screen_token(a_token);

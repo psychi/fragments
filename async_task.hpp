@@ -26,17 +26,16 @@ class psyq::async_task:
 	private: template< typename, typename > class function_wrapper;
 
 	//-------------------------------------------------------------------------
+	/// 状態値。
 	public: enum state
 	{
-		state_BUSY,     ///< 稼働中。
+		state_BUSY,     ///< 実行中。
 		state_FINISHED, ///< 正常終了。
 		state_ABORTED,  ///< 途中終了。
-		state_end
 	};
 
 	//-------------------------------------------------------------------------
-	protected: async_task():
-	state_(this_type::state_FINISHED)
+	protected: async_task(): state_(this_type::state_FINISHED)
 	{
 		// pass
 	}
@@ -83,26 +82,31 @@ class psyq::async_task:
 		return this->state_;
 	}
 
+	//-------------------------------------------------------------------------
 	/** @brief 状態値を設定。
-	    @param[in] i_state 設定するstate_BUSY以外の状態値。
-	    @return trueなら成功。falseなら失敗。
+	    @param[in] i_state 設定する状態値。
+	    @return false以外なら成功。falseなら失敗。
 	 */
-	public: bool set_state(boost::uint32_t const i_state)
+	protected: virtual bool set_lockable_state(boost::uint32_t const i_state) = 0;
+
+	/** @brief 状態値を設定。
+	    @param[in] i_state 設定する状態値。
+	    @return false以外なら成功。falseなら失敗。
+	 */
+	protected: bool set_unlockable_state(boost::uint32_t const i_state)
 	{
-		// busy状態には設定できない。
-		return this_type::state_BUSY != i_state?
-			this->set_locked_state(i_state): false;
+		if (this_type::state_BUSY != this->get_state())
+		{
+			this->state_ = i_state;
+			return true;
+		}
+		return false;
 	}
 
 	//-------------------------------------------------------------------------
-	protected: void set_unlocked_state(boost::uint32_t const i_state)
-	{
-		this->state_ = i_state;
-	}
-
-	//-------------------------------------------------------------------------
+	/** @brief taskを実行。
+	 */
 	protected: virtual boost::uint32_t run() = 0;
-	protected: virtual bool set_locked_state(boost::uint32_t const i_state) = 0;
 
 	//-------------------------------------------------------------------------
 	private: boost::uint32_t state_;
@@ -122,21 +126,19 @@ class psyq::lockable_async_task:
 	public: typedef t_mutex mutex;
 
 	//-------------------------------------------------------------------------
-	protected: lockable_async_task():
-	super_type()
+	protected: lockable_async_task(): super_type()
 	{
 		// pass
 	}
 
-	protected: virtual bool set_locked_state(boost::uint32_t const i_state)
+	/** @brief 状態値を設定。
+	    @param[in] i_state 設定する状態値。
+	    @return false以外なら成功。falseなら失敗。
+	 */
+	protected: virtual bool set_lockable_state(boost::uint32_t const i_state)
 	{
 		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
-		if (super_type::state_BUSY != this->get_state())
-		{
-			this->set_unlocked_state(i_state);
-			return true;
-		}
-		return false;
+		return this->set_unlockable_state(i_state);
 	}
 
 	//-------------------------------------------------------------------------

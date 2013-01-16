@@ -111,8 +111,7 @@ class psyq::scene_stage
 	    @param[in] i_allocator ‰Šú‰»‚Ég‚¤memoryŠ„“–qB
 	 */
 	public: explicit scene_stage(
-		typename this_type::event::package::const_shared_ptr const&
-			i_package,
+		typename this_type::event::package::const_shared_ptr const& i_package,
 		t_allocator const& i_allocator = t_allocator()):
 	event_(i_package, i_allocator),
 	packages_(typename this_type::package_map::key_compare(), i_allocator),

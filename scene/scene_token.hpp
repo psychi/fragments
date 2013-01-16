@@ -45,6 +45,52 @@ class psyq::scene_package
 	public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
 
 	//-------------------------------------------------------------------------
+#if 0
+	/** @brief fileを読み込んでscene-packageを構築。
+	    @param[in] i_allocator 使用するmemory割当子。
+	    @param[in] i_scenes    scene-fileのpath名文字列の配列。
+	    @param[in] i_shaders   shared-fileのpath名文字列の配列。
+	    @param[in] i_textures  texture-fileのpath名文字列の配列。
+	 */
+	public: template< typename t_allocator, typename t_strings >
+	static this_type::shared_ptr make(
+		t_allocator const& i_allocator,
+		t_strings const&   i_scenes,
+		t_strings const&   i_shaders,
+		t_strings const&   i_textures)
+	{
+		this_type::read_files(this->textures_, i_textures);
+		this_type::read_files(this->shaders_, i_shaders);
+		this_type::read_files(this->scenes_, i_scenes);
+	}
+
+	private: template< typename t_files, typename t_strings >
+	static std::size_t read_files(
+		t_files&         o_files,
+		t_strings const& i_paths)
+	{
+		o_files.clear();
+		o_files.reserve(i_paths.size());
+		std::size_t a_error_count(0);
+		for (
+			typename t_strings::const_iterator i = i_paths.begin();
+			i_paths.end() != i;
+			++i)
+		{
+			if (!i->empty())
+			{
+				o_files.push_back();
+				if (0 < this_type::read_file(o_files.back(), *i))
+				{
+					// fileの読み込みに失敗。
+					++a_error_count;
+				}
+			}
+		}
+		return a_error_count;
+	}
+#endif // 0
+
 	/** @brief fileを読み込んでscene-packageを構築。
 	    @param[in] i_allocator    使用するmemory割当子。
 	    @param[in] i_scene_path   scene-fileのpath名。

@@ -54,11 +54,12 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief memory割当policy基底class。
+/** @brief memory割当policyの基底型。
  */
 class psyq::arena:
 	private boost::noncopyable
 {
+	/// このobjectの型。
 	public: typedef psyq::arena this_type;
 
 	//-------------------------------------------------------------------------
@@ -66,14 +67,19 @@ class psyq::arena:
 	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
 
 	//-------------------------------------------------------------------------
+	/// memory確保関数の型。
 	protected: typedef void* (*malloc_function)(
 		std::size_t const,
 		std::size_t const,
 		std::size_t const,
 		char const* const);
+
+	/// memory解放関数の型。
 	protected: typedef void (*free_function)(void* const, std::size_t const);
 
 	//-------------------------------------------------------------------------
+	/** @param[in] i_name debugで使うためのmemory識別名。
+	 */
 	public: explicit arena(char const* const i_name = PSYQ_ARENA_NAME_DEFAULT):
 	name_(i_name)
 	{
@@ -86,12 +92,18 @@ class psyq::arena:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @brief this＝右辺値か判定。
+	    @param[in] i_right 右辺値。
+	 */
 	public: bool operator==(this_type const& i_right) const
 	{
 		return this->get_malloc() == i_right.get_malloc()
 			&& this->get_free() == i_right.get_free();
 	}
 
+	/** @brief this≠右辺値か判定。
+	    @param[in] i_right 右辺値。
+	 */
 	public: bool operator!=(this_type const& i_right) const
 	{
 		return !this->operator==(i_right);
@@ -100,8 +112,8 @@ class psyq::arena:
 	//-------------------------------------------------------------------------
 	/** @brief memoryを確保する。
 	    @param[in] i_size      確保するmemoryの大きさ。byte単位。
-	    @param[in] i_alignment 確保するmemoryの境界値。byte単位。
-	    @param[in] i_offset    確保するmemoryの境界offset値。byte単位。
+	    @param[in] i_alignment 確保するmemoryの配置境界値。byte単位。
+	    @param[in] i_offset    確保するmemoryの配置境界offset値。byte単位。
 	    @return 確保したmemoryの先頭位置。ただしNULLの場合は失敗。
 	 */
 	public: void* allocate(
@@ -139,17 +151,22 @@ class psyq::arena:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief malloc()に指定できるmemoryの最大sizeを取得。
-	    @return malloc()に指定できる確保できるmemoryの最大size。byte単位。
+	/** @brief 一度に確保できるmemoryの最大sizeを取得。
+	    @return 一度に確保できるmemoryの最大size。byte単位。
 	 */
 	public: virtual std::size_t get_max_size() const = 0;
 
 	//-------------------------------------------------------------------------
+	/** @brief memory確保関数を取得。
+	 */
 	protected: virtual this_type::malloc_function get_malloc() const = 0;
+
+	/** @brief memory解放関数を取得。
+	 */
 	protected: virtual this_type::free_function get_free() const = 0;
 
 	//-------------------------------------------------------------------------
-	private: char const* name_;
+	private: char const* name_; ///< debugで使うためのmemory識別名。
 };
 
 #endif // !PSYQ_ARENA_HPP_

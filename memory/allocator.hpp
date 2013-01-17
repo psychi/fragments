@@ -41,7 +41,7 @@ class psyq::_allocator_base:
 
 	//-------------------------------------------------------------------------
 	/// 割当てるobjectの型。
-	public: typedef super_type::value_type value_type;
+	public: typedef typename super_type::value_type value_type;
 
 	/// 割当てるobjectのmemory配置境界値。byte単位。
 	public: static std::size_t const ALIGNMENT = t_alignment;

@@ -3,17 +3,19 @@
 
 //#include <psyq/scene/scene_token.hpp>
 
+/// @cond
 namespace psyq
 {
 	template< typename, typename, typename, typename > class scene_screen;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief sceneを描画するscreen。
-    @tparam t_hash      event-packageで使われているhash関数の型。
-    @tparam t_real      event-packageで使われている実数の型。
-    @tparam t_name      scene-nodeの識別名の型。
-    @tparam t_allocator 使用するmemory割当子の型。
+    @tparam t_hash      @copydoc scene_screen::hash
+    @tparam t_real      @copydoc scene_screen::real
+    @tparam t_name      @copydoc scene_screen::name
+    @tparam t_allocator @copydoc scene_screen::allocator
  */
 template<
 	typename t_hash,
@@ -23,21 +25,35 @@ template<
 class psyq::scene_screen:
 	private boost::noncopyable
 {
+	/// このobjectの型。
 	public: typedef psyq::scene_screen< t_hash, t_real, t_name, t_allocator >
 		this_type;
 
 	//-------------------------------------------------------------------------
+	/// このinstanceの保持子。
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
+
+	/// このinstanceの監視子。
 	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
 
 	//-------------------------------------------------------------------------
+	/// event-packageで使われているhash関数の型。
 	public: typedef t_hash hash;
+
+	/// event-packageで使われている実数の型。
 	public: typedef t_real real;
+
+	/// scene-nodeの識別名の型。
 	public: typedef t_name name;
+
+	/// 使用するmemory割当子の型。
 	public: typedef t_allocator allocator;
+
+	/// このinstanceで使用する scene_token の型。
 	public: typedef psyq::scene_token< t_hash, t_real > token;
 
 	//-------------------------------------------------------------------------
+	/// this_type::token の配列型。
 	private: typedef std::vector<
 		typename this_type::token::shared_ptr,
 		typename t_allocator::template rebind<
@@ -58,7 +74,7 @@ class psyq::scene_screen:
 
 	//-------------------------------------------------------------------------
 	/** @brief 値を交換。
-	    @param[in,out] io_target 交換するscreen。
+	    @param[in,out] io_target 値を交換するinstance。
 	 */
 	public: void swap(this_type& io_target)
 	{
@@ -167,7 +183,7 @@ class psyq::scene_screen:
 	}
 
 	/** @brief camera-nodeを持つscene-tokenを取得。
-	    @retun
+	    @return
 	        camera-nodeを持つscene-tokenを指すsmart-pointer。
 	        ただし、焦点nodeが設定されてない場合は空。
 	 */
@@ -266,7 +282,7 @@ class psyq::scene_screen:
 	}
 
 	/** @brief 焦点nodeを持つscene-tokenを取得。
-	    @retun
+	    @return
 	        焦点nodeを持つscene-tokenを指すsmart-pointer。
 	        ただし、焦点nodeが設定されてない場合は空。
 	 */

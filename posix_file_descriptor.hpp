@@ -15,10 +15,12 @@
 //#define PSYQ_POSIX_FILE_BLOCK_SIZE 4096
 #endif // !PSYQ_POSIX_FILE_BLOCK_SIZE
 
+/// @cond
 namespace psyq
 {
 	class posix_file_descriptor;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief posix準拠のfile記述子を用いたfile操作。

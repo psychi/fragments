@@ -3,10 +3,12 @@
 
 #include <cmath>
 
+/// @cond
 namespace psyq
 {
 	template< typename > class scene_action;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 template< typename t_stage >

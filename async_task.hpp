@@ -5,28 +5,38 @@
 #include <boost/noncopyable.hpp>
 //#include <psyq/thread.hpp>
 
+/// @cond
 namespace psyq
 {
 	class async_task;
 	template< typename > class lockable_async_task;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 非同期処理task基底class。
+/** @brief 非同期処理taskの基底型。
  */
 class psyq::async_task:
 	private boost::noncopyable
 {
+	/// このobjectの型。
 	public: typedef psyq::async_task this_type;
+
 	template< typename, typename, typename > friend class async_queue;
 
 	//-------------------------------------------------------------------------
+	/// このinstanceの保持子。
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
+
+	/// このinsrtanceの監視子。
 	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
+
+	/// @cond
 	private: template< typename, typename > class function_wrapper;
+	/// @endcond
 
 	//-------------------------------------------------------------------------
-	/// 状態値。
+	/// taskの状態値。
 	public: enum state
 	{
 		state_BUSY,     ///< 実行中。
@@ -75,7 +85,7 @@ class psyq::async_task:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 状態値を取得。
+	/** @brief taskの状態値を取得。
 	 */
 	public: boost::uint32_t get_state() const
 	{
@@ -83,13 +93,13 @@ class psyq::async_task:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 状態値を設定。
+	/** @brief 鍵があくのを待ってからtaskの状態値を設定。
 	    @param[in] i_state 設定する状態値。
 	    @return false以外なら成功。falseなら失敗。
 	 */
 	protected: virtual bool set_lockable_state(boost::uint32_t const i_state) = 0;
 
-	/** @brief 状態値を設定。
+	/** @brief 鍵を無視してtaskの状態値を設定。
 	    @param[in] i_state 設定する状態値。
 	    @return false以外なら成功。falseなら失敗。
 	 */
@@ -109,20 +119,26 @@ class psyq::async_task:
 	protected: virtual boost::uint32_t run() = 0;
 
 	//-------------------------------------------------------------------------
+	/// taskの状態値。
 	private: boost::uint32_t state_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief mutexを持つ非同期処理task基底class。
+/** @brief mutexを持つ非同期処理taskの基底型。
+    @tparam t_mutex @copydoc lockable_async_task::mutex
  */
 template< typename t_mutex >
 class psyq::lockable_async_task:
 	public psyq::async_task
 {
+	/// このobjectの型。
 	public: typedef psyq::lockable_async_task< t_mutex > this_type;
+
+	/// このobjectの基底型。
 	public: typedef psyq::async_task super_type;
 
 	//-------------------------------------------------------------------------
+	/// 鍵に使うmutexの型。
 	public: typedef t_mutex mutex;
 
 	//-------------------------------------------------------------------------
@@ -131,10 +147,6 @@ class psyq::lockable_async_task:
 		// pass
 	}
 
-	/** @brief 状態値を設定。
-	    @param[in] i_state 設定する状態値。
-	    @return false以外なら成功。falseなら失敗。
-	 */
 	protected: virtual bool set_lockable_state(boost::uint32_t const i_state)
 	{
 		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
@@ -142,21 +154,29 @@ class psyq::lockable_async_task:
 	}
 
 	//-------------------------------------------------------------------------
+	/// 鍵に使うmutex。
 	private: t_mutex mutex_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 関数objectを呼び出す非同期処理task。
+    @tparam t_functor 呼び出す関数objectの型。
+    @tparam t_mutex   このobjectで使うmutexの型。
  */
 template< typename t_functor, typename t_mutex >
 class psyq::async_task::function_wrapper:
 	public psyq::lockable_async_task< t_mutex >
 {
+	/// このobjectの型。
 	public: typedef psyq::async_task::function_wrapper< t_functor, t_mutex >
 		this_type;
+
+	/// このobjectの基底型。
 	public: typedef psyq::lockable_async_task< t_mutex > super_type;
 
 	//-------------------------------------------------------------------------
+	/** @param[in] i_functor 呼び出す関数objectの初期値。
+	 */
 	public: explicit function_wrapper(t_functor const& i_functor):
 	psyq::lockable_async_task< t_mutex >(),
 	functor_(i_functor)
@@ -170,6 +190,7 @@ class psyq::async_task::function_wrapper:
 	}
 
 	//-------------------------------------------------------------------------
+	/// 呼び出す関数objectのinstance。
 	private: t_functor functor_;
 };
 

@@ -4,17 +4,19 @@
 //#include <psyq/const_string.hpp>
 //#include <psyq/scene/event_line.hpp>
 
+/// @cond
 namespace psyq
 {
 	template< typename, typename, typename, typename > class event_stage;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief eventで使うobjectを配置する場。
-    @tparam t_hash      event-packageで使われているhash関数。
-    @tparam t_real      event-packageで使われている実数の型。
-    @tparam t_string    event置換語に使う文字列の型。std::basic_string互換。
-    @tparam t_allocator 使用するmemory割当子の型。
+    @tparam t_hash      @copydoc event_stage::hash
+    @tparam t_real      @copydoc event_stage::real
+    @tparam t_string    @copydoc event_stage::string
+    @tparam t_allocator @copydoc event_stage::allocator
  */
 template<
 	typename t_hash,
@@ -27,16 +29,31 @@ class psyq::event_stage
 		this_type;
 
 	//-------------------------------------------------------------------------
+	/// event-packageで使われているhash関数。
 	public: typedef t_hash hash;
+
+	/// event-packageで使われている実数の型。
 	public: typedef t_real real;
+
+	/// event置換語に使う文字列の型。 std::basic_string 互換。
 	public: typedef t_string string;
+
+	/// 使用するmemory割当子の型。
 	public: typedef t_allocator allocator;
+
+	/// このinstanceが使う event_package の型。
 	public: typedef psyq::event_package< t_hash > package;
+
+	/// このinstanceが使う event_line の型。
 	public: typedef psyq::event_line< t_hash, t_real > line;
+
+	/// このinstanceが使う event_action の型。
 	public: typedef psyq::event_action< t_hash, t_real > action;
+
+	/// このinstanceが使う文字列定数の型。
 	public: typedef psyq::basic_const_string<
 		typename t_string::value_type, typename t_string::traits_type >
-			const_string; ///< 文字列定数の型。
+			const_string;
 
 	//-------------------------------------------------------------------------
 	/// event置換語の辞書。
@@ -48,7 +65,7 @@ class psyq::event_stage
 			std::pair< typename t_hash::value const, t_string > >::other >
 				word_map;
 
-	/// event-lineの辞書。
+	/// event_line の辞書。
 	public: typedef std::map<
 		typename t_hash::value,
 		typename this_type::line,
@@ -59,7 +76,7 @@ class psyq::event_stage
 				typename this_type::line > >::other >
 					line_map;
 
-	/// event-actionの辞書。
+	/// event_action の辞書。
 	public: typedef std::map<
 		typename t_hash::value,
 		typename this_type::action::shared_ptr,
@@ -70,7 +87,7 @@ class psyq::event_stage
 				typename this_type::action::shared_ptr > >::other >
 					action_map;
 
-	/// time-scaleの辞書。
+	/// 時間倍率の辞書。
 	public: typedef std::map<
 		typename t_hash::value,
 		typename this_type::line::scale::shared_ptr,
@@ -100,7 +117,7 @@ class psyq::event_stage
 
 	//-------------------------------------------------------------------------
 	/** @brief 値を交換。
-	    @param[in,out] 交換する対象。
+	    @param[in,out] io_target 値を交換するinstance。
 	 */
 	public: void swap(this_type& io_target)
 	{
@@ -113,10 +130,10 @@ class psyq::event_stage
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief event-actionを挿入。
-	    @param[in] i_name   挿入するevent-actionの名前hash値。
-		@param[in] i_action 挿入するevent-action。
-	    @return 挿入したtime-scale。挿入に失敗した場合は空。
+	/** @brief event_action を登録。
+	    @param[in] i_name   登録する event_action の名前hash値。
+		@param[in] i_action 登録する event_action 。
+	    @return 登録した event_action 。登録に失敗した場合は空。
 	 */
 	public: typename this_type::action::shared_ptr const& insert_action(
 		typename t_hash::value const                  i_name,
@@ -126,9 +143,9 @@ class psyq::event_stage
 			this->actions_, i_name, i_action);
 	}
 
-	/** @brief event-actionを初期化。
-	    @param t_action 初期化するevent-actionの型。
-	    @return 追加したevent-actionへの共有pointer。
+	/** @brief event_action を構築して登録。
+	    @tparam t_action 登録する event_action の型。
+	    @return 登録した event_action の保持子。登録に失敗した場合は空。
 	 */
 	public: template< typename t_action >
 	typename this_type::action::shared_ptr const& make_action()
@@ -138,6 +155,11 @@ class psyq::event_stage
 			PSYQ_ALLOCATE_SHARED< t_action >(this->actions_.get_allocator()));
 	}
 
+	/** @brief event_action を構築して登録。
+	    @tparam t_action 登録する event_action の型。
+	    @param  i_param0 event_action 構築関数の引数#0。
+	    @return 登録した event_action の保持子。登録に失敗した場合は空。
+	 */
 	public: template< typename t_action, typename t_param0 >
 	typename this_type::action::shared_ptr const& make_action(
 		t_param0 const& i_param0)
@@ -148,6 +170,12 @@ class psyq::event_stage
 				this->actions_.get_allocator(), i_param0));
 	}
 
+	/** @brief event_action を構築して登録。
+	    @tparam t_action 登録する event_action の型。
+	    @param  i_param0 event_action 構築関数の引数#0。
+	    @param  i_param1 event_action 構築関数の引数#1。
+	    @return 登録した event_action の保持子。登録に失敗した場合は空。
+	 */
 	public: template< typename t_action, typename t_param0, typename t_param1 >
 	typename this_type::action::shared_ptr const& make_action(
 		t_param0 const& i_param0,
@@ -159,9 +187,9 @@ class psyq::event_stage
 				this->actions_.get_allocator(), i_param0, i_param1));
 	}
 
-	/** @brief event-actionを検索。
-	    @tparam t_action 検索するevent-actionの型。
-	    @return 見つけたevent-action。見つからなかった場合は空。
+	/** @brief event_action を検索。
+	    @tparam t_action 検索する event_action の型。
+	    @return 見つけた event_action の保持子。見つからなかった場合は空。
 	 */
 	public: template< typename t_action >
 	typename this_type::action::shared_ptr const& find_action() const
@@ -170,9 +198,9 @@ class psyq::event_stage
 			this->actions_, t_action::get_hash());
 	}
 
-	/** @brief event-actionを取り除く。
-	    @tparam t_action 検索するevent-actionの型。
-	    @return 取り除いたevent-action。取り除かなかった場合は空。
+	/** @brief event_action を登録解除。
+	    @tparam t_action 登録解除する event_action の型。
+	    @return 登録解除した event_action の保持子。登録解除しなかった場合は空。
 	 */
 	public: template< typename t_action >
 	typename this_type::action::shared_ptr const remove_action() const
@@ -219,10 +247,10 @@ class psyq::event_stage
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief time-scaleを挿入。
-	    @param[in] i_name   挿入するtime-scaleの名前hash値。
-		@param[in] i_screen 挿入するtime-scale。
-	    @return 挿入したtime-scale。挿入に失敗した場合は空。
+	/** @brief 時間倍率を登録。
+	    @param[in] i_name  登録する時間倍率の名前hash値。
+		@param[in] i_scale 登録する時間倍率。
+	    @return 登録した時間倍率の保持子。登録に失敗した場合は空。
 	 */
 	public: typename this_type::line::scale::shared_ptr const& insert_scale(
 		typename t_hash::value const                       i_name,
@@ -232,10 +260,11 @@ class psyq::event_stage
 			this->scales_, i_name, i_scale);
 	}
 
-	/** @brief time-scaleを取得。
-	    名前に対応するtime-scaleが存在しない場合は、新たに作る。
-	    @param[in] i_scale time-scaleの名前hash値。
-	    @return time-scaleへの共有pointer。失敗した場合は空。
+	/** @brief 時間倍率を取得。
+
+	    名前に対応する時間倍率が存在しない場合は、新たに作る。
+	    @param[in] i_scale 時間倍率の名前hash値。
+	    @return 取得した時間倍率の保持子。失敗した場合は空。
 	 */
 	public: typename this_type::line::scale::shared_ptr const& get_scale(
 		typename t_hash::value const i_scale)
@@ -256,9 +285,9 @@ class psyq::event_stage
 		return a_scale;
 	}
 
-	/** @brief time-scaleを検索。
-	    @param[in] i_name 検索するtime-scaleの名前hash値。
-	    @return 見つけたtime-scale。見つからなかった場合は空。
+	/** @brief 時間倍率を検索。
+	    @param[in] i_scale 検索する時間倍率の名前hash値。
+	    @return 見つけた時間倍率の保持子。見つからなかった場合は空。
 	 */
 	public: typename this_type::line::scale::shared_ptr const& find_scale(
 		typename t_hash::value const i_scale)
@@ -267,9 +296,9 @@ class psyq::event_stage
 		return this_type::package::_find_shared_ptr(this->scales_, i_scale);
 	}
 
-	/** @brief time-scaleを取り除く。
-	    @param[in] i_scale 取り除くtime-scaleの名前hash値。
-	    @return 取り除いたtime-scale。取り除かなかった場合は空。
+	/** @brief 時間倍率を登録解除。
+	    @param[in] i_scale 登録解除するtime-scaleの名前hash値。
+	    @return 登録解除した時間倍率の保持子。取り除かなかった場合は空。
 	 */
 	public: typename this_type::line::scale::shared_ptr const remove_scale(
 		typename t_hash::value const i_scale)

@@ -6,12 +6,14 @@
 #include <boost/type_traits/aligned_storage.hpp>
 #include <boost/type_traits/alignment_of.hpp>
 
+/// @cond
 namespace psyq
 {
 	template< typename, std::size_t > class _enum_set;
 	template< typename, typename > class _enum_item;
 	template< typename t_name > class _enum_item< t_name, void >;
 };
+/// @endcond
 
 //-----------------------------------------------------------------------------
 /** @brief 列挙子を定義。
@@ -145,7 +147,7 @@ class psyq::_enum_set:
 	//-------------------------------------------------------------------------
 	/** @brief 列挙子を取得。
 	    @param[in] i_ordinal 取得する列挙子の序数。
-	    @retrun 列挙子へのpointer。ただし、対応する列挙子がない場合はNULL。
+	    @return 列挙子へのpointer。ただし、対応する列挙子がない場合はNULL。
 	 */
 	public: t_item const* operator()(
 		typename t_item::ordinal const i_ordinal)
@@ -156,7 +158,7 @@ class psyq::_enum_set:
 
 	/** @brief 列挙子を取得。
 	    @param[in] i_name 取得する列挙子の名前。
-	    @retrun 列挙子へのpointer。ただし、対応する列挙子がない場合はNULL。
+	    @return 列挙子へのpointer。ただし、対応する列挙子がない場合はNULL。
 	 */
 	public: t_item const* operator()(typename t_item::name const& i_name) const
 	{
@@ -174,7 +176,7 @@ class psyq::_enum_set:
 	//-------------------------------------------------------------------------
 	/** @brief 列挙子を参照。
 	    @param[in] i_ordinal 参照する列挙子の序数。
-	    @retrun 列挙子への参照。
+	    @return 列挙子への参照。
 	 */
 	public: t_item const& operator[](
 		typename t_item::ordinal const i_ordinal)

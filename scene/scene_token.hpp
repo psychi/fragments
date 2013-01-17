@@ -3,6 +3,7 @@
 
 //#include <psyq/scene/event_line.hpp>
 
+/// @cond
 namespace psyq
 {
 	class texture_package;
@@ -10,6 +11,7 @@ namespace psyq
 	class scene_package;
 	template< typename, typename > class scene_token;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 class psyq::texture_package

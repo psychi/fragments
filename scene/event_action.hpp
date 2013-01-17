@@ -3,10 +3,12 @@
 
 //#include <psyq/memory/arena.hpp>
 
+/// @cond
 namespace psyq
 {
 	template< typename, typename > class event_action;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief event-action‚ÌŠî’êclassB

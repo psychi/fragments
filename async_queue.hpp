@@ -5,10 +5,12 @@
 //#include <psyq/async_task.hpp>
 //#include <psyq/memory/dynamic_storage.hpp>
 
+/// @cond
 namespace psyq
 {
 	template< typename, typename, typename > class async_queue;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief ”ñ“¯Šútask-queueB

@@ -10,6 +10,7 @@
 #define PSYQ_SMALL_ARENA_SMALL_SIZE_DEFAULT 64
 #endif // !PSYQ_SMALL_ARENA_SMALL_SIZE_DEFAULT
 
+/// @cond
 namespace psyq
 {
 	template< typename, typename > class small_pools;
@@ -31,6 +32,7 @@ namespace psyq
 		typename >
 			class small_allocator;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief ¬‹K–Ísize‚Ìfixed-poolW‡B
@@ -238,7 +240,8 @@ class psyq::small_arena:
 	 */
 	private: class set_pool
 	{
-		/** @param[in] i_pools \’z‚µ‚½fixed-pool‚Ìpointer‚ğŠi”[‚·‚é”z—ñB
+		/** @param[in] i_pointers \’z‚µ‚½fixed-pool‚Ìpointer‚ğŠi”[‚·‚é”z—ñB
+		    @param[in] i_destruct_priority singleton‚Ì”jŠü‚Ì—Dæ‡ˆÊB
 		 */
 		public:	set_pool(
 			psyq::fixed_pool< t_arena, t_mutex >** const i_pointers,

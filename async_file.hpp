@@ -5,6 +5,7 @@
 #include <boost/interprocess/mapped_region.hpp>
 //#include <psyq/file_buffer.hpp>
 
+/// @cond
 namespace psyq
 {
 	template< typename, typename > class _async_file_task;
@@ -12,22 +13,35 @@ namespace psyq
 	template< typename, typename > class async_file_writer;
 	template< typename > class async_file_mapper;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 非同期file処理の基底class。
-    @tparam t_handle file-handleの型。
-    @tparam t_mutex  mutexの型。
+/** @brief 非同期file処理の基底型。
+    @ingroup async-file-processing
+    @tparam t_handle @copydoc _async_file_task::file
+    @tparam t_mutex  @copydoc _async_file_task::mutex
  */
 template< typename t_handle, typename t_mutex >
 class psyq::_async_file_task:
 	public psyq::lockable_async_task< t_mutex >
 {
+	/// このobjectの型。
 	public: typedef psyq::_async_file_task< t_handle, t_mutex > this_type;
+
+	/// このobjectの基底型。
 	public: typedef psyq::lockable_async_task< t_mutex > super_type;
 
 	//-------------------------------------------------------------------------
+	/// このinstanceが保持するfile-handleの型。
 	public: typedef t_handle file;
+
+	/// このinstanceが保持するmutexの型。
+	protected: typedef t_mutex mutex;
+
+	/// このinstanceの保持子。
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
+
+	/// このinstanceの監視子。
 	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
 
 	//-------------------------------------------------------------------------
@@ -64,6 +78,8 @@ class psyq::_async_file_task:
 	}
 
 	//-------------------------------------------------------------------------
+	/** @param[in] i_handle file-handleの初期値。
+	 */
 	protected: explicit _async_file_task(
 		typename t_handle::shared_ptr const& i_handle):
 	handle_(i_handle),
@@ -74,16 +90,22 @@ class psyq::_async_file_task:
 	}
 
 	//-------------------------------------------------------------------------
+	/// 保持しているfile-handle。
 	protected: typename t_handle::shared_ptr handle_;
-	protected: psyq::file_buffer             buffer_;
-	protected: int                           error_;
+
+	/// 保持しているfile-buffer。
+	protected: psyq::file_buffer buffer_;
+
+	/// file処理で発生したerror番号。
+	protected: int error_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 非同期file読み込み処理object。
-    @tparam t_handle  file-handleの型。
-    @tparam t_arena memory-arenaの型。
-    @tparam t_mutex mutexの型。
+    @ingroup async-file-processing
+    @tparam t_handle @copydoc _async_file_task::file
+    @tparam t_arena  @copydoc async_file_reader::arena
+    @tparam t_mutex  @copydoc _async_file_task::mutex
  */
 template<
 	typename t_handle,
@@ -92,11 +114,15 @@ template<
 class psyq::async_file_reader:
 	public psyq::_async_file_task< t_handle, t_mutex >
 {
+	/// このobjectの型。
 	public: typedef psyq::async_file_reader< t_handle, t_arena, t_mutex >
 		this_type;
+
+	/// このobjectの基底型。
 	public: typedef psyq::_async_file_task< t_handle, t_mutex > super_type;
 
 	//-------------------------------------------------------------------------
+	/// このinstanceが使用するmemory-arenaの型。
 	public: typedef t_arena arena;
 
 	//-------------------------------------------------------------------------
@@ -154,14 +180,18 @@ class psyq::async_file_reader:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 非同期file書き出し処理object。
-    @tparam t_handle  file-handleの型。
-    @tparam t_mutex mutexの型。
+    @ingroup async-file-processing
+    @tparam t_handle このinstanceが保持するfile-handleの型。
+    @tparam t_mutex  このinstanceが保持するmutexの型。
  */
 template< typename t_handle, typename t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::async_file_writer:
 	public psyq::_async_file_task< t_handle, t_mutex >
 {
+	/// このobjectの型。
 	public: typedef psyq::async_file_writer< t_handle > this_type;
+
+	/// このobjectの基底型。
 	public: typedef psyq::_async_file_task< t_handle, t_mutex > super_type;
 
 	//-------------------------------------------------------------------------
@@ -187,6 +217,10 @@ class psyq::async_file_writer:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 非同期file-mapping-object。
+    @ingroup async-file-processing
+    @tparam t_mutex このinstanceが保持するmutexの型。
+ */
 template< typename t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::async_file_mapper:
 	public psyq::lockable_async_task< t_mutex >

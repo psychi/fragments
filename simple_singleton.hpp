@@ -8,24 +8,30 @@
 #include <boost/bind.hpp>
 //#include <psyq/singleton.hpp>
 
+/// @cond
 namespace psyq
 {
 	template< typename, typename > class simple_singleton;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief singleton管理class。破棄は構築した逆順で行われる。
-    @tparam t_value singleton-instanceの型。
-    @tparam t_tag   同じ型のsingleton-instanceで、区別が必要な場合に使う。
+/** @brief singleton管理object。構築した逆順で破棄される。
+    @tparam t_value singleton-objectの型。
+    @tparam t_tag   同じ型のsingleton-objectで、区別に使うtag。
  */
 template< typename t_value, typename t_tag = t_value >
 class psyq::simple_singleton:
 	private boost::noncopyable
 {
+	/// このobjectの型。
 	public: typedef simple_singleton< t_value, t_tag > this_type;
 
 	//-------------------------------------------------------------------------
+	/// singleton-objectの型。
 	public: typedef t_value value_type;
+
+	/// 同じ型のsingleton-objectの、区別に使うtag。
 	public: typedef t_tag tag;
 
 	//-------------------------------------------------------------------------
@@ -98,9 +104,8 @@ class psyq::simple_singleton:
 
 	/** @brief sigleton-instanceを構築する。
 	        すでにsingleton-instanceがあるなら、構築は行わず既存のものを返す。
-	    @param[in] i_constructor boost::in_placeから取得した構築関数object。
-		@param[in] i_destruct_priority 破棄の優先順位。破棄は昇順に行われる。
-	    @return singleton-instanceへの参照。
+	    @param[in] i_constructor boost::in_place から取得した構築関数object。
+	    @return singleton-instanceへのpointer。
 	 */
 	public: template< typename t_constructor >
 	static t_value* construct(t_constructor const& i_constructor)

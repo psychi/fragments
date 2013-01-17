@@ -3,10 +3,12 @@
 
 //#include <psyq/file_buffer.hpp>
 
+/// @cond
 namespace psyq
 {
 	template< typename, typename > class file_handle;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief file操作を抽象化したhandle。
@@ -153,11 +155,12 @@ class psyq::file_handle:
 	}
 
 	/** @brief fileを読み込む。
-	    @tparam t_arena        memory確保に使うmemory-arenaの型。
-	    @param[out] o_buffer   生成した読み込みbufferの格納先。
-	    @param[in] i_offset    fileの読み込みoffset位置。
-	    @param[in] i_size      読み込み領域のbyte単位の大きさ。
-	    @param[in] i_alignment 読み込みbufferのmemory配置境界値。
+	    @tparam     t_arena     memory割当てに使うmemory-arenaの型。
+	    @param[out] o_buffer    生成した読み込みbufferの格納先。
+	    @param[in]  i_offset    fileの読み込みoffset位置。
+	    @param[in]  i_size      読み込み領域のbyte単位の大きさ。
+	    @param[in]  i_alignment 読み込みbufferのmemory配置境界値。
+	    @param[in]  i_name      割当てられたmemoryにつける名前。
 	    @return 結果のerror番号。0なら成功。
 	 */
 	public: template< typename t_arena >

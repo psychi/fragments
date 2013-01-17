@@ -1,10 +1,12 @@
 #ifndef PSYQ_LERP_HPP_
 #define PSYQ_LERP_HPP_
 
+/// @cond
 namespace psyq
 {
 	template< typename, typename > class lerp;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief ”CˆÓŒ^‚Ì’l‚ÌüŒ`•âŠÔanimationB

@@ -4,6 +4,7 @@
 #include <iosfwd>
 #include <iterator>
 
+/// @cond
 namespace psyq
 {
 	template<
@@ -12,29 +13,52 @@ namespace psyq
 	typedef psyq::basic_const_string< char > const_string;
 	typedef psyq::basic_const_string< wchar_t > const_wstring;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_stringに準拠した文字列定数。
-    @param t_value  文字の型。
-    @param t_traits 文字特性の型。
+/** @brief std::basic_string に準拠した文字列定数。
+    @param t_value  @copydoc basic_const_string::value_type
+    @param t_traits @copydoc basic_const_string::traits_type
  */
 template< typename t_value, typename t_traits >
 class psyq::basic_const_string
 {
+	/// このobjectの型。
 	public: typedef psyq::basic_const_string< t_value, t_traits > this_type;
 
 	//-------------------------------------------------------------------------
+	/// 文字の型。
 	public: typedef t_value value_type;
+
+	/// 文字特性の型。
 	public: typedef t_traits traits_type;
+
+	/// 文字数の型。
 	public: typedef std::size_t size_type;
+
+	/// 文字定数へのpointer。
 	public: typedef t_value const* const_pointer;
+
+	/// 文字定数へのpointer。
 	public: typedef typename this_type::const_pointer pointer;
+
+	/// 文字定数への参照。
 	public: typedef t_value const& const_reference;
+
+	/// 文字定数への参照。
 	public: typedef typename this_type::const_reference reference;
+
+	/// 文字定数の反復子。
 	public: typedef typename this_type::const_pointer const_iterator;
+
+	/// 文字定数の反復子。
 	public: typedef typename this_type::const_iterator iterator;
+
+	/// 文字定数の逆反復子。
 	public: typedef std::reverse_iterator< const_iterator >
 		const_reverse_iterator;
+
+	/// 文字定数の逆反復子。
 	public: typedef typename this_type::const_reverse_iterator
 		reverse_iterator;
 
@@ -666,7 +690,7 @@ class psyq::basic_const_string
 
 	//-------------------------------------------------------------------------
 	/** @brief 文字を検索。
-	    @param[in] i_string 検索文字。
+	    @param[in] i_char   検索する文字。
 	    @param[in] i_offset 検索を開始する位置。
 	    @return 検索文字が見つけた位置。現れない場合はnposを返す。
 	 */

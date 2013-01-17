@@ -5,17 +5,19 @@
 //#include <psyq/scene/scene_action.hpp>
 //#include <psyq/scene/scene_screen.hpp>
 
+/// @cond
 namespace psyq
 {
 	template< typename, typename, typename, typename > class scene_stage;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief sceneで使うobjectを配置する場。
-    @tparam t_hash      event-packageで使われているhash関数。
-    @tparam t_real      event-packageで使われている実数の型。
-    @tparam t_string    event置換語に使う文字列の型。std::basic_string互換。
-    @tparam t_allocator 使用するmemory割当子の型。
+    @tparam t_hash      @copydoc scene_stage::hash
+    @tparam t_real      @copydoc scene_stage::real
+    @tparam t_string    @copydoc scene_stage::string
+    @tparam t_allocator @copydoc scene_stage::allocator
  */
 template<
 	typename t_hash = psyq::fnv1_hash32,
@@ -27,20 +29,36 @@ template<
 	typename t_allocator = typename t_string::allocator_type >
 class psyq::scene_stage
 {
+	/// このobjectの型。
 	public: typedef psyq::scene_stage< t_hash, t_real, t_string, t_allocator >
 		this_type;
 
 	//-------------------------------------------------------------------------
+	/// event-packageで使われているhash関数。
 	public: typedef t_hash hash;
+
+	/// event-packageで使われている実数の型。
 	public: typedef t_real real;
+
+	/// event置換語に使う文字列の型。 std::basic_string 互換。
 	public: typedef t_string string;
+
+	/// 使用するmemory割当子の型。
 	public: typedef t_allocator allocator;
+
+	/// このinstanceで使う event_stage の型。
 	public: typedef psyq::event_stage< t_hash, t_real, t_string, t_allocator >
 		event;
+
+	/// このinstanceで使う scene_screen の型。
 	public: typedef psyq::scene_screen<
 		t_hash, t_real, typename t_string::const_pointer, t_allocator >
 			screen;
+
+	/// このinstanceで使う scene_screen::token の型。
 	public: typedef typename this_type::screen::token token;
+
+	/// このinstanceで使う文字列定数の型。
 	public: typedef typename this_type::event::const_string const_string;
 
 	//-------------------------------------------------------------------------
@@ -78,6 +96,7 @@ class psyq::scene_stage
 					screen_map;
 
 	//-------------------------------------------------------------------------
+	/// packageのpath名。
 	private: struct package_path
 	{
 		/// sceneのpath名のpackage-offset値。
@@ -90,12 +109,14 @@ class psyq::scene_stage
 		typename this_type::event::package::offset texture;
 	};
 
+	/// 文字列配列の型。
 	private: typedef std::vector<
 		typename this_type::string,
 		typename this_type::event::allocator::template rebind<
 			typename this_type::string > >
 				string_vector;
 
+	/// event実行辞書の型。
 	private: typedef std::multimap<
 		t_real,
 		typename this_type::event::action::point const*,
@@ -123,7 +144,7 @@ class psyq::scene_stage
 
 	//-------------------------------------------------------------------------
 	/** @brief 値を交換。
-	    @param[in,out] 交換する対象。
+	    @param[in,out] io_target 値を交換するinstance。
 	 */
 	public: void swap(this_type& io_target)
 	{
@@ -682,6 +703,10 @@ class psyq::scene_stage
 //-----------------------------------------------------------------------------
 namespace std
 {
+	/** @brief 左辺と右辺の値を交換。
+	    @param[in,out] io_left  左辺値。
+	    @param[in,out] io_right 右辺値
+	 */
 	template<
 		typename t_hash,
 		typename t_real,

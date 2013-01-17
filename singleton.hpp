@@ -7,6 +7,7 @@
 #include <boost/utility/in_place_factory.hpp>
 #include <boost/bind/bind.hpp>
 
+/// @cond
 namespace psyq
 {
 	template< typename, typename, typename > class singleton;
@@ -14,10 +15,11 @@ namespace psyq
 	template< typename > class _singleton_ordered_destructor;
 	template< typename, typename > class _singleton_ordered_holder;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 破棄関数の単方向連結list。
-    @tparam t_mutex multi-thread対応に使うmutexの型。
+    @tparam t_mutex @copydoc _singleton_ordered_destructor::mutex
  */
 template< typename t_mutex >
 class psyq::_singleton_ordered_destructor:
@@ -27,7 +29,11 @@ class psyq::_singleton_ordered_destructor:
 	template< typename, typename, typename > friend class psyq::singleton;
 
 	//-------------------------------------------------------------------------
-	protected: typedef void (*function)(this_type* const); ///< 破棄関数の型。
+	/// multi-thread対応に使うmutexの型。
+	protected: t_mutex mutex;
+
+	/// 破棄関数の型。
+	protected: typedef void (*function)(this_type* const);
 
 	//-------------------------------------------------------------------------
 	protected: explicit _singleton_ordered_destructor(
@@ -164,19 +170,24 @@ class psyq::_singleton_ordered_destructor:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief singleton-instance領域の単方向連結list。
-    @tparam t_value singleton-instanceの型。
-    @tparam t_mutex      multi-thread対応に使うmutexの型。
+    @tparam t_value @copydoc _singleton_ordered_holder::value_type
+    @tparam t_mutex @copydoc _singleton_ordered_destructor::mutex
  */
 template< typename t_value, typename t_mutex >
 class psyq::_singleton_ordered_holder:
 	public psyq::_singleton_ordered_destructor< t_mutex >
 {
+	/// このobjectの型。
 	public: typedef psyq::_singleton_ordered_holder< t_value, t_mutex >
 		this_type;
+
+	/// このobjectの基底型。
 	public: typedef psyq::_singleton_ordered_destructor< t_mutex > super_type;
+
 	template< typename, typename, typename > friend class psyq::singleton;
 
 	//-------------------------------------------------------------------------
+	/// singleton-objectの型。
 	public: typedef t_value value_type;
 
 	//-------------------------------------------------------------------------
@@ -189,7 +200,8 @@ class psyq::_singleton_ordered_holder:
 
 	//-------------------------------------------------------------------------
 	/** @brief 保持している領域にinstanceを構築する。
-	    @param[in] i_constructor boost::in_placeから取得した構築関数object。
+	    @param[in,out] io_pointer 構築したinstanceへのpointerが格納される。
+	    @param[in] i_constructor  boost::in_placeから取得した構築関数object。
 	 */
 	private: template< typename t_constructor >
 	void construct(
@@ -229,10 +241,10 @@ class psyq::_singleton_ordered_holder:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 破棄順番が可変のsingleton管理class。
-    @tparam t_value singleton-instanceの型。
-    @tparam t_tag   同じ型のsingleton-instanceで、区別が必要な場合に使う。
-    @tparam t_mutex multi-thread対応に使うmutexの型。
+/** @brief 破棄順番が可変のsingleton管理object。
+    @tparam t_value @copydoc singleton::value_type
+    @tparam t_tag   @copydoc singleton::tag
+    @tparam t_mutex @copydoc singleton::mutex
  */
 template<
 	typename t_value,
@@ -241,12 +253,20 @@ template<
 class psyq::singleton:
 	private boost::noncopyable
 {
+	/// このobjectの型。
 	public: typedef psyq::singleton< t_value, t_tag, t_mutex > this_type;
 
 	//-------------------------------------------------------------------------
+	/// @copydoc _singleton_ordered_holder::value_type
 	public: typedef t_value value_type;
+
+	/// 同じ型のsingleton-objectで、区別が必要な場合に使う。
 	public: typedef t_tag tag;
+
+	/// @copydoc _singleton_ordered_holder::mutex
 	public: typedef t_mutex mutex;
+
+	/// singleton-instanceの保持子。
 	private: typedef psyq::_singleton_ordered_holder< t_value, t_mutex >
 		instance_holder;
 

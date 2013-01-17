@@ -4,12 +4,14 @@
 //#include <psyq/memory/allocator.hpp>
 //#include <psyq/memory/fixed_arena.hpp>
 
+/// @cond
 namespace psyq
 {
 	template<
 		typename, std::size_t, std::size_t, std::size_t, typename, typename >
 			class single_allocator;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 一度にひとつのinstanceを確保する、std::allocator互換の割当子。

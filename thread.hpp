@@ -78,10 +78,12 @@ namespace clx {using std::shared_ptr;}
 #	define PSYQ_MUTEX_DEFAULT psyq::_dummy_mutex
 #endif // PSYQ_MUTEX_DISABLE
 
+/// @cond
 namespace psyq
 {
 	class _dummy_mutex;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 class psyq::_dummy_mutex:

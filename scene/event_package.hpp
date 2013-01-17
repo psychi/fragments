@@ -3,14 +3,16 @@
 
 //#include <psyq/memory/arena.hpp>
 
+/// @cond
 namespace psyq
 {
 	template< typename > class event_package;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief eventで使うresourceをまとめたpackage。
-    @tparam t_hash event-package内で使われているhash関数。
+    @tparam t_hash @copydoc event_package::hash
  */
 template< typename t_hash >
 class psyq::event_package:
@@ -20,24 +22,42 @@ class psyq::event_package:
 	private: typedef psyq::file_buffer super_type;
 
 	//-------------------------------------------------------------------------
+	/// event-package内で使われているhash関数。
 	public: typedef t_hash hash;
+
+	/// event-package内のoffset位置。
 	public: typedef typename t_hash::value offset;
+
+	/// このinstance定数の保持子。
 	public: typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
+
+	/// このinstance定数の監視子。
 	public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
 
 	//-------------------------------------------------------------------------
+	/// event-package内の項目。
 	private: struct item
 	{
+		/** @brief this＜右辺値か判定。
+		    @param[in] i_right 右辺値。
+		 */
 		bool operator<(item const& i_right) const
 		{
 			return this->name < i_right.name;
 		}
 
-		typename t_hash::value name;     ///< itemの名前hash値。
-		typename t_hash::value position; ///< itemの先頭位置のevent-package内offset値。
+		///< itemの名前hash値。
+		typename t_hash::value name;
+
+		///< itemの先頭位置のevent-package内offset値。
+		typename t_hash::value position;
 	};
 
 	//-------------------------------------------------------------------------
+	/** @brief file_buffer を event_package に変換。
+	    @param[in] i_package 変換する file_buffer の保持子。
+	    @return file_buffer から変換した event_package の保持子。
+	 */
 	public: static typename this_type::const_shared_ptr make(
 		PSYQ_SHARED_PTR< psyq::file_buffer const > const& i_package)
 	{
@@ -47,9 +67,9 @@ class psyq::event_package:
 	private: event_package();
 
 	//-------------------------------------------------------------------------
-	/** @brief event-package内に存在するinstanceへのpointerを取得。
+	/** @brief event-package内に存在するinstanceを取得。
 	    @param[in] i_offset event-package先頭位置からのoffset値。
-	    @retval !=NULL instanceへのpointer。
+	    @retval !=NULL 取得したinstanceへのpointer。
 	    @retval ==NULL instanceは見つからなかった。
 	 */
 	public: void const* get_address(typename this_type::offset const i_offset)
@@ -60,10 +80,10 @@ class psyq::event_package:
 			NULL;
 	}
 
-	/** @brief event-package内に存在するinstanceへのpointerを取得。
-		@tparam t_value     instanceの型。
+	/** @brief event-package内に存在するinstanceを取得。
+		@tparam t_value     取得するinstanceの型。
 	    @param[in] i_offset event-package先頭位置からのoffset値。
-	    @retval !=NULL instanceへのpointer。
+	    @retval !=NULL 取得したinstanceへのpointer。
 	    @retval ==NULL instanceは見つからなかった。
 	 */
 	public: template< typename t_value >
@@ -79,10 +99,10 @@ class psyq::event_package:
 		return static_cast< t_value const* >(a_address);
 	}
 
-	/** @brief event-package内に存在するinstanceへのpointerを取得。
-		@tparam t_value   instanceの型。
+	/** @brief event-package内に存在するinstanceを取得。
+		@tparam t_value   取得するinstanceの型。
 	    @param[in] i_name instanceの名前hash値。
-	    @retval !=NULL instanceへのpointer。
+	    @retval !=NULL 取得したinstanceへのpointer。
 	    @retval ==NULL instanceは見つからなかった。
 	 */
 	public: template< typename t_value >
@@ -168,8 +188,8 @@ class psyq::event_package:
 	}
 
 	/** @brief containerから要素を取り除く。
-	    @param[in] i_container 要素を取り除くcontainer。
-	    @param[in] i_key       取り除く要素のkey。
+	    @param[in,out] io_container 要素を取り除くcontainer。
+	    @param[in]     i_key        取り除く要素のkey。
 	    @return 取り除いた要素が持っていた値。
 	 */
 	public: template< typename t_container >

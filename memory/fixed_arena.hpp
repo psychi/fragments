@@ -9,6 +9,7 @@
 #define PSYQ_FIXED_ARENA_CHUNK_SIZE_DEFAULT 4096
 #endif // !PSYQ_FIXED_ARENA_CHUNK_SIZE_DEFAULT
 
+/// @cond
 namespace psyq
 {
 	template<
@@ -20,6 +21,7 @@ namespace psyq
 		typename >
 			class fixed_arena;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief å≈íËsizeÇÃmemoryäÑìñpolicyÅB

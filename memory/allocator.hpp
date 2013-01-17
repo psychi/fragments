@@ -5,11 +5,13 @@
 #include <boost/type_traits/alignment_of.hpp>
 //#include <psyq/memory/arena.hpp>
 
+/// @cond
 namespace psyq
 {
 	template< typename, std::size_t, std::size_t > class _allocator_base;
 	template< typename, std::size_t, std::size_t, typename > class allocator;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 template<

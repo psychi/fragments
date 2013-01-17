@@ -1,6 +1,7 @@
 #ifndef PSYQ_FNV_HASH_HPP_
 #define PSYQ_FNV_HASH_HPP_
 
+/// @cond
 namespace psyq
 {
 	template< typename, typename > class _fnv_hash;
@@ -14,17 +15,28 @@ namespace psyq
 	typedef psyq::_fnv_hash< psyq::_fnv1_maker, psyq::_fnv_traits64 >
 		fnv1_hash64;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief FNV-hash-policyの基底型。
+    @tparam t_maker  FNV-hashの生成policy。
+    @tparam t_traits FNV-hashの型特性。
+ */
 template< typename t_maker, typename t_traits >
 class psyq::_fnv_hash:
 	public t_maker, public t_traits
 {
+	/// このobjectの型。
 	public: typedef psyq::_fnv_hash< t_maker, t_traits > this_type;
 
 	//-------------------------------------------------------------------------
+	/// hash値の型。
 	public: typedef typename t_traits::value value;
+
+	/// 使用する空hash値。
 	public: static typename t_traits::value const EMPTY = t_traits::EMPTY;
+
+	/// 使用するFNV-hash素数。
 	public: static typename t_traits::value const PRIME = t_traits::PRIME;
 
 	//-------------------------------------------------------------------------
@@ -33,8 +45,8 @@ class psyq::_fnv_hash:
 	//-------------------------------------------------------------------------
 	/** @brief 文字列のhash値を生成。
 	    @param[in] i_string NULL文字で終了する文字列の先頭位置。
-	    @param[in] i_offset fnv-hash開始値。
-	    @param[in] i_prime  fnv-hash素数。
+	    @param[in] i_offset FNV-hash開始値。
+	    @param[in] i_prime  FNV-hash素数。
 	 */
 	public: template< typename t_char >
 	static typename this_type::value make(
@@ -56,8 +68,8 @@ class psyq::_fnv_hash:
 	/** @brief 配列のhash値を生成。
 	    @param[in] i_begin  配列の先頭位置。
 	    @param[in] i_end    配列の末尾位置。
-	    @param[in] i_offset fnv-hash開始値。
-	    @param[in] i_prime  fnv-hash素数。
+	    @param[in] i_offset FNV-hash開始値。
+	    @param[in] i_prime  FNV-hash素数。
 	 */
 	public: template< typename t_value >
 	static typename this_type::value make(
@@ -71,8 +83,8 @@ class psyq::_fnv_hash:
 
 	/** @brief 文字列のhash値を生成。
 	    @param[in] i_string std::basic_string互換の文字列。
-	    @param[in] i_offset fnv-hash開始値。
-	    @param[in] i_prime  fnv-hash素数。
+	    @param[in] i_offset FNV-hash開始値。
+	    @param[in] i_prime  FNV-hash素数。
 	 */
 	public: template< typename t_string >
 	static typename this_type::value make(
@@ -88,8 +100,8 @@ class psyq::_fnv_hash:
 	/** @brief 文字列のhash値を生成。
 	    @param[in] i_begin  文字列の先頭位置。
 	    @param[in] i_end    文字列の末尾位置。
-	    @param[in] i_offset fnv-hash開始値。
-	    @param[in] i_prime  fnv-hash素数。
+	    @param[in] i_offset FNV-hash開始値。
+	    @param[in] i_prime  FNV-hash素数。
 	 */
 	public: template< typename t_iterator >
 	static typename this_type::value make(
@@ -109,6 +121,7 @@ class psyq::_fnv_hash:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief FNV-1で、hash値を生成。
+
     http://www.radiumsoftware.com/0605.html#060526
     http://d.hatena.ne.jp/jonosuke/20100406/p1
  */
@@ -123,7 +136,7 @@ class psyq::_fnv1_maker:
 	    @param[in] i_begin  byte配列の先頭位置。
 	    @param[in] i_end    byte配列の末尾位置。
 	    @param[in] i_offset hash開始値。
-	    @param[in] i_prime  fnv-hash素数。
+	    @param[in] i_prime  FNV-hash素数。
 	 */
 	public: template< typename t_value >
 	static t_value make(
@@ -147,6 +160,7 @@ class psyq::_fnv1_maker:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief FNV-1aで、hash値を生成。
+
     http://www.radiumsoftware.com/0605.html#060526
     http://d.hatena.ne.jp/jonosuke/20100406/p1
  */
@@ -159,9 +173,9 @@ class psyq::_fnv1a_maker:
 	//-------------------------------------------------------------------------
 	/** @brief byte配列のhash値を生成。
 	    @param[in] i_begin  byte配列の先頭位置。
-	    @param[in] i_begin  byte配列の末尾位置。
-	    @param[in] i_offset fnv-hash開始値。
-	    @param[in] i_prime  fnv-hash素数。
+	    @param[in] i_end    byte配列の末尾位置。
+	    @param[in] i_offset FNV-hash開始値。
+	    @param[in] i_prime  FNV-hash素数。
 	 */
 	public: template< typename t_value >
 	static t_value make(

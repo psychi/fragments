@@ -4,10 +4,12 @@
 #include <boost/noncopyable.hpp>
 #include <boost/type.hpp>
 
+/// @cond
 namespace psyq
 {
 	class dynamic_storage;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief “®“I‚ÉŠm•Û‚µ‚½memory‚ğŠÇ—‚·‚éB

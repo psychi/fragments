@@ -7,10 +7,12 @@
 //#define PSYQ_WIN32_FILE_BLOCK_SIZE 4096
 #endif // !PSYQ_WIN32_FILE_BLOCK_SIZE
 
+/// @cond
 namespace psyq
 {
 	class win32_file_descriptor;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 class psyq::win32_file_descriptor:

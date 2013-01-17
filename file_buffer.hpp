@@ -52,7 +52,8 @@ class psyq::file_buffer:
 		// pass
 	}
 
-	/** @param[in] i_offset
+	/** @param[in] i_type memory-arenaの型。
+	    @param[in] i_offset
 	        fileの先頭位置からのoffset値。
 	        fileの論理block-sizeの整数倍である必要がある。
 	    @param[in] i_size

@@ -4,10 +4,12 @@
 //#include <psyq/memory/arena.hpp>
 //#include <psyq/lerp.hpp>
 
+/// @cond
 namespace psyq
 {
 	template< typename, typename, typename > class layered_scale;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 template<

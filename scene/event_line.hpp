@@ -5,15 +5,17 @@
 //#include <psyq/scene/event_package.hpp>
 //#include <psyq/scene/event_action.hpp>
 
+/// @cond
 namespace psyq
 {
 	template< typename, typename > class event_line;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief event時間軸の管理。
-    @tparam t_hash event-packageで使われているhash関数。
-    @tparam t_real event-packageで使われている実数の型。
+    @tparam t_hash @copydoc event_line::hash
+    @tparam t_real @copydoc event_line::real
  */
 template< typename t_hash, typename t_real >
 class psyq::event_line
@@ -21,13 +23,24 @@ class psyq::event_line
 	public: typedef psyq::event_line< t_hash, t_real > this_type;
 
 	//-------------------------------------------------------------------------
+	/// event-packageで使われているhash関数。
 	public: typedef t_hash hash;
+
+	/// event-packageで使われている実数の型。
 	public: typedef t_real real;
+
+	/// event-packageで使われている整数の型。
 	public: typedef typename t_hash::value integer;
+
+	/// このinstanceで使う時間倍率の型。
 	public: typedef psyq::layered_scale<
 		t_real, typename this_type::integer, this_type >
 			scale;
+
+	/// このinstacneで使う event_package の型。
 	public: typedef typename psyq::event_package< t_hash > package;
+
+	/// このinstacneで使う event_action::point の型。
 	private: typedef typename psyq::event_action< t_hash, t_real >::point
 		point;
 
@@ -54,7 +67,7 @@ class psyq::event_line
 
 	//-------------------------------------------------------------------------
 	/** @brief 値を交換。
-	    @param[in,out] 交換する対象。
+	    @param[in,out] io_target 値を交換するinstance。
 	 */
 	public: void swap(this_type& io_target)
 	{

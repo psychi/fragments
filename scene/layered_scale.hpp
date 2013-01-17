@@ -12,6 +12,11 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 階層構造のscale値。
+    @tparam t_value @copydoc layered_scale::value
+    @tparam t_count @copydoc layered_scale::count
+    @tparam t_tag   @copydoc layered_scale::tag
+ */
 template<
 	typename t_value,
 	typename t_count = boost::uint32_t,
@@ -21,13 +26,28 @@ class psyq::layered_scale
 	typedef psyq::layered_scale< t_value, t_count, t_tag > this_type;
 
 	//-------------------------------------------------------------------------
+	/// scale値の型。
 	public: typedef t_value value;
+
+	/// frame数の型。
 	public: typedef t_count count;
+
+	/// objectの区別に使うtag。
 	public: typedef t_tag tag;
+
+	/// scaleの線形補間値。
 	public: typedef psyq::lerp< t_value, t_count > lerp;
+
+	/// このobjectの保持子。
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
+
+	/// このobjectの監視子。
 	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
+
+	/// このobject定数の保持子。
 	public: typedef PSYQ_SHARED_PTR< this_type const > const_shared_ptr;
+
+	/// このobject定数の監視子。
 	public: typedef PSYQ_WEAK_PTR< this_type const > const_weak_ptr;
 
 	//-------------------------------------------------------------------------

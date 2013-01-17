@@ -14,6 +14,11 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief interfaceが std::allocator 互換のmemory割当子の基底型。
+    @tparam t_value     @copydoc _allocator_base::value_type
+    @tparam t_alignment @copydoc _allocator_base::ALIGNMENT
+    @tparam t_offset    @copydoc _allocator_base::OFFSET
+ */
 template<
 	typename    t_value,
 	std::size_t t_alignment,
@@ -21,16 +26,27 @@ template<
 class psyq::_allocator_base:
 	public std::allocator< t_value >
 {
+	/// このobjectの型。
 	public: typedef psyq::_allocator_base< t_value, t_alignment, t_offset >
 		this_type;
+
+	/// このobjectの基底型。
 	public: typedef std::allocator< t_value > super_type;
 
 	// 配置境界値が2のべき乗か確認。
+	/// @cond
 	BOOST_STATIC_ASSERT(0 == (t_alignment & (t_alignment - 1)));
 	BOOST_STATIC_ASSERT(0 < t_alignment);
+	/// @endcond
 
 	//-------------------------------------------------------------------------
+	/// 割当てるobjectの型。
+	public: typedef super_type::value_type value_type;
+
+	/// 割当てるobjectのmemory配置境界値。byte単位。
 	public: static std::size_t const ALIGNMENT = t_alignment;
+
+	/// 割当てるobjectのmemory配置offset値。byte単位。
 	public: static std::size_t const OFFSET = t_offset;
 
 	//-------------------------------------------------------------------------
@@ -88,19 +104,19 @@ class psyq::_allocator_base:
 	}
 
 	//-------------------------------------------------------------------------
-	private: void allocate();
-	private: void deallocate();
+	private: void allocate();   ///< 使用禁止。
+	private: void deallocate(); ///< 使用禁止。
 
 	//-------------------------------------------------------------------------
 	private: char const* name_; ///< debugで使うためのmemory識別名。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::allocator互換のinstance割当子。
-    @tparam t_value      割り当てるinstanceの型。
-    @tparam t_alignment  instanceの配置境界値。byte単位。
-    @tparam t_offset     instanceの配置offset値。byte単位。
-    @tparam t_arena      memory割当policy。
+/** @brief interfaceが std::allocator 互換のmemory割当子。
+    @tparam t_value     @copydoc _allocator_base::value_type
+    @tparam t_alignment @copydoc _allocator_base::ALIGNMENT
+    @tparam t_offset    @copydoc _allocator_base::OFFSET
+    @tparam t_arena     @copydoc allocator::arena
  */
 template<
 	typename    t_value,
@@ -110,15 +126,25 @@ template<
 class psyq::allocator:
 	public psyq::_allocator_base< t_value, t_alignment, t_offset >
 {
+	/// このobjectの型。
 	typedef psyq::allocator< t_value, t_alignment, t_offset, t_arena >
 		this_type;
+
+	/// このobjectの基底型。
 	typedef psyq::_allocator_base< t_value, t_alignment, t_offset >
 		super_type;
 
 	//-------------------------------------------------------------------------
+	/// memory割当policyの型。
 	public: typedef t_arena arena;
 
 	//-------------------------------------------------------------------------
+	/** @brief psyq::allocator の再定義policy。
+	    @tparam t_other_type      @copydoc _allocator_base::value_type
+	    @tparam t_other_alignment @copydoc _allocator_base::ALIGNMENT
+	    @tparam t_other_offset    @copydoc _allocator_base::OFFSET
+	    @tparam t_other_arena     @copydoc allocator::arena
+	 */
 	public: template<
 		typename    t_other_type,
 		std::size_t t_other_alignment =
@@ -127,6 +153,7 @@ class psyq::allocator:
 		typename    t_other_arena = t_arena >
 	struct rebind
 	{
+		/// 再定義する allocator の型。
 		typedef psyq::allocator<
 			t_other_type, t_other_alignment, t_other_offset, t_other_arena >
 				other;

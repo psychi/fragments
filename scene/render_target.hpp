@@ -338,7 +338,7 @@ class psyq::render_target:
 		this->flags_ = (~this_type::flag_TYPE & this->flags_) | i_type;
 	}
 
-	/** @biref 保持しているpost-effectを解放。
+	/** @brief 保持しているpost-effectを解放。
 	 */
 	private: void release_post_effect()
 	{
@@ -349,7 +349,7 @@ class psyq::render_target:
 		}
 	}
 
-	/** @biref post-effectを初期化。
+	/** @brief post-effectを初期化。
 	 */
 	private: void reset_post_effect()
 	{

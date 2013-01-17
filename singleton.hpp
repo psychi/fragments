@@ -25,7 +25,9 @@ template< typename t_mutex >
 class psyq::_singleton_ordered_destructor:
 	public boost::noncopyable
 {
+	/// このobjectの型。
 	public: typedef psyq::_singleton_ordered_destructor< t_mutex > this_type;
+
 	template< typename, typename, typename > friend class psyq::singleton;
 
 	//-------------------------------------------------------------------------
@@ -36,6 +38,8 @@ class psyq::_singleton_ordered_destructor:
 	protected: typedef void (*function)(this_type* const);
 
 	//-------------------------------------------------------------------------
+	/** @param[in] i_destructor 破棄時に呼び出す関数。
+	 */
 	protected: explicit _singleton_ordered_destructor(
 		typename this_type::function i_destructor):
 	destructor_(i_destructor),
@@ -163,9 +167,14 @@ class psyq::_singleton_ordered_destructor:
 	}
 
 	//-------------------------------------------------------------------------
-	private: this_type*                   next_;       ///< 次のnode。
-	private: typename this_type::function destructor_; ///< 破棄時に呼び出す関数。
-	private: int                          priority_;   ///< 破棄の優先順位。昇順に破棄される。
+	///< 次のnode。
+	private: this_type* next_;
+
+	///< 破棄時に呼び出す関数。
+	private: typename this_type::function destructor_;
+
+	///< 破棄の優先順位。昇順に破棄される。
+	private: int priority_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -201,7 +210,7 @@ class psyq::_singleton_ordered_holder:
 	//-------------------------------------------------------------------------
 	/** @brief 保持している領域にinstanceを構築する。
 	    @param[in,out] io_pointer 構築したinstanceへのpointerが格納される。
-	    @param[in] i_constructor  boost::in_placeから取得した構築関数object。
+	    @param[in] i_constructor  boost::in_place から取得した構築関数object。
 	 */
 	private: template< typename t_constructor >
 	void construct(
@@ -275,8 +284,10 @@ class psyq::singleton:
 
 	//-------------------------------------------------------------------------
 	/** @brief sigleton-instanceを取得する。
-	    @return singleton-instanceへのpointer。
+	    @return
+	        singleton-instanceへのpointer。
 	        ただしsingleton-instanceをまだ構築してない場合は、NULLを返す。
+	    @sa construct
 	 */
 	public: static t_value* get()
 	{
@@ -285,9 +296,11 @@ class psyq::singleton:
 
 	//-------------------------------------------------------------------------
 	/** @brief sigleton-instanceをdefault-constructorで構築する。
-	        すでにsingleton-instanceがあるなら、何も行わずに既存のものを返す。
+
+	    すでにsingleton-instanceがあるなら、何も行わずに既存のものを返す。
 	    @param[in] i_destruct_priority 破棄の優先順位。破棄は昇順に行われる。
 	    @return singleton-instanceへのpointer。
+	    @sa get
 	 */
 	public: static t_value* construct(int const i_destruct_priority = 0)
 	{
@@ -295,10 +308,12 @@ class psyq::singleton:
 	}
 
 	/** @brief sigleton-instanceを構築する。
-	        すでにsingleton-instanceがあるなら、何も行わずに既存のものを返す。
-	    @param[in] i_constructor boost::in_placeから取得した構築関数object。
+
+	    すでにsingleton-instanceがあるなら、何も行わずに既存のものを返す。
+	    @param[in] i_constructor boost::in_place から取得した構築関数object。
 	    @param[in] i_destruct_priority 破棄の優先順位。破棄は昇順に行われる。
 	    @return singleton-instanceへのpointer。
+	    @sa get
 	 */
 	public: template< typename t_constructor >
 	static t_value* construct(
@@ -320,8 +335,10 @@ class psyq::singleton:
 
 	//-------------------------------------------------------------------------
 	/** @brief 破棄の優先順位を取得する。
-	    @return singleton-instanceの破棄の優先順位。破棄は昇順に行われる。
+	    @return
+	        singleton-instanceの破棄の優先順位。破棄は昇順に行われる。
 	        ただしsingleton-instanceをまだ構築してない場合は、0を返す。
+	    @sa construct
 	 */
 	public: static int get_destruct_priority()
 	{
@@ -333,9 +350,11 @@ class psyq::singleton:
 	}
 
 	/** @brief 破棄の優先順位を設定する。
-	        ただしsingleton-instanceをまだ構築してない場合は、何も行わない。
+
+	    ただしsingleton-instanceをまだ構築してない場合は、何も行わない。
 	    @param[in] i_priority 破棄の優先順位。破棄は昇順に行われる。
 	    @return i_priorityをそのまま返す。
+	    @sa construct
 	 */
 	public: static int set_destruct_priority(int const i_priority)
 	{
@@ -360,7 +379,7 @@ class psyq::singleton:
 
 	//-------------------------------------------------------------------------
 	/** @brief singleton-instanceを構築する。
-	    @param[in] i_constructor boost::in_placeから取得した構築関数object。
+	    @param[in] i_constructor boost::in_place から取得した構築関数object。
 	    @param[in] i_priority 破棄の優先順位。
 	 */
 	private: template< typename t_constructor >
@@ -395,8 +414,9 @@ class psyq::singleton:
 	}
 
 	/** @brief singleton-instance領域を参照する。
-	        静的局所変数なので、構築は最初にこの関数が呼ばれた時点で行われる。
-	        最初は必ずconstruct_instance()から呼ばれる。
+
+	    静的局所変数なので、構築は最初にこの関数が呼ばれた時点で行われる。
+	    最初は必ず construct_instance() から呼ばれる。
 	 */
 	private: static typename this_type::instance_holder& instance()
 	{

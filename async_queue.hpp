@@ -13,10 +13,10 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 非同期task-queue。
-    @tparam t_mutex     使用するmutexの型。
-    @tparam t_condition 使用するの条件変数の型。
-    @tparam t_thread    使用するthread-handleの型。
+/** @brief 非同期処理task-queue。
+    @tparam t_mutex     @copydoc async_queue::mutex
+    @tparam t_condition @copydoc async_queue::condition
+    @tparam t_thread    @copydoc async_queue::thread
  */
 template<
 	typename t_mutex = PSYQ_MUTEX_DEFAULT,
@@ -25,28 +25,42 @@ template<
 class psyq::async_queue:
 	private boost::noncopyable
 {
+	/// このobjectの型。
 	public: typedef psyq::async_queue< t_mutex, t_condition, t_thread >
 		this_type;
 
 	//-------------------------------------------------------------------------
+	/// threadの同期に使うmutexの型。
 	public: typedef t_mutex mutex;
+
+	/// threadの同期に使う条件変数の型。
 	public: typedef t_condition condition;
+
+	/// 非同期処理taskを実行するthread-handleの型。
 	public: typedef t_thread thread;
 
 	//-------------------------------------------------------------------------
-	/// 非同期task配列。
+	/** @brief 非同期処理task配列。
+	    @tparam t_value 配列要素の型。
+	 */
 	private: template< typename t_value >
 	class array:
 		private psyq::dynamic_storage
 	{
-		typedef array this_type;
-		typedef psyq::dynamic_storage super_type;
+		typedef array this_type;                  ///< このobjectの型。
+		typedef psyq::dynamic_storage super_type; ///< このobjectの基底型。
 
 		public: array(): super_type()
 		{
 			// pass
 		}
 
+		/** @param[in] i_type      使用するmemory-arenaの型。
+		    @param[in] i_size      配列の要素数。
+		    @param[in] i_alignment 配列領域のmemory配置境界値。
+		    @param[in] i_offset    配列領域のmemory-offset値。
+		    @param[in] i_name      配列領域のmemory識別名。
+		 */
 		private: template< typename t_arena >
 		array(
 			boost::type< t_arena > const& i_type,
@@ -70,27 +84,37 @@ class psyq::async_queue:
 			}
 		}
 
+		/** @brief 配列を交換。
+		    @param[in,out] io_target 配列を交換するinstance。
+		 */
 		public: void swap(this_type& io_target)
 		{
 			this->super_type::swap(io_target);
 		}
 
+		/** @brief 配列の先頭addressを取得。
+		 */
 		public: t_value* get_address()
 		{
 			return static_cast< t_value* >(this->super_type::get_address());
 		}
 
+		/** @brief 配列の要素数を取得。
+		 */
 		public: std::size_t get_size() const
 		{
 			return this->super_type::get_size() / sizeof(t_value);
 		}
 
+		/** @brief 配列が空か判定。
+		 */
 		public: bool is_empty() const
 		{
 			return this->super_type::get_size() <= 0;
 		}
 
 		/** @brief 配列の大きさを変更する。
+		    @tparam    t_arena       使用するmemory-arena。
 		    @param[in] i_last_size   元の配列の要素数。
 		    @param[in] i_new_size    新しい配列の要素数。
 			@param[in] i_memory_name 確保するmemoryの識別名。debugでのみ使う。
@@ -119,7 +143,7 @@ class psyq::async_queue:
 					new(&a_new_tasks[i]) t_value();
 				}
 
-				// 元の配列が持つ非同期taskを、新しい配列に移動。
+				// 元の配列が持つ非同期処理taskを、新しい配列に移動。
 				t_value* const a_last_tasks(this->get_address());
 				if (NULL != a_last_tasks)
 				{
@@ -136,9 +160,9 @@ class psyq::async_queue:
 			this->swap(a_array);
 		}
 
-		/** @brief 配列が持つ非同期taskを実行する。
-		    @param[in] i_size 配列が持つ非同期taskの数。
-		    @return 配列が持つ非同期taskの数。
+		/** @brief 配列が持つ非同期処理taskを実行する。
+		    @param[in] i_size 配列が持つ非同期処理taskの数。
+		    @return 配列が持つ非同期処理taskの数。
 		 */
 		public: std::size_t run(std::size_t const i_size)
 		{
@@ -174,7 +198,7 @@ class psyq::async_queue:
 			return a_new_size;
 		}
 
-		/** @brief 配列が持つ非同期taskを途中終了する。
+		/** @brief 配列が持つ非同期処理taskを途中終了する。
 		 */
 		public: void abort()
 		{
@@ -194,12 +218,17 @@ class psyq::async_queue:
 	};
 
 	//-------------------------------------------------------------------------
+	/// 非同期処理taskのsmart-pointer。
 	private: typedef psyq::async_task::weak_ptr task_ptr;
+
+	/// 非同期処理task配列。
 	private: typedef typename
 		this_type::template array< typename this_type::task_ptr >
 			task_array;
 
 	//-------------------------------------------------------------------------
+	/** @param[in] i_start 非同期処理を開始するか。
+	 */
 	public: explicit async_queue(bool const i_start = true):
 	running_size_(0),
 	stop_request_(false)
@@ -216,14 +245,14 @@ class psyq::async_queue:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 実行中の非同期taskの数を取得。
+	/** @brief 実行中の非同期処理taskの数を取得。
 	 */
 	public: std::size_t get_size() const
 	{
 		return this->running_size_;
 	}
 
-	/** @brief 非同期task配列の容量を取得。
+	/** @brief 非同期処理task配列の容量を取得。
 	 */
 	public: std::size_t get_capacity() const
 	{
@@ -274,10 +303,10 @@ class psyq::async_queue:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 非同期taskを登録。
+	/** @brief 非同期処理taskを登録。
 	    @param[in] i_allocator memory確保に使う割当子。
-	    @param[in] i_task      登録する非同期taskを指すsmart-pointer。
-	    @return 登録した非同期taskの数。
+	    @param[in] i_task      登録する非同期処理taskを指すsmart-pointer。
+	    @return 登録した非同期処理taskの数。
 	 */
 	public: template< typename t_allocator >
 	std::size_t insert(
@@ -287,11 +316,11 @@ class psyq::async_queue:
 		return this->insert(i_allocator, &i_task, &i_task + 1);
 	}
 
-	/** @brief 非同期taskを登録。
+	/** @brief 非同期処理taskを登録。
 	    @tparam t_arena   memory確保に使うmemory-arenaの型。
-	    @param[in] i_task 登録する非同期taskを指すsmart-pointer。
+	    @param[in] i_task 登録する非同期処理taskを指すsmart-pointer。
 	    @param[in] i_name 確保するmemoryの識別名。debugでのみ使う。
-	    @return 登録した非同期taskの数。
+	    @return 登録した非同期処理taskの数。
 	 */
 	public: template< typename t_arena >
 	std::size_t insert(
@@ -301,11 +330,11 @@ class psyq::async_queue:
 		return this->template insert< t_arena >(&i_task, &i_task + 1, i_name);
 	}
 
-	/** @brief 追加task-containerが持つ非同期taskをまとめて登録。
+	/** @brief 追加task-containerが持つ非同期処理taskをまとめて登録。
 	    @param[in] i_allocator memory確保に使う割当子。
 	    @param[in] i_begin     追加task-containerの先頭位置。
 	    @param[in] i_end       追加task-containerの末尾位置。
-	    @return 登録した非同期taskの数。
+	    @return 登録した非同期処理taskの数。
 	 */
 	public: template< typename t_allocator, typename t_iterator >
 	std::size_t insert(
@@ -317,13 +346,13 @@ class psyq::async_queue:
 			i_begin, i_end, i_allocator.get_name());
 	}
 
-	/** @brief 追加task-containerが持つ非同期taskをまとめて登録。
+	/** @brief 追加task-containerが持つ非同期処理taskをまとめて登録。
 	    @tparam t_arena    memory確保に使うmemory-arenaの型。
 	    @tparam t_iterator shared_ptr型containerのiterator型。
 	    @param[in] i_begin 追加task-containerの先頭位置。
 	    @param[in] i_end   追加task-containerの末尾位置。
 	    @param[in] i_name  確保するmemoryの識別名。debugでのみ使う。
-	    @return 登録した非同期taskの数。
+	    @return 登録した非同期処理taskの数。
 	 */
 	public: template< typename t_arena, typename t_iterator >
 	std::size_t insert(
@@ -340,8 +369,8 @@ class psyq::async_queue:
 		this->reserve_tasks_.template resize< t_arena >(
 			a_last_size, a_last_size + std::distance(i_begin, i_end), i_name);
 
-		// 追加task-containerが持つ非同期taskのうち、
-		// busy状態ではない非同期taskだけを、予約task配列にcopyする。
+		// 追加task-containerが持つ非同期処理taskのうち、
+		// busy状態ではない非同期処理taskだけを、予約task配列にcopyする。
 		typename this_type::task_ptr* a_new_task(
 			this->reserve_tasks_.get_address() + a_last_size);
 		for (t_iterator i = i_begin; i_end != i; ++i)
@@ -383,7 +412,7 @@ class psyq::async_queue:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 非同期処理用のthreadを起動。
+	/** @brief 非同期処理taskを実行するthreadを起動。
 	 */
 	private: void start_run()
 	{
@@ -464,12 +493,23 @@ class psyq::async_queue:
 	}
 
 	//-------------------------------------------------------------------------
-	private: t_mutex                        mutex_;
-	private: t_thread                       thread_;
-	private: t_condition                    condition_;
-	private: typename this_type::task_array reserve_tasks_; ///< 予約task配列。
-	private: std::size_t                    running_size_;  ///< 実行task配列の要素数。
-	private: bool                           stop_request_;  ///< 実行停止要求。
+	/// threadの同期に使うmutex。
+	private: t_mutex mutex_;
+
+	/// 非同期処理taskを実行するthread。
+	private: t_thread thread_;
+
+	/// threadの同期に使う条件変数。
+	private: t_condition condition_;
+
+	/// 予約されてる非同期処理taskの配列。
+	private: typename this_type::task_array reserve_tasks_;
+
+	/// 実行中の非同期処理taskの数。
+	private: std::size_t running_size_;
+
+	/// 実行停止要求。
+	private: bool stop_request_;
 };
 
 #endif // !PSYQ_ASYNC_QUEUE_HPP_

@@ -1,3 +1,4 @@
+/// @file
 #ifndef PSYQ_ASYNC_TASK_HPP_
 #define PSYQ_ASYNC_TASK_HPP_
 
@@ -124,7 +125,7 @@ class psyq::async_task:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief mutex‚ğ‚Â”ñ“¯Šúˆ—task‚ÌŠî’êŒ^B
+/** @brief mutex‚ğŒ®‚Ég‚¤”ñ“¯Šúˆ—task‚ÌŠî’êŒ^B
     @tparam t_mutex @copydoc lockable_async_task::mutex
  */
 template< typename t_mutex >

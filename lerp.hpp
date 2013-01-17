@@ -1,3 +1,4 @@
+/// @file
 #ifndef PSYQ_LERP_HPP_
 #define PSYQ_LERP_HPP_
 
@@ -10,12 +11,13 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 任意型の値の線形補間animation。
-	@tparam t_value 線形補間する値の型。
-	@tparam t_time  線形補間する時間の型。
+    @tparam t_value @copydoc lerp::value_type
+    @tparam t_time  @copydoc lerp::time
  */
 template< typename t_value, typename t_time >
 class psyq::lerp
 {
+	/// このobjectの型。
 	public: typedef psyq::lerp< t_value, t_time > this_type;
 
 	//-------------------------------------------------------------------------
@@ -23,7 +25,7 @@ class psyq::lerp
 	public: typedef t_time time;        ///< 線形補間の時間の型。
 
 	//-------------------------------------------------------------------------
-	/** @param i_current 初期値。
+	/** @param i_current 線形補間の開始値と終了値。
 	 */
 	public: explicit lerp(t_value const& i_current = t_value(0)):
 	value_diff_(0),
@@ -34,7 +36,7 @@ class psyq::lerp
 		// pass
 	}
 
-	/**	@param[in] i_time  終了までの時間。
+	/**	@param[in] i_time  線形補間の終了までの時間。
 	    @param[in] i_start 線形補間の開始値。
 	    @param[in] i_end   線形補間の終了値。
 	 */
@@ -76,7 +78,7 @@ class psyq::lerp
 
 	//-------------------------------------------------------------------------
 	/** @brief 線形補間の時間を進める。
-		@param[in] i_time どれだけ時間を進めるか。
+	    @param[in] i_time 進める時間。
 	 */
 	public: void update(t_time const& i_time)
 	{
@@ -94,7 +96,7 @@ class psyq::lerp
 
 	//-------------------------------------------------------------------------
 	/** @brief 線形補間の再設定。
-	    @param[in] i_time  終了までの時間。
+	    @param[in] i_time  線形補間の終了までの時間。
 	    @param[in] i_start 線形補間の開始値。
 	    @param[in] i_end   線形補間の終了値。
 	 */
@@ -107,7 +109,7 @@ class psyq::lerp
 	}
 
 	/** @brief 線形補間の再設定。
-	    @param[in] i_time 終了までの時間。
+	    @param[in] i_time 線形補間の終了までの時間。
 	    @param[in] i_end  線形補間の終了値。
 	 */
 	public: void reset(t_time const&  i_time, t_value const& i_end)
@@ -115,16 +117,19 @@ class psyq::lerp
 		this->reset(i_time, this->current(), i_end);
 	}
 
+	/** @brief 線形補間の再設定。
+	    @param[in] i_current 線形補間の開始値と終了値。
+	 */
 	public: void reset(t_value const& i_current)
 	{
 		new(this) this_type(i_current);
 	}
 
 	//-------------------------------------------------------------------------
-	private: t_value value_diff_; ///< 開始値と終了値の差。
-	private: t_value end_value_;  ///< 終了値
-	private: t_time  time_diff_;  ///< 開始時間と終了時間の差。
-	private: t_time  rest_time_;  ///< 残り時間。
+	private: t_value value_diff_; ///< 線形補間の開始値と終了値の差。
+	private: t_value end_value_;  ///< 線形補間の終了値
+	private: t_time  time_diff_;  ///< 線形補間の開始時間と終了時間の差。
+	private: t_time  rest_time_;  ///< 線形補間の残り時間。
 };
 
 #endif // PSYQ_LERP_HPP_

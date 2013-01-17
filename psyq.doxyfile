@@ -687,7 +687,7 @@ INPUT                  = ./async_file.hpp \
                          ./file_handle.hpp \
                          ./fnv_hash.hpp \
                          ./lerp.hpp \
-                         ./posix_file_desciptor.hpp \
+                         ./posix_file_descriptor.hpp \
                          ./simple_singleton.hpp \
                          ./singleton.hpp \
                          ./thread.hpp \
@@ -700,7 +700,7 @@ INPUT                  = ./async_file.hpp \
                          ./memory/small_allocator.hpp \
                          ./scene/event_action.hpp \
                          ./scene/event_line.hpp \
-                         ./scene/event_package.hpp\
+                         ./scene/event_package.hpp \
                          ./scene/event_stage.hpp \
                          ./scene/layered_scale.hpp \
                          ./scene/render_target.hpp \

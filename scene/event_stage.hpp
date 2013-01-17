@@ -535,7 +535,7 @@ class psyq::event_stage
 		}
 	}
 
-	/** @biref 文字列から'('と')'で囲まれた単語を検索。
+	/** @brief 文字列から'('と')'で囲まれた単語を検索。
 	    @param[in] i_begin 検索範囲の先頭位置。
 	    @param[in] i_end   検索範囲の末尾位置。
 	    @return '('と')'で囲まれた単語。

@@ -18,7 +18,7 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 非同期file処理の基底型。
     @ingroup async-file-processing
-    @tparam t_handle @copydoc _async_file_task::file
+    @tparam t_handle @copydoc _async_file_task::handle
     @tparam t_mutex  @copydoc _async_file_task::mutex
  */
 template< typename t_handle, typename t_mutex >
@@ -33,7 +33,7 @@ class psyq::_async_file_task:
 
 	//-------------------------------------------------------------------------
 	/// このinstanceが保持するfile-handleの型。
-	public: typedef t_handle file;
+	public: typedef t_handle handle;
 
 	/// このinstanceが保持するmutexの型。
 	protected: typedef t_mutex mutex;
@@ -45,14 +45,16 @@ class psyq::_async_file_task:
 	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
 
 	//-------------------------------------------------------------------------
-	/** @brief file-handleを取得。
+	/** @brief 保持してるfile-handleを取得。
+	    @return 保持してるfile-handleの保持子。
 	 */
 	public: typename t_handle::shared_ptr const& get_handle() const
 	{
 		return this->handle_;
 	}
 
-	/** @brief file-bufferを取得。
+	/** @brief 保持してる file_buffer を取得。
+	    @return 保持してる file_buffer へのpointer。
 	 */
 	public: psyq::file_buffer const* get_buffer() const
 	{
@@ -60,7 +62,7 @@ class psyq::_async_file_task:
 			&this->buffer_: NULL;
 	}
 
-	/** @brief file-bufferを取得。
+	/** @copydoc get_buffer
 	 */
 	public: psyq::file_buffer* get_buffer()
 	{
@@ -78,7 +80,7 @@ class psyq::_async_file_task:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @param[in] i_handle file-handleの初期値。
+	/** @param[in] i_handle このinstanceで保持させるfile-handle。
 	 */
 	protected: explicit _async_file_task(
 		typename t_handle::shared_ptr const& i_handle):
@@ -103,7 +105,7 @@ class psyq::_async_file_task:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 非同期file読み込み処理object。
     @ingroup async-file-processing
-    @tparam t_handle @copydoc _async_file_task::file
+    @tparam t_handle @copydoc _async_file_task::handle
     @tparam t_arena  @copydoc async_file_reader::arena
     @tparam t_mutex  @copydoc _async_file_task::mutex
  */
@@ -195,6 +197,9 @@ class psyq::async_file_writer:
 	public: typedef psyq::_async_file_task< t_handle, t_mutex > super_type;
 
 	//-------------------------------------------------------------------------
+	/** @param[in]     i_handle  読み込むfile。
+	    @param[in,out] io_buffer 読み込んだfileを書き出すbuffer。
+	 */
 	public: async_file_writer(
 		typename t_handle::shared_ptr const& i_handle,
 		psyq::file_buffer&                   io_buffer):
@@ -213,24 +218,30 @@ class psyq::async_file_writer:
 	}
 
 	//-------------------------------------------------------------------------
-	private: std::size_t write_size_;
+	private: std::size_t write_size_; ///< 書き出すバイトサイズ。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 非同期file-mapping-object。
     @ingroup async-file-processing
-    @tparam t_mutex このinstanceが保持するmutexの型。
+    @tparam t_mutex @copydoc lockable_async_task::mutex
  */
 template< typename t_mutex = PSYQ_MUTEX_DEFAULT >
 class psyq::async_file_mapper:
 	public psyq::lockable_async_task< t_mutex >
 {
+	/// このobjectの型。
 	public: typedef psyq::async_file_mapper< t_mutex > this_type;
+
+	/// このobjectの基底型。
 	public: typedef psyq::lockable_async_task< t_mutex > super_type;
 
 	//-------------------------------------------------------------------------
+	/// file-mappingの保持子。
 	public: typedef PSYQ_SHARED_PTR< boost::interprocess::file_mapping >
 		handle_shared_ptr;
+
+	/// file-mappingの監視子。
 	public: typedef PSYQ_WEAK_PTR< boost::interprocess::file_mapping >
 		handle_weak_ptr;
 

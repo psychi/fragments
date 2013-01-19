@@ -15,7 +15,24 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 非同期処理taskの基底型。
+/** @brief 非同期taskの基底型。
+
+    - 非同期taskの保持子を psyq::async_queue::insert() の引数に渡すことで、
+      非同期taskを非同期task実行queueに予約できる。
+      予約された非同期taskは予約busy状態となり、実行が終了するか
+      abort() しないと、他の非同期task実行queueに予約できない。
+
+    - psyq::async_queue::flush() で非同期task実行queueが更新されると、
+      予約された非同期taskは実行busy状態となる。
+
+    - 実行busy状態となった非同期taskは、適当な時点で非同期task実行threadから
+      run() が呼び出される。
+      その返り値が state_BUSY 以外なら非同期taskは実行終了し、
+      非同期task実行queueから掃き出される。
+      返り値が state_BUSY なら非同期taskの実行は継続し、しばらくして再び
+      run() が呼び出される。
+
+    @sa async_queue
  */
 class psyq::async_task:
 	private boost::noncopyable
@@ -23,7 +40,8 @@ class psyq::async_task:
 	/// このobjectの型。
 	public: typedef psyq::async_task this_type;
 
-	template< typename, typename, typename > friend class async_queue;
+	template< typename, typename, typename, typename >
+	friend class async_queue;
 
 	//-------------------------------------------------------------------------
 	/// このinstanceの保持子。
@@ -37,10 +55,10 @@ class psyq::async_task:
 	/// @endcond
 
 	//-------------------------------------------------------------------------
-	/// taskの状態値。
+	/// taskの実行状態値。
 	public: enum state
 	{
-		state_BUSY,     ///< 実行中。
+		state_BUSY,     ///< busy状態。実行中か、実行が予約されている。
 		state_FINISHED, ///< 正常終了。
 		state_ABORTED,  ///< 途中終了。
 	};
@@ -57,7 +75,7 @@ class psyq::async_task:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 関数objectを呼び出す非同期処理taskを生成。
+	/** @brief 関数objectを呼び出す非同期taskを生成。
 	    @param[in] i_allocator memory割当に使うallocator。
 	    @param[in] i_functor   呼び出す関数object。
 	 */
@@ -69,7 +87,7 @@ class psyq::async_task:
 		return this_type::create< PSYQ_MUTEX_DEFAULT >(i_allocator, i_functor);
 	}
 
-	/** @brief 関数objectを呼び出す非同期処理taskを生成。
+	/** @brief 関数objectを呼び出す非同期taskを生成。
 	    @param[in] i_allocator memory割当に使うallocator。
 	    @param[in] i_functor   呼び出す関数object。
 	 */
@@ -88,23 +106,43 @@ class psyq::async_task:
 	//-------------------------------------------------------------------------
 	/** @brief taskの状態値を取得。
 	 */
-	public: boost::uint32_t get_state() const
+	public: int get_state() const
 	{
 		return this->state_;
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 鍵があくのを待ってからtaskの状態値を設定。
-	    @param[in] i_state 設定する状態値。
-	    @return false以外なら成功。falseなら失敗。
+	/** @brief taskの実行を途中終了。
+	    @param[in] i_state 新たに設定する state_BUSY 以外の実行状態値。
 	 */
-	protected: virtual bool set_lockable_state(boost::uint32_t const i_state) = 0;
+	public: virtual void abort(
+		int const i_state = this_type::state_ABORTED) = 0;
 
-	/** @brief 鍵を無視してtaskの状態値を設定。
-	    @param[in] i_state 設定する状態値。
-	    @return false以外なら成功。falseなら失敗。
+	/** @brief 実行状態値を設定。
+	    @param[in] i_state 設定する実行状態値。
+	    @retval !=false 実行状態値を設定した。
+	    @retval ==false busy状態だったので、実行状態値を設定できなかった。
 	 */
-	protected: bool set_unlockable_state(boost::uint32_t const i_state)
+	protected: virtual bool set_state(int const i_state) = 0;
+
+	/** @brief 実行状態値にtask終了状態を設定。
+	    @param[in] i_state 設定する state_BUSY 以外の実行状態値。
+	 */
+	protected: void set_finish_state(int const i_state)
+	{
+		if (this_type::state_BUSY != i_state &&
+			this_type::state_BUSY == this->get_state())
+		{
+			this->state_ = i_state;
+		}
+	}
+
+	/** @brief idle状態のtaskに実行状態値を設定。
+	    @param[in] i_state 設定する実行状態値。
+	    @retval !=false 実行状態値を設定した。
+	    @retval ==false busy状態だったので、実行状態値を設定できなかった。
+	 */
+	protected: bool set_idle_state(int const i_state)
 	{
 		if (this_type::state_BUSY != this->get_state())
 		{
@@ -116,16 +154,16 @@ class psyq::async_task:
 
 	//-------------------------------------------------------------------------
 	/** @brief taskを実行。
+	    @return 実行状態。 async_task::state_BUSY 以外だと非同期taskの実行を終了し、新たにその値が実行状態値に設定される。
 	 */
-	protected: virtual boost::uint32_t run() = 0;
+	protected: virtual int run() = 0;
 
 	//-------------------------------------------------------------------------
-	/// taskの状態値。
-	private: boost::uint32_t state_;
+	private: boost::int32_t state_; ///< taskの実行状態値。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief mutexを鍵に使う非同期処理taskの基底型。
+/** @brief mutexを鍵に使う非同期taskの基底型。
     @tparam t_mutex @copydoc lockable_async_task::mutex
  */
 template< typename t_mutex >
@@ -139,7 +177,7 @@ class psyq::lockable_async_task:
 	public: typedef psyq::async_task super_type;
 
 	//-------------------------------------------------------------------------
-	/// 鍵に使うmutexの型。
+	/// lockに使うmutexの型。
 	public: typedef t_mutex mutex;
 
 	//-------------------------------------------------------------------------
@@ -148,19 +186,24 @@ class psyq::lockable_async_task:
 		// pass
 	}
 
-	protected: virtual bool set_lockable_state(boost::uint32_t const i_state)
+	public: virtual void abort(int const i_state = super_type::state_ABORTED)
 	{
 		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
-		return this->set_unlockable_state(i_state);
+		this->set_finish_state(i_state);
+	}
+
+	protected: virtual bool set_state(int const i_state)
+	{
+		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
+		return this->set_idle_state(i_state);
 	}
 
 	//-------------------------------------------------------------------------
-	/// 鍵に使うmutex。
-	private: t_mutex mutex_;
+	private: t_mutex mutex_; ///< lockに使うmutex。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 関数objectを呼び出す非同期処理task。
+/** @brief 関数objectを呼び出す非同期task。
     @tparam t_functor 呼び出す関数objectの型。
     @tparam t_mutex   このobjectで使うmutexの型。
  */
@@ -185,14 +228,13 @@ class psyq::async_task::function_wrapper:
 		// pass
 	}
 
-	protected: virtual boost::uint32_t run()
+	protected: virtual int run()
 	{
 		return this->functor_();
 	}
 
 	//-------------------------------------------------------------------------
-	/// 呼び出す関数objectのinstance。
-	private: t_functor functor_;
+	private: t_functor functor_; ///< 呼び出す関数object。
 };
 
 #endif // !PSYQ_ASYNC_TASK_HPP_

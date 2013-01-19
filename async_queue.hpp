@@ -8,17 +8,26 @@
 /// @cond
 namespace psyq
 {
-	template< typename, typename, typename > class async_queue;
+	template< typename, typename, typename, typename > class async_queue;
 }
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 非同期処理task-queue。
+/** @brief 非同期taskを実行するqueue。
+    @tparam t_container @copydoc async_queue::container
     @tparam t_mutex     @copydoc async_queue::mutex
     @tparam t_condition @copydoc async_queue::condition
     @tparam t_thread    @copydoc async_queue::thread
+    @sa async_task
  */
 template<
+	typename t_container = std::vector<
+		psyq::async_task::shared_ptr,
+		psyq::allocator<
+			psyq::async_task::shared_ptr,
+			boost::alignment_of< psyq::async_task::shared_ptr >::value,
+			0,
+			PSYQ_ARENA_DEFAULT > >,
 	typename t_mutex = PSYQ_MUTEX_DEFAULT,
 	typename t_condition = PSYQ_CONDITION_DEFAULT,
 	typename t_thread = PSYQ_THREAD_DEFAULT >
@@ -26,244 +35,78 @@ class psyq::async_queue:
 	private boost::noncopyable
 {
 	/// このobjectの型。
-	public: typedef psyq::async_queue< t_mutex, t_condition, t_thread >
+	public: typedef async_queue< t_container, t_mutex, t_condition, t_thread >
 		this_type;
 
 	//-------------------------------------------------------------------------
-	/// threadの同期に使うmutexの型。
+	/// 非同期task-containerの型。 std::vector 互換。
+	public: typedef t_container container;
+
+	/// lockに使うmutexの型。
 	public: typedef t_mutex mutex;
 
 	/// threadの同期に使う条件変数の型。
 	public: typedef t_condition condition;
 
-	/// 非同期処理taskを実行するthread-handleの型。
+	/// 非同期taskを実行するthread-handleの型。
 	public: typedef t_thread thread;
 
 	//-------------------------------------------------------------------------
-	/** @brief 非同期処理task配列。
-	    @tparam t_value 配列要素の型。
-	 */
-	private: template< typename t_value >
-	class array:
-		private psyq::dynamic_storage
+	public: async_queue()
 	{
-		typedef array this_type;                  ///< このobjectの型。
-		typedef psyq::dynamic_storage super_type; ///< このobjectの基底型。
+		this->~this_type();
+		new(this) this_type(
+			true, typename t_container::allocator_type());
+	}
 
-		public: array(): super_type()
-		{
-			// pass
-		}
-
-		/** @param[in] i_type      使用するmemory-arenaの型。
-		    @param[in] i_size      配列の要素数。
-		    @param[in] i_alignment 配列領域のmemory配置境界値。
-		    @param[in] i_offset    配列領域のmemory-offset値。
-		    @param[in] i_name      配列領域のmemory識別名。
-		 */
-		private: template< typename t_arena >
-		array(
-			boost::type< t_arena > const& i_type,
-			std::size_t const             i_size,
-			std::size_t const             i_alignment,
-			std::size_t const             i_offset,
-			char const* const             i_name):
-		super_type(
-			i_type, i_size * sizeof(t_value), i_alignment, i_offset, i_name)
-		{
-			// pass
-		}
-
-		public: ~array()
-		{
-			t_value* const a_tasks(this->get_address());
-			std::size_t const a_size(this->get_size());
-			for (std::size_t i = 0; i < a_size; ++i)
-			{
-				a_tasks[i].~t_value();
-			}
-		}
-
-		/** @brief 配列を交換。
-		    @param[in,out] io_target 配列を交換するinstance。
-		 */
-		public: void swap(this_type& io_target)
-		{
-			this->super_type::swap(io_target);
-		}
-
-		/** @brief 配列の先頭addressを取得。
-		 */
-		public: t_value* get_address()
-		{
-			return static_cast< t_value* >(this->super_type::get_address());
-		}
-
-		/** @brief 配列の要素数を取得。
-		 */
-		public: std::size_t get_size() const
-		{
-			return this->super_type::get_size() / sizeof(t_value);
-		}
-
-		/** @brief 配列が空か判定。
-		 */
-		public: bool is_empty() const
-		{
-			return this->super_type::get_size() <= 0;
-		}
-
-		/** @brief 配列の大きさを変更する。
-		    @tparam    t_arena       使用するmemory-arena。
-		    @param[in] i_last_size   元の配列の要素数。
-		    @param[in] i_new_size    新しい配列の要素数。
-			@param[in] i_memory_name 確保するmemoryの識別名。debugでのみ使う。
-		 */
-		public: template< typename t_arena >
-		void resize(
-			std::size_t const i_last_size,
-			std::size_t const i_new_size,
-			char const* const i_memory_name)
-		{
-			PSYQ_ASSERT(i_last_size <= this->get_size());
-			PSYQ_ASSERT(i_last_size <= i_new_size);
-
-			// 新しい配列を確保。
-			this_type a_array(
-				boost::type< t_arena >(),
-				i_new_size,
-				boost::alignment_of< t_value >::value,
-				0,
-				i_memory_name);
-			t_value* const a_new_tasks(a_array.get_address());
-			if (NULL != a_new_tasks)
-			{
-				for (std::size_t i = 0; i < i_new_size; ++i)
-				{
-					new(&a_new_tasks[i]) t_value();
-				}
-
-				// 元の配列が持つ非同期処理taskを、新しい配列に移動。
-				t_value* const a_last_tasks(this->get_address());
-				if (NULL != a_last_tasks)
-				{
-					for (std::size_t i = 0; i < i_last_size; ++i)
-					{
-						a_new_tasks[i].swap(a_last_tasks[i]);
-					}
-				}
-			}
-			else
-			{
-				PSYQ_ASSERT(i_new_size <= 0);
-			}
-			this->swap(a_array);
-		}
-
-		/** @brief 配列が持つ非同期処理taskを実行する。
-		    @param[in] i_size 配列が持つ非同期処理taskの数。
-		    @return 配列が持つ非同期処理taskの数。
-		 */
-		public: std::size_t run(std::size_t const i_size)
-		{
-			PSYQ_ASSERT(i_size <= this->get_size());
-			t_value* const a_tasks(this->get_address());
-			std::size_t a_new_size(0);
-			for (std::size_t i = 0; i < i_size; ++i)
-			{
-				// taskを取得。
-				psyq::async_task::shared_ptr const a_holder(a_tasks[i].lock());
-				psyq::async_task* const a_task(a_holder.get());
-				if (NULL != a_task &&
-					psyq::async_task::state_BUSY == a_task->get_state())
-				{
-					// taskを実行し、実行状態を取得。
-					boost::uint32_t const a_state(a_task->run());
-					if (psyq::async_task::state_BUSY == a_state)
-					{
-						a_tasks[a_new_size].swap(a_tasks[i]);
-						++a_new_size;
-						continue;
-					}
-					else
-					{
-						// taskがbusy状態ではなくなった。
-						a_task->state_ = a_state;
-					}
-				}
-
-				// taskがbusy状態ではなくなったので、解放。
-				a_tasks[i].reset();
-			}
-			return a_new_size;
-		}
-
-		/** @brief 配列が持つ非同期処理taskを途中終了する。
-		 */
-		public: void abort()
-		{
-			t_value* const a_tasks(this->get_address());
-			std::size_t const a_size(this->get_size());
-			for (std::size_t i = 0; i < a_size; ++i)
-			{
-				psyq::async_task::shared_ptr const a_holder(a_tasks[i].lock());
-				psyq::async_task* const a_task(a_holder.get());
-				if (NULL != a_task &&
-					psyq::async_task::state_BUSY == a_task->get_state())
-				{
-					a_task->state_ = psyq::async_task::state_ABORTED;
-				}
-			}
-		}
-	};
-
-	//-------------------------------------------------------------------------
-	/// 非同期処理taskのsmart-pointer。
-	private: typedef psyq::async_task::weak_ptr task_ptr;
-
-	/// 非同期処理task配列。
-	private: typedef typename
-		this_type::template array< typename this_type::task_ptr >
-			task_array;
-
-	//-------------------------------------------------------------------------
-	/** @param[in] i_start 非同期処理を開始するか。
+	/** @param[in] i_allocator memory割当子の初期値。
+	    @param[in] i_start     非同期task実行threadを開始するか。
 	 */
-	public: explicit async_queue(bool const i_start = true):
+	private: template< typename t_allocator >
+	async_queue(
+		bool const         i_start,
+		t_allocator const& i_allocator):
+	reserve_tasks_(i_allocator),
 	running_size_(0),
-	stop_request_(false)
+	stop_request_(false),
+	flush_request_(false)
 	{
 		if (i_start)
 		{
-			this->start_run();
+			this->start_loop();
 		}
 	}
 
 	public: ~async_queue()
 	{
-		this->stop(true);
+		if (this->is_running())
+		{
+			this->stop(true);
+		}
+		else
+		{
+			this->clear_reserve_tasks();
+		}
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 実行中の非同期処理taskの数を取得。
+	/** @brief 実行している非同期taskの数を取得。
 	 */
-	public: std::size_t get_size() const
+	std::size_t get_running_size() const
 	{
 		return this->running_size_;
 	}
 
-	/** @brief 非同期処理task配列の容量を取得。
+	/** @brief 非同期task実行threadが起動しているか判定。
 	 */
-	public: std::size_t get_capacity() const
+	public: bool is_running() const
 	{
-		PSYQ_LOCK_GUARD< t_mutex > const a_lock(
-			const_cast< this_type* >(this)->mutex_);
-		return (std::max)(
-			this->reserve_tasks_.get_size(), this->running_size_);
+		return this->thread_.joinable();
 	}
 
-	//-------------------------------------------------------------------------
-	/** @brief 非同期処理を開始。
+	/** @brief 非同期task実行threadを起動。
+	    @retval !=false 起動に成功。
+	    @retval ==false すでに起動していた。
 	 */
 	private: bool start()
 	{
@@ -271,18 +114,18 @@ class psyq::async_queue:
 		if (!this->is_running())
 		{
 			this->stop_request_ = false;
-			this->start_run();
+			this->start_loop();
 			return true;
 		}
 		return false;
 	}
 
-	/** @brief 非同期処理を停止。
-	    @param[in] i_block 非同期処理が停止するまでblockするかどうか。
+	/** @brief 非同期task実行threadを停止。
+	    @param[in] i_block threadが停止するまでblockするか。
 	 */
 	private: void stop(bool const i_block)
 	{
-		// 終了要求flagを有効化。
+		// 終了要求を出す。
 		this->stop_request_ = true;
 		if (i_block)
 		{
@@ -295,221 +138,273 @@ class psyq::async_queue:
 		}
 	}
 
-	/** @brief 非同期処理を実行中か判定。
-	 */
-	public: bool is_running() const
-	{
-		return this->thread_.joinable();
-	}
-
 	//-------------------------------------------------------------------------
-	/** @brief 非同期処理taskを登録。
-	    @param[in] i_allocator memory確保に使う割当子。
-	    @param[in] i_task      登録する非同期処理taskを指すsmart-pointer。
-	    @return 登録した非同期処理taskの数。
+	/** @brief 非同期taskを予約task-containerに挿入。
+	    @param[in] i_task  挿入する非同期task。
+	    @param[in] i_flush 実行task-containerの更新をするか。
+	    @return 挿入した非同期taskの数。
 	 */
-	public: template< typename t_allocator >
 	std::size_t insert(
-		t_allocator const&                  i_allocator,
-		psyq::async_task::shared_ptr const& i_task)
+		typename t_container::value_type const& i_task,
+		bool const                              i_flush = true)
 	{
-		return this->insert(i_allocator, &i_task, &i_task + 1);
+		return this->insert(&i_task, &i_task + 1, i_flush);
 	}
 
-	/** @brief 非同期処理taskを登録。
-	    @tparam t_arena   memory確保に使うmemory-arenaの型。
-	    @param[in] i_task 登録する非同期処理taskを指すsmart-pointer。
-	    @param[in] i_name 確保するmemoryの識別名。debugでのみ使う。
-	    @return 登録した非同期処理taskの数。
+	/** @brief 非同期task-contanerを予約task-cotainerに挿入。
+	    @param[in] i_tasks 挿入する非同期task-container。
+	    @param[in] i_flush 実行task-containerの更新をするか。
+	    @return 挿入した非同期taskの数。
 	 */
-	public: template< typename t_arena >
 	std::size_t insert(
-		psyq::async_task::shared_ptr const& i_task,
-		char const* const                   i_name = PSYQ_ARENA_NAME_DEFAULT)
+		typename t_container const& i_tasks,
+		bool const                  i_flush = true)
 	{
-		return this->template insert< t_arena >(&i_task, &i_task + 1, i_name);
+		return this->insert(i_tasks.begin(), i_tasks.end(), i_flush);
 	}
 
-	/** @brief 追加task-containerが持つ非同期処理taskをまとめて登録。
-	    @param[in] i_allocator memory確保に使う割当子。
-	    @param[in] i_begin     追加task-containerの先頭位置。
-	    @param[in] i_end       追加task-containerの末尾位置。
-	    @return 登録した非同期処理taskの数。
+	/** @brief 非同期task-contanerを予約task-cotainerに挿入。
+	    @param[in] i_begin 挿入する非同期task-containerの先頭位置。
+	    @param[in] i_end   挿入する非同期task-containerの末尾位置。
+	    @param[in] i_flush 実行task-containerを更新するか。
+	    @return 挿入した非同期taskの数。
 	 */
-	public: template< typename t_allocator, typename t_iterator >
+	public: template< typename t_iterator >
 	std::size_t insert(
-		t_allocator const& i_allocator,
-		t_iterator const   i_begin,
-		t_iterator const   i_end)
-	{
-		return this->template insert< typename t_allocator::arena >(
-			i_begin, i_end, i_allocator.get_name());
-	}
-
-	/** @brief 追加task-containerが持つ非同期処理taskをまとめて登録。
-	    @tparam t_arena    memory確保に使うmemory-arenaの型。
-	    @tparam t_iterator shared_ptr型containerのiterator型。
-	    @param[in] i_begin 追加task-containerの先頭位置。
-	    @param[in] i_end   追加task-containerの末尾位置。
-	    @param[in] i_name  確保するmemoryの識別名。debugでのみ使う。
-	    @return 登録した非同期処理taskの数。
-	 */
-	public: template< typename t_arena, typename t_iterator >
-	std::size_t insert(
-		t_iterator const  i_begin,
-		t_iterator const  i_end,
-		char const* const i_name = PSYQ_ARENA_NAME_DEFAULT)
+		t_iterator const& i_begin,
+		t_iterator const& i_end,
+		bool const        i_flush = true)
 	{
 		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
 
-		// 予約task配列を拡張。
-		std::size_t const a_last_size(
-			this->reserve_tasks_.is_empty()?
-				this->running_size_: this->reserve_tasks_.get_size());
-		this->reserve_tasks_.template resize< t_arena >(
-			a_last_size, a_last_size + std::distance(i_begin, i_end), i_name);
-
-		// 追加task-containerが持つ非同期処理taskのうち、
-		// busy状態ではない非同期処理taskだけを、予約task配列にcopyする。
-		typename this_type::task_ptr* a_new_task(
-			this->reserve_tasks_.get_address() + a_last_size);
+		// 挿入するcontainerが持つ非同期taskのうち、
+		// busy状態ではない非同期taskだけ、予約task-containerに挿入する。
+		std::size_t const a_last_size(this->reserve_tasks_.size());
+		this->reserve_tasks_.reserve(
+			this->running_size_ + a_last_size + std::distance(i_begin, i_end));
 		for (t_iterator i = i_begin; i_end != i; ++i)
 		{
-			psyq::async_task* const a_task(i->get());
-			if (NULL != a_task &&
-				a_task->set_lockable_state(psyq::async_task::state_BUSY))
+			this->reserve_tasks_.push_back(*i);
+			psyq::async_task* const a_task(this->reserve_tasks_.back().get());
+			if (NULL == a_task ||
+				!a_task->set_state(psyq::async_task::state_BUSY))
 			{
-				*a_new_task = *i;
-				++a_new_task;
+				this->reserve_tasks_.pop_back();
 			}
 		}
 
-		// 予約task配列を更新したので通知。
+		// 実行task-containerの更新を要求。
+		if (i_flush)
+		{
+			this->flush_request_ = true;
+			this->condition_.notify_all();
+		}
+
+		return this->reserve_tasks_.size() - a_last_size;
+	}
+
+	/** @brief 予約された非同期taskを実行開始。
+	 */
+	public: void flush()
+	{
+		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
+
+		// ここでmemory確保しておき、非同期task実行threadでは
+		// memory確保しないようにする。
+		if (this->reserve_tasks_.empty())
+		{
+			this->reserve_tasks_.reserve(this->running_size_);
+		}
+
+		// 実行task-containerの更新を要求。
+		this->flush_request_ = true;
 		this->condition_.notify_all();
-		return a_new_task - this->reserve_tasks_.get_address() - a_last_size;
+	}
+
+	/** @brief 予約task-containerを空にする。
+	 */
+	private: void clear_reserve_tasks()
+	{
+		this_type::abort_tasks(
+			this->reserve_tasks_.begin(), this->reserve_tasks_.end());
+		t_container().swap(this->reserve_tasks_);
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief queueの大きさを必要最低限にする。
-	    @param[in] i_allocator memory確保に使う割当子。
+	/** @brief 非同期task実行threadを起動。
 	 */
-	public: template< typename t_allocator >
-	void shrink(t_allocator const& i_allocator)
-	{
-		this->shrink< typename t_allocator::arena >(i_allocator.get_name());
-	}
-
-	/** @brief queueの大きさを必要最低限にする。
-	    @param[in] i_name 確保するmemoryの識別名。debugでのみ使う。
-	 */
-	public: template< typename t_arena >
-	void shrink(char const* const i_name = PSYQ_ARENA_NAME_DEFAULT)
-	{
-		this->template insert< t_arena >(
-			static_cast< psyq::async_task::shared_ptr const* >(NULL),
-			static_cast< psyq::async_task::shared_ptr const* >(NULL),
-			i_name);
-	}
-
-	//-------------------------------------------------------------------------
-	/** @brief 非同期処理taskを実行するthreadを起動。
-	 */
-	private: void start_run()
+	private: void start_loop()
 	{
 #ifdef PSYQ_USE_CLX
-		this->thread_.start(boost::bind(&this_type::run, this));
+		this->thread_.start(boost::bind(&this_type::main_loop, this));
 #else
-		t_thread a_thread(boost::bind(&this_type::run, this));
+		t_thread a_thread(boost::bind(&this_type::main_loop, this));
 		this->thread_.swap(a_thread);
 #endif // PSYQ_USE_CLX
 	}
 
-	/** @brief 非同期処理のmain-loop。
+	/** @brief 非同期task実行threadのmain-loop。
 	 */
-	private: void run()
+	private: void main_loop()
 	{
-		typename this_type::task_array a_current_tasks;
-		std::size_t a_current_size(0);
-		PSYQ_UNIQUE_LOCK< t_mutex > a_lock(this->mutex_);
+		t_container a_running_tasks;
+
+		// 終了要求があるまでloop。
 		while (!this->stop_request_)
 		{
-			// 予約task配列があるなら、実行task配列を更新。
-			if (!this->reserve_tasks_.is_empty())
+			std::size_t const a_running_size(a_running_tasks.size());
+			if (this->flush_request_)
 			{
-				// 実行task配列を、直前task配列に移動。
-				typename this_type::task_array a_last_tasks;
-				a_last_tasks.swap(a_current_tasks);
-				std::size_t const a_last_size(a_current_size);
-
-				// 予約task配列を、実行task配列に移動。
-				a_current_tasks.swap(this->reserve_tasks_);
-				a_current_size = a_current_tasks.get_size();
-				PSYQ_ASSERT(this->running_size_ <= a_current_size);
-				PSYQ_ASSERT(a_last_size <= a_current_size);
-				this->running_size_	=
-					a_last_size + a_current_size - this->running_size_;
-				a_lock.unlock();
-
-				// 直前task配列が持つtaskを、実行task配列に移動。
-				typename this_type::task_ptr* const a_last_front(
-					static_cast< typename this_type::task_ptr* >(
-						a_last_tasks.get_address()));
-				typename this_type::task_ptr* const a_current_front(
-					static_cast< typename this_type::task_ptr* >(
-						a_current_tasks.get_address()));
-				for (std::size_t i = 0; i < a_last_size; ++i)
+				// 予約task-containerを待機task-containerに移動。
+				t_container a_wait_tasks;
 				{
-					PSYQ_ASSERT(a_current_front[i].expired());
-					a_current_front[i].swap(a_last_front[i]);
+					PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
+					a_wait_tasks.swap(this->reserve_tasks_);
+					this->running_size_ = a_running_size + a_wait_tasks.size();
+					this->flush_request_ = false;
 				}
+
+				// 待機task-containerから実行task-containerに移動。
+				// 古いものから実行されるように並びかえる。
+				a_running_tasks.swap(a_wait_tasks);
+				this_type::move_tasks(a_running_tasks, a_wait_tasks);
 			}
-			else if (0 < a_current_size)
+			else if (0 < a_running_size)
 			{
-				// 実行task配列の大きさを更新。
-				this->running_size_ = a_current_size;
-				a_lock.unlock();
+				// 実行task-containerの大きさを更新。
+				/** @attention
+				    この箇所だけ、lockせずに running_size_ を書き換えている。
+				 */
+				this->running_size_ = a_running_size;
 			}
 			else
 			{
-				// 予約task配列と実行task配列が空になったので待機。
+				// 実行task-containerが空になったので待機。
+				PSYQ_UNIQUE_LOCK< t_mutex > a_lock(this->mutex_);
 				this->running_size_ = 0;
 				this->condition_.wait(a_lock);
 				continue;
 			}
 
-			// 実行task配列のtaskを実行する。
-			a_current_size = a_current_tasks.run(a_current_size);
-			if (a_current_size <= 0)
+			// 非同期taskを実行。
+			typename t_container::iterator const a_end(
+				a_running_tasks.end());
+			a_running_tasks.erase(
+				this_type::run_tasks(a_running_tasks.begin(), a_end),
+				a_end);
+			if (a_running_tasks.empty())
 			{
-				// 実行task配列が空になったので破棄。
-				typename this_type::task_array().swap(a_current_tasks);
+				// 実行containerが空になったので破棄。
+				t_container().swap(a_running_tasks);
 			}
-			a_lock.lock();
 		}
+
+		// 後始末。
+		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
+		this_type::abort_tasks(
+			a_running_tasks.begin(), a_running_tasks.end());
+		this->clear_reserve_tasks();
 		this->running_size_ = 0;
-		this->reserve_tasks_.abort();
-		typename this_type::task_array().swap(this->reserve_tasks_);
-		a_current_tasks.abort();
+	}
+
+	/** @brief containerを移動して合成。
+
+	    io_source を io_target の先頭に移動挿入する。
+	    @param[in,out] io_target 移動先のcontainer。
+	    @param[in,out] io_source 移動元のcontainer。
+	 */
+	private: static void move_tasks(
+		t_container& io_target,
+		t_container& io_source)
+	{
+		// memory確保が行われないことを確認。
+		PSYQ_ASSERT(
+			io_target.size() + io_source.size() <= io_target.capacity());
+
+		// io_target の先頭を空ける。
+		io_target.insert(
+			io_target.begin(),
+			io_source.size(),
+			typename t_container::value_type());
+
+		// io_source の要素を io_target の先頭に移動。
+		typename t_container::iterator a_target(io_target.begin());
+		typename t_container::iterator a_source(io_source.begin());
+		for (; io_source.end() != a_source; ++a_source, ++a_target)
+		{
+			a_target->swap(*a_source);
+		}
+	}
+
+	/** @brief 非同期taskを実行。
+	    @param[in] i_begin 実行する非同期task-containerの先頭位置。
+	    @param[in] i_end   実行する非同期task-containerの末尾位置。
+	    @return 実行task-containerの新たな末尾位置。
+	 */
+	private: static typename t_container::iterator run_tasks(
+		typename t_container::iterator const& i_begin,
+		typename t_container::iterator const& i_end)
+	{
+		typename t_container::iterator a_end(i_begin);
+		for(typename t_container::iterator i = i_begin; i_end != i; ++i)
+		{
+			psyq::async_task& a_task(**i);
+			if (psyq::async_task::state_BUSY == a_task.get_state())
+			{
+				// taskを実行し、実行状態を取得。
+				int const a_state(a_task.run());
+				if (psyq::async_task::state_BUSY == a_state)
+				{
+					// taskがbusy状態なので、実行を継続。
+					a_end->swap(*i);
+					++a_end;
+				}
+				else
+				{
+					// taskがbusy状態ではなくなったので、実行を終了。
+					a_task.state_ = a_state;
+				}
+			}
+		}
+		return a_end;
+	}
+
+	/** @brief 非同期taskを途中終了する。
+	    @param[in] i_begin 途中終了する非同期task-containerの先頭位置。
+	    @param[in] i_end   途中終了する非同期task-containerの末尾位置。
+	 */
+	private: static void abort_tasks(
+		typename t_container::iterator const& i_begin,
+		typename t_container::iterator const& i_end)
+	{
+		for (typename t_container::iterator i = i_begin; i_end != i; ++i)
+		{
+			(**i).abort();
+		}
 	}
 
 	//-------------------------------------------------------------------------
+	/// 非同期taskを実行するthread。
+	private: t_thread thread_;
+
 	/// threadの同期に使うmutex。
 	private: t_mutex mutex_;
-
-	/// 非同期処理taskを実行するthread。
-	private: t_thread thread_;
 
 	/// threadの同期に使う条件変数。
 	private: t_condition condition_;
 
-	/// 予約されてる非同期処理taskの配列。
-	private: typename this_type::task_array reserve_tasks_;
+	/// 予約task-container。
+	private: t_container reserve_tasks_;
 
-	/// 実行中の非同期処理taskの数。
+	/// 実行しているtaskの数。
 	private: std::size_t running_size_;
 
 	/// 実行停止要求。
 	private: bool stop_request_;
+
+	/// 実行containerの更新要求。
+	private: bool flush_request_;
+
 };
 
 #endif // !PSYQ_ASYNC_QUEUE_HPP_

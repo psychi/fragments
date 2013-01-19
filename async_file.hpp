@@ -155,7 +155,7 @@ class psyq::async_file_reader:
 		// pass
 	}
 
-	private: virtual boost::uint32_t run()
+	private: virtual int run()
 	{
 		this->error_ = this->get_handle()->template read< t_arena >(
 			this->buffer_,
@@ -210,7 +210,7 @@ class psyq::async_file_writer:
 	}
 
 	//-------------------------------------------------------------------------
-	private: virtual boost::uint32_t run()
+	private: virtual int run()
 	{
 		this->error_ = this->get_handle()->write(
 			this->write_size_, this->buffer_);
@@ -279,7 +279,7 @@ class psyq::async_file_mapper:
 	}
 
 	//-------------------------------------------------------------------------
-	private: virtual boost::uint32_t run()
+	private: virtual int run()
 	{
 		boost::interprocess::mapped_region(
 			*this->get_handle(),

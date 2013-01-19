@@ -1,3 +1,4 @@
+/// @file
 #ifndef PSYQ_ASYNC_QUEUE_HPP_
 #define PSYQ_ASYNC_QUEUE_HPP_
 
@@ -13,21 +14,22 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 独自のthreadから実行する非同期taskを保持するqueue。
+/** @brief 独自のthreadから非同期taskを実行するqueue。
 
-    insert() の引数に非同期taskの保持子を渡して、
-    予約task-containerに非同期taskを挿入する。
+    非同期taskを実行するには、 push_back() の引数に非同期taskの保持子を渡し、
+    非同期taskを予約task-containerの末尾に挿入する。
 
     flush() で実行task-containerの更新が要求されると、
-    予約task-containerにある非同期taskが、実行task-containerに移動する。
+    予約task-containerにある非同期taskが実行task-containerに移動し、
+    実行できる状態となる。
 
-    constructorもしくは start() によって起動した独自のthreadから main_loop()
-    が呼び出され、実行task-containerにある非同期taskを実行するloopが起動する。
-    非同期taskの実行は、 async_task::run() を呼び出すことで行われる。
+    constructorもしくは start() によって起動する独自のthreadから main_loop()
+    が呼び出され、実行task-containerにある非同期taskを実行するloopが始まる。
+    main_loop() の中で async_task::run() を呼び出し、非同期taskを実行する。
     - async_task::run() の戻り値が async_task::state_BUSY 以外だった場合、
-      非同期taskは終了し、実行task-containerから取り除かれる。
+      非同期taskは終了。実行task-containerから取り除かれる。
     - async_task::run() の戻り値が async_task::state_BUSY だった場合、
-      非同期taskは継続し、 次のloopで async_task::run() を再び呼び出す。
+      非同期taskは継続。次のloopで async_task::run() を再び呼び出す。
 
     @tparam t_container @copydoc async_queue::container
     @tparam t_mutex     @copydoc async_queue::mutex
@@ -162,41 +164,50 @@ class psyq::async_queue:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief 非同期taskを予約task-containerに挿入。
+	/** @brief 非同期taskを予約task-containerの末尾に挿入。
+
+	    busy状態ではない非同期taskを、予約task-containerの末尾に挿入する。
+	    busy状態の非同期taskは挿入しない。
 	    @param[in] i_task  挿入する非同期task。
-	    @param[in] i_flush 実行task-containerの更新をするか。
+	    @param[in] i_flush 実行task-containerの更新要求。
 	    @return 挿入した非同期taskの数。
 	 */
-	public: std::size_t insert(
+	public: std::size_t push_back(
 		typename t_container::value_type const& i_task,
 		bool const                              i_flush = true)
 	{
-		return this->insert(&i_task, &i_task + 1, i_flush);
+		return this->push_back(&i_task, &i_task + 1, i_flush);
 	}
 
-	/** @brief 非同期task-contanerを予約task-cotainerに挿入。
-	    @param[in] i_tasks 挿入する非同期task-container。
-	    @param[in] i_flush 実行task-containerの更新をするか。
+	/** @brief 非同期taskを予約task-cotainerの末尾に挿入。
+
+	    busy状態ではない非同期taskを、予約task-containerの末尾に挿入する。
+	    busy状態の非同期taskは挿入しない。
+	    @param[in] i_tasks 挿入する非同期taskを持つcontainer。
+	    @param[in] i_flush 実行task-containerの更新要求。
 	    @return 挿入した非同期taskの数。
 	 */
-	public: std::size_t insert(
+	public: std::size_t push_back(
 		typename t_container const& i_tasks,
 		bool const                  i_flush = true)
 	{
-		return this->insert(i_tasks.begin(), i_tasks.end(), i_flush);
+		return this->push_back(i_tasks.begin(), i_tasks.end(), i_flush);
 	}
 
-	/** @brief 非同期task-contanerを予約task-cotainerに挿入。
-	    @param[in] i_begin 挿入する非同期task-containerの先頭位置。
-	    @param[in] i_end   挿入する非同期task-containerの末尾位置。
-	    @param[in] i_flush 実行task-containerを更新するか。
+	/** @brief 非同期taskを予約task-cotainerの末尾に挿入。
+
+	    busy状態ではない非同期taskを、予約task-containerの末尾に挿入する。
+	    busy状態の非同期taskは挿入しない。
+	    @param[in] i_begin 挿入する非同期taskを持つcontainerの先頭位置。
+	    @param[in] i_end   挿入する非同期taskを持つcontainerの末尾位置。
+	    @param[in] i_flush 実行task-containerの更新要求。
 	    @return 挿入した非同期taskの数。
 	 */
 	public: template< typename t_iterator >
-	std::size_t insert(
-		t_iterator const& i_begin,
-		t_iterator const& i_end,
-		bool const        i_flush = true)
+	std::size_t push_back(
+		t_iterator const i_begin,
+		t_iterator const i_end,
+		bool const       i_flush = true)
 	{
 		PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
 
@@ -308,7 +319,7 @@ class psyq::async_queue:
 				this->flush_request_ = false;
 			}
 
-			// 待機task-containerから実行task-containerに移動。
+			// 待機task-containerを実行task-containerに移動し、
 			// 古いものから実行されるように並びかえる。
 			io_running_tasks.swap(a_wait_tasks);
 			this_type::move_tasks(io_running_tasks, a_wait_tasks);
@@ -323,7 +334,7 @@ class psyq::async_queue:
 		}
 		else
 		{
-			// 実行task-containerが空になったので待機。
+			// 実行task-containerが空になったので、更新要求があるまで待機。
 			PSYQ_UNIQUE_LOCK< t_mutex > a_lock(this->mutex_);
 			this->running_size_ = 0;
 			this->condition_.wait(a_lock);
@@ -371,8 +382,8 @@ class psyq::async_queue:
 	}
 
 	/** @brief 非同期taskを実行。
-	    @param[in] i_begin 実行する非同期task-containerの先頭位置。
-	    @param[in] i_end   実行する非同期task-containerの末尾位置。
+	    @param[in] i_begin 実行task-containerの先頭位置。
+	    @param[in] i_end   実行task-containerの末尾位置。
 	    @return 実行task-containerの新たな末尾位置。
 	 */
 	private: static typename t_container::iterator run_tasks(
@@ -418,26 +429,13 @@ class psyq::async_queue:
 	}
 
 	//-------------------------------------------------------------------------
-	/// 非同期taskを実行するthread。
-	private: t_thread thread_;
-
-	/// lockに使うmutex。
-	private: t_mutex mutex_;
-
-	/// threadの同期に使う条件変数。
-	private: t_condition condition_;
-
-	/// 予約task-container。
-	private: t_container reserve_tasks_;
-
-	/// 実行しているtaskの数。
-	private: std::size_t running_size_;
-
-	/// 実行停止要求。
-	private: bool stop_request_;
-
-	/// 実行containerの更新要求。
-	private: bool flush_request_;
+	private: t_thread thread_;           ///< 非同期taskを実行するthread。
+	private: t_mutex mutex_;             ///< lockに使うmutex。
+	private: t_condition condition_;     ///< threadの同期に使う条件変数。
+	private: t_container reserve_tasks_; ///< 予約task-container。
+	private: std::size_t running_size_;  ///< 実行しているtaskの数。
+	private: bool stop_request_;         ///< 実行停止要求。
+	private: bool flush_request_;        ///< 実行containerの更新要求。
 
 };
 

@@ -17,8 +17,8 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 非同期taskの基底型。
 
-    psyq::async_queue::insert() の引数に非同期taskの保持子を渡すことで、
-    非同期task実行queueに非同期taskを予約できる。
+    psyq::async_queue::push_back() の引数に非同期taskの保持子を渡すことで、
+    非同期taskを非同期task実行queueに予約できる。
     予約された非同期taskは予約busy状態となり、非同期taskの実行が終了するか
     abort() しないと、他の非同期task実行queueに予約できない。
 

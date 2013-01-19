@@ -13,7 +13,22 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 非同期taskを実行するqueue。
+/** @brief 独自のthreadから実行する非同期taskを保持するqueue。
+
+    insert() の引数に非同期taskの保持子を渡して、
+    予約task-containerに非同期taskを挿入する。
+
+    flush() で実行task-containerの更新が要求されると、
+    予約task-containerにある非同期taskが、実行task-containerに移動する。
+
+    constructorもしくは start() によって起動した独自のthreadから main_loop()
+    が呼び出され、実行task-containerにある非同期taskを実行するloopが起動する。
+    非同期taskの実行は、 async_task::run() を呼び出すことで行われる。
+    - async_task::run() の戻り値が async_task::state_BUSY 以外だった場合、
+      非同期taskは終了し、実行task-containerから取り除かれる。
+    - async_task::run() の戻り値が async_task::state_BUSY だった場合、
+      非同期taskは継続し、 次のloopで async_task::run() を再び呼び出す。
+
     @tparam t_container @copydoc async_queue::container
     @tparam t_mutex     @copydoc async_queue::mutex
     @tparam t_condition @copydoc async_queue::condition
@@ -52,6 +67,7 @@ class psyq::async_queue:
 	public: typedef t_thread thread;
 
 	//-------------------------------------------------------------------------
+	/// @brief 非同期task実行threadを起動する。
 	public: async_queue()
 	{
 		this->~this_type();
@@ -95,6 +111,13 @@ class psyq::async_queue:
 	std::size_t get_running_size() const
 	{
 		return this->running_size_;
+	}
+
+	/** @brief 保持しているmemory割当子を取得。
+	 */
+	typename t_container::allocator_type get_allocator() const
+	{
+		return this->reserve_tasks_.get_allocator();
 	}
 
 	/** @brief 非同期task実行threadが起動しているか判定。
@@ -144,7 +167,7 @@ class psyq::async_queue:
 	    @param[in] i_flush 実行task-containerの更新をするか。
 	    @return 挿入した非同期taskの数。
 	 */
-	std::size_t insert(
+	public: std::size_t insert(
 		typename t_container::value_type const& i_task,
 		bool const                              i_flush = true)
 	{
@@ -156,7 +179,7 @@ class psyq::async_queue:
 	    @param[in] i_flush 実行task-containerの更新をするか。
 	    @return 挿入した非同期taskの数。
 	 */
-	std::size_t insert(
+	public: std::size_t insert(
 		typename t_container const& i_tasks,
 		bool const                  i_flush = true)
 	{
@@ -221,15 +244,6 @@ class psyq::async_queue:
 		this->condition_.notify_all();
 	}
 
-	/** @brief 予約task-containerを空にする。
-	 */
-	private: void clear_reserve_tasks()
-	{
-		this_type::abort_tasks(
-			this->reserve_tasks_.begin(), this->reserve_tasks_.end());
-		t_container().swap(this->reserve_tasks_);
-	}
-
 	//-------------------------------------------------------------------------
 	/** @brief 非同期task実行threadを起動。
 	 */
@@ -247,55 +261,23 @@ class psyq::async_queue:
 	 */
 	private: void main_loop()
 	{
-		t_container a_running_tasks;
-
 		// 終了要求があるまでloop。
+		t_container a_running_tasks; // 実行task-container。
 		while (!this->stop_request_)
 		{
-			std::size_t const a_running_size(a_running_tasks.size());
-			if (this->flush_request_)
+			if (this->update_running_tasks(a_running_tasks))
 			{
-				// 予約task-containerを待機task-containerに移動。
-				t_container a_wait_tasks;
+				// 非同期taskを実行。
+				typename t_container::iterator const a_end(
+					a_running_tasks.end());
+				a_running_tasks.erase(
+					this_type::run_tasks(a_running_tasks.begin(), a_end),
+					a_end);
+				if (a_running_tasks.empty())
 				{
-					PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
-					a_wait_tasks.swap(this->reserve_tasks_);
-					this->running_size_ = a_running_size + a_wait_tasks.size();
-					this->flush_request_ = false;
+					// 実行containerが空になったので破棄。
+					t_container().swap(a_running_tasks);
 				}
-
-				// 待機task-containerから実行task-containerに移動。
-				// 古いものから実行されるように並びかえる。
-				a_running_tasks.swap(a_wait_tasks);
-				this_type::move_tasks(a_running_tasks, a_wait_tasks);
-			}
-			else if (0 < a_running_size)
-			{
-				// 実行task-containerの大きさを更新。
-				/** @attention
-				    この箇所だけ、lockせずに running_size_ を書き換えている。
-				 */
-				this->running_size_ = a_running_size;
-			}
-			else
-			{
-				// 実行task-containerが空になったので待機。
-				PSYQ_UNIQUE_LOCK< t_mutex > a_lock(this->mutex_);
-				this->running_size_ = 0;
-				this->condition_.wait(a_lock);
-				continue;
-			}
-
-			// 非同期taskを実行。
-			typename t_container::iterator const a_end(
-				a_running_tasks.end());
-			a_running_tasks.erase(
-				this_type::run_tasks(a_running_tasks.begin(), a_end),
-				a_end);
-			if (a_running_tasks.empty())
-			{
-				// 実行containerが空になったので破棄。
-				t_container().swap(a_running_tasks);
 			}
 		}
 
@@ -305,6 +287,58 @@ class psyq::async_queue:
 			a_running_tasks.begin(), a_running_tasks.end());
 		this->clear_reserve_tasks();
 		this->running_size_ = 0;
+	}
+
+	/** @brief 実行task-containerを更新。
+	    @param[in,out] io_running_tasks 更新する実行task-container。
+	    @retval !=false 実行許可が出た。
+	    @retval ==false 実行する前にもう一度更新が必要。
+	 */
+	private: bool update_running_tasks(t_container& io_running_tasks)
+	{
+		std::size_t const a_running_size(io_running_tasks.size());
+		if (this->flush_request_)
+		{
+			// 予約task-containerを待機task-containerに移動。
+			t_container a_wait_tasks;
+			{
+				PSYQ_LOCK_GUARD< t_mutex > const a_lock(this->mutex_);
+				a_wait_tasks.swap(this->reserve_tasks_);
+				this->running_size_ = a_running_size + a_wait_tasks.size();
+				this->flush_request_ = false;
+			}
+
+			// 待機task-containerから実行task-containerに移動。
+			// 古いものから実行されるように並びかえる。
+			io_running_tasks.swap(a_wait_tasks);
+			this_type::move_tasks(io_running_tasks, a_wait_tasks);
+		}
+		else if (0 < a_running_size)
+		{
+			// 実行task-containerの大きさを更新。
+			/** @attention この箇所だけ、lockせずに
+			    async_queue::running_size_ を書き換えている。
+			 */
+			this->running_size_ = a_running_size;
+		}
+		else
+		{
+			// 実行task-containerが空になったので待機。
+			PSYQ_UNIQUE_LOCK< t_mutex > a_lock(this->mutex_);
+			this->running_size_ = 0;
+			this->condition_.wait(a_lock);
+			return false;
+		}
+		return true;
+	}
+
+	/** @brief 予約task-containerを空にする。
+	 */
+	private: void clear_reserve_tasks()
+	{
+		this_type::abort_tasks(
+			this->reserve_tasks_.begin(), this->reserve_tasks_.end());
+		t_container().swap(this->reserve_tasks_);
 	}
 
 	/** @brief containerを移動して合成。
@@ -387,7 +421,7 @@ class psyq::async_queue:
 	/// 非同期taskを実行するthread。
 	private: t_thread thread_;
 
-	/// threadの同期に使うmutex。
+	/// lockに使うmutex。
 	private: t_mutex mutex_;
 
 	/// threadの同期に使う条件変数。

@@ -17,20 +17,20 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 非同期taskの基底型。
 
-    - 非同期taskの保持子を psyq::async_queue::insert() の引数に渡すことで、
-      非同期taskを非同期task実行queueに予約できる。
-      予約された非同期taskは予約busy状態となり、実行が終了するか
-      abort() しないと、他の非同期task実行queueに予約できない。
+    psyq::async_queue::insert() の引数に非同期taskの保持子を渡すことで、
+    非同期task実行queueに非同期taskを予約できる。
+    予約された非同期taskは予約busy状態となり、非同期taskの実行が終了するか
+    abort() しないと、他の非同期task実行queueに予約できない。
 
-    - psyq::async_queue::flush() で非同期task実行queueが更新されると、
-      予約された非同期taskは実行busy状態となる。
+    psyq::async_queue::flush() で非同期task実行queueが更新されると、
+    予約された非同期taskは実行busy状態となる。
 
-    - 実行busy状態となった非同期taskは、適当な時点で非同期task実行threadから
-      run() が呼び出される。
-      その返り値が state_BUSY 以外なら非同期taskは実行終了し、
-      非同期task実行queueから掃き出される。
-      返り値が state_BUSY なら非同期taskの実行は継続し、しばらくして再び
-      run() が呼び出される。
+    実行busy状態となった非同期taskは、適当な時点で非同期task実行threadから
+    run() が呼び出されて実行される。
+    - run() の戻り値が async_task::state_BUSY 以外なら非同期taskは実行終了。
+      非同期taskは、非同期task実行queueから取り除かれる。
+    - run() の戻り値が async_task::state_BUSY なら非同期taskの実行は継続。
+      適当な時点で非同期task実行threadから再び run() が呼び出され実行される。
 
     @sa async_queue
  */
@@ -44,10 +44,10 @@ class psyq::async_task:
 	friend class async_queue;
 
 	//-------------------------------------------------------------------------
-	/// このinstanceの保持子。
+	/// 非同期taskの保持子。
 	public: typedef PSYQ_SHARED_PTR< this_type > shared_ptr;
 
-	/// このinsrtanceの監視子。
+	/// 非同期taskの監視子。
 	public: typedef PSYQ_WEAK_PTR< this_type > weak_ptr;
 
 	/// @cond
@@ -59,8 +59,8 @@ class psyq::async_task:
 	public: enum state
 	{
 		state_BUSY,     ///< busy状態。実行中か、実行が予約されている。
-		state_FINISHED, ///< 正常終了。
-		state_ABORTED,  ///< 途中終了。
+		state_FINISHED, ///< 正常終了した。
+		state_ABORTED,  ///< 途中終了した。
 	};
 
 	//-------------------------------------------------------------------------
@@ -104,7 +104,7 @@ class psyq::async_task:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief taskの状態値を取得。
+	/** @brief 非同期taskの実行状態値を取得。
 	 */
 	public: int get_state() const
 	{
@@ -113,7 +113,7 @@ class psyq::async_task:
 
 	//-------------------------------------------------------------------------
 	/** @brief taskの実行を途中終了。
-	    @param[in] i_state 新たに設定する state_BUSY 以外の実行状態値。
+	    @param[in] i_state 新たに設定する async_task::state_BUSY 以外の実行状態値。
 	 */
 	public: virtual void abort(
 		int const i_state = this_type::state_ABORTED) = 0;
@@ -126,7 +126,7 @@ class psyq::async_task:
 	protected: virtual bool set_state(int const i_state) = 0;
 
 	/** @brief 実行状態値にtask終了状態を設定。
-	    @param[in] i_state 設定する state_BUSY 以外の実行状態値。
+	    @param[in] i_state 設定する async_task::state_BUSY 以外の実行状態値。
 	 */
 	protected: void set_finish_state(int const i_state)
 	{
@@ -153,13 +153,13 @@ class psyq::async_task:
 	}
 
 	//-------------------------------------------------------------------------
-	/** @brief taskを実行。
+	/** @brief 非同期taskを実行。
 	    @return 実行状態。 async_task::state_BUSY 以外だと非同期taskの実行を終了し、新たにその値が実行状態値に設定される。
 	 */
 	protected: virtual int run() = 0;
 
 	//-------------------------------------------------------------------------
-	private: boost::int32_t state_; ///< taskの実行状態値。
+	private: boost::int32_t state_; ///< 非同期taskの実行状態値。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

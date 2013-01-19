@@ -23,7 +23,7 @@ namespace psyq
  */
 template< typename t_mutex >
 class psyq::_singleton_ordered_destructor:
-	public boost::noncopyable
+	private boost::noncopyable
 {
 	/// Ç±ÇÃobjectÇÃå^ÅB
 	public: typedef psyq::_singleton_ordered_destructor< t_mutex > this_type;

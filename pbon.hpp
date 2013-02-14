@@ -1,10 +1,10 @@
 /// @file
-/// @author Psychi Hillco ( https://twitter.com/psychi )
-#ifndef FBON_HPP_
-#define FBON_HPP_
+/// @author Psychi Hillco (https://twitter.com/psychi)
+#ifndef PBON_HPP_
+#define PBON_HPP_
 
-/// fbon(Frozen Binary Object Notation)は、jsonをfrozen-binary化したもの。
-namespace fbon
+/// pbon(Packed Binary Object Notation)は、jsonをbinaryにpackしたもの。
+namespace pbon
 {
 
 typedef char Char8;
@@ -31,44 +31,44 @@ enum Type
 	Type_FLOAT64,
 };
 
-template< typename template_Type > fbon::Type GetType()
+template< typename template_Type > pbon::Type GetType()
 {
-	return fbon::Type_NULL;
+	return pbon::Type_NULL;
 }
 
-template<> fbon::Type GetType< fbon::Char8 >()
+template<> pbon::Type GetType< pbon::Char8 >()
 {
-	return fbon::Type_CHAR8;
+	return pbon::Type_CHAR8;
 }
 
-template<> fbon::Type GetType< fbon::Char16 >()
+template<> pbon::Type GetType< pbon::Char16 >()
 {
-	return fbon::Type_CHAR16;
+	return pbon::Type_CHAR16;
 }
 
-template<> fbon::Type GetType< fbon::Int32 >()
+template<> pbon::Type GetType< pbon::Int32 >()
 {
-	return fbon::Type_INT32;
+	return pbon::Type_INT32;
 }
 
-template<> fbon::Type GetType< fbon::Int64 >()
+template<> pbon::Type GetType< pbon::Int64 >()
 {
-	return fbon::Type_INT64;
+	return pbon::Type_INT64;
 }
 
-template<> fbon::Type GetType< fbon::Float32 >()
+template<> pbon::Type GetType< pbon::Float32 >()
 {
-	return fbon::Type_FLOAT32;
+	return pbon::Type_FLOAT32;
 }
 
-template<> fbon::Type GetType< fbon::Float64 >()
+template<> pbon::Type GetType< pbon::Float64 >()
 {
-	return fbon::Type_FLOAT64;
+	return pbon::Type_FLOAT64;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief frozen-binaryの要素。
-    @tparam template_AttributeType @copydoc fbon::Element::Attribute
+/** @brief packed-binaryの要素。
+    @tparam template_AttributeType @copydoc pbon::Element::Attribute
  */
 template< typename template_AttributeType >
 class Element
@@ -76,42 +76,42 @@ class Element
 	/// thisの型。
 	public: typedef Element This;
 
-	/// frozen-binaryの属性の型。
+	/// packed-binaryの属性の型。
 	public: typedef template_AttributeType Attribute;
 
-	/// frozen-binaryのheader情報。
+	/// packed-binaryのheader情報。
 	private: struct Header
 	{
-		fbon::Int32 Endian_;
-		fbon::Int16 Type_;
-		fbon::Int16 Root_;
+		pbon::Int32 Endian_;
+		pbon::Int16 Type_;
+		pbon::Int16 Root_;
 	};
 
-	/** @brief frozen-binaryの最上位要素を取得。
-	    @param[in] in_FrozenBinary frozen-binaryの先頭位置。
-	    @retval !=NULL frozen-binaryの最上位要素へのpointer。
-	    @retval ==NULL 扱えないfrozen-binaryだった。
+	/** @brief pbonの最上位要素を取得。
+	    @param[in] in_PackedBinary packed-binaryの先頭位置。
+	    @retval !=NULL packed-binaryの最上位要素へのpointer。
+	    @retval ==NULL 扱えないpacked-binaryだった。
 	 */
 	public: static const This* GetRoot(
-		const void* const in_FrozenBinary)
+		const void* const in_PackedBinary)
 	{
-		if (in_FrozenBinary == NULL)
+		if (in_PackedBinary == NULL)
 		{
 			return NULL;
 		}
 		const This::Header& local_Header(
-			*static_cast< const This::Header* >(in_FrozenBinary));
-		if (local_Header.Endian_ != 'fbon')
+			*static_cast< const This::Header* >(in_PackedBinary));
+		if (local_Header.Endian_ != 'pbon')
 		{
 			// endianが異なるので扱えない。
 			return NULL;
 		}
-		if (local_Header.Type_ != fbon::GetType< This::Attribute >())
+		if (local_Header.Type_ != pbon::GetType< This::Attribute >())
 		{
 			// 属性の型が異なるので扱えない。
 			return NULL;
 		}
-		return This::GetAddress< This >(in_FrozenBinary, local_Header.Root_);
+		return This::GetAddress< This >(in_PackedBinary, local_Header.Root_);
 	}
 
 	/** @brief 上位要素を取得。
@@ -136,19 +136,19 @@ class Element
 
 	/** @brief 持っている値の型を取得。
 	 */
-	public: fbon::Type GetType() const
+	public: pbon::Type GetType() const
 	{
-		return static_cast< fbon::Type >(this->Type_);
+		return static_cast< pbon::Type >(this->Type_);
 	}
 
 	public: bool IsSequence() const
 	{
-		return this->GetType() == fbon::Type_SEQUENCE;
+		return this->GetType() == pbon::Type_SEQUENCE;
 	}
 
 	public: bool IsMapping() const
 	{
-		return this->GetType() == fbon::Type_MAPPING;
+		return this->GetType() == pbon::Type_MAPPING;
 	}
 
 	/** @brief 持っている値へのpointerを取得。
@@ -180,16 +180,16 @@ class Element
 	private: typename This::Attribute Type_;
 	private: typename This::Attribute Super_;
 };
-typedef fbon::Element< fbon::Int32 > Element32;
+typedef pbon::Element< pbon::Int32 > Element32;
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// fbon::Element の配列。
+/// pbon::Element の配列。
 template< typename template_AttributeType >
 class Sequence:
-	private fbon::Element< template_AttributeType >
+	private pbon::Element< template_AttributeType >
 {
-	public: typedef fbon::Sequence< template_AttributeType > This;
-	private: typedef fbon::Element< template_AttributeType > Super;
+	public: typedef pbon::Sequence< template_AttributeType > This;
+	private: typedef pbon::Element< template_AttributeType > Super;
 	public: typedef Super Value;
 
 	using Super::Attribute;
@@ -244,16 +244,16 @@ class Sequence:
 		return this->GetValue< This::Value >() + in_Index;
 	}
 };
-typedef fbon::Sequence< fbon::Int32 > Sequence32;
+typedef pbon::Sequence< pbon::Int32 > Sequence32;
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// fbon::Element の辞書。
+/// pbon::Element の辞書。
 template< typename template_AttributeType >
 class Mapping:
 	private Element< template_AttributeType >
 {
-	public: typedef fbon::Mapping< template_AttributeType > This;
-	private: typedef fbon::Element< template_AttributeType > Super;
+	public: typedef pbon::Mapping< template_AttributeType > This;
+	private: typedef pbon::Element< template_AttributeType > Super;
 	public: typedef std::pair< Super, Super > Value;
 
 	using Super::Attribute;
@@ -310,8 +310,8 @@ class Mapping:
 	const typename This::Value* Find(
 		const template_KeyType& in_Key) const;
 };
-typedef fbon::Mapping< fbon::Int32 > Mapping32;
+typedef pbon::Mapping< pbon::Int32 > Mapping32;
 
-} // namespace fbon
+} // namespace pbon
 
-#endif // FBON_HPP_
+#endif // PBON_HPP_

@@ -1,5 +1,5 @@
 /// @file
-/// @author Psychi Hillco (https://twitter.com/psychi)
+/// @author Hillco Psychi (https://twitter.com/psychi)
 #ifndef PBON_HPP_
 #define PBON_HPP_
 
@@ -68,13 +68,13 @@ template<> pbon::Type GetType< pbon::Float64 >()
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief packed-binaryの要素。
-    @tparam template_AttributeType @copydoc pbon::Element::Attribute
+    @tparam template_AttributeType @copydoc pbon::Value::Attribute
  */
 template< typename template_AttributeType >
-class Element
+class Value
 {
 	/// thisの型。
-	public: typedef Element This;
+	public: typedef Value This;
 
 	/// packed-binaryの属性の型。
 	public: typedef template_AttributeType Attribute;
@@ -87,7 +87,7 @@ class Element
 		pbon::Int16 Root_;
 	};
 
-	/** @brief pbonの最上位要素を取得。
+	/** @brief packed-binaryの最上位要素を取得。
 	    @param[in] in_PackedBinary packed-binaryの先頭位置。
 	    @retval !=NULL packed-binaryの最上位要素へのpointer。
 	    @retval ==NULL 扱えないpacked-binaryだった。
@@ -175,34 +175,34 @@ class Element
 			static_cast< const char* >(in_BaseAdress) + in_BytePosition);
 	}
 
-	private: typename This::Attribute Value_;
-	private: typename This::Attribute Size_;
-	private: typename This::Attribute Type_;
-	private: typename This::Attribute Super_;
+	private: typename This::Attribute Value_; ///< 値。もしくは値への相対位置。
+	private: typename This::Attribute Size_;  ///< 値の数。
+	private: typename This::Attribute Type_;  ///< 値の型。
+	private: typename This::Attribute Super_; ///< 上位要素への相対位置。
 };
-typedef pbon::Element< pbon::Int32 > Element32;
+typedef pbon::Value< pbon::Int32 > Value32;
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// pbon::Element の配列。
+/// pbon::Value の配列。
 template< typename template_AttributeType >
 class Sequence:
-	private pbon::Element< template_AttributeType >
+	private pbon::Value< template_AttributeType >
 {
 	public: typedef pbon::Sequence< template_AttributeType > This;
-	private: typedef pbon::Element< template_AttributeType > Super;
+	private: typedef pbon::Value< template_AttributeType > Super;
 	public: typedef Super Value;
 
 	using Super::Attribute;
 	using Super::GetSuper;
 
 	public: static const This* Cast(
-		const Super* const in_Element)
+		const Super* const in_Value)
 	{
-		if (in_Element == NULL || !in_Element->IsSequence())
+		if (in_Value == NULL || !in_Value->IsSequence())
 		{
 			return NULL;
 		}
-		return static_cast< const This* >(in_Element);
+		return static_cast< const This* >(in_Value);
 	}
 
 	/** @brief 持っている値の数を取得。
@@ -247,26 +247,26 @@ class Sequence:
 typedef pbon::Sequence< pbon::Int32 > Sequence32;
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// pbon::Element の辞書。
+/// pbon::Value の辞書。
 template< typename template_AttributeType >
 class Mapping:
-	private Element< template_AttributeType >
+	private Value< template_AttributeType >
 {
 	public: typedef pbon::Mapping< template_AttributeType > This;
-	private: typedef pbon::Element< template_AttributeType > Super;
+	private: typedef pbon::Value< template_AttributeType > Super;
 	public: typedef std::pair< Super, Super > Value;
 
 	using Super::Attribute;
 	using Super::GetSuper;
 
 	public: static const This* Cast(
-		const Super* const in_Element)
+		const Super* const in_Value)
 	{
-		if (in_Element == NULL || !in_Element->IsMapping())
+		if (in_Value == NULL || !in_Value->IsMapping())
 		{
 			return NULL;
 		}
-		return static_cast< const This* >(in_Element);
+		return static_cast< const This* >(in_Value);
 	}
 
 	/** @brief 持っている値の数を取得。
@@ -311,6 +311,197 @@ class Mapping:
 		const template_KeyType& in_Key) const;
 };
 typedef pbon::Mapping< pbon::Int32 > Mapping32;
+
+namespace json
+{
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+class Value
+{
+	public: typedef Value This;
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template< typename template_IteratorType >
+class Parser
+{
+	public: typedef Parser< template_IteratorType > This;
+
+	public: typedef template_IteratorType Iterator;
+
+	private: enum { END_CHAR = -1 };
+
+	//---------------------------------------------------------------------
+	public: Parser(
+		const template_IteratorType& in_Begin,
+		const template_IteratorType& in_End):
+	Current_(in_Begin),
+	End_(in_End),
+	LastChar_(This::END_CHAR),
+	Line_(1),
+	Undo_(false)
+	{
+		// pass
+	}
+
+	//---------------------------------------------------------------------
+	private: void Parse(
+		pbon::json::Value& out_Value)
+	{
+		this->SkipWhiteSpace();
+		const int local_Char(this->TakeChar());
+		switch (local_Char)
+		{
+			case 'n':
+			if (this->Match("ull"))
+			{
+				out_Value = pbon::json::Value();
+				return true;
+			}
+			return false;
+
+			case 't':
+			if (this->Match("rue"))
+			{
+				//out_Value = pbon::json::Value(true);
+				return true;
+			}
+			return false;
+
+			case 'f':
+			if (this->Match("alse"))
+			{
+				//out_Value = pbon::json::Value(false);
+				return true;
+			}
+			return false;
+
+			case '"':
+			return this->ParseString(out_Value);
+
+			case '[':
+			return this->ParseArray(out_Value);
+
+			case '{':
+			return this->ParseObject(out_Value);
+
+			default:
+			this->UndoChar();
+			if (('0' <= local_Char && local_Char <= '9') ||
+				local_Char == '-')
+			{
+				return this->ParseNumber(out_Value);
+			}
+			return false;
+		}
+	}
+
+	private: bool ParseString(pbon::json::Value& out_Value);
+	private: bool ParseArray(pbon::json::Value& out_Value);
+	private: bool ParseObject(pbon::json::Value& out_Value);
+	private: bool ParseNumber(pbon::json::Value& out_Value);
+
+	//---------------------------------------------------------------------
+	public: unsigned GetLine() const
+	{
+		return this->Line_;
+	}
+
+	private: int TakeChar()
+	{
+		if (this->Undo_)
+		{
+			this->Undo_ = false;
+			return this->LastChar_;
+		}
+		if (this->Current_ == this->End_)
+		{
+			this->LastChar_ = This::END_CHAR;
+			return This::END_CHAR;
+		}
+		if (this->LastChar_ == '\n')
+		{
+			++this->Line_;
+		}
+		this->LastChar_ = *this->Current_;
+		++this->Current_;
+		return this->LastChar_;
+	}
+
+	private: void UndoChar()
+	{
+		if (this->LastChar_ != This::END_CHAR)
+		{
+			//assert(!this->Undo_);
+			this->Undo_ = true;
+		}
+	}
+
+	private: void SkipWhiteSpace()
+	{
+		for (;;)
+		{
+			switch (this->TakeChar())
+			{
+				case ' ':
+				case '\t':
+				case '\n':
+				case '\r':
+				break;
+
+				default:
+				this->UndoChar();
+				return;
+			}
+		}
+	}
+
+	private: bool Expect(
+		const int in_ExpectChar)
+	{
+		this->SkipWhiteSpace();
+		if (this->TakeChar() != in_ExpectChar)
+		{
+			this->UndoChar();
+			return false;
+		}
+		return true;
+	}
+
+	private: bool Match(
+		const char* const in_Begin)
+	{
+		for (const char* i = in_Begin; *i != 0; ++i)
+		{
+			if (this->TakeChar() != *i)
+			{
+				this->UndoChar();
+				return false;
+			}
+		}
+		this->SkipWhiteSpace();
+		switch (this->LastChar_)
+		{
+			case ',':
+			case ']':
+			case '}':
+			case This::END_CHAR:
+			return true;
+
+			default:
+			return false;
+		}
+	}
+
+	//---------------------------------------------------------------------
+	private: template_IteratorType Current_;
+	private: template_IteratorType End_;
+	private: int                   LastChar_;
+	private: unsigned              Line_;
+	private: bool                  Undo_;
+};
+
+} // namespace json
 
 } // namespace pbon
 

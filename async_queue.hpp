@@ -14,6 +14,95 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template< typename t_functor, typename t_priority = float >
+class float_task:
+	private boost::noncopyable
+{
+	public: typedef float_task< t_functor, t_priority > this_type;
+	public: typedef t_functor functor;
+	public: typedef t_priority priority;
+
+	public: float_task(
+		t_functor&       io_functor,
+		t_priority const i_priority):
+	priority_(i_priority)
+	{
+		this->functor_.swap(io_functor);
+	}
+
+	bool operator<(this_type const& i_right) const
+	{
+		return this->get_priority() < i_right.get_priority();
+	}
+
+	public: t_priority get_priority() const
+	{
+		return this->priority_;
+	}
+
+	private: t_functor functor_;
+	private: t_priority priority_;
+};
+
+struct _compare_async_task
+{
+	bool operator()(
+		psyq::async_task::shared_ptr const& i_left,
+		psyq::async_task::shared_ptr const& i_right)
+	{
+		psyq::async_task const* const a_left(i_left.get());
+		psyq::async_task const* const a_right(i_right.get());
+		if (a_left == a_right || NULL == a_left)
+		{
+			return false;
+		}
+		else if (NULL == a_right)
+		{
+			return true;
+		}
+		else
+		{
+			//return a_left->get_priority() < a_right->get_priority();
+			return false;
+		}
+	}
+};
+
+template<
+	typename t_container = std::multiset<
+		psyq::async_task::shared_ptr,
+		_compare_async_task,
+		psyq::allocator<
+			psyq::async_task::shared_ptr,
+			boost::alignment_of< psyq::async_task::shared_ptr >::value,
+			0,
+			PSYQ_ARENA_DEFAULT > >,
+	typename t_mutex = PSYQ_MUTEX_DEFAULT,
+	typename t_condition = PSYQ_CONDITION_DEFAULT,
+	typename t_thread = PSYQ_THREAD_DEFAULT >
+class float_task_pool
+{
+	public: typedef float_task_pool< t_container, t_mutex, t_condition, t_thread >
+		this_type;
+
+	public: void add(
+		float const                             i_priority,
+		typename t_condition::value_type const& i_task)
+	{
+	}
+
+	private: void main_loop()
+	{
+		while (this->stop_request_)
+		{
+		}
+	}
+
+	private: t_container container_;
+	private: bool stop_request_;
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 独自のthreadから非同期taskを実行するqueue。
 
     非同期taskを実行するには、 push_back() の引数に非同期taskの保持子を渡し、

@@ -683,6 +683,7 @@ INPUT                  = ./async_file.hpp \
                          ./const_string.hpp \
                          ./dynamic_storage.hpp \
                          ./enum.hpp \
+                         ./fbon.hpp \
                          ./file_buffer.hpp \
                          ./file_handle.hpp \
                          ./fnv_hash.hpp \

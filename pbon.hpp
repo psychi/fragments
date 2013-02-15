@@ -1,33 +1,55 @@
-/// @file
-/// @author Hillco Psychi (https://twitter.com/psychi)
-#ifndef PBON_HPP_
-#define PBON_HPP_
+/** @brief PBON/JSON is a library for translating between PBON and JSON.
 
-/// pbon(Packed Binary Object Notation)は、jsonをbinaryにpackしたもの。
+    PBON/JSONは、PBONとJSONの相互変換を行うためのlibrary。
+    PBONは、Packed-Binary-Object-Notationの略。
+
+    - Call pbon::json::Value::ImportJson(), import the JSON.
+      pbon::json::Value::ImportJson() で、JSONを取り込む。
+
+    - Call pbon::json::Value::ImportPbon(), import the PBON.
+      pbon::json::Value::ImportPbon() で、PBONを取り込む。
+
+    - Call pbon::json::Value::ExportJson(), export the JSON.
+      pbon::json::Value::ExportJson() で、JSONを書き出す。
+
+    - Call pbon::json::Value::ExportPbon(), export the PBON.
+      pbon::json::Value::ExportPbon() で、PBONを書き出す。
+
+    - Call pbon::Value::GetRoot(), get root value of PBON from packed-binary.
+      pbon::Value::GetRoot() で、packed-binaryからPBONの最上位要素を取得する。
+
+    @file
+    @author Hillco Psychi (https://twitter.com/psychi)
+ */
+#ifndef PBON_JSON_HPP_
+#define PBON_JSON_HPP_
+
 namespace pbon
 {
 
-typedef char Char8;
-typedef wchar_t Char16;
-typedef char Int8;
+typedef std::int8_t  Int8;
 typedef std::int16_t Int16;
 typedef std::int32_t Int32;
 typedef std::int64_t Int64;
-typedef float Float32;
+typedef Int8  Char8;
+typedef Int16 Char16;
+typedef Int32 Char32;
+typedef float  Float32;
 typedef double Float64;
 
 enum Type
 {
 	Type_NULL,
-	Type_SEQUENCE,
-	Type_MAPPING,
+	Type_ARRAY,
+	Type_OBJECT,
 	Type_CHAR8 = 1 << 4,
 	Type_CHAR16,
+	Type_CHAR32,
 	Type_INT8 = 2 << 4,
 	Type_INT16,
 	Type_INT32,
 	Type_INT64,
-	Type_FLOAT32 = 3 << 4,
+	Type_FLOAT32 = (3 << 4) + 2,
 	Type_FLOAT64,
 };
 
@@ -73,7 +95,7 @@ template<> pbon::Type GetType< pbon::Float64 >()
 template< typename template_AttributeType >
 class Value
 {
-	/// thisの型。
+	/// thisが指す型。
 	public: typedef Value This;
 
 	/// packed-binaryの属性の型。
@@ -141,14 +163,14 @@ class Value
 		return static_cast< pbon::Type >(this->Type_);
 	}
 
-	public: bool IsSequence() const
+	public: bool IsArray() const
 	{
-		return this->GetType() == pbon::Type_SEQUENCE;
+		return this->GetType() == pbon::Type_ARRAY;
 	}
 
-	public: bool IsMapping() const
+	public: bool IsObject() const
 	{
-		return this->GetType() == pbon::Type_MAPPING;
+		return this->GetType() == pbon::Type_OBJECT;
 	}
 
 	/** @brief 持っている値へのpointerを取得。
@@ -185,10 +207,10 @@ typedef pbon::Value< pbon::Int32 > Value32;
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// pbon::Value の配列。
 template< typename template_AttributeType >
-class Sequence:
+class Array:
 	private pbon::Value< template_AttributeType >
 {
-	public: typedef pbon::Sequence< template_AttributeType > This;
+	public: typedef pbon::Array< template_AttributeType > This;
 	private: typedef pbon::Value< template_AttributeType > Super;
 	public: typedef Super Value;
 
@@ -198,7 +220,7 @@ class Sequence:
 	public: static const This* Cast(
 		const Super* const in_Value)
 	{
-		if (in_Value == NULL || !in_Value->IsSequence())
+		if (in_Value == NULL || !in_Value->IsArray())
 		{
 			return NULL;
 		}
@@ -209,7 +231,7 @@ class Sequence:
 	 */
 	public: std::size_t GetSize() const
 	{
-		if (!this->IsSequence())
+		if (!this->IsArray())
 		{
 			return 0;
 		}
@@ -218,7 +240,7 @@ class Sequence:
 
 	public: const typename This::Value* GetBegin() const
 	{
-		if (!this->IsSequence())
+		if (!this->IsArray())
 		{
 			return NULL;
 		}
@@ -227,7 +249,7 @@ class Sequence:
 
 	public: const typename This::Value* GetEnd() const
 	{
-		if (!this->IsSequence())
+		if (!this->IsArray())
 		{
 			return NULL;
 		}
@@ -237,22 +259,22 @@ class Sequence:
 	public: const typename This::Value* At(
 		const std::size_t in_Index)
 	{
-		if (!this->IsSequence() || this->GetSize() <= in_Index)
+		if (!this->IsArray() || this->GetSize() <= in_Index)
 		{
 			return NULL;
 		}
 		return this->GetValue< This::Value >() + in_Index;
 	}
 };
-typedef pbon::Sequence< pbon::Int32 > Sequence32;
+typedef pbon::Array< pbon::Int32 > Array32;
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// pbon::Value の辞書。
 template< typename template_AttributeType >
-class Mapping:
+class Object:
 	private Value< template_AttributeType >
 {
-	public: typedef pbon::Mapping< template_AttributeType > This;
+	public: typedef pbon::Object< template_AttributeType > This;
 	private: typedef pbon::Value< template_AttributeType > Super;
 	public: typedef std::pair< Super, Super > Value;
 
@@ -262,7 +284,7 @@ class Mapping:
 	public: static const This* Cast(
 		const Super* const in_Value)
 	{
-		if (in_Value == NULL || !in_Value->IsMapping())
+		if (in_Value == NULL || !in_Value->IsObject())
 		{
 			return NULL;
 		}
@@ -273,7 +295,7 @@ class Mapping:
 	 */
 	public: std::size_t GetSize() const
 	{
-		if (!this->IsMapping())
+		if (!this->IsObject())
 		{
 			return 0;
 		}
@@ -282,7 +304,7 @@ class Mapping:
 
 	public: const typename This::Value* GetBegin() const
 	{
-		if (!this->IsMapping())
+		if (!this->IsObject())
 		{
 			return NULL;
 		}
@@ -291,7 +313,7 @@ class Mapping:
 
 	public: const typename This::Value* GetEnd() const
 	{
-		if (!this->IsMapping())
+		if (!this->IsObject())
 		{
 			return NULL;
 		}
@@ -310,58 +332,205 @@ class Mapping:
 	const typename This::Value* Find(
 		const template_KeyType& in_Key) const;
 };
-typedef pbon::Mapping< pbon::Int32 > Mapping32;
+typedef pbon::Object< pbon::Int32 > Object32;
 
 namespace json
 {
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief JSONの要素。
+    @tparam template_StringType @copydoc pbon::json::String
+ */
+template< typename template_StringType >
 class Value
 {
-	public: typedef Value This;
-};
+	/// thisが指す値の型。
+	public: typedef pbon::json::Value< template_StringType > This;
 
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template< typename template_IteratorType >
-class Parser
-{
-	public: typedef Parser< template_IteratorType > This;
+	/// JSONの要素に使う std::string 互換の文字列型。
+	public: typedef template_StringType String;
 
-	public: typedef template_IteratorType Iterator;
-
-	private: enum { END_CHAR = -1 };
-
-	//---------------------------------------------------------------------
-	public: Parser(
-		const template_IteratorType& in_Begin,
-		const template_IteratorType& in_End):
-	Current_(in_Begin),
-	End_(in_End),
-	LastChar_(This::END_CHAR),
-	Line_(1),
-	Undo_(false)
+	//-------------------------------------------------------------------------
+	/** @brief JSON形式の文字列から値を取り込む。
+	    @param[in] in_JsonString 値を取り込むJSON形式文字列。
+	 */
+	public: void ImportJson(
+		const typename This::String& in_JsonString)
 	{
-		// pass
+		this->ImportJson(in_JsonString.begin(), in_JsonString.end());
 	}
 
-	//---------------------------------------------------------------------
-	private: void Parse(
-		pbon::json::Value& out_Value)
+	/** @brief JSON形式の文字列から値を取り込む。
+	    @param[in] in_JsonBegin 値を取り込むJSON形式文字列の先頭位置。
+	    @param[in] in_JsonEnd   値を取り込むJSON形式文字列の末尾位置。
+	 */
+	public: void ImportJson(
+		const typename This::String::const_iterator& in_JsonBegin,
+		const typename This::String::const_iterator& in_JsonEnd)
 	{
-		this->SkipWhiteSpace();
-		const int local_Char(this->TakeChar());
+		typename This::JsonParser local_Parser(in_JsonBegin, in_JsonEnd);
+		if (!this->Parse(local_Parser))
+		{
+		}
+	}
+
+	/** @brief PBON形式のbyte列から値を取り込む。
+	    @param[in] in_PbonBegin 値を取り込むPBON形式byte列の先頭位置。
+	    @param[in] in_PbonEnd   値を取り込むPBON形式byte列の末尾位置。
+	 */
+	public: void ImportPbon(
+		const void* const in_PbonBegin,
+		const void* const in_PbonEnd);
+
+	/** @brief JSON形式で文字列に値を書き出す。
+	    @param[out] out_JsonString 値を書き出す先。
+	 */
+	public: void ExportJson(
+		typename This::String& out_JsonString) const;
+
+	/** @brief PBON形式でbinaryに値を書き出す。
+	    @param[out] out_PbonBinary 値を書き出す先。
+	 */
+	public: template< typename template_Vector >
+	void ExportPbon(template_Vector& out_PbonBinary) const;
+
+	//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+	private: class JsonParser
+	{
+		public: typedef JsonParser This;
+
+		private: enum { END_CHAR = -1 };
+
+		//---------------------------------------------------------------------
+		public: JsonParser(
+			const typename String::const_iterator& in_Begin,
+			const typename String::const_iterator& in_End):
+		Current_(in_Begin),
+		End_(in_End),
+		LastChar_(This::END_CHAR),
+		Line_(1),
+		Undo_(false)
+		{
+			// pass
+		}
+
+		public: unsigned GetLine() const
+		{
+			return this->Line_;
+		}
+
+		public: int ReadChar()
+		{
+			if (this->Undo_)
+			{
+				this->Undo_ = false;
+				return this->LastChar_;
+			}
+			if (this->Current_ == this->End_)
+			{
+				this->LastChar_ = This::END_CHAR;
+				return This::END_CHAR;
+			}
+			if (this->LastChar_ == '\n')
+			{
+				++this->Line_;
+			}
+			this->LastChar_ = *this->Current_;
+			++this->Current_;
+			return this->LastChar_;
+		}
+
+		public: void UndoChar()
+		{
+			if (this->LastChar_ != This::END_CHAR)
+			{
+				//assert(!this->Undo_);
+				this->Undo_ = true;
+			}
+		}
+
+		public: void SkipWhiteSpace()
+		{
+			for (;;)
+			{
+				switch (this->ReadChar())
+				{
+					case ' ':
+					case '\t':
+					case '\n':
+					case '\r':
+					break;
+
+					default:
+					this->UndoChar();
+					return;
+				}
+			}
+		}
+
+		public: bool Expect(
+			const int in_ExpectChar)
+		{
+			this->SkipWhiteSpace();
+			if (this->ReadChar() != in_ExpectChar)
+			{
+				this->UndoChar();
+				return false;
+			}
+			return true;
+		}
+
+		public: bool Match(
+			const char* const in_Begin)
+		{
+			for (const char* i = in_Begin; *i != 0; ++i)
+			{
+				if (this->ReadChar() != *i)
+				{
+					this->UndoChar();
+					return false;
+				}
+			}
+			this->SkipWhiteSpace();
+			switch (this->LastChar_)
+			{
+				case ',':
+				case ']':
+				case '}':
+				case This::END_CHAR:
+				return true;
+
+				default:
+				return false;
+			}
+		}
+
+		//---------------------------------------------------------------------
+		private: typename String::const_iterator Current_;
+		private: typename String::const_iterator End_;
+		private: int                             LastChar_;
+		private: unsigned                        Line_;
+		private: bool                            Undo_;
+	};
+
+	//-------------------------------------------------------------------------
+	private: bool Parse(
+		typename This::JsonParser& io_Parser)
+	{
+		io_Parser.SkipWhiteSpace();
+		const int local_Char(io_Parser.ReadChar());
 		switch (local_Char)
 		{
 			case 'n':
-			if (this->Match("ull"))
+			if (io_Parser.Match("ull"))
 			{
-				out_Value = pbon::json::Value();
+				//*this = pbon::json::Value();
 				return true;
 			}
 			return false;
 
 			case 't':
-			if (this->Match("rue"))
+			if (io_Parser.Match("rue"))
 			{
 				//out_Value = pbon::json::Value(true);
 				return true;
@@ -369,7 +538,7 @@ class Parser
 			return false;
 
 			case 'f':
-			if (this->Match("alse"))
+			if (io_Parser.Match("alse"))
 			{
 				//out_Value = pbon::json::Value(false);
 				return true;
@@ -377,132 +546,48 @@ class Parser
 			return false;
 
 			case '"':
-			return this->ParseString(out_Value);
+			return this->ParseString(io_Parser);
 
 			case '[':
-			return this->ParseArray(out_Value);
+			return this->ParseArray(io_Parser);
 
 			case '{':
-			return this->ParseObject(out_Value);
+			return this->ParseObject(io_Parser);
 
 			default:
-			this->UndoChar();
+			io_Parser.UndoChar();
 			if (('0' <= local_Char && local_Char <= '9') ||
 				local_Char == '-')
 			{
-				return this->ParseNumber(out_Value);
+				return this->ParseNumber(io_Parser);
 			}
 			return false;
 		}
 	}
 
-	private: bool ParseString(pbon::json::Value& out_Value);
-	private: bool ParseArray(pbon::json::Value& out_Value);
-	private: bool ParseObject(pbon::json::Value& out_Value);
-	private: bool ParseNumber(pbon::json::Value& out_Value);
-
-	//---------------------------------------------------------------------
-	public: unsigned GetLine() const
+	private: bool ParseString(typename This::JsonParser& io_Parser)
 	{
-		return this->Line_;
+		return false;
 	}
 
-	private: int TakeChar()
+	private: bool ParseArray(typename This::JsonParser& io_Parser)
 	{
-		if (this->Undo_)
-		{
-			this->Undo_ = false;
-			return this->LastChar_;
-		}
-		if (this->Current_ == this->End_)
-		{
-			this->LastChar_ = This::END_CHAR;
-			return This::END_CHAR;
-		}
-		if (this->LastChar_ == '\n')
-		{
-			++this->Line_;
-		}
-		this->LastChar_ = *this->Current_;
-		++this->Current_;
-		return this->LastChar_;
+		return false;
 	}
 
-	private: void UndoChar()
+	private: bool ParseObject(typename This::JsonParser& io_Parser)
 	{
-		if (this->LastChar_ != This::END_CHAR)
-		{
-			//assert(!this->Undo_);
-			this->Undo_ = true;
-		}
+		return false;
 	}
 
-	private: void SkipWhiteSpace()
+	private: bool ParseNumber(typename This::JsonParser& io_Parser)
 	{
-		for (;;)
-		{
-			switch (this->TakeChar())
-			{
-				case ' ':
-				case '\t':
-				case '\n':
-				case '\r':
-				break;
-
-				default:
-				this->UndoChar();
-				return;
-			}
-		}
+		return false;
 	}
-
-	private: bool Expect(
-		const int in_ExpectChar)
-	{
-		this->SkipWhiteSpace();
-		if (this->TakeChar() != in_ExpectChar)
-		{
-			this->UndoChar();
-			return false;
-		}
-		return true;
-	}
-
-	private: bool Match(
-		const char* const in_Begin)
-	{
-		for (const char* i = in_Begin; *i != 0; ++i)
-		{
-			if (this->TakeChar() != *i)
-			{
-				this->UndoChar();
-				return false;
-			}
-		}
-		this->SkipWhiteSpace();
-		switch (this->LastChar_)
-		{
-			case ',':
-			case ']':
-			case '}':
-			case This::END_CHAR:
-			return true;
-
-			default:
-			return false;
-		}
-	}
-
-	//---------------------------------------------------------------------
-	private: template_IteratorType Current_;
-	private: template_IteratorType End_;
-	private: int                   LastChar_;
-	private: unsigned              Line_;
-	private: bool                  Undo_;
 };
 
 } // namespace json
 
 } // namespace pbon
 
-#endif // PBON_HPP_
+#endif // PBON_JSON_HPP_

@@ -426,10 +426,10 @@ class Value
 
     //-------------------------------------------------------------------------
     /** @brief JSON形式の文字列から値を取り込む。
-        @param[in] in_JsonString 値を取り込むJSON形式文字列。
+        @param[in] in_JsonString 値を取り込むJSON形式の文字列。
         @return
         - 成功した場合は(0, 0)。
-        - 失敗した場合は取り込みに失敗した文字列の(行番号, 桁位置)。
+        - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
      */
     public: template< typename template_StringType >
     std::pair< unsigned, unsigned > ImportJson(
@@ -453,7 +453,7 @@ class Value
     }
 
     /** @brief PBON形式のbinary列から値を取り込む。
-        @param[in] in_PbonBinary 値を取り込むPBON形式binary列。
+        @param[in] in_PbonBinary 値を取り込むPBON形式のbinary列。
      */
     public: template< typename template_ArrayType >
     void ImportPbon(
@@ -473,6 +473,12 @@ class Value
     void ExportPbon(template_ArrayType& out_PbonBinary) const;
 
     //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+    /** @brief JSON解析器。
+        @tparam template_NumberType 数値の型。
+        @tparam template_StringType 文字列の型。
+        @tparam template_ArrayType  配列の型。
+        @tparam template_ObjectType objectの型。
+     */
     private: template<
         typename template_NumberType,
         typename template_StringType,
@@ -480,6 +486,7 @@ class Value
         typename template_ObjectType >
     class JsonParser
     {
+        /// thisが指す値の型。
         public: typedef JsonParser<
             template_NumberType,
             template_StringType,
@@ -490,6 +497,9 @@ class Value
         private: enum { END_CHAR = -1 };
 
         //---------------------------------------------------------------------
+        /** @param[in] in_Begin 解析する文字列の先頭位置。
+            @param[in] in_End   解析する文字列の末尾位置。
+         */
         public: JsonParser(
             const typename template_StringType::const_iterator& in_Begin,
             const typename template_StringType::const_iterator& in_End):
@@ -504,11 +514,17 @@ class Value
         }
 
         //---------------------------------------------------------------------
+        /** @brief 解析中の行番号を取得。
+            @return 解析中の行番号。必ず1以上。
+         */
         public: unsigned GetLine() const
         {
             return this->Line_;
         }
 
+        /** @brief 解析中の行の桁位置を取得。
+            @return 解析中の行の桁位置。必ず1以上。
+         */
         public: unsigned GetColumn() const
         {
             return this->Column_;
@@ -527,6 +543,15 @@ class Value
             const int local_Char(this->ReadChar());
             switch (local_Char)
             {
+                case '"':
+                return this->ParseString(out_Value);
+
+                case '[':
+                return this->ParseArray(out_Value);
+
+                case '{':
+                return this->ParseObject(out_Value);
+
                 case 'n':
                 if (this->Match("ull"))
                 {
@@ -551,15 +576,6 @@ class Value
                 }
                 return false;
 
-                case '"':
-                return this->ParseString(out_Value);
-
-                case '[':
-                return this->ParseArray(out_Value);
-
-                case '{':
-                return this->ParseObject(out_Value);
-
                 default:
                 this->UndoChar();
                 if (('0' <= local_Char && local_Char <= '9') ||
@@ -571,8 +587,50 @@ class Value
             }
         }
 
+        /** @brief JSONが持っている配列を解析。
+            @param[out] out_Value JSONから解析した配列の出力先。
+            @retval !=false 成功。
+            @retval ==false 失敗。値は出力されない。
+         */
+        private: bool ParseArray(pbon::json::Value&)
+        {
+            template_ArrayType auto_Array;
+            if (!this->Expect(']'))
+            {
+                for (;;)
+                {
+                    auto_Array.push_back(pbon::json::Value());
+                    if (!this->Parse(auto_Array.back()))
+                    {
+                        return false;
+                    }
+                    if (!this->Expect(','))
+                    {
+                        break;
+                    }
+                }
+            }
+            //pbon::json::Value(auto_Array).swap(out_Value);
+            return this->Expect(']');
+        }
+
+        /** @brief JSONが持っているobjectを解析。
+            @param[out] out_Value JSONから解析したobjectの出力先。
+            @retval !=false 成功。
+            @retval ==false 失敗。値は出力されない。
+         */
+        private: bool ParseObject(pbon::json::Value&)
+        {
+            return false;
+        }
+
+        private: bool ParseNumber(pbon::json::Value&)
+        {
+            return false;
+        }
+
         /** @brief JSONが持っている文字列を解析。
-            @param[out] out_Value JSONから解析した値の出力先。
+            @param[out] out_Value JSONから解析した文字列の出力先。
             @retval !=false 成功。
             @retval ==false 失敗。値は出力されない。
          */
@@ -644,7 +702,7 @@ class Value
             }
         }
 
-        /** @brief 文字列のcode-point表記の解析。
+        /** @brief 文字列のcode-point表記を解析。
          */
         private: bool ParseCodePoint(
             template_StringType& out_String)
@@ -751,21 +809,7 @@ class Value
             return local_UnicodeChar;
         }
 
-        private: bool ParseNumber(pbon::json::Value&)
-        {
-            return false;
-        }
-
-        private: bool ParseArray(pbon::json::Value&)
-        {
-            return false;
-        }
-
-        private: bool ParseObject(pbon::json::Value&)
-        {
-            return false;
-        }
-
+        //---------------------------------------------------------------------
         private: int ReadChar()
         {
             if (this->Undo_)
@@ -832,7 +876,7 @@ class Value
             return true;
         }
 
-        public: bool Match(
+        private: bool Match(
             const char* const in_Begin)
         {
             for (const char* i = in_Begin; *i != 0; ++i)

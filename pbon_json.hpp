@@ -371,13 +371,12 @@ class Value
     /// thisが指す値の型。
     public: typedef pbon::json::Value This;
 
-    private: enum Type
+    /// 値の持ち方。
+    private: enum Hold
     {
-        Type_NULL,
-        Type_BOOL,
-        Type_INT,
-        Type_FLOAT,
-        Type_HOLDER,
+        Hold_EMPTY,   ///< 値を持ってない。
+        Hold_VALUE,   ///< 直接値を持ってる。
+        Hold_POINTER, ///< pointerとして値を持ってる。
     };
 
     private: class Placeholder
@@ -387,47 +386,123 @@ class Value
     };
 
     //-------------------------------------------------------------------------
-    private: union
-    {
-        bool          Bool_;
-        pbon::Int64   Int_;
-        pbon::Float64 Float_;
-        Placeholder*  Holder_;
-    };
-    private: pbon::Int8 Type_;
+    private: pbon::Int64 Storage_;
+    private: pbon::Int8  Hold_;
 
     //-------------------------------------------------------------------------
+    /// @brief 値を空にして構築。
     public: Value():
-    Type_(pbon::Type_NULL)
+    Storage_(0),
+    Hold_(This::Hold_EMPTY)
     {
-        this->Int_ = 0;
+        // pass
     }
 
-    public: explicit Value(
-        const bool in_Bool):
-    Type_(pbon::Type_BOOL)
+    /** @brief copy constructor
+        @param[in] in_Source 代入元となる値。
+        @todo 未実装。
+     */
+    public: Value(
+        const This& in_Source):
+    Hold_(in_Source.Hold_)
     {
-        this->Bool_ = in_Bool;
     }
 
-    ~Value()
+    /** @brief 任意型の値を構築。
+
+        memory割当てを行わずに構築。構築できなかった場合は、空となる。
+
+        @tparam template_ValueType 初期値の型。
+        @param[in] in_Value 初期値。
+     */
+    public: template< typename template_ValueType >
+    explicit Value(
+        const template_ValueType& in_Value):
+    Storage_(0)
     {
-        if (this->Type_ == Type_HOLDER)
+        if (this->SetValue(in_Value))
         {
-            this->Holder_->DeleteSelf();
+            this->Hold_ = This::Hold_EMPTY;
         }
     }
 
-    void Swap(This& io_Target)
+    /** @brief 任意型の値を構築。
+
+        @tparam template_ValueType     初期値の型。
+        @tparam template_AllocatorType memory割当子の型。
+        @param[in] in_Value         初期値。
+        @param[in,out] io_Allocator 使用するmemory割当子。
+        @todo 未実装。
+     */
+    public: template<
+        typename template_ValueType,
+        typename template_AllocatorType >
+    Value(
+        const template_ValueType& in_Value,
+        template_AllocatorType&   io_Allocator):
+    Storage_(0)
     {
-        std::swap(this->Int_, io_Target.Int_);
-        std::swap(this->Type_, io_Target.Type_);
+        if (this->SetValue(in_Value))
+        {
+            io_Allocator;
+            this->Hold_ = This::Hold_POINTER;
+        }
+    }
+
+    /// @brief destructor
+    /// @todo 未実装。
+    ~Value()
+    {
+        if (this->Hold_ == Hold_POINTER)
+        {
+            //this->Holder_->DeleteSelf();
+        }
+    }
+
+    /** @brief 代入演算子。
+        @param[in] in_Source 代入元となる値。
+     */
+    public: This& operator=(const This& in_Source)
+    {
+        this->~Value();
+        return *new(this) This(in_Source);
+    }
+
+    public: void Swap(This& io_Target)
+    {
+        std::swap(this->Storage_, io_Target.Storage_);
+        std::swap(this->Hold_, io_Target.Hold_);
+    }
+
+    /** @brief 値が空か判定。
+        @retval true  値が空だった。
+        @retval false 値が空ではなかった。
+     */
+    public: bool IsEmpty() const
+    {
+        return this->Hold_ == This::Hold_EMPTY;
+    }
+
+    private: template< typename template_ValueType >
+    bool SetValue(
+        const template_ValueType& in_Value)
+    {
+        std::size_t auto_ValueSize(sizeof(template_ValueType));
+        if (sizeof(this->Storage_) < auto_ValueSize)
+        {
+            return false;
+        }
+        this->~Value();
+        new(&this->Storage_) template_ValueType(in_Value);
+        this->Hold_ = This::Hold_VALUE;
+        return true;
     }
 
     //-------------------------------------------------------------------------
     /** @brief JSON形式の文字列から値を取り出す。
         @tparam template_NumberType JSONの値に使う数値の型。
-        @tparam template_StringType std::basic_string 互換の文字列型。
+        @tparam template_StringType
+            std::basic_string 互換のinterfaceを持つ文字列型。
         @param[in] in_JsonString 値を取り込むJSON形式の文字列。
         @return
         - 成功した場合は(0, 0)。
@@ -439,17 +514,22 @@ class Value
     std::pair< unsigned, unsigned > ImportJson(
         const template_StringType in_JsonString)
     {
+        typename template_StringType::allocator_type auto_Allocator(
+            in_JsonString.get_allocator());
         return this->ImportJson< template_NumberType, template_StringType >(
-            in_JsonString.begin(), in_JsonString.end());
+            in_JsonString.begin(),
+            in_JsonString.end(),
+            auto_Allocator);
     }
 
     /** @brief JSON形式の文字列から値を取り出す。
         @tparam template_NumberType JSONの値に使う数値の型。
         @tparam template_StringType
-            JSONの値に使う文字列の型。std::basic_string 互換が必須。
+            JSONの値に使う文字列の型。std::basic_string 互換のinterfaceを持つ。
         @tparam template_IteratorType JSONの解析で使う反復子の型。
-        @param[in] in_JsonBegin 値を取り込むJSON形式の文字列の先頭位置。
-        @param[in] in_JsonEnd   値を取り込むJSON形式の文字列の末尾位置。
+        @param[in] in_JsonBegin     値を取り込むJSON形式の文字列の先頭位置。
+        @param[in] in_JsonEnd       値を取り込むJSON形式の文字列の末尾位置。
+        @param[in,out] io_Allocator 使用するmemory割当子。
         @return
         - 成功した場合は(0, 0)。
         - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
@@ -457,10 +537,12 @@ class Value
     public: template<
         typename template_NumberType,
         typename template_StringType,
+        typename template_AllocatorType,
         typename template_IteratorType >
     std::pair< unsigned, unsigned > ImportJson(
         const template_IteratorType& in_JsonBegin,
-        const template_IteratorType& in_JsonEnd)
+        const template_IteratorType& in_JsonEnd,
+        template_AllocatorType&      io_Allocator)
     {
         typedef template_IteratorType Iterator;
         typedef template_NumberType Number;
@@ -474,7 +556,7 @@ class Value
             Map;
         This::JsonParser< Iterator, Number, String, Vector, Map >
             local_Parser(in_JsonBegin, in_JsonEnd);
-        if (!local_Parser.Parse(*this))
+        if (!local_Parser.Parse(*this, io_Allocator))
         {
             std::make_pair(local_Parser.GetLine(), local_Parser.GetColumn());
         }
@@ -564,25 +646,30 @@ class Value
 
         //---------------------------------------------------------------------
         /** @brief JSONが持っている値を解析して取り出す。
-            @param[out] out_Value JSONから取り出した値の出力先。
-            @retval !=false 成功。
-            @retval ==false 失敗。値は出力されない。
+            @tparam template_AllocatorType
+                std::allocator 互換のinterfaceを持つmemory割当子の型。
+            @param[out]    out_Value    JSONから取り出した値の出力先。
+            @param[in,out] io_Allocator 使用するmemory割当子。
+            @retval true  成功。
+            @retval false 失敗。値は出力されない。
          */
-        public: bool Parse(
-            pbon::json::Value& out_Value)
+        public: template< typename template_AllocatorType >
+        bool Parse(
+            pbon::json::Value&      out_Value,
+            template_AllocatorType& io_Allocator)
         {
             this->SkipWhiteSpace();
             const int local_Char(this->ReadChar());
             switch (local_Char)
             {
                 case '"':
-                return this->ParseString(out_Value);
+                return this->ParseString(out_Value, io_Allocator);
 
                 case '[':
-                return this->ParseArray(out_Value);
+                return this->ParseArray(out_Value, io_Allocator);
 
                 case '{':
-                return this->ParseObject(out_Value);
+                return this->ParseObject(out_Value, io_Allocator);
 
                 case 'n':
                 if (this->Match("ull"))
@@ -595,7 +682,7 @@ class Value
                 case 't':
                 if (this->Match("rue"))
                 {
-                    pbon::json::Value(true).Swap(out_Value);
+                    pbon::json::Value(true, io_Allocator).Swap(out_Value);
                     return true;
                 }
                 return false;
@@ -603,7 +690,7 @@ class Value
                 case 'f':
                 if (this->Match("alse"))
                 {
-                    pbon::json::Value(false).Swap(out_Value);
+                    pbon::json::Value(false, io_Allocator).Swap(out_Value);
                     return true;
                 }
                 return false;
@@ -613,18 +700,24 @@ class Value
                 if (('0' <= local_Char && local_Char <= '9') ||
                     local_Char == '-')
                 {
-                    return this->ParseNumber(out_Value);
+                    return this->ParseNumber(out_Value, io_Allocator);
                 }
                 return false;
             }
         }
 
         /** @brief JSONが持っている配列を解析して取り出す。
-            @param[out] out_Value JSONから取り出した値の出力先。
-            @retval !=false 成功。
-            @retval ==false 失敗。値は出力されない。
+            @tparam template_AllocatorType
+                std::allocator 互換のinterfaceを持つmemory割当子の型。
+            @param[out]    out_Value    JSONから取り出した値の出力先。
+            @param[in,out] io_Allocator 使用するmemory割当子。
+            @retval true  成功。
+            @retval false 失敗。値は出力されない。
          */
-        private: bool ParseArray(pbon::json::Value&)
+        private: template< typename template_AllocatorType >
+        bool ParseArray(
+            pbon::json::Value&      out_Value,
+            template_AllocatorType& io_Allocator)
         {
             template_ArrayType auto_Array;
             if (!this->Expect(']'))
@@ -632,7 +725,7 @@ class Value
                 for (;;)
                 {
                     auto_Array.push_back(pbon::json::Value());
-                    if (!this->Parse(auto_Array.back()))
+                    if (!this->Parse(auto_Array.back(), io_Allocator))
                     {
                         return false;
                     }
@@ -642,37 +735,58 @@ class Value
                     }
                 }
             }
-            //pbon::json::Value(auto_Array).swap(out_Value);
+            pbon::json::Value(auto_Array, io_Allocator).Swap(out_Value);
             return this->Expect(']');
         }
 
         /** @brief JSONが持っているobjectを解析して取り出す。
-            @param[out] out_Value JSONから取り出した値の出力先。
-            @retval !=false 成功。
-            @retval ==false 失敗。値は出力されない。
+            @tparam template_AllocatorType
+                std::allocator 互換のinterfaceを持つmemory割当子の型。
+            @param[out]    out_Value    JSONから取り出した値の出力先。
+            @param[in,out] io_Allocator 使用するmemory割当子。
+            @retval true  成功。
+            @retval false 失敗。値は出力されない。
+            @todo 未実装。
          */
-        private: bool ParseObject(pbon::json::Value&)
+        private: template< typename template_AllocatorType >
+        bool ParseObject(
+            pbon::json::Value&      out_Value,
+            template_AllocatorType& io_Allocator)
         {
+            out_Value;io_Allocator;
             return false;
         }
 
         /** @brief JSONが持っている数値を解析して取り出す。
-            @param[out] out_Value JSONから取り出した値の出力先。
-            @retval !=false 成功。
-            @retval ==false 失敗。値は出力されない。
+            @tparam template_AllocatorType
+                std::allocator 互換のinterfaceを持つmemory割当子の型。
+            @param[out]    out_Value    JSONから取り出した値の出力先。
+            @param[in,out] io_Allocator 使用するmemory割当子。
+            @retval true  成功。
+            @retval false 失敗。値は出力されない。
+            @todo 未実装。
          */
-        private: bool ParseNumber(pbon::json::Value&)
+        private: template< typename template_AllocatorType >
+        bool ParseNumber(
+            pbon::json::Value&      out_Value,
+            template_AllocatorType& io_Allocator)
         {
+            out_Value;io_Allocator;
             return false;
         }
 
         /** @brief JSONが持っている文字列を解析して取り出す。
-            @param[out] out_Value JSONから取り出した値の出力先。
-            @retval !=false 成功。
-            @retval ==false 失敗。値は出力されない。
+            @tparam template_AllocatorType
+                std::allocator 互換のinterfaceを持つmemory割当子の型。
+            @param[out]    out_Value    JSONから取り出した値の出力先。
+            @param[in,out] io_Allocator 使用するmemory割当子。
+            @retval true  成功。
+            @retval false 失敗。値は出力されない。
          */
-        private: bool ParseString(
-            pbon::json::Value&)
+        private: template< typename template_AllocatorType >
+        bool ParseString(
+            pbon::json::Value&      out_Value,
+            template_AllocatorType& io_Allocator)
         {
             template_StringType local_String;
             for (;;)
@@ -685,7 +799,8 @@ class Value
                 }
                 if (auto_Char == '"')
                 {
-                    //pbon::json::Value(local_String).Swap(out_Value);
+                    pbon::json::Value(local_String, io_Allocator).Swap(
+                        out_Value);
                     return true;
                 }
                 if (auto_Char == '\\')

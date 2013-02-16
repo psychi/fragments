@@ -351,28 +351,19 @@ namespace json
 {
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief JSONの値。
+/** @brief JSONから取り出した値を保持する。
  */
 class value
 {
     /// thisが指す値の型。
     public: typedef pbon::json::value self;
 
-    //-------------------------------------------------------------------------
-    public: template< typename template_value_type > struct type {};
+    /** @brief JSONの解析結果。
+
+        - 成功した場合は(0, 0)。
+        - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
+     */
     public: typedef std::pair< unsigned, unsigned > parse_result;
-
-    /// 値の持ち方。
-    private: enum hold
-    {
-        hold_EMPTY,   ///< 値が空。
-        hold_VALUE,   ///< 直接値を持ってる。
-        hold_POINTER, ///< pointerとして値を持ってる。
-    };
-
-    //-------------------------------------------------------------------------
-    private: pbon::int64 storage_;
-    private: self::hold  hold_;
 
     //-------------------------------------------------------------------------
     /// @brief 空の値を構築。
@@ -394,194 +385,111 @@ class value
     }
 
     /** @brief JSON形式の文字列を解析し、値を取り出す。
-        @tparam template_number_type @copydoc pbon::json::parser::number
-        @tparam template_string_type @copydoc pbon::json::parser::string
-        @param[in] in_string      値を取り込むJSON形式の文字列。
-        @param[in] in_number_type 保持する数値の型。
+        @tparam template_string_type 解析する文字列の型。
+        @param[in] in_string   値を取り込むJSON形式の文字列。
+        @param[out] out_result JSONの解析結果。
+        - 成功した場合は(0, 0)。
+        - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
      */
-    template<
-        typename template_number_type,
-        typename template_string_type >
+    public: template< typename template_string_type >
     value(
-        const template_string_type&               in_string,
-        const self::type< template_number_type >& in_number_type)
+        const template_string_type& in_string,
+        self::parse_result&         out_result)
     {
-        self::parse_result local_result;
-        new(this) self(in_string, in_number_type, local_result);
+        new(this) self(type_traits<>(), in_string, out_result);
     }
 
     /** @brief JSON形式の文字列を解析し、値を取り出す。
-        @tparam template_number_type   @copydoc pbon::json::parser::number
-        @tparam template_string_type   @copydoc pbon::json::parser::string
+        @tparam template_traits_type
+            pbon::json::type_traits に準拠した型特性の型。
+        @tparam template_string_type 解析する文字列の型。
+        @param[in] in_type_traits pbon::json::type_traits に準拠した型特性。
         @param[in] in_string      値を取り込むJSON形式の文字列。
-        @param[in] in_number_type 保持する数値の型。
         @param[out] out_result    JSONの解析結果。
         - 成功した場合は(0, 0)。
         - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
      */
-    template<
-        typename template_number_type,
+    public: template<
+        typename template_traits_type,
         typename template_string_type >
     value(
-        const template_string_type&               in_string,
-        const self::type< template_number_type >& in_number_type,
-        self::parse_result&                       out_result)
+        const template_traits_type& in_type_traits,
+        const template_string_type& in_string,
+        self::parse_result&         out_result)
     {
         typename template_string_type::allocator_type local_allocator(
             in_string.get_allocator());
-        new(this) self(in_string, in_number_type, local_allocator, out_result);
+        new(this) self(in_type_traits, in_string, local_allocator, out_result);
     }
 
     /** @brief JSON形式の文字列を解析し、値を取り出す。
-        @tparam template_number_type   @copydoc pbon::json::parser::number
-        @tparam template_string_type   @copydoc pbon::json::parser::string
+        @tparam template_traits_type
+            pbon::json::type_traits に準拠した型特性の型。
+        @tparam template_string_type 解析する文字列の型。
+        @tparam template_allocator_type
+            @copydoc pbon::json::type_traits::allocator
+        @param[in] in_type_traits   pbon::json::type_traits に準拠した型特性。
         @param[in] in_string        値を取り込むJSON形式の文字列。
-        @param[in] in_number_type   保持する数値の型。
-        @param[in,out] io_allocator 使用するmemory割当子。
-     */
-    template<
-        typename template_number_type,
-        typename template_string_type,
-        typename template_allocator_type >
-    value(
-        const template_string_type&               in_string,
-        const self::type< template_number_type >& in_number_type,
-        template_allocator_type&                  io_allocator)
-    {
-        self::parse_result local_result;
-        new(this) self(
-            in_string, in_number_type, io_allocator, local_result);
-    }
-
-    /** @brief JSON形式の文字列を解析し、値を取り出す。
-        @tparam template_number_type   @copydoc pbon::json::parser::number
-        @tparam template_string_type   @copydoc pbon::json::parser::string
-        @param[in] in_string        値を取り込むJSON形式の文字列。
-        @param[in] in_number_type   保持する数値の型。
         @param[in,out] io_allocator 使用するmemory割当子。
         @param[out] out_result      JSONの解析結果。
         - 成功した場合は(0, 0)。
         - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
      */
-    template<
-        typename template_number_type,
+    public: template<
+        typename template_traits_type,
         typename template_string_type,
         typename template_allocator_type >
     value(
-        const template_string_type&               in_string,
-        const self::type< template_number_type >& in_number_type,
-        template_allocator_type&                  io_allocator,
-        self::parse_result&                       out_result)
+        const template_traits_type& in_type_traits,
+        const template_string_type& in_string,
+        template_allocator_type&    io_allocator,
+        self::parse_result&         out_result)
     {
-        typedef std::list< pbon::json::value, template_allocator_type > array;
-        typedef std::map<
-            template_string_type,
-            pbon::json::value,
-            std::less< template_string_type >,
-            template_allocator_type >
-                object;
         new(this) self(
+            in_type_traits,
             in_string.begin(),
             in_string.end(),
-            in_number_type,
-            self::type< template_string_type >(),
-            self::type< array >(),
-            self::type< object >(),
             io_allocator,
             out_result);
     }
 
     /** @brief JSON形式の文字列を解析し、値を取り出す。
+        @tparam template_traits_type
+            pbon::json::type_traits に準拠した型特性の型。
         @tparam template_iterator_type @copydoc pbon::json::parser::iterator
-        @tparam template_number_type   @copydoc pbon::json::parser::number
-        @tparam template_string_type   @copydoc pbon::json::parser::string
-        @tparam template_array_type    @copydoc pbon::json::parser::array
-        @tparam template_object_type   @copydoc pbon::json::parser::object
-        @param[in] in_string_begin  値を取り込むJSON形式の文字列の先頭位置。
-        @param[in] in_string_end    値を取り込むJSON形式の文字列の末尾位置。
-        @param[in] in_number_type   保持する数値の型。
-        @param[in] in_string_type   保持する文字列の型。
-        @param[in] in_array_type    保持する配列の型。
-        @param[in] in_object_type   保持するobjectの型。
-        @param[in,out] io_allocator 使用するmemory割当子。
-     */
-    template<
-        typename template_number_type,
-        typename template_string_type,
-        typename template_array_type,
-        typename template_object_type,
-        typename template_iterator_type,
-        typename template_allocator_type >
-    value(
-        const template_iterator_type&             in_string_begin,
-        const template_iterator_type&             in_string_end,
-        const self::type< template_number_type >& in_number_type,
-        const self::type< template_string_type >& in_string_type,
-        const self::type< template_array_type >&  in_array_type,
-        const self::type< template_object_type >& in_object_type,
-        template_allocator_type&                  io_allocator)
-    {
-        self::parse_result local_result;
-        new(this) self(
-            in_string_begin,
-            in_string_end,
-            in_number_type,
-            in_string_type,
-            in_array_type,
-            in_object_type,
-            io_allocator,
-            local_result);
-    }
-
-    /** @brief JSON形式の文字列から値を取り出す。
-        @tparam template_iterator_type @copydoc pbon::json::parser::iterator
-        @tparam template_number_type   @copydoc pbon::json::parser::number
-        @tparam template_string_type   @copydoc pbon::json::parser::string
-        @tparam template_array_type    @copydoc pbon::json::parser::array
-        @tparam template_object_type   @copydoc pbon::json::parser::object
-        @param[in] in_string_begin  値を取り込むJSON形式の文字列の先頭位置。
-        @param[in] in_string_end    値を取り込むJSON形式の文字列の末尾位置。
-        @param[in] in_number_type   保持する数値の型。
-        @param[in] in_string_type   保持する文字列の型。
-        @param[in] in_array_type    保持する配列の型。
-        @param[in] in_object_type   保持するobjectの型。
+        @tparam template_allocator_type
+            @copydoc pbon::json::type_traits::allocator
+        @param[in] in_type_traits   型特性。
+        @param[in] in_string_begin  解析する文字列の先頭位置。
+        @param[in] in_string_end    解析する文字列の末尾位置。
         @param[in,out] io_allocator 使用するmemory割当子。
         @param[out] out_result      JSONの解析結果。
         - 成功した場合は(0, 0)。
         - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
      */
-    template<
-        typename template_number_type,
-        typename template_string_type,
-        typename template_array_type,
-        typename template_object_type,
+    public: template<
+        typename template_traits_type,
         typename template_iterator_type,
         typename template_allocator_type >
     value(
-        const template_iterator_type&             in_string_begin,
-        const template_iterator_type&             in_string_end,
-        const self::type< template_number_type >& in_number_type,
-        const self::type< template_string_type >& in_string_type,
-        const self::type< template_array_type >&  in_array_type,
-        const self::type< template_object_type >& in_object_type,
-        template_allocator_type&                  io_allocator,
-        self::parse_result&                       out_result):
+        const template_traits_type&   in_type_traits,
+        const template_iterator_type& in_string_begin,
+        const template_iterator_type& in_string_end,
+        template_allocator_type&      io_allocator,
+        self::parse_result&           out_result):
     storage_(0),
     hold_(self::hold_EMPTY)
     {
         // 使わない引数。
-        in_number_type;
-        in_string_type;
-        in_array_type;
-        in_object_type;
+        in_type_traits;
 
         // JSON文字列を解析して値を取り出す。
         pbon::json::parser<
             template_iterator_type,
-            template_number_type,
-            template_string_type,
-            template_array_type,
-            template_object_type >
+            typename template_traits_type::number,
+            typename template_traits_type::string,
+            typename template_traits_type::array,
+            typename template_traits_type::object >
                 local_parser(
                     in_string_begin, in_string_end, io_allocator, *this);
         out_result = self::parse_result(
@@ -670,6 +578,15 @@ class value
         return this->hold_ == self::hold_EMPTY;
     }
 
+    //-------------------------------------------------------------------------
+    /// 値の持ち方。
+    private: enum hold
+    {
+        hold_EMPTY,   ///< 値が空。
+        hold_VALUE,   ///< 直接値を持ってる。
+        hold_POINTER, ///< pointerとして値を持ってる。
+    };
+
     private: template< typename template_value_type >
     bool set_value(
         const template_value_type& in_value)
@@ -684,15 +601,80 @@ class value
         this->hold_ = self::hold_VALUE;
         return true;
     }
+
+    //-------------------------------------------------------------------------
+    private: pbon::int64 storage_;
+    private: self::hold  hold_;
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief pbon::json::value に持たせる値の型特性。
+    @tparam template_number_type    @copydoc type_traits::number
+    @tparam template_string_type    @copydoc type_traits::string
+    @tparam template_allocator_type @copydoc type_traits::allocator
+ */
+template<
+    typename template_number_type = double,
+    typename template_string_type = std::string,
+    typename template_allocator_type = std::allocator< void* > >
+struct type_traits
+{
+    /** @brief pbon::json::value に持たせる数値の型。
+
+        文字列から数値に変換するため、以下に相当する関数が使えること。
+        @code
+        operator>>(
+            std::basic_istringstream< pbon::json::parser::string::value_type >&,
+            parser::number&)
+        @endcode
+     */
+    typedef template_number_type number;
+
+    /** @brief pbon::json::value に持たせる文字列の型。
+
+        末尾に文字を追加するため、以下に相当する関数が使えること。
+        @code
+        string::push_back(const pbon::json::parser::string::value_type)
+        @endcode
+     */
+    typedef template_string_type string;
+
+    /** @brief pbon::json::value に持たせる配列の型。
+
+        末尾に値を追加するため、以下に相当する関数が使えること。
+        @code
+        array::push_back(const pbon::json::value&)
+        @endcode
+     */
+    typedef std::list< pbon::json::value, template_allocator_type > array;
+
+    /** @brief pbon::json::value に持たせるobjectの型。
+
+        値を挿入するため、以下に相当する関数が使えること。
+        @code
+        array::insert(
+            std::pair< pbon::json::parser::string, const pbon::json::value >&)
+        @endcode
+     */
+    typedef std::map<
+        template_string_type,
+        pbon::json::value,
+        std::less< template_string_type >,
+        template_allocator_type >
+            object;
+
+    /** @brief std::allocator 互換のinterfaceを持つmemory割当子。
+     */
+    typedef template_allocator_type allocator;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief JSON解析器。
-    @tparam template_iterator_type @copydoc parser::iterator
-    @tparam template_number_type   @copydoc parser::number
-    @tparam template_string_type   @copydoc parser::string
-    @tparam template_array_type    @copydoc parser::array
-    @tparam template_object_type   @copydoc parser::object
+    @tparam template_iterator_type @copydoc pbon::json::parser::iterator
+    @tparam template_number_type   @copydoc pbon::json::type_traits::number
+    @tparam template_string_type   @copydoc pbon::json::type_traits::string
+    @tparam template_array_type    @copydoc pbon::json::type_traits::array
+    @tparam template_object_type   @copydoc pbon::json::type_traits::object
  */
 template<
     typename template_iterator_type,
@@ -712,42 +694,25 @@ class parser
             self;
 
     //-------------------------------------------------------------------------
-    /// JSONの解析に使う反復子。
+    /// JSONの解析に使う反復子の型。
     public: typedef template_iterator_type iterator;
 
-    /// pbon::json::value に持たせる数値の型。
+    /// @copydoc pbon::json::type_traits::number
     public: typedef template_number_type number;
 
-    /** @brief pbon::json::value に持たせる文字列の型。
-
-        末尾に文字を追加するため、以下に相当する関数が使えること。
-        @code
-        string::push_back(const string::value_type)
-        @endcode
-     */
+    /// @copydoc pbon::json::type_traits::string
     public: typedef template_string_type string;
 
-    /** @brief pbon::json::value に持たせる配列の型。
-
-        末尾に値を追加するため、以下に相当する関数が使えること。
-        @code
-        array::push_back(const pbon::json::value&)
-        @endcode
-     */
+    /// @copydoc pbon::json::type_traits::array
     public: typedef template_array_type array;
 
-    /** @brief pbon::json::value に持たせるobjectの型。
-
-        値を挿入するため、以下に相当する関数が使えること。
-        @code
-        array::insert(std::pair< string, const pbon::json::value >&)
-        @endcode
-     */
+    /// @copydoc pbon::json::type_traits::object
     public: typedef template_object_type object;
 
     //-------------------------------------------------------------------------
-    /** @tparam template_allocator_type
-            std::allocator 互換のinterfaceを持つmemory割当子の型。
+    /** @brief JSON形式の文字列を解析し、値を取り出す。
+        @tparam template_allocator_type
+            @copydoc pbon::json::type_traits::allocator
         @param[in] in_begin         解析する文字列の先頭位置。
         @param[in] in_end           解析する文字列の末尾位置。
         @param[in,out] io_allocator 使用するmemory割当子。
@@ -795,7 +760,7 @@ class parser
     //-------------------------------------------------------------------------
     /** @brief JSONが持つ値を解析して取り出す。
         @tparam template_allocator_type
-            std::allocator 互換のinterfaceを持つmemory割当子の型。
+            @copydoc pbon::json::type_traits::allocator
         @param[in,out] io_allocator 使用するmemory割当子。
         @param[out] out_value       JSONから取り出した値の出力先。
         @retval true  成功。
@@ -858,8 +823,8 @@ class parser
     }
 
     /** @brief JSONが持っている配列を解析して取り出す。
-        @tparam template_allocator_type @
-            std::allocator 互換のinterfaceを持つmemory割当子の型。
+        @tparam template_allocator_type
+            @copydoc pbon::json::type_traits::allocator
         @param[in,out] io_allocator 使用するmemory割当子。
         @param[out] out_value       JSONから取り出した配列の出力先。
         @retval true  成功。
@@ -892,7 +857,7 @@ class parser
 
     /** @brief JSONが持っているobjectを解析して取り出す。
         @tparam template_allocator_type
-            std::allocator 互換のinterfaceを持つmemory割当子の型。
+            @copydoc pbon::json::type_traits::allocator
         @param[in,out] io_allocator 使用するmemory割当子。
         @param[out] out_value       JSONから取り出したobjectの出力先。
         @retval true  成功。
@@ -910,7 +875,7 @@ class parser
 
     /** @brief JSONが持っている数値を解析して取り出す。
         @tparam template_allocator_type
-            std::allocator 互換のinterfaceを持つmemory割当子の型。
+            @copydoc pbon::json::type_traits::allocator
         @param[in,out] io_allocator 使用するmemory割当子。
         @param[out] out_value       JSONから取り出した数値の出力先。
         @retval true  成功。
@@ -921,6 +886,7 @@ class parser
         template_allocator_type& io_allocator,
         pbon::json::value&       out_value)
     {
+        // 数の文字列を取り出す。
         template_string_type local_string;
         for (;;)
         {
@@ -943,7 +909,9 @@ class parser
             }
         }
 
-        std::istringstream local_stream(local_string);
+        // 数の文字列を数値に変換。
+        std::basic_istringstream< typename template_string_type::value_type >
+            local_stream(local_string);
         template_number_type local_number;
         local_stream >> local_number;
         if (!local_stream.eof())
@@ -956,7 +924,7 @@ class parser
 
     /** @brief JSONが持っている文字列を解析して取り出す。
         @tparam template_allocator_type
-            std::allocator 互換のinterfaceを持つmemory割当子の型。
+            @copydoc pbon::json::type_traits::allocator
         @param[in,out] io_allocator 使用するmemory割当子。
         @param[out] out_value       JSONから取り出した文字列の出力先。
         @retval true  成功。
@@ -1237,7 +1205,10 @@ class parser
         }
     }
 
-    private: enum { END_CHAR = -1 };
+    private: enum
+    {
+        END_CHAR = -1 ///< 末尾位置を表す文字。
+    };
 
     //-------------------------------------------------------------------------
     private: template_iterator_type current_;

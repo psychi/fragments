@@ -26,20 +26,20 @@
     PBON/JSONは、PBONとJSONの相互変換を行うためのlibrary。
     PBONは、Packed-Binary-Object-Notationの略。
 
-    - Call pbon::json::element::import_json(), import the JSON.
-      pbon::json::element::import_json() で、JSONを取り込む。
+    - Call pbon::json::value::import_json(), import the JSON.
+      pbon::json::value::import_json() で、JSONを取り込む。
 
-    - Call pbon::json::element::import_pbon(), import the PBON.
-      pbon::json::element::import_pbon() で、PBONを取り込む。
+    - Call pbon::json::value::import_pbon(), import the PBON.
+      pbon::json::value::import_pbon() で、PBONを取り込む。
 
-    - Call pbon::json::element::export_json(), export the JSON.
-      pbon::json::element::export_json() で、JSONを書き出す。
+    - Call pbon::json::value::export_json(), export the JSON.
+      pbon::json::value::export_json() で、JSONを書き出す。
 
-    - Call pbon::json::element::export_pbon(), export the PBON.
-      pbon::json::element::export_pbon() で、PBONを書き出す。
+    - Call pbon::json::value::export_pbon(), export the PBON.
+      pbon::json::value::export_pbon() で、PBONを書き出す。
 
-    - Call pbon::element::get_root(), get root element of PBON from binary.
-      pbon::element::get_root() で、binary列からPBONの最上位要素を取得する。
+    - Call pbon::value::get_root(), get root value of PBON from binary.
+      pbon::value::get_root() で、binary列からPBONの最上位要素を取得する。
 
     @file
     @author Hillco Psychi (https://twitter.com/psychi)
@@ -113,13 +113,13 @@ template<> pbon::type get_type< pbon::float64 >()
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief PBONの要素。
-    @tparam template_attribute_type @copydoc pbon::element::attribute
+    @tparam template_attribute_type @copydoc pbon::value::attribute
  */
 template< typename template_attribute_type >
-class element
+class value
 {
     /// thisが指す型。
-    public: typedef element self;
+    public: typedef value self;
 
     /// packed-binaryの属性の型。
     public: typedef template_attribute_type attribute;
@@ -197,12 +197,12 @@ class element
     }
 
     /** @brief 持っている値へのpointerを取得。
-        @tparam template_elementtype 持っている値の型。
+        @tparam template_valuetype 持っている値の型。
      */
-    protected: template< typename template_elementtype >
-    const template_elementtype* get_element() const
+    protected: template< typename template_valuetype >
+    const template_valuetype* get_value() const
     {
-        return self::get_address< template_elementtype >(this, this->element_);
+        return self::get_address< template_valuetype >(this, this->value_);
     }
 
     /** @brief 相対位置からaddressを取得。
@@ -222,34 +222,34 @@ class element
             static_cast< const char* >(in_base_address) + in_byte_position);
     }
 
-    private: typename self::attribute element_; ///< 値。もしくは値への相対位置。
+    private: typename self::attribute value_; ///< 値。もしくは値への相対位置。
     private: typename self::attribute size_;  ///< 値の数。
     private: typename self::attribute type_;  ///< 値の型。
     private: typename self::attribute super_; ///< 上位要素への相対位置。
 };
-typedef pbon::element< pbon::int32 > element32;
+typedef pbon::value< pbon::int32 > value32;
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// pbon::element の配列。
+/// pbon::value の配列。
 template< typename template_attribute_type >
 class array:
-    private pbon::element< template_attribute_type >
+    private pbon::value< template_attribute_type >
 {
     public: typedef pbon::array< template_attribute_type > self;
-    private: typedef pbon::element< template_attribute_type > super;
-    public: typedef super element;
+    private: typedef pbon::value< template_attribute_type > super;
+    public: typedef super value;
 
     using super::attribute;
     using super::get_super;
 
     public: static const self* cast(
-        const super* const in_element)
+        const super* const in_value)
     {
-        if (in_element == NULL || !in_element->is_array())
+        if (in_value == NULL || !in_value->is_array())
         {
             return NULL;
         }
-        return static_cast< const self* >(in_element);
+        return static_cast< const self* >(in_value);
     }
 
     /** @brief 持っている値の数を取得。
@@ -263,57 +263,57 @@ class array:
         return this->super::get_size();
     }
 
-    public: const typename self::element* get_begin() const
+    public: const typename self::value* get_begin() const
     {
         if (!this->is_array())
         {
             return NULL;
         }
-        return this->get_element< typename self::element >();
+        return this->get_value< typename self::value >();
     }
 
-    public: const typename self::element* get_end() const
+    public: const typename self::value* get_end() const
     {
         if (!this->is_array())
         {
             return NULL;
         }
-        return this->get_element< typename self::element >() + this->get_size();
+        return this->get_value< typename self::value >() + this->get_size();
     }
 
-    public: const typename self::element* at(
+    public: const typename self::value* at(
         const std::size_t in_index)
     {
         if (!this->is_array() || this->get_size() <= in_index)
         {
             return NULL;
         }
-        return this->get_element< self::element >() + in_index;
+        return this->get_value< self::value >() + in_index;
     }
 };
 typedef pbon::array< pbon::int32 > array32;
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// pbon::element の辞書。
+/// pbon::value の辞書。
 template< typename template_attribute_type >
 class object:
-    private element< template_attribute_type >
+    private value< template_attribute_type >
 {
     public: typedef pbon::object< template_attribute_type > self;
-    private: typedef pbon::element< template_attribute_type > super;
-    public: typedef std::pair< super, super > element;
+    private: typedef pbon::value< template_attribute_type > super;
+    public: typedef std::pair< super, super > value;
 
     using super::attribute;
     using super::get_super;
 
     public: static const self* cast(
-        const super* const in_element)
+        const super* const in_value)
     {
-        if (in_element == NULL || !in_element->is_object())
+        if (in_value == NULL || !in_value->is_object())
         {
             return NULL;
         }
-        return static_cast< const self* >(in_element);
+        return static_cast< const self* >(in_value);
     }
 
     /** @brief 持っている値の数を取得。
@@ -327,34 +327,34 @@ class object:
         return this->super::get_size() / 2;
     }
 
-    public: const typename self::element* get_begin() const
+    public: const typename self::value* get_begin() const
     {
         if (!this->is_object())
         {
             return NULL;
         }
-        return this->get_element< typename self::element >();
+        return this->get_value< typename self::value >();
     }
 
-    public: const typename self::element* get_end() const
+    public: const typename self::value* get_end() const
     {
         if (!this->is_object())
         {
             return NULL;
         }
-        return this->get_element< typename self::element >() + this->get_size();
+        return this->get_value< typename self::value >() + this->get_size();
     }
 
     public: template< typename template_key_type >
-    const typename self::element* lower_bound(
+    const typename self::value* lower_bound(
         const template_key_type& in_key) const;
 
     public: template< typename template_key_type >
-    const typename self::element* upper_bound(
+    const typename self::value* upper_bound(
         const template_key_type& in_key) const;
 
     public: template< typename template_key_type >
-    const typename self::element* find(
+    const typename self::value* find(
         const template_key_type& in_key) const;
 };
 typedef pbon::object< pbon::int32 > object32;
@@ -363,28 +363,28 @@ namespace json
 {
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief JSONの要素。
+/** @brief JSONの値。
  */
-class element
+class value
 {
     /// thisが指す値の型。
-    public: typedef pbon::json::element self;
+    public: typedef pbon::json::value self;
 
-    /** @brief JSONの要素が持つ値の型特性。
-        @tparam template_number_type @copydoc value_traits::number
-        @tparam template_string_type @copydoc value_traits::string
-        @tparam template_allocator_type @copydoc value_traits::allocator
+    /** @brief JSON値の型特性。
+        @tparam template_number_type @copydoc type_traits::number
+        @tparam template_string_type @copydoc type_traits::string
+        @tparam template_allocator_type @copydoc type_traits::allocator
      */
     public: template<
         typename template_number_type = double,
         typename template_string_type = std::string,
         typename template_allocator_type = std::allocator< void* > >
-    struct value_traits
+    struct type_traits
     {
-        /// JSONの要素が持つ数値の型。
+        /// JSON値が持つ数値の型。
         typedef template_number_type number;
 
-        /** @brief JSONの要素が持つ文字列の型。
+        /** @brief JSON値が持つ文字列の型。
 
             末尾に文字を追加するため、以下に相当する関数が使えること。
             @code
@@ -393,38 +393,38 @@ class element
          */
         typedef template_string_type string;
 
-        /** @brief JSONの要素が持つ配列の型。
+        /** @brief JSON値が持つ配列の型。
 
             末尾に値を追加するため、以下に相当する関数が使えること。
             @code
-            array::push_back(const pbon::json::element&)
+            array::push_back(const pbon::json::value&)
             @endcode
          */
-        typedef std::list< pbon::json::element, template_allocator_type >
+        typedef std::list< pbon::json::value, template_allocator_type >
             array;
 
-        /** @brief JSONの要素が持つobjectの型。
+        /** @brief JSON値が持つobjectの型。
 
             値を挿入するため、以下に相当する関数が使えること。
             @code
-            array::insert(std::pair< string, const pbon::json::element >&)
+            array::insert(std::pair< string, const pbon::json::value >&)
             @endcode
          */
         typedef std::map<
             template_string_type,
-            pbon::json::element,
+            pbon::json::value,
             std::less< template_string_type >,
             template_allocator_type >
                 object;
 
-        /// JSONの要素で使うmemory割当子の型。
+        /// JSON値が使うmemory割当子の型。
         typedef template_allocator_type allocator;
     };
 
     /// 値の持ち方。
     private: enum hold
     {
-        hold_EMPTY,   ///< 値を持ってない。
+        hold_EMPTY,   ///< 値が空。
         hold_VALUE,   ///< 直接値を持ってる。
         hold_POINTER, ///< pointerとして値を持ってる。
     };
@@ -434,8 +434,8 @@ class element
     private: pbon::int8  hold_;
 
     //-------------------------------------------------------------------------
-    /// @brief 値を空にして構築。
-    public: element():
+    /// @brief 空の値を構築。
+    public: value():
     storage_(0),
     hold_(self::hold_EMPTY)
     {
@@ -446,7 +446,7 @@ class element
         @param[in] in_source 代入元となる値。
         @todo 未実装。
      */
-    public: element(
+    public: value(
         const self& in_source):
     hold_(in_source.hold_)
     {
@@ -457,14 +457,14 @@ class element
         memory割当てを行わずに構築。構築できなかった場合は、空となる。
 
         @tparam template_value_type 初期値の型。
-        @param[in] in_element 初期値。
+        @param[in] in_value 初期値。
      */
     public: template< typename template_value_type >
-    explicit element(
-        const template_value_type& in_element):
+    explicit value(
+        const template_value_type& in_value):
     storage_(0)
     {
-        if (this->set_value(in_element))
+        if (this->set_value(in_value))
         {
             this->hold_ = self::hold_EMPTY;
         }
@@ -474,19 +474,19 @@ class element
 
         @tparam template_value_type     初期値の型。
         @tparam template_allocator_type memory割当子の型。
-        @param[in] in_element       初期値。
+        @param[in] in_value         初期値。
         @param[in,out] io_allocator 使用するmemory割当子。
         @todo 未実装。
      */
     public: template<
         typename template_value_type,
         typename template_allocator_type >
-    element(
-        const template_value_type& in_element,
+    value(
+        const template_value_type& in_value,
         template_allocator_type&   io_allocator):
     storage_(0)
     {
-        if (this->set_value(in_element))
+        if (this->set_value(in_value))
         {
             io_allocator;
             this->hold_ = self::hold_POINTER;
@@ -495,7 +495,7 @@ class element
 
     /// @brief destructor
     /// @todo 未実装。
-    ~element()
+    ~value()
     {
     }
 
@@ -504,10 +504,13 @@ class element
      */
     public: self& operator=(const self& in_source)
     {
-        this->~element();
+        this->~value();
         return *new(this) self(in_source);
     }
 
+    /** @brief 値を交換。
+        @param[in,out] io_target 値を交換する対象。
+     */
     public: void swap(self& io_target)
     {
         std::swap(this->storage_, io_target.storage_);
@@ -525,24 +528,24 @@ class element
 
     private: template< typename template_value_type >
     bool set_value(
-        const template_value_type& in_element)
+        const template_value_type& in_value)
     {
-        std::size_t local_elementSize(sizeof(template_value_type));
-        if (sizeof(this->storage_) < local_elementSize)
+        std::size_t local_value_size(sizeof(template_value_type));
+        if (sizeof(this->storage_) < local_value_size)
         {
             return false;
         }
-        this->~element();
-        new(&this->storage_) template_value_type(in_element);
+        this->~value();
+        new(&this->storage_) template_value_type(in_value);
         this->hold_ = self::hold_VALUE;
         return true;
     }
 
     //-------------------------------------------------------------------------
     /** @brief JSON形式の文字列から値を取り出す。
-        @tparam template_number_type JSONの要素に使う数値の型。
+        @tparam template_number_type JSON値が持つ数値の型。
         @tparam template_string_type
-            JSONの要素で使う文字列の型。
+            JSON値が持つ文字列の型。
             末尾に文字を追加するため、以下に相当する関数が使えること。
             @code
             template_string_type::push_back(
@@ -559,7 +562,7 @@ class element
     std::pair< unsigned, unsigned > import_json(
         const template_string_type in_json_string)
     {
-        typedef self::value_traits<
+        typedef self::type_traits<
             template_number_type,
             template_string_type,
             typename template_string_type::allocator_type >
@@ -571,7 +574,7 @@ class element
 
     /** @brief JSON形式の文字列から値を取り出す。
         @tparam template_traits_type
-            pbon::json::element::value_traits から導出した、JSONの値の型特性。
+            pbon::json::value::type_traits から導出した、JSONの値の型特性。
         @tparam template_iterator_type  JSONの解析で使う反復子の型。
         @tparam template_allocator_type memory割当子の型。
         @param[in] in_json_begin    値を取り込むJSON形式の文字列の先頭位置。
@@ -627,26 +630,26 @@ class element
     //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
     /** @brief JSON解析器。
         @tparam template_iterator_type 解析に使う反復子の型。
-        @tparam template_number_type   JSONの要素で使う数値の型。
+        @tparam template_number_type   JSON値が持つ数値の型。
         @tparam template_string_type
-            JSONの要素で使う文字列の型。
+            JSON値が持つ文字列の型。
             末尾に文字を追加するため、以下に相当する関数が使えること。
             @code
             template_string_type::push_back(
                 const template_string_type::value_type)
             @endcode
         @tparam template_array_type
-            JSONの要素で使う配列の型。
+            JSON値が持つ配列の型。
             末尾に値を追加するため、以下に相当する関数が使えること。
             @code
-            template_array_type::push_back(const pbon::json::element)
+            template_array_type::push_back(const pbon::json::value&)
             @endcode
         @tparam template_object_type
-            JSONの要素で使うobjectの型。
+            JSON値が持つobjectの型。
             値を挿入するため、以下に相当する関数が使えること。
             @code
             template_object_type::insert(
-                const std::pair< template_string_type, pbon::json::element >)
+                const std::pair< template_string_type, pbon::json::value >&)
             @endcode
      */
     private: template<
@@ -706,14 +709,14 @@ class element
         /** @brief JSONが持っている値を解析して取り出す。
             @tparam template_allocator_type
                 std::allocator 互換のinterfaceを持つmemory割当子の型。
-            @param[out]    out_element  JSONから取り出した値の出力先。
+            @param[out] out_value       JSONから取り出した値の出力先。
             @param[in,out] io_allocator 使用するmemory割当子。
             @retval true  成功。
             @retval false 失敗。値は出力されない。
          */
         public: template< typename template_allocator_type >
         bool parse(
-            pbon::json::element&     out_element,
+            pbon::json::value&     out_value,
             template_allocator_type& io_allocator)
         {
             this->skip_white_space();
@@ -721,18 +724,18 @@ class element
             switch (local_char)
             {
                 case '"':
-                return this->parse_string(out_element, io_allocator);
+                return this->parse_string(out_value, io_allocator);
 
                 case '[':
-                return this->parse_array(out_element, io_allocator);
+                return this->parse_array(out_value, io_allocator);
 
                 case '{':
-                return this->parse_object(out_element, io_allocator);
+                return this->parse_object(out_value, io_allocator);
 
                 case 'n':
                 if (this->match("ull"))
                 {
-                    pbon::json::element().swap(out_element);
+                    pbon::json::value().swap(out_value);
                     return true;
                 }
                 return false;
@@ -740,7 +743,7 @@ class element
                 case 't':
                 if (this->match("rue"))
                 {
-                    pbon::json::element(true, io_allocator).swap(out_element);
+                    pbon::json::value(true, io_allocator).swap(out_value);
                     return true;
                 }
                 return false;
@@ -748,7 +751,7 @@ class element
                 case 'f':
                 if (this->match("alse"))
                 {
-                    pbon::json::element(false, io_allocator).swap(out_element);
+                    pbon::json::value(false, io_allocator).swap(out_value);
                     return true;
                 }
                 return false;
@@ -758,7 +761,7 @@ class element
                 if (('0' <= local_char && local_char <= '9') ||
                     local_char == '-')
                 {
-                    return this->parse_number(out_element, io_allocator);
+                    return this->parse_number(out_value, io_allocator);
                 }
                 return false;
             }
@@ -767,14 +770,14 @@ class element
         /** @brief JSONが持っている配列を解析して取り出す。
             @tparam template_allocator_type
                 std::allocator 互換のinterfaceを持つmemory割当子の型。
-            @param[out]    out_element  JSONから取り出した配列の出力先。
+            @param[out]    out_value  JSONから取り出した配列の出力先。
             @param[in,out] io_allocator 使用するmemory割当子。
             @retval true  成功。
             @retval false 失敗。配列は出力されない。
          */
         private: template< typename template_allocator_type >
         bool parse_array(
-            pbon::json::element&      out_element,
+            pbon::json::value&      out_value,
             template_allocator_type& io_allocator)
         {
             template_array_type local_array;
@@ -782,7 +785,7 @@ class element
             {
                 for (;;)
                 {
-                    local_array.push_back(pbon::json::element());
+                    local_array.push_back(pbon::json::value());
                     if (!this->parse(local_array.back(), io_allocator))
                     {
                         return false;
@@ -793,14 +796,14 @@ class element
                     }
                 }
             }
-            pbon::json::element(local_array, io_allocator).swap(out_element);
+            pbon::json::value(local_array, io_allocator).swap(out_value);
             return this->expect(']');
         }
 
         /** @brief JSONが持っているobjectを解析して取り出す。
             @tparam template_allocator_type
                 std::allocator 互換のinterfaceを持つmemory割当子の型。
-            @param[out]    out_element  JSONから取り出したobjectの出力先。
+            @param[out] out_value       JSONから取り出したobjectの出力先。
             @param[in,out] io_allocator 使用するmemory割当子。
             @retval true  成功。
             @retval false 失敗。objectは出力されない。
@@ -808,17 +811,17 @@ class element
          */
         private: template< typename template_allocator_type >
         bool parse_object(
-            pbon::json::element&     out_element,
+            pbon::json::value&     out_value,
             template_allocator_type& io_allocator)
         {
-            out_element;io_allocator;
+            out_value;io_allocator;
             return false;
         }
 
         /** @brief JSONが持っている数値を解析して取り出す。
             @tparam template_allocator_type
                 std::allocator 互換のinterfaceを持つmemory割当子の型。
-            @param[out]    out_element  JSONから取り出した数値の出力先。
+            @param[out] out_value       JSONから取り出した数値の出力先。
             @param[in,out] io_allocator 使用するmemory割当子。
             @retval true  成功。
             @retval false 失敗。数値は出力されない。
@@ -826,24 +829,24 @@ class element
          */
         private: template< typename template_allocator_type >
         bool parse_number(
-            pbon::json::element&      out_element,
+            pbon::json::value&      out_value,
             template_allocator_type& io_allocator)
         {
-            out_element;io_allocator;
+            out_value;io_allocator;
             return false;
         }
 
         /** @brief JSONが持っている文字列を解析して取り出す。
             @tparam template_allocator_type
                 std::allocator 互換のinterfaceを持つmemory割当子の型。
-            @param[out]    out_element  JSONから取り出した文字列の出力先。
+            @param[out] out_value       JSONから取り出した文字列の出力先。
             @param[in,out] io_allocator 使用するmemory割当子。
             @retval true  成功。
             @retval false 失敗。文字列は出力されない。
          */
         private: template< typename template_allocator_type >
         bool parse_string(
-            pbon::json::element&     out_element,
+            pbon::json::value&     out_value,
             template_allocator_type& io_allocator)
         {
             template_string_type local_string;
@@ -857,8 +860,8 @@ class element
                 }
                 if (local_char == '"')
                 {
-                    pbon::json::element(local_string, io_allocator).swap(
-                        out_element);
+                    pbon::json::value(local_string, io_allocator).swap(
+                        out_value);
                     return true;
                 }
                 if (local_char == '\\')

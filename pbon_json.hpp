@@ -382,7 +382,7 @@ class Value
 
     private: class Placeholder
     {
-        public: virtual void DeleteThis() = 0;
+        public: virtual void DeleteSelf() = 0;
         public: virtual Placeholder* Clone() = 0;
     };
 
@@ -414,7 +414,7 @@ class Value
     {
         if (this->Type_ == Type_HOLDER)
         {
-            this->Holder_->DeleteThis();
+            this->Holder_->DeleteSelf();
         }
     }
 
@@ -425,16 +425,45 @@ class Value
     }
 
     //-------------------------------------------------------------------------
-    /** @brief JSON形式の文字列から値を取り込む。
+    /** @brief JSON形式の文字列から値を取り出す。
+        @tparam template_NumberType JSONの値に使う数値の型。
+        @tparam template_StringType std::basic_string 互換の文字列型。
         @param[in] in_JsonString 値を取り込むJSON形式の文字列。
         @return
         - 成功した場合は(0, 0)。
         - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
      */
-    public: template< typename template_StringType >
+    public: template<
+        typename template_NumberType,
+        typename template_StringType >
     std::pair< unsigned, unsigned > ImportJson(
-        const template_StringType& in_JsonString)
+        const template_StringType in_JsonString)
     {
+        return this->ImportJson< template_NumberType, template_StringType >(
+            in_JsonString.begin(), in_JsonString.end());
+    }
+
+    /** @brief JSON形式の文字列から値を取り出す。
+        @tparam template_NumberType JSONの値に使う数値の型。
+        @tparam template_StringType
+            JSONの値に使う文字列の型。std::basic_string 互換が必須。
+        @tparam template_IteratorType JSONの解析で使う反復子の型。
+        @param[in] in_JsonBegin 値を取り込むJSON形式の文字列の先頭位置。
+        @param[in] in_JsonEnd   値を取り込むJSON形式の文字列の末尾位置。
+        @return
+        - 成功した場合は(0, 0)。
+        - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
+     */
+    public: template<
+        typename template_NumberType,
+        typename template_StringType,
+        typename template_IteratorType >
+    std::pair< unsigned, unsigned > ImportJson(
+        const template_IteratorType& in_JsonBegin,
+        const template_IteratorType& in_JsonEnd)
+    {
+        typedef template_IteratorType Iterator;
+        typedef template_NumberType Number;
         typedef template_StringType String;
         typedef String::allocator_type::rebind< This >::other VectorAllocator;
         typedef std::vector< This, VectorAllocator > Vector;
@@ -443,8 +472,8 @@ class Value
             MapAllocator;
         typedef std::map< Key, This, std::less< Key >, MapAllocator >
             Map;
-        This::JsonParser< double, String, Vector, Map >
-            local_Parser(in_JsonString.begin(), in_JsonString.end());
+        This::JsonParser< Iterator, Number, String, Vector, Map >
+            local_Parser(in_JsonBegin, in_JsonEnd);
         if (!local_Parser.Parse(*this))
         {
             std::make_pair(local_Parser.GetLine(), local_Parser.GetColumn());
@@ -452,7 +481,7 @@ class Value
         return std::make_pair(unsigned(0), unsigned(0));
     }
 
-    /** @brief PBON形式のbinary列から値を取り込む。
+    /** @brief PBON形式のbinary列から値を取り出す。
         @param[in] in_PbonBinary 値を取り込むPBON形式のbinary列。
      */
     public: template< typename template_ArrayType >
@@ -474,12 +503,14 @@ class Value
 
     //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
     /** @brief JSON解析器。
-        @tparam template_NumberType 数値の型。
-        @tparam template_StringType 文字列の型。
-        @tparam template_ArrayType  配列の型。
-        @tparam template_ObjectType objectの型。
+        @tparam template_IteratorType 解析に使う反復子の型。
+        @tparam template_NumberType   JSONの値で使う数値の型。
+        @tparam template_StringType   JSONの値で使う文字列の型。
+        @tparam template_ArrayType    JSONの値で使う配列の型。
+        @tparam template_ObjectType   JSONの値で使うobjectの型。
      */
     private: template<
+        typename template_IteratorType,
         typename template_NumberType,
         typename template_StringType,
         typename template_ArrayType,
@@ -488,6 +519,7 @@ class Value
     {
         /// thisが指す値の型。
         public: typedef JsonParser<
+            template_IteratorType,
             template_NumberType,
             template_StringType,
             template_ArrayType,
@@ -501,8 +533,8 @@ class Value
             @param[in] in_End   解析する文字列の末尾位置。
          */
         public: JsonParser(
-            const typename template_StringType::const_iterator& in_Begin,
-            const typename template_StringType::const_iterator& in_End):
+            const template_IteratorType& in_Begin,
+            const template_IteratorType& in_End):
         Current_(in_Begin),
         End_(in_End),
         LastChar_(This::END_CHAR),
@@ -531,8 +563,8 @@ class Value
         }
 
         //---------------------------------------------------------------------
-        /** @brief JSONが持っている値を解析。
-            @param[out] out_Value JSONから解析した値の出力先。
+        /** @brief JSONが持っている値を解析して取り出す。
+            @param[out] out_Value JSONから取り出した値の出力先。
             @retval !=false 成功。
             @retval ==false 失敗。値は出力されない。
          */
@@ -555,7 +587,7 @@ class Value
                 case 'n':
                 if (this->Match("ull"))
                 {
-                    //pbon::json::Value().Swap(out_Value);
+                    pbon::json::Value().Swap(out_Value);
                     return true;
                 }
                 return false;
@@ -563,7 +595,7 @@ class Value
                 case 't':
                 if (this->Match("rue"))
                 {
-                    //pbon::json::Value(true).Swap(out_Value);
+                    pbon::json::Value(true).Swap(out_Value);
                     return true;
                 }
                 return false;
@@ -571,7 +603,7 @@ class Value
                 case 'f':
                 if (this->Match("alse"))
                 {
-                    //pbon::json::Value(false).Swap(out_Value);
+                    pbon::json::Value(false).Swap(out_Value);
                     return true;
                 }
                 return false;
@@ -587,8 +619,8 @@ class Value
             }
         }
 
-        /** @brief JSONが持っている配列を解析。
-            @param[out] out_Value JSONから解析した配列の出力先。
+        /** @brief JSONが持っている配列を解析して取り出す。
+            @param[out] out_Value JSONから取り出した値の出力先。
             @retval !=false 成功。
             @retval ==false 失敗。値は出力されない。
          */
@@ -614,8 +646,8 @@ class Value
             return this->Expect(']');
         }
 
-        /** @brief JSONが持っているobjectを解析。
-            @param[out] out_Value JSONから解析したobjectの出力先。
+        /** @brief JSONが持っているobjectを解析して取り出す。
+            @param[out] out_Value JSONから取り出した値の出力先。
             @retval !=false 成功。
             @retval ==false 失敗。値は出力されない。
          */
@@ -624,13 +656,18 @@ class Value
             return false;
         }
 
+        /** @brief JSONが持っている数値を解析して取り出す。
+            @param[out] out_Value JSONから取り出した値の出力先。
+            @retval !=false 成功。
+            @retval ==false 失敗。値は出力されない。
+         */
         private: bool ParseNumber(pbon::json::Value&)
         {
             return false;
         }
 
-        /** @brief JSONが持っている文字列を解析。
-            @param[out] out_Value JSONから解析した文字列の出力先。
+        /** @brief JSONが持っている文字列を解析して取り出す。
+            @param[out] out_Value JSONから取り出した値の出力先。
             @retval !=false 成功。
             @retval ==false 失敗。値は出力されない。
          */
@@ -902,8 +939,8 @@ class Value
         }
 
         //---------------------------------------------------------------------
-        private: typename template_StringType::const_iterator Current_;
-        private: typename template_StringType::const_iterator End_;
+        private: template_IteratorType Current_;
+        private: template_IteratorType End_;
         private: int      LastChar_;
         private: unsigned Line_;
         private: unsigned Column_;

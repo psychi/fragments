@@ -63,6 +63,7 @@ typedef double Float64;
 enum Type
 {
     Type_NULL,
+    Type_BOOL,
     Type_ARRAY,
     Type_OBJECT,
     Type_CHAR8 = 1 << 4,
@@ -211,7 +212,9 @@ class Value
         @param[in] in_BaseAddress     基準位置となるpointer。
         @param[in] in_BytePosition    基準位置からのbyte単位での相対位置。
      */
-    private: template< typename template_ValueType, typename template_PositionType >
+    private: template<
+        typename template_ValueType,
+        typename template_PositionType >
     static const template_ValueType* GetAddress(
         const void* const           in_BaseAddress,
         const template_PositionType in_BytePosition)
@@ -362,16 +365,64 @@ namespace json
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief JSONの要素。
-    @tparam template_StringType @copydoc pbon::json::Value::String
  */
-template< typename template_StringType >
 class Value
 {
     /// thisが指す値の型。
-    public: typedef pbon::json::Value< template_StringType > This;
+    public: typedef pbon::json::Value This;
 
-    /// JSONの要素に使う std::string 互換の文字列型。
-    public: typedef template_StringType String;
+    private: enum Type
+    {
+        Type_NULL,
+        Type_BOOL,
+        Type_INT,
+        Type_FLOAT,
+        Type_HOLDER,
+    };
+
+    private: class Placeholder
+    {
+        public: virtual void DeleteThis() = 0;
+        public: virtual Placeholder* Clone() = 0;
+    };
+
+    //-------------------------------------------------------------------------
+    private: union
+    {
+        bool          Bool_;
+        pbon::Int64   Int_;
+        pbon::Float64 Float_;
+        Placeholder*  Holder_;
+    };
+    private: pbon::Int8 Type_;
+
+    //-------------------------------------------------------------------------
+    public: Value():
+    Type_(pbon::Type_NULL)
+    {
+        this->Int_ = 0;
+    }
+
+    public: explicit Value(
+        const bool in_Bool):
+    Type_(pbon::Type_BOOL)
+    {
+        this->Bool_ = in_Bool;
+    }
+
+    ~Value()
+    {
+        if (this->Type_ == Type_HOLDER)
+        {
+            this->Holder_->DeleteThis();
+        }
+    }
+
+    void Swap(This& io_Target)
+    {
+        std::swap(this->Int_, io_Target.Int_);
+        std::swap(this->Type_, io_Target.Type_);
+    }
 
     //-------------------------------------------------------------------------
     /** @brief JSON形式の文字列から値を取り込む。
@@ -380,25 +431,21 @@ class Value
         - 成功した場合は(0, 0)。
         - 失敗した場合は取り込みに失敗した文字列の(行番号, 桁位置)。
      */
-    public: std::pair< unsigned, unsigned > ImportJson(
-        const typename This::String& in_JsonString)
+    public: template< typename template_StringType >
+    std::pair< unsigned, unsigned > ImportJson(
+        const template_StringType& in_JsonString)
     {
-        return this->ImportJson(in_JsonString.begin(), in_JsonString.end());
-    }
-
-    /** @brief JSON形式の文字列から値を取り込む。
-        @param[in] in_JsonBegin 値を取り込むJSON形式文字列の先頭位置。
-        @param[in] in_JsonEnd   値を取り込むJSON形式文字列の末尾位置。
-        @return
-        - 成功した場合は(0, 0)。
-        - 失敗した場合は取り込みに失敗した文字列の(行番号, 桁位置)。
-     */
-    public: std::pair< unsigned, unsigned > ImportJson(
-        const typename This::String::const_iterator& in_JsonBegin,
-        const typename This::String::const_iterator& in_JsonEnd)
-    {
-        typename This::JsonParser local_Parser(in_JsonBegin, in_JsonEnd);
-        if (!this->Parse(local_Parser))
+        typedef template_StringType String;
+        typedef String::allocator_type::rebind< This >::other VectorAllocator;
+        typedef std::vector< This, VectorAllocator > Vector;
+        typedef String Key;
+        typedef VectorAllocator::rebind< std::pair< Key, This > >::other
+            MapAllocator;
+        typedef std::map< Key, This, std::less< Key >, MapAllocator >
+            Map;
+        This::JsonParser< double, String, Vector, Map >
+            local_Parser(in_JsonString.begin(), in_JsonString.end());
+        if (!local_Parser.Parse(*this))
         {
             std::make_pair(local_Parser.GetLine(), local_Parser.GetColumn());
         }
@@ -406,36 +453,46 @@ class Value
     }
 
     /** @brief PBON形式のbinary列から値を取り込む。
-        @param[in] in_PbonBegin 値を取り込むPBON形式binary列の先頭位置。
-        @param[in] in_PbonEnd   値を取り込むPBON形式binary列の末尾位置。
+        @param[in] in_PbonBinary 値を取り込むPBON形式binary列。
      */
-    public: void ImportPbon(
-        const void* const in_PbonBegin,
-        const void* const in_PbonEnd);
+    public: template< typename template_ArrayType >
+    void ImportPbon(
+        const template_ArrayType& in_PbonBinary);
 
     /** @brief JSON形式で文字列に値を書き出す。
         @param[out] out_JsonString 値を書き出す先。
      */
-    public: void ExportJson(
-        typename This::String& out_JsonString) const;
+    public: template< typename template_StringType >
+    void ExportJson(
+        template_StringType& out_JsonString) const;
 
     /** @brief PBON形式でbinaryに値を書き出す。
         @param[out] out_PbonBinary 値を書き出す先。
      */
-    public: template< typename template_Vector >
-    void ExportPbon(template_Vector& out_PbonBinary) const;
+    public: template< typename template_ArrayType >
+    void ExportPbon(template_ArrayType& out_PbonBinary) const;
 
     //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-    private: class JsonParser
+    private: template<
+        typename template_NumberType,
+        typename template_StringType,
+        typename template_ArrayType,
+        typename template_ObjectType >
+    class JsonParser
     {
-        public: typedef JsonParser This;
+        public: typedef JsonParser<
+            template_NumberType,
+            template_StringType,
+            template_ArrayType,
+            template_ObjectType >
+                This;
 
         private: enum { END_CHAR = -1 };
 
         //---------------------------------------------------------------------
         public: JsonParser(
-            const typename String::const_iterator& in_Begin,
-            const typename String::const_iterator& in_End):
+            const typename template_StringType::const_iterator& in_Begin,
+            const typename template_StringType::const_iterator& in_End):
         Current_(in_Begin),
         End_(in_End),
         LastChar_(This::END_CHAR),
@@ -446,6 +503,7 @@ class Value
             // pass
         }
 
+        //---------------------------------------------------------------------
         public: unsigned GetLine() const
         {
             return this->Line_;
@@ -456,7 +514,259 @@ class Value
             return this->Column_;
         }
 
-        public: int ReadChar()
+        //---------------------------------------------------------------------
+        /** @brief JSONが持っている値を解析。
+            @param[out] out_Value JSONから解析した値の出力先。
+            @retval !=false 成功。
+            @retval ==false 失敗。値は出力されない。
+         */
+        public: bool Parse(
+            pbon::json::Value& out_Value)
+        {
+            this->SkipWhiteSpace();
+            const int local_Char(this->ReadChar());
+            switch (local_Char)
+            {
+                case 'n':
+                if (this->Match("ull"))
+                {
+                    //pbon::json::Value().Swap(out_Value);
+                    return true;
+                }
+                return false;
+
+                case 't':
+                if (this->Match("rue"))
+                {
+                    //pbon::json::Value(true).Swap(out_Value);
+                    return true;
+                }
+                return false;
+
+                case 'f':
+                if (this->Match("alse"))
+                {
+                    //pbon::json::Value(false).Swap(out_Value);
+                    return true;
+                }
+                return false;
+
+                case '"':
+                return this->ParseString(out_Value);
+
+                case '[':
+                return this->ParseArray(out_Value);
+
+                case '{':
+                return this->ParseObject(out_Value);
+
+                default:
+                this->UndoChar();
+                if (('0' <= local_Char && local_Char <= '9') ||
+                    local_Char == '-')
+                {
+                    return this->ParseNumber(out_Value);
+                }
+                return false;
+            }
+        }
+
+        /** @brief JSONが持っている文字列を解析。
+            @param[out] out_Value JSONから解析した値の出力先。
+            @retval !=false 成功。
+            @retval ==false 失敗。値は出力されない。
+         */
+        private: bool ParseString(
+            pbon::json::Value&)
+        {
+            template_StringType local_String;
+            for (;;)
+            {
+                int auto_Char(this->ReadChar());
+                if (auto_Char < ' ')
+                {
+                    this->UndoChar();
+                    return false;
+                }
+                if (auto_Char == '"')
+                {
+                    //pbon::json::Value(local_String).Swap(out_Value);
+                    return true;
+                }
+                if (auto_Char == '\\')
+                {
+                    auto_Char = this->ReadChar();
+                    switch (auto_Char)
+                    {
+                        case '"':
+                        break;
+
+                        case '\\':
+                        break;
+
+                        case '/':
+                        break;
+
+                        case 'b':
+                        auto_Char = '\b';
+                        break;
+
+                        case 'f':
+                        auto_Char = '\f';
+                        break;
+
+                        case 'n':
+                        auto_Char = '\n';
+                        break;
+
+                        case 'r':
+                        auto_Char = '\r';
+                        break;
+
+                        case 't':
+                        auto_Char = '\t';
+                        break;
+
+                        case 'u':
+                        if (this->ParseCodePoint(local_String))
+                        {
+                            continue;
+                        }
+                        return false;
+
+                        default:
+                        return false;
+                    }
+                }
+                local_String.push_back(
+                    static_cast< typename template_StringType::value_type >(
+                        auto_Char));
+            }
+        }
+
+        /** @brief 文字列のcode-point表記の解析。
+         */
+        private: bool ParseCodePoint(
+            template_StringType& out_String)
+        {
+            int local_UnicodeChar(this->ParseQuadHex());
+            if (local_UnicodeChar == This::END_CHAR)
+            {
+                return false;
+            }
+            if (0xd800 <= local_UnicodeChar && local_UnicodeChar <= 0xdfff)
+            {
+                // 16bit surrogate pairの後半か判定。
+                if (0xdc00 <= local_UnicodeChar)
+                {
+                    return false;
+                }
+
+                // 16bit surrogate pairの前半だった。
+                if (this->ReadChar() != '\\' || this->ReadChar() != 'u')
+                {
+                    this->UndoChar();
+                    return false;
+                }
+                const int auto_Second(this->ParseQuadHex());
+                if (auto_Second < 0xdc00 || 0xdfff < auto_Second)
+                {
+                    return false;
+                }
+                local_UnicodeChar = 0x10000 + (
+                    ((local_UnicodeChar - 0xd800) << 10) |
+                    ((auto_Second - 0xdc00) & 0x3ff));
+            }
+            if (local_UnicodeChar < 0x80)
+            {
+                out_String.push_back(
+                    static_cast< template_StringType::value_type >(
+                        local_UnicodeChar));
+            }
+            else
+            {
+                if (local_UnicodeChar < 0x800)
+                {
+                    out_String.push_back(
+                        static_cast< template_StringType::value_type >(
+                            0xc0 | (local_UnicodeChar >> 6)));
+                } else
+                {
+                    if (local_UnicodeChar < 0x10000)
+                    {
+                        out_String.push_back(
+                            static_cast< template_StringType::value_type >(
+                                0xe0 | (local_UnicodeChar >> 12)));
+                    }
+                    else
+                    {
+                        out_String.push_back(
+                            static_cast< template_StringType::value_type >(
+                                0xf0 | (local_UnicodeChar >> 18)));
+                        out_String.push_back(
+                            static_cast< template_StringType::value_type >(
+                                0x80 | ((local_UnicodeChar >> 12) & 0x3f)));
+                    }
+                    out_String.push_back(
+                        static_cast< template_StringType::value_type >(
+                            0x80 | ((local_UnicodeChar >> 6) & 0x3f)));
+                }
+                out_String.push_back(
+                    static_cast< template_StringType::value_type >(
+                        0x80 | (local_UnicodeChar & 0x3f)));
+            }
+            return true;
+        }
+
+        /** @brief 文字列の16進数表記4桁を解析。
+         */
+        private: int ParseQuadHex()
+        {
+            int local_UnicodeChar(0);
+            for (int i = 0; i < 4; i++)
+            {
+                int local_Hex(this->ReadChar());
+                if ('0' <= local_Hex && local_Hex <= '9')
+                {
+                    local_Hex -= '0';
+                }
+                else if ('A' <= local_Hex && local_Hex <= 'F')
+                {
+                    local_Hex -= 'A' - 0xa;
+                }
+                else if ('a' <= local_Hex && local_Hex <= 'f')
+                {
+                    local_Hex -= 'a' - 0xa;
+                }
+                else
+                {
+                    if (local_Hex != This::END_CHAR)
+                    {
+                        this->UndoChar();
+                    }
+                    return This::END_CHAR;
+                }
+                local_UnicodeChar = local_UnicodeChar * 16 + local_Hex;
+            }
+            return local_UnicodeChar;
+        }
+
+        private: bool ParseNumber(pbon::json::Value&)
+        {
+            return false;
+        }
+
+        private: bool ParseArray(pbon::json::Value&)
+        {
+            return false;
+        }
+
+        private: bool ParseObject(pbon::json::Value&)
+        {
+            return false;
+        }
+
+        private: int ReadChar()
         {
             if (this->Undo_)
             {
@@ -482,7 +792,7 @@ class Value
             return this->LastChar_;
         }
 
-        public: void UndoChar()
+        private: void UndoChar()
         {
             if (this->LastChar_ != This::END_CHAR)
             {
@@ -491,7 +801,7 @@ class Value
             }
         }
 
-        public: void SkipWhiteSpace()
+        private: void SkipWhiteSpace()
         {
             for (;;)
             {
@@ -510,7 +820,7 @@ class Value
             }
         }
 
-        public: bool Expect(
+        private: bool Expect(
             const int in_ExpectChar)
         {
             this->SkipWhiteSpace();
@@ -548,153 +858,13 @@ class Value
         }
 
         //---------------------------------------------------------------------
-        private: typename String::const_iterator Current_;
-        private: typename String::const_iterator End_;
-        private: int                             LastChar_;
-        private: unsigned                        Line_;
-        private: unsigned                        Column_;
-        private: bool                            Undo_;
+        private: typename template_StringType::const_iterator Current_;
+        private: typename template_StringType::const_iterator End_;
+        private: int      LastChar_;
+        private: unsigned Line_;
+        private: unsigned Column_;
+        private: bool     Undo_;
     };
-
-    //-------------------------------------------------------------------------
-    private: bool Parse(
-        typename This::JsonParser& io_Parser)
-    {
-        io_Parser.SkipWhiteSpace();
-        const int local_Char(io_Parser.ReadChar());
-        switch (local_Char)
-        {
-            case 'n':
-            if (io_Parser.Match("ull"))
-            {
-                //this->SetValue();
-                return true;
-            }
-            return false;
-
-            case 't':
-            if (io_Parser.Match("rue"))
-            {
-                //this->SetValue(true);
-                return true;
-            }
-            return false;
-
-            case 'f':
-            if (io_Parser.Match("alse"))
-            {
-                //this->SetValue(false);
-                return true;
-            }
-            return false;
-
-            case '"':
-            return this->ParseString(io_Parser);
-
-            case '[':
-            return this->ParseArray(io_Parser);
-
-            case '{':
-            return this->ParseObject(io_Parser);
-
-            default:
-            io_Parser.UndoChar();
-            if (('0' <= local_Char && local_Char <= '9') ||
-                local_Char == '-')
-            {
-                return this->ParseNumber(io_Parser);
-            }
-            return false;
-        }
-    }
-
-    private: bool ParseString(typename This::JsonParser& io_Parser)
-    {
-        typename This::String local_String;
-        for (;;)
-        {
-            int auto_Char(io_Parser.ReadChar());
-            if (auto_Char < ' ')
-            {
-                io_Parser.UndoChar();
-                return false;
-            }
-            if (auto_Char == '"')
-            {
-                //this->SetValue(local_String);
-                return true;
-            }
-            if (auto_Char == '\\')
-            {
-                auto_Char = io_Parser.ReadChar();
-                switch (auto_Char)
-                {
-                    case '"':
-                    break;
-
-                    case '\\':
-                    break;
-
-                    case '/':
-                    break;
-
-                    case 'b':
-                    auto_Char = '\b';
-                    break;
-
-                    case 'f':
-                    auto_Char = '\f';
-                    break;
-
-                    case 'n':
-                    auto_Char = '\n';
-                    break;
-
-                    case 'r':
-                    auto_Char = '\r';
-                    break;
-
-                    case 't':
-                    auto_Char = '\t';
-                    break;
-
-                    case 'u':
-                    if (This::ParseCodePoint(io_Parser, local_String))
-                    {
-                        continue;
-                    }
-                    return false;
-
-                    default:
-                    return false;
-                }
-            }
-            local_String.push_back(
-                static_cast< typename This::String::value_type >(auto_Char));
-        }
-    }
-
-    private: static bool ParseCodePoint(
-        typename This::JsonParser&,
-        typename This::String&)
-    {
-        return false;
-    }
-
-    private: bool ParseArray(typename This::JsonParser&)
-    {
-        return false;
-    }
-
-    private: bool ParseObject(typename This::JsonParser&)
-    {
-        return false;
-    }
-
-    private: bool ParseNumber(typename This::JsonParser&)
-    {
-        return false;
-    }
 };
 } // namespace json
 } // namespace pbon

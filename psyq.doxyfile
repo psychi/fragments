@@ -687,7 +687,7 @@ INPUT                  = ./async_file.hpp \
                          ./file_handle.hpp \
                          ./fnv_hash.hpp \
                          ./lerp.hpp \
-                         ./pbon.hpp \
+                         ./pbon_json.hpp \
                          ./posix_file_descriptor.hpp \
                          ./simple_singleton.hpp \
                          ./singleton.hpp \

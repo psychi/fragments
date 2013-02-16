@@ -26,20 +26,20 @@
     PBON/JSONは、PBONとJSONの相互変換を行うためのlibrary。
     PBONは、Packed-Binary-Object-Notationの略。
 
-    - Call pbon::json::Value::ImportJson(), import the JSON.
-      pbon::json::Value::ImportJson() で、JSONを取り込む。
+    - Call pbon::json::element::import_json(), import the JSON.
+      pbon::json::element::import_json() で、JSONを取り込む。
 
-    - Call pbon::json::Value::ImportPbon(), import the PBON.
-      pbon::json::Value::ImportPbon() で、PBONを取り込む。
+    - Call pbon::json::element::import_pbon(), import the PBON.
+      pbon::json::element::import_pbon() で、PBONを取り込む。
 
-    - Call pbon::json::Value::ExportJson(), export the JSON.
-      pbon::json::Value::ExportJson() で、JSONを書き出す。
+    - Call pbon::json::element::export_json(), export the JSON.
+      pbon::json::element::export_json() で、JSONを書き出す。
 
-    - Call pbon::json::Value::ExportPbon(), export the PBON.
-      pbon::json::Value::ExportPbon() で、PBONを書き出す。
+    - Call pbon::json::element::export_pbon(), export the PBON.
+      pbon::json::element::export_pbon() で、PBONを書き出す。
 
-    - Call pbon::Value::GetRoot(), get root value of PBON from packed-binary.
-      pbon::Value::GetRoot() で、packed-binaryからPBONの最上位要素を取得する。
+    - Call pbon::element::get_root(), get root element of PBON from binary.
+      pbon::element::get_root() で、binary列からPBONの最上位要素を取得する。
 
     @file
     @author Hillco Psychi (https://twitter.com/psychi)
@@ -50,315 +50,315 @@
 namespace pbon
 {
 
-typedef std::int8_t  Int8;
-typedef std::int16_t Int16;
-typedef std::int32_t Int32;
-typedef std::int64_t Int64;
-typedef Int8  Char8;
-typedef Int16 Char16;
-typedef Int32 Char32;
-typedef float  Float32;
-typedef double Float64;
+typedef std::int8_t  int8;
+typedef std::int16_t int16;
+typedef std::int32_t int32;
+typedef std::int64_t int64;
+typedef int8  char8;
+typedef int16 char16;
+typedef int32 char32;
+typedef float  float32;
+typedef double float64;
 
-enum Type
+enum type
 {
-    Type_NULL,
-    Type_BOOL,
-    Type_ARRAY,
-    Type_OBJECT,
-    Type_CHAR8 = 1 << 4,
-    Type_CHAR16,
-    Type_CHAR32,
-    Type_INT8 = 2 << 4,
-    Type_INT16,
-    Type_INT32,
-    Type_INT64,
-    Type_FLOAT32 = (3 << 4) + 2,
-    Type_FLOAT64,
+    type_NULL,
+    type_BOOL,
+    type_ARRAY,
+    type_OBJECT,
+    type_CHAR8 = 1 << 4,
+    type_CHAR16,
+    type_CHAR32,
+    type_INT8 = 2 << 4,
+    type_INT16,
+    type_INT32,
+    type_INT64,
+    type_FLOAT32 = (3 << 4) + 2,
+    type_FLOAT64,
 };
 
-template< typename template_Type > pbon::Type GetType()
+template< typename template_type > pbon::type get_type()
 {
-    return pbon::Type_NULL;
+    return pbon::type_NULL;
 }
 
-template<> pbon::Type GetType< pbon::Char8 >()
+template<> pbon::type get_type< pbon::char8 >()
 {
-    return pbon::Type_CHAR8;
+    return pbon::type_CHAR8;
 }
 
-template<> pbon::Type GetType< pbon::Char16 >()
+template<> pbon::type get_type< pbon::char16 >()
 {
-    return pbon::Type_CHAR16;
+    return pbon::type_CHAR16;
 }
 
-template<> pbon::Type GetType< pbon::Int32 >()
+template<> pbon::type get_type< pbon::int32 >()
 {
-    return pbon::Type_INT32;
+    return pbon::type_INT32;
 }
 
-template<> pbon::Type GetType< pbon::Int64 >()
+template<> pbon::type get_type< pbon::int64 >()
 {
-    return pbon::Type_INT64;
+    return pbon::type_INT64;
 }
 
-template<> pbon::Type GetType< pbon::Float32 >()
+template<> pbon::type get_type< pbon::float32 >()
 {
-    return pbon::Type_FLOAT32;
+    return pbon::type_FLOAT32;
 }
 
-template<> pbon::Type GetType< pbon::Float64 >()
+template<> pbon::type get_type< pbon::float64 >()
 {
-    return pbon::Type_FLOAT64;
+    return pbon::type_FLOAT64;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief packed-binaryの要素。
-    @tparam template_AttributeType @copydoc pbon::Value::Attribute
+/** @brief PBONの要素。
+    @tparam template_attribute_type @copydoc pbon::element::attribute
  */
-template< typename template_AttributeType >
-class Value
+template< typename template_attribute_type >
+class element
 {
     /// thisが指す型。
-    public: typedef Value This;
+    public: typedef element self;
 
     /// packed-binaryの属性の型。
-    public: typedef template_AttributeType Attribute;
+    public: typedef template_attribute_type attribute;
 
     /// packed-binaryのheader情報。
-    private: struct Header
+    private: struct header
     {
-        pbon::Int32 Endian_;
-        pbon::Int16 Type_;
-        pbon::Int16 Root_;
+        pbon::int32 endian_;
+        pbon::int16 type_;
+        pbon::int16 root_;
     };
 
     /** @brief packed-binaryの最上位要素を取得。
-        @param[in] in_PackedBinary packed-binaryの先頭位置。
+        @param[in] in_packed_binary packed-binaryの先頭位置。
         @retval !=NULL packed-binaryの最上位要素へのpointer。
         @retval ==NULL 扱えないpacked-binaryだった。
      */
-    public: static const This* GetRoot(
-        const void* const in_PackedBinary)
+    public: static const self* get_root(
+        const void* const in_packed_binary)
     {
-        if (in_PackedBinary == NULL)
+        if (in_packed_binary == NULL)
         {
             return NULL;
         }
-        const This::Header& local_Header(
-            *static_cast< const This::Header* >(in_PackedBinary));
-        if (local_Header.Endian_ != 'pbon')
+        const self::header& local_header(
+            *static_cast< const self::header* >(in_packed_binary));
+        if (local_header.endian_ != 'pbon')
         {
             // endianが異なるので扱えない。
             return NULL;
         }
-        if (local_Header.Type_ != pbon::GetType< This::Attribute >())
+        if (local_header.type_ != pbon::get_type< self::attribute >())
         {
             // 属性の型が異なるので扱えない。
             return NULL;
         }
-        return This::GetAddress< This >(in_PackedBinary, local_Header.Root_);
+        return self::get_address< self >(in_packed_binary, local_header.root_);
     }
 
     /** @brief 上位要素を取得。
         @retval !=NULL 上位要素へのpointer。
         @retval ==NULL 上位要素がない。
      */
-    public: const This* GetSuper() const
+    public: const self* get_super() const
     {
-        if (this->Super_ == 0)
+        if (this->super_ == 0)
         {
             return NULL;
         }
-        return This::GetAddress< This >(this, this->Super_);
+        return self::get_address< self >(this, this->super_);
     }
 
     /** @brief 持っている値の数を取得。
      */
-    public: std::size_t GetSize() const
+    public: std::size_t get_size() const
     {
-        return this->Size_;
+        return this->size_;
     }
 
     /** @brief 持っている値の型を取得。
      */
-    public: pbon::Type GetType() const
+    public: pbon::type get_type() const
     {
-        return static_cast< pbon::Type >(this->Type_);
+        return static_cast< pbon::type >(this->type_);
     }
 
-    public: bool IsArray() const
+    public: bool is_array() const
     {
-        return this->GetType() == pbon::Type_ARRAY;
+        return this->get_type() == pbon::type_ARRAY;
     }
 
-    public: bool IsObject() const
+    public: bool is_object() const
     {
-        return this->GetType() == pbon::Type_OBJECT;
+        return this->get_type() == pbon::type_OBJECT;
     }
 
     /** @brief 持っている値へのpointerを取得。
-        @tparam template_ValueType 持っている値の型。
+        @tparam template_elementtype 持っている値の型。
      */
-    protected: template< typename template_ValueType >
-    const template_ValueType* GetValue() const
+    protected: template< typename template_elementtype >
+    const template_elementtype* get_element() const
     {
-        return This::GetAddress< template_ValueType >(this, this->Value_);
+        return self::get_address< template_elementtype >(this, this->element_);
     }
 
     /** @brief 相対位置からaddressを取得。
-        @tparam template_ValueType    pointerが指す値の型。
-        @tparam template_PositionType 相対位置の型。
-        @param[in] in_BaseAddress     基準位置となるpointer。
-        @param[in] in_BytePosition    基準位置からのbyte単位での相対位置。
+        @tparam template_value_type    pointerが指す値の型。
+        @tparam template_position_type 相対位置の型。
+        @param[in] in_base_address     基準位置となるpointer。
+        @param[in] in_byte_position    基準位置からのbyte単位での相対位置。
      */
     private: template<
-        typename template_ValueType,
-        typename template_PositionType >
-    static const template_ValueType* GetAddress(
-        const void* const           in_BaseAddress,
-        const template_PositionType in_BytePosition)
+        typename template_value_type,
+        typename template_position_type >
+    static const template_value_type* get_address(
+        const void* const            in_base_address,
+        const template_position_type in_byte_position)
     {
-        return reinterpret_cast< const template_ValueType* >(
-            static_cast< const char* >(in_BaseAdress) + in_BytePosition);
+        return reinterpret_cast< const template_value_type* >(
+            static_cast< const char* >(in_base_address) + in_byte_position);
     }
 
-    private: typename This::Attribute Value_; ///< 値。もしくは値への相対位置。
-    private: typename This::Attribute Size_;  ///< 値の数。
-    private: typename This::Attribute Type_;  ///< 値の型。
-    private: typename This::Attribute Super_; ///< 上位要素への相対位置。
+    private: typename self::attribute element_; ///< 値。もしくは値への相対位置。
+    private: typename self::attribute size_;  ///< 値の数。
+    private: typename self::attribute type_;  ///< 値の型。
+    private: typename self::attribute super_; ///< 上位要素への相対位置。
 };
-typedef pbon::Value< pbon::Int32 > Value32;
+typedef pbon::element< pbon::int32 > element32;
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// pbon::Value の配列。
-template< typename template_AttributeType >
-class Array:
-    private pbon::Value< template_AttributeType >
+/// pbon::element の配列。
+template< typename template_attribute_type >
+class array:
+    private pbon::element< template_attribute_type >
 {
-    public: typedef pbon::Array< template_AttributeType > This;
-    private: typedef pbon::Value< template_AttributeType > Super;
-    public: typedef Super Value;
+    public: typedef pbon::array< template_attribute_type > self;
+    private: typedef pbon::element< template_attribute_type > super;
+    public: typedef super element;
 
-    using Super::Attribute;
-    using Super::GetSuper;
+    using super::attribute;
+    using super::get_super;
 
-    public: static const This* Cast(
-        const Super* const in_Value)
+    public: static const self* cast(
+        const super* const in_element)
     {
-        if (in_Value == NULL || !in_Value->IsArray())
+        if (in_element == NULL || !in_element->is_array())
         {
             return NULL;
         }
-        return static_cast< const This* >(in_Value);
+        return static_cast< const self* >(in_element);
     }
 
     /** @brief 持っている値の数を取得。
      */
-    public: std::size_t GetSize() const
+    public: std::size_t get_size() const
     {
-        if (!this->IsArray())
+        if (!this->is_array())
         {
             return 0;
         }
-        return this->Super::GetSize();
+        return this->super::get_size();
     }
 
-    public: const typename This::Value* GetBegin() const
+    public: const typename self::element* get_begin() const
     {
-        if (!this->IsArray())
+        if (!this->is_array())
         {
             return NULL;
         }
-        return this->GetValue< typename This::Value >();
+        return this->get_element< typename self::element >();
     }
 
-    public: const typename This::Value* GetEnd() const
+    public: const typename self::element* get_end() const
     {
-        if (!this->IsArray())
+        if (!this->is_array())
         {
             return NULL;
         }
-        return this->GetValue< typename This::Value >() + this->GetSize();
+        return this->get_element< typename self::element >() + this->get_size();
     }
 
-    public: const typename This::Value* At(
-        const std::size_t in_Index)
+    public: const typename self::element* at(
+        const std::size_t in_index)
     {
-        if (!this->IsArray() || this->GetSize() <= in_Index)
+        if (!this->is_array() || this->get_size() <= in_index)
         {
             return NULL;
         }
-        return this->GetValue< This::Value >() + in_Index;
+        return this->get_element< self::element >() + in_index;
     }
 };
-typedef pbon::Array< pbon::Int32 > Array32;
+typedef pbon::array< pbon::int32 > array32;
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// pbon::Value の辞書。
-template< typename template_AttributeType >
-class Object:
-    private Value< template_AttributeType >
+/// pbon::element の辞書。
+template< typename template_attribute_type >
+class object:
+    private element< template_attribute_type >
 {
-    public: typedef pbon::Object< template_AttributeType > This;
-    private: typedef pbon::Value< template_AttributeType > Super;
-    public: typedef std::pair< Super, Super > Value;
+    public: typedef pbon::object< template_attribute_type > self;
+    private: typedef pbon::element< template_attribute_type > super;
+    public: typedef std::pair< super, super > element;
 
-    using Super::Attribute;
-    using Super::GetSuper;
+    using super::attribute;
+    using super::get_super;
 
-    public: static const This* Cast(
-        const Super* const in_Value)
+    public: static const self* cast(
+        const super* const in_element)
     {
-        if (in_Value == NULL || !in_Value->IsObject())
+        if (in_element == NULL || !in_element->is_object())
         {
             return NULL;
         }
-        return static_cast< const This* >(in_Value);
+        return static_cast< const self* >(in_element);
     }
 
     /** @brief 持っている値の数を取得。
      */
-    public: std::size_t GetSize() const
+    public: std::size_t get_size() const
     {
-        if (!this->IsObject())
+        if (!this->is_object())
         {
             return 0;
         }
-        return this->Super::GetSize() / 2;
+        return this->super::get_size() / 2;
     }
 
-    public: const typename This::Value* GetBegin() const
+    public: const typename self::element* get_begin() const
     {
-        if (!this->IsObject())
+        if (!this->is_object())
         {
             return NULL;
         }
-        return this->GetValue< typename This::Value >();
+        return this->get_element< typename self::element >();
     }
 
-    public: const typename This::Value* GetEnd() const
+    public: const typename self::element* get_end() const
     {
-        if (!this->IsObject())
+        if (!this->is_object())
         {
             return NULL;
         }
-        return this->GetValue< typename This::Value >() + this->GetSize();
+        return this->get_element< typename self::element >() + this->get_size();
     }
 
-    public: template< typename template_KeyType >
-    const typename This::Value* LowerBound(
-        const template_KeyType& in_Key) const;
+    public: template< typename template_key_type >
+    const typename self::element* lower_bound(
+        const template_key_type& in_key) const;
 
-    public: template< typename template_KeyType >
-    const typename This::Value* UpperBound(
-        const template_KeyType& in_Key) const;
+    public: template< typename template_key_type >
+    const typename self::element* upper_bound(
+        const template_key_type& in_key) const;
 
-    public: template< typename template_KeyType >
-    const typename This::Value* Find(
-        const template_KeyType& in_Key) const;
+    public: template< typename template_key_type >
+    const typename self::element* find(
+        const template_key_type& in_key) const;
 };
-typedef pbon::Object< pbon::Int32 > Object32;
+typedef pbon::object< pbon::int32 > object32;
 
 namespace json
 {
@@ -366,45 +366,45 @@ namespace json
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief JSONの要素。
  */
-class Value
+class element
 {
     /// thisが指す値の型。
-    public: typedef pbon::json::Value This;
+    public: typedef pbon::json::element self;
 
     /// 値の持ち方。
-    private: enum Hold
+    private: enum hold
     {
-        Hold_EMPTY,   ///< 値を持ってない。
-        Hold_VALUE,   ///< 直接値を持ってる。
-        Hold_POINTER, ///< pointerとして値を持ってる。
+        hold_EMPTY,   ///< 値を持ってない。
+        hold_VALUE,   ///< 直接値を持ってる。
+        hold_POINTER, ///< pointerとして値を持ってる。
     };
 
-    private: class Placeholder
+    private: class placeholder
     {
-        public: virtual void DeleteSelf() = 0;
-        public: virtual Placeholder* Clone() = 0;
+        public: virtual void delete_this() = 0;
+        public: virtual placeholder* clone() = 0;
     };
 
     //-------------------------------------------------------------------------
-    private: pbon::Int64 Storage_;
-    private: pbon::Int8  Hold_;
+    private: pbon::int64 storage_;
+    private: pbon::int8  hold_;
 
     //-------------------------------------------------------------------------
     /// @brief 値を空にして構築。
-    public: Value():
-    Storage_(0),
-    Hold_(This::Hold_EMPTY)
+    public: element():
+    storage_(0),
+    hold_(self::hold_EMPTY)
     {
         // pass
     }
 
     /** @brief copy constructor
-        @param[in] in_Source 代入元となる値。
+        @param[in] in_source 代入元となる値。
         @todo 未実装。
      */
-    public: Value(
-        const This& in_Source):
-    Hold_(in_Source.Hold_)
+    public: element(
+        const self& in_source):
+    hold_(in_source.hold_)
     {
     }
 
@@ -412,217 +412,256 @@ class Value
 
         memory割当てを行わずに構築。構築できなかった場合は、空となる。
 
-        @tparam template_ValueType 初期値の型。
-        @param[in] in_Value 初期値。
+        @tparam template_value_type 初期値の型。
+        @param[in] in_element 初期値。
      */
-    public: template< typename template_ValueType >
-    explicit Value(
-        const template_ValueType& in_Value):
-    Storage_(0)
+    public: template< typename template_value_type >
+    explicit element(
+        const template_value_type& in_element):
+    storage_(0)
     {
-        if (this->SetValue(in_Value))
+        if (this->set_value(in_element))
         {
-            this->Hold_ = This::Hold_EMPTY;
+            this->hold_ = self::hold_EMPTY;
         }
     }
 
     /** @brief 任意型の値を構築。
 
-        @tparam template_ValueType     初期値の型。
-        @tparam template_AllocatorType memory割当子の型。
-        @param[in] in_Value         初期値。
-        @param[in,out] io_Allocator 使用するmemory割当子。
+        @tparam template_value_type     初期値の型。
+        @tparam template_allocator_type memory割当子の型。
+        @param[in] in_element       初期値。
+        @param[in,out] io_allocator 使用するmemory割当子。
         @todo 未実装。
      */
     public: template<
-        typename template_ValueType,
-        typename template_AllocatorType >
-    Value(
-        const template_ValueType& in_Value,
-        template_AllocatorType&   io_Allocator):
-    Storage_(0)
+        typename template_value_type,
+        typename template_allocator_type >
+    element(
+        const template_value_type& in_element,
+        template_allocator_type&   io_allocator):
+    storage_(0)
     {
-        if (this->SetValue(in_Value))
+        if (this->set_value(in_element))
         {
-            io_Allocator;
-            this->Hold_ = This::Hold_POINTER;
+            io_allocator;
+            this->hold_ = self::hold_POINTER;
         }
     }
 
     /// @brief destructor
     /// @todo 未実装。
-    ~Value()
+    ~element()
     {
-        if (this->Hold_ == Hold_POINTER)
-        {
-            //this->Holder_->DeleteSelf();
-        }
     }
 
     /** @brief 代入演算子。
-        @param[in] in_Source 代入元となる値。
+        @param[in] in_source 代入元となる値。
      */
-    public: This& operator=(const This& in_Source)
+    public: self& operator=(const self& in_source)
     {
-        this->~Value();
-        return *new(this) This(in_Source);
+        this->~element();
+        return *new(this) self(in_source);
     }
 
-    public: void Swap(This& io_Target)
+    public: void swap(self& io_target)
     {
-        std::swap(this->Storage_, io_Target.Storage_);
-        std::swap(this->Hold_, io_Target.Hold_);
+        std::swap(this->storage_, io_target.storage_);
+        std::swap(this->hold_, io_target.hold_);
     }
 
     /** @brief 値が空か判定。
         @retval true  値が空だった。
         @retval false 値が空ではなかった。
      */
-    public: bool IsEmpty() const
+    public: bool is_empty() const
     {
-        return this->Hold_ == This::Hold_EMPTY;
+        return this->hold_ == self::hold_EMPTY;
     }
 
-    private: template< typename template_ValueType >
-    bool SetValue(
-        const template_ValueType& in_Value)
+    private: template< typename template_value_type >
+    bool set_value(
+        const template_value_type& in_element)
     {
-        std::size_t auto_ValueSize(sizeof(template_ValueType));
-        if (sizeof(this->Storage_) < auto_ValueSize)
+        std::size_t local_elementSize(sizeof(template_value_type));
+        if (sizeof(this->storage_) < local_elementSize)
         {
             return false;
         }
-        this->~Value();
-        new(&this->Storage_) template_ValueType(in_Value);
-        this->Hold_ = This::Hold_VALUE;
+        this->~element();
+        new(&this->storage_) template_value_type(in_element);
+        this->hold_ = self::hold_VALUE;
         return true;
     }
 
     //-------------------------------------------------------------------------
     /** @brief JSON形式の文字列から値を取り出す。
-        @tparam template_NumberType JSONの値に使う数値の型。
-        @tparam template_StringType
-            std::basic_string 互換のinterfaceを持つ文字列型。
-        @param[in] in_JsonString 値を取り込むJSON形式の文字列。
+        @tparam template_number_type JSONの要素に使う数値の型。
+        @tparam template_string_type
+            JSONの要素で使う文字列の型。
+            末尾に文字を追加するため、以下に相当する関数が使えること。
+            @code
+            template_string_type::push_back(
+                const template_string_type::value_type)
+            @endcode
+        @param[in] in_json_string 値を取り込むJSON形式の文字列。
         @return
         - 成功した場合は(0, 0)。
         - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
      */
     public: template<
-        typename template_NumberType,
-        typename template_StringType >
-    std::pair< unsigned, unsigned > ImportJson(
-        const template_StringType in_JsonString)
+        typename template_number_type,
+        typename template_string_type >
+    std::pair< unsigned, unsigned > import_json(
+        const template_string_type in_json_string)
     {
-        typename template_StringType::allocator_type auto_Allocator(
-            in_JsonString.get_allocator());
-        return this->ImportJson< template_NumberType, template_StringType >(
-            in_JsonString.begin(),
-            in_JsonString.end(),
-            auto_Allocator);
+        typedef typename template_string_type::allocator_type allocator;
+        typedef std::list< pbon::json::element, allocator > array;
+        typedef std::map<
+            template_string_type,
+            pbon::json::element,
+            std::less< template_string_type >,
+            allocator >
+                object;
+        allocator local_allocator(in_json_string.get_allocator());
+        return this->import_json<
+            template_number_type, template_string_type, array, object >(
+                in_json_string.begin(), in_json_string.end(), local_allocator);
     }
 
     /** @brief JSON形式の文字列から値を取り出す。
-        @tparam template_NumberType JSONの値に使う数値の型。
-        @tparam template_StringType
-            JSONの値に使う文字列の型。std::basic_string 互換のinterfaceを持つ。
-        @tparam template_IteratorType JSONの解析で使う反復子の型。
-        @param[in] in_JsonBegin     値を取り込むJSON形式の文字列の先頭位置。
-        @param[in] in_JsonEnd       値を取り込むJSON形式の文字列の末尾位置。
-        @param[in,out] io_Allocator 使用するmemory割当子。
+        @tparam template_number_type JSONの要素に使う数値の型。
+        @tparam template_string_type
+            JSONの要素で使う文字列の型。
+            末尾に文字を追加するため、以下に相当する関数が使えること。
+            @code
+            template_string_type::push_back(
+                const template_string_type::value_type)
+            @endcode
+        @tparam template_array_type
+            JSONの要素で使う配列の型。
+            末尾に値を追加するため、以下に相当する関数が使えること。
+            @code
+            template_array_type::push_back(const pbon::json::element)
+            @endcode
+        @tparam template_object_type
+            JSONの要素で使うobjectの型。
+            値を挿入するため、以下に相当する関数が使えること。
+            @code
+            template_object_type::insert(
+                const std::pair< template_string_type, pbon::json::element >)
+            @endcode
+        @tparam template_iterator_type JSONの解析で使う反復子の型。
+        @param[in] in_json_begin    値を取り込むJSON形式の文字列の先頭位置。
+        @param[in] in_json_end      値を取り込むJSON形式の文字列の末尾位置。
+        @param[in,out] io_allocator 使用するmemory割当子。
         @return
         - 成功した場合は(0, 0)。
         - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
      */
     public: template<
-        typename template_NumberType,
-        typename template_StringType,
-        typename template_AllocatorType,
-        typename template_IteratorType >
-    std::pair< unsigned, unsigned > ImportJson(
-        const template_IteratorType& in_JsonBegin,
-        const template_IteratorType& in_JsonEnd,
-        template_AllocatorType&      io_Allocator)
+        typename template_number_type,
+        typename template_string_type,
+        typename template_array_type,
+        typename template_object_type,
+        typename template_iterator_type,
+        typename template_allocator_type >
+    std::pair< unsigned, unsigned > import_json(
+        const template_iterator_type& in_json_begin,
+        const template_iterator_type& in_json_end,
+        template_allocator_type&      io_allocator)
     {
-        typedef template_IteratorType Iterator;
-        typedef template_NumberType Number;
-        typedef template_StringType String;
-        typedef String::allocator_type::rebind< This >::other VectorAllocator;
-        typedef std::vector< This, VectorAllocator > Vector;
-        typedef String Key;
-        typedef VectorAllocator::rebind< std::pair< Key, This > >::other
-            MapAllocator;
-        typedef std::map< Key, This, std::less< Key >, MapAllocator >
-            Map;
-        This::JsonParser< Iterator, Number, String, Vector, Map >
-            local_Parser(in_JsonBegin, in_JsonEnd);
-        if (!local_Parser.Parse(*this, io_Allocator))
+        self::json_parser<
+            template_iterator_type,
+            template_number_type,
+            template_string_type,
+            template_array_type,
+            template_object_type >
+                local_parser(in_json_begin, in_json_end);
+        if (!local_parser.parse(*this, io_allocator))
         {
-            std::make_pair(local_Parser.GetLine(), local_Parser.GetColumn());
+            std::make_pair(local_parser.get_line(), local_parser.get_column());
         }
         return std::make_pair(unsigned(0), unsigned(0));
     }
 
     /** @brief PBON形式のbinary列から値を取り出す。
-        @param[in] in_PbonBinary 値を取り込むPBON形式のbinary列。
+        @param[in] in_pbon_binary 値を取り込むPBON形式のbinary列。
      */
-    public: template< typename template_ArrayType >
-    void ImportPbon(
-        const template_ArrayType& in_PbonBinary);
+    public: template< typename template_array_type >
+    void import_pbon(
+        const template_array_type& in_pbon_binary);
 
     /** @brief JSON形式で文字列に値を書き出す。
-        @param[out] out_JsonString 値を書き出す先。
+        @param[out] out_json_string 値を書き出す先。
      */
-    public: template< typename template_StringType >
-    void ExportJson(
-        template_StringType& out_JsonString) const;
+    public: template< typename template_string_type >
+    void export_json(
+        template_string_type& out_json_string) const;
 
     /** @brief PBON形式でbinaryに値を書き出す。
-        @param[out] out_PbonBinary 値を書き出す先。
+        @param[out] out_pbon_binary 値を書き出す先。
      */
-    public: template< typename template_ArrayType >
-    void ExportPbon(template_ArrayType& out_PbonBinary) const;
+    public: template< typename template_array_type >
+    void export_pbon(template_array_type& out_pbon_binary) const;
 
     //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
     /** @brief JSON解析器。
-        @tparam template_IteratorType 解析に使う反復子の型。
-        @tparam template_NumberType   JSONの値で使う数値の型。
-        @tparam template_StringType   JSONの値で使う文字列の型。
-        @tparam template_ArrayType    JSONの値で使う配列の型。
-        @tparam template_ObjectType   JSONの値で使うobjectの型。
+        @tparam template_iterator_type 解析に使う反復子の型。
+        @tparam template_number_type   JSONの要素で使う数値の型。
+        @tparam template_string_type
+            JSONの要素で使う文字列の型。
+            末尾に文字を追加するため、以下に相当する関数が使えること。
+            @code
+            template_string_type::push_back(
+                const template_string_type::value_type)
+            @endcode
+        @tparam template_array_type
+            JSONの要素で使う配列の型。
+            末尾に値を追加するため、以下に相当する関数が使えること。
+            @code
+            template_array_type::push_back(const pbon::json::element)
+            @endcode
+        @tparam template_object_type
+            JSONの要素で使うobjectの型。
+            値を挿入するため、以下に相当する関数が使えること。
+            @code
+            template_object_type::insert(
+                const std::pair< template_string_type, pbon::json::element >)
+            @endcode
      */
     private: template<
-        typename template_IteratorType,
-        typename template_NumberType,
-        typename template_StringType,
-        typename template_ArrayType,
-        typename template_ObjectType >
-    class JsonParser
+        typename template_iterator_type,
+        typename template_number_type,
+        typename template_string_type,
+        typename template_array_type,
+        typename template_object_type >
+    class json_parser
     {
         /// thisが指す値の型。
-        public: typedef JsonParser<
-            template_IteratorType,
-            template_NumberType,
-            template_StringType,
-            template_ArrayType,
-            template_ObjectType >
-                This;
+        public: typedef json_parser<
+            template_iterator_type,
+            template_number_type,
+            template_string_type,
+            template_array_type,
+            template_object_type >
+                self;
 
         private: enum { END_CHAR = -1 };
 
         //---------------------------------------------------------------------
-        /** @param[in] in_Begin 解析する文字列の先頭位置。
-            @param[in] in_End   解析する文字列の末尾位置。
+        /** @param[in] in_begin 解析する文字列の先頭位置。
+            @param[in] in_end   解析する文字列の末尾位置。
          */
-        public: JsonParser(
-            const template_IteratorType& in_Begin,
-            const template_IteratorType& in_End):
-        Current_(in_Begin),
-        End_(in_End),
-        LastChar_(This::END_CHAR),
-        Line_(1),
-        Column_(1),
-        Undo_(false)
+        public: json_parser(
+            const template_iterator_type& in_begin,
+            const template_iterator_type& in_end):
+        current_(in_begin),
+        end_(in_end),
+        last_char_(self::END_CHAR),
+        line_(1),
+        column_(1),
+        undo_(false)
         {
             // pass
         }
@@ -631,182 +670,182 @@ class Value
         /** @brief 解析中の行番号を取得。
             @return 解析中の行番号。必ず1以上。
          */
-        public: unsigned GetLine() const
+        public: unsigned get_line() const
         {
-            return this->Line_;
+            return this->line_;
         }
 
         /** @brief 解析中の行の桁位置を取得。
             @return 解析中の行の桁位置。必ず1以上。
          */
-        public: unsigned GetColumn() const
+        public: unsigned get_column() const
         {
-            return this->Column_;
+            return this->column_;
         }
 
         //---------------------------------------------------------------------
         /** @brief JSONが持っている値を解析して取り出す。
-            @tparam template_AllocatorType
+            @tparam template_allocator_type
                 std::allocator 互換のinterfaceを持つmemory割当子の型。
-            @param[out]    out_Value    JSONから取り出した値の出力先。
-            @param[in,out] io_Allocator 使用するmemory割当子。
+            @param[out]    out_element  JSONから取り出した値の出力先。
+            @param[in,out] io_allocator 使用するmemory割当子。
             @retval true  成功。
             @retval false 失敗。値は出力されない。
          */
-        public: template< typename template_AllocatorType >
-        bool Parse(
-            pbon::json::Value&      out_Value,
-            template_AllocatorType& io_Allocator)
+        public: template< typename template_allocator_type >
+        bool parse(
+            pbon::json::element&     out_element,
+            template_allocator_type& io_allocator)
         {
-            this->SkipWhiteSpace();
-            const int local_Char(this->ReadChar());
-            switch (local_Char)
+            this->skip_white_space();
+            const int local_char(this->read_char());
+            switch (local_char)
             {
                 case '"':
-                return this->ParseString(out_Value, io_Allocator);
+                return this->parse_string(out_element, io_allocator);
 
                 case '[':
-                return this->ParseArray(out_Value, io_Allocator);
+                return this->parse_array(out_element, io_allocator);
 
                 case '{':
-                return this->ParseObject(out_Value, io_Allocator);
+                return this->parse_object(out_element, io_allocator);
 
                 case 'n':
-                if (this->Match("ull"))
+                if (this->match("ull"))
                 {
-                    pbon::json::Value().Swap(out_Value);
+                    pbon::json::element().swap(out_element);
                     return true;
                 }
                 return false;
 
                 case 't':
-                if (this->Match("rue"))
+                if (this->match("rue"))
                 {
-                    pbon::json::Value(true, io_Allocator).Swap(out_Value);
+                    pbon::json::element(true, io_allocator).swap(out_element);
                     return true;
                 }
                 return false;
 
                 case 'f':
-                if (this->Match("alse"))
+                if (this->match("alse"))
                 {
-                    pbon::json::Value(false, io_Allocator).Swap(out_Value);
+                    pbon::json::element(false, io_allocator).swap(out_element);
                     return true;
                 }
                 return false;
 
                 default:
-                this->UndoChar();
-                if (('0' <= local_Char && local_Char <= '9') ||
-                    local_Char == '-')
+                this->undo_char();
+                if (('0' <= local_char && local_char <= '9') ||
+                    local_char == '-')
                 {
-                    return this->ParseNumber(out_Value, io_Allocator);
+                    return this->parse_number(out_element, io_allocator);
                 }
                 return false;
             }
         }
 
         /** @brief JSONが持っている配列を解析して取り出す。
-            @tparam template_AllocatorType
+            @tparam template_allocator_type
                 std::allocator 互換のinterfaceを持つmemory割当子の型。
-            @param[out]    out_Value    JSONから取り出した値の出力先。
-            @param[in,out] io_Allocator 使用するmemory割当子。
+            @param[out]    out_element  JSONから取り出した配列の出力先。
+            @param[in,out] io_allocator 使用するmemory割当子。
             @retval true  成功。
-            @retval false 失敗。値は出力されない。
+            @retval false 失敗。配列は出力されない。
          */
-        private: template< typename template_AllocatorType >
-        bool ParseArray(
-            pbon::json::Value&      out_Value,
-            template_AllocatorType& io_Allocator)
+        private: template< typename template_allocator_type >
+        bool parse_array(
+            pbon::json::element&      out_element,
+            template_allocator_type& io_allocator)
         {
-            template_ArrayType auto_Array;
-            if (!this->Expect(']'))
+            template_array_type local_array;
+            if (!this->expect(']'))
             {
                 for (;;)
                 {
-                    auto_Array.push_back(pbon::json::Value());
-                    if (!this->Parse(auto_Array.back(), io_Allocator))
+                    local_array.push_back(pbon::json::element());
+                    if (!this->parse(local_array.back(), io_allocator))
                     {
                         return false;
                     }
-                    if (!this->Expect(','))
+                    if (!this->expect(','))
                     {
                         break;
                     }
                 }
             }
-            pbon::json::Value(auto_Array, io_Allocator).Swap(out_Value);
-            return this->Expect(']');
+            pbon::json::element(local_array, io_allocator).swap(out_element);
+            return this->expect(']');
         }
 
         /** @brief JSONが持っているobjectを解析して取り出す。
-            @tparam template_AllocatorType
+            @tparam template_allocator_type
                 std::allocator 互換のinterfaceを持つmemory割当子の型。
-            @param[out]    out_Value    JSONから取り出した値の出力先。
-            @param[in,out] io_Allocator 使用するmemory割当子。
+            @param[out]    out_element  JSONから取り出したobjectの出力先。
+            @param[in,out] io_allocator 使用するmemory割当子。
             @retval true  成功。
-            @retval false 失敗。値は出力されない。
+            @retval false 失敗。objectは出力されない。
             @todo 未実装。
          */
-        private: template< typename template_AllocatorType >
-        bool ParseObject(
-            pbon::json::Value&      out_Value,
-            template_AllocatorType& io_Allocator)
+        private: template< typename template_allocator_type >
+        bool parse_object(
+            pbon::json::element&     out_element,
+            template_allocator_type& io_allocator)
         {
-            out_Value;io_Allocator;
+            out_element;io_allocator;
             return false;
         }
 
         /** @brief JSONが持っている数値を解析して取り出す。
-            @tparam template_AllocatorType
+            @tparam template_allocator_type
                 std::allocator 互換のinterfaceを持つmemory割当子の型。
-            @param[out]    out_Value    JSONから取り出した値の出力先。
-            @param[in,out] io_Allocator 使用するmemory割当子。
+            @param[out]    out_element  JSONから取り出した数値の出力先。
+            @param[in,out] io_allocator 使用するmemory割当子。
             @retval true  成功。
-            @retval false 失敗。値は出力されない。
+            @retval false 失敗。数値は出力されない。
             @todo 未実装。
          */
-        private: template< typename template_AllocatorType >
-        bool ParseNumber(
-            pbon::json::Value&      out_Value,
-            template_AllocatorType& io_Allocator)
+        private: template< typename template_allocator_type >
+        bool parse_number(
+            pbon::json::element&      out_element,
+            template_allocator_type& io_allocator)
         {
-            out_Value;io_Allocator;
+            out_element;io_allocator;
             return false;
         }
 
         /** @brief JSONが持っている文字列を解析して取り出す。
-            @tparam template_AllocatorType
+            @tparam template_allocator_type
                 std::allocator 互換のinterfaceを持つmemory割当子の型。
-            @param[out]    out_Value    JSONから取り出した値の出力先。
-            @param[in,out] io_Allocator 使用するmemory割当子。
+            @param[out]    out_element  JSONから取り出した文字列の出力先。
+            @param[in,out] io_allocator 使用するmemory割当子。
             @retval true  成功。
-            @retval false 失敗。値は出力されない。
+            @retval false 失敗。文字列は出力されない。
          */
-        private: template< typename template_AllocatorType >
-        bool ParseString(
-            pbon::json::Value&      out_Value,
-            template_AllocatorType& io_Allocator)
+        private: template< typename template_allocator_type >
+        bool parse_string(
+            pbon::json::element&     out_element,
+            template_allocator_type& io_allocator)
         {
-            template_StringType local_String;
+            template_string_type local_string;
             for (;;)
             {
-                int auto_Char(this->ReadChar());
-                if (auto_Char < ' ')
+                int local_char(this->read_char());
+                if (local_char < ' ')
                 {
-                    this->UndoChar();
+                    this->undo_char();
                     return false;
                 }
-                if (auto_Char == '"')
+                if (local_char == '"')
                 {
-                    pbon::json::Value(local_String, io_Allocator).Swap(
-                        out_Value);
+                    pbon::json::element(local_string, io_allocator).swap(
+                        out_element);
                     return true;
                 }
-                if (auto_Char == '\\')
+                if (local_char == '\\')
                 {
-                    auto_Char = this->ReadChar();
-                    switch (auto_Char)
+                    local_char = this->read_char();
+                    switch (local_char)
                     {
                         case '"':
                         break;
@@ -818,27 +857,27 @@ class Value
                         break;
 
                         case 'b':
-                        auto_Char = '\b';
+                        local_char = '\b';
                         break;
 
                         case 'f':
-                        auto_Char = '\f';
+                        local_char = '\f';
                         break;
 
                         case 'n':
-                        auto_Char = '\n';
+                        local_char = '\n';
                         break;
 
                         case 'r':
-                        auto_Char = '\r';
+                        local_char = '\r';
                         break;
 
                         case 't':
-                        auto_Char = '\t';
+                        local_char = '\t';
                         break;
 
                         case 'u':
-                        if (this->ParseCodePoint(local_String))
+                        if (this->parse_code_point(local_string))
                         {
                             continue;
                         }
@@ -848,160 +887,160 @@ class Value
                         return false;
                     }
                 }
-                local_String.push_back(
-                    static_cast< typename template_StringType::value_type >(
-                        auto_Char));
+                local_string.push_back(
+                    static_cast< typename template_string_type::value_type >(
+                        local_char));
             }
         }
 
         /** @brief 文字列のcode-point表記を解析。
          */
-        private: bool ParseCodePoint(
-            template_StringType& out_String)
+        private: bool parse_code_point(
+            template_string_type& out_string)
         {
-            int local_UnicodeChar(this->ParseQuadHex());
-            if (local_UnicodeChar == This::END_CHAR)
+            int local_unicode_char(this->parse_quad_hex());
+            if (local_unicode_char == self::END_CHAR)
             {
                 return false;
             }
-            if (0xd800 <= local_UnicodeChar && local_UnicodeChar <= 0xdfff)
+            if (0xd800 <= local_unicode_char && local_unicode_char <= 0xdfff)
             {
                 // 16bit surrogate pairの後半か判定。
-                if (0xdc00 <= local_UnicodeChar)
+                if (0xdc00 <= local_unicode_char)
                 {
                     return false;
                 }
 
                 // 16bit surrogate pairの前半だった。
-                if (this->ReadChar() != '\\' || this->ReadChar() != 'u')
+                if (this->read_char() != '\\' || this->read_char() != 'u')
                 {
-                    this->UndoChar();
+                    this->undo_char();
                     return false;
                 }
-                const int auto_Second(this->ParseQuadHex());
-                if (auto_Second < 0xdc00 || 0xdfff < auto_Second)
+                const int local_second(this->parse_quad_hex());
+                if (local_second < 0xdc00 || 0xdfff < local_second)
                 {
                     return false;
                 }
-                local_UnicodeChar = 0x10000 + (
-                    ((local_UnicodeChar - 0xd800) << 10) |
-                    ((auto_Second - 0xdc00) & 0x3ff));
+                local_unicode_char = 0x10000 + (
+                    ((local_unicode_char - 0xd800) << 10) |
+                    ((local_second - 0xdc00) & 0x3ff));
             }
-            if (local_UnicodeChar < 0x80)
+            if (local_unicode_char < 0x80)
             {
-                out_String.push_back(
-                    static_cast< template_StringType::value_type >(
-                        local_UnicodeChar));
+                out_string.push_back(
+                    static_cast< template_string_type::value_type >(
+                        local_unicode_char));
             }
             else
             {
-                if (local_UnicodeChar < 0x800)
+                if (local_unicode_char < 0x800)
                 {
-                    out_String.push_back(
-                        static_cast< template_StringType::value_type >(
-                            0xc0 | (local_UnicodeChar >> 6)));
+                    out_string.push_back(
+                        static_cast< template_string_type::value_type >(
+                            0xc0 | (local_unicode_char >> 6)));
                 } else
                 {
-                    if (local_UnicodeChar < 0x10000)
+                    if (local_unicode_char < 0x10000)
                     {
-                        out_String.push_back(
-                            static_cast< template_StringType::value_type >(
-                                0xe0 | (local_UnicodeChar >> 12)));
+                        out_string.push_back(
+                            static_cast< template_string_type::value_type >(
+                                0xe0 | (local_unicode_char >> 12)));
                     }
                     else
                     {
-                        out_String.push_back(
-                            static_cast< template_StringType::value_type >(
-                                0xf0 | (local_UnicodeChar >> 18)));
-                        out_String.push_back(
-                            static_cast< template_StringType::value_type >(
-                                0x80 | ((local_UnicodeChar >> 12) & 0x3f)));
+                        out_string.push_back(
+                            static_cast< template_string_type::value_type >(
+                                0xf0 | (local_unicode_char >> 18)));
+                        out_string.push_back(
+                            static_cast< template_string_type::value_type >(
+                                0x80 | ((local_unicode_char >> 12) & 0x3f)));
                     }
-                    out_String.push_back(
-                        static_cast< template_StringType::value_type >(
-                            0x80 | ((local_UnicodeChar >> 6) & 0x3f)));
+                    out_string.push_back(
+                        static_cast< template_string_type::value_type >(
+                            0x80 | ((local_unicode_char >> 6) & 0x3f)));
                 }
-                out_String.push_back(
-                    static_cast< template_StringType::value_type >(
-                        0x80 | (local_UnicodeChar & 0x3f)));
+                out_string.push_back(
+                    static_cast< template_string_type::value_type >(
+                        0x80 | (local_unicode_char & 0x3f)));
             }
             return true;
         }
 
         /** @brief 文字列の16進数表記4桁を解析。
          */
-        private: int ParseQuadHex()
+        private: int parse_quad_hex()
         {
-            int local_UnicodeChar(0);
+            int local_unicode_char(0);
             for (int i = 0; i < 4; i++)
             {
-                int local_Hex(this->ReadChar());
-                if ('0' <= local_Hex && local_Hex <= '9')
+                int local_hex(this->read_char());
+                if ('0' <= local_hex && local_hex <= '9')
                 {
-                    local_Hex -= '0';
+                    local_hex -= '0';
                 }
-                else if ('A' <= local_Hex && local_Hex <= 'F')
+                else if ('A' <= local_hex && local_hex <= 'F')
                 {
-                    local_Hex -= 'A' - 0xa;
+                    local_hex -= 'A' - 0xa;
                 }
-                else if ('a' <= local_Hex && local_Hex <= 'f')
+                else if ('a' <= local_hex && local_hex <= 'f')
                 {
-                    local_Hex -= 'a' - 0xa;
+                    local_hex -= 'a' - 0xa;
                 }
                 else
                 {
-                    if (local_Hex != This::END_CHAR)
+                    if (local_hex != self::END_CHAR)
                     {
-                        this->UndoChar();
+                        this->undo_char();
                     }
-                    return This::END_CHAR;
+                    return self::END_CHAR;
                 }
-                local_UnicodeChar = local_UnicodeChar * 16 + local_Hex;
+                local_unicode_char = local_unicode_char * 16 + local_hex;
             }
-            return local_UnicodeChar;
+            return local_unicode_char;
         }
 
         //---------------------------------------------------------------------
-        private: int ReadChar()
+        private: int read_char()
         {
-            if (this->Undo_)
+            if (this->undo_)
             {
-                this->Undo_ = false;
-                return this->LastChar_;
+                this->undo_ = false;
+                return this->last_char_;
             }
-            if (this->Current_ == this->End_)
+            if (this->current_ == this->end_)
             {
-                this->LastChar_ = This::END_CHAR;
-                return This::END_CHAR;
+                this->last_char_ = self::END_CHAR;
+                return self::END_CHAR;
             }
-            if (this->LastChar_ == '\n')
+            if (this->last_char_ == '\n')
             {
-                this->Column_ = 1;
-                ++this->Line_;
+                this->column_ = 1;
+                ++this->line_;
             }
             else
             {
-                ++this->Column_;
+                ++this->column_;
             }
-            this->LastChar_ = *this->Current_;
-            ++this->Current_;
-            return this->LastChar_;
+            this->last_char_ = *this->current_;
+            ++this->current_;
+            return this->last_char_;
         }
 
-        private: void UndoChar()
+        private: void undo_char()
         {
-            if (this->LastChar_ != This::END_CHAR)
+            if (this->last_char_ != self::END_CHAR)
             {
-                //assert(!this->Undo_);
-                this->Undo_ = true;
+                //assert(!this->undo_);
+                this->undo_ = true;
             }
         }
 
-        private: void SkipWhiteSpace()
+        private: void skip_white_space()
         {
             for (;;)
             {
-                switch (this->ReadChar())
+                switch (this->read_char())
                 {
                     case ' ':
                     case '\t':
@@ -1010,42 +1049,42 @@ class Value
                     break;
 
                     default:
-                    this->UndoChar();
+                    this->undo_char();
                     return;
                 }
             }
         }
 
-        private: bool Expect(
-            const int in_ExpectChar)
+        private: bool expect(
+            const int in_expect_char)
         {
-            this->SkipWhiteSpace();
-            if (this->ReadChar() != in_ExpectChar)
+            this->skip_white_space();
+            if (this->read_char() != in_expect_char)
             {
-                this->UndoChar();
+                this->undo_char();
                 return false;
             }
             return true;
         }
 
-        private: bool Match(
-            const char* const in_Begin)
+        private: bool match(
+            const char* const in_begin)
         {
-            for (const char* i = in_Begin; *i != 0; ++i)
+            for (const char* i = in_begin; *i != 0; ++i)
             {
-                if (this->ReadChar() != *i)
+                if (this->read_char() != *i)
                 {
-                    this->UndoChar();
+                    this->undo_char();
                     return false;
                 }
             }
-            this->SkipWhiteSpace();
-            switch (this->LastChar_)
+            this->skip_white_space();
+            switch (this->last_char_)
             {
                 case ',':
                 case ']':
                 case '}':
-                case This::END_CHAR:
+                case self::END_CHAR:
                 return true;
 
                 default:
@@ -1054,12 +1093,12 @@ class Value
         }
 
         //---------------------------------------------------------------------
-        private: template_IteratorType Current_;
-        private: template_IteratorType End_;
-        private: int      LastChar_;
-        private: unsigned Line_;
-        private: unsigned Column_;
-        private: bool     Undo_;
+        private: template_iterator_type current_;
+        private: template_iterator_type end_;
+        private: int      last_char_;
+        private: unsigned line_;
+        private: unsigned column_;
+        private: bool     undo_;
     };
 };
 } // namespace json

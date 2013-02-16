@@ -386,7 +386,7 @@ class value
 
     /** @brief JSON形式の文字列を解析し、値を取り出す。
         @tparam template_string_type 解析する文字列の型。
-        @param[in] in_string   値を取り込むJSON形式の文字列。
+        @param[in]  in_string  値を取り込むJSON形式の文字列。
         @param[out] out_result JSONの解析結果。
         - 成功した場合は(0, 0)。
         - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
@@ -403,9 +403,9 @@ class value
         @tparam template_traits_type
             pbon::json::type_traits に準拠した型特性の型。
         @tparam template_string_type 解析する文字列の型。
-        @param[in] in_type_traits pbon::json::type_traits に準拠した型特性。
-        @param[in] in_string      値を取り込むJSON形式の文字列。
-        @param[out] out_result    JSONの解析結果。
+        @param[in]  in_type_traits pbon::json::type_traits に準拠した型特性。
+        @param[in]  in_string      値を取り込むJSON形式の文字列。
+        @param[out] out_result     JSONの解析結果。
         - 成功した場合は(0, 0)。
         - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
      */
@@ -428,10 +428,10 @@ class value
         @tparam template_string_type 解析する文字列の型。
         @tparam template_allocator_type
             @copydoc pbon::json::type_traits::allocator
-        @param[in] in_type_traits   pbon::json::type_traits に準拠した型特性。
-        @param[in] in_string        値を取り込むJSON形式の文字列。
-        @param[in,out] io_allocator 使用するmemory割当子。
-        @param[out] out_result      JSONの解析結果。
+        @param[in]     in_type_traits pbon::json::type_traits に準拠した型特性。
+        @param[in]     in_string      値を取り込むJSON形式の文字列。
+        @param[in,out] io_allocator   使用するmemory割当子。
+        @param[out]    out_result     JSONの解析結果。
         - 成功した場合は(0, 0)。
         - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
      */
@@ -459,11 +459,11 @@ class value
         @tparam template_iterator_type @copydoc pbon::json::parser::iterator
         @tparam template_allocator_type
             @copydoc pbon::json::type_traits::allocator
-        @param[in] in_type_traits   型特性。
-        @param[in] in_string_begin  解析する文字列の先頭位置。
-        @param[in] in_string_end    解析する文字列の末尾位置。
-        @param[in,out] io_allocator 使用するmemory割当子。
-        @param[out] out_result      JSONの解析結果。
+        @param[in]     in_type_traits  型特性。
+        @param[in]     in_string_begin 解析する文字列の先頭位置。
+        @param[in]     in_string_end   解析する文字列の末尾位置。
+        @param[in,out] io_allocator    使用するmemory割当子。
+        @param[out]    out_result      JSONの解析結果。
         - 成功した場合は(0, 0)。
         - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
      */
@@ -502,16 +502,12 @@ class value
 
         @tparam template_value_type 初期値の型。
         @param[in] in_value 初期値。
-        @param[in] in_dummy
-             constructorを区別するためのdummy。値は何でもいい。
      */
     public: template< typename template_value_type >
     value(
-        const template_value_type& in_value,
-        const bool                 in_dummy):
+        const template_value_type& in_value):
     storage_(0)
     {
-        in_dummy; // 使わない引数。
         if (!this->set_value(in_value))
         {
             this->hold_ = self::hold_EMPTY;
@@ -522,10 +518,8 @@ class value
 
         @tparam template_value_type     初期値の型。
         @tparam template_allocator_type memory割当子の型。
-        @param[in] in_value 初期値。
-        @param[in] in_dummy
-             constructorを区別するためのdummy。値は何でもいい。
-        @param[in,out] io_allocator 使用するmemory割当子。
+        @param[in]     in_value         初期値。
+        @param[in,out] io_allocator     使用するmemory割当子。
         @todo 未実装。
      */
     public: template<
@@ -533,14 +527,12 @@ class value
         typename template_allocator_type >
     value(
         const template_value_type& in_value,
-        const bool                 in_dummy,
         template_allocator_type&   io_allocator):
     storage_(0)
     {
-        in_dummy;
         if (!this->set_value(in_value))
         {
-            io_allocator;
+            io_allocator.deallocate(0, 0);
             this->hold_ = self::hold_POINTER;
         }
     }
@@ -624,8 +616,9 @@ struct type_traits
         文字列から数値に変換するため、以下に相当する関数が使えること。
         @code
         operator>>(
-            std::basic_istringstream< pbon::json::parser::string::value_type >&,
-            parser::number&)
+            std::basic_istringstream<
+                pbon::json::type_traits::string::value_type >&,
+            pbon::json::type_traits::number&)
         @endcode
      */
     typedef template_number_type number;
@@ -634,7 +627,8 @@ struct type_traits
 
         末尾に文字を追加するため、以下に相当する関数が使えること。
         @code
-        string::push_back(const pbon::json::parser::string::value_type)
+        pbon::json::type_traits::string::push_back(
+            const pbon::json::type_traits::string::value_type)
         @endcode
      */
     typedef template_string_type string;
@@ -643,7 +637,7 @@ struct type_traits
 
         末尾に値を追加するため、以下に相当する関数が使えること。
         @code
-        array::push_back(const pbon::json::value&)
+        pbon::json::type_traits::array::push_back(const pbon::json::value&)
         @endcode
      */
     typedef std::list< pbon::json::value, template_allocator_type > array;
@@ -652,8 +646,9 @@ struct type_traits
 
         値を挿入するため、以下に相当する関数が使えること。
         @code
-        array::insert(
-            std::pair< pbon::json::parser::string, const pbon::json::value >&)
+        pbon::json::type_traits::object::insert(
+            std::pair<
+                pbon::json::type_traits::string, const pbon::json::value >&)
         @endcode
      */
     typedef std::map<
@@ -713,10 +708,10 @@ class parser
     /** @brief JSON形式の文字列を解析し、値を取り出す。
         @tparam template_allocator_type
             @copydoc pbon::json::type_traits::allocator
-        @param[in] in_begin         解析する文字列の先頭位置。
-        @param[in] in_end           解析する文字列の末尾位置。
+        @param[in]     in_begin     解析する文字列の先頭位置。
+        @param[in]     in_end       解析する文字列の末尾位置。
         @param[in,out] io_allocator 使用するmemory割当子。
-        @param[out] out_value       JSONから取り出した値の出力先。
+        @param[out]    out_value    JSONから取り出した値の出力先。
      */
     public: template< typename template_allocator_type >
     parser(
@@ -762,7 +757,7 @@ class parser
         @tparam template_allocator_type
             @copydoc pbon::json::type_traits::allocator
         @param[in,out] io_allocator 使用するmemory割当子。
-        @param[out] out_value       JSONから取り出した値の出力先。
+        @param[out]    out_value    JSONから取り出した値の出力先。
         @retval true  成功。
         @retval false 失敗。値は出力されない。
      */
@@ -795,7 +790,7 @@ class parser
             case 't':
             if (this->match("rue"))
             {
-                pbon::json::value(true, true, io_allocator).swap(out_value);
+                pbon::json::value(true, io_allocator).swap(out_value);
                 return true;
             }
             return false;
@@ -803,7 +798,7 @@ class parser
             case 'f':
             if (this->match("alse"))
             {
-                pbon::json::value(false, true, io_allocator).swap(out_value);
+                pbon::json::value(false, io_allocator).swap(out_value);
                 return true;
             }
             return false;
@@ -826,7 +821,7 @@ class parser
         @tparam template_allocator_type
             @copydoc pbon::json::type_traits::allocator
         @param[in,out] io_allocator 使用するmemory割当子。
-        @param[out] out_value       JSONから取り出した配列の出力先。
+        @param[out]    out_value    JSONから取り出した配列の出力先。
         @retval true  成功。
         @retval false 失敗。配列は出力されない。
      */
@@ -851,7 +846,7 @@ class parser
                 }
             }
         }
-        pbon::json::value(local_array, true, io_allocator).swap(out_value);
+        pbon::json::value(local_array, io_allocator).swap(out_value);
         return this->expect(']');
     }
 
@@ -859,7 +854,7 @@ class parser
         @tparam template_allocator_type
             @copydoc pbon::json::type_traits::allocator
         @param[in,out] io_allocator 使用するmemory割当子。
-        @param[out] out_value       JSONから取り出したobjectの出力先。
+        @param[out]    out_value    JSONから取り出したobjectの出力先。
         @retval true  成功。
         @retval false 失敗。objectは出力されない。
         @todo 未実装。
@@ -877,7 +872,7 @@ class parser
         @tparam template_allocator_type
             @copydoc pbon::json::type_traits::allocator
         @param[in,out] io_allocator 使用するmemory割当子。
-        @param[out] out_value       JSONから取り出した数値の出力先。
+        @param[out]    out_value    JSONから取り出した数値の出力先。
         @retval true  成功。
         @retval false 失敗。数値は出力されない。
      */
@@ -918,7 +913,7 @@ class parser
         {
             return false;
         }
-        pbon::json::value(local_number, true, io_allocator).swap(out_value);
+        pbon::json::value(local_number, io_allocator).swap(out_value);
         return true;
     }
 
@@ -926,7 +921,7 @@ class parser
         @tparam template_allocator_type
             @copydoc pbon::json::type_traits::allocator
         @param[in,out] io_allocator 使用するmemory割当子。
-        @param[out] out_value       JSONから取り出した文字列の出力先。
+        @param[out]    out_value    JSONから取り出した文字列の出力先。
         @retval true  成功。
         @retval false 失敗。文字列は出力されない。
      */
@@ -946,7 +941,7 @@ class parser
             }
             if (local_char == '"')
             {
-                pbon::json::value(local_string, true, io_allocator).swap(
+                pbon::json::value(local_string, io_allocator).swap(
                     out_value);
                 return true;
             }

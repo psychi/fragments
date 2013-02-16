@@ -417,8 +417,7 @@ class value
         const template_string_type& in_string,
         self::parse_result&         out_result)
     {
-        typename template_string_type::allocator_type local_allocator(
-            in_string.get_allocator());
+        typename template_traits_type::allocator local_allocator;
         new(this) self(in_type_traits, in_string, local_allocator, out_result);
     }
 
@@ -484,6 +483,7 @@ class value
         in_type_traits;
 
         // JSON文字列を解析して値を取り出す。
+        self local_value;
         pbon::json::parser<
             template_iterator_type,
             typename template_traits_type::number,
@@ -491,7 +491,11 @@ class value
             typename template_traits_type::array,
             typename template_traits_type::object >
                 local_parser(
-                    in_string_begin, in_string_end, io_allocator, *this);
+                    in_string_begin, in_string_end, io_allocator, local_value);
+        if (local_parser.get_line() == 0)
+        {
+            this->swap(local_value);
+        }
         out_result = self::parse_result(
             local_parser.get_line(), local_parser.get_column());
     }
@@ -548,6 +552,10 @@ class value
      */
     public: self& operator=(const self& in_source)
     {
+        if (this == &in_source)
+        {
+            return *this;
+        }
         this->~value();
         return *new(this) self(in_source);
     }
@@ -565,7 +573,7 @@ class value
         @retval true  値が空だった。
         @retval false 値が空ではなかった。
      */
-    public: bool is_empty() const
+    public: bool empty() const
     {
         return this->hold_ == self::hold_EMPTY;
     }

@@ -393,7 +393,7 @@ class value
     {
     }
 
-    /** @brief JSON形式の文字列から値を取り出す。
+    /** @brief JSON形式の文字列を解析し、値を取り出す。
         @tparam template_number_type @copydoc pbon::json::parser::number
         @tparam template_string_type @copydoc pbon::json::parser::string
         @param[in] in_string      値を取り込むJSON形式の文字列。
@@ -410,7 +410,7 @@ class value
         new(this) self(in_string, in_number_type, local_result);
     }
 
-    /** @brief JSON形式の文字列から値を取り出す。
+    /** @brief JSON形式の文字列を解析し、値を取り出す。
         @tparam template_number_type   @copydoc pbon::json::parser::number
         @tparam template_string_type   @copydoc pbon::json::parser::string
         @param[in] in_string      値を取り込むJSON形式の文字列。
@@ -432,7 +432,28 @@ class value
         new(this) self(in_string, in_number_type, local_allocator, out_result);
     }
 
-    /** @brief JSON形式の文字列から値を取り出す。
+    /** @brief JSON形式の文字列を解析し、値を取り出す。
+        @tparam template_number_type   @copydoc pbon::json::parser::number
+        @tparam template_string_type   @copydoc pbon::json::parser::string
+        @param[in] in_string        値を取り込むJSON形式の文字列。
+        @param[in] in_number_type   保持する数値の型。
+        @param[in,out] io_allocator 使用するmemory割当子。
+     */
+    template<
+        typename template_number_type,
+        typename template_string_type,
+        typename template_allocator_type >
+    value(
+        const template_string_type&               in_string,
+        const self::type< template_number_type >& in_number_type,
+        template_allocator_type&                  io_allocator)
+    {
+        self::parse_result local_result;
+        new(this) self(
+            in_string, in_number_type, io_allocator, local_result);
+    }
+
+    /** @brief JSON形式の文字列を解析し、値を取り出す。
         @tparam template_number_type   @copydoc pbon::json::parser::number
         @tparam template_string_type   @copydoc pbon::json::parser::string
         @param[in] in_string        値を取り込むJSON形式の文字列。
@@ -470,7 +491,49 @@ class value
             out_result);
     }
 
-    /** @brief JSON形式の文字列から値を取り出して構築。
+    /** @brief JSON形式の文字列を解析し、値を取り出す。
+        @tparam template_iterator_type @copydoc pbon::json::parser::iterator
+        @tparam template_number_type   @copydoc pbon::json::parser::number
+        @tparam template_string_type   @copydoc pbon::json::parser::string
+        @tparam template_array_type    @copydoc pbon::json::parser::array
+        @tparam template_object_type   @copydoc pbon::json::parser::object
+        @param[in] in_string_begin  値を取り込むJSON形式の文字列の先頭位置。
+        @param[in] in_string_end    値を取り込むJSON形式の文字列の末尾位置。
+        @param[in] in_number_type   保持する数値の型。
+        @param[in] in_string_type   保持する文字列の型。
+        @param[in] in_array_type    保持する配列の型。
+        @param[in] in_object_type   保持するobjectの型。
+        @param[in,out] io_allocator 使用するmemory割当子。
+     */
+    template<
+        typename template_number_type,
+        typename template_string_type,
+        typename template_array_type,
+        typename template_object_type,
+        typename template_iterator_type,
+        typename template_allocator_type >
+    value(
+        const template_iterator_type&             in_string_begin,
+        const template_iterator_type&             in_string_end,
+        const self::type< template_number_type >& in_number_type,
+        const self::type< template_string_type >& in_string_type,
+        const self::type< template_array_type >&  in_array_type,
+        const self::type< template_object_type >& in_object_type,
+        template_allocator_type&                  io_allocator)
+    {
+        self::parse_result local_result;
+        new(this) self(
+            in_string_begin,
+            in_string_end,
+            in_number_type,
+            in_string_type,
+            in_array_type,
+            in_object_type,
+            io_allocator,
+            local_result);
+    }
+
+    /** @brief JSON形式の文字列から値を取り出す。
         @tparam template_iterator_type @copydoc pbon::json::parser::iterator
         @tparam template_number_type   @copydoc pbon::json::parser::number
         @tparam template_string_type   @copydoc pbon::json::parser::string
@@ -540,8 +603,8 @@ class value
         const bool                 in_dummy):
     storage_(0)
     {
-        in_dummy;
-        if (this->set_value(in_value))
+        in_dummy; // 使わない引数。
+        if (!this->set_value(in_value))
         {
             this->hold_ = self::hold_EMPTY;
         }
@@ -567,7 +630,7 @@ class value
     storage_(0)
     {
         in_dummy;
-        if (this->set_value(in_value))
+        if (!this->set_value(in_value))
         {
             io_allocator;
             this->hold_ = self::hold_POINTER;
@@ -795,7 +858,7 @@ class parser
     }
 
     /** @brief JSONが持っている配列を解析して取り出す。
-        @tparam template_allocator_type
+        @tparam template_allocator_type @
             std::allocator 互換のinterfaceを持つmemory割当子の型。
         @param[in,out] io_allocator 使用するmemory割当子。
         @param[out] out_value       JSONから取り出した配列の出力先。
@@ -852,15 +915,43 @@ class parser
         @param[out] out_value       JSONから取り出した数値の出力先。
         @retval true  成功。
         @retval false 失敗。数値は出力されない。
-        @todo 未実装。
      */
     private: template< typename template_allocator_type >
     bool parse_number(
         template_allocator_type& io_allocator,
         pbon::json::value&       out_value)
     {
-        out_value;io_allocator;
-        return false;
+        template_string_type local_string;
+        for (;;)
+        {
+            const int local_char(this->read_char());
+            if (('0' <= local_char && local_char <= '9') ||
+                local_char == '+' ||
+                local_char == '-' ||
+                local_char == '.' ||
+                local_char == 'e' ||
+                local_char == 'E')
+            {
+                local_string.push_back(
+                    static_cast< typename template_string_type::value_type >(
+                        local_char));
+            }
+            else
+            {
+                this->undo_char();
+                break;
+            }
+        }
+
+        std::istringstream local_stream(local_string);
+        template_number_type local_number;
+        local_stream >> local_number;
+        if (!local_stream.eof())
+        {
+            return false;
+        }
+        pbon::json::value(local_number, true, io_allocator).swap(out_value);
+        return true;
     }
 
     /** @brief JSONが持っている文字列を解析して取り出す。
@@ -1050,6 +1141,9 @@ class parser
     }
 
     //-------------------------------------------------------------------------
+    /** @brief 1文字読み込む。
+        @return 読み込んだ文字。
+     */
     private: int read_char()
     {
         if (this->undo_)
@@ -1085,6 +1179,8 @@ class parser
         }
     }
 
+    /** @brief 空白文字をskipする。
+     */
     private: void skip_white_space()
     {
         for (;;)

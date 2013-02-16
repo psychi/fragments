@@ -49,7 +49,6 @@
 
 namespace pbon
 {
-
 typedef std::int8_t  int8;
 typedef std::int16_t int16;
 typedef std::int32_t int32;
@@ -371,18 +370,63 @@ class element
     /// thisが指す値の型。
     public: typedef pbon::json::element self;
 
+    /** @brief JSONの要素が持つ値の型特性。
+        @tparam template_number_type @copydoc value_traits::number
+        @tparam template_string_type @copydoc value_traits::string
+        @tparam template_allocator_type @copydoc value_traits::allocator
+     */
+    public: template<
+        typename template_number_type = double,
+        typename template_string_type = std::string,
+        typename template_allocator_type = std::allocator< void* > >
+    struct value_traits
+    {
+        /// JSONの要素が持つ数値の型。
+        typedef template_number_type number;
+
+        /** @brief JSONの要素が持つ文字列の型。
+
+            末尾に文字を追加するため、以下に相当する関数が使えること。
+            @code
+            string::push_back(const string::value_type)
+            @endcode
+         */
+        typedef template_string_type string;
+
+        /** @brief JSONの要素が持つ配列の型。
+
+            末尾に値を追加するため、以下に相当する関数が使えること。
+            @code
+            array::push_back(const pbon::json::element&)
+            @endcode
+         */
+        typedef std::list< pbon::json::element, template_allocator_type >
+            array;
+
+        /** @brief JSONの要素が持つobjectの型。
+
+            値を挿入するため、以下に相当する関数が使えること。
+            @code
+            array::insert(std::pair< string, const pbon::json::element >&)
+            @endcode
+         */
+        typedef std::map<
+            template_string_type,
+            pbon::json::element,
+            std::less< template_string_type >,
+            template_allocator_type >
+                object;
+
+        /// JSONの要素で使うmemory割当子の型。
+        typedef template_allocator_type allocator;
+    };
+
     /// 値の持ち方。
     private: enum hold
     {
         hold_EMPTY,   ///< 値を持ってない。
         hold_VALUE,   ///< 直接値を持ってる。
         hold_POINTER, ///< pointerとして値を持ってる。
-    };
-
-    private: class placeholder
-    {
-        public: virtual void delete_this() = 0;
-        public: virtual placeholder* clone() = 0;
     };
 
     //-------------------------------------------------------------------------
@@ -515,43 +559,21 @@ class element
     std::pair< unsigned, unsigned > import_json(
         const template_string_type in_json_string)
     {
-        typedef typename template_string_type::allocator_type allocator;
-        typedef std::list< pbon::json::element, allocator > array;
-        typedef std::map<
+        typedef self::value_traits<
+            template_number_type,
             template_string_type,
-            pbon::json::element,
-            std::less< template_string_type >,
-            allocator >
-                object;
-        allocator local_allocator(in_json_string.get_allocator());
-        return this->import_json<
-            template_number_type, template_string_type, array, object >(
-                in_json_string.begin(), in_json_string.end(), local_allocator);
+            typename template_string_type::allocator_type >
+                traits;
+        traits::allocator local_allocator(in_json_string.get_allocator());
+        return this->import_json< traits >(
+            in_json_string.begin(), in_json_string.end(), local_allocator);
     }
 
     /** @brief JSON形式の文字列から値を取り出す。
-        @tparam template_number_type JSONの要素に使う数値の型。
-        @tparam template_string_type
-            JSONの要素で使う文字列の型。
-            末尾に文字を追加するため、以下に相当する関数が使えること。
-            @code
-            template_string_type::push_back(
-                const template_string_type::value_type)
-            @endcode
-        @tparam template_array_type
-            JSONの要素で使う配列の型。
-            末尾に値を追加するため、以下に相当する関数が使えること。
-            @code
-            template_array_type::push_back(const pbon::json::element)
-            @endcode
-        @tparam template_object_type
-            JSONの要素で使うobjectの型。
-            値を挿入するため、以下に相当する関数が使えること。
-            @code
-            template_object_type::insert(
-                const std::pair< template_string_type, pbon::json::element >)
-            @endcode
-        @tparam template_iterator_type JSONの解析で使う反復子の型。
+        @tparam template_traits_type
+            pbon::json::element::value_traits から導出した、JSONの値の型特性。
+        @tparam template_iterator_type  JSONの解析で使う反復子の型。
+        @tparam template_allocator_type memory割当子の型。
         @param[in] in_json_begin    値を取り込むJSON形式の文字列の先頭位置。
         @param[in] in_json_end      値を取り込むJSON形式の文字列の末尾位置。
         @param[in,out] io_allocator 使用するmemory割当子。
@@ -560,10 +582,7 @@ class element
         - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
      */
     public: template<
-        typename template_number_type,
-        typename template_string_type,
-        typename template_array_type,
-        typename template_object_type,
+        typename template_traits_type,
         typename template_iterator_type,
         typename template_allocator_type >
     std::pair< unsigned, unsigned > import_json(
@@ -573,10 +592,10 @@ class element
     {
         self::json_parser<
             template_iterator_type,
-            template_number_type,
-            template_string_type,
-            template_array_type,
-            template_object_type >
+            typename template_traits_type::number,
+            typename template_traits_type::string,
+            typename template_traits_type::array,
+            typename template_traits_type::object >
                 local_parser(in_json_begin, in_json_end);
         if (!local_parser.parse(*this, io_allocator))
         {

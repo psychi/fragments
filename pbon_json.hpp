@@ -387,9 +387,8 @@ class value
     /** @brief JSON形式の文字列を解析し、値を取り出す。
         @tparam template_string_type 解析する文字列の型。
         @param[in]  in_string  値を取り込むJSON形式の文字列。
-        @param[out] out_result JSONの解析結果。
-        - 成功した場合は(0, 0)。
-        - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
+        @param[out] out_result
+            @copydoc pbon::json::value::parse_result
      */
     public: template< typename template_string_type >
     value(
@@ -405,9 +404,8 @@ class value
         @tparam template_string_type 解析する文字列の型。
         @param[in]  in_type_traits pbon::json::type_traits に準拠した型特性。
         @param[in]  in_string      値を取り込むJSON形式の文字列。
-        @param[out] out_result     JSONの解析結果。
-        - 成功した場合は(0, 0)。
-        - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
+        @param[out] out_result
+            @copydoc pbon::json::value::parse_result
      */
     public: template<
         typename template_traits_type,
@@ -430,9 +428,8 @@ class value
         @param[in]     in_type_traits pbon::json::type_traits に準拠した型特性。
         @param[in]     in_string      値を取り込むJSON形式の文字列。
         @param[in,out] io_allocator   使用するmemory割当子。
-        @param[out]    out_result     JSONの解析結果。
-        - 成功した場合は(0, 0)。
-        - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
+        @param[out]    out_result
+            @copydoc pbon::json::value::parse_result
      */
     public: template<
         typename template_traits_type,
@@ -462,9 +459,8 @@ class value
         @param[in]     in_string_begin 解析する文字列の先頭位置。
         @param[in]     in_string_end   解析する文字列の末尾位置。
         @param[in,out] io_allocator    使用するmemory割当子。
-        @param[out]    out_result      JSONの解析結果。
-        - 成功した場合は(0, 0)。
-        - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
+        @param[out]    out_result
+            @copydoc pbon::json::value::parse_result
      */
     public: template<
         typename template_traits_type,
@@ -647,6 +643,12 @@ struct type_traits
         @code
         pbon::json::type_traits::array::push_back(const pbon::json::value&)
         @endcode
+
+        値の数を取得するため、以下に相当する関数が使えること。
+        @code
+        pbon::json::type_traits::array::size_type
+            pbon::json::type_traits::array::size()
+        @endcode
      */
     typedef std::list< pbon::json::value, template_allocator_type > array;
 
@@ -654,9 +656,15 @@ struct type_traits
 
         値を挿入するため、以下に相当する関数が使えること。
         @code
-        pbon::json::type_traits::object::insert(
-            std::pair<
-                pbon::json::type_traits::string, const pbon::json::value >&)
+        pbon::json::value& pbon::json::type_traits::object::operator[](
+            const pbon::json::type_traits::string&)
+        @endcode
+
+        keyの数を取得するため、以下に相当する関数が使えること。
+        @code
+        pbon::json::type_traits::object::size_type
+            pbon::json::type_traits::object::count(
+                const pbon::json::type_traits::string&)
         @endcode
      */
     typedef std::map<
@@ -672,7 +680,7 @@ struct type_traits
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief JSON解析器。
+/** @brief JSON形式の文字列を解析し、値を取り出す。
     @tparam template_iterator_type @copydoc pbon::json::parser::iterator
     @tparam template_number_type   @copydoc pbon::json::type_traits::number
     @tparam template_string_type   @copydoc pbon::json::type_traits::string
@@ -843,8 +851,11 @@ class parser
         {
             for (;;)
             {
+                const typename template_array_type::size_type local_size(
+                    local_array.size());
                 local_array.push_back(pbon::json::value());
-                if (!this->parse(io_allocator, local_array.back()))
+                if (local_array.size() != local_size + 1 ||
+                    !this->parse(io_allocator, local_array.back()))
                 {
                     return false;
                 }
@@ -865,15 +876,44 @@ class parser
         @param[out]    out_value    JSONから取り出したobjectの出力先。
         @retval true  成功。
         @retval false 失敗。objectは出力されない。
-        @todo 未実装。
      */
     private: template< typename template_allocator_type >
     bool parse_object(
         template_allocator_type& io_allocator,
         pbon::json::value&       out_value)
     {
-        out_value;io_allocator;
-        return false;
+        if (this->expect('}'))
+        {
+            return true;
+        }
+        template_object_type local_object;
+        for (;;)
+        {
+            template_string_type local_key;
+            pbon::json::value local_value;
+            if (!this->expect('"') ||
+                !this->parse_string(local_key) ||
+                !this->expect(':') ||
+                !this->parse(io_allocator, local_value))
+            {
+                return false;
+            }
+            local_object[local_key].swap(local_value);
+            if (local_object.count(local_key) <= 0)
+            {
+                return false;
+            }
+            if (!this->expect(','))
+            {
+                break;
+            }
+        }
+        if (!this->expect('}'))
+        {
+            return false;
+        }
+        pbon::json::value(local_object, io_allocator).swap(out_value);
+        return true;
     }
 
     /** @brief JSONが持っている数値を解析して取り出す。
@@ -939,6 +979,22 @@ class parser
         pbon::json::value&       out_value)
     {
         template_string_type local_string;
+        if (!this->parse_string(local_string))
+        {
+            return false;
+        }
+        pbon::json::value(local_string, io_allocator).swap(out_value);
+        return true;
+    }
+
+    /** @brief JSONが持っている文字列を解析して取り出す。
+        @param[out] out_string JSONから取り出した文字列の出力先。
+        @retval true  成功。
+        @retval false 失敗。
+     */
+    private: bool parse_string(
+        template_string_type& out_string)
+    {
         for (;;)
         {
             int local_char(this->read_char());
@@ -949,8 +1005,6 @@ class parser
             }
             if (local_char == '"')
             {
-                pbon::json::value(local_string, io_allocator).swap(
-                    out_value);
                 return true;
             }
             if (local_char == '\\')
@@ -988,7 +1042,7 @@ class parser
                     break;
 
                     case 'u':
-                    if (this->parse_code_point(local_string))
+                    if (this->parse_code_point(out_string))
                     {
                         continue;
                     }
@@ -998,13 +1052,17 @@ class parser
                     return false;
                 }
             }
-            local_string.push_back(
+            out_string.push_back(
                 static_cast< typename template_string_type::value_type >(
                     local_char));
         }
     }
 
-    /** @brief 文字列のcode-point表記を解析。
+    /** @brief 文字列のcode-point表記を解析して取り出す。
+        @param[out] out_string JSONから取り出した文字列の出力先。
+        @retval true  成功。
+        @retval false 失敗。
+        @todo 今のところUTF-8専用。その他のUTFにも対応させたい。
      */
     private: bool parse_code_point(
         template_string_type& out_string)
@@ -1042,43 +1100,44 @@ class parser
             out_string.push_back(
                 static_cast< template_string_type::value_type >(
                     local_unicode_char));
+            return true;
+        }
+
+        // UTF-8に変換して格納。
+        if (local_unicode_char < 0x800)
+        {
+            out_string.push_back(
+                static_cast< template_string_type::value_type >(
+                    0xc0 | (local_unicode_char >> 6)));
         }
         else
         {
-            if (local_unicode_char < 0x800)
+            if (local_unicode_char < 0x10000)
             {
                 out_string.push_back(
                     static_cast< template_string_type::value_type >(
-                        0xc0 | (local_unicode_char >> 6)));
-            } else
+                        0xe0 | (local_unicode_char >> 12)));
+            }
+            else
             {
-                if (local_unicode_char < 0x10000)
-                {
-                    out_string.push_back(
-                        static_cast< template_string_type::value_type >(
-                            0xe0 | (local_unicode_char >> 12)));
-                }
-                else
-                {
-                    out_string.push_back(
-                        static_cast< template_string_type::value_type >(
-                            0xf0 | (local_unicode_char >> 18)));
-                    out_string.push_back(
-                        static_cast< template_string_type::value_type >(
-                            0x80 | ((local_unicode_char >> 12) & 0x3f)));
-                }
                 out_string.push_back(
                     static_cast< template_string_type::value_type >(
-                        0x80 | ((local_unicode_char >> 6) & 0x3f)));
+                        0xf0 | (local_unicode_char >> 18)));
+                out_string.push_back(
+                    static_cast< template_string_type::value_type >(
+                        0x80 | ((local_unicode_char >> 12) & 0x3f)));
             }
             out_string.push_back(
                 static_cast< template_string_type::value_type >(
-                    0x80 | (local_unicode_char & 0x3f)));
+                    0x80 | ((local_unicode_char >> 6) & 0x3f)));
         }
+        out_string.push_back(
+            static_cast< template_string_type::value_type >(
+                0x80 | (local_unicode_char & 0x3f)));
         return true;
     }
 
-    /** @brief 文字列の16進数表記4桁を解析。
+    /** @brief 文字列の16進数表記4桁を解析して取り出す。
      */
     private: int parse_quad_hex()
     {

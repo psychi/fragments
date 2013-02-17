@@ -375,6 +375,7 @@ class value
 
     /** @brief copy constructor
         @param[in] in_source 代入元となる値。
+        @note deep-copyを行うので、処理負荷が大きくなることがある。
      */
     public: value(
         const self& in_source):
@@ -501,8 +502,8 @@ class value
 
         @tparam template_value_type     値の型。
         @tparam template_allocator_type memory割当子の型。
-        @param[in] in_value     初期値。
-        @param[in] io_allocator memory割当子の初期値。
+        @param[in] in_value     値の初期値。
+        @param[in] in_allocator memory割当子の初期値。
      */
     public: template<
         typename template_value_type,
@@ -529,6 +530,7 @@ class value
 
     /** @brief 代入演算子。
         @param[in] in_source 代入元となる値。
+        @note deep-copyを行うので、処理負荷が大きくなることがある。
      */
     public: self& operator=(const self& in_source)
     {
@@ -557,12 +559,66 @@ class value
         return this->holder_ == NULL;
     }
 
+    /** @brief 保持している値の型識別番号を取得。
+        @retval !=NULL 保持している値の型識別番号。
+        @retval ==NULL 値が空だった。
+     */
+    public: const void* type() const
+    {
+        if (this->empty())
+        {
+            return NULL;
+        }
+        return this->holder_->type();
+    }
+
+    /** @brief 保持している値を取得。
+        @retval !=NULL 保持している値へのpointer。
+        @retval ==NULL 失敗。
+     */
+    public: template< typename template_value_type >
+    template_value_type* get()
+    {
+        if (this->type() != self::placeholder::get_type< template_value_type >())
+        {
+            return NULL;
+        }
+        return static_cast< template_value_type* >(this->holder_->get());
+    }
+
+    /** @brief 保持している値を取得。
+        @retval !=NULL 保持している値へのpointer。
+        @retval ==NULL 失敗。
+     */
+    public: template< typename template_value_type >
+    const template_value_type* get() const
+    {
+        if (this->type() != self::placeholder::get_type< template_value_type >())
+        {
+            return NULL;
+        }
+        return static_cast< template_value_type* >(this->holder_->get());
+    }
+
     //-------------------------------------------------------------------------
+    /// @brief holder の基底型。
     private: class placeholder
     {
         public: typedef placeholder self;
 
         public: placeholder() {}
+
+        /** @brief 保持している値の型の識別番号を取得。
+         */
+        public: virtual const void* type() const = 0;
+
+        /** @brief 保持している値を取得。
+         */
+        public: virtual void* get() = 0;
+
+        /** @brief 保持している値を取得。
+         */
+        public: virtual const void* get() const = 0;
 
         /** @brief *thisのdeep-copyを作成。
          */
@@ -572,6 +628,13 @@ class value
          */
         public: virtual void destroy_this() = 0;
 
+        public: template< typename template_value_type >
+        static const void* get_type()
+        {
+            static bool static_dummy;
+            return &static_dummy;
+        }
+
         /// copy-constructorは使用禁止。
         private: placeholder(const self&);
 
@@ -579,6 +642,9 @@ class value
         private: self& operator=(const self&);
     };
 
+    /** @brief 実際に値を保持する型。
+        @tparam template_allocator_type 保持する値のmemory割当子。
+     */
     private: template< typename template_allocator_type >
     class holder:
         public placeholder
@@ -589,16 +655,16 @@ class value
         /// self の上位型。
         public: typedef placeholder super;
 
-        /// holder が持つmemory割当子の型。
+        /// pbon::json::value::holder が持つmemory割当子の型。
         public: typedef typename template_allocator_type::template
             rebind< self >::other
                 allocator;
 
-        /// holder が持つ値の型。
+        /// pbon::json::value::holder が持つ値の型。
         public: typedef typename template_allocator_type::value_type value;
 
-        /** @param[in] holder が持つ値の初期値。
-            @param[in] holder が持つmemory割当子の初期値。
+        /** @param[in] in_value     値の初期値。
+            @param[in] in_allocator memory割当子の初期値。
          */
         private: holder(
             const typename self::value&     in_value,
@@ -610,9 +676,11 @@ class value
             // pass
         }
 
-        /** @brief holder を構築。
-            @param[in] holder が持つ値の初期値。
-            @param[in] holder が持つmemory割当子の初期値。
+        /** @brief pbon::json::value::holder を生成。
+            @param[in] in_value     値の初期値。
+            @param[in] in_allocator memory割当子の初期値。
+            @retval !=NULL 生成した pbon::json::value::holder 。
+            @retval ==NULL 生成に失敗。
          */
         public: template< typename template_other_allocator_type >
         static self* create(
@@ -626,6 +694,21 @@ class value
                 new(local_holder) self(in_value, local_allocator);
             }
             return local_holder;
+        }
+
+        public: virtual void* get()
+        {
+            return &this->value_;
+        }
+
+        public: virtual const void* get() const
+        {
+            return &this->value_;
+        }
+
+        public: virtual const void* type() const
+        {
+            return super::get_type< typename self::value >();
         }
 
         public: virtual super* create_clone() const

@@ -360,28 +360,30 @@ class value
 
     /** @brief JSONの解析結果。
 
-        - 成功した場合は(0, 0)。
-        - 失敗した場合は、取り込みに失敗した文字位置の(行番号, 桁位置)。
+        - 成功した場合は[0, 0]。
+        - 失敗した場合は、取り込みに失敗した文字位置の[行番号, 桁位置]。
      */
     public: typedef std::pair< unsigned, unsigned > parse_result;
 
     //-------------------------------------------------------------------------
     /// @brief 空の値を構築。
     public: value():
-    storage_(0),
-    hold_(self::hold_EMPTY)
+    holder_(NULL)
     {
         // pass
     }
 
     /** @brief copy constructor
         @param[in] in_source 代入元となる値。
-        @todo 未実装。
      */
     public: value(
         const self& in_source):
-    hold_(in_source.hold_)
+    holder_(NULL)
     {
+        if (in_source.holder_ != NULL)
+        {
+            this->holder_ = in_source.holder_->create_clone();
+        }
     }
 
     /** @brief JSON形式の文字列を解析し、値を取り出す。
@@ -472,8 +474,7 @@ class value
         const template_iterator_type& in_string_end,
         template_allocator_type&      io_allocator,
         self::parse_result&           out_result):
-    storage_(0),
-    hold_(self::hold_EMPTY)
+    holder_(NULL)
     {
         // 使わない引数。
         in_type_traits;
@@ -498,49 +499,32 @@ class value
 
     /** @brief 任意型の値を構築。
 
-        memory割当てを行わずに構築。構築できなかった場合は、空となる。
-
-        @tparam template_value_type 初期値の型。
-        @param[in] in_value 初期値。
-     */
-    public: template< typename template_value_type >
-    value(
-        const template_value_type& in_value):
-    storage_(0)
-    {
-        if (!this->set_value(in_value))
-        {
-            this->hold_ = self::hold_EMPTY;
-        }
-    }
-
-    /** @brief 任意型の値を構築。
-
-        @tparam template_value_type     初期値の型。
+        @tparam template_value_type     値の型。
         @tparam template_allocator_type memory割当子の型。
-        @param[in]     in_value         初期値。
-        @param[in,out] io_allocator     使用するmemory割当子。
-        @todo 未実装。
+        @param[in] in_value     初期値。
+        @param[in] io_allocator memory割当子の初期値。
      */
     public: template<
         typename template_value_type,
         typename template_allocator_type >
     value(
-        const template_value_type& in_value,
-        template_allocator_type&   io_allocator):
-    storage_(0)
+        const template_value_type&     in_value,
+        const template_allocator_type& in_allocator)
     {
-        if (!this->set_value(in_value))
-        {
-            io_allocator.deallocate(0, 0);
-            this->hold_ = self::hold_POINTER;
-        }
+        typedef typename template_allocator_type::template
+            rebind< template_value_type >::other
+                allocator;
+        this->holder_ = holder< allocator >::create(
+            in_value, in_allocator);
     }
 
     /// @brief destructor
-    /// @todo 未実装。
     ~value()
     {
+        if (this->holder_ != NULL)
+        {
+            this->holder_->destroy_this();
+        }
     }
 
     /** @brief 代入演算子。
@@ -561,8 +545,7 @@ class value
      */
     public: void swap(self& io_target)
     {
-        std::swap(this->storage_, io_target.storage_);
-        std::swap(this->hold_, io_target.hold_);
+        std::swap(this->holder_, io_target.holder_);
     }
 
     /** @brief 値が空か判定。
@@ -571,36 +554,98 @@ class value
      */
     public: bool empty() const
     {
-        return this->hold_ == self::hold_EMPTY;
+        return this->holder_ == NULL;
     }
 
     //-------------------------------------------------------------------------
-    /// 値の持ち方。
-    private: enum hold
+    private: class placeholder
     {
-        hold_EMPTY,   ///< 値が空。
-        hold_VALUE,   ///< 直接値を持ってる。
-        hold_POINTER, ///< pointerとして値を持ってる。
+        public: typedef placeholder self;
+
+        public: placeholder() {}
+
+        /** @brief *thisのdeep-copyを作成。
+         */
+        public: virtual placeholder* create_clone() const = 0;
+
+        /** @brief *thisを破棄。
+         */
+        public: virtual void destroy_this() = 0;
+
+        /// copy-constructorは使用禁止。
+        private: placeholder(const self&);
+
+        /// 代入演算子は使用禁止。
+        private: self& operator=(const self&);
     };
 
-    private: template< typename template_value_type >
-    bool set_value(
-        const template_value_type& in_value)
+    private: template< typename template_allocator_type >
+    class holder:
+        public placeholder
     {
-        std::size_t local_value_size(sizeof(template_value_type));
-        if (sizeof(this->storage_) < local_value_size)
+        /// this が指す値の型。
+        public: typedef holder< template_allocator_type > self;
+
+        /// self の上位型。
+        public: typedef placeholder super;
+
+        /// holder が持つmemory割当子の型。
+        public: typedef typename template_allocator_type::template
+            rebind< self >::other
+                allocator;
+
+        /// holder が持つ値の型。
+        public: typedef typename template_allocator_type::value_type value;
+
+        /** @param[in] holder が持つ値の初期値。
+            @param[in] holder が持つmemory割当子の初期値。
+         */
+        private: holder(
+            const typename self::value&     in_value,
+            const typename self::allocator& in_allocator):
+        super(),
+        value_(in_value),
+        allocator_(in_allocator)
         {
-            return false;
+            // pass
         }
-        this->~value();
-        new(&this->storage_) template_value_type(in_value);
-        this->hold_ = self::hold_VALUE;
-        return true;
-    }
+
+        /** @brief holder を構築。
+            @param[in] holder が持つ値の初期値。
+            @param[in] holder が持つmemory割当子の初期値。
+         */
+        public: template< typename template_other_allocator_type >
+        static self* create(
+            const typename self::value&          in_value,
+            const template_other_allocator_type& in_allocator)
+        {
+            self::allocator local_allocator(in_allocator);
+            self* const local_holder(local_allocator.allocate(1));
+            if (local_holder != NULL)
+            {
+                new(local_holder) self(in_value, local_allocator);
+            }
+            return local_holder;
+        }
+
+        public: virtual super* create_clone() const
+        {
+            return self::create(this->value_, this->allocator_);
+        }
+
+        public: virtual void destroy_this()
+        {
+            typename self::allocator local_allocator(this->allocator_);
+            this->~self();
+            local_allocator.deallocate(this, 1);
+        }
+
+        private: typename self::value     value_;
+        private: typename self::allocator allocator_;
+    };
 
     //-------------------------------------------------------------------------
-    private: pbon::int64 storage_;
-    private: self::hold  hold_;
+    private: self::placeholder* holder_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

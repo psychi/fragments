@@ -350,6 +350,21 @@ typedef pbon::object< pbon::int32 > object32;
 namespace json
 {
 
+//-----------------------------------------------------------------------------
+/** @brief 型の識別値を取得。
+
+    型によって異なる識別値を取得する。
+
+    @tparam template_value_type 識別値を取得したい型。
+    @return 型の識別値。
+ */
+template< typename template_value_type >
+static const void* type()
+{
+    static bool static_dummy;
+    return &static_dummy;
+}
+
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief JSONから取り出した値を保持する。
  */
@@ -385,20 +400,6 @@ class value
         {
             this->holder_ = in_source.holder_->create_clone();
         }
-    }
-
-    /** @brief JSON形式の文字列を解析し、値を取り出す。
-        @tparam template_string_type 解析する文字列の型。
-        @param[in]  in_string  値を取り込むJSON形式の文字列。
-        @param[out] out_result
-            @copydoc pbon::json::value::parse_result
-     */
-    public: template< typename template_string_type >
-    value(
-        const template_string_type& in_string,
-        self::parse_result&         out_result)
-    {
-        new(this) self(type_traits<>(), in_string, out_result);
     }
 
     /** @brief JSON形式の文字列を解析し、値を取り出す。
@@ -499,6 +500,31 @@ class value
     }
 
     /** @brief 任意型の値を構築。
+
+        初期値をswapして構築。
+
+        @tparam template_value_type     値の型。
+        @tparam template_allocator_type memory割当子の型。
+        @param[in,out] io_value     値の初期値。
+        @param[in]     in_allocator memory割当子の初期値。
+     */
+    public: template<
+        typename template_value_type,
+        typename template_allocator_type >
+    value(
+        template_value_type&           io_value,
+        const template_allocator_type& in_allocator)
+    {
+        typedef typename template_allocator_type::template
+            rebind< template_value_type >::other
+                allocator;
+        this->holder_ = holder< allocator >::create(io_value, in_allocator);
+    }
+
+    /** @brief 任意型の値を構築。
+
+        初期値をcopyして構築。
+
         @tparam template_value_type     値の型。
         @tparam template_allocator_type memory割当子の型。
         @param[in] in_value     値の初期値。
@@ -540,7 +566,7 @@ class value
         return *new(this) self(in_source);
     }
 
-    /** @brief 値を交換。
+    /** @brief 保持してる値を交換。
         @param[in,out] io_target 値を交換する対象。
      */
     public: void swap(self& io_target)
@@ -548,7 +574,7 @@ class value
         std::swap(this->holder_, io_target.holder_);
     }
 
-    /** @brief 値が空か判定。
+    /** @brief 保持してる値が空か判定。
         @retval true  値が空だった。
         @retval false 値が空ではなかった。
      */
@@ -557,29 +583,29 @@ class value
         return this->holder_ == NULL;
     }
 
-    /** @brief 保持している値の型識別番号を取得。
-        @retval !=NULL 保持している値の型識別番号。
-        @retval ==NULL 値が空だった。
+    /** @brief 保持してる値の型識別値を取得。
+        @return 保持してる値の型識別値。
+        @sa pbon::json::type()
      */
     public: const void* type() const
     {
         if (this->empty())
         {
-            return NULL;
+            return pbon::json::type< void >();
         }
         return this->holder_->type();
     }
 
     /** @brief 保持してる値を取得。
-        @tparam template_value_type 保持してる値の型。
-        @retval !=NULL 保持している値へのpointer。
+        @tparam template_value_type 取得する値の型。
+        @retval !=NULL 保持してる値へのpointer。
         @retval ==NULL
             失敗。値が空か、 template_value_type と異なる値を保持している。
      */
     public: template< typename template_value_type >
     template_value_type* get()
     {
-        if (this->type() != self::placeholder::get_type< template_value_type >())
+        if (this->type() != pbon::json::type< template_value_type >())
         {
             return NULL;
         }
@@ -590,11 +616,58 @@ class value
     public: template< typename template_value_type >
     const template_value_type* get() const
     {
-        if (this->type() != self::placeholder::get_type< template_value_type >())
+        if (this->type() != pbon::json::type< template_value_type >())
         {
             return NULL;
         }
         return static_cast< template_value_type* >(this->holder_->get());
+    }
+
+    /** @brief 保持してる値を、別の型に変換。
+        @tparam template_source_type    変換する前の型。
+        @tparam template_target_type    変換した後の型。
+        @tparam template_allocator_type 使用するmemory割当子の型。
+        @param[in] in_allocator 変換に使うmemory割当子。
+        @retval !=NULL 変換した後の値へのpointer。
+        @retval ==NULL 失敗。値は変化しない。
+        @note
+            引数にmemory割当子を受け取っているが、
+            self::holder がmemory割当子を持っているので、
+            できればそちらを使うようにして、引数なくしたい。
+     */
+    public: template<
+        typename template_source_type,
+        typename template_target_type,
+        typename template_allocator_type >
+    template_target_type* convert(
+        const template_allocator_type& in_allocator)
+    {
+        // 保持してる値の型が変換後の型と同じなら、何もしない。
+        template_target_type* local_target_value(
+            this->get< template_target_type >());
+        if (local_target_value != NULL)
+        {
+            return local_target_value;
+        }
+
+        // 保持してる値の型と変換前の型が違っていたら、失敗。
+        const template_source_type* const local_source_value(
+            this->get< template_source_type >());
+        if (local_source_value == NULL)
+        {
+            return NULL;
+        }
+
+        // 変換した値で新たな pbon::json::value を構築し、thisと交換する。
+        self local_value(
+            static_cast< const template_target_type >(*local_source_value),
+            in_allocator);
+        local_target_value = local_value.get< template_target_type >();
+        if (local_target_value != NULL)
+        {
+            this->swap(local_value);
+        }
+        return local_target_value;
     }
 
     //-------------------------------------------------------------------------
@@ -607,18 +680,18 @@ class value
         /// default-constructor
         protected: placeholder() {}
 
-        /** @brief 保持している値の型識別番号を取得。
-            @return 保持している値の型識別番号。
+        /** @brief 保持してる値の型識別値を取得。
+            @return 保持してる値の型識別値。
+            @sa pbon::json::type()
          */
         public: virtual const void* type() const = 0;
 
-        /** @brief 保持している値を取得。
-            @return 保持している値へのpointer。
+        /** @brief 保持してる値を取得。
+            @return 保持してる値へのpointer。
          */
         public: virtual void* get() = 0;
 
-        /** @brief 保持している値を取得。
-         */
+        /// @copydoc type()
         public: virtual const void* get() const = 0;
 
         /** @brief *thisのdeep-copyを作成。
@@ -629,17 +702,6 @@ class value
          */
         public: virtual void destroy_this() = 0;
 
-        /** @brief 型識別番号を取得。
-            @tparam template_value_type 識別番号を取得する型。
-            @return 型識別番号。
-         */
-        public: template< typename template_value_type >
-        static const void* get_type()
-        {
-            static bool static_dummy;
-            return &static_dummy;
-        }
-
         /// copy-constructorは使用禁止。
         private: placeholder(const self&);
 
@@ -648,7 +710,14 @@ class value
     };
 
     /** @brief 実際に値を保持する型。
-        @tparam template_allocator_type 保持する値のmemory割当子。
+        @tparam template_allocator_type
+            保持する値のmemory割当子。
+            値を交換するため、以下に相当する関数が使えること。
+            @code
+            std::swap(
+                template_allocator_type::value_type&,
+                template_allocator_type::value_type&)
+            @endcode
      */
     private: template< typename template_allocator_type >
     class holder:
@@ -682,6 +751,36 @@ class value
         }
 
         /** @brief pbon::json::value::holder を生成。
+
+            初期値をswapして構築。
+
+            @param[in,out] io_value     値の初期値。
+            @param[in]     in_allocator memory割当子の初期値。
+            @retval !=NULL 生成した pbon::json::value::holder 。
+            @retval ==NULL 生成に失敗。
+         */
+        public: template< typename template_other_allocator_type >
+        static self* create(
+            typename self::value&                io_value,
+            const template_other_allocator_type& in_allocator)
+        {
+            self::allocator local_allocator(in_allocator);
+            self* const local_holder(local_allocator.allocate(1));
+            if (local_holder == NULL)
+            {
+                return NULL;
+            }
+            new(local_holder) self(self::value(), local_allocator);
+
+            // 初期値と空値を交換。
+            std::swap(local_holder->value_, io_value);
+            return local_holder;
+        }
+
+        /** @brief pbon::json::value::holder を生成。
+
+            初期値をcopyして構築。
+
             @param[in] in_value     値の初期値。
             @param[in] in_allocator memory割当子の初期値。
             @retval !=NULL 生成した pbon::json::value::holder 。
@@ -713,7 +812,7 @@ class value
 
         public: virtual const void* type() const
         {
-            return super::get_type< typename self::value >();
+            return pbon::json::type< typename self::value >();
         }
 
         public: virtual super* create_clone() const
@@ -758,6 +857,13 @@ struct type_traits
                 pbon::json::type_traits::string::value_type >&,
             pbon::json::type_traits::number&)
         @endcode
+
+        数値を交換するため、以下に相当する関数が使えること。
+        @code
+        std::swap(
+            pbon::json::type_traits::number&,
+            pbon::json::type_traits::number&)
+        @endcode
      */
     typedef template_number_type number;
 
@@ -771,7 +877,8 @@ struct type_traits
 
         文字列を交換するため、以下に相当する関数が使えること。
         @code
-        pbon::json::type_traits::string::swap(
+        std::swap(
+            pbon::json::type_traits::string&,
             pbon::json::type_traits::string&)
         @endcode
      */
@@ -792,7 +899,8 @@ struct type_traits
 
         配列を交換するため、以下に相当する関数が使えること。
         @code
-        pbon::json::type_traits::array::swap(
+        std::swap(
+            pbon::json::type_traits::array&,
             pbon::json::type_traits::array&)
         @endcode
      */
@@ -815,7 +923,8 @@ struct type_traits
 
         objectを交換するため、以下に相当する関数が使えること。
         @code
-        pbon::json::type_traits::object::swap(
+        std::swap(
+            pbon::json::type_traits::object&,
             pbon::json::type_traits::object&)
         @endcode
      */
@@ -1017,10 +1126,7 @@ class parser
                 }
             }
         }
-
-        // copyを発生させないようにする。
-        pbon::json::value(template_array_type(), io_allocator).swap(out_value);
-        out_value.get< template_array_type >()->swap(local_array);
+        pbon::json::value(local_array, io_allocator).swap(out_value);
         return this->expect(']');
     }
 
@@ -1067,10 +1173,7 @@ class parser
         {
             return false;
         }
-
-        // copyを発生させないようにする。
-        pbon::json::value(template_object_type(), io_allocator).swap(out_value);
-        out_value.get< template_object_type >()->swap(local_object);
+        pbon::json::value(local_object, io_allocator).swap(out_value);
         return true;
     }
 
@@ -1119,7 +1222,6 @@ class parser
         {
             return false;
         }
-
         pbon::json::value(local_number, io_allocator).swap(out_value);
         return true;
     }
@@ -1142,10 +1244,7 @@ class parser
         {
             return false;
         }
-
-        // copyを発生させないようにする。
-        pbon::json::value(template_string_type(), io_allocator).swap(out_value);
-        out_value.get< template_string_type >()->swap(local_string);
+        pbon::json::value(local_string, io_allocator).swap(out_value);
         return true;
     }
 
@@ -1444,6 +1543,43 @@ class parser
 };
 
 } // namespace json
+
+#if 0
+template<
+    typename template_traits_type,
+    typename template_binary_container_type >
+void pack(
+    const template_traits_type&     in_traits,
+    const pbon::json::value&        in_value,
+    template_binary_container_type& out_binary)
+{
+    typename const template_traits_type::string* const local_string(
+        in_value.get< typename template_traits_type::string >());
+    if (local_string != NULL)
+    {
+        pbon::value::pack_string(
+            local_string->begin(),
+            local_string->end(),
+            out_binary);
+        return;
+    }
+
+    typename const template_traits_type::array* const local_array(
+        in_value.get< typename template_traits_type::array >());
+    if (local_array != NULL)
+    {
+        return;
+    }
+
+    typename const template_traits_type::array* const local_object(
+        in_value.get< typename template_traits_type::object >());
+    if (local_object != NULL)
+    {
+        return;
+    }
+}
+#endif //0
+
 } // namespace pbon
 
 #endif // PBON_JSON_HPP_

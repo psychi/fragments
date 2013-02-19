@@ -393,12 +393,15 @@ class value
         @note deep-copyを行うので、処理負荷が大きくなることがある。
      */
     public: value(
-        const self& in_source):
-    holder_(NULL)
+        const self& in_source)
     {
-        if (in_source.holder_ != NULL)
+        if (in_source.empty())
         {
-            this->holder_ = in_source.holder_->create_clone();
+            this->holder_ = NULL;
+        }
+        else
+        {
+            this->holder_ = in_source.holder_->create_copy();
         }
     }
 
@@ -419,8 +422,11 @@ class value
         const template_string_type& in_string,
         self::parse_result&         out_result)
     {
-        typename template_traits_type::allocator local_allocator;
-        new(this) self(in_type_traits, in_string, local_allocator, out_result);
+        new(this) self(
+            in_type_traits,
+            in_string,
+            template_traits_type::allocator(),
+            out_result);
     }
 
     /** @brief JSON形式の文字列を解析し、値を取り出す。
@@ -429,27 +435,27 @@ class value
         @tparam template_string_type 解析する文字列の型。
         @tparam template_allocator_type
             @copydoc pbon::json::type_traits::allocator
-        @param[in]     in_type_traits pbon::json::type_traits に準拠した型特性。
-        @param[in]     in_string      値を取り込むJSON形式の文字列。
-        @param[in,out] io_allocator   使用するmemory割当子。
-        @param[out]    out_result
-            @copydoc pbon::json::value::parse_result
+        @param[in]  in_type_traits pbon::json::type_traits に準拠した型特性。
+        @param[in]  in_string      値を取り込むJSON形式の文字列。
+        @param[in]  in_allocator   out_value が使うmemory割当子の初期値。
+        @param[out] out_result
+             @copydoc pbon::json::value::parse_result
      */
     public: template<
         typename template_traits_type,
         typename template_string_type,
         typename template_allocator_type >
     value(
-        const template_traits_type& in_type_traits,
-        const template_string_type& in_string,
-        template_allocator_type&    io_allocator,
-        self::parse_result&         out_result)
+        const template_traits_type&    in_type_traits,
+        const template_string_type&    in_string,
+        const template_allocator_type& in_allocator,
+        self::parse_result&            out_result)
     {
         new(this) self(
             in_type_traits,
             in_string.begin(),
             in_string.end(),
-            io_allocator,
+            in_allocator,
             out_result);
     }
 
@@ -459,11 +465,11 @@ class value
         @tparam template_iterator_type @copydoc pbon::json::parser::iterator
         @tparam template_allocator_type
             @copydoc pbon::json::type_traits::allocator
-        @param[in]     in_type_traits  型特性。
-        @param[in]     in_string_begin 解析する文字列の先頭位置。
-        @param[in]     in_string_end   解析する文字列の末尾位置。
-        @param[in,out] io_allocator    使用するmemory割当子。
-        @param[out]    out_result
+        @param[in]  in_type_traits  型特性。
+        @param[in]  in_string_begin 解析する文字列の先頭位置。
+        @param[in]  in_string_end   解析する文字列の末尾位置。
+        @param[in]  in_allocator    out_value が使うmemory割当子の初期値。
+        @param[out] out_result
             @copydoc pbon::json::value::parse_result
      */
     public: template<
@@ -471,11 +477,11 @@ class value
         typename template_iterator_type,
         typename template_allocator_type >
     value(
-        const template_traits_type&   in_type_traits,
-        const template_iterator_type& in_string_begin,
-        const template_iterator_type& in_string_end,
-        template_allocator_type&      io_allocator,
-        self::parse_result&           out_result):
+        const template_traits_type&    in_type_traits,
+        const template_iterator_type&  in_string_begin,
+        const template_iterator_type&  in_string_end,
+        const template_allocator_type& in_allocator,
+        self::parse_result&            out_result):
     holder_(NULL)
     {
         // 使わない引数。
@@ -490,7 +496,7 @@ class value
             typename template_traits_type::array,
             typename template_traits_type::object >
                 local_parser(
-                    in_string_begin, in_string_end, io_allocator, local_value);
+                    in_string_begin, in_string_end, in_allocator, local_value);
         if (local_parser.get_line() == 0)
         {
             this->swap(local_value);
@@ -503,50 +509,50 @@ class value
 
         初期値をswapして構築。
 
-        @tparam template_value_type     値の型。
         @tparam template_allocator_type memory割当子の型。
-        @param[in,out] io_value     値の初期値。
+        @tparam template_value_type     値の型。
         @param[in]     in_allocator memory割当子の初期値。
+        @param[in,out] io_value     値の初期値。swapされる。
      */
     public: template<
-        typename template_value_type,
-        typename template_allocator_type >
+        typename template_allocator_type,
+        typename template_value_type>
     value(
-        template_value_type&           io_value,
-        const template_allocator_type& in_allocator)
+        const template_allocator_type& in_allocator,
+        template_value_type&           io_value)
     {
         typedef typename template_allocator_type::template
             rebind< template_value_type >::other
                 allocator;
-        this->holder_ = holder< allocator >::create(io_value, in_allocator);
+        this->holder_ = holder< allocator >::create(in_allocator, io_value);
     }
 
     /** @brief 任意型の値を構築。
 
         初期値をcopyして構築。
 
-        @tparam template_value_type     値の型。
         @tparam template_allocator_type memory割当子の型。
-        @param[in] in_value     値の初期値。
+        @tparam template_value_type     値の型。
         @param[in] in_allocator memory割当子の初期値。
+        @param[in] in_value     値の初期値。copyされる。
      */
     public: template<
-        typename template_value_type,
-        typename template_allocator_type >
+        typename template_allocator_type,
+        typename template_value_type >
     value(
-        const template_value_type&     in_value,
-        const template_allocator_type& in_allocator)
+        const template_allocator_type& in_allocator,
+        const template_value_type&     in_value)
     {
         typedef typename template_allocator_type::template
             rebind< template_value_type >::other
                 allocator;
-        this->holder_ = holder< allocator >::create(in_value, in_allocator);
+        this->holder_ = holder< allocator >::create(in_allocator, in_value);
     }
 
     /// @brief destructor
     ~value()
     {
-        if (this->holder_ != NULL)
+        if (!this->empty())
         {
             this->holder_->destroy_this();
         }
@@ -600,12 +606,13 @@ class value
         @tparam template_value_type 取得する値の型。
         @retval !=NULL 保持してる値へのpointer。
         @retval ==NULL
-            失敗。値が空か、 template_value_type と異なる値を保持している。
+            失敗。保持してる値が空か、 template_value_type と異なる型だった。
      */
     public: template< typename template_value_type >
     template_value_type* get()
     {
-        if (this->type() != pbon::json::type< template_value_type >())
+        if (this->empty() ||
+            this->type() != pbon::json::type< template_value_type >())
         {
             return NULL;
         }
@@ -616,11 +623,12 @@ class value
     public: template< typename template_value_type >
     const template_value_type* get() const
     {
-        if (this->type() != pbon::json::type< template_value_type >())
+        if (this->empty() ||
+            this->type() != pbon::json::type< template_value_type >())
         {
             return NULL;
         }
-        return static_cast< template_value_type* >(this->holder_->get());
+        return static_cast< const template_value_type* >(this->holder_->get());
     }
 
     /** @brief 保持してる値を、別の型に変換。
@@ -630,10 +638,6 @@ class value
         @param[in] in_allocator 変換に使うmemory割当子。
         @retval !=NULL 変換した後の値へのpointer。
         @retval ==NULL 失敗。値は変化しない。
-        @note
-            引数にmemory割当子を受け取っているが、
-            self::holder がmemory割当子を持っているので、
-            できればそちらを使うようにして、引数なくしたい。
      */
     public: template<
         typename template_source_type,
@@ -659,13 +663,13 @@ class value
         }
 
         // 変換した値で新たな pbon::json::value を構築し、thisと交換する。
-        self local_value(
-            static_cast< const template_target_type >(*local_source_value),
-            in_allocator);
-        local_target_value = local_value.get< template_target_type >();
+        template_target_type local_copy_value(
+            static_cast< template_target_type >(*local_source_value));
+        self local_new_value(in_allocator, local_copy_value);
+        local_target_value = local_new_value.get< template_target_type >();
         if (local_target_value != NULL)
         {
-            this->swap(local_value);
+            this->swap(local_new_value);
         }
         return local_target_value;
     }
@@ -676,9 +680,6 @@ class value
     {
         /// this が指す値の型。
         public: typedef placeholder self;
-
-        /// default-constructor
-        protected: placeholder() {}
 
         /** @brief 保持してる値の型識別値を取得。
             @return 保持してる値の型識別値。
@@ -696,11 +697,14 @@ class value
 
         /** @brief *thisのdeep-copyを作成。
          */
-        public: virtual placeholder* create_clone() const = 0;
+        public: virtual placeholder* create_copy() const = 0;
 
         /** @brief *thisを破棄。
          */
         public: virtual void destroy_this() = 0;
+
+        /// default-constructor
+        protected: placeholder() {}
 
         /// copy-constructorは使用禁止。
         private: placeholder(const self&);
@@ -737,59 +741,42 @@ class value
         /// pbon::json::value::holder が持つ値の型。
         public: typedef typename template_allocator_type::value_type value;
 
-        /** @param[in] in_value     値の初期値。
-            @param[in] in_allocator memory割当子の初期値。
-         */
-        private: holder(
-            const typename self::value&     in_value,
-            const typename self::allocator& in_allocator):
-        super(),
-        value_(in_value),
-        allocator_(in_allocator)
-        {
-            // pass
-        }
-
-        /** @brief pbon::json::value::holder を生成。
+        /** @brief pbon::json::value::holder のinstanceを生成。
 
             初期値をswapして構築。
 
-            @param[in,out] io_value     値の初期値。
             @param[in]     in_allocator memory割当子の初期値。
-            @retval !=NULL 生成した pbon::json::value::holder 。
+            @param[in,out] io_value     値の初期値。swapする。
+            @retval !=NULL 生成したinstance。
             @retval ==NULL 生成に失敗。
          */
         public: template< typename template_other_allocator_type >
         static self* create(
-            typename self::value&                io_value,
-            const template_other_allocator_type& in_allocator)
+            const template_other_allocator_type& in_allocator,
+            typename self::value&                io_value)
         {
-            self::allocator local_allocator(in_allocator);
-            self* const local_holder(local_allocator.allocate(1));
-            if (local_holder == NULL)
+            self* const local_holder(self::create(in_allocator, self::value()));
+            if (local_holder != NULL)
             {
-                return NULL;
+                // 初期値と空値を交換。
+                std::swap(local_holder->value_, io_value);
             }
-            new(local_holder) self(self::value(), local_allocator);
-
-            // 初期値と空値を交換。
-            std::swap(local_holder->value_, io_value);
             return local_holder;
         }
 
-        /** @brief pbon::json::value::holder を生成。
+        /** @brief pbon::json::value::holder のinstanceを生成。
 
             初期値をcopyして構築。
 
-            @param[in] in_value     値の初期値。
             @param[in] in_allocator memory割当子の初期値。
-            @retval !=NULL 生成した pbon::json::value::holder 。
+            @param[in] in_value     値の初期値。copyする。
+            @retval !=NULL 生成したinstance。
             @retval ==NULL 生成に失敗。
          */
         public: template< typename template_other_allocator_type >
         static self* create(
-            const typename self::value&          in_value,
-            const template_other_allocator_type& in_allocator)
+            const template_other_allocator_type& in_allocator,
+            const typename self::value&          in_value)
         {
             self::allocator local_allocator(in_allocator);
             self* const local_holder(local_allocator.allocate(1));
@@ -797,7 +784,7 @@ class value
             {
                 return NULL;
             }
-            return new(local_holder) self(in_value, local_allocator);
+            return new(local_holder) self(local_allocator, in_value);
         }
 
         public: virtual void* get()
@@ -815,9 +802,9 @@ class value
             return pbon::json::type< typename self::value >();
         }
 
-        public: virtual super* create_clone() const
+        public: virtual super* create_copy() const
         {
-            return self::create(this->value_, this->allocator_);
+            return self::create(this->allocator_, this->value_);
         }
 
         public: virtual void destroy_this()
@@ -827,12 +814,28 @@ class value
             local_allocator.deallocate(this, 1);
         }
 
-        private: typename self::value     value_;
+        /** @param[in] in_allocator memory割当子の初期値。
+            @param[in] in_value     値の初期値。
+         */
+        private: holder(
+            const typename self::allocator& in_allocator,
+            const typename self::value&     in_value):
+        super(),
+        value_(in_value),
+        allocator_(in_allocator)
+        {
+            // pass
+        }
+
+        /// 保持してる値。
+        private: typename self::value value_;
+
+        /// 使用するmemory割当子。
         private: typename self::allocator allocator_;
     };
 
     //-------------------------------------------------------------------------
-    /// 実際に値を保持しているinstance。
+    /// 実際に値を保持してるinstance。
     private: self::placeholder* holder_;
 };
 
@@ -985,17 +988,17 @@ class parser
     /** @brief JSON形式の文字列を解析し、値を取り出す。
         @tparam template_allocator_type
             @copydoc pbon::json::type_traits::allocator
-        @param[in]     in_begin     解析する文字列の先頭位置。
-        @param[in]     in_end       解析する文字列の末尾位置。
-        @param[in,out] io_allocator 使用するmemory割当子。
-        @param[out]    out_value    JSONから取り出した値の出力先。
+        @param[in]  in_begin     解析する文字列の先頭位置。
+        @param[in]  in_end       解析する文字列の末尾位置。
+        @param[in]  in_allocator out_value が使うmemory割当子。
+        @param[out] out_value    JSONから取り出した値の出力先。
      */
     public: template< typename template_allocator_type >
     parser(
-        const template_iterator_type& in_begin,
-        const template_iterator_type& in_end,
-        template_allocator_type&      io_allocator,
-        pbon::json::value&            out_value):
+        const template_iterator_type&  in_begin,
+        const template_iterator_type&  in_end,
+        const template_allocator_type& in_allocator,
+        pbon::json::value&             out_value):
     current_(in_begin),
     end_(in_end),
     last_char_(self::END_CHAR),
@@ -1003,7 +1006,7 @@ class parser
     column_(1),
     undo_(false)
     {
-        if (this->parse(io_allocator, out_value))
+        if (this->parse(in_allocator, out_value))
         {
             this->line_ = 0;
             this->column_ = 0;
@@ -1033,28 +1036,28 @@ class parser
     /** @brief JSONが持つ値を解析して取り出す。
         @tparam template_allocator_type
             @copydoc pbon::json::type_traits::allocator
-        @param[in,out] io_allocator 使用するmemory割当子。
-        @param[out]    out_value    JSONから取り出した値の出力先。
+        @param[in]  in_allocator out_value が使うmemory割当子の初期値。
+        @param[out] out_value    JSONから取り出した値の出力先。
         @retval true  成功。
         @retval false 失敗。値は出力されない。
      */
     private: template< typename template_allocator_type >
     bool parse(
-        template_allocator_type& io_allocator,
-        pbon::json::value&       out_value)
+        const template_allocator_type& in_allocator,
+        pbon::json::value&             out_value)
     {
         this->skip_white_space();
         const int local_char(this->read_char());
         switch (local_char)
         {
             case '"':
-            return this->parse_string(io_allocator, out_value);
+            return this->parse_string(in_allocator, out_value);
 
             case '[':
-            return this->parse_array(io_allocator, out_value);
+            return this->parse_array(in_allocator, out_value);
 
             case '{':
-            return this->parse_object(io_allocator, out_value);
+            return this->parse_object(in_allocator, out_value);
 
             case 'n':
             if (this->match("ull"))
@@ -1067,7 +1070,7 @@ class parser
             case 't':
             if (this->match("rue"))
             {
-                pbon::json::value(true, io_allocator).swap(out_value);
+                pbon::json::value(in_allocator, true).swap(out_value);
                 return true;
             }
             return false;
@@ -1075,7 +1078,7 @@ class parser
             case 'f':
             if (this->match("alse"))
             {
-                pbon::json::value(false, io_allocator).swap(out_value);
+                pbon::json::value(in_allocator, false).swap(out_value);
                 return true;
             }
             return false;
@@ -1088,7 +1091,7 @@ class parser
             if (('0' <= local_char && local_char <= '9') ||
                 local_char == '-')
             {
-                return this->parse_number(io_allocator, out_value);
+                return this->parse_number(in_allocator, out_value);
             }
             return false;
         }
@@ -1097,15 +1100,15 @@ class parser
     /** @brief JSONが持っている配列を解析して取り出す。
         @tparam template_allocator_type
             @copydoc pbon::json::type_traits::allocator
-        @param[in,out] io_allocator 使用するmemory割当子。
-        @param[out]    out_value    JSONから取り出した配列の出力先。
+        @param[in]  in_allocator out_value が使うmemory割当子。
+        @param[out] out_value    JSONから取り出した配列の出力先。
         @retval true  成功。
         @retval false 失敗。配列は出力されない。
      */
     private: template< typename template_allocator_type >
     bool parse_array(
-        template_allocator_type& io_allocator,
-        pbon::json::value&       out_value)
+        const template_allocator_type& in_allocator,
+        pbon::json::value&             out_value)
     {
         template_array_type local_array;
         if (!this->expect(']'))
@@ -1116,7 +1119,7 @@ class parser
                     local_array.size());
                 local_array.push_back(pbon::json::value());
                 if (local_array.size() != local_size + 1 ||
-                    !this->parse(io_allocator, local_array.back()))
+                    !this->parse(in_allocator, local_array.back()))
                 {
                     return false;
                 }
@@ -1126,22 +1129,22 @@ class parser
                 }
             }
         }
-        pbon::json::value(local_array, io_allocator).swap(out_value);
+        pbon::json::value(in_allocator, local_array).swap(out_value);
         return this->expect(']');
     }
 
     /** @brief JSONが持っているobjectを解析して取り出す。
         @tparam template_allocator_type
             @copydoc pbon::json::type_traits::allocator
-        @param[in,out] io_allocator 使用するmemory割当子。
-        @param[out]    out_value    JSONから取り出したobjectの出力先。
+        @param[in]  in_allocator out_value が使うmemory割当子。
+        @param[out] out_value    JSONから取り出したobjectの出力先。
         @retval true  成功。
         @retval false 失敗。objectは出力されない。
      */
     private: template< typename template_allocator_type >
     bool parse_object(
-        template_allocator_type& io_allocator,
-        pbon::json::value&       out_value)
+        const template_allocator_type& in_allocator,
+        pbon::json::value&             out_value)
     {
         if (this->expect('}'))
         {
@@ -1155,7 +1158,7 @@ class parser
             if (!this->expect('"') ||
                 !this->parse_string(local_key) ||
                 !this->expect(':') ||
-                !this->parse(io_allocator, local_value))
+                !this->parse(in_allocator, local_value))
             {
                 return false;
             }
@@ -1173,22 +1176,22 @@ class parser
         {
             return false;
         }
-        pbon::json::value(local_object, io_allocator).swap(out_value);
+        pbon::json::value(in_allocator, local_object).swap(out_value);
         return true;
     }
 
     /** @brief JSONが持っている数値を解析して取り出す。
         @tparam template_allocator_type
             @copydoc pbon::json::type_traits::allocator
-        @param[in,out] io_allocator 使用するmemory割当子。
-        @param[out]    out_value    JSONから取り出した数値の出力先。
+        @param[in]  in_allocator out_value が使うmemory割当子の初期値。
+        @param[out] out_value    JSONから取り出した数値の出力先。
         @retval true  成功。
         @retval false 失敗。数値は出力されない。
      */
     private: template< typename template_allocator_type >
     bool parse_number(
-        template_allocator_type& io_allocator,
-        pbon::json::value&       out_value)
+        const template_allocator_type& in_allocator,
+        pbon::json::value&             out_value)
     {
         // 数の文字列を取り出す。
         template_string_type local_string;
@@ -1222,29 +1225,29 @@ class parser
         {
             return false;
         }
-        pbon::json::value(local_number, io_allocator).swap(out_value);
+        pbon::json::value(in_allocator, local_number).swap(out_value);
         return true;
     }
 
     /** @brief JSONが持っている文字列を解析して取り出す。
         @tparam template_allocator_type
             @copydoc pbon::json::type_traits::allocator
-        @param[in,out] io_allocator 使用するmemory割当子。
-        @param[out]    out_value    JSONから取り出した文字列の出力先。
+        @param[in]  in_allocator out_value が使うmemory割当子の初期値。
+        @param[out] out_value    JSONから取り出した文字列の出力先。
         @retval true  成功。
         @retval false 失敗。文字列は出力されない。
      */
     private: template< typename template_allocator_type >
     bool parse_string(
-        template_allocator_type& io_allocator,
-        pbon::json::value&       out_value)
+        const template_allocator_type& in_allocator,
+        pbon::json::value&             out_value)
     {
         template_string_type local_string;
         if (!this->parse_string(local_string))
         {
             return false;
         }
-        pbon::json::value(local_string, io_allocator).swap(out_value);
+        pbon::json::value(in_allocator, local_string).swap(out_value);
         return true;
     }
 
@@ -1581,5 +1584,19 @@ void pack(
 #endif //0
 
 } // namespace pbon
+
+namespace std
+{
+    /** @brief 保持してる値を交換。
+        @param[in,out] io_left  交換する値の左辺値。
+        @param[in,out] io_right 交換する値の右辺値。
+     */
+    void swap(
+        pbon::json::value& io_left,
+        pbon::json::value& io_right)
+    {
+        io_left.swap(io_right);
+    }
+} // namespace std
 
 #endif // PBON_JSON_HPP_

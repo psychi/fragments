@@ -103,7 +103,7 @@ template<> pbon::type get_type< pbon::float64 >()
 /** @brief PBONの要素。
     @tparam template_attribute_type @copydoc pbon::value::attribute
  */
-template< typename template_attribute_type >
+template<typename template_attribute_type>
 class value
 {
     /// thisが指す型。
@@ -126,14 +126,14 @@ class value
         @retval ==NULL 扱えないpacked-binaryだった。
      */
     public: static const self* get_root(
-        const void* const in_packed_binary)
+        void const* const in_packed_binary)
     {
         if (in_packed_binary == NULL)
         {
             return NULL;
         }
         const self::header& local_header(
-            *static_cast< const self::header* >(in_packed_binary));
+            *static_cast<self::header const*>(in_packed_binary));
         if (local_header.endian_ != 'pbon')
         {
             // endianが異なるので扱えない。
@@ -151,13 +151,13 @@ class value
         @retval !=NULL 上位要素へのpointer。
         @retval ==NULL 上位要素がない。
      */
-    public: const self* get_super() const
+    public: self const* get_super() const
     {
         if (this->super_ == 0)
         {
             return NULL;
         }
-        return self::get_address< self >(this, this->super_);
+        return self::get_address<self>(this, this->super_);
     }
 
     /** @brief 持っている値の数を取得。
@@ -187,10 +187,10 @@ class value
     /** @brief 持っている値へのpointerを取得。
         @tparam template_valuetype 持っている値の型。
      */
-    protected: template< typename template_valuetype >
+    protected: template<typename template_valuetype>
     const template_valuetype* get_value() const
     {
-        return self::get_address< template_valuetype >(this, this->value_);
+        return self::get_address<template_valuetype>(this, this->value_);
     }
 
     /** @brief 相対位置からaddressを取得。
@@ -201,13 +201,13 @@ class value
      */
     private: template<
         typename template_value_type,
-        typename template_position_type >
+        typename template_position_type>
     static const template_value_type* get_address(
-        const void* const            in_base_address,
-        const template_position_type in_byte_position)
+        void const* const            in_base_address,
+        template_position_type const in_byte_position)
     {
-        return reinterpret_cast< const template_value_type* >(
-            static_cast< const char* >(in_base_address) + in_byte_position);
+        return reinterpret_cast<template_value_type const*>(
+            static_cast<char const*>(in_base_address) + in_byte_position);
     }
 
     private: typename self::attribute value_; ///< 値。もしくは値への相対位置。
@@ -215,13 +215,13 @@ class value
     private: typename self::attribute type_;  ///< 値の型。
     private: typename self::attribute super_; ///< 上位要素への相対位置。
 };
-typedef pbon::value< pbon::int32 > value32;
+typedef pbon::value<pbon::int32> value32;
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// pbon::value の配列。
-template< typename template_attribute_type >
+template<typename template_attribute_type>
 class array:
-    private pbon::value< template_attribute_type >
+    private pbon::value<template_attribute_type>
 {
     public: typedef pbon::array< template_attribute_type > self;
     private: typedef pbon::value< template_attribute_type > super;
@@ -230,14 +230,14 @@ class array:
     using super::attribute;
     using super::get_super;
 
-    public: static const self* cast(
-        const super* const in_value)
+    public: static self const* cast(
+        super const* const in_value)
     {
         if (in_value == NULL || !in_value->is_array())
         {
             return NULL;
         }
-        return static_cast< const self* >(in_value);
+        return static_cast<const self*>(in_value);
     }
 
     /** @brief 持っている値の数を取得。
@@ -251,7 +251,7 @@ class array:
         return this->super::get_size();
     }
 
-    public: const typename self::value* get_begin() const
+    public: typename self::value const* get_begin() const
     {
         if (!this->is_array())
         {
@@ -260,7 +260,7 @@ class array:
         return this->get_value< typename self::value >();
     }
 
-    public: const typename self::value* get_end() const
+    public: typename self::value const* get_end() const
     {
         if (!this->is_array())
         {
@@ -269,7 +269,7 @@ class array:
         return this->get_value< typename self::value >() + this->get_size();
     }
 
-    public: const typename self::value* at(
+    public: typename self::value const* at(
         const std::size_t in_index)
     {
         if (!this->is_array() || this->get_size() <= in_index)
@@ -279,29 +279,29 @@ class array:
         return this->get_value< self::value >() + in_index;
     }
 };
-typedef pbon::array< pbon::int32 > array32;
+typedef pbon::array<pbon::int32> array32;
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// pbon::value の辞書。
-template< typename template_attribute_type >
+template<typename template_attribute_type>
 class object:
-    private value< template_attribute_type >
+    private value<template_attribute_type>
 {
-    public: typedef pbon::object< template_attribute_type > self;
-    private: typedef pbon::value< template_attribute_type > super;
-    public: typedef std::pair< super, super > value;
+    public: typedef pbon::object<template_attribute_type> self;
+    private: typedef pbon::value<template_attribute_type> super;
+    public: typedef std::pair<super, super> value;
 
     using super::attribute;
     using super::get_super;
 
-    public: static const self* cast(
-        const super* const in_value)
+    public: static self* const cast(
+        super const* const in_value)
     {
         if (in_value == NULL || !in_value->is_object())
         {
             return NULL;
         }
-        return static_cast< const self* >(in_value);
+        return static_cast<const self*>(in_value);
     }
 
     /** @brief 持っている値の数を取得。
@@ -315,7 +315,7 @@ class object:
         return this->super::get_size() / 2;
     }
 
-    public: const typename self::value* get_begin() const
+    public: typename self::value const* get_begin() const
     {
         if (!this->is_object())
         {
@@ -324,28 +324,28 @@ class object:
         return this->get_value< typename self::value >();
     }
 
-    public: const typename self::value* get_end() const
+    public: typename self::value const* get_end() const
     {
         if (!this->is_object())
         {
             return NULL;
         }
-        return this->get_value< typename self::value >() + this->get_size();
+        return this->get_value<typename self::value>() + this->get_size();
     }
 
-    public: template< typename template_key_type >
+    public: template<typename template_key_type>
     const typename self::value* lower_bound(
-        const template_key_type& in_key) const;
+        template_key_type const& in_key) const;
 
-    public: template< typename template_key_type >
+    public: template<typename template_key_type>
     const typename self::value* upper_bound(
-        const template_key_type& in_key) const;
+        template_key_type const& in_key) const;
 
-    public: template< typename template_key_type >
+    public: template<typename template_key_type>
     const typename self::value* find(
-        const template_key_type& in_key) const;
+        template_key_type const& in_key) const;
 };
-typedef pbon::object< pbon::int32 > object32;
+typedef pbon::object<pbon::int32> object32;
 
 namespace json
 {
@@ -358,8 +358,8 @@ namespace json
     @tparam template_value_type 識別値を取得したい型。
     @return 型の識別値。
  */
-template< typename template_value_type >
-static const void* type()
+template<typename template_value_type>
+static void const* type()
 {
     static bool static_dummy;
     return &static_dummy;
@@ -378,7 +378,7 @@ class value
         - 成功した場合は[0, 0]。
         - 失敗した場合は、取り込みに失敗した文字位置の[行番号, 桁位置]。
      */
-    public: typedef std::pair< unsigned, unsigned > parse_result;
+    public: typedef std::pair<unsigned, unsigned> parse_result;
 
     //-------------------------------------------------------------------------
     /// @brief 空の値を構築。
@@ -393,7 +393,7 @@ class value
         @note deep-copyを行うので、処理負荷が大きくなることがある。
      */
     public: value(
-        const self& in_source)
+        self const& in_source)
     {
         if (in_source.empty())
         {
@@ -406,7 +406,7 @@ class value
     }
 
     /** @brief JSON形式の文字列を解析し、値を取り出す。
-        @tparam template_traits_type
+        @tparam template_type_traits
             pbon::json::type_traits に準拠した型特性の型。
         @tparam template_string_type 解析する文字列の型。
         @param[in]  in_type_traits pbon::json::type_traits に準拠した型特性。
@@ -415,22 +415,22 @@ class value
             @copydoc pbon::json::value::parse_result
      */
     public: template<
-        typename template_traits_type,
-        typename template_string_type >
+        typename template_type_traits,
+        typename template_string_type>
     value(
-        const template_traits_type& in_type_traits,
-        const template_string_type& in_string,
+        template_type_traits const& in_type_traits,
+        template_string_type const& in_string,
         self::parse_result&         out_result)
     {
         new(this) self(
             in_type_traits,
             in_string,
-            template_traits_type::allocator(),
+            template_type_traits::allocator(),
             out_result);
     }
 
     /** @brief JSON形式の文字列を解析し、値を取り出す。
-        @tparam template_traits_type
+        @tparam template_type_traits
             pbon::json::type_traits に準拠した型特性の型。
         @tparam template_string_type 解析する文字列の型。
         @tparam template_allocator_type
@@ -442,13 +442,13 @@ class value
              @copydoc pbon::json::value::parse_result
      */
     public: template<
-        typename template_traits_type,
+        typename template_type_traits,
         typename template_string_type,
-        typename template_allocator_type >
+        typename template_allocator_type>
     value(
-        const template_traits_type&    in_type_traits,
-        const template_string_type&    in_string,
-        const template_allocator_type& in_allocator,
+        template_type_traits const&    in_type_traits,
+        template_string_type const&    in_string,
+        template_allocator_type const& in_allocator,
         self::parse_result&            out_result)
     {
         new(this) self(
@@ -460,7 +460,7 @@ class value
     }
 
     /** @brief JSON形式の文字列を解析し、値を取り出す。
-        @tparam template_traits_type
+        @tparam template_type_traits
             pbon::json::type_traits に準拠した型特性の型。
         @tparam template_iterator_type @copydoc pbon::json::parser::iterator
         @tparam template_allocator_type
@@ -473,14 +473,14 @@ class value
             @copydoc pbon::json::value::parse_result
      */
     public: template<
-        typename template_traits_type,
+        typename template_type_traits,
         typename template_iterator_type,
-        typename template_allocator_type >
+        typename template_allocator_type>
     value(
-        const template_traits_type&    in_type_traits,
-        const template_iterator_type&  in_string_begin,
-        const template_iterator_type&  in_string_end,
-        const template_allocator_type& in_allocator,
+        template_type_traits const&    in_type_traits,
+        template_iterator_type const&  in_string_begin,
+        template_iterator_type const&  in_string_end,
+        template_allocator_type const& in_allocator,
         self::parse_result&            out_result):
     holder_(NULL)
     {
@@ -491,10 +491,10 @@ class value
         self local_value;
         pbon::json::parser<
             template_iterator_type,
-            typename template_traits_type::number,
-            typename template_traits_type::string,
-            typename template_traits_type::array,
-            typename template_traits_type::object >
+            typename template_type_traits::number,
+            typename template_type_traits::string,
+            typename template_type_traits::array,
+            typename template_type_traits::object>
                 local_parser(
                     in_string_begin, in_string_end, in_allocator, local_value);
         if (local_parser.get_line() == 0)
@@ -518,13 +518,13 @@ class value
         typename template_allocator_type,
         typename template_value_type>
     value(
-        const template_allocator_type& in_allocator,
+        template_allocator_type const& in_allocator,
         template_value_type&           io_value)
     {
         typedef typename template_allocator_type::template
-            rebind< template_value_type >::other
+            rebind<template_value_type>::other
                 allocator;
-        this->holder_ = holder< allocator >::create(in_allocator, io_value);
+        this->holder_ = holder<allocator>::create(in_allocator, io_value);
     }
 
     /** @brief 任意型の値を構築。
@@ -538,15 +538,15 @@ class value
      */
     public: template<
         typename template_allocator_type,
-        typename template_value_type >
+        typename template_value_type>
     value(
-        const template_allocator_type& in_allocator,
-        const template_value_type&     in_value)
+        template_allocator_type const& in_allocator,
+        template_value_type const&     in_value)
     {
         typedef typename template_allocator_type::template
-            rebind< template_value_type >::other
+            rebind<template_value_type>::other
                 allocator;
-        this->holder_ = holder< allocator >::create(in_allocator, in_value);
+        this->holder_ = holder<allocator>::create(in_allocator, in_value);
     }
 
     /// @brief destructor
@@ -562,7 +562,7 @@ class value
         @param[in] in_source 代入元となる値。
         @note deep-copyを行うので、処理負荷が大きくなることがある。
      */
-    public: self& operator=(const self& in_source)
+    public: self& operator=(self const& in_source)
     {
         if (this == &in_source)
         {
@@ -597,7 +597,7 @@ class value
     {
         if (this->empty())
         {
-            return pbon::json::type< void >();
+            return pbon::json::type<void>();
         }
         return this->holder_->type();
     }
@@ -608,27 +608,27 @@ class value
         @retval ==NULL
             失敗。保持してる値が空か、 template_value_type と異なる型だった。
      */
-    public: template< typename template_value_type >
+    public: template<typename template_value_type>
     template_value_type* get()
     {
         if (this->empty() ||
-            this->type() != pbon::json::type< template_value_type >())
+            this->type() != pbon::json::type<template_value_type>())
         {
             return NULL;
         }
-        return static_cast< template_value_type* >(this->holder_->get());
+        return static_cast<template_value_type*>(this->holder_->get());
     }
 
     /// @copydoc get()
-    public: template< typename template_value_type >
-    const template_value_type* get() const
+    public: template<typename template_value_type>
+    template_value_type const* get() const
     {
         if (this->empty() ||
-            this->type() != pbon::json::type< template_value_type >())
+            this->type() != pbon::json::type<template_value_type>())
         {
             return NULL;
         }
-        return static_cast< const template_value_type* >(this->holder_->get());
+        return static_cast<template_value_type const*>(this->holder_->get());
     }
 
     /** @brief 保持してる値を、別の型に変換。
@@ -642,21 +642,21 @@ class value
     public: template<
         typename template_source_type,
         typename template_target_type,
-        typename template_allocator_type >
+        typename template_allocator_type>
     template_target_type* convert(
-        const template_allocator_type& in_allocator)
+        template_allocator_type const& in_allocator)
     {
         // 保持してる値の型が変換後の型と同じなら、何もしない。
         template_target_type* local_target_value(
-            this->get< template_target_type >());
+            this->get<template_target_type>());
         if (local_target_value != NULL)
         {
             return local_target_value;
         }
 
         // 保持してる値の型と変換前の型が違っていたら、失敗。
-        const template_source_type* const local_source_value(
-            this->get< template_source_type >());
+        template_source_type const* const local_source_value(
+            this->get<template_source_type>());
         if (local_source_value == NULL)
         {
             return NULL;
@@ -664,7 +664,7 @@ class value
 
         // 変換した値で新たな pbon::json::value を構築し、thisと交換する。
         template_target_type local_copy_value(
-            static_cast< template_target_type >(*local_source_value));
+            static_cast<template_target_type>(*local_source_value));
         self local_new_value(in_allocator, local_copy_value);
         local_target_value = local_new_value.get< template_target_type >();
         if (local_target_value != NULL)
@@ -685,7 +685,7 @@ class value
             @return 保持してる値の型識別値。
             @sa pbon::json::type()
          */
-        public: virtual const void* type() const = 0;
+        public: virtual void const* type() const = 0;
 
         /** @brief 保持してる値を取得。
             @return 保持してる値へのpointer。
@@ -693,7 +693,7 @@ class value
         public: virtual void* get() = 0;
 
         /// @copydoc type()
-        public: virtual const void* get() const = 0;
+        public: virtual void const* get() const = 0;
 
         /** @brief *thisのdeep-copyを作成。
          */
@@ -707,10 +707,10 @@ class value
         protected: placeholder() {}
 
         /// copy-constructorは使用禁止。
-        private: placeholder(const self&);
+        private: placeholder(self const&);
 
         /// 代入演算子は使用禁止。
-        private: self& operator=(const self&);
+        private: self& operator=(self const&);
     };
 
     /** @brief 実際に値を保持する型。
@@ -723,19 +723,19 @@ class value
                 template_allocator_type::value_type&)
             @endcode
      */
-    private: template< typename template_allocator_type >
+    private: template<typename template_allocator_type>
     class holder:
         public placeholder
     {
         /// this が指す値の型。
-        public: typedef holder< template_allocator_type > self;
+        public: typedef holder<template_allocator_type> self;
 
         /// 上位の型。
         public: typedef placeholder super;
 
         /// pbon::json::value::holder が持つmemory割当子の型。
         public: typedef typename template_allocator_type::template
-            rebind< self >::other
+            rebind<self>::other
                 allocator;
 
         /// pbon::json::value::holder が持つ値の型。
@@ -750,12 +750,13 @@ class value
             @retval !=NULL 生成したinstance。
             @retval ==NULL 生成に失敗。
          */
-        public: template< typename template_other_allocator_type >
+        public: template<typename template_other_allocator_type>
         static self* create(
-            const template_other_allocator_type& in_allocator,
+            template_other_allocator_type const& in_allocator,
             typename self::value&                io_value)
         {
-            self* const local_holder(self::create(in_allocator, self::value()));
+            self* const local_holder(
+                self::create(in_allocator, self::value()));
             if (local_holder != NULL)
             {
                 // 初期値と空値を交換。
@@ -773,10 +774,10 @@ class value
             @retval !=NULL 生成したinstance。
             @retval ==NULL 生成に失敗。
          */
-        public: template< typename template_other_allocator_type >
+        public: template<typename template_other_allocator_type>
         static self* create(
-            const template_other_allocator_type& in_allocator,
-            const typename self::value&          in_value)
+            template_other_allocator_type const& in_allocator,
+            typename self::value const&          in_value)
         {
             self::allocator local_allocator(in_allocator);
             self* const local_holder(local_allocator.allocate(1));
@@ -792,14 +793,14 @@ class value
             return &this->value_;
         }
 
-        public: virtual const void* get() const
+        public: virtual void const* get() const
         {
             return &this->value_;
         }
 
-        public: virtual const void* type() const
+        public: virtual void const* type() const
         {
-            return pbon::json::type< typename self::value >();
+            return pbon::json::type<typename self::value>();
         }
 
         public: virtual super* create_copy() const
@@ -818,8 +819,8 @@ class value
             @param[in] in_value     値の初期値。
          */
         private: holder(
-            const typename self::allocator& in_allocator,
-            const typename self::value&     in_value):
+            typename self::allocator const& in_allocator,
+            typename self::value const&     in_value):
         super(),
         value_(in_value),
         allocator_(in_allocator)
@@ -848,7 +849,7 @@ class value
 template<
     typename template_number_type = double,
     typename template_string_type = std::string,
-    typename template_allocator_type = std::allocator< void* > >
+    typename template_allocator_type = std::allocator<void*>>
 struct type_traits
 {
     /** @brief pbon::json::value に持たせる数値の型。
@@ -934,8 +935,8 @@ struct type_traits
     typedef std::map<
         template_string_type,
         pbon::json::value,
-        std::less< template_string_type >,
-        template_allocator_type >
+        std::less<template_string_type>,
+        template_allocator_type>
             object;
 
     /** @brief std::allocator 互換のinterfaceを持つmemory割当子。
@@ -956,7 +957,7 @@ template<
     typename template_number_type,
     typename template_string_type,
     typename template_array_type,
-    typename template_object_type >
+    typename template_object_type>
 class parser
 {
     /// thisが指す値の型。
@@ -965,7 +966,7 @@ class parser
         template_number_type,
         template_string_type,
         template_array_type,
-        template_object_type >
+        template_object_type>
             self;
 
     //-------------------------------------------------------------------------
@@ -993,11 +994,11 @@ class parser
         @param[in]  in_allocator out_value が使うmemory割当子。
         @param[out] out_value    JSONから取り出した値の出力先。
      */
-    public: template< typename template_allocator_type >
+    public: template<typename template_allocator_type>
     parser(
-        const template_iterator_type&  in_begin,
-        const template_iterator_type&  in_end,
-        const template_allocator_type& in_allocator,
+        template_iterator_type const &  in_begin,
+        template_iterator_type const&  in_end,
+        template_allocator_type const& in_allocator,
         pbon::json::value&             out_value):
     current_(in_begin),
     end_(in_end),
@@ -1041,9 +1042,9 @@ class parser
         @retval true  成功。
         @retval false 失敗。値は出力されない。
      */
-    private: template< typename template_allocator_type >
+    private: template<typename template_allocator_type>
     bool parse(
-        const template_allocator_type& in_allocator,
+        template_allocator_type const& in_allocator,
         pbon::json::value&             out_value)
     {
         this->skip_white_space();
@@ -1105,9 +1106,9 @@ class parser
         @retval true  成功。
         @retval false 失敗。配列は出力されない。
      */
-    private: template< typename template_allocator_type >
+    private: template<typename template_allocator_type>
     bool parse_array(
-        const template_allocator_type& in_allocator,
+        template_allocator_type const& in_allocator,
         pbon::json::value&             out_value)
     {
         template_array_type local_array;
@@ -1128,9 +1129,13 @@ class parser
                     break;
                 }
             }
+            if (!this->expect(']'))
+            {
+                return false;
+            }
         }
         pbon::json::value(in_allocator, local_array).swap(out_value);
-        return this->expect(']');
+        return true;
     }
 
     /** @brief JSONが持っているobjectを解析して取り出す。
@@ -1141,40 +1146,39 @@ class parser
         @retval true  成功。
         @retval false 失敗。objectは出力されない。
      */
-    private: template< typename template_allocator_type >
+    private: template<typename template_allocator_type>
     bool parse_object(
-        const template_allocator_type& in_allocator,
-        pbon::json::value&             out_value)
+        template_allocator_type const in_allocator,
+        pbon::json::value&            out_value)
     {
-        if (this->expect('}'))
-        {
-            return true;
-        }
         template_object_type local_object;
-        for (;;)
-        {
-            template_string_type local_key;
-            pbon::json::value local_value;
-            if (!this->expect('"') ||
-                !this->parse_string(local_key) ||
-                !this->expect(':') ||
-                !this->parse(in_allocator, local_value))
-            {
-                return false;
-            }
-            local_object[local_key].swap(local_value);
-            if (local_object.count(local_key) <= 0)
-            {
-                return false;
-            }
-            if (!this->expect(','))
-            {
-                break;
-            }
-        }
         if (!this->expect('}'))
         {
-            return false;
+            for (;;)
+            {
+                template_string_type local_key;
+                pbon::json::value local_value;
+                if (!this->expect('"') ||
+                    !this->parse_string(local_key) ||
+                    !this->expect(':') ||
+                    !this->parse(in_allocator, local_value))
+                {
+                    return false;
+                }
+                local_object[local_key].swap(local_value);
+                if (local_object.count(local_key) <= 0)
+                {
+                    return false;
+                }
+                if (!this->expect(','))
+                {
+                    break;
+                }
+            }
+            if (!this->expect('}'))
+            {
+                return false;
+            }
         }
         pbon::json::value(in_allocator, local_object).swap(out_value);
         return true;
@@ -1188,9 +1192,9 @@ class parser
         @retval true  成功。
         @retval false 失敗。数値は出力されない。
      */
-    private: template< typename template_allocator_type >
+    private: template<typename template_allocator_type>
     bool parse_number(
-        const template_allocator_type& in_allocator,
+        template_allocator_type const& in_allocator,
         pbon::json::value&             out_value)
     {
         // 数の文字列を取り出す。
@@ -1217,7 +1221,7 @@ class parser
         }
 
         // 数の文字列を数値に変換。
-        std::basic_istringstream< typename template_string_type::value_type >
+        std::basic_istringstream<typename template_string_type::value_type>
             local_stream(local_string);
         template_number_type local_number;
         local_stream >> local_number;
@@ -1237,9 +1241,9 @@ class parser
         @retval true  成功。
         @retval false 失敗。文字列は出力されない。
      */
-    private: template< typename template_allocator_type >
+    private: template<typename template_allocator_type>
     bool parse_string(
-        const template_allocator_type& in_allocator,
+        template_allocator_type const& in_allocator,
         pbon::json::value&             out_value)
     {
         template_string_type local_string;
@@ -1317,7 +1321,7 @@ class parser
                 }
             }
             out_string.push_back(
-                static_cast< typename template_string_type::value_type >(
+                static_cast<typename template_string_type::value_type>(
                     local_char));
         }
     }
@@ -1362,7 +1366,7 @@ class parser
         if (local_unicode_char < 0x80)
         {
             out_string.push_back(
-                static_cast< template_string_type::value_type >(
+                static_cast<template_string_type::value_type>(
                     local_unicode_char));
             return true;
         }
@@ -1371,7 +1375,7 @@ class parser
         if (local_unicode_char < 0x800)
         {
             out_string.push_back(
-                static_cast< template_string_type::value_type >(
+                static_cast<template_string_type::value_type>(
                     0xc0 | (local_unicode_char >> 6)));
         }
         else
@@ -1379,24 +1383,24 @@ class parser
             if (local_unicode_char < 0x10000)
             {
                 out_string.push_back(
-                    static_cast< template_string_type::value_type >(
+                    static_cast<template_string_type::value_type>(
                         0xe0 | (local_unicode_char >> 12)));
             }
             else
             {
                 out_string.push_back(
-                    static_cast< template_string_type::value_type >(
+                    static_cast<template_string_type::value_type>(
                         0xf0 | (local_unicode_char >> 18)));
                 out_string.push_back(
-                    static_cast< template_string_type::value_type >(
+                    static_cast<template_string_type::value_type>(
                         0x80 | ((local_unicode_char >> 12) & 0x3f)));
             }
             out_string.push_back(
-                static_cast< template_string_type::value_type >(
+                static_cast<template_string_type::value_type>(
                     0x80 | ((local_unicode_char >> 6) & 0x3f)));
         }
         out_string.push_back(
-            static_cast< template_string_type::value_type >(
+            static_cast<template_string_type::value_type>(
                 0x80 | (local_unicode_char & 0x3f)));
         return true;
     }
@@ -1495,7 +1499,7 @@ class parser
     }
 
     private: bool expect(
-        const int in_expect_char)
+        int const in_expect_char)
     {
         this->skip_white_space();
         if (this->read_char() != in_expect_char)
@@ -1507,7 +1511,7 @@ class parser
     }
 
     private: bool match(
-        const char* const in_begin)
+        char const* const in_begin)
     {
         for (const char* i = in_begin; *i != 0; ++i)
         {
@@ -1549,15 +1553,15 @@ class parser
 
 #if 0
 template<
-    typename template_traits_type,
-    typename template_binary_container_type >
+    typename template_type_traits,
+    typename template_binary_container_type>
 void pack(
-    const template_traits_type&     in_traits,
-    const pbon::json::value&        in_value,
+    template_type_traits const&     in_traits,
+    pbon::json::value const&        in_value,
     template_binary_container_type& out_binary)
 {
-    typename const template_traits_type::string* const local_string(
-        in_value.get< typename template_traits_type::string >());
+    typename template_type_traits::string const* const local_string(
+        in_value.get<typename template_type_traits::string>());
     if (local_string != NULL)
     {
         pbon::value::pack_string(
@@ -1567,15 +1571,15 @@ void pack(
         return;
     }
 
-    typename const template_traits_type::array* const local_array(
-        in_value.get< typename template_traits_type::array >());
+    typename template_type_traits::array const* const local_array(
+        in_value.get<typename template_type_traits::array>());
     if (local_array != NULL)
     {
         return;
     }
 
-    typename const template_traits_type::array* const local_object(
-        in_value.get< typename template_traits_type::object >());
+    typename template_type_traits::array const* const local_object(
+        in_value.get<typename template_traits_type::object>());
     if (local_object != NULL)
     {
         return;
@@ -1587,7 +1591,7 @@ void pack(
 
 namespace std
 {
-    /** @brief 保持してる値を交換。
+    /** @brief 値を交換。
         @param[in,out] io_left  交換する値の左辺値。
         @param[in,out] io_right 交換する値の右辺値。
      */

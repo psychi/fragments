@@ -388,7 +388,9 @@ class psyq::event_stage
 		typename this_type::package::offset const i_offset)
 	const
 	{
-		return t_hash::make(this->make_string(i_offset));
+		const t_string local_string(this->make_string(i_offset));
+		return t_hash::make(
+			local_string.data(), local_string.data() + local_string.size());
 	}
 
 	/** @brief 任意の文字列を、event置換語辞書で置換した文字列のhash値を取得。
@@ -399,7 +401,9 @@ class psyq::event_stage
 		typename this_type::const_string const& i_source)
 	const
 	{
-		return t_hash::make(this->make_string(i_source));
+		const t_string local_string(this->make_string(i_source));
+		return t_hash::make(
+			local_string.data(), local_string.data() + local_string.size());
 	}
 
 	//-------------------------------------------------------------------------

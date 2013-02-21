@@ -4,119 +4,120 @@
 /// @cond
 namespace psyq
 {
-	template< typename, typename > class _fnv_hash;
-	class _fnv1_maker;
-	class _fnv1a_maker;
-	class _fnv_traits32;
-	class _fnv_traits64;
+    /// この名前空間を直接accessするのは禁止。
+    namespace _PSYQ
+    {
+        template< typename, typename > class fnv_hash;
+        class fnv1_maker;
+        class fnv1a_maker;
+        class fnv_traits32;
+        class fnv_traits64;
+    }
 
-	typedef psyq::_fnv_hash< psyq::_fnv1_maker, psyq::_fnv_traits32 >
-		fnv1_hash32;
-	typedef psyq::_fnv_hash< psyq::_fnv1_maker, psyq::_fnv_traits64 >
-		fnv1_hash64;
+    typedef psyq::_PSYQ::fnv_hash<
+        psyq::_PSYQ::fnv1_maker, psyq::_PSYQ::fnv_traits32>
+            fnv1_hash32;
+    typedef psyq::_PSYQ::fnv_hash<
+        psyq::_PSYQ::fnv1_maker, psyq::_PSYQ::fnv_traits64>
+            fnv1_hash64;
 }
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief FNV-hash-policyの基底型。
-    @tparam t_maker  FNV-hashの生成policy。
-    @tparam t_traits FNV-hashの型特性。
+    @tparam template_hash_policy @copydoc fnv_hash::policy
+    @tparam template_hash_traits @copydoc fnv_hash::type_traits
  */
-template< typename t_maker, typename t_traits >
-class psyq::_fnv_hash:
-	public t_maker, public t_traits
+template< typename template_hash_policy, typename template_hash_traits >
+class psyq::_PSYQ::fnv_hash:
+    public template_hash_policy, public template_hash_traits
 {
-	/// このobjectの型。
-	public: typedef psyq::_fnv_hash< t_maker, t_traits > this_type;
+    /// thisの指す値の型。
+    public: typedef psyq::_PSYQ::fnv_hash<
+        template_hash_policy, template_hash_traits>
+            self;
 
-	//-------------------------------------------------------------------------
-	/// hash値の型。
-	public: typedef typename t_traits::value value;
+    //-------------------------------------------------------------------------
+    /// FNV-hashの生成policy。
+    public: typedef template_hash_policy policy;
 
-	/// 使用する空hash値。
-	public: static typename t_traits::value const EMPTY = t_traits::EMPTY;
+    /// FNV-hashの型特性。
+    public: typedef template_hash_traits type_traits;
 
-	/// 使用するFNV-hash素数。
-	public: static typename t_traits::value const PRIME = t_traits::PRIME;
+    /// FNV-hash値。
+    public: typedef typename template_hash_traits::value value;
 
-	//-------------------------------------------------------------------------
-	private: _fnv_hash();
+    /// 使用する空hash値。
+    public: static typename template_hash_traits::value const EMPTY =
+        template_hash_traits::EMPTY;
 
-	//-------------------------------------------------------------------------
-	/** @brief 文字列のhash値を生成。
-	    @param[in] i_string NULL文字で終了する文字列の先頭位置。
-	    @param[in] i_offset FNV-hash開始値。
-	    @param[in] i_prime  FNV-hash素数。
-	 */
-	public: template< typename t_char >
-	static typename this_type::value make(
-		t_char const* const             i_string,
-		typename this_type::value const i_offset = this_type::EMPTY,
-		typename this_type::value const i_prime = this_type::PRIME)
-	{
-		typename this_type::value a_hash(i_offset);
-		if (NULL != i_string)
-		{
-			for (t_char const* i = i_string; 0 != *i; ++i)
-			{
-				a_hash = t_maker::make(i, i + 1, a_hash, i_prime);
-			}
-		}
-		return a_hash;
-	}
+    /// 使用するFNV-hash素数。
+    public: static typename template_hash_traits::value const PRIME =
+        template_hash_traits::PRIME;
 
-	/** @brief 配列のhash値を生成。
-	    @param[in] i_begin  配列の先頭位置。
-	    @param[in] i_end    配列の末尾位置。
-	    @param[in] i_offset FNV-hash開始値。
-	    @param[in] i_prime  FNV-hash素数。
-	 */
-	public: template< typename t_value >
-	static typename this_type::value make(
-		t_value const* const            i_begin,
-		t_value const* const            i_end,
-		typename this_type::value const i_offset = this_type::EMPTY,
-		typename this_type::value const i_prime = this_type::PRIME)
-	{
-		return t_maker::make(i_begin, i_end, i_offset, i_prime);
-	}
+    //-------------------------------------------------------------------------
+    /** @brief 文字列のhash値を生成。
+        @param[in] in_string NULL文字で終了する文字列の先頭位置。
+        @param[in] in_offset FNV-hash開始値。
+        @param[in] in_prime  FNV-hash素数。
+        @return 文字列のhash値。
+     */
+    public: template< typename template_char_type >
+    static typename self::value make(
+        template_char_type const* const in_string,
+        typename self::value const      in_offset = self::EMPTY,
+        typename self::value const      in_prime = self::PRIME)
+    {
+        typename self::value local_hash(in_offset);
+        if (in_string != NULL)
+        {
+            for (template_char_type const* i(in_string); *i != 0; ++i)
+            {
+                local_hash = template_hash_policy::make(
+                    i, i + 1, local_hash, in_prime);
+            }
+        }
+        return local_hash;
+    }
 
-	/** @brief 文字列のhash値を生成。
-	    @param[in] i_string std::basic_string互換の文字列。
-	    @param[in] i_offset FNV-hash開始値。
-	    @param[in] i_prime  FNV-hash素数。
-	 */
-	public: template< typename t_string >
-	static typename this_type::value make(
-		t_string const&                 i_string,
-		typename this_type::value const i_offset = this_type::EMPTY,
-		typename this_type::value const i_prime = this_type::PRIME)
-	{
-		typename t_string::const_pointer const a_data(i_string.data());
-		return this_type::make(
-			a_data, a_data + i_string.length(), i_offset, i_prime);
-	}
+    /** @brief 配列のhash値を生成。
+	    @param[in] in_begin  配列の先頭位置。
+	    @param[in] in_end    配列の末尾位置。
+	    @param[in] in_offset FNV-hash開始値。
+	    @param[in] in_prime  FNV-hash素数。
+     */
+    public: template< typename template_value_type >
+    static typename self::value make(
+        template_value_type const* const in_begin,
+        template_value_type const* const in_end,
+        typename self::value const       in_offset = self::EMPTY,
+        typename self::value const       in_prime = self::PRIME)
+    {
+        return template_hash_policy::make(
+            in_begin, in_end, in_offset, in_prime);
+    }
 
-	/** @brief 文字列のhash値を生成。
-	    @param[in] i_begin  文字列の先頭位置。
-	    @param[in] i_end    文字列の末尾位置。
-	    @param[in] i_offset FNV-hash開始値。
-	    @param[in] i_prime  FNV-hash素数。
-	 */
-	public: template< typename t_iterator >
-	static typename this_type::value make(
-		t_iterator const                i_begin,
-		t_iterator const                i_end,
-		typename this_type::value const i_offset = this_type::EMPTY,
-		typename this_type::value const i_prime = this_type::PRIME)
-	{
-		typename this_type::value a_hash(i_offset);
-		for (t_iterator i = i_begin; i_end != i; ++i)
-		{
-			a_hash = t_maker::make(&(*i), &(*i) + 1, a_hash, i_prime);
-		}
-		return a_hash;
-	}
+    /** @brief 文字列のhash値を生成。
+        @param[in] in_begin  文字列の先頭位置。
+        @param[in] in_end    文字列の末尾位置。
+        @param[in] in_offset FNV-hash開始値。
+        @param[in] in_prime  FNV-hash素数。
+     */
+    public: template< typename template_iterator_type >
+    static typename self::value make(
+        template_iterator_type const& in_begin,
+        template_iterator_type const& in_end,
+        typename self::value const    in_offset = self::EMPTY,
+        typename self::value const    in_prime = self::PRIME)
+    {
+        typename self::value local_hash(in_offset);
+        for (template_iterator_type i(in_begin); in_end != i; ++i)
+        {
+            local_hash = template_hash_policy::make(
+                &(*i), &(*i) + 1, local_hash, in_prime);
+        }
+        return local_hash;
+    }
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -125,37 +126,32 @@ class psyq::_fnv_hash:
     http://www.radiumsoftware.com/0605.html#060526
     http://d.hatena.ne.jp/jonosuke/20100406/p1
  */
-class psyq::_fnv1_maker:
-	private boost::noncopyable
+class psyq::_PSYQ::fnv1_maker
 {
-	//-------------------------------------------------------------------------
-	private: _fnv1_maker();
-
-	//-------------------------------------------------------------------------
-	/** @brief byte配列のhash値を生成。
-	    @param[in] i_begin  byte配列の先頭位置。
-	    @param[in] i_end    byte配列の末尾位置。
-	    @param[in] i_offset hash開始値。
-	    @param[in] i_prime  FNV-hash素数。
-	 */
-	public: template< typename t_value >
-	static t_value make(
-		void const* const i_begin,
-		void const* const i_end,
-		t_value const     i_offset,
-		t_value const     i_prime)
-	{
-		t_value a_hash(i_offset);
-		for (
-			boost::uint8_t const* i =
-				static_cast< boost::uint8_t const* >(i_begin);
-			i < i_end;
-			++i)
-		{
-			a_hash = (a_hash * i_prime) ^ *i;
-		}
-		return a_hash;
-	}
+    //-------------------------------------------------------------------------
+    /** @brief byte配列のhash値を生成。
+        @param[in] in_begin  byte配列の先頭位置。
+        @param[in] in_end    byte配列の末尾位置。
+        @param[in] in_offset hash開始値。
+        @param[in] in_prime  FNV-hash素数。
+     */
+    public: template< typename template_value_type >
+    static template_value_type make(
+        void const* const          in_begin,
+        void const* const          in_end,
+        template_value_type const& in_offset,
+        template_value_type const& in_prime)
+    {
+        template_value_type local_hash(in_offset);
+        for (
+            char const* i(static_cast<char const*>(in_begin));
+            i < in_end;
+            ++i)
+        {
+            local_hash = (local_hash * in_prime) ^ *i;
+        }
+        return local_hash;
+    }
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -164,57 +160,48 @@ class psyq::_fnv1_maker:
     http://www.radiumsoftware.com/0605.html#060526
     http://d.hatena.ne.jp/jonosuke/20100406/p1
  */
-class psyq::_fnv1a_maker:
-	private boost::noncopyable
+class psyq::_PSYQ::fnv1a_maker
 {
-	//-------------------------------------------------------------------------
-	private: _fnv1a_maker();
-
-	//-------------------------------------------------------------------------
-	/** @brief byte配列のhash値を生成。
-	    @param[in] i_begin  byte配列の先頭位置。
-	    @param[in] i_end    byte配列の末尾位置。
-	    @param[in] i_offset FNV-hash開始値。
-	    @param[in] i_prime  FNV-hash素数。
-	 */
-	public: template< typename t_value >
-	static t_value make(
-		void const* const i_begin,
-		void const* const i_end,
-		t_value const     i_offset,
-		t_value const     i_prime)
-	{
-		t_value a_hash(i_offset);
-		for (
-			boost::uint8_t const* i =
-				static_cast< boost::uint8_t const* >(i_begin);
-			i < i_end;
-			++i)
-		{
-			a_hash = (a_hash ^ *i) * i_prime;
-		}
-		return a_hash;
-	}
+    //-------------------------------------------------------------------------
+    /** @brief byte配列のhash値を生成。
+        @param[in] in_begin  byte配列の先頭位置。
+        @param[in] in_end    byte配列の末尾位置。
+        @param[in] in_offset FNV-hash開始値。
+        @param[in] in_prime  FNV-hash素数。
+     */
+    public: template< typename template_value_type >
+    static template_value_type make(
+        void const* const          in_begin,
+        void const* const          in_end,
+        template_value_type const& in_offset,
+        template_value_type const& in_prime)
+    {
+        template_value_type local_hash(in_offset);
+        for (
+            char const* i(static_cast<char const*>(in_begin));
+            i < in_end;
+            ++i)
+        {
+            local_hash = (local_hash ^ *i) * in_prime;
+        }
+        return local_hash;
+    }
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class psyq::_fnv_traits32:
-	private boost::noncopyable
+class psyq::_PSYQ::fnv_traits32
 {
-	public: typedef boost::uint32_t value;
-	public: static value const EMPTY = 0x811c9dc5;
-	public: static value const PRIME = 0x1000193;
-	private: _fnv_traits32();
+    public: typedef boost::uint32_t value;
+    public: static value const EMPTY = 0x811c9dc5;
+    public: static value const PRIME = 0x1000193;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class psyq::_fnv_traits64:
-	private boost::noncopyable
+class psyq::_PSYQ::fnv_traits64
 {
-	public: typedef boost::uint64_t value;
-	public: static value const EMPTY = 0xcbf29ce484222325ULL;
-	public: static value const PRIME = 0x100000001b3ULL;
-	private: _fnv_traits64();
+    public: typedef boost::uint64_t value;
+    public: static value const EMPTY = 0xcbf29ce484222325ULL;
+    public: static value const PRIME = 0x100000001b3ULL;
 };
 
 #endif // PSYQ_FNV_HASH_HPP_

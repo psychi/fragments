@@ -1,13 +1,13 @@
 #ifndef PSYQ_HASH_STRING_HPP_
 #define PSYQ_HASH_STRING_HPP_
 
-/// @cond
 namespace psyq
 {
+    /// @cond
     template<typename, typename> class const_hash_string;
     template<typename, typename> class hash_string;
+    /// @endcond
 }
-/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief hash値を使って比較を行う定数文字列。
@@ -76,7 +76,7 @@ class psyq::const_hash_string:
         self const& in_right)
     const
     {
-        return in_left.hash() == in_left.hash() &&
+        return in_left.hash() == in_right.hash() &&
             static_cast<super const&>(*this) == in_right;
     }
 
@@ -133,7 +133,6 @@ class psyq::const_hash_string:
         super const& in_right)
     const
     {
-        template_hash_type local_hash_maker
         return self::less(
             *this, this->hash(), in_right, this->make_hash(in_right));
     }
@@ -229,7 +228,7 @@ class psyq::const_hash_string:
      */
     public: typename template_hash_type::value const& hash() const
     {
-        if (this->hash_ == template_hash_type::EMPTY)
+        if (!this->empty() && this->hash_ == template_hash_type::EMPTY)
         {
             this->hash_ = this->make_hash(*this);
         }
@@ -529,6 +528,50 @@ bool operator!=(
         in_right)
 {
     return in_right.operator!=(in_left);
+}
+
+template<
+    typename template_string_type,
+    typename template_hash_type>
+bool operator<(
+    template_string_type const& in_left,
+    psyq::const_hash_string<template_string_type, template_hash_type> const&
+        in_right)
+{
+    return in_right.operator>(in_left);
+}
+
+template<
+    typename template_string_type,
+    typename template_hash_type>
+bool operator<=(
+    template_string_type const& in_left,
+    psyq::const_hash_string<template_string_type, template_hash_type> const&
+        in_right)
+{
+    return in_right.operator>=(in_left);
+}
+
+template<
+    typename template_string_type,
+    typename template_hash_type>
+bool operator>(
+    template_string_type const& in_left,
+    psyq::const_hash_string<template_string_type, template_hash_type> const&
+        in_right)
+{
+    return in_right.operator<(in_left);
+}
+
+template<
+    typename template_string_type,
+    typename template_hash_type>
+bool operator>=(
+    template_string_type const& in_left,
+    psyq::const_hash_string<template_string_type, template_hash_type> const&
+        in_right)
+{
+    return in_right.operator<=(in_left);
 }
 
 namespace std

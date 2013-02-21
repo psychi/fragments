@@ -1,27 +1,30 @@
 #ifndef PSYQ_FNV_HASH_HPP_
 #define PSYQ_FNV_HASH_HPP_
 
-/// @cond
 namespace psyq
 {
     /// この名前空間を直接accessするのは禁止。
     namespace _PSYQ
     {
+        /// @cond
         template< typename, typename > class fnv_hash;
+        /// @endcond
         class fnv1_maker;
         class fnv1a_maker;
         class fnv_traits32;
         class fnv_traits64;
     }
 
+    /// 32bit FNV-1 hash関数object
     typedef psyq::_PSYQ::fnv_hash<
         psyq::_PSYQ::fnv1_maker, psyq::_PSYQ::fnv_traits32>
             fnv1_hash32;
+
+    /// 64bit FNV-1 hash関数object
     typedef psyq::_PSYQ::fnv_hash<
         psyq::_PSYQ::fnv1_maker, psyq::_PSYQ::fnv_traits64>
             fnv1_hash64;
 }
-/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief FNV-hash-policyの基底型。
@@ -30,7 +33,8 @@ namespace psyq
  */
 template< typename template_hash_policy, typename template_hash_traits >
 class psyq::_PSYQ::fnv_hash:
-    public template_hash_policy, public template_hash_traits
+    public template_hash_policy,
+    public template_hash_traits
 {
     /// thisの指す値の型。
     public: typedef psyq::_PSYQ::fnv_hash<
@@ -81,10 +85,10 @@ class psyq::_PSYQ::fnv_hash:
     }
 
     /** @brief 配列のhash値を生成。
-	    @param[in] in_begin  配列の先頭位置。
-	    @param[in] in_end    配列の末尾位置。
-	    @param[in] in_offset FNV-hash開始値。
-	    @param[in] in_prime  FNV-hash素数。
+        @param[in] in_begin  配列の先頭位置。
+        @param[in] in_end    配列の末尾位置。
+        @param[in] in_offset FNV-hash開始値。
+        @param[in] in_prime  FNV-hash素数。
      */
     public: template< typename template_value_type >
     static typename self::value make(
@@ -189,18 +193,30 @@ class psyq::_PSYQ::fnv1a_maker
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// 32bitのFNV-hash関数の型特性。
 class psyq::_PSYQ::fnv_traits32
 {
+    /// hash値の型。
     public: typedef boost::uint32_t value;
+
+    /// 空hash値。
     public: static value const EMPTY = 0x811c9dc5;
+
+    /// FNV-hash素数。
     public: static value const PRIME = 0x1000193;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// 64bitのFNV-hash関数の型特性。
 class psyq::_PSYQ::fnv_traits64
 {
+    /// hash値の型。
     public: typedef boost::uint64_t value;
+
+    /// 空hash値。
     public: static value const EMPTY = 0xcbf29ce484222325ULL;
+
+    /// FNV-hash素数。
     public: static value const PRIME = 0x100000001b3ULL;
 };
 

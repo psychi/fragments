@@ -4,17 +4,18 @@
 #include <iosfwd>
 #include <iterator>
 
-/// @cond
 namespace psyq
 {
+    /// @cond
     template<
         typename template_char_type,
         typename template_char_traits = std::char_traits<template_char_type>>
             class basic_const_string;
+    /// @endcond
+
     typedef psyq::basic_const_string<char> const_string;
     typedef psyq::basic_const_string<wchar_t> const_wstring;
 }
-/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_string ‚É€‹’‚µ‚½•¶š—ñ’è”B

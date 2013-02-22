@@ -356,6 +356,13 @@ class psyq::basic_const_string
     }
 
     //-------------------------------------------------------------------------
+    /** @brief 文字列の比較。
+
+        *thisを左辺として、右辺の文字列と比較。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 == 右辺
+     */
     public: bool operator==(self const& in_right) const
     {
         if (this->size() != in_right.size())
@@ -372,26 +379,61 @@ class psyq::basic_const_string
         return local_compare == 0;
     }
 
+    /** @brief 文字列の比較。
+
+        *thisを左辺として、右辺の文字列と比較。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 != 右辺
+     */
     public: bool operator!=(self const& in_right) const
     {
         return !this->operator==(in_right);
     }
 
+    /** @brief 文字列の比較。
+
+        *thisを左辺として、右辺の文字列と比較。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 < 右辺
+     */
     public: bool operator<(self const& in_right) const
     {
         return this->compare(in_right) < 0;
     }
 
+    /** @brief 文字列の比較。
+
+        *thisを左辺として、右辺の文字列と比較。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 <= 右辺
+     */
     public: bool operator<=(self const& in_right) const
     {
         return this->compare(in_right) <= 0;
     }
 
+    /** @brief 文字列の比較。
+
+        *thisを左辺として、右辺の文字列と比較。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 > 右辺
+     */
     public: bool operator>(self const& in_right) const
     {
         return 0 < this->compare(in_right);
     }
 
+    /** @brief 文字列の比較。
+
+        *thisを左辺として、右辺の文字列と比較。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 >= 右辺
+     */
     public: bool operator>=(self const& in_right) const
     {
         return 0 <= this->compare(in_right);

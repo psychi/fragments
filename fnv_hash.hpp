@@ -3,12 +3,13 @@
 
 namespace psyq
 {
-    /// この名前空間を直接accessするのは禁止。
-    namespace _PSYQ
+    /// この名前空間をuserが直接accessするのは禁止。
+    namespace closed
     {
         /// @cond
         template< typename, typename > class fnv_hash;
         /// @endcond
+
         class fnv1_maker;
         class fnv1a_maker;
         class fnv_traits32;
@@ -16,28 +17,26 @@ namespace psyq
     }
 
     /// 32bit FNV-1 hash関数object
-    typedef psyq::_PSYQ::fnv_hash<
-        psyq::_PSYQ::fnv1_maker, psyq::_PSYQ::fnv_traits32>
+    typedef psyq::closed::fnv_hash<
+        psyq::closed::fnv1_maker, psyq::closed::fnv_traits32>
             fnv1_hash32;
 
     /// 64bit FNV-1 hash関数object
-    typedef psyq::_PSYQ::fnv_hash<
-        psyq::_PSYQ::fnv1_maker, psyq::_PSYQ::fnv_traits64>
+    typedef psyq::closed::fnv_hash<
+        psyq::closed::fnv1_maker, psyq::closed::fnv_traits64>
             fnv1_hash64;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief FNV-hash-policyの基底型。
+/** @brief FNV-hash
     @tparam template_hash_policy @copydoc fnv_hash::policy
-    @tparam template_hash_traits @copydoc fnv_hash::type_traits
+    @tparam template_hash_traits @copydoc fnv_hash::traits
  */
 template< typename template_hash_policy, typename template_hash_traits >
-class psyq::_PSYQ::fnv_hash:
-    public template_hash_policy,
-    public template_hash_traits
+class psyq::closed::fnv_hash
 {
     /// thisの指す値の型。
-    public: typedef psyq::_PSYQ::fnv_hash<
+    public: typedef psyq::closed::fnv_hash<
         template_hash_policy, template_hash_traits>
             self;
 
@@ -46,27 +45,28 @@ class psyq::_PSYQ::fnv_hash:
     public: typedef template_hash_policy policy;
 
     /// FNV-hashの型特性。
-    public: typedef template_hash_traits type_traits;
+    public: typedef template_hash_traits traits;
 
-    /// FNV-hash値。
+    /// FNV-hash値の型。
     public: typedef typename template_hash_traits::value value;
 
     /// 使用する空hash値。
     public: static typename template_hash_traits::value const EMPTY =
-        template_hash_traits::EMPTY;
+        self::traits::EMPTY;
 
     /// 使用するFNV-hash素数。
     public: static typename template_hash_traits::value const PRIME =
-        template_hash_traits::PRIME;
+        self::traits::PRIME;
 
     //-------------------------------------------------------------------------
     /** @brief 文字列のhash値を生成。
+        @tparam template_char_type 文字の型。
         @param[in] in_string NULL文字で終了する文字列の先頭位置。
         @param[in] in_offset FNV-hash開始値。
         @param[in] in_prime  FNV-hash素数。
         @return 文字列のhash値。
      */
-    public: template< typename template_char_type >
+    public: template<typename template_char_type>
     static typename self::value make(
         template_char_type const* const in_string,
         typename self::value const      in_offset = self::EMPTY,
@@ -85,12 +85,13 @@ class psyq::_PSYQ::fnv_hash:
     }
 
     /** @brief 配列のhash値を生成。
+        @tparam template_value_type 配列の要素の型。
         @param[in] in_begin  配列の先頭位置。
         @param[in] in_end    配列の末尾位置。
         @param[in] in_offset FNV-hash開始値。
         @param[in] in_prime  FNV-hash素数。
      */
-    public: template< typename template_value_type >
+    public: template<typename template_value_type>
     static typename self::value make(
         template_value_type const* const in_begin,
         template_value_type const* const in_end,
@@ -101,13 +102,14 @@ class psyq::_PSYQ::fnv_hash:
             in_begin, in_end, in_offset, in_prime);
     }
 
-    /** @brief 文字列のhash値を生成。
+    /** @brief 配列のhash値を生成。
+        @tparam template_iterator_type 配列の要素を指す反復子の型。
         @param[in] in_begin  文字列の先頭位置。
         @param[in] in_end    文字列の末尾位置。
         @param[in] in_offset FNV-hash開始値。
         @param[in] in_prime  FNV-hash素数。
      */
-    public: template< typename template_iterator_type >
+    public: template<typename template_iterator_type>
     static typename self::value make(
         template_iterator_type const& in_begin,
         template_iterator_type const& in_end,
@@ -130,7 +132,7 @@ class psyq::_PSYQ::fnv_hash:
     http://www.radiumsoftware.com/0605.html#060526
     http://d.hatena.ne.jp/jonosuke/20100406/p1
  */
-class psyq::_PSYQ::fnv1_maker
+class psyq::closed::fnv1_maker
 {
     //-------------------------------------------------------------------------
     /** @brief byte配列のhash値を生成。
@@ -139,7 +141,7 @@ class psyq::_PSYQ::fnv1_maker
         @param[in] in_offset hash開始値。
         @param[in] in_prime  FNV-hash素数。
      */
-    public: template< typename template_value_type >
+    public: template<typename template_value_type>
     static template_value_type make(
         void const* const          in_begin,
         void const* const          in_end,
@@ -164,7 +166,7 @@ class psyq::_PSYQ::fnv1_maker
     http://www.radiumsoftware.com/0605.html#060526
     http://d.hatena.ne.jp/jonosuke/20100406/p1
  */
-class psyq::_PSYQ::fnv1a_maker
+class psyq::closed::fnv1a_maker
 {
     //-------------------------------------------------------------------------
     /** @brief byte配列のhash値を生成。
@@ -173,7 +175,7 @@ class psyq::_PSYQ::fnv1a_maker
         @param[in] in_offset FNV-hash開始値。
         @param[in] in_prime  FNV-hash素数。
      */
-    public: template< typename template_value_type >
+    public: template<typename template_value_type>
     static template_value_type make(
         void const* const          in_begin,
         void const* const          in_end,
@@ -194,7 +196,7 @@ class psyq::_PSYQ::fnv1a_maker
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// 32bitのFNV-hash関数の型特性。
-class psyq::_PSYQ::fnv_traits32
+class psyq::closed::fnv_traits32
 {
     /// hash値の型。
     public: typedef boost::uint32_t value;
@@ -208,7 +210,7 @@ class psyq::_PSYQ::fnv_traits32
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// 64bitのFNV-hash関数の型特性。
-class psyq::_PSYQ::fnv_traits64
+class psyq::closed::fnv_traits64
 {
     /// hash値の型。
     public: typedef boost::uint64_t value;

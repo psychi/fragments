@@ -1,3 +1,29 @@
+/* Copyright (c) 2013, Hillco Psychi, All rights reserved.
+
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions are met:
+
+   1. Redistributions of source code must retain the above copyright notice,
+      this list of conditions and the following disclaimer.
+   2. Redistributions in binary form must reproduce the above copyright notice,
+      this list of conditions and the following disclaimer in the documentation
+      and/or other materials provided with the distribution.
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+   THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+   OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/** @file
+    @author Hillco Psychi (https://twitter.com/psychi)
+ */
 #ifndef PSYQ_CONST_STRING_HPP_
 #define PSYQ_CONST_STRING_HPP_
 
@@ -13,14 +39,25 @@ namespace psyq
             class basic_const_string;
     /// @endcond
 
+    /// char型の文字を扱う basic_const_string
     typedef psyq::basic_const_string<char> const_string;
+
+    /// wchar_t型の文字を扱う basic_const_string
     typedef psyq::basic_const_string<wchar_t> const_wstring;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string に準拠した文字列定数。
-    @param template_char_type   @copydoc basic_const_string::value_type
-    @param template_char_traits @copydoc basic_const_string::traits_type
+/** @brief std::basic_string のinterfaceに準拠した文字列定数。
+
+    文字列literalで std::basic_string と同じinterfaceを提供するのが主な用途。
+
+    文字列定数なので、文字列を書き換えるinterfaceは持たない。
+
+    constructorや assign() で割り当てられた文字列を参照してるので、
+    参照してる文字列が先に破棄された場合、動作を保証できない。
+
+    @tparam template_char_type   @copydoc basic_const_string::value_type
+    @tparam template_char_traits @copydoc basic_const_string::traits_type
  */
 template<typename template_char_type, typename template_char_traits>
 class psyq::basic_const_string
@@ -116,10 +153,6 @@ class psyq::basic_const_string
         data_(in_string),
         size_(in_size)
     {
-        if (in_size < this->size())
-        {
-            this->size_ = in_size;
-        }
         PSYQ_ASSERT(NULL != in_string || 0 == in_size);
     }
 
@@ -163,6 +196,7 @@ class psyq::basic_const_string
     //-------------------------------------------------------------------------
     /** @brief 文字列の先頭位置を取得。
         @return 文字列の先頭位置。
+        @note 文字列がNULL文字で終わっているとは限らない。
      */
     public: typename self::const_pointer data() const
     {
@@ -496,7 +530,7 @@ class psyq::basic_const_string
     /** @brief 文字を検索。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が現れた位置。現れない場合はnposを返す。
+        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find(
         template_char_type const       in_char,
@@ -521,7 +555,7 @@ class psyq::basic_const_string
     /** @brief 文字列を検索。
         @param[in] in_string 検索文字列の先頭位置。必ずNULL文字で終わる。
         @param[in] in_offset 検索を開始する位置。
-        @return 検索文字列が現れた位置。現れない場合はnposを返す。
+        @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find(
         typename self::const_pointer const in_string,
@@ -535,7 +569,7 @@ class psyq::basic_const_string
         @tparam template_string_traits @copydoc string_interface
         @param[in] in_string 検索文字列。
         @param[in] in_offset 検索を開始する位置。
-        @return 検索文字列が現れた位置。現れない場合はnposを返す。
+        @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
      */
     public: template<typename template_string_type>
     typename self::size_type find(
@@ -550,7 +584,7 @@ class psyq::basic_const_string
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @param[in] in_size 検索文字列の長さ。
-        @return 検索文字列が現れた位置。現れない場合はnposを返す。
+        @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find(
         typename self::const_pointer const in_string,
@@ -603,7 +637,7 @@ class psyq::basic_const_string
     /** @brief 後ろから文字を検索。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が現れた位置。現れない場合はnposを返す。
+        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type rfind(
         template_char_type const       in_char,
@@ -631,7 +665,7 @@ class psyq::basic_const_string
     /** @brief 後ろから文字列を検索。
         @param[in] in_string 検索文字列の先頭位置。必ずNULL文字で終わる。
         @param[in] in_offset 検索を開始する位置。
-        @return 検索文字列が現れた位置。現れない場合はnposを返す。
+        @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type rfind(
         typename self::const_pointer const in_string,
@@ -645,7 +679,7 @@ class psyq::basic_const_string
         @tparam template_string_traits @copydoc string_interface
         @param[in] in_string 検索文字列。
         @param[in] in_offset 検索を開始する位置。
-        @return 検索文字列が現れた位置。現れない場合はnposを返す。
+        @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
      */
     public: template<typename template_string_type>
     typename self::size_type rfind(
@@ -660,7 +694,7 @@ class psyq::basic_const_string
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @param[in] in_size 検索文字列の長さ。
-        @return 検索文字列が現れた位置。現れない場合はnposを返す。
+        @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type rfind(
         typename self::const_pointer const in_string,
@@ -700,7 +734,7 @@ class psyq::basic_const_string
     /** @brief 文字を検索。
         @param[in] in_char   検索する文字。
         @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が見つけた位置。現れない場合はnposを返す。
+        @return 検索文字が見つけた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_first_of(
         template_char_type const                       in_char,
@@ -713,7 +747,7 @@ class psyq::basic_const_string
     /** @brief 検索文字列に含まれるいずれかの文字を検索。
         @param[in] in_string 検索文字列の先頭位置。必ずNULLで終わる。
         @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が現れた位置。現れない場合はnposを返す。
+        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_first_of(
         typename self::const_pointer const in_string,
@@ -728,7 +762,7 @@ class psyq::basic_const_string
         @tparam template_string_traits @copydoc string_interface
         @param[in] in_string 検索文字列。
         @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が現れた位置。現れない場合はnposを返す。
+        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: template<typename template_string_type>
     typename self::size_type find_first_of(
@@ -744,7 +778,7 @@ class psyq::basic_const_string
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @param[in] in_size 検索文字列の長さ。
-        @return 検索文字が現れた位置。現れない場合はnposを返す。
+        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_first_of(
         typename self::const_pointer const in_string,
@@ -773,7 +807,7 @@ class psyq::basic_const_string
     /** @brief 文字を後ろから検索。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が現れた位置。現れない場合はnposを返す。
+        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_last_of(
         template_char_type const                       in_char,
@@ -786,7 +820,7 @@ class psyq::basic_const_string
     /** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索。
         @param[in] in_string 検索文字列。必ずNULL文字で終わる。
         @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が現れた位置。現れない場合はnposを返す。
+        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_last_of(
         typename self::const_pointer const in_string,
@@ -801,7 +835,7 @@ class psyq::basic_const_string
         @tparam template_string_traits @copydoc string_interface
         @param[in] in_string 検索文字列。
         @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が現れた位置。現れない場合はnposを返す。
+        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: template<typename template_string_type>
     typename self::size_type find_last_of(
@@ -817,7 +851,7 @@ class psyq::basic_const_string
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @param[in] in_size   検索文字列の長さ。
-        @return 検索文字が現れた位置。現れない場合はnposを返す。
+        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_last_of(
         typename self::const_pointer const in_string,
@@ -848,7 +882,8 @@ class psyq::basic_const_string
     /** @brief 検索文字以外の文字を検索。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
-        @return 検索文字以外の文字が現れた位置。現れない場合はnposを返す。
+        @return
+            検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_first_not_of(
         template_char_type const       in_char,
@@ -871,7 +906,8 @@ class psyq::basic_const_string
     /** @brief 検索文字列に含まれない文字を検索。
         @param[in] in_string 検索文字列の先頭位置。必ずNULL文字で終わる。
         @param[in] in_offset 検索を開始する位置。
-        @return 検索文字以外の文字が現れた位置。現れない場合はnposを返す。
+        @return
+            検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_first_not_of(
         typename self::const_pointer const in_string,
@@ -886,7 +922,8 @@ class psyq::basic_const_string
         @tparam template_string_traits @copydoc string_interface
         @param[in] in_string 検索文字列。
         @param[in] in_offset 検索を開始する位置。
-        @return 検索文字以外の文字が現れた位置。現れない場合はnposを返す。
+        @return
+            検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: template<typename template_string_type>
     typename self::size_type find_first_not_of(
@@ -902,7 +939,8 @@ class psyq::basic_const_string
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @param[in] in_size 検索文字列の長さ。
-        @return 検索文字以外の文字が現れた位置。現れない場合はnposを返す。
+        @return
+           検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_first_not_of(
         typename self::const_pointer const in_string,
@@ -931,7 +969,8 @@ class psyq::basic_const_string
     /** @brief 検索文字以外の文字を、後ろから検索。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
-        @return 検索文字以外の文字が現れた位置。現れない場合はnposを返す。
+        @return
+            検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_last_not_of(
         template_char_type const       in_char,
@@ -959,7 +998,8 @@ class psyq::basic_const_string
     /** @brief 検索文字列に含まれない文字を検索。
         @param[in] in_string 検索文字列の先頭位置。必ずNULL文字で終わる。
         @param[in] in_offset 検索を開始する位置。
-        @return 検索文字以外の文字が現れた位置。現れない場合はnposを返す。
+        @return
+            検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_last_not_of(
         typename self::const_pointer const in_string,
@@ -974,7 +1014,8 @@ class psyq::basic_const_string
         @tparam template_string_traits @copydoc string_interface
         @param[in] in_string 検索文字列。
         @param[in] in_offset 検索を開始する位置。
-        @return 検索文字以外の文字が現れた位置。現れない場合はnposを返す。
+        @return
+            検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: template<typename template_string_type>
     typename self::size_type find_last_not_of(
@@ -990,7 +1031,8 @@ class psyq::basic_const_string
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @param[in] in_size   検索文字列の長さ。
-        @return 検索文字以外の文字が現れた位置。現れない場合はnposを返す。
+        @return
+            検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_last_not_of(
         typename self::const_pointer const in_string,
@@ -1172,6 +1214,7 @@ class psyq::basic_const_string
     }
 
     //-------------------------------------------------------------------------
+    /// 無効な位置を表す。 find() や substr() などで使われる。
     public: static typename self::size_type const npos =
         static_cast<typename self::size_type>(-1);
 
@@ -1181,11 +1224,11 @@ class psyq::basic_const_string
 
     /** @page string_interface
 
-        割り当てる文字列の型。
+        文字列の型。
 
         文字列の先頭位置を取得するため、以下の関数を使えること。
         @code
-        self::const_pointer template_string_type::data() const
+        psyq::basic_const_string::const_pointer template_string_type::data() const
         @endcode
 
         文字列の大きさを取得するため、以下の関数を使えること。
@@ -1196,6 +1239,14 @@ class psyq::basic_const_string
 };
 
 //.............................................................................
+/** @brief 文字列の比較。
+    @tparam template_string_type @copydoc string_interface
+    @tparam template_char_type   @copydoc psyq::basic_const_string::value_type
+    @tparam template_char_traits @copydoc psyq::basic_const_string::traits_type
+    @param[in] in_left  左辺の文字列。
+    @param[in] in_right 右辺の文字列。
+    @return 左辺 == 右辺
+ */
 template<
     typename template_string_type,
     typename template_char_type,
@@ -1209,6 +1260,14 @@ bool operator==(
     return in_right == in_left;
 }
 
+/** @brief 文字列の比較。
+    @tparam template_string_type @copydoc string_interface
+    @tparam template_char_type   @copydoc psyq::basic_const_string::value_type
+    @tparam template_char_traits @copydoc psyq::basic_const_string::traits_type
+    @param[in] in_left  左辺の文字列。
+    @param[in] in_right 右辺の文字列。
+    @return 左辺 != 右辺
+ */
 template<
     typename template_string_type,
     typename template_char_type,
@@ -1221,6 +1280,14 @@ bool operator!=(
     return in_right != in_left;
 }
 
+/** @brief 文字列の比較。
+    @tparam template_string_type @copydoc string_interface
+    @tparam template_char_type   @copydoc psyq::basic_const_string::value_type
+    @tparam template_char_traits @copydoc psyq::basic_const_string::traits_type
+    @param[in] in_left  左辺の文字列。
+    @param[in] in_right 右辺の文字列。
+    @return 左辺 < 右辺
+ */
 template<
     typename template_string_type,
     typename template_char_type,
@@ -1233,6 +1300,14 @@ bool operator<(
     return in_right > in_left;
 }
 
+/** @brief 文字列の比較。
+    @tparam template_string_type @copydoc string_interface
+    @tparam template_char_type   @copydoc psyq::basic_const_string::value_type
+    @tparam template_char_traits @copydoc psyq::basic_const_string::traits_type
+    @param[in] in_left  左辺の文字列。
+    @param[in] in_right 右辺の文字列。
+    @return 左辺 <= 右辺
+ */
 template<
     typename template_string_type,
     typename template_char_type,
@@ -1245,6 +1320,14 @@ bool operator<=(
     return in_right >= in_left;
 }
 
+/** @brief 文字列の比較。
+    @tparam template_string_type @copydoc string_interface
+    @tparam template_char_type   @copydoc psyq::basic_const_string::value_type
+    @tparam template_char_traits @copydoc psyq::basic_const_string::traits_type
+    @param[in] in_left  左辺の文字列。
+    @param[in] in_right 右辺の文字列。
+    @return 左辺 > 右辺
+ */
 template<
     typename template_string_type,
     typename template_char_type,
@@ -1257,6 +1340,14 @@ bool operator>(
     return in_right < in_left;
 }
 
+/** @brief 文字列の比較。
+    @tparam template_string_type @copydoc string_interface
+    @tparam template_char_type   @copydoc psyq::basic_const_string::value_type
+    @tparam template_char_traits @copydoc psyq::basic_const_string::traits_type
+    @param[in] in_left  左辺の文字列。
+    @param[in] in_right 右辺の文字列。
+    @return 左辺 >= 右辺
+ */
 template<
     typename template_string_type,
     typename template_char_type,
@@ -1271,6 +1362,14 @@ bool operator>=(
 
 namespace std
 {
+    /** @brief 文字列の交換。
+        @tparam template_char_type
+            @copydoc psyq::basic_const_string::value_type
+        @tparam template_char_traits
+            @copydoc psyq::basic_const_string::traits_type
+        @param[in] in_left  交換する文字列。
+        @param[in] in_right 交換する文字列。
+     */
     template<typename template_char_type, typename template_char_traits>
     void swap(
         psyq::basic_const_string<template_char_type, template_char_traits>&

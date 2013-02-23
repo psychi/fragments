@@ -62,7 +62,7 @@ namespace psyq
 template<typename template_char_type, typename template_char_traits>
 class psyq::basic_const_string
 {
-    /// thisの指す値の型。
+    /// thisが指す値の型。
     public: typedef psyq::basic_const_string<
         template_char_type, template_char_traits> self;
 
@@ -102,14 +102,16 @@ class psyq::basic_const_string
     public: typedef typename self::const_reverse_iterator
         reverse_iterator;
 
-    /** std::basic_string と同等のinterfaceを提供するために使うdummyの型。
+    /** @brief memory割当子のdummy。
+
+        std::basic_string と同等のinterfaceを提供するためにあるdummyの型。
         memory割当子としては機能しない。
      */
     public: typedef const void* allocator_type;
 
     //-------------------------------------------------------------------------
     /// default-constructor
-    public: basic_const_string(
+    public: explicit basic_const_string(
         typename self::allocator_type const = self::allocator_type())
     :
         data_(NULL),
@@ -133,7 +135,7 @@ class psyq::basic_const_string
         typename self::allocator_type const& = self::allocator_type())
     :
         data_(in_string.data() + in_offset),
-        size_(self::trim_size(in_string, in_offset, in_count))
+        size_(self::trim_count(in_string, in_offset, in_count))
     {
         // pass
     }
@@ -189,6 +191,24 @@ class psyq::basic_const_string
     :
         data_(&in_string[in_offset]),
         size_(in_offset < template_size - 1? template_size - 1 - in_offset: 0)
+    {
+        PSYQ_ASSERT(0 < template_size);
+    }
+
+    /** @brief 文字列literalを割り当てる。
+        @tparam template_size 割り当てる文字列literalの要素数。
+        @param[in] in_offset 割り当てる文字列literalの開始offset位置。
+        @param[in] in_count  割り当てる文字数。
+        @param[in] in_string 割り当てる文字列literal。
+     */
+    public: template <std::size_t template_size>
+    basic_const_string(
+        typename self::size_type in_offset,
+        typename self::size_type in_count,
+        template_char_type const (&in_string)[template_size])
+    :
+        data_(&in_string[in_offset]),
+        size_(self::trim_count(template_size - 1, in_offset, in_count))
     {
         PSYQ_ASSERT(0 < template_size);
     }
@@ -533,7 +553,7 @@ class psyq::basic_const_string
     const
     {
         std::size_t const local_left_size(
-            self::trim_size(*this, in_left_offset, in_left_count));
+            self::trim_count(*this, in_left_offset, in_left_count));
         bool const local_less(local_left_size < in_right_size);
         int const local_compare(
             template_char_traits::compare(
@@ -575,7 +595,7 @@ class psyq::basic_const_string
             in_left_offset,
             in_left_count,
             in_right.data() + in_right_offset,
-            self::trim_size(in_right, in_right_offset, in_right_count));
+            self::trim_count(in_right, in_right_offset, in_right_count));
     }
 
     //-------------------------------------------------------------------------
@@ -1199,7 +1219,7 @@ class psyq::basic_const_string
     {
         return template_string_type(
             this->data() + in_offset,
-            self::trim_size(*this, in_offset, in_count));
+            self::trim_count(*this, in_offset, in_count));
     }
 
     //-------------------------------------------------------------------------
@@ -1218,7 +1238,7 @@ class psyq::basic_const_string
     const
     {
         typename template_string_type::size_type local_offset(
-            self::get_offset<template_string_type>(in_offset));
+            self::convert_count<template_string_type>(in_offset));
         typename template_string_type::size_type local_size(in_string.size());
         if (local_size <= local_offset)
         {
@@ -1229,32 +1249,37 @@ class psyq::basic_const_string
     }
 
     private: template<typename template_string_type>
-    static typename template_string_type::size_type trim_size(
+    static typename template_string_type::size_type trim_count(
         template_string_type const&                    in_string,
         typename template_string_type::size_type const in_offset,
         typename template_string_type::size_type const in_count)
     {
-        typename template_string_type::size_type const local_offset(
-            self::get_offset<template_string_type>(in_offset));
-        if (in_string.size() < local_offset)
+        return self::trim_count(
+            in_string.size(),
+            self::convert_count<template_string_type>(in_offset),
+            self::convert_count<template_string_type>(in_count));
+    }
+
+    private: static typename self::size_type trim_count(
+        typename self::size_type const in_size,
+        typename self::size_type const in_offset,
+        typename self::size_type const in_count)
+    {
+        if (in_size < in_offset)
         {
-            PSYQ_ASSERT(false);
             return 0;
         }
-        typename template_string_type::size_type const local_limit(
-            in_string.size() - local_offset);
-        typename template_string_type::size_type const local_count(
-            self::get_offset<template_string_type>(in_count));
-        return local_count < local_limit? local_count: local_limit;
+        typename self::size_type const local_limit(in_size - in_offset);
+        return in_count < local_limit? in_count: local_limit;
     }
 
     private: template<typename template_string_type>
-    static typename template_string_type::size_type get_offset(
-        typename template_string_type::size_type const in_position)
+    static typename template_string_type::size_type convert_count(
+        typename template_string_type::size_type const in_count)
     {
-        if (in_position != template_string_type::npos)
+        if (in_count != template_string_type::npos)
         {
-            return in_position;
+            return in_count;
         }
         return (std::numeric_limits<typename template_string_type::size_type>::max)();
     }

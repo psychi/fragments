@@ -230,6 +230,164 @@ class psyq::hash_string:
     };
 
     //-------------------------------------------------------------------------
+    public: typename super::reference at(
+        typename super::size_type const in_index)
+    {
+        this->reset_hash();
+        return this->super::at(in_index);
+    }
+
+    public: typename super::const_reference at(
+        typename super::size_type const in_index)
+    const
+    {
+        return this->super::at(in_index);
+    }
+
+    public: typename super::reference operator[](
+        typename super::size_type const in_index)
+    {
+        this->reset_hash();
+        return this->super::operator[](in_index);
+    }
+
+    public: typename super::const_reference operator[](
+        typename super::size_type const in_index)
+    const
+    {
+        return this->super::operator[](in_index);
+    }
+
+    //-------------------------------------------------------------------------
+    public: typename super::reference front()
+    {
+        this->reset_hash();
+        return this->super::front();
+    }
+
+    public: typename super::const_reference front() const
+    {
+        return this->super::front();
+    }
+
+    public: typename super::reference back()
+    {
+        this->reset_hash();
+        return this->super::back();
+    }
+
+    public: typename super::const_reference back() const
+    {
+        return this->super::back();
+    }
+
+    //-------------------------------------------------------------------------
+    public: typename super::iterator begin()
+    {
+        this->reset_hash();
+        return this->super::begin();
+    }
+
+    public: typename super::const_iterator begin() const
+    {
+        return this->super::begin();
+    }
+
+    public: typename super::iterator end()
+    {
+        this->reset_hash();
+        return this->super::end();
+    }
+
+    public: typename super::const_iterator end() const
+    {
+        return this->super::end();
+    }
+
+    //-------------------------------------------------------------------------
+    public: typename super::reverse_iterator rbegin()
+    {
+        this->reset_hash();
+        return this->super::rbegin();
+    }
+
+    public: typename super::const_reverse_iterator rbegin() const
+    {
+        return this->super::rbegin();
+    }
+
+    public: typename super::reverse_iterator rend()
+    {
+        this->reset_hash();
+        return this->super::rend();
+    }
+
+    public: typename super::const_reverse_iterator rend() const
+    {
+        return this->super::rend();
+    }
+
+    //-------------------------------------------------------------------------
+    public: void clear()
+    {
+        this->reset_hash();
+        return this->super::clear();
+    }
+
+    //-------------------------------------------------------------------------
+    public: self& insert(
+        typename super::size_type const  in_index,
+        typename super::size_type const  in_count,
+        typename super::value_type const in_char)
+    {
+        this->reset_hash();
+        this->super::insert(in_index, in_count, in_char);
+        return *this;
+    }
+
+    //-------------------------------------------------------------------------
+    public: self& erase(
+        typename super::size_type const in_index = 0,
+        typename super::size_type const in_count = super::npos)
+    {
+        this->reset_hash();
+        this->super::erase(in_index, in_count);
+        return *this;
+    }
+
+    //-------------------------------------------------------------------------
+    public: void push_back(
+        typename self::value_type const in_char)
+    {
+        this->reset_hash();
+        this->super::push_back(in_char);
+    }
+
+    public: void pop_back()
+    {
+        this->reset_hash();
+        this->super::pop_back();
+    }
+
+    //-------------------------------------------------------------------------
+    public: self& append(
+        typename super::size_type const  in_count,
+        typename super::value_type const in_char)
+    {
+        this->reset_hash();
+        this->super::append(in_count, in_char);
+        return *this;
+    }
+
+    public: self& operator+=(
+        self const& in_string)
+    {
+        this->reset_hash();
+        this->super::operator+=(in_string);
+        return *this;
+    }
+
+    //-------------------------------------------------------------------------
     /** @brief 文字列を比較。
         @param[in] in_right 右辺の文字列。
         @retval 負 右辺のほうが大きい。
@@ -321,6 +479,33 @@ class psyq::hash_string:
             in_left_count,
             in_right.data() + in_right_offset,
             self::trim_size(in_right, in_right_offset, in_right_count));
+    }
+
+    //-------------------------------------------------------------------------
+    public: self& replace(
+        typename super::size_type const in_position,
+        typename super::size_type const in_count,
+        self const&                     in_string)
+    {
+        this->reset_hash();
+        this->super::replace(in_position, in_count, in_string);
+        return *this;
+    }
+
+    //-------------------------------------------------------------------------
+    public: void resize(
+        typename super::size_type const in_count)
+    {
+        this->reset_hash();
+        this->super::resize(in_count);
+    }
+
+    public: void resize(
+        typename super::size_type const  in_count,
+        typename super::value_type const in_char)
+    {
+        this->reset_hash();
+        this->super::resize(in_count, in_char);
     }
 
     //-------------------------------------------------------------------------
@@ -526,7 +711,7 @@ class psyq::hash_string:
         return local_hash;
     }
 
-    private: void reset_hash() const
+    private: void reset_hash()
     {
         this->hash_ = template_hash_type::EMPTY;
     }
@@ -540,6 +725,13 @@ class psyq::hash_string:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 文字列の比較。
+    @tparam template_string_type @copydoc psyq::hash_string::super
+    @tparam template_hash_type   @copydoc psyq::hash_string::maker_type
+    @param[in] in_left  左辺の文字列。
+    @param[in] in_right 右辺の文字列。
+    @return 左辺 == 右辺
+ */
 template<
     typename template_string_type,
     typename template_hash_type>
@@ -551,6 +743,13 @@ bool operator==(
     return in_right.operator==(in_left);
 }
 
+/** @brief 文字列の比較。
+    @tparam template_string_type @copydoc psyq::hash_string::super
+    @tparam template_hash_type   @copydoc psyq::hash_string::maker_type
+    @param[in] in_left  左辺の文字列。
+    @param[in] in_right 右辺の文字列。
+    @return 左辺 != 右辺
+ */
 template<
     typename template_string_type,
     typename template_hash_type>
@@ -562,6 +761,13 @@ bool operator!=(
     return in_right.operator!=(in_left);
 }
 
+/** @brief 文字列の比較。
+    @tparam template_string_type @copydoc psyq::hash_string::super
+    @tparam template_hash_type   @copydoc psyq::hash_string::maker_type
+    @param[in] in_left  左辺の文字列。
+    @param[in] in_right 右辺の文字列。
+    @return 左辺 < 右辺
+ */
 template<
     typename template_string_type,
     typename template_hash_type>
@@ -573,6 +779,13 @@ bool operator<(
     return in_right.operator>(in_left);
 }
 
+/** @brief 文字列の比較。
+    @tparam template_string_type @copydoc psyq::hash_string::super
+    @tparam template_hash_type   @copydoc psyq::hash_string::maker_type
+    @param[in] in_left  左辺の文字列。
+    @param[in] in_right 右辺の文字列。
+    @return 左辺 <= 右辺
+ */
 template<
     typename template_string_type,
     typename template_hash_type>
@@ -584,6 +797,13 @@ bool operator<=(
     return in_right.operator>=(in_left);
 }
 
+/** @brief 文字列の比較。
+    @tparam template_string_type @copydoc psyq::hash_string::super
+    @tparam template_hash_type   @copydoc psyq::hash_string::maker_type
+    @param[in] in_left  左辺の文字列。
+    @param[in] in_right 右辺の文字列。
+    @return 左辺 > 右辺
+ */
 template<
     typename template_string_type,
     typename template_hash_type>
@@ -595,6 +815,13 @@ bool operator>(
     return in_right.operator<(in_left);
 }
 
+/** @brief 文字列の比較。
+    @tparam template_string_type @copydoc psyq::hash_string::super
+    @tparam template_hash_type   @copydoc psyq::hash_string::maker_type
+    @param[in] in_left  左辺の文字列。
+    @param[in] in_right 右辺の文字列。
+    @return 左辺 >= 右辺
+ */
 template<
     typename template_string_type,
     typename template_hash_type>

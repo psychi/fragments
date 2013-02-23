@@ -749,17 +749,31 @@ class psyq::hash_string:
         self const& in_right)
     const
     {
-        return this->hash() == in_right.hash() &&
-            static_cast<super const&>(*this) ==
-                static_cast<super const&>(in_right);
+        return
+            this->size() == in_right.size() &&
+            this->hash() == in_right.hash() &&
+            this->operator==(static_cast<super const&>(in_right));
+    }
+
+    /** @brief 文字列を比較。
+        @param[in] in_right 右辺の文字列。
+        @return *this == 右辺の文字列
+     */
+    public: template<typename template_other_string_type>
+    bool operator==(
+        template_other_string_type const& in_right)
+    const
+    {
+        return static_cast<super const&>(*this) == in_right;
     }
 
     /** @brief 文字列を比較。
         @param[in] in_right 右辺の文字列。
         @return *this != 右辺の文字列
      */
-    public: bool operator!=(
-        self const& in_right)
+    public: template<typename template_other_string_type>
+    bool operator!=(
+        template_other_string_type const& in_right)
     const
     {
         return !this->operator==(in_right);
@@ -769,8 +783,9 @@ class psyq::hash_string:
         @param[in] in_right 右辺の文字列。
         @return *this < 右辺の文字列
      */
-    public: bool operator<(
-        self const& in_right)
+    public: template<typename template_other_string_type>
+    bool operator<(
+        template_other_string_type const& in_right)
     const
     {
         return this->compare(in_right) < 0;
@@ -780,8 +795,9 @@ class psyq::hash_string:
         @param[in] in_right 右辺の文字列。
         @return *this <= 右辺の文字列
      */
-    public: bool operator<=(
-        self const& in_right)
+    public: template<typename template_other_string_type>
+    bool operator<=(
+        template_other_string_type const& in_right)
     const
     {
         return this->compare(in_right) <= 0;
@@ -791,22 +807,24 @@ class psyq::hash_string:
         @param[in] in_right 右辺の文字列。
         @return *this > 右辺の文字列
      */
-    public: bool operator>(
-        self const& in_right)
+    public: template<typename template_other_string_type>
+    bool operator>(
+        template_other_string_type const& in_right)
     const
     {
-        return in_right < *this;
+        return 0 < this->compare(in_right);
     }
 
     /** @brief 文字列を比較。
         @param[in] in_right 右辺の文字列。
         @return *this >= 右辺の文字列
      */
-    public: bool operator>=(
+    public: template<typename template_other_string_type>
+    bool operator>=(
         self const& in_right)
     const
     {
-        return in_right <= *this;
+        return 0 <= this->compare(in_right);
     }
 
     //-------------------------------------------------------------------------

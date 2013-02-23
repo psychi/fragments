@@ -11,7 +11,7 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief hash値を使って比較を行う文字列。
     @tparam template_string_type @copydoc hash_string::super
-    @tparam template_hash_type   @copydoc hash_string::maker_type
+    @tparam template_hash_type   @copydoc hash_string::hasher
  */
 template<
     typename template_string_type,
@@ -28,22 +28,22 @@ class psyq::hash_string:
     public: typedef template_string_type super;
 
     /// hash値を生成するhash生成子の型。
-    public: typedef template_hash_type maker_type;
+    public: typedef template_hash_type hasher;
 
     //-------------------------------------------------------------------------
     /** @brief default-constructor
         @param[in] in_allocator  memory割当子の初期値。
-        @param[in] in_hash_maker hash生成子の初期値。
+        @param[in] in_hasher hash生成子の初期値。
      */
     public: explicit hash_string(
         typename super::allocator_type const& in_allocator =
             super::allocator_type(),
-        template_hash_type const&             in_hash_maker =
+        template_hash_type const&             in_hasher =
             template_hash_type())
     :
         super(in_allocator),
         hash_(template_hash_type::EMPTY),
-        hash_maker_(in_hash_maker)
+        hasher_(in_hasher)
     {
         // pass
     }
@@ -53,7 +53,7 @@ class psyq::hash_string:
         @param[in] in_offset     文字列の開始位置。
         @param[in] in_count      文字数。
         @param[in] in_allocator  memory割当子の初期値。
-        @param[in] in_hash_maker hash生成子の初期値。
+        @param[in] in_hasher hash生成子の初期値。
      */
     public: template<typename template_other_string_type>
     hash_string(
@@ -62,30 +62,30 @@ class psyq::hash_string:
         typename super::size_type const       in_count = super::npos,
         typename super::allocator_type const& in_allocator =
             typename super::allocator_type(),
-        template_hash_type const&             in_hash_maker =
+        template_hash_type const&             in_hasher =
             template_hash_type())
     :
         super(in_string, in_offset, in_count, in_allocator),
         hash_(template_hash_type::EMPTY),
-        hash_maker_(in_hash_maker)
+        hasher_(in_hasher)
     {
         // pass
     }
 
     /** @param[in] in_string     初期値に使う文字列の先頭位置。NULL文字で終わる。
         @param[in] in_allocator  memory割当子の初期値。
-        @param[in] in_hash_maker hash生成子の初期値。
+        @param[in] in_hasher hash生成子の初期値。
      */
     public: explicit hash_string(
         typename super::const_pointer const   in_string,
         typename super::allocator_type const& in_allocator =
             super::allocator_type(),
-        template_hash_type const&             in_hash_maker =
+        template_hash_type const&             in_hasher =
             template_hash_type())
     :
         super(in_string, in_allocator),
         hash_(template_hash_type::EMPTY),
-        hash_maker_(in_hash_maker)
+        hasher_(in_hasher)
     {
         // pass
     }
@@ -93,19 +93,19 @@ class psyq::hash_string:
     /** @param[in] in_string     初期値に使う文字列の先頭位置。
         @param[in] in_size       初期値に使う文字列の長さ。
         @param[in] in_allocator  memory割当子の初期値。
-        @param[in] in_hash_maker hash生成子の初期値。
+        @param[in] in_hasher hash生成子の初期値。
      */
     public: hash_string(
         typename super::const_pointer const   in_string,
         typename super::size_type const       in_size,
         typename super::allocator_type const& in_allocator =
             typename super::allocator_type(),
-        template_hash_type const&             in_hash_maker =
+        template_hash_type const&             in_hasher =
             template_hash_type())
     :
         super(in_string, in_size, in_allocator),
         hash_(template_hash_type::EMPTY),
-        hash_maker_(in_hash_maker)
+        hasher_(in_hasher)
     {
         // pass
     }
@@ -115,7 +115,7 @@ class psyq::hash_string:
         @param[in] in_count      文字数。
         @param[in] in_string     初期値に使う文字列literal。
         @param[in] in_allocator  memory割当子の初期値。
-        @param[in] in_hash_maker hash生成子の初期値。
+        @param[in] in_hasher hash生成子の初期値。
      */
     public: template <std::size_t template_size>
     hash_string(
@@ -124,12 +124,12 @@ class psyq::hash_string:
         typename super::value_type const      (&in_string)[template_size],
         typename super::allocator_type const& in_allocator =
             typename super::allocator_type(),
-        template_hash_type const&             in_hash_maker =
+        template_hash_type const&             in_hasher =
             template_hash_type())
     :
         super(&in_string[in_offset], in_count, in_allocator)
         hash_(template_hash_type::EMPTY),
-        hash_maker_(in_hash_maker)
+        hasher_(in_hasher)
     {
         // pass
     }
@@ -149,85 +149,9 @@ class psyq::hash_string:
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列を比較。
-        @param[in] in_right 右辺の文字列。
-        @return *this == 右辺の文字列
-     */
-    public: bool operator==(
-        self const& in_right)
-    const
-    {
-        return this->hash() == in_right.hash() &&
-            static_cast<super const&>(*this) ==
-                static_cast<super const&>(in_right);
-    }
-
-    /** @brief 文字列を比較。
-        @param[in] in_right 右辺の文字列。
-        @return *this != 右辺の文字列
-     */
-    public: bool operator!=(
-        self const& in_right)
-    const
-    {
-        return !this->operator==(in_right);
-    }
-
-    /** @brief 文字列を比較。
-        @param[in] in_right 右辺の文字列。
-        @return *this < 右辺の文字列
-     */
-    public: bool operator<(
-        self const& in_right)
-    const
-    {
-        return this->compare(in_right) < 0;
-    }
-
-    /** @brief 文字列を比較。
-        @param[in] in_right 右辺の文字列。
-        @return *this <= 右辺の文字列
-     */
-    public: bool operator<=(
-        self const& in_right)
-    const
-    {
-        return this->compare(in_right) <= 0;
-    }
-
-    /** @brief 文字列を比較。
-        @param[in] in_right 右辺の文字列。
-        @return *this > 右辺の文字列
-     */
-    public: bool operator>(
-        self const& in_right)
-    const
-    {
-        return in_right < *this;
-    }
-
-    /** @brief 文字列を比較。
-        @param[in] in_right 右辺の文字列。
-        @return *this >= 右辺の文字列
-     */
-    public: bool operator>=(
-        self const& in_right)
-    const
-    {
-        return in_right <= *this;
-    }
-
-    //-------------------------------------------------------------------------
-    /** @brief 値を交換。
-        @param[in,out] io_target 値を交換する対象。
-     */
-    public: void swap(
-        self& io_target)
-    {
-        this->super::swap(io_target);
-        std::swap(this->hash_, io_target.hash_);
-        std::swap(this->hash_maker_, io_target.hash_maker_);
-    };
+    public: self& assign(
+        typename super::size_type const  in_count,
+        typename super::value_type const in_char);
 
     //-------------------------------------------------------------------------
     public: typename super::reference at(
@@ -482,6 +406,75 @@ class psyq::hash_string:
     }
 
     //-------------------------------------------------------------------------
+    /** @brief 文字列を比較。
+        @param[in] in_right 右辺の文字列。
+        @return *this == 右辺の文字列
+     */
+    public: bool operator==(
+        self const& in_right)
+    const
+    {
+        return this->hash() == in_right.hash() &&
+            static_cast<super const&>(*this) ==
+                static_cast<super const&>(in_right);
+    }
+
+    /** @brief 文字列を比較。
+        @param[in] in_right 右辺の文字列。
+        @return *this != 右辺の文字列
+     */
+    public: bool operator!=(
+        self const& in_right)
+    const
+    {
+        return !this->operator==(in_right);
+    }
+
+    /** @brief 文字列を比較。
+        @param[in] in_right 右辺の文字列。
+        @return *this < 右辺の文字列
+     */
+    public: bool operator<(
+        self const& in_right)
+    const
+    {
+        return this->compare(in_right) < 0;
+    }
+
+    /** @brief 文字列を比較。
+        @param[in] in_right 右辺の文字列。
+        @return *this <= 右辺の文字列
+     */
+    public: bool operator<=(
+        self const& in_right)
+    const
+    {
+        return this->compare(in_right) <= 0;
+    }
+
+    /** @brief 文字列を比較。
+        @param[in] in_right 右辺の文字列。
+        @return *this > 右辺の文字列
+     */
+    public: bool operator>(
+        self const& in_right)
+    const
+    {
+        return in_right < *this;
+    }
+
+    /** @brief 文字列を比較。
+        @param[in] in_right 右辺の文字列。
+        @return *this >= 右辺の文字列
+     */
+    public: bool operator>=(
+        self const& in_right)
+    const
+    {
+        return in_right <= *this;
+    }
+
+    //-------------------------------------------------------------------------
     public: self& replace(
         typename super::size_type const in_position,
         typename super::size_type const in_count,
@@ -507,6 +500,18 @@ class psyq::hash_string:
         this->reset_hash();
         this->super::resize(in_count, in_char);
     }
+
+    //-------------------------------------------------------------------------
+    /** @brief 値を交換。
+        @param[in,out] io_target 値を交換する対象。
+     */
+    public: void swap(
+        self& io_target)
+    {
+        this->super::swap(io_target);
+        std::swap(this->hash_, io_target.hash_);
+        std::swap(this->hasher_, io_target.hasher_);
+    };
 
     //-------------------------------------------------------------------------
     /** @brief 文字列を比較。
@@ -628,12 +633,12 @@ class psyq::hash_string:
     }
 
     //-------------------------------------------------------------------------
-    /** @brief hash生成instanceを取得。
-        @return hash生成instance。
+    /** @brief hash生成子を取得。
+        @return hash生成子。
      */
-    public: typename template_hash_type const& hash_maker() const
+    public: typename template_hash_type const& hash_function() const
     {
-        return this->hash_maker_;
+        return this->hasher_;
     }
 
     /** @brief 文字列のhash値を取得。
@@ -700,7 +705,7 @@ class psyq::hash_string:
     const
     {
         typename template_hash_type::value const local_hash(
-            this->hash_maker_.make(in_begin, in_end));
+            this->hasher_.make(in_begin, in_end));
         if (local_hash == template_hash_type::EMPTY)
         {
             // 空配列と同じhash値だったので変更。
@@ -721,13 +726,13 @@ class psyq::hash_string:
     private: mutable typename template_hash_type::value hash_;
 
     /// hash値を発行するinstance。
-    private: mutable template_hash_type hash_maker_;
+    private: mutable template_hash_type hasher_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 文字列の比較。
     @tparam template_string_type @copydoc psyq::hash_string::super
-    @tparam template_hash_type   @copydoc psyq::hash_string::maker_type
+    @tparam template_hash_type   @copydoc psyq::hash_string::hasher
     @param[in] in_left  左辺の文字列。
     @param[in] in_right 右辺の文字列。
     @return 左辺 == 右辺
@@ -745,7 +750,7 @@ bool operator==(
 
 /** @brief 文字列の比較。
     @tparam template_string_type @copydoc psyq::hash_string::super
-    @tparam template_hash_type   @copydoc psyq::hash_string::maker_type
+    @tparam template_hash_type   @copydoc psyq::hash_string::hasher
     @param[in] in_left  左辺の文字列。
     @param[in] in_right 右辺の文字列。
     @return 左辺 != 右辺
@@ -763,7 +768,7 @@ bool operator!=(
 
 /** @brief 文字列の比較。
     @tparam template_string_type @copydoc psyq::hash_string::super
-    @tparam template_hash_type   @copydoc psyq::hash_string::maker_type
+    @tparam template_hash_type   @copydoc psyq::hash_string::hasher
     @param[in] in_left  左辺の文字列。
     @param[in] in_right 右辺の文字列。
     @return 左辺 < 右辺
@@ -781,7 +786,7 @@ bool operator<(
 
 /** @brief 文字列の比較。
     @tparam template_string_type @copydoc psyq::hash_string::super
-    @tparam template_hash_type   @copydoc psyq::hash_string::maker_type
+    @tparam template_hash_type   @copydoc psyq::hash_string::hasher
     @param[in] in_left  左辺の文字列。
     @param[in] in_right 右辺の文字列。
     @return 左辺 <= 右辺
@@ -799,7 +804,7 @@ bool operator<=(
 
 /** @brief 文字列の比較。
     @tparam template_string_type @copydoc psyq::hash_string::super
-    @tparam template_hash_type   @copydoc psyq::hash_string::maker_type
+    @tparam template_hash_type   @copydoc psyq::hash_string::hasher
     @param[in] in_left  左辺の文字列。
     @param[in] in_right 右辺の文字列。
     @return 左辺 > 右辺
@@ -817,7 +822,7 @@ bool operator>(
 
 /** @brief 文字列の比較。
     @tparam template_string_type @copydoc psyq::hash_string::super
-    @tparam template_hash_type   @copydoc psyq::hash_string::maker_type
+    @tparam template_hash_type   @copydoc psyq::hash_string::hasher
     @param[in] in_left  左辺の文字列。
     @param[in] in_right 右辺の文字列。
     @return 左辺 >= 右辺
@@ -837,7 +842,7 @@ namespace std
 {
     /** @brief 値を交換。
         @tparam template_string_type @copydoc psyq::hash_string::super
-        @tparam template_hash_type   @copydoc psyq::hash_string::maker
+        @tparam template_hash_type   @copydoc psyq::hash_string::hasher
         @param[in,out] io_left  交換する値。
         @param[in,out] io_right 交換する値。
      */

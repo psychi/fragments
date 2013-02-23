@@ -49,6 +49,21 @@ class psyq::hash_string:
     }
 
     /** @brief 変換constructor
+        @param[in] in_string 初期値に使う文字列。
+        @param[in] in_hasher hash生成子の初期値。
+     */
+    public: hash_string(
+        super const&              in_string,
+        template_hash_type const& in_hasher = template_hash_type())
+    :
+        super(in_string),
+        hash_(template_hash_type::EMPTY),
+        hasher_(in_hasher)
+    {
+        // pass
+    }
+
+    /** @brief 変換constructor
         @param[in] in_string     初期値に使う文字列。
         @param[in] in_offset     文字列の開始位置。
         @param[in] in_count      文字数。
@@ -112,6 +127,28 @@ class psyq::hash_string:
 
     /** @brief 文字列literalから構築。
         @param[in] in_offset     文字列literalの開始offset位置。
+        @param[in] in_string     初期値に使う文字列literal。
+        @param[in] in_allocator  memory割当子の初期値。
+        @param[in] in_hasher hash生成子の初期値。
+     */
+    public: template <std::size_t template_size>
+    hash_string(
+        typename self::size_type              in_offset,
+        typename super::value_type const      (&in_string)[template_size],
+        typename super::allocator_type const& in_allocator =
+            typename super::allocator_type(),
+        template_hash_type const&             in_hasher =
+            template_hash_type())
+    :
+        super(&in_string[in_offset], in_count, in_allocator)
+        hash_(template_hash_type::EMPTY),
+        hasher_(in_hasher)
+    {
+        // pass
+    }
+
+    /** @brief 文字列literalから構築。
+        @param[in] in_offset     文字列literalの開始offset位置。
         @param[in] in_count      文字数。
         @param[in] in_string     初期値に使う文字列literal。
         @param[in] in_allocator  memory割当子の初期値。
@@ -151,7 +188,57 @@ class psyq::hash_string:
     //-------------------------------------------------------------------------
     public: self& assign(
         typename super::size_type const  in_count,
-        typename super::value_type const in_char);
+        typename super::value_type const in_char)
+    {
+        this->reset_hash();
+        this->super::assign(in_count, in_char);
+        return *this;
+    }
+
+    public: self& assign(
+        super const& in_string)
+    {
+        this->reset_hash();
+        this->super::assign(in_string);
+        return *this;
+    }
+
+    public: self& assign(
+        super const&                    in_string,
+        typename super::size_type const in_offset,
+        typename super::size_type const in_count)
+    {
+        this->reset_hash();
+        this->super::assign(in_string, in_offset, in_count);
+        return *this;
+    }
+
+    public: self& assign(
+        typename super::const_pointer const in_string)
+    {
+        this->reset_hash();
+        this->super::assign(in_string);
+        return *this;
+    }
+
+    public: self& assign(
+        typename super::const_pointer const in_string,
+        typename super::size_type const     in_size)
+    {
+        this->reset_hash();
+        this->super::assign(in_string, in_size);
+        return *this;
+    }
+
+    public: template<typename template_iterator_type>
+    self& assign(
+        template_iterator_type const in_begin,
+        template_iterator_type const in_end)
+    {
+        this->reset_hash();
+        this->super::assign(in_begin, in_end);
+        return *this;
+    }
 
     //-------------------------------------------------------------------------
     public: typename super::reference at(
@@ -269,6 +356,73 @@ class psyq::hash_string:
         return *this;
     }
 
+    public: self& insert(
+        typename super::size_type const     in_index,
+        typename super::const_pointer const in_string)
+    {
+        this->reset_hash();
+        this->super::insert(in_index, in_string);
+        return *this;
+    }
+
+    public: self& insert(
+        typename super::size_type const     in_index,
+        typename super::const_pointer const in_string,
+        typename super::size_type const     in_count)
+    {
+        this->reset_hash();
+        this->super::insert(in_index, in_string, in_count);
+        return *this;
+    }
+
+    public: self& insert(
+        typename super::size_type const in_index,
+        typename super const&           in_string)
+    {
+        this->reset_hash();
+        this->super::insert(in_index, in_string);
+        return *this;
+    }
+
+    public: self& insert(
+        typename super::size_type const in_index,
+        typename super const&           in_string,
+        typename super::size_type const in_string_index,
+        typename super::size_type const in_string_offset)
+    {
+        this->reset_hash();
+        this->super::insert(
+            in_index, in_string, in_string_index, in_string_offset);
+        return *this;
+    }
+
+    public: typename super::iterator insert(
+        typename super::const_iterator const in_position,
+        typename super::value_type const     in_char)
+    {
+        this->reset_hash();
+        return this->super::insert(in_position, in_char);
+    }
+
+    public: typename super::iterator insert(
+        typename super::const_iterator const in_position,
+        typename super::size_type const      in_count,
+        typename super::value_type const     in_char)
+    {
+        this->reset_hash();
+        return this->super::insert(in_position, in_count, in_char);
+    }
+
+    public: template<typename template_iterator_type>
+    typename super::iterator insert(
+        typename super::const_iterator const in_position,
+        template_iterator_type const         in_begin,
+        template_iterator_type const         in_end)
+    {
+        this->reset_hash();
+        return this->super::insert(in_position, in_begin, in_end);
+    }
+
     //-------------------------------------------------------------------------
     public: self& erase(
         typename super::size_type const in_index = 0,
@@ -279,9 +433,24 @@ class psyq::hash_string:
         return *this;
     }
 
+    public: typename super::iterator erase(
+        typename super::const_iterator const in_position)
+    {
+        this->reset_hash();
+        return this->super::erase(in_position);
+    }
+
+    public: typename super::iterator erase(
+        typename super::const_iterator const in_begin,
+        typename super::const_iterator const in_end)
+    {
+        this->reset_hash();
+        return this->super::erase(in_begin, in_end);
+    }
+
     //-------------------------------------------------------------------------
     public: void push_back(
-        typename self::value_type const in_char)
+        typename super::value_type const in_char)
     {
         this->reset_hash();
         this->super::push_back(in_char);
@@ -303,8 +472,70 @@ class psyq::hash_string:
         return *this;
     }
 
+    public: self& append(
+        typename super const& in_string)
+    {
+        this->reset_hash();
+        this->super::append(in_string);
+        return *this;
+    }
+
+    public: self& append(
+        typename super const&           in_string,
+        typename super::size_type const in_offset,
+        typename super::size_type const in_count)
+    {
+        this->reset_hash();
+        this->super::append(in_string, in_offset, in_count);
+        return *this;
+    }
+
+    public: self& append(
+        typename super::const_pointer const in_string)
+    {
+        this->reset_hash();
+        this->super::append(in_string);
+        return *this;
+    }
+
+    public: self& append(
+        typename super::const_pointer const in_string,
+        typename super::size_type const     in_size)
+    {
+        this->reset_hash();
+        this->super::append(in_string, in_size);
+        return *this;
+    }
+
+    public: template<typename template_iterator_type>
+    self& append(
+        template_iterator_type const in_begin,
+        template_iterator_type const in_end)
+    {
+        this->reset_hash();
+        this->super::append(in_begin, in_end);
+        return *this;
+    }
+
+    //-------------------------------------------------------------------------
     public: self& operator+=(
-        self const& in_string)
+        super const& in_string)
+    {
+        this->reset_hash();
+        this->super::operator+=(in_string);
+        return *this;
+    }
+
+    public: self& operator+=(
+        typename super::value_type const in_char)
+    {
+        this->reset_hash();
+        this->super::operator+=(in_char);
+        return *this;
+    }
+
+    public: self& operator+=(
+        typename super::const_pointer const in_string)
     {
         this->reset_hash();
         this->super::operator+=(in_string);
@@ -328,7 +559,29 @@ class psyq::hash_string:
             this->hash(),
             in_right.data(),
             in_right.size(),
-            in_right.hash());
+            in_right.hash(),
+            this->hasher_);
+    }
+
+    /** @brief 文字列を比較。
+        @param[in] in_right 右辺の文字列。
+        @retval 負 右辺のほうが大きい。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  左辺と右辺は等価。
+     */
+    public: template<typename template_other_string_type>
+    int compare(
+        template_other_string_type const& in_right)
+    const
+    {
+        return self::compare_string(
+            this->data(),
+            this->size(),
+            this->hash(),
+            in_right.data(),
+            in_right.size(),
+            template_hash_type::EMPTY,
+            this->hasher_);
     }
 
     /** @brief 文字列を比較。
@@ -357,6 +610,30 @@ class psyq::hash_string:
     /** @brief 文字列を比較。
         @param[in] in_left_offset 左辺の文字列の開始位置。
         @param[in] in_left_count  左辺の文字列の文字数。
+        @param[in] in_right       右辺の文字列。
+        @retval 負 右辺のほうが大きい。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  左辺と右辺は等価。
+     */
+    public: template<typename template_other_string_type>
+    int compare(
+        typename self::size_type const    in_left_offset,
+        typename self::size_type const    in_left_count,
+        template_other_string_type const& in_right)
+    const
+    {
+        return self::compare_sub_string(
+            *this,
+            in_left_offset,
+            in_left_count,
+            in_right.data(),
+            in_right.size(),
+            template_hash_type::EMPTY);
+    }
+
+    /** @brief 文字列を比較。
+        @param[in] in_left_offset 左辺の文字列の開始位置。
+        @param[in] in_left_count  左辺の文字列の文字数。
         @param[in] in_right_begin 右辺の文字列の先頭位置。
         @param[in] in_right_size  右辺の文字列の長さ。
         @retval 負 右辺のほうが大きい。
@@ -376,7 +653,7 @@ class psyq::hash_string:
             in_left_count,
             in_right_begin,
             in_right_size,
-            this->make_hash(in_right_begin, in_right_size));
+            template_hash_type::EMPTY);
     }
 
     /** @brief 文字列を比較。
@@ -390,12 +667,13 @@ class psyq::hash_string:
         @retval 正 左辺のほうが大きい。
         @retval 0  左辺と右辺は等価。
      */
-    public: int compare(
-        typename self::size_type const in_left_offset,
-        typename self::size_type const in_left_count,
-        super const&                   in_right,
-        typename self::size_type const in_right_offset,
-        typename self::size_type const in_right_count)
+    public: template<typename template_other_string_type>
+    int compare(
+        typename self::size_type const    in_left_offset,
+        typename self::size_type const    in_left_count,
+        template_other_string_type const& in_right,
+        typename self::size_type const    in_right_offset,
+        typename self::size_type const    in_right_count)
     const
     {
         return this->compare(
@@ -476,12 +754,111 @@ class psyq::hash_string:
 
     //-------------------------------------------------------------------------
     public: self& replace(
-        typename super::size_type const in_position,
+        typename super::size_type const in_index,
         typename super::size_type const in_count,
-        self const&                     in_string)
+        super const&                    in_string)
     {
         this->reset_hash();
-        this->super::replace(in_position, in_count, in_string);
+        this->super::replace(in_index, in_count, in_string);
+        return *this;
+    }
+
+    public: self& replace(
+        typename super::const_iterator const in_begin,
+        typename super::const_iterator const in_end,
+        super const&                         in_string)
+    {
+        this->reset_hash();
+        this->super::replace(in_begin, in_end, in_string);
+        return *this;
+    }
+
+    public: self& replace(
+        typename super::size_type const in_index,
+        typename super::size_type const in_count,
+        super const&                    in_string,
+        typename super::size_type const in_string_index,
+        typename super::size_type const in_string_count)
+    {
+        this->reset_hash();
+        this->super::replace(
+            in_index, in_count, in_string, in_string_index, in_string_count);
+        return *this;
+    }
+
+    public: template<typename template_iterator_type>
+    self& replace(
+        typename super::const_iterator const in_begin,
+        typename super::const_iterator const in_end,
+        template_iterator_type const         in_string_begin,
+        template_iterator_type const         in_string_end)
+    {
+        this->reset_hash();
+        this->super::replace(in_begin, in_end, in_string_begin, in_string_end);
+        return *this;
+    }
+
+    public: self& replace(
+        typename super::size_type const     in_index,
+        typename super::size_type const     in_count,
+        typename super::const_pointer const in_string,
+        typename super::size_type const     in_string_size)
+    {
+        this->reset_hash();
+        this->super::replace(in_index, in_count, in_string, in_string_size);
+        return *this;
+    }
+
+    public: self& replace(
+        typename super::const_iterator const in_begin,
+        typename super::const_iterator const in_end,
+        typename super::const_pointer const  in_string,
+        typename super::size_type const      in_string_size)
+    {
+        this->reset_hash();
+        this->super::replace(in_begin, in_end, in_string, in_string_size);
+        return *this;
+    }
+
+    public: self& replace(
+        typename super::size_type const     in_index,
+        typename super::size_type const     in_count,
+        typename super::const_pointer const in_string)
+    {
+        this->reset_hash();
+        this->super::replace(in_index, in_count, in_string);
+        return *this;
+    }
+
+    public: self& replace(
+        typename super::const_iterator const in_begin,
+        typename super::const_iterator const in_end,
+        typename super::const_pointer const  in_string)
+    {
+        this->reset_hash();
+        this->super::replace(in_begin, in_end, in_string);
+        return *this;
+    }
+
+    public: self& replace(
+        typename super::size_type const  in_index,
+        typename super::size_type const  in_count,
+        typename super::size_type const  in_char_count,
+        typename super::value_type const in_char)
+    {
+        this->reset_hash();
+        this->super::replace(in_index, in_count, in_char_count, in_char);
+        return *this;
+    }
+
+    public: self& replace(
+        typename super::const_iterator const in_begin,
+        typename super::const_iterator const in_end,
+        typename super::size_type const      in_char_count,
+        typename super::value_type const     in_char)
+    {
+        this->reset_hash();
+        this->super::replace(in_begin, in_end, in_char_count, in_char);
         return *this;
     }
 
@@ -532,19 +909,17 @@ class psyq::hash_string:
         typename template_left_type::size_type const in_left_count,
         typename super::const_pointer const          in_right_begin,
         typename super::size_type const              in_right_size,
-        typename template_hash_type::value const&    in_right_hash)
+        typename template_hash_type::value const&    in_right_hash,
+        typename template_hash_type const&           in_hasher)
     {
-        typename template_left_type::size_type const local_left_size(
-            self::trim_size(in_left, in_left_offset, in_left_count));
-        typename template_left_type::const_pointer const local_left_begin(
-            in_left.data() + in_left_offset);
         return self::compare_string(
-            local_left_begin,
-            local_left_size,
-            this->make_hash(local_left_begin, local_left_size),
+            in_left.data() + in_left_offset,
+            self::trim_size(in_left, in_left_offset, in_left_count),
+            template_hash_type::EMPTY,
             in_right_begin,
             in_right_size,
-            in_right_hash);
+            in_right_hash,
+            in_hasher);
     }
 
     /** @brief 文字列を比較。
@@ -564,56 +939,44 @@ class psyq::hash_string:
         typename template_hash_type::value const& in_left_hash,
         typename super::const_pointer const       in_right_begin,
         typename super::size_type const           in_right_size,
-        typename template_hash_type::value const& in_right_hash)
+        typename template_hash_type::value const& in_right_hash,
+        typename template_hash_type const&        in_hasher)
     {
-        // hash値を比較。
-        int const local_compare_hash(
-            self::compare_value(in_left_hash, in_right_hash));
-        if (local_compare_hash != 0)
-        {
-            return local_compare_hash;
-        }
-
-        // 大きさを比較。
-        int const local_compare_size(
-            self::compare_value(in_left_size, in_right_size));
-        if (local_compare_size != 0)
-        {
-            return local_compare_size;
-        }
-
-        // 文字列を比較。
-        int const local_compare_string(
-            super::traits_type::compare(
-                in_left_begin, in_right_begin, in_right_size));
-        if (0 != local_compare_string)
-        {
-            return local_compare_string;
-        }
-        return 0;
-    }
-
-    /** @brief 大きさを比較。
-        @param[in] in_left  左辺値。
-        @param[in] in_right 右辺値。
-        @retval 負  右辺の値のほうが大きい。
-        @retval 正  左辺の文字列のほうが大きい。
-        @retval 0 左辺と右辺は同じ値。
-     */
-    private: template<typename template_value_type>
-    static int compare_value(
-        template_value_type const& in_left,
-        template_value_type const& in_right)
-    {
-        if (in_left < in_right)
+        // 長さを比較。
+        if (in_left_size < in_right_size)
         {
             return -1;
         }
-        if (in_right < in_left)
+        if (in_right_size < in_left_size)
         {
             return 1;
         }
-        return 0;
+        if (in_left_size <= 0 || in_left_begin == in_right_begin)
+        {
+            return 0;
+        }
+
+        // hash値を比較。
+        template_hash_type::value const local_left_hash(
+            in_left_hash != template_hash_type::EMPTY?
+                in_left_hash:
+                self::make_hash(in_left_begin, in_left_size, in_hasher));
+        template_hash_type::value const local_right_hash(
+            in_right_hash != template_hash_type::EMPTY?
+                in_right_hash:
+                self::make_hash(in_right_begin, in_right_size, in_hasher));
+        if (local_left_hash < local_right_hash)
+        {
+            return -1;
+        }
+        if (local_right_hash < local_left_hash)
+        {
+            return 1;
+        }
+
+        // 文字列を比較。
+        return super::traits_type::compare(
+            in_left_begin, in_right_begin, in_right_size);
     }
 
     private: template<typename template_other_string_type>
@@ -648,7 +1011,7 @@ class psyq::hash_string:
     {
         if (!this->empty() && this->hash_ == template_hash_type::EMPTY)
         {
-            this->hash_ = this->make_hash(*this);
+            this->hash_ = self::make_hash(*this, this->hasher_);
         }
         return this->hash_;
     }
@@ -672,11 +1035,12 @@ class psyq::hash_string:
         @return 文字列のhash値。
      */
     public: template<typename template_other_string_type>
-    typename template_hash_type::value make_hash(
-        template_other_string_type const& in_string)
-    const
+    static typename template_hash_type::value make_hash(
+        template_other_string_type const& in_string,
+        template_hash_type const&         in_hasher)
     {
-        return this->make_hash(in_string.data(), in_string.size());
+        return self::make_hash(
+            in_string.data(), in_string.size(), in_hasher);
     }
 
     /** @brief 配列のhash値を取得。
@@ -686,12 +1050,12 @@ class psyq::hash_string:
         @return 配列のhash値。
      */
     public: template<typename template_value_type>
-    typename template_hash_type::value make_hash(
+    static typename template_hash_type::value make_hash(
         template_value_type const* const in_data,
-        typename self::size_type const   in_size)
-    const
+        typename self::size_type const   in_size,
+        template_hash_type const&        in_hasher)
     {
-        return this->make_hash(in_data, in_data + in_size);
+        return self::make_hash(in_data, in_data + in_size, in_hasher);
     }
 
     /** @brief 配列のhash値を取得。
@@ -699,13 +1063,14 @@ class psyq::hash_string:
         @param[in] in_end   hash値を決定する配列の末尾位置。
         @return 配列のhash値。
      */
-    public: typename template_hash_type::value make_hash(
-        void const* const in_begin,
-        void const* const in_end)
-    const
+    private: static typename template_hash_type::value make_hash(
+        void const* const         in_begin,
+        void const* const         in_end,
+        template_hash_type const& in_hasher)
     {
+        in_hasher;
         typename template_hash_type::value const local_hash(
-            this->hasher_.make(in_begin, in_end));
+            in_hasher.make(in_begin, in_end));
         if (local_hash == template_hash_type::EMPTY)
         {
             // 空配列と同じhash値だったので変更。

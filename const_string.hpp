@@ -49,12 +49,12 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_string のinterfaceに準拠した文字列定数。
 
-    文字列literalで std::basic_string と同じinterfaceを提供するのが主な用途。
+    文字列literalで std::basic_string と同等のinterfaceを提供するのが主な目的。
 
     文字列定数なので、文字列を書き換えるinterfaceは持たない。
 
     constructorや assign() で割り当てられた文字列を参照してるので、
-    参照してる文字列が先に破棄された場合、動作を保証できない。
+    参照してる文字列が先に破棄されると、動作を保証できない。
 
     @tparam template_char_type   @copydoc basic_const_string::value_type
     @tparam template_char_traits @copydoc basic_const_string::traits_type
@@ -102,9 +102,15 @@ class psyq::basic_const_string
     public: typedef typename self::const_reverse_iterator
         reverse_iterator;
 
+    /** std::basic_string と同等のinterfaceを提供するために使うdummyの型。
+        memory割当子としては機能しない。
+     */
+    public: typedef const void* allocator_type;
+
     //-------------------------------------------------------------------------
     /// default-constructor
-    public: basic_const_string()
+    public: basic_const_string(
+        typename self::allocator_type const = self::allocator_type())
     :
         data_(NULL),
         size_(0)
@@ -123,7 +129,8 @@ class psyq::basic_const_string
         template_string_type const&                    in_string,
         typename template_string_type::size_type const in_offset = 0,
         typename template_string_type::size_type const in_count =
-            template_string_type::npos)
+            template_string_type::npos,
+        typename self::allocator_type const& = self::allocator_type())
     :
         data_(in_string.data() + in_offset),
         size_(self::trim_size(in_string, in_offset, in_count))
@@ -135,7 +142,8 @@ class psyq::basic_const_string
         @param[in] in_string 割り当てる文字列の先頭位置。NULL文字で終わる。
      */
     public: basic_const_string(
-        typename self::const_pointer const in_string)
+        typename self::const_pointer const in_string,
+        typename self::allocator_type const& = self::allocator_type())
     :
         data_(in_string),
         size_(self::find_null(in_string))
@@ -148,7 +156,8 @@ class psyq::basic_const_string
      */
     public: basic_const_string(
         typename self::const_pointer const in_string,
-        typename self::size_type const     in_size)
+        typename self::size_type const     in_size,
+        typename self::allocator_type const& = self::allocator_type())
     :
         data_(in_string),
         size_(in_size)
@@ -161,7 +170,8 @@ class psyq::basic_const_string
      */
     public: basic_const_string(
         typename self::const_pointer const in_begin,
-        typename self::const_pointer const in_end)
+        typename self::const_pointer const in_end,
+        typename self::allocator_type const& = self::allocator_type())
     {
         PSYQ_ASSERT(in_begin <= in_end);
         new(this) self(in_begin, std::distance(in_begin, in_end));
@@ -301,7 +311,7 @@ class psyq::basic_const_string
 
     /** @brief 文字列の最大長を取得。
         @return 文字列の最大長。
-            文字列の加工ができないので、文字列の長さと同じ値になる。
+            文字列の書き換えができないので、文字列の長さと同じ値になる。
      */
     public: typename self::size_type max_size() const
     {
@@ -310,7 +320,7 @@ class psyq::basic_const_string
 
     /** @brief 文字列の容量を取得。
         @return 文字列の容量。
-           文字列の加工ができないので、文字列の長さと同じ値になる。
+           文字列の書き換えができないので、文字列の長さと同じ値になる。
      */
     public: typename self::size_type capacity() const
     {
@@ -1273,7 +1283,7 @@ class psyq::basic_const_string
         psyq::basic_const_string::const_pointer template_string_type::data() const
         @endcode
 
-        文字列の大きさを取得するため、以下の関数を使えること。
+        文字列の長さを取得するため、以下の関数を使えること。
         @code
         template_string_type::size_type template_string_type::size() const
         @endcode

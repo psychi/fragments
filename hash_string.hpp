@@ -147,7 +147,7 @@ class psyq::hash_string:
         hash_(template_hash_type::EMPTY),
         hasher_(in_hasher)
     {
-        // pass
+        PSYQ_ASSERT(0 < template_size);
     }
 
     /** @brief •¶Žš—ñliteral‚©‚ç\’zB
@@ -174,7 +174,7 @@ class psyq::hash_string:
         hash_(template_hash_type::EMPTY),
         hasher_(in_hasher)
     {
-        // pass
+        PSYQ_ASSERT(0 < template_size);
     }
 
     //-------------------------------------------------------------------------
@@ -251,6 +251,7 @@ class psyq::hash_string:
         typename self::size_type         in_offset,
         typename super::value_type const (&in_string)[template_size])
     {
+        PSYQ_ASSERT(0 < template_size);
         this->reset_hash();
         return this->assign(
             &in_string[in_offset],
@@ -263,6 +264,7 @@ class psyq::hash_string:
         typename self::size_type         in_count,
         typename super::value_type const (&in_string)[template_size])
     {
+        PSYQ_ASSERT(0 < template_size);
         this->reset_hash();
         return this->assign(
             &in_string[in_offset],
@@ -544,6 +546,31 @@ class psyq::hash_string:
         this->reset_hash();
         this->super::append(in_begin, in_end);
         return *this;
+    }
+
+    public: template <std::size_t template_size>
+    self& append(
+        typename self::size_type         in_offset,
+        typename super::value_type const (&in_string)[template_size])
+    {
+        PSYQ_ASSERT(0 < template_size);
+        this->reset_hash();
+        return this->append(
+            &in_string[in_offset],
+            self::trim_count(template_size - 1, in_offset, template_size));
+    }
+
+    public: template <std::size_t template_size>
+    self& append(
+        typename self::size_type         in_offset,
+        typename self::size_type         in_count,
+        typename super::value_type const (&in_string)[template_size])
+    {
+        PSYQ_ASSERT(0 < template_size);
+        this->reset_hash();
+        return this->append(
+            &in_string[in_offset],
+            self::trim_count(template_size - 1, in_offset, in_count));
     }
 
     //-------------------------------------------------------------------------

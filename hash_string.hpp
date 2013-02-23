@@ -32,8 +32,8 @@ class psyq::hash_string:
 
     //-------------------------------------------------------------------------
     /** @brief default-constructor
-        @param[in] in_allocator  memory割当子の初期値。
-        @param[in] in_hasher hash生成子の初期値。
+        @param[in] in_allocator memory割当子の初期値。
+        @param[in] in_hasher    hash生成子の初期値。
      */
     public: explicit hash_string(
         typename super::allocator_type const& in_allocator =
@@ -64,11 +64,11 @@ class psyq::hash_string:
     }
 
     /** @brief 変換constructor
-        @param[in] in_string     初期値に使う文字列。
-        @param[in] in_offset     文字列の開始位置。
-        @param[in] in_count      文字数。
-        @param[in] in_allocator  memory割当子の初期値。
-        @param[in] in_hasher hash生成子の初期値。
+        @param[in] in_string    初期値に使う文字列。
+        @param[in] in_offset    文字列の開始位置。
+        @param[in] in_count     文字数。
+        @param[in] in_allocator memory割当子の初期値。
+        @param[in] in_hasher    hash生成子の初期値。
      */
     public: template<typename template_other_string_type>
     hash_string(
@@ -87,9 +87,9 @@ class psyq::hash_string:
         // pass
     }
 
-    /** @param[in] in_string     初期値に使う文字列の先頭位置。NULL文字で終わる。
-        @param[in] in_allocator  memory割当子の初期値。
-        @param[in] in_hasher hash生成子の初期値。
+    /** @param[in] in_string    初期値に使う文字列の先頭位置。NULL文字で終わる。
+        @param[in] in_allocator memory割当子の初期値。
+        @param[in] in_hasher    hash生成子の初期値。
      */
     public: explicit hash_string(
         typename super::const_pointer const   in_string,
@@ -105,10 +105,10 @@ class psyq::hash_string:
         // pass
     }
 
-    /** @param[in] in_string     初期値に使う文字列の先頭位置。
-        @param[in] in_size       初期値に使う文字列の長さ。
-        @param[in] in_allocator  memory割当子の初期値。
-        @param[in] in_hasher hash生成子の初期値。
+    /** @param[in] in_string    初期値に使う文字列の先頭位置。
+        @param[in] in_size      初期値に使う文字列の長さ。
+        @param[in] in_allocator memory割当子の初期値。
+        @param[in] in_hasher    hash生成子の初期値。
      */
     public: hash_string(
         typename super::const_pointer const   in_string,
@@ -126,10 +126,10 @@ class psyq::hash_string:
     }
 
     /** @brief 文字列literalから構築。
-        @param[in] in_offset     文字列literalの開始offset位置。
-        @param[in] in_string     初期値に使う文字列literal。
-        @param[in] in_allocator  memory割当子の初期値。
-        @param[in] in_hasher hash生成子の初期値。
+        @param[in] in_offset    文字列literalの開始offset位置。
+        @param[in] in_string    初期値に使う文字列literal。
+        @param[in] in_allocator memory割当子の初期値。
+        @param[in] in_hasher    hash生成子の初期値。
      */
     public: template <std::size_t template_size>
     hash_string(
@@ -151,11 +151,11 @@ class psyq::hash_string:
     }
 
     /** @brief 文字列literalから構築。
-        @param[in] in_offset     文字列literalの開始offset位置。
-        @param[in] in_count      文字数。
-        @param[in] in_string     初期値に使う文字列literal。
-        @param[in] in_allocator  memory割当子の初期値。
-        @param[in] in_hasher hash生成子の初期値。
+        @param[in] in_offset    文字列literalの開始offset位置。
+        @param[in] in_count     文字数。
+        @param[in] in_string    初期値に使う文字列literal。
+        @param[in] in_allocator memory割当子の初期値。
+        @param[in] in_hasher    hash生成子の初期値。
      */
     public: template <std::size_t template_size>
     hash_string(
@@ -709,7 +709,8 @@ class psyq::hash_string:
             in_left_offset,
             in_left_count,
             in_right.data() + in_right_offset,
-            self::trim_size(in_right, in_right_offset, in_right_count));
+            self::trim_count(
+                in_right, in_right_offset, in_right_count));
     }
 
     //-------------------------------------------------------------------------
@@ -927,6 +928,7 @@ class psyq::hash_string:
         @param[in] in_right_begin 右辺の文字列の先頭位置。
         @param[in] in_right_size  右辺の文字列の大きさ。
         @param[in] in_right_hash  右辺の文字列のhash値。
+        @param[in] in_hasher      hash生成子。
         @retval 負 右辺の文字列のほうが大きい。
         @retval 正 左辺の文字列のほうが大きい。
         @retval 0  左辺と右辺は等価。
@@ -943,7 +945,7 @@ class psyq::hash_string:
     {
         return self::compare_string(
             in_left.data() + in_left_offset,
-            self::trim_size(in_left, in_left_offset, in_left_count),
+            self::trim_count(in_left, in_left_offset, in_left_count),
             template_hash_type::EMPTY,
             in_right_begin,
             in_right_size,
@@ -958,6 +960,7 @@ class psyq::hash_string:
         @param[in] in_right_begin 右辺の文字列の先頭位置。
         @param[in] in_right_size  右辺の文字列の大きさ。
         @param[in] in_right_hash  右辺の文字列のhash値。
+        @param[in] in_hasher      hash生成子。
         @retval 負 右辺の文字列のほうが大きい。
         @retval 正 左辺の文字列のほうが大きい。
         @retval 0  左辺と右辺は等価。
@@ -1008,22 +1011,6 @@ class psyq::hash_string:
             in_left_begin, in_right_begin, in_right_size);
     }
 
-    private: template<typename template_other_string_type>
-    static typename template_other_string_type::size_type trim_size(
-        template_other_string_type const&                    in_string,
-        typename template_other_string_type::size_type const in_offset,
-        typename template_other_string_type::size_type const in_count)
-    {
-        if (in_string.size() < in_offset)
-        {
-            PSYQ_ASSERT(false);
-            return 0;
-        }
-        typename template_other_string_type::size_type const a_limit(
-            in_string.size() - in_offset);
-        return in_count < a_limit? in_count: a_limit;
-    }
-
     //-------------------------------------------------------------------------
     /** @brief hash生成子を取得。
         @return hash生成子。
@@ -1061,6 +1048,7 @@ class psyq::hash_string:
                 template_other_string_type::size() const
             @endcode
         @param[in] in_string hash値を決定する文字列。
+        @param[in] in_hasher 使用するhash生成子。
         @return 文字列のhash値。
      */
     public: template<typename template_other_string_type>
@@ -1074,8 +1062,9 @@ class psyq::hash_string:
 
     /** @brief 配列のhash値を取得。
         @tparam template_value_type 配列の要素の型。
-        @param[in] in_data hash値を決定する配列の先頭位置。
-        @param[in] in_size 配列の大きさ。
+        @param[in] in_data   hash値を決定する配列の先頭位置。
+        @param[in] in_size   hash値を決定する配列の大きさ。
+        @param[in] in_hasher 使用するhash生成子。
         @return 配列のhash値。
      */
     public: template<typename template_value_type>
@@ -1088,8 +1077,9 @@ class psyq::hash_string:
     }
 
     /** @brief 配列のhash値を取得。
-        @param[in] in_begin hash値を決定する配列の先頭位置。
-        @param[in] in_end   hash値を決定する配列の末尾位置。
+        @param[in] in_begin  hash値を決定する配列の先頭位置。
+        @param[in] in_end    hash値を決定する配列の末尾位置。
+        @param[in] in_hasher 使用するhash生成子。
         @return 配列のhash値。
      */
     public: static typename template_hash_type::value make_hash(
@@ -1115,6 +1105,18 @@ class psyq::hash_string:
         this->hash_ = template_hash_type::EMPTY;
     }
 
+    private: template<typename template_string_type>
+    static typename template_string_type::size_type trim_count(
+        template_string_type const&                    in_string,
+        typename template_string_type::size_type const in_offset,
+        typename template_string_type::size_type const in_count)
+    {
+        return self::trim_count(
+            in_string.size(),
+            self::convert_count<template_string_type>(in_offset),
+            self::convert_count<template_string_type>(in_count));
+    }
+
     private: static typename self::size_type trim_count(
         typename self::size_type const in_size,
         typename self::size_type const in_offset,
@@ -1126,6 +1128,17 @@ class psyq::hash_string:
         }
         typename self::size_type const local_limit(in_size - in_offset);
         return in_count < local_limit? in_count: local_limit;
+    }
+
+    private: template<typename template_string_type>
+    static typename template_string_type::size_type convert_count(
+        typename template_string_type::size_type const in_count)
+    {
+        if (in_count != template_string_type::npos)
+        {
+            return in_count;
+        }
+        return (std::numeric_limits<typename template_string_type::size_type>::max)();
     }
 
     //-------------------------------------------------------------------------

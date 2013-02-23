@@ -140,7 +140,10 @@ class psyq::hash_string:
         template_hash_type const&             in_hasher =
             template_hash_type())
     :
-        super(&in_string[in_offset], in_count, in_allocator)
+        super(
+            &in_string[in_offset],
+            self::trim_count(template_size - 1, in_offset, template_size),
+            in_allocator),
         hash_(template_hash_type::EMPTY),
         hasher_(in_hasher)
     {
@@ -164,7 +167,10 @@ class psyq::hash_string:
         template_hash_type const&             in_hasher =
             template_hash_type())
     :
-        super(&in_string[in_offset], in_count, in_allocator)
+        super(
+            &in_string[in_offset],
+            self::trim_count(template_size - 1, in_offset, in_count),
+            in_allocator),
         hash_(template_hash_type::EMPTY),
         hasher_(in_hasher)
     {
@@ -238,6 +244,29 @@ class psyq::hash_string:
         this->reset_hash();
         this->super::assign(in_begin, in_end);
         return *this;
+    }
+
+    public: template <std::size_t template_size>
+    self& assign(
+        typename self::size_type         in_offset,
+        typename super::value_type const (&in_string)[template_size])
+    {
+        this->reset_hash();
+        return this->assign(
+            &in_string[in_offset],
+            self::trim_count(template_size - 1, in_offset, template_size));
+    }
+
+    public: template <std::size_t template_size>
+    self& assign(
+        typename self::size_type         in_offset,
+        typename self::size_type         in_count,
+        typename super::value_type const (&in_string)[template_size])
+    {
+        this->reset_hash();
+        return this->assign(
+            &in_string[in_offset],
+            self::trim_count(template_size - 1, in_offset, in_count));
     }
 
     //-------------------------------------------------------------------------
@@ -1063,7 +1092,7 @@ class psyq::hash_string:
         @param[in] in_end   hash値を決定する配列の末尾位置。
         @return 配列のhash値。
      */
-    private: static typename template_hash_type::value make_hash(
+    public: static typename template_hash_type::value make_hash(
         void const* const         in_begin,
         void const* const         in_end,
         template_hash_type const& in_hasher)
@@ -1084,6 +1113,19 @@ class psyq::hash_string:
     private: void reset_hash()
     {
         this->hash_ = template_hash_type::EMPTY;
+    }
+
+    private: static typename self::size_type trim_count(
+        typename self::size_type const in_size,
+        typename self::size_type const in_offset,
+        typename self::size_type const in_count)
+    {
+        if (in_size < in_offset)
+        {
+            return 0;
+        }
+        typename self::size_type const local_limit(in_size - in_offset);
+        return in_count < local_limit? in_count: local_limit;
     }
 
     //-------------------------------------------------------------------------

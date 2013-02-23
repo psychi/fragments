@@ -226,7 +226,7 @@ class psyq::basic_const_string
     //-------------------------------------------------------------------------
     /** @brief 文字列の先頭位置を取得。
         @return 文字列の先頭位置。
-        @note 文字列がNULL文字で終わっているとは限らない。
+        @warning 文字列がNULL文字で終わっているとは限らない。
      */
     public: typename self::const_pointer data() const
     {
@@ -1175,11 +1175,26 @@ class psyq::basic_const_string
         return *new(this) self(in_offset, in_string);
     }
 
+    /** @brief 文字列literalを割り当てる。
+        @tparam template_size 割り当てる文字列literalの要素数。
+        @param[in] in_offset 割り当てる文字列literalの開始offset位置。
+        @param[in] in_count  割り当てる文字数。
+        @param[in] in_string 割り当てる文字列literal。
+     */
+    public: template <std::size_t template_size>
+    self& assign(
+        typename self::size_type in_offset,
+        typename self::size_type in_count,
+        template_char_type const (&in_string)[template_size])
+    {
+        return *new(this) self(in_offset, in_count, in_string);
+    }
+
     /** @brief 文字列を割り当てる。
         @tparam template_string_traits @copydoc string_interface
+        @param[in] in_offset 割り当てる文字列の開始offset位置。
+        @param[in] in_count  割り当てる文字数。
         @param[in] in_string 割り当てる文字列。
-        @param[in] in_offset 文字列の開始位置。
-        @param[in] in_count  文字数。
      */
     public: template<typename template_string_type>
     self& assign(
@@ -1195,7 +1210,7 @@ class psyq::basic_const_string
     /** @brief 部分文字列を構築。
         @param[in] in_offset 文字列の開始位置。
         @param[in] in_count  文字数。
-        @return 構築した部分文字列。
+        @return 新たに構築した部分文字列。
      */
     public: self substr(
         typename self::size_type const in_offset = 0,
@@ -1206,10 +1221,10 @@ class psyq::basic_const_string
     }
 
     /** @brief 部分文字列を構築。
-        @tparam template_string_type @copydoc string_interface
+        @tparam template_string_type 新たに構築する部分文字列の型。
         @param[in] in_offset 文字列の開始位置。
         @param[in] in_count  文字数。
-        @return 構築した部分文字列。
+        @return 新たに構築した部分文字列。
      */
     public: template<typename template_string_type>
     template_string_type substr(

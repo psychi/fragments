@@ -686,12 +686,12 @@ INPUT                  = ./async_file.hpp \
                          ./file_buffer.hpp \
                          ./file_handle.hpp \
                          ./fnv_hash.hpp \
-                         ./hash_string.hpp \
                          ./lerp.hpp \
                          ./pbon_json.hpp \
                          ./posix_file_descriptor.hpp \
                          ./simple_singleton.hpp \
                          ./singleton.hpp \
+                         ./string_hash.hpp \
                          ./thread.hpp \
                          ./win32_file_descriptor.hpp \
                          ./memory/allocator.hpp \

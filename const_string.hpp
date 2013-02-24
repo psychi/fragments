@@ -190,7 +190,7 @@ class psyq::basic_const_string
         template_char_type const (&in_string)[template_size])
     :
         data_(&in_string[in_offset]),
-        size_(in_offset < template_size - 1? template_size - 1 - in_offset: 0)
+        size_(self::trim_count(template_size - 1, in_offset, template_size))
     {
         PSYQ_ASSERT(0 < template_size);
     }

@@ -50,6 +50,9 @@ class psyq::closed::fnv_hash
     /// FNV-hash値の型。
     public: typedef typename template_hash_traits::value value;
 
+    /// FNV-hash値の型。
+    public: typedef typename template_hash_traits::value result_type;
+
     /// 使用する空hash値。
     public: static typename template_hash_traits::value const EMPTY =
         self::traits::EMPTY;

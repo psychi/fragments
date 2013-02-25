@@ -25,7 +25,7 @@ class psyq::string_hash
     /// thisが指す値の型。
     typedef psyq::string_hash<template_string_type, template_hash_type> self;
 
-    /** @brief 文字列の型。
+    /** @brief self が保持する文字列の型。
 
         文字列の長さを得るため、以下に相当する関数が使えること。
         @code
@@ -39,7 +39,7 @@ class psyq::string_hash
 
         文字列を交換するため、以下に相当する関数が使えること。
         @code
-        std::swap(self::string&, self::string&)
+        self::string::swap(self::string&)
         @endcode
      */
     public: typedef template_string_type string;
@@ -49,6 +49,11 @@ class psyq::string_hash
         hash値を生成するため、以下に相当する関数が使えること。
         @code
         self::hasher::result_type self::hasher::operator()(self::string const&);
+        @endcode
+
+        hash生成関数objectを交換するため、以下に相当する関数が使えること。
+        @code
+        std::swap(self::hasher&, self::hasher&)
         @endcode
      */
     public: typedef template_hash_type hasher;
@@ -88,9 +93,8 @@ class psyq::string_hash
         return this->string_;
     }
 
-    /** @brief 文字列をcopy。
+    /** @brief 文字列をcopyして書き換える。
 
-        保持している文字列にcopyする。
         @param[in] in_source copy元の文字列。
      */
     public: void copy_string(
@@ -100,15 +104,14 @@ class psyq::string_hash
         this->rehash();
     }
 
-    /** @brief 文字列を交換。
+    /** @brief 文字列をswapして書き換える。
 
-        保持している文字列と交換する。
         @param[in,out] io_target 交換する文字列。
      */
     public: void swap_string(
         typename self::string& io_target)
     {
-        this->string_.swap(io_target);
+        std::swap(this->string_, io_target);
         this->rehash();
     }
 

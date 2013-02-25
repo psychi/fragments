@@ -110,14 +110,19 @@ class psyq::basic_const_string
     public: typedef const void* allocator_type;
 
     //-------------------------------------------------------------------------
-    /// default-constructor
+    /** @brief default-constructor
+        @param[in] in_dummy
+            std::basic_string と同じinterfaceにするためのdummy引数。
+            実際には使わない。
+     */
     public: explicit basic_const_string(
-        typename self::allocator_type const = self::allocator_type())
+        typename self::allocator_type const in_dummy =
+            self::allocator_type())
     :
         data_(NULL),
         size_(0)
     {
-        // pass
+        in_dummy; // 使わない引数。
     }
 
     /** @brief 変換constructor
@@ -125,6 +130,9 @@ class psyq::basic_const_string
         @param[in] in_string 割り当てる文字列。
         @param[in] in_offset 割り当てる文字列の開始offset位置。
         @param[in] in_count  割り当てる文字数。
+        @param[in] in_dummy
+            std::basic_string と同じinterfaceにするためのdummy引数。
+            実際には使わない。
      */
     public: template<typename template_string_type>
     basic_const_string(
@@ -132,50 +140,63 @@ class psyq::basic_const_string
         typename template_string_type::size_type const in_offset = 0,
         typename template_string_type::size_type const in_count =
             template_string_type::npos,
-        typename self::allocator_type const& = self::allocator_type())
+        typename self::allocator_type const            in_dummy =
+            self::allocator_type())
     :
         data_(in_string.data() + in_offset),
         size_(self::trim_count(in_string, in_offset, in_count))
     {
-        // pass
+        in_dummy; // 使わない引数。
     }
 
     /** @brief 変換constructor
         @param[in] in_string 割り当てる文字列の先頭位置。NULL文字で終わる。
+        @param[in] in_dummy
+            std::basic_string と同じinterfaceにするためのdummy引数。
+            実際には使わない。
      */
     public: basic_const_string(
-        typename self::const_pointer const in_string,
-        typename self::allocator_type const& = self::allocator_type())
+        typename self::const_pointer const  in_string,
+        typename self::allocator_type const in_dummy = self::allocator_type())
     :
         data_(in_string),
         size_(self::find_null(in_string))
     {
         PSYQ_ASSERT(NULL != in_string || this->empty());
+        in_dummy; // 使わない引数。
     }
 
     /** @param[in] in_string 割り当てる文字列の先頭位置。
         @param[in] in_size   割り当てる文字列の長さ。
+        @param[in] in_dummy
+            std::basic_string と同じinterfaceにするためのdummy引数。
+            実際には使わない。
      */
     public: basic_const_string(
-        typename self::const_pointer const in_string,
-        typename self::size_type const     in_size,
-        typename self::allocator_type const& = self::allocator_type())
+        typename self::const_pointer const  in_string,
+        typename self::size_type const      in_size,
+        typename self::allocator_type const in_dummy = self::allocator_type())
     :
         data_(in_string),
         size_(in_size)
     {
         PSYQ_ASSERT(NULL != in_string || 0 == in_size);
+        in_dummy; // 使わない引数。
     }
 
     /** @param[in] in_begin 割り当てる文字列の先頭位置。
         @param[in] in_end   割り当てる文字列の末尾位置。
+        @param[in] in_dummy
+            std::basic_string と同じinterfaceにするためのdummy引数。
+            実際には使わない。
      */
     public: basic_const_string(
-        typename self::const_pointer const in_begin,
-        typename self::const_pointer const in_end,
-        typename self::allocator_type const& = self::allocator_type())
+        typename self::const_pointer const  in_begin,
+        typename self::const_pointer const  in_end,
+        typename self::allocator_type const in_dummy = self::allocator_type())
     {
         PSYQ_ASSERT(in_begin <= in_end);
+		in_dummy;
         new(this) self(in_begin, std::distance(in_begin, in_end));
     }
 
@@ -302,6 +323,7 @@ class psyq::basic_const_string
      */
     typename self::const_reference front() const
     {
+        PSYQ_ASSERT(!this->empty());
         return (*this)[0];
     }
 
@@ -310,6 +332,7 @@ class psyq::basic_const_string
      */
     public: typename self::const_reference back() const
     {
+        PSYQ_ASSERT(!this->empty());
         return (*this)[this->size() - 1];
     }
 

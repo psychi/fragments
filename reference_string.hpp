@@ -30,6 +30,10 @@
 #include <iosfwd>
 #include <iterator>
 
+#ifndef PSYQ_ASSERT
+#define PSYQ_ASSERT(define_expression) assert(define_expression)
+#endif // !PSYQ_ASSERT
+
 #ifndef PSYQ_BASIC_REFERENCE_STRING_DEFAULT
 #define PSYQ_BASIC_REFERENCE_STRING_DEFAULT\
     std::char_traits<template_char_type>
@@ -64,8 +68,10 @@ namespace psyq
         参照先の文字列が再割り当てや破棄されると、動作を保証できなくなる。
         安全に文字列定数を扱うには、 psyq::basic_const_string を使う。
 
-    @tparam template_char_type   @copydoc psyq::basic_reference_string::value_type
-    @tparam template_char_traits @copydoc psyq::basic_reference_string::traits_type
+    @tparam template_char_type
+        @copydoc psyq::basic_reference_string::value_type
+    @tparam template_char_traits
+        @copydoc psyq::basic_reference_string::traits_type
  */
 template<typename template_char_type, typename template_char_traits>
 class psyq::basic_reference_string
@@ -498,7 +504,7 @@ class psyq::basic_reference_string
     /** @brief 文字列を比較。
         @param[in] in_left_offset 左辺の文字列の開始位置。
         @param[in] in_left_count  左辺の文字列の文字数。
-        @param[in] in_right       右辺の文字列の先頭位置。必ずNULL文字で終わる。
+        @param[in] in_right       右辺の文字列の先頭位置。
         @retval 負 右辺のほうが大きい。
         @retval 正 左辺のほうが大きい。
         @retval 0  左辺と右辺は等価。

@@ -64,8 +64,11 @@ namespace psyq
 
     constructor以外では、memory割り当てを一切行わない。
 
-    @tparam template_char_type @copydoc psyq::basic_reference_string::value_type
-    @tparam template_char_traits @copydoc psyq::basic_reference_string::traits_type
+    @tparam template_char_type
+        @copydoc psyq::basic_reference_string::value_type
+    @tparam template_char_traits
+        @copydoc psyq::basic_reference_string::traits_type
+    @tparam template_allocator_type memory割当子の型。
  */
 template<
     typename template_char_type,
@@ -202,9 +205,6 @@ class psyq::basic_const_string:
         @param[in] in_offset    割り当てる文字列の開始offset位置。
         @param[in] in_count     割り当てる文字数。
         @param[in] in_allocator memory割当子の初期値。
-        @note
-            この関数を実装するため、
-            basic_const_string(self::const_pointer) はomitした。
      */
     public: template <std::size_t template_size>
     basic_const_string(

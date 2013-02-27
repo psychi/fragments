@@ -155,9 +155,9 @@ class psyq::basic_reference_string
      */
     public: template <std::size_t template_size>
     basic_reference_string(
+        typename self::value_type const (&in_string)[template_size],
         typename self::size_type        in_offset,
-        typename self::size_type        in_count,
-        typename self::value_type const (&in_string)[template_size])
+        typename self::size_type        in_count)
     :
         data_(&in_string[in_offset]),
         size_(self::trim_count(template_size - 1, in_offset, in_count))

@@ -13,6 +13,58 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+#if 0
+template<typename template_vector_type>
+class reserved_vector:
+    public template_vector_type
+{
+    public: bool push_back(
+        typename self::value_type&& in_value)
+    {
+        if (this->capacity() <= this->size())
+        {
+            return false;
+        }
+        this->super::push_back(in_value);
+        return true;
+    }
+
+    private: void move_back(
+        typename self::size_type const in_move_index,
+        typename self::size_type const in_move_size)
+    {
+        self local_vector;
+        local_vector.swap(*this);
+        typename self::size_type const local_size(local_vector.size());
+        if (in_move_index + in_move_size < local_size)
+        {
+            if (0 < in_move_size)
+            {
+                typename self::size_type const local_move_distance(
+                    local_size - in_move_size - in_move_index);
+                typename self::size_type const local_move_end(
+                    local_size - local_move_distance);
+                for (
+                    typename self::size_type i(in_move_index);
+                    i + < local_move_end;
+                    ++i)
+                {
+                    std::swap(
+                        local_vector[i],
+                        local_vector[i + local_move_distance]);
+                }
+            }
+        }
+        else
+        {
+            PSYQ_ASSERT(local_size == in_move_index + in_move_size);
+        }
+        this->swap(local_vector);
+    }
+};
+#endif // 0
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 template<
     typename template_vector_type,
     typename template_compare_type>
@@ -205,6 +257,7 @@ class psyq::vector_map:
         {
             return local_position->second;
         }
+            return local_position->second;
     }
 
     public: std::pair<typename self::iterator, bool> insert(

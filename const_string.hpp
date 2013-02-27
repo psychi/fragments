@@ -380,9 +380,11 @@ class psyq::basic_const_string:
         @param[in] in_right 右辺の文字列。
         @return 左辺 == 右辺
      */
-    public: bool operator==(self const& in_right) const
+    public: bool operator==(
+        self const& in_right)
+    const
     {
-        return this->super::is_equal(in_right);
+        return this->super::is_equal(in_right.data(), in_right.size());
     }
 
     /** @brief 文字列の比較。
@@ -394,9 +396,27 @@ class psyq::basic_const_string:
         @return 左辺 == 右辺
      */
     public: template<typename template_string_type>
-    bool operator==(template_string_type const& in_right) const
+    bool operator==(
+        template_string_type const& in_right)
+    const
     {
-        return this->super::is_equal(in_right);
+        return this->super::is_equal(in_right.data(), in_right.size());
+    }
+
+    /** @brief 文字列の比較。
+
+        *thisを左辺として、右辺の文字列と比較。
+
+        @tparam template_string_traits @copydoc string_interface
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 == 右辺
+     */
+    public: template<std::size_t template_size>
+    bool operator==(
+        typename self::value_type const (&in_right)[template_size])
+    const
+    {
+        return this->super::is_equal(&in_right[0], template_size - 1);
     }
 
     /** @brief 文字列の比較。
@@ -406,9 +426,11 @@ class psyq::basic_const_string:
         @param[in] in_right 右辺の文字列。
         @return 左辺 != 右辺
      */
-    public: bool operator!=(self const& in_right) const
+    public: bool operator!=(
+        self const& in_right)
+    const
     {
-        return !this->super::is_equal(in_right);
+        return !this->super::is_equal(in_right.data(), in_right.size());
     }
 
     /** @brief 文字列の比較。
@@ -420,9 +442,27 @@ class psyq::basic_const_string:
         @return 左辺 != 右辺
      */
     public: template<typename template_string_type>
-    bool operator!=(template_string_type const& in_right) const
+    bool operator!=(
+        template_string_type const& in_right)
+    const
     {
-        return !this->super::is_equal(in_right);
+        return !this->super::is_equal(in_right.data(), in_right.size());
+    }
+
+    /** @brief 文字列の比較。
+
+        *thisを左辺として、右辺の文字列と比較。
+
+        @tparam template_string_traits @copydoc string_interface
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 != 右辺
+     */
+    public: template<std::size_t template_size>
+    bool operator!=(
+        typename self::value_type const (&in_right)[template_size])
+    const
+    {
+        return !this->super::is_equal(&in_right[0], template_size - 1);
     }
 
     /** @brief 文字列の比較。
@@ -432,7 +472,9 @@ class psyq::basic_const_string:
         @param[in] in_right 右辺の文字列。
         @return 左辺 < 右辺
      */
-    public: bool operator<(self const& in_right) const
+    public: bool operator<(
+        self const& in_right)
+    const
     {
         return this->super::compare(in_right) < 0;
     }
@@ -446,7 +488,9 @@ class psyq::basic_const_string:
         @return 左辺 < 右辺
      */
     public: template<typename template_string_type>
-    bool operator<(template_string_type const& in_right) const
+    bool operator<(
+        template_string_type const& in_right)
+    const
     {
         return this->super::compare(in_right) < 0;
     }
@@ -455,10 +499,28 @@ class psyq::basic_const_string:
 
         *thisを左辺として、右辺の文字列と比較。
 
+        @tparam template_string_traits @copydoc string_interface
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 < 右辺
+     */
+    public: template<std::size_t template_size>
+    bool operator<(
+        typename self::value_type const (&in_right)[template_size])
+    const
+    {
+        return this->super::compare(super(in_right)) < 0;
+    }
+
+    /** @brief 文字列の比較。
+
+        *thisを左辺として、右辺の文字列と比較。
+
         @param[in] in_right 右辺の文字列。
         @return 左辺 <= 右辺
      */
-    public: bool operator<=(self const& in_right) const
+    public: bool operator<=(
+        self const& in_right)
+    const
     {
         return this->super::compare(in_right) <= 0;
     }
@@ -472,7 +534,9 @@ class psyq::basic_const_string:
         @return 左辺 <= 右辺
      */
     public: template<typename template_string_type>
-    bool operator<=(template_string_type const& in_right) const
+    bool operator<=(
+        template_string_type const& in_right)
+    const
     {
         return this->super::compare(in_right) <= 0;
     }
@@ -481,10 +545,28 @@ class psyq::basic_const_string:
 
         *thisを左辺として、右辺の文字列と比較。
 
+        @tparam template_string_traits @copydoc string_interface
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 < 右辺
+     */
+    public: template<std::size_t template_size>
+    bool operator<=(
+        typename self::value_type const (&in_right)[template_size])
+    const
+    {
+        return this->super::compare(super(in_right)) <= 0;
+    }
+
+    /** @brief 文字列の比較。
+
+        *thisを左辺として、右辺の文字列と比較。
+
         @param[in] in_right 右辺の文字列。
         @return 左辺 > 右辺
      */
-    public: bool operator>(self const& in_right) const
+    public: bool operator>(
+        self const& in_right)
+    const
     {
         return 0 < this->super::compare(in_right);
     }
@@ -498,9 +580,27 @@ class psyq::basic_const_string:
         @return 左辺 > 右辺
      */
     public: template<typename template_string_type>
-    bool operator>(template_string_type const& in_right) const
+    bool operator>(
+        template_string_type const& in_right)
+    const
     {
         return 0 < this->super::compare(in_right);
+    }
+
+    /** @brief 文字列の比較。
+
+        *thisを左辺として、右辺の文字列と比較。
+
+        @tparam template_string_traits @copydoc string_interface
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 < 右辺
+     */
+    public: template<std::size_t template_size>
+    bool operator>(
+        typename self::value_type const (&in_right)[template_size])
+    const
+    {
+        return 0 < this->super::compare(super(in_right));
     }
 
     /** @brief 文字列の比較。
@@ -510,7 +610,9 @@ class psyq::basic_const_string:
         @param[in] in_right 右辺の文字列。
         @return 左辺 >= 右辺
      */
-    public: bool operator>=(self const& in_right) const
+    public: bool operator>=(
+        self const& in_right)
+    const
     {
         return 0 <= this->super::compare(in_right);
     }
@@ -524,9 +626,27 @@ class psyq::basic_const_string:
         @return 左辺 >= 右辺
      */
     public: template<typename template_string_type>
-    bool operator>=(template_string_type const& in_right) const
+    bool operator>=(
+        template_string_type const& in_right)
+    const
     {
         return 0 <= this->super::compare(in_right);
+    }
+
+    /** @brief 文字列の比較。
+
+        *thisを左辺として、右辺の文字列と比較。
+
+        @tparam template_string_traits @copydoc string_interface
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 < 右辺
+     */
+    public: template<std::size_t template_size>
+    bool operator>=(
+        typename self::value_type const (&in_right)[template_size])
+    const
+    {
+        return 0 <= this->super::compare(super(in_right));
     }
 
     //-------------------------------------------------------------------------

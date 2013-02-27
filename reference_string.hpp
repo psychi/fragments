@@ -149,9 +149,9 @@ class psyq::basic_reference_string
 
     /** @brief 文字列literalを割り当てる。
         @tparam template_size 割り当てる文字列literalの要素数。
+        @param[in] in_string 割り当てる文字列literal。
         @param[in] in_offset 割り当てる文字列literalの開始offset位置。
         @param[in] in_count  割り当てる文字数。
-        @param[in] in_string 割り当てる文字列literal。
      */
     public: template <std::size_t template_size>
     basic_reference_string(
@@ -412,7 +412,7 @@ class psyq::basic_reference_string
      */
     public: bool operator==(self const& in_right) const
     {
-        return this->is_equal(in_right);
+        return this->is_equal(in_right.data(), in_right.size());
     }
 
     /** @brief 文字列の比較。
@@ -424,7 +424,7 @@ class psyq::basic_reference_string
      */
     public: bool operator!=(self const& in_right) const
     {
-        return !this->is_equal(in_right);
+        return !this->is_equal(in_right.data(), in_right.size());
     }
 
     /** @brief 文字列の比較。
@@ -477,12 +477,14 @@ class psyq::basic_reference_string
 
     //-------------------------------------------------------------------------
     /** @brief 文字列を比較。
-        @param[in] in_right 右辺の文字列の先頭位置。必ずNULL文字で終わる。
+        @param[in] in_right 右辺の文字列の先頭位置。
         @retval 負 右辺のほうが大きい。
         @retval 正 左辺のほうが大きい。
         @retval 0  左辺と右辺は等価。
      */
-    public: int compare(typename self::const_pointer const in_right) const
+    public: template<std::size_t template_size>
+    int compare(
+        typename self::value_type const (&in_right)[template_size])
     {
         return this->compare(0, this->size(), in_right);
     }
@@ -633,7 +635,7 @@ class psyq::basic_reference_string
     }
 
     /** @brief 文字列を検索。
-        @param[in] in_string 検索文字列の先頭位置。必ずNULL文字で終わる。
+        @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
         @note
@@ -747,7 +749,7 @@ class psyq::basic_reference_string
     }
 
     /** @brief 後ろから文字列を検索。
-        @param[in] in_string 検索文字列の先頭位置。必ずNULL文字で終わる。
+        @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
         @note
@@ -910,7 +912,7 @@ class psyq::basic_reference_string
     }
 
     /** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索。
-        @param[in] in_string 検索文字列。必ずNULL文字で終わる。
+        @param[in] in_string 検索文字列。
         @param[in] in_offset 検索を開始する位置。
         @return 検索文字が現れた位置。現れない場合は self::npos を返す。
         @note
@@ -1000,7 +1002,7 @@ class psyq::basic_reference_string
     }
 
     /** @brief 検索文字列に含まれない文字を検索。
-        @param[in] in_string 検索文字列の先頭位置。必ずNULL文字で終わる。
+        @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @return
             検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
@@ -1097,7 +1099,7 @@ class psyq::basic_reference_string
     }
 
     /** @brief 検索文字列に含まれない文字を検索。
-        @param[in] in_string 検索文字列の先頭位置。必ずNULL文字で終わる。
+        @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @return
             検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
@@ -1219,22 +1221,22 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    protected: template<typename template_string_type>
-    bool is_equal(
-        template_string_type const& in_right)
+    protected: bool is_equal(
+        typename self::const_pointer const in_right_begin,
+        typename self::size_type const     in_right_size)
     const
     {
-        if (this->size() != in_right.size())
+        if (this->size() != in_right_size)
         {
             return false;
         }
-        if (this->data() == in_right.data())
+        if (this->data() == in_right_begin)
         {
             return true;
         }
         int const local_compare(
             template_char_traits::compare(
-                this->data(), in_right.data(), this->size()));
+                this->data(), in_right_begin, in_right_size));
         return local_compare == 0;
     }
 

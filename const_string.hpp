@@ -53,7 +53,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string のinterfaceに準拠した、文字列定数。
+/** @brief std::basic_string のinterfaceを模した、文字列定数。
 
     文字列定数なので、文字列を書き換えるinterfaceは持たない。
 
@@ -150,34 +150,6 @@ class psyq::basic_const_string:
         // pass
     }
 
-    /** @brief copy-constructor
-
-        copy元が文字列literalなら、memoy割当子を使わず、
-        文字列literalを直接割り当てて構築。
-
-        copy元が文字列literalでなければ、memory割り当てを行い、
-        文字列をcopyして構築。
-
-        @param[in] in_source copy元。
-        @sa is_allocated()
-     */
-    public: basic_const_string(
-        self const& in_source)
-    :
-        super(),
-        is_allocated_(in_source.is_allocated_),
-        allocator_(in_source.allocator_)
-    {
-        if (in_source.is_allocated())
-        {
-            this->create_string(in_source.data(), in_source.size());
-        }
-        else
-        {
-            static_cast<super&>(*this) = in_source;
-        }
-    }
-
     /** @brief memory割当子を使わず、文字列literalを直接割り当てて構築。
         @tparam template_size 割り当てる文字列literalの要素数。
         @param[in] in_string    割り当てる文字列literal。
@@ -199,28 +171,29 @@ class psyq::basic_const_string:
         PSYQ_ASSERT(0 < template_size);
     }
 
-    /** @brief memory割当子を使わず、文字列literalを直接割り当てて構築。
-        @tparam template_size 割り当てる文字列literalの要素数。
-        @param[in] in_string    割り当てる文字列literal。
-        @param[in] in_offset    割り当てる文字列の開始offset位置。
-        @param[in] in_count     割り当てる文字数。
+    /** @brief memory割り当てを行い、文字をcopyして構築。
+        @param[in] in_count     文字数。
+        @param[in] in_char      copyする文字。
         @param[in] in_allocator memory割当子の初期値。
      */
-    public: template <std::size_t template_size>
-    basic_const_string(
-        typename self::value_type const      (&in_string)[template_size],
-        typename self::size_type const       in_offset,
-        typename self::size_type const       in_count,
-        typename self::allocator_type const& in_allocator =
+    public: basic_const_string(
+        typename self::size_type const      in_count,
+        typename self::value_type const     in_char,
+        typename self::allocator_type const in_allocator =
             self::allocator_type())
     :
-        super(in_string, in_offset, in_count),
+        super(),
         is_allocated_(false),
         allocator_(in_allocator)
     {
-        if (this->end() < &in_string[template_size - 1])
+        self::value_type* const local_pointer(this->allocate_string(in_count));
+        if (local_pointer != NULL)
         {
-            this->create_string(this->data(), this->size());
+            for (typename self::size_type i(0); i < in_count; ++i)
+            {
+                local_pointer[i] = in_char;
+            }
+            local_pointer[in_count] = 0;
         }
     }
 
@@ -236,27 +209,10 @@ class psyq::basic_const_string:
             self::allocator_type())
     :
         super(),
+        is_allocated_(false),
         allocator_(in_allocator)
     {
         this->create_string(in_string, in_size);
-    }
-
-    /** @brief memory割り当てを行い、文字列をcopyして構築。
-        @param[in] in_begin     copyする文字列の先頭位置。
-        @param[in] in_end       copyする文字列の末尾位置。
-        @param[in] in_allocator memory割当子の初期値。
-     */
-    public: basic_const_string(
-        typename self::const_pointer const  in_begin,
-        typename self::const_pointer const  in_end,
-        typename self::allocator_type const in_allocator =
-            self::allocator_type())
-    :
-        super(),
-        allocator_(in_allocator)
-    {
-        PSYQ_ASSERT(in_begin <= in_end);
-        this->create_string(in_begin, std::distance(in_begin, in_end));
     }
 
     /** @brief memory割り当てを行い、任意型の文字列をcopyして構築。
@@ -276,6 +232,7 @@ class psyq::basic_const_string:
             self::allocator_type())
     :
         super(),
+        is_allocated_(false),
         allocator_(in_allocator)
     {
         this->create_string(
@@ -325,51 +282,6 @@ class psyq::basic_const_string:
         this->super::swap(io_target);
         std::swap(this->is_allocated_, io_target.is_allocated_);
         std::swap(this->allocator_, io_target.allocator_);
-    }
-
-    //-------------------------------------------------------------------------
-    /** @brief 部分文字列を構築。
-        @param[in] in_offset 文字列の開始位置。
-        @param[in] in_count  文字数。
-        @return 新たに構築した部分文字列。
-     */
-    public: self substr(
-        typename self::size_type const in_offset = 0,
-        typename self::size_type const in_count = self::npos)
-    const
-    {
-        if (!this->is_allocated())
-        {
-            self local_string(this->allocator_);
-            if (this->size() <= in_offset)
-            {
-                PSYQ_ASSERT(in_offset == this->size());
-                return local_string;
-            }
-            typename self::size_type const local_count(
-                super::trim_count(*this, in_offset, in_count));
-            if (in_offset + local_count == this->size())
-            {
-                new(&local_string) super(this->data_ + in_offset, local_count);
-                return local_string;
-            }
-        }
-        return this->substr<self>(in_offset, in_count);
-    }
-
-    /** @brief 部分文字列を構築。
-        @tparam template_string_type 新たに構築する部分文字列の型。
-        @param[in] in_offset 文字列の開始位置。
-        @param[in] in_count  文字数。
-        @return 新たに構築した部分文字列。
-     */
-    public: template<typename template_string_type>
-    template_string_type substr(
-        typename self::size_type const in_offset = 0,
-        typename self::size_type const in_count = self::npos)
-    const
-    {
-        return this->super::substr<template_string_type>(in_offset, in_count);
     }
 
     //-------------------------------------------------------------------------
@@ -650,15 +562,47 @@ class psyq::basic_const_string:
     }
 
     //-------------------------------------------------------------------------
-    private: void create_string(
-        typename self::const_pointer const  in_string,
-        typename self::size_type const      in_size)
+    /** @brief
+        memory割り当てを抑制するため、copy-constructorとcopy演算子は使用禁止。
+
+        copy-constructorやcopy演算子を使えると便利だが、
+        copy処理に伴う重みを実感しにくい。
+        copy処理を行う場合は、それに伴う重みを実感しやすいように、
+        典型的な関数呼び出しの形式で記述するのを推奨する。
+
+        @note
+        copy-constructorやcopy演算子がどうしても必要になった場合は、
+        psyq::basic_reference_string をsmart-pointerで参照する実装を
+        考えること。
+     */
+    private: basic_const_string(
+        self const& in_source)
+    :
+        super(),
+        is_allocated_(in_source.is_allocated_),
+        allocator_(in_source.allocator_)
     {
-        this->is_allocated_ = false;
-        if (in_size <= 0 || in_string == NULL)
+        if (in_source.is_allocated())
         {
-            PSYQ_ASSERT(in_string <= 0 || in_string != NULL);
-            return;
+            // 文字列literalでなければ、memory割り当てを行い、文字列をcopy。
+            this->create_string(in_source.data(), in_source.size());
+        }
+        else
+        {
+            // 文字列literalなら、文字列literalを直接割り当てる。
+            static_cast<super&>(*this) = in_source;
+        }
+    }
+
+    /// @copydoc basic_const_string(self const&)
+    private: self& operator=(self const&);
+
+    private: typename self::value_type* allocate_string(
+        typename self::size_type const in_size)
+    {
+        if (in_size <= 0)
+        {
+            return NULL;
         }
         typename self::size_type const local_capacity(in_size + 1);
         typename self::value_type* const local_pointer(
@@ -666,17 +610,29 @@ class psyq::basic_const_string:
         if (local_pointer == NULL)
         {
             PSYQ_ASSERT(false);
-            return;
+            return NULL;
         }
-
         this->is_allocated_ = true;
         new(this) super(local_pointer, in_size);
-        self::traits_type::copy(local_pointer, in_string, in_size);
-        local_pointer[in_size] = 0;
+        return local_pointer;
     }
 
-    /// copy演算子は使用禁止。
-    private: self& operator=(self const&);
+    private: void create_string(
+        typename self::const_pointer const  in_string,
+        typename self::size_type const      in_size)
+    {
+        if (in_string == NULL)
+        {
+            PSYQ_ASSERT(in_size <= 0);
+            return;
+        }
+        self::value_type* const local_pointer(this->allocate_string(in_size));
+        if (local_pointer != NULL)
+        {
+            self::traits_type::copy(local_pointer, in_string, in_size);
+            local_pointer[in_size] = 0;
+        }
+    }
 
     //-------------------------------------------------------------------------
     /// memory割り当てを行ったかどうか。

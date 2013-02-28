@@ -57,15 +57,15 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string のinterfaceに準拠した、文字列定数への参照。
+/** @brief std::basic_string のinterfaceを模した、文字列定数への参照。
 
     文字列定数なので、文字列を書き換えるinterfaceは持たない。
 
     memory割り当てを一切行わない。
 
     @warning
-        constructorで割り当てられた文字列を参照してるので、
-        参照先の文字列が再割り当てや破棄されると、動作を保証できなくなる。
+        constructorで割り当てられた文字列を文字列定数として参照してるので、
+        参照先の文字列が更新されると、動作を保証できなくなる。
         安全に文字列定数を扱うには、 psyq::basic_const_string を使う。
 
     @tparam template_char_type
@@ -130,12 +130,9 @@ class psyq::basic_reference_string
         // pass
     }
 
-    /** @brief 文字列literalからの変換constructor。
-        @tparam template_size 割り当てる文字列literalの要素数。
-        @param[in] in_string 割り当てる文字列literal。
-        @note
-            この関数を実装するため、
-            basic_reference_string(self::const_pointer) はomitした。
+    /** @brief 文字列literalを参照する。
+        @tparam template_size 参照する文字列literalの要素数。
+        @param[in] in_string 参照する文字列literal。
      */
     public: template <std::size_t template_size>
     basic_reference_string(
@@ -147,26 +144,9 @@ class psyq::basic_reference_string
         PSYQ_ASSERT(0 < template_size);
     }
 
-    /** @brief 文字列literalを割り当てる。
-        @tparam template_size 割り当てる文字列literalの要素数。
-        @param[in] in_string 割り当てる文字列literal。
-        @param[in] in_offset 割り当てる文字列literalの開始offset位置。
-        @param[in] in_count  割り当てる文字数。
-     */
-    public: template <std::size_t template_size>
-    basic_reference_string(
-        typename self::value_type const (&in_string)[template_size],
-        typename self::size_type        in_offset,
-        typename self::size_type        in_count)
-    :
-        data_(&in_string[in_offset]),
-        size_(self::trim_count(template_size - 1, in_offset, in_count))
-    {
-        PSYQ_ASSERT(0 < template_size);
-    }
-
-    /** @param[in] in_string 割り当てる文字列の先頭位置。
-        @param[in] in_size   割り当てる文字列の長さ。
+    /** @brief 文字列を参照する。
+        @param[in] in_string 参照する文字列の先頭位置。
+        @param[in] in_size   参照する文字列の長さ。
      */
     public: basic_reference_string(
         typename self::const_pointer const in_string,
@@ -182,20 +162,9 @@ class psyq::basic_reference_string
         }
     }
 
-    /** @param[in] in_begin 割り当てる文字列の先頭位置。
-        @param[in] in_end   割り当てる文字列の末尾位置。
-     */
-    public: basic_reference_string(
-        typename self::const_pointer const in_begin,
-        typename self::const_pointer const in_end)
-    {
-        PSYQ_ASSERT(in_begin <= in_end);
-        new(this) self(in_begin, std::distance(in_begin, in_end));
-    }
-
-    /** @brief 任意型の文字列からの変換constructor
+    /** @brief 任意型の文字列を参照する。
         @tparam template_string_type @copydoc string_interface
-        @param[in] in_string 割り当てる文字列。
+        @param[in] in_string 参照する文字列。
      */
     public: template<typename template_string_type>
     basic_reference_string(
@@ -207,11 +176,11 @@ class psyq::basic_reference_string
         // pass
     }
 
-    /** @brief 任意型の文字列を割り当てる。
+    /** @brief 任意型の文字列を参照する。
         @tparam template_string_type @copydoc string_interface
-        @param[in] in_string 割り当てる文字列。
-        @param[in] in_offset 割り当てる文字列の開始offset位置。
-        @param[in] in_count  割り当てる文字数。
+        @param[in] in_string 参照する文字列。
+        @param[in] in_offset 参照する文字列の開始offset位置。
+        @param[in] in_count  参照する文字数。
      */
     public: template<typename template_string_type>
     basic_reference_string(
@@ -638,9 +607,6 @@ class psyq::basic_reference_string
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
-        @note
-            この関数を実装するため、
-            find(self::const_pointer, self::size_type) はomitした。
      */
     public: template <std::size_t template_size>
     typename self::size_type find(
@@ -752,9 +718,6 @@ class psyq::basic_reference_string
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
-        @note
-            この関数を実装するため、
-            rfind(self::const_pointer, self::size_type) はomitした。
      */
     public: template <std::size_t template_size>
     typename self::size_type rfind(
@@ -838,9 +801,6 @@ class psyq::basic_reference_string
         @param[in] in_string 検索文字列の先頭位置。必ずNULLで終わる。
         @param[in] in_offset 検索を開始する位置。
         @return 検索文字が現れた位置。現れない場合は self::npos を返す。
-        @note
-            この関数を実装するため、
-            find_first_of(self::const_pointer, self::size_type) はomitした。
      */
     public: template <std::size_t template_size>
     typename self::size_type find_first_of(
@@ -915,9 +875,6 @@ class psyq::basic_reference_string
         @param[in] in_string 検索文字列。
         @param[in] in_offset 検索を開始する位置。
         @return 検索文字が現れた位置。現れない場合は self::npos を返す。
-        @note
-            この関数を実装するため、
-            find_last_of(self::const_pointer, self::size_type) はomitした。
      */
     public: template <std::size_t template_size>
     typename self::size_type find_last_of(
@@ -1006,10 +963,6 @@ class psyq::basic_reference_string
         @param[in] in_offset 検索を開始する位置。
         @return
             検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
-        @note
-            この関数を実装するため、
-            find_first_not_of(self::const_pointer, self::size_type)
-            はomitした。
      */
     public: template <std::size_t template_size>
     typename self::size_type find_first_not_of(
@@ -1103,9 +1056,6 @@ class psyq::basic_reference_string
         @param[in] in_offset 検索を開始する位置。
         @return
             検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
-        @note
-            この関数を実装するため、
-            find_last_not_of(self::const_pointer, self::size_type) はomitした。
      */
     public: template <std::size_t template_size>
     typename self::size_type find_last_not_of(
@@ -1179,37 +1129,6 @@ class psyq::basic_reference_string
             return 0;
         }
         return template_char_traits::length(in_string);
-    }
-
-    //-------------------------------------------------------------------------
-    /** @brief 部分文字列を構築。
-        @param[in] in_offset 文字列の開始位置。
-        @param[in] in_count  文字数。
-        @return 新たに構築した部分文字列。
-     */
-    public: self substr(
-        typename self::size_type const in_offset = 0,
-        typename self::size_type const in_count = self::npos)
-    const
-    {
-        return this->substr<self>(in_offset, in_count);
-    }
-
-    /** @brief 部分文字列を構築。
-        @tparam template_string_type 新たに構築する部分文字列の型。
-        @param[in] in_offset 文字列の開始位置。
-        @param[in] in_count  文字数。
-        @return 新たに構築した部分文字列。
-     */
-    public: template<typename template_string_type>
-    template_string_type substr(
-        typename self::size_type const in_offset = 0,
-        typename self::size_type const in_count = self::npos)
-    const
-    {
-        return template_string_type(
-            this->data() + in_offset,
-            self::trim_count(*this, in_offset, in_count));
     }
 
     //-------------------------------------------------------------------------
@@ -1294,7 +1213,7 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /// 無効な位置を表す。 find() や substr() などで使われる。
+    /// 無効な位置を表す。 find() などで使われる。
     public: static typename self::size_type const npos =
         static_cast<typename self::size_type>(-1);
 
@@ -1304,7 +1223,7 @@ class psyq::basic_reference_string
 
     /** @page string_interface
 
-        文字列の型。
+        文字列を持つ型。文字列の先頭から末尾までのmemory連続性が必須。
 
         文字列の先頭位置を取得するため、以下の関数を使えること。
         @code

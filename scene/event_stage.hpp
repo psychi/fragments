@@ -51,7 +51,7 @@ class psyq::event_stage
 	public: typedef psyq::event_action< t_hash, t_real > action;
 
 	/// ‚±‚Ìinstance‚ªg‚¤•¶š—ñ’è”‚ÌŒ^B
-	public: typedef psyq::basic_const_string<
+	public: typedef psyq::basic_reference_string<
 		typename t_string::value_type, typename t_string::traits_type >
 			const_string;
 
@@ -565,12 +565,12 @@ class psyq::event_stage
 				if (i_end != a_word_begin)
 				{
 					return typename this_type::const_string(
-						a_word_begin, i + 1);
+						a_word_begin, std::distance(a_word_begin, i + 1));
 				}
 				break;
 			}
 		}
-		return typename this_type::const_string(i_end, i_end);
+		return typename this_type::const_string(i_end, 0);
 	}
 
 	//-------------------------------------------------------------------------

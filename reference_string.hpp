@@ -59,14 +59,13 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_string のinterfaceを模した、文字列定数への参照。
 
-    文字列定数なので、文字列を書き換えるinterfaceは持たない。
-
-    memory割り当てを一切行わない。
+    - memory割り当てを一切行わない。
+    - 文字列定数なので、文字列を書き換えるinterfaceは持たない。
 
     @warning
         constructorで割り当てられた文字列を文字列定数として参照してるので、
         参照先の文字列が更新されると、動作を保証できなくなる。
-        安全に文字列定数を扱うには、 psyq::basic_const_string を使う。
+        文字列定数を安全に扱うには、 psyq::basic_const_string を使う。
 
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type
@@ -297,6 +296,7 @@ class psyq::basic_reference_string
         return (*this)[this->size() - 1];
     }
 
+    //-------------------------------------------------------------------------
     /** @brief 文字列の長さを取得。
         @return 文字列の長さ。
      */
@@ -1140,6 +1140,12 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
+    /** @brief 等価な文字列か判定。
+        @param[in] in_right_begin 比較する文字列の先頭位置。
+        @param[in] in_right_size  比較する文字列の文字数。
+        @retval true  等価な文字列だった。
+        @retval false 等価な文字列ではなかった。
+     */
     protected: bool is_equal(
         typename self::const_pointer const in_right_begin,
         typename self::size_type const     in_right_size)
@@ -1159,11 +1165,18 @@ class psyq::basic_reference_string
         return local_compare == 0;
     }
 
+    /** @brief 文字pointerを取得。
+        @tparam template_string_type @copydoc string_interface
+        @param[in] in_string 文字列。
+        @param[in] in_offset 文字列の開始offset位置。
+        @return
+            開始offset位置にある文字へのpointer。
+            開始offset位置が文字数を超えている場合は、最後の文字へのpointer。
+     */
     private: template<typename template_string_type>
-    typename template_string_type::const_pointer get_pointer(
+    static typename template_string_type::const_pointer get_pointer(
         template_string_type const&                    in_string,
         typename template_string_type::size_type const in_offset)
-    const
     {
         typename template_string_type::size_type local_offset(
             self::convert_count<template_string_type>(in_offset));
@@ -1176,6 +1189,13 @@ class psyq::basic_reference_string
         return in_string.data() + local_offset;
     }
 
+    /** @brief 文字数をtrimmingする。
+        @tparam template_string_type @copydoc string_interface
+        @param[in] in_string 文字列。
+        @param[in] in_offset 文字列の開始offset位置。
+        @param[in] in_count  文字列の開始offset位置からの文字数。
+        @return 文字列全体の文字数に収まるようにin_countをtrimmingした値。
+     */
     protected: template<typename template_string_type>
     static typename template_string_type::size_type trim_count(
         template_string_type const&                    in_string,
@@ -1188,6 +1208,12 @@ class psyq::basic_reference_string
             self::convert_count<template_string_type>(in_count));
     }
 
+    /** @brief 文字数をtrimmingする。
+        @param[in] in_size   文字列全体の文字数。
+        @param[in] in_offset 文字列の開始offset位置。
+        @param[in] in_count  文字列の開始offset位置からの文字数。
+        @return 文字列全体の文字数に収まるようにin_countをtrimmingした値。
+     */
     protected: static typename self::size_type trim_count(
         typename self::size_type const in_size,
         typename self::size_type const in_offset,

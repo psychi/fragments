@@ -119,7 +119,7 @@ class psyq::basic_reference_string
         reverse_iterator;
 
     //-------------------------------------------------------------------------
-    /** @brief default-constructor
+    /** @brief 空の文字列を構築する。
      */
     public: basic_reference_string()
     :
@@ -195,7 +195,7 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列を交換。
+    /** @brief 文字列を交換する。
         @param[in,out] io_target 交換する文字列。
      */
     public: void swap(self& io_target)
@@ -205,7 +205,7 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列の先頭位置を取得。
+    /** @brief 文字列の先頭位置を取得する。
         @return 文字列の先頭位置。
         @warning 文字列がNULL文字で終わっているとは限らない。
      */
@@ -214,7 +214,7 @@ class psyq::basic_reference_string
         return this->data_;
     }
 
-    /** @brief 文字列の先頭位置を取得。
+    /** @brief 文字列の先頭位置を取得する。
         @return 文字列の先頭位置への反復子。
      */
     public: typename self::const_iterator begin() const
@@ -222,7 +222,7 @@ class psyq::basic_reference_string
         return this->data();
     }
 
-    /** @brief 文字列の末尾位置を取得。
+    /** @brief 文字列の末尾位置を取得する。
         @return 文字列の末尾位置への反復子。
      */
     public: typename self::const_iterator end() const
@@ -230,7 +230,7 @@ class psyq::basic_reference_string
         return this->begin() + this->size();
     }
 
-    /** @brief 文字列の先頭位置を取得。
+    /** @brief 文字列の先頭位置を取得する。
         @return 文字列の先頭位置への反復子。
      */
     public: typename self::const_iterator cbegin() const
@@ -238,7 +238,7 @@ class psyq::basic_reference_string
         return this->begin();
     }
 
-    /** @brief 文字列の末尾位置を取得。
+    /** @brief 文字列の末尾位置を取得する。
         @return 文字列の末尾位置への反復子。
      */
     public: typename self::const_iterator cend() const
@@ -246,7 +246,7 @@ class psyq::basic_reference_string
         return this->end();
     }
 
-    /** @brief 文字列の末尾位置を取得。
+    /** @brief 文字列の末尾位置を取得する。
         @return 文字列の末尾位置への逆反復子。
      */
     public: typename self::const_reverse_iterator rbegin() const
@@ -254,7 +254,7 @@ class psyq::basic_reference_string
         return typename self::const_reverse_iterator(this->end());
     }
 
-    /** @brief 文字列の先頭位置を取得。
+    /** @brief 文字列の先頭位置を取得する。
         @return 文字列の先頭位置への逆反復子。
      */
     public: typename self::const_reverse_iterator rend() const
@@ -262,7 +262,7 @@ class psyq::basic_reference_string
         return typename self::const_reverse_iterator(this->begin());
     }
 
-    /** @brief 文字列の末尾位置を取得。
+    /** @brief 文字列の末尾位置を取得する。
         @return 文字列の末尾位置への逆反復子。
      */
     public: typename self::const_reverse_iterator crbegin() const
@@ -270,7 +270,7 @@ class psyq::basic_reference_string
         return this->rbegin();
     }
 
-    /** @brief 文字列の先頭位置を取得。
+    /** @brief 文字列の先頭位置を取得する。
         @return 文字列の先頭位置への逆反復子。
      */
     public: typename self::const_reverse_iterator crend() const
@@ -278,7 +278,7 @@ class psyq::basic_reference_string
         return this->rend();
     }
 
-    /** @brief 文字列の先頭文字を参照。
+    /** @brief 文字列の先頭文字を参照する。
         @return 文字列の先頭文字への参照。
      */
     typename self::const_reference front() const
@@ -287,7 +287,7 @@ class psyq::basic_reference_string
         return (*this)[0];
     }
 
-    /** @brief 文字列の末尾文字を参照。
+    /** @brief 文字列の末尾文字を参照する。
         @return 文字列の末尾文字への参照。
      */
     public: typename self::const_reference back() const
@@ -297,7 +297,7 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列の長さを取得。
+    /** @brief 文字列の長さを取得する。
         @return 文字列の長さ。
      */
     public: typename self::size_type length() const
@@ -305,7 +305,7 @@ class psyq::basic_reference_string
         return this->size();
     }
 
-    /** @brief 文字列の長さを取得。
+    /** @brief 文字列の長さを取得する。
         @return 文字列の長さ。
      */
     public: typename self::size_type size() const
@@ -313,7 +313,7 @@ class psyq::basic_reference_string
         return this->size_;
     }
 
-    /** @brief 文字列の最大長を取得。
+    /** @brief 文字列の最大長を取得する。
         @return
             文字列の最大長。
             文字列の書き換えができないので、文字列の長さと同じ値になる。
@@ -323,7 +323,7 @@ class psyq::basic_reference_string
         return this->size();
     }
 
-    /** @brief 文字列の容量を取得。
+    /** @brief 文字列の容量を取得する。
         @return
            文字列の容量。
            文字列の書き換えができないので、文字列の長さと同じ値になる。
@@ -333,9 +333,9 @@ class psyq::basic_reference_string
         return this->size();
     }
 
-    /** @brief 文字列が空か判定。
-        @retval true  文字列は空。
-        @retval false 文字列は空ではない。
+    /** @brief 空の文字列か判定する。
+        @retval true  空の文字列。
+        @retval false 空の文字列ではない。
      */
     public: bool empty() const
     {
@@ -343,7 +343,7 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列が持つ文字を参照。
+    /** @brief 文字列が持つ文字を参照する。
         @param[in] in_index 文字のindex番号。
         @return 文字への参照。
      */
@@ -359,7 +359,7 @@ class psyq::basic_reference_string
         return *(this->data() + in_index);
     }
 
-    /** @brief 文字列が持つ文字を参照。
+    /** @brief 文字列が持つ文字を参照する。
         @param[in] in_index 文字のindex番号。
         @return 文字への参照。
      */
@@ -372,9 +372,9 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列の比較。
+    /** @brief 文字列を比較する。
 
-        *thisを左辺として、右辺の文字列と比較。
+        *thisを左辺として、右辺の文字列と比較する。
 
         @param[in] in_right 右辺の文字列。
         @return 左辺 == 右辺
@@ -384,9 +384,9 @@ class psyq::basic_reference_string
         return this->is_equal(in_right.data(), in_right.size());
     }
 
-    /** @brief 文字列の比較。
+    /** @brief 文字列を比較する。
 
-        *thisを左辺として、右辺の文字列と比較。
+        *thisを左辺として、右辺の文字列と比較する。
 
         @param[in] in_right 右辺の文字列。
         @return 左辺 != 右辺
@@ -396,9 +396,9 @@ class psyq::basic_reference_string
         return !this->is_equal(in_right.data(), in_right.size());
     }
 
-    /** @brief 文字列の比較。
+    /** @brief 文字列を比較する。
 
-        *thisを左辺として、右辺の文字列と比較。
+        *thisを左辺として、右辺の文字列と比較する。
 
         @param[in] in_right 右辺の文字列。
         @return 左辺 < 右辺
@@ -408,9 +408,9 @@ class psyq::basic_reference_string
         return this->compare(in_right) < 0;
     }
 
-    /** @brief 文字列の比較。
+    /** @brief 文字列を比較する。
 
-        *thisを左辺として、右辺の文字列と比較。
+        *thisを左辺として、右辺の文字列と比較する。
 
         @param[in] in_right 右辺の文字列。
         @return 左辺 <= 右辺
@@ -420,9 +420,9 @@ class psyq::basic_reference_string
         return this->compare(in_right) <= 0;
     }
 
-    /** @brief 文字列の比較。
+    /** @brief 文字列を比較する。
 
-        *thisを左辺として、右辺の文字列と比較。
+        *thisを左辺として、右辺の文字列と比較する。
 
         @param[in] in_right 右辺の文字列。
         @return 左辺 > 右辺
@@ -432,9 +432,9 @@ class psyq::basic_reference_string
         return 0 < this->compare(in_right);
     }
 
-    /** @brief 文字列の比較。
+    /** @brief 文字列を比較する。
 
-        *thisを左辺として、右辺の文字列と比較。
+        *thisを左辺として、右辺の文字列と比較する。
 
         @param[in] in_right 右辺の文字列。
         @return 左辺 >= 右辺
@@ -445,7 +445,7 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列を比較。
+    /** @brief 文字列を比較する。
         @param[in] in_right 右辺の文字列の先頭位置。
         @retval 負 右辺のほうが大きい。
         @retval 正 左辺のほうが大きい。
@@ -458,7 +458,7 @@ class psyq::basic_reference_string
         return this->compare(0, this->size(), in_right);
     }
 
-    /** @brief 文字列を比較。
+    /** @brief 文字列を比較する。
         @tparam template_string_traits @copydoc string_interface
         @param[in] in_right 右辺の文字列。
         @retval 負 右辺のほうが大きい。
@@ -472,7 +472,7 @@ class psyq::basic_reference_string
             0, this->size(), in_right.data(), in_right.size());
     }
 
-    /** @brief 文字列を比較。
+    /** @brief 文字列を比較する。
         @param[in] in_left_offset 左辺の文字列の開始位置。
         @param[in] in_left_count  左辺の文字列の文字数。
         @param[in] in_right       右辺の文字列の先頭位置。
@@ -491,7 +491,7 @@ class psyq::basic_reference_string
             in_left_offset, in_left_count, &in_right[0], template_size - 1);
     }
 
-    /** @brief 文字列を比較。
+    /** @brief 文字列を比較する。
         @tparam template_string_traits @copydoc string_interface
         @param[in] in_left_offset 左辺の文字列の開始位置。
         @param[in] in_left_count  左辺の文字列の文字数。
@@ -511,7 +511,7 @@ class psyq::basic_reference_string
             in_left_offset, in_left_count, in_right.data(), in_right.size());
     }
 
-    /** @brief 文字列を比較。
+    /** @brief 文字列を比較する。
         @param[in] in_left_offset 左辺の文字列の開始位置。
         @param[in] in_left_count  左辺の文字列の文字数。
         @param[in] in_right_begin 右辺の文字列の先頭位置。
@@ -550,7 +550,7 @@ class psyq::basic_reference_string
         return 0;
     }
 
-    /** @brief 文字列を比較。
+    /** @brief 文字列を比較する。
         @tparam template_string_traits @copydoc string_interface
         @param[in] in_left_offset  左辺の文字列の開始位置。
         @param[in] in_left_count   左辺の文字列の文字数。
@@ -578,7 +578,7 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字を検索。
+    /** @brief 文字を検索する。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
         @return 検索文字が現れた位置。現れない場合は self::npos を返す。
@@ -603,7 +603,7 @@ class psyq::basic_reference_string
         return self::npos;
     }
 
-    /** @brief 文字列を検索。
+    /** @brief 文字列を検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
@@ -617,7 +617,7 @@ class psyq::basic_reference_string
         return this->find(&in_string[0], in_offset, template_size - 1);
     }
 
-    /** @brief 文字列を検索。
+    /** @brief 文字列を検索する。
         @tparam template_string_traits @copydoc string_interface
         @param[in] in_string 検索文字列。
         @param[in] in_offset 検索を開始する位置。
@@ -632,7 +632,7 @@ class psyq::basic_reference_string
         return this->find(in_string.data(), in_offset, in_string.size());
     }
 
-    /** @brief 文字列を検索。
+    /** @brief 文字列を検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @param[in] in_size   検索文字列の長さ。
@@ -686,7 +686,7 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 後ろから文字を検索。
+    /** @brief 後ろから文字を検索する。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
         @return 検索文字が現れた位置。現れない場合は self::npos を返す。
@@ -714,7 +714,7 @@ class psyq::basic_reference_string
         return self::npos;
     }
 
-    /** @brief 後ろから文字列を検索。
+    /** @brief 後ろから文字列を検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
@@ -728,7 +728,7 @@ class psyq::basic_reference_string
         return this->rfind(&in_string[0], in_offset, template_size - 1);
     }
 
-    /** @brief 後ろから文字列を検索。
+    /** @brief 後ろから文字列を検索する。
         @tparam template_string_traits @copydoc string_interface
         @param[in] in_string 検索文字列。
         @param[in] in_offset 検索を開始する位置。
@@ -743,7 +743,7 @@ class psyq::basic_reference_string
         return this->rfind(in_string.data(), in_offset, in_string.size());
     }
 
-    /** @brief 後ろから文字列を検索。
+    /** @brief 後ろから文字列を検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @param[in] in_size 検索文字列の長さ。
@@ -784,7 +784,7 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字を検索。
+    /** @brief 文字を検索する。
         @param[in] in_char   検索する文字。
         @param[in] in_offset 検索を開始する位置。
         @return 検索文字が見つけた位置。現れない場合は self::npos を返す。
@@ -797,7 +797,7 @@ class psyq::basic_reference_string
         return this->find(in_char, in_offset);
     }
 
-    /** @brief 検索文字列に含まれるいずれかの文字を検索。
+    /** @brief 検索文字列に含まれるいずれかの文字を検索する。
         @param[in] in_string 検索文字列の先頭位置。必ずNULLで終わる。
         @param[in] in_offset 検索を開始する位置。
         @return 検索文字が現れた位置。現れない場合は self::npos を返す。
@@ -812,7 +812,7 @@ class psyq::basic_reference_string
             &in_string[0], in_offset, template_size - 1);
     }
 
-    /** @brief 検索文字列に含まれるいずれかの文字を検索。
+    /** @brief 検索文字列に含まれるいずれかの文字を検索する。
         @tparam template_string_traits @copydoc string_interface
         @param[in] in_string 検索文字列。
         @param[in] in_offset 検索を開始する位置。
@@ -828,7 +828,7 @@ class psyq::basic_reference_string
             in_string.data(), in_offset, in_string.size());
     }
 
-    /** @brief 検索文字列に含まれるいずれかの文字を検索。
+    /** @brief 検索文字列に含まれるいずれかの文字を検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @param[in] in_size 検索文字列の長さ。
@@ -858,7 +858,7 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字を後ろから検索。
+    /** @brief 文字を後ろから検索する。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
         @return 検索文字が現れた位置。現れない場合は self::npos を返す。
@@ -871,7 +871,7 @@ class psyq::basic_reference_string
         return this->rfind(in_char, in_offset);
     }
 
-    /** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索。
+    /** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索する。
         @param[in] in_string 検索文字列。
         @param[in] in_offset 検索を開始する位置。
         @return 検索文字が現れた位置。現れない場合は self::npos を返す。
@@ -886,7 +886,7 @@ class psyq::basic_reference_string
             &in_string[0], in_offset, template_size - 1);
     }
 
-    /** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索。
+    /** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索する。
         @tparam template_string_traits @copydoc string_interface
         @param[in] in_string 検索文字列。
         @param[in] in_offset 検索を開始する位置。
@@ -902,7 +902,7 @@ class psyq::basic_reference_string
             in_string.data(), in_offset, in_string.size());
     }
 
-    /** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索。
+    /** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @param[in] in_size   検索文字列の長さ。
@@ -934,7 +934,7 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 検索文字以外の文字を検索。
+    /** @brief 検索文字以外の文字を検索する。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
         @return
@@ -958,7 +958,7 @@ class psyq::basic_reference_string
         return self::npos;
     }
 
-    /** @brief 検索文字列に含まれない文字を検索。
+    /** @brief 検索文字列に含まれない文字を検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @return
@@ -974,7 +974,7 @@ class psyq::basic_reference_string
             &in_string[0], in_offset, template_size - 1);
     }
 
-    /** @brief 検索文字列に含まれない文字を検索。
+    /** @brief 検索文字列に含まれない文字を検索する。
         @tparam template_string_traits @copydoc string_interface
         @param[in] in_string 検索文字列。
         @param[in] in_offset 検索を開始する位置。
@@ -991,7 +991,7 @@ class psyq::basic_reference_string
             in_string.data(), in_offset, in_string.size());
     }
 
-    /** @brief 検索文字列に含まれない文字を検索。
+    /** @brief 検索文字列に含まれない文字を検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @param[in] in_size 検索文字列の長さ。
@@ -1022,7 +1022,7 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 検索文字以外の文字を、後ろから検索。
+    /** @brief 検索文字以外の文字を、後ろから検索する。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
         @return
@@ -1051,7 +1051,7 @@ class psyq::basic_reference_string
         return self::npos;
     }
 
-    /** @brief 検索文字列に含まれない文字を検索。
+    /** @brief 検索文字列に含まれない文字を検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @return
@@ -1067,7 +1067,7 @@ class psyq::basic_reference_string
             &in_string[0], in_offset, template_size - 1);
     }
 
-    /** @brief 検索文字列に含まれない文字を検索。
+    /** @brief 検索文字列に含まれない文字を検索する。
         @tparam template_string_traits @copydoc string_interface
         @param[in] in_string 検索文字列。
         @param[in] in_offset 検索を開始する位置。
@@ -1084,7 +1084,7 @@ class psyq::basic_reference_string
             in_string.data(), in_offset, in_string.size());
     }
 
-    /** @brief 検索文字列に含まれない文字を、後ろから検索。
+    /** @brief 検索文字列に含まれない文字を、後ろから検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
         @param[in] in_size   検索文字列の長さ。
@@ -1117,7 +1117,7 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列からNULL文字を検索。
+    /** @brief 文字列からNULL文字を検索する。
         @param[in] in_string 文字列の先頭位置。NULLの場合は、空文字列とみなす。
         @return NULL文字を見つけた位置のindex番号。
      */
@@ -1140,7 +1140,7 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 等価な文字列か判定。
+    /** @brief 等価な文字列か判定する。
         @param[in] in_right_begin 比較する文字列の先頭位置。
         @param[in] in_right_size  比較する文字列の文字数。
         @retval true  等価な文字列だった。
@@ -1165,7 +1165,7 @@ class psyq::basic_reference_string
         return local_compare == 0;
     }
 
-    /** @brief 文字pointerを取得。
+    /** @brief 文字pointerを取得する。
         @tparam template_string_type @copydoc string_interface
         @param[in] in_string 文字列。
         @param[in] in_offset 文字列の開始offset位置。
@@ -1264,7 +1264,7 @@ class psyq::basic_reference_string
 };
 
 //-----------------------------------------------------------------------------
-/** @brief 文字列の比較。
+/** @brief 文字列を比較する。
     @tparam template_string_type @copydoc string_interface
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type
@@ -1287,7 +1287,7 @@ bool operator==(
     return in_right.operator==(in_left);
 }
 
-/** @brief 文字列の比較。
+/** @brief 文字列を比較する。
     @tparam template_string_type @copydoc string_interface
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type
@@ -1310,7 +1310,7 @@ bool operator!=(
     return in_right.operator!=(in_left);
 }
 
-/** @brief 文字列の比較。
+/** @brief 文字列を比較する。
     @tparam template_string_type @copydoc string_interface
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type
@@ -1333,7 +1333,7 @@ bool operator<(
     return in_right.operator>(in_left);
 }
 
-/** @brief 文字列の比較。
+/** @brief 文字列を比較する。
     @tparam template_string_type @copydoc string_interface
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type
@@ -1356,7 +1356,7 @@ bool operator<=(
     return in_right.operator>=(in_left);
 }
 
-/** @brief 文字列の比較。
+/** @brief 文字列を比較する。
     @tparam template_string_type @copydoc string_interface
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type
@@ -1379,7 +1379,7 @@ bool operator>(
     return in_right.operator<(in_left);
 }
 
-/** @brief 文字列の比較。
+/** @brief 文字列を比較する。
     @tparam template_string_type @copydoc string_interface
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type

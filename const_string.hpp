@@ -89,7 +89,7 @@ class psyq::basic_const_string:
     public: typedef template_allocator_type allocator_type;
 
     //-------------------------------------------------------------------------
-    /** @brief default-constructor. memory割り当ては行わない。
+    /** @brief 空文字列を構築する。memory割り当ては行わない。
      */
     public: explicit basic_const_string(
         typename self::allocator_type const& in_allocator =
@@ -113,6 +113,15 @@ class psyq::basic_const_string:
         allocator_(in_source.allocator_)
     {
         self::hold_string(in_source.holder_);
+    }
+
+    /** @brief 文字列を移動する。memory割り当ては行わない。
+        @param[in,out] io_source move元の文字列。
+     */
+    public: basic_const_string(
+        self&& io_source)
+    {
+        this->swap(io_source);
     }
 
     /** @brief 文字列literalを参照する。memory割り当ては行わない。
@@ -224,25 +233,36 @@ class psyq::basic_const_string:
         return *this;
     }
 
+    public: self& operator=(self&& io_right)
+    {
+        this->swap(io_right);
+        return *this;
+    }
+
     public: typename self::allocator_type const& get_allocator() const
     {
         return this->allocator_;
     }
 
-    public: void swap(self const& in_right)
+    /** @brief 文字列を交換する。
+        @param[in,out] io_target 交換する文字列。
+     */
+    public: void swap(self& io_right)
     {
-        this->super::swap(in_right);
-        std::swap(this->holder_, in_right.holder_);
-        std::swap(this->allocator_, in_right.allocator_);
+        this->super::swap(io_right);
+        std::swap(this->holder_, io_right.holder_);
+        std::swap(this->allocator_, io_right.allocator_);
     }
 
     //-------------------------------------------------------------------------
+    /// 文字列保持子。
     private: struct holder
     {
         std::size_t refrence_count_; ///< 文字列の被参照数。
-        std::size_t string_length_;  ///< 参照している文字の文字数。
+        std::size_t string_length_;  ///< 参照してる文字列の文字数。
     };
 
+    /// 文字列保持子のmemory割当子。
     private: typedef typename self::allocator_type::template
         rebind<typename self::holder>::other
             holder_allocator;
@@ -270,14 +290,14 @@ class psyq::basic_const_string:
     }
 
     //-------------------------------------------------------------------------
-    private: typename self::holder*        holder_;    ///< 文字列の保持子。
+    private: typename self::holder*        holder_;    ///< 文字列保持子。
     private: typename self::allocator_type allocator_; ///< 使用するmemory割当子。
 };
 
 //-----------------------------------------------------------------------------
 namespace std
 {
-    /** @brief 文字列の交換。
+    /** @brief 文字列を交換する。
         @tparam template_char_type
             @copydoc psyq::basic_reference_string::value_type
         @tparam template_char_traits
@@ -301,5 +321,120 @@ namespace std
         io_left.swap(io_right);
     }
 };
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief CSV形式の文字列を解析し、STL互換コンテナに格納する。
+    @param[in,out] io_csv_rows         解析した結果を格納するSTL互換コンテナ。
+    @param[in]     in_csv_string       解析するCSV形式のSTL互換文字列。
+    @param[in]     in_field_separator  field区切り文字。
+    @param[in]     in_record_separator record区切り文字。
+    @param[in]     in_quote_begin      引用符の開始文字。
+    @param[in]     in_quote_end        引用符の終了文字。
+    @param[in]     in_quote_escape     引用符のescape文字。
+ */
+template<typename template_csv>
+bool parse_csv(
+    template_csv& io_csv_rows,
+    typename template_csv::value_type::value_type const& in_csv_string,
+    typename template_csv::value_type::value_type::value_type const
+        in_field_separator = ',',
+    typename template_csv::value_type::value_type::value_type const
+        in_record_separator = '\n',
+    typename template_csv::value_type::value_type::value_type const
+        in_quote_begin = '"',
+    typename template_csv::value_type::value_type::value_type const
+        in_quote_end = '"',
+    typename template_csv::value_type::value_type::value_type const
+        in_quote_escape = '"')
+{
+    PSYQ_ASSERT(in_quote_escape != 0);
+
+    io_csv_rows.push_back(typename template_csv::value_type());
+
+    bool local_quote(false);
+    template_csv::value_type::value_type local_field;
+    template_csv::value_type::value_type::value_type local_last_char(0);
+    for (auto i(in_csv_string.begin()); i != in_csv_string.end(); ++i)
+    {
+        if (local_quote)
+        {
+            if (local_last_char != in_quote_escape)
+            {
+                if (*i != in_quote_end)
+                {
+                    if (*i != in_quote_escape)
+                    {
+                        local_field.push_back(*i);
+                    }
+                    local_last_char = *i;
+                }
+                else
+                {
+                    // 引用符を終了。
+                    local_quote = false;
+                    local_last_char = 0;
+                }
+            }
+            else if (*i == in_quote_end)
+            {
+                // 引用符の終了文字をescapeする。
+                local_field.push_back(*i);
+                local_last_char = 0;
+            }
+            else if (local_last_char == in_quote_end)
+            {
+                // 引用符を終了し、文字を巻き戻す。
+                local_quote = false;
+                --i;
+                local_last_char = 0;
+            }
+            else
+            {
+                local_field.push_back(local_last_char);
+                local_field.push_back(*i);
+                local_last_char = *i;
+            }
+        }
+        else if (*i == in_quote_begin)
+        {
+            // 引用符の開始。
+            local_quote = true;
+        }
+        else if (*i == in_field_separator)
+        {
+            // fieldの区切り。
+            io_csv_rows.last().push_back(std::move(local_field));
+            local_field.clear();
+        }
+        else if (*i == in_record_separator)
+        {
+            // recordの区切り。
+            if (!local_field.empty() || !io_csv_rows.last().empty())
+            {
+                io_csv_rows.last().push_back(std::move(local_field));
+            }
+            local_field.clear();
+            io_csv_rows.push_back(typename template_csv::value_type());
+        }
+        else
+        {
+            local_field.push_back(*i);
+        }
+    }
+
+    // 最終fieldの処理。
+    if (!local_field.empty())
+    {
+        if (local_quote)
+        {
+            //local_field.insert(local_field.begin(), in_quote_begin);
+        }
+        io_csv_rows.last().push_back(std::move(local_field));
+    }
+    else if (io_csv_rows.last().empty())
+    {
+        io_csv_rows.pop_back();
+    }
+}
 
 #endif // PSYQ_CONST_STRING_HPP_

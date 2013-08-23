@@ -7,13 +7,21 @@
 namespace psyq
 {
     /// @cond
+    struct csv_table_attribute;
     struct csv_table_key;
-    template<typename template_cell_map> class csv_table;
+    template<typename, typename> class csv_table;
     /// @endcond
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief CSV cellの辞書に使うキーの型。
+/// @brief CSV表の属性の辞書の値の型。
+struct psyq::csv_table_attribute
+{
+    std::size_t column; ///< 属性の列番号。
+    std::size_t size;   ///< 属性の要素数。
+};
+
+/// @brief CSV表のcellの辞書のキーの型。
 struct psyq::csv_table_key
 {
     /** @param[in] in_row    @copydoc key::row
@@ -31,22 +39,22 @@ struct psyq::csv_table_key
         csv_table_key const& in_right)
     const
     {
-        if (this->column != in_right.column)
+        if (this->row != in_right.row)
         {
-            return this->column < in_right.column;
+            return this->row < in_right.row;
         }
-        return this->row < in_right.row;
+        return this->column < in_right.column;
     }
 
     bool operator <=(
         csv_table_key const& in_right)
     const
     {
-        if (this->column != in_right.column)
+        if (this->row != in_right.row)
         {
-            return this->column <= in_right.column;
+            return this->row < in_right.row;
         }
-        return this->row <= in_right.row;
+        return this->column <= in_right.column;
     }
 
     bool operator>(
@@ -68,12 +76,21 @@ struct psyq::csv_table_key
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template<typename template_cell_map>
+template<typename template_attribute_map, typename template_cell_map>
 class psyq::csv_table
 {
-    private: typedef csv_table self;
+    private: typedef csv_table<template_cell_map, template_attribute_map> self;
 
-    /** @brief CSV-cellの辞書。
+    /** @brief CSV表の属性の辞書。
+
+        以下の条件を満たしている必要がある。
+        - std::map 互換の型。
+        - attribute_map::key_type は、 std::basic_string 互換の文字列型。
+        - attribute_map::mapped_type は、 csv_table_attribute 型。
+     */
+    public: typedef template_attribute_map attribute_map;
+
+    /** @brief CSV表のcellの辞書。
 
         以下の条件を満たしている必要がある。
         - std::map 互換の型。
@@ -93,19 +110,20 @@ class psyq::csv_table
         @param[in] in_quote_end        引用符の終了文字。
         @param[in] in_quote_escape     引用符のescape文字。
      */
-    template<typename template_string>
-    public: static self::cell_map parse(
+    public: template<typename template_string>
+    explicit csv_table(
         template_string const&                     in_csv_string,
         typename template_string::value_type const in_column_ceparator = ',',
         typename template_string::value_type const in_row_separator = '\n',
         typename template_string::value_type const in_quote_begin = '"',
         typename template_string::value_type const in_quote_end = '"',
-        typename template_string::value_type const in_quote_escape = '"')
+        typename template_string::value_type const in_quote_escape = '"');
     {
         PSYQ_ASSERT(in_quote_escape != 0);
         bool local_quote(false);
-        unsigned local_row(0);
-        unsigned local_column(0);
+        std::size_t local_row(0);
+        std::size_t local_column(0);
+        std::size_t local_column_max(0);
         template_string local_field;
         typename template_string::value_type local_last_char(0);
         for (auto i(in_csv_string.begin()); i != in_csv_string.end(); ++i)
@@ -160,7 +178,7 @@ class psyq::csv_table
                 if (!local_field.empty())
                 {
                     self::emplace_cell(
-                        local_cells,
+                        this->m_cell_map,
                         local_row,
                         local_column,
                         std::move(local_field));
@@ -174,14 +192,18 @@ class psyq::csv_table
                 if (!local_field.empty())
                 {
                     self::emplace_cell(
-                        local_cells,
+                        this->m_cell_map,
                         local_row,
                         local_column,
                         std::move(local_field));
                     local_field.clear();
                 }
-                ++local_row;
+                if (local_column_max < local_column)
+                {
+                    local_column_max = local_column;
+                }
                 local_column = 0;
+                ++local_row;
             }
             else
             {
@@ -199,87 +221,109 @@ class psyq::csv_table
         if (!local_field.empty())
         {
             self::emplace_cell(
-                local_cells, local_row, local_column, std::move(local_field));
+                this->m_cell_map,
+                local_row,
+                local_column,
+                std::move(local_field));
         }
-        return local_cells;
+
+        // CSV表の属性辞書を構築する。
+        std::size_t const local_attributes_row(0);
+        this->m_attribute_map = self::make_attribute_map(
+            this->m_cell_map, local_attributes_row, local_column_max + 1);
     }
- 
-    template<typename template_string>
-    private: static void emplace_cell(
-        self::cell_map&   io_cells,
-        std::size_t const in_row,
-        std::size_t const in_column,
-        template_string   in_field)
+
+    private: template<typename template_string>
+    static void emplace_cell(
+        typename self::cell_map&      io_cells,
+        std::size_t const             in_row,
+        std::size_t const             in_column,
+        template_string               in_field)
     {
         io_cells.emplace(
             typename self::cell_map::value_type(
-                typename self::cell_map::key_type(local_row, local_column),
+                typename self::cell_map::key_type(
+                    local_row, local_column),
                 typename self::cell_map::mapped_type(std::move(in_field))));
     }
 
-   //-------------------------------------------------------------------------
-    static std::size_t get_row_size(
-        cell_map const& in_cells)
-    {
-        if (in_cells.empty())
-        {
-            return 0;
-        }
-        std::size_t local_max_row(0);
-        std::size_t local_column(in_cells.begin()->first.column + 1);
-        for (;;)
-        {
-            auto local_last_cell(
-                in_cells.lower_bound(
-                    typename cell_map::key_type(0, local_column)));
-            const auto local_position(local_last_cell);
-            --local_last_cell;
-            if (local_max_row < local_last_cell->first.row)
-            {
-                local_max_row = local_last_cell->first.row;
-            }
-
-            if (local_position != in_cells.end())
-            {
-                local_column = local_last_cell->first.column + 1;
-            }
-            else
-            {
-                return local_max_row + 1;
-            }
-        }
-    }
-
-    static std::size_t get_column_size(
-        cell_map const& in_cells)
-    {
-        return in_cells.empty()? 0: (--in_cells.end())->first.column + 1;
-    }
-
-    static std::size_t get_column_size(
-        cell_map const&   in_cells,
-        std::size_t const in_row);
-
-    static cell_map::const_iterator find(
-        cell_map const&                in_cells,
+    private: static typename self::attribute_map make_attribute_map(
+        typename self::cell_map const& in_cells,
         std::size_t const              in_row,
-        attribute_map const&           in_attribute_map,
-        attribute_map::key_type const& in_attribute,
-        std::size_t const              in_attribute_index)
+        std::size_t const              in_column_end)
     {
-        const auto local_attribute_iterator(
-            in_attribute_map.find(in_attribute));
-        if (local_attribute_iterator == in_attribute_map.end() ||
-            local_attribute_iterator->second.size <= in_attribute_index)
+        typename self::attribute_map local_attributes;
+        auto local_last_attribute(local_attributes.end());
+        for (
+            auto i(
+                in_cells.lower_bound(
+                    typename self::cell_map::key_type(in_row, 0)));
+            i != in_cells.end() && i->first.row == in_row;
+            ++i)
         {
-            return in_cells.end();
+            if (!local_attributes.empty())
+            {
+                local_last_attribute->second.size =
+                    i->first.column - local_last_attribute->second.column;
+            }
+            local_last_attribute = local_attributes.emplace(
+                typename self::attribute_map::value_type(
+                    typename self::attribute_map::key_type(i->second),
+                    typename self::attribute_map::mapped_type(
+                        i->first.column, 0)));
         }
-        return in_cells.find(
-            typename cell_map::key_type(
-                in_row,
-                local_attribute_iterator->second.index + in_attribute_index));
+        if (!local_attributes.empty())
+        {
+            local_last_attribute->second.size =
+                in_column_end - local_last_attribute->second.column;
+        }
+        return local_attributes;
     }
 
+    //-------------------------------------------------------------------------
+    public: typename self::attribute_map const& get_attribute_map() const
+    {
+        return this->m_attribute_map;
+    }
+
+    public: typename self::cell_map const& get_cell_map() const
+    {
+        return this->m_cell_map;
+    }
+
+    public: std::size_t get_row_size() const
+    {
+        return this->m_cell_map.empty()?
+            0: (--this->m_cell_map.end())->first.row + 1;
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief cellを検索する。
+        @param[in] in_row             検索するcellの行番号。
+        @param[in] in_attribute_key   検索するcellの属性名。
+        @param[in] in_attribute_index 検索するcellの属性index番号。
+     */
+    public: typename self::cell_map::const_iterator find_cell(
+        std::size_t const                       in_row,
+        typename attribute_map::key_type const& in_attribute_key,
+        std::size_t const                       in_attribute_index)
+    const
+    {
+        const auto local_attribute(
+            this->m_attribute_map.find(in_attribute_key));
+        if (local_attribute == this->m_attribute_map.end() ||
+            local_attribute->second.size <= in_attribute_index)
+        {
+            return this->m_cell_map.end();
+        }
+        return this->m_cell_map.find(
+            typename self::cell_map::key_type(
+                in_row, local_attribute->second.column + in_attribute_index));
+    }
+
+    //-------------------------------------------------------------------------
+    private: typename self::attribute_map m_attribute_map;
+    private: typename self::cell_map      m_cell_map;
 };
 
 #endif // PSYQ_CSV_TABLE_HPP_

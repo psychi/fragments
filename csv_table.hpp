@@ -228,7 +228,7 @@ class psyq::csv_table
         }
 
         // CSV表の属性辞書を構築する。
-        std::size_t const local_attributes_row(0);
+        std::size_t const local_attributes_row(this->get_begin_row() - 1);
         this->attribute_map_ = self::make_attribute_map(
             this->cell_map_, local_attributes_row, local_column_max + 1);
     }
@@ -291,19 +291,43 @@ class psyq::csv_table
         return this->cell_map_;
     }
 
-    public: std::size_t get_row_size() const
+    //-------------------------------------------------------------------------
+    public: std::size get_begin_row() const
     {
-        return this->get_cell_map().empty()?
-            0: (--this->get_cell_map().end())->first.row + 1;
+        return 1;
+    }
+
+    public: std::size_t get_end_row() const
+    {
+        if (this->get_cell_map().empty())
+        {
+            return this->get_begin_row();
+        }
+        return (--this->get_cell_map().end())->first.row + 1;
     }
 
     //-------------------------------------------------------------------------
+    public: typename self::cell_map::mapped_type const* find_cell(
+        std::size_t const in_row,
+        std::size_t const in_column)
+    const
+    {
+        const auto local_cell(
+            this->get_cell_map().find(
+                typename self::cell_map::key_type(in_row, in_column)));
+        if (local_cell == this->get_cell_map().end())
+        {
+            return nullptr;
+        }
+        return &local_cell->second;
+    }
+
     /** @brief cellを検索する。
         @param[in] in_row             検索するcellの行番号。
         @param[in] in_attribute_key   検索するcellの属性名。
         @param[in] in_attribute_index 検索するcellの属性index番号。
      */
-    public: typename self::cell_map::const_iterator find_cell(
+    public: typename self::cell_map::mapped_type const* find_cell(
         std::size_t const                       in_row,
         typename attribute_map::key_type const& in_attribute_key,
         std::size_t const                       in_attribute_index)
@@ -311,14 +335,13 @@ class psyq::csv_table
     {
         const auto local_attribute(
             this->get_attribute_map().find(in_attribute_key));
-        if (local_attribute == this->attribute_map_.end() ||
+        if (local_attribute == this->get_attribute_map().end() ||
             local_attribute->second.size <= in_attribute_index)
         {
-            return this->cell_map_.end();
+            return nullptr;
         }
-        return this->cell_map_.find(
-            typename self::cell_map::key_type(
-                in_row, local_attribute->second.column + in_attribute_index));
+        return this->find_cell(
+            in_row, local_attribute->second.column + in_attribute_index);
     }
 
     //-------------------------------------------------------------------------

@@ -178,7 +178,7 @@ class psyq::csv_table
                 if (!local_field.empty())
                 {
                     self::emplace_cell(
-                        this->m_cell_map,
+                        this->cell_map_,
                         local_row,
                         local_column,
                         std::move(local_field));
@@ -192,7 +192,7 @@ class psyq::csv_table
                 if (!local_field.empty())
                 {
                     self::emplace_cell(
-                        this->m_cell_map,
+                        this->cell_map_,
                         local_row,
                         local_column,
                         std::move(local_field));
@@ -221,7 +221,7 @@ class psyq::csv_table
         if (!local_field.empty())
         {
             self::emplace_cell(
-                this->m_cell_map,
+                this->cell_map_,
                 local_row,
                 local_column,
                 std::move(local_field));
@@ -229,8 +229,8 @@ class psyq::csv_table
 
         // CSV•\‚Ì‘®«Ž«‘‚ð\’z‚·‚éB
         std::size_t const local_attributes_row(0);
-        this->m_attribute_map = self::make_attribute_map(
-            this->m_cell_map, local_attributes_row, local_column_max + 1);
+        this->attribute_map_ = self::make_attribute_map(
+            this->cell_map_, local_attributes_row, local_column_max + 1);
     }
 
     private: template<typename template_string>
@@ -283,18 +283,18 @@ class psyq::csv_table
     //-------------------------------------------------------------------------
     public: typename self::attribute_map const& get_attribute_map() const
     {
-        return this->m_attribute_map;
+        return this->attribute_map_;
     }
 
     public: typename self::cell_map const& get_cell_map() const
     {
-        return this->m_cell_map;
+        return this->cell_map_;
     }
 
     public: std::size_t get_row_size() const
     {
-        return this->m_cell_map.empty()?
-            0: (--this->m_cell_map.end())->first.row + 1;
+        return this->get_cell_map().empty()?
+            0: (--this->get_cell_map().end())->first.row + 1;
     }
 
     //-------------------------------------------------------------------------
@@ -310,20 +310,20 @@ class psyq::csv_table
     const
     {
         const auto local_attribute(
-            this->m_attribute_map.find(in_attribute_key));
-        if (local_attribute == this->m_attribute_map.end() ||
+            this->get_attribute_map().find(in_attribute_key));
+        if (local_attribute == this->attribute_map_.end() ||
             local_attribute->second.size <= in_attribute_index)
         {
-            return this->m_cell_map.end();
+            return this->cell_map_.end();
         }
-        return this->m_cell_map.find(
+        return this->cell_map_.find(
             typename self::cell_map::key_type(
                 in_row, local_attribute->second.column + in_attribute_index));
     }
 
     //-------------------------------------------------------------------------
-    private: typename self::attribute_map m_attribute_map;
-    private: typename self::cell_map      m_cell_map;
+    private: typename self::attribute_map attribute_map_;
+    private: typename self::cell_map      cell_map_;
 };
 
 #endif // PSYQ_CSV_TABLE_HPP_

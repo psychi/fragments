@@ -159,7 +159,7 @@ namespace psyq
             + ((local_bits >>16) & 0x0000ffff0000ffffLL);
         local_bits = (local_bits & 0x00000000ffffffffLL)
             + ((local_bits >>32) & 0x00000000ffffffffLL);
-        return local_bits;
+        return static_cast<std::size_t>(local_bits);
     }
 
     /// @copydoc count_bit1()
@@ -281,7 +281,7 @@ namespace psyq
         return psyq::count_leading_bit0(static_cast<std::uint32_t>(in_bits));
     }
 
-    /// @copydoc count_leading_bit0_()
+    /// @copydoc count_leading_bit0()
     template<>
     std::size_t count_leading_bit0(
         std::uint64_t const in_bits)
@@ -296,7 +296,7 @@ namespace psyq
         }
     }
 
-    /// @copydoc count_leading_bit0_()
+    /// @copydoc count_leading_bit0()
     template<>
     std::size_t count_leading_bit0(
         std::int64_t const in_bits)

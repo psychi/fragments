@@ -680,13 +680,16 @@ WARN_LOGFILE           =
 INPUT                  = ./async_file.hpp \
                          ./async_queue.hpp \
                          ./async_task.hpp \
+                         ./bit_algorithm.hpp \
                          ./const_string.hpp \
                          ./dynamic_storage.hpp \
                          ./enum.hpp \
                          ./file_buffer.hpp \
                          ./file_handle.hpp \
                          ./fnv_hash.hpp \
+                         ./integer_bitset.hpp \
                          ./lerp.hpp \
+                         ./mosp_collision.hpp \
                          ./pbon_json.hpp \
                          ./posix_file_descriptor.hpp \
                          ./reference_string.hpp \

@@ -247,11 +247,11 @@ class psyq::basic_const_string:
     /** @brief •¶Žš—ñ‚ðŒðŠ·‚·‚éB
         @param[in,out] io_target ŒðŠ·‚·‚é•¶Žš—ñB
      */
-    public: void swap(self& io_right)
+    public: void swap(self& io_target)
     {
-        this->super::swap(io_right);
-        std::swap(this->holder_, io_right.holder_);
-        std::swap(this->allocator_, io_right.allocator_);
+        this->super::swap(io_target);
+        std::swap(this->holder_, io_target.holder_);
+        std::swap(this->allocator_, io_target.allocator_);
     }
 
     //-------------------------------------------------------------------------

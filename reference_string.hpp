@@ -29,6 +29,7 @@
 
 #include <iosfwd>
 #include <iterator>
+#include <algorithm>
 
 #ifndef PSYQ_ASSERT
 #define PSYQ_ASSERT(define_expression) assert(define_expression)
@@ -761,7 +762,7 @@ class psyq::basic_reference_string
         if (in_size <= this->size())
         {
             auto const local_offset(
-                std::min(in_offset, this->size() - in_size));
+                (std::min)(in_offset, this->size() - in_size));
             for (auto i(this->data() + local_offset); ; --i)
             {
                 if (template_char_traits::eq(*i, *in_string)
@@ -1205,11 +1206,8 @@ class psyq::basic_reference_string
         typename self::size_type const in_offset,
         typename self::size_type const in_count)
     {
-        if (in_size < in_offset)
-        {
-            return 0;
-        }
-        return std::min(in_count, in_size - in_offset);
+        return in_size < in_offset?
+            0: (std::min)(in_count, in_size - in_offset);
     }
 
     private: template<typename template_string_type>

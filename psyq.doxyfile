@@ -682,6 +682,7 @@ INPUT                  = ./async_file.hpp \
                          ./async_task.hpp \
                          ./bit_algorithm.hpp \
                          ./const_string.hpp \
+                         ./csv_table.hpp \
                          ./dynamic_storage.hpp \
                          ./enum.hpp \
                          ./file_buffer.hpp \

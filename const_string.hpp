@@ -105,8 +105,7 @@ class psyq::basic_const_string:
     /** @brief 文字列を参照する。memory割り当ては行わない。
         @param[in] in_source copy元の文字列。
      */
-    public: basic_const_string(
-        self const& in_source)
+    public: basic_const_string(self const& in_source)
     :
         super(in_source),
         holder_(in_source.holder_),
@@ -118,10 +117,14 @@ class psyq::basic_const_string:
     /** @brief 文字列を移動する。memory割り当ては行わない。
         @param[in,out] io_source move元の文字列。
      */
-    public: basic_const_string(
-        self&& io_source)
+    public: basic_const_string(self&& io_source)
+    :
+        super(io_source),
+        holder_(io_source.holder_),
+        allocator_(io_source.allocator_)
     {
-        this->swap(io_source);
+        new(&io_source) super();
+        io_source.holder_ = nullptr;
     }
 
     /** @brief 文字列literalを参照する。memory割り当ては行わない。

@@ -123,7 +123,7 @@ class psyq::basic_reference_string
      */
     public: basic_reference_string()
     :
-        data_(NULL),
+        data_(nullptr),
         size_(0)
     {
         // pass
@@ -154,7 +154,7 @@ class psyq::basic_reference_string
         data_(in_string),
         size_(in_size)
     {
-        if (in_string == NULL && 0 < in_size)
+        if (in_string == nullptr && 0 < in_size)
         {
             PSYQ_ASSERT(false);
             this->size_ = 0;
@@ -207,7 +207,7 @@ class psyq::basic_reference_string
     //-------------------------------------------------------------------------
     /** @brief 文字列の先頭位置を取得する。
         @return 文字列の先頭位置。
-        @warning 文字列がNULL文字で終わっているとは限らない。
+        @warning 文字列がnullptr文字で終わっているとは限らない。
      */
     public: typename self::const_pointer data() const
     {
@@ -363,7 +363,7 @@ class psyq::basic_reference_string
         @param[in] in_index 文字のindex番号。
         @return 文字への参照。
      */
-   public: typename self::const_reference operator[](
+    public: typename self::const_reference operator[](
         typename self::size_type const in_index)
     const
     {
@@ -527,7 +527,7 @@ class psyq::basic_reference_string
         typename self::size_type const     in_right_size)
     const
     {
-        std::size_t const local_left_size(
+        auto const local_left_size(
             self::trim_count(*this, in_left_offset, in_left_count));
         bool const local_less(local_left_size < in_right_size);
         int const local_compare(
@@ -590,12 +590,12 @@ class psyq::basic_reference_string
     {
         if (in_offset < this->size())
         {
-            typename self::const_pointer const local_find(
+            auto const local_find(
                 template_char_traits::find(
                     this->data() + in_offset,
                     this->size() - in_offset,
                     in_char));
-            if (local_find != NULL)
+            if (local_find != nullptr)
             {
                 return local_find - this->data();
             }
@@ -648,22 +648,20 @@ class psyq::basic_reference_string
         {
             return in_offset <= this->size()? in_offset: self::npos;
         }
-        PSYQ_ASSERT(NULL != in_string);
+        PSYQ_ASSERT(nullptr != in_string);
 
-        typename self::size_type local_rest_size(
-            this->size() - in_offset);
+        auto local_rest_size(this->size() - in_offset);
         if (in_offset < this->size() && in_size <= local_rest_size)
         {
             local_rest_size -= in_size - 1;
-            typename self::const_pointer local_rest_string(
-                this->data() + in_offset);
+            auto local_rest_string(this->data() + in_offset);
             for (;;)
             {
                 // 検索文字列の先頭文字と合致する位置を見つける。
-                typename self::const_pointer const local_find(
+                auto const local_find(
                     template_char_traits::find(
                         local_rest_string, local_rest_size, *in_string));
-                if (local_find == NULL)
+                if (local_find == nullptr)
                 {
                     break;
                 }
@@ -698,8 +696,7 @@ class psyq::basic_reference_string
     {
         if (!this->empty())
         {
-            typename self::const_pointer i(self::get_pointer(*this, in_offset));
-            for (;; --i)
+            for (auto i(self::get_pointer(*this, in_offset)); ; --i)
             {
                 if (template_char_traits::eq(*i, in_char))
                 {
@@ -759,15 +756,13 @@ class psyq::basic_reference_string
         {
             return in_offset < this->size() ? in_offset: this->size();
         }
-        PSYQ_ASSERT(NULL != in_string);
+        PSYQ_ASSERT(nullptr != in_string);
 
         if (in_size <= this->size())
         {
-            typename self::size_type const local_rest(
-                this->size() - in_size);
-            typename self::const_pointer i(
-                this->data() + (in_offset < local_rest? in_offset: local_rest));
-            for (;; --i)
+            auto const local_offset(
+                std::min(in_offset, this->size() - in_size));
+            for (auto i(this->data() + local_offset); ; --i)
             {
                 if (template_char_traits::eq(*i, *in_string)
                     && template_char_traits::compare(i, in_string, in_size) == 0)
@@ -798,7 +793,7 @@ class psyq::basic_reference_string
     }
 
     /** @brief 検索文字列に含まれるいずれかの文字を検索する。
-        @param[in] in_string 検索文字列の先頭位置。必ずNULLで終わる。
+        @param[in] in_string 検索文字列の先頭位置。必ずnullptrで終わる。
         @param[in] in_offset 検索を開始する位置。
         @return 検索文字が現れた位置。現れない場合は self::npos を返す。
      */
@@ -840,15 +835,13 @@ class psyq::basic_reference_string
         typename self::size_type const     in_size)
     const
     {
-        PSYQ_ASSERT(in_size <= 0 || NULL != in_string);
+        PSYQ_ASSERT(in_size <= 0 || nullptr != in_string);
         if (0 < in_size && in_offset < this->size())
         {
-            typename self::const_pointer const local_end(
-                this->data() + this->size());
-            typename self::const_pointer i(this->data() + in_offset);
-            for (; i < local_end; ++i)
+            auto const local_end(this->data() + this->size());
+            for (auto i(this->data() + in_offset); i < local_end; ++i)
             {
-                if (template_char_traits::find(in_string, in_size, *i) != NULL)
+                if (template_char_traits::find(in_string, in_size, *i) != nullptr)
                 {
                     return i - this->data();
                 }
@@ -914,13 +907,12 @@ class psyq::basic_reference_string
         typename self::size_type const     in_size)
     const
     {
-        PSYQ_ASSERT(in_size <= 0 || NULL != in_string);
+        PSYQ_ASSERT(in_size <= 0 || nullptr != in_string);
         if (0 < in_size && 0 < this->size())
         {
-            typename self::const_pointer i(self::get_pointer(*this, in_offset));
-            for (;; --i)
+            for (auto i(self::get_pointer(*this, in_offset)); ; --i)
             {
-                if (template_char_traits::find(in_string, in_size, *i) != NULL)
+                if (template_char_traits::find(in_string, in_size, *i) != nullptr)
                 {
                     return i - this->data();
                 }
@@ -945,10 +937,8 @@ class psyq::basic_reference_string
         typename self::size_type const  in_offset = 0)
     const
     {
-        typename self::const_pointer const local_end(
-            this->data() + this->size());
-        typename self::const_pointer i(this->data() + in_offset);
-        for (; i < local_end; ++i)
+        auto const local_end(this->data() + this->size());
+        for (auto i(this->data() + in_offset); i < local_end; ++i)
         {
             if (!template_char_traits::eq(*i, in_char))
             {
@@ -1004,15 +994,13 @@ class psyq::basic_reference_string
         typename self::size_type const     in_size)
     const
     {
-        PSYQ_ASSERT(in_size <= 0 || NULL != in_string);
+        PSYQ_ASSERT(in_size <= 0 || nullptr != in_string);
         if (in_offset < this->size())
         {
-            typename self::const_pointer const local_end(
-                this->data() + this->size());
-            typename self::const_pointer i(this->data() + in_offset);
-            for (; i < local_end; ++i)
+            auto const local_end(this->data() + this->size());
+            for (auto i(this->data() + in_offset); i < local_end; ++i)
             {
-                if (template_char_traits::find(in_string, in_size, *i) == NULl)
+                if (template_char_traits::find(in_string, in_size, *i) == nullptr)
                 {
                     return i - this->data();
                 }
@@ -1035,8 +1023,7 @@ class psyq::basic_reference_string
     {
         if (!this->empty())
         {
-            typename self::const_pointer i(self::get_pointer(*this, in_offset));
-            for (;; --i)
+            for (auto i(self::get_pointer(*this, in_offset)); ; --i)
             {
                 if (!template_char_traits::eq(*i, in_char))
                 {
@@ -1097,13 +1084,12 @@ class psyq::basic_reference_string
         typename self::size_type const     in_size)
     const
     {
-        PSYQ_ASSERT(in_size <= 0 || NULL != in_string);
+        PSYQ_ASSERT(in_size <= 0 || nullptr != in_string);
         if (!this->empty())
         {
-            typename self::const_pointer i(self::get_pointer(*this, in_offset));
-            for (;; --i)
+            for (auto i(self::get_pointer(*this, in_offset)); ; --i)
             {
-                if (template_char_traits::find(in_string, in_size, *i) == NULL)
+                if (template_char_traits::find(in_string, in_size, *i) == nullptr)
                 {
                     return i - this->data();
                 }
@@ -1117,14 +1103,14 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列からNULL文字を検索する。
-        @param[in] in_string 文字列の先頭位置。NULLの場合は、空文字列とみなす。
-        @return NULL文字を見つけた位置のindex番号。
+    /** @brief 文字列からnullptr文字を検索する。
+        @param[in] in_string 文字列の先頭位置。nullptrの場合は、空文字列とみなす。
+        @return nullptr文字を見つけた位置のindex番号。
      */
     public: static typename self::size_type find_null(
         typename self::const_pointer const in_string)
     {
-        if (in_string == NULL)
+        if (in_string == nullptr)
         {
             return 0;
         }
@@ -1178,9 +1164,9 @@ class psyq::basic_reference_string
         template_string_type const&                    in_string,
         typename template_string_type::size_type const in_offset)
     {
-        typename template_string_type::size_type local_offset(
+        auto local_offset(
             self::convert_count<template_string_type>(in_offset));
-        typename template_string_type::size_type local_size(in_string.size());
+        auto const local_size(in_string.size());
         if (local_size <= local_offset)
         {
             PSYQ_ASSERT(0 < local_size);
@@ -1223,8 +1209,7 @@ class psyq::basic_reference_string
         {
             return 0;
         }
-        typename self::size_type const local_limit(in_size - in_offset);
-        return in_count < local_limit? in_count: local_limit;
+        return std::min(in_count, in_size - in_offset);
     }
 
     private: template<typename template_string_type>

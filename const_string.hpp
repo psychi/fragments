@@ -96,7 +96,7 @@ class psyq::basic_const_string:
             self::allocator_type())
     :
         super(),
-        holder_(NULL),
+        holder_(nullptr),
         allocator_(in_allocator)
     {
         // pass
@@ -136,7 +136,7 @@ class psyq::basic_const_string:
             self::allocator_type())
     :
         super(in_string),
-        holder_(NULL),
+        holder_(nullptr),
         allocator_(in_allocator)
     {
         // pass
@@ -173,7 +173,7 @@ class psyq::basic_const_string:
             self::allocator_type())
     :
         super(),
-        holder_(NULL),
+        holder_(nullptr),
         allocator_(in_allocator)
     {
         if (in_size <= 0)
@@ -185,20 +185,20 @@ class psyq::basic_const_string:
         typename self::holder_allocator local_allocator(this->allocator_);
         typename self::holder* const local_holder(
             local_allocator.allocate(self::count_allocate_size(in_size)));
-        if (local_holder == NULL)
+        if (local_holder == nullptr)
         {
             PSYQ_ASSERT(false);
             return;
         }
 
         // ï∂éöóÒbufferÇèâä˙âªÅB
-        typename self::value_type* const local_string(
+        auto const local_string(
             reinterpret_cast<self::value_type*>(local_holder + 1));
         new(this) super(local_string, in_size);
         this->holder_ = local_holder;
         local_holder->refrence_count_ = 1;
         local_holder->string_length_ = in_size;
-        PSYQ_ASSERT(in_string != NULL);
+        PSYQ_ASSERT(in_string != nullptr);
         super::traits_type::copy(local_string, in_string, in_size);
         local_string[in_size] = 0;
     }
@@ -206,8 +206,8 @@ class psyq::basic_const_string:
     /// destructor
     public: ~basic_const_string()
     {
-        typename self::holder* const local_holder(this->holder_);
-        if (local_holder != NULL)
+        auto const local_holder(this->holder_);
+        if (local_holder != nullptr)
         {
             //bool const local_destroy(
             //    1 == std::atomic_fetch_sub_explicit(
@@ -270,7 +270,7 @@ class psyq::basic_const_string:
     private: static void hold_string(
         typename self::holder* const io_holder)
     {
-        if (io_holder != NULL)
+        if (io_holder != nullptr)
         {
             //std::atomic_fetch_add_explicit(
             //    &io_holder->refrence_count_, 1, std::memory_order_relaxed);
@@ -282,10 +282,10 @@ class psyq::basic_const_string:
     static typename self::holder_allocator::size_type count_allocate_size(
         typename self::size_type const in_string_length)
     {
-        std::size_t const local_holder_size(sizeof(typename self::holder));
-        std::size_t const local_string_size(
-            sizeof(typename self::value_type) * (in_string_length + 1) +
-            local_holder_size - 1);
+        auto const local_holder_size(sizeof(typename self::holder));
+        auto const local_string_size(
+            sizeof(typename self::value_type) * (in_string_length + 1)
+            + local_holder_size - 1);
         return 1 + local_string_size / local_holder_size;
     }
 

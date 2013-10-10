@@ -401,10 +401,14 @@ class psyq::csv_table
         {
             self::emplace_cell(
                 local_cells, local_row, local_column, local_field);
-            if (local_max_column < local_column)
-            {
-                local_max_column = local_column;
-            }
+        }
+        else if (0 < local_column)
+        {
+            --local_column;
+        }
+        if (local_max_column < local_column)
+        {
+            local_max_column = local_column;
         }
         auto const local_max_row(
             local_cells.empty()? 0: (--local_cells.end())->first.row);
@@ -421,11 +425,10 @@ class psyq::csv_table
         std::size_t const        in_column,
         template_string const&   in_field)
     {
-        typename self::cell_map::mapped_type local_mapped(
-                in_field.data(), in_field.size());
         io_cells.emplace(
             typename self::cell_map::key_type(in_row, in_column),
-            std::move(local_mapped));
+            typename self::cell_map::mapped_type(
+                in_field.data(), in_field.size()));
     }
 
     //-------------------------------------------------------------------------

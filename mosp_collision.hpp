@@ -152,6 +152,10 @@ class psyq::mosp_handle
         }
     }
 
+    /** @brief 現在取りつけられている空間分割木のnodeを取得する。
+        @retval !=nullptr 現在取りつけられている空間分割木のnode。
+        @retval ==nullptr 空間分割木に取りつけられていない。
+     */
     public: mosp_node<template_collision_object> const* get_node() const
     {
         return this->node_;
@@ -605,10 +609,11 @@ class psyq::mosp_space_3d:
        衝突判定handleを空間分割木に取りつける。
     -# psyq::mosp_tree::detect_collision() を呼び出し、衝突を判定する。
 
-    @tparam template_collision_object @copydoc psyq::mosp_handle::collision_object
-    @tparam template_space            @copydoc psyq::mosp_tree::space
+    @tparam template_collision_object @copydoc mosp_handle::collision_object
+    @tparam template_space            @copydoc mosp_tree::space
 
-    @sa psyq::mosp_handle::attach_tree() psyq::mosp_handle::detach_tree()
+    @sa mosp_handle::attach_tree() mosp_handle::detach_tree()
+    @note mosp_tree::cell_map に任意の辞書template-classを指定できるようにしたい。
  */
 template<
     typename template_collision_object,
@@ -623,6 +628,7 @@ class psyq::mosp_tree
     friend handle;
     /// @endcond
 
+    /// 空間分割木のnodeの型。
     public: typedef mosp_node<template_collision_object> node;
 
     /** @brief 使用するmorton空間の型。

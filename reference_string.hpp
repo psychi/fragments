@@ -62,9 +62,10 @@ namespace psyq
 
     - memory割り当てを一切行わない。
     - 文字列定数なので、文字列を書き換えるinterfaceは持たない。
+    - not thread-safe
 
     @warning
-        constructorで割り当てられた文字列を文字列定数として参照してるので、
+        割り当てられた文字列を文字列定数として参照してるので、
         参照先の文字列が更新されると、動作を保証できなくなる。
         文字列定数を安全に扱うには、 psyq::basic_const_string を使う。
 
@@ -125,10 +126,8 @@ class psyq::basic_reference_string
     public: basic_reference_string()
     :
         data_(nullptr),
-        size_(0)
-    {
-        // pass
-    }
+        length_(0)
+    {}
 
     /** @brief 文字列literalを参照する。
         @tparam template_size 参照する文字列literalの要素数。
@@ -139,26 +138,26 @@ class psyq::basic_reference_string
         typename self::value_type const (&in_string)[template_size])
     :
         data_(&in_string[0]),
-        size_(template_size - 1)
+        length_(template_size - 1)
     {
         PSYQ_ASSERT(0 < template_size);
     }
 
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列の先頭位置。
-        @param[in] in_size   参照する文字列の長さ。
+        @param[in] in_length 参照する文字列の長さ。
      */
     public: basic_reference_string(
         typename self::const_pointer const in_string,
-        typename self::size_type const     in_size)
+        typename self::size_type const     in_length)
     :
         data_(in_string),
-        size_(in_size)
+        length_(in_length)
     {
-        if (in_string == nullptr && 0 < in_size)
+        if (in_string == nullptr && 0 < in_length)
         {
             PSYQ_ASSERT(false);
-            this->size_ = 0;
+            this->length_ = 0;
         }
     }
 
@@ -167,14 +166,11 @@ class psyq::basic_reference_string
         @param[in] in_string 参照する文字列。
      */
     public: template<typename template_string_type>
-    basic_reference_string(
-        template_string_type const& in_string)
+    basic_reference_string(template_string_type const& in_string)
     :
         data_(in_string.data()),
-        size_(in_string.size())
-    {
-        // pass
-    }
+        length_(in_string.length())
+    {}
 
     /** @brief 任意型の文字列を参照する。
         @tparam template_string_type @copydoc string_interface
@@ -186,14 +182,12 @@ class psyq::basic_reference_string
     basic_reference_string(
         template_string_type const&                    in_string,
         typename template_string_type::size_type const in_offset,
-        typename template_string_type::size_type const in_count =
-            template_string_type::npos)
+        typename template_string_type::size_type const in_count
+        = template_string_type::npos)
     :
         data_(in_string.data() + in_offset),
-        size_(self::trim_count(in_string, in_offset, in_count))
-    {
-        // pass
-    }
+        length_(self::trim_count(in_string, in_offset, in_count))
+    {}
 
     //-------------------------------------------------------------------------
     /** @brief 文字列を交換する。
@@ -202,13 +196,61 @@ class psyq::basic_reference_string
     public: void swap(self& io_target)
     {
         std::swap(this->data_, io_target.data_);
-        std::swap(this->size_, io_target.size_);
+        std::swap(this->length_, io_target.length_);
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief 文字列literalを参照する。
+        @tparam template_size 参照する文字列literalの要素数。
+        @param[in] in_string 参照する文字列literal。
+     */
+    public: template <std::size_t template_size>
+    self& assign(typename self::value_type const (&in_string)[template_size])
+    {
+        return *new(this) self(in_string);
+    }
+
+    /** @brief 文字列を参照する。
+        @param[in] in_string 参照する文字列の先頭位置。
+        @param[in] in_length 参照する文字列の長さ。
+     */
+    public: self& assign(
+        typename self::const_pointer const in_string,
+        typename self::size_type const     in_length)
+    {
+        return *new(this) self(in_string, in_length);
+    }
+
+    /** @brief 任意型の文字列を参照する。
+        @tparam template_string_type @copydoc string_interface
+        @param[in] in_string 参照する文字列。
+     */
+    public: template<typename template_string_type>
+    self& assign(template_string_type const& in_string)
+    {
+        return *new(this) self(in_string);
+    }
+
+    /** @brief 任意型の文字列を参照する。
+        @tparam template_string_type @copydoc string_interface
+        @param[in] in_string 参照する文字列。
+        @param[in] in_offset 参照する文字列の開始offset位置。
+        @param[in] in_count  参照する文字数。
+     */
+    public: template<typename template_string_type>
+    self& assign(
+        template_string_type const&                    in_string,
+        typename template_string_type::size_type const in_offset,
+        typename template_string_type::size_type const in_count
+        = template_string_type::npos)
+    {
+        return *new(this) self(in_string, in_offset, in_count);
     }
 
     //-------------------------------------------------------------------------
     /** @brief 文字列の先頭位置を取得する。
         @return 文字列の先頭位置。
-        @warning 文字列がnullptr文字で終わっているとは限らない。
+        @warning 文字列が空文字で終わっているとは限らない。
      */
     public: typename self::const_pointer data() const
     {
@@ -228,7 +270,7 @@ class psyq::basic_reference_string
      */
     public: typename self::const_iterator end() const
     {
-        return this->begin() + this->size();
+        return this->begin() + this->length();
     }
 
     /** @brief 文字列の先頭位置を取得する。
@@ -294,7 +336,7 @@ class psyq::basic_reference_string
     public: typename self::const_reference back() const
     {
         PSYQ_ASSERT(!this->empty());
-        return (*this)[this->size() - 1];
+        return (*this)[this->length() - 1];
     }
 
     //-------------------------------------------------------------------------
@@ -303,7 +345,7 @@ class psyq::basic_reference_string
      */
     public: typename self::size_type length() const
     {
-        return this->size();
+        return this->length_;
     }
 
     /** @brief 文字列の長さを取得する。
@@ -311,7 +353,7 @@ class psyq::basic_reference_string
      */
     public: typename self::size_type size() const
     {
-        return this->size_;
+        return this->length();
     }
 
     /** @brief 文字列の最大長を取得する。
@@ -321,7 +363,7 @@ class psyq::basic_reference_string
      */
     public: typename self::size_type max_size() const
     {
-        return this->size();
+        return this->length();
     }
 
     /** @brief 文字列の容量を取得する。
@@ -331,7 +373,7 @@ class psyq::basic_reference_string
      */
     public: typename self::size_type capacity() const
     {
-        return this->size();
+        return this->length();
     }
 
     /** @brief 空の文字列か判定する。
@@ -340,7 +382,7 @@ class psyq::basic_reference_string
      */
     public: bool empty() const
     {
-        return this->size() <= 0;
+        return this->length() <= 0;
     }
 
     //-------------------------------------------------------------------------
@@ -352,7 +394,7 @@ class psyq::basic_reference_string
         typename self::size_type const in_index)
     const
     {
-        if (this->size() <= in_index)
+        if (this->length() <= in_index)
         {
             PSYQ_ASSERT(false);
             //throw std::out_of_range; // 例外は使いたくない。
@@ -368,7 +410,7 @@ class psyq::basic_reference_string
         typename self::size_type const in_index)
     const
     {
-        PSYQ_ASSERT(in_index < this->size());
+        PSYQ_ASSERT(in_index < this->length());
         return *(this->data() + in_index);
     }
 
@@ -382,7 +424,7 @@ class psyq::basic_reference_string
      */
     public: bool operator==(self const& in_right) const
     {
-        return this->is_equal(in_right.data(), in_right.size());
+        return this->is_equal(in_right.data(), in_right.length());
     }
 
     /** @brief 文字列を比較する。
@@ -394,7 +436,7 @@ class psyq::basic_reference_string
      */
     public: bool operator!=(self const& in_right) const
     {
-        return !this->is_equal(in_right.data(), in_right.size());
+        return !this->is_equal(in_right.data(), in_right.length());
     }
 
     /** @brief 文字列を比較する。
@@ -456,7 +498,7 @@ class psyq::basic_reference_string
     int compare(
         typename self::value_type const (&in_right)[template_size])
     {
-        return this->compare(0, this->size(), in_right);
+        return this->compare(0, this->length(), in_right);
     }
 
     /** @brief 文字列を比較する。
@@ -470,7 +512,7 @@ class psyq::basic_reference_string
     int compare(template_string_type const& in_right) const
     {
         return this->compare(
-            0, this->size(), in_right.data(), in_right.size());
+            0, this->length(), in_right.data(), in_right.length());
     }
 
     /** @brief 文字列を比較する。
@@ -509,14 +551,14 @@ class psyq::basic_reference_string
     const
     {
         return this->compare(
-            in_left_offset, in_left_count, in_right.data(), in_right.size());
+            in_left_offset, in_left_count, in_right.data(), in_right.length());
     }
 
     /** @brief 文字列を比較する。
-        @param[in] in_left_offset 左辺の文字列の開始位置。
-        @param[in] in_left_count  左辺の文字列の文字数。
-        @param[in] in_right_begin 右辺の文字列の先頭位置。
-        @param[in] in_right_size  右辺の文字列の長さ。
+        @param[in] in_left_offset  左辺の文字列の開始位置。
+        @param[in] in_left_count   左辺の文字列の文字数。
+        @param[in] in_right_begin  右辺の文字列の先頭位置。
+        @param[in] in_right_length 右辺の文字列の長さ。
         @retval 負 右辺のほうが大きい。
         @retval 正 左辺のほうが大きい。
         @retval 0  左辺と右辺は等価。
@@ -525,17 +567,17 @@ class psyq::basic_reference_string
         typename self::size_type const     in_left_offset,
         typename self::size_type const     in_left_count,
         typename self::const_pointer const in_right_begin,
-        typename self::size_type const     in_right_size)
+        typename self::size_type const     in_right_length)
     const
     {
-        auto const local_left_size(
+        auto const local_left_length(
             self::trim_count(*this, in_left_offset, in_left_count));
-        bool const local_less(local_left_size < in_right_size);
+        bool const local_less(local_left_length < in_right_length);
         int const local_compare(
             template_char_traits::compare(
                 this->data() + in_left_offset,
                 in_right_begin,
-                local_less? local_left_size: in_right_size));
+                local_less? local_left_length: in_right_length));
         if (local_compare != 0)
         {
             return local_compare;
@@ -544,7 +586,7 @@ class psyq::basic_reference_string
         {
             return -1;
         }
-        if (in_right_size < local_left_size)
+        if (in_right_length < local_left_length)
         {
             return 1;
         }
@@ -589,12 +631,12 @@ class psyq::basic_reference_string
         typename self::size_type const  in_offset = 0)
     const
     {
-        if (in_offset < this->size())
+        if (in_offset < this->length())
         {
             auto const local_find(
                 template_char_traits::find(
                     this->data() + in_offset,
-                    this->size() - in_offset,
+                    this->length() - in_offset,
                     in_char));
             if (local_find != nullptr)
             {
@@ -630,38 +672,38 @@ class psyq::basic_reference_string
         typename self::size_type    in_offset = 0)
     const
     {
-        return this->find(in_string.data(), in_offset, in_string.size());
+        return this->find(in_string.data(), in_offset, in_string.length());
     }
 
     /** @brief 文字列を検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
-        @param[in] in_size   検索文字列の長さ。
+        @param[in] in_length 検索文字列の長さ。
         @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find(
         typename self::const_pointer const in_string,
         typename self::size_type const     in_offset,
-        typename self::size_type const     in_size)
+        typename self::size_type const     in_length)
     const
     {
-        if (in_size <= 0)
+        if (in_length <= 0)
         {
-            return in_offset <= this->size()? in_offset: self::npos;
+            return in_offset <= this->length()? in_offset: self::npos;
         }
         PSYQ_ASSERT(nullptr != in_string);
 
-        auto local_rest_size(this->size() - in_offset);
-        if (in_offset < this->size() && in_size <= local_rest_size)
+        auto local_rest_length(this->length() - in_offset);
+        if (in_offset < this->length() && in_length <= local_rest_length)
         {
-            local_rest_size -= in_size - 1;
+            local_rest_length -= in_length - 1;
             auto local_rest_string(this->data() + in_offset);
             for (;;)
             {
                 // 検索文字列の先頭文字と合致する位置を見つける。
                 auto const local_find(
                     template_char_traits::find(
-                        local_rest_string, local_rest_size, *in_string));
+                        local_rest_string, local_rest_length, *in_string));
                 if (local_find == nullptr)
                 {
                     break;
@@ -670,14 +712,14 @@ class psyq::basic_reference_string
                 // 検索文字列と合致するか判定。
                 int const local_compare(
                     template_char_traits::compare(
-                        local_find, in_string, in_size));
+                        local_find, in_string, in_length));
                 if (local_compare == 0)
                 {
                     return local_find - this->data();
                 }
 
                 // 次の候補へ。
-                local_rest_size -= local_find + 1 - local_rest_string;
+                local_rest_length -= local_find + 1 - local_rest_string;
                 local_rest_string = local_find + 1;
             }
         }
@@ -738,35 +780,35 @@ class psyq::basic_reference_string
         typename self::size_type const in_offset = self::npos)
     const
     {
-        return this->rfind(in_string.data(), in_offset, in_string.size());
+        return this->rfind(in_string.data(), in_offset, in_string.length());
     }
 
     /** @brief 後ろから文字列を検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
-        @param[in] in_size 検索文字列の長さ。
+        @param[in] in_length 検索文字列の長さ。
         @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type rfind(
         typename self::const_pointer const in_string,
         typename self::size_type const     in_offset,
-        typename self::size_type const     in_size)
+        typename self::size_type const     in_length)
     const
     {
-        if (in_size <= 0)
+        if (in_length <= 0)
         {
-            return in_offset < this->size() ? in_offset: this->size();
+            return in_offset < this->length() ? in_offset: this->length();
         }
         PSYQ_ASSERT(nullptr != in_string);
 
-        if (in_size <= this->size())
+        if (in_length <= this->length())
         {
             auto const local_offset(
-                (std::min)(in_offset, this->size() - in_size));
+                (std::min)(in_offset, this->length() - in_length));
             for (auto i(this->data() + local_offset); ; --i)
             {
                 if (template_char_traits::eq(*i, *in_string)
-                    && template_char_traits::compare(i, in_string, in_size) == 0)
+                    && template_char_traits::compare(i, in_string, in_length) == 0)
                 {
                     return i - this->data();
                 }
@@ -821,28 +863,28 @@ class psyq::basic_reference_string
     const
     {
         return this->find_first_of(
-            in_string.data(), in_offset, in_string.size());
+            in_string.data(), in_offset, in_string.length());
     }
 
     /** @brief 検索文字列に含まれるいずれかの文字を検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
-        @param[in] in_size 検索文字列の長さ。
+        @param[in] in_length 検索文字列の長さ。
         @return 検索文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_first_of(
         typename self::const_pointer const in_string,
         typename self::size_type const     in_offset,
-        typename self::size_type const     in_size)
+        typename self::size_type const     in_length)
     const
     {
-        PSYQ_ASSERT(in_size <= 0 || nullptr != in_string);
-        if (0 < in_size && in_offset < this->size())
+        PSYQ_ASSERT(in_length <= 0 || nullptr != in_string);
+        if (0 < in_length && in_offset < this->length())
         {
-            auto const local_end(this->data() + this->size());
+            auto const local_end(this->data() + this->length());
             for (auto i(this->data() + in_offset); i < local_end; ++i)
             {
-                if (template_char_traits::find(in_string, in_size, *i) != nullptr)
+                if (template_char_traits::find(in_string, in_length, *i) != nullptr)
                 {
                     return i - this->data();
                 }
@@ -893,27 +935,27 @@ class psyq::basic_reference_string
     const
     {
         return this->find_last_of(
-            in_string.data(), in_offset, in_string.size());
+            in_string.data(), in_offset, in_string.length());
     }
 
     /** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
-        @param[in] in_size   検索文字列の長さ。
+        @param[in] in_length   検索文字列の長さ。
         @return 検索文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_last_of(
         typename self::const_pointer const in_string,
         typename self::size_type const     in_offset,
-        typename self::size_type const     in_size)
+        typename self::size_type const     in_length)
     const
     {
-        PSYQ_ASSERT(in_size <= 0 || nullptr != in_string);
-        if (0 < in_size && 0 < this->size())
+        PSYQ_ASSERT(in_length <= 0 || nullptr != in_string);
+        if (0 < in_length && 0 < this->length())
         {
             for (auto i(self::get_pointer(*this, in_offset)); ; --i)
             {
-                if (template_char_traits::find(in_string, in_size, *i) != nullptr)
+                if (template_char_traits::find(in_string, in_length, *i) != nullptr)
                 {
                     return i - this->data();
                 }
@@ -938,7 +980,7 @@ class psyq::basic_reference_string
         typename self::size_type const  in_offset = 0)
     const
     {
-        auto const local_end(this->data() + this->size());
+        auto const local_end(this->data() + this->length());
         for (auto i(this->data() + in_offset); i < local_end; ++i)
         {
             if (!template_char_traits::eq(*i, in_char))
@@ -979,29 +1021,29 @@ class psyq::basic_reference_string
     const
     {
         return this->find_first_not_of(
-            in_string.data(), in_offset, in_string.size());
+            in_string.data(), in_offset, in_string.length());
     }
 
     /** @brief 検索文字列に含まれない文字を検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
-        @param[in] in_size 検索文字列の長さ。
+        @param[in] in_length 検索文字列の長さ。
         @return
            検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_first_not_of(
         typename self::const_pointer const in_string,
         typename self::size_type const     in_offset,
-        typename self::size_type const     in_size)
+        typename self::size_type const     in_length)
     const
     {
-        PSYQ_ASSERT(in_size <= 0 || nullptr != in_string);
-        if (in_offset < this->size())
+        PSYQ_ASSERT(in_length <= 0 || nullptr != in_string);
+        if (in_offset < this->length())
         {
-            auto const local_end(this->data() + this->size());
+            auto const local_end(this->data() + this->length());
             for (auto i(this->data() + in_offset); i < local_end; ++i)
             {
-                if (template_char_traits::find(in_string, in_size, *i) == nullptr)
+                if (template_char_traits::find(in_string, in_length, *i) == nullptr)
                 {
                     return i - this->data();
                 }
@@ -1069,28 +1111,28 @@ class psyq::basic_reference_string
     const
     {
         return this->find_last_not_of(
-            in_string.data(), in_offset, in_string.size());
+            in_string.data(), in_offset, in_string.length());
     }
 
     /** @brief 検索文字列に含まれない文字を、後ろから検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
-        @param[in] in_size   検索文字列の長さ。
+        @param[in] in_length 検索文字列の長さ。
         @return
             検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_last_not_of(
         typename self::const_pointer const in_string,
         typename self::size_type const     in_offset,
-        typename self::size_type const     in_size)
+        typename self::size_type const     in_length)
     const
     {
-        PSYQ_ASSERT(in_size <= 0 || nullptr != in_string);
+        PSYQ_ASSERT(in_length <= 0 || nullptr != in_string);
         if (!this->empty())
         {
             for (auto i(self::get_pointer(*this, in_offset)); ; --i)
             {
-                if (template_char_traits::find(in_string, in_size, *i) == nullptr)
+                if (template_char_traits::find(in_string, in_length, *i) == nullptr)
                 {
                     return i - this->data();
                 }
@@ -1104,9 +1146,92 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列からnullptr文字を検索する。
+    /** @brief 文字列の先頭と末尾にある空白文字を取り除く。
+     */
+    public: void trim()
+    {
+        this->trim_end();
+        this->trim_begin();
+    }
+
+    /** @brief 文字列の先頭にある空白文字を取り除く。
+     */
+    public: void trim_begin()
+    {
+        auto const local_first(
+            self::find_first_not_of_space(this->data(), this->length()));
+        if (local_first != self::npos)
+        {
+            this->data_ += local_first;
+            this->length_ -= local_first;
+        }
+        else if (this->data() != nullptr)
+        {
+            this->data_ += this->length();
+            this->length_ = 0;
+        }
+    }
+
+    /** @brief 文字列の末尾にある空白文字を取り除く。
+     */
+    public: void trim_end()
+    {
+        auto const local_last(
+            self::find_last_not_of_space(this->data(), this->length()));
+        this->length_ = (local_last != self::npos? local_last + 1: 0);
+    }
+
+    /** @brief 空白ではない文字が最初にある位置を検索する。
+        @param[in] in_string 文字列の先頭位置。
+        @param[in] in_length 文字列の長さ。
+        @retval !=self::npos 空白ではない文字が最初にある位置。
+        @retval ==self::npos 文字列が空か、すべて空白文字だった。
+     */
+    public: static typename self::size_type find_first_not_of_space(
+        typename self::const_pointer const in_string,
+        typename self::size_type const     in_length)
+    {
+        if (in_string != nullptr && 0 < in_length)
+        {
+            auto const local_end(in_string + in_length);
+            for (auto i(in_string); i < local_end; ++i)
+            {
+                if (' ' < *i)
+                {
+                    return i - in_string;
+                }
+            }
+        }
+        return self::npos;
+    }
+
+    /** @brief 空白ではない文字が最後にある位置を検索する。
+        @param[in] in_string 文字列の先頭位置。
+        @param[in] in_length 文字列の長さ。
+        @retval !=self::npos 空白ではない文字が最後にある位置。
+        @retval ==self::npos 文字列が空か、すべて空白文字だった。
+     */
+    public: static typename self::size_type find_last_not_of_space(
+        typename self::const_pointer const in_string,
+        typename self::size_type const     in_length)
+    {
+        if (in_string != nullptr && 0 < in_length)
+        {
+            for (auto i(in_string + in_length - 1); in_string <= i; --i)
+            {
+                if (' ' < *i)
+                {
+                    return i - in_string;
+                }
+            }
+        }
+        return self::npos;
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief 文字列から空文字を検索する。
         @param[in] in_string 文字列の先頭位置。nullptrの場合は、空文字列とみなす。
-        @return nullptr文字を見つけた位置のindex番号。
+        @return 空文字を見つけた位置のindex番号。
      */
     public: static typename self::size_type find_null(
         typename self::const_pointer const in_string)
@@ -1128,17 +1253,17 @@ class psyq::basic_reference_string
 
     //-------------------------------------------------------------------------
     /** @brief 等価な文字列か判定する。
-        @param[in] in_right_begin 比較する文字列の先頭位置。
-        @param[in] in_right_size  比較する文字列の文字数。
+        @param[in] in_right_begin  比較する文字列の先頭位置。
+        @param[in] in_right_length 比較する文字列の文字数。
         @retval true  等価な文字列だった。
         @retval false 等価な文字列ではなかった。
      */
     protected: bool is_equal(
         typename self::const_pointer const in_right_begin,
-        typename self::size_type const     in_right_size)
+        typename self::size_type const     in_right_length)
     const
     {
-        if (this->size() != in_right_size)
+        if (this->length() != in_right_length)
         {
             return false;
         }
@@ -1148,7 +1273,7 @@ class psyq::basic_reference_string
         }
         int const local_compare(
             template_char_traits::compare(
-                this->data(), in_right_begin, in_right_size));
+                this->data(), in_right_begin, in_right_length));
         return local_compare == 0;
     }
 
@@ -1167,11 +1292,11 @@ class psyq::basic_reference_string
     {
         auto local_offset(
             self::convert_count<template_string_type>(in_offset));
-        auto const local_size(in_string.size());
-        if (local_size <= local_offset)
+        auto const local_length(in_string.length());
+        if (local_length <= local_offset)
         {
-            PSYQ_ASSERT(0 < local_size);
-            local_offset = local_size - 1;
+            PSYQ_ASSERT(0 < local_length);
+            local_offset = local_length - 1;
         }
         return in_string.data() + local_offset;
     }
@@ -1190,24 +1315,24 @@ class psyq::basic_reference_string
         typename template_string_type::size_type const in_count)
     {
         return self::trim_count(
-            in_string.size(),
+            in_string.length(),
             self::convert_count<template_string_type>(in_offset),
             self::convert_count<template_string_type>(in_count));
     }
 
     /** @brief 文字数をtrimmingする。
-        @param[in] in_size   文字列全体の文字数。
+        @param[in] in_length 文字列全体の文字数。
         @param[in] in_offset 文字列の開始offset位置。
         @param[in] in_count  文字列の開始offset位置からの文字数。
         @return 文字列全体の文字数に収まるようにin_countをtrimmingした値。
      */
     protected: static typename self::size_type trim_count(
-        typename self::size_type const in_size,
+        typename self::size_type const in_length,
         typename self::size_type const in_offset,
         typename self::size_type const in_count)
     {
-        return in_size < in_offset?
-            0: (std::min)(in_count, in_size - in_offset);
+        return in_length < in_offset?
+            0: (std::min)(in_count, in_length - in_offset);
     }
 
     private: template<typename template_string_type>
@@ -1227,8 +1352,8 @@ class psyq::basic_reference_string
         static_cast<typename self::size_type>(-1);
 
     //-------------------------------------------------------------------------
-    private: typename self::const_pointer data_; ///< 文字列の先頭位置。
-    private: typename self::size_type     size_; ///< 文字数。
+    private: typename self::const_pointer data_;   ///< 文字列の先頭位置。
+    private: typename self::size_type     length_; ///< 文字列の長さ。
 
     /** @page string_interface
 
@@ -1241,7 +1366,7 @@ class psyq::basic_reference_string
 
         文字列の長さを取得するため、以下の関数を使えること。
         @code
-        template_string_type::size_type template_string_type::size() const
+        template_string_type::size_type template_string_type::length() const
         @endcode
      */
 };

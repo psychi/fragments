@@ -24,15 +24,15 @@
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_CONST_STRING_HPP_
-#define PSYQ_CONST_STRING_HPP_
+#ifndef PSYQ_IMMUTABLE_STRING_HPP_
+#define PSYQ_IMMUTABLE_STRING_HPP_
 
 //#include "reference_string.hpp"
 
-#ifndef PSYQ_BASIC_CONST_STRING_ALLOCATOR_DEFAULT
-#define PSYQ_BASIC_CONST_STRING_ALLOCATOR_DEFAULT\
+#ifndef PSYQ_BASIC_IMMUTABLE_STRING_ALLOCATOR_DEFAULT
+#define PSYQ_BASIC_IMMUTABLE_STRING_ALLOCATOR_DEFAULT\
     std::allocator<typename template_char_traits::char_type>
-#endif // !PSYQ_BASIC_CONST_STRING_ALLOCATOR_DEFAULT
+#endif // !PSYQ_BASIC_IMMUTABLE_STRING_ALLOCATOR_DEFAULT
 
 namespace psyq
 {
@@ -41,23 +41,23 @@ namespace psyq
         typename template_char_type,
         typename template_char_traits = PSYQ_BASIC_REFERENCE_STRING_DEFAULT,
         typename template_allocator_type =
-            PSYQ_BASIC_CONST_STRING_ALLOCATOR_DEFAULT>
-                class basic_const_string;
+            PSYQ_BASIC_IMMUTABLE_STRING_ALLOCATOR_DEFAULT>
+                class basic_immutable_string;
     /// @endcond
 
-    /// char型の文字を扱う basic_const_string
-    typedef psyq::basic_const_string<char> const_string;
+    /// char型の文字を扱う basic_immutable_string
+    typedef psyq::basic_immutable_string<char> immutable_string;
 
-    /// wchar_t型の文字を扱う basic_const_string
-    typedef psyq::basic_const_string<wchar_t> const_wstring;
+    /// wchar_t型の文字を扱う basic_immutable_string
+    typedef psyq::basic_immutable_string<wchar_t> const_wstring;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string のinterfaceを模した、文字列定数。
+/** @brief std::basic_string のinterfaceを模した、immutableな文字列。
 
-    - constructorで文字pointerを渡すとmemory割り当てを行い、文字列をcopyする。
-    - 上記以外では、memory割り当てを一切行わない。
-    - 文字列定数なので、文字列を書き換えるinterfaceは持たない。
+    - immutableな文字列を参照countで管理する。
+    - 他の型の文字列をcopyするときだけ、memory割り当てを行う。
+    - immutableな文字列なので、文字列を書き換えるinterfaceはない。
     - not thread-safe
 
     @tparam template_char_type
@@ -72,12 +72,12 @@ template<
     typename template_char_type,
     typename template_char_traits,
     typename template_allocator_type>
-class psyq::basic_const_string:
+class psyq::basic_immutable_string:
     public psyq::basic_reference_string<
         template_char_type, template_char_traits>
 {
     /// thisが指す値の型。
-    public: typedef psyq::basic_const_string<
+    public: typedef psyq::basic_immutable_string<
         template_char_type, template_char_traits, template_allocator_type>
             self;
 
@@ -92,7 +92,7 @@ class psyq::basic_const_string:
     //-------------------------------------------------------------------------
     /** @brief 空文字列を構築する。memory割り当ては行わない。
      */
-    public: explicit basic_const_string(
+    public: explicit basic_immutable_string(
         typename self::allocator_type const& in_allocator
         = self::allocator_type())
     :
@@ -103,7 +103,7 @@ class psyq::basic_const_string:
     /** @brief 文字列を参照する。memory割り当ては行わない。
         @param[in] in_source copy元の文字列。
      */
-    public: basic_const_string(self const& in_source)
+    public: basic_immutable_string(self const& in_source)
     :
         super(in_source),
         allocator_(in_source.allocator_)
@@ -114,7 +114,7 @@ class psyq::basic_const_string:
     /** @brief 文字列を移動する。memory割り当ては行わない。
         @param[in,out] io_source move元の文字列。
      */
-    public: basic_const_string(self&& io_source)
+    public: basic_immutable_string(self&& io_source)
     :
         super(io_source),
         holder_(io_source.holder_),
@@ -130,7 +130,7 @@ class psyq::basic_const_string:
         @param[in] in_allocator memory割当子の初期値。
      */
     public: template <std::size_t template_size>
-    basic_const_string(
+    basic_immutable_string(
         typename self::value_type const (&in_string)[template_size],
         typename self::allocator_type const& in_allocator
         = self::allocator_type())
@@ -145,7 +145,7 @@ class psyq::basic_const_string:
         @param[in] in_offset 参照する文字列の開始offset位置。
         @param[in] in_count  参照する文字数。
      */
-    public: basic_const_string(
+    public: basic_immutable_string(
         self const&                    in_string,
         typename self::size_type const in_offset,
         typename self::size_type const in_count = super::npos)
@@ -162,7 +162,7 @@ class psyq::basic_const_string:
         @param[in] in_string    copy元の文字列。
         @param[in] in_allocator memory割当子の初期値。
      */
-    public: basic_const_string(
+    public: basic_immutable_string(
         super const&                         in_source,
         typename self::allocator_type const& in_allocator
         = self::allocator_type())
@@ -180,7 +180,7 @@ class psyq::basic_const_string:
         @param[in] in_length    copy元の文字列の長さ。
         @param[in] in_allocator memory割当子の初期値。
      */
-    public: basic_const_string(
+    public: basic_immutable_string(
         typename self::const_pointer const   in_string,
         typename self::size_type const       in_length,
         typename self::allocator_type const& in_allocator
@@ -195,7 +195,7 @@ class psyq::basic_const_string:
     }
 
     /// destructor
-    public: ~basic_const_string()
+    public: ~basic_immutable_string()
     {
         this->release_string();
     }
@@ -421,10 +421,10 @@ namespace std
         typename template_char_traits,
         typename template_allocator_type>
     void swap(
-        psyq::basic_const_string<
+        psyq::basic_immutable_string<
             template_char_type, template_char_traits, template_allocator_type>&
                 io_left,
-        psyq::basic_const_string<
+        psyq::basic_immutable_string<
             template_char_type, template_char_traits, template_allocator_type>&
                 io_right)
     {
@@ -432,4 +432,4 @@ namespace std
     }
 };
 
-#endif // PSYQ_CONST_STRING_HPP_
+#endif // PSYQ_IMMUTABLE_STRING_HPP_

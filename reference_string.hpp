@@ -58,16 +58,16 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string のinterfaceを模した、文字列定数への参照。
+/** @brief std::basic_string のinterfaceを模した、const文字列への参照。
 
     - memory割り当てを一切行わない。
-    - 文字列定数なので、文字列を書き換えるinterfaceは持たない。
+    - const文字列への参照なので、文字列を書き換えるinterfaceはない。
     - not thread-safe
 
     @warning
-        割り当てられた文字列を文字列定数として参照してるので、
+        割り当てられた文字列をconst文字列として参照してるので、
         参照先の文字列が更新されると、動作を保証できなくなる。
-        文字列定数を安全に扱うには、 psyq::basic_const_string を使う。
+        const文字列を安全に扱うには、 psyq::basic_immutable_string を使う。
 
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type

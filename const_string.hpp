@@ -58,6 +58,7 @@ namespace psyq
     - constructorで文字pointerを渡すとmemory割り当てを行い、文字列をcopyする。
     - 上記以外では、memory割り当てを一切行わない。
     - 文字列定数なので、文字列を書き換えるinterfaceは持たない。
+    - not thread-safe
 
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type
@@ -65,7 +66,7 @@ namespace psyq
         @copydoc psyq::basic_reference_string::traits_type
     @tparam template_allocator_type memory割当子の型。
 
-    @note スレッドセーフではないので、後日対応したい。
+    @note 参照counterだけでもthread-safeにしたい。
  */
 template<
     typename template_char_type,
@@ -92,15 +93,12 @@ class psyq::basic_const_string:
     /** @brief 空文字列を構築する。memory割り当ては行わない。
      */
     public: explicit basic_const_string(
-        typename self::allocator_type const& in_allocator =
-            self::allocator_type())
+        typename self::allocator_type const& in_allocator
+        = self::allocator_type())
     :
-        super(),
         holder_(nullptr),
         allocator_(in_allocator)
-    {
-        // pass
-    }
+    {}
 
     /** @brief 文字列を参照する。memory割り当ては行わない。
         @param[in] in_source copy元の文字列。
@@ -108,10 +106,9 @@ class psyq::basic_const_string:
     public: basic_const_string(self const& in_source)
     :
         super(in_source),
-        holder_(in_source.holder_),
         allocator_(in_source.allocator_)
     {
-        self::hold_string(in_source.holder_);
+        this->hold_string(in_source.holder_);
     }
 
     /** @brief 文字列を移動する。memory割り当ては行わない。
@@ -135,15 +132,13 @@ class psyq::basic_const_string:
     public: template <std::size_t template_size>
     basic_const_string(
         typename self::value_type const (&in_string)[template_size],
-        typename self::allocator_type const& in_allocator =
-            self::allocator_type())
+        typename self::allocator_type const& in_allocator
+        = self::allocator_type())
     :
         super(in_string),
         holder_(nullptr),
         allocator_(in_allocator)
-    {
-        // pass
-    }
+    {}
 
     /** @brief 文字列を参照する。memory割り当ては行わない。
         @param[in] in_string 参照する文字列。
@@ -158,81 +153,57 @@ class psyq::basic_const_string:
         super(
             in_string.data() + in_offset,
             super::trim_count(in_string, in_offset, in_count)),
-        holder_(in_string.holder_),
         allocator_(in_string.allocator_)
     {
-        self::hold_string(in_string.holder_);
+        this->hold_string(in_string.holder_);
+    }
+
+    /** @brief memoryを割り当てを行い、文字列をcopyする。
+        @param[in] in_string    copy元の文字列。
+        @param[in] in_allocator memory割当子の初期値。
+     */
+    public: basic_const_string(
+        super const&                         in_source,
+        typename self::allocator_type const& in_allocator
+        = self::allocator_type())
+    :
+        allocator_(in_allocator)
+    {
+        if (!this->create_string(in_source.data(), in_source.length()))
+        {
+            this->holder_ = nullptr;
+        }
     }
 
     /** @brief memoryを割り当てを行い、文字列をcopyする。
         @param[in] in_string    copy元の文字列の先頭位置。
-        @param[in] in_size      copy元の文字列の長さ。
+        @param[in] in_length    copy元の文字列の長さ。
         @param[in] in_allocator memory割当子の初期値。
      */
     public: basic_const_string(
         typename self::const_pointer const   in_string,
-        typename self::size_type const       in_size,
-        typename self::allocator_type const& in_allocator =
-            self::allocator_type())
+        typename self::size_type const       in_length,
+        typename self::allocator_type const& in_allocator
+        = self::allocator_type())
     :
-        super(),
-        holder_(nullptr),
         allocator_(in_allocator)
     {
-        if (in_size <= 0)
+        if (!this->create_string(in_string, in_length))
         {
-            return;
+            this->holder_ = nullptr;
         }
-
-        // 文字列bufferの確保。
-        typename self::holder_allocator local_allocator(this->allocator_);
-        typename self::holder* const local_holder(
-            local_allocator.allocate(self::count_allocate_size(in_size)));
-        if (local_holder == nullptr)
-        {
-            PSYQ_ASSERT(false);
-            return;
-        }
-
-        // 文字列bufferを初期化。
-        auto const local_string(
-            reinterpret_cast<self::value_type*>(local_holder + 1));
-        new(this) super(local_string, in_size);
-        this->holder_ = local_holder;
-        local_holder->refrence_count_ = 1;
-        local_holder->string_length_ = in_size;
-        PSYQ_ASSERT(in_string != nullptr);
-        super::traits_type::copy(local_string, in_string, in_size);
-        local_string[in_size] = 0;
     }
 
     /// destructor
     public: ~basic_const_string()
     {
-        auto const local_holder(this->holder_);
-        if (local_holder != nullptr)
-        {
-            //bool const local_destroy(
-            //    1 == std::atomic_fetch_sub_explicit(
-            //        &local_holder->refrence_count_, 1, std::memory_order_release));
-            //if (local_destroy)
-            if ((--local_holder->refrence_count_) == 0)
-            {
-                //std::atomic_thread_fence(std::memory_order_acquire);
-                local_holder->~holder();
-                typename self::holder_allocator(this->allocator_).deallocate(
-                    local_holder, self::count_allocate_size(this->size()));
-            }
-        }
+        this->release_string();
     }
 
     //-------------------------------------------------------------------------
     public: self& operator=(self const& in_right)
     {
-        if (this != &in_right)
-        {
-            self(in_right).swap(*this);
-        }
+        self(in_right).swap(*this);
         return *this;
     }
 
@@ -258,6 +229,81 @@ class psyq::basic_const_string:
     }
 
     //-------------------------------------------------------------------------
+    /** @brief 文字列literalを参照する。memory割り当ては行わない。
+        @tparam template_size 参照する文字列literalの要素数。
+        @param[in] in_string 参照する文字列literal。
+     */
+    public: template <std::size_t template_size>
+    self& assign(typename self::value_type const (&in_string)[template_size])
+    {
+        this->release_string();
+        new(this) super(in_string);
+        this->holder_ = nullptr;
+        return *this;
+    }
+
+    /** @brief 文字列を参照する。memory割り当ては行わない。
+        @param[in] in_string 参照する文字列。
+     */
+    public: self& assign(self const& in_string)
+    {
+        *this = in_string;
+        return *this;
+    }
+
+    /** @brief 文字列を参照する。memory割り当ては行わない。
+        @param[in] in_string 参照する文字列。
+        @param[in] in_offset 参照する文字列の開始offset位置。
+        @param[in] in_count  参照する文字数。
+     */
+    public: self& assign(
+        self const&                    in_string,
+        typename self::size_type const in_offset,
+        typename self::size_type const in_count = super::npos)
+    {
+        if (this->holder_ != in_string.holder_)
+        {
+            this->release_string();
+            this->hold_string(in_string.holder_);
+        }
+        new(this) super(
+            in_string.data() + in_offset,
+            super::trim_count(in_string, in_offset, in_count));
+        return *this;
+    }
+
+    /** @brief memoryを割り当てを行い、文字列をcopyする。
+        @param[in] in_string copy元の文字列。
+     */
+    public: self& assign(super const& in_string)
+    {
+        return this->assign(in_string.data(), in_string.size());
+    }
+
+    /** @brief memoryを割り当てを行い、文字列をcopyする。
+        @param[in] in_string copy元の文字列の先頭位置。
+        @param[in] in_length copy元の文字列の長さ。
+     */
+    public: self& assign(
+        typename self::const_pointer const in_string,
+        typename self::size_type const     in_length)
+    {
+        if (in_string < this->begin() || this->end() <= in_string)
+        {
+            this->release_string();
+            if (!this->create_string(in_string, in_length))
+            {
+                this->holder_ = nullptr;
+            }
+        }
+        else
+        {
+            new(this) super(in_string, in_length);
+        }
+        return *this;
+    }
+
+    //-------------------------------------------------------------------------
     /// 文字列保持子。
     private: struct holder
     {
@@ -270,9 +316,47 @@ class psyq::basic_const_string:
         rebind<typename self::holder>::other
             holder_allocator;
 
-    private: static void hold_string(
-        typename self::holder* const io_holder)
+    private: bool create_string(
+        typename self::const_pointer const in_string,
+        typename self::size_type const     in_length)
     {
+        if (in_length <= 0)
+        {
+            return false;
+        }
+        if (in_string == nullptr)
+        {
+            PSYQ_ASSERT(false);
+            return false;
+        }
+
+        // 文字列bufferを確保する。
+        typename self::holder_allocator local_allocator(this->allocator_);
+        auto const local_holder(
+            local_allocator.allocate(self::count_allocate_size(in_length)));
+        if (local_holder == nullptr)
+        {
+            PSYQ_ASSERT(false);
+            return false;
+        }
+
+        // 文字列bufferを初期化する。
+        auto const local_string(
+            reinterpret_cast<self::value_type*>(local_holder + 1));
+        local_holder->refrence_count_ = 1;
+        local_holder->string_length_ = in_length;
+        super::traits_type::copy(local_string, in_string, in_length);
+        local_string[in_length] = 0;
+
+        // 文字列bufferを保持する。
+        new(this) super(local_string, in_length);
+        this->holder_ = local_holder;
+        return true;
+    }
+
+    private: void hold_string(typename self::holder* const io_holder)
+    {
+        this->holder_ = io_holder;
         if (io_holder != nullptr)
         {
             //std::atomic_fetch_add_explicit(
@@ -281,15 +365,38 @@ class psyq::basic_const_string:
         }
     }
 
+    private: bool release_string()
+    {
+        auto const local_holder(this->holder_);
+        if (local_holder == nullptr)
+        {
+            return false;
+        }
+        //bool const local_destroy(
+        //    1 == std::atomic_fetch_sub_explicit(
+        //        &local_holder->refrence_count_, 1, std::memory_order_release));
+        //if (local_destroy)
+        if (0 < (--local_holder->refrence_count_))
+        {
+            return false;
+        }
+        //std::atomic_thread_fence(std::memory_order_acquire);
+        auto const local_length(local_holder->string_length_);
+        local_holder->~holder();
+        typename self::holder_allocator(this->allocator_).deallocate(
+            local_holder, self::count_allocate_size(local_length));
+        return true;
+    }
+
     private:
     static typename self::holder_allocator::size_type count_allocate_size(
         typename self::size_type const in_string_length)
     {
         auto const local_holder_size(sizeof(typename self::holder));
-        auto const local_string_size(
+        auto const local_string_length(
             sizeof(typename self::value_type) * (in_string_length + 1)
             + local_holder_size - 1);
-        return 1 + local_string_size / local_holder_size;
+        return 1 + local_string_length / local_holder_size;
     }
 
     //-------------------------------------------------------------------------

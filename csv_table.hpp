@@ -1,4 +1,4 @@
-/** @file
+﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_CSV_TABLE_HPP_

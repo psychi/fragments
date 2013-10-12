@@ -1,4 +1,4 @@
-/** @file
+﻿/** @file
     @brief morton順序を用いた空間分割木による衝突判定。
 
     使い方は、 psyq::mosp_handle と psyq::mosp_tree

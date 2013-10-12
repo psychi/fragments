@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, Hillco Psychi, All rights reserved.
+﻿/* Copyright (c) 2013, Hillco Psychi, All rights reserved.
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -64,7 +64,11 @@ namespace psyq
     - C文字列を単純にconst参照する。
     - memory割り当てを一切行わない。
     - 文字列を書き換えるinterfaceはない。
-    - not thread-safe
+    - thread-safety
+      - 同じinstanceを、異なるthreadでreadする。
+      - 異なるinstanceを、異なるthreadでwriteする。
+    - not thread-safety
+      - 同じinstanceを異なるthreadでwriteする。
 
     @warning
         C文字列を単純にconst参照しているので、

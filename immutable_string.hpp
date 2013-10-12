@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, Hillco Psychi, All rights reserved.
+﻿/* Copyright (c) 2013, Hillco Psychi, All rights reserved.
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -63,8 +63,9 @@ namespace psyq
 /** @brief std::basic_string のinterfaceを模した、immutableな文字列。
 
     - immutableな文字列を参照countで管理する。
-    - 他の型の文字列をcopyするときだけ、memory割り当てを行う。
-    - 文字列を書き換えるinterfaceはない。
+    - 文字列literalを割り当てた場合は、memory割り当てを行わない。
+    - 同じ型の文字列を割り当てた場合は、memory割り当てを行わない。
+    - 違う型の文字列を割り当てた場合は、memory割り当てを行う。
     - not thread-safe
 
     @tparam template_char_type
@@ -155,9 +156,7 @@ class psyq::basic_immutable_string:
         typename self::size_type const in_offset,
         typename self::size_type const in_count = super::npos)
     :
-        super(
-            in_string.data() + in_offset,
-            super::trim_count(in_string, in_offset, in_count)),
+        super(in_string, in_offset, in_count),
         allocator_(in_string.allocator_)
     {
         this->hold_buffer(in_string.buffer_);
@@ -246,7 +245,7 @@ class psyq::basic_immutable_string:
         return *this;
     }
 
-    /** @brief 文字列を参照する。memory割り当ては行わない。
+    /** @brief 文字列を移動する。memory割り当ては行わない。
         @param[in,out] io_string 参照する文字列。
      */
     public: self& assign(self&& io_string)
@@ -283,9 +282,7 @@ class psyq::basic_immutable_string:
             this->release_buffer();
             this->hold_buffer(in_string.buffer_);
         }
-        new(this) super(
-            in_string.data() + in_offset,
-            super::trim_count(in_string, in_offset, in_count));
+        new(this) super(in_string, in_offset, in_count);
         return *this;
     }
 

@@ -681,13 +681,13 @@ INPUT                  = ./async_file.hpp \
                          ./async_queue.hpp \
                          ./async_task.hpp \
                          ./bit_algorithm.hpp \
-                         ./const_string.hpp \
                          ./csv_table.hpp \
                          ./dynamic_storage.hpp \
                          ./enum.hpp \
                          ./file_buffer.hpp \
                          ./file_handle.hpp \
                          ./fnv_hash.hpp \
+                         ./immutable_string.hpp \
                          ./integer_bitset.hpp \
                          ./lerp.hpp \
                          ./mosp_collision.hpp \

@@ -30,6 +30,7 @@
 #include <iosfwd>
 #include <iterator>
 #include <algorithm>
+#include <cctype>
 
 #ifndef PSYQ_ASSERT
 #define PSYQ_ASSERT(define_expression) assert(define_expression)
@@ -58,16 +59,17 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string のinterfaceを模した、const文字列への参照。
+/** @brief std::basic_string のinterfaceを模した、文字列へのconst参照。
 
+    - C文字列を単純にconst参照する。
     - memory割り当てを一切行わない。
-    - const文字列への参照なので、文字列を書き換えるinterfaceはない。
+    - 文字列を書き換えるinterfaceはない。
     - not thread-safe
 
     @warning
-        割り当てられた文字列をconst文字列として参照してるので、
-        参照先の文字列が更新されると、動作を保証できなくなる。
-        const文字列を安全に扱うには、 psyq::basic_immutable_string を使う。
+        C文字列を単純にconst参照しているので、
+        参照してる文字列が破棄されると、動作を保証できなくなる。
+        文字列を安全に扱うには、 psyq::basic_immutable_string を使う。
 
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type
@@ -197,6 +199,13 @@ class psyq::basic_reference_string
     {
         std::swap(this->data_, io_target.data_);
         std::swap(this->length_, io_target.length_);
+    }
+
+    /** @brief 文字列を空にする。
+     */
+    public: void clear()
+    {
+        this->length_ = 0;
     }
 
     //-------------------------------------------------------------------------
@@ -1150,105 +1159,50 @@ class psyq::basic_reference_string
      */
     public: void trim()
     {
-        this->trim_end();
-        this->trim_begin();
+        this->trim_right();
+        this->trim_left();
     }
 
     /** @brief 文字列の先頭にある空白文字を取り除く。
      */
-    public: void trim_begin()
+    public: void trim_left()
     {
-        auto const local_first(
-            self::find_first_not_of_space(this->data(), this->length()));
-        if (local_first != self::npos)
+        if (this->empty())
         {
-            this->data_ += local_first;
-            this->length_ -= local_first;
+            return;
         }
-        else if (this->data() != nullptr)
+        auto const local_end(this->end());
+        for (auto i(this->begin()); i < local_end; ++i)
         {
-            this->data_ += this->length();
-            this->length_ = 0;
+            if (!std::isspace(*i))
+            {
+                auto const local_position(i - this->begin());
+                this->data_ += local_position;
+                this->length_ -= local_position;
+                return;
+            }
         }
+        this->data_ += this->length();
+        this->length_ = 0;
     }
 
     /** @brief 文字列の末尾にある空白文字を取り除く。
      */
-    public: void trim_end()
+    public: void trim_right()
     {
-        auto const local_last(
-            self::find_last_not_of_space(this->data(), this->length()));
-        this->length_ = (local_last != self::npos? local_last + 1: 0);
-    }
-
-    /** @brief 空白ではない文字が最初にある位置を検索する。
-        @param[in] in_string 文字列の先頭位置。
-        @param[in] in_length 文字列の長さ。
-        @retval !=self::npos 空白ではない文字が最初にある位置。
-        @retval ==self::npos 文字列が空か、すべて空白文字だった。
-     */
-    public: static typename self::size_type find_first_not_of_space(
-        typename self::const_pointer const in_string,
-        typename self::size_type const     in_length)
-    {
-        if (in_string != nullptr && 0 < in_length)
+        if (this->empty())
         {
-            auto const local_end(in_string + in_length);
-            for (auto i(in_string); i < local_end; ++i)
+            return;
+        }
+        for (auto i(this->end() - 1); this->begin() <= i; --i)
+        {
+            if (!std::isspace(*i))
             {
-                if (' ' < *i)
-                {
-                    return i - in_string;
-                }
+                this->length_ = 1 + i - this->begin();
+                return;
             }
         }
-        return self::npos;
-    }
-
-    /** @brief 空白ではない文字が最後にある位置を検索する。
-        @param[in] in_string 文字列の先頭位置。
-        @param[in] in_length 文字列の長さ。
-        @retval !=self::npos 空白ではない文字が最後にある位置。
-        @retval ==self::npos 文字列が空か、すべて空白文字だった。
-     */
-    public: static typename self::size_type find_last_not_of_space(
-        typename self::const_pointer const in_string,
-        typename self::size_type const     in_length)
-    {
-        if (in_string != nullptr && 0 < in_length)
-        {
-            for (auto i(in_string + in_length - 1); in_string <= i; --i)
-            {
-                if (' ' < *i)
-                {
-                    return i - in_string;
-                }
-            }
-        }
-        return self::npos;
-    }
-
-    //-------------------------------------------------------------------------
-    /** @brief 文字列から空文字を検索する。
-        @param[in] in_string 文字列の先頭位置。nullptrの場合は、空文字列とみなす。
-        @return 空文字を見つけた位置のindex番号。
-     */
-    public: static typename self::size_type find_null(
-        typename self::const_pointer const in_string)
-    {
-        if (in_string == nullptr)
-        {
-            return 0;
-        }
-        return template_char_traits::length(in_string);
-    }
-
-    //-------------------------------------------------------------------------
-    /** @brief 文字列を空にする。
-     */
-    public: void clear()
-    {
-        this->size_ = 0;
+        this->length_ = 0;
     }
 
     //-------------------------------------------------------------------------

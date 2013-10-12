@@ -34,6 +34,13 @@
     std::allocator<typename template_char_traits::char_type>
 #endif // !PSYQ_BASIC_IMMUTABLE_STRING_ALLOCATOR_DEFAULT
 
+/** @brief 文字列の参照countをthread-safeにしないかどうか。
+    @warning 今のところthread-safeには未対応。
+ */
+#ifndef PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
+#define PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS 1
+#endif // PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
+
 namespace psyq
 {
     /// @cond
@@ -65,8 +72,6 @@ namespace psyq
     @tparam template_char_traits
         @copydoc psyq::basic_reference_string::traits_type
     @tparam template_allocator_type memory割当子の型。
-
-    @note 参照countだけでもthread-safeにしたい。
  */
 template<
     typename template_char_type,
@@ -207,9 +212,18 @@ class psyq::basic_immutable_string:
         return *this;
     }
 
-    public: typename self::allocator_type const& get_allocator() const
+    /** @brief 文字列literalを参照する。memory割り当ては行わない。
+        @tparam template_size 参照する文字列literalの要素数。
+        @param[in] in_string    参照する文字列literal。
+     */
+    public: template <std::size_t template_size>
+    self& operator=(
+        typename self::value_type const (&in_string)[template_size])
     {
-        return this->allocator_;
+        this->release_buffer();
+        new(this) super(in_string);
+        this->buffer_ = nullptr;
+        return *this;
     }
 
     /** @brief 文字列を交換する。
@@ -223,6 +237,24 @@ class psyq::basic_immutable_string:
     }
 
     //-------------------------------------------------------------------------
+    /** @brief 文字列を参照する。memory割り当ては行わない。
+        @param[in] in_string 参照する文字列。
+     */
+    public: self& assign(self const& in_string)
+    {
+        *this = in_string;
+        return *this;
+    }
+
+    /** @brief 文字列を参照する。memory割り当ては行わない。
+        @param[in] in_string 参照する文字列。
+     */
+    public: self& assign(self&& io_string)
+    {
+        *this = io_string;
+        return *this;
+    }
+
     /** @brief 文字列literalを参照する。memory割り当ては行わない。
         @tparam template_size 参照する文字列literalの要素数。
         @param[in] in_string 参照する文字列literal。
@@ -233,15 +265,6 @@ class psyq::basic_immutable_string:
         this->release_buffer();
         new(this) super(in_string);
         this->buffer_ = nullptr;
-        return *this;
-    }
-
-    /** @brief 文字列を参照する。memory割り当ては行わない。
-        @param[in] in_string 参照する文字列。
-     */
-    public: self& assign(self const& in_string)
-    {
-        *this = in_string;
         return *this;
     }
 
@@ -298,9 +321,33 @@ class psyq::basic_immutable_string:
     }
 
     //-------------------------------------------------------------------------
+    public: typename self::allocator_type const& get_allocator() const
+    {
+        return this->allocator_;
+    }
+
+    /** @brief 部分文字列を取得する。
+        @param[in] in_offset 部分文字列の開始offset位置。
+        @param[in] in_count  部分文字列の文字数。
+     */
+    public: self substr(
+        typename self::size_type in_offset = 0,
+        typename self::size_type in_count = self::npos)
+    const
+    {
+        return self(*this, in_offset, in_count);
+    }
+
+    //-------------------------------------------------------------------------
     /// 文字列buffer。
     private: struct buffer
     {
+        explicit buffer(std::size_t const in_capacity)
+        :
+            reference_count_(1),
+            capacity_(in_capacity)
+        {}
+
         value_type* get_begin()
         {
             return reinterpret_cast<value_type*>(this + 1);
@@ -311,7 +358,11 @@ class psyq::basic_immutable_string:
             return this->get_begin() + this->capacity_;
         }
 
+#if PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
         std::size_t reference_count_; ///< 文字列bufferの被参照数。
+#else
+        std::atomic<std::size_t> reference_count_;
+#endif // PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
         std::size_t capacity_;        ///< 文字列bufferの大きさ。
     };
 
@@ -339,13 +390,12 @@ class psyq::basic_immutable_string:
             PSYQ_ASSERT(false);
             return nullptr;
         }
-        local_buffer->reference_count_ = 1;
         auto const local_allocate_bytes(
             local_allocate_size
             * sizeof(typename self::buffer_allocator::value_type));
-        local_buffer->capacity_ =
+        new(local_buffer) typename self::buffer(
             (local_allocate_bytes - sizeof(typename self::buffer))
-            / sizeof(typename self::value_type);
+            / sizeof(typename self::value_type));
 
         // 文字列bufferを保持する。
         auto const local_buffer_begin(local_buffer->get_begin());
@@ -381,9 +431,12 @@ class psyq::basic_immutable_string:
         this->buffer_ = io_buffer;
         if (io_buffer != nullptr)
         {
-            //std::atomic_fetch_add_explicit(
-            //    &io_buffer->reference_count_, 1, std::memory_order_relaxed);
+#if PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
             ++io_buffer->reference_count_;
+#else
+            std::atomic_fetch_add_explicit(
+                &io_buffer->reference_count_, 1, std::memory_order_relaxed);
+#endif // PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS 
         }
     }
 
@@ -394,15 +447,23 @@ class psyq::basic_immutable_string:
         {
             return false;
         }
-        //bool const local_destroy(
-        //    1 == std::atomic_fetch_sub_explicit(
-        //        &local_buffer->reference_count_, 1, std::memory_order_release));
-        //if (local_destroy)
-        if (0 < (--local_buffer->reference_count_))
+#if PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
+        --local_buffer->reference_count_;
+        if (0 < local_buffer->reference_count_)
+#else
+        auto const local_last_count(
+            std::atomic_fetch_sub_explicit(
+                &local_buffer->reference_count_,
+                1,
+                std::memory_order_release));
+        if (1 < local_last_count)
+#endif // PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
         {
             return false;
         }
-        //std::atomic_thread_fence(std::memory_order_acquire);
+#if !PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
+        std::atomic_thread_fence(std::memory_order_acquire);
+#endif // PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
         auto const local_capacity(local_buffer->capacity_);
         local_buffer->~buffer();
         typename self::buffer_allocator(this->allocator_).deallocate(

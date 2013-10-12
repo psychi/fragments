@@ -1,10 +1,10 @@
 /** @file
-    @brief morton‡˜‚ğ—p‚¢‚½‹óŠÔ•ªŠ„–Ø‚É‚æ‚éÕ“Ë”»’èB
+    @brief mortoné †åºã‚’ç”¨ã„ãŸç©ºé–“åˆ†å‰²æœ¨ã«ã‚ˆã‚‹è¡çªåˆ¤å®šã€‚
 
-    g‚¢•û‚ÍA psyq::mosp_handle ‚Æ psyq::mosp_tree
-    ‚ÌÚ×à–¾‚ğQÆ‚·‚é‚±‚ÆB
+    ä½¿ã„æ–¹ã¯ã€ psyq::mosp_handle ã¨ psyq::mosp_tree
+    ã®è©³ç´°èª¬æ˜ã‚’å‚ç…§ã™ã‚‹ã“ã¨ã€‚
 
-    ˆÈ‰º‚Ìweb-page‚ğQl‚É‚µ‚ÄÀ‘•‚µ‚½B
+    ä»¥ä¸‹ã®web-pageã‚’å‚è€ƒã«ã—ã¦å®Ÿè£…ã—ãŸã€‚
     http://marupeke296.com/COL_2D_No8_QuadTree.html
  */
 #ifndef PSYQ_MOSP_COLLISION_HPP_
@@ -29,28 +29,28 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief morton‡˜‚É‚æ‚é‹óŠÔ•ªŠ„–Ø‚ğ—p‚¢‚½Õ“Ë”»’è‚ÌhandleB
+/** @brief mortoné †åºã«ã‚ˆã‚‹ç©ºé–“åˆ†å‰²æœ¨ã‚’ç”¨ã„ãŸè¡çªåˆ¤å®šã®handleã€‚
 
-    g‚¢•û‚ÌŠT—vB
-    -# Õ“Ë‚·‚é•¨‘Ì‚Ì¯•Ê’l‚ğA mosp_handle::object_ ‚É‘ã“ü‚µ‚Ä‚¨‚­B
-    -# mosp_handle::Attach() ‚ğŒÄ‚Ño‚µA
-       Õ“Ë”»’èhandle‚ğ‹óŠÔ•ªŠ„–Ø‚Éæ‚è‚Â‚¯‚éB
-    -# mosp_tree::detect_collision() ‚ğŒÄ‚Ño‚µAÕ“Ë‚ğ”»’è‚·‚éB
+    ä½¿ã„æ–¹ã®æ¦‚è¦ã€‚
+    -# è¡çªã™ã‚‹ç‰©ä½“ã®è­˜åˆ¥å€¤ã‚’ã€ mosp_handle::object_ ã«ä»£å…¥ã—ã¦ãŠãã€‚
+    -# mosp_handle::Attach() ã‚’å‘¼ã³å‡ºã—ã€
+       è¡çªåˆ¤å®šhandleã‚’ç©ºé–“åˆ†å‰²æœ¨ã«å–ã‚Šã¤ã‘ã‚‹ã€‚
+    -# mosp_tree::detect_collision() ã‚’å‘¼ã³å‡ºã—ã€è¡çªã‚’åˆ¤å®šã™ã‚‹ã€‚
 
     @tparam template_collision_object @copydoc mosp_handle::collision_object
  */
 template<typename template_collision_object>
 class psyq::mosp_handle
 {
-    /// *this‚ÌŒ^B
+    /// *thisã®å‹ã€‚
     private: typedef mosp_handle<template_collision_object> self;
 
-    /// Õ“Ë‚·‚é•¨‘Ì‚Ì¯•Ê’l‚ÌŒ^B
+    /// è¡çªã™ã‚‹ç‰©ä½“ã®è­˜åˆ¥å€¤ã®å‹ã€‚
     public: typedef template_collision_object collision_object;
 
     //-------------------------------------------------------------------------
-    /** @brief Õ“Ë”»’èhandle‚ğ\’z‚·‚éB
-        @param[in] in_object this‚É‘Î‰‚·‚éAÕ“Ë•¨‘Ì‚Ì¯•Ê’l‚Ì‰Šú’lB
+    /** @brief è¡çªåˆ¤å®šhandleã‚’æ§‹ç¯‰ã™ã‚‹ã€‚
+        @param[in] in_object thisã«å¯¾å¿œã™ã‚‹ã€è¡çªç‰©ä½“ã®è­˜åˆ¥å€¤ã®åˆæœŸå€¤ã€‚
      */
     public: explicit mosp_handle(
         template_collision_object in_object)
@@ -59,11 +59,11 @@ class psyq::mosp_handle
         node_(nullptr)
     {}
 
-    /// copy-constructor‚Íg—p‹Ö~B
+    /// copy-constructorã¯ä½¿ç”¨ç¦æ­¢ã€‚
     private: mosp_handle(self const&);
 
-    /** @brief move-constructorB
-        @param[in,out] io_source ˆÚ“®Œ³‚Æ‚È‚éinstanceB
+    /** @brief move-constructorã€‚
+        @param[in,out] io_source ç§»å‹•å…ƒã¨ãªã‚‹instanceã€‚
      */
     public: mosp_handle(
         self&& io_source)
@@ -78,17 +78,17 @@ class psyq::mosp_handle
         }
     }
 
-    /// @brief ‹óŠÔ•ªŠ„–Ø‚©‚çthis‚ğæ‚èŠO‚·B
+    /// @brief ç©ºé–“åˆ†å‰²æœ¨ã‹ã‚‰thisã‚’å–ã‚Šå¤–ã™ã€‚
     public: ~mosp_handle()
     {
         this->detach_tree();
     }
 
-    /// copy‘ã“ü‰‰Zq‚Íg—p‹Ö~B
+    /// copyä»£å…¥æ¼”ç®—å­ã¯ä½¿ç”¨ç¦æ­¢ã€‚
     private: self& operator=(const self&);
 
-    /** @brief move‘ã“ü‰‰ZqB
-        @param[in,out] io_source ˆÚ“®Œ³‚Æ‚È‚éinstanceB
+    /** @brief moveä»£å…¥æ¼”ç®—å­ã€‚
+        @param[in,out] io_source ç§»å‹•å…ƒã¨ãªã‚‹instanceã€‚
      */
     public: self& operator=(self&& io_source)
     {
@@ -101,15 +101,15 @@ class psyq::mosp_handle
     }
 
     //-------------------------------------------------------------------------
-    /** @brief ‹óŠÔ•ªŠ„–Ø‚Éthis‚ğæ‚è‚Â‚¯‚éB
+    /** @brief ç©ºé–“åˆ†å‰²æœ¨ã«thisã‚’å–ã‚Šã¤ã‘ã‚‹ã€‚
 
-        Œ»İæ‚è‚Â‚¯‚ç‚ê‚Ä‚¢‚é‹óŠÔ•ªŠ„–Ø‚Æthis‚ğØ‚è—£‚µA
-        V‚µ‚¢‹óŠÔ•ªŠ„–Ø‚Éthis‚ğæ‚è‚Â‚¯‚éB
+        ç¾åœ¨å–ã‚Šã¤ã‘ã‚‰ã‚Œã¦ã„ã‚‹ç©ºé–“åˆ†å‰²æœ¨ã¨thisã‚’åˆ‡ã‚Šé›¢ã—ã€
+        æ–°ã—ã„ç©ºé–“åˆ†å‰²æœ¨ã«thisã‚’å–ã‚Šã¤ã‘ã‚‹ã€‚
 
         @param[in,out] io_tree
-            V‚½‚Éæ‚è‚Â‚¯‚éA mosp_tree templateŒ^‚Ì‹óŠÔ•ªŠ„–ØB
-        @param[in] in_min Õ“Ë”»’èhandle‚É‘Î‰‚·‚éâ‘ÎÀ•WŒnAABB‚ÌÅ¬’lB
-        @param[in] in_max Õ“Ë”»’èhandle‚É‘Î‰‚·‚éâ‘ÎÀ•WŒnAABB‚ÌÅ‘å’lB
+            æ–°ãŸã«å–ã‚Šã¤ã‘ã‚‹ã€ mosp_tree templateå‹ã®ç©ºé–“åˆ†å‰²æœ¨ã€‚
+        @param[in] in_min è¡çªåˆ¤å®šhandleã«å¯¾å¿œã™ã‚‹çµ¶å¯¾åº§æ¨™ç³»AABBã®æœ€å°å€¤ã€‚
+        @param[in] in_max è¡çªåˆ¤å®šhandleã«å¯¾å¿œã™ã‚‹çµ¶å¯¾åº§æ¨™ç³»AABBã®æœ€å¤§å€¤ã€‚
         @sa detach_tree()
      */
     public: template<typename template_mosp_tree>
@@ -118,7 +118,7 @@ class psyq::mosp_handle
         typename template_mosp_tree::space::vector const& in_min,
         typename template_mosp_tree::space::vector const& in_max)
     {
-        // V‚µ‚¢node‚ğ—pˆÓ‚·‚éB
+        // æ–°ã—ã„nodeã‚’ç”¨æ„ã™ã‚‹ã€‚
         auto const local_node(io_tree.make_node(in_min, in_max));
         if (local_node == nullptr)
         {
@@ -126,7 +126,7 @@ class psyq::mosp_handle
         }
         local_node->handle_ = this;
 
-        // ŒÃ‚¢node‚©‚çV‚µ‚¢node‚ÖØ‚è‘Ö‚¦‚éB
+        // å¤ã„nodeã‹ã‚‰æ–°ã—ã„nodeã¸åˆ‡ã‚Šæ›¿ãˆã‚‹ã€‚
         if (this->node_ != nullptr)
         {
             PSYQ_ASSERT(this == this->node_->get_handle());
@@ -136,9 +136,9 @@ class psyq::mosp_handle
         return true;
     }
 
-    /** @brief ‹óŠÔ•ªŠ„–Ø‚©‚çthis‚ğæ‚èŠO‚·B
+    /** @brief ç©ºé–“åˆ†å‰²æœ¨ã‹ã‚‰thisã‚’å–ã‚Šå¤–ã™ã€‚
 
-        Œ»İæ‚è‚Â‚¯‚ç‚ê‚Ä‚¢‚é‹óŠÔ•ªŠ„–Ø‚Æthis‚ğØ‚è—£‚·B
+        ç¾åœ¨å–ã‚Šã¤ã‘ã‚‰ã‚Œã¦ã„ã‚‹ç©ºé–“åˆ†å‰²æœ¨ã¨thisã‚’åˆ‡ã‚Šé›¢ã™ã€‚
 
         @sa attach_tree()
      */
@@ -152,9 +152,9 @@ class psyq::mosp_handle
         }
     }
 
-    /** @brief Œ»İæ‚è‚Â‚¯‚ç‚ê‚Ä‚¢‚é‹óŠÔ•ªŠ„–Ø‚Ìnode‚ğæ“¾‚·‚éB
-        @retval !=nullptr Œ»İæ‚è‚Â‚¯‚ç‚ê‚Ä‚¢‚é‹óŠÔ•ªŠ„–Ø‚ÌnodeB
-        @retval ==nullptr ‹óŠÔ•ªŠ„–Ø‚Éæ‚è‚Â‚¯‚ç‚ê‚Ä‚¢‚È‚¢B
+    /** @brief ç¾åœ¨å–ã‚Šã¤ã‘ã‚‰ã‚Œã¦ã„ã‚‹ç©ºé–“åˆ†å‰²æœ¨ã®nodeã‚’å–å¾—ã™ã‚‹ã€‚
+        @retval !=nullptr ç¾åœ¨å–ã‚Šã¤ã‘ã‚‰ã‚Œã¦ã„ã‚‹ç©ºé–“åˆ†å‰²æœ¨ã®nodeã€‚
+        @retval ==nullptr ç©ºé–“åˆ†å‰²æœ¨ã«å–ã‚Šã¤ã‘ã‚‰ã‚Œã¦ã„ãªã„ã€‚
      */
     public: mosp_node<template_collision_object> const* get_node() const
     {
@@ -162,31 +162,31 @@ class psyq::mosp_handle
     }
 
     //-------------------------------------------------------------------------
-    /** @brief this‚É‘Î‰‚·‚éAÕ“Ë•¨‘Ì‚Ì¯•Ê’lB
+    /** @brief thisã«å¯¾å¿œã™ã‚‹ã€è¡çªç‰©ä½“ã®è­˜åˆ¥å€¤ã€‚
 
-        ‚±‚Ì’l‚ğˆø”‚Æ‚µ‚ÄAÕ“Ë”»’ècallbackŠÖ”‚ªŒÄ‚Ño‚³‚ê‚éB
+        ã“ã®å€¤ã‚’å¼•æ•°ã¨ã—ã¦ã€è¡çªåˆ¤å®šcallbacké–¢æ•°ãŒå‘¼ã³å‡ºã•ã‚Œã‚‹ã€‚
 
         @sa mosp_tree::detect_collision()
      */
     public: template_collision_object object_;
 
-    /// this‚É‘Î‰‚·‚é‹óŠÔ•ªŠ„–Ø‚ÌnodeB
+    /// thisã«å¯¾å¿œã™ã‚‹ç©ºé–“åˆ†å‰²æœ¨ã®nodeã€‚
     private: mosp_node<template_collision_object>* node_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief ‚±‚Ìclass‚ğuser‚ªg‚¤‚Ì‚Í‹Ö~B‹óŠÔ•ªŠ„–Ø‚Ìnode‚ÌŒ^B
+/** @brief ã“ã®classã‚’userãŒä½¿ã†ã®ã¯ç¦æ­¢ã€‚ç©ºé–“åˆ†å‰²æœ¨ã®nodeã®å‹ã€‚
     @tparam template_collision_object @copydoc mosp_handle::collision_object
  */
 template<typename template_collision_object>
 class psyq::mosp_node
 {
-    /// *this‚ÌŒ^B
+    /// *thisã®å‹ã€‚
     private: typedef mosp_node<template_collision_object> self;
     friend class mosp_handle<template_collision_object>;
 
     //-------------------------------------------------------------------------
-    /// @brief ’P“Æ‚Ìnode‚ğ\’z‚·‚éB
+    /// @brief å˜ç‹¬ã®nodeã‚’æ§‹ç¯‰ã™ã‚‹ã€‚
     public: mosp_node()
     :
         handle_(nullptr)
@@ -194,7 +194,7 @@ class psyq::mosp_node
         this->next_ = this;
     }
 
-    /// copy-constructor‚Íg—p‹Ö~B
+    /// copy-constructorã¯ä½¿ç”¨ç¦æ­¢ã€‚
     private: mosp_node(self const&);
 
     /// destructor
@@ -209,12 +209,12 @@ class psyq::mosp_node
         }
     }
 
-    /// copy‘ã“ü‰‰Zq‚Íg—p‹Ö~B
+    /// copyä»£å…¥æ¼”ç®—å­ã¯ä½¿ç”¨ç¦æ­¢ã€‚
     private: self& operator=(self const&);
 
-    /** @brief this‚É‘Î‰‚·‚éÕ“Ë”»’èhandle‚ğæ“¾‚·‚éB
-        @retval !=nullptr this‚É‘Î‰‚·‚éÕ“Ë”»’èhandle‚Ö‚Ìƒ|ƒCƒ“ƒ^B
-        @retval ==nullptr this‚É‘Î‰‚·‚éÕ“Ë”»’èhandle‚ª‘¶İ‚µ‚È‚¢B
+    /** @brief thisã«å¯¾å¿œã™ã‚‹è¡çªåˆ¤å®šhandleã‚’å–å¾—ã™ã‚‹ã€‚
+        @retval !=nullptr thisã«å¯¾å¿œã™ã‚‹è¡çªåˆ¤å®šhandleã¸ã®ãƒã‚¤ãƒ³ã‚¿ã€‚
+        @retval ==nullptr thisã«å¯¾å¿œã™ã‚‹è¡çªåˆ¤å®šhandleãŒå­˜åœ¨ã—ãªã„ã€‚
      */
     public: mosp_handle<template_collision_object> const* get_handle()
     const
@@ -222,15 +222,15 @@ class psyq::mosp_node
         return this->handle_;
     }
 
-    /** @brief ’P“Æ‚Ìnode‚©”»’è‚·‚éB
+    /** @brief å˜ç‹¬ã®nodeã‹åˆ¤å®šã™ã‚‹ã€‚
      */
     public: bool is_alone() const
     {
         return this == &this->get_next();
     }
 
-    /** @brief Ÿ‚Ìnode‚ğæ“¾‚·‚éB
-        @return Ÿ‚ÌnodeB
+    /** @brief æ¬¡ã®nodeã‚’å–å¾—ã™ã‚‹ã€‚
+        @return æ¬¡ã®nodeã€‚
      */
     public: const self& get_next() const
     {
@@ -243,14 +243,14 @@ class psyq::mosp_node
         return *this->next_;
     }
 
-    /** @brief ’P“Æ‚Ìnode‚ğAthis‚ÌŸ‚É‘}“ü‚·‚éB
+    /** @brief å˜ç‹¬ã®nodeã‚’ã€thisã®æ¬¡ã«æŒ¿å…¥ã™ã‚‹ã€‚
 
-        ‘}“ü‚·‚énode‚ÍA’P“Æ‚Å‚ ‚é•K—v‚ª‚ ‚éB
-        io_insert_node‚ª‘¼‚Ìnode‚Æ˜AŒ‹‚µ‚Ä‚¢‚éê‡‚ÍA‘}“ü‚É¸”s‚·‚éB
+        æŒ¿å…¥ã™ã‚‹nodeã¯ã€å˜ç‹¬ã§ã‚ã‚‹å¿…è¦ãŒã‚ã‚‹ã€‚
+        io_insert_nodeãŒä»–ã®nodeã¨é€£çµã—ã¦ã„ã‚‹å ´åˆã¯ã€æŒ¿å…¥ã«å¤±æ•—ã™ã‚‹ã€‚
 
-        @param[in,out] io_insert_node ‘}“ü‚·‚énodeB
-        @retval true  ‘}“ü‚É¬Œ÷B
-        @retval false ‘}“ü‚É¸”s‚µ‚½‚Ì‚ÅA‰½‚às‚í‚È‚©‚Á‚½B
+        @param[in,out] io_insert_node æŒ¿å…¥ã™ã‚‹nodeã€‚
+        @retval true  æŒ¿å…¥ã«æˆåŠŸã€‚
+        @retval false æŒ¿å…¥ã«å¤±æ•—ã—ãŸã®ã§ã€ä½•ã‚‚è¡Œã‚ãªã‹ã£ãŸã€‚
         @sa remove_next is_alone
      */
     public: bool insert_next(
@@ -258,7 +258,7 @@ class psyq::mosp_node
     {
         if (!io_insert_node.is_alone())
         {
-            // ’P“Æ‚ÌzŠÂƒm[ƒh‚Å‚È‚¢‚Æ‘}“ü‚Å‚«‚È‚¢B
+            // å˜ç‹¬ã®å¾ªç’°ãƒãƒ¼ãƒ‰ã§ãªã„ã¨æŒ¿å…¥ã§ããªã„ã€‚
             PSYQ_ASSERT(false);
             return false;
         }
@@ -267,11 +267,11 @@ class psyq::mosp_node
         return true;
     }
 
-    /** @brief this‚ÌŸ‚É‚ ‚énode‚ğíœ‚·‚éB
+    /** @brief thisã®æ¬¡ã«ã‚ã‚‹nodeã‚’å‰Šé™¤ã™ã‚‹ã€‚
 
-        íœ‚µ‚½node‚ÍA’P“Æ‚Ìnode‚Æ‚È‚éB
+        å‰Šé™¤ã—ãŸnodeã¯ã€å˜ç‹¬ã®nodeã¨ãªã‚‹ã€‚
 
-        @return íœ‚µ‚½nodeB
+        @return å‰Šé™¤ã—ãŸnodeã€‚
      */
     public: self& remove_next()
     {
@@ -282,40 +282,40 @@ class psyq::mosp_node
     }
 
     //-------------------------------------------------------------------------
-    private: self* next_; ///< Ÿ‚ÌnodeB
-    /// this‚É‘Î‰‚·‚éÕ“Ë”»’èhandleB
+    private: self* next_; ///< æ¬¡ã®nodeã€‚
+    /// thisã«å¯¾å¿œã™ã‚‹è¡çªåˆ¤å®šhandleã€‚
     private: mosp_handle<template_collision_object>* handle_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief vector‚ÌXYZ¬•ª‚ğ—p‚¢‚émortonÀ•WB
+/** @brief vectorã®XYZæˆåˆ†ã‚’ç”¨ã„ã‚‹mortonåº§æ¨™ã€‚
 
-    psyq::mosp_space ‚Ìtemplateˆø”‚Ég‚¤B
+    psyq::mosp_space ã®templateå¼•æ•°ã«ä½¿ã†ã€‚
 
     @tparam template_vector @copydoc psyq::mosp_coordinates_xyz::vector
  */
 template<typename template_vector>
 class psyq::mosp_coordinates_xyz
 {
-    /// *this‚ÌŒ^B
+    /// *thisã®å‹ã€‚
     private: typedef mosp_coordinates_xyz<template_vector> self;
 
     public: enum: unsigned
     {
-        ELEMENT0_INDEX = 0, ///< mortonÀ•W‚Ì¬•ª#0‚Ìindex”Ô†B
-        ELEMENT1_INDEX = 1, ///< mortonÀ•W‚Ì¬•ª#1‚Ìindex”Ô†B
-        ELEMENT2_INDEX = 2, ///< mortonÀ•W‚Ì¬•ª#2‚Ìindex”Ô†B
+        ELEMENT0_INDEX = 0, ///< mortonåº§æ¨™ã®æˆåˆ†#0ã®indexç•ªå·ã€‚
+        ELEMENT1_INDEX = 1, ///< mortonåº§æ¨™ã®æˆåˆ†#1ã®indexç•ªå·ã€‚
+        ELEMENT2_INDEX = 2, ///< mortonåº§æ¨™ã®æˆåˆ†#2ã®indexç•ªå·ã€‚
     };
 
-    /// mortonÀ•W‚ğ•\‚·vector‚ÌŒ^Bglm::vec3ŒİŠ·‚Å‚ ‚é‚±‚ÆB
+    /// mortonåº§æ¨™ã‚’è¡¨ã™vectorã®å‹ã€‚glm::vec3äº’æ›ã§ã‚ã‚‹ã“ã¨ã€‚
     public: typedef template_vector vector;
 
-    /// mortonÀ•W‚ğ•\‚·vector‚Ì¬•ª‚ÌŒ^B
+    /// mortonåº§æ¨™ã‚’è¡¨ã™vectorã®æˆåˆ†ã®å‹ã€‚
     public: typedef typename template_vector::value_type element;
 
-    /** @brief â‘ÎÀ•WŒn‚©‚çmortonÀ•W‚Ö‚Ì•ÏŠ·scale‚ğZo‚·‚éB
-        @param[in] in_morton_size mortonÀ•W‚ÌÅ‘å’lB
-        @param[in] in_world_size  â‘ÎÀ•WŒn‚Å‚Ìmorton‹óŠÔ‚Ì‘å‚«‚³B
+    /** @brief çµ¶å¯¾åº§æ¨™ç³»ã‹ã‚‰mortonåº§æ¨™ã¸ã®å¤‰æ›scaleã‚’ç®—å‡ºã™ã‚‹ã€‚
+        @param[in] in_morton_size mortonåº§æ¨™ã®æœ€å¤§å€¤ã€‚
+        @param[in] in_world_size  çµ¶å¯¾åº§æ¨™ç³»ã§ã®mortonç©ºé–“ã®å¤§ãã•ã€‚
      */
     public: static typename self::element calc_scale(
         typename self::element const in_morton_size,
@@ -328,10 +328,10 @@ class psyq::mosp_coordinates_xyz
         return in_morton_size / in_world_size;
     }
 
-    /** @brief â‘ÎÀ•WŒn‹óŠÔ‚©‚çmortonÀ•W‹óŠÔ‚Ö‚Ì•ÏŠ·scale‚ğZo‚·‚éB
-        @param[in] in_min   Õ“Ë”»’è‚ğs‚¤—Ìˆæ‘S‘Ì‚ğ•ï‚Şâ‘ÎÀ•WŒnAABB‚ÌÅ¬’lB
-        @param[in] in_max   Õ“Ë”»’è‚ğs‚¤—Ìˆæ‘S‘Ì‚ğ•ï‚Şâ‘ÎÀ•WŒnAABB‚ÌÅ‘å’lB
-        @param[in] in_level ‹óŠÔ•ªŠ„‚ÌÅ[levelB
+    /** @brief çµ¶å¯¾åº§æ¨™ç³»ç©ºé–“ã‹ã‚‰mortonåº§æ¨™ç©ºé–“ã¸ã®å¤‰æ›scaleã‚’ç®—å‡ºã™ã‚‹ã€‚
+        @param[in] in_min   è¡çªåˆ¤å®šã‚’è¡Œã†é ˜åŸŸå…¨ä½“ã‚’åŒ…ã‚€çµ¶å¯¾åº§æ¨™ç³»AABBã®æœ€å°å€¤ã€‚
+        @param[in] in_max   è¡çªåˆ¤å®šã‚’è¡Œã†é ˜åŸŸå…¨ä½“ã‚’åŒ…ã‚€çµ¶å¯¾åº§æ¨™ç³»AABBã®æœ€å¤§å€¤ã€‚
+        @param[in] in_level ç©ºé–“åˆ†å‰²ã®æœ€æ·±levelã€‚
      */
     public: static typename self::vector calc_scale(
         typename self::vector const& in_min,
@@ -349,9 +349,9 @@ class psyq::mosp_coordinates_xyz
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief vector‚ÌXZ¬•ª‚ğ—p‚¢‚émortonÀ•WB
+/** @brief vectorã®XZæˆåˆ†ã‚’ç”¨ã„ã‚‹mortonåº§æ¨™ã€‚
 
-    psyq::mosp_space ‚Ìtemplateˆø”‚Ég‚¤B
+    psyq::mosp_space ã®templateå¼•æ•°ã«ä½¿ã†ã€‚
 
     @tparam template_vector @copydoc psyq::mosp_coordinates_xyz::vector
  */
@@ -359,48 +359,48 @@ template<typename template_vector>
 class psyq::mosp_coordinates_xz:
     public psyq::mosp_coordinates_xyz<template_vector>
 {
-    /// *this‚ÌŒ^B
+    /// *thisã®å‹ã€‚
     private: typedef mosp_coordinates_xz<template_vector> self;
-    /// *this‚ÌãˆÊŒ^B
+    /// *thisã®ä¸Šä½å‹ã€‚
     public: typedef mosp_coordinates_xyz<template_vector> super;
 
     public: enum: unsigned
     {
-        ELEMENT0_INDEX = 0, ///< mortonÀ•W‚Ì¬•ª#0‚Ìindex”Ô†B
-        ELEMENT1_INDEX = 2, ///< mortonÀ•W‚Ì¬•ª#1‚Ìindex”Ô†B
+        ELEMENT0_INDEX = 0, ///< mortonåº§æ¨™ã®æˆåˆ†#0ã®indexç•ªå·ã€‚
+        ELEMENT1_INDEX = 2, ///< mortonåº§æ¨™ã®æˆåˆ†#1ã®indexç•ªå·ã€‚
     };
     private: enum: unsigned
     {
-        ELEMENT2_INDEX = 2, ///< mortonÀ•W‚Ì¬•ª#2‚Íg—p‚Å‚«‚È‚¢B
+        ELEMENT2_INDEX = 2, ///< mortonåº§æ¨™ã®æˆåˆ†#2ã¯ä½¿ç”¨ã§ããªã„ã€‚
     };
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief psyq::mosp_tree ‚Ìtemplateˆø”‚Ég‚¤Amorton‹óŠÔ‚ÌŠî’êŒ^B
+/** @brief psyq::mosp_tree ã®templateå¼•æ•°ã«ä½¿ã†ã€mortonç©ºé–“ã®åŸºåº•å‹ã€‚
     @tparam template_coordinates @copydoc psyq::mosp_space::coordinates
  */
 template<typename template_coordinates>
 class psyq::mosp_space
 {
-    /// *this‚ÌŒ^B
+    /// *thisã®å‹ã€‚
     private: typedef mosp_space<template_coordinates> self;
 
-    /** @brief Õ“Ë”»’è‚Ég‚¤mortonÀ•W‚ÌŒ^B
+    /** @brief è¡çªåˆ¤å®šã«ä½¿ã†mortonåº§æ¨™ã®å‹ã€‚
 
-        mosp_coordinates_xyz ‚â mosp_coordinates_xz ‚ğg‚¤B
+        mosp_coordinates_xyz ã‚„ mosp_coordinates_xz ã‚’ä½¿ã†ã€‚
      */
     public: typedef template_coordinates coordinates;
 
-    /// Õ“Ë”»’è‚Ég‚¤vector‚ÌŒ^B
+    /// è¡çªåˆ¤å®šã«ä½¿ã†vectorã®å‹ã€‚
     public: typedef typename template_coordinates::vector vector;
 
-    /// morton‡˜‚ÌŒ^B
+    /// mortoné †åºã®å‹ã€‚
     public: typedef std::uint32_t order;
 
-    /** @brief Õ“Ë”»’è‚ğs‚¤—Ìˆæ‚ğİ’è‚·‚éB
-        @param[in] in_min   Õ“Ë”»’è‚ğs‚¤—Ìˆæ‚Ìâ‘ÎÀ•WŒnÅ¬’lB
-        @param[in] in_max   Õ“Ë”»’è‚ğs‚¤—Ìˆæ‚Ìâ‘ÎÀ•WŒnÅ‘å’lB
-        @param[in] in_level ‹óŠÔ•ªŠ„‚ÌÅ[ƒŒƒxƒ‹B
+    /** @brief è¡çªåˆ¤å®šã‚’è¡Œã†é ˜åŸŸã‚’è¨­å®šã™ã‚‹ã€‚
+        @param[in] in_min   è¡çªåˆ¤å®šã‚’è¡Œã†é ˜åŸŸã®çµ¶å¯¾åº§æ¨™ç³»æœ€å°å€¤ã€‚
+        @param[in] in_max   è¡çªåˆ¤å®šã‚’è¡Œã†é ˜åŸŸã®çµ¶å¯¾åº§æ¨™ç³»æœ€å¤§å€¤ã€‚
+        @param[in] in_level ç©ºé–“åˆ†å‰²ã®æœ€æ·±ãƒ¬ãƒ™ãƒ«ã€‚
      */
     protected: mosp_space(
         typename self::vector const& in_min,
@@ -451,20 +451,20 @@ class psyq::mosp_space
         return in_max;
     }
 
-    /// Õ“Ë”»’è‚ğs‚¤—Ìˆæ‚ÌAâ‘ÎÀ•WŒn‚Å‚ÌÅ¬À•WB
+    /// è¡çªåˆ¤å®šã‚’è¡Œã†é ˜åŸŸã®ã€çµ¶å¯¾åº§æ¨™ç³»ã§ã®æœ€å°åº§æ¨™ã€‚
     private: typename self::vector min_;
 
-    /// Õ“Ë”»’è‚ğs‚¤—Ìˆæ‚ÌAâ‘ÎÀ•WŒn‚Å‚ÌÅ‘åÀ•WB
+    /// è¡çªåˆ¤å®šã‚’è¡Œã†é ˜åŸŸã®ã€çµ¶å¯¾åº§æ¨™ç³»ã§ã®æœ€å¤§åº§æ¨™ã€‚
     private: typename self::vector max_;
 
-    /// Å¬‚Æ‚È‚é•ªŠ„‹óŠÔ‚ÌAâ‘ÎÀ•WŒn‚Å‚Ì‘å‚«‚³‚Ì‹t”B
+    /// æœ€å°ã¨ãªã‚‹åˆ†å‰²ç©ºé–“ã®ã€çµ¶å¯¾åº§æ¨™ç³»ã§ã®å¤§ãã•ã®é€†æ•°ã€‚
     private: typename self::vector scale_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 2ŸŒ³À•W‚ÅÕ“Ë”»’è‚ğs‚¤morton‹óŠÔB
+/** @brief 2æ¬¡å…ƒåº§æ¨™ã§è¡çªåˆ¤å®šã‚’è¡Œã†mortonç©ºé–“ã€‚
 
-    psyq::mosp_tree ‚Ìtemplateˆø”‚Ég‚¤B
+    psyq::mosp_tree ã®templateå¼•æ•°ã«ä½¿ã†ã€‚
 
     @tparam template_coordinates @copydoc mosp_space::coordinates
  */
@@ -472,13 +472,13 @@ template<typename template_coordinates = psyq::mosp_coordinates_xz>
 class psyq::mosp_space_2d:
     public psyq::mosp_space<template_coordinates>
 {
-    /// *this‚ÌŒ^B
+    /// *thisã®å‹ã€‚
     private: typedef mosp_space_2d<template_coordinates> self;
 
-    /// *this‚ÌãˆÊŒ^B
+    /// *thisã®ä¸Šä½å‹ã€‚
     public: typedef mosp_space<template_coordinates> super;
 
-    /// Õ“Ë”»’è‚Ég‚¤À•W‚Ì¬•ª‚Ì”B
+    /// è¡çªåˆ¤å®šã«ä½¿ã†åº§æ¨™ã®æˆåˆ†ã®æ•°ã€‚
     public: static unsigned const DIMENSION = 2;
 
     /// @copydoc mosp_space::mosp_space
@@ -492,10 +492,10 @@ class psyq::mosp_space_2d:
         // pass
     }
 
-    /** @brief 2ŸŒ³À•Wã‚Ì“_‚©‚çAüŒ`4•ª–Ø‚Ìmorton‡˜‚ğZo‚·‚éB
-        @param[in] in_point 2ŸŒ³À•Wã‚Ì“_B
-        @param[in] in_max   mortonÀ•W‚ÌÅ‘å’lB
-        @return 2ŸŒ³À•W‚É‘Î‰‚·‚émorton‡˜B
+    /** @brief 2æ¬¡å…ƒåº§æ¨™ä¸Šã®ç‚¹ã‹ã‚‰ã€ç·šå½¢4åˆ†æœ¨ã®mortoné †åºã‚’ç®—å‡ºã™ã‚‹ã€‚
+        @param[in] in_point 2æ¬¡å…ƒåº§æ¨™ä¸Šã®ç‚¹ã€‚
+        @param[in] in_max   mortonåº§æ¨™ã®æœ€å¤§å€¤ã€‚
+        @return 2æ¬¡å…ƒåº§æ¨™ã«å¯¾å¿œã™ã‚‹mortoné †åºã€‚
      */
     public: typename super::order calc_order(
         typename super::vector const& in_point,
@@ -513,9 +513,9 @@ class psyq::mosp_space_2d:
             self::separate_bits(local_element1, in_max) << 1;
     }
 
-    /** @brief mortonÀ•W‚ğA²‚²‚Æ‚Ìbit‚É•ªŠ„‚·‚éB
-        @param[in] in_element mortonÀ•W‚Ì¬•ª’lB
-        @param[in] in_max     mortonÀ•W‚ÌÅ‘å’lB
+    /** @brief mortonåº§æ¨™ã‚’ã€è»¸ã”ã¨ã®bitã«åˆ†å‰²ã™ã‚‹ã€‚
+        @param[in] in_element mortonåº§æ¨™ã®æˆåˆ†å€¤ã€‚
+        @param[in] in_max     mortonåº§æ¨™ã®æœ€å¤§å€¤ã€‚
      */
     private: static typename super::order separate_bits(
         typename super::coordinates::element const in_element,
@@ -531,9 +531,9 @@ class psyq::mosp_space_2d:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 3ŸŒ³À•W‚ÅÕ“Ë”»’è‚ğs‚¤moront‹óŠÔB
+/** @brief 3æ¬¡å…ƒåº§æ¨™ã§è¡çªåˆ¤å®šã‚’è¡Œã†morontç©ºé–“ã€‚
 
-    mosp_tree ‚Ìtemplateˆø”‚Ég‚¤B
+    mosp_tree ã®templateå¼•æ•°ã«ä½¿ã†ã€‚
 
     @tparam template_coordinates @copydoc mosp_space::coordinates
  */
@@ -541,10 +541,10 @@ template<typename template_coordinates = psyq::mosp_coordinates_xyz>
 class psyq::mosp_space_3d:
     public psyq::mosp_space<template_coordinates>
 {
-    /// *this‚ÌŒ^B
+    /// *thisã®å‹ã€‚
     private: typedef mosp_space_3d<template_coordinates> self;
 
-    /// *this‚ÌãˆÊŒ^B
+    /// *thisã®ä¸Šä½å‹ã€‚
     public: typedef mosp_space<template_coordinates> super;
 
     /// @copydoc mosp_space_2d::DIMENSION
@@ -561,10 +561,10 @@ class psyq::mosp_space_3d:
         // pass
     }
 
-    /** @brief 3ŸŒ³À•Wã‚Ì“_‚©‚çAüŒ`8•ª–Ø‚Ìmorton‡˜‚ğZo‚·‚éB
-        @param[in] in_point 3ŸŒ³À•Wã‚Ì“_B
-        @param[in] in_max   morton‡˜‚ÌÅ‘å’lB
-        @return 3ŸŒ³À•W‚É‘Î‰‚·‚émorton‡˜B
+    /** @brief 3æ¬¡å…ƒåº§æ¨™ä¸Šã®ç‚¹ã‹ã‚‰ã€ç·šå½¢8åˆ†æœ¨ã®mortoné †åºã‚’ç®—å‡ºã™ã‚‹ã€‚
+        @param[in] in_point 3æ¬¡å…ƒåº§æ¨™ä¸Šã®ç‚¹ã€‚
+        @param[in] in_max   mortoné †åºã®æœ€å¤§å€¤ã€‚
+        @return 3æ¬¡å…ƒåº§æ¨™ã«å¯¾å¿œã™ã‚‹mortoné †åºã€‚
      */
     public: typename super::order calc_order(
         typename super::vector const& in_point,
@@ -600,56 +600,56 @@ class psyq::mosp_space_3d:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief morton‡˜‚É‚æ‚é‹óŠÔ•ªŠ„–ØB
+/** @brief mortoné †åºã«ã‚ˆã‚‹ç©ºé–“åˆ†å‰²æœ¨ã€‚
 
-    g‚¢•û‚ÌŠT—vB
-    -# psyq::mosp_tree::mosp_tree() ‚ğŒÄ‚Ño‚µA
-       Õ“Ë”»’è‚ğs‚¤—Ìˆæ‚ğ‹óŠÔ•ªŠ„–Ø‚Éİ’è‚·‚éB
-    -# psyq::mosp_handle::attach_tree() ‚ğŒÄ‚Ño‚µA
-       Õ“Ë”»’èhandle‚ğ‹óŠÔ•ªŠ„–Ø‚Éæ‚è‚Â‚¯‚éB
-    -# psyq::mosp_tree::detect_collision() ‚ğŒÄ‚Ño‚µAÕ“Ë‚ğ”»’è‚·‚éB
+    ä½¿ã„æ–¹ã®æ¦‚è¦ã€‚
+    -# psyq::mosp_tree::mosp_tree() ã‚’å‘¼ã³å‡ºã—ã€
+       è¡çªåˆ¤å®šã‚’è¡Œã†é ˜åŸŸã‚’ç©ºé–“åˆ†å‰²æœ¨ã«è¨­å®šã™ã‚‹ã€‚
+    -# psyq::mosp_handle::attach_tree() ã‚’å‘¼ã³å‡ºã—ã€
+       è¡çªåˆ¤å®šhandleã‚’ç©ºé–“åˆ†å‰²æœ¨ã«å–ã‚Šã¤ã‘ã‚‹ã€‚
+    -# psyq::mosp_tree::detect_collision() ã‚’å‘¼ã³å‡ºã—ã€è¡çªã‚’åˆ¤å®šã™ã‚‹ã€‚
 
     @tparam template_collision_object @copydoc mosp_handle::collision_object
     @tparam template_space            @copydoc mosp_tree::space
 
     @sa mosp_handle::attach_tree() mosp_handle::detach_tree()
-    @note mosp_tree::cell_map ‚É”CˆÓ‚Ì«‘template-class‚ğw’è‚Å‚«‚é‚æ‚¤‚É‚µ‚½‚¢B
+    @note mosp_tree::cell_map ã«ä»»æ„ã®è¾æ›¸template-classã‚’æŒ‡å®šã§ãã‚‹ã‚ˆã†ã«ã—ãŸã„ã€‚
  */
 template<
     typename template_collision_object,
     typename template_space>
 class psyq::mosp_tree
 {
-    private: typedef mosp_tree self; ///< *this‚ÌŒ^B
+    private: typedef mosp_tree self; ///< *thisã®å‹ã€‚
 
-    /// ‹óŠÔ•ªŠ„–Ø‚Éæ‚è‚Â‚¯‚éAÕ“Ë”»’èhandle‚ÌŒ^B
+    /// ç©ºé–“åˆ†å‰²æœ¨ã«å–ã‚Šã¤ã‘ã‚‹ã€è¡çªåˆ¤å®šhandleã®å‹ã€‚
     public: typedef mosp_handle<template_collision_object> handle;
     /// @cond
     friend handle;
     /// @endcond
 
-    /// ‹óŠÔ•ªŠ„–Ø‚Ìnode‚ÌŒ^B
+    /// ç©ºé–“åˆ†å‰²æœ¨ã®nodeã®å‹ã€‚
     public: typedef mosp_node<template_collision_object> node;
 
-    /** @brief g—p‚·‚émorton‹óŠÔ‚ÌŒ^B
+    /** @brief ä½¿ç”¨ã™ã‚‹mortonç©ºé–“ã®å‹ã€‚
 
-        mosp_space_2d ‚â mosp_space_3d ‚ğg‚¤B
+        mosp_space_2d ã‚„ mosp_space_3d ã‚’ä½¿ã†ã€‚
      */
     public: typedef template_space space;
 
-    /// •ªŠ„‹óŠÔ‚Ì«‘B
+    /// åˆ†å‰²ç©ºé–“ã®è¾æ›¸ã€‚
     private: typedef std::map<
         typename self::space::order, typename self::node*> cell_map;
-    /// node ‚ÌmemoryŠ„“–qB
+    /// node ã®memoryå‰²å½“å­ã€‚
     private: typedef typename self::cell_map::allocator_type::template
         rebind<typename self::node>::other
             node_allocator;
-    /// ‘Î‰‚Å‚«‚é‹óŠÔ•ªŠ„‚ÌÅ[ƒŒƒxƒ‹B
+    /// å¯¾å¿œã§ãã‚‹ç©ºé–“åˆ†å‰²ã®æœ€æ·±ãƒ¬ãƒ™ãƒ«ã€‚
     public: static const unsigned LEVEL_LIMIT =
         (8 * sizeof(typename self::space::order) - 1) / self::space::DIMENSION;
 
     //-------------------------------------------------------------------------
-    /// @brief Õ“Ë”»’è—Ìˆæ‚Ì‚È‚¢‹óŠÔ•ªŠ„–Ø‚ğ\’z‚·‚éB
+    /// @brief è¡çªåˆ¤å®šé ˜åŸŸã®ãªã„ç©ºé–“åˆ†å‰²æœ¨ã‚’æ§‹ç¯‰ã™ã‚‹ã€‚
     public: mosp_tree()
     :
         space_(
@@ -663,11 +663,11 @@ class psyq::mosp_tree
         // pass
     }
 
-    /// copy-constructor‚Íg—p‹Ö~B
+    /// copy-constructorã¯ä½¿ç”¨ç¦æ­¢ã€‚
     private: mosp_tree(self const&);
 
-    /** @brief move-constructorB
-        @param[in,out] io_source ˆÚ“®Œ³‚Æ‚È‚éinstanceB
+    /** @brief move-constructorã€‚
+        @param[in,out] io_source ç§»å‹•å…ƒã¨ãªã‚‹instanceã€‚
      */
     public: mosp_tree(
         self&& io_source)
@@ -680,7 +680,7 @@ class psyq::mosp_tree
     {
         if (io_source.detect_collision_)
         {
-            // Õ“Ë”»’è’†‚Ímove‚Å‚«‚È‚¢B
+            // è¡çªåˆ¤å®šä¸­ã¯moveã§ããªã„ã€‚
             PSYQ_ASSERT(false);
             this->level_cap_ = 0;
         }
@@ -700,25 +700,25 @@ class psyq::mosp_tree
         idle_node_(nullptr),
         detect_collision_(false)
     {
-        // ‹óŠÔ•ªŠ„‚ÌÅ[level‚ğŒˆ’èB
+        // ç©ºé–“åˆ†å‰²ã®æœ€æ·±levelã‚’æ±ºå®šã€‚
         if (in_level <= self::LEVEL_LIMIT)
         {
             this->level_cap_ = in_level;
         }
         else
         {
-            // Å‚levelˆÈã‚Ì‹óŠÔ‚Íì‚ê‚È‚¢B
+            // æœ€é«˜levelä»¥ä¸Šã®ç©ºé–“ã¯ä½œã‚Œãªã„ã€‚
             PSYQ_ASSERT(false);
             this->level_cap_ = self::LEVEL_LIMIT;
         }
     }
 
-    /** @brief æ‚è‚Â‚¯‚ç‚ê‚Ä‚¢‚éÕ“Ë”»’èhandle‚ğ‚·‚×‚Äæ‚èŠO‚µA
-               ‹óŠÔ•ªŠ„–Ø‚ğ”jŠü‚·‚éB
+    /** @brief å–ã‚Šã¤ã‘ã‚‰ã‚Œã¦ã„ã‚‹è¡çªåˆ¤å®šhandleã‚’ã™ã¹ã¦å–ã‚Šå¤–ã—ã€
+               ç©ºé–“åˆ†å‰²æœ¨ã‚’ç ´æ£„ã™ã‚‹ã€‚
      */
     public: ~mosp_tree()
     {
-        // Õ“Ë”»’è’†‚ÍA”jŠü‚Å‚«‚È‚¢B
+        // è¡çªåˆ¤å®šä¸­ã¯ã€ç ´æ£„ã§ããªã„ã€‚
         PSYQ_ASSERT(!this->detect_collision_);
         typename self::node_allocator local_allocator(
             this->cells_.get_allocator());
@@ -729,11 +729,11 @@ class psyq::mosp_tree
         }
     }
 
-    /// copy‘ã“ü‰‰Zq‚Íg—p‹Ö~B
+    /// copyä»£å…¥æ¼”ç®—å­ã¯ä½¿ç”¨ç¦æ­¢ã€‚
     private: self& operator=(self const&);
 
-    /** @brief move‘ã“ü‰‰ZqB
-        @param[in,out] io_source ˆÚ“®Œ³‚Æ‚È‚éinstanceB
+    /** @brief moveä»£å…¥æ¼”ç®—å­ã€‚
+        @param[in,out] io_source ç§»å‹•å…ƒã¨ãªã‚‹instanceã€‚
      */
     public: self& operator=(self&& io_source)
     {
@@ -746,22 +746,22 @@ class psyq::mosp_tree
     }
 
     //-------------------------------------------------------------------------
-    /** @brief ‹óŠÔ•ªŠ„–Ø‚ğ—p‚¢‚ÄAÕ“Ë‚ğ”»’è‚·‚éB
+    /** @brief ç©ºé–“åˆ†å‰²æœ¨ã‚’ç”¨ã„ã¦ã€è¡çªã‚’åˆ¤å®šã™ã‚‹ã€‚
 
-        mosp_handle::attach_tree() ‚É‚æ‚Á‚Ä‹óŠÔ•ªŠ„–Ø‚Éæ‚è‚Â‚¯‚ç‚ê‚½
-        Õ“Ë”»’èƒnƒ“ƒhƒ‹‚Ì‚¤‚¿A•ªŠ„‹óŠÔ‚ªd‚È‚Á‚½Õ“Ë”»’èƒnƒ“ƒhƒ‹‚Ì‚Â
-        mosp_handle::collision_object ‚ğˆø”‚Æ‚µ‚ÄA
-        Õ“Ë”»’èƒR[ƒ‹ƒoƒbƒNŠÖ”‚ğŒÄ‚Ño‚·B
+        mosp_handle::attach_tree() ã«ã‚ˆã£ã¦ç©ºé–“åˆ†å‰²æœ¨ã«å–ã‚Šã¤ã‘ã‚‰ã‚ŒãŸ
+        è¡çªåˆ¤å®šãƒãƒ³ãƒ‰ãƒ«ã®ã†ã¡ã€åˆ†å‰²ç©ºé–“ãŒé‡ãªã£ãŸè¡çªåˆ¤å®šãƒãƒ³ãƒ‰ãƒ«ã®æŒã¤
+        mosp_handle::collision_object ã‚’å¼•æ•°ã¨ã—ã¦ã€
+        è¡çªåˆ¤å®šã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯é–¢æ•°ã‚’å‘¼ã³å‡ºã™ã€‚
 
         @param[in] in_detect_callback
-            2‚Â‚Ì mosp_handle::collision_object ‚ğˆø”‚Æ‚·‚éA
-            Õ“Ë”»’èƒR[ƒ‹ƒoƒbƒNŠÖ”B
-            2‚Â‚ÌÕ“Ë”»’èƒnƒ“ƒhƒ‹‚Ì•ªŠ„‹óŠÔ‚ªd‚È‚Á‚½‚Æ‚«AŒÄ‚Ño‚³‚ê‚éB
+            2ã¤ã® mosp_handle::collision_object ã‚’å¼•æ•°ã¨ã™ã‚‹ã€
+            è¡çªåˆ¤å®šã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯é–¢æ•°ã€‚
+            2ã¤ã®è¡çªåˆ¤å®šãƒãƒ³ãƒ‰ãƒ«ã®åˆ†å‰²ç©ºé–“ãŒé‡ãªã£ãŸã¨ãã€å‘¼ã³å‡ºã•ã‚Œã‚‹ã€‚
 
-        @retval ture ¬Œ÷BÕ“Ë”»’è‚ğs‚Á‚½B
+        @retval ture æˆåŠŸã€‚è¡çªåˆ¤å®šã‚’è¡Œã£ãŸã€‚
         @retval false
-            ¸”sBÕ“Ë”»’è‚ğs‚í‚È‚©‚Á‚½B
-            Œ´ˆö‚ÍA‚·‚Å‚ÉÕ“Ë”»’è‚ğs‚È‚Á‚Ä‚éÅ’†‚¾‚©‚çB
+            å¤±æ•—ã€‚è¡çªåˆ¤å®šã‚’è¡Œã‚ãªã‹ã£ãŸã€‚
+            åŸå› ã¯ã€ã™ã§ã«è¡çªåˆ¤å®šã‚’è¡Œãªã£ã¦ã‚‹æœ€ä¸­ã ã‹ã‚‰ã€‚
      */
     public: template<typename template_detect_callback>
     bool detect_collision(
@@ -785,7 +785,7 @@ class psyq::mosp_tree
         typename self::cell_map::iterator const& in_cell,
         template_detect_callback const&          in_detect_callback)
     {
-        // (1) ‚±‚Ì•ªŠ„‹óŠÔ‚ÅAÕ“Ë”»’è‚ğs‚¤B
+        // (1) ã“ã®åˆ†å‰²ç©ºé–“ã§ã€è¡çªåˆ¤å®šã‚’è¡Œã†ã€‚
         auto const local_cell(in_cell->second);
         auto local_last_node(local_cell);
         auto local_node(&local_cell->get_next());
@@ -797,13 +797,13 @@ class psyq::mosp_tree
                     *local_node, *local_node, *local_cell, in_detect_callback));
             if (local_exist_handle)
             {
-                // “¯‚¶•ªŠ„‹óŠÔ‚ÌŸ‚Ìnode‚ÖˆÚs‚·‚éB
+                // åŒã˜åˆ†å‰²ç©ºé–“ã®æ¬¡ã®nodeã¸ç§»è¡Œã™ã‚‹ã€‚
                 local_last_node = local_node;
                 ++local_node_count;
             }
             else
             {
-                // ‹óhandle‚Ìnode‚¾‚Á‚½‚Ì‚ÅA•ªŠ„‹óŠÔ‚©‚çíœ‚·‚éB
+                // ç©ºhandleã®nodeã ã£ãŸã®ã§ã€åˆ†å‰²ç©ºé–“ã‹ã‚‰å‰Šé™¤ã™ã‚‹ã€‚
                 this->collect_idle_node(local_last_node->remove_next());
             }
             local_node = &local_last_node->get_next();
@@ -813,17 +813,17 @@ class psyq::mosp_tree
             return this->cells_.erase(in_cell);
         }
 
-        // (2) ‚±‚Ì•ªŠ„‹óŠÔ‚ÆãˆÊ‚Ì•ªŠ„‹óŠÔ‚ÅAÕ“Ë”»’è‚ğs‚¤B
+        // (2) ã“ã®åˆ†å‰²ç©ºé–“ã¨ä¸Šä½ã®åˆ†å‰²ç©ºé–“ã§ã€è¡çªåˆ¤å®šã‚’è¡Œã†ã€‚
         for (auto local_super_order(in_cell->first); 0 < local_super_order;)
         {
-            // ãˆÊ‚Ì•ªŠ„‹óŠÔ‚ÉˆÚ“®‚·‚éB
+            // ä¸Šä½ã®åˆ†å‰²ç©ºé–“ã«ç§»å‹•ã™ã‚‹ã€‚
             local_super_order =
                 (local_super_order - 1) >> self::space::DIMENSION;
             auto const local_super_iterator(
                 this->cells_.find(local_super_order));
             if (local_super_iterator != this->cells_.end())
             {
-                // ãˆÊ‚Ì•ªŠ„‹óŠÔ‚ÆÕ“Ë”»’è‚ğs‚¤B
+                // ä¸Šä½ã®åˆ†å‰²ç©ºé–“ã¨è¡çªåˆ¤å®šã‚’è¡Œã†ã€‚
                 auto const local_super_cell(local_super_iterator->second);
                 this->detect_collision_cell_and_cell(
                     *local_cell, *local_super_cell, in_detect_callback);
@@ -857,25 +857,25 @@ class psyq::mosp_tree
                     *local_node, io_cell1, io_cell1, in_detect_callback));
             if (local_exist_handle)
             {
-                // “¯‚¶•ªŠ„‹óŠÔ‚ÌŸ‚Ìnode‚ÖˆÚs‚·‚éB
+                // åŒã˜åˆ†å‰²ç©ºé–“ã®æ¬¡ã®nodeã¸ç§»è¡Œã™ã‚‹ã€‚
                 local_last_node = local_node;
             }
             else
             {
-                // ‹óhandle‚Ìnode‚¾‚Á‚½‚Ì‚ÅA•ªŠ„‹óŠÔ‚©‚çíœ‚·‚éB
+                // ç©ºhandleã®nodeã ã£ãŸã®ã§ã€åˆ†å‰²ç©ºé–“ã‹ã‚‰å‰Šé™¤ã™ã‚‹ã€‚
                 this->collect_idle_node(local_last_node->remove_next());
             }
             local_node = &local_last_node->get_next();
         }
     }
 
-    /** @brief node‚Æ•ªŠ„‹óŠÔ‚ÅAÕ“Ë”»’è‚ğs‚¤B
-        @param[in,out] io_node             Õ“Ë”»’è‚ğs‚¤nodeB
-        @param[in,out] io_cell_begin_back  Õ“Ë”»’è‚ğs‚¤•ªŠ„‹óŠÔ‚Ìæ“ª‚Ì’¼‘O‚ÌnodeB
-        @param[in]     in_cell_end         Õ“Ë”»’è‚ğs‚¤•ªŠ„‹óŠÔ‚Ì––”önodeB
-        @param[in]     in_detect_callback  Õ“Ë”»’ècallbackŠÖ”B
-        @retval true  io_node ‚Í‹ó‚É‚È‚Á‚Ä‚È‚¢B
-        @retval false io_node ‚ª‹ó‚É‚È‚Á‚½B
+    /** @brief nodeã¨åˆ†å‰²ç©ºé–“ã§ã€è¡çªåˆ¤å®šã‚’è¡Œã†ã€‚
+        @param[in,out] io_node             è¡çªåˆ¤å®šã‚’è¡Œã†nodeã€‚
+        @param[in,out] io_cell_begin_back  è¡çªåˆ¤å®šã‚’è¡Œã†åˆ†å‰²ç©ºé–“ã®å…ˆé ­ã®ç›´å‰ã®nodeã€‚
+        @param[in]     in_cell_end         è¡çªåˆ¤å®šã‚’è¡Œã†åˆ†å‰²ç©ºé–“ã®æœ«å°¾nodeã€‚
+        @param[in]     in_detect_callback  è¡çªåˆ¤å®šcallbacké–¢æ•°ã€‚
+        @retval true  io_node ã¯ç©ºã«ãªã£ã¦ãªã„ã€‚
+        @retval false io_node ãŒç©ºã«ãªã£ãŸã€‚
      */
     private: template<typename template_detect_callback>
     bool detect_collision_node_and_cell(
@@ -897,12 +897,12 @@ class psyq::mosp_tree
             auto const local_cell_handle(local_cell->get_handle());
             if (local_cell_handle != nullptr)
             {
-                // Õ“Ë”»’èB
+                // è¡çªåˆ¤å®šã€‚
                 in_detect_callback(
                     local_node_handle->object_, local_cell_handle->object_);
 
-                // Õ“Ë”»’ècallbackŠÖ”‚Ì’†‚Å handle::detach_tree()
-                // ‚³‚ê‚é‰Â”\«‚ª‚ ‚é‚Ì‚ÅAÄæ“¾‚·‚éB
+                // è¡çªåˆ¤å®šcallbacké–¢æ•°ã®ä¸­ã§ handle::detach_tree()
+                // ã•ã‚Œã‚‹å¯èƒ½æ€§ãŒã‚ã‚‹ã®ã§ã€å†å–å¾—ã™ã‚‹ã€‚
                 local_node_handle = io_node.get_handle();
                 if (local_node_handle == nullptr)
                 {
@@ -912,7 +912,7 @@ class psyq::mosp_tree
             }
             else
             {
-                // ‹óhandle‚Ìnode‚¾‚Á‚½‚Ì‚ÅA•ªŠ„‹óŠÔ‚©‚çíœ‚·‚éB
+                // ç©ºhandleã®nodeã ã£ãŸã®ã§ã€åˆ†å‰²ç©ºé–“ã‹ã‚‰å‰Šé™¤ã™ã‚‹ã€‚
                 this->collect_idle_node(local_Lastcell->remove_next());
             }
             local_cell = &local_Lastcell->get_next();
@@ -921,11 +921,11 @@ class psyq::mosp_tree
     }
 
     //-------------------------------------------------------------------------
-    /** @brief AABB‚ğ•ï‚ŞÅ¬‚Ì•ªŠ„‹óŠÔ‚Ìnode‚ğ\’z‚·‚éB
-        @param[in] in_min â‘ÎÀ•WŒnAABB‚ÌÅ¬’lB
-        @param[in] in_max â‘ÎÀ•WŒnAABB‚ÌÅ‘å’lB
-        @retval !=nullptr AABB‚ğ•ï‚ŞÅ¬‚Ì•ªŠ„‹óŠÔ‚ÌnodeB
-        @retval ==nullptr ¸”sB
+    /** @brief AABBã‚’åŒ…ã‚€æœ€å°ã®åˆ†å‰²ç©ºé–“ã®nodeã‚’æ§‹ç¯‰ã™ã‚‹ã€‚
+        @param[in] in_min çµ¶å¯¾åº§æ¨™ç³»AABBã®æœ€å°å€¤ã€‚
+        @param[in] in_max çµ¶å¯¾åº§æ¨™ç³»AABBã®æœ€å¤§å€¤ã€‚
+        @retval !=nullptr AABBã‚’åŒ…ã‚€æœ€å°ã®åˆ†å‰²ç©ºé–“ã®nodeã€‚
+        @retval ==nullptr å¤±æ•—ã€‚
      */
     private: typename self::node* make_node(
         typename self::space::vector const& in_min,
@@ -933,12 +933,12 @@ class psyq::mosp_tree
     {
         if (this->detect_collision_)
         {
-            // detect_collision() ‚ÌÀs’†‚Ínode‚ğì‚ê‚È‚¢B
+            // detect_collision() ã®å®Ÿè¡Œä¸­ã¯nodeã‚’ä½œã‚Œãªã„ã€‚
             PSYQ_ASSERT(false);
             return nullptr;
         }
 
-        // morton‡˜‚É‘Î‰‚·‚é•ªŠ„‹óŠÔ‚ğ—pˆÓ‚·‚éB
+        // mortoné †åºã«å¯¾å¿œã™ã‚‹åˆ†å‰²ç©ºé–“ã‚’ç”¨æ„ã™ã‚‹ã€‚
         auto const local_morton_order(this->calc_order(in_min, in_max));
         auto& local_cell(this->cells_[local_morton_order]);
         if (local_cell == nullptr)
@@ -952,7 +952,7 @@ class psyq::mosp_tree
             }
         }
 
-        // morton‡˜‚É‘Î‰‚·‚é‹óŠÔ•ªŠ„–Ønode‚ğ—pˆÓ‚·‚éB
+        // mortoné †åºã«å¯¾å¿œã™ã‚‹ç©ºé–“åˆ†å‰²æœ¨nodeã‚’ç”¨æ„ã™ã‚‹ã€‚
         auto const local_node(this->distribute_idle_node());
         if (local_node == nullptr || !local_cell->insert_next(*local_node))
         {
@@ -975,7 +975,7 @@ class psyq::mosp_tree
             return 0;
         }
 
-        // Õ“Ë•¨‘Ì‚ÌAABB‚ğ•ï‚ŞAÅ¬‚Ì•ªŠ„‹óŠÔ‚Ìmorton‡˜‚ğZo‚·‚éB
+        // è¡çªç‰©ä½“ã®AABBã‚’åŒ…ã‚€ã€æœ€å°ã®åˆ†å‰²ç©ºé–“ã®mortoné †åºã‚’ç®—å‡ºã™ã‚‹ã€‚
         auto const local_axis_order_max((1 << local_level_cap) - 1);
         auto const local_min_morton(
             this->space_.calc_order(in_min, local_axis_order_max));
@@ -993,15 +993,15 @@ class psyq::mosp_tree
         auto const local_base(
             (local_num_cells - 1) / ((1 << self::space::DIMENSION) - 1));
         auto const local_shift(local_level * self::space::DIMENSION);
-        // VisualStudio‚¾‚ÆA32ˆÈã‚Ìbit-shift‰‰Z‚É•s‹ï‡‚ª‚ ‚é‚Á‚Û‚¢B
+        // VisualStudioã ã¨ã€32ä»¥ä¸Šã®bit-shiftæ¼”ç®—ã«ä¸å…·åˆãŒã‚ã‚‹ã£ã½ã„ã€‚
         PSYQ_ASSERT(local_shift < sizeof(local_max_morton) * 8);
         return local_base + (local_max_morton >> local_shift);
     }
 
     //-------------------------------------------------------------------------
-    /** @brief ‹óhandle‚Ìnode‚ğ”z•z‚·‚éB
-        @retval !=nullptr ”z•z‚³‚ê‚½‹ó‚«handle‚ÌnodeB
-        @retval ==nullptr ¸”sB
+    /** @brief ç©ºhandleã®nodeã‚’é…å¸ƒã™ã‚‹ã€‚
+        @retval !=nullptr é…å¸ƒã•ã‚ŒãŸç©ºãhandleã®nodeã€‚
+        @retval ==nullptr å¤±æ•—ã€‚
         @sa collect_idle_node()
      */
     private: typename self::node* distribute_idle_node()
@@ -1009,13 +1009,13 @@ class psyq::mosp_tree
         auto local_node(this->idle_node_);
         if (local_node == nullptr)
         {
-            // ‹óhandle‚Ìnode‚ª‚È‚©‚Á‚½‚Ì‚ÅAV‚½‚Énode‚ğ¶¬‚·‚éB
+            // ç©ºhandleã®nodeãŒãªã‹ã£ãŸã®ã§ã€æ–°ãŸã«nodeã‚’ç”Ÿæˆã™ã‚‹ã€‚
             typename self::node_allocator local_allocator(
                 this->cells_.get_allocator());
             return new(local_allocator.allocate(1)) typename self::node;
         }
 
-        // ‹óhandle‚Ìnode‚ğæ‚èo‚·B
+        // ç©ºhandleã®nodeã‚’å–ã‚Šå‡ºã™ã€‚
         local_node = &local_node->remove_next();
         if (local_node == this->idle_node_)
         {
@@ -1024,8 +1024,8 @@ class psyq::mosp_tree
         return local_node;
     }
 
-    /** @brief ‹óhandle‚Ìnode‚ğ‰ñû‚·‚éB
-        @param[in,out] io_idle_node ‰ñû‚·‚énodeB
+    /** @brief ç©ºhandleã®nodeã‚’å›åã™ã‚‹ã€‚
+        @param[in,out] io_idle_node å›åã™ã‚‹nodeã€‚
         @sa distribute_idle_node()
      */
     private: void collect_idle_node(
@@ -1067,11 +1067,11 @@ class psyq::mosp_tree
     }
 
     //-------------------------------------------------------------------------
-    private: typename self::cell_map cells_; ///< •ªŠ„‹óŠÔ‚Ì«‘B
-    private: typename self::space space_; ///< g—p‚·‚émorton‹óŠÔB
-    private: typename self::node* idle_node_; ///< ‹óhandle‚ÌnodeB
-    private: std::size_t level_cap_; ///< ‹óŠÔ•ªŠ„‚ÌÅ[levelB
-    private: bool detect_collision_; ///< detect_collision() ‚ğÀs’†‚©‚Ç‚¤‚©B
+    private: typename self::cell_map cells_; ///< åˆ†å‰²ç©ºé–“ã®è¾æ›¸ã€‚
+    private: typename self::space space_; ///< ä½¿ç”¨ã™ã‚‹mortonç©ºé–“ã€‚
+    private: typename self::node* idle_node_; ///< ç©ºhandleã®nodeã€‚
+    private: std::size_t level_cap_; ///< ç©ºé–“åˆ†å‰²ã®æœ€æ·±levelã€‚
+    private: bool detect_collision_; ///< detect_collision() ã‚’å®Ÿè¡Œä¸­ã‹ã©ã†ã‹ã€‚
 };
 
 #endif // !PSYQ_MOSP_COLLISION_HPP_

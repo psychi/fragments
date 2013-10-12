@@ -65,10 +65,11 @@ namespace psyq
     - memory割り当てを一切行わない。
     - 文字列を書き換えるinterfaceはない。
     - thread-safety
-      - 同じinstanceを、異なるthreadでreadする。
-      - 異なるinstanceを、異なるthreadでwriteする。
+      - 1つのinstanceを、異なるthreadで同時にreadする。
+      - 複数のinstanceを、異なるthreadで同時にwriteする。
     - not thread-safety
-      - 同じinstanceを異なるthreadでwriteする。
+      - 1つのinstanceを、異なるthreadで同時にwriteする。
+      - 1つのinstanceを、異なるthreadで同時にreadとwriteをする。
 
     @warning
         C文字列を単純にconst参照しているので、
@@ -84,7 +85,8 @@ class psyq::basic_reference_string
 {
     /// thisが指す値の型。
     public: typedef psyq::basic_reference_string<
-        template_char_type, template_char_traits> self;
+        template_char_type, template_char_traits>
+            self;
 
     //-------------------------------------------------------------------------
     /// 文字特性の型。
@@ -126,12 +128,25 @@ class psyq::basic_reference_string
         reverse_iterator;
 
     //-------------------------------------------------------------------------
+    /// @name constructor / destructor
+    //@{
     /** @brief 空の文字列を構築する。
      */
     public: basic_reference_string()
     :
         data_(nullptr),
         length_(0)
+    {}
+
+    /** @brief 任意型の文字列を参照する。
+        @tparam template_string_type @copydoc string_interface
+        @param[in] in_string 参照する文字列。
+     */
+    public: template<typename template_string_type>
+    basic_reference_string(template_string_type const& in_string)
+    :
+        data_(in_string.data()),
+        length_(in_string.length())
     {}
 
     /** @brief 文字列literalを参照する。
@@ -187,17 +202,6 @@ class psyq::basic_reference_string
     /** @brief 任意型の文字列を参照する。
         @tparam template_string_type @copydoc string_interface
         @param[in] in_string 参照する文字列。
-     */
-    public: template<typename template_string_type>
-    basic_reference_string(template_string_type const& in_string)
-    :
-        data_(in_string.data()),
-        length_(in_string.length())
-    {}
-
-    /** @brief 任意型の文字列を参照する。
-        @tparam template_string_type @copydoc string_interface
-        @param[in] in_string 参照する文字列。
         @param[in] in_offset 参照する文字列の開始offset位置。
         @param[in] in_count  参照する文字数。
      */
@@ -211,25 +215,22 @@ class psyq::basic_reference_string
         data_(in_string.data() + in_offset),
         length_(self::trim_count(in_string, in_offset, in_count))
     {}
+    //@}
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列を交換する。
-        @param[in,out] io_target 交換する文字列。
+    /// @name 文字列の割り当て
+    //@{
+    /** @brief 文字列literalを参照する。
+        @tparam template_size 参照する文字列literalの要素数。
+        @param[in] in_string 参照する文字列literal。
      */
-    public: void swap(self& io_target)
+    public: template <std::size_t template_size>
+    self& operator=(
+        typename self::value_type const (&in_string)[template_size])
     {
-        std::swap(this->data_, io_target.data_);
-        std::swap(this->length_, io_target.length_);
+        return *new(this) self(in_string);
     }
 
-    /** @brief 文字列を空にする。
-     */
-    public: void clear()
-    {
-        this->length_ = 0;
-    }
-
-    //-------------------------------------------------------------------------
     /** @brief 文字列literalを参照する。
         @tparam template_size 参照する文字列literalの要素数。
         @param[in] in_string 参照する文字列literal。
@@ -249,17 +250,6 @@ class psyq::basic_reference_string
         typename self::size_type const     in_length)
     {
         return *new(this) self(in_string, in_length);
-    }
-
-    /** @brief 文字列を参照する。
-        @param[in] in_begin 参照する文字列の先頭位置。
-        @param[in] in_end   参照する文字列の末尾位置。
-     */
-    public: self& assign(
-        typename self::const_pointer const in_begin,
-        typename self::const_pointer const in_end)
-    {
-        return *new(this) self(in_begin, in_end);
     }
 
     /** @brief 任意型の文字列を参照する。
@@ -287,17 +277,66 @@ class psyq::basic_reference_string
     {
         return *new(this) self(in_string, in_offset, in_count);
     }
-
+    //@}
     //-------------------------------------------------------------------------
-    /** @brief 文字列の先頭位置を取得する。
-        @return 文字列の先頭位置。
+    /// @name 文字列の要素を参照
+    //@{
+    /** @brief 文字列が持つ文字を参照する。
+        @param[in] in_index 文字のindex番号。
+        @return 文字への参照。
+     */
+    public: typename self::const_reference at(
+        typename self::size_type const in_index)
+    const
+    {
+        if (this->length() <= in_index)
+        {
+            PSYQ_ASSERT(false);
+            //throw std::out_of_range; // 例外は使いたくない。
+        }
+        return *(this->data() + in_index);
+    }
+
+    /** @brief 文字列が持つ文字を参照する。
+        @param[in] in_index 文字のindex番号。
+        @return 文字への参照。
+     */
+    public: typename self::const_reference operator[](
+        typename self::size_type const in_index)
+    const
+    {
+        PSYQ_ASSERT(in_index < this->length());
+        return *(this->data() + in_index);
+    }
+
+    /** @brief 文字列の最初の文字を参照する。
+        @return 文字列の最初の文字への参照。
+     */
+    typename self::const_reference front() const
+    {
+        return (*this)[0];
+    }
+
+    /** @brief 文字列の最後の文字を参照する。
+        @return 文字列の最後の文字への参照。
+     */
+    public: typename self::const_reference back() const
+    {
+        return (*this)[this->length() - 1];
+    }
+
+    /** @brief 文字列の最初の文字へのpointerを取得する。
+        @return 文字列の最初の文字へのpointer。
         @warning 文字列が空文字で終わっているとは限らない。
      */
     public: typename self::const_pointer data() const
     {
         return this->data_;
     }
-
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name iterator
+    //@{
     /** @brief 文字列の先頭位置を取得する。
         @return 文字列の先頭位置への反復子。
      */
@@ -361,44 +400,17 @@ class psyq::basic_reference_string
     {
         return this->rend();
     }
-
-    /** @brief 文字列の先頭文字を参照する。
-        @return 文字列の先頭文字への参照。
-     */
-    typename self::const_reference front() const
-    {
-        PSYQ_ASSERT(!this->empty());
-        return (*this)[0];
-    }
-
-    /** @brief 文字列の末尾文字を参照する。
-        @return 文字列の末尾文字への参照。
-     */
-    public: typename self::const_reference back() const
-    {
-        PSYQ_ASSERT(!this->empty());
-        return (*this)[this->length() - 1];
-    }
-
-    /** @brief 部分文字列を取得する。
-        @param[in] in_offset 部分文字列の開始offset位置。
-        @param[in] in_count  部分文字列の文字数。
-     */
-    public: self substr(
-        typename self::size_type in_offset = 0,
-        typename self::size_type in_count = self::npos)
-    const
-    {
-        return self(*this, in_offset, in_count);
-    }
-
+    //@}
     //-------------------------------------------------------------------------
-    /** @brief 文字列の長さを取得する。
-        @return 文字列の長さ。
+    /// @name 文字列の容量
+    //@{
+    /** @brief 空の文字列か判定する。
+        @retval true  空の文字列。
+        @retval false 空の文字列ではない。
      */
-    public: typename self::size_type length() const
+    public: bool empty() const
     {
-        return this->length_;
+        return this->length() <= 0;
     }
 
     /** @brief 文字列の長さを取得する。
@@ -407,6 +419,14 @@ class psyq::basic_reference_string
     public: typename self::size_type size() const
     {
         return this->length();
+    }
+
+    /** @brief 文字列の長さを取得する。
+        @return 文字列の長さ。
+     */
+    public: typename self::size_type length() const
+    {
+        return this->length_;
     }
 
     /** @brief 文字列の最大長を取得する。
@@ -428,46 +448,91 @@ class psyq::basic_reference_string
     {
         return this->length();
     }
-
-    /** @brief 空の文字列か判定する。
-        @retval true  空の文字列。
-        @retval false 空の文字列ではない。
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 文字列の操作
+    //@{
+    /** @brief 文字列を空にする。
      */
-    public: bool empty() const
+    public: void clear()
     {
-        return this->length() <= 0;
+        this->length_ = 0;
     }
 
-    //-------------------------------------------------------------------------
-    /** @brief 文字列が持つ文字を参照する。
-        @param[in] in_index 文字のindex番号。
-        @return 文字への参照。
+    /** @brief 部分文字列を取得する。
+        @param[in] in_offset 部分文字列の開始offset位置。
+        @param[in] in_count  部分文字列の文字数。
      */
-    public: typename self::const_reference at(
-        typename self::size_type const in_index)
+    public: self substr(
+        typename self::size_type in_offset = 0,
+        typename self::size_type in_count = self::npos)
     const
     {
-        if (this->length() <= in_index)
+        return self(*this, in_offset, in_count);
+    }
+
+    /** @brief 文字列を交換する。
+        @param[in,out] io_target 交換する文字列。
+     */
+    public: void swap(self& io_target)
+    {
+        std::swap(this->data_, io_target.data_);
+        std::swap(this->length_, io_target.length_);
+    }
+
+    /** @brief 文字列の先頭と末尾にある空白文字を取り除く。
+     */
+    public: void trim()
+    {
+        this->trim_right();
+        this->trim_left();
+    }
+
+    /** @brief 文字列の先頭にある空白文字を取り除く。
+     */
+    public: void trim_left()
+    {
+        if (this->empty())
         {
-            PSYQ_ASSERT(false);
-            //throw std::out_of_range; // 例外は使いたくない。
+            return;
         }
-        return *(this->data() + in_index);
+        auto const local_end(this->end());
+        for (auto i(this->begin()); i < local_end; ++i)
+        {
+            if (!std::isspace(*i))
+            {
+                auto const local_position(i - this->begin());
+                this->data_ += local_position;
+                this->length_ -= local_position;
+                return;
+            }
+        }
+        this->data_ += this->length();
+        this->length_ = 0;
     }
 
-    /** @brief 文字列が持つ文字を参照する。
-        @param[in] in_index 文字のindex番号。
-        @return 文字への参照。
+    /** @brief 文字列の末尾にある空白文字を取り除く。
      */
-    public: typename self::const_reference operator[](
-        typename self::size_type const in_index)
-    const
+    public: void trim_right()
     {
-        PSYQ_ASSERT(in_index < this->length());
-        return *(this->data() + in_index);
+        if (this->empty())
+        {
+            return;
+        }
+        for (auto i(this->end() - 1); this->begin() <= i; --i)
+        {
+            if (!std::isspace(*i))
+            {
+                this->length_ = 1 + i - this->begin();
+                return;
+            }
+        }
+        this->length_ = 0;
     }
-
+    //@}
     //-------------------------------------------------------------------------
+    /// @name 文字列の比較
+    //@{
     /** @brief 文字列を比較する。
 
         *thisを左辺として、右辺の文字列と比較する。
@@ -672,8 +737,10 @@ class psyq::basic_reference_string
             in_right.data() + in_right_offset,
             self::trim_count(in_right, in_right_offset, in_right_count));
     }
-
+    //@}
     //-------------------------------------------------------------------------
+    /// @name 指定文字列の前方検索
+    //@{
     /** @brief 文字を検索する。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
@@ -778,8 +845,10 @@ class psyq::basic_reference_string
         }
         return self::npos;
     }
-
+    //@{
     //-------------------------------------------------------------------------
+    /// @name 指定文字列の後方検索
+    //@{
     /** @brief 後ろから文字を検索する。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
@@ -873,8 +942,10 @@ class psyq::basic_reference_string
         }
         return self::npos;
     }
-
+    //@}
     //-------------------------------------------------------------------------
+    /// @name 指定文字の前方検索
+    //@{
     /** @brief 文字を検索する。
         @param[in] in_char   検索する文字。
         @param[in] in_offset 検索を開始する位置。
@@ -945,8 +1016,10 @@ class psyq::basic_reference_string
         }
         return self::npos;
     }
-
+    //@}
     //-------------------------------------------------------------------------
+    /// @name 指定文字の後方検索
+    //@{
     /** @brief 文字を後ろから検索する。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
@@ -1020,8 +1093,10 @@ class psyq::basic_reference_string
         }
         return self::npos;
     }
-
+    //@}
     //-------------------------------------------------------------------------
+    /// @name 指定文字以外の前方検索
+    //@{
     /** @brief 検索文字以外の文字を検索する。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
@@ -1104,8 +1179,10 @@ class psyq::basic_reference_string
         }
         return self::npos;
     }
-
+    //@}
     //-------------------------------------------------------------------------
+    /// @name 指定文字以外の後方検索
+    //@{
     /** @brief 検索文字以外の文字を、後ろから検索する。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
@@ -1197,58 +1274,7 @@ class psyq::basic_reference_string
         }
         return self::npos;
     }
-
-    //-------------------------------------------------------------------------
-    /** @brief 文字列の先頭と末尾にある空白文字を取り除く。
-     */
-    public: void trim()
-    {
-        this->trim_right();
-        this->trim_left();
-    }
-
-    /** @brief 文字列の先頭にある空白文字を取り除く。
-     */
-    public: void trim_left()
-    {
-        if (this->empty())
-        {
-            return;
-        }
-        auto const local_end(this->end());
-        for (auto i(this->begin()); i < local_end; ++i)
-        {
-            if (!std::isspace(*i))
-            {
-                auto const local_position(i - this->begin());
-                this->data_ += local_position;
-                this->length_ -= local_position;
-                return;
-            }
-        }
-        this->data_ += this->length();
-        this->length_ = 0;
-    }
-
-    /** @brief 文字列の末尾にある空白文字を取り除く。
-     */
-    public: void trim_right()
-    {
-        if (this->empty())
-        {
-            return;
-        }
-        for (auto i(this->end() - 1); this->begin() <= i; --i)
-        {
-            if (!std::isspace(*i))
-            {
-                this->length_ = 1 + i - this->begin();
-                return;
-            }
-        }
-        this->length_ = 0;
-    }
-
+    //@}
     //-------------------------------------------------------------------------
     /** @brief 等価な文字列か判定する。
         @param[in] in_right_begin  比較する文字列の先頭位置。
@@ -1256,7 +1282,7 @@ class psyq::basic_reference_string
         @retval true  等価な文字列だった。
         @retval false 等価な文字列ではなかった。
      */
-    protected: bool is_equal(
+    private: bool is_equal(
         typename self::const_pointer const in_right_begin,
         typename self::size_type const     in_right_length)
     const
@@ -1306,7 +1332,7 @@ class psyq::basic_reference_string
         @param[in] in_count  文字列の開始offset位置からの文字数。
         @return 文字列全体の文字数に収まるようにin_countをtrimmingした値。
      */
-    protected: template<typename template_string_type>
+    private: template<typename template_string_type>
     static typename template_string_type::size_type trim_count(
         template_string_type const&                    in_string,
         typename template_string_type::size_type const in_offset,
@@ -1324,7 +1350,7 @@ class psyq::basic_reference_string
         @param[in] in_count  文字列の開始offset位置からの文字数。
         @return 文字列全体の文字数に収まるようにin_countをtrimmingした値。
      */
-    protected: static typename self::size_type trim_count(
+    private: static typename self::size_type trim_count(
         typename self::size_type const in_length,
         typename self::size_type const in_offset,
         typename self::size_type const in_count)

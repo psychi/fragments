@@ -96,6 +96,8 @@ class psyq::basic_immutable_string:
     public: typedef template_allocator_type allocator_type;
 
     //-------------------------------------------------------------------------
+    /// @name constructor / destructor
+    //@{
     /** @brief 空文字列を構築する。memory割り当ては行わない。
      */
     public: explicit basic_immutable_string(
@@ -137,7 +139,7 @@ class psyq::basic_immutable_string:
      */
     public: template <std::size_t template_size>
     basic_immutable_string(
-        typename self::value_type const (&in_string)[template_size],
+        typename super::value_type const (&in_string)[template_size],
         typename self::allocator_type const& in_allocator
         = self::allocator_type())
     :
@@ -152,9 +154,9 @@ class psyq::basic_immutable_string:
         @param[in] in_count  参照する文字数。
      */
     public: basic_immutable_string(
-        self const&                    in_string,
-        typename self::size_type const in_offset,
-        typename self::size_type const in_count = super::npos)
+        self const&                     in_string,
+        typename super::size_type const in_offset,
+        typename super::size_type const in_count = super::npos)
     :
         super(in_string, in_offset, in_count),
         allocator_(in_string.allocator_)
@@ -182,8 +184,8 @@ class psyq::basic_immutable_string:
         @param[in] in_allocator memory割当子の初期値。
      */
     public: basic_immutable_string(
-        typename self::const_pointer const   in_string,
-        typename self::size_type const       in_length,
+        typename super::const_pointer const  in_string,
+        typename super::size_type const      in_length,
         typename self::allocator_type const& in_allocator
         = self::allocator_type())
     :
@@ -208,19 +210,32 @@ class psyq::basic_immutable_string:
         this->create_buffer(in_left_string, in_right_string);
     }
 
-    /// destructor
+    /// @brief 文字列を解放する。
     public: ~basic_immutable_string()
     {
         this->release_buffer();
     }
 
+    public: typename self::allocator_type const& get_allocator() const
+    {
+        return this->allocator_;
+    }
+    //@}
     //-------------------------------------------------------------------------
+    /// @name 文字列の割り当て
+    //@{
+    /** @brief 文字列を参照する。memory割り当ては行わない。
+        @param[in] in_right 参照する文字列。
+     */
     public: self& operator=(self const& in_right)
     {
         self(in_right).swap(*this);
         return *this;
     }
 
+    /** @brief 文字列を移動する。memory割り当ては行わない。
+        @param[in,out] io_right 参照する文字列。
+     */
     public: self& operator=(self&& io_right)
     {
         this->swap(io_right);
@@ -229,11 +244,11 @@ class psyq::basic_immutable_string:
 
     /** @brief 文字列literalを参照する。memory割り当ては行わない。
         @tparam template_size 参照する文字列literalの要素数。
-        @param[in] in_string    参照する文字列literal。
+        @param[in] in_string 参照する文字列literal。
      */
     public: template <std::size_t template_size>
     self& operator=(
-        typename self::value_type const (&in_string)[template_size])
+        typename super::value_type const (&in_string)[template_size])
     {
         this->release_buffer();
         new(this) super(in_string);
@@ -241,38 +256,6 @@ class psyq::basic_immutable_string:
         return *this;
     }
 
-    /** @brief memoryを割り当てを行い、2つの文字列を連結してcopyする。
-        @param[in] in_right copy元の右辺文字列。
-     */
-    public: self operator+(super const& in_right) const
-    {
-        return in_right.empty()?
-            *this: self(*this, in_right, this->get_allocator());
-    }
-
-    /** @brief memoryを割り当てを行い、2つの文字列を連結してcopyする。
-        @param[in] in_right copy元の右辺文字列。
-     */
-    public: self& operator+=(super const& in_right)
-    {
-        if (!in_right.empty())
-        {
-            *this = *this + in_right;
-        }
-        return *this;
-    }
-
-    /** @brief 文字列を交換する。
-        @param[in,out] io_target 交換する文字列。
-     */
-    public: void swap(self& io_target)
-    {
-        this->super::swap(io_target);
-        std::swap(this->buffer_, io_target.buffer_);
-        std::swap(this->allocator_, io_target.allocator_);
-    }
-
-    //-------------------------------------------------------------------------
     /** @brief 文字列を参照する。memory割り当ては行わない。
         @param[in] in_string 参照する文字列。
      */
@@ -287,7 +270,7 @@ class psyq::basic_immutable_string:
      */
     public: self& assign(self&& io_string)
     {
-        *this = io_string;
+        *this = std::move(io_string);
         return *this;
     }
 
@@ -296,11 +279,9 @@ class psyq::basic_immutable_string:
         @param[in] in_string 参照する文字列literal。
      */
     public: template <std::size_t template_size>
-    self& assign(typename self::value_type const (&in_string)[template_size])
+    self& assign(typename super::value_type const (&in_string)[template_size])
     {
-        this->release_buffer();
-        new(this) super(in_string);
-        this->buffer_ = nullptr;
+        *this = in_string;
         return *this;
     }
 
@@ -310,9 +291,9 @@ class psyq::basic_immutable_string:
         @param[in] in_count  参照する文字数。
      */
     public: self& assign(
-        self const&                    in_string,
-        typename self::size_type const in_offset,
-        typename self::size_type const in_count = super::npos)
+        self const&                     in_string,
+        typename super::size_type const in_offset,
+        typename super::size_type const in_count = super::npos)
     {
         if (this->buffer_ != in_string.buffer_)
         {
@@ -348,16 +329,34 @@ class psyq::basic_immutable_string:
         @param[in] in_length copy元の文字列の長さ。
      */
     public: self& assign(
-        typename self::const_pointer const in_string,
-        typename self::size_type const     in_length)
+        typename super::const_pointer const in_string,
+        typename super::size_type const     in_length)
     {
         return this->assign(super(in_string, in_length));
     }
-
+    //@}
     //-------------------------------------------------------------------------
-    public: typename self::allocator_type const& get_allocator() const
+    /// @name 文字列の操作
+    //@{
+    /** @brief memoryを割り当てを行い、2つの文字列を連結してcopyする。
+        @param[in] in_right copy元の右辺文字列。
+     */
+    public: self operator+(super const& in_right) const
     {
-        return this->allocator_;
+        return in_right.empty()?
+            *this: self(*this, in_right, this->get_allocator());
+    }
+
+    /** @brief memoryを割り当てを行い、2つの文字列を連結してcopyする。
+        @param[in] in_right copy元の右辺文字列。
+     */
+    public: self& operator+=(super const& in_right)
+    {
+        if (!in_right.empty())
+        {
+            *this = *this + in_right;
+        }
+        return *this;
     }
 
     /** @brief 部分文字列を取得する。
@@ -365,13 +364,23 @@ class psyq::basic_immutable_string:
         @param[in] in_count  部分文字列の文字数。
      */
     public: self substr(
-        typename self::size_type in_offset = 0,
-        typename self::size_type in_count = self::npos)
+        typename super::size_type in_offset = 0,
+        typename super::size_type in_count = self::npos)
     const
     {
         return self(*this, in_offset, in_count);
     }
 
+    /** @brief 文字列を交換する。
+        @param[in,out] io_target 交換する文字列。
+     */
+    public: void swap(self& io_target)
+    {
+        this->super::swap(io_target);
+        std::swap(this->buffer_, io_target.buffer_);
+        std::swap(this->allocator_, io_target.allocator_);
+    }
+    //@}
     //-------------------------------------------------------------------------
     /// 文字列buffer。
     private: struct buffer
@@ -405,8 +414,12 @@ class psyq::basic_immutable_string:
         rebind<std::size_t>::other
             buffer_allocator;
 
-    private: typename self::value_type* allocate_buffer(
-        typename self::size_type const in_length)
+    /** @brief 文字列bufferを確保する。
+        @param[in] in_length 文字列の長さ。
+        @return 文字列の先頭位置。
+     */
+    private: typename super::value_type* allocate_buffer(
+        typename super::size_type const in_length)
     {
         if (in_length <= 0)
         {
@@ -429,7 +442,7 @@ class psyq::basic_immutable_string:
             * sizeof(typename self::buffer_allocator::value_type));
         new(local_buffer) typename self::buffer(
             (local_allocate_bytes - sizeof(typename self::buffer))
-            / sizeof(typename self::value_type));
+            / sizeof(typename super::value_type));
 
         // 文字列bufferを保持する。
         auto const local_buffer_begin(local_buffer->get_begin());
@@ -438,6 +451,10 @@ class psyq::basic_immutable_string:
         return local_buffer_begin;
     }
 
+    /** @brief 2つの文字列を結合した文字列bufferを構築する。
+        @param[in] in_left_string  左辺の文字列。
+        @param[in] in_right_string 右辺の文字列。
+     */
     private: void create_buffer(
         super const& in_left_string,
         super const& in_right_string = super())
@@ -452,7 +469,7 @@ class psyq::basic_immutable_string:
             return;
         }
 
-        // 文字列bufferを初期化する。
+        // 左辺と右辺の文字列を結合する。
         super::traits_type::copy(
             local_buffer, in_left_string.data(), in_left_string.length());
         super::traits_type::copy(
@@ -462,6 +479,9 @@ class psyq::basic_immutable_string:
         local_buffer[local_length] = 0;
     }
 
+    /** @brief 文字列bufferを保持する。
+        @param[in,out] io_buffer 保持する文字列buffer。
+     */
     private: void hold_buffer(typename self::buffer* const io_buffer)
     {
         this->buffer_ = io_buffer;
@@ -476,6 +496,8 @@ class psyq::basic_immutable_string:
         }
     }
 
+    /** @brief 文字列bufferを解放する。
+     */
     private: bool release_buffer()
     {
         auto const local_buffer(this->buffer_);
@@ -511,10 +533,10 @@ class psyq::basic_immutable_string:
 
     private:
     static typename self::buffer_allocator::size_type count_allocate_size(
-        typename self::size_type const in_string_length)
+        typename super::size_type const in_string_length)
     {
         auto const local_string_bytes(
-            sizeof(typename self::value_type) * (in_string_length + 1));
+            sizeof(typename super::value_type) * (in_string_length + 1));
         auto const local_header_bytes(sizeof(typename self::buffer));
         auto const local_unit_bytes(
             sizeof(typename self::buffer_allocator::value_type));

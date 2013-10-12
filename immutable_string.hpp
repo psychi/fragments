@@ -162,7 +162,7 @@ class psyq::basic_immutable_string:
         this->hold_buffer(in_string.buffer_);
     }
 
-    /** @brief memoryを割り当てを行い、immutableな文字列を構築する。
+    /** @brief memoryを割り当てを行い、文字列をcopyする。
         @param[in] in_string    copy元の文字列。
         @param[in] in_allocator memory割当子の初期値。
      */
@@ -176,7 +176,7 @@ class psyq::basic_immutable_string:
         this->create_buffer(in_string);
     }
 
-    /** @brief memoryを割り当てを行い、immutableな文字列を構築する。
+    /** @brief memoryを割り当てを行い、文字列をcopyする。
         @param[in] in_string    copy元の文字列の先頭位置。
         @param[in] in_length    copy元の文字列の長さ。
         @param[in] in_allocator memory割当子の初期値。
@@ -190,6 +190,22 @@ class psyq::basic_immutable_string:
         allocator_(in_allocator)
     {
         this->create_buffer(super(in_string, in_length));
+    }
+
+    /** @brief memoryを割り当てを行い、2つの文字列を連結してcopyする。
+        @param[in] in_left_string  copy元の左辺文字列。
+        @param[in] in_right_string copy元の右辺文字列。
+        @param[in] in_allocator    memory割当子の初期値。
+     */
+    public: basic_immutable_string(
+        super const&                         in_left_string,
+        super const&                         in_right_string,
+        typename self::allocator_type const& in_allocator
+        = self::allocator_type())
+    :
+        allocator_(in_allocator)
+    {
+        this->create_buffer(in_left_string, in_right_string);
     }
 
     /// destructor
@@ -222,6 +238,27 @@ class psyq::basic_immutable_string:
         this->release_buffer();
         new(this) super(in_string);
         this->buffer_ = nullptr;
+        return *this;
+    }
+
+    /** @brief memoryを割り当てを行い、2つの文字列を連結してcopyする。
+        @param[in] in_right copy元の右辺文字列。
+     */
+    public: self operator+(super const& in_right) const
+    {
+        return in_right.empty()?
+            *this: self(*this, in_right, this->get_allocator());
+    }
+
+    /** @brief memoryを割り当てを行い、2つの文字列を連結してcopyする。
+        @param[in] in_right copy元の右辺文字列。
+     */
+    public: self& operator+=(super const& in_right)
+    {
+        if (!in_right.empty())
+        {
+            *this = *this + in_right;
+        }
         return *this;
     }
 
@@ -401,16 +438,14 @@ class psyq::basic_immutable_string:
         return local_buffer_begin;
     }
 
-    private: void create_buffer(super const& in_string)
+    private: void create_buffer(
+        super const& in_left_string,
+        super const& in_right_string = super())
     {
-        if (in_string.empty())
-        {
-            this->buffer_ = nullptr;
-            return;
-        }
-
         // 文字列bufferを確保する。
-        auto const local_buffer(this->allocate_buffer(in_string.length()));
+        auto const local_length(
+            in_left_string.length() + in_right_string.length());
+        auto const local_buffer(this->allocate_buffer(local_length));
         if (local_buffer == nullptr)
         {
             this->buffer_ = nullptr;
@@ -419,8 +454,12 @@ class psyq::basic_immutable_string:
 
         // 文字列bufferを初期化する。
         super::traits_type::copy(
-            local_buffer, in_string.data(), in_string.length());
-        local_buffer[in_string.length()] = 0;
+            local_buffer, in_left_string.data(), in_left_string.length());
+        super::traits_type::copy(
+            local_buffer + in_left_string.length(),
+            in_right_string.data(),
+            in_right_string.length());
+        local_buffer[local_length] = 0;
     }
 
     private: void hold_buffer(typename self::buffer* const io_buffer)

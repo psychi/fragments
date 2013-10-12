@@ -163,6 +163,24 @@ class psyq::basic_reference_string
         }
     }
 
+    /** @brief 文字列を参照する。
+        @param[in] in_begin 参照する文字列の先頭位置。
+        @param[in] in_end   参照する文字列の末尾位置。
+     */
+    public: basic_reference_string(
+        typename self::const_pointer const in_begin,
+        typename self::const_pointer const in_end)
+    :
+        data_(in_begin),
+        length_(in_end - in_begin)
+    {
+        if (in_end < in_begin || in_begin == nullptr)
+        {
+            PSYQ_ASSERT(false);
+            this->length_ = 0;
+        }
+    }
+
     /** @brief 任意型の文字列を参照する。
         @tparam template_string_type @copydoc string_interface
         @param[in] in_string 参照する文字列。
@@ -228,6 +246,17 @@ class psyq::basic_reference_string
         typename self::size_type const     in_length)
     {
         return *new(this) self(in_string, in_length);
+    }
+
+    /** @brief 文字列を参照する。
+        @param[in] in_begin 参照する文字列の先頭位置。
+        @param[in] in_end   参照する文字列の末尾位置。
+     */
+    public: self& assign(
+        typename self::const_pointer const in_begin,
+        typename self::const_pointer const in_end)
+    {
+        return *new(this) self(in_begin, in_end);
     }
 
     /** @brief 任意型の文字列を参照する。
@@ -346,6 +375,18 @@ class psyq::basic_reference_string
     {
         PSYQ_ASSERT(!this->empty());
         return (*this)[this->length() - 1];
+    }
+
+    /** @brief 部分文字列を取得する。
+        @param[in] in_offset 部分文字列の開始offset位置。
+        @param[in] in_count  部分文字列の文字数。
+     */
+    public: self substr(
+        typename self::size_type in_offset = 0,
+        typename self::size_type in_count = self::npos)
+    const
+    {
+        return self(*this, in_offset, in_count);
     }
 
     //-------------------------------------------------------------------------
@@ -1302,8 +1343,8 @@ class psyq::basic_reference_string
 
     //-------------------------------------------------------------------------
     /// 無効な位置を表す。 find() などで使われる。
-    public: static typename self::size_type const npos =
-        static_cast<typename self::size_type>(-1);
+    public: static typename self::size_type const npos
+        = static_cast<typename self::size_type>(-1);
 
     //-------------------------------------------------------------------------
     private: typename self::const_pointer data_;   ///< 文字列の先頭位置。

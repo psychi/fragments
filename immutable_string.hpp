@@ -96,7 +96,7 @@ class psyq::basic_immutable_string:
         typename self::allocator_type const& in_allocator
         = self::allocator_type())
     :
-        holder_(nullptr),
+        buffer_(nullptr),
         allocator_(in_allocator)
     {}
 
@@ -108,7 +108,7 @@ class psyq::basic_immutable_string:
         super(in_source),
         allocator_(in_source.allocator_)
     {
-        this->hold_buffer(in_source.holder_);
+        this->hold_buffer(in_source.buffer_);
     }
 
     /** @brief 文字列を移動する。memory割り当ては行わない。
@@ -117,11 +117,11 @@ class psyq::basic_immutable_string:
     public: basic_immutable_string(self&& io_source)
     :
         super(io_source),
-        holder_(io_source.holder_),
+        buffer_(io_source.buffer_),
         allocator_(io_source.allocator_)
     {
         new(&io_source) super();
-        io_source.holder_ = nullptr;
+        io_source.buffer_ = nullptr;
     }
 
     /** @brief 文字列literalを参照する。memory割り当ては行わない。
@@ -136,7 +136,7 @@ class psyq::basic_immutable_string:
         = self::allocator_type())
     :
         super(in_string),
-        holder_(nullptr),
+        buffer_(nullptr),
         allocator_(in_allocator)
     {}
 
@@ -155,7 +155,7 @@ class psyq::basic_immutable_string:
             super::trim_count(in_string, in_offset, in_count)),
         allocator_(in_string.allocator_)
     {
-        this->hold_buffer(in_string.holder_);
+        this->hold_buffer(in_string.buffer_);
     }
 
     /** @brief memoryを割り当てを行い、immutableな文字列を構築する。
@@ -218,7 +218,7 @@ class psyq::basic_immutable_string:
     public: void swap(self& io_target)
     {
         this->super::swap(io_target);
-        std::swap(this->holder_, io_target.holder_);
+        std::swap(this->buffer_, io_target.buffer_);
         std::swap(this->allocator_, io_target.allocator_);
     }
 
@@ -232,7 +232,7 @@ class psyq::basic_immutable_string:
     {
         this->release_buffer();
         new(this) super(in_string);
-        this->holder_ = nullptr;
+        this->buffer_ = nullptr;
         return *this;
     }
 
@@ -255,10 +255,10 @@ class psyq::basic_immutable_string:
         typename self::size_type const in_offset,
         typename self::size_type const in_count = super::npos)
     {
-        if (this->holder_ != in_string.holder_)
+        if (this->buffer_ != in_string.buffer_)
         {
             this->release_buffer();
-            this->hold_buffer(in_string.holder_);
+            this->hold_buffer(in_string.buffer_);
         }
         new(this) super(
             in_string.data() + in_offset,
@@ -271,10 +271,10 @@ class psyq::basic_immutable_string:
      */
     public: self& assign(super const& in_string)
     {
-        auto const local_holder(this->holder_);
-        if (local_holder == nullptr
-            || in_string.data() < local_holder->get_buffer_begin()
-            || local_holder->get_buffer_end() <= in_string.data())
+        auto const local_buffer(this->buffer_);
+        if (local_buffer == nullptr
+            || in_string.data() < local_buffer->get_begin()
+            || local_buffer->get_end() <= in_string.data())
         {
             this->release_buffer();
             this->create_buffer(in_string);
@@ -298,27 +298,27 @@ class psyq::basic_immutable_string:
     }
 
     //-------------------------------------------------------------------------
-    /// 文字列保持子。
-    private: struct holder
+    /// 文字列buffer。
+    private: struct buffer
     {
-        value_type* get_buffer_begin()
+        value_type* get_begin()
         {
             return reinterpret_cast<value_type*>(this + 1);
         }
 
-        value_type* get_buffer_end()
+        value_type* get_end()
         {
-            return this->get_buffer_begin() + this->buffer_size_;
+            return this->get_begin() + this->capacity_;
         }
 
-        std::size_t refrence_count_; ///< 文字列の被参照数。
-        std::size_t buffer_size_;  ///< 参照してる文字列の文字数。
+        std::size_t reference_count_; ///< 文字列bufferの被参照数。
+        std::size_t capacity_;        ///< 文字列bufferの大きさ。
     };
 
     /// 文字列保持子のmemory割当子。
     private: typedef typename self::allocator_type::template
-        rebind<typename self::holder>::other
-            holder_allocator;
+        rebind<std::size_t>::other
+            buffer_allocator;
 
     private: typename self::value_type* allocate_buffer(
         typename self::size_type const in_length)
@@ -328,32 +328,37 @@ class psyq::basic_immutable_string:
             return nullptr;
         }
 
-        // 文字列holderを構築する。
-        typename self::holder_allocator local_allocator(this->allocator_);
+        // 文字列bufferを構築する。
+        typename self::buffer_allocator local_allocator(this->allocator_);
         auto const local_allocate_size(self::count_allocate_size(in_length));
-        auto const local_holder(local_allocator.allocate(local_allocate_size));
-        if (local_holder == nullptr)
+        auto const local_buffer(
+            reinterpret_cast<typename self::buffer*>(
+                local_allocator.allocate(local_allocate_size)));
+        if (local_buffer == nullptr)
         {
             PSYQ_ASSERT(false);
             return nullptr;
         }
-        auto const local_buffer(local_holder->get_buffer_begin());
-        local_holder->refrence_count_ = 1;
-        local_holder->buffer_size_ = (local_allocate_size - 1)
-            * sizeof(typename self::holder)
+        local_buffer->reference_count_ = 1;
+        auto const local_allocate_bytes(
+            local_allocate_size
+            * sizeof(typename self::buffer_allocator::value_type));
+        local_buffer->capacity_ =
+            (local_allocate_bytes - sizeof(typename self::buffer))
             / sizeof(typename self::value_type);
 
-        // 文字列holderを保持する。
-        new(this) super(local_buffer, in_length);
-        this->holder_ = local_holder;
-        return local_buffer;
+        // 文字列bufferを保持する。
+        auto const local_buffer_begin(local_buffer->get_begin());
+        new(this) super(local_buffer_begin, in_length);
+        this->buffer_ = local_buffer;
+        return local_buffer_begin;
     }
 
     private: void create_buffer(super const& in_string)
     {
         if (in_string.empty())
         {
-            this->holder_ = nullptr;
+            this->buffer_ = nullptr;
             return;
         }
 
@@ -361,7 +366,7 @@ class psyq::basic_immutable_string:
         auto const local_buffer(this->allocate_buffer(in_string.length()));
         if (local_buffer == nullptr)
         {
-            this->holder_ = nullptr;
+            this->buffer_ = nullptr;
             return;
         }
 
@@ -371,53 +376,57 @@ class psyq::basic_immutable_string:
         local_buffer[in_string.length()] = 0;
     }
 
-    private: void hold_buffer(typename self::holder* const io_holder)
+    private: void hold_buffer(typename self::buffer* const io_buffer)
     {
-        this->holder_ = io_holder;
-        if (io_holder != nullptr)
+        this->buffer_ = io_buffer;
+        if (io_buffer != nullptr)
         {
             //std::atomic_fetch_add_explicit(
-            //    &io_holder->refrence_count_, 1, std::memory_order_relaxed);
-            ++io_holder->refrence_count_;
+            //    &io_buffer->reference_count_, 1, std::memory_order_relaxed);
+            ++io_buffer->reference_count_;
         }
     }
 
     private: bool release_buffer()
     {
-        auto const local_holder(this->holder_);
-        if (local_holder == nullptr)
+        auto const local_buffer(this->buffer_);
+        if (local_buffer == nullptr)
         {
             return false;
         }
         //bool const local_destroy(
         //    1 == std::atomic_fetch_sub_explicit(
-        //        &local_holder->refrence_count_, 1, std::memory_order_release));
+        //        &local_buffer->reference_count_, 1, std::memory_order_release));
         //if (local_destroy)
-        if (0 < (--local_holder->refrence_count_))
+        if (0 < (--local_buffer->reference_count_))
         {
             return false;
         }
         //std::atomic_thread_fence(std::memory_order_acquire);
-        auto const local_length(local_holder->buffer_size_);
-        local_holder->~holder();
-        typename self::holder_allocator(this->allocator_).deallocate(
-            local_holder, self::count_allocate_size(local_length));
+        auto const local_capacity(local_buffer->capacity_);
+        local_buffer->~buffer();
+        typename self::buffer_allocator(this->allocator_).deallocate(
+            reinterpret_cast<typename self::buffer_allocator::pointer>(
+                local_buffer),
+            self::count_allocate_size(local_capacity));
         return true;
     }
 
     private:
-    static typename self::holder_allocator::size_type count_allocate_size(
+    static typename self::buffer_allocator::size_type count_allocate_size(
         typename self::size_type const in_string_length)
     {
-        auto const local_holder_size(sizeof(typename self::holder));
-        auto const local_string_length(
-            sizeof(typename self::value_type) * (in_string_length + 1)
-            + local_holder_size - 1);
-        return 1 + local_string_length / local_holder_size;
+        auto const local_string_bytes(
+            sizeof(typename self::value_type) * (in_string_length + 1));
+        auto const local_header_bytes(sizeof(typename self::buffer));
+        auto const local_unit_bytes(
+            sizeof(typename self::buffer_allocator::value_type));
+        return (local_header_bytes + local_string_bytes + local_unit_bytes - 1)
+            / local_unit_bytes;
     }
 
     //-------------------------------------------------------------------------
-    private: typename self::holder*        holder_;    ///< 文字列保持子。
+    private: typename self::buffer*        buffer_;    ///< 文字列buffer。
     private: typename self::allocator_type allocator_; ///< 使用するmemory割当子。
 };
 

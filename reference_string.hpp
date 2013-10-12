@@ -52,10 +52,6 @@ namespace psyq
 
     /// char型の文字を扱う basic_reference_string
     typedef psyq::basic_reference_string<char> reference_string;
-
-    /// wchar_t型の文字を扱う basic_reference_string
-    typedef psyq::basic_reference_string<wchar_t> reference_wstring;
-
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -845,7 +841,7 @@ class psyq::basic_reference_string
         }
         return self::npos;
     }
-    //@{
+    //@}
     //-------------------------------------------------------------------------
     /// @name 指定文字列の後方検索
     //@{

@@ -54,9 +54,6 @@ namespace psyq
 
     /// char型の文字を扱う basic_immutable_string
     typedef psyq::basic_immutable_string<char> immutable_string;
-
-    /// wchar_t型の文字を扱う basic_immutable_string
-    typedef psyq::basic_immutable_string<wchar_t> const_wstring;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

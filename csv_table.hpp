@@ -15,7 +15,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief CSV•\‚Ì‘®«‚Ì«‘‚Ì’l‚ÌŒ^B
+/// @brief CSVè¡¨ã®å±æ€§ã®è¾æ›¸ã®å€¤ã®å‹ã€‚
 struct psyq::csv_table_attribute
 {
     csv_table_attribute(
@@ -26,11 +26,11 @@ struct psyq::csv_table_attribute
         size(in_size)
     {}
 
-    std::size_t column; ///< ‘®«‚Ì—ñ”Ô†B
-    std::size_t size;   ///< ‘®«‚Ì—v‘f”B
+    std::size_t column; ///< å±æ€§ã®åˆ—ç•ªå·ã€‚
+    std::size_t size;   ///< å±æ€§ã®è¦ç´ æ•°ã€‚
 };
 
-/// @brief CSV•\‚Ìcell‚Ì«‘‚ÌƒL[‚ÌŒ^B
+/// @brief CSVè¡¨ã®cellã®è¾æ›¸ã®ã‚­ãƒ¼ã®å‹ã€‚
 struct psyq::csv_table_key
 {
     csv_table_key(
@@ -69,49 +69,49 @@ struct psyq::csv_table_key
         return in_right.operator<=(*this);
     }
 
-    std::size_t row;    ///< cell‚Ìs”Ô†B
-    std::size_t column; ///< cell‚Ì—ñ”Ô†B
+    std::size_t row;    ///< cellã®è¡Œç•ªå·ã€‚
+    std::size_t column; ///< cellã®åˆ—ç•ªå·ã€‚
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief CSVŒ`®‚Ì•¶š—ñ‚©‚ç\’z‚·‚é•\B
+/** @brief CSVå½¢å¼ã®æ–‡å­—åˆ—ã‹ã‚‰æ§‹ç¯‰ã™ã‚‹è¡¨ã€‚
     @tparam template_attribute_map @copydoc csv_table::attribute_map
     @tparam template_cell_map      @copydoc csv_table::cell_map
  */
 template<typename template_attribute_map, typename template_cell_map>
 class psyq::csv_table
 {
-    /// this‚ªw‚·’l‚ÌŒ^B
+    /// thisãŒæŒ‡ã™å€¤ã®å‹ã€‚
     private: typedef csv_table<template_attribute_map, template_cell_map> self;
 
-    /** @brief CSV•\‚Ì‘®«‚Ì«‘B
+    /** @brief CSVè¡¨ã®å±æ€§ã®è¾æ›¸ã€‚
 
-        ˆÈ‰º‚ÌğŒ‚ğ–‚½‚µ‚Ä‚¢‚é•K—v‚ª‚ ‚éB
-        - std::map ŒİŠ·‚ÌŒ^B
-        - attribute_map::key_type ‚ÍA psyq::const_string ŒİŠ·‚Ì•¶š—ñŒ^B
-        - attribute_map::mapped_type ‚ÍA csv_table_attribute Œ^B
+        ä»¥ä¸‹ã®æ¡ä»¶ã‚’æº€ãŸã—ã¦ã„ã‚‹å¿…è¦ãŒã‚ã‚‹ã€‚
+        - std::map äº’æ›ã®å‹ã€‚
+        - attribute_map::key_type ã¯ã€ psyq::const_string äº’æ›ã®æ–‡å­—åˆ—å‹ã€‚
+        - attribute_map::mapped_type ã¯ã€ csv_table_attribute å‹ã€‚
      */
     public: typedef template_attribute_map attribute_map;
 
-    /** @brief CSV•\‚Ìcell‚Ì«‘B
+    /** @brief CSVè¡¨ã®cellã®è¾æ›¸ã€‚
 
-        ˆÈ‰º‚ÌğŒ‚ğ–‚½‚µ‚Ä‚¢‚é•K—v‚ª‚ ‚éB
-        - std::map ŒİŠ·‚ÌŒ^B
-        - cell_map::key_type ‚ÍA csv_table_key Œ^B
-        - cell_map::mapped_type ‚ÍA attribute_map::key_type ŒİŠ·‚Ì•¶š—ñŒ^B
+        ä»¥ä¸‹ã®æ¡ä»¶ã‚’æº€ãŸã—ã¦ã„ã‚‹å¿…è¦ãŒã‚ã‚‹ã€‚
+        - std::map äº’æ›ã®å‹ã€‚
+        - cell_map::key_type ã¯ã€ csv_table_key å‹ã€‚
+        - cell_map::mapped_type ã¯ã€ attribute_map::key_type äº’æ›ã®æ–‡å­—åˆ—å‹ã€‚
      */
     public: typedef template_cell_map cell_map;
 
     //-------------------------------------------------------------------------
-    /** @brief CSVŒ`®‚Ì•¶š—ñ‚ğ‰ğÍ‚µACSV•\‚É•ÏŠ·‚·‚éB
-        @tparam template_string std::basic_string ŒİŠ·‚Ì•¶š—ñŒ^B
-        @param[in] in_csv_string       ‰ğÍ‚·‚éCSVŒ`®‚Ì•¶š—ñB
-        @param[in] in_attribute_row    CSV•\‚Ì‘®«‚Æ‚µ‚Äg‚¤s‚Ì”Ô†B
-        @param[in] in_column_ceparator —ñ‚Ì‹æØ‚è•¶šB
-        @param[in] in_row_separator    s‚Ì‹æØ‚è•¶šB
-        @param[in] in_quote_begin      ˆø—p•„‚ÌŠJn•¶šB
-        @param[in] in_quote_end        ˆø—p•„‚ÌI—¹•¶šB
-        @param[in] in_quote_escape     ˆø—p•„‚Ìescape•¶šB
+    /** @brief CSVå½¢å¼ã®æ–‡å­—åˆ—ã‚’è§£æã—ã€CSVè¡¨ã«å¤‰æ›ã™ã‚‹ã€‚
+        @tparam template_string std::basic_string äº’æ›ã®æ–‡å­—åˆ—å‹ã€‚
+        @param[in] in_csv_string       è§£æã™ã‚‹CSVå½¢å¼ã®æ–‡å­—åˆ—ã€‚
+        @param[in] in_attribute_row    CSVè¡¨ã®å±æ€§ã¨ã—ã¦ä½¿ã†è¡Œã®ç•ªå·ã€‚
+        @param[in] in_column_ceparator åˆ—ã®åŒºåˆ‡ã‚Šæ–‡å­—ã€‚
+        @param[in] in_row_separator    è¡Œã®åŒºåˆ‡ã‚Šæ–‡å­—ã€‚
+        @param[in] in_quote_begin      å¼•ç”¨ç¬¦ã®é–‹å§‹æ–‡å­—ã€‚
+        @param[in] in_quote_end        å¼•ç”¨ç¬¦ã®çµ‚äº†æ–‡å­—ã€‚
+        @param[in] in_quote_escape     å¼•ç”¨ç¬¦ã®escapeæ–‡å­—ã€‚
      */
     public: template<typename template_string>
     explicit csv_table(
@@ -125,7 +125,7 @@ class psyq::csv_table
     :
         attribute_row_(in_attribute_row)
     {
-        // CSV•\‚Ìcell«‘‚ğ\’z‚·‚éB
+        // CSVè¡¨ã®cellè¾æ›¸ã‚’æ§‹ç¯‰ã™ã‚‹ã€‚
         auto local_make_cell_map_result(
             self::make_cell_map(
                 in_csv_string,
@@ -138,7 +138,7 @@ class psyq::csv_table
         this->max_row_ = std::get<1>(local_make_cell_map_result);
         this->max_column_ = std::get<2>(local_make_cell_map_result);
 
-        // CSV•\‚Ì‘®««‘‚ğ\’z‚·‚éB
+        // CSVè¡¨ã®å±æ€§è¾æ›¸ã‚’æ§‹ç¯‰ã™ã‚‹ã€‚
         this->attribute_map_ = self::make_attribute_map(
             this->get_cell_map(),
             this->get_attribute_row(),
@@ -146,7 +146,7 @@ class psyq::csv_table
     }
 
     //-------------------------------------------------------------------------
-    /** @brief CSV•\‚Ìs”Ô†‚ÌÅ‘å’l‚ğæ“¾‚·‚éB
+    /** @brief CSVè¡¨ã®è¡Œç•ªå·ã®æœ€å¤§å€¤ã‚’å–å¾—ã™ã‚‹ã€‚
         @return @copydoc csv_table::max_row_
      */
     public: std::size_t get_max_row() const
@@ -154,7 +154,7 @@ class psyq::csv_table
         return this->max_row_;
     }
 
-    /** @brief CSV•\‚ÌŒ…”Ô†‚ÌÅ‘å’l‚ğæ“¾‚·‚éB
+    /** @brief CSVè¡¨ã®æ¡ç•ªå·ã®æœ€å¤§å€¤ã‚’å–å¾—ã™ã‚‹ã€‚
         @return @copydoc csv_table::max_column_
      */
     public: std::size_t get_max_column() const
@@ -162,7 +162,7 @@ class psyq::csv_table
         return this->max_column_;
     }
 
-    /** @brief CSV•\‚Ì‘®«‚Æ‚µ‚Äg‚Á‚Ä‚¢‚és‚Ì”Ô†‚ğæ“¾‚·‚éB
+    /** @brief CSVè¡¨ã®å±æ€§ã¨ã—ã¦ä½¿ã£ã¦ã„ã‚‹è¡Œã®ç•ªå·ã‚’å–å¾—ã™ã‚‹ã€‚
         @return @copydoc csv_table::attribute_row_
      */
     public: std::size_t get_attribute_row() const
@@ -170,7 +170,7 @@ class psyq::csv_table
         return this->attribute_row_;
     }
 
-    /** @brief CSV•\‚Ì‘®««‘‚ğæ“¾‚·‚éB
+    /** @brief CSVè¡¨ã®å±æ€§è¾æ›¸ã‚’å–å¾—ã™ã‚‹ã€‚
         @return @copydoc csv_table::attribute_map_
      */
     public: typename self::attribute_map const& get_attribute_map() const
@@ -178,7 +178,7 @@ class psyq::csv_table
         return this->attribute_map_;
     }
 
-    /** @brief CSV•\‚Ìcell«‘‚ğæ“¾‚·‚éB
+    /** @brief CSVè¡¨ã®cellè¾æ›¸ã‚’å–å¾—ã™ã‚‹ã€‚
         @return @copydoc csv_table::cell_map_
      */
     public: typename self::cell_map const& get_cell_map() const
@@ -187,11 +187,11 @@ class psyq::csv_table
     }
 
     //-------------------------------------------------------------------------
-    /** @brief CSV•\‚©‚çcell‚ğŒŸõ‚·‚éB
-        @param[in] in_row    ŒŸõ‚·‚écell‚Ìs”Ô†B
-        @param[in] in_column ŒŸõ‚·‚écell‚Ì—ñ”Ô†B
-        @retval !=nullptr Œ©‚Â‚©‚Á‚½cellB
-        @retval ==nullptr ‘Î‰‚·‚écell‚ªŒ©‚Â‚©‚ç‚È‚©‚Á‚½B
+    /** @brief CSVè¡¨ã‹ã‚‰cellã‚’æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_row    æ¤œç´¢ã™ã‚‹cellã®è¡Œç•ªå·ã€‚
+        @param[in] in_column æ¤œç´¢ã™ã‚‹cellã®åˆ—ç•ªå·ã€‚
+        @retval !=nullptr è¦‹ã¤ã‹ã£ãŸcellã€‚
+        @retval ==nullptr å¯¾å¿œã™ã‚‹cellãŒè¦‹ã¤ã‹ã‚‰ãªã‹ã£ãŸã€‚
      */
     public: typename self::cell_map::mapped_type const* find_cell(
         std::size_t const in_row,
@@ -211,12 +211,12 @@ class psyq::csv_table
         return nullptr;
     }
 
-    /** @brief CSV•\‚©‚çcell‚ğŒŸõ‚·‚éB
-        @param[in] in_row             ŒŸõ‚·‚écell‚Ìs”Ô†B
-        @param[in] in_attribute_key   ŒŸõ‚·‚écell‚Ì‘®«–¼B
-        @param[in] in_attribute_index ŒŸõ‚·‚écell‚Ì‘®«index”Ô†B
-        @retval !=nullptr Œ©‚Â‚©‚Á‚½cellB
-        @retval ==nullptr ‘Î‰‚·‚écell‚ªŒ©‚Â‚©‚ç‚È‚©‚Á‚½B
+    /** @brief CSVè¡¨ã‹ã‚‰cellã‚’æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_row             æ¤œç´¢ã™ã‚‹cellã®è¡Œç•ªå·ã€‚
+        @param[in] in_attribute_key   æ¤œç´¢ã™ã‚‹cellã®å±æ€§åã€‚
+        @param[in] in_attribute_index æ¤œç´¢ã™ã‚‹cellã®å±æ€§indexç•ªå·ã€‚
+        @retval !=nullptr è¦‹ã¤ã‹ã£ãŸcellã€‚
+        @retval ==nullptr å¯¾å¿œã™ã‚‹cellãŒè¦‹ã¤ã‹ã‚‰ãªã‹ã£ãŸã€‚
      */
     public: typename self::cell_map::mapped_type const* find_cell(
         std::size_t const                       in_row,
@@ -236,11 +236,11 @@ class psyq::csv_table
     }
 
     //-------------------------------------------------------------------------
-    /** @brief CSV•\‚Ì‘®«‚Ì«‘‚ğì‚éB
+    /** @brief CSVè¡¨ã®å±æ€§ã®è¾æ›¸ã‚’ä½œã‚‹ã€‚
 
-        @param[in] in_cells      ‰ğÍ‚·‚éCSV•\B
-        @param[in] in_row        ‘®«‚Æ‚µ‚Äg‚¤s‚Ì”Ô†B
-        @param[in] in_max_column CSV•\‚ÌŒ…”‚ÌÅ‘å’lB
+        @param[in] in_cells      è§£æã™ã‚‹CSVè¡¨ã€‚
+        @param[in] in_row        å±æ€§ã¨ã—ã¦ä½¿ã†è¡Œã®ç•ªå·ã€‚
+        @param[in] in_max_column CSVè¡¨ã®æ¡æ•°ã®æœ€å¤§å€¤ã€‚
      */
     private: static typename self::attribute_map make_attribute_map(
         typename self::cell_map const& in_cells,
@@ -280,14 +280,14 @@ class psyq::csv_table
     }
 
     //-------------------------------------------------------------------------
-    /** @brief CSVŒ`®‚Ì•¶š—ñ‚ğ‰ğÍ‚µAcell‚Ì«‘‚É•ÏŠ·‚·‚éB
-        @tparam template_string std::basic_string ŒİŠ·‚Ì•¶š—ñŒ^B
-        @param[in] in_csv_string       ‰ğÍ‚·‚éCSVŒ`®‚Ì•¶š—ñB
-        @param[in] in_column_ceparator —ñ‚Ì‹æØ‚è•¶šB
-        @param[in] in_row_separator    s‚Ì‹æØ‚è•¶šB
-        @param[in] in_quote_begin      ˆø—p•„‚ÌŠJn•¶šB
-        @param[in] in_quote_end        ˆø—p•„‚ÌI—¹•¶šB
-        @param[in] in_quote_escape     ˆø—p•„‚Ìescape•¶šB
+    /** @brief CSVå½¢å¼ã®æ–‡å­—åˆ—ã‚’è§£æã—ã€cellã®è¾æ›¸ã«å¤‰æ›ã™ã‚‹ã€‚
+        @tparam template_string std::basic_string äº’æ›ã®æ–‡å­—åˆ—å‹ã€‚
+        @param[in] in_csv_string       è§£æã™ã‚‹CSVå½¢å¼ã®æ–‡å­—åˆ—ã€‚
+        @param[in] in_column_ceparator åˆ—ã®åŒºåˆ‡ã‚Šæ–‡å­—ã€‚
+        @param[in] in_row_separator    è¡Œã®åŒºåˆ‡ã‚Šæ–‡å­—ã€‚
+        @param[in] in_quote_begin      å¼•ç”¨ç¬¦ã®é–‹å§‹æ–‡å­—ã€‚
+        @param[in] in_quote_end        å¼•ç”¨ç¬¦ã®çµ‚äº†æ–‡å­—ã€‚
+        @param[in] in_quote_escape     å¼•ç”¨ç¬¦ã®escapeæ–‡å­—ã€‚
      */
     private: template<typename template_string>
     static std::tuple<typename self::cell_map, std::size_t, std::size_t>
@@ -323,20 +323,20 @@ class psyq::csv_table
                     }
                     else
                     {
-                        // ˆø—p•„‚ğI—¹B
+                        // å¼•ç”¨ç¬¦ã‚’çµ‚äº†ã€‚
                         local_quote = false;
                         local_last_char = 0;
                     }
                 }
                 else if (*i == in_quote_end)
                 {
-                    // ˆø—p•„‚ÌI—¹•¶š‚ğescape‚·‚éB
+                    // å¼•ç”¨ç¬¦ã®çµ‚äº†æ–‡å­—ã‚’escapeã™ã‚‹ã€‚
                     local_field.push_back(*i);
                     local_last_char = 0;
                 }
                 else if (local_last_char == in_quote_end)
                 {
-                    // ˆø—p•„‚ğI—¹‚µA•¶š‚ğŠª‚«–ß‚·B
+                    // å¼•ç”¨ç¬¦ã‚’çµ‚äº†ã—ã€æ–‡å­—ã‚’å·»ãæˆ»ã™ã€‚
                     local_quote = false;
                     --i;
                     local_last_char = 0;
@@ -350,12 +350,12 @@ class psyq::csv_table
             }
             else if (*i == in_quote_begin)
             {
-                // ˆø—p•„‚ÌŠJnB
+                // å¼•ç”¨ç¬¦ã®é–‹å§‹ã€‚
                 local_quote = true;
             }
             else if (*i == in_column_ceparator)
             {
-                // —ñ‚Ì‹æØ‚èB
+                // åˆ—ã®åŒºåˆ‡ã‚Šã€‚
                 if (!local_field.empty())
                 {
                     self::emplace_cell(
@@ -366,7 +366,7 @@ class psyq::csv_table
             }
             else if (*i == in_row_separator)
             {
-                // s‚Ì‹æØ‚èB
+                // è¡Œã®åŒºåˆ‡ã‚Šã€‚
                 if (!local_field.empty())
                 {
                     self::emplace_cell(
@@ -390,13 +390,13 @@ class psyq::csv_table
             }
         }
 
-        // ˆø—p•„‚ÌŠJn‚Í‚ ‚Á‚½‚ªI—¹‚ª‚È‚©‚Á‚½ê‡B
+        // å¼•ç”¨ç¬¦ã®é–‹å§‹ã¯ã‚ã£ãŸãŒçµ‚äº†ãŒãªã‹ã£ãŸå ´åˆã€‚
         if (local_quote)
         {
             //local_field.insert(local_field.begin(), in_quote_begin);
         }
 
-        // ÅIfield‚Ìˆ—B
+        // æœ€çµ‚fieldã®å‡¦ç†ã€‚
         if (!local_field.empty())
         {
             self::emplace_cell(
@@ -410,12 +410,12 @@ class psyq::csv_table
         {
             local_max_column = local_column;
         }
-        auto const local_max_row(
+        auto local_max_row(
             local_cells.empty()? 0: (--local_cells.end())->first.row);
         return std::tuple<typename self::cell_map, std::size_t, std::size_t>(
             std::move(local_cells),
-            local_max_row,
-            local_max_column);
+            std::move(local_max_row),
+            std::move(local_max_column));
     }
 
     private: template<typename template_string>
@@ -427,20 +427,19 @@ class psyq::csv_table
     {
         io_cells.emplace(
             typename self::cell_map::key_type(in_row, in_column),
-            typename self::cell_map::mapped_type(
-                in_field.data(), in_field.size()));
+            typename self::cell_map::mapped_type(in_field));
     }
 
     //-------------------------------------------------------------------------
-    /// CSV•\‚Ì‘®««‘B
+    /// CSVè¡¨ã®å±æ€§è¾æ›¸ã€‚
     private: typename self::attribute_map attribute_map_;
-    /// CSV•\‚Ìcell«‘B
+    /// CSVè¡¨ã®cellè¾æ›¸ã€‚
     private: typename self::cell_map cell_map_;
-    /// CSV•\‚Ì‘®«‚Æ‚µ‚Äg‚Á‚Ä‚¢‚és‚Ì”Ô†B
+    /// CSVè¡¨ã®å±æ€§ã¨ã—ã¦ä½¿ã£ã¦ã„ã‚‹è¡Œã®ç•ªå·ã€‚
     private: std::size_t attribute_row_;
-    /// CSV•\‚Ìs”Ô†‚ÌÅ‘å’lB
+    /// CSVè¡¨ã®è¡Œç•ªå·ã®æœ€å¤§å€¤ã€‚
     private: std::size_t max_row_;
-    /// CSV•\‚ÌŒ…”Ô†‚ÌÅ‘å’lB
+    /// CSVè¡¨ã®æ¡ç•ªå·ã®æœ€å¤§å€¤ã€‚
     private: std::size_t max_column_;
 };
 

@@ -34,8 +34,8 @@
     std::allocator<typename template_char_traits::char_type>
 #endif // !PSYQ_BASIC_IMMUTABLE_STRING_ALLOCATOR_DEFAULT
 
-/** @brief •¶š—ñ‚ÌQÆcount‚ğthread-safe‚É‚µ‚È‚¢‚©‚Ç‚¤‚©B
-    @warning ¡‚Ì‚Æ‚±‚ëthread-safe‚É‚Í–¢‘Î‰B
+/** @brief æ–‡å­—åˆ—ã®å‚ç…§countã‚’thread-safeã«ã—ãªã„ã‹ã©ã†ã‹ã€‚
+    @warning ä»Šã®ã¨ã“ã‚thread-safeã«ã¯æœªå¯¾å¿œã€‚
  */
 #ifndef PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
 #define PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS 1
@@ -52,26 +52,26 @@ namespace psyq
                 class basic_immutable_string;
     /// @endcond
 
-    /// charŒ^‚Ì•¶š‚ğˆµ‚¤ basic_immutable_string
+    /// charå‹ã®æ–‡å­—ã‚’æ‰±ã† basic_immutable_string
     typedef psyq::basic_immutable_string<char> immutable_string;
 
-    /// wchar_tŒ^‚Ì•¶š‚ğˆµ‚¤ basic_immutable_string
+    /// wchar_tå‹ã®æ–‡å­—ã‚’æ‰±ã† basic_immutable_string
     typedef psyq::basic_immutable_string<wchar_t> const_wstring;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string ‚Ìinterface‚ğ–Í‚µ‚½Aimmutable‚È•¶š—ñB
+/** @brief std::basic_string ã®interfaceã‚’æ¨¡ã—ãŸã€immutableãªæ–‡å­—åˆ—ã€‚
 
-    - immutable‚È•¶š—ñ‚ğQÆcount‚ÅŠÇ—‚·‚éB
-    - ‘¼‚ÌŒ^‚Ì•¶š—ñ‚ğcopy‚·‚é‚Æ‚«‚¾‚¯AmemoryŠ„‚è“–‚Ä‚ğs‚¤B
-    - •¶š—ñ‚ğ‘‚«Š·‚¦‚éinterface‚Í‚È‚¢B
+    - immutableãªæ–‡å­—åˆ—ã‚’å‚ç…§countã§ç®¡ç†ã™ã‚‹ã€‚
+    - ä»–ã®å‹ã®æ–‡å­—åˆ—ã‚’copyã™ã‚‹ã¨ãã ã‘ã€memoryå‰²ã‚Šå½“ã¦ã‚’è¡Œã†ã€‚
+    - æ–‡å­—åˆ—ã‚’æ›¸ãæ›ãˆã‚‹interfaceã¯ãªã„ã€‚
     - not thread-safe
 
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type
     @tparam template_char_traits
         @copydoc psyq::basic_reference_string::traits_type
-    @tparam template_allocator_type memoryŠ„“–q‚ÌŒ^B
+    @tparam template_allocator_type memoryå‰²å½“å­ã®å‹ã€‚
  */
 template<
     typename template_char_type,
@@ -81,21 +81,21 @@ class psyq::basic_immutable_string:
     public psyq::basic_reference_string<
         template_char_type, template_char_traits>
 {
-    /// this‚ªw‚·’l‚ÌŒ^B
+    /// thisãŒæŒ‡ã™å€¤ã®å‹ã€‚
     public: typedef psyq::basic_immutable_string<
         template_char_type, template_char_traits, template_allocator_type>
             self;
 
-    /// self ‚ÌãˆÊŒ^B
+    /// self ã®ä¸Šä½å‹ã€‚
     public: typedef psyq::basic_reference_string<
         template_char_type, template_char_traits>
             super;
 
-    /// memoryŠ„“–q‚ÌŒ^B
+    /// memoryå‰²å½“å­ã®å‹ã€‚
     public: typedef template_allocator_type allocator_type;
 
     //-------------------------------------------------------------------------
-    /** @brief ‹ó•¶š—ñ‚ğ\’z‚·‚éBmemoryŠ„‚è“–‚Ä‚Ís‚í‚È‚¢B
+    /** @brief ç©ºæ–‡å­—åˆ—ã‚’æ§‹ç¯‰ã™ã‚‹ã€‚memoryå‰²ã‚Šå½“ã¦ã¯è¡Œã‚ãªã„ã€‚
      */
     public: explicit basic_immutable_string(
         typename self::allocator_type const& in_allocator
@@ -105,8 +105,8 @@ class psyq::basic_immutable_string:
         allocator_(in_allocator)
     {}
 
-    /** @brief •¶š—ñ‚ğQÆ‚·‚éBmemoryŠ„‚è“–‚Ä‚Ís‚í‚È‚¢B
-        @param[in] in_source copyŒ³‚Ì•¶š—ñB
+    /** @brief æ–‡å­—åˆ—ã‚’å‚ç…§ã™ã‚‹ã€‚memoryå‰²ã‚Šå½“ã¦ã¯è¡Œã‚ãªã„ã€‚
+        @param[in] in_source copyå…ƒã®æ–‡å­—åˆ—ã€‚
      */
     public: basic_immutable_string(self const& in_source)
     :
@@ -116,8 +116,8 @@ class psyq::basic_immutable_string:
         this->hold_buffer(in_source.buffer_);
     }
 
-    /** @brief •¶š—ñ‚ğˆÚ“®‚·‚éBmemoryŠ„‚è“–‚Ä‚Ís‚í‚È‚¢B
-        @param[in,out] io_source moveŒ³‚Ì•¶š—ñB
+    /** @brief æ–‡å­—åˆ—ã‚’ç§»å‹•ã™ã‚‹ã€‚memoryå‰²ã‚Šå½“ã¦ã¯è¡Œã‚ãªã„ã€‚
+        @param[in,out] io_source moveå…ƒã®æ–‡å­—åˆ—ã€‚
      */
     public: basic_immutable_string(self&& io_source)
     :
@@ -129,10 +129,10 @@ class psyq::basic_immutable_string:
         io_source.buffer_ = nullptr;
     }
 
-    /** @brief •¶š—ñliteral‚ğQÆ‚·‚éBmemoryŠ„‚è“–‚Ä‚Ís‚í‚È‚¢B
-        @tparam template_size QÆ‚·‚é•¶š—ñliteral‚Ì—v‘f”B
-        @param[in] in_string    QÆ‚·‚é•¶š—ñliteralB
-        @param[in] in_allocator memoryŠ„“–q‚Ì‰Šú’lB
+    /** @brief æ–‡å­—åˆ—literalã‚’å‚ç…§ã™ã‚‹ã€‚memoryå‰²ã‚Šå½“ã¦ã¯è¡Œã‚ãªã„ã€‚
+        @tparam template_size å‚ç…§ã™ã‚‹æ–‡å­—åˆ—literalã®è¦ç´ æ•°ã€‚
+        @param[in] in_string    å‚ç…§ã™ã‚‹æ–‡å­—åˆ—literalã€‚
+        @param[in] in_allocator memoryå‰²å½“å­ã®åˆæœŸå€¤ã€‚
      */
     public: template <std::size_t template_size>
     basic_immutable_string(
@@ -145,10 +145,10 @@ class psyq::basic_immutable_string:
         allocator_(in_allocator)
     {}
 
-    /** @brief •¶š—ñ‚ğQÆ‚·‚éBmemoryŠ„‚è“–‚Ä‚Ís‚í‚È‚¢B
-        @param[in] in_string QÆ‚·‚é•¶š—ñB
-        @param[in] in_offset QÆ‚·‚é•¶š—ñ‚ÌŠJnoffsetˆÊ’uB
-        @param[in] in_count  QÆ‚·‚é•¶š”B
+    /** @brief æ–‡å­—åˆ—ã‚’å‚ç…§ã™ã‚‹ã€‚memoryå‰²ã‚Šå½“ã¦ã¯è¡Œã‚ãªã„ã€‚
+        @param[in] in_string å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã€‚
+        @param[in] in_offset å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã®é–‹å§‹offsetä½ç½®ã€‚
+        @param[in] in_count  å‚ç…§ã™ã‚‹æ–‡å­—æ•°ã€‚
      */
     public: basic_immutable_string(
         self const&                    in_string,
@@ -163,9 +163,9 @@ class psyq::basic_immutable_string:
         this->hold_buffer(in_string.buffer_);
     }
 
-    /** @brief memory‚ğŠ„‚è“–‚Ä‚ğs‚¢Aimmutable‚È•¶š—ñ‚ğ\’z‚·‚éB
-        @param[in] in_string    copyŒ³‚Ì•¶š—ñB
-        @param[in] in_allocator memoryŠ„“–q‚Ì‰Šú’lB
+    /** @brief memoryã‚’å‰²ã‚Šå½“ã¦ã‚’è¡Œã„ã€immutableãªæ–‡å­—åˆ—ã‚’æ§‹ç¯‰ã™ã‚‹ã€‚
+        @param[in] in_string    copyå…ƒã®æ–‡å­—åˆ—ã€‚
+        @param[in] in_allocator memoryå‰²å½“å­ã®åˆæœŸå€¤ã€‚
      */
     public: basic_immutable_string(
         super const&                         in_string,
@@ -177,10 +177,10 @@ class psyq::basic_immutable_string:
         this->create_buffer(in_string);
     }
 
-    /** @brief memory‚ğŠ„‚è“–‚Ä‚ğs‚¢Aimmutable‚È•¶š—ñ‚ğ\’z‚·‚éB
-        @param[in] in_string    copyŒ³‚Ì•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_length    copyŒ³‚Ì•¶š—ñ‚Ì’·‚³B
-        @param[in] in_allocator memoryŠ„“–q‚Ì‰Šú’lB
+    /** @brief memoryã‚’å‰²ã‚Šå½“ã¦ã‚’è¡Œã„ã€immutableãªæ–‡å­—åˆ—ã‚’æ§‹ç¯‰ã™ã‚‹ã€‚
+        @param[in] in_string    copyå…ƒã®æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_length    copyå…ƒã®æ–‡å­—åˆ—ã®é•·ã•ã€‚
+        @param[in] in_allocator memoryå‰²å½“å­ã®åˆæœŸå€¤ã€‚
      */
     public: basic_immutable_string(
         typename self::const_pointer const   in_string,
@@ -212,9 +212,9 @@ class psyq::basic_immutable_string:
         return *this;
     }
 
-    /** @brief •¶š—ñliteral‚ğQÆ‚·‚éBmemoryŠ„‚è“–‚Ä‚Ís‚í‚È‚¢B
-        @tparam template_size QÆ‚·‚é•¶š—ñliteral‚Ì—v‘f”B
-        @param[in] in_string    QÆ‚·‚é•¶š—ñliteralB
+    /** @brief æ–‡å­—åˆ—literalã‚’å‚ç…§ã™ã‚‹ã€‚memoryå‰²ã‚Šå½“ã¦ã¯è¡Œã‚ãªã„ã€‚
+        @tparam template_size å‚ç…§ã™ã‚‹æ–‡å­—åˆ—literalã®è¦ç´ æ•°ã€‚
+        @param[in] in_string    å‚ç…§ã™ã‚‹æ–‡å­—åˆ—literalã€‚
      */
     public: template <std::size_t template_size>
     self& operator=(
@@ -226,8 +226,8 @@ class psyq::basic_immutable_string:
         return *this;
     }
 
-    /** @brief •¶š—ñ‚ğŒğŠ·‚·‚éB
-        @param[in,out] io_target ŒğŠ·‚·‚é•¶š—ñB
+    /** @brief æ–‡å­—åˆ—ã‚’äº¤æ›ã™ã‚‹ã€‚
+        @param[in,out] io_target äº¤æ›ã™ã‚‹æ–‡å­—åˆ—ã€‚
      */
     public: void swap(self& io_target)
     {
@@ -237,8 +237,8 @@ class psyq::basic_immutable_string:
     }
 
     //-------------------------------------------------------------------------
-    /** @brief •¶š—ñ‚ğQÆ‚·‚éBmemoryŠ„‚è“–‚Ä‚Ís‚í‚È‚¢B
-        @param[in] in_string QÆ‚·‚é•¶š—ñB
+    /** @brief æ–‡å­—åˆ—ã‚’å‚ç…§ã™ã‚‹ã€‚memoryå‰²ã‚Šå½“ã¦ã¯è¡Œã‚ãªã„ã€‚
+        @param[in] in_string å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã€‚
      */
     public: self& assign(self const& in_string)
     {
@@ -246,8 +246,8 @@ class psyq::basic_immutable_string:
         return *this;
     }
 
-    /** @brief •¶š—ñ‚ğQÆ‚·‚éBmemoryŠ„‚è“–‚Ä‚Ís‚í‚È‚¢B
-        @param[in] in_string QÆ‚·‚é•¶š—ñB
+    /** @brief æ–‡å­—åˆ—ã‚’å‚ç…§ã™ã‚‹ã€‚memoryå‰²ã‚Šå½“ã¦ã¯è¡Œã‚ãªã„ã€‚
+        @param[in,out] io_string å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã€‚
      */
     public: self& assign(self&& io_string)
     {
@@ -255,9 +255,9 @@ class psyq::basic_immutable_string:
         return *this;
     }
 
-    /** @brief •¶š—ñliteral‚ğQÆ‚·‚éBmemoryŠ„‚è“–‚Ä‚Ís‚í‚È‚¢B
-        @tparam template_size QÆ‚·‚é•¶š—ñliteral‚Ì—v‘f”B
-        @param[in] in_string QÆ‚·‚é•¶š—ñliteralB
+    /** @brief æ–‡å­—åˆ—literalã‚’å‚ç…§ã™ã‚‹ã€‚memoryå‰²ã‚Šå½“ã¦ã¯è¡Œã‚ãªã„ã€‚
+        @tparam template_size å‚ç…§ã™ã‚‹æ–‡å­—åˆ—literalã®è¦ç´ æ•°ã€‚
+        @param[in] in_string å‚ç…§ã™ã‚‹æ–‡å­—åˆ—literalã€‚
      */
     public: template <std::size_t template_size>
     self& assign(typename self::value_type const (&in_string)[template_size])
@@ -268,10 +268,10 @@ class psyq::basic_immutable_string:
         return *this;
     }
 
-    /** @brief •¶š—ñ‚ğQÆ‚·‚éBmemoryŠ„‚è“–‚Ä‚Ís‚í‚È‚¢B
-        @param[in] in_string QÆ‚·‚é•¶š—ñB
-        @param[in] in_offset QÆ‚·‚é•¶š—ñ‚ÌŠJnoffsetˆÊ’uB
-        @param[in] in_count  QÆ‚·‚é•¶š”B
+    /** @brief æ–‡å­—åˆ—ã‚’å‚ç…§ã™ã‚‹ã€‚memoryå‰²ã‚Šå½“ã¦ã¯è¡Œã‚ãªã„ã€‚
+        @param[in] in_string å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã€‚
+        @param[in] in_offset å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã®é–‹å§‹offsetä½ç½®ã€‚
+        @param[in] in_count  å‚ç…§ã™ã‚‹æ–‡å­—æ•°ã€‚
      */
     public: self& assign(
         self const&                    in_string,
@@ -289,8 +289,8 @@ class psyq::basic_immutable_string:
         return *this;
     }
 
-    /** @brief memory‚ğŠ„‚è“–‚Ä‚ğs‚¢A•¶š—ñ‚ğcopy‚·‚éB
-        @param[in] in_string copyŒ³‚Ì•¶š—ñB
+    /** @brief memoryã‚’å‰²ã‚Šå½“ã¦ã‚’è¡Œã„ã€æ–‡å­—åˆ—ã‚’copyã™ã‚‹ã€‚
+        @param[in] in_string copyå…ƒã®æ–‡å­—åˆ—ã€‚
      */
     public: self& assign(super const& in_string)
     {
@@ -309,9 +309,9 @@ class psyq::basic_immutable_string:
         return *this;
     }
 
-    /** @brief memory‚ğŠ„‚è“–‚Ä‚ğs‚¢A•¶š—ñ‚ğcopy‚·‚éB
-        @param[in] in_string copyŒ³‚Ì•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_length copyŒ³‚Ì•¶š—ñ‚Ì’·‚³B
+    /** @brief memoryã‚’å‰²ã‚Šå½“ã¦ã‚’è¡Œã„ã€æ–‡å­—åˆ—ã‚’copyã™ã‚‹ã€‚
+        @param[in] in_string copyå…ƒã®æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_length copyå…ƒã®æ–‡å­—åˆ—ã®é•·ã•ã€‚
      */
     public: self& assign(
         typename self::const_pointer const in_string,
@@ -326,9 +326,9 @@ class psyq::basic_immutable_string:
         return this->allocator_;
     }
 
-    /** @brief •”•ª•¶š—ñ‚ğæ“¾‚·‚éB
-        @param[in] in_offset •”•ª•¶š—ñ‚ÌŠJnoffsetˆÊ’uB
-        @param[in] in_count  •”•ª•¶š—ñ‚Ì•¶š”B
+    /** @brief éƒ¨åˆ†æ–‡å­—åˆ—ã‚’å–å¾—ã™ã‚‹ã€‚
+        @param[in] in_offset éƒ¨åˆ†æ–‡å­—åˆ—ã®é–‹å§‹offsetä½ç½®ã€‚
+        @param[in] in_count  éƒ¨åˆ†æ–‡å­—åˆ—ã®æ–‡å­—æ•°ã€‚
      */
     public: self substr(
         typename self::size_type in_offset = 0,
@@ -339,7 +339,7 @@ class psyq::basic_immutable_string:
     }
 
     //-------------------------------------------------------------------------
-    /// •¶š—ñbufferB
+    /// æ–‡å­—åˆ—bufferã€‚
     private: struct buffer
     {
         explicit buffer(std::size_t const in_capacity)
@@ -359,14 +359,14 @@ class psyq::basic_immutable_string:
         }
 
 #if PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
-        std::size_t reference_count_; ///< •¶š—ñbuffer‚Ì”íQÆ”B
+        std::size_t reference_count_; ///< æ–‡å­—åˆ—bufferã®è¢«å‚ç…§æ•°ã€‚
 #else
         std::atomic<std::size_t> reference_count_;
 #endif // PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
-        std::size_t capacity_;        ///< •¶š—ñbuffer‚Ì‘å‚«‚³B
+        std::size_t capacity_;        ///< æ–‡å­—åˆ—bufferã®å¤§ãã•ã€‚
     };
 
-    /// •¶š—ñ•Ûq‚ÌmemoryŠ„“–qB
+    /// æ–‡å­—åˆ—ä¿æŒå­ã®memoryå‰²å½“å­ã€‚
     private: typedef typename self::allocator_type::template
         rebind<std::size_t>::other
             buffer_allocator;
@@ -379,7 +379,7 @@ class psyq::basic_immutable_string:
             return nullptr;
         }
 
-        // •¶š—ñbuffer‚ğ\’z‚·‚éB
+        // æ–‡å­—åˆ—bufferã‚’æ§‹ç¯‰ã™ã‚‹ã€‚
         typename self::buffer_allocator local_allocator(this->allocator_);
         auto const local_allocate_size(self::count_allocate_size(in_length));
         auto const local_buffer(
@@ -397,7 +397,7 @@ class psyq::basic_immutable_string:
             (local_allocate_bytes - sizeof(typename self::buffer))
             / sizeof(typename self::value_type));
 
-        // •¶š—ñbuffer‚ğ•Û‚·‚éB
+        // æ–‡å­—åˆ—bufferã‚’ä¿æŒã™ã‚‹ã€‚
         auto const local_buffer_begin(local_buffer->get_begin());
         new(this) super(local_buffer_begin, in_length);
         this->buffer_ = local_buffer;
@@ -412,7 +412,7 @@ class psyq::basic_immutable_string:
             return;
         }
 
-        // •¶š—ñbuffer‚ğŠm•Û‚·‚éB
+        // æ–‡å­—åˆ—bufferã‚’ç¢ºä¿ã™ã‚‹ã€‚
         auto const local_buffer(this->allocate_buffer(in_string.length()));
         if (local_buffer == nullptr)
         {
@@ -420,7 +420,7 @@ class psyq::basic_immutable_string:
             return;
         }
 
-        // •¶š—ñbuffer‚ğ‰Šú‰»‚·‚éB
+        // æ–‡å­—åˆ—bufferã‚’åˆæœŸåŒ–ã™ã‚‹ã€‚
         super::traits_type::copy(
             local_buffer, in_string.data(), in_string.length());
         local_buffer[in_string.length()] = 0;
@@ -487,21 +487,21 @@ class psyq::basic_immutable_string:
     }
 
     //-------------------------------------------------------------------------
-    private: typename self::buffer*        buffer_;    ///< •¶š—ñbufferB
-    private: typename self::allocator_type allocator_; ///< g—p‚·‚émemoryŠ„“–qB
+    private: typename self::buffer*        buffer_;    ///< æ–‡å­—åˆ—bufferã€‚
+    private: typename self::allocator_type allocator_; ///< ä½¿ç”¨ã™ã‚‹memoryå‰²å½“å­ã€‚
 };
 
 //-----------------------------------------------------------------------------
 namespace std
 {
-    /** @brief •¶š—ñ‚ğŒğŠ·‚·‚éB
+    /** @brief æ–‡å­—åˆ—ã‚’äº¤æ›ã™ã‚‹ã€‚
         @tparam template_char_type
             @copydoc psyq::basic_reference_string::value_type
         @tparam template_char_traits
             @copydoc psyq::basic_reference_string::traits_type
-        @tparam template_allocator_type memoryŠ„“–q‚ÌŒ^B
-        @param[in] in_left  ŒğŠ·‚·‚é•¶š—ñB
-        @param[in] in_right ŒğŠ·‚·‚é•¶š—ñB
+        @tparam template_allocator_type memoryå‰²å½“å­ã®å‹ã€‚
+        @param[in] in_left  äº¤æ›ã™ã‚‹æ–‡å­—åˆ—ã€‚
+        @param[in] in_right äº¤æ›ã™ã‚‹æ–‡å­—åˆ—ã€‚
      */
     template<
         typename template_char_type,

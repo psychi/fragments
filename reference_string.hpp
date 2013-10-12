@@ -50,26 +50,26 @@ namespace psyq
             class basic_reference_string;
     /// @endcond
 
-    /// charŒ^‚Ì•¶š‚ğˆµ‚¤ basic_reference_string
+    /// charå‹ã®æ–‡å­—ã‚’æ‰±ã† basic_reference_string
     typedef psyq::basic_reference_string<char> reference_string;
 
-    /// wchar_tŒ^‚Ì•¶š‚ğˆµ‚¤ basic_reference_string
+    /// wchar_tå‹ã®æ–‡å­—ã‚’æ‰±ã† basic_reference_string
     typedef psyq::basic_reference_string<wchar_t> reference_wstring;
 
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string ‚Ìinterface‚ğ–Í‚µ‚½A•¶š—ñ‚Ö‚ÌconstQÆB
+/** @brief std::basic_string ã®interfaceã‚’æ¨¡ã—ãŸã€æ–‡å­—åˆ—ã¸ã®constå‚ç…§ã€‚
 
-    - C•¶š—ñ‚ğ’Pƒ‚ÉconstQÆ‚·‚éB
-    - memoryŠ„‚è“–‚Ä‚ğˆêØs‚í‚È‚¢B
-    - •¶š—ñ‚ğ‘‚«Š·‚¦‚éinterface‚Í‚È‚¢B
+    - Cæ–‡å­—åˆ—ã‚’å˜ç´”ã«constå‚ç…§ã™ã‚‹ã€‚
+    - memoryå‰²ã‚Šå½“ã¦ã‚’ä¸€åˆ‡è¡Œã‚ãªã„ã€‚
+    - æ–‡å­—åˆ—ã‚’æ›¸ãæ›ãˆã‚‹interfaceã¯ãªã„ã€‚
     - not thread-safe
 
     @warning
-        C•¶š—ñ‚ğ’Pƒ‚ÉconstQÆ‚µ‚Ä‚¢‚é‚Ì‚ÅA
-        QÆ‚µ‚Ä‚é•¶š—ñ‚ª”jŠü‚³‚ê‚é‚ÆA“®ì‚ğ•ÛØ‚Å‚«‚È‚­‚È‚éB
-        •¶š—ñ‚ğˆÀ‘S‚Éˆµ‚¤‚É‚ÍA psyq::basic_immutable_string ‚ğg‚¤B
+        Cæ–‡å­—åˆ—ã‚’å˜ç´”ã«constå‚ç…§ã—ã¦ã„ã‚‹ã®ã§ã€
+        å‚ç…§ã—ã¦ã‚‹æ–‡å­—åˆ—ãŒç ´æ£„ã•ã‚Œã‚‹ã¨ã€å‹•ä½œã‚’ä¿è¨¼ã§ããªããªã‚‹ã€‚
+        æ–‡å­—åˆ—ã‚’å®‰å…¨ã«æ‰±ã†ã«ã¯ã€ psyq::basic_immutable_string ã‚’ä½¿ã†ã€‚
 
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type
@@ -79,51 +79,51 @@ namespace psyq
 template<typename template_char_type, typename template_char_traits>
 class psyq::basic_reference_string
 {
-    /// this‚ªw‚·’l‚ÌŒ^B
+    /// thisãŒæŒ‡ã™å€¤ã®å‹ã€‚
     public: typedef psyq::basic_reference_string<
         template_char_type, template_char_traits> self;
 
     //-------------------------------------------------------------------------
-    /// •¶š“Á«‚ÌŒ^B
+    /// æ–‡å­—ç‰¹æ€§ã®å‹ã€‚
     public: typedef template_char_traits traits_type;
 
-    /// •¶š‚ÌŒ^B
+    /// æ–‡å­—ã®å‹ã€‚
     public: typedef typename self::traits_type::char_type value_type;
 
-    /// •¶š”‚ÌŒ^B
+    /// æ–‡å­—æ•°ã®å‹ã€‚
     public: typedef std::size_t size_type;
 
-    /// ”½•œq‚Ì·‚ğ•\‚·Œ^B
+    /// åå¾©å­ã®å·®ã‚’è¡¨ã™å‹ã€‚
     public: typedef std::ptrdiff_t difference_type;
 
-    /// •¶š‚Ö‚ÌpointerB
+    /// æ–‡å­—ã¸ã®pointerã€‚
     public: typedef typename self::value_type const* const_pointer;
 
-    /// •¶š‚Ö‚ÌpointerB
+    /// æ–‡å­—ã¸ã®pointerã€‚
     public: typedef typename self::const_pointer pointer;
 
-    /// •¶š‚Ö‚ÌQÆB
+    /// æ–‡å­—ã¸ã®å‚ç…§ã€‚
     public: typedef typename self::value_type const& const_reference;
 
-    /// •¶š‚Ö‚ÌQÆB
+    /// æ–‡å­—ã¸ã®å‚ç…§ã€‚
     public: typedef typename self::const_reference reference;
 
-    /// •¶š‚ğw‚·”½•œqB
+    /// æ–‡å­—ã‚’æŒ‡ã™åå¾©å­ã€‚
     public: typedef typename self::const_pointer const_iterator;
 
-    /// •¶š‚ğw‚·”½•œqB
+    /// æ–‡å­—ã‚’æŒ‡ã™åå¾©å­ã€‚
     public: typedef typename self::const_iterator iterator;
 
-    /// •¶š‚ğw‚·‹t”½•œqB
+    /// æ–‡å­—ã‚’æŒ‡ã™é€†åå¾©å­ã€‚
     public: typedef std::reverse_iterator<const_iterator>
         const_reverse_iterator;
 
-    /// •¶š‚ğw‚·‹t”½•œqB
+    /// æ–‡å­—ã‚’æŒ‡ã™é€†åå¾©å­ã€‚
     public: typedef typename self::const_reverse_iterator
         reverse_iterator;
 
     //-------------------------------------------------------------------------
-    /** @brief ‹ó‚Ì•¶š—ñ‚ğ\’z‚·‚éB
+    /** @brief ç©ºã®æ–‡å­—åˆ—ã‚’æ§‹ç¯‰ã™ã‚‹ã€‚
      */
     public: basic_reference_string()
     :
@@ -131,9 +131,9 @@ class psyq::basic_reference_string
         length_(0)
     {}
 
-    /** @brief •¶š—ñliteral‚ğQÆ‚·‚éB
-        @tparam template_size QÆ‚·‚é•¶š—ñliteral‚Ì—v‘f”B
-        @param[in] in_string QÆ‚·‚é•¶š—ñliteralB
+    /** @brief æ–‡å­—åˆ—literalã‚’å‚ç…§ã™ã‚‹ã€‚
+        @tparam template_size å‚ç…§ã™ã‚‹æ–‡å­—åˆ—literalã®è¦ç´ æ•°ã€‚
+        @param[in] in_string å‚ç…§ã™ã‚‹æ–‡å­—åˆ—literalã€‚
      */
     public: template <std::size_t template_size>
     basic_reference_string(
@@ -145,9 +145,9 @@ class psyq::basic_reference_string
         PSYQ_ASSERT(0 < template_size);
     }
 
-    /** @brief •¶š—ñ‚ğQÆ‚·‚éB
-        @param[in] in_string QÆ‚·‚é•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_length QÆ‚·‚é•¶š—ñ‚Ì’·‚³B
+    /** @brief æ–‡å­—åˆ—ã‚’å‚ç…§ã™ã‚‹ã€‚
+        @param[in] in_string å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_length å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã®é•·ã•ã€‚
      */
     public: basic_reference_string(
         typename self::const_pointer const in_string,
@@ -163,9 +163,9 @@ class psyq::basic_reference_string
         }
     }
 
-    /** @brief •¶š—ñ‚ğQÆ‚·‚éB
-        @param[in] in_begin QÆ‚·‚é•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_end   QÆ‚·‚é•¶š—ñ‚Ì––”öˆÊ’uB
+    /** @brief æ–‡å­—åˆ—ã‚’å‚ç…§ã™ã‚‹ã€‚
+        @param[in] in_begin å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_end   å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã®æœ«å°¾ä½ç½®ã€‚
      */
     public: basic_reference_string(
         typename self::const_pointer const in_begin,
@@ -181,9 +181,9 @@ class psyq::basic_reference_string
         }
     }
 
-    /** @brief ”CˆÓŒ^‚Ì•¶š—ñ‚ğQÆ‚·‚éB
+    /** @brief ä»»æ„å‹ã®æ–‡å­—åˆ—ã‚’å‚ç…§ã™ã‚‹ã€‚
         @tparam template_string_type @copydoc string_interface
-        @param[in] in_string QÆ‚·‚é•¶š—ñB
+        @param[in] in_string å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã€‚
      */
     public: template<typename template_string_type>
     basic_reference_string(template_string_type const& in_string)
@@ -192,11 +192,11 @@ class psyq::basic_reference_string
         length_(in_string.length())
     {}
 
-    /** @brief ”CˆÓŒ^‚Ì•¶š—ñ‚ğQÆ‚·‚éB
+    /** @brief ä»»æ„å‹ã®æ–‡å­—åˆ—ã‚’å‚ç…§ã™ã‚‹ã€‚
         @tparam template_string_type @copydoc string_interface
-        @param[in] in_string QÆ‚·‚é•¶š—ñB
-        @param[in] in_offset QÆ‚·‚é•¶š—ñ‚ÌŠJnoffsetˆÊ’uB
-        @param[in] in_count  QÆ‚·‚é•¶š”B
+        @param[in] in_string å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã€‚
+        @param[in] in_offset å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã®é–‹å§‹offsetä½ç½®ã€‚
+        @param[in] in_count  å‚ç…§ã™ã‚‹æ–‡å­—æ•°ã€‚
      */
     public: template<typename template_string_type>
     basic_reference_string(
@@ -210,8 +210,8 @@ class psyq::basic_reference_string
     {}
 
     //-------------------------------------------------------------------------
-    /** @brief •¶š—ñ‚ğŒğŠ·‚·‚éB
-        @param[in,out] io_target ŒğŠ·‚·‚é•¶š—ñB
+    /** @brief æ–‡å­—åˆ—ã‚’äº¤æ›ã™ã‚‹ã€‚
+        @param[in,out] io_target äº¤æ›ã™ã‚‹æ–‡å­—åˆ—ã€‚
      */
     public: void swap(self& io_target)
     {
@@ -219,7 +219,7 @@ class psyq::basic_reference_string
         std::swap(this->length_, io_target.length_);
     }
 
-    /** @brief •¶š—ñ‚ğ‹ó‚É‚·‚éB
+    /** @brief æ–‡å­—åˆ—ã‚’ç©ºã«ã™ã‚‹ã€‚
      */
     public: void clear()
     {
@@ -227,9 +227,9 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief •¶š—ñliteral‚ğQÆ‚·‚éB
-        @tparam template_size QÆ‚·‚é•¶š—ñliteral‚Ì—v‘f”B
-        @param[in] in_string QÆ‚·‚é•¶š—ñliteralB
+    /** @brief æ–‡å­—åˆ—literalã‚’å‚ç…§ã™ã‚‹ã€‚
+        @tparam template_size å‚ç…§ã™ã‚‹æ–‡å­—åˆ—literalã®è¦ç´ æ•°ã€‚
+        @param[in] in_string å‚ç…§ã™ã‚‹æ–‡å­—åˆ—literalã€‚
      */
     public: template <std::size_t template_size>
     self& assign(typename self::value_type const (&in_string)[template_size])
@@ -237,9 +237,9 @@ class psyq::basic_reference_string
         return *new(this) self(in_string);
     }
 
-    /** @brief •¶š—ñ‚ğQÆ‚·‚éB
-        @param[in] in_string QÆ‚·‚é•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_length QÆ‚·‚é•¶š—ñ‚Ì’·‚³B
+    /** @brief æ–‡å­—åˆ—ã‚’å‚ç…§ã™ã‚‹ã€‚
+        @param[in] in_string å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_length å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã®é•·ã•ã€‚
      */
     public: self& assign(
         typename self::const_pointer const in_string,
@@ -248,9 +248,9 @@ class psyq::basic_reference_string
         return *new(this) self(in_string, in_length);
     }
 
-    /** @brief •¶š—ñ‚ğQÆ‚·‚éB
-        @param[in] in_begin QÆ‚·‚é•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_end   QÆ‚·‚é•¶š—ñ‚Ì––”öˆÊ’uB
+    /** @brief æ–‡å­—åˆ—ã‚’å‚ç…§ã™ã‚‹ã€‚
+        @param[in] in_begin å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_end   å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã®æœ«å°¾ä½ç½®ã€‚
      */
     public: self& assign(
         typename self::const_pointer const in_begin,
@@ -259,9 +259,9 @@ class psyq::basic_reference_string
         return *new(this) self(in_begin, in_end);
     }
 
-    /** @brief ”CˆÓŒ^‚Ì•¶š—ñ‚ğQÆ‚·‚éB
+    /** @brief ä»»æ„å‹ã®æ–‡å­—åˆ—ã‚’å‚ç…§ã™ã‚‹ã€‚
         @tparam template_string_type @copydoc string_interface
-        @param[in] in_string QÆ‚·‚é•¶š—ñB
+        @param[in] in_string å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã€‚
      */
     public: template<typename template_string_type>
     self& assign(template_string_type const& in_string)
@@ -269,11 +269,11 @@ class psyq::basic_reference_string
         return *new(this) self(in_string);
     }
 
-    /** @brief ”CˆÓŒ^‚Ì•¶š—ñ‚ğQÆ‚·‚éB
+    /** @brief ä»»æ„å‹ã®æ–‡å­—åˆ—ã‚’å‚ç…§ã™ã‚‹ã€‚
         @tparam template_string_type @copydoc string_interface
-        @param[in] in_string QÆ‚·‚é•¶š—ñB
-        @param[in] in_offset QÆ‚·‚é•¶š—ñ‚ÌŠJnoffsetˆÊ’uB
-        @param[in] in_count  QÆ‚·‚é•¶š”B
+        @param[in] in_string å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã€‚
+        @param[in] in_offset å‚ç…§ã™ã‚‹æ–‡å­—åˆ—ã®é–‹å§‹offsetä½ç½®ã€‚
+        @param[in] in_count  å‚ç…§ã™ã‚‹æ–‡å­—æ•°ã€‚
      */
     public: template<typename template_string_type>
     self& assign(
@@ -286,81 +286,81 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief •¶š—ñ‚Ìæ“ªˆÊ’u‚ğæ“¾‚·‚éB
-        @return •¶š—ñ‚Ìæ“ªˆÊ’uB
-        @warning •¶š—ñ‚ª‹ó•¶š‚ÅI‚í‚Á‚Ä‚¢‚é‚Æ‚ÍŒÀ‚ç‚È‚¢B
+    /** @brief æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã‚’å–å¾—ã™ã‚‹ã€‚
+        @return æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @warning æ–‡å­—åˆ—ãŒç©ºæ–‡å­—ã§çµ‚ã‚ã£ã¦ã„ã‚‹ã¨ã¯é™ã‚‰ãªã„ã€‚
      */
     public: typename self::const_pointer data() const
     {
         return this->data_;
     }
 
-    /** @brief •¶š—ñ‚Ìæ“ªˆÊ’u‚ğæ“¾‚·‚éB
-        @return •¶š—ñ‚Ìæ“ªˆÊ’u‚Ö‚Ì”½•œqB
+    /** @brief æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã‚’å–å¾—ã™ã‚‹ã€‚
+        @return æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã¸ã®åå¾©å­ã€‚
      */
     public: typename self::const_iterator begin() const
     {
         return this->data();
     }
 
-    /** @brief •¶š—ñ‚Ì––”öˆÊ’u‚ğæ“¾‚·‚éB
-        @return •¶š—ñ‚Ì––”öˆÊ’u‚Ö‚Ì”½•œqB
+    /** @brief æ–‡å­—åˆ—ã®æœ«å°¾ä½ç½®ã‚’å–å¾—ã™ã‚‹ã€‚
+        @return æ–‡å­—åˆ—ã®æœ«å°¾ä½ç½®ã¸ã®åå¾©å­ã€‚
      */
     public: typename self::const_iterator end() const
     {
         return this->begin() + this->length();
     }
 
-    /** @brief •¶š—ñ‚Ìæ“ªˆÊ’u‚ğæ“¾‚·‚éB
-        @return •¶š—ñ‚Ìæ“ªˆÊ’u‚Ö‚Ì”½•œqB
+    /** @brief æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã‚’å–å¾—ã™ã‚‹ã€‚
+        @return æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã¸ã®åå¾©å­ã€‚
      */
     public: typename self::const_iterator cbegin() const
     {
         return this->begin();
     }
 
-    /** @brief •¶š—ñ‚Ì––”öˆÊ’u‚ğæ“¾‚·‚éB
-        @return •¶š—ñ‚Ì––”öˆÊ’u‚Ö‚Ì”½•œqB
+    /** @brief æ–‡å­—åˆ—ã®æœ«å°¾ä½ç½®ã‚’å–å¾—ã™ã‚‹ã€‚
+        @return æ–‡å­—åˆ—ã®æœ«å°¾ä½ç½®ã¸ã®åå¾©å­ã€‚
      */
     public: typename self::const_iterator cend() const
     {
         return this->end();
     }
 
-    /** @brief •¶š—ñ‚Ì––”öˆÊ’u‚ğæ“¾‚·‚éB
-        @return •¶š—ñ‚Ì––”öˆÊ’u‚Ö‚Ì‹t”½•œqB
+    /** @brief æ–‡å­—åˆ—ã®æœ«å°¾ä½ç½®ã‚’å–å¾—ã™ã‚‹ã€‚
+        @return æ–‡å­—åˆ—ã®æœ«å°¾ä½ç½®ã¸ã®é€†åå¾©å­ã€‚
      */
     public: typename self::const_reverse_iterator rbegin() const
     {
         return typename self::const_reverse_iterator(this->end());
     }
 
-    /** @brief •¶š—ñ‚Ìæ“ªˆÊ’u‚ğæ“¾‚·‚éB
-        @return •¶š—ñ‚Ìæ“ªˆÊ’u‚Ö‚Ì‹t”½•œqB
+    /** @brief æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã‚’å–å¾—ã™ã‚‹ã€‚
+        @return æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã¸ã®é€†åå¾©å­ã€‚
      */
     public: typename self::const_reverse_iterator rend() const
     {
         return typename self::const_reverse_iterator(this->begin());
     }
 
-    /** @brief •¶š—ñ‚Ì––”öˆÊ’u‚ğæ“¾‚·‚éB
-        @return •¶š—ñ‚Ì––”öˆÊ’u‚Ö‚Ì‹t”½•œqB
+    /** @brief æ–‡å­—åˆ—ã®æœ«å°¾ä½ç½®ã‚’å–å¾—ã™ã‚‹ã€‚
+        @return æ–‡å­—åˆ—ã®æœ«å°¾ä½ç½®ã¸ã®é€†åå¾©å­ã€‚
      */
     public: typename self::const_reverse_iterator crbegin() const
     {
         return this->rbegin();
     }
 
-    /** @brief •¶š—ñ‚Ìæ“ªˆÊ’u‚ğæ“¾‚·‚éB
-        @return •¶š—ñ‚Ìæ“ªˆÊ’u‚Ö‚Ì‹t”½•œqB
+    /** @brief æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã‚’å–å¾—ã™ã‚‹ã€‚
+        @return æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã¸ã®é€†åå¾©å­ã€‚
      */
     public: typename self::const_reverse_iterator crend() const
     {
         return this->rend();
     }
 
-    /** @brief •¶š—ñ‚Ìæ“ª•¶š‚ğQÆ‚·‚éB
-        @return •¶š—ñ‚Ìæ“ª•¶š‚Ö‚ÌQÆB
+    /** @brief æ–‡å­—åˆ—ã®å…ˆé ­æ–‡å­—ã‚’å‚ç…§ã™ã‚‹ã€‚
+        @return æ–‡å­—åˆ—ã®å…ˆé ­æ–‡å­—ã¸ã®å‚ç…§ã€‚
      */
     typename self::const_reference front() const
     {
@@ -368,8 +368,8 @@ class psyq::basic_reference_string
         return (*this)[0];
     }
 
-    /** @brief •¶š—ñ‚Ì––”ö•¶š‚ğQÆ‚·‚éB
-        @return •¶š—ñ‚Ì––”ö•¶š‚Ö‚ÌQÆB
+    /** @brief æ–‡å­—åˆ—ã®æœ«å°¾æ–‡å­—ã‚’å‚ç…§ã™ã‚‹ã€‚
+        @return æ–‡å­—åˆ—ã®æœ«å°¾æ–‡å­—ã¸ã®å‚ç…§ã€‚
      */
     public: typename self::const_reference back() const
     {
@@ -377,9 +377,9 @@ class psyq::basic_reference_string
         return (*this)[this->length() - 1];
     }
 
-    /** @brief •”•ª•¶š—ñ‚ğæ“¾‚·‚éB
-        @param[in] in_offset •”•ª•¶š—ñ‚ÌŠJnoffsetˆÊ’uB
-        @param[in] in_count  •”•ª•¶š—ñ‚Ì•¶š”B
+    /** @brief éƒ¨åˆ†æ–‡å­—åˆ—ã‚’å–å¾—ã™ã‚‹ã€‚
+        @param[in] in_offset éƒ¨åˆ†æ–‡å­—åˆ—ã®é–‹å§‹offsetä½ç½®ã€‚
+        @param[in] in_count  éƒ¨åˆ†æ–‡å­—åˆ—ã®æ–‡å­—æ•°ã€‚
      */
     public: self substr(
         typename self::size_type in_offset = 0,
@@ -390,45 +390,45 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief •¶š—ñ‚Ì’·‚³‚ğæ“¾‚·‚éB
-        @return •¶š—ñ‚Ì’·‚³B
+    /** @brief æ–‡å­—åˆ—ã®é•·ã•ã‚’å–å¾—ã™ã‚‹ã€‚
+        @return æ–‡å­—åˆ—ã®é•·ã•ã€‚
      */
     public: typename self::size_type length() const
     {
         return this->length_;
     }
 
-    /** @brief •¶š—ñ‚Ì’·‚³‚ğæ“¾‚·‚éB
-        @return •¶š—ñ‚Ì’·‚³B
+    /** @brief æ–‡å­—åˆ—ã®é•·ã•ã‚’å–å¾—ã™ã‚‹ã€‚
+        @return æ–‡å­—åˆ—ã®é•·ã•ã€‚
      */
     public: typename self::size_type size() const
     {
         return this->length();
     }
 
-    /** @brief •¶š—ñ‚ÌÅ‘å’·‚ğæ“¾‚·‚éB
+    /** @brief æ–‡å­—åˆ—ã®æœ€å¤§é•·ã‚’å–å¾—ã™ã‚‹ã€‚
         @return
-            •¶š—ñ‚ÌÅ‘å’·B
-            •¶š—ñ‚Ì‘‚«Š·‚¦‚ª‚Å‚«‚È‚¢‚Ì‚ÅA•¶š—ñ‚Ì’·‚³‚Æ“¯‚¶’l‚É‚È‚éB
+            æ–‡å­—åˆ—ã®æœ€å¤§é•·ã€‚
+            æ–‡å­—åˆ—ã®æ›¸ãæ›ãˆãŒã§ããªã„ã®ã§ã€æ–‡å­—åˆ—ã®é•·ã•ã¨åŒã˜å€¤ã«ãªã‚‹ã€‚
      */
     public: typename self::size_type max_size() const
     {
         return this->length();
     }
 
-    /** @brief •¶š—ñ‚Ì—e—Ê‚ğæ“¾‚·‚éB
+    /** @brief æ–‡å­—åˆ—ã®å®¹é‡ã‚’å–å¾—ã™ã‚‹ã€‚
         @return
-           •¶š—ñ‚Ì—e—ÊB
-           •¶š—ñ‚Ì‘‚«Š·‚¦‚ª‚Å‚«‚È‚¢‚Ì‚ÅA•¶š—ñ‚Ì’·‚³‚Æ“¯‚¶’l‚É‚È‚éB
+           æ–‡å­—åˆ—ã®å®¹é‡ã€‚
+           æ–‡å­—åˆ—ã®æ›¸ãæ›ãˆãŒã§ããªã„ã®ã§ã€æ–‡å­—åˆ—ã®é•·ã•ã¨åŒã˜å€¤ã«ãªã‚‹ã€‚
      */
     public: typename self::size_type capacity() const
     {
         return this->length();
     }
 
-    /** @brief ‹ó‚Ì•¶š—ñ‚©”»’è‚·‚éB
-        @retval true  ‹ó‚Ì•¶š—ñB
-        @retval false ‹ó‚Ì•¶š—ñ‚Å‚Í‚È‚¢B
+    /** @brief ç©ºã®æ–‡å­—åˆ—ã‹åˆ¤å®šã™ã‚‹ã€‚
+        @retval true  ç©ºã®æ–‡å­—åˆ—ã€‚
+        @retval false ç©ºã®æ–‡å­—åˆ—ã§ã¯ãªã„ã€‚
      */
     public: bool empty() const
     {
@@ -436,9 +436,9 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief •¶š—ñ‚ª‚Â•¶š‚ğQÆ‚·‚éB
-        @param[in] in_index •¶š‚Ìindex”Ô†B
-        @return •¶š‚Ö‚ÌQÆB
+    /** @brief æ–‡å­—åˆ—ãŒæŒã¤æ–‡å­—ã‚’å‚ç…§ã™ã‚‹ã€‚
+        @param[in] in_index æ–‡å­—ã®indexç•ªå·ã€‚
+        @return æ–‡å­—ã¸ã®å‚ç…§ã€‚
      */
     public: typename self::const_reference at(
         typename self::size_type const in_index)
@@ -447,14 +447,14 @@ class psyq::basic_reference_string
         if (this->length() <= in_index)
         {
             PSYQ_ASSERT(false);
-            //throw std::out_of_range; // —áŠO‚Íg‚¢‚½‚­‚È‚¢B
+            //throw std::out_of_range; // ä¾‹å¤–ã¯ä½¿ã„ãŸããªã„ã€‚
         }
         return *(this->data() + in_index);
     }
 
-    /** @brief •¶š—ñ‚ª‚Â•¶š‚ğQÆ‚·‚éB
-        @param[in] in_index •¶š‚Ìindex”Ô†B
-        @return •¶š‚Ö‚ÌQÆB
+    /** @brief æ–‡å­—åˆ—ãŒæŒã¤æ–‡å­—ã‚’å‚ç…§ã™ã‚‹ã€‚
+        @param[in] in_index æ–‡å­—ã®indexç•ªå·ã€‚
+        @return æ–‡å­—ã¸ã®å‚ç…§ã€‚
      */
     public: typename self::const_reference operator[](
         typename self::size_type const in_index)
@@ -465,72 +465,72 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief •¶š—ñ‚ğ”äŠr‚·‚éB
+    /** @brief æ–‡å­—åˆ—ã‚’æ¯”è¼ƒã™ã‚‹ã€‚
 
-        *this‚ğ¶•Ó‚Æ‚µ‚ÄA‰E•Ó‚Ì•¶š—ñ‚Æ”äŠr‚·‚éB
+        *thisã‚’å·¦è¾ºã¨ã—ã¦ã€å³è¾ºã®æ–‡å­—åˆ—ã¨æ¯”è¼ƒã™ã‚‹ã€‚
 
-        @param[in] in_right ‰E•Ó‚Ì•¶š—ñB
-        @return ¶•Ó == ‰E•Ó
+        @param[in] in_right å³è¾ºã®æ–‡å­—åˆ—ã€‚
+        @return å·¦è¾º == å³è¾º
      */
     public: bool operator==(self const& in_right) const
     {
         return this->is_equal(in_right.data(), in_right.length());
     }
 
-    /** @brief •¶š—ñ‚ğ”äŠr‚·‚éB
+    /** @brief æ–‡å­—åˆ—ã‚’æ¯”è¼ƒã™ã‚‹ã€‚
 
-        *this‚ğ¶•Ó‚Æ‚µ‚ÄA‰E•Ó‚Ì•¶š—ñ‚Æ”äŠr‚·‚éB
+        *thisã‚’å·¦è¾ºã¨ã—ã¦ã€å³è¾ºã®æ–‡å­—åˆ—ã¨æ¯”è¼ƒã™ã‚‹ã€‚
 
-        @param[in] in_right ‰E•Ó‚Ì•¶š—ñB
-        @return ¶•Ó != ‰E•Ó
+        @param[in] in_right å³è¾ºã®æ–‡å­—åˆ—ã€‚
+        @return å·¦è¾º != å³è¾º
      */
     public: bool operator!=(self const& in_right) const
     {
         return !this->is_equal(in_right.data(), in_right.length());
     }
 
-    /** @brief •¶š—ñ‚ğ”äŠr‚·‚éB
+    /** @brief æ–‡å­—åˆ—ã‚’æ¯”è¼ƒã™ã‚‹ã€‚
 
-        *this‚ğ¶•Ó‚Æ‚µ‚ÄA‰E•Ó‚Ì•¶š—ñ‚Æ”äŠr‚·‚éB
+        *thisã‚’å·¦è¾ºã¨ã—ã¦ã€å³è¾ºã®æ–‡å­—åˆ—ã¨æ¯”è¼ƒã™ã‚‹ã€‚
 
-        @param[in] in_right ‰E•Ó‚Ì•¶š—ñB
-        @return ¶•Ó < ‰E•Ó
+        @param[in] in_right å³è¾ºã®æ–‡å­—åˆ—ã€‚
+        @return å·¦è¾º < å³è¾º
      */
     public: bool operator<(self const& in_right) const
     {
         return this->compare(in_right) < 0;
     }
 
-    /** @brief •¶š—ñ‚ğ”äŠr‚·‚éB
+    /** @brief æ–‡å­—åˆ—ã‚’æ¯”è¼ƒã™ã‚‹ã€‚
 
-        *this‚ğ¶•Ó‚Æ‚µ‚ÄA‰E•Ó‚Ì•¶š—ñ‚Æ”äŠr‚·‚éB
+        *thisã‚’å·¦è¾ºã¨ã—ã¦ã€å³è¾ºã®æ–‡å­—åˆ—ã¨æ¯”è¼ƒã™ã‚‹ã€‚
 
-        @param[in] in_right ‰E•Ó‚Ì•¶š—ñB
-        @return ¶•Ó <= ‰E•Ó
+        @param[in] in_right å³è¾ºã®æ–‡å­—åˆ—ã€‚
+        @return å·¦è¾º <= å³è¾º
      */
     public: bool operator<=(self const& in_right) const
     {
         return this->compare(in_right) <= 0;
     }
 
-    /** @brief •¶š—ñ‚ğ”äŠr‚·‚éB
+    /** @brief æ–‡å­—åˆ—ã‚’æ¯”è¼ƒã™ã‚‹ã€‚
 
-        *this‚ğ¶•Ó‚Æ‚µ‚ÄA‰E•Ó‚Ì•¶š—ñ‚Æ”äŠr‚·‚éB
+        *thisã‚’å·¦è¾ºã¨ã—ã¦ã€å³è¾ºã®æ–‡å­—åˆ—ã¨æ¯”è¼ƒã™ã‚‹ã€‚
 
-        @param[in] in_right ‰E•Ó‚Ì•¶š—ñB
-        @return ¶•Ó > ‰E•Ó
+        @param[in] in_right å³è¾ºã®æ–‡å­—åˆ—ã€‚
+        @return å·¦è¾º > å³è¾º
      */
     public: bool operator>(self const& in_right) const
     {
         return 0 < this->compare(in_right);
     }
 
-    /** @brief •¶š—ñ‚ğ”äŠr‚·‚éB
+    /** @brief æ–‡å­—åˆ—ã‚’æ¯”è¼ƒã™ã‚‹ã€‚
 
-        *this‚ğ¶•Ó‚Æ‚µ‚ÄA‰E•Ó‚Ì•¶š—ñ‚Æ”äŠr‚·‚éB
+        *thisã‚’å·¦è¾ºã¨ã—ã¦ã€å³è¾ºã®æ–‡å­—åˆ—ã¨æ¯”è¼ƒã™ã‚‹ã€‚
 
-        @param[in] in_right ‰E•Ó‚Ì•¶š—ñB
-        @return ¶•Ó >= ‰E•Ó
+        @param[in] in_right å³è¾ºã®æ–‡å­—åˆ—ã€‚
+        @return å·¦è¾º >= å³è¾º
      */
     public: bool operator>=(self const& in_right) const
     {
@@ -538,11 +538,11 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief •¶š—ñ‚ğ”äŠr‚·‚éB
-        @param[in] in_right ‰E•Ó‚Ì•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @retval •‰ ‰E•Ó‚Ì‚Ù‚¤‚ª‘å‚«‚¢B
-        @retval ³ ¶•Ó‚Ì‚Ù‚¤‚ª‘å‚«‚¢B
-        @retval 0  ¶•Ó‚Æ‰E•Ó‚Í“™‰¿B
+    /** @brief æ–‡å­—åˆ—ã‚’æ¯”è¼ƒã™ã‚‹ã€‚
+        @param[in] in_right å³è¾ºã®æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @retval è²  å³è¾ºã®ã»ã†ãŒå¤§ãã„ã€‚
+        @retval æ­£ å·¦è¾ºã®ã»ã†ãŒå¤§ãã„ã€‚
+        @retval 0  å·¦è¾ºã¨å³è¾ºã¯ç­‰ä¾¡ã€‚
      */
     public: template<std::size_t template_size>
     int compare(
@@ -551,12 +551,12 @@ class psyq::basic_reference_string
         return this->compare(0, this->length(), in_right);
     }
 
-    /** @brief •¶š—ñ‚ğ”äŠr‚·‚éB
+    /** @brief æ–‡å­—åˆ—ã‚’æ¯”è¼ƒã™ã‚‹ã€‚
         @tparam template_string_traits @copydoc string_interface
-        @param[in] in_right ‰E•Ó‚Ì•¶š—ñB
-        @retval •‰ ‰E•Ó‚Ì‚Ù‚¤‚ª‘å‚«‚¢B
-        @retval ³ ¶•Ó‚Ì‚Ù‚¤‚ª‘å‚«‚¢B
-        @retval 0  ¶•Ó‚Æ‰E•Ó‚Í“™‰¿B
+        @param[in] in_right å³è¾ºã®æ–‡å­—åˆ—ã€‚
+        @retval è²  å³è¾ºã®ã»ã†ãŒå¤§ãã„ã€‚
+        @retval æ­£ å·¦è¾ºã®ã»ã†ãŒå¤§ãã„ã€‚
+        @retval 0  å·¦è¾ºã¨å³è¾ºã¯ç­‰ä¾¡ã€‚
      */
     public: template<typename template_string_type>
     int compare(template_string_type const& in_right) const
@@ -565,13 +565,13 @@ class psyq::basic_reference_string
             0, this->length(), in_right.data(), in_right.length());
     }
 
-    /** @brief •¶š—ñ‚ğ”äŠr‚·‚éB
-        @param[in] in_left_offset ¶•Ó‚Ì•¶š—ñ‚ÌŠJnˆÊ’uB
-        @param[in] in_left_count  ¶•Ó‚Ì•¶š—ñ‚Ì•¶š”B
-        @param[in] in_right       ‰E•Ó‚Ì•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @retval •‰ ‰E•Ó‚Ì‚Ù‚¤‚ª‘å‚«‚¢B
-        @retval ³ ¶•Ó‚Ì‚Ù‚¤‚ª‘å‚«‚¢B
-        @retval 0  ¶•Ó‚Æ‰E•Ó‚Í“™‰¿B
+    /** @brief æ–‡å­—åˆ—ã‚’æ¯”è¼ƒã™ã‚‹ã€‚
+        @param[in] in_left_offset å·¦è¾ºã®æ–‡å­—åˆ—ã®é–‹å§‹ä½ç½®ã€‚
+        @param[in] in_left_count  å·¦è¾ºã®æ–‡å­—åˆ—ã®æ–‡å­—æ•°ã€‚
+        @param[in] in_right       å³è¾ºã®æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @retval è²  å³è¾ºã®ã»ã†ãŒå¤§ãã„ã€‚
+        @retval æ­£ å·¦è¾ºã®ã»ã†ãŒå¤§ãã„ã€‚
+        @retval 0  å·¦è¾ºã¨å³è¾ºã¯ç­‰ä¾¡ã€‚
      */
     public: template <std::size_t template_size>
     int compare(
@@ -584,14 +584,14 @@ class psyq::basic_reference_string
             in_left_offset, in_left_count, &in_right[0], template_size - 1);
     }
 
-    /** @brief •¶š—ñ‚ğ”äŠr‚·‚éB
+    /** @brief æ–‡å­—åˆ—ã‚’æ¯”è¼ƒã™ã‚‹ã€‚
         @tparam template_string_traits @copydoc string_interface
-        @param[in] in_left_offset ¶•Ó‚Ì•¶š—ñ‚ÌŠJnˆÊ’uB
-        @param[in] in_left_count  ¶•Ó‚Ì•¶š—ñ‚Ì•¶š”B
-        @param[in] in_right       ‰E•Ó‚Ì•¶š—ñB
-        @retval •‰ ‰E•Ó‚Ì‚Ù‚¤‚ª‘å‚«‚¢B
-        @retval ³ ¶•Ó‚Ì‚Ù‚¤‚ª‘å‚«‚¢B
-        @retval 0  ¶•Ó‚Æ‰E•Ó‚Í“™‰¿B
+        @param[in] in_left_offset å·¦è¾ºã®æ–‡å­—åˆ—ã®é–‹å§‹ä½ç½®ã€‚
+        @param[in] in_left_count  å·¦è¾ºã®æ–‡å­—åˆ—ã®æ–‡å­—æ•°ã€‚
+        @param[in] in_right       å³è¾ºã®æ–‡å­—åˆ—ã€‚
+        @retval è²  å³è¾ºã®ã»ã†ãŒå¤§ãã„ã€‚
+        @retval æ­£ å·¦è¾ºã®ã»ã†ãŒå¤§ãã„ã€‚
+        @retval 0  å·¦è¾ºã¨å³è¾ºã¯ç­‰ä¾¡ã€‚
      */
     public: template<typename template_string_type>
     int compare(
@@ -604,14 +604,14 @@ class psyq::basic_reference_string
             in_left_offset, in_left_count, in_right.data(), in_right.length());
     }
 
-    /** @brief •¶š—ñ‚ğ”äŠr‚·‚éB
-        @param[in] in_left_offset  ¶•Ó‚Ì•¶š—ñ‚ÌŠJnˆÊ’uB
-        @param[in] in_left_count   ¶•Ó‚Ì•¶š—ñ‚Ì•¶š”B
-        @param[in] in_right_begin  ‰E•Ó‚Ì•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_right_length ‰E•Ó‚Ì•¶š—ñ‚Ì’·‚³B
-        @retval •‰ ‰E•Ó‚Ì‚Ù‚¤‚ª‘å‚«‚¢B
-        @retval ³ ¶•Ó‚Ì‚Ù‚¤‚ª‘å‚«‚¢B
-        @retval 0  ¶•Ó‚Æ‰E•Ó‚Í“™‰¿B
+    /** @brief æ–‡å­—åˆ—ã‚’æ¯”è¼ƒã™ã‚‹ã€‚
+        @param[in] in_left_offset  å·¦è¾ºã®æ–‡å­—åˆ—ã®é–‹å§‹ä½ç½®ã€‚
+        @param[in] in_left_count   å·¦è¾ºã®æ–‡å­—åˆ—ã®æ–‡å­—æ•°ã€‚
+        @param[in] in_right_begin  å³è¾ºã®æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_right_length å³è¾ºã®æ–‡å­—åˆ—ã®é•·ã•ã€‚
+        @retval è²  å³è¾ºã®ã»ã†ãŒå¤§ãã„ã€‚
+        @retval æ­£ å·¦è¾ºã®ã»ã†ãŒå¤§ãã„ã€‚
+        @retval 0  å·¦è¾ºã¨å³è¾ºã¯ç­‰ä¾¡ã€‚
      */
     public: int compare(
         typename self::size_type const     in_left_offset,
@@ -643,16 +643,16 @@ class psyq::basic_reference_string
         return 0;
     }
 
-    /** @brief •¶š—ñ‚ğ”äŠr‚·‚éB
+    /** @brief æ–‡å­—åˆ—ã‚’æ¯”è¼ƒã™ã‚‹ã€‚
         @tparam template_string_traits @copydoc string_interface
-        @param[in] in_left_offset  ¶•Ó‚Ì•¶š—ñ‚ÌŠJnˆÊ’uB
-        @param[in] in_left_count   ¶•Ó‚Ì•¶š—ñ‚Ì•¶š”B
-        @param[in] in_right        ‰E•Ó‚Ì•¶š—ñB
-        @param[in] in_right_offset ¶•Ó‚Ì•¶š—ñ‚ÌŠJnˆÊ’uB
-        @param[in] in_right_count  ‰E•Ó‚Ì•¶š—ñ‚Ì•¶š”B
-        @retval •‰ ‰E•Ó‚Ì‚Ù‚¤‚ª‘å‚«‚¢B
-        @retval ³ ¶•Ó‚Ì‚Ù‚¤‚ª‘å‚«‚¢B
-        @retval 0  ¶•Ó‚Æ‰E•Ó‚Í“™‰¿B
+        @param[in] in_left_offset  å·¦è¾ºã®æ–‡å­—åˆ—ã®é–‹å§‹ä½ç½®ã€‚
+        @param[in] in_left_count   å·¦è¾ºã®æ–‡å­—åˆ—ã®æ–‡å­—æ•°ã€‚
+        @param[in] in_right        å³è¾ºã®æ–‡å­—åˆ—ã€‚
+        @param[in] in_right_offset å·¦è¾ºã®æ–‡å­—åˆ—ã®é–‹å§‹ä½ç½®ã€‚
+        @param[in] in_right_count  å³è¾ºã®æ–‡å­—åˆ—ã®æ–‡å­—æ•°ã€‚
+        @retval è²  å³è¾ºã®ã»ã†ãŒå¤§ãã„ã€‚
+        @retval æ­£ å·¦è¾ºã®ã»ã†ãŒå¤§ãã„ã€‚
+        @retval 0  å·¦è¾ºã¨å³è¾ºã¯ç­‰ä¾¡ã€‚
      */
     public: template<typename template_string_type>
     int compare(
@@ -671,10 +671,10 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief •¶š‚ğŒŸõ‚·‚éB
-        @param[in] in_char   ŒŸõ•¶šB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
-        @return ŒŸõ•¶š‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+    /** @brief æ–‡å­—ã‚’æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_char   æ¤œç´¢æ–‡å­—ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
+        @return æ¤œç´¢æ–‡å­—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: typename self::size_type find(
         typename self::value_type const in_char,
@@ -696,10 +696,10 @@ class psyq::basic_reference_string
         return self::npos;
     }
 
-    /** @brief •¶š—ñ‚ğŒŸõ‚·‚éB
-        @param[in] in_string ŒŸõ•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
-        @return ŒŸõ•¶š—ñ‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+    /** @brief æ–‡å­—åˆ—ã‚’æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_string æ¤œç´¢æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
+        @return æ¤œç´¢æ–‡å­—åˆ—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: template <std::size_t template_size>
     typename self::size_type find(
@@ -710,11 +710,11 @@ class psyq::basic_reference_string
         return this->find(&in_string[0], in_offset, template_size - 1);
     }
 
-    /** @brief •¶š—ñ‚ğŒŸõ‚·‚éB
+    /** @brief æ–‡å­—åˆ—ã‚’æ¤œç´¢ã™ã‚‹ã€‚
         @tparam template_string_traits @copydoc string_interface
-        @param[in] in_string ŒŸõ•¶š—ñB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
-        @return ŒŸõ•¶š—ñ‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+        @param[in] in_string æ¤œç´¢æ–‡å­—åˆ—ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
+        @return æ¤œç´¢æ–‡å­—åˆ—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: template<typename template_string_type>
     typename self::size_type find(
@@ -725,11 +725,11 @@ class psyq::basic_reference_string
         return this->find(in_string.data(), in_offset, in_string.length());
     }
 
-    /** @brief •¶š—ñ‚ğŒŸõ‚·‚éB
-        @param[in] in_string ŒŸõ•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
-        @param[in] in_length ŒŸõ•¶š—ñ‚Ì’·‚³B
-        @return ŒŸõ•¶š—ñ‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+    /** @brief æ–‡å­—åˆ—ã‚’æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_string æ¤œç´¢æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
+        @param[in] in_length æ¤œç´¢æ–‡å­—åˆ—ã®é•·ã•ã€‚
+        @return æ¤œç´¢æ–‡å­—åˆ—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: typename self::size_type find(
         typename self::const_pointer const in_string,
@@ -750,7 +750,7 @@ class psyq::basic_reference_string
             auto local_rest_string(this->data() + in_offset);
             for (;;)
             {
-                // ŒŸõ•¶š—ñ‚Ìæ“ª•¶š‚Æ‡’v‚·‚éˆÊ’u‚ğŒ©‚Â‚¯‚éB
+                // æ¤œç´¢æ–‡å­—åˆ—ã®å…ˆé ­æ–‡å­—ã¨åˆè‡´ã™ã‚‹ä½ç½®ã‚’è¦‹ã¤ã‘ã‚‹ã€‚
                 auto const local_find(
                     template_char_traits::find(
                         local_rest_string, local_rest_length, *in_string));
@@ -759,7 +759,7 @@ class psyq::basic_reference_string
                     break;
                 }
 
-                // ŒŸõ•¶š—ñ‚Æ‡’v‚·‚é‚©”»’èB
+                // æ¤œç´¢æ–‡å­—åˆ—ã¨åˆè‡´ã™ã‚‹ã‹åˆ¤å®šã€‚
                 int const local_compare(
                     template_char_traits::compare(
                         local_find, in_string, in_length));
@@ -768,7 +768,7 @@ class psyq::basic_reference_string
                     return local_find - this->data();
                 }
 
-                // Ÿ‚ÌŒó•â‚ÖB
+                // æ¬¡ã®å€™è£œã¸ã€‚
                 local_rest_length -= local_find + 1 - local_rest_string;
                 local_rest_string = local_find + 1;
             }
@@ -777,10 +777,10 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief Œã‚ë‚©‚ç•¶š‚ğŒŸõ‚·‚éB
-        @param[in] in_char   ŒŸõ•¶šB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
-        @return ŒŸõ•¶š‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+    /** @brief å¾Œã‚ã‹ã‚‰æ–‡å­—ã‚’æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_char   æ¤œç´¢æ–‡å­—ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
+        @return æ¤œç´¢æ–‡å­—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: typename self::size_type rfind(
         typename self::value_type const in_char,
@@ -804,10 +804,10 @@ class psyq::basic_reference_string
         return self::npos;
     }
 
-    /** @brief Œã‚ë‚©‚ç•¶š—ñ‚ğŒŸõ‚·‚éB
-        @param[in] in_string ŒŸõ•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
-        @return ŒŸõ•¶š—ñ‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+    /** @brief å¾Œã‚ã‹ã‚‰æ–‡å­—åˆ—ã‚’æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_string æ¤œç´¢æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
+        @return æ¤œç´¢æ–‡å­—åˆ—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: template <std::size_t template_size>
     typename self::size_type rfind(
@@ -818,11 +818,11 @@ class psyq::basic_reference_string
         return this->rfind(&in_string[0], in_offset, template_size - 1);
     }
 
-    /** @brief Œã‚ë‚©‚ç•¶š—ñ‚ğŒŸõ‚·‚éB
+    /** @brief å¾Œã‚ã‹ã‚‰æ–‡å­—åˆ—ã‚’æ¤œç´¢ã™ã‚‹ã€‚
         @tparam template_string_traits @copydoc string_interface
-        @param[in] in_string ŒŸõ•¶š—ñB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
-        @return ŒŸõ•¶š—ñ‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+        @param[in] in_string æ¤œç´¢æ–‡å­—åˆ—ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
+        @return æ¤œç´¢æ–‡å­—åˆ—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: template<typename template_string_type>
     typename self::size_type rfind(
@@ -833,11 +833,11 @@ class psyq::basic_reference_string
         return this->rfind(in_string.data(), in_offset, in_string.length());
     }
 
-    /** @brief Œã‚ë‚©‚ç•¶š—ñ‚ğŒŸõ‚·‚éB
-        @param[in] in_string ŒŸõ•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
-        @param[in] in_length ŒŸõ•¶š—ñ‚Ì’·‚³B
-        @return ŒŸõ•¶š—ñ‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+    /** @brief å¾Œã‚ã‹ã‚‰æ–‡å­—åˆ—ã‚’æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_string æ¤œç´¢æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
+        @param[in] in_length æ¤œç´¢æ–‡å­—åˆ—ã®é•·ã•ã€‚
+        @return æ¤œç´¢æ–‡å­—åˆ—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: typename self::size_type rfind(
         typename self::const_pointer const in_string,
@@ -872,10 +872,10 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief •¶š‚ğŒŸõ‚·‚éB
-        @param[in] in_char   ŒŸõ‚·‚é•¶šB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
-        @return ŒŸõ•¶š‚ªŒ©‚Â‚¯‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+    /** @brief æ–‡å­—ã‚’æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_char   æ¤œç´¢ã™ã‚‹æ–‡å­—ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
+        @return æ¤œç´¢æ–‡å­—ãŒè¦‹ã¤ã‘ãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: typename self::size_type find_first_of(
         typename self::value_type const in_char,
@@ -885,10 +885,10 @@ class psyq::basic_reference_string
         return this->find(in_char, in_offset);
     }
 
-    /** @brief ŒŸõ•¶š—ñ‚ÉŠÜ‚Ü‚ê‚é‚¢‚¸‚ê‚©‚Ì•¶š‚ğŒŸõ‚·‚éB
-        @param[in] in_string ŒŸõ•¶š—ñ‚Ìæ“ªˆÊ’uB•K‚¸nullptr‚ÅI‚í‚éB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
-        @return ŒŸõ•¶š‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+    /** @brief æ¤œç´¢æ–‡å­—åˆ—ã«å«ã¾ã‚Œã‚‹ã„ãšã‚Œã‹ã®æ–‡å­—ã‚’æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_string æ¤œç´¢æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚å¿…ãšnullptrã§çµ‚ã‚ã‚‹ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
+        @return æ¤œç´¢æ–‡å­—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: template <std::size_t template_size>
     typename self::size_type find_first_of(
@@ -900,11 +900,11 @@ class psyq::basic_reference_string
             &in_string[0], in_offset, template_size - 1);
     }
 
-    /** @brief ŒŸõ•¶š—ñ‚ÉŠÜ‚Ü‚ê‚é‚¢‚¸‚ê‚©‚Ì•¶š‚ğŒŸõ‚·‚éB
+    /** @brief æ¤œç´¢æ–‡å­—åˆ—ã«å«ã¾ã‚Œã‚‹ã„ãšã‚Œã‹ã®æ–‡å­—ã‚’æ¤œç´¢ã™ã‚‹ã€‚
         @tparam template_string_traits @copydoc string_interface
-        @param[in] in_string ŒŸõ•¶š—ñB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
-        @return ŒŸõ•¶š‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+        @param[in] in_string æ¤œç´¢æ–‡å­—åˆ—ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
+        @return æ¤œç´¢æ–‡å­—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: template<typename template_string_type>
     typename self::size_type find_first_of(
@@ -916,11 +916,11 @@ class psyq::basic_reference_string
             in_string.data(), in_offset, in_string.length());
     }
 
-    /** @brief ŒŸõ•¶š—ñ‚ÉŠÜ‚Ü‚ê‚é‚¢‚¸‚ê‚©‚Ì•¶š‚ğŒŸõ‚·‚éB
-        @param[in] in_string ŒŸõ•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
-        @param[in] in_length ŒŸõ•¶š—ñ‚Ì’·‚³B
-        @return ŒŸõ•¶š‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+    /** @brief æ¤œç´¢æ–‡å­—åˆ—ã«å«ã¾ã‚Œã‚‹ã„ãšã‚Œã‹ã®æ–‡å­—ã‚’æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_string æ¤œç´¢æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
+        @param[in] in_length æ¤œç´¢æ–‡å­—åˆ—ã®é•·ã•ã€‚
+        @return æ¤œç´¢æ–‡å­—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: typename self::size_type find_first_of(
         typename self::const_pointer const in_string,
@@ -944,10 +944,10 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief •¶š‚ğŒã‚ë‚©‚çŒŸõ‚·‚éB
-        @param[in] in_char   ŒŸõ•¶šB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
-        @return ŒŸõ•¶š‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+    /** @brief æ–‡å­—ã‚’å¾Œã‚ã‹ã‚‰æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_char   æ¤œç´¢æ–‡å­—ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
+        @return æ¤œç´¢æ–‡å­—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: typename self::size_type find_last_of(
         typename self::value_type const in_char,
@@ -957,10 +957,10 @@ class psyq::basic_reference_string
         return this->rfind(in_char, in_offset);
     }
 
-    /** @brief ŒŸõ•¶š—ñ‚ÉŠÜ‚Ü‚ê‚é‚¢‚¸‚ê‚©‚Ì•¶š‚ğAŒã‚ë‚©‚çŒŸõ‚·‚éB
-        @param[in] in_string ŒŸõ•¶š—ñB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
-        @return ŒŸõ•¶š‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+    /** @brief æ¤œç´¢æ–‡å­—åˆ—ã«å«ã¾ã‚Œã‚‹ã„ãšã‚Œã‹ã®æ–‡å­—ã‚’ã€å¾Œã‚ã‹ã‚‰æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_string æ¤œç´¢æ–‡å­—åˆ—ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
+        @return æ¤œç´¢æ–‡å­—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: template <std::size_t template_size>
     typename self::size_type find_last_of(
@@ -972,11 +972,11 @@ class psyq::basic_reference_string
             &in_string[0], in_offset, template_size - 1);
     }
 
-    /** @brief ŒŸõ•¶š—ñ‚ÉŠÜ‚Ü‚ê‚é‚¢‚¸‚ê‚©‚Ì•¶š‚ğAŒã‚ë‚©‚çŒŸõ‚·‚éB
+    /** @brief æ¤œç´¢æ–‡å­—åˆ—ã«å«ã¾ã‚Œã‚‹ã„ãšã‚Œã‹ã®æ–‡å­—ã‚’ã€å¾Œã‚ã‹ã‚‰æ¤œç´¢ã™ã‚‹ã€‚
         @tparam template_string_traits @copydoc string_interface
-        @param[in] in_string ŒŸõ•¶š—ñB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
-        @return ŒŸõ•¶š‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+        @param[in] in_string æ¤œç´¢æ–‡å­—åˆ—ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
+        @return æ¤œç´¢æ–‡å­—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: template<typename template_string_type>
     typename self::size_type find_last_of(
@@ -988,11 +988,11 @@ class psyq::basic_reference_string
             in_string.data(), in_offset, in_string.length());
     }
 
-    /** @brief ŒŸõ•¶š—ñ‚ÉŠÜ‚Ü‚ê‚é‚¢‚¸‚ê‚©‚Ì•¶š‚ğAŒã‚ë‚©‚çŒŸõ‚·‚éB
-        @param[in] in_string ŒŸõ•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
-        @param[in] in_length   ŒŸõ•¶š—ñ‚Ì’·‚³B
-        @return ŒŸõ•¶š‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+    /** @brief æ¤œç´¢æ–‡å­—åˆ—ã«å«ã¾ã‚Œã‚‹ã„ãšã‚Œã‹ã®æ–‡å­—ã‚’ã€å¾Œã‚ã‹ã‚‰æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_string æ¤œç´¢æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
+        @param[in] in_length   æ¤œç´¢æ–‡å­—åˆ—ã®é•·ã•ã€‚
+        @return æ¤œç´¢æ–‡å­—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: typename self::size_type find_last_of(
         typename self::const_pointer const in_string,
@@ -1019,11 +1019,11 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief ŒŸõ•¶šˆÈŠO‚Ì•¶š‚ğŒŸõ‚·‚éB
-        @param[in] in_char   ŒŸõ•¶šB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
+    /** @brief æ¤œç´¢æ–‡å­—ä»¥å¤–ã®æ–‡å­—ã‚’æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_char   æ¤œç´¢æ–‡å­—ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
         @return
-            ŒŸõ•¶šˆÈŠO‚Ì•¶š‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+            æ¤œç´¢æ–‡å­—ä»¥å¤–ã®æ–‡å­—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: typename self::size_type find_first_not_of(
         typename self::value_type const in_char,
@@ -1041,11 +1041,11 @@ class psyq::basic_reference_string
         return self::npos;
     }
 
-    /** @brief ŒŸõ•¶š—ñ‚ÉŠÜ‚Ü‚ê‚È‚¢•¶š‚ğŒŸõ‚·‚éB
-        @param[in] in_string ŒŸõ•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
+    /** @brief æ¤œç´¢æ–‡å­—åˆ—ã«å«ã¾ã‚Œãªã„æ–‡å­—ã‚’æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_string æ¤œç´¢æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
         @return
-            ŒŸõ•¶šˆÈŠO‚Ì•¶š‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+            æ¤œç´¢æ–‡å­—ä»¥å¤–ã®æ–‡å­—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: template <std::size_t template_size>
     typename self::size_type find_first_not_of(
@@ -1057,12 +1057,12 @@ class psyq::basic_reference_string
             &in_string[0], in_offset, template_size - 1);
     }
 
-    /** @brief ŒŸõ•¶š—ñ‚ÉŠÜ‚Ü‚ê‚È‚¢•¶š‚ğŒŸõ‚·‚éB
+    /** @brief æ¤œç´¢æ–‡å­—åˆ—ã«å«ã¾ã‚Œãªã„æ–‡å­—ã‚’æ¤œç´¢ã™ã‚‹ã€‚
         @tparam template_string_traits @copydoc string_interface
-        @param[in] in_string ŒŸõ•¶š—ñB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
+        @param[in] in_string æ¤œç´¢æ–‡å­—åˆ—ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
         @return
-            ŒŸõ•¶šˆÈŠO‚Ì•¶š‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+            æ¤œç´¢æ–‡å­—ä»¥å¤–ã®æ–‡å­—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: template<typename template_string_type>
     typename self::size_type find_first_not_of(
@@ -1074,12 +1074,12 @@ class psyq::basic_reference_string
             in_string.data(), in_offset, in_string.length());
     }
 
-    /** @brief ŒŸõ•¶š—ñ‚ÉŠÜ‚Ü‚ê‚È‚¢•¶š‚ğŒŸõ‚·‚éB
-        @param[in] in_string ŒŸõ•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
-        @param[in] in_length ŒŸõ•¶š—ñ‚Ì’·‚³B
+    /** @brief æ¤œç´¢æ–‡å­—åˆ—ã«å«ã¾ã‚Œãªã„æ–‡å­—ã‚’æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_string æ¤œç´¢æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
+        @param[in] in_length æ¤œç´¢æ–‡å­—åˆ—ã®é•·ã•ã€‚
         @return
-           ŒŸõ•¶šˆÈŠO‚Ì•¶š‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+           æ¤œç´¢æ–‡å­—ä»¥å¤–ã®æ–‡å­—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: typename self::size_type find_first_not_of(
         typename self::const_pointer const in_string,
@@ -1103,11 +1103,11 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief ŒŸõ•¶šˆÈŠO‚Ì•¶š‚ğAŒã‚ë‚©‚çŒŸõ‚·‚éB
-        @param[in] in_char   ŒŸõ•¶šB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
+    /** @brief æ¤œç´¢æ–‡å­—ä»¥å¤–ã®æ–‡å­—ã‚’ã€å¾Œã‚ã‹ã‚‰æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_char   æ¤œç´¢æ–‡å­—ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
         @return
-            ŒŸõ•¶šˆÈŠO‚Ì•¶š‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+            æ¤œç´¢æ–‡å­—ä»¥å¤–ã®æ–‡å­—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: typename self::size_type find_last_not_of(
         typename self::value_type const in_char,
@@ -1131,11 +1131,11 @@ class psyq::basic_reference_string
         return self::npos;
     }
 
-    /** @brief ŒŸõ•¶š—ñ‚ÉŠÜ‚Ü‚ê‚È‚¢•¶š‚ğŒŸõ‚·‚éB
-        @param[in] in_string ŒŸõ•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
+    /** @brief æ¤œç´¢æ–‡å­—åˆ—ã«å«ã¾ã‚Œãªã„æ–‡å­—ã‚’æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_string æ¤œç´¢æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
         @return
-            ŒŸõ•¶šˆÈŠO‚Ì•¶š‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+            æ¤œç´¢æ–‡å­—ä»¥å¤–ã®æ–‡å­—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: template <std::size_t template_size>
     typename self::size_type find_last_not_of(
@@ -1147,12 +1147,12 @@ class psyq::basic_reference_string
             &in_string[0], in_offset, template_size - 1);
     }
 
-    /** @brief ŒŸõ•¶š—ñ‚ÉŠÜ‚Ü‚ê‚È‚¢•¶š‚ğŒŸõ‚·‚éB
+    /** @brief æ¤œç´¢æ–‡å­—åˆ—ã«å«ã¾ã‚Œãªã„æ–‡å­—ã‚’æ¤œç´¢ã™ã‚‹ã€‚
         @tparam template_string_traits @copydoc string_interface
-        @param[in] in_string ŒŸõ•¶š—ñB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
+        @param[in] in_string æ¤œç´¢æ–‡å­—åˆ—ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
         @return
-            ŒŸõ•¶šˆÈŠO‚Ì•¶š‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+            æ¤œç´¢æ–‡å­—ä»¥å¤–ã®æ–‡å­—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: template<typename template_string_type>
     typename self::size_type find_last_not_of(
@@ -1164,12 +1164,12 @@ class psyq::basic_reference_string
             in_string.data(), in_offset, in_string.length());
     }
 
-    /** @brief ŒŸõ•¶š—ñ‚ÉŠÜ‚Ü‚ê‚È‚¢•¶š‚ğAŒã‚ë‚©‚çŒŸõ‚·‚éB
-        @param[in] in_string ŒŸõ•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_offset ŒŸõ‚ğŠJn‚·‚éˆÊ’uB
-        @param[in] in_length ŒŸõ•¶š—ñ‚Ì’·‚³B
+    /** @brief æ¤œç´¢æ–‡å­—åˆ—ã«å«ã¾ã‚Œãªã„æ–‡å­—ã‚’ã€å¾Œã‚ã‹ã‚‰æ¤œç´¢ã™ã‚‹ã€‚
+        @param[in] in_string æ¤œç´¢æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_offset æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ä½ç½®ã€‚
+        @param[in] in_length æ¤œç´¢æ–‡å­—åˆ—ã®é•·ã•ã€‚
         @return
-            ŒŸõ•¶šˆÈŠO‚Ì•¶š‚ªŒ»‚ê‚½ˆÊ’uBŒ»‚ê‚È‚¢ê‡‚Í self::npos ‚ğ•Ô‚·B
+            æ¤œç´¢æ–‡å­—ä»¥å¤–ã®æ–‡å­—ãŒç¾ã‚ŒãŸä½ç½®ã€‚ç¾ã‚Œãªã„å ´åˆã¯ self::npos ã‚’è¿”ã™ã€‚
      */
     public: typename self::size_type find_last_not_of(
         typename self::const_pointer const in_string,
@@ -1196,7 +1196,7 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief •¶š—ñ‚Ìæ“ª‚Æ––”ö‚É‚ ‚é‹ó”’•¶š‚ğæ‚èœ‚­B
+    /** @brief æ–‡å­—åˆ—ã®å…ˆé ­ã¨æœ«å°¾ã«ã‚ã‚‹ç©ºç™½æ–‡å­—ã‚’å–ã‚Šé™¤ãã€‚
      */
     public: void trim()
     {
@@ -1204,7 +1204,7 @@ class psyq::basic_reference_string
         this->trim_left();
     }
 
-    /** @brief •¶š—ñ‚Ìæ“ª‚É‚ ‚é‹ó”’•¶š‚ğæ‚èœ‚­B
+    /** @brief æ–‡å­—åˆ—ã®å…ˆé ­ã«ã‚ã‚‹ç©ºç™½æ–‡å­—ã‚’å–ã‚Šé™¤ãã€‚
      */
     public: void trim_left()
     {
@@ -1227,7 +1227,7 @@ class psyq::basic_reference_string
         this->length_ = 0;
     }
 
-    /** @brief •¶š—ñ‚Ì––”ö‚É‚ ‚é‹ó”’•¶š‚ğæ‚èœ‚­B
+    /** @brief æ–‡å­—åˆ—ã®æœ«å°¾ã«ã‚ã‚‹ç©ºç™½æ–‡å­—ã‚’å–ã‚Šé™¤ãã€‚
      */
     public: void trim_right()
     {
@@ -1247,11 +1247,11 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /** @brief “™‰¿‚È•¶š—ñ‚©”»’è‚·‚éB
-        @param[in] in_right_begin  ”äŠr‚·‚é•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_right_length ”äŠr‚·‚é•¶š—ñ‚Ì•¶š”B
-        @retval true  “™‰¿‚È•¶š—ñ‚¾‚Á‚½B
-        @retval false “™‰¿‚È•¶š—ñ‚Å‚Í‚È‚©‚Á‚½B
+    /** @brief ç­‰ä¾¡ãªæ–‡å­—åˆ—ã‹åˆ¤å®šã™ã‚‹ã€‚
+        @param[in] in_right_begin  æ¯”è¼ƒã™ã‚‹æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_right_length æ¯”è¼ƒã™ã‚‹æ–‡å­—åˆ—ã®æ–‡å­—æ•°ã€‚
+        @retval true  ç­‰ä¾¡ãªæ–‡å­—åˆ—ã ã£ãŸã€‚
+        @retval false ç­‰ä¾¡ãªæ–‡å­—åˆ—ã§ã¯ãªã‹ã£ãŸã€‚
      */
     protected: bool is_equal(
         typename self::const_pointer const in_right_begin,
@@ -1272,13 +1272,13 @@ class psyq::basic_reference_string
         return local_compare == 0;
     }
 
-    /** @brief •¶špointer‚ğæ“¾‚·‚éB
+    /** @brief æ–‡å­—pointerã‚’å–å¾—ã™ã‚‹ã€‚
         @tparam template_string_type @copydoc string_interface
-        @param[in] in_string •¶š—ñB
-        @param[in] in_offset •¶š—ñ‚ÌŠJnoffsetˆÊ’uB
+        @param[in] in_string æ–‡å­—åˆ—ã€‚
+        @param[in] in_offset æ–‡å­—åˆ—ã®é–‹å§‹offsetä½ç½®ã€‚
         @return
-            ŠJnoffsetˆÊ’u‚É‚ ‚é•¶š‚Ö‚ÌpointerB
-            ŠJnoffsetˆÊ’u‚ª•¶š”‚ğ’´‚¦‚Ä‚¢‚éê‡‚ÍAÅŒã‚Ì•¶š‚Ö‚ÌpointerB
+            é–‹å§‹offsetä½ç½®ã«ã‚ã‚‹æ–‡å­—ã¸ã®pointerã€‚
+            é–‹å§‹offsetä½ç½®ãŒæ–‡å­—æ•°ã‚’è¶…ãˆã¦ã„ã‚‹å ´åˆã¯ã€æœ€å¾Œã®æ–‡å­—ã¸ã®pointerã€‚
      */
     private: template<typename template_string_type>
     static typename template_string_type::const_pointer get_pointer(
@@ -1296,12 +1296,12 @@ class psyq::basic_reference_string
         return in_string.data() + local_offset;
     }
 
-    /** @brief •¶š”‚ğtrimming‚·‚éB
+    /** @brief æ–‡å­—æ•°ã‚’trimmingã™ã‚‹ã€‚
         @tparam template_string_type @copydoc string_interface
-        @param[in] in_string •¶š—ñB
-        @param[in] in_offset •¶š—ñ‚ÌŠJnoffsetˆÊ’uB
-        @param[in] in_count  •¶š—ñ‚ÌŠJnoffsetˆÊ’u‚©‚ç‚Ì•¶š”B
-        @return •¶š—ñ‘S‘Ì‚Ì•¶š”‚Éû‚Ü‚é‚æ‚¤‚Éin_count‚ğtrimming‚µ‚½’lB
+        @param[in] in_string æ–‡å­—åˆ—ã€‚
+        @param[in] in_offset æ–‡å­—åˆ—ã®é–‹å§‹offsetä½ç½®ã€‚
+        @param[in] in_count  æ–‡å­—åˆ—ã®é–‹å§‹offsetä½ç½®ã‹ã‚‰ã®æ–‡å­—æ•°ã€‚
+        @return æ–‡å­—åˆ—å…¨ä½“ã®æ–‡å­—æ•°ã«åã¾ã‚‹ã‚ˆã†ã«in_countã‚’trimmingã—ãŸå€¤ã€‚
      */
     protected: template<typename template_string_type>
     static typename template_string_type::size_type trim_count(
@@ -1315,11 +1315,11 @@ class psyq::basic_reference_string
             self::convert_count<template_string_type>(in_count));
     }
 
-    /** @brief •¶š”‚ğtrimming‚·‚éB
-        @param[in] in_length •¶š—ñ‘S‘Ì‚Ì•¶š”B
-        @param[in] in_offset •¶š—ñ‚ÌŠJnoffsetˆÊ’uB
-        @param[in] in_count  •¶š—ñ‚ÌŠJnoffsetˆÊ’u‚©‚ç‚Ì•¶š”B
-        @return •¶š—ñ‘S‘Ì‚Ì•¶š”‚Éû‚Ü‚é‚æ‚¤‚Éin_count‚ğtrimming‚µ‚½’lB
+    /** @brief æ–‡å­—æ•°ã‚’trimmingã™ã‚‹ã€‚
+        @param[in] in_length æ–‡å­—åˆ—å…¨ä½“ã®æ–‡å­—æ•°ã€‚
+        @param[in] in_offset æ–‡å­—åˆ—ã®é–‹å§‹offsetä½ç½®ã€‚
+        @param[in] in_count  æ–‡å­—åˆ—ã®é–‹å§‹offsetä½ç½®ã‹ã‚‰ã®æ–‡å­—æ•°ã€‚
+        @return æ–‡å­—åˆ—å…¨ä½“ã®æ–‡å­—æ•°ã«åã¾ã‚‹ã‚ˆã†ã«in_countã‚’trimmingã—ãŸå€¤ã€‚
      */
     protected: static typename self::size_type trim_count(
         typename self::size_type const in_length,
@@ -1342,24 +1342,24 @@ class psyq::basic_reference_string
     }
 
     //-------------------------------------------------------------------------
-    /// –³Œø‚ÈˆÊ’u‚ğ•\‚·B find() ‚È‚Ç‚Åg‚í‚ê‚éB
+    /// ç„¡åŠ¹ãªä½ç½®ã‚’è¡¨ã™ã€‚ find() ãªã©ã§ä½¿ã‚ã‚Œã‚‹ã€‚
     public: static typename self::size_type const npos
         = static_cast<typename self::size_type>(-1);
 
     //-------------------------------------------------------------------------
-    private: typename self::const_pointer data_;   ///< •¶š—ñ‚Ìæ“ªˆÊ’uB
-    private: typename self::size_type     length_; ///< •¶š—ñ‚Ì’·‚³B
+    private: typename self::const_pointer data_;   ///< æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+    private: typename self::size_type     length_; ///< æ–‡å­—åˆ—ã®é•·ã•ã€‚
 
     /** @page string_interface
 
-        •¶š—ñ‚ğ‚ÂŒ^B•¶š—ñ‚Ìæ“ª‚©‚ç––”ö‚Ü‚Å‚Ìmemory˜A‘±«‚ª•K{B
+        æ–‡å­—åˆ—ã‚’æŒã¤å‹ã€‚æ–‡å­—åˆ—ã®å…ˆé ­ã‹ã‚‰æœ«å°¾ã¾ã§ã®memoryé€£ç¶šæ€§ãŒå¿…é ˆã€‚
 
-        •¶š—ñ‚Ìæ“ªˆÊ’u‚ğæ“¾‚·‚é‚½‚ßAˆÈ‰º‚ÌŠÖ”‚ğg‚¦‚é‚±‚ÆB
+        æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã‚’å–å¾—ã™ã‚‹ãŸã‚ã€ä»¥ä¸‹ã®é–¢æ•°ã‚’ä½¿ãˆã‚‹ã“ã¨ã€‚
         @code
         psyq::basic_reference_string::const_pointer template_string_type::data() const
         @endcode
 
-        •¶š—ñ‚Ì’·‚³‚ğæ“¾‚·‚é‚½‚ßAˆÈ‰º‚ÌŠÖ”‚ğg‚¦‚é‚±‚ÆB
+        æ–‡å­—åˆ—ã®é•·ã•ã‚’å–å¾—ã™ã‚‹ãŸã‚ã€ä»¥ä¸‹ã®é–¢æ•°ã‚’ä½¿ãˆã‚‹ã“ã¨ã€‚
         @code
         template_string_type::size_type template_string_type::length() const
         @endcode
@@ -1367,15 +1367,15 @@ class psyq::basic_reference_string
 };
 
 //-----------------------------------------------------------------------------
-/** @brief •¶š—ñ‚ğ”äŠr‚·‚éB
+/** @brief æ–‡å­—åˆ—ã‚’æ¯”è¼ƒã™ã‚‹ã€‚
     @tparam template_string_type @copydoc string_interface
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type
     @tparam template_char_traits
         @copydoc psyq::basic_reference_string::traits_type
-    @param[in] in_left  ¶•Ó‚Ì•¶š—ñB
-    @param[in] in_right ‰E•Ó‚Ì•¶š—ñB
-    @return ¶•Ó == ‰E•Ó
+    @param[in] in_left  å·¦è¾ºã®æ–‡å­—åˆ—ã€‚
+    @param[in] in_right å³è¾ºã®æ–‡å­—åˆ—ã€‚
+    @return å·¦è¾º == å³è¾º
  */
 template<
     typename template_string_type,
@@ -1390,15 +1390,15 @@ bool operator==(
     return in_right.operator==(in_left);
 }
 
-/** @brief •¶š—ñ‚ğ”äŠr‚·‚éB
+/** @brief æ–‡å­—åˆ—ã‚’æ¯”è¼ƒã™ã‚‹ã€‚
     @tparam template_string_type @copydoc string_interface
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type
     @tparam template_char_traits
         @copydoc psyq::basic_reference_string::traits_type
-    @param[in] in_left  ¶•Ó‚Ì•¶š—ñB
-    @param[in] in_right ‰E•Ó‚Ì•¶š—ñB
-    @return ¶•Ó != ‰E•Ó
+    @param[in] in_left  å·¦è¾ºã®æ–‡å­—åˆ—ã€‚
+    @param[in] in_right å³è¾ºã®æ–‡å­—åˆ—ã€‚
+    @return å·¦è¾º != å³è¾º
  */
 template<
     typename template_string_type,
@@ -1413,15 +1413,15 @@ bool operator!=(
     return in_right.operator!=(in_left);
 }
 
-/** @brief •¶š—ñ‚ğ”äŠr‚·‚éB
+/** @brief æ–‡å­—åˆ—ã‚’æ¯”è¼ƒã™ã‚‹ã€‚
     @tparam template_string_type @copydoc string_interface
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type
     @tparam template_char_traits
         @copydoc psyq::basic_reference_string::traits_type
-    @param[in] in_left  ¶•Ó‚Ì•¶š—ñB
-    @param[in] in_right ‰E•Ó‚Ì•¶š—ñB
-    @return ¶•Ó < ‰E•Ó
+    @param[in] in_left  å·¦è¾ºã®æ–‡å­—åˆ—ã€‚
+    @param[in] in_right å³è¾ºã®æ–‡å­—åˆ—ã€‚
+    @return å·¦è¾º < å³è¾º
  */
 template<
     typename template_string_type,
@@ -1436,15 +1436,15 @@ bool operator<(
     return in_right.operator>(in_left);
 }
 
-/** @brief •¶š—ñ‚ğ”äŠr‚·‚éB
+/** @brief æ–‡å­—åˆ—ã‚’æ¯”è¼ƒã™ã‚‹ã€‚
     @tparam template_string_type @copydoc string_interface
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type
     @tparam template_char_traits
         @copydoc psyq::basic_reference_string::traits_type
-    @param[in] in_left  ¶•Ó‚Ì•¶š—ñB
-    @param[in] in_right ‰E•Ó‚Ì•¶š—ñB
-    @return ¶•Ó <= ‰E•Ó
+    @param[in] in_left  å·¦è¾ºã®æ–‡å­—åˆ—ã€‚
+    @param[in] in_right å³è¾ºã®æ–‡å­—åˆ—ã€‚
+    @return å·¦è¾º <= å³è¾º
  */
 template<
     typename template_string_type,
@@ -1459,15 +1459,15 @@ bool operator<=(
     return in_right.operator>=(in_left);
 }
 
-/** @brief •¶š—ñ‚ğ”äŠr‚·‚éB
+/** @brief æ–‡å­—åˆ—ã‚’æ¯”è¼ƒã™ã‚‹ã€‚
     @tparam template_string_type @copydoc string_interface
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type
     @tparam template_char_traits
         @copydoc psyq::basic_reference_string::traits_type
-    @param[in] in_left  ¶•Ó‚Ì•¶š—ñB
-    @param[in] in_right ‰E•Ó‚Ì•¶š—ñB
-    @return ¶•Ó > ‰E•Ó
+    @param[in] in_left  å·¦è¾ºã®æ–‡å­—åˆ—ã€‚
+    @param[in] in_right å³è¾ºã®æ–‡å­—åˆ—ã€‚
+    @return å·¦è¾º > å³è¾º
  */
 template<
     typename template_string_type,
@@ -1482,15 +1482,15 @@ bool operator>(
     return in_right.operator<(in_left);
 }
 
-/** @brief •¶š—ñ‚ğ”äŠr‚·‚éB
+/** @brief æ–‡å­—åˆ—ã‚’æ¯”è¼ƒã™ã‚‹ã€‚
     @tparam template_string_type @copydoc string_interface
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type
     @tparam template_char_traits
         @copydoc psyq::basic_reference_string::traits_type
-    @param[in] in_left  ¶•Ó‚Ì•¶š—ñB
-    @param[in] in_right ‰E•Ó‚Ì•¶š—ñB
-    @return ¶•Ó >= ‰E•Ó
+    @param[in] in_left  å·¦è¾ºã®æ–‡å­—åˆ—ã€‚
+    @param[in] in_right å³è¾ºã®æ–‡å­—åˆ—ã€‚
+    @return å·¦è¾º >= å³è¾º
  */
 template<
     typename template_string_type,
@@ -1508,13 +1508,13 @@ bool operator>=(
 //-----------------------------------------------------------------------------
 namespace std
 {
-    /** @brief •¶š—ñ‚ÌŒğŠ·B
+    /** @brief æ–‡å­—åˆ—ã®äº¤æ›ã€‚
         @tparam template_char_type
             @copydoc psyq::basic_reference_string::value_type
         @tparam template_char_traits
             @copydoc psyq::basic_reference_string::traits_type
-        @param[in] in_left  ŒğŠ·‚·‚é•¶š—ñB
-        @param[in] in_right ŒğŠ·‚·‚é•¶š—ñB
+        @param[in] in_left  äº¤æ›ã™ã‚‹æ–‡å­—åˆ—ã€‚
+        @param[in] in_right äº¤æ›ã™ã‚‹æ–‡å­—åˆ—ã€‚
      */
     template<typename template_char_type, typename template_char_traits>
     void swap(

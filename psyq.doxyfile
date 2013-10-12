@@ -677,44 +677,46 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories 
 # with spaces.
 
-INPUT                  = ./async_file.hpp \
-                         ./async_queue.hpp \
-                         ./async_task.hpp \
-                         ./bit_algorithm.hpp \
-                         ./csv_table.hpp \
-                         ./dynamic_storage.hpp \
-                         ./enum.hpp \
-                         ./file_buffer.hpp \
-                         ./file_handle.hpp \
-                         ./fnv_hash.hpp \
-                         ./immutable_string.hpp \
-                         ./integer_bitset.hpp \
-                         ./lerp.hpp \
-                         ./mosp_collision.hpp \
-                         ./pbon_json.hpp \
-                         ./posix_file_descriptor.hpp \
+INPUT                  = \
                          ./reference_string.hpp \
-                         ./simple_singleton.hpp \
-                         ./singleton.hpp \
-                         ./string_hash.hpp \
-                         ./thread.hpp \
-                         ./win32_file_descriptor.hpp \
-                         ./memory/allocator.hpp \
-                         ./memory/arena.hpp \
-                         ./memory/fixed_arena.hpp \
-                         ./memory/heap_arena.hpp \
-                         ./memory/single_allocator.hpp \
-                         ./memory/small_allocator.hpp \
-                         ./scene/event_action.hpp \
-                         ./scene/event_line.hpp \
-                         ./scene/event_package.hpp \
-                         ./scene/event_stage.hpp \
-                         ./scene/layered_scale.hpp \
-                         ./scene/render_target.hpp \
-                         ./scene/scene_action.hpp \
-                         ./scene/scene_screen.hpp \
-                         ./scene/scene_stage.hpp \
-                         ./scene/scene_token.hpp \
+                         ./immutable_string.hpp \
+                         ./csv_table.hpp \
+                         ./mosp_collision.hpp \
+
+#                         ./async_file.hpp \
+#                         ./async_queue.hpp \
+#                         ./async_task.hpp \
+#                         ./bit_algorithm.hpp \
+#                         ./dynamic_storage.hpp \
+#                         ./enum.hpp \
+#                         ./file_buffer.hpp \
+#                         ./file_handle.hpp \
+#                         ./fnv_hash.hpp \
+#                         ./integer_bitset.hpp \
+#                         ./lerp.hpp \
+#                         ./pbon_json.hpp \
+#                         ./posix_file_descriptor.hpp \
+#                         ./simple_singleton.hpp \
+#                         ./singleton.hpp \
+#                         ./string_hash.hpp \
+#                         ./thread.hpp \
+#                         ./win32_file_descriptor.hpp \
+#                         ./memory/allocator.hpp \
+#                         ./memory/arena.hpp \
+#                         ./memory/fixed_arena.hpp \
+#                         ./memory/heap_arena.hpp \
+#                         ./memory/single_allocator.hpp \
+#                         ./memory/small_allocator.hpp \
+#                         ./scene/event_action.hpp \
+#                         ./scene/event_line.hpp \
+#                         ./scene/event_package.hpp \
+#                         ./scene/event_stage.hpp \
+#                         ./scene/layered_scale.hpp \
+#                         ./scene/render_target.hpp \
+#                         ./scene/scene_action.hpp \
+#                         ./scene/scene_screen.hpp \
+#                         ./scene/scene_stage.hpp \
+#                         ./scene/scene_token.hpp \
 
 # This tag can be used to specify the character encoding of the source files 
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is 
@@ -722,7 +724,7 @@ INPUT                  = ./async_file.hpp \
 # into libc) for the transcoding. See http://www.gnu.org/software/libiconv for 
 # the list of possible encodings.
 
-INPUT_ENCODING         = CP932
+#INPUT_ENCODING         = CP932
 
 # If the value of the INPUT tag contains directories, you can use the 
 # FILE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp 

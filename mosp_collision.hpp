@@ -33,7 +33,7 @@ namespace psyq
 
     使い方の概要。
     -# 衝突する物体の識別値を、 mosp_handle::object_ に代入しておく。
-    -# mosp_handle::Attach() を呼び出し、
+    -# mosp_handle::attach_tree() を呼び出し、
        衝突判定handleを空間分割木に取りつける。
     -# mosp_tree::detect_collision() を呼び出し、衝突を判定する。
 

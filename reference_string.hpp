@@ -68,8 +68,7 @@ namespace psyq
 
     @warning
         C文字列を単純にconst参照しているので、
-        参照してる文字列が破棄されると、動作を保証できなくなる。
-        文字列を安全に扱うには、 psyq::basic_immutable_string を使う。
+        参照してる文字列が破壊されると、動作を保証できなくなる。
 
     @tparam template_char_type
         @copydoc psyq::basic_reference_string::value_type

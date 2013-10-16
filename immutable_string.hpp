@@ -101,7 +101,7 @@ class psyq::basic_immutable_string:
         typename self::allocator_type const& in_allocator
         = self::allocator_type())
     :
-        buffer_(nullptr),
+        shared_buffer_(nullptr),
         allocator_(in_allocator)
     {}
 
@@ -111,10 +111,9 @@ class psyq::basic_immutable_string:
     public: basic_immutable_string(self const& in_source)
     :
         super(in_source),
+        shared_buffer_(self::hold_buffer(in_source.shared_buffer_)),
         allocator_(in_source.allocator_)
-    {
-        this->hold_buffer(in_source.buffer_);
-    }
+    {}
 
     /** @brief 文字列を移動する。memory割り当ては行わない。
         @param[in,out] io_source move元の文字列。
@@ -122,28 +121,30 @@ class psyq::basic_immutable_string:
     public: basic_immutable_string(self&& io_source)
     :
         super(io_source),
-        buffer_(io_source.buffer_),
+        shared_buffer_(io_source.shared_buffer_),
         allocator_(io_source.allocator_)
     {
         new(&io_source) super();
-        io_source.buffer_ = nullptr;
+        io_source.shared_buffer_ = nullptr;
     }
 
-    /** @brief 文字列literalを参照する。memory割り当ては行わない。
-        @tparam template_size 参照する文字列literalの要素数。
-        @param[in] in_string    参照する文字列literal。
+    /** @brief memoryを割り当てを行い、文字列をcopyする。
+        @param[in] in_string    copy元の文字列。
         @param[in] in_allocator memory割当子の初期値。
+        @note
+            copy元が文字列literalか判定できるようにして、
+            文字列literalだった場合はmemory割り当てを回避したい。
      */
-    public: template <std::size_t template_size>
-    basic_immutable_string(
-        typename super::value_type const (&in_string)[template_size],
+    public: basic_immutable_string(
+        super const&                         in_string,
         typename self::allocator_type const& in_allocator
         = self::allocator_type())
     :
         super(in_string),
-        buffer_(nullptr),
         allocator_(in_allocator)
-    {}
+    {
+        this->create_buffer(in_string, super());
+    }
 
     /** @brief 文字列を参照する。memory割り当ては行わない。
         @param[in] in_string 参照する文字列。
@@ -156,24 +157,9 @@ class psyq::basic_immutable_string:
         typename super::size_type const in_count = super::npos)
     :
         super(in_string, in_offset, in_count),
+        shared_buffer_(self::hold_buffer(in_string.shared_buffer_)),
         allocator_(in_string.allocator_)
-    {
-        this->hold_buffer(in_string.buffer_);
-    }
-
-    /** @brief memoryを割り当てを行い、文字列をcopyする。
-        @param[in] in_string    copy元の文字列。
-        @param[in] in_allocator memory割当子の初期値。
-     */
-    public: basic_immutable_string(
-        super const&                         in_string,
-        typename self::allocator_type const& in_allocator
-        = self::allocator_type())
-    :
-        allocator_(in_allocator)
-    {
-        this->create_buffer(in_string);
-    }
+    {}
 
     /** @brief memoryを割り当てを行い、文字列をcopyする。
         @param[in] in_string    copy元の文字列の先頭位置。
@@ -188,7 +174,7 @@ class psyq::basic_immutable_string:
     :
         allocator_(in_allocator)
     {
-        this->create_buffer(super(in_string, in_length));
+        this->create_buffer(super(in_string, in_length), super());
     }
 
     /** @brief memoryを割り当てを行い、2つの文字列を連結してcopyする。
@@ -210,12 +196,7 @@ class psyq::basic_immutable_string:
     /// @brief 文字列を解放する。
     public: ~basic_immutable_string()
     {
-        this->release_buffer();
-    }
-
-    public: typename self::allocator_type const& get_allocator() const
-    {
-        return this->allocator_;
+        self::release_buffer(this->shared_buffer_, this->get_allocator());
     }
     //@}
     //-------------------------------------------------------------------------
@@ -239,17 +220,26 @@ class psyq::basic_immutable_string:
         return *this;
     }
 
-    /** @brief 文字列literalを参照する。memory割り当ては行わない。
-        @tparam template_size 参照する文字列literalの要素数。
-        @param[in] in_string 参照する文字列literal。
+    /** @brief memoryを割り当てを行い、文字列をcopyする。
+        @param[in] in_string copy元の文字列。
+        @note
+            copy元が文字列literalか判定できるようにして、
+            文字列literalだった場合はmemory割り当てを回避したい。
      */
-    public: template <std::size_t template_size>
-    self& operator=(
-        typename super::value_type const (&in_string)[template_size])
+    public: self& operator=(super const& in_string)
     {
-        this->release_buffer();
-        new(this) super(in_string);
-        this->buffer_ = nullptr;
+        auto const local_buffer(this->shared_buffer_);
+        if (local_buffer == nullptr
+            || in_string.data() < local_buffer->get_begin()
+            || local_buffer->get_end() <= in_string.data())
+        {
+            self::release_buffer(this->shared_buffer_, this->get_allocator());
+            this->create_buffer(in_string, super());
+        }
+        else
+        {
+            new(this) super(in_string);
+        }
         return *this;
     }
 
@@ -271,12 +261,10 @@ class psyq::basic_immutable_string:
         return *this;
     }
 
-    /** @brief 文字列literalを参照する。memory割り当ては行わない。
-        @tparam template_size 参照する文字列literalの要素数。
-        @param[in] in_string 参照する文字列literal。
+    /** @brief memoryを割り当てを行い、文字列をcopyする。
+        @param[in] in_string copy元の文字列。
      */
-    public: template <std::size_t template_size>
-    self& assign(typename super::value_type const (&in_string)[template_size])
+    public: self& assign(super const& in_string)
     {
         *this = in_string;
         return *this;
@@ -292,32 +280,12 @@ class psyq::basic_immutable_string:
         typename super::size_type const in_offset,
         typename super::size_type const in_count = super::npos)
     {
-        if (this->buffer_ != in_string.buffer_)
+        if (this->shared_buffer_ != in_string.shared_buffer_)
         {
-            this->release_buffer();
-            this->hold_buffer(in_string.buffer_);
+            self::release_buffer(this->shared_buffer_, this->get_allocator());
+            this->shared_buffer_ = self::hold_buffer(in_string.shared_buffer_);
         }
         new(this) super(in_string, in_offset, in_count);
-        return *this;
-    }
-
-    /** @brief memoryを割り当てを行い、文字列をcopyする。
-        @param[in] in_string copy元の文字列。
-     */
-    public: self& assign(super const& in_string)
-    {
-        auto const local_buffer(this->buffer_);
-        if (local_buffer == nullptr
-            || in_string.data() < local_buffer->get_begin()
-            || local_buffer->get_end() <= in_string.data())
-        {
-            this->release_buffer();
-            this->create_buffer(in_string);
-        }
-        else
-        {
-            new(this) super(in_string);
-        }
         return *this;
     }
 
@@ -330,6 +298,14 @@ class psyq::basic_immutable_string:
         typename super::size_type const     in_length)
     {
         return this->assign(super(in_string, in_length));
+    }
+
+    /** @brief memory割当子を取得する。
+        @return memory割当子。
+     */
+    public: typename self::allocator_type const& get_allocator() const
+    {
+        return this->allocator_;
     }
     //@}
     //-------------------------------------------------------------------------
@@ -374,167 +350,188 @@ class psyq::basic_immutable_string:
     public: void swap(self& io_target)
     {
         this->super::swap(io_target);
-        std::swap(this->buffer_, io_target.buffer_);
+        std::swap(this->shared_buffer_, io_target.shared_buffer_);
         std::swap(this->allocator_, io_target.allocator_);
     }
     //@}
     //-------------------------------------------------------------------------
-    /// 文字列buffer。
-    private: struct buffer
+    /// 共有文字列buffer。
+    private: struct shared_buffer
     {
-        explicit buffer(std::size_t const in_capacity)
+        /** @brief 共有文字列bufferを初期化する
+            @param[in] in_capacity 文字列bufferに格納する最大文字数。
+         */
+        explicit shared_buffer(std::size_t const in_capacity)
         :
-            reference_count_(1),
+            hold_count_(1),
             capacity_(in_capacity)
         {}
 
+        /** @brief 共有文字列bufferの先頭位置を取得する。
+            @return 共有文字列bufferの先頭位置。
+         */
         value_type* get_begin()
         {
             return reinterpret_cast<value_type*>(this + 1);
         }
 
+        /** @brief 共有文字列bufferの末尾位置を取得する。
+            @return 共有文字列bufferの末尾位置。
+         */
         value_type* get_end()
         {
             return this->get_begin() + this->capacity_;
         }
 
+         /// 共有文字列bufferの被参照数。
 #if PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
-        std::size_t reference_count_; ///< 文字列bufferの被参照数。
+        std::size_t hold_count_;
 #else
-        std::atomic<std::size_t> reference_count_;
+        std::atomic<std::size_t> hold_count_;
 #endif // PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
-        std::size_t capacity_;        ///< 文字列bufferの大きさ。
+
+        std::size_t capacity_; ///< 共有文字列bufferに格納できる最大文字数。
     };
 
-    /// 文字列保持子のmemory割当子。
+    /// 共有文字列bufferに使うmemory割当子。
     private: typedef typename self::allocator_type::template
         rebind<std::size_t>::other
             buffer_allocator;
 
-    /** @brief 文字列bufferを確保する。
+    /** @brief 共有文字列bufferを確保する。
         @param[in] in_length 文字列の長さ。
-        @return 文字列の先頭位置。
+        @return 共有文字列bufferの先頭位置。
      */
     private: typename super::value_type* allocate_buffer(
         typename super::size_type const in_length)
     {
         if (in_length <= 0)
         {
+            this->shared_buffer_ = nullptr;
             return nullptr;
         }
 
-        // 文字列bufferを構築する。
-        typename self::buffer_allocator local_allocator(this->allocator_);
+        // 共有文字列bufferを確保する。
         auto const local_allocate_size(self::count_allocate_size(in_length));
-        auto const local_buffer(
-            reinterpret_cast<typename self::buffer*>(
-                local_allocator.allocate(local_allocate_size)));
-        if (local_buffer == nullptr)
+        void* const local_allocate_buffer(
+            typename self::buffer_allocator(this->allocator_).allocate(
+                local_allocate_size));
+        if (local_allocate_buffer == nullptr)
         {
             PSYQ_ASSERT(false);
+            this->shared_buffer_ = nullptr;
             return nullptr;
         }
+
+        // 共有文字列bufferを構築する。
         auto const local_allocate_bytes(
             local_allocate_size
             * sizeof(typename self::buffer_allocator::value_type));
-        new(local_buffer) typename self::buffer(
-            (local_allocate_bytes - sizeof(typename self::buffer))
-            / sizeof(typename super::value_type));
+        this->shared_buffer_ = new(local_allocate_buffer)
+            typename self::shared_buffer(
+                (local_allocate_bytes - sizeof(typename self::shared_buffer))
+                / sizeof(typename super::value_type));
 
-        // 文字列bufferを保持する。
-        auto const local_buffer_begin(local_buffer->get_begin());
+        // 共有文字列bufferを保持する。
+        auto const local_buffer_begin(this->shared_buffer_->get_begin());
         new(this) super(local_buffer_begin, in_length);
-        this->buffer_ = local_buffer;
         return local_buffer_begin;
     }
 
-    /** @brief 2つの文字列を結合した文字列bufferを構築する。
-        @param[in] in_left_string  左辺の文字列。
-        @param[in] in_right_string 右辺の文字列。
+    /** @brief 共有文字列bufferを確保し、2つの文字列を結合してcopyする。
+        @param[in] in_left_string  結合する左辺の文字列。
+        @param[in] in_right_string 結合する右辺の文字列。
      */
     private: void create_buffer(
         super const& in_left_string,
-        super const& in_right_string = super())
+        super const& in_right_string)
     {
-        // 文字列bufferを確保する。
+        // 共有文字列bufferを確保する。
         auto const local_length(
             in_left_string.length() + in_right_string.length());
         auto const local_buffer(this->allocate_buffer(local_length));
-        if (local_buffer == nullptr)
+        if (local_buffer != nullptr)
         {
-            this->buffer_ = nullptr;
+            // 左辺と右辺の文字列を結合し、共有文字列bufferにcopyする。
+            super::traits_type::copy(
+                local_buffer, in_left_string.data(), in_left_string.length());
+            super::traits_type::copy(
+                local_buffer + in_left_string.length(),
+                in_right_string.data(),
+                in_right_string.length());
+            local_buffer[local_length] = 0;
+        }
+    }
+
+    /** @brief 共有文字列bufferを保持する。
+        @param[in,out] io_shared_buffer 保持する共有文字列buffer。
+     */
+    private: static typename self::shared_buffer* hold_buffer(
+        typename self::shared_buffer* const io_shared_buffer)
+    {
+        if (io_shared_buffer != nullptr)
+        {
+#if PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
+            ++io_shared_buffer->hold_count_;
+#else
+            std::atomic_fetch_add_explicit(
+                &io_shared_buffer->hold_count_, 1, std::memory_order_relaxed);
+#endif // PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS 
+        }
+        return io_shared_buffer;
+    }
+
+    /** @brief 共有文字列bufferを解放する。
+        @param[in,out] io_shared_buffer    解放する共有文字列buffer。
+        @param[in]     in_allocator 共有文字列bufferの破棄に使うmemory割当子。
+     */
+    private: static void release_buffer(
+        typename self::shared_buffer* const  io_shared_buffer,
+        typename self::allocator_type const& in_allocator)
+    {
+        if (io_shared_buffer == nullptr)
+        {
             return;
         }
 
-        // 左辺と右辺の文字列を結合する。
-        super::traits_type::copy(
-            local_buffer, in_left_string.data(), in_left_string.length());
-        super::traits_type::copy(
-            local_buffer + in_left_string.length(),
-            in_right_string.data(),
-            in_right_string.length());
-        local_buffer[local_length] = 0;
-    }
-
-    /** @brief 文字列bufferを保持する。
-        @param[in,out] io_buffer 保持する文字列buffer。
-     */
-    private: void hold_buffer(typename self::buffer* const io_buffer)
-    {
-        this->buffer_ = io_buffer;
-        if (io_buffer != nullptr)
-        {
+        // 共有文字列bufferの参照countを減らす。
 #if PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
-            ++io_buffer->reference_count_;
-#else
-            std::atomic_fetch_add_explicit(
-                &io_buffer->reference_count_, 1, std::memory_order_relaxed);
-#endif // PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS 
-        }
-    }
-
-    /** @brief 文字列bufferを解放する。
-     */
-    private: bool release_buffer()
-    {
-        auto const local_buffer(this->buffer_);
-        if (local_buffer == nullptr)
-        {
-            return false;
-        }
-#if PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
-        --local_buffer->reference_count_;
-        if (0 < local_buffer->reference_count_)
+        --io_shared_buffer->hold_count_;
+        if (io_shared_buffer->hold_count_ <= 0)
 #else
         auto const local_last_count(
             std::atomic_fetch_sub_explicit(
-                &local_buffer->reference_count_,
+                &io_shared_buffer->hold_count_,
                 1,
                 std::memory_order_release));
-        if (1 < local_last_count)
+        if (local_last_count <= 1)
 #endif // PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
         {
-            return false;
-        }
+            // 参照countが0になったので、共有文字列bufferを破棄する。
 #if !PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
-        std::atomic_thread_fence(std::memory_order_acquire);
+            std::atomic_thread_fence(std::memory_order_acquire);
 #endif // PSYQ_BASIC_IMMUTABLE_STRING_DISABLE_THREADS
-        auto const local_capacity(local_buffer->capacity_);
-        local_buffer->~buffer();
-        typename self::buffer_allocator(this->allocator_).deallocate(
-            reinterpret_cast<typename self::buffer_allocator::pointer>(
-                local_buffer),
-            self::count_allocate_size(local_capacity));
-        return true;
+            auto const local_allocate_size(
+                self::count_allocate_size(io_shared_buffer->capacity_));
+            io_shared_buffer->~shared_buffer();
+            typename self::buffer_allocator(in_allocator).deallocate(
+                reinterpret_cast<typename self::buffer_allocator::pointer>(
+                    io_shared_buffer),
+                local_allocate_size);
+        }
     }
 
+    /** @brief 共有文字列bufferに必要な要素数を決定する。
+        @param[in] in_string_length 共有文字列bufferに格納する最大文字数。
+        @return 共有文字列bufferに必要な要素数。
+     */
     private:
     static typename self::buffer_allocator::size_type count_allocate_size(
         typename super::size_type const in_string_length)
     {
+        auto const local_header_bytes(sizeof(typename self::shared_buffer));
         auto const local_string_bytes(
             sizeof(typename super::value_type) * (in_string_length + 1));
-        auto const local_header_bytes(sizeof(typename self::buffer));
         auto const local_unit_bytes(
             sizeof(typename self::buffer_allocator::value_type));
         return (local_header_bytes + local_string_bytes + local_unit_bytes - 1)
@@ -542,8 +539,10 @@ class psyq::basic_immutable_string:
     }
 
     //-------------------------------------------------------------------------
-    private: typename self::buffer*        buffer_;    ///< 文字列buffer。
-    private: typename self::allocator_type allocator_; ///< 使用するmemory割当子。
+    /// 保持している共有文字列buffer。
+    private: typename self::shared_buffer* shared_buffer_;
+    /// 使用するmemory割当子。
+    private: typename self::allocator_type allocator_;
 };
 
 //-----------------------------------------------------------------------------

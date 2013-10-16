@@ -80,6 +80,10 @@ class psyq::basic_shared_string
 
     public: typedef template_allocator_type allocator_type;
 
+    private: typedef psyq::basic_reference_string<
+        template_char_type, template_char_traits>
+            piece;
+
     //-------------------------------------------------------------------------
     /// @name constructor / destructor
     //@{
@@ -113,6 +117,22 @@ class psyq::basic_shared_string
         allocator_(std::move(io_string.allocator_))
     {
         this->move_string(std::move(io_string));
+    }
+
+    /** @brief memoryを割り当てを行い、2つの文字列を連結してcopyする。
+        @param[in] in_left_string  copy元の左辺文字列。
+        @param[in] in_right_string copy元の右辺文字列。
+        @param[in] in_allocator    memory割当子の初期値。
+     */
+    public: basic_shared_string(
+        typename self::piece const&          in_left_string,
+        typename self::piece const&          in_right_string,
+        typename self::allocator_type const& in_allocator
+        = self::allocator_type())
+    :
+        allocator_(in_allocator)
+    {
+        this->create_buffer(in_left_string, in_right_string);
     }
 
     /// @brief 文字列を解放する。
@@ -160,20 +180,24 @@ class psyq::basic_shared_string
     //-------------------------------------------------------------------------
     public: typename self::const_pointer data() const
     {
-        return this->buffer_ == nullptr || 0 < this->length_?
-            this->literal_: this->buffer_->get_data();
+        return this->is_literal()? this->literal_: this->buffer_->get_data();
     }
 
     public: typename self::size_type length() const
     {
-        return this->buffer_ == nullptr || 0 < this->length_?
-            this->length_: this->buffer_->length;
+        return this->is_literal()? this->length_: this->buffer_->length;
     }
 
     //-------------------------------------------------------------------------
     /// 共有文字列buffer。
     private: struct shared_buffer
     {
+        explicit shared_buffer(std::size_t const in_length)
+        :
+            hold_count(1),
+            length(in_length)
+        {}
+
         typename template_char_type* get_data()
         {
             return reinterpret_cast<template_char_type*>(this + 1);
@@ -199,13 +223,11 @@ class psyq::basic_shared_string
         if (local_buffer != nullptr)
         {
             self::hold_buffer(local_buffer);
-            this->buffer_ = local_buffer;
-            this->length_ = 0;
+            this->set_buffer(local_buffer);
         }
         else
         {
-            this->literal_ = in_string.literal_;
-            this->length_ = in_string.length_;
+            this->set_literal(in_string);
         }
     }
 
@@ -214,22 +236,88 @@ class psyq::basic_shared_string
         auto const local_buffer(io_string.get_buffer());
         if (local_buffer != nullptr)
         {
-            io_string.buffer_ = nullptr;
-            io_string.length_ = 0;
-            this->buffer_ = local_buffer;
-            this->length_ = 0;
+            io_string.set_buffer(nullptr);
+            this->set_buffer(local_buffer);
         }
         else
         {
-            this->literal_ = io_string.literal_;
-            this->length_ = io_string.length_;
+            this->set_literal(io_string);
         }
+    }
+
+    private: void set_literal(self const& in_string)
+    {
+        this->literal_ = in_string.literal_;
+        this->length_ = in_string.length_;
+    }
+
+    private: void set_buffer(typename self::shared_buffer* const in_buffer)
+    {
+        this->buffer_ = in_buffer;
+        this->length_ = 0;
+    }
+
+    private: bool is_literal() const
+    {
+        return 0 < this->length_ || this->buffer_ == nullptr;
     }
 
     private: typename self::shared_buffer* get_buffer() const
     {
-        return this->buffer_ == nullptr || 0 < this->length_?
-            nullptr: this->buffer_;
+        return this->is_literal()? nullptr: this->buffer_;
+    }
+
+    /** @brief 共有文字列bufferを確保する。
+     */
+    private: typename self::value_type* allocate_buffer(
+        typename self::size_type const in_length)
+    {
+        if (in_length <= 0)
+        {
+            this->set_buffer(nullptr);
+            return nullptr;
+        }
+
+        // 共有文字列bufferを構築する。
+        typename self::buffer_allocator local_allocator(this->allocator_);
+        auto const local_allocate_size(self::count_allocate_size(in_length));
+        auto const local_buffer(
+            reinterpret_cast<typename self::shared_buffer*>(
+                local_allocator.allocate(local_allocate_size)));
+        if (local_buffer == nullptr)
+        {
+            PSYQ_ASSERT(false);
+            this->set_buffer(nullptr);
+            return nullptr;
+        }
+        new(local_buffer) typename self::shared_buffer(in_length);
+
+        // 共有文字列bufferを保持する。
+        this->set_buffer(local_buffer);
+        return local_buffer->get_data();
+    }
+
+    /** @brief 共有文字列bufferを構築する。
+     */
+    private: void create_buffer(
+        typename self::piece const& in_left_string,
+        typename self::piece const& in_right_string = typename self::piece())
+    {
+        // 共有文字列bufferを確保する。
+        auto const local_length(
+            in_left_string.length() + in_right_string.length());
+        auto const local_string(this->allocate_buffer(local_length));
+        if (local_string != nullptr)
+        {
+            // 共有文字列bufferを初期化する。
+            self::traits_type::copy(
+                local_string, in_left_string.data(), in_left_string.length());
+            self::traits_type::copy(
+                local_string + in_left_string.length(),
+                in_right_string.data(),
+                in_right_string.length());
+            local_string[local_length] = 0;
+        }
     }
 
     private: static void hold_buffer(

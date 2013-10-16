@@ -146,8 +146,9 @@ class psyq::basic_reference_string
     {}
 
     /** @brief 文字列literalを参照する。
-        @tparam template_size 参照する文字列literalの要素数。
+        @tparam template_size 参照する文字列literalの要素数。空文字も含む。
         @param[in] in_string 参照する文字列literal。
+        @warning 文字列literal以外の文字列を引数に渡すのは禁止。
      */
     public: template <std::size_t template_size>
     basic_reference_string(
@@ -156,7 +157,7 @@ class psyq::basic_reference_string
         data_(&in_string[0]),
         length_(template_size - 1)
     {
-        PSYQ_ASSERT(0 < template_size);
+        PSYQ_ASSERT(0 < template_size && in_string[template_size - 1] == 0);
     }
 
     /** @brief 文字列を参照する。
@@ -171,24 +172,6 @@ class psyq::basic_reference_string
         length_(in_length)
     {
         if (in_string == nullptr && 0 < in_length)
-        {
-            PSYQ_ASSERT(false);
-            this->length_ = 0;
-        }
-    }
-
-    /** @brief 文字列を参照する。
-        @param[in] in_begin 参照する文字列の先頭位置。
-        @param[in] in_end   参照する文字列の末尾位置。
-     */
-    public: basic_reference_string(
-        typename self::const_pointer const in_begin,
-        typename self::const_pointer const in_end)
-    :
-        data_(in_begin),
-        length_(in_end - in_begin)
-    {
-        if (in_end < in_begin || in_begin == nullptr)
         {
             PSYQ_ASSERT(false);
             this->length_ = 0;
@@ -216,9 +199,20 @@ class psyq::basic_reference_string
     //-------------------------------------------------------------------------
     /// @name 文字列の割り当て
     //@{
+    /** @copydoc basic_reference_string(template_string_type const&)
+        @return *this
+     */
+    public: template<typename template_string_type>
+    self& operator=(template_string_type const& in_string)
+    {
+        return *new(this) self(in_string);
+    }
+
     /** @brief 文字列literalを参照する。
-        @tparam template_size 参照する文字列literalの要素数。
+        @tparam template_size 参照する文字列literalの要素数。空文字も含む。
         @param[in] in_string 参照する文字列literal。
+        @return *this
+        @warning 文字列literal以外の文字列を引数に渡すのは禁止。
      */
     public: template <std::size_t template_size>
     self& operator=(
@@ -227,9 +221,18 @@ class psyq::basic_reference_string
         return *new(this) self(in_string);
     }
 
+    /// @copydoc operator=(template_string_type const& in_string)
+    public: template<typename template_string_type>
+    self& assign(template_string_type const& in_string)
+    {
+        return *new(this) self(in_string);
+    }
+
     /** @brief 文字列literalを参照する。
-        @tparam template_size 参照する文字列literalの要素数。
+        @tparam template_size 参照する文字列literalの要素数。空文字も含む。
         @param[in] in_string 参照する文字列literal。
+        @return *this
+        @warning 文字列literal以外の文字列を引数に渡すのは禁止。
      */
     public: template <std::size_t template_size>
     self& assign(typename self::value_type const (&in_string)[template_size])
@@ -237,10 +240,7 @@ class psyq::basic_reference_string
         return *new(this) self(in_string);
     }
 
-    /** @brief 文字列を参照する。
-        @param[in] in_string 参照する文字列の先頭位置。
-        @param[in] in_length 参照する文字列の長さ。
-     */
+    /// @copydoc basic_reference_string(const_pointer const, size_type const)
     public: self& assign(
         typename self::const_pointer const in_string,
         typename self::size_type const     in_length)
@@ -248,22 +248,7 @@ class psyq::basic_reference_string
         return *new(this) self(in_string, in_length);
     }
 
-    /** @brief 任意型の文字列を参照する。
-        @tparam template_string_type @copydoc string_interface
-        @param[in] in_string 参照する文字列。
-     */
-    public: template<typename template_string_type>
-    self& assign(template_string_type const& in_string)
-    {
-        return *new(this) self(in_string);
-    }
-
-    /** @brief 任意型の文字列を参照する。
-        @tparam template_string_type @copydoc string_interface
-        @param[in] in_string 参照する文字列。
-        @param[in] in_offset 参照する文字列の開始offset位置。
-        @param[in] in_count  参照する文字数。
-     */
+    /// @copydoc basic_reference_string(template_string_type const&, template_string_type::size_type const, template_string_type::size_type const)
     public: template<typename template_string_type>
     self& assign(
         template_string_type const&                    in_string,

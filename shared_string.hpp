@@ -214,11 +214,15 @@ class psyq::basic_shared_string
      */
     public: self& operator=(self const& in_string)
     {
-        if (this->holder_.buffer != in_string.holder_.buffer)
+        if (this->buffer_ != in_string.buffer_)
         {
             self::release_buffer(this->get_buffer(), this->get_allocator());
             this->set_string(in_string);
             this->allocator_ = in_string.get_allocator();
+        }
+        else
+        {
+            PSYQ_ASSERT(this->length_ == in_string.length_);
         }
         return *this;
     }
@@ -228,11 +232,15 @@ class psyq::basic_shared_string
      */
     public: self& operator=(self&& io_string)
     {
-        if (this->holder_.buffer != io_string.holder_.buffer)
+        if (this->buffer_ != io_string.buffer_)
         {
             self::release_buffer(this->get_buffer(), this->get_allocator());
             this->move_string(std::move(io_string));
             this->allocator_ = std::move(io_string.allocator_);
+        }
+        else
+        {
+            PSYQ_ASSERT(this->length_ == io_string.length_);
         }
         return *this;
     }
@@ -493,29 +501,28 @@ class psyq::basic_shared_string
     //-------------------------------------------------------------------------
     private: void move_string(self&& io_string)
     {
-        auto const local_buffer(io_string.get_buffer());
-        if (local_buffer != nullptr)
+        if (io_string.is_literal())
         {
-            io_string.set_buffer(nullptr);
-            this->set_buffer(local_buffer);
+            this->set_literal(io_string);
         }
         else
         {
-            this->set_literal(io_string);
+            this->set_buffer(io_string.buffer_);
+            io_string.set_buffer(nullptr);
         }
     }
 
     private: void set_string(self const& in_string)
     {
-        auto const local_buffer(in_string.get_buffer());
-        if (local_buffer != nullptr)
+        if (in_string.is_literal())
         {
-            self::hold_buffer(local_buffer);
-            this->set_buffer(local_buffer);
+            this->set_literal(in_string);
         }
         else
         {
-            this->set_literal(in_string);
+            auto const local_buffer(in_string.buffer_);
+            this->set_buffer(local_buffer);
+            self::hold_buffer(local_buffer);
         }
     }
 

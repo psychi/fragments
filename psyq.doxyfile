@@ -679,6 +679,7 @@ WARN_LOGFILE           =
 
 INPUT                  = \
                          ./reference_string.hpp \
+                         ./shared_string.hpp \
                          ./immutable_string.hpp \
                          ./csv_table.hpp \
                          ./mosp_collision.hpp \

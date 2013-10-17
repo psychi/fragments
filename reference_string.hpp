@@ -84,6 +84,20 @@ class psyq::basic_reference_string
         template_char_type, template_char_traits>
             self;
 
+    /** @page string_interface
+
+        文字列を持つ型。文字列の先頭から末尾までのmemory連続性が必須。
+
+        文字列の先頭位置を取得するため、以下の関数を使えること。
+        @code
+        psyq::basic_reference_string::const_pointer template_string_type::data() const
+        @endcode
+
+        文字列の長さを取得するため、以下の関数を使えること。
+        @code
+        template_string_type::size_type template_string_type::length() const
+        @endcode
+     */
     //-------------------------------------------------------------------------
     /// 文字特性の型。
     public: typedef template_char_traits traits_type;
@@ -171,7 +185,7 @@ class psyq::basic_reference_string
         data_(in_string),
         length_(in_length)
     {
-        if (in_string == nullptr && 0 < in_length)
+        if (in_string == nullptr && in_length != 0)
         {
             PSYQ_ASSERT(false);
             this->length_ = 0;
@@ -1359,21 +1373,6 @@ class psyq::basic_reference_string
     //-------------------------------------------------------------------------
     private: typename self::const_pointer data_;   ///< 文字列の先頭位置。
     private: typename self::size_type     length_; ///< 文字列の長さ。
-
-    /** @page string_interface
-
-        文字列を持つ型。文字列の先頭から末尾までのmemory連続性が必須。
-
-        文字列の先頭位置を取得するため、以下の関数を使えること。
-        @code
-        psyq::basic_reference_string::const_pointer template_string_type::data() const
-        @endcode
-
-        文字列の長さを取得するため、以下の関数を使えること。
-        @code
-        template_string_type::size_type template_string_type::length() const
-        @endcode
-     */
 };
 
 //-----------------------------------------------------------------------------

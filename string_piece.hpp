@@ -590,7 +590,7 @@ class psyq::internal::immutable_string_interface:
         typename self::size_type const     in_left_length,
         typename self::const_pointer const in_right_begin,
         typename self::size_type const     in_right_length)
-        const
+    const
     {
         bool const local_less(in_left_length < in_right_length);
         int const local_compare(
@@ -611,6 +611,102 @@ class psyq::internal::immutable_string_interface:
             return 1;
         }
         return 0;
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 指定文字列の前方検索
+    //@{
+    /** @brief 文字を検索する。
+        @param[in] in_char   検索文字。
+        @param[in] in_offset 検索を開始する位置。
+        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
+     */
+    public: typename self::size_type find(
+        typename self::value_type const in_char,
+        typename self::size_type const  in_offset = 0)
+    const
+    {
+        auto const local_this_length(this->length());
+        if (in_offset < local_this_length)
+        {
+            auto const local_this_data(this->data());
+            auto const local_find(
+                template_char_traits::find(
+                    local_this_data + in_offset,
+                    local_this_length - in_offset,
+                    in_char));
+            if (local_find != nullptr)
+            {
+                return local_find - local_this_data;
+            }
+        }
+        return self::npos;
+    }
+
+    /** @brief 文字列を検索する。
+        @param[in] in_string 検索文字列。
+        @param[in] in_offset 検索を開始する位置。
+        @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
+     */
+    public: typename self::size_type find(
+        super const&             in_string,
+        typename self::size_type in_offset = 0)
+    const
+    {
+        return this->find(in_string.data(), in_offset, in_string.length());
+    }
+
+    /** @brief 文字列を検索する。
+        @param[in] in_string 検索文字列の先頭位置。
+        @param[in] in_offset 検索を開始する位置。
+        @param[in] in_length 検索文字列の長さ。
+        @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
+     */
+    public: typename self::size_type find(
+        typename self::const_pointer const in_string,
+        typename self::size_type const     in_offset,
+        typename self::size_type const     in_length)
+    const
+    {
+        auto const local_this_length(this->length());
+        if (in_length <= 0)
+        {
+            return in_offset <= local_this_length? in_offset: self::npos;
+        }
+        PSYQ_ASSERT(nullptr != in_string);
+
+        auto local_rest_length(local_this_length - in_offset);
+        if (in_offset < local_this_length && in_length <= local_rest_length)
+        {
+            local_rest_length -= in_length - 1;
+            auto const local_this_data(this->data());
+            auto local_rest_string(local_this_data + in_offset);
+            for (;;)
+            {
+                // 検索文字列の先頭文字と合致する位置を見つける。
+                auto const local_find(
+                    template_char_traits::find(
+                        local_rest_string, local_rest_length, *in_string));
+                if (local_find == nullptr)
+                {
+                    break;
+                }
+
+                // 検索文字列と合致するか判定。
+                int const local_compare(
+                    template_char_traits::compare(
+                        local_find, in_string, in_length));
+                if (local_compare == 0)
+                {
+                    return local_find - local_this_data;
+                }
+
+                // 次の候補へ。
+                local_rest_length -= local_find + 1 - local_rest_string;
+                local_rest_string = local_find + 1;
+            }
+        }
+        return self::npos;
     }
     //@}
     //-------------------------------------------------------------------------
@@ -747,114 +843,6 @@ class psyq::basic_string_piece:
     const
     {
         return self(*this, in_offset, in_count);
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name 指定文字列の前方検索
-    //@{
-    /** @brief 文字を検索する。
-        @param[in] in_char   検索文字。
-        @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
-     */
-    public: typename self::size_type find(
-        typename self::value_type const in_char,
-        typename self::size_type const  in_offset = 0)
-    const
-    {
-        if (in_offset < this->length())
-        {
-            auto const local_find(
-                template_char_traits::find(
-                    this->data() + in_offset,
-                    this->length() - in_offset,
-                    in_char));
-            if (local_find != nullptr)
-            {
-                return local_find - this->data();
-            }
-        }
-        return self::npos;
-    }
-
-    /** @brief 文字列を検索する。
-        @param[in] in_string 検索文字列の先頭位置。
-        @param[in] in_offset 検索を開始する位置。
-        @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
-     */
-    public: template <std::size_t template_size>
-    typename self::size_type find(
-        typename self::value_type const (&in_string)[template_size],
-        typename self::size_type const  in_offset = 0)
-    const
-    {
-        return this->find(&in_string[0], in_offset, template_size - 1);
-    }
-
-    /** @brief 文字列を検索する。
-        @tparam template_string_traits @copydoc string_interface
-        @param[in] in_string 検索文字列。
-        @param[in] in_offset 検索を開始する位置。
-        @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
-     */
-    public: template<typename template_string_type>
-    typename self::size_type find(
-        template_string_type const& in_string,
-        typename self::size_type    in_offset = 0)
-    const
-    {
-        return this->find(in_string.data(), in_offset, in_string.length());
-    }
-
-    /** @brief 文字列を検索する。
-        @param[in] in_string 検索文字列の先頭位置。
-        @param[in] in_offset 検索を開始する位置。
-        @param[in] in_length 検索文字列の長さ。
-        @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
-     */
-    public: typename self::size_type find(
-        typename self::const_pointer const in_string,
-        typename self::size_type const     in_offset,
-        typename self::size_type const     in_length)
-    const
-    {
-        if (in_length <= 0)
-        {
-            return in_offset <= this->length()? in_offset: self::npos;
-        }
-        PSYQ_ASSERT(nullptr != in_string);
-
-        auto local_rest_length(this->length() - in_offset);
-        if (in_offset < this->length() && in_length <= local_rest_length)
-        {
-            local_rest_length -= in_length - 1;
-            auto local_rest_string(this->data() + in_offset);
-            for (;;)
-            {
-                // 検索文字列の先頭文字と合致する位置を見つける。
-                auto const local_find(
-                    template_char_traits::find(
-                        local_rest_string, local_rest_length, *in_string));
-                if (local_find == nullptr)
-                {
-                    break;
-                }
-
-                // 検索文字列と合致するか判定。
-                int const local_compare(
-                    template_char_traits::compare(
-                        local_find, in_string, in_length));
-                if (local_compare == 0)
-                {
-                    return local_find - this->data();
-                }
-
-                // 次の候補へ。
-                local_rest_length -= local_find + 1 - local_rest_string;
-                local_rest_string = local_find + 1;
-            }
-        }
-        return self::npos;
     }
     //@}
     //-------------------------------------------------------------------------

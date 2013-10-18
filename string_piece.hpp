@@ -68,14 +68,14 @@ class psyq::internal::const_string_piece
 
     //-------------------------------------------------------------------------
     /** @brief 文字列を参照する。
-        @param[in] in_data   参照する文字列の先頭位置。
+        @param[in] in_begin  参照する文字列の先頭位置。
         @param[in] in_length 参照する文字列の長さ。
      */
     public: const_string_piece(
-        template_char_type const* const in_data,
+        template_char_type const* const in_begin,
         std::size_t const               in_length)
      :
-        data_(in_data),
+        data_(in_begin),
         length_(in_length)
     {}
 
@@ -299,7 +299,7 @@ class psyq::internal::immutable_string_interface:
     /** @brief 文字列の最初の文字を参照する。
         @return 文字列の最初の文字への参照。
      */
-    typename self::const_reference front() const
+    public: typename self::const_reference front() const
     {
         return (*this)[0];
     }
@@ -436,15 +436,15 @@ class psyq::internal::immutable_string_interface:
         {
             return false;
         }
-        auto const local_left_data(this->data());
-        auto const local_right_data(in_right.data());
-        if (this->data() == local_right_data)
+        auto const local_left_begin(this->data());
+        auto const local_right_begin(in_right.data());
+        if (this->data() == local_right_begin)
         {
             return true;
         }
         auto const local_compare(
             template_char_traits::compare(
-                local_left_data, local_right_data, local_right_length));
+                local_left_begin, local_right_begin, local_right_length));
         return local_compare == 0;
     }
 
@@ -458,6 +458,159 @@ class psyq::internal::immutable_string_interface:
     public: bool operator!=(super const& in_right) const
     {
         return !this->operator==(in_right);
+    }
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 < 右辺
+     */
+    public: bool operator<(super const& in_right) const
+    {
+        return this->compare(in_right) < 0;
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 <= 右辺
+     */
+    public: bool operator<=(super const& in_right) const
+    {
+        return this->compare(in_right) <= 0;
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 > 右辺
+     */
+    public: bool operator>(super const& in_right) const
+    {
+        return 0 < this->compare(in_right);
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 >= 右辺
+     */
+    public: bool operator>=(super const& in_right) const
+    {
+        return 0 <= this->compare(in_right);
+    }
+
+    /** @brief 文字列を比較する。
+        @param[in] in_right  左辺の文字列。
+        @retval 負 右辺のほうが大きい。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  左辺と右辺は等価。
+     */
+    public: int compare(super const& in_right) const
+    {
+        return this->compare_checked(
+            0, this->length(), in_right.data(), in_right.length());
+    }
+
+    /** @brief 文字列を比較する。
+        @param[in] in_left_offset 左辺の文字列の開始offset値。
+        @param[in] in_left_count  左辺の文字列の文字数。
+        @param[in] in_right       右辺の文字列。
+        @retval 負 右辺のほうが大きい。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  左辺と右辺は等価。
+     */
+    public: int compare(
+        typename self::size_type const in_left_offset,
+        typename self::size_type const in_left_count,
+        typename super const&          in_right)
+    const
+    {
+        return this->compare(
+            in_left_offset, in_left_count, in_right.data(), in_right.length());
+    }
+
+    /** @brief 文字列を比較する。
+        @param[in] in_left_offset  左辺の文字列の開始offset値。
+        @param[in] in_left_count   左辺の文字列の文字数。
+        @param[in] in_right_begin  右辺の文字列の先頭位置。
+        @param[in] in_right_length 右辺の文字列の長さ。
+        @retval 負 右辺のほうが大きい。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  左辺と右辺は等価。
+     */
+    public: int compare(
+        typename self::size_type const     in_left_offset,
+        typename self::size_type const     in_left_count,
+        typename self::const_pointer const in_right_begin,
+        typename self::size_type const     in_right_length)
+    const
+    {
+        this->compare_checked(
+            in_left_offset,
+            self::trim_count(*this, in_left_offset, in_left_count),
+            in_right_begin,
+            in_right_length);
+    }
+
+    /** @brief 文字列を比較する。
+        @param[in] in_left_offset  左辺の文字列の開始offset値。
+        @param[in] in_left_count   左辺の文字列の文字数。
+        @param[in] in_right        右辺の文字列。
+        @param[in] in_right_offset 左辺の文字列の開始offset値。
+        @param[in] in_right_count  右辺の文字列の文字数。
+        @retval 負 右辺のほうが大きい。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  左辺と右辺は等価。
+     */
+    public: int compare(
+        typename self::size_type const in_left_offset,
+        typename self::size_type const in_left_count,
+        typename super const&          in_right,
+        typename self::size_type const in_right_offset,
+        typename self::size_type const in_right_count)
+    const
+    {
+        return this->compare(
+            in_left_offset,
+            in_left_count,
+            in_right.data() + in_right_offset,
+            self::trim_count(in_right, in_right_offset, in_right_count));
+    }
+
+    private: int compare_checked(
+        typename self::size_type const     in_left_offset,
+        typename self::size_type const     in_left_length,
+        typename self::const_pointer const in_right_begin,
+        typename self::size_type const     in_right_length)
+        const
+    {
+        bool const local_less(in_left_length < in_right_length);
+        int const local_compare(
+            template_char_traits::compare(
+                this->data() + in_left_offset,
+                in_right_begin,
+                local_less? in_left_length: in_right_length));
+        if (local_compare != 0)
+        {
+            return local_compare;
+        }
+        if (local_less)
+        {
+            return -1;
+        }
+        if (in_right_length < in_left_length)
+        {
+            return 1;
+        }
+        return 0;
     }
     //@}
     //-------------------------------------------------------------------------
@@ -478,6 +631,7 @@ class psyq::basic_string_piece:
         template_char_type, template_char_traits>
             self;
 
+    /// self の上位型。
     public: typedef psyq::internal::immutable_string_interface<
         psyq::internal::const_string_piece<template_char_type>,
         template_char_traits>
@@ -501,17 +655,25 @@ class psyq::basic_string_piece:
         super(in_string)
     {}
 
+    /** @brief 文字列を移動する。
+        @param[in,out] io_string 移動する文字列。
+     */
+    public: basic_string_piece(typename super::super&& io_string)
+    :
+        super(std::move(io_string))
+    {}
+
     /** @brief 文字列を参照する。
-        @param[in] in_string 参照する文字列の先頭位置。
+        @param[in] in_front 参照する文字列の先頭位置。
         @param[in] in_length 参照する文字列の長さ。
      */
     public: basic_string_piece(
-        typename super::const_pointer const in_string,
+        typename super::const_pointer const in_front,
         typename super::size_type const     in_length)
     :
-        super(super::super(in_string, in_length))
+        super(super::super(in_front, in_length))
     {
-        if (in_string == nullptr && in_length != 0)
+        if (in_front == nullptr && in_length != 0)
         {
             PSYQ_ASSERT(false);
             new(this) self(nullptr, 0);
@@ -585,214 +747,6 @@ class psyq::basic_string_piece:
     const
     {
         return self(*this, in_offset, in_count);
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name 文字列の比較
-    //@{
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 == 右辺
-     */
-    public: bool operator==(typename super::super const& in_right) const
-    {
-        return this->super::operator==(in_right);
-    }
-
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 != 右辺
-     */
-    public: bool operator!=(typename super::super const& in_right) const
-    {
-        return !this->operator==(in_right);
-    }
-
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 < 右辺
-     */
-    public: bool operator<(self const& in_right) const
-    {
-        return this->compare(in_right) < 0;
-    }
-
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 <= 右辺
-     */
-    public: bool operator<=(self const& in_right) const
-    {
-        return this->compare(in_right) <= 0;
-    }
-
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 > 右辺
-     */
-    public: bool operator>(self const& in_right) const
-    {
-        return 0 < this->compare(in_right);
-    }
-
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 >= 右辺
-     */
-    public: bool operator>=(self const& in_right) const
-    {
-        return 0 <= this->compare(in_right);
-    }
-
-    //-------------------------------------------------------------------------
-    /** @brief 文字列を比較する。
-        @param[in] in_right 右辺の文字列の先頭位置。
-        @retval 負 右辺のほうが大きい。
-        @retval 正 左辺のほうが大きい。
-        @retval 0  左辺と右辺は等価。
-     */
-    public: template<std::size_t template_size>
-    int compare(
-        typename self::value_type const (&in_right)[template_size])
-    {
-        return this->compare(0, this->length(), in_right);
-    }
-
-    /** @brief 文字列を比較する。
-        @tparam template_string_traits @copydoc string_interface
-        @param[in] in_right 右辺の文字列。
-        @retval 負 右辺のほうが大きい。
-        @retval 正 左辺のほうが大きい。
-        @retval 0  左辺と右辺は等価。
-     */
-    public: template<typename template_string_type>
-    int compare(template_string_type const& in_right) const
-    {
-        return this->compare(
-            0, this->length(), in_right.data(), in_right.length());
-    }
-
-    /** @brief 文字列を比較する。
-        @param[in] in_left_offset 左辺の文字列の開始位置。
-        @param[in] in_left_count  左辺の文字列の文字数。
-        @param[in] in_right       右辺の文字列の先頭位置。
-        @retval 負 右辺のほうが大きい。
-        @retval 正 左辺のほうが大きい。
-        @retval 0  左辺と右辺は等価。
-     */
-    public: template <std::size_t template_size>
-    int compare(
-        typename self::size_type const  in_left_offset,
-        typename self::size_type const  in_left_count,
-        typename self::value_type const (&in_right)[template_size])
-    const
-    {
-        return this->compare(
-            in_left_offset, in_left_count, &in_right[0], template_size - 1);
-    }
-
-    /** @brief 文字列を比較する。
-        @tparam template_string_traits @copydoc string_interface
-        @param[in] in_left_offset 左辺の文字列の開始位置。
-        @param[in] in_left_count  左辺の文字列の文字数。
-        @param[in] in_right       右辺の文字列。
-        @retval 負 右辺のほうが大きい。
-        @retval 正 左辺のほうが大きい。
-        @retval 0  左辺と右辺は等価。
-     */
-    public: template<typename template_string_type>
-    int compare(
-        typename self::size_type const in_left_offset,
-        typename self::size_type const in_left_count,
-        template_string_type const&    in_right)
-    const
-    {
-        return this->compare(
-            in_left_offset, in_left_count, in_right.data(), in_right.length());
-    }
-
-    /** @brief 文字列を比較する。
-        @param[in] in_left_offset  左辺の文字列の開始位置。
-        @param[in] in_left_count   左辺の文字列の文字数。
-        @param[in] in_right_begin  右辺の文字列の先頭位置。
-        @param[in] in_right_length 右辺の文字列の長さ。
-        @retval 負 右辺のほうが大きい。
-        @retval 正 左辺のほうが大きい。
-        @retval 0  左辺と右辺は等価。
-     */
-    public: int compare(
-        typename self::size_type const     in_left_offset,
-        typename self::size_type const     in_left_count,
-        typename self::const_pointer const in_right_begin,
-        typename self::size_type const     in_right_length)
-    const
-    {
-        auto const local_left_length(
-            self::trim_count(*this, in_left_offset, in_left_count));
-        bool const local_less(local_left_length < in_right_length);
-        int const local_compare(
-            template_char_traits::compare(
-                this->data() + in_left_offset,
-                in_right_begin,
-                local_less? local_left_length: in_right_length));
-        if (local_compare != 0)
-        {
-            return local_compare;
-        }
-        if (local_less)
-        {
-            return -1;
-        }
-        if (in_right_length < local_left_length)
-        {
-            return 1;
-        }
-        return 0;
-    }
-
-    /** @brief 文字列を比較する。
-        @tparam template_string_traits @copydoc string_interface
-        @param[in] in_left_offset  左辺の文字列の開始位置。
-        @param[in] in_left_count   左辺の文字列の文字数。
-        @param[in] in_right        右辺の文字列。
-        @param[in] in_right_offset 左辺の文字列の開始位置。
-        @param[in] in_right_count  右辺の文字列の文字数。
-        @retval 負 右辺のほうが大きい。
-        @retval 正 左辺のほうが大きい。
-        @retval 0  左辺と右辺は等価。
-     */
-    public: template<typename template_string_type>
-    int compare(
-        typename self::size_type const in_left_offset,
-        typename self::size_type const in_left_count,
-        template_string_type const&    in_right,
-        typename self::size_type const in_right_offset,
-        typename self::size_type const in_right_count)
-    const
-    {
-        return this->compare(
-            in_left_offset,
-            in_left_count,
-            in_right.data() + in_right_offset,
-            self::trim_count(in_right, in_right_offset, in_right_count));
     }
     //@}
     //-------------------------------------------------------------------------

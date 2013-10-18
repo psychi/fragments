@@ -57,7 +57,7 @@ namespace psyq
     {
         /// @cond
         template<typename> class const_string_piece;
-        template<typename, typename> class immutable_string_interface;
+        template<typename, typename> class const_string_interface;
         /// @endcond
     }
 }
@@ -99,7 +99,7 @@ class psyq::internal::const_string_piece
     }
 
     /** @brief 任意型の文字列を参照する。
-        @tparam template_string_type @copydoc immutable_string_interface::super
+        @tparam template_string_type @copydoc const_string_interface::super
         @param[in] in_string 参照する文字列。
      */
     public: template<typename template_string_type>
@@ -197,14 +197,14 @@ class psyq::internal::const_string_piece
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 文字列のinterface。
 
-    @tparam template_string_type @copydoc immutable_string_interface::super
-    @tparam template_char_traits @copydoc immutable_string_interface::traits_type
+    @tparam template_string_type @copydoc const_string_interface::super
+    @tparam template_char_traits @copydoc const_string_interface::traits_type
  */
 template<typename template_string_type, typename template_char_traits>
-class psyq::internal::immutable_string_interface:
+class psyq::internal::const_string_interface:
     public template_string_type
 {
-    private: typedef immutable_string_interface<
+    private: typedef const_string_interface<
         template_string_type, template_char_traits>
             self;
 
@@ -264,12 +264,12 @@ class psyq::internal::immutable_string_interface:
     //-------------------------------------------------------------------------
     /// @name constructor / destructor
     //@{
-    protected: immutable_string_interface(super const& in_source)
+    protected: const_string_interface(super const& in_source)
     :
         super(in_source)
     {}
 
-    protected: immutable_string_interface(super&& io_source)
+    protected: const_string_interface(super&& io_source)
     :
         super(std::move(io_source))
     {}
@@ -786,7 +786,7 @@ class psyq::internal::immutable_string_interface:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 template<typename template_char_type, typename template_char_traits>
 class psyq::basic_string_piece:
-    public psyq::internal::immutable_string_interface<
+    public psyq::internal::const_string_interface<
         psyq::internal::const_string_piece<template_char_type>,
         template_char_traits>
 {
@@ -796,7 +796,7 @@ class psyq::basic_string_piece:
             self;
 
     /// self の上位型。
-    public: typedef psyq::internal::immutable_string_interface<
+    public: typedef psyq::internal::const_string_interface<
         psyq::internal::const_string_piece<template_char_type>,
         template_char_traits>
             super;

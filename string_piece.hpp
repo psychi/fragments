@@ -85,7 +85,13 @@ class psyq::internal::const_string_piece
      :
         data_(in_begin),
         length_(in_length)
-    {}
+    {
+        if (in_begin == nullptr && 0 < in_length)
+        {
+            PSYQ_ASSERT(false);
+            this->length_ = 0;
+        }
+    }
 
     /** @brief 文字列literalを参照する。
         @tparam template_size 参照する文字列literalの要素数。空文字も含む。
@@ -139,6 +145,27 @@ class psyq::internal::const_string_piece
     public: void clear()
     {
         this->length_ = 0;
+    }
+
+    /** @brief 部分文字列を取得する。
+        @param[in] in_offset 部分文字列の開始offset値。
+        @param[in] in_count  部分文字列の開始offset値からの文字数。
+        @return 部分文字列。
+     */
+    public: self substr(
+        std::size_t const in_offset,
+        std::size_t const in_count)
+    const
+    {
+        if (this->length() <= in_offset)
+        {
+            return self(this->data() + this->length(), 0);
+        }
+        if (in_count < this->length() - in_offset)
+        {
+            return self(this->data() + in_offset, in_count);
+        }
+        return self(this->data() + in_offset, this->length() - in_offset);
     }
 
     /** @brief 文字列を交換する。
@@ -878,6 +905,73 @@ class psyq::internal::const_string_interface:
     }
     //@}
     //-------------------------------------------------------------------------
+    /// @name 指定文字の後方検索
+    //@{
+    /** @brief 文字を後ろから検索する。
+        @param[in] in_char   検索文字。
+        @param[in] in_offset 検索を開始する位置。
+        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
+     */
+    public: typename self::size_type find_last_of(
+        typename self::value_type const in_char,
+        typename self::size_type const  in_offset = self::npos)
+    const
+    {
+        return this->rfind(in_char, in_offset);
+    }
+
+    /** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索する。
+        @tparam template_string_traits @copydoc string_interface
+        @param[in] in_string 検索文字列。
+        @param[in] in_offset 検索を開始する位置。
+        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
+     */
+    public: typename self::size_type find_last_of(
+        super const&                   in_string,
+        typename self::size_type const in_offset = self::npos)
+    const
+    {
+        return this->find_last_of(
+            in_string.data(), in_offset, in_string.length());
+    }
+
+    /** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索する。
+        @param[in] in_string 検索文字列の先頭位置。
+        @param[in] in_offset 検索を開始する位置。
+        @param[in] in_length 検索文字列の長さ。
+        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
+     */
+    public: typename self::size_type find_last_of(
+        typename self::const_pointer const in_string,
+        typename self::size_type const     in_offset,
+        typename self::size_type const     in_length)
+    const
+    {
+        PSYQ_ASSERT(in_length <= 0 || nullptr != in_string);
+        auto const local_this_length(this->length());
+        if (in_length <= local_this_length
+            && 0 < in_length
+            && 0 < local_this_length)
+        {
+            auto const local_begin(this->data());
+            auto const local_offset(
+                (std::min)(in_offset, local_this_length - in_length));
+            for (auto i(local_begin + local_offset); ; --i)
+            {
+                if (self::traits_type::find(in_string, in_length, *i) != nullptr)
+                {
+                    return i - local_begin;
+                }
+                if (i <= local_begin)
+                {
+                    break;
+                }
+            }
+        }
+        return self::npos;
+    }
+    //@}
+    //-------------------------------------------------------------------------
     /// @name 指定文字以外の前方検索
     //@{
     /** @brief 検索文字以外の文字を検索する。
@@ -1027,13 +1121,13 @@ class psyq::basic_string_piece:
     :
         super(super::super(in_begin, in_length))
     {
-        if (in_front == nullptr && in_length != 0)
+        if (in_begin == nullptr && in_length != 0)
         {
             PSYQ_ASSERT(false);
             new(this) self(nullptr, 0);
         }
     }
-#if 0
+
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
         @param[in] in_offset 参照する文字列の開始offset位置。
@@ -1044,12 +1138,8 @@ class psyq::basic_string_piece:
         typename super::size_type const in_offset,
         typename super::size_type const in_count = super::npos)
     :
-        super(
-            super::super(
-                in_string.data() + in_offset,
-                self::trim_count(in_string, in_offset, in_count)))
+        super(in_string.substr(in_offset, in_count))
     {}
-#endif
     //@}
     //-------------------------------------------------------------------------
     /// @name 文字列の割り当て
@@ -1076,18 +1166,14 @@ class psyq::basic_string_piece:
         return *new(this) self(in_begin, in_length);
     }
 
-#if 0
-    /// @copydoc basic_string_piece(template_string_type const&, template_string_type::size_type const, template_string_type::size_type const)
-    public: template<typename template_string_type>
-    self& assign(
-        template_string_type const&                    in_string,
-        typename template_string_type::size_type const in_offset,
-        typename template_string_type::size_type const in_count
-        = template_string_type::npos)
+    /// @copydoc basic_string_piece(typename super::super const&, typename size_type const, typename size_type const)
+    public: self& assign(
+        typename super::super const&    in_string,
+        typename super::size_type const in_offset,
+        typename super::size_type const in_count = super::npos)
     {
         return *new(this) self(in_string, in_offset, in_count);
     }
-#endif
     //@}
     //-------------------------------------------------------------------------
     /// @name 文字列の操作
@@ -1102,83 +1188,6 @@ class psyq::basic_string_piece:
     const
     {
         return self(*this, in_offset, in_count);
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name 指定文字の後方検索
-    //@{
-    /** @brief 文字を後ろから検索する。
-        @param[in] in_char   検索文字。
-        @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
-     */
-    public: typename self::size_type find_last_of(
-        typename self::value_type const in_char,
-        typename self::size_type const  in_offset = self::npos)
-    const
-    {
-        return this->rfind(in_char, in_offset);
-    }
-
-    /** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索する。
-        @param[in] in_string 検索文字列。
-        @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
-     */
-    public: template <std::size_t template_size>
-    typename self::size_type find_last_of(
-        typename self::value_type const (&in_string)[template_size],
-        typename self::size_type const  in_offset = 0)
-    const
-    {
-        return this->find_last_of(
-            &in_string[0], in_offset, template_size - 1);
-    }
-
-    /** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索する。
-        @tparam template_string_traits @copydoc string_interface
-        @param[in] in_string 検索文字列。
-        @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
-     */
-    public: template<typename template_string_type>
-    typename self::size_type find_last_of(
-        template_string_type const&    in_string,
-        typename self::size_type const in_offset = self::npos)
-    const
-    {
-        return this->find_last_of(
-            in_string.data(), in_offset, in_string.length());
-    }
-
-    /** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索する。
-        @param[in] in_string 検索文字列の先頭位置。
-        @param[in] in_offset 検索を開始する位置。
-        @param[in] in_length   検索文字列の長さ。
-        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
-     */
-    public: typename self::size_type find_last_of(
-        typename self::const_pointer const in_string,
-        typename self::size_type const     in_offset,
-        typename self::size_type const     in_length)
-    const
-    {
-        PSYQ_ASSERT(in_length <= 0 || nullptr != in_string);
-        if (0 < in_length && 0 < this->length())
-        {
-            for (auto i(self::get_pointer(*this, in_offset)); ; --i)
-            {
-                if (template_char_traits::find(in_string, in_length, *i) != nullptr)
-                {
-                    return i - this->data();
-                }
-                if (i <= this->data())
-                {
-                    break;
-                }
-            }
-        }
-        return self::npos;
     }
     //@}
     //-------------------------------------------------------------------------

@@ -36,17 +36,17 @@
 #define PSYQ_ASSERT(define_expression) assert(define_expression)
 #endif // !PSYQ_ASSERT
 
-#ifndef PSYQ_BASIC_STRING_PIECE_DEFAULT
-#define PSYQ_BASIC_STRING_PIECE_DEFAULT\
+#ifndef PSYQ_BASIC_STRING_PIECE_TRAITS_DEFAULT
+#define PSYQ_BASIC_STRING_PIECE_TRAITS_DEFAULT\
     std::char_traits<template_char_type>
-#endif // !PSYQ_BASIC_STRING_PIECE_DEFAULT
+#endif // !PSYQ_BASIC_STRING_PIECE_TRAITS_DEFAULT
 
 namespace psyq
 {
     /// @cond
     template<
         typename template_char_type,
-        typename = PSYQ_BASIC_STRING_PIECE_DEFAULT>
+        typename = PSYQ_BASIC_STRING_PIECE_TRAITS_DEFAULT>
             class basic_string_piece;
     /// @endcond
 
@@ -470,7 +470,7 @@ class psyq::internal::const_string_interface:
             return true;
         }
         auto const local_compare(
-            template_char_traits::compare(
+            self::traits_type::compare(
                 local_left_begin, local_right_begin, local_right_length));
         return local_compare == 0;
     }
@@ -620,7 +620,7 @@ class psyq::internal::const_string_interface:
     {
         bool const local_less(in_left_length < in_right_length);
         int const local_compare(
-            template_char_traits::compare(
+            self::traits_type::compare(
                 in_left_begin,
                 in_right_begin,
                 local_less? in_left_length: in_right_length));
@@ -657,7 +657,7 @@ class psyq::internal::const_string_interface:
         {
             auto const local_this_data(this->data());
             auto const local_find(
-                template_char_traits::find(
+                self::traits_type::find(
                     local_this_data + in_offset,
                     local_this_length - in_offset,
                     in_char));
@@ -711,7 +711,7 @@ class psyq::internal::const_string_interface:
             {
                 // 検索文字列の先頭文字と合致する位置を見つける。
                 auto const local_find(
-                    template_char_traits::find(
+                    self::traits_type::find(
                         local_rest_string, local_rest_length, *in_string));
                 if (local_find == nullptr)
                 {
@@ -720,7 +720,7 @@ class psyq::internal::const_string_interface:
 
                 // 検索文字列と合致するか判定。
                 int const local_compare(
-                    template_char_traits::compare(
+                    self::traits_type::compare(
                         local_find, in_string, in_length));
                 if (local_compare == 0)
                 {
@@ -730,6 +730,89 @@ class psyq::internal::const_string_interface:
                 // 次の候補へ。
                 local_rest_length -= local_find + 1 - local_rest_string;
                 local_rest_string = local_find + 1;
+            }
+        }
+        return self::npos;
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 指定文字列の後方検索
+    //@{
+    /** @brief 後ろから文字を検索する。
+        @param[in] in_char   検索文字。
+        @param[in] in_offset 検索を開始する位置。
+        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
+     */
+    public: typename self::size_type rfind(
+        typename self::value_type const in_char,
+        typename self::size_type const  in_offset = self::npos)
+    const
+    {
+        if (!this->empty())
+        {
+            auto const local_begin(this->data());
+            for (auto i(local_begin + (std::min)(in_offset, this->length())); ; --i)
+            {
+                if (self::traits_type::eq(*i, in_char))
+                {
+                    return i - local_begin;
+                }
+                if (i <= local_begin)
+                {
+                    break;
+                }
+            }
+        }
+        return self::npos;
+    }
+
+    /** @brief 後ろから文字列を検索する。
+        @param[in] in_string 検索文字列。
+        @param[in] in_offset 検索を開始する位置。
+        @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
+     */
+    public: typename self::size_type rfind(
+        super const&                   in_string,
+        typename self::size_type const in_offset = self::npos)
+    const
+    {
+        return this->rfind(in_string.data(), in_offset, in_string.length());
+    }
+
+    /** @brief 後ろから文字列を検索する。
+        @param[in] in_string 検索文字列の先頭位置。
+        @param[in] in_offset 検索を開始する位置。
+        @param[in] in_length 検索文字列の長さ。
+        @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
+     */
+    public: typename self::size_type rfind(
+        typename self::const_pointer const in_string,
+        typename self::size_type const     in_offset,
+        typename self::size_type const     in_length)
+    const
+    {
+        auto const local_this_length(this->length());
+        if (in_length <= 0)
+        {
+            return (std::min)(in_offset, local_this_length);
+        }
+        PSYQ_ASSERT(nullptr != in_string);
+        if (in_length <= local_this_length)
+        {
+            auto const local_begin(this->data());
+            auto const local_offset(
+                (std::min)(in_offset, local_this_length - in_length));
+            for (auto i(local_begin + local_offset); ; --i)
+            {
+                if (self::traits_type::eq(*i, *in_string)
+                    && self::traits_type::compare(i, in_string, in_length) == 0)
+                {
+                    return i - local_begin;
+                }
+                if (i <= local_begin)
+                {
+                    break;
+                }
             }
         }
         return self::npos;
@@ -785,7 +868,7 @@ class psyq::internal::const_string_interface:
             auto const local_end(local_begin + local_this_length);
             for (auto i(local_begin + in_offset); i < local_end; ++i)
             {
-                if (template_char_traits::find(in_string, in_length, *i) != nullptr)
+                if (self::traits_type::find(in_string, in_length, *i) != nullptr)
                 {
                     return i - local_begin;
                 }
@@ -812,7 +895,7 @@ class psyq::internal::const_string_interface:
         auto const local_end(local_begin + this->length());
         for (auto i(local_begin + in_offset); i < local_end; ++i)
         {
-            if (!template_char_traits::eq(*i, in_char))
+            if (!self::traits_type::eq(*i, in_char))
             {
                 return i - local_begin;
             }
@@ -856,7 +939,7 @@ class psyq::internal::const_string_interface:
             auto const local_end(local_begin + local_this_length);
             for (auto i(local_begin + in_offset); i < local_end; ++i)
             {
-                if (template_char_traits::find(in_string, in_length, *i) == nullptr)
+                if (self::traits_type::find(in_string, in_length, *i) == nullptr)
                 {
                     return i - local_begin;
                 }
@@ -872,6 +955,25 @@ class psyq::internal::const_string_interface:
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief std::basic_string のinterfaceを模した、文字列へのconst参照。
+
+    - C文字列を単純にconst参照する。
+    - memory割り当てを一切行わない。
+    - 文字列を書き換えるinterfaceはない。
+    - thread-safety
+      - 1つのinstanceを、異なるthreadで同時にreadする。
+      - 複数のinstanceを、異なるthreadで同時にwriteする。
+    - not thread-safety
+      - 1つのinstanceを、異なるthreadで同時にwriteする。
+      - 1つのinstanceを、異なるthreadで同時にreadとwriteをする。
+
+    @warning
+        C文字列を単純にconst参照しているので、
+        参照してる文字列が破壊されると、動作を保証できなくなる。
+
+    @tparam template_char_type   @copydoc super::value_type
+    @tparam template_char_traits @copydoc super::traits_type
+ */
 template<typename template_char_type, typename template_char_traits>
 class psyq::basic_string_piece:
     public psyq::internal::const_string_interface<
@@ -1000,103 +1102,6 @@ class psyq::basic_string_piece:
     const
     {
         return self(*this, in_offset, in_count);
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name 指定文字列の後方検索
-    //@{
-    /** @brief 後ろから文字を検索する。
-        @param[in] in_char   検索文字。
-        @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が現れた位置。現れない場合は self::npos を返す。
-     */
-    public: typename self::size_type rfind(
-        typename self::value_type const in_char,
-        typename self::size_type const  in_offset = self::npos)
-    const
-    {
-        if (!this->empty())
-        {
-            for (auto i(self::get_pointer(*this, in_offset)); ; --i)
-            {
-                if (template_char_traits::eq(*i, in_char))
-                {
-                    return i - this->data();
-                }
-                if (i <= this->data())
-                {
-                    break;
-                }
-            }
-        }
-        return self::npos;
-    }
-
-    /** @brief 後ろから文字列を検索する。
-        @param[in] in_string 検索文字列の先頭位置。
-        @param[in] in_offset 検索を開始する位置。
-        @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
-     */
-    public: template <std::size_t template_size>
-    typename self::size_type rfind(
-        typename self::value_type const (&in_string)[template_size],
-        typename self::size_type const  in_offset = 0)
-    const
-    {
-        return this->rfind(&in_string[0], in_offset, template_size - 1);
-    }
-
-    /** @brief 後ろから文字列を検索する。
-        @tparam template_string_traits @copydoc string_interface
-        @param[in] in_string 検索文字列。
-        @param[in] in_offset 検索を開始する位置。
-        @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
-     */
-    public: template<typename template_string_type>
-    typename self::size_type rfind(
-        template_string_type const&    in_string,
-        typename self::size_type const in_offset = self::npos)
-    const
-    {
-        return this->rfind(in_string.data(), in_offset, in_string.length());
-    }
-
-    /** @brief 後ろから文字列を検索する。
-        @param[in] in_string 検索文字列の先頭位置。
-        @param[in] in_offset 検索を開始する位置。
-        @param[in] in_length 検索文字列の長さ。
-        @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
-     */
-    public: typename self::size_type rfind(
-        typename self::const_pointer const in_string,
-        typename self::size_type const     in_offset,
-        typename self::size_type const     in_length)
-    const
-    {
-        if (in_length <= 0)
-        {
-            return in_offset < this->length() ? in_offset: this->length();
-        }
-        PSYQ_ASSERT(nullptr != in_string);
-
-        if (in_length <= this->length())
-        {
-            auto const local_offset(
-                (std::min)(in_offset, this->length() - in_length));
-            for (auto i(this->data() + local_offset); ; --i)
-            {
-                if (template_char_traits::eq(*i, *in_string)
-                    && template_char_traits::compare(i, in_string, in_length) == 0)
-                {
-                    return i - this->data();
-                }
-                if (i <= this->data())
-                {
-                    break;
-                }
-            }
-        }
-        return self::npos;
     }
     //@}
     //-------------------------------------------------------------------------

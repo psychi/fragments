@@ -895,7 +895,9 @@ class psyq::internal::const_string_interface:
             auto const local_end(local_begin + local_this_length);
             for (auto i(local_begin + in_offset); i < local_end; ++i)
             {
-                if (self::traits_type::find(in_string, in_length, *i) != nullptr)
+                auto const local_find(
+                    self::traits_type::find(in_string, in_length, *i));
+                if (local_find != nullptr)
                 {
                     return i - local_begin;
                 }
@@ -958,7 +960,9 @@ class psyq::internal::const_string_interface:
                 (std::min)(in_offset, local_this_length - in_length));
             for (auto i(local_begin + local_offset); ; --i)
             {
-                if (self::traits_type::find(in_string, in_length, *i) != nullptr)
+                auto const local_find(
+                    self::traits_type::find(in_string, in_length, *i));
+                if (local_find != nullptr)
                 {
                     return i - local_begin;
                 }
@@ -1033,9 +1037,96 @@ class psyq::internal::const_string_interface:
             auto const local_end(local_begin + local_this_length);
             for (auto i(local_begin + in_offset); i < local_end; ++i)
             {
-                if (self::traits_type::find(in_string, in_length, *i) == nullptr)
+                auto const local_find(
+                    self::traits_type::find(in_string, in_length, *i));
+                if (local_find == nullptr)
                 {
                     return i - local_begin;
+                }
+            }
+        }
+        return self::npos;
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 指定文字以外の後方検索
+    //@{
+    /** @brief 検索文字以外の文字を、後ろから検索する。
+        @param[in] in_char   検索文字。
+        @param[in] in_offset 検索を開始する位置。
+        @return
+            検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
+     */
+    public: typename self::size_type find_last_not_of(
+        typename self::value_type const in_char,
+        typename self::size_type const  in_offset = self::npos)
+    const
+    {
+        auto const local_this_length(this->length())
+        if (in_offset < local_this_length)
+        {
+            auto const local_begin(this->data());
+            auto const local_end(local_begin + local_this_length);
+            for (auto i(local_begin + in_offset); i < local_end; ++i)
+            {
+                if (!self::traits_type::eq(*i, in_char))
+                {
+                    return i - local_begin;
+                }
+                if (i <= local_begin)
+                {
+                    break;
+                }
+            }
+        }
+        return self::npos;
+    }
+
+    /** @brief 検索文字列に含まれない文字を検索する。
+        @param[in] in_string 検索文字列。
+        @param[in] in_offset 検索を開始する位置。
+        @return
+            検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
+     */
+    public: typename self::size_type find_last_not_of(
+        super const&                   in_string,
+        typename self::size_type const in_offset = self::npos)
+    const
+    {
+        return this->find_last_not_of(
+            in_string.data(), in_offset, in_string.length());
+    }
+
+    /** @brief 検索文字列に含まれない文字を、後ろから検索する。
+        @param[in] in_string 検索文字列の先頭位置。
+        @param[in] in_offset 検索を開始する位置。
+        @param[in] in_length 検索文字列の長さ。
+        @return
+            検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
+     */
+    public: typename self::size_type find_last_not_of(
+        typename self::const_pointer const in_string,
+        typename self::size_type const     in_offset,
+        typename self::size_type const     in_length)
+    const
+    {
+        PSYQ_ASSERT(in_length <= 0 || nullptr != in_string);
+        auto const local_this_length(this->length())
+        if (in_offset < local_this_length)
+        {
+            auto const local_begin(this->data());
+            auto const local_end(local_begin + local_this_length);
+            for (auto i(local_begin + in_offset); i < local_end; ++i)
+            {
+                auto const local_find(
+                    template_char_traits::find(in_string, in_length, *i));
+                if (local_find == nullptr)
+                {
+                    return i - this->data();
+                }
+                else if (i <= this->data())
+                {
+                    break;
                 }
             }
         }
@@ -1190,170 +1281,6 @@ class psyq::basic_string_piece:
         return self(*this, in_offset, in_count);
     }
     //@}
-    //-------------------------------------------------------------------------
-    /// @name 指定文字以外の後方検索
-    //@{
-    /** @brief 検索文字以外の文字を、後ろから検索する。
-        @param[in] in_char   検索文字。
-        @param[in] in_offset 検索を開始する位置。
-        @return
-            検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
-     */
-    public: typename self::size_type find_last_not_of(
-        typename self::value_type const in_char,
-        typename self::size_type const  in_offset = self::npos)
-    const
-    {
-        if (!this->empty())
-        {
-            for (auto i(self::get_pointer(*this, in_offset)); ; --i)
-            {
-                if (!template_char_traits::eq(*i, in_char))
-                {
-                    return i - this->data();
-                }
-                if (i <= this->data())
-                {
-                    break;
-                }
-            }
-        }
-        return self::npos;
-    }
-
-    /** @brief 検索文字列に含まれない文字を検索する。
-        @param[in] in_string 検索文字列の先頭位置。
-        @param[in] in_offset 検索を開始する位置。
-        @return
-            検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
-     */
-    public: template <std::size_t template_size>
-    typename self::size_type find_last_not_of(
-        typename self::value_type const (&in_string)[template_size],
-        typename self::size_type const  in_offset = 0)
-    const
-    {
-        return this->find_last_not_of(
-            &in_string[0], in_offset, template_size - 1);
-    }
-
-    /** @brief 検索文字列に含まれない文字を検索する。
-        @tparam template_string_traits @copydoc string_interface
-        @param[in] in_string 検索文字列。
-        @param[in] in_offset 検索を開始する位置。
-        @return
-            検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
-     */
-    public: template<typename template_string_type>
-    typename self::size_type find_last_not_of(
-        template_string_type const&    in_string,
-        typename self::size_type const in_offset = self::npos)
-    const
-    {
-        return this->find_last_not_of(
-            in_string.data(), in_offset, in_string.length());
-    }
-
-    /** @brief 検索文字列に含まれない文字を、後ろから検索する。
-        @param[in] in_string 検索文字列の先頭位置。
-        @param[in] in_offset 検索を開始する位置。
-        @param[in] in_length 検索文字列の長さ。
-        @return
-            検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
-     */
-    public: typename self::size_type find_last_not_of(
-        typename self::const_pointer const in_string,
-        typename self::size_type const     in_offset,
-        typename self::size_type const     in_length)
-    const
-    {
-        PSYQ_ASSERT(in_length <= 0 || nullptr != in_string);
-        if (!this->empty())
-        {
-            for (auto i(self::get_pointer(*this, in_offset)); ; --i)
-            {
-                if (template_char_traits::find(in_string, in_length, *i) == nullptr)
-                {
-                    return i - this->data();
-                }
-                else if (i <= this->data())
-                {
-                    break;
-                }
-            }
-        }
-        return self::npos;
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /** @brief 文字pointerを取得する。
-        @tparam template_string_type @copydoc string_interface
-        @param[in] in_string 文字列。
-        @param[in] in_offset 文字列の開始offset位置。
-        @return
-            開始offset位置にある文字へのpointer。
-            開始offset位置が文字数を超えている場合は、最後の文字へのpointer。
-     */
-    private: template<typename template_string_type>
-    static typename template_string_type::const_pointer get_pointer(
-        template_string_type const&                    in_string,
-        typename template_string_type::size_type const in_offset)
-    {
-        auto local_offset(
-            self::convert_count<template_string_type>(in_offset));
-        auto const local_length(in_string.length());
-        if (local_length <= local_offset)
-        {
-            PSYQ_ASSERT(0 < local_length);
-            local_offset = local_length - 1;
-        }
-        return in_string.data() + local_offset;
-    }
-
-    /** @brief 文字数をtrimmingする。
-        @tparam template_string_type @copydoc string_interface
-        @param[in] in_string 文字列。
-        @param[in] in_offset 文字列の開始offset位置。
-        @param[in] in_count  文字列の開始offset位置からの文字数。
-        @return 文字列全体の文字数に収まるようにin_countをtrimmingした値。
-     */
-    private: template<typename template_string_type>
-    static typename template_string_type::size_type trim_count(
-        template_string_type const&                    in_string,
-        typename template_string_type::size_type const in_offset,
-        typename template_string_type::size_type const in_count)
-    {
-        return self::trim_count(
-            in_string.length(),
-            self::convert_count<template_string_type>(in_offset),
-            self::convert_count<template_string_type>(in_count));
-    }
-
-    /** @brief 文字数をtrimmingする。
-        @param[in] in_length 文字列全体の文字数。
-        @param[in] in_offset 文字列の開始offset位置。
-        @param[in] in_count  文字列の開始offset位置からの文字数。
-        @return 文字列全体の文字数に収まるようにin_countをtrimmingした値。
-     */
-    private: static typename self::size_type trim_count(
-        typename self::size_type const in_length,
-        typename self::size_type const in_offset,
-        typename self::size_type const in_count)
-    {
-        return in_length < in_offset?
-            0: (std::min)(in_count, in_length - in_offset);
-    }
-
-    private: template<typename template_string_type>
-    static typename template_string_type::size_type convert_count(
-        typename template_string_type::size_type const in_count)
-    {
-        if (in_count != template_string_type::npos)
-        {
-            return in_count;
-        }
-        return (std::numeric_limits<typename template_string_type::size_type>::max)();
-    }
 };
 
 //-----------------------------------------------------------------------------

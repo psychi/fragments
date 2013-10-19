@@ -48,7 +48,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string のinterfaceを模した、文字列へのconst参照。
+/** @brief std::basic_string を模したinterfaceが使える、文字列へのconst参照。
 
     - C文字列を単純にconst参照する。
     - memory割り当てを一切行わない。
@@ -70,8 +70,7 @@ namespace psyq
 template<typename template_char_type, typename template_char_traits>
 class psyq::basic_string_piece:
     public psyq::internal::const_string_interface<
-        psyq::internal::const_string_piece<template_char_type>,
-        template_char_traits>
+        psyq::internal::const_string_piece<template_char_traits>>
 {
     /// thisが指す値の型。
     public: typedef psyq::basic_string_piece<
@@ -80,8 +79,7 @@ class psyq::basic_string_piece:
 
     /// self の上位型。
     public: typedef psyq::internal::const_string_interface<
-        psyq::internal::const_string_piece<template_char_type>,
-        template_char_traits>
+        psyq::internal::const_string_piece<template_char_traits>>
             super;
 
     //-------------------------------------------------------------------------
@@ -124,7 +122,7 @@ class psyq::basic_string_piece:
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
         @param[in] in_offset 参照する文字列の開始offset位置。
-        @param[in] in_count  参照する文字数。
+        @param[in] in_count  参照する文字数の開始offset位置からの文字数。
      */
     public: basic_string_piece(
         typename super::super const&    in_string,
@@ -145,7 +143,7 @@ class psyq::basic_string_piece:
         return *new(this) self(in_string);
     }
 
-    /// @copydoc operator=(typename super::super const& in_string)
+    /// @copydoc operator=(typename super::super const&)
     public: self& assign(typename super::super const& in_string)
     {
         return *new(this) self(in_string);
@@ -153,8 +151,8 @@ class psyq::basic_string_piece:
 
     /// @copydoc basic_string_piece(typename const_pointer const, typename size_type const)
     public: self& assign(
-        typename self::const_pointer const in_begin,
-        typename self::size_type const     in_length)
+        typename super::const_pointer const in_begin,
+        typename super::size_type const     in_length)
     {
         return *new(this) self(in_begin, in_length);
     }
@@ -173,11 +171,11 @@ class psyq::basic_string_piece:
     //@{
     /** @brief 部分文字列を取得する。
         @param[in] in_offset 部分文字列の開始offset位置。
-        @param[in] in_count  部分文字列の文字数。
+        @param[in] in_count  部分文字列の開始offset位置からの文字数。
      */
     public: self substr(
-        typename self::size_type in_offset = 0,
-        typename self::size_type in_count = self::npos)
+        typename super::size_type in_offset = 0,
+        typename super::size_type in_count = super::npos)
     const
     {
         return self(*this, in_offset, in_count);

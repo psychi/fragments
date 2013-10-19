@@ -42,7 +42,7 @@ namespace psyq
     {
         /// @cond
         template<typename> class const_string_piece;
-        template<typename, typename> class const_string_interface;
+        template<typename> class const_string_interface;
         /// @endcond
     }
 }
@@ -53,19 +53,30 @@ namespace psyq
         C文字列を単純にconst参照しているので、
         参照してる文字列が破壊されると、動作を保証できなくなる。
  */
-template<typename template_char_type>
+template<typename template_char_traits>
 class psyq::internal::const_string_piece
 {
     /// thisが指す値の型。
-    private: typedef const_string_piece<template_char_type> self;
+    private: typedef const_string_piece<template_char_traits> self;
+
+    /// 文字特性の型。
+    public: typedef template_char_traits traits_type;
 
     //-------------------------------------------------------------------------
+    /** @brief 空の文字列を構築する。
+     */
+    public: const_string_piece()
+     :
+        data_(nullptr),
+        length_(0)
+    {}
+
     /** @brief 文字列を参照する。
         @param[in] in_begin  参照する文字列の先頭位置。
         @param[in] in_length 参照する文字列の長さ。
      */
     public: const_string_piece(
-        template_char_type const* const in_begin,
+        typename self::traits_type::char_type const* const in_begin,
         std::size_t const               in_length)
      :
         data_(in_begin),
@@ -88,7 +99,7 @@ class psyq::internal::const_string_piece
      */
     public: template <std::size_t template_size>
     const_string_piece(
-        template_char_type const (&in_literal)[template_size])
+        typename self::traits_type::char_type const (&in_literal)[template_size])
     :
         data_(&in_literal[0]),
         length_(template_size - 1)
@@ -112,7 +123,7 @@ class psyq::internal::const_string_piece
         @return 文字列の最初の文字へのpointer。
         @warning 文字列が空文字で終わっている保証はない。
      */
-    public: template_char_type const* data() const
+    public: typename self::traits_type::char_type const* data() const
     {
         return this->data_;
     }
@@ -216,31 +227,34 @@ class psyq::internal::const_string_piece
     }
     //@}
     //-------------------------------------------------------------------------
-    private: template_char_type const* data_;   ///< 文字列の先頭位置。
-    private: std::size_t               length_; ///< 文字列の長さ。
+    /// 文字列の先頭位置。
+    private: typename self::traits_type::char_type const* data_;
+    /// 文字列の長さ。
+    private: std::size_t length_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_string のinterfaceを模した、const文字列のinterface。
 
     @tparam template_string_type @copydoc const_string_interface::super
-    @tparam template_char_traits @copydoc const_string_interface::traits_type
  */
-template<typename template_string_type, typename template_char_traits>
+template<typename template_string_type>
 class psyq::internal::const_string_interface:
     public template_string_type
 {
     /// thisが指す値の型。
-    private: typedef const_string_interface<
-        template_string_type, template_char_traits>
-            self;
+    private: typedef const_string_interface<template_string_type> self;
 
     /** @brief 操作する文字列型。
 
         - 文字列の先頭から末尾までのmemory連続性が必須。
+        - 文字の型属性として、以下の型が定義されてること。
+          @code
+          template_string_type::traits_type
+          @endcode
         - 文字列の先頭位置を取得するため、以下の関数を使えること。
           @code
-          template_char_traits::value_type const* template_string_type::data() const
+          template_char_traits::char_type const* template_string_type::data() const
           @endcode
         - 文字列の長さを取得するため、以下の関数を使えること。
           @code
@@ -250,11 +264,8 @@ class psyq::internal::const_string_interface:
     public: typedef template_string_type super;
 
     //-------------------------------------------------------------------------
-    /// 文字特性の型。
-    public: typedef template_char_traits traits_type;
-
     /// 文字の型。
-    public: typedef typename self::traits_type::char_type value_type;
+    public: typedef typename super::traits_type::char_type value_type;
 
     /// 文字数の型。
     public: typedef std::size_t size_type;
@@ -485,7 +496,7 @@ class psyq::internal::const_string_interface:
             return true;
         }
         auto const local_compare(
-            self::traits_type::compare(
+            super::traits_type::compare(
                 local_left_begin, local_right_begin, local_right_length));
         return local_compare == 0;
     }
@@ -635,7 +646,7 @@ class psyq::internal::const_string_interface:
     {
         bool const local_less(in_left_length < in_right_length);
         int const local_compare(
-            self::traits_type::compare(
+            super::traits_type::compare(
                 in_left_begin,
                 in_right_begin,
                 local_less? in_left_length: in_right_length));
@@ -672,7 +683,7 @@ class psyq::internal::const_string_interface:
         {
             auto const local_this_data(this->data());
             auto const local_find(
-                self::traits_type::find(
+                super::traits_type::find(
                     local_this_data + in_offset,
                     local_this_length - in_offset,
                     in_char));
@@ -726,7 +737,7 @@ class psyq::internal::const_string_interface:
             {
                 // 検索文字列の先頭文字と合致する位置を見つける。
                 auto const local_find(
-                    self::traits_type::find(
+                    super::traits_type::find(
                         local_rest_string, local_rest_length, *in_string));
                 if (local_find == nullptr)
                 {
@@ -735,7 +746,7 @@ class psyq::internal::const_string_interface:
 
                 // 検索文字列と合致するか判定。
                 int const local_compare(
-                    self::traits_type::compare(
+                    super::traits_type::compare(
                         local_find, in_string, in_length));
                 if (local_compare == 0)
                 {
@@ -769,7 +780,7 @@ class psyq::internal::const_string_interface:
             auto const local_offset((std::min)(in_offset, this->length()));
             for (auto i(local_begin + local_offset); ; --i)
             {
-                if (self::traits_type::eq(*i, in_char))
+                if (super::traits_type::eq(*i, in_char))
                 {
                     return i - local_begin;
                 }
@@ -820,8 +831,8 @@ class psyq::internal::const_string_interface:
                 (std::min)(in_offset, local_this_length - in_length));
             for (auto i(local_begin + local_offset); ; --i)
             {
-                if (self::traits_type::eq(*i, *in_string)
-                    && self::traits_type::compare(i, in_string, in_length) == 0)
+                if (super::traits_type::eq(*i, *in_string)
+                    && super::traits_type::compare(i, in_string, in_length) == 0)
                 {
                     return i - local_begin;
                 }
@@ -885,7 +896,7 @@ class psyq::internal::const_string_interface:
             for (auto i(local_begin + in_offset); i < local_end; ++i)
             {
                 auto const local_find(
-                    self::traits_type::find(in_string, in_length, *i));
+                    super::traits_type::find(in_string, in_length, *i));
                 if (local_find != nullptr)
                 {
                     return i - local_begin;
@@ -949,7 +960,7 @@ class psyq::internal::const_string_interface:
             for (auto i(local_begin + local_offset); ; --i)
             {
                 auto const local_find(
-                    self::traits_type::find(in_string, in_length, *i));
+                    super::traits_type::find(in_string, in_length, *i));
                 if (local_find != nullptr)
                 {
                     return i - local_begin;
@@ -981,7 +992,7 @@ class psyq::internal::const_string_interface:
         auto const local_end(local_begin + this->length());
         for (auto i(local_begin + in_offset); i < local_end; ++i)
         {
-            if (!self::traits_type::eq(*i, in_char))
+            if (!super::traits_type::eq(*i, in_char))
             {
                 return i - local_begin;
             }
@@ -1026,7 +1037,7 @@ class psyq::internal::const_string_interface:
             for (auto i(local_begin + in_offset); i < local_end; ++i)
             {
                 auto const local_find(
-                    self::traits_type::find(in_string, in_length, *i));
+                    super::traits_type::find(in_string, in_length, *i));
                 if (local_find == nullptr)
                 {
                     return i - local_begin;
@@ -1057,7 +1068,7 @@ class psyq::internal::const_string_interface:
             auto const local_end(local_begin + local_this_length);
             for (auto i(local_begin + in_offset); i < local_end; ++i)
             {
-                if (!self::traits_type::eq(*i, in_char))
+                if (!super::traits_type::eq(*i, in_char))
                 {
                     return i - local_begin;
                 }
@@ -1107,7 +1118,7 @@ class psyq::internal::const_string_interface:
             for (auto i(local_begin + in_offset); i < local_end; ++i)
             {
                 auto const local_find(
-                    self::traits_type::find(in_string, in_length, *i));
+                    super::traits_type::find(in_string, in_length, *i));
                 if (local_find == nullptr)
                 {
                     return i - local_begin;

@@ -31,7 +31,7 @@
 
 #ifndef PSYQ_BASIC_IMMUTABLE_STRING_ALLOCATOR_DEFAULT
 #define PSYQ_BASIC_IMMUTABLE_STRING_ALLOCATOR_DEFAULT\
-    std::allocator<typename template_char_traits::char_type>
+    std::allocator<template_char_type>
 #endif // !PSYQ_BASIC_IMMUTABLE_STRING_ALLOCATOR_DEFAULT
 
 /** @brief 文字列の参照countをthread-safeにしないかどうか。
@@ -46,9 +46,8 @@ namespace psyq
     /// @cond
     template<
         typename template_char_type,
-        typename template_char_traits = PSYQ_BASIC_REFERENCE_STRING_DEFAULT,
-        typename template_allocator_type =
-            PSYQ_BASIC_IMMUTABLE_STRING_ALLOCATOR_DEFAULT>
+        typename = PSYQ_BASIC_STRING_PIECE_TRAITS_DEFAULT,
+        typename = PSYQ_BASIC_IMMUTABLE_STRING_ALLOCATOR_DEFAULT>
                 class basic_immutable_string;
     /// @endcond
 

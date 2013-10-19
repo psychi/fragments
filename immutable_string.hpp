@@ -27,7 +27,7 @@
 #ifndef PSYQ_IMMUTABLE_STRING_HPP_
 #define PSYQ_IMMUTABLE_STRING_HPP_
 
-//#include "reference_string.hpp"
+//#include "string_piece.hpp"
 
 #ifndef PSYQ_BASIC_IMMUTABLE_STRING_ALLOCATOR_DEFAULT
 #define PSYQ_BASIC_IMMUTABLE_STRING_ALLOCATOR_DEFAULT\
@@ -66,9 +66,9 @@ namespace psyq
     - not thread-safe
 
     @tparam template_char_type
-        @copydoc psyq::basic_reference_string::value_type
+        @copydoc psyq::basic_string_piece::value_type
     @tparam template_char_traits
-        @copydoc psyq::basic_reference_string::traits_type
+        @copydoc psyq::basic_string_piece::traits_type
     @tparam template_allocator_type memory割当子の型。
  */
 template<
@@ -76,7 +76,7 @@ template<
     typename template_char_traits,
     typename template_allocator_type>
 class psyq::basic_immutable_string:
-    public psyq::basic_reference_string<
+    public psyq::basic_string_piece<
         template_char_type, template_char_traits>
 {
     /// thisが指す値の型。
@@ -85,7 +85,7 @@ class psyq::basic_immutable_string:
             self;
 
     /// self の上位型。
-    public: typedef psyq::basic_reference_string<
+    public: typedef psyq::basic_string_piece<
         template_char_type, template_char_traits>
             super;
 
@@ -550,9 +550,9 @@ namespace std
 {
     /** @brief 文字列を交換する。
         @tparam template_char_type
-            @copydoc psyq::basic_reference_string::value_type
+            @copydoc psyq::basic_string_piece::value_type
         @tparam template_char_traits
-            @copydoc psyq::basic_reference_string::traits_type
+            @copydoc psyq::basic_string_piece::traits_type
         @tparam template_allocator_type memory割当子の型。
         @param[in] in_left  交換する文字列。
         @param[in] in_right 交換する文字列。

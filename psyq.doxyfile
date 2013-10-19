@@ -679,7 +679,6 @@ WARN_LOGFILE           =
 
 INPUT                  = \
                          ./string_piece.hpp \
-                         ./reference_string.hpp \
                          ./shared_string.hpp \
                          ./immutable_string.hpp \
                          ./csv_table.hpp \

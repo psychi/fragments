@@ -1,7 +1,7 @@
 ﻿#ifndef PSYQ_SHARED_STRING_HPP_
 #define PSYQ_SHARED_STRING_HPP_
 
-//#include "reference_string.hpp"
+//#include "string_piece.hpp"
 
 #ifndef PSYQ_BASIC_SHARED_STRING_ALLOCATOR_DEFAULT
 #define PSYQ_BASIC_SHARED_STRING_ALLOCATOR_DEFAULT\
@@ -40,9 +40,9 @@ namespace psyq
     - not thread-safe
 
     @tparam template_char_type
-        @copydoc psyq::basic_reference_string::value_type
+        @copydoc psyq::basic_string_piece::value_type
     @tparam template_char_traits
-        @copydoc psyq::basic_reference_string::traits_type
+        @copydoc psyq::basic_string_piece::traits_type
     @tparam template_allocator_type
         @copydoc psyq::basic_shared_string::allocator_type
  */
@@ -98,7 +98,7 @@ class psyq::basic_shared_string
     /// memory割当子の型。
     public: typedef template_allocator_type allocator_type;
 
-    public: typedef psyq::basic_reference_string<
+    public: typedef psyq::basic_string_piece<
         template_char_type, template_char_traits>
             piece;
 

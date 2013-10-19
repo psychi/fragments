@@ -247,7 +247,7 @@ class psyq::internal::const_string_interface:
         template_string_type, template_char_traits>
             self;
 
-    /** @brief 上位の文字列型。
+    /** @brief 操作する文字列型。
 
         - 文字列の先頭から末尾までのmemory連続性が必須。
         - 文字列の先頭位置を取得するため、以下の関数を使えること。
@@ -778,7 +778,8 @@ class psyq::internal::const_string_interface:
         if (!this->empty())
         {
             auto const local_begin(this->data());
-            for (auto i(local_begin + (std::min)(in_offset, this->length())); ; --i)
+            auto const local_offset((std::min)(in_offset, this->length()));
+            for (auto i(local_begin + local_offset); ; --i)
             {
                 if (self::traits_type::eq(*i, in_char))
                 {
@@ -923,7 +924,6 @@ class psyq::internal::const_string_interface:
     }
 
     /** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索する。
-        @tparam template_string_traits @copydoc string_interface
         @param[in] in_string 検索文字列。
         @param[in] in_offset 検索を開始する位置。
         @return 検索文字が現れた位置。現れない場合は self::npos を返す。
@@ -1119,12 +1119,12 @@ class psyq::internal::const_string_interface:
             for (auto i(local_begin + in_offset); i < local_end; ++i)
             {
                 auto const local_find(
-                    template_char_traits::find(in_string, in_length, *i));
+                    self::traits_type::find(in_string, in_length, *i));
                 if (local_find == nullptr)
                 {
-                    return i - this->data();
+                    return i - local_begin;
                 }
-                else if (i <= this->data())
+                else if (i <= local_begin)
                 {
                     break;
                 }
@@ -1211,13 +1211,7 @@ class psyq::basic_string_piece:
         typename super::size_type const     in_length)
     :
         super(super::super(in_begin, in_length))
-    {
-        if (in_begin == nullptr && in_length != 0)
-        {
-            PSYQ_ASSERT(false);
-            new(this) self(nullptr, 0);
-        }
-    }
+    {}
 
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
@@ -1285,7 +1279,8 @@ class psyq::basic_string_piece:
 
 //-----------------------------------------------------------------------------
 /** @brief 文字列を比較する。
-    @tparam template_string_type @copydoc string_interface
+    @tparam template_string_type
+        @copydoc psyq::internal::const_string_interface::super
     @tparam template_char_type
         @copydoc psyq::basic_string_piece::value_type
     @tparam template_char_traits
@@ -1308,7 +1303,8 @@ bool operator==(
 }
 
 /** @brief 文字列を比較する。
-    @tparam template_string_type @copydoc string_interface
+    @tparam template_string_type
+        @copydoc psyq::internal::const_string_interface::super
     @tparam template_char_type
         @copydoc psyq::basic_string_piece::value_type
     @tparam template_char_traits
@@ -1331,7 +1327,8 @@ bool operator!=(
 }
 
 /** @brief 文字列を比較する。
-    @tparam template_string_type @copydoc string_interface
+    @tparam template_string_type
+        @copydoc psyq::internal::const_string_interface::super
     @tparam template_char_type
         @copydoc psyq::basic_string_piece::value_type
     @tparam template_char_traits
@@ -1354,7 +1351,8 @@ bool operator<(
 }
 
 /** @brief 文字列を比較する。
-    @tparam template_string_type @copydoc string_interface
+    @tparam template_string_type
+        @copydoc psyq::internal::const_string_interface::super
     @tparam template_char_type
         @copydoc psyq::basic_string_piece::value_type
     @tparam template_char_traits
@@ -1377,7 +1375,8 @@ bool operator<=(
 }
 
 /** @brief 文字列を比較する。
-    @tparam template_string_type @copydoc string_interface
+    @tparam template_string_type
+        @copydoc psyq::internal::const_string_interface::super
     @tparam template_char_type
         @copydoc psyq::basic_string_piece::value_type
     @tparam template_char_traits
@@ -1400,7 +1399,8 @@ bool operator>(
 }
 
 /** @brief 文字列を比較する。
-    @tparam template_string_type @copydoc string_interface
+    @tparam template_string_type
+        @copydoc psyq::internal::const_string_interface::super
     @tparam template_char_type
         @copydoc psyq::basic_string_piece::value_type
     @tparam template_char_traits

@@ -247,8 +247,8 @@ class psyq::internal::const_string_interface:
 
     /** @brief 操作する文字列型。
 
-        - 文字列の先頭から末尾までのmemory連続性が必須。
-        - 文字の型属性として、以下の型が定義されてること。
+        - 文字列の先頭から末尾までのmemory連続性が保証されてること。
+        - std::char_traits 互換の文字特性の型として、以下の型を使えること。
           @code
           template_string_type::traits_type
           @endcode

@@ -500,20 +500,18 @@ class psyq::internal::const_string_interface:
      */
     public: bool operator==(typename self::piece const& in_right) const
     {
-        auto const local_right_length(in_right.length());
-        if (this->length() != local_right_length)
+        if (this->length() != in_right.length())
         {
             return false;
         }
         auto const local_left_begin(this->data());
-        auto const local_right_begin(in_right.data());
-        if (local_left_begin == local_right_begin)
+        if (local_left_begin == in_right.data())
         {
             return true;
         }
         auto const local_compare(
             super::traits_type::compare(
-                local_left_begin, local_right_begin, local_right_length));
+                local_left_begin, in_right.data(), in_right.length()));
         return local_compare == 0;
     }
 
@@ -622,9 +620,12 @@ class psyq::internal::const_string_interface:
         typename self::size_type const     in_right_length)
     const
     {
+        auto const local_left(
+            typename self::piece(this->data(), this->length()).substr(
+                in_left_offset, in_left_count));
         return self::compare_string(
-            this->data() + in_left_offset,
-            self::trim_count(*this, in_left_offset, in_left_count),
+            local_left.data(),
+            local_left.length(),
             in_right_begin,
             in_right_length);
     }
@@ -650,8 +651,7 @@ class psyq::internal::const_string_interface:
         return this->compare(
             in_left_offset,
             in_left_count,
-            in_right.data() + in_right_offset,
-            self::trim_count(in_right, in_right_offset, in_right_count));
+            in_right.substr(in_right_offset, in_right_count));
     }
     //@}
     private: static int compare_string(

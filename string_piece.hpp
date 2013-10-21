@@ -29,6 +29,7 @@
 
 //#include "const_string.hpp"
 
+/// psyq::basic_string_piece で使う、defaultの文字特性の型。
 #ifndef PSYQ_BASIC_STRING_PIECE_TRAITS_DEFAULT
 #define PSYQ_BASIC_STRING_PIECE_TRAITS_DEFAULT\
     std::char_traits<template_char_type>
@@ -174,159 +175,14 @@ class psyq::basic_string_piece:
         @param[in] in_count  部分文字列の開始offset位置からの文字数。
      */
     public: self substr(
-        typename super::size_type in_offset = 0,
-        typename super::size_type in_count = super::npos)
+        typename super::size_type const in_offset = 0,
+        typename super::size_type const in_count = super::npos)
     const
     {
         return self(*this, in_offset, in_count);
     }
     //@}
 };
-
-//-----------------------------------------------------------------------------
-/** @brief 文字列を比較する。
-    @tparam template_string_type
-        @copydoc psyq::internal::const_string_interface::super
-    @tparam template_char_type
-        @copydoc psyq::basic_string_piece::value_type
-    @tparam template_char_traits
-        @copydoc psyq::basic_string_piece::traits_type
-    @param[in] in_left  左辺の文字列。
-    @param[in] in_right 右辺の文字列。
-    @return 左辺 == 右辺
- */
-template<
-    typename template_string_type,
-    typename template_char_type,
-    typename template_char_traits>
-bool operator==(
-    template_string_type const& in_left,
-    psyq::basic_string_piece<
-        template_char_type, template_char_traits> const&
-            in_right)
-{
-    return in_right.operator==(in_left);
-}
-
-/** @brief 文字列を比較する。
-    @tparam template_string_type
-        @copydoc psyq::internal::const_string_interface::super
-    @tparam template_char_type
-        @copydoc psyq::basic_string_piece::value_type
-    @tparam template_char_traits
-        @copydoc psyq::basic_string_piece::traits_type
-    @param[in] in_left  左辺の文字列。
-    @param[in] in_right 右辺の文字列。
-    @return 左辺 != 右辺
- */
-template<
-    typename template_string_type,
-    typename template_char_type,
-    typename template_char_traits>
-bool operator!=(
-    template_string_type const& in_left,
-    psyq::basic_string_piece<
-        template_char_type, template_char_traits> const&
-            in_right)
-{
-    return in_right.operator!=(in_left);
-}
-
-/** @brief 文字列を比較する。
-    @tparam template_string_type
-        @copydoc psyq::internal::const_string_interface::super
-    @tparam template_char_type
-        @copydoc psyq::basic_string_piece::value_type
-    @tparam template_char_traits
-        @copydoc psyq::basic_string_piece::traits_type
-    @param[in] in_left  左辺の文字列。
-    @param[in] in_right 右辺の文字列。
-    @return 左辺 < 右辺
- */
-template<
-    typename template_string_type,
-    typename template_char_type,
-    typename template_char_traits>
-bool operator<(
-    template_string_type const& in_left,
-    psyq::basic_string_piece<
-        template_char_type, template_char_traits> const&
-            in_right)
-{
-    return in_right.operator>(in_left);
-}
-
-/** @brief 文字列を比較する。
-    @tparam template_string_type
-        @copydoc psyq::internal::const_string_interface::super
-    @tparam template_char_type
-        @copydoc psyq::basic_string_piece::value_type
-    @tparam template_char_traits
-        @copydoc psyq::basic_string_piece::traits_type
-    @param[in] in_left  左辺の文字列。
-    @param[in] in_right 右辺の文字列。
-    @return 左辺 <= 右辺
- */
-template<
-    typename template_string_type,
-    typename template_char_type,
-    typename template_char_traits>
-bool operator<=(
-    template_string_type const& in_left,
-    psyq::basic_string_piece<
-        template_char_type, template_char_traits> const&
-            in_right)
-{
-    return in_right.operator>=(in_left);
-}
-
-/** @brief 文字列を比較する。
-    @tparam template_string_type
-        @copydoc psyq::internal::const_string_interface::super
-    @tparam template_char_type
-        @copydoc psyq::basic_string_piece::value_type
-    @tparam template_char_traits
-        @copydoc psyq::basic_string_piece::traits_type
-    @param[in] in_left  左辺の文字列。
-    @param[in] in_right 右辺の文字列。
-    @return 左辺 > 右辺
- */
-template<
-    typename template_string_type,
-    typename template_char_type,
-    typename template_char_traits>
-bool operator>(
-    template_string_type const& in_left,
-    psyq::basic_string_piece<
-        template_char_type, template_char_traits> const&
-            in_right)
-{
-    return in_right.operator<(in_left);
-}
-
-/** @brief 文字列を比較する。
-    @tparam template_string_type
-        @copydoc psyq::internal::const_string_interface::super
-    @tparam template_char_type
-        @copydoc psyq::basic_string_piece::value_type
-    @tparam template_char_traits
-        @copydoc psyq::basic_string_piece::traits_type
-    @param[in] in_left  左辺の文字列。
-    @param[in] in_right 右辺の文字列。
-    @return 左辺 >= 右辺
- */
-template<
-    typename template_string_type,
-    typename template_char_type,
-    typename template_char_traits>
-bool operator>=(
-    template_string_type const& in_left,
-    psyq::basic_string_piece<
-        template_char_type, template_char_traits> const&
-            in_right)
-{
-    return in_right.operator<=(in_left);
-}
 
 //-----------------------------------------------------------------------------
 namespace std

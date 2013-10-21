@@ -3,6 +3,7 @@
 
 //#include "string_piece.hpp"
 
+/// psyq::basic_shared_string で使う、defaultのmemory割当子の型。
 #ifndef PSYQ_BASIC_SHARED_STRING_ALLOCATOR_DEFAULT
 #define PSYQ_BASIC_SHARED_STRING_ALLOCATOR_DEFAULT\
     std::allocator<template_char_type>
@@ -32,6 +33,7 @@ namespace psyq
     {
         /// @cond
         template<typename ,typename> class shared_string_holder;
+        template<typename ,typename> class shared_string_slice;
         /// @endcond
     }
 }
@@ -40,6 +42,7 @@ namespace psyq
 template<typename template_char_traits, typename template_allocator_type>
 class psyq::internal::shared_string_holder
 {
+    /// thisが指す値の型。
     private: typedef shared_string_holder<
         template_char_traits, template_allocator_type>
             self;
@@ -50,6 +53,7 @@ class psyq::internal::shared_string_holder
     /// memory割当子の型。
     public: typedef template_allocator_type allocator_type;
 
+    /// 部分文字列の型。
     public: typedef psyq::internal::const_string_piece<
         typename self::traits_type>
             piece;
@@ -111,7 +115,7 @@ class psyq::internal::shared_string_holder
         this->set_literal(in_literal);
     }
 
-    /** @brief memoryを割り当てを行い、2つの文字列を連結してcopyする。
+    /** @brief memoryを割り当てを行い、2つの文字列をcopyして連結する。
         @param[in] in_left_string  copy元の左辺文字列。
         @param[in] in_right_string copy元の右辺文字列。
         @param[in] in_allocator    memory割当子の初期値。
@@ -183,14 +187,14 @@ class psyq::internal::shared_string_holder
         return *this;
     }
 
-    /** @brief memoryを割り当てを行い、2つの文字列を連結してcopyする。
+    /** @brief memoryを割り当てを行い、2つの文字列をcopyして連結する。
         @param[in] in_left_string  copy元の左辺文字列。
         @param[in] in_right_string copy元の右辺文字列。
         @return *this
      */
     public: self& assign(
         typename self::piece const& in_left_string,
-        typename self::piece const& in_right_string = self::piece())
+        typename self::piece const& in_right_string)
     {
         self::release_buffer(this->get_buffer(), this->get_allocator());
         this->create_buffer(in_left_string, in_right_string);
@@ -247,11 +251,14 @@ class psyq::internal::shared_string_holder
         std::swap(this->length_, io_target.length_);
     }
 
-    public: typename self::piece make_piece() const
+    /// @copydoc const_string_piece::make_string()
+    public: template<typename template_string_type>
+    template_string_type make_string() const
     {
         return this->is_literal()?
-            self::piece(this->literal_, this->length_):
-            self::piece(this->buffer_->get_data(), this->buffer_.length);
+            template_string_type(this->literal_, this->length_):
+            template_string_type(
+                this->buffer_->get_data(), this->buffer_.length);
     }
     //@}
     //-------------------------------------------------------------------------
@@ -266,7 +273,8 @@ class psyq::internal::shared_string_holder
 
         typename self::traits_type::char_type* get_data()
         {
-            return reinterpret_cast<self::traits_type::char_type*>(this + 1);
+            return reinterpret_cast<typename self::traits_type::char_type*>(
+                this + 1);
         }
 
         /// 共有文字列bufferの被参照数。
@@ -387,7 +395,7 @@ class psyq::internal::shared_string_holder
         return local_buffer->get_data();
     }
 
-    /** @brief 共有文字列bufferを確保し、2つの文字列を結合してcopyする。
+    /** @brief 共有文字列bufferを確保し、2つの文字列をcopyして結合する。
         @param[in] in_left_string  結合する左辺の文字列。
         @param[in] in_right_string 結合する右辺の文字列。
      */
@@ -475,7 +483,7 @@ class psyq::internal::shared_string_holder
     static typename self::allocator_type::size_type count_allocate_size(
         std::size_t const in_string_length)
     {
-        auto const local_header_bytes(sizeof(typename shared_buffer));
+        auto const local_header_bytes(sizeof(typename self::shared_buffer));
         auto const local_string_bytes(
             sizeof(typename self::traits_type::char_type)
             * (in_string_length + 1));
@@ -700,11 +708,7 @@ class psyq::basic_shared_string:
             typename super::piece());
     }
 
-    /** @brief memoryを割り当てを行い、2つの文字列を連結してcopyする。
-        @param[in] in_left_string  copy元の左辺文字列。
-        @param[in] in_right_string copy元の右辺文字列。
-        @return *this
-     */
+    /// @copydoc super::super::assign(typename piece const&, typename piece const&);
     public: self& assign(
         typename super::piece const& in_left_string,
         typename super::piece const& in_right_string = super::piece())
@@ -732,7 +736,7 @@ class psyq::basic_shared_string:
      */
     public: self substr(
         typename super::size_type in_offset = 0,
-        typename super::size_type in_count = self::npos)
+        typename super::size_type in_count = super::npos)
     const
     {
         return self(*this, in_offset, in_count);

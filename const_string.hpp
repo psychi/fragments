@@ -48,7 +48,8 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 文字列へのconst参照。
+/** @brief 別の文字列の一部分をconst参照する文字列型。
+    @tparam template_char_traits @copydoc const_string_piece::traits_type
     @warning
         C文字列を単純にconst参照しているので、
         参照してる文字列が破壊されると、動作を保証できなくなる。
@@ -66,7 +67,7 @@ class psyq::internal::const_string_piece
     /** @brief 空の文字列を構築する。
      */
     public: const_string_piece()
-     :
+    :
         data_(nullptr),
         length_(0)
     {}
@@ -77,7 +78,7 @@ class psyq::internal::const_string_piece
      */
     public: const_string_piece(
         typename self::traits_type::char_type const* const in_begin,
-        std::size_t const               in_length)
+        std::size_t const                                  in_length)
      :
         data_(in_begin),
         length_(in_length)
@@ -160,7 +161,7 @@ class psyq::internal::const_string_piece
         {
             return self(this->data() + this->length(), 0);
         }
-        if (in_count < this->length() - in_offset)
+        if (in_count <= this->length() - in_offset)
         {
             return self(this->data() + in_offset, in_count);
         }
@@ -174,6 +175,16 @@ class psyq::internal::const_string_piece
     {
         std::swap(this->data_, io_target.data_);
         std::swap(this->length_, io_target.length_);
+    }
+
+    /** @brief 任意の文字列型を構築する。
+        @tparam template_string_type 構築する文字列型。
+        @return 構築した文字列。
+     */
+    public: template<typename template_string_type>
+    template_string_type make_string() const
+    {
+        return template_string_type(this->data(), this->length());
     }
 
     /** @brief 文字列の先頭と末尾にある空白文字を取り除く。
@@ -254,7 +265,7 @@ class psyq::internal::const_string_interface:
           @endcode
         - 文字列の先頭位置を取得するため、以下の関数を使えること。
           @code
-          template_char_traits::char_type const* template_string_type::data() const
+          template_string_type::traits_type::char_type const* template_string_type::data() const
           @endcode
         - 文字列の長さを取得するため、以下の関数を使えること。
           @code
@@ -262,6 +273,11 @@ class psyq::internal::const_string_interface:
           @endcode
      */
     public: typedef template_string_type super;
+
+    /// 部分文字列の型。
+    public: typedef psyq::internal::const_string_piece<
+        typename super::traits_type>
+            piece;
 
     //-------------------------------------------------------------------------
     /// 文字の型。
@@ -482,7 +498,7 @@ class psyq::internal::const_string_interface:
         @param[in] in_right 右辺の文字列。
         @return 左辺 == 右辺
      */
-    public: bool operator==(super const& in_right) const
+    public: bool operator==(typename self::piece const& in_right) const
     {
         auto const local_right_length(in_right.length());
         if (this->length() != local_right_length)
@@ -508,7 +524,7 @@ class psyq::internal::const_string_interface:
         @param[in] in_right 右辺の文字列。
         @return 左辺 != 右辺
      */
-    public: bool operator!=(super const& in_right) const
+    public: bool operator!=(typename self::piece const& in_right) const
     {
         return !this->operator==(in_right);
     }
@@ -519,7 +535,7 @@ class psyq::internal::const_string_interface:
         @param[in] in_right 右辺の文字列。
         @return 左辺 < 右辺
      */
-    public: bool operator<(super const& in_right) const
+    public: bool operator<(typename self::piece const& in_right) const
     {
         return this->compare(in_right) < 0;
     }
@@ -531,7 +547,7 @@ class psyq::internal::const_string_interface:
         @param[in] in_right 右辺の文字列。
         @return 左辺 <= 右辺
      */
-    public: bool operator<=(super const& in_right) const
+    public: bool operator<=(typename self::piece const& in_right) const
     {
         return this->compare(in_right) <= 0;
     }
@@ -543,7 +559,7 @@ class psyq::internal::const_string_interface:
         @param[in] in_right 右辺の文字列。
         @return 左辺 > 右辺
      */
-    public: bool operator>(super const& in_right) const
+    public: bool operator>(typename self::piece const& in_right) const
     {
         return 0 < this->compare(in_right);
     }
@@ -555,7 +571,7 @@ class psyq::internal::const_string_interface:
         @param[in] in_right 右辺の文字列。
         @return 左辺 >= 右辺
      */
-    public: bool operator>=(super const& in_right) const
+    public: bool operator>=(typename self::piece const& in_right) const
     {
         return 0 <= this->compare(in_right);
     }
@@ -566,7 +582,7 @@ class psyq::internal::const_string_interface:
         @retval 正 左辺のほうが大きい。
         @retval 0  左辺と右辺は等価。
      */
-    public: int compare(super const& in_right) const
+    public: int compare(typename self::piece const& in_right) const
     {
         return self::compare_string(
             this->data(), this->length(), in_right.data(), in_right.length());
@@ -583,7 +599,7 @@ class psyq::internal::const_string_interface:
     public: int compare(
         typename self::size_type const in_left_offset,
         typename self::size_type const in_left_count,
-        typename super const&          in_right)
+        typename self::piece const&    in_right)
     const
     {
         return this->compare(
@@ -626,7 +642,7 @@ class psyq::internal::const_string_interface:
     public: int compare(
         typename self::size_type const in_left_offset,
         typename self::size_type const in_left_count,
-        typename super const&          in_right,
+        typename self::piece const&    in_right,
         typename self::size_type const in_right_offset,
         typename self::size_type const in_right_count)
     const
@@ -701,8 +717,8 @@ class psyq::internal::const_string_interface:
         @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find(
-        super const&             in_string,
-        typename self::size_type in_offset = 0)
+        typename self::piece const& in_string,
+        typename self::size_type    in_offset = 0)
     const
     {
         return this->find(in_string.data(), in_offset, in_string.length());
@@ -799,7 +815,7 @@ class psyq::internal::const_string_interface:
         @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type rfind(
-        super const&                   in_string,
+        typename self::piece const&    in_string,
         typename self::size_type const in_offset = self::npos)
     const
     {
@@ -867,7 +883,7 @@ class psyq::internal::const_string_interface:
         @return 検索文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_first_of(
-        super const&                   in_string,
+        typename self::piece const&    in_string,
         typename self::size_type const in_offset = 0)
     const
     {
@@ -928,7 +944,7 @@ class psyq::internal::const_string_interface:
         @return 検索文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_last_of(
-        super const&                   in_string,
+        typename self::piece const&    in_string,
         typename self::size_type const in_offset = self::npos)
     const
     {
@@ -1007,7 +1023,7 @@ class psyq::internal::const_string_interface:
             検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_first_not_of(
-        super const&                   in_string,
+        typename self::piece const&    in_string,
         typename self::size_type const in_offset = 0)
     const
     {
@@ -1088,7 +1104,7 @@ class psyq::internal::const_string_interface:
             検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_last_not_of(
-        super const&                   in_string,
+        typename self::piece const&    in_string,
         typename self::size_type const in_offset = self::npos)
     const
     {
@@ -1137,5 +1153,126 @@ class psyq::internal::const_string_interface:
     public: static typename self::size_type const npos
         = static_cast<typename self::size_type>(-1);
 };
+
+//-----------------------------------------------------------------------------
+/** @brief 文字列を比較する。
+    @tparam template_left_string_type
+        @copydoc psyq::internal::const_string_interface::super
+    @tparam template_right_string_type
+        @copydoc psyq::internal::const_string_interface::super
+    @param[in] in_left  左辺の文字列。
+    @param[in] in_right 右辺の文字列。
+    @return 左辺 == 右辺
+ */
+template<
+    typename template_left_string_type,
+    typename template_right_string_type>
+bool operator==(
+    template_left_string_type const& in_left,
+    psyq::internal::const_string_interface<template_right_string_type> const&
+        in_right)
+{
+    return in_right.operator==(in_left);
+}
+
+/** @brief 文字列を比較する。
+    @tparam template_left_string_type
+        @copydoc psyq::internal::const_string_interface::super
+    @tparam template_right_string_type
+        @copydoc psyq::internal::const_string_interface::super
+    @param[in] in_left  左辺の文字列。
+    @param[in] in_right 右辺の文字列。
+    @return 左辺 != 右辺
+ */
+template<
+    typename template_left_string_type,
+    typename template_right_string_type>
+bool operator!=(
+    template_left_string_type const& in_left,
+    psyq::internal::const_string_interface<template_right_string_type> const&
+        in_right)
+{
+    return in_right.operator!=(in_left);
+}
+
+/** @brief 文字列を比較する。
+    @tparam template_left_string_type
+        @copydoc psyq::internal::const_string_interface::super
+    @tparam template_right_string_type
+        @copydoc psyq::internal::const_string_interface::super
+    @param[in] in_left  左辺の文字列。
+    @param[in] in_right 右辺の文字列。
+    @return 左辺 < 右辺
+ */
+template<
+    typename template_left_string_type,
+    typename template_right_string_type>
+bool operator<(
+    template_left_string_type const& in_left,
+    psyq::internal::const_string_interface<template_right_string_type> const&
+        in_right)
+{
+    return in_right.operator>(in_left);
+}
+
+/** @brief 文字列を比較する。
+    @tparam template_left_string_type
+        @copydoc psyq::internal::const_string_interface::super
+    @tparam template_right_string_type
+        @copydoc psyq::internal::const_string_interface::super
+    @param[in] in_left  左辺の文字列。
+    @param[in] in_right 右辺の文字列。
+    @return 左辺 <= 右辺
+ */
+template<
+    typename template_left_string_type,
+    typename template_right_string_type>
+bool operator<=(
+    template_left_string_type const& in_left,
+    psyq::internal::const_string_interface<template_right_string_type> const&
+        in_right)
+{
+    return in_right.operator>=(in_left);
+}
+
+/** @brief 文字列を比較する。
+    @tparam template_left_string_type
+        @copydoc psyq::internal::const_string_interface::super
+    @tparam template_right_string_type
+        @copydoc psyq::internal::const_string_interface::super
+    @param[in] in_left  左辺の文字列。
+    @param[in] in_right 右辺の文字列。
+    @return 左辺 > 右辺
+ */
+template<
+    typename template_left_string_type,
+    typename template_right_string_type>
+bool operator>(
+    template_left_string_type const& in_left,
+    psyq::internal::const_string_interface<template_right_string_type> const&
+        in_right)
+{
+    return in_right.operator<(in_left);
+}
+
+/** @brief 文字列を比較する。
+    @tparam template_left_string_type
+        @copydoc psyq::internal::const_string_interface::super
+    @tparam template_right_string_type
+        @copydoc psyq::internal::const_string_interface::super
+    @param[in] in_left  左辺の文字列。
+    @param[in] in_right 右辺の文字列。
+    @return 左辺 >= 右辺
+ */
+template<
+    typename template_left_string_type,
+    typename template_right_string_type>
+bool operator>=(
+    template_left_string_type const& in_left,
+    psyq::internal::const_string_interface<template_right_string_type> const&
+        in_right)
+{
+    return in_right.operator<=(in_left);
+}
 
 #endif // !PSYQ_CONST_STRING_HPP_

@@ -476,23 +476,23 @@ class psyq::internal::const_string_piece
             auto local_char(*i);
             if ('a' <= local_char)
             {
-                if ('a' + template_base - 9 < local_char)
+                if ('a' + template_base - 10 <= local_char)
                 {
                     break;
                 }
-                local_char -= 'a';
+                local_char -= 'a' - 10;
             }
             else if ('A' <= local_char)
             {
-                if ('A' + template_base - 9 < local_char)
+                if ('A' + template_base - 10 <= local_char)
                 {
                     break;
                 }
-                local_char -= 'A';
+                local_char -= 'A' - 10;
             }
             else if ('0' <= local_char && local_char <= '9')
             {
-                if ('0' + template_base - 1 < local_char)
+                if ('0' + template_base <= local_char)
                 {
                     break;
                 }

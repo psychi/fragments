@@ -326,20 +326,21 @@ class psyq::internal::const_string_piece
     }
 
     /** @brief 文字列の先頭と末尾にある空白文字を取り除く。
+        @return 先頭と末尾にある空白文字を取り除いた文字列。
      */
-    public: self& trim()
+    public: self trim() const
     {
-        this->trim_right();
-        return this->trim_left();
+        return this->trim_right().trim_left();
     }
 
     /** @brief 文字列の先頭にある空白文字を取り除く。
+        @return 先頭にある空白文字を取り除いた文字列。
      */
-    public: self& trim_left()
+    public: self trim_left() const
     {
         if (this->length() <= 0)
         {
-            return;
+            return *this;
         }
         auto const local_end(this->data() + this->length());
         for (auto i(this->data()); i < local_end; ++i)
@@ -347,53 +348,56 @@ class psyq::internal::const_string_piece
             if (!std::isspace(*i))
             {
                 auto const local_position(i - this->data());
-                this->data_ += local_position;
-                this->length_ -= local_position;
-                return;
+                return self(
+                    this->data() + local_position,
+                    this->length() - local_position);
             }
         }
-        this->data_ += this->length();
-        this->length_ = 0;
-        return *this;
+        return self(this->data() + this->length(), 0);
     }
 
     /** @brief 文字列の末尾にある空白文字を取り除く。
+        @return 末尾にある空白文字を取り除いた文字列。
      */
-    public: self& trim_right()
+    public: self trim_right() const
     {
         if (this->length() <= 0)
         {
-            return;
+            return *this;
         }
         for (auto i(this->data() + this->length() - 1); this->data() <= i; --i)
         {
             if (!std::isspace(*i))
             {
-                this->length_ = 1 + i - this->data();
-                return;
+                return self(this->data(), 1 + i - this->data());
             }
         }
-        this->length_ = 0;
-        return *this;
+        return self(this->data(), 0);
     }
     //@}
 
     //-------------------------------------------------------------------------
-    public: long long to_llong(std::size_t* const io_last_index = nullptr)
+    /** @brief 文字列を整数に変換する。
+        @param[out] out_last_index
+            最後に解析した文字のindex位置を格納する。
+            nullptrだった場合は格納しない。
+        @return 文字列から変換した整数。
+     */
+    public: long long to_llong(std::size_t* const out_last_index = nullptr)
     const
     {
         auto local_iterator(this->data());
-        auto const local_value(
+        auto const local_integer(
             self::parse_integer(
                 local_iterator, local_iterator + this->length()));
-        if (io_last_index != nullptr)
+        if (out_last_index != nullptr)
         {
-            *io_last_index = local_iterator - this->data();
+            *out_last_index = local_iterator - this->data();
         }
-        return local_value;
+        return local_integer;
     }
 
-    protected: static long long parse_integer(
+    private: static long long parse_integer(
         typename self::traits_type::char_type const*&      io_iterator,
         typename self::traits_type::char_type const* const in_end)
     {
@@ -417,8 +421,7 @@ class psyq::internal::const_string_piece
                 case 'x':
                 case 'X':
                 ++local_iterator;
-                local_integer = self::parse_unsigned_integer<16>(
-                    local_iterator, in_end);
+                local_integer = self::parse_numbers<16>(local_iterator, in_end);
                 break;
 
                 case 'b':
@@ -440,7 +443,7 @@ class psyq::internal::const_string_piece
         return local_sign * local_integer;
     }
 
-    protected: static int parse_sign(
+    private: static int parse_sign(
         typename self::traits_type::char_type const*&      io_iterator,
         typename self::traits_type::char_type const* const in_end)
     {
@@ -460,8 +463,8 @@ class psyq::internal::const_string_piece
         return 1;
     }
 
-    protected: template<std::size_t template_base>
-    static unsigned long long parse_unsigned_integer(
+    private: template<std::size_t template_base>
+    static unsigned long long parse_numbers(
         typename self::traits_type::char_type const*&      io_iterator,
         typename self::traits_type::char_type const* const in_end)
     {
@@ -505,7 +508,7 @@ class psyq::internal::const_string_piece
         return local_integer;
     }
 
-    protected: template<std::size_t template_base>
+    private: template<std::size_t template_base>
     static unsigned long long parse_digits(
         typename self::traits_type::char_type const*&      io_iterator,
         typename self::traits_type::char_type const* const in_end)

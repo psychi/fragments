@@ -91,7 +91,7 @@ class psyq::internal::const_string_piece
     }
 
     /** @brief 文字列literalを参照する。
-        @tparam template_size 参照する文字列literalの要素数。空文字も含む。
+        @tparam template_size 参照する文字列literalの要素数。終端文字も含む。
         @param[in] in_literal 参照する文字列literal。
         @warning 文字列literal以外の文字列を引数に渡すのは禁止。
         @note
@@ -120,9 +120,11 @@ class psyq::internal::const_string_piece
     {}
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列の最初の文字へのpointerを取得する。
-        @return 文字列の最初の文字へのpointer。
-        @warning 文字列が空文字で終わっている保証はない。
+    /** @brief 文字列の先頭文字へのpointerを取得する。
+        @return 文字列の先頭文字へのpointer。
+        @warning
+            文字列の先頭文字から末尾文字までのmemory連続性は保証されているが、
+            文字列の終端文字が空文字となっている保証はない。
      */
     public: typename self::traits_type::char_type const* data() const
     {
@@ -137,6 +139,131 @@ class psyq::internal::const_string_piece
         return this->length_;
     }
 
+    //-------------------------------------------------------------------------
+    /// @name 文字列の比較
+    //@{
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 == 右辺
+     */
+    public: bool operator==(self const& in_right) const
+    {
+        return this->compare(in_right) == 0;
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 != 右辺
+     */
+    public: bool operator!=(self const& in_right) const
+    {
+        return this->compare(in_right) != 0;
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 < 右辺
+     */
+    public: bool operator<(self const& in_right) const
+    {
+        return this->compare(in_right) < 0;
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 <= 右辺
+     */
+    public: bool operator<=(self const& in_right) const
+    {
+        return this->compare(in_right) <= 0;
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 > 右辺
+     */
+    public: bool operator>(self const& in_right) const
+    {
+        return 0 < this->compare(in_right);
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 >= 右辺
+     */
+    public: bool operator>=(self const& in_right) const
+    {
+        return 0 <= this->compare(in_right);
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @retval - 右辺のほうが大きい。
+        @retval + 左辺のほうが大きい。
+        @retval 0 左辺と右辺は等価。
+     */
+    public: int compare(self const& in_right) const
+    {
+        bool local_less;
+        bool local_greater;
+        if (this->length() != in_right.length())
+        {
+            local_less = (this->length() < in_right.length());
+            local_greater = !local_less;
+        }
+        else if (this->data() != in_right.data())
+        {
+            local_less = false;
+            local_greater = false;
+        }
+        else
+        {
+            return 0;
+        }
+        int const local_compare(
+            self::traits_type::compare(
+                this->data(),
+                in_right.data(),
+                local_less? this->length(): in_right.length()));
+        if (local_compare != 0)
+        {
+            return local_compare;
+        }
+        else if (local_less)
+        {
+            return -1;
+        }
+        else if (local_greater)
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+    //@}
     //-------------------------------------------------------------------------
     /// @name 文字列の操作
     //@{
@@ -157,15 +284,26 @@ class psyq::internal::const_string_piece
         std::size_t const in_count)
     const
     {
-        if (this->length() <= in_offset)
+        auto local_begin(this->data());
+        auto local_length(this->length());
+        if (local_length <= in_offset)
         {
-            return self(this->data() + this->length(), 0);
+            local_begin += local_length;
+            local_length = 0;
         }
-        if (in_count <= this->length() - in_offset)
+        else
         {
-            return self(this->data() + in_offset, in_count);
+            local_begin += in_offset;
+            if (in_count <= local_length - in_offset)
+            {
+                local_length = in_count;
+            }
+            else
+            {
+                local_length -= in_offset;
+            }
         }
-        return self(this->data() + in_offset, this->length() - in_offset);
+        return self(local_begin, local_length);
     }
 
     /** @brief 文字列を交換する。
@@ -491,108 +629,55 @@ class psyq::internal::const_string_interface:
     //-------------------------------------------------------------------------
     /// @name 文字列の比較
     //@{
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 == 右辺
-     */
+    /// @copydoc psyq::internal::const_string_piece::operator==()
     public: bool operator==(typename self::piece const& in_right) const
     {
-        if (this->length() != in_right.length())
-        {
-            return false;
-        }
-        auto const local_left_begin(this->data());
-        if (local_left_begin == in_right.data())
-        {
-            return true;
-        }
-        auto const local_compare(
-            super::traits_type::compare(
-                local_left_begin, in_right.data(), in_right.length()));
-        return local_compare == 0;
+        return in_right.operator==(*this);
     }
 
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 != 右辺
-     */
+    /// @copydoc psyq::internal::const_string_piece::operator!=()
     public: bool operator!=(typename self::piece const& in_right) const
     {
-        return !this->operator==(in_right);
+        return in_right.operator!=(*this);
     }
-    /** @brief 文字列を比較する。
 
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 < 右辺
-     */
+    /// @copydoc psyq::internal::const_string_piece::operator<()
     public: bool operator<(typename self::piece const& in_right) const
     {
-        return this->compare(in_right) < 0;
+        return in_right.operator>=(*this);
     }
 
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 <= 右辺
-     */
+    /// @copydoc psyq::internal::const_string_piece::operator<=()
     public: bool operator<=(typename self::piece const& in_right) const
     {
-        return this->compare(in_right) <= 0;
+        return in_right.operator>(*this);
     }
 
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 > 右辺
-     */
+    /// @copydoc psyq::internal::const_string_piece::operator>()
     public: bool operator>(typename self::piece const& in_right) const
     {
-        return 0 < this->compare(in_right);
+        return in_right.operator<=(*this);
     }
 
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 >= 右辺
-     */
+    /// @copydoc psyq::internal::const_string_piece::operator>=()
     public: bool operator>=(typename self::piece const& in_right) const
     {
-        return 0 <= this->compare(in_right);
+        return in_right.operator<(*this);
     }
 
-    /** @brief 文字列を比較する。
-        @param[in] in_right  左辺の文字列。
-        @retval 負 右辺のほうが大きい。
-        @retval 正 左辺のほうが大きい。
-        @retval 0  左辺と右辺は等価。
-     */
+    /// @copydoc psyq::internal::const_string_piece::compare()
     public: int compare(typename self::piece const& in_right) const
     {
-        return self::compare_string(
-            this->data(), this->length(), in_right.data(), in_right.length());
+        return -(in_right.compare(*this));
     }
 
     /** @brief 文字列を比較する。
         @param[in] in_left_offset 左辺の文字列の開始offset値。
         @param[in] in_left_count  左辺の文字列の開始offset値からの文字数。
         @param[in] in_right       右辺の文字列。
-        @retval 負 右辺のほうが大きい。
-        @retval 正 左辺のほうが大きい。
-        @retval 0  左辺と右辺は等価。
+        @retval - 右辺のほうが大きい。
+        @retval + 左辺のほうが大きい。
+        @retval 0 左辺と右辺は等価。
      */
     public: int compare(
         typename self::size_type const in_left_offset,
@@ -600,8 +685,9 @@ class psyq::internal::const_string_interface:
         typename self::piece const&    in_right)
     const
     {
-        return this->compare(
-            in_left_offset, in_left_count, in_right.data(), in_right.length());
+        auto const local_left(
+            typename self::piece(*this).substr(in_left_offset, in_left_count));
+        return local_left.compare(in_right);
     }
 
     /** @brief 文字列を比較する。
@@ -609,9 +695,9 @@ class psyq::internal::const_string_interface:
         @param[in] in_left_count   左辺の文字列の開始offset値からの文字数。
         @param[in] in_right_begin  右辺の文字列の先頭位置。
         @param[in] in_right_length 右辺の文字列の長さ。
-        @retval 負 右辺のほうが大きい。
-        @retval 正 左辺のほうが大きい。
-        @retval 0  左辺と右辺は等価。
+        @retval - 右辺のほうが大きい。
+        @retval + 左辺のほうが大きい。
+        @retval 0 左辺と右辺は等価。
      */
     public: int compare(
         typename self::size_type const     in_left_offset,
@@ -620,14 +706,10 @@ class psyq::internal::const_string_interface:
         typename self::size_type const     in_right_length)
     const
     {
-        auto const local_left(
-            typename self::piece(this->data(), this->length()).substr(
-                in_left_offset, in_left_count));
-        return self::compare_string(
-            local_left.data(),
-            local_left.length(),
-            in_right_begin,
-            in_right_length);
+        this->compare(
+            in_left_offset,
+            in_left_count,
+            typename self::piece(in_right_begin, in_right_length));
     }
 
     /** @brief 文字列を比較する。
@@ -636,9 +718,9 @@ class psyq::internal::const_string_interface:
         @param[in] in_right        右辺の文字列。
         @param[in] in_right_offset 左辺の文字列の開始offset値。
         @param[in] in_right_count  右辺の文字列の開始offset値からの文字数。
-        @retval 負 右辺のほうが大きい。
-        @retval 正 左辺のほうが大きい。
-        @retval 0  左辺と右辺は等価。
+        @retval - 右辺のほうが大きい。
+        @retval + 左辺のほうが大きい。
+        @retval 0 左辺と右辺は等価。
      */
     public: int compare(
         typename self::size_type const in_left_offset,
@@ -654,33 +736,6 @@ class psyq::internal::const_string_interface:
             in_right.substr(in_right_offset, in_right_count));
     }
     //@}
-    private: static int compare_string(
-        typename self::const_pointer const in_left_begin,
-        typename self::size_type const     in_left_length,
-        typename self::const_pointer const in_right_begin,
-        typename self::size_type const     in_right_length)
-    {
-        bool const local_less(in_left_length < in_right_length);
-        int const local_compare(
-            super::traits_type::compare(
-                in_left_begin,
-                in_right_begin,
-                local_less? in_left_length: in_right_length));
-        if (local_compare != 0)
-        {
-            return local_compare;
-        }
-        if (local_less)
-        {
-            return -1;
-        }
-        if (in_right_length < in_left_length)
-        {
-            return 1;
-        }
-        return 0;
-    }
-
     //-------------------------------------------------------------------------
     /// @name 指定文字列の前方検索
     //@{

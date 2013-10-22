@@ -644,25 +644,25 @@ class psyq::internal::const_string_interface:
     /// @copydoc psyq::internal::const_string_piece::operator<()
     public: bool operator<(typename self::piece const& in_right) const
     {
-        return in_right.operator>=(*this);
+        return in_right.operator>(*this);
     }
 
     /// @copydoc psyq::internal::const_string_piece::operator<=()
     public: bool operator<=(typename self::piece const& in_right) const
     {
-        return in_right.operator>(*this);
+        return in_right.operator>=(*this);
     }
 
     /// @copydoc psyq::internal::const_string_piece::operator>()
     public: bool operator>(typename self::piece const& in_right) const
     {
-        return in_right.operator<=(*this);
+        return in_right.operator<(*this);
     }
 
     /// @copydoc psyq::internal::const_string_piece::operator>=()
     public: bool operator>=(typename self::piece const& in_right) const
     {
-        return in_right.operator<(*this);
+        return in_right.operator<=(*this);
     }
 
     /// @copydoc psyq::internal::const_string_piece::compare()

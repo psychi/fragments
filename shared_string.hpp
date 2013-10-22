@@ -7,14 +7,15 @@
 #ifndef PSYQ_BASIC_SHARED_STRING_ALLOCATOR_DEFAULT
 #define PSYQ_BASIC_SHARED_STRING_ALLOCATOR_DEFAULT\
     std::allocator<template_char_type>
-#endif // !PSYQ_BASIC_SHARED_STRING_ALLOCATOR_DEFAULT
+#endif // !defined(PSYQ_BASIC_SHARED_STRING_ALLOCATOR_DEFAULT)
 
-/** @brief 文字列の参照countをthread-safeにしないかどうか。
-    @warning 今のところthread-safeには未対応。
- */
+/// 共有文字列の被参照数をthread非対応にするかどうか。
 #ifndef PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
-#define PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS 1
-#endif // PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
+#define PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS 0
+#endif // !defined(PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS)
+#if !PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
+#include <atomic>
+#endif // !PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
 
 namespace psyq
 {
@@ -177,7 +178,15 @@ class psyq::internal::shared_string_holder
         return *this;
     }
 
-    /// @copydoc refer_literal
+    /** @brief 文字列literalを参照する。memory割り当ては行わない。
+        @tparam template_size 参照する文字列literalの要素数。終端文字も含む。
+        @param[in] in_literal 参照する文字列literal。
+        @return *this
+        @warning 文字列literal以外の文字列を in_literal に渡すのは禁止。
+        @note
+            引数が文字列literalであることを保証するため、
+            user定義literalを経由して呼び出すようにしたい。
+     */
     public: template <std::size_t template_size>
     self& assign(
         typename self::traits_type::char_type const (&in_literal)[template_size])
@@ -192,7 +201,7 @@ class psyq::internal::shared_string_holder
         @param[in] in_right_string copy元の右辺文字列。
         @return *this
      */
-    public: self& assign(
+    public: self& concatenate(
         typename self::piece const& in_left_string,
         typename self::piece const& in_right_string)
     {
@@ -218,7 +227,6 @@ class psyq::internal::shared_string_holder
         return this->is_literal()? this->literal_: this->buffer_->get_data();
     }
     //@}
-
     //-------------------------------------------------------------------------
     /// @name 文字列の容量
     //@{
@@ -251,7 +259,7 @@ class psyq::internal::shared_string_holder
         std::swap(this->length_, io_target.length_);
     }
 
-    /// @copydoc const_string_piece::make_string()
+    /// @copydoc self::piece::make_string()
     public: template<typename template_string_type>
     template_string_type make_string() const
     {
@@ -370,29 +378,23 @@ class psyq::internal::shared_string_holder
     private: typename self::traits_type::char_type* allocate_buffer(
         std::size_t const in_length)
     {
-        if (in_length <= 0)
+        if (0 < in_length)
         {
-            this->set_buffer(nullptr);
-            return nullptr;
-        }
-
-        // 共有文字列bufferを構築する。
-        typename self::buffer_allocator local_allocator(this->allocator_);
-        auto const local_allocate_size(self::count_allocate_size(in_length));
-        auto const local_buffer(
-            reinterpret_cast<typename self::shared_buffer*>(
-                local_allocator.allocate(local_allocate_size)));
-        if (local_buffer == nullptr)
-        {
+            // 共有文字列bufferを構築する。
+            void* const local_buffer(
+                typename self::buffer_allocator(this->allocator_).allocate(
+                    self::count_allocate_size(in_length)));
+            if (local_buffer != nullptr)
+            {
+                // 共有文字列bufferを保持する。
+                this->set_buffer(
+                    new(local_buffer) typename self::shared_buffer(in_length));
+                return this->buffer_->get_data();
+            }
             PSYQ_ASSERT(false);
-            this->set_buffer(nullptr);
-            return nullptr;
         }
-        new(local_buffer) typename self::shared_buffer(in_length);
-
-        // 共有文字列bufferを保持する。
-        this->set_buffer(local_buffer);
-        return local_buffer->get_data();
+        this->set_buffer(nullptr);
+        return nullptr;
     }
 
     /** @brief 共有文字列bufferを確保し、2つの文字列をcopyして結合する。
@@ -429,11 +431,19 @@ class psyq::internal::shared_string_holder
         if (io_buffer != nullptr)
         {
 #if PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
+            auto const local_last_count(io_buffer->hold_count);
             ++io_buffer->hold_count;
 #else
-            std::atomic_fetch_add_explicit(
-                &io_buffer->hold_count, 1, std::memory_order_relaxed);
-#endif // PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS 
+            auto const local_last_count(
+                std::atomic_fetch_add_explicit(
+                    &io_buffer->hold_count, 1, std::memory_order_relaxed));
+#endif // PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
+            if ((std::numeric_limits<decltype(local_last_count)>::max)()
+                <= local_last_count)
+            {
+                // 被参照数が限界に達した。
+                PSYQ_ASSERT(false);
+            }
         }
     }
 
@@ -450,22 +460,21 @@ class psyq::internal::shared_string_holder
             return;
         }
 #if PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
+        auto const local_last_count(io_buffer->hold_count);
         --io_buffer->hold_count;
-        if (0 < io_buffer->hold_count)
 #else
         auto const local_last_count(
             std::atomic_fetch_sub_explicit(
-                &io_buffer->hold_count,
-                1,
-                std::memory_order_release));
-        if (1 < local_last_count)
+                &io_buffer->hold_count, 1, std::memory_order_release));
 #endif // PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
+        if (1 < local_last_count)
         {
             return;
         }
 #if !PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
         std::atomic_thread_fence(std::memory_order_acquire);
 #endif // PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
+        PSYQ_ASSERT(0 < local_last_count);
         auto const local_allocate_size(
             self::count_allocate_size(io_buffer->length));
         io_buffer->~shared_buffer();
@@ -510,7 +519,7 @@ class psyq::internal::shared_string_holder
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_string のinterfaceを模した、immutableな文字列。
 
-    - immutableな文字列を参照countで共有する。
+    - immutableな文字列を被参照数で共有する。
     - 文字列literalを割り当てた場合は、memory割り当てを行わない。
     - 同じ型の文字列を割り当てた場合は、memory割り当てを行わない。
     - 違う型の文字列を割り当てた場合は、memory割り当てを行う。
@@ -532,10 +541,12 @@ class psyq::basic_shared_string:
         psyq::internal::shared_string_holder<
             template_char_traits, template_allocator_type>>
 {
+    /// thisが指す値の型。
     private: typedef basic_shared_string<
         template_char_type, template_char_traits, template_allocator_type>
             self;
 
+    /// self の上位型。
     public: typedef psyq::internal::const_string_interface<
         psyq::internal::shared_string_holder<
             template_char_traits, template_allocator_type>>
@@ -570,18 +581,6 @@ class psyq::basic_shared_string:
         super(super::super(std::move(io_string)))
     {}
 
-    /** @brief memoryを割り当てを行い、文字列をcopyする。
-        @param[in] in_string    copy元の文字列。
-        @param[in] in_allocator memory割当子の初期値。
-     */
-    public: basic_shared_string(
-        typename super::piece const&          in_string,
-        typename super::allocator_type const& in_allocator
-        = super::allocator_type())
-    :
-        super(super::super(in_string, super::piece(), in_allocator))
-    {}
-
     /** @brief 文字列literalを参照する。memory割り当ては行わない。
         @tparam template_size 参照する文字列literalの要素数。空文字も含む。
         @param[in] in_literal   参照する文字列literal。
@@ -598,17 +597,33 @@ class psyq::basic_shared_string:
     {}
 
     /** @brief memoryを割り当てを行い、文字列をcopyする。
-        @param[in] in_string    copy元の文字列の先頭位置。
+        @param[in] in_string    copy元の文字列。
+        @param[in] in_allocator memory割当子の初期値。
+     */
+    public: basic_shared_string(
+        typename super::piece const&          in_string,
+        typename super::allocator_type const& in_allocator
+        = super::allocator_type())
+    :
+        super(super::super(in_string, super::piece(), in_allocator))
+    {}
+
+    /** @brief memoryを割り当てを行い、文字列をcopyする。
+        @param[in] in_begin     copy元の文字列の先頭位置。
         @param[in] in_length    copy元の文字列の長さ。
         @param[in] in_allocator memory割当子の初期値。
      */
     public: basic_shared_string(
-        typename super::const_pointer const   in_string,
+        typename super::const_pointer const   in_begin,
         typename super::size_type const       in_length,
         typename super::allocator_type const& in_allocator
         = super::allocator_type())
     :
-        super(super::super(super::piece(in_string, in_length), in_allocator))
+        super(
+            super::super(
+                super::piece(in_begin, in_length),
+                super::piece(),
+                in_allocator))
     {}
 
     /** @brief memoryを割り当てを行い、2つの文字列を連結してcopyする。
@@ -652,20 +667,10 @@ class psyq::basic_shared_string:
      */
     public: self& operator=(typename super::piece const& in_string)
     {
-        return this->super::assign(in_string, typename super::piece());
+        return this->assign(in_string);
     }
 
-    /** @page refer_literal
-        @brief 文字列literalを参照する。memory割り当ては行わない。
-        @tparam template_size 参照する文字列literalの要素数。空文字も含む。
-        @param[in] in_literal 参照する文字列literal。
-        @return *this
-        @warning 文字列literal以外の文字列を in_literal に渡すのは禁止。
-        @note
-            引数が文字列literalであることを保証するため、
-            user定義literalを経由して呼び出すようにしたい。
-     */
-    /// @copydoc refer_literal
+    /// @copydoc super::super::assign()
     public: template <std::size_t template_size>
     self& operator=(
         typename super::value_type const (&in_literal)[template_size])
@@ -686,7 +691,7 @@ class psyq::basic_shared_string:
         return this->operator=(std::move(io_string));
     }
 
-    /// @copydoc refer_literal
+    /// @copydoc super::super::assign()
     public: template <std::size_t template_size>
     self& assign(
         typename super::value_type const (&in_literal)[template_size])
@@ -695,25 +700,23 @@ class psyq::basic_shared_string:
     }
 
     /** @brief memoryを割り当てを行い、文字列をcopyする。
-        @param[in] in_string copy元の文字列の先頭位置。
+        @param[in] in_begin  copy元の文字列の先頭位置。
         @param[in] in_length copy元の文字列の長さ。
         @return *this
      */
     public: self& assign(
-        typename super::const_pointer const in_string,
+        typename super::const_pointer const in_begin,
         typename super::size_type const     in_length)
     {
-        return this->assign(
-            typename super::piece(in_string, in_length),
-            typename super::piece());
+        return this->assign(typename super::piece(in_begin, in_length));
     }
 
-    /// @copydoc super::super::assign(typename piece const&, typename piece const&);
+    /// @copydoc super::super::concatenate();
     public: self& assign(
         typename super::piece const& in_left_string,
         typename super::piece const& in_right_string = super::piece())
     {
-        this->super::assign(in_left_string, in_right_string);
+        this->super::concatenate(in_left_string, in_right_string);
         return *this;
     }
     //@}
@@ -745,4 +748,4 @@ class psyq::basic_shared_string:
     //@}
 };
 
-#endif // !PSYQ_SHARED_STRING_HPP_
+#endif // !defined(PSYQ_SHARED_STRING_HPP_)

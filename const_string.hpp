@@ -327,15 +327,15 @@ class psyq::internal::const_string_piece
 
     /** @brief 文字列の先頭と末尾にある空白文字を取り除く。
      */
-    public: void trim()
+    public: self& trim()
     {
         this->trim_right();
-        this->trim_left();
+        return this->trim_left();
     }
 
     /** @brief 文字列の先頭にある空白文字を取り除く。
      */
-    public: void trim_left()
+    public: self& trim_left()
     {
         if (this->length() <= 0)
         {
@@ -354,11 +354,12 @@ class psyq::internal::const_string_piece
         }
         this->data_ += this->length();
         this->length_ = 0;
+        return *this;
     }
 
     /** @brief 文字列の末尾にある空白文字を取り除く。
      */
-    public: void trim_right()
+    public: self& trim_right()
     {
         if (this->length() <= 0)
         {
@@ -373,8 +374,153 @@ class psyq::internal::const_string_piece
             }
         }
         this->length_ = 0;
+        return *this;
     }
     //@}
+
+    //-------------------------------------------------------------------------
+    public: long long to_llong(std::size_t* const io_last_index = nullptr)
+    const
+    {
+        auto local_iterator(this->data());
+        auto const local_value(
+            self::parse_integer(
+                local_iterator, local_iterator + this->length()));
+        if (io_last_index != nullptr)
+        {
+            *io_last_index = local_iterator - this->data();
+        }
+        return local_value;
+    }
+
+    protected: static long long parse_integer(
+        typename self::traits_type::char_type const*&      io_iterator,
+        typename self::traits_type::char_type const* const in_end)
+    {
+        auto local_iterator(io_iterator);
+        auto const local_sign(self::parse_sign(local_iterator, in_end));
+        if (in_end <= local_iterator)
+        {
+            return 0;
+        }
+        unsigned long long local_integer;
+        if (*local_iterator == '0')
+        {
+            ++local_iterator;
+            if (in_end <= local_iterator)
+            {
+                io_iterator = local_iterator;
+                return 0;
+            }
+            switch (*local_iterator)
+            {
+                case 'x':
+                case 'X':
+                ++local_iterator;
+                local_integer = self::parse_unsigned_integer<16>(
+                    local_iterator, in_end);
+                break;
+
+                case 'b':
+                case 'B':
+                ++local_iterator;
+                local_integer = self::parse_digits<2>(local_iterator, in_end);
+                break;
+
+                default:
+                local_integer = self::parse_digits<8>(local_iterator, in_end);
+                break;
+            }
+        }
+        else
+        {
+            local_integer = self::parse_digits<10>(local_iterator, in_end);
+        }
+        io_iterator = local_iterator;
+        return local_sign * local_integer;
+    }
+
+    protected: static int parse_sign(
+        typename self::traits_type::char_type const*&      io_iterator,
+        typename self::traits_type::char_type const* const in_end)
+    {
+        if (io_iterator < in_end)
+        {
+            switch (*io_iterator)
+            {
+                case '-':
+                ++io_iterator;
+                return -1;
+
+                case '+':
+                ++io_iterator;
+                break;
+            }
+        }
+        return 1;
+    }
+
+    protected: template<std::size_t template_base>
+    static unsigned long long parse_unsigned_integer(
+        typename self::traits_type::char_type const*&      io_iterator,
+        typename self::traits_type::char_type const* const in_end)
+    {
+        static_assert(template_base <= 36, "");
+        unsigned long long local_integer(0);
+        auto i(io_iterator);
+        for (; i < in_end; ++i)
+        {
+            auto local_char(*i);
+            if ('a' <= local_char)
+            {
+                if ('a' + template_base - 9 < local_char)
+                {
+                    break;
+                }
+                local_char -= 'a';
+            }
+            else if ('A' <= local_char)
+            {
+                if ('A' + template_base - 9 < local_char)
+                {
+                    break;
+                }
+                local_char -= 'A';
+            }
+            else if ('0' <= local_char && local_char <= '9')
+            {
+                if ('0' + template_base - 1 < local_char)
+                {
+                    break;
+                }
+                local_char -= '0';
+            }
+            else
+            {
+                break;
+            }
+            local_integer = local_integer * template_base + local_char;
+        }
+        io_iterator = i;
+        return local_integer;
+    }
+
+    protected: template<std::size_t template_base>
+    static unsigned long long parse_digits(
+        typename self::traits_type::char_type const*&      io_iterator,
+        typename self::traits_type::char_type const* const in_end)
+    {
+        static_assert(template_base <= 10, "");
+        unsigned long long local_integer(0);
+        auto i(io_iterator);
+        for (; i < in_end && '0' <= *i && *i < '0' + template_base; ++i)
+        {
+            local_integer = local_integer * template_base + (*i - '0');
+        }
+        io_iterator = i;
+        return local_integer;
+    }
+
     //-------------------------------------------------------------------------
     /// 文字列の先頭位置。
     private: typename self::traits_type::char_type const* data_;

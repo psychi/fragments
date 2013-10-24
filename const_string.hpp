@@ -378,71 +378,103 @@ class psyq::internal::const_string_piece
 
     //-------------------------------------------------------------------------
     /** @brief 文字列を整数に変換する。
-        @param[out] out_last_index
-            最後に解析した文字のindex位置を格納する。
+        @param[out] out_rest_length
+            数値にしなかった文字の数を格納する先。
             nullptrだった場合は格納しない。
         @return 文字列から変換した整数。
      */
-    public: long long to_llong(std::size_t* const out_last_index = nullptr)
+    public: long long to_long_long(std::size_t* const out_rest_length = nullptr)
     const
     {
         auto local_iterator(this->data());
+        auto const local_end(local_iterator + this->length());
+        auto const local_sign(self::parse_sign(local_iterator, local_end));
+        auto const local_base(self::parse_base(local_iterator, local_end));
         auto const local_integer(
-            self::parse_integer(
-                local_iterator, local_iterator + this->length()));
-        if (out_last_index != nullptr)
+            static_cast<long long>(
+                self::parse_numbers(local_iterator, local_end, local_base)));
+        if (out_rest_length != nullptr)
         {
-            *out_last_index = local_iterator - this->data();
+            *out_rest_length = local_end - local_iterator;
         }
-        return local_integer;
-    }
-
-    private: static long long parse_integer(
-        typename self::traits_type::char_type const*&      io_iterator,
-        typename self::traits_type::char_type const* const in_end)
-    {
-        auto local_iterator(io_iterator);
-        auto const local_sign(self::parse_sign(local_iterator, in_end));
-        if (in_end <= local_iterator)
-        {
-            return 0;
-        }
-        unsigned long long local_integer;
-        if (*local_iterator == '0')
-        {
-            ++local_iterator;
-            if (in_end <= local_iterator)
-            {
-                io_iterator = local_iterator;
-                return 0;
-            }
-            switch (*local_iterator)
-            {
-                case 'x':
-                case 'X':
-                ++local_iterator;
-                local_integer = self::parse_numbers<16>(local_iterator, in_end);
-                break;
-
-                case 'b':
-                case 'B':
-                ++local_iterator;
-                local_integer = self::parse_digits<2>(local_iterator, in_end);
-                break;
-
-                default:
-                local_integer = self::parse_digits<8>(local_iterator, in_end);
-                break;
-            }
-        }
-        else
-        {
-            local_integer = self::parse_digits<10>(local_iterator, in_end);
-        }
-        io_iterator = local_iterator;
         return local_sign * local_integer;
     }
 
+    /** @brief 文字列を浮動小数点実数に変換する。
+        @param[out] out_rest_length
+            数値にしなかった文字の数を格納する先。
+            nullptrだった場合は格納しない。
+        @return 文字列から取り出した浮動小数点実数。
+     */
+    public: long double to_long_double(
+        std::size_t* const out_rest_length = nullptr)
+    const
+    {
+        // 整数部を解析する。
+        auto local_iterator(this->data());
+        auto const local_end(local_iterator + this->length());
+        auto const local_sign(self::parse_sign(local_iterator, local_end));
+        auto const local_base(self::parse_base(local_iterator, local_end));
+        auto const local_integer(
+            static_cast<long long>(
+                self::parse_numbers(local_iterator, local_end, local_base)));
+        auto local_real(static_cast<long double>(local_integer));
+
+        // 小数部を解析する。
+        enum {BASE_10 = 10};
+        if (local_base == BASE_10
+            && local_iterator < local_end
+            && *local_iterator == '.')
+        {
+            ++local_iterator;
+            auto local_decimal_begin(local_iterator);
+            self::parse_digits(local_iterator, local_end, BASE_10);
+            auto local_decimal_end(local_iterator);
+            auto local_multiple(
+                std::pow(
+                    static_cast<long double>(BASE_10),
+                    self::parse_exponent(local_iterator, local_end)));
+            local_real *= local_multiple;
+            for (auto i(local_decimal_begin); i < local_decimal_end; ++i)
+            {
+                unsigned local_char(*i);
+                if (local_char < '0' || '0' + BASE_10 <= local_char)
+                {
+                    break;
+                }
+                local_multiple /= BASE_10;
+                local_real += (local_char - '0') * local_multiple;
+            }
+        }
+
+        // 戻り値を決定する。
+        if (out_rest_length != nullptr)
+        {
+            *out_rest_length = local_end - local_iterator;
+        }
+        return local_sign * local_real;
+    }
+
+    private: static int parse_exponent(
+        typename self::traits_type::char_type const*&      io_iterator,
+        typename self::traits_type::char_type const* const in_end)
+    {
+        if (in_end <= io_iterator
+            || (*io_iterator != 'e' && *io_iterator != 'E'))
+        {
+            return 0;
+        }
+        ++io_iterator;
+        auto const local_sign(self::parse_sign(io_iterator, in_end));
+        return local_sign * static_cast<int>(
+            self::parse_digits(io_iterator, in_end, 10));
+    }
+
+    /** @brief 文字列を解析し、数値の符号を取り出す。
+        @param[in,out] io_iterator 文字を解析する位置。
+        @param[in]     in_end      文字列の末尾位置。
+        @return 文字列から取り出した符号。
+     */
     private: static int parse_sign(
         typename self::traits_type::char_type const*&      io_iterator,
         typename self::traits_type::char_type const* const in_end)
@@ -457,26 +489,73 @@ class psyq::internal::const_string_piece
 
                 case '+':
                 ++io_iterator;
-                break;
+                return 1;
             }
         }
         return 1;
     }
 
-    private: template<std::size_t template_base>
-    static unsigned long long parse_numbers(
+    /** @brief 文字列を解析し、数値の基数を取り出す。
+        @param[in,out] io_iterator 文字を解析する位置。
+        @param[in]     in_end      文字列の末尾位置。
+        @return 文字列から取り出した基数。
+     */
+    private: static unsigned parse_base(
         typename self::traits_type::char_type const*&      io_iterator,
         typename self::traits_type::char_type const* const in_end)
     {
-        static_assert(template_base <= 36, "");
+        if (in_end <= io_iterator)
+        {
+            return 0;
+        }
+        if (*io_iterator != '0')
+        {
+            return 10;
+        }
+        ++io_iterator;
+        if (in_end <= io_iterator)
+        {
+            return 0;
+        }
+        switch (*io_iterator)
+        {
+            case 'x':
+            case 'X':
+            ++io_iterator;
+            return 16;
+
+            case 'b':
+            case 'B':
+            ++io_iterator;
+            return 2;
+
+            default:
+            return 8;
+        }
+    }
+
+    private: static unsigned long long parse_numbers(
+        typename self::traits_type::char_type const*&      io_iterator,
+        typename self::traits_type::char_type const* const in_end,
+        unsigned const                                     in_base)
+    {
+        PSYQ_ASSERT(0 < in_base && in_base <= 36);
+
+        // 基数が10以下なら、数字だけを解析する。
+        if (in_base <= 10)
+        {
+            return self::parse_digits(io_iterator, in_end, in_base);
+        }
+
+        // 任意の基数の数値を取り出す。
         unsigned long long local_integer(0);
         auto i(io_iterator);
         for (; i < in_end; ++i)
         {
-            auto local_char(*i);
+            unsigned local_char(*i);
             if ('a' <= local_char)
             {
-                if ('a' + template_base - 10 <= local_char)
+                if ('a' - 10 + in_base <= local_char)
                 {
                     break;
                 }
@@ -484,7 +563,7 @@ class psyq::internal::const_string_piece
             }
             else if ('A' <= local_char)
             {
-                if ('A' + template_base - 10 <= local_char)
+                if ('A' - 10 + in_base <= local_char)
                 {
                     break;
                 }
@@ -492,7 +571,7 @@ class psyq::internal::const_string_piece
             }
             else if ('0' <= local_char && local_char <= '9')
             {
-                if ('0' + template_base <= local_char)
+                if ('0' + in_base <= local_char)
                 {
                     break;
                 }
@@ -502,23 +581,28 @@ class psyq::internal::const_string_piece
             {
                 break;
             }
-            local_integer = local_integer * template_base + local_char;
+            local_integer = local_integer * in_base + local_char;
         }
         io_iterator = i;
         return local_integer;
     }
 
-    private: template<std::size_t template_base>
-    static unsigned long long parse_digits(
+    private: static unsigned long long parse_digits(
         typename self::traits_type::char_type const*&      io_iterator,
-        typename self::traits_type::char_type const* const in_end)
+        typename self::traits_type::char_type const* const in_end,
+        unsigned const                                     in_base)
     {
-        static_assert(template_base <= 10, "");
+        PSYQ_ASSERT(0 < in_base && in_base <= 10);
         unsigned long long local_integer(0);
         auto i(io_iterator);
-        for (; i < in_end && '0' <= *i && *i < '0' + template_base; ++i)
+        for (; i < in_end; ++i)
         {
-            local_integer = local_integer * template_base + (*i - '0');
+            unsigned local_char(*i);
+            if (local_char < '0' || '0' + in_base <= local_char)
+            {
+                break;
+            }
+            local_integer = local_integer * in_base + local_char - '0';
         }
         io_iterator = i;
         return local_integer;

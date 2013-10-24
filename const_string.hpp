@@ -378,12 +378,15 @@ class psyq::internal::const_string_piece
 
     //-------------------------------------------------------------------------
     /** @brief 文字列を整数に変換する。
+        @tparam template_real_type 変換する整数の型。
         @param[out] out_rest_length
             数値にしなかった文字の数を格納する先。
             nullptrだった場合は格納しない。
         @return 文字列から変換した整数。
      */
-    public: long long to_long_long(std::size_t* const out_rest_length = nullptr)
+    public: template<typename template_integer_type>
+    template_integer_type to_integer(
+        std::size_t* const out_rest_length = nullptr)
     const
     {
         auto local_iterator(this->data());
@@ -391,22 +394,24 @@ class psyq::internal::const_string_piece
         auto const local_sign(self::parse_sign(local_iterator, local_end));
         auto const local_base(self::parse_base(local_iterator, local_end));
         auto const local_integer(
-            static_cast<long long>(
-                self::parse_numbers(local_iterator, local_end, local_base)));
+            self::parse_numbers<template_integer_type>(
+                local_iterator, local_end, local_base));
         if (out_rest_length != nullptr)
         {
             *out_rest_length = local_end - local_iterator;
         }
-        return local_sign * local_integer;
+        return local_integer * local_sign;
     }
 
-    /** @brief 文字列を浮動小数点実数に変換する。
+    /** @brief 文字列を実数に変換する。
+        @tparam template_real_type 変換する実数の型。
         @param[out] out_rest_length
             数値にしなかった文字の数を格納する先。
             nullptrだった場合は格納しない。
-        @return 文字列から取り出した浮動小数点実数。
+        @return 文字列から変換した実数。
      */
-    public: long double to_long_double(
+    public: template<typename template_real_type>
+    template_real_type to_real(
         std::size_t* const out_rest_length = nullptr)
     const
     {
@@ -415,10 +420,9 @@ class psyq::internal::const_string_piece
         auto const local_end(local_iterator + this->length());
         auto const local_sign(self::parse_sign(local_iterator, local_end));
         auto const local_base(self::parse_base(local_iterator, local_end));
-        auto const local_integer(
-            static_cast<long long>(
-                self::parse_numbers(local_iterator, local_end, local_base)));
-        auto local_real(static_cast<long double>(local_integer));
+        auto local_real(
+            self::parse_numbers<template_real_type>(
+                local_iterator, local_end, local_base));
 
         // 小数部を解析する。
         enum {BASE_10 = 10};
@@ -426,14 +430,34 @@ class psyq::internal::const_string_piece
             && local_iterator < local_end
             && *local_iterator == '.')
         {
+            // 小数部の範囲を決定する。
             ++local_iterator;
             auto local_decimal_begin(local_iterator);
-            self::parse_digits(local_iterator, local_end, BASE_10);
+            self::parse_digits<int>(local_iterator, local_end, BASE_10);
             auto local_decimal_end(local_iterator);
-            auto local_multiple(
-                std::pow(
-                    static_cast<long double>(BASE_10),
-                    self::parse_exponent(local_iterator, local_end)));
+
+            // 指数部を解析する。
+            template_real_type local_multiple(1);
+            if (local_iterator < local_end
+                && (*local_iterator == 'e' || *local_iterator == 'E'))
+            {
+                ++local_iterator;
+                auto const local_exp_sign(
+                    self::parse_sign(local_iterator, local_end));
+                auto const local_exp_count(
+                    self::parse_digits<int>(
+                        local_iterator, local_end, BASE_10));
+                for (auto i(local_exp_count); 0 < i; --i)
+                {
+                    local_multiple *= BASE_10;
+                }
+                if (local_exp_sign < 0)
+                {
+                    local_multiple = 1 / local_multiple;
+                }
+            }
+
+            // 整数部と小数部と指数部を合成する。
             local_real *= local_multiple;
             for (auto i(local_decimal_begin); i < local_decimal_end; ++i)
             {
@@ -452,22 +476,7 @@ class psyq::internal::const_string_piece
         {
             *out_rest_length = local_end - local_iterator;
         }
-        return local_sign * local_real;
-    }
-
-    private: static int parse_exponent(
-        typename self::traits_type::char_type const*&      io_iterator,
-        typename self::traits_type::char_type const* const in_end)
-    {
-        if (in_end <= io_iterator
-            || (*io_iterator != 'e' && *io_iterator != 'E'))
-        {
-            return 0;
-        }
-        ++io_iterator;
-        auto const local_sign(self::parse_sign(io_iterator, in_end));
-        return local_sign * static_cast<int>(
-            self::parse_digits(io_iterator, in_end, 10));
+        return local_real * local_sign;
     }
 
     /** @brief 文字列を解析し、数値の符号を取り出す。
@@ -534,7 +543,8 @@ class psyq::internal::const_string_piece
         }
     }
 
-    private: static unsigned long long parse_numbers(
+    private: template<typename template_integer_type>
+    static template_integer_type parse_numbers(
         typename self::traits_type::char_type const*&      io_iterator,
         typename self::traits_type::char_type const* const in_end,
         unsigned const                                     in_base)
@@ -544,11 +554,12 @@ class psyq::internal::const_string_piece
         // 基数が10以下なら、数字だけを解析する。
         if (in_base <= 10)
         {
-            return self::parse_digits(io_iterator, in_end, in_base);
+            return self::parse_digits<template_integer_type>(
+                io_iterator, in_end, in_base);
         }
 
         // 任意の基数の数値を取り出す。
-        unsigned long long local_integer(0);
+        template_integer_type local_integer(0);
         auto i(io_iterator);
         for (; i < in_end; ++i)
         {
@@ -587,13 +598,14 @@ class psyq::internal::const_string_piece
         return local_integer;
     }
 
-    private: static unsigned long long parse_digits(
+    private: template<typename template_integer_type>
+    static template_integer_type parse_digits(
         typename self::traits_type::char_type const*&      io_iterator,
         typename self::traits_type::char_type const* const in_end,
         unsigned const                                     in_base)
     {
         PSYQ_ASSERT(0 < in_base && in_base <= 10);
-        unsigned long long local_integer(0);
+        template_integer_type local_integer(0);
         auto i(io_iterator);
         for (; i < in_end; ++i)
         {

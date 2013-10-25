@@ -90,7 +90,7 @@ class psyq::basic_string_piece:
      */
     public: basic_string_piece()
     :
-        super(typename super::super(nullptr, 0))
+        super(super::super(nullptr, 0))
     {}
 
     /** @brief 文字列を参照する。
@@ -308,8 +308,8 @@ class psyq::basic_string_piece:
         @return 文字列から取り出した符号。
      */
     private: static signed parse_sign(
-        typename self::traits_type::char_type const*&      io_iterator,
-        typename self::traits_type::char_type const* const in_end)
+        typename super::traits_type::char_type const*&      io_iterator,
+        typename super::traits_type::char_type const* const in_end)
     {
         if (io_iterator < in_end)
         {
@@ -333,8 +333,8 @@ class psyq::basic_string_piece:
         @return 文字列から取り出した基数。
      */
     private: static unsigned parse_base(
-        typename self::traits_type::char_type const*&      io_iterator,
-        typename self::traits_type::char_type const* const in_end)
+        typename super::traits_type::char_type const*&      io_iterator,
+        typename super::traits_type::char_type const* const in_end)
     {
         if (in_end <= io_iterator)
         {
@@ -379,9 +379,9 @@ class psyq::basic_string_piece:
      */
     private: template<typename template_integer_type>
     static template_integer_type parse_numbers(
-        typename self::traits_type::char_type const*&      io_iterator,
-        typename self::traits_type::char_type const* const in_end,
-        unsigned const                                     in_base)
+        typename super::traits_type::char_type const*&      io_iterator,
+        typename super::traits_type::char_type const* const in_end,
+        unsigned const                                      in_base)
     {
         // 基数が10以下なら、数字だけを解析する。
         if (in_base <= 10)
@@ -440,9 +440,9 @@ class psyq::basic_string_piece:
      */
     private: template<typename template_integer_type>
     static template_integer_type parse_digits(
-        typename self::traits_type::char_type const*&      io_iterator,
-        typename self::traits_type::char_type const* const in_end,
-        unsigned const                                     in_base)
+        typename super::traits_type::char_type const*&      io_iterator,
+        typename super::traits_type::char_type const* const in_end,
+        unsigned const                                      in_base)
     {
         if (in_base <= 0)
         {
@@ -478,9 +478,9 @@ class psyq::basic_string_piece:
      */
     private: template<std::size_t template_base, typename template_real_type>
     static template_real_type merge_decimal_digits(
-        typename self::traits_type::char_type const*&      io_iterator,
-        typename self::traits_type::char_type const* const in_end,
-        template_real_type const                           in_real)
+        typename super::traits_type::char_type const*&      io_iterator,
+        typename super::traits_type::char_type const* const in_end,
+        template_real_type const                            in_real)
     {
         PSYQ_ASSERT(0 <= in_real);
 

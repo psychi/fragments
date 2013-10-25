@@ -609,7 +609,7 @@ class psyq::basic_shared_string:
      */
     public: basic_shared_string(self&& io_string)
     :
-        super(static_cast<typename super::super&&>(std::move(io_string)))
+        super(std::move(io_string))
     {}
 
     /** @brief 文字列literalを参照する。memory割り当ては行わない。

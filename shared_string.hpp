@@ -1,4 +1,30 @@
-﻿#ifndef PSYQ_SHARED_STRING_HPP_
+﻿/* Copyright (c) 2013, Hillco Psychi, All rights reserved.
+
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions are met:
+
+   1. Redistributions of source code must retain the above copyright notice,
+      this list of conditions and the following disclaimer.
+   2. Redistributions in binary form must reproduce the above copyright notice,
+      this list of conditions and the following disclaimer in the documentation
+      and/or other materials provided with the distribution.
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+   THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+   OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/** @file
+    @author Hillco Psychi (https://twitter.com/psychi)
+ */
+#ifndef PSYQ_SHARED_STRING_HPP_
 #define PSYQ_SHARED_STRING_HPP_
 
 //#include "string_piece.hpp"
@@ -73,7 +99,7 @@ class psyq::internal::shared_string_holder
     /** @brief 空文字列を構築する。memory割り当ては行わない。
         @param[in] in_allocator memory割当子の初期値。
      */
-    protected: explicit shared_string_holder(
+    public: explicit shared_string_holder(
         typename self::allocator_type const& in_allocator)
     :
         literal_(nullptr),
@@ -84,7 +110,7 @@ class psyq::internal::shared_string_holder
     /** @brief 文字列を参照する。memory割り当ては行わない。
         @param[in] in_string copy元の文字列。
      */
-    protected: explicit shared_string_holder(self const& in_string)
+    public: explicit shared_string_holder(self const& in_string)
     :
         literal_(nullptr),
         length_(0),
@@ -96,7 +122,7 @@ class psyq::internal::shared_string_holder
     /** @brief 文字列を移動する。memory割り当ては行わない。
         @param[in,out] io_string move元の文字列。
      */
-    protected: explicit shared_string_holder(self&& io_string)
+    public: explicit shared_string_holder(self&& io_string)
     :
         literal_(nullptr),
         length_(0),
@@ -114,7 +140,7 @@ class psyq::internal::shared_string_holder
             引数が文字列literalであることを保証するため、
             user定義literalを経由して呼び出すようにしたい。
      */
-    protected: template <std::size_t template_size>
+    public: template <std::size_t template_size>
     shared_string_holder(
         typename self::traits_type::char_type const (&in_literal)[template_size],
         typename self::allocator_type const&        in_allocator)
@@ -129,7 +155,7 @@ class psyq::internal::shared_string_holder
         @param[in] in_right_string copy元の右辺文字列。
         @param[in] in_allocator    memory割当子の初期値。
      */
-    protected: shared_string_holder(
+    public: shared_string_holder(
         typename self::piece const&          in_left_string,
         typename self::piece const&          in_right_string,
         typename self::allocator_type const& in_allocator)
@@ -223,30 +249,10 @@ class psyq::internal::shared_string_holder
         return this->is_literal()? this->literal_: this->buffer_->get_data();
     }
 
-    /// @copydoc psyq::internal::const_string_interface::empty()
-    public: bool empty() const
-    {
-        return this->buffer_ == nullptr;
-    }
-
     /// @copydoc self::piece::length()
     public: std::size_t length() const
     {
         return this->is_literal()? this->length_: this->buffer_->length;
-    }
-
-    /// @copydoc self::piece::clear()
-    public: void clear()
-    {
-        self::release_buffer(this->get_buffer(), this->get_allocator());
-        this->set_buffer(nullptr);
-    }
-
-    /// @copydoc self::piece::swap()
-    public: void swap(self& io_target)
-    {
-        std::swap(this->buffer_, io_target.buffer_);
-        std::swap(this->length_, io_target.length_);
     }
 
     /** @brief 使っているmemory割当子を取得する。
@@ -264,7 +270,38 @@ class psyq::internal::shared_string_holder
         return this->is_literal()?
             template_string_type(this->literal_, this->length_):
             template_string_type(
-                this->buffer_->get_data(), this->buffer_.length);
+                this->buffer_->get_data(), this->buffer_->length);
+    }
+
+    public: psyq::basic_string_piece<
+        typename self::traits_type::char_type, typename self::traits_type>
+    make_piece() const
+    {
+        return this->make_string<
+            psyq::basic_string_piece<
+                typename self::traits_type::char_type,
+                typename self::traits_type>>();
+    }
+
+    //-------------------------------------------------------------------------
+    /// @copydoc psyq::internal::const_string_interface::empty()
+    protected: bool empty() const
+    {
+        return this->buffer_ == nullptr;
+    }
+
+    /// @copydoc self::piece::clear()
+    protected: void clear()
+    {
+        self::release_buffer(this->get_buffer(), this->get_allocator());
+        this->set_buffer(nullptr);
+    }
+
+    /// @copydoc psyq::internal::const_string_interface::swap()
+    protected: void swap(self& io_target)
+    {
+        std::swap(this->buffer_, io_target.buffer_);
+        std::swap(this->length_, io_target.length_);
     }
 
     //-------------------------------------------------------------------------
@@ -729,20 +766,57 @@ class psyq::basic_shared_string:
     //-------------------------------------------------------------------------
     /// @name 文字列の操作
     //@{
+    /// @copydoc super::super::clear()
+    public: void clear()
+    {
+        this->super::super::clear();
+    }
+
+    /// @copydoc super::super::swap()
+    public: void swap(self& io_target)
+    {
+        this->super::super::swap(io_target);
+    }
 #if 0
     /** @brief 部分文字列を取得する。
         @param[in] in_offset 部分文字列の開始offset位置。
         @param[in] in_count  部分文字列の文字数。
      */
-    public: self substr(
+    public: self::slice substr(
         typename super::size_type in_offset = 0,
         typename super::size_type in_count = super::npos)
-    const
-    {
-        return self(*this, in_offset, in_count);
-    }
+    const;
 #endif
     //@}
+};
+
+//-----------------------------------------------------------------------------
+namespace std
+{
+    /** @brief 文字列の交換。
+        @tparam template_char_type
+            @copydoc psyq::basic_shared_string::value_type
+        @tparam template_char_traits
+            @copydoc psyq::basic_shared_string::traits_type
+        @tparam template_allocator_type
+            @copydoc psyq::basic_shared_string::allocator_type
+        @param[in] in_left  交換する文字列。
+        @param[in] in_right 交換する文字列。
+     */
+    template<
+        typename template_char_type,
+        typename template_char_traits,
+        typename template_allocator_type>
+    void swap(
+        psyq::basic_shared_string<
+            template_char_type, template_char_traits, template_allocator_type>&
+                io_left,
+        psyq::basic_shared_string<
+            template_char_type, template_char_traits, template_allocator_type>&
+                io_right)
+    {
+        io_left.swap(io_right);
+    }
 };
 
 #endif // !defined(PSYQ_SHARED_STRING_HPP_)

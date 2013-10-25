@@ -170,10 +170,13 @@ class psyq::basic_string_piece:
     //-------------------------------------------------------------------------
     /// @name 文字列の操作
     //@{
-    /** @brief 部分文字列を取得する。
-        @param[in] in_offset 部分文字列の開始offset位置。
-        @param[in] in_count  部分文字列の開始offset位置からの文字数。
-     */
+    /// @copydoc psyq::internal::const_string_piece::clear()
+    public: void clear()
+    {
+        this->super::super::clear();
+    }
+
+    /// @copydoc psyq::internal::const_string_piece::substr()
     public: self substr(
         typename super::size_type const in_offset = 0,
         typename super::size_type const in_count = super::npos)
@@ -181,7 +184,345 @@ class psyq::basic_string_piece:
     {
         return self(*this, in_offset, in_count);
     }
+
+    /** @brief 文字列の先頭と末尾にある空白文字を取り除く。
+        @return 先頭と末尾にある空白文字を取り除いた文字列。
+     */
+    public: self trim() const
+    {
+        return this->trim_right().trim_left();
+    }
+
+    /** @brief 文字列の先頭にある空白文字を取り除く。
+        @return 先頭にある空白文字を取り除いた文字列。
+     */
+    public: self trim_left() const
+    {
+        if (this->length() <= 0)
+        {
+            return *this;
+        }
+        auto const local_end(this->data() + this->length());
+        for (auto i(this->data()); i < local_end; ++i)
+        {
+            if (!std::isspace(*i))
+            {
+                auto const local_position(i - this->data());
+                return self(
+                    this->data() + local_position,
+                    this->length() - local_position);
+            }
+        }
+        return self(this->data() + this->length(), 0);
+    }
+
+    /** @brief 文字列の末尾にある空白文字を取り除く。
+        @return 末尾にある空白文字を取り除いた文字列。
+     */
+    public: self trim_right() const
+    {
+        if (this->length() <= 0)
+        {
+            return *this;
+        }
+        for (auto i(this->data() + this->length() - 1); this->data() <= i; --i)
+        {
+            if (!std::isspace(*i))
+            {
+                return self(this->data(), 1 + i - this->data());
+            }
+        }
+        return self(this->data(), 0);
+    }
+
+    /** @brief 文字列を整数に変換する。
+        @tparam template_real_type 変換する整数の型。
+        @param[out] out_rest_length
+            数値にしなかった文字の数を格納する先。
+            nullptrだった場合は格納しない。
+        @return 文字列から変換した整数の値。
+     */
+    public: template<typename template_integer_type>
+    template_integer_type to_integer(
+        std::size_t* const out_rest_length = nullptr)
+    const
+    {
+        auto local_iterator(this->data());
+        auto const local_end(local_iterator + this->length());
+        auto const local_sign(self::parse_sign(local_iterator, local_end));
+        auto const local_base(self::parse_base(local_iterator, local_end));
+        auto const local_integer(
+            self::parse_numbers<template_integer_type>(
+                local_iterator, local_end, local_base));
+        if (out_rest_length != nullptr)
+        {
+            *out_rest_length = local_end - local_iterator;
+        }
+        return local_integer * local_sign;
+    }
+
+    /** @brief 文字列を実数に変換する。
+        @tparam template_real_type 変換する実数の型。
+        @param[out] out_rest_length
+            数値にしなかった文字の数を格納する先。
+            nullptrだった場合は格納しない。
+        @return 文字列から変換した実数の値。
+     */
+    public: template<typename template_real_type>
+    template_real_type to_real(
+        std::size_t* const out_rest_length = nullptr)
+    const
+    {
+        // 整数部を解析する。
+        auto local_iterator(this->data());
+        auto const local_end(local_iterator + this->length());
+        auto const local_sign(self::parse_sign(local_iterator, local_end));
+        auto const local_base(self::parse_base(local_iterator, local_end));
+        auto local_real(
+            self::parse_numbers<template_real_type>(
+                local_iterator, local_end, local_base));
+
+        // 小数部を解析する。
+        enum {BASE_10 = 10};
+        if (local_base == BASE_10
+            && local_iterator < local_end
+            && *local_iterator == '.')
+        {
+            ++local_iterator;
+            local_real = self::merge_decimal_digits<BASE_10>(
+                local_iterator, local_end, local_real);
+        }
+
+        // 戻り値を決定する。
+        if (out_rest_length != nullptr)
+        {
+            *out_rest_length = local_end - local_iterator;
+        }
+        return local_real * local_sign;
+    }
     //@}
+    //-------------------------------------------------------------------------
+    /** @brief 文字列を解析し、数値の符号を取り出す。
+        @param[in,out] io_iterator 文字を解析する位置。
+        @param[in]     in_end      文字列の末尾位置。
+        @return 文字列から取り出した符号。
+     */
+    private: static signed parse_sign(
+        typename self::traits_type::char_type const*&      io_iterator,
+        typename self::traits_type::char_type const* const in_end)
+    {
+        if (io_iterator < in_end)
+        {
+            switch (*io_iterator)
+            {
+                case '-':
+                ++io_iterator;
+                return -1;
+
+                case '+':
+                ++io_iterator;
+                return 1;
+            }
+        }
+        return 1;
+    }
+
+    /** @brief 文字列を解析し、数値の基数を取り出す。
+        @param[in,out] io_iterator 文字を解析する位置。
+        @param[in]     in_end      文字列の末尾位置。
+        @return 文字列から取り出した基数。
+     */
+    private: static unsigned parse_base(
+        typename self::traits_type::char_type const*&      io_iterator,
+        typename self::traits_type::char_type const* const in_end)
+    {
+        if (in_end <= io_iterator)
+        {
+            return 0;
+        }
+        if (*io_iterator != '0')
+        {
+            return 10;
+        }
+        ++io_iterator;
+        if (in_end <= io_iterator)
+        {
+            return 0;
+        }
+        switch (*io_iterator)
+        {
+            case 'x':
+            case 'X':
+            ++io_iterator;
+            return 16;
+
+            case 'b':
+            case 'B':
+            ++io_iterator;
+            return 2;
+
+            default:
+            return 8;
+        }
+    }
+
+    /** @brief 文字列を解析し、整数を取り出す。
+
+        数字と英字で構成される文字列を解析し、整数値を取り出す。
+        数字以外または英字以外を見つけたら、解析はそこで停止する。
+
+        @tparam template_integer_type 整数の型。
+        @param[in,out] io_iterator 文字を解析する位置。
+        @param[in]     in_end      文字列の末尾位置。
+        @param[in]     in_base     整数の基数。
+        @return 文字列から取り出した整数の値。
+     */
+    private: template<typename template_integer_type>
+    static template_integer_type parse_numbers(
+        typename self::traits_type::char_type const*&      io_iterator,
+        typename self::traits_type::char_type const* const in_end,
+        unsigned const                                     in_base)
+    {
+        // 基数が10以下なら、数字だけを解析する。
+        if (in_base <= 10)
+        {
+            return self::parse_digits<template_integer_type>(
+                io_iterator, in_end, in_base);
+        }
+        PSYQ_ASSERT(in_base <= 36);
+
+        // 任意の基数の数値を取り出す。
+        template_integer_type local_integer(0);
+        auto i(io_iterator);
+        for (; i < in_end; ++i)
+        {
+            int local_number(*i);
+            if ('a' <= local_number)
+            {
+                local_number -= 'a' - 0xA;
+            }
+            else if ('A' <= local_number)
+            {
+                local_number -= 'A' - 0xA;
+            }
+            else if ('9' < local_number)
+            {
+                break;
+            }
+            else
+            {
+                local_number -= '0';
+                if (local_number < 0)
+                {
+                    break;
+                }
+            }
+            if (int(in_base) <= local_number)
+            {
+                break;
+            }
+            local_integer = local_integer * in_base + local_number;
+        }
+        io_iterator = i;
+        return local_integer;
+    }
+
+    /** @brief 文字列を解析し、整数を取り出す。
+
+        数字で構成される文字列を解析し、整数値を取り出す。
+        数字以外を見つけたら、変換はそこで停止する。
+
+        @tparam template_integer_type 整数の型。
+        @param[in,out] io_iterator 文字を解析する位置。
+        @param[in]     in_end      文字列の末尾位置。
+        @param[in]     in_base     整数の基数。
+        @return 文字列から取り出した整数の値。
+     */
+    private: template<typename template_integer_type>
+    static template_integer_type parse_digits(
+        typename self::traits_type::char_type const*&      io_iterator,
+        typename self::traits_type::char_type const* const in_end,
+        unsigned const                                     in_base)
+    {
+        if (in_base <= 0)
+        {
+            return 0;
+        }
+        PSYQ_ASSERT(in_base <= 10);
+        template_integer_type local_integer(0);
+        auto i(io_iterator);
+        for (; i < in_end; ++i)
+        {
+            int local_digit(*i - '0');
+            if (local_digit < 0 || int(in_base) <= local_digit)
+            {
+                break;
+            }
+            local_integer = local_integer * in_base + local_digit;
+        }
+        io_iterator = i;
+        return local_integer;
+    }
+
+    /** @brief 文字列を解析し、実数を取り出す。
+
+        数字で構成される文字列を解析し、小数と指数を取り出して合成する。
+        数字以外を見つけたら、解析はそこで停止する。
+
+        @tparam template_base      実数の基数。
+        @tparam template_real_type 実数の型。
+        @param[in,out] io_iterator 文字を解析する位置。
+        @param[in]     in_end      文字列の末尾位置。
+        @param[in]     in_real     実数の入力値。
+        @return 実数の入力値と文字列から取り出した小数と指数を合成した値。
+     */
+    private: template<std::size_t template_base, typename template_real_type>
+    static template_real_type merge_decimal_digits(
+        typename self::traits_type::char_type const*&      io_iterator,
+        typename self::traits_type::char_type const* const in_end,
+        template_real_type const                           in_real)
+    {
+        PSYQ_ASSERT(0 <= in_real);
+
+        // 小数部の範囲を決定する。
+        auto const local_decimal_begin(io_iterator);
+        self::parse_digits<int>(io_iterator, in_end, template_base);
+        auto const local_decimal_end(io_iterator);
+
+        // 指数部を解析し、入力値と合成する。
+        template_real_type local_multiple(1);
+        if (io_iterator < in_end
+            && (*io_iterator == 'e' || *io_iterator == 'E'))
+        {
+            ++io_iterator;
+            auto const local_exponent_sign(
+                self::parse_sign(io_iterator, in_end));
+            auto const local_exponent_count(
+                self::parse_digits<int>(io_iterator, in_end, template_base));
+            for (auto i(local_exponent_count); 0 < i; --i)
+            {
+                local_multiple *= template_base;
+            }
+            if (local_exponent_sign < 0)
+            {
+                local_multiple = 1 / local_multiple;
+            }
+        }
+        auto local_real(in_real * local_multiple);
+
+        // 小数部を実数に変換し、入力値と合成する。
+        for (auto i(local_decimal_begin); i < local_decimal_end; ++i)
+        {
+            int local_digit(*i - '0');
+            if (local_digit < 0 || int(template_base) <= local_digit)
+            {
+                break;
+            }
+            local_multiple /= template_base;
+            local_real += local_multiple * local_digit;
+        }
+        return local_real;
+    }
 };
 
 //-----------------------------------------------------------------------------

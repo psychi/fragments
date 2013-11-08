@@ -810,6 +810,7 @@ class psyq::mosp_tree
         }
         if (&local_cell->get_next() == local_cell)
         {
+            this->collect_idle_node(*local_cell);
             return this->cells_.erase(in_cell);
         }
 
@@ -817,8 +818,8 @@ class psyq::mosp_tree
         for (auto local_super_order(in_cell->first); 0 < local_super_order;)
         {
             // 上位の分割空間に移動する。
-            local_super_order =
-                (local_super_order - 1) >> self::space::DIMENSION;
+            local_super_order
+                = (local_super_order - 1) >> self::space::DIMENSION;
             auto const local_super_iterator(
                 this->cells_.find(local_super_order));
             if (local_super_iterator != this->cells_.end())
@@ -829,10 +830,12 @@ class psyq::mosp_tree
                     *local_cell, *local_super_cell, in_detect_callback);
                 if (&local_cell->get_next() == local_cell)
                 {
+                    this->collect_idle_node(*local_cell);
                     return this->cells_.erase(in_cell);
                 }
                 if (&local_super_cell->get_next() == local_super_cell)
                 {
+                    this->collect_idle_node(*local_super_cell);
                     this->cells_.erase(local_super_iterator);
                 }
             }

@@ -27,7 +27,7 @@
 #ifndef PSYQ_STRING_PIECE_HPP_
 #define PSYQ_STRING_PIECE_HPP_
 
-//#include "const_string.hpp"
+//#include "string/const_string.hpp"
 
 /// psyq::basic_string_piece で使う、defaultの文字特性の型。
 #ifndef PSYQ_BASIC_STRING_PIECE_TRAITS_DEFAULT

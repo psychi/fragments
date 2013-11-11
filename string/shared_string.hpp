@@ -27,7 +27,7 @@
 #ifndef PSYQ_SHARED_STRING_HPP_
 #define PSYQ_SHARED_STRING_HPP_
 
-//#include "string_piece.hpp"
+//#include "string/string_piece.hpp"
 
 /// psyq::basic_shared_string で使う、defaultのmemory割当子の型。
 #ifndef PSYQ_BASIC_SHARED_STRING_ALLOCATOR_DEFAULT

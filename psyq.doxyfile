@@ -678,10 +678,10 @@ WARN_LOGFILE           =
 # with spaces.
 
 INPUT                  = \
-                         ./const_string.hpp \
-                         ./string_piece.hpp \
-                         ./shared_string.hpp \
-                         ./immutable_string.hpp \
+                         ./string/const_string.hpp \
+                         ./string/string_piece.hpp \
+                         ./string/shared_string.hpp \
+                         ./string/array_string.hpp \
                          ./csv_table.hpp \
                          ./mosp_collision.hpp \
 

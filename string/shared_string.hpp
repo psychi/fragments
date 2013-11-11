@@ -59,8 +59,8 @@ namespace psyq
     namespace internal
     {
         /// @cond
-        template<typename ,typename> class shared_string_holder;
-        template<typename ,typename> class shared_string_slice;
+        template<typename, typename> class shared_string_holder;
+        template<typename, typename> class shared_string_slice;
         /// @endcond
     }
 }
@@ -164,7 +164,7 @@ class psyq::internal::shared_string_holder
         length_(0),
         allocator_(in_allocator)
     {
-        this->create_buffer(in_left_string, in_right_string);
+        this->create_concatenate_buffer(in_left_string, in_right_string);
     }
 
     /// @brief 文字列を解放する。
@@ -238,7 +238,7 @@ class psyq::internal::shared_string_holder
         typename self::piece const& in_right_string)
     {
         self::release_buffer(this->get_buffer(), this->get_allocator());
-        this->create_buffer(in_left_string, in_right_string);
+        this->create_concatenate_buffer(in_left_string, in_right_string);
         return *this;
     }
 
@@ -273,14 +273,14 @@ class psyq::internal::shared_string_holder
                 this->buffer_->get_data(), this->buffer_->length);
     }
 
-    public: psyq::basic_string_piece<
-        typename self::traits_type::char_type, typename self::traits_type>
-    make_piece() const
+    public: template<typename template_map_type>
+    self make_replaced(
+        template_map_type const& in_char_map)
     {
-        return this->make_string<
-            psyq::basic_string_piece<
-                typename self::traits_type::char_type,
-                typename self::traits_type>>();
+        self local_string;
+        local_sring.create_replaced_buffer(
+            this->make_string<typename self::piece>(), in_char_map);
+        return local_sring;
     }
 
     //-------------------------------------------------------------------------
@@ -436,7 +436,7 @@ class psyq::internal::shared_string_holder
         @param[in] in_left_string  結合する左辺の文字列。
         @param[in] in_right_string 結合する右辺の文字列。
      */
-    private: void create_buffer(
+    private: void create_concatenate_buffer(
         typename self::piece const& in_left_string,
         typename self::piece const& in_right_string)
     {
@@ -454,6 +454,26 @@ class psyq::internal::shared_string_holder
                 in_right_string.data(),
                 in_right_string.length());
             local_string[local_length] = 0;
+        }
+    }
+
+    private: template<typename template_map_type>
+    void create_replaced_buffer(
+        typename self::piece const& in_string,
+        template_map_type const&    in_char_map)
+    {
+        auto const local_begin(this->allocate_buffer(in_string.length()));
+        if (local_begin != nullptr)
+        {
+            for (std::size_t i(0); i < in_string.length(); ++i)
+            {
+                auto const local_source_char(*(in_string.data() + i));
+                auto const local_find_char(in_char_map.find(local_source_char));
+                local_begin[i] = (
+                    local_find_char != in_char_map.end()?
+                        local_find_char->second: local_source_char);
+            }
+            local_begin[in_string.length()] = 0;
         }
     }
 
@@ -787,6 +807,15 @@ class psyq::basic_shared_string:
         typename super::size_type in_count = super::npos)
     const;
 #endif
+    public: psyq::basic_string_piece<
+        typename super::traits_type::char_type, typename super::traits_type>
+    make_piece() const
+    {
+        return this->make_string<
+            psyq::basic_string_piece<
+                typename super::traits_type::char_type,
+                typename super::traits_type>>();
+    }
     //@}
 };
 

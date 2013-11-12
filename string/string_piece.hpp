@@ -237,6 +237,21 @@ class psyq::basic_string_piece:
 
     /** @brief 文字列を整数に変換する。
         @tparam template_real_type 変換する整数の型。
+        @param[out] out_integer 文字列を整数に変換した結果を格納する先。
+        @retval true  文字列を整数に変換しきれた。
+        @retval false 文字列を整数に変換しきれなかった。
+     */
+    public: template<typename template_integer_type>
+    bool to_integer(template_integer_type& out_integer) const
+    {
+        std::size_t local_rest_length;
+        out_integer
+            = this->to_integer<template_integer_type>(&local_rest_length);
+        return local_rest_length <= 0 && !this->empty();
+    }
+
+    /** @brief 文字列を整数に変換する。
+        @tparam template_real_type 変換する整数の型。
         @param[out] out_rest_length
             数値にしなかった文字の数を格納する先。
             nullptrだった場合は格納しない。
@@ -259,6 +274,20 @@ class psyq::basic_string_piece:
             *out_rest_length = local_end - local_iterator;
         }
         return local_integer * local_sign;
+    }
+
+    /** @brief 文字列を実数に変換する。
+        @tparam template_real_type 変換する実数の型。
+        @param[out] out_real 文字列を実数に変換した結果を格納する先。
+        @retval true  文字列を実数に変換しきれた。
+        @retval false 文字列を実数に変換しきれなかった。
+     */
+    public: template<typename template_real_type>
+    bool to_real(template_real_type& out_real) const
+    {
+        std::size_t local_rest_length;
+        out_real = this->to_real<template_real_type>(&local_rest_length);
+        return local_rest_length <= 0 && !this->empty();
     }
 
     /** @brief 文字列を実数に変換する。

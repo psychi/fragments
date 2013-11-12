@@ -1,9 +1,32 @@
-﻿/** @file
+﻿/* Copyright (c) 2013, Hillco Psychi, All rights reserved.
+
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions are met:
+
+   1. Redistributions of source code must retain the above copyright notice,
+      this list of conditions and the following disclaimer.
+   2. Redistributions in binary form must reproduce the above copyright notice,
+      this list of conditions and the following disclaimer in the documentation
+      and/or other materials provided with the distribution.
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+   THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+   OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_STRING_TABLE_HPP_
 #define PSYQ_STRING_TABLE_HPP_
-#include <tuple>
+#include <map>
 
 namespace psyq
 {
@@ -12,6 +35,12 @@ namespace psyq
     struct string_table_key;
     template<typename, typename> class string_table;
     /// @endcond
+
+    /// 共有文字列の表。
+    typedef psyq::string_table<
+        std::map<psyq::shared_string, psyq::string_table_attribute>,
+        std::map<psyq::string_table_key, psyq::shared_string>>
+            shared_string_table;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -88,7 +117,7 @@ class psyq::string_table
     /** @brief 文字列表の属性の辞書。
 
         以下の条件を満たしている必要がある。
-        - std::map 互換の型。
+        - std::unorderd_map 相当の型。要素がsortされてなくともよい。
         - attribute_map::key_type は、 psyq::basic_string_piece 互換の文字列型。
         - attribute_map::mapped_type は、 string_table_attribute 型。
      */
@@ -97,82 +126,101 @@ class psyq::string_table
     /** @brief 文字列表のcellの辞書。
 
         以下の条件を満たしている必要がある。
-        - std::map 互換の型。
+        - std::unorderd_map 相当の型。要素がsortされてなくともよい。
         - cell_map::key_type は、 string_table_key 型。
         - cell_map::mapped_type は、 attribute_map::key_type と同じ文字列型。
      */
     public: typedef template_cell_map cell_map;
 
     //-------------------------------------------------------------------------
-    /** @brief CSV形式の文字列を解析し、文字列の表に変換する。
-        @tparam template_string std::basic_string 互換の文字列型。
-        @param[in] in_csv_string       解析するCSV形式の文字列。
-        @param[in] in_attribute_row    表の属性として使う行の番号。
-        @param[in] in_column_ceparator 列の区切り文字。
-        @param[in] in_row_separator    行の区切り文字。
-        @param[in] in_quote_begin      引用符の開始文字。
-        @param[in] in_quote_end        引用符の終了文字。
-        @param[in] in_quote_escape     引用符のescape文字。
+    /** @brief 文字列表を構築する。
+        @param[in] in_cell_map      元となる文字列表。
+        @param[in] in_attribute_row 属性として使う行の番号。
      */
-    public: template<typename template_string>
     explicit string_table(
-        template_string const&                     in_csv_string,
-        std::size_t const                          in_attribute_row = 0,
-        typename template_string::value_type const in_column_ceparator = ',',
-        typename template_string::value_type const in_row_separator = '\n',
-        typename template_string::value_type const in_quote_begin = '"',
-        typename template_string::value_type const in_quote_end = '"',
-        typename template_string::value_type const in_quote_escape = '"')
+        typename self::cell_map in_cell_map,
+        std::size_t const       in_attribute_row = 0)
     :
-        attribute_row_(in_attribute_row)
+        attribute_map_(in_cell_map.get_allocator()),
+        cell_map_(std::move(in_cell_map)),
+        min_key_(0, 0),
+        max_key_(0, 0)
     {
-        // 文字列表のcell辞書を構築する。
-        auto local_make_cell_map_result(
-            self::make_cell_map(
-                in_csv_string,
-                in_column_ceparator,
-                in_row_separator,
-                in_quote_begin,
-                in_quote_end,
-                in_quote_escape));
-        this->cell_map_ = std::move(std::get<0>(local_make_cell_map_result));
-        this->max_row_ = std::get<1>(local_make_cell_map_result);
-        this->max_column_ = std::get<2>(local_make_cell_map_result);
+        // cell辞書の範囲を決定する。
+        if (!this->cell_map_.empty())
+        {
+            const auto& local_front_key(this->cell_map_.begin()->first);
+            this->min_key_ = local_front_key;
+            this->max_key_ = local_front_key;
+        }
+        for (auto i(this->cell_map_.begin()); i != this->cell_map_.end();)
+        {
+            const auto& local_key(i->first);
+            if (local_key.row == in_attribute_row)
+            {
+                // 属性はcell辞書から削除する。
+                this->attribute_map_.emplace(
+                    i->second,
+                    typename self::attribute_map::mapped_type(
+                        local_key.column, 1));
+                i = this->cell_map_.erase(i);
+                continue;
+            }
+            if (local_key.row < this->min_key_.row)
+            {
+                this->min_key_.row = local_key.row;
+            }
+            else if (this->max_key_.row < local_key.row)
+            {
+                this->max_key_.row = local_key.row;
+            }
+            if (local_key.column < this->min_key_.column)
+            {
+                this->min_key_.column = local_key.column;
+            }
+            else if (this->max_key_.column < local_key.column)
+            {
+                this->max_key_.column = local_key.column;
+            }
+            ++i;
+        }
 
-        // 文字列表の属性辞書を構築する。
-        this->attribute_map_ = self::make_attribute_map(
-            this->get_cell_map(),
-            this->get_attribute_row(),
-            this->get_max_column());
+        // 各属性の要素数を決定する。
+        typename self::attribute_map::allocator_type::template
+            rebind<typename self::attribute_map::value_type*>::other
+                local_allocator(this->attribute_map_.get_allocator());
+        auto const local_attribute_begin(
+            local_allocator.allocate(this->attribute_map_.size()));
+        auto local_attribute_end(local_attribute_begin);
+        for (auto& local_value: this->attribute_map_)
+        {
+            *local_attribute_end = &local_value;
+            ++local_attribute_end;
+        }
+        std::sort(
+            local_attribute_begin,
+            local_attribute_end,
+            [=](
+                typename self::attribute_map::value_type const* const in_left,
+                typename self::attribute_map::value_type const* const in_right)
+            ->bool
+            {
+                return in_left->second.column < in_right->second.column;
+            });
+        auto local_last_column(this->max_key_.column + 1);
+        for (auto i(local_attribute_end - 1); local_attribute_begin <= i; --i)
+        {
+            auto& local_attribute((**i).second);
+            local_attribute.size = local_last_column - local_attribute.column;
+            local_last_column = local_attribute.column;
+        }
+        local_allocator.deallocate(
+            local_attribute_begin, this->attribute_map_.size());
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列表の行番号の最大値を取得する。
-        @return @copydoc string_table::max_row_
-     */
-    public: std::size_t get_max_row() const
-    {
-        return this->max_row_;
-    }
-
-    /** @brief 文字列表の桁番号の最大値を取得する。
-        @return @copydoc string_table::max_column_
-     */
-    public: std::size_t get_max_column() const
-    {
-        return this->max_column_;
-    }
-
-    /** @brief 文字列表の属性として使っている行の番号を取得する。
-        @return @copydoc string_table::attribute_row_
-     */
-    public: std::size_t get_attribute_row() const
-    {
-        return this->attribute_row_;
-    }
-
     /** @brief 文字列表の属性辞書を取得する。
-        @return @copydoc string_table::attribute_map_
+        @return @copydoc attribute_map_
      */
     public: typename self::attribute_map const& get_attribute_map() const
     {
@@ -187,6 +235,22 @@ class psyq::string_table
         return this->cell_map_;
     }
 
+    /** @brief 文字列表の行と桁の最小値を取得する。
+        @return @copydoc string_table::min_key_
+     */
+    public: typename self::cell_map::key_type const& get_min_key() const
+    {
+        return this->min_key_;
+    }
+
+    /** @brief 文字列表の行と桁の最大値を取得する。
+        @return @copydoc string_table::max_key_
+     */
+    public: typename self::cell_map::key_type const& get_max_key() const
+    {
+        return this->max_key_;
+    }
+
     //-------------------------------------------------------------------------
     /** @brief 文字列表からcellを検索する。
         @param[in] in_row    検索するcellの行番号。
@@ -199,15 +263,12 @@ class psyq::string_table
         std::size_t const in_column)
     const
     {
-        if (in_row != this->get_attribute_row())
+        auto const local_cell(
+            this->get_cell_map().find(
+                typename self::cell_map::key_type(in_row, in_column)));
+        if (local_cell != this->get_cell_map().end())
         {
-            auto const local_cell(
-                this->get_cell_map().find(
-                    typename self::cell_map::key_type(in_row, in_column)));
-            if (local_cell != this->get_cell_map().end())
-            {
-                return &local_cell->second;
-            }
+            return &local_cell->second;
         }
         return nullptr;
     }
@@ -237,50 +298,6 @@ class psyq::string_table
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列表の属性の辞書を作る。
-
-        @param[in] in_cells      解析するcell辞書。
-        @param[in] in_row        属性として使う行の番号。
-        @param[in] in_max_column 表の桁数の最大値。
-     */
-    private: static typename self::attribute_map make_attribute_map(
-        typename self::cell_map const& in_cells,
-        std::size_t const              in_row,
-        std::size_t const              in_max_column)
-    {
-        typename self::attribute_map local_attributes;
-        auto local_last_attribute(local_attributes.end());
-        for (
-            auto i(
-                in_cells.lower_bound(
-                    typename self::cell_map::key_type(in_row, 0)));
-            i != in_cells.end() && i->first.row == in_row;
-            ++i)
-        {
-            if (!local_attributes.empty())
-            {
-                local_last_attribute->second.size =
-                    i->first.column - local_last_attribute->second.column;
-            }
-            auto const local_emplace_result(
-                local_attributes.emplace(
-                    typename self::attribute_map::key_type(i->second),
-                    typename self::attribute_map::mapped_type(
-                        i->first.column, 0)));
-            if (std::get<1>(local_emplace_result))
-            {
-                local_last_attribute = std::get<0>(local_emplace_result);
-            }
-        }
-        if (!local_attributes.empty())
-        {
-            local_last_attribute->second.size =
-                1 + in_max_column - local_last_attribute->second.column;
-        }
-        return local_attributes;
-    }
-
-    //-------------------------------------------------------------------------
     /** @brief CSV形式の文字列を解析し、cellの辞書を構築する。
         @tparam template_string std::basic_string 互換の文字列型。
         @param[in] in_csv_string       解析するCSV形式の文字列。
@@ -290,9 +307,8 @@ class psyq::string_table
         @param[in] in_quote_end        引用符の終了文字。
         @param[in] in_quote_escape     引用符のescape文字。
      */
-    private: template<typename template_string>
-    static std::tuple<typename self::cell_map, std::size_t, std::size_t>
-    make_cell_map(
+    public: template<typename template_string>
+    static typename self::cell_map make_cell_map(
         template_string const&                     in_csv_string,
         typename template_string::value_type const in_column_ceparator = ',',
         typename template_string::value_type const in_row_separator = '\n',
@@ -413,10 +429,7 @@ class psyq::string_table
         }
         auto local_max_row(
             local_cells.empty()? 0: (--local_cells.end())->first.row);
-        return std::tuple<typename self::cell_map, std::size_t, std::size_t>(
-            std::move(local_cells),
-            std::move(local_max_row),
-            std::move(local_max_column));
+        return local_cells;
     }
 
     private: template<typename template_string>
@@ -436,12 +449,10 @@ class psyq::string_table
     private: typename self::attribute_map attribute_map_;
     /// 文字列表のcell辞書。
     private: typename self::cell_map cell_map_;
-    /// 文字列表の属性として使っている行の番号。
-    private: std::size_t attribute_row_;
-    /// 文字列表の行番号の最大値。
-    private: std::size_t max_row_;
-    /// 文字列表の桁番号の最大値。
-    private: std::size_t max_column_;
+    /// 文字列表の行と列の最小値。
+    private: typename self::cell_map::key_type min_key_;
+    /// 文字列表の行と列の最大値。
+    private: typename self::cell_map::key_type max_key_;
 };
 
 #endif // !defined(PSYQ_STRING_TABLE_HPP_)

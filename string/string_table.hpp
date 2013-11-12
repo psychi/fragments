@@ -1,24 +1,24 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_CSV_TABLE_HPP_
-#define PSYQ_CSV_TABLE_HPP_
+#ifndef PSYQ_STRING_TABLE_HPP_
+#define PSYQ_STRING_TABLE_HPP_
 #include <tuple>
 
 namespace psyq
 {
     /// @cond
-    struct csv_table_attribute;
-    struct csv_table_key;
-    template<typename, typename> class csv_table;
+    struct string_table_attribute;
+    struct string_table_key;
+    template<typename, typename> class string_table;
     /// @endcond
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief CSV表の属性の辞書の値の型。
-struct psyq::csv_table_attribute
+/// @brief 文字列表の属性の辞書の値の型。
+struct psyq::string_table_attribute
 {
-    csv_table_attribute(
+    string_table_attribute(
         std::size_t const in_column,
         std::size_t const in_size)
     :
@@ -30,10 +30,10 @@ struct psyq::csv_table_attribute
     std::size_t size;   ///< 属性の要素数。
 };
 
-/// @brief CSV表のcellの辞書のキーの型。
-struct psyq::csv_table_key
+/// @brief 文字列表のcellの辞書のキーの型。
+struct psyq::string_table_key
 {
-    csv_table_key(
+    string_table_key(
         std::size_t const in_row,
         std::size_t const in_column)
     :
@@ -41,7 +41,7 @@ struct psyq::csv_table_key
         column(in_column)
     {}
 
-    bool operator<(csv_table_key const& in_right) const
+    bool operator<(string_table_key const& in_right) const
     {
         if (this->row != in_right.row)
         {
@@ -50,7 +50,7 @@ struct psyq::csv_table_key
         return this->column < in_right.column;
     }
 
-    bool operator <=(csv_table_key const& in_right) const
+    bool operator <=(string_table_key const& in_right) const
     {
         if (this->row != in_right.row)
         {
@@ -59,12 +59,12 @@ struct psyq::csv_table_key
         return this->column <= in_right.column;
     }
 
-    bool operator>(csv_table_key const& in_right) const
+    bool operator>(string_table_key const& in_right) const
     {
         return in_right.operator<(*this);
     }
 
-    bool operator>=( csv_table_key const& in_right) const
+    bool operator>=( string_table_key const& in_right) const
     {
         return in_right.operator<=(*this);
     }
@@ -74,39 +74,40 @@ struct psyq::csv_table_key
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief CSV形式の文字列から構築する表。
-    @tparam template_attribute_map @copydoc csv_table::attribute_map
-    @tparam template_cell_map      @copydoc csv_table::cell_map
+/** @brief CSV形式の文字列から構築できる文字列の表。
+    @tparam template_attribute_map @copydoc string_table::attribute_map
+    @tparam template_cell_map      @copydoc string_table::cell_map
  */
 template<typename template_attribute_map, typename template_cell_map>
-class psyq::csv_table
+class psyq::string_table
 {
     /// thisが指す値の型。
-    private: typedef csv_table<template_attribute_map, template_cell_map> self;
+    private: typedef string_table<template_attribute_map, template_cell_map>
+        self;
 
-    /** @brief CSV表の属性の辞書。
+    /** @brief 文字列表の属性の辞書。
 
         以下の条件を満たしている必要がある。
         - std::map 互換の型。
-        - attribute_map::key_type は、 psyq::const_string 互換の文字列型。
-        - attribute_map::mapped_type は、 csv_table_attribute 型。
+        - attribute_map::key_type は、 psyq::basic_string_piece 互換の文字列型。
+        - attribute_map::mapped_type は、 string_table_attribute 型。
      */
     public: typedef template_attribute_map attribute_map;
 
-    /** @brief CSV表のcellの辞書。
+    /** @brief 文字列表のcellの辞書。
 
         以下の条件を満たしている必要がある。
         - std::map 互換の型。
-        - cell_map::key_type は、 csv_table_key 型。
-        - cell_map::mapped_type は、 attribute_map::key_type 互換の文字列型。
+        - cell_map::key_type は、 string_table_key 型。
+        - cell_map::mapped_type は、 attribute_map::key_type と同じ文字列型。
      */
     public: typedef template_cell_map cell_map;
 
     //-------------------------------------------------------------------------
-    /** @brief CSV形式の文字列を解析し、CSV表に変換する。
+    /** @brief CSV形式の文字列を解析し、文字列の表に変換する。
         @tparam template_string std::basic_string 互換の文字列型。
         @param[in] in_csv_string       解析するCSV形式の文字列。
-        @param[in] in_attribute_row    CSV表の属性として使う行の番号。
+        @param[in] in_attribute_row    表の属性として使う行の番号。
         @param[in] in_column_ceparator 列の区切り文字。
         @param[in] in_row_separator    行の区切り文字。
         @param[in] in_quote_begin      引用符の開始文字。
@@ -114,7 +115,7 @@ class psyq::csv_table
         @param[in] in_quote_escape     引用符のescape文字。
      */
     public: template<typename template_string>
-    explicit csv_table(
+    explicit string_table(
         template_string const&                     in_csv_string,
         std::size_t const                          in_attribute_row = 0,
         typename template_string::value_type const in_column_ceparator = ',',
@@ -125,7 +126,7 @@ class psyq::csv_table
     :
         attribute_row_(in_attribute_row)
     {
-        // CSV表のcell辞書を構築する。
+        // 文字列表のcell辞書を構築する。
         auto local_make_cell_map_result(
             self::make_cell_map(
                 in_csv_string,
@@ -138,7 +139,7 @@ class psyq::csv_table
         this->max_row_ = std::get<1>(local_make_cell_map_result);
         this->max_column_ = std::get<2>(local_make_cell_map_result);
 
-        // CSV表の属性辞書を構築する。
+        // 文字列表の属性辞書を構築する。
         this->attribute_map_ = self::make_attribute_map(
             this->get_cell_map(),
             this->get_attribute_row(),
@@ -146,40 +147,40 @@ class psyq::csv_table
     }
 
     //-------------------------------------------------------------------------
-    /** @brief CSV表の行番号の最大値を取得する。
-        @return @copydoc csv_table::max_row_
+    /** @brief 文字列表の行番号の最大値を取得する。
+        @return @copydoc string_table::max_row_
      */
     public: std::size_t get_max_row() const
     {
         return this->max_row_;
     }
 
-    /** @brief CSV表の桁番号の最大値を取得する。
-        @return @copydoc csv_table::max_column_
+    /** @brief 文字列表の桁番号の最大値を取得する。
+        @return @copydoc string_table::max_column_
      */
     public: std::size_t get_max_column() const
     {
         return this->max_column_;
     }
 
-    /** @brief CSV表の属性として使っている行の番号を取得する。
-        @return @copydoc csv_table::attribute_row_
+    /** @brief 文字列表の属性として使っている行の番号を取得する。
+        @return @copydoc string_table::attribute_row_
      */
     public: std::size_t get_attribute_row() const
     {
         return this->attribute_row_;
     }
 
-    /** @brief CSV表の属性辞書を取得する。
-        @return @copydoc csv_table::attribute_map_
+    /** @brief 文字列表の属性辞書を取得する。
+        @return @copydoc string_table::attribute_map_
      */
     public: typename self::attribute_map const& get_attribute_map() const
     {
         return this->attribute_map_;
     }
 
-    /** @brief CSV表のcell辞書を取得する。
-        @return @copydoc csv_table::cell_map_
+    /** @brief 文字列表のcell辞書を取得する。
+        @return @copydoc string_table::cell_map_
      */
     public: typename self::cell_map const& get_cell_map() const
     {
@@ -187,7 +188,7 @@ class psyq::csv_table
     }
 
     //-------------------------------------------------------------------------
-    /** @brief CSV表からcellを検索する。
+    /** @brief 文字列表からcellを検索する。
         @param[in] in_row    検索するcellの行番号。
         @param[in] in_column 検索するcellの列番号。
         @retval !=nullptr 見つかったcell。
@@ -211,7 +212,7 @@ class psyq::csv_table
         return nullptr;
     }
 
-    /** @brief CSV表からcellを検索する。
+    /** @brief 文字列表からcellを検索する。
         @param[in] in_row             検索するcellの行番号。
         @param[in] in_attribute_key   検索するcellの属性名。
         @param[in] in_attribute_index 検索するcellの属性index番号。
@@ -236,11 +237,11 @@ class psyq::csv_table
     }
 
     //-------------------------------------------------------------------------
-    /** @brief CSV表の属性の辞書を作る。
+    /** @brief 文字列表の属性の辞書を作る。
 
-        @param[in] in_cells      解析するCSV表。
+        @param[in] in_cells      解析するcell辞書。
         @param[in] in_row        属性として使う行の番号。
-        @param[in] in_max_column CSV表の桁数の最大値。
+        @param[in] in_max_column 表の桁数の最大値。
      */
     private: static typename self::attribute_map make_attribute_map(
         typename self::cell_map const& in_cells,
@@ -280,7 +281,7 @@ class psyq::csv_table
     }
 
     //-------------------------------------------------------------------------
-    /** @brief CSV形式の文字列を解析し、cellの辞書に変換する。
+    /** @brief CSV形式の文字列を解析し、cellの辞書を構築する。
         @tparam template_string std::basic_string 互換の文字列型。
         @param[in] in_csv_string       解析するCSV形式の文字列。
         @param[in] in_column_ceparator 列の区切り文字。
@@ -304,7 +305,7 @@ class psyq::csv_table
         std::size_t local_row(0);
         std::size_t local_column(0);
         std::size_t local_max_column(0);
-        template_string local_field;
+        template_string local_cell;
         typename self::cell_map local_cells;
         typename template_string::value_type local_last_char(0);
         for (auto i(in_csv_string.begin()); i != in_csv_string.end(); ++i)
@@ -317,7 +318,7 @@ class psyq::csv_table
                     {
                         if (*i != in_quote_escape)
                         {
-                            local_field.push_back(*i);
+                            local_cell.push_back(*i);
                         }
                         local_last_char = *i;
                     }
@@ -331,7 +332,7 @@ class psyq::csv_table
                 else if (*i == in_quote_end)
                 {
                     // 引用符の終了文字をescapeする。
-                    local_field.push_back(*i);
+                    local_cell.push_back(*i);
                     local_last_char = 0;
                 }
                 else if (local_last_char == in_quote_end)
@@ -343,8 +344,8 @@ class psyq::csv_table
                 }
                 else
                 {
-                    local_field.push_back(local_last_char);
-                    local_field.push_back(*i);
+                    local_cell.push_back(local_last_char);
+                    local_cell.push_back(*i);
                     local_last_char = *i;
                 }
             }
@@ -356,22 +357,22 @@ class psyq::csv_table
             else if (*i == in_column_ceparator)
             {
                 // 列の区切り。
-                if (!local_field.empty())
+                if (!local_cell.empty())
                 {
                     self::emplace_cell(
-                        local_cells, local_row, local_column, local_field);
-                    local_field.clear();
+                        local_cells, local_row, local_column, local_cell);
+                    local_cell.clear();
                 }
                 ++local_column;
             }
             else if (*i == in_row_separator)
             {
                 // 行の区切り。
-                if (!local_field.empty())
+                if (!local_cell.empty())
                 {
                     self::emplace_cell(
-                        local_cells, local_row, local_column, local_field);
-                    local_field.clear();
+                        local_cells, local_row, local_column, local_cell);
+                    local_cell.clear();
                 }
                 else if (0 < local_column)
                 {
@@ -386,21 +387,21 @@ class psyq::csv_table
             }
             else
             {
-                local_field.push_back(*i);
+                local_cell.push_back(*i);
             }
         }
 
         // 引用符の開始はあったが終了がなかった場合。
         if (local_quote)
         {
-            //local_field.insert(local_field.begin(), in_quote_begin);
+            //local_cell.insert(local_cell.begin(), in_quote_begin);
         }
 
-        // 最終fieldの処理。
-        if (!local_field.empty())
+        // 最終cellの処理。
+        if (!local_cell.empty())
         {
             self::emplace_cell(
-                local_cells, local_row, local_column, local_field);
+                local_cells, local_row, local_column, local_cell);
         }
         else if (0 < local_column)
         {
@@ -423,24 +424,24 @@ class psyq::csv_table
         typename self::cell_map& io_cells,
         std::size_t const        in_row,
         std::size_t const        in_column,
-        template_string const&   in_field)
+        template_string const&   in_cell)
     {
         io_cells.emplace(
             typename self::cell_map::key_type(in_row, in_column),
-            typename self::cell_map::mapped_type(in_field));
+            typename self::cell_map::mapped_type(in_cell));
     }
 
     //-------------------------------------------------------------------------
-    /// CSV表の属性辞書。
+    /// 文字列表の属性辞書。
     private: typename self::attribute_map attribute_map_;
-    /// CSV表のcell辞書。
+    /// 文字列表のcell辞書。
     private: typename self::cell_map cell_map_;
-    /// CSV表の属性として使っている行の番号。
+    /// 文字列表の属性として使っている行の番号。
     private: std::size_t attribute_row_;
-    /// CSV表の行番号の最大値。
+    /// 文字列表の行番号の最大値。
     private: std::size_t max_row_;
-    /// CSV表の桁番号の最大値。
+    /// 文字列表の桁番号の最大値。
     private: std::size_t max_column_;
 };
 
-#endif // PSYQ_CSV_TABLE_HPP_
+#endif // !defined(PSYQ_STRING_TABLE_HPP_)

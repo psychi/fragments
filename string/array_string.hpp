@@ -78,8 +78,10 @@ class psyq::internal::fixed_array_string
         typename self::traits_type>
             piece;
 
-    /// 最大の文字数。
-    static const std::size_t MAX_SIZE = template_max_size;
+    public: enum: std::size_t
+    {
+        MAX_SIZE = template_max_size, ///< 最大の文字数。
+    };
 
     //-------------------------------------------------------------------------
     /** @brief 空文字列を構築する。
@@ -107,7 +109,7 @@ class psyq::internal::fixed_array_string
         @param[in] in_string copy元とする文字列。
      */
     public: fixed_array_string(typename self::piece const& in_string):
-        length_((std::min)(in_string.length(), self::MAX_SIZE))
+        length_((std::min<std::size_t>)(in_string.length(), self::MAX_SIZE))
     {
         self::traits_type::copy(
             &this->array_[0], in_string.data(), this->length());
@@ -202,6 +204,8 @@ class psyq::basic_array_string:
     public: basic_array_string(
         typename super::const_pointer const in_begin,
         typename super::size_type const     in_length)
+    :
+        super(self())
     {
         new(this) super::super(typename super::piece(in_begin, in_length));
     }
@@ -269,19 +273,6 @@ class psyq::basic_array_string:
         typename super::size_type const     in_length)
     {
         return *new(this) self(in_begin, in_length);
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name 文字列の操作
-    //@{
-    public: psyq::basic_string_piece<
-        typename super::traits_type::char_type, typename super::traits_type>
-    make_piece() const
-    {
-        return this->make_string<
-            psyq::basic_string_piece<
-                typename super::traits_type::char_type,
-                typename super::traits_type>>();
     }
     //@}
 };

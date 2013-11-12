@@ -682,7 +682,7 @@ INPUT                  = \
                          ./string/string_piece.hpp \
                          ./string/shared_string.hpp \
                          ./string/array_string.hpp \
-                         ./csv_table.hpp \
+                         ./string/string_table.hpp \
                          ./mosp_collision.hpp \
 
 #                         ./async_file.hpp \

@@ -154,6 +154,7 @@ class psyq::string_table
         end_key_(0, 0)
     {
         // cell辞書の範囲を決定する。
+        bool local_first(true);
         for (auto i(this->cell_map_.begin()); i != this->cell_map_.end();)
         {
             auto const& local_key(i->first);
@@ -167,29 +168,30 @@ class psyq::string_table
                 i = this->cell_map_.erase(i);
                 continue;
             }
-            if (i == this->cell_map_.begin())
+            typename self::cell_map::key_type const local_key_1(
+                local_key.row + 1, local_key.column + 1);
+            if (local_first)
             {
+                local_first = false;
                 this->begin_key_ = local_key;
-                this->end_key_.row = local_key.row + 1;
-                this->end_key_.column = local_key.column + 1;
-                ++i;
+                this->end_key_ = local_key_1;
                 continue;
             }
             if (local_key.row < this->begin_key_.row)
             {
                 this->begin_key_.row = local_key.row;
             }
-            else if (this->end_key_.row < local_key.row + 1)
+            else if (this->end_key_.row < local_key_1.row)
             {
-                this->end_key_.row = local_key.row + 1;
+                this->end_key_.row = local_key_1.row;
             }
             if (local_key.column < this->begin_key_.column)
             {
                 this->begin_key_.column = local_key.column;
             }
-            else if (this->end_key_.column < local_key.column + 1)
+            else if (this->end_key_.column < local_key_1.column)
             {
-                this->end_key_.column = local_key.column + 1;
+                this->end_key_.column = local_key_1.column;
             }
             ++i;
         }

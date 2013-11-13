@@ -154,12 +154,6 @@ class psyq::string_table
         end_key_(0, 0)
     {
         // cell辞書の範囲を決定する。
-        if (!this->cell_map_.empty())
-        {
-            auto const& local_front_key(this->cell_map_.begin()->first);
-            this->begin_key_ = local_front_key;
-            this->end_key_ = local_front_key;
-        }
         for (auto i(this->cell_map_.begin()); i != this->cell_map_.end();)
         {
             auto const& local_key(i->first);
@@ -171,6 +165,13 @@ class psyq::string_table
                     typename self::attribute_map::mapped_type(
                         local_key.column, 1));
                 i = this->cell_map_.erase(i);
+                continue;
+            }
+            if (i == this->cell_map_.begin())
+            {
+                this->begin_key_ = local_key;
+                this->end_key_ = local_key;
+                ++i;
                 continue;
             }
             if (local_key.row < this->begin_key_.row)

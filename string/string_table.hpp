@@ -193,14 +193,27 @@ class psyq::string_table
             ++i;
         }
 
-        // 各属性の要素数を決定する。
+        // 属性の要素数を調整する。
+        self::adjust_attribute_size(this->attribute_map_, this->end_key_.row);
+    }
+
+    //-------------------------------------------------------------------------
+    private: static void adjust_attribute_size(
+        typename self::attribute_map& io_attribute_map,
+        std::size_t const             in_end_row)
+    {
+        if (io_attribute_map.empty())
+        {
+            return;
+        }
         typename self::attribute_map::allocator_type::template
             rebind<typename self::attribute_map::value_type*>::other
-                local_allocator(this->attribute_map_.get_allocator());
+                local_allocator(io_attribute_map.get_allocator());
         auto const local_attribute_begin(
-            local_allocator.allocate(this->attribute_map_.size()));
+            local_allocator.allocate(io_attribute_map.size()));
+        PSYQ_ASSERT(local_attribute_begin != nullptr);
         auto local_attribute_end(local_attribute_begin);
-        for (auto& local_value: this->attribute_map_)
+        for (auto& local_value: io_attribute_map)
         {
             *local_attribute_end = &local_value;
             ++local_attribute_end;
@@ -215,7 +228,7 @@ class psyq::string_table
             {
                 return in_left->second.column < in_right->second.column;
             });
-        auto local_last_column(this->end_key_.column + 1);
+        auto local_last_column(in_end_row);
         for (auto i(local_attribute_end - 1); local_attribute_begin <= i; --i)
         {
             auto& local_attribute((**i).second);
@@ -223,7 +236,7 @@ class psyq::string_table
             local_last_column = local_attribute.column;
         }
         local_allocator.deallocate(
-            local_attribute_begin, this->attribute_map_.size());
+            local_attribute_begin, io_attribute_map.size());
     }
 
     //-------------------------------------------------------------------------

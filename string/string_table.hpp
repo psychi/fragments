@@ -170,7 +170,8 @@ class psyq::string_table
             if (i == this->cell_map_.begin())
             {
                 this->begin_key_ = local_key;
-                this->end_key_ = local_key;
+                this->end_key_.row = local_key.row + 1;
+                this->end_key_.column = local_key.column + 1;
                 ++i;
                 continue;
             }

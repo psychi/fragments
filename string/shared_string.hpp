@@ -91,9 +91,8 @@ class psyq::internal::shared_string_holder
     public: typedef template_allocator_type allocator_type;
 
     /// 部分文字列の型。
-    public: typedef psyq::internal::const_string_piece<
-        typename self::traits_type>
-            piece;
+    public: typedef psyq::internal::const_string_piece<template_char_traits>
+        piece;
 
     //-------------------------------------------------------------------------
     /** @brief 空文字列を構築する。memory割り当ては行わない。
@@ -603,6 +602,11 @@ class psyq::basic_shared_string:
             template_char_traits, template_allocator_type>>
                 super;
 
+    /// 部分文字列の型。
+    public: typedef psyq::basic_string_piece<
+        template_char_type, template_char_traits>
+            piece;
+
     //-------------------------------------------------------------------------
     /// @name constructor / destructor
     //@{
@@ -797,6 +801,7 @@ class psyq::basic_shared_string:
     {
         this->super::super::swap(io_target);
     }
+
 #if 0
     /** @brief 部分文字列を取得する。
         @param[in] in_offset 部分文字列の開始offset位置。
@@ -807,14 +812,10 @@ class psyq::basic_shared_string:
         typename super::size_type in_count = super::npos)
     const;
 #endif
-    public: psyq::basic_string_piece<
-        typename super::traits_type::char_type, typename super::traits_type>
-    make_piece() const
+
+    public: typename self::piece make_piece() const
     {
-        return this->make_string<
-            psyq::basic_string_piece<
-                typename super::traits_type::char_type,
-                typename super::traits_type>>();
+        return this->template make_string<typename self::piece>();
     }
     //@}
 };

@@ -132,7 +132,7 @@ class psyq::string_table
      */
     public: typedef template_cell_map cell_map;
 
-    /** @brief 部分文字列の方。
+    /** @brief cellの部分文字列の型。
      */
     public: typedef psyq::basic_string_piece<
         typename self::cell_map::mapped_type::value_type,
@@ -144,25 +144,25 @@ class psyq::string_table
         @param[in] in_cell_map      元となる文字列表。
         @param[in] in_attribute_row 属性として使う行の番号。
      */
-    explicit string_table(
+    public: string_table(
         typename self::cell_map in_cell_map,
-        std::size_t const       in_attribute_row = 0)
+        std::size_t const       in_attribute_row)
     :
         attribute_map_(in_cell_map.get_allocator()),
         cell_map_(std::move(in_cell_map)),
-        cell_min_(0, 0),
-        cell_max_(0, 0)
+        begin_key_(0, 0),
+        end_key_(0, 0)
     {
         // cell辞書の範囲を決定する。
         if (!this->cell_map_.empty())
         {
-            const auto& local_front_key(this->cell_map_.begin()->first);
-            this->cell_min_ = local_front_key;
-            this->cell_max_ = local_front_key;
+            auto const& local_front_key(this->cell_map_.begin()->first);
+            this->begin_key_ = local_front_key;
+            this->end_key_ = local_front_key;
         }
         for (auto i(this->cell_map_.begin()); i != this->cell_map_.end();)
         {
-            const auto& local_key(i->first);
+            auto const& local_key(i->first);
             if (local_key.row == in_attribute_row)
             {
                 // 属性はcell辞書から削除する。
@@ -173,21 +173,21 @@ class psyq::string_table
                 i = this->cell_map_.erase(i);
                 continue;
             }
-            if (local_key.row < this->cell_min_.row)
+            if (local_key.row < this->begin_key_.row)
             {
-                this->cell_min_.row = local_key.row;
+                this->begin_key_.row = local_key.row;
             }
-            else if (this->cell_max_.row < local_key.row)
+            else if (this->end_key_.row < local_key.row + 1)
             {
-                this->cell_max_.row = local_key.row;
+                this->end_key_.row = local_key.row + 1;
             }
-            if (local_key.column < this->cell_min_.column)
+            if (local_key.column < this->begin_key_.column)
             {
-                this->cell_min_.column = local_key.column;
+                this->begin_key_.column = local_key.column;
             }
-            else if (this->cell_max_.column < local_key.column)
+            else if (this->end_key_.column < local_key.column + 1)
             {
-                this->cell_max_.column = local_key.column;
+                this->end_key_.column = local_key.column + 1;
             }
             ++i;
         }
@@ -214,7 +214,7 @@ class psyq::string_table
             {
                 return in_left->second.column < in_right->second.column;
             });
-        auto local_last_column(this->cell_max_.column + 1);
+        auto local_last_column(this->end_key_.column + 1);
         for (auto i(local_attribute_end - 1); local_attribute_begin <= i; --i)
         {
             auto& local_attribute((**i).second);
@@ -243,41 +243,37 @@ class psyq::string_table
     }
 
     /** @brief 文字列表の行と桁の最小値を取得する。
-        @return @copydoc string_table::cell_min_
+        @return @copydoc string_table::begin_key_
      */
-    public: typename self::cell_map::key_type const& get_cell_min() const
+    public: typename self::cell_map::key_type const& get_begin_key() const
     {
-        return this->cell_min_;
+        return this->begin_key_;
     }
 
-    /** @brief 文字列表の行と桁の最大値を取得する。
-        @return @copydoc string_table::cell_max_
+    /** @brief 文字列表の行と桁の最大値+1を取得する。
+        @return @copydoc string_table::end_key_
      */
-    public: typename self::cell_map::key_type const& get_cell_max() const
+    public: typename self::cell_map::key_type const& get_end_key() const
     {
-        return this->cell_max_;
+        return this->end_key_;
     }
 
     //-------------------------------------------------------------------------
     /** @brief 文字列表からcellを検索する。
-        @param[in] in_row    検索するcellの行番号。
-        @param[in] in_column 検索するcellの列番号。
+        @param[in] in_cell_key 検索するcellのkey。
         @retval !=nullptr 見つかったcell。
         @retval ==nullptr 対応するcellが見つからなかった。
      */
     public: typename self::cell_map::mapped_type const* find_cell(
-        std::size_t const in_row,
-        std::size_t const in_column)
+        typename self::cell_map::key_type const& in_cell_key)
     const
     {
-        auto const local_cell(
-            this->get_cell_map().find(
-                typename self::cell_map::key_type(in_row, in_column)));
-        if (local_cell != this->get_cell_map().end())
+        auto const local_cell(this->get_cell_map().find(in_cell_key));
+        if (local_cell == this->get_cell_map().end())
         {
-            return &local_cell->second;
+            return nullptr;
         }
-        return nullptr;
+        return &local_cell->second;
     }
 
     /** @brief 文字列表からcellを検索する。
@@ -290,7 +286,7 @@ class psyq::string_table
     public: typename self::cell_map::mapped_type const* find_cell(
         std::size_t const                       in_row,
         typename attribute_map::key_type const& in_attribute_key,
-        std::size_t const                       in_attribute_index)
+        std::size_t const                       in_attribute_index = 0)
     const
     {
         auto const local_attribute(
@@ -301,20 +297,19 @@ class psyq::string_table
             return nullptr;
         }
         return this->find_cell(
-            in_row, local_attribute->second.column + in_attribute_index);
+            typename self::cell_map::key_type(
+                in_row, local_attribute->second.column + in_attribute_index));
     }
 
     /** @brief 文字列表のcellから、前後の空白を削除した部分文字列を作る。
-        @param[in] in_row    検索するcellの行番号。
-        @param[in] in_column 検索するcellの列番号。
+        @param[in] in_cell_key 検索するcellのkey。
         @return cellの前後から空白を削除した部分文字列。
      */
     public: typename self::string_piece trim_cell(
-        std::size_t const in_row,
-        std::size_t const in_column)
+        typename self::cell_map::key_type const& in_cell_key)
     const
     {
-        auto const local_cell(this->find_cell(in_row, in_column));
+        auto const local_cell(this->find_cell(in_cell_key));
         if (local_cell == nullptr)
         {
             return typename self::string_piece();
@@ -331,7 +326,7 @@ class psyq::string_table
     public: typename self::string_piece trim_cell(
         std::size_t const                       in_row,
         typename attribute_map::key_type const& in_attribute_key,
-        std::size_t const                       in_attribute_index)
+        std::size_t const                       in_attribute_index = 0)
     const
     {
         auto const local_cell(
@@ -496,9 +491,9 @@ class psyq::string_table
     /// 文字列表のcell辞書。
     private: typename self::cell_map cell_map_;
     /// 文字列表の行と列の最小値。
-    private: typename self::cell_map::key_type cell_min_;
-    /// 文字列表の行と列の最大値。
-    private: typename self::cell_map::key_type cell_max_;
+    private: typename self::cell_map::key_type begin_key_;
+    /// 文字列表の行と列の最大値+1。
+    private: typename self::cell_map::key_type end_key_;
 };
 
 #endif // !defined(PSYQ_STRING_TABLE_HPP_)

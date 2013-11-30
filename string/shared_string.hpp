@@ -27,6 +27,7 @@
 #ifndef PSYQ_SHARED_STRING_HPP_
 #define PSYQ_SHARED_STRING_HPP_
 
+//#include "atomic_count.hpp"
 //#include "string/string_piece.hpp"
 
 /// psyq::basic_shared_string で使う、defaultのmemory割当子の型。
@@ -34,14 +35,6 @@
 #define PSYQ_BASIC_SHARED_STRING_ALLOCATOR_DEFAULT\
     std::allocator<template_char_type>
 #endif // !defined(PSYQ_BASIC_SHARED_STRING_ALLOCATOR_DEFAULT)
-
-/// 共有文字列の被参照数をthread非対応にするかどうか。
-#ifndef PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
-#define PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS 0
-#endif // !defined(PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS)
-#if !PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
-#include <atomic>
-#endif // !PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
 
 namespace psyq
 {
@@ -320,11 +313,7 @@ class psyq::internal::shared_string_holder
         }
 
         /// 共有文字列bufferの被参照数。
-#if PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
-        std::size_t hold_count;
-#else
-        std::atomic<std::size_t> hold_count;
-#endif // PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
+        psyq::atomic_count hold_count;
         /// 共有文字列の長さ。
         std::size_t length;
     };
@@ -357,8 +346,8 @@ class psyq::internal::shared_string_holder
         else
         {
             auto const local_buffer(in_string.buffer_);
-            this->set_buffer(local_buffer);
-            self::hold_buffer(local_buffer);
+            this->set_buffer(
+                1 < self::hold_buffer(local_buffer)? local_buffer: nullptr);
         }
     }
 
@@ -479,26 +468,16 @@ class psyq::internal::shared_string_holder
     /** @brief 共有文字列bufferを保持する。
         @param[in,out] io_buffer 保持する共有文字列buffer。
      */
-    private: static void hold_buffer(
+    private: static std::size_t hold_buffer(
         typename self::shared_buffer* const io_buffer)
     {
-        if (io_buffer != nullptr)
+        if (io_buffer == nullptr)
         {
-#if PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
-            auto const local_last_count(io_buffer->hold_count);
-            ++io_buffer->hold_count;
-#else
-            auto const local_last_count(
-                std::atomic_fetch_add_explicit(
-                    &io_buffer->hold_count, 1, std::memory_order_relaxed));
-#endif // PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
-            if ((std::numeric_limits<decltype(local_last_count)>::max)()
-                <= local_last_count)
-            {
-                // 被参照数が限界に達した。
-                PSYQ_ASSERT(false);
-            }
+            return 0;
         }
+        auto const local_count(io_buffer->hold_count.add());
+        PSYQ_ASSERT(0 < local_count);
+        return local_count;
     }
 
     /** @brief 共有文字列bufferを解放する。
@@ -513,22 +492,13 @@ class psyq::internal::shared_string_holder
         {
             return;
         }
-#if PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
-        auto const local_last_count(io_buffer->hold_count);
-        --io_buffer->hold_count;
-#else
-        auto const local_last_count(
-            std::atomic_fetch_sub_explicit(
-                &io_buffer->hold_count, 1, std::memory_order_release));
-#endif // PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
-        if (1 < local_last_count)
+        auto const local_count(io_buffer->hold_count.sub());
+        if (0 < local_count)
         {
+            PSYQ_ASSERT(0 < local_count + 1);
             return;
         }
-#if !PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
-        std::atomic_thread_fence(std::memory_order_acquire);
-#endif // PSYQ_BASIC_SHARED_STRING_DISABLE_THREADS
-        PSYQ_ASSERT(0 < local_last_count);
+        psyq::atomic_count::acquire_fence();
         auto const local_allocate_size(
             self::count_allocate_size(io_buffer->length));
         io_buffer->~shared_buffer();

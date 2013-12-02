@@ -1,128 +1,147 @@
+ï»¿/* Copyright (c) 2013, Hillco Psychi, All rights reserved.
+
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions are met:
+
+   1. Redistributions of source code must retain the above copyright notice,
+      this list of conditions and the following disclaimer.
+   2. Redistributions in binary form must reproduce the above copyright notice,
+      this list of conditions and the following disclaimer in the documentation
+      and/or other materials provided with the distribution.
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+   THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+   OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/** @file
+    @author Hillco Psychi (https://twitter.com/psychi)
+    @brief FNV-hashé–¢æ•°ã€‚
+
+    ä»¥ä¸‹ã®web-pageã‚’å‚è€ƒã«ã—ã¦å®Ÿè£…ã—ãŸã€‚
+    - http://www.radiumsoftware.com/0605.html#060526
+    - http://d.hatena.ne.jp/jonosuke/20100406/p1
+ */
 #ifndef PSYQ_FNV_HASH_HPP_
 #define PSYQ_FNV_HASH_HPP_
+#include <cstdint>
 
 namespace psyq
 {
-    /// ‚±‚Ì–¼‘O‹óŠÔ‚ğuser‚ª’¼Úaccess‚·‚é‚Ì‚Í‹Ö~B
-    namespace closed
+    /// ã“ã®åå‰ç©ºé–“ã‚’userãŒç›´æ¥accessã™ã‚‹ã®ã¯ç¦æ­¢ã€‚
+    namespace internal
     {
         /// @cond
-        template< typename, typename > class fnv_hash;
+        template<typename, typename> struct fnv_hash;
+        struct fnv1_maker;
+        struct fnv1a_maker;
+        template<typename> struct fnv_traits;
         /// @endcond
-
-        class fnv1_maker;
-        class fnv1a_maker;
-        class fnv_traits32;
-        class fnv_traits64;
     }
 
-    /// 32bit FNV-1 hashŠÖ”object
-    typedef psyq::closed::fnv_hash<
-        psyq::closed::fnv1_maker, psyq::closed::fnv_traits32>
+    /// 32bit FNV-1 hashé–¢æ•°object
+    typedef psyq::internal::fnv_hash<
+        psyq::internal::fnv1_maker, psyq::internal::fnv_traits<std::uint32_t>>
             fnv1_hash32;
 
-    /// 64bit FNV-1 hashŠÖ”object
-    typedef psyq::closed::fnv_hash<
-        psyq::closed::fnv1_maker, psyq::closed::fnv_traits64>
+    /// 64bit FNV-1 hashé–¢æ•°object
+    typedef psyq::internal::fnv_hash<
+        psyq::internal::fnv1_maker, psyq::internal::fnv_traits<std::uint64_t>>
             fnv1_hash64;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief FNV-hash
-    @tparam template_hash_policy @copydoc fnv_hash::policy
+    @tparam template_hash_maker @copydoc fnv_hash::maker
     @tparam template_hash_traits @copydoc fnv_hash::traits
  */
-template< typename template_hash_policy, typename template_hash_traits >
-class psyq::closed::fnv_hash
+template<typename template_hash_maker, typename template_hash_traits>
+struct psyq::internal::fnv_hash
 {
-    /// this‚Ìw‚·’l‚ÌŒ^B
-    public: typedef psyq::closed::fnv_hash<
-        template_hash_policy, template_hash_traits>
+    /// thisã®æŒ‡ã™å€¤ã®å‹ã€‚
+    typedef psyq::internal::fnv_hash<
+        template_hash_maker, template_hash_traits>
             self;
 
     //-------------------------------------------------------------------------
-    /// FNV-hash‚Ì¶¬policyB
-    public: typedef template_hash_policy policy;
+    /// FNV-hashã‚’ç”Ÿæˆã€‚
+    typedef template_hash_maker maker;
 
-    /// FNV-hash‚ÌŒ^“Á«B
-    public: typedef template_hash_traits traits;
+    /// FNV-hashã®å‹ç‰¹æ€§ã€‚
+    typedef template_hash_traits traits_type;
 
-    /// FNV-hash’l‚ÌŒ^B
-    public: typedef typename template_hash_traits::value value;
-
-    /// FNV-hash’l‚ÌŒ^B
-    public: typedef typename template_hash_traits::value result_type;
-
-    /// g—p‚·‚é‹óhash’lB
-    public: static typename template_hash_traits::value const EMPTY =
-        self::traits::EMPTY;
-
-    /// g—p‚·‚éFNV-hash‘f”B
-    public: static typename template_hash_traits::value const PRIME =
-        self::traits::PRIME;
+    /// FNV-hashå€¤ã®å‹ã€‚
+    typedef typename self::traits_type::value_type value_type;
 
     //-------------------------------------------------------------------------
-    /** @brief •¶š—ñ‚Ìhash’l‚ğ¶¬B
-        @tparam template_char_type •¶š‚ÌŒ^B
-        @param[in] in_string NULL•¶š‚ÅI—¹‚·‚é•¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_offset FNV-hashŠJn’lB
-        @param[in] in_prime  FNV-hash‘f”B
-        @return •¶š—ñ‚Ìhash’lB
+    /** @brief æ–‡å­—åˆ—ã®hashå€¤ã‚’ç”Ÿæˆã€‚
+        @tparam template_char_type æ–‡å­—ã®å‹ã€‚
+        @param[in] in_string NULLæ–‡å­—ã§çµ‚äº†ã™ã‚‹æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_offset FNV-hashé–‹å§‹å€¤ã€‚
+        @param[in] in_prime  FNV-hashç´ æ•°ã€‚
+        @return æ–‡å­—åˆ—ã®hashå€¤ã€‚
      */
-    public: template<typename template_char_type>
-    static typename self::value make(
+    template<typename template_char_type>
+    static typename self::value_type make(
         template_char_type const* const in_string,
-        typename self::value const      in_offset = self::EMPTY,
-        typename self::value const      in_prime = self::PRIME)
+        typename self::value_type const in_offset = self::traits_type::EMPTY,
+        typename self::value_type const in_prime = self::traits_type::PRIME)
     {
-        typename self::value local_hash(in_offset);
+        auto local_hash(in_offset);
         if (in_string != NULL)
         {
             for (template_char_type const* i(in_string); *i != 0; ++i)
             {
-                local_hash = template_hash_policy::make(
+                local_hash = template_hash_maker::make(
                     i, i + 1, local_hash, in_prime);
             }
         }
         return local_hash;
     }
 
-    /** @brief ”z—ñ‚Ìhash’l‚ğ¶¬B
-        @tparam template_value_type ”z—ñ‚Ì—v‘f‚ÌŒ^B
-        @param[in] in_begin  ”z—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_end    ”z—ñ‚Ì––”öˆÊ’uB
-        @param[in] in_offset FNV-hashŠJn’lB
-        @param[in] in_prime  FNV-hash‘f”B
+    /** @brief é…åˆ—ã®hashå€¤ã‚’ç”Ÿæˆã€‚
+        @tparam template_value_type é…åˆ—ã®è¦ç´ ã®å‹ã€‚
+        @param[in] in_begin  é…åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_end    é…åˆ—ã®æœ«å°¾ä½ç½®ã€‚
+        @param[in] in_offset FNV-hashé–‹å§‹å€¤ã€‚
+        @param[in] in_prime  FNV-hashç´ æ•°ã€‚
      */
-    public: template<typename template_value_type>
-    static typename self::value make(
+    template<typename template_value_type>
+    static typename self::value_type make(
         template_value_type const* const in_begin,
         template_value_type const* const in_end,
-        typename self::value const       in_offset = self::EMPTY,
-        typename self::value const       in_prime = self::PRIME)
+        typename self::value_type const  in_offset = self::traits_type::EMPTY,
+        typename self::value_type const  in_prime = self::traits_type::PRIME)
     {
-        return template_hash_policy::make(
+        return template_hash_maker::make(
             in_begin, in_end, in_offset, in_prime);
     }
 
-    /** @brief ”z—ñ‚Ìhash’l‚ğ¶¬B
-        @tparam template_iterator_type ”z—ñ‚Ì—v‘f‚ğw‚·”½•œq‚ÌŒ^B
-        @param[in] in_begin  •¶š—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_end    •¶š—ñ‚Ì––”öˆÊ’uB
-        @param[in] in_offset FNV-hashŠJn’lB
-        @param[in] in_prime  FNV-hash‘f”B
+    /** @brief é…åˆ—ã®hashå€¤ã‚’ç”Ÿæˆã€‚
+        @tparam template_iterator_type é…åˆ—ã®è¦ç´ ã‚’æŒ‡ã™åå¾©å­ã®å‹ã€‚
+        @param[in] in_begin  æ–‡å­—åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_end    æ–‡å­—åˆ—ã®æœ«å°¾ä½ç½®ã€‚
+        @param[in] in_offset FNV-hashé–‹å§‹å€¤ã€‚
+        @param[in] in_prime  FNV-hashç´ æ•°ã€‚
      */
-    public: template<typename template_iterator_type>
-    static typename self::value make(
-        template_iterator_type const& in_begin,
-        template_iterator_type const& in_end,
-        typename self::value const    in_offset = self::EMPTY,
-        typename self::value const    in_prime = self::PRIME)
+    template<typename template_iterator_type>
+    static typename self::value_type make(
+        template_iterator_type const&   in_begin,
+        template_iterator_type const&   in_end,
+        typename self::value_type const in_offset = self::traits_type::EMPTY,
+        typename self::value_type const in_prime = self::traits_type::PRIME)
     {
-        typename self::value local_hash(in_offset);
+        auto local_hash(in_offset);
         for (template_iterator_type i(in_begin); in_end != i; ++i)
         {
-            local_hash = template_hash_policy::make(
+            local_hash = template_hash_maker::make(
                 &(*i), &(*i) + 1, local_hash, in_prime);
         }
         return local_hash;
@@ -130,19 +149,15 @@ class psyq::closed::fnv_hash
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief FNV-1‚ÅAhash’l‚ğ¶¬B
-
-    http://www.radiumsoftware.com/0605.html#060526
-    http://d.hatena.ne.jp/jonosuke/20100406/p1
- */
-class psyq::closed::fnv1_maker
+/// @brief FNV-1ã§ã€hashå€¤ã‚’ç”Ÿæˆã€‚
+struct psyq::internal::fnv1_maker
 {
     //-------------------------------------------------------------------------
-    /** @brief byte”z—ñ‚Ìhash’l‚ğ¶¬B
-        @param[in] in_begin  byte”z—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_end    byte”z—ñ‚Ì––”öˆÊ’uB
-        @param[in] in_offset hashŠJn’lB
-        @param[in] in_prime  FNV-hash‘f”B
+    /** @brief byteé…åˆ—ã®hashå€¤ã‚’ç”Ÿæˆã€‚
+        @param[in] in_begin  byteé…åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_end    byteé…åˆ—ã®æœ«å°¾ä½ç½®ã€‚
+        @param[in] in_offset hashé–‹å§‹å€¤ã€‚
+        @param[in] in_prime  FNV-hashç´ æ•°ã€‚
      */
     public: template<typename template_value_type>
     static template_value_type make(
@@ -151,11 +166,8 @@ class psyq::closed::fnv1_maker
         template_value_type const& in_offset,
         template_value_type const& in_prime)
     {
-        template_value_type local_hash(in_offset);
-        for (
-            char const* i(static_cast<char const*>(in_begin));
-            i < in_end;
-            ++i)
+        auto local_hash(in_offset);
+        for (auto i(static_cast<char const*>(in_begin)); i < in_end; ++i)
         {
             local_hash = (local_hash * in_prime) ^ *i;
         }
@@ -164,19 +176,15 @@ class psyq::closed::fnv1_maker
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief FNV-1a‚ÅAhash’l‚ğ¶¬B
-
-    http://www.radiumsoftware.com/0605.html#060526
-    http://d.hatena.ne.jp/jonosuke/20100406/p1
- */
-class psyq::closed::fnv1a_maker
+/// @brief FNV-1aã§ã€hashå€¤ã‚’ç”Ÿæˆã€‚
+struct psyq::internal::fnv1a_maker
 {
     //-------------------------------------------------------------------------
-    /** @brief byte”z—ñ‚Ìhash’l‚ğ¶¬B
-        @param[in] in_begin  byte”z—ñ‚Ìæ“ªˆÊ’uB
-        @param[in] in_end    byte”z—ñ‚Ì––”öˆÊ’uB
-        @param[in] in_offset FNV-hashŠJn’lB
-        @param[in] in_prime  FNV-hash‘f”B
+    /** @brief byteé…åˆ—ã®hashå€¤ã‚’ç”Ÿæˆã€‚
+        @param[in] in_begin  byteé…åˆ—ã®å…ˆé ­ä½ç½®ã€‚
+        @param[in] in_end    byteé…åˆ—ã®æœ«å°¾ä½ç½®ã€‚
+        @param[in] in_offset FNV-hashé–‹å§‹å€¤ã€‚
+        @param[in] in_prime  FNV-hashç´ æ•°ã€‚
      */
     public: template<typename template_value_type>
     static template_value_type make(
@@ -185,11 +193,8 @@ class psyq::closed::fnv1a_maker
         template_value_type const& in_offset,
         template_value_type const& in_prime)
     {
-        template_value_type local_hash(in_offset);
-        for (
-            char const* i(static_cast<char const*>(in_begin));
-            i < in_end;
-            ++i)
+        auto local_hash(in_offset);
+        for (auto i(static_cast<char const*>(in_begin)); i < in_end; ++i)
         {
             local_hash = (local_hash ^ *i) * in_prime;
         }
@@ -198,31 +203,27 @@ class psyq::closed::fnv1a_maker
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// 32bit‚ÌFNV-hashŠÖ”‚ÌŒ^“Á«B
-class psyq::closed::fnv_traits32
+/// 32bitã®FNV-hashé–¢æ•°ã®å‹ç‰¹æ€§ã€‚
+template<> struct psyq::internal::fnv_traits<std::uint32_t>
 {
-    /// hash’l‚ÌŒ^B
-    public: typedef boost::uint32_t value;
-
-    /// ‹óhash’lB
-    public: static value const EMPTY = 0x811c9dc5;
-
-    /// FNV-hash‘f”B
-    public: static value const PRIME = 0x1000193;
+    typedef std::uint32_t value_type; ///< hashå€¤ã®å‹ã€‚
+    enum: value_type
+    {
+        EMPTY = 0x811c9dc5, ///< ç©ºhashå€¤ã€‚
+        PRIME = 0x1000193,  ///< FNV-hashç´ æ•°ã€‚
+    };
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// 64bit‚ÌFNV-hashŠÖ”‚ÌŒ^“Á«B
-class psyq::closed::fnv_traits64
+/// 64bitã®FNV-hashé–¢æ•°ã®å‹ç‰¹æ€§ã€‚
+template<> struct psyq::internal::fnv_traits<std::uint64_t>
 {
-    /// hash’l‚ÌŒ^B
-    public: typedef boost::uint64_t value;
-
-    /// ‹óhash’lB
-    public: static value const EMPTY = 0xcbf29ce484222325ULL;
-
-    /// FNV-hash‘f”B
-    public: static value const PRIME = 0x100000001b3ULL;
+    typedef std::uint64_t value_type;  ///< hashå€¤ã®å‹ã€‚
+    enum: value_type
+    {
+        EMPTY = 0xcbf29ce484222325ULL, ///< ç©ºhashå€¤ã€‚
+        PRIME = 0x100000001b3ULL,      ///< FNV-hashç´ æ•°ã€‚
+    };
 };
 
-#endif // PSYQ_FNV_HASH_HPP_
+#endif // !defined(PSYQ_FNV_HASH_HPP_)

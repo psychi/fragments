@@ -26,21 +26,28 @@
  */
 #ifndef PSYQ_STRING_TABLE_HPP_
 #define PSYQ_STRING_TABLE_HPP_
-#include <map>
+#include <unordered_map>
 
 namespace psyq
 {
     /// @cond
     struct string_table_attribute;
     struct string_table_key;
+    struct string_table_key_hash;
     template<typename, typename> class string_table;
     /// @endcond
 
     /// 共有文字列の表。
     typedef psyq::string_table<
-        std::map<psyq::shared_string, psyq::string_table_attribute>,
-        std::map<psyq::string_table_key, psyq::shared_string>>
-            shared_string_table;
+        std::unordered_map<
+            psyq::shared_string,
+            psyq::string_table_attribute,
+            psyq::shared_string::fnv1_hash>,
+        std::unordered_map<
+            psyq::string_table_key,
+            psyq::shared_string,
+            psyq::string_table_key_hash>>
+                shared_string_table;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -69,6 +76,16 @@ struct psyq::string_table_key
         row(in_row),
         column(in_column)
     {}
+
+    bool operator==(string_table_key const& in_right) const
+    {
+        return this->row == in_right.row && this->column == in_right.column;
+    }
+
+    bool operator!=(string_table_key const& in_right) const
+    {
+        return !this->operator==(in_right);
+    }
 
     bool operator<(string_table_key const& in_right) const
     {
@@ -100,6 +117,14 @@ struct psyq::string_table_key
 
     std::size_t row;    ///< cellの行番号。
     std::size_t column; ///< cellの列番号。
+};
+
+struct psyq::string_table_key_hash
+{
+    std::size_t operator()(psyq::string_table_key const& in_key) const
+    {
+        return (in_key.row << (sizeof(in_key.row) * 4)) ^ in_key.column;
+    }
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -149,55 +174,62 @@ class psyq::string_table
         std::size_t const       in_attribute_row)
     :
         attribute_map_(in_cell_map.get_allocator()),
+        attribute_row_(in_attribute_row),
         cell_map_(std::move(in_cell_map)),
         begin_key_(0, 0),
         end_key_(0, 0)
     {
         // cell辞書の範囲を決定する。
+        self::adjust_cell_range(
+            this->begin_key_,
+            this->end_key_,
+            this->cell_map_,
+            in_attribute_row);
+
+        // 属性の要素数を調整する。
+        self::adjust_attribute_size(this->attribute_map_, this->end_key_.row);
+    }
+
+    //-------------------------------------------------------------------------
+    private: static void adjust_cell_range(
+        typename self::cell_map::key_type& out_begin_key,
+        typename self::cell_map::key_type& out_end_key,
+        typename self::cell_map const&     in_cell_map,
+        std::size_t const                  in_attribute_row)
+    {
         bool local_first(true);
-        for (auto i(this->cell_map_.begin()); i != this->cell_map_.end();)
+        for (auto i(in_cell_map.begin()); i != in_cell_map.end(); ++i)
         {
             auto const& local_key(i->first);
             if (local_key.row == in_attribute_row)
             {
-                // 属性はcell辞書から削除する。
-                this->attribute_map_.emplace(
-                    i->second,
-                    typename self::attribute_map::mapped_type(
-                        local_key.column, 1));
-                i = this->cell_map_.erase(i);
                 continue;
             }
-            typename self::cell_map::key_type const local_key_1(
-                local_key.row + 1, local_key.column + 1);
             if (local_first)
             {
                 local_first = false;
-                this->begin_key_ = local_key;
-                this->end_key_ = local_key_1;
+                out_begin_key = local_key;
+                out_end_key.row = local_key.row + 1;
+                out_end_key.column = local_key.column + 1;
                 continue;
             }
-            if (local_key.row < this->begin_key_.row)
+            if (local_key.row < out_begin_key.row)
             {
-                this->begin_key_.row = local_key.row;
+                out_begin_key.row = local_key.row;
             }
-            else if (this->end_key_.row < local_key_1.row)
+            else if (out_end_key.row <= local_key.row)
             {
-                this->end_key_.row = local_key_1.row;
+                out_end_key.row = local_key.row + 1;
             }
-            if (local_key.column < this->begin_key_.column)
+            if (local_key.column < out_begin_key.column)
             {
-                this->begin_key_.column = local_key.column;
+                out_begin_key.column = local_key.column;
             }
-            else if (this->end_key_.column < local_key_1.column)
+            else if (out_end_key.column <= local_key.column)
             {
-                this->end_key_.column = local_key_1.column;
+                out_end_key.column = local_key.column + 1;
             }
-            ++i;
         }
-
-        // 属性の要素数を調整する。
-        self::adjust_attribute_size(this->attribute_map_, this->end_key_.row);
     }
 
     //-------------------------------------------------------------------------
@@ -249,6 +281,11 @@ class psyq::string_table
     public: typename self::attribute_map const& get_attribute_map() const
     {
         return this->attribute_map_;
+    }
+
+    public: std::size_t get_attribute_row() const
+    {
+        return this->attribute_row_;
     }
 
     /** @brief 文字列表のcell辞書を取得する。
@@ -306,6 +343,10 @@ class psyq::string_table
         std::size_t const                       in_attribute_index = 0)
     const
     {
+        if (in_row == this->attribute_row_)
+        {
+            return nullptr;
+        }
         auto const local_attribute(
             this->get_attribute_map().find(in_attribute_key));
         if (local_attribute == this->get_attribute_map().end() ||
@@ -505,6 +546,8 @@ class psyq::string_table
     //-------------------------------------------------------------------------
     /// 文字列表の属性辞書。
     private: typename self::attribute_map attribute_map_;
+    /// 属性名として使う行の番号。
+    private: std::size_t attribute_row_;
     /// 文字列表のcell辞書。
     private: typename self::cell_map cell_map_;
     /// 文字列表の行と列の最小値。

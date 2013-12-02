@@ -31,6 +31,7 @@
 #include <iterator>
 #include <algorithm>
 #include <cctype>
+//#include "fnv_hash.hpp"
 
 #ifndef PSYQ_ASSERT
 #define PSYQ_ASSERT(define_expression) assert(define_expression)
@@ -359,6 +360,21 @@ class psyq::internal::const_string_interface:
     public: typedef psyq::internal::const_string_piece<
         typename super::traits_type>
             piece;
+
+    //-------------------------------------------------------------------------
+    public: template<typename template_hash>
+    struct hash: public template_hash
+    {
+        typename template_hash::value_type operator()(piece const& in_string)
+        const
+        {
+            return template_hash::make(
+                in_string.data(), in_string.data() + in_string.length());
+        }
+    };
+    public: typedef typename self::hash<psyq::fnv1_hash>   fnv1_hash;
+    public: typedef typename self::hash<psyq::fnv1_hash32> fnv1_hash32;
+    public: typedef typename self::hash<psyq::fnv1_hash64> fnv1_hash64;
 
     //-------------------------------------------------------------------------
     /// 文字の型。

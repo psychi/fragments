@@ -46,6 +46,11 @@ namespace psyq
         /// @endcond
     }
 
+    /// FNV-1 hash関数object
+    typedef psyq::internal::fnv_hash<
+        psyq::internal::fnv1_maker, psyq::internal::fnv_traits<std::size_t>>
+            fnv1_hash;
+
     /// 32bit FNV-1 hash関数object
     typedef psyq::internal::fnv_hash<
         psyq::internal::fnv1_maker, psyq::internal::fnv_traits<std::uint32_t>>

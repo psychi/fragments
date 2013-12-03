@@ -33,10 +33,6 @@
 #include <cctype>
 //#include "fnv_hash.hpp"
 
-#ifndef PSYQ_ASSERT
-#define PSYQ_ASSERT(define_expression) assert(define_expression)
-#endif // !PSYQ_ASSERT
-
 namespace psyq
 {
     namespace internal

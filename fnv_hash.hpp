@@ -65,7 +65,7 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief FNV-hash
     @tparam template_hash_maker @copydoc fnv_hash::maker
-    @tparam template_hash_traits @copydoc fnv_hash::traits
+    @tparam template_hash_traits @copydoc fnv_hash::traits_type
  */
 template<typename template_hash_maker, typename template_hash_traits>
 struct psyq::internal::fnv_hash

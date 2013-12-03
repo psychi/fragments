@@ -190,6 +190,36 @@ class psyq::string_table
         self::adjust_attribute_size(this->attribute_map_, this->end_key_.row);
     }
 
+    public: string_table(self&& io_source):
+        attribute_map_(std::move(io_source.attribute_map_)),
+        attribute_row_(std::move(io_source.attribute_row_)),
+        cell_map_(std::move(io_source.cell_map_)),
+        begin_key_(std::move(io_source.begin_key_)),
+        end_key_(std::move(io_source.end_key_))
+    {
+        io_source.attribute_row_ = 0;
+        io_source.begin_key_.row = 0;
+        io_source.begin_key_.column = 0;
+        io_source.end_key_ = io_source.begin_key_;
+    }
+
+    public: self& operator=(self&& io_source)
+    {
+        if (this != &io_source)
+        {
+            this->attribute_map_ = std::move(io_source.attribute_map_);
+            this->attribute_row_ = std::move(io_source.attribute_row_);
+            this->cell_map_  = std::move(io_source.cell_map_);
+            this->begin_key_ = std::move(io_source.begin_key_);
+            this->end_key_ = std::move(io_source.end_key_);
+            io_source.attribute_row_ = 0;
+            io_source.begin_key_.row = 0;
+            io_source.begin_key_.column = 0;
+            io_source.end_key_ = io_source.begin_key_;
+        }
+        return *this;
+    }
+
     //-------------------------------------------------------------------------
     private: static void adjust_cell_range(
         typename self::cell_map::key_type& out_begin_key,

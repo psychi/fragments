@@ -58,12 +58,12 @@ class psyq::any
     /** @brief 保持してる値の型情報を取得する。
         @return 保持してる値の型情報。
      */
-    public: virtual type_info const& get_typeid() const = 0;
+    public: virtual std::type_info const& get_type_info() const = 0;
 
     /** @brief 保持してる値の型の識別値を取得する。
         @return 保持してる値の型の識別値。
      */
-    public: virtual psyq::type_hash get_type() const = 0;
+    public: virtual psyq::type_hash get_type_hash() const = 0;
 
     /** @brief 保持してる値の大きさを取得する。
         @return 保持してる値のbyte単位の大きさ。
@@ -94,12 +94,12 @@ class psyq::any::holder: public psyq::any
     public: holder(template_value const& in_value): value(in_value) {}
     public: holder(template_value&& io_value): value(std::move(io_value)) {}
 
-    public: virtual type_info const& get_typeid() const
+    public: virtual std::type_info const& get_type_info() const
     {
-        return typeid(this->value);
+        return typeid(template_value);
     }
 
-    public: virtual psyq::type_hash get_type() const
+    public: virtual psyq::type_hash get_type_hash() const
     {
         return psyq::get_type_hash<template_value>();
     }
@@ -131,7 +131,7 @@ namespace psyq
     template<typename template_value>
     template_value& any_cast(psyq::any& in_any)
     {
-        if (in_any.get_type() != psyq::get_type_hash<template_value>())
+        if (in_any.get_type_hash() != psyq::get_type_hash<template_value>())
         {
             PSYQ_ASSERT(false);
             //throw std::basic_cast; // 例外は使いたくない。
@@ -158,7 +158,7 @@ namespace psyq
     template_value* any_cast(psyq::any* const in_any)
     {
         if (in_any == nullptr
-            || in_any->get_type() != psyq::get_type_hash<template_value>())
+            || in_any->get_type_hash() != psyq::get_type_hash<template_value>())
         {
             return nullptr;
         }

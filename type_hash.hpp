@@ -98,11 +98,19 @@ namespace psyq
     template<typename template_type>
     psyq::type_hash set_type_hash(psyq::type_hash const in_type)
     {
-        if (psyq::get_type_hash<void>() < in_type
-            && in_type == psyq::internal::register_type_hash(in_type))
+        if (in_type < psyq::get_type_hash<void>()
+            && in_type == psyq::internal::register_type_hash<template_type>(in_type))
         {
             return in_type;
         }
+        return psyq::get_type_hash<void>();
+    }
+
+    /** @brief void型の識別値を取得する。
+        @return void型の識別値。
+     */
+    template<> psyq::type_hash set_type_hash<void>(psyq::type_hash const)
+    {
         return psyq::get_type_hash<void>();
     }
 }

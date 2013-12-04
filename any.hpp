@@ -47,7 +47,7 @@ class psyq::any
     private: typedef any self; ///< thisが指す値の型。
 
     public: typedef std::shared_ptr<self> shared_ptr; ///< self の保持子。
-    public: typedef std::weak_ptr<self> weak_ptr;     ///< self の監視子。
+    public: typedef std::weak_ptr<self>   weak_ptr;   ///< self の監視子。
 
     /// @cond
     public: template<typename> class holder;
@@ -87,26 +87,32 @@ class psyq::any::holder: public psyq::any
     public: typedef psyq::any super;              ///< self の上位型。
 
     public: typedef std::shared_ptr<self> shared_ptr; ///< self の保持子。
-    public: typedef std::weak_ptr<self> weak_ptr;     ///< self の監視子。
+    public: typedef std::weak_ptr<self>   weak_ptr;   ///< self の監視子。
 
-    public: typedef template_value value_type; ///< 保持してる値の型。
+    /// 保持してる値の型。const修飾子とvolatile修飾子は取り除かれる。
+    public: typedef typename std::remove_cv<template_value>::type value_type;
 
-    public: holder(template_value const& in_value): value(in_value) {}
-    public: holder(template_value&& io_value): value(std::move(io_value)) {}
+    public: holder(typename self::value_type const& in_value):
+        value(in_value)
+    {}
+
+    public: holder(typename self::value_type&& io_value):
+        value(std::move(io_value))
+    {}
 
     public: virtual std::type_info const& get_type_info() const
     {
-        return typeid(template_value);
+        return typeid(typename self::value_type);
     }
 
     public: virtual psyq::type_hash get_type_hash() const
     {
-        return psyq::get_type_hash<template_value>();
+        return psyq::get_type_hash<typename self::value_type>();
     }
 
     public: virtual std::size_t get_size() const
     {
-        return sizeof(template_value);
+        return sizeof(typename self::value_type);
     }
 
     public: virtual void* get_pointer()
@@ -114,7 +120,7 @@ class psyq::any::holder: public psyq::any
         return &this->value;
     }
 
-    public: template_value value; ///< 保持してる値。
+    public: typename self::value_type value; ///< 保持してる値。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

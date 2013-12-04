@@ -30,7 +30,8 @@
 //#include "psyq/atomic_count.hpp"
 #ifndef PSYQ_TYPE_HASH_RESERVED_COUNT
 /// 予約済みの型の識別値の数。
-#define PSYQ_TYPE_HASH_RESERVED_COUNT 1024
+#define PSYQ_TYPE_HASH_RESERVED_COUNT\
+    std::size_t(1 << (sizeof(std::size_t) * 8 - 1))
 #endif // !defined(PSYQ_TYPE_HASH_RESERVED_COUNT)
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -63,8 +64,14 @@ namespace psyq
         {
             static auto const static_type(
                 in_type != PSYQ_TYPE_HASH_RESERVED_COUNT?
-                    in_type: add_type_hash());
+                    in_type: psyq::internal::add_type_hash());
             return static_type;
+        }
+
+        template<>
+        psyq::type_hash register_type_hash<void>(psyq::type_hash const)
+        {
+            return PSYQ_TYPE_HASH_RESERVED_COUNT;
         }
     }
 
@@ -75,16 +82,9 @@ namespace psyq
     template<typename template_type>
     psyq::type_hash get_type_hash()
     {
-        return psyq::internal::register_type_hash<template_type>(
-            get_type_hash<void>());
-    }
-
-    /** @brief void型の識別値を取得する。
-        @return void型の識別値。
-     */
-    template<> psyq::type_hash get_type_hash<void>()
-    {
-        return PSYQ_TYPE_HASH_RESERVED_COUNT;
+        typedef typename std::remove_cv<template_type>::type type;
+        return psyq::internal::register_type_hash<type>(
+            PSYQ_TYPE_HASH_RESERVED_COUNT);
     }
 
     /** @brief 型の識別値を設定する。
@@ -98,20 +98,13 @@ namespace psyq
     template<typename template_type>
     psyq::type_hash set_type_hash(psyq::type_hash const in_type)
     {
-        if (in_type < psyq::get_type_hash<void>()
-            && in_type == psyq::internal::register_type_hash<template_type>(in_type))
+        typedef typename std::remove_cv<template_type>::type type;
+        if (in_type < PSYQ_TYPE_HASH_RESERVED_COUNT
+            && in_type == psyq::internal::register_type_hash<type>(in_type))
         {
             return in_type;
         }
-        return psyq::get_type_hash<void>();
-    }
-
-    /** @brief void型の識別値を取得する。
-        @return void型の識別値。
-     */
-    template<> psyq::type_hash set_type_hash<void>(psyq::type_hash const)
-    {
-        return psyq::get_type_hash<void>();
+        return PSYQ_TYPE_HASH_RESERVED_COUNT;
     }
 }
 

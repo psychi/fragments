@@ -114,8 +114,8 @@ class psyq::string_table
 
     //-------------------------------------------------------------------------
     /** @brief 文字列表を構築する。
-        @param[in,out] io_column_map    @copydoc column_map_
-        @param[in]     in_attribute_row @copydoc attribute_row_
+        @param[in,out] io_column_map    文字列表の列の辞書。
+        @param[in]     in_attribute_row 文字列表の属性行の番号。
      */
     public: string_table(
         typename self::column_map io_column_map,

@@ -28,7 +28,6 @@
 #ifndef PSYQ_ANY_HPP_
 #define PSYQ_ANY_HPP_
 #include <memory>
-//#include "psyq/type_hash.hpp"
 #ifndef PSYQ_ANY_TYPE_HASH_RESERVED_COUNT
 /// 予約済みの型の識別値の数。
 #define PSYQ_ANY_TYPE_HASH_RESERVED_COUNT\
@@ -99,11 +98,11 @@ class psyq::any
         return static_cast<template_value*>(this->get_pointer());
     }
 
-    /// @copydoc get_value(psyq::any* const)
+    /// @copydoc get_value()
     public: template<typename template_value>
     template_value const* get_value() const
     {
-        return const_cast<self*>(in_any)->get_value<template_value>();
+        return const_cast<self*>(this)->get_value<template_value>();
     }
 
     //-------------------------------------------------------------------------

@@ -94,8 +94,8 @@ class psyq::internal::shared_string_holder
     public: explicit shared_string_holder(
         typename self::allocator_type const& in_allocator)
     :
-        literal_(nullptr),
-        length_(0),
+        buffer_(nullptr),
+        data_(nullptr),
         allocator_(in_allocator)
     {}
 
@@ -104,11 +104,11 @@ class psyq::internal::shared_string_holder
      */
     public: explicit shared_string_holder(self const& in_string)
     :
-        literal_(nullptr),
-        length_(0),
+        buffer_(nullptr),
+        data_(nullptr),
         allocator_(in_string.get_allocator())
     {
-        this->set_string(in_string);
+        this->copy_data(in_string);
     }
 
     /** @brief 文字列を移動する。memory割り当ては行わない。
@@ -116,11 +116,11 @@ class psyq::internal::shared_string_holder
      */
     public: explicit shared_string_holder(self&& io_string)
     :
-        literal_(nullptr),
-        length_(0),
+        buffer_(nullptr),
+        data_(nullptr),
         allocator_(std::move(io_string.allocator_))
     {
-        this->move_string(std::move(io_string));
+        this->move_data(std::move(io_string));
     }
 
     /** @brief 文字列literalを参照する。memory割り当ては行わない。
@@ -152,8 +152,8 @@ class psyq::internal::shared_string_holder
         typename self::piece const&          in_right_string,
         typename self::allocator_type const& in_allocator)
     :
-        literal_(nullptr),
-        length_(0),
+        buffer_(nullptr),
+        data_(nullptr),
         allocator_(in_allocator)
     {
         this->create_concatenate_buffer(in_left_string, in_right_string);
@@ -174,7 +174,7 @@ class psyq::internal::shared_string_holder
         if (this->buffer_ != in_string.buffer_)
         {
             self::release_buffer(this->get_buffer(), this->get_allocator());
-            this->set_string(in_string);
+            this->copy_data(in_string);
             this->allocator_ = in_string.get_allocator();
         }
         else
@@ -192,7 +192,7 @@ class psyq::internal::shared_string_holder
         if (this->buffer_ != io_string.buffer_)
         {
             self::release_buffer(this->get_buffer(), this->get_allocator());
-            this->move_string(std::move(io_string));
+            this->move_data(std::move(io_string));
             this->allocator_ = std::move(io_string.allocator_);
         }
         else
@@ -238,13 +238,15 @@ class psyq::internal::shared_string_holder
     /// @copydoc self::piece::data()
     public: typename self::traits_type::char_type const* data() const
     {
-        return this->is_literal()? this->literal_: this->buffer_->get_data();
+        return this->data_;
     }
 
     /// @copydoc self::piece::length()
     public: std::size_t length() const
     {
-        return this->is_literal()? this->length_: this->buffer_->length;
+        auto const local_buffer(this->get_buffer());
+        return local_buffer != nullptr?
+            local_buffer->length: this->length_ >> 1;
     }
 
     /** @brief 使っているmemory割当子を取得する。
@@ -259,15 +261,11 @@ class psyq::internal::shared_string_holder
     public: template<typename template_string_type>
     template_string_type make_string() const
     {
-        return this->is_literal()?
-            template_string_type(this->literal_, this->length_):
-            template_string_type(
-                this->buffer_->get_data(), this->buffer_->length);
+        return template_string_type(this->data(), this->length());
     }
 
     public: template<typename template_map_type>
-    self make_replaced(
-        template_map_type const& in_char_map)
+    self make_replaced(template_map_type const& in_char_map)
     {
         self local_string;
         local_sring.create_replaced_buffer(
@@ -279,38 +277,31 @@ class psyq::internal::shared_string_holder
     /// @copydoc psyq::internal::const_string_interface::empty()
     protected: bool empty() const
     {
-        return this->buffer_ == nullptr;
+        return this->data() == nullptr;
     }
 
     /// @copydoc self::piece::clear()
     protected: void clear()
     {
         self::release_buffer(this->get_buffer(), this->get_allocator());
-        this->set_buffer(nullptr);
+        this->reset_data();
     }
 
     /// @copydoc psyq::internal::const_string_interface::swap()
     protected: void swap(self& io_target)
     {
+        std::swap(this->data_, io_target.data_);
         std::swap(this->buffer_, io_target.buffer_);
-        std::swap(this->length_, io_target.length_);
     }
 
     //-------------------------------------------------------------------------
     /// 共有文字列buffer。
     private: struct shared_buffer
     {
-        explicit shared_buffer(std::size_t const in_length)
-        :
+        explicit shared_buffer(std::size_t const in_length):
             hold_count(1),
             length(in_length)
         {}
-
-        typename self::traits_type::char_type* get_data()
-        {
-            return reinterpret_cast<typename self::traits_type::char_type*>(
-                this + 1);
-        }
 
         /// 共有文字列bufferの被参照数。
         psyq::atomic_count hold_count;
@@ -324,65 +315,61 @@ class psyq::internal::shared_string_holder
             buffer_allocator;
 
     //-------------------------------------------------------------------------
-    private: void move_string(self&& io_string)
+    private: void reset_data()
     {
-        if (io_string.is_literal())
+        this->data_ = nullptr;
+        this->buffer_ = nullptr;
+    }
+
+    private: void move_data(self&& io_string)
+    {
+        auto const local_buffer(io_string.get_buffer());
+        if (local_buffer != nullptr)
         {
-            this->set_literal(io_string);
+            this->set_buffer(*local_buffer);
+            io_string.reset_data();
         }
         else
         {
-            this->set_buffer(io_string.buffer_);
-            io_string.set_buffer(nullptr);
+            this->data_ = io_string.data_;
+            this->length_ = io_string.length_;
         }
     }
 
-    private: void set_string(self const& in_string)
+    private: void copy_data(self const& in_string)
     {
-        if (in_string.is_literal())
+        auto const local_buffer(in_string.get_buffer());
+        if (local_buffer != nullptr)
         {
-            this->set_literal(in_string);
+            this->set_buffer(*local_buffer);
+            self::hold_buffer(*local_buffer);
         }
         else
         {
-            auto const local_buffer(in_string.buffer_);
-            this->set_buffer(
-                1 < self::hold_buffer(local_buffer)? local_buffer: nullptr);
+            this->data_ = in_string.data_;
+            this->length_ = in_string.length_;
         }
-    }
-
-    private: void set_literal(self const& in_string)
-    {
-        this->literal_ = in_string.literal_;
-        this->length_ = in_string.length_;
     }
 
     /** @brief 文字列literalを参照する。
         @tparam template_size 参照する文字列literalの要素数。空文字も含む。
         @param[in] in_string 参照する文字列literal。
      */
-    private: template <std::size_t template_size>
+    private: template<std::size_t template_size>
     void set_literal(
         typename self::traits_type::char_type const (&in_string)[template_size])
     {
         PSYQ_ASSERT(0 < template_size && in_string[template_size - 1] == 0);
-        this->literal_ = &in_string[0];
-        this->length_ = template_size - 1;
+        this->data_ = &in_string[0];
+        this->length_ = ((template_size - 1) << 1) | 1;
     }
 
-    private: void set_buffer(typename self::shared_buffer* const in_buffer)
+    private: template<>
+    void set_literal(
+        typename self::traits_type::char_type const (&in_string)[1])
     {
-        this->buffer_ = in_buffer;
-        this->length_ = 0;
-    }
-
-    /** @brief 文字列literalを参照してるか判定する。
-        @retval true  文字列literalを保持してる。
-        @retval false 文字列literalを保持してない。
-     */
-    private: bool is_literal() const
-    {
-        return 0 < this->length_ || this->buffer_ == nullptr;
+        PSYQ_ASSERT(in_string[0] == 0);
+        this->reset_data();
     }
 
     /** @brief 保持してる共有文字列bufferを取得する。
@@ -391,7 +378,15 @@ class psyq::internal::shared_string_holder
      */
     private: typename self::shared_buffer* get_buffer() const
     {
-        return this->is_literal()? nullptr: this->buffer_;
+        return (this->length_ & 1) != 0? nullptr: this->buffer_;
+    }
+
+    private: void set_buffer(typename self::shared_buffer& in_buffer)
+    {
+        typedef typename self::traits_type::char_type* pointer;
+        this->data_ = reinterpret_cast<pointer>(&in_buffer + 1);
+        this->buffer_ = &in_buffer;
+        PSYQ_ASSERT(this->get_buffer() != nullptr);
     }
 
     /** @brief 共有文字列bufferを確保する。
@@ -411,12 +406,13 @@ class psyq::internal::shared_string_holder
             {
                 // 共有文字列bufferを保持する。
                 this->set_buffer(
-                    new(local_buffer) typename self::shared_buffer(in_length));
-                return this->buffer_->get_data();
+                    *new(local_buffer) typename self::shared_buffer(in_length));
+                return const_cast<typename self::traits_type::char_type*>(
+                    this->data());
             }
             PSYQ_ASSERT(false);
         }
-        this->set_buffer(nullptr);
+        this->reset_data();
         return nullptr;
     }
 
@@ -469,13 +465,9 @@ class psyq::internal::shared_string_holder
         @param[in,out] io_buffer 保持する共有文字列buffer。
      */
     private: static std::size_t hold_buffer(
-        typename self::shared_buffer* const io_buffer)
+        typename self::shared_buffer& io_buffer)
     {
-        if (io_buffer == nullptr)
-        {
-            return 0;
-        }
-        auto const local_count(io_buffer->hold_count.add());
+        auto const local_count(io_buffer.hold_count.add());
         PSYQ_ASSERT(0 < local_count);
         return local_count;
     }
@@ -529,13 +521,13 @@ class psyq::internal::shared_string_holder
     //-------------------------------------------------------------------------
     private: union
     {
-        /// 参照している文字列literalの先頭位置。
-        typename self::traits_type::char_type const* literal_;
         /// 保持している共有文字列buffer。
         typename self::shared_buffer* buffer_;
+        /// 参照している文字列literalの長さ。
+        std::size_t length_;
     };
-    /// 文字列の長さ。
-    private: std::size_t length_;
+    /// 文字列の先頭位置。
+    typename self::traits_type::char_type const* data_;
     /// 使っているmemory割当子。
     private: typename self::allocator_type allocator_;
 };

@@ -63,11 +63,7 @@ class psyq::internal::const_string_piece
     //-------------------------------------------------------------------------
     /** @brief 空の文字列を構築する。
      */
-    public: const_string_piece()
-    :
-        data_(nullptr),
-        length_(0)
-    {}
+    public: const_string_piece(): data_(nullptr), length_(0) {}
 
     /** @brief 文字列を参照する。
         @param[in] in_begin  参照する文字列の先頭位置。
@@ -97,7 +93,8 @@ class psyq::internal::const_string_piece
      */
     public: template <std::size_t template_size>
     const_string_piece(
-        typename self::traits_type::char_type const (&in_literal)[template_size])
+        typename self::traits_type::char_type const
+            (&in_literal)[template_size])
     :
         data_(&in_literal[0]),
         length_(template_size - 1)
@@ -110,8 +107,7 @@ class psyq::internal::const_string_piece
         @param[in] in_string 参照する文字列。
      */
     public: template<typename template_string_type>
-    const_string_piece(template_string_type const& in_string)
-    :
+    const_string_piece(template_string_type const& in_string):
         data_(in_string.data()),
         length_(in_string.length())
     {}
@@ -294,16 +290,6 @@ class psyq::internal::const_string_piece
             }
         }
         return self(local_begin, local_length);
-    }
-
-    /** @brief *thisを任意の文字列型にcopyする。
-        @tparam template_string_type 構築する文字列型。
-        @return 構築した文字列。
-     */
-    public: template<typename template_string_type>
-    template_string_type make_string() const
-    {
-        return template_string_type(this->data(), this->length());
     }
     //@}
     //-------------------------------------------------------------------------

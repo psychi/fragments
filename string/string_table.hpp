@@ -127,6 +127,9 @@ class psyq::string_table
         column_map_(std::move(io_column_map))
     {}
 
+    /** @brief move-constructor
+        @param[in,out] move元となる文字列表。
+     */
     public: string_table(self&& io_source):
         attribute_map_(std::move(io_source.attribute_map_)),
         attribute_row_(std::move(io_source.attribute_row_)),
@@ -135,6 +138,10 @@ class psyq::string_table
         io_source.clear();
     }
 
+    /** @brief move代入演算子。
+        @param[in,out] move元となる文字列表。
+        @return *this
+     */
     public: self& operator=(self&& io_source)
     {
         if (this != &io_source)
@@ -188,7 +195,7 @@ class psyq::string_table
         @retval !=nullptr 見つかった行の辞書。
         @retval ==nullptr 対応する行の辞書が見つからなかった。
      */
-    public: static typename self::row_map* find_row_map(
+    public: static typename self::row_map const* find_row_map(
         typename self::column_map const& in_column_map,
         std::size_t const                in_column)
     {
@@ -222,6 +229,15 @@ class psyq::string_table
         return nullptr;
     }
 
+    /** @brief 文字列表の列の辞書から、cell文字列を検索する。
+        @param[in] in_column_map      検索する文字列表の列辞書。
+        @param[in] in_row             検索するcellの行番号。
+        @param[in] in_attribute_map   検索する文字列表の属性辞書。
+        @param[in] in_attribute_name  検索するcellの属性名。
+        @param[in] in_attribute_index 検索するcellの属性index番号。
+        @retval !=nullptr 見つかったcell。
+        @retval ==nullptr 対応するcellが見つからなかった。
+     */
     public: static typename self::cell_string const* find_cell(
         typename self::column_map const&              in_column_map,
         std::size_t const                             in_row,
@@ -264,11 +280,11 @@ class psyq::string_table
     }
 
     /** @brief 文字列表の本体から、cellを検索する。
-        @param[in] in_row             検索する値cellの行番号。
-        @param[in] in_attribute_name  検索する値cellの属性名。
-        @param[in] in_attribute_index 検索する値cellの属性index番号。
-        @retval !=nullptr 見つかった値cell。
-        @retval ==nullptr 対応する値cellが見つからなかった。
+        @param[in] in_row             検索するcellの行番号。
+        @param[in] in_attribute_name  検索するcellの属性名。
+        @param[in] in_attribute_index 検索するcellの属性index番号。
+        @retval !=nullptr 見つかったcell。
+        @retval ==nullptr 対応するcellが見つからなかった。
      */
     public: typename self::cell_string const* find_body_cell(
         std::size_t const                             in_row,

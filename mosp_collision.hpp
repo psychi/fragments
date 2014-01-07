@@ -105,13 +105,12 @@ class psyq::mosp_handle
     //-------------------------------------------------------------------------
     /** @brief 空間分割木にthisを取りつける。
 
-        現在取りつけられている空間分割木とthisを切り離し、
-        新しい空間分割木にthisを取りつける。
+        現在取りつけられている mosp_tree からthisを切り離し、
+        新しい mosp_tree にthisを取りつける。
 
-        @param[in,out] io_tree
-            新たに取りつける、 mosp_tree template型の空間分割木。
-        @param[in] in_min 衝突領域の絶対座標系AABBの最小値。
-        @param[in] in_max 衝突領域の絶対座標系AABBの最大値。
+        @param[in,out] io_tree thisを取りつける mosp_tree 。
+        @param[in]     in_min  thisに対応する衝突領域の、絶対座標系AABBの最小値。
+        @param[in]     in_max  thisに対応する衝突領域の、絶対座標系AABBの最大値。
         @sa detach_tree()
      */
     public: template<typename template_mosp_tree>
@@ -140,7 +139,7 @@ class psyq::mosp_handle
 
     /** @brief 空間分割木からthisを取り外す。
 
-        現在取りつけられている空間分割木とthisを切り離す。
+        現在取りつけられている mosp_tree とthisを切り離す。
 
         @sa attach_tree()
      */
@@ -244,7 +243,6 @@ class psyq::internal::mosp_node
     /** @brief 単独のnodeを、thisの次に挿入する。
 
         挿入するnodeは、単独である必要がある。
-        io_insert_nodeが他のnodeと連結している場合は、挿入に失敗する。
 
         @param[in,out] io_insert_node 挿入するnode。
         @sa remove_next() is_alone()
@@ -320,8 +318,8 @@ class psyq::mosp_coordinates_xyz
     }
 
     /** @brief 絶対座標系空間からmorton座標空間への変換scaleを算出する。
-        @param[in] in_min   衝突判定を行う領域全体を包む絶対座標系AABBの最小値。
-        @param[in] in_max   衝突判定を行う領域全体を包む絶対座標系AABBの最大値。
+        @param[in] in_min   衝突判定領域の全体を包む、絶対座標系AABBの最小値。
+        @param[in] in_max   衝突判定領域の全体を包む、絶対座標系AABBの最大値。
         @param[in] in_level 空間分割の最深level。
      */
     public: static typename self::vector calc_scale(
@@ -455,7 +453,7 @@ class psyq::mosp_space
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 2次元座標で衝突判定を行うmorton空間。
 
-    psyq::mosp_tree のtemplate引数に使う。
+    mosp_tree のtemplate引数に使う。
 
     @tparam template_coordinates @copydoc mosp_space::coordinates
  */
@@ -468,8 +466,10 @@ class psyq::mosp_space_2d: public psyq::mosp_space<template_coordinates>
     /// *thisの上位型。
     public: typedef mosp_space<template_coordinates> super;
 
-    /// 衝突判定に使う座標の成分の数。
-    public: enum: unsigned {DIMENSION = 2};
+    public: enum: unsigned
+    {
+        DIMENSION = 2, ///< 衝突判定に使う座標の成分の数。
+    };
 
     /// @copydoc mosp_space::mosp_space
     public: mosp_space_2d(
@@ -478,9 +478,7 @@ class psyq::mosp_space_2d: public psyq::mosp_space<template_coordinates>
         unsigned const                in_level)
     :
         super(in_min, in_max, in_level)
-    {
-        // pass
-    }
+    {}
 
     /** @brief 2次元座標上の点から、線形4分木のmorton順序を算出する。
         @param[in] in_point 2次元座標上の点。
@@ -536,8 +534,10 @@ class psyq::mosp_space_3d: public psyq::mosp_space<template_coordinates>
     /// *thisの上位型。
     public: typedef mosp_space<template_coordinates> super;
 
-    /// @copydoc mosp_space_2d::DIMENSION
-    public: enum: unsigned {DIMENSION = 3};
+    public: enum: unsigned
+    {
+        DIMENSION = 3, ///< @copydoc mosp_space_2d::DIMENSION
+    };
 
     /// @copydoc mosp_space::mosp_space
     public: mosp_space_3d(
@@ -546,9 +546,7 @@ class psyq::mosp_space_3d: public psyq::mosp_space<template_coordinates>
         unsigned const                in_level)
     :
         super(in_min, in_max, in_level)
-    {
-        // pass
-    }
+    {}
 
     /** @brief 3次元座標上の点から、線形8分木のmorton順序を算出する。
         @param[in] in_point 3次元座標上の点。
@@ -591,12 +589,12 @@ class psyq::mosp_space_3d: public psyq::mosp_space<template_coordinates>
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief morton順序による空間分割木。
 
-    使い方の概要。
+    使い方の概要は、以下の通り。
     -# mosp_tree::mosp_tree() を呼び出し、
        衝突判定を行う領域を空間分割木に設定する。
     -# mosp_handle::attach_tree() を呼び出し、
        mosp_handle を mosp_tree に取りつける。
-    -# mosp_tree::detect_collision() を呼び出し、衝突を判定する。
+    -# mosp_tree::detect_collision() を呼び出し、衝突判定を行う。
 
     @tparam template_collision_object @copydoc mosp_handle::collision_object
     @tparam template_space            @copydoc mosp_tree::space
@@ -645,9 +643,7 @@ class psyq::mosp_tree
         idle_end_(nullptr),
         level_cap_(0),
         detect_collision_(false)
-    {
-        // pass
-    }
+    {}
 
     /// copy-constructorは使用禁止。
     private: mosp_tree(self const&);
@@ -662,10 +658,12 @@ class psyq::mosp_tree
         level_cap_(io_source.level_cap_),
         detect_collision_(false)
     {
+        io_source.cell_map_.clear();
         if (io_source.detect_collision_)
         {
             // 衝突判定中はmoveできない。
             PSYQ_ASSERT(false);
+            this->cell_map_.swap(io_source.cell_map_);
             this->level_cap_ = 0;
         }
         else

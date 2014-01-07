@@ -9,22 +9,28 @@
  */
 #ifndef PSYQ_MOSP_COLLISION_HPP_
 #define PSYQ_MOSP_COLLISION_HPP_
-#include <glm/glm.hpp> // OpenGL Mathematics
 //#include "psyq/bit_algorithm.hpp"
+
+/// psyq::mosp_coordinates_xyz で使う、defaultのvector型。
+#ifndef PSYQ_MOSP_VECTOR_DEFAULT
+#include <glm/glm.hpp> // OpenGL Mathematics
+#define PSYQ_MOSP_VECTOR_DEFAULT glm::vec3
+#endif // !defined(PSYQ_MOSP_VECTOR_DEFAULT)
 
 namespace psyq
 {
     /// @cond
+    namespace internal
+    {
+        template<typename> class mosp_node;
+    }
     template<typename> class mosp_handle;
-    template<typename> class mosp_node;
-    template<typename> class mosp_coordinates_xyz;
-    template<typename> class mosp_coordinates_xz;
+    template<typename = PSYQ_MOSP_VECTOR_DEFAULT> class mosp_coordinates_xyz;
+    template<typename = PSYQ_MOSP_VECTOR_DEFAULT> class mosp_coordinates_xz;
     template<typename> class mosp_space;
-    template<typename> class mosp_space_2d;
-    template<typename> class mosp_space_3d;
-    template<
-        typename, typename = mosp_space_2d<mosp_coordinates_xz<glm::vec3>>>
-            class mosp_tree;
+    template<typename = mosp_coordinates_xz<>> class mosp_space_2d;
+    template<typename = mosp_coordinates_xyz<>> class mosp_space_3d;
+    template<typename, typename = mosp_space_2d<>> class mosp_tree;
     /// @endcond
 }
 
@@ -34,7 +40,7 @@ namespace psyq
     使い方の概要。
     -# 衝突する物体の識別値を、 mosp_handle::object_ に代入しておく。
     -# mosp_handle::attach_tree() を呼び出し、
-       衝突判定handleを空間分割木に取りつける。
+       mosp_handle を空間分割木に取りつける。
     -# mosp_tree::detect_collision() を呼び出し、衝突を判定する。
 
     @tparam template_collision_object @copydoc mosp_handle::collision_object
@@ -49,7 +55,7 @@ class psyq::mosp_handle
     public: typedef template_collision_object collision_object;
 
     //-------------------------------------------------------------------------
-    /** @brief 衝突判定handleを構築する。
+    /** @brief 衝突判定のhandleを構築する。
         @param[in] in_object thisに対応する、衝突物体の識別値の初期値。
      */
     public: explicit mosp_handle(template_collision_object in_object):
@@ -104,8 +110,8 @@ class psyq::mosp_handle
 
         @param[in,out] io_tree
             新たに取りつける、 mosp_tree template型の空間分割木。
-        @param[in] in_min 衝突判定handleに対応する絶対座標系AABBの最小値。
-        @param[in] in_max 衝突判定handleに対応する絶対座標系AABBの最大値。
+        @param[in] in_min 衝突領域の絶対座標系AABBの最小値。
+        @param[in] in_max 衝突領域の絶対座標系AABBの最大値。
         @sa detach_tree()
      */
     public: template<typename template_mosp_tree>
@@ -148,34 +154,33 @@ class psyq::mosp_handle
         }
     }
 
-    /** @brief 現在取りつけられている空間分割木のnodeを取得する。
-        @retval !=nullptr 現在取りつけられている空間分割木のnode。
-        @retval ==nullptr 空間分割木に取りつけられていない。
+    /** @brief 空間分割木に取りつけられているか判定する。
+        @retval true  空間分割木に取りつけられている。
+        @retval false 空間分割木に取りつけられていない。
      */
-    public: mosp_node<template_collision_object> const* get_node() const
+    public: bool is_attached() const
     {
-        return this->node_;
+        return this->node_ != nullptr;
     }
 
     //-------------------------------------------------------------------------
     /** @brief thisに対応する、衝突物体の識別値。
 
-        この値を引数として、衝突判定callback関数が呼び出される。
-
-        @sa mosp_tree::detect_collision()
+        この値を引数として、 mosp_tree::detect_collision()
+        の引数に指定した、衝突callback関数が呼び出される。
      */
     public: template_collision_object object_;
 
     /// thisに対応する空間分割木のnode。
-    private: mosp_node<template_collision_object>* node_;
+    private: internal::mosp_node<template_collision_object>* node_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief このclassをuserが使うのは禁止。空間分割木のnodeの型。
+/** @brief psyq::mosp_tree で使う、単方向循環listのnode。
     @tparam template_collision_object @copydoc mosp_handle::collision_object
  */
 template<typename template_collision_object>
-class psyq::mosp_node
+class psyq::internal::mosp_node
 {
     /// *thisの型。
     private: typedef mosp_node<template_collision_object> self;
@@ -183,9 +188,7 @@ class psyq::mosp_node
 
     //-------------------------------------------------------------------------
     /// @brief 単独のnodeを構築する。
-    public: mosp_node()
-    :
-        handle_(nullptr)
+    public: mosp_node(): handle_(nullptr)
     {
         this->next_ = this;
     }
@@ -208,9 +211,9 @@ class psyq::mosp_node
     /// copy代入演算子は使用禁止。
     private: self& operator=(self const&);
 
-    /** @brief thisに対応する衝突判定handleを取得する。
-        @retval !=nullptr thisに対応する衝突判定handleへのポインタ。
-        @retval ==nullptr thisに対応する衝突判定handleが存在しない。
+    /** @brief thisに対応する mosp_handle を取得する。
+        @retval !=nullptr thisに対応する mosp_handle へのポインタ。
+        @retval ==nullptr thisに対応する mosp_handle が存在しない。
      */
     public: mosp_handle<template_collision_object> const* get_handle() const
     {
@@ -244,41 +247,34 @@ class psyq::mosp_node
         io_insert_nodeが他のnodeと連結している場合は、挿入に失敗する。
 
         @param[in,out] io_insert_node 挿入するnode。
-        @retval true  挿入に成功。
-        @retval false 挿入に失敗したので、何も行わなかった。
         @sa remove_next() is_alone()
      */
-    public: bool insert_next(
-        self& io_insert_node)
+    public: void insert_next(self& io_insert_node)
     {
-        if (!io_insert_node.is_alone())
-        {
-            // 単独の循環ノードでないと挿入できない。
-            PSYQ_ASSERT(false);
-            return false;
-        }
+        // 単独の循環ノードでないと挿入できない。
+        PSYQ_ASSERT(io_insert_node.is_alone());
         io_insert_node.next_ = &this->get_next();
         this->next_ = &io_insert_node;
-        return true;
     }
 
-    /** @brief thisの次にあるnodeを削除する。
+    /** @brief thisの次にあるnodeを取り外す。
 
-        削除したnodeは、単独のnodeとなる。
+        取り外したnodeは、単独のnodeとなる。
 
-        @return 削除したnode。
+        @return 取り外したnode。
      */
     public: self& remove_next()
     {
-        auto const local_next(&this->get_next());
-        this->next_ = &local_next->get_next();
-        local_next->next_ = local_next;
-        return *local_next;
+        auto& local_next(this->get_next());
+        this->next_ = &(local_next.get_next());
+        local_next.next_ = &local_next;
+        return local_next;
     }
 
     //-------------------------------------------------------------------------
-    private: self* next_; ///< 次のnode。
-    /// thisに対応する衝突判定handle。
+    /// 単方向循環listの次の mosp_node
+    private: self* next_;
+    /// thisに対応する mosp_handle
     private: mosp_handle<template_collision_object>* handle_;
 };
 
@@ -302,7 +298,7 @@ class psyq::mosp_coordinates_xyz
         ELEMENT2_INDEX = 2, ///< morton座標の成分#2のindex番号。
     };
 
-    /// morton座標を表すvectorの型。glm::vec3互換であること。
+    /// morton座標を表すvectorの型。 glm::vec3 互換であること。
     public: typedef template_vector vector;
 
     /// morton座標を表すvectorの成分の型。
@@ -452,7 +448,7 @@ class psyq::mosp_space
     /// 衝突判定を行う領域の、絶対座標系での最大座標。
     private: typename self::vector max_;
 
-    /// 最小となる分割空間cellの、絶対座標系での大きさの逆数。
+    /// 最小となる分割空間の、絶対座標系での大きさの逆数。
     private: typename self::vector scale_;
 };
 
@@ -463,9 +459,8 @@ class psyq::mosp_space
 
     @tparam template_coordinates @copydoc mosp_space::coordinates
  */
-template<typename template_coordinates = psyq::mosp_coordinates_xz>
-class psyq::mosp_space_2d:
-    public psyq::mosp_space<template_coordinates>
+template<typename template_coordinates>
+class psyq::mosp_space_2d: public psyq::mosp_space<template_coordinates>
 {
     /// *thisの型。
     private: typedef mosp_space_2d<template_coordinates> self;
@@ -474,7 +469,7 @@ class psyq::mosp_space_2d:
     public: typedef mosp_space<template_coordinates> super;
 
     /// 衝突判定に使う座標の成分の数。
-    public: static unsigned const DIMENSION = 2;
+    public: enum: unsigned {DIMENSION = 2};
 
     /// @copydoc mosp_space::mosp_space
     public: mosp_space_2d(
@@ -532,9 +527,8 @@ class psyq::mosp_space_2d:
 
     @tparam template_coordinates @copydoc mosp_space::coordinates
  */
-template<typename template_coordinates = psyq::mosp_coordinates_xyz>
-class psyq::mosp_space_3d:
-    public psyq::mosp_space<template_coordinates>
+template<typename template_coordinates>
+class psyq::mosp_space_3d: public psyq::mosp_space<template_coordinates>
 {
     /// *thisの型。
     private: typedef mosp_space_3d<template_coordinates> self;
@@ -543,7 +537,7 @@ class psyq::mosp_space_3d:
     public: typedef mosp_space<template_coordinates> super;
 
     /// @copydoc mosp_space_2d::DIMENSION
-    public: static unsigned const DIMENSION = 3;
+    public: enum: unsigned {DIMENSION = 3};
 
     /// @copydoc mosp_space::mosp_space
     public: mosp_space_3d(
@@ -598,48 +592,48 @@ class psyq::mosp_space_3d:
 /** @brief morton順序による空間分割木。
 
     使い方の概要。
-    -# psyq::mosp_tree::mosp_tree() を呼び出し、
+    -# mosp_tree::mosp_tree() を呼び出し、
        衝突判定を行う領域を空間分割木に設定する。
-    -# psyq::mosp_handle::attach_tree() を呼び出し、
-       衝突判定handleを空間分割木に取りつける。
-    -# psyq::mosp_tree::detect_collision() を呼び出し、衝突を判定する。
+    -# mosp_handle::attach_tree() を呼び出し、
+       mosp_handle を mosp_tree に取りつける。
+    -# mosp_tree::detect_collision() を呼び出し、衝突を判定する。
 
     @tparam template_collision_object @copydoc mosp_handle::collision_object
     @tparam template_space            @copydoc mosp_tree::space
 
-    @sa mosp_handle::attach_tree() mosp_handle::detach_tree()
-    @note mosp_tree::cell_map に任意の辞書template-classを指定できるようにしたい。
+    @note mosp_tree::cell_map に任意の辞書template型を指定できるようにしたい。
  */
 template<typename template_collision_object, typename template_space>
 class psyq::mosp_tree
 {
     private: typedef mosp_tree self; ///< *thisの型。
 
-    /// 空間分割木に取りつける、衝突判定handleの型。
+    /// 空間分割木に取りつける mosp_handle 。
     public: typedef mosp_handle<template_collision_object> handle;
     /// @cond
     friend handle;
     /// @endcond
 
-    /// 空間分割木のnodeの型。
-    public: typedef mosp_node<template_collision_object> node;
+    /// 空間分割木のnode 。
+    public: typedef internal::mosp_node<template_collision_object> node;
 
-    /** @brief 使用するmorton空間の型。
-
-        mosp_space_2d や mosp_space_3d を使う。
+    /** @brief 使用するmorton空間。 mosp_space_2d や mosp_space_3d を使う。
      */
     public: typedef template_space space;
 
-    /// cellの辞書。
+    /// cell（同じ分割空間に所属する self::node の、単方向循環list）の辞書。
     private: typedef std::map<
         typename self::space::order, typename self::node*> cell_map;
-    /// node のmemory割当子。
+    /// self::node のmemory割当子。
     private: typedef typename self::cell_map::allocator_type::template
         rebind<typename self::node>::other
             node_allocator;
-    /// 対応できる空間分割の最深level。
-    public: static const unsigned LEVEL_LIMIT =
-        (8 * sizeof(typename self::space::order) - 1) / self::space::DIMENSION;
+    public: enum: unsigned
+    {
+        /// 対応できる空間分割の最深level。
+        LEVEL_LIMIT = (8 * sizeof(typename self::space::order) - 1)
+            / self::space::DIMENSION
+    };
 
     //-------------------------------------------------------------------------
     /// @brief 衝突判定領域のない空間分割木を構築する。
@@ -703,19 +697,17 @@ class psyq::mosp_tree
         }
     }
 
-    /** @brief 取りつけられている衝突判定handleをすべて取り外し、
+    /** @brief 取りつけられてる mosp_handle をすべて取り外し、
                空間分割木を破棄する。
      */
     public: ~mosp_tree()
     {
         // 衝突判定中は、破棄できない。
         PSYQ_ASSERT(!this->detect_collision_);
-        typename self::node_allocator local_allocator(
-            this->cell_map_.get_allocator());
-        self::delete_cell(this->cell_map_.get_allocator(), this->idle_end_);
+        self::destroy_cell(this->cell_map_.get_allocator(), this->idle_end_);
         for (auto const& local_value: this->cell_map_)
         {
-            self::delete_cell(
+            self::destroy_cell(
                 this->cell_map_.get_allocator(), local_value.second);
         }
     }
@@ -737,17 +729,16 @@ class psyq::mosp_tree
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 空間分割木の持つすべてのノードで、衝突判定を行う。
+    /** @brief thisに取りつけられたすべての mosp_handle の衝突判定を行う。
 
-        mosp_handle::attach_tree() によって空間分割木に取りつけられた
-        衝突判定handleのうち、分割空間cellが重なった衝突判定handleの持つ
-        mosp_handle::collision_object を引数として、
-        衝突判定callback関数を呼び出す。
+        mosp_handle::attach_tree() によってthisに取りつけられた
+        mosp_handle のうち、分割空間が重なった2つの mosp_handle の持つ
+        mosp_handle::collision_object を引数に、衝突callback関数を呼び出す。
 
         @param[in] in_detect_callback
-            2つの mosp_handle::collision_object を引数とする、
-            衝突判定callback関数。
-            2つの衝突判定handleの分割空間cellが重なったとき、呼び出される。
+            衝突callback関数。引数として、2つの mosp_handle::collision_object
+            を受け取ること。戻り値はなくてよい。
+            2つの mosp_handle が所属する分割空間が重なったとき、呼び出される。
 
         @retval ture 成功。衝突判定を行った。
         @retval false
@@ -764,7 +755,7 @@ class psyq::mosp_tree
             return false;
         }
 
-        // 分割空間cellごとに、衝突判定を行う。
+        // cellごとに衝突判定を行う。
         for (auto& local_value: *local_cell_map)
         {
             PSYQ_ASSERT(local_value.second != nullptr);
@@ -785,11 +776,8 @@ class psyq::mosp_tree
 
         end_detect() と対になるように呼び出すこと。
 
-        @retval !=nullptr
-            衝突判定を行う分割空間cellの辞書。 detect_cell() で使う。
-        @retval ==nullptr
-            失敗。すでに begin_detect() が呼び出されていた。
-        @sa detect_collision_space()
+        @retval !=nullptr 衝突判定を行うcellの辞書。 detect_cell() で使う。
+        @retval ==nullptr 失敗。すでに begin_detect() が呼び出されていた。
      */
     private: typename self::cell_map const* begin_detect()
     {
@@ -797,7 +785,8 @@ class psyq::mosp_tree
         {
             return nullptr;
         }
-        this->collect_idle_node();
+        this->idle_end_ = self::collect_idle_node(
+            this->idle_end_, this->cell_map_);
         this->detect_collision_ = true;
         return &this->cell_map_;
     }
@@ -812,17 +801,17 @@ class psyq::mosp_tree
         this->detect_collision_ = false;
     }
 
-    /** @brief 分割空間cellと分割空間cellの辞書とで、衝突判定を行う。
+    /** @brief cellとcellの辞書とで、衝突判定を行う。
 
         begin_detect() と end_detect() の間で呼び出すこと。
 
-        @param[in] in_cell_end   衝突判定を行う分割空間cellの終端ノード。
-        @param[in] in_cell_order 衝突判定を行う分割空間cellのモートン順序。
-        @param[in] in_cell_map   衝突の対象となる分割空間cellの辞書。
+        @param[in] in_cell_end   衝突判定を行うcellの終端node。
+        @param[in] in_cell_order 衝突判定を行うcellのmorton順序。
+        @param[in] in_cell_map   衝突の対象となるcellの辞書。
         @param[in] in_detect_callback
-            2つの mosp_handle::collision_object を引数とする、
-            衝突判定コールバック関数。
-            2つの衝突判定ハンドルの分割空間cellが重なったとき、呼び出される。
+            衝突callback関数。戻り値はなくてよい。
+            引数として、2つの mosp_handle::collision_object を受け取ること。
+            2つの mosp_handle が所属する分割空間が重なったとき、呼び出される。
      */
     private: template<typename template_detect_callback>
     static void detect_cell(
@@ -831,7 +820,7 @@ class psyq::mosp_tree
         typename self::cell_map const&    in_cell_map,
         template_detect_callback const&   in_detect_callback)
     {
-        // 分割空間cellの内部だけで、衝突判定を行う。
+        // cellの内部だけで、衝突判定を行う。
         auto local_node(&in_cell_end.get_next());
         while (local_node != &in_cell_end)
         {
@@ -843,10 +832,10 @@ class psyq::mosp_tree
             local_node = &local_node->get_next();
         }
 
-        // 分割空間cellと上位の分割空間cellで、衝突判定を行う。
+        // cellと上位のcellとで、衝突判定を行う。
         for (auto local_super_order(in_cell_order); 0 < local_super_order;)
         {
-            // 上位の分割空間cellへ移動し、衝突判定を行う。
+            // 上位のcellへ移動し、衝突判定を行う。
             local_super_order
                 = (local_super_order - 1) >> self::space::DIMENSION;
             auto const local_super_iterator(
@@ -862,13 +851,13 @@ class psyq::mosp_tree
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 分割空間cellと分割空間cellとで、衝突判定を行う。
-        @param[in] in_cell_end_a 衝突判定を行う分割空間cellAの終端ノード。
-        @param[in] in_cell_end_b 衝突判定を行う分割空間cellBの終端ノード。
+    /** @brief cellとcellとで、衝突判定を行う。
+        @param[in] in_cell_end_a 衝突判定を行うcell-Aの終端node。
+        @param[in] in_cell_end_b 衝突判定を行うcell-Bの終端node。
         @param[in] in_detect_callback
-            2つの mosp_handle::collision_object を引数とする、
-            衝突判定コールバック関数。
-            2つの衝突判定ハンドルの分割空間cellが重なったとき、呼び出される。
+            衝突callback関数。戻り値はなくてよい。
+            引数として、2つの mosp_handle::collision_object を受け取ること。
+            2つの mosp_handle が所属する分割空間が重なったとき、呼び出される。
      */
     private: template<typename template_detect_callback>
     static void detect_cell_and_cell(
@@ -888,14 +877,14 @@ class psyq::mosp_tree
         }
     }
 
-    /** @brief nodeと分割空間cellとで、衝突判定を行う。
+    /** @brief nodeとcellとで、衝突判定を行う。
         @param[in] in_node       衝突判定を行うnode。
-        @param[in] in_cell_begin 衝突判定を行う分割空間cellの先頭node。
-        @param[in] in_cell_end   衝突判定を行う分割空間cellの終端node。
+        @param[in] in_cell_begin 衝突判定を行うcellの先頭node。
+        @param[in] in_cell_end   衝突判定を行うcellの終端node。
         @param[in] in_detect_callback
-            2つの mosp_handle::collision_object を引数とする、
-            衝突判定callback関数。
-            2つの衝突判定handleの分割空間cellが重なったとき、呼び出される。
+            衝突callback関数。戻り値はなくてよい。
+            引数として、2つの mosp_handle::collision_object を受け取ること。
+            2つの mosp_handle が所属する分割空間が重なったとき、呼び出される。
      */
     private: template<typename template_detect_callback>
     static void detect_node_and_cell(
@@ -910,34 +899,34 @@ class psyq::mosp_tree
             return;
         }
 
-        auto local_space_node(&in_cell_begin);
-        while (local_space_node != &in_cell_end)
+        auto local_cell_node(&in_cell_begin);
+        while (local_cell_node != &in_cell_end)
         {
-            auto const local_space_node_handle(local_space_node->get_handle());
-            if (local_space_node_handle != nullptr)
+            auto const local_cell_node_handle(local_cell_node->get_handle());
+            if (local_cell_node_handle != nullptr)
             {
-                // 衝突判定callback関数を呼び出す。
+                // 衝突callback関数を呼び出す。
                 in_detect_callback(
                     local_node_handle->object_,
-                    local_space_node_handle->object_);
+                    local_cell_node_handle->object_);
 
-                // 衝突判定callback関数の中で handle::detach_tree()
-                // される可能性があるので、再取得する。
+                // 衝突callback関数の中で handle::detach_tree()
+                // される可能性があるので、 handle を再取得する。
                 local_node_handle = in_node.get_handle();
                 if (local_node_handle == nullptr)
                 {
                     return;
                 }
             }
-            local_space_node = &local_space_node->get_next();
+            local_cell_node = &local_cell_node->get_next();
         }
     }
 
     //-------------------------------------------------------------------------
-    /** @brief AABBを包む最小の分割空間cellのnodeを構築する。
+    /** @brief AABBを包む最小の分割空間のnodeを構築する。
         @param[in] in_min 絶対座標系AABBの最小値。
         @param[in] in_max 絶対座標系AABBの最大値。
-        @retval !=nullptr AABBを包む最小の分割空間cellのnode。
+        @retval !=nullptr AABBを包む最小の分割空間のnode。
         @retval ==nullptr 失敗。
      */
     private: typename self::node* make_node(
@@ -951,8 +940,9 @@ class psyq::mosp_tree
             return nullptr;
         }
 
-        // morton順序に対応する分割空間cellを用意する。
-        auto const local_morton_order(this->calc_order(in_min, in_max));
+        // morton順序に対応するcellを用意する。
+        auto const local_morton_order(
+            self::calc_order(this->level_cap_, this->space_, in_min, in_max));
         auto& local_cell(this->cell_map_[local_morton_order]);
         if (local_cell == nullptr)
         {
@@ -965,121 +955,118 @@ class psyq::mosp_tree
             }
         }
 
-        // morton順序に対応する空間分割木nodeを用意する。
+        // morton順序に対応するnodeを用意する。
         auto const local_node(this->distribute_idle_node());
-        if (local_node == nullptr || !local_cell->insert_next(*local_node))
+        if (local_node == nullptr)
         {
-            PSYQ_ASSERT(local_node != nullptr);
             PSYQ_ASSERT(false);
             return nullptr;
         }
+        local_cell->insert_next(*local_node);
         return local_node;
     }
 
     //-------------------------------------------------------------------------
-    private: typename self::space::order calc_order(
+    /** @brief AABBを包む最小の分割空間のmorton順序を算出する。
+        @param[in] in_level_cap 空間分割の最深level。
+        @param[in] in_space     使用するmorton空間。
+        @param[in] in_min       絶対座標系AABBの最小値。
+        @param[in] in_max       絶対座標系AABBの最大値。
+        @return AABBを包む最小の分割空間のmorton順序。
+     */
+    private: static typename self::space::order calc_order(
+        std::size_t const                   in_level_cap,
+        typename self::space const&         in_space,
         typename self::space::vector const& in_min,
         typename self::space::vector const& in_max)
-    const
     {
-        auto const local_level_cap(this->level_cap_);
-        if (local_level_cap <= 0)
+        if (in_level_cap <= 0)
         {
             return 0;
         }
 
-        // 衝突物体のAABBを包む、最小の分割空間cellのmorton順序を算出する。
-        auto const local_axis_order_max((1 << local_level_cap) - 1);
+        // 衝突物体のAABBを包む、最小の分割空間のmorton順序を算出する。
+        auto const local_axis_order_max((1 << in_level_cap) - 1);
         auto const local_min_morton(
-            this->space_.calc_order(in_min, local_axis_order_max));
+            in_space.calc_order(in_min, local_axis_order_max));
         auto const local_max_morton(
-            this->space_.calc_order(in_max, local_axis_order_max));
+            in_space.calc_order(in_max, local_axis_order_max));
         auto const local_morton_distance(local_max_morton ^ local_min_morton);
         auto const local_nlz(psyq::count_leading_bit0(local_morton_distance));
         auto const local_level(
             local_morton_distance != 0?
                 (sizeof(local_max_morton) * 8 + 1 - local_nlz)
-                    / self::space::DIMENSION:
+                / self::space::DIMENSION:
                 1);
-        auto const local_num_cells(
-            1 << ((local_level_cap - local_level) * self::space::DIMENSION));
+        auto const local_cell_count(
+            1 << ((in_level_cap - local_level) * self::space::DIMENSION));
         auto const local_base(
-            (local_num_cells - 1) / ((1 << self::space::DIMENSION) - 1));
+            (local_cell_count - 1) / ((1 << self::space::DIMENSION) - 1));
         auto const local_shift(local_level * self::space::DIMENSION);
-        // VisualStudioだと、32以上のbit-shift演算に不具合があるっぽい。
+        /** @note
+            bit数以上のbit-right-shift演算は、
+            C言語の仕様として未定義の動作となる。
+            http://hexadrive.sblo.jp/article/56575654.html
+         */
         PSYQ_ASSERT(local_shift < sizeof(local_max_morton) * 8);
         return local_base + (local_max_morton >> local_shift);
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 空handleのnodeを配布する。
-        @retval !=nullptr 配布された空handleのnode。
+    /** @brief 空きnodeを配布する。
+        @retval !=nullptr 配布された空きnode。
         @retval ==nullptr 失敗。
-        @sa collect_idle_node()
      */
     private: typename self::node* distribute_idle_node()
     {
-        auto local_node(this->idle_end_);
-        if (local_node == nullptr)
+        auto const local_idle_end(this->idle_end_);
+        if (local_idle_end == nullptr)
         {
-            // 空handleのnodeがなかったので、新たにnodeを生成する。
-            typename self::node_allocator local_allocator(
-                this->cell_map_.get_allocator());
-            return new(local_allocator.allocate(1)) typename self::node;
+            // 空きnodeがなかったので、新たにnodeを生成する。
+            return self::create_node(this->cell_map_.get_allocator());
         }
 
-        // 空handleのnodeを取り出す。
-        local_node = &local_node->remove_next();
-        if (local_node == this->idle_end_)
+        // 空きnodeを取り出す。
+        if (local_idle_end->is_alone())
         {
             this->idle_end_ = nullptr;
+            return local_idle_end;
         }
-        return local_node;
+        return &local_idle_end->remove_next();
     }
 
-    /** @brief 空間分割木から、空handleのnodeを回収する。
-
-        distribute_idle_node() によって配布された、空handleのnodeを回収する。
+    /** @brief cellの辞書から空きnodeを回収し、空きlistに追加する。
+        @param[in,out] io_idle_end 空きlistの終端node。
+        @param[in,out] io_cell_map 空きnodeが回収される、cellの辞書。
+        @return 空きlistの新たな終端node。
      */
-    private: void collect_idle_node()
+    private: static typename self::node* collect_idle_node(
+        typename self::node* const io_idle_end,
+        typename self::cell_map&   io_cell_map)
     {
-        if (this->idle_end_ == nullptr)
+        // 空きlistを用意する。
+        auto local_idle_end(io_idle_end);
+        if (local_idle_end == nullptr)
         {
-            typename self::node_allocator local_allocator(
-                this->cell_map_.get_allocator());
-            this->idle_end_
-                = new(local_allocator.allocate(1)) typename self::node;
-            if (this->idle_end_ == nullptr)
+            local_idle_end = self::create_node(io_cell_map.get_allocator());
+            if (local_idle_end == nullptr)
             {
-                PSYQ_ASSERT(false);
-                return;
+                return nullptr;
             }
         }
-        this->idle_end_ = self::collect_idle_node_in_map(
-            *this->idle_end_, this->cell_map_);
-    }
 
-    /** @brief 分割空間cell辞書から、空handleのnodeを回収する。
-        @param[in,out] io_idle_end
-            回収した空handleのnodeを追加する、空handle-listの終端node。
-        @param[in,out] io_cell_map
-            空handleのnodeを回収される、分割空間cellの辞書。
-        @return 空handle-listの新たな終端node。
-     */
-    private: static typename self::node* collect_idle_node_in_map(
-        typename self::node&     io_idle_end,
-        typename self::cell_map& io_cell_map)
-    {
-        auto local_idle_end(&io_idle_end);
-        for (auto i(io_cell_map.begin()); i != io_cell_map.end();)
+        // cellの辞書から空きnodeを回収し、空きlistに追加する。
+        for (auto i(io_cell_map.cbegin()); i != io_cell_map.cend();)
         {
             auto& local_cell_end(*(i->second));
             local_idle_end = self::collect_idle_node_in_cell(
                 *local_idle_end, local_cell_end);
             if (local_cell_end.is_alone())
             {
-                local_idle_end = self::insert_idle_node(
-                    *local_idle_end, local_cell_end);
+                // cellが空になったので、
+                // cellの終端nodeも空きlistに追加し、cellを削除する。
+                local_idle_end->insert_next(local_cell_end);
+                local_idle_end = &local_cell_end;
                 i = io_cell_map.erase(i);
             }
             else
@@ -1090,12 +1077,10 @@ class psyq::mosp_tree
         return local_idle_end;
     }
 
-    /** @brief 分割空間cellから、空ハンドルのノードを回収する。
-        @param[in,out] io_idle_end
-            回収した空ハンドルノードを追加する、空ハンドルリストの終端ノード。
-        @param[in,out] io_cell_end
-            空ハンドルのノードを回収される、分割空間cellの終端ノード。
-        @return 空ハンドルリストの新たな終端ノード。
+    /** @brief cellから空きnodeを回収し、空きlistに追加する。
+        @param[in,out] io_idle_end 空きlistの終端node。
+        @param[in,out] io_cell_end 空きnodeが回収される、cellの終端node。
+        @return 空きlistの新たな終端node。
      */
     private: static typename self::node* collect_idle_node_in_cell(
         typename self::node& io_idle_end,
@@ -1108,48 +1093,40 @@ class psyq::mosp_tree
         {
             if (local_node->get_handle() != nullptr)
             {
-                // 空ハンドルのノードではないので、次のノードへ移行する。
+                // 空きnodeではないので、次のnodeへ移行する。
                 local_last_node = local_node;
             }
             else
             {
-                // 空ハンドルのノードだったので、分割空間cellから削除し、
-                // 空ハンドルリストに追加する。
-                local_idle_end = self::insert_idle_node(
-                    *local_idle_end, local_last_node->remove_next());
+                // 空きnodeだったのでcellから削除し、
+                // 空きlistの末尾に追加する。
+                auto& local_idle_node(local_last_node->remove_next());
+                local_idle_end->insert_next(local_idle_node);
+                local_idle_end = &local_idle_node;
             }
             local_node = &local_last_node->get_next();
         }
         return local_idle_end;
     }
 
-    /** @brief 空ハンドルノードを、空ハンドルリストに追加する。
-        @param[in,out] io_idle_end
-            空ハンドルノードを追加する、空ハンドルリストの終端ノード。
-        @param[in,out] io_idle_node 追加する空ハンドルノード。
-        @return 空ハンドルリストの新たな終端ノード。
-     */
-    private: static typename self::node* insert_idle_node(
-        typename self::node& io_idle_end,
-        typename self::node& io_idle_node)
+    //-------------------------------------------------------------------------
+    private: static typename self::node* create_node(
+        typename self::node_allocator io_allocator)
     {
-        if (!io_idle_node.is_alone())
+        auto const local_node(io_allocator.allocate(1));
+        if (local_node == nullptr)
         {
             PSYQ_ASSERT(false);
+            return nullptr;
         }
-        else if (!io_idle_end.insert_next(io_idle_node))
-        {
-            PSYQ_ASSERT(false);
-        }
-        else
-        {
-            return &io_idle_node;
-        }
-        return &io_idle_end;
+        return new(local_node) typename self::node;
     }
 
-    //-------------------------------------------------------------------------
-    private: static void delete_cell(
+    /** @brief cellが持つnodeを、すべて破棄する。
+        @param[in,out] io_allocator nodeの破棄に使うmemory割当子。
+        @param[in,out] io_cell_end  破棄するcellの終端node。
+     */
+    private: static void destroy_cell(
         typename self::node_allocator io_allocator,
         typename self::node* const    io_cell_end)
     {
@@ -1157,10 +1134,10 @@ class psyq::mosp_tree
         {
             for (;;)
             {
-                auto const local_node(&io_cell_end->remove_next());
-                local_node->~node();
-                io_allocator.deallocate(local_node, 1);
-                if (io_cell_end == local_node)
+                auto& local_node(io_cell_end->remove_next());
+                local_node.~node();
+                io_allocator.deallocate(&local_node, 1);
+                if (io_cell_end == &local_node)
                 {
                     break;
                 }
@@ -1169,11 +1146,11 @@ class psyq::mosp_tree
     }
 
     //-------------------------------------------------------------------------
-    private: typename self::cell_map cell_map_; ///< 分割空間cellの辞書。
-    private: typename self::space space_; ///< 使用するmorton空間。
-    private: typename self::node* idle_end_; ///< 空handle-listの末尾node。
+    private: typename self::cell_map cell_map_; ///< @copydoc cell_map
+    private: typename self::space space_; ///< @copydoc space
+    private: typename self::node* idle_end_; ///< 空きlistの終端node。
     private: std::size_t level_cap_; ///< 空間分割の最深level。
     private: bool detect_collision_; ///< detect_collision() を実行中かどうか。
 };
 
-#endif // !PSYQ_MOSP_COLLISION_HPP_
+#endif // !defined(PSYQ_MOSP_COLLISION_HPP_)

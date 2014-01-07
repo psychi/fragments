@@ -685,7 +685,6 @@ INPUT                  = \
                          ./string/string_table.hpp \
                          ./mosp_collision.hpp \
                          ./fnv_hash.hpp \
-                         ./type_hash.hpp \
                          ./any.hpp \
 
 #                         ./async_file.hpp \

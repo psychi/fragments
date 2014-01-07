@@ -128,7 +128,7 @@ class psyq::string_table
     {}
 
     /** @brief move-constructor
-        @param[in,out] move元となる文字列表。
+        @param[in,out] io_source move元となる文字列表。
      */
     public: string_table(self&& io_source):
         attribute_map_(std::move(io_source.attribute_map_)),
@@ -139,7 +139,7 @@ class psyq::string_table
     }
 
     /** @brief move代入演算子。
-        @param[in,out] move元となる文字列表。
+        @param[in,out] io_source move元となる文字列表。
         @return *this
      */
     public: self& operator=(self&& io_source)

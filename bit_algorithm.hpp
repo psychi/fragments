@@ -103,15 +103,13 @@ namespace psyq
         @param[in] in_float 変換する浮動小数点実数。
         @return 浮動小数点実数のビット集合。
      */
-    inline uint32_t get_float_bits(
-        float const in_float)
+    inline uint32_t get_float_bits(float const in_float)
     {
         return *reinterpret_cast<std::uint32_t const*>(&in_float);
     }
 
     /// @copydoc get_float_bits()
-    inline std::uint64_t get_float_bits(
-        double const in_float)
+    inline std::uint64_t get_float_bits(double const in_float)
     {
         return *reinterpret_cast<std::uint64_t const*>(&in_float);
     }
@@ -124,8 +122,7 @@ namespace psyq
         @return 値が0以外のビット値の数。
      */
     template<typename template_bits>
-    std::size_t count_bit1(
-        template_bits const in_bits)
+    std::size_t count_bit1(template_bits const in_bits)
     {
         std::uint32_t local_bits(in_bits);
         local_bits = (local_bits & 0x55555555)
@@ -143,8 +140,7 @@ namespace psyq
 
     /// @copydoc count_bit1()
     template<>
-    std::size_t count_bit1(
-        std::uint64_t const in_bits)
+    std::size_t count_bit1(std::uint64_t const in_bits)
     {
         auto local_bits(in_bits);
         local_bits = (local_bits & 0x5555555555555555LL)
@@ -164,8 +160,7 @@ namespace psyq
 
     /// @copydoc count_bit1()
     template<>
-    std::size_t count_bit1(
-        std::int64_t const in_bits)
+    std::size_t count_bit1(std::int64_t const in_bits)
     {
         return psyq::count_bit1(static_cast<std::uint64_t>(in_bits));
     }
@@ -178,8 +173,7 @@ namespace psyq
         @return 最下位ビットから0が連続する数。
      */
     template<typename template_bits>
-    std::size_t count_training_bit0(
-        template_bits const in_bits)
+    std::size_t count_training_bit0(template_bits const in_bits)
     {
         return psyq::count_bit1((in_bits & (-in_bits)) - 1);
     }
@@ -192,8 +186,7 @@ namespace psyq
         @return 最上位ビットから0が連続する数。
      */
     template<typename template_bits>
-    std::size_t count_leading_bit0_23bits(
-        template_bits const in_bits)
+    std::size_t count_leading_bit0_23bits(template_bits const in_bits)
     {
         float const local_float(in_bits + 0.5f);
         return 149 - (psyq::get_float_bits(local_float) >> 23);
@@ -206,9 +199,17 @@ namespace psyq
         @param[in] in_bits  数えるビット集合。
         @return 最上位ビットから0が連続する数。
      */
-    inline std::size_t count_leading_bit0_32bits(
-        std::uint32_t const in_bits)
+    inline std::size_t count_leading_bit0_32bits(std::uint32_t const in_bits)
     {
+#if defined(_MSC_VER)
+        if (in_bits == 0)
+        {
+            return 32;
+        }
+        unsigned long local_index;
+        BitScanReverse(&local_index, in_bits);
+        return 31 - local_index;
+#else
         auto local_bits(in_bits);
         local_bits = local_bits | (local_bits >>  1);
         local_bits = local_bits | (local_bits >>  2);
@@ -216,6 +217,7 @@ namespace psyq
         local_bits = local_bits | (local_bits >>  8);
         local_bits = local_bits | (local_bits >> 16);
         return psyq::count_bit1(~local_bits);
+#endif // defined(_MSC_VER)
     }
 
     /** @brief 52ビット整数で、最上位ビットから0が連続する数を数える。
@@ -226,8 +228,7 @@ namespace psyq
         @return 最上位ビットから0が連続する数。
      */
     template<typename template_bits>
-    std::size_t count_leading_bit0_52bits(
-        template_bits const in_bits)
+    std::size_t count_leading_bit0_52bits(template_bits const in_bits)
     {
         double const local_float(in_bits + 0.5);
         return 1074 - (psyq::get_float_bits(local_float) >> 52);
@@ -240,9 +241,17 @@ namespace psyq
         @param[in] in_bits  数えるビット集合。
         @return 最上位ビットから0が連続する数。
      */
-    inline std::size_t count_leading_bit0_64bits(
-        std::uint64_t const in_bits)
+    inline std::size_t count_leading_bit0_64bits(std::uint64_t const in_bits)
     {
+#if defined(_MSC_VER) && defined(BitScanReverse64)
+        if (in_bits == 0)
+        {
+            return 64;
+        }
+        unsigned long local_index;
+        BitScanReverse64(&local_index, in_bits);
+        return 63 - local_index;
+#else
         auto local_bits(in_bits);
         local_bits = local_bits | (local_bits >>  1);
         local_bits = local_bits | (local_bits >>  2);
@@ -251,6 +260,7 @@ namespace psyq
         local_bits = local_bits | (local_bits >> 16);
         local_bits = local_bits | (local_bits >> 32);
         return psyq::count_bit1(~local_bits);
+#endif // defined(_MSC_VER) && defined(BitScanReverse64)
     }
 
     /** @brief 最上位ビットから0が連続する数を数える。
@@ -258,34 +268,46 @@ namespace psyq
         @return 最上位ビットから0が連続する数。
      */
     template<typename template_bits>
-    std::size_t count_leading_bit0(
-        template_bits const in_bits)
+    std::size_t count_leading_bit0(template_bits const in_bits)
     {
-        return psyq::count_leading_bit0_23bits(in_bits)
+        enum: std::uint32_t
+        {
+            MASK = (1 << (sizeof(template_bits) * 8)) - 1,
+        };
+#if defined(_MSC_VER)
+        return psyq::count_leading_bit0_32bits(in_bits & MASK)
+            + sizeof(template_bits) * 8 - 32;
+#else
+        return psyq::count_leading_bit0_23bits(in_bits & MASK)
             + sizeof(template_bits) * 8 - 23;
+#endif // defined(_MSC_VER)
     }
 
     /// @copydoc count_leading_bit0()
     template<>
-    static std::size_t count_leading_bit0(
-        std::uint32_t const in_bits)
+    std::size_t count_leading_bit0(std::uint32_t const in_bits)
     {
+#if defined(_MSC_VER)
+        return psyq::count_leading_bit0_32bits(in_bits);
+#else
         return psyq::count_leading_bit0_52bits(in_bits) - 20;
+#endif // defined(_MSC_VER)
     }
 
     /// @copydoc count_leading_bit0()
     template<>
-    std::size_t count_leading_bit0(
-        std::int32_t const in_bits)
+    std::size_t count_leading_bit0(std::int32_t const in_bits)
     {
         return psyq::count_leading_bit0(static_cast<std::uint32_t>(in_bits));
     }
 
     /// @copydoc count_leading_bit0()
     template<>
-    std::size_t count_leading_bit0(
-        std::uint64_t const in_bits)
+    std::size_t count_leading_bit0(std::uint64_t const in_bits)
     {
+#if defined(_MSC_VER) && defined(BitScanReverse64)
+        return psyq::count_leading_bit0_64bits(in_bits);
+#else
         if (in_bits < (std::uint64_t(1) << 52))
         {
             return psyq::count_leading_bit0_52bits(in_bits) + 12;
@@ -294,12 +316,12 @@ namespace psyq
         {
             return psyq::count_leading_bit0_64bits(in_bits);
         }
+#endif // defined(_MSC_VER) && defined(BitScanReverse64)
     }
 
     /// @copydoc count_leading_bit0()
     template<>
-    std::size_t count_leading_bit0(
-        std::int64_t const in_bits)
+    std::size_t count_leading_bit0(std::int64_t const in_bits)
     {
         return psyq::count_leading_bit0(static_cast<std::uint64_t>(in_bits));
     }

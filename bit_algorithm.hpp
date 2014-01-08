@@ -41,13 +41,9 @@
 #if defined(__GNUC__) && (3 < __GNUC__ || (__GNUC__ == 3 && 4 <= __GNUC_MINOR__)) && defined(__GNUC_PATCHLEVEL__)
 #   define PSYQ_BIT_ALGORITHM_FOR_GNUC
 #elif defined(_MSC_VER)
+#   define PSYQ_BIT_ALGORITHM_FOR_MSC
 #   if defined(_M_PPC)
-#      define PSYQ_BIT_ALGORITHM_FOR_VC_PPC
 #      include <ppcintrinsics.h>
-#   elif defined(_M_ARM)
-#      define PSYQ_BIT_ALGORITHM_FOR_VC_ARM
-#   else
-#      define PSYQ_BIT_ALGORITHM_FOR_VC
 #   endif
 #elif defined(__ARMCC_VERSION)
 #   define PSYQ_BIT_ALGORITHM_FOR_ARMCC
@@ -321,7 +317,7 @@ namespace psyq
                 BIT_WIDTH = sizeof(in_bits) * 8,
                 WIDTH_DIFF = 32 - BIT_WIDTH,
             };
-#if defined(PSYQ_BIT_ALGORITHM_FOR_VC)
+#if defined(PSYQ_BIT_ALGORITHM_FOR_MSC) && defined(BitScanReverse)
             if (in_bits == 0)
             {
                 return BIT_WIDTH;
@@ -329,7 +325,7 @@ namespace psyq
             unsigned long local_index;
             BitScanReverse(&local_index, in_bits);
             return BIT_WIDTH - 1 - local_index;
-#elif defined(PSYQ_BIT_ALGORITHM_FOR_VC_PPC)
+#elif defined(PSYQ_BIT_ALGORITHM_FOR_MSC) && defined(CountLeadingZeros)
             return CountLeadingZeros(in_bits) - WIDTH_DIFF;
 #elif defined(PSYQ_BIT_ALGORITHM_FOR_GNUC)
             return in_bits != 0? __builtin_clz(in_bits) - WIDTH_DIFF: BIT_WIDTH;
@@ -377,7 +373,7 @@ namespace psyq
                 return psyq::internal::count_leading_0bits(local_high_bits);
             }
 #   endif
-#elif defined(PSYQ_BIT_ALGORITHM_FOR_VC)
+#elif defined(PSYQ_BIT_ALGORITHM_FOR_MSC) && defined(BitScanReverse64)
             if (in_bits == 0)
             {
                 return 64;
@@ -385,6 +381,8 @@ namespace psyq
             unsigned long local_index;
             BitScanReverse64(&local_index, in_bits);
             return 63 - local_index;
+#elif defined(PSYQ_BIT_ALGORITHM_FOR_MSC) && defined(CountLeadingZeros64)
+            return CountLeadingZeros64(in_bits);
 #else
             return internal::count_leading_0bits(in_bits);
 #endif

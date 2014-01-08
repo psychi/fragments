@@ -990,7 +990,7 @@ class psyq::mosp_tree
         auto const local_max_morton(
             in_space.calc_order(in_max, local_axis_order_max));
         auto const local_morton_distance(local_max_morton ^ local_min_morton);
-        auto const local_nlz(psyq::count_leading_bit0(local_morton_distance));
+        auto const local_nlz(psyq::count_leading_0bits(local_morton_distance));
         auto const local_level(
             local_morton_distance != 0?
                 (sizeof(local_max_morton) * 8 + 1 - local_nlz)

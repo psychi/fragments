@@ -683,6 +683,7 @@ INPUT                  = \
                          ./string/shared_string.hpp \
                          ./string/array_string.hpp \
                          ./string/string_table.hpp \
+                         ./bit_algorithm.hpp \
                          ./mosp_collision.hpp \
                          ./fnv_hash.hpp \
                          ./any.hpp \

@@ -214,7 +214,7 @@ class psyq::integer_bitset
 
     public: std::size_t count() const
     {
-        return psyq::count_bit1(this->integer_);
+        return psyq::count_1bits(this->integer_);
     }
 
     public: std::size_t size() const

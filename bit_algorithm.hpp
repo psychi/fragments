@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, Hillco Psychi, All rights reserved.
+ï»¿/* Copyright (c) 2013, Hillco Psychi, All rights reserved.
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -28,13 +28,42 @@
 #define PSYQ_BIT_ALGORITHM_HPP_
 #include <cstdint>
 
+#if defined(__alpha__) || defined(__ia64__) || defined(__x86_64__) || defined(_WIN64) || defined(__LP64__) || defined(__LLP64__)
+#   define PSYQ_BIT_ALGORITHM_INTRINSIC_SIZE 64
+#else
+#   define PSYQ_BIT_ALGORITHM_INTRINSIC_SIZE 32
+#endif
+
+#if defined(FLT_RADIX) && FLT_RADIX == 2
+#   define PSYQ_COUNT_LEADING_0BITS_BY_FLOAT
+#endif
+
+#if defined(__GNUC__) && (3 < __GNUC__ || (__GNUC__ == 3 && 4 <= __GNUC_MINOR__)) && defined(__GNUC_PATCHLEVEL__)
+#   define PSYQ_BIT_ALGORITHM_FOR_GNUC
+#elif defined(_MSC_VER)
+#   if defined(_M_PPC)
+#      define PSYQ_BIT_ALGORITHM_FOR_VC_PPC
+#      include <ppcintrinsics.h>
+#   elif defined(_M_ARM)
+#      define PSYQ_BIT_ALGORITHM_FOR_VC_ARM
+#   else
+#      define PSYQ_BIT_ALGORITHM_FOR_VC
+#   endif
+#elif defined(__ARMCC_VERSION)
+#   define PSYQ_BIT_ALGORITHM_FOR_ARMCC
+#elif defined(__ghs__)
+#   define PSYQ_BIT_ALGORITHM_FOR_GHS
+#   include <ppc_ghs.h>
+#endif
+
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq
 {
-    /** @brief w’è‚³‚ê‚½ˆÊ’u‚Ìƒrƒbƒg’l‚ğæ“¾‚·‚éB
-        @param[in] in_bits ƒrƒbƒgW‡‚Æ‚µ‚Äˆµ‚¤®”’lB
-        @param[in] in_position æ“¾‚·‚éƒrƒbƒg‚ÌˆÊ’uB
-        @return w’è‚³‚ê‚½ˆÊ’u‚Ìƒrƒbƒg’lB
+    //-------------------------------------------------------------------------
+    /** @brief æŒ‡å®šã•ã‚ŒãŸä½ç½®ã®ãƒ“ãƒƒãƒˆå€¤ã‚’å–å¾—ã™ã‚‹ã€‚
+        @param[in] in_bits ãƒ“ãƒƒãƒˆé›†åˆã¨ã—ã¦æ‰±ã†æ•´æ•°å€¤ã€‚
+        @param[in] in_position å–å¾—ã™ã‚‹ãƒ“ãƒƒãƒˆã®ä½ç½®ã€‚
+        @return æŒ‡å®šã•ã‚ŒãŸä½ç½®ã®ãƒ“ãƒƒãƒˆå€¤ã€‚
      */
     template<typename template_bits>
     bool get_bit(
@@ -44,10 +73,10 @@ namespace psyq
         return (in_bits >> in_position) & template_bits(1);
     }
 
-    /** @brief w’è‚³‚ê‚½ˆÊ’u‚Éƒrƒbƒg’l‚Æ‚µ‚Ä1‚ğİ’è‚·‚éB
-        @param[in] in_bits     ƒrƒbƒgW‡‚Æ‚µ‚Äˆµ‚¤®”’lB
-        @param[in] in_position İ’è‚·‚éƒrƒbƒg‚ÌˆÊ’uB
-        @return w’è‚³‚ê‚½ˆÊ’u‚Éƒrƒbƒg’l‚ğİ’è‚µ‚½ƒrƒbƒgW‡B
+    /** @brief æŒ‡å®šã•ã‚ŒãŸä½ç½®ã«ãƒ“ãƒƒãƒˆå€¤ã¨ã—ã¦1ã‚’è¨­å®šã™ã‚‹ã€‚
+        @param[in] in_bits     ãƒ“ãƒƒãƒˆé›†åˆã¨ã—ã¦æ‰±ã†æ•´æ•°å€¤ã€‚
+        @param[in] in_position è¨­å®šã™ã‚‹ãƒ“ãƒƒãƒˆã®ä½ç½®ã€‚
+        @return æŒ‡å®šã•ã‚ŒãŸä½ç½®ã«ãƒ“ãƒƒãƒˆå€¤ã‚’è¨­å®šã—ãŸãƒ“ãƒƒãƒˆé›†åˆã€‚
      */
     template<typename template_bits>
     template_bits set_bit(
@@ -57,11 +86,11 @@ namespace psyq
         return (template_bits(1) << in_position) | in_bits;
     }
 
-    /** @brief w’è‚³‚ê‚½ˆÊ’u‚Éƒrƒbƒg’l‚ğİ’è‚·‚éB
-        @param[in] in_bits     ƒrƒbƒgW‡‚Æ‚µ‚Äˆµ‚¤®”’lB
-        @param[in] in_position İ’è‚·‚éƒrƒbƒg‚ÌˆÊ’uB
-        @param[in] in_value    İ’è‚·‚éƒrƒbƒg’lB
-        @return w’è‚³‚ê‚½ˆÊ’u‚Éƒrƒbƒg’l‚ğİ’è‚µ‚½ƒrƒbƒgW‡B
+    /** @brief æŒ‡å®šã•ã‚ŒãŸä½ç½®ã«ãƒ“ãƒƒãƒˆå€¤ã‚’è¨­å®šã™ã‚‹ã€‚
+        @param[in] in_bits     ãƒ“ãƒƒãƒˆé›†åˆã¨ã—ã¦æ‰±ã†æ•´æ•°å€¤ã€‚
+        @param[in] in_position è¨­å®šã™ã‚‹ãƒ“ãƒƒãƒˆã®ä½ç½®ã€‚
+        @param[in] in_value    è¨­å®šã™ã‚‹ãƒ“ãƒƒãƒˆå€¤ã€‚
+        @return æŒ‡å®šã•ã‚ŒãŸä½ç½®ã«ãƒ“ãƒƒãƒˆå€¤ã‚’è¨­å®šã—ãŸãƒ“ãƒƒãƒˆé›†åˆã€‚
      */
     template<typename template_bits>
     template_bits set_bit(
@@ -73,10 +102,10 @@ namespace psyq
             | (in_value << in_position);
     }
 
-    /** @brief w’è‚³‚ê‚½ˆÊ’u‚Éƒrƒbƒg’l‚Æ‚µ‚Ä0‚ğİ’è‚·‚éB
-        @param[in] in_bits     ƒrƒbƒgW‡‚Æ‚µ‚Äˆµ‚¤®”’lB
-        @param[in] in_position İ’è‚·‚éƒrƒbƒg‚ÌˆÊ’uB
-        @return w’è‚³‚ê‚½ˆÊ’u‚Éƒrƒbƒg’l‚ğİ’è‚µ‚½ƒrƒbƒgW‡B
+    /** @brief æŒ‡å®šã•ã‚ŒãŸä½ç½®ã«ãƒ“ãƒƒãƒˆå€¤ã¨ã—ã¦0ã‚’è¨­å®šã™ã‚‹ã€‚
+        @param[in] in_bits     ãƒ“ãƒƒãƒˆé›†åˆã¨ã—ã¦æ‰±ã†æ•´æ•°å€¤ã€‚
+        @param[in] in_position è¨­å®šã™ã‚‹ãƒ“ãƒƒãƒˆã®ä½ç½®ã€‚
+        @return æŒ‡å®šã•ã‚ŒãŸä½ç½®ã«ãƒ“ãƒƒãƒˆå€¤ã‚’è¨­å®šã—ãŸãƒ“ãƒƒãƒˆé›†åˆã€‚
      */
     template<typename template_bits>
     template_bits reset_bit(
@@ -86,10 +115,10 @@ namespace psyq
         return ~(template_bits(1) << in_position) & in_bits;
     }
 
-    /** @brief w’è‚³‚ê‚½ˆÊ’u‚Ìƒrƒbƒg’l‚ğ”½“]‚·‚éB
-        @param[in] in_bits     ƒrƒbƒgW‡‚Æ‚µ‚Äˆµ‚¤®”’lB
-        @param[in] in_position ”½“]‚·‚éƒrƒbƒg‚ÌˆÊ’uB
-        @return w’è‚³‚ê‚½ˆÊ’u‚Ìƒrƒbƒg’l‚ğ”½“]‚µ‚½ƒrƒbƒgW‡B
+    /** @brief æŒ‡å®šã•ã‚ŒãŸä½ç½®ã®ãƒ“ãƒƒãƒˆå€¤ã‚’åè»¢ã™ã‚‹ã€‚
+        @param[in] in_bits     ãƒ“ãƒƒãƒˆé›†åˆã¨ã—ã¦æ‰±ã†æ•´æ•°å€¤ã€‚
+        @param[in] in_position åè»¢ã™ã‚‹ãƒ“ãƒƒãƒˆã®ä½ç½®ã€‚
+        @return æŒ‡å®šã•ã‚ŒãŸä½ç½®ã®ãƒ“ãƒƒãƒˆå€¤ã‚’åè»¢ã—ãŸãƒ“ãƒƒãƒˆé›†åˆã€‚
      */
     template<typename template_bits>
     template_bits flip_bit(
@@ -99,9 +128,10 @@ namespace psyq
         return (template_bits(1) << in_position) ^ in_bits;
     }
 
-    /** @brief •‚“®¬”“_À”‚ğƒrƒbƒgW‡‚É•ÏŠ·‚·‚éB
-        @param[in] in_float •ÏŠ·‚·‚é•‚“®¬”“_À”B
-        @return •‚“®¬”“_À”‚ÌƒrƒbƒgW‡B
+    //-------------------------------------------------------------------------
+    /** @brief æµ®å‹•å°æ•°ç‚¹å®Ÿæ•°ã‚’ãƒ“ãƒƒãƒˆé›†åˆã«å¤‰æ›ã™ã‚‹ã€‚
+        @param[in] in_float å¤‰æ›ã™ã‚‹æµ®å‹•å°æ•°ç‚¹å®Ÿæ•°ã€‚
+        @return æµ®å‹•å°æ•°ç‚¹å®Ÿæ•°ã®ãƒ“ãƒƒãƒˆé›†åˆã€‚
      */
     inline uint32_t get_float_bits(float const in_float)
     {
@@ -114,216 +144,265 @@ namespace psyq
         return *reinterpret_cast<std::uint64_t const*>(&in_float);
     }
 
-    /** @brief ’l‚ª0ˆÈŠO‚Ìƒrƒbƒg’l‚Ì”‚ğ”‚¦‚éB
+    //-------------------------------------------------------------------------
+    /** @brief å€¤ãŒ0ä»¥å¤–ã®ãƒ“ãƒƒãƒˆå€¤ã®æ•°ã‚’æ•°ãˆã‚‹ã€‚
 
-        ˆÈ‰º‚ÌƒEƒFƒuƒy[ƒW‚ğQl‚É‚µ‚½B
+        ä»¥ä¸‹ã®ã‚¦ã‚§ãƒ–ãƒšãƒ¼ã‚¸ã‚’å‚è€ƒã«ã—ãŸã€‚
         http://www.nminoru.jp/~nminoru/programming/bitcount.html
-        @param[in] in_bits  ”‚¦‚éƒrƒbƒgW‡B
-        @return ’l‚ª0ˆÈŠO‚Ìƒrƒbƒg’l‚Ì”B
+        @param[in] in_bits  æ•°ãˆã‚‹ãƒ“ãƒƒãƒˆé›†åˆã€‚
+        @return å€¤ãŒ0ä»¥å¤–ã®ãƒ“ãƒƒãƒˆå€¤ã®æ•°ã€‚
      */
     template<typename template_bits>
-    std::size_t count_bit1(template_bits const in_bits)
+    std::size_t count_1bits(template_bits const in_bits)
     {
-        std::uint32_t local_bits(in_bits);
-        local_bits = (local_bits & 0x55555555)
-            + ((local_bits >> 1) & 0x55555555);
-        local_bits = (local_bits & 0x33333333)
-            + ((local_bits >> 2) & 0x33333333);
-        local_bits = (local_bits & 0x0f0f0f0f)
-            + ((local_bits >> 4) & 0x0f0f0f0f);
-        local_bits = (local_bits & 0x00ff00ff)
-            + ((local_bits >> 8) & 0x00ff00ff);
-        local_bits = (local_bits & 0x0000ffff)
-            + ((local_bits >>16) & 0x0000ffff);
+        return psyq::count_1bits(
+            static_cast<typename std::make_unsigned<template_bits>::type>(
+                in_bits));
+    }
+
+    /// @copydoc count_1bits()
+    template<> std::size_t count_1bits(std::uint8_t const in_bits)
+    {
+        unsigned local_bits(in_bits);
+        local_bits = (local_bits & 0x55) + ((local_bits >> 1) & 0x55);
+        local_bits = (local_bits & 0x33) + ((local_bits >> 2) & 0x33);
+        local_bits = (local_bits & 0x0f) + ((local_bits >> 4) & 0x0f);
         return local_bits;
     }
 
-    /// @copydoc count_bit1()
-    template<>
-    std::size_t count_bit1(std::uint64_t const in_bits)
+    /// @copydoc count_1bits()
+    template<> std::size_t count_1bits(std::uint16_t const in_bits)
+    {
+        unsigned local_bits(in_bits);
+        local_bits = (local_bits & 0x5555) + ((local_bits >> 1) & 0x5555);
+        local_bits = (local_bits & 0x3333) + ((local_bits >> 2) & 0x3333);
+        local_bits = (local_bits & 0x0f0f) + ((local_bits >> 4) & 0x0f0f);
+        local_bits = (local_bits & 0x00ff) + ((local_bits >> 8) & 0x00ff);
+        return local_bits;
+    }
+
+    /// @copydoc count_1bits()
+    template<> std::size_t count_1bits(std::uint32_t const in_bits)
+    {
+        unsigned local_bits(in_bits);
+        local_bits = (local_bits & 0x55555555) + ((local_bits >> 1) & 0x55555555);
+        local_bits = (local_bits & 0x33333333) + ((local_bits >> 2) & 0x33333333);
+        local_bits = (local_bits & 0x0f0f0f0f) + ((local_bits >> 4) & 0x0f0f0f0f);
+        local_bits = (local_bits & 0x00ff00ff) + ((local_bits >> 8) & 0x00ff00ff);
+        local_bits = (local_bits & 0x0000ffff) + ((local_bits >>16) & 0x0000ffff);
+        return local_bits;
+    }
+
+    /// @copydoc count_1bits()
+    template<> std::size_t count_1bits(std::uint64_t const in_bits)
     {
         auto local_bits(in_bits);
-        local_bits = (local_bits & 0x5555555555555555LL)
-            + ((local_bits >> 1) & 0x5555555555555555LL);
-        local_bits = (local_bits & 0x3333333333333333LL)
-            + ((local_bits >> 2) & 0x3333333333333333LL);
-        local_bits = (local_bits & 0x0f0f0f0f0f0f0f0fLL)
-            + ((local_bits >> 4) & 0x0f0f0f0f0f0f0f0fLL);
-        local_bits = (local_bits & 0x00ff00ff00ff00ffLL)
-            + ((local_bits >> 8) & 0x00ff00ff00ff00ffLL);
-        local_bits = (local_bits & 0x0000ffff0000ffffLL)
-            + ((local_bits >>16) & 0x0000ffff0000ffffLL);
-        local_bits = (local_bits & 0x00000000ffffffffLL)
-            + ((local_bits >>32) & 0x00000000ffffffffLL);
+        local_bits = (local_bits & 0x5555555555555555ULL) + ((local_bits >> 1) & 0x5555555555555555ULL);
+        local_bits = (local_bits & 0x3333333333333333ULL) + ((local_bits >> 2) & 0x3333333333333333ULL);
+        local_bits = (local_bits & 0x0f0f0f0f0f0f0f0fULL) + ((local_bits >> 4) & 0x0f0f0f0f0f0f0f0fULL);
+        local_bits = (local_bits & 0x00ff00ff00ff00ffULL) + ((local_bits >> 8) & 0x00ff00ff00ff00ffULL);
+        local_bits = (local_bits & 0x0000ffff0000ffffULL) + ((local_bits >>16) & 0x0000ffff0000ffffULL);
+        local_bits = (local_bits & 0x00000000ffffffffULL) + ((local_bits >>32) & 0x00000000ffffffffULL);
         return static_cast<std::size_t>(local_bits);
     }
 
-    /// @copydoc count_bit1()
-    template<>
-    std::size_t count_bit1(std::int64_t const in_bits)
-    {
-        return psyq::count_bit1(static_cast<std::uint64_t>(in_bits));
-    }
+    //-------------------------------------------------------------------------
+    /** @brief æ•´æ•°å€¤ã®æœ€ä¸‹ä½ãƒ“ãƒƒãƒˆã‹ã‚‰ã€0ãŒé€£ç¶šã™ã‚‹æ•°ã‚’æ•°ãˆã‚‹ã€‚
 
-    /** @brief Å‰ºˆÊƒrƒbƒg‚©‚ç0‚ª˜A‘±‚·‚é”‚ğ”‚¦‚éB
-
-        ˆÈ‰º‚ÌƒEƒFƒuƒy[ƒW‚ğQl‚É‚µ‚½B
+        ä»¥ä¸‹ã®ã‚¦ã‚§ãƒ–ãƒšãƒ¼ã‚¸ã‚’å‚è€ƒã«ã—ãŸã€‚
         http://www.nminoru.jp/~nminoru/programming/bitcount.html
-        @param[in] in_bits  ”‚¦‚éƒrƒbƒgW‡B
-        @return Å‰ºˆÊƒrƒbƒg‚©‚ç0‚ª˜A‘±‚·‚é”B
+
+        @param[in] in_bits æ•°ãˆã‚‹æ•´æ•°å€¤ã€‚
+        @return æœ€ä¸‹ä½ãƒ“ãƒƒãƒˆã‹ã‚‰0ãŒé€£ç¶šã™ã‚‹æ•°ã€‚
      */
     template<typename template_bits>
-    std::size_t count_training_bit0(template_bits const in_bits)
+    std::size_t count_trailing_0bits(template_bits const in_bits)
     {
-        return psyq::count_bit1((in_bits & (-in_bits)) - 1);
+        return psyq::count_1bits((in_bits & (-in_bits)) - 1);
     }
 
-    /** @brief 23ƒrƒbƒg®”‚ÅAÅãˆÊƒrƒbƒg‚©‚ç0‚ª˜A‘±‚·‚é”‚ğ”‚¦‚éB
+    //-------------------------------------------------------------------------
+    namespace internal
+    {
+        /** @brief æ•´æ•°å€¤ã®æœ€ä¸Šä½ãƒ“ãƒƒãƒˆã‹ã‚‰ã€0ãŒé€£ç¶šã™ã‚‹æ•°ã‚’æ•°ãˆã‚‹ã€‚
 
-        ˆÈ‰º‚ÌƒEƒFƒuƒy[ƒW‚ğQl‚É‚µ‚½B
-        http://www.nminoru.jp/~nminoru/programming/bitcount.html
-        @param[in] in_bits  ”‚¦‚éƒrƒbƒgW‡B
-        @return ÅãˆÊƒrƒbƒg‚©‚ç0‚ª˜A‘±‚·‚é”B
+            ä»¥ä¸‹ã®ã‚¦ã‚§ãƒ–ãƒšãƒ¼ã‚¸ã‚’å‚è€ƒã«ã—ãŸã€‚
+            http://www.nminoru.jp/~nminoru/programming/bitcount.html
+
+            @param[in] in_bits æ•°ãˆã‚‹æ•´æ•°å€¤ã€‚
+            @return æœ€ä¸Šä½ãƒ“ãƒƒãƒˆã‹ã‚‰0ãŒé€£ç¶šã™ã‚‹æ•°ã€‚
+         */
+        inline std::size_t count_leading_0bits(std::uint8_t const in_bits)
+        {
+            unsigned local_bits(in_bits);
+            local_bits = local_bits | (local_bits >> 1);
+            local_bits = local_bits | (local_bits >> 2);
+            local_bits = local_bits | (local_bits >> 4);
+            return psyq::count_1bits(static_cast<std::uint8_t>(~local_bits));
+        }
+
+        /// @copydoc count_leading_0bits()
+        inline std::size_t count_leading_0bits(std::uint16_t const in_bits)
+        {
+            unsigned local_bits(in_bits);
+            local_bits = local_bits | (local_bits >> 1);
+            local_bits = local_bits | (local_bits >> 2);
+            local_bits = local_bits | (local_bits >> 4);
+            local_bits = local_bits | (local_bits >> 8);
+            return psyq::count_1bits(static_cast<std::uint16_t>(~local_bits));
+        }
+
+        /// @copydoc count_leading_0bits()
+        inline std::size_t count_leading_0bits(std::uint32_t const in_bits)
+        {
+            unsigned local_bits(in_bits);
+            local_bits = local_bits | (local_bits >> 1);
+            local_bits = local_bits | (local_bits >> 2);
+            local_bits = local_bits | (local_bits >> 4);
+            local_bits = local_bits | (local_bits >> 8);
+            local_bits = local_bits | (local_bits >>16);
+            return psyq::count_1bits(static_cast<std::uint32_t>(~local_bits));
+        }
+
+        /// @copydoc count_leading_0bits()
+        inline std::size_t count_leading_0bits(std::uint64_t in_bits)
+        {
+            in_bits = in_bits | (in_bits >> 1);
+            in_bits = in_bits | (in_bits >> 2);
+            in_bits = in_bits | (in_bits >> 4);
+            in_bits = in_bits | (in_bits >> 8);
+            in_bits = in_bits | (in_bits >>16);
+            in_bits = in_bits | (in_bits >>32);
+            return psyq::count_1bits(~in_bits);
+        }
+
+#if defined(PSYQ_COUNT_LEADING_0BITS_BY_FLOAT)
+        /** @brief æµ®å‹•å°æ•°ç‚¹ã®ãƒ“ãƒƒãƒˆãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã‚’ç”¨ã„ã¦ã€
+                   æ•´æ•°å€¤ã®æœ€ä¸Šä½ãƒ“ãƒƒãƒˆã‹ã‚‰ã€0ãŒé€£ç¶šã™ã‚‹æ•°ã‚’æ•°ãˆã‚‹ã€‚
+
+            ä»¥ä¸‹ã®ã‚¦ã‚§ãƒ–ãƒšãƒ¼ã‚¸ã‚’å‚è€ƒã«ã—ãŸã€‚
+            http://www.nminoru.jp/~nminoru/programming/bitcount.html
+
+            @param[in] in_bits æ•°ãˆã‚‹æ•´æ•°å€¤ã€‚
+            @return æœ€ä¸Šä½ãƒ“ãƒƒãƒˆã‹ã‚‰0ãŒé€£ç¶šã™ã‚‹æ•°ã€‚
+         */
+        template<typename template_bits>
+        std::size_t count_leading_0bits_by_float(template_bits const in_bits)
+        {
+            static_assert(std::is_unsigned<template_bits>::value, "");
+            static_assert(
+                FLT_RADIX == 2 && sizeof(in_bits) * 8 < FLT_MANT_DIG, "");
+            return sizeof(in_bits) * 8 + (1 - FLT_MIN_EXP) - (
+                psyq::get_float_bits(in_bits + 0.5f) >> (FLT_MANT_DIG - 1));
+        }
+
+        /// @copydoc count_leading_0bits_by_float()
+        template<>
+        std::size_t count_leading_0bits_by_float(std::uint32_t const in_bits)
+        {
+            static_assert(
+                FLT_RADIX == 2 && sizeof(in_bits) * 8 < DBL_MANT_DIG, "");
+            return sizeof(in_bits) * 8 + (1 - DBL_MIN_EXP) - (
+                psyq::get_float_bits(in_bits + 0.5) >> (DBL_MANT_DIG - 1));
+        }
+#endif
+
+        /** @brief ç„¡ç¬¦å·æ•´æ•°å€¤ã®æœ€ä¸Šä½ãƒ“ãƒƒãƒˆã‹ã‚‰ã€0ãŒé€£ç¶šã™ã‚‹æ•°ã‚’æ•°ãˆã‚‹ã€‚
+            @param[in] in_bits æ•°ãˆã‚‹æ•´æ•°å€¤ã€‚
+            @return æœ€ä¸Šä½ãƒ“ãƒƒãƒˆã‹ã‚‰0ãŒé€£ç¶šã™ã‚‹æ•°ã€‚
+         */
+        template<typename template_bits>
+        std::size_t count_leading_0bits_in_unsigned(template_bits const in_bits)
+        {
+            static_assert(sizeof(in_bits) <= sizeof(std::uint32_t), "");
+            static_assert(std::is_unsigned<template_bits>::value, "");
+            enum: unsigned
+            {
+                BIT_WIDTH = sizeof(in_bits) * 8,
+                WIDTH_DIFF = 32 - BIT_WIDTH,
+            };
+#if defined(PSYQ_BIT_ALGORITHM_FOR_VC)
+            if (in_bits == 0)
+            {
+                return BIT_WIDTH;
+            }
+            unsigned long local_index;
+            BitScanReverse(&local_index, in_bits);
+            return BIT_WIDTH - 1 - local_index;
+#elif defined(PSYQ_BIT_ALGORITHM_FOR_VC_PPC)
+            return CountLeadingZeros(in_bits) - WIDTH_DIFF;
+#elif defined(PSYQ_BIT_ALGORITHM_FOR_GNUC)
+            return in_bits != 0? __builtin_clz(in_bits) - WIDTH_DIFF: BIT_WIDTH;
+#elif defined(PSYQ_BIT_ALGORITHM_FOR_ARMCC)
+            return in_bits != 0? __clz(in_bits) - WIDTH_DIFF: BIT_WIDTH;
+#elif defined(PSYQ_BIT_ALGORITHM_FOR_GHS)
+            return in_bits != 0? __CLZ(in_bits) - WIDTH_DIFF: BIT_WIDTH;
+#elif defined(PSYQ_COUNT_LEADING_0BITS_BY_FLOAT)
+            return psyq::internal::count_leading_0bits_by_float(in_bits);
+#else
+            return psyq::internal::count_leading_0bits(in_bits);
+#endif
+        }
+
+        /// @copydoc count_leading_0bits_in_unsigned()
+        template<>
+        std::size_t count_leading_0bits_in_unsigned(std::uint64_t const in_bits)
+        {
+#if PSYQ_BIT_ALGORITHM_INTRINSIC_SIZE < 64
+#   if defined(PSYQ_COUNT_LEADING_0BITS_BY_FLOAT)
+            if ((in_bits >> (DBL_MANT_DIG - 1)) == 0)
+            {
+                /*  æµ®å‹•å°æ•°ç‚¹ã‚’åˆ©ç”¨ã—ã€æœ€ä¸Šä½ãƒ“ãƒƒãƒˆã‹ã‚‰0ãŒé€£ç¶šã™ã‚‹æ•°ã‚’æ•°ãˆã‚‹ã€‚
+                    ä»¥ä¸‹ã®ã‚¦ã‚§ãƒ–ãƒšãƒ¼ã‚¸ã‚’å‚è€ƒã«ã—ãŸã€‚
+                    http://www.nminoru.jp/~nminoru/programming/bitcount.html
+                 */
+                return sizeof(in_bits) * 8 + (1 - DBL_MIN_EXP) - (
+                    psyq::get_float_bits(in_bits + 0.5) >> (DBL_MANT_DIG - 1));
+            }
+            else
+            {
+                static_assert(48 < DBL_MANT_DIG, "");
+                return psyq::internal::count_leading_0bits_by_float(
+                    static_cast<std::uint16_t>(in_bits >> 48));
+            }
+#   else
+            auto const local_high_bits(static_cast<std::uint32_t>(in_bits >> 32));
+            if (local_high_bits == 0)
+            {
+                return 32 + psyq::internal::count_leading_0bits(
+                    static_cast<std::uint32_t>(in_bits));
+            }
+            else
+            {
+                return psyq::internal::count_leading_0bits(local_high_bits);
+            }
+#   endif
+#elif defined(PSYQ_BIT_ALGORITHM_FOR_VC)
+            if (in_bits == 0)
+            {
+                return 64;
+            }
+            unsigned long local_index;
+            BitScanReverse64(&local_index, in_bits);
+            return 63 - local_index;
+#else
+            return internal::count_leading_0bits(in_bits);
+#endif
+        }
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief æ•´æ•°å€¤ã®æœ€ä¸Šä½ãƒ“ãƒƒãƒˆã‹ã‚‰ã€0ãŒé€£ç¶šã™ã‚‹æ•°ã‚’æ•°ãˆã‚‹ã€‚
+
+        @param[in] in_bits æ•°ãˆã‚‹æ•´æ•°å€¤ã€‚
+        @return æœ€ä¸Šä½ãƒ“ãƒƒãƒˆã‹ã‚‰0ãŒé€£ç¶šã™ã‚‹æ•°ã€‚
      */
     template<typename template_bits>
-    std::size_t count_leading_bit0_23bits(template_bits const in_bits)
+    std::size_t count_leading_0bits(template_bits const in_bits)
     {
-        float const local_float(in_bits + 0.5f);
-        return 149 - (psyq::get_float_bits(local_float) >> 23);
-    }
-
-    /** @brief 32ƒrƒbƒg®”‚ÅAÅãˆÊƒrƒbƒg‚©‚ç0‚ª˜A‘±‚·‚é”‚ğ”‚¦‚éB
-
-        ˆÈ‰º‚ÌƒEƒFƒuƒy[ƒW‚ğQl‚É‚µ‚½B
-        http://www.nminoru.jp/~nminoru/programming/bitcount.html
-        @param[in] in_bits  ”‚¦‚éƒrƒbƒgW‡B
-        @return ÅãˆÊƒrƒbƒg‚©‚ç0‚ª˜A‘±‚·‚é”B
-     */
-    inline std::size_t count_leading_bit0_32bits(std::uint32_t const in_bits)
-    {
-#if defined(_MSC_VER)
-        if (in_bits == 0)
-        {
-            return 32;
-        }
-        unsigned long local_index;
-        BitScanReverse(&local_index, in_bits);
-        return 31 - local_index;
-#else
-        auto local_bits(in_bits);
-        local_bits = local_bits | (local_bits >>  1);
-        local_bits = local_bits | (local_bits >>  2);
-        local_bits = local_bits | (local_bits >>  4);
-        local_bits = local_bits | (local_bits >>  8);
-        local_bits = local_bits | (local_bits >> 16);
-        return psyq::count_bit1(~local_bits);
-#endif // defined(_MSC_VER)
-    }
-
-    /** @brief 52ƒrƒbƒg®”‚ÅAÅãˆÊƒrƒbƒg‚©‚ç0‚ª˜A‘±‚·‚é”‚ğ”‚¦‚éB
-
-        ˆÈ‰º‚ÌƒEƒFƒuƒy[ƒW‚ğQl‚É‚µ‚½B
-        http://www.nminoru.jp/~nminoru/programming/bitcount.html
-        @param[in] in_bits  ”‚¦‚éƒrƒbƒgW‡B
-        @return ÅãˆÊƒrƒbƒg‚©‚ç0‚ª˜A‘±‚·‚é”B
-     */
-    template<typename template_bits>
-    std::size_t count_leading_bit0_52bits(template_bits const in_bits)
-    {
-        double const local_float(in_bits + 0.5);
-        return 1074 - (psyq::get_float_bits(local_float) >> 52);
-    }
-
-    /** @brief 64ƒrƒbƒg®”‚ÅAÅãˆÊƒrƒbƒg‚©‚ç0‚ª˜A‘±‚·‚é”‚ğ”‚¦‚éB
-
-        ˆÈ‰º‚ÌƒEƒFƒuƒy[ƒW‚ğQl‚É‚µ‚½B
-        http://www.nminoru.jp/~nminoru/programming/bitcount.html
-        @param[in] in_bits  ”‚¦‚éƒrƒbƒgW‡B
-        @return ÅãˆÊƒrƒbƒg‚©‚ç0‚ª˜A‘±‚·‚é”B
-     */
-    inline std::size_t count_leading_bit0_64bits(std::uint64_t const in_bits)
-    {
-#if defined(_MSC_VER) && defined(BitScanReverse64)
-        if (in_bits == 0)
-        {
-            return 64;
-        }
-        unsigned long local_index;
-        BitScanReverse64(&local_index, in_bits);
-        return 63 - local_index;
-#else
-        auto local_bits(in_bits);
-        local_bits = local_bits | (local_bits >>  1);
-        local_bits = local_bits | (local_bits >>  2);
-        local_bits = local_bits | (local_bits >>  4);
-        local_bits = local_bits | (local_bits >>  8);
-        local_bits = local_bits | (local_bits >> 16);
-        local_bits = local_bits | (local_bits >> 32);
-        return psyq::count_bit1(~local_bits);
-#endif // defined(_MSC_VER) && defined(BitScanReverse64)
-    }
-
-    /** @brief ÅãˆÊƒrƒbƒg‚©‚ç0‚ª˜A‘±‚·‚é”‚ğ”‚¦‚éB
-        @param[in] in_bits  ”‚¦‚éƒrƒbƒgW‡B
-        @return ÅãˆÊƒrƒbƒg‚©‚ç0‚ª˜A‘±‚·‚é”B
-     */
-    template<typename template_bits>
-    std::size_t count_leading_bit0(template_bits const in_bits)
-    {
-        enum: std::uint32_t
-        {
-            MASK = (1 << (sizeof(template_bits) * 8)) - 1,
-        };
-#if defined(_MSC_VER)
-        return psyq::count_leading_bit0_32bits(in_bits & MASK)
-            + sizeof(template_bits) * 8 - 32;
-#else
-        return psyq::count_leading_bit0_23bits(in_bits & MASK)
-            + sizeof(template_bits) * 8 - 23;
-#endif // defined(_MSC_VER)
-    }
-
-    /// @copydoc count_leading_bit0()
-    template<>
-    std::size_t count_leading_bit0(std::uint32_t const in_bits)
-    {
-#if defined(_MSC_VER)
-        return psyq::count_leading_bit0_32bits(in_bits);
-#else
-        return psyq::count_leading_bit0_52bits(in_bits) - 20;
-#endif // defined(_MSC_VER)
-    }
-
-    /// @copydoc count_leading_bit0()
-    template<>
-    std::size_t count_leading_bit0(std::int32_t const in_bits)
-    {
-        return psyq::count_leading_bit0(static_cast<std::uint32_t>(in_bits));
-    }
-
-    /// @copydoc count_leading_bit0()
-    template<>
-    std::size_t count_leading_bit0(std::uint64_t const in_bits)
-    {
-#if defined(_MSC_VER) && defined(BitScanReverse64)
-        return psyq::count_leading_bit0_64bits(in_bits);
-#else
-        if (in_bits < (std::uint64_t(1) << 52))
-        {
-            return psyq::count_leading_bit0_52bits(in_bits) + 12;
-        }
-        else
-        {
-            return psyq::count_leading_bit0_64bits(in_bits);
-        }
-#endif // defined(_MSC_VER) && defined(BitScanReverse64)
-    }
-
-    /// @copydoc count_leading_bit0()
-    template<>
-    std::size_t count_leading_bit0(std::int64_t const in_bits)
-    {
-        return psyq::count_leading_bit0(static_cast<std::uint64_t>(in_bits));
+        return psyq::internal::count_leading_0bits_in_unsigned(
+            static_cast<typename std::make_unsigned<template_bits>::type>(
+                in_bits));
     }
 
 } // namespace psyq

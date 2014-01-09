@@ -63,34 +63,76 @@ namespace psyq
     /** @brief 指定された位置のビット値を取得する。
         @param[in] in_bits ビット集合として扱う整数値。
         @param[in] in_position 取得するビットの位置。
-        @return 指定された位置のビット値。
+        @return
+            指定された位置のビット値。
+            ただし in_position がsizeof(int)以上だった場合
+            - in_bits が有符号整数型なら、符号ビットを返す。
+            - in_bits が無符号整数型なら、falseを返す。
      */
     template<typename template_bits>
     bool get_bit(
         template_bits const in_bits,
         std::size_t   const in_position)
     {
-        return (in_bits >> in_position) & template_bits(1);
+        return in_position < sizeof(int) * 8?
+            psyq::get_bit_fast(in_bits, in_position): in_bits < 0;
+    }
+
+    /** @brief 指定された位置のビット値を取得する。
+        @param[in] in_bits ビット集合として扱う整数値。
+        @param[in] in_position 取得するビットの位置。
+        @return
+            指定された位置のビット値。
+            ただし in_position がsizeof(int)以上だった場合、未定義。
+     */
+    template<typename template_bits>
+    bool get_bit_fast(
+        template_bits const in_bits,
+        std::size_t   const in_position)
+    {
+        return ((in_bits >> in_position) & 1) != 0;
     }
 
     /** @brief 指定された位置にビット値として1を設定する。
         @param[in] in_bits     ビット集合として扱う整数値。
         @param[in] in_position 設定するビットの位置。
-        @return 指定された位置にビット値を設定したビット集合。
+        @return
+            指定されたビット位置に1を設定した整数値。
+            ただし in_position がsizeof(int)以上だった場合、
+            in_bits をそのまま返す。
      */
     template<typename template_bits>
     template_bits set_bit(
         template_bits const in_bits,
         std::size_t   const in_position)
     {
-        return (template_bits(1) << in_position) | in_bits;
+        return in_position < sizeof(in_bits) * 8?
+            psyq::set_bit_fast(in_bits, in_position): in_bits;
+    }
+
+    /** @brief 指定された位置にビット値として1を設定する。
+        @param[in] in_bits     ビット集合として扱う整数値。
+        @param[in] in_position 設定するビットの位置。
+        @return
+            指定されたビット位置に1を設定した整数値。
+            ただし in_position がsizeof(int)以上だった場合、未定義。
+     */
+    template<typename template_bits>
+    template_bits set_bit_fast(
+        template_bits const in_bits,
+        std::size_t   const in_position)
+    {
+        return static_cast<template_bits>((1 << in_position) | in_bits);
     }
 
     /** @brief 指定された位置にビット値を設定する。
         @param[in] in_bits     ビット集合として扱う整数値。
         @param[in] in_position 設定するビットの位置。
         @param[in] in_value    設定するビット値。
-        @return 指定された位置にビット値を設定したビット集合。
+        @return
+            指定されたビット位置に in_value を設定した整数値。
+            ただし in_position がsizeof(int)以上だった場合、
+            in_bits をそのまま返す。
      */
     template<typename template_bits>
     template_bits set_bit(
@@ -98,34 +140,90 @@ namespace psyq
         std::size_t   const in_position,
         bool          const in_value)
     {
-        return psyq::reset_bit(in_bits, in_position)
+        return in_position < sizeof(in_bits) * 8?
+            psyq::set_bit_fast(in_bits, in_position, in_value): in_bits;
+    }
+
+    /** @brief 指定された位置にビット値を設定する。
+        @param[in] in_bits     ビット集合として扱う整数値。
+        @param[in] in_position 設定するビットの位置。
+        @param[in] in_value    設定するビット値。
+        @return
+            指定されたビット位置に in_value を設定した整数値。
+            ただし in_position がsizeof(int)以上だった場合、未定義。
+     */
+    template<typename template_bits>
+    template_bits set_bit_fast(
+        template_bits const in_bits,
+        std::size_t   const in_position,
+        bool          const in_value)
+    {
+        return psyq::reset_bit_fast(in_bits, in_position)
             | (in_value << in_position);
     }
 
     /** @brief 指定された位置にビット値として0を設定する。
         @param[in] in_bits     ビット集合として扱う整数値。
         @param[in] in_position 設定するビットの位置。
-        @return 指定された位置にビット値を設定したビット集合。
+        @return
+            指定されたビット位置に0を設定した整数値。
+            ただし in_position がsizeof(int)以上だった場合、
+            in_bits をそのまま返す。
      */
     template<typename template_bits>
     template_bits reset_bit(
         template_bits const in_bits,
         std::size_t   const in_position)
     {
-        return ~(template_bits(1) << in_position) & in_bits;
+        return in_position < sizeof(in_bits) * 8?
+            psyq::reset_bit_fast(in_bits, in_position): in_bits;
+    }
+
+    /** @brief 指定された位置にビット値として0を設定する。
+        @param[in] in_bits     ビット集合として扱う整数値。
+        @param[in] in_position 設定するビットの位置。
+        @return
+            指定されたビット位置に0を設定した整数値。
+            ただし in_position がsizeof(int)以上だった場合、未定義。
+     */
+    template<typename template_bits>
+    template_bits reset_bit_fast(
+        template_bits const in_bits,
+        std::size_t   const in_position)
+    {
+        return static_cast<template_bits>(~(1 << in_position) & in_bits);
     }
 
     /** @brief 指定された位置のビット値を反転する。
         @param[in] in_bits     ビット集合として扱う整数値。
         @param[in] in_position 反転するビットの位置。
-        @return 指定された位置のビット値を反転したビット集合。
+        @return
+            指定されたビット位置の値を反転した整数値。
+            ただし in_position がsizeof(int)以上だった場合、
+            in_bits をそのまま返す。
      */
     template<typename template_bits>
     template_bits flip_bit(
         template_bits const in_bits,
         std::size_t   const in_position)
     {
-        return (template_bits(1) << in_position) ^ in_bits;
+        return in_position < sizeof(in_bits) * 8?
+            psyq::flip_bit_fast(in_bits, in_position): in_bits;
+    }
+
+    /** @brief 指定された位置のビット値を反転する。
+        @param[in] in_bits     ビット集合として扱う整数値。
+        @param[in] in_position 反転するビットの位置。
+        @return
+            指定されたビット位置の値を反転した整数値。
+            ただし in_position がsizeof(int)以上だった場合、未定義。
+     */
+    template<typename template_bits>
+    template_bits flip_bit_fast(
+        template_bits const in_bits,
+        std::size_t   const in_position)
+    {
+        return static_cast<template_bits>((1 << in_position) ^ in_bits);
     }
 
     //-------------------------------------------------------------------------
@@ -163,12 +261,12 @@ namespace psyq
         };
 
         //---------------------------------------------------------------------
-        /** @brief 無符号整数値の、1になっているビットを数える。
+        /** @brief 無符号整数で、1になっているビットを数える。
 
             以下のウェブページを参考にした。
             http://www.nminoru.jp/~nminoru/programming/bitcount.html
 
-            @param[in] in_bits  ビットを数えられる無符号整数値。
+            @param[in] in_bits  ビットを数える無符号整数の値。
             @return 1になっているビットの数。
          */
         inline std::size_t count_1bits_by_logical(std::uint8_t const in_bits)
@@ -180,7 +278,7 @@ namespace psyq
             return local_bits;
         }
 
-        /// @copydoc count_1bits()
+        /// @copydoc count_1bits_by_logical()
         inline std::size_t count_1bits_by_logical(std::uint16_t const in_bits)
         {
             unsigned local_bits(in_bits);
@@ -191,7 +289,7 @@ namespace psyq
             return local_bits;
         }
 
-        /// @copydoc count_1bits()
+        /// @copydoc count_1bits_by_logical()
         inline std::size_t count_1bits_by_logical(std::uint32_t const in_bits)
         {
             unsigned local_bits(in_bits);
@@ -208,7 +306,7 @@ namespace psyq
             return local_bits;
         }
 
-        /// @copydoc count_1bits()
+        /// @copydoc count_1bits_by_logical()
         inline std::size_t count_1bits_by_logical(std::uint64_t const in_bits)
         {
             auto local_bits(in_bits);
@@ -228,8 +326,8 @@ namespace psyq
         }
 
         //---------------------------------------------------------------------
-        /** @brief 無符号整数値の、1になっているビットを数える。
-            @param[in] in_bits ビットを数えられる無符号整数値。
+        /** @brief 無符号整数で、1になっているビットを数える。
+            @param[in] in_bits ビットを数える無符号整数の値。
             @return 1になってるビットの数。
          */
         template<typename template_bits>
@@ -252,7 +350,10 @@ namespace psyq
 #endif
         }
 
-        /// @copydoc count_1bits_of_uint
+        /** @brief 64ビット無符号整数で、1になっているビットを数える。
+            @param[in] in_bits ビットを数える無符号整数の値。
+            @return 1になってるビットの数。
+         */
         template<> std::size_t count_1bits_of_uint(std::uint64_t const in_bits)
         {
 #if PSYQ_BIT_ALGORITHM_INTRINSIC_SIZE < 64
@@ -308,12 +409,12 @@ namespace psyq
         }
 
         //---------------------------------------------------------------------
-        /** @brief 整数値の最上位ビットから、0が連続する数を数える。
+        /** @brief 無符号整数の最上位ビットから、0が連続する数を数える。
 
             以下のウェブページを参考にした。
             http://tlsf.baisoku.org/
 
-            @param[in] in_bits 数える整数値。
+            @param[in] in_bits ビットを数える無符号整数の値。
             @return 最上位ビットから0が連続する数。
          */
         inline std::size_t count_leading_0bits_by_logical(
@@ -343,7 +444,7 @@ namespace psyq
             return sizeof(in_bits) * 8 - local_fls;
         }
 
-        /// @copydoc count_leading_0bits()
+        /// @copydoc count_leading_0bits_by_logical()
         inline std::size_t count_leading_0bits_by_logical(
             std::uint16_t const in_bits)
         {
@@ -376,7 +477,7 @@ namespace psyq
             return sizeof(in_bits) * 8 - local_fls;
         }
 
-        /// @copydoc count_leading_0bits()
+        /// @copydoc count_leading_0bits_by_logical()
         inline std::size_t count_leading_0bits_by_logical(
             std::uint32_t const in_bits)
         {
@@ -414,7 +515,7 @@ namespace psyq
             return sizeof(in_bits) * 8 - local_fls;
         }
 
-        /// @copydoc count_leading_0bits()
+        /// @copydoc count_leading_0bits_by_logical()
         inline std::size_t count_leading_0bits_by_logical(
             std::uint64_t in_bits)
         {
@@ -459,12 +560,12 @@ namespace psyq
 
         //---------------------------------------------------------------------
         /** @brief 浮動小数点のビットパターンを使って、
-                   整数値の最上位ビットから、0が連続する数を数える。
+                   無符号整数の最上位ビットから、0が連続する数を数える。
 
             以下のウェブページを参考にした。
             http://www.nminoru.jp/~nminoru/programming/bitcount.html
 
-            @param[in] in_bits 数える整数値。
+            @param[in] in_bits ビットを数える整数の値。
             @return 最上位ビットから0が連続する数。
          */
         template<typename template_bits>
@@ -503,8 +604,8 @@ namespace psyq
         }
 
         //---------------------------------------------------------------------
-        /** @brief 無符号整数値の最上位ビットから、0が連続する数を数える。
-            @param[in] in_bits 数える整数値。
+        /** @brief 無符号整数の最上位ビットから、0が連続する数を数える。
+            @param[in] in_bits ビットを数える整数の値。
             @return 最上位ビットから0が連続する数。
          */
         template<typename template_bits>
@@ -547,7 +648,10 @@ namespace psyq
 #endif
         }
 
-        /// @copydoc count_leading_0bits_of_uint()
+        /** @brief 64ビット無符号整数の最上位ビットから、0が連続する数を数える。
+            @param[in] in_bits ビットを数える整数の値。
+            @return 最上位ビットから0が連続する数。
+         */
         template<>
         std::size_t count_leading_0bits_of_uint(std::uint64_t const in_bits)
         {
@@ -607,8 +711,12 @@ namespace psyq
         }
 
         //---------------------------------------------------------------------
-        /** @brief 無符号整数値の最下位ビットから、0が連続する数を数える。
-            @param[in] in_bits 数える整数値。
+        /** @brief 無符号整数の最下位ビットから、0が連続する数を数える。
+
+            以下のウェブページを参考にした。
+            http://www.nminoru.jp/~nminoru/programming/bitcount.html
+
+            @param[in] in_bits 数える整数の値。
             @return 最下位ビットから、0が連続する数。
          */
         template<typename template_bits>
@@ -618,8 +726,8 @@ namespace psyq
                 static_cast<template_bits>(((~in_bits + 1) & in_bits) - 1));
         }
 
-        /** @brief 無符号整数値の最下位ビットから、0が連続する数を数える。
-            @param[in] in_bits 数える整数値。
+        /** @brief 無符号整数の最下位ビットから、0が連続する数を数える。
+            @param[in] in_bits ビットを数える整数の値。
             @return 最下位ビットから、0が連続する数。
          */
         template<typename template_bits>
@@ -648,7 +756,10 @@ namespace psyq
 #endif
         }
 
-        /// @copydoc count_trailing_0bits_of_uint
+        /** @brief 64ビット無符号整数の最下位ビットから、0が連続する数を数える。
+            @param[in] in_bits ビットを数える整数の値。
+            @return 最下位ビットから、0が連続する数。
+         */
         template<>
         std::size_t count_trailing_0bits_of_uint(std::uint64_t const in_bits)
         {
@@ -685,8 +796,8 @@ namespace psyq
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 整数値の、1になっているビットを数える。
-        @param[in] in_bits  数えられる整数値。
+    /** @brief 整数で、1になっているビットを数える。
+        @param[in] in_bits  ビットを数える整数の値。
         @return 1になっているビットの数。
      */
     template<typename template_bits>
@@ -699,9 +810,9 @@ namespace psyq
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 整数値の最上位ビットから、0が連続する数を数える。
+    /** @brief 整数の最上位ビットから、0が連続する数を数える。
 
-        @param[in] in_bits 数えられる整数値。
+        @param[in] in_bits ビットを数える整数の値。
         @return 最上位ビットから0が連続する数。
      */
     template<typename template_bits>
@@ -714,8 +825,8 @@ namespace psyq
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 整数値の最下位ビットから、0が連続する数を数える。
-        @param[in] in_bits 数えられる整数値。
+    /** @brief 整数の最下位ビットから、0が連続する数を数える。
+        @param[in] in_bits ビットを数える整数の値。
         @return 最下位ビットから0が連続する数。
      */
     template<typename template_bits>
@@ -728,6 +839,7 @@ namespace psyq
     }
 
     //-------------------------------------------------------------------------
+    /// 単体テストに使う。この名前空間をuserが直接accessするのは禁止。
     namespace test
     {
         template<typename template_value> void count_1bits()

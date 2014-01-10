@@ -229,21 +229,19 @@ namespace psyq
     //-------------------------------------------------------------------------
     namespace internal
     {
-        /** @brief 基本整数型から、同じ大きさのstd::uint*_t型に変換する。
-            @tparam template_type 元となる基本整数型。
+        /** @brief 組み込み整数型から、同じ大きさのstd::uint*_t型に変換する。
+            @tparam template_type 元となる型。
          */
         template<typename template_type> struct make_std_uint
         {
-            static_assert(
-                // template_type は、基本整数型であること。
-                std::is_integral<template_type>::value,
-                "'template_type' must be primitive integer type.");
-
             /** @brief template_type型から変換した、std::uint*_t型。
 
-                同じ大きさのstd::uint*_t型がない場合は、void型となる。
+                変換できない場合は、void型となる。
              */
             typedef
+                typename std::conditional<
+                    !std::is_integral<template_type>::value,
+                    void,
                 typename std::conditional<
                     sizeof(template_type) == sizeof(std::uint8_t),
                     std::uint8_t,
@@ -255,8 +253,9 @@ namespace psyq
                     std::uint32_t,
                 typename std::conditional<
                     sizeof(template_type) == sizeof(std::uint64_t),
-                    std::uint64_t, void
-                >::type>::type>::type>::type
+                    std::uint64_t,
+                    void
+                >::type>::type>::type>::type>::type
                     type;
         };
 
@@ -360,7 +359,7 @@ namespace psyq
             // 上位32ビットと下位32ビットに分ける。
             auto const local_high_count(
                 psyq::internal::count_1bits_of_uint(
-                static_cast<std::uint32_t>(in_bits >> 32)));
+                    static_cast<std::uint32_t>(in_bits >> 32)));
             auto const local_low_count(
                 psyq::internal::count_1bits_of_uint(
                     static_cast<std::uint32_t>(in_bits)));
@@ -677,16 +676,13 @@ namespace psyq
             // 上位32ビットと下位32ビットに分ける。
             auto const local_high_bits(
                 static_cast<std::uint32_t>(in_bits >> 32));
-            if (local_high_bits == 0)
-            {
-                return 32 + psyq::internal::count_leading_0bits_by_logical(
-                    static_cast<std::uint32_t>(in_bits));
-            }
-            else
+            if (local_high_bits != 0)
             {
                 return psyq::internal::count_leading_0bits_by_logical(
                     local_high_bits);
             }
+            return 32 + psyq::internal::count_leading_0bits_by_logical(
+                static_cast<std::uint32_t>(in_bits));
 #   else
             // 64ビットのまま処理する。
             return psyq::internal::count_leading_0bits_by_logical(in_bits);
@@ -772,11 +768,8 @@ namespace psyq
             {
                 return local_low_count;
             }
-            else
-            {
-                return 32 + psyq::internal::count_trailing_0bits_of_uint(
-                    static_cast<std::uint32_t>(in_bits >> 32));
-            }
+            return 32 + psyq::internal::count_trailing_0bits_of_uint(
+                static_cast<std::uint32_t>(in_bits >> 32));
 #elif defined(PSYQ_BIT_ALGORITHM_FOR_MSC) && define(BitScanForward64)
             if (in_bits == 0)
             {
@@ -805,13 +798,16 @@ namespace psyq
     {
         typedef typename psyq::internal::make_std_uint<template_bits>::type
             std_uint;
+        static_assert(
+            // template_bits は、64ビット以下の整数型であること。
+            std::is_unsigned<std_uint>::value,
+            "'template_bits' must be integer type of 64bits or less.");
         return psyq::internal::count_1bits_of_uint(
             static_cast<std_uint>(in_bits));
     }
 
     //-------------------------------------------------------------------------
     /** @brief 整数の最上位ビットから、0が連続する数を数える。
-
         @param[in] in_bits ビットを数える整数の値。
         @return 最上位ビットから0が連続する数。
      */
@@ -820,6 +816,10 @@ namespace psyq
     {
         typedef typename psyq::internal::make_std_uint<template_bits>::type
             std_uint;
+        static_assert(
+            // template_bits は、64ビット以下の整数型であること。
+            std::is_unsigned<std_uint>::value,
+            "'template_bits' must be integer type of 64bits or less.");
         return psyq::internal::count_leading_0bits_of_uint(
             static_cast<std_uint>(in_bits));
     }
@@ -834,6 +834,10 @@ namespace psyq
     {
         typedef typename psyq::internal::make_std_uint<template_bits>::type
             std_uint;
+        static_assert(
+            // template_bits は、64ビット以下の整数型であること。
+            std::is_unsigned<std_uint>::value,
+            "'template_bits' must be integer type of 64bits or less.");
         return psyq::internal::count_trailing_0bits_of_uint(
             static_cast<std_uint>(in_bits));
     }

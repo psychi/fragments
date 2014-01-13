@@ -855,7 +855,6 @@ class psyq::mosp_tree
                     local_super_cell_end.get_next(),
                     local_super_cell_end,
                     in_detect_callback);
-                local_node = &local_node->get_next();
             }
         }
     }

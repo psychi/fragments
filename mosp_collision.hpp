@@ -819,15 +819,16 @@ class psyq::mosp_tree
         template_detect_callback const&   in_detect_callback)
     {
         // cellの内部だけで、衝突判定を行う。
-        auto local_node(&in_cell_end.get_next());
-        while (local_node != &in_cell_end)
+        for (
+            auto local_node(&in_cell_end.get_next());
+            local_node != &in_cell_end;
+            local_node = &local_node->get_next())
         {
             self::detect_node_and_cell(
                 *local_node,
                 local_node->get_next(),
                 in_cell_end,
                 in_detect_callback);
-            local_node = &local_node->get_next();
         }
 
         // cellと上位のcellとで、衝突判定を行う。
@@ -838,40 +839,24 @@ class psyq::mosp_tree
                 = (local_super_order - 1) >> self::space::DIMENSION;
             auto const local_super_iterator(
                 in_cell_map.find(local_super_order));
-            if (local_super_iterator != in_cell_map.end())
+            if (local_super_iterator == in_cell_map.end())
             {
-                self::detect_cell_and_cell(
-                    in_cell_end,
-                    *(local_super_iterator->second),
-                    in_detect_callback);
+                // 上位のcellがなかったので、次へ。
+                continue;
             }
-        }
-    }
-
-    //-------------------------------------------------------------------------
-    /** @brief cellとcellとで、衝突判定を行う。
-        @param[in] in_cell_end_a 衝突判定を行うcell-Aの終端node。
-        @param[in] in_cell_end_b 衝突判定を行うcell-Bの終端node。
-        @param[in] in_detect_callback
-            衝突callback関数。戻り値はなくてよい。
-            引数として、2つの mosp_handle::collision_object を受け取ること。
-            2つの mosp_handle が所属する分割空間が重なったとき、呼び出される。
-     */
-    private: template<typename template_detect_callback>
-    static void detect_cell_and_cell(
-        typename self::node const&      in_cell_end_a,
-        typename self::node const&      in_cell_end_b,
-        template_detect_callback const& in_detect_callback)
-    {
-        auto local_node(&in_cell_end_a.get_next());
-        while (local_node != &in_cell_end_a)
-        {
-            self::detect_node_and_cell(
-                *local_node,
-                in_cell_end_b.get_next(),
-                in_cell_end_b,
-                in_detect_callback);
-            local_node = &local_node->get_next();
+            auto const& local_super_cell_end(*local_super_iterator->second);
+            for (
+                auto local_node(&in_cell_end.get_next());
+                local_node != &in_cell_end;
+                local_node = &local_node->get_next())
+            {
+                self::detect_node_and_cell(
+                    *local_node,
+                    local_super_cell_end.get_next(),
+                    local_super_cell_end,
+                    in_detect_callback);
+                local_node = &local_node->get_next();
+            }
         }
     }
 
@@ -896,27 +881,29 @@ class psyq::mosp_tree
         {
             return;
         }
-
-        auto local_cell_node(&in_cell_begin);
-        while (local_cell_node != &in_cell_end)
+        for (
+            auto local_cell_node(&in_cell_begin);
+            local_cell_node != &in_cell_end;
+            local_cell_node = &local_cell_node->get_next())
         {
             auto const local_cell_node_handle(local_cell_node->get_handle());
-            if (local_cell_node_handle != nullptr)
+            if (local_cell_node_handle == nullptr)
             {
-                // 衝突callback関数を呼び出す。
-                in_detect_callback(
-                    local_node_handle->object_,
-                    local_cell_node_handle->object_);
-
-                // 衝突callback関数の中で handle::detach_tree()
-                // される可能性があるので、 handle を再取得する。
-                local_node_handle = in_node.get_handle();
-                if (local_node_handle == nullptr)
-                {
-                    return;
-                }
+                continue;
             }
-            local_cell_node = &local_cell_node->get_next();
+
+            // 衝突callback関数を呼び出す。
+            in_detect_callback(
+                local_node_handle->object_,
+                local_cell_node_handle->object_);
+
+            // 衝突callback関数の中で handle::detach_tree()
+            // される場合があるので、 handle を再取得する。
+            local_node_handle = in_node.get_handle();
+            if (local_node_handle == nullptr)
+            {
+                return;
+            }
         }
     }
 
@@ -984,21 +971,27 @@ class psyq::mosp_tree
         }
 
         // 衝突物体のAABBを包む、最小の分割空間のmorton順序を算出する。
-        auto const local_axis_order_max((1 << in_level_cap) - 1);
+        unsigned const local_axis_order_max((1 << in_level_cap) - 1);
         auto const local_min_morton(
             in_space.calc_order(in_min, local_axis_order_max));
         auto const local_max_morton(
             in_space.calc_order(in_max, local_axis_order_max));
         auto const local_morton_distance(local_max_morton ^ local_min_morton);
-        auto const local_nlz(psyq::count_leading_0bits(local_morton_distance));
-        auto const local_level(
-            local_morton_distance != 0?
-                (sizeof(local_max_morton) * 8 + 1 - local_nlz)
-                / self::space::DIMENSION:
-                1);
-        auto const local_cell_count(
+        unsigned local_level;
+        if (local_morton_distance != 0)
+        {
+            auto const local_clz(
+                psyq::count_leading_0bits(local_morton_distance));
+            local_level = (sizeof(local_morton_distance) * 8 + 1 - local_clz)
+                / self::space::DIMENSION;
+        }
+        else
+        {
+            local_level = 1;
+        }
+        unsigned const local_cell_count(
             1 << ((in_level_cap - local_level) * self::space::DIMENSION));
-        auto const local_base(
+        unsigned const local_base(
             (local_cell_count - 1) / ((1 << self::space::DIMENSION) - 1));
         auto const local_shift(local_level * self::space::DIMENSION);
         /** @note
@@ -1086,8 +1079,10 @@ class psyq::mosp_tree
     {
         auto local_idle_end(&io_idle_end);
         auto local_last_node(&io_cell_end);
-        auto local_node(&io_cell_end.get_next());
-        while (local_node != &io_cell_end)
+        for (
+            auto local_node(&io_cell_end.get_next());
+            local_node != &io_cell_end;
+            local_node = &local_last_node->get_next())
         {
             if (local_node->get_handle() != nullptr)
             {
@@ -1102,7 +1097,6 @@ class psyq::mosp_tree
                 local_idle_end->insert_next(local_idle_node);
                 local_idle_end = &local_idle_node;
             }
-            local_node = &local_last_node->get_next();
         }
         return local_idle_end;
     }

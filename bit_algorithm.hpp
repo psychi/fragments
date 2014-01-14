@@ -268,6 +268,67 @@ namespace psyq
             @param[in] in_bits  ビットを数える無符号整数の値。
             @return 1になっているビットの数。
          */
+        inline std::size_t count_1bits_by_table(
+            std::uint8_t const in_bits)
+        {
+            static std::uint8_t const BITS_COUNT_TABLE[256] =
+            {
+                0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
+                1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+                1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+                2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+                1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+                2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+                2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+                3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+                1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+                2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+                2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+                3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+                2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+                3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+                3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+                4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8,
+            };
+            return BITS_COUNT_TABLE[in_bits];
+        }
+
+        /// @copydoc count_1bits_by_table()
+        inline std::size_t count_1bits_by_table(
+            std::uint16_t const in_bits)
+        {
+            return count_1bits_by_table(static_cast<std::uint8_t>(in_bits))
+                + count_1bits_by_table(
+                    static_cast<std::uint8_t>(in_bits >> 8));
+        }
+
+        /// @copydoc count_1bits_by_table()
+        inline std::size_t count_1bits_by_table(
+            std::uint32_t const in_bits)
+        {
+            return count_1bits_by_table(static_cast<std::uint16_t>(in_bits))
+                + count_1bits_by_table(
+                    static_cast<std::uint16_t>(in_bits >> 16));
+        }
+
+        /// @copydoc count_1bits_by_table()
+        inline std::size_t count_1bits_by_table(
+            std::uint64_t const in_bits)
+        {
+            return count_1bits_by_table(static_cast<std::uint32_t>(in_bits))
+                + count_1bits_by_table(
+                    static_cast<std::uint32_t>(in_bits >> 32));
+        }
+
+        //---------------------------------------------------------------------
+        /** @brief 無符号整数で、1になっているビットを数える。
+
+            以下のウェブページを参考にした。
+            http://www.nminoru.jp/~nminoru/programming/bitcount.html
+
+            @param[in] in_bits  ビットを数える無符号整数の値。
+            @return 1になっているビットの数。
+         */
         inline std::size_t count_1bits_by_logical(std::uint8_t const in_bits)
         {
             unsigned local_bits(in_bits);
@@ -345,7 +406,7 @@ namespace psyq
 #elif defined(PSYQ_BIT_ALGORITHM_FOR_GNUC)
             return __builtin_popcount(in_bits);
 #else
-            return psyq::internal::count_1bits_by_logical(in_bits);
+            return psyq::internal::count_1bits_by_table(in_bits);
 #endif
         }
 
@@ -371,7 +432,7 @@ namespace psyq
 #elif defined(PSYQ_BIT_ALGORITHM_FOR_GNUC) && ULLONG_MAX == 0xffffffffffffffff
             return __builtin_popcountll(in_bits);
 #else
-            return psyq::internal::count_1bits_by_logical(in_bits);
+            return psyq::internal::count_1bits_by_table(in_bits);
 #endif
         }
 
@@ -411,7 +472,7 @@ namespace psyq
         /** @brief 無符号整数の最上位ビットから、0が連続する数を数える。
 
             以下のウェブページを参考にした。
-            http://tlsf.baisoku.org/
+            http://www.nminoru.jp/~nminoru/programming/bitcount.html
 
             @param[in] in_bits ビットを数える無符号整数の値。
             @return 最上位ビットから0が連続する数。
@@ -420,27 +481,11 @@ namespace psyq
             std::uint8_t const in_bits)
         {
             unsigned local_bits(in_bits);
-            unsigned local_fls(sizeof(in_bits) * 8);
-            if (local_bits == 0)
-            {
-                --local_fls;
-            }
-            if ((local_bits & 0xf0) == 0)
-            {
-                local_bits <<= 4;
-                local_fls -= 4;
-            }
-            if ((local_bits & 0xc0) == 0)
-            {
-                local_bits <<= 2;
-                local_fls -= 2;
-            }
-            if ((local_bits & 0x80) == 0)
-            {
-                local_bits <<= 1;
-                local_fls -= 1;
-            }
-            return sizeof(in_bits) * 8 - local_fls;
+            local_bits = local_bits | (local_bits >> 1);
+            local_bits = local_bits | (local_bits >> 2);
+            local_bits = local_bits | (local_bits >> 4);
+            return psyq::internal::count_1bits_of_uint(
+                static_cast<std::uint8_t>(~local_bits));
         }
 
         /// @copydoc count_leading_0bits_by_logical()
@@ -448,32 +493,12 @@ namespace psyq
             std::uint16_t const in_bits)
         {
             unsigned local_bits(in_bits);
-            unsigned local_fls(sizeof(in_bits) * 8);
-            if (local_bits == 0)
-            {
-                --local_fls;
-            }
-            if ((local_bits & 0xff00) == 0)
-            {
-                local_bits <<= 8;
-                local_fls -= 8;
-            }
-            if ((local_bits & 0xf000) == 0)
-            {
-                local_bits <<= 4;
-                local_fls -= 4;
-            }
-            if ((local_bits & 0xc000) == 0)
-            {
-                local_bits <<= 2;
-                local_fls -= 2;
-            }
-            if ((local_bits & 0x8000) == 0)
-            {
-                local_bits <<= 1;
-                local_fls -= 1;
-            }
-            return sizeof(in_bits) * 8 - local_fls;
+            local_bits = local_bits | (local_bits >> 1);
+            local_bits = local_bits | (local_bits >> 2);
+            local_bits = local_bits | (local_bits >> 4);
+            local_bits = local_bits | (local_bits >> 8);
+            return psyq::internal::count_1bits_of_uint(
+                static_cast<std::uint16_t>(~local_bits));
         }
 
         /// @copydoc count_leading_0bits_by_logical()
@@ -481,37 +506,13 @@ namespace psyq
             std::uint32_t const in_bits)
         {
             unsigned local_bits(in_bits);
-            unsigned local_fls(sizeof(in_bits) * 8);
-            if (local_bits == 0)
-            {
-                --local_fls;
-            }
-            if ((local_bits & 0xffff0000) == 0)
-            {
-                local_bits <<= 16;
-                local_fls -= 16;
-            }
-            if ((local_bits & 0xff000000) == 0)
-            {
-                local_bits <<= 8;
-                local_fls -= 8;
-            }
-            if ((local_bits & 0xf0000000) == 0)
-            {
-                local_bits <<= 4;
-                local_fls -= 4;
-            }
-            if ((local_bits & 0xc0000000) == 0)
-            {
-                local_bits <<= 2;
-                local_fls -= 2;
-            }
-            if ((local_bits & 0x80000000) == 0)
-            {
-                local_bits <<= 1;
-                local_fls -= 1;
-            }
-            return sizeof(in_bits) * 8 - local_fls;
+            local_bits = local_bits | (local_bits >> 1);
+            local_bits = local_bits | (local_bits >> 2);
+            local_bits = local_bits | (local_bits >> 4);
+            local_bits = local_bits | (local_bits >> 8);
+            local_bits = local_bits | (local_bits >>16);
+            return psyq::internal::count_1bits_of_uint(
+                static_cast<std::uint32_t>(~local_bits));
         }
 
         /// @copydoc count_leading_0bits_by_logical()
@@ -519,42 +520,13 @@ namespace psyq
             std::uint64_t in_bits)
         {
             auto local_bits(in_bits);
-            unsigned local_fls(sizeof(in_bits) * 8);
-            if (local_bits == 0)
-            {
-                --local_fls;
-            }
-            if ((local_bits & 0xffffffff00000000) == 0)
-            {
-                local_bits <<= 32;
-                local_fls -= 32;
-            }
-            if ((local_bits & 0xffff000000000000) == 0)
-            {
-                local_bits <<= 16;
-                local_fls -= 16;
-            }
-            if ((local_bits & 0xff00000000000000) == 0)
-            {
-                local_bits <<= 8;
-                local_fls -= 8;
-            }
-            if ((local_bits & 0xf000000000000000) == 0)
-            {
-                local_bits <<= 4;
-                local_fls -= 4;
-            }
-            if ((local_bits & 0xc000000000000000) == 0)
-            {
-                local_bits <<= 2;
-                local_fls -= 2;
-            }
-            if ((local_bits & 0x8000000000000000) == 0)
-            {
-                local_bits <<= 1;
-                local_fls -= 1;
-            }
-            return sizeof(in_bits) * 8 - local_fls;
+            local_bits = local_bits | (local_bits >> 1);
+            local_bits = local_bits | (local_bits >> 2);
+            local_bits = local_bits | (local_bits >> 4);
+            local_bits = local_bits | (local_bits >> 8);
+            local_bits = local_bits | (local_bits >>16);
+            local_bits = local_bits | (local_bits >>32);
+            return psyq::internal::count_1bits_of_uint(~local_bits);
         }
 
         //---------------------------------------------------------------------
@@ -718,8 +690,8 @@ namespace psyq
         template<typename template_bits>
         std::size_t count_trailing_0bits_by_logical(template_bits const in_bits)
         {
-            return psyq::internal::count_1bits_by_logical(
-                static_cast<template_bits>(((~in_bits + 1) & in_bits) - 1));
+            return psyq::internal::count_1bits_of_uint(
+                static_cast<template_bits>((~in_bits) & (in_bits - 1)));
         }
 
         /** @brief 無符号整数の最下位ビットから、0が連続する数を数える。

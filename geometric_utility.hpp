@@ -7,6 +7,14 @@
 
 namespace psyq
 {
+    /// @cond
+    template<typename> class geometric_aabb;
+    template<typename> class geometric_sphere;
+    template<typename> class geometric_segment;
+    template<typename> class geometric_ray;
+    template<typename> class geometric_cuboid;
+    /// @endcond
+
     template<typename template_value>
     bool is_nearly_equal(
         template_value const in_left_value,
@@ -61,151 +69,7 @@ namespace psyq
             psyq::square_geometric_vector_length(in_vector),
             typename psyq::geometric_vector_element<template_vector>::type(1));
     }
-
-    /// @cond
-    template<typename> class geometric_sphere;
-    template<typename> class geometric_segment;
-    template<typename> class geometric_ray;
-    template<typename> class geometric_aabb;
-    template<typename> class geometric_cuboid;
-    /// @endcond
 }
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// 球。
-template<typename template_vector>
-class psyq::geometric_sphere
-{
-    private: typedef psyq::geometric_sphere<template_vector> self;
-
-    public: typedef template_vector vector;
-
-    public: geometric_sphere(
-        template_vector const& in_center,
-        typename geometric_vector_element<template_vector>::type const
-            in_radius)
-     :
-        center_(in_center),
-        radius_(in_radius)
-    {
-        PSYQ_ASSERT(0 <= in_radius);
-    }
-
-    public: template_vector const& get_center() const
-    {
-        return this->center_;
-    }
-
-    public: void set_center(template_vector const& in_center)
-    {
-        this->center_ = in_center;
-    }
-
-    public: typename psyq::geometric_vector_element<template_vector>::type
-    get_radius() const
-    {
-        return this->radius_;
-    }
-
-    public: void set_radius(
-        typename psyq::geometric_vector_element<template_vector>::type const
-            in_radius)
-    {
-        PSYQ_ASSERT(0 <= in_radius);
-        this->radius_ = in_radius;
-    }
-
-    /// 球の中心位置。
-    private: template_vector center_;
-    /// 球の半径。
-    private: typename geometric_vector_element<template_vector>::type radius_;
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// 線分。
-template<typename template_vector>
-class psyq::geometric_segment
-{
-    private: typedef psyq::geometric_segment<template_vector> self;
-
-    public: typedef template_vector vector;
-
-    public: geometric_segment(
-        template_vector const& in_origin,
-        template_vector const& in_direction)
-    :
-        origin_(in_origin),
-        direction_(in_direction)
-    {}
-
-    public: template_vector const& get_origin() const
-    {
-        return this->origin_;
-    }
-
-    public: void set_origin(template_vector const& in_origin)
-    {
-        this->origin_ = in_origin;
-    }
-
-    public: template_vector const& get_direction() const
-    {
-        return this->direction_;
-    }
-
-    public: void set_direction(template_vector const& in_direction)
-    {
-        this->direction_ = in_direction;
-    }
-
-    private: template_vector origin_;    ///< 線分の始点。
-    private: template_vector direction_; ///< 線分の方向と大きさ。
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// 半線分。
-template<typename template_vector>
-class psyq::geometric_ray: public psyq::geometric_segment<template_vector>
-{
-    private: typedef psyq::geometric_ray<template_vector> self;
-    public: typedef psyq::geometric_segment<template_vector> super;
-
-    public: typedef template_vector vector;
-
-    public: geometric_ray(
-        template_vector const& in_origin,
-        template_vector const& in_direction)
-    :
-        super(in_origin, in_direction)
-    {
-        PSYQ_ASSERT(psyq::is_normalized_geometric_vector(in_direction));
-    }
-
-    public: void set_direction(template_vector const& in_direction)
-    {
-        this->direction_ = self::make_direction(in_direction);
-    }
-
-    public: static self make(
-        template_vector const& in_origin,
-        template_vector const& in_direction)
-    {
-        return self(in_origin, self::make_direction(in_direction));
-    }
-
-    private: static template_vector make_direction(
-        template_vector const& in_direction)
-    {
-        auto const local_length(
-            psyq::calc_geometric_vector_length(in_direction));
-        if (local_length <= 0)
-        {
-            PSYQ_ASSERT(false);
-            return template_vector(0, 0, 1);
-        }
-        return in_direction / local_length;
-    }
-};
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// axis-aligned-bounding-box.
@@ -263,8 +127,286 @@ class psyq::geometric_aabb
                 local_x.second, local_y.second, local_z.second));
     }
 
+    public: self const& make_aabb() const
+    {
+        return *this;
+    }
+
     private: template_vector min_; ///< AABBの最小座標。
     private: template_vector max_; ///< AABBの最大座標。
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// 球。
+template<typename template_vector>
+class psyq::geometric_sphere
+{
+    private: typedef psyq::geometric_sphere<template_vector> self;
+
+    public: typedef template_vector vector;
+
+    public: geometric_sphere(
+        template_vector const& in_center,
+        typename geometric_vector_element<template_vector>::type const
+            in_radius)
+     :
+        center_(in_center),
+        radius_(in_radius)
+    {
+        PSYQ_ASSERT(0 <= in_radius);
+    }
+
+    public: template_vector const& get_center() const
+    {
+        return this->center_;
+    }
+
+    public: void set_center(template_vector const& in_center)
+    {
+        this->center_ = in_center;
+    }
+
+    public: typename psyq::geometric_vector_element<template_vector>::type
+    get_radius() const
+    {
+        return this->radius_;
+    }
+
+    public: void set_radius(
+        typename psyq::geometric_vector_element<template_vector>::type const
+            in_radius)
+    {
+        PSYQ_ASSERT(0 <= in_radius);
+        this->radius_ = in_radius;
+    }
+
+    /** @brief 球のAABBを構築する。
+        @return 球のAABB。
+     */
+    public: psyq::geometric_aabb<template_vector> make_aabb() const
+    {
+        template_vector const local_extent(
+            this->get_radius(), this->get_radius(), this->get_radius());
+        return psyq::geometric_aabb<template_vector>(
+            this->get_center() - local_extent,
+            this->get_center() + local_extent);
+    }
+
+    /// 球の中心位置。
+    private: template_vector center_;
+    /// 球の半径。
+    private: typename geometric_vector_element<template_vector>::type radius_;
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// 線分。
+template<typename template_vector>
+class psyq::geometric_segment
+{
+    private: typedef psyq::geometric_segment<template_vector> self;
+
+    public: typedef template_vector vector;
+
+    public: geometric_segment(
+        template_vector const& in_origin,
+        template_vector const& in_direction)
+    :
+        origin_(in_origin),
+        direction_(in_direction)
+    {}
+
+    public: template_vector const& get_origin() const
+    {
+        return this->origin_;
+    }
+
+    public: void set_origin(template_vector const& in_origin)
+    {
+        this->origin_ = in_origin;
+    }
+
+    public: template_vector const& get_direction() const
+    {
+        return this->direction_;
+    }
+
+    public: void set_direction(template_vector const& in_direction)
+    {
+        this->direction_ = in_direction;
+    }
+
+    /** @brief 線分のAABBを構築する。
+        @return 線分のAABB。
+     */
+    public: psyq::geometric_aabb<template_vector> make_aabb() const
+    {
+        typedef typename psyq::geometric_vector_element<template_vector>::type
+            element_type;
+        auto const local_end(this->get_origin() + this->get_direction());
+
+        // X座標の範囲を決定する。
+        element_type local_min_x;
+        element_type local_max_x;
+        if (this->get_direction()[0] < 0)
+        {
+            local_min_x = local_end[0];
+            local_max_x = this->get_origin()[0];
+        }
+        else
+        {
+            local_min_x = this->get_origin()[0];
+            local_max_x = local_end[0];
+        }
+
+        // Y座標の範囲を決定する。
+        element_type local_min_y;
+        element_type local_max_y;
+        if (this->get_direction()[1] < 0)
+        {
+            local_min_y = local_end[1];
+            local_max_y = this->get_origin()[1];
+        }
+        else
+        {
+            local_min_y = this->get_origin()[1];
+            local_max_y = local_end[1];
+        }
+
+        // Z座標の範囲を決定する。
+        element_type local_min_z;
+        element_type local_max_z;
+        if (this->get_direction()[2] < 0)
+        {
+            local_min_z = local_end[2];
+            local_max_z = this->get_origin()[2];
+        }
+        else
+        {
+            local_min_z = this->get_origin()[2];
+            local_max_z = local_end[2];
+        }
+
+        return psyq::geometric_aabb<template_vector>(
+            template_vector(local_min_x, local_min_y, local_min_z),
+            template_vector(local_max_x, local_max_y, local_max_z));
+    }
+
+    private: template_vector origin_;    ///< 線分の始点。
+    private: template_vector direction_; ///< 線分の方向と大きさ。
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// 半線分。
+template<typename template_vector>
+class psyq::geometric_ray: public psyq::geometric_segment<template_vector>
+{
+    private: typedef psyq::geometric_ray<template_vector> self;
+    public: typedef psyq::geometric_segment<template_vector> super;
+
+    public: typedef template_vector vector;
+
+    public: geometric_ray(
+        template_vector const& in_origin,
+        template_vector const& in_direction)
+    :
+        super(in_origin, in_direction)
+    {
+        PSYQ_ASSERT(psyq::is_normalized_geometric_vector(in_direction));
+    }
+
+    public: void set_direction(template_vector const& in_direction)
+    {
+        this->direction_ = self::make_direction(in_direction);
+    }
+
+    public: static self make(
+        template_vector const& in_origin,
+        template_vector const& in_direction)
+    {
+        return self(in_origin, self::make_direction(in_direction));
+    }
+
+    private: static template_vector make_direction(
+        template_vector const& in_direction)
+    {
+        auto const local_length(
+            psyq::calc_geometric_vector_length(in_direction));
+        if (local_length <= 0)
+        {
+            PSYQ_ASSERT(false);
+            return template_vector(0, 0, 1);
+        }
+        return in_direction / local_length;
+    }
+
+    /** @brief 半直線のAABBを構築する。
+     */
+    public: psyq::geometric_aabb<template_vector> make_aabb() const
+    {
+        typedef typename psyq::geometric_vector_element<template_vector>::type
+            element_type;
+
+        // X座標の範囲を決定する。
+        element_type local_min_x;
+        element_type local_max_x;
+        if (this->get_direction()[0] < 0)
+        {
+            local_min_x = -(std::numeric_limits<element_type>::max)();
+            local_max_x = this->get_origin()[0];
+        }
+        else if (0 < this->get_direction()[0])
+        {
+            local_min_x = this->get_origin()[0];
+            local_max_x = (std::numeric_limits<element_type>::max)();
+        }
+        else
+        {
+            local_min_x = this->get_origin()[0];
+            local_max_x = this->get_origin()[0];
+        }
+
+        // Y座標の範囲を決定する。
+        element_type local_min_y;
+        element_type local_max_y;
+        if (this->get_direction()[1] < 0)
+        {
+            local_min_y = -(std::numeric_limits<element_type>::max)();
+            local_max_y = this->get_origin()[1];
+        }
+        else if (0 < this->get_direction()[1])
+        {
+            local_min_y = this->get_origin()[1];
+            local_max_y = (std::numeric_limits<element_type>::max)();
+        }
+        else
+        {
+            local_min_y = this->get_origin()[1];
+            local_max_y = this->get_origin()[1];
+        }
+
+        // Z座標の範囲を決定する。
+        element_type local_min_z;
+        element_type local_max_z;
+        if (this->get_direction()[2] < 0)
+        {
+            local_min_z = -(std::numeric_limits<element_type>::max)();
+            local_max_z = this->get_origin()[2];
+        }
+        else if (0 < this->get_direction()[2])
+        {
+            local_min_z = this->get_origin()[2];
+            local_max_z = (std::numeric_limits<element_type>::max)();
+        }
+        else
+        {
+            local_min_z = this->get_origin()[2];
+            local_max_z = this->get_origin()[2];
+        }
+
+        return psyq::geometric_aabb<template_vector>(
+            template_vector(local_min_x, local_min_y, local_min_z),
+            template_vector(local_max_x, local_max_y, local_max_z));
+    }
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -330,6 +472,30 @@ class psyq::geometric_cuboid
     public: template_vector const& get_extent() const
     {
         return this->extent_;
+    }
+
+    /** @brief 直方体のAABBを構築する。
+     */
+    public: psyq::geometric_aabb<template_vector> make_aabb() const
+    {
+        auto const local_abs_vector(
+            [](template_vector const& in_vector)->template_vector
+            {
+                auto const local_x(in_vector[0]);
+                auto const local_y(in_vector[1]);
+                auto const local_z(in_vector[2]);
+                return template_vector(
+                    local_x < 0? -local_x: local_x,
+                    local_y < 0? -local_y: local_y,
+                    local_z < 0? -local_z: local_z);
+            });
+        auto const local_half_diagonal(
+            local_abs_vector(this->get_axis_x() * this->get_extent()[0]) +
+            local_abs_vector(this->get_axis_y() * this->get_extent()[1]) +
+            local_abs_vector(this->get_axis_z() * this->get_extent()[2]));
+        return psyq::geometric_aabb<template_vector>(
+            this->get_center() - local_half_diagonal,
+            this->get_center() + local_half_diagonal);
     }
 
     private: template_vector center_;  ///< 直方体の中心位置。

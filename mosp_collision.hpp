@@ -11,7 +11,7 @@
 #define PSYQ_MOSP_COLLISION_HPP_
 //#include "psyq/bit_algorithm.hpp"
 
-/// psyq::mosp_coordinates_xyz で使う、defaultのvector型。
+/// psyq::mosp_coordinates で使う、defaultのvector型。
 #ifndef PSYQ_MOSP_VECTOR_DEFAULT
 #include <glm/glm.hpp> // OpenGL Mathematics
 #define PSYQ_MOSP_VECTOR_DEFAULT glm::vec3
@@ -25,11 +25,12 @@ namespace psyq
         template<typename> class mosp_node;
     }
     template<typename> class mosp_handle;
-    template<typename = PSYQ_MOSP_VECTOR_DEFAULT> class mosp_coordinates_xyz;
-    template<typename = PSYQ_MOSP_VECTOR_DEFAULT> class mosp_coordinates_xz;
+    template<typename, unsigned, unsigned, unsigned> class mosp_coordinates;
     template<typename> class mosp_space;
-    template<typename = mosp_coordinates_xz<>> class mosp_space_2d;
-    template<typename = mosp_coordinates_xyz<>> class mosp_space_3d;
+    template<typename = mosp_coordinates<PSYQ_MOSP_VECTOR_DEFAULT, 0, 2, 1>>
+        class mosp_space_2d;
+    template<typename = mosp_coordinates<PSYQ_MOSP_VECTOR_DEFAULT, 0, 1, 2>>
+        class mosp_space_3d;
     template<typename, typename = mosp_space_2d<>> class mosp_tree;
     /// @endcond
 }
@@ -109,18 +110,16 @@ class psyq::mosp_handle
         新しい mosp_tree にthisを取りつける。
 
         @param[in,out] io_tree thisを取りつける mosp_tree 。
-        @param[in]     in_min  thisに対応する衝突領域の、絶対座標系AABBの最小値。
-        @param[in]     in_max  thisに対応する衝突領域の、絶対座標系AABBの最大値。
+        @param[in]     in_aabb thisに対応する衝突領域の、絶対座標系AABB。
         @sa detach_tree()
      */
     public: template<typename template_mosp_tree>
     bool attach_tree(
-        template_mosp_tree&                               io_tree,
-        typename template_mosp_tree::space::vector const& in_min,
-        typename template_mosp_tree::space::vector const& in_max)
+        template_mosp_tree&                                          io_tree,
+        typename template_mosp_tree::space::coordinates::aabb const& in_aabb)
     {
         // 新しいnodeを用意する。
-        auto const local_node(io_tree.make_node(in_min, in_max));
+        auto const local_node(io_tree.make_node(in_aabb));
         if (local_node == nullptr)
         {
             return false;
@@ -277,30 +276,49 @@ class psyq::internal::mosp_node
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief vectorのXYZ成分を用いるmorton座標。
+/** @brief 衝突判定に使うmorton座標。
 
-    psyq::mosp_space のtemplate引数に使う。
+    psyq::mosp_space のtemplate引数として使う。
 
-    @tparam template_vector @copydoc psyq::mosp_coordinates_xyz::vector
+    @tparam template_vector @copydoc psyq::mosp_coordinates::vector
+    @tparam template_element0 @copydoc psyq::mosp_coordinates::ELEMENT0_INDEX
+    @tparam template_element1 @copydoc psyq::mosp_coordinates::ELEMENT1_INDEX
+    @tparam template_element2 @copydoc psyq::mosp_coordinates::ELEMENT2_INDEX
  */
-template<typename template_vector>
-class psyq::mosp_coordinates_xyz
+template<
+    typename template_vector,
+    unsigned template_element0,
+    unsigned template_element1,
+    unsigned template_element2>
+class psyq::mosp_coordinates
 {
     /// *thisの型。
-    private: typedef mosp_coordinates_xyz<template_vector> self;
+    private: typedef mosp_coordinates<
+        template_vector,
+        template_element0,
+        template_element1,
+        template_element2>
+            self;
 
     public: enum: unsigned
     {
-        ELEMENT0_INDEX = 0, ///< morton座標の成分#0のindex番号。
-        ELEMENT1_INDEX = 1, ///< morton座標の成分#1のindex番号。
-        ELEMENT2_INDEX = 2, ///< morton座標の成分#2のindex番号。
+        /// morton座標の成分#0のindex番号。
+        ELEMENT0_INDEX = template_element0,
+        /// morton座標の成分#1のindex番号。
+        ELEMENT1_INDEX = template_element1,
+        /// morton座標の成分#2のindex番号。
+        ELEMENT2_INDEX = template_element2,
     };
 
     /// morton座標を表すvectorの型。 glm::vec3 互換であること。
     public: typedef template_vector vector;
 
     /// morton座標を表すvectorの成分の型。
-    public: typedef typename template_vector::value_type element;
+    public: typedef typename
+        psyq::geometric_vector_element<template_vector>::type element;
+
+    /// 最小座標と最大座標を要素とするAABB。
+    public: typedef psyq::geometric_aabb<template_vector> aabb;
 
     /** @brief 絶対座標系からmorton座標への変換scaleを算出する。
         @param[in] in_morton_size morton座標の最大値。
@@ -310,7 +328,8 @@ class psyq::mosp_coordinates_xyz
         typename self::element const in_morton_size,
         typename self::element const in_world_size)
     {
-        if (in_world_size < std::numeric_limits<self::element>::epsilon())
+        if (in_world_size
+            < std::numeric_limits<typename self::element>::epsilon())
         {
             return 0;
         }
@@ -318,16 +337,14 @@ class psyq::mosp_coordinates_xyz
     }
 
     /** @brief 絶対座標系空間からmorton座標空間への変換scaleを算出する。
-        @param[in] in_min   衝突判定領域の全体を包む、絶対座標系AABBの最小値。
-        @param[in] in_max   衝突判定領域の全体を包む、絶対座標系AABBの最大値。
+        @param[in] in_aabb  衝突判定領域の全体を包む、絶対座標系AABB。
         @param[in] in_level 空間分割の最深level。
      */
     public: static typename self::vector calc_scale(
-        typename self::vector const& in_min,
-        typename self::vector const& in_max,
-        unsigned const               in_level)
+        typename self::aabb const& in_aabb,
+        unsigned const             in_level)
     {
-        auto const local_size(in_max - in_min);
+        auto const local_size(in_aabb.get_max() - in_aabb.get_min());
         auto const local_unit(
             static_cast<typename self::element>(1 << in_level));
         return self::vector(
@@ -335,33 +352,6 @@ class psyq::mosp_coordinates_xyz
             self::calc_scale(local_unit, local_size.operator[](1)),
             self::calc_scale(local_unit, local_size.operator[](2)));
     }
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief vectorのXZ成分を用いるmorton座標。
-
-    psyq::mosp_space のtemplate引数に使う。
-
-    @tparam template_vector @copydoc psyq::mosp_coordinates_xyz::vector
- */
-template<typename template_vector>
-class psyq::mosp_coordinates_xz:
-    public psyq::mosp_coordinates_xyz<template_vector>
-{
-    /// *thisの型。
-    private: typedef mosp_coordinates_xz<template_vector> self;
-    /// *thisの上位型。
-    public: typedef mosp_coordinates_xyz<template_vector> super;
-
-    public: enum: unsigned
-    {
-        ELEMENT0_INDEX = 0, ///< morton座標の成分#0のindex番号。
-        ELEMENT1_INDEX = 2, ///< morton座標の成分#1のindex番号。
-    };
-    private: enum: unsigned
-    {
-        ELEMENT2_INDEX = 2, ///< morton座標の成分#2は使用できない。
-    };
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -374,49 +364,42 @@ class psyq::mosp_space
     /// *thisの型。
     private: typedef mosp_space<template_coordinates> self;
 
-    /** @brief 衝突判定に使うmorton座標の型。
-
-        mosp_coordinates_xyz や mosp_coordinates_xz を使う。
-     */
+    /// 衝突判定に使う mosp_coordinates の型。
     public: typedef template_coordinates coordinates;
-
-    /// 衝突判定に使うvectorの型。
-    public: typedef typename template_coordinates::vector vector;
 
     /// morton順序の型。
     public: typedef std::uint32_t order;
 
+    //-------------------------------------------------------------------------
     /** @brief 衝突判定を行う領域を設定する。
-        @param[in] in_min   衝突判定を行う領域の絶対座標系最小値。
-        @param[in] in_max   衝突判定を行う領域の絶対座標系最大値。
+        @param[in] in_aabb  衝突判定を行う領域の全体を包む、絶対座標系AABB。
         @param[in] in_level 空間分割の最深レベル。
      */
     protected: mosp_space(
-        typename self::vector const& in_min,
-        typename self::vector const& in_max,
-        unsigned const               in_level)
+        typename self::coordinates::aabb const& in_aabb,
+        unsigned const                          in_level)
     :
-        min_(in_min),
-        max_(in_max),
-        scale_(self::coordinates::calc_scale(in_min, in_max, in_level))
+        aabb_(in_aabb),
+        scale_(self::coordinates::calc_scale(in_aabb, in_level))
+    {}
+
+    public: typename self::coordinates::aabb const& get_aabb() const
     {
-        PSYQ_ASSERT(this->min_.operator[](0) <= this->max_.operator[](0));
-        PSYQ_ASSERT(this->min_.operator[](1) <= this->max_.operator[](1));
-        PSYQ_ASSERT(this->min_.operator[](2) <= this->max_.operator[](2));
+        return this->aabb_;
     }
 
     protected: typename self::coordinates::element transform_element(
-        typename self::vector const& in_vector,
-        unsigned const               in_element_index)
+        typename self::coordinates::vector const& in_vector,
+        unsigned const                            in_element_index)
     const
     {
         auto local_element(in_vector[in_element_index]);
-        auto const local_min(this->min_[in_element_index]);
+        auto const local_min(this->aabb_.get_min()[in_element_index]);
         if (local_element < local_min)
         {
             return 0;
         }
-        auto const local_max(this->max_[in_element_index]);
+        auto const local_max(this->aabb_.get_max()[in_element_index]);
         if (local_max < local_element)
         {
             local_element = local_max;
@@ -440,14 +423,12 @@ class psyq::mosp_space
         return in_max;
     }
 
-    /// 衝突判定を行う領域の、絶対座標系での最小座標。
-    private: typename self::vector min_;
-
-    /// 衝突判定を行う領域の、絶対座標系での最大座標。
-    private: typename self::vector max_;
+    //-------------------------------------------------------------------------
+    /// 衝突判定を行う全体の領域の、絶対座標系AABB。
+    private: typename self::coordinates::aabb aabb_;
 
     /// 最小となる分割空間の、絶対座標系での大きさの逆数。
-    private: typename self::vector scale_;
+    private: typename self::coordinates::vector scale_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -471,13 +452,13 @@ class psyq::mosp_space_2d: public psyq::mosp_space<template_coordinates>
         DIMENSION = 2, ///< 衝突判定に使う座標の成分の数。
     };
 
+    //-------------------------------------------------------------------------
     /// @copydoc mosp_space::mosp_space
     public: mosp_space_2d(
-        typename super::vector const& in_min,
-        typename super::vector const& in_max,
-        unsigned const                in_level)
+        typename super::coordinates::aabb const& in_aabb,
+        unsigned const                           in_level)
     :
-        super(in_min, in_max, in_level)
+        super(in_aabb, in_level)
     {}
 
     /** @brief 2次元座標上の点から、線形4分木のmorton順序を算出する。
@@ -486,8 +467,8 @@ class psyq::mosp_space_2d: public psyq::mosp_space<template_coordinates>
         @return 2次元座標に対応するmorton順序。
      */
     public: typename super::order calc_order(
-        typename super::vector const& in_point,
-        typename super::order const   in_max)
+        typename super::coordinates::vector const& in_point,
+        typename super::order const                in_max)
     const
     {
         auto const local_element0(
@@ -496,9 +477,8 @@ class psyq::mosp_space_2d: public psyq::mosp_space<template_coordinates>
         auto const local_element1(
             this->transform_element(
                 in_point, super::coordinates::ELEMENT1_INDEX));
-        return
-            self::separate_bits(local_element0, in_max) << 0 |
-            self::separate_bits(local_element1, in_max) << 1;
+        return self::separate_bits(local_element0, in_max) << 0
+            |  self::separate_bits(local_element1, in_max) << 1;
     }
 
     /** @brief morton座標を、軸ごとのbitに分割する。
@@ -539,13 +519,13 @@ class psyq::mosp_space_3d: public psyq::mosp_space<template_coordinates>
         DIMENSION = 3, ///< @copydoc mosp_space_2d::DIMENSION
     };
 
+    //-------------------------------------------------------------------------
     /// @copydoc mosp_space::mosp_space
     public: mosp_space_3d(
-        typename super::vector const& in_min,
-        typename super::vector const& in_max,
-        unsigned const                in_level)
+        typename super::coordinates::aabb const& in_aabb,
+        unsigned const                           in_level)
     :
-        super(in_min, in_max, in_level)
+        super(in_aabb, in_level)
     {}
 
     /** @brief 3次元座標上の点から、線形8分木のmorton順序を算出する。
@@ -554,8 +534,8 @@ class psyq::mosp_space_3d: public psyq::mosp_space<template_coordinates>
         @return 3次元座標に対応するmorton順序。
      */
     public: typename super::order calc_order(
-        typename super::vector const& in_point,
-        typename self::order const    in_max)
+        typename super::coordinates::vector const& in_point,
+        typename self::order const                 in_max)
     const
     {
         auto const local_element0(
@@ -567,10 +547,9 @@ class psyq::mosp_space_3d: public psyq::mosp_space<template_coordinates>
         auto const local_element2(
             this->transform_element(
                 in_point, super::coordinates::ELEMENT2_INDEX));
-        return
-            self::separate_bits(local_element0, in_max) << 0 |
-            self::separate_bits(local_element1, in_max) << 1 |
-            self::separate_bits(local_element2, in_max) << 2;
+        return self::separate_bits(local_element0, in_max) << 0
+            |  self::separate_bits(local_element1, in_max) << 1
+            |  self::separate_bits(local_element2, in_max) << 2;
     }
 
     /// @copydoc mosp_space_2d::separate_bits
@@ -637,8 +616,9 @@ class psyq::mosp_tree
     /// @brief 衝突判定領域のない空間分割木を構築する。
     public: mosp_tree():
         space_(
-            typename self::space::vector(0, 0, 0),
-            typename self::space::vector(0, 0, 0),
+            typename self::space::coordinates::aabb(
+                typename self::space::coordinates::vector(0, 0, 0),
+                typename self::space::coordinates::vector(0, 0, 0)),
             0),
         idle_end_(nullptr),
         level_cap_(0),
@@ -664,21 +644,18 @@ class psyq::mosp_tree
             // 衝突判定中はmoveできない。
             PSYQ_ASSERT(false);
             this->cell_map_.swap(io_source.cell_map_);
-            this->level_cap_ = 0;
-        }
-        else
-        {
-            io_source.level_cap_ = 0;
         }
     }
 
-    /// @copydoc mosp_space::mosp_space
+    /** @brief 衝突判定を行う領域を設定する。
+        @param[in] in_aabb  衝突判定を行う領域の全体を包む、絶対座標系AABB。
+        @param[in] in_level 空間分割の最深レベル。
+     */
     public: mosp_tree(
-        typename self::space::vector const& in_min,
-        typename self::space::vector const& in_max,
-        unsigned const                      in_level = self::LEVEL_LIMIT)
+        typename self::space::coordinates::aabb const& in_aabb,
+        unsigned const in_level = self::LEVEL_LIMIT)
     :
-        space_(in_min, in_max, in_level),
+        space_(in_aabb, in_level),
         idle_end_(nullptr),
         detect_collision_(false)
     {
@@ -914,8 +891,7 @@ class psyq::mosp_tree
         @retval ==nullptr 失敗。
      */
     private: typename self::node* make_node(
-        typename self::space::vector const& in_min,
-        typename self::space::vector const& in_max)
+        typename self::space::coordinates::aabb const& in_aabb)
     {
         if (this->detect_collision_)
         {
@@ -926,7 +902,7 @@ class psyq::mosp_tree
 
         // morton順序に対応するcellを用意する。
         auto const local_morton_order(
-            self::calc_order(this->level_cap_, this->space_, in_min, in_max));
+            self::calc_order(this->level_cap_, this->space_, in_aabb));
         auto& local_cell(this->cell_map_[local_morton_order]);
         if (local_cell == nullptr)
         {
@@ -959,10 +935,9 @@ class psyq::mosp_tree
         @return AABBを包む最小の分割空間のmorton順序。
      */
     private: static typename self::space::order calc_order(
-        std::size_t const                   in_level_cap,
-        typename self::space const&         in_space,
-        typename self::space::vector const& in_min,
-        typename self::space::vector const& in_max)
+        std::size_t const                              in_level_cap,
+        typename self::space const&                    in_space,
+        typename self::space::coordinates::aabb const& in_aabb)
     {
         if (in_level_cap <= 0)
         {
@@ -972,9 +947,9 @@ class psyq::mosp_tree
         // 衝突物体のAABBを包む、最小の分割空間のmorton順序を算出する。
         unsigned const local_axis_order_max((1 << in_level_cap) - 1);
         auto const local_min_morton(
-            in_space.calc_order(in_min, local_axis_order_max));
+            in_space.calc_order(in_aabb.get_min(), local_axis_order_max));
         auto const local_max_morton(
-            in_space.calc_order(in_max, local_axis_order_max));
+            in_space.calc_order(in_aabb.get_max(), local_axis_order_max));
         auto const local_morton_distance(local_max_morton ^ local_min_morton);
         unsigned local_level;
         if (local_morton_distance != 0)

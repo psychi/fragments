@@ -7,9 +7,10 @@
     以下のweb-pageを参考にして実装した。
     http://marupeke296.com/COL_2D_No8_QuadTree.html
  */
-#ifndef PSYQ_MOSP_COLLISION_HPP_
-#define PSYQ_MOSP_COLLISION_HPP_
+#ifndef PSYQ_MOSP_TREE_HPP_
+#define PSYQ_MOSP_TREE_HPP_
 //#include "psyq/bit_algorithm.hpp"
+//#include "psyq/geometric_utility.hpp"
 
 /// psyq::mosp_coordinates で使う、defaultのvector型。
 #ifndef PSYQ_MOSP_VECTOR_DEFAULT
@@ -594,8 +595,7 @@ class psyq::mosp_tree
     /// 空間分割木のnode 。
     public: typedef internal::mosp_node<template_collision_object> node;
 
-    /** @brief 使用するmorton空間。 mosp_space_2d や mosp_space_3d を使う。
-     */
+    /// 使用するmorton空間。 mosp_space_2d や mosp_space_3d を使う。
     public: typedef template_space space;
 
     /// cell（同じ分割空間に所属する self::node の、単方向循環list）の辞書。
@@ -1119,4 +1119,4 @@ class psyq::mosp_tree
     private: bool detect_collision_; ///< detect_collision() を実行中かどうか。
 };
 
-#endif // !defined(PSYQ_MOSP_COLLISION_HPP_)
+#endif // !defined(PSYQ_MOSP_TREE_HPP_)

@@ -322,7 +322,7 @@ class psyq::geometric_cuboid
     /// @copydoc psyq::geometric_aabb::vector
     public: typedef template_vector vector;
 
-    public: typedef std::array<template_vector, 3> axis_array;
+    //public: typedef std::array<template_vector, 3> axis_array;
 
     /** @brief 直方体を構築する。
         @param[in] in_center 直方体の中心位置。

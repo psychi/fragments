@@ -16,7 +16,11 @@
 #ifndef PSYQ_MOSP_VECTOR_DEFAULT
 #include <glm/glm.hpp> // OpenGL Mathematics
 #define PSYQ_MOSP_VECTOR_DEFAULT glm::vec3
-#endif // !defined(PSYQ_MOSP_VECTOR_DEFAULT)
+#endif
+
+#ifndef PSYQ_MOSP_SPACE_DEFAULT
+#define PSYQ_MOSP_SPACE_DEFAULT psyq::mosp_space_2d<>
+#endif
 
 namespace psyq
 {
@@ -32,7 +36,7 @@ namespace psyq
         class mosp_space_2d;
     template<typename = mosp_coordinates<PSYQ_MOSP_VECTOR_DEFAULT, 0, 1, 2>>
         class mosp_space_3d;
-    template<typename, typename = mosp_space_2d<>> class mosp_tree;
+    template<typename, typename = PSYQ_MOSP_SPACE_DEFAULT> class mosp_tree;
     /// @endcond
 }
 

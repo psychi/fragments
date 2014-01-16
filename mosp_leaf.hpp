@@ -4,8 +4,10 @@
 
 namespace psyq
 {
-    template<typename> class mosp_leaf;
+    /// @cond
+    template<typename = PSYQ_MOSP_SPACE_DEFAULT> class mosp_leaf;
     template<typename, typename> class mosp_leaf_shape;
+    /// @endcond
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -54,7 +56,7 @@ class psyq::mosp_leaf
         this->handle_.detach_tree();
     }
 
-    protected: bool is_attached()
+    protected: bool is_attached() const
     {
         return this->handle_.is_attached();
     }
@@ -136,5 +138,26 @@ class psyq::mosp_leaf_shape: public psyq::mosp_leaf<template_space>
     //-------------------------------------------------------------------------
     protected: template_shape shape_; ///< 衝突判定プリミティブの形状。
 };
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+namespace psyq
+{
+    typedef psyq::mosp_leaf_shape<
+        psyq::mosp_leaf<>::space,
+        psyq::geometric_sphere<psyq::mosp_leaf<>::vector>>
+            mosp_sphere_leaf;
+    typedef psyq::mosp_leaf_shape<
+        psyq::mosp_leaf<>::space,
+        psyq::geometric_segment<psyq::mosp_leaf<>::vector>>
+            mosp_segment_leaf;
+    typedef psyq::mosp_leaf_shape<
+        psyq::mosp_leaf<>::space,
+        psyq::geometric_ray<psyq::mosp_leaf<>::vector>>
+            mosp_ray_leaf;
+    typedef psyq::mosp_leaf_shape<
+        psyq::mosp_leaf<>::space,
+        psyq::geometric_cuboid<psyq::mosp_leaf<>::vector>>
+            mosp_cuboid_leaf;
+}
 
 #endif // !defined(PSYQ_MOSP_LEAF_HPP_)

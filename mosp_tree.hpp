@@ -65,8 +65,8 @@ class psyq::mosp_handle
         @param[in] in_object thisに対応する、衝突物体の識別値の初期値。
      */
     public: explicit mosp_handle(template_collision_object in_object):
-        object_(std::move(in_object)),
-        node_(nullptr)
+        node_(nullptr),
+        object_(std::move(in_object))
     {}
 
     /// copy-constructorは使用禁止。
@@ -76,8 +76,8 @@ class psyq::mosp_handle
         @param[in,out] io_source 移動元となるinstance。
      */
     public: mosp_handle(self&& io_source):
-        object_(std::move(io_source.object_)),
-        node_(io_source.node_)
+        node_(io_source.node_),
+        object_(std::move(io_source.object_))
     {
         if (io_source.node_ != nullptr)
         {
@@ -167,15 +167,15 @@ class psyq::mosp_handle
     }
 
     //-------------------------------------------------------------------------
+    /// thisに対応する空間分割木のnode。
+    private: internal::mosp_node<template_collision_object>* node_;
+
     /** @brief thisに対応する、衝突物体の識別値。
 
         この値を引数として、 mosp_tree::detect_collision()
         の引数に指定した、衝突callback関数が呼び出される。
      */
     public: template_collision_object object_;
-
-    /// thisに対応する空間分割木のnode。
-    private: internal::mosp_node<template_collision_object>* node_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

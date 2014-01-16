@@ -27,11 +27,11 @@ class psyq::mosp_leaf
 
     //-------------------------------------------------------------------------
     protected: mosp_leaf():
+        handle_(this),
         aabb_(
             typename self::aabb(
                 typename self::vector(0, 0, 0),
-                typename self::vector(0, 0, 0))),
-        handle_(this)
+                typename self::vector(0, 0, 0)))
     {}
 
     /// mosp_tree から取り外す。
@@ -73,10 +73,10 @@ class psyq::mosp_leaf
     protected: virtual void update_aabb() = 0;
 
     //-------------------------------------------------------------------------
-    /// 衝突判定プリミティブの絶対座標系AABB。
-    protected: typename self::aabb aabb_;
     /// 衝突判定プリミティブに対応する衝突判定ハンドル。
     private: typename self::tree::handle handle_;
+    /// 衝突判定プリミティブの絶対座標系AABB。
+    protected: typename self::aabb aabb_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

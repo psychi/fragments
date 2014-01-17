@@ -57,12 +57,12 @@ class psyq::mosp_handle
     /// *thisの型。
     private: typedef mosp_handle<template_collision_object> self;
 
-    /// 衝突する物体の識別値の型。
+    /// 衝突判定オブジェクトの識別子。
     public: typedef template_collision_object collision_object;
 
     //-------------------------------------------------------------------------
     /** @brief 衝突判定のhandleを構築する。
-        @param[in] in_object thisに対応する、衝突物体の識別値の初期値。
+        @param[in] in_object thisに対応する、衝突判定オブジェクトの識別子。
      */
     public: explicit mosp_handle(template_collision_object in_object):
         node_(nullptr),
@@ -109,14 +109,14 @@ class psyq::mosp_handle
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 空間分割木にthisを取りつける。
+    /** @brief *thisを mosp_tree 空間分割木に取りつける。
 
-        現在取りつけられている mosp_tree からthisを切り離し、
-        新しい mosp_tree にthisを取りつける。
+        現在取りつけられている mosp_tree から*thisを切り離し、
+        新しい mosp_tree に*thisを取りつける。
 
-        @param[in,out] io_tree thisを取りつける mosp_tree 。
-        @param[in]     in_aabb thisに対応する衝突領域の、絶対座標系AABB。
-        @sa detach_tree()
+        @param[in,out] io_tree *thisを取りつける mosp_tree 。
+        @param[in]     in_aabb *thisに対応する衝突領域の、絶対座標系AABB。
+        @sa detach_tree() is_attached()
      */
     public: template<typename template_mosp_tree>
     bool attach_tree(
@@ -141,11 +141,11 @@ class psyq::mosp_handle
         return true;
     }
 
-    /** @brief 空間分割木からthisを取り外す。
+    /** @brief *thisを mosp_tree 空間分割木から取り外す。
 
-        現在取りつけられている mosp_tree とthisを切り離す。
+        現在取りつけられている mosp_tree から、*thisを切り離す。
 
-        @sa attach_tree()
+        @sa attach_tree() is_attached()
      */
     public: void detach_tree()
     {
@@ -157,9 +157,10 @@ class psyq::mosp_handle
         }
     }
 
-    /** @brief 空間分割木に取りつけられているか判定する。
-        @retval true  空間分割木に取りつけられている。
-        @retval false 空間分割木に取りつけられていない。
+    /** @brief *thisが mosp_tree 空間分割木に取りつけられているか判定する。
+        @retval true  *thisは mosp_tree に取りつけられている。
+        @retval false *thisは mosp_tree に取りつけられていない。
+        @sa attach_tree() detach_tree()
      */
     public: bool is_attached() const
     {
@@ -281,11 +282,8 @@ class psyq::internal::mosp_node
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 衝突判定に使うmorton座標。
-
-    psyq::mosp_space のtemplate引数として使う。
-
-    @tparam template_vector @copydoc psyq::mosp_coordinates::vector
+/** @brief 衝突判定に使うmorton座標。 psyq::mosp_space のtemplate引数に使う。
+    @tparam template_vector   @copydoc psyq::mosp_coordinates::vector
     @tparam template_element0 @copydoc psyq::mosp_coordinates::ELEMENT0_INDEX
     @tparam template_element1 @copydoc psyq::mosp_coordinates::ELEMENT1_INDEX
     @tparam template_element2 @copydoc psyq::mosp_coordinates::ELEMENT2_INDEX
@@ -320,9 +318,9 @@ class psyq::mosp_coordinates
 
     /// morton座標を表すvectorの成分の型。
     public: typedef typename
-        psyq::geometric_vector_element<template_vector>::type element;
+        psyq::geometric_vector<template_vector>::element element;
 
-    /// 最小座標と最大座標を要素とするAABB。
+    /// morton座標のAABB。
     public: typedef psyq::geometric_aabb<template_vector> aabb;
 
     /** @brief 絶対座標系からmorton座標への変換scaleを算出する。
@@ -352,10 +350,13 @@ class psyq::mosp_coordinates
         auto const local_size(in_aabb.get_max() - in_aabb.get_min());
         auto const local_unit(
             static_cast<typename self::element>(1 << in_level));
-        return self::vector(
-            self::calc_scale(local_unit, local_size.operator[](0)),
-            self::calc_scale(local_unit, local_size.operator[](1)),
-            self::calc_scale(local_unit, local_size.operator[](2)));
+        return psyq::geometric_vector<self::vector>::make(
+            self::calc_scale(
+                local_unit, psyq::geometric_vector_element(local_size, 0)),
+            self::calc_scale(
+                local_unit, psyq::geometric_vector_element(local_size, 1)),
+            self::calc_scale(
+                local_unit, psyq::geometric_vector_element(local_size, 2)));
     }
 };
 
@@ -368,10 +369,8 @@ class psyq::mosp_space
 {
     /// *thisの型。
     private: typedef mosp_space<template_coordinates> self;
-
-    /// 衝突判定に使う mosp_coordinates の型。
+    /// 衝突判定に使う psyq::mosp_coordinates の型。
     public: typedef template_coordinates coordinates;
-
     /// morton順序の型。
     public: typedef std::uint32_t order;
 
@@ -388,28 +387,42 @@ class psyq::mosp_space
         scale_(self::coordinates::calc_scale(in_aabb, in_level))
     {}
 
+    /** @brief 衝突判定を行う領域の全体を包む、絶対座標系AABBを取得する。
+        @return 衝突判定を行う領域の全体を包む、絶対座標系AABB。
+     */
     public: typename self::coordinates::aabb const& get_aabb() const
     {
         return this->aabb_;
     }
 
+    /** @brief 絶対座標系ベクトルの要素を、morton座標に変換する。
+        @param[in] in_vector        変換する絶対座標系ベクトル。
+        @param[in] in_element_index 変換する要素のインデックス番号。
+        @return morton座標でのベクトル要素の値。
+     */
     protected: typename self::coordinates::element transform_element(
         typename self::coordinates::vector const& in_vector,
         unsigned const                            in_element_index)
     const
     {
-        auto local_element(in_vector[in_element_index]);
-        auto const local_min(this->aabb_.get_min()[in_element_index]);
+        auto local_element(
+            psyq::geometric_vector_element(in_vector, in_element_index));
+        auto const local_min(
+            psyq::geometric_vector_element(
+                this->aabb_.get_min(), in_element_index));
         if (local_element < local_min)
         {
             return 0;
         }
-        auto const local_max(this->aabb_.get_max()[in_element_index]);
+        auto const local_max(
+            psyq::geometric_vector_element(
+                this->aabb_.get_max(), in_element_index));
         if (local_max < local_element)
         {
             local_element = local_max;
         }
-        return (local_element - local_min) * this->scale_[in_element_index];
+        return (local_element - local_min)
+            * psyq::geometric_vector_element(this->scale_, in_element_index);
     }
 
     protected: static typename self::order clamp_axis_order(
@@ -448,7 +461,6 @@ class psyq::mosp_space_2d: public psyq::mosp_space<template_coordinates>
 {
     /// *thisの型。
     private: typedef mosp_space_2d<template_coordinates> self;
-
     /// *thisの上位型。
     public: typedef mosp_space<template_coordinates> super;
 
@@ -617,17 +629,30 @@ class psyq::mosp_tree
     };
 
     //-------------------------------------------------------------------------
-    /// @brief 衝突判定領域のない空間分割木を構築する。
-    public: mosp_tree():
-        space_(
-            typename self::space::coordinates::aabb(
-                typename self::space::coordinates::vector(0, 0, 0),
-                typename self::space::coordinates::vector(0, 0, 0)),
-            0),
+    /** @brief 衝突判定を行う領域を設定する。
+        @param[in] in_aabb  衝突判定を行う領域の全体を包む、絶対座標系AABB。
+        @param[in] in_level 空間分割の最深レベル。
+     */
+    public: explicit mosp_tree(
+        typename self::space::coordinates::aabb const& in_aabb,
+        unsigned const in_level = self::LEVEL_LIMIT)
+    :
+        space_(in_aabb, in_level),
         idle_end_(nullptr),
-        level_cap_(0),
         detect_collision_(false)
-    {}
+    {
+        // 空間分割の最深levelを決定。
+        if (in_level <= self::LEVEL_LIMIT)
+        {
+            this->level_cap_ = in_level;
+        }
+        else
+        {
+            // 最高level以上の空間は作れない。
+            PSYQ_ASSERT(false);
+            this->level_cap_ = self::LEVEL_LIMIT;
+        }
+    }
 
     /// copy-constructorは使用禁止。
     private: mosp_tree(self const&);
@@ -648,31 +673,6 @@ class psyq::mosp_tree
             // 衝突判定中はmoveできない。
             PSYQ_ASSERT(false);
             this->cell_map_.swap(io_source.cell_map_);
-        }
-    }
-
-    /** @brief 衝突判定を行う領域を設定する。
-        @param[in] in_aabb  衝突判定を行う領域の全体を包む、絶対座標系AABB。
-        @param[in] in_level 空間分割の最深レベル。
-     */
-    public: mosp_tree(
-        typename self::space::coordinates::aabb const& in_aabb,
-        unsigned const in_level = self::LEVEL_LIMIT)
-    :
-        space_(in_aabb, in_level),
-        idle_end_(nullptr),
-        detect_collision_(false)
-    {
-        // 空間分割の最深levelを決定。
-        if (in_level <= self::LEVEL_LIMIT)
-        {
-            this->level_cap_ = in_level;
-        }
-        else
-        {
-            // 最高level以上の空間は作れない。
-            PSYQ_ASSERT(false);
-            this->level_cap_ = self::LEVEL_LIMIT;
         }
     }
 

@@ -95,16 +95,16 @@ class psyq::mosp_coordinates
     }
 
     /** @brief 絶対座標系空間からmorton座標空間への変換scaleを算出する。
-        @param[in] in_aabb  衝突判定領域の全体を包む、絶対座標系AABB。
-        @param[in] in_level 空間分割の最深level。
+        @param[in] in_aabb      衝突判定領域の全体を包む、絶対座標系AABB。
+        @param[in] in_level_cap 空間分割の最大深度。
      */
     public: static typename self::vector calc_scale(
         typename self::aabb const& in_aabb,
-        unsigned const             in_level)
+        unsigned const             in_level_cap)
     {
         auto const local_size(in_aabb.get_max() - in_aabb.get_min());
         auto const local_unit(
-            static_cast<typename self::element>(1 << in_level));
+            static_cast<typename self::element>(1 << in_level_cap));
         return psyq::geometric_vector<self::vector>::make(
             self::calc_scale(
                 local_unit, psyq::geometric_vector_element(local_size, 0)),
@@ -124,22 +124,29 @@ class psyq::mosp_space
 {
     /// *thisの型。
     private: typedef mosp_space<template_coordinates> self;
+
     /// 衝突判定に使う psyq::mosp_coordinates の型。
     public: typedef template_coordinates coordinates;
-    /// morton順序の型。
-    public: typedef std::size_t order;
+
+    /** @brief morton順序の型。
+        @note
+            64ビット整数だと、座標の要素の型が32ビット浮動小数点だった場合に、
+            精度が足らなくなる。
+            separate_bits() も32ビット整数に特化したものしか用意してない。
+     */
+    public: typedef std::uint32_t order;
 
     //-------------------------------------------------------------------------
     /** @brief 衝突判定を行う領域を設定する。
-        @param[in] in_aabb  衝突判定を行う領域の全体を包む、絶対座標系AABB。
-        @param[in] in_level 空間分割の最深レベル。
+        @param[in] in_aabb      衝突判定を行う領域の全体を包む、絶対座標系AABB。
+        @param[in] in_level_cap 空間分割の最深レベル。
      */
     protected: mosp_space(
         typename self::coordinates::aabb const& in_aabb,
-        unsigned const                          in_level)
+        unsigned const                          in_level_cap)
     :
         aabb_(in_aabb),
-        scale_(self::coordinates::calc_scale(in_aabb, in_level))
+        scale_(self::coordinates::calc_scale(in_aabb, in_level_cap))
     {}
 
     /** @brief 衝突判定を行う領域の全体を包む、絶対座標系AABBを取得する。
@@ -180,6 +187,10 @@ class psyq::mosp_space
             * psyq::geometric_vector_element(this->scale_, in_element_index);
     }
 
+    /** @brief morton空間に収まるように、morton座標値をclampする。
+        @param[in] in_element clampするmorton座標値。
+        @param[in] in_max     morton座標の最大値。
+     */
     protected: static typename self::order clamp_axis_order(
         typename self::coordinates::element const in_element,
         typename self::order const                in_max)
@@ -188,12 +199,8 @@ class psyq::mosp_space
         {
             return 0;
         }
-        const auto local_order(static_cast<typename self::order>(in_element));
-        if (local_order < in_max)
-        {
-            return local_order;
-        }
-        return in_max;
+        return (std::min)(
+            static_cast<typename self::order>(in_element), in_max);
     }
 
     //-------------------------------------------------------------------------
@@ -228,9 +235,9 @@ class psyq::mosp_space_2d: public psyq::mosp_space<template_coordinates>
     /// @copydoc mosp_space::mosp_space
     public: mosp_space_2d(
         typename super::coordinates::aabb const& in_aabb,
-        unsigned const                           in_level)
+        unsigned const                           in_level_cap)
     :
-        super(in_aabb, in_level)
+        super(in_aabb, in_level_cap)
     {}
 
     /** @brief 2次元座標上の点から、線形4分木のmorton順序を算出する。
@@ -294,9 +301,9 @@ class psyq::mosp_space_3d: public psyq::mosp_space<template_coordinates>
     /// @copydoc mosp_space::mosp_space
     public: mosp_space_3d(
         typename super::coordinates::aabb const& in_aabb,
-        unsigned const                           in_level)
+        unsigned const                           in_level_cap)
     :
-        super(in_aabb, in_level)
+        super(in_aabb, in_level_cap)
     {}
 
     /** @brief 3次元座標上の点から、線形8分木のmorton順序を算出する。
@@ -340,10 +347,12 @@ class psyq::mosp_space_3d: public psyq::mosp_space<template_coordinates>
 /** @brief morton順序による空間分割木を用いた衝突判定ハンドル。
 
     使い方の概要。
-    -# 衝突する物体の識別値を、 mosp_handle::object_ に代入しておく。
+    -# 衝突判定オブジェクトの識別子を、 mosp_handle::object_ に代入する。
     -# mosp_handle::attach_tree() を呼び出し、
        mosp_handle を mosp_tree 空間分割木に取りつける。
     -# mosp_tree::detect_collision() を呼び出し、衝突判定を行う。
+      衝突した2つの衝突判定オブジェクトの識別子を引数に、
+      衝突callback関数が呼び出される。
 
     @tparam template_collision_object @copydoc mosp_handle::collision_object
     @tparam template_morton_order     @copydoc mosp_handle::order
@@ -358,7 +367,7 @@ class psyq::mosp_handle
 
     /// 衝突判定オブジェクトの識別子。
     public: typedef template_collision_object collision_object;
-    /// @copydoc psyq::morton_space::order
+    /// @copydoc psyq::mosp_space::order
     public: typedef template_morton_order order;
 
     //-------------------------------------------------------------------------
@@ -471,10 +480,10 @@ class psyq::mosp_handle
     /// *thisに対応する分割空間。
     private: std::pair<template_morton_order const, self*>* cell_;
 
-    /** @brief thisに対応する、衝突判定オブジェクトの識別子。
+    /** @brief *thisに対応する、衝突判定オブジェクトの識別子。
 
-        この値を引数として、 mosp_tree::detect_collision()
-        の引数に指定した、衝突callback関数が呼び出される。
+        mosp_tree::detect_collision() で他の分割空間と重なったとき、
+        この値を引数として衝突callback関数が呼び出される。
      */
     public: template_collision_object object_;
 };
@@ -488,6 +497,8 @@ class psyq::mosp_handle
     -# mosp_handle::attach_tree() を呼び出し、
        mosp_handle を mosp_tree に取りつける。
     -# mosp_tree::detect_collision() を呼び出し、衝突判定を行う。
+      衝突した2つの衝突判定オブジェクトの識別子を引数に、
+      衝突callback関数が呼び出される。
 
     @tparam template_collision_object @copydoc mosp_handle::collision_object
     @tparam template_space            @copydoc mosp_tree::space
@@ -520,7 +531,7 @@ class psyq::mosp_tree
 
     public: enum: unsigned
     {
-        /// 対応できる空間分割の限界の分割レベル。
+        /// 対応できる空間分割の限界深度。
         LEVEL_LIMIT = (8 * sizeof(typename self::space::order) - 1)
             / self::space::DIMENSION
     };
@@ -528,18 +539,18 @@ class psyq::mosp_tree
     //-------------------------------------------------------------------------
     /** @brief 衝突判定を行う領域を設定する。
         @param[in] in_aabb  衝突判定を行う領域の全体を包む、絶対座標系AABB。
-        @param[in] in_level 空間分割の最深レベル。
+        @param[in] in_level_cap 空間分割の最深レベル。
      */
     public: explicit mosp_tree(
         typename self::space::coordinates::aabb const& in_aabb,
-        unsigned const in_level = self::LEVEL_LIMIT)
+        unsigned const in_level_cap = self::LEVEL_LIMIT)
     :
-        space_(in_aabb, in_level),
-        level_cap_(in_level),
+        space_(in_aabb, in_level_cap),
+        level_cap_(static_cast<decltype(level_cap_)>(in_level_cap)),
         detect_collision_(false)
     {
         // 限界レベルより深い分割空間は作れない。
-        if (self::LEVEL_LIMIT < in_level)
+        if (self::LEVEL_LIMIT < in_level_cap)
         {
             PSYQ_ASSERT(false);
             this->level_cap_ = self::LEVEL_LIMIT;
@@ -657,7 +668,7 @@ class psyq::mosp_tree
         }
         this->detect_collision_ = true;
 
-        // 空になった要素を削除する。
+        // 空になった分割空間を削除する。
         for (auto i(this->cell_map_.begin()); i != this->cell_map_.end();)
         {
             auto const local_handle(i->second);
@@ -718,12 +729,12 @@ class psyq::mosp_tree
             }
         }
 
-        // cellと上位のcellとで、衝突判定を行う。
+        // 上位の分割空間と衝突判定を行う。
         for (
             auto local_super_order(in_target_cell->first);
             0 < local_super_order;)
         {
-            // 上位のcellへ移動し、衝突判定を行う。
+            // 上位の分割空間を取得する。
             local_super_order
                 = (local_super_order - 1) >> self::space::DIMENSION;
             auto const local_super_iterator(
@@ -732,6 +743,8 @@ class psyq::mosp_tree
             {
                 continue;
             }
+
+            // 衝突判定を行う。
             auto const local_target_handle(
                 self::detect_collision_container(
                     local_super_iterator,
@@ -795,8 +808,8 @@ class psyq::mosp_tree
 
     //-------------------------------------------------------------------------
     /** @brief AABBを包む最小の分割空間を構築する。
-        @param[in] in_aabb   絶対座標系AABB。
-        @param[in] in_handle
+        @param[in] in_aabb   衝突判定ハンドルの絶対座標系AABB。
+        @param[in] in_handle 分割空間に取りつける衝突判定ハンドル。
         @retval !=nullptr AABBを包む最小の分割空間。
         @retval ==nullptr 失敗。
      */
@@ -826,7 +839,7 @@ class psyq::mosp_tree
         @return AABBを包む最小の分割空間のmorton順序。
      */
     private: static typename self::space::order calc_order(
-        std::size_t const                              in_level_cap,
+        unsigned const                                 in_level_cap,
         typename self::space const&                    in_space,
         typename self::space::coordinates::aabb const& in_aabb)
     {
@@ -871,7 +884,7 @@ class psyq::mosp_tree
     //-------------------------------------------------------------------------
     private: typename self::space space_; ///< @copydoc space
     private: typename self::cell_map cell_map_; ///< @copydoc cell_map
-    private: std::size_t level_cap_; ///< 空間分割の最深level。
+    private: std::uint8_t level_cap_; ///< 空間分割の最大深度。
     private: bool detect_collision_; ///< detect_collision() を実行中かどうか。
 };
 

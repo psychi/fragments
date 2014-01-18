@@ -18,7 +18,7 @@ namespace psyq
 
     /** @brief 2つの浮動小数点値がほぼ等値か比較する。
         @param[in] in_left_value  比較する浮動小数点値の左辺値。
-        @param[in] in_left_value  比較する浮動小数点値の右辺値。
+        @param[in] in_right_value 比較する浮動小数点値の右辺値。
         @param[in] in_epsilon_mag 誤差の範囲に使うエプシロン値の倍率。
         @retval true  ほぼ等値だった。
         @retval false 等値ではなかった。
@@ -248,7 +248,7 @@ class psyq::geometric_sphere
     }
 
     /** @brief 球の半径を設定する。
-        @param[in] in_center 新たに設定する球の半径。0未満の場合は0になる。
+        @param[in] in_radius 新たに設定する球の半径。0未満の場合は0になる。
      */
     public: void set_radius(
         typename psyq::geometric_vector<template_vector>::element const
@@ -652,8 +652,8 @@ namespace psyq
         }
 
         /** @brief 2つの点を含む最小のAABBを構築する。
-            @parma[in] in_point_a 点Aの座標。
-            @parma[in] in_point_b 点Bの座標。
+            @param[in] in_point_a 点Aの座標。
+            @param[in] in_point_b 点Bの座標。
             @return 点Aと点Bを包むAABB。
          */
         static psyq::geometric_aabb<template_vector> make(
@@ -725,7 +725,7 @@ namespace psyq
         typedef psyq::geometric_segment<template_vector> shape;
 
         /** @brief 線分のAABBを構築する。
-            @param[in] in_sphere AABBを構築する線分。
+            @param[in] in_segment AABBを構築する線分。
             @return 線分のAABB。
          */
         static psyq::geometric_aabb<template_vector> make(
@@ -818,7 +818,7 @@ namespace psyq
         typedef psyq::geometric_ray<template_vector> shape;
 
         /** @brief 半線分のAABBを構築する。
-            @param[in] in_sphere AABBを構築する半線分。
+            @param[in] in_ray AABBを構築する半線分。
             @return 半線分のAABB。
          */
         static psyq::geometric_aabb<template_vector> make(
@@ -919,7 +919,7 @@ namespace psyq
         typedef psyq::geometric_cuboid<template_vector> shape;
 
         /** @brief 直方体のAABBを構築する。
-            @param[in] in_sphere AABBを構築する直方体。
+            @param[in] in_cuboid AABBを構築する直方体。
             @return 直方体のAABB。
          */
         static psyq::geometric_aabb<template_vector> make(

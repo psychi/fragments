@@ -712,16 +712,18 @@ class psyq::mosp_tree
         template_detect_callback const&                in_detect_callback)
     {
         // 同じ分割空間の内部だけで、衝突判定を行う。
-        PSYQ_ASSERT(in_target_cell != in_cell_map.end());
+        auto const local_cell_map_end(in_cell_map.end());
+        PSYQ_ASSERT(in_target_cell != local_cell_map_end);
+        auto const& local_target_cell(*in_target_cell);
         auto const local_next_cell(std::next(in_target_cell));
-        if (local_next_cell != in_cell_map.end()
+        if (local_next_cell != local_cell_map_end
             && in_target_cell->first == local_next_cell->first)
         {
             auto const local_target_handle(
                 self::detect_collision_container(
                     local_next_cell,
-                    in_cell_map.end(),
-                    *in_target_cell,
+                    local_cell_map_end,
+                    local_target_cell,
                     in_detect_callback));
             if (local_target_handle == nullptr)
             {
@@ -739,7 +741,7 @@ class psyq::mosp_tree
                 = (local_super_order - 1) >> self::space::DIMENSION;
             auto const local_super_iterator(
                 in_cell_map.find(local_super_order));
-            if (local_super_iterator == in_cell_map.end())
+            if (local_super_iterator == local_cell_map_end)
             {
                 continue;
             }
@@ -748,8 +750,8 @@ class psyq::mosp_tree
             auto const local_target_handle(
                 self::detect_collision_container(
                     local_super_iterator,
-                    in_cell_map.end(),
-                    *in_target_cell,
+                    local_cell_map_end,
+                    local_target_cell,
                     in_detect_callback));
             if (local_target_handle == nullptr)
             {

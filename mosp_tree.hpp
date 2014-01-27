@@ -10,7 +10,7 @@
 #ifndef PSYQ_MOSP_TREE_HPP_
 #define PSYQ_MOSP_TREE_HPP_
 //#include "psyq/bit_algorithm.hpp"
-//#include "psyq/geometric_utility.hpp"
+//#include "psyq/geometric_aabb.hpp"
 
 /// psyq::mosp_coordinates で使う、defaultのvector型。
 #ifndef PSYQ_MOSP_VECTOR_DEFAULT
@@ -37,7 +37,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 衝突判定に使うmorton座標。 psyq::mosp_space のtemplate引数に使う。
+/** @brief morton座標の型特性。 psyq::mosp_space のtemplate引数に使う。
     @tparam template_vector   @copydoc psyq::mosp_coordinates::vector
     @tparam template_element0 @copydoc psyq::mosp_coordinates::ELEMENT0_INDEX
     @tparam template_element1 @copydoc psyq::mosp_coordinates::ELEMENT1_INDEX
@@ -68,7 +68,7 @@ class psyq::mosp_coordinates
         ELEMENT2_INDEX = template_element2,
     };
 
-    /// morton座標を表すvectorの型。 glm::vec3 互換であること。
+    /// morton座標を表すvectorの型。
     public: typedef template_vector vector;
 
     /// morton座標を表すvectorの成分の型。
@@ -78,7 +78,7 @@ class psyq::mosp_coordinates
     /// morton座標のAABB。
     public: typedef psyq::geometric_aabb<template_vector> aabb;
 
-    /** @brief 絶対座標系からmorton座標への変換scaleを算出する。
+    /** @brief 絶対座標系からmorton座標系への変換scaleを算出する。
         @param[in] in_morton_size morton座標の最大値。
         @param[in] in_world_size  絶対座標系でのmorton空間の大きさ。
      */
@@ -94,7 +94,7 @@ class psyq::mosp_coordinates
         return in_morton_size / in_world_size;
     }
 
-    /** @brief 絶対座標系空間からmorton座標空間への変換scaleを算出する。
+    /** @brief 絶対座標系からmorton座標系への変換scaleを算出する。
         @param[in] in_aabb      衝突判定領域の全体を包む、絶対座標系AABB。
         @param[in] in_level_cap 空間分割の最大深度。
      */
@@ -204,7 +204,7 @@ class psyq::mosp_space
     }
 
     //-------------------------------------------------------------------------
-    /// 衝突判定を行う全体の領域の、絶対座標系AABB。
+    /// 衝突判定を行う領域全体の、絶対座標系AABB。
     private: typename self::coordinates::aabb aabb_;
 
     /// 最小となる分割空間の、絶対座標系での大きさの逆数。
@@ -214,9 +214,9 @@ class psyq::mosp_space
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 2次元座標で衝突判定を行うmorton空間。
 
-    mosp_tree のtemplate引数に使う。
+    psyq::mosp_tree のtemplate引数に使う。
 
-    @tparam template_coordinates @copydoc mosp_space::coordinates
+    @tparam template_coordinates @copydoc psyq::mosp_space::coordinates
  */
 template<typename template_coordinates>
 class psyq::mosp_space_2d: public psyq::mosp_space<template_coordinates>
@@ -282,7 +282,7 @@ class psyq::mosp_space_2d: public psyq::mosp_space<template_coordinates>
 
     mosp_tree のtemplate引数に使う。
 
-    @tparam template_coordinates @copydoc mosp_space::coordinates
+    @tparam template_coordinates @copydoc psyq::mosp_space::coordinates
  */
 template<typename template_coordinates>
 class psyq::mosp_space_3d: public psyq::mosp_space<template_coordinates>
@@ -440,7 +440,7 @@ class psyq::mosp_handle
             return false;
         }
 
-        // 古いリンクから新しい分割空間へ切り替える。
+        // 古い分割空間から新たな分割空間へ切り替える。
         if (this->cell_ != nullptr)
         {
             PSYQ_ASSERT(this == this->cell_->second);
@@ -776,8 +776,6 @@ class psyq::mosp_tree
         typename self::cell_map::value_type const&     in_target_cell,
         template_detect_callback const&                in_detect_callback)
     {
-        auto local_target_handle(in_target_cell.second);
-        PSYQ_ASSERT(local_target_handle != nullptr);
         PSYQ_ASSERT(in_container_begin != in_container_end);
         auto const local_container_order(in_container_begin->first);
         for (
@@ -791,21 +789,19 @@ class psyq::mosp_tree
             {
                 continue;
             }
+            auto const local_target_handle(in_target_cell.second);
+            if (local_target_handle == nullptr)
+            {
+                return nullptr;
+            }
 
             // 衝突callback関数を呼び出す。
             in_detect_callback(
                 local_target_handle->object_,
                 local_container_handle->object_);
 
-            // 衝突callback関数の中で handle::detach_tree()
-            // される場合があるので、 handle を再取得する。
-            local_target_handle = in_target_cell.second;
-            if (local_target_handle == nullptr)
-            {
-                return nullptr;
-            }
         }
-        return local_target_handle;
+        return in_target_cell.second;
     }
 
     //-------------------------------------------------------------------------
@@ -851,7 +847,8 @@ class psyq::mosp_tree
         }
 
         // 衝突物体のAABBを包む、最小の分割空間のmorton順序を算出する。
-        unsigned const local_axis_order_max((1 << in_level_cap) - 1);
+        auto const local_axis_order_max(
+            psyq::bitwise_shift_left_fast<unsigned>(1, in_level_cap) - 1);
         auto const local_min_morton(
             in_space.calc_order(in_aabb.get_min(), local_axis_order_max));
         auto const local_max_morton(
@@ -869,18 +866,12 @@ class psyq::mosp_tree
         {
             local_level = 1;
         }
-        unsigned const local_cell_count(
-            1 << ((in_level_cap - local_level) * self::space::DIMENSION));
-        unsigned const local_base(
-            (local_cell_count - 1) / ((1 << self::space::DIMENSION) - 1));
-        auto const local_shift(local_level * self::space::DIMENSION);
-        /** @note
-            bit数以上のbit-right-shift演算は、
-            C言語の仕様として未定義の動作となる。
-            http://hexadrive.sblo.jp/article/56575654.html
-         */
-        PSYQ_ASSERT(local_shift < sizeof(local_max_morton) * 8);
-        return local_base + (local_max_morton >> local_shift);
+        auto const local_cell_count(
+            psyq::bitwise_shift_left_fast<unsigned>(
+                1, (in_level_cap - local_level) * self::space::DIMENSION));
+        return (local_cell_count - 1) / ((1 << self::space::DIMENSION) - 1)
+            + psyq::bitwise_shift_right_fast(
+                local_max_morton, local_level * self::space::DIMENSION);
     }
 
     //-------------------------------------------------------------------------

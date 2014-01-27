@@ -1,5 +1,6 @@
 ﻿#ifndef PSYQ_GEOMETIC_AABB_HPP_
 #define PSYQ_GEOMETIC_AABB_HPP_
+//#include "psyq/geometric_shape.hpp"
 
 namespace psyq
 {

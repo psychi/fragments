@@ -60,6 +60,69 @@
 namespace psyq
 {
     //-------------------------------------------------------------------------
+    /** @brief 整数を左ビットシフトする。
+        @param[in] in_bits  ビットシフトする値。
+        @param[in] in_shift シフトするビット数。
+        @return 左ビットシフトした値。
+     */
+    template<typename template_bits>
+    template_bits bitwise_shift_left(
+        template_bits const in_bits,
+        unsigned const      in_shift)
+    {
+        return static_cast<template_bits>(
+            in_shift < sizeof(in_bits) * 8? in_bits << in_shift: 0);
+    }
+
+    /** @brief 整数を左ビットシフトする。
+        @param[in] in_bits  ビットシフトする値。
+        @param[in] in_shift シフトするビット数。
+        @return 左ビットシフトした値。
+        @note
+            bit数以上のbit-shift演算は、C言語の仕様として未定義の動作となる。
+            http://hexadrive.sblo.jp/article/56575654.html
+     */
+    template<typename template_bits>
+    template_bits bitwise_shift_left_fast(
+        template_bits const in_bits,
+        unsigned const      in_shift)
+    {
+        PSYQ_ASSERT(in_shift < sizeof(in_bits) * 8);
+        return in_bits << in_shift;
+    }
+
+    /** @brief 整数を右ビットシフトする。
+        @param[in] in_bits  ビットシフトする値。
+        @param[in] in_shift シフトするビット数。
+        @return 右ビットシフトした値。
+     */
+    template<typename template_bits>
+    template_bits bitwise_shift_right(
+        template_bits const in_bits,
+        unsigned const      in_shift)
+    {
+        return static_cast<template_bits>(
+            in_bits >> (std::min)(in_shift, sizeof(in_bits) * 8 - 1)):
+    }
+
+    /** @brief 整数を右ビットシフトする。
+        @param[in] in_bits  ビットシフトする値。
+        @param[in] in_shift シフトするビット数。
+        @return 右ビットシフトした値。
+        @note
+            bit数以上のbit-shift演算は、C言語の仕様として未定義の動作となる。
+            http://hexadrive.sblo.jp/article/56575654.html
+     */
+    template<typename template_bits>
+    template_bits bitwise_shift_right_fast(
+        template_bits const in_bits,
+        unsigned const      in_shift)
+    {
+        PSYQ_ASSERT(in_shift < sizeof(in_bits) * 8);
+        return in_bits >> in_shift;
+    }
+
+    //-------------------------------------------------------------------------
     /** @brief 指定された位置のビット値を取得する。
         @param[in] in_bits ビット集合として扱う整数値。
         @param[in] in_position 取得するビットの位置。
@@ -90,7 +153,7 @@ namespace psyq
         template_bits const in_bits,
         std::size_t   const in_position)
     {
-        return ((in_bits >> in_position) & 1) != 0;
+        return (psyq::bitwise_shift_right_fast(in_bits, in_position) & 1) != 0;
     }
 
     /** @brief 指定された位置にビット値として1を設定する。
@@ -122,7 +185,8 @@ namespace psyq
         template_bits const in_bits,
         std::size_t   const in_position)
     {
-        return static_cast<template_bits>((1 << in_position) | in_bits);
+        return psyq::bitwise_shift_left_fast<template_bits>(1, in_position)
+            | in_bits;
     }
 
     /** @brief 指定された位置にビット値を設定する。
@@ -159,7 +223,8 @@ namespace psyq
         bool          const in_value)
     {
         return psyq::reset_bit_fast(in_bits, in_position)
-            | (in_value << in_position);
+            | psyq::bitwise_shift_left_fast<template_bits>(
+                in_value, in_position);
     }
 
     /** @brief 指定された位置にビット値として0を設定する。
@@ -223,7 +288,8 @@ namespace psyq
         template_bits const in_bits,
         std::size_t   const in_position)
     {
-        return static_cast<template_bits>((1 << in_position) ^ in_bits);
+        return psyq::shift_left_bit_fast<template_bits>(1, in_position)
+            ^ in_bits;
     }
 
     //-------------------------------------------------------------------------

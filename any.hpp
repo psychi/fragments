@@ -39,6 +39,7 @@ namespace psyq
     /// @cond
     class type_hash;
     class any;
+    template<typename> class any_holder;
     /// @endcond
 }
 
@@ -221,7 +222,7 @@ class psyq::type_hash
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 任意型の値を保持するためのinterface。
 
-    psyq::any::holder を、 std::shared_ptr 互換のsmart-pointerで保持して使う。
+    psyq::any_holder を、 std::shared_ptr 互換のsmart-pointerで保持して使う。
  */
 class psyq::any
 {
@@ -229,10 +230,6 @@ class psyq::any
 
     public: typedef std::shared_ptr<self> shared_ptr; ///< self の保持子。
     public: typedef std::weak_ptr<self>   weak_ptr;   ///< self の監視子。
-
-    /// @cond
-    public: template<typename> class holder;
-    /// @endcond
 
     //-------------------------------------------------------------------------
     public: virtual ~any() {}
@@ -263,7 +260,7 @@ class psyq::any
     protected: virtual void const* get_const_value(
         psyq::type_hash::value const in_type_hash) const = 0;
 
-    /** @brief psyq::any が保持してる値へのpointerを取得する。
+    /** @brief 保持してる値へのpointerを取得する。
         @tparam template_value 取得する値の型。
         @retval !=nullptr thisが保持してる値へのpointer。
         @retval ==nullptr
@@ -287,13 +284,13 @@ class psyq::any
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 実際に任意型の値を保持する。
-    @tparam template_value @copydoc holder::value_type
+    @tparam template_value @copydoc psyq::any_holder::value_type
  */
 template<typename template_value>
-class psyq::any::holder: public psyq::any
+class psyq::any_holder: public psyq::any
 {
-    private: typedef holder<template_value> self; ///< thisが指す値の型。
-    public: typedef psyq::any super;              ///< self の上位型。
+    private: typedef any_holder<template_value> self; ///< thisが指す値の型。
+    public: typedef psyq::any super;                  ///< self の上位型。
 
     public: typedef std::shared_ptr<self> shared_ptr; ///< self の保持子。
     public: typedef std::weak_ptr<self>   weak_ptr;   ///< self の監視子。
@@ -301,11 +298,11 @@ class psyq::any::holder: public psyq::any
     /// 保持してる値の型。const修飾子とvolatile修飾子は取り除かれる。
     public: typedef typename std::remove_cv<template_value>::type value_type;
 
-    public: holder(typename self::value_type const& in_value):
+    public: any_holder(typename self::value_type const& in_value):
         value(in_value)
     {}
 
-    public: holder(typename self::value_type&& io_value):
+    public: any_holder(typename self::value_type&& io_value):
         value(std::move(io_value))
     {}
 

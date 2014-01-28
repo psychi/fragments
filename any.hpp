@@ -28,11 +28,7 @@
 #ifndef PSYQ_ANY_HPP_
 #define PSYQ_ANY_HPP_
 #include <memory>
-#ifndef PSYQ_ANY_TYPE_HASH_RESERVED_COUNT
-/// 予約済みの型の識別値の数。
-#define PSYQ_ANY_TYPE_HASH_RESERVED_COUNT\
-    std::size_t(1 << (sizeof(std::size_t) * 8 - 1))
-#endif // !defined(PSYQ_ANY_TYPE_HASH_RESERVED_COUNT)
+//#include "atomic_count.hpp"
 
 namespace psyq
 {
@@ -54,6 +50,12 @@ class psyq::type_hash
     private: typedef psyq::type_hash self;
 
     public: typedef std::size_t value; ///< 型の識別値。
+
+    public: enum: self::value
+    {
+        /// void型の識別値。
+        EMPTY = self::value(1) << (sizeof(std::size_t) * 8 - 1),
+    };
 
     private: struct node
     {
@@ -79,10 +81,8 @@ class psyq::type_hash
     static self::value get()
     {
         auto const local_node(
-            self::register_node<template_type>(
-                nullptr, PSYQ_ANY_TYPE_HASH_RESERVED_COUNT));
-        return local_node != nullptr?
-            local_node->type_hash: PSYQ_ANY_TYPE_HASH_RESERVED_COUNT;
+            self::register_node<template_type>(nullptr, self::EMPTY));
+        return local_node != nullptr? local_node->type_hash: self::EMPTY;
     }
 
     /** @brief 型の識別値と上位型を設定する。
@@ -93,14 +93,13 @@ class psyq::type_hash
         @tparam template_super_type 識別値を設定したい型の上位型。
         @param[in] in_hash
             設定する型の識別値。デフォルト値の場合は、自動的に決定する。
-        @retval !=psyq::type_hash::get<void>() 型の識別値。
-        @retval ==psyq::type_hash::get<void>() 失敗。すでに設定済み。
+        @retval !=self::EMPTY 型の識別値。
+        @retval ==self::EMPTY 失敗。すでに設定済み。
         @todo 異なる型に同じ識別値を設定できてしまう。対処したい。
      */
     public: template<
         typename template_type, typename template_super_type>
-    static self::value reserve(
-        self::value const in_hash = PSYQ_ANY_TYPE_HASH_RESERVED_COUNT)
+    static self::value reserve(self::value const in_hash = self::EMPTY)
     {
         static_assert(
             // 上位型の指定が正しいこと。
@@ -118,29 +117,27 @@ class psyq::type_hash
             /// @note constexprが使えるなら、static_assertにしたい。
             PSYQ_ASSERT(false);
         }
-        else if (in_hash <= PSYQ_ANY_TYPE_HASH_RESERVED_COUNT)
+        else if (in_hash <= self::EMPTY)
         {
             auto const local_super_node(
                 self::register_node<template_super_type>(
-                    nullptr, PSYQ_ANY_TYPE_HASH_RESERVED_COUNT));
+                    nullptr, self::EMPTY));
             auto const local_node(
                 self::register_node<template_type>(
                     local_super_node, in_hash));
             if (local_node != nullptr)
             {
-                if (in_hash == PSYQ_ANY_TYPE_HASH_RESERVED_COUNT
-                    || in_hash == local_node->type_hash)
+                if (in_hash == self::EMPTY || in_hash == local_node->type_hash)
                 {
                     return local_node->type_hash;
                 }
             }
         }
-        return PSYQ_ANY_TYPE_HASH_RESERVED_COUNT;
+        return self::EMPTY;
     }
 
     public: template<typename template_type>
-    static self::value reserve(
-        self::value const in_hash = PSYQ_ANY_TYPE_HASH_RESERVED_COUNT)
+    static self::value reserve(self::value const in_hash = self::EMPTY)
     {
         return self::reserve<template_type, void>(in_hash);
     }
@@ -154,8 +151,7 @@ class psyq::type_hash
     static bool find_super(self::value const in_super_hash)
     {
         auto local_node(
-            self::register_node<template_type>(
-                nullptr, PSYQ_ANY_TYPE_HASH_RESERVED_COUNT));
+            self::register_node<template_type>(nullptr, self::EMPTY));
         while (local_node != nullptr)
         {
             if (local_node->type_hash == in_super_hash)
@@ -192,9 +188,7 @@ class psyq::type_hash
         template_type*)
     {
         static self::node const static_node(
-            in_super,
-            in_hash != PSYQ_ANY_TYPE_HASH_RESERVED_COUNT?
-                in_hash: self::add_hash());
+            in_super, in_hash != self::EMPTY? in_hash: self::add_hash());
         return &static_node;
     }
 
@@ -212,7 +206,7 @@ class psyq::type_hash
      */
     private: static self::value add_hash()
     {
-        static psyq::atomic_count static_hash(PSYQ_ANY_TYPE_HASH_RESERVED_COUNT);
+        static psyq::atomic_count static_hash(self::EMPTY);
         auto const local_hash(static_hash.add());
         PSYQ_ASSERT(0 < local_hash);
         return local_hash;

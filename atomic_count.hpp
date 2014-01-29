@@ -29,30 +29,30 @@ class psyq::atomic_count
         count_(in_count)
     {}
 
-    public: std::size_t add()
+    public: std::size_t add(std::size_t const in_add)
     {
 #if PSYQ_ATOMIC_COUNT_ENABLE_THREADS
         auto const local_last_count(
             std::atomic_fetch_add_explicit(
-                &this->count_, 1, std::memory_order_relaxed));
+                &this->count_, in_add, std::memory_order_relaxed));
+        return local_last_count + in_add;
 #else
-        auto const local_last_count(this->count_);
-        ++this->count_;
+        this->count_ += in_add;
+        return this->count_;
 #endif // PSYQ_ATOMIC_COUNT_ENABLE_THREADS
-        return local_last_count + 1;
     }
 
-    public: std::size_t sub()
+    public: std::size_t sub(std::size_t const in_sub)
     {
 #if PSYQ_ATOMIC_COUNT_ENABLE_THREADS
         auto const local_last_count(
             std::atomic_fetch_sub_explicit(
-                &this->count_, 1, std::memory_order_release));
+                &this->count_, in_sub, std::memory_order_release));
+        return local_last_count - in_sub;
 #else
-        auto const local_last_count(this->count_);
-        --this->count_;
+        this->count_ -= in_sub;
+        return this->count_;
 #endif // PSYQ_ATOMIC_COUNT_ENABLE_THREADS
-        return local_last_count - 1;
     }
 
     public: static void acquire_fence()

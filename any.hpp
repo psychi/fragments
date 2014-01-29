@@ -27,191 +27,16 @@
  */
 #ifndef PSYQ_ANY_HPP_
 #define PSYQ_ANY_HPP_
-#include <memory>
 //#include "atomic_count.hpp"
+#include <memory>
 
 namespace psyq
 {
     /// @cond
-    class type_hash;
     class any;
     template<typename> class any_holder;
     /// @endcond
 }
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 動的型情報は使わず、型ごとに固有の識別値を管理する。
-
-    - psyq::type_hash::reserve() で、型の識別値と上位型を登録する。
-    - psyq::type_hash::make() で、型の識別値を取得する。
- */
-class psyq::type_hash
-{
-    private: typedef psyq::type_hash self;
-
-    public: typedef std::size_t value; ///< 型の識別値。
-
-    public: enum: self::value
-    {
-        /// void型の識別値。
-        EMPTY = self::value(1) << (sizeof(std::size_t) * 8 - 1),
-    };
-
-    private: struct node
-    {
-        node(node const* const in_super, self::value const in_hash):
-            super_node(in_super), type_hash(in_hash)
-        {}
-
-        node const* super_node;
-        self::value type_hash;
-    };
-
-    //-------------------------------------------------------------------------
-    /** @brief 型の識別値を取得する。
-
-        型の識別値がまだ設定されてない場合は、自動的に設定する。
-        型の識別値は、一度設定すると変更できない。
-
-        @tparam template_type 識別値を取得したい型。
-        @tparam template_super_type 識別値を取得したい型の上位型。
-        @return 型の識別値。
-     */
-    public: template<typename template_type>
-    static self::value get()
-    {
-        auto const local_node(
-            self::register_node<template_type>(nullptr, self::EMPTY));
-        return local_node != nullptr? local_node->type_hash: self::EMPTY;
-    }
-
-    /** @brief 型の識別値と上位型を設定する。
-
-        型の識別値と上位型は、一度設定すると変更できない。
-
-        @tparam template_type       識別値を設定したい型。
-        @tparam template_super_type 識別値を設定したい型の上位型。
-        @param[in] in_hash
-            設定する型の識別値。デフォルト値の場合は、自動的に決定する。
-        @retval !=self::EMPTY 型の識別値。
-        @retval ==self::EMPTY 失敗。すでに設定済み。
-        @todo 異なる型に同じ識別値を設定できてしまう。対処したい。
-     */
-    public: template<
-        typename template_type, typename template_super_type>
-    static self::value reserve(self::value const in_hash = self::EMPTY)
-    {
-        static_assert(
-            // 上位型の指定が正しいこと。
-            std::is_void<template_super_type>::value
-            || std::is_base_of<template_super_type, template_type>::value,
-            "'template_super_type' is not a base type of 'template_type'.");
-        auto const local_pointer(
-            reinterpret_cast<template_type const*>(0x10000000));
-        void const* const local_super_pointer(
-            static_cast<template_super_type const*>(local_pointer));
-        if (local_pointer != local_super_pointer)
-        {
-            // 多重継承の場合は、最初の上位型のみ扱える。
-            // 'template_super_type' is not a first base type of 'template_type'.
-            /// @note constexprが使えるなら、static_assertにしたい。
-            PSYQ_ASSERT(false);
-        }
-        else if (in_hash <= self::EMPTY)
-        {
-            auto const local_super_node(
-                self::register_node<template_super_type>(
-                    nullptr, self::EMPTY));
-            auto const local_node(
-                self::register_node<template_type>(
-                    local_super_node, in_hash));
-            if (local_node != nullptr)
-            {
-                if (in_hash == self::EMPTY || in_hash == local_node->type_hash)
-                {
-                    return local_node->type_hash;
-                }
-            }
-        }
-        return self::EMPTY;
-    }
-
-    public: template<typename template_type>
-    static self::value reserve(self::value const in_hash = self::EMPTY)
-    {
-        return self::reserve<template_type, void>(in_hash);
-    }
-
-    /** @brief 上位型か判定する。
-        @param[in] in_super_hash 上位型か判定する型の識別値。
-        @retval true  上位型に含まれている。
-        @retval false 上位型に含まれていない。
-     */
-    public: template<typename template_type>
-    static bool find_super(self::value const in_super_hash)
-    {
-        auto local_node(
-            self::register_node<template_type>(nullptr, self::EMPTY));
-        while (local_node != nullptr)
-        {
-            if (local_node->type_hash == in_super_hash)
-            {
-                return true;
-            }
-            local_node = local_node->super_node;
-        }
-        return false;
-    }
-
-    /** @brief 型の識別値を登録する。
-
-        一度登録された型の識別値は、変更できない。
-
-        @param[in] in_super 登録する型の上位の識別ノードの初期値。
-        @param[in] in_hash  登録する型の識別値の初期値。
-        @return 登録されている型の識別ノード。
-     */
-    private: template<typename template_type>
-    static self::node const* register_node(
-        self::node const* const in_super,
-        self::value const       in_hash)
-    {
-        typename std::remove_cv<template_type>::type* local_pointer(nullptr);
-        return self::register_node(in_super, in_hash, local_pointer);
-    }
-
-    /// @copydoc register_node()
-    private: template<typename template_type>
-    static self::node const* register_node(
-        self::node const* const in_super,
-        self::value const       in_hash,
-        template_type*)
-    {
-        static self::node const static_node(
-            in_super, in_hash != self::EMPTY? in_hash: self::add_hash());
-        return &static_node;
-    }
-
-    /** @brief void型の識別値は登録できない。
-        @return 必ずnullptrとなる。
-     */
-    private: static self::node const* register_node(
-        self::node const* const, self::value const, void*)
-    {
-        return nullptr;
-    }
-
-    /** @brief 型の識別値を追加する。
-        @return 追加された型の識別値。
-     */
-    private: static self::value add_hash()
-    {
-        static psyq::atomic_count static_hash(self::EMPTY);
-        auto const local_hash(static_hash.add());
-        PSYQ_ASSERT(0 < local_hash);
-        return local_hash;
-    }
-};
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 任意型の値を保持するためのinterface。
@@ -228,43 +53,19 @@ class psyq::any
     //-------------------------------------------------------------------------
     public: virtual ~any() {}
 
-    /** @brief 保持してる値の型情報を取得する。
-        @return 保持してる値の型情報。
-     */
-    public: virtual std::type_info const& get_type_info() const = 0;
-
-    /** @brief 保持してる値の型の識別値を取得する。
-        @return 保持してる値の型の識別値。
-     */
-    public: virtual psyq::type_hash::value get_type_hash() const = 0;
-
-    /** @brief 保持してる値の大きさを取得する。
-        @return 保持してる値のbyte単位の大きさ。
-     */
-    public: virtual std::size_t get_size() const = 0;
-
-    /** @brief 保持してる値へのpointerを取得する。
-        @param[in] in_type_hash 取得する型の識別値。
-        @return 保持してる値へのpointer。
-     */
-    protected: virtual void* get_value(
-        psyq::type_hash::value const in_type_hash) = 0;
-
-    /// @copydoc get_value()
-    protected: virtual void const* get_const_value(
-        psyq::type_hash::value const in_type_hash) const = 0;
-
-    /** @brief 保持してる値へのpointerを取得する。
+    /** @brief 保持してる値へのポインタを取得する。
         @tparam template_value 取得する値の型。
-        @retval !=nullptr thisが保持してる値へのpointer。
+        @retval !=nullptr *thisが保持してる値へのポインタ。
         @retval ==nullptr
-            実際に保持してる値の型と template_value が異なっていた。
+            *thisが実際に保持してる値のポインタ型を、
+            template_value のポインタ型にキャストできなかった。
      */
     public: template<typename template_value>
     template_value* get_pointer()
     {
         return static_cast<template_value*>(
-            this->get_value(psyq::type_hash::get<template_value>()));
+            this->cast_pointer(
+                psyq::tiny_rtti::get<template_value>().get_hash()));
     }
 
     /// @copydoc get_pointer()
@@ -272,8 +73,29 @@ class psyq::any
     template_value const* get_const_pointer() const
     {
         return static_cast<template_value const*>(
-            this->get_const_value(psyq::type_hash::get<template_value>()));
+            this->cast_const_pointer(
+                psyq::tiny_rtti::get<template_value>().get_hash()));
     }
+
+    //-------------------------------------------------------------------------
+    /** @brief 保持してる値のRTTIを取得する。
+        @return 保持してる値のRTTI。
+     */
+    public: virtual psyq::tiny_rtti const& get_rtti() const = 0;
+
+    /** @brief 保持してる値へのポインタをキャストする。
+        @param[in] in_value_hash キャスト先の型の識別値。
+        @retval !=nullptr *thisが保持してる値へのポインタ。
+        @retval ==nullptr
+            *thisが実際に保持してる値のポインタ型を、
+            template_value のポインタ型にキャストできなかった。
+     */
+    protected: virtual void* cast_pointer(
+        psyq::tiny_rtti::hash const in_value_hash) = 0;
+
+    /// @copydoc cast_pointer()
+    protected: virtual void const* cast_const_pointer(
+        psyq::tiny_rtti::hash const in_value_hash) const = 0;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -292,44 +114,36 @@ class psyq::any_holder: public psyq::any
     /// 保持してる値の型。const修飾子とvolatile修飾子は取り除かれる。
     public: typedef typename std::remove_cv<template_value>::type value_type;
 
+    /// @param[in] in_value 保持する値の初期値。
     public: any_holder(typename self::value_type const& in_value):
         value(in_value)
     {}
 
+    /// @param[in,out] io_value 保持する値の初期値。
     public: any_holder(typename self::value_type&& io_value):
         value(std::move(io_value))
     {}
 
-    public: virtual std::type_info const& get_type_info() const override
+    public: virtual psyq::tiny_rtti const& get_rtti() const override
     {
-        return typeid(typename self::value_type);
+        return psyq::tiny_rtti::get<typename self::value_type>();
     }
 
-    public: virtual psyq::type_hash::value get_type_hash() const override
-    {
-        return psyq::type_hash::get<typename self::value_type>();
-    }
-
-    public: virtual std::size_t get_size() const override
-    {
-        return sizeof(typename self::value_type);
-    }
-
-    protected: virtual void* get_value(
-        psyq::type_hash::value const in_super_hash)
+    protected: virtual void* cast_pointer(
+        psyq::tiny_rtti::hash const in_value_hash)
     override
     {
         return std::is_const<template_value>::value?
             nullptr:
-            const_cast<void*>(this->self::get_const_value(in_super_hash));
+            const_cast<void*>(this->self::cast_const_pointer(in_value_hash));
     }
 
-    protected: virtual void const* get_const_value(
-        psyq::type_hash::value const in_super_hash)
+    protected: virtual void const* cast_const_pointer(
+        psyq::tiny_rtti::hash const in_value_hash)
     const override
     {
-        return psyq::type_hash::find_super<typename self::value_type>(
-            in_super_hash)? &this->value: nullptr;
+        return this->self::get_rtti().find_base(in_value_hash) != nullptr?
+            &this->value: nullptr;
     }
 
     public: typename self::value_type value; ///< 保持してる値。

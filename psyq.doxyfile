@@ -684,13 +684,14 @@ INPUT                  = \
                          ./string/array_string.hpp \
                          ./string/string_table.hpp \
                          ./bit_algorithm.hpp \
+                         ./fnv_hash.hpp \
+                         ./tiny_rtti.hpp \
+                         ./any.hpp \
                          ./geometric_vector.hpp \
                          ./geometric_shape.hpp \
                          ./geometric_aabb.hpp \
                          ./mosp_tree.hpp \
                          ./mosp_leaf.hpp \
-                         ./fnv_hash.hpp \
-                         ./any.hpp \
 
 #                         ./async_file.hpp \
 #                         ./async_queue.hpp \

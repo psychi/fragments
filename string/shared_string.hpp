@@ -483,7 +483,7 @@ class psyq::internal::shared_string_holder
     private: static std::size_t hold_buffer(
         typename self::shared_buffer& io_buffer)
     {
-        auto const local_count(io_buffer.hold_count.add());
+        auto const local_count(io_buffer.hold_count.add(1));
         PSYQ_ASSERT(0 < local_count);
         return local_count;
     }
@@ -500,7 +500,7 @@ class psyq::internal::shared_string_holder
         {
             return;
         }
-        auto const local_count(io_buffer->hold_count.sub());
+        auto const local_count(io_buffer->hold_count.sub(1));
         if (0 < local_count)
         {
             PSYQ_ASSERT(0 < local_count + 1);

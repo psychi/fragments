@@ -53,31 +53,31 @@ class psyq::any
     //-------------------------------------------------------------------------
     public: virtual ~any() {}
 
-    /** @brief 保持してる値へのポインタを取得する。
-        @tparam template_value 取得する値の型。
+    /** @brief 保持してる値を動的にキャストする。
+        @tparam template_value キャストする値の型。
         @retval !=nullptr *thisが保持してる値へのポインタ。
         @retval ==nullptr
             *thisが実際に保持してる値のポインタ型を、
             template_value のポインタ型にキャストできなかった。
      */
     public: template<typename template_value>
-    template_value* get_pointer()
+    template_value* cast_pointer()
     {
         auto const local_hash(
             psyq::tiny_rtti::get<template_value>().get_hash());
         return static_cast<template_value*>(
             /// @note static_ifを使いたい。
             std::is_const<template_value>::value?
-                const_cast<void*>(this->cast_const_pointer(local_hash)):
-                this->cast_pointer(local_hash));
+                const_cast<void*>(this->cast_const_void(local_hash)):
+                this->cast_void(local_hash));
     }
 
-    /// @copydoc get_pointer()
+    /// @copydoc cast_pointer()
     public: template<typename template_value>
-    template_value const* get_pointer() const
+    template_value const* cast_pointer() const
     {
         return static_cast<template_value const*>(
-            this->cast_const_pointer(
+            this->cast_const_void(
                 psyq::tiny_rtti::get<template_value>().get_hash()));
     }
 
@@ -94,11 +94,11 @@ class psyq::any
             *thisが実際に保持してる値のポインタ型を、
             template_value のポインタ型にキャストできなかった。
      */
-    protected: virtual void* cast_pointer(
+    protected: virtual void* cast_void(
         psyq::tiny_rtti::hash const in_value_hash) = 0;
 
-    /// @copydoc cast_pointer()
-    protected: virtual void const* cast_const_pointer(
+    /// @copydoc cast_void()
+    protected: virtual void const* cast_const_void(
         psyq::tiny_rtti::hash const in_value_hash) const = 0;
 };
 
@@ -133,16 +133,16 @@ class psyq::any_holder: public psyq::any
         return psyq::tiny_rtti::get<typename self::value_type>();
     }
 
-    protected: virtual void* cast_pointer(
+    protected: virtual void* cast_void(
         psyq::tiny_rtti::hash const in_value_hash)
     override
     {
         return std::is_const<template_value>::value?
             nullptr:
-            const_cast<void*>(this->self::cast_const_pointer(in_value_hash));
+            const_cast<void*>(this->self::cast_const_void(in_value_hash));
     }
 
-    protected: virtual void const* cast_const_pointer(
+    protected: virtual void const* cast_const_void(
         psyq::tiny_rtti::hash const in_value_hash)
     const override
     {
@@ -173,24 +173,24 @@ namespace psyq
                 new psyq::any_holder<class_a>(class_a()));
             psyq::any::shared_ptr local_b(
                 new psyq::any_holder<class_b>(class_b()));
-            PSYQ_ASSERT(local_a->get_pointer<class_a>() != nullptr);
-            PSYQ_ASSERT(local_a->get_pointer<class_a>() != nullptr);
-            PSYQ_ASSERT(local_a->get_pointer<class_b>() == nullptr);
-            PSYQ_ASSERT(local_b->get_pointer<class_b>() != nullptr);
+            PSYQ_ASSERT(local_a->cast_pointer<class_a>() != nullptr);
+            PSYQ_ASSERT(local_a->cast_pointer<class_a>() != nullptr);
+            PSYQ_ASSERT(local_a->cast_pointer<class_b>() == nullptr);
+            PSYQ_ASSERT(local_b->cast_pointer<class_b>() != nullptr);
 
             psyq::any::shared_ptr local_const_a(
                 new psyq::any_holder<class_a const>(class_a()));
-            PSYQ_ASSERT(local_const_a->get_pointer<class_a>() == nullptr);
-            PSYQ_ASSERT(local_const_a->get_pointer<class_a const>() != nullptr);
+            PSYQ_ASSERT(local_const_a->cast_pointer<class_a>() == nullptr);
+            PSYQ_ASSERT(local_const_a->cast_pointer<class_a const>() != nullptr);
             auto const& local_const_a_ref(*local_const_a);
-            PSYQ_ASSERT(local_const_a_ref.get_pointer<class_a>() != nullptr);
+            PSYQ_ASSERT(local_const_a_ref.cast_pointer<class_a>() != nullptr);
 
             PSYQ_ASSERT((psyq::tiny_rtti::make<class_ab, class_a>()) != nullptr);
             psyq::any::shared_ptr local_ab(
                 new psyq::any_holder<class_ab>(class_ab()));
-            PSYQ_ASSERT(local_ab->get_pointer<class_ab>() != nullptr);
-            PSYQ_ASSERT(local_ab->get_pointer<class_a>() != nullptr);
-            PSYQ_ASSERT(local_ab->get_pointer<class_b>() == nullptr);
+            PSYQ_ASSERT(local_ab->cast_pointer<class_ab>() != nullptr);
+            PSYQ_ASSERT(local_ab->cast_pointer<class_a>() != nullptr);
+            PSYQ_ASSERT(local_ab->cast_pointer<class_b>() == nullptr);
         }
     }
 }

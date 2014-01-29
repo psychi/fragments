@@ -114,7 +114,7 @@ class psyq::tiny_rtti
             /// @note constexprが使えるなら、static_assertしたい。
             PSYQ_ASSERT(false);
         }
-        else if (in_hash == self::VOID_HASH || !self::find_rtti_list(in_hash))
+        else if (in_hash <= self::VOID_HASH && !self::find_rtti_list(in_hash))
         {
             auto const& local_super_rtti(
                 self::get_static_rtti<template_super_type>(

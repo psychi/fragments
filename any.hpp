@@ -118,15 +118,51 @@ class psyq::any_holder: public psyq::any
     /// 保持してる値の型。const修飾子とvolatile修飾子は取り除かれる。
     public: typedef typename std::remove_cv<template_value>::type value_type;
 
-    /// @param[in] in_value 保持する値の初期値。
-    public: any_holder(typename self::value_type const& in_value):
+    /** @brief 保持する値をコピーして初期化する。
+        @param[in] in_value コピーする初期値。
+     */
+    public: explicit any_holder(typename self::value_type const& in_value):
         value(in_value)
     {}
 
-    /// @param[in,out] io_value 保持する値の初期値。
-    public: any_holder(typename self::value_type&& io_value):
+    /** @brief 保持する値をムーブして初期化する。
+        @param[in,out] io_value ムーブする初期値。
+     */
+    public: explicit any_holder(typename self::value_type&& io_value):
         value(std::move(io_value))
     {}
+
+    /** @brief コピーコンストラクタ。
+        @param[in] in_source コピー元となるインスタンス。
+     */
+    public: any_holder(self const& in_source): value(in_source.value)
+    {}
+
+    /** @brief ムーブコンストラクタ。
+        @param[in,out] io_source ムーブ元となるインスタンス。
+     */
+    public: any_holder(self&& io_source): value(std::move(in_source.value))
+    {}
+
+    /** @brief コピー代入演算子。
+        @param[in] in_source コピー元となるインスタンス。
+        @return *this
+     */
+    public: self& operator=(self const& in_source)
+    {
+        this->value = in_source.value;
+        return *this;
+    }
+
+    /** @brief ムーブ代入演算子。
+        @param[in,out] io_source ムーブ元となるインスタンス。
+        @return *this
+     */
+    public: self& operator=(self&& io_source)
+    {
+        this->value = std::move(io_source.value);
+        return *this;
+    }
 
     public: virtual psyq::tiny_rtti const& get_rtti() const override
     {

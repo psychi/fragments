@@ -27,7 +27,6 @@
  */
 #ifndef PSYQ_ANY_HPP_
 #define PSYQ_ANY_HPP_
-//#include "atomic_count.hpp"
 #include <memory>
 
 namespace psyq
@@ -63,8 +62,15 @@ class psyq::any
     public: template<typename template_value>
     template_value* cast_pointer()
     {
-        auto const local_hash(
-            psyq::tiny_rtti::get<template_value>().get_hash());
+        auto const local_rtti(psyq::tiny_rtti::get<template_value>());
+        if (local_rtti == nullptr)
+        {
+            // psyq::tiny_rtti::make() で、
+            // template_value のRTTIがまだ構築されてなかった。
+            PSYQ_ASSERT(false);
+            return nullptr;
+        }
+        auto const local_hash(local_rtti->get_hash());
         return static_cast<template_value*>(
             /// @note static_ifを使いたい。
             std::is_const<template_value>::value?
@@ -76,22 +82,32 @@ class psyq::any
     public: template<typename template_value>
     template_value const* cast_pointer() const
     {
+        auto const local_rtti(psyq::tiny_rtti::get<template_value>());
+        if (local_rtti == nullptr)
+        {
+            // psyq::tiny_rtti::make() で、
+            // template_value のRTTIがまだ構築されてなかった。
+            PSYQ_ASSERT(false);
+            return nullptr;
+        }
         return static_cast<template_value const*>(
-            this->cast_const_void(
-                psyq::tiny_rtti::get<template_value>().get_hash()));
+            this->cast_const_void(local_rtti->get_hash()));
     }
 
     //-------------------------------------------------------------------------
     /** @brief 保持してる値のRTTIを取得する。
-        @return 保持してる値のRTTI。
+        @retval !=nullptr 保持してる値のRTTI。
+        @retval ==nullptr
+            psyq::tiny_rtti::make() で、
+            保持してる値のRTTIがまだ構築されていない。
      */
-    public: virtual psyq::tiny_rtti const& get_rtti() const = 0;
+    public: virtual psyq::tiny_rtti const* get_rtti() const = 0;
 
     /** @brief 保持してる値へのポインタをキャストする。
         @param[in] in_value_hash キャスト先の型の識別値。
         @retval !=nullptr *thisが保持してる値へのポインタ。
         @retval ==nullptr
-            *thisが実際に保持してる値のポインタ型を、
+            *thisが保持してる値のポインタ型を、
             template_value のポインタ型にキャストできなかった。
      */
     protected: virtual void* cast_void(
@@ -164,9 +180,9 @@ class psyq::any_holder: public psyq::any
         return *this;
     }
 
-    public: virtual psyq::tiny_rtti const& get_rtti() const override
+    public: virtual psyq::tiny_rtti const* get_rtti() const override
     {
-        return psyq::tiny_rtti::get<typename self::value_type>();
+        return psyq::tiny_rtti::get<template_value>();
     }
 
     protected: virtual void* cast_void(
@@ -182,7 +198,15 @@ class psyq::any_holder: public psyq::any
         psyq::tiny_rtti::hash const in_value_hash)
     const override
     {
-        return this->self::get_rtti().find_base(in_value_hash) != nullptr?
+        auto const local_rtti(this->self::get_rtti());
+        if (local_rtti == nullptr)
+        {
+            // psyq::tiny_rtti::make() で、
+            // template_value のRTTIがまだ構築されてなかった。
+            PSYQ_ASSERT(false);
+            return nullptr;
+        }
+        return local_rtti->find_base(in_value_hash) != nullptr?
             &this->value: nullptr;
     }
 
@@ -194,7 +218,7 @@ namespace psyq
 {
     namespace test
     {
-        void any()
+        inline void any()
         {
             struct int_object
             {
@@ -204,6 +228,10 @@ namespace psyq
             struct class_a {int_object a;};
             struct class_b {int_object b;};
             struct class_ab: class_a, class_b {int_object ab;};
+
+            PSYQ_ASSERT((psyq::tiny_rtti::make<class_a>()) != nullptr);
+            PSYQ_ASSERT((psyq::tiny_rtti::make<class_b>()) != nullptr);
+            PSYQ_ASSERT((psyq::tiny_rtti::make<class_ab, class_a>()) != nullptr);
 
             psyq::any::shared_ptr local_a(
                 new psyq::any_holder<class_a>(class_a()));
@@ -221,7 +249,6 @@ namespace psyq
             auto const& local_const_a_ref(*local_const_a);
             PSYQ_ASSERT(local_const_a_ref.cast_pointer<class_a>() != nullptr);
 
-            PSYQ_ASSERT((psyq::tiny_rtti::make<class_ab, class_a>()) != nullptr);
             psyq::any::shared_ptr local_ab(
                 new psyq::any_holder<class_ab>(class_ab()));
             PSYQ_ASSERT(local_ab->cast_pointer<class_ab>() != nullptr);

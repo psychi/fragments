@@ -29,6 +29,11 @@
 #define PSYQ_TINY_RTTI_HPP_
 //#include "atomic_count.hpp"
 
+#ifndef PSYQ_TINY_RTTI_VOID_HASH
+#define PSYQ_TINY_RTTI_VOID_HASH\
+    self::hash(1) << (sizeof(self::hash) * 8 - 1)
+#endif // !defined(PSYQ_TINY_RTTI_VOID_HASH)
+
 namespace psyq
 {
     /// @cond
@@ -52,57 +57,73 @@ class psyq::tiny_rtti
 
     public: enum: self::hash
     {
-        /// void型の識別値。
-        VOID_HASH = self::hash(1) << (sizeof(self::hash) * 8 - 1),
+        /// 空の識別値。
+        VOID_HASH = PSYQ_TINY_RTTI_VOID_HASH,
     };
+
+    static_assert(
+        // 実行時に自動で割り当てる識別値の数が、1つ以上あること。
+        self::VOID_HASH < self::hash(0) - 1,
+        "There is no hash value to be assigned to the runtime.");
 
     //-------------------------------------------------------------------------
     /** @brief RTTIを構築する。
 
-        - RTTIは、関数内のstatic変数として構築される。
-        - 一度構築されたRTTIは変更できず、
-          プログラムの実行が終了するまで破棄されない。
-        - すでにRTTIが構築されていた場合は、今回のRTTIの構築は失敗する。
+        - RTTIのインスタンスの数は、1つの型につき1つ以下である。
+        - RTTIのインスタンスは、関数内のstatic変数として構築される。
+          - 一度構築されたRTTIは、変更されない。
+          - main関数が終了するまで、RTTIは破棄されない。
+        - make<void>() はstatic_assertするため、
+          void型のRTTIは、あらかじめ用意されている。 get<void>() で取得できる。
 
-        @note
-            void型のRTTIは予め用意されてるので、 make<void>() で構築できない。
         @note
             関数内のstatic変数の構築は、C++11の仕様ではスレッドセーフだが、
             VisualStudio2013以前ではスレッドセーフになってない。
             https://sites.google.com/site/cpprefjp/implementation-status
-        @tparam template_type RTTIを構築する型。
+        @tparam template_type
+            RTTIを構築する型。
+            - template_type のRTTIがすでに構築されてた場合は、
+              RTTIの構築に失敗する。
+        @tparam template_hash
+            RTTIを構築する型の識別値。 構築後は、 get_hash() で取得できる。
+            - self::VOID_HASH より小さい値なら、任意の値を指定できる。
+              - 同じ識別値がすでに使われていた場合は、RTTIの構築に失敗する。
+            - self::VOID_HASH の場合は、型の識別値を実行時に自動で割り当てる。
+            - self::VOID_HASH より大きい値は、static_assertする。
         @tparam template_super_type
             RTTIを構築する型の親型。
             - 親型がない場合は、voidを指定する。
-            - 親型のRTTIが make() でまだ構築されてなかった場合は、
-              親型のRTTIは自動で構築される。
-              - 親型のRTTIが自動で構築される場合は、
-                親型の親型は空、親型の識別値は自動で決定される。
-        @param[in] in_hash
-            構築する型の識別値。
-            - self::VOID_HASH より小さい値なら、任意の値を指定できる。
-              - 同じ識別値がすでに使われていた場合は、RTTIの構築に失敗する。
-            - self::VOID_HASH の場合は、型の識別値を自動で決定する。
-            - self::VOID_HASH より大きい値は、RTTIの構築に失敗する。
+            - 親型のRTTIがまだ構築されてなかった場合は、
+              RTTIの構築に失敗する。
+            - template_type が多重継承していて、
+              template_super_type が2番目以降の親型だった場合は、
+              RTTIの構築に失敗する。
         @retval !=nullptr 構築したRTTI。
         @retval ==nullptr 失敗。RTTIを構築できなかった。
      */
     public: template<
-        typename template_type, typename template_super_type>
-    static self const* make(self::hash const in_hash = self::VOID_HASH)
+        typename    template_type,
+        std::size_t template_hash,
+        typename    template_super_type>
+    static self const* make()
     {
         static_assert(
-            // template_typeとtemplate_super_typeが異なる型であること。
+            // template_hash は、 self::VOID_HASH 以下であること。
+            template_hash <= self::VOID_HASH,
+            "'template_hash' is greater than 'self::VOID_HASH'.");
+        static_assert(
+            // template_type と template_super_type が異なる型であること。
             !std::is_same<
                 typename std::remove_cv<template_type>::type,
                 typename std::remove_cv<template_super_type>::type>
                     ::value,
             "'template_type' and 'template_super_type' is same type.");
         static_assert(
-            // template_typeの基底型に、template_super_typeが含まれること。
+            // template_type の基底型に、 template_super_type が含まれること。
             std::is_void<template_super_type>::value
             || std::is_base_of<template_super_type, template_type>::value,
             "'template_super_type' is not a base type of 'template_type'.");
+
         auto const local_pointer(
             reinterpret_cast<template_type const*>(0x10000000));
         void const* const local_super_pointer(
@@ -112,62 +133,60 @@ class psyq::tiny_rtti
             // 多重継承の場合は、先頭の親型のみ扱える。
             // 'template_super_type' is not a first super type of 'template_type'.
             /// @note constexprが使えるなら、static_assertしたい。
-            PSYQ_ASSERT(false);
+            return nullptr;
         }
-        else if (in_hash <= self::VOID_HASH && !self::find_rtti_list(in_hash))
+        if (self::get<template_type>() != nullptr)
         {
-            auto const& local_super_rtti(
-                self::get_static_rtti<template_super_type>(
-                    nullptr, self::VOID_HASH));
-            auto const local_last_hash(self::add_hash(0));
-            auto const& local_rtti(
-                self::get_static_rtti<template_type>(
-                    local_super_rtti.get_hash() != self::VOID_HASH?
-                        &local_super_rtti: nullptr,
-                    in_hash));
-            if (local_last_hash < local_rtti.get_hash()
-                || in_hash == local_rtti.get_hash())
-            {
-                return &local_rtti;
-            }
+            // template_type のRTTIは、すでに構築済みだった。
+            return nullptr;
         }
-        return nullptr;
+        auto const local_super_rtti(self::get<template_super_type>());
+        if (local_super_rtti == nullptr)
+        {
+            // 親型のRTTIが make() でまだ構築されてなかった。
+            return nullptr;
+        }
+        if (self::find_rtti_list<template_hash>())
+        {
+            // 同じ識別値がすでに使われていた。
+            return nullptr;
+        }
+        return self::get_static_rtti<template_type, template_hash>(
+            local_super_rtti->get_hash() != self::VOID_HASH?
+                local_super_rtti: nullptr);
     }
 
-    /** @brief 親型がない型のRTTIを構築する。
-
-        - すでにRTTIが構築されていた場合は、今回のRTTIの構築は失敗する。
-        - 一度構築されたRTTIは変更できず、
-          プログラムの実行が終了するまで破棄されない。
-
-        @tparam template_type RTTIを構築する型。
-        @param[in] in_hash
-            構築する型の識別値。
-            - self::VOID_HASH の場合は、型の識別値を自動で決定する。
-            - self::VOID_HASH より大きい値は、RTTIの構築に失敗する。
-            - 識別値がすでに使われていた場合は、RTTIの構築に失敗する。
-        @retval !=nullptr 構築したRTTI。
-        @retval ==nullptr 失敗。RTTIを構築できなかった。
-     */
-    public: template<typename template_type>
-    static self const* make(self::hash const in_hash = self::VOID_HASH)
+    /// @copydoc make()
+    public: template<typename template_type, typename template_super_type>
+    static self const* make()
     {
-        return self::make<template_type, void>(in_hash);
+        return self::make<template_type, self::VOID_HASH, template_super_type>();
+    }
+
+    /// @copydoc make()
+    public: template<typename template_type, std::size_t template_hash>
+    static self const* make()
+    {
+        return self::make<template_type, template_hash, void>();
+    }
+
+    /// @copydoc make()
+    public: template<typename template_type>
+    static self const* make()
+    {
+        return self::make<template_type, self::VOID_HASH, void>();
     }
 
     /** @brief RTTIを取得する。
 
-        RTTIが make() でまだ構築されてなかった場合は、自動で構築する。
-        - 自動で構築する場合は、型の親型は空、型の識別値は自動で決定される。
-        - RTTIは、一度構築すると変更できない。
-
         @tparam template_type RTTIを取得したい型。
-        @return 型ごとに固有のRTTI。
+        @retval !=nullptr 型ごとに固有のRTTI。
+        @retval ==nullptr make() で、RTTIがまだ構築されてなかった。
      */
     public: template<typename template_type>
-    static self const& get()
+    static self const* get()
     {
-        return self::get_static_rtti<template_type>(nullptr, self::VOID_HASH);
+        return self::get_static_rtti<template_type, self::VOID_HASH + 1>(nullptr);
     }
 
     //-------------------------------------------------------------------------
@@ -206,59 +225,68 @@ class psyq::tiny_rtti
 
     //-------------------------------------------------------------------------
     /** @brief RTTIを取得する。
+        @tparam template_type RTTIを取得する型。
+        @tparam template_hash RTTIを取得する型の識別値。
+        @param[in] in_super 初期化に使う、型の親型のRTTI。
+        @return 型ごとに固有のRTTI。
+     */
+    private: template<typename template_type, std::size_t template_hash>
+    static self const* get_static_rtti(self const* const in_super)
+    {
+        typename std::remove_cv<template_type>::type* local_pointer(nullptr);
+        return self::get_static_rtti(in_super, template_hash, local_pointer);
+    }
 
-        RTTIは、関数内のstatic変数として、最初の取得時に初期化される。
-        一度初期化されたRTTIは変更されず、
-        プログラムの実行が終了するまで破棄されない。
-
+    /** @brief RTTIを取得する。
         @tparam template_type RTTIを取得したい型。
         @param[in] in_super 初期化に使う、型の親型のRTTI。
         @param[in] in_hash  初期化に使う、型の識別値。
         @return 型ごとに固有のRTTI。
      */
     private: template<typename template_type>
-    static self const& get_static_rtti(
+    static self const* get_static_rtti(
         self const* const in_super,
-        self::hash const  in_hash)
-    {
-        typename std::remove_cv<template_type>::type* local_pointer(nullptr);
-        return self::get_static_rtti(in_super, in_hash, local_pointer);
-    }
-
-    /// @copydoc get_static_rtti()
-    private: template<typename template_type>
-    static self const& get_static_rtti(
-        self const* const in_super,
-        self::hash        in_hash,
+        self::hash const  in_hash,
         template_type*)
     {
-        static self const static_node(in_super, in_hash, sizeof(template_type));
-        return static_node;
+        static bool static_make(false);
+        if (in_hash <= self::VOID_HASH)
+        {
+            static_make = true;
+        }
+        if (static_make)
+        {
+            static self const static_node(
+                in_super, in_hash, sizeof(template_type));
+            return &static_node;
+        }
+        return nullptr;
     }
 
     /** @brief void型のRTTIを取得する。
         @return void型のRTTI。
      */
-    private: static self const& get_static_rtti(
+    private: static self const* get_static_rtti(
         self const* const, self::hash const, void*)
     {
         static self const static_node;
-        return static_node;
+        return &static_node;
     }
 
     /** @brief 型の識別値がすでに登録されているか判定する。
-        @param[in] in_target_hash 検索する型の識別値。
+        @tparam template_hash 検索する型の識別値。
         @retval true  すでに登録されている。
         @retval false まだ登録されてない。
      */
-    private: static bool find_rtti_list(self::hash const in_target_hash)
+    private: template<std::size_t template_hash>
+    static bool find_rtti_list()
     {
-        if (in_target_hash < self::VOID_HASH)
+        if (template_hash < self::VOID_HASH)
         {
             auto local_rtti(self::get_list_begin());
             while (local_rtti != nullptr)
             {
-                if (in_target_hash == local_rtti->get_hash())
+                if (template_hash == local_rtti->get_hash())
                 {
                     return true;
                 }
@@ -292,15 +320,14 @@ class psyq::tiny_rtti
     }
 
     /** @brief 型の識別値を追加する。
-        @param[in] in_add 追加する数。
         @return 追加された型の識別値。
      */
-    private: static self::hash add_hash(unsigned char const in_add)
+    private: static self::hash add_hash()
     {
         static psyq::atomic_count static_hash(self::VOID_HASH);
-        auto const local_hash(static_hash.add(in_add));
+        auto const local_hash(static_hash.add(1));
         // 自動で決定する型識別値をすべて使いきった場合にassertする。
-        PSYQ_ASSERT(self::VOID_HASH <= local_hash);
+        PSYQ_ASSERT(self::VOID_HASH < local_hash);
         return local_hash;
     }
 
@@ -324,7 +351,7 @@ class psyq::tiny_rtti
         }
         else
         {
-            this->hash_ = self::add_hash(1);
+            this->hash_ = self::add_hash();
             this->next_ = nullptr;
         }
     }
@@ -340,7 +367,7 @@ namespace psyq
 {
     namespace test
     {
-        void tiny_rtti()
+        inline void tiny_rtti()
         {
             struct int_object
             {
@@ -352,26 +379,29 @@ namespace psyq
             struct class_ab: class_a, class_b {};
             struct class_ab_c: private class_ab {int_object c;};
 
-            //PSYQ_ASSERT((psyq::tiny_rtti::make<class_a, class_b>()) == nullptr); // compile error!
+            PSYQ_ASSERT(psyq::tiny_rtti::get<class_a>() == nullptr);
             PSYQ_ASSERT(psyq::tiny_rtti::make<class_a>() != nullptr);
-            PSYQ_ASSERT(psyq::tiny_rtti::make<class_a>() == nullptr);
-            PSYQ_ASSERT(psyq::tiny_rtti::make<class_a>(1000) == nullptr);
-            PSYQ_ASSERT(psyq::tiny_rtti::make<class_b>(1000) != nullptr);
+            PSYQ_ASSERT(psyq::tiny_rtti::get<class_a>() != nullptr);
+
+            PSYQ_ASSERT((psyq::tiny_rtti::make<class_a, 1000>()) == nullptr);
+            //PSYQ_ASSERT((psyq::tiny_rtti::make<class_a, class_b>()) == nullptr); // static_assert!
+            PSYQ_ASSERT((psyq::tiny_rtti::make<class_b, 1000>()) != nullptr);
             PSYQ_ASSERT(psyq::tiny_rtti::make<class_b>() == nullptr);
-            PSYQ_ASSERT((psyq::tiny_rtti::make<class_ab, class_a>(1000)) == nullptr);
-            PSYQ_ASSERT((psyq::tiny_rtti::make<class_ab, class_a>(1001)) != nullptr);
-            //PSYQ_ASSERT((psyq::tiny_rtti::make<class_ab, class_b>()) == nullptr); // assert!
+            PSYQ_ASSERT((psyq::tiny_rtti::make<class_ab, 1000, class_a>()) == nullptr);
+            PSYQ_ASSERT((psyq::tiny_rtti::make<class_ab, 1001, class_a>()) != nullptr);
+
+            PSYQ_ASSERT((psyq::tiny_rtti::make<class_ab, class_b>()) == nullptr);
             //PSYQ_ASSERT((psyq::tiny_rtti::make<class_ab_c, class_ab>()) != nullptr); // compile error!
-            PSYQ_ASSERT(psyq::tiny_rtti::get<class_b>().get_hash() == 1000);
-            PSYQ_ASSERT(psyq::tiny_rtti::get<class_ab>().get_hash() == 1001);
-            PSYQ_ASSERT(psyq::tiny_rtti::get<class_ab>().find_base(
-                psyq::tiny_rtti::get<class_a>().get_hash()) != nullptr);
-            PSYQ_ASSERT(psyq::tiny_rtti::get<class_ab>().find_base(
-                psyq::tiny_rtti::get<class_b>().get_hash()) == nullptr);
-            PSYQ_ASSERT(psyq::tiny_rtti::get<class_ab>().find_base(
-                psyq::tiny_rtti::get<class_ab>().get_hash()) != nullptr);
-            PSYQ_ASSERT(psyq::tiny_rtti::get<class_a>().find_base(
-                psyq::tiny_rtti::get<class_ab>().get_hash()) == nullptr);
+            PSYQ_ASSERT(psyq::tiny_rtti::get<class_b>()->get_hash() == 1000);
+            PSYQ_ASSERT(psyq::tiny_rtti::get<class_ab>()->get_hash() == 1001);
+            PSYQ_ASSERT(psyq::tiny_rtti::get<class_ab>()->find_base(
+                psyq::tiny_rtti::get<class_a>()->get_hash()) != nullptr);
+            PSYQ_ASSERT(psyq::tiny_rtti::get<class_ab>()->find_base(
+                psyq::tiny_rtti::get<class_b>()->get_hash()) == nullptr);
+            PSYQ_ASSERT(psyq::tiny_rtti::get<class_ab>()->find_base(
+                psyq::tiny_rtti::get<class_ab>()->get_hash()) != nullptr);
+            PSYQ_ASSERT(psyq::tiny_rtti::get<class_a>()->find_base(
+                psyq::tiny_rtti::get<class_ab>()->get_hash()) == nullptr);
         }
     }
 }

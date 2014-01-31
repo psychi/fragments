@@ -621,9 +621,10 @@ class psyq::mosp_tree
         mosp_handle::collision_object を引数に、衝突callback関数を呼び出す。
 
         @param[in] in_detect_callback
-            衝突callback関数。引数として、2つの mosp_handle::collision_object
-            を受け取ること。戻り値はなくてよい。
-            2つの mosp_handle が所属する分割空間が重なったとき、呼び出される。
+            衝突callback関数。
+            - 2つの mosp_handle が所属する分割空間が衝突した時、呼び出される。
+            - 引数として、2つの mosp_handle::collision_object を受け取ること。
+            - 戻り値はなくてよい。
 
         @retval ture 成功。衝突判定を行った。
         @retval false
@@ -643,7 +644,7 @@ class psyq::mosp_tree
         // 衝突判定を行う。
         for (auto i(local_cell_map->begin()); i != local_cell_map->end(); ++i)
         {
-            self::detect_collision_map(*local_cell_map, i, in_detect_callback);
+            self::collide_cell_map(*local_cell_map, i, in_detect_callback);
         }
 
         // 衝突判定を終了する。
@@ -694,24 +695,27 @@ class psyq::mosp_tree
         this->detect_collision_ = false;
     }
 
-    /** @brief 分割空間と分割空間の辞書とで、衝突判定を行う。
+    /** @brief 分割空間に分割空間の辞書を衝突させる。
 
         begin_detect() と end_detect() の間で呼び出すこと。
 
-        @param[in] in_cell_map    衝突判定を行う分割空間の辞書。
-        @param[in] in_target_cell 衝突の対象となる分割空間の反復子。
+        @param[in] in_cell_map 衝突させる分割空間の辞書。
+        @param[in] in_target_cell
+            衝突させる分割空間の反復子。
+            衝突させる分割空間の辞書が持つ値を指していること。
         @param[in] in_detect_callback
-            衝突callback関数。戻り値はなくてよい。
-            引数として、2つの mosp_handle::collision_object を受け取ること。
-            2つの mosp_handle が所属する分割空間が重なったとき、呼び出される。
+            衝突callback関数。
+            - 2つの mosp_handle が所属する分割空間が衝突した時、呼び出される。
+            - 引数として、2つの mosp_handle::collision_object を受け取ること。
+            - 戻り値はなくてよい。
      */
     private: template<typename template_detect_callback>
-    static void detect_collision_map(
+    static void collide_cell_map(
         typename self::cell_map const&                 in_cell_map,
         typename self::cell_map::const_iterator const& in_target_cell,
         template_detect_callback const&                in_detect_callback)
     {
-        // 同じ分割空間の内部だけで、衝突判定を行う。
+        // 対象となる分割空間を、同じmorton順序の分割空間に衝突させる。
         auto const local_cell_map_end(in_cell_map.end());
         PSYQ_ASSERT(in_target_cell != local_cell_map_end);
         auto const& local_target_cell(*in_target_cell);
@@ -720,7 +724,7 @@ class psyq::mosp_tree
             && in_target_cell->first == local_next_cell->first)
         {
             auto const local_target_handle(
-                self::detect_collision_container(
+                self::collide_cell_list(
                     local_next_cell,
                     local_cell_map_end,
                     local_target_cell,
@@ -731,7 +735,7 @@ class psyq::mosp_tree
             }
         }
 
-        // 上位の分割空間と衝突判定を行う。
+        // 対象となる分割空間を、上位の分割空間に衝突させる。
         for (
             auto local_super_order(in_target_cell->first);
             0 < local_super_order;)
@@ -746,9 +750,9 @@ class psyq::mosp_tree
                 continue;
             }
 
-            // 衝突判定を行う。
+            // 上位の分割空間に衝突させる。
             auto const local_target_handle(
-                self::detect_collision_container(
+                self::collide_cell_list(
                     local_super_iterator,
                     local_cell_map_end,
                     local_target_cell,
@@ -760,27 +764,28 @@ class psyq::mosp_tree
         }
     }
 
-    /** @brief 分割空間と分割空間コンテナとで、衝突判定を行う。
-        @param[in] in_container_begin 衝突判定を行う分割空間コンテナの先頭位置。
-        @param[in] in_container_end   衝突判定を行う分割空間コンテナの終端位置。
-        @param[in] in_target_cell     衝突の対象となる分割空間。
+    /** @brief 分割空間に分割空間リストを衝突させる。
+        @param[in] in_list_begin  衝突させる分割空間リストの先頭位置。
+        @param[in] in_list_end    衝突させる分割空間リストの終端位置。
+        @param[in] in_target_cell 衝突させる分割空間。
         @param[in] in_detect_callback
-            衝突callback関数。戻り値はなくてよい。
-            引数として、2つの mosp_handle::collision_object を受け取ること。
-            2つの mosp_handle が所属する分割空間が重なったとき、呼び出される。
+            衝突callback関数。
+            - 2つの mosp_handle が所属する分割空間が衝突した時、呼び出される。
+            - 引数として、2つの mosp_handle::collision_object を受け取ること。
+            - 戻り値はなくてよい。
      */
     private: template<typename template_detect_callback>
-    static typename self::handle const* detect_collision_container(
-        typename self::cell_map::const_iterator const& in_container_begin,
-        typename self::cell_map::const_iterator const& in_container_end,
+    static typename self::handle const* collide_cell_list(
+        typename self::cell_map::const_iterator const& in_list_begin,
+        typename self::cell_map::const_iterator const& in_list_end,
         typename self::cell_map::value_type const&     in_target_cell,
         template_detect_callback const&                in_detect_callback)
     {
-        PSYQ_ASSERT(in_container_begin != in_container_end);
-        auto const local_container_order(in_container_begin->first);
+        PSYQ_ASSERT(in_list_begin != in_list_end);
+        auto const local_container_order(in_list_begin->first);
         for (
-            auto local_container_cell(in_container_begin);
-            local_container_cell != in_container_end
+            auto local_container_cell(in_list_begin);
+            local_container_cell != in_list_end
             && local_container_order == local_container_cell->first;
             ++local_container_cell)
         {

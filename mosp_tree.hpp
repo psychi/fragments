@@ -31,6 +31,7 @@ namespace psyq
         class mosp_space_2d;
     template<typename = mosp_coordinates<PSYQ_MOSP_VECTOR_DEFAULT, 0, 1, 2>>
         class mosp_space_3d;
+    template<typename> class mosp_pool_allocator;
     template<typename, typename> class mosp_handle;
     template<typename, typename = PSYQ_MOSP_SPACE_DEFAULT> class mosp_tree;
     /// @endcond
@@ -489,6 +490,96 @@ class psyq::mosp_handle
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template<typename template_allocator>
+class psyq::mosp_pool_allocator: public template_allocator
+{
+    private: typedef mosp_pool_allocator<template_allocator> self;
+    public: typedef template_allocator super;
+
+    public: template<typename template_other>
+    struct rebind
+    {
+        typedef mosp_pool_allocator<
+            typename super::template rebind<template_other>::other>
+                other;
+    };
+
+    //-------------------------------------------------------------------------
+    public: mosp_pool_allocator(): idle_list_(nullptr) {}
+
+    public: mosp_pool_allocator(self const& in_allocator):
+        super(in_allocator),
+        idle_list_(nullptr)
+    {}
+
+    public: template<typename template_other>
+    mosp_pool_allocator(
+        psyq::mosp_pool_allocator<template_other> const& in_allocator)
+    :
+        super(in_allocator),
+        idle_list_(nullptr)
+    {}
+
+    public: ~mosp_pool_allocator()
+    {
+        auto local_pointer(this->idle_list_);
+        while (local_pointer != nullptr)
+        {
+            auto const local_next(*static_cast<void**>(local_pointer));
+            this->super::deallocate(
+                static_cast<typename super::pointer>(local_pointer), 1);
+            local_pointer = local_next;
+        }
+    }
+
+    public: self& operator=(self const&) {return *this;}
+
+    //-------------------------------------------------------------------------
+    public: typename super::pointer allocate(
+        typename super::size_type const           in_size,
+        std::allocator<void>::const_pointer const in_hint = 0)
+    {
+        if (in_size <= 0)
+        {
+            return nullptr;
+        }
+        if (1 < in_size || this->idle_list_ == nullptr)
+        {
+            return this->super::allocate(in_size, in_hint);
+        }
+        auto const local_result(
+            static_cast<typename super::pointer>(this->idle_list_));
+        this->idle_list_ = *static_cast<void**>(this->idle_list_);
+        return local_result;
+    }
+
+    public: void deallocate(
+        typename super::pointer const   in_pointer,
+        typename super::size_type const in_size)
+    {
+        if (in_pointer == nullptr)
+        {
+            PSYQ_ASSERT(in_size <= 0);
+            return;
+        }
+        if (in_size != 1)
+        {
+            this->super::deallocate(in_pointer, in_size);
+            return;
+        }
+        static_assert(
+            // 要素の大きさがポインタ値以上であること。
+            sizeof(void*) <= sizeof(typename super::value_type),
+            "sizeof(value_type) is less than sizeof(void*).");
+       *reinterpret_cast<void**>(in_pointer) = this->idle_list_;
+        this->idle_list_ = in_pointer;
+    }
+
+    //-------------------------------------------------------------------------
+    private: void* idle_list_;
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief morton順序による空間分割木。
 
     使い方の概要は、以下の通り。
@@ -504,9 +595,9 @@ class psyq::mosp_handle
     @tparam template_space            @copydoc mosp_tree::space
 
     @note
-    - mosp_tree::handle_map に任意の辞書template型を指定できるようにしたい。
-    - mosp_tree::handle_map のメモリ割当子に、メモリプールを使いたい。
-      用途からして挿入と削除を頻繁に行うので、高速なメモリ割当子が必要。
+    - mosp_tree::cell_map に任意の辞書template型を指定できるようにしたい。
+    - mosp_tree::cell_map のメモリ割当子に、メモリプールを使いたい。
+      挿入と削除を頻繁に行うので、高速なメモリ割当子が必要。
  */
 template<typename template_collision_object, typename template_space>
 class psyq::mosp_tree
@@ -536,8 +627,14 @@ class psyq::mosp_tree
     private: typedef std::unordered_multimap<
         typename self::space::order,
         typename self::handle*,
-        typename self::order_hash>
-            cell_map;
+        typename self::order_hash,
+        std::equal_to<typename self::space::order>,
+        psyq::mosp_pool_allocator<
+            std::allocator<
+                std::pair<
+                    typename self::space::order,
+                    typename self::handle*>>>>
+                        cell_map;
 
     public: enum: unsigned
     {

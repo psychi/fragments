@@ -524,9 +524,19 @@ class psyq::mosp_tree
     friend handle;
     /// @endcond
 
+    private: struct order_hash
+    {
+        std::size_t operator()(typename self::space::order in_order) const
+        {
+            return in_order;
+        }
+    };
+
     /// 分割空間の辞書。
-    private: typedef std::multimap<
-        typename self::space::order, typename self::handle*>
+    private: typedef std::unordered_multimap<
+        typename self::space::order,
+        typename self::handle*,
+        typename self::order_hash>
             cell_map;
 
     public: enum: unsigned
@@ -538,14 +548,17 @@ class psyq::mosp_tree
 
     //-------------------------------------------------------------------------
     /** @brief 衝突判定を行う領域を設定する。
-        @param[in] in_aabb  衝突判定を行う領域の全体を包む、絶対座標系AABB。
+        @param[in] in_aabb 衝突判定を行う領域の全体を包む、絶対座標系AABB。
+        @param[in] in_bucket_count 分割空間の辞書のバケット数。
         @param[in] in_level_cap 空間分割の最深レベル。
      */
     public: explicit mosp_tree(
         typename self::space::coordinates::aabb const& in_aabb,
+        std::size_t const in_bucket_count,
         unsigned const in_level_cap = self::LEVEL_LIMIT)
     :
         space_(in_aabb, in_level_cap),
+        cell_map_(in_bucket_count),
         level_cap_(static_cast<decltype(level_cap_)>(in_level_cap)),
         detect_collision_(false)
     {
@@ -782,15 +795,15 @@ class psyq::mosp_tree
         template_detect_callback const&                in_detect_callback)
     {
         PSYQ_ASSERT(in_list_begin != in_list_end);
-        auto const local_container_order(in_list_begin->first);
+        auto const local_list_order(in_list_begin->first);
         for (
-            auto local_container_cell(in_list_begin);
-            local_container_cell != in_list_end
-            && local_container_order == local_container_cell->first;
-            ++local_container_cell)
+            auto local_list_cell(in_list_begin);
+            local_list_cell != in_list_end
+            && local_list_order == local_list_cell->first;
+            ++local_list_cell)
         {
-            auto const local_container_handle(local_container_cell->second);
-            if (local_container_handle == nullptr)
+            auto const local_list_handle(local_list_cell->second);
+            if (local_list_handle == nullptr)
             {
                 continue;
             }
@@ -802,9 +815,7 @@ class psyq::mosp_tree
 
             // 衝突callback関数を呼び出す。
             in_detect_callback(
-                local_target_handle->object_,
-                local_container_handle->object_);
-
+                local_target_handle->object_, local_list_handle->object_);
         }
         return in_target_cell.second;
     }

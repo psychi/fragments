@@ -39,7 +39,7 @@ namespace psyq
     template<
         std::size_t,
         typename template_char_type,
-        typename = PSYQ_BASIC_STRING_PIECE_TRAITS_DEFAULT>
+        typename = PSYQ_BASIC_STRING_REF_TRAITS_DEFAULT>
             class basic_array_string;
     /// @endcond
 
@@ -74,7 +74,7 @@ class psyq::internal::fixed_array_string
     public: typedef template_char_traits traits_type;
 
     /// 部分文字列の型。
-    public: typedef psyq::internal::const_string_piece<
+    public: typedef psyq::internal::const_string_ref<
         typename self::traits_type>
             piece;
 
@@ -119,13 +119,13 @@ class psyq::internal::fixed_array_string
         }
     }
 
-    /// @copydoc psyq::internal::const_string_piece::data()
+    /// @copydoc psyq::internal::const_string_ref::data()
     public: typename self::traits_type::char_type const* data() const
     {
         return &this->array_[0];
     }
 
-    /// @copydoc psyq::internal::const_string_piece::length()
+    /// @copydoc psyq::internal::const_string_ref::length()
     public: std::size_t length() const
     {
         return this->length_;

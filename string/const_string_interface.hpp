@@ -24,291 +24,21 @@
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_CONST_STRING_HPP_
-#define PSYQ_CONST_STRING_HPP_
-
-#include <iosfwd>
-#include <iterator>
-#include <algorithm>
-#include <cctype>
-//#include "fnv_hash.hpp"
+#ifndef PSYQ_CONST_STRING_INTERFACE_HPP_
+#define PSYQ_CONST_STRING_INTERFACE_HPP_
 
 namespace psyq
 {
     namespace internal
     {
         /// @cond
-        template<typename> class const_string_piece;
         template<typename> class const_string_interface;
         /// @endcond
     }
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 別の文字列の一部分をconst参照する文字列型。
-    @tparam template_char_traits @copydoc const_string_piece::traits_type
-    @warning
-        C文字列を単純にconst参照しているので、
-        参照してる文字列が破壊されると、動作を保証できなくなる。
- */
-template<typename template_char_traits>
-class psyq::internal::const_string_piece
-{
-    /// thisが指す値の型。
-    private: typedef const_string_piece<template_char_traits> self;
-
-    /// 文字特性の型。
-    public: typedef template_char_traits traits_type;
-
-    //-------------------------------------------------------------------------
-    /** @brief 空の文字列を構築する。
-     */
-    public: const_string_piece(): data_(nullptr), length_(0) {}
-
-    /** @brief 文字列を参照する。
-        @param[in] in_begin  参照する文字列の先頭位置。
-        @param[in] in_length 参照する文字列の長さ。
-     */
-    public: const_string_piece(
-        typename self::traits_type::char_type const* const in_begin,
-        std::size_t const                                  in_length)
-     :
-        data_(in_begin),
-        length_(in_length)
-    {
-        if (in_begin == nullptr && 0 < in_length)
-        {
-            PSYQ_ASSERT(false);
-            this->length_ = 0;
-        }
-    }
-
-    /** @brief 文字列literalを参照する。
-        @tparam template_size 参照する文字列literalの要素数。終端文字も含む。
-        @param[in] in_literal 参照する文字列literal。
-        @warning 文字列literal以外の文字列を引数に渡すのは禁止。
-        @note
-            引数が文字列literalであることを保証するため、
-            user定義literalを経由して呼び出すようにしたい。
-     */
-    public: template <std::size_t template_size>
-    const_string_piece(
-        typename self::traits_type::char_type const
-            (&in_literal)[template_size])
-    :
-        data_(&in_literal[0]),
-        length_(template_size - 1)
-    {
-        PSYQ_ASSERT(0 < template_size && in_literal[template_size - 1] == 0);
-    }
-
-    /** @brief 任意型の文字列を参照する。
-        @tparam template_string_type @copydoc const_string_interface::super
-        @param[in] in_string 参照する文字列。
-     */
-    public: template<typename template_string_type>
-    const_string_piece(template_string_type const& in_string):
-        data_(in_string.data()),
-        length_(in_string.length())
-    {}
-
-    //-------------------------------------------------------------------------
-    /** @brief 文字列の先頭文字へのpointerを取得する。
-        @return 文字列の先頭文字へのpointer。
-        @warning
-            文字列の先頭文字から末尾文字までのmemory連続性は保証されているが、
-            文字列の終端文字が空文字となっている保証はない。
-     */
-    public: typename self::traits_type::char_type const* data() const
-    {
-        return this->data_;
-    }
-
-    /** @brief 文字列の長さを取得する。
-        @return 文字列の長さ。
-     */
-    public: std::size_t length() const
-    {
-        return this->length_;
-    }
-
-    //-------------------------------------------------------------------------
-    /// @name 文字列の比較
-    //@{
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 == 右辺
-     */
-    public: bool operator==(self const& in_right) const
-    {
-        return this->compare(in_right) == 0;
-    }
-
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 != 右辺
-     */
-    public: bool operator!=(self const& in_right) const
-    {
-        return this->compare(in_right) != 0;
-    }
-
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 < 右辺
-     */
-    public: bool operator<(self const& in_right) const
-    {
-        return this->compare(in_right) < 0;
-    }
-
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 <= 右辺
-     */
-    public: bool operator<=(self const& in_right) const
-    {
-        return this->compare(in_right) <= 0;
-    }
-
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 > 右辺
-     */
-    public: bool operator>(self const& in_right) const
-    {
-        return 0 < this->compare(in_right);
-    }
-
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 >= 右辺
-     */
-    public: bool operator>=(self const& in_right) const
-    {
-        return 0 <= this->compare(in_right);
-    }
-
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @retval - 右辺のほうが大きい。
-        @retval + 左辺のほうが大きい。
-        @retval 0 左辺と右辺は等価。
-     */
-    public: int compare(self const& in_right) const
-    {
-        bool local_less;
-        bool local_greater;
-        if (this->length() != in_right.length())
-        {
-            local_less = (this->length() < in_right.length());
-            local_greater = !local_less;
-        }
-        else if (this->data() != in_right.data())
-        {
-            local_less = false;
-            local_greater = false;
-        }
-        else
-        {
-            return 0;
-        }
-        int const local_compare(
-            self::traits_type::compare(
-                this->data(),
-                in_right.data(),
-                local_less? this->length(): in_right.length()));
-        if (local_compare != 0)
-        {
-            return local_compare;
-        }
-        else if (local_less)
-        {
-            return -1;
-        }
-        else if (local_greater)
-        {
-            return 1;
-        }
-        else
-        {
-            return 0;
-        }
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name 文字列の構築
-    //@{
-    /** @brief *thisの部分文字列を構築する。
-        @param[in] in_offset 部分文字列の開始offset値。
-        @param[in] in_count  部分文字列の開始offset値からの文字数。
-        @return 部分文字列。
-     */
-    public: self substr(
-        std::size_t const in_offset,
-        std::size_t const in_count)
-    const
-    {
-        auto local_begin(this->data());
-        auto local_length(this->length());
-        if (local_length <= in_offset)
-        {
-            local_begin += local_length;
-            local_length = 0;
-        }
-        else
-        {
-            local_begin += in_offset;
-            if (in_count <= local_length - in_offset)
-            {
-                local_length = in_count;
-            }
-            else
-            {
-                local_length -= in_offset;
-            }
-        }
-        return self(local_begin, local_length);
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @copydoc psyq::internal::const_string_interface::clear()
-    protected: void clear()
-    {
-        this->length_ = 0;
-    }
-
-    //-------------------------------------------------------------------------
-    /// 文字列の先頭位置。
-    private: typename self::traits_type::char_type const* data_;
-    /// 文字列の長さ。
-    private: std::size_t length_;
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_string のinterfaceを模した、const文字列のinterface。
-
     @tparam template_string_type @copydoc const_string_interface::super
  */
 template<typename template_string_type>
@@ -339,15 +69,17 @@ class psyq::internal::const_string_interface:
     public: typedef template_string_type super;
 
     /// 部分文字列の型。
-    public: typedef psyq::internal::const_string_piece<
-        typename super::traits_type>
-            piece;
+    public: typedef
+        psyq::internal::const_string_ref<typename super::traits_type> piece;
 
     //-------------------------------------------------------------------------
+    /** @brief std::hash 互換のハッシュ関数オブジェクト。
+     */
     public: template<typename template_hash>
     struct hash: public template_hash
     {
-        typename template_hash::value_type operator()(piece const& in_string)
+        typename template_hash::value_type operator()(
+            piece const& in_string)
         const
         {
             return template_hash::make(
@@ -400,24 +132,21 @@ class psyq::internal::const_string_interface:
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
      */
-    protected: const_string_interface(super const& in_string)
-    :
+    protected: const_string_interface(super const& in_string):
         super(in_string)
     {}
 
     /** @brief 文字列を移動する。
         @param[in,out] io_string 移動する文字列。
      */
-    protected: const_string_interface(super&& io_string)
-    :
+    protected: const_string_interface(super&& io_string):
         super(std::move(io_string))
     {}
 
     /** @brief 文字列を移動する。
         @param[in,out] io_string 移動する文字列。
      */
-    protected: const_string_interface(self&& io_string)
-    :
+    protected: const_string_interface(self&& io_string):
         super(std::move(io_string))
     {}
     //@}
@@ -578,43 +307,43 @@ class psyq::internal::const_string_interface:
     //-------------------------------------------------------------------------
     /// @name 文字列の比較
     //@{
-    /// @copydoc psyq::internal::const_string_piece::operator==()
+    /// @copydoc psyq::internal::const_string_ref::operator==()
     public: bool operator==(typename self::piece const& in_right) const
     {
         return in_right.operator==(*this);
     }
 
-    /// @copydoc psyq::internal::const_string_piece::operator!=()
+    /// @copydoc psyq::internal::const_string_ref::operator!=()
     public: bool operator!=(typename self::piece const& in_right) const
     {
         return in_right.operator!=(*this);
     }
 
-    /// @copydoc psyq::internal::const_string_piece::operator<()
+    /// @copydoc psyq::internal::const_string_ref::operator<()
     public: bool operator<(typename self::piece const& in_right) const
     {
         return in_right.operator>(*this);
     }
 
-    /// @copydoc psyq::internal::const_string_piece::operator<=()
+    /// @copydoc psyq::internal::const_string_ref::operator<=()
     public: bool operator<=(typename self::piece const& in_right) const
     {
         return in_right.operator>=(*this);
     }
 
-    /// @copydoc psyq::internal::const_string_piece::operator>()
+    /// @copydoc psyq::internal::const_string_ref::operator>()
     public: bool operator>(typename self::piece const& in_right) const
     {
         return in_right.operator<(*this);
     }
 
-    /// @copydoc psyq::internal::const_string_piece::operator>=()
+    /// @copydoc psyq::internal::const_string_ref::operator>=()
     public: bool operator>=(typename self::piece const& in_right) const
     {
         return in_right.operator<=(*this);
     }
 
-    /// @copydoc psyq::internal::const_string_piece::compare()
+    /// @copydoc psyq::internal::const_string_ref::compare()
     public: int compare(typename self::piece const& in_right) const
     {
         return -(in_right.compare(*this));
@@ -1299,4 +1028,4 @@ bool operator>=(
     return in_right.operator<=(in_left);
 }
 
-#endif // !PSYQ_CONST_STRING_HPP_
+#endif // !defined(PSYQ_CONST_STRING_INTERFACE_HPP_)

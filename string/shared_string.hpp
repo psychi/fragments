@@ -28,7 +28,7 @@
 #define PSYQ_SHARED_STRING_HPP_
 
 //#include "atomic_count.hpp"
-//#include "string/const_string.hpp"
+//#include "string/string_ref.hpp"
 
 /// psyq::basic_shared_string で使う、defaultのmemory割当子の型。
 #ifndef PSYQ_BASIC_SHARED_STRING_ALLOCATOR_DEFAULT
@@ -41,7 +41,7 @@ namespace psyq
     /// @cond
     template<
         typename template_char_type,
-        typename = PSYQ_BASIC_STRING_PIECE_TRAITS_DEFAULT,
+        typename = PSYQ_BASIC_STRING_REF_TRAITS_DEFAULT,
         typename = PSYQ_BASIC_SHARED_STRING_ALLOCATOR_DEFAULT>
             class basic_shared_string;
     /// @endcond
@@ -84,7 +84,7 @@ class psyq::internal::shared_string_holder
     public: typedef template_allocator_type allocator_type;
 
     /// 部分文字列の型。
-    protected: typedef psyq::internal::const_string_piece<template_char_traits>
+    protected: typedef psyq::internal::const_string_ref<template_char_traits>
         piece;
 
     /// 共有文字列buffer。

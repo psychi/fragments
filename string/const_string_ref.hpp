@@ -24,210 +24,309 @@
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_STRING_PIECE_HPP_
-#define PSYQ_STRING_PIECE_HPP_
+#ifndef PSYQ_CONST_STRING_REF_HPP_
+#define PSYQ_CONST_STRING_REF_HPP_
 
-//#include "string/const_string.hpp"
-
-/// psyq::basic_string_piece で使う、defaultの文字特性の型。
-#ifndef PSYQ_BASIC_STRING_PIECE_TRAITS_DEFAULT
-#define PSYQ_BASIC_STRING_PIECE_TRAITS_DEFAULT\
-    std::char_traits<template_char_type>
-#endif // !PSYQ_BASIC_STRING_PIECE_TRAITS_DEFAULT
+#include <iosfwd>
+#include <iterator>
+#include <algorithm>
+#include <cctype>
+//#include "fnv_hash.hpp"
 
 namespace psyq
 {
-    /// @cond
-    template<
-        typename template_char_type,
-        typename = PSYQ_BASIC_STRING_PIECE_TRAITS_DEFAULT>
-            class basic_string_piece;
-    /// @endcond
-
-    /// char型の文字を扱う basic_string_piece
-    typedef psyq::basic_string_piece<char> string_piece;
+    namespace internal
+    {
+        /// @cond
+        template<typename> class const_string_ref;
+        /// @endcond
+    }
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string を模したinterfaceが使える、文字列へのconst参照。
-
-    - C文字列を単純にconst参照する。
-    - memory割り当てを一切行わない。
-    - 文字列を書き換えるinterfaceはない。
-    - thread-safety
-      - 1つのinstanceを、異なるthreadで同時にreadする。
-      - 複数のinstanceを、異なるthreadで同時にwriteする。
-    - not thread-safety
-      - 1つのinstanceを、異なるthreadで同時にwriteする。
-      - 1つのinstanceを、異なるthreadで同時にreadとwriteをする。
-
+/** @brief 別の文字列の一部分をconst参照する文字列型。
+    @tparam template_char_traits @copydoc const_string_ref::traits_type
     @warning
         C文字列を単純にconst参照しているので、
         参照してる文字列が破壊されると、動作を保証できなくなる。
-
-    @tparam template_char_type   @copydoc super::value_type
-    @tparam template_char_traits @copydoc super::traits_type
  */
-template<typename template_char_type, typename template_char_traits>
-class psyq::basic_string_piece:
-    public psyq::internal::const_string_interface<
-        psyq::internal::const_string_piece<template_char_traits>>
+template<typename template_char_traits>
+class psyq::internal::const_string_ref
 {
     /// thisが指す値の型。
-    public: typedef psyq::basic_string_piece<
-        template_char_type, template_char_traits>
-            self;
+    private: typedef const_string_ref<template_char_traits> self;
 
-    /// self の上位型。
-    public: typedef psyq::internal::const_string_interface<
-        psyq::internal::const_string_piece<template_char_traits>>
-            super;
+    /// 文字特性の型。
+    public: typedef template_char_traits traits_type;
 
     //-------------------------------------------------------------------------
-    /// @name constructor / destructor
-    //@{
     /** @brief 空の文字列を構築する。
      */
-    public: basic_string_piece(): super(super::super(nullptr, 0)) {}
-
-    /** @brief 文字列を参照する。
-        @param[in] in_string 参照する文字列。
-     */
-    public: basic_string_piece(typename super::super const& in_string):
-        super(in_string)
-    {}
-
-    /** @brief 文字列を移動する。
-        @param[in,out] io_string 移動する文字列。
-     */
-    public: basic_string_piece(typename super::super&& io_string):
-        super(std::move(io_string))
-    {}
+    public: const_string_ref(): data_(nullptr), length_(0) {}
 
     /** @brief 文字列を参照する。
         @param[in] in_begin  参照する文字列の先頭位置。
         @param[in] in_length 参照する文字列の長さ。
      */
-    public: basic_string_piece(
-        typename super::const_pointer const in_begin,
-        typename super::size_type const     in_length)
-    :
-        super(super::super(in_begin, in_length))
-    {}
+    public: const_string_ref(
+        typename self::traits_type::char_type const* const in_begin,
+        std::size_t const                                  in_length)
+     :
+        data_(in_begin),
+        length_(in_length)
+    {
+        if (in_begin == nullptr && 0 < in_length)
+        {
+            PSYQ_ASSERT(false);
+            this->length_ = 0;
+        }
+    }
 
-    /** @brief 文字列を参照する。
+    /** @brief 文字列literalを参照する。
+        @tparam template_size 参照する文字列literalの要素数。終端文字も含む。
+        @param[in] in_literal 参照する文字列literal。
+        @warning 文字列literal以外の文字列を引数に渡すのは禁止。
+        @note
+            引数が文字列literalであることを保証するため、
+            user定義literalを経由して呼び出すようにしたい。
+     */
+    public: template <std::size_t template_size>
+    const_string_ref(
+        typename self::traits_type::char_type const
+            (&in_literal)[template_size])
+    :
+        data_(&in_literal[0]),
+        length_(template_size - 1)
+    {
+        PSYQ_ASSERT(0 < template_size && in_literal[template_size - 1] == 0);
+    }
+
+    /** @brief 任意型の文字列を参照する。
+        @tparam template_string_type @copydoc const_string_interface::super
         @param[in] in_string 参照する文字列。
-        @param[in] in_offset 参照する文字列の開始offset位置。
-        @param[in] in_count  参照する文字数の開始offset位置からの文字数。
      */
-    public: basic_string_piece(
-        typename super::super const&    in_string,
-        typename super::size_type const in_offset,
-        typename super::size_type const in_count = super::npos)
-    :
-        super(in_string.substr(in_offset, in_count))
+    public: template<typename template_string_type>
+    const_string_ref(template_string_type const& in_string):
+        data_(in_string.data()),
+        length_(in_string.length())
     {}
-    //@}
+
     //-------------------------------------------------------------------------
-    /// @name 文字列の割り当て
-    //@{
-    /** @copydoc basic_string_piece(typename super::super const&)
-        @return *this
+    /** @brief 文字列の先頭文字へのpointerを取得する。
+        @return 文字列の先頭文字へのpointer。
+        @warning
+            文字列の先頭文字から末尾文字までのmemory連続性は保証されているが、
+            文字列の終端文字が空文字となっている保証はない。
      */
-    public: self& operator=(typename super::super const& in_string)
+    public: typename self::traits_type::char_type const* data() const
     {
-        return *new(this) self(in_string);
+        return this->data_;
     }
 
-    /// @copydoc operator=(typename super::super const&)
-    public: self& assign(typename super::super const& in_string)
+    /** @brief 文字列の長さを取得する。
+        @return 文字列の長さ。
+     */
+    public: std::size_t length() const
     {
-        return *new(this) self(in_string);
+        return this->length_;
     }
 
-    /// @copydoc basic_string_piece(typename const_pointer const, typename size_type const)
-    public: self& assign(
-        typename super::const_pointer const in_begin,
-        typename super::size_type const     in_length)
+    //-------------------------------------------------------------------------
+    /// @name 文字列の比較
+    //@{
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 == 右辺
+     */
+    public: bool operator==(self const& in_right) const
     {
-        return *new(this) self(in_begin, in_length);
+        return this->compare(in_right) == 0;
     }
 
-    /// @copydoc basic_string_piece(typename super::super const&, typename size_type const, typename size_type const)
-    public: self& assign(
-        typename super::super const&    in_string,
-        typename super::size_type const in_offset,
-        typename super::size_type const in_count = super::npos)
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 != 右辺
+     */
+    public: bool operator!=(self const& in_right) const
     {
-        return *new(this) self(in_string, in_offset, in_count);
+        return this->compare(in_right) != 0;
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 < 右辺
+     */
+    public: bool operator<(self const& in_right) const
+    {
+        return this->compare(in_right) < 0;
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 <= 右辺
+     */
+    public: bool operator<=(self const& in_right) const
+    {
+        return this->compare(in_right) <= 0;
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 > 右辺
+     */
+    public: bool operator>(self const& in_right) const
+    {
+        return 0 < this->compare(in_right);
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 >= 右辺
+     */
+    public: bool operator>=(self const& in_right) const
+    {
+        return 0 <= this->compare(in_right);
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @retval - 右辺のほうが大きい。
+        @retval + 左辺のほうが大きい。
+        @retval 0 左辺と右辺は等価。
+     */
+    public: int compare(self const& in_right) const
+    {
+        bool local_less;
+        bool local_greater;
+        if (this->length() != in_right.length())
+        {
+            local_less = (this->length() < in_right.length());
+            local_greater = !local_less;
+        }
+        else if (this->data() != in_right.data())
+        {
+            local_less = false;
+            local_greater = false;
+        }
+        else
+        {
+            return 0;
+        }
+        int const local_compare(
+            self::traits_type::compare(
+                this->data(),
+                in_right.data(),
+                local_less? this->length(): in_right.length()));
+        if (local_compare != 0)
+        {
+            return local_compare;
+        }
+        else if (local_less)
+        {
+            return -1;
+        }
+        else if (local_greater)
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
     }
     //@}
     //-------------------------------------------------------------------------
     /// @name 文字列の操作
     //@{
-    /// @copydoc psyq::internal::const_string_piece::clear()
+    /// @copydoc psyq::internal::const_string_interface::clear()
     public: void clear()
     {
-        this->super::super::clear();
+        this->length_ = 0;
     }
 
-    /// @copydoc psyq::internal::const_string_piece::substr()
+    /** @brief 先頭の文字を削除する。
+        @param[in] in_remove_length 削除する文字数。
+     */
+    public: void remove_prefix(std::size_t const in_remove_length)
+    {
+        if (in_remove_length < this->length())
+        {
+            this->data_ += in_remove_length;
+            this->length_ -= in_remove_length;
+        }
+        else
+        {
+            this->data_ += this->length();
+            this->clear();
+        }
+    }
+
+    /** @brief 末尾の文字を削除する。
+        @param[in] in_remove_length 削除する文字数。
+     */
+    public: void remove_suffix(std::size_t const in_remove_length)
+    {
+        if (in_remove_length < this->length())
+        {
+            this->length_ -= in_remove_length;
+        }
+        else
+        {
+            this->clear();
+        }
+    }
+
+    /** @brief *thisの部分文字列を構築する。
+        @param[in] in_offset 部分文字列の開始offset値。
+        @param[in] in_count  部分文字列の開始offset値からの文字数。
+        @return 部分文字列。
+     */
     public: self substr(
-        typename super::size_type const in_offset = 0,
-        typename super::size_type const in_count = super::npos)
+        std::size_t const in_offset,
+        std::size_t const in_count)
     const
     {
-        return self(*this, in_offset, in_count);
-    }
-
-    /** @brief 文字列の先頭と末尾にある空白文字を取り除く。
-        @return 先頭と末尾にある空白文字を取り除いた文字列。
-     */
-    public: self trim() const
-    {
-        return this->trim_right().trim_left();
-    }
-
-    /** @brief 文字列の先頭にある空白文字を取り除く。
-        @return 先頭にある空白文字を取り除いた文字列。
-     */
-    public: self trim_left() const
-    {
-        if (this->length() <= 0)
+        auto local_begin(this->data());
+        auto local_length(this->length());
+        if (local_length <= in_offset)
         {
-            return *this;
+            local_begin += local_length;
+            local_length = 0;
         }
-        auto const local_end(this->data() + this->length());
-        for (auto i(this->data()); i < local_end; ++i)
+        else
         {
-            if (!std::isspace(*i))
+            local_begin += in_offset;
+            if (in_count <= local_length - in_offset)
             {
-                auto const local_position(i - this->data());
-                return self(
-                    this->data() + local_position,
-                    this->length() - local_position);
+                local_length = in_count;
+            }
+            else
+            {
+                local_length -= in_offset;
             }
         }
-        return self(this->data() + this->length(), 0);
-    }
-
-    /** @brief 文字列の末尾にある空白文字を取り除く。
-        @return 末尾にある空白文字を取り除いた文字列。
-     */
-    public: self trim_right() const
-    {
-        if (this->length() <= 0)
-        {
-            return *this;
-        }
-        for (auto i(this->data() + this->length() - 1); this->data() <= i; --i)
-        {
-            if (!std::isspace(*i))
-            {
-                return self(this->data(), 1 + i - this->data());
-            }
-        }
-        return self(this->data(), 0);
+        return self(local_begin, local_length);
     }
 
     /** @brief 文字列を整数に変換する。
@@ -242,7 +341,7 @@ class psyq::basic_string_piece:
         std::size_t local_rest_length;
         out_integer
             = this->to_integer<template_integer_type>(&local_rest_length);
-        return local_rest_length <= 0 && !this->empty();
+        return local_rest_length <= 0 && 0 < this->length();
     }
 
     /** @brief 文字列を整数に変換する。
@@ -282,7 +381,7 @@ class psyq::basic_string_piece:
     {
         std::size_t local_rest_length;
         out_real = this->to_real<template_real_type>(&local_rest_length);
-        return local_rest_length <= 0 && !this->empty();
+        return local_rest_length <= 0 && 0 < this->length();
     }
 
     /** @brief 文字列を実数に変換する。
@@ -332,8 +431,8 @@ class psyq::basic_string_piece:
         @return 文字列から取り出した符号。
      */
     private: static signed parse_sign(
-        typename super::traits_type::char_type const*&      io_iterator,
-        typename super::traits_type::char_type const* const in_end)
+        typename self::traits_type::char_type const*&      io_iterator,
+        typename self::traits_type::char_type const* const in_end)
     {
         if (io_iterator < in_end)
         {
@@ -357,8 +456,8 @@ class psyq::basic_string_piece:
         @return 文字列から取り出した基数。
      */
     private: static unsigned parse_base(
-        typename super::traits_type::char_type const*&      io_iterator,
-        typename super::traits_type::char_type const* const in_end)
+        typename self::traits_type::char_type const*&      io_iterator,
+        typename self::traits_type::char_type const* const in_end)
     {
         if (in_end <= io_iterator)
         {
@@ -403,9 +502,9 @@ class psyq::basic_string_piece:
      */
     private: template<typename template_integer_type>
     static template_integer_type parse_numbers(
-        typename super::traits_type::char_type const*&      io_iterator,
-        typename super::traits_type::char_type const* const in_end,
-        unsigned const                                      in_base)
+        typename self::traits_type::char_type const*&      io_iterator,
+        typename self::traits_type::char_type const* const in_end,
+        unsigned const                                     in_base)
     {
         // 基数が10以下なら、数字だけを解析する。
         if (in_base <= 10)
@@ -413,7 +512,7 @@ class psyq::basic_string_piece:
             return self::parse_digits<template_integer_type>(
                 io_iterator, in_end, in_base);
         }
-        PSYQ_ASSERT(in_base <= 36);
+        PSYQ_ASSERT(in_base <= ('9' - '0') + ('z' - 'a'));
 
         // 任意の基数の数値を取り出す。
         template_integer_type local_integer(0);
@@ -429,19 +528,15 @@ class psyq::basic_string_piece:
             {
                 local_number -= 'A' - 0xA;
             }
-            else if ('9' < local_number)
+            else if (local_number <= '9')
             {
-                break;
+                local_number -= '0';
             }
             else
             {
-                local_number -= '0';
-                if (local_number < 0)
-                {
-                    break;
-                }
+                break;
             }
-            if (int(in_base) <= local_number)
+            if (in_base <= static_cast<unsigned>(local_number))
             {
                 break;
             }
@@ -464,9 +559,9 @@ class psyq::basic_string_piece:
      */
     private: template<typename template_integer_type>
     static template_integer_type parse_digits(
-        typename super::traits_type::char_type const*&      io_iterator,
-        typename super::traits_type::char_type const* const in_end,
-        unsigned const                                      in_base)
+        typename self::traits_type::char_type const*&      io_iterator,
+        typename self::traits_type::char_type const* const in_end,
+        unsigned const                                     in_base)
     {
         if (in_base <= 0)
         {
@@ -502,9 +597,9 @@ class psyq::basic_string_piece:
      */
     private: template<std::size_t template_base, typename template_real_type>
     static template_real_type merge_decimal_digits(
-        typename super::traits_type::char_type const*&      io_iterator,
-        typename super::traits_type::char_type const* const in_end,
-        template_real_type const                            in_real)
+        typename self::traits_type::char_type const*&      io_iterator,
+        typename self::traits_type::char_type const* const in_end,
+        template_real_type const                           in_real)
     {
         PSYQ_ASSERT(0 <= in_real);
 
@@ -547,28 +642,12 @@ class psyq::basic_string_piece:
         }
         return local_real;
     }
+
+    //-------------------------------------------------------------------------
+    /// 文字列の先頭位置。
+    private: typename self::traits_type::char_type const* data_;
+    /// 文字列の長さ。
+    private: std::size_t length_;
 };
 
-//-----------------------------------------------------------------------------
-namespace std
-{
-    /** @brief 文字列の交換。
-        @tparam template_char_type
-            @copydoc psyq::basic_string_piece::value_type
-        @tparam template_char_traits
-            @copydoc psyq::basic_string_piece::traits_type
-        @param[in] in_left  交換する文字列。
-        @param[in] in_right 交換する文字列。
-     */
-    template<typename template_char_type, typename template_char_traits>
-    void swap(
-        psyq::basic_string_piece<template_char_type, template_char_traits>&
-            io_left,
-        psyq::basic_string_piece<template_char_type, template_char_traits>&
-            io_right)
-    {
-        io_left.swap(io_right);
-    }
-};
-
-#endif // !PSYQ_STRING_PIECE_HPP_
+#endif // !PSYQ_CONST_STRING_REF_HPP_

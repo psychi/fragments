@@ -23,10 +23,10 @@
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
+    @brief @copybrief psyq::basic_array_string
  */
 #ifndef PSYQ_ARRAY_STRING_HPP_
 #define PSYQ_ARRAY_STRING_HPP_
-
 //#include "string/const_string.hpp"
 
 #ifndef PSYQ_BASIC_ARRAY_STRING_MAX_SIZE_DEFAULT
@@ -137,7 +137,7 @@ class psyq::internal::fixed_array_string
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string のinterfaceを模した、固定長の文字列。
+/** @brief boost::basic_string_ref を模した、固定長の文字列。
 
     @tparam template_max_size    @copydoc super::MAX_SIZE
     @tparam template_char_type   @copydoc super::value_type

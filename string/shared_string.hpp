@@ -23,6 +23,7 @@
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
+    @brief @copybrief psyq::basic_shared_string
  */
 #ifndef PSYQ_SHARED_STRING_HPP_
 #define PSYQ_SHARED_STRING_HPP_
@@ -549,7 +550,7 @@ class psyq::internal::shared_string_holder
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string のinterfaceを模した、immutableな共有文字列の保持子。
+/** @brief boost::basic_string_ref を模した、immutableな共有文字列の保持子。
 
     - immutableな文字列を被参照数で共有する。
     - 文字列literalを割り当てた場合は、memory割り当てを行わない。

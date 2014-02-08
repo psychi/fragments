@@ -23,6 +23,7 @@
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
+    @brief @copybrief psyq::internal::const_string_interface
  */
 #ifndef PSYQ_CONST_STRING_INTERFACE_HPP_
 #define PSYQ_CONST_STRING_INTERFACE_HPP_
@@ -38,7 +39,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string のinterfaceを模した、const文字列のinterface。
+/** @brief boost::basic_string_ref を模した、const文字列のinterface。
     @tparam template_string_type @copydoc const_string_interface::super
  */
 template<typename template_string_type>

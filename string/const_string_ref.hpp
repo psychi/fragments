@@ -23,6 +23,7 @@
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
+    @brief @copybrief psyq::internal::const_string_ref
  */
 #ifndef PSYQ_CONST_STRING_REF_HPP_
 #define PSYQ_CONST_STRING_REF_HPP_

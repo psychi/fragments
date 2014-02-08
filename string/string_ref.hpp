@@ -23,6 +23,7 @@
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
+    @brief @copybrief psyq::basic_string_ref
  */
 #ifndef PSYQ_STRING_REF_HPP_
 #define PSYQ_STRING_REF_HPP_
@@ -49,7 +50,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string を模したinterfaceが使える、文字列へのconst参照。
+/** @brief boost::basic_string_ref を模した、immutableな文字列への参照。
 
     - C文字列を単純にconst参照する。
     - memory割り当てを一切行わない。

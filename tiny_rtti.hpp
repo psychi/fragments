@@ -30,8 +30,7 @@
 //#include "atomic_count.hpp"
 
 #ifndef PSYQ_TINY_RTTI_VOID_HASH
-#define PSYQ_TINY_RTTI_VOID_HASH\
-    self::hash(1) << (sizeof(self::hash) * 8 - 1)
+#define PSYQ_TINY_RTTI_VOID_HASH self::hash(1) << (sizeof(self::hash) * 8 - 1)
 #endif // !defined(PSYQ_TINY_RTTI_VOID_HASH)
 
 namespace psyq

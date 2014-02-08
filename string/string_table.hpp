@@ -23,6 +23,7 @@
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
+    @brief @copybrief psyq::string_table
  */
 #ifndef PSYQ_STRING_TABLE_HPP_
 #define PSYQ_STRING_TABLE_HPP_

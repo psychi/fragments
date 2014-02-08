@@ -23,6 +23,7 @@
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
+    @brief ビット操作のための関数群。
  */
 #ifndef PSYQ_BIT_ALGORITHM_HPP_
 #define PSYQ_BIT_ALGORITHM_HPP_

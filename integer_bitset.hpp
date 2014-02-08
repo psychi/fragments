@@ -55,9 +55,7 @@ class psyq::integer_bitset
     /** @brief 整数値でbit集合を初期化する。
         @param[in] in_bitset bit集合の初期値。
      */
-    public: explicit integer_bitset(
-        const template_integer in_bitset = 0)
-    :
+    public: explicit integer_bitset(template_integer const in_bitset = 0):
         integer_(in_bitset)
     {}
 
@@ -134,7 +132,7 @@ class psyq::integer_bitset
     }
 
     /// 未実装。
-    private: bool operator[](std::size_t const in_position);
+    private: bool& operator[](std::size_t const in_position);
 
     public: self operator~() const
     {

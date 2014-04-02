@@ -27,10 +27,10 @@
  */
 #ifndef PSYQ_ARRAY_STRING_HPP_
 #define PSYQ_ARRAY_STRING_HPP_
-//#include "string/const_string.hpp"
+//#include "string/string_view_base.hpp"
 
 #ifndef PSYQ_BASIC_ARRAY_STRING_MAX_SIZE_DEFAULT
-#define PSYQ_BASIC_ARRAY_STRING_MAX_SIZE_DEFAULT 256
+#define PSYQ_BASIC_ARRAY_STRING_MAX_SIZE_DEFAULT 160
 #endif // !defined(PSYQ_BASIC_ARRAY_STRING_MAX_SIZE_DEFAULT)
 
 namespace psyq
@@ -39,7 +39,7 @@ namespace psyq
     template<
         std::size_t,
         typename template_char_type,
-        typename = PSYQ_BASIC_STRING_REF_TRAITS_DEFAULT>
+        typename = PSYQ_BASIC_STRING_VIEW_TRAITS_DEFAULT>
             class basic_array_string;
     /// @endcond
 
@@ -74,9 +74,8 @@ class psyq::internal::fixed_array_string
     public: typedef template_char_traits traits_type;
 
     /// 部分文字列の型。
-    public: typedef psyq::internal::const_string_ref<
-        typename self::traits_type>
-            piece;
+    protected:
+    typedef psyq::internal::string_view_base<typename self::traits_type> view;
 
     public: enum: std::size_t
     {
@@ -108,7 +107,7 @@ class psyq::internal::fixed_array_string
     /** @brief 文字列をcopyする。
         @param[in] in_string copy元とする文字列。
      */
-    public: fixed_array_string(typename self::piece const& in_string):
+    public: fixed_array_string(typename self::view const& in_string):
         length_((std::min<std::size_t>)(in_string.length(), self::MAX_SIZE))
     {
         self::traits_type::copy(
@@ -119,13 +118,21 @@ class psyq::internal::fixed_array_string
         }
     }
 
-    /// @copydoc psyq::internal::const_string_ref::data()
+    /** @copydoc fixed_array_string(self const&)
+        @return *this
+     */
+    public: self& operator=(self const& in_string)
+    {
+        return *new(this) self(in_string);
+    }
+
+    /// @copydoc psyq::internal::string_view_base::data()
     public: typename self::traits_type::char_type const* data() const
     {
         return &this->array_[0];
     }
 
-    /// @copydoc psyq::internal::const_string_ref::length()
+    /// @copydoc psyq::internal::string_view_base::length()
     public: std::size_t length() const
     {
         return this->length_;
@@ -148,7 +155,7 @@ template<
     typename    template_char_type,
     typename    template_char_traits>
 class psyq::basic_array_string:
-    public psyq::internal::const_string_interface<
+    public psyq::internal::string_view_interface<
         psyq::internal::fixed_array_string<
             template_char_traits, template_max_size>>
 {
@@ -158,14 +165,12 @@ class psyq::basic_array_string:
             self;
 
     /// self の上位型。
-    public: typedef psyq::internal::const_string_interface<
+    public: typedef psyq::internal::string_view_interface<
         psyq::internal::fixed_array_string<
             template_char_traits, template_max_size>>
                 super;
 
     //-------------------------------------------------------------------------
-    /// @name constructor / destructor
-    //@{
     /** @brief 空文字列を構築する。
      */
     public: explicit basic_array_string(): super(super::super()) {}
@@ -185,13 +190,13 @@ class psyq::basic_array_string:
     :
         super(self())
     {
-        new(this) super::super(typename super::piece(in_literal));
+        new(this) super::super(typename super::view(in_literal));
     }
 
     /** @brief 文字列をcopyする。
         @param[in] in_string copy元の文字列。
      */
-    public: basic_array_string(typename super::piece const& in_string):
+    public: basic_array_string(typename super::view const& in_string):
         super(self())
     {
         new(this) super::super(in_string);
@@ -207,12 +212,10 @@ class psyq::basic_array_string:
     :
         super(self())
     {
-        new(this) super::super(typename super::piece(in_begin, in_length));
+        new(this) super::super(typename super::view(in_begin, in_length));
     }
-    //@}
+
     //-------------------------------------------------------------------------
-    /// @name 文字列の割り当て
-    //@{
     /** @copydoc basic_array_string(self const&)
         @return *this
      */
@@ -221,10 +224,10 @@ class psyq::basic_array_string:
         return *new(this) self(in_string);
     }
 
-    /** @copydoc basic_array_string(typename super::piece const&)
+    /** @copydoc basic_array_string(typename super::view const&)
         @return *this
      */
-    public: self& operator=(typename super::piece const& in_string)
+    public: self& operator=(typename super::view const& in_string)
     {
         return *new(this) self(in_string);
     }
@@ -240,41 +243,6 @@ class psyq::basic_array_string:
     {
         return *new(this) self(in_string);
     }
-
-    /// @copydoc operator=(self const&)
-    public: self& assign(self const& in_string)
-    {
-        return this->operator=(in_string);
-    }
-
-    /// @copydoc operator=(typename super::piece const&)
-    public: self& assign(typename super::piece const& in_string)
-    {
-        return this->operator=(in_string);
-    }
-
-    /** @brief 文字列literalをcopyする。
-        @tparam template_size copyする文字列literalの要素数。空文字も含む。
-        @param[in] in_literal copyする文字列literal。
-        @return *this
-     */
-    public: template <std::size_t template_size>
-    self& assign(
-        typename super::value_type const (&in_literal)[template_size])
-    {
-        return this->operator=(in_literal);
-    }
-
-    /** @copydoc basic_array_string(super::const_pointer const, super::size_type const)
-        @return *this
-     */
-    public: self& assign(
-        typename super::const_pointer const in_begin,
-        typename super::size_type const     in_length)
-    {
-        return *new(this) self(in_begin, in_length);
-    }
-    //@}
 };
 
 #endif // !defined(PSYQ_ARRAY_STRING_HPP_)

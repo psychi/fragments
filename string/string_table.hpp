@@ -79,11 +79,11 @@ class psyq::string_table
     /** @brief 文字列表の列の辞書。
 
         以下の条件を満たしている必要がある。
-        - std::map 相当の型。要素がsortされてなくともよい。
+        - std::unordered_map 相当の型。要素がsortされてなくともよい。
         - template_column_map::key_type は、文字列表の列の番号。
         - template_column_map::mapped_type は、文字列表の行の辞書。
           以下の条件を満たしている必要がある。
-          - std::map 相当の型。要素がsortされてなくともよい。
+          - std::unordered_map 相当の型。要素がsortされてなくともよい。
           - template_column_map::mapped_type::key_type は、文字列表の行の番号。
           - template_column_map::mapped_type::mapped_type は、
             文字列表の要素となる、 psyq::basic_shared_string 相当の文字列。
@@ -92,7 +92,7 @@ class psyq::string_table
 
     /** @brief 文字列表の行の辞書。
 
-        - std::map 相当の型。要素がsortされてなくともよい。
+        - std::unordered_map 相当の型。要素がsortされてなくともよい。
         - row_map::key_type は、文字列表の行の番号。
         - row_map::mapped_type は、文字列表の要素となる、
           psyq::basic_shared_string 相当の文字列。
@@ -115,8 +115,9 @@ class psyq::string_table
 
     //-------------------------------------------------------------------------
     /** @brief 文字列表を構築する。
-        @param[in,out] io_column_map    文字列表の列の辞書。
-        @param[in]     in_attribute_row 文字列表の属性行の番号。
+        @param[in,out] io_column_map
+            make_column_map() で構築した、文字列表の列の辞書。
+        @param[in] in_attribute_row 文字列表の属性行として使う行の番号。
      */
     public: string_table(
         typename self::column_map io_column_map,
@@ -320,17 +321,22 @@ class psyq::string_table
         std::size_t local_column_max(0);
         for (auto& local_column_value: in_column_map)
         {
+            // 最大行を更新する。
             if (local_column_max < local_column_value.first)
             {
                 local_column_max = local_column_value.first;
             }
+
+            // 属性行を取得する。
             auto& local_row_map(local_column_value.second);
             auto const local_row_iterator(
                 local_row_map.find(in_attribute_row));
             if (local_row_iterator == local_row_map.end())
             {
-                continue;
+                continue; // 属性行ではなかった。
             }
+
+            // 属性辞書を更新する。
             auto const local_attribute_iterator(
                 local_attribute_map.find(local_row_iterator->second));
             if (local_attribute_iterator == local_attribute_map.end())
@@ -345,6 +351,8 @@ class psyq::string_table
                 PSYQ_ASSERT(false); // 名前が重複する属性がある。
             }
         }
+
+        // 属性ごとの要素数を決定する。
         self::adjust_attribute_size(local_attribute_map, local_column_max);
         return local_attribute_map;
     }

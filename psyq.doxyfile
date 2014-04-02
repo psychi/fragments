@@ -678,9 +678,9 @@ WARN_LOGFILE           =
 # with spaces.
 
 INPUT                  = \
-                         ./string/const_string_ref.hpp \
-                         ./string/const_string_interface.hpp \
-                         ./string/string_ref.hpp \
+                         ./string/string_view_base.hpp \
+                         ./string/string_view_interface.hpp \
+                         ./string/string_view.hpp \
                          ./string/shared_string.hpp \
                          ./string/array_string.hpp \
                          ./string/string_table.hpp \

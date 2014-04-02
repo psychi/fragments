@@ -23,31 +23,37 @@
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::internal::const_string_interface
+    @brief @copybrief psyq::internal::string_view_interface
  */
-#ifndef PSYQ_CONST_STRING_INTERFACE_HPP_
-#define PSYQ_CONST_STRING_INTERFACE_HPP_
+#ifndef PSYQ_STRING_VIEW_INTERFACE_HPP_
+#define PSYQ_STRING_VIEW_INTERFACE_HPP_
+
+//#include "string/string_view_base.hpp"
 
 namespace psyq
 {
+    /// @cond
+    template<typename, typename> class basic_string_view;
+    /// @endcond
+
     namespace internal
     {
         /// @cond
-        template<typename> class const_string_interface;
+        template<typename> class string_view_interface;
         /// @endcond
     }
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief boost::basic_string_ref を模した、const文字列のinterface。
-    @tparam template_string_type @copydoc const_string_interface::super
+/** @brief std::basic_string_view を模した、immutableな文字列のinterface。
+    @tparam template_string_type @copydoc string_view_interface::super
  */
 template<typename template_string_type>
-class psyq::internal::const_string_interface:
+class psyq::internal::string_view_interface:
     public template_string_type
 {
     /// thisが指す値の型。
-    private: typedef const_string_interface<template_string_type> self;
+    private: typedef string_view_interface<template_string_type> self;
 
     /** @brief 操作する文字列型。
 
@@ -69,10 +75,6 @@ class psyq::internal::const_string_interface:
      */
     public: typedef template_string_type super;
 
-    /// 部分文字列の型。
-    public: typedef
-        psyq::internal::const_string_ref<typename super::traits_type> piece;
-
     //-------------------------------------------------------------------------
     /** @brief std::hash 互換のハッシュ関数オブジェクト。
      */
@@ -80,7 +82,7 @@ class psyq::internal::const_string_interface:
     struct hash: public template_hash
     {
         typename template_hash::value_type operator()(
-            piece const& in_string)
+            typename template_string_type::view const& in_string)
         const
         {
             return template_hash::make(
@@ -128,26 +130,37 @@ class psyq::internal::const_string_interface:
         reverse_iterator;
 
     //-------------------------------------------------------------------------
+    /// 部分文字列の型。
+    public: typedef psyq::basic_string_view<
+        typename self::value_type, typename super::traits_type>
+            view;
+
+    /// 部分文字列の上位型。
+    protected: typedef psyq::internal::string_view_base<
+        typename super::traits_type>
+            super_view;
+
+    //-------------------------------------------------------------------------
     /// @name constructor / destructor
     //@{
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
      */
-    protected: const_string_interface(super const& in_string):
+    protected: string_view_interface(super const& in_string):
         super(in_string)
     {}
 
     /** @brief 文字列を移動する。
         @param[in,out] io_string 移動する文字列。
      */
-    protected: const_string_interface(super&& io_string):
+    protected: string_view_interface(super&& io_string):
         super(std::move(io_string))
     {}
 
     /** @brief 文字列を移動する。
         @param[in,out] io_string 移動する文字列。
      */
-    protected: const_string_interface(self&& io_string):
+    protected: string_view_interface(self&& io_string):
         super(std::move(io_string))
     {}
     //@}
@@ -308,44 +321,44 @@ class psyq::internal::const_string_interface:
     //-------------------------------------------------------------------------
     /// @name 文字列の比較
     //@{
-    /// @copydoc psyq::internal::const_string_ref::operator==()
-    public: bool operator==(typename self::piece const& in_right) const
+    /// @copydoc psyq::internal::string_view_base::operator==()
+    public: bool operator==(typename self::super_view const& in_right) const
     {
         return in_right.operator==(*this);
     }
 
-    /// @copydoc psyq::internal::const_string_ref::operator!=()
-    public: bool operator!=(typename self::piece const& in_right) const
+    /// @copydoc psyq::internal::string_view_base::operator!=()
+    public: bool operator!=(typename self::super_view const& in_right) const
     {
         return in_right.operator!=(*this);
     }
 
-    /// @copydoc psyq::internal::const_string_ref::operator<()
-    public: bool operator<(typename self::piece const& in_right) const
+    /// @copydoc psyq::internal::string_view_base::operator<()
+    public: bool operator<(typename self::super_view const& in_right) const
     {
         return in_right.operator>(*this);
     }
 
-    /// @copydoc psyq::internal::const_string_ref::operator<=()
-    public: bool operator<=(typename self::piece const& in_right) const
+    /// @copydoc psyq::internal::string_view_base::operator<=()
+    public: bool operator<=(typename self::super_view const& in_right) const
     {
         return in_right.operator>=(*this);
     }
 
-    /// @copydoc psyq::internal::const_string_ref::operator>()
-    public: bool operator>(typename self::piece const& in_right) const
+    /// @copydoc psyq::internal::string_view_base::operator>()
+    public: bool operator>(typename self::super_view const& in_right) const
     {
         return in_right.operator<(*this);
     }
 
-    /// @copydoc psyq::internal::const_string_ref::operator>=()
-    public: bool operator>=(typename self::piece const& in_right) const
+    /// @copydoc psyq::internal::string_view_base::operator>=()
+    public: bool operator>=(typename self::super_view const& in_right) const
     {
         return in_right.operator<=(*this);
     }
 
-    /// @copydoc psyq::internal::const_string_ref::compare()
-    public: int compare(typename self::piece const& in_right) const
+    /// @copydoc psyq::internal::string_view_base::compare()
+    public: int compare(typename self::super_view const& in_right) const
     {
         return -(in_right.compare(*this));
     }
@@ -361,11 +374,12 @@ class psyq::internal::const_string_interface:
     public: int compare(
         typename self::size_type const in_left_offset,
         typename self::size_type const in_left_count,
-        typename self::piece const&    in_right)
+        typename self::super_view const& in_right)
     const
     {
         auto const local_left(
-            typename self::piece(*this).substr(in_left_offset, in_left_count));
+            typename self::super_view(*this).substr(
+                in_left_offset, in_left_count));
         return local_left.compare(in_right);
     }
 
@@ -388,7 +402,7 @@ class psyq::internal::const_string_interface:
         this->compare(
             in_left_offset,
             in_left_count,
-            typename self::piece(in_right_begin, in_right_length));
+            typename self::super_view(in_right_begin, in_right_length));
     }
 
     /** @brief 文字列を比較する。
@@ -404,7 +418,7 @@ class psyq::internal::const_string_interface:
     public: int compare(
         typename self::size_type const in_left_offset,
         typename self::size_type const in_left_count,
-        typename self::piece const&    in_right,
+        typename self::super_view const& in_right,
         typename self::size_type const in_right_offset,
         typename self::size_type const in_right_count)
     const
@@ -416,13 +430,13 @@ class psyq::internal::const_string_interface:
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name 文字列の操作
+    /// @name 文字列の変更
     //@{
     /** @brief 文字列を空にする。
      */
     public: void clear()
     {
-        io_target.super::operator=(super());
+        this->super::operator=(super());
     }
 
     /** @brief 文字列を交換する。
@@ -471,8 +485,8 @@ class psyq::internal::const_string_interface:
         @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find(
-        typename self::piece const& in_string,
-        typename self::size_type    in_offset = 0)
+        typename self::super_view const& in_string,
+        typename self::size_type in_offset = 0)
     const
     {
         return this->find(in_string.data(), in_offset, in_string.length());
@@ -569,7 +583,7 @@ class psyq::internal::const_string_interface:
         @return 検索文字列が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type rfind(
-        typename self::piece const&    in_string,
+        typename self::super_view const& in_string,
         typename self::size_type const in_offset = self::npos)
     const
     {
@@ -637,7 +651,7 @@ class psyq::internal::const_string_interface:
         @return 検索文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_first_of(
-        typename self::piece const&    in_string,
+        typename self::super_view const& in_string,
         typename self::size_type const in_offset = 0)
     const
     {
@@ -698,7 +712,7 @@ class psyq::internal::const_string_interface:
         @return 検索文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_last_of(
-        typename self::piece const&    in_string,
+        typename self::super_view const& in_string,
         typename self::size_type const in_offset = self::npos)
     const
     {
@@ -777,7 +791,7 @@ class psyq::internal::const_string_interface:
             検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_first_not_of(
-        typename self::piece const&    in_string,
+        typename self::super_view const& in_string,
         typename self::size_type const in_offset = 0)
     const
     {
@@ -858,7 +872,7 @@ class psyq::internal::const_string_interface:
             検索文字以外の文字が現れた位置。現れない場合は self::npos を返す。
      */
     public: typename self::size_type find_last_not_of(
-        typename self::piece const&    in_string,
+        typename self::super_view const& in_string,
         typename self::size_type const in_offset = self::npos)
     const
     {
@@ -911,9 +925,9 @@ class psyq::internal::const_string_interface:
 //-----------------------------------------------------------------------------
 /** @brief 文字列を比較する。
     @tparam template_left_string_type
-        @copydoc psyq::internal::const_string_interface::super
+        @copydoc psyq::internal::string_view_interface::super
     @tparam template_right_string_type
-        @copydoc psyq::internal::const_string_interface::super
+        @copydoc psyq::internal::string_view_interface::super
     @param[in] in_left  左辺の文字列。
     @param[in] in_right 右辺の文字列。
     @return 左辺 == 右辺
@@ -923,7 +937,7 @@ template<
     typename template_right_string_type>
 bool operator==(
     template_left_string_type const& in_left,
-    psyq::internal::const_string_interface<template_right_string_type> const&
+    psyq::internal::string_view_interface<template_right_string_type> const&
         in_right)
 {
     return in_right.operator==(in_left);
@@ -931,9 +945,9 @@ bool operator==(
 
 /** @brief 文字列を比較する。
     @tparam template_left_string_type
-        @copydoc psyq::internal::const_string_interface::super
+        @copydoc psyq::internal::string_view_interface::super
     @tparam template_right_string_type
-        @copydoc psyq::internal::const_string_interface::super
+        @copydoc psyq::internal::string_view_interface::super
     @param[in] in_left  左辺の文字列。
     @param[in] in_right 右辺の文字列。
     @return 左辺 != 右辺
@@ -943,7 +957,7 @@ template<
     typename template_right_string_type>
 bool operator!=(
     template_left_string_type const& in_left,
-    psyq::internal::const_string_interface<template_right_string_type> const&
+    psyq::internal::string_view_interface<template_right_string_type> const&
         in_right)
 {
     return in_right.operator!=(in_left);
@@ -951,9 +965,9 @@ bool operator!=(
 
 /** @brief 文字列を比較する。
     @tparam template_left_string_type
-        @copydoc psyq::internal::const_string_interface::super
+        @copydoc psyq::internal::string_view_interface::super
     @tparam template_right_string_type
-        @copydoc psyq::internal::const_string_interface::super
+        @copydoc psyq::internal::string_view_interface::super
     @param[in] in_left  左辺の文字列。
     @param[in] in_right 右辺の文字列。
     @return 左辺 < 右辺
@@ -963,7 +977,7 @@ template<
     typename template_right_string_type>
 bool operator<(
     template_left_string_type const& in_left,
-    psyq::internal::const_string_interface<template_right_string_type> const&
+    psyq::internal::string_view_interface<template_right_string_type> const&
         in_right)
 {
     return in_right.operator>(in_left);
@@ -971,9 +985,9 @@ bool operator<(
 
 /** @brief 文字列を比較する。
     @tparam template_left_string_type
-        @copydoc psyq::internal::const_string_interface::super
+        @copydoc psyq::internal::string_view_interface::super
     @tparam template_right_string_type
-        @copydoc psyq::internal::const_string_interface::super
+        @copydoc psyq::internal::string_view_interface::super
     @param[in] in_left  左辺の文字列。
     @param[in] in_right 右辺の文字列。
     @return 左辺 <= 右辺
@@ -983,7 +997,7 @@ template<
     typename template_right_string_type>
 bool operator<=(
     template_left_string_type const& in_left,
-    psyq::internal::const_string_interface<template_right_string_type> const&
+    psyq::internal::string_view_interface<template_right_string_type> const&
         in_right)
 {
     return in_right.operator>=(in_left);
@@ -991,9 +1005,9 @@ bool operator<=(
 
 /** @brief 文字列を比較する。
     @tparam template_left_string_type
-        @copydoc psyq::internal::const_string_interface::super
+        @copydoc psyq::internal::string_view_interface::super
     @tparam template_right_string_type
-        @copydoc psyq::internal::const_string_interface::super
+        @copydoc psyq::internal::string_view_interface::super
     @param[in] in_left  左辺の文字列。
     @param[in] in_right 右辺の文字列。
     @return 左辺 > 右辺
@@ -1003,7 +1017,7 @@ template<
     typename template_right_string_type>
 bool operator>(
     template_left_string_type const& in_left,
-    psyq::internal::const_string_interface<template_right_string_type> const&
+    psyq::internal::string_view_interface<template_right_string_type> const&
         in_right)
 {
     return in_right.operator<(in_left);
@@ -1011,9 +1025,9 @@ bool operator>(
 
 /** @brief 文字列を比較する。
     @tparam template_left_string_type
-        @copydoc psyq::internal::const_string_interface::super
+        @copydoc psyq::internal::string_view_interface::super
     @tparam template_right_string_type
-        @copydoc psyq::internal::const_string_interface::super
+        @copydoc psyq::internal::string_view_interface::super
     @param[in] in_left  左辺の文字列。
     @param[in] in_right 右辺の文字列。
     @return 左辺 >= 右辺
@@ -1023,10 +1037,10 @@ template<
     typename template_right_string_type>
 bool operator>=(
     template_left_string_type const& in_left,
-    psyq::internal::const_string_interface<template_right_string_type> const&
+    psyq::internal::string_view_interface<template_right_string_type> const&
         in_right)
 {
     return in_right.operator<=(in_left);
 }
 
-#endif // !defined(PSYQ_CONST_STRING_INTERFACE_HPP_)
+#endif // !defined(PSYQ_STRING_VIEW_INTERFACE_HPP_)

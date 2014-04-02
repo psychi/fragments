@@ -144,7 +144,7 @@ class psyq::internal::fixed_array_string
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief boost::basic_string_ref を模した、固定長の文字列。
+/** @brief std::basic_string_view を模した、固定長の文字列。
 
     @tparam template_max_size    @copydoc super::MAX_SIZE
     @tparam template_char_type   @copydoc super::value_type
@@ -171,6 +171,8 @@ class psyq::basic_array_string:
                 super;
 
     //-------------------------------------------------------------------------
+    /// @name constructor / destructor
+    //@{
     /** @brief 空文字列を構築する。
      */
     public: explicit basic_array_string(): super(super::super()) {}
@@ -201,8 +203,10 @@ class psyq::basic_array_string:
     {
         new(this) super::super(typename super::view(in_begin, in_length));
     }
-
+    //@}
     //-------------------------------------------------------------------------
+    /// @name 文字列の代入
+    //@{
     /** @copydoc basic_array_string(self const&)
         @return *this
      */
@@ -211,13 +215,14 @@ class psyq::basic_array_string:
         return *new(this) self(in_string);
     }
 
-    /** @copydoc basic_array_string(typename super::view const&)
+    /** @copydoc basic_array_string(typename super::super_view const&)
         @return *this
      */
     public: self& operator=(typename super::super_view const& in_string)
     {
         return *new(this) self(in_string);
     }
+    //@}
 };
 
 #endif // !defined(PSYQ_ARRAY_STRING_HPP_)

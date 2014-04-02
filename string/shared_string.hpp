@@ -63,9 +63,9 @@ namespace psyq
 /** @brief immutableな共有文字列の保持子。
 
     - immutableな文字列を被参照数で共有する。
-    - 文字列literalを代入する場合は、memory割り当てを行わない。
-    - 同じ型の文字列を代入する場合は、memory割り当てを行わない。
-    - 違う型の文字列を代入する場合は、memory割り当てを行う。
+    - 文字列literalを代入した場合は、memory割り当てを行わない。
+    - 同じ型の文字列を代入した場合は、memory割り当てを行わない。
+    - 違う型の文字列を代入した場合は、memory割り当てを行う。
 
     @tparam template_char_traits    @copydoc self::traits_type
     @tparam template_allocator_type @copydoc self::allocator_type
@@ -106,6 +106,8 @@ class psyq::internal::shared_string_holder
             buffer_allocator;
 
     //-------------------------------------------------------------------------
+    /// @name constructor / destructor
+    //@{
     /** @brief 空文字列を構築する。memory割り当ては行わない。
         @param[in] in_allocator memory割当子の初期値。
      */
@@ -181,7 +183,7 @@ class psyq::internal::shared_string_holder
     {
         self::release_buffer(this->get_buffer(), this->get_allocator());
     }
-
+    //@}
     //-------------------------------------------------------------------------
     /** @copydoc shared_string_holder(self const&)
         @return *this
@@ -238,6 +240,8 @@ class psyq::internal::shared_string_holder
         return *this;
     }
 
+    /// @name 文字列の編集
+    //@{
     /** @brief memoryを割り当てを行い、2つの文字列をcopyして連結する。
         @param[in] in_left_string  copy元の左辺文字列。
         @param[in] in_right_string copy元の右辺文字列。
@@ -250,8 +254,10 @@ class psyq::internal::shared_string_holder
         self::release_buffer(this->get_buffer(), this->get_allocator());
         this->create_concatenate_buffer(in_left_string, in_right_string);
     }
-
+    //@}
     //-------------------------------------------------------------------------
+    /// @name 文字列の情報
+    //@{
     /// @copydoc self::view::data()
     public: typename self::traits_type::char_type const* data() const
     {
@@ -273,18 +279,7 @@ class psyq::internal::shared_string_holder
     {
         return this->allocator_;
     }
-
-    /** @brief 文字を置換した文字列を作る。
-        @param[in] in_char_map 文字の置換に使う辞書。
-     */
-    private: template<typename template_map_type>
-    self make_replaced(template_map_type const& in_char_map)
-    {
-        self local_string(this->get_allocator());
-        local_sring.create_replaced_buffer(
-            typename self::view(this->data(), this->length()), in_char_map);
-        return local_sring;
-    }
+    //@}
 
     //-------------------------------------------------------------------------
     /// @copydoc psyq::internal::string_view_interface::empty()
@@ -534,6 +529,18 @@ class psyq::internal::shared_string_holder
             / local_unit_bytes;
     }
 
+    /** @brief 文字を置換した文字列を作る。
+        @param[in] in_char_map 文字の置換に使う辞書。
+     */
+    private: template<typename template_map_type>
+    self make_replaced(template_map_type const& in_char_map)
+    {
+        self local_string(this->get_allocator());
+        local_sring.create_replaced_buffer(
+            typename self::view(this->data(), this->length()), in_char_map);
+        return local_sring;
+    }
+
     //-------------------------------------------------------------------------
     private: union
     {
@@ -549,12 +556,12 @@ class psyq::internal::shared_string_holder
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief boost::basic_string_ref を模した、immutableな共有文字列の保持子。
+/** @brief std::basic_string_view を模した、immutableな共有文字列の保持子。
 
     - immutableな文字列を被参照数で共有する。
-    - 文字列literalを割り当てた場合は、memory割り当てを行わない。
-    - 同じ型の文字列を割り当てた場合は、memory割り当てを行わない。
-    - 違う型の文字列を割り当てた場合は、memory割り当てを行う。
+    - 文字列literalを代入した場合は、memory割り当てを行わない。
+    - 同じ型の文字列を代入した場合は、memory割り当てを行わない。
+    - 違う型の文字列を代入した場合は、memory割り当てを行う。
 
     @tparam template_char_type      @copydoc super::value_type
     @tparam template_char_traits    @copydoc super::traits_type
@@ -711,15 +718,6 @@ class psyq::basic_shared_string:
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name 文字列の情報
-    //@{
-    /// @copydoc super::super::empty()
-    public: bool empty() const
-    {
-        return this->super::super::empty();
-    }
-    //@}
-    //-------------------------------------------------------------------------
     /// @name 文字列の編集
     //@{
     /// @copydoc super::super::clear()
@@ -732,6 +730,15 @@ class psyq::basic_shared_string:
     public: void swap(self& io_target)
     {
         this->super::super::swap(io_target);
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 文字列の容量
+    //@{
+    /// @copydoc super::super::empty()
+    public: bool empty() const
+    {
+        return this->super::super::empty();
     }
     //@}
 };

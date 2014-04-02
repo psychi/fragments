@@ -180,23 +180,10 @@ class psyq::basic_array_string:
      */
     public: basic_array_string(self const& in_string): super(in_string) {}
 
-    /** @brief 文字列literalをcopyする。
-        @tparam template_size 参照する文字列literalの要素数。空文字も含む。
-        @param[in] in_literal copyする文字列literal。
-     */
-    public: template <std::size_t template_size>
-    basic_array_string(
-        typename super::value_type const (&in_literal)[template_size])
-    :
-        super(self())
-    {
-        new(this) super::super(typename super::view(in_literal));
-    }
-
     /** @brief 文字列をcopyする。
         @param[in] in_string copy元の文字列。
      */
-    public: basic_array_string(typename super::view const& in_string):
+    public: basic_array_string(typename super::super_view const& in_string):
         super(self())
     {
         new(this) super::super(in_string);
@@ -227,19 +214,7 @@ class psyq::basic_array_string:
     /** @copydoc basic_array_string(typename super::view const&)
         @return *this
      */
-    public: self& operator=(typename super::view const& in_string)
-    {
-        return *new(this) self(in_string);
-    }
-
-    /** @brief 文字列literalをcopyする。
-        @tparam template_size copyする文字列literalの要素数。空文字も含む。
-        @param[in] in_literal copyする文字列literal。
-        @return *this
-     */
-    public: template <std::size_t template_size>
-    self& operator=(
-        typename super::value_type const (&in_literal)[template_size])
+    public: self& operator=(typename super::super_view const& in_string)
     {
         return *new(this) self(in_string);
     }

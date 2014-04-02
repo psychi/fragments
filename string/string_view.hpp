@@ -85,6 +85,8 @@ class psyq::basic_string_view:
             super;
 
     //-------------------------------------------------------------------------
+    /// @name constructor / destructor
+    //@{
     /** @brief 空の文字列を構築する。
      */
     public: basic_string_view(): super(super::super(nullptr, 0)) {}
@@ -126,8 +128,10 @@ class psyq::basic_string_view:
     :
         super(in_string.substr(in_offset, in_count))
     {}
+    //@}
 
-    //-------------------------------------------------------------------------
+    /// @name 文字列の代入
+    //@{
     /** @copydoc basic_string_view(typename super::super const&)
         @return *this
      */
@@ -135,14 +139,19 @@ class psyq::basic_string_view:
     {
         return *new(this) self(in_string);
     }
+    //@}
 
-    //-------------------------------------------------------------------------
+    /// @name 文字列の編集
+    //@{
     /// @copydoc psyq::internal::string_view_base::clear()
     public: void clear()
     {
         this->super::super::clear();
     }
+    //@}
 
+    /// @name 文字列の情報
+    //@{
     /// @copydoc psyq::internal::string_view_base::substr()
     public: self substr(
         typename super::size_type const in_offset = 0,
@@ -151,6 +160,7 @@ class psyq::basic_string_view:
     {
         return self(*this, in_offset, in_count);
     }
+    //@}
 };
 
 //-----------------------------------------------------------------------------

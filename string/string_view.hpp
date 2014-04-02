@@ -87,22 +87,13 @@ class psyq::basic_string_view:
     //-------------------------------------------------------------------------
     /// @name constructor / destructor
     //@{
-    /** @brief 空の文字列を構築する。
-     */
-    public: basic_string_view(): super(super::super(nullptr, 0)) {}
-
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
      */
-    public: basic_string_view(typename super::super const& in_string):
+    public: basic_string_view(
+        typename super::super const& in_string = super::super())
+    :
         super(in_string)
-    {}
-
-    /** @brief 文字列を移動する。
-        @param[in,out] io_string 移動する文字列。
-     */
-    public: basic_string_view(typename super::super&& io_string):
-        super(std::move(io_string))
     {}
 
     /** @brief 文字列を参照する。

@@ -23,35 +23,35 @@
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::basic_array_string
+    @brief @copybrief psyq::basic_fixed_string
  */
-#ifndef PSYQ_ARRAY_STRING_HPP_
-#define PSYQ_ARRAY_STRING_HPP_
+#ifndef PSYQ_FIXED_STRING_HPP_
+#define PSYQ_FIXED_STRING_HPP_
 //#include "string/string_view_base.hpp"
 
-#ifndef PSYQ_BASIC_ARRAY_STRING_MAX_SIZE_DEFAULT
-#define PSYQ_BASIC_ARRAY_STRING_MAX_SIZE_DEFAULT 160
-#endif // !defined(PSYQ_BASIC_ARRAY_STRING_MAX_SIZE_DEFAULT)
+#ifndef PSYQ_BASIC_FIXED_STRING_MAX_SIZE_DEFAULT
+#define PSYQ_BASIC_FIXED_STRING_MAX_SIZE_DEFAULT 160
+#endif // !defined(PSYQ_BASIC_FIXED_STRING_MAX_SIZE_DEFAULT)
 
 namespace psyq
 {
     /// @cond
     template<
-        std::size_t,
         typename template_char_type,
+        std::size_t,
         typename = PSYQ_BASIC_STRING_VIEW_TRAITS_DEFAULT>
-            class basic_array_string;
+            class basic_fixed_string;
     /// @endcond
 
-    /// char型の文字を扱う basic_array_string
-    typedef psyq::basic_array_string<
-        PSYQ_BASIC_ARRAY_STRING_MAX_SIZE_DEFAULT, char>
-            array_string;
+    /// char型の文字を扱う basic_fixed_string
+    typedef psyq::basic_fixed_string<
+        char, PSYQ_BASIC_FIXED_STRING_MAX_SIZE_DEFAULT>
+            fixed_string;
 
     namespace internal
     {
         /// @cond
-        template<typename, std::size_t> class fixed_array_string;
+        template<typename, std::size_t> class fixed_length_string;
         /// @endcond
     }
 }
@@ -63,10 +63,10 @@ namespace psyq
     @tparam template_max_size    @copydoc self::MAX_SIZE
  */
 template<typename template_char_traits, std::size_t template_max_size>
-class psyq::internal::fixed_array_string
+class psyq::internal::fixed_length_string
 {
     /// thisが指す値の型。
-    private: typedef fixed_array_string<
+    private: typedef fixed_length_string<
         template_char_traits, template_max_size>
             self;
 
@@ -83,9 +83,11 @@ class psyq::internal::fixed_array_string
     };
 
     //-------------------------------------------------------------------------
+    /// @name constructor / destructor
+    //@{
     /** @brief 空文字列を構築する。
      */
-    public: fixed_array_string(): length_(0)
+    public: fixed_length_string(): length_(0)
     {
         this->array_[0] = 0;
     }
@@ -93,7 +95,7 @@ class psyq::internal::fixed_array_string
     /** @brief 文字列をcopyする。
         @param[in] in_string copy元とする文字列。
      */
-    public: fixed_array_string(self const& in_string):
+    public: fixed_length_string(self const& in_string):
         length_(in_string.length())
     {
         self::traits_type::copy(
@@ -107,7 +109,7 @@ class psyq::internal::fixed_array_string
     /** @brief 文字列をcopyする。
         @param[in] in_string copy元とする文字列。
      */
-    public: fixed_array_string(typename self::view const& in_string):
+    public: fixed_length_string(typename self::view const& in_string):
         length_((std::min<std::size_t>)(in_string.length(), self::MAX_SIZE))
     {
         self::traits_type::copy(
@@ -117,15 +119,18 @@ class psyq::internal::fixed_array_string
             this->array_[this->length()] = 0;
         }
     }
+    //@}
 
-    /** @copydoc fixed_array_string(self const&)
+    /** @copydoc fixed_length_string(self const&)
         @return *this
      */
-    public: self& operator=(self const& in_string)
+    protected: self& operator=(self const& in_string)
     {
         return *new(this) self(in_string);
     }
 
+    /// @name 文字列の情報
+    //@{
     /// @copydoc psyq::internal::string_view_base::data()
     public: typename self::traits_type::char_type const* data() const
     {
@@ -137,7 +142,7 @@ class psyq::internal::fixed_array_string
     {
         return this->length_;
     }
-
+    //@}
     //-------------------------------------------------------------------------
     private: std::size_t length_;
     private: typename self::traits_type::char_type array_[template_max_size];
@@ -146,27 +151,27 @@ class psyq::internal::fixed_array_string
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_string_view を模した、固定長の文字列。
 
-    @tparam template_max_size    @copydoc super::MAX_SIZE
     @tparam template_char_type   @copydoc super::value_type
+    @tparam template_max_size    @copydoc super::MAX_SIZE
     @tparam template_char_traits @copydoc super::traits_type
  */
 template<
-    std::size_t template_max_size,
     typename    template_char_type,
+    std::size_t template_max_size,
     typename    template_char_traits>
-class psyq::basic_array_string:
+class psyq::basic_fixed_string:
     public psyq::internal::string_view_interface<
-        psyq::internal::fixed_array_string<
+        psyq::internal::fixed_length_string<
             template_char_traits, template_max_size>>
 {
     /// thisが指す値の型。
-    private: typedef basic_array_string<
-        template_max_size, template_char_type, template_char_traits>
+    private: typedef basic_fixed_string<
+        template_char_type, template_max_size, template_char_traits>
             self;
 
     /// self の上位型。
     public: typedef psyq::internal::string_view_interface<
-        psyq::internal::fixed_array_string<
+        psyq::internal::fixed_length_string<
             template_char_traits, template_max_size>>
                 super;
 
@@ -175,17 +180,17 @@ class psyq::basic_array_string:
     //@{
     /** @brief 空文字列を構築する。
      */
-    public: explicit basic_array_string(): super(super::super()) {}
+    public: explicit basic_fixed_string(): super(super::super()) {}
 
     /** @brief 文字列をcopyする。
         @param[in] in_string copy元の文字列。
      */
-    public: basic_array_string(self const& in_string): super(in_string) {}
+    public: basic_fixed_string(self const& in_string): super(in_string) {}
 
     /** @brief 文字列をcopyする。
         @param[in] in_string copy元の文字列。
      */
-    public: basic_array_string(typename super::super_view const& in_string):
+    public: basic_fixed_string(typename super::super_view const& in_string):
         super(self())
     {
         new(this) super::super(in_string);
@@ -195,7 +200,7 @@ class psyq::basic_array_string:
         @param[in] in_begin  copy元の文字列の先頭位置。
         @param[in] in_length copy元の文字列の長さ。
      */
-    public: basic_array_string(
+    public: basic_fixed_string(
         typename super::const_pointer const in_begin,
         typename super::size_type const     in_length)
     :
@@ -207,7 +212,7 @@ class psyq::basic_array_string:
     //-------------------------------------------------------------------------
     /// @name 文字列の代入
     //@{
-    /** @copydoc basic_array_string(self const&)
+    /** @copydoc basic_fixed_string(self const&)
         @return *this
      */
     public: self& operator=(self const& in_string)
@@ -215,7 +220,7 @@ class psyq::basic_array_string:
         return *new(this) self(in_string);
     }
 
-    /** @copydoc basic_array_string(typename super::super_view const&)
+    /** @copydoc basic_fixed_string(typename super::super_view const&)
         @return *this
      */
     public: self& operator=(typename super::super_view const& in_string)
@@ -225,4 +230,4 @@ class psyq::basic_array_string:
     //@}
 };
 
-#endif // !defined(PSYQ_ARRAY_STRING_HPP_)
+#endif // !defined(PSYQ_FIXED_STRING_HPP_)

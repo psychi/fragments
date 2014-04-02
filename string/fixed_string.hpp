@@ -190,7 +190,7 @@ class psyq::basic_fixed_string:
     /** @brief 文字列をcopyする。
         @param[in] in_string copy元の文字列。
      */
-    public: basic_fixed_string(typename super::super_view const& in_string):
+    public: basic_fixed_string(typename super::super::view const& in_string):
         super(self())
     {
         new(this) super::super(in_string);
@@ -220,10 +220,10 @@ class psyq::basic_fixed_string:
         return *new(this) self(in_string);
     }
 
-    /** @copydoc basic_fixed_string(typename super::super_view const&)
+    /** @copydoc basic_fixed_string(typename super::super::view const&)
         @return *this
      */
-    public: self& operator=(typename super::super_view const& in_string)
+    public: self& operator=(typename super::super::view const& in_string)
     {
         return *new(this) self(in_string);
     }

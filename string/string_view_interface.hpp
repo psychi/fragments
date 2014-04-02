@@ -165,6 +165,26 @@ class psyq::internal::string_view_interface:
     {}
     //@}
     //-------------------------------------------------------------------------
+    /// @name 文字列の編集
+    //@{
+    /** @brief 文字列を空にする。
+     */
+    public: void clear()
+    {
+        this->super::operator=(super());
+    }
+
+    /** @brief 文字列を交換する。
+        @param[in,out] io_target 交換する対象。
+     */
+    public: void swap(self& io_target)
+    {
+        self local_temp(std::move(io_target));
+        io_target.super::operator=(std::move(*this));
+        this->super::operator=(std::move(local_temp));
+    }
+    //@}
+    //-------------------------------------------------------------------------
     /// @name 文字列の要素を参照
     //@{
     /** @brief 文字列が持つ文字を参照する。
@@ -212,7 +232,7 @@ class psyq::internal::string_view_interface:
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name iterator
+    /// @name iteratorの取得
     //@{
     /** @brief 文字列の先頭位置を取得する。
         @return 文字列の先頭位置への反復子。
@@ -321,40 +341,76 @@ class psyq::internal::string_view_interface:
     //-------------------------------------------------------------------------
     /// @name 文字列の比較
     //@{
-    /// @copydoc psyq::internal::string_view_base::operator==()
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 == 右辺
+     */
     public: bool operator==(typename self::super_view const& in_right) const
     {
-        return in_right.operator==(*this);
+        return in_right.compare(*this) == 0;
     }
 
-    /// @copydoc psyq::internal::string_view_base::operator!=()
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 != 右辺
+     */
     public: bool operator!=(typename self::super_view const& in_right) const
     {
-        return in_right.operator!=(*this);
+        return in_right.compare(*this) != 0;
     }
 
-    /// @copydoc psyq::internal::string_view_base::operator<()
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 < 右辺
+     */
     public: bool operator<(typename self::super_view const& in_right) const
     {
-        return in_right.operator>(*this);
+        return 0 < in_right.compare(*this);
     }
 
-    /// @copydoc psyq::internal::string_view_base::operator<=()
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 <= 右辺
+     */
     public: bool operator<=(typename self::super_view const& in_right) const
     {
-        return in_right.operator>=(*this);
+        return 0 <= in_right.compare(*this);
     }
 
-    /// @copydoc psyq::internal::string_view_base::operator>()
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 > 右辺
+     */
     public: bool operator>(typename self::super_view const& in_right) const
     {
-        return in_right.operator<(*this);
+        return in_right.compare(*this) < 0;
     }
 
-    /// @copydoc psyq::internal::string_view_base::operator>=()
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 >= 右辺
+     */
     public: bool operator>=(typename self::super_view const& in_right) const
     {
-        return in_right.operator<=(*this);
+        return in_right.compare(*this) <= 0;
     }
 
     /// @copydoc psyq::internal::string_view_base::compare()
@@ -427,26 +483,6 @@ class psyq::internal::string_view_interface:
             in_left_offset,
             in_left_count,
             in_right.substr(in_right_offset, in_right_count));
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name 文字列の変更
-    //@{
-    /** @brief 文字列を空にする。
-     */
-    public: void clear()
-    {
-        this->super::operator=(super());
-    }
-
-    /** @brief 文字列を交換する。
-        @param[in,out] io_target 交換する対象。
-     */
-    public: void swap(self& io_target)
-    {
-        self local_temp(std::move(io_target));
-        io_target.super::operator=(std::move(*this));
-        this->super::operator=(std::move(local_temp));
     }
     //@}
     //-------------------------------------------------------------------------

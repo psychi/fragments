@@ -2,12 +2,18 @@
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
+   ソースコード形式かバイナリ形式か、変更するかしないかを問わず、
+   以下の条件を満たす場合に限り、再頒布および使用が許可されます。
 
    1. Redistributions of source code must retain the above copyright notice,
       this list of conditions and the following disclaimer.
+      ソースコードを再頒布する場合、上記の著作権表示、本条件一覧、
+      および下記の免責条項を含めること。
    2. Redistributions in binary form must reproduce the above copyright notice,
       this list of conditions and the following disclaimer in the documentation
       and/or other materials provided with the distribution.
+      バイナリ形式で再頒布する場合、頒布物に付属のドキュメント等の資料に、
+      上記の著作権表示、本条件一覧、および下記の免責条項を含めること。
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
@@ -20,6 +26,18 @@
    WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
    OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
    ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+   本ソフトウェアは、著作権者およびコントリビューターによって
+   「現状のまま」提供されており、明示黙示を問わず、商業的な使用可能性、
+   および特定の目的に対する適合性に関する暗黙の保証も含め、
+   またそれに限定されない、いかなる保証もありません。
+   著作権者もコントリビューターも、事由のいかんを問わず、
+   損害発生の原因いかんを問わず、かつ責任の根拠が契約であるか厳格責任であるか
+   （過失その他の）不法行為であるかを問わず、
+   仮にそのような損害が発生する可能性を知らされていたとしても、
+   本ソフトウェアの使用によって発生した（代替品または代用サービスの調達、
+   使用の喪失、データの喪失、利益の喪失、業務の中断も含め、
+   またそれに限定されない）直接損害、間接損害、偶発的な損害、特別損害、
+   懲罰的損害、または結果損害について、一切責任を負わないものとします。
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
@@ -48,8 +66,8 @@ namespace psyq
 /** @brief immutableな文字列への参照の基底型。
     @tparam template_char_traits @copydoc string_view_base::traits_type
     @warning
-        C文字列を単純にconst参照しているので、
-        参照してる文字列が破壊されると、動作を保証できなくなる。
+        文字の配列を単純にconst参照しているので、
+        参照してる文字の配列が変更／破壊されると、動作を保証できなくなる。
  */
 template<typename template_char_traits>
 class psyq::internal::string_view_base
@@ -65,24 +83,23 @@ class psyq::internal::string_view_base
     //@{
     /** @brief 空の文字列を構築する。
      */
-    public: string_view_base(): data_(nullptr), length_(0) {}
+    public: PSYQ_CONSTEXPR string_view_base() PSYQ_NOEXCEPT:
+        data_(nullptr),
+        length_(0)
+    {}
 
     /** @brief 文字列を参照する。
         @param[in] in_begin  参照する文字列の先頭位置。
         @param[in] in_length 参照する文字列の長さ。
      */
-    public: string_view_base(
+    public: PSYQ_CONSTEXPR string_view_base(
         typename self::traits_type::char_type const* const in_begin,
         std::size_t const                                  in_length)
-     :
+    PSYQ_NOEXCEPT:
         data_(in_begin),
-        length_(in_length)
+        length_(in_begin != nullptr && 0 < in_length? in_length: 0)
     {
-        if (in_begin == nullptr && 0 < in_length)
-        {
-            PSYQ_ASSERT(false);
-            this->length_ = 0;
-        }
+        PSYQ_ASSERT(this->length() == in_length);
     }
 
     /** @brief 文字列literalを参照する。
@@ -94,14 +111,15 @@ class psyq::internal::string_view_base
             user定義literalを経由して呼び出すようにしたい。
      */
     public: template <std::size_t template_size>
-    string_view_base(
+    PSYQ_CONSTEXPR string_view_base(
         typename self::traits_type::char_type const
             (&in_literal)[template_size])
-    :
+    PSYQ_NOEXCEPT:
         data_(&in_literal[0]),
         length_(template_size - 1)
     {
-        PSYQ_ASSERT(0 < template_size && in_literal[template_size - 1] == 0);
+        static_assert(0 < template_size, "");
+        PSYQ_ASSERT(in_literal[template_size - 1] == 0);
     }
 
     /** @brief 任意型の文字列を参照する。
@@ -109,21 +127,100 @@ class psyq::internal::string_view_base
         @param[in] in_string 参照する文字列。
      */
     public: template<typename template_string_type>
-    string_view_base(template_string_type const& in_string):
+    PSYQ_CONSTEXPR string_view_base(template_string_type const& in_string)
+    PSYQ_NOEXCEPT:
         data_(in_string.data()),
         length_(in_string.length())
     {}
     //@}
     //-------------------------------------------------------------------------
-    /// @name 文字列の情報
+    /// @name 文字列の変更
+    //@{
+    /// @copydoc psyq::internal::string_view_interface::clear()
+    public: void clear() PSYQ_NOEXCEPT
+    {
+        this->length_ = 0;
+    }
+
+    /** @brief 先頭の文字を削除する。
+        @param[in] in_remove_length 削除する文字数。
+     */
+    public: void remove_prefix(std::size_t const in_remove_length)
+    {
+        if (in_remove_length <= this->length())
+        {
+            this->data_ += in_remove_length;
+            this->length_ -= in_remove_length;
+        }
+        else
+        {
+            PSYQ_ASSERT(false);
+            this->data_ += this->length();
+            this->clear();
+        }
+    }
+
+    /** @brief 末尾の文字を削除する。
+        @param[in] in_remove_length 削除する文字数。
+     */
+    public: void remove_suffix(std::size_t const in_remove_length)
+    {
+        if (in_remove_length <= this->length())
+        {
+            this->length_ -= in_remove_length;
+        }
+        else
+        {
+            PSYQ_ASSERT(false);
+            this->clear();
+        }
+    }
+
+    /** @brief 文字列の先頭にある空白文字を取り除く。
+     */
+    public: void remove_prefix_space() PSYQ_NOEXCEPT
+    {
+        auto const local_end(this->data() + this->length());
+        for (auto i(this->data()); i < local_end; ++i)
+        {
+            if (!std::isspace(*i))
+            {
+                auto const local_position(i - this->data());
+                this->data_ = this->data() + local_position,
+                this->length_ = this->length() - local_position;
+                return;
+            }
+        }
+        this->data_ = this->data() + this->length();
+        this->length_ = 0;
+    }
+
+    /** @brief 文字列の末尾にある空白文字を取り除く。
+     */
+    public: void remove_suffix_space() PSYQ_NOEXCEPT
+    {
+        for (auto i(this->data() + this->length()); this->data() < i; --i)
+        {
+            if (!std::isspace(*(i - 1)))
+            {
+                this->length_ = i - this->data();
+                return;
+            }
+        }
+        this->length_ = 0;
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 文字列の操作
     //@{
     /** @brief 文字列の先頭文字へのpointerを取得する。
         @return 文字列の先頭文字へのpointer。
         @warning
             文字列の先頭文字から末尾文字までのmemory連続性は保証されているが、
-            文字列の終端文字が空文字となっている保証はない。
+            文字列の終端がnull文字となっている保証はない。
      */
-    public: typename self::traits_type::char_type const* data() const
+    public: PSYQ_CONSTEXPR typename self::traits_type::char_type const* data()
+    const PSYQ_NOEXCEPT
     {
         return this->data_;
     }
@@ -131,9 +228,17 @@ class psyq::internal::string_view_base
     /** @brief 文字列の長さを取得する。
         @return 文字列の長さ。
      */
-    public: std::size_t length() const
+    public: PSYQ_CONSTEXPR std::size_t length() const PSYQ_NOEXCEPT
     {
         return this->length_;
+    }
+
+    /** @brief 文字列の最大長を取得する。
+        @return 文字列の最大長。
+     */
+    public: PSYQ_CONSTEXPR std::size_t max_size() const PSYQ_NOEXCEPT
+    {
+        return (std::numeric_limits<std::size_t>::max)();
     }
 
     /** @brief *thisの部分文字列を構築する。
@@ -141,43 +246,36 @@ class psyq::internal::string_view_base
         @param[in] in_count  部分文字列の開始offset値からの文字数。
         @return 部分文字列。
      */
-    public: self substr(
+    public: PSYQ_CONSTEXPR self substr(
         std::size_t const in_offset,
         std::size_t const in_count)
-    const
+    const PSYQ_NOEXCEPT
     {
-        auto local_begin(this->data());
-        auto local_length(this->length());
-        if (in_offset < local_length)
-        {
-            local_begin += in_offset;
-            if (local_length - in_offset < in_count)
-            {
-                local_length -= in_offset;
-            }
-            else
-            {
-                local_length = in_count;
-            }
-        }
-        else
-        {
-            local_begin += local_length;
-            local_length = 0;
-        }
-        return self(local_begin, local_length);
+        return self(
+            this->data() + (std::min)(in_offset, this->length()),
+            in_offset < this->length()?
+                (std::min)(this->length() - in_offset, in_count): 0);
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 文字列の比較
+    //@{
+    /// @copydoc psyq::internal::string_view_interface::operator==()
+    public: bool operator==(self const& in_right) const PSYQ_NOEXCEPT
+    {
+        return this->length() == in_right.length()
+            && 0 == self::traits_type::compare(
+                this->data(), in_right.data(), in_right.length());
     }
 
-    /** @brief 文字列を比較する。
+    /// @copydoc psyq::internal::string_view_interface::operator!=()
+    public: bool operator!=(self const& in_right) const PSYQ_NOEXCEPT
+    {
+        return !this->operator==(in_right);
+    }
 
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @retval - 右辺のほうが大きい。
-        @retval + 左辺のほうが大きい。
-        @retval 0 左辺と右辺は等価。
-     */
-    public: int compare(self const& in_right) const
+    /// @copydoc psyq::internal::string_view_interface::compare()
+    public: int compare(self const& in_right) const PSYQ_NOEXCEPT
     {
         int local_compare_length;
         if (this->length() != in_right.length())
@@ -200,80 +298,37 @@ class psyq::internal::string_view_base
         return local_compare_string != 0?
             local_compare_string: local_compare_length;
     }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name 文字列の編集
-    //@{
-    /// @copydoc psyq::internal::string_view_interface::clear()
-    public: void clear()
+
+    /// @copydoc psyq::internal::string_view_interface::starts_with()
+    public: PSYQ_CONSTEXPR bool starts_with(self const& in_prefix)
+    const PSYQ_NOEXCEPT
     {
-        this->length_ = 0;
+        return this->substr(0, in_prefix.length()) == in_string;
     }
 
-    /** @brief 先頭の文字を削除する。
-        @param[in] in_remove_length 削除する文字数。
-     */
-    public: void remove_prefix(std::size_t const in_remove_length)
+    /// @copydoc psyq::internal::string_view_interface::starts_with()
+    public: PSYQ_CONSTEXPR bool starts_with(
+        typename self::traits_type::char_type const in_prefix)
+    const PSYQ_NOEXCEPT
     {
-        if (in_remove_length < this->length())
-        {
-            this->data_ += in_remove_length;
-            this->length_ -= in_remove_length;
-        }
-        else
-        {
-            this->data_ += this->length();
-            this->clear();
-        }
+        return 0 < this->length() && in_prefix == *(this->data());
     }
 
-    /** @brief 末尾の文字を削除する。
-        @param[in] in_remove_length 削除する文字数。
-     */
-    public: void remove_suffix(std::size_t const in_remove_length)
+    /// @copydoc psyq::internal::string_view_interface::ends_with()
+    public: PSYQ_CONSTEXPR bool ends_with(self const& in_suffix)
+    const PSYQ_NOEXCEPT
     {
-        if (in_remove_length < this->length())
-        {
-            this->length_ -= in_remove_length;
-        }
-        else
-        {
-            this->clear();
-        }
+        return in_suffix.length() <= this->length()
+            && in_suffix == this->substr(this->length() - in_suffix.length());
     }
 
-    /** @brief 文字列の先頭にある空白文字を取り除く。
-     */
-    public: void remove_prefix_space()
+    /// @copydoc psyq::internal::string_view_interface::ends_with()
+    public: PSYQ_CONSTEXPR bool ends_with(
+        typename self::traits_type::char_type const in_suffix)
+    const PSYQ_NOEXCEPT
     {
-        auto const local_end(this->data() + this->length());
-        for (auto i(this->data()); i < local_end; ++i)
-        {
-            if (!std::isspace(*i))
-            {
-                auto const local_position(i - this->data());
-                this->data_ = this->data() + local_position,
-                this->length_ = this->length() - local_position;
-                return;
-            }
-        }
-        this->data_ = this->data() + this->length();
-        this->length_ = 0;
-    }
-
-    /** @brief 文字列の末尾にある空白文字を取り除く。
-     */
-    public: void remove_suffix_space()
-    {
-        for (auto i(this->data() + this->length()); this->data() < i; --i)
-        {
-            if (!std::isspace(*(i - 1)))
-            {
-                this->length_ = i - this->data();
-                return;
-            }
-        }
-        this->length_ = 0;
+        return 0 < this->length()
+            && in_suffix == *(this->data() + this->length() - 1);
     }
     //@}
     //-------------------------------------------------------------------------
@@ -286,7 +341,7 @@ class psyq::internal::string_view_base
         @retval false 文字列の途中で変換を中止した。
      */
     public: template<typename template_integer_type>
-    bool parse_integer(template_integer_type& out_integer) const
+    bool parse_integer(template_integer_type& out_integer) const PSYQ_NOEXCEPT
     {
         std::size_t local_rest_length;
         out_integer
@@ -294,22 +349,23 @@ class psyq::internal::string_view_base
         return local_rest_length <= 0 && 0 < this->length();
     }
 
-    /** @brief 文字列を解析し、整数に変換する。
-        @tparam template_real_type 変換する整数の型。
+    /** @brief 文字列を解析し、整数値に変換する。
+        @tparam template_integer_type 変換する整数値の型。
         @param[out] out_rest_length
             数値にしなかった文字の数を格納する先。
             nullptrだった場合は格納しない。
-        @return 文字列から変換した整数の値。
+        @return 文字列から変換した整数値。
      */
     public: template<typename template_integer_type>
     template_integer_type parse_integer(
         std::size_t* const out_rest_length = nullptr)
-    const
+    const PSYQ_NOEXCEPT
     {
         auto local_iterator(this->data());
         auto const local_end(local_iterator + this->length());
         auto const local_sign(self::parse_sign(local_iterator, local_end));
-        auto const local_base(self::parse_base(local_iterator, local_end));
+        template_integer_type const local_base(
+            self::parse_base(local_iterator, local_end));
         auto const local_integer(
             self::parse_numbers(local_iterator, local_end, local_base));
         if (out_rest_length != nullptr)
@@ -326,39 +382,39 @@ class psyq::internal::string_view_base
         @retval false 文字列の途中で変換を中止した。
      */
     public: template<typename template_real_type>
-    bool parse_real(template_real_type& out_real) const
+    bool parse_real(template_real_type& out_real) const PSYQ_NOEXCEPT
     {
         std::size_t local_rest_length;
         out_real = this->parse_real<template_real_type>(&local_rest_length);
         return local_rest_length <= 0 && 0 < this->length();
     }
 
-    /** @brief 文字列を解析し、実数に変換する。
+    /** @brief 文字列を解析し、実数値に変換する。
         @tparam template_real_type 変換する実数の型。
         @param[out] out_rest_length
             数値にしなかった文字の数を格納する先。
             nullptrだった場合は格納しない。
-        @return 文字列から変換した実数の値。
+        @return 文字列から変換した実数値。
      */
     public: template<typename template_real_type>
     template_real_type parse_real(
         std::size_t* const out_rest_length = nullptr)
-    const
+    const PSYQ_NOEXCEPT
     {
         // 整数部を解析する。
         auto local_iterator(this->data());
         auto const local_end(local_iterator + this->length());
         auto const local_sign(self::parse_sign(local_iterator, local_end));
-        auto const local_base(self::parse_base(local_iterator, local_end));
+        template_real_type const local_base(
+            self::parse_base(local_iterator, local_end));
         auto local_real(
-            static_cast<template_real_type>(
-                self::parse_numbers(local_iterator, local_end, local_base)));
+            self::parse_numbers(local_iterator, local_end, local_base));
 
         // 小数部を解析する。
         if (local_iterator < local_end && *local_iterator == '.')
         {
             ++local_iterator;
-            local_real = self::merge_decimal_digits(
+            local_real = self::merge_decimal_numbers(
                 local_iterator, local_end, local_base, local_real);
         }
 
@@ -379,6 +435,7 @@ class psyq::internal::string_view_base
     private: static signed parse_sign(
         typename self::traits_type::char_type const*&      io_iterator,
         typename self::traits_type::char_type const* const in_end)
+    PSYQ_NOEXCEPT
     {
         if (io_iterator < in_end)
         {
@@ -404,59 +461,62 @@ class psyq::internal::string_view_base
     private: static unsigned parse_base(
         typename self::traits_type::char_type const*&      io_iterator,
         typename self::traits_type::char_type const* const in_end)
+    PSYQ_NOEXCEPT
     {
         if (in_end <= io_iterator)
         {
-            return 0;
+            return 0; // 失敗
         }
         if (*io_iterator != '0')
         {
-            return 10;
+            return 10; // 10進数
         }
         ++io_iterator;
         if (in_end <= io_iterator)
         {
-            return 10;
+            return 10; // 10進数
         }
         switch (*io_iterator)
         {
         case 'x':
         case 'X':
             ++io_iterator;
-            return 16;
+            return 16; // 16進数
 
         case 'b':
         case 'B':
             ++io_iterator;
-            return 2;
+            return 2; // 2進数
 
         case 'q':
         case 'Q':
             ++io_iterator;
-            return 4;
+            return 4; // 4進数
 
         default:
-            return 8;
+            return 8; // 8進数
         }
     }
 
-    /** @brief 文字列を解析し、整数を取り出す。
+    /** @brief 文字列を解析し、整数値を取り出す。
 
-        数字と英字で構成される文字列を解析し、整数値を取り出す。
-        数字以外または英字以外を見つけたら、解析はそこで停止する。
+        数字で構成される文字列を解析し、整数値を取り出す。
+        数字以外を見つけたら、解析はそこで停止する。
 
-        @tparam template_integer_type 整数の型。
+        @tparam template_number_type 整数の型。
         @param[in,out] io_iterator 文字を解析する位置。
         @param[in]     in_end      文字列の末尾位置。
         @param[in]     in_base     整数の基数。
         @return 文字列から取り出した整数の値。
      */
-    private: static unsigned parse_numbers(
-        typename self::traits_type::char_type const*&      io_iterator,
+    private: template<typename template_number_type>
+    static template_number_type parse_numbers(
+        typename self::traits_type::char_type const*& io_iterator,
         typename self::traits_type::char_type const* const in_end,
-        unsigned const                                     in_base)
+        template_number_type const in_base)
+    PSYQ_NOEXCEPT
     {
-        // 基数が10以下なら、数字だけを解析する。
+        // 基数が10以下なら、アラビア数字だけを解析する。
         if (in_base <= 10)
         {
             return self::parse_digits(io_iterator, in_end, in_base);
@@ -464,7 +524,7 @@ class psyq::internal::string_view_base
         PSYQ_ASSERT(in_base <= ('9' - '0') + ('z' - 'a'));
 
         // 任意の基数の数値を取り出す。
-        unsigned local_integer(0);
+        template_number_type local_value(0);
         auto i(io_iterator);
         for (; i < in_end; ++i)
         {
@@ -489,34 +549,36 @@ class psyq::internal::string_view_base
             {
                 break;
             }
-            local_integer = local_integer * in_base + local_number;
+            local_value = local_value * in_base + local_number;
         }
         io_iterator = i;
-        return local_integer;
+        return local_value;
     }
 
-    /** @brief 文字列を解析し、整数を取り出す。
+    /** @brief 文字列を解析し、整数値を取り出す。
 
-        数字で構成される文字列を解析し、整数値を取り出す。
-        数字以外を見つけたら、変換はそこで停止する。
+        アラビア数字で構成される文字列を解析し、整数値を取り出す。
+        アラビア数字以外を見つけたら、変換はそこで停止する。
 
-        @tparam template_integer_type 整数の型。
+        @tparam template_number_type 整数の型。
         @param[in,out] io_iterator 文字を解析する位置。
         @param[in]     in_end      文字列の末尾位置。
         @param[in]     in_base     整数の基数。
         @return 文字列から取り出した整数の値。
      */
-    private: static unsigned parse_digits(
-        typename self::traits_type::char_type const*&      io_iterator,
+    private: template<typename template_number_type>
+    static template_number_type parse_digits(
+        typename self::traits_type::char_type const*& io_iterator,
         typename self::traits_type::char_type const* const in_end,
-        unsigned const                                     in_base)
+        template_number_type const in_base)
+    PSYQ_NOEXCEPT
     {
         if (in_base <= 0)
         {
             return 0;
         }
         PSYQ_ASSERT(in_base <= 10);
-        unsigned local_integer(0);
+        template_number_type local_value(0);
         auto i(io_iterator);
         for (; i < in_end; ++i)
         {
@@ -525,13 +587,13 @@ class psyq::internal::string_view_base
             {
                 break;
             }
-            local_integer = local_integer * in_base + local_digit;
+            local_value = local_value * in_base + local_digit;
         }
         io_iterator = i;
-        return local_integer;
+        return local_value;
     }
 
-    /** @brief 文字列を解析し、実数を取り出す。
+    /** @brief 文字列を解析し、実数値を取り出す。
 
         数字で構成される文字列を解析し、小数と指数を取り出して合成する。
         数字以外を見つけたら、解析はそこで停止する。
@@ -544,18 +606,19 @@ class psyq::internal::string_view_base
         @return 実数の入力値と文字列から取り出した小数と指数を合成した値。
      */
     private: template<typename template_real_type>
-    static template_real_type merge_decimal_digits(
+    static template_real_type merge_decimal_numbers(
         typename self::traits_type::char_type const*&      io_iterator,
         typename self::traits_type::char_type const* const in_end,
-        unsigned const                                     in_base,
+        template_real_type const                           in_base,
         template_real_type const                           in_real)
+    PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(0 <= in_real);
         PSYQ_ASSERT(0 < in_base);
 
         // 小数部の範囲を決定する。
         auto const local_decimal_begin(io_iterator);
-        self::parse_digits(io_iterator, in_end, in_base);
+        self::parse_numbers(io_iterator, in_end, in_base);
         auto const local_decimal_end(io_iterator);
 
         // 指数部を解析し、入力値と合成する。
@@ -567,7 +630,7 @@ class psyq::internal::string_view_base
             auto const local_exponent_sign(
                 self::parse_sign(io_iterator, in_end));
             auto const local_exponent_count(
-                self::parse_digits(io_iterator, in_end, in_base));
+                self::parse_numbers(io_iterator, in_end, in_base));
             for (auto i(local_exponent_count); 0 < i; --i)
             {
                 local_multiple *= in_base;

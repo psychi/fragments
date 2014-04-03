@@ -2,12 +2,18 @@
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
+   ソースコード形式かバイナリ形式か、変更するかしないかを問わず、
+   以下の条件を満たす場合に限り、再頒布および使用が許可されます。
 
    1. Redistributions of source code must retain the above copyright notice,
       this list of conditions and the following disclaimer.
+      ソースコードを再頒布する場合、上記の著作権表示、本条件一覧、
+      および下記の免責条項を含めること。
    2. Redistributions in binary form must reproduce the above copyright notice,
       this list of conditions and the following disclaimer in the documentation
       and/or other materials provided with the distribution.
+      バイナリ形式で再頒布する場合、頒布物に付属のドキュメント等の資料に、
+      上記の著作権表示、本条件一覧、および下記の免責条項を含めること。
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
@@ -20,6 +26,18 @@
    WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
    OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
    ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+   本ソフトウェアは、著作権者およびコントリビューターによって
+   「現状のまま」提供されており、明示黙示を問わず、商業的な使用可能性、
+   および特定の目的に対する適合性に関する暗黙の保証も含め、
+   またそれに限定されない、いかなる保証もありません。
+   著作権者もコントリビューターも、事由のいかんを問わず、
+   損害発生の原因いかんを問わず、かつ責任の根拠が契約であるか厳格責任であるか
+   （過失その他の）不法行為であるかを問わず、
+   仮にそのような損害が発生する可能性を知らされていたとしても、
+   本ソフトウェアの使用によって発生した（代替品または代用サービスの調達、
+   使用の喪失、データの喪失、利益の喪失、業務の中断も含め、
+   またそれに限定されない）直接損害、間接損害、偶発的な損害、特別損害、
+   懲罰的損害、または結果損害について、一切責任を負わないものとします。
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
@@ -40,21 +58,32 @@
 #endif
 
 #if defined(__GNUC__) && (3 < __GNUC__ || (__GNUC__ == 3 && 4 <= __GNUC_MINOR__)) && defined(__GNUC_PATCHLEVEL__)
+#   define PSYQ_NOEXCEPT noexcept
+#   define PSYQ_CONSTEXPR constexpr
 //  'gcc 3.4' and above have builtin support, specialized for architecture.
 //  Some compilers masquerade as gcc; patchlevel test filters them out.
 #   define PSYQ_BIT_ALGORITHM_FOR_GNUC
 #elif defined(_MSC_VER)
+#   define PSYQ_NOEXCEPT throw()
+#   define PSYQ_CONSTEXPR
 #   define PSYQ_BIT_ALGORITHM_FOR_MSC
 #   if defined(_M_PPC)
 #      include <ppcintrinsics.h>
 #   endif
 #elif defined(__ARMCC_VERSION)
 //  RealView Compilation Tools for ARM.
+#   define PSYQ_NOEXCEPT noexcept
+#   define PSYQ_CONSTEXPR
 #   define PSYQ_BIT_ALGORITHM_FOR_ARMCC
 #elif defined(__ghs__)
 //  Green Hills support for PowerPC.
+#   define PSYQ_NOEXCEPT noexcept
+#   define PSYQ_CONSTEXPR
 #   define PSYQ_BIT_ALGORITHM_FOR_GHS
 #   include <ppc_ghs.h>
+#else
+#   define PSYQ_NOEXCEPT noexcept
+#   define PSYQ_CONSTEXPR
 #endif
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -67,9 +96,10 @@ namespace psyq
         @return 左ビットシフトした値。
      */
     template<typename template_bits>
-    template_bits bitwise_shift_left(
+    PSYQ_CONSTEXPR template_bits bitwise_shift_left(
         template_bits const in_bits,
         unsigned const      in_shift)
+    PSYQ_NOEXCEPT
     {
         return static_cast<template_bits>(
             in_shift < sizeof(in_bits) * 8? in_bits << in_shift: 0);
@@ -87,6 +117,7 @@ namespace psyq
     template_bits bitwise_shift_left_fast(
         template_bits const in_bits,
         unsigned const      in_shift)
+    PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(in_shift < sizeof(in_bits) * 8);
         return in_bits << in_shift;
@@ -98,9 +129,10 @@ namespace psyq
         @return 右ビットシフトした値。
      */
     template<typename template_bits>
-    template_bits bitwise_shift_right(
+    PSYQ_CONSTEXPR template_bits bitwise_shift_right(
         template_bits const in_bits,
         unsigned const      in_shift)
+    PSYQ_NOEXCEPT
     {
         return static_cast<template_bits>(
             in_bits >> (std::min)(in_shift, sizeof(in_bits) * 8 - 1)):
@@ -118,6 +150,7 @@ namespace psyq
     template_bits bitwise_shift_right_fast(
         template_bits const in_bits,
         unsigned const      in_shift)
+    PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(in_shift < sizeof(in_bits) * 8);
         return in_bits >> in_shift;
@@ -134,12 +167,12 @@ namespace psyq
             - in_bits が無符号整数型なら、falseを返す。
      */
     template<typename template_bits>
-    bool get_bit(
+    PSYQ_CONSTEXPR bool get_bit(
         template_bits const in_bits,
         std::size_t   const in_position)
+    PSYQ_NOEXCEPT
     {
-        return in_position < sizeof(int) * 8?
-            psyq::get_bit_fast(in_bits, in_position): in_bits < 0;
+        return (psyq::bitwise_shift_right(in_bits, in_position) & 1) != 0;
     }
 
     /** @brief 指定された位置のビット値を取得する。
@@ -150,9 +183,10 @@ namespace psyq
             ただし in_position がsizeof(int)以上だった場合、未定義。
      */
     template<typename template_bits>
-    bool get_bit_fast(
+    PSYQ_CONSTEXPR bool get_bit_fast(
         template_bits const in_bits,
         std::size_t   const in_position)
+    PSYQ_NOEXCEPT
     {
         return (psyq::bitwise_shift_right_fast(in_bits, in_position) & 1) != 0;
     }
@@ -166,12 +200,13 @@ namespace psyq
             in_bits をそのまま返す。
      */
     template<typename template_bits>
-    template_bits set_bit(
+    PSYQ_CONSTEXPR template_bits set_bit(
         template_bits const in_bits,
         std::size_t   const in_position)
+    PSYQ_NOEXCEPT
     {
-        return in_position < sizeof(in_bits) * 8?
-            psyq::set_bit_fast(in_bits, in_position): in_bits;
+        return psyq::bitwise_shift_left<template_bits>(1, in_position)
+            |  in_bits;
     }
 
     /** @brief 指定された位置にビット値として1を設定する。
@@ -185,9 +220,10 @@ namespace psyq
     template_bits set_bit_fast(
         template_bits const in_bits,
         std::size_t   const in_position)
+    PSYQ_NOEXCEPT
     {
         return psyq::bitwise_shift_left_fast<template_bits>(1, in_position)
-            | in_bits;
+            |  in_bits;
     }
 
     /** @brief 指定された位置にビット値を設定する。
@@ -200,13 +236,14 @@ namespace psyq
             in_bits をそのまま返す。
      */
     template<typename template_bits>
-    template_bits set_bit(
+    PSYQ_CONSTEXPR template_bits set_bit(
         template_bits const in_bits,
         std::size_t   const in_position,
         bool          const in_value)
+    PSYQ_NOEXCEPT
     {
-        return in_position < sizeof(in_bits) * 8?
-            psyq::set_bit_fast(in_bits, in_position, in_value): in_bits;
+        return psyq::reset_bit(in_bits, in_position)
+            |  psyq::bitwise_shift_left<template_bits>(in_value, in_position);
     }
 
     /** @brief 指定された位置にビット値を設定する。
@@ -222,9 +259,10 @@ namespace psyq
         template_bits const in_bits,
         std::size_t   const in_position,
         bool          const in_value)
+    PSYQ_NOEXCEPT
     {
         return psyq::reset_bit_fast(in_bits, in_position)
-            | psyq::bitwise_shift_left_fast<template_bits>(
+            |  psyq::bitwise_shift_left_fast<template_bits>(
                 in_value, in_position);
     }
 
@@ -237,12 +275,13 @@ namespace psyq
             in_bits をそのまま返す。
      */
     template<typename template_bits>
-    template_bits reset_bit(
+    PSYQ_CONSTEXPR template_bits reset_bit(
         template_bits const in_bits,
         std::size_t   const in_position)
+    PSYQ_NOEXCEPT
     {
-        return in_position < sizeof(in_bits) * 8?
-            psyq::reset_bit_fast(in_bits, in_position): in_bits;
+        return ~psyq::bitwise_shift_left<template_bits>(1, in_position)
+            & in_bits;
     }
 
     /** @brief 指定された位置にビット値として0を設定する。
@@ -256,8 +295,10 @@ namespace psyq
     template_bits reset_bit_fast(
         template_bits const in_bits,
         std::size_t   const in_position)
+    PSYQ_NOEXCEPT
     {
-        return static_cast<template_bits>(~(1 << in_position) & in_bits);
+        return ~psyq::bitwise_shift_left_fast<template_bits>(1, in_position)
+            & in_bits;
     }
 
     /** @brief 指定された位置のビット値を反転する。
@@ -269,12 +310,12 @@ namespace psyq
             in_bits をそのまま返す。
      */
     template<typename template_bits>
-    template_bits flip_bit(
+    PSYQ_CONSTEXPR template_bits flip_bit(
         template_bits const in_bits,
         std::size_t   const in_position)
+    PSYQ_NOEXCEPT
     {
-        return in_position < sizeof(in_bits) * 8?
-            psyq::flip_bit_fast(in_bits, in_position): in_bits;
+        return psyq::shift_left_bit<template_bits>(1, in_position) ^ in_bits;
     }
 
     /** @brief 指定された位置のビット値を反転する。
@@ -288,6 +329,7 @@ namespace psyq
     template_bits flip_bit_fast(
         template_bits const in_bits,
         std::size_t   const in_position)
+    PSYQ_NOEXCEPT
     {
         return psyq::shift_left_bit_fast<template_bits>(1, in_position)
             ^ in_bits;
@@ -335,8 +377,8 @@ namespace psyq
             @param[in] in_bits  ビットを数える無符号整数の値。
             @return 1になっているビットの数。
          */
-        inline std::size_t count_1bits_by_table(
-            std::uint8_t const in_bits)
+        inline std::size_t count_1bits_by_table(std::uint8_t const in_bits)
+        PSYQ_NOEXCEPT
         {
             static std::uint8_t const BITS_COUNT_TABLE[256] =
             {
@@ -361,8 +403,8 @@ namespace psyq
         }
 
         /// @copydoc count_1bits_by_table()
-        inline std::size_t count_1bits_by_table(
-            std::uint16_t const in_bits)
+        inline std::size_t count_1bits_by_table(std::uint16_t const in_bits)
+        PSYQ_NOEXCEPT
         {
             return count_1bits_by_table(static_cast<std::uint8_t>(in_bits))
                 + count_1bits_by_table(
@@ -370,8 +412,8 @@ namespace psyq
         }
 
         /// @copydoc count_1bits_by_table()
-        inline std::size_t count_1bits_by_table(
-            std::uint32_t const in_bits)
+        inline std::size_t count_1bits_by_table(std::uint32_t const in_bits)
+        PSYQ_NOEXCEPT
         {
             return count_1bits_by_table(static_cast<std::uint16_t>(in_bits))
                 + count_1bits_by_table(
@@ -379,8 +421,8 @@ namespace psyq
         }
 
         /// @copydoc count_1bits_by_table()
-        inline std::size_t count_1bits_by_table(
-            std::uint64_t const in_bits)
+        inline std::size_t count_1bits_by_table(std::uint64_t const in_bits)
+        PSYQ_NOEXCEPT
         {
             return count_1bits_by_table(static_cast<std::uint32_t>(in_bits))
                 + count_1bits_by_table(
@@ -397,6 +439,7 @@ namespace psyq
             @return 1になっているビットの数。
          */
         inline std::size_t count_1bits_by_logical(std::uint8_t const in_bits)
+        PSYQ_NOEXCEPT
         {
             unsigned local_bits(in_bits);
             local_bits = (local_bits & 0x55) + ((local_bits >> 1) & 0x55);
@@ -407,6 +450,7 @@ namespace psyq
 
         /// @copydoc count_1bits_by_logical()
         inline std::size_t count_1bits_by_logical(std::uint16_t const in_bits)
+        PSYQ_NOEXCEPT
         {
             unsigned local_bits(in_bits);
             local_bits = (local_bits & 0x5555) + ((local_bits >> 1) & 0x5555);
@@ -418,6 +462,7 @@ namespace psyq
 
         /// @copydoc count_1bits_by_logical()
         inline std::size_t count_1bits_by_logical(std::uint32_t const in_bits)
+        PSYQ_NOEXCEPT
         {
             unsigned local_bits(in_bits);
             local_bits = (local_bits & 0x55555555)
@@ -435,6 +480,7 @@ namespace psyq
 
         /// @copydoc count_1bits_by_logical()
         inline std::size_t count_1bits_by_logical(std::uint64_t const in_bits)
+        PSYQ_NOEXCEPT
         {
             auto local_bits(in_bits);
             local_bits = (local_bits & 0x5555555555555555)
@@ -459,6 +505,7 @@ namespace psyq
          */
         template<typename template_bits>
         std::size_t count_1bits_of_uint(template_bits const in_bits)
+        PSYQ_NOEXCEPT
         {
             static_assert(
                 // in_bitsのビット数は、32以下であること。
@@ -482,6 +529,7 @@ namespace psyq
             @return 1になってるビットの数。
          */
         template<> std::size_t count_1bits_of_uint(std::uint64_t const in_bits)
+        PSYQ_NOEXCEPT
         {
 #if PSYQ_BIT_ALGORITHM_INTRINSIC_SIZE < 64
             // 上位32ビットと下位32ビットに分ける。
@@ -512,7 +560,7 @@ namespace psyq
             @param[in] in_float ビット値を取得するする浮動小数点実数。
             @return 浮動小数点実数のビット値。
          */
-        inline uint32_t get_float_bit_value(float const in_float)
+        inline uint32_t get_float_bit_value(float const in_float) PSYQ_NOEXCEPT
         {
             union
             {
@@ -525,6 +573,7 @@ namespace psyq
 
         /// @copydoc get_float_bit_value()
         inline std::uint64_t get_float_bit_value(double const in_float)
+        PSYQ_NOEXCEPT
         {
             union
             {
@@ -546,6 +595,7 @@ namespace psyq
          */
         inline std::size_t count_leading_0bits_by_logical(
             std::uint8_t const in_bits)
+        PSYQ_NOEXCEPT
         {
             unsigned local_bits(in_bits);
             local_bits = local_bits | (local_bits >> 1);
@@ -558,6 +608,7 @@ namespace psyq
         /// @copydoc count_leading_0bits_by_logical()
         inline std::size_t count_leading_0bits_by_logical(
             std::uint16_t const in_bits)
+        PSYQ_NOEXCEPT
         {
             unsigned local_bits(in_bits);
             local_bits = local_bits | (local_bits >> 1);
@@ -571,6 +622,7 @@ namespace psyq
         /// @copydoc count_leading_0bits_by_logical()
         inline std::size_t count_leading_0bits_by_logical(
             std::uint32_t const in_bits)
+        PSYQ_NOEXCEPT
         {
             unsigned local_bits(in_bits);
             local_bits = local_bits | (local_bits >> 1);
@@ -585,6 +637,7 @@ namespace psyq
         /// @copydoc count_leading_0bits_by_logical()
         inline std::size_t count_leading_0bits_by_logical(
             std::uint64_t in_bits)
+        PSYQ_NOEXCEPT
         {
             auto local_bits(in_bits);
             local_bits = local_bits | (local_bits >> 1);

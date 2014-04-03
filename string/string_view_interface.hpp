@@ -2,12 +2,18 @@
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
+   　ソースコード形式かバイナリ形式か、変更するかしないかを問わず、
+   以下の条件を満たす場合に限り、再頒布および使用が許可されます。
 
    1. Redistributions of source code must retain the above copyright notice,
       this list of conditions and the following disclaimer.
+      ソースコードを再頒布する場合、上記の著作権表示、本条件一覧、
+      および下記の免責条項を含めること。
    2. Redistributions in binary form must reproduce the above copyright notice,
       this list of conditions and the following disclaimer in the documentation
       and/or other materials provided with the distribution.
+      バイナリ形式で再頒布する場合、頒布物に付属のドキュメント等の資料に、
+      上記の著作権表示、本条件一覧、および下記の免責条項を含めること。
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
@@ -20,6 +26,18 @@
    WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
    OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
    ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+   本ソフトウェアは、著作権者およびコントリビューターによって
+   「現状のまま」提供されており、明示黙示を問わず、商業的な使用可能性、
+   および特定の目的に対する適合性に関する暗黙の保証も含め、
+   またそれに限定されない、いかなる保証もありません。
+   著作権者もコントリビューターも、事由のいかんを問わず、
+   損害発生の原因いかんを問わず、かつ責任の根拠が契約であるか厳格責任であるか
+   （過失その他の）不法行為であるかを問わず、
+   仮にそのような損害が発生する可能性を知らされていたとしても、
+   本ソフトウェアの使用によって発生した（代替品または代用サービスの調達、
+   使用の喪失、データの喪失、利益の喪失、業務の中断も含め、
+   またそれに限定されない）直接損害、間接損害、偶発的な損害、特別損害、
+   懲罰的損害、または結果損害について、一切責任を負わないものとします。
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
@@ -66,11 +84,15 @@ class psyq::internal::string_view_interface:
           @endcode
         - 文字列の先頭位置を取得するため、以下の関数を使えること。
           @code
-          template_string_type::traits_type::char_type const* template_string_type::data() const
+          template_string_type::traits_type::char_type const* template_string_type::data() const PSYQ_NOEXCEPT
           @endcode
         - 文字列の長さを取得するため、以下の関数を使えること。
           @code
-          std::size_t template_string_type::length() const
+          std::size_t template_string_type::length() const PSYQ_NOEXCEPT
+          @endcode
+        - 文字列の最大長を取得するため、以下の関数を使えること。
+          @code
+          std::size_t template_string_type::max_size() const PSYQ_NOEXCEPT
           @endcode
      */
     public: typedef template_string_type super;
@@ -83,7 +105,7 @@ class psyq::internal::string_view_interface:
     {
         typename template_hash::value_type operator()(
             typename template_string_type::view const& in_string)
-        const
+        const PSYQ_NOEXCEPT
         {
             return template_hash::make(
                 in_string.data(), in_string.data() + in_string.length());
@@ -143,33 +165,41 @@ class psyq::internal::string_view_interface:
     //-------------------------------------------------------------------------
     /// @name constructor / destructor
     //@{
+    /** @brief 空文字列を構築する。
+     */
+    protected: PSYQ_CONSTEXPR string_view_interface() PSYQ_NOEXCEPT {}
+
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
      */
-    protected: string_view_interface(super const& in_string):
+    protected: PSYQ_CONSTEXPR explicit string_view_interface(
+        super const& in_string)
+    :
         super(in_string)
     {}
 
     /** @brief 文字列を移動する。
         @param[in,out] io_string 移動する文字列。
      */
-    protected: string_view_interface(super&& io_string):
+    protected: PSYQ_CONSTEXPR explicit string_view_interface(self&& io_string)
+    PSYQ_NOEXCEPT:
         super(std::move(io_string))
     {}
 
     /** @brief 文字列を移動する。
         @param[in,out] io_string 移動する文字列。
      */
-    protected: string_view_interface(self&& io_string):
+    protected: PSYQ_CONSTEXPR explicit string_view_interface(super&& io_string)
+    PSYQ_NOEXCEPT:
         super(std::move(io_string))
     {}
     //@}
     //-------------------------------------------------------------------------
-    /// @name 文字列の編集
+    /// @name 文字列の変更
     //@{
     /** @brief 文字列を空にする。
      */
-    public: void clear()
+    public: void clear() PSYQ_NOEXCEPT
     {
         this->super::operator=(super());
     }
@@ -177,7 +207,7 @@ class psyq::internal::string_view_interface:
     /** @brief 文字列を交換する。
         @param[in,out] io_target 交換する対象。
      */
-    public: void swap(self& io_target)
+    public: void swap(self& io_target) PSYQ_NOEXCEPT
     {
         self local_temp(std::move(io_target));
         io_target.super::operator=(std::move(*this));
@@ -237,7 +267,8 @@ class psyq::internal::string_view_interface:
     /** @brief 文字列の先頭位置を取得する。
         @return 文字列の先頭位置への反復子。
      */
-    public: typename self::const_iterator begin() const
+    public: PSYQ_CONSTEXPR typename self::const_iterator begin()
+    const PSYQ_NOEXCEPT
     {
         return this->data();
     }
@@ -245,7 +276,8 @@ class psyq::internal::string_view_interface:
     /** @brief 文字列の末尾位置を取得する。
         @return 文字列の末尾位置への反復子。
      */
-    public: typename self::const_iterator end() const
+    public: PSYQ_CONSTEXPR typename self::const_iterator end()
+    const PSYQ_NOEXCEPT
     {
         return this->begin() + this->length();
     }
@@ -253,7 +285,8 @@ class psyq::internal::string_view_interface:
     /** @brief 文字列の先頭位置を取得する。
         @return 文字列の先頭位置への反復子。
      */
-    public: typename self::const_iterator cbegin() const
+    public: PSYQ_CONSTEXPR typename self::const_iterator cbegin()
+    const PSYQ_NOEXCEPT
     {
         return this->begin();
     }
@@ -261,7 +294,8 @@ class psyq::internal::string_view_interface:
     /** @brief 文字列の末尾位置を取得する。
         @return 文字列の末尾位置への反復子。
      */
-    public: typename self::const_iterator cend() const
+    public: PSYQ_CONSTEXPR typename self::const_iterator cend()
+    const PSYQ_NOEXCEPT
     {
         return this->end();
     }
@@ -269,7 +303,8 @@ class psyq::internal::string_view_interface:
     /** @brief 文字列の末尾位置を取得する。
         @return 文字列の末尾位置への逆反復子。
      */
-    public: typename self::const_reverse_iterator rbegin() const
+    public: PSYQ_CONSTEXPR typename self::const_reverse_iterator rbegin()
+    const PSYQ_NOEXCEPT
     {
         return typename self::const_reverse_iterator(this->end());
     }
@@ -277,7 +312,8 @@ class psyq::internal::string_view_interface:
     /** @brief 文字列の先頭位置を取得する。
         @return 文字列の先頭位置への逆反復子。
      */
-    public: typename self::const_reverse_iterator rend() const
+    public: PSYQ_CONSTEXPR typename self::const_reverse_iterator rend()
+    const PSYQ_NOEXCEPT
     {
         return typename self::const_reverse_iterator(this->begin());
     }
@@ -285,7 +321,8 @@ class psyq::internal::string_view_interface:
     /** @brief 文字列の末尾位置を取得する。
         @return 文字列の末尾位置への逆反復子。
      */
-    public: typename self::const_reverse_iterator crbegin() const
+    public: PSYQ_CONSTEXPR typename self::const_reverse_iterator crbegin()
+    const PSYQ_NOEXCEPT
     {
         return this->rbegin();
     }
@@ -293,7 +330,8 @@ class psyq::internal::string_view_interface:
     /** @brief 文字列の先頭位置を取得する。
         @return 文字列の先頭位置への逆反復子。
      */
-    public: typename self::const_reverse_iterator crend() const
+    public: PSYQ_CONSTEXPR typename self::const_reverse_iterator crend()
+    const PSYQ_NOEXCEPT
     {
         return this->rend();
     }
@@ -305,7 +343,7 @@ class psyq::internal::string_view_interface:
         @retval true  空の文字列。
         @retval false 空の文字列ではない。
      */
-    public: bool empty() const
+    public: PSYQ_CONSTEXPR bool empty() const PSYQ_NOEXCEPT
     {
         return this->length() <= 0;
     }
@@ -313,27 +351,7 @@ class psyq::internal::string_view_interface:
     /** @brief 文字列の長さを取得する。
         @return 文字列の長さ。
      */
-    public: typename self::size_type size() const
-    {
-        return this->length();
-    }
-
-    /** @brief 文字列の最大長を取得する。
-        @return
-            文字列の最大長。
-            文字列の書き換えができないので、文字列の長さと同じ値になる。
-     */
-    public: typename self::size_type max_size() const
-    {
-        return this->length();
-    }
-
-    /** @brief 文字列の容量を取得する。
-        @return
-           文字列の容量。
-           文字列の書き換えができないので、文字列の長さと同じ値になる。
-     */
-    public: typename self::size_type capacity() const
+    public: PSYQ_CONSTEXPR typename self::size_type size() const PSYQ_NOEXCEPT
     {
         return this->length();
     }
@@ -348,9 +366,10 @@ class psyq::internal::string_view_interface:
         @param[in] in_right 右辺の文字列。
         @return 左辺 == 右辺
      */
-    public: bool operator==(typename self::super_view const& in_right) const
+    public: bool operator==(typename self::super_view const& in_right)
+    const PSYQ_NOEXCEPT
     {
-        return in_right.compare(*this) == 0;
+        return self::super_view(*this) == in_right;
     }
 
     /** @brief 文字列を比較する。
@@ -360,9 +379,10 @@ class psyq::internal::string_view_interface:
         @param[in] in_right 右辺の文字列。
         @return 左辺 != 右辺
      */
-    public: bool operator!=(typename self::super_view const& in_right) const
+    public: bool operator!=(typename self::super_view const& in_right)
+    const PSYQ_NOEXCEPT
     {
-        return in_right.compare(*this) != 0;
+        return self::super_view(*this) != in_right;
     }
 
     /** @brief 文字列を比較する。
@@ -372,7 +392,8 @@ class psyq::internal::string_view_interface:
         @param[in] in_right 右辺の文字列。
         @return 左辺 < 右辺
      */
-    public: bool operator<(typename self::super_view const& in_right) const
+    public: bool operator<(typename self::super_view const& in_right)
+    const PSYQ_NOEXCEPT
     {
         return 0 < in_right.compare(*this);
     }
@@ -384,7 +405,8 @@ class psyq::internal::string_view_interface:
         @param[in] in_right 右辺の文字列。
         @return 左辺 <= 右辺
      */
-    public: bool operator<=(typename self::super_view const& in_right) const
+    public: bool operator<=(typename self::super_view const& in_right)
+    const PSYQ_NOEXCEPT
     {
         return 0 <= in_right.compare(*this);
     }
@@ -396,7 +418,8 @@ class psyq::internal::string_view_interface:
         @param[in] in_right 右辺の文字列。
         @return 左辺 > 右辺
      */
-    public: bool operator>(typename self::super_view const& in_right) const
+    public: bool operator>(typename self::super_view const& in_right)
+    const PSYQ_NOEXCEPT
     {
         return in_right.compare(*this) < 0;
     }
@@ -408,13 +431,23 @@ class psyq::internal::string_view_interface:
         @param[in] in_right 右辺の文字列。
         @return 左辺 >= 右辺
      */
-    public: bool operator>=(typename self::super_view const& in_right) const
+    public: bool operator>=(typename self::super_view const& in_right)
+    const PSYQ_NOEXCEPT
     {
         return in_right.compare(*this) <= 0;
     }
 
-    /// @copydoc psyq::internal::string_view_base::compare()
-    public: int compare(typename self::super_view const& in_right) const
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @retval - 右辺のほうが大きい。
+        @retval + 左辺のほうが大きい。
+        @retval 0 左辺と右辺は等価。
+     */
+    public: int compare(typename self::super_view const& in_right)
+    const PSYQ_NOEXCEPT
     {
         return -(in_right.compare(*this));
     }
@@ -431,7 +464,7 @@ class psyq::internal::string_view_interface:
         typename self::size_type const in_left_offset,
         typename self::size_type const in_left_count,
         typename self::super_view const& in_right)
-    const
+    const PSYQ_NOEXCEPT
     {
         auto const local_left(
             typename self::super_view(*this).substr(
@@ -453,7 +486,7 @@ class psyq::internal::string_view_interface:
         typename self::size_type const     in_left_count,
         typename self::const_pointer const in_right_begin,
         typename self::size_type const     in_right_length)
-    const
+    const PSYQ_NOEXCEPT
     {
         this->compare(
             in_left_offset,
@@ -477,7 +510,7 @@ class psyq::internal::string_view_interface:
         typename self::super_view const& in_right,
         typename self::size_type const in_right_offset,
         typename self::size_type const in_right_count)
-    const
+    const PSYQ_NOEXCEPT
     {
         return this->compare(
             in_left_offset,
@@ -496,7 +529,7 @@ class psyq::internal::string_view_interface:
     public: typename self::size_type find(
         typename self::value_type const in_char,
         typename self::size_type const  in_offset = 0)
-    const
+    const PSYQ_NOEXCEPT
     {
         auto const local_this_length(this->length());
         if (in_offset < local_this_length)
@@ -523,7 +556,7 @@ class psyq::internal::string_view_interface:
     public: typename self::size_type find(
         typename self::super_view const& in_string,
         typename self::size_type in_offset = 0)
-    const
+    const PSYQ_NOEXCEPT
     {
         return this->find(in_string.data(), in_offset, in_string.length());
     }
@@ -538,7 +571,7 @@ class psyq::internal::string_view_interface:
         typename self::const_pointer const in_string,
         typename self::size_type const     in_offset,
         typename self::size_type const     in_length)
-    const
+    const PSYQ_NOEXCEPT
     {
         auto const local_this_length(this->length());
         if (in_length <= 0)
@@ -580,6 +613,30 @@ class psyq::internal::string_view_interface:
         }
         return self::npos;
     }
+
+    /** @brief 先頭が文字列と一致するか判定する。
+        @param[in] in_prefix 比較する文字列。
+        @retval true  先頭が文字列と一致した。
+        @retval false 先頭が文字列と一致しなかった。
+     */
+    public: PSYQ_CONSTEXPR bool starts_with(
+        typename self::super_view const& in_prefix)
+    const PSYQ_NOEXCEPT
+    {
+        return self::super_view(*this).starts_with(in_prefix);
+    }
+
+    /** @brief 先頭が文字と一致するか判定する。
+        @param[in] in_prefix 比較する文字。
+        @retval true  先頭が文字と一致した。
+        @retval false 先頭が文字と一致しなかった。
+     */
+    public: PSYQ_CONSTEXPR bool starts_with(
+        typename self::value_type const in_prefix)
+    const PSYQ_NOEXCEPT
+    {
+        return self::super_view(*this).starts_with(in_prefix);
+    }
     //@}
     //-------------------------------------------------------------------------
     /// @name 指定文字列の後方検索
@@ -592,7 +649,7 @@ class psyq::internal::string_view_interface:
     public: typename self::size_type rfind(
         typename self::value_type const in_char,
         typename self::size_type const  in_offset = self::npos)
-    const
+    const PSYQ_NOEXCEPT
     {
         if (!this->empty())
         {
@@ -621,7 +678,7 @@ class psyq::internal::string_view_interface:
     public: typename self::size_type rfind(
         typename self::super_view const& in_string,
         typename self::size_type const in_offset = self::npos)
-    const
+    const PSYQ_NOEXCEPT
     {
         return this->rfind(in_string.data(), in_offset, in_string.length());
     }
@@ -636,7 +693,7 @@ class psyq::internal::string_view_interface:
         typename self::const_pointer const in_string,
         typename self::size_type const     in_offset,
         typename self::size_type const     in_length)
-    const
+    const PSYQ_NOEXCEPT
     {
         auto const local_this_length(this->length());
         if (in_length <= 0)
@@ -664,6 +721,30 @@ class psyq::internal::string_view_interface:
         }
         return self::npos;
     }
+
+    /** @brief 末尾が文字列と一致するか判定する。
+        @param[in] in_suffix 比較する文字列。
+        @retval true  末尾が文字列と一致した。
+        @retval false 末尾が文字列と一致しなかった。
+     */
+    public: PSYQ_CONSTEXPR bool end_with(
+        typename self::super_view const& in_suffix)
+    const PSYQ_NOEXCEPT
+    {
+        return self::super_view(*this).ends_with(in_suffix);
+    }
+
+    /** @brief 末尾が文字と一致するか判定する。
+        @param[in] in_suffix 比較する文字。
+        @retval true  末尾が文字と一致した。
+        @retval false 末尾が文字と一致しなかった。
+     */
+    public: PSYQ_CONSTEXPR bool ends_with(
+        typename self::value_type const in_suffix)
+    const PSYQ_NOEXCEPT
+    {
+        return self::super_view(*this).ends_with(in_suffix);
+    }
     //@}
     //-------------------------------------------------------------------------
     /// @name 指定文字の前方検索
@@ -676,7 +757,7 @@ class psyq::internal::string_view_interface:
     public: typename self::size_type find_first_of(
         typename self::value_type const in_char,
         typename self::size_type const  in_offset = 0)
-    const
+    const PSYQ_NOEXCEPT
     {
         return this->find(in_char, in_offset);
     }
@@ -689,7 +770,7 @@ class psyq::internal::string_view_interface:
     public: typename self::size_type find_first_of(
         typename self::super_view const& in_string,
         typename self::size_type const in_offset = 0)
-    const
+    const PSYQ_NOEXCEPT
     {
         return this->find_first_of(
             in_string.data(), in_offset, in_string.length());
@@ -705,7 +786,7 @@ class psyq::internal::string_view_interface:
         typename self::const_pointer const in_string,
         typename self::size_type const     in_offset,
         typename self::size_type const     in_length)
-    const
+    const PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(in_length <= 0 || nullptr != in_string);
         auto const local_this_length(this->length());
@@ -737,7 +818,7 @@ class psyq::internal::string_view_interface:
     public: typename self::size_type find_last_of(
         typename self::value_type const in_char,
         typename self::size_type const  in_offset = self::npos)
-    const
+    const PSYQ_NOEXCEPT
     {
         return this->rfind(in_char, in_offset);
     }
@@ -750,7 +831,7 @@ class psyq::internal::string_view_interface:
     public: typename self::size_type find_last_of(
         typename self::super_view const& in_string,
         typename self::size_type const in_offset = self::npos)
-    const
+    const PSYQ_NOEXCEPT
     {
         return this->find_last_of(
             in_string.data(), in_offset, in_string.length());
@@ -766,7 +847,7 @@ class psyq::internal::string_view_interface:
         typename self::const_pointer const in_string,
         typename self::size_type const     in_offset,
         typename self::size_type const     in_length)
-    const
+    const PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(in_length <= 0 || nullptr != in_string);
         auto const local_this_length(this->length());
@@ -806,7 +887,7 @@ class psyq::internal::string_view_interface:
     public: typename self::size_type find_first_not_of(
         typename self::value_type const in_char,
         typename self::size_type const  in_offset = 0)
-    const
+    const PSYQ_NOEXCEPT
     {
         auto const local_begin(this->data());
         auto const local_end(local_begin + this->length());
@@ -829,7 +910,7 @@ class psyq::internal::string_view_interface:
     public: typename self::size_type find_first_not_of(
         typename self::super_view const& in_string,
         typename self::size_type const in_offset = 0)
-    const
+    const PSYQ_NOEXCEPT
     {
         return this->find_first_not_of(
             in_string.data(), in_offset, in_string.length());
@@ -846,7 +927,7 @@ class psyq::internal::string_view_interface:
         typename self::const_pointer const in_string,
         typename self::size_type const     in_offset,
         typename self::size_type const     in_length)
-    const
+    const PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(in_length <= 0 || nullptr != in_string);
         auto const local_this_length(this->length())
@@ -879,7 +960,7 @@ class psyq::internal::string_view_interface:
     public: typename self::size_type find_last_not_of(
         typename self::value_type const in_char,
         typename self::size_type const  in_offset = self::npos)
-    const
+    const PSYQ_NOEXCEPT
     {
         auto const local_this_length(this->length())
         if (in_offset < local_this_length)
@@ -910,7 +991,7 @@ class psyq::internal::string_view_interface:
     public: typename self::size_type find_last_not_of(
         typename self::super_view const& in_string,
         typename self::size_type const in_offset = self::npos)
-    const
+    const PSYQ_NOEXCEPT
     {
         return this->find_last_not_of(
             in_string.data(), in_offset, in_string.length());
@@ -927,7 +1008,7 @@ class psyq::internal::string_view_interface:
         typename self::const_pointer const in_string,
         typename self::size_type const     in_offset,
         typename self::size_type const     in_length)
-    const
+    const PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(in_length <= 0 || nullptr != in_string);
         auto const local_this_length(this->length())
@@ -953,9 +1034,11 @@ class psyq::internal::string_view_interface:
     }
     //@}
     //-------------------------------------------------------------------------
-    /// 無効な位置を表す。 find() などで使われる。
-    public: static typename self::size_type const npos
-        = static_cast<typename self::size_type>(-1);
+    public: enum: std::size_t
+    {
+        /// 無効な位置を表す。 find() などで使われる。
+        npos = static_cast<typename self::size_type>(-1)
+    };
 };
 
 //-----------------------------------------------------------------------------
@@ -975,6 +1058,7 @@ bool operator==(
     template_left_string_type const& in_left,
     psyq::internal::string_view_interface<template_right_string_type> const&
         in_right)
+PSYQ_NOEXCEPT
 {
     return in_right.operator==(in_left);
 }
@@ -995,6 +1079,7 @@ bool operator!=(
     template_left_string_type const& in_left,
     psyq::internal::string_view_interface<template_right_string_type> const&
         in_right)
+PSYQ_NOEXCEPT
 {
     return in_right.operator!=(in_left);
 }
@@ -1015,6 +1100,7 @@ bool operator<(
     template_left_string_type const& in_left,
     psyq::internal::string_view_interface<template_right_string_type> const&
         in_right)
+PSYQ_NOEXCEPT
 {
     return in_right.operator>(in_left);
 }
@@ -1035,6 +1121,7 @@ bool operator<=(
     template_left_string_type const& in_left,
     psyq::internal::string_view_interface<template_right_string_type> const&
         in_right)
+PSYQ_NOEXCEPT
 {
     return in_right.operator>=(in_left);
 }
@@ -1055,6 +1142,7 @@ bool operator>(
     template_left_string_type const& in_left,
     psyq::internal::string_view_interface<template_right_string_type> const&
         in_right)
+PSYQ_NOEXCEPT
 {
     return in_right.operator<(in_left);
 }
@@ -1075,6 +1163,7 @@ bool operator>=(
     template_left_string_type const& in_left,
     psyq::internal::string_view_interface<template_right_string_type> const&
         in_right)
+PSYQ_NOEXCEPT
 {
     return in_right.operator<=(in_left);
 }

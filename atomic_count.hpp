@@ -25,11 +25,11 @@ class psyq::atomic_count
     private: typedef psyq::atomic_count self;
 
     //-------------------------------------------------------------------------
-    public: explicit atomic_count(std::size_t const in_count):
+    public: explicit atomic_count(std::size_t const in_count) PSYQ_NOEXCEPT:
         count_(in_count)
     {}
 
-    public: std::size_t add(std::size_t const in_add)
+    public: std::size_t add(std::size_t const in_add) PSYQ_NOEXCEPT
     {
 #if PSYQ_ATOMIC_COUNT_ENABLE_THREADS
         auto const local_last_count(
@@ -42,7 +42,7 @@ class psyq::atomic_count
 #endif // PSYQ_ATOMIC_COUNT_ENABLE_THREADS
     }
 
-    public: std::size_t sub(std::size_t const in_sub)
+    public: std::size_t sub(std::size_t const in_sub) PSYQ_NOEXCEPT
     {
 #if PSYQ_ATOMIC_COUNT_ENABLE_THREADS
         auto const local_last_count(
@@ -55,7 +55,7 @@ class psyq::atomic_count
 #endif // PSYQ_ATOMIC_COUNT_ENABLE_THREADS
     }
 
-    public: static void acquire_fence()
+    public: static void acquire_fence() PSYQ_NOEXCEPT
     {
 #if PSYQ_ATOMIC_COUNT_ENABLE_THREADS
         std::atomic_thread_fence(std::memory_order_acquire);

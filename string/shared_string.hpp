@@ -46,8 +46,8 @@
 #ifndef PSYQ_SHARED_STRING_HPP_
 #define PSYQ_SHARED_STRING_HPP_
 
-//#include "atomic_count.hpp"
-//#include "string/string_view.hpp"
+//#include "psyq/string/string_view.hpp"
+//#include "psyq/atomic_count.hpp"
 
 /// psyq::basic_shared_string で使う、defaultのmemory割当子の型。
 #ifndef PSYQ_BASIC_SHARED_STRING_ALLOCATOR_DEFAULT
@@ -207,7 +207,7 @@ class psyq::internal::shared_string_holder
     /** @copydoc shared_string_holder(self const&)
         @return *this
      */
-    protected: self& operator=(self const& in_string) PSYQ_NOEXCEPT
+    protected: self& operator=(self const& in_string)
     {
         if (this->buffer_ != in_string.buffer_)
         {
@@ -225,7 +225,7 @@ class psyq::internal::shared_string_holder
     /** @copydoc shared_string_holder(self&&)
         @return *this
      */
-    protected: self& operator=(self&& io_string) PSYQ_NOEXCEPT
+    protected: self& operator=(self&& io_string)
     {
         if (this->buffer_ != io_string.buffer_)
         {
@@ -252,7 +252,6 @@ class psyq::internal::shared_string_holder
     void assign(
         typename self::traits_type::char_type const
             (&in_literal)[template_size])
-    PSYQ_NOEXCEPT
     {
         self::release_buffer(this->get_buffer(), this->get_allocator());
         this->set_literal(in_literal);
@@ -313,7 +312,7 @@ class psyq::internal::shared_string_holder
     }
 
     /// @copydoc psyq::internal::string_view_interface::clear()
-    protected: void clear() PSYQ_NOEXCEPT
+    protected: void clear()
     {
         self::release_buffer(this->get_buffer(), this->get_allocator());
         this->reset_data();
@@ -719,7 +718,7 @@ class psyq::basic_shared_string:
     /** @copydoc basic_shared_string(self const&)
         @return *this
      */
-    public: self& operator=(self const& in_string) PSYQ_NOEXCEPT
+    public: self& operator=(self const& in_string)
     {
         this->super::super::operator=(in_string);
         return *this;
@@ -728,7 +727,7 @@ class psyq::basic_shared_string:
     /** @copydoc basic_shared_string(self&&)
         @return *this
      */
-    public: self& operator=(self&& io_string) PSYQ_NOEXCEPT
+    public: self& operator=(self&& io_string)
     {
         this->super::super::operator=(std::move(io_string));
         return *this;
@@ -741,7 +740,6 @@ class psyq::basic_shared_string:
     self& operator=(
         typename self::traits_type::char_type const
             (&in_literal)[template_size])
-    PSYQ_NOEXCEPT
     {
         this->super::super::assign(in_literal);
         return *this;

@@ -45,7 +45,9 @@
  */
 #ifndef PSYQ_BIT_ALGORITHM_HPP_
 #define PSYQ_BIT_ALGORITHM_HPP_
+
 #include <cstdint>
+//#include "psyq/assert.hpp"
 
 #if defined(__alpha__) || defined(__ia64__) || defined(__x86_64__) || defined(_WIN64) || defined(__LP64__) || defined(__LLP64__)
 #   define PSYQ_BIT_ALGORITHM_INTRINSIC_SIZE 64
@@ -58,32 +60,21 @@
 #endif
 
 #if defined(__GNUC__) && (3 < __GNUC__ || (__GNUC__ == 3 && 4 <= __GNUC_MINOR__)) && defined(__GNUC_PATCHLEVEL__)
-#   define PSYQ_NOEXCEPT noexcept
-#   define PSYQ_CONSTEXPR constexpr
 //  'gcc 3.4' and above have builtin support, specialized for architecture.
 //  Some compilers masquerade as gcc; patchlevel test filters them out.
 #   define PSYQ_BIT_ALGORITHM_FOR_GNUC
 #elif defined(_MSC_VER)
-#   define PSYQ_NOEXCEPT throw()
-#   define PSYQ_CONSTEXPR
 #   define PSYQ_BIT_ALGORITHM_FOR_MSC
 #   if defined(_M_PPC)
 #      include <ppcintrinsics.h>
 #   endif
 #elif defined(__ARMCC_VERSION)
 //  RealView Compilation Tools for ARM.
-#   define PSYQ_NOEXCEPT noexcept
-#   define PSYQ_CONSTEXPR
 #   define PSYQ_BIT_ALGORITHM_FOR_ARMCC
 #elif defined(__ghs__)
 //  Green Hills support for PowerPC.
-#   define PSYQ_NOEXCEPT noexcept
-#   define PSYQ_CONSTEXPR
 #   define PSYQ_BIT_ALGORITHM_FOR_GHS
 #   include <ppc_ghs.h>
-#else
-#   define PSYQ_NOEXCEPT noexcept
-#   define PSYQ_CONSTEXPR
 #endif
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -114,13 +105,14 @@ namespace psyq
             http://hexadrive.sblo.jp/article/56575654.html
      */
     template<typename template_bits>
-    template_bits bitwise_shift_left_fast(
+    PSYQ_CONSTEXPR template_bits bitwise_shift_left_fast(
         template_bits const in_bits,
         unsigned const      in_shift)
     PSYQ_NOEXCEPT
     {
-        PSYQ_ASSERT(in_shift < sizeof(in_bits) * 8);
-        return in_bits << in_shift;
+        return (
+            PSYQ_ASSERT(in_shift < sizeof(in_bits) * 8),
+            in_bits << in_shift);
     }
 
     /** @brief 整数を右ビットシフトする。
@@ -147,13 +139,14 @@ namespace psyq
             http://hexadrive.sblo.jp/article/56575654.html
      */
     template<typename template_bits>
-    template_bits bitwise_shift_right_fast(
+    PSYQ_CONSTEXPR template_bits bitwise_shift_right_fast(
         template_bits const in_bits,
         unsigned const      in_shift)
     PSYQ_NOEXCEPT
     {
-        PSYQ_ASSERT(in_shift < sizeof(in_bits) * 8);
-        return in_bits >> in_shift;
+        return (
+            PSYQ_ASSERT(in_shift < sizeof(in_bits) * 8),
+            in_bits >> in_shift);
     }
 
     //-------------------------------------------------------------------------
@@ -217,7 +210,7 @@ namespace psyq
             ただし in_position がsizeof(int)以上だった場合、未定義。
      */
     template<typename template_bits>
-    template_bits set_bit_fast(
+    PSYQ_CONSTEXPR template_bits set_bit_fast(
         template_bits const in_bits,
         std::size_t   const in_position)
     PSYQ_NOEXCEPT
@@ -255,7 +248,7 @@ namespace psyq
             ただし in_position がsizeof(int)以上だった場合、未定義。
      */
     template<typename template_bits>
-    template_bits set_bit_fast(
+    PSYQ_CONSTEXPR template_bits set_bit_fast(
         template_bits const in_bits,
         std::size_t   const in_position,
         bool          const in_value)
@@ -292,7 +285,7 @@ namespace psyq
             ただし in_position がsizeof(int)以上だった場合、未定義。
      */
     template<typename template_bits>
-    template_bits reset_bit_fast(
+    PSYQ_CONSTEXPR template_bits reset_bit_fast(
         template_bits const in_bits,
         std::size_t   const in_position)
     PSYQ_NOEXCEPT
@@ -326,7 +319,7 @@ namespace psyq
             ただし in_position がsizeof(int)以上だった場合、未定義。
      */
     template<typename template_bits>
-    template_bits flip_bit_fast(
+    PSYQ_CONSTEXPR template_bits flip_bit_fast(
         template_bits const in_bits,
         std::size_t   const in_position)
     PSYQ_NOEXCEPT

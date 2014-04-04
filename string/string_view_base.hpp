@@ -50,7 +50,8 @@
 #include <iterator>
 #include <algorithm>
 #include <cctype>
-//#include "fnv_hash.hpp"
+//#include "psyq/assert.hpp"
+//#include "psyq/fnv_hash.hpp"
 
 namespace psyq
 {
@@ -96,11 +97,9 @@ class psyq::internal::string_view_base
         typename self::traits_type::char_type const* const in_begin,
         std::size_t const                                  in_length)
     PSYQ_NOEXCEPT:
-        data_(in_begin),
+        data_((PSYQ_ASSERT(in_begin != nullptr || in_length == 0), in_begin)),
         length_(in_begin != nullptr && 0 < in_length? in_length: 0)
-    {
-        PSYQ_ASSERT(this->length() == in_length);
-    }
+    {}
 
     /** @brief 文字列literalを参照する。
         @tparam template_size 参照する文字列literalの要素数。終端文字も含む。
@@ -115,11 +114,11 @@ class psyq::internal::string_view_base
         typename self::traits_type::char_type const
             (&in_literal)[template_size])
     PSYQ_NOEXCEPT:
-        data_(&in_literal[0]),
+        data_((
+            PSYQ_ASSERT(in_literal[template_size - 1] == 0), &in_literal[0])),
         length_(template_size - 1)
     {
         static_assert(0 < template_size, "");
-        PSYQ_ASSERT(in_literal[template_size - 1] == 0);
     }
 
     /** @brief 任意型の文字列を参照する。

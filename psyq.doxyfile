@@ -693,6 +693,7 @@ INPUT                  = \
                          ./geometric_aabb.hpp \
                          ./mosp_tree.hpp \
                          ./mosp_leaf.hpp \
+                         ./assert.hpp \
 
 #                         ./async_file.hpp \
 #                         ./async_queue.hpp \

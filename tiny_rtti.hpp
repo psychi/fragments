@@ -2,12 +2,18 @@
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
+   ソースコード形式かバイナリ形式か、変更するかしないかを問わず、
+   以下の条件を満たす場合に限り、再頒布および使用が許可されます。
 
    1. Redistributions of source code must retain the above copyright notice,
       this list of conditions and the following disclaimer.
+      ソースコードを再頒布する場合、上記の著作権表示、本条件一覧、
+      および下記の免責条項を含めること。
    2. Redistributions in binary form must reproduce the above copyright notice,
       this list of conditions and the following disclaimer in the documentation
       and/or other materials provided with the distribution.
+      バイナリ形式で再頒布する場合、頒布物に付属のドキュメント等の資料に、
+      上記の著作権表示、本条件一覧、および下記の免責条項を含めること。
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
@@ -20,6 +26,18 @@
    WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
    OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
    ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+   本ソフトウェアは、著作権者およびコントリビューターによって
+   「現状のまま」提供されており、明示黙示を問わず、商業的な使用可能性、
+   および特定の目的に対する適合性に関する暗黙の保証も含め、
+   またそれに限定されない、いかなる保証もありません。
+   著作権者もコントリビューターも、事由のいかんを問わず、
+   損害発生の原因いかんを問わず、かつ責任の根拠が契約であるか厳格責任であるか
+   （過失その他の）不法行為であるかを問わず、
+   仮にそのような損害が発生する可能性を知らされていたとしても、
+   本ソフトウェアの使用によって発生した（代替品または代用サービスの調達、
+   使用の喪失、データの喪失、利益の喪失、業務の中断も含め、
+   またそれに限定されない）直接損害、間接損害、偶発的な損害、特別損害、
+   懲罰的損害、または結果損害について、一切責任を負わないものとします。
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
@@ -27,10 +45,13 @@
  */
 #ifndef PSYQ_TINY_RTTI_HPP_
 #define PSYQ_TINY_RTTI_HPP_
-//#include "atomic_count.hpp"
+
+//#include "psyq/assert.hpp"
+//#include "psyq/atomic_count.hpp"
 
 #ifndef PSYQ_TINY_RTTI_VOID_HASH
-#define PSYQ_TINY_RTTI_VOID_HASH self::hash(1) << (sizeof(self::hash) * 8 - 1)
+#define PSYQ_TINY_RTTI_VOID_HASH\
+    (self::hash(1) << (sizeof(self::hash) * 8 - 1))
 #endif // !defined(PSYQ_TINY_RTTI_VOID_HASH)
 
 namespace psyq
@@ -66,28 +87,30 @@ class psyq::tiny_rtti
         "There is no hash value to be assigned to the runtime.");
 
     //-------------------------------------------------------------------------
-    /** @brief RTTIを構築する。
+    /** @brief RTTIインスタンスを構築する。
 
         - RTTIのインスタンスの数は、1つの型につき1つ以下である。
-        - RTTIのインスタンスは、関数内のstatic変数として構築される。
+        - RTTIのインスタンスは、関数内のstatic変数として構築する。
           - 一度構築されたRTTIは、変更されない。
           - main関数が終了するまで、RTTIは破棄されない。
         - make<void>() はstatic_assertするため、
           void型のRTTIは、あらかじめ用意されている。 get<void>() で取得できる。
 
         @note
+            RTTIのインスタンスは、関数内のstatic変数として構築する。
             関数内のstatic変数の構築は、C++11の仕様ではスレッドセーフだが、
             VisualStudio2013以前ではスレッドセーフになってない。
             https://sites.google.com/site/cpprefjp/implementation-status
+
         @tparam template_type
             RTTIを構築する型。
             - template_type のRTTIがすでに構築されてた場合は、
               RTTIの構築に失敗する。
         @tparam template_hash
-            RTTIを構築する型の識別値。 構築後は、 get_hash() で取得できる。
+            RTTIを構築する型の識別値。構築後は、 get_hash() で取得できる。
             - self::VOID_HASH より小さい値なら、任意の値を指定できる。
               - 同じ識別値がすでに使われていた場合は、RTTIの構築に失敗する。
-            - self::VOID_HASH の場合は、型の識別値を実行時に自動で割り当てる。
+            - self::VOID_HASH の場合は、型の識別値を実行時に自動で決定する。
             - self::VOID_HASH より大きい値は、static_assertする。
         @tparam template_super_type
             RTTIを構築する型の親型。
@@ -176,8 +199,7 @@ class psyq::tiny_rtti
         return self::make<template_type, self::VOID_HASH, void>();
     }
 
-    /** @brief RTTIを取得する。
-
+    /** @brief RTTIインスタンスを取得する。
         @tparam template_type RTTIを取得したい型。
         @retval !=nullptr 型ごとに固有のRTTI。
         @retval ==nullptr make() で、RTTIがまだ構築されてなかった。
@@ -185,20 +207,21 @@ class psyq::tiny_rtti
     public: template<typename template_type>
     static self const* get()
     {
-        return self::get_static_rtti<template_type, self::VOID_HASH + 1>(nullptr);
+        return self::get_static_rtti<template_type, self::VOID_HASH + 1>(
+            nullptr);
     }
 
     //-------------------------------------------------------------------------
     /** @brief 型の識別値を取得する。
      */
-    public: self::hash get_hash() const
+    public: self::hash get_hash() const PSYQ_NOEXCEPT
     {
         return this->hash_;
     }
 
     /** @brief 型のバイトサイズを取得する。
      */
-    public: std::size_t get_size() const
+    public: std::size_t get_size() const PSYQ_NOEXCEPT
     {
         return this->size_;
     }
@@ -208,7 +231,8 @@ class psyq::tiny_rtti
         @retval !=nullptr 同じ型か基底型のRTTI。
         @retval ==nullptr 基底型には含まれず、同じ型でもなかった。
      */
-    public: self const* find_base(self::hash const in_base_hash) const
+    public: self const* find_base(self::hash const in_base_hash)
+    const PSYQ_NOEXCEPT
     {
         auto local_rtti(this);
         while (local_rtti != nullptr)
@@ -255,9 +279,10 @@ class psyq::tiny_rtti
         }
         if (static_make)
         {
-            static self const static_node(
+            // このstatic変数を、RTTIインスタンスとして使う。
+            static self const static_rtti(
                 in_super, in_hash, sizeof(template_type));
-            return &static_node;
+            return &static_rtti;
         }
         return nullptr;
     }
@@ -272,8 +297,8 @@ class psyq::tiny_rtti
         return &static_node;
     }
 
-    /** @brief 型の識別値がすでに登録されているか判定する。
-        @tparam template_hash 検索する型の識別値。
+    /** @brief 型識別値がすでに登録されているか判定する。
+        @tparam template_hash 検索する型識別値。
         @retval true  すでに登録されている。
         @retval false まだ登録されてない。
      */
@@ -325,13 +350,13 @@ class psyq::tiny_rtti
     {
         static psyq::atomic_count static_hash(self::VOID_HASH);
         auto const local_hash(static_hash.add(1));
-        // 自動で決定する型識別値をすべて使いきった場合にassertする。
+        // 自動で決定する型の識別値をすべて使いきった場合にassertする。
         PSYQ_ASSERT(self::VOID_HASH < local_hash);
         return local_hash;
     }
 
     //-------------------------------------------------------------------------
-    private: tiny_rtti():
+    private: PSYQ_CONSTEXPR tiny_rtti() PSYQ_NOEXCEPT:
         next_(nullptr), super_(nullptr), hash_(self::VOID_HASH), size_(0)
     {}
 
@@ -345,16 +370,21 @@ class psyq::tiny_rtti
     {
         if (in_hash < self::VOID_HASH)
         {
+            // 指定された型の識別値を使う。
             this->hash_ = in_hash;
             this->next_ = self::set_list_begin(*this);
         }
         else
         {
+            // 型の識別値を自動決定する。
             this->hash_ = self::add_hash();
             this->next_ = nullptr;
         }
     }
 
+    private: tiny_rtti(self const&);// = delete;
+
+    //-------------------------------------------------------------------------
     private: self const* next_;  ///< RTTIリストの、次のRTTI。
     private: self const* super_; ///< 親型のRTTI。
     private: self::hash  hash_;  ///< 型の識別値。

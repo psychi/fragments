@@ -368,15 +368,75 @@ class psyq::string_table
         return nullptr;
     }
 
+    //-------------------------------------------------------------------------
     /** @brief 文字列表の列の辞書から、行の辞書を検索する。
-        @param[in] in_column_map 検索する文字列表の列辞書。
-        @param[in] in_column     検索するcellの列番号。
+        @param[in] in_attribute_name  検索する列の属性名。
+        @param[in] in_attribute_index 検索する列の属性index番号。
+        @retval !=nullptr 見つかった行の辞書。
+        @retval ==nullptr 対応する行の辞書が見つからなかった。
+     */
+    public: typename self::row_map const* find_row_map(
+        typename self::attribute_map::key_type const& in_attribute_name,
+        std::size_t const in_attribute_index = 0)
+    const
+    {
+        return self::find_row_map(
+            this->get_column_map(),
+            this->get_attribute_map(),
+            in_attribute_name,
+            in_attribute_index);
+    }
+
+    /** @brief 文字列表の列の辞書から、行の辞書を検索する。
+        @param[in] in_column 検索する列番号。
+        @retval !=nullptr 見つかった行の辞書。
+        @retval ==nullptr 対応する行の辞書が見つからなかった。
+     */
+    public: typename self::row_map const* find_row_map(
+        std::size_t const in_column)
+    const
+    {
+        return self::find_row_map(this->get_column_map(), in_column);
+    }
+
+    /** @brief 文字列表の列の辞書から、行の辞書を検索する。
+        @param[in] in_column_map      検索する文字列表の列辞書。
+        @param[in] in_attribute_map   検索する文字列表の属性辞書。
+        @param[in] in_attribute_name  検索する列の属性名。
+        @param[in] in_attribute_index 検索する列の属性index番号。
         @retval !=nullptr 見つかった行の辞書。
         @retval ==nullptr 対応する行の辞書が見つからなかった。
      */
     public: static typename self::row_map const* find_row_map(
         typename self::column_map const& in_column_map,
-        std::size_t const                in_column)
+        typename self::attribute_map const& in_attribute_map,
+        typename self::attribute_map::key_type const& in_attribute_name,
+        std::size_t const in_attribute_index = 0)
+    {
+        auto const local_attribute_iterator(
+            in_attribute_map.find(in_attribute_name));
+        if (local_attribute_iterator != in_attribute_map.end())
+        {
+            auto& local_attribute(local_attribute_iterator->second);
+            if (in_attribute_index < local_attribute.size)
+            {
+                return self::find_row_map(
+                    in_column_map,
+                    local_attribute.column + in_attribute_index);
+            }
+        }
+        return nullptr;
+    }
+
+    /** @brief 文字列表の列の辞書から、行の辞書を検索する。
+        @param[in] in_column_map 検索する文字列表の列辞書。
+        @param[in] in_column     検索する文字列表の列番号。
+        @retval !=nullptr 見つかった行の辞書。
+        @retval ==nullptr 対応する行の辞書が見つからなかった。
+     */
+    public: static typename self::row_map const* find_row_map(
+        typename self::column_map const& in_column_map,
+        std::size_t const in_column)
     {
         auto const local_column_iterator(in_column_map.find(in_column));
         return local_column_iterator != in_column_map.end()?

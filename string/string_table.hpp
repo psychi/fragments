@@ -2,12 +2,18 @@
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
+   ソースコード形式かバイナリ形式か、変更するかしないかを問わず、
+   以下の条件を満たす場合に限り、再頒布および使用が許可されます。
 
    1. Redistributions of source code must retain the above copyright notice,
       this list of conditions and the following disclaimer.
+      ソースコードを再頒布する場合、上記の著作権表示、本条件一覧、
+      および下記の免責条項を含めること。
    2. Redistributions in binary form must reproduce the above copyright notice,
       this list of conditions and the following disclaimer in the documentation
       and/or other materials provided with the distribution.
+      バイナリ形式で再頒布する場合、頒布物に付属のドキュメント等の資料に、
+      上記の著作権表示、本条件一覧、および下記の免責条項を含めること。
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
@@ -20,6 +26,18 @@
    WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
    OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
    ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+   本ソフトウェアは、著作権者およびコントリビューターによって
+   「現状のまま」提供されており、明示黙示を問わず、商業的な使用可能性、
+   および特定の目的に対する適合性に関する暗黙の保証も含め、
+   またそれに限定されない、いかなる保証もありません。
+   著作権者もコントリビューターも、事由のいかんを問わず、
+   損害発生の原因いかんを問わず、かつ責任の根拠が契約であるか厳格責任であるか
+   （過失その他の）不法行為であるかを問わず、
+   仮にそのような損害が発生する可能性を知らされていたとしても、
+   本ソフトウェアの使用によって発生した（代替品または代用サービスの調達、
+   使用の喪失、データの喪失、利益の喪失、業務の中断も含め、
+   またそれに限定されない）直接損害、間接損害、偶発的な損害、特別損害、
+   懲罰的損害、または結果損害について、一切責任を負わないものとします。
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
@@ -27,7 +45,9 @@
  */
 #ifndef PSYQ_STRING_TABLE_HPP_
 #define PSYQ_STRING_TABLE_HPP_
+
 #include <unordered_map>
+//#include "psyq/string/shared_string.hpp"
 
 namespace psyq
 {
@@ -66,6 +86,13 @@ struct psyq::string_table_attribute
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 文字列の表。CSV形式の文字列から構築する。
+
+    使い方の概略。
+    -# string_table::make_column_map() で文字列表の列の辞書を構築する。
+    -# string_table::string_table() に文字列表の列yの辞書を渡し、
+       文字列表を構築する。
+    -# string_table::find_body_cell() で、任意のcellを検索する。
+
     @tparam template_column_map    @copydoc string_table::column_map
     @tparam template_attribute_map @copydoc string_table::attribute_map
  */
@@ -87,6 +114,11 @@ class psyq::string_table
           - template_column_map::mapped_type::key_type は、文字列表の行の番号。
           - template_column_map::mapped_type::mapped_type は、
             文字列表の要素となる、 psyq::basic_shared_string 相当の文字列。
+
+        @note 2014.04.05
+            文字列表では行の辞書を保持することも考えたが、
+            表を編集し属性の追加や削除を考えると、
+            列の辞書を保持したほうがいいように思う。
      */
     public: typedef template_column_map column_map;
 
@@ -191,26 +223,140 @@ class psyq::string_table
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列表の列の辞書から、行の辞書を検索する。
-        @param[in] in_column_map 検索する文字列表の列辞書。
-        @param[in] in_column     検索するcellの列番号。
-        @retval !=nullptr 見つかった行の辞書。
-        @retval ==nullptr 対応する行の辞書が見つからなかった。
+    /** @brief 文字列表の本体のcell文字列を解析し、値を取り出す。
+        @tparam template_value_type 取り出す値の型。
+        @param[in]  in_default         解析に失敗した場合の戻り値。
+        @param[in]  in_row             解析するcellの行番号。
+        @param[in]  in_attribute_name  解析するcellの属性の名前。
+        @param[in]  in_attribute_index 解析するcellの属性のindex番号。
+        @param[out] out_succeed
+            解析に成功したらtrueが、失敗したらfalseが書き込まれる。
+            nullptrの場合は、何も書き込まない。
+        @return
+            cell文字列を解析して取り出した値。
+            解析に失敗したら in_default を返す。
      */
-    public: static typename self::row_map const* find_row_map(
-        typename self::column_map const& in_column_map,
-        std::size_t const                in_column)
+    public: template<typename template_value_type>
+    template_value_type deserialize_body_cell(
+        template_value_type const& in_default,
+        std::size_t const in_row,
+        typename self::attribute_map::key_type const& in_attribute_name,
+        std::size_t const in_attribute_index = 0,
+        bool* const out_succeed = nullptr)
+    const
     {
-        auto const local_column_iterator(in_column_map.find(in_column));
-        return local_column_iterator != in_column_map.end()?
-            &local_column_iterator->second: nullptr;
+        return psyq::deserialize_string(
+            in_default,
+            this->find_body_cell(
+                in_row, in_attribute_name, in_attribute_index),
+            out_succeed);
+    }
+
+    /** @brief 文字列表の本体のcell文字列を解析し、値を取り出す。
+        @tparam template_value_type 取り出す値の型。
+        @param[in]  in_default 解析に失敗した場合の戻り値。
+        @param[in]  in_row     解析するcellの行番号。
+        @param[in]  in_column  解析するcellの列番号。
+        @param[out] out_succeed
+            解析に成功したらtrueが、失敗したらfalseが書き込まれる。
+            nullptrの場合は、何も書き込まない。
+        @return
+            cell文字列を解析して取り出した値。
+            解析に失敗したら in_default を返す。
+     */
+    public: template<typename template_value_type>
+    template_value_type deserialize_body_cell(
+        template_value_type const& in_default,
+        std::size_t const in_row,
+        std::size_t const in_column,
+        bool* const out_succeed = nullptr)
+    const
+    {
+        return psyq::deserialize_string(
+            in_default, this->find_body_cell(in_row, in_column), out_succeed);
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief 文字列表の本体から、cell文字列を検索する。
+        @param[in] in_row             検索するcellの行番号。
+        @param[in] in_attribute_name  検索するcellの属性の名前。
+        @param[in] in_attribute_index 検索するcellの属性のindex番号。
+        @retval !=nullptr 見つかったcell文字列。
+        @retval ==nullptr 対応するcellが見つからなかった。
+     */
+    public: typename self::cell_string const* find_body_cell(
+        std::size_t const in_row,
+        typename self::attribute_map::key_type const& in_attribute_name,
+        std::size_t const in_attribute_index = 0)
+    const
+    {
+        if (in_row == this->get_attribute_row())
+        {
+            return nullptr;
+        }
+        return self::find_cell(
+            this->get_column_map(),
+            in_row,
+            this->get_attribute_map(),
+            in_attribute_name,
+            in_attribute_index);
+    }
+
+    /** @brief 文字列表の本体から、cell文字列を検索する。
+        @param[in] in_row    検索するcellの行番号。
+        @param[in] in_column 検索するcellの列番号。
+        @retval !=nullptr 見つかったcell文字列。
+        @retval ==nullptr 対応するcellが見つからなかった。
+     */
+    public: typename self::cell_string const* find_body_cell(
+        std::size_t const in_row,
+        std::size_t const in_column)
+    const
+    {
+        if (in_row == this->get_attribute_row())
+        {
+            return nullptr;
+        }
+        return self::find_cell(this->get_column_map(), in_row, in_column);
+    }
+
+    /** @brief 文字列表の列の辞書から、cell文字列を検索する。
+        @param[in] in_column_map      検索する文字列表の列辞書。
+        @param[in] in_row             検索するcellの行番号。
+        @param[in] in_attribute_map   検索する文字列表の属性辞書。
+        @param[in] in_attribute_name  検索するcellの属性名。
+        @param[in] in_attribute_index 検索するcellの属性index番号。
+        @retval !=nullptr 見つかったcell文字列。
+        @retval ==nullptr 対応するcellが見つからなかった。
+     */
+    public: static typename self::cell_string const* find_cell(
+        typename self::column_map const&              in_column_map,
+        std::size_t const                             in_row,
+        typename self::attribute_map const&           in_attribute_map,
+        typename self::attribute_map::key_type const& in_attribute_name,
+        std::size_t const                             in_attribute_index)
+    {
+        auto const local_attribute_iterator(
+            in_attribute_map.find(in_attribute_name));
+        if (local_attribute_iterator != in_attribute_map.end())
+        {
+            auto& local_attribute(local_attribute_iterator->second);
+            if (in_attribute_index < local_attribute.size)
+            {
+                return self::find_cell(
+                    in_column_map,
+                    in_row,
+                    local_attribute.column + in_attribute_index);
+            }
+        }
+        return nullptr;
     }
 
     /** @brief 文字列表の列の辞書から、cell文字列を検索する。
         @param[in] in_column_map 検索する文字列表の列辞書。
         @param[in] in_row        検索するcellの行番号。
         @param[in] in_column     検索するcellの列番号。
-        @retval !=nullptr 見つかったcell。
+        @retval !=nullptr 見つかったcell文字列。
         @retval ==nullptr 対応するcellが見つからなかった。
      */
     public: static typename self::cell_string const* find_cell(
@@ -231,79 +377,19 @@ class psyq::string_table
         return nullptr;
     }
 
-    /** @brief 文字列表の列の辞書から、cell文字列を検索する。
-        @param[in] in_column_map      検索する文字列表の列辞書。
-        @param[in] in_row             検索するcellの行番号。
-        @param[in] in_attribute_map   検索する文字列表の属性辞書。
-        @param[in] in_attribute_name  検索するcellの属性名。
-        @param[in] in_attribute_index 検索するcellの属性index番号。
-        @retval !=nullptr 見つかったcell。
-        @retval ==nullptr 対応するcellが見つからなかった。
+    /** @brief 文字列表の列の辞書から、行の辞書を検索する。
+        @param[in] in_column_map 検索する文字列表の列辞書。
+        @param[in] in_column     検索するcellの列番号。
+        @retval !=nullptr 見つかった行の辞書。
+        @retval ==nullptr 対応する行の辞書が見つからなかった。
      */
-    public: static typename self::cell_string const* find_cell(
-        typename self::column_map const&              in_column_map,
-        std::size_t const                             in_row,
-        typename self::attribute_map const&           in_attribute_map,
-        typename self::attribute_map::key_type const& in_attribute_name,
-        std::size_t const                             in_attribute_index)
+    public: static typename self::row_map const* find_row_map(
+        typename self::column_map const& in_column_map,
+        std::size_t const                in_column)
     {
-        auto const local_attribute_iterator(
-            in_attribute_map.find(in_attribute_name));
-        if (local_attribute_iterator != in_attribute_map.end())
-        {
-            auto& local_attribute(local_attribute_iterator.second);
-            if (in_attribute_index < local_attribute.size)
-            {
-                return self::find_cell(
-                    in_column_map,
-                    in_row,
-                    local_attribute.column + in_attribute_index);
-            }
-        }
-        return nullptr;
-    }
-
-    /** @brief 文字列表の本体から、cellを検索する。
-        @param[in] in_row    検索するcellの行番号。
-        @param[in] in_column 検索するcellの列番号。
-        @retval !=nullptr 見つかったcell。
-        @retval ==nullptr 対応するcellが見つからなかった。
-     */
-    public: typename self::cell_string const* find_body_cell(
-        std::size_t const in_row,
-        std::size_t const in_column)
-    const
-    {
-        if (in_row == this->get_attribute_row())
-        {
-            return nullptr;
-        }
-        return self::find_cell(this->get_column_map(), in_row, in_column);
-    }
-
-    /** @brief 文字列表の本体から、cellを検索する。
-        @param[in] in_row             検索するcellの行番号。
-        @param[in] in_attribute_name  検索するcellの属性名。
-        @param[in] in_attribute_index 検索するcellの属性index番号。
-        @retval !=nullptr 見つかったcell。
-        @retval ==nullptr 対応するcellが見つからなかった。
-     */
-    public: typename self::cell_string const* find_body_cell(
-        std::size_t const                             in_row,
-        typename self::attribute_map::key_type const& in_attribute_name,
-        std::size_t const                             in_attribute_index)
-    const
-    {
-        if (in_row == this->get_attribute_row())
-        {
-            return nullptr;
-        }
-        return self::find_cell(
-            this->get_column_map(),
-            in_row,
-            this->get_attribute_map(),
-            in_attribute_name,
-            in_attribute_index);
+        auto const local_column_iterator(in_column_map.find(in_column));
+        return local_column_iterator != in_column_map.end()?
+            &local_column_iterator->second: nullptr;
     }
 
     //-------------------------------------------------------------------------

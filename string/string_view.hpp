@@ -214,7 +214,7 @@ namespace psyq
     {
         /** @brief 文字列を解析し、値を取り出す。
             @param[in]  in_string  解析する文字列。
-            @param[in]  in_default 解析に失敗したときのdefault値。
+            @param[in]  in_default 解析に失敗したときに返す値。
             @param[out] out_succeed
                 解析に成功したらtrueが、失敗したらfalseが書き込まれる。
                 nullptrの場合は、何も書き込まない。
@@ -224,8 +224,8 @@ namespace psyq
          */
         template<typename template_string_type, typename template_number_type>
         template_number_type parse_number(
-            template_string_type const* const in_string,
             template_number_type const& in_default,
+            template_string_type const* const in_string,
             bool* const out_succeed)
         PSYQ_NOEXCEPT
         {
@@ -272,129 +272,153 @@ namespace psyq
 
     /// @copydoc psyq::internal::parse_number()
     template<typename template_string_type>
-    std::int8_t deserialize_string(
+    char deserialize_string(
+        char const in_default,
         template_string_type const* const in_string,
-        std::int8_t const in_default,
         bool* const out_succeed = nullptr)
     PSYQ_NOEXCEPT
     {
         return psyq::internal::parse_number(
-            in_string, in_default, out_succeed);
+            in_default, in_string, out_succeed);
     }
 
     /// @copydoc psyq::internal::parse_number()
     template<typename template_string_type>
-    std::uint8_t deserialize_string(
+    unsigned char deserialize_string(
+        unsigned char const in_default,
         template_string_type const* const in_string,
-        std::uint8_t const in_default,
         bool* const out_succeed = nullptr)
     PSYQ_NOEXCEPT
     {
         return psyq::internal::parse_number(
-            in_string, in_default, out_succeed);
+            in_default, in_string, out_succeed);
     }
 
     /// @copydoc psyq::internal::parse_number()
     template<typename template_string_type>
-    std::int16_t deserialize_string(
+    short deserialize_string(
+        short const in_default,
         template_string_type const* const in_string,
-        std::int16_t const in_default,
         bool* const out_succeed = nullptr)
     PSYQ_NOEXCEPT
     {
         return psyq::internal::parse_number(
-            in_string, in_default, out_succeed);
+            in_default, in_string, out_succeed);
     }
 
     /// @copydoc psyq::internal::parse_number()
     template<typename template_string_type>
-    std::uint16_t deserialize_string(
+    unsigned short deserialize_string(
+        unsigned short const in_default,
         template_string_type const* const in_string,
-        std::uint16_t const in_default,
         bool* const out_succeed = nullptr)
     PSYQ_NOEXCEPT
     {
         return psyq::internal::parse_number(
-            in_string, in_default, out_succeed);
+            in_default, in_string, out_succeed);
     }
 
     /// @copydoc psyq::internal::parse_number()
     template<typename template_string_type>
-    std::int32_t deserialize_string(
+    int deserialize_string(
+        int const in_default,
         template_string_type const* const in_string,
-        std::int32_t const in_default,
         bool* const out_succeed = nullptr)
     PSYQ_NOEXCEPT
     {
         return psyq::internal::parse_number(
-            in_string, in_default, out_succeed);
+            in_default, in_string, out_succeed);
     }
 
     /// @copydoc psyq::internal::parse_number()
     template<typename template_string_type>
-    std::uint32_t deserialize_string(
+    unsigned int deserialize_string(
+        unsigned int const in_default,
         template_string_type const* const in_string,
-        std::uint32_t const in_default,
         bool* const out_succeed = nullptr)
     PSYQ_NOEXCEPT
     {
         return psyq::internal::parse_number(
-            in_string, in_default, out_succeed);
+            in_default, in_string, out_succeed);
     }
 
     /// @copydoc psyq::internal::parse_number()
     template<typename template_string_type>
-    std::int64_t deserialize_string(
+    long deserialize_string(
+        long const in_default,
         template_string_type const* const in_string,
-        std::int64_t const in_default,
         bool* const out_succeed = nullptr)
     PSYQ_NOEXCEPT
     {
         return psyq::internal::parse_number(
-            in_string, in_default, out_succeed);
+            in_default, in_string, out_succeed);
     }
 
     /// @copydoc psyq::internal::parse_number()
     template<typename template_string_type>
-    std::uint64_t deserialize_string(
+    unsigned long deserialize_string(
+        unsigned long const in_default,
         template_string_type const* const in_string,
-        std::uint64_t const in_default,
         bool* const out_succeed = nullptr)
     PSYQ_NOEXCEPT
     {
         return psyq::internal::parse_number(
-            in_string, in_default, out_succeed);
+            in_default, in_string, out_succeed);
+    }
+
+    /// @copydoc psyq::internal::parse_number()
+    template<typename template_string_type>
+    long long deserialize_string(
+        long long const in_default,
+        template_string_type const* const in_string,
+        bool* const out_succeed = nullptr)
+    PSYQ_NOEXCEPT
+    {
+        return psyq::internal::parse_number(
+            in_default, in_string, out_succeed);
+    }
+
+    /// @copydoc psyq::internal::parse_number()
+    template<typename template_string_type>
+    unsigned long long deserialize_string(
+        unsigned long long const in_default,
+        template_string_type const* const in_string,
+        bool* const out_succeed = nullptr)
+    PSYQ_NOEXCEPT
+    {
+        return psyq::internal::parse_number(
+            in_default, in_string, out_succeed);
     }
 
     /// @copydoc psyq::internal::parse_number()
     template<typename template_string_type>
     float deserialize_string(
-        template_string_type const* const in_string,
         float const in_default,
+        template_string_type const* const in_string,
         bool* const out_succeed = nullptr)
     PSYQ_NOEXCEPT
     {
         return psyq::internal::parse_number(
-            in_string, in_default, out_succeed);
+            in_default, in_string, out_succeed);
     }
 
     /// @copydoc psyq::internal::parse_number()
     template<typename template_string_type>
     double deserialize_string(
-        template_string_type const* const in_string,
         double const in_default,
+        template_string_type const* const in_string,
         bool* const out_succeed = nullptr)
     PSYQ_NOEXCEPT
     {
         return psyq::internal::parse_number(
-            in_string, in_default, out_succeed);
+            in_default, in_string, out_succeed);
     }
 
     /// @copydoc psyq::internal::parse_number()
     template<typename template_string_type, typename template_value_type>
     template_value_type deserialize_string(
-        template_string_type const* const in_string,
         template_value_type const& in_default,
+        template_string_type const* const in_string,
         bool* const out_succeed = nullptr)
     {
         if (in_string == nullptr)

@@ -224,56 +224,47 @@ class psyq::string_table
 
     //-------------------------------------------------------------------------
     /** @brief 文字列表の本体のcell文字列を解析し、値を取り出す。
-        @tparam template_value_type 取り出す値の型。
-        @param[in]  in_default         解析に失敗した場合の戻り値。
+        @param[out] out_value
+          - cell文字列の解析に成功した場合、解析して取り出した値が代入される。
+          - cell文字列の解析に失敗した場合、代入は行われない。
         @param[in]  in_row             解析するcellの行番号。
         @param[in]  in_attribute_name  解析するcellの属性の名前。
         @param[in]  in_attribute_index 解析するcellの属性のindex番号。
-        @param[out] out_succeed
-            解析に成功したらtrueが、失敗したらfalseが書き込まれる。
-            nullptrの場合は、何も書き込まない。
-        @return
-            cell文字列を解析して取り出した値。
-            解析に失敗したら in_default を返す。
+        @retval true  文字列の解析に成功した。
+        @retval false 文字列の解析に失敗した。
      */
     public: template<typename template_value_type>
-    template_value_type deserialize_body_cell(
-        template_value_type const& in_default,
+    bool deserialize_body_cell(
+        template_value_type& out_value,
         std::size_t const in_row,
         typename self::attribute_map::key_type const& in_attribute_name,
-        std::size_t const in_attribute_index = 0,
-        bool* const out_succeed = nullptr)
+        std::size_t const in_attribute_index = 0)
     const
     {
         return psyq::deserialize_string(
-            in_default,
+            out_value,
             this->find_body_cell(
-                in_row, in_attribute_name, in_attribute_index),
-            out_succeed);
+                in_row, in_attribute_name, in_attribute_index));
     }
 
     /** @brief 文字列表の本体のcell文字列を解析し、値を取り出す。
-        @tparam template_value_type 取り出す値の型。
-        @param[in]  in_default 解析に失敗した場合の戻り値。
-        @param[in]  in_row     解析するcellの行番号。
-        @param[in]  in_column  解析するcellの列番号。
-        @param[out] out_succeed
-            解析に成功したらtrueが、失敗したらfalseが書き込まれる。
-            nullptrの場合は、何も書き込まない。
-        @return
-            cell文字列を解析して取り出した値。
-            解析に失敗したら in_default を返す。
+        @param[out] out_value
+          - cell文字列の解析に成功した場合、解析して取り出した値が代入される。
+          - cell文字列の解析に失敗した場合、代入は行われない。
+        @param[in]  in_row    解析するcellの行番号。
+        @param[in]  in_column 解析するcellの列番号。
+        @retval true  文字列の解析に成功した。
+        @retval false 文字列の解析に失敗した。
      */
     public: template<typename template_value_type>
-    template_value_type deserialize_body_cell(
-        template_value_type const& in_default,
+    bool deserialize_body_cell(
+        template_value_type& out_value,
         std::size_t const in_row,
-        std::size_t const in_column,
-        bool* const out_succeed = nullptr)
+        std::size_t const in_column)
     const
     {
         return psyq::deserialize_string(
-            in_default, this->find_body_cell(in_row, in_column), out_succeed);
+            out_value, this->find_body_cell(in_row, in_column));
     }
 
     //-------------------------------------------------------------------------

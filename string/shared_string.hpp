@@ -269,7 +269,7 @@ class psyq::internal::shared_string_holder
         typename self::view const& in_left_string,
         typename self::view const& in_right_string)
     {
-        self::release_buffer(this->get_buffer(), this->get_allocator());
+        this->clear();
         this->create_concatenate_buffer(in_left_string, in_right_string);
     }
     //@}
@@ -305,6 +305,7 @@ class psyq::internal::shared_string_holder
         return this->allocator_;
     }
     //@}
+    //-------------------------------------------------------------------------
     /// @copydoc psyq::internal::string_view_interface::empty()
     protected: PSYQ_CONSTEXPR bool empty() const PSYQ_NOEXCEPT
     {
@@ -756,7 +757,7 @@ class psyq::basic_shared_string:
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name 文字列の編集
+    /// @name 文字列の変更
     //@{
     /// @copydoc super::super::clear()
     public: void clear() PSYQ_NOEXCEPT
@@ -771,7 +772,7 @@ class psyq::basic_shared_string:
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name 文字列の容量
+    /// @name 文字列の操作
     //@{
     /// @copydoc super::super::empty()
     public: bool empty() const PSYQ_NOEXCEPT

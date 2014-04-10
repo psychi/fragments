@@ -163,6 +163,24 @@ class psyq::basic_string_view:
     {
         return self(*this, in_offset, in_count);
     }
+
+    /// @copydoc psyq::internal::string_view_base::trim_copy()
+    public: self trim_copy() const PSYQ_NOEXCEPT
+    {
+        return this->super::super::trim_copy();
+    }
+
+    /// @copydoc psyq::internal::string_view_base::trim_prefix_copy()
+    public: self trim_prefix_copy() const PSYQ_NOEXCEPT
+    {
+        return this->super::super::trim_prefix_copy();
+    }
+
+    /// @copydoc psyq::internal::string_view_base::trim_suffix_copy()
+    public: self trim_suffix_copy() const PSYQ_NOEXCEPT
+    {
+        return this->super::super::trim_suffix_copy();
+    }
     //@}
 };
 
@@ -188,5 +206,219 @@ namespace std
         io_left.swap(io_right);
     }
 };
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+namespace psyq
+{
+    namespace internal
+    {
+        /** @brief 文字列を解析し、値を取り出す。
+            @param[in]  in_string  解析する文字列。
+            @param[in]  in_default 解析に失敗したときのdefault値。
+            @param[out] out_succeed
+                解析に成功したらtrueが、失敗したらfalseが書き込まれる。
+                nullptrの場合は、何も書き込まない。
+            @return
+                文字列を解析して取り出した値。
+                解析に失敗した場合は in_default を返す。
+         */
+        template<typename template_string_type, typename template_number_type>
+        template_number_type parse_number(
+            template_string_type const* const in_string,
+            template_number_type const& in_default,
+            bool* const out_succeed)
+        PSYQ_NOEXCEPT
+        {
+            if (in_string == nullptr)
+            {
+                if (out_succeed != nullptr)
+                {
+                    *out_succeed = false;
+                }
+                return in_default;
+            }
+
+            // 文字列の前後の空白を取り除く。
+            typedef psyq::basic_string_view<
+                typename template_string_type::value_type,
+                typename template_string_type::traits_type>
+                    string_view;
+            auto const local_string(string_view(*in_string).trim_copy());
+            if (local_string.empty())
+            {
+                if (out_succeed != nullptr)
+                {
+                    *out_succeed = false;
+                }
+                return in_default;
+            }
+
+            // 文字列を解析し、数値を取り出す。
+            std::size_t local_rest_length(0);
+            auto const local_value(
+                std::is_integral<template_number_type>::value?
+                    local_string.template parse_integer<template_number_type>(
+                        &local_rest_length):
+                    local_string.template parse_real<template_number_type>(
+                        &local_rest_length));
+            auto const local_succeed(local_rest_length <= 0);
+            if (out_succeed != nullptr)
+            {
+                *out_succeed = local_succeed;
+            }
+            return local_succeed? local_value: in_default;
+        }
+    }
+
+    /// @copydoc psyq::internal::parse_number()
+    template<typename template_string_type>
+    std::int8_t deserialize_string(
+        template_string_type const* const in_string,
+        std::int8_t const in_default,
+        bool* const out_succeed = nullptr)
+    PSYQ_NOEXCEPT
+    {
+        return psyq::internal::parse_number(
+            in_string, in_default, out_succeed);
+    }
+
+    /// @copydoc psyq::internal::parse_number()
+    template<typename template_string_type>
+    std::uint8_t deserialize_string(
+        template_string_type const* const in_string,
+        std::uint8_t const in_default,
+        bool* const out_succeed = nullptr)
+    PSYQ_NOEXCEPT
+    {
+        return psyq::internal::parse_number(
+            in_string, in_default, out_succeed);
+    }
+
+    /// @copydoc psyq::internal::parse_number()
+    template<typename template_string_type>
+    std::int16_t deserialize_string(
+        template_string_type const* const in_string,
+        std::int16_t const in_default,
+        bool* const out_succeed = nullptr)
+    PSYQ_NOEXCEPT
+    {
+        return psyq::internal::parse_number(
+            in_string, in_default, out_succeed);
+    }
+
+    /// @copydoc psyq::internal::parse_number()
+    template<typename template_string_type>
+    std::uint16_t deserialize_string(
+        template_string_type const* const in_string,
+        std::uint16_t const in_default,
+        bool* const out_succeed = nullptr)
+    PSYQ_NOEXCEPT
+    {
+        return psyq::internal::parse_number(
+            in_string, in_default, out_succeed);
+    }
+
+    /// @copydoc psyq::internal::parse_number()
+    template<typename template_string_type>
+    std::int32_t deserialize_string(
+        template_string_type const* const in_string,
+        std::int32_t const in_default,
+        bool* const out_succeed = nullptr)
+    PSYQ_NOEXCEPT
+    {
+        return psyq::internal::parse_number(
+            in_string, in_default, out_succeed);
+    }
+
+    /// @copydoc psyq::internal::parse_number()
+    template<typename template_string_type>
+    std::uint32_t deserialize_string(
+        template_string_type const* const in_string,
+        std::uint32_t const in_default,
+        bool* const out_succeed = nullptr)
+    PSYQ_NOEXCEPT
+    {
+        return psyq::internal::parse_number(
+            in_string, in_default, out_succeed);
+    }
+
+    /// @copydoc psyq::internal::parse_number()
+    template<typename template_string_type>
+    std::int64_t deserialize_string(
+        template_string_type const* const in_string,
+        std::int64_t const in_default,
+        bool* const out_succeed = nullptr)
+    PSYQ_NOEXCEPT
+    {
+        return psyq::internal::parse_number(
+            in_string, in_default, out_succeed);
+    }
+
+    /// @copydoc psyq::internal::parse_number()
+    template<typename template_string_type>
+    std::uint64_t deserialize_string(
+        template_string_type const* const in_string,
+        std::uint64_t const in_default,
+        bool* const out_succeed = nullptr)
+    PSYQ_NOEXCEPT
+    {
+        return psyq::internal::parse_number(
+            in_string, in_default, out_succeed);
+    }
+
+    /// @copydoc psyq::internal::parse_number()
+    template<typename template_string_type>
+    float deserialize_string(
+        template_string_type const* const in_string,
+        float const in_default,
+        bool* const out_succeed = nullptr)
+    PSYQ_NOEXCEPT
+    {
+        return psyq::internal::parse_number(
+            in_string, in_default, out_succeed);
+    }
+
+    /// @copydoc psyq::internal::parse_number()
+    template<typename template_string_type>
+    double deserialize_string(
+        template_string_type const* const in_string,
+        double const in_default,
+        bool* const out_succeed = nullptr)
+    PSYQ_NOEXCEPT
+    {
+        return psyq::internal::parse_number(
+            in_string, in_default, out_succeed);
+    }
+
+    /// @copydoc psyq::internal::parse_number()
+    template<typename template_string_type, typename template_value_type>
+    template_value_type deserialize_string(
+        template_string_type const* const in_string,
+        template_value_type const& in_default,
+        bool* const out_succeed = nullptr)
+    {
+        if (in_string == nullptr)
+        {
+            if (out_succeed != nullptr)
+            {
+                *out_succeed = false;
+            }
+            return in_default;
+        }
+
+        // 文字列の前後の空白を取り除く。
+        typedef psyq::basic_string_view<
+            typename template_string_type::value_type,
+            typename template_string_type::traits_type>
+                string_view;
+        auto const local_string(string_view(*in_string).trim_copy());
+        auto const local_succeed(!local_string.empty());
+        if (out_succeed != nullptr)
+        {
+            *out_succeed = local_succeed;
+        }
+        return local_succeed? template_value_type(local_string): in_default;
+    }
+}
 
 #endif // !PSYQ_STRING_VIEW_HPP_

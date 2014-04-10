@@ -104,7 +104,9 @@ class psyq::internal::string_view_interface:
     struct hash: public template_hash
     {
         typename template_hash::value_type operator()(
-            typename template_string_type::view const& in_string)
+            psyq::internal::string_view_base<
+                typename template_string_type::traits_type>
+                    const& in_string)
         const PSYQ_NOEXCEPT
         {
             return template_hash::make(

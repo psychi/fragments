@@ -521,7 +521,8 @@ namespace psyq
             @param[in] in_bits ビットを数える無符号整数の値。
             @return 1になってるビットの数。
          */
-        template<> std::size_t count_1bits_of_uint(std::uint64_t const in_bits)
+        template<> inline std::size_t count_1bits_of_uint(
+            std::uint64_t const in_bits)
         PSYQ_NOEXCEPT
         {
 #if PSYQ_BIT_ALGORITHM_INTRINSIC_SIZE < 64
@@ -672,8 +673,8 @@ namespace psyq
         }
 
         /// @copydoc count_leading_0bits_by_float()
-        template<>
-        std::size_t count_leading_0bits_by_float(std::uint32_t const in_bits)
+        template<> inline std::size_t count_leading_0bits_by_float(
+            std::uint32_t const in_bits)
         {
             static_assert(
                 // 浮動小数点の基数は、2であること。
@@ -736,8 +737,8 @@ namespace psyq
             @param[in] in_bits ビットを数える整数の値。
             @return 最上位ビットから0が連続する数。
          */
-        template<>
-        std::size_t count_leading_0bits_of_uint(std::uint64_t const in_bits)
+        template<> inline std::size_t count_leading_0bits_of_uint(
+            std::uint64_t const in_bits)
         {
 #if PSYQ_BIT_ALGORITHM_INTRINSIC_SIZE < 64
 #   if defined(PSYQ_COUNT_LEADING_0BITS_BY_FLOAT)
@@ -841,8 +842,8 @@ namespace psyq
             @param[in] in_bits ビットを数える整数の値。
             @return 最下位ビットから、0が連続する数。
          */
-        template<>
-        std::size_t count_trailing_0bits_of_uint(std::uint64_t const in_bits)
+        template<> inline std::size_t count_trailing_0bits_of_uint(
+            std::uint64_t const in_bits)
         {
 #if PSYQ_BIT_ALGORITHM_INTRINSIC_SIZE < 64
             // 上位32ビットと下位32ビットに分ける。

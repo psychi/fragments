@@ -16,7 +16,7 @@
 struct msgpack_unpacked
 {
     msgpack_zone* zone;
-    msgpack_object data;
+    psyq::message_pack::object data;
 };
 
 bool msgpack_unpack_next(
@@ -160,7 +160,7 @@ inline void msgpack_unpacked_destroy(msgpack_unpacked* result)
 	if(result->zone != NULL) {
 		msgpack_zone_free(result->zone);
 		result->zone = NULL;
-		memset(&result->data, 0, sizeof(msgpack_object));
+		memset(&result->data, 0, sizeof(psyq::message_pack::object));
 	}
 }
 
@@ -182,7 +182,7 @@ inline msgpack_zone* msgpack_unpacked_release_zone(msgpack_unpacked* result)
 
 int msgpack_unpacker_execute(msgpack_unpacker* mpac);
 
-msgpack_object msgpack_unpacker_data(msgpack_unpacker* mpac);
+psyq::message_pack::object msgpack_unpacker_data(msgpack_unpacker* mpac);
 
 msgpack_zone* msgpack_unpacker_release_zone(msgpack_unpacker* mpac);
 
@@ -213,7 +213,7 @@ msgpack_unpack_return msgpack_unpack(
     std::size_t  const in_length,
     std::size_t* const io_offset,
     msgpack_zone&      out_zone,
-    msgpack_object&    out_result);
+    psyq::message_pack::object&    out_result);
 
 
 inline size_t msgpack_unpacker_parsed_size(const msgpack_unpacker* mpac)

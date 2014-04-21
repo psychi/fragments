@@ -694,6 +694,7 @@ INPUT                  = \
                          ./mosp_tree.hpp \
                          ./mosp_leaf.hpp \
                          ./assert.hpp \
+                         ./message_pack_object.hpp \
 
 #                         ./async_file.hpp \
 #                         ./async_queue.hpp \

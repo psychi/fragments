@@ -10,21 +10,23 @@
 #endif // !defined(MSGPACK_EMBED_STACK_SIZE)
 
 //-----------------------------------------------------------------------------
+/// MessagePackの直列化形式の種別。
 enum msgpack_unpack_state
 {
-    CS_HEADER       = 0x00,  // nil
+    CS_HEADER       = 0x00, // nil
 
     //CS_           = 0x01,
-    //CS_           = 0x02,  // false
-    //CS_           = 0x03,  // true
+    //CS_           = 0x02, // false
+    //CS_           = 0x03, // true
 
-    //CS_           = 0x04,
-    //CS_           = 0x05,
-    //CS_           = 0x06,
-    //CS_           = 0x07,
+    CS_BIN_8        = 0x04,
+    CS_BIN_16       = 0x05,
+    CS_BIN_32       = 0x06,
 
-    //CS_           = 0x08,
-    //CS_           = 0x09,
+    //CS_EXT_8        = 0x07,
+    //CS_EXT_16       = 0x08,
+    //CS_EXT_32       = 0x09,
+
     CS_FLOAT        = 0x0a,
     CS_DOUBLE       = 0x0b,
     CS_UINT_8       = 0x0c,
@@ -36,14 +38,15 @@ enum msgpack_unpack_state
     CS_INT_32       = 0x12,
     CS_INT_64       = 0x13,
 
-    //CS_           = 0x14,
-    //CS_           = 0x15,
-    //CS_BIG_INT_16   = 0x16,
-    //CS_BIG_INT_32   = 0x17,
-    //CS_BIG_FLOAT_16 = 0x18,
-    //CS_BIG_FLOAT_32 = 0x19,
-    CS_RAW_16       = 0x1a,
-    CS_RAW_32       = 0x1b,
+    //CS_FIXEXT_1        = 0x14,
+    //CS_FIXEXT_2        = 0x15,
+    //CS_FIXEXT_4        = 0x16,
+    //CS_FIXEXT_8        = 0x17,
+    //CS_FIXEXT_16       = 0x18,
+
+    CS_RAW_8        = 0x19, // str8
+    CS_RAW_16       = 0x1a, // str16
+    CS_RAW_32       = 0x1b, // str32
     CS_ARRAY_16     = 0x1c,
     CS_ARRAY_32     = 0x1d,
     CS_MAP_16       = 0x1e,
@@ -52,14 +55,6 @@ enum msgpack_unpack_state
     //ACS_BIG_INT_VALUE,
     //ACS_BIG_FLOAT_VALUE,
     ACS_RAW_VALUE,
-};
-
-//-----------------------------------------------------------------------------
-enum msgpack_container_type
-{
-    CT_ARRAY_ITEM, ///< 配列の要素。
-    CT_MAP_KEY,    ///< 連想配列の要素のキー。
-    CT_MAP_VALUE,  ///< 連想配列の要素の値。
 };
 
 #endif // !defined(PSYQ_MESSAGE_PACK_DEFINE_HPP_)

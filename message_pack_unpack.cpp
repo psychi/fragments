@@ -9,7 +9,7 @@ msgpack_unpack_return msgpack_unpack(
     std::size_t const in_size,
     std::size_t* const io_offset,
     msgpack_zone& out_zone,
-    msgpack_object& out_root)
+    psyq::message_pack::object& out_root)
 {
     std::size_t local_offset(0);
     if (io_offset != nullptr)

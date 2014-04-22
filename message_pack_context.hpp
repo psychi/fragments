@@ -50,7 +50,7 @@ class deserialize_context
         this->deserialize_kind_ = CS_HEADER;
         this->trail_ = 0;
         this->stack_size_ = 0;
-        this->stack_[0].object.set_nil();
+        this->stack_[0].object.reset();
         this->user_.zone = &io_zone;
         this->user_.referenced = false;
     }
@@ -149,7 +149,7 @@ class deserialize_context
         if (local_header <= 0x7f)
         {
             // [0x00, 0x7f]: positive fixnum
-            out_object.set_integer(static_cast<std::uint8_t>(local_header));
+            out_object = local_header;
             return this->deserialize_stack(out_object);
         }
         else if (local_header <= 0x8f)
@@ -183,7 +183,7 @@ class deserialize_context
         else if (local_header == 0xc0)
         {
             // 0xc0: nil
-            out_object.set_nil();
+            out_object.reset();
             return this->deserialize_stack(out_object);
         }
         else if (local_header == 0xc1)
@@ -195,13 +195,13 @@ class deserialize_context
         else if (local_header == 0xc2)
         {
             // 0xc2: false
-            out_object.set_boolean(false);
+            out_object = false;
             return this->deserialize_stack(out_object);
         }
         else if (local_header == 0xc3)
         {
             // 0xc3: true
-            out_object.set_boolean(true);
+            out_object = true;
             return this->deserialize_stack(out_object);
         }
         else if (local_header <= 0xc6)
@@ -266,7 +266,7 @@ class deserialize_context
         {
             // [0xe0, 0xff]: negative fixnum
             PSYQ_ASSERT(local_header <= 0xff);
-            out_object.set_integer(static_cast<std::int8_t>(local_header));
+            out_object = static_cast<std::int8_t>(local_header);
             return this->deserialize_stack(out_object);
         }
 
@@ -294,36 +294,36 @@ class deserialize_context
         {
         // 無符号整数
         case CS_UINT_8:
-            out_object.set_integer(static_cast<std::uint8_t>(*local_data));
+            out_object = *local_data;
             break;
         case CS_UINT_16:
-            out_object.set_integer(
-                self::load_big_endian_integer<std::uint16_t>(local_data));
+            out_object
+                = self::load_big_endian_integer<std::uint16_t>(local_data);
             break;
         case CS_UINT_32:
-            out_object.set_integer(
-                self::load_big_endian_integer<std::uint32_t>(local_data));
+            out_object
+                = self::load_big_endian_integer<std::uint32_t>(local_data);
             break;
         case CS_UINT_64:
-            out_object.set_integer(
-                self::load_big_endian_integer<std::uint64_t>(local_data));
+            out_object
+                = self::load_big_endian_integer<std::uint64_t>(local_data);
             break;
 
         // 有符号整数
         case CS_INT_8:
-            out_object.set_integer(static_cast<std::int8_t>(*local_data));
+            out_object = static_cast<std::int8_t>(*local_data);
             break;
         case CS_INT_16:
-            out_object.set_integer(
-                self::load_big_endian_integer<std::int16_t>(local_data));
+            out_object
+                = self::load_big_endian_integer<std::int16_t>(local_data);
             break;
         case CS_INT_32:
-            out_object.set_integer(
-                self::load_big_endian_integer<std::int32_t>(local_data));
+            out_object
+                = self::load_big_endian_integer<std::int32_t>(local_data);
             break;
         case CS_INT_64:
-            out_object.set_integer(
-                self::load_big_endian_integer<std::int64_t>(local_data));
+            out_object
+                = self::load_big_endian_integer<std::int64_t>(local_data);
             break;
 
         // 浮動小数点実数
@@ -332,7 +332,7 @@ class deserialize_context
             union {std::uint32_t integer; float real;} local_value;
             local_value.integer
                 = self::load_big_endian_integer<std::uint32_t>(local_data);
-            out_object.set_floating_point(local_value.real);
+            out_object = local_value.real;
             break;
         }
         case CS_DOUBLE:
@@ -340,7 +340,7 @@ class deserialize_context
             union {std::uint64_t integer; double real;} local_value;
             local_value.integer
                 = self::load_big_endian_integer<std::uint64_t>(local_data);
-            out_object.set_floating_point(local_value.real);
+            out_object = local_value.real;
             break;
         }
 
@@ -488,10 +488,17 @@ class deserialize_context
                 return self::deserialize_result_CONTINUE;
 
             case self::stack_kind_MAP_VALUE:
-                self::deserialize_map_item(
-                    local_stack_top.object,
-                    local_stack_top.map_key,
-                    out_object);
+            {
+                auto const local_map(
+                    self::deserialize_map_item(
+                        local_stack_top.object,
+                        local_stack_top.map_key,
+                        out_object));
+                if (local_map == nullptr)
+                {
+                    PSYQ_ASSERT(false);
+                    return self::deserialize_result_FAILED;
+                }
                 --local_stack_top.count;
                 if (0 < local_stack_top.count)
                 {
@@ -500,9 +507,11 @@ class deserialize_context
                 }
                 else
                 {
-                    /// @note 連想配列が要素が揃ったので、ソートする？
+                    // 連想配列が要素が揃ったので、ソートする。
+                    local_map->sort();
                 }
                 break;
+            }
 
             default:
                 PSYQ_ASSERT(false);
@@ -609,7 +618,7 @@ class deserialize_context
         @param[in]     in_key    追加する要素のキー。
         @param[in]     in_mapped 追加する要素の値。
      */
-    private: static void deserialize_map_item(
+    private: static psyq::message_pack::object::map* deserialize_map_item(
         psyq::message_pack::object& io_object,
         psyq::message_pack::object const& in_key,
         psyq::message_pack::object const& in_mapped)
@@ -624,6 +633,7 @@ class deserialize_context
         {
             PSYQ_ASSERT(false);
         }
+        return local_map;
     }
 
     //-------------------------------------------------------------------------

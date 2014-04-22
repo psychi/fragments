@@ -1,356 +1,405 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief MessagePackオブジェクト。
+    @brief @copybrief psyq::message_pack::object
  */
 #ifndef PSYQ_MESSAGE_PACK_OBJECT_HPP_
 #define PSYQ_MESSAGE_PACK_OBJECT_HPP_
 
-namespace psyq
-{
-    namespace message_pack
-    {
-        /// @cond
-        template<typename> struct object_container;
-        struct object_map;
-        struct object;
-        /// @endcond
-    }
-}
+//#include "psyq/message_pack_object.hpp"
 
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief MessagePackオブジェクトコンテナの基底型。
-    @tparam template_value_type @copydoc value_type
- */
-template<typename template_value_type>
-struct psyq::message_pack::object_container
-{
-    /// thisが指す値の型。
-    private: typedef object_container<template_value_type> self;
-
-    //-------------------------------------------------------------------------
-    /// 要素の型。
-    public: typedef template_value_type value_type;
-
-    /// 要素数の型。
-    public: typedef std::size_t size_type;
-
-    /// 反復子の差を表す型。
-    public: typedef std::ptrdiff_t difference_type;
-
-    /// 要素へのpointer。
-    public: typedef typename self::value_type const* const_pointer;
-
-    /// 要素へのpointer。
-    public: typedef typename self::value_type* pointer;
-
-    /// 要素への参照。
-    public: typedef typename self::value_type const& const_reference;
-
-    /// 要素への参照。
-    public: typedef typename self::value_type& reference;
-
-    /// 要素を指す反復子。
-    public: typedef typename self::const_pointer const_iterator;
-
-    /// 要素を指す反復子。
-    public: typedef typename self::pointer iterator;
-
-    /// 要素を指す逆反復子。
-    public: typedef std::reverse_iterator<const_iterator>
-        const_reverse_iterator;
-
-    /// 要素を指す逆反復子。
-    public: typedef std::reverse_iterator<iterator>
-        reverse_iterator;
-
-    //-------------------------------------------------------------------------
-    /// @name コンテナの要素を参照
-    //@{
-    /** @brief コンテナの先頭要素へのpointerを取得する。
-        @return コンテナの先頭要素へのpointer。
-     */
-    public: typename self::const_pointer data()
-    const PSYQ_NOEXCEPT
-    {
-        return this->data_;
-    }
-
-    /** @brief コンテナが持つ要素を参照する。
-        @param[in] in_index 要素のindex番号。
-        @return 要素への参照。
-     */
-    public: typename self::const_reference at(
-        typename self::size_type const in_index)
-    const
-    {
-        if (this->size() <= in_index)
-        {
-            PSYQ_ASSERT(false);
-            //throw std::out_of_range; // 例外は使いたくない。
-        }
-        return *(this->data() + in_index);
-    }
-
-    /** @brief コンテナが持つ要素を参照する。
-        @param[in] in_index 要素のindex番号。
-        @return 要素への参照。
-     */
-    public: typename self::const_reference operator[](
-        typename self::size_type const in_index)
-    const
-    {
-        PSYQ_ASSERT(in_index < this->size());
-        return *(this->data() + in_index);
-    }
-
-    /** @brief コンテナの最初の要素を参照する。
-        @return コンテナの最初の要素への参照。
-     */
-    public: typename self::const_reference front() const
-    {
-        return (*this)[0];
-    }
-
-    /** @brief コンテナの最後の要素を参照する。
-        @return コンテナの最後の要素への参照。
-     */
-    public: typename self::const_reference back() const
-    {
-        return (*this)[this->size() - 1];
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name iteratorの取得
-    //@{
-    /** @brief コンテナの先頭位置を取得する。
-        @return コンテナの先頭位置への反復子。
-     */
-    public: typename self::const_iterator begin() const PSYQ_NOEXCEPT
-    {
-        return this->data();
-    }
-
-    /** @brief コンテナの末尾位置を取得する。
-        @return コンテナの末尾位置への反復子。
-     */
-    public: typename self::const_iterator end() const PSYQ_NOEXCEPT
-    {
-        return this->begin() + this->size();
-    }
-
-    /** @brief コンテナの先頭位置を取得する。
-        @return コンテナの先頭位置への反復子。
-     */
-    public: typename self::const_iterator cbegin() const PSYQ_NOEXCEPT
-    {
-        return this->begin();
-    }
-
-    /** @brief コンテナの末尾位置を取得する。
-        @return コンテナの末尾位置への反復子。
-     */
-    public: typename self::const_iterator cend() const PSYQ_NOEXCEPT
-    {
-        return this->end();
-    }
-
-    /** @brief コンテナの末尾位置を取得する。
-        @return コンテナの末尾位置への逆反復子。
-     */
-    public: typename self::const_reverse_iterator rbegin() const PSYQ_NOEXCEPT
-    {
-        return typename self::const_reverse_iterator(this->end());
-    }
-
-    /** @brief コンテナの先頭位置を取得する。
-        @return コンテナの先頭位置への逆反復子。
-     */
-    public: typename self::const_reverse_iterator rend() const PSYQ_NOEXCEPT
-    {
-        return typename self::const_reverse_iterator(this->begin());
-    }
-
-    /** @brief コンテナの末尾位置を取得する。
-        @return コンテナの末尾位置への逆反復子。
-     */
-    public: typename self::const_reverse_iterator crbegin() const PSYQ_NOEXCEPT
-    {
-        return this->rbegin();
-    }
-
-    /** @brief コンテナの先頭位置を取得する。
-        @return コンテナの先頭位置への逆反復子。
-     */
-    public: typename self::const_reverse_iterator crend() const PSYQ_NOEXCEPT
-    {
-        return this->rend();
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name コンテナの容量
-    //@{
-    /** @brief 空のコンテナか判定する。
-        @retval true  空のコンテナ。
-        @retval false 空のコンテナではない。
-     */
-    public: bool empty() const PSYQ_NOEXCEPT
-    {
-        return this->size() <= 0;
-    }
-
-    /** @brief コンテナの要素数を取得する。
-        @return コンテナの要素数。
-     */
-    public: typename self::size_type size() const PSYQ_NOEXCEPT
-    {
-        return this->size_;
-    }
-
-    /** @brief コンテナの最大要素数を取得する。
-        @return コンテナの最大要素数。
-     */
-    public: PSYQ_CONSTEXPR std::size_t max_size() const PSYQ_NOEXCEPT
-    {
-        return (std::numeric_limits<std::size_t>::max)();
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name コンテナの編集
-    //@{
-    public: void reset(
-        typename self::pointer const in_data,
-        std::size_t const in_size)
-    {
-        this->data_ = in_data;
-        this->size_ = in_size;
-    }
-
-    public: void push_back(typename self::const_reference in_element)
-    {
-        this->data_[this->size_] = in_element;
-        ++this->size_;
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    private: typename self::pointer data_;   ///< コンテナの先頭位置。
-    private: typename self::size_type size_; ///< コンテナの要素数。
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// MessagePackオブジェクトの連想配列。
-struct psyq::message_pack::object_map:
-    public psyq::message_pack::object_container<
-        std::pair<psyq::message_pack::object, psyq::message_pack::object>>
-{
-    /// thisが指す値の型。
-    private: typedef object_map self;
-
-    /// thisの上位型。
-    public: typedef psyq::message_pack::object_container<
-        std::pair<psyq::message_pack::object, psyq::message_pack::object>>
-            super;
-
-    /// 連想配列のキー。
-    public: typedef psyq::message_pack::object key_type;
-    /// 連想配列のマップ値。
-    public: typedef psyq::message_pack::object mapped_type;
-
-    //-------------------------------------------------------------------------
-    public: void push_back(super::value_type const& in_value)
-    {
-        this->super::push_back(in_value);
-    }
-
-    public: super::const_iterator find(
-        self::key_type const& in_key)
-    const
-    {
-        /// @todo 未実装。
-        return this->cend();
-    }
-
-    private: super::const_reference at(super::size_type const) const;
-    private: super::const_reference operator[](super::size_type const) const;
-};
+#ifndef PSYQ_MESSAGE_PACK_OBJECT_FLOATING_POINT_EPSILON
+#define PSYQ_MESSAGE_PACK_OBJECT_FLOATING_POINT_EPSILON\
+    std::numeric_limits<self::floating_point>::epsilon() * 4
+#endif // !defined(PSYQ_MESSAGE_PACK_OBJECT_FLOATING_POINT_EPSILON)
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// MessagePackオブジェクト。
 struct psyq::message_pack::object
 {
-    private: typedef object self;
+    private: typedef object self; ///< thisが指す値の型。
 
+    //-------------------------------------------------------------------------
     /** @brief MessagePackオブジェクトに格納されてる値の種別。
         @sa self::get_kind()
      */
-    public: enum kind
+    public: enum kind: std::uint8_t
     {
-        kind_NIL,              ///< 空
-        kind_BOOLEAN,          ///< 真偽値
-        kind_POSITIVE_INTEGER, ///< 正の整数
-        kind_NEGATIVE_INTEGER, ///< 負の整数
-        kind_FLOATING_POINT,   ///< 浮動小数点実数
-        kind_RAW,              ///< RAWバイト列
-        kind_ARRAY,            ///< MessagePackオブジェクトの配列
-        kind_MAP,              ///< MessagePackオブジェクトの連想配列
+        kind_NIL,              ///< 空。
+        kind_BOOLEAN,          ///< 真偽値。
+        kind_POSITIVE_INTEGER, ///< 0以上の整数。
+        kind_NEGATIVE_INTEGER, ///< 0未満の整数。
+        kind_FLOATING_POINT,   ///< 浮動小数点実数。
+        kind_RAW,              ///< RAWバイト列。
+        kind_ARRAY,            ///< MessagePackオブジェクトの配列。
+        kind_MAP,              ///< MessagePackオブジェクトの連想配列。
     };
 
-    /// @copydoc self::kind_RAW
-    public: typedef psyq::message_pack::object_container<char const> raw;
-    /// @copydoc self::kind_ARRAY
-    public: typedef psyq::message_pack::object_container<self> array;
-    /// @copydoc self::kind_MAP
-    public: typedef psyq::message_pack::object_map map;
+    //-------------------------------------------------------------------------
+    /// 任意型を比較する関数オブジェクト。
+    private: template<typename template_value_type>
+    struct compare_value
+    {
+        typedef template_value_type value_type;
+
+        static int compare(
+            value_type const in_left,
+            value_type const in_right)
+        PSYQ_NOEXCEPT
+        {
+            return in_left < in_right? -1: (in_right < in_left? 1: 0);
+        }
+
+        static bool equal(
+            value_type const in_left,
+            value_type const in_right)
+        PSYQ_NOEXCEPT
+        {
+            return in_left == in_right;
+        }
+    };
+
+    /// MessagePackオブジェクトを比較する関数オブジェクト。
+    private: struct compare_object
+    {
+        typedef object value_type;
+
+        static int compare(
+            value_type const& in_left,
+            value_type const& in_right)
+        PSYQ_NOEXCEPT
+        {
+            return in_left.compare(in_right);
+        }
+
+        static bool equal(
+            value_type const& in_left,
+            value_type const& in_right)
+        PSYQ_NOEXCEPT
+        {
+            return in_left == in_right;
+        }
+    };
+
+    /// 連想配列のキーを比較する関数オブジェクト。
+    private: struct compare_map_key
+    {
+        typedef std::pair<object, object> value_type;
+
+        static int compare(
+            value_type const& in_left,
+            value_type const& in_right)
+        PSYQ_NOEXCEPT
+        {
+            return in_left.first.compare(in_right.first);
+        }
+
+        static bool equal(
+            value_type const& in_left,
+            value_type const& in_right)
+        PSYQ_NOEXCEPT
+        {
+            return in_left.first == in_right.first;
+        }
+    };
 
     //-------------------------------------------------------------------------
+    /// @name オブジェクトに格納できる型
+    //@{
+    /// @copydoc self::kind_FLOATING_POINT
+    public: typedef double floating_point;
+    /// @copydoc self::kind_RAW
+    public: typedef psyq::internal
+        ::message_pack_object_container<self::compare_value<char const>>
+            raw;
+    /// @copydoc self::kind_ARRAY
+    public: typedef psyq::internal
+        ::message_pack_object_container<self::compare_object>
+            array;
+    /// @copydoc self::kind_MAP
+    public: typedef psyq::internal
+        ::message_pack_object_map<self::compare_map_key>
+            map;
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name オブジェクトの構築と破棄
+    //@{
     /// 空のオブジェクトを構築する。
-    public: object(): kind_(self::kind_NIL) {}
+    public: PSYQ_CONSTEXPR object(): kind_(self::kind_NIL) {}
 
-    /// オブジェクトを空にする。
-    public: void set_nil() PSYQ_NOEXCEPT
+    /** @brief オブジェクトに真偽値を格納する。
+        @param[in] in_boolean オブジェクトに格納する真偽値。
+     */
+    public: PSYQ_CONSTEXPR object(bool const in_boolean)
+    PSYQ_NOEXCEPT:
+        boolean_(in_boolean),
+        kind_(self::kind_BOOLEAN)
+    {}
+
+    /** @brief オブジェクトに無符号整数を格納する。
+        @param[in] in_integer オブジェクトに格納する無符号整数。
+     */
+    public: PSYQ_CONSTEXPR object(std::uint64_t const in_integer)
+    PSYQ_NOEXCEPT:
+        positive_integer_(in_integer),
+        kind_(self::kind_POSITIVE_INTEGER)
+    {}
+    /// @copydoc object(std::uint64_t const)
+    public: PSYQ_CONSTEXPR object(unsigned long const in_integer)
+    PSYQ_NOEXCEPT:
+        positive_integer_(in_integer),
+        kind_(self::kind_POSITIVE_INTEGER)
+    {}
+    /// @copydoc object(std::uint64_t const)
+    public: PSYQ_CONSTEXPR object(unsigned int const in_integer)
+    PSYQ_NOEXCEPT:
+        positive_integer_(in_integer),
+        kind_(self::kind_POSITIVE_INTEGER)
+    {}
+    /// @copydoc object(std::uint64_t const)
+    public: PSYQ_CONSTEXPR object(unsigned short const in_integer)
+    PSYQ_NOEXCEPT:
+        positive_integer_(in_integer),
+        kind_(self::kind_POSITIVE_INTEGER)
+    {}
+    /// @copydoc object(std::uint64_t const)
+    public: PSYQ_CONSTEXPR object(unsigned char const in_integer)
+    PSYQ_NOEXCEPT:
+        positive_integer_(in_integer),
+        kind_(self::kind_POSITIVE_INTEGER)
+    {}
+
+    /** @brief オブジェクトに整数を格納する。
+        @param[in] in_integer オブジェクトに格納する整数。
+     */
+    public: PSYQ_CONSTEXPR object(std::int64_t const in_integer)
+    PSYQ_NOEXCEPT:
+        negative_integer_(in_integer),
+        kind_(
+            in_integer < 0?
+                self::kind_NEGATIVE_INTEGER: self::kind_POSITIVE_INTEGER)
+    {}
+    /// @copydoc object(std::int64_t const)
+    public: PSYQ_CONSTEXPR object(long const in_integer)
+    PSYQ_NOEXCEPT:
+        negative_integer_(in_integer),
+        kind_(
+            in_integer < 0?
+                self::kind_NEGATIVE_INTEGER: self::kind_POSITIVE_INTEGER)
+    {}
+    /// @copydoc object(std::int64_t const)
+    public: PSYQ_CONSTEXPR object(int const in_integer)
+    PSYQ_NOEXCEPT:
+        negative_integer_(in_integer),
+        kind_(
+            in_integer < 0?
+                self::kind_NEGATIVE_INTEGER: self::kind_POSITIVE_INTEGER)
+    {}
+    /// @copydoc object(std::int64_t const)
+    public: PSYQ_CONSTEXPR object(short const in_integer)
+    PSYQ_NOEXCEPT:
+        negative_integer_(in_integer),
+        kind_(
+            in_integer < 0?
+                self::kind_NEGATIVE_INTEGER: self::kind_POSITIVE_INTEGER)
+    {}
+    /// @copydoc object(std::int64_t const)
+    public: PSYQ_CONSTEXPR object(char const in_integer)
+    PSYQ_NOEXCEPT:
+        negative_integer_(in_integer),
+        kind_(
+            in_integer < 0?
+                self::kind_NEGATIVE_INTEGER: self::kind_POSITIVE_INTEGER)
+    {}
+
+    /** @brief オブジェクトに浮動小数点実数を格納する。
+        @param[in] in_floating_point オブジェクトに格納する浮動小数点実数。
+     */
+    public: PSYQ_CONSTEXPR object(
+        self::floating_point const in_floating_point)
+    PSYQ_NOEXCEPT:
+        floating_point_(in_floating_point),
+        kind_(self::kind_FLOATING_POINT)
+    {}
+
+    /** @brief オブジェクトにRAWバイト列を格納する。
+        @param[in] in_raw オブジェクトに格納するRAWバイト列。
+     */
+    public: PSYQ_CONSTEXPR object(self::raw const& in_raw)
+    PSYQ_NOEXCEPT:
+        raw_(in_raw),
+        kind_(self::kind_RAW)
+    {}
+
+    /** @brief オブジェクトに配列を格納する。
+        @param[in] in_array オブジェクトに格納する配列。
+     */
+    public: PSYQ_CONSTEXPR object(self::array const& in_array)
+    PSYQ_NOEXCEPT:
+        array_(in_array),
+        kind_(self::kind_ARRAY)
+    {}
+
+    /** @brief オブジェクトに連想配列を格納する。
+        @param[in] in_map オブジェクトに格納する連想配列。
+     */
+    public: PSYQ_CONSTEXPR object(self::map const& in_map)
+    PSYQ_NOEXCEPT:
+        map_(in_map),
+        kind_(self::kind_MAP)
+    {}
+
+    /** @brief オブジェクトに真偽値を格納する。
+        @param[in] in_boolean オブジェクトに格納する真偽値。
+        @return *this
+     */
+    public: self& operator=(bool const in_boolean) PSYQ_NOEXCEPT
     {
-        this->kind_ = psyq::message_pack::object::kind_NIL;
+        this->boolean_ = in_boolean;
+        this->kind_ = self::kind_BOOLEAN;
+        return *this;
     }
 
+    /** @brief オブジェクトに無符号整数を格納する。
+        @param[in] in_integer オブジェクトに格納する無符号整数。
+        @return *this
+     */
+    public: self& operator=(std::uint64_t const in_integer) PSYQ_NOEXCEPT
+    {
+        this->positive_integer_ = in_integer;
+        this->kind_ = self::kind_POSITIVE_INTEGER;
+        return *this;
+    }
+    /// @copydoc operator=(std::uint64_t const)
+    public: self& operator=(unsigned long const in_integer) PSYQ_NOEXCEPT
+    {
+        return *this = static_cast<std::uint64_t>(in_integer);
+    }
+    /// @copydoc operator=(std::uint64_t const)
+    public: self& operator=(unsigned int const in_integer) PSYQ_NOEXCEPT
+    {
+        return *this = static_cast<std::uint64_t>(in_integer);
+    }
+    /// @copydoc operator=(std::uint64_t const)
+    public: self& operator=(unsigned short const in_integer) PSYQ_NOEXCEPT
+    {
+        return *this = static_cast<std::uint64_t>(in_integer);
+    }
+    /// @copydoc operator=(std::uint64_t const)
+    public: self& operator=(unsigned char const in_integer) PSYQ_NOEXCEPT
+    {
+        return *this = static_cast<std::uint64_t>(in_integer);
+    }
+
+    /** @brief オブジェクトに整数を格納する。
+        @param[in] in_integer オブジェクトに格納する整数。
+        @return *this
+     */
+    public: self& operator=(std::int64_t const in_integer) PSYQ_NOEXCEPT
+    {
+        this->negative_integer_ = in_integer;
+        this->kind_ = in_integer < 0?
+            self::kind_NEGATIVE_INTEGER: self::kind_POSITIVE_INTEGER;
+        return *this;
+    }
+    /// @copydoc operator=(std::int64_t const)
+    public: self& operator=(long const in_integer) PSYQ_NOEXCEPT
+    {
+        return *this = static_cast<std::int64_t>(in_integer);
+    }
+    /// @copydoc operator=(std::int64_t const)
+    public: self& operator=(int const in_integer) PSYQ_NOEXCEPT
+    {
+        return *this = static_cast<std::int64_t>(in_integer);
+    }
+    /// @copydoc operator=(std::int64_t const)
+    public: self& operator=(short const in_integer) PSYQ_NOEXCEPT
+    {
+        return *this = static_cast<std::int64_t>(in_integer);
+    }
+    /// @copydoc operator=(std::int64_t const)
+    public: self& operator=(char const in_integer) PSYQ_NOEXCEPT
+    {
+        return *this = static_cast<std::int64_t>(in_integer);
+    }
+
+    /** @brief オブジェクトに浮動小数点実数を格納する。
+        @param[in] in_floating_point オブジェクトに格納する浮動小数点実数。
+        @return *this
+     */
+    public: self& operator=(self::floating_point const in_floating_point)
+    PSYQ_NOEXCEPT
+    {
+        this->floating_point_ = in_floating_point;
+        this->kind_ = self::kind_FLOATING_POINT;
+        return *this;
+    }
+
+    /** @brief オブジェクトにRAWバイト列を格納する。
+        @param[in] in_raw オブジェクトに格納するRAWバイト列。
+        @return *this
+     */
+    public: self& operator=(self::raw const& in_raw) PSYQ_NOEXCEPT
+    {
+        this->raw_ = in_raw;
+        this->kind_ = self::kind_RAW;
+        return *this;
+    }
+
+    /** @brief オブジェクトに配列を格納する。
+        @param[in] in_array オブジェクトに格納する配列。
+        @return *this
+     */
+    public: self& operator=(self::array const& in_array) PSYQ_NOEXCEPT
+    {
+        this->array_ = in_array;
+        this->kind_ = self::kind_ARRAY;
+        return *this;
+    }
+
+    /** @brief オブジェクトに連想配列を格納する。
+        @param[in] in_map オブジェクトに格納する連想配列。
+        @return *this
+     */
+    public: self& operator=(self::map const& in_map) PSYQ_NOEXCEPT
+    {
+        this->map_ = in_map;
+        this->kind_ = self::kind_MAP;
+        return *this;
+    }
+
+    /// @brief オブジェクトを空にする。
+    public: void reset() PSYQ_NOEXCEPT
+    {
+        this->kind_ = self::kind_NIL;
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name オブジェクトに格納されてる値の操作
+    //@{
     /** @brief オブジェクトに格納されてる値の種別を取得する。
         @return @copydoc self::kind
      */
-    public: self::kind get_kind() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR self::kind get_kind() const PSYQ_NOEXCEPT
     {
         return this->kind_;
     }
 
-    //-------------------------------------------------------------------------
-    /// @name 真偽値の操作
-    //@{
     /** @brief オブジェクトに格納されてる真偽値を取得する。
         @retval !=nullptr オブジェクトに格納されてる真偽値へのポインタ。
-        @retval ==nullptr オブジェクトは真偽値を持ってない。
+        @retval ==nullptr オブジェクトに格納されてるのは真偽値ではない。
      */
-    public: bool const* get_boolean() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR bool const* get_boolean() const PSYQ_NOEXCEPT
     {
         return this->get_kind() == self::kind_BOOLEAN?
             &this->boolean_: nullptr;
     }
 
-    /** @brief オブジェクトに真偽値を格納する。
-        @param[in] in_boolean オブジェクトに格納する真偽値。
-        @return オブジェクトに格納した真偽値。
-     */
-    public: bool set_boolean(bool const in_boolean) PSYQ_NOEXCEPT
-    {
-        this->boolean_ = in_boolean;
-        this->kind_ = self::kind_BOOLEAN;
-        return in_boolean;
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name 整数の操作
-    //@{
     /** @brief オブジェクトに格納されてる正の整数を取得する。
         @retval !=nullptr オブジェクトに格納されてる正の整数へのポインタ。
-        @retval ==nullptr オブジェクトは正の整数を持ってない。
+        @retval ==nullptr オブジェクトに格納されてるのは正の整数ではない。
      */
-    public: std::uint64_t const* get_positive_integer() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR std::uint64_t const* get_positive_integer()
+    const PSYQ_NOEXCEPT
     {
         return this->get_kind() == self::kind_POSITIVE_INTEGER?
             &this->positive_integer_: nullptr;
@@ -358,69 +407,70 @@ struct psyq::message_pack::object
 
     /** @brief オブジェクトに格納されてる負の整数を取得する。
         @retval !=nullptr オブジェクトに格納されてる負の整数へのポインタ。
-        @retval ==nullptr オブジェクトは負の整数を持ってない。
+        @retval ==nullptr オブジェクトに格納されてるのは負の整数ではない。
      */
-    public: std::int64_t const* get_negative_integer() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR std::int64_t const* get_negative_integer()
+    const PSYQ_NOEXCEPT
     {
         return this->get_kind() == self::kind_NEGATIVE_INTEGER?
             &this->negative_integer_: nullptr;
     }
 
-    /** @brief オブジェクトに整数を格納する。
-        @param[in] in_integer オブジェクトに格納する整数。
-        @return オブジェクトに格納した整数。
+    /** @brief オブジェクトに格納されてる整数を取得する。
+        @param[out] out_integer 取得した整数が格納される。
+        @retval true  取得に成功した。
+        @retval false 取得に失敗した。
      */
     public: template<typename template_integer_type>
-    template_integer_type set_integer(
-        template_integer_type const in_integer)
-    PSYQ_NOEXCEPT
+    bool get_integer(template_integer_type& out_integer)
     {
-        if (in_integer < 0)
+        static_assert(
+            std::is_integral<template_integer_type>::value,
+            "template_integer_type is not integer type.");
+        switch (this->get_kind())
         {
-            this->kind_ = psyq::message_pack::object::kind_NEGATIVE_INTEGER;
-            this->negative_integer_ = in_integer;
+        case self::kind_POSITIVE_INTEGER:
+            if ((std::numeric_limits<template_integer_type>::max)()
+                < this->positive_integer_)
+            {
+                return false; // 範囲外なので失敗。
+            }
+            break;
+        case self::kind_NEGATIVE_INTEGER:
+            if (this->negative_integer_
+                < (std::numeric_limits<template_integer_type>::min)())
+            {
+                return false; // 範囲外なので失敗。
+            }
+            break;
+        default:
+            return false; // 整数以外が格納されていたので失敗。
         }
-        else
-        {
-            this->kind_ = psyq::message_pack::object::kind_POSITIVE_INTEGER;
-            this->positive_integer_ = in_integer;
-        }
-        return in_integer;
+        out_integer
+            = static_cast<template_integer_type>(this->positive_integer_);
+        return true;
     }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name 浮動小数点実数の操作
-    //@{
+
     /** @brief オブジェクトに格納されてる浮動小数点実数を取得する。
         @retval !=nullptr オブジェクトに格納されてる浮動小数点実数へのポインタ。
-        @retval ==nullptr オブジェクトは浮動小数点実数を持ってない。
+        @retval ==nullptr オブジェクトに格納されてるのは浮動小数点実数ではない。
      */
-    public: double const* get_floating_point() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR self::floating_point const* get_floating_point()
+    const PSYQ_NOEXCEPT
     {
         return this->get_kind() == self::kind_FLOATING_POINT?
             &this->floating_point_: nullptr;
     }
-
-    /** @brief オブジェクトに浮動小数点実数を格納する。
-        @param[in] in_floating_point オブジェクトに格納する浮動小数点実数。
-        @return オブジェクトに格納した浮動小数点実数。
-     */
-    public: double set_floating_point(double const in_floating_point)
-    PSYQ_NOEXCEPT
-    {
-        this->kind_ = psyq::message_pack::object::kind_FLOATING_POINT;
-        this->floating_point_ = in_floating_point;
-        return in_floating_point;
-    }
     //@}
     //-------------------------------------------------------------------------
-    /// @name RAWバイト列の操作
+    /// @name オブジェクトに格納されてるRAWバイト列の操作
     //@{
     /** @brief オブジェクトに格納されてるRAWバイト列を取得する。
         @retval !=nullptr オブジェクトに格納されてるRAWバイト列へのポインタ。
-        @retval ==nullptr オブジェクトはRAWバイト列を持ってない。
+        @retval ==nullptr オブジェクトに格納されてるのはRAWバイト列ではない。
+        @sa self::set_raw()
      */
-    public: self::raw const* get_raw() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR self::raw const* get_raw() const PSYQ_NOEXCEPT
     {
         return this->get_kind() == self::kind_RAW? &this->raw_: nullptr;
     }
@@ -441,19 +491,19 @@ struct psyq::message_pack::object
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name 配列の操作
+    /// @name オブジェクトに格納されてる配列の操作
     //@{
     /** @brief オブジェクトに格納されてる配列を取得する。
         @retval !=nullptr オブジェクトに格納されてる配列へのポインタ。
-        @retval ==nullptr オブジェクトは配列を持ってない。
+        @retval ==nullptr オブジェクトに格納されてるのは配列ではない。
+        @sa self::get_map()
      */
-    public: self::array* get_array() PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR self::array* get_array() PSYQ_NOEXCEPT
     {
         return this->get_kind() == self::kind_ARRAY? &this->array_: nullptr;
     }
-
     /// @copydoc get_array()
-    public: self::array const* get_array() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR self::array const* get_array() const PSYQ_NOEXCEPT
     {
         return const_cast<self*>(this)->get_array();
     }
@@ -474,19 +524,19 @@ struct psyq::message_pack::object
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name 連想配列の操作
+    /// @name オブジェクトに格納されてる連想配列の操作
     //@{
     /** @brief オブジェクトに格納されてる連想配列を取得する。
         @retval !=nullptr オブジェクトに格納されてる連想配列へのポインタ。
-        @retval ==nullptr オブジェクトは連想配列を持ってない。
+        @retval ==nullptr オブジェクトに格納されてるのは連想配列ではない。
+        @sa self::set_map()
      */
-    public: self::map* get_map() PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR self::map* get_map() PSYQ_NOEXCEPT
     {
         return this->get_kind() == self::kind_MAP? &this->map_: nullptr;
     }
-
     /// @copydoc get_map()
-    public: self::map const* get_map() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR self::map const* get_map() const PSYQ_NOEXCEPT
     {
         return const_cast<self*>(this)->get_map();
     }
@@ -507,22 +557,498 @@ struct psyq::message_pack::object
     }
     //@}
     //-------------------------------------------------------------------------
+    /// @name オブジェクトの比較
+    //@{
+    /** @brief thisを左辺として、右辺のオブジェクトと等値か判定する。
+        @param[in] in_right 右辺のオブジェクト。
+        @retval true  等値だった。
+        @retval false 非等値だった 。
+     */
+    public: bool operator==(self const& in_right) const PSYQ_NOEXCEPT
+    {
+        if (this->get_kind() != in_right.get_kind())
+        {
+            return false;
+        }
+        switch (this->get_kind())
+        {
+        case self::kind_NIL:
+            return true;
+        case self::kind_BOOLEAN:
+            return this->boolean_ == in_right.boolean_;
+        case self::kind_POSITIVE_INTEGER:
+            return this->positive_integer_ == in_right.positive_integer_;
+        case self::kind_NEGATIVE_INTEGER:
+            return this->negative_integer_ == in_right.negative_integer_;
+        case self::kind_FLOATING_POINT:
+            return 0 == self::compare_floating_point(
+                this->floating_point_, in_right.floating_point_);
+        case self::kind_RAW:
+            return this->raw_ == in_right.raw_;
+        case self::kind_ARRAY:
+            return this->array_ == in_right.array_;
+        case self::kind_MAP:
+            return this->map_ == in_right.map_;
+        default:
+            PSYQ_ASSERT(false);
+            return false;
+        }
+    }
+
+    /** @brief thisを左辺として、右辺のオブジェクトと非等値か判定する。
+        @param[in] in_right 右辺のオブジェクト。
+        @retval true  非等値だった 。
+        @retval false 等値だった。
+     */
+    public: bool operator!=(self const& in_right) const PSYQ_NOEXCEPT
+    {
+        return !(*this == in_right);
+    }
+
+    /** @brief thisを左辺として、右辺のオブジェクトと比較する。
+        @param[in] in_right 右辺のオブジェクト。
+        @return 左辺 < 右辺
+     */
+    public: bool operator<(self const& in_right) const PSYQ_NOEXCEPT
+    {
+        return this->compare(in_right) < 0;
+    }
+
+    /** @brief thisを左辺として、右辺のオブジェクトと比較する。
+        @param[in] in_right 右辺のオブジェクト。
+        @return 左辺 <= 右辺
+     */
+    public: bool operator<=(self const& in_right) const PSYQ_NOEXCEPT
+    {
+        return this->compare(in_right) <= 0;
+    }
+
+    /** @brief thisを左辺として、右辺のオブジェクトと比較する。
+        @param[in] in_right 右辺のオブジェクト。
+        @return 左辺 > 右辺
+     */
+    public: bool operator>(self const& in_right) const PSYQ_NOEXCEPT
+    {
+        return 0 < this->compare(in_right);
+    }
+
+    /** @brief thisを左辺として、右辺のオブジェクトと比較する。
+        @param[in] in_right 右辺のオブジェクト。
+        @return 左辺 >= 右辺
+     */
+    public: bool operator>=(self const& in_right) const PSYQ_NOEXCEPT
+    {
+        return 0 <= this->compare(in_right);
+    }
+
+    /** @brief thisを左辺として、右辺のオブジェクトと比較する。
+        @param[in] in_right 右辺となるオブジェクト。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
+    public: int compare(self const& in_right) const PSYQ_NOEXCEPT
+    {
+        switch (in_right.get_kind())
+        {
+        case self::kind_NIL:
+            return this->get_kind() != self::kind_NIL? 1: 0;
+        case self::kind_BOOLEAN:
+            return this->compare(in_right.boolean_);
+        case self::kind_POSITIVE_INTEGER:
+            return this->compare(in_right.positive_integer_);
+        case self::kind_NEGATIVE_INTEGER:
+            return this->compare(in_right.negative_integer_);
+        case self::kind_FLOATING_POINT:
+            return this->compare(in_right.floating_point_);
+        case self::kind_RAW:
+            return this->compare(in_right.raw_);
+        case self::kind_ARRAY:
+            return this->compare(in_right.array_);
+        case self::kind_MAP:
+            return this->compare(in_right.map_);
+        default:
+            PSYQ_ASSERT(false);
+            return this->get_kind() <= self::kind_MAP? -1: 0;
+        }
+    }
+
+    /** @brief thisを左辺として、右辺の連想配列と比較する。
+        @param[in] in_right 右辺となる連想配列。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
+    public: int compare(self::map const& in_right) const PSYQ_NOEXCEPT
+    {
+        switch (this->get_kind())
+        {
+        case self::kind_NIL:
+            return 1;
+        case self::kind_BOOLEAN:
+            return -1;//-self::compare_map(in_right, this->boolean_);
+        case self::kind_POSITIVE_INTEGER:
+            return -1;//-self::compare_map(in_right, this->positive_integer_);
+        case self::kind_NEGATIVE_INTEGER:
+            return -1;//-self::compare_map(in_right, this->negative_integer_);
+        case self::kind_FLOATING_POINT:
+            return -1;//-self::compare_map(in_right, this->floating_point_);
+        case self::kind_RAW:
+            return -1;//-self::compare_map(in_right, this->raw_);
+        case self::kind_ARRAY:
+            return -1;//-self::compare_map(in_right, this->array_);
+        case self::kind_MAP:
+            return this->map_.compare(in_right);
+        default:
+            PSYQ_ASSERT(false);
+            return 1;
+        }
+    }
+
+    /** @brief thisを左辺として、右辺の配列と比較する。
+        @param[in] in_right 右辺となる配列。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
+    public: int compare(self::array const& in_right) const PSYQ_NOEXCEPT
+    {
+        switch (this->get_kind())
+        {
+        case self::kind_NIL:
+            return 1;
+        case self::kind_BOOLEAN:
+            return -1;//-self::compare_array(in_right, this->boolean_);
+        case self::kind_POSITIVE_INTEGER:
+            return -1;//-self::compare_array(in_right, this->positive_integer_);
+        case self::kind_NEGATIVE_INTEGER:
+            return -1;//-self::compare_array(in_right, this->negative_integer_);
+        case self::kind_FLOATING_POINT:
+            return -1;//-self::compare_array(in_right, this->floating_point_);
+        case self::kind_RAW:
+            return -1;//-self::compare_array(in_right, this->raw_);
+        case self::kind_ARRAY:
+            return this->array_.compare(in_right);
+        case self::kind_MAP:
+            return 1;//self::compare_map(this->map_, in_right);
+        default:
+            PSYQ_ASSERT(false);
+            return 1;
+        }
+    }
+
+    /** @brief thisを左辺として、右辺のRAWバイト列と比較する。
+        @param[in] in_right 右辺となるRAWバイト列。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
+    public: int compare(self::raw const& in_right) const PSYQ_NOEXCEPT
+    {
+        switch (this->get_kind())
+        {
+        case self::kind_NIL:
+            return 1;
+        case self::kind_BOOLEAN:
+            return -1;//-self::compare_raw(in_right, this->boolean_);
+        case self::kind_POSITIVE_INTEGER:
+            return -1;//-self::compare_raw(in_right, this->positive_integer_);
+        case self::kind_NEGATIVE_INTEGER:
+            return -1;//-self::compare_raw(in_right, this->negative_integer_);
+        case self::kind_FLOATING_POINT:
+            return -1;//-self::compare_raw(in_right, this->floating_point_);
+        case self::kind_RAW:
+            return this->raw_.compare(in_right);
+        case self::kind_ARRAY:
+            return 1;//self::compare_array(this->array_, in_right);
+        case self::kind_MAP:
+            return 1;//self::compare_map(this->map_, in_right);
+        default:
+            PSYQ_ASSERT(false);
+            return 1;
+        }
+    }
+
+    /** @brief thisを左辺として、右辺の浮動小数点実数と比較する。
+        @param[in] in_right 右辺となる浮動小数点実数。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
+    public: int compare(self::floating_point const in_right)
+    const PSYQ_NOEXCEPT
+    {
+        switch (this->get_kind())
+        {
+        case self::kind_NIL:
+            return 1;
+        case self::kind_BOOLEAN:
+            return -self::compare_floating_point(in_right, this->boolean_);
+        case self::kind_POSITIVE_INTEGER:
+            return -self::compare_floating_point(
+                in_right, this->positive_integer_);
+        case self::kind_NEGATIVE_INTEGER:
+            return -self::compare_floating_point(
+                in_right, this->negative_integer_);
+        case self::kind_FLOATING_POINT:
+            return self::compare_floating_point(
+                this->floating_point_, in_right);
+        case self::kind_RAW:
+            return 1;//self::compare_raw(this->raw_, in_right);
+        case self::kind_ARRAY:
+            return 1;//self::compare_array(this->array_, in_right);
+        case self::kind_MAP:
+            return 1;//self::compare_map(this->map_, in_right);
+        default:
+            PSYQ_ASSERT(false);
+            return 1;
+        }
+    }
+
+    /** @brief thisを左辺として、右辺の有符号整数と比較する。
+        @param[in] in_right 右辺となる有符号整数。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
+    public: int compare(std::int64_t const in_right) const PSYQ_NOEXCEPT
+    {
+        switch (this->get_kind())
+        {
+        case self::kind_NIL:
+            return 1;
+        case self::kind_BOOLEAN:
+            return -self::compare_signed_integer(in_right, this->boolean_);
+        case self::kind_POSITIVE_INTEGER:
+            return -self::compare_signed_integer(
+                in_right, this->positive_integer_);
+        case self::kind_NEGATIVE_INTEGER:
+            return self::compare_signed_integer(
+                this->negative_integer_, in_right);
+        case self::kind_FLOATING_POINT:
+            return -self::compare_signed_integer(
+                in_right, this->floating_point_);
+        case self::kind_RAW:
+            return 1;//self::compare_raw(this->raw_, in_right);
+        case self::kind_ARRAY:
+            return 1;//self::compare_array(this->array_, in_right);
+        case self::kind_MAP:
+            return 1;//self::compare_map(this->map_, in_right);
+        default:
+            PSYQ_ASSERT(false);
+            return 1;
+        }
+    }
+
+    /** @brief thisを左辺として、右辺の無符号整数と比較する。
+        @param[in] in_right 右辺となる無符号整数。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
+    public: int compare(std::uint64_t const in_right) const PSYQ_NOEXCEPT
+    {
+        switch (this->get_kind())
+        {
+        case self::kind_NIL:
+            return 1;
+        case self::kind_BOOLEAN:
+            return -self::compare_unsigned_integer(in_right, this->boolean_);
+        case self::kind_POSITIVE_INTEGER:
+            return self::compare_unsigned_integer(
+                this->positive_integer_, in_right);
+        case self::kind_NEGATIVE_INTEGER:
+            return -1;//-self::compare_unsigned_integer(in_right, this->negative_integer_);
+        case self::kind_FLOATING_POINT:
+            return self::compare_floating_point(
+                this->floating_point_, in_right);
+        case self::kind_RAW:
+            return 1;//self::compare_raw(this->raw_, in_right);
+        case self::kind_ARRAY:
+            return 1;//self::compare_array(this->array_, in_right);
+        case self::kind_MAP:
+            return 1;//self::compare_map(this->map_, in_right);
+        default:
+            PSYQ_ASSERT(false);
+            return 1;
+        }
+    }
+
+    /** @brief thisを左辺として、右辺の真偽値と比較する。
+        @param[in] in_right 右辺となる真偽値。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
+    public: int compare(bool const in_right) const PSYQ_NOEXCEPT
+    {
+        switch (this->get_kind())
+        {
+        case self::kind_NIL:
+            return 1;
+        case self::kind_BOOLEAN:
+            return self::compare_boolean(this->boolean_, in_right);
+        case self::kind_POSITIVE_INTEGER:
+            return self::compare_unsigned_integer(
+                this->positive_integer_, in_right);
+        case self::kind_NEGATIVE_INTEGER:
+            return -1;//-self::compare_negative_integer(this->negative_integer_, in_right);
+        case self::kind_FLOATING_POINT:
+            return self::compare_floating_point(
+                this->floating_point_, in_right);
+        case self::kind_RAW:
+            return 1;//self::compare_raw(this->raw_, in_right);
+        case self::kind_ARRAY:
+            return 1;//self::compare_array(this->array_, in_right);
+        case self::kind_MAP:
+            return 1;//self::compare_map(this->map_, in_right);
+        default:
+            PSYQ_ASSERT(false);
+            return 1;
+        }
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 浮動小数点実数との比較
+    //@{
+    private: static int compare_floating_point(
+        self::floating_point const in_left,
+        self::floating_point const in_right)
+    PSYQ_NOEXCEPT
+    {
+        auto const local_epsilon(
+            PSYQ_MESSAGE_PACK_OBJECT_FLOATING_POINT_EPSILON);
+        auto const local_diff(in_left - in_right);
+        return local_diff < -local_epsilon?
+            -1: (local_epsilon < local_diff? 1: 0);
+    }
+
+    private: static int compare_floating_point(
+        self::floating_point const in_left,
+        std::uint64_t const in_right)
+    PSYQ_NOEXCEPT
+    {
+        return in_left < 0?
+            -1:
+            self::compare_floating_point(
+                in_left, static_cast<self::floating_point>(in_right));
+    }
+
+    private: static int compare_floating_point(
+        self::floating_point const in_left,
+        std::int64_t const in_right)
+    PSYQ_NOEXCEPT
+    {
+        PSYQ_ASSERT(in_right < 0);
+        return in_left < 0?
+            self::compare_floating_point(
+                in_left, static_cast<self::floating_point>(in_right)):
+            1;
+    }
+
+    private: static int compare_floating_point(
+        self::floating_point const in_left,
+        bool const in_right)
+    PSYQ_NOEXCEPT
+    {
+        return in_right?
+            in_left < 1? -1: (1 < in_left? 1: 0):
+            in_left < 0? -1: (0 < in_left? 1: 0);
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 有符号整数との比較
+    //@{
+    private: static int compare_signed_integer(
+        std::int64_t const in_left,
+        self::floating_point const in_right)
+    PSYQ_NOEXCEPT
+    {
+        return self::compare_floating_point(
+            static_cast<self::floating_point>(in_left), in_right);
+    }
+
+    private: static int compare_signed_integer(
+        std::int64_t const in_left,
+        std::uint64_t const in_right)
+    PSYQ_NOEXCEPT
+    {
+        return in_left < 0?
+            -1:
+            self::compare_unsigned_integer(
+                static_cast<std::uint64_t>(in_left), in_right);
+    }
+
+    private: static int compare_signed_integer(
+        std::int64_t const in_left,
+        std::int64_t const in_right)
+    PSYQ_NOEXCEPT
+    {
+        return in_left < in_right? -1: (in_right < in_left? 1: 0);
+    }
+
+    private: static int compare_signed_integer(
+        std::int64_t const in_left,
+        bool const in_right)
+    PSYQ_NOEXCEPT
+    {
+        return in_left < 0?
+            -1:
+            self::compare_unsigned_integer(
+                static_cast<std::uint64_t>(in_left), in_right);
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 無符号整数との比較
+    //@{
+    private: static int compare_unsigned_integer(
+        std::uint64_t const in_left,
+        std::uint64_t const in_right)
+    PSYQ_NOEXCEPT
+    {
+        return in_left < in_right? -1: (in_right < in_left? 1: 0);
+    }
+
+    private: static int compare_unsigned_integer(
+        std::uint64_t const in_left,
+        bool const in_right)
+    PSYQ_NOEXCEPT
+    {
+        return in_right?
+            (1 < in_left? 1: (in_left < 1? -1: 0)):
+            (0 < in_left? 1: 0);
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 真偽値の比較
+    //@{
+    private: static int compare_boolean(
+        bool const in_left,
+        bool const in_right)
+    PSYQ_NOEXCEPT
+    {
+        return in_left == in_right? 0: (in_right? 1: -1);
+    }
+    //@}
+    //-------------------------------------------------------------------------
     private: union
     {
-        bool boolean_;                   ///< 真偽値。
-        std::uint64_t positive_integer_; ///< 0以上の整数。
-        std::int64_t negative_integer_;  ///< 0未満の整数。
-        double floating_point_;          ///< 浮動小数点実数。
-        self::raw raw_;                  ///< @copydoc self::raw
-        self::array array_;              ///< @copydoc self::array
-        self::map map_;                  ///< @copydoc self::map
+        /// @copydoc self::kind_BOOLEAN
+        bool boolean_;
+        /// @copydoc self::kind_POSITIVE_INTEGER
+        std::uint64_t positive_integer_;
+        /// @copydoc self::kind_NEGATIVE_INTEGER
+        std::int64_t negative_integer_;
+        /// @copydoc self::kind_FLOATING_POINT
+        self::floating_point floating_point_;
+        /// @copydoc self::kind_RAW
+        self::raw raw_;
+        /// @copydoc self::kind_ARRAY
+        self::array array_;
+        /// @copydoc self::kind_MAP
+        self::map map_;
     };
     private: self::kind kind_; ///< @copydoc self::kind
 };
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-//void msgpack_object_print(FILE* out, msgpack_object o);
-
-//bool msgpack_object_equal(const msgpack_object x, const msgpack_object y);
 
 #endif // PSYQ_MESSAGE_PACK_OBJECT_HPP_

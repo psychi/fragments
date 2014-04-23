@@ -54,11 +54,11 @@ struct psyq::internal::message_pack_object_container
           - 戻り値がtrueなら、in_left == in_right。
           - 戻り値がtrueなら、in_left != in_right。
      */
-    public: typedef template_value_compare value_compare;
+    private: typedef template_value_compare value_compare;
 
     //-------------------------------------------------------------------------
     /// 要素の型。
-    public: typedef typename self::value_compare::value_type value_type;
+    public: typedef typename template_value_compare::value_type value_type;
 
     /// 要素数の型。
     public: typedef std::size_t size_type;
@@ -91,6 +91,14 @@ struct psyq::internal::message_pack_object_container
     /// 要素を指す逆反復子。
     public: typedef std::reverse_iterator<iterator>
         reverse_iterator;
+
+    //-------------------------------------------------------------------------
+#if 0 // Visual Studio 2012 だとコンパイルエラーになるので。
+    public: message_pack_object_container():
+       data_(nullptr),
+       size_(0)
+    {}
+#endif
 
     //-------------------------------------------------------------------------
     /// @name コンテナの要素を参照
@@ -263,7 +271,8 @@ struct psyq::internal::message_pack_object_container
             for (typename self::size_type i(0); i < this->size(); ++i)
             {
                 bool const local_equal(
-                    self::value_compare::equal(this->at(i), in_right.at(i)));
+                    template_value_compare::equal(
+                        this->at(i), in_right.at(i)));
                 if (!local_equal)
                 {
                     return false;
@@ -346,7 +355,7 @@ struct psyq::internal::message_pack_object_container
         for (typename self::size_type i(0); i < local_size; ++i)
         {
             int const local_compare_element(
-                self::value_compare::compare(this->at(i), in_right.at(i)));
+                template_value_compare::compare(this->at(i), in_right.at(i)));
             if (local_compare_element != 0)
             {
                 return local_compare_element;
@@ -428,7 +437,7 @@ struct psyq::internal::message_pack_object_map:
                 typename self::value_type const& in_left,
                 typename self::value_type const& in_right)
             {
-                return self::value_compare::compare(in_left, in_right) < 0;
+                return template_value_compare::compare(in_left, in_right) < 0;
             });
     }
 
@@ -444,7 +453,7 @@ struct psyq::internal::message_pack_object_map:
                 typename self::value_type const& in_left,
                 typename self::value_type const& in_right)
             {
-                return self::value_compare::compare(in_left, in_right) < 0;
+                return template_value_compare::compare(in_left, in_right) < 0;
             });
     }
 
@@ -462,7 +471,7 @@ struct psyq::internal::message_pack_object_map:
                 typename self::value_type const& in_left,
                 typename self::value_type const& in_right)
             {
-                return self::value_compare::compare(in_left, in_right) < 0;
+                return template_value_compare::compare(in_left, in_right) < 0;
             });
     }
 };

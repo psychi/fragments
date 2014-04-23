@@ -381,24 +381,24 @@ class deserialize_context
         case CS_ARRAY_16:
             return this->deserialize_container(
                 out_object,
-                self::load_big_endian_integer<std::int16_t>(local_data),
+                self::load_big_endian_integer<std::uint16_t>(local_data),
                 self::stack_kind_ARRAY_ITEM);
         case CS_ARRAY_32:
             return this->deserialize_container(
                 out_object,
-                self::load_big_endian_integer<std::int32_t>(local_data),
+                self::load_big_endian_integer<std::uint32_t>(local_data),
                 self::stack_kind_ARRAY_ITEM);
 
         // 連想配列
         case CS_MAP_16:
             return this->deserialize_container(
                 out_object,
-                self::load_big_endian_integer<std::int16_t>(local_data),
+                self::load_big_endian_integer<std::uint16_t>(local_data),
                 self::stack_kind_MAP_KEY);
         case CS_MAP_32:
             return this->deserialize_container(
                 out_object,
-                self::load_big_endian_integer<std::int32_t>(local_data),
+                self::load_big_endian_integer<std::uint32_t>(local_data),
                 self::stack_kind_MAP_KEY);
 
         default:
@@ -468,8 +468,11 @@ class deserialize_context
             switch (local_stack_top.kind)
             {
             case self::stack_kind_ARRAY_ITEM:
+                // 配列に要素を追加する。
                 self::deserialize_array_item(
                     local_stack_top.object, out_object);
+
+                // 残り要素数を更新する。
                 --local_stack_top.count;
                 if (0 < local_stack_top.count)
                 {
@@ -478,17 +481,13 @@ class deserialize_context
                 break;
 
             case self::stack_kind_MAP_KEY:
-                if (out_object.get_kind() != psyq::message_pack::object::kind_RAW)
-                {
-                    /// @note 連想配列のキーは必ず文字列？
-                    //PSYQ_ASSERT(false);
-                }
                 local_stack_top.map_key = out_object;
                 local_stack_top.kind = self::stack_kind_MAP_VALUE;
                 return self::deserialize_result_CONTINUE;
 
             case self::stack_kind_MAP_VALUE:
             {
+                // 連想配列に要素を追加する。
                 auto const local_map(
                     self::deserialize_map_item(
                         local_stack_top.object,
@@ -499,17 +498,17 @@ class deserialize_context
                     PSYQ_ASSERT(false);
                     return self::deserialize_result_FAILED;
                 }
+
+                // 残り要素数を更新する。
                 --local_stack_top.count;
                 if (0 < local_stack_top.count)
                 {
                     local_stack_top.kind = self::stack_kind_MAP_KEY;
                     return self::deserialize_result_CONTINUE;
                 }
-                else
-                {
-                    // 連想配列が要素が揃ったので、ソートする。
-                    local_map->sort();
-                }
+
+                // 連想配列の全要素が揃ったので、ソートする。
+                local_map->sort();
                 break;
             }
 
@@ -673,15 +672,15 @@ class deserialize_context
         {
             return static_cast<template_value_type>(
                 (static_cast<std::uint16_t>(local_bytes[0]) << 8) |
-                (static_cast<std::uint16_t>(local_bytes[1]) << 0));
+                (static_cast<std::uint8_t >(local_bytes[1]) << 0));
         }
         case 4:
         {
             return static_cast<template_value_type>(
                 (static_cast<std::uint32_t>(local_bytes[0]) << 24) |
                 (static_cast<std::uint32_t>(local_bytes[1]) << 16) |
-                (static_cast<std::uint32_t>(local_bytes[2]) <<  8) |
-                (static_cast<std::uint32_t>(local_bytes[3]) <<  0));
+                (static_cast<std::uint16_t>(local_bytes[2]) <<  8) |
+                (static_cast<std::uint8_t >(local_bytes[3]) <<  0));
         }
         case 8:
         {
@@ -690,10 +689,10 @@ class deserialize_context
                 (static_cast<std::uint64_t>(local_bytes[1]) << 48) |
                 (static_cast<std::uint64_t>(local_bytes[2]) << 40) |
                 (static_cast<std::uint64_t>(local_bytes[3]) << 32) |
-                (static_cast<std::uint64_t>(local_bytes[4]) << 24) |
-                (static_cast<std::uint64_t>(local_bytes[5]) << 16) |
-                (static_cast<std::uint64_t>(local_bytes[6]) <<  8) |
-                (static_cast<std::uint64_t>(local_bytes[7]) <<  0));
+                (static_cast<std::uint32_t>(local_bytes[4]) << 24) |
+                (static_cast<std::uint32_t>(local_bytes[5]) << 16) |
+                (static_cast<std::uint16_t>(local_bytes[6]) <<  8) |
+                (static_cast<std::uint8_t >(local_bytes[7]) <<  0));
         }
         default:
             PSYQ_ASSERT(false);

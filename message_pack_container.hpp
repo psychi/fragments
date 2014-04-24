@@ -1,17 +1,17 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::internal::message_pack_object_container
+    @brief @copybrief psyq::internal::message_pack_container
  */
-#ifndef PSYQ_MESSAGE_PACK_OBJECT_CONTAINER_HPP_
-#define PSYQ_MESSAGE_PACK_OBJECT_CONTAINER_HPP_
+#ifndef PSYQ_MESSAGE_PACK_CONTAINER_HPP_
+#define PSYQ_MESSAGE_PACK_CONTAINER_HPP_
 
 namespace psyq
 {
     namespace internal
     {
         /// @cond
-        template<typename> struct message_pack_object_container;
-        template<typename> struct message_pack_object_map;
+        template<typename> struct message_pack_container;
+        template<typename> struct message_pack_map;
         /// @endcond
 
         /** @brief コンテナ要素を比較する。
@@ -57,10 +57,10 @@ namespace psyq
     @sa psyq::message_pack::object
  */
 template<typename template_value_type>
-struct psyq::internal::message_pack_object_container
+struct psyq::internal::message_pack_container
 {
     /// thisが指す値の型。
-    private: typedef message_pack_object_container<template_value_type>
+    private: typedef message_pack_container<template_value_type>
         self;
 
     //-------------------------------------------------------------------------
@@ -101,7 +101,7 @@ struct psyq::internal::message_pack_object_container
 
     //-------------------------------------------------------------------------
 #if 0 // Visual Studio 2012 だとコンパイルエラーになるので。
-    public: message_pack_object_container():
+    public: message_pack_container():
        data_(nullptr),
        size_(0)
     {}
@@ -396,21 +396,20 @@ struct psyq::internal::message_pack_object_container
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief MessagePackオブジェクトで使う連想配列。
-    @tparam template_value_compare @copydoc super::value_compare
+    @tparam template_value_type @copydoc super::value_type
     @sa psyq::message_pack::object
  */
 template<typename template_value_type>
-struct psyq::internal::message_pack_object_map:
-    public psyq::internal::message_pack_object_container<
+struct psyq::internal::message_pack_map:
+    public psyq::internal::message_pack_container<
         template_value_type>
 {
     /// thisが指す値の型。
-    private: typedef message_pack_object_map<template_value_type> self;
+    private: typedef message_pack_map<template_value_type> self;
 
     /// thisの上位型。
-    public: typedef psyq::internal
-        ::message_pack_object_container<template_value_type>
-            super;
+    public: typedef psyq::internal::message_pack_container<template_value_type>
+        super;
 
     /// 連想配列のキー。
     public: typedef psyq::message_pack::object key_type;
@@ -487,4 +486,4 @@ struct psyq::internal::message_pack_object_map:
     }
 };
 
-#endif // PSYQ_MESSAGE_PACK_OBJECT_CONTAINER_HPP_
+#endif // PSYQ_MESSAGE_PACK_CONTAINER_HPP_

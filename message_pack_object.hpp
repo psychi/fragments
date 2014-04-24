@@ -7,10 +7,15 @@
 
 //#include "psyq/message_pack_object.hpp"
 
-#ifndef PSYQ_MESSAGE_PACK_OBJECT_FLOATING_POINT_EPSILON
-#define PSYQ_MESSAGE_PACK_OBJECT_FLOATING_POINT_EPSILON\
-    std::numeric_limits<self::floating_point>::epsilon() * 4
-#endif // !defined(PSYQ_MESSAGE_PACK_OBJECT_FLOATING_POINT_EPSILON)
+#ifndef PSYQ_MESSAGE_PACK_OBJECT_FLOAT32_EPSILON
+#define PSYQ_MESSAGE_PACK_OBJECT_FLOAT32_EPSILON\
+    std::numeric_limits<self::float32>::epsilon() * 4
+#endif // !defined(PSYQ_MESSAGE_PACK_OBJECT_FLOAT32_EPSILON)
+
+#ifndef PSYQ_MESSAGE_PACK_OBJECT_FLOAT64_EPSILON
+#define PSYQ_MESSAGE_PACK_OBJECT_FLOAT64_EPSILON\
+    std::numeric_limits<self::float64>::epsilon() * 4
+#endif // !defined(PSYQ_MESSAGE_PACK_OBJECT_FLOAT64_EPSILON)
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// MessagePackオブジェクト。
@@ -28,97 +33,28 @@ struct psyq::message_pack::object
         kind_BOOLEAN,          ///< 真偽値。
         kind_POSITIVE_INTEGER, ///< 0以上の整数。
         kind_NEGATIVE_INTEGER, ///< 0未満の整数。
-        kind_FLOATING_POINT,   ///< 浮動小数点実数。
+        kind_FLOAT32,          ///< IEEE754単精度浮動小数点実数。
+        kind_FLOAT64,          ///< IEEE754倍精度浮動小数点実数。
         kind_RAW,              ///< RAWバイト列。
         kind_ARRAY,            ///< MessagePackオブジェクトの配列。
         kind_MAP,              ///< MessagePackオブジェクトの連想配列。
     };
 
     //-------------------------------------------------------------------------
-    /// 任意型を比較する関数オブジェクト。
-    private: template<typename template_value_type>
-    struct compare_value
-    {
-        typedef template_value_type value_type;
-
-        static int compare(
-            value_type const in_left,
-            value_type const in_right)
-        PSYQ_NOEXCEPT
-        {
-            return in_left < in_right? -1: (in_right < in_left? 1: 0);
-        }
-
-        static bool equal(
-            value_type const in_left,
-            value_type const in_right)
-        PSYQ_NOEXCEPT
-        {
-            return in_left == in_right;
-        }
-    };
-
-    /// MessagePackオブジェクトを比較する関数オブジェクト。
-    private: struct compare_object
-    {
-        typedef object value_type;
-
-        static int compare(
-            value_type const& in_left,
-            value_type const& in_right)
-        PSYQ_NOEXCEPT
-        {
-            return in_left.compare(in_right);
-        }
-
-        static bool equal(
-            value_type const& in_left,
-            value_type const& in_right)
-        PSYQ_NOEXCEPT
-        {
-            return in_left == in_right;
-        }
-    };
-
-    /// 連想配列の要素キーを比較する関数オブジェクト。
-    private: struct compare_map_key
-    {
-        /// 連想配列の要素
-        typedef std::pair<object, object> value_type;
-
-        static int compare(
-            value_type const& in_left,
-            value_type const& in_right)
-        PSYQ_NOEXCEPT
-        {
-            return in_left.first.compare(in_right.first);
-        }
-
-        static bool equal(
-            value_type const& in_left,
-            value_type const& in_right)
-        PSYQ_NOEXCEPT
-        {
-            return in_left.first == in_right.first;
-        }
-    };
-
-    //-------------------------------------------------------------------------
     /// @name MessagePackオブジェクトに格納する型
     //@{
-    /// @copydoc self::kind_FLOATING_POINT
-    public: typedef double floating_point;
+    /// @copydoc self::kind_FLOAT32
+    public: typedef float float32;
+    /// @copydoc self::kind_FLOAT64
+    public: typedef double float64;
     /// @copydoc self::kind_RAW
-    public: typedef psyq::internal
-        ::message_pack_object_container<self::compare_value<char const>>
-            raw;
+    public: typedef psyq::internal::message_pack_object_container<char const>
+        raw;
     /// @copydoc self::kind_ARRAY
-    public: typedef psyq::internal
-        ::message_pack_object_container<self::compare_object>
-            array;
+    public: typedef psyq::internal::message_pack_object_container<self> array;
     /// @copydoc self::kind_MAP
     public: typedef psyq::internal
-        ::message_pack_object_map<self::compare_map_key>
+        ::message_pack_object_map<std::pair<self, self>>
             map;
     //@}
     //-------------------------------------------------------------------------
@@ -203,14 +139,18 @@ struct psyq::message_pack::object
     {}
 
     /** @brief MessagePackオブジェクトに浮動小数点実数を格納する。
-        @param[in] in_floating_point
-            MessagePackオブジェクトに格納する浮動小数点実数。
+        @param[in] in_float MessagePackオブジェクトに格納する浮動小数点実数。
      */
-    public: explicit PSYQ_CONSTEXPR object(
-        self::floating_point const in_floating_point)
+    public: explicit PSYQ_CONSTEXPR object(self::float64 const in_float)
     PSYQ_NOEXCEPT:
-        floating_point_(in_floating_point),
-        kind_(self::kind_FLOATING_POINT)
+        float64_(in_float),
+        kind_(self::kind_FLOAT64)
+    {}
+    /// @copydoc object(self::float64 const)
+    public: explicit PSYQ_CONSTEXPR object(self::float32 const in_float)
+    PSYQ_NOEXCEPT:
+        float32_(in_float),
+        kind_(self::kind_FLOAT32)
     {}
 
     /** @brief MessagePackオブジェクトにRAWバイト列を格納する。
@@ -319,15 +259,20 @@ struct psyq::message_pack::object
     }
 
     /** @brief MessagePackオブジェクトに浮動小数点実数を格納する。
-        @param[in] in_floating_point
+        @param[in] in_float
             MessagePackオブジェクトに格納する浮動小数点実数。
         @return *this
      */
-    public: PSYQ_CONSTEXPR self& operator=(
-        self::floating_point const in_floating_point)
+    public: PSYQ_CONSTEXPR self& operator=(self::float64 const in_float)
     PSYQ_NOEXCEPT
     {
-        return *new(this) self(in_floating_point);
+        return *new(this) self(in_float);
+    }
+    /// @copydoc operator=(self::float64 const)
+    public: PSYQ_CONSTEXPR self& operator=(self::float32 const in_float)
+    PSYQ_NOEXCEPT
+    {
+        return *new(this) self(in_float);
     }
 
     /** @brief MessagePackオブジェクトにRAWバイト列を格納する。
@@ -421,7 +366,7 @@ struct psyq::message_pack::object
         @retval false 取得に失敗した。
      */
     public: template<typename template_integer_type>
-    bool get_integer(template_integer_type& out_integer)
+    bool get_integer(template_integer_type& out_integer) const PSYQ_NOEXCEPT
     {
         static_assert(
             std::is_integral<template_integer_type>::value,
@@ -456,11 +401,42 @@ struct psyq::message_pack::object
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは浮動小数点実数ではない。
      */
-    public: PSYQ_CONSTEXPR self::floating_point const* get_floating_point()
+    public: PSYQ_CONSTEXPR self::float64 const* get_float64()
     const PSYQ_NOEXCEPT
     {
-        return this->get_kind() == self::kind_FLOATING_POINT?
-            &this->floating_point_: nullptr;
+        return this->get_kind() == self::kind_FLOAT64?
+            &this->float64_: nullptr;
+    }
+    /// @copydoc self::get_float64()
+    public: PSYQ_CONSTEXPR self::float32 const* get_float32()
+    const PSYQ_NOEXCEPT
+    {
+        return this->get_kind() == self::kind_FLOAT32?
+            &this->float32_: nullptr;
+    }
+
+    /** @brief MessagePackオブジェクトに格納されてる浮動小数点実数を取得する。
+        @param[out] out_integer 取得した整数が格納される。
+        @retval true  取得に成功した。
+        @retval false 取得に失敗した。
+     */
+    public: template<typename template_float_type>
+    bool get_floating_point(template_float_type& out_float) const PSYQ_NOEXCEPT
+    {
+        static_assert(
+            std::is_floating_point<template_float_type>::value,
+            "template_float_type is not floating point type.");
+        switch (this->get_kind())
+        {
+        case self::kind_FLOAT32:
+            out_float = static_cast<template_float_type>(this->float32_);
+            return true;
+        case self::kind_FLOAT64:
+            out_float = static_cast<template_float_type>(this->float64_);
+            return true;
+        default:
+            return false; // 整数以外が格納されていたので失敗。
+        }
     }
     //@}
     //-------------------------------------------------------------------------
@@ -587,9 +563,16 @@ struct psyq::message_pack::object
             return this->positive_integer_ == in_right.positive_integer_;
         case self::kind_NEGATIVE_INTEGER:
             return this->negative_integer_ == in_right.negative_integer_;
-        case self::kind_FLOATING_POINT:
+        case self::kind_FLOAT32:
             return 0 == self::compare_floating_point(
-                this->floating_point_, in_right.floating_point_);
+                this->float32_,
+                in_right.float32_,
+                PSYQ_MESSAGE_PACK_OBJECT_FLOAT32_EPSILON);
+        case self::kind_FLOAT64:
+            return 0 == self::compare_floating_point(
+                this->float64_,
+                in_right.float64_,
+                PSYQ_MESSAGE_PACK_OBJECT_FLOAT64_EPSILON);
         case self::kind_RAW:
             return this->raw_ == in_right.raw_;
         case self::kind_ARRAY:
@@ -666,8 +649,10 @@ struct psyq::message_pack::object
             return this->compare(in_object.positive_integer_);
         case self::kind_NEGATIVE_INTEGER:
             return this->compare(in_object.negative_integer_);
-        case self::kind_FLOATING_POINT:
-            return this->compare(in_object.floating_point_);
+        case self::kind_FLOAT32:
+            return this->compare(in_object.float32_);
+        case self::kind_FLOAT64:
+            return this->compare(in_object.float64_);
         case self::kind_RAW:
             return this->compare(in_object.raw_);
         case self::kind_ARRAY:
@@ -698,8 +683,10 @@ struct psyq::message_pack::object
             return -1;//-self::compare_map(in_map, this->positive_integer_);
         case self::kind_NEGATIVE_INTEGER:
             return -1;//-self::compare_map(in_map, this->negative_integer_);
-        case self::kind_FLOATING_POINT:
-            return -1;//-self::compare_map(in_map, this->floating_point_);
+        case self::kind_FLOAT32:
+            return -1;//-self::compare_map(in_map, this->float32_);
+        case self::kind_FLOAT64:
+            return -1;//-self::compare_map(in_map, this->float64_);
         case self::kind_RAW:
             return -1;//-self::compare_map(in_map, this->raw_);
         case self::kind_ARRAY:
@@ -730,8 +717,10 @@ struct psyq::message_pack::object
             return -1;//-self::compare_array(in_array, this->positive_integer_);
         case self::kind_NEGATIVE_INTEGER:
             return -1;//-self::compare_array(in_array, this->negative_integer_);
-        case self::kind_FLOATING_POINT:
-            return -1;//-self::compare_array(in_array, this->floating_point_);
+        case self::kind_FLOAT32:
+            return -1;//-self::compare_array(in_array, this->float32_);
+        case self::kind_FLOAT64:
+            return -1;//-self::compare_array(in_array, this->float64_);
         case self::kind_RAW:
             return -1;//-self::compare_array(in_array, this->raw_);
         case self::kind_ARRAY:
@@ -762,8 +751,10 @@ struct psyq::message_pack::object
             return -1;//-self::compare_raw(in_raw, this->positive_integer_);
         case self::kind_NEGATIVE_INTEGER:
             return -1;//-self::compare_raw(in_raw, this->negative_integer_);
-        case self::kind_FLOATING_POINT:
-            return -1;//-self::compare_raw(in_raw, this->floating_point_);
+        case self::kind_FLOAT32:
+            return -1;//-self::compare_raw(in_raw, this->float32_);
+        case self::kind_FLOAT64:
+            return -1;//-self::compare_raw(in_raw, this->float64_);
         case self::kind_RAW:
             return this->raw_.compare(in_raw);
         case self::kind_ARRAY:
@@ -777,12 +768,12 @@ struct psyq::message_pack::object
     }
 
     /** @brief *thisと浮動小数点実数を比較する。
-        @param[in] in_floating_point 比較する浮動小数点実数。
+        @param[in] in_float 比較する浮動小数点実数。
         @retval 正 *thisのほうが大きい。
         @retval 0  等値。
         @retval 負 *thisのほうが小さい。
      */
-    public: int compare(self::floating_point const in_floating_point)
+    public: int compare(self::float64 const in_float)
     const PSYQ_NOEXCEPT
     {
         switch (this->get_kind())
@@ -791,22 +782,79 @@ struct psyq::message_pack::object
             return 1;
         case self::kind_BOOLEAN:
             return -self::compare_floating_point(
-                in_floating_point, this->boolean_);
+                in_float,
+                this->boolean_,
+                PSYQ_MESSAGE_PACK_OBJECT_FLOAT64_EPSILON);
         case self::kind_POSITIVE_INTEGER:
             return -self::compare_floating_point(
-                in_floating_point, this->positive_integer_);
+                in_float,
+                this->positive_integer_,
+                PSYQ_MESSAGE_PACK_OBJECT_FLOAT64_EPSILON);
         case self::kind_NEGATIVE_INTEGER:
             return -self::compare_floating_point(
-                in_floating_point, this->negative_integer_);
-        case self::kind_FLOATING_POINT:
+                in_float,
+                this->negative_integer_,
+                PSYQ_MESSAGE_PACK_OBJECT_FLOAT64_EPSILON);
+        case self::kind_FLOAT32:
+            return self::compare_floating_point<self::float64>(
+                this->float32_,
+                in_float,
+                PSYQ_MESSAGE_PACK_OBJECT_FLOAT32_EPSILON);
+        case self::kind_FLOAT64:
             return self::compare_floating_point(
-                this->floating_point_, in_floating_point);
+                this->float64_,
+                in_float,
+                PSYQ_MESSAGE_PACK_OBJECT_FLOAT64_EPSILON);
         case self::kind_RAW:
-            return 1;//self::compare_raw(this->raw_, in_floating_point);
+            return 1;//self::compare_raw(this->raw_, in_float);
         case self::kind_ARRAY:
-            return 1;//self::compare_array(this->array_, in_floating_point);
+            return 1;//self::compare_array(this->array_, in_float);
         case self::kind_MAP:
-            return 1;//self::compare_map(this->map_, in_floating_point);
+            return 1;//self::compare_map(this->map_, in_float);
+        default:
+            PSYQ_ASSERT(false);
+            return 1;
+        }
+    }
+    /// @copydoc self::compare(self::float32 const)
+    public: int compare(self::float32 const in_float)
+    const PSYQ_NOEXCEPT
+    {
+        switch (this->get_kind())
+        {
+        case self::kind_NIL:
+            return 1;
+        case self::kind_BOOLEAN:
+            return -self::compare_floating_point(
+                in_float,
+                this->boolean_,
+                PSYQ_MESSAGE_PACK_OBJECT_FLOAT32_EPSILON);
+        case self::kind_POSITIVE_INTEGER:
+            return -self::compare_floating_point(
+                in_float,
+                this->positive_integer_,
+                PSYQ_MESSAGE_PACK_OBJECT_FLOAT32_EPSILON);
+        case self::kind_NEGATIVE_INTEGER:
+            return -self::compare_floating_point(
+                in_float,
+                this->negative_integer_,
+                PSYQ_MESSAGE_PACK_OBJECT_FLOAT32_EPSILON);
+        case self::kind_FLOAT32:
+            return self::compare_floating_point(
+                this->float32_,
+                in_float,
+                PSYQ_MESSAGE_PACK_OBJECT_FLOAT32_EPSILON);
+        case self::kind_FLOAT64:
+            return self::compare_floating_point<self::float64>(
+                this->float64_,
+                in_float,
+                PSYQ_MESSAGE_PACK_OBJECT_FLOAT32_EPSILON);
+        case self::kind_RAW:
+            return 1;//self::compare_raw(this->raw_, in_float);
+        case self::kind_ARRAY:
+            return 1;//self::compare_array(this->array_, in_float);
+        case self::kind_MAP:
+            return 1;//self::compare_map(this->map_, in_float);
         default:
             PSYQ_ASSERT(false);
             return 1;
@@ -900,9 +948,16 @@ struct psyq::message_pack::object
                 this->positive_integer_, in_boolean);
         case self::kind_NEGATIVE_INTEGER:
             return -1;
-        case self::kind_FLOATING_POINT:
+        case self::kind_FLOAT32:
             return self::compare_floating_point(
-                this->floating_point_, in_boolean);
+                this->float32_,
+                in_boolean,
+                PSYQ_MESSAGE_PACK_OBJECT_FLOAT32_EPSILON);
+        case self::kind_FLOAT64:
+            return self::compare_floating_point(
+                this->float64_,
+                in_boolean,
+                PSYQ_MESSAGE_PACK_OBJECT_FLOAT64_EPSILON);
         case self::kind_RAW:
             return 1;//self::compare_raw(this->raw_, in_boolean);
         case self::kind_ARRAY:
@@ -918,47 +973,60 @@ struct psyq::message_pack::object
     //-------------------------------------------------------------------------
     /// @name 浮動小数点実数との比較
     //@{
-    private: static int compare_floating_point(
-        self::floating_point const in_left,
-        self::floating_point const in_right)
+    private: template<typename template_float_type>
+    static int compare_floating_point(
+        template_float_type const in_left,
+        template_float_type const in_right,
+        template_float_type const in_epsilon)
     PSYQ_NOEXCEPT
     {
-        auto const local_epsilon(
-            PSYQ_MESSAGE_PACK_OBJECT_FLOATING_POINT_EPSILON);
         auto const local_diff(in_left - in_right);
-        return local_diff < -local_epsilon?
-            -1: (local_epsilon < local_diff? 1: 0);
+        return local_diff < -in_epsilon? -1: (in_epsilon < local_diff? 1: 0);
     }
 
-    private: static int compare_floating_point(
-        self::floating_point const in_left,
-        std::int64_t const in_right)
+    private: template<typename template_float_type>
+    static int compare_floating_point(
+        template_float_type const in_left,
+        std::int64_t const in_right,
+        template_float_type const in_epsilon)
     PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(in_right < 0);
-        return in_left < 0?
-            self::compare_floating_point(
-                in_left, static_cast<self::floating_point>(in_right)):
+        return in_left < -in_epsilon?
+            self::compare_floating_point<self::float64>(
+                in_left, static_cast<self::float64>(in_right), in_epsilon):
             1;
     }
 
-    private: static int compare_floating_point(
-        self::floating_point const in_left,
-        std::uint64_t const in_right)
+    private: template<typename template_float_type>
+    static int compare_floating_point(
+        template_float_type const in_left,
+        std::uint64_t const in_right,
+        template_float_type const in_epsilon)
     PSYQ_NOEXCEPT
     {
-        return -self::compare_unsigned_integer(in_right, in_left);
+        return in_left < -in_epsilon?
+            -1:
+            self::compare_floating_point(
+                in_left,
+                static_cast<template_float_type>(in_right),
+                in_epsilon);
     }
 
-    private: static int compare_floating_point(
-        self::floating_point const in_left,
-        bool const in_right)
+    private: template<typename template_float_type>
+    static int compare_floating_point(
+        template_float_type const in_left,
+        bool const in_right,
+        template_float_type const in_epsilon)
     PSYQ_NOEXCEPT
     {
         // C++の仕様に基づき、trueは1、falseは0に変換して判定する。
-        return in_right?
-            in_left < 1? -1: (1 < in_left? 1: 0):
-            in_left < 0? -1: (0 < in_left? 1: 0);
+        return in_left < -in_epsilon?
+            -1:
+            self::compare_floating_point(
+                in_left,
+                static_cast<template_float_type>(in_right? 1: 0),
+                in_epsilon);
     }
     //@}
     //-------------------------------------------------------------------------
@@ -984,9 +1052,16 @@ struct psyq::message_pack::object
         case self::kind_NEGATIVE_INTEGER:
             return -self::compare_signed_integer(
                 in_signed_integer, this->negative_integer_);
-        case self::kind_FLOATING_POINT:
-            return -self::compare_signed_integer(
-                in_signed_integer, this->floating_point_);
+        case self::kind_FLOAT32:
+            return self::compare_floating_point<self::float64>(
+                this->float32_,
+                static_cast<self::float64>(in_signed_integer),
+                PSYQ_MESSAGE_PACK_OBJECT_FLOAT32_EPSILON);
+        case self::kind_FLOAT64:
+            return self::compare_floating_point<self::float64>(
+                this->float64_,
+                static_cast<self::float64>(in_signed_integer),
+                PSYQ_MESSAGE_PACK_OBJECT_FLOAT64_EPSILON);
         case self::kind_RAW:
             return 1;//self::compare_raw(this->raw_, in_signed_integer);
         case self::kind_ARRAY:
@@ -999,14 +1074,17 @@ struct psyq::message_pack::object
         }
     }
 
-    private: template<typename template_signed_type>
+    private: template<
+        typename template_signed_type,
+        typename template_float_type>
     static int compare_signed_integer(
         template_signed_type const in_left,
-        self::floating_point const in_right)
+        template_float_type const in_right,
+        template_float_type const in_epsilon)
     PSYQ_NOEXCEPT
     {
         return self::compare_floating_point(
-            static_cast<self::floating_point>(in_left), in_right);
+            static_cast<template_float_type>(in_left), in_right, in_epsilon);
     }
 
     private: template<typename template_signed_type>
@@ -1086,9 +1164,17 @@ struct psyq::message_pack::object
                 in_unsigned_integer, this->positive_integer_);
         case self::kind_NEGATIVE_INTEGER:
             return -1;
-        case self::kind_FLOATING_POINT:
+        case self::kind_FLOAT32:
             return -self::compare_unsigned_integer(
-                in_unsigned_integer, this->floating_point_);
+                in_unsigned_integer,
+                static_cast<self::float64>(this->float32_),
+                static_cast<self::float64>(
+                    PSYQ_MESSAGE_PACK_OBJECT_FLOAT32_EPSILON));
+        case self::kind_FLOAT64:
+            return -self::compare_unsigned_integer(
+                in_unsigned_integer,
+                this->float64_,
+                PSYQ_MESSAGE_PACK_OBJECT_FLOAT64_EPSILON);
         case self::kind_RAW:
             return 1;//self::compare_raw(this->raw_, in_unsigned_integer);
         case self::kind_ARRAY:
@@ -1101,19 +1187,24 @@ struct psyq::message_pack::object
         }
     }
 
-    private: template<typename template_unsigned_type>
+    private: template<
+        typename template_unsigned_type,
+        typename template_float_type>
     static int compare_unsigned_integer(
         template_unsigned_type const in_left,
-        self::floating_point const in_right)
+        template_float_type const in_right,
+        template_float_type const in_epsilon)
     PSYQ_NOEXCEPT
     {
         static_assert(
             std::is_unsigned<template_unsigned_type>::value,
             "template_unsigned_type is not unsigned integer type.");
-        return in_right < 0?
+        return in_right < -in_epsilon?
             1:
             self::compare_floating_point(
-                static_cast<self::floating_point>(in_left), in_right);
+                static_cast<template_float_type>(in_left),
+                in_right,
+                in_epsilon);
     }
 
     private: template<typename template_unsigned_type>
@@ -1155,6 +1246,256 @@ struct psyq::message_pack::object
     }
 
     //-------------------------------------------------------------------------
+    public: bool serialize(std::basic_ostream<char>& out_stream) const
+    {
+        switch (this->get_kind())
+        {
+        case self::kind_NIL:
+            out_stream << std::uint8_t(0xc0);
+            return true;
+        case self::kind_BOOLEAN:
+            out_stream << std::uint8_t(this->boolean_? 0xc3: 0xc2);
+            return true;
+        case self::kind_POSITIVE_INTEGER:
+            self::serialize_positive_integer(
+                out_stream, this->positive_integer_);
+            return true;
+        case self::kind_NEGATIVE_INTEGER:
+            self::serialize_negative_integer(
+                out_stream, this->negative_integer_);
+            return true;
+        case self::kind_FLOAT32:
+            self::serialize_uint(out_stream, 0xca, this->uint32_);
+            return true;
+        case self::kind_FLOAT64:
+            self::serialize_uint(out_stream, 0xcb, this->positive_integer_);
+            return true;
+        case self::kind_RAW:
+            self::serialize_raw(out_stream, this->raw_);
+            return true;
+        case self::kind_ARRAY:
+            return self::serialize_array(out_stream, this->array_);
+        case self::kind_MAP:
+            return self::serialize_map(out_stream, this->map_);
+        default:
+            PSYQ_ASSERT(false);
+            return false;
+        }
+    }
+
+    private: template<typename template_out_stream>
+    static void serialize_positive_integer(
+        template_out_stream& out_stream,
+        std::uint64_t const in_integer)
+    {
+        if (in_integer <= 0x7f)
+        {
+            out_stream << static_cast<std::uint8_t>(in_integer);
+        }
+        else if (in_integer <= (std::numeric_limits<std::uint8_t>::min)())
+        {
+            self::serialize_uint(
+                out_stream, 0xcc, static_cast<std::uint8_t>(in_integer));
+        }
+        else if (in_integer <= (std::numeric_limits<std::uint16_t>::min)())
+        {
+            self::serialize_uint(
+                out_stream, 0xcd, static_cast<std::uint16_t>(in_integer));
+        }
+        else if (in_integer <= (std::numeric_limits<std::uint32_t>::min)())
+        {
+            self::serialize_uint(
+                out_stream, 0xce, static_cast<std::uint32_t>(in_integer));
+        }
+        else
+        {
+            self::serialize_uint(out_stream, 0xcf, in_integer);
+        }
+    }
+
+    private: template<typename template_out_stream>
+    static void serialize_negative_integer(
+        template_out_stream& out_stream,
+        std::int64_t const in_integer)
+    {
+        PSYQ_ASSERT(in_integer < 0);
+        if (-0x20 <= in_integer)
+        {
+            out_stream << static_cast<std::uint8_t>(in_integer);
+        }
+        else if ((std::numeric_limits<std::int8_t>::min)() <= in_integer)
+        {
+            self::serialize_uint(
+                out_stream, 0xd0, static_cast<std::uint8_t>(in_integer));
+        }
+        else if ((std::numeric_limits<std::int16_t>::min)() <= in_integer)
+        {
+            self::serialize_uint(
+                out_stream, 0xd1, static_cast<std::uint16_t>(in_integer));
+        }
+        else if ((std::numeric_limits<std::int32_t>::min)() <= in_integer)
+        {
+            self::serialize_uint(
+                out_stream, 0xd2, static_cast<std::uint32_t>(in_integer));
+        }
+        else
+        {
+            self::serialize_uint(
+                out_stream, 0xd3, static_cast<std::uint64_t>(in_integer));
+        }
+    }
+
+    private: template<typename template_out_stream>
+    static void serialize_raw(
+        template_out_stream& out_stream,
+        self::raw const& in_raw)
+    {
+        // RAWバイト列の大きさを書き出す。
+        std::uint32_t const local_size(in_raw.size());
+        if (local_size <= 0x1f)
+        {
+            out_stream << std::uint8_t(0xa0 + (local_size & 0x1f));
+        }
+        else if (local_size <= 0xff)
+        {
+            self::serialize_uint(
+                out_stream, 0xd9, static_cast<std::uint8_t>(local_size));
+        }
+        else if (local_size <= 0xffff)
+        {
+            self::serialize_uint(
+                out_stream, 0xda, static_cast<std::uint16_t>(local_size));
+        }
+        else
+        {
+            PSYQ_ASSERT(in_raw.size() <= 0xffffffff);
+            self::serialize_uint(out_stream, 0xdb, local_size);
+        }
+
+        // RAWバイト列を書き出す。
+        typedef typename template_out_stream::char_type const* const_pointer;
+        out_stream.write(
+            reinterpret_cast<const_pointer>(in_raw.data()), local_size);
+    }
+
+    private: template<typename template_out_stream>
+    static bool serialize_array(
+        template_out_stream& out_stream,
+        self::array const& in_array)
+    {
+        // 配列の大きさを書き出す。
+        std::uint32_t const local_size(in_array.size());
+        if (local_size <= 0xf)
+        {
+            out_stream << std::uint8_t(0x90 + (local_size & 0xf));
+        }
+        else if (local_size <= 0xffff)
+        {
+            self::serialize_uint(
+                out_stream, 0xdc, static_cast<std::uint16_t>(local_size));
+        }
+        else
+        {
+            PSYQ_ASSERT(in_array.size() <= 0xffffffff);
+            self::serialize_uint(out_stream, 0xdd, local_size);
+        }
+
+        // 配列を書き出す。
+        for (auto& local_object: in_array)
+        {
+            if (!local_object.serialize(out_stream))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private: template<typename template_out_stream>
+    static bool serialize_map(
+        template_out_stream& out_stream,
+        self::map const& in_map)
+    {
+        // 配列の大きさを書き出す。
+        std::uint32_t const local_size(in_map.size());
+        if (local_size <= 0xf)
+        {
+            out_stream << std::uint8_t(0x80 + (local_size & 0xf));
+        }
+        else if (local_size <= 0xffff)
+        {
+            self::serialize_uint(
+                out_stream, 0xde, static_cast<std::uint16_t>(local_size));
+        }
+        else
+        {
+            PSYQ_ASSERT(in_map.size() <= 0xffffffff);
+            self::serialize_uint(out_stream, 0xdf, local_size);
+        }
+
+        // 配列を書き出す。
+        for (auto& local_element: in_map)
+        {
+            if (!local_element.first.serialize(out_stream)
+                || !local_element.second.serialize(out_stream))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private: template<typename template_out_stream>
+    static void serialize_uint(
+        template_out_stream& out_stream,
+        std::uint8_t const in_header,
+        std::uint8_t const in_integer)
+    {
+        out_stream << in_header << in_integer;
+    }
+
+    private: template<typename template_out_stream>
+    static void serialize_uint(
+        template_out_stream& out_stream,
+        std::uint8_t const in_header,
+        std::uint16_t const in_integer)
+    {
+        out_stream << in_header
+            << static_cast<std::uint8_t>(in_integer >> 8)
+            << static_cast<std::uint8_t>(in_integer);
+    }
+
+    private: template<typename template_out_stream>
+    static void serialize_uint(
+        template_out_stream& out_stream,
+        std::uint8_t const in_header,
+        std::uint32_t const in_integer)
+    {
+        out_stream << in_header
+            << static_cast<std::uint8_t>(in_integer >> 24)
+            << static_cast<std::uint8_t>(in_integer >> 16)
+            << static_cast<std::uint8_t>(in_integer >>  8)
+            << static_cast<std::uint8_t>(in_integer);
+    }
+
+    private: template<typename template_out_stream>
+    static void serialize_uint(
+        template_out_stream& out_stream,
+        std::uint8_t const in_header,
+        std::uint64_t const in_integer)
+    {
+        out_stream << in_header
+            << static_cast<std::uint8_t>(in_integer >> 56)
+            << static_cast<std::uint8_t>(in_integer >> 48)
+            << static_cast<std::uint8_t>(in_integer >> 40)
+            << static_cast<std::uint8_t>(in_integer >> 32)
+            << static_cast<std::uint8_t>(in_integer >> 24)
+            << static_cast<std::uint8_t>(in_integer >> 16)
+            << static_cast<std::uint8_t>(in_integer >>  8)
+            << static_cast<std::uint8_t>(in_integer);
+    }
+
+    //-------------------------------------------------------------------------
     private: union
     {
         /// @copydoc self::kind_BOOLEAN
@@ -1163,8 +1504,11 @@ struct psyq::message_pack::object
         std::uint64_t positive_integer_;
         /// @copydoc self::kind_NEGATIVE_INTEGER
         std::int64_t negative_integer_;
-        /// @copydoc self::kind_FLOATING_POINT
-        self::floating_point floating_point_;
+        std::uint32_t uint32_;
+        /// @copydoc self::kind_FLOAT32
+        self::float32 float32_;
+        /// @copydoc self::kind_FLOAT64
+        self::float64 float64_;
         /// @copydoc self::kind_RAW
         self::raw raw_;
         /// @copydoc self::kind_ARRAY
@@ -1174,5 +1518,36 @@ struct psyq::message_pack::object
     };
     private: self::kind kind_; ///< @copydoc self::kind
 };
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+namespace psyq
+{
+    namespace internal
+    {
+        /// @cond
+        template<>
+        inline int message_pack_object_compare(
+            psyq::message_pack::object const& in_left,
+            psyq::message_pack::object const& in_right)
+        {
+            return in_left.compare(in_right);
+        }
+        template<>
+        inline int message_pack_object_compare(
+            psyq::message_pack::object::map::value_type const& in_left,
+            psyq::message_pack::object::map::value_type const& in_right)
+        {
+            return in_left.first.compare(in_right.first);
+        }
+        template<>
+        inline bool message_pack_object_equal(
+            psyq::message_pack::object::map::value_type const& in_left,
+            psyq::message_pack::object::map::value_type const& in_right)
+        {
+            return in_left.first == in_right.second;
+        }
+        /// @endcond
+    }
+}
 
 #endif // PSYQ_MESSAGE_PACK_OBJECT_HPP_

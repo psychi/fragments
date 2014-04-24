@@ -13,6 +13,35 @@ namespace psyq
         template<typename> struct message_pack_object_container;
         template<typename> struct message_pack_object_map;
         /// @endcond
+
+        /** @brief コンテナ要素を比較する。
+            @param[in] in_left  左辺のコンテナ要素。
+            @param[in] in_right 右辺のコンテナ要素。
+            @retval 正 左辺のほうが大きい。
+            @retval 0  等値。
+            @retval 負 右辺のほうが小さい。
+         */
+        template<typename template_value_type>
+        int message_pack_object_compare(
+            template_value_type const& in_left,
+            template_value_type const& in_right)
+        {
+            return in_left < in_right? -1: (in_right < in_left? 1: 0);
+        }
+
+        /** @brief コンテナ要素が等値か判定する。
+            @param[in] in_left  左辺のコンテナ要素。
+            @param[in] in_right 右辺のコンテナ要素。
+            @retval true  左辺と右辺は等値。
+            @retval false 左辺と右辺は非等値。
+         */
+        template<typename template_value_type>
+        bool message_pack_object_equal(
+            template_value_type const& in_left,
+            template_value_type const& in_right)
+        {
+            return in_left == in_right;
+        }
     }
     namespace message_pack
     {
@@ -24,71 +53,49 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief MessagePackオブジェクトで使うコンテナ。
-    @tparam template_value_compare @copydoc value_compare
+    @tparam template_value_type @copydoc value_type
     @sa psyq::message_pack::object
  */
-template<typename template_value_compare>
+template<typename template_value_type>
 struct psyq::internal::message_pack_object_container
 {
     /// thisが指す値の型。
-    private: typedef message_pack_object_container<template_value_compare>
+    private: typedef message_pack_object_container<template_value_type>
         self;
 
-    /** @brief 要素の比較関数オブジェクト。
-
-        - 要素として、以下の型を使えること。
-          @code
-          template_value_compare::value_type
-          @endcode
-        - 要素の比較のために、以下に相当するクラス関数が使えること。
-          @code
-          static int template_value_compare::compare(value_type const& in_left, value_type const& in_right)
-          @endcode
-          - 戻り値が正なら、in_left > in_right。
-          - 戻り値が0なら、in_left == in_right。
-          - 戻り値が負なら、in_left < in_right。
-        - 要素の等値比較のために、以下に相当するクラス関数が使えること。
-          @code
-          static bool template_value_compare::equal(value_type const& in_left, value_type const& in_right)
-          @endcode
-          - 戻り値がtrueなら、in_left == in_right。
-          - 戻り値がtrueなら、in_left != in_right。
-     */
-    private: typedef template_value_compare value_compare;
-
     //-------------------------------------------------------------------------
-    /// 要素の型。
-    public: typedef typename template_value_compare::value_type value_type;
+    /// コンテナ要素の型。
+    public: typedef template_value_type value_type;
 
-    /// 要素数の型。
-    public: typedef std::size_t size_type;
+    /// コンテナ要素数の型。
+    public: typedef std::uint32_t size_type;
 
-    /// 反復子の差を表す型。
+    /// コンテナ反復子の差を表す型。
     public: typedef std::ptrdiff_t difference_type;
 
-    /// 要素へのpointer。
+    /// コンテナ要素へのpointer。
     public: typedef typename self::value_type const* const_pointer;
 
-    /// 要素へのpointer。
+    /// コンテナ要素へのpointer。
     public: typedef typename self::value_type* pointer;
 
-    /// 要素への参照。
+    /// コンテナ要素への参照。
     public: typedef typename self::value_type const& const_reference;
 
-    /// 要素への参照。
+    /// コンテナ要素への参照。
     public: typedef typename self::value_type& reference;
 
-    /// 要素を指す反復子。
+    /// コンテナ要素を指す反復子。
     public: typedef typename self::const_pointer const_iterator;
 
-    /// 要素を指す反復子。
+    /// コンテナ要素を指す反復子。
     public: typedef typename self::pointer iterator;
 
-    /// 要素を指す逆反復子。
+    /// コンテナ要素を指す逆反復子。
     public: typedef std::reverse_iterator<const_iterator>
         const_reverse_iterator;
 
-    /// 要素を指す逆反復子。
+    /// コンテナ要素を指す逆反復子。
     public: typedef std::reverse_iterator<iterator>
         reverse_iterator;
 
@@ -271,7 +278,7 @@ struct psyq::internal::message_pack_object_container
             for (typename self::size_type i(0); i < this->size(); ++i)
             {
                 bool const local_equal(
-                    template_value_compare::equal(
+                    psyq::internal::message_pack_object_equal(
                         this->at(i), in_right.at(i)));
                 if (!local_equal)
                 {
@@ -355,7 +362,8 @@ struct psyq::internal::message_pack_object_container
         for (typename self::size_type i(0); i < local_size; ++i)
         {
             int const local_compare_element(
-                template_value_compare::compare(this->at(i), in_right.at(i)));
+                psyq::internal::message_pack_object_compare(
+                    this->at(i), in_right.at(i)));
             if (local_compare_element != 0)
             {
                 return local_compare_element;
@@ -391,17 +399,17 @@ struct psyq::internal::message_pack_object_container
     @tparam template_value_compare @copydoc super::value_compare
     @sa psyq::message_pack::object
  */
-template<typename template_value_compare>
+template<typename template_value_type>
 struct psyq::internal::message_pack_object_map:
     public psyq::internal::message_pack_object_container<
-        template_value_compare>
+        template_value_type>
 {
     /// thisが指す値の型。
-    private: typedef message_pack_object_map<template_value_compare> self;
+    private: typedef message_pack_object_map<template_value_type> self;
 
     /// thisの上位型。
     public: typedef psyq::internal
-        ::message_pack_object_container<template_value_compare>
+        ::message_pack_object_container<template_value_type>
             super;
 
     /// 連想配列のキー。
@@ -437,7 +445,8 @@ struct psyq::internal::message_pack_object_map:
                 typename self::value_type const& in_left,
                 typename self::value_type const& in_right)
             {
-                return template_value_compare::compare(in_left, in_right) < 0;
+                return psyq::internal
+                    ::message_pack_object_compare(in_left, in_right) < 0;
             });
     }
 
@@ -453,7 +462,8 @@ struct psyq::internal::message_pack_object_map:
                 typename self::value_type const& in_left,
                 typename self::value_type const& in_right)
             {
-                return template_value_compare::compare(in_left, in_right) < 0;
+                return psyq::internal
+                    ::message_pack_object_compare(in_left, in_right) < 0;
             });
     }
 
@@ -471,7 +481,8 @@ struct psyq::internal::message_pack_object_map:
                 typename self::value_type const& in_left,
                 typename self::value_type const& in_right)
             {
-                return template_value_compare::compare(in_left, in_right) < 0;
+                return psyq::internal
+                    ::message_pack_object_compare(in_left, in_right) < 0;
             });
     }
 };

@@ -1,6 +1,6 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief
+    @brief @copydoc psyq::internal::message_pack_value
  */
 #ifndef PSYQ_MESSAGE_PACK_VALUE_HPP_
 #define PSYQ_MESSAGE_PACK_VALUE_HPP_
@@ -28,9 +28,12 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief MessagePackオブジェクトの値。
+    @sa psyq::message_pack::object
+ */
 union psyq::internal::message_pack_value
 {
-    private: typedef message_pack_value self;
+    private: typedef message_pack_value self; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
     /** @brief MessagePackオブジェクトに格納されてる値の種別。
@@ -126,7 +129,7 @@ union psyq::internal::message_pack_value
     PSYQ_NOEXCEPT:
         map_(in_map)
     {}
-
+    //@}
     //-------------------------------------------------------------------------
     /// @name MessagePackオブジェクト値の比較
     //@{
@@ -246,7 +249,7 @@ union psyq::internal::message_pack_value
         @retval 0  等値。
         @retval 負 左辺のほうが小さい。
      */
-    public: static int compare_map(
+    private: static int compare_map(
         self const& in_left_value,
         self::kind const in_left_kind,
         self::map const& in_right_map)
@@ -286,7 +289,7 @@ union psyq::internal::message_pack_value
         @retval 0  等値。
         @retval 負 左辺のほうが小さい。
      */
-    public: static int compare_array(
+    private: static int compare_array(
         self const& in_left_value,
         self::kind const in_left_kind,
         self::array const& in_right_array)
@@ -326,7 +329,7 @@ union psyq::internal::message_pack_value
         @retval 0  等値。
         @retval 負 左辺のほうが小さい。
      */
-    public: static int compare_raw(
+    private: static int compare_raw(
         self const& in_left_value,
         self::kind const in_left_kind,
         self::raw const& in_right_raw)
@@ -369,7 +372,7 @@ union psyq::internal::message_pack_value
         @retval 0  等値。
         @retval 負 左辺のほうが小さい。
      */
-    public: template<typename template_float_type>
+    private: template<typename template_float_type>
     static int compare_floating_point(
         self const& in_left_value,
         self::kind const in_left_kind,
@@ -417,6 +420,14 @@ union psyq::internal::message_pack_value
         }
     }
 
+    /** @brief 浮動小数点実数を比較する。
+        @param[in] in_left    左辺の浮動小数点実数。
+        @param[in] in_right   右辺の浮動小数点実数。
+        @param[in] in_epsilon 許容する誤差の最大値。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
     private: template<typename template_float_type>
     static int compare_floating_point(
         template_float_type const in_left,
@@ -493,7 +504,7 @@ union psyq::internal::message_pack_value
         @retval 0  等値。
         @retval 負 左辺のほうが小さい。
      */
-    public: template<typename template_signed_type>
+    private: template<typename template_signed_type>
     static int compare_signed_integer(
         self const& in_left_value,
         self::kind const in_left_kind,
@@ -599,7 +610,7 @@ union psyq::internal::message_pack_value
         @retval 0  等値。
         @retval 負 左辺のほうが小さい。
      */
-    public: template<typename template_unsigned_type>
+    private: template<typename template_unsigned_type>
     static int compare_unsigned_integer(
         self const& in_left_value,
         self::kind const in_left_kind,
@@ -696,7 +707,7 @@ union psyq::internal::message_pack_value
         @retval 0  等値。
         @retval 負 左辺のほうが小さい。
      */
-    public: static int compare_boolean(
+    private: static int compare_boolean(
         self const& in_left_value,
         self::kind const in_left_kind,
         bool const in_right_boolean)
@@ -744,7 +755,6 @@ union psyq::internal::message_pack_value
         return in_left == in_right? 0: (in_right? 1: -1);
     }
     //@}
-
     //-------------------------------------------------------------------------
     /// 真偽値。
     public: bool boolean_;

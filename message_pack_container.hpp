@@ -54,7 +54,8 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief MessagePackオブジェクトで使うコンテナ。
     @tparam template_value_type @copydoc value_type
-    @sa psyq::message_pack::object
+    @sa psyq::message_pack::object::array
+    @sa psyq::message_pack::object::map
  */
 template<typename template_value_type>
 struct psyq::internal::message_pack_container
@@ -397,7 +398,7 @@ struct psyq::internal::message_pack_container
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief MessagePackオブジェクトで使う連想配列。
     @tparam template_value_type @copydoc super::value_type
-    @sa psyq::message_pack::object
+    @sa psyq::message_pack::object::map
  */
 template<typename template_value_type>
 struct psyq::internal::message_pack_map:

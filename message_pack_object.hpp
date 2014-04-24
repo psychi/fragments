@@ -17,21 +17,21 @@ struct psyq::message_pack::object
     /// @copydoc self::value_
     private: typedef psyq::internal::message_pack_value value;
 
-    /// @copydoc self::value::kind
-    public: typedef self::value::kind kind;
+    /// @copydoc psyq::internal::message_pack_value::kind
+    public: typedef psyq::internal::message_pack_value::kind kind;
 
     /// @name MessagePackオブジェクトが持つ値の型。
     //@{
     /// @copydoc self::value::float32
-    public: typedef self::value::float32 float32;
+    public: typedef psyq::internal::message_pack_value::float32 float32;
     /// @copydoc self::value::float64
-    public: typedef self::value::float64 float64;
+    public: typedef psyq::internal::message_pack_value::float64 float64;
     /// @copydoc self::value::raw
-    public: typedef self::value::raw raw;
+    public: typedef psyq::internal::message_pack_value::raw raw;
     /// @copydoc self::value::array
-    public: typedef self::value::array array;
+    public: typedef psyq::internal::message_pack_value::array array;
     /// @copydoc self::value::map
-    public: typedef self::value::map map;
+    public: typedef psyq::internal::message_pack_value::map map;
     //@}
     //-------------------------------------------------------------------------
     /// @name MessagePackオブジェクトの構築
@@ -294,9 +294,9 @@ struct psyq::message_pack::object
     /// @name MessagePackオブジェクトに格納されてる値の操作
     //@{
     /** @brief MessagePackオブジェクトに格納されてる値の種別を取得する。
-        @return @copydoc self::value::kind
+        @return @copydoc self::kind
      */
-    public: PSYQ_CONSTEXPR self::value::kind get_kind() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR self::kind get_kind() const PSYQ_NOEXCEPT
     {
         return this->kind_;
     }
@@ -866,8 +866,8 @@ struct psyq::message_pack::object
             self::kind::NEGATIVE_INTEGER: self::kind::POSITIVE_INTEGER;
     }
     //-------------------------------------------------------------------------
-    private: self::value value_;      ///< MessagePackオブジェクトの値。
-    private: self::value::kind kind_; ///< @copydoc self::value::kind
+    private: self::value value_; ///< MessagePackオブジェクトの値。
+    private: self::kind kind_;   ///< @copydoc self::value::kind
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

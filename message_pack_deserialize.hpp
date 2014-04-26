@@ -2,8 +2,8 @@
     @author Hillco Psychi (https://twitter.com/psychi)
     @brief
  */
-#ifndef PSYQ_MESSAGE_PACK_CONTEXT_HPP_
-#define PSYQ_MESSAGE_PACK_CONTEXT_HPP_
+#ifndef PSYQ_MESSAGE_PACK_DESIRIALIZE_HPP_
+#define PSYQ_MESSAGE_PACK_DESIRIALIZE_HPP_
 
 #include <array>
 //#include "psyq/message_pack_define.hpp"
@@ -709,4 +709,4 @@ class deserialize_context
     private: std::size_t stack_size_; ///< スタックの要素数。
 };
 
-#endif // !defined(PSYQ_MESSAGE_PACK_CONTEXT_HPP_)
+#endif // !defined(PSYQ_MESSAGE_PACK_DESIRIALIZE_HPP_)

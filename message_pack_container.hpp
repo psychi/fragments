@@ -101,12 +101,18 @@ struct psyq::internal::message_pack_container
         reverse_iterator;
 
     //-------------------------------------------------------------------------
-#if 0 // Visual Studio 2012 だとコンパイルエラーになるので。
-    public: message_pack_container():
+#ifndef _MSC_VER
+    /** @brief 空のコンテナを構築する。
+        @note 2014.04.25
+        VisualStudio2013以前では、C++11の仕様であるunionの制限解除に未対応。
+        そのため psyq::internal::message_pack_value でビルドエラーが発生する。
+        対応時期が現時点では不明なので、VisualStudioでは無効にしておく。
+     */
+    public: PSYQ_CONSTEXPR message_pack_container() PSYQ_NOEXCEPT:
        data_(nullptr),
        size_(0)
     {}
-#endif
+#endif // !defined(_MSC_VER)
 
     //-------------------------------------------------------------------------
     /// @name コンテナの要素を参照
@@ -356,18 +362,17 @@ struct psyq::internal::message_pack_container
             local_size = in_right.size();
             local_compare_size = this->size() < in_right.size()? 1: 0;
         }
-        if (this->data() == in_right.data())
+        if (this->data() != in_right.data())
         {
-            return local_compare_size;
-        }
-        for (typename self::size_type i(0); i < local_size; ++i)
-        {
-            int const local_compare_element(
-                psyq::internal::message_pack_object_compare(
-                    this->at(i), in_right.at(i)));
-            if (local_compare_element != 0)
+            for (typename self::size_type i(0); i < local_size; ++i)
             {
-                return local_compare_element;
+                int const local_compare_element(
+                    psyq::internal::message_pack_object_compare(
+                        this->at(i), in_right.at(i)));
+                if (local_compare_element != 0)
+                {
+                    return local_compare_element;
+                }
             }
         }
         return local_compare_size;
@@ -442,8 +447,8 @@ struct psyq::internal::message_pack_map:
             this->cend(),
             typename self::value_type(in_key, self::mapped_type()),
             [](
-                typename self::value_type const& in_left,
-                typename self::value_type const& in_right)
+                typename super::value_type const& in_left,
+                typename super::value_type const& in_right)
             {
                 return psyq::internal
                     ::message_pack_object_compare(in_left, in_right) < 0;
@@ -459,8 +464,8 @@ struct psyq::internal::message_pack_map:
             this->end(),
             typename self::value_type(in_key, self::mapped_type()),
             [](
-                typename self::value_type const& in_left,
-                typename self::value_type const& in_right)
+                typename super::value_type const& in_left,
+                typename super::value_type const& in_right)
             {
                 return psyq::internal
                     ::message_pack_object_compare(in_left, in_right) < 0;
@@ -478,8 +483,8 @@ struct psyq::internal::message_pack_map:
             const_cast<typename super::iterator>(this->begin()),
             const_cast<typename super::iterator>(this->end()),
             [](
-                typename self::value_type const& in_left,
-                typename self::value_type const& in_right)
+                typename super::value_type const& in_left,
+                typename super::value_type const& in_right)
             {
                 return psyq::internal
                     ::message_pack_object_compare(in_left, in_right) < 0;

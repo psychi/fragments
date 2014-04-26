@@ -8,13 +8,15 @@
 //#include "psyq/message_pack_container.hpp"
 
 #ifndef PSYQ_MESSAGE_PACK_VALUE_FLOAT32_EPSILON
+/// 倍精度浮動小数点実数で許容する誤差の最大値。
 #define PSYQ_MESSAGE_PACK_VALUE_FLOAT32_EPSILON\
-    std::numeric_limits<self::float32>::epsilon() * 4
+    (std::numeric_limits<self::float32>::epsilon() * 4)
 #endif // !defined(PSYQ_MESSAGE_PACK_VALUE_FLOAT32_EPSILON)
 
 #ifndef PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON
+/// 単精度浮動小数点実数で許容する誤差の最大値。
 #define PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON\
-    std::numeric_limits<self::float64>::epsilon() * 4
+    (std::numeric_limits<self::float64>::epsilon() * 4)
 #endif // !defined(PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON)
 
 namespace psyq
@@ -71,7 +73,7 @@ union psyq::internal::message_pack_value
             map;
     //@}
     //-------------------------------------------------------------------------
-    /// @name MessagePackオブジェクト値の構築と破棄
+    /// @name MessagePackオブジェクト値の構築
     //@{
     /// 空のMessagePackオブジェクト値を構築する。
     public: PSYQ_CONSTEXPR message_pack_value() PSYQ_NOEXCEPT {}
@@ -101,6 +103,12 @@ union psyq::internal::message_pack_value
         self::float64 const in_float)
     PSYQ_NOEXCEPT:
         float64_(in_float)
+    {}
+    /// @copydoc message_pack_value(self::float64 const)
+    public: explicit PSYQ_CONSTEXPR message_pack_value(
+        self::float32 const in_float)
+    PSYQ_NOEXCEPT:
+        float32_(in_float)
     {}
 
     /** @brief MessagePackオブジェクトにRAWバイト列を格納する。
@@ -138,10 +146,10 @@ union psyq::internal::message_pack_value
         @param[in] in_left_kind   左辺のMessagePackオブジェクト値の種別。
         @param[in] in_right_value 右辺のMessagePackオブジェクト値。
         @param[in] in_right_kind  右辺のMessagePackオブジェクト値の種別。
-        @retval true  等値だった。
-        @retval false 非等値だった 。
+        @retval true  左辺と右辺は等値。
+        @retval false 左辺と右辺は非等値。
      */
-    public: static bool equal_value(
+    public: static bool equal(
         self const& in_left_value,
         self::kind const in_left_kind,
         self const& in_right_value,
@@ -159,9 +167,11 @@ union psyq::internal::message_pack_value
         case self::kind::BOOLEAN:
             return in_left_value.boolean_ == in_right_value.boolean_;
         case self::kind::POSITIVE_INTEGER:
-            return in_left_value.positive_integer_ == in_right_value.positive_integer_;
+            return in_left_value.positive_integer_
+                == in_right_value.positive_integer_;
         case self::kind::NEGATIVE_INTEGER:
-            return in_left_value.negative_integer_ == in_right_value.negative_integer_;
+            return in_left_value.negative_integer_
+                == in_right_value.negative_integer_;
         case self::kind::FLOAT32:
             return 0 == self::compare_floating_point(
                 in_left_value.float32_,
@@ -193,7 +203,7 @@ union psyq::internal::message_pack_value
         @retval 0  等値。
         @retval 負 左辺のほうが小さい。
      */
-    public: static int compare_value(
+    public: static int compare(
         self const& in_left_value,
         self::kind const in_left_kind,
         self const& in_right_value,
@@ -234,6 +244,12 @@ union psyq::internal::message_pack_value
         }
     }
     //@}
+
+    /** @brief 正規の種別か判定する。
+        @param[in] in_kind 判定する種別。
+        @retval true  正規の種別だった。
+        @retval false 不正な種別だった。
+     */
     private: static bool is_valid_kind(self::kind const in_kind)
     {
         return in_kind <= self::kind::MAP;
@@ -402,7 +418,7 @@ union psyq::internal::message_pack_value
             return self::compare_floating_point<template_float_type>(
                 in_left_value.float32_,
                 in_right_float,
-                self::get_epsilon(self::float32(0)));
+                PSYQ_MESSAGE_PACK_VALUE_FLOAT32_EPSILON);
         case self::kind::FLOAT64:
             return self::compare_floating_point<self::float64>(
                 in_left_value.float64_,
@@ -439,6 +455,14 @@ union psyq::internal::message_pack_value
         return local_diff < -in_epsilon? -1: (in_epsilon < local_diff? 1: 0);
     }
 
+    /** @brief 浮動小数点実数と有符号整数を比較する。
+        @param[in] in_left    左辺の浮動小数点実数。
+        @param[in] in_right   右辺の有符号整数。
+        @param[in] in_epsilon 許容する誤差の最大値。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
     private: template<typename template_float_type>
     static int compare_floating_point(
         template_float_type const in_left,
@@ -453,6 +477,14 @@ union psyq::internal::message_pack_value
             1;
     }
 
+    /** @brief 浮動小数点実数と無符号整数を比較する。
+        @param[in] in_left    左辺の浮動小数点実数。
+        @param[in] in_right   右辺の無符号整数。
+        @param[in] in_epsilon 許容する誤差の最大値。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
     private: template<typename template_float_type>
     static int compare_floating_point(
         template_float_type const in_left,
@@ -468,6 +500,14 @@ union psyq::internal::message_pack_value
                 in_epsilon);
     }
 
+    /** @brief 浮動小数点実数と真偽値を比較する。
+        @param[in] in_left    左辺の浮動小数点実数。
+        @param[in] in_right   右辺の真偽値。
+        @param[in] in_epsilon 許容する誤差の最大値。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
     private: template<typename template_float_type>
     static int compare_floating_point(
         template_float_type const in_left,
@@ -484,10 +524,16 @@ union psyq::internal::message_pack_value
                 in_epsilon);
     }
 
+    /** @brief 倍精度浮動小数点実数で許容する誤差の最大値を取得する。
+        @return 倍精度浮動小数点実数で許容する誤差の最大値。
+     */
     private: static self::float64 get_epsilon(self::float64 const)
     {
         return PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON;
     }
+    /** @brief 単精度浮動小数点実数で許容する誤差の最大値を取得する。
+        @return 単精度浮動小数点実数で許容する誤差の最大値。
+     */
     private: static self::float32 get_epsilon(self::float32 const)
     {
         return PSYQ_MESSAGE_PACK_VALUE_FLOAT32_EPSILON;
@@ -549,6 +595,14 @@ union psyq::internal::message_pack_value
         }
     }
 
+    /** @brief 有符号整数と浮動小数点実数を比較する。
+        @param[in] in_left    左辺の有符号整数。
+        @param[in] in_right   右辺の浮動小数点実数。
+        @param[in] in_epsilon 許容する誤差の最大値。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
     private: template<
         typename template_signed_type,
         typename template_float_type>
@@ -562,6 +616,13 @@ union psyq::internal::message_pack_value
             static_cast<template_float_type>(in_left), in_right, in_epsilon);
     }
 
+    /** @brief 有符号整数を比較する。
+        @param[in] in_left  左辺の有符号整数。
+        @param[in] in_right 右辺の有符号整数。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
     private: template<typename template_signed_type>
     static int compare_signed_integer(
         template_signed_type const in_left,
@@ -571,6 +632,13 @@ union psyq::internal::message_pack_value
         return in_left < in_right? -1: (in_right < in_left? 1: 0);
     }
 
+    /** @brief 有符号整数と無符号整数を比較する。
+        @param[in] in_left  左辺の有符号整数。
+        @param[in] in_right 右辺の無符号整数。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
     private: template<typename template_signed_type>
     static int compare_signed_integer(
         template_signed_type const in_left,
@@ -585,6 +653,13 @@ union psyq::internal::message_pack_value
                 static_cast<unsigned_type>(in_left), in_right);
     }
 
+    /** @brief 有符号整数と真偽値を比較する。
+        @param[in] in_left  左辺の有符号整数。
+        @param[in] in_right 右辺の真偽値。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
     private: template<typename template_signed_type>
     static int compare_signed_integer(
         template_signed_type const in_left,
@@ -655,6 +730,14 @@ union psyq::internal::message_pack_value
         }
     }
 
+    /** @brief 無符号整数と浮動小数点実数を比較する。
+        @param[in] in_left    左辺の無符号整数。
+        @param[in] in_right   右辺の浮動小数点実数。
+        @param[in] in_epsilon 許容する誤差の最大値。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
     private: template<
         typename template_unsigned_type,
         typename template_float_type>
@@ -675,6 +758,13 @@ union psyq::internal::message_pack_value
                 in_epsilon);
     }
 
+    /** @brief 無符号整数を比較する。
+        @param[in] in_left  左辺の無符号整数。
+        @param[in] in_right 右辺の無符号整数。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
     private: template<typename template_unsigned_type>
     static int compare_unsigned_integer(
         template_unsigned_type const in_left,
@@ -684,6 +774,13 @@ union psyq::internal::message_pack_value
         return in_left < in_right? -1: (in_right < in_left? 1: 0);
     }
 
+    /** @brief 無符号整数と真偽値を比較する。
+        @param[in] in_left  左辺の無符号整数。
+        @param[in] in_right 右辺の真偽値。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
     private: template<typename template_unsigned_type>
     static int compare_unsigned_integer(
         template_unsigned_type const in_left,
@@ -747,6 +844,13 @@ union psyq::internal::message_pack_value
         }
     }
 
+    /** @brief 真偽値を比較する。
+        @param[in] in_left  左辺の真偽値。
+        @param[in] in_right 右辺の真偽値。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  等値。
+        @retval 負 左辺のほうが小さい。
+     */
     private: static int compare_boolean(
         bool const in_left,
         bool const in_right)
@@ -762,7 +866,6 @@ union psyq::internal::message_pack_value
     public: std::uint64_t positive_integer_;
     /// 0未満の整数。
     public: std::int64_t negative_integer_;
-    public: std::uint32_t uint32_;
     /// 単精度浮動小数点数実数。
     public: self::float32 float32_;
     /// 倍精度浮動小数点実数。
@@ -773,6 +876,8 @@ union psyq::internal::message_pack_value
     public: self::array array_;
     /// MessagePackオブジェクトの連想配列。
     public: self::map map_;
+    /// self::float32_ をビット列として取り出すための32bit整数。
+    public: std::uint32_t uint32_;
 };
 
 #endif // !defined(PSYQ_MESSAGE_PACK_VALUE_HPP_)

@@ -81,8 +81,8 @@ struct psyq::message_pack::object
         kind_(self::kind::POSITIVE_INTEGER)
     {}
 
-    /** @brief MessagePackオブジェクトに整数を格納する。
-        @param[in] in_integer MessagePackオブジェクトに格納する整数。
+    /** @brief MessagePackオブジェクトに有符号整数を格納する。
+        @param[in] in_integer MessagePackオブジェクトに格納する有符号整数。
      */
     public: explicit PSYQ_CONSTEXPR object(std::int64_t const in_integer)
     PSYQ_NOEXCEPT:
@@ -157,7 +157,7 @@ struct psyq::message_pack::object
     {}
     //@}
     //-------------------------------------------------------------------------
-    /// @name MessagePackオブジェクトの代入
+    /// @name MessagePackオブジェクトへの値の格納
     //@{
     /** @brief MessagePackオブジェクトに真偽値を格納する。
         @param[in] in_boolean MessagePackオブジェクトに格納する真偽値。
@@ -203,8 +203,8 @@ struct psyq::message_pack::object
         return *new(this) self(in_integer);
     }
 
-    /** @brief MessagePackオブジェクトに整数を格納する。
-        @param[in] in_integer MessagePackオブジェクトに格納する整数。
+    /** @brief MessagePackオブジェクトに有符号整数を格納する。
+        @param[in] in_integer MessagePackオブジェクトに格納する有符号整数。
         @return *this
      */
     public: PSYQ_CONSTEXPR self& operator=(std::int64_t const in_integer)
@@ -238,8 +238,7 @@ struct psyq::message_pack::object
     }
 
     /** @brief MessagePackオブジェクトに浮動小数点実数を格納する。
-        @param[in] in_float
-            MessagePackオブジェクトに格納する浮動小数点実数。
+        @param[in] in_float MessagePackオブジェクトに格納する浮動小数点実数。
         @return *this
      */
     public: PSYQ_CONSTEXPR self& operator=(self::float64 const in_float)
@@ -459,7 +458,7 @@ struct psyq::message_pack::object
             MessagePackオブジェクトに格納されてる配列へのポインタ。
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは配列ではない。
-        @sa self::get_map()
+        @sa self::set_array()
      */
     public: PSYQ_CONSTEXPR self::array* get_array() PSYQ_NOEXCEPT
     {
@@ -498,7 +497,8 @@ struct psyq::message_pack::object
      */
     public: PSYQ_CONSTEXPR self::map* get_map() PSYQ_NOEXCEPT
     {
-        return this->get_kind() == self::kind::MAP? &this->value_.map_: nullptr;
+        return this->get_kind() == self::kind::MAP?
+            &this->value_.map_: nullptr;
     }
     /// @copydoc get_map()
     public: PSYQ_CONSTEXPR self::map const* get_map() const PSYQ_NOEXCEPT
@@ -531,7 +531,7 @@ struct psyq::message_pack::object
      */
     public: bool operator==(self const& in_right) const PSYQ_NOEXCEPT
     {
-        return self::value::equal_value(
+        return self::value::equal(
             this->value_,
             this->get_kind(),
             in_right.value_,
@@ -592,7 +592,7 @@ struct psyq::message_pack::object
      */
     public: int compare(self const& in_object) const PSYQ_NOEXCEPT
     {
-        return self::value::compare_value(
+        return self::value::compare(
             this->value_,
             this->get_kind(),
             in_object.value_,
@@ -600,6 +600,10 @@ struct psyq::message_pack::object
     }
     //@}
     //-------------------------------------------------------------------------
+    /** @brief *thisをMessagePack形式で直列化する。
+        @tparam template_out_stream std::basic_ostream 互換の出力ストリーム型。
+        @param[out] out_stream 直列化した*thisを出力するストリーム。
+     */
     public: bool serialize(std::basic_ostream<char>& out_stream) const
     {
         switch (this->get_kind())
@@ -622,7 +626,8 @@ struct psyq::message_pack::object
             self::serialize_uint(out_stream, 0xca, this->value_.uint32_);
             return true;
         case self::kind::FLOAT64:
-            self::serialize_uint(out_stream, 0xcb, this->value_.positive_integer_);
+            self::serialize_uint(
+                out_stream, 0xcb, this->value_.positive_integer_);
             return true;
         case self::kind::RAW:
             self::serialize_raw(out_stream, this->value_.raw_);
@@ -637,6 +642,11 @@ struct psyq::message_pack::object
         }
     }
 
+    /** @brief 0以上の整数をMessagePack形式で直列化する。
+        @tparam template_out_stream std::basic_ostream 互換の出力ストリーム型。
+        @param[out] out_stream 直列化した整数を出力するストリーム。
+        @param[in]  in_integer 直列化する0以上の整数。
+     */
     private: template<typename template_out_stream>
     static void serialize_positive_integer(
         template_out_stream& out_stream,
@@ -646,17 +656,17 @@ struct psyq::message_pack::object
         {
             out_stream << static_cast<std::uint8_t>(in_integer);
         }
-        else if (in_integer <= (std::numeric_limits<std::uint8_t>::min)())
+        else if (in_integer <= (std::numeric_limits<std::uint8_t>::max)())
         {
             self::serialize_uint(
                 out_stream, 0xcc, static_cast<std::uint8_t>(in_integer));
         }
-        else if (in_integer <= (std::numeric_limits<std::uint16_t>::min)())
+        else if (in_integer <= (std::numeric_limits<std::uint16_t>::max)())
         {
             self::serialize_uint(
                 out_stream, 0xcd, static_cast<std::uint16_t>(in_integer));
         }
-        else if (in_integer <= (std::numeric_limits<std::uint32_t>::min)())
+        else if (in_integer <= (std::numeric_limits<std::uint32_t>::max)())
         {
             self::serialize_uint(
                 out_stream, 0xce, static_cast<std::uint32_t>(in_integer));
@@ -667,6 +677,11 @@ struct psyq::message_pack::object
         }
     }
 
+    /** @brief 0未満の整数をMessagePack形式で直列化する。
+        @tparam template_out_stream std::basic_ostream 互換の出力ストリーム型。
+        @param[out] out_stream 直列化した整数を出力するストリーム。
+        @param[in]  in_integer 直列化する0未満の整数。
+     */
     private: template<typename template_out_stream>
     static void serialize_negative_integer(
         template_out_stream& out_stream,
@@ -699,6 +714,11 @@ struct psyq::message_pack::object
         }
     }
 
+    /** @brief RAWバイト列をMessagePack形式で直列化する。
+        @tparam template_out_stream std::basic_ostream 互換の出力ストリーム型。
+        @param[out] out_stream 直列化したRAWバイト列を出力するストリーム。
+        @param[in]  in_raw 直列化するRAWバイト列。
+     */
     private: template<typename template_out_stream>
     static void serialize_raw(
         template_out_stream& out_stream,
@@ -710,28 +730,38 @@ struct psyq::message_pack::object
         {
             out_stream << std::uint8_t(0xa0 + (local_size & 0x1f));
         }
-        else if (local_size <= 0xff)
+        else if (local_size <= (std::numeric_limits<std::uint8_t>::max)())
         {
             self::serialize_uint(
                 out_stream, 0xd9, static_cast<std::uint8_t>(local_size));
         }
-        else if (local_size <= 0xffff)
+        else if (local_size <= (std::numeric_limits<std::uint16_t>::max)())
         {
             self::serialize_uint(
                 out_stream, 0xda, static_cast<std::uint16_t>(local_size));
         }
         else
         {
-            PSYQ_ASSERT(in_raw.size() <= 0xffffffff);
+            PSYQ_ASSERT(
+                in_raw.size() <= (std::numeric_limits<std::uint32_t>::max)());
             self::serialize_uint(out_stream, 0xdb, local_size);
         }
 
         // RAWバイト列を書き出す。
+        static_assert(
+            sizeof(typename template_out_stream::char_type) == 1,
+            "sizeof(typename template_out_stream::char_type) is not 1.");
         typedef typename template_out_stream::char_type const* const_pointer;
         out_stream.write(
             reinterpret_cast<const_pointer>(in_raw.data()), local_size);
     }
 
+    /** @brief MessagePackオブジェクト配列をMessagePack形式で直列化する。
+        @tparam template_out_stream std::basic_ostream 互換の出力ストリーム型。
+        @param[out] out_stream
+            直列化したMessagePackオブジェクト配列を出力するストリーム。
+        @param[in] in_array 直列化するMessagePackオブジェクト配列。
+     */
     private: template<typename template_out_stream>
     static bool serialize_array(
         template_out_stream& out_stream,
@@ -743,14 +773,15 @@ struct psyq::message_pack::object
         {
             out_stream << std::uint8_t(0x90 + (local_size & 0xf));
         }
-        else if (local_size <= 0xffff)
+        else if (local_size <= (std::numeric_limits<std::uint16_t>::max)())
         {
             self::serialize_uint(
                 out_stream, 0xdc, static_cast<std::uint16_t>(local_size));
         }
         else
         {
-            PSYQ_ASSERT(in_array.size() <= 0xffffffff);
+            PSYQ_ASSERT(
+                in_array.size() <= (std::numeric_limits<std::uint32_t>::max)());
             self::serialize_uint(out_stream, 0xdd, local_size);
         }
 
@@ -765,29 +796,36 @@ struct psyq::message_pack::object
         return true;
     }
 
+    /** @brief MessagePackオブジェクト連想配列をMessagePack形式で直列化する。
+        @tparam template_out_stream std::basic_ostream 互換の出力ストリーム型。
+        @param[out] out_stream
+            直列化したMessagePackオブジェクト連想配列を出力するストリーム。
+        @param[in] in_map 直列化するMessagePackオブジェクト連想配列。
+     */
     private: template<typename template_out_stream>
     static bool serialize_map(
         template_out_stream& out_stream,
         self::map const& in_map)
     {
-        // 配列の大きさを書き出す。
+        // 連想配列の大きさを書き出す。
         std::uint32_t const local_size(in_map.size());
         if (local_size <= 0xf)
         {
             out_stream << std::uint8_t(0x80 + (local_size & 0xf));
         }
-        else if (local_size <= 0xffff)
+        else if (local_size <= (std::numeric_limits<std::uint16_t>::max)())
         {
             self::serialize_uint(
                 out_stream, 0xde, static_cast<std::uint16_t>(local_size));
         }
         else
         {
-            PSYQ_ASSERT(in_map.size() <= 0xffffffff);
+            PSYQ_ASSERT(
+                in_map.size() <= (std::numeric_limits<std::uint32_t>::max)());
             self::serialize_uint(out_stream, 0xdf, local_size);
         }
 
-        // 配列を書き出す。
+        // 連想配列を書き出す。
         for (auto& local_element: in_map)
         {
             if (!local_element.first.serialize(out_stream)
@@ -799,6 +837,12 @@ struct psyq::message_pack::object
         return true;
     }
 
+    /** @brief 8bit整数をMessagePack形式で直列化する。
+        @tparam template_out_stream std::basic_ostream 互換の出力ストリーム型。
+        @param[out] out_stream 直列化した整数を出力するストリーム。
+        @param[in]  in_header  直列化するヘッダ値。
+        @param[in]  in_integer 直列化する8bit整数。
+     */
     private: template<typename template_out_stream>
     static void serialize_uint(
         template_out_stream& out_stream,
@@ -808,6 +852,12 @@ struct psyq::message_pack::object
         out_stream << in_header << in_integer;
     }
 
+    /** @brief 16bit整数をMessagePack形式で直列化する。
+        @tparam template_out_stream std::basic_ostream 互換の出力ストリーム型。
+        @param[out] out_stream 直列化した整数を出力するストリーム。
+        @param[in]  in_header  直列化するヘッダ値。
+        @param[in]  in_integer 直列化する16bit整数。
+     */
     private: template<typename template_out_stream>
     static void serialize_uint(
         template_out_stream& out_stream,
@@ -819,6 +869,12 @@ struct psyq::message_pack::object
             << static_cast<std::uint8_t>(in_integer);
     }
 
+    /** @brief 32bit整数をMessagePack形式で直列化する。
+        @tparam template_out_stream std::basic_ostream 互換の出力ストリーム型。
+        @param[out] out_stream 直列化した整数を出力するストリーム。
+        @param[in]  in_header  直列化するヘッダ値。
+        @param[in]  in_integer 直列化する32bit整数。
+     */
     private: template<typename template_out_stream>
     static void serialize_uint(
         template_out_stream& out_stream,
@@ -832,6 +888,12 @@ struct psyq::message_pack::object
             << static_cast<std::uint8_t>(in_integer);
     }
 
+    /** @brief 64bit整数をMessagePack形式で直列化する。
+        @tparam template_out_stream std::basic_ostream 互換の出力ストリーム型。
+        @param[out] out_stream 直列化した整数を出力するストリーム。
+        @param[in]  in_header  直列化するヘッダ値。
+        @param[in]  in_integer 直列化する64bit整数。
+     */
     private: template<typename template_out_stream>
     static void serialize_uint(
         template_out_stream& out_stream,

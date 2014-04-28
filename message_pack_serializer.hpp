@@ -74,9 +74,9 @@ class psyq::message_pack::serializer
     };
 
     //-------------------------------------------------------------------------
-    public: serializer(): stack_size_(0) {}
-
-    public: explicit serializer(typename self::stream in_stream):
+    public: explicit serializer(
+        typename self::stream in_stream = self::stream())
+    :
         stream_(std::move(in_stream)),
         stack_size_(0)
     {}
@@ -543,6 +543,7 @@ class psyq::message_pack::serializer
 
     /** @brief 現在直列化途中のコンテナの残り要素数を取得する。
         @return 現在のコンテナスタックの残り要素数。
+        @sa self::serialize_array() self::serialize_map()
      */
     public: std::size_t get_container_rest_size() const PSYQ_NOEXCEPT
     {
@@ -552,6 +553,7 @@ class psyq::message_pack::serializer
 
     /** @brief 直列化途中のコンテナの数を取得する。
         @return 直列化途中のコンテナの数。
+        @sa self::serialize_array() self::serialize_map()
      */
     public: std::size_t get_container_stack_size() const PSYQ_NOEXCEPT
     {
@@ -840,7 +842,7 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 }
 //@}
 //-----------------------------------------------------------------------------
-/// @name RAWバイト列の直列化
+/// @name 文字列をRAWバイト列として直列化
 //@{
 /** @brief 文字列をMessagePack形式のRAWバイト列として直列化する。
     @param[out] out_stream 出力するストリーム。
@@ -872,7 +874,7 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 }
 //@}
 //-----------------------------------------------------------------------------
-/// @name 配列の直列化
+/// @name タプルを配列として直列化
 //@{
 /** @brief std::tuple をMessagePack形式の配列として直列化する。
     @param[out] out_stream 出力するストリーム。
@@ -1159,7 +1161,7 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 }
 //@}
 //-----------------------------------------------------------------------------
-/// @name 連想配列の直列化
+/// @name 集合を連想配列として直列化
 //@{
 /** @brief std::set をMessagePack形式の連想配列として直列化する。
     @param[out] out_stream 出力するストリーム。

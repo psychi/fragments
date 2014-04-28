@@ -1,6 +1,6 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief
+    @brief @copydoc psyq::message_pack::serializer
  */
 #ifndef PSYQ_MESSAGE_PACK_SERIALIZER_HPP_
 #define PSYQ_MESSAGE_PACK_SERIALIZER_HPP_
@@ -34,16 +34,28 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief MessagePack形式で直列化したバイナリを
+           std::basic_ostream 互換のオブジェクトに書き込むためのアダプタ。
+    @tparam template_out_stream @copydoc self::stream
+    @tparam template_stack_size @copydoc self::stack_size
+ */
 template<
     typename template_out_stream = std::ostringstream,
     std::size_t template_stack_size
         = PSYQ_MESSAGE_PACK_SERIALIZER_STACK_SIZE_DEFAULT>
 class psyq::message_pack::serializer
 {
+    /// thisが指す値の型。
     private: typedef serializer<template_out_stream, template_stack_size> self;
 
-    /// 直列化したMessagePackを出力する std::basic_ostream 互換のストリーム。
+    /** 直列化したMessagePack形式のバイナリを書き込む
+        std::basic_ostream 互換の出力ストリーム。
+     */
     public: typedef template_out_stream stream;
+
+    /** 直列化途中のコンテナのスタックの限界数。
+     */
+    public: static std::size_t const stack_size = template_stack_size;
 
     /// 次に直列化するオブジェクトの種類。
     public: enum next_kind
@@ -54,7 +66,7 @@ class psyq::message_pack::serializer
         next_kind_MAP_VALUE,  ///< 連想配列の要素の値。
     };
 
-    /// 直列化途中のコンテナのスタック。
+    /// @copydoc self::stack_
     private: struct stack
     {
         std::size_t rest_size;         ///< コンテナ要素の残数。
@@ -64,12 +76,7 @@ class psyq::message_pack::serializer
     //-------------------------------------------------------------------------
     public: serializer(): stack_size_(0) {}
 
-    public: explicit serializer(typename self::stream const& in_stream):
-        stream_(in_stream),
-        stack_size_(0)
-    {}
-
-    public: explicit serializer(typename self::stream&& in_stream):
+    public: explicit serializer(typename self::stream in_stream):
         stream_(std::move(in_stream)),
         stack_size_(0)
     {}
@@ -554,7 +561,7 @@ class psyq::message_pack::serializer
     //-------------------------------------------------------------------------
     /// @copydoc self::stream
     private: typename self::stream stream_;
-    /// @copydoc self::stack
+    /// 直列化途中のコンテナのスタック。
     private: std::array<typename self::stack, template_stack_size> stack_;
     /// 直列化途中のコンテナのスタック数。
     private: std::size_t stack_size_;
@@ -1322,7 +1329,7 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
     psyq::message_pack::serialize_map(out_stream, in_map);
     return out_stream;
 }
-
+//@}
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq
 {
@@ -1380,6 +1387,5 @@ namespace psyq
         }
     }
 }
-//@}
 
 #endif // !defined(PSYQ_MESSAGE_PACK_SERIALIZER_HPP_)

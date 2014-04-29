@@ -42,14 +42,24 @@
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
     @brief @copydoc psyq::message_pack::serializer
+
+    使用例
+    @code
+    psyq::message_pack::serializer<> local_serializer;
+    // 真偽値を直列化する。
+    local_serializer << false << true;
+    // 整数を直列化する。
+    local_serializer << -0x12 << 0x1234 << -0x12345678L << 0x123456789abcdefLL;
+    // 浮動小数点数を直列化する。
+    local_serializer << -1.2f << 3.4;
+    // コンテナを直列化する。
+    local_serializer << std::make_tuple(
+        std::vector<std::uint32_t>(4, 0x12345678),
+        std::list<std::string>(3, std::string("std::string")));
+    @endcode
  */
 #ifndef PSYQ_MESSAGE_PACK_SERIALIZER_HPP_
 #define PSYQ_MESSAGE_PACK_SERIALIZER_HPP_
-
-#ifndef PSYQ_MESSAGE_PACK_SERIALIZER_STACK_SIZE_DEFAULT
-/// psyq::message_pack::serializer のスタック限界数のデフォルト値。
-#define PSYQ_MESSAGE_PACK_SERIALIZER_STACK_SIZE_DEFAULT 32
-#endif // !defined(PSYQ_MESSAGE_PACK_SERIALIZER_STACK_SIZE_DEFAULT)
 
 #include <array>
 #include <sstream>
@@ -62,7 +72,20 @@
 #include <unordered_set>
 #include <map>
 #include <unordered_map>
-//#include "psyq/string/string_view_interface.hpp"
+
+/// psyq::message_pack::serializer のスタック限界数のデフォルト値。
+#ifndef PSYQ_MESSAGE_PACK_SERIALIZER_STACK_SIZE_DEFAULT
+#define PSYQ_MESSAGE_PACK_SERIALIZER_STACK_SIZE_DEFAULT 32
+#endif // !defined(PSYQ_MESSAGE_PACK_SERIALIZER_STACK_SIZE_DEFAULT)
+
+#ifndef PSYQ_ASSERT
+#include <assert.h>
+#define PSYQ_ASSERT assert
+#endif // !defined(PSYQ_ASSERT)
+
+#ifndef PSYQ_NOEXCEPT
+#define PSYQ_NOEXCEPT
+#endif // !defined(PSYQ_NOEXCEPT)
 
 namespace psyq
 {
@@ -75,8 +98,8 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief MessagePack形式で直列化したバイナリを
-           std::basic_ostream 互換のオブジェクトに書き込むためのアダプタ。
+/** @brief MessagePack形式で直列化したバイナリを、 std::basic_ostream
+           互換の出力ストリームオブジェクトに書き込むアダプタ。
     @tparam template_out_stream @copydoc self::stream
     @tparam template_stack_size @copydoc self::stack_size
  */
@@ -137,24 +160,24 @@ class psyq::message_pack::serializer
     //-------------------------------------------------------------------------
     /// @name 値の直列化
     //@{
-    /** @brief nilを直列化し、出力ストリームに書き込む。
+    /** @brief nilを直列化し、出力ストリームへ書き込む。
      */
     public: void write_nil()
     {
-        this->stream_ << std::uint8_t(0xc0);
+        this->put(0xc0);
         this->update_stack();
     }
 
-    /** @brief 真偽値を直列化し、出力ストリームに書き込む。
+    /** @brief 真偽値を直列化し、出力ストリームへ書き込む。
         @param[in] in_boolean 直列化する真偽値。
      */
     public: void write_boolean(bool const in_boolean)
     {
-        this->stream_ << std::uint8_t(in_boolean? 0xc3: 0xc2);
+        this->put(in_boolean? 0xc3: 0xc2);
         this->update_stack();
     }
 
-    /** @brief 無符号整数を直列化し、出力ストリームに書き込む。
+    /** @brief 無符号整数を直列化し、出力ストリームへ書き込む。
         @param[in] in_integer 直列化する整数。
      */
     public: template<typename template_integer_type>
@@ -165,34 +188,30 @@ class psyq::message_pack::serializer
             "template_integer_type is not unsigned integer type.");
         if (in_integer <= 0x7f)
         {
-            this->stream_ << static_cast<std::uint8_t>(in_integer);
+            this->put(static_cast<std::uint8_t>(in_integer));
         }
         else if (in_integer <= (std::numeric_limits<std::uint8_t>::max)())
         {
-            self::write_8bits(
-                this->stream_, 0xcc, static_cast<std::uint8_t>(in_integer));
+            this->write_8bits(0xcc, static_cast<std::uint8_t>(in_integer));
         }
         else if (in_integer <= (std::numeric_limits<std::uint16_t>::max)())
         {
-            self::write_16bits(
-                this->stream_, 0xcd, static_cast<std::uint16_t>(in_integer));
+            this->write_16bits(0xcd, static_cast<std::uint16_t>(in_integer));
         }
         else if (in_integer <= (std::numeric_limits<std::uint32_t>::max)())
         {
-            self::write_32bits(
-                this->stream_, 0xce, static_cast<std::uint32_t>(in_integer));
+            this->write_32bits(0xce, static_cast<std::uint32_t>(in_integer));
         }
         else
         {
             PSYQ_ASSERT(
                 in_integer <= (std::numeric_limits<std::uint64_t>::max()));
-            self::write_64bits(
-                this->stream_, 0xcf, static_cast<std::uint64_t>(in_integer));
+            this->write_64bits(0xcf, static_cast<std::uint64_t>(in_integer));
         }
         this->update_stack();
     }
 
-    /** @brief 整数を直列化し、出力ストリームに書き込む。
+    /** @brief 整数を直列化し、出力ストリームへ書き込む。
         @param[in] in_integer 直列化する整数。
      */
     public: template<typename template_integer_type>
@@ -214,41 +233,37 @@ class psyq::message_pack::serializer
         // 0未満の整数を直列化する。
         if (-0x20 <= in_integer)
         {
-            this->stream_ << static_cast<std::uint8_t>(in_integer);
+            this->put(static_cast<std::uint8_t>(in_integer));
         }
         else if ((std::numeric_limits<std::int8_t>::min()) <= in_integer)
         {
-            self::write_8bits(
-                this->stream_, 0xd0, static_cast<std::uint8_t>(in_integer));
+            this->write_8bits(0xd0, static_cast<std::uint8_t>(in_integer));
         }
         else if ((std::numeric_limits<std::int16_t>::min()) <= in_integer)
         {
-            self::write_16bits(
-                this->stream_, 0xd1, static_cast<std::uint16_t>(in_integer));
+            this->write_16bits(0xd1, static_cast<std::uint16_t>(in_integer));
         }
         else if ((std::numeric_limits<std::int32_t>::min()) <= in_integer)
         {
-            self::write_32bits(
-                this->stream_, 0xd2, static_cast<std::uint32_t>(in_integer));
+            this->write_32bits(0xd2, static_cast<std::uint32_t>(in_integer));
         }
         else
         {
             PSYQ_ASSERT(
                 (std::numeric_limits<std::int64_t>::min()) <= in_integer);
-            self::write_64bits(
-                this->stream_, 0xd3, static_cast<std::uint64_t>(in_integer));
+            this->write_64bits(0xd3, static_cast<std::uint64_t>(in_integer));
         }
         this->update_stack();
     }
 
-    /** @brief 浮動小数点数を直列化し、出力ストリームに書き込む。
+    /** @brief 浮動小数点数を直列化し、出力ストリームへ書き込む。
         @param[in] in_float 直列化する浮動小数点数。
      */
     public: void write_floating_point(float const in_float)
     {
         union {std::uint32_t integer; float real;} local_value;
         local_value.real = in_float;
-        self::write_32bits(this->stream_, 0xca, local_value.integer);
+        this->write_32bits(0xca, local_value.integer);
         this->update_stack();
     }
     /// @copydoc self::write_floating_point(float const)
@@ -256,11 +271,11 @@ class psyq::message_pack::serializer
     {
         union {std::uint64_t integer; double real;} local_value;
         local_value.real = in_float;
-        self::write_64bits(this->stream_, 0xcb, local_value.integer);
+        this->write_64bits(0xcb, local_value.integer);
         this->update_stack();
     }
 
-    /** @brief 組込み配列をRAWバイト列として直列化し、出力ストリームに書き込む。
+    /** @brief 組込み配列をRAWバイト列として直列化し、出力ストリームへ書き込む。
         @param[in] in_data 直列化する組込み配列の先頭位置。
         @param[in] in_size 組込み配列の要素数。
      */
@@ -273,22 +288,19 @@ class psyq::message_pack::serializer
         auto const local_size(in_size * sizeof(template_value_type));
         if (local_size <= 0x1f)
         {
-            this->stream_ << std::uint8_t(0xa0 + (local_size & 0x1f));
+            this->put(std::uint8_t(0xa0 + (local_size & 0x1f)));
         }
         else if (local_size <= (std::numeric_limits<std::uint8_t>::max)())
         {
-            self::write_8bits(
-                this->stream_, 0xd9, static_cast<std::uint8_t>(local_size));
+            this->write_8bits(0xd9, static_cast<std::uint8_t>(local_size));
         }
         else if (local_size <= (std::numeric_limits<std::uint16_t>::max)())
         {
-            self::write_16bits(
-                this->stream_, 0xda, static_cast<std::uint16_t>(local_size));
+            this->write_16bits(0xda, static_cast<std::uint16_t>(local_size));
         }
         else if (local_size <= (std::numeric_limits<std::uint32_t>::max)())
         {
-            self::write_32bits(
-                this->stream_, 0xdb, static_cast<std::uint32_t>(local_size));
+            this->write_32bits(0xdb, static_cast<std::uint32_t>(local_size));
         }
         else
         {
@@ -318,7 +330,7 @@ class psyq::message_pack::serializer
         if (in_size <= 0)
         {
             // 空の配列を直列化する。
-            this->stream_ << std::uint8_t(0x90);
+            this->put(0x90);
             this->update_stack();
         }
         else if (this->get_container_stack_size() < MSGPACK_EMBED_STACK_SIZE)
@@ -326,17 +338,15 @@ class psyq::message_pack::serializer
             // 配列の要素数を直列化する。
             if (in_size <= 0xf)
             {
-                this->stream_ << std::uint8_t(0x90 + in_size);
+                this->put(std::uint8_t(0x90 + in_size));
             }
             else if (in_size <= (std::numeric_limits<std::uint16_t>::max)())
             {
-                self::write_16bits(
-                    this->stream_, 0xdc, static_cast<std::uint16_t>(in_size));
+                this->write_16bits(0xdc, static_cast<std::uint16_t>(in_size));
             }
             else if (in_size <= (std::numeric_limits<std::uint32_t>::max)())
             {
-                self::write_32bits(
-                    this->stream_, 0xdd, static_cast<std::uint32_t>(in_size));
+                this->write_32bits(0xdd, static_cast<std::uint32_t>(in_size));
             }
             else
             {
@@ -368,7 +378,7 @@ class psyq::message_pack::serializer
         if (in_size <= 0)
         {
             // 空の連想配列を直列化する。
-            this->stream_ << std::uint8_t(0x80);
+            this->put(0x80);
             this->update_stack();
         }
         else if (this->get_container_stack_size() < MSGPACK_EMBED_STACK_SIZE)
@@ -376,17 +386,15 @@ class psyq::message_pack::serializer
             // 連想配列の要素数を直列化する。
             if (in_size <= 0xf)
             {
-                this->stream_ << std::uint8_t(0x80 + in_size);
+                this->put(std::uint8_t(0x80 + in_size));
             }
             else if (in_size <= (std::numeric_limits<std::uint16_t>::max)())
             {
-                self::write_16bits(
-                    this->stream_, 0xde, static_cast<std::uint16_t>(in_size));
+                this->write_16bits(0xde, static_cast<std::uint16_t>(in_size));
             }
             else if (in_size <= (std::numeric_limits<std::uint32_t>::max)())
             {
-                self::write_32bits(
-                    this->stream_, 0xdf, static_cast<std::uint32_t>(in_size));
+                this->write_32bits(0xdf, static_cast<std::uint32_t>(in_size));
             }
             else
             {
@@ -445,7 +453,7 @@ class psyq::message_pack::serializer
         // nilを直列化し、コンテナの残り要素を埋める。
         for (; 0 < local_nil_count; --local_nil_count)
         {
-            this->stream_ << std::uint8_t(0xc0);
+            this->put(0xc0);
         }
         --this->stack_size_;
         this->update_stack();
@@ -465,6 +473,7 @@ class psyq::message_pack::serializer
     //-------------------------------------------------------------------------
     private: void update_stack()
     {
+        PSYQ_ASSERT(this->stream_.good());
         if (this->get_container_stack_size() <= 0)
         {
             return;
@@ -510,80 +519,77 @@ class psyq::message_pack::serializer
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 8bit整数をMessagePack形式で直列化し、出力ストリームに書き込む。
-        @param[out] out_stream 直列化した整数を書き込む出力ストリーム。
-        @param[in]  in_header  直列化する整数のヘッダ。
-        @param[in]  in_integer 直列化する8bit整数。
+    /** @brief 文字を出力ストリームへ書き込む。
+        @param[in] in_char 書き込む文字。
      */
-    private: static void write_8bits(
-        typename self::stream& out_stream,
+    private: void put(std::uint8_t const in_char)
+    {
+        this->stream_.put(
+            static_cast<typename self::stream::char_type>(in_char));
+    }
+
+    /** @brief 8bit整数をMessagePack形式で直列化し、出力ストリームへ書き込む。
+        @param[in] in_header  直列化する整数のヘッダ。
+        @param[in] in_integer 直列化する8bit整数。
+     */
+    private: void write_8bits(
         std::uint8_t const in_header,
         std::uint8_t const in_integer)
     {
-        out_stream << in_header << in_integer;
+        this->put(in_header);
+        this->put(in_integer);
     }
 
-    /** @brief 16bit整数をMessagePack形式で直列化し、出力ストリームに書き込む。
-        @param[out] out_stream 直列化した整数を書き込む出力ストリーム。
-        @param[in]  in_header  直列化する整数のヘッダ。
-        @param[in]  in_integer 直列化する16bit整数。
+    /** @brief 16bit整数をMessagePack形式で直列化し、出力ストリームへ書き込む。
+        @param[in] in_header  直列化する整数のヘッダ。
+        @param[in] in_integer 直列化する16bit整数。
      */
-    private: static void write_16bits(
-        typename self::stream& out_stream,
+    private: void write_16bits(
         std::uint8_t const in_header,
         std::uint16_t const in_integer)
     {
-        out_stream << in_header
-            << static_cast<std::uint8_t>(in_integer >> 8)
-            << static_cast<std::uint8_t>(in_integer);
+        this->put(in_header);
+        this->put(static_cast<std::uint8_t>(in_integer >> 8));
+        this->put(static_cast<std::uint8_t>(in_integer));
     }
 
-    /** @brief 32bit整数をMessagePack形式で直列化し、出力ストリームに書き込む。
-        @param[out] out_stream 直列化した整数を書き込む出力ストリーム。
+    /** @brief 32bit整数をMessagePack形式で直列化し、出力ストリームへ書き込む。
         @param[in]  in_header  直列化する整数のヘッダ。
         @param[in]  in_integer 直列化する32bit整数。
      */
-    private: static void write_32bits(
-        typename self::stream& out_stream,
+    private: void write_32bits(
         std::uint8_t const in_header,
         std::uint32_t const in_integer)
     {
-        out_stream << in_header
-            << static_cast<std::uint8_t>(in_integer >> 24)
-            << static_cast<std::uint8_t>(in_integer >> 16)
-            << static_cast<std::uint8_t>(in_integer >>  8)
-            << static_cast<std::uint8_t>(in_integer);
+        this->put(in_header);
+        this->put(static_cast<std::uint8_t>(in_integer >> 24));
+        this->put(static_cast<std::uint8_t>(in_integer >> 16));
+        this->put(static_cast<std::uint8_t>(in_integer >>  8));
+        this->put(static_cast<std::uint8_t>(in_integer));
     }
 
-    /** @brief 64bit整数をMessagePack形式で直列化し、出力ストリームに書き込む。
-        @param[out] out_stream 直列化した整数を書き込む出力ストリーム。
+    /** @brief 64bit整数をMessagePack形式で直列化し、出力ストリームへ書き込む。
         @param[in]  in_header  直列化する整数のヘッダ。
         @param[in]  in_integer 直列化する64bit整数。
      */
-    private: static void write_64bits(
-        typename self::stream& out_stream,
+    private: void write_64bits(
         std::uint8_t const in_header,
         std::uint64_t const in_integer)
     {
-        out_stream << in_header
-            << static_cast<std::uint8_t>(in_integer >> 56)
-            << static_cast<std::uint8_t>(in_integer >> 48)
-            << static_cast<std::uint8_t>(in_integer >> 40)
-            << static_cast<std::uint8_t>(in_integer >> 32)
-            << static_cast<std::uint8_t>(in_integer >> 24)
-            << static_cast<std::uint8_t>(in_integer >> 16)
-            << static_cast<std::uint8_t>(in_integer >>  8)
-            << static_cast<std::uint8_t>(in_integer);
+        this->put(in_header);
+        this->put(static_cast<std::uint8_t>(in_integer >> 56));
+        this->put(static_cast<std::uint8_t>(in_integer >> 48));
+        this->put(static_cast<std::uint8_t>(in_integer >> 40));
+        this->put(static_cast<std::uint8_t>(in_integer >> 32));
+        this->put(static_cast<std::uint8_t>(in_integer >> 24));
+        this->put(static_cast<std::uint8_t>(in_integer >> 16));
+        this->put(static_cast<std::uint8_t>(in_integer >>  8));
+        this->put(static_cast<std::uint8_t>(in_integer));
     }
 
     //-------------------------------------------------------------------------
     /// @name 状態の取得
     //@{
-    public: typename self::stream const& get_stream() const PSYQ_NOEXCEPT
-    {
-        return this->stream_;
-    }
-
     public: typename self::next_kind get_next_kind() const PSYQ_NOEXCEPT
     {
         return 0 < this->get_container_rest_size()?
@@ -611,6 +617,30 @@ class psyq::message_pack::serializer
     }
     //@}
     //-------------------------------------------------------------------------
+    /// @name ストリームの操作
+    //@{
+    public: typename self::stream const& get_stream() const PSYQ_NOEXCEPT
+    {
+        return this->stream_;
+    }
+
+    private: void swap_stream(typename self::stream& io_stream)
+    {
+        this->fill_container_stack();
+        this->stream_.swap(io_stream);
+    }
+
+    public: typename self::stream::pos_type tellp()
+    {
+        return this->stream_.tellp();
+    }
+
+    public: void flush()
+    {
+        this->stream_.flush();
+    }
+    //@}
+    //-------------------------------------------------------------------------
     /// @copydoc self::stream
     private: typename self::stream stream_;
     /// 直列化途中のコンテナのスタック。
@@ -622,6 +652,7 @@ class psyq::message_pack::serializer
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq
 {
+    /// この名前空間をuserが直接accessするのは禁止。
     namespace internal
     {
         template<
@@ -658,7 +689,7 @@ namespace psyq
 
     namespace message_pack
     {
-        /** @brief タプルをMessagePack形式で直列化し、出力ストリームに書き込む。
+        /** @brief タプルをMessagePack形式で直列化し、出力ストリームへ書き込む。
             @tparam template_tuple std::tuple 互換のタプル型。
             @param[out] out_stream 書き込む出力ストリーム。
             @param[in]  in_tuple   直列化するタプル。
@@ -679,7 +710,7 @@ namespace psyq
             }
         }
 
-        /** @brief 配列をMessagePack形式で直列化し、出力ストリームに書き込む。
+        /** @brief 配列をMessagePack形式で直列化し、出力ストリームへ書き込む。
             @param[out] out_stream 書き込む出力ストリーム。
             @param[in]  in_iterator 直列化する配列の先頭位置。
             @param[in]  in_size     直列化する配列の要素数。
@@ -696,7 +727,7 @@ namespace psyq
                 out_stream << *in_iterator;
             }
         }
-        /** @brief 配列をMessagePack形式で直列化し、出力ストリームに書き込む。
+        /** @brief 配列をMessagePack形式で直列化し、出力ストリームへ書き込む。
             @param[out] out_stream 出力するストリーム。
             @param[in]  in_array   直列化する配列。
          */
@@ -709,7 +740,7 @@ namespace psyq
                 out_stream, in_array.begin(), in_array.size());
         }
 
-        /** @brief 集合をMessagePack形式で直列化し、出力ストリームに書き込む。
+        /** @brief 集合をMessagePack形式で直列化し、出力ストリームへ書き込む。
             @param[out] out_stream 書き込む出力ストリーム。
             @param[in]  in_set     直列化する連想配列。
          */
@@ -718,7 +749,7 @@ namespace psyq
             psyq::message_pack::serializer<template_out_stream>& out_stream,
             template_set const& in_set)
         {
-            // マップ値が空の辞書として直列化する。
+            // マップ値が空の辞書として集合を直列化する。
             out_stream.make_map(in_set.size());
             for (auto& local_value: in_set)
             {
@@ -727,7 +758,7 @@ namespace psyq
             }
         }
 
-        /** @brief 連想配列をMessagePack形式で直列化し、出力ストリームに書き込む。
+        /** @brief 連想配列をMessagePack形式で直列化し、出力ストリームへ書き込む。
             @param[out] out_stream 書き込む出力ストリーム。
             @param[in]  in_map     直列化する連想配列。
          */
@@ -739,7 +770,7 @@ namespace psyq
             out_stream.make_map(in_map.size());
             for (auto& local_value: in_map)
             {
-                out_stream << local_value.first << local_value.second;
+                out_stream << local_value;
             }
         }
     }
@@ -749,7 +780,7 @@ namespace psyq
 //----------------------------------------------------------------------------
 /// @name 真偽値の直列化
 //@{
-/** @brief 真偽値をMessagePack形式で直列化し、出力ストリームに書き込む。
+/** @brief 真偽値をMessagePack形式で直列化し、出力ストリームへ書き込む。
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_boolean 直列化する真偽値。
  */
@@ -765,7 +796,7 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 //-----------------------------------------------------------------------------
 /// @name 無符号整数の直列化
 //@{
-/** @brief 無符号整数をMessagePack形式で直列化し、出力ストリームに書き込む。
+/** @brief 無符号整数をMessagePack形式で直列化し、出力ストリームへ書き込む。
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_integer 直列化する無符号整数。
  */
@@ -817,7 +848,7 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 //-----------------------------------------------------------------------------
 /// @name 有符号整数の直列化
 //@{
-/** @brief 有符号整数をMessagePack形式で直列化し、出力ストリームに書き込む。
+/** @brief 有符号整数をMessagePack形式で直列化し、出力ストリームへ書き込む。
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_integer 直列化する有符号整数。
  */
@@ -869,7 +900,7 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 //-----------------------------------------------------------------------------
 /// @name 浮動小数点数の直列化
 //@{
-/** @brief 浮動小数点数をMessagePack形式で直列化し、出力ストリームに書き込む。
+/** @brief 浮動小数点数をMessagePack形式で直列化し、出力ストリームへ書き込む。
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_float   直列化する浮動小数点数。
  */
@@ -892,9 +923,10 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 }
 //@}
 //-----------------------------------------------------------------------------
-/// @name 文字列をRAWバイト列として直列化
+/// @name 文字列の直列化
 //@{
-/** @brief 文字列をMessagePack形式のRAWバイト列として直列化し、出力ストリームに書き込む。
+/** @brief 文字列をMessagePack形式のRAWバイト列として直列化し、
+           出力ストリームへ書き込む。
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_string  直列化する文字列。
  */
@@ -911,22 +943,28 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
     out_stream.write_raw(in_string.data(), in_string.length());
     return out_stream;
 }
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, std::basic_string<template_char, template_traits, template_allocator> const&)
-template<
-    typename template_out_stream,
-    typename template_string>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
-    psyq::internal::string_view_interface<template_string> const& in_string)
-{
-    out_stream.write_raw(in_string.data(), in_string.length());
-    return out_stream;
-}
 //@}
 //-----------------------------------------------------------------------------
-/// @name タプルを配列として直列化
+/// @name タプルの直列化
 //@{
-/** @brief std::tuple をMessagePack形式の配列として直列化し、出力ストリームに書き込む。
+/** @brief std::pair をMessagePack形式で直列化し、出力ストリームへ書き込む。
+    @param[out] out_stream 書き込む出力ストリーム。
+    @param[in]  in_pair    直列化するペアタプル。
+ */
+template<
+    typename template_out_stream,
+    typename template_first,
+    typename template_second>
+psyq::message_pack::serializer<template_out_stream>& operator<<(
+    psyq::message_pack::serializer<template_out_stream>& out_stream,
+    std::pair<template_first, template_second> const& in_pair)
+{
+    out_stream << in_pair.first << in_pair.second;
+    return out_stream;
+}
+
+/** @brief std::tuple をMessagePack形式の配列として直列化し、
+           出力ストリームへ書き込む。
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_tuple   直列化するタプル。
  */
@@ -1147,7 +1185,7 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 /// @name 配列の直列化
 //@{
 /** @brief std::array をMessagePack形式の配列として直列化し、
-           出力ストリームに書き込む。
+           出力ストリームへ書き込む。
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_array   直列化するコンテナ。
  */
@@ -1164,7 +1202,7 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 }
 
 /** @brief std::vector をMessagePack形式の配列として直列化し、
-           出力ストリームに書き込む。
+           出力ストリームへ書き込む。
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_vector  直列化するコンテナ。
  */
@@ -1181,7 +1219,7 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 }
 
 /** @brief std::deque をMessagePack形式の配列として直列化し、
-           出力ストリームに書き込む。
+           出力ストリームへ書き込む。
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_deque   直列化するコンテナ。
  */
@@ -1198,7 +1236,7 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 }
 
 /** @brief std::list をMessagePack形式の配列として直列化し、
-           出力ストリームに書き込む。
+           出力ストリームへ書き込む。
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_list    直列化するコンテナ。
  */
@@ -1215,10 +1253,10 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 }
 //@}
 //-----------------------------------------------------------------------------
-/// @name 集合を連想配列として直列化
+/// @name 集合の直列化
 //@{
 /** @brief std::set をMessagePack形式の連想配列として直列化し、
-           出力ストリームに書き込む。
+           出力ストリームへ書き込む。
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_set     直列化するコンテナ。
  */
@@ -1237,7 +1275,7 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 }
 
 /** @brief std::multiset をMessagePack形式の連想配列として直列化し、
-           出力ストリームに書き込む。
+           出力ストリームへ書き込む。
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_set     直列化するコンテナ。
  */
@@ -1256,7 +1294,7 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 }
 
 /** @brief std::unordered_set をMessagePack形式の連想配列として直列化し、
-           出力ストリームに書き込む。
+           出力ストリームへ書き込む。
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_set     直列化するコンテナ。
  */
@@ -1277,7 +1315,7 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 }
 
 /** @brief std::unordered_multiset をMessagePack形式の連想配列として直列化し、
-           出力ストリームに書き込む。
+           出力ストリームへ書き込む。
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_set     直列化するコンテナ。
  */
@@ -1301,7 +1339,7 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 /// @name 連想配列の直列化
 //@{
 /** @brief std::map をMessagePack形式の連想配列として直列化し、
-           出力ストリームに書き込む。
+           出力ストリームへ書き込む。
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_map     直列化するコンテナ。
  */
@@ -1322,7 +1360,7 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 }
 
 /** @brief std::multimap をMessagePack形式の連想配列として直列化し、
-           出力ストリームに書き込む。
+           出力ストリームへ書き込む。
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_map     直列化するコンテナ。
  */
@@ -1343,7 +1381,7 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 }
 
 /** @brief std::unordered_map をMessagePack形式の連想配列として直列化し、
-           出力ストリームに書き込む。
+           出力ストリームへ書き込む。
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_map     直列化するコンテナ。
  */
@@ -1369,7 +1407,7 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
 }
 
 /** @brief std::unordered_multimap をMessagePack形式の連想配列として直列化し、
-           出力ストリームに書き込む。
+           出力ストリームへ書き込む。
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_map     直列化するコンテナ。
  */
@@ -1409,8 +1447,7 @@ namespace psyq
                     0.0,
                     false,
                     true,
-                    std::string("std::string"),
-                    psyq::string_view("psyq::string_view"))
+                    std::string("std::string"))
                 << (std::numeric_limits<std::uint64_t>::max)();
             local_serializer.get_stream().str().length();
 

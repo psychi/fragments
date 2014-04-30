@@ -151,10 +151,33 @@ class psyq::message_pack::serializer
         stack_size_(0)
     {}
 
+    /** @brief move構築子。
+        @param[in,out] io_source 移動元。
+     */
+    public: serializer(self&& io_source):
+        stream_(std::move(io_source.stream_)),
+        stack_(std::move(io_source.stack_)),
+        stack_size_(std::move(io_source.stack_size_))
+    {}
+
     /// 出力ストリームを破壊する。
     public: ~serializer()
     {
         this->fill_container_stack();
+    }
+
+    /** @brief move代入演算子。
+        @param[in,out] io_source 移動元。
+        @return *this
+     */
+    public: self& operator=(self&& io_source)
+    {
+        if (this != &io_source)
+        {
+            this->~self();
+            return *new(this) self(std::move(io_source));
+        }
+        return *this;
     }
     //@}
     //-------------------------------------------------------------------------
@@ -192,21 +215,25 @@ class psyq::message_pack::serializer
         }
         else if (in_integer <= (std::numeric_limits<std::uint8_t>::max)())
         {
-            this->write_8bits(0xcc, static_cast<std::uint8_t>(in_integer));
+            this->put(0xcc);
+            this->put(static_cast<std::uint8_t>(in_integer));
         }
         else if (in_integer <= (std::numeric_limits<std::uint16_t>::max)())
         {
-            this->write_16bits(0xcd, static_cast<std::uint16_t>(in_integer));
+            this->put(0xcd);
+            this->put_16bits(static_cast<std::uint16_t>(in_integer));
         }
         else if (in_integer <= (std::numeric_limits<std::uint32_t>::max)())
         {
-            this->write_32bits(0xce, static_cast<std::uint32_t>(in_integer));
+            this->put(0xce);
+            this->put_32bits(static_cast<std::uint32_t>(in_integer));
         }
         else
         {
             PSYQ_ASSERT(
                 in_integer <= (std::numeric_limits<std::uint64_t>::max()));
-            this->write_64bits(0xcf, static_cast<std::uint64_t>(in_integer));
+            this->put(0xcf);
+            this->put_64bits(static_cast<std::uint64_t>(in_integer));
         }
         this->update_stack();
     }
@@ -237,21 +264,25 @@ class psyq::message_pack::serializer
         }
         else if ((std::numeric_limits<std::int8_t>::min()) <= in_integer)
         {
-            this->write_8bits(0xd0, static_cast<std::uint8_t>(in_integer));
+            this->put(0xd0);
+            this->put(static_cast<std::uint8_t>(in_integer));
         }
         else if ((std::numeric_limits<std::int16_t>::min()) <= in_integer)
         {
-            this->write_16bits(0xd1, static_cast<std::uint16_t>(in_integer));
+            this->put(0xd1);
+            this->put_16bits(static_cast<std::uint16_t>(in_integer));
         }
         else if ((std::numeric_limits<std::int32_t>::min()) <= in_integer)
         {
-            this->write_32bits(0xd2, static_cast<std::uint32_t>(in_integer));
+            this->put(0xd2);
+            this->put_32bits(static_cast<std::uint32_t>(in_integer));
         }
         else
         {
             PSYQ_ASSERT(
                 (std::numeric_limits<std::int64_t>::min()) <= in_integer);
-            this->write_64bits(0xd3, static_cast<std::uint64_t>(in_integer));
+            this->put(0xd3);
+            this->put_64bits(static_cast<std::uint64_t>(in_integer));
         }
         this->update_stack();
     }
@@ -263,7 +294,8 @@ class psyq::message_pack::serializer
     {
         union {std::uint32_t integer; float real;} local_value;
         local_value.real = in_float;
-        this->write_32bits(0xca, local_value.integer);
+        this->put(0xca);
+        this->put_32bits(local_value.integer);
         this->update_stack();
     }
     /// @copydoc self::write_floating_point(float const)
@@ -271,7 +303,8 @@ class psyq::message_pack::serializer
     {
         union {std::uint64_t integer; double real;} local_value;
         local_value.real = in_float;
-        this->write_64bits(0xcb, local_value.integer);
+        this->put(0xcb);
+        this->put_64bits(local_value.integer);
         this->update_stack();
     }
 
@@ -292,15 +325,18 @@ class psyq::message_pack::serializer
         }
         else if (local_size <= (std::numeric_limits<std::uint8_t>::max)())
         {
-            this->write_8bits(0xd9, static_cast<std::uint8_t>(local_size));
+            this->put(0xd9);
+            this->put(static_cast<std::uint8_t>(local_size));
         }
         else if (local_size <= (std::numeric_limits<std::uint16_t>::max)())
         {
-            this->write_16bits(0xda, static_cast<std::uint16_t>(local_size));
+            this->put(0xda);
+            this->put_16bits(static_cast<std::uint16_t>(local_size));
         }
         else if (local_size <= (std::numeric_limits<std::uint32_t>::max)())
         {
-            this->write_32bits(0xdb, static_cast<std::uint32_t>(local_size));
+            this->put(0xdb);
+            this->put_32bits(static_cast<std::uint32_t>(local_size));
         }
         else
         {
@@ -342,11 +378,13 @@ class psyq::message_pack::serializer
             }
             else if (in_size <= (std::numeric_limits<std::uint16_t>::max)())
             {
-                this->write_16bits(0xdc, static_cast<std::uint16_t>(in_size));
+                this->put(0xdc);
+                this->put_16bits(static_cast<std::uint16_t>(in_size));
             }
             else if (in_size <= (std::numeric_limits<std::uint32_t>::max)())
             {
-                this->write_32bits(0xdd, static_cast<std::uint32_t>(in_size));
+                this->put(0xdd);
+                this->put_32bits(static_cast<std::uint32_t>(in_size));
             }
             else
             {
@@ -390,11 +428,13 @@ class psyq::message_pack::serializer
             }
             else if (in_size <= (std::numeric_limits<std::uint16_t>::max)())
             {
-                this->write_16bits(0xde, static_cast<std::uint16_t>(in_size));
+                this->put(0xde);
+                this->put_16bits(static_cast<std::uint16_t>(in_size));
             }
             else if (in_size <= (std::numeric_limits<std::uint32_t>::max)())
             {
-                this->write_32bits(0xdf, static_cast<std::uint32_t>(in_size));
+                this->put(0xdf);
+                this->put_32bits(static_cast<std::uint32_t>(in_size));
             }
             else
             {
@@ -528,63 +568,31 @@ class psyq::message_pack::serializer
             static_cast<typename self::stream::char_type>(in_char));
     }
 
-    /** @brief 8bit整数をMessagePack形式で直列化し、出力ストリームへ書き込む。
-        @param[in] in_header  直列化する整数のヘッダ。
-        @param[in] in_integer 直列化する8bit整数。
-     */
-    private: void write_8bits(
-        std::uint8_t const in_header,
-        std::uint8_t const in_integer)
-    {
-        this->put(in_header);
-        this->put(in_integer);
-    }
-
     /** @brief 16bit整数をMessagePack形式で直列化し、出力ストリームへ書き込む。
-        @param[in] in_header  直列化する整数のヘッダ。
         @param[in] in_integer 直列化する16bit整数。
      */
-    private: void write_16bits(
-        std::uint8_t const in_header,
-        std::uint16_t const in_integer)
+    private: void put_16bits(std::uint16_t const in_integer)
     {
-        this->put(in_header);
         this->put(static_cast<std::uint8_t>(in_integer >> 8));
         this->put(static_cast<std::uint8_t>(in_integer));
     }
 
     /** @brief 32bit整数をMessagePack形式で直列化し、出力ストリームへ書き込む。
-        @param[in]  in_header  直列化する整数のヘッダ。
-        @param[in]  in_integer 直列化する32bit整数。
+        @param[in] in_integer 直列化する32bit整数。
      */
-    private: void write_32bits(
-        std::uint8_t const in_header,
-        std::uint32_t const in_integer)
+    private: void put_32bits(std::uint32_t const in_integer)
     {
-        this->put(in_header);
-        this->put(static_cast<std::uint8_t>(in_integer >> 24));
-        this->put(static_cast<std::uint8_t>(in_integer >> 16));
-        this->put(static_cast<std::uint8_t>(in_integer >>  8));
-        this->put(static_cast<std::uint8_t>(in_integer));
+        this->put_16bits(static_cast<std::uint16_t>(in_integer >> 16));
+        this->put_16bits(static_cast<std::uint16_t>(in_integer));
     }
 
     /** @brief 64bit整数をMessagePack形式で直列化し、出力ストリームへ書き込む。
-        @param[in]  in_header  直列化する整数のヘッダ。
-        @param[in]  in_integer 直列化する64bit整数。
+        @param[in] in_integer 直列化する64bit整数。
      */
-    private: void write_64bits(
-        std::uint8_t const in_header,
-        std::uint64_t const in_integer)
+    private: void put_64bits(std::uint64_t const in_integer)
     {
-        this->put(in_header);
-        this->put(static_cast<std::uint8_t>(in_integer >> 56));
-        this->put(static_cast<std::uint8_t>(in_integer >> 48));
-        this->put(static_cast<std::uint8_t>(in_integer >> 40));
-        this->put(static_cast<std::uint8_t>(in_integer >> 32));
-        this->put(static_cast<std::uint8_t>(in_integer >> 24));
-        this->put(static_cast<std::uint8_t>(in_integer >> 16));
-        this->put(static_cast<std::uint8_t>(in_integer >>  8));
-        this->put(static_cast<std::uint8_t>(in_integer));
+        this->put_32bits(static_cast<std::uint32_t>(in_integer >> 32));
+        this->put_32bits(static_cast<std::uint32_t>(in_integer));
     }
 
     //-------------------------------------------------------------------------
@@ -719,10 +727,10 @@ namespace psyq
         void write_array(
             psyq::message_pack::serializer<template_out_stream>& out_stream,
             template_iterator in_iterator,
-            std::size_t const in_size)
+            std::size_t in_size)
         {
             out_stream.make_array(in_size);
-            for (std::size_t i(0); i < in_size; ++i, ++in_iterator)
+            for (; 0 < in_size; --in_size, ++in_iterator)
             {
                 out_stream << *in_iterator;
             }

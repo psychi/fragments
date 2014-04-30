@@ -34,7 +34,7 @@ class deserialize_context
     {
         psyq::message_pack::object object;  ///< 復元中のオブジェクト。
         psyq::message_pack::object map_key; ///< 直前に復元した連想配列キー。
-        std::size_t count;                  ///< コンテナ要素の残数。
+        std::size_t rest_size;              ///< コンテナ要素の残数。
         self::stack_kind kind;              ///< 復元中のオブジェクトの種別。
     };
 
@@ -446,12 +446,15 @@ class deserialize_context
         {
             // コンテナをスタックに積む。
             local_stack_top.kind = in_kind;
-            local_stack_top.count = in_capacity;
+            local_stack_top.rest_size = in_capacity;
             ++this->stack_size_;
             return self::deserialize_result_CONTINUE;
         }
-        out_object = local_stack_top.object;
-        return this->deserialize_stack(out_object);
+        else
+        {
+            out_object = local_stack_top.object;
+            return this->deserialize_stack(out_object);
+        }
     }
 
     //-------------------------------------------------------------------------
@@ -473,8 +476,8 @@ class deserialize_context
                     local_stack_top.object, out_object);
 
                 // 残り要素数を更新する。
-                --local_stack_top.count;
-                if (0 < local_stack_top.count)
+                --local_stack_top.rest_size;
+                if (0 < local_stack_top.rest_size)
                 {
                     return self::deserialize_result_CONTINUE;
                 }
@@ -500,8 +503,8 @@ class deserialize_context
                 }
 
                 // 残り要素数を更新する。
-                --local_stack_top.count;
-                if (0 < local_stack_top.count)
+                --local_stack_top.rest_size;
+                if (0 < local_stack_top.rest_size)
                 {
                     local_stack_top.kind = self::stack_kind_MAP_KEY;
                     return self::deserialize_result_CONTINUE;

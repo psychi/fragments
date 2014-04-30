@@ -321,7 +321,7 @@ class psyq::message_pack::serializer
         auto const local_size(in_size * sizeof(template_value_type));
         if (local_size <= 0x1f)
         {
-            this->put(std::uint8_t(0xa0 + (local_size & 0x1f)));
+            this->put(std::uint8_t(0xa0 + local_size));
         }
         else if (local_size <= (std::numeric_limits<std::uint8_t>::max)())
         {

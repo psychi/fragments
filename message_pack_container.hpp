@@ -402,30 +402,29 @@ struct psyq::internal::message_pack_container
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief MessagePackオブジェクトで使う連想配列。
-    @tparam template_value_type @copydoc super::value_type
+    @tparam template_object キーとマップ値に使うMessagePackオブジェクト。
     @sa psyq::message_pack::object::map
  */
-template<typename template_value_type>
+template<typename template_object>
 struct psyq::internal::message_pack_map:
     public psyq::internal::message_pack_container<
-        template_value_type>
+        std::pair<template_object, template_object>>
 {
     /// thisが指す値の型。
-    private: typedef message_pack_map<template_value_type> self;
+    private: typedef message_pack_map<template_object> self;
 
     /// thisの上位型。
-    public: typedef psyq::internal::message_pack_container<template_value_type>
-        super;
+    public: typedef psyq::internal::message_pack_container<
+        std::pair<template_object, template_object>>
+            super;
 
     /// 連想配列のキー。
-    public: typedef psyq::message_pack::object key_type;
-    //public: typedef typename super::value_type::first_type key_type;
+    public: typedef template_object key_type;
     /// 連想配列のマップ値。
-    public: typedef psyq::message_pack::object mapped_type;
-    //public: typedef typename super::value_type::second_type mapped_type;
+    public: typedef template_object mapped_type;
 
     //-------------------------------------------------------------------------
-    //private: super::const_reference at(super::size_type const) const;
+    private: super::const_reference at(super::size_type const) const;
     private: typename super::const_reference operator[](
         typename super::size_type const)
     const;

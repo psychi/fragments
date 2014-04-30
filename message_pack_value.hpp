@@ -7,14 +7,14 @@
 
 //#include "psyq/message_pack_container.hpp"
 
-#ifndef PSYQ_MESSAGE_PACK_VALUE_FLOAT32_EPSILON
 /// 倍精度浮動小数点実数で許容する誤差の最大値。
+#ifndef PSYQ_MESSAGE_PACK_VALUE_FLOAT32_EPSILON
 #define PSYQ_MESSAGE_PACK_VALUE_FLOAT32_EPSILON\
     (std::numeric_limits<self::float32>::epsilon() * 4)
 #endif // !defined(PSYQ_MESSAGE_PACK_VALUE_FLOAT32_EPSILON)
 
-#ifndef PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON
 /// 単精度浮動小数点実数で許容する誤差の最大値。
+#ifndef PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON
 #define PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON\
     (std::numeric_limits<self::float64>::epsilon() * 4)
 #endif // !defined(PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON)
@@ -69,7 +69,7 @@ union psyq::internal::message_pack_value
             array;
     /// @copydoc self::map_
     public: typedef psyq::internal::message_pack_map<
-        std::pair<psyq::message_pack::object, psyq::message_pack::object>>
+        psyq::message_pack::object>
             map;
     //@}
     //-------------------------------------------------------------------------

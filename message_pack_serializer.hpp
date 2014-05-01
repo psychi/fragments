@@ -1669,4 +1669,3 @@ namespace psyq
 }
 
 #endif // !defined(PSYQ_MESSAGE_PACK_SERIALIZER_HPP_)
-//MessagePackの仕様で、文字列とバイナリを区別するのと、拡張型の導入って、正式の仕様ということでいいんかな。C++のヘッダ1つで実装したMessagePackシリアライザで、文字列／バイナリの区別と拡張型に対応してみました。

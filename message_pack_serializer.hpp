@@ -423,7 +423,7 @@ class psyq::message_pack::serializer
      */
     public: template<typename template_value_type>
     void write_extended_binary(
-        std::uint8_t const in_type,
+        std::int8_t const in_type,
         template_value_type const& in_data)
     {
         this->write_extended_binary(in_type, &in_data, 1);
@@ -436,7 +436,7 @@ class psyq::message_pack::serializer
      */
     public: template<typename template_value_type>
     void write_extended_binary(
-        std::uint8_t const in_type,
+        std::int8_t const in_type,
         template_value_type const* const in_data,
         std::size_t const in_length)
     {
@@ -470,7 +470,7 @@ class psyq::message_pack::serializer
         }
 
         // 拡張バイナリの型とバイナリを直列化する。
-        this->put(in_type);
+        this->put(static_cast<std::int8_t>(in_type));
         this->write_raw_data(in_data, local_size);
     }
     //@}

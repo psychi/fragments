@@ -8,6 +8,7 @@
 #include <array>
 //#include "psyq/message_pack_define.hpp"
 //#include "psyq/message_pack_object.hpp"
+//#include "psyq/message_pack_serializer.hpp"
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 class deserialize_context
@@ -146,13 +147,13 @@ class deserialize_context
     {
         // MessagePackの直列化形式によって、復元処理を分岐する。
         auto const local_header(*this->deserialize_iterator_);
-        if (local_header <= 0x7f)
+        if (local_header <= psyq::message_pack::header_FIX_INT_MAX)
         {
             // [0x00, 0x7f]: positive fixnum
             out_object = local_header;
             return this->deserialize_stack(out_object);
         }
-        else if (local_header <= 0x8f)
+        else if (local_header <= psyq::message_pack::header_FIX_MAP_MAX)
         {
             // [0x80, 0x8f]: fix map
             return this->deserialize_container(
@@ -160,7 +161,7 @@ class deserialize_context
                 local_header & 0x0f,
                 self::stack_kind_MAP_KEY);
         }
-        else if (local_header <= 0x9f)
+        else if (local_header <= psyq::message_pack::header_FIX_ARRAY_MAX)
         {
             // [0x90, 0x9f]: fix array
             return this->deserialize_container(
@@ -168,43 +169,43 @@ class deserialize_context
                 local_header & 0x0f,
                 self::stack_kind_ARRAY_ITEM);
         }
-        else if (local_header == 0xa0)
+        else if (local_header == psyq::message_pack::header_FIX_STR_MIN)
         {
-            // [0xa0, 0xbf]: fix raw
+            // [0xa0, 0xbf]: fix str
             self::deserialize_raw(out_object, this->user_, nullptr, 0);
             return this->deserialize_stack(out_object);
         }
-        else if (local_header <= 0xbf)
+        else if (local_header <= psyq::message_pack::header_FIX_STR_MAX)
         {
-            // [0xa0, 0xbf]: fix raw
+            // [0xa0, 0xbf]: fix str
             this->trail_ = local_header & 0x1f;
             this->deserialize_kind_ = ACS_RAW_VALUE;
         }
-        else if (local_header == 0xc0)
+        else if (local_header == psyq::message_pack::header_NIL)
         {
             // 0xc0: nil
             out_object.reset();
             return this->deserialize_stack(out_object);
         }
-        else if (local_header == 0xc1)
+        else if (local_header == psyq::message_pack::header_NEVER_USED)
         {
-            // 0xc1: string?
+            // 0xc1: never used
             PSYQ_ASSERT(false);
             return self::deserialize_result_FAILED;
         }
-        else if (local_header == 0xc2)
+        else if (local_header == psyq::message_pack::header_FALSE)
         {
             // 0xc2: false
             out_object = false;
             return this->deserialize_stack(out_object);
         }
-        else if (local_header == 0xc3)
+        else if (local_header == psyq::message_pack::header_TRUE)
         {
             // 0xc3: true
             out_object = true;
             return this->deserialize_stack(out_object);
         }
-        else if (local_header <= 0xc6)
+        else if (local_header <= psyq::message_pack::header_BIN32)
         {
             // 0xc4: bin 8
             // 0xc5: bin 16
@@ -212,15 +213,15 @@ class deserialize_context
             this->trail_ = 1 << (local_header & 0x3);
             this->deserialize_kind_ = local_header & 0x1f;
         }
-        else if (local_header <= 0xc9)
+        else if (local_header <= psyq::message_pack::header_EXT32)
         {
-            // 0xc7:
-            // 0xc8:
-            // 0xc9:
+            // 0xc7: ext 8
+            // 0xc8: ext 16
+            // 0xc9: ext 32
             PSYQ_ASSERT(false);
             return self::deserialize_result_FAILED;
         }
-        else if (local_header <= 0xd3)
+        else if (local_header <= psyq::message_pack::header_INT64)
         {
             // 0xca: float
             // 0xcb: double
@@ -235,25 +236,25 @@ class deserialize_context
             this->trail_ = 1 << (local_header & 0x3);
             this->deserialize_kind_ = local_header & 0x1f;
         }
-        else if (local_header <= 0xd8)
+        else if (local_header <= psyq::message_pack::header_FIX_EXT16)
         {
-            // 0xd4:
-            // 0xd5:
-            // 0xd6: big integer 16?
-            // 0xd7: big integer 32?
-            // 0xd8: big float 16?
+            // 0xd4: fixext 1
+            // 0xd5: fixext 2
+            // 0xd6: fixext 4
+            // 0xd7: fixext 8
+            // 0xd8: fixext 16
             PSYQ_ASSERT(false);
             return self::deserialize_result_FAILED;
         }
-        else if (local_header <= 0xdb)
+        else if (local_header <= psyq::message_pack::header_STR32)
         {
-            // 0xd9: raw 8
-            // 0xda: raw 16
-            // 0xdb: raw 32
+            // 0xd9: str 8
+            // 0xda: str 16
+            // 0xdb: str 32
             this->trail_ = 1 << ((local_header & 0x3) - 1);
             this->deserialize_kind_ = local_header & 0x1f;
         }
-        else if (local_header <= 0xdf)
+        else if (local_header <= psyq::message_pack::header_MAP32)
         {
             // 0xdc: array 16
             // 0xdd: array 32

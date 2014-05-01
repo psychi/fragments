@@ -38,19 +38,25 @@ union psyq::internal::message_pack_value
     private: typedef message_pack_value self; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
-    /** @brief MessagePackオブジェクトに格納されてる値の種別。
-     */
-    public: enum class kind: std::uint8_t
+    public: struct kind
     {
-        NIL,              ///< 空。
-        BOOLEAN,          ///< @copydoc self::boolean_
-        POSITIVE_INTEGER, ///< @copydoc self::positive_integer_
-        NEGATIVE_INTEGER, ///< @copydoc self::negative_integer_
-        FLOAT32,          ///< @copydoc self::float32_
-        FLOAT64,          ///< @copydoc self::float64_
-        RAW,              ///< @copydoc self::raw_
-        ARRAY,            ///< @copydoc self::array_
-        MAP,              ///< @copydoc self::map_
+        /** @brief MessagePackオブジェクトに格納されてる値の種別。
+         */
+        enum value: std::uint8_t
+        {
+            NIL,              ///< 空。
+            BOOLEAN,          ///< 真偽値。
+            POSITIVE_INTEGER, ///< 0以上の整数。
+            NEGATIVE_INTEGER, ///< 0未満の整数。
+            FLOAT32,          ///< 単精度浮動小数点数。
+            FLOAT64,          ///< 倍精度浮動小数点数。
+            RAW,              ///< @copydoc self::raw_
+            STRING,           ///< 文字列。
+            BINARY,           ///< バイナリ。
+            EXTENDED_BINARY,  ///< 拡張バイナリ。
+            ARRAY,            ///< MessagePack配列。
+            MAP,              ///< MessagePack連想配列。
+        };
     };
 
     //-------------------------------------------------------------------------
@@ -151,9 +157,9 @@ union psyq::internal::message_pack_value
      */
     public: static bool equal(
         self const& in_left_value,
-        self::kind const in_left_kind,
+        self::kind::value const in_left_kind,
         self const& in_right_value,
-        self::kind const in_right_kind)
+        self::kind::value const in_right_kind)
     PSYQ_NOEXCEPT
     {
         if (in_left_kind != in_right_kind)
@@ -183,6 +189,9 @@ union psyq::internal::message_pack_value
                 in_right_value.float64_,
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON);
         case self::kind::RAW:
+        case self::kind::STRING:
+        case self::kind::BINARY:
+        case self::kind::EXTENDED_BINARY:
             return in_left_value.raw_ == in_right_value.raw_;
         case self::kind::ARRAY:
             return in_left_value.array_ == in_right_value.array_;
@@ -205,9 +214,9 @@ union psyq::internal::message_pack_value
      */
     public: static int compare(
         self const& in_left_value,
-        self::kind const in_left_kind,
+        self::kind::value const in_left_kind,
         self const& in_right_value,
-        self::kind const in_right_kind)
+        self::kind::value const in_right_kind)
     PSYQ_NOEXCEPT
     {
         switch (in_right_kind)
@@ -230,8 +239,14 @@ union psyq::internal::message_pack_value
             return self::compare_floating_point(
                 in_left_value, in_left_kind, in_right_value.float64_);
         case self::kind::RAW:
+        case self::kind::STRING:
+        case self::kind::BINARY:
+        case self::kind::EXTENDED_BINARY:
             return self::compare_raw(
-                in_left_value, in_left_kind, in_right_value.raw_);
+                in_left_value,
+                in_left_kind,
+                in_right_value.raw_,
+                in_right_kind);
         case self::kind::ARRAY:
             return self::compare_array(
                 in_left_value, in_left_kind, in_right_value.array_);
@@ -250,7 +265,7 @@ union psyq::internal::message_pack_value
         @retval true  正規の種別だった。
         @retval false 不正な種別だった。
      */
-    private: static bool is_valid_kind(self::kind const in_kind)
+    private: static bool is_valid_kind(self::kind::value const in_kind)
     {
         return in_kind <= self::kind::MAP;
     }
@@ -267,7 +282,7 @@ union psyq::internal::message_pack_value
      */
     private: static int compare_map(
         self const& in_left_value,
-        self::kind const in_left_kind,
+        self::kind::value const in_left_kind,
         self::map const& in_right_map)
     PSYQ_NOEXCEPT
     {
@@ -286,6 +301,9 @@ union psyq::internal::message_pack_value
         case self::kind::FLOAT64:
             return -1;//-self::compare_map(in_right_map, this->float64_);
         case self::kind::RAW:
+        case self::kind::STRING:
+        case self::kind::BINARY:
+        case self::kind::EXTENDED_BINARY:
             return -1;//-self::compare_map(in_right_map, this->raw_);
         case self::kind::ARRAY:
             return -1;//-self::compare_map(in_right_map, this->array_);
@@ -307,7 +325,7 @@ union psyq::internal::message_pack_value
      */
     private: static int compare_array(
         self const& in_left_value,
-        self::kind const in_left_kind,
+        self::kind::value const in_left_kind,
         self::array const& in_right_array)
     PSYQ_NOEXCEPT
     {
@@ -326,6 +344,9 @@ union psyq::internal::message_pack_value
         case self::kind::FLOAT64:
             return -1;//-self::compare_array(in_right_array, in_left_value.float64_);
         case self::kind::RAW:
+        case self::kind::STRING:
+        case self::kind::BINARY:
+        case self::kind::EXTENDED_BINARY:
             return -1;//-self::compare_array(in_right_array, in_left_value.raw_);
         case self::kind::ARRAY:
             return in_left_value.array_.compare(in_right_array);
@@ -341,14 +362,16 @@ union psyq::internal::message_pack_value
         @param[in] in_left_value 左辺のMessagePackオブジェクト値。
         @param[in] in_left_kind  左辺のMessagePackオブジェクト種別。
         @param[in] in_right_raw  右辺のRAWバイト列。
+        @param[in] in_right_kind 右辺のMessagePackオブジェクト種別。
         @retval 正 左辺のほうが大きい。
         @retval 0  等値。
         @retval 負 左辺のほうが小さい。
      */
     private: static int compare_raw(
         self const& in_left_value,
-        self::kind const in_left_kind,
-        self::raw const& in_right_raw)
+        self::kind::value const in_left_kind,
+        self::raw const& in_right_raw,
+        self::kind::value const in_right_kind)
     PSYQ_NOEXCEPT
     {
         switch (in_left_kind)
@@ -366,7 +389,12 @@ union psyq::internal::message_pack_value
         case self::kind::FLOAT64:
             return -1;//-self::compare_raw(in_right_raw, in_left_value.float64_);
         case self::kind::RAW:
-            return in_left_value.raw_.compare(in_right_raw);
+        case self::kind::STRING:
+        case self::kind::BINARY:
+        case self::kind::EXTENDED_BINARY:
+            return in_left_kind != in_right_kind?
+                (in_left_kind < in_right_kind? -1: 1):
+                in_left_value.raw_.compare(in_right_raw);
         case self::kind::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_raw);
         case self::kind::MAP:
@@ -391,7 +419,7 @@ union psyq::internal::message_pack_value
     private: template<typename template_float_type>
     static int compare_floating_point(
         self const& in_left_value,
-        self::kind const in_left_kind,
+        self::kind::value const in_left_kind,
         template_float_type const in_right_float)
     PSYQ_NOEXCEPT
     {
@@ -425,6 +453,9 @@ union psyq::internal::message_pack_value
                 in_right_float,
                 self::get_epsilon(template_float_type(0)));
         case self::kind::RAW:
+        case self::kind::STRING:
+        case self::kind::BINARY:
+        case self::kind::EXTENDED_BINARY:
             return 1;//self::compare_raw(in_left_value.raw_, in_right_float);
         case self::kind::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_float);
@@ -553,7 +584,7 @@ union psyq::internal::message_pack_value
     private: template<typename template_signed_type>
     static int compare_signed_integer(
         self const& in_left_value,
-        self::kind const in_left_kind,
+        self::kind::value const in_left_kind,
         template_signed_type const in_right_integer)
     PSYQ_NOEXCEPT
     {
@@ -584,6 +615,9 @@ union psyq::internal::message_pack_value
                 static_cast<self::float64>(in_right_integer),
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON);
         case self::kind::RAW:
+        case self::kind::STRING:
+        case self::kind::BINARY:
+        case self::kind::EXTENDED_BINARY:
             return 1;//self::compare_raw(in_left_value.raw_, in_right_integer);
         case self::kind::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_integer);
@@ -688,7 +722,7 @@ union psyq::internal::message_pack_value
     private: template<typename template_unsigned_type>
     static int compare_unsigned_integer(
         self const& in_left_value,
-        self::kind const in_left_kind,
+        self::kind::value const in_left_kind,
         template_unsigned_type const in_right_integer)
     PSYQ_NOEXCEPT
     {
@@ -719,6 +753,9 @@ union psyq::internal::message_pack_value
                 in_left_value.float64_,
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON);
         case self::kind::RAW:
+        case self::kind::STRING:
+        case self::kind::BINARY:
+        case self::kind::EXTENDED_BINARY:
             return 1;//self::compare_raw(in_left_value.raw_, in_right_integer);
         case self::kind::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_integer);
@@ -806,7 +843,7 @@ union psyq::internal::message_pack_value
      */
     private: static int compare_boolean(
         self const& in_left_value,
-        self::kind const in_left_kind,
+        self::kind::value const in_left_kind,
         bool const in_right_boolean)
     PSYQ_NOEXCEPT
     {
@@ -833,6 +870,9 @@ union psyq::internal::message_pack_value
                 in_right_boolean,
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON);
         case self::kind::RAW:
+        case self::kind::STRING:
+        case self::kind::BINARY:
+        case self::kind::EXTENDED_BINARY:
             return 1;//self::compare_raw(in_left_value.raw_, in_right_boolean);
         case self::kind::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_boolean);
@@ -860,21 +900,21 @@ union psyq::internal::message_pack_value
     }
     //@}
     //-------------------------------------------------------------------------
-    /// 真偽値。
+    /// @copydoc self::kind::BOOLEAN
     public: bool boolean_;
-    /// 0以上の整数。
+    /// @copydoc self::kind::POSITIVE_INTEGER
     public: std::uint64_t positive_integer_;
-    /// 0未満の整数。
+    /// @copydoc self::kind::NEGATIVE_INTEGER
     public: std::int64_t negative_integer_;
-    /// 単精度浮動小数点数実数。
+    /// @copydoc self::kind::FLOAT32
     public: self::float32 float32_;
-    /// 倍精度浮動小数点実数。
+    /// @copydoc self::kind::FLOAT64
     public: self::float64 float64_;
     /// RAWバイト列。
     public: self::raw raw_;
-    /// MessagePackオブジェクトの配列。
+    /// @copydoc self::kind::ARRAY
     public: self::array array_;
-    /// MessagePackオブジェクトの連想配列。
+    /// @copydoc self::kind::MAP
     public: self::map map_;
     /// self::float32_ をビット列として取り出すための32bit整数。
     public: std::uint32_t uint32_;

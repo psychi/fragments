@@ -17,8 +17,8 @@ struct psyq::message_pack::object
     /// @copydoc self::value_
     private: typedef psyq::internal::message_pack_value value;
 
-    /// @copydoc psyq::internal::message_pack_value::kind
-    public: typedef psyq::internal::message_pack_value::kind kind;
+    /// @copydoc psyq::internal::message_pack_value::kind::value
+    public: typedef psyq::internal::message_pack_value::kind::value kind;
 
     /// @name MessagePackオブジェクトが持つ値の型。
     //@{
@@ -619,7 +619,7 @@ struct psyq::message_pack::object
 
     //-------------------------------------------------------------------------
     private: self::value value_; ///< MessagePackオブジェクトの値。
-    private: self::kind kind_;   ///< @copydoc self::value::kind
+    private: self::kind kind_;   ///< @copydoc self::kind
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

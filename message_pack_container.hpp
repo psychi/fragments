@@ -52,7 +52,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief MessagePackオブジェクトで使うコンテナ。
+/** @brief MessagePackオブジェクトで使うコンテナの基底型。
     @tparam template_value_type @copydoc value_type
     @sa psyq::message_pack::object::array
     @sa psyq::message_pack::object::map
@@ -424,26 +424,57 @@ struct psyq::internal::message_pack_map:
     public: typedef template_object mapped_type;
 
     //-------------------------------------------------------------------------
-    private: super::const_reference at(super::size_type const) const;
-    private: typename super::const_reference operator[](
-        typename super::size_type const)
-    const;
+    /** @brief 連想配列の要素を並び替える。
+     */
+    public: void sort()
+    {
+        std::sort(
+            const_cast<typename super::iterator>(this->begin()),
+            const_cast<typename super::iterator>(this->end()),
+            [](
+                typename super::value_type const& in_left,
+                typename super::value_type const& in_right)
+            {
+                return psyq::internal
+                    ::message_pack_object_compare(in_left, in_right) < 0;
+            });
+    }
 
+    //-------------------------------------------------------------------------
+    /** @brief std::multimap::count() 相当の関数。
+        @warning 事前に self::sort() されている必要がある。
+     */
+    public: typename super::size_type count(
+        typename self::key_type const& in_key)
+    const
+    {
+        auto const local_range(this->equal_range(in_key));
+        return local_range.second - local_range.first;
+    }
+
+    /** @brief std::multimap::find() 相当の関数。
+        @warning 事前に self::sort() されている必要がある。
+     */
     public: typename super::const_iterator find(
         typename self::key_type const& in_key)
     const
     {
-        /// @todo 未実装。
-        return this->cend();
+        auto const local_iterator(this->lower_bound(in_key));
+        return local_iterator != this->end()
+            && local_iterator->first == in_key?
+                local_iterator: this->end();
     }
 
-    public: typename super::const_iterator lower_bound(
-        typename self::key_type const& in_key)
-    const
+    /** @brief std::multimap::equal_range() 相当の関数。
+        @warning 事前に self::sort() されている必要がある。
+     */
+    public: std::pair<
+        typename super::const_iterator, typename super::const_iterator>
+            equal_range(typename self::key_type const& in_key) const
     {
-        return std::lower_bound(
-            this->cbegin(),
-            this->cend(),
+        return std::equal_range(
+            this->begin(),
+            this->end(),
             typename self::value_type(in_key, self::mapped_type()),
             [](
                 typename super::value_type const& in_left,
@@ -454,6 +485,29 @@ struct psyq::internal::message_pack_map:
             });
     }
 
+    /** @brief std::multimap::lower_bound() 相当の関数。
+        @warning 事前に self::sort() されている必要がある。
+     */
+    public: typename super::const_iterator lower_bound(
+        typename self::key_type const& in_key)
+    const
+    {
+        return std::lower_bound(
+            this->begin(),
+            this->end(),
+            typename self::value_type(in_key, self::mapped_type()),
+            [](
+                typename super::value_type const& in_left,
+                typename super::value_type const& in_right)
+            {
+                return psyq::internal
+                    ::message_pack_object_compare(in_left, in_right) < 0;
+            });
+    }
+
+    /** @brief std::multimap::upper_bound() 相当の関数。
+        @warning 事前に self::sort() されている必要がある。
+     */
     public: typename super::const_iterator upper_bound(
         typename self::key_type const& in_key)
     const
@@ -471,24 +525,14 @@ struct psyq::internal::message_pack_map:
             });
     }
 
-    public: void push_back(typename super::value_type const& in_value)
-    {
-        this->super::push_back(in_value);
-    }
+    //-------------------------------------------------------------------------
+    private: typename super::const_reference at(
+        typename super::size_type const)
+    const;
 
-    public: void sort()
-    {
-        std::sort(
-            const_cast<typename super::iterator>(this->begin()),
-            const_cast<typename super::iterator>(this->end()),
-            [](
-                typename super::value_type const& in_left,
-                typename super::value_type const& in_right)
-            {
-                return psyq::internal
-                    ::message_pack_object_compare(in_left, in_right) < 0;
-            });
-    }
+    private: typename super::const_reference operator[](
+        typename super::size_type const)
+    const;
 };
 
 #endif // PSYQ_MESSAGE_PACK_CONTAINER_HPP_

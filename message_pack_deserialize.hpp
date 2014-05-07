@@ -5,18 +5,37 @@
 #ifndef PSYQ_MESSAGE_PACK_DESIRIALIZE_HPP_
 #define PSYQ_MESSAGE_PACK_DESIRIALIZE_HPP_
 
-//#include "psyq/message_pack_object.hpp"
 //#include "psyq/message_pack_serializer.hpp"
+//#include "psyq/message_pack_pool.hpp"
+//#include "psyq/message_pack_object.hpp"
 
-/// deserialize_context のスタック限界数のデフォルト値。
+/// psyq::message_pack::deserializer のスタック限界数のデフォルト値。
 #ifndef PSYQ_MESSAGE_PACK_DESERIALIZER_STACK_CAPACITY_DEFAULT
 #define PSYQ_MESSAGE_PACK_DESERIALIZER_STACK_CAPACITY_DEFAULT 32
 #endif // !defined(PSYQ_MESSAGE_PACK_SERIALIZER_STACK_CAPACITY_DEFAULT)
 
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class deserialize_context
+namespace psyq
 {
-    private: typedef deserialize_context self;
+    namespace message_pack
+    {
+        /// @cond
+        template<std::size_t> class deserializer;
+        /// @endcond
+    }
+}
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template<
+    std::size_t template_stack_capacity
+        = PSYQ_MESSAGE_PACK_DESERIALIZER_STACK_CAPACITY_DEFAULT>
+class psyq::message_pack::deserializer
+{
+    /// thisが指す値の型。
+    private: typedef deserializer<template_stack_capacity> self;
+
+    /** @brief 直列化途中のコンテナのスタック限界数。
+     */
+    public: static std::size_t const stack_capacity = template_stack_capacity;
 
     private: enum deserialize_result
     {
@@ -26,52 +45,12 @@ class deserialize_context
         deserialize_result_CONTINUE,
     };
 
-    /// @note psyq::message_pack::header と統合したほうがいいような。
-    private: enum state
+    private: enum phase
     {
-        state_HEADER     = 0x00, // nil
-
-        state_NEVER_USED = 0x01,
-
-        state_FALSE      = 0x02,
-        state_TRUE       = 0x03,
-
-        state_BIN8       = 0x04,
-        state_BIN16      = 0x05,
-        state_BIN32      = 0x06,
-
-        state_EXT_BIN8   = 0x07,
-        state_EXT_BIN16  = 0x08,
-        state_EXT_BIN32  = 0x09,
-
-        state_FLOAT32    = 0x0a,
-        state_FLOAT64    = 0x0b,
-        state_UINT8      = 0x0c,
-        state_UINT16     = 0x0d,
-        state_UINT32     = 0x0e,
-        state_UINT64     = 0x0f,
-        state_INT8       = 0x10,
-        state_INT16      = 0x11,
-        state_INT32      = 0x12,
-        state_INT64      = 0x13,
-
-        state_FIX_EXT1   = 0x14,
-        state_FIX_EXT2   = 0x15,
-        state_FIX_EXT4   = 0x16,
-        state_FIX_EXT8   = 0x17,
-        state_FIX_EXT16  = 0x18,
-
-        state_STR8       = 0x19,
-        state_STR16      = 0x1a,
-        state_STR32      = 0x1b,
-        state_ARRAY16    = 0x1c,
-        state_ARRAY32    = 0x1d,
-        state_MAP16      = 0x1e,
-        state_MAP32      = 0x1f,
-
-        state_RAW_STRING,
-        state_RAW_BINARY,
-        state_RAW_EXTENDED_BINARY,
+        phase_HEADER,
+        phase_STRING,
+        phase_BINARY,
+        phase_EXTENDED_BINARY,
     };
 
     /// 復元中のオブジェクトの種別。
@@ -87,7 +66,7 @@ class deserialize_context
         psyq::message_pack::object object;  ///< 復元中のオブジェクト。
         psyq::message_pack::object map_key; ///< 直前に復元した連想配列キー。
         std::size_t rest_size;              ///< コンテナ要素の残数。
-        self::stack_kind kind;              ///< 復元中のオブジェクトの種別。
+        typename self::stack_kind kind;     ///< 復元中のオブジェクトの種別。
     };
 
     private: struct user
@@ -99,7 +78,7 @@ class deserialize_context
     //-------------------------------------------------------------------------
     public: void initialize(msgpack_zone& io_zone)
     {
-        this->deserialize_state_ = self::state_HEADER;
+        this->phase_ = self::phase_HEADER;
         this->trail_ = 0;
         this->stack_size_ = 0;
         this->stack_[0].object.reset();
@@ -156,8 +135,8 @@ class deserialize_context
         for (;;)
         {
             switch (
-                this->deserialize_state_ == self::state_HEADER?
-                    this->deserialize_object(local_object, in_end):
+                this->phase_ == self::phase_HEADER?
+                    this->deserialize_header(local_object, in_end):
                     this->deserialize_value(local_object, in_end))
             {
             case self::deserialize_result_FINISH:
@@ -166,7 +145,7 @@ class deserialize_context
                 return 1;
 
             case self::deserialize_result_CONTINUE:
-                this->deserialize_state_ = self::state_HEADER;
+                this->phase_ = self::phase_HEADER;
                 ++this->deserialize_iterator_;
                 if (this->deserialize_iterator_ < in_end)
                 {
@@ -192,7 +171,7 @@ class deserialize_context
         @param[out] out_object 復元したオブジェクトが格納される。
         @param[in]  in_end     MessagePackの末尾位置。
      */
-    private: self::deserialize_result deserialize_object(
+    private: typename self::deserialize_result deserialize_header(
         psyq::message_pack::object& out_object,
         std::uint8_t const* const in_end)
     {
@@ -230,7 +209,7 @@ class deserialize_context
         {
             // [0xa0, 0xbf]: fix str
             this->trail_ = local_header & 0x1f;
-            this->deserialize_state_ = self::state_RAW_STRING;
+            this->phase_ = self::phase_STRING;
         }
         else if (local_header == psyq::message_pack::header_NIL)
         {
@@ -263,7 +242,7 @@ class deserialize_context
             // 0xc6: bin 32
             this->trail_
                 = 1 << (local_header - psyq::message_pack::header_BIN8);
-            this->deserialize_state_ = local_header & 0x1f;
+            this->phase_ = local_header;
         }
         else if (local_header <= psyq::message_pack::header_EXT32)
         {
@@ -272,7 +251,7 @@ class deserialize_context
             // 0xc9: ext 32
             this->trail_
                 = 1 << (local_header - psyq::message_pack::header_EXT8);
-            this->deserialize_state_ = local_header & 0x1f;
+            this->phase_ = local_header;
         }
         else if (local_header <= psyq::message_pack::header_INT64)
         {
@@ -282,12 +261,12 @@ class deserialize_context
             // 0xcd: unsigned int 16
             // 0xce: unsigned int 32
             // 0xcf: unsigned int 64
-            // 0xd0: signed int  8
+            // 0xd0: signed int 8
             // 0xd1: signed int 16
             // 0xd2: signed int 32
             // 0xd3: signed int 64
             this->trail_ = 1 << (local_header & 0x3);
-            this->deserialize_state_ = local_header & 0x1f;
+            this->phase_ = local_header;
         }
         else if (local_header <= psyq::message_pack::header_FIX_EXT16)
         {
@@ -298,7 +277,7 @@ class deserialize_context
             // 0xd8: fix ext 16
             this->trail_ = 1 + (
                 1 << (local_header - psyq::message_pack::header_FIX_EXT1));
-            this->deserialize_state_ = self::state_RAW_EXTENDED_BINARY;
+            this->phase_ = self::phase_EXTENDED_BINARY;
         }
         else if (local_header <= psyq::message_pack::header_STR32)
         {
@@ -307,7 +286,7 @@ class deserialize_context
             // 0xdb: str 32
             this->trail_
                 = 1 << (local_header - psyq::message_pack::header_STR8);
-            this->deserialize_state_ = local_header & 0x1f;
+            this->phase_ = local_header;
         }
         else if (local_header <= psyq::message_pack::header_MAP32)
         {
@@ -316,7 +295,7 @@ class deserialize_context
             // 0xde: map 16
             // 0xdf: map 32
             this->trail_ = 2 << (local_header & 0x1);
-            this->deserialize_state_ = local_header & 0x1f;
+            this->phase_ = local_header;
         }
         else
         {
@@ -336,7 +315,7 @@ class deserialize_context
         @param[out]out_object 復元した値を格納するオブジェクト。
         @param[in] in_end     MessagePackの末尾位置。
      */
-    private: self::deserialize_result deserialize_value(
+    private: typename self::deserialize_result deserialize_value(
         psyq::message_pack::object& out_object,
         std::uint8_t const* const in_end)
     {
@@ -345,45 +324,46 @@ class deserialize_context
             return self::deserialize_result_ABORT;
         }
         auto const local_data(this->deserialize_iterator_);
+        PSYQ_ASSERT(0 < this->trail_);
         this->deserialize_iterator_ += this->trail_ - 1;
-        switch (this->deserialize_state_)
+        switch (this->phase_)
         {
         // 無符号整数
-        case self::state_UINT8:
+        case psyq::message_pack::header_UINT8:
             out_object = *local_data;
             break;
-        case self::state_UINT16:
+        case psyq::message_pack::header_UINT16:
             out_object
                 = self::load_big_endian_integer<std::uint16_t>(local_data);
             break;
-        case self::state_UINT32:
+        case psyq::message_pack::header_UINT32:
             out_object
                 = self::load_big_endian_integer<std::uint32_t>(local_data);
             break;
-        case self::state_UINT64:
+        case psyq::message_pack::header_UINT64:
             out_object
                 = self::load_big_endian_integer<std::uint64_t>(local_data);
             break;
 
         // 有符号整数
-        case self::state_INT8:
+        case psyq::message_pack::header_INT8:
             out_object = static_cast<std::int8_t>(*local_data);
             break;
-        case self::state_INT16:
+        case psyq::message_pack::header_INT16:
             out_object
                 = self::load_big_endian_integer<std::int16_t>(local_data);
             break;
-        case self::state_INT32:
+        case psyq::message_pack::header_INT32:
             out_object
                 = self::load_big_endian_integer<std::int32_t>(local_data);
             break;
-        case self::state_INT64:
+        case psyq::message_pack::header_INT64:
             out_object
                 = self::load_big_endian_integer<std::int64_t>(local_data);
             break;
 
         // 浮動小数点数
-        case self::state_FLOAT32:
+        case psyq::message_pack::header_FLOAT32:
         {
             union {std::uint32_t integer; float real;} local_value;
             local_value.integer
@@ -391,7 +371,7 @@ class deserialize_context
             out_object = local_value.real;
             break;
         }
-        case self::state_FLOAT64:
+        case psyq::message_pack::header_FLOAT64:
         {
             union {std::uint64_t integer; double real;} local_value;
             local_value.integer
@@ -401,119 +381,108 @@ class deserialize_context
         }
 
         // 文字列
-        case self::state_STR8:
+        case psyq::message_pack::header_STR8:
             this->trail_ = *local_data;
             goto PSYQ_MESSAGE_PACK_DESERIALIZE_STRING;
-        case self::state_STR16:
+        case psyq::message_pack::header_STR16:
             this->trail_
                 = self::load_big_endian_integer<std::uint16_t>(local_data);
             goto PSYQ_MESSAGE_PACK_DESERIALIZE_STRING;
-        case self::state_STR32:
+        case psyq::message_pack::header_STR32:
             this->trail_
                 = self::load_big_endian_integer<std::uint32_t>(local_data);
             goto PSYQ_MESSAGE_PACK_DESERIALIZE_STRING;
         PSYQ_MESSAGE_PACK_DESERIALIZE_STRING:
             if (0 < this->trail_)
             {
-                this->deserialize_state_ = self::state_RAW_STRING;
+                this->phase_ = self::phase_STRING;
                 ++this->deserialize_iterator_;
+                return this->deserialize_value(out_object, in_end);
             }
-            else
-            {
-                self::deserialize_string(out_object, this->user_, nullptr, 0);
-            }
+            self::deserialize_string(out_object, this->user_, nullptr, 0);
             break;
-        case self::state_RAW_STRING:
+        case self::phase_STRING:
             self::deserialize_string(
                 out_object, this->user_, local_data, this->trail_);
             break;
 
         // バイナリ
-        case self::state_BIN8:
+        case psyq::message_pack::header_BIN8:
             this->trail_ = *local_data;
             goto PSYQ_MESSAGE_PACK_DESERIALIZE_BINARY;
-        case self::state_BIN16:
+        case psyq::message_pack::header_BIN16:
             this->trail_
                 = self::load_big_endian_integer<std::uint16_t>(local_data);
             goto PSYQ_MESSAGE_PACK_DESERIALIZE_BINARY;
-        case self::state_BIN32:
+        case psyq::message_pack::header_BIN32:
             this->trail_
                 = self::load_big_endian_integer<std::uint32_t>(local_data);
             goto PSYQ_MESSAGE_PACK_DESERIALIZE_BINARY;
         PSYQ_MESSAGE_PACK_DESERIALIZE_BINARY:
             if (0 < this->trail_)
             {
-                this->deserialize_state_ = self::state_RAW_BINARY;
+                this->phase_ = self::phase_BINARY;
                 ++this->deserialize_iterator_;
+                return this->deserialize_value(out_object, in_end);
             }
-            else
-            {
-                self::deserialize_binary(out_object, this->user_, nullptr, 0);
-            }
+            self::deserialize_binary(out_object, this->user_, nullptr, 0);
             break;
-        case self::state_RAW_BINARY:
+        case self::phase_BINARY:
             self::deserialize_binary(
                 out_object, this->user_, local_data, this->trail_);
             break;
 
         // 拡張バイナリ
-        case self::state_EXT_BIN8:
+        case psyq::message_pack::header_EXT8:
             this->trail_ = *local_data;
             goto PSYQ_MESSAGE_PACK_DESERIALIZE_EXTENDED_BINARY;
-        case self::state_EXT_BIN16:
+        case psyq::message_pack::header_EXT16:
             this->trail_
                 = self::load_big_endian_integer<std::uint16_t>(local_data);
             goto PSYQ_MESSAGE_PACK_DESERIALIZE_EXTENDED_BINARY;
-        case self::state_EXT_BIN32:
+        case psyq::message_pack::header_EXT32:
             this->trail_
                 = self::load_big_endian_integer<std::uint32_t>(local_data);
             goto PSYQ_MESSAGE_PACK_DESERIALIZE_EXTENDED_BINARY;
         PSYQ_MESSAGE_PACK_DESERIALIZE_EXTENDED_BINARY:
+            ++this->deserialize_iterator_;
             if (0 < this->trail_)
             {
-                this->deserialize_state_ = self::state_RAW_EXTENDED_BINARY;
+                this->phase_ = self::phase_EXTENDED_BINARY;
                 ++this->trail_;
+                return this->deserialize_value(out_object, in_end);
             }
-            else
-            {
-                self::deserialize_extended_binary(
-                    out_object,
-                    this->user_,
-                    nullptr,
-                    0,
-                    static_cast<std::int8_t>(*this->deserialize_iterator_));
-            }
-            ++this->deserialize_iterator_;
-            break;
-        case self::state_RAW_EXTENDED_BINARY:
-            PSYQ_ASSERT(0 < this->trail_);
             self::deserialize_extended_binary(
                 out_object,
                 this->user_,
-                local_data + 1,
-                this->trail_ - 1,
-                static_cast<std::int8_t>(*local_data));
+                this->deserialize_iterator_ - 1,
+                1);
+            break;
+        case self::phase_EXTENDED_BINARY:
+            PSYQ_ASSERT(0 < this->trail_);
+            self::deserialize_extended_binary(
+                out_object, this->user_, local_data, this->trail_);
             break;
 
         // 配列
-        case self::state_ARRAY16:
+        case psyq::message_pack::header_ARRAY16:
             return this->deserialize_container(
                 out_object,
                 self::load_big_endian_integer<std::uint16_t>(local_data),
                 self::stack_kind_ARRAY_ITEM);
-        case self::state_ARRAY32:
+        case psyq::message_pack::header_ARRAY32:
             return this->deserialize_container(
                 out_object,
                 self::load_big_endian_integer<std::uint32_t>(local_data),
                 self::stack_kind_ARRAY_ITEM);
 
         // 連想配列
-        case self::state_MAP16:
+        case psyq::message_pack::header_MAP16:
             return this->deserialize_container(
                 out_object,
                 self::load_big_endian_integer<std::uint16_t>(local_data),
                 self::stack_kind_MAP_KEY);
-        case self::state_MAP32:
+        case psyq::message_pack::header_MAP32:
             return this->deserialize_container(
                 out_object,
                 self::load_big_endian_integer<std::uint32_t>(local_data),
@@ -532,10 +501,10 @@ class deserialize_context
         @param[in] in_capacity 復元するコンテナの容量。
         @param[in] in_kind     復元するコンテナの種別。
      */
-    private: self::deserialize_result deserialize_container(
+    private: typename self::deserialize_result deserialize_container(
         psyq::message_pack::object& out_object,
         std::size_t const in_capacity,
-        self::stack_kind const in_kind)
+        typename self::stack_kind const in_kind)
     {
         PSYQ_ASSERT(
             in_kind == self::stack_kind_ARRAY_ITEM
@@ -579,7 +548,7 @@ class deserialize_context
     /** @brief スタックからMessagePackオブジェクトを取り出す。
         @param[out] out_object スタックから取り出したオブジェクトが格納される。
      */
-    private: self::deserialize_result deserialize_stack(
+    private: typename self::deserialize_result deserialize_stack(
         psyq::message_pack::object& out_object)
     PSYQ_NOEXCEPT
     {
@@ -653,16 +622,14 @@ class deserialize_context
      */
     private: static void deserialize_string(
         psyq::message_pack::object& out_object,
-        self::user& out_user,
+        typename self::user& out_user,
         void const* const in_data,
         std::size_t const in_size)
     PSYQ_NOEXCEPT
     {
-        out_object.set_string(
-            static_cast<psyq::message_pack::object::raw::const_pointer>(
-                in_data),
-            in_size);
-        out_user.referenced = true;
+        typedef psyq::message_pack::object::string::const_pointer pointer;
+        out_object.set_string(static_cast<pointer>(in_data), in_size);
+        out_user.referenced = 0 < in_size;
     }
 
     /** @brief MessagePackオブジェクトにバイナリを格納する。
@@ -672,38 +639,32 @@ class deserialize_context
      */
     private: static void deserialize_binary(
         psyq::message_pack::object& out_object,
-        self::user& out_user,
+        typename self::user& out_user,
         void const* const in_data,
         std::size_t const in_size)
     PSYQ_NOEXCEPT
     {
-        out_object.set_binary(
-            static_cast<psyq::message_pack::object::raw::const_pointer>(
-                in_data),
-            in_size);
-        out_user.referenced = true;
+        typedef psyq::message_pack::object::binary::const_pointer pointer;
+        out_object.set_binary(static_cast<pointer>(in_data), in_size);
+        out_user.referenced = 0 < in_size;
     }
 
     /** @brief MessagePackオブジェクトに拡張バイナリを格納する。
         @param[out] out_object 拡張バイナリを格納するMessagePackオブジェクト。
         @param[in]  in_data    拡張バイナリの先頭位置。
         @param[in]  in_size    拡張バイナリのバイト数。
-        @param[in]  in_kind    拡張バイナリの型識別値。
      */
     private: static void deserialize_extended_binary(
         psyq::message_pack::object& out_object,
-        self::user& out_user,
+        typename self::user& out_user,
         void const* const in_data,
-        std::size_t const in_size,
-        std::int8_t const in_extended_kind)
+        std::size_t const in_size)
     PSYQ_NOEXCEPT
     {
-        out_object.set_extended_binary(
-            static_cast<psyq::message_pack::object::raw::const_pointer>(
-                in_data),
-            in_size,
-            in_extended_kind);
-        out_user.referenced = true;
+        typedef psyq::message_pack::object::extended_binary::const_pointer
+            pointer;
+        out_object.set_extended_binary(static_cast<pointer>(in_data), in_size);
+        out_user.referenced = 0 < in_size;
     }
 
     //-------------------------------------------------------------------------
@@ -716,7 +677,7 @@ class deserialize_context
      */
     private: static bool deserialize_array(
         psyq::message_pack::object& out_object,
-        self::user const& io_user,
+        typename self::user const& io_user,
         std::size_t const in_capacity)
     {
         auto& local_array(
@@ -761,7 +722,7 @@ class deserialize_context
      */
     private: static bool deserialize_map(
         psyq::message_pack::object& out_object,
-        self::user const& io_user,
+        typename self::user const& io_user,
         std::size_t const in_capacity)
     {
         auto& local_map(
@@ -866,10 +827,10 @@ class deserialize_context
     }
 
     //-------------------------------------------------------------------------
-    private: std::array<self::stack, PSYQ_MESSAGE_PACK_DESERIALIZER_STACK_CAPACITY_DEFAULT> stack_;
-    private: self::user user_;
+    private: std::array<typename self::stack, template_stack_capacity> stack_;
+    private: typename self::user user_;
     private: std::uint8_t const* deserialize_iterator_;
-    private: std::size_t deserialize_state_; ///< 復元するオブジェクトの種別。
+    private: std::size_t phase_; ///< 復元するオブジェクトの種別。
     private: std::size_t trail_;
     private: std::size_t stack_size_; ///< スタックの要素数。
 };

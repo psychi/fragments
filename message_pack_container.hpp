@@ -11,6 +11,7 @@ namespace psyq
     {
         /// @cond
         template<typename> struct message_pack_container;
+        struct message_pack_extended_binary;
         template<typename> struct message_pack_map;
         /// @endcond
 
@@ -114,8 +115,7 @@ struct psyq::internal::message_pack_container
     /** @brief コンテナの先頭要素へのpointerを取得する。
         @return コンテナの先頭要素へのpointer。
      */
-    public: typename self::const_pointer data()
-    const PSYQ_NOEXCEPT
+    public: typename self::const_pointer data() const PSYQ_NOEXCEPT
     {
         return this->data_;
     }
@@ -397,6 +397,104 @@ struct psyq::internal::message_pack_container
     //-------------------------------------------------------------------------
     private: typename self::pointer data_;   ///< コンテナの先頭位置。
     private: typename self::size_type size_; ///< コンテナの要素数。
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief MessagePackオブジェクトで使う拡張バイナリ。
+
+    RAWバイト列の先頭1バイトに、拡張型の識別値として符号つき整数が格納され、
+    その後ろにバイナリが格納されている。
+
+    @sa psyq::message_pack::object::extended_binary
+ */
+struct psyq::internal::message_pack_extended_binary:
+    public psyq::internal::message_pack_container<std::uint8_t const>
+{
+    /// thisが指す値の型。
+    private: typedef message_pack_extended_binary self;
+
+    /// thisの上位型。
+    public: typedef psyq::internal::message_pack_container<std::uint8_t const>
+        super;
+
+    //-------------------------------------------------------------------------
+    /// @name コンテナの要素を参照
+    //@{
+    /// @copydoc super::data()
+    public: super::const_pointer data() const PSYQ_NOEXCEPT
+    {
+        return 1 < this->super::size()?
+            this->super::data() + 1: this->super::data();
+    }
+
+    /// @copydoc super::at()
+    public: super::const_reference at(super::size_type const in_index) const
+    {
+        if (this->size() <= in_index)
+        {
+            PSYQ_ASSERT(false);
+            //throw std::out_of_range; // 例外は使いたくない。
+        }
+        return *(this->data() + in_index);
+    }
+
+    /// @copydoc super::operator[]()
+    public: super::const_reference operator[](super::size_type const in_index)
+    const
+    {
+        PSYQ_ASSERT(in_index < this->size());
+        return *(this->data() + in_index);
+    }
+
+    /// @copydoc super::front()
+    public: super::const_reference front() const
+    {
+        return (*this)[0];
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name iteratorの取得
+    //@{
+    /// @copydoc super::begin()
+    public: super::const_iterator begin() const PSYQ_NOEXCEPT
+    {
+        return this->data();
+    }
+
+    /// @copydoc super::cbegin()
+    public: super::const_iterator cbegin() const PSYQ_NOEXCEPT
+    {
+        return this->begin();
+    }
+
+    /// @copydoc super::rend()
+    public: super::const_reverse_iterator rend() const PSYQ_NOEXCEPT
+    {
+        return super::const_reverse_iterator(this->begin());
+    }
+
+    /// @copydoc super::crend()
+    public: super::const_reverse_iterator crend() const PSYQ_NOEXCEPT
+    {
+        return this->rend();
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @copydoc super::size()
+    public: super::size_type size() const PSYQ_NOEXCEPT
+    {
+        return 1 < this->super::size()? this->super::size() - 1: 0;
+    }
+
+    /** @brief 拡張バイナリの型の識別値を取得する。
+        @retval !=nullptr 拡張バイナリの型の識別値が格納されているポインタ。
+        @retval ==nullptr 拡張バイナリが空。
+     */
+    public: std::int8_t type() const PSYQ_NOEXCEPT
+    {
+        return 0 < this->super::size()?
+            *reinterpret_cast<std::int8_t const*>(this->super::data()): 0;
+    }
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

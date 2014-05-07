@@ -44,7 +44,7 @@ union psyq::internal::message_pack_value
     private: typedef message_pack_value self; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
-    public: struct kind
+    public: struct type
     {
         /** @brief MessagePackオブジェクトに格納する値の種別。
          */
@@ -67,17 +67,24 @@ union psyq::internal::message_pack_value
     //-------------------------------------------------------------------------
     /// @name MessagePackオブジェクトに格納する値の型
     //@{
-    /// @copydoc self::kind::FLOAT32
+    /// @copydoc self::type::FLOAT32
     public: typedef float float32;
-    /// @copydoc self::kind::FLOAT64
+    /// @copydoc self::type::FLOAT64
     public: typedef double float64;
-    /// 文字列／バイナリ／拡張バイナリを保持するRAWバイト列。
-    public: typedef psyq::internal::message_pack_container<char const> raw;
-    /// @copydoc self::kind::ARRAY
+    /// 文字列を保持するRAWバイト列。
+    public: typedef psyq::internal::message_pack_container<std::int8_t const>
+        string;
+    /// バイナリを保持するRAWバイト列。
+    public: typedef psyq::internal::message_pack_extended_binary::super
+        binary;
+    /// 拡張バイナリを保持するRAWバイト列。
+    public: typedef psyq::internal::message_pack_extended_binary
+        extended_binary;
+    /// @copydoc self::type::ARRAY
     public: typedef psyq::internal::message_pack_container<
         psyq::message_pack::object>
             array;
-    /// @copydoc self::kind::MAP
+    /// @copydoc self::type::MAP
     public: typedef psyq::internal::message_pack_map<
         psyq::message_pack::object>
             map;
@@ -121,13 +128,29 @@ union psyq::internal::message_pack_value
         float32_(in_float)
     {}
 
-    /** @brief MessagePackオブジェクトにRAWバイト列を格納する。
-        @param[in] in_raw MessagePackオブジェクトに格納するRAWバイト列。
+    /** @brief MessagePackオブジェクトに文字列を格納する。
+        @param[in] in_string MessagePackオブジェクトに格納する文字列。
      */
     public: explicit PSYQ_CONSTEXPR message_pack_value(
-        self::raw const& in_raw)
+        self::string const& in_string)
     PSYQ_NOEXCEPT:
-        raw_(in_raw)
+        string_(in_string)
+    {}
+    /** @brief MessagePackオブジェクトにバイナリを格納する。
+        @param[in] in_string MessagePackオブジェクトに格納するバイナリ。
+     */
+    public: explicit PSYQ_CONSTEXPR message_pack_value(
+        self::binary const& in_binary)
+    PSYQ_NOEXCEPT:
+        binary_(in_binary)
+    {}
+    /** @brief MessagePackオブジェクトに文字列を格納する。
+        @param[in] in_string MessagePackオブジェクトに格納する文字列。
+     */
+    public: explicit PSYQ_CONSTEXPR message_pack_value(
+        self::extended_binary const& in_extended_binary)
+    PSYQ_NOEXCEPT:
+        extended_binary_(in_extended_binary)
     {}
 
     /** @brief MessagePackオブジェクトに配列を格納する。
@@ -161,9 +184,9 @@ union psyq::internal::message_pack_value
      */
     public: static bool equal(
         self const& in_left_value,
-        self::kind::value const in_left_kind,
+        self::type::value const in_left_kind,
         self const& in_right_value,
-        self::kind::value const in_right_kind)
+        self::type::value const in_right_kind)
     PSYQ_NOEXCEPT
     {
         if (in_left_kind != in_right_kind)
@@ -172,33 +195,36 @@ union psyq::internal::message_pack_value
         }
         switch (in_left_kind)
         {
-        case self::kind::NIL:
+        case self::type::NIL:
             return true;
-        case self::kind::BOOLEAN:
+        case self::type::BOOLEAN:
             return in_left_value.boolean_ == in_right_value.boolean_;
-        case self::kind::POSITIVE_INTEGER:
+        case self::type::POSITIVE_INTEGER:
             return in_left_value.positive_integer_
                 == in_right_value.positive_integer_;
-        case self::kind::NEGATIVE_INTEGER:
+        case self::type::NEGATIVE_INTEGER:
             return in_left_value.negative_integer_
                 == in_right_value.negative_integer_;
-        case self::kind::FLOAT32:
+        case self::type::FLOAT32:
             return 0 == self::compare_floating_point(
                 in_left_value.float32_,
                 in_right_value.float32_,
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT32_EPSILON);
-        case self::kind::FLOAT64:
+        case self::type::FLOAT64:
             return 0 == self::compare_floating_point(
                 in_left_value.float64_,
                 in_right_value.float64_,
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON);
-        case self::kind::STRING:
-        case self::kind::BINARY:
-        case self::kind::EXTENDED_BINARY:
-            return in_left_value.raw_ == in_right_value.raw_;
-        case self::kind::ARRAY:
+        case self::type::STRING:
+            return in_left_value.string_ == in_right_value.string_;
+        case self::type::BINARY:
+            return in_left_value.binary_ == in_right_value.binary_;
+        case self::type::EXTENDED_BINARY:
+            return in_left_value.extended_binary_
+                == in_right_value.extended_binary_;
+        case self::type::ARRAY:
             return in_left_value.array_ == in_right_value.array_;
-        case self::kind::MAP:
+        case self::type::MAP:
             return in_left_value.map_ == in_right_value.map_;
         default:
             PSYQ_ASSERT(false);
@@ -217,42 +243,39 @@ union psyq::internal::message_pack_value
      */
     public: static int compare(
         self const& in_left_value,
-        self::kind::value const in_left_kind,
+        self::type::value const in_left_kind,
         self const& in_right_value,
-        self::kind::value const in_right_kind)
+        self::type::value const in_right_kind)
     PSYQ_NOEXCEPT
     {
         switch (in_right_kind)
         {
-        case self::kind::NIL:
-            return in_left_kind != self::kind::NIL? 1: 0;
-        case self::kind::BOOLEAN:
+        case self::type::NIL:
+            return in_left_kind != self::type::NIL? 1: 0;
+        case self::type::BOOLEAN:
             return self::compare_boolean(
                 in_left_value, in_left_kind, in_right_value.boolean_);
-        case self::kind::POSITIVE_INTEGER:
+        case self::type::POSITIVE_INTEGER:
             return self::compare_unsigned_integer(
                 in_left_value, in_left_kind, in_right_value.positive_integer_);
-        case self::kind::NEGATIVE_INTEGER:
+        case self::type::NEGATIVE_INTEGER:
             return self::compare_signed_integer(
                 in_left_value, in_left_kind, in_right_value.negative_integer_);
-        case self::kind::FLOAT32:
+        case self::type::FLOAT32:
             return self::compare_floating_point(
                 in_left_value, in_left_kind, in_right_value.float32_);
-        case self::kind::FLOAT64:
+        case self::type::FLOAT64:
             return self::compare_floating_point(
                 in_left_value, in_left_kind, in_right_value.float64_);
-        case self::kind::STRING:
-        case self::kind::BINARY:
-        case self::kind::EXTENDED_BINARY:
+        case self::type::STRING:
+        case self::type::BINARY:
+        case self::type::EXTENDED_BINARY:
             return self::compare_raw(
-                in_left_value,
-                in_left_kind,
-                in_right_value.raw_,
-                in_right_kind);
-        case self::kind::ARRAY:
+                in_left_value, in_left_kind, in_right_value, in_right_kind);
+        case self::type::ARRAY:
             return self::compare_array(
                 in_left_value, in_left_kind, in_right_value.array_);
-        case self::kind::MAP:
+        case self::type::MAP:
             return self::compare_map(
                 in_left_value, in_left_kind, in_right_value.map_);
         default:
@@ -267,9 +290,9 @@ union psyq::internal::message_pack_value
         @retval true  正規の種別だった。
         @retval false 不正な種別だった。
      */
-    private: static bool is_valid_kind(self::kind::value const in_kind)
+    private: static bool is_valid_kind(self::type::value const in_kind)
     {
-        return in_kind <= self::kind::MAP;
+        return in_kind <= self::type::MAP;
     }
     //-------------------------------------------------------------------------
     /// @name MessagePackオブジェクトコンテナとの比較
@@ -284,31 +307,31 @@ union psyq::internal::message_pack_value
      */
     private: static int compare_map(
         self const& in_left_value,
-        self::kind::value const in_left_kind,
+        self::type::value const in_left_kind,
         self::map const& in_right_map)
     PSYQ_NOEXCEPT
     {
         switch (in_left_kind)
         {
-        case self::kind::NIL:
+        case self::type::NIL:
             return 1;
-        case self::kind::BOOLEAN:
+        case self::type::BOOLEAN:
             return -1;//-self::compare_map(in_right_map, this->boolean_);
-        case self::kind::POSITIVE_INTEGER:
+        case self::type::POSITIVE_INTEGER:
             return -1;//-self::compare_map(in_right_map, this->positive_integer_);
-        case self::kind::NEGATIVE_INTEGER:
+        case self::type::NEGATIVE_INTEGER:
             return -1;//-self::compare_map(in_right_map, this->negative_integer_);
-        case self::kind::FLOAT32:
+        case self::type::FLOAT32:
             return -1;//-self::compare_map(in_right_map, this->float32_);
-        case self::kind::FLOAT64:
+        case self::type::FLOAT64:
             return -1;//-self::compare_map(in_right_map, this->float64_);
-        case self::kind::STRING:
-        case self::kind::BINARY:
-        case self::kind::EXTENDED_BINARY:
+        case self::type::STRING:
+        case self::type::BINARY:
+        case self::type::EXTENDED_BINARY:
             return -1;//-self::compare_map(in_right_map, this->raw_);
-        case self::kind::ARRAY:
+        case self::type::ARRAY:
             return -1;//-self::compare_map(in_right_map, this->array_);
-        case self::kind::MAP:
+        case self::type::MAP:
             return in_left_value.map_.compare(in_right_map);
         default:
             PSYQ_ASSERT(false);
@@ -326,31 +349,31 @@ union psyq::internal::message_pack_value
      */
     private: static int compare_array(
         self const& in_left_value,
-        self::kind::value const in_left_kind,
+        self::type::value const in_left_kind,
         self::array const& in_right_array)
     PSYQ_NOEXCEPT
     {
         switch (in_left_kind)
         {
-        case self::kind::NIL:
+        case self::type::NIL:
             return 1;
-        case self::kind::BOOLEAN:
+        case self::type::BOOLEAN:
             return -1;//-self::compare_array(in_right_array, in_left_value.boolean_);
-        case self::kind::POSITIVE_INTEGER:
+        case self::type::POSITIVE_INTEGER:
             return -1;//-self::compare_array(in_right_array, in_left_value.positive_integer_);
-        case self::kind::NEGATIVE_INTEGER:
+        case self::type::NEGATIVE_INTEGER:
             return -1;//-self::compare_array(in_right_array, in_left_value.negative_integer_);
-        case self::kind::FLOAT32:
+        case self::type::FLOAT32:
             return -1;//-self::compare_array(in_right_array, in_left_value.float32_);
-        case self::kind::FLOAT64:
+        case self::type::FLOAT64:
             return -1;//-self::compare_array(in_right_array, in_left_value.float64_);
-        case self::kind::STRING:
-        case self::kind::BINARY:
-        case self::kind::EXTENDED_BINARY:
+        case self::type::STRING:
+        case self::type::BINARY:
+        case self::type::EXTENDED_BINARY:
             return -1;//-self::compare_array(in_right_array, in_left_value.raw_);
-        case self::kind::ARRAY:
+        case self::type::ARRAY:
             return in_left_value.array_.compare(in_right_array);
-        case self::kind::MAP:
+        case self::type::MAP:
             return 1;//self::compare_map(in_left_value.map_, in_right_array);
         default:
             PSYQ_ASSERT(false);
@@ -369,34 +392,39 @@ union psyq::internal::message_pack_value
      */
     private: static int compare_raw(
         self const& in_left_value,
-        self::kind::value const in_left_kind,
-        self::raw const& in_right_raw,
-        self::kind::value const in_right_kind)
+        self::type::value const in_left_kind,
+        self const& in_right_value,
+        self::type::value const in_right_kind)
     PSYQ_NOEXCEPT
     {
+        if (in_left_kind != in_right_kind)
+        {
+            return in_left_kind < in_right_kind? -1: 1;
+        }
         switch (in_left_kind)
         {
-        case self::kind::NIL:
+        case self::type::NIL:
             return 1;
-        case self::kind::BOOLEAN:
+        case self::type::BOOLEAN:
             return -1;//-self::compare_raw(in_right_raw, in_left_value.boolean_);
-        case self::kind::POSITIVE_INTEGER:
+        case self::type::POSITIVE_INTEGER:
             return -1;//-self::compare_raw(in_right_raw, in_left_value.positive_integer_);
-        case self::kind::NEGATIVE_INTEGER:
+        case self::type::NEGATIVE_INTEGER:
             return -1;//-self::compare_raw(in_right_raw, in_left_value.negative_integer_);
-        case self::kind::FLOAT32:
+        case self::type::FLOAT32:
             return -1;//-self::compare_raw(in_right_raw, in_left_value.float32_);
-        case self::kind::FLOAT64:
+        case self::type::FLOAT64:
             return -1;//-self::compare_raw(in_right_raw, in_left_value.float64_);
-        case self::kind::STRING:
-        case self::kind::BINARY:
-        case self::kind::EXTENDED_BINARY:
-            return in_left_kind != in_right_kind?
-                (in_left_kind < in_right_kind? -1: 1):
-                in_left_value.raw_.compare(in_right_raw);
-        case self::kind::ARRAY:
+        case self::type::STRING:
+            return in_left_value.string_.compare(in_right_value.string_);
+        case self::type::BINARY:
+            return in_left_value.binary_.compare(in_right_value.binary_);
+        case self::type::EXTENDED_BINARY:
+            return in_left_value.extended_binary_.compare(
+                in_right_value.extended_binary_);
+        case self::type::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_raw);
-        case self::kind::MAP:
+        case self::type::MAP:
             return 1;//self::compare_map(in_left_value.map_, in_right_raw);
         default:
             PSYQ_ASSERT(false);
@@ -418,46 +446,46 @@ union psyq::internal::message_pack_value
     private: template<typename template_float_type>
     static int compare_floating_point(
         self const& in_left_value,
-        self::kind::value const in_left_kind,
+        self::type::value const in_left_kind,
         template_float_type const in_right_float)
     PSYQ_NOEXCEPT
     {
         switch (in_left_kind)
         {
-        case self::kind::NIL:
+        case self::type::NIL:
             return 1;
-        case self::kind::BOOLEAN:
+        case self::type::BOOLEAN:
             return -self::compare_floating_point(
                 in_right_float,
                 in_left_value.boolean_,
                 self::get_epsilon(template_float_type(0)));
-        case self::kind::POSITIVE_INTEGER:
+        case self::type::POSITIVE_INTEGER:
             return -self::compare_floating_point(
                 in_right_float,
                 in_left_value.positive_integer_,
                 self::get_epsilon(template_float_type(0)));
-        case self::kind::NEGATIVE_INTEGER:
+        case self::type::NEGATIVE_INTEGER:
             return -self::compare_floating_point(
                 in_right_float,
                 in_left_value.negative_integer_,
                 self::get_epsilon(template_float_type(0)));
-        case self::kind::FLOAT32:
+        case self::type::FLOAT32:
             return self::compare_floating_point<template_float_type>(
                 in_left_value.float32_,
                 in_right_float,
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT32_EPSILON);
-        case self::kind::FLOAT64:
+        case self::type::FLOAT64:
             return self::compare_floating_point<self::float64>(
                 in_left_value.float64_,
                 in_right_float,
                 self::get_epsilon(template_float_type(0)));
-        case self::kind::STRING:
-        case self::kind::BINARY:
-        case self::kind::EXTENDED_BINARY:
+        case self::type::STRING:
+        case self::type::BINARY:
+        case self::type::EXTENDED_BINARY:
             return 1;//self::compare_raw(in_left_value.raw_, in_right_float);
-        case self::kind::ARRAY:
+        case self::type::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_float);
-        case self::kind::MAP:
+        case self::type::MAP:
             return 1;//self::compare_map(in_left_value.map_, in_right_float);
         default:
             PSYQ_ASSERT(false);
@@ -582,7 +610,7 @@ union psyq::internal::message_pack_value
     private: template<typename template_signed_type>
     static int compare_signed_integer(
         self const& in_left_value,
-        self::kind::value const in_left_kind,
+        self::type::value const in_left_kind,
         template_signed_type const in_right_integer)
     PSYQ_NOEXCEPT
     {
@@ -591,34 +619,34 @@ union psyq::internal::message_pack_value
             "template_signed_type is not signed integer type.");
         switch (in_left_kind)
         {
-        case self::kind::NIL:
+        case self::type::NIL:
             return 1;
-        case self::kind::BOOLEAN:
+        case self::type::BOOLEAN:
             return -self::compare_signed_integer(
                 in_right_integer, in_left_value.boolean_);
-        case self::kind::POSITIVE_INTEGER:
+        case self::type::POSITIVE_INTEGER:
             return -self::compare_signed_integer(
                 in_right_integer, in_left_value.positive_integer_);
-        case self::kind::NEGATIVE_INTEGER:
+        case self::type::NEGATIVE_INTEGER:
             return -self::compare_signed_integer(
                 in_right_integer, in_left_value.negative_integer_);
-        case self::kind::FLOAT32:
+        case self::type::FLOAT32:
             return self::compare_floating_point<self::float64>(
                 in_left_value.float32_,
                 static_cast<self::float64>(in_right_integer),
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT32_EPSILON);
-        case self::kind::FLOAT64:
+        case self::type::FLOAT64:
             return self::compare_floating_point<self::float64>(
                 in_left_value.float64_,
                 static_cast<self::float64>(in_right_integer),
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON);
-        case self::kind::STRING:
-        case self::kind::BINARY:
-        case self::kind::EXTENDED_BINARY:
+        case self::type::STRING:
+        case self::type::BINARY:
+        case self::type::EXTENDED_BINARY:
             return 1;//self::compare_raw(in_left_value.raw_, in_right_integer);
-        case self::kind::ARRAY:
+        case self::type::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_integer);
-        case self::kind::MAP:
+        case self::type::MAP:
             return 1;//self::compare_map(in_left_value.map_, in_right_integer);
         default:
             PSYQ_ASSERT(false);
@@ -719,7 +747,7 @@ union psyq::internal::message_pack_value
     private: template<typename template_unsigned_type>
     static int compare_unsigned_integer(
         self const& in_left_value,
-        self::kind::value const in_left_kind,
+        self::type::value const in_left_kind,
         template_unsigned_type const in_right_integer)
     PSYQ_NOEXCEPT
     {
@@ -728,34 +756,34 @@ union psyq::internal::message_pack_value
             "template_unsigned_type is not unsigned integer type.");
         switch (in_left_kind)
         {
-        case self::kind::NIL:
+        case self::type::NIL:
             return 1;
-        case self::kind::BOOLEAN:
+        case self::type::BOOLEAN:
             return -self::compare_unsigned_integer(
                 in_right_integer, in_left_value.boolean_);
-        case self::kind::POSITIVE_INTEGER:
+        case self::type::POSITIVE_INTEGER:
             return -self::compare_unsigned_integer(
                 in_right_integer, in_left_value.positive_integer_);
-        case self::kind::NEGATIVE_INTEGER:
+        case self::type::NEGATIVE_INTEGER:
             return -1;
-        case self::kind::FLOAT32:
+        case self::type::FLOAT32:
             return -self::compare_unsigned_integer(
                 in_right_integer,
                 static_cast<self::float64>(in_left_value.float32_),
                 static_cast<self::float64>(
                     PSYQ_MESSAGE_PACK_VALUE_FLOAT32_EPSILON));
-        case self::kind::FLOAT64:
+        case self::type::FLOAT64:
             return -self::compare_unsigned_integer(
                 in_right_integer,
                 in_left_value.float64_,
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON);
-        case self::kind::STRING:
-        case self::kind::BINARY:
-        case self::kind::EXTENDED_BINARY:
+        case self::type::STRING:
+        case self::type::BINARY:
+        case self::type::EXTENDED_BINARY:
             return 1;//self::compare_raw(in_left_value.raw_, in_right_integer);
-        case self::kind::ARRAY:
+        case self::type::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_integer);
-        case self::kind::MAP:
+        case self::type::MAP:
             return 1;//self::compare_map(in_left_value.map_, in_right_integer);
         default:
             PSYQ_ASSERT(false);
@@ -839,39 +867,39 @@ union psyq::internal::message_pack_value
      */
     private: static int compare_boolean(
         self const& in_left_value,
-        self::kind::value const in_left_kind,
+        self::type::value const in_left_kind,
         bool const in_right_boolean)
     PSYQ_NOEXCEPT
     {
         switch (in_left_kind)
         {
-        case self::kind::NIL:
+        case self::type::NIL:
             return 1;
-        case self::kind::BOOLEAN:
+        case self::type::BOOLEAN:
             return self::compare_boolean(
                 in_left_value.boolean_, in_right_boolean);
-        case self::kind::POSITIVE_INTEGER:
+        case self::type::POSITIVE_INTEGER:
             return self::compare_unsigned_integer(
                 in_left_value.positive_integer_, in_right_boolean);
-        case self::kind::NEGATIVE_INTEGER:
+        case self::type::NEGATIVE_INTEGER:
             return -1;
-        case self::kind::FLOAT32:
+        case self::type::FLOAT32:
             return self::compare_floating_point(
                 in_left_value.float32_,
                 in_right_boolean,
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT32_EPSILON);
-        case self::kind::FLOAT64:
+        case self::type::FLOAT64:
             return self::compare_floating_point(
                 in_left_value.float64_,
                 in_right_boolean,
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON);
-        case self::kind::STRING:
-        case self::kind::BINARY:
-        case self::kind::EXTENDED_BINARY:
+        case self::type::STRING:
+        case self::type::BINARY:
+        case self::type::EXTENDED_BINARY:
             return 1;//self::compare_raw(in_left_value.raw_, in_right_boolean);
-        case self::kind::ARRAY:
+        case self::type::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_boolean);
-        case self::kind::MAP:
+        case self::type::MAP:
             return 1;//self::compare_map(in_left_value.map_, in_right_boolean);
         default:
             PSYQ_ASSERT(false);
@@ -895,23 +923,27 @@ union psyq::internal::message_pack_value
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @copydoc self::kind::BOOLEAN
+    /// @copydoc self::type::BOOLEAN
     public: bool boolean_;
-    /// @copydoc self::kind::POSITIVE_INTEGER
+    /// @copydoc self::type::POSITIVE_INTEGER
     public: std::uint64_t positive_integer_;
-    /// @copydoc self::kind::NEGATIVE_INTEGER
+    /// @copydoc self::type::NEGATIVE_INTEGER
     public: std::int64_t negative_integer_;
     /// self::float32_ をビット列として取り出すための32bit整数。
     public: std::uint32_t uint32_;
-    /// @copydoc self::kind::FLOAT32
+    /// @copydoc self::type::FLOAT32
     public: self::float32 float32_;
-    /// @copydoc self::kind::FLOAT64
+    /// @copydoc self::type::FLOAT64
     public: self::float64 float64_;
-    /// @copydoc self::raw
-    public: self::raw raw_;
-    /// @copydoc self::kind::ARRAY
+    /// @copydoc self::string
+    public: self::string string_;
+    /// @copydoc self::binary
+    public: self::binary binary_;
+    /// @copydoc self::extended_binary
+    public: self::extended_binary extended_binary_;
+    /// @copydoc self::type::ARRAY
     public: self::array array_;
-    /// @copydoc self::kind::MAP
+    /// @copydoc self::type::MAP
     public: self::map map_;
 };
 

@@ -17,8 +17,8 @@ struct psyq::message_pack::object
     /// MessagePackオブジェクトの値。
     private: typedef psyq::internal::message_pack_value value;
 
-    /// @copydoc psyq::internal::message_pack_value::kind::value
-    public: typedef psyq::internal::message_pack_value::kind::value kind;
+    /// @copydoc psyq::internal::message_pack_value::type::value
+    public: typedef psyq::internal::message_pack_value::type::value type;
 
     /// @name MessagePackオブジェクトが持つ値の型。
     //@{
@@ -26,8 +26,13 @@ struct psyq::message_pack::object
     public: typedef psyq::internal::message_pack_value::float32 float32;
     /// @copydoc self::value::float64
     public: typedef psyq::internal::message_pack_value::float64 float64;
-    /// @copydoc self::value::raw
-    public: typedef psyq::internal::message_pack_value::raw raw;
+    /// @copydoc self::value::string
+    public: typedef psyq::internal::message_pack_value::string string;
+    /// @copydoc self::value::binary
+    public: typedef psyq::internal::message_pack_value::binary binary;
+    /// @copydoc self::value::extended_binary
+    public: typedef psyq::internal::message_pack_value::extended_binary
+        extended_binary;
     /// @copydoc self::value::array
     public: typedef psyq::internal::message_pack_value::array array;
     /// @copydoc self::value::map
@@ -37,7 +42,7 @@ struct psyq::message_pack::object
     /// @name MessagePackオブジェクトの構築
     //@{
     /// 空のMessagePackオブジェクトを構築する。
-    public: PSYQ_CONSTEXPR object(): kind_(self::kind::NIL) {}
+    public: PSYQ_CONSTEXPR object(): type_(self::type::NIL) {}
 
     /** @brief MessagePackオブジェクトに真偽値を格納する。
         @param[in] in_boolean MessagePackオブジェクトに格納する真偽値。
@@ -45,7 +50,7 @@ struct psyq::message_pack::object
     public: explicit PSYQ_CONSTEXPR object(bool const in_boolean)
     PSYQ_NOEXCEPT:
         value_(in_boolean),
-        kind_(self::kind::BOOLEAN)
+        type_(self::type::BOOLEAN)
     {}
 
     /** @brief MessagePackオブジェクトに無符号整数を格納する。
@@ -54,31 +59,31 @@ struct psyq::message_pack::object
     public: explicit PSYQ_CONSTEXPR object(std::uint64_t const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        kind_(self::kind::POSITIVE_INTEGER)
+        type_(self::type::POSITIVE_INTEGER)
     {}
     /// @copydoc object(std::uint64_t const)
     public: explicit PSYQ_CONSTEXPR object(unsigned long const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        kind_(self::kind::POSITIVE_INTEGER)
+        type_(self::type::POSITIVE_INTEGER)
     {}
     /// @copydoc object(std::uint64_t const)
     public: explicit PSYQ_CONSTEXPR object(unsigned int const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        kind_(self::kind::POSITIVE_INTEGER)
+        type_(self::type::POSITIVE_INTEGER)
     {}
     /// @copydoc object(std::uint64_t const)
     public: explicit PSYQ_CONSTEXPR object(unsigned short const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        kind_(self::kind::POSITIVE_INTEGER)
+        type_(self::type::POSITIVE_INTEGER)
     {}
     /// @copydoc object(std::uint64_t const)
     public: explicit PSYQ_CONSTEXPR object(unsigned char const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        kind_(self::kind::POSITIVE_INTEGER)
+        type_(self::type::POSITIVE_INTEGER)
     {}
 
     /** @brief MessagePackオブジェクトに有符号整数を格納する。
@@ -87,31 +92,31 @@ struct psyq::message_pack::object
     public: explicit PSYQ_CONSTEXPR object(std::int64_t const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        kind_(self::tell_signed_integer_kind(in_integer))
+        type_(self::tell_signed_integer_type(in_integer))
     {}
     /// @copydoc object(std::int64_t const)
     public: explicit PSYQ_CONSTEXPR object(long const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        kind_(self::tell_signed_integer_kind(in_integer))
+        type_(self::tell_signed_integer_type(in_integer))
     {}
     /// @copydoc object(std::int64_t const)
     public: explicit PSYQ_CONSTEXPR object(int const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        kind_(self::tell_signed_integer_kind(in_integer))
+        type_(self::tell_signed_integer_type(in_integer))
     {}
     /// @copydoc object(std::int64_t const)
     public: explicit PSYQ_CONSTEXPR object(short const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        kind_(self::tell_signed_integer_kind(in_integer))
+        type_(self::tell_signed_integer_type(in_integer))
     {}
     /// @copydoc object(std::int64_t const)
     public: explicit PSYQ_CONSTEXPR object(char const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        kind_(self::tell_signed_integer_kind(in_integer))
+        type_(self::tell_signed_integer_type(in_integer))
     {}
 
     /** @brief MessagePackオブジェクトに浮動小数点数を格納する。
@@ -120,33 +125,38 @@ struct psyq::message_pack::object
     public: explicit PSYQ_CONSTEXPR object(self::float64 const in_float)
     PSYQ_NOEXCEPT:
         value_(in_float),
-        kind_(self::kind::FLOAT64)
+        type_(self::type::FLOAT64)
     {}
     /// @copydoc object(self::float64 const)
     public: explicit PSYQ_CONSTEXPR object(self::float32 const in_float)
     PSYQ_NOEXCEPT:
         value_(in_float),
-        kind_(self::kind::FLOAT32)
+        type_(self::type::FLOAT32)
     {}
 
-    /** @brief MessagePackオブジェクトにRAWバイト列を格納する。
-        @param[in] in_raw MessagePackオブジェクトに格納するRAWバイト列。
-        @param[in] in_kind
-            MessagePackオブジェクトに格納するRAWバイト列の種別。
-        @param[in] in_extended_kind 拡張バイナリの型識別値。
+    /** @brief MessagePackオブジェクトに文字列を格納する。
+        @param[in] in_string MessagePackオブジェクトに格納する文字列。
      */
-    public: PSYQ_CONSTEXPR object(
-        self::raw const& in_raw,
-        self::kind const in_kind,
-        std::int8_t const in_extended_kind = 0)
+    public: PSYQ_CONSTEXPR object(self::string const& in_string)
     PSYQ_NOEXCEPT:
-        value_(in_raw),
-        kind_(
-            in_kind == self::kind::STRING ||
-            in_kind == self::kind::BINARY ||
-            in_kind == self::kind::EXTENDED_BINARY?
-                in_kind: (PSYQ_ASSERT(false), self::kind::NIL)),
-        extended_kind_(in_extended_kind)
+        value_(in_string),
+        type_(self::type::STRING)
+    {}
+    /** @brief MessagePackオブジェクトにバイナリを格納する。
+        @param[in] in_binary MessagePackオブジェクトに格納するバイナリ。
+     */
+    public: PSYQ_CONSTEXPR object(self::binary const& in_binary)
+    PSYQ_NOEXCEPT:
+        value_(in_binary),
+        type_(self::type::BINARY)
+    {}
+    /** @brief MessagePackオブジェクトに拡張バイナリを格納する。
+        @param[in] in_binary MessagePackオブジェクトに格納する拡張バイナリ。
+     */
+    public: PSYQ_CONSTEXPR object(self::extended_binary const& in_binary)
+    PSYQ_NOEXCEPT:
+        value_(in_binary),
+        type_(self::type::EXTENDED_BINARY)
     {}
 
     /** @brief MessagePackオブジェクトに配列を格納する。
@@ -155,7 +165,7 @@ struct psyq::message_pack::object
     public: explicit PSYQ_CONSTEXPR object(self::array const& in_array)
     PSYQ_NOEXCEPT:
         value_(in_array),
-        kind_(self::kind::ARRAY)
+        type_(self::type::ARRAY)
     {}
 
     /** @brief MessagePackオブジェクトに連想配列を格納する。
@@ -164,7 +174,7 @@ struct psyq::message_pack::object
     public: explicit PSYQ_CONSTEXPR object(self::map const& in_map)
     PSYQ_NOEXCEPT:
         value_(in_map),
-        kind_(self::kind::MAP)
+        type_(self::type::MAP)
     {}
     //@}
     //-------------------------------------------------------------------------
@@ -264,15 +274,33 @@ struct psyq::message_pack::object
         return *new(this) self(in_float);
     }
 
-#if 0
-    /** @brief MessagePackオブジェクトにRAWバイト列を格納する。
-        @param[in] in_raw MessagePackオブジェクトに格納するRAWバイト列。
+    /** @brief MessagePackオブジェクトに文字列を格納する。
+        @param[in] in_raw MessagePackオブジェクトに格納する文字列。
         @return *this
      */
-    public: PSYQ_CONSTEXPR self& operator=(self::raw const& in_raw)
+    public: PSYQ_CONSTEXPR self& operator=(self::string const& in_string)
     PSYQ_NOEXCEPT
     {
-        return *new(this) self(in_raw);
+        return *new(this) self(in_string);
+    }
+    /** @brief MessagePackオブジェクトにバイナリを格納する。
+        @param[in] in_binary MessagePackオブジェクトに格納するバイナリ。
+        @return *this
+     */
+    public: PSYQ_CONSTEXPR self& operator=(self::binary const& in_binary)
+    PSYQ_NOEXCEPT
+    {
+        return *new(this) self(in_binary);
+    }
+    /** @brief MessagePackオブジェクトに拡張バイナリを格納する。
+        @param[in] in_binary MessagePackオブジェクトに格納する拡張バイナリ。
+        @return *this
+     */
+    public: PSYQ_CONSTEXPR self& operator=(
+        self::extended_binary const& in_binary)
+    PSYQ_NOEXCEPT
+    {
+        return *new(this) self(in_binary);
     }
 
     /** @brief MessagePackオブジェクトに配列を格納する。
@@ -294,7 +322,6 @@ struct psyq::message_pack::object
     {
         return *new(this) self(in_map);
     }
-#endif
 
     /// @brief MessagePackオブジェクトを空にする。
     public: void reset() PSYQ_NOEXCEPT
@@ -314,9 +341,9 @@ struct psyq::message_pack::object
     {
         return self::value::equal(
             this->value_,
-            this->get_kind(),
+            this->get_type(),
             in_right.value_,
-            in_right.get_kind());
+            in_right.get_type());
     }
 
     /** @brief thisを左辺として、右辺のMessagePackオブジェクトと非等値か判定する。
@@ -339,9 +366,9 @@ struct psyq::message_pack::object
     {
         return self::value::compare(
             this->value_,
-            this->get_kind(),
+            this->get_type(),
             in_object.value_,
-            in_object.get_kind());
+            in_object.get_type());
     }
     //@}
     /** @brief thisを左辺として、右辺のMessagePackオブジェクトと比較する。
@@ -384,11 +411,11 @@ struct psyq::message_pack::object
     /// @name MessagePackオブジェクトに格納されてる値の操作
     //@{
     /** @brief MessagePackオブジェクトに格納されてる値の種別を取得する。
-        @return @copydoc self::kind
+        @return @copydoc self::type
      */
-    public: PSYQ_CONSTEXPR self::kind get_kind() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR self::type get_type() const PSYQ_NOEXCEPT
     {
-        return this->kind_;
+        return this->type_;
     }
 
     /** @brief MessagePackオブジェクトに格納されてる真偽値を取得する。
@@ -399,7 +426,7 @@ struct psyq::message_pack::object
      */
     public: PSYQ_CONSTEXPR bool const* get_boolean() const PSYQ_NOEXCEPT
     {
-        return this->get_kind() == self::kind::BOOLEAN?
+        return this->get_type() == self::type::BOOLEAN?
             &this->value_.boolean_: nullptr;
     }
 
@@ -412,7 +439,7 @@ struct psyq::message_pack::object
     public: PSYQ_CONSTEXPR std::uint64_t const* get_positive_integer()
     const PSYQ_NOEXCEPT
     {
-        return this->get_kind() == self::kind::POSITIVE_INTEGER?
+        return this->get_type() == self::type::POSITIVE_INTEGER?
             &this->value_.positive_integer_: nullptr;
     }
 
@@ -425,7 +452,7 @@ struct psyq::message_pack::object
     public: PSYQ_CONSTEXPR std::int64_t const* get_negative_integer()
     const PSYQ_NOEXCEPT
     {
-        return this->get_kind() == self::kind::NEGATIVE_INTEGER?
+        return this->get_type() == self::type::NEGATIVE_INTEGER?
             &this->value_.negative_integer_: nullptr;
     }
 
@@ -440,16 +467,16 @@ struct psyq::message_pack::object
         static_assert(
             std::is_integral<template_integer_type>::value,
             "template_integer_type is not integer type.");
-        switch (this->get_kind())
+        switch (this->get_type())
         {
-        case self::kind::POSITIVE_INTEGER:
+        case self::type::POSITIVE_INTEGER:
             if ((std::numeric_limits<template_integer_type>::max)()
                 < this->value_.positive_integer_)
             {
                 return false; // 範囲外なので失敗。
             }
             break;
-        case self::kind::NEGATIVE_INTEGER:
+        case self::type::NEGATIVE_INTEGER:
             if (this->value_.negative_integer_
                 < (std::numeric_limits<template_integer_type>::min)())
             {
@@ -473,14 +500,14 @@ struct psyq::message_pack::object
     public: PSYQ_CONSTEXPR self::float64 const* get_float64()
     const PSYQ_NOEXCEPT
     {
-        return this->get_kind() == self::kind::FLOAT64?
+        return this->get_type() == self::type::FLOAT64?
             &this->value_.float64_: nullptr;
     }
     /// @copydoc self::get_float64()
     public: PSYQ_CONSTEXPR self::float32 const* get_float32()
     const PSYQ_NOEXCEPT
     {
-        return this->get_kind() == self::kind::FLOAT32?
+        return this->get_type() == self::type::FLOAT32?
             &this->value_.float32_: nullptr;
     }
 
@@ -495,13 +522,13 @@ struct psyq::message_pack::object
         static_assert(
             std::is_floating_point<template_float_type>::value,
             "template_float_type is not floating point type.");
-        switch (this->get_kind())
+        switch (this->get_type())
         {
-        case self::kind::FLOAT32:
+        case self::type::FLOAT32:
             out_float = static_cast<template_float_type>(
                 this->value_.float32_);
             return true;
-        case self::kind::FLOAT64:
+        case self::type::FLOAT64:
             out_float = static_cast<template_float_type>(
                 this->value_.float64_);
             return true;
@@ -520,10 +547,10 @@ struct psyq::message_pack::object
             MessagePackオブジェクトに格納されてるのは文字列ではない。
         @sa self::set_string()
      */
-    public: PSYQ_CONSTEXPR self::raw const* get_string() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR self::string const* get_string() const PSYQ_NOEXCEPT
     {
-        return this->get_kind() == self::kind::STRING?
-            &this->value_.raw_: nullptr;
+        return this->get_type() == self::type::STRING?
+            &this->value_.string_: nullptr;
     }
     /** @brief MessagePackオブジェクトに格納されてるバイナリを取得する。
         @retval !=nullptr
@@ -532,10 +559,10 @@ struct psyq::message_pack::object
             MessagePackオブジェクトに格納されてるのはバイナリではない。
         @sa self::set_binary()
      */
-    public: PSYQ_CONSTEXPR self::raw const* get_binary() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR self::binary const* get_binary() const PSYQ_NOEXCEPT
     {
-        return this->get_kind() == self::kind::BINARY?
-            &this->value_.raw_: nullptr;
+        return this->get_type() == self::type::BINARY?
+            &this->value_.binary_: nullptr;
     }
     /** @brief MessagePackオブジェクトに格納されてる拡張バイナリを取得する。
         @retval !=nullptr
@@ -544,21 +571,11 @@ struct psyq::message_pack::object
             MessagePackオブジェクトに格納されてるのは拡張バイナリではない。
         @sa self::set_extended_binary()
      */
-    public: PSYQ_CONSTEXPR self::raw const* get_extended_binary()
+    public: PSYQ_CONSTEXPR self::extended_binary const* get_extended_binary()
     const PSYQ_NOEXCEPT
     {
-        return this->get_kind() == self::kind::EXTENDED_BINARY?
-            &this->value_.raw_: nullptr;
-    }
-    /** @brief MessagePackオブジェクトに格納されてる拡張バイナリの
-               識別値を取得する。
-        @return 拡張バイナリの型識別値。
-        @sa self::set_extended_binary()
-     */
-    public: PSYQ_CONSTEXPR std::int8_t get_extended_kind() const PSYQ_NOEXCEPT
-    {
-        return this->get_kind() == self::kind::EXTENDED_BINARY?
-            this->extended_kind_: 0;
+        return this->get_type() == self::type::EXTENDED_BINARY?
+            &this->value_.extended_binary_: nullptr;
     }
 
     /** @brief MessagePackオブジェクトに文字列を格納する。
@@ -566,45 +583,46 @@ struct psyq::message_pack::object
         @param[in] in_size 文字列のバイト数。
         @return MessagePackオブジェクトに格納したRAWバイト列。
      */
-    public: self::raw const& set_string(
-        self::raw::pointer const in_data,
-        self::raw::size_type const in_size)
+    public: self::string const& set_string(
+        self::string::pointer const in_data,
+        self::string::size_type const in_size)
     PSYQ_NOEXCEPT
     {
-        this->kind_ = self::kind::STRING;
-        this->value_.raw_.reset(in_data, in_size);
-        return this->value_.raw_;
+        this->type_ = self::type::STRING;
+        this->value_.string_.reset(in_data, in_size);
+        return this->value_.string_;
     }
     /** @brief MessagePackオブジェクトにバイナリを格納する。
         @param[in] in_data バイナリの先頭位置。
         @param[in] in_size バイナリのバイト数。
         @return MessagePackオブジェクトに格納したRAWバイト列。
      */
-    public: self::raw const& set_binary(
-        self::raw::pointer const in_data,
-        self::raw::size_type const in_size)
+    public: self::binary const& set_binary(
+        self::binary::pointer const in_data,
+        self::binary::size_type const in_size)
     PSYQ_NOEXCEPT
     {
-        this->kind_ = self::kind::BINARY;
-        this->value_.raw_.reset(in_data, in_size);
-        return this->value_.raw_;
+        this->type_ = self::type::BINARY;
+        this->value_.binary_.reset(in_data, in_size);
+        return this->value_.binary_;
     }
     /** @brief MessagePackオブジェクトに拡張バイナリを格納する。
-        @param[in] in_data          拡張バイナリの先頭位置。
-        @param[in] in_size          拡張バイナリのバイト数。
-        @param[in] in_extended_kind 拡張バイナリの型識別値。
+        @param[in] in_data
+            拡張バイナリの先頭位置。先頭1バイトに型識別値が格納され、
+            以後、バイナリが格納されていること。
+        @param[in] in_size
+            拡張バイナリのバイト数。
+            型識別値の1バイトと、バイナリのバイト数を合わせたもの。
         @return MessagePackオブジェクトに格納した拡張バイナリ。
      */
-    public: self::raw const& set_extended_binary(
-        self::raw::pointer const in_data,
-        self::raw::size_type const in_size,
-        std::int8_t const in_extended_kind)
+    public: self::extended_binary const& set_extended_binary(
+        self::extended_binary::pointer const in_data,
+        self::extended_binary::size_type const in_size)
     PSYQ_NOEXCEPT
     {
-        this->extended_kind_ = in_extended_kind;
-        this->kind_ = self::kind::EXTENDED_BINARY;
-        this->value_.raw_.reset(in_data, in_size);
-        return this->value_.raw_;
+        this->type_ = self::type::EXTENDED_BINARY;
+        this->value_.extended_binary_.reset(in_data, in_size);
+        return this->value_.extended_binary_;
     }
     //@}
     //-------------------------------------------------------------------------
@@ -619,7 +637,7 @@ struct psyq::message_pack::object
      */
     public: PSYQ_CONSTEXPR self::array* get_array() PSYQ_NOEXCEPT
     {
-        return this->get_kind() == self::kind::ARRAY?
+        return this->get_type() == self::type::ARRAY?
             &this->value_.array_: nullptr;
     }
     /// @copydoc get_array()
@@ -638,7 +656,7 @@ struct psyq::message_pack::object
         self::array::size_type const in_size)
     PSYQ_NOEXCEPT
     {
-        this->kind_ = self::kind::ARRAY;
+        this->type_ = self::type::ARRAY;
         this->value_.array_.reset(in_data, in_size);
         return this->value_.array_;
     }
@@ -655,7 +673,7 @@ struct psyq::message_pack::object
      */
     public: PSYQ_CONSTEXPR self::map* get_map() PSYQ_NOEXCEPT
     {
-        return this->get_kind() == self::kind::MAP?
+        return this->get_type() == self::type::MAP?
             &this->value_.map_: nullptr;
     }
     /// @copydoc get_map()
@@ -674,7 +692,7 @@ struct psyq::message_pack::object
         self::map::size_type const in_size)
     PSYQ_NOEXCEPT
     {
-        this->kind_ = self::kind::MAP;
+        this->type_ = self::type::MAP;
         this->value_.map_.reset(in_data, in_size);
         return this->value_.map_;
     }
@@ -682,11 +700,11 @@ struct psyq::message_pack::object
     //-------------------------------------------------------------------------
     /** @brief 有符号整数値のMessagePackオブジェクト種別を判定する。
         @param[in] in_integer 判定する整数値。
-        @retval self::kind_NEGATIVE_INTEGER 0未満の整数だった。
-        @retval self::kind_POSITIVE_INTEGER 0以上の整数だった。
+        @retval self::type_NEGATIVE_INTEGER 0未満の整数だった。
+        @retval self::type_POSITIVE_INTEGER 0以上の整数だった。
      */
     private: template<typename template_signed_type>
-    PSYQ_CONSTEXPR static self::kind tell_signed_integer_kind(
+    PSYQ_CONSTEXPR static self::type tell_signed_integer_type(
         template_signed_type const in_integer)
     PSYQ_NOEXCEPT
     {
@@ -694,13 +712,12 @@ struct psyq::message_pack::object
             !std::is_unsigned<template_signed_type>::value,
             "template_signed_type is not signed integer type.");
         return in_integer < 0?
-            self::kind::NEGATIVE_INTEGER: self::kind::POSITIVE_INTEGER;
+            self::type::NEGATIVE_INTEGER: self::type::POSITIVE_INTEGER;
     }
 
     //-------------------------------------------------------------------------
-    private: self::value value_;         ///< @copydoc self::value
-    private: self::kind kind_;           ///< @copydoc self::kind
-    private: std::int8_t extended_kind_; ///< 拡張バイナリの型識別値。
+    private: self::value value_; ///< @copydoc self::value
+    private: self::type type_;   ///< @copydoc self::type
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

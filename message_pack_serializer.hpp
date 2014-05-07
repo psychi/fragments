@@ -176,19 +176,19 @@ class psyq::message_pack::serializer
 
     /** @brief 次に直列化するオブジェクトの種類。
      */
-    public: enum next_kind
+    public: enum next_type
     {
-        next_kind_VALUE,
-        next_kind_ARRAY_ITEM, ///< 配列の要素。
-        next_kind_MAP_KEY,    ///< 連想配列の要素のキー。
-        next_kind_MAP_VALUE,  ///< 連想配列の要素の値。
+        next_type_VALUE,
+        next_type_ARRAY_ITEM, ///< 配列の要素。
+        next_type_MAP_KEY,    ///< 連想配列の要素のキー。
+        next_type_MAP_VALUE,  ///< 連想配列の要素の値。
     };
 
     /// @copydoc self::stack_
     private: struct stack
     {
         std::size_t rest_size;         ///< コンテナ要素の残数。
-        typename self::next_kind kind; ///< @copydoc self::next_kind
+        typename self::next_type type; ///< @copydoc self::next_type
     };
 
     //-------------------------------------------------------------------------
@@ -551,7 +551,7 @@ class psyq::message_pack::serializer
             // 配列をスタックに積む。
             auto& local_stack(
                 this->stack_.at(this->get_container_stack_size()));
-            local_stack.kind = self::next_kind_ARRAY_ITEM;
+            local_stack.type = self::next_type_ARRAY_ITEM;
             local_stack.rest_size = in_size;
             ++this->stack_size_;
         }
@@ -585,7 +585,7 @@ class psyq::message_pack::serializer
             // 連想配列をスタックに積む。
             auto& local_stack(
                 this->stack_.at(this->get_container_stack_size()));
-            local_stack.kind = self::next_kind_MAP_KEY;
+            local_stack.type = self::next_type_MAP_KEY;
             local_stack.rest_size = in_size;
             ++this->stack_size_;
         }
@@ -605,17 +605,17 @@ class psyq::message_pack::serializer
         auto& local_stack(
             this->stack_.at(this->get_container_stack_size() - 1));
         std::size_t local_nil_count;
-        switch (local_stack.kind)
+        switch (local_stack.type)
         {
-        case self::next_kind_ARRAY_ITEM:
+        case self::next_type_ARRAY_ITEM:
             local_nil_count = local_stack.rest_size;
             break;
 
-        case self::next_kind_MAP_KEY:
+        case self::next_type_MAP_KEY:
             local_nil_count = local_stack.rest_size * 2;
             break;
 
-        case self::next_kind_MAP_VALUE:
+        case self::next_type_MAP_VALUE:
             local_nil_count = local_stack.rest_size * 2 + 1;
             break;
 
@@ -691,9 +691,9 @@ class psyq::message_pack::serializer
 
         auto& local_stack(
             this->stack_.at(this->get_container_stack_size() - 1));
-        switch (local_stack.kind)
+        switch (local_stack.type)
         {
-        case self::next_kind_ARRAY_ITEM:
+        case self::next_type_ARRAY_ITEM:
             if (1 < local_stack.rest_size)
             {
                 --local_stack.rest_size;
@@ -705,14 +705,14 @@ class psyq::message_pack::serializer
             }
             break;
 
-        case self::next_kind_MAP_KEY:
-            local_stack.kind = self::next_kind_MAP_VALUE;
+        case self::next_type_MAP_KEY:
+            local_stack.type = self::next_type_MAP_VALUE;
             break;
 
-        case self::next_kind_MAP_VALUE:
+        case self::next_type_MAP_VALUE:
             if (1 < local_stack.rest_size)
             {
-                local_stack.kind = self::next_kind_MAP_KEY;
+                local_stack.type = self::next_type_MAP_KEY;
                 --local_stack.rest_size;
             }
             else
@@ -769,11 +769,11 @@ class psyq::message_pack::serializer
     //-------------------------------------------------------------------------
     /// @name 状態の取得
     //@{
-    public: typename self::next_kind get_next_kind() const PSYQ_NOEXCEPT
+    public: typename self::next_type get_next_type() const PSYQ_NOEXCEPT
     {
         return 0 < this->get_container_rest_size()?
-            this->stack_.at(this->get_container_rest_size() - 1).kind:
-            typename self::next_kind_VALUE;
+            this->stack_.at(this->get_container_rest_size() - 1).type:
+            typename self::next_type_VALUE;
     }
 
     /** @brief 現在直列化途中のコンテナの残り要素数を取得する。

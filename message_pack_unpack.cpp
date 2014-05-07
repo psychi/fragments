@@ -21,7 +21,7 @@ msgpack_unpack_return msgpack_unpack(
     {
         return MSGPACK_UNPACK_CONTINUE; // FIXME
     }
-    deserialize_context local_context;
+    psyq::message_pack::deserializer<> local_context;
     local_context.initialize(out_zone);
 
     int const local_execute(

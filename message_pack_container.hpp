@@ -43,12 +43,6 @@ namespace psyq
             return in_left == in_right;
         }
     }
-    namespace message_pack
-    {
-        /// @cond
-        struct object;
-        /// @endcond
-    }
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -381,9 +375,14 @@ struct psyq::internal::message_pack_container
     //-------------------------------------------------------------------------
     /// @name コンテナの編集
     //@{
+    /** @brief コンテナを初期化する。
+        @param[in] in_data コンテナの先頭位置。
+        @param[in] in_size コンテナの要素数。
+     */
     public: void reset(
         typename self::pointer const in_data,
         typename self::size_type const in_size)
+    PSYQ_NOEXCEPT
     {
         this->data_ = in_data;
         this->size_ = in_size;

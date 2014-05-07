@@ -470,7 +470,7 @@ class psyq::message_pack::serializer
         }
 
         // 拡張バイナリの型とバイナリを直列化する。
-        this->put(static_cast<std::int8_t>(in_type));
+        this->put(static_cast<std::uint8_t>(in_type));
         this->write_raw_data(in_data, local_size);
     }
     //@}

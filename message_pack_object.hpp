@@ -14,7 +14,7 @@ struct psyq::message_pack::object
     private: typedef object self; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
-    /// @copydoc self::value_
+    /// MessagePackオブジェクトの値。
     private: typedef psyq::internal::message_pack_value value;
 
     /// @copydoc psyq::internal::message_pack_value::kind::value
@@ -114,8 +114,8 @@ struct psyq::message_pack::object
         kind_(self::tell_signed_integer_kind(in_integer))
     {}
 
-    /** @brief MessagePackオブジェクトに浮動小数点実数を格納する。
-        @param[in] in_float MessagePackオブジェクトに格納する浮動小数点実数。
+    /** @brief MessagePackオブジェクトに浮動小数点数を格納する。
+        @param[in] in_float MessagePackオブジェクトに格納する浮動小数点数。
      */
     public: explicit PSYQ_CONSTEXPR object(self::float64 const in_float)
     PSYQ_NOEXCEPT:
@@ -131,11 +131,22 @@ struct psyq::message_pack::object
 
     /** @brief MessagePackオブジェクトにRAWバイト列を格納する。
         @param[in] in_raw MessagePackオブジェクトに格納するRAWバイト列。
+        @param[in] in_kind
+            MessagePackオブジェクトに格納するRAWバイト列の種別。
+        @param[in] in_extended_kind 拡張バイナリの型識別値。
      */
-    public: explicit PSYQ_CONSTEXPR object(self::raw const& in_raw)
+    public: PSYQ_CONSTEXPR object(
+        self::raw const& in_raw,
+        self::kind const in_kind,
+        std::int8_t const in_extended_kind = 0)
     PSYQ_NOEXCEPT:
         value_(in_raw),
-        kind_(self::kind::RAW)
+        kind_(
+            in_kind == self::kind::STRING ||
+            in_kind == self::kind::BINARY ||
+            in_kind == self::kind::EXTENDED_BINARY?
+                in_kind: (PSYQ_ASSERT(false), self::kind::NIL)),
+        extended_kind_(in_extended_kind)
     {}
 
     /** @brief MessagePackオブジェクトに配列を格納する。
@@ -237,8 +248,8 @@ struct psyq::message_pack::object
         return *new(this) self(in_integer);
     }
 
-    /** @brief MessagePackオブジェクトに浮動小数点実数を格納する。
-        @param[in] in_float MessagePackオブジェクトに格納する浮動小数点実数。
+    /** @brief MessagePackオブジェクトに浮動小数点数を格納する。
+        @param[in] in_float MessagePackオブジェクトに格納する浮動小数点数。
         @return *this
      */
     public: PSYQ_CONSTEXPR self& operator=(self::float64 const in_float)
@@ -253,6 +264,7 @@ struct psyq::message_pack::object
         return *new(this) self(in_float);
     }
 
+#if 0
     /** @brief MessagePackオブジェクトにRAWバイト列を格納する。
         @param[in] in_raw MessagePackオブジェクトに格納するRAWバイト列。
         @return *this
@@ -282,6 +294,7 @@ struct psyq::message_pack::object
     {
         return *new(this) self(in_map);
     }
+#endif
 
     /// @brief MessagePackオブジェクトを空にする。
     public: void reset() PSYQ_NOEXCEPT
@@ -451,11 +464,11 @@ struct psyq::message_pack::object
         return true;
     }
 
-    /** @brief MessagePackオブジェクトに格納されてる浮動小数点実数を取得する。
+    /** @brief MessagePackオブジェクトに格納されてる浮動小数点数を取得する。
         @retval !=nullptr
-            MessagePackオブジェクトに格納されてる浮動小数点実数へのポインタ。
+            MessagePackオブジェクトに格納されてる浮動小数点数へのポインタ。
         @retval ==nullptr
-            MessagePackオブジェクトに格納されてるのは浮動小数点実数ではない。
+            MessagePackオブジェクトに格納されてるのは浮動小数点数ではない。
      */
     public: PSYQ_CONSTEXPR self::float64 const* get_float64()
     const PSYQ_NOEXCEPT
@@ -471,8 +484,8 @@ struct psyq::message_pack::object
             &this->value_.float32_: nullptr;
     }
 
-    /** @brief MessagePackオブジェクトに格納されてる浮動小数点実数を取得する。
-        @param[out] out_float 取得した浮動小数点実数が格納される。
+    /** @brief MessagePackオブジェクトに格納されてる浮動小数点数を取得する。
+        @param[out] out_float 取得した浮動小数点数が格納される。
         @retval true  取得に成功した。
         @retval false 取得に失敗した。
      */
@@ -500,30 +513,96 @@ struct psyq::message_pack::object
     //-------------------------------------------------------------------------
     /// @name MessagePackオブジェクトに格納されてるRAWバイト列の操作
     //@{
-    /** @brief MessagePackオブジェクトに格納されてるRAWバイト列を取得する。
+    /** @brief MessagePackオブジェクトに格納されてる文字列を取得する。
         @retval !=nullptr
-            MessagePackオブジェクトに格納されてるRAWバイト列へのポインタ。
+            MessagePackオブジェクトに格納されてる文字列へのポインタ。
         @retval ==nullptr
-            MessagePackオブジェクトに格納されてるのはRAWバイト列ではない。
-        @sa self::set_raw()
+            MessagePackオブジェクトに格納されてるのは文字列ではない。
+        @sa self::set_string()
      */
-    public: PSYQ_CONSTEXPR self::raw const* get_raw() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR self::raw const* get_string() const PSYQ_NOEXCEPT
     {
-        return this->get_kind() == self::kind::RAW?
+        return this->get_kind() == self::kind::STRING?
             &this->value_.raw_: nullptr;
     }
+    /** @brief MessagePackオブジェクトに格納されてるバイナリを取得する。
+        @retval !=nullptr
+            MessagePackオブジェクトに格納されてるバイナリへのポインタ。
+        @retval ==nullptr
+            MessagePackオブジェクトに格納されてるのはバイナリではない。
+        @sa self::set_binary()
+     */
+    public: PSYQ_CONSTEXPR self::raw const* get_binary() const PSYQ_NOEXCEPT
+    {
+        return this->get_kind() == self::kind::BINARY?
+            &this->value_.raw_: nullptr;
+    }
+    /** @brief MessagePackオブジェクトに格納されてる拡張バイナリを取得する。
+        @retval !=nullptr
+            MessagePackオブジェクトに格納されてる拡張バイナリへのポインタ。
+        @retval ==nullptr
+            MessagePackオブジェクトに格納されてるのは拡張バイナリではない。
+        @sa self::set_extended_binary()
+     */
+    public: PSYQ_CONSTEXPR self::raw const* get_extended_binary()
+    const PSYQ_NOEXCEPT
+    {
+        return this->get_kind() == self::kind::EXTENDED_BINARY?
+            &this->value_.raw_: nullptr;
+    }
+    /** @brief MessagePackオブジェクトに格納されてる拡張バイナリの
+               識別値を取得する。
+        @return 拡張バイナリの型識別値。
+        @sa self::set_extended_binary()
+     */
+    public: PSYQ_CONSTEXPR std::int8_t get_extended_kind() const PSYQ_NOEXCEPT
+    {
+        return this->get_kind() == self::kind::EXTENDED_BINARY?
+            this->extended_kind_: 0;
+    }
 
-    /** @brief MessagePackオブジェクトにRAWバイト列を格納する。
-        @param[in] in_data RAWバイト列の先頭位置。
-        @param[in] in_size RAWバイト列のバイト数。
+    /** @brief MessagePackオブジェクトに文字列を格納する。
+        @param[in] in_data 文字列の先頭位置。
+        @param[in] in_size 文字列のバイト数。
         @return MessagePackオブジェクトに格納したRAWバイト列。
      */
-    public: self::raw const& set_raw(
+    public: self::raw const& set_string(
         self::raw::pointer const in_data,
         self::raw::size_type const in_size)
     PSYQ_NOEXCEPT
     {
-        this->kind_ = self::kind::RAW;
+        this->kind_ = self::kind::STRING;
+        this->value_.raw_.reset(in_data, in_size);
+        return this->value_.raw_;
+    }
+    /** @brief MessagePackオブジェクトにバイナリを格納する。
+        @param[in] in_data バイナリの先頭位置。
+        @param[in] in_size バイナリのバイト数。
+        @return MessagePackオブジェクトに格納したRAWバイト列。
+     */
+    public: self::raw const& set_binary(
+        self::raw::pointer const in_data,
+        self::raw::size_type const in_size)
+    PSYQ_NOEXCEPT
+    {
+        this->kind_ = self::kind::BINARY;
+        this->value_.raw_.reset(in_data, in_size);
+        return this->value_.raw_;
+    }
+    /** @brief MessagePackオブジェクトに拡張バイナリを格納する。
+        @param[in] in_data          拡張バイナリの先頭位置。
+        @param[in] in_size          拡張バイナリのバイト数。
+        @param[in] in_extended_kind 拡張バイナリの型識別値。
+        @return MessagePackオブジェクトに格納した拡張バイナリ。
+     */
+    public: self::raw const& set_extended_binary(
+        self::raw::pointer const in_data,
+        self::raw::size_type const in_size,
+        std::int8_t const in_extended_kind)
+    PSYQ_NOEXCEPT
+    {
+        this->extended_kind_ = in_extended_kind;
+        this->kind_ = self::kind::EXTENDED_BINARY;
         this->value_.raw_.reset(in_data, in_size);
         return this->value_.raw_;
     }
@@ -540,7 +619,8 @@ struct psyq::message_pack::object
      */
     public: PSYQ_CONSTEXPR self::array* get_array() PSYQ_NOEXCEPT
     {
-        return this->get_kind() == self::kind::ARRAY? &this->value_.array_: nullptr;
+        return this->get_kind() == self::kind::ARRAY?
+            &this->value_.array_: nullptr;
     }
     /// @copydoc get_array()
     public: PSYQ_CONSTEXPR self::array const* get_array() const PSYQ_NOEXCEPT
@@ -618,8 +698,9 @@ struct psyq::message_pack::object
     }
 
     //-------------------------------------------------------------------------
-    private: self::value value_; ///< MessagePackオブジェクトの値。
-    private: self::kind kind_;   ///< @copydoc self::kind
+    private: self::value value_;         ///< @copydoc self::value
+    private: self::kind kind_;           ///< @copydoc self::kind
+    private: std::int8_t extended_kind_; ///< 拡張バイナリの型識別値。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

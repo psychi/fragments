@@ -7,13 +7,13 @@
 
 //#include "psyq/message_pack_container.hpp"
 
-/// 倍精度浮動小数点実数で許容する誤差の最大値。
+/// 倍精度浮動小数点数で許容する誤差の最大値。
 #ifndef PSYQ_MESSAGE_PACK_VALUE_FLOAT32_EPSILON
 #define PSYQ_MESSAGE_PACK_VALUE_FLOAT32_EPSILON\
     (std::numeric_limits<self::float32>::epsilon() * 4)
 #endif // !defined(PSYQ_MESSAGE_PACK_VALUE_FLOAT32_EPSILON)
 
-/// 単精度浮動小数点実数で許容する誤差の最大値。
+/// 単精度浮動小数点数で許容する誤差の最大値。
 #ifndef PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON
 #define PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON\
     (std::numeric_limits<self::float64>::epsilon() * 4)
@@ -25,6 +25,12 @@ namespace psyq
     {
         /// @cond
         union message_pack_value;
+        /// @endcond
+    }
+    namespace message_pack
+    {
+        /// @cond
+        struct object;
         /// @endcond
     }
 }
@@ -40,7 +46,7 @@ union psyq::internal::message_pack_value
     //-------------------------------------------------------------------------
     public: struct kind
     {
-        /** @brief MessagePackオブジェクトに格納されてる値の種別。
+        /** @brief MessagePackオブジェクトに格納する値の種別。
          */
         enum value: std::uint8_t
         {
@@ -50,7 +56,6 @@ union psyq::internal::message_pack_value
             NEGATIVE_INTEGER, ///< 0未満の整数。
             FLOAT32,          ///< 単精度浮動小数点数。
             FLOAT64,          ///< 倍精度浮動小数点数。
-            RAW,              ///< @copydoc self::raw_
             STRING,           ///< 文字列。
             BINARY,           ///< バイナリ。
             EXTENDED_BINARY,  ///< 拡張バイナリ。
@@ -60,20 +65,19 @@ union psyq::internal::message_pack_value
     };
 
     //-------------------------------------------------------------------------
-    /// @name MessagePackオブジェクトに格納する型
+    /// @name MessagePackオブジェクトに格納する値の型
     //@{
-    /// @copydoc self::float32_
+    /// @copydoc self::kind::FLOAT32
     public: typedef float float32;
-    /// @copydoc self::float64_
+    /// @copydoc self::kind::FLOAT64
     public: typedef double float64;
-    /// @copydoc self::raw_
-    public: typedef psyq::internal::message_pack_container<char const>
-        raw;
-    /// @copydoc self::array_
+    /// 文字列／バイナリ／拡張バイナリを保持するRAWバイト列。
+    public: typedef psyq::internal::message_pack_container<char const> raw;
+    /// @copydoc self::kind::ARRAY
     public: typedef psyq::internal::message_pack_container<
         psyq::message_pack::object>
             array;
-    /// @copydoc self::map_
+    /// @copydoc self::kind::MAP
     public: typedef psyq::internal::message_pack_map<
         psyq::message_pack::object>
             map;
@@ -102,8 +106,8 @@ union psyq::internal::message_pack_value
         negative_integer_(in_integer)
     {}
 
-    /** @brief MessagePackオブジェクトに浮動小数点実数を格納する。
-        @param[in] in_float MessagePackオブジェクトに格納する浮動小数点実数。
+    /** @brief MessagePackオブジェクトに浮動小数点数を格納する。
+        @param[in] in_float MessagePackオブジェクトに格納する浮動小数点数。
      */
     public: explicit PSYQ_CONSTEXPR message_pack_value(
         self::float64 const in_float)
@@ -188,7 +192,6 @@ union psyq::internal::message_pack_value
                 in_left_value.float64_,
                 in_right_value.float64_,
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON);
-        case self::kind::RAW:
         case self::kind::STRING:
         case self::kind::BINARY:
         case self::kind::EXTENDED_BINARY:
@@ -238,7 +241,6 @@ union psyq::internal::message_pack_value
         case self::kind::FLOAT64:
             return self::compare_floating_point(
                 in_left_value, in_left_kind, in_right_value.float64_);
-        case self::kind::RAW:
         case self::kind::STRING:
         case self::kind::BINARY:
         case self::kind::EXTENDED_BINARY:
@@ -300,7 +302,6 @@ union psyq::internal::message_pack_value
             return -1;//-self::compare_map(in_right_map, this->float32_);
         case self::kind::FLOAT64:
             return -1;//-self::compare_map(in_right_map, this->float64_);
-        case self::kind::RAW:
         case self::kind::STRING:
         case self::kind::BINARY:
         case self::kind::EXTENDED_BINARY:
@@ -343,7 +344,6 @@ union psyq::internal::message_pack_value
             return -1;//-self::compare_array(in_right_array, in_left_value.float32_);
         case self::kind::FLOAT64:
             return -1;//-self::compare_array(in_right_array, in_left_value.float64_);
-        case self::kind::RAW:
         case self::kind::STRING:
         case self::kind::BINARY:
         case self::kind::EXTENDED_BINARY:
@@ -388,7 +388,6 @@ union psyq::internal::message_pack_value
             return -1;//-self::compare_raw(in_right_raw, in_left_value.float32_);
         case self::kind::FLOAT64:
             return -1;//-self::compare_raw(in_right_raw, in_left_value.float64_);
-        case self::kind::RAW:
         case self::kind::STRING:
         case self::kind::BINARY:
         case self::kind::EXTENDED_BINARY:
@@ -406,12 +405,12 @@ union psyq::internal::message_pack_value
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name 浮動小数点実数との比較
+    /// @name 浮動小数点数との比較
     //@{
-    /** @brief MessagePackオブジェクト値と浮動小数点実数を比較する。
+    /** @brief MessagePackオブジェクト値と浮動小数点数を比較する。
         @param[in] in_left_value  左辺のMessagePackオブジェクト値。
         @param[in] in_left_kind   左辺のMessagePackオブジェクト値の種別。
-        @param[in] in_right_float 右辺の浮動小数点実数。
+        @param[in] in_right_float 右辺の浮動小数点数。
         @retval 正 左辺のほうが大きい。
         @retval 0  等値。
         @retval 負 左辺のほうが小さい。
@@ -452,7 +451,6 @@ union psyq::internal::message_pack_value
                 in_left_value.float64_,
                 in_right_float,
                 self::get_epsilon(template_float_type(0)));
-        case self::kind::RAW:
         case self::kind::STRING:
         case self::kind::BINARY:
         case self::kind::EXTENDED_BINARY:
@@ -467,9 +465,9 @@ union psyq::internal::message_pack_value
         }
     }
 
-    /** @brief 浮動小数点実数を比較する。
-        @param[in] in_left    左辺の浮動小数点実数。
-        @param[in] in_right   右辺の浮動小数点実数。
+    /** @brief 浮動小数点数を比較する。
+        @param[in] in_left    左辺の浮動小数点数。
+        @param[in] in_right   右辺の浮動小数点数。
         @param[in] in_epsilon 許容する誤差の最大値。
         @retval 正 左辺のほうが大きい。
         @retval 0  等値。
@@ -486,8 +484,8 @@ union psyq::internal::message_pack_value
         return local_diff < -in_epsilon? -1: (in_epsilon < local_diff? 1: 0);
     }
 
-    /** @brief 浮動小数点実数と有符号整数を比較する。
-        @param[in] in_left    左辺の浮動小数点実数。
+    /** @brief 浮動小数点数と有符号整数を比較する。
+        @param[in] in_left    左辺の浮動小数点数。
         @param[in] in_right   右辺の有符号整数。
         @param[in] in_epsilon 許容する誤差の最大値。
         @retval 正 左辺のほうが大きい。
@@ -508,8 +506,8 @@ union psyq::internal::message_pack_value
             1;
     }
 
-    /** @brief 浮動小数点実数と無符号整数を比較する。
-        @param[in] in_left    左辺の浮動小数点実数。
+    /** @brief 浮動小数点数と無符号整数を比較する。
+        @param[in] in_left    左辺の浮動小数点数。
         @param[in] in_right   右辺の無符号整数。
         @param[in] in_epsilon 許容する誤差の最大値。
         @retval 正 左辺のほうが大きい。
@@ -531,8 +529,8 @@ union psyq::internal::message_pack_value
                 in_epsilon);
     }
 
-    /** @brief 浮動小数点実数と真偽値を比較する。
-        @param[in] in_left    左辺の浮動小数点実数。
+    /** @brief 浮動小数点数と真偽値を比較する。
+        @param[in] in_left    左辺の浮動小数点数。
         @param[in] in_right   右辺の真偽値。
         @param[in] in_epsilon 許容する誤差の最大値。
         @retval 正 左辺のほうが大きい。
@@ -555,15 +553,15 @@ union psyq::internal::message_pack_value
                 in_epsilon);
     }
 
-    /** @brief 倍精度浮動小数点実数で許容する誤差の最大値を取得する。
-        @return 倍精度浮動小数点実数で許容する誤差の最大値。
+    /** @brief 倍精度浮動小数点数で許容する誤差の最大値を取得する。
+        @return 倍精度浮動小数点数で許容する誤差の最大値。
      */
     private: static self::float64 get_epsilon(self::float64 const)
     {
         return PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON;
     }
-    /** @brief 単精度浮動小数点実数で許容する誤差の最大値を取得する。
-        @return 単精度浮動小数点実数で許容する誤差の最大値。
+    /** @brief 単精度浮動小数点数で許容する誤差の最大値を取得する。
+        @return 単精度浮動小数点数で許容する誤差の最大値。
      */
     private: static self::float32 get_epsilon(self::float32 const)
     {
@@ -614,7 +612,6 @@ union psyq::internal::message_pack_value
                 in_left_value.float64_,
                 static_cast<self::float64>(in_right_integer),
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON);
-        case self::kind::RAW:
         case self::kind::STRING:
         case self::kind::BINARY:
         case self::kind::EXTENDED_BINARY:
@@ -629,9 +626,9 @@ union psyq::internal::message_pack_value
         }
     }
 
-    /** @brief 有符号整数と浮動小数点実数を比較する。
+    /** @brief 有符号整数と浮動小数点数を比較する。
         @param[in] in_left    左辺の有符号整数。
-        @param[in] in_right   右辺の浮動小数点実数。
+        @param[in] in_right   右辺の浮動小数点数。
         @param[in] in_epsilon 許容する誤差の最大値。
         @retval 正 左辺のほうが大きい。
         @retval 0  等値。
@@ -752,7 +749,6 @@ union psyq::internal::message_pack_value
                 in_right_integer,
                 in_left_value.float64_,
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON);
-        case self::kind::RAW:
         case self::kind::STRING:
         case self::kind::BINARY:
         case self::kind::EXTENDED_BINARY:
@@ -767,9 +763,9 @@ union psyq::internal::message_pack_value
         }
     }
 
-    /** @brief 無符号整数と浮動小数点実数を比較する。
+    /** @brief 無符号整数と浮動小数点数を比較する。
         @param[in] in_left    左辺の無符号整数。
-        @param[in] in_right   右辺の浮動小数点実数。
+        @param[in] in_right   右辺の浮動小数点数。
         @param[in] in_epsilon 許容する誤差の最大値。
         @retval 正 左辺のほうが大きい。
         @retval 0  等値。
@@ -869,7 +865,6 @@ union psyq::internal::message_pack_value
                 in_left_value.float64_,
                 in_right_boolean,
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON);
-        case self::kind::RAW:
         case self::kind::STRING:
         case self::kind::BINARY:
         case self::kind::EXTENDED_BINARY:
@@ -906,18 +901,18 @@ union psyq::internal::message_pack_value
     public: std::uint64_t positive_integer_;
     /// @copydoc self::kind::NEGATIVE_INTEGER
     public: std::int64_t negative_integer_;
+    /// self::float32_ をビット列として取り出すための32bit整数。
+    public: std::uint32_t uint32_;
     /// @copydoc self::kind::FLOAT32
     public: self::float32 float32_;
     /// @copydoc self::kind::FLOAT64
     public: self::float64 float64_;
-    /// RAWバイト列。
+    /// @copydoc self::raw
     public: self::raw raw_;
     /// @copydoc self::kind::ARRAY
     public: self::array array_;
     /// @copydoc self::kind::MAP
     public: self::map map_;
-    /// self::float32_ をビット列として取り出すための32bit整数。
-    public: std::uint32_t uint32_;
 };
 
 #endif // !defined(PSYQ_MESSAGE_PACK_VALUE_HPP_)

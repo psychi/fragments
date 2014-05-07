@@ -216,8 +216,11 @@ class psyq::message_pack::pool
     {
         void* local_pool(
             reinterpret_cast<std::int8_t*>(&io_chunk) - io_chunk.free_size);
-        return std::align(
-            in_alignment, in_size, local_pool, io_chunk.free_size);
+        std::size_t const local_free_size(io_chunk.free_size);
+        io_chunk.free_size -= in_size;
+        void* const local_memory(
+            std::align(in_alignment, in_size, local_pool, io_chunk.free_size));
+        return local_memory;
     }
 
     private: template<std::size_t template_size>

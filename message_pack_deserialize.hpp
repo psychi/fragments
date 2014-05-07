@@ -948,7 +948,7 @@ class psyq::message_pack::deserializer
         case 8:
         {
             return static_cast<template_value_type>(
-                (static_cast<std::uint64_t>(local_bytes[0]) << 54) |
+                (static_cast<std::uint64_t>(local_bytes[0]) << 56) |
                 (static_cast<std::uint64_t>(local_bytes[1]) << 48) |
                 (static_cast<std::uint64_t>(local_bytes[2]) << 40) |
                 (static_cast<std::uint64_t>(local_bytes[3]) << 32) |

@@ -214,12 +214,23 @@ class psyq::message_pack::pool
         std::size_t const in_size,
         std::size_t const in_alignment)
     {
+        if (io_chunk.free_size < in_size)
+        {
+            return nullptr;
+        }
         void* local_pool(
             reinterpret_cast<std::int8_t*>(&io_chunk) - io_chunk.free_size);
-        std::size_t const local_free_size(io_chunk.free_size);
         io_chunk.free_size -= in_size;
+        if (in_alignment <= 1)
+        {
+            return local_pool;
+        }
         void* const local_memory(
             std::align(in_alignment, in_size, local_pool, io_chunk.free_size));
+        if (local_memory == nullptr)
+        {
+            io_chunk.free_size += in_size;
+        }
         return local_memory;
     }
 

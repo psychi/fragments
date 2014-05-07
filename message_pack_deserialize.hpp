@@ -19,19 +19,23 @@ namespace psyq
     namespace message_pack
     {
         /// @cond
-        template<std::size_t> class deserializer;
+        template<
+            typename = psyq::message_pack::pool<>,
+            std::size_t
+                = PSYQ_MESSAGE_PACK_DESERIALIZER_STACK_CAPACITY_DEFAULT>
+                    class deserializer;
         /// @endcond
     }
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template<
-    std::size_t template_stack_capacity
-        = PSYQ_MESSAGE_PACK_DESERIALIZER_STACK_CAPACITY_DEFAULT>
+template<typename template_pool, std::size_t template_stack_capacity>
 class psyq::message_pack::deserializer
 {
     /// thisが指す値の型。
-    private: typedef deserializer<template_stack_capacity> self;
+    private: typedef deserializer<template_pool, template_stack_capacity> self;
+
+    public: typedef template_pool pool;
 
     /** @brief 直列化途中のコンテナのスタック限界数。
      */
@@ -69,23 +73,7 @@ class psyq::message_pack::deserializer
         typename self::stack_kind kind;     ///< 復元中のオブジェクトの種別。
     };
 
-    private: struct user
-    {
-        msgpack_zone* zone;
-        bool referenced;
-    };
-
     //-------------------------------------------------------------------------
-    public: void initialize(msgpack_zone& io_zone)
-    {
-        this->phase_ = self::phase_HEADER;
-        this->trail_ = 0;
-        this->stack_size_ = 0;
-        this->stack_[0].object.reset();
-        this->user_.zone = &io_zone;
-        this->user_.referenced = false;
-    }
-
     /** @brief MessagePackを復元する。
         @param[in]     in_data   復元するMessagePackの先頭位置。
         @param[in]     in_size   復元するMessagePackのバイト数。
@@ -106,6 +94,12 @@ class psyq::message_pack::deserializer
             PSYQ_ASSERT(false);
             return -1;
         }
+        this->phase_ = self::phase_HEADER;
+        this->trail_ = 0;
+        this->stack_size_ = 0;
+        this->stack_.front().object.reset();
+        this->allocate_raw_ = true;// !this->pool_.is_from(in_data);
+
         auto const local_data_begin(static_cast<std::uint8_t const*>(in_data));
         auto const local_data_end(local_data_begin + in_size);
         this->deserialize_iterator_ = local_data_begin + io_offset;
@@ -202,7 +196,8 @@ class psyq::message_pack::deserializer
         else if (local_header == psyq::message_pack::header_FIX_STR_MIN)
         {
             // [0xa0, 0xbf]: fix str
-            self::deserialize_string(out_object, this->user_, nullptr, 0);
+            self::deserialize_string(
+                out_object, this->pool_, nullptr, 0, false);
             return this->deserialize_stack(out_object);
         }
         else if (local_header <= psyq::message_pack::header_FIX_STR_MAX)
@@ -399,11 +394,16 @@ class psyq::message_pack::deserializer
                 ++this->deserialize_iterator_;
                 return this->deserialize_value(out_object, in_end);
             }
-            self::deserialize_string(out_object, this->user_, nullptr, 0);
+            self::deserialize_string(
+                out_object, this->pool_, nullptr, 0, false);
             break;
         case self::phase_STRING:
             self::deserialize_string(
-                out_object, this->user_, local_data, this->trail_);
+                out_object,
+                this->pool_,
+                local_data,
+                this->trail_,
+                this->allocate_raw_);
             break;
 
         // バイナリ
@@ -425,11 +425,16 @@ class psyq::message_pack::deserializer
                 ++this->deserialize_iterator_;
                 return this->deserialize_value(out_object, in_end);
             }
-            self::deserialize_binary(out_object, this->user_, nullptr, 0);
+            self::deserialize_binary(
+                out_object, this->pool_, nullptr, 0, false);
             break;
         case self::phase_BINARY:
             self::deserialize_binary(
-                out_object, this->user_, local_data, this->trail_);
+                out_object,
+                this->pool_,
+                local_data,
+                this->trail_,
+                this->allocate_raw_);
             break;
 
         // 拡張バイナリ
@@ -454,14 +459,19 @@ class psyq::message_pack::deserializer
             }
             self::deserialize_extended_binary(
                 out_object,
-                this->user_,
+                this->pool_,
                 this->deserialize_iterator_ - 1,
-                1);
+                1,
+                this->allocate_raw_);
             break;
         case self::phase_EXTENDED_BINARY:
             PSYQ_ASSERT(0 < this->trail_);
             self::deserialize_extended_binary(
-                out_object, this->user_, local_data, this->trail_);
+                out_object,
+                this->pool_,
+                local_data,
+                this->trail_,
+                this->allocate_raw_);
             break;
 
         // 配列
@@ -518,10 +528,10 @@ class psyq::message_pack::deserializer
         bool const local_deserialize_container(
             in_kind == self::stack_kind_ARRAY_ITEM?
                 self::deserialize_array(
-                    local_stack_top.object, this->user_, in_capacity):
+                    local_stack_top.object, this->pool_, in_capacity):
                 in_kind == self::stack_kind_MAP_KEY?
                     self::deserialize_map(
-                        local_stack_top.object, this->user_, in_capacity):
+                        local_stack_top.object, this->pool_, in_capacity):
                     false);
         if (!local_deserialize_container)
         {
@@ -622,14 +632,16 @@ class psyq::message_pack::deserializer
      */
     private: static void deserialize_string(
         psyq::message_pack::object& out_object,
-        typename self::user& out_user,
+        typename self::pool& io_pool,
         void const* const in_data,
-        std::size_t const in_size)
+        std::size_t const in_size,
+        bool const in_allocate)
     PSYQ_NOEXCEPT
     {
-        typedef psyq::message_pack::object::string::const_pointer pointer;
-        out_object.set_string(static_cast<pointer>(in_data), in_size);
-        out_user.referenced = 0 < in_size;
+        typedef psyq::message_pack::object::string::value_type element;
+        out_object.set_string(
+            self::make_raw<element>(io_pool, in_data, in_size, in_allocate),
+            in_size);
     }
 
     /** @brief MessagePackオブジェクトにバイナリを格納する。
@@ -639,14 +651,16 @@ class psyq::message_pack::deserializer
      */
     private: static void deserialize_binary(
         psyq::message_pack::object& out_object,
-        typename self::user& out_user,
+        typename self::pool& io_pool,
         void const* const in_data,
-        std::size_t const in_size)
+        std::size_t const in_size,
+        bool const in_allocate)
     PSYQ_NOEXCEPT
     {
-        typedef psyq::message_pack::object::binary::const_pointer pointer;
-        out_object.set_binary(static_cast<pointer>(in_data), in_size);
-        out_user.referenced = 0 < in_size;
+        typedef psyq::message_pack::object::binary::value_type element;
+        out_object.set_binary(
+            self::make_raw<element>(io_pool, in_data, in_size, in_allocate),
+            in_size);
     }
 
     /** @brief MessagePackオブジェクトに拡張バイナリを格納する。
@@ -656,15 +670,41 @@ class psyq::message_pack::deserializer
      */
     private: static void deserialize_extended_binary(
         psyq::message_pack::object& out_object,
-        typename self::user& out_user,
+        typename self::pool& io_pool,
         void const* const in_data,
-        std::size_t const in_size)
+        std::size_t const in_size,
+        bool const in_allocate)
     PSYQ_NOEXCEPT
     {
-        typedef psyq::message_pack::object::extended_binary::const_pointer
-            pointer;
-        out_object.set_extended_binary(static_cast<pointer>(in_data), in_size);
-        out_user.referenced = 0 < in_size;
+        typedef psyq::message_pack::object::extended_binary::value_type
+            element;
+        out_object.set_extended_binary(
+            self::make_raw<element>(io_pool, in_data, in_size, in_allocate),
+            in_size);
+    }
+
+    private: template<typename template_value>
+    static template_value* make_raw(
+        typename self::pool& io_pool,
+        void const* const in_data,
+        std::size_t const in_size,
+        bool const in_allocate)
+    {
+        if (!in_allocate || in_size <= 0)
+        {
+            return static_cast<template_value*>(in_data);
+        }
+        auto const local_data(io_pool.allocate(in_size, 1));
+        if (local_data == nullptr)
+        {
+            PSYQ_ASSERT(false);
+            return nullptr;
+        }
+        std::char_traits<std::int8_t>::copy(
+            static_cast<std::int8_t*>(local_data),
+            static_cast<std::int8_t const*>(in_data),
+            in_size);
+        return static_cast<template_value*>(local_data);
     }
 
     //-------------------------------------------------------------------------
@@ -677,16 +717,16 @@ class psyq::message_pack::deserializer
      */
     private: static bool deserialize_array(
         psyq::message_pack::object& out_object,
-        typename self::user const& io_user,
+        typename self::pool& io_pool,
         std::size_t const in_capacity)
     {
         auto& local_array(
             out_object.set_array(
                 0 < in_capacity?
                     static_cast<psyq::message_pack::object*>(
-                        msgpack_zone_malloc(
-                            io_user.zone,
-                            in_capacity * sizeof(psyq::message_pack::object))):
+                        io_pool.allocate(
+                            in_capacity * sizeof(psyq::message_pack::object),
+                            sizeof(std::int64_t))):
                     nullptr,
                 0));
         return in_capacity <= 0 || local_array.data() != nullptr;
@@ -722,17 +762,17 @@ class psyq::message_pack::deserializer
      */
     private: static bool deserialize_map(
         psyq::message_pack::object& out_object,
-        typename self::user const& io_user,
+        typename self::pool& io_pool,
         std::size_t const in_capacity)
     {
         auto& local_map(
             out_object.set_map(
                 0 < in_capacity?
                     static_cast<psyq::message_pack::object::map::pointer>(
-                        msgpack_zone_malloc(
-                            io_user.zone,
+                        io_pool.allocate(
                             in_capacity * sizeof(
-                                psyq::message_pack::object::map::value_type))):
+                                psyq::message_pack::object::map::value_type),
+                            sizeof(std::int64_t))):
                     nullptr,
                 0));
         return in_capacity <= 0 || local_map.data() != nullptr;
@@ -828,11 +868,12 @@ class psyq::message_pack::deserializer
 
     //-------------------------------------------------------------------------
     private: std::array<typename self::stack, template_stack_capacity> stack_;
-    private: typename self::user user_;
+    private: typename self::pool pool_;
     private: std::uint8_t const* deserialize_iterator_;
     private: std::size_t phase_; ///< 復元するオブジェクトの種別。
     private: std::size_t trail_;
     private: std::size_t stack_size_; ///< スタックの要素数。
+    private: bool allocate_raw_;
 };
 
 #endif // !defined(PSYQ_MESSAGE_PACK_DESIRIALIZE_HPP_)

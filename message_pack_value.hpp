@@ -137,7 +137,7 @@ union psyq::internal::message_pack_value
         string_(in_string)
     {}
     /** @brief MessagePackオブジェクトにバイナリを格納する。
-        @param[in] in_string MessagePackオブジェクトに格納するバイナリ。
+        @param[in] in_binary MessagePackオブジェクトに格納するバイナリ。
      */
     public: explicit PSYQ_CONSTEXPR message_pack_value(
         self::binary const& in_binary)
@@ -145,7 +145,7 @@ union psyq::internal::message_pack_value
         binary_(in_binary)
     {}
     /** @brief MessagePackオブジェクトに文字列を格納する。
-        @param[in] in_string MessagePackオブジェクトに格納する文字列。
+        @param[in] in_extended_binary MessagePackオブジェクトに格納する文字列。
      */
     public: explicit PSYQ_CONSTEXPR message_pack_value(
         self::extended_binary const& in_extended_binary)
@@ -382,10 +382,10 @@ union psyq::internal::message_pack_value
     }
 
     /** @brief MessagePackオブジェクト値とRAWバイト列を比較する。
-        @param[in] in_left_value 左辺のMessagePackオブジェクト値。
-        @param[in] in_left_kind  左辺のMessagePackオブジェクト種別。
-        @param[in] in_right_raw  右辺のRAWバイト列。
-        @param[in] in_right_kind 右辺のMessagePackオブジェクト種別。
+        @param[in] in_left_value  左辺のMessagePackオブジェクト値。
+        @param[in] in_left_kind   左辺のMessagePackオブジェクト種別。
+        @param[in] in_right_value 右辺のRAWバイト列。
+        @param[in] in_right_kind  右辺のMessagePackオブジェクト種別。
         @retval 正 左辺のほうが大きい。
         @retval 0  等値。
         @retval 負 左辺のほうが小さい。

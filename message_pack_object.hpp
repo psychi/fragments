@@ -275,7 +275,7 @@ struct psyq::message_pack::object
     }
 
     /** @brief MessagePackオブジェクトに文字列を格納する。
-        @param[in] in_raw MessagePackオブジェクトに格納する文字列。
+        @param[in] in_string MessagePackオブジェクトに格納する文字列。
         @return *this
      */
     public: PSYQ_CONSTEXPR self& operator=(self::string const& in_string)

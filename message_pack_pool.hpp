@@ -1,6 +1,6 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief
+    @brief @copydoc psyq::message_pack::pool
  */
 #ifndef PSYQ_MESSAGE_PACK_POOL_HPP_
 #define PSYQ_MESSAGE_PACK_POOL_HPP_
@@ -21,7 +21,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief MessagePackのメモリ確保に使う割当子。
+/** @brief MessagePackで使うメモリ割当子。
  */
 template<typename template_allocator>
 class psyq::message_pack::pool
@@ -45,7 +45,7 @@ class psyq::message_pack::pool
     };
 
     //-------------------------------------------------------------------------
-    /** @biref メモリプールを構築する。
+    /** @brief メモリプールを構築する。
         @param[in] in_default_capacity チャンク容量バイト数のデフォルト値。
         @param[in] in_allocator        メモリ割当子の初期値。
      */
@@ -59,7 +59,7 @@ class psyq::message_pack::pool
         allocator_(std::move(in_allocator))
     {}
 
-    /** @biref copy構築子。
+    /** @brief copy構築子。
         @param[in] in_source copy元。
      */
     public: pool(self const& in_source):
@@ -68,7 +68,7 @@ class psyq::message_pack::pool
         allocator_(in_source.get_allocator())
     {}
 
-    /** @biref move構築子。
+    /** @brief move構築子。
         @param[in,out] io_source move元。
      */
     public: pool(self&& io_source):
@@ -99,7 +99,7 @@ class psyq::message_pack::pool
         }
     }
 
-    /** @biref copy代入演算子。
+    /** @brief copy代入演算子。
         @param[in] in_source copy元。
         @return *this
      */
@@ -110,7 +110,7 @@ class psyq::message_pack::pool
         return *this;
     }
 
-    /** @biref move代入演算子。
+    /** @brief move代入演算子。
         @param[in,out] io_source move元。
         @return *this
      */
@@ -154,6 +154,9 @@ class psyq::message_pack::pool
 
     //-------------------------------------------------------------------------
     /** @brief メモリを確保する。
+
+        確保したメモリは、 self::~pool() で解放される。
+
         @param[in] in_size      確保するメモリのバイト数。
         @param[in] in_alignment 確保するメモリ先頭位置のメモリ境界単位。
         @retval !=nullptr 確保したメモリの先頭位置。
@@ -230,9 +233,9 @@ class psyq::message_pack::pool
     }
 
     //-------------------------------------------------------------------------
-    private: typename self::chunk_header* chunk_list_; ///< チャンクリストの先頭。
-    private: std::size_t default_capacity_;   ///< チャンク容量のデフォルト値。
-    private: template_allocator allocator_;   ///< @copydoc allocator_type
+    private: typename self::chunk_header* chunk_list_; ///< 先頭チャンク。
+    private: std::size_t default_capacity_; ///< チャンク容量のデフォルト値。
+    private: template_allocator allocator_; ///< @copydoc allocator_type
 };
 
 #endif // !defined(PSYQ_MESSAGE_PACK_POOL_HPP_)

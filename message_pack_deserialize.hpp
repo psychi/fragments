@@ -19,6 +19,7 @@ namespace psyq
     namespace message_pack
     {
         /// @cond
+        template<typename = std::uint8_t const*> class istream;
         template<
             typename = psyq::message_pack::pool<>,
             std::size_t
@@ -27,6 +28,102 @@ namespace psyq
         /// @endcond
     }
 }
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template<typename template_iterator>
+class psyq::message_pack::istream
+{
+    private: typedef istream<template_iterator> self;
+
+    public: typedef template_iterator iterator;
+
+    public: istream(
+        typename self::iterator const in_begin,
+        typename self::iterator const in_end)
+    :
+        iterator_(in_begin),
+        begin_(in_begin),
+        end_(in_end),
+        size_(std::distance(in_begin, in_end))
+    {}
+
+    public: typename self::iterator const& begin() const
+    {
+        return this->begin_;
+    }
+    public: typename self::iterator const& end() const
+    {
+        return this->end_;
+    }
+    public: typename self::iterator const& current() const
+    {
+        return this->iterator_;
+    }
+
+    public: typename self::iterator tellg() const
+    {
+        return this->iterator_;
+    }
+
+    public: self& seekg(
+        signed const in_offset,
+        std::ios::seek_dir const in_direction)
+    {
+        switch (in_direction)
+        {
+        case std::ios::cur:
+            if (in_offset < 0)
+            {
+                auto const local_distance(
+                    std::distance(this->begin_, this->iterator_));
+                this->iterator_ = -in_offset < local_distance?
+                    std::prev(this->iterator_, -in_offset): this->begin_;
+            }
+            else if (0 < in_offset)
+            {
+                auto const local_distance(
+                    std::distance(this->iterator_, this->end_));
+                this->iterator_ = in_offset < local_distance?
+                    std::next(this->iterator_, in_offset): this->end_;
+            }
+            break;
+        case std::ios::beg:
+            if (in_offset <= 0)
+            {
+                this->iterator_ = this->begin_;
+            }
+            else if (this->size_ <= unsigned(in_offset))
+            {
+                this->iterator_ = this->end_;
+            }
+            else
+            {
+                this->iterator_ = std::next(this->begin_, in_offset);
+            }
+            break;
+        case std::ios::end:
+            if (0 <= in_offset)
+            {
+                this->iterator_ = this->end_;
+            }
+            else if (this->size_ <= unsigned(-in_offset))
+            {
+                this->iterator_ = this->begin_;
+            }
+            else
+            {
+                this->iterator_ = std::prev(this->begin_, -in_offset);
+            }
+            break;
+        }
+        return *this;
+    }
+
+    private: typename self::iterator iterator_;
+    private: typename self::iterator begin_;
+    private: typename self::iterator end_;
+    private: std::size_t size_;
+};
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 template<typename template_pool, std::size_t template_stack_capacity>
@@ -113,7 +210,7 @@ class psyq::message_pack::deserializer
     public: psyq::message_pack::object const& get_root_object()
     const PSYQ_NOEXCEPT
     {
-        return this->stack_[0].object;
+        return this->stack_.front().object;
     }
 
     //-------------------------------------------------------------------------
@@ -875,5 +972,61 @@ class psyq::message_pack::deserializer
     private: std::size_t stack_size_; ///< スタックの要素数。
     private: bool allocate_raw_;
 };
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+namespace psyq
+{
+    namespace test
+    {
+        inline void message_pack_deserializer()
+        {
+            psyq::message_pack::serializer<> local_serializer;
+            local_serializer.make_array(17);
+            local_serializer << (std::numeric_limits<std::int64_t>::min)();
+            local_serializer << (std::numeric_limits<std::int32_t>::min)();
+            local_serializer << (std::numeric_limits<std::int16_t>::min)();
+            local_serializer << (std::numeric_limits<std::int8_t >::min)();
+            local_serializer << -0x20;
+            local_serializer << false;
+            local_serializer << true;
+            local_serializer << 0x7f;
+            local_serializer << (std::numeric_limits<std::uint8_t >::max)();
+            local_serializer << (std::numeric_limits<std::uint16_t>::max)();
+            local_serializer << (std::numeric_limits<std::uint32_t>::max)();
+            local_serializer << (std::numeric_limits<std::uint64_t>::max)();
+            local_serializer << std::string("0123456789ABCDEFGHIJKLMNOPQRSTU");
+            local_serializer << std::string(0xff, 'x');
+            local_serializer << std::string(0xffff, 'y');
+            local_serializer << std::string(0x10000, 'z');
+            local_serializer.write_nil();
+
+            auto const local_message_string(local_serializer.get_stream().str());
+            psyq::message_pack::deserializer<> local_deserializer;
+            std::size_t local_message_offset(0);
+            local_deserializer.deserialize(
+                local_message_string.data(),
+                local_message_string.size(),
+                local_message_offset);
+            auto const& local_root(local_deserializer.get_root_object());
+            PSYQ_ASSERT(local_root.get_array() != nullptr);
+            PSYQ_ASSERT(
+                local_root.get_array()->at(0)
+                    == psyq::message_pack::object(
+                        (std::numeric_limits<std::int64_t>::min)()));
+            PSYQ_ASSERT(
+                local_root.get_array()->at(1)
+                    == psyq::message_pack::object(
+                        (std::numeric_limits<std::int32_t>::min)()));
+            PSYQ_ASSERT(
+                local_root.get_array()->at(2)
+                    == psyq::message_pack::object(
+                        (std::numeric_limits<std::int16_t>::min)()));
+            PSYQ_ASSERT(
+                local_root.get_array()->at(3)
+                    == psyq::message_pack::object(
+                        (std::numeric_limits<std::int8_t>::min)()));
+        }
+    }
+}
 
 #endif // !defined(PSYQ_MESSAGE_PACK_DESIRIALIZE_HPP_)

@@ -293,9 +293,9 @@ namespace psyq
                 template_stream& io_stream,
                 template_value const& in_value)
             {
+                typedef typename template_stream::char_type const* pointer;
                 io_stream.write(
-                    static_cast<typename self::stream::char_type const*>(
-                        &*in_iterator),
+                    reinterpret_cast<pointer>(&in_value),
                     sizeof(template_value));
                 auto const local_good(io_stream.good());
                 PSYQ_ASSERT(local_good);
@@ -812,7 +812,7 @@ class psyq::message_pack::serializer
         }
         // バイナリのバイト数を直列化する。
         else if (
-            this->write_raw_header(local_size, psy::message_pack::header_BIN8)
+            this->write_raw_header(local_size, psyq::message_pack::header_BIN8)
             && 0 < local_size)
         {
             // RAWバイト列をスタックに積む。
@@ -852,7 +852,7 @@ class psyq::message_pack::serializer
             auto& local_stack(
                 this->stack_.at(this->get_container_stack_size()));
             local_stack.type = self::next_type_RAW_ELEMENT;
-            local_stack.rest_size = local_stack;
+            local_stack.rest_size = local_size;
             ++this->stack_size_;
         }
     }
@@ -1417,9 +1417,14 @@ namespace psyq
             @param[in]  in_iterator 直列化するコンテナの先頭位置。
             @param[in]  in_length   直列化するコンテナの要素数。
          */
-        template<typename template_out_stream, typename template_iterator>
+        template<
+            typename template_out_stream,
+            std::size_t template_stack_capacity,
+            typename template_iterator>
         void write_array(
-            psyq::message_pack::serializer<template_out_stream>& out_stream,
+            psyq::message_pack::serializer<
+                template_out_stream, template_stack_capacity>&
+                    out_stream,
             template_iterator in_iterator,
             std::size_t in_length)
         {
@@ -1434,9 +1439,14 @@ namespace psyq
             @param[out] out_stream   出力するストリーム。
             @param[in]  in_container 直列化するコンテナ。
          */
-        template<typename template_out_stream, typename template_array>
+        template<
+            typename template_out_stream,
+            std::size_t template_stack_capacity,
+            typename template_array>
         void write_array(
-            psyq::message_pack::serializer<template_out_stream>& out_stream,
+            psyq::message_pack::serializer<
+                template_out_stream, template_stack_capacity>&
+                    out_stream,
             template_array const& in_container)
         {
             psyq::message_pack::write_array(
@@ -1449,9 +1459,14 @@ namespace psyq
             @param[in]  in_iterator 直列化する集合コンテナの先頭位置。
             @param[in]  in_length   直列化する集合コンテナの要素数。
          */
-        template<typename template_out_stream, typename template_iterator>
+        template<
+            typename template_out_stream,
+            std::size_t template_stack_capacity,
+            typename template_iterator>
         void write_set(
-            psyq::message_pack::serializer<template_out_stream>& out_stream,
+            psyq::message_pack::serializer<
+                template_out_stream, template_stack_capacity>&
+                    out_stream,
             template_iterator in_iterator,
             std::size_t in_length)
         {
@@ -1468,9 +1483,14 @@ namespace psyq
             @param[out] out_stream 書き込む出力ストリーム。
             @param[in]  in_set     直列化する集合コンテナ。
          */
-        template<typename template_out_stream, typename template_set>
+        template<
+            typename template_out_stream,
+            std::size_t template_stack_capacity,
+            typename template_set>
         void write_set(
-            psyq::message_pack::serializer<template_out_stream>& out_stream,
+            psyq::message_pack::serializer<
+                template_out_stream, template_stack_capacity>&
+                    out_stream,
             template_set const& in_set)
         {
             psyq::message_pack::write_set(
@@ -1482,9 +1502,14 @@ namespace psyq
             @param[in]  in_iterator 直列化する連想配列コンテナの先頭位置。
             @param[in]  in_length   直列化する連想配列コンテナの要素数。
          */
-        template<typename template_out_stream, typename template_iterator>
+        template<
+            typename template_out_stream,
+            std::size_t template_stack_capacity,
+            typename template_iterator>
         void write_map(
-            psyq::message_pack::serializer<template_out_stream>& out_stream,
+            psyq::message_pack::serializer<
+                template_out_stream, template_stack_capacity>&
+                    out_stream,
             template_iterator in_iterator,
             std::size_t in_length)
         {
@@ -1500,9 +1525,14 @@ namespace psyq
             @param[out] out_stream 書き込む出力ストリーム。
             @param[in]  in_map     直列化する連想配列コンテナ。
          */
-        template<typename template_out_stream, typename template_map>
+        template<
+            typename template_out_stream,
+            std::size_t template_stack_capacity,
+            typename template_map>
         void write_map(
-            psyq::message_pack::serializer<template_out_stream>& out_stream,
+            psyq::message_pack::serializer<
+                template_out_stream, template_stack_capacity>&
+                    out_stream,
             template_map const& in_map)
         {
             psyq::message_pack::write_map(
@@ -1519,9 +1549,12 @@ namespace psyq
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_boolean 直列化する真偽値。
  */
-template<typename template_out_stream>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+template<typename template_out_stream, std::size_t template_stack_capacity>
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     bool const in_boolean)
 {
     out_stream.write_boolean(in_boolean);
@@ -1535,45 +1568,60 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_integer 直列化する無符号整数。
  */
-template<typename template_out_stream>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+template<typename template_out_stream, std::size_t template_stack_capacity>
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     unsigned char const in_integer)
 {
     out_stream.write_unsigned_integer(in_integer);
     return out_stream;
 }
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, unsigned char const)
-template<typename template_out_stream>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&, unsigned char const)
+template<typename template_out_stream, std::size_t template_stack_capacity>
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     unsigned short const in_integer)
 {
     out_stream.write_unsigned_integer(in_integer);
     return out_stream;
 }
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, unsigned char const)
-template<typename template_out_stream>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&, unsigned char const)
+template<typename template_out_stream, std::size_t template_stack_capacity>
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     unsigned int const in_integer)
 {
     out_stream.write_unsigned_integer(in_integer);
     return out_stream;
 }
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, unsigned char const)
-template<typename template_out_stream>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&, unsigned char const)
+template<typename template_out_stream, std::size_t template_stack_capacity>
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     unsigned long const in_integer)
 {
     out_stream.write_unsigned_integer(in_integer);
     return out_stream;
 }
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, unsigned char const)
-template<typename template_out_stream>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&, unsigned char const)
+template<typename template_out_stream, std::size_t template_stack_capacity>
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     unsigned long long const in_integer)
 {
     out_stream.write_unsigned_integer(in_integer);
@@ -1587,45 +1635,60 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_integer 直列化する有符号整数。
  */
-template<typename template_out_stream>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+template<typename template_out_stream, std::size_t template_stack_capacity>
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     char const in_integer)
 {
     out_stream.write_signed_integer(in_integer);
     return out_stream;
 }
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, char const)
-template<typename template_out_stream>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&, char const)
+template<typename template_out_stream, std::size_t template_stack_capacity>
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     short const in_integer)
 {
     out_stream.write_signed_integer(in_integer);
     return out_stream;
 }
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, char const)
-template<typename template_out_stream>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&, char const)
+template<typename template_out_stream, std::size_t template_stack_capacity>
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     int const in_integer)
 {
     out_stream.write_signed_integer(in_integer);
     return out_stream;
 }
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, char const)
-template<typename template_out_stream>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&, char const)
+template<typename template_out_stream, std::size_t template_stack_capacity>
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     long const in_integer)
 {
     out_stream.write_signed_integer(in_integer);
     return out_stream;
 }
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, char const)
-template<typename template_out_stream>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&, char const)
+template<typename template_out_stream, std::size_t template_stack_capacity>
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     long long const in_integer)
 {
     out_stream.write_signed_integer(in_integer);
@@ -1639,18 +1702,24 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_float   直列化する浮動小数点数。
  */
-template<typename template_out_stream>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+template<typename template_out_stream, std::size_t template_stack_capacity>
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     float const in_float)
 {
     out_stream.write_floating_point(in_float);
     return out_stream;
 }
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, float const)
-template<typename template_out_stream>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&, float const)
+template<typename template_out_stream, std::size_t template_stack_capacity>
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     double const in_float)
 {
     out_stream.write_floating_point(in_float);
@@ -1667,11 +1736,15 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
  */
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_char,
     typename template_traits,
     typename template_allocator>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::basic_string<template_char, template_traits, template_allocator>
         const& in_string)
 {
@@ -1691,10 +1764,14 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
  */
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_first,
     typename template_second>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::pair<template_first, template_second> const& in_pair)
 {
     out_stream << in_pair.first << in_pair.second;
@@ -1707,67 +1784,94 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
     @param[out] out_stream 書き込む出力ストリーム。
     @param[in]  in_tuple   直列化するタプル。
  */
-template<typename template_out_stream, typename template_element0>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+template<
+    typename template_out_stream,
+    std::size_t template_stack_capacity,
+    typename template_element0>
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::tuple<template_element0> const& in_tuple)
 {
     psyq::message_pack::write_tuple(out_stream, in_tuple);
     return out_stream;
 }
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, std::tuple<template_element0> const&)
+/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&, std::tuple<template_element0> const&)
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_element0,
     typename template_element1>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::tuple<template_element0, template_element1> const& in_tuple)
 {
     psyq::message_pack::write_tuple(out_stream, in_tuple);
     return out_stream;
 }
 
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, std::tuple<template_element0> const&)
+/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&, std::tuple<template_element0> const&)
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_element0,
     typename template_element1,
     typename template_element2>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
-    std::tuple<template_element0, template_element1, template_element2> const& in_tuple)
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
+    std::tuple<template_element0, template_element1, template_element2> const&
+        in_tuple)
 {
     psyq::message_pack::write_tuple(out_stream, in_tuple);
     return out_stream;
 }
 
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, std::tuple<template_element0> const&)
+/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&, std::tuple<template_element0> const&)
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_element0,
     typename template_element1,
     typename template_element2,
     typename template_element3>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
-    std::tuple<template_element0, template_element1, template_element2, template_element3>
-        const& in_tuple)
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
+    std::tuple<
+        template_element0,
+        template_element1,
+        template_element2,
+        template_element3>
+            const& in_tuple)
 {
     psyq::message_pack::write_tuple(out_stream, in_tuple);
     return out_stream;
 }
 
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, std::tuple<template_element0> const&)
+/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&, std::tuple<template_element0> const&)
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_element0,
     typename template_element1,
     typename template_element2,
     typename template_element3,
     typename template_element4>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::tuple<
         template_element0,
         template_element1,
@@ -1780,17 +1884,21 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
     return out_stream;
 }
 
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, std::tuple<template_element0> const&)
+/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&, std::tuple<template_element0> const&)
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_element0,
     typename template_element1,
     typename template_element2,
     typename template_element3,
     typename template_element4,
     typename template_element5>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::tuple<
         template_element0,
         template_element1,
@@ -1804,9 +1912,10 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
     return out_stream;
 }
 
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, std::tuple<template_element0> const&)
+/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&, std::tuple<template_element0> const&)
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_element0,
     typename template_element1,
     typename template_element2,
@@ -1814,8 +1923,11 @@ template<
     typename template_element4,
     typename template_element5,
     typename template_element6>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::tuple<
         template_element0,
         template_element1,
@@ -1830,9 +1942,10 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
     return out_stream;
 }
 
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, std::tuple<template_element0> const&)
+/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&, std::tuple<template_element0> const&)
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_element0,
     typename template_element1,
     typename template_element2,
@@ -1841,8 +1954,11 @@ template<
     typename template_element5,
     typename template_element6,
     typename template_element7>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::tuple<
         template_element0,
         template_element1,
@@ -1858,9 +1974,10 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
     return out_stream;
 }
 
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, std::tuple<template_element0> const&)
+/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&, std::tuple<template_element0> const&)
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_element0,
     typename template_element1,
     typename template_element2,
@@ -1870,8 +1987,11 @@ template<
     typename template_element6,
     typename template_element7,
     typename template_element8>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::tuple<
         template_element0,
         template_element1,
@@ -1888,9 +2008,10 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
     return out_stream;
 }
 
-/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream>&, std::tuple<template_element0> const&)
+/// @copydoc operator<<(psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&, std::tuple<template_element0> const&)
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_element0,
     typename template_element1,
     typename template_element2,
@@ -1901,8 +2022,11 @@ template<
     typename template_element7,
     typename template_element8,
     typename template_element9>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::tuple<
         template_element0,
         template_element1,
@@ -1930,10 +2054,14 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
  */
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_value,
     std::size_t template_size>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::array<template_value, template_size> const& in_array)
 {
     psyq::message_pack::write_array(out_stream, in_array);
@@ -1947,10 +2075,14 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
  */
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_value,
     typename template_allocator>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::vector<template_value, template_allocator> const& in_vector)
 {
     psyq::message_pack::write_array(out_stream, in_vector);
@@ -1964,10 +2096,14 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
  */
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_value,
     typename template_allocator>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::deque<template_value, template_allocator> const& in_deque)
 {
     psyq::message_pack::write_array(out_stream, in_deque);
@@ -1981,10 +2117,14 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
  */
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_value,
     typename template_allocator>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::list<template_value, template_allocator> const& in_list)
 {
     psyq::message_pack::write_array(out_stream, in_list);
@@ -2001,11 +2141,15 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
  */
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_key,
     typename template_compare,
     typename template_allocator>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::set<template_key, template_compare, template_allocator>
         const& in_set)
 {
@@ -2020,11 +2164,15 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
  */
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_key,
     typename template_compare,
     typename template_allocator>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::multiset<template_key, template_compare, template_allocator>
         const& in_set)
 {
@@ -2039,12 +2187,16 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
  */
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_key,
     typename template_hash,
     typename template_compare,
     typename template_allocator>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::unordered_set<
         template_key, template_hash, template_compare, template_allocator>
             const& in_set)
@@ -2060,12 +2212,16 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
  */
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_key,
     typename template_hash,
     typename template_compare,
     typename template_allocator>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::unordered_multiset<
         template_key, template_hash, template_compare, template_allocator>
             const& in_set)
@@ -2084,12 +2240,16 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
  */
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_key,
     typename template_mapped,
     typename template_compare,
     typename template_allocator>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::map<
         template_key, template_mapped, template_compare, template_allocator>
             const& in_map)
@@ -2105,12 +2265,16 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
  */
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_key,
     typename template_mapped,
     typename template_compare,
     typename template_allocator>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::multimap<
         template_key, template_mapped, template_compare, template_allocator>
             const& in_map)
@@ -2126,13 +2290,17 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
  */
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_key,
     typename template_mapped,
     typename template_hash,
     typename template_compare,
     typename template_allocator>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::unordered_map<
         template_key,
         template_mapped,
@@ -2152,13 +2320,17 @@ psyq::message_pack::serializer<template_out_stream>& operator<<(
  */
 template<
     typename template_out_stream,
+    std::size_t template_stack_capacity,
     typename template_key,
     typename template_mapped,
     typename template_hash,
     typename template_compare,
     typename template_allocator>
-psyq::message_pack::serializer<template_out_stream>& operator<<(
-    psyq::message_pack::serializer<template_out_stream>& out_stream,
+psyq::message_pack::serializer<template_out_stream, template_stack_capacity>&
+operator<<(
+    psyq::message_pack::serializer<
+        template_out_stream, template_stack_capacity>&
+            out_stream,
     std::unordered_multimap<
         template_key,
         template_mapped,

@@ -980,7 +980,8 @@ namespace psyq
     {
         inline void message_pack_deserializer()
         {
-            psyq::message_pack::serializer<> local_serializer;
+            psyq::message_pack::serializer<std::ostringstream, 16>
+                local_serializer;
             local_serializer.make_array(19);
             local_serializer << (std::numeric_limits<std::int64_t>::min)();
             local_serializer << (std::numeric_limits<std::int32_t>::min)();
@@ -1001,6 +1002,18 @@ namespace psyq
             local_serializer << std::string(0xffff, 'y');
             local_serializer << std::string(0x10000, 'z');
             local_serializer.write_nil();
+
+            std::unordered_set<int> local_integer_set;
+            while (local_integer_set.size() < 0x10000)
+            {
+                local_integer_set.insert(local_integer_set.size());
+            }
+            local_serializer.write_binary<true>(
+                local_integer_set.begin(), local_integer_set.size());
+            local_serializer.write_extended_binary<false>(
+                local_integer_set.begin(), local_integer_set.size(), 0x7f);
+            psyq::message_pack::write_array(local_serializer, local_integer_set);
+            psyq::message_pack::write_set(local_serializer, local_integer_set);
 
             auto const local_message_string(local_serializer.get_stream().str());
             psyq::message_pack::deserializer<> local_deserializer;

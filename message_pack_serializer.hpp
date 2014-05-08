@@ -296,7 +296,7 @@ namespace psyq
                 io_stream.write(
                     static_cast<typename self::stream::char_type const*>(
                         &*in_iterator),
-                    in_size);
+                    sizeof(template_value));
                 auto const local_good(io_stream.good());
                 PSYQ_ASSERT(local_good);
                 return local_good;
@@ -632,30 +632,30 @@ class psyq::message_pack::serializer
     //@{
     /** @brief 連続するメモリ領域にある文字列を、MessagePack形式の
                RAWバイト列として直列化し、ストリームへ出力する。
-        @param[in] in_data 直列化する文字列の先頭位置。
-        @param[in] in_size 直列化する文字列の文字数。
+        @param[in] in_begin  直列化する文字列の先頭位置。
+        @param[in] in_length 直列化する文字列の文字数。
      */
     public: template<typename template_char>
     void write_contiguous_string(
-        template_char const* const in_data,
-        std::size_t const in_size)
+        template_char const* const in_begin,
+        std::size_t const in_length)
     {
         // 文字列の大きさを直列化する。
-        auto const local_size(in_size * sizeof(template_char));
+        auto const local_size(in_length * sizeof(template_char));
         if (this->write_string_header(local_size))
         {
             // 文字列を直列化する。
-            this->write_raw_data(in_data, local_size);
+            this->write_raw_data(in_begin, local_size);
         }
     }
     /** @brief 連続するメモリ領域にあるバイナリを、MessagePack形式の
                RAWバイト列として直列化し、ストリームへ出力する。
-        @param[in] in_data   直列化するバイナリの先頭位置。
+        @param[in] in_begin  直列化するバイナリの先頭位置。
         @param[in] in_length 直列化するバイナリの要素数。
      */
     public: template<typename template_element_type>
     void write_contiguous_binary(
-        template_element_type const* const in_data,
+        template_element_type const* const in_begin,
         std::size_t const in_length)
     {
         // バイナリの大きさを直列化する。
@@ -663,7 +663,7 @@ class psyq::message_pack::serializer
         if (this->write_raw_header(local_size, psy::message_pack::header_BIN8))
         {
             // バイナリを直列化する。
-            this->write_raw_data(in_data, local_size);
+            this->write_raw_data(in_begin, local_size);
         }
     }
     /** @brief 連続するメモリ領域にある拡張バイナリを、MessagePack形式の
@@ -680,22 +680,22 @@ class psyq::message_pack::serializer
     }
     /** @brief 連続するメモリ上にある拡張バイナリを、MessagePack形式の
                RAWバイト列として直列化し、ストリームへ出力する。
-        @param[in] in_data 直列化する拡張バイナリの先頭位置。
-        @param[in] in_size 直列化する拡張バイナリの要素数。
-        @param[in] in_type 直列化する拡張バイナリの型の識別値。
+        @param[in] in_begin  直列化する拡張バイナリの先頭位置。
+        @param[in] in_length 直列化する拡張バイナリの要素数。
+        @param[in] in_type   直列化する拡張バイナリの型の識別値。
      */
     public: template<typename template_element_type>
     void write_contiguous_extended_binary(
-        template_element_type const* const in_data,
-        std::size_t const in_size,
+        template_element_type const* const in_begin,
+        std::size_t const in_length,
         std::int8_t const in_type)
     {
         // 拡張バイナリの大きさと型識別値を直列化する。
-        auto const local_size(in_size * sizeof(template_element_type));
+        auto const local_size(in_length * sizeof(template_element_type));
         if (this->write_extended_binary_header(local_size, in_type))
         {
             // 拡張バイナリを直列化する。
-            this->write_raw_data(in_data, local_size);
+            this->write_raw_data(in_begin, local_size);
         }
     }
 
@@ -703,55 +703,58 @@ class psyq::message_pack::serializer
                ストリームへ出力する。
         @tparam template_big_endian
             trueならbig-endian、falseならnative-endianで直列化する。
-        @param[in] in_begin 直列化する文字列コンテナの先頭位置。
-        @param[in] in_size  直列化する文字列コンテナの文字数。
+        @param[in] in_begin  直列化する文字列コンテナの先頭位置。
+        @param[in] in_length 直列化する文字列コンテナの文字数。
      */
     public: template<bool template_big_endian, typename template_iterator>
     void write_string(
         template_iterator in_begin,
-        std::size_t const in_size)
+        std::size_t const in_length)
     {
         typedef typename std::iterator_traits<template_iterator>::value_type
-            value_type;
-        this->make_partially_string<value_type>(in_size);
-        this->write_partially_elements<template_big_endian>(in_begin, in_size);
+            element;
+        this->make_partially_string<element>(in_length);
+        this->write_partially_elements<template_big_endian>(
+            in_begin, in_length);
     }
     /** @brief バイナリコンテナをMessagePack形式のRAWバイト列として直列化し、
                ストリームへ出力する。
         @tparam template_big_endian
             trueならbig-endian、falseならnative-endianで直列化する。
-        @param[in] in_begin 直列化するバイナリコンテナの先頭位置。
-        @param[in] in_size  直列化するバイナリコンテナの要素数。
+        @param[in] in_begin  直列化するバイナリコンテナの先頭位置。
+        @param[in] in_length 直列化するバイナリコンテナの要素数。
      */
     public: template<bool template_big_endian, typename template_iterator>
     void write_binary(
         template_iterator in_begin,
-        std::size_t const in_size)
+        std::size_t const in_length)
     {
         typedef typename std::iterator_traits<template_iterator>::value_type
-            value_type;
-        this->make_partially_binary<value_type>(in_size);
-        this->write_partially_elements<template_big_endian>(in_begin, in_size);
+            element;
+        this->make_partially_binary<element>(in_length);
+        this->write_partially_elements<template_big_endian>(
+            in_begin, in_length);
     }
 
     /** @brief 拡張バイナリコンテナをMessagePack形式の
                RAWバイト列として直列化し、ストリームへ出力する。
         @tparam template_big_endian
             trueならbig-endian、falseならnative-endianで直列化する。
-        @param[in] in_begin 直列化する拡張バイナリコンテナの先頭位置。
-        @param[in] in_size  直列化する拡張バイナリコンテナの要素数。
-        @param[in] in_type  直列化する拡張バイナリの型の識別値。
+        @param[in] in_begin  直列化する拡張バイナリコンテナの先頭位置。
+        @param[in] in_length 直列化する拡張バイナリコンテナの要素数。
+        @param[in] in_type   直列化する拡張バイナリの型の識別値。
      */
     public: template<bool template_big_endian, typename template_iterator>
     void write_extended_binary(
         template_iterator in_begin,
-        std::size_t const in_size,
+        std::size_t const in_length,
         std::int8_t const in_type)
     {
         typedef typename std::iterator_traits<template_iterator>::value_type
-            value_type;
-        this->make_partially_extended_binary<value_type>(in_size, in_type);
-        this->write_partially_elements<template_big_endian>(in_begin, in_size);
+            element;
+        this->make_partially_extended_binary<element>(in_length, in_type);
+        this->write_partially_elements<template_big_endian>(
+            in_begin, in_length);
     }
 
     //-------------------------------------------------------------------------
@@ -760,13 +763,13 @@ class psyq::message_pack::serializer
         以後、 in_size 個の文字を、 write_partially_elements() で直列化できる。
 
         @tparam template_element 文字列コンテナの文字の型。
-        @param[in] in_size 直列化する文字列コンテナの文字数。
+        @param[in] in_length 直列化する文字列コンテナの文字数。
         @sa self::write_partially_elements() self::fill_container_rest()
      */
     public: template<typename template_element>
-    void make_partially_string(std::size_t const in_size)
+    void make_partially_string(std::size_t const in_length)
     {
-        auto const local_size(in_size * sizeof(template_element));
+        auto const local_size(in_length * sizeof(template_element));
         if (local_size <= 0)
         {
             // 空の文字列を直列化する。
@@ -792,16 +795,16 @@ class psyq::message_pack::serializer
     }
     /** @brief バイナリコンテナの直列化を開始する。
 
-        以後、 in_size 個の要素を、 write_partially_elements() で直列化できる。
+        以後 in_length 個の要素を、 write_partially_elements() で直列化できる。
 
         @tparam template_element バイナリコンテナの要素の型。
-        @param[in] in_size 直列化するバイナリコンテナの要素数。
+        @param[in] in_length 直列化するバイナリコンテナの要素数。
         @sa self::write_partially_elements() self::fill_container_rest()
      */
     public: template<typename template_element>
-    void make_partially_binary(std::size_t const in_size)
+    void make_partially_binary(std::size_t const in_length)
     {
-        auto const local_size(in_size * sizeof(template_element));
+        auto const local_size(in_length * sizeof(template_element));
         if (self::stack_capacity <= this->get_container_stack_size())
         {
             // スタック限界を超えたので失敗。
@@ -822,19 +825,19 @@ class psyq::message_pack::serializer
     }
     /** @brief 拡張バイナリコンテナの直列化を開始する。
 
-        以後、 in_size 個の要素を、 write_partially_elements() で直列化できる。
+        以後 in_length 個の要素を、 write_partially_elements() で直列化できる。
 
         @tparam template_element 拡張バイナリコンテナの要素の型。
-        @param[in] in_size          直列化する拡張バイナリコンテナの要素数。
-        @param[in] in_extended_type 直列化する拡張バイナリの型識別値。
+        @param[in] in_length 直列化する拡張バイナリコンテナの要素数。
+        @param[in] in_type   直列化する拡張バイナリの型の識別値。
         @sa self::write_partially_elements() self::fill_container_rest()
      */
     public: template<typename template_element>
     void make_partially_extended_binary(
-        std::size_t const in_size,
-        std::int8_t const in_extended_type)
+        std::size_t const in_length,
+        std::int8_t const in_type)
     {
-        auto const local_size(in_size * sizeof(template_element));
+        auto const local_size(in_length * sizeof(template_element));
         if (self::stack_capacity <= this->get_container_stack_size())
         {
             // スタック限界を超えたので失敗。
@@ -842,7 +845,7 @@ class psyq::message_pack::serializer
         }
         else if (
             // 拡張バイナリのバイト数を直列化する。
-            this->write_extended_binary_header(local_size, in_extended_type)
+            this->write_extended_binary_header(local_size, in_type)
             && 0 < local_size)
         {
             // RAWバイト列をスタックに積む。
@@ -858,7 +861,7 @@ class psyq::message_pack::serializer
         @tparam template_big_endian
             trueならbig-endian、falseならnative-endianで直列化する。
         @param[in] in_iterator 直列化するコンテナの先頭位置。
-        @param[in] in_size     直列化するコンテナの要素数。
+        @param[in] in_length   直列化するコンテナの要素数。
         @sa self::make_partially_string()
             self::make_partially_binary()
             self::make_partially_extended_binary()
@@ -866,7 +869,7 @@ class psyq::message_pack::serializer
     public: template<bool template_big_endian, typename template_iterator>
     void write_partially_elements(
         template_iterator in_iterator,
-        std::size_t in_size)
+        std::size_t in_length)
     {
         auto const local_stack(this->get_stack_top_raw());
         if (local_stack == nullptr)
@@ -879,21 +882,21 @@ class psyq::message_pack::serializer
                 bi_endian_serializer;
         enum: std::size_t
         {
-            value_size = sizeof(
+            element_size = sizeof(
                 std::iterator_traits<template_iterator>::value_type),
         };
-        for (;; --in_size, ++in_iterator)
+        for (;; --in_length, ++in_iterator)
         {
-            if (local_stack->rest_size < value_size)
+            if (local_stack->rest_size < element_size)
             {
                 this->fill_container_rest();
                 break;
             }
-            else if (in_size <= 0)
+            else if (in_length <= 0)
             {
                 break;
             }
-            local_stack->rest_size -= value_size;
+            local_stack->rest_size -= element_size;
             bi_endian_serializer::write(this->stream_, *in_iterator);
         }
     }
@@ -1053,7 +1056,7 @@ class psyq::message_pack::serializer
     //@{
     /** @brief MessagePack形式の配列の直列化を開始する。
 
-        以後 in_size 個のMessagePack値を、配列の要素として直列化できる。
+        以後 in_length 個のMessagePack値を、配列の要素として直列化できる。
 
         以下の関数を1回呼び出す毎に、MessagePack値を1つ直列化する。
         - self::write_nil()
@@ -1073,12 +1076,12 @@ class psyq::message_pack::serializer
         - self::make_array()
         - self::make_map()
 
-        @param[in] in_size 直列化する配列の要素数。
+        @param[in] in_length 直列化する配列の要素数。
         @sa self::fill_container_rest() self::fill_container_stack()
      */
-    public: void make_array(std::size_t const in_size)
+    public: void make_array(std::size_t const in_length)
     {
-        if (in_size <= 0)
+        if (in_length <= 0)
         {
             // 空の配列を直列化する。
             this->write_big_endian<std::uint8_t>(
@@ -1093,7 +1096,7 @@ class psyq::message_pack::serializer
         // 配列の要素数を直列化する。
         else if (
             this->write_container_size(
-                in_size,
+                in_length,
                 psyq::message_pack::header_ARRAY16,
                 psyq::message_pack::header_FIX_ARRAY_MIN,
                 psyq::message_pack::header_FIX_ARRAY_MAX))
@@ -1102,14 +1105,14 @@ class psyq::message_pack::serializer
             auto& local_stack(
                 this->stack_.at(this->get_container_stack_size()));
             local_stack.type = self::next_type_ARRAY_ELEMENT;
-            local_stack.rest_size = in_size;
+            local_stack.rest_size = in_length;
             ++this->stack_size_;
         }
     }
 
     /** @brief MessagePack形式の連想配列の直列化を開始する。
 
-        以後 in_size*2 個のMessagePack値を、連想配列の要素として直列化できる。
+        以後 in_length*2 個のMessagePack値を、連想配列の要素として直列化できる。
         2つのMessagePack値で、連想配列の要素1つとなる。
         最初のMessagePack値を連想配列のキー、
         次のMessagePack値を連想配列のマップ値として直列化する。
@@ -1132,12 +1135,12 @@ class psyq::message_pack::serializer
         - self::make_array()
         - self::make_map()
 
-        @param[in] in_size 直列化する連想配列の要素数。
+        @param[in] in_length 直列化する連想配列の要素数。
         @sa self::fill_container_rest() self::fill_container_stack()
      */
-    public: void make_map(std::size_t const in_size)
+    public: void make_map(std::size_t const in_length)
     {
-        if (in_size <= 0)
+        if (in_length <= 0)
         {
             // 空の連想配列を直列化する。
             this->write_big_endian<std::uint8_t>(
@@ -1152,7 +1155,7 @@ class psyq::message_pack::serializer
         // 連想配列の要素数を直列化する。
         else if (
             this->write_container_size(
-                in_size,
+                in_length,
                 psyq::message_pack::header_MAP16,
                 psyq::message_pack::header_FIX_MAP_MIN,
                 psyq::message_pack::header_FIX_MAP_MAX))
@@ -1161,7 +1164,7 @@ class psyq::message_pack::serializer
             auto& local_stack(
                 this->stack_.at(this->get_container_stack_size()));
             local_stack.type = self::next_type_MAP_KEY;
-            local_stack.rest_size = in_size;
+            local_stack.rest_size = in_length;
             ++this->stack_size_;
         }
     }
@@ -1226,33 +1229,35 @@ class psyq::message_pack::serializer
     }
     //@}
     /** @brief コンテナの要素数を直列化する。
-        @param[in] in_size           コンテナの要素数。
+        @param[in] in_length         コンテナの要素数。
         @param[in] in_header_begin   コンテナのヘッダ。
         @param[in] in_fix_header_min 固定長ヘッダの最小値。
         @param[in] in_fix_header_max 固定長ヘッダの最大値。
      */
     private: bool write_container_size(
-        std::size_t const in_size,
+        std::size_t const in_length,
         std::uint8_t const in_header_begin,
         std::uint8_t const in_fix_header_min,
         std::uint8_t const in_fix_header_max)
     {
         PSYQ_ASSERT(in_fix_header_min <= in_fix_header_max);
-        if (in_size <= unsigned(in_fix_header_max - in_fix_header_min))
+        if (in_length <= unsigned(in_fix_header_max - in_fix_header_min))
         {
-            this->write_big_endian(
-                static_cast<std::uint8_t>(in_fix_header_min + in_size));
+            return this->write_big_endian(
+                static_cast<std::uint8_t>(in_fix_header_min + in_length));
         }
-        else if (in_size <= (std::numeric_limits<std::uint16_t>::max)())
+        else if (in_length <= (std::numeric_limits<std::uint16_t>::max)())
         {
-            this->write_big_endian(in_header_begin);
-            this->write_big_endian(static_cast<std::uint16_t>(in_size));
+            return this->write_big_endian(in_header_begin)
+                && this->write_big_endian(
+                    static_cast<std::uint16_t>(in_length));
         }
-        else if (in_size <= (std::numeric_limits<std::uint32_t>::max)())
+        else if (in_length <= (std::numeric_limits<std::uint32_t>::max)())
         {
-            this->write_big_endian(
-                static_cast<std::uint8_t>(in_header_begin + 1));
-            this->write_big_endian(static_cast<std::uint32_t>(in_size));
+            return this->write_big_endian(
+                    static_cast<std::uint8_t>(in_header_begin + 1))
+                && this->write_big_endian(
+                    static_cast<std::uint32_t>(in_length));
         }
         else
         {
@@ -1260,7 +1265,6 @@ class psyq::message_pack::serializer
             PSYQ_ASSERT(false);
             return false;
         }
-        return true;
     }
 
     /** @brief コンテナスタックを更新する。
@@ -1411,16 +1415,16 @@ namespace psyq
                    ストリームへ出力する。
             @param[out] out_stream 書き込む出力ストリーム。
             @param[in]  in_iterator 直列化するコンテナの先頭位置。
-            @param[in]  in_size     直列化するコンテナの要素数。
+            @param[in]  in_length   直列化するコンテナの要素数。
          */
         template<typename template_out_stream, typename template_iterator>
         void write_array(
             psyq::message_pack::serializer<template_out_stream>& out_stream,
             template_iterator in_iterator,
-            std::size_t in_size)
+            std::size_t in_length)
         {
-            out_stream.make_array(in_size);
-            for (; 0 < in_size; --in_size, ++in_iterator)
+            out_stream.make_array(in_length);
+            for (; 0 < in_length; --in_length, ++in_iterator)
             {
                 out_stream << *in_iterator;
             }
@@ -1443,17 +1447,17 @@ namespace psyq
                    ストリームへ出力する。
             @param[out] out_stream  書き込む出力ストリーム。
             @param[in]  in_iterator 直列化する集合コンテナの先頭位置。
-            @param[in]  in_size     直列化する集合コンテナの要素数。
+            @param[in]  in_length   直列化する集合コンテナの要素数。
          */
         template<typename template_out_stream, typename template_iterator>
         void write_set(
             psyq::message_pack::serializer<template_out_stream>& out_stream,
             template_iterator in_iterator,
-            std::size_t in_size)
+            std::size_t in_length)
         {
             // マップ値が空の辞書として集合を直列化する。
-            out_stream.make_map(in_size);
-            for (; 0 < in_size; --in_size, ++in_iterator)
+            out_stream.make_map(in_length);
+            for (; 0 < in_length; --in_length, ++in_iterator)
             {
                 out_stream << *in_iterator;
                 out_stream.write_nil();
@@ -1476,16 +1480,16 @@ namespace psyq
                    ストリームへ出力する。
             @param[out] out_stream  書き込む出力ストリーム。
             @param[in]  in_iterator 直列化する連想配列コンテナの先頭位置。
-            @param[in]  in_size     直列化する連想配列コンテナの要素数。
+            @param[in]  in_length   直列化する連想配列コンテナの要素数。
          */
         template<typename template_out_stream, typename template_iterator>
         void write_map(
             psyq::message_pack::serializer<template_out_stream>& out_stream,
             template_iterator in_iterator,
-            std::size_t in_size)
+            std::size_t in_length)
         {
-            out_stream.make_map(in_size);
-            for (; 0 < in_size; --in_size, ++in_iterator)
+            out_stream.make_map(in_length);
+            for (; 0 < in_length; --in_length, ++in_iterator)
             {
                 auto& local_value(*in_iterator);
                 out_stream << local_value.first << local_value.second;

@@ -981,13 +981,15 @@ namespace psyq
         inline void message_pack_deserializer()
         {
             psyq::message_pack::serializer<> local_serializer;
-            local_serializer.make_array(17);
+            local_serializer.make_array(19);
             local_serializer << (std::numeric_limits<std::int64_t>::min)();
             local_serializer << (std::numeric_limits<std::int32_t>::min)();
             local_serializer << (std::numeric_limits<std::int16_t>::min)();
             local_serializer << (std::numeric_limits<std::int8_t >::min)();
             local_serializer << -0x20;
             local_serializer << false;
+            local_serializer << 0.25;
+            local_serializer << 0.5f;
             local_serializer << true;
             local_serializer << 0x7f;
             local_serializer << (std::numeric_limits<std::uint8_t >::max)();
@@ -1033,48 +1035,54 @@ namespace psyq
                     == psyq::message_pack::object(false));
             PSYQ_ASSERT(
                 local_root.get_array()->at(6)
-                    == psyq::message_pack::object(true));
+                    == psyq::message_pack::object(0.25));
             PSYQ_ASSERT(
                 local_root.get_array()->at(7)
-                    == psyq::message_pack::object(0x7f));
+                    == psyq::message_pack::object(0.5f));
             PSYQ_ASSERT(
                 local_root.get_array()->at(8)
-                    == psyq::message_pack::object(
-                        (std::numeric_limits<std::uint8_t>::max)()));
+                    == psyq::message_pack::object(true));
             PSYQ_ASSERT(
                 local_root.get_array()->at(9)
-                    == psyq::message_pack::object(
-                        (std::numeric_limits<std::uint16_t>::max)()));
+                    == psyq::message_pack::object(0x7f));
             PSYQ_ASSERT(
                 local_root.get_array()->at(10)
                     == psyq::message_pack::object(
-                        (std::numeric_limits<std::uint32_t>::max)()));
+                        (std::numeric_limits<std::uint8_t>::max)()));
             PSYQ_ASSERT(
                 local_root.get_array()->at(11)
+                    == psyq::message_pack::object(
+                        (std::numeric_limits<std::uint16_t>::max)()));
+            PSYQ_ASSERT(
+                local_root.get_array()->at(12)
+                    == psyq::message_pack::object(
+                        (std::numeric_limits<std::uint32_t>::max)()));
+            PSYQ_ASSERT(
+                local_root.get_array()->at(13)
                     == psyq::message_pack::object(
                         (std::numeric_limits<std::uint64_t>::max)()));
             PSYQ_ASSERT(
                 std::string("0123456789ABCDEFGHIJKLMNOPQRSTU")
                     == std::string(
-                        local_root.get_array()->at(12).get_string()->begin(),
-                        local_root.get_array()->at(12).get_string()->end()));
-            PSYQ_ASSERT(
-                std::string(0xff, 'x')
-                    == std::string(
-                        local_root.get_array()->at(13).get_string()->begin(),
-                        local_root.get_array()->at(13).get_string()->end()));
-            PSYQ_ASSERT(
-                std::string(0xffff, 'y')
-                    == std::string(
                         local_root.get_array()->at(14).get_string()->begin(),
                         local_root.get_array()->at(14).get_string()->end()));
             PSYQ_ASSERT(
-                std::string(0x10000, 'z')
+                std::string(0xff, 'x')
                     == std::string(
                         local_root.get_array()->at(15).get_string()->begin(),
                         local_root.get_array()->at(15).get_string()->end()));
             PSYQ_ASSERT(
-                local_root.get_array()->at(16) == psyq::message_pack::object());
+                std::string(0xffff, 'y')
+                    == std::string(
+                        local_root.get_array()->at(16).get_string()->begin(),
+                        local_root.get_array()->at(16).get_string()->end()));
+            PSYQ_ASSERT(
+                std::string(0x10000, 'z')
+                    == std::string(
+                        local_root.get_array()->at(17).get_string()->begin(),
+                        local_root.get_array()->at(17).get_string()->end()));
+            PSYQ_ASSERT(
+                local_root.get_array()->at(18) == psyq::message_pack::object());
         }
     }
 }

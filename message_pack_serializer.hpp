@@ -692,6 +692,9 @@ class psyq::message_pack::serializer
         @param[in] in_endianess コンテナ要素を直列化するときの self::endianess
         @param[in] in_begin     直列化するコンテナの先頭位置。
         @param[in] in_length    直列化するコンテナの文字数。
+        @note 2014.05.10
+            MessagePackの文字列はUTF-8なので、要素が1バイトではないコンテナは
+            static_assertしたほうがいい？ そうなればエンディアン性も不要。
      */
     public: template<typename template_iterator>
     void write_container_string(
@@ -701,6 +704,7 @@ class psyq::message_pack::serializer
     {
         typedef typename std::iterator_traits<template_iterator>::value_type
             element;
+        //static_assert(sizeof(element) == 1, "");
         this->make_serial_string<element>(in_length);
         this->write_serial_raw(in_endianess, in_begin, in_length);
     }

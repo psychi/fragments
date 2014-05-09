@@ -154,10 +154,15 @@ namespace psyq
     namespace internal
     {
         //---------------------------------------------------------------------
+        /// ビット配列として使う型。
         template<std::size_t> struct message_pack_bit_field;
+        /// 8ビット配列として使う型。
         template<> struct message_pack_bit_field<1> {typedef std::uint8_t  type;};
+        /// 16ビット配列として使う型。
         template<> struct message_pack_bit_field<2> {typedef std::uint16_t type;};
+        /// 32ビット配列として使う型。
         template<> struct message_pack_bit_field<4> {typedef std::uint32_t type;};
+        /// 64ビット配列として使う型。
         template<> struct message_pack_bit_field<8> {typedef std::uint64_t type;};
 
         /// バイト列をストリームへ出力する。
@@ -223,6 +228,63 @@ namespace psyq
         };
 
         //---------------------------------------------------------------------
+        /// キャストで値をビット配列に変換し、ストリームへ出力する。
+        template<bool> struct message_pack_bit_field_serializer
+        {
+            /** @brief キャストで値をビット配列に変換し、ストリームへ出力する。
+                @param[in,out] io_stream 出力先ストリーム。
+                @param[in] in_value      ビット配列に変換する値。
+                @param[in] in_big_endian
+                    trueならbig-endianで、falseならlittle-endianで出力する。
+             */
+            template<typename template_stream, typename template_value>
+            static bool write(
+                template_stream& io_stream,
+                template_value const in_value,
+                bool const in_big_endian)
+            {
+                typedef typename psyq::internal
+                    ::message_pack_bit_field<sizeof(template_value)>::type
+                        bit_field;
+                typedef typename psyq::internal
+                    ::message_pack_endianess_serializer<sizeof(template_value)>
+                        endianess_serializer;
+
+                // 値をビット配列にキャストして直列化する。
+                return endianess_serializer::write(
+                    io_stream, static_cast<bit_field>(in_value), in_big_endian);
+            }
+        };
+        /// unionで値をビット配列に変換し、ストリームへ出力する。
+        template<> struct message_pack_bit_field_serializer<false>
+        {
+            /** @brief unionで値をビット配列に変換し、ストリームへ出力する。
+                @param[in,out] io_stream 出力先ストリーム。
+                @param[in] in_value      ビット配列に変換する値。
+                @param[in] in_big_endian
+                    trueならbig-endianで、falseならlittle-endianで出力する。
+             */
+            template<typename template_stream, typename template_value>
+            static bool write(
+                template_stream& io_stream,
+                template_value in_value,
+                bool const in_big_endian)
+            {
+                typedef typename psyq::internal
+                    ::message_pack_bit_field<sizeof(template_value)>::type
+                        bit_field;
+                typedef typename psyq::internal
+                    ::message_pack_endianess_serializer<sizeof(template_value)>
+                        endianess_serializer;
+
+                // 値をビット配列として扱えないので、
+                // 同じ大きさのunionを経由して直列化する。
+                union {template_value value; bit_field bits;} local_union;
+                local_union.value = std::move(in_value);
+                return endianess_serializer::write(
+                    io_stream, local_union.bits, in_big_endian);
+            }
+        };
         /// 値を直列化し、ストリームへ出力する。
         template<typename template_value>
         struct message_pack_value_serializer
@@ -241,28 +303,13 @@ namespace psyq
                 template_value in_value,
                 bool const in_big_endian)
             {
-                typedef typename psyq::internal
-                    ::message_pack_bit_field<sizeof(template_value)>::type
-                        bit_field;
-                typedef typename psyq::internal
-                    ::message_pack_endianess_serializer<sizeof(template_value)>
-                        endianess_serializer;
-
-                /// @note 2013.05.09 ここは、static_ifを使いたい。
-                if (std::is_integral<template_value>::value)
-                {
-                    return endianess_serializer::write(
-                        io_stream,
-                        static_cast<bit_field>(in_value),
-                        in_big_endian);
-                }
-                else
-                {
-                    union {template_value value; bit_field bits;} local_union;
-                    local_union.value = std::move(in_value);
-                    return endianess_serializer::write(
-                        io_stream, local_union.bits, in_big_endian);
-                }
+                /** @note 2014.05.10
+                    C++1y対応コンパイラでないとstatic_ifが使えないので、
+                    テンプレート特殊化で実装しておく。
+                 */
+                return psyq::internal::message_pack_bit_field_serializer<
+                    std::is_integral<template_value>::value>::write(
+                        io_stream, std::move(in_value), in_big_endian);
             }
         };
 
@@ -322,6 +369,13 @@ class psyq::message_pack::serializer
     /** @brief 直列化途中のコンテナのスタック限界数。
      */
     public: static std::size_t const stack_capacity = template_stack_capacity;
+
+    /// 値を直列化する場合のエンディアン性。
+    public: enum endianess: bool
+    {
+        little_endian = false, ///< リトルエンディアン。
+        big_endian = true,     ///< ビッグエンディアン。
+    };
 
     /** @brief 次に直列化する値の種類。
      */
@@ -635,76 +689,76 @@ class psyq::message_pack::serializer
 
     /** @brief コンテナをMessagePack形式の文字列として直列化し、
                ストリームへ出力する。
-        @tparam template_big_endian
-            trueならbig-endian、falseならnative-endianで直列化する。
-        @param[in] in_begin  直列化するコンテナの先頭位置。
-        @param[in] in_length 直列化するコンテナの文字数。
+        @param[in] in_endianess コンテナ要素を直列化するときの self::endianess
+        @param[in] in_begin     直列化するコンテナの先頭位置。
+        @param[in] in_length    直列化するコンテナの文字数。
      */
-    public: template<bool template_big_endian, typename template_iterator>
+    public: template<typename template_iterator>
     void write_container_string(
+        bool const in_endianess,
         template_iterator const& in_begin,
         std::size_t const in_length)
     {
         typedef typename std::iterator_traits<template_iterator>::value_type
             element;
         this->make_serial_string<element>(in_length);
-        this->write_serial_elements<template_big_endian>(
-            in_begin, in_length);
+        this->write_serial_raw(in_endianess, in_begin, in_length);
     }
     /** @brief コンテナをMessagePack形式の文字列として直列化し、
                ストリームへ出力する。
-        @tparam template_big_endian
-            trueならbig-endian、falseならnative-endianで直列化する。
+        @param[in] in_endianess コンテナ要素を直列化するときの self::endianess
         @param[in] in_container 直列化するコンテナ。
      */
-    public: template<bool template_big_endian, typename template_container>
-    void write_container_string(template_container const& in_container)
+    public: template<typename template_container>
+    void write_container_string(
+        bool const in_endianess,
+        template_container const& in_container)
     {
-        this->write_string<template_big_endian>(
-            in_container.begin(), in_container.size());
+        this->write_string(
+            in_endianess, in_container.begin(), in_container.size());
     }
 
     /** @brief コンテナをMessagePack形式のバイナリとして直列化し、
                ストリームへ出力する。
-        @tparam template_big_endian
-            trueならbig-endian、falseならnative-endianで直列化する。
-        @param[in] in_begin  直列化するコンテナの先頭位置。
-        @param[in] in_length 直列化するコンテナの要素数。
+        @param[in] in_endianess コンテナ要素を直列化するときの self::endianess
+        @param[in] in_begin     直列化するコンテナの先頭位置。
+        @param[in] in_length    直列化するコンテナの要素数。
      */
-    public: template<bool template_big_endian, typename template_iterator>
+    public: template<typename template_iterator>
     void write_container_binary(
+        bool const in_endianess,
         template_iterator const& in_begin,
         std::size_t const in_length)
     {
         typedef typename std::iterator_traits<template_iterator>::value_type
             element;
         this->make_serial_binary<element>(in_length);
-        this->write_serial_elements<template_big_endian>(
-            in_begin, in_length);
+        this->write_serial_raw(in_endianess, in_begin, in_length);
     }
     /** @brief コンテナをMessagePack形式のバイナリとして直列化し、
                ストリームへ出力する。
-        @tparam template_big_endian
-            trueならbig-endian、falseならnative-endianで直列化する。
+        @param[in] in_endianess 要素を直列化するときのエンディアン性。
         @param[in] in_container 直列化するコンテナ。
      */
-    public: template<bool template_big_endian, typename template_container>
-    void write_container_binary(template_container const& in_container)
+    public: template<typename template_container>
+    void write_container_binary(
+        bool const in_endianess,
+        template_container const& in_container)
     {
-        this->write_binary<template_big_endian>(
-            in_container.begin(), in_container.size());
+        this->write_binary(
+            in_endianess, in_container.begin(), in_container.size());
     }
 
     /** @brief コンテナをMessagePack形式の拡張バイナリとして直列化し、
                ストリームへ出力する。
-        @tparam template_big_endian
-            trueならbig-endian、falseならnative-endianで直列化する。
-        @param[in] in_begin  直列化するコンテナの先頭位置。
-        @param[in] in_length 直列化するコンテナの要素数。
-        @param[in] in_type   直列化するコンテナの拡張型識別値。
+        @param[in] in_endianess コンテナ要素を直列化するときの self::endianess
+        @param[in] in_begin     直列化するコンテナの先頭位置。
+        @param[in] in_length    直列化するコンテナの要素数。
+        @param[in] in_type      直列化するコンテナの拡張型識別値。
      */
-    public: template<bool template_big_endian, typename template_iterator>
+    public: template<typename template_iterator>
     void write_container_extended_binary(
+        bool const in_endianess,
         template_iterator const& in_begin,
         std::size_t const in_length,
         std::int8_t const in_type)
@@ -712,33 +766,32 @@ class psyq::message_pack::serializer
         typedef typename std::iterator_traits<template_iterator>::value_type
             element;
         this->make_serial_extended_binary<element>(in_length, in_type);
-        this->write_serial_elements<template_big_endian>(
-            in_begin, in_length);
+        this->write_serial_raw(in_endianess, in_begin, in_length);
     }
     /** @brief コンテナをMessagePack形式の拡張バイナリとして直列化し、
                ストリームへ出力する。
-        @tparam template_big_endian
-            trueならbig-endian、falseならnative-endianで直列化する。
+        @param[in] in_endianess コンテナ要素を直列化するときの self::endianess
         @param[in] in_container 直列化するコンテナ。
         @param[in] in_type      直列化するコンテナの拡張型識別値。
      */
-    public: template<bool template_big_endian, typename template_container>
+    public: template<typename template_container>
     void write_container_extended_binary(
+        bool const in_endianess,
         template_container const& in_container,
         std::int8_t const in_type)
     {
-        this->write_extended_binary<template_big_endian>(
-            in_container.begin(), in_container.size(), in_type);
+        this->write_extended_binary(
+            in_endianess, in_container.begin(), in_container.size(), in_type);
     }
 
     //-------------------------------------------------------------------------
     /** @brief 文字列コンテナの直列化を開始する。
 
-        以後、 in_size 個の文字を、 write_serial_elements() で直列化できる。
+        以後、 in_size 個の文字を、 write_serial_raw() で直列化できる。
 
         @tparam template_element 文字列コンテナの文字の型。
         @param[in] in_length 直列化する文字列コンテナの文字数。
-        @sa self::write_serial_elements() self::fill_container_rest()
+        @sa self::write_serial_raw() self::fill_container_rest()
      */
     public: template<typename template_element>
     void make_serial_string(std::size_t const in_length)
@@ -769,11 +822,11 @@ class psyq::message_pack::serializer
     }
     /** @brief バイナリコンテナの直列化を開始する。
 
-        以後 in_length 個の要素を、 write_serial_elements() で直列化できる。
+        以後 in_length 個の要素を、 write_serial_raw() で直列化できる。
 
         @tparam template_element バイナリコンテナの要素の型。
         @param[in] in_length 直列化するバイナリコンテナの要素数。
-        @sa self::write_serial_elements() self::fill_container_rest()
+        @sa self::write_serial_raw() self::fill_container_rest()
      */
     public: template<typename template_element>
     void make_serial_binary(std::size_t const in_length)
@@ -799,12 +852,12 @@ class psyq::message_pack::serializer
     }
     /** @brief 拡張バイナリの直列化を開始する。
 
-        以後 in_length 個の要素を、 write_serial_elements() で直列化できる。
+        以後 in_length 個の要素を、 write_serial_raw() で直列化できる。
 
         @tparam template_element 直列化するコンテナの要素の型。
         @param[in] in_length 直列化するコンテナの要素数。
         @param[in] in_type   直列化するコンテナの拡張型識別値。
-        @sa self::write_serial_elements() self::fill_container_rest()
+        @sa self::write_serial_raw() self::fill_container_rest()
      */
     public: template<typename template_element>
     void make_serial_extended_binary(
@@ -832,16 +885,16 @@ class psyq::message_pack::serializer
     }
     /** @brief コンテナの要素をMessagePack形式のRAWバイト列として直列化し、
                ストリームへ出力する。
-        @tparam template_big_endian
-            trueならbig-endian、falseならnative-endianで直列化する。
-        @param[in] in_iterator 直列化するコンテナの先頭位置。
-        @param[in] in_length   直列化するコンテナの要素数。
+        @param[in] in_endianess コンテナ要素を直列化するときの self::endianess
+        @param[in] in_iterator  直列化するコンテナの先頭位置。
+        @param[in] in_length    直列化するコンテナの要素数。
         @sa self::make_serial_string()
             self::make_serial_binary()
             self::make_serial_extended_binary()
      */
-    public: template<bool template_big_endian, typename template_iterator>
-    void write_serial_elements(
+    public: template<typename template_iterator>
+    void write_serial_raw(
+        bool const in_endianess,
         template_iterator in_iterator,
         std::size_t in_length)
     {
@@ -867,8 +920,7 @@ class psyq::message_pack::serializer
                 break;
             }
             local_stack->rest_size -= sizeof(element);
-            value_serializer::write(
-                this->stream_, *in_iterator, template_big_endian);
+            value_serializer::write(this->stream_, *in_iterator, in_endianess);
         }
     }
     //@}

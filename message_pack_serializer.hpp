@@ -317,10 +317,9 @@ namespace psyq
 
         //---------------------------------------------------------------------
         /** @brief タプルをストリームへ出力する。
-            @tparam template_index 出力するタプル要素のインデクス番号。
-            @sa psyq::message_pack::serializer::write_tuple()
+            @tparam template_length 出力するタプルの要素数。
          */
-        template<std::size_t template_index>
+        template<std::size_t template_length>
         struct message_pack_tuple_serializer
         {
             /** @brief タプルをストリームへ出力する。
@@ -335,22 +334,17 @@ namespace psyq
                 template_tuple const& in_tuple)
             {
                 psyq::internal
-                    ::message_pack_tuple_serializer<template_index - 1>
+                    ::message_pack_tuple_serializer<template_length - 1>
                         ::write(out_stream, in_tuple);
-                out_stream << std::get<template_index>(in_tuple);
+                out_stream << std::get<template_length - 1>(in_tuple);
             }
         };
         /// @copydoc message_pack_tuple_serializer
         template<> struct message_pack_tuple_serializer<0>
         {
-            /// @copydoc message_pack_tuple_serializer::write()
+            /// 何もしない。
             template<typename template_stream, typename template_tuple>
-            static void write(
-                template_stream& out_stream,
-                template_tuple const& in_tuple)
-            {
-                out_stream << std::get<0>(in_tuple);
-            }
+            static void write(template_stream&, template_tuple const&) {}
         };
     }
 }
@@ -1098,12 +1092,9 @@ class psyq::message_pack::serializer
     void write_tuple(template_tuple const& in_tuple)
     {
         this->make_serial_array(std::tuple_size<template_tuple>::value);
-        if (0 < std::tuple_size<template_tuple>::value)
-        {
-            psyq::internal::message_pack_tuple_serializer<
-                std::tuple_size<template_tuple>::value - 1>::write(
-                    *this, in_tuple);
-        }
+        psyq::internal::message_pack_tuple_serializer<
+            std::tuple_size<template_tuple>::value>::write(
+                *this, in_tuple);
     }
 
     /** @brief コンテナをMessagePack形式の配列として直列化し、

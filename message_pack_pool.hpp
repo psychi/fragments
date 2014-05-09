@@ -42,6 +42,7 @@ class psyq::message_pack::pool
     {
         value_size = sizeof(typename self::allocator_type::value_type),
         header_size = sizeof(typename self::chunk_header),
+        header_alignment = sizeof(void*),
     };
 
     //-------------------------------------------------------------------------
@@ -79,7 +80,7 @@ class psyq::message_pack::pool
         io_source.chunk_list_ = nullptr;
     }
 
-    /** @brief 確保したメモリをすべて破棄する。
+    /** @brief self::allocate() で確保したメモリを、すべて解放する。
      */
     public: ~pool()
     {
@@ -166,6 +167,11 @@ class psyq::message_pack::pool
         std::size_t const in_size,
         std::size_t const in_alignment = sizeof(std::int64_t))
     {
+        if (in_size <= 0)
+        {
+            return nullptr;
+        }
+
         // チャンクからメモリを分配する。
         if (this->chunk_list_ != nullptr)
         {
@@ -179,12 +185,18 @@ class psyq::message_pack::pool
         }
 
         // 新たにチャンクを確保する。
+        /** @todo 2014.05.09
+            今のところ、新たにチャンクを確保すると、
+            既存のチャンクの空き領域が使われなくなる。
+            チャンクを空き領域のサイズでソートし、
+            既存のチャンクから空き領域を検索するようにしたい。
+         */
         auto const local_free_size(
-            self::alignment_size<sizeof(void*)>(
+            self::alignment_size<self::header_alignment>(
                 std::max(
                     self::header_size < this->get_default_capacity()?
                         this->get_default_capacity() - self::header_size: 0,
-                    std::max(in_size, in_alignment * 2))));
+                    std::max(in_size + in_alignment - 1, in_alignment * 2))));
         void* const local_pool(
             this->allocator_.allocate(
                 self::alignment_count<self::value_size>(
@@ -209,6 +221,13 @@ class psyq::message_pack::pool
     }
 
     //-------------------------------------------------------------------------
+    /** @brief チャンクからメモリを分配する。
+        @param[in,out] io_chunk     メモリを分配するチャンク。
+        @param[in]     in_size      分配するメモリのバイト数。
+        @param[in]     in_alignment 分配するメモリの境界単位。
+        @retval !=nullptr 分配したメモリの先頭位置。
+        @retval ==nullptr 分配に失敗。メモリ不足。
+     */
     private: static void* partition_chunk(
         typename self::chunk_header& io_chunk,
         std::size_t const in_size,
@@ -220,17 +239,14 @@ class psyq::message_pack::pool
         }
         void* local_pool(
             reinterpret_cast<std::int8_t*>(&io_chunk) - io_chunk.free_size);
-        io_chunk.free_size -= in_size;
-        if (in_alignment <= 1)
+        auto local_free_size(io_chunk.free_size);
+        void* local_memory(
+            std::align(in_alignment, in_size, local_pool, local_free_size));
+        if (local_memory == nullptr || local_free_size < in_size)
         {
-            return local_pool;
+            return nullptr;
         }
-        void* const local_memory(
-            std::align(in_alignment, in_size, local_pool, io_chunk.free_size));
-        if (local_memory == nullptr)
-        {
-            io_chunk.free_size += in_size;
-        }
+        io_chunk.free_size = local_free_size - in_size;
         return local_memory;
     }
 

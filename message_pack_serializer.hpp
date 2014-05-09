@@ -154,20 +154,22 @@ namespace psyq
     namespace internal
     {
         //---------------------------------------------------------------------
-        /// ビット配列として使う型。
-        template<std::size_t> struct message_pack_bit_field;
-        /// 8ビット配列として使う型。
-        template<> struct message_pack_bit_field<1> {typedef std::uint8_t  type;};
-        /// 16ビット配列として使う型。
-        template<> struct message_pack_bit_field<2> {typedef std::uint16_t type;};
-        /// 32ビット配列として使う型。
-        template<> struct message_pack_bit_field<4> {typedef std::uint32_t type;};
-        /// 64ビット配列として使う型。
-        template<> struct message_pack_bit_field<8> {typedef std::uint64_t type;};
+        /// バイト列として使う型。
+        template<std::size_t> struct message_pack_bytes;
+        /// 1バイトのバイト列として使う型。
+        template<> struct message_pack_bytes<1> {typedef std::uint8_t  type;};
+        /// 2バイトのバイト列として使う型。
+        template<> struct message_pack_bytes<2> {typedef std::uint16_t type;};
+        /// 4バイトのバイト列として使う型。
+        template<> struct message_pack_bytes<4> {typedef std::uint32_t type;};
+        /// 8バイトのバイト列として使う型。
+        template<> struct message_pack_bytes<8> {typedef std::uint64_t type;};
 
-        /// バイト列をストリームへ出力する。
+        /** @brief バイト列をストリームへ出力する。
+            @tparam template_size バイト列のバイト数。
+         */
         template<std::size_t template_size>
-        struct message_pack_endianess_serializer
+        struct message_pack_bytes_serializer
         {
             static_assert(0 < template_size, "");
             static_assert(
@@ -176,51 +178,51 @@ namespace psyq
 
             /** @brief バイト列をストリームへ出力する。
                 @param[in,out] io_stream 出力先ストリーム。
-                @param[in] in_value      出力するバイト列。
-                @param[in] in_big_endian
+                @param[in]     in_bytes  出力するバイト列。
+                @param[in]     in_big_endian
                     trueならbig-endianで、falseならlittle-endianで出力する。
              */
-            template<typename template_stream, typename template_value>
+            template<typename template_stream, typename template_bytes>
             static bool write(
                 template_stream& io_stream,
-                template_value const in_value,
+                template_bytes const in_bytes,
                 bool const in_big_endian)
             {
-                static_assert(sizeof(template_value) == template_size, "");
-                static_assert(std::is_integral<template_value>::value, "");
+                static_assert(sizeof(template_bytes) == template_size, "");
+                static_assert(std::is_integral<template_bytes>::value, "");
 
                 typedef typename psyq::internal
-                    ::message_pack_bit_field<template_size / 2>::type
-                        super_value;
+                    ::message_pack_bytes<template_size / 2>::type
+                        half_bytes;
                 auto const local_1st_shift(
                     (8 * template_size / 2) * in_big_endian);
                 auto const local_2nd_shift(
                     (8 * template_size / 2) - local_1st_shift);
 
                 typedef psyq::internal
-                    ::message_pack_endianess_serializer<template_size / 2>
-                        super_serializer;
-                return super_serializer::write(
+                    ::message_pack_bytes_serializer<template_size / 2>
+                        half_serializer;
+                return half_serializer::write(
                         io_stream,
-                        static_cast<super_value>(in_value >> local_1st_shift),
+                        static_cast<half_bytes>(in_bytes >> local_1st_shift),
                         in_big_endian)
-                    && super_serializer::write(
+                    && half_serializer::write(
                         io_stream,
-                        static_cast<super_value>(in_value >> local_2nd_shift),
+                        static_cast<half_bytes>(in_bytes >> local_2nd_shift),
                         in_big_endian);
             }
         };
-        /// 1バイトをストリームへ出力する。
-        template<> struct message_pack_endianess_serializer<1>
+        /// 1バイトのバイト列をストリームへ出力する。
+        template<> struct message_pack_bytes_serializer<1>
         {
             template<typename template_stream>
             static bool write(
                 template_stream& io_stream,
-                std::uint8_t const in_value,
+                std::uint8_t const in_bytes,
                 bool const)
             {
                 io_stream.put(
-                    static_cast<typename template_stream::char_type>(in_value));
+                    static_cast<typename template_stream::char_type>(in_bytes));
                 auto const local_good(io_stream.good());
                 PSYQ_ASSERT(local_good);
                 return local_good;
@@ -228,12 +230,12 @@ namespace psyq
         };
 
         //---------------------------------------------------------------------
-        /// キャストで値をビット配列に変換し、ストリームへ出力する。
-        template<bool> struct message_pack_bit_field_serializer
+        /// static_castで値をバイト列に変換し、ストリームへ出力する。
+        template<bool> struct message_pack_cast_value_serializer
         {
-            /** @brief キャストで値をビット配列に変換し、ストリームへ出力する。
+            /** @brief static_castで値をバイト列に変換し、ストリームへ出力する。
                 @param[in,out] io_stream 出力先ストリーム。
-                @param[in] in_value      ビット配列に変換する値。
+                @param[in] in_value      バイト列に変換する値。
                 @param[in] in_big_endian
                     trueならbig-endianで、falseならlittle-endianで出力する。
              */
@@ -244,23 +246,23 @@ namespace psyq
                 bool const in_big_endian)
             {
                 typedef typename psyq::internal
-                    ::message_pack_bit_field<sizeof(template_value)>::type
-                        bit_field;
+                    ::message_pack_bytes<sizeof(template_value)>::type
+                        bytes;
                 typedef typename psyq::internal
-                    ::message_pack_endianess_serializer<sizeof(template_value)>
-                        endianess_serializer;
+                    ::message_pack_bytes_serializer<sizeof(template_value)>
+                        bytes_serializer;
 
-                // 値をビット配列にキャストして直列化する。
-                return endianess_serializer::write(
-                    io_stream, static_cast<bit_field>(in_value), in_big_endian);
+                // 値をバイト列にキャストして直列化する。
+                return bytes_serializer::write(
+                    io_stream, static_cast<bytes>(in_value), in_big_endian);
             }
         };
-        /// unionで値をビット配列に変換し、ストリームへ出力する。
-        template<> struct message_pack_bit_field_serializer<false>
+        /// unionで値をバイト列に変換し、ストリームへ出力する。
+        template<> struct message_pack_cast_value_serializer<false>
         {
-            /** @brief unionで値をビット配列に変換し、ストリームへ出力する。
+            /** @brief unionで値をバイト列に変換し、ストリームへ出力する。
                 @param[in,out] io_stream 出力先ストリーム。
-                @param[in] in_value      ビット配列に変換する値。
+                @param[in] in_value      バイト列に変換する値。
                 @param[in] in_big_endian
                     trueならbig-endianで、falseならlittle-endianで出力する。
              */
@@ -271,18 +273,18 @@ namespace psyq
                 bool const in_big_endian)
             {
                 typedef typename psyq::internal
-                    ::message_pack_bit_field<sizeof(template_value)>::type
-                        bit_field;
+                    ::message_pack_bytes<sizeof(template_value)>::type
+                        bytes_type;
                 typedef typename psyq::internal
-                    ::message_pack_endianess_serializer<sizeof(template_value)>
-                        endianess_serializer;
+                    ::message_pack_bytes_serializer<sizeof(template_value)>
+                        bytes_serializer;
 
-                // 値をビット配列として扱えないので、
+                // 値をバイト列として扱えないので、
                 // 同じ大きさのunionを経由して直列化する。
-                union {template_value value; bit_field bits;} local_union;
+                union {template_value value; bytes_type bytes;} local_union;
                 local_union.value = std::move(in_value);
-                return endianess_serializer::write(
-                    io_stream, local_union.bits, in_big_endian);
+                return bytes_serializer::write(
+                    io_stream, local_union.bytes, in_big_endian);
             }
         };
         /// 値を直列化し、ストリームへ出力する。
@@ -307,7 +309,7 @@ namespace psyq
                     C++1y対応コンパイラでないとstatic_ifが使えないので、
                     テンプレート特殊化で実装しておく。
                  */
-                return psyq::internal::message_pack_bit_field_serializer<
+                return psyq::internal::message_pack_cast_value_serializer<
                     std::is_integral<template_value>::value>::write(
                         io_stream, std::move(in_value), in_big_endian);
             }

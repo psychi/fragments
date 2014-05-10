@@ -1009,9 +1009,8 @@ namespace psyq
                 local_integer_set.insert(local_integer_set.size());
             }
             local_serializer.write_container_binary(
-                true, local_integer_set.begin(), local_integer_set.size());
-            local_serializer.write_container_extended(
-                false, local_integer_set.begin(), local_integer_set.size(), 0x7f);
+                local_integer_set.begin(), local_integer_set.size());
+            local_serializer.write_extended(0x123456789abcdefLL, 0x7f);
             local_serializer.write_array(local_integer_set);
             local_serializer.write_set(local_integer_set);
             local_serializer.write_tuple(std::make_tuple(0, 0.0f, 0.0, false));

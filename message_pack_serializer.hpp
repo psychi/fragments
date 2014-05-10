@@ -106,46 +106,46 @@ namespace psyq
          */
         enum header
         {
-            header_FIX_INT_MIN   = -0x20,
-            header_FIX_INT_MAX   = 0x7f,
-            header_FIX_MAP_MIN   = 0x80,
-            header_FIX_MAP_MAX   = 0x8f,
-            header_FIX_ARRAY_MIN = 0x90,
-            header_FIX_ARRAY_MAX = 0x9f,
-            header_FIX_STR_MIN   = 0xa0,
-            header_FIX_STR_MAX   = 0xbf,
-            header_NIL           = 0xc0,
-            header_NEVER_USED    = 0xc1,
-            header_FALSE         = 0xc2,
-            header_TRUE          = 0xc3,
-            header_BIN8          = 0xc4,
-            header_BIN16         = 0xc5,
-            header_BIN32         = 0xc6,
-            header_EXT8          = 0xc7,
-            header_EXT16         = 0xc8,
-            header_EXT32         = 0xc9,
-            header_FLOAT32       = 0xca,
-            header_FLOAT64       = 0xcb,
-            header_UINT8         = 0xcc,
-            header_UINT16        = 0xcd,
-            header_UINT32        = 0xce,
-            header_UINT64        = 0xcf,
-            header_INT8          = 0xd0,
-            header_INT16         = 0xd1,
-            header_INT32         = 0xd2,
-            header_INT64         = 0xd3,
-            header_FIX_EXT1      = 0xd4,
-            header_FIX_EXT2      = 0xd5,
-            header_FIX_EXT4      = 0xd6,
-            header_FIX_EXT8      = 0xd7,
-            header_FIX_EXT16     = 0xd8,
-            header_STR8          = 0xd9,
-            header_STR16         = 0xda,
-            header_STR32         = 0xdb,
-            header_ARRAY16       = 0xdc,
-            header_ARRAY32       = 0xdd,
-            header_MAP16         = 0xde,
-            header_MAP32         = 0xdf,
+            header_FIX_INT_MIN   =-0x20, ///< 最小の固定値整数。
+            header_FIX_INT_MAX   = 0x7f, ///< 最大の固定値整数。
+            header_FIX_MAP_MIN   = 0x80, ///< 最小長の固定長連想配列。
+            header_FIX_MAP_MAX   = 0x8f, ///< 最大長の固定長連想配列。
+            header_FIX_ARRAY_MIN = 0x90, ///< 最小長の固定長配列。
+            header_FIX_ARRAY_MAX = 0x9f, ///< 最大長の固定長配列。
+            header_FIX_STR_MIN   = 0xa0, ///< 最小長の固定長文字列。
+            header_FIX_STR_MAX   = 0xbf, ///< 最大長の固定長文字列。
+            header_NIL           = 0xc0, ///< nil値。
+            header_NEVER_USED    = 0xc1, ///< 未使用。
+            header_FALSE         = 0xc2, ///< false
+            header_TRUE          = 0xc3, ///< true
+            header_BIN8          = 0xc4, ///< 長さが8bit以下のバイナリ。
+            header_BIN16         = 0xc5, ///< 長さが16bit以下のバイナリ。
+            header_BIN32         = 0xc6, ///< 長さが32bit以下のバイナリ。
+            header_EXT8          = 0xc7, ///< 長さが8bit以下の拡張バイナリ。
+            header_EXT16         = 0xc8, ///< 長さが16bit以下の拡張バイナリ。
+            header_EXT32         = 0xc9, ///< 長さが32bit以下の拡張バイナリ。
+            header_FLOAT32       = 0xca, ///< IEEE754単精度浮動小数点数。
+            header_FLOAT64       = 0xcb, ///< IEEE754倍精度浮動小数点数。
+            header_UINT8         = 0xcc, ///< 0以上の8bit整数。
+            header_UINT16        = 0xcd, ///< 0以上の16bit整数。
+            header_UINT32        = 0xce, ///< 0以上の32bit整数。
+            header_UINT64        = 0xcf, ///< 0以上の64bit整数。
+            header_INT8          = 0xd0, ///< 0未満の8bit整数。
+            header_INT16         = 0xd1, ///< 0未満の16bit整数。
+            header_INT32         = 0xd2, ///< 0未満の32bit整数。
+            header_INT64         = 0xd3, ///< 0未満の64bit整数。
+            header_FIX_EXT1      = 0xd4, ///< 長さが1の拡張バイナリ。
+            header_FIX_EXT2      = 0xd5, ///< 長さが2の拡張バイナリ。
+            header_FIX_EXT4      = 0xd6, ///< 長さが4の拡張バイナリ。
+            header_FIX_EXT8      = 0xd7, ///< 長さが8の拡張バイナリ。
+            header_FIX_EXT16     = 0xd8, ///< 長さが16の拡張バイナリ。
+            header_STR8          = 0xd9, ///< 長さが8bit以下の文字列。
+            header_STR16         = 0xda, ///< 長さが16bit以下の文字列。
+            header_STR32         = 0xdb, ///< 長さが32bit以下の文字列。
+            header_ARRAY16       = 0xdc, ///< 長さが16bit以下の配列。
+            header_ARRAY32       = 0xdd, ///< 長さが32bit以下の配列。
+            header_MAP16         = 0xde, ///< 長さが16bit以下の連想配列。
+            header_MAP32         = 0xdf, ///< 長さが32bit以下の連想配列。
         };
     }
 
@@ -191,9 +191,6 @@ namespace psyq
                 static_assert(sizeof(template_bytes) == template_size, "");
                 static_assert(std::is_integral<template_bytes>::value, "");
 
-                typedef typename psyq::internal
-                    ::message_pack_bytes<template_size / 2>::type
-                        half_bytes;
                 auto const local_1st_shift(
                     (8 * template_size / 2) * in_big_endian);
                 auto const local_2nd_shift(
@@ -202,6 +199,9 @@ namespace psyq
                 typedef psyq::internal
                     ::message_pack_bytes_serializer<template_size / 2>
                         half_serializer;
+                typedef typename psyq::internal
+                    ::message_pack_bytes<template_size / 2>::type
+                        half_bytes;
                 return half_serializer::write(
                         out_stream,
                         static_cast<half_bytes>(in_bytes >> local_1st_shift),
@@ -342,7 +342,7 @@ namespace psyq
         /// @copydoc message_pack_tuple_serializer
         template<> struct message_pack_tuple_serializer<0>
         {
-            /// 何もしない。
+            /// タプルの要素数が0なので、何もしない。
             template<typename template_stream, typename template_tuple>
             static void write(template_stream&, template_tuple const&) {}
         };
@@ -351,7 +351,7 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief MessagePack形式で直列化したバイナリを、 std::basic_ostream
-           互換の出力ストリームオブジェクトに書き込むアダプタ。
+           互換のストリームへ出力するアダプタ。
     @tparam template_out_stream @copydoc self::stream
     @tparam template_stack_capacity @copydoc self::stack_capacity
  */
@@ -379,6 +379,7 @@ class psyq::message_pack::serializer
     {
         little_endian = false, ///< リトルエンディアン。
         big_endian = true,     ///< ビッグエンディアン。
+        //native_endian = ,    ///< ネイティブエンディアン。
     };
 
     /** @brief 次に直列化する値の種類。
@@ -423,7 +424,7 @@ class psyq::message_pack::serializer
         io_source.stack_size_ = 0;
     }
 
-    /// 出力ストリームを破壊する。
+    /// 出力ストリームを破棄する。
     public: ~serializer()
     {
         this->fill_container_stack();
@@ -446,7 +447,7 @@ class psyq::message_pack::serializer
     //-------------------------------------------------------------------------
     /// @name MessagePack値への直列化
     //@{
-    /** @brief nilを直列化し、ストリームへ出力する。
+    /** @brief nil値をMessagePack形式で直列化し、ストリームへ出力する。
      */
     public: void write_nil()
     {
@@ -459,7 +460,7 @@ class psyq::message_pack::serializer
         this->update_container_stack();
     }
 
-    /** @brief 真偽値を直列化し、ストリームへ出力する。
+    /** @brief 真偽値をMessagePack形式で直列化し、ストリームへ出力する。
         @param[in] in_boolean 直列化する真偽値。
      */
     public: void write_boolean(bool const in_boolean)
@@ -476,7 +477,7 @@ class psyq::message_pack::serializer
         this->update_container_stack();
     }
 
-    /** @brief 無符号整数を直列化し、ストリームへ出力する。
+    /** @brief 無符号整数をMessagePack形式で直列化し、ストリームへ出力する。
         @param[in] in_integer 直列化する整数。
      */
     public: template<typename template_integer_type>
@@ -523,7 +524,7 @@ class psyq::message_pack::serializer
         this->update_container_stack();
     }
 
-    /** @brief 有符号整数を直列化し、ストリームへ出力する。
+    /** @brief 有符号整数をMessagePack形式で直列化し、ストリームへ出力する。
         @param[in] in_integer 直列化する整数。
      */
     public: template<typename template_integer_type>
@@ -581,7 +582,7 @@ class psyq::message_pack::serializer
         this->update_container_stack();
     }
 
-    /** @brief 浮動小数点数を直列化し、ストリームへ出力する。
+    /** @brief 浮動小数点数をMessagePack形式で直列化し、ストリームへ出力する。
         @param[in] in_float 直列化する浮動小数点数。
      */
     public: void write_floating_point(float const in_float)
@@ -625,7 +626,7 @@ class psyq::message_pack::serializer
     /** @brief 連続するメモリ領域にある文字列を、
                MessagePack形式の文字列として直列化し、ストリームへ出力する。
         @param[in] in_begin  直列化する文字列の先頭位置。
-        @param[in] in_length 直列化する文字列の文字数。
+        @param[in] in_length 直列化する文字列の要素数。
      */
     public: template<typename template_char>
     void write_contiguous_string(
@@ -698,7 +699,7 @@ class psyq::message_pack::serializer
     /** @brief コンテナをMessagePack形式の文字列として直列化し、
                ストリームへ出力する。
         @param[in] in_begin  直列化するコンテナの先頭位置。
-        @param[in] in_length 直列化するコンテナの文字数。
+        @param[in] in_length 直列化するコンテナの要素数。
      */
     public: template<typename template_iterator>
     void write_container_string(
@@ -793,17 +794,14 @@ class psyq::message_pack::serializer
     //-------------------------------------------------------------------------
     /** @brief 文字列コンテナの直列化を開始する。
 
-        以後、 in_size 個の文字を、 write_serial_raw() で直列化できる。
+        以後、 in_length 個の要素を、 write_serial_raw() で直列化できる。
 
-        @tparam template_element 文字列コンテナの文字の型。
-        @param[in] in_length 直列化する文字列コンテナの文字数。
+        @param[in] in_length 直列化する文字列コンテナの要素数。
         @sa self::write_serial_raw() self::fill_container_rest()
      */
-    public: template<typename template_element>
-    void make_serial_string(std::size_t const in_length)
+    public: void make_serial_string(std::size_t const in_length)
     {
-        auto const local_size(in_length * sizeof(template_element));
-        if (local_size <= 0)
+        if (in_length <= 0)
         {
             // 空の文字列を直列化する。
             this->write_big_endian<std::uint8_t>(
@@ -816,13 +814,13 @@ class psyq::message_pack::serializer
             PSYQ_ASSERT(false);
         }
         // 文字列のバイト数を直列化する。
-        else if (this->write_string_header(local_size))
+        else if (this->write_string_header(in_length))
         {
             // RAWバイト列をスタックに積む。
             auto& local_stack(
                 this->stack_.at(this->get_container_stack_size()));
             local_stack.type = self::next_type_RAW_ELEMENT;
-            local_stack.rest_size = local_size;
+            local_stack.rest_size = in_length;
             ++this->stack_size_;
         }
     }
@@ -1297,7 +1295,7 @@ class psyq::message_pack::serializer
         }
     }
 
-    /** @brief 直前に直列化を開始したコンテナの残り要素をnilで埋める。
+    /** @brief 直前に直列化を開始したコンテナの残り要素をnil値で埋める。
         @sa self::make_serial_array() self::make_serial_map()
      */
     public: void fill_container_rest()
@@ -1345,7 +1343,7 @@ class psyq::message_pack::serializer
         this->update_container_stack();
     }
 
-    /** @brief 現在直列化途中のオブジェクトの残りをnillで埋める。
+    /** @brief 現在直列化途中のオブジェクトの残りをnil値で埋める。
         @sa self::make_serial_array() self::make_serial_map()
      */
     public: void fill_container_stack()

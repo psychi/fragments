@@ -1066,16 +1066,13 @@ class psyq::message_pack::serializer
         this->stream_.write(
             static_cast<typename self::stream::char_type const*>(in_data),
             in_size);
-        bool const local_good(this->stream_.good());
-        if (local_good)
-        {
-            this->update_container_stack();
-        }
-        else
+        if (!this->stream_.good())
         {
             PSYQ_ASSERT(false);
+            return false;
         }
-        return local_good;
+        this->update_container_stack();
+        return true;
     }
 
     //-------------------------------------------------------------------------
@@ -1091,8 +1088,8 @@ class psyq::message_pack::serializer
     {
         this->make_serial_array(std::tuple_size<template_tuple>::value);
         psyq::internal::message_pack_tuple_serializer<
-            std::tuple_size<template_tuple>::value>::write(
-                *this, in_tuple);
+            std::tuple_size<template_tuple>::value>
+                ::write(*this, in_tuple);
     }
 
     /** @brief コンテナをMessagePack形式の配列として直列化し、
@@ -1120,15 +1117,15 @@ class psyq::message_pack::serializer
         this->write_array(in_container.begin(), in_container.size());
     }
 
-    /** @brief 集合コンテナをMessagePack形式の連想配列として直列化し、
+    /** @brief コンテナをMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
-        @param[in] in_iterator 直列化する集合コンテナの先頭位置。
-        @param[in] in_length   直列化する集合コンテナの要素数。
+        @param[in] in_iterator 直列化するコンテナの先頭位置。
+        @param[in] in_length   直列化するコンテナの要素数。
      */
     public: template<typename template_iterator>
     void write_set(template_iterator in_iterator, std::size_t in_length)
     {
-        // マップ値が空の辞書として集合を直列化する。
+        // マップ値が空の連想配列としてコンテナを直列化する。
         this->make_serial_map(in_length);
         for (; 0 < in_length; --in_length, ++in_iterator)
         {
@@ -1136,9 +1133,9 @@ class psyq::message_pack::serializer
             this->write_nil();
         }
     }
-    /** @brief 集合コンテナをMessagePack形式の連想配列として直列化し、
+    /** @brief コンテナをMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
-        @param[in] in_set 直列化する集合コンテナ。
+        @param[in] in_set 直列化するコンテナ。
      */
     public: template<typename template_set>
     void write_set(template_set const& in_set)
@@ -1146,8 +1143,9 @@ class psyq::message_pack::serializer
         this->write_set(in_set.begin(), in_set.size());
     }
 
-    /** @brief 連想配列コンテナをMessagePack形式の連想配列として直列化し、
+    /** @brief pairコンテナをMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
+        @tparam template_iterator std::pair 互換の要素を指す反復子の型。
         @param[in] in_iterator 直列化する連想配列コンテナの先頭位置。
         @param[in] in_length   直列化する連想配列コンテナの要素数。
      */
@@ -1161,9 +1159,10 @@ class psyq::message_pack::serializer
             *this << local_value.first << local_value.second;
         }
     }
-    /** @brief 連想配列コンテナをMessagePack形式の連想配列として直列化し、
+    /** @brief pairコンテナをMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
-        @param[in]  in_map     直列化する連想配列コンテナ。
+        @tparam template_map std::pair 互換の要素を持つコンテナ型。
+        @param[in] in_map 直列化する連想配列コンテナ。
      */
     public: template<typename template_map>
     void write_map(template_map const& in_map)
@@ -1203,33 +1202,12 @@ class psyq::message_pack::serializer
      */
     public: void make_serial_array(std::size_t const in_length)
     {
-        if (in_length <= 0)
-        {
-            // 空の配列を直列化する。
-            this->write_big_endian<std::uint8_t>(
-                psyq::message_pack::header_FIX_ARRAY_MIN);
-            this->update_container_stack();
-        }
-        else if (self::stack_capacity <= this->get_container_stack_size())
-        {
-            // スタック限界を超えたので失敗。
-            PSYQ_ASSERT(false);
-        }
-        // 配列の要素数を直列化する。
-        else if (
-            this->write_container_size(
-                in_length,
-                psyq::message_pack::header_ARRAY16,
-                psyq::message_pack::header_FIX_ARRAY_MIN,
-                psyq::message_pack::header_FIX_ARRAY_MAX))
-        {
-            // 配列をスタックに積む。
-            auto& local_stack(
-                this->stack_.at(this->get_container_stack_size()));
-            local_stack.type = self::next_type_ARRAY_ELEMENT;
-            local_stack.rest_size = in_length;
-            ++this->stack_size_;
-        }
+        this->make_serial_container<
+            self::next_type_ARRAY_ELEMENT,
+            psyq::message_pack::header_ARRAY16,
+            psyq::message_pack::header_FIX_ARRAY_MIN,
+            psyq::message_pack::header_FIX_ARRAY_MAX>(
+                in_length);
     }
 
     /** @brief MessagePack形式の連想配列の直列化を開始する。
@@ -1266,33 +1244,12 @@ class psyq::message_pack::serializer
      */
     public: void make_serial_map(std::size_t const in_length)
     {
-        if (in_length <= 0)
-        {
-            // 空の連想配列を直列化する。
-            this->write_big_endian<std::uint8_t>(
-                psyq::message_pack::header_FIX_MAP_MIN);
-            this->update_container_stack();
-        }
-        else if (self::stack_capacity <= this->get_container_stack_size())
-        {
-            // スタック限界を超えたので失敗。
-            PSYQ_ASSERT(false);
-        }
-        // 連想配列の要素数を直列化する。
-        else if (
-            this->write_container_size(
-                in_length,
-                psyq::message_pack::header_MAP16,
-                psyq::message_pack::header_FIX_MAP_MIN,
-                psyq::message_pack::header_FIX_MAP_MAX))
-        {
-            // 連想配列をスタックに積む。
-            auto& local_stack(
-                this->stack_.at(this->get_container_stack_size()));
-            local_stack.type = self::next_type_MAP_KEY;
-            local_stack.rest_size = in_length;
-            ++this->stack_size_;
-        }
+        this->make_serial_container<
+            self::next_type_MAP_KEY,
+            psyq::message_pack::header_MAP16,
+            psyq::message_pack::header_FIX_MAP_MIN,
+            psyq::message_pack::header_FIX_MAP_MAX>(
+                in_length);
     }
 
     /** @brief 直前に直列化を開始したコンテナの残り要素をnil値で埋める。
@@ -1354,36 +1311,68 @@ class psyq::message_pack::serializer
         }
     }
     //@}
-    /** @brief コンテナの要素数を直列化する。
-        @param[in] in_length         コンテナの要素数。
-        @param[in] in_header_begin   コンテナのヘッダ。
-        @param[in] in_fix_header_min 固定長ヘッダの最小値。
-        @param[in] in_fix_header_max 固定長ヘッダの最大値。
+    /** @brief コンテナの直列化を開始する。
+        @tparam template_next_type      スタックの種別。
+        @tparam template_header_begin   コンテナのヘッダ。
+        @tparam template_header_fix_min 固定長ヘッダの最小値。
+        @tparam template_header_fix_max 固定長ヘッダの最大値。
+        @param[in] in_length 直列化するコンテナの要素数。
      */
-    private: bool write_container_size(
-        std::size_t const in_length,
-        std::uint8_t const in_header_begin,
-        std::uint8_t const in_fix_header_min,
-        std::uint8_t const in_fix_header_max)
+    private: template<
+        typename self::next_type template_next_type,
+        std::uint8_t template_header_begin,
+        std::uint8_t template_header_fix_min,
+        std::uint8_t template_header_fix_max>
+    bool make_serial_container(std::size_t const in_length)
     {
-        PSYQ_ASSERT(in_fix_header_min <= in_fix_header_max);
-        if (in_length <= unsigned(in_fix_header_max - in_fix_header_min))
+        static_assert(template_header_fix_min <= template_header_fix_max, "");
+        if (in_length <= 0)
         {
-            return this->write_big_endian(
-                static_cast<std::uint8_t>(in_fix_header_min + in_length));
+            // 空の連想配列を直列化する。
+            if (this->write_big_endian<std::uint8_t>(template_header_fix_min))
+            {
+                this->update_container_stack();
+                return true;
+            }
+            return false;
+        }
+        else if (self::stack_capacity <= this->get_container_stack_size())
+        {
+            // スタック限界を超えたので失敗。
+            PSYQ_ASSERT(false);
+            return false;
+        }
+        else if (in_length <= template_header_fix_max - template_header_fix_min)
+        {
+            // 固定長コンテナのヘッダを直列化する。
+            std::uint8_t const local_header(
+                template_header_fix_min + in_length);
+            if (!this->write_big_endian(local_header))
+            {
+                return false;
+            }
         }
         else if (in_length <= (std::numeric_limits<std::uint16_t>::max)())
         {
-            return this->write_big_endian(in_header_begin)
-                && this->write_big_endian(
-                    static_cast<std::uint16_t>(in_length));
+            // 16bit長コンテナのヘッダと要素数を直列化する。
+            std::uint8_t const local_header(template_header_begin);
+            std::uint16_t const local_length(in_length);
+            if (!this->write_big_endian(local_header) ||
+                !this->write_big_endian(local_length))
+            {
+                return false;
+            }
         }
         else if (in_length <= (std::numeric_limits<std::uint32_t>::max)())
         {
-            return this->write_big_endian(
-                    static_cast<std::uint8_t>(in_header_begin + 1))
-                && this->write_big_endian(
-                    static_cast<std::uint32_t>(in_length));
+            // 32bit長コンテナのヘッダと要素数を直列化する。
+            std::uint8_t const local_header(template_header_begin + 1);
+            std::uint32_t const local_length(in_length);
+            if (!this->write_big_endian(local_header) ||
+                !this->write_big_endian(local_length))
+            {
+                return false;
+            }
         }
         else
         {
@@ -1391,6 +1380,14 @@ class psyq::message_pack::serializer
             PSYQ_ASSERT(false);
             return false;
         }
+
+        // コンテナをスタックに積む。
+        auto& local_stack(
+            this->stack_.at(this->get_container_stack_size()));
+        local_stack.type = template_next_type;
+        local_stack.rest_size = in_length;
+        ++this->stack_size_;
+        return true;
     }
 
     /** @brief コンテナスタックを更新する。
@@ -1737,8 +1734,7 @@ operator<<(
             out_stream,
     std::pair<template_first, template_second> const& in_pair)
 {
-    out_stream << in_pair.first << in_pair.second;
-    return out_stream;
+    return out_stream << in_pair.first << in_pair.second;
 }
 #endif // 0
 

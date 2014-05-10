@@ -1010,7 +1010,7 @@ namespace psyq
             }
             local_serializer.write_container_binary(
                 true, local_integer_set.begin(), local_integer_set.size());
-            local_serializer.write_container_extended_binary(
+            local_serializer.write_container_extended(
                 false, local_integer_set.begin(), local_integer_set.size(), 0x7f);
             local_serializer.write_array(local_integer_set);
             local_serializer.write_set(local_integer_set);

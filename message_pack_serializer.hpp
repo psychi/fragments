@@ -827,11 +827,11 @@ class psyq::message_pack::serializer
         @param[in] in_type  直列化する値の拡張型識別値。
      */
     public: template<typename template_element_type>
-    void write_contiguous_extended_binary(
+    void write_contiguous_extended(
         template_element_type const& in_value,
         std::int8_t const in_type)
     {
-        this->write_contiguous_extended_binary(&in_value, 1, in_type);
+        this->write_contiguous_extended(&in_value, 1, in_type);
     }
     /** @brief 連続するメモリ上にある配列を、MessagePack形式の
                拡張バイナリとして直列化し、ストリームへ出力する。
@@ -840,14 +840,14 @@ class psyq::message_pack::serializer
         @param[in] in_type   直列化する配列の拡張型識別値。
      */
     public: template<typename template_element_type>
-    void write_contiguous_extended_binary(
+    void write_contiguous_extended(
         template_element_type const* const in_begin,
         std::size_t const in_length,
         std::int8_t const in_type)
     {
         // 拡張バイナリの大きさと拡張型識別値を直列化する。
         auto const local_size(in_length * sizeof(template_element_type));
-        if (this->write_extended_binary_header(local_size, in_type))
+        if (this->write_extended_header(local_size, in_type))
         {
             // 拡張バイナリを直列化する。
             this->write_raw_data(in_begin, local_size);
@@ -862,7 +862,7 @@ class psyq::message_pack::serializer
         @param[in] in_type      直列化する拡張型識別値。
      */
     public: template<typename template_iterator>
-    void write_container_extended_binary(
+    void write_container_extended(
         bool const in_endianess,
         template_iterator const& in_begin,
         std::size_t const in_length,
@@ -870,7 +870,7 @@ class psyq::message_pack::serializer
     {
         typedef typename std::iterator_traits<template_iterator>::value_type
             element;
-        this->make_serial_extended_binary<element>(in_length, in_type);
+        this->make_serial_extended<element>(in_length, in_type);
         this->fill_serial_raw(in_endianess, in_begin, in_length);
     }
     /** @brief 標準コンテナをMessagePack形式の拡張バイナリとして直列化し、
@@ -880,12 +880,12 @@ class psyq::message_pack::serializer
         @param[in] in_type      直列化する拡張型識別値。
      */
     public: template<typename template_container>
-    void write_container_extended_binary(
+    void write_container_extended(
         bool const in_endianess,
         template_container const& in_container,
         std::int8_t const in_type)
     {
-        this->write_container_extended_binary(
+        this->write_container_extended(
             in_endianess, in_container.begin(), in_container.size(), in_type);
     }
 
@@ -899,7 +899,7 @@ class psyq::message_pack::serializer
         @sa self::fill_rest_elements()
      */
     public: template<typename template_element>
-    void make_serial_extended_binary(
+    void make_serial_extended(
         std::size_t const in_length,
         std::int8_t const in_type)
     {
@@ -911,7 +911,7 @@ class psyq::message_pack::serializer
         }
         else if (
             // 拡張バイナリのバイト数を直列化する。
-            this->write_extended_binary_header(local_size, in_type)
+            this->write_extended_header(local_size, in_type)
             && 0 < local_size)
         {
             // RAWバイト列をスタックに積む。
@@ -927,7 +927,7 @@ class psyq::message_pack::serializer
         @param[in] in_size 拡張バイナリのバイト数。
         @param[in] in_type 拡張型識別値。
      */
-    private: bool write_extended_binary_header(
+    private: bool write_extended_header(
         std::size_t const in_size,
         std::int8_t const in_type)
     {
@@ -1026,17 +1026,17 @@ class psyq::message_pack::serializer
         - self::write_floating_point()
         - self::write_contiguous_string()
         - self::write_contiguous_binary()
-        - self::write_contiguous_extended_binary()
+        - self::write_contiguous_extended()
         - self::write_container_string()
         - self::write_container_binary()
-        - self::write_container_extended_binary()
+        - self::write_container_extended()
         - self::write_tuple()
         - self::write_array()
         - self::write_set()
         - self::write_map()
         - self::make_serial_string()
         - self::make_serial_binary()
-        - self::make_serial_extended_binary()
+        - self::make_serial_extended()
         - self::make_serial_array()
         - self::make_serial_map()
 
@@ -1124,17 +1124,17 @@ class psyq::message_pack::serializer
         - self::write_floating_point()
         - self::write_contiguous_string()
         - self::write_contiguous_binary()
-        - self::write_contiguous_extended_binary()
+        - self::write_contiguous_extended()
         - self::write_container_string()
         - self::write_container_binary()
-        - self::write_container_extended_binary()
+        - self::write_container_extended()
         - self::write_tuple()
         - self::write_array()
         - self::write_set()
         - self::write_map()
         - self::make_serial_string()
         - self::make_serial_binary()
-        - self::make_serial_extended_binary()
+        - self::make_serial_extended()
         - self::make_serial_array()
         - self::make_serial_map()
 
@@ -1162,7 +1162,7 @@ class psyq::message_pack::serializer
         @param[in] in_length    直列化する標準コンテナの要素数。
         @sa self::make_serial_string()
         @sa self::make_serial_binary()
-        @sa self::make_serial_extended_binary()
+        @sa self::make_serial_extended()
      */
     public: template<typename template_iterator>
     void fill_serial_raw(
@@ -1201,7 +1201,7 @@ class psyq::message_pack::serializer
                MessagePackコンテナの残り要素を、空値で埋める。
         @sa self::make_serial_string()
         @sa self::make_serial_binary()
-        @sa self::make_serial_extended_binary()
+        @sa self::make_serial_extended()
         @sa self::make_serial_array()
         @sa self::make_serial_map()
         @sa self::fill_rest_containers()
@@ -1255,7 +1255,7 @@ class psyq::message_pack::serializer
                MessagePackコンテナの残り要素を、空値で埋める。
         @sa self::make_serial_string()
         @sa self::make_serial_binary()
-        @sa self::make_serial_extended_binary()
+        @sa self::make_serial_extended()
         @sa self::make_serial_array()
         @sa self::make_serial_map()
         @sa self::fill_rest_elements()
@@ -1486,7 +1486,7 @@ class psyq::message_pack::serializer
             - 配列／連想配列なら、残り要素数。
         @sa self::make_serial_string()
         @sa self::make_serial_binary()
-        @sa self::make_serial_extended_binary()
+        @sa self::make_serial_extended()
         @sa self::make_serial_array()
         @sa self::make_serial_map()
      */
@@ -1500,7 +1500,7 @@ class psyq::message_pack::serializer
         @return 直列化を終了してないMessagePackコンテナの数。
         @sa self::make_serial_string()
         @sa self::make_serial_binary()
-        @sa self::make_serial_extended_binary()
+        @sa self::make_serial_extended()
         @sa self::make_serial_array()
         @sa self::make_serial_map()
      */

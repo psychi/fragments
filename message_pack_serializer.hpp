@@ -1439,7 +1439,7 @@ struct psyq::message_pack::raw_stream
         psyq::message_pack::raw_stream を実装し、
         staticメンバ関数として read() と write() を実装すること。
      */
-    typedef template_value value_type;
+    public: typedef template_value value_type;
     static_assert(
         std::is_integral<template_value>::value
         || std::is_floating_point<template_value>::value,
@@ -1450,13 +1450,13 @@ struct psyq::message_pack::raw_stream
         in_endianess とnative-endianが一致するなら先頭から末尾へ、
         異なるなら末尾から先頭の順に、値のバイト列をストリームへ出力する。
 
-        @param[out] out_stream   出力先ストリーム。
-        @param[in]  in_value     直列化する値。
-        @param[in]  in_endianess 値を直列化する際のエンディアン性。
+        @param[in,out] io_ostream   出力先ストリーム。
+        @param[in]     in_value     直列化する値。
+        @param[in]     in_endianess 値を直列化する際のエンディアン性。
      */
-    template<typename template_stream>
+    public: template<typename template_stream>
     static bool write(
-        template_stream& out_stream,
+        template_stream& io_ostream,
         template_value const& in_value,
         psyq::message_pack::endianess const in_endianess)
     {
@@ -1471,15 +1471,22 @@ struct psyq::message_pack::raw_stream
         auto const local_end(local_begin + sizeof(template_value) * local_step);
         for (auto i(local_begin); i != local_end; i += local_step)
         {
-            out_stream.put(static_cast<typename template_stream::char_type>(*i));
+            io_ostream.put(static_cast<typename template_stream::char_type>(*i));
         }
-        return out_stream.good();
+        return io_ostream.good();
     }
 
     /** @brief バイト列から値を直列化復元する。
         @note 未実装。
      */
-    private: static bool read();
+    public: template<typename template_stream>
+    static bool read(
+        template_stream& io_istream,
+        template_value& out_value,
+        psyq::message_pack::endianess const in_endianess)
+    {
+        return false;
+    }
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

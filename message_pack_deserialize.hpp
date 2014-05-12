@@ -65,7 +65,7 @@ class psyq::message_pack::istream
         return this->end() <= this->current();
     }
 
-    public: std::int8_t get()
+    public: std::uint8_t get()
     {
         if (this->eof())
         {
@@ -249,12 +249,10 @@ class psyq::message_pack::deserializer
             {
             case self::deserialize_result_FINISH:
                 this->stack_[0].object = local_object;
-                io_istream.seekg(1, std::ios::cur);
                 return 1;
 
             case self::deserialize_result_CONTINUE:
                 this->phase_ = self::phase_HEADER;
-                io_istream.seekg(1, std::ios::cur);
                 if (io_istream.tellg() < io_istream.end())
                 {
                     break;
@@ -285,7 +283,7 @@ class psyq::message_pack::deserializer
         template_stream& io_istream)
     {
         // MessagePackの直列化形式によって、復元処理を分岐する。
-        auto const local_header(*io_istream.tellg());
+        auto const local_header(static_cast<std::uint8_t>(io_istream.get()));
         if (local_header <= psyq::message_pack::header_FIX_INT_MAX)
         {
             // [0x00, 0x7f]: positive fixnum
@@ -416,7 +414,6 @@ class psyq::message_pack::deserializer
         }
 
         // MessagePackオブジェクトの値を復元する。
-        io_istream.seekg(1, std::ios::cur);
         return this->deserialize_value(out_object, io_istream);
     }
 
@@ -436,7 +433,7 @@ class psyq::message_pack::deserializer
         }
         auto const local_data(io_istream.tellg());
         PSYQ_ASSERT(0 < this->trail_);
-        io_istream.seekg(this->trail_ - 1, std::ios::cur);
+        io_istream.seekg(this->trail_, std::ios::cur);
         switch (this->phase_)
         {
         // 無符号整数
@@ -507,7 +504,6 @@ class psyq::message_pack::deserializer
             if (0 < this->trail_)
             {
                 this->phase_ = self::phase_STRING;
-                io_istream.seekg(1, std::ios::cur);
                 return this->deserialize_value(out_object, io_istream);
             }
             self::deserialize_string(
@@ -538,7 +534,6 @@ class psyq::message_pack::deserializer
             if (0 < this->trail_)
             {
                 this->phase_ = self::phase_BINARY;
-                io_istream.seekg(1, std::ios::cur);
                 return this->deserialize_value(out_object, io_istream);
             }
             self::deserialize_binary(
@@ -566,7 +561,6 @@ class psyq::message_pack::deserializer
                 = self::load_big_endian_integer<std::uint32_t>(local_data);
             goto PSYQ_MESSAGE_PACK_DESERIALIZE_EXTENDED_BINARY;
         PSYQ_MESSAGE_PACK_DESERIALIZE_EXTENDED_BINARY:
-            io_istream.seekg(1, std::ios::cur);
             if (0 < this->trail_)
             {
                 this->phase_ = self::phase_EXTENDED_BINARY;
@@ -576,9 +570,10 @@ class psyq::message_pack::deserializer
             self::deserialize_extended(
                 out_object,
                 this->pool_,
-                io_istream.tellg() - 1,
+                io_istream.tellg(),
                 1,
                 this->allocate_raw_);
+            io_istream.seekg(1, std::ios::cur);
             break;
         case self::phase_EXTENDED_BINARY:
             PSYQ_ASSERT(0 < this->trail_);

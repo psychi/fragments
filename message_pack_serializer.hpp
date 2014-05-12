@@ -509,10 +509,9 @@ class psyq::message_pack::serializer
         template_char const* const in_begin,
         std::size_t const in_size)
     {
-        // MessagePack文字列はUTF-8なので、文字は1バイト単位となる。
         static_assert(
+            // MessagePack文字列はUTF-8なので、文字は1バイト単位となる。
             sizeof(template_char) == 1, "MessagePack string is only UTF-8.");
-
         auto const local_size(in_size * sizeof(template_char));
         return this->write_string_header(local_size)
             && this->write_raw_data(in_begin, local_size);
@@ -1001,6 +1000,23 @@ class psyq::message_pack::serializer
     //-------------------------------------------------------------------------
     /// @name MessagePackコンテナ要素への直列化
     //@{
+    /** @brief 直前に直列化を開始した文字列／バイナリ／拡張バイナリの残り要素に
+               値をMessagePack形式のRAWバイト列として直列化し、
+               ストリームへ出力する。
+        @param[in] in_value     直列化する値。
+        @param[in] in_endianess コンテナ要素を直列化する際のエンディアン性。
+        @sa self::make_serial_string()
+        @sa self::make_serial_binary()
+        @sa self::make_serial_extended()
+     */
+    public: template<typename template_value>
+    std::size_t fill_serial_raw(
+        template_value const& in_value,
+        psyq::message_pack::endianess const in_endianess)
+    {
+        return this->fill_serial_raw(&in_value, 1, in_endianess);
+    }
+
     /** @brief 直前に直列化を開始した文字列／バイナリ／拡張バイナリの残り要素に
                標準コンテナの要素をMessagePack形式のRAWバイト列として直列化し、
                ストリームへ出力する。

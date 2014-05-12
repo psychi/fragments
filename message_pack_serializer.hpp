@@ -302,8 +302,7 @@ class psyq::message_pack::serializer
         {
             PSYQ_ASSERT(false);
         }
-        else if (
-            this->write_big_endian<std::uint8_t>(psyq::message_pack::header_NIL))
+        else if (this->write_big_endian<std::uint8_t>(psyq::message_pack::header_NIL))
         {
             this->update_container_stack();
             return true;
@@ -532,7 +531,7 @@ class psyq::message_pack::serializer
         static_assert(
             // MessagePack文字列はUTF-8なので、文字は1バイト単位となる。
             sizeof(element) == 1, "MessagePack string is only UTF-8.");
-        return this->make_serial_string<element>(in_length)
+        return this->make_serial_string(in_length)
             && this->fill_serial_raw(in_begin, in_length, psyq::message_pack::big_endian) == 0;
     }
     /** @brief 標準コンテナをMessagePack形式の文字列として直列化し、

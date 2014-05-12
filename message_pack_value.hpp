@@ -75,11 +75,11 @@ union psyq::internal::message_pack_value
     public: typedef psyq::internal::message_pack_container<std::int8_t const>
         string;
     /// バイナリを保持するRAWバイト列。
-    public: typedef psyq::internal::message_pack_extended_binary::super
+    public: typedef psyq::internal::message_pack_extended::super
         binary;
     /// 拡張バイナリを保持するRAWバイト列。
-    public: typedef psyq::internal::message_pack_extended_binary
-        extended_binary;
+    public: typedef psyq::internal::message_pack_extended
+        extended;
     /// @copydoc self::type::ARRAY
     public: typedef psyq::internal::message_pack_container<
         psyq::message_pack::object>
@@ -145,12 +145,12 @@ union psyq::internal::message_pack_value
         binary_(in_binary)
     {}
     /** @brief MessagePackオブジェクトに文字列を格納する。
-        @param[in] in_extended_binary MessagePackオブジェクトに格納する文字列。
+        @param[in] in_extended MessagePackオブジェクトに格納する文字列。
      */
     public: explicit PSYQ_CONSTEXPR message_pack_value(
-        self::extended_binary const& in_extended_binary)
+        self::extended const& in_extended)
     PSYQ_NOEXCEPT:
-        extended_binary_(in_extended_binary)
+        extended_(in_extended)
     {}
 
     /** @brief MessagePackオブジェクトに配列を格納する。
@@ -220,8 +220,8 @@ union psyq::internal::message_pack_value
         case self::type::BINARY:
             return in_left_value.binary_ == in_right_value.binary_;
         case self::type::EXTENDED_BINARY:
-            return in_left_value.extended_binary_
-                == in_right_value.extended_binary_;
+            return in_left_value.extended_
+                == in_right_value.extended_;
         case self::type::ARRAY:
             return in_left_value.array_ == in_right_value.array_;
         case self::type::MAP:
@@ -420,8 +420,8 @@ union psyq::internal::message_pack_value
         case self::type::BINARY:
             return in_left_value.binary_.compare(in_right_value.binary_);
         case self::type::EXTENDED_BINARY:
-            return in_left_value.extended_binary_.compare(
-                in_right_value.extended_binary_);
+            return in_left_value.extended_.compare(
+                in_right_value.extended_);
         case self::type::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_raw);
         case self::type::MAP:
@@ -939,8 +939,8 @@ union psyq::internal::message_pack_value
     public: self::string string_;
     /// @copydoc self::binary
     public: self::binary binary_;
-    /// @copydoc self::extended_binary
-    public: self::extended_binary extended_binary_;
+    /// @copydoc self::extended
+    public: self::extended extended_;
     /// @copydoc self::type::ARRAY
     public: self::array array_;
     /// @copydoc self::type::MAP

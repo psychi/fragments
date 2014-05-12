@@ -11,7 +11,7 @@ namespace psyq
     {
         /// @cond
         template<typename> struct message_pack_container;
-        struct message_pack_extended_binary;
+        struct message_pack_extended;
         template<typename> struct message_pack_map;
         /// @endcond
 
@@ -405,13 +405,13 @@ struct psyq::internal::message_pack_container
     RAWバイト列の先頭1バイトに、拡張型の識別値として符号つき整数が格納され、
     その後ろにバイナリが格納されている。
 
-    @sa psyq::message_pack::object::extended_binary
+    @sa psyq::message_pack::object::extended
  */
-struct psyq::internal::message_pack_extended_binary:
+struct psyq::internal::message_pack_extended:
     public psyq::internal::message_pack_container<std::uint8_t const>
 {
     /// thisが指す値の型。
-    private: typedef message_pack_extended_binary self;
+    private: typedef message_pack_extended self;
 
     /// thisの上位型。
     public: typedef psyq::internal::message_pack_container<std::uint8_t const>

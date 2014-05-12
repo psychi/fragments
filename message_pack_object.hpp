@@ -30,9 +30,8 @@ struct psyq::message_pack::object
     public: typedef psyq::internal::message_pack_value::string string;
     /// @copydoc self::value::binary
     public: typedef psyq::internal::message_pack_value::binary binary;
-    /// @copydoc self::value::extended_binary
-    public: typedef psyq::internal::message_pack_value::extended_binary
-        extended_binary;
+    /// @copydoc self::value::extended
+    public: typedef psyq::internal::message_pack_value::extended extended;
     /// @copydoc self::value::array
     public: typedef psyq::internal::message_pack_value::array array;
     /// @copydoc self::value::map
@@ -153,7 +152,7 @@ struct psyq::message_pack::object
     /** @brief MessagePackオブジェクトに拡張バイナリを格納する。
         @param[in] in_binary MessagePackオブジェクトに格納する拡張バイナリ。
      */
-    public: PSYQ_CONSTEXPR object(self::extended_binary const& in_binary)
+    public: PSYQ_CONSTEXPR object(self::extended const& in_binary)
     PSYQ_NOEXCEPT:
         value_(in_binary),
         type_(self::type::EXTENDED_BINARY)
@@ -297,7 +296,7 @@ struct psyq::message_pack::object
         @return *this
      */
     public: PSYQ_CONSTEXPR self& operator=(
-        self::extended_binary const& in_binary)
+        self::extended const& in_binary)
     PSYQ_NOEXCEPT
     {
         return *new(this) self(in_binary);
@@ -569,13 +568,13 @@ struct psyq::message_pack::object
             MessagePackオブジェクトに格納されてる拡張バイナリへのポインタ。
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは拡張バイナリではない。
-        @sa self::set_extended_binary()
+        @sa self::set_extended()
      */
-    public: PSYQ_CONSTEXPR self::extended_binary const* get_extended_binary()
+    public: PSYQ_CONSTEXPR self::extended const* get_extended()
     const PSYQ_NOEXCEPT
     {
         return this->get_type() == self::type::EXTENDED_BINARY?
-            &this->value_.extended_binary_: nullptr;
+            &this->value_.extended_: nullptr;
     }
 
     /** @brief MessagePackオブジェクトに文字列を格納する。
@@ -615,14 +614,14 @@ struct psyq::message_pack::object
             型識別値の1バイトと、バイナリのバイト数を合わせたもの。
         @return MessagePackオブジェクトに格納した拡張バイナリ。
      */
-    public: self::extended_binary const& set_extended_binary(
-        self::extended_binary::pointer const in_data,
-        self::extended_binary::size_type const in_size)
+    public: self::extended const& set_extended(
+        self::extended::pointer const in_data,
+        self::extended::size_type const in_size)
     PSYQ_NOEXCEPT
     {
         this->type_ = self::type::EXTENDED_BINARY;
-        this->value_.extended_binary_.reset(in_data, in_size);
-        return this->value_.extended_binary_;
+        this->value_.extended_.reset(in_data, in_size);
+        return this->value_.extended_;
     }
     //@}
     //-------------------------------------------------------------------------

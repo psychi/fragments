@@ -10,6 +10,11 @@
 #define PSYQ_MESSAGE_PACK_MEMORY_POOL_CHUNK_CAPACITY_DEFAULT 4096
 #endif // !defined(PSYQ_MESSAGE_PACK_SERIALIZER_STACK_CAPACITY_DEFAULT)
 
+#ifndef PSYQ_MESSAGE_PACK_MEMORY_POOL_STD_ALGIN_PATCH
+#define PSYQ_MESSAGE_PACK_MEMORY_POOL_STD_ALGIN_PATCH\
+    defined(_MSC_VER) && _MSC_VER <= 1700
+#endif // !defined(PSYQ_MESSAGE_PACK_MEMORY_POOL_STD_ALGIN_PATCH)
+
 namespace psyq
 {
     namespace message_pack
@@ -240,8 +245,15 @@ class psyq::message_pack::pool
         void* local_pool(
             reinterpret_cast<std::int8_t*>(&io_chunk) - io_chunk.free_size);
         auto local_free_size(io_chunk.free_size);
-        void* local_memory(
+        void* const local_memory(
             std::align(in_alignment, in_size, local_pool, local_free_size));
+#if PSYQ_MESSAGE_PACK_MEMORY_POOL_STD_ALGIN_PATCH
+        /** @note 2014.05.12
+            VisualStudio2012では、 std::align() の実装に問題がある？
+            「_Space -= _Off + _Size」と実装されてたので、その対応をしておく。
+         */
+        local_free_size += (local_memory != nullptr? in_size: 0);
+#endif // PSYQ_MESSAGE_PACK_MEMORY_POOL_STD_ALGIN_PATCH
         if (local_memory == nullptr || local_free_size < in_size)
         {
             return nullptr;

@@ -36,6 +36,8 @@ class psyq::message_pack::istream
     private: typedef istream<template_iterator> self;
 
     public: typedef template_iterator iterator;
+    public: typedef typename std::iterator_traits<template_iterator>::value_type
+        char_type;
 
     public: istream(
         typename self::iterator const in_begin,
@@ -64,6 +66,10 @@ class psyq::message_pack::istream
     {
         return this->end() <= this->current();
     }
+    public: bool fail() const
+    {
+        return false;
+    }
 
     public: std::uint8_t get()
     {
@@ -74,6 +80,20 @@ class psyq::message_pack::istream
         auto const local_char(*this->current());
         ++this->current_;
         return local_char;
+    }
+
+    public: self& read(
+        typename self::char_type* const out_buffer,
+        std::size_t const in_length)
+    {
+        auto const local_length(
+            std::min<std::size_t>(in_length, this->end() - this->current()));
+        std::memcpy(
+            out_buffer,
+            this->current(),
+            sizeof(typename self::char_type) * local_length);
+        this->current_ += local_length;
+        return *this;
     }
 
     public: typename self::iterator tellg() const
@@ -306,18 +326,11 @@ class psyq::message_pack::deserializer
                 local_header & 0x0f,
                 self::stack_kind_ARRAY_ITEM);
         }
-        else if (local_header == psyq::message_pack::header_FIX_STR_MIN)
-        {
-            // [0xa0, 0xbf]: fix str
-            self::deserialize_string(
-                out_object, this->pool_, nullptr, 0, false);
-            return this->deserialize_stack(out_object);
-        }
         else if (local_header <= psyq::message_pack::header_FIX_STR_MAX)
         {
             // [0xa0, 0xbf]: fix str
-            this->trail_ = local_header & 0x1f;
-            this->phase_ = self::phase_STRING;
+            return this->deserialize_string(
+                out_object, io_istream, local_header & 0x1f);
         }
         else if (local_header == psyq::message_pack::header_NIL)
         {
@@ -431,93 +444,48 @@ class psyq::message_pack::deserializer
         {
             return self::deserialize_result_ABORT;
         }
+        switch (this->phase_)
+        {
+        // 無符号整数
+        case psyq::message_pack::header_UINT8:
+            return this->read_big_endian<std::uint8_t >(out_object, io_istream);
+        case psyq::message_pack::header_UINT16:
+            return this->read_big_endian<std::uint16_t>(out_object, io_istream);
+        case psyq::message_pack::header_UINT32:
+            return this->read_big_endian<std::uint32_t>(out_object, io_istream);
+        case psyq::message_pack::header_UINT64:
+            return this->read_big_endian<std::uint64_t>(out_object, io_istream);
+
+        // 有符号整数
+        case psyq::message_pack::header_INT8:
+            return this->read_big_endian<std::int8_t >(out_object, io_istream);
+        case psyq::message_pack::header_INT16:
+            return this->read_big_endian<std::int16_t>(out_object, io_istream);
+        case psyq::message_pack::header_INT32:
+            return this->read_big_endian<std::int32_t>(out_object, io_istream);
+        case psyq::message_pack::header_INT64:
+            return this->read_big_endian<std::int64_t>(out_object, io_istream);
+
+        // 浮動小数点数
+        case psyq::message_pack::header_FLOAT32:
+            return this->read_big_endian<float>(out_object, io_istream);
+        case psyq::message_pack::header_FLOAT64:
+            return this->read_big_endian<double>(out_object, io_istream);
+
+        // 文字列
+        case psyq::message_pack::header_STR8:
+            return this->deserialize_string<std::uint8_t >(out_object, io_istream);
+        case psyq::message_pack::header_STR16:
+            return this->deserialize_string<std::uint16_t>(out_object, io_istream);
+        case psyq::message_pack::header_STR32:
+            return this->deserialize_string<std::uint32_t>(out_object, io_istream);
+        }
+
         auto const local_data(io_istream.tellg());
         PSYQ_ASSERT(0 < this->trail_);
         io_istream.seekg(this->trail_, std::ios::cur);
         switch (this->phase_)
         {
-        // 無符号整数
-        case psyq::message_pack::header_UINT8:
-            out_object = *local_data;
-            break;
-        case psyq::message_pack::header_UINT16:
-            out_object
-                = self::load_big_endian_integer<std::uint16_t>(local_data);
-            break;
-        case psyq::message_pack::header_UINT32:
-            out_object
-                = self::load_big_endian_integer<std::uint32_t>(local_data);
-            break;
-        case psyq::message_pack::header_UINT64:
-            out_object
-                = self::load_big_endian_integer<std::uint64_t>(local_data);
-            break;
-
-        // 有符号整数
-        case psyq::message_pack::header_INT8:
-            out_object = static_cast<std::int8_t>(*local_data);
-            break;
-        case psyq::message_pack::header_INT16:
-            out_object
-                = self::load_big_endian_integer<std::int16_t>(local_data);
-            break;
-        case psyq::message_pack::header_INT32:
-            out_object
-                = self::load_big_endian_integer<std::int32_t>(local_data);
-            break;
-        case psyq::message_pack::header_INT64:
-            out_object
-                = self::load_big_endian_integer<std::int64_t>(local_data);
-            break;
-
-        // 浮動小数点数
-        case psyq::message_pack::header_FLOAT32:
-        {
-            union {std::uint32_t integer; float real;} local_value;
-            local_value.integer
-                = self::load_big_endian_integer<std::uint32_t>(local_data);
-            out_object = local_value.real;
-            break;
-        }
-        case psyq::message_pack::header_FLOAT64:
-        {
-            union {std::uint64_t integer; double real;} local_value;
-            local_value.integer
-                = self::load_big_endian_integer<std::uint64_t>(local_data);
-            out_object = local_value.real;
-            break;
-        }
-
-        // 文字列
-        case psyq::message_pack::header_STR8:
-            this->trail_ = *local_data;
-            goto PSYQ_MESSAGE_PACK_DESERIALIZE_STRING;
-        case psyq::message_pack::header_STR16:
-            this->trail_
-                = self::load_big_endian_integer<std::uint16_t>(local_data);
-            goto PSYQ_MESSAGE_PACK_DESERIALIZE_STRING;
-        case psyq::message_pack::header_STR32:
-            this->trail_
-                = self::load_big_endian_integer<std::uint32_t>(local_data);
-            goto PSYQ_MESSAGE_PACK_DESERIALIZE_STRING;
-        PSYQ_MESSAGE_PACK_DESERIALIZE_STRING:
-            if (0 < this->trail_)
-            {
-                this->phase_ = self::phase_STRING;
-                return this->deserialize_value(out_object, io_istream);
-            }
-            self::deserialize_string(
-                out_object, this->pool_, nullptr, 0, false);
-            break;
-        case self::phase_STRING:
-            self::deserialize_string(
-                out_object,
-                this->pool_,
-                local_data,
-                this->trail_,
-                this->allocate_raw_);
-            break;
-
         // バイナリ
         case psyq::message_pack::header_BIN8:
             this->trail_ = *local_data;
@@ -736,23 +704,37 @@ class psyq::message_pack::deserializer
     }
 
     //-------------------------------------------------------------------------
-    /** @brief MessagePackオブジェクトに文字列を格納する。
-        @param[out] out_object 文字列を格納するMessagePackオブジェクト。
-        @param[in]  in_data    文字列の先頭位置。
-        @param[in]  in_size    文字列のバイト数。
-     */
-    private: static void deserialize_string(
+    private: template<typename template_length, typename template_stream>
+    typename self::deserialize_result deserialize_string(
         psyq::message_pack::object& out_object,
-        typename self::pool& io_pool,
-        void const* const in_data,
-        std::size_t const in_size,
-        bool const in_allocate)
-    PSYQ_NOEXCEPT
+        template_stream& io_istream)
     {
-        typedef psyq::message_pack::object::string::value_type element;
+        template_length local_size;
+        if (!self::read_big_endian(local_size, io_istream))
+        {
+            PSYQ_ASSERT(false);
+            local_size = 0;
+        }
+        return this->deserialize_string(out_object, io_istream, local_size);
+    }
+    /** @brief MessagePackオブジェクトに文字列を格納する。
+        @param[out]    out_object 文字列を格納するMessagePackオブジェクト。
+        @param[in,out] io_istream 文字列を読み込むストリーム。
+        @param[in]     in_size    文字列のバイト数。
+     */
+    private: template<typename template_stream>
+    typename self::deserialize_result deserialize_string(
+        psyq::message_pack::object& out_object,
+        template_stream& io_istream,
+        std::size_t const in_size)
+    {
+        auto const local_raw(
+            0 < in_size?
+                self::make_raw(this->pool_, io_istream, in_size):
+                nullptr);
         out_object.set_string(
-            self::make_raw<element>(io_pool, in_data, in_size, in_allocate),
-            in_size);
+            local_raw, local_raw != nullptr? in_size: 0);
+        return this->deserialize_stack(out_object);
     }
 
     /** @brief MessagePackオブジェクトにバイナリを格納する。
@@ -815,6 +797,36 @@ class psyq::message_pack::deserializer
             static_cast<std::int8_t const*>(in_data),
             in_size);
         return static_cast<template_value*>(local_data);
+    }
+    private: template<typename template_stream>
+    static psyq::message_pack::object::string::pointer make_raw(
+        typename self::pool& io_pool,
+        template_stream& io_istream,
+        std::size_t const in_size)
+    {
+        auto const local_length(
+            in_size / sizeof(typename template_stream::char_type));
+        if (local_length <= 0)
+        {
+            return nullptr;
+        }
+        typedef psyq::message_pack::object::string::value_type element;
+        auto const local_raw(io_pool.allocate(local_length, sizeof(element)));
+        if (local_raw == nullptr)
+        {
+            PSYQ_ASSERT(false);
+            return nullptr;
+        }
+        io_istream.read(
+            static_cast<typename template_stream::char_type*>(local_raw),
+            local_length);
+        if (io_istream.fail())
+        {
+            PSYQ_ASSERT(false);
+            //io_pool.deallocate(local_raw, local_length);
+            return nullptr;
+        }
+        return static_cast<element*>(local_raw);
     }
 
     //-------------------------------------------------------------------------
@@ -912,6 +924,28 @@ class psyq::message_pack::deserializer
     }
 
     //-------------------------------------------------------------------------
+    private: template<typename template_value, typename template_stream>
+    typename self::deserialize_result read_big_endian(
+        psyq::message_pack::object& out_object,
+        template_stream& io_istream)
+    {
+        template_value local_value;
+        if (!self::read_big_endian(local_value, io_istream))
+        {
+            return self::deserialize_result_FAILED;
+        }
+        out_object = local_value;
+        return this->deserialize_stack(out_object);
+    }
+    private: template<typename template_value, typename template_stream>
+    static bool read_big_endian(
+        template_value& out_value,
+        template_stream& io_istream)
+    {
+        return psyq::message_pack::raw_bytes<template_value>::read_stream(
+            out_value, io_istream, psyq::message_pack::big_endian);
+    }
+
     /** @brief RAWバイト列から、ビッグエンディアンの整数値を取り出す。
         @param[in] in_bytes 整数値を取り出すRAWバイト列。
         @param[in] in_index 取り出す整数値のインデックス番号。

@@ -87,6 +87,288 @@
 #define PSYQ_NOEXCEPT
 #endif // !defined(PSYQ_NOEXCEPT)
 
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+namespace psyq
+{
+    namespace message_pack
+    {
+        /// @cond
+        template<typename> struct raw_bytes;
+        /// @endcond
+
+        //---------------------------------------------------------------------
+        /// 値を直列化／直列化復元する際のエンディアン性。
+        enum endianness
+        {
+            little_endian = false, ///< リトルエンディアン。
+            big_endian = true,     ///< ビッグエンディアン。
+            //native_endian = (__BYTE_ORDER == __BIG_ENDIAN), ///< ネイティブエンディアン。
+        };
+
+        /** @brief 稼働環境でのエンディアン性を取得する。
+            @return 稼働環境でのエンディアン性。
+         */
+        inline psyq::message_pack::endianness get_native_endian() PSYQ_NOEXCEPT
+        {
+            static const union {int integer; std::uint8_t endianness;}
+                static_native = {psyq::message_pack::big_endian};
+            return static_cast<psyq::message_pack::endianness>(
+                psyq::message_pack::big_endian - static_native.endianness);
+        }
+
+        //---------------------------------------------------------------------
+        inline std::uint8_t swap_endianness(std::uint8_t in_value) PSYQ_NOEXCEPT
+        {
+            return in_value;
+        }
+        inline std::uint16_t swap_endianness(std::uint16_t in_value) PSYQ_NOEXCEPT
+        {
+            return static_cast<std::uint16_t>((in_value << 8) | (in_value >> 8));
+        }
+        inline std::uint32_t swap_endianness(std::uint32_t in_value) PSYQ_NOEXCEPT
+        {
+            in_value = static_cast<std::uint32_t>(
+                ((in_value << 8) & 0xff00ff00) |
+                ((in_value >> 8) & 0x00ff00ff));
+            return static_cast<std::uint32_t>((in_value << 16) | (in_value >> 16));
+        }
+        inline std::uint64_t swap_endianness(std::uint64_t in_value) PSYQ_NOEXCEPT
+        {
+            in_value = static_cast<std::uint64_t>(
+                ((in_value << 8) & 0xff00ff00ff00ff00) |
+                ((in_value >> 8) & 0x00ff00ff00ff00ff));
+            in_value = static_cast<std::uint64_t>(
+                ((in_value << 16) & 0xffff0000ffff0000) |
+                ((in_value >> 16) & 0x0000ffff0000ffff));
+            return static_cast<std::uint64_t>((in_value << 32) | (in_value >> 32));
+        }
+    } // namespace message_pack
+
+    /// この名前空間をuserが直接accessするのは禁止。
+    namespace internal
+    {
+        //---------------------------------------------------------------------
+        /// バイト列として使う型。
+        template<std::size_t> struct message_pack_bytes;
+        /// 1バイトのバイト列として使う型。
+        template<> struct message_pack_bytes<1> {typedef std::uint8_t  type;};
+        /// 2バイトのバイト列として使う型。
+        template<> struct message_pack_bytes<2> {typedef std::uint16_t type;};
+        /// 4バイトのバイト列として使う型。
+        template<> struct message_pack_bytes<4> {typedef std::uint32_t type;};
+        /// 8バイトのバイト列として使う型。
+        template<> struct message_pack_bytes<8> {typedef std::uint64_t type;};
+
+        //---------------------------------------------------------------------
+        /// @brief 整数値のエンディアン性を変換する。
+        template<bool template_integral>
+        struct message_pack_endianness_converter
+        {
+            /** @brief 値のエンディアン性を変換する。
+                @tparam template_target 変換先の値の型。
+                @tparam template_source 変換元の値の型。
+                @param[in] in_source     変換元の値。ネイティブエンディアン。
+                @param[in] in_endianness 変換先のエンディアン性。
+                @return エンディアン性を変換した値。
+             */
+            template<typename template_target, typename template_source>
+            static template_target convert(
+                template_source const in_source,
+                psyq::message_pack::endianness const in_endianness)
+            PSYQ_NOEXCEPT
+            {
+                static_assert(
+                    std::is_integral<template_source>::value,
+                    "template_source is not integer type.");
+                typedef typename psyq::internal
+                    ::message_pack_bytes<sizeof(template_source)>::type
+                        bytes_type;
+                return static_cast<template_target>(
+                    in_endianness != psyq::message_pack::get_native_endian()?
+                        psyq::message_pack::swap_endianness(
+                            static_cast<bytes_type>(in_source)):
+                        in_source);
+            }
+        };
+        /// @brief 値のエンディアン性を変換する。
+        template<> struct message_pack_endianness_converter<false>
+        {
+            /// @copydoc message_pack_endianness_converter::convert()
+            template<typename template_target, typename template_source>
+            static template_target convert(
+                template_source const in_source,
+                psyq::message_pack::endianness const in_endianness)
+            PSYQ_NOEXCEPT
+            {
+                typedef typename psyq::internal
+                    ::message_pack_bytes<sizeof(template_source)>::type
+                        bytes_type;
+                /** @note 2014.05.13
+                    strict-aliasingの対応のためにunionを使う手法は、
+                    C++標準では許容されておらず、リスクを伴う。
+                    でも、ほとんどのコンパイラでは問題はないはず。
+                    http://d.hatena.ne.jp/yohhoy/20120220/p1
+                 */
+                union
+                {
+                    template_source source;
+                    bytes_type bytes;
+                    template_target target;
+                } local_union = {in_source};
+                if (in_endianness != psyq::message_pack::get_native_endian())
+                {
+                    local_union.bytes = psyq::message_pack::swap_endianness(
+                        local_union.bytes);
+                }
+                return local_union.target;
+            }
+        };
+    } // namespace internal
+} // namespace psyq
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 値のRAWバイト列の型特性。
+    @tparam template_value @copydoc psyq::message_pack::raw_bytes::value_type
+ */
+template<typename template_value>
+struct psyq::message_pack::raw_bytes
+{
+    private: typedef raw_bytes<template_value> self;
+
+    /** @brief 直列化／直列化復元する値の型。
+
+        この実装では、整数型か浮動小数点数型にのみに対応している。
+        これらの型以外に対応するには、テンプレートの特殊化をした
+        psyq::message_pack::raw_bytes を実装し、
+        staticメンバ関数として read_stream() と write_stream() を実装すること。
+     */
+    public: typedef template_value value_type;
+    static_assert(
+        std::is_integral<template_value>::value
+        || std::is_floating_point<template_value>::value,
+        "template_value is not integer or floating point type.");
+
+    /// self::value_type のRAWバイト列の型。
+    public: typedef typename psyq::internal
+        ::message_pack_bytes<sizeof(template_value)>::type
+            pack;
+
+    //-------------------------------------------------------------------------
+    /** @brief ストリームからバイト列を読み込み、値へ直列化復元する。
+
+        in_endianness とnative-endianが一致するなら先頭から末尾、
+        異なるなら末尾から先頭の順に、バイト列を読み込む。
+
+        @param[out]    out_value     直列化復元した値を格納する。
+        @param[in,out] io_istream    バイト列を読み込む入力ストリーム。
+        @param[in]     in_endianness 値を直列化復元する際のエンディアン性。
+     */
+    public: template<typename template_stream>
+    static bool read_stream(
+        template_value& out_value,
+        template_stream& io_istream,
+        psyq::message_pack::endianness const in_endianness)
+    {
+        self::pack local_bytes;
+        auto const local_begin(io_istream.tellg());
+        io_istream.read(
+            reinterpret_cast<typename template_stream::char_type*>(
+                &local_bytes),
+            sizeof(template_value));
+        if (io_istream.fail())
+        {
+            PSYQ_ASSERT(false);
+        }
+        else
+        {
+            auto const local_end(io_istream.tellg());
+            if (local_end - local_begin == sizeof(template_value))
+            {
+                out_value = self::convert_bytes_endianness(
+                    local_bytes, in_endianness);
+                return true;
+            }
+            PSYQ_ASSERT(false);
+        }
+        return false;
+    }
+
+    /** @brief 値からバイト列へ直列化し、ストリームへ書き出す。
+
+        in_endianness とnative-endianが一致するなら先頭から末尾へ、
+        異なるなら末尾から先頭の順に、値のバイト列をストリームへ出力する。
+
+        @param[in,out] io_ostream    バイト列を書き出す出力ストリーム。
+        @param[in]     in_value      直列化する値。
+        @param[in]     in_endianness 値を直列化する際のエンディアン性。
+     */
+    public: template<typename template_stream>
+    static bool write_stream(
+        template_stream& io_ostream,
+        template_value const in_value,
+        psyq::message_pack::endianness const in_endianness)
+    {
+        auto const local_bytes(
+            self::convert_value_endianness(in_value, in_endianness));
+        io_ostream.write(
+            reinterpret_cast<typename template_stream::char_type const*>(
+                &local_bytes),
+            sizeof(template_value));
+        if (io_ostream.fail())
+        {
+            PSYQ_ASSERT(false);
+            return false;
+        }
+        return true;
+    }
+
+    //---------------------------------------------------------------------
+    /** @brief 値をバイト列に変換する。
+        @param[in] in_value      変換する値。
+        @param[in] in_endianness バイト列のエンディアン性。
+        @return 値から変換されたバイト列。
+     */
+    public: static typename self::pack convert_value_endianness(
+        template_value const in_value,
+        psyq::message_pack::endianness const in_endianness)
+    PSYQ_NOEXCEPT
+    {
+        return psyq::internal::message_pack_endianness_converter<
+            std::is_integral<template_value>::value>
+                ::template convert<typename self::pack>(in_value, in_endianness);
+    }
+
+    /** @brief バイト列を値に変換する。
+        @param[in] in_bytes      変換するバイト列。
+        @param[in] in_endianness バイト列のエンディアン性。
+        @return バイト列から変換された値。
+     */
+    public: static template_value convert_bytes_endianness(
+        typename self::pack const in_bytes,
+        psyq::message_pack::endianness const in_endianness)
+    PSYQ_NOEXCEPT
+    {
+        return psyq::internal::message_pack_endianness_converter<
+            std::is_integral<template_value>::value>
+                ::template convert<template_value>(in_bytes, in_endianness);
+    }
+    /** @brief バイト列を値に変換する。
+        @param[in] in_bytes      変換するバイト列の先頭位置。
+        @param[in] in_endianness バイト列のエンディアン性。
+        @return バイト列から変換された値。
+     */
+    public: static template_value convert_bytes_endianness(
+        void const* const in_bytes,
+        psyq::message_pack::endianness const in_endianness)
+    PSYQ_NOEXCEPT
+    {
+        typename self::pack local_bytes;
+        std::memcpy(&local_bytes, in_bytes, sizeof(template_value));
+        return self::convert_bytes_endianness(local_bytes, in_endianness);
+    }
+}; // struct psyq::message_pack::raw_bytes;
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq
 {
     namespace message_pack
@@ -96,18 +378,7 @@ namespace psyq
             typename = std::ostringstream,
             std::size_t = PSYQ_MESSAGE_PACK_SERIALIZER_STACK_CAPACITY_DEFAULT>
                 class serializer;
-        template<typename> struct raw_stream;
         /// @endcond
-
-        /// 値を直列化／直列化復元する際のエンディアン性。
-        enum endianess
-        {
-            little_endian = 0, ///< リトルエンディアン。
-            big_endian = 1,    ///< ビッグエンディアン。
-            //native_endian = (__BYTE_ORDER == __BIG_ENDIAN), ///< ネイティブエンディアン。
-        };
-        static_assert(
-            static_cast<int>(true) == 1 && static_cast<int>(false) == 0, "");
 
         //---------------------------------------------------------------------
         /** @brief MessagePackに格納されている値の種別。
@@ -158,7 +429,7 @@ namespace psyq
             header_MAP16         = 0xde, ///< 長さが16bit以下の連想配列。
             header_MAP32         = 0xdf, ///< 長さが32bit以下の連想配列。
         };
-    }
+    } // namespace message_pack
 
     //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
     /// この名前空間をuserが直接accessするのは禁止。
@@ -186,7 +457,7 @@ namespace psyq
                     ::message_pack_tuple_serializer<template_length - 1>
                         ::write(out_stream, in_tuple);
                 out_stream << std::get<template_length - 1>(in_tuple);
-                return out_stream.good();
+                return !out_stream.fail();
             }
         };
         /// @copydoc message_pack_tuple_serializer
@@ -195,12 +466,13 @@ namespace psyq
             /// タプルの要素数が0なので、何もしない。
             template<typename template_stream, typename template_tuple>
             static bool write(template_stream&, template_tuple const&)
+            PSYQ_NOEXCEPT
             {
                 return true;
             }
         };
-    }
-}
+    } // namespace internal
+} // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief MessagePack形式で直列化したバイナリを、
@@ -491,7 +763,7 @@ class psyq::message_pack::serializer
     private: template<typename template_value>
     bool write_big_endian(template_value const in_value)
     {
-        return psyq::message_pack::raw_stream<template_value>::write(
+        return psyq::message_pack::raw_bytes<template_value>::write_stream(
             this->stream_, in_value, psyq::message_pack::big_endian);
     }
 
@@ -626,35 +898,35 @@ class psyq::message_pack::serializer
 
     /** @brief 標準コンテナをMessagePack形式のバイナリとして直列化し、
                ストリームへ出力する。
-        @param[in] in_begin     直列化する標準コンテナの先頭位置。
-        @param[in] in_length    直列化する標準コンテナの要素数。
-        @param[in] in_endianess 要素を直列化する際のエンディアン性。
+        @param[in] in_begin      直列化する標準コンテナの先頭位置。
+        @param[in] in_length     直列化する標準コンテナの要素数。
+        @param[in] in_endianness 要素を直列化する際のエンディアン性。
      */
     public: template<typename template_iterator>
     bool write_container_binary(
         template_iterator const& in_begin,
         std::size_t const in_length,
-        psyq::message_pack::endianess const in_endianess
+        psyq::message_pack::endianness const in_endianness
             = psyq::message_pack::big_endian)
     {
         typedef typename std::iterator_traits<template_iterator>::value_type
             element;
         return this->make_serial_binary<element>(in_length)
-            && this->fill_serial_raw(in_begin, in_length, in_endianess) == 0;
+            && this->fill_serial_raw(in_begin, in_length, in_endianness) == 0;
     }
     /** @brief 標準コンテナをMessagePack形式のバイナリとして直列化し、
                ストリームへ出力する。
-        @param[in] in_container 直列化する標準コンテナ。
-        @param[in] in_endianess コンテナ要素を直列化する際のエンディアン性。
+        @param[in] in_container  直列化する標準コンテナ。
+        @param[in] in_endianness コンテナ要素を直列化する際のエンディアン性。
      */
     public: template<typename template_container>
     bool write_container_binary(
         template_container const& in_container,
-        psyq::message_pack::endianess const in_endianess
+        psyq::message_pack::endianness const in_endianness
             = psyq::message_pack::big_endian)
     {
         return this->write_container_binary(
-            in_container.begin(), in_container.size(), in_endianess);
+            in_container.begin(), in_container.size(), in_endianness);
     }
 
     /** @brief MessagePackバイナリの直列化を開始する。
@@ -700,20 +972,20 @@ class psyq::message_pack::serializer
     //@{
     /** @brief 値をMessagePack形式の拡張バイナリとして直列化し、
                ストリームへ出力する。
-        @param[in] in_type      直列化する値の拡張型識別値。
-        @param[in] in_value     直列化する値。
-        @param[in] in_endianess 値を直列化する際のエンディアン性。
+        @param[in] in_type       直列化する値の拡張型識別値。
+        @param[in] in_value      直列化する値。
+        @param[in] in_endianness 値を直列化する際のエンディアン性。
      */
     public: template<typename template_value>
     bool write_extended(
         std::int8_t const in_type,
         template_value const& in_value,
-        psyq::message_pack::endianess const in_endianess
+        psyq::message_pack::endianness const in_endianness
             = psyq::message_pack::big_endian)
     {
         return this->write_extended_header(in_type, sizeof(template_value))
-            && psyq::message_pack::raw_stream<template_value>
-                ::write(this->stream_, in_value, in_endianess);
+            && psyq::message_pack::raw_bytes<template_value>
+                ::write_stream(this->stream_, in_value, in_endianness);
     }
     /** @brief 長さが0の拡張バイナリを直列化し、ストリームへ出力する。
         @param[in] in_type 直列化する拡張型識別値。
@@ -840,7 +1112,7 @@ class psyq::message_pack::serializer
         {
             *this << *in_iterator;
         }
-        return this->stream_.good();
+        return !this->stream_.fail();
     }
 
     /** @brief 標準コンテナをMessagePack形式の配列として直列化し、
@@ -912,7 +1184,7 @@ class psyq::message_pack::serializer
             *this << *in_iterator;
             this->write_nil();
         }
-        return this->stream_.good();
+        return !this->stream_.fail();
     }
     /** @brief 標準コンテナをMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
@@ -942,7 +1214,7 @@ class psyq::message_pack::serializer
             auto& local_value(*in_iterator);
             *this << local_value.first << local_value.second;
         }
-        return this->stream_.good();
+        return !this->stream_.fail();
     }
     /** @brief pairコンテナをMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
@@ -1002,8 +1274,8 @@ class psyq::message_pack::serializer
     /** @brief 直前に直列化を開始した文字列／バイナリ／拡張バイナリの残り要素に
                値をMessagePack形式のRAWバイト列として直列化し、
                ストリームへ出力する。
-        @param[in] in_value     直列化する値。
-        @param[in] in_endianess コンテナ要素を直列化する際のエンディアン性。
+        @param[in] in_value      直列化する値。
+        @param[in] in_endianness コンテナ要素を直列化する際のエンディアン性。
         @sa self::make_serial_string()
         @sa self::make_serial_binary()
         @sa self::make_serial_extended()
@@ -1011,17 +1283,17 @@ class psyq::message_pack::serializer
     public: template<typename template_value>
     std::size_t fill_serial_raw(
         template_value const& in_value,
-        psyq::message_pack::endianess const in_endianess)
+        psyq::message_pack::endianness const in_endianness)
     {
-        return this->fill_serial_raw(&in_value, 1, in_endianess);
+        return this->fill_serial_raw(&in_value, 1, in_endianness);
     }
 
     /** @brief 直前に直列化を開始した文字列／バイナリ／拡張バイナリの残り要素に
                標準コンテナの要素をMessagePack形式のRAWバイト列として直列化し、
                ストリームへ出力する。
-        @param[in] in_iterator  直列化する標準コンテナの先頭位置。
-        @param[in] in_length    直列化する標準コンテナの要素数。
-        @param[in] in_endianess コンテナ要素を直列化する際のエンディアン性。
+        @param[in] in_iterator   直列化する標準コンテナの先頭位置。
+        @param[in] in_length     直列化する標準コンテナの要素数。
+        @param[in] in_endianness コンテナ要素を直列化する際のエンディアン性。
         @sa self::make_serial_string()
         @sa self::make_serial_binary()
         @sa self::make_serial_extended()
@@ -1030,7 +1302,7 @@ class psyq::message_pack::serializer
     std::size_t fill_serial_raw(
         template_iterator in_iterator,
         std::size_t in_length,
-        psyq::message_pack::endianess const in_endianess)
+        psyq::message_pack::endianness const in_endianness)
     {
         auto const local_stack(this->get_stack_top_raw());
         if (local_stack == nullptr)
@@ -1050,8 +1322,8 @@ class psyq::message_pack::serializer
             }
             else if (
                 in_length <= 0
-                || !psyq::message_pack::raw_stream<element>::write(
-                    this->stream_, *in_iterator, in_endianess))
+                || !psyq::message_pack::raw_bytes<element>::write_stream(
+                    this->stream_, *in_iterator, in_endianness))
             {
                 return local_stack->rest_size;
             }
@@ -1190,7 +1462,7 @@ class psyq::message_pack::serializer
             this->stream_.write(
                 static_cast<typename self::stream::char_type const*>(in_begin),
                 in_size);
-            if (!this->stream_.good())
+            if (this->stream_.fail())
             {
                 PSYQ_ASSERT(false);
                 return false;
@@ -1401,9 +1673,9 @@ class psyq::message_pack::serializer
         return true;
     }
 
-    public: bool good() const
+    public: bool fail() const
     {
-        return this->stream_.good();
+        return this->stream_.fail();
     }
 
     public: typename self::stream::pos_type tellp()
@@ -1423,71 +1695,7 @@ class psyq::message_pack::serializer
     private: std::array<typename self::stack, template_stack_capacity> stack_;
     /// 直列化途中のコンテナのスタック数。
     private: std::size_t stack_size_;
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 値を直列化／直列化復元する。
-    @tparam template_value @copydoc psyq::message_pack::raw_stream::value_type
- */
-template<typename template_value>
-struct psyq::message_pack::raw_stream
-{
-    /** @brief 直列化／直列化復元する値の型。
-
-        この実装では、整数型か浮動小数点数型にのみに対応している。
-        これらの型以外に対応するには、テンプレートの特殊化をした
-        psyq::message_pack::raw_stream を実装し、
-        staticメンバ関数として read() と write() を実装すること。
-     */
-    public: typedef template_value value_type;
-    static_assert(
-        std::is_integral<template_value>::value
-        || std::is_floating_point<template_value>::value,
-        "template_value is not integer or floating point type.");
-
-    /** @brief 値を直列化し、ストリームへ出力する。
-
-        in_endianess とnative-endianが一致するなら先頭から末尾へ、
-        異なるなら末尾から先頭の順に、値のバイト列をストリームへ出力する。
-
-        @param[in,out] io_ostream   出力先ストリーム。
-        @param[in]     in_value     直列化する値。
-        @param[in]     in_endianess 値を直列化する際のエンディアン性。
-     */
-    public: template<typename template_stream>
-    static bool write(
-        template_stream& io_ostream,
-        template_value const& in_value,
-        psyq::message_pack::endianess const in_endianess)
-    {
-        PSYQ_ASSERT(in_endianess == 0 || in_endianess == 1);
-        static const union {int integer; std::uint8_t endianess;}
-            static_native = {1};
-        int const local_mask((static_native.endianess ^ in_endianess) - 1);
-        int const local_step(1 - (2 & local_mask));
-        auto const local_begin(
-            reinterpret_cast<std::uint8_t const*>(&in_value)
-                + ((sizeof(template_value) - 1) & local_mask));
-        auto const local_end(local_begin + sizeof(template_value) * local_step);
-        for (auto i(local_begin); i != local_end; i += local_step)
-        {
-            io_ostream.put(static_cast<typename template_stream::char_type>(*i));
-        }
-        return io_ostream.good();
-    }
-
-    /** @brief バイト列から値を直列化復元する。
-        @note 未実装。
-     */
-    public: template<typename template_stream>
-    static bool read(
-        template_stream& io_istream,
-        template_value& out_value,
-        psyq::message_pack::endianess const in_endianess)
-    {
-        return false;
-    }
-};
+}; // class psyq::message_pack::serializer
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 //----------------------------------------------------------------------------
@@ -2249,5 +2457,4 @@ operator<<(
     return out_stream;
 }
 //@}
-
 #endif // !defined(PSYQ_MESSAGE_PACK_SERIALIZER_HPP_)

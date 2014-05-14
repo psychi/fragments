@@ -55,30 +55,30 @@ struct psyq::message_pack::object
     /** @brief MessagePackオブジェクトに無符号整数を格納する。
         @param[in] in_integer MessagePackオブジェクトに格納する無符号整数。
      */
-    public: explicit PSYQ_CONSTEXPR object(std::uint64_t const in_integer)
+    public: explicit PSYQ_CONSTEXPR object(unsigned long long const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::type::POSITIVE_INTEGER)
     {}
-    /// @copydoc object(std::uint64_t const)
+    /// @copydoc object(unsigned long long const)
     public: explicit PSYQ_CONSTEXPR object(unsigned long const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::type::POSITIVE_INTEGER)
     {}
-    /// @copydoc object(std::uint64_t const)
+    /// @copydoc object(unsigned long long const)
     public: explicit PSYQ_CONSTEXPR object(unsigned int const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::type::POSITIVE_INTEGER)
     {}
-    /// @copydoc object(std::uint64_t const)
+    /// @copydoc object(unsigned long long const)
     public: explicit PSYQ_CONSTEXPR object(unsigned short const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::type::POSITIVE_INTEGER)
     {}
-    /// @copydoc object(std::uint64_t const)
+    /// @copydoc object(unsigned long long const)
     public: explicit PSYQ_CONSTEXPR object(unsigned char const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
@@ -88,31 +88,31 @@ struct psyq::message_pack::object
     /** @brief MessagePackオブジェクトに有符号整数を格納する。
         @param[in] in_integer MessagePackオブジェクトに格納する有符号整数。
      */
-    public: explicit PSYQ_CONSTEXPR object(std::int64_t const in_integer)
+    public: explicit PSYQ_CONSTEXPR object(signed long long const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::tell_signed_integer_type(in_integer))
     {}
-    /// @copydoc object(std::int64_t const)
-    public: explicit PSYQ_CONSTEXPR object(long const in_integer)
+    /// @copydoc object(signed long long const)
+    public: explicit PSYQ_CONSTEXPR object(signed long const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::tell_signed_integer_type(in_integer))
     {}
-    /// @copydoc object(std::int64_t const)
-    public: explicit PSYQ_CONSTEXPR object(int const in_integer)
+    /// @copydoc object(signed long long const)
+    public: explicit PSYQ_CONSTEXPR object(signed int const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::tell_signed_integer_type(in_integer))
     {}
-    /// @copydoc object(std::int64_t const)
-    public: explicit PSYQ_CONSTEXPR object(short const in_integer)
+    /// @copydoc object(signed long long const)
+    public: explicit PSYQ_CONSTEXPR object(signed short const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::tell_signed_integer_type(in_integer))
     {}
-    /// @copydoc object(std::int64_t const)
-    public: explicit PSYQ_CONSTEXPR object(char const in_integer)
+    /// @copydoc object(signed long long const)
+    public: explicit PSYQ_CONSTEXPR object(signed char const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::tell_signed_integer_type(in_integer))
@@ -193,30 +193,30 @@ struct psyq::message_pack::object
         @param[in] in_integer MessagePackオブジェクトに格納する無符号整数。
         @return *this
      */
-    public: PSYQ_CONSTEXPR self& operator=(std::uint64_t const in_integer)
+    public: PSYQ_CONSTEXPR self& operator=(unsigned long long const in_integer)
     PSYQ_NOEXCEPT
     {
         return *new(this) self(in_integer);
     }
-    /// @copydoc operator=(std::uint64_t const)
+    /// @copydoc operator=(unsigned long long const)
     public: PSYQ_CONSTEXPR self& operator=(unsigned long const in_integer)
     PSYQ_NOEXCEPT
     {
         return *new(this) self(in_integer);
     }
-    /// @copydoc operator=(std::uint64_t const)
+    /// @copydoc operator=(unsigned long long const)
     public: PSYQ_CONSTEXPR self& operator=(unsigned int const in_integer)
     PSYQ_NOEXCEPT
     {
         return *new(this) self(in_integer);
     }
-    /// @copydoc operator=(std::uint64_t const)
+    /// @copydoc operator=(unsigned long long const)
     public: PSYQ_CONSTEXPR self& operator=(unsigned short const in_integer)
     PSYQ_NOEXCEPT
     {
         return *new(this) self(in_integer);
     }
-    /// @copydoc operator=(std::uint64_t const)
+    /// @copydoc operator=(unsigned long long const)
     public: PSYQ_CONSTEXPR self& operator=(unsigned char const in_integer)
     PSYQ_NOEXCEPT
     {
@@ -227,31 +227,31 @@ struct psyq::message_pack::object
         @param[in] in_integer MessagePackオブジェクトに格納する有符号整数。
         @return *this
      */
-    public: PSYQ_CONSTEXPR self& operator=(std::int64_t const in_integer)
+    public: PSYQ_CONSTEXPR self& operator=(signed long long const in_integer)
     PSYQ_NOEXCEPT
     {
         return *new(this) self(in_integer);
     }
-    /// @copydoc operator=(std::int64_t const)
-    public: PSYQ_CONSTEXPR self& operator=(long const in_integer)
+    /// @copydoc operator=(signed long long const)
+    public: PSYQ_CONSTEXPR self& operator=(signed long const in_integer)
     PSYQ_NOEXCEPT
     {
         return *new(this) self(in_integer);
     }
-    /// @copydoc operator=(std::int64_t const)
-    public: PSYQ_CONSTEXPR self& operator=(int const in_integer)
+    /// @copydoc operator=(signed long long const)
+    public: PSYQ_CONSTEXPR self& operator=(signed int const in_integer)
     PSYQ_NOEXCEPT
     {
         return *new(this) self(in_integer);
     }
-    /// @copydoc operator=(std::int64_t const)
-    public: PSYQ_CONSTEXPR self& operator=(short const in_integer)
+    /// @copydoc operator=(signed long long const)
+    public: PSYQ_CONSTEXPR self& operator=(signed short const in_integer)
     PSYQ_NOEXCEPT
     {
         return *new(this) self(in_integer);
     }
-    /// @copydoc operator=(std::int64_t const)
-    public: PSYQ_CONSTEXPR self& operator=(char const in_integer)
+    /// @copydoc operator=(signed long long const)
+    public: PSYQ_CONSTEXPR self& operator=(signed char const in_integer)
     PSYQ_NOEXCEPT
     {
         return *new(this) self(in_integer);

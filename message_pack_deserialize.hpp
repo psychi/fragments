@@ -614,10 +614,10 @@ class psyq::message_pack::deserializer
 
     //-------------------------------------------------------------------------
     /** @brief スタックからMessagePackオブジェクトを取り出す。
-        @param[out] out_object スタックから取り出したオブジェクトが格納される。
+        @param[in,out] io_object スタックから取り出したオブジェクトが格納される。
      */
     private: typename self::read_result update_container_stack(
-        psyq::message_pack::object& out_object)
+        psyq::message_pack::object& io_object)
     PSYQ_NOEXCEPT
     {
         while (0 < this->stack_size_)
@@ -626,9 +626,17 @@ class psyq::message_pack::deserializer
             switch (local_stack_top.kind)
             {
             case self::stack_kind_ARRAY_ELEMENT:
+            {
                 // 配列に要素を追加する。
-                self::read_array_item(
-                    local_stack_top.object, out_object);
+                auto const local_array(local_stack_top.object.get_array());
+                if (local_array != nullptr)
+                {
+                    local_array->push_back(io_object);
+                }
+                else
+                {
+                    PSYQ_ASSERT(false);
+                }
 
                 // 残り要素数を更新する。
                 --local_stack_top.rest_size;
@@ -637,21 +645,23 @@ class psyq::message_pack::deserializer
                     return self::read_result_CONTINUE;
                 }
                 break;
+            }
 
             case self::stack_kind_MAP_KEY:
-                local_stack_top.map_key = out_object;
+                local_stack_top.map_key = io_object;
                 local_stack_top.kind = self::stack_kind_MAP_VALUE;
                 return self::read_result_CONTINUE;
 
             case self::stack_kind_MAP_VALUE:
             {
                 // 連想配列に要素を追加する。
-                auto const local_map(
-                    self::read_map_item(
-                        local_stack_top.object,
-                        local_stack_top.map_key,
-                        out_object));
-                if (local_map == nullptr)
+                auto const local_map(local_stack_top.object.get_map());
+                if (local_map != nullptr)
+                {
+                    local_map->push_back(
+                        std::make_pair(local_stack_top.map_key, io_object));
+                }
+                else
                 {
                     PSYQ_ASSERT(false);
                     return self::read_result_FAILED;
@@ -676,7 +686,7 @@ class psyq::message_pack::deserializer
             }
 
             // オブジェクトをスタックから取り出す。
-            out_object = local_stack_top.object;
+            io_object = local_stack_top.object;
             --this->stack_size_;
         }
         return self::read_result_FINISH;
@@ -790,26 +800,6 @@ class psyq::message_pack::deserializer
         return in_capacity <= 0 || local_array.data() != nullptr;
     }
 
-    /** @brief 配列に要素を追加する。
-        @param[in,out] io_object 要素を追加する配列。
-        @param[in]     in_item   追加する要素。
-     */
-    private: static void read_array_item(
-        psyq::message_pack::object& io_object,
-        psyq::message_pack::object const& in_item)
-    PSYQ_NOEXCEPT
-    {
-        auto const local_array(io_object.get_array());
-        if (local_array != nullptr)
-        {
-            local_array->push_back(in_item);
-        }
-        else
-        {
-            PSYQ_ASSERT(false);
-        }
-    }
-
     //-------------------------------------------------------------------------
     /** @brief MessagePackオブジェクトに連想配列を格納する。
         @param[out]    out_object  連想配列を格納するMessagePackオブジェクト。
@@ -834,29 +824,6 @@ class psyq::message_pack::deserializer
                     nullptr,
                 0));
         return in_capacity <= 0 || local_map.data() != nullptr;
-    }
-
-    /** @brief 連想配列に要素を追加する。
-        @param[in,out] io_object 要素を追加する連想配列。
-        @param[in]     in_key    追加する要素のキー。
-        @param[in]     in_mapped 追加する要素の値。
-     */
-    private: static psyq::message_pack::object::map* read_map_item(
-        psyq::message_pack::object& io_object,
-        psyq::message_pack::object const& in_key,
-        psyq::message_pack::object const& in_mapped)
-    PSYQ_NOEXCEPT
-    {
-        auto const local_map(io_object.get_map());
-        if (local_map != nullptr)
-        {
-            local_map->push_back(std::make_pair(in_key, in_mapped));
-        }
-        else
-        {
-            PSYQ_ASSERT(false);
-        }
-        return local_map;
     }
 
     //-------------------------------------------------------------------------
@@ -888,235 +855,5 @@ class psyq::message_pack::deserializer
     private: std::size_t stack_size_; ///< スタックの要素数。
     private: bool allocate_raw_;
 };
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-namespace psyq
-{
-    namespace test
-    {
-        inline void message_pack_deserializer()
-        {
-            psyq::message_pack::serializer<std::ostringstream, 16>
-                local_serializer;
-            std::unordered_set<int> local_integer_set;
-            while (local_integer_set.size() < 0x10000)
-            {
-                local_integer_set.insert(local_integer_set.size());
-            }
-            std::string local_string_0x10("0123456789ABCDEF");
-            std::string local_string_0x10000;
-            local_string_0x10000.reserve(0x10000);
-            while (local_string_0x10000.size() < 0x10000)
-            {
-                local_string_0x10000 += local_string_0x10;
-            }
-            std::string local_string_0x1f(local_string_0x10000, 0, 0x1f);
-            std::string local_string_0xff(local_string_0x10000, 0, 0xff);
-            std::string local_string_0xffff(local_string_0x10000, 0, 0xffff);
-
-            local_serializer.make_serial_array(31);
-            local_serializer.write_container_binary(
-                local_integer_set.begin(), local_integer_set.size());
-            local_serializer.write_extended(
-                0x7f, 0x123456789abcdefLL, psyq::message_pack::little_endian);
-            local_serializer.write_array(local_integer_set);
-            local_serializer.write_set(local_integer_set);
-            local_serializer.write_tuple(std::make_tuple(0, 0.0f, 0.0, false));
-            local_serializer << (std::numeric_limits<std::int64_t>::min)();
-            local_serializer << (std::numeric_limits<std::int32_t>::min)();
-            local_serializer << (std::numeric_limits<std::int16_t>::min)();
-            local_serializer << (std::numeric_limits<std::int8_t >::min)();
-            local_serializer << -0x20;
-            local_serializer << false;
-            local_serializer << 0.25;
-            local_serializer << 0.5f;
-            local_serializer << true;
-            local_serializer << int(0x7f);
-            local_serializer << (std::numeric_limits<std::uint8_t >::max)();
-            local_serializer << (std::numeric_limits<std::uint16_t>::max)();
-            local_serializer << (std::numeric_limits<std::uint32_t>::max)();
-            local_serializer << (std::numeric_limits<std::uint64_t>::max)();
-            local_serializer << local_string_0x1f;
-            local_serializer << local_string_0xff;
-            local_serializer << local_string_0xffff;
-            local_serializer << local_string_0x10000;
-            local_serializer.write_container_binary(local_string_0xff);
-            local_serializer.write_container_binary(local_string_0xffff);
-            local_serializer.write_container_binary(local_string_0x10000);
-            local_serializer.make_serial_extended(5, local_string_0x10.size());
-            local_serializer.fill_container_raw(local_string_0x10);
-            local_serializer.make_serial_extended(8, local_string_0xff.size());
-            local_serializer.fill_container_raw(local_string_0xff);
-            local_serializer.make_serial_extended(16, local_string_0xffff.size());
-            local_serializer.fill_container_raw(local_string_0xffff);
-            local_serializer.make_serial_extended(17, local_string_0x10000.size());
-            local_serializer.fill_container_raw(local_string_0x10000);
-            local_serializer.write_nil();
-
-            auto const local_message_string(local_serializer.get_stream().str());
-            psyq::message_pack::deserializer<> local_deserializer;
-            std::size_t local_message_offset(0);
-            local_deserializer.deserialize(
-                local_message_string.data(),
-                local_message_string.size(),
-                local_message_offset);
-            auto const& local_root(local_deserializer.get_root_object());
-            auto local_message_pack_object(local_root.get_array()->begin() + 5);
-            PSYQ_ASSERT(local_message_pack_object != nullptr);
-
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(
-                        (std::numeric_limits<std::int64_t>::min)()));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(
-                        (std::numeric_limits<std::int32_t>::min)()));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(
-                        (std::numeric_limits<std::int16_t>::min)()));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(
-                        (std::numeric_limits<std::int8_t>::min)()));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(-0x20));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(false));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(0.25));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(0.5f));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(true));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(0x7f));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(
-                        (std::numeric_limits<std::uint8_t>::max)()));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(
-                        (std::numeric_limits<std::uint16_t>::max)()));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(
-                        (std::numeric_limits<std::uint32_t>::max)()));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(
-                        (std::numeric_limits<std::uint64_t>::max)()));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                local_string_0x1f == std::string(
-                    local_message_pack_object->get_string()->begin(),
-                    local_message_pack_object->get_string()->end()));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                local_string_0xff == std::string(
-                    local_message_pack_object->get_string()->begin(),
-                    local_message_pack_object->get_string()->end()));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                local_string_0xffff == std::string(
-                        local_message_pack_object->get_string()->begin(),
-                        local_message_pack_object->get_string()->end()));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                local_string_0x10000 == std::string(
-                    local_message_pack_object->get_string()->begin(),
-                    local_message_pack_object->get_string()->end()));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                local_string_0xff == std::string(
-                    (char const*)local_message_pack_object->get_binary()->begin(),
-                    (char const*)local_message_pack_object->get_binary()->end()));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                local_string_0xffff == std::string(
-                    (char const*)local_message_pack_object->get_binary()->begin(),
-                    (char const*)local_message_pack_object->get_binary()->end()));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                local_string_0x10000 == std::string(
-                    (char const*)local_message_pack_object->get_binary()->begin(),
-                    (char const*)local_message_pack_object->get_binary()->end()));
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                local_string_0x10 == std::string(
-                    (char const*)local_message_pack_object->get_extended()->begin(),
-                    (char const*)local_message_pack_object->get_extended()->end()));
-            PSYQ_ASSERT(local_message_pack_object->get_extended()->type() == 5);
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                local_string_0xff == std::string(
-                    (char const*)local_message_pack_object->get_extended()->begin(),
-                    (char const*)local_message_pack_object->get_extended()->end()));
-            PSYQ_ASSERT(local_message_pack_object->get_extended()->type() == 8);
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                local_string_0xffff == std::string(
-                    (char const*)local_message_pack_object->get_extended()->begin(),
-                    (char const*)local_message_pack_object->get_extended()->end()));
-            PSYQ_ASSERT(local_message_pack_object->get_extended()->type() == 16);
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                local_string_0x10000 == std::string(
-                    (char const*)local_message_pack_object->get_extended()->begin(),
-                    (char const*)local_message_pack_object->get_extended()->end()));
-            PSYQ_ASSERT(local_message_pack_object->get_extended()->type() == 17);
-            ++local_message_pack_object;
-
-            PSYQ_ASSERT(
-                *local_message_pack_object == psyq::message_pack::object());
-            ++local_message_pack_object;
-        }
-    }
-}
 
 #endif // !defined(PSYQ_MESSAGE_PACK_DESIRIALIZE_HPP_)

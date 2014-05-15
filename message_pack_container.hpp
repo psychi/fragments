@@ -22,10 +22,10 @@ namespace psyq
             @retval 0  等値。
             @retval 負 右辺のほうが小さい。
          */
-        template<typename template_value_type>
+        template<typename template_value>
         int message_pack_object_compare(
-            template_value_type const& in_left,
-            template_value_type const& in_right)
+            template_value const& in_left,
+            template_value const& in_right)
         {
             return in_left < in_right? -1: (in_right < in_left? 1: 0);
         }
@@ -36,10 +36,10 @@ namespace psyq
             @retval true  左辺と右辺は等値。
             @retval false 左辺と右辺は非等値。
          */
-        template<typename template_value_type>
+        template<typename template_value>
         bool message_pack_object_equal(
-            template_value_type const& in_left,
-            template_value_type const& in_right)
+            template_value const& in_left,
+            template_value const& in_right)
         {
             return in_left == in_right;
         }
@@ -48,20 +48,20 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief MessagePackオブジェクトで使うコンテナの基底型。
-    @tparam template_value_type @copydoc value_type
+    @tparam template_value @copydoc value_type
     @sa psyq::message_pack::object::array
     @sa psyq::message_pack::object::map
  */
-template<typename template_value_type>
+template<typename template_value>
 struct psyq::internal::message_pack_container
 {
     /// thisが指す値の型。
-    private: typedef message_pack_container<template_value_type>
+    private: typedef message_pack_container<template_value>
         self;
 
     //-------------------------------------------------------------------------
     /// コンテナ要素の型。
-    public: typedef template_value_type value_type;
+    public: typedef template_value value_type;
 
     /// コンテナ要素数の型。
     public: typedef std::uint32_t size_type;

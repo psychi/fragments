@@ -76,8 +76,13 @@ namespace psyq
                 local_message_string.size(),
                 local_message_offset);
             auto const& local_root(local_deserializer.get_root_object());
-            auto local_message_pack_object(local_root.get_array()->begin() + 5);
+            auto local_message_pack_object(local_root.get_array()->data());
             PSYQ_ASSERT(local_message_pack_object != nullptr);
+            ++local_message_pack_object;
+            ++local_message_pack_object;
+            ++local_message_pack_object;
+            ++local_message_pack_object;
+            ++local_message_pack_object;
 
             PSYQ_ASSERT(
                 *local_message_pack_object

@@ -60,6 +60,7 @@ union psyq::internal::message_pack_value
             BINARY,           ///< バイナリ。
             EXTENDED_BINARY,  ///< 拡張バイナリ。
             ARRAY,            ///< MessagePack配列。
+            UNORDERED_MAP,    ///< ソートしてないMessagePack連想配列。
             MAP,              ///< MessagePack連想配列。
         };
     };
@@ -81,13 +82,13 @@ union psyq::internal::message_pack_value
     public: typedef psyq::internal::message_pack_extended
         extended;
     /// @copydoc self::type::ARRAY
-    public: typedef psyq::internal::message_pack_container<
-        psyq::message_pack::object>
-            array;
+    public: typedef psyq::internal::message_pack_container<psyq::message_pack::object>
+        array;
     /// @copydoc self::type::MAP
-    public: typedef psyq::internal::message_pack_map<
-        psyq::message_pack::object>
-            map;
+    public: typedef psyq::internal::message_pack_map<psyq::message_pack::object>
+        map;
+    /// @copydoc self::type::UNORDERED_MAP
+    public: typedef self::map::super unordered_map;
     //@}
     //-------------------------------------------------------------------------
     /// @name MessagePackオブジェクト値の構築
@@ -166,6 +167,14 @@ union psyq::internal::message_pack_value
         @param[in] in_map MessagePackオブジェクトに格納する連想配列。
      */
     public: explicit PSYQ_CONSTEXPR message_pack_value(
+        self::unordered_map const& in_map)
+    PSYQ_NOEXCEPT:
+        unordered_map_(in_map)
+    {}
+    /** @brief MessagePackオブジェクトに連想配列を格納する。
+        @param[in] in_map MessagePackオブジェクトに格納する連想配列。
+     */
+    public: explicit PSYQ_CONSTEXPR message_pack_value(
         self::map const& in_map)
     PSYQ_NOEXCEPT:
         map_(in_map)
@@ -184,11 +193,19 @@ union psyq::internal::message_pack_value
      */
     public: static bool equal(
         self const& in_left_value,
-        self::type::value const in_left_kind,
+        self::type::value in_left_kind,
         self const& in_right_value,
-        self::type::value const in_right_kind)
+        self::type::value in_right_kind)
     PSYQ_NOEXCEPT
     {
+        if (in_left_kind == self::type::MAP)
+        {
+            in_left_kind = self::type::UNORDERED_MAP;
+        }
+        if (in_right_kind == self::type::MAP)
+        {
+            in_right_kind = self::type::UNORDERED_MAP;
+        }
         if (in_left_kind != in_right_kind)
         {
             return false;
@@ -224,6 +241,7 @@ union psyq::internal::message_pack_value
                 == in_right_value.extended_;
         case self::type::ARRAY:
             return in_left_value.array_ == in_right_value.array_;
+        case self::type::UNORDERED_MAP:
         case self::type::MAP:
             return in_left_value.map_ == in_right_value.map_;
         default:
@@ -275,6 +293,7 @@ union psyq::internal::message_pack_value
         case self::type::ARRAY:
             return self::compare_array(
                 in_left_value, in_left_kind, in_right_value.array_);
+        case self::type::UNORDERED_MAP:
         case self::type::MAP:
             return self::compare_map(
                 in_left_value, in_left_kind, in_right_value.map_);
@@ -331,6 +350,7 @@ union psyq::internal::message_pack_value
             return -1;//-self::compare_map(in_right_map, this->raw_);
         case self::type::ARRAY:
             return -1;//-self::compare_map(in_right_map, this->array_);
+        case self::type::UNORDERED_MAP:
         case self::type::MAP:
             return in_left_value.map_.compare(in_right_map);
         default:
@@ -373,6 +393,7 @@ union psyq::internal::message_pack_value
             return -1;//-self::compare_array(in_right_array, in_left_value.raw_);
         case self::type::ARRAY:
             return in_left_value.array_.compare(in_right_array);
+        case self::type::UNORDERED_MAP:
         case self::type::MAP:
             return 1;//self::compare_map(in_left_value.map_, in_right_array);
         default:
@@ -424,6 +445,7 @@ union psyq::internal::message_pack_value
                 in_right_value.extended_);
         case self::type::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_raw);
+        case self::type::UNORDERED_MAP:
         case self::type::MAP:
             return 1;//self::compare_map(in_left_value.map_, in_right_raw);
         default:
@@ -485,6 +507,7 @@ union psyq::internal::message_pack_value
             return 1;//self::compare_raw(in_left_value.raw_, in_right_float);
         case self::type::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_float);
+        case self::type::UNORDERED_MAP:
         case self::type::MAP:
             return 1;//self::compare_map(in_left_value.map_, in_right_float);
         default:
@@ -646,6 +669,7 @@ union psyq::internal::message_pack_value
             return 1;//self::compare_raw(in_left_value.raw_, in_right_integer);
         case self::type::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_integer);
+        case self::type::UNORDERED_MAP:
         case self::type::MAP:
             return 1;//self::compare_map(in_left_value.map_, in_right_integer);
         default:
@@ -783,6 +807,7 @@ union psyq::internal::message_pack_value
             return 1;//self::compare_raw(in_left_value.raw_, in_right_integer);
         case self::type::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_integer);
+        case self::type::UNORDERED_MAP:
         case self::type::MAP:
             return 1;//self::compare_map(in_left_value.map_, in_right_integer);
         default:
@@ -899,6 +924,7 @@ union psyq::internal::message_pack_value
             return 1;//self::compare_raw(in_left_value.raw_, in_right_boolean);
         case self::type::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_boolean);
+        case self::type::UNORDERED_MAP:
         case self::type::MAP:
             return 1;//self::compare_map(in_left_value.map_, in_right_boolean);
         default:
@@ -943,6 +969,8 @@ union psyq::internal::message_pack_value
     public: self::extended extended_;
     /// @copydoc self::type::ARRAY
     public: self::array array_;
+    /// @copydoc self::type::UNORDERED_MAP
+    public: self::unordered_map unordered_map_;
     /// @copydoc self::type::MAP
     public: self::map map_;
 };

@@ -487,13 +487,15 @@ struct psyq::internal::message_pack_extended:
     }
 
     /** @brief 拡張バイナリの型の識別値を取得する。
-        @retval !=nullptr 拡張バイナリの型の識別値が格納されているポインタ。
-        @retval ==nullptr 拡張バイナリが空。
+        @param[in] in_empty_type 拡張バイナリが空だった場合の型の識別値。
+        @return 拡張バイナリの型の識別値。
      */
-    public: std::int8_t type() const PSYQ_NOEXCEPT
+    public: std::int8_t type(std::int8_t const in_empty_type = 0)
+    const PSYQ_NOEXCEPT
     {
         return 0 < this->super::size()?
-            *reinterpret_cast<std::int8_t const*>(this->super::data()): 0;
+            *reinterpret_cast<std::int8_t const*>(this->super::data()):
+            in_empty_type;
     }
 };
 

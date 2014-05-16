@@ -34,6 +34,8 @@ struct psyq::message_pack::object
     public: typedef psyq::internal::message_pack_value::extended extended;
     /// @copydoc self::value::array
     public: typedef psyq::internal::message_pack_value::array array;
+    /// @copydoc self::value::unordered_map
+    public: typedef psyq::internal::message_pack_value::unordered_map unordered_map;
     /// @copydoc self::value::map
     public: typedef psyq::internal::message_pack_value::map map;
     //@}
@@ -170,12 +172,21 @@ struct psyq::message_pack::object
     /** @brief MessagePackオブジェクトに連想配列を格納する。
         @param[in] in_map MessagePackオブジェクトに格納する連想配列。
      */
-    public: explicit PSYQ_CONSTEXPR object(self::map const& in_map)
+    public: explicit PSYQ_CONSTEXPR object(self::unordered_map const& in_map)
+    PSYQ_NOEXCEPT:
+        value_(in_map),
+        type_(self::type::UNORDERED_MAP)
+    {}
+    //@}
+    /** @brief MessagePackオブジェクトに連想配列を格納する。
+        @param[in] in_map MessagePackオブジェクトに格納する連想配列。
+     */
+    private: explicit PSYQ_CONSTEXPR object(self::map const& in_map)
     PSYQ_NOEXCEPT:
         value_(in_map),
         type_(self::type::MAP)
     {}
-    //@}
+
     //-------------------------------------------------------------------------
     /// @name MessagePackオブジェクトへの値の格納
     //@{
@@ -316,7 +327,7 @@ struct psyq::message_pack::object
         @param[in] in_map MessagePackオブジェクトに格納する連想配列。
         @return *this
      */
-    public: PSYQ_CONSTEXPR self& operator=(self::map const& in_map)
+    public: PSYQ_CONSTEXPR self& operator=(self::unordered_map const& in_map)
     PSYQ_NOEXCEPT
     {
         return *new(this) self(in_map);
@@ -328,6 +339,16 @@ struct psyq::message_pack::object
         new(this) self();
     }
     //@}
+
+    /** @brief MessagePackオブジェクトに連想配列を格納する。
+        @param[in] in_map MessagePackオブジェクトに格納する連想配列。
+        @return *this
+     */
+    private: PSYQ_CONSTEXPR self& operator=(self::map const& in_map)
+    PSYQ_NOEXCEPT
+    {
+        return *new(this) self(in_map);
+    }
     //-------------------------------------------------------------------------
     /// @name MessagePackオブジェクトの比較
     //@{
@@ -544,7 +565,6 @@ struct psyq::message_pack::object
             MessagePackオブジェクトに格納されてる文字列へのポインタ。
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは文字列ではない。
-        @sa self::set_string()
      */
     public: PSYQ_CONSTEXPR self::string const* get_string() const PSYQ_NOEXCEPT
     {
@@ -556,7 +576,6 @@ struct psyq::message_pack::object
             MessagePackオブジェクトに格納されてるバイナリへのポインタ。
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのはバイナリではない。
-        @sa self::set_binary()
      */
     public: PSYQ_CONSTEXPR self::binary const* get_binary() const PSYQ_NOEXCEPT
     {
@@ -568,60 +587,12 @@ struct psyq::message_pack::object
             MessagePackオブジェクトに格納されてる拡張バイナリへのポインタ。
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは拡張バイナリではない。
-        @sa self::set_extended()
      */
     public: PSYQ_CONSTEXPR self::extended const* get_extended()
     const PSYQ_NOEXCEPT
     {
         return this->get_type() == self::type::EXTENDED_BINARY?
             &this->value_.extended_: nullptr;
-    }
-
-    /** @brief MessagePackオブジェクトに文字列を格納する。
-        @param[in] in_data 文字列の先頭位置。
-        @param[in] in_size 文字列のバイト数。
-        @return MessagePackオブジェクトに格納したRAWバイト列。
-     */
-    public: self::string const& set_string(
-        self::string::pointer const in_data,
-        self::string::size_type const in_size)
-    PSYQ_NOEXCEPT
-    {
-        this->type_ = self::type::STRING;
-        this->value_.string_.reset(in_data, in_size);
-        return this->value_.string_;
-    }
-    /** @brief MessagePackオブジェクトにバイナリを格納する。
-        @param[in] in_data バイナリの先頭位置。
-        @param[in] in_size バイナリのバイト数。
-        @return MessagePackオブジェクトに格納したRAWバイト列。
-     */
-    public: self::binary const& set_binary(
-        self::binary::pointer const in_data,
-        self::binary::size_type const in_size)
-    PSYQ_NOEXCEPT
-    {
-        this->type_ = self::type::BINARY;
-        this->value_.binary_.reset(in_data, in_size);
-        return this->value_.binary_;
-    }
-    /** @brief MessagePackオブジェクトに拡張バイナリを格納する。
-        @param[in] in_data
-            拡張バイナリの先頭位置。先頭1バイトに型識別値が格納され、
-            以後、バイナリが格納されていること。
-        @param[in] in_size
-            拡張バイナリのバイト数。
-            型識別値の1バイトと、バイナリのバイト数を合わせたもの。
-        @return MessagePackオブジェクトに格納した拡張バイナリ。
-     */
-    public: self::extended const& set_extended(
-        self::extended::pointer const in_data,
-        self::extended::size_type const in_size)
-    PSYQ_NOEXCEPT
-    {
-        this->type_ = self::type::EXTENDED_BINARY;
-        this->value_.extended_.reset(in_data, in_size);
-        return this->value_.extended_;
     }
     //@}
     //-------------------------------------------------------------------------
@@ -632,7 +603,6 @@ struct psyq::message_pack::object
             MessagePackオブジェクトに格納されてる配列へのポインタ。
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは配列ではない。
-        @sa self::set_array()
      */
     public: PSYQ_CONSTEXPR self::array* get_array() PSYQ_NOEXCEPT
     {
@@ -644,21 +614,6 @@ struct psyq::message_pack::object
     {
         return const_cast<self*>(this)->get_array();
     }
-
-    /** @brief MessagePackオブジェクトに配列を格納する。
-        @param[in] in_data 配列の先頭位置。
-        @param[in] in_size 配列の要素数。
-        @return MessagePackオブジェクトに格納されてる配列。
-     */
-    public: self::array const& set_array(
-        self::array::pointer const in_data,
-        self::array::size_type const in_size)
-    PSYQ_NOEXCEPT
-    {
-        this->type_ = self::type::ARRAY;
-        this->value_.array_.reset(in_data, in_size);
-        return this->value_.array_;
-    }
     //@}
     //-------------------------------------------------------------------------
     /// @name MessagePackオブジェクトに格納されてる連想配列の操作
@@ -668,7 +623,25 @@ struct psyq::message_pack::object
             MessagePackオブジェクトに格納されてる連想配列へのポインタ。
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは連想配列ではない。
-        @sa self::set_map()
+     */
+    public: PSYQ_CONSTEXPR self::unordered_map* get_unordered_map() PSYQ_NOEXCEPT
+    {
+        return this->get_type() == self::type::UNORDERED_MAP
+            || this->get_type() == self::type::MAP?
+                &this->value_.map_: nullptr;
+    }
+    /// @copydoc get_map()
+    public: PSYQ_CONSTEXPR self::unordered_map const* get_unordered_map()
+    const PSYQ_NOEXCEPT
+    {
+        return const_cast<self*>(this)->get_unordered_map();
+    }
+
+    /** @brief MessagePackオブジェクトに格納されてる連想配列を取得する。
+        @retval !=nullptr
+            MessagePackオブジェクトに格納されてる連想配列へのポインタ。
+        @retval ==nullptr
+            MessagePackオブジェクトに格納されてるのは連想配列ではない。
      */
     public: PSYQ_CONSTEXPR self::map* get_map() PSYQ_NOEXCEPT
     {
@@ -681,19 +654,26 @@ struct psyq::message_pack::object
         return const_cast<self*>(this)->get_map();
     }
 
-    /** @brief MessagePackオブジェクトに配列を格納する。
-        @param[in] in_data 連想配列の先頭位置。
-        @param[in] in_size 連想配列の要素数。
-        @return MessagePackオブジェクトに格納されてる連想配列。
+    /** @brief MessagePackオブジェクトに格納されてる unordered_map を並び替え、
+               map に変換する。
+        @retval !=nullptr
+            MessagePackオブジェクトに格納されてる連想配列へのポインタ。
+        @retval ==nullptr
+            MessagePackオブジェクトに格納されてるのは連想配列ではない。
      */
-    public: self::map const& set_map(
-        self::map::pointer const in_data,
-        self::map::size_type const in_size)
-    PSYQ_NOEXCEPT
+    public: self::map const* sort_map()
     {
-        this->type_ = self::type::MAP;
-        this->value_.map_.reset(in_data, in_size);
-        return this->value_.map_;
+        switch (this->get_type())
+        {
+        case self::type::UNORDERED_MAP:
+            this->value_.map_.sort();
+            this->type_ = self::type::MAP;
+            return &this->value_.map_;
+        case self::type::MAP:
+            return &this->value_.map_;
+        default:
+            return nullptr;
+        }
     }
     //@}
     //-------------------------------------------------------------------------

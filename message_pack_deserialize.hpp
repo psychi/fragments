@@ -258,6 +258,7 @@ class psyq::message_pack::deserializer
         this->stack_.front().object.reset();
         this->stack_size_ = 0;
         this->allocate_raw_ = true;// !this->pool_.is_from(in_data);
+        this->sort_map_ = true;
 
         for (;;)
         {
@@ -319,7 +320,7 @@ class psyq::message_pack::deserializer
         else if (local_header <= psyq::message_pack::header_FIX_MAP_MAX)
         {
             // [0x80, 0x8f]: fix map
-            return this->make_container<psyq::message_pack::object::map>(
+            return this->make_container<psyq::message_pack::object::unordered_map>(
                 out_object, local_header & 0x0f);
         }
         else if (local_header <= psyq::message_pack::header_FIX_ARRAY_MAX)
@@ -525,11 +526,11 @@ class psyq::message_pack::deserializer
         // 連想配列
         case psyq::message_pack::header_MAP16:
             return this->read_container<
-                psyq::message_pack::object::map, std::uint16_t>(
+                psyq::message_pack::object::unordered_map, std::uint16_t>(
                     out_object, io_istream);
         case psyq::message_pack::header_MAP32:
             return this->read_container<
-                psyq::message_pack::object::map, std::uint32_t>(
+                psyq::message_pack::object::unordered_map, std::uint32_t>(
                     out_object, io_istream);
 
         default:
@@ -571,7 +572,7 @@ class psyq::message_pack::deserializer
     {
         static_assert(
             std::is_same<template_container, psyq::message_pack::object::array>::value
-            || std::is_same<template_container, psyq::message_pack::object::map>::value,
+            || std::is_same<template_container, psyq::message_pack::object::unordered_map>::value,
             "");
         if (this->stack_.size() <= this->stack_size_)
         {
@@ -820,7 +821,7 @@ class psyq::message_pack::deserializer
             case self::stack_kind_MAP_VALUE:
             {
                 // 連想配列に要素を追加する。
-                auto const local_map(local_stack_top.object.get_map());
+                auto const local_map(local_stack_top.object.get_unordered_map());
                 if (local_map != nullptr)
                 {
                     local_map->push_back(
@@ -841,7 +842,10 @@ class psyq::message_pack::deserializer
                 }
 
                 // 連想配列の全要素が揃ったので、ソートする。
-                local_map->sort();
+                if (this->sort_map_)
+                {
+                    local_stack_top.object.sort_map();
+                }
                 break;
             }
 
@@ -861,6 +865,7 @@ class psyq::message_pack::deserializer
     private: typename self::pool pool_;
     private: std::array<typename self::stack, template_stack_capacity> stack_;
     private: std::size_t stack_size_; ///< スタックの要素数。
+    private: bool sort_map_;
     private: bool allocate_raw_;
 };
 

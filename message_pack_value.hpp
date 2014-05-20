@@ -30,7 +30,7 @@ namespace psyq
     namespace message_pack
     {
         /// @cond
-        struct object;
+        class object;
         /// @endcond
     }
 }

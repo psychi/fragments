@@ -11,7 +11,7 @@ namespace psyq
     {
         inline void message_pack()
         {
-            psyq::message_pack::serializer<std::ostringstream, 16>
+            psyq::message_pack::serializer<std::stringstream, 16>
                 local_serializer;
             std::unordered_set<int> local_integer_set;
             while (local_integer_set.size() < 0x10000)
@@ -68,14 +68,13 @@ namespace psyq
             local_serializer.fill_container_raw(local_string_0x10000);
             local_serializer.write_nil();
 
-            auto const local_message_string(local_serializer.get_stream().str());
+            std::stringstream local_stream;
+            local_serializer.swap_stream(local_stream);
+            local_stream.seekg(0);
             psyq::message_pack::deserializer<> local_deserializer;
-            std::size_t local_message_offset(0);
-            local_deserializer.deserialize(
-                local_message_string.data(),
-                local_message_string.size(),
-                local_message_offset);
-            auto const& local_root(local_deserializer.get_root_object());
+            auto const local_root(
+                local_deserializer.read_object(
+                    local_stream, psyq::message_pack::pool<>()));
             auto local_message_pack_object(local_root.get_array()->data());
             PSYQ_ASSERT(local_message_pack_object != nullptr);
             ++local_message_pack_object;

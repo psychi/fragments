@@ -1685,7 +1685,7 @@ class psyq::message_pack::serializer
         return this->stream_;
     }
 
-    private: bool swap_stream(typename self::stream& io_stream)
+    public: bool swap_stream(typename self::stream& io_stream)
     {
         if (this->fill_rest_containers() != 0)
         {

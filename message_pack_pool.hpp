@@ -78,9 +78,9 @@ class psyq::message_pack::pool
         @param[in,out] io_source move元。
      */
     public: pool(self&& io_source):
-        chunk_list_(std::move(in_source.chunk_list_)),
-        default_capacity_(std::move(in_source.default_capacity_)),
-        allocator_(std::move(in_source.allocator_))
+        chunk_list_(std::move(io_source.chunk_list_)),
+        default_capacity_(std::move(io_source.default_capacity_)),
+        allocator_(std::move(io_source.allocator_))
     {
         io_source.chunk_list_ = nullptr;
     }

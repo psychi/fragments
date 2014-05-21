@@ -87,18 +87,17 @@ class psyq::message_pack::deserializer
         stack_size_(0),
         allocate_raw_(true),
         sort_map_(true)
-    {
-        this->stack_.front().object.reset();
-    }
+    {}
 
     public: deserializer(self&& io_source):
         stream_(std::move(io_source.stream_)),
         pool_(std::move(io_source.pool_)),
-        stack_size_(0),
+        stack_(std::move(io_source.stack_)),
+        stack_size_(std::move(io_source.stack_size_)),
         allocate_raw_(std::move(io_source.allocate_raw_)),
         sort_map_(std::move(io_source.sort_map_))
     {
-        this->stack_.front().object.reset();
+        io_source.stack_size_ = 0;
     }
 
     public: self& operator=(self&& io_source)
@@ -114,6 +113,17 @@ class psyq::message_pack::deserializer
 
     private: deserializer(self const&);
     private: self& operator=(self const&);
+
+    public: bool swap_stream(typename self::stream& io_stream)
+    {
+        if (0 < this->stack_size_)
+        {
+            // 復元途中はできない。
+            return false;
+        }
+        std::swap(this->stream_, io_stream);
+        return true;
+    }
 
     public: bool swap_pool(typename self::pool& io_pool)
     {

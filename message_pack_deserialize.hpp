@@ -104,10 +104,11 @@ class psyq::message_pack::deserializer
     {
         this->stream_ = std::move(io_source.stream_);
         this->pool_ = std::move(io_source.pool_);
-        this->stack_.front().object.reset();
-        this->stack_size_ = 0;
-        this->allocate_raw_ = true;
-        this->sort_map_ = true;
+        this->stack_ = std::move(io_source.stack_);
+        this->stack_size_ = std::move(io_source.stack_size_);
+        this->allocate_raw_ = std::move(io_source.allocate_raw_);
+        this->sort_map_ = std::move(io_source.sort_map_);
+        io_source.stack_size_ = 0;
         return *this;
     }
 
@@ -139,8 +140,8 @@ class psyq::message_pack::deserializer
     //-------------------------------------------------------------------------
     /** @brief ストリームを読み込み、MessagePackオブジェクトを復元する。
         @param[out] out_object
-            復元したMessagePackオブジェクトの格納先。
-            復元完了しなかった場合は、何もしない。
+            復元が完了したMessagePackオブジェクトを格納する。
+            復元が完了しなかった場合は、何もしない。
         @return
             - 正なら、MessagePackオブジェクトの復元完了。
             - 0 なら、MessagePackオブジェクトの復元途中で終了。
@@ -148,14 +149,6 @@ class psyq::message_pack::deserializer
      */
     public: int read_object(typename self::root_object& out_object)
     {
-        // 復元途中のオブジェクトではないか判定する。
-        if (0 < this->stack_size_ && this->stack_.front().object != out_object)
-        {
-            PSYQ_ASSERT(false);
-            return -1;
-        }
-
-        // ストリームからMessagePackを読み込む。
         psyq::message_pack::object local_object;
         for (;;)
         {

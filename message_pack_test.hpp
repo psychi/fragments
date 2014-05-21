@@ -71,11 +71,12 @@ namespace psyq
             std::stringstream local_stream;
             local_serializer.swap_stream(local_stream);
             local_stream.seekg(0);
-            psyq::message_pack::deserializer<> local_deserializer;
-            auto const local_root(
-                local_deserializer.read_object(
-                    local_stream, psyq::message_pack::pool<>()));
-            auto local_message_pack_object(local_root.get_array()->data());
+            psyq::message_pack::deserializer<std::stringstream>
+                local_deserializer(std::move(local_stream));
+            psyq::message_pack::root_object<> local_root_object;
+            auto const local_result(local_deserializer.read_object(local_root_object));
+            PSYQ_ASSERT(0 < local_result);
+            auto local_message_pack_object(local_root_object.get_array()->data());
             PSYQ_ASSERT(local_message_pack_object != nullptr);
             ++local_message_pack_object;
             ++local_message_pack_object;

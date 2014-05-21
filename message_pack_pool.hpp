@@ -23,6 +23,12 @@ namespace psyq
         template<typename = std::allocator<std::int64_t>> class pool;
         /// @endcond
     }
+    namespace internal
+    {
+        /// @cond
+        template<typename = std::int8_t const*> class message_pack_istream;
+        /// @endcond
+    }
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -278,6 +284,144 @@ class psyq::message_pack::pool
     private: typename self::chunk_header* chunk_list_; ///< 先頭チャンク。
     private: std::size_t default_capacity_; ///< チャンク容量のデフォルト値。
     private: template_allocator allocator_; ///< @copydoc allocator_type
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template<typename template_iterator>
+class psyq::internal::message_pack_istream
+{
+    private: typedef message_pack_istream<template_iterator> self;
+
+    public: typedef template_iterator iterator;
+    public: typedef typename
+        std::iterator_traits<template_iterator>::value_type char_type;
+    public: typedef std::char_traits<typename self::char_type> traits_type;
+    public: typedef typename self::traits_type::int_type int_type;
+    //public: typedef typename self::traits_type::pos_type pos_type;
+    //public: typedef typename self::traits_type::off_type off_type;
+    public: typedef std::size_t pos_type;
+    public: typedef int off_type;
+
+    public: message_pack_istream(
+        typename self::iterator const in_begin,
+        typename self::iterator const in_end)
+    :
+        current_(in_begin),
+        begin_(in_begin),
+        end_(in_end),
+        size_(std::distance(in_begin, in_end))
+    {}
+
+    public: typename self::iterator const& begin() const
+    {
+        return this->begin_;
+    }
+    public: typename self::iterator const& end() const
+    {
+        return this->end_;
+    }
+    public: typename self::iterator const& current() const
+    {
+        return this->current_;
+    }
+
+    public: bool eof() const
+    {
+        return this->end() <= this->current();
+    }
+    public: bool fail() const
+    {
+        return false;
+    }
+
+    public: typename self::char_type get()
+    {
+        if (this->eof())
+        {
+            return 0;
+        }
+        auto const local_char(*this->current());
+        ++this->current_;
+        return local_char;
+    }
+
+    public: self& read(
+        typename self::char_type* const out_buffer,
+        std::size_t const in_length)
+    {
+        auto const local_length(
+            std::min<std::size_t>(in_length, this->end() - this->current()));
+        std::memcpy(
+            out_buffer,
+            this->current(),
+            sizeof(typename self::char_type) * local_length);
+        this->current_ += local_length;
+        return *this;
+    }
+
+    public: typename self::pos_type tellg() const
+    {
+        return this->current() - this->begin();
+    }
+
+    public: self& seekg(typename self::pos_type const in_offset)
+    {
+        this->current_ = in_offset < this->size_?
+            std::next(this->begin_, in_offset): this->end_;
+        return *this;
+    }
+    public: self& seekg(
+        typename self::off_type const in_offset,
+        std::ios::seek_dir const in_direction)
+    {
+        switch (in_direction)
+        {
+        case std::ios::beg:
+            if (0 < in_offset)
+            {
+                return this->seekg(
+                    static_cast<typename self::pos_type>(in_offset));
+            }
+            this->current_ = this->begin_;
+            break;
+        case std::ios::end:
+            if (0 <= in_offset)
+            {
+                this->current_ = this->end_;
+            }
+            else if (this->size_ <= unsigned(-in_offset))
+            {
+                this->current_ = this->begin_;
+            }
+            else
+            {
+                this->current_ = std::prev(this->begin_, -in_offset);
+            }
+            break;
+        case std::ios::cur:
+            if (in_offset < 0)
+            {
+                auto const local_distance(
+                    std::distance(this->begin_, this->current_));
+                this->current_ = -in_offset < local_distance?
+                    std::prev(this->current_, -in_offset): this->begin_;
+            }
+            else if (0 < in_offset)
+            {
+                auto const local_distance(
+                    std::distance(this->current_, this->end_));
+                this->current_ = in_offset < local_distance?
+                    std::next(this->current_, in_offset): this->end_;
+            }
+            break;
+        }
+        return *this;
+    }
+
+    private: typename self::iterator current_;
+    private: typename self::iterator begin_;
+    private: typename self::iterator end_;
+    private: std::size_t size_;
 };
 
 #endif // !defined(PSYQ_MESSAGE_PACK_POOL_HPP_)

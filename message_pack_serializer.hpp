@@ -223,6 +223,40 @@ namespace psyq
                 return local_union.target;
             }
         };
+
+        //---------------------------------------------------------------------
+        /** @brief ストリームからRAWバイト列を読み込む。
+            @param[out]    out_bytes    ストリームから読み込んだRAWバイト列を格納する。
+            @param[in,out] io_istream   読み込むストリーム。
+            @param[in]     in_read_size 読み込むバイト数。
+            @return 読み込んだバイト数。
+         */
+        template<typename template_stream>
+        std::size_t message_pack_read_bytes(
+            void* const out_bytes,
+            template_stream& io_istream,
+            std::size_t const in_read_size)
+        {
+            if (io_istream.fail())
+            {
+                return 0;
+            }
+
+            // ストリームを読み込む。
+            auto const local_pre_position(io_istream.tellg());
+            typedef typename template_stream::char_type char_type;
+            io_istream.read(
+                static_cast<char_type*>(out_bytes),
+                in_read_size / sizeof(char_type));
+            if (io_istream.fail())
+            {
+                PSYQ_ASSERT(false);
+                io_istream.seekg(local_pre_position);
+                return 0;
+            }
+            return static_cast<std::size_t>(io_istream.tellg() - local_pre_position)
+                * sizeof(char_type);
+        }
     } // namespace internal
 } // namespace psyq
 
@@ -240,7 +274,7 @@ struct psyq::message_pack::raw_bytes
         この実装では、整数型か浮動小数点数型にのみに対応している。
         これらの型以外に対応するには、テンプレートの特殊化をした
         psyq::message_pack::raw_bytes を実装し、
-        staticメンバ関数として read_stream() と write_stream() を実装すること。
+        staticメンバ関数として self::write_value() を実装すること。
      */
     public: typedef template_value value_type;
     static_assert(
@@ -263,33 +297,25 @@ struct psyq::message_pack::raw_bytes
         @param[in,out] io_istream    バイト列を読み込む入力ストリーム。
         @param[in]     in_endianness 値を直列化復元する際のエンディアン性。
      */
-    public: template<typename template_stream>
-    static bool read_stream(
+    private: template<typename template_stream>
+    static bool read_value(
         template_value& out_value,
         template_stream& io_istream,
         psyq::message_pack::endianness const in_endianness)
     {
+        auto const local_pre_position(io_istream.tellg());
         self::pack local_bytes;
-        auto const local_pre_offset(io_istream.tellg());
-        io_istream.read(
-            reinterpret_cast<typename template_stream::char_type*>(
-                &local_bytes),
-            sizeof(template_value));
-        if (io_istream.fail())
+        auto const local_read_size(
+            psyq::internal::message_pack_read_bytes(
+                &local_bytes, io_istream, sizeof(local_bytes)));
+        if (local_read_size != sizeof(local_bytes))
         {
             PSYQ_ASSERT(false);
+            io_istream.seekg(local_pre_position);
+            return false;
         }
-        else if (io_istream.tellg() - local_pre_offset != sizeof(template_value))
-        {
-            PSYQ_ASSERT(false);
-        }
-        else
-        {
-            out_value = self::convert_bytes_endianness(local_bytes, in_endianness);
-            return true;
-        }
-        io_istream.seekg(local_pre_offset);
-        return false;
+        out_value = self::convert_bytes_endianness(local_bytes, in_endianness);
+        return true;
     }
 
     /** @brief 値からバイト列へ直列化し、ストリームへ書き出す。
@@ -302,7 +328,7 @@ struct psyq::message_pack::raw_bytes
         @param[in]     in_endianness 値を直列化する際のエンディアン性。
      */
     public: template<typename template_stream>
-    static bool write_stream(
+    static bool write_value(
         template_stream& io_ostream,
         template_value const in_value,
         psyq::message_pack::endianness const in_endianness)
@@ -764,7 +790,7 @@ class psyq::message_pack::serializer
     private: template<typename template_value>
     bool write_big_endian(template_value const in_value)
     {
-        return psyq::message_pack::raw_bytes<template_value>::write_stream(
+        return psyq::message_pack::raw_bytes<template_value>::write_value(
             this->stream_, in_value, psyq::message_pack::big_endian);
     }
 
@@ -986,7 +1012,7 @@ class psyq::message_pack::serializer
     {
         return this->write_extended_header(in_type, sizeof(template_value))
             && psyq::message_pack::raw_bytes<template_value>
-                ::write_stream(this->stream_, in_value, in_endianness);
+                ::write_value(this->stream_, in_value, in_endianness);
     }
     /** @brief 長さが0の拡張バイナリを直列化し、ストリームへ出力する。
         @param[in] in_type 直列化する拡張型識別値。
@@ -1344,7 +1370,7 @@ class psyq::message_pack::serializer
             }
             else if (
                 in_length <= 0
-                || !psyq::message_pack::raw_bytes<element>::write_stream(
+                || !psyq::message_pack::raw_bytes<element>::write_value(
                     this->stream_, *in_iterator, in_endianness))
             {
                 return local_stack->rest_size;

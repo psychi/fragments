@@ -74,8 +74,7 @@ namespace psyq
             psyq::message_pack::deserializer<std::stringstream>
                 local_deserializer(std::move(local_stream));
             psyq::message_pack::root_object<> local_root_object;
-            auto const local_result(local_deserializer.read_object(local_root_object));
-            PSYQ_ASSERT(0 < local_result);
+            local_deserializer >> local_root_object;
             auto local_message_pack_object(local_root_object.get_array()->data());
             PSYQ_ASSERT(local_message_pack_object != nullptr);
             ++local_message_pack_object;

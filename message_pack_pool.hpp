@@ -424,4 +424,142 @@ class psyq::internal::message_pack_istream
     private: std::size_t size_;
 };
 
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+#if 0
+template<typename template_char, typename template_traits>
+class basic_raw_istreambuf
+{
+    private: typedef basic_raw_istreambuf self;
+    public: typedef template_char char_type;
+    public: typedef template_traits traits_type;
+    public: typedef typename self::traits_type::int_type int_type;
+
+    //-------------------------------------------------------------------------
+    protected: basic_raw_istreambuf();
+
+    //-------------------------------------------------------------------------
+    pubimbue();
+    getloc();
+
+    //-------------------------------------------------------------------------
+    pubsetbuf();
+    pubseekoff();
+    pubseekpos();
+    pubsync();
+
+    //-------------------------------------------------------------------------
+    /** @brief 現在の部分列から読み取り可能な文字数を取得する。
+     */
+    public: std::streamsize in_avail()
+    {
+        return this->egptr() - this->gptr();
+    }
+
+    /** @brief 1文字捨てて、次の文字を読み取る。
+     */
+    public: typename self::int_type snextc();
+
+    /** @brief 現在位置の文字を読み取り、現在位置を1文字進める。
+     */
+    public: typename self::int_type sbumpc();
+
+    protected: virtual typename self::int_type uflow();
+
+    /** @brief 現在位置の文字を読み取る。
+     */
+    public: typename self::int_type sgetc()
+    {
+        return 0 < this->in_avail()?
+            self::traits_type::to_int_type(*(this->gptr())):
+            this->underflow();
+    }
+
+    protected: virtual typename self::int_type underflow()
+    {
+        return self::traits_type::eof();
+    }
+
+    /** @brief 複数文字を読み取る。
+     */
+    sgetn();
+
+    /** @brief 
+     */
+    protected: virtual xsgetn();
+
+    /** @brief ブロックせずに読み取れると期待される文字数を取得する。
+     */
+    protected: virtual std::streamsize showmanyc();
+
+    /** @brief 任意の1文字を入力列に戻す。
+     */
+    sputbackc();
+
+    /** @brief 直前に読み取った1文字を入力列に戻す。
+     */
+    sungetc();
+
+    /** @brief 1文字を入力列に戻す。
+     */
+    protected: virtual pbackfail();
+
+    //-------------------------------------------------------------------------
+    /** @brief 入力部分列の先頭へのポインタを取得する。
+     */
+    protected: typename self::char_type* eback()
+    {
+        return this->begin_;
+    }
+
+    /** @brief 入力部分列の終端へのポインタを取得する。
+     */
+    protected: typename self::char_type* egptr()
+    {
+        return this->end_;
+    }
+
+    /** @brief 入力部分列の現在位置へのポインタを取得する。
+     */
+    protected: typename self::char_type* gptr()
+    {
+        return this->current_;
+    }
+
+    /** @brief 入力部分列の現在位置を進める。
+     */
+    protected: void gbump(int const in_count)
+    {
+        if (in_count < 0)
+        {
+            if (this->eback() <= this->gptr() + in_count)
+            {
+                this->current_ += in_count;
+            }
+        }
+        else if (0 < in_count)
+        {
+            if (this->gptr() + in_count <= this->egptr())
+            {
+                this->current_ += in_count;
+            }
+        }
+    }
+
+    /** @brief 入力部分列の現在位置を進める。
+     */
+    protected: void setg(
+        typename self::char_type* const in_begin,
+        typename self::char_type* const in_current,
+        typename self::char_type* const in_end);
+
+    //-------------------------------------------------------------------------
+    void swap(self& io_right);
+
+    //-------------------------------------------------------------------------
+    typename self::char_type* begin_;
+    typename self::char_type* end_;
+    typename self::char_type* current_;
+};
+#endif // 0
+
 #endif // !defined(PSYQ_MESSAGE_PACK_POOL_HPP_)

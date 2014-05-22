@@ -176,16 +176,14 @@ class psyq::message_pack::deserializer
     /** @brief 直列化復元で読み込む入力ストリームを取得する。
         @return 直列化復元で読み込む入力ストリーム。
      */
-    public: typename self::stream& get_stream()
-    {
-        return this->stream_;
-    }
-    /** @brief 直列化復元で読み込む入力ストリームを取得する。
-        @return 直列化復元で読み込む入力ストリーム。
-     */
     public: typename self::stream const& get_stream() const
     {
         return this->stream_;
+    }
+
+    public: typename self::stream::pos_type tellg()
+    {
+        return this->stream_.tellg();
     }
 
     /** @brief 直列化復元で使うメモリ割当子を取得する。
@@ -296,7 +294,7 @@ class psyq::message_pack::deserializer
     {
         for (;;)
         {
-            auto const local_pre_position(this->get_stream().tellg());
+            auto const local_pre_position(this->stream_.tellg());
             switch (this->read_value())
             {
             case self::read_result_FINISH:
@@ -306,18 +304,18 @@ class psyq::message_pack::deserializer
                 return 1;
 
             case self::read_result_CONTINUE:
-                if (this->get_stream().eof())
+                if (this->stream_.eof())
                 {
                     return 0;
                 }
                 break;
 
             case self::read_result_ABORT:
-                if (this->get_stream().fail())
+                if (this->stream_.fail())
                 {
                     return -1;
                 }
-                this->get_stream().seekg(local_pre_position);
+                this->stream_.seekg(local_pre_position);
                 return 0;
 
             default:
@@ -333,11 +331,11 @@ class psyq::message_pack::deserializer
     private: typename self::read_result read_value()
     {
         // ストリームからMessagePack直列化形式を読み込む。
-        if (!this->get_stream().good())
+        if (!this->stream_.good())
         {
             return self::read_result_ABORT;
         }
-        auto const local_header(static_cast<unsigned>(this->get_stream().get()));
+        auto const local_header(static_cast<unsigned>(this->stream_.get()));
 
         // MessagePackの直列化形式によって、復元処理を分岐する。
         unsigned local_read(0);
@@ -536,7 +534,7 @@ class psyq::message_pack::deserializer
     typename self::read_result read_big_endian()
     {
         template_value local_value;
-        return self::read_big_endian(local_value, this->get_stream())?
+        return self::read_big_endian(local_value, this->stream_)?
             this->add_container_value(psyq::message_pack::object(local_value)):
             self::read_result_ABORT;
     }
@@ -573,7 +571,7 @@ class psyq::message_pack::deserializer
     typename self::read_result read_raw()
     {
         template_length local_size;
-        return self::read_big_endian(local_size, this->get_stream())?
+        return self::read_big_endian(local_size, this->stream_)?
             this->read_raw<template_raw>(local_size):
             self::read_result_ABORT;
     }
@@ -591,7 +589,7 @@ class psyq::message_pack::deserializer
         auto const local_bytes(
             static_cast<typename template_raw::pointer>(
                 self::read_raw(
-                    this->get_stream(), this->pool_, in_size, this->allocate_raw_)));
+                    this->stream_, this->pool_, in_size, this->allocate_raw_)));
         if (local_bytes == nullptr && 0 < in_size)
         {
             return self::read_result_ABORT;
@@ -663,7 +661,7 @@ class psyq::message_pack::deserializer
     {
         // コンテナ容量をストリームから読み込み、コンテナを予約する。
         template_length local_length;
-        return self::read_big_endian(local_length, this->get_stream())?
+        return self::read_big_endian(local_length, this->stream_)?
             this->reserve_container<template_container>(local_length):
             self::read_result_ABORT;
     }

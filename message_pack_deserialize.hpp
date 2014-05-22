@@ -25,8 +25,44 @@ namespace psyq
             std::size_t = PSYQ_MESSAGE_PACK_DESERIALIZER_STACK_CAPACITY_DEFAULT>
                 class deserializer;
         /// @endcond
-    }
-}
+    } // namespace message_pack
+    namespace internal
+    {
+        //---------------------------------------------------------------------
+        /** @brief ストリームからRAWバイト列を読み込む。
+            @param[out]    out_bytes    ストリームから読み込んだRAWバイト列を格納する。
+            @param[in,out] io_istream   読み込むストリーム。
+            @param[in]     in_read_size 読み込むバイト数。
+            @return 読み込んだバイト数。
+         */
+        template<typename template_stream>
+        std::size_t message_pack_read_bytes(
+            void* const out_bytes,
+            template_stream& io_istream,
+            std::size_t const in_read_size)
+        {
+            if (io_istream.fail())
+            {
+                return 0;
+            }
+
+            // ストリームを読み込む。
+            auto const local_pre_position(io_istream.tellg());
+            typedef typename template_stream::char_type char_type;
+            io_istream.read(
+                static_cast<char_type*>(out_bytes),
+                in_read_size / sizeof(char_type));
+            if (io_istream.fail())
+            {
+                PSYQ_ASSERT(false);
+                io_istream.seekg(local_pre_position);
+                return 0;
+            }
+            return static_cast<std::size_t>(io_istream.tellg() - local_pre_position)
+                * sizeof(char_type);
+        }
+    } // namespace internal
+} // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_istream 互換のストリームを読み込み、
@@ -514,8 +550,8 @@ class psyq::message_pack::deserializer
         template_value& out_value,
         typename self::stream& io_istream)
     {
-        typedef psyq::message_pack::raw_bytes<template_value> raw_bytes;
-        typename raw_bytes::pack local_bytes;
+        typedef psyq::message_pack::bytes_serializer<template_value> bytes_serializer;
+        typename bytes_serializer::pack local_bytes;
         auto const local_read_size(
             psyq::internal::message_pack_read_bytes(
                 &local_bytes, io_istream, sizeof(local_bytes)));
@@ -523,7 +559,7 @@ class psyq::message_pack::deserializer
         {
             return false;
         }
-        out_value = raw_bytes::convert_bytes_endianness(
+        out_value = bytes_serializer::convert_bytes_endianness(
             local_bytes, psyq::message_pack::big_endian);
         return true;
     }

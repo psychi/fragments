@@ -93,7 +93,7 @@ namespace psyq
     namespace message_pack
     {
         /// @cond
-        template<typename> struct raw_bytes;
+        template<typename> struct bytes_serializer;
         /// @endcond
 
         //---------------------------------------------------------------------
@@ -223,57 +223,23 @@ namespace psyq
                 return local_union.target;
             }
         };
-
-        //---------------------------------------------------------------------
-        /** @brief ストリームからRAWバイト列を読み込む。
-            @param[out]    out_bytes    ストリームから読み込んだRAWバイト列を格納する。
-            @param[in,out] io_istream   読み込むストリーム。
-            @param[in]     in_read_size 読み込むバイト数。
-            @return 読み込んだバイト数。
-         */
-        template<typename template_stream>
-        std::size_t message_pack_read_bytes(
-            void* const out_bytes,
-            template_stream& io_istream,
-            std::size_t const in_read_size)
-        {
-            if (io_istream.fail())
-            {
-                return 0;
-            }
-
-            // ストリームを読み込む。
-            auto const local_pre_position(io_istream.tellg());
-            typedef typename template_stream::char_type char_type;
-            io_istream.read(
-                static_cast<char_type*>(out_bytes),
-                in_read_size / sizeof(char_type));
-            if (io_istream.fail())
-            {
-                PSYQ_ASSERT(false);
-                io_istream.seekg(local_pre_position);
-                return 0;
-            }
-            return static_cast<std::size_t>(io_istream.tellg() - local_pre_position)
-                * sizeof(char_type);
-        }
     } // namespace internal
 } // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 値のRAWバイト列の型特性。
-    @tparam template_value @copydoc psyq::message_pack::raw_bytes::value_type
+/** @brief 値からRAWバイト列へ直列化する。
+    @tparam template_value @copydoc psyq::message_pack::bytes_serializer::value_type
  */
 template<typename template_value>
-struct psyq::message_pack::raw_bytes
+struct psyq::message_pack::bytes_serializer
 {
-    private: typedef raw_bytes<template_value> self;
+    private: typedef bytes_serializer self;
 
-    /** @brief 直列化／直列化復元する値の型。
+    /** @brief 直列化する値の型。
 
         この実装では、整数型か浮動小数点数型にのみに対応している。
         これらの型以外に対応するには、テンプレートの特殊化をした
-        psyq::message_pack::raw_bytes を実装し、
+        psyq::message_pack::bytes_serializer を実装し、
         staticメンバ関数として self::write_value() を実装すること。
      */
     public: typedef template_value value_type;
@@ -288,36 +254,6 @@ struct psyq::message_pack::raw_bytes
             pack;
 
     //-------------------------------------------------------------------------
-    /** @brief ストリームからバイト列を読み込み、値へ直列化復元する。
-
-        in_endianness とnative-endianが一致するなら先頭から末尾、
-        異なるなら末尾から先頭の順に、バイト列を読み込む。
-
-        @param[out]    out_value     直列化復元した値を格納する。
-        @param[in,out] io_istream    バイト列を読み込む入力ストリーム。
-        @param[in]     in_endianness 値を直列化復元する際のエンディアン性。
-     */
-    private: template<typename template_stream>
-    static bool read_value(
-        template_value& out_value,
-        template_stream& io_istream,
-        psyq::message_pack::endianness const in_endianness)
-    {
-        auto const local_pre_position(io_istream.tellg());
-        self::pack local_bytes;
-        auto const local_read_size(
-            psyq::internal::message_pack_read_bytes(
-                &local_bytes, io_istream, sizeof(local_bytes)));
-        if (local_read_size != sizeof(local_bytes))
-        {
-            PSYQ_ASSERT(false);
-            io_istream.seekg(local_pre_position);
-            return false;
-        }
-        out_value = self::convert_bytes_endianness(local_bytes, in_endianness);
-        return true;
-    }
-
     /** @brief 値からバイト列へ直列化し、ストリームへ書き出す。
 
         in_endianness とnative-endianが一致するなら先頭から末尾へ、
@@ -393,7 +329,7 @@ struct psyq::message_pack::raw_bytes
         std::memcpy(&local_bytes, in_bytes, sizeof(template_value));
         return self::convert_bytes_endianness(local_bytes, in_endianness);
     }
-}; // struct psyq::message_pack::raw_bytes;
+}; // struct psyq::message_pack::bytes_serializer;
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq
@@ -790,7 +726,7 @@ class psyq::message_pack::serializer
     private: template<typename template_value>
     bool write_big_endian(template_value const in_value)
     {
-        return psyq::message_pack::raw_bytes<template_value>::write_value(
+        return psyq::message_pack::bytes_serializer<template_value>::write_value(
             this->stream_, in_value, psyq::message_pack::big_endian);
     }
 
@@ -1011,7 +947,7 @@ class psyq::message_pack::serializer
             = psyq::message_pack::big_endian)
     {
         return this->write_extended_header(in_type, sizeof(template_value))
-            && psyq::message_pack::raw_bytes<template_value>
+            && psyq::message_pack::bytes_serializer<template_value>
                 ::write_value(this->stream_, in_value, in_endianness);
     }
     /** @brief 長さが0の拡張バイナリを直列化し、ストリームへ出力する。
@@ -1370,7 +1306,7 @@ class psyq::message_pack::serializer
             }
             else if (
                 in_length <= 0
-                || !psyq::message_pack::raw_bytes<element>::write_value(
+                || !psyq::message_pack::bytes_serializer<element>::write_value(
                     this->stream_, *in_iterator, in_endianness))
             {
                 return local_stack->rest_size;

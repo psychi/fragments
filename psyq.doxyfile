@@ -698,6 +698,7 @@ INPUT                  = \
                          ./message_pack_value.hpp \
                          ./message_pack_container.hpp \
                          ./message_pack_serializer.hpp \
+                         ./message_pack_deserialize.hpp \
                          ./message_pack_pool.hpp \
 
 #                         ./async_file.hpp \

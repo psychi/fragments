@@ -5,6 +5,13 @@
 #ifndef PSYQ_MESSAGE_PACK_TEST_HPP_
 #define PSYQ_MESSAGE_PACK_TEST_HPP_
 
+//#include "psyq/message_pack_pool.hpp"
+//#include "psyq/message_pack_container.hpp"
+//#include "psyq/message_pack_value.hpp"
+//#include "psyq/message_pack_object.hpp"
+//#include "psyq/message_pack_serializer.hpp"
+//#include "psyq/message_pack_deserialize.hpp"
+
 namespace psyq
 {
     namespace test
@@ -71,8 +78,9 @@ namespace psyq
             std::stringstream local_stream;
             local_serializer.swap_stream(local_stream);
             local_stream.seekg(0);
-            psyq::message_pack::deserializer<std::stringstream>
-                local_deserializer(std::move(local_stream));
+            psyq::message_pack::deserializer
+                <std::stringstream, psyq::message_pack::pool<>, 8>
+                    local_deserializer(std::move(local_stream));
             psyq::message_pack::root_object<> local_root_object;
             local_deserializer >> local_root_object;
             auto local_message_pack_object(local_root_object.get_array()->data());

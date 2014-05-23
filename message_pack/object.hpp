@@ -5,18 +5,7 @@
 #ifndef PSYQ_MESSAGE_PACK_OBJECT_HPP_
 #define PSYQ_MESSAGE_PACK_OBJECT_HPP_
 
-//#include "psyq/message_pack_pool.hpp"
-//#include "psyq/message_pack_value.hpp"
-
-namespace psyq
-{
-    namespace message_pack
-    {
-        /// @cond
-        template<typename = psyq::message_pack::pool<>> class root_object;
-        /// @endcond
-    }
-}
+//#include "psyq/message_pack/value.hpp"
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// MessagePackオブジェクト。
@@ -708,57 +697,6 @@ class psyq::message_pack::object
     //-------------------------------------------------------------------------
     private: self::value value_; ///< @copydoc self::value
     private: self::type type_;   ///< @copydoc self::type
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// MessagePack最上位オブジェクト。
-template<typename template_pool>
-class psyq::message_pack::root_object: public psyq::message_pack::object
-{
-    private: typedef root_object<template_pool> self;
-    public: typedef psyq::message_pack::object super;
-
-    public: typedef template_pool pool;
-
-    //-------------------------------------------------------------------------
-    public: root_object() {}
-
-    public: root_object(super const& in_object, typename self::pool in_pool):
-        super(in_object),
-        pool_(std::move(in_pool))
-    {}
-
-    public: root_object(self&& io_source):
-        super(io_source),
-        pool_(std::move(io_source.pool_))
-    {
-        io_source.reset();
-    }
-
-    public: self& operator=(self&& io_source)
-    {
-        if (this != &io_source)
-        {
-            this->super::operator=(io_source);
-            this->pool_ = std::move(io_source.pool_);
-            io_source.reset();
-        }
-        return *this;
-    }
-
-    typename self::pool reset()
-    {
-        this->super::reset();
-        return std::move(this->pool_);
-    }
-
-    typename self::pool const& get_pool() const
-    {
-        return this->pool_;
-    }
-
-    //-------------------------------------------------------------------------
-    private: typename self::pool pool_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

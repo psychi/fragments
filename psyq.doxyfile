@@ -694,12 +694,12 @@ INPUT                  = \
                          ./mosp_tree.hpp \
                          ./mosp_leaf.hpp \
                          ./assert.hpp \
-                         ./message_pack_object.hpp \
-                         ./message_pack_value.hpp \
-                         ./message_pack_container.hpp \
-                         ./message_pack_serializer.hpp \
-                         ./message_pack_deserialize.hpp \
-                         ./message_pack_pool.hpp \
+                         ./message_pack/serializer.hpp \
+                         ./message_pack/container.hpp \
+                         ./message_pack/value.hpp \
+                         ./message_pack/object.hpp \
+                         ./message_pack/root_object.hpp \
+                         ./message_pack/deserializer.hpp \
 
 #                         ./async_file.hpp \
 #                         ./async_queue.hpp \

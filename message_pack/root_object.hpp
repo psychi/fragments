@@ -1,9 +1,9 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copydoc psyq::message_pack::pool
+    @brief @copydoc psyq::message_pack::root_object
  */
-#ifndef PSYQ_MESSAGE_PACK_POOL_HPP_
-#define PSYQ_MESSAGE_PACK_POOL_HPP_
+#ifndef PSYQ_MESSAGE_PACK_ROOT_OBJECT_
+#define PSYQ_MESSAGE_PACK_ROOT_OBJECT_
 
 /// psyq::message_pack::pool のチャンク容量のデフォルト値。
 #ifndef PSYQ_MESSAGE_PACK_MEMORY_POOL_CHUNK_CAPACITY_DEFAULT
@@ -21,6 +21,7 @@ namespace psyq
     {
         /// @cond
         template<typename = std::allocator<std::int64_t>> class pool;
+        template<typename> class root_object;
         /// @endcond
     }
     namespace internal
@@ -32,7 +33,8 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief MessagePackで使うメモリ割当子。
+/** @brief MessagePackの直列化復元に使うメモリ割当子。
+    @sa psyq::message_pack::deserializer
  */
 template<typename template_allocator>
 class psyq::message_pack::pool
@@ -285,6 +287,84 @@ class psyq::message_pack::pool
     private: std::size_t default_capacity_; ///< チャンク容量のデフォルト値。
     private: template_allocator allocator_; ///< @copydoc allocator_type
 };
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 直列化復元の際に、最上位となるMessagePackオブジェクト。
+    @tparam template_pool @copydoc psyq::message_pack::root_object::pool
+    @sa psyq::message_pack::deserializer
+ */
+template<typename template_pool>
+class psyq::message_pack::root_object: public psyq::message_pack::object
+{
+    private: typedef root_object self; ///< thisが指す値の型。
+    public: typedef psyq::message_pack::object super; ///< thisの上位型。
+
+    /// 下位オブジェクトを保持するメモリ割当子。
+    public: typedef template_pool pool;
+
+    //-------------------------------------------------------------------------
+    /// @name 構築
+    //@{
+    /// @brief 空のMessagePackオブジェクトを構築する。
+    public: root_object() {}
+
+    /** @brief 最上位のMessagePackオブジェクトを構築する。
+        @param[in] in_root 最上位のMessagePackオブジェクト。
+        @param[in] in_pool 下位オブジェクトを保持するメモリ割当子。
+     */
+    public: root_object(super const& in_root, typename self::pool in_pool):
+        super(in_root),
+        pool_(std::move(in_pool))
+    {}
+
+    /** @brief move構築子。
+        @param[in,out] io_source 移動元。
+     */
+    public: root_object(self&& io_source):
+        super(io_source),
+        pool_(std::move(io_source.reset()))
+    {}
+
+    /** @brief move代入演算子。
+        @param[in,out] io_source 移動元。
+     */
+    public: self& operator=(self&& io_source)
+    {
+        if (this != &io_source)
+        {
+            this->super::operator=(io_source);
+            this->pool_ = std::move(io_source.reset());
+        }
+        return *this;
+    }
+    //@}
+    private: root_object(self const&);// = delete;
+    private: self& operator=(self const&);// = delete;
+
+    //-------------------------------------------------------------------------
+    /// @name インスタンス変数の操作
+    //@{
+    /** @brief 空にする。
+        @return 下位オブジェクトを保持するのに使っていたメモリ割当子。
+     */
+    public: typename self::pool reset()
+    {
+        this->super::reset();
+        auto local_pool(std::move(this->pool_));
+        return local_pool;
+    }
+
+    /** @brief 下位オブジェクトを保持するメモリ割当子を取得する。
+        @return 下位オブジェクトを保持するメモリ割当子。
+     */
+    public: typename self::pool const& get_pool() const
+    {
+        return this->pool_;
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    private: typename self::pool pool_; ///< @copydoc pool
+}; // class psyq::message_pack::root_object
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 template<typename template_iterator>
@@ -562,4 +642,4 @@ class basic_raw_istreambuf
 };
 #endif // 0
 
-#endif // !defined(PSYQ_MESSAGE_PACK_POOL_HPP_)
+#endif // !defined(PSYQ_MESSAGE_PACK_ROOT_OBJECT_)

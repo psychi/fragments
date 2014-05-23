@@ -5,12 +5,13 @@
 #ifndef PSYQ_MESSAGE_PACK_TEST_HPP_
 #define PSYQ_MESSAGE_PACK_TEST_HPP_
 
-//#include "psyq/message_pack_pool.hpp"
-//#include "psyq/message_pack_container.hpp"
-//#include "psyq/message_pack_value.hpp"
-//#include "psyq/message_pack_object.hpp"
-//#include "psyq/message_pack_serializer.hpp"
-//#include "psyq/message_pack_deserialize.hpp"
+#include <sstream>
+//#include "psyq/message_pack/serializer.hpp"
+//#include "psyq/message_pack/container.hpp"
+//#include "psyq/message_pack/value.hpp"
+//#include "psyq/message_pack/object.hpp"
+//#include "psyq/message_pack/root_object.hpp"
+//#include "psyq/message_pack/deserialize.hpp"
 
 namespace psyq
 {
@@ -18,9 +19,7 @@ namespace psyq
     {
         inline void message_pack()
         {
-            psyq::message_pack::serializer<std::stringstream, 16>
-                local_serializer;
-            std::unordered_set<int> local_integer_set;
+            std::set<int> local_integer_set;
             while (local_integer_set.size() < 0x10000)
             {
                 local_integer_set.insert(local_integer_set.size());
@@ -28,22 +27,26 @@ namespace psyq
             std::string local_string_0x10("0123456789ABCDEF");
             std::string local_string_0x10000;
             local_string_0x10000.reserve(0x10000);
+            local_string_0x10000 = local_string_0x10;
             while (local_string_0x10000.size() < 0x10000)
             {
-                local_string_0x10000 += local_string_0x10;
+                local_string_0x10000 += local_string_0x10000;
             }
             std::string local_string_0x1f(local_string_0x10000, 0, 0x1f);
             std::string local_string_0xff(local_string_0x10000, 0, 0xff);
             std::string local_string_0xffff(local_string_0x10000, 0, 0xffff);
 
+            psyq::message_pack::serializer<std::stringstream, 16>
+                local_serializer(
+                    std::stringstream(std::ios_base::in | std::ios_base::out));
             local_serializer.make_serial_array(31);
             local_serializer.write_container_binary(
                 local_integer_set.begin(), local_integer_set.size());
             local_serializer.write_extended(
                 0x7f, 0x123456789abcdefLL, psyq::message_pack::little_endian);
             local_serializer.write_array(local_integer_set);
-            local_serializer.write_set(local_integer_set);
-            local_serializer.write_tuple(std::make_tuple(0, 0.0f, 0.0, false));
+            local_serializer << local_integer_set;
+            local_serializer << std::make_tuple(0, 0.0f, 0.0, false);
             local_serializer << (std::numeric_limits<std::int64_t>::min)();
             local_serializer << (std::numeric_limits<std::int32_t>::min)();
             local_serializer << (std::numeric_limits<std::int16_t>::min)();
@@ -75,13 +78,15 @@ namespace psyq
             local_serializer.fill_container_raw(local_string_0x10000);
             local_serializer.write_nil();
 
-            std::stringstream local_stream;
-            local_serializer.swap_stream(local_stream);
+            auto local_stream(
+                std::move(local_serializer.reset(std::stringstream())));
             local_stream.seekg(0);
-            psyq::message_pack::deserializer
-                <std::stringstream, psyq::message_pack::pool<>, 8>
-                    local_deserializer(std::move(local_stream));
-            psyq::message_pack::root_object<> local_root_object;
+            typedef psyq::message_pack::deserializer
+                <decltype(local_stream), psyq::message_pack::pool<>, 8>
+                    message_pack_deserializer;
+            message_pack_deserializer local_deserializer(
+                std::move(local_stream), message_pack_deserializer::pool());
+            message_pack_deserializer::root_object local_root_object;
             local_deserializer >> local_root_object;
             auto local_message_pack_object(local_root_object.get_array()->data());
             PSYQ_ASSERT(local_message_pack_object != nullptr);

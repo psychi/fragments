@@ -1,68 +1,11 @@
-﻿/* Copyright (c) 2013, Hillco Psychi, All rights reserved.
-
-   Redistribution and use in source and binary forms, with or without
-   modification, are permitted provided that the following conditions are met:
-   ソースコード形式かバイナリ形式か、変更するかしないかを問わず、
-   以下の条件を満たす場合に限り、再頒布および使用が許可されます。
-
-   1. Redistributions of source code must retain the above copyright notice,
-      this list of conditions and the following disclaimer.
-      ソースコードを再頒布する場合、上記の著作権表示、本条件一覧、
-      および下記の免責条項を含めること。
-   2. Redistributions in binary form must reproduce the above copyright notice,
-      this list of conditions and the following disclaimer in the documentation
-      and/or other materials provided with the distribution.
-      バイナリ形式で再頒布する場合、頒布物に付属のドキュメント等の資料に、
-      上記の著作権表示、本条件一覧、および下記の免責条項を含めること。
-
-   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-   THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
-   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
-   OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
-   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-   本ソフトウェアは、著作権者およびコントリビューターによって
-   「現状のまま」提供されており、明示黙示を問わず、商業的な使用可能性、
-   および特定の目的に対する適合性に関する暗黙の保証も含め、
-   またそれに限定されない、いかなる保証もありません。
-   著作権者もコントリビューターも、事由のいかんを問わず、
-   損害発生の原因いかんを問わず、かつ責任の根拠が契約であるか厳格責任であるか
-   （過失その他の）不法行為であるかを問わず、
-   仮にそのような損害が発生する可能性を知らされていたとしても、
-   本ソフトウェアの使用によって発生した（代替品または代用サービスの調達、
-   使用の喪失、データの喪失、利益の喪失、業務の中断も含め、
-   またそれに限定されない）直接損害、間接損害、偶発的な損害、特別損害、
-   懲罰的損害、または結果損害について、一切責任を負わないものとします。
- */
-/** @file
+﻿/** @file
+    @brief @copybrief psyq::message_pack::serializer
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copydoc psyq::message_pack::serializer
-
-    使用例
-    @code
-    psyq::message_pack::serializer<> local_serializer;
-    // 真偽値を直列化する。
-    local_serializer << false << true;
-    // 整数を直列化する。
-    local_serializer << -0x12 << 0x1234 << -0x12345678L << 0x123456789abcdefLL;
-    // 浮動小数点数を直列化する。
-    local_serializer << -1.2f << 3.4;
-    // コンテナを直列化する。
-    local_serializer << std::make_tuple(
-        std::vector<std::uint32_t>(4, 0x12345678),
-        std::list<std::string>(3, std::string("std::string")));
-    @endcode
  */
 #ifndef PSYQ_MESSAGE_PACK_SERIALIZER_HPP_
 #define PSYQ_MESSAGE_PACK_SERIALIZER_HPP_
 
 #include <array>
-#include <sstream>
 #include <tuple>
 #include <string>
 #include <vector>
@@ -93,7 +36,7 @@ namespace psyq
     namespace message_pack
     {
         /// @cond
-        template<typename> struct bytes_serializer;
+        template<typename> struct raw_serializer;
         /// @endcond
 
         //---------------------------------------------------------------------
@@ -117,14 +60,26 @@ namespace psyq
         }
 
         //---------------------------------------------------------------------
+        /** @brief 1バイト整数のエンディアン性を切り替える。
+            @param[in] in_value 元になる1バイト整数。
+            @return エンディアン性を切り替えた1バイト整数。
+         */
         inline std::uint8_t swap_endianness(std::uint8_t in_value) PSYQ_NOEXCEPT
         {
             return in_value;
         }
+        /** @brief 2バイト整数のエンディアン性を切り替える。
+            @param[in] in_value 元になる2バイト整数。
+            @return エンディアン性を切り替えた2バイト整数。
+         */
         inline std::uint16_t swap_endianness(std::uint16_t in_value) PSYQ_NOEXCEPT
         {
             return static_cast<std::uint16_t>((in_value << 8) | (in_value >> 8));
         }
+        /** @brief 4バイト整数のエンディアン性を切り替える。
+            @param[in] in_value 元になる4バイト整数。
+            @return エンディアン性を切り替えた4バイト整数。
+         */
         inline std::uint32_t swap_endianness(std::uint32_t in_value) PSYQ_NOEXCEPT
         {
             in_value = static_cast<std::uint32_t>(
@@ -132,6 +87,10 @@ namespace psyq
                 ((in_value >> 8) & 0x00ff00ff));
             return static_cast<std::uint32_t>((in_value << 16) | (in_value >> 16));
         }
+        /** @brief 8バイト整数のエンディアン性を切り替える。
+            @param[in] in_value 元になる8バイト整数。
+            @return エンディアン性を切り替えた8バイト整数。
+         */
         inline std::uint64_t swap_endianness(std::uint64_t in_value) PSYQ_NOEXCEPT
         {
             in_value = static_cast<std::uint64_t>(
@@ -227,19 +186,19 @@ namespace psyq
 } // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 値からRAWバイト列へ直列化する。
-    @tparam template_value @copydoc psyq::message_pack::bytes_serializer::value_type
+/** @brief 任意型の値からRAWバイト列へ直列化する。
+    @tparam template_value @copydoc psyq::message_pack::raw_serializer::value_type
  */
 template<typename template_value>
-struct psyq::message_pack::bytes_serializer
+struct psyq::message_pack::raw_serializer
 {
-    private: typedef bytes_serializer self;
+    private: typedef raw_serializer self;
 
     /** @brief 直列化する値の型。
 
         この実装では、整数型か浮動小数点数型にのみに対応している。
         これらの型以外に対応するには、テンプレートの特殊化をした
-        psyq::message_pack::bytes_serializer を実装し、
+        psyq::message_pack::raw_serializer を実装し、
         staticメンバ関数として self::write_value() を実装すること。
      */
     public: typedef template_value value_type;
@@ -251,15 +210,15 @@ struct psyq::message_pack::bytes_serializer
     /// self::value_type のRAWバイト列の型。
     public: typedef typename psyq::internal
         ::message_pack_bytes<sizeof(template_value)>::type
-            pack;
+            bytes;
 
     //-------------------------------------------------------------------------
-    /** @brief 値からバイト列へ直列化し、ストリームへ書き出す。
+    /** @brief 値からRAWバイト列へ直列化し、ストリームへ書き出す。
 
         in_endianness とnative-endianが一致するなら先頭から末尾へ、
-        異なるなら末尾から先頭の順に、値のバイト列をストリームへ出力する。
+        異なるなら末尾から先頭の順に、値のRAWバイト列をストリームへ出力する。
 
-        @param[in,out] io_ostream    バイト列を書き出す出力ストリーム。
+        @param[in,out] io_ostream    RAWバイト列を書き出す出力ストリーム。
         @param[in]     in_value      直列化する値。
         @param[in]     in_endianness 値を直列化する際のエンディアン性。
      */
@@ -269,12 +228,10 @@ struct psyq::message_pack::bytes_serializer
         template_value const in_value,
         psyq::message_pack::endianness const in_endianness)
     {
-        auto const local_bytes(
-            self::convert_value_endianness(in_value, in_endianness));
+        auto const local_bytes(self::pack_bytes(in_value, in_endianness));
         auto const local_pre_offset(io_ostream.tellp());
         io_ostream.write(
-            reinterpret_cast<typename template_stream::char_type const*>(
-                &local_bytes),
+            reinterpret_cast<typename template_stream::char_type const*>(&local_bytes),
             sizeof(template_value));
         if (io_ostream.fail())
         {
@@ -286,50 +243,50 @@ struct psyq::message_pack::bytes_serializer
     }
 
     //---------------------------------------------------------------------
-    /** @brief 値をバイト列に変換する。
+    /** @brief 値をRAWバイト列に変換する。
         @param[in] in_value      変換する値。
-        @param[in] in_endianness バイト列のエンディアン性。
-        @return 値から変換されたバイト列。
+        @param[in] in_endianness RAWバイト列のエンディアン性。
+        @return 値から変換されたRAWバイト列。
      */
-    public: static typename self::pack convert_value_endianness(
+    public: static typename self::bytes pack_bytes(
         template_value const in_value,
         psyq::message_pack::endianness const in_endianness)
     PSYQ_NOEXCEPT
     {
-        return psyq::internal::message_pack_endianness_converter<
-            std::is_integral<template_value>::value>
-                ::template convert<typename self::pack>(in_value, in_endianness);
+        return psyq::internal::message_pack_endianness_converter
+            <std::is_integral<template_value>::value>
+                ::template convert<typename self::bytes>(in_value, in_endianness);
     }
 
-    /** @brief バイト列を値に変換する。
-        @param[in] in_bytes      変換するバイト列。
-        @param[in] in_endianness バイト列のエンディアン性。
+    /** @brief RAWバイト列を値に変換する。
+        @param[in] in_bytes      変換するRAWバイト列。
+        @param[in] in_endianness RAWバイト列のエンディアン性。
         @return バイト列から変換された値。
      */
-    public: static template_value convert_bytes_endianness(
-        typename self::pack const in_bytes,
+    public: static template_value unpack_bytes(
+        typename self::bytes const in_bytes,
         psyq::message_pack::endianness const in_endianness)
     PSYQ_NOEXCEPT
     {
-        return psyq::internal::message_pack_endianness_converter<
-            std::is_integral<template_value>::value>
+        return psyq::internal::message_pack_endianness_converter
+            <std::is_integral<template_value>::value>
                 ::template convert<template_value>(in_bytes, in_endianness);
     }
-    /** @brief バイト列を値に変換する。
-        @param[in] in_bytes      変換するバイト列の先頭位置。
-        @param[in] in_endianness バイト列のエンディアン性。
-        @return バイト列から変換された値。
+    /** @brief RAWバイト列を値に変換する。
+        @param[in] in_bytes      変換するRAWバイト列の先頭位置。
+        @param[in] in_endianness RAWバイト列のエンディアン性。
+        @return RAWバイト列から変換された値。
      */
-    public: static template_value convert_bytes_endianness(
+    public: static template_value unpack_bytes(
         void const* const in_bytes,
         psyq::message_pack::endianness const in_endianness)
     PSYQ_NOEXCEPT
     {
-        typename self::pack local_bytes;
+        typename self::bytes local_bytes;
         std::memcpy(&local_bytes, in_bytes, sizeof(template_value));
-        return self::convert_bytes_endianness(local_bytes, in_endianness);
+        return self::unpack_bytes(local_bytes, in_endianness);
     }
-}; // struct psyq::message_pack::bytes_serializer;
+}; // struct psyq::message_pack::raw_serializer;
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq
@@ -338,7 +295,7 @@ namespace psyq
     {
         /// @cond
         template<
-            typename = std::ostringstream,
+            typename,
             std::size_t = PSYQ_MESSAGE_PACK_SERIALIZER_STACK_CAPACITY_DEFAULT>
                 class serializer;
         /// @endcond
@@ -412,7 +369,7 @@ namespace psyq
                 @param[in]  in_tuple   出力するタプル。
              */
             template<typename template_stream, typename template_tuple>
-            static bool write(
+            static void write(
                 template_stream& out_stream,
                 template_tuple const& in_tuple)
             {
@@ -420,7 +377,6 @@ namespace psyq
                     ::message_pack_tuple_serializer<template_length - 1>
                         ::write(out_stream, in_tuple);
                 out_stream << std::get<template_length - 1>(in_tuple);
-                return !out_stream.fail();
             }
         };
         /// @copydoc message_pack_tuple_serializer
@@ -428,68 +384,75 @@ namespace psyq
         {
             /// タプルの要素数が0なので、何もしない。
             template<typename template_stream, typename template_tuple>
-            static bool write(template_stream&, template_tuple const&)
+            static void write(template_stream&, template_tuple const&)
             PSYQ_NOEXCEPT
-            {
-                return true;
-            }
+            {}
         };
     } // namespace internal
 } // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief MessagePack形式で直列化したバイナリを、
+/** @brief MessagePack形式で値を直列化し、
            std::basic_ostream 互換のストリームへ出力するアダプタ。
-    @tparam template_stream @copydoc self::stream
-    @tparam template_stack_capacity @copydoc self::stack_capacity
+
+    使用例
+    @code
+    psyq::message_pack::serializer<std::ostringstream> local_serializer;
+    // 真偽値を直列化する。
+    local_serializer << false << true;
+    // 整数を直列化する。
+    local_serializer << -0x12 << 0x1234 << -0x12345678L << 0x123456789abcdefLL;
+    // 浮動小数点数を直列化する。
+    local_serializer << -1.2f << 3.4;
+    // コンテナを直列化する。
+    local_serializer << std::make_tuple(
+        std::vector<std::uint32_t>(4, 0x12345678),
+        std::list<std::string>(3, std::string("std::string")));
+    @endcode
+
+    @tparam template_stream @copydoc psyq::message_pack::serializer::stream
+    @tparam template_stack_capacity @copydoc psyq::message_pack::serializer::stack_capacity
  */
 template<typename template_stream, std::size_t template_stack_capacity>
 class psyq::message_pack::serializer
 {
     /// thisが指す値の型。
-    private: typedef serializer<template_stream, template_stack_capacity>
-        self;
+    private: typedef serializer self;
 
-    /** @brief 直列化したMessagePack値を出力する、
-               std::basic_ostream 互換のストリーム。
-     */
+    /// 直列化したMessagePack値を出力する、std::basic_ostream 互換のストリーム。
     public: typedef template_stream stream;
     static_assert(
         sizeof(typename self::stream::char_type) == 1,
         "sizeof(self::stream::char_type) is not 1.");
 
-    /** @brief 直列化途中のMessagePackコンテナのスタック限界数。
-     */
+    /// 直列化途中のMessagePackコンテナのスタック限界数。
     public: static std::size_t const stack_capacity = template_stack_capacity;
 
-    /** @brief 次に直列化する値の種類。
-     */
-    public: enum next_type
+    /// 次に直列化する値の種類。
+    public: enum value_kind
     {
-        next_type_VALUE,
-        next_type_RAW_BYTES,     ///< RAWバイト列。
-        next_type_ARRAY_ELEMENT, ///< 配列の要素。
-        next_type_MAP_KEY,       ///< 連想配列の要素のキー。
-        next_type_MAP_VALUE,     ///< 連想配列の要素の値。
+        value_kind_ROOT,          ///< 最上位のMessagePackオブジェクト。
+        value_kind_RAW_BYTES,     ///< RAWバイト列。
+        value_kind_ARRAY_ELEMENT, ///< 配列の要素。
+        value_kind_MAP_KEY,       ///< 連想配列の要素のキー。
+        value_kind_MAP_VALUE,     ///< 連想配列の要素の値。
     };
 
-    /// @copydoc self::stack_
-    private: struct stack
+    /// @brief 直列化途中のコンテナのスタック。
+    private: struct container_stack
     {
-        std::size_t rest_size;         ///< MessagePackコンテナ要素の残数。
-        typename self::next_type type; ///< @copydoc self::next_type
+        std::size_t rest_count;         ///< MessagePackコンテナ要素の残数。
+        typename self::value_kind kind; ///< @copydoc value_kind
     };
 
     //-------------------------------------------------------------------------
     /// @name 構築と破壊
     //@{
     /** @brief 出力ストリームを構築する。
-        @param[in] in_stream 出力ストリームの初期値。
+        @param[in] in_ostream MessagePackを書き出すストリームの初期値。
      */
-    public: explicit serializer(
-        typename self::stream in_stream = self::stream())
-    :
-        stream_(std::move(in_stream)),
+    public: explicit serializer(typename self::stream in_ostream):
+        stream_(std::move(in_ostream)),
         stack_size_(0)
     {}
 
@@ -498,7 +461,7 @@ class psyq::message_pack::serializer
      */
     public: serializer(self&& io_source):
         stream_(std::move(io_source.stream_)),
-        stack_(std::move(io_source.stack_)),
+        container_stack_(std::move(io_source.container_stack_)),
         stack_size_(std::move(io_source.stack_size_))
     {
         io_source.stack_size_ = 0;
@@ -523,9 +486,83 @@ class psyq::message_pack::serializer
         }
         return *this;
     }
+    //@} 
+    private: serializer(self const&);// = delete;
+    private: self& operator=(self const&);// = delete;
+
+    //-------------------------------------------------------------------------
+    /// @name 出力ストリームの操作
+    //@{
+    /** @brief 出力ストリームを再構築する。
+        @param[in] in_ostream 新たに使う出力ストリーム。
+        @return これまで使っていた出力ストリーム。
+     */
+    public: typename self::stream reset(typename self::stream in_ostream)
+    {
+        this->stream_.swap(in_ostream);
+        this->stack_size_ = 0;
+        return in_ostream;
+    }
+
+    /** @brief 出力ストリームを取得する。
+        @return 出力ストリーム。
+     */
+    public: typename self::stream const& get_stream() const PSYQ_NOEXCEPT
+    {
+        return this->stream_;
+    }
     //@}
     //-------------------------------------------------------------------------
-    /// @name MessagePack値への直列化
+    /// @name 状態の取得
+    //@{
+    /** @brief 次に直列化するMessagePack値の種別を取得する。
+        @return 次に直列化するMessagePack値の種別。
+        @sa self::make_serial_string()
+        @sa self::make_serial_binary()
+        @sa self::make_serial_extended()
+        @sa self::make_serial_array()
+        @sa self::make_serial_map()
+     */
+    public: typename self::value_kind get_next_value_kind() const PSYQ_NOEXCEPT
+    {
+        return 0 < this->get_rest_container_count()?
+            this->container_stack_.at(this->get_rest_container_count() - 1).kind:
+            typename self::value_kind_ROOT;
+    }
+
+    /** @brief 直前に直列化を開始したMessagePackコンテナの残り要素数を取得する。
+        @return
+            直前に直列化を開始したMessagePackコンテナが…
+            - 文字列／バイナリ／拡張バイナリなら、残りバイト数。
+            - 配列／連想配列なら、残り要素数。
+        @sa self::make_serial_string()
+        @sa self::make_serial_binary()
+        @sa self::make_serial_extended()
+        @sa self::make_serial_array()
+        @sa self::make_serial_map()
+     */
+    public: std::size_t get_rest_element_count() const PSYQ_NOEXCEPT
+    {
+        return 0 < this->get_rest_container_count()?
+            this->container_stack_.at(this->get_rest_container_count() - 1).rest_count:
+            0;
+    }
+
+    /** @brief 直列化途中のMessagePackコンテナの数を取得する。
+        @return 直列化途中のMessagePackコンテナの数。
+        @sa self::make_serial_string()
+        @sa self::make_serial_binary()
+        @sa self::make_serial_extended()
+        @sa self::make_serial_array()
+        @sa self::make_serial_map()
+     */
+    public: std::size_t get_rest_container_count() const PSYQ_NOEXCEPT
+    {
+        return this->stack_size_;
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 空値の直列化
     //@{
     /** @brief 空値をMessagePack形式で直列化し、ストリームへ出力する。
         @retval true  成功。
@@ -543,6 +580,19 @@ class psyq::message_pack::serializer
             return true;
         }
         return false;
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 真偽値の直列化
+    //@{
+    /** @brief 真偽値をMessagePack形式で直列化し、ストリームへ出力する。
+        @param[in] in_boolean 直列化する真偽値。
+        @return *this
+     */
+    public: self& operator<<(bool const in_boolean)
+    {
+        this->write_boolean(in_boolean);
+        return *this;
     }
 
     /** @brief 真偽値をMessagePack形式で直列化し、ストリームへ出力する。
@@ -564,6 +614,43 @@ class psyq::message_pack::serializer
             return true;
         }
         return false;
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 無符号整数の直列化
+    //@{
+    /** @brief 無符号整数をMessagePack形式で直列化し、ストリームへ出力する。
+        @param[in] in_integer 直列化する無符号整数。
+        @return *this
+     */
+    public: self& operator<<(unsigned char const in_integer)
+    {
+        this->write_unsigned_integer(in_integer);
+        return *this;
+    }
+    /// @copydoc operator<<(unsigned char const)
+    public: self& operator<<(unsigned short const in_integer)
+    {
+        this->write_unsigned_integer(in_integer);
+        return *this;
+    }
+    /// @copydoc operator<<(unsigned char const)
+    public: self& operator<<(unsigned int const in_integer)
+    {
+        this->write_unsigned_integer(in_integer);
+        return *this;
+    }
+    /// @copydoc operator<<(unsigned char const)
+    public: self& operator<<(unsigned long const in_integer)
+    {
+        this->write_unsigned_integer(in_integer);
+        return *this;
+    }
+    /// @copydoc operator<<(unsigned char const)
+    public: self& operator<<(unsigned long long const in_integer)
+    {
+        this->write_unsigned_integer(in_integer);
+        return *this;
     }
 
     /** @brief 無符号整数をMessagePack形式で直列化し、ストリームへ出力する。
@@ -621,6 +708,53 @@ class psyq::message_pack::serializer
         }
         this->update_container_stack();
         return true;
+    }
+    //@}
+    /** @brief 数値を直列化し、ストリームへ出力する。
+        @param[in] in_value 直列化する数値。
+     */
+    private: template<typename template_value>
+    bool write_big_endian(template_value const in_value)
+    {
+        return psyq::message_pack::raw_serializer<template_value>::write_value(
+            this->stream_, in_value, psyq::message_pack::big_endian);
+    }
+
+    //-------------------------------------------------------------------------
+    /// @name 有符号整数の直列化
+    //@{
+    /** @brief 有符号整数をMessagePack形式で直列化し、ストリームへ出力する。
+        @param[in] in_integer 直列化する有符号整数。
+        @return *this
+     */
+    public: self& operator<<(signed char const in_integer)
+    {
+        this->write_signed_integer(in_integer);
+        return *this;
+    }
+    /// @copydoc operator<<(signed char const)
+    public: self& operator<<(signed short const in_integer)
+    {
+        this->write_signed_integer(in_integer);
+        return *this;
+    }
+    /// @copydoc operator<<(signed char const)
+    public: self& operator<<(signed int const in_integer)
+    {
+        this->write_signed_integer(in_integer);
+        return *this;
+    }
+    /// @copydoc operator<<(signed char const)
+    public: self& operator<<(signed long const in_integer)
+    {
+        this->write_signed_integer(in_integer);
+        return *this;
+    }
+    /// @copydoc operator<<(signed char const)
+    public: self& operator<<(signed long long const in_integer)
+    {
+        this->write_signed_integer(in_integer);
+        return *this;
     }
 
     /** @brief 有符号整数をMessagePack形式で直列化し、ストリームへ出力する。
@@ -689,6 +823,25 @@ class psyq::message_pack::serializer
         this->update_container_stack();
         return true;
     }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 浮動小数点数の直列化
+    //@{
+    /** @brief 浮動小数点数をMessagePack形式で直列化し、ストリームへ出力する。
+        @param[in] in_float 直列化する浮動小数点数。
+        @return *this
+     */
+    public: self& operator<<(float const in_float)
+    {
+        this->write_floating_point(in_float);
+        return *this;
+    }
+    /// @copydoc operator<<(float const)
+    public: self& operator<<(double const in_float)
+    {
+        this->write_floating_point(in_float);
+        return *this;
+    }
 
     /** @brief 浮動小数点数をMessagePack形式で直列化し、ストリームへ出力する。
         @param[in] in_float 直列化する浮動小数点数。
@@ -697,13 +850,13 @@ class psyq::message_pack::serializer
     {
         return this->write_floating_point<psyq::message_pack::header_FLOAT32>(in_float);
     }
-    /// @copydoc self::write_floating_point(float const)
+    /// @copydoc write_floating_point(float const)
     public: bool write_floating_point(double const in_float)
     {
         return this->write_floating_point<psyq::message_pack::header_FLOAT64>(in_float);
     }
     //@}
-    /// @copydoc self::write_floating_point(float const)
+    /// @copydoc write_floating_point(float const)
     private: template<std::uint8_t template_header, typename template_value>
     bool write_floating_point(template_value const in_float)
     {
@@ -719,15 +872,6 @@ class psyq::message_pack::serializer
             return true;
         }
         return false;
-    }
-
-    /** @brief 数値を直列化し、ストリームへ出力する。
-     */
-    private: template<typename template_value>
-    bool write_big_endian(template_value const in_value)
-    {
-        return psyq::message_pack::bytes_serializer<template_value>::write_value(
-            this->stream_, in_value, psyq::message_pack::big_endian);
     }
 
     //-------------------------------------------------------------------------
@@ -807,9 +951,9 @@ class psyq::message_pack::serializer
         {
             // RAWバイト列をスタックに積む。
             auto& local_stack(
-                this->stack_.at(this->get_rest_container_count()));
-            local_stack.type = self::next_type_RAW_BYTES;
-            local_stack.rest_size = in_size;
+                this->container_stack_.at(this->get_rest_container_count()));
+            local_stack.kind = self::value_kind_RAW_BYTES;
+            local_stack.rest_count = in_size;
             ++this->stack_size_;
             return true;
         }
@@ -921,9 +1065,9 @@ class psyq::message_pack::serializer
         {
             // RAWバイト列をスタックに積む。
             auto& local_stack(
-                this->stack_.at(this->get_rest_container_count()));
-            local_stack.type = self::next_type_RAW_BYTES;
-            local_stack.rest_size = local_size;
+                this->container_stack_.at(this->get_rest_container_count()));
+            local_stack.kind = self::value_kind_RAW_BYTES;
+            local_stack.rest_count = local_size;
             ++this->stack_size_;
             return true;
         }
@@ -947,7 +1091,7 @@ class psyq::message_pack::serializer
             = psyq::message_pack::big_endian)
     {
         return this->write_extended_header(in_type, sizeof(template_value))
-            && psyq::message_pack::bytes_serializer<template_value>
+            && psyq::message_pack::raw_serializer<template_value>
                 ::write_value(this->stream_, in_value, in_endianness);
     }
     /** @brief 長さが0の拡張バイナリを直列化し、ストリームへ出力する。
@@ -989,9 +1133,9 @@ class psyq::message_pack::serializer
         {
             // RAWバイト列をスタックに積む。
             auto& local_stack(
-                this->stack_.at(this->get_rest_container_count()));
-            local_stack.type = self::next_type_RAW_BYTES;
-            local_stack.rest_size = in_size;
+                this->container_stack_.at(this->get_rest_container_count()));
+            local_stack.kind = self::value_kind_RAW_BYTES;
+            local_stack.rest_count = in_size;
             ++this->stack_size_;
             return true;
         }
@@ -1054,9 +1198,10 @@ class psyq::message_pack::serializer
     bool write_tuple(template_tuple const& in_tuple)
     {
         this->make_serial_array(std::tuple_size<template_tuple>::value);
-        return psyq::internal::message_pack_tuple_serializer<
-            std::tuple_size<template_tuple>::value>
+        psyq::internal::message_pack_tuple_serializer
+            <std::tuple_size<template_tuple>::value>
                 ::write(*this, in_tuple);
+        return !this->stream_.fail();
     }
 
     /** @brief 標準コンテナをMessagePack形式の配列として直列化し、
@@ -1119,7 +1264,7 @@ class psyq::message_pack::serializer
     public: bool make_serial_array(std::size_t const in_length)
     {
         return this->make_serial_container<
-            self::next_type_ARRAY_ELEMENT,
+            self::value_kind_ARRAY_ELEMENT,
             psyq::message_pack::header_ARRAY16,
             psyq::message_pack::header_FIX_ARRAY_MIN,
             psyq::message_pack::header_FIX_ARRAY_MAX>(
@@ -1224,7 +1369,7 @@ class psyq::message_pack::serializer
     public: bool make_serial_map(std::size_t const in_length)
     {
         return this->make_serial_container<
-            self::next_type_MAP_KEY,
+            self::value_kind_MAP_KEY,
             psyq::message_pack::header_MAP16,
             psyq::message_pack::header_FIX_MAP_MIN,
             psyq::message_pack::header_FIX_MAP_MAX>(
@@ -1296,22 +1441,22 @@ class psyq::message_pack::serializer
         }
         typedef typename std::iterator_traits<template_iterator>::value_type
             element;
-        PSYQ_ASSERT(sizeof(element) * in_length <= local_stack->rest_size);
+        PSYQ_ASSERT(sizeof(element) * in_length <= local_stack->rest_count);
         for (;; --in_length, ++in_iterator)
         {
-            if (local_stack->rest_size < sizeof(element))
+            if (local_stack->rest_count < sizeof(element))
             {
-                PSYQ_ASSERT(local_stack->rest_size == 0);
+                PSYQ_ASSERT(local_stack->rest_count == 0);
                 return this->fill_rest_elements();
             }
             else if (
                 in_length <= 0
-                || !psyq::message_pack::bytes_serializer<element>::write_value(
+                || !psyq::message_pack::raw_serializer<element>::write_value(
                     this->stream_, *in_iterator, in_endianness))
             {
-                return local_stack->rest_size;
+                return local_stack->rest_count;
             }
-            local_stack->rest_size -= sizeof(element);
+            local_stack->rest_count -= sizeof(element);
         }
     }
 
@@ -1333,34 +1478,34 @@ class psyq::message_pack::serializer
 
         // 残りの要素数を決定する。
         auto& local_stack(
-            this->stack_.at(this->get_rest_container_count() - 1));
+            this->container_stack_.at(this->get_rest_container_count() - 1));
         std::size_t local_empty_count;
         std::uint8_t local_empty_value;
-        switch (local_stack.type)
+        switch (local_stack.kind)
         {
-        case self::next_type_RAW_BYTES:
+        case self::value_kind_RAW_BYTES:
             local_empty_value = 0;
-            local_empty_count = local_stack.rest_size;
+            local_empty_count = local_stack.rest_count;
             break;
 
-        case self::next_type_ARRAY_ELEMENT:
+        case self::value_kind_ARRAY_ELEMENT:
             local_empty_value = psyq::message_pack::header_NIL;
-            local_empty_count = local_stack.rest_size;
+            local_empty_count = local_stack.rest_count;
             break;
 
-        case self::next_type_MAP_KEY:
+        case self::value_kind_MAP_KEY:
             local_empty_value = psyq::message_pack::header_NIL;
-            local_empty_count = local_stack.rest_size * 2;
+            local_empty_count = local_stack.rest_count * 2;
             break;
 
-        case self::next_type_MAP_VALUE:
+        case self::value_kind_MAP_VALUE:
             local_empty_value = psyq::message_pack::header_NIL;
-            local_empty_count = local_stack.rest_size * 2 + 1;
+            local_empty_count = local_stack.rest_count * 2 + 1;
             break;
 
         default:
             PSYQ_ASSERT(false);
-            return local_stack.rest_size;
+            return local_stack.rest_count;
         }
 
         // コンテナの残り要素を埋める。
@@ -1458,13 +1603,13 @@ class psyq::message_pack::serializer
 
     /** @brief 最上段スタックがRAWバイト列なら、それを取得する。
      */
-    private: typename self::stack* get_stack_top_raw()
+    private: typename self::container_stack* get_stack_top_raw()
     {
         if (0 < this->get_rest_container_count())
         {
             auto& local_stack(
-                this->stack_.at(this->get_rest_container_count() - 1));
-            if (local_stack.type == self::next_type_RAW_BYTES)
+                this->container_stack_.at(this->get_rest_container_count() - 1));
+            if (local_stack.kind == self::value_kind_RAW_BYTES)
             {
                 return &local_stack;
             }
@@ -1473,14 +1618,14 @@ class psyq::message_pack::serializer
     }
 
     /** @brief コンテナの直列化を開始する。
-        @tparam template_next_type      スタックの種別。
+        @tparam template_value_kind     スタックの種別。
         @tparam template_header_begin   コンテナのヘッダ。
         @tparam template_header_fix_min 固定長ヘッダの最小値。
         @tparam template_header_fix_max 固定長ヘッダの最大値。
         @param[in] in_length 直列化するコンテナの要素数。
      */
     private: template<
-        typename self::next_type template_next_type,
+        typename self::value_kind template_value_kind,
         std::uint8_t template_header_begin,
         std::uint8_t template_header_fix_min,
         std::uint8_t template_header_fix_max>
@@ -1543,9 +1688,9 @@ class psyq::message_pack::serializer
         }
 
         // コンテナをスタックに積む。
-        auto& local_stack(this->stack_.at(this->get_rest_container_count()));
-        local_stack.type = template_next_type;
-        local_stack.rest_size = in_length;
+        auto& local_stack(this->container_stack_.at(this->get_rest_container_count()));
+        local_stack.kind = template_value_kind;
+        local_stack.rest_count = in_length;
         ++this->stack_size_;
         return true;
     }
@@ -1560,13 +1705,13 @@ class psyq::message_pack::serializer
         }
 
         auto& local_stack(
-            this->stack_.at(this->get_rest_container_count() - 1));
-        switch (local_stack.type)
+            this->container_stack_.at(this->get_rest_container_count() - 1));
+        switch (local_stack.kind)
         {
-        case self::next_type_ARRAY_ELEMENT:
-            if (1 < local_stack.rest_size)
+        case self::value_kind_ARRAY_ELEMENT:
+            if (1 < local_stack.rest_count)
             {
-                --local_stack.rest_size;
+                --local_stack.rest_count;
             }
             else
             {
@@ -1575,15 +1720,15 @@ class psyq::message_pack::serializer
             }
             break;
 
-        case self::next_type_MAP_KEY:
-            local_stack.type = self::next_type_MAP_VALUE;
+        case self::value_kind_MAP_KEY:
+            local_stack.kind = self::value_kind_MAP_VALUE;
             break;
 
-        case self::next_type_MAP_VALUE:
-            if (1 < local_stack.rest_size)
+        case self::value_kind_MAP_VALUE:
+            if (1 < local_stack.rest_count)
             {
-                local_stack.type = self::next_type_MAP_KEY;
-                --local_stack.rest_size;
+                local_stack.kind = self::value_kind_MAP_KEY;
+                --local_stack.rest_count;
             }
             else
             {
@@ -1592,7 +1737,7 @@ class psyq::message_pack::serializer
             }
             break;
 
-        case self::next_type_RAW_BYTES:
+        case self::value_kind_RAW_BYTES:
         default:
             PSYQ_ASSERT(false);
             break;
@@ -1600,259 +1745,16 @@ class psyq::message_pack::serializer
     }
 
     //-------------------------------------------------------------------------
-    /// @name 状態の取得
-    //@{
-    public: typename self::next_type get_next_type() const PSYQ_NOEXCEPT
-    {
-        return 0 < this->get_rest_container_count()?
-            this->stack_.at(this->get_rest_container_count() - 1).type:
-            typename self::next_type_VALUE;
-    }
-
-    /** @brief 直前に直列化を開始したMessagePackコンテナの残り要素数を取得する。
-        @return
-            直前に直列化を開始したMessagePackコンテナが…
-            - 文字列／バイナリ／拡張バイナリなら、残りバイト数。
-            - 配列／連想配列なら、残り要素数。
-        @sa self::make_serial_string()
-        @sa self::make_serial_binary()
-        @sa self::make_serial_extended()
-        @sa self::make_serial_array()
-        @sa self::make_serial_map()
-     */
-    public: std::size_t get_rest_element_count() const PSYQ_NOEXCEPT
-    {
-        return 0 < this->get_rest_container_count()?
-            this->stack_.at(this->get_rest_container_count() - 1).rest_size: 0;
-    }
-
-    /** @brief 直列化を終了してないMessagePackコンテナの数を取得する。
-        @return 直列化を終了してないMessagePackコンテナの数。
-        @sa self::make_serial_string()
-        @sa self::make_serial_binary()
-        @sa self::make_serial_extended()
-        @sa self::make_serial_array()
-        @sa self::make_serial_map()
-     */
-    public: std::size_t get_rest_container_count() const PSYQ_NOEXCEPT
-    {
-        return this->stack_size_;
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name ストリームの操作
-    //@{
-    public: typename self::stream const& get_stream() const PSYQ_NOEXCEPT
-    {
-        return this->stream_;
-    }
-
-    public: bool swap_stream(typename self::stream& io_stream)
-    {
-        if (this->fill_rest_containers() != 0)
-        {
-            return false;
-        }
-        this->stream_.swap(io_stream);
-        return true;
-    }
-
-    public: bool fail() const
-    {
-        return this->stream_.fail();
-    }
-
-    public: typename self::stream::pos_type tellp()
-    {
-        return this->stream_.tellp();
-    }
-
-    public: void flush()
-    {
-        this->stream_.flush();
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @copydoc self::stream
+    /// @copydoc stream
     private: typename self::stream stream_;
-    /// 直列化途中のコンテナのスタック。
-    private: std::array<typename self::stack, template_stack_capacity> stack_;
-    /// 直列化途中のコンテナのスタック数。
+    /// @copydoc container_stack
+    private: std::array<typename self::container_stack, template_stack_capacity>
+        container_stack_;
+    /// 直列化途中のコンテナのスタック階層数。
     private: std::size_t stack_size_;
 }; // class psyq::message_pack::serializer
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-//----------------------------------------------------------------------------
-/// @name 真偽値の直列化
-//@{
-/** @brief 真偽値をMessagePack形式で直列化し、ストリームへ出力する。
-    @param[out] out_stream 書き込む出力ストリーム。
-    @param[in]  in_boolean 直列化する真偽値。
- */
-template<typename template_stream, std::size_t template_stack_capacity>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    bool const in_boolean)
-{
-    out_stream.write_boolean(in_boolean);
-    return out_stream;
-}
-//@}
-//-----------------------------------------------------------------------------
-/// @name 無符号整数の直列化
-//@{
-/** @brief 無符号整数をMessagePack形式で直列化し、ストリームへ出力する。
-    @param[out] out_stream 書き込む出力ストリーム。
-    @param[in]  in_integer 直列化する無符号整数。
- */
-template<typename template_stream, std::size_t template_stack_capacity>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    unsigned char const in_integer)
-{
-    out_stream.write_unsigned_integer(in_integer);
-    return out_stream;
-}
-/// @copydoc operator<<(psyq::message_pack::serializer<template_stream, template_stack_capacity>&, unsigned char const)
-template<typename template_stream, std::size_t template_stack_capacity>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    unsigned short const in_integer)
-{
-    out_stream.write_unsigned_integer(in_integer);
-    return out_stream;
-}
-/// @copydoc operator<<(psyq::message_pack::serializer<template_stream, template_stack_capacity>&, unsigned char const)
-template<typename template_stream, std::size_t template_stack_capacity>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    unsigned int const in_integer)
-{
-    out_stream.write_unsigned_integer(in_integer);
-    return out_stream;
-}
-/// @copydoc operator<<(psyq::message_pack::serializer<template_stream, template_stack_capacity>&, unsigned char const)
-template<typename template_stream, std::size_t template_stack_capacity>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    unsigned long const in_integer)
-{
-    out_stream.write_unsigned_integer(in_integer);
-    return out_stream;
-}
-/// @copydoc operator<<(psyq::message_pack::serializer<template_stream, template_stack_capacity>&, unsigned char const)
-template<typename template_stream, std::size_t template_stack_capacity>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    unsigned long long const in_integer)
-{
-    out_stream.write_unsigned_integer(in_integer);
-    return out_stream;
-}
-//@}
-//-----------------------------------------------------------------------------
-/// @name 有符号整数の直列化
-//@{
-/** @brief 有符号整数をMessagePack形式で直列化し、ストリームへ出力する。
-    @param[out] out_stream 書き込む出力ストリーム。
-    @param[in]  in_integer 直列化する有符号整数。
- */
-template<typename template_stream, std::size_t template_stack_capacity>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    signed char const in_integer)
-{
-    out_stream.write_signed_integer(in_integer);
-    return out_stream;
-}
-/// @copydoc operator<<(psyq::message_pack::serializer<template_stream, template_stack_capacity>&, signed char const)
-template<typename template_stream, std::size_t template_stack_capacity>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    signed short const in_integer)
-{
-    out_stream.write_signed_integer(in_integer);
-    return out_stream;
-}
-/// @copydoc operator<<(psyq::message_pack::serializer<template_stream, template_stack_capacity>&, signed char const)
-template<typename template_stream, std::size_t template_stack_capacity>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    signed int const in_integer)
-{
-    out_stream.write_signed_integer(in_integer);
-    return out_stream;
-}
-/// @copydoc operator<<(psyq::message_pack::serializer<template_stream, template_stack_capacity>&, signed char const)
-template<typename template_stream, std::size_t template_stack_capacity>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    signed long const in_integer)
-{
-    out_stream.write_signed_integer(in_integer);
-    return out_stream;
-}
-/// @copydoc operator<<(psyq::message_pack::serializer<template_stream, template_stack_capacity>&, signed char const)
-template<typename template_stream, std::size_t template_stack_capacity>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    signed long long const in_integer)
-{
-    out_stream.write_signed_integer(in_integer);
-    return out_stream;
-}
-//@}
-//-----------------------------------------------------------------------------
-/// @name 浮動小数点数の直列化
-//@{
-/** @brief 浮動小数点数をMessagePack形式で直列化し、ストリームへ出力する。
-    @param[out] out_stream 書き込む出力ストリーム。
-    @param[in]  in_float   直列化する浮動小数点数。
- */
-template<typename template_stream, std::size_t template_stack_capacity>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    float const in_float)
-{
-    out_stream.write_floating_point(in_float);
-    return out_stream;
-}
-/// @copydoc operator<<(psyq::message_pack::serializer<template_stream, template_stack_capacity>&, float const)
-template<typename template_stream, std::size_t template_stack_capacity>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    double const in_float)
-{
-    out_stream.write_floating_point(in_float);
-    return out_stream;
-}
-//@}
 //-----------------------------------------------------------------------------
 /// @name 文字列の直列化
 //@{

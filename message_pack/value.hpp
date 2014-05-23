@@ -5,7 +5,7 @@
 #ifndef PSYQ_MESSAGE_PACK_VALUE_HPP_
 #define PSYQ_MESSAGE_PACK_VALUE_HPP_
 
-//#include "psyq/message_pack_container.hpp"
+//#include "psyq/message_pack/container.hpp"
 
 /// 倍精度浮動小数点数で許容する誤差の最大値。
 #ifndef PSYQ_MESSAGE_PACK_VALUE_FLOAT32_EPSILON

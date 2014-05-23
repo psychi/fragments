@@ -563,9 +563,9 @@ class psyq::message_pack::deserializer
         template_value& out_value,
         typename self::stream& io_istream)
     {
-        typedef psyq::message_pack::raw_serializer<template_value>
-            raw_serializer;
-        typename raw_serializer::bytes local_bytes;
+        typedef psyq::message_pack::endianness_converter<template_value>
+            endianness_converter;
+        typename endianness_converter::bytes local_bytes;
         auto const local_read_size(
             psyq::internal::message_pack_read_bytes(
                 &local_bytes, io_istream, sizeof(local_bytes)));
@@ -573,7 +573,7 @@ class psyq::message_pack::deserializer
         {
             return false;
         }
-        out_value = raw_serializer::unpack_bytes(
+        out_value = endianness_converter::unpack_bytes(
             local_bytes, psyq::message_pack::big_endian);
         return true;
     }

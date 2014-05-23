@@ -2,8 +2,8 @@
     @author Hillco Psychi (https://twitter.com/psychi)
     @brief @copydoc psyq::message_pack::root_object
  */
-#ifndef PSYQ_MESSAGE_PACK_ROOT_OBJECT_
-#define PSYQ_MESSAGE_PACK_ROOT_OBJECT_
+#ifndef PSYQ_MESSAGE_PACK_ROOT_OBJECT_HPP_
+#define PSYQ_MESSAGE_PACK_ROOT_OBJECT_HPP_
 
 /// psyq::message_pack::pool のチャンク容量のデフォルト値。
 #ifndef PSYQ_MESSAGE_PACK_MEMORY_POOL_CHUNK_CAPACITY_DEFAULT
@@ -17,11 +17,10 @@
 
 namespace psyq
 {
-    /// MessagePackの直列化／直列化復元。
     namespace message_pack
     {
         /// @cond
-        template<typename = std::allocator<std::int64_t>> class pool;
+        template<typename = std::allocator<long long>> class pool;
         template<typename> class root_object;
         /// @endcond
     }
@@ -361,4 +360,4 @@ class psyq::message_pack::root_object: public psyq::message_pack::object
     private: typename self::pool pool_; ///< @copydoc pool
 }; // class psyq::message_pack::root_object
 
-#endif // !defined(PSYQ_MESSAGE_PACK_ROOT_OBJECT_)
+#endif // !defined(PSYQ_MESSAGE_PACK_ROOT_OBJECT_HPP_)

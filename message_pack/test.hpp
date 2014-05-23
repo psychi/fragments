@@ -6,6 +6,7 @@
 #define PSYQ_MESSAGE_PACK_TEST_HPP_
 
 #include <sstream>
+//#include "psyq/message_pack/endianness.hpp"
 //#include "psyq/message_pack/serializer.hpp"
 //#include "psyq/message_pack/container.hpp"
 //#include "psyq/message_pack/value.hpp"

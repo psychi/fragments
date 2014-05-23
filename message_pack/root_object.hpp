@@ -28,6 +28,7 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief MessagePackの直列化復元に使うメモリ割当子。
+    @tparam template_allocator @copydoc psyq::message_pack::pool::allocator_type
     @sa psyq::message_pack::deserializer
  */
 template<typename template_allocator>
@@ -35,7 +36,7 @@ class psyq::message_pack::pool
 {
     private: typedef pool<template_allocator> self; ///< thisが指す値の型。
 
-    /// 使用するメモリ割当子。
+    /// 使用する、 std::allocator 互換のメモリ割当子。
     public: typedef template_allocator allocator_type;
 
     private: struct chunk_header
@@ -53,6 +54,8 @@ class psyq::message_pack::pool
     };
 
     //-------------------------------------------------------------------------
+    /// @name 構築と破壊
+    //@{
     /** @brief メモリプールを構築する。
         @param[in] in_default_capacity チャンク容量バイト数のデフォルト値。
         @param[in] in_allocator        メモリ割当子の初期値。
@@ -131,8 +134,10 @@ class psyq::message_pack::pool
         }
         return *this;
     }
-
+    //@}
     //-------------------------------------------------------------------------
+    /// @name 比較
+    //@{
     public: bool operator==(self const& in_source) const PSYQ_NOEXCEPT
     {
         return this->allocator_ == in_source.get_allocator();
@@ -141,10 +146,13 @@ class psyq::message_pack::pool
     {
         return this->allocator_ != in_source.get_allocator();
     }
-
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 状態の取得
+    //@{
     /** @brief メモリ割当子を取得する。
         @return メモリ割当子。
-     */ 
+     */
     public: typename self::allocator_type const& get_allocator()
     const PSYQ_NOEXCEPT
     {
@@ -159,8 +167,10 @@ class psyq::message_pack::pool
     {
         return this->default_capacity_;
     }
-
+    //@}
     //-------------------------------------------------------------------------
+    /// @name メモリ確保
+    //@{
     /** @brief メモリを確保する。
 
         確保したメモリは、 self::~pool() で解放される。
@@ -226,7 +236,7 @@ class psyq::message_pack::pool
         PSYQ_ASSERT(local_memory != nullptr);
         return local_memory;
     }
-
+    //@}
     //-------------------------------------------------------------------------
     /** @brief チャンクからメモリを分配する。
         @param[in,out] io_chunk     メモリを分配するチャンク。
@@ -293,7 +303,7 @@ class psyq::message_pack::root_object: public psyq::message_pack::object
     private: typedef root_object self; ///< thisが指す値の型。
     public: typedef psyq::message_pack::object super; ///< thisの上位型。
 
-    /// 下位オブジェクトを保持するメモリ割当子。
+    /// psyq::message_pack::pool 互換のメモリ割当子。下位オブジェクトを保持する。
     public: typedef template_pool pool;
 
     //-------------------------------------------------------------------------

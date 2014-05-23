@@ -26,6 +26,8 @@ namespace psyq
                 class deserializer;
         /// @endcond
     } // namespace message_pack
+
+    /// この名前空間をuserが直接accessするのは禁止。
     namespace internal
     {
         //---------------------------------------------------------------------
@@ -70,17 +72,19 @@ namespace psyq
 
     使用例
     @code
-    // 出力ストリームを読み込み、MessagePackオブジェクトを直列化復元する関数。
-    template<typename template_ostream>
-    typename psyq::message_pack::deserializer<template_ostream>::root_object
-    deserialize_message_pack(template_ostream in_ostream)
+    // 入力ストリームを読み込み、MessagePackオブジェクトを直列化復元する関数。
+    // @param[in] in_istream std::basic_istream 互換の入力ストリーム。
+    // @return 入力ストリームから直列化復元したMessagePackオブジェクト。
+    template<typename template_istream>
+    typename psyq::message_pack::deserializer<template_istream>::root_object
+    deserialize_message_pack(template_istream in_istream)
     {
         // deserializerを構築する。
-        typename psyq::message_pack::deserializer<template_ostream>
+        typename psyq::message_pack::deserializer<template_istream>
             local_deserializer(
-                std::move(in_ostream), message_pack_deserializer::pool());
+                std::move(in_istream), message_pack_deserializer::pool());
         // 直列化復元した最上位オブジェクトを格納するインスタンスを用意する。
-        typename psyq::message_pack::deserializer<template_ostream>::root_object
+        typename psyq::message_pack::deserializer<template_istream>::root_object
             local_root_object;
         // 直列化復元する。
         local_deserializer >> local_root_object;
@@ -281,10 +285,10 @@ class psyq::message_pack::deserializer
     //-------------------------------------------------------------------------
     /// @name 直列化復元
     //@{
-    /** @brief ストリームを読み込み、MessagePackオブジェクトを復元する。
+    /** @brief ストリームを読み込み、MessagePackオブジェクトを直列化復元する。
         @param[out] out_object
-            - 復元が完了したMessagePackオブジェクトを格納する。
-            - 復元が完了しなかった場合は、空値を格納する。
+            - 直列化復元が完了したMessagePackオブジェクトを格納する。
+            - 直列化復元が完了しなかった場合は、空値を格納する。
         @return *this
      */
     public: self& operator>>(typename self::root_object& out_object)
@@ -298,16 +302,16 @@ class psyq::message_pack::deserializer
         return *this;
     }
 
-    /** @brief ストリームを読み込み、MessagePackオブジェクトを復元する。
+    /** @brief ストリームを読み込み、MessagePackオブジェクトを直列化復元する。
         @param[out] out_object
-            - 復元が完了したMessagePackオブジェクトを格納する。
-            - 復元が完了しなかった場合は、何もしない。
+            - 直列化復元が完了したMessagePackオブジェクトを格納する。
+            - 直列化復元が完了しなかった場合は、何もしない。
         @param[in] in_pool 直列化復元に使うメモリ割当子。
         @return
-            - 正なら、MessagePackオブジェクトの復元を完了。
-            - 0 なら、MessagePackオブジェクトの復元途中で中断。
-              self::read_object(self::root_object&) で、復元を続行できる。
-            - 負なら、復元に失敗。
+            - 正なら、MessagePackオブジェクトの直列化復元を完了。
+            - 0 なら、MessagePackオブジェクトの直列化復元途中で中断。
+              self::read_object(self::root_object&) で、直列化復元を続行できる。
+            - 負なら、直列化復元に失敗。
         @sa self::get_rest_container_count()
      */
     public: int read_object(
@@ -323,15 +327,15 @@ class psyq::message_pack::deserializer
         this->pool_ = std::move(in_pool);
         return this->read_object(out_object);
     }
-    /** @brief ストリームを読み込み、MessagePackオブジェクトの復元を続行する。
+    /** @brief ストリームを読み込み、MessagePackオブジェクトの直列化復元を続行する。
         @param[out] out_object
-            - 復元が完了したMessagePackオブジェクトを格納する。
-            - 復元が完了しなかった場合は、何もしない。
+            - 直列化復元が完了したMessagePackオブジェクトを格納する。
+            - 直列化復元が完了しなかった場合は、何もしない。
         @return
-            - 正なら、MessagePackオブジェクトの復元を完了。
-            - 0 なら、MessagePackオブジェクトの復元途中で中断。
-              self::read_object(self::root_object&) で、復元を続行できる。
-            - 負なら、復元に失敗。
+            - 正なら、MessagePackオブジェクトの直列化復元を完了。
+            - 0 なら、MessagePackオブジェクトの直列化復元途中で中断。
+              self::read_object(self::root_object&) で、直列化復元を続行できる。
+            - 負なら、直列化復元に失敗。
         @sa self::get_rest_container_count()
      */
     public: int read_object(typename self::root_object& out_object)

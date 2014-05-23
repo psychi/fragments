@@ -7,6 +7,7 @@
 
 namespace psyq
 {
+    /// この名前空間をuserが直接accessするのは禁止。
     namespace internal
     {
         /// @cond

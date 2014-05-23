@@ -21,16 +21,18 @@
 
 namespace psyq
 {
-    namespace internal
-    {
-        /// @cond
-        union message_pack_value;
-        /// @endcond
-    }
     namespace message_pack
     {
         /// @cond
         class object;
+        /// @endcond
+    }
+
+    /// この名前空間をuserが直接accessするのは禁止。
+    namespace internal
+    {
+        /// @cond
+        union message_pack_value;
         /// @endcond
     }
 }

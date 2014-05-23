@@ -83,7 +83,6 @@ namespace psyq
         };
     } // namespace message_pack
 
-    //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
     /// この名前空間をuserが直接accessするのは禁止。
     namespace internal
     {

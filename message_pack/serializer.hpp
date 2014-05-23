@@ -608,6 +608,24 @@ class psyq::message_pack::serializer
     //-------------------------------------------------------------------------
     /// @name MessagePack文字列への直列化
     //@{
+    /** @brief std::basic_string をMessagePack形式の文字列として直列化し、
+               ストリームへ出力する。
+        @param[in] in_string  直列化する文字列。
+     */
+    public: template<
+        typename template_char,
+        typename template_traits,
+        typename template_allocator>
+    self& operator<<(
+        std::basic_string<template_char, template_traits, template_allocator>
+            const& in_string)
+    {
+        static_assert(
+            sizeof(template_char) == 1, "sizeof(template_char) is not 1.");
+        this->write_raw_string(in_string.data(), in_string.length());
+        return *this;
+    }
+
     /** @brief 連続するメモリ領域にある文字列を、
                MessagePack形式の文字列として直列化し、ストリームへ出力する。
         @param[in] in_begin 直列化する文字列の先頭位置。
@@ -920,6 +938,53 @@ class psyq::message_pack::serializer
     //-------------------------------------------------------------------------
     /// @name MessagePack配列への直列化
     //@{
+    /** @brief std::array をMessagePack形式の配列として直列化し、
+               ストリームへ出力する。
+        @param[in] in_array 直列化するコンテナ。
+     */
+    public: template<typename template_value, std::size_t template_size>
+    self& operator<<(std::array<template_value, template_size> const& in_array)
+    {
+        this->write_array(in_array);
+        return *this;
+    }
+
+    /** @brief std::vector をMessagePack形式の配列として直列化し、
+              ストリームへ出力する。
+        @param[in] in_vector 直列化するコンテナ。
+     */
+    public: template<typename template_value, typename template_allocator>
+    self& operator<<(
+        std::vector<template_value, template_allocator> const& in_vector)
+    {
+        this->write_array(in_vector);
+        return *this;
+    }
+
+    /** @brief std::deque をMessagePack形式の配列として直列化し、
+               ストリームへ出力する。
+        @param[in] in_deque 直列化するコンテナ。
+     */
+    public: template<typename template_value, typename template_allocator>
+    self& operator<<(
+        std::deque<template_value, template_allocator> const& in_deque)
+    {
+        this->write_array(in_deque);
+        return *this;
+    }
+
+    /** @brief std::list をMessagePack形式の配列として直列化し、
+               ストリームへ出力する。
+        @param[in] in_list 直列化するコンテナ。
+     */
+    public: template<typename template_value, typename template_allocator>
+    self& operator<<(
+        std::list<template_value, template_allocator> const& in_list)
+    {
+        this->write_array(in_list);
+        return *this;
+    }
+
     /** @brief タプルをMessagePack形式の配列として直列化し、
                ストリームへ出力する。
         @tparam template_tuple std::tuple 互換のタプル型。
@@ -1005,6 +1070,161 @@ class psyq::message_pack::serializer
     //-------------------------------------------------------------------------
     /// @name MessagePack連想配列への直列化
     //@{
+    /** @brief std::set をMessagePack形式の連想配列として直列化し、
+               ストリームへ出力する。
+        @param[in] in_set 直列化するコンテナ。
+        @return *this
+     */
+    public: template<
+        typename template_key,
+        typename template_compare,
+        typename template_allocator>
+    self& operator<<(
+        std::set<template_key, template_compare, template_allocator>
+            const& in_set)
+    {
+        this->write_set(in_set);
+        return *this;
+    }
+
+    /** @brief std::multiset をMessagePack形式の連想配列として直列化し、
+               ストリームへ出力する。
+        @param[in] in_set 直列化するコンテナ。
+     */
+    public: template<
+        typename template_key,
+        typename template_compare,
+        typename template_allocator>
+    self& operator<<(
+        std::multiset<template_key, template_compare, template_allocator>
+            const& in_set)
+    {
+        this->write_set(in_set);
+        return *this;
+    }
+
+    /** @brief std::unordered_set をMessagePack形式の連想配列として直列化し、
+               ストリームへ出力する。
+        @param[in] in_set 直列化するコンテナ。
+        @return *this
+     */
+    public: template<
+        typename template_key,
+        typename template_hash,
+        typename template_compare,
+        typename template_allocator>
+    self& operator<<(
+        std::unordered_set
+            <template_key, template_hash, template_compare, template_allocator>
+                const& in_set)
+    {
+        this->write_set(in_set);
+        return *this;
+    }
+
+    /** @brief std::unordered_multiset をMessagePack形式の連想配列として直列化し、
+               ストリームへ出力する。
+        @param[in] in_set 直列化するコンテナ。
+ */
+    public: template<
+        typename template_key,
+        typename template_hash,
+        typename template_compare,
+        typename template_allocator>
+    self& operator<<(
+        std::unordered_multiset
+            <template_key, template_hash, template_compare, template_allocator>
+                const& in_set)
+    {
+        this->write_set(in_set);
+        return *this;
+    }
+
+    /** @brief std::map をMessagePack形式の連想配列として直列化し、
+               ストリームへ出力する。
+        @param[in] in_map 直列化するコンテナ。
+        @return *this
+     */
+    public: template<
+        typename template_key,
+        typename template_mapped,
+        typename template_compare,
+        typename template_allocator>
+    self& operator<<(
+        std::map<template_key, template_mapped, template_compare, template_allocator>
+            const& in_map)
+    {
+        this->write_map(in_map);
+        return *this;
+    }
+
+    /** @brief std::multimap をMessagePack形式の連想配列として直列化し、
+               ストリームへ出力する。
+        @param[in] in_map 直列化するコンテナ。
+        @return *this
+     */
+    public: template<
+        typename template_key,
+        typename template_mapped,
+        typename template_compare,
+        typename template_allocator>
+    self& operator<<(
+        std::multimap
+            <template_key, template_mapped, template_compare, template_allocator>
+                const& in_map)
+    {
+        this->write_map(in_map);
+        return *this;
+    }
+
+    /** @brief std::unordered_map をMessagePack形式の連想配列として直列化し、
+               ストリームへ出力する。
+        @param[in] in_map 直列化するコンテナ。
+        @return *this
+     */
+    public: template<
+        typename template_key,
+        typename template_mapped,
+        typename template_hash,
+        typename template_compare,
+        typename template_allocator>
+    self& operator<<(
+        std::unordered_map<
+            template_key,
+            template_mapped,
+            template_hash,
+            template_compare,
+            template_allocator>
+                const& in_map)
+    {
+        this->write_map(in_map);
+        return *this;
+    }
+
+    /** @brief std::unordered_multimap をMessagePack形式の連想配列として直列化し、
+               ストリームへ出力する。
+        @param[in] in_map 直列化するコンテナ。
+        @return *this
+     */
+    template<
+        typename template_key,
+        typename template_mapped,
+        typename template_hash,
+        typename template_compare,
+        typename template_allocator>
+    self& operator<<(
+        std::unordered_multimap<
+            template_key,
+            template_mapped,
+            template_hash,
+            template_compare,
+            template_allocator>
+                const& in_map)
+    {
+        this->write_map(in_map);
+        return *this;
+    }
+
     /** @brief 標準コンテナをMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
         @param[in] in_iterator 直列化する標準コンテナの先頭位置。
@@ -1489,6 +1709,7 @@ class psyq::message_pack::serializer
 //-----------------------------------------------------------------------------
 /// @name 文字列の直列化
 //@{
+#ifdef PSYQ_STRING_VIEW_BASE_HPP_
 /** @brief 文字列をMessagePack形式のRAWバイト列として直列化し、
            ストリームへ出力する。
     @param[out] out_stream 書き込む出力ストリーム。
@@ -1497,21 +1718,17 @@ class psyq::message_pack::serializer
 template<
     typename template_stream,
     std::size_t template_stack_capacity,
-    typename template_char,
-    typename template_traits,
-    typename template_allocator>
+    typename template_char_traits>
 psyq::message_pack::serializer<template_stream, template_stack_capacity>&
 operator<<(
     psyq::message_pack::serializer<template_stream, template_stack_capacity>&
         out_stream,
-    std::basic_string<template_char, template_traits, template_allocator>
-        const& in_string)
+    psyq::internal::string_view_base<template_char_traits> const& in_string)
 {
-    static_assert(
-        sizeof(template_char) == 1, "sizeof(template_char) is not 1.");
     out_stream.write_raw_string(in_string.data(), in_string.length());
     return out_stream;
 }
+#endif // defined(PSYQ_STRING_VIEW_BASE_HPP_)
 //@}
 //-----------------------------------------------------------------------------
 /// @name タプルの直列化
@@ -1788,289 +2005,6 @@ operator<<(
             const& in_tuple)
 {
     out_stream.write_tuple(in_tuple);
-    return out_stream;
-}
-//@}
-//-----------------------------------------------------------------------------
-/// @name コンテナの直列化
-//@{
-/** @brief std::array をMessagePack形式の配列として直列化し、
-           ストリームへ出力する。
-    @param[out] out_stream 書き込む出力ストリーム。
-    @param[in]  in_array   直列化するコンテナ。
- */
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_value,
-    std::size_t template_size>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::array<template_value, template_size> const& in_array)
-{
-    out_stream.write_array(in_array);
-    return out_stream;
-}
-
-/** @brief std::vector をMessagePack形式の配列として直列化し、
-           ストリームへ出力する。
-    @param[out] out_stream 書き込む出力ストリーム。
-    @param[in]  in_vector  直列化するコンテナ。
- */
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_value,
-    typename template_allocator>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::vector<template_value, template_allocator> const& in_vector)
-{
-    out_stream.write_array(in_vector);
-    return out_stream;
-}
-
-/** @brief std::deque をMessagePack形式の配列として直列化し、
-           ストリームへ出力する。
-    @param[out] out_stream 書き込む出力ストリーム。
-    @param[in]  in_deque   直列化するコンテナ。
- */
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_value,
-    typename template_allocator>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::deque<template_value, template_allocator> const& in_deque)
-{
-    out_stream.write_array(in_deque);
-    return out_stream;
-}
-
-/** @brief std::list をMessagePack形式の配列として直列化し、
-           ストリームへ出力する。
-    @param[out] out_stream 書き込む出力ストリーム。
-    @param[in]  in_list    直列化するコンテナ。
- */
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_value,
-    typename template_allocator>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::list<template_value, template_allocator> const& in_list)
-{
-    out_stream.write_array(in_list);
-    return out_stream;
-}
-//@}
-//-----------------------------------------------------------------------------
-/// @name 集合コンテナの直列化
-//@{
-/** @brief std::set をMessagePack形式の連想配列として直列化し、
-           ストリームへ出力する。
-    @param[out] out_stream 書き込む出力ストリーム。
-    @param[in]  in_set     直列化するコンテナ。
- */
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_key,
-    typename template_compare,
-    typename template_allocator>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::set<template_key, template_compare, template_allocator>
-        const& in_set)
-{
-    out_stream.write_set(in_set);
-    return out_stream;
-}
-
-/** @brief std::multiset をMessagePack形式の連想配列として直列化し、
-           ストリームへ出力する。
-    @param[out] out_stream 書き込む出力ストリーム。
-    @param[in]  in_set     直列化するコンテナ。
- */
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_key,
-    typename template_compare,
-    typename template_allocator>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::multiset<template_key, template_compare, template_allocator>
-        const& in_set)
-{
-    out_stream.write_set(in_set);
-    return out_stream;
-}
-
-/** @brief std::unordered_set をMessagePack形式の連想配列として直列化し、
-           ストリームへ出力する。
-    @param[out] out_stream 書き込む出力ストリーム。
-    @param[in]  in_set     直列化するコンテナ。
- */
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_key,
-    typename template_hash,
-    typename template_compare,
-    typename template_allocator>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::unordered_set<template_key, template_hash, template_compare, template_allocator>
-        const& in_set)
-{
-    out_stream.write_set(in_set);
-    return out_stream;
-}
-
-/** @brief std::unordered_multiset をMessagePack形式の連想配列として直列化し、
-           ストリームへ出力する。
-    @param[out] out_stream 書き込む出力ストリーム。
-    @param[in]  in_set     直列化するコンテナ。
- */
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_key,
-    typename template_hash,
-    typename template_compare,
-    typename template_allocator>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::unordered_multiset<template_key, template_hash, template_compare, template_allocator>
-        const& in_set)
-{
-    out_stream.write_set(in_set);
-    return out_stream;
-}
-//@}
-//-----------------------------------------------------------------------------
-/// @name 連想配列コンテナの直列化
-//@{
-/** @brief std::map をMessagePack形式の連想配列として直列化し、
-           ストリームへ出力する。
-    @param[out] out_stream 書き込む出力ストリーム。
-    @param[in]  in_map     直列化するコンテナ。
- */
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_key,
-    typename template_mapped,
-    typename template_compare,
-    typename template_allocator>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::map<template_key, template_mapped, template_compare, template_allocator>
-        const& in_map)
-{
-    out_stream.write_map(in_map);
-    return out_stream;
-}
-
-/** @brief std::multimap をMessagePack形式の連想配列として直列化し、
-           ストリームへ出力する。
-    @param[out] out_stream 書き込む出力ストリーム。
-    @param[in]  in_map     直列化するコンテナ。
- */
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_key,
-    typename template_mapped,
-    typename template_compare,
-    typename template_allocator>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::multimap<template_key, template_mapped, template_compare, template_allocator>
-        const& in_map)
-{
-    out_stream.write_map(in_map);
-    return out_stream;
-}
-
-/** @brief std::unordered_map をMessagePack形式の連想配列として直列化し、
-           ストリームへ出力する。
-    @param[out] out_stream 書き込む出力ストリーム。
-    @param[in]  in_map     直列化するコンテナ。
- */
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_key,
-    typename template_mapped,
-    typename template_hash,
-    typename template_compare,
-    typename template_allocator>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::unordered_map<
-        template_key,
-        template_mapped,
-        template_hash,
-        template_compare,
-        template_allocator>
-            const& in_map)
-{
-    out_stream.write_map(in_map);
-    return out_stream;
-}
-
-/** @brief std::unordered_multimap をMessagePack形式の連想配列として直列化し、
-           ストリームへ出力する。
-    @param[out] out_stream 書き込む出力ストリーム。
-    @param[in]  in_map     直列化するコンテナ。
- */
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_key,
-    typename template_mapped,
-    typename template_hash,
-    typename template_compare,
-    typename template_allocator>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::unordered_multimap<
-        template_key,
-        template_mapped,
-        template_hash,
-        template_compare,
-        template_allocator>
-            const& in_map)
-{
-    out_stream.write_map(in_map);
     return out_stream;
 }
 //@}

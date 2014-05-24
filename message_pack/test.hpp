@@ -98,7 +98,21 @@ namespace psyq
             ++local_message_pack_object;
             ++local_message_pack_object;
             ++local_message_pack_object;
+
+            auto const local_integer_map(local_message_pack_object->get_map());
+            PSYQ_ASSERT(local_integer_map != nullptr);
+            local_integer_map->find(true);
+            local_integer_map->find(2);
+            local_integer_map->find(3.0f);
+            local_integer_map->find(4.0);
+            local_integer_map->find(
+                psyq::message_pack::object::make_string("100"));
+            local_integer_map->find(
+                psyq::message_pack::object::make_string(std::string("101")));
             ++local_message_pack_object;
+
+            auto const local_tuple4(local_message_pack_object->get_array());
+            PSYQ_ASSERT(local_tuple4 != nullptr);
             ++local_message_pack_object;
 
             PSYQ_ASSERT(
@@ -252,6 +266,10 @@ namespace psyq
             PSYQ_ASSERT(
                 *local_message_pack_object == psyq::message_pack::object());
             ++local_message_pack_object;
+
+            psyq::message_pack::object local_single_object(false);
+            local_single_object = true;
+            local_single_object = int(sizeof(int));
         }
     } // namespace test
 } // namespace psyq

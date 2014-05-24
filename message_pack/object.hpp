@@ -143,6 +143,7 @@ class psyq::message_pack::object
         value_(in_string),
         type_(self::type::STRING)
     {}
+
     /** @brief MessagePackオブジェクトにバイナリを格納する。
         @param[in] in_binary MessagePackオブジェクトに格納するバイナリ。
      */
@@ -192,6 +193,35 @@ class psyq::message_pack::object
         value_(in_map),
         type_(self::type::MAP)
     {}
+
+    /** @brief 文字列を参照するMessagePackオブジェクトを構築する。
+        @param[in] in_string 参照する文字列。
+     */
+    public: template<typename template_string>
+    static self make_string(template_string const& in_string) PSYQ_NOEXCEPT
+    {
+        self::string local_string;
+        local_string.reset(in_string.data(), in_string.length());
+        return self(local_string);
+    }
+    /** @brief 文字列literalを参照するMessagePackオブジェクトを構築する。
+        @tparam template_size 参照する文字列literalの要素数。終端文字も含む。
+        @param[in] in_literal 参照する文字列literal。
+        @warning 文字列literal以外の文字列を引数に渡すのは禁止。
+        @note
+            引数が文字列literalであることを保証するため、
+            user定義literalを経由して呼び出すようにしたい。
+     */
+    public: template<typename template_char, std::size_t template_size>
+    static self make_string(template_char const (&in_literal)[template_size])
+    PSYQ_NOEXCEPT
+    {
+        static_assert(0 < template_size, "");
+        PSYQ_ASSERT(in_literal[template_size - 1] == 0);
+        self::string local_string;
+        local_string.reset(&in_literal[0], template_size - 1);
+        return self(local_string);
+    }
 
     //-------------------------------------------------------------------------
     /// @name MessagePackオブジェクトの比較
@@ -272,7 +302,7 @@ class psyq::message_pack::object
     }
 
     //-------------------------------------------------------------------------
-    /// @name MessagePackオブジェクトに格納されてる値の操作
+    /// @name MessagePackオブジェクトに格納されてる値の取得
     //@{
     /** @brief MessagePackオブジェクトに格納されてる値の種別を取得する。
         @return @copydoc self::type
@@ -402,7 +432,7 @@ class psyq::message_pack::object
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name MessagePackオブジェクトに格納されてるRAWバイト列の操作
+    /// @name MessagePackオブジェクトに格納されてるRAWバイト列の取得
     //@{
     /** @brief MessagePackオブジェクトに格納されてる文字列を取得する。
         @retval !=nullptr
@@ -440,7 +470,7 @@ class psyq::message_pack::object
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name MessagePackオブジェクトに格納されてる配列の操作
+    /// @name MessagePackオブジェクトに格納されてる配列の取得
     //@{
     /** @brief MessagePackオブジェクトに格納されてる配列を取得する。
         @retval !=nullptr
@@ -460,7 +490,7 @@ class psyq::message_pack::object
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name MessagePackオブジェクトに格納されてる連想配列の操作
+    /// @name MessagePackオブジェクトに格納されてる連想配列の取得
     //@{
     /** @brief MessagePackオブジェクトに格納されてる連想配列を取得する。
         @retval !=nullptr

@@ -560,9 +560,9 @@ struct psyq::internal::message_pack_map:
     const
     {
         auto const local_iterator(this->lower_bound(in_key));
-        return local_iterator != this->end()
-            && local_iterator->first == in_key?
-                local_iterator: this->end();
+        auto const local_end(this->end());
+        return local_iterator != local_end && local_iterator->first == in_key?
+            local_iterator: local_end;
     }
 
     /** @brief std::multimap::equal_range() 相当の関数。

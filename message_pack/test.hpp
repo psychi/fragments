@@ -6,11 +6,11 @@
 #define PSYQ_MESSAGE_PACK_TEST_HPP_
 
 #include <sstream>
-//#include "psyq/message_pack/endianness.hpp"
-//#include "psyq/message_pack/serializer.hpp"
 //#include "psyq/message_pack/container.hpp"
 //#include "psyq/message_pack/value.hpp"
 //#include "psyq/message_pack/object.hpp"
+//#include "psyq/message_pack/endianness.hpp"
+//#include "psyq/message_pack/serializer.hpp"
 //#include "psyq/message_pack/root_object.hpp"
 //#include "psyq/message_pack/deserialize.hpp"
 
@@ -83,6 +83,7 @@ namespace psyq
             local_serializer.fill_container_raw(local_string_0x10000);
             local_serializer.write_nil();
 
+            auto local_serialize_string(local_serializer.get_stream().str());
             auto local_stream(
                 std::move(local_serializer.reset(std::stringstream())));
             local_stream.seekg(0);
@@ -267,9 +268,8 @@ namespace psyq
                 *local_message_pack_object == psyq::message_pack::object());
             ++local_message_pack_object;
 
-            psyq::message_pack::object local_single_object(false);
-            local_single_object = true;
-            local_single_object = int(sizeof(int));
+            local_serializer << local_root_object;
+            PSYQ_ASSERT(local_serializer.get_stream().str() == local_serialize_string);
         }
     } // namespace test
 } // namespace psyq

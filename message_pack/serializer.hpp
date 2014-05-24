@@ -16,6 +16,9 @@
 #include <map>
 #include <unordered_map>
 
+//#include "psyq/message_pack/endianness.hpp"
+//#include "psyq/message_pack/object.hpp"
+
 /// psyq::message_pack::serializer のスタック限界数のデフォルト値。
 #ifndef PSYQ_MESSAGE_PACK_SERIALIZER_STACK_CAPACITY_DEFAULT
 #define PSYQ_MESSAGE_PACK_SERIALIZER_STACK_CAPACITY_DEFAULT 32
@@ -218,8 +221,10 @@ class psyq::message_pack::serializer
         }
         return *this;
     }
-    //@} 
+    //@}
+    /// copy構築子は使用禁止。
     private: serializer(self const&);// = delete;
+    /// copy代入演算子は使用禁止。
     private: self& operator=(self const&);// = delete;
 
     //-------------------------------------------------------------------------
@@ -626,7 +631,6 @@ class psyq::message_pack::serializer
         this->write_raw_string(in_string.data(), in_string.length());
         return *this;
     }
-
 #ifdef PSYQ_STRING_VIEW_BASE_HPP_
     /** @brief 文字列をMessagePack形式のRAWバイト列として直列化し、
                ストリームへ出力する。
@@ -763,7 +767,7 @@ class psyq::message_pack::serializer
         std::size_t const in_length)
     {
         auto const local_size(in_length * sizeof(template_element));
-        return this->write_raw_header<psy::internal::message_pack_format_BIN8>(local_size)
+        return this->write_raw_header<psyq::internal::message_pack_format_BIN8>(local_size)
             && this->write_raw_data(in_begin, local_size);
     }
 
@@ -1368,6 +1372,7 @@ class psyq::message_pack::serializer
                ストリームへ出力する。
         @param[in] in_container  直列化する標準コンテナ。
         @param[in] in_endianness コンテナ要素を直列化する際のエンディアン性。
+        @return 残り要素の数。
         @sa self::make_serial_string()
         @sa self::make_serial_binary()
         @sa self::make_serial_extended()
@@ -1388,6 +1393,7 @@ class psyq::message_pack::serializer
         @param[in] in_iterator   直列化する標準コンテナの先頭位置。
         @param[in] in_length     直列化する標準コンテナの要素数。
         @param[in] in_endianness コンテナ要素を直列化する際のエンディアン性。
+        @return 残り要素の数。
         @sa self::make_serial_string()
         @sa self::make_serial_binary()
         @sa self::make_serial_extended()
@@ -1503,6 +1509,143 @@ class psyq::message_pack::serializer
             && this->fill_rest_elements() <= 0)
         {}
         return this->get_rest_container_count();
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name MessagePackオブジェクトの直列化
+    //@{
+    /** @brief MessagePackオブジェクトを直列化し、ストリームへ出力する。
+        @param[in] in_object 直列化するMessagePackオブジェクト。
+        @return *this
+     */
+    public: self& operator<<(psyq::message_pack::object const& in_object)
+    {
+        this->write_object(in_object);
+        return *this;
+    }
+    /** @brief MessagePackオブジェクトを直列化し、ストリームへ出力する。
+        @param[in] in_object 直列化するMessagePackオブジェクト。
+        @retval true  成功。
+        @retval false 失敗。
+     */
+    public: bool write_object(psyq::message_pack::object const& in_object)
+    {
+        switch(in_object.get_type())
+        {
+        case psyq::message_pack::object::type::NIL:
+        {
+            // 空値をストリームへ出力する。
+            auto const local_result(this->write_nil());
+            PSYQ_ASSERT(local_result);
+            return local_result;
+        }
+        case psyq::message_pack::object::type::BOOLEAN:
+        {
+            // 真偽値をストリームへ出力する。
+            auto const local_boolean(in_object.get_boolean());
+            PSYQ_ASSERT(local_boolean != nullptr);
+            auto const local_result(this->write_boolean(*local_boolean));
+            PSYQ_ASSERT(local_result);
+            return local_result;
+        }
+        case psyq::message_pack::object::type::POSITIVE_INTEGER:
+        {
+            // 0以上の整数をストリームへ出力する。
+            auto const local_integer(in_object.get_positive_integer());
+            PSYQ_ASSERT(local_integer != nullptr);
+            auto const local_result(this->write_unsigned_integer(*local_integer));
+            PSYQ_ASSERT(local_result);
+            return local_result;
+        }
+        case psyq::message_pack::object::type::NEGATIVE_INTEGER:
+        {
+            // 0未満の整数をストリームへ出力する。
+            auto const local_integer(in_object.get_negative_integer());
+            PSYQ_ASSERT(local_integer != nullptr);
+            auto const local_result(this->write_signed_integer(*local_integer));
+            PSYQ_ASSERT(local_result);
+            return local_result;
+        }
+        case psyq::message_pack::object::type::FLOAT32:
+        {
+            // 32bit浮動小数点数をストリームへ出力する。
+            auto const local_float(in_object.get_float32());
+            PSYQ_ASSERT(local_float != nullptr);
+            auto const local_result(this->write_floating_point(*local_float));
+            PSYQ_ASSERT(local_result);
+            return local_result;
+        }
+        case psyq::message_pack::object::type::FLOAT64:
+        {
+            // 64bit浮動小数点数をストリームへ出力する。
+            auto const local_float(in_object.get_float64());
+            PSYQ_ASSERT(local_float != nullptr);
+            auto const local_result(this->write_floating_point(*local_float));
+            PSYQ_ASSERT(local_result);
+            return local_result;
+        }
+        case psyq::message_pack::object::type::STRING:
+        {
+            // 文字列をストリームへ出力する。
+            auto const local_string(in_object.get_string());
+            PSYQ_ASSERT(local_string != nullptr);
+            auto const local_result(
+                this->write_raw_string(
+                    local_string->data(), local_string->size()));
+            PSYQ_ASSERT(local_result);
+            return local_result;
+        }
+        case psyq::message_pack::object::type::BINARY:
+        {
+            // バイナリをストリームへ出力する。
+            auto const local_binary(in_object.get_binary());
+            PSYQ_ASSERT(local_binary != nullptr);
+            auto const local_result(
+                this->write_raw_binary(
+                    local_binary->data(), local_binary->size()));
+            PSYQ_ASSERT(local_result);
+            return local_result;
+        }
+        case psyq::message_pack::object::type::EXTENDED:
+        {
+            // 拡張バイナリをストリームへ出力する。
+            auto const local_extended(in_object.get_extended());
+            PSYQ_ASSERT(local_extended != nullptr);
+            if (!this->make_serial_extended(local_extended->type(), local_extended->size()))
+            {
+                PSYQ_ASSERT(false);
+                return false;
+            }
+            if (this->fill_container_raw(*local_extended) != 0)
+            {
+                PSYQ_ASSERT(false);
+                return false;
+            }
+            return true;
+        }
+        case psyq::message_pack::object::type::ARRAY:
+        {
+            // 配列をストリームへ出力する。
+            auto const local_array(in_object.get_array());
+            PSYQ_ASSERT(local_array != nullptr);
+            auto const local_result(this->write_array(*local_array));
+            PSYQ_ASSERT(local_result);
+            return local_result;
+        }
+        case psyq::message_pack::object::type::UNORDERED_MAP:
+        case psyq::message_pack::object::type::MAP:
+        {
+            // 連想配列をストリームへ出力する。
+            auto const local_map(in_object.get_unordered_map());
+            PSYQ_ASSERT(local_map != nullptr);
+            auto const local_result(this->write_map(*local_map));
+            PSYQ_ASSERT(local_result);
+            return local_result;
+        }
+        default:
+            PSYQ_ASSERT(false);
+            return false;
+        }
     }
     //@}
     //-------------------------------------------------------------------------
@@ -1720,7 +1863,7 @@ class psyq::message_pack::serializer
     private: std::size_t stack_size_;
 }; // class psyq::message_pack::serializer
 
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 //-----------------------------------------------------------------------------
 /// @name タプルの直列化
 //@{

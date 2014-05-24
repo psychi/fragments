@@ -33,12 +33,13 @@ namespace psyq
             {
                 local_string_0x10000 += local_string_0x10000;
             }
-            //psyq::string_view local_string_0x1f(local_string_0x10000.data(), 0x1f);
-            //psyq::string_view local_string_0xff(local_string_0x10000.data(), 0xff);
-            //psyq::string_view local_string_0xffff(local_string_0x10000.data(), 0xffff);
-            std::string local_string_0x1f(local_string_0x10000, 0, 0x1f);
-            std::string local_string_0xff(local_string_0x10000, 0, 0xff);
+            psyq::string_view local_string_0x1f(local_string_0x10000.data(), 0x1f);
+            psyq::string_view local_string_0xff(local_string_0x10000.data(), 0xff);
+#ifdef PSYQ_STRING_VIEW_BASE_HPP_
+            psyq::string_view local_string_0xffff(local_string_0x10000.data(), 0xffff);
+#else
             std::string local_string_0xffff(local_string_0x10000, 0, 0xffff);
+#endif
 
             psyq::message_pack::serializer<std::stringstream, 16>
                 local_serializer(

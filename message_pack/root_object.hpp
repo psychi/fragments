@@ -5,6 +5,8 @@
 #ifndef PSYQ_MESSAGE_PACK_ROOT_OBJECT_HPP_
 #define PSYQ_MESSAGE_PACK_ROOT_OBJECT_HPP_
 
+//#include "psyq/message_pack/object.hpp"
+
 /// psyq::message_pack::pool のチャンク容量のデフォルト値。
 #ifndef PSYQ_MESSAGE_PACK_MEMORY_POOL_CHUNK_CAPACITY_DEFAULT
 #define PSYQ_MESSAGE_PACK_MEMORY_POOL_CHUNK_CAPACITY_DEFAULT 4096

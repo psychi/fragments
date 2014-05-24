@@ -48,7 +48,7 @@ class psyq::message_pack::object
     /** @brief MessagePackオブジェクトに真偽値を格納する。
         @param[in] in_boolean MessagePackオブジェクトに格納する真偽値。
      */
-    public: explicit PSYQ_CONSTEXPR object(bool const in_boolean)
+    public: PSYQ_CONSTEXPR object(bool const in_boolean)
     PSYQ_NOEXCEPT:
         value_(in_boolean),
         type_(self::type::BOOLEAN)
@@ -57,31 +57,31 @@ class psyq::message_pack::object
     /** @brief MessagePackオブジェクトに無符号整数を格納する。
         @param[in] in_integer MessagePackオブジェクトに格納する無符号整数。
      */
-    public: explicit PSYQ_CONSTEXPR object(unsigned long long const in_integer)
+    public: PSYQ_CONSTEXPR object(unsigned long long const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::type::POSITIVE_INTEGER)
     {}
     /// @copydoc object(unsigned long long const)
-    public: explicit PSYQ_CONSTEXPR object(unsigned long const in_integer)
+    public: PSYQ_CONSTEXPR object(unsigned long const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::type::POSITIVE_INTEGER)
     {}
     /// @copydoc object(unsigned long long const)
-    public: explicit PSYQ_CONSTEXPR object(unsigned int const in_integer)
+    public: PSYQ_CONSTEXPR object(unsigned int const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::type::POSITIVE_INTEGER)
     {}
     /// @copydoc object(unsigned long long const)
-    public: explicit PSYQ_CONSTEXPR object(unsigned short const in_integer)
+    public: PSYQ_CONSTEXPR object(unsigned short const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::type::POSITIVE_INTEGER)
     {}
     /// @copydoc object(unsigned long long const)
-    public: explicit PSYQ_CONSTEXPR object(unsigned char const in_integer)
+    public: PSYQ_CONSTEXPR object(unsigned char const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::type::POSITIVE_INTEGER)
@@ -90,31 +90,31 @@ class psyq::message_pack::object
     /** @brief MessagePackオブジェクトに有符号整数を格納する。
         @param[in] in_integer MessagePackオブジェクトに格納する有符号整数。
      */
-    public: explicit PSYQ_CONSTEXPR object(signed long long const in_integer)
+    public: PSYQ_CONSTEXPR object(signed long long const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::tell_signed_integer_type(in_integer))
     {}
     /// @copydoc object(signed long long const)
-    public: explicit PSYQ_CONSTEXPR object(signed long const in_integer)
+    public: PSYQ_CONSTEXPR object(signed long const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::tell_signed_integer_type(in_integer))
     {}
     /// @copydoc object(signed long long const)
-    public: explicit PSYQ_CONSTEXPR object(signed int const in_integer)
+    public: PSYQ_CONSTEXPR object(signed int const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::tell_signed_integer_type(in_integer))
     {}
     /// @copydoc object(signed long long const)
-    public: explicit PSYQ_CONSTEXPR object(signed short const in_integer)
+    public: PSYQ_CONSTEXPR object(signed short const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::tell_signed_integer_type(in_integer))
     {}
     /// @copydoc object(signed long long const)
-    public: explicit PSYQ_CONSTEXPR object(signed char const in_integer)
+    public: PSYQ_CONSTEXPR object(signed char const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
         type_(self::tell_signed_integer_type(in_integer))
@@ -123,13 +123,13 @@ class psyq::message_pack::object
     /** @brief MessagePackオブジェクトに浮動小数点数を格納する。
         @param[in] in_float MessagePackオブジェクトに格納する浮動小数点数。
      */
-    public: explicit PSYQ_CONSTEXPR object(self::float64 const in_float)
+    public: PSYQ_CONSTEXPR object(self::float64 const in_float)
     PSYQ_NOEXCEPT:
         value_(in_float),
         type_(self::type::FLOAT64)
     {}
     /// @copydoc object(self::float64 const)
-    public: explicit PSYQ_CONSTEXPR object(self::float32 const in_float)
+    public: PSYQ_CONSTEXPR object(self::float32 const in_float)
     PSYQ_NOEXCEPT:
         value_(in_float),
         type_(self::type::FLOAT32)
@@ -163,7 +163,7 @@ class psyq::message_pack::object
     /** @brief MessagePackオブジェクトに配列を格納する。
         @param[in] in_array MessagePackオブジェクトに格納する配列。
      */
-    public: explicit PSYQ_CONSTEXPR object(self::array const& in_array)
+    public: PSYQ_CONSTEXPR object(self::array const& in_array)
     PSYQ_NOEXCEPT:
         value_(in_array),
         type_(self::type::ARRAY)
@@ -172,11 +172,17 @@ class psyq::message_pack::object
     /** @brief MessagePackオブジェクトに連想配列を格納する。
         @param[in] in_map MessagePackオブジェクトに格納する連想配列。
      */
-    public: explicit PSYQ_CONSTEXPR object(self::unordered_map const& in_map)
+    public: PSYQ_CONSTEXPR object(self::unordered_map const& in_map)
     PSYQ_NOEXCEPT:
         value_(in_map),
         type_(self::type::UNORDERED_MAP)
     {}
+
+    /// @brief MessagePackオブジェクトを空にする。
+    public: void reset() PSYQ_NOEXCEPT
+    {
+        new(this) self();
+    }
     //@}
     /** @brief MessagePackオブジェクトに連想配列を格納する。
         @param[in] in_map MessagePackオブジェクトに格納する連想配列。
@@ -187,168 +193,6 @@ class psyq::message_pack::object
         type_(self::type::MAP)
     {}
 
-    //-------------------------------------------------------------------------
-    /// @name MessagePackオブジェクトへの値の格納
-    //@{
-    /** @brief MessagePackオブジェクトに真偽値を格納する。
-        @param[in] in_boolean MessagePackオブジェクトに格納する真偽値。
-        @return *this
-     */
-    public: PSYQ_CONSTEXPR self& operator=(bool const in_boolean)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_boolean);
-    }
-
-    /** @brief MessagePackオブジェクトに無符号整数を格納する。
-        @param[in] in_integer MessagePackオブジェクトに格納する無符号整数。
-        @return *this
-     */
-    public: PSYQ_CONSTEXPR self& operator=(unsigned long long const in_integer)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_integer);
-    }
-    /// @copydoc operator=(unsigned long long const)
-    public: PSYQ_CONSTEXPR self& operator=(unsigned long const in_integer)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_integer);
-    }
-    /// @copydoc operator=(unsigned long long const)
-    public: PSYQ_CONSTEXPR self& operator=(unsigned int const in_integer)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_integer);
-    }
-    /// @copydoc operator=(unsigned long long const)
-    public: PSYQ_CONSTEXPR self& operator=(unsigned short const in_integer)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_integer);
-    }
-    /// @copydoc operator=(unsigned long long const)
-    public: PSYQ_CONSTEXPR self& operator=(unsigned char const in_integer)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_integer);
-    }
-
-    /** @brief MessagePackオブジェクトに有符号整数を格納する。
-        @param[in] in_integer MessagePackオブジェクトに格納する有符号整数。
-        @return *this
-     */
-    public: PSYQ_CONSTEXPR self& operator=(signed long long const in_integer)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_integer);
-    }
-    /// @copydoc operator=(signed long long const)
-    public: PSYQ_CONSTEXPR self& operator=(signed long const in_integer)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_integer);
-    }
-    /// @copydoc operator=(signed long long const)
-    public: PSYQ_CONSTEXPR self& operator=(signed int const in_integer)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_integer);
-    }
-    /// @copydoc operator=(signed long long const)
-    public: PSYQ_CONSTEXPR self& operator=(signed short const in_integer)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_integer);
-    }
-    /// @copydoc operator=(signed long long const)
-    public: PSYQ_CONSTEXPR self& operator=(signed char const in_integer)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_integer);
-    }
-
-    /** @brief MessagePackオブジェクトに浮動小数点数を格納する。
-        @param[in] in_float MessagePackオブジェクトに格納する浮動小数点数。
-        @return *this
-     */
-    public: PSYQ_CONSTEXPR self& operator=(self::float64 const in_float)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_float);
-    }
-    /// @copydoc operator=(self::float64 const)
-    public: PSYQ_CONSTEXPR self& operator=(self::float32 const in_float)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_float);
-    }
-
-    /** @brief MessagePackオブジェクトに文字列を格納する。
-        @param[in] in_string MessagePackオブジェクトに格納する文字列。
-        @return *this
-     */
-    public: PSYQ_CONSTEXPR self& operator=(self::string const& in_string)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_string);
-    }
-    /** @brief MessagePackオブジェクトにバイナリを格納する。
-        @param[in] in_binary MessagePackオブジェクトに格納するバイナリ。
-        @return *this
-     */
-    public: PSYQ_CONSTEXPR self& operator=(self::binary const& in_binary)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_binary);
-    }
-    /** @brief MessagePackオブジェクトに拡張バイナリを格納する。
-        @param[in] in_binary MessagePackオブジェクトに格納する拡張バイナリ。
-        @return *this
-     */
-    public: PSYQ_CONSTEXPR self& operator=(
-        self::extended const& in_binary)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_binary);
-    }
-
-    /** @brief MessagePackオブジェクトに配列を格納する。
-        @param[in] in_array MessagePackオブジェクトに格納する配列。
-        @return *this
-     */
-    public: PSYQ_CONSTEXPR self& operator=(self::array const& in_array)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_array);
-    }
-
-    /** @brief MessagePackオブジェクトに連想配列を格納する。
-        @param[in] in_map MessagePackオブジェクトに格納する連想配列。
-        @return *this
-     */
-    public: PSYQ_CONSTEXPR self& operator=(self::unordered_map const& in_map)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_map);
-    }
-
-    /// @brief MessagePackオブジェクトを空にする。
-    public: void reset() PSYQ_NOEXCEPT
-    {
-        new(this) self();
-    }
-    //@}
-
-    /** @brief MessagePackオブジェクトに連想配列を格納する。
-        @param[in] in_map MessagePackオブジェクトに格納する連想配列。
-        @return *this
-     */
-    private: PSYQ_CONSTEXPR self& operator=(self::map const& in_map)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) self(in_map);
-    }
     //-------------------------------------------------------------------------
     /// @name MessagePackオブジェクトの比較
     //@{

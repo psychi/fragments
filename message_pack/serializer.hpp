@@ -334,6 +334,8 @@ class psyq::message_pack::serializer
 
     /** @brief 真偽値をMessagePack形式で直列化し、ストリームへ出力する。
         @param[in] in_boolean 直列化する真偽値。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: bool write_boolean(bool const in_boolean)
     {
@@ -392,6 +394,8 @@ class psyq::message_pack::serializer
 
     /** @brief 無符号整数をMessagePack形式で直列化し、ストリームへ出力する。
         @param[in] in_integer 直列化する整数。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: template<typename template_integer_type>
     bool write_unsigned_integer(template_integer_type const in_integer)
@@ -449,6 +453,8 @@ class psyq::message_pack::serializer
     //@}
     /** @brief 数値を直列化し、ストリームへ出力する。
         @param[in] in_value 直列化する数値。
+        @retval true  成功。
+        @retval false 失敗。
      */
     private: template<typename template_value>
     bool write_big_endian(template_value const in_value)
@@ -496,6 +502,8 @@ class psyq::message_pack::serializer
 
     /** @brief 有符号整数をMessagePack形式で直列化し、ストリームへ出力する。
         @param[in] in_integer 直列化する整数。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: template<typename template_integer_type>
     bool write_signed_integer(template_integer_type const in_integer)
@@ -582,6 +590,8 @@ class psyq::message_pack::serializer
 
     /** @brief 浮動小数点数をMessagePack形式で直列化し、ストリームへ出力する。
         @param[in] in_float 直列化する浮動小数点数。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: bool write_floating_point(float const in_float)
     {
@@ -617,6 +627,7 @@ class psyq::message_pack::serializer
     /** @brief std::basic_string をMessagePack形式の文字列として直列化し、
                ストリームへ出力する。
         @param[in] in_string  直列化する文字列。
+        @return *this
      */
     public: template<
         typename template_char,
@@ -635,6 +646,7 @@ class psyq::message_pack::serializer
     /** @brief 文字列をMessagePack形式のRAWバイト列として直列化し、
                ストリームへ出力する。
         @param[in] in_string 直列化する文字列。
+        @return *this
      */
     public: template<typename template_char_traits>
     self& operator<<(
@@ -649,6 +661,8 @@ class psyq::message_pack::serializer
                MessagePack形式の文字列として直列化し、ストリームへ出力する。
         @param[in] in_begin 直列化する文字列の先頭位置。
         @param[in] in_size  直列化する文字列のバイト数。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: template<typename template_char>
     bool write_raw_string(
@@ -667,6 +681,8 @@ class psyq::message_pack::serializer
                ストリームへ出力する。
         @param[in] in_begin  直列化する標準コンテナの先頭位置。
         @param[in] in_length 直列化する標準コンテナの要素数。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: template<typename template_iterator>
     bool write_container_string(
@@ -684,6 +700,8 @@ class psyq::message_pack::serializer
     /** @brief 標準コンテナをMessagePack形式の文字列として直列化し、
                ストリームへ出力する。
         @param[in] in_container 直列化する標準コンテナ。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: template<typename template_container>
     bool write_container_string(template_container const& in_container)
@@ -730,6 +748,8 @@ class psyq::message_pack::serializer
     //@}
     /** @brief 文字列のバイト数を書き込む。
         @param[in] in_size 文字列のバイト数。
+        @retval true  成功。
+        @retval false 失敗。
      */
     private: bool write_string_header(std::size_t const in_size)
     {
@@ -760,6 +780,8 @@ class psyq::message_pack::serializer
                MessagePack形式のバイナリとして直列化し、ストリームへ出力する。
         @param[in] in_begin  直列化する配列の先頭位置。
         @param[in] in_length 直列化する配列の要素数。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: template<typename template_element>
     bool write_raw_binary(
@@ -776,6 +798,8 @@ class psyq::message_pack::serializer
         @param[in] in_begin      直列化する標準コンテナの先頭位置。
         @param[in] in_length     直列化する標準コンテナの要素数。
         @param[in] in_endianness 要素を直列化する際のエンディアン性。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: template<typename template_iterator>
     bool write_container_binary(
@@ -793,6 +817,8 @@ class psyq::message_pack::serializer
                ストリームへ出力する。
         @param[in] in_container  直列化する標準コンテナ。
         @param[in] in_endianness コンテナ要素を直列化する際のエンディアン性。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: template<typename template_container>
     bool write_container_binary(
@@ -850,6 +876,8 @@ class psyq::message_pack::serializer
         @param[in] in_type       直列化する値の拡張型識別値。
         @param[in] in_value      直列化する値。
         @param[in] in_endianness 値を直列化する際のエンディアン性。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: template<typename template_value>
     bool write_extended(
@@ -864,6 +892,8 @@ class psyq::message_pack::serializer
     }
     /** @brief 長さが0の拡張バイナリを直列化し、ストリームへ出力する。
         @param[in] in_type 直列化する拡張型識別値。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: bool write_extended(std::int8_t const in_type)
     {
@@ -913,6 +943,8 @@ class psyq::message_pack::serializer
     /** @brief 拡張バイナリのバイト数と型識別値を書き込む。
         @param[in] in_size 拡張バイナリのバイト数。
         @param[in] in_type 拡張型識別値。
+        @retval true  成功。
+        @retval false 失敗。
      */
     private: bool write_extended_header(
         std::int8_t const in_type,
@@ -959,7 +991,10 @@ class psyq::message_pack::serializer
     //@{
     /** @brief std::tuple をMessagePack形式の配列として直列化し、
                ストリームへ出力する。
-        @param[in]  in_tuple   直列化するタプル。
+        @param[in] in_tuple 直列化するタプル。
+        @return *this
+        @note 2014.05.24
+              可変長テンプレート引数が使えるようになったら、対応したい。
      */
     public: template<typename template_element0>
     self& operator<<(std::tuple<template_element0> const& in_tuple)
@@ -1153,6 +1188,8 @@ class psyq::message_pack::serializer
                ストリームへ出力する。
         @tparam template_tuple std::tuple 互換のタプル型。
         @param[in] in_tuple 直列化するタプル。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: template<typename template_tuple>
     bool write_tuple(template_tuple const& in_tuple)
@@ -1170,6 +1207,7 @@ class psyq::message_pack::serializer
     /** @brief std::array をMessagePack形式の配列として直列化し、
                ストリームへ出力する。
         @param[in] in_array 直列化するコンテナ。
+        @return *this
      */
     public: template<typename template_value, std::size_t template_size>
     self& operator<<(std::array<template_value, template_size> const& in_array)
@@ -1181,6 +1219,7 @@ class psyq::message_pack::serializer
     /** @brief std::vector をMessagePack形式の配列として直列化し、
               ストリームへ出力する。
         @param[in] in_vector 直列化するコンテナ。
+        @return *this
      */
     public: template<typename template_value, typename template_allocator>
     self& operator<<(
@@ -1193,6 +1232,7 @@ class psyq::message_pack::serializer
     /** @brief std::deque をMessagePack形式の配列として直列化し、
                ストリームへ出力する。
         @param[in] in_deque 直列化するコンテナ。
+        @return *this
      */
     public: template<typename template_value, typename template_allocator>
     self& operator<<(
@@ -1205,6 +1245,7 @@ class psyq::message_pack::serializer
     /** @brief std::list をMessagePack形式の配列として直列化し、
                ストリームへ出力する。
         @param[in] in_list 直列化するコンテナ。
+        @return *this
      */
     public: template<typename template_value, typename template_allocator>
     self& operator<<(
@@ -1218,6 +1259,8 @@ class psyq::message_pack::serializer
                ストリームへ出力する。
         @param[in] in_iterator 直列化する標準コンテナの先頭位置。
         @param[in] in_length   直列化する標準コンテナの要素数。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: template<typename template_iterator>
     bool write_array(template_iterator in_iterator, std::size_t in_length)
@@ -1236,6 +1279,8 @@ class psyq::message_pack::serializer
     /** @brief 標準コンテナをMessagePack形式の配列として直列化し、
                ストリームへ出力する。
         @param[in] in_container 直列化する標準コンテナ。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: template<typename template_container>
     bool write_array(template_container const& in_container)
@@ -1304,6 +1349,7 @@ class psyq::message_pack::serializer
     /** @brief std::multiset をMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
         @param[in] in_set 直列化するコンテナ。
+        @return *this
      */
     public: template<
         typename template_key,
@@ -1339,7 +1385,8 @@ class psyq::message_pack::serializer
     /** @brief std::unordered_multiset をMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
         @param[in] in_set 直列化するコンテナ。
- */
+        @return *this
+     */
     public: template<
         typename template_key,
         typename template_hash,
@@ -1443,6 +1490,8 @@ class psyq::message_pack::serializer
                ストリームへ出力する。
         @param[in] in_iterator 直列化する標準コンテナの先頭位置。
         @param[in] in_length   直列化する標準コンテナの要素数。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: template<typename template_iterator>
     bool write_set(template_iterator in_iterator, std::size_t in_length)
@@ -1462,6 +1511,8 @@ class psyq::message_pack::serializer
     /** @brief 標準コンテナをMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
         @param[in] in_set 直列化する標準コンテナ。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: template<typename template_set>
     bool write_set(template_set const& in_set)
@@ -1474,6 +1525,8 @@ class psyq::message_pack::serializer
         @tparam template_iterator std::pair 互換の要素を指す反復子の型。
         @param[in] in_iterator 直列化するpairコンテナの先頭位置。
         @param[in] in_length   直列化するpairコンテナの要素数。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: template<typename template_iterator>
     bool write_map(template_iterator in_iterator, std::size_t in_length)
@@ -1492,6 +1545,8 @@ class psyq::message_pack::serializer
                ストリームへ出力する。
         @tparam template_map std::pair 互換の要素を持つ標準コンテナの型。
         @param[in] in_map 直列化するpairコンテナ。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: template<typename template_map>
     bool write_map(template_map const& in_map)
@@ -1542,6 +1597,7 @@ class psyq::message_pack::serializer
     //@}
     /** @brief std::pair をMessagePack形式で直列化し、ストリームへ出力する。
         @param[in] in_pair 直列化する std::pair インスタンス。
+        @return *this
      */
     private: template<typename template_first, typename template_second>
     self& operator<<(std::pair<template_first, template_second> const& in_pair)
@@ -1855,6 +1911,8 @@ class psyq::message_pack::serializer
     /** @brief RAWバイト列のバイト数を書き込む。
         @tparam template_header 書き込むヘッダーの基準値。
         @param[in] in_size RAWバイト列のバイト数。
+        @retval true  成功。
+        @retval false 失敗。
      */
     private: template<std::uint8_t template_header>
     bool write_raw_header(std::size_t const in_size)
@@ -1888,6 +1946,8 @@ class psyq::message_pack::serializer
     /** @brief RAWバイト列を書き込む。
         @param[in] in_begin RAWバイト列の先頭位置。
         @param[in] in_size  RAWバイト列のバイト数。
+        @retval true  成功。
+        @retval false 失敗。
      */
     private: bool write_raw_data(
         void const* const in_begin,

@@ -75,7 +75,7 @@ union psyq::internal::message_pack_value
     /// @copydoc self::type::FLOAT64
     public: typedef double float64;
     /// 文字列を保持するRAWバイト列。
-    public: typedef psyq::internal::message_pack_container<std::int8_t const>
+    public: typedef psyq::internal::message_pack_container<char const>
         string;
     /// バイナリを保持するRAWバイト列。
     public: typedef psyq::internal::message_pack_extended::super
@@ -187,32 +187,32 @@ union psyq::internal::message_pack_value
     //@{
     /** @brief MessagePackオブジェクト値が等値か比較する。
         @param[in] in_left_value  左辺のMessagePackオブジェクト値。
-        @param[in] in_left_kind   左辺のMessagePackオブジェクト値の種別。
+        @param[in] in_left_type   左辺のMessagePackオブジェクト値の種別。
         @param[in] in_right_value 右辺のMessagePackオブジェクト値。
-        @param[in] in_right_kind  右辺のMessagePackオブジェクト値の種別。
+        @param[in] in_right_type  右辺のMessagePackオブジェクト値の種別。
         @retval true  左辺と右辺は等値。
         @retval false 左辺と右辺は非等値。
      */
     public: static bool equal(
         self const& in_left_value,
-        self::type::value in_left_kind,
+        self::type::value in_left_type,
         self const& in_right_value,
-        self::type::value in_right_kind)
+        self::type::value in_right_type)
     PSYQ_NOEXCEPT
     {
-        if (in_left_kind == self::type::MAP)
+        if (in_left_type == self::type::MAP)
         {
-            in_left_kind = self::type::UNORDERED_MAP;
+            in_left_type = self::type::UNORDERED_MAP;
         }
-        if (in_right_kind == self::type::MAP)
+        if (in_right_type == self::type::MAP)
         {
-            in_right_kind = self::type::UNORDERED_MAP;
+            in_right_type = self::type::UNORDERED_MAP;
         }
-        if (in_left_kind != in_right_kind)
+        if (in_left_type != in_right_type)
         {
             return false;
         }
-        switch (in_left_kind)
+        switch (in_left_type)
         {
         case self::type::NIL:
             return true;
@@ -254,73 +254,73 @@ union psyq::internal::message_pack_value
 
     /** @brief MessagePackオブジェクト値を比較する。
         @param[in] in_left_value  左辺のMessagePackオブジェクト値。
-        @param[in] in_left_kind   左辺のMessagePackオブジェクト値の種別。
+        @param[in] in_left_type   左辺のMessagePackオブジェクト値の種別。
         @param[in] in_right_value 右辺のMessagePackオブジェクト値。
-        @param[in] in_right_kind  右辺のMessagePackオブジェクト値の種別。
+        @param[in] in_right_type  右辺のMessagePackオブジェクト値の種別。
         @retval 正 左辺のほうが大きい。
         @retval 0  等値。
         @retval 負 左辺のほうが小さい。
      */
     public: static int compare(
         self const& in_left_value,
-        self::type::value const in_left_kind,
+        self::type::value const in_left_type,
         self const& in_right_value,
-        self::type::value const in_right_kind)
+        self::type::value const in_right_type)
     PSYQ_NOEXCEPT
     {
-        switch (in_right_kind)
+        switch (in_right_type)
         {
         case self::type::NIL:
-            return in_left_kind != self::type::NIL? 1: 0;
+            return in_left_type != self::type::NIL? 1: 0;
         case self::type::BOOLEAN:
             return self::compare_boolean(
-                in_left_value, in_left_kind, in_right_value.boolean_);
+                in_left_value, in_left_type, in_right_value.boolean_);
         case self::type::POSITIVE_INTEGER:
             return self::compare_unsigned_integer(
-                in_left_value, in_left_kind, in_right_value.positive_integer_);
+                in_left_value, in_left_type, in_right_value.positive_integer_);
         case self::type::NEGATIVE_INTEGER:
             return self::compare_signed_integer(
-                in_left_value, in_left_kind, in_right_value.negative_integer_);
+                in_left_value, in_left_type, in_right_value.negative_integer_);
         case self::type::FLOAT32:
             return self::compare_floating_point(
-                in_left_value, in_left_kind, in_right_value.float32_);
+                in_left_value, in_left_type, in_right_value.float32_);
         case self::type::FLOAT64:
             return self::compare_floating_point(
-                in_left_value, in_left_kind, in_right_value.float64_);
+                in_left_value, in_left_type, in_right_value.float64_);
         case self::type::STRING:
         case self::type::BINARY:
         case self::type::EXTENDED_BINARY:
             return self::compare_raw(
-                in_left_value, in_left_kind, in_right_value, in_right_kind);
+                in_left_value, in_left_type, in_right_value, in_right_type);
         case self::type::ARRAY:
             return self::compare_array(
-                in_left_value, in_left_kind, in_right_value.array_);
+                in_left_value, in_left_type, in_right_value.array_);
         case self::type::UNORDERED_MAP:
         case self::type::MAP:
             return self::compare_map(
-                in_left_value, in_left_kind, in_right_value.map_);
+                in_left_value, in_left_type, in_right_value.map_);
         default:
             PSYQ_ASSERT(false);
-            return self::is_valid_kind(in_left_kind)? -1: 0;
+            return self::is_valid_type(in_left_type)? -1: 0;
         }
     }
     //@}
 
     /** @brief 正規の種別か判定する。
-        @param[in] in_kind 判定する種別。
+        @param[in] in_type 判定する種別。
         @retval true  正規の種別だった。
         @retval false 不正な種別だった。
      */
-    private: static bool is_valid_kind(self::type::value const in_kind)
+    private: static bool is_valid_type(self::type::value const in_type)
     {
-        return in_kind <= self::type::MAP;
+        return in_type <= self::type::MAP;
     }
     //-------------------------------------------------------------------------
     /// @name MessagePackオブジェクトコンテナとの比較
     //@{
     /** @brief MessagePackオブジェクト値と連想配列を比較する。
         @param[in] in_left_value 左辺のMessagePackオブジェクト値。
-        @param[in] in_left_kind  左辺のMessagePackオブジェクト値の種別。
+        @param[in] in_left_type  左辺のMessagePackオブジェクト値の種別。
         @param[in] in_right_map  右辺のMessagePackオブジェクト連想配列。
         @retval 正 左辺のほうが大きい。
         @retval 0  等値。
@@ -328,11 +328,11 @@ union psyq::internal::message_pack_value
      */
     private: static int compare_map(
         self const& in_left_value,
-        self::type::value const in_left_kind,
+        self::type::value const in_left_type,
         self::map const& in_right_map)
     PSYQ_NOEXCEPT
     {
-        switch (in_left_kind)
+        switch (in_left_type)
         {
         case self::type::NIL:
             return 1;
@@ -363,7 +363,7 @@ union psyq::internal::message_pack_value
 
     /** @brief MessagePackオブジェクト値と配列を比較する。
         @param[in] in_left_value  左辺のMessagePackオブジェクト値。
-        @param[in] in_left_kind   左辺のMessagePackオブジェクト値の種別。
+        @param[in] in_left_type   左辺のMessagePackオブジェクト値の種別。
         @param[in] in_right_array 右辺のMessagePackオブジェクト配列。
         @retval 正 左辺のほうが大きい。
         @retval 0  等値。
@@ -371,11 +371,11 @@ union psyq::internal::message_pack_value
      */
     private: static int compare_array(
         self const& in_left_value,
-        self::type::value const in_left_kind,
+        self::type::value const in_left_type,
         self::array const& in_right_array)
     PSYQ_NOEXCEPT
     {
-        switch (in_left_kind)
+        switch (in_left_type)
         {
         case self::type::NIL:
             return 1;
@@ -406,25 +406,25 @@ union psyq::internal::message_pack_value
 
     /** @brief MessagePackオブジェクト値とRAWバイト列を比較する。
         @param[in] in_left_value  左辺のMessagePackオブジェクト値。
-        @param[in] in_left_kind   左辺のMessagePackオブジェクト種別。
+        @param[in] in_left_type   左辺のMessagePackオブジェクト種別。
         @param[in] in_right_value 右辺のRAWバイト列。
-        @param[in] in_right_kind  右辺のMessagePackオブジェクト種別。
+        @param[in] in_right_type  右辺のMessagePackオブジェクト種別。
         @retval 正 左辺のほうが大きい。
         @retval 0  等値。
         @retval 負 左辺のほうが小さい。
      */
     private: static int compare_raw(
         self const& in_left_value,
-        self::type::value const in_left_kind,
+        self::type::value const in_left_type,
         self const& in_right_value,
-        self::type::value const in_right_kind)
+        self::type::value const in_right_type)
     PSYQ_NOEXCEPT
     {
-        if (in_left_kind != in_right_kind)
+        if (in_left_type != in_right_type)
         {
-            return in_left_kind < in_right_kind? -1: 1;
+            return in_left_type < in_right_type? -1: 1;
         }
-        switch (in_left_kind)
+        switch (in_left_type)
         {
         case self::type::NIL:
             return 1;
@@ -461,7 +461,7 @@ union psyq::internal::message_pack_value
     //@{
     /** @brief MessagePackオブジェクト値と浮動小数点数を比較する。
         @param[in] in_left_value  左辺のMessagePackオブジェクト値。
-        @param[in] in_left_kind   左辺のMessagePackオブジェクト値の種別。
+        @param[in] in_left_type   左辺のMessagePackオブジェクト値の種別。
         @param[in] in_right_float 右辺の浮動小数点数。
         @retval 正 左辺のほうが大きい。
         @retval 0  等値。
@@ -470,11 +470,11 @@ union psyq::internal::message_pack_value
     private: template<typename template_float_type>
     static int compare_floating_point(
         self const& in_left_value,
-        self::type::value const in_left_kind,
+        self::type::value const in_left_type,
         template_float_type const in_right_float)
     PSYQ_NOEXCEPT
     {
-        switch (in_left_kind)
+        switch (in_left_type)
         {
         case self::type::NIL:
             return 1;
@@ -626,7 +626,7 @@ union psyq::internal::message_pack_value
     //@{
     /** @brief MessagePackオブジェクト値と有符号整数を比較する。
         @param[in] in_left_value    左辺のMessagePackオブジェクト値。
-        @param[in] in_left_kind     左辺のMessagePackオブジェクト値の種別。
+        @param[in] in_left_type     左辺のMessagePackオブジェクト値の種別。
         @param[in] in_right_integer 右辺の有符号整数。
         @retval 正 左辺のほうが大きい。
         @retval 0  等値。
@@ -635,14 +635,14 @@ union psyq::internal::message_pack_value
     private: template<typename template_signed_type>
     static int compare_signed_integer(
         self const& in_left_value,
-        self::type::value const in_left_kind,
+        self::type::value const in_left_type,
         template_signed_type const in_right_integer)
     PSYQ_NOEXCEPT
     {
         static_assert(
             !std::is_unsigned<template_signed_type>::value,
             "template_signed_type is not signed integer type.");
-        switch (in_left_kind)
+        switch (in_left_type)
         {
         case self::type::NIL:
             return 1;
@@ -764,7 +764,7 @@ union psyq::internal::message_pack_value
     //@{
     /** @brief MessagePackオブジェクト値と無符号整数を比較する。
         @param[in] in_left_value    左辺のMessagePackオブジェクト値。
-        @param[in] in_left_kind     左辺のMessagePackオブジェクト値の種別。
+        @param[in] in_left_type     左辺のMessagePackオブジェクト値の種別。
         @param[in] in_right_integer 右辺の無符号整数。
         @retval 正 左辺のほうが大きい。
         @retval 0  等値。
@@ -773,14 +773,14 @@ union psyq::internal::message_pack_value
     private: template<typename template_unsigned_type>
     static int compare_unsigned_integer(
         self const& in_left_value,
-        self::type::value const in_left_kind,
+        self::type::value const in_left_type,
         template_unsigned_type const in_right_integer)
     PSYQ_NOEXCEPT
     {
         static_assert(
             std::is_unsigned<template_unsigned_type>::value,
             "template_unsigned_type is not unsigned integer type.");
-        switch (in_left_kind)
+        switch (in_left_type)
         {
         case self::type::NIL:
             return 1;
@@ -886,7 +886,7 @@ union psyq::internal::message_pack_value
     //@{
     /** @brief MessagePackオブジェクト値と真偽値を比較する。
         @param[in] in_left_value    左辺のMessagePackオブジェクト値。
-        @param[in] in_left_kind     左辺のMessagePackオブジェクト値の種別。
+        @param[in] in_left_type     左辺のMessagePackオブジェクト値の種別。
         @param[in] in_right_boolean 右辺の真偽値。
         @retval 正 左辺のほうが大きい。
         @retval 0  等値。
@@ -894,11 +894,11 @@ union psyq::internal::message_pack_value
      */
     private: static int compare_boolean(
         self const& in_left_value,
-        self::type::value const in_left_kind,
+        self::type::value const in_left_type,
         bool const in_right_boolean)
     PSYQ_NOEXCEPT
     {
-        switch (in_left_kind)
+        switch (in_left_type)
         {
         case self::type::NIL:
             return 1;

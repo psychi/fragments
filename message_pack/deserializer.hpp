@@ -73,16 +73,16 @@ namespace psyq
     @code
     // ファイルを読み込み、MessagePackオブジェクトを直列化復元する関数。
     // @param[in] in_file_path 読み込むファイルのパス名。
-    // @return 入力ストリームから直列化復元したMessagePackオブジェクト。
+    // @return ファイルから直列化復元したMessagePackオブジェクト。
     psyq::message_pack::deserializer<std::ifstream>::root_object
-    deserialize_message_pack(std::string const& in_file_path)
+    read_message_pack(std::string const& in_file_path)
     {
         // ファイル入力ストリームを構築する。
         psyq::message_pack::deserializer<std::ifstream> local_deserializer(
             std::ifstream(in_file_path, std::ios::in | std::ios::binary),
-            message_pack_deserializer::pool());
+            psyq::message_pack::deserializer<std::ifstream>::pool());
         // 直列化復元した最上位オブジェクトを格納するインスタンスを用意する。
-        typename psyq::message_pack::deserializer<template_istream>::root_object
+        psyq::message_pack::deserializer<std::ifstream>::root_object
             local_root_object;
         // 直列化復元する。
         local_deserializer >> local_root_object;
@@ -193,7 +193,9 @@ class psyq::message_pack::deserializer
         return *this;
     }
     //@}
+    /// copy構築子は使用禁止。
     private: deserializer(self const&);// = delete;
+    /// copy代入演算子は使用禁止。
     private: self& operator=(self const&);// = delete;
 
     //-------------------------------------------------------------------------

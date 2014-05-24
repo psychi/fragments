@@ -344,7 +344,9 @@ class psyq::message_pack::root_object: public psyq::message_pack::object
         return *this;
     }
     //@}
+    /// copy構築子は使用禁止。
     private: root_object(self const&);// = delete;
+    /// copy代入演算子は使用禁止。
     private: self& operator=(self const&);// = delete;
 
     //-------------------------------------------------------------------------

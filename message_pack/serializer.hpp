@@ -955,6 +955,216 @@ class psyq::message_pack::serializer
     }
 
     //-------------------------------------------------------------------------
+    /// @name タプルの直列化
+    //@{
+    /** @brief std::tuple をMessagePack形式の配列として直列化し、
+               ストリームへ出力する。
+        @param[in]  in_tuple   直列化するタプル。
+     */
+    public: template<typename template_element0>
+    self& operator<<(std::tuple<template_element0> const& in_tuple)
+    {
+        this->write_tuple(in_tuple);
+        return *this;
+    }
+    /// @copydoc operator<<(std::tuple<template_element0> const&)
+    public: template<typename template_element0, typename template_element1>
+    self& operator<<(
+        std::tuple<template_element0, template_element1> const& in_tuple)
+    {
+        this->write_tuple(in_tuple);
+        return *this;
+    }
+    /// @copydoc operator<<(std::tuple<template_element0> const&)
+    public: template<
+        typename template_element0,
+        typename template_element1,
+        typename template_element2>
+    self& operator<<(
+        std::tuple<template_element0, template_element1, template_element2>
+            const& in_tuple)
+    {
+        this->write_tuple(in_tuple);
+        return *this;
+    }
+    /// @copydoc operator<<(std::tuple<template_element0> const&)
+    public: template<
+        typename template_element0,
+        typename template_element1,
+        typename template_element2,
+        typename template_element3>
+    self& operator<<(
+        std::tuple<
+            template_element0,
+            template_element1,
+            template_element2,
+            template_element3>
+                const& in_tuple)
+    {
+        this->write_tuple(in_tuple);
+        return *this;
+    }
+    /// @copydoc operator<<(std::tuple<template_element0> const&)
+    public: template<
+        typename template_element0,
+        typename template_element1,
+        typename template_element2,
+        typename template_element3,
+        typename template_element4>
+    self& operator<<(
+        std::tuple<
+            template_element0,
+            template_element1,
+            template_element2,
+            template_element3,
+            template_element4>
+                const& in_tuple)
+    {
+        this->write_tuple(in_tuple);
+        return *this;
+    }
+    /// @copydoc operator<<(std::tuple<template_element0> const&)
+    public: template<
+        typename template_element0,
+        typename template_element1,
+        typename template_element2,
+        typename template_element3,
+        typename template_element4,
+        typename template_element5>
+    self& operator<<(
+        std::tuple<
+            template_element0,
+            template_element1,
+            template_element2,
+            template_element3,
+            template_element4,
+            template_element5>
+                const& in_tuple)
+    {
+        this->write_tuple(in_tuple);
+        return *this;
+    }
+    /// @copydoc operator<<(std::tuple<template_element0> const&)
+    public: template<
+        typename template_element0,
+        typename template_element1,
+        typename template_element2,
+        typename template_element3,
+        typename template_element4,
+        typename template_element5,
+        typename template_element6>
+    self& operator<<(
+        std::tuple<
+            template_element0,
+            template_element1,
+            template_element2,
+            template_element3,
+            template_element4,
+            template_element5,
+            template_element6>
+                const& in_tuple)
+    {
+        this->write_tuple(in_tuple);
+        return *this;
+    }
+    /// @copydoc operator<<(std::tuple<template_element0> const&)
+    public: template<
+        typename template_element0,
+        typename template_element1,
+        typename template_element2,
+        typename template_element3,
+        typename template_element4,
+        typename template_element5,
+        typename template_element6,
+        typename template_element7>
+    self& operator<<(
+        std::tuple<
+            template_element0,
+            template_element1,
+            template_element2,
+            template_element3,
+            template_element4,
+            template_element5,
+            template_element6,
+            template_element7>
+                const& in_tuple)
+    {
+        this->write_tuple(in_tuple);
+        return *this;
+    }
+    /// @copydoc operator<<(std::tuple<template_element0> const&)
+    public: template<
+        typename template_element0,
+        typename template_element1,
+        typename template_element2,
+        typename template_element3,
+        typename template_element4,
+        typename template_element5,
+        typename template_element6,
+        typename template_element7,
+        typename template_element8>
+    self& operator<<(
+        std::tuple<
+            template_element0,
+            template_element1,
+            template_element2,
+            template_element3,
+            template_element4,
+            template_element5,
+            template_element6,
+            template_element7,
+            template_element8>
+                const& in_tuple)
+    {
+        this->write_tuple(in_tuple);
+        return *this;
+    }
+    /// @copydoc operator<<(std::tuple<template_element0> const&)
+    public: template<
+        typename template_element0,
+        typename template_element1,
+        typename template_element2,
+        typename template_element3,
+        typename template_element4,
+        typename template_element5,
+        typename template_element6,
+        typename template_element7,
+        typename template_element8,
+        typename template_element9>
+    self& operator<<(
+        std::tuple<
+            template_element0,
+            template_element1,
+            template_element2,
+            template_element3,
+            template_element4,
+            template_element5,
+            template_element6,
+            template_element7,
+            template_element8,
+            template_element9>
+                const& in_tuple)
+    {
+        this->write_tuple(in_tuple);
+        return *this;
+    }
+
+    /** @brief タプルをMessagePack形式の配列として直列化し、
+               ストリームへ出力する。
+        @tparam template_tuple std::tuple 互換のタプル型。
+        @param[in] in_tuple 直列化するタプル。
+     */
+    public: template<typename template_tuple>
+    bool write_tuple(template_tuple const& in_tuple)
+    {
+        this->make_serial_array(std::tuple_size<template_tuple>::value);
+        psyq::internal::message_pack_tuple_serializer
+            <std::tuple_size<template_tuple>::value>
+                ::write(*this, in_tuple);
+        return !this->stream_.fail();
+    }
+    //@}
+    //-------------------------------------------------------------------------
     /// @name MessagePack配列への直列化
     //@{
     /** @brief std::array をMessagePack形式の配列として直列化し、
@@ -1002,21 +1212,6 @@ class psyq::message_pack::serializer
     {
         this->write_array(in_list);
         return *this;
-    }
-
-    /** @brief タプルをMessagePack形式の配列として直列化し、
-               ストリームへ出力する。
-        @tparam template_tuple std::tuple 互換のタプル型。
-        @param[in] in_tuple 直列化するタプル。
-     */
-    public: template<typename template_tuple>
-    bool write_tuple(template_tuple const& in_tuple)
-    {
-        this->make_serial_array(std::tuple_size<template_tuple>::value);
-        psyq::internal::message_pack_tuple_serializer
-            <std::tuple_size<template_tuple>::value>
-                ::write(*this, in_tuple);
-        return !this->stream_.fail();
     }
 
     /** @brief 標準コンテナをMessagePack形式の配列として直列化し、
@@ -1289,8 +1484,7 @@ class psyq::message_pack::serializer
         }
         for (; 0 < in_length; --in_length, ++in_iterator)
         {
-            auto& local_value(*in_iterator);
-            *this << local_value.first << local_value.second;
+            *this << *in_iterator;
         }
         return !this->stream_.fail();
     }
@@ -1346,6 +1540,15 @@ class psyq::message_pack::serializer
                 in_length);
     }
     //@}
+    /** @brief std::pair をMessagePack形式で直列化し、ストリームへ出力する。
+        @param[in] in_pair 直列化する std::pair インスタンス。
+     */
+    private: template<typename template_first, typename template_second>
+    self& operator<<(std::pair<template_first, template_second> const& in_pair)
+    {
+        return *this << in_pair.first << in_pair.second;
+    }
+
     //-------------------------------------------------------------------------
     /// @name MessagePackコンテナ要素への直列化
     //@{
@@ -1863,283 +2066,4 @@ class psyq::message_pack::serializer
     private: std::size_t stack_size_;
 }; // class psyq::message_pack::serializer
 
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-//-----------------------------------------------------------------------------
-/// @name タプルの直列化
-//@{
-#if 0
-/** @brief std::pair をMessagePack形式で直列化し、ストリームへ出力する。
-    @param[out] out_stream 書き込む出力ストリーム。
-    @param[in]  in_pair    直列化するペアタプル。
- */
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_first,
-    typename template_second>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::pair<template_first, template_second> const& in_pair)
-{
-    return out_stream << in_pair.first << in_pair.second;
-}
-#endif // 0
-
-/** @brief std::tuple をMessagePack形式の配列として直列化し、
-           ストリームへ出力する。
-    @param[out] out_stream 書き込む出力ストリーム。
-    @param[in]  in_tuple   直列化するタプル。
- */
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_element0>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::tuple<template_element0> const& in_tuple)
-{
-    out_stream.write_tuple(in_tuple);
-    return out_stream;
-}
-/// @copydoc operator<<(psyq::message_pack::serializer<template_stream, template_stack_capacity>&, std::tuple<template_element0> const&)
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_element0,
-    typename template_element1>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::tuple<template_element0, template_element1> const& in_tuple)
-{
-    out_stream.write_tuple(in_tuple);
-    return out_stream;
-}
-
-/// @copydoc operator<<(psyq::message_pack::serializer<template_stream, template_stack_capacity>&, std::tuple<template_element0> const&)
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_element0,
-    typename template_element1,
-    typename template_element2>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::tuple<template_element0, template_element1, template_element2> const&
-        in_tuple)
-{
-    out_stream.write_tuple(in_tuple);
-    return out_stream;
-}
-
-/// @copydoc operator<<(psyq::message_pack::serializer<template_stream, template_stack_capacity>&, std::tuple<template_element0> const&)
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_element0,
-    typename template_element1,
-    typename template_element2,
-    typename template_element3>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::tuple<
-        template_element0,
-        template_element1,
-        template_element2,
-        template_element3>
-            const& in_tuple)
-{
-    out_stream.write_tuple(in_tuple);
-    return out_stream;
-}
-
-/// @copydoc operator<<(psyq::message_pack::serializer<template_stream, template_stack_capacity>&, std::tuple<template_element0> const&)
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_element0,
-    typename template_element1,
-    typename template_element2,
-    typename template_element3,
-    typename template_element4>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::tuple<
-        template_element0,
-        template_element1,
-        template_element2,
-        template_element3,
-        template_element4>
-            const& in_tuple)
-{
-    out_stream.write_tuple(in_tuple);
-    return out_stream;
-}
-
-/// @copydoc operator<<(psyq::message_pack::serializer<template_stream, template_stack_capacity>&, std::tuple<template_element0> const&)
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_element0,
-    typename template_element1,
-    typename template_element2,
-    typename template_element3,
-    typename template_element4,
-    typename template_element5>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::tuple<
-        template_element0,
-        template_element1,
-        template_element2,
-        template_element3,
-        template_element4,
-        template_element5>
-            const& in_tuple)
-{
-    out_stream.write_tuple(in_tuple);
-    return out_stream;
-}
-
-/// @copydoc operator<<(psyq::message_pack::serializer<template_stream, template_stack_capacity>&, std::tuple<template_element0> const&)
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_element0,
-    typename template_element1,
-    typename template_element2,
-    typename template_element3,
-    typename template_element4,
-    typename template_element5,
-    typename template_element6>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::tuple<
-        template_element0,
-        template_element1,
-        template_element2,
-        template_element3,
-        template_element4,
-        template_element5,
-        template_element6>
-            const& in_tuple)
-{
-    out_stream.write_tuple(in_tuple);
-    return out_stream;
-}
-
-/// @copydoc operator<<(psyq::message_pack::serializer<template_stream, template_stack_capacity>&, std::tuple<template_element0> const&)
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_element0,
-    typename template_element1,
-    typename template_element2,
-    typename template_element3,
-    typename template_element4,
-    typename template_element5,
-    typename template_element6,
-    typename template_element7>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::tuple<
-        template_element0,
-        template_element1,
-        template_element2,
-        template_element3,
-        template_element4,
-        template_element5,
-        template_element6,
-        template_element7>
-            const& in_tuple)
-{
-    out_stream.write_tuple(in_tuple);
-    return out_stream;
-}
-
-/// @copydoc operator<<(psyq::message_pack::serializer<template_stream, template_stack_capacity>&, std::tuple<template_element0> const&)
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_element0,
-    typename template_element1,
-    typename template_element2,
-    typename template_element3,
-    typename template_element4,
-    typename template_element5,
-    typename template_element6,
-    typename template_element7,
-    typename template_element8>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::tuple<
-        template_element0,
-        template_element1,
-        template_element2,
-        template_element3,
-        template_element4,
-        template_element5,
-        template_element6,
-        template_element7,
-        template_element8>
-            const& in_tuple)
-{
-    out_stream.write_tuple(in_tuple);
-    return out_stream;
-}
-
-/// @copydoc operator<<(psyq::message_pack::serializer<template_stream, template_stack_capacity>&, std::tuple<template_element0> const&)
-template<
-    typename template_stream,
-    std::size_t template_stack_capacity,
-    typename template_element0,
-    typename template_element1,
-    typename template_element2,
-    typename template_element3,
-    typename template_element4,
-    typename template_element5,
-    typename template_element6,
-    typename template_element7,
-    typename template_element8,
-    typename template_element9>
-psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-operator<<(
-    psyq::message_pack::serializer<template_stream, template_stack_capacity>&
-        out_stream,
-    std::tuple<
-        template_element0,
-        template_element1,
-        template_element2,
-        template_element3,
-        template_element4,
-        template_element5,
-        template_element6,
-        template_element7,
-        template_element8,
-        template_element9>
-            const& in_tuple)
-{
-    out_stream.write_tuple(in_tuple);
-    return out_stream;
-}
-//@}
 #endif // !defined(PSYQ_MESSAGE_PACK_SERIALIZER_HPP_)

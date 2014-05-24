@@ -699,11 +699,10 @@ class psyq::message_pack::deserializer
         }
 
         // コンテナを構築する。
-        auto& local_stack_top(
-            this->container_stack_[this->get_rest_container_count()]);
+        template_container local_container;
         bool local_reserve_container(
-            self::reserve_container<template_container>(
-                local_stack_top.object,
+            self::reserve_container(
+                local_container,
                 this->pool_,
                 in_capacity,
                 sizeof(std::int64_t)));
@@ -714,10 +713,14 @@ class psyq::message_pack::deserializer
         }
         else if (in_capacity <= 0)
         {
-            return this->add_container_element(local_stack_top.object);
+            return this->add_container_element(
+                psyq::message_pack::object(local_container));
         }
 
         // コンテナをスタックに積む。
+        auto& local_stack_top(
+            this->container_stack_[this->get_rest_container_count()]);
+        local_stack_top.object = psyq::message_pack::object(local_container);
         local_stack_top.kind =
             std::is_same<template_container, psyq::message_pack::object::array>
                 ::value?
@@ -728,17 +731,16 @@ class psyq::message_pack::deserializer
         return self::read_result_CONTINUE;
     }
     /** @brief MessagePackコンテナを予約する。
-        @tparam template_container 予約するMessagePackコンテナの型。
-        @param[out]    out_object   予約したMessagePackコンテナの格納先。
-        @param[in,out] io_pool      psyq::message_pack::pool 互換のメモリ割当子。
-        @param[in]     in_capacity  予約するコンテナの容量。
-        @param[in]     in_alignment メモリ境界単位。
+        @param[out]    out_container 予約したMessagePackコンテナの格納先。
+        @param[in,out] io_pool       psyq::message_pack::pool 互換のメモリ割当子。
+        @param[in]     in_capacity   予約するコンテナの容量。
+        @param[in]     in_alignment  メモリ境界単位。
         @retval true  成功。
         @retval false 失敗。
      */
     private: template<typename template_container>
     static bool reserve_container(
-        psyq::message_pack::object& out_object,
+        template_container& out_container,
         typename self::pool& io_pool,
         std::size_t const in_capacity,
         std::size_t const in_alignment)
@@ -760,9 +762,7 @@ class psyq::message_pack::deserializer
         {
             local_storage = nullptr;
         }
-        template_container local_container;
-        local_container.reset(local_storage, 0);
-        out_object = local_container;
+        out_container.reset(local_storage, 0);
         return true;
     }
 

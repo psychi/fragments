@@ -158,7 +158,7 @@ class psyq::message_pack::object
     public: PSYQ_CONSTEXPR object(self::extended const& in_binary)
     PSYQ_NOEXCEPT:
         value_(in_binary),
-        type_(self::type::EXTENDED_BINARY)
+        type_(self::type::EXTENDED)
     {}
 
     /** @brief MessagePackオブジェクトに配列を格納する。
@@ -465,7 +465,7 @@ class psyq::message_pack::object
     public: PSYQ_CONSTEXPR self::extended const* get_extended()
     const PSYQ_NOEXCEPT
     {
-        return this->get_type() == self::type::EXTENDED_BINARY?
+        return this->get_type() == self::type::EXTENDED?
             &this->value_.extended_: nullptr;
     }
     //@}

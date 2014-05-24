@@ -60,7 +60,7 @@ union psyq::internal::message_pack_value
             FLOAT64,          ///< 倍精度浮動小数点数。
             STRING,           ///< 文字列。
             BINARY,           ///< バイナリ。
-            EXTENDED_BINARY,  ///< 拡張バイナリ。
+            EXTENDED,         ///< 拡張バイナリ。
             ARRAY,            ///< MessagePack配列。
             UNORDERED_MAP,    ///< ソートしてないMessagePack連想配列。
             MAP,              ///< MessagePack連想配列。
@@ -238,7 +238,7 @@ union psyq::internal::message_pack_value
             return in_left_value.string_ == in_right_value.string_;
         case self::type::BINARY:
             return in_left_value.binary_ == in_right_value.binary_;
-        case self::type::EXTENDED_BINARY:
+        case self::type::EXTENDED:
             return in_left_value.extended_
                 == in_right_value.extended_;
         case self::type::ARRAY:
@@ -289,7 +289,7 @@ union psyq::internal::message_pack_value
                 in_left_value, in_left_type, in_right_value.float64_);
         case self::type::STRING:
         case self::type::BINARY:
-        case self::type::EXTENDED_BINARY:
+        case self::type::EXTENDED:
             return self::compare_raw(
                 in_left_value, in_left_type, in_right_value, in_right_type);
         case self::type::ARRAY:
@@ -348,7 +348,7 @@ union psyq::internal::message_pack_value
             return -1;//-self::compare_map(in_right_map, this->float64_);
         case self::type::STRING:
         case self::type::BINARY:
-        case self::type::EXTENDED_BINARY:
+        case self::type::EXTENDED:
             return -1;//-self::compare_map(in_right_map, this->raw_);
         case self::type::ARRAY:
             return -1;//-self::compare_map(in_right_map, this->array_);
@@ -391,7 +391,7 @@ union psyq::internal::message_pack_value
             return -1;//-self::compare_array(in_right_array, in_left_value.float64_);
         case self::type::STRING:
         case self::type::BINARY:
-        case self::type::EXTENDED_BINARY:
+        case self::type::EXTENDED:
             return -1;//-self::compare_array(in_right_array, in_left_value.raw_);
         case self::type::ARRAY:
             return in_left_value.array_.compare(in_right_array);
@@ -442,7 +442,7 @@ union psyq::internal::message_pack_value
             return in_left_value.string_.compare(in_right_value.string_);
         case self::type::BINARY:
             return in_left_value.binary_.compare(in_right_value.binary_);
-        case self::type::EXTENDED_BINARY:
+        case self::type::EXTENDED:
             return in_left_value.extended_.compare(
                 in_right_value.extended_);
         case self::type::ARRAY:
@@ -505,7 +505,7 @@ union psyq::internal::message_pack_value
                 self::get_epsilon(template_float_type(0)));
         case self::type::STRING:
         case self::type::BINARY:
-        case self::type::EXTENDED_BINARY:
+        case self::type::EXTENDED:
             return 1;//self::compare_raw(in_left_value.raw_, in_right_float);
         case self::type::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_float);
@@ -667,7 +667,7 @@ union psyq::internal::message_pack_value
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON);
         case self::type::STRING:
         case self::type::BINARY:
-        case self::type::EXTENDED_BINARY:
+        case self::type::EXTENDED:
             return 1;//self::compare_raw(in_left_value.raw_, in_right_integer);
         case self::type::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_integer);
@@ -805,7 +805,7 @@ union psyq::internal::message_pack_value
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON);
         case self::type::STRING:
         case self::type::BINARY:
-        case self::type::EXTENDED_BINARY:
+        case self::type::EXTENDED:
             return 1;//self::compare_raw(in_left_value.raw_, in_right_integer);
         case self::type::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_integer);
@@ -922,7 +922,7 @@ union psyq::internal::message_pack_value
                 PSYQ_MESSAGE_PACK_VALUE_FLOAT64_EPSILON);
         case self::type::STRING:
         case self::type::BINARY:
-        case self::type::EXTENDED_BINARY:
+        case self::type::EXTENDED:
             return 1;//self::compare_raw(in_left_value.raw_, in_right_boolean);
         case self::type::ARRAY:
             return 1;//self::compare_array(in_left_value.array_, in_right_boolean);

@@ -328,7 +328,10 @@ class psyq::message_pack::serializer
      */
     public: self& operator<<(bool const in_boolean)
     {
-        this->write_boolean(in_boolean);
+        if (!this->write_boolean(in_boolean))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
 
@@ -364,31 +367,46 @@ class psyq::message_pack::serializer
      */
     public: self& operator<<(unsigned char const in_integer)
     {
-        this->write_unsigned_integer(in_integer);
+        if (!this->write_unsigned_integer(in_integer))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
     /// @copydoc operator<<(unsigned char const)
     public: self& operator<<(unsigned short const in_integer)
     {
-        this->write_unsigned_integer(in_integer);
+        if (!this->write_unsigned_integer(in_integer))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
     /// @copydoc operator<<(unsigned char const)
     public: self& operator<<(unsigned int const in_integer)
     {
-        this->write_unsigned_integer(in_integer);
+        if (!this->write_unsigned_integer(in_integer))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
     /// @copydoc operator<<(unsigned char const)
     public: self& operator<<(unsigned long const in_integer)
     {
-        this->write_unsigned_integer(in_integer);
+        if (!this->write_unsigned_integer(in_integer))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
     /// @copydoc operator<<(unsigned char const)
     public: self& operator<<(unsigned long long const in_integer)
     {
-        this->write_unsigned_integer(in_integer);
+        if (!this->write_unsigned_integer(in_integer))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
 
@@ -472,31 +490,46 @@ class psyq::message_pack::serializer
      */
     public: self& operator<<(signed char const in_integer)
     {
-        this->write_signed_integer(in_integer);
+        if (!this->write_signed_integer(in_integer))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
     /// @copydoc operator<<(signed char const)
     public: self& operator<<(signed short const in_integer)
     {
-        this->write_signed_integer(in_integer);
+        if (!this->write_signed_integer(in_integer))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
     /// @copydoc operator<<(signed char const)
     public: self& operator<<(signed int const in_integer)
     {
-        this->write_signed_integer(in_integer);
+        if (!this->write_signed_integer(in_integer))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
     /// @copydoc operator<<(signed char const)
     public: self& operator<<(signed long const in_integer)
     {
-        this->write_signed_integer(in_integer);
+        if (!this->write_signed_integer(in_integer))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
     /// @copydoc operator<<(signed char const)
     public: self& operator<<(signed long long const in_integer)
     {
-        this->write_signed_integer(in_integer);
+        if (!this->write_signed_integer(in_integer))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
 
@@ -578,13 +611,19 @@ class psyq::message_pack::serializer
      */
     public: self& operator<<(float const in_float)
     {
-        this->write_floating_point(in_float);
+        if (!this->write_floating_point(in_float))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
     /// @copydoc operator<<(float const)
     public: self& operator<<(double const in_float)
     {
-        this->write_floating_point(in_float);
+        if (!this->write_floating_point(in_float))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
 
@@ -624,6 +663,25 @@ class psyq::message_pack::serializer
     //-------------------------------------------------------------------------
     /// @name MessagePack文字列への直列化
     //@{
+    /** @brief 文字列literalをMessagePack形式の文字列として直列化し、
+               ストリームへ出力する。
+        @tparam template_size 文字列literalの要素数。終端文字も含む。
+        @param[in] in_string 直列化する文字列literal。
+        @return *this
+        @warning 文字列literal以外の文字列を引数に渡すのは禁止。
+        @note
+            引数が文字列literalであることを保証するため、
+            user定義literalを経由して呼び出すようにしたい。
+     */
+    public: template <typename template_char, std::size_t template_size>
+    self& operator<<(template_char const (&in_string)[template_size])
+    {
+        if (!this->write_raw_string(in_string))
+        {
+            PSYQ_ASSERT(false);
+        }
+        return *this;
+    }
     /** @brief std::basic_string をMessagePack形式の文字列として直列化し、
                ストリームへ出力する。
         @param[in] in_string  直列化する文字列。
@@ -637,13 +695,14 @@ class psyq::message_pack::serializer
         std::basic_string<template_char, template_traits, template_allocator>
             const& in_string)
     {
-        static_assert(
-            sizeof(template_char) == 1, "sizeof(template_char) is not 1.");
-        this->write_raw_string(in_string.data(), in_string.length());
+        if (!this->write_raw_string(in_string))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
 #ifdef PSYQ_STRING_VIEW_BASE_HPP_
-    /** @brief 文字列をMessagePack形式のRAWバイト列として直列化し、
+    /** @brief 文字列をMessagePack形式の文字列として直列化し、
                ストリームへ出力する。
         @param[in] in_string 直列化する文字列。
         @return *this
@@ -652,31 +711,82 @@ class psyq::message_pack::serializer
     self& operator<<(
         psyq::internal::string_view_base<template_char_traits> const& in_string)
     {
-        this->write_raw_string(in_string.data(), in_string.length());
+        if (!this->write_raw_string(in_string))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
 #endif // defined(PSYQ_STRING_VIEW_BASE_HPP_)
 
+    /** @brief 文字列literalをMessagePack形式の文字列として直列化し、
+               ストリームへ出力する。
+        @tparam template_size 文字列literalの要素数。終端文字も含む。
+        @param[in] in_string 直列化する文字列literal。
+        @retval true  成功。
+        @retval false 失敗。
+        @warning 文字列literal以外の文字列を引数に渡すのは禁止。
+        @note
+            引数が文字列literalであることを保証するため、
+            user定義literalを経由して呼び出すようにしたい。
+     */
+    public: template <typename template_char, std::size_t template_size>
+    bool write_raw_string(template_char const (&in_string)[template_size])
+    {
+        static_assert(0 < template_size, "");
+        PSYQ_ASSERT(in_string[template_size - 1] == 0);
+        return this->write_raw_string(&in_string[0], template_size - 1);
+    }
     /** @brief 連続するメモリ領域にある文字列を、
                MessagePack形式の文字列として直列化し、ストリームへ出力する。
-        @param[in] in_begin 直列化する文字列の先頭位置。
-        @param[in] in_size  直列化する文字列のバイト数。
+        @param[in] in_string
+            直列化する文字列。以下の関数を使える必要がある。
+            @code
+            // 文字列の先頭位置を取得する。
+            in_string.data();
+            // 文字列の要素数を取得する。
+            in_string.length();
+            @endcode
+        @retval true  成功。
+        @retval false 失敗。
+     */
+    public: template<typename template_string>
+    bool write_raw_string(template_string const& in_string)
+    {
+        return this->write_raw_string(in_string.data(), in_string.length());
+    }
+    /** @brief 連続するメモリ領域にある文字列を、
+               MessagePack形式の文字列として直列化し、ストリームへ出力する。
+        @param[in] in_begin  直列化する文字列の先頭位置。
+        @param[in] in_length 直列化する文字列の要素数。
         @retval true  成功。
         @retval false 失敗。
      */
     public: template<typename template_char>
     bool write_raw_string(
         template_char const* const in_begin,
-        std::size_t const in_size)
+        std::size_t const in_length)
     {
         static_assert(
             // MessagePack文字列はUTF-8なので、文字は1バイト単位となる。
             sizeof(template_char) == 1, "MessagePack string is only UTF-8.");
-        auto const local_size(in_size * sizeof(template_char));
+        auto const local_size(in_length * sizeof(template_char));
         return this->write_string_header(local_size)
             && this->write_raw_data(in_begin, local_size);
     }
 
+    /** @brief 標準コンテナをMessagePack形式の文字列として直列化し、
+               ストリームへ出力する。
+        @param[in] in_container 直列化する標準コンテナ。
+        @retval true  成功。
+        @retval false 失敗。
+     */
+    public: template<typename template_container>
+    bool write_container_string(template_container const& in_container)
+    {
+        return this->write_container_string(
+            in_container.begin(), in_container.size());
+    }
     /** @brief 標準コンテナをMessagePack形式の文字列として直列化し、
                ストリームへ出力する。
         @param[in] in_begin  直列化する標準コンテナの先頭位置。
@@ -696,18 +806,6 @@ class psyq::message_pack::serializer
             sizeof(element) == 1, "MessagePack string is only UTF-8.");
         return this->make_serial_string(in_length)
             && this->fill_container_raw(in_begin, in_length, psyq::message_pack::big_endian) == 0;
-    }
-    /** @brief 標準コンテナをMessagePack形式の文字列として直列化し、
-               ストリームへ出力する。
-        @param[in] in_container 直列化する標準コンテナ。
-        @retval true  成功。
-        @retval false 失敗。
-     */
-    public: template<typename template_container>
-    bool write_container_string(template_container const& in_container)
-    {
-        return this->write_container_string(
-            in_container.begin(), in_container.size());
     }
 
     /** @brief MessagePack文字列の直列化を開始する。
@@ -795,6 +893,22 @@ class psyq::message_pack::serializer
 
     /** @brief 標準コンテナをMessagePack形式のバイナリとして直列化し、
                ストリームへ出力する。
+        @param[in] in_container  直列化する標準コンテナ。
+        @param[in] in_endianness コンテナ要素を直列化する際のエンディアン性。
+        @retval true  成功。
+        @retval false 失敗。
+     */
+    public: template<typename template_container>
+    bool write_container_binary(
+        template_container const& in_container,
+        psyq::message_pack::endianness const in_endianness
+            = psyq::message_pack::big_endian)
+    {
+        return this->write_container_binary(
+            in_container.begin(), in_container.size(), in_endianness);
+    }
+    /** @brief 標準コンテナをMessagePack形式のバイナリとして直列化し、
+               ストリームへ出力する。
         @param[in] in_begin      直列化する標準コンテナの先頭位置。
         @param[in] in_length     直列化する標準コンテナの要素数。
         @param[in] in_endianness 要素を直列化する際のエンディアン性。
@@ -812,22 +926,6 @@ class psyq::message_pack::serializer
             element;
         return this->make_serial_binary<element>(in_length)
             && this->fill_container_raw(in_begin, in_length, in_endianness) == 0;
-    }
-    /** @brief 標準コンテナをMessagePack形式のバイナリとして直列化し、
-               ストリームへ出力する。
-        @param[in] in_container  直列化する標準コンテナ。
-        @param[in] in_endianness コンテナ要素を直列化する際のエンディアン性。
-        @retval true  成功。
-        @retval false 失敗。
-     */
-    public: template<typename template_container>
-    bool write_container_binary(
-        template_container const& in_container,
-        psyq::message_pack::endianness const in_endianness
-            = psyq::message_pack::big_endian)
-    {
-        return this->write_container_binary(
-            in_container.begin(), in_container.size(), in_endianness);
     }
 
     /** @brief MessagePackバイナリの直列化を開始する。
@@ -999,7 +1097,10 @@ class psyq::message_pack::serializer
     public: template<typename template_element0>
     self& operator<<(std::tuple<template_element0> const& in_tuple)
     {
-        this->write_tuple(in_tuple);
+        if (!this->write_tuple(in_tuple))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
     /// @copydoc operator<<(std::tuple<template_element0> const&)
@@ -1019,7 +1120,10 @@ class psyq::message_pack::serializer
         std::tuple<template_element0, template_element1, template_element2>
             const& in_tuple)
     {
-        this->write_tuple(in_tuple);
+        if (!this->write_tuple(in_tuple))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
     /// @copydoc operator<<(std::tuple<template_element0> const&)
@@ -1036,7 +1140,10 @@ class psyq::message_pack::serializer
             template_element3>
                 const& in_tuple)
     {
-        this->write_tuple(in_tuple);
+        if (!this->write_tuple(in_tuple))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
     /// @copydoc operator<<(std::tuple<template_element0> const&)
@@ -1055,7 +1162,10 @@ class psyq::message_pack::serializer
             template_element4>
                 const& in_tuple)
     {
-        this->write_tuple(in_tuple);
+        if (!this->write_tuple(in_tuple))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
     /// @copydoc operator<<(std::tuple<template_element0> const&)
@@ -1076,7 +1186,10 @@ class psyq::message_pack::serializer
             template_element5>
                 const& in_tuple)
     {
-        this->write_tuple(in_tuple);
+        if (!this->write_tuple(in_tuple))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
     /// @copydoc operator<<(std::tuple<template_element0> const&)
@@ -1099,7 +1212,10 @@ class psyq::message_pack::serializer
             template_element6>
                 const& in_tuple)
     {
-        this->write_tuple(in_tuple);
+        if (!this->write_tuple(in_tuple))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
     /// @copydoc operator<<(std::tuple<template_element0> const&)
@@ -1124,7 +1240,10 @@ class psyq::message_pack::serializer
             template_element7>
                 const& in_tuple)
     {
-        this->write_tuple(in_tuple);
+        if (!this->write_tuple(in_tuple))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
     /// @copydoc operator<<(std::tuple<template_element0> const&)
@@ -1151,7 +1270,10 @@ class psyq::message_pack::serializer
             template_element8>
                 const& in_tuple)
     {
-        this->write_tuple(in_tuple);
+        if (!this->write_tuple(in_tuple))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
     /// @copydoc operator<<(std::tuple<template_element0> const&)
@@ -1180,7 +1302,10 @@ class psyq::message_pack::serializer
             template_element9>
                 const& in_tuple)
     {
-        this->write_tuple(in_tuple);
+        if (!this->write_tuple(in_tuple))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
 
@@ -1257,6 +1382,17 @@ class psyq::message_pack::serializer
 
     /** @brief 標準コンテナをMessagePack形式の配列として直列化し、
                ストリームへ出力する。
+        @param[in] in_container 直列化する標準コンテナ。
+        @retval true  成功。
+        @retval false 失敗。
+     */
+    public: template<typename template_container>
+    bool write_array(template_container const& in_container)
+    {
+        return this->write_array(in_container.begin(), in_container.size());
+    }
+    /** @brief 標準コンテナをMessagePack形式の配列として直列化し、
+               ストリームへ出力する。
         @param[in] in_iterator 直列化する標準コンテナの先頭位置。
         @param[in] in_length   直列化する標準コンテナの要素数。
         @retval true  成功。
@@ -1274,18 +1410,6 @@ class psyq::message_pack::serializer
             *this << *in_iterator;
         }
         return !this->stream_.fail();
-    }
-
-    /** @brief 標準コンテナをMessagePack形式の配列として直列化し、
-               ストリームへ出力する。
-        @param[in] in_container 直列化する標準コンテナ。
-        @retval true  成功。
-        @retval false 失敗。
-     */
-    public: template<typename template_container>
-    bool write_array(template_container const& in_container)
-    {
-        return this->write_array(in_container.begin(), in_container.size());
     }
 
     /** @brief MessagePack形式の配列の直列化を開始する。
@@ -1342,10 +1466,12 @@ class psyq::message_pack::serializer
         std::set<template_key, template_compare, template_allocator>
             const& in_set)
     {
-        this->write_set(in_set);
+        if (!this->write_set(in_set))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
-
     /** @brief std::multiset をMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
         @param[in] in_set 直列化するコンテナ。
@@ -1359,10 +1485,12 @@ class psyq::message_pack::serializer
         std::multiset<template_key, template_compare, template_allocator>
             const& in_set)
     {
-        this->write_set(in_set);
+        if (!this->write_set(in_set))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
-
     /** @brief std::unordered_set をMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
         @param[in] in_set 直列化するコンテナ。
@@ -1378,10 +1506,12 @@ class psyq::message_pack::serializer
             <template_key, template_hash, template_compare, template_allocator>
                 const& in_set)
     {
-        this->write_set(in_set);
+        if (!this->write_set(in_set))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
-
     /** @brief std::unordered_multiset をMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
         @param[in] in_set 直列化するコンテナ。
@@ -1397,10 +1527,12 @@ class psyq::message_pack::serializer
             <template_key, template_hash, template_compare, template_allocator>
                 const& in_set)
     {
-        this->write_set(in_set);
+        if (!this->write_set(in_set))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
-
     /** @brief std::map をMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
         @param[in] in_map 直列化するコンテナ。
@@ -1415,10 +1547,12 @@ class psyq::message_pack::serializer
         std::map<template_key, template_mapped, template_compare, template_allocator>
             const& in_map)
     {
-        this->write_map(in_map);
+        if (!this->write_map(in_map))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
-
     /** @brief std::multimap をMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
         @param[in] in_map 直列化するコンテナ。
@@ -1434,10 +1568,12 @@ class psyq::message_pack::serializer
             <template_key, template_mapped, template_compare, template_allocator>
                 const& in_map)
     {
-        this->write_map(in_map);
+        if (!this->write_map(in_map))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
-
     /** @brief std::unordered_map をMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
         @param[in] in_map 直列化するコンテナ。
@@ -1458,10 +1594,12 @@ class psyq::message_pack::serializer
             template_allocator>
                 const& in_map)
     {
-        this->write_map(in_map);
+        if (!this->write_map(in_map))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
-
     /** @brief std::unordered_multimap をMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
         @param[in] in_map 直列化するコンテナ。
@@ -1482,10 +1620,24 @@ class psyq::message_pack::serializer
             template_allocator>
                 const& in_map)
     {
-        this->write_map(in_map);
+        if (!this->write_map(in_map))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
 
+    /** @brief 標準コンテナをMessagePack形式の連想配列として直列化し、
+               ストリームへ出力する。
+        @param[in] in_set 直列化する標準コンテナ。
+        @retval true  成功。
+        @retval false 失敗。
+     */
+    public: template<typename template_set>
+    bool write_set(template_set const& in_set)
+    {
+        return this->write_set(in_set.begin(), in_set.size());
+    }
     /** @brief 標準コンテナをMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
         @param[in] in_iterator 直列化する標準コンテナの先頭位置。
@@ -1508,18 +1660,19 @@ class psyq::message_pack::serializer
         }
         return !this->stream_.fail();
     }
-    /** @brief 標準コンテナをMessagePack形式の連想配列として直列化し、
+
+    /** @brief pairコンテナをMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
-        @param[in] in_set 直列化する標準コンテナ。
+        @tparam template_map std::pair 互換の要素を持つ標準コンテナの型。
+        @param[in] in_map 直列化するpairコンテナ。
         @retval true  成功。
         @retval false 失敗。
      */
-    public: template<typename template_set>
-    bool write_set(template_set const& in_set)
+    public: template<typename template_map>
+    bool write_map(template_map const& in_map)
     {
-        return this->write_set(in_set.begin(), in_set.size());
+        return this->write_map(in_map.begin(), in_map.size());
     }
-
     /** @brief pairコンテナをMessagePack形式の連想配列として直列化し、
                ストリームへ出力する。
         @tparam template_iterator std::pair 互換の要素を指す反復子の型。
@@ -1537,21 +1690,10 @@ class psyq::message_pack::serializer
         }
         for (; 0 < in_length; --in_length, ++in_iterator)
         {
-            *this << *in_iterator;
+            auto const& local_pair(*in_iterator);
+            *this << local_pair.first << local_pair.second;
         }
         return !this->stream_.fail();
-    }
-    /** @brief pairコンテナをMessagePack形式の連想配列として直列化し、
-               ストリームへ出力する。
-        @tparam template_map std::pair 互換の要素を持つ標準コンテナの型。
-        @param[in] in_map 直列化するpairコンテナ。
-        @retval true  成功。
-        @retval false 失敗。
-     */
-    public: template<typename template_map>
-    bool write_map(template_map const& in_map)
-    {
-        return this->write_map(in_map.begin(), in_map.size());
     }
 
     /** @brief MessagePack形式の連想配列の直列化を開始する。
@@ -1595,6 +1737,7 @@ class psyq::message_pack::serializer
                 in_length);
     }
     //@}
+#if 0
     /** @brief std::pair をMessagePack形式で直列化し、ストリームへ出力する。
         @param[in] in_pair 直列化する std::pair インスタンス。
         @return *this
@@ -1604,6 +1747,7 @@ class psyq::message_pack::serializer
     {
         return *this << in_pair.first << in_pair.second;
     }
+#endif
 
     //-------------------------------------------------------------------------
     /// @name MessagePackコンテナ要素への直列化
@@ -1652,7 +1796,7 @@ class psyq::message_pack::serializer
         @param[in] in_iterator   直列化する標準コンテナの先頭位置。
         @param[in] in_length     直列化する標準コンテナの要素数。
         @param[in] in_endianness コンテナ要素を直列化する際のエンディアン性。
-        @return 残り要素の数。
+        @return 残りバイト数。
         @sa self::make_serial_string()
         @sa self::make_serial_binary()
         @sa self::make_serial_extended()
@@ -1693,6 +1837,7 @@ class psyq::message_pack::serializer
 
     /** @brief 直前に直列化を開始したMessagePackコンテナの残り要素を、
                空値で埋める。
+        @return 残りバイト数。0以外の場合は、途中で失敗している。
         @sa self::make_serial_string()
         @sa self::make_serial_binary()
         @sa self::make_serial_extended()
@@ -1742,8 +1887,9 @@ class psyq::message_pack::serializer
         // コンテナの残り要素を埋める。
         for (; 0 < local_empty_count; --local_empty_count)
         {
-            if (!this->write_big_endian<std::uint8_t>(local_empty_value))
+            if (!this->write_big_endian(local_empty_value))
             {
+                PSYQ_ASSERT(false);
                 return local_empty_count;
             }
         }
@@ -1779,7 +1925,10 @@ class psyq::message_pack::serializer
      */
     public: self& operator<<(psyq::message_pack::object const& in_object)
     {
-        this->write_object(in_object);
+        if (!this->write_object(in_object))
+        {
+            PSYQ_ASSERT(false);
+        }
         return *this;
     }
     /** @brief MessagePackオブジェクトを直列化し、ストリームへ出力する。
@@ -1794,112 +1943,80 @@ class psyq::message_pack::serializer
         case psyq::message_pack::object::type::NIL:
         {
             // 空値をストリームへ出力する。
-            auto const local_result(this->write_nil());
-            PSYQ_ASSERT(local_result);
-            return local_result;
+            return this->write_nil();
         }
         case psyq::message_pack::object::type::BOOLEAN:
         {
             // 真偽値をストリームへ出力する。
             auto const local_boolean(in_object.get_boolean());
-            PSYQ_ASSERT(local_boolean != nullptr);
-            auto const local_result(this->write_boolean(*local_boolean));
-            PSYQ_ASSERT(local_result);
-            return local_result;
+            return local_boolean != nullptr
+                && this->write_boolean(*local_boolean);
         }
         case psyq::message_pack::object::type::POSITIVE_INTEGER:
         {
             // 0以上の整数をストリームへ出力する。
             auto const local_integer(in_object.get_positive_integer());
-            PSYQ_ASSERT(local_integer != nullptr);
-            auto const local_result(this->write_unsigned_integer(*local_integer));
-            PSYQ_ASSERT(local_result);
-            return local_result;
+            return local_integer != nullptr
+                && this->write_unsigned_integer(*local_integer);
         }
         case psyq::message_pack::object::type::NEGATIVE_INTEGER:
         {
             // 0未満の整数をストリームへ出力する。
             auto const local_integer(in_object.get_negative_integer());
-            PSYQ_ASSERT(local_integer != nullptr);
-            auto const local_result(this->write_signed_integer(*local_integer));
-            PSYQ_ASSERT(local_result);
-            return local_result;
+            return local_integer != nullptr
+                && this->write_signed_integer(*local_integer);
         }
         case psyq::message_pack::object::type::FLOAT32:
         {
             // 32bit浮動小数点数をストリームへ出力する。
             auto const local_float(in_object.get_float32());
-            PSYQ_ASSERT(local_float != nullptr);
-            auto const local_result(this->write_floating_point(*local_float));
-            PSYQ_ASSERT(local_result);
-            return local_result;
+            return local_float != nullptr
+                && this->write_floating_point(*local_float);
         }
         case psyq::message_pack::object::type::FLOAT64:
         {
             // 64bit浮動小数点数をストリームへ出力する。
             auto const local_float(in_object.get_float64());
-            PSYQ_ASSERT(local_float != nullptr);
-            auto const local_result(this->write_floating_point(*local_float));
-            PSYQ_ASSERT(local_result);
-            return local_result;
+            return local_float != nullptr
+                && this->write_floating_point(*local_float);
         }
         case psyq::message_pack::object::type::STRING:
         {
             // 文字列をストリームへ出力する。
             auto const local_string(in_object.get_string());
-            PSYQ_ASSERT(local_string != nullptr);
-            auto const local_result(
-                this->write_raw_string(
-                    local_string->data(), local_string->size()));
-            PSYQ_ASSERT(local_result);
-            return local_result;
+            return local_string != nullptr
+                && this->write_raw_string(
+                    local_string->data(), local_string->size());
         }
         case psyq::message_pack::object::type::BINARY:
         {
             // バイナリをストリームへ出力する。
             auto const local_binary(in_object.get_binary());
-            PSYQ_ASSERT(local_binary != nullptr);
-            auto const local_result(
-                this->write_raw_binary(
-                    local_binary->data(), local_binary->size()));
-            PSYQ_ASSERT(local_result);
-            return local_result;
+            return local_binary != nullptr
+                && this->write_raw_binary(
+                    local_binary->data(), local_binary->size());
         }
         case psyq::message_pack::object::type::EXTENDED:
         {
             // 拡張バイナリをストリームへ出力する。
             auto const local_extended(in_object.get_extended());
-            PSYQ_ASSERT(local_extended != nullptr);
-            if (!this->make_serial_extended(local_extended->type(), local_extended->size()))
-            {
-                PSYQ_ASSERT(false);
-                return false;
-            }
-            if (this->fill_container_raw(*local_extended) != 0)
-            {
-                PSYQ_ASSERT(false);
-                return false;
-            }
-            return true;
+            return local_extended != nullptr
+                && this->make_serial_extended(
+                    local_extended->type(), local_extended->size())
+                && this->fill_container_raw(*local_extended) == 0;
         }
         case psyq::message_pack::object::type::ARRAY:
         {
             // 配列をストリームへ出力する。
             auto const local_array(in_object.get_array());
-            PSYQ_ASSERT(local_array != nullptr);
-            auto const local_result(this->write_array(*local_array));
-            PSYQ_ASSERT(local_result);
-            return local_result;
+            return local_array != nullptr && this->write_array(*local_array);
         }
         case psyq::message_pack::object::type::UNORDERED_MAP:
         case psyq::message_pack::object::type::MAP:
         {
             // 連想配列をストリームへ出力する。
             auto const local_map(in_object.get_unordered_map());
-            PSYQ_ASSERT(local_map != nullptr);
-            auto const local_result(this->write_map(*local_map));
-            PSYQ_ASSERT(local_result);
-            return local_result;
+            return local_map != nullptr && this->write_map(*local_map);
         }
         default:
             PSYQ_ASSERT(false);

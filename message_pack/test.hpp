@@ -66,7 +66,7 @@ namespace psyq
             local_serializer << (std::numeric_limits<std::uint16_t>::max)();
             local_serializer << (std::numeric_limits<std::uint32_t>::max)();
             local_serializer << (std::numeric_limits<std::uint64_t>::max)();
-            local_serializer << local_string_0x1f;
+            local_serializer << "0123456789ABCDEF0123456789ABCDE";
             local_serializer << local_string_0xff;
             local_serializer << local_string_0xffff;
             local_serializer << local_string_0x10000;

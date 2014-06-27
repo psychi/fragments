@@ -63,38 +63,26 @@ struct psyq::internal::message_pack_container
     //-------------------------------------------------------------------------
     /// コンテナ要素の型。
     public: typedef template_value value_type;
-
     /// コンテナ要素数の型。
     public: typedef std::uint32_t size_type;
-
     /// コンテナ反復子の差を表す型。
     public: typedef std::ptrdiff_t difference_type;
-
     /// コンテナ要素へのpointer。
     public: typedef typename self::value_type const* const_pointer;
-
     /// コンテナ要素へのpointer。
     public: typedef typename self::value_type* pointer;
-
     /// コンテナ要素への参照。
     public: typedef typename self::value_type const& const_reference;
-
     /// コンテナ要素への参照。
     public: typedef typename self::value_type& reference;
-
     /// コンテナ要素を指す反復子。
     public: typedef typename self::const_pointer const_iterator;
-
     /// コンテナ要素を指す反復子。
     public: typedef typename self::pointer iterator;
-
     /// コンテナ要素を指す逆反復子。
-    public: typedef std::reverse_iterator<const_iterator>
-        const_reverse_iterator;
-
+    public: typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
     /// コンテナ要素を指す逆反復子。
-    public: typedef std::reverse_iterator<iterator>
-        reverse_iterator;
+    public: typedef std::reverse_iterator<iterator> reverse_iterator;
 
     //-------------------------------------------------------------------------
 #ifndef _MSC_VER
@@ -235,9 +223,9 @@ struct psyq::internal::message_pack_container
     //-------------------------------------------------------------------------
     /// @name コンテナの容量
     //@{
-    /** @brief 空のコンテナか判定する。
-        @retval true  空のコンテナ。
-        @retval false 空のコンテナではない。
+    /** @brief コンテナに要素がないか判定する。
+        @retval true  コンテナに要素がない。
+        @retval false コンテナに要素がある。
      */
     public: bool empty() const PSYQ_NOEXCEPT
     {
@@ -376,6 +364,13 @@ struct psyq::internal::message_pack_container
     //-------------------------------------------------------------------------
     /// @name コンテナの編集
     //@{
+    /// @brief コンテナを空にする。
+    public: void reset()
+    {
+        this->data_ = nullptr;
+        this->size_ = 0;
+    }
+
     /** @brief コンテナを初期化する。
         @param[in] in_data コンテナの先頭位置。
         @param[in] in_size コンテナの要素数。
@@ -385,12 +380,17 @@ struct psyq::internal::message_pack_container
         typename self::size_type const in_size)
     PSYQ_NOEXCEPT
     {
+        PSYQ_ASSERT(in_data != nullptr || in_size == 0);
         this->data_ = in_data;
         this->size_ = in_size;
     }
 
+    /** @brief コンテナの末尾に要素を挿入する。
+        @param[in] in_element 挿入する要素。
+     */
     public: void push_back(typename self::const_reference in_element)
     {
+        PSYQ_ASSERT(this->data_ != nullptr && this->size_ < this->max_size());
         this->data_[this->size_] = in_element;
         ++this->size_;
     }
@@ -413,7 +413,6 @@ struct psyq::internal::message_pack_extended:
 {
     /// thisが指す値の型。
     private: typedef message_pack_extended self;
-
     /// thisの上位型。
     public: typedef psyq::internal::message_pack_container<std::uint8_t const>
         super;
@@ -424,27 +423,20 @@ struct psyq::internal::message_pack_extended:
     /// @copydoc super::data()
     public: super::const_pointer data() const PSYQ_NOEXCEPT
     {
-        return 1 < this->super::size()?
-            this->super::data() + 1: this->super::data();
+        return this->super::data() + (this->super::empty()? 0: 1);
     }
 
     /// @copydoc super::at()
     public: super::const_reference at(super::size_type const in_index) const
     {
-        if (this->size() <= in_index)
-        {
-            PSYQ_ASSERT(false);
-            //throw std::out_of_range; // 例外は使いたくない。
-        }
-        return *(this->data() + in_index);
+        return this->super::at(in_index + 1);
     }
 
     /// @copydoc super::operator[]()
     public: super::const_reference operator[](super::size_type const in_index)
     const
     {
-        PSYQ_ASSERT(in_index < this->size());
-        return *(this->data() + in_index);
+        return this->super::operator[](in_index + 1);
     }
 
     /// @copydoc super::front()
@@ -481,22 +473,34 @@ struct psyq::internal::message_pack_extended:
     }
     //@}
     //-------------------------------------------------------------------------
+    /// @copydoc super::empty()
+    public: bool empty() const PSYQ_NOEXCEPT
+    {
+        return this->super::size() <= 1;
+    }
+
     /// @copydoc super::size()
     public: super::size_type size() const PSYQ_NOEXCEPT
     {
-        return 1 < this->super::size()? this->super::size() - 1: 0;
+        return this->empty()? 0: this->super::size() - 1;
+    }
+
+    /// @copydoc super::max_size()
+    public: self::size_type max_size() const PSYQ_NOEXCEPT
+    {
+        PSYQ_ASSERT(0 < this->super::max_size());
+        return this->super::max_size() - 1;
     }
 
     /** @brief 拡張バイナリの型の識別値を取得する。
-        @param[in] in_empty_type 拡張バイナリが空だった場合の型の識別値。
+        @param[in] in_empty_type 拡張バイナリが空だった場合に返す、型の識別値。
         @return 拡張バイナリの型の識別値。
      */
     public: std::int8_t type(std::int8_t const in_empty_type = 0)
     const PSYQ_NOEXCEPT
     {
-        return 0 < this->super::size()?
-            *reinterpret_cast<std::int8_t const*>(this->super::data()):
-            in_empty_type;
+        return this->super::empty()?
+            in_empty_type: static_cast<std::int8_t>(*this->super::data());
     }
 };
 
@@ -512,7 +516,6 @@ struct psyq::internal::message_pack_map:
 {
     /// thisが指す値の型。
     private: typedef message_pack_map<template_object> self;
-
     /// thisの上位型。
     public: typedef psyq::internal::message_pack_container<
         std::pair<template_object, template_object>>
@@ -568,9 +571,8 @@ struct psyq::internal::message_pack_map:
     /** @brief std::multimap::equal_range() 相当の関数。
         @warning 事前に self::sort() されている必要がある。
      */
-    public: std::pair<
-        typename super::const_iterator, typename super::const_iterator>
-            equal_range(typename self::key_type const& in_key) const
+    public: std::pair<typename super::const_iterator, typename super::const_iterator>
+    equal_range(typename self::key_type const& in_key) const
     {
         return std::equal_range(
             this->begin(),

@@ -22,21 +22,25 @@ class psyq::message_pack::object
 
     /// @name MessagePackオブジェクトが持つ値の型。
     //@{
-    /// @copydoc self::value::float32
-    public: typedef psyq::internal::message_pack_value::float32 float32;
-    /// @copydoc self::value::float64
-    public: typedef psyq::internal::message_pack_value::float64 float64;
-    /// @copydoc self::value::string
+    /// @copydoc psyq::internal::message_pack_value::type::UNSIGNED_INTEGER
+    public: typedef psyq::internal::message_pack_value::unsigned_integer unsigned_integer;
+    /// @copydoc psyq::internal::message_pack_value::type::NEGATIVE_INTEGER
+    public: typedef psyq::internal::message_pack_value::negative_integer negative_integer;
+    /// @copydoc psyq::internal::message_pack_value::type::FLOATING_POINT_32
+    public: typedef psyq::internal::message_pack_value::floating_point_32 floating_point_32;
+    /// @copydoc psyq::internal::message_pack_value::type::FLOATING_POINT_64
+    public: typedef psyq::internal::message_pack_value::floating_point_64 floating_point_64;
+    /// @copydoc psyq::internal::message_pack_value::type::STRING
     public: typedef psyq::internal::message_pack_value::string string;
-    /// @copydoc self::value::binary
+    /// @copydoc psyq::internal::message_pack_value::type::BINARY
     public: typedef psyq::internal::message_pack_value::binary binary;
-    /// @copydoc self::value::extended
+    /// @copydoc psyq::internal::message_pack_value::type::EXTENDED
     public: typedef psyq::internal::message_pack_value::extended extended;
-    /// @copydoc self::value::array
+    /// @copydoc psyq::internal::message_pack_value::type::ARRAY
     public: typedef psyq::internal::message_pack_value::array array;
-    /// @copydoc self::value::unordered_map
+    /// @copydoc psyq::internal::message_pack_value::type::UNORDERED_MAP
     public: typedef psyq::internal::message_pack_value::unordered_map unordered_map;
-    /// @copydoc self::value::map
+    /// @copydoc psyq::internal::message_pack_value::type::MAP
     public: typedef psyq::internal::message_pack_value::map map;
     //@}
     //-------------------------------------------------------------------------
@@ -60,31 +64,31 @@ class psyq::message_pack::object
     public: PSYQ_CONSTEXPR object(unsigned long long const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        type_(self::type::POSITIVE_INTEGER)
+        type_(self::type::UNSIGNED_INTEGER)
     {}
     /// @copydoc object(unsigned long long const)
     public: PSYQ_CONSTEXPR object(unsigned long const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        type_(self::type::POSITIVE_INTEGER)
+        type_(self::type::UNSIGNED_INTEGER)
     {}
     /// @copydoc object(unsigned long long const)
     public: PSYQ_CONSTEXPR object(unsigned int const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        type_(self::type::POSITIVE_INTEGER)
+        type_(self::type::UNSIGNED_INTEGER)
     {}
     /// @copydoc object(unsigned long long const)
     public: PSYQ_CONSTEXPR object(unsigned short const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        type_(self::type::POSITIVE_INTEGER)
+        type_(self::type::UNSIGNED_INTEGER)
     {}
     /// @copydoc object(unsigned long long const)
     public: PSYQ_CONSTEXPR object(unsigned char const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        type_(self::type::POSITIVE_INTEGER)
+        type_(self::type::UNSIGNED_INTEGER)
     {}
 
     /** @brief MessagePackオブジェクトに有符号整数を格納する。
@@ -123,16 +127,16 @@ class psyq::message_pack::object
     /** @brief MessagePackオブジェクトに浮動小数点数を格納する。
         @param[in] in_float MessagePackオブジェクトに格納する浮動小数点数。
      */
-    public: PSYQ_CONSTEXPR object(self::float64 const in_float)
+    public: PSYQ_CONSTEXPR object(self::floating_point_64 const in_float)
     PSYQ_NOEXCEPT:
         value_(in_float),
-        type_(self::type::FLOAT64)
+        type_(self::type::FLOATING_POINT_64)
     {}
-    /// @copydoc object(self::float64 const)
-    public: PSYQ_CONSTEXPR object(self::float32 const in_float)
+    /// @copydoc object(self::floating_point_64 const)
+    public: PSYQ_CONSTEXPR object(self::floating_point_32 const in_float)
     PSYQ_NOEXCEPT:
         value_(in_float),
-        type_(self::type::FLOAT32)
+        type_(self::type::FLOATING_POINT_32)
     {}
 
     /** @brief MessagePackオブジェクトに文字列を格納する。
@@ -324,26 +328,26 @@ class psyq::message_pack::object
             &this->value_.boolean_: nullptr;
     }
 
-    /** @brief MessagePackオブジェクトに格納されてる正の整数を取得する。
+    /** @brief MessagePackオブジェクトに格納されてる0以上の整数を取得する。
         @retval !=nullptr
             MessagePackオブジェクトに格納されてる正の整数へのポインタ。
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは正の整数ではない。
      */
-    public: PSYQ_CONSTEXPR std::uint64_t const* get_positive_integer()
+    public: PSYQ_CONSTEXPR self::unsigned_integer const* get_unsigned_integer()
     const PSYQ_NOEXCEPT
     {
-        return this->get_type() == self::type::POSITIVE_INTEGER?
-            &this->value_.positive_integer_: nullptr;
+        return this->get_type() == self::type::UNSIGNED_INTEGER?
+            &this->value_.unsigned_integer_: nullptr;
     }
 
-    /** @brief MessagePackオブジェクトに格納されてる負の整数を取得する。
+    /** @brief MessagePackオブジェクトに格納されてる0未満の整数を取得する。
         @retval !=nullptr
             MessagePackオブジェクトに格納されてる負の整数へのポインタ。
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは負の整数ではない。
      */
-    public: PSYQ_CONSTEXPR std::int64_t const* get_negative_integer()
+    public: PSYQ_CONSTEXPR self::negative_integer const* get_negative_integer()
     const PSYQ_NOEXCEPT
     {
         return this->get_type() == self::type::NEGATIVE_INTEGER?
@@ -363,9 +367,9 @@ class psyq::message_pack::object
             "template_integer_type is not integer type.");
         switch (this->get_type())
         {
-        case self::type::POSITIVE_INTEGER:
+        case self::type::UNSIGNED_INTEGER:
             if ((std::numeric_limits<template_integer_type>::max)()
-                < this->value_.positive_integer_)
+                < this->value_.unsigned_integer_)
             {
                 return false; // 範囲外なので失敗。
             }
@@ -381,7 +385,7 @@ class psyq::message_pack::object
             return false; // 整数以外が格納されていたので失敗。
         }
         out_integer = static_cast<template_integer_type>(
-            this->value_.positive_integer_);
+            this->value_.unsigned_integer_);
         return true;
     }
 
@@ -391,43 +395,38 @@ class psyq::message_pack::object
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは浮動小数点数ではない。
      */
-    public: PSYQ_CONSTEXPR self::float64 const* get_float64()
+    public: PSYQ_CONSTEXPR self::floating_point_64 const* get_floating_point_64()
     const PSYQ_NOEXCEPT
     {
-        return this->get_type() == self::type::FLOAT64?
-            &this->value_.float64_: nullptr;
+        return this->get_type() == self::type::FLOATING_POINT_64?
+            &this->value_.floating_point_64_: nullptr;
     }
-    /// @copydoc self::get_float64()
-    public: PSYQ_CONSTEXPR self::float32 const* get_float32()
+    /// @copydoc self::get_floating_point_64()
+    public: PSYQ_CONSTEXPR self::floating_point_32 const* get_floating_point_32()
     const PSYQ_NOEXCEPT
     {
-        return this->get_type() == self::type::FLOAT32?
-            &this->value_.float32_: nullptr;
+        return this->get_type() == self::type::FLOATING_POINT_32?
+            &this->value_.floating_point_32_: nullptr;
     }
 
     /** @brief MessagePackオブジェクトに格納されてる浮動小数点数を取得する。
-        @param[out] out_float 取得した浮動小数点数が格納される。
+        @param[out] out_value 取得した浮動小数点数が格納される。
         @retval true  取得に成功した。
         @retval false 取得に失敗した。
      */
-    public: template<typename template_float_type>
-    bool get_floating_point(template_float_type& out_float) const PSYQ_NOEXCEPT
+    public: template<typename template_value_type>
+    bool get_floating_point(template_value_type& out_value) const PSYQ_NOEXCEPT
     {
-        static_assert(
-            std::is_floating_point<template_float_type>::value,
-            "template_float_type is not floating point type.");
         switch (this->get_type())
         {
-        case self::type::FLOAT32:
-            out_float = static_cast<template_float_type>(
-                this->value_.float32_);
+        case self::type::FLOATING_POINT_32:
+            out_value = static_cast<template_value_type>(this->value_.floating_point_32_);
             return true;
-        case self::type::FLOAT64:
-            out_float = static_cast<template_float_type>(
-                this->value_.float64_);
+        case self::type::FLOATING_POINT_64:
+            out_value = static_cast<template_value_type>(this->value_.floating_point_64_);
             return true;
         default:
-            return false; // 整数以外が格納されていたので失敗。
+            return false; // 浮動小数点数以外が格納されていたので失敗。
         }
     }
     //@}
@@ -554,7 +553,7 @@ class psyq::message_pack::object
     /** @brief 有符号整数値のMessagePackオブジェクト種別を判定する。
         @param[in] in_integer 判定する整数値。
         @retval self::type_NEGATIVE_INTEGER 0未満の整数だった。
-        @retval self::type_POSITIVE_INTEGER 0以上の整数だった。
+        @retval self::type_UNSIGNED_INTEGER 0以上の整数だった。
      */
     private: template<typename template_signed_type>
     PSYQ_CONSTEXPR static self::type tell_signed_integer_type(
@@ -565,7 +564,7 @@ class psyq::message_pack::object
             !std::is_unsigned<template_signed_type>::value,
             "template_signed_type is not signed integer type.");
         return in_integer < 0?
-            self::type::NEGATIVE_INTEGER: self::type::POSITIVE_INTEGER;
+            self::type::NEGATIVE_INTEGER: self::type::UNSIGNED_INTEGER;
     }
 
     //-------------------------------------------------------------------------

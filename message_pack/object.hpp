@@ -340,7 +340,6 @@ class psyq::message_pack::object
         return this->get_type() == self::type::UNSIGNED_INTEGER?
             &this->value_.unsigned_integer_: nullptr;
     }
-
     /** @brief MessagePackオブジェクトに格納されてる0未満の整数を取得する。
         @retval !=nullptr
             MessagePackオブジェクトに格納されてる負の整数へのポインタ。
@@ -352,41 +351,6 @@ class psyq::message_pack::object
     {
         return this->get_type() == self::type::NEGATIVE_INTEGER?
             &this->value_.negative_integer_: nullptr;
-    }
-
-    /** @brief MessagePackオブジェクトに格納されてる整数を取得する。
-        @param[out] out_integer 取得した整数が格納される。
-        @retval true  取得に成功した。
-        @retval false 取得に失敗した。
-     */
-    public: template<typename template_integer_type>
-    bool get_integer(template_integer_type& out_integer) const PSYQ_NOEXCEPT
-    {
-        static_assert(
-            std::is_integral<template_integer_type>::value,
-            "template_integer_type is not integer type.");
-        switch (this->get_type())
-        {
-        case self::type::UNSIGNED_INTEGER:
-            if ((std::numeric_limits<template_integer_type>::max)()
-                < this->value_.unsigned_integer_)
-            {
-                return false; // 範囲外なので失敗。
-            }
-            break;
-        case self::type::NEGATIVE_INTEGER:
-            if (this->value_.negative_integer_
-                < (std::numeric_limits<template_integer_type>::min)())
-            {
-                return false; // 範囲外なので失敗。
-            }
-            break;
-        default:
-            return false; // 整数以外が格納されていたので失敗。
-        }
-        out_integer = static_cast<template_integer_type>(
-            this->value_.unsigned_integer_);
-        return true;
     }
 
     /** @brief MessagePackオブジェクトに格納されてる浮動小数点数を取得する。
@@ -409,24 +373,37 @@ class psyq::message_pack::object
             &this->value_.floating_point_32_: nullptr;
     }
 
-    /** @brief MessagePackオブジェクトに格納されてる浮動小数点数を取得する。
-        @param[out] out_value 取得した浮動小数点数が格納される。
-        @retval true  取得に成功した。
-        @retval false 取得に失敗した。
+    /** @brief MessagePackオブジェクトに格納されてる数値を取得する。
+
+        MessagePackオブジェクトに格納されている数値をキャストして取得するので、
+        格納されている値と取得した値が一致するとは限らない。
+
+        @param[out] out_value 取得した数値が格納される。
+        @retval true  MessagePackオブジェクト格納値と out_value は等値。
+        @retval false MessagePackオブジェクト格納値と out_value は不等値。
      */
     public: template<typename template_value_type>
-    bool get_floating_point(template_value_type& out_value) const PSYQ_NOEXCEPT
+    bool get_numeric_value(template_value_type& out_value) const PSYQ_NOEXCEPT
     {
         switch (this->get_type())
         {
+        case self::type::UNSIGNED_INTEGER:
+            out_value = static_cast<template_value_type>(this->value_.unsigned_integer_);
+            return 0 <= out_value
+                && static_cast<self::unsigned_integer>(out_value) == this->value_.unsigned_integer_;
+        case self::type::NEGATIVE_INTEGER:
+            out_value = static_cast<template_value_type>(this->value_.negative_integer_);
+            return out_value < 0
+                && static_cast<self::negative_integer>(out_value) == this->value_.negative_integer_;
         case self::type::FLOATING_POINT_32:
             out_value = static_cast<template_value_type>(this->value_.floating_point_32_);
-            return true;
+            return static_cast<self::floating_point_32>(out_value) == this->value_.floating_point_32_;
         case self::type::FLOATING_POINT_64:
             out_value = static_cast<template_value_type>(this->value_.floating_point_64_);
-            return true;
+            return static_cast<self::floating_point_64>(out_value) == this->value_.floating_point_64_;
         default:
-            return false; // 浮動小数点数以外が格納されていたので失敗。
+            //out_value = template_value_type();
+            return false; // 数値以外が格納されていたので、必ず不等値となる。
         }
     }
     //@}

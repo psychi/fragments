@@ -116,82 +116,166 @@ namespace psyq
             PSYQ_ASSERT(local_tuple4 != nullptr);
             ++local_message_pack_object;
 
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(
-                        (std::numeric_limits<std::int64_t>::min)()));
+            std::uint8_t  local_unsigned_integer_8;
+            std::uint16_t local_unsigned_integer_16;
+            std::uint32_t local_unsigned_integer_32;
+            std::uint64_t local_unsigned_integer_64;
+            std::int8_t  local_integer_8;
+            std::int16_t local_integer_16;
+            std::int32_t local_integer_32;
+            std::int64_t local_integer_64;
+            float  local_float_32;
+            double local_float_64;
+            local_integer_64 = (std::numeric_limits<std::int64_t>::min)();
+            PSYQ_ASSERT(*local_message_pack_object == local_integer_64);
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_8));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_16));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_32));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_64));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_8));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_16));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_integer_64));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_float_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_float_64));
             ++local_message_pack_object;
 
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(
-                        (std::numeric_limits<std::int32_t>::min)()));
+            local_integer_32 = (std::numeric_limits<std::int32_t>::min)();
+            PSYQ_ASSERT(*local_message_pack_object == local_integer_32);
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_8));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_16));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_32));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_64));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_8));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_16));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_integer_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_integer_64));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_float_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_float_64));
             ++local_message_pack_object;
 
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(
-                        (std::numeric_limits<std::int16_t>::min)()));
+            local_integer_16 = (std::numeric_limits<std::int16_t>::min)();
+            PSYQ_ASSERT(*local_message_pack_object == local_integer_16);
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_8));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_16));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_32));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_64));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_8));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_integer_16));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_integer_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_integer_64));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_float_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_float_64));
             ++local_message_pack_object;
 
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(
-                        (std::numeric_limits<std::int8_t>::min)()));
+            local_integer_8 = (std::numeric_limits<std::int8_t>::min)();
+            PSYQ_ASSERT(*local_message_pack_object == local_integer_8);
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_8));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_16));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_32));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_64));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_integer_8));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_integer_16));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_integer_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_integer_64));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_float_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_float_64));
             ++local_message_pack_object;
 
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(-0x20));
+            PSYQ_ASSERT(*local_message_pack_object == -0x20);
             ++local_message_pack_object;
 
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(false));
+            PSYQ_ASSERT(*local_message_pack_object == false);
             ++local_message_pack_object;
 
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(0.25));
+            local_float_64 = 0.25;
+            PSYQ_ASSERT(*local_message_pack_object == local_float_64);
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_8));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_16));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_32));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_64));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_8));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_16));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_32));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_64));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_float_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_float_64));
             ++local_message_pack_object;
 
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(0.5f));
+            local_float_32 = 0.5f;
+            PSYQ_ASSERT(*local_message_pack_object == local_float_32);
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_8));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_16));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_32));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_64));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_8));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_16));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_32));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_64));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_float_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_float_64));
             ++local_message_pack_object;
 
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(true));
+            PSYQ_ASSERT(*local_message_pack_object == true);
             ++local_message_pack_object;
 
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(0x7f));
+            PSYQ_ASSERT(*local_message_pack_object == 0x7f);
             ++local_message_pack_object;
 
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(
-                        (std::numeric_limits<std::uint8_t>::max)()));
+            local_unsigned_integer_8 = (std::numeric_limits<std::uint8_t>::max)();
+            PSYQ_ASSERT(*local_message_pack_object == local_unsigned_integer_8);
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_unsigned_integer_8));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_unsigned_integer_16));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_unsigned_integer_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_unsigned_integer_64));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_8));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_integer_16));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_integer_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_integer_64));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_float_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_float_64));
             ++local_message_pack_object;
 
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(
-                        (std::numeric_limits<std::uint16_t>::max)()));
+            local_unsigned_integer_16 = (std::numeric_limits<std::uint16_t>::max)();
+            PSYQ_ASSERT(*local_message_pack_object == local_unsigned_integer_16);
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_8));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_unsigned_integer_16));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_unsigned_integer_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_unsigned_integer_64));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_8));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_16));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_integer_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_integer_64));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_float_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_float_64));
             ++local_message_pack_object;
 
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(
-                        (std::numeric_limits<std::uint32_t>::max)()));
+            local_unsigned_integer_32 = (std::numeric_limits<std::uint32_t>::max)();
+            PSYQ_ASSERT(*local_message_pack_object == local_unsigned_integer_32);
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_8));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_16));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_unsigned_integer_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_unsigned_integer_64));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_8));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_16));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_integer_64));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_float_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_float_64));
             ++local_message_pack_object;
 
-            PSYQ_ASSERT(
-                *local_message_pack_object
-                    == psyq::message_pack::object(
-                        (std::numeric_limits<std::uint64_t>::max)()));
+            local_unsigned_integer_64 = (std::numeric_limits<std::uint64_t>::max)();
+            PSYQ_ASSERT(*local_message_pack_object == local_unsigned_integer_64);
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_8));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_16));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_unsigned_integer_32));
+            PSYQ_ASSERT(local_message_pack_object->get_numeric_value(local_unsigned_integer_64));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_8));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_16));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_32));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_64));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_float_32));
+            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_float_64));
             ++local_message_pack_object;
 
             PSYQ_ASSERT(

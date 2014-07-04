@@ -65,7 +65,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief psyq::any_holder から使われる 簡易的なRTTI（実行時型情報）。
+/** @brief psyq::any_storage から使われる 簡易的なRTTI（実行時型情報）。
 
     C++標準のRTTIを使わずに、RTTIの機能を実現する。
 
@@ -75,7 +75,7 @@ namespace psyq
       型ごとに固有の識別値を取得できる。
     - psyq::any_rtti::find_base() で、基底型のRTTIを検索できる。
 
-    @sa psyq::any_holder
+    @sa psyq::any_storage
  */
 class psyq::any_rtti
 {

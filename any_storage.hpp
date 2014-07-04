@@ -22,41 +22,12 @@
    ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /** @file
-    @brief 任意型の値を格納できるオブジェクト。
-
-    - psyq::any_holder のインスタンスに任意型の値を格納し、
-      psyq::any_placeholder 経由のインターフェイスでアクセスする。
-    - std::shared_ptrなどのsmart-pointerを経由して使うのを推奨する。
-
-    使用例
-    @code
-    // psyq::any_holder に格納する値の型は、
-    // 事前に psyq::any_rtti::make() で、RTTIを構築しておく必要がある。
-    psyq::any_rtti::make<int>();
-    psyq::any_rtti::make<double>();
-    // psyq::any_placeholder のsmart-pointerに、
-    // int型の値を格納可能な psyq::any_holder のインスタンスを代入する。
-    std::shared_ptr<psyq::any_placeholder> local_any(new psyq::any_holder<int>(-12));
-    PSYQ_ASSERT(local_any.get() != nullptr);
-    // psyq::any_placeholder に格納されているint型の値を参照する。
-    PSYQ_ASSERT(
-        local_any->pointer_cast<int>() != nullptr
-        && *(local_any->pointer_cast<int>()) == -12);
-    // psyq::any_placeholder に現在格納されている型以外へはキャストできない。
-    PSYQ_ASSERT(local_any->pointer_cast<double>() == nullptr);
-    // int型の値が格納されていた psyq::any_placeholder インスタンスに、
-    // double型の値を代入する。元の値は解放される。
-    local_any.reset(new psyq::any_holder<double>(0.5));
-    PSYQ_ASSERT(local_any->pointer_cast<int>() == nullptr);
-    PSYQ_ASSERT(
-        local_any->pointer_cast<double>() != nullptr
-        && *(local_any->pointer_cast<double>()) == 0.5);
-    @endcode
-
+    @brief 任意型の値を格納できるオブジェクト
+    @copydetails psyq::any_storage
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_ANY_HOLDER_HPP_
-#define PSYQ_ANY_HOLDER_HPP_
+#ifndef PSYQ_ANY_STORAGE_HPP_
+#define PSYQ_ANY_STORAGE_HPP_
 
 #include <memory>
 //#include "psyq/any_rtti.hpp"
@@ -64,34 +35,61 @@
 namespace psyq
 {
     /// @cond
-    class any_placeholder;
-    template<typename> class any_holder;
+    class any_storage;
     /// @endcond
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 任意型の値を格納できるオブジェクトのインターフェイス。
 
-    実際の値は、 psyq::any_holder に格納する。
+    - psyq::any_storage::concrete インスタンスに任意型の値を格納し、
+      psyq::any_storage 経由のインターフェイスでアクセスする。
+    - std::shared_ptr などのスマートポインタを経由して使うことを推奨する。
+
+    使用例
+    @code
+    // psyq::any_storage::concrete に格納する値の型は、
+    // 事前に psyq::any_rtti::make() で、RTTIを構築しておく必要がある。
+    psyq::any_rtti::make<int>();
+    psyq::any_rtti::make<double>();
+    // psyq::any_storage のスマートポインタに、
+    // int型の値を格納可能な psyq::any_storage::concrete のインスタンスを代入する。
+    std::shared_ptr<psyq::any_storage> local_any(
+        new psyq::any_storage::concrete<int>(-12));
+    PSYQ_ASSERT(local_any.get() != nullptr);
+    // psyq::any_storage に格納されているint型の値を参照する。
+    PSYQ_ASSERT(
+        local_any->cast_pointer<int>() != nullptr
+        && *(local_any->cast_pointer<int>()) == -12);
+    // psyq::any_storage に現在格納されている型以外へはキャストできない。
+    PSYQ_ASSERT(local_any->cast_pointer<double>() == nullptr);
+    // int型の値が格納されていた psyq::any_storage インスタンスに、
+    // double型の値を代入する。元の値は解放される。
+    local_any.reset(new psyq::any_storage::concrete<double>(0.5));
+    PSYQ_ASSERT(local_any->cast_pointer<int>() == nullptr);
+    PSYQ_ASSERT(
+        local_any->cast_pointer<double>() != nullptr
+        && *(local_any->cast_pointer<double>()) == 0.5);
+    @endcode
  */
-class psyq::any_placeholder
+class psyq::any_storage
 {
-    private: typedef any_placeholder self; ///< thisが指す値の型。
+    private: typedef any_storage self; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
-    public: typedef std::shared_ptr<self> shared_ptr; ///< self の保持子。
-    public: typedef std::weak_ptr<self>   weak_ptr;   ///< self の監視子。
+    public: template<typename> class concrete;
 
     //-------------------------------------------------------------------------
     /// デフォルト構築子。
-    protected: PSYQ_CONSTEXPR any_placeholder() PSYQ_NOEXCEPT {}
+    protected: PSYQ_CONSTEXPR any_storage() PSYQ_NOEXCEPT {}
     /// コピー構築子は使用禁止。
-    private: any_placeholder(self const&);
+    private: any_storage(self const&);
     /// コピー代入演算子は使用禁止。
     private: self& operator=(self const&);
     /// 破棄する。
-    public: virtual ~any_placeholder() {}
+    public: virtual ~any_storage() {}
 
+    //-------------------------------------------------------------------------
     /** @brief 格納されている値へのポインタを、キャストして取得する。
         @tparam template_value
             キャストして取得するポインタが指す値の型。
@@ -100,6 +98,9 @@ class psyq::any_placeholder
         @retval ==nullptr
             *thisに格納されている値のポインタ型を、
             template_value のポインタ型にキャストできなかった。
+        @warning
+            この関数を使用するより前に psyq::any_rtti::make() を一度呼び出し、
+            template_value 型のRTTIを構築しておく必要がある。
      */
     public: template<typename template_value>
     template_value* cast_pointer()
@@ -142,6 +143,9 @@ class psyq::any_placeholder
         @retval ==nullptr
             格納されている値のRTTIが、
             まだ psyq::any_rtti::make() で構築されていない。
+        @warning
+            この関数を使用するより前に psyq::any_rtti::make() を一度呼び出し、
+            格納されている値のRTTIを構築しておく必要がある。
      */
     public: virtual psyq::any_rtti const* get_rtti() const = 0;
 
@@ -161,21 +165,21 @@ class psyq::any_placeholder
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 任意型の値を格納するオブジェクト。
-    @tparam template_value @copydoc psyq::any_holder::value_type
+/** @brief 任意型の値を格納するオブジェクトの実装。
+    @tparam template_value
+        @copydoc psyq::any_storage::concrete::value_type
  */
 template<typename template_value>
-class psyq::any_holder: public psyq::any_placeholder
+class psyq::any_storage::concrete: public psyq::any_storage
 {
-    private: typedef any_holder self;            ///< thisが指す値の型。
-    public: typedef psyq::any_placeholder super; ///< self の上位型。
+    private: typedef concrete self;        ///< thisが指す値の型。
+    public: typedef psyq::any_storage super; ///< self の上位型。
 
     //-------------------------------------------------------------------------
-    public: typedef std::shared_ptr<self> shared_ptr; ///< self の保持子。
-    public: typedef std::weak_ptr<self>   weak_ptr;   ///< self の監視子。
+    /** @brief 格納する値の型。
 
-    /** @brief 格納できる値の型。const修飾子とvolatile修飾子は取り除かれる。
-        @warning 事前に psyq::any_rtti::make() でRTTIを構築してから使うこと。
+        - const修飾子とvolatile修飾子は取り除かれる。
+        - 構築と代入で、コピーかムーブができる必要がある。
      */
     public: typedef typename std::remove_cv<template_value>::type value_type;
 
@@ -183,28 +187,28 @@ class psyq::any_holder: public psyq::any_placeholder
     /** @brief 値をコピーして格納する。
         @param[in] in_value コピーする初期値。
      */
-    public: explicit PSYQ_CONSTEXPR any_holder(typename self::value_type const& in_value):
+    public: explicit PSYQ_CONSTEXPR concrete(typename self::value_type const& in_value):
         value(in_value)
     {}
 
     /** @brief 値をムーブして格納する。
         @param[in,out] io_value ムーブする初期値。
      */
-    public: explicit PSYQ_CONSTEXPR any_holder(typename self::value_type&& io_value):
+    public: explicit PSYQ_CONSTEXPR concrete(typename self::value_type&& io_value):
         value(std::move(io_value))
     {}
 
     /** @brief コピー構築子。
         @param[in] in_source コピー元となるインスタンス。
      */
-    public: PSYQ_CONSTEXPR any_holder(self const& in_source):
+    public: PSYQ_CONSTEXPR concrete(self const& in_source):
         value(in_source.value)
     {}
 
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
-    public: PSYQ_CONSTEXPR any_holder(self&& io_source):
+    public: PSYQ_CONSTEXPR concrete(self&& io_source):
         value(std::move(in_source.value))
     {}
 
@@ -282,24 +286,24 @@ namespace psyq
             PSYQ_ASSERT((psyq::any_rtti::make<class_b>()) != nullptr);
             PSYQ_ASSERT((psyq::any_rtti::make<class_ab, class_a>()) != nullptr);
 
-            psyq::any_placeholder::shared_ptr local_a(
-                new psyq::any_holder<class_a>(class_a()));
-            psyq::any_placeholder::shared_ptr local_b(
-                new psyq::any_holder<class_b>(class_b()));
+            std::shared_ptr<psyq::any_storage> local_a(
+                new psyq::any_storage::concrete<class_a>(class_a()));
+            std::shared_ptr<psyq::any_storage> local_b(
+                new psyq::any_storage::concrete<class_b>(class_b()));
             PSYQ_ASSERT(local_a->cast_pointer<class_a>() != nullptr);
             PSYQ_ASSERT(local_a->cast_pointer<class_a>() != nullptr);
             PSYQ_ASSERT(local_a->cast_pointer<class_b>() == nullptr);
             PSYQ_ASSERT(local_b->cast_pointer<class_b>() != nullptr);
 
-            psyq::any_placeholder::shared_ptr local_const_a(
-                new psyq::any_holder<class_a const>(class_a()));
+            std::shared_ptr<psyq::any_storage> local_const_a(
+                new psyq::any_storage::concrete<class_a const>(class_a()));
             PSYQ_ASSERT(local_const_a->cast_pointer<class_a>() == nullptr);
             PSYQ_ASSERT(local_const_a->cast_pointer<class_a const>() != nullptr);
             auto const& local_const_a_ref(*local_const_a);
             PSYQ_ASSERT(local_const_a_ref.cast_pointer<class_a>() != nullptr);
 
-            psyq::any_placeholder::shared_ptr local_ab(
-                new psyq::any_holder<class_ab>(class_ab()));
+            std::shared_ptr<psyq::any_storage> local_ab(
+                new psyq::any_storage::concrete<class_ab>(class_ab()));
             PSYQ_ASSERT(local_ab->cast_pointer<class_ab>() != nullptr);
             PSYQ_ASSERT(local_ab->cast_pointer<class_a>() != nullptr);
             PSYQ_ASSERT(local_ab->cast_pointer<class_b>() == nullptr);
@@ -307,4 +311,4 @@ namespace psyq
     }
 }
 
-#endif // !defined(PSYQ_ANY_HOLDER_HPP_)
+#endif // !defined(PSYQ_ANY_STORAGE_HPP_)

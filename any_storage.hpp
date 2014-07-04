@@ -40,10 +40,10 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 任意型の値を格納できるオブジェクトのインターフェイス。
+/** @brief 任意型の値を格納できるオブジェクトの抽象型。
 
     - psyq::any_storage::concrete インスタンスに任意型の値を格納し、
-      psyq::any_storage 経由のインターフェイスでアクセスする。
+      psyq::any_storage 経由のインタフェイスでアクセスする。
     - std::shared_ptr などのスマートポインタを経由して使うことを推奨する。
 
     使用例
@@ -165,7 +165,7 @@ class psyq::any_storage
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 任意型の値を格納するオブジェクトの実装。
+/** @brief 任意型の値を格納するオブジェクトの具象型。
     @tparam template_value
         @copydoc psyq::any_storage::concrete::value_type
  */
@@ -232,6 +232,7 @@ class psyq::any_storage::concrete: public psyq::any_storage
         return *this;
     }
 
+    //-------------------------------------------------------------------------
     public: psyq::any_rtti const* get_rtti() const override
     {
         return psyq::any_rtti::find<template_value>();
@@ -263,6 +264,7 @@ class psyq::any_storage::concrete: public psyq::any_storage
             &this->value: nullptr;
     }
 
+    //-------------------------------------------------------------------------
     public: typename self::value_type value; ///< 保持してる値。
 };
 
@@ -271,7 +273,7 @@ namespace psyq
 {
     namespace test
     {
-        inline void any_holder()
+        inline void any_storage()
         {
             struct int_object
             {

@@ -686,8 +686,8 @@ INPUT                  = \
                          ./string/string_table.hpp \
                          ./bit_algorithm.hpp \
                          ./fnv_hash.hpp \
-                         ./tiny_rtti.hpp \
-                         ./any.hpp \
+                         ./any_rtti.hpp \
+                         ./any_holder.hpp \
                          ./geometric_vector.hpp \
                          ./geometric_shape.hpp \
                          ./geometric_aabb.hpp \

@@ -41,45 +41,51 @@
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::tiny_rtti
+    @brief @copybrief psyq::any_rtti
  */
-#ifndef PSYQ_TINY_RTTI_HPP_
-#define PSYQ_TINY_RTTI_HPP_
+#ifndef PSYQ_ANY_RTTI_HPP_
+#define PSYQ_ANY_RTTI_HPP_
 
 //#include "psyq/assert.hpp"
 //#include "psyq/atomic_count.hpp"
 
-#ifndef PSYQ_TINY_RTTI_VOID_HASH
-#define PSYQ_TINY_RTTI_VOID_HASH\
-    (self::hash(1) << (sizeof(self::hash) * 8 - 1))
-#endif // !defined(PSYQ_TINY_RTTI_VOID_HASH)
+#ifndef PSYQ_ANY_RTTI_HASH_TYPE
+#define PSYQ_ANY_RTTI_HASH_TYPE std::size_t
+#endif // !defined(PSYQ_ANY_RTTI_HASH_TYPE)
+
+#ifndef PSYQ_ANY_RTTI_VOID_HASH
+#define PSYQ_ANY_RTTI_VOID_HASH (self::hash(1) << (sizeof(self::hash) * 8 - 1))
+#endif // !defined(PSYQ_ANY_RTTI_VOID_HASH)
 
 namespace psyq
 {
     /// @cond
-    class tiny_rtti;
+    class any_rtti;
     /// @endcond
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::type_info を使わない、簡易RTTI（実行時型情報）。
+/** @brief psyq::any_holder から使われる 簡易的なRTTI（実行時型情報）。
 
-    - psyq::tiny_rtti::make() で、型ごとに固有のRTTIを構築する。
-    - psyq::tiny_rtti::get() で、型ごとに固有のRTTIを取得する。
-    - psyq::tiny_rtti::get_hash() で、型ごとに固有の識別値を取得できる。
-    - psyq::tiny_rtti::find_base() で、基底型のRTTIを検索できる。
+    C++標準のRTTIを使わずに、RTTIの機能を実現する。
+
+    - psyq::any_rtti::make() で、型ごとに固有のRTTIを構築する。
+    - psyq::any_rtti::find() で、型ごとに固有のRTTIを取得する。
+    - psyq::any_rtti::find_hash() か psyq::any_rtti::get_hash() で、
+      型ごとに固有の識別値を取得できる。
+    - psyq::any_rtti::find_base() で、基底型のRTTIを検索できる。
+
+    @sa psyq::any_holder
  */
-class psyq::tiny_rtti
+class psyq::any_rtti
 {
-    private: typedef psyq::tiny_rtti self;
+    private: typedef psyq::any_rtti self; ///< thisが指す値の型。
 
-    public: typedef std::size_t hash; ///< 型の識別値。
+    //-------------------------------------------------------------------------
+    public: typedef PSYQ_ANY_RTTI_HASH_TYPE hash; ///< 型の識別値。
 
-    public: enum: self::hash
-    {
-        /// 空の識別値。
-        VOID_HASH = PSYQ_TINY_RTTI_VOID_HASH,
-    };
+    /// 空の識別値。
+    public: static self::hash const VOID_HASH = PSYQ_ANY_RTTI_VOID_HASH;
 
     static_assert(
         // 実行時に自動で割り当てる識別値の数が、1つ以上あること。
@@ -87,14 +93,15 @@ class psyq::tiny_rtti
         "There is no hash value to be assigned to the runtime.");
 
     //-------------------------------------------------------------------------
-    /** @brief RTTIインスタンスを構築する。
+    /** @brief RTTIを構築する。
 
         - RTTIのインスタンスの数は、1つの型につき1つ以下である。
         - RTTIのインスタンスは、関数内のstatic変数として構築する。
-          - 一度構築されたRTTIは、変更されない。
-          - main関数が終了するまで、RTTIは破棄されない。
-        - make<void>() はstatic_assertするため、
-          void型のRTTIは、あらかじめ用意されている。 get<void>() で取得できる。
+          - 構築したRTTIのインスタンスは、main関数を終了するまで変更されない。
+          - main関数の終了後、RTTIのインスタンスを参照してはならない。
+        - self::make<void>() はstatic_assertする。
+          void型のRTTIはあらかじめ用意されており、
+          self::find<void>() で取得できる。
 
         @note
             RTTIのインスタンスは、関数内のstatic変数として構築する。
@@ -104,10 +111,11 @@ class psyq::tiny_rtti
 
         @tparam template_type
             RTTIを構築する型。
-            - template_type のRTTIがすでに構築されてた場合は、
+            - template_type のRTTIインスタンスがすでに構築されてた場合は、
               RTTIの構築に失敗する。
         @tparam template_hash
-            RTTIを構築する型の識別値。構築後は、 get_hash() で取得できる。
+            RTTIを構築する型の識別値。
+            構築後は、 self::find_hash() か self::get_hash() で取得できる。
             - self::VOID_HASH より小さい値なら、任意の値を指定できる。
               - 同じ識別値がすでに使われていた場合は、RTTIの構築に失敗する。
             - self::VOID_HASH の場合は、型の識別値を実行時に自動で決定する。
@@ -115,8 +123,7 @@ class psyq::tiny_rtti
         @tparam template_super_type
             RTTIを構築する型の親型。
             - 親型がない場合は、voidを指定する。
-            - 親型のRTTIがまだ構築されてなかった場合は、
-              RTTIの構築に失敗する。
+            - 親型のRTTIがまだ構築されてなかった場合は、RTTIの構築に失敗する。
             - template_type が多重継承していて、
               template_super_type が2番目以降の親型だった場合は、
               RTTIの構築に失敗する。
@@ -124,9 +131,9 @@ class psyq::tiny_rtti
         @retval ==nullptr 失敗。RTTIを構築できなかった。
      */
     public: template<
-        typename    template_type,
-        std::size_t template_hash,
-        typename    template_super_type>
+        typename   template_type,
+        self::hash template_hash,
+        typename   template_super_type>
     static self const* make()
     {
         static_assert(
@@ -157,12 +164,12 @@ class psyq::tiny_rtti
             /// @note constexprが使えるなら、static_assertしたい。
             return nullptr;
         }
-        if (self::get<template_type>() != nullptr)
+        if (self::find<template_type>() != nullptr)
         {
             // template_type のRTTIは、すでに構築済みだった。
             return nullptr;
         }
-        auto const local_super_rtti(self::get<template_super_type>());
+        auto const local_super_rtti(self::find<template_super_type>());
         if (local_super_rtti == nullptr)
         {
             // 親型のRTTIが make() でまだ構築されてなかった。
@@ -186,7 +193,7 @@ class psyq::tiny_rtti
     }
 
     /// @copydoc make()
-    public: template<typename template_type, std::size_t template_hash>
+    public: template<typename template_type, self::hash template_hash>
     static self const* make()
     {
         return self::make<template_type, template_hash, void>();
@@ -202,24 +209,36 @@ class psyq::tiny_rtti
     /** @brief RTTIインスタンスを取得する。
         @tparam template_type RTTIを取得したい型。
         @retval !=nullptr 型ごとに固有のRTTI。
-        @retval ==nullptr make() で、RTTIがまだ構築されてなかった。
+        @retval ==nullptr self::make() で、RTTIがまだ構築されてなかった。
      */
     public: template<typename template_type>
-    static self const* get()
+    static self const* find()
     {
-        return self::get_static_rtti<template_type, self::VOID_HASH + 1>(
-            nullptr);
+        return self::get_static_rtti<template_type, self::VOID_HASH + 1>(nullptr);
+    }
+
+    /** @brief RTTIハッシュ値を取得する。
+        @tparam template_type RTTIハッシュ値を取得したい型。
+        @return 型ごとに固有のRTTIハッシュ値。
+     */
+    public: template<typename template_type>
+    static self::hash find_hash()
+    {
+        auto const local_rtti(self::find<template_type>());
+        return local_rtti != nullptr? local_rtti->get_hash(): self::VOID_HASH;
     }
 
     //-------------------------------------------------------------------------
     /** @brief 型の識別値を取得する。
+        @return 型の識別値。
      */
     public: self::hash get_hash() const PSYQ_NOEXCEPT
     {
         return this->hash_;
     }
 
-    /** @brief 型のバイトサイズを取得する。
+    /** @brief 型のバイト数を取得する。
+        @return 型の値のバイト数。
      */
     public: std::size_t get_size() const PSYQ_NOEXCEPT
     {
@@ -253,7 +272,7 @@ class psyq::tiny_rtti
         @param[in] in_super 初期化に使う、型の親型のRTTI。
         @return 型ごとに固有のRTTI。
      */
-    private: template<typename template_type, std::size_t template_hash>
+    private: template<typename template_type, self::hash template_hash>
     static self const* get_static_rtti(self const* const in_super)
     {
         typename std::remove_cv<template_type>::type* local_pointer(nullptr);
@@ -302,7 +321,7 @@ class psyq::tiny_rtti
         @retval true  すでに登録されている。
         @retval false まだ登録されてない。
      */
-    private: template<std::size_t template_hash>
+    private: template<self::hash template_hash>
     static bool find_rtti_list()
     {
         if (template_hash < self::VOID_HASH)
@@ -356,11 +375,11 @@ class psyq::tiny_rtti
     }
 
     //-------------------------------------------------------------------------
-    private: PSYQ_CONSTEXPR tiny_rtti() PSYQ_NOEXCEPT:
+    private: PSYQ_CONSTEXPR any_rtti() PSYQ_NOEXCEPT:
         next_(nullptr), super_(nullptr), hash_(self::VOID_HASH), size_(0)
     {}
 
-    private: tiny_rtti(
+    private: any_rtti(
         self const* const in_super,
         self::hash const  in_hash,
         std::size_t const in_size)
@@ -382,13 +401,19 @@ class psyq::tiny_rtti
         }
     }
 
-    private: tiny_rtti(self const&);// = delete;
+    private: any_rtti(self const&);// = delete;
+
+    private: ~any_rtti()
+    {
+        this->hash_ = self::VOID_HASH;
+        this->size_ = 0;
+    }
 
     //-------------------------------------------------------------------------
     private: self const* next_;  ///< RTTIリストの、次のRTTI。
     private: self const* super_; ///< 親型のRTTI。
     private: self::hash  hash_;  ///< 型の識別値。
-    private: std::size_t size_;  ///< 型のバイトサイズ。
+    private: std::size_t size_;  ///< 型のバイト数。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -396,7 +421,7 @@ namespace psyq
 {
     namespace test
     {
-        inline void tiny_rtti()
+        inline void any_rtti()
         {
             struct int_object
             {
@@ -408,31 +433,30 @@ namespace psyq
             struct class_ab: class_a, class_b {};
             struct class_ab_c: private class_ab {int_object c;};
 
-            PSYQ_ASSERT(psyq::tiny_rtti::get<class_a>() == nullptr);
-            PSYQ_ASSERT(psyq::tiny_rtti::make<class_a>() != nullptr);
-            PSYQ_ASSERT(psyq::tiny_rtti::get<class_a>() != nullptr);
+            PSYQ_ASSERT(psyq::any_rtti::find<class_a>() == nullptr);
+            PSYQ_ASSERT(psyq::any_rtti::make<class_a>() != nullptr);
+            PSYQ_ASSERT(psyq::any_rtti::find<class_a>() != nullptr);
 
-            PSYQ_ASSERT((psyq::tiny_rtti::make<class_a, 1000>()) == nullptr);
-            //PSYQ_ASSERT((psyq::tiny_rtti::make<class_a, class_b>()) == nullptr); // static_assert!
-            PSYQ_ASSERT((psyq::tiny_rtti::make<class_b, 1000>()) != nullptr);
-            PSYQ_ASSERT(psyq::tiny_rtti::make<class_b>() == nullptr);
-            PSYQ_ASSERT((psyq::tiny_rtti::make<class_ab, 1000, class_a>()) == nullptr);
-            PSYQ_ASSERT((psyq::tiny_rtti::make<class_ab, 1001, class_a>()) != nullptr);
+            PSYQ_ASSERT((psyq::any_rtti::make<class_a, 1000>()) == nullptr);
+            //PSYQ_ASSERT((psyq::any_rtti::make<class_a, class_b>()) == nullptr); // static_assert!
+            PSYQ_ASSERT((psyq::any_rtti::make<class_b, 1000>()) != nullptr);
+            PSYQ_ASSERT(psyq::any_rtti::make<class_b>() == nullptr);
+            PSYQ_ASSERT((psyq::any_rtti::make<class_ab, 1000, class_a>()) == nullptr);
+            PSYQ_ASSERT((psyq::any_rtti::make<class_ab, 1001, class_a>()) != nullptr);
 
-            PSYQ_ASSERT((psyq::tiny_rtti::make<class_ab, class_b>()) == nullptr);
-            //PSYQ_ASSERT((psyq::tiny_rtti::make<class_ab_c, class_ab>()) != nullptr); // compile error!
-            PSYQ_ASSERT(psyq::tiny_rtti::get<class_b>()->get_hash() == 1000);
-            PSYQ_ASSERT(psyq::tiny_rtti::get<class_ab>()->get_hash() == 1001);
-            PSYQ_ASSERT(psyq::tiny_rtti::get<class_ab>()->find_base(
-                psyq::tiny_rtti::get<class_a>()->get_hash()) != nullptr);
-            PSYQ_ASSERT(psyq::tiny_rtti::get<class_ab>()->find_base(
-                psyq::tiny_rtti::get<class_b>()->get_hash()) == nullptr);
-            PSYQ_ASSERT(psyq::tiny_rtti::get<class_ab>()->find_base(
-                psyq::tiny_rtti::get<class_ab>()->get_hash()) != nullptr);
-            PSYQ_ASSERT(psyq::tiny_rtti::get<class_a>()->find_base(
-                psyq::tiny_rtti::get<class_ab>()->get_hash()) == nullptr);
+            PSYQ_ASSERT((psyq::any_rtti::make<class_ab, class_b>()) == nullptr);
+            //PSYQ_ASSERT((psyq::any_rtti::make<class_ab_c, class_ab>()) != nullptr); // compile error!
+            PSYQ_ASSERT(psyq::any_rtti::find<class_b>()->get_hash() == 1000);
+            PSYQ_ASSERT(psyq::any_rtti::find<class_ab>()->get_hash() == 1001);
+            PSYQ_ASSERT(psyq::any_rtti::find<class_ab>()->find_base(
+                psyq::any_rtti::find<class_a>()->get_hash()) != nullptr);
+            PSYQ_ASSERT(psyq::any_rtti::find<class_ab>()->find_base(
+                psyq::any_rtti::find<class_b>()->get_hash()) == nullptr);
+            PSYQ_ASSERT(psyq::any_rtti::find<class_ab>()->find_base(
+                psyq::any_rtti::find<class_ab>()->get_hash()) != nullptr);
+            PSYQ_ASSERT(psyq::any_rtti::find<class_a>()->find_base(
+                psyq::any_rtti::find<class_ab>()->get_hash()) == nullptr);
         }
     }
 }
-
-#endif // !defined(PSYQ_TINY_RTTI_HPP_)
+#endif // !defined(PSYQ_ANY_RTTI_HPP_)

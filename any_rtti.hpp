@@ -49,13 +49,13 @@
 //#include "psyq/assert.hpp"
 //#include "psyq/atomic_count.hpp"
 
-#ifndef PSYQ_ANY_RTTI_HASH_TYPE
-#define PSYQ_ANY_RTTI_HASH_TYPE std::size_t
-#endif // !defined(PSYQ_ANY_RTTI_HASH_TYPE)
+#ifndef PSYQ_ANY_RTTI_KEY_TYPE
+#define PSYQ_ANY_RTTI_KEY_TYPE std::uint32_t
+#endif // !defined(PSYQ_ANY_RTTI_KEY_TYPE)
 
-#ifndef PSYQ_ANY_RTTI_VOID_HASH
-#define PSYQ_ANY_RTTI_VOID_HASH (self::hash(1) << (sizeof(self::hash) * 8 - 1))
-#endif // !defined(PSYQ_ANY_RTTI_VOID_HASH)
+#ifndef PSYQ_ANY_RTTI_VOID_KEY
+#define PSYQ_ANY_RTTI_VOID_KEY (self::key(1) << (sizeof(self::key) * 8 - 1))
+#endif // !defined(PSYQ_ANY_RTTI_VOID_KEY)
 
 namespace psyq
 {
@@ -71,7 +71,7 @@ namespace psyq
 
     - psyq::any_rtti::make() で、型ごとに固有のRTTIを構築する。
     - psyq::any_rtti::find() で、型ごとに固有のRTTIを取得する。
-    - psyq::any_rtti::find_hash() か psyq::any_rtti::get_hash() で、
+    - psyq::any_rtti::find_key() か psyq::any_rtti::get_key() で、
       型ごとに固有の識別値を取得できる。
     - psyq::any_rtti::find_base() で、基底型のRTTIを検索できる。
 
@@ -82,15 +82,14 @@ class psyq::any_rtti
     private: typedef psyq::any_rtti self; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
-    public: typedef PSYQ_ANY_RTTI_HASH_TYPE hash; ///< 型の識別値。
+    public: typedef PSYQ_ANY_RTTI_KEY_TYPE key; ///< 型の識別値。
 
     /// 空の識別値。
-    public: static self::hash const VOID_HASH = PSYQ_ANY_RTTI_VOID_HASH;
-
+    public: static self::key const VOID_KEY = PSYQ_ANY_RTTI_VOID_KEY;
     static_assert(
         // 実行時に自動で割り当てる識別値の数が、1つ以上あること。
-        self::VOID_HASH < self::hash(0) - 1,
-        "There is no hash value to be assigned to the runtime.");
+        self::VOID_KEY < self::key(0) - 1,
+        "There is no key value to be assigned to the runtime.");
 
     //-------------------------------------------------------------------------
     /** @brief RTTIを構築する。
@@ -113,13 +112,13 @@ class psyq::any_rtti
             RTTIを構築する型。
             - template_type のRTTIインスタンスがすでに構築されてた場合は、
               RTTIの構築に失敗する。
-        @tparam template_hash
+        @tparam template_key
             RTTIを構築する型の識別値。
-            構築後は、 self::find_hash() か self::get_hash() で取得できる。
-            - self::VOID_HASH より小さい値なら、任意の値を指定できる。
+            構築後は、 self::find_key() か self::get_key() で取得できる。
+            - self::VOID_KEY より小さい値なら、任意の値を指定できる。
               - 同じ識別値がすでに使われていた場合は、RTTIの構築に失敗する。
-            - self::VOID_HASH の場合は、型の識別値を実行時に自動で決定する。
-            - self::VOID_HASH より大きい値は、static_assertする。
+            - self::VOID_KEY の場合は、型の識別値を実行時に自動で決定する。
+            - self::VOID_KEY より大きい値は、static_assertする。
         @tparam template_super_type
             RTTIを構築する型の親型。
             - 親型がない場合は、voidを指定する。
@@ -131,15 +130,15 @@ class psyq::any_rtti
         @retval ==nullptr 失敗。RTTIを構築できなかった。
      */
     public: template<
-        typename   template_type,
-        self::hash template_hash,
-        typename   template_super_type>
+        typename  template_type,
+        self::key template_key,
+        typename  template_super_type>
     static self const* make()
     {
         static_assert(
-            // template_hash は、 self::VOID_HASH 以下であること。
-            template_hash <= self::VOID_HASH,
-            "'template_hash' is greater than 'self::VOID_HASH'.");
+            // template_key は、 self::VOID_KEY 以下であること。
+            template_key <= self::VOID_KEY,
+            "'template_key' is greater than 'self::VOID_KEY'.");
         static_assert(
             // template_type と template_super_type が異なる型であること。
             !std::is_same<
@@ -175,13 +174,13 @@ class psyq::any_rtti
             // 親型のRTTIが make() でまだ構築されてなかった。
             return nullptr;
         }
-        if (self::find_rtti_list<template_hash>())
+        if (self::find_rtti_list<template_key>())
         {
             // 同じ識別値がすでに使われていた。
             return nullptr;
         }
-        return self::get_static_rtti<template_type, template_hash>(
-            local_super_rtti->get_hash() != self::VOID_HASH?
+        return self::get_static_rtti<template_type, template_key>(
+            local_super_rtti->get_key() != self::VOID_KEY?
                 local_super_rtti: nullptr);
     }
 
@@ -189,21 +188,21 @@ class psyq::any_rtti
     public: template<typename template_type, typename template_super_type>
     static self const* make()
     {
-        return self::make<template_type, self::VOID_HASH, template_super_type>();
+        return self::make<template_type, self::VOID_KEY, template_super_type>();
     }
 
     /// @copydoc make()
-    public: template<typename template_type, self::hash template_hash>
+    public: template<typename template_type, self::key template_key>
     static self const* make()
     {
-        return self::make<template_type, template_hash, void>();
+        return self::make<template_type, template_key, void>();
     }
 
     /// @copydoc make()
     public: template<typename template_type>
     static self const* make()
     {
-        return self::make<template_type, self::VOID_HASH, void>();
+        return self::make<template_type, self::VOID_KEY, void>();
     }
 
     /** @brief RTTIインスタンスを取得する。
@@ -214,7 +213,7 @@ class psyq::any_rtti
     public: template<typename template_type>
     static self const* find()
     {
-        return self::get_static_rtti<template_type, self::VOID_HASH + 1>(nullptr);
+        return self::get_static_rtti<template_type, self::VOID_KEY + 1>(nullptr);
     }
 
     /** @brief RTTIハッシュ値を取得する。
@@ -222,19 +221,19 @@ class psyq::any_rtti
         @return 型ごとに固有のRTTIハッシュ値。
      */
     public: template<typename template_type>
-    static self::hash find_hash()
+    static self::key find_key()
     {
         auto const local_rtti(self::find<template_type>());
-        return local_rtti != nullptr? local_rtti->get_hash(): self::VOID_HASH;
+        return local_rtti != nullptr? local_rtti->get_key(): self::VOID_KEY;
     }
 
     //-------------------------------------------------------------------------
     /** @brief 型の識別値を取得する。
         @return 型の識別値。
      */
-    public: self::hash get_hash() const PSYQ_NOEXCEPT
+    public: self::key get_key() const PSYQ_NOEXCEPT
     {
-        return this->hash_;
+        return this->key_;
     }
 
     /** @brief 型のバイト数を取得する。
@@ -246,17 +245,17 @@ class psyq::any_rtti
     }
 
     /** @brief 基底型を検索する。
-        @param[in] in_base_hash 検索する基底型の識別値。
+        @param[in] in_base_key 検索する基底型の識別値。
         @retval !=nullptr 同じ型か基底型のRTTI。
         @retval ==nullptr 基底型には含まれず、同じ型でもなかった。
      */
-    public: self const* find_base(self::hash const in_base_hash)
+    public: self const* find_base(self::key const in_base_key)
     const PSYQ_NOEXCEPT
     {
         auto local_rtti(this);
         while (local_rtti != nullptr)
         {
-            if (local_rtti->get_hash() == in_base_hash)
+            if (local_rtti->get_key() == in_base_key)
             {
                 return local_rtti;
             }
@@ -268,31 +267,31 @@ class psyq::any_rtti
     //-------------------------------------------------------------------------
     /** @brief RTTIを取得する。
         @tparam template_type RTTIを取得する型。
-        @tparam template_hash RTTIを取得する型の識別値。
+        @tparam template_key RTTIを取得する型の識別値。
         @param[in] in_super 初期化に使う、型の親型のRTTI。
         @return 型ごとに固有のRTTI。
      */
-    private: template<typename template_type, self::hash template_hash>
+    private: template<typename template_type, self::key template_key>
     static self const* get_static_rtti(self const* const in_super)
     {
         typename std::remove_cv<template_type>::type* local_pointer(nullptr);
-        return self::get_static_rtti(in_super, template_hash, local_pointer);
+        return self::get_static_rtti(in_super, template_key, local_pointer);
     }
 
     /** @brief RTTIを取得する。
         @tparam template_type RTTIを取得したい型。
         @param[in] in_super 初期化に使う、型の親型のRTTI。
-        @param[in] in_hash  初期化に使う、型の識別値。
+        @param[in] in_key   初期化に使う、型の識別値。
         @return 型ごとに固有のRTTI。
      */
     private: template<typename template_type>
     static self const* get_static_rtti(
         self const* const in_super,
-        self::hash const  in_hash,
+        self::key const in_key,
         template_type*)
     {
         static bool static_make(false);
-        if (in_hash <= self::VOID_HASH)
+        if (in_key <= self::VOID_KEY)
         {
             static_make = true;
         }
@@ -300,7 +299,7 @@ class psyq::any_rtti
         {
             // このstatic変数を、RTTIインスタンスとして使う。
             static self const static_rtti(
-                in_super, in_hash, sizeof(template_type));
+                in_super, in_key, sizeof(template_type));
             return &static_rtti;
         }
         return nullptr;
@@ -310,26 +309,26 @@ class psyq::any_rtti
         @return void型のRTTI。
      */
     private: static self const* get_static_rtti(
-        self const* const, self::hash const, void*)
+        self const* const, self::key const, void*)
     {
         static self const static_node;
         return &static_node;
     }
 
     /** @brief 型識別値がすでに登録されているか判定する。
-        @tparam template_hash 検索する型識別値。
+        @tparam template_key 検索する型識別値。
         @retval true  すでに登録されている。
         @retval false まだ登録されてない。
      */
-    private: template<self::hash template_hash>
+    private: template<self::key template_key>
     static bool find_rtti_list()
     {
-        if (template_hash < self::VOID_HASH)
+        if (template_key < self::VOID_KEY)
         {
             auto local_rtti(self::get_list_begin());
             while (local_rtti != nullptr)
             {
-                if (template_hash == local_rtti->get_hash())
+                if (template_key == local_rtti->get_key())
                 {
                     return true;
                 }
@@ -365,38 +364,38 @@ class psyq::any_rtti
     /** @brief 型の識別値を追加する。
         @return 追加された型の識別値。
      */
-    private: static self::hash add_hash()
+    private: static self::key add_key()
     {
-        static psyq::atomic_count static_hash(self::VOID_HASH);
-        auto const local_hash(static_hash.add(1));
+        static psyq::atomic_count static_key(self::VOID_KEY);
+        auto const local_key(static_key.add(1));
         // 自動で決定する型の識別値をすべて使いきった場合にassertする。
-        PSYQ_ASSERT(self::VOID_HASH < local_hash);
-        return local_hash;
+        PSYQ_ASSERT(self::VOID_KEY < local_key);
+        return local_key;
     }
 
     //-------------------------------------------------------------------------
     private: PSYQ_CONSTEXPR any_rtti() PSYQ_NOEXCEPT:
-        next_(nullptr), super_(nullptr), hash_(self::VOID_HASH), size_(0)
+        next_(nullptr), super_(nullptr), key_(self::VOID_KEY), size_(0)
     {}
 
     private: any_rtti(
         self const* const in_super,
-        self::hash const  in_hash,
+        self::key const in_key,
         std::size_t const in_size)
     :
         super_(in_super),
         size_(in_size)
     {
-        if (in_hash < self::VOID_HASH)
+        if (in_key < self::VOID_KEY)
         {
             // 指定された型の識別値を使う。
-            this->hash_ = in_hash;
+            this->key_ = in_key;
             this->next_ = self::set_list_begin(*this);
         }
         else
         {
             // 型の識別値を自動決定する。
-            this->hash_ = self::add_hash();
+            this->key_ = self::add_key();
             this->next_ = nullptr;
         }
     }
@@ -405,14 +404,14 @@ class psyq::any_rtti
 
     private: ~any_rtti()
     {
-        this->hash_ = self::VOID_HASH;
+        this->key_ = self::VOID_KEY;
         this->size_ = 0;
     }
 
     //-------------------------------------------------------------------------
     private: self const* next_;  ///< RTTIリストの、次のRTTI。
     private: self const* super_; ///< 親型のRTTI。
-    private: self::hash  hash_;  ///< 型の識別値。
+    private: self::key key_;     ///< 型の識別値。
     private: std::size_t size_;  ///< 型のバイト数。
 };
 
@@ -446,16 +445,16 @@ namespace psyq
 
             PSYQ_ASSERT((psyq::any_rtti::make<class_ab, class_b>()) == nullptr);
             //PSYQ_ASSERT((psyq::any_rtti::make<class_ab_c, class_ab>()) != nullptr); // compile error!
-            PSYQ_ASSERT(psyq::any_rtti::find<class_b>()->get_hash() == 1000);
-            PSYQ_ASSERT(psyq::any_rtti::find<class_ab>()->get_hash() == 1001);
+            PSYQ_ASSERT(psyq::any_rtti::find<class_b>()->get_key() == 1000);
+            PSYQ_ASSERT(psyq::any_rtti::find<class_ab>()->get_key() == 1001);
             PSYQ_ASSERT(psyq::any_rtti::find<class_ab>()->find_base(
-                psyq::any_rtti::find<class_a>()->get_hash()) != nullptr);
+                psyq::any_rtti::find<class_a>()->get_key()) != nullptr);
             PSYQ_ASSERT(psyq::any_rtti::find<class_ab>()->find_base(
-                psyq::any_rtti::find<class_b>()->get_hash()) == nullptr);
+                psyq::any_rtti::find<class_b>()->get_key()) == nullptr);
             PSYQ_ASSERT(psyq::any_rtti::find<class_ab>()->find_base(
-                psyq::any_rtti::find<class_ab>()->get_hash()) != nullptr);
+                psyq::any_rtti::find<class_ab>()->get_key()) != nullptr);
             PSYQ_ASSERT(psyq::any_rtti::find<class_a>()->find_base(
-                psyq::any_rtti::find<class_ab>()->get_hash()) == nullptr);
+                psyq::any_rtti::find<class_ab>()->get_key()) == nullptr);
         }
     }
 }

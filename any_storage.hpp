@@ -40,7 +40,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 任意型の値を格納できるオブジェクトの抽象型。
+/** @brief 任意型の値が格納されているオブジェクトの抽象型。
 
     - psyq::any_storage::concrete インスタンスに任意型の値を格納し、
       psyq::any_storage 経由のインタフェイスでアクセスする。
@@ -52,8 +52,8 @@ namespace psyq
     // 事前に psyq::any_rtti::make() で、RTTIを構築しておく必要がある。
     psyq::any_rtti::make<int>();
     psyq::any_rtti::make<double>();
-    // psyq::any_storage のスマートポインタに、
-    // int型の値を格納可能な psyq::any_storage::concrete のインスタンスを代入する。
+    // psyq::any_storage のスマートポインタに、int型の値を格納可能な
+    // psyq::any_storage::concrete のインスタンスを代入する。
     std::shared_ptr<psyq::any_storage> local_any(
         new psyq::any_storage::concrete<int>(-12));
     PSYQ_ASSERT(local_any.get() != nullptr);
@@ -77,7 +77,7 @@ class psyq::any_storage
     private: typedef any_storage self; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
-    public: template<typename> class concrete;
+    public: template<typename template_value> class concrete;
 
     //-------------------------------------------------------------------------
     /// デフォルト構築子。
@@ -99,8 +99,8 @@ class psyq::any_storage
             *thisに格納されている値のポインタ型を、
             template_value のポインタ型にキャストできなかった。
         @warning
-            この関数を使用するより前に psyq::any_rtti::make() を一度呼び出し、
-            template_value 型のRTTIを構築しておく必要がある。
+            この関数を最初に使用する前に psyq::any_rtti::make() を呼び出し、
+            template_value 型と格納されている値のRTTIを構築しておく必要がある。
      */
     public: template<typename template_value>
     template_value* cast_pointer()
@@ -109,16 +109,16 @@ class psyq::any_storage
         if (local_rtti == nullptr)
         {
             // psyq::any_rtti::make() で、
-            // template_value のRTTIがまだ構築されてなかった。
+            // template_value 型のRTTIがまだ構築されてなかった。
             PSYQ_ASSERT(false);
             return nullptr;
         }
-        auto const local_hash(local_rtti->get_hash());
+        auto const local_key(local_rtti->get_key());
         return static_cast<template_value*>(
             /// @note static_ifを使いたい。
             std::is_const<template_value>::value?
-                const_cast<void*>(this->get_void_const_pointer(local_hash)):
-                this->get_void_pointer(local_hash));
+                const_cast<void*>(this->get_void_const_pointer(local_key)):
+                this->get_void_pointer(local_key));
     }
 
     /// @copydoc cast_pointer()
@@ -134,7 +134,7 @@ class psyq::any_storage
             return nullptr;
         }
         return static_cast<template_value const*>(
-            this->get_void_const_pointer(local_rtti->get_hash()));
+            this->get_void_const_pointer(local_rtti->get_key()));
     }
 
     //-------------------------------------------------------------------------
@@ -150,29 +150,28 @@ class psyq::any_storage
     public: virtual psyq::any_rtti const* get_rtti() const = 0;
 
     /** @brief 格納されている値へのポインタをキャストする。
-        @param[in] in_type_hash キャスト先の型の識別値。
+        @param[in] in_type_key キャスト先の型の識別値。
         @retval !=nullptr *thisに格納されている値へのポインタ。
         @retval ==nullptr
             *thisに格納されている値のポインタ型を、
             template_value のポインタ型にキャストできなかった。
      */
     protected: virtual void* get_void_pointer(
-        psyq::any_rtti::hash const in_type_hash) = 0;
+        psyq::any_rtti::key const in_type_key) = 0;
 
     /// @copydoc get_void_pointer()
     protected: virtual void const* get_void_const_pointer(
-        psyq::any_rtti::hash const in_type_hash) const = 0;
+        psyq::any_rtti::key const in_type_key) const = 0;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 任意型の値を格納するオブジェクトの具象型。
-    @tparam template_value
-        @copydoc psyq::any_storage::concrete::value_type
+/** @brief 任意型の値が実際に格納されているオブジェクトの具象型。
+    @tparam template_value @copydoc psyq::any_storage::concrete::value_type
  */
 template<typename template_value>
 class psyq::any_storage::concrete: public psyq::any_storage
 {
-    private: typedef concrete self;        ///< thisが指す値の型。
+    private: typedef concrete self;          ///< thisが指す値の型。
     public: typedef psyq::any_storage super; ///< self の上位型。
 
     //-------------------------------------------------------------------------
@@ -187,14 +186,18 @@ class psyq::any_storage::concrete: public psyq::any_storage
     /** @brief 値をコピーして格納する。
         @param[in] in_value コピーする初期値。
      */
-    public: explicit PSYQ_CONSTEXPR concrete(typename self::value_type const& in_value):
+    public: explicit PSYQ_CONSTEXPR concrete(
+        typename self::value_type const& in_value)
+    :
         value(in_value)
     {}
 
     /** @brief 値をムーブして格納する。
         @param[in,out] io_value ムーブする初期値。
      */
-    public: explicit PSYQ_CONSTEXPR concrete(typename self::value_type&& io_value):
+    public: explicit PSYQ_CONSTEXPR concrete(
+        typename self::value_type&& io_value)
+    :
         value(std::move(io_value))
     {}
 
@@ -239,17 +242,17 @@ class psyq::any_storage::concrete: public psyq::any_storage
     }
 
     protected: void* get_void_pointer(
-        psyq::any_rtti::hash const in_type_hash)
+        psyq::any_rtti::key const in_type_key)
     override
     {
         return std::is_const<template_value>::value?
             nullptr:
             const_cast<void*>(
-                this->self::get_void_const_pointer(in_type_hash));
+                this->self::get_void_const_pointer(in_type_key));
     }
 
     protected: void const* get_void_const_pointer(
-        psyq::any_rtti::hash const in_type_hash)
+        psyq::any_rtti::key const in_type_key)
     const override
     {
         auto const local_rtti(this->self::get_rtti());
@@ -260,7 +263,7 @@ class psyq::any_storage::concrete: public psyq::any_storage
             PSYQ_ASSERT(false);
             return nullptr;
         }
-        return local_rtti->find_base(in_type_hash) != nullptr?
+        return local_rtti->find_base(in_type_key) != nullptr?
             &this->value: nullptr;
     }
 

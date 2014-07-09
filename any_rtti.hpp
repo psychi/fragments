@@ -206,6 +206,7 @@ class psyq::any_rtti
         return self::make<template_type, psyq::ANY_RTTI_VOID_KEY, void>();
     }
 
+    //-------------------------------------------------------------------------
     /** @brief RTTIを取得する。
         @tparam template_type RTTIを取得したい型。
         @retval !=nullptr 型ごとに固有のRTTI。
@@ -227,7 +228,7 @@ class psyq::any_rtti
      */
     public: static self const* find(psyq::any_rtti_key const in_key)
     {
-        // 単方向リストから同じ識別値のRTTIを検索する。
+        // RTTI単方向リストから同じ識別値のRTTIを検索する。
         for (
             auto local_rtti(self::get_list_begin());
             local_rtti != nullptr;
@@ -241,6 +242,7 @@ class psyq::any_rtti
         return nullptr;
     }
 
+    //-------------------------------------------------------------------------
     /** @brief RTTI識別値を取得する。
         @tparam template_type RTTI識別値を取得したい型。
         @retval !=psyq::ANY_RTTI_VOID_KEY 型ごとに固有のRTTI識別値。
@@ -254,7 +256,6 @@ class psyq::any_rtti
             local_rtti->get_key(): psyq::ANY_RTTI_VOID_KEY;
     }
 
-    //-------------------------------------------------------------------------
     /** @brief RTTI識別値を取得する。
         @return 型のRTTI識別値。
      */
@@ -263,8 +264,20 @@ class psyq::any_rtti
         return this->key_;
     }
 
-    /** @brief 型のバイト数を取得する。
-        @return 型の値のバイト数。
+    /** @brief 型の値のバイトサイズを取得する。
+        @tparam template_type バイトサイズを取得したい型。
+        @retval 正の数 型の値のバイトサイズ。
+        @retval 0以下  self::make() で、RTTIがまだ構築されてなかった。
+     */
+    public: template<typename template_type>
+    static std::size_t find_size()
+    {
+        auto const local_rtti(self::find<template_type>());
+        return local_rtti != nullptr? local_rtti->get_size(): 0;
+    }
+
+    /** @brief 型のバイトサイズを取得する。
+        @return 型の値のバイトサイズ。
      */
     public: std::size_t get_size() const PSYQ_NOEXCEPT
     {
@@ -279,16 +292,31 @@ class psyq::any_rtti
     public: self const* find_base(psyq::any_rtti_key const in_base_key)
     const PSYQ_NOEXCEPT
     {
-        auto local_rtti(this);
-        while (local_rtti != nullptr)
+        for (
+            auto local_rtti(this);
+            local_rtti != nullptr;
+            local_rtti = local_rtti->super_)
         {
             if (local_rtti->get_key() == in_base_key)
             {
                 return local_rtti;
             }
-            local_rtti = local_rtti->super_;
         }
         return nullptr;
+    }
+
+    /** @brief 基底型を検索する。
+        @param[in] in_derived_rtti 検索の基準となる派生型のRTTI。
+        @param[in] in_base_key     検索する基底型のRTTI識別値。
+        @retval !=nullptr 同じ型か基底型のRTTI。
+        @retval ==nullptr 基底型には含まれず、同じ型でもなかった。
+     */
+    public: static self const* find_base(
+        self const* const        in_derived_rtti,
+        psyq::any_rtti_key const in_base_key)
+    {
+        return in_derived_rtti != nullptr?
+            in_derived_rtti->find_base(in_base_key): nullptr;
     }
 
     //-------------------------------------------------------------------------

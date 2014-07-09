@@ -43,8 +43,8 @@ namespace psyq
 /** @brief 任意型の値が格納されているオブジェクトの抽象型。
 
     - psyq::any_storage::concrete インスタンスに任意型の値を格納し、
-      psyq::any_storage 経由のインタフェイスでアクセスする。
-    - std::shared_ptr などのスマートポインタを経由して使うことを推奨する。
+      psyq::any_storage::cast_pointer() で格納されている値のポインタを取得する。
+    - std::shared_ptr などのスマートポインタを介した使用を推奨する。
 
     使用例
     @code
@@ -157,11 +157,11 @@ class psyq::any_storage
             template_value のポインタ型にキャストできなかった。
      */
     protected: virtual void* get_void_pointer(
-        psyq::any_rtti::key const in_type_key) = 0;
+        psyq::any_rtti_key const in_type_key) = 0;
 
     /// @copydoc get_void_pointer()
     protected: virtual void const* get_void_const_pointer(
-        psyq::any_rtti::key const in_type_key) const = 0;
+        psyq::any_rtti_key const in_type_key) const = 0;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -242,7 +242,7 @@ class psyq::any_storage::concrete: public psyq::any_storage
     }
 
     protected: void* get_void_pointer(
-        psyq::any_rtti::key const in_type_key)
+        psyq::any_rtti_key const in_type_key)
     override
     {
         return std::is_const<template_value>::value?
@@ -252,7 +252,7 @@ class psyq::any_storage::concrete: public psyq::any_storage
     }
 
     protected: void const* get_void_const_pointer(
-        psyq::any_rtti::key const in_type_key)
+        psyq::any_rtti_key const in_type_key)
     const override
     {
         auto const local_rtti(this->self::get_rtti());

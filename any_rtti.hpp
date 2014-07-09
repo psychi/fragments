@@ -54,11 +54,21 @@
 #endif // !defined(PSYQ_ANY_RTTI_KEY_TYPE)
 
 #ifndef PSYQ_ANY_RTTI_VOID_KEY
-#define PSYQ_ANY_RTTI_VOID_KEY (self::key(1) << (sizeof(self::key) * 8 - 1))
+#define PSYQ_ANY_RTTI_VOID_KEY (any_rtti_key(1) << (sizeof(any_rtti_key) * 8 - 1))
 #endif // !defined(PSYQ_ANY_RTTI_VOID_KEY)
 
 namespace psyq
 {
+    /// RTTI識別値。
+    typedef PSYQ_ANY_RTTI_KEY_TYPE any_rtti_key;
+
+    /// void型のRTTI識別値。
+    static any_rtti_key const ANY_RTTI_VOID_KEY = PSYQ_ANY_RTTI_VOID_KEY;
+    static_assert(
+        // 実行時に自動で割り当てる識別値の数が、1つ以上あること。
+        PSYQ_ANY_RTTI_VOID_KEY < psyq::any_rtti_key(0) - 1,
+        "There is no key value to be assigned to the runtime.");
+
     /// @cond
     class any_rtti;
     /// @endcond
@@ -72,7 +82,7 @@ namespace psyq
     - psyq::any_rtti::make() で、型ごとに固有のRTTIを構築する。
     - psyq::any_rtti::find() で、型ごとに固有のRTTIを取得する。
     - psyq::any_rtti::find_key() か psyq::any_rtti::get_key() で、
-      型ごとに固有の識別値を取得できる。
+      型ごとに固有のRTTI識別値を取得できる。
     - psyq::any_rtti::find_base() で、基底型のRTTIを検索できる。
 
     @sa psyq::any_storage
@@ -80,16 +90,6 @@ namespace psyq
 class psyq::any_rtti
 {
     private: typedef psyq::any_rtti self; ///< thisが指す値の型。
-
-    //-------------------------------------------------------------------------
-    public: typedef PSYQ_ANY_RTTI_KEY_TYPE key; ///< 型の識別値。
-
-    /// 空の識別値。
-    public: static self::key const VOID_KEY = PSYQ_ANY_RTTI_VOID_KEY;
-    static_assert(
-        // 実行時に自動で割り当てる識別値の数が、1つ以上あること。
-        self::VOID_KEY < self::key(0) - 1,
-        "There is no key value to be assigned to the runtime.");
 
     //-------------------------------------------------------------------------
     /** @brief RTTIを構築する。
@@ -113,12 +113,12 @@ class psyq::any_rtti
             - template_type のRTTIインスタンスがすでに構築されてた場合は、
               RTTIの構築に失敗する。
         @tparam template_key
-            RTTIを構築する型の識別値。
+            構築するRTTIの識別値。
             構築後は、 self::find_key() か self::get_key() で取得できる。
-            - self::VOID_KEY より小さい値なら、任意の値を指定できる。
+            - psyq::ANY_RTTI_VOID_KEY より小さい値なら、任意の値を指定できる。
               - 同じ識別値がすでに使われていた場合は、RTTIの構築に失敗する。
-            - self::VOID_KEY の場合は、型の識別値を実行時に自動で決定する。
-            - self::VOID_KEY より大きい値は、static_assertする。
+            - psyq::ANY_RTTI_VOID_KEY の場合は、RTTI識別値を実行時に自動で決定する。
+            - psyq::ANY_RTTI_VOID_KEY より大きい値は、static_assertする。
         @tparam template_super_type
             RTTIを構築する型の親型。
             - 親型がない場合は、voidを指定する。
@@ -130,15 +130,15 @@ class psyq::any_rtti
         @retval ==nullptr 失敗。RTTIを構築できなかった。
      */
     public: template<
-        typename  template_type,
-        self::key template_key,
-        typename  template_super_type>
+        typename           template_type,
+        psyq::any_rtti_key template_key,
+        typename           template_super_type>
     static self const* make()
     {
         static_assert(
-            // template_key は、 self::VOID_KEY 以下であること。
-            template_key <= self::VOID_KEY,
-            "'template_key' is greater than 'self::VOID_KEY'.");
+            // template_key は、 psyq::ANY_RTTI_VOID_KEY 以下であること。
+            template_key <= psyq::ANY_RTTI_VOID_KEY,
+            "'template_key' is greater than 'psyq::ANY_RTTI_VOID_KEY'.");
         static_assert(
             // template_type と template_super_type が異なる型であること。
             !std::is_same<
@@ -174,13 +174,14 @@ class psyq::any_rtti
             // 親型のRTTIが make() でまだ構築されてなかった。
             return nullptr;
         }
-        if (self::find_rtti_list<template_key>())
+        if (template_key < psyq::ANY_RTTI_VOID_KEY
+            && self::find(template_key) != nullptr)
         {
             // 同じ識別値がすでに使われていた。
             return nullptr;
         }
         return self::get_static_rtti<template_type, template_key>(
-            local_super_rtti->get_key() != self::VOID_KEY?
+            local_super_rtti->get_key() != psyq::ANY_RTTI_VOID_KEY?
                 local_super_rtti: nullptr);
     }
 
@@ -188,11 +189,11 @@ class psyq::any_rtti
     public: template<typename template_type, typename template_super_type>
     static self const* make()
     {
-        return self::make<template_type, self::VOID_KEY, template_super_type>();
+        return self::make<template_type, psyq::ANY_RTTI_VOID_KEY, template_super_type>();
     }
 
     /// @copydoc make()
-    public: template<typename template_type, self::key template_key>
+    public: template<typename template_type, psyq::any_rtti_key template_key>
     static self const* make()
     {
         return self::make<template_type, template_key, void>();
@@ -202,10 +203,10 @@ class psyq::any_rtti
     public: template<typename template_type>
     static self const* make()
     {
-        return self::make<template_type, self::VOID_KEY, void>();
+        return self::make<template_type, psyq::ANY_RTTI_VOID_KEY, void>();
     }
 
-    /** @brief RTTIインスタンスを取得する。
+    /** @brief RTTIを取得する。
         @tparam template_type RTTIを取得したい型。
         @retval !=nullptr 型ごとに固有のRTTI。
         @retval ==nullptr self::make() で、RTTIがまだ構築されてなかった。
@@ -213,25 +214,51 @@ class psyq::any_rtti
     public: template<typename template_type>
     static self const* find()
     {
-        return self::get_static_rtti<template_type, self::VOID_KEY + 1>(nullptr);
+        return self::get_static_rtti<template_type, psyq::ANY_RTTI_VOID_KEY + 1>(nullptr);
     }
 
-    /** @brief RTTIハッシュ値を取得する。
-        @tparam template_type RTTIハッシュ値を取得したい型。
-        @return 型ごとに固有のRTTIハッシュ値。
+    /** @brief RTTIを取得する。
+        @param[in] in_key 取得したい型のRTTI識別値。
+        @retval !=nullptr 型ごとに固有のRTTI。
+        @retval ==nullptr self::make() で、RTTIがまだ構築されてなかった。
+        @note
+            今のところRTTIコンテナは単方向リストで実装しているが、
+            赤黒木などで実装しなおして高速化したい。
+     */
+    public: static self const* find(psyq::any_rtti_key const in_key)
+    {
+        // 単方向リストから同じ識別値のRTTIを検索する。
+        for (
+            auto local_rtti(self::get_list_begin());
+            local_rtti != nullptr;
+            local_rtti = local_rtti->next_)
+        {
+            if (in_key == local_rtti->get_key())
+            {
+                return local_rtti;
+            }
+        }
+        return nullptr;
+    }
+
+    /** @brief RTTI識別値を取得する。
+        @tparam template_type RTTI識別値を取得したい型。
+        @retval !=psyq::ANY_RTTI_VOID_KEY 型ごとに固有のRTTI識別値。
+        @retval ==psyq::ANY_RTTI_VOID_KEY self::make() で、RTTIがまだ構築されてなかった。
      */
     public: template<typename template_type>
-    static self::key find_key()
+    static psyq::any_rtti_key find_key()
     {
         auto const local_rtti(self::find<template_type>());
-        return local_rtti != nullptr? local_rtti->get_key(): self::VOID_KEY;
+        return local_rtti != nullptr?
+            local_rtti->get_key(): psyq::ANY_RTTI_VOID_KEY;
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 型の識別値を取得する。
-        @return 型の識別値。
+    /** @brief RTTI識別値を取得する。
+        @return 型のRTTI識別値。
      */
-    public: self::key get_key() const PSYQ_NOEXCEPT
+    public: psyq::any_rtti_key get_key() const PSYQ_NOEXCEPT
     {
         return this->key_;
     }
@@ -245,11 +272,11 @@ class psyq::any_rtti
     }
 
     /** @brief 基底型を検索する。
-        @param[in] in_base_key 検索する基底型の識別値。
+        @param[in] in_base_key 検索する基底型のRTTI識別値。
         @retval !=nullptr 同じ型か基底型のRTTI。
         @retval ==nullptr 基底型には含まれず、同じ型でもなかった。
      */
-    public: self const* find_base(self::key const in_base_key)
+    public: self const* find_base(psyq::any_rtti_key const in_base_key)
     const PSYQ_NOEXCEPT
     {
         auto local_rtti(this);
@@ -267,39 +294,38 @@ class psyq::any_rtti
     //-------------------------------------------------------------------------
     /** @brief RTTIを取得する。
         @tparam template_type RTTIを取得する型。
-        @tparam template_key RTTIを取得する型の識別値。
+        @tparam template_key  取得する型のRTTI識別値。
         @param[in] in_super 初期化に使う、型の親型のRTTI。
         @return 型ごとに固有のRTTI。
      */
-    private: template<typename template_type, self::key template_key>
+    private: template<typename template_type, psyq::any_rtti_key template_key>
     static self const* get_static_rtti(self const* const in_super)
     {
-        typename std::remove_cv<template_type>::type* local_pointer(nullptr);
+        typename std::remove_cv<template_type>::type* const local_pointer(nullptr);
         return self::get_static_rtti(in_super, template_key, local_pointer);
     }
 
     /** @brief RTTIを取得する。
         @tparam template_type RTTIを取得したい型。
         @param[in] in_super 初期化に使う、型の親型のRTTI。
-        @param[in] in_key   初期化に使う、型の識別値。
+        @param[in] in_key   初期化に使う、RTTI識別値。
         @return 型ごとに固有のRTTI。
      */
     private: template<typename template_type>
     static self const* get_static_rtti(
         self const* const in_super,
-        self::key const in_key,
+        psyq::any_rtti_key const in_key,
         template_type*)
     {
         static bool static_make(false);
-        if (in_key <= self::VOID_KEY)
+        if (in_key <= psyq::ANY_RTTI_VOID_KEY)
         {
             static_make = true;
         }
         if (static_make)
         {
             // このstatic変数を、RTTIインスタンスとして使う。
-            static self const static_rtti(
-                in_super, in_key, sizeof(template_type));
+            static self const static_rtti(in_super, in_key, sizeof(template_type));
             return &static_rtti;
         }
         return nullptr;
@@ -309,110 +335,77 @@ class psyq::any_rtti
         @return void型のRTTI。
      */
     private: static self const* get_static_rtti(
-        self const* const, self::key const, void*)
+        self const* const, psyq::any_rtti_key const, void*)
     {
         static self const static_node;
         return &static_node;
-    }
-
-    /** @brief 型識別値がすでに登録されているか判定する。
-        @tparam template_key 検索する型識別値。
-        @retval true  すでに登録されている。
-        @retval false まだ登録されてない。
-     */
-    private: template<self::key template_key>
-    static bool find_rtti_list()
-    {
-        if (template_key < self::VOID_KEY)
-        {
-            auto local_rtti(self::get_list_begin());
-            while (local_rtti != nullptr)
-            {
-                if (template_key == local_rtti->get_key())
-                {
-                    return true;
-                }
-                local_rtti = local_rtti->next_;
-            }
-        }
-        return false;
     }
 
     /** @brief RTTIリストの先頭RTTIを取得する。
      */
     private: static self const*& get_list_begin()
     {
-        static self const* static_list_begin(nullptr);
+        static self const* static_list_begin(
+            self::get_static_rtti(
+                nullptr, psyq::ANY_RTTI_VOID_KEY, static_cast<void*>(nullptr)));
         return static_list_begin;
     }
 
-    /** @brief RTTIリストの先頭を設定する。
-        @param[in] in_new_begin 新たにリストの先頭とするRTTI。
-        @return 直前までリストの先頭だったRTTI。
+    /** @brief RTTI識別値を追加する。
+        @return 追加された型のRTTI識別値。
      */
-    private: static self const* set_list_begin(self const& in_new_begin)
+    private: static psyq::any_rtti_key add_key()
     {
-        /** @todo
-            複数スレッドからひとつの変数を書き換える可能性があるので、
-            スレッドーセーフにすること。
-         */
-        auto const local_last_begin(self::get_list_begin());
-        self::get_list_begin() = &in_new_begin;
-        return local_last_begin;
-    }
-
-    /** @brief 型の識別値を追加する。
-        @return 追加された型の識別値。
-     */
-    private: static self::key add_key()
-    {
-        static psyq::atomic_count static_key(self::VOID_KEY);
+        static psyq::atomic_count static_key(psyq::ANY_RTTI_VOID_KEY);
         auto const local_key(static_key.add(1));
-        // 自動で決定する型の識別値をすべて使いきった場合にassertする。
-        PSYQ_ASSERT(self::VOID_KEY < local_key);
+        // 自動で決定する識別値をすべて使いきった場合にassertする。
+        PSYQ_ASSERT(psyq::ANY_RTTI_VOID_KEY < local_key);
         return local_key;
     }
 
     //-------------------------------------------------------------------------
+    /// void型のRTTIを構築する。
     private: PSYQ_CONSTEXPR any_rtti() PSYQ_NOEXCEPT:
-        next_(nullptr), super_(nullptr), key_(self::VOID_KEY), size_(0)
+        next_(nullptr), super_(nullptr), key_(psyq::ANY_RTTI_VOID_KEY), size_(0)
     {}
 
+    /** @brief RTTIを構築する。
+        @param[in] in_super 親型のRTTI。
+        @param[in] in_key   RTTI識別値。
+        @param[in] in_size  型の値のバイトサイズ。
+     */
     private: any_rtti(
-        self const* const in_super,
-        self::key const in_key,
-        std::size_t const in_size)
+        self const* const        in_super,
+        psyq::any_rtti_key const in_key,
+        std::size_t const        in_size)
     :
         super_(in_super),
+        key_(in_key < psyq::ANY_RTTI_VOID_KEY? in_key: self::add_key()),
         size_(in_size)
     {
-        if (in_key < self::VOID_KEY)
-        {
-            // 指定された型の識別値を使う。
-            this->key_ = in_key;
-            this->next_ = self::set_list_begin(*this);
-        }
-        else
-        {
-            // 型の識別値を自動決定する。
-            this->key_ = self::add_key();
-            this->next_ = nullptr;
-        }
+        // RTTIリストの先頭に挿入する。
+        /** @todo
+            複数スレッドから get_list_begin() を書き換える可能性があるので、
+            スレッドーセーフにすること。
+         */
+        this->next_ = self::get_list_begin();
+        self::get_list_begin() = this;
     }
 
+    /// copy構築子は使用禁止。
     private: any_rtti(self const&);// = delete;
 
     private: ~any_rtti()
     {
-        this->key_ = self::VOID_KEY;
+        this->key_ = psyq::ANY_RTTI_VOID_KEY;
         this->size_ = 0;
     }
 
     //-------------------------------------------------------------------------
-    private: self const* next_;  ///< RTTIリストの、次のRTTI。
-    private: self const* super_; ///< 親型のRTTI。
-    private: self::key key_;     ///< 型の識別値。
-    private: std::size_t size_;  ///< 型のバイト数。
+    private: self const*        next_;  ///< RTTIリストの、次のRTTI。
+    private: self const*        super_; ///< 親型のRTTI。
+    private: psyq::any_rtti_key key_;   ///< RTTI識別値。
+    private: std::size_t        size_;  ///< 型の値のバイトサイズ。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

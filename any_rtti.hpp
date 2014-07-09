@@ -207,6 +207,43 @@ class psyq::any_rtti
     }
 
     //-------------------------------------------------------------------------
+    /** @brief RTTIを用意する。
+        @tparam template_type RTTIを用意したい型。
+        @retval !=nullptr 型ごとに固有のRTTI。
+        @retval ==nullptr RTTIの用意に失敗した。
+        @note
+            ユーザーが明示的にRTTIを構築しないと、
+            間違う可能性が高まりそうなので、privateにしておく。
+     */
+    private: template<typename template_type>
+    static self const* equip_value()
+    {
+        auto local_rtti(psyq::any_rtti::find_value<template_type>());
+        if (local_rtti == nullptr)
+        {
+            local_rtti = psyq::any_rtti::make_value<template_type>();
+            PSYQ_ASSERT(local_rtti != nullptr);
+        }
+        return local_rtti;
+    }
+
+    /** @brief RTTIを用意し、RTTI識別値を取得する。
+        @tparam template_type RTTIを用意したい型。
+        @retval !=psyq::ANY_RTTI_VOID_KEY 型ごとに固有のRTTI識別値。
+        @retval ==psyq::ANY_RTTI_VOID_KEY RTTIの用意に失敗した。
+        @note
+            ユーザーが明示的にRTTIを構築しないと、
+            間違う可能性が高まりそうなので、privateにしておく。
+     */
+    private: template<typename template_type>
+    static psyq::any_rtti_key equip_key()
+    {
+        auto const local_rtti(self::equip_value<template_type>());
+        return local_rtti != nullptr?
+            local_rtti->get_key(): psyq::ANY_RTTI_VOID_KEY;
+    }
+
+    //-------------------------------------------------------------------------
     /** @brief RTTIを取得する。
         @tparam template_type RTTIを取得したい型。
         @retval !=nullptr 型ごとに固有のRTTI。

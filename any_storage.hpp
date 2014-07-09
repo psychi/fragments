@@ -36,6 +36,7 @@ namespace psyq
 {
     /// @cond
     class any_storage;
+    class any_static_storage;
     /// @endcond
 }
 
@@ -270,6 +271,130 @@ class psyq::any_storage::concrete: public psyq::any_storage
     //-------------------------------------------------------------------------
     public: typename self::value_type value; ///< 保持してる値。
 };
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+#if 0
+class psyq::any_static_storage
+{
+    private: typedef any_static_storage self;
+
+    //-------------------------------------------------------------------------
+    public: template<typename template_value> class concrete;
+
+    //-------------------------------------------------------------------------
+    /** @brief 格納されている値へのポインタを、キャストして取得する。
+        @tparam template_value キャストして取得するポインタが指す値の型。
+        @retval !=nullptr *thisに格納されている値へのポインタ。
+        @retval ==nullptr
+            *thisに格納されている値のポインタ型を、
+            template_value のポインタ型にキャストできなかった。
+     */
+    public: template<typename template_value>
+    template_value* cast_pointer()
+    {
+        auto const local_rtti(psyq::any_rtti::equip_value<template_value>());
+        if (local_rtti == nullptr)
+        {
+            PSYQ_ASSERT(false);
+            return nullptr;
+        }
+        auto const local_key(local_rtti->get_key());
+        return static_cast<template_value*>(
+            /// @note static_ifを使いたい。
+            std::is_const<template_value>::value?
+                const_cast<void*>(this->get_void_const_pointer(local_key)):
+                std::is_const<template_value>::value?
+                    nullptr:
+                    const_cast<void*>(this->get_void_const_pointer(in_type_key)));
+    }
+
+    /// @copydoc cast_pointer()
+    public: template<typename template_value>
+    template_value const* cast_pointer() const
+    {
+        auto const local_rtti(psyq::any_rtti::equip_value<template_value>());
+        if (local_rtti == nullptr)
+        {
+            PSYQ_ASSERT(false);
+            return nullptr;
+        }
+        return static_cast<template_value const*>(
+            this->get_void_const_pointer(local_rtti->get_key()));
+    }
+
+    //-------------------------------------------------------------------------
+    public: psyq::any_rtti_key get_rtti_key() const PSYQ_NOEXCEPT
+    {
+        return this->rtti_key_;
+    }
+
+    private: void const* get_void_const_pointer(
+        psyq::any_rtti_key const in_type_key)
+    const
+    {
+        if (this->body_offset_ <= 0)
+        {
+            return nullptr;
+        }
+        auto const local_rtti(psyq::any_rtti::find_value(this->get_rtti_key()));
+        if (local_rtti == nullptr)
+        {
+            PSYQ_ASSERT(false);
+            return nullptr;
+        }
+        return local_rtti->find_base(in_type_key) != nullptr?
+            reinterpret_cast<char const*>(this) + this->body_offset_:
+            nullptr;
+    }
+
+    //-------------------------------------------------------------------------
+    protected: any_static_storage(
+        psyq::any_rtti_key const in_rtti_key,
+        void const* const        in_body)
+    :
+        rtti_key_(in_rtti_key)
+    {}
+
+    /// copy構築子は使用禁止。
+    private: any_static_storage(self const&);
+    /// copy代入演算子は使用禁止。
+    private: self& operator=(self const&);
+
+    //-------------------------------------------------------------------------
+    private: psyq::any_rtti_key rtti_key_;
+    private: std::uint32_t      body_offset_;
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template<typename template_value>
+psyq::any_static_storage::concrete: public psyq::any_static_storage
+{
+    private: typedef concrete self; ///< thisが指す値の型。
+    public: typedef psyq::any_static_storage super; ///< self の上位型。
+
+    //-------------------------------------------------------------------------
+    /** @brief 格納する値の型。
+
+        - const修飾子とvolatile修飾子は取り除かれる。
+        - 構築と代入で、コピーかムーブができる必要がある。
+     */
+    public: typedef typename std::remove_cv<template_value>::type value_type;
+
+    //-------------------------------------------------------------------------
+    public: explicit concrete(typename self::value_type const& in_value):
+        super(psyq::any_rtti::equip_key<template_value>(), &value_),
+        value_(in_value)
+    {}
+
+    public: explicit concrete(typename self::value_type&& in_value):
+        super(psyq::any_rtti::equip_key<template_value>(), &value_),
+        value_(std::move(in_value))
+    {}
+
+    //-------------------------------------------------------------------------
+    private: typename self::value_type value_;
+};
+#endif // 0
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq

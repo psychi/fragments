@@ -50,8 +50,8 @@ namespace psyq
     @code
     // psyq::any_storage::concrete に格納する値の型は、
     // 事前に psyq::any_rtti::make() で、RTTIを構築しておく必要がある。
-    psyq::any_rtti::make<int>();
-    psyq::any_rtti::make<double>();
+    psyq::any_rtti::make_value<int>();
+    psyq::any_rtti::make_value<double>();
     // psyq::any_storage のスマートポインタに、int型の値を格納可能な
     // psyq::any_storage::concrete のインスタンスを代入する。
     std::shared_ptr<psyq::any_storage> local_any(
@@ -105,7 +105,7 @@ class psyq::any_storage
     public: template<typename template_value>
     template_value* cast_pointer()
     {
-        auto const local_rtti(psyq::any_rtti::find<template_value>());
+        auto const local_rtti(psyq::any_rtti::find_value<template_value>());
         if (local_rtti == nullptr)
         {
             // psyq::any_rtti::make() で、
@@ -125,7 +125,7 @@ class psyq::any_storage
     public: template<typename template_value>
     template_value const* cast_pointer() const
     {
-        auto const local_rtti(psyq::any_rtti::find<template_value>());
+        auto const local_rtti(psyq::any_rtti::find_value<template_value>());
         if (local_rtti == nullptr)
         {
             // psyq::any_rtti::make() で、
@@ -238,7 +238,7 @@ class psyq::any_storage::concrete: public psyq::any_storage
     //-------------------------------------------------------------------------
     public: psyq::any_rtti const* get_rtti() const override
     {
-        return psyq::any_rtti::find<template_value>();
+        return psyq::any_rtti::find_value<template_value>();
     }
 
     protected: void* get_void_pointer(
@@ -287,9 +287,9 @@ namespace psyq
             struct class_b {int_object b;};
             struct class_ab: class_a, class_b {int_object ab;};
 
-            PSYQ_ASSERT((psyq::any_rtti::make<class_a>()) != nullptr);
-            PSYQ_ASSERT((psyq::any_rtti::make<class_b>()) != nullptr);
-            PSYQ_ASSERT((psyq::any_rtti::make<class_ab, class_a>()) != nullptr);
+            PSYQ_ASSERT((psyq::any_rtti::make_value<class_a>()) != nullptr);
+            PSYQ_ASSERT((psyq::any_rtti::make_value<class_b>()) != nullptr);
+            PSYQ_ASSERT((psyq::any_rtti::make_value<class_ab, class_a>()) != nullptr);
 
             std::shared_ptr<psyq::any_storage> local_a(
                 new psyq::any_storage::concrete<class_a>(class_a()));

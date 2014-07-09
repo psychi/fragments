@@ -59,7 +59,7 @@
 
 namespace psyq
 {
-    /// RTTI識別値。
+    /// 型ごとに固有のRTTI識別値。
     typedef PSYQ_ANY_RTTI_KEY_TYPE any_rtti_key;
 
     /// void型のRTTI識別値。
@@ -79,8 +79,8 @@ namespace psyq
 
     C++標準のRTTIを使わずに、RTTIの機能を実現する。
 
-    - psyq::any_rtti::make() で、型ごとに固有のRTTIを構築する。
-    - psyq::any_rtti::find() で、型ごとに固有のRTTIを取得する。
+    - psyq::any_rtti::make_value() で、型ごとに固有のRTTIを構築する。
+    - psyq::any_rtti::find_value() で、型ごとに固有のRTTIを取得する。
     - psyq::any_rtti::find_key() か psyq::any_rtti::get_key() で、
       型ごとに固有のRTTI識別値を取得できる。
     - psyq::any_rtti::find_base() で、基底型のRTTIを検索できる。
@@ -98,9 +98,9 @@ class psyq::any_rtti
         - RTTIのインスタンスは、関数内のstatic変数として構築する。
           - 構築したRTTIのインスタンスは、main関数を終了するまで変更されない。
           - main関数の終了後、RTTIのインスタンスを参照してはならない。
-        - self::make<void>() はstatic_assertする。
+        - self::make_value<void>() はstatic_assertする。
           void型のRTTIはあらかじめ用意されており、
-          self::find<void>() で取得できる。
+          self::find_value<void>() で取得できる。
 
         @note
             RTTIのインスタンスは、関数内のstatic変数として構築する。
@@ -133,7 +133,7 @@ class psyq::any_rtti
         typename           template_type,
         psyq::any_rtti_key template_key,
         typename           template_super_type>
-    static self const* make()
+    static self const* make_value()
     {
         static_assert(
             // template_key は、 psyq::ANY_RTTI_VOID_KEY 以下であること。
@@ -163,19 +163,19 @@ class psyq::any_rtti
             /// @note constexprが使えるなら、static_assertしたい。
             return nullptr;
         }
-        if (self::find<template_type>() != nullptr)
+        if (self::find_value<template_type>() != nullptr)
         {
             // template_type のRTTIは、すでに構築済みだった。
             return nullptr;
         }
-        auto const local_super_rtti(self::find<template_super_type>());
+        auto const local_super_rtti(self::find_value<template_super_type>());
         if (local_super_rtti == nullptr)
         {
-            // 親型のRTTIが make() でまだ構築されてなかった。
+            // 親型のRTTIが make_value() でまだ構築されてなかった。
             return nullptr;
         }
         if (template_key < psyq::ANY_RTTI_VOID_KEY
-            && self::find(template_key) != nullptr)
+            && self::find_value(template_key) != nullptr)
         {
             // 同じ識別値がすでに使われていた。
             return nullptr;
@@ -185,35 +185,35 @@ class psyq::any_rtti
                 local_super_rtti: nullptr);
     }
 
-    /// @copydoc make()
+    /// @copydoc make_value()
     public: template<typename template_type, typename template_super_type>
-    static self const* make()
+    static self const* make_value()
     {
-        return self::make<template_type, psyq::ANY_RTTI_VOID_KEY, template_super_type>();
+        return self::make_value<template_type, psyq::ANY_RTTI_VOID_KEY, template_super_type>();
     }
 
-    /// @copydoc make()
+    /// @copydoc make_value()
     public: template<typename template_type, psyq::any_rtti_key template_key>
-    static self const* make()
+    static self const* make_value()
     {
-        return self::make<template_type, template_key, void>();
+        return self::make_value<template_type, template_key, void>();
     }
 
-    /// @copydoc make()
+    /// @copydoc make_value()
     public: template<typename template_type>
-    static self const* make()
+    static self const* make_value()
     {
-        return self::make<template_type, psyq::ANY_RTTI_VOID_KEY, void>();
+        return self::make_value<template_type, psyq::ANY_RTTI_VOID_KEY, void>();
     }
 
     //-------------------------------------------------------------------------
     /** @brief RTTIを取得する。
         @tparam template_type RTTIを取得したい型。
         @retval !=nullptr 型ごとに固有のRTTI。
-        @retval ==nullptr self::make() で、RTTIがまだ構築されてなかった。
+        @retval ==nullptr self::make_value() で、RTTIがまだ構築されてなかった。
      */
     public: template<typename template_type>
-    static self const* find()
+    static self const* find_value()
     {
         return self::get_static_rtti<template_type, psyq::ANY_RTTI_VOID_KEY + 1>(nullptr);
     }
@@ -221,12 +221,12 @@ class psyq::any_rtti
     /** @brief RTTIを取得する。
         @param[in] in_key 取得したい型のRTTI識別値。
         @retval !=nullptr 型ごとに固有のRTTI。
-        @retval ==nullptr self::make() で、RTTIがまだ構築されてなかった。
+        @retval ==nullptr self::make_value() で、RTTIがまだ構築されてなかった。
         @note
             今のところRTTIコンテナは単方向リストで実装しているが、
             赤黒木などで実装しなおして高速化したい。
      */
-    public: static self const* find(psyq::any_rtti_key const in_key)
+    public: static self const* find_value(psyq::any_rtti_key const in_key)
     {
         // RTTI単方向リストから同じ識別値のRTTIを検索する。
         for (
@@ -246,12 +246,12 @@ class psyq::any_rtti
     /** @brief RTTI識別値を取得する。
         @tparam template_type RTTI識別値を取得したい型。
         @retval !=psyq::ANY_RTTI_VOID_KEY 型ごとに固有のRTTI識別値。
-        @retval ==psyq::ANY_RTTI_VOID_KEY self::make() で、RTTIがまだ構築されてなかった。
+        @retval ==psyq::ANY_RTTI_VOID_KEY self::make_value() で、RTTIがまだ構築されてなかった。
      */
     public: template<typename template_type>
     static psyq::any_rtti_key find_key()
     {
-        auto const local_rtti(self::find<template_type>());
+        auto const local_rtti(self::find_value<template_type>());
         return local_rtti != nullptr?
             local_rtti->get_key(): psyq::ANY_RTTI_VOID_KEY;
     }
@@ -267,12 +267,12 @@ class psyq::any_rtti
     /** @brief 型の値のバイトサイズを取得する。
         @tparam template_type バイトサイズを取得したい型。
         @retval 正の数 型の値のバイトサイズ。
-        @retval 0以下  self::make() で、RTTIがまだ構築されてなかった。
+        @retval 0以下  self::make_value() で、RTTIがまだ構築されてなかった。
      */
     public: template<typename template_type>
     static std::size_t find_size()
     {
-        auto const local_rtti(self::find<template_type>());
+        auto const local_rtti(self::find_value<template_type>());
         return local_rtti != nullptr? local_rtti->get_size(): 0;
     }
 
@@ -453,29 +453,29 @@ namespace psyq
             struct class_ab: class_a, class_b {};
             struct class_ab_c: private class_ab {int_object c;};
 
-            PSYQ_ASSERT(psyq::any_rtti::find<class_a>() == nullptr);
-            PSYQ_ASSERT(psyq::any_rtti::make<class_a>() != nullptr);
-            PSYQ_ASSERT(psyq::any_rtti::find<class_a>() != nullptr);
+            PSYQ_ASSERT(psyq::any_rtti::find_value<class_a>() == nullptr);
+            PSYQ_ASSERT(psyq::any_rtti::make_value<class_a>() != nullptr);
+            PSYQ_ASSERT(psyq::any_rtti::find_value<class_a>() != nullptr);
 
-            PSYQ_ASSERT((psyq::any_rtti::make<class_a, 1000>()) == nullptr);
-            //PSYQ_ASSERT((psyq::any_rtti::make<class_a, class_b>()) == nullptr); // static_assert!
-            PSYQ_ASSERT((psyq::any_rtti::make<class_b, 1000>()) != nullptr);
-            PSYQ_ASSERT(psyq::any_rtti::make<class_b>() == nullptr);
-            PSYQ_ASSERT((psyq::any_rtti::make<class_ab, 1000, class_a>()) == nullptr);
-            PSYQ_ASSERT((psyq::any_rtti::make<class_ab, 1001, class_a>()) != nullptr);
+            PSYQ_ASSERT((psyq::any_rtti::make_value<class_a, 1000>()) == nullptr);
+            //PSYQ_ASSERT((psyq::any_rtti::make_value<class_a, class_b>()) == nullptr); // static_assert!
+            PSYQ_ASSERT((psyq::any_rtti::make_value<class_b, 1000>()) != nullptr);
+            PSYQ_ASSERT(psyq::any_rtti::make_value<class_b>() == nullptr);
+            PSYQ_ASSERT((psyq::any_rtti::make_value<class_ab, 1000, class_a>()) == nullptr);
+            PSYQ_ASSERT((psyq::any_rtti::make_value<class_ab, 1001, class_a>()) != nullptr);
 
-            PSYQ_ASSERT((psyq::any_rtti::make<class_ab, class_b>()) == nullptr);
-            //PSYQ_ASSERT((psyq::any_rtti::make<class_ab_c, class_ab>()) != nullptr); // compile error!
-            PSYQ_ASSERT(psyq::any_rtti::find<class_b>()->get_key() == 1000);
-            PSYQ_ASSERT(psyq::any_rtti::find<class_ab>()->get_key() == 1001);
-            PSYQ_ASSERT(psyq::any_rtti::find<class_ab>()->find_base(
-                psyq::any_rtti::find<class_a>()->get_key()) != nullptr);
-            PSYQ_ASSERT(psyq::any_rtti::find<class_ab>()->find_base(
-                psyq::any_rtti::find<class_b>()->get_key()) == nullptr);
-            PSYQ_ASSERT(psyq::any_rtti::find<class_ab>()->find_base(
-                psyq::any_rtti::find<class_ab>()->get_key()) != nullptr);
-            PSYQ_ASSERT(psyq::any_rtti::find<class_a>()->find_base(
-                psyq::any_rtti::find<class_ab>()->get_key()) == nullptr);
+            PSYQ_ASSERT((psyq::any_rtti::make_value<class_ab, class_b>()) == nullptr);
+            //PSYQ_ASSERT((psyq::any_rtti::make_value<class_ab_c, class_ab>()) != nullptr); // compile error!
+            PSYQ_ASSERT(psyq::any_rtti::find_value<class_b>()->get_key() == 1000);
+            PSYQ_ASSERT(psyq::any_rtti::find_value<class_ab>()->get_key() == 1001);
+            PSYQ_ASSERT(psyq::any_rtti::find_value<class_ab>()->find_base(
+                psyq::any_rtti::find_value<class_a>()->get_key()) != nullptr);
+            PSYQ_ASSERT(psyq::any_rtti::find_value<class_ab>()->find_base(
+                psyq::any_rtti::find_value<class_b>()->get_key()) == nullptr);
+            PSYQ_ASSERT(psyq::any_rtti::find_value<class_ab>()->find_base(
+                psyq::any_rtti::find_value<class_ab>()->get_key()) != nullptr);
+            PSYQ_ASSERT(psyq::any_rtti::find_value<class_a>()->find_base(
+                psyq::any_rtti::find_value<class_ab>()->get_key()) == nullptr);
         }
     }
 }

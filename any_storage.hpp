@@ -36,7 +36,6 @@ namespace psyq
 {
     /// @cond
     class any_storage;
-    class any_static_storage;
     /// @endcond
 }
 
@@ -44,15 +43,15 @@ namespace psyq
 /** @brief 任意型の値が格納されているオブジェクトの抽象型。
 
     - psyq::any_storage::concrete インスタンスに任意型の値を格納し、
-      psyq::any_storage::cast_pointer() で格納されている値のポインタを取得する。
+      psyq::any_storage::up_cast() で格納されている値のポインタを取得する。
     - std::shared_ptr などのスマートポインタを介した使用を推奨する。
 
     使用例
     @code
     // psyq::any_storage::concrete に格納する値の型は、
     // 事前に psyq::any_rtti::make() で、RTTIを構築しておく必要がある。
-    psyq::any_rtti::make_value<int>();
-    psyq::any_rtti::make_value<double>();
+    psyq::any_rtti::make<int>();
+    psyq::any_rtti::make<double>();
     // psyq::any_storage のスマートポインタに、int型の値を格納可能な
     // psyq::any_storage::concrete のインスタンスを代入する。
     std::shared_ptr<psyq::any_storage> local_any(
@@ -60,17 +59,17 @@ namespace psyq
     PSYQ_ASSERT(local_any.get() != nullptr);
     // psyq::any_storage に格納されているint型の値を参照する。
     PSYQ_ASSERT(
-        local_any->cast_pointer<int>() != nullptr
-        && *(local_any->cast_pointer<int>()) == -12);
+        local_any->up_cast<int>() != nullptr
+        && *(local_any->up_cast<int>()) == -12);
     // psyq::any_storage に現在格納されている型以外へはキャストできない。
-    PSYQ_ASSERT(local_any->cast_pointer<double>() == nullptr);
+    PSYQ_ASSERT(local_any->up_cast<double>() == nullptr);
     // int型の値が格納されていた psyq::any_storage インスタンスに、
     // double型の値を代入する。元の値は解放される。
     local_any.reset(new psyq::any_storage::concrete<double>(0.5));
-    PSYQ_ASSERT(local_any->cast_pointer<int>() == nullptr);
+    PSYQ_ASSERT(local_any->up_cast<int>() == nullptr);
     PSYQ_ASSERT(
-        local_any->cast_pointer<double>() != nullptr
-        && *(local_any->cast_pointer<double>()) == 0.5);
+        local_any->up_cast<double>() != nullptr
+        && *(local_any->up_cast<double>()) == 0.5);
     @endcode
  */
 class psyq::any_storage
@@ -91,22 +90,22 @@ class psyq::any_storage
     public: virtual ~any_storage() {}
 
     //-------------------------------------------------------------------------
-    /** @brief 格納されている値へのポインタを、キャストして取得する。
+    /** @brief 格納されている値へのポインタを、アップキャストして取得する。
         @tparam template_value
-            キャストして取得するポインタが指す値の型。
+            アップキャストして取得するポインタが指す値の型。
             psyq::any_rtti::make() で事前にRTTIを構築してから使う必要がある。
         @retval !=nullptr *thisに格納されている値へのポインタ。
         @retval ==nullptr
             *thisに格納されている値のポインタ型を、
-            template_value のポインタ型にキャストできなかった。
+            template_value のポインタ型にアップキャストできなかった。
         @warning
             この関数を最初に使用する前に psyq::any_rtti::make() を呼び出し、
             template_value 型と格納されている値のRTTIを構築しておく必要がある。
      */
     public: template<typename template_value>
-    template_value* cast_pointer()
+    template_value* up_cast()
     {
-        auto const local_rtti(psyq::any_rtti::find_value<template_value>());
+        auto const local_rtti(psyq::any_rtti::find<template_value>());
         if (local_rtti == nullptr)
         {
             // psyq::any_rtti::make() で、
@@ -118,15 +117,15 @@ class psyq::any_storage
         return static_cast<template_value*>(
             /// @note static_ifを使いたい。
             std::is_const<template_value>::value?
-                const_cast<void*>(this->get_void_const_pointer(local_key)):
-                this->get_void_pointer(local_key));
+                const_cast<void*>(this->up_cast_const(local_key)):
+                this->up_cast_non_const(local_key));
     }
 
-    /// @copydoc cast_pointer()
+    /// @copydoc up_cast()
     public: template<typename template_value>
-    template_value const* cast_pointer() const
+    template_value const* up_cast() const
     {
-        auto const local_rtti(psyq::any_rtti::find_value<template_value>());
+        auto const local_rtti(psyq::any_rtti::find<template_value>());
         if (local_rtti == nullptr)
         {
             // psyq::any_rtti::make() で、
@@ -135,7 +134,7 @@ class psyq::any_storage
             return nullptr;
         }
         return static_cast<template_value const*>(
-            this->get_void_const_pointer(local_rtti->get_key()));
+            this->up_cast_const(local_rtti->get_key()));
     }
 
     //-------------------------------------------------------------------------
@@ -150,19 +149,19 @@ class psyq::any_storage
      */
     public: virtual psyq::any_rtti const* get_rtti() const = 0;
 
-    /** @brief 格納されている値へのポインタをキャストする。
-        @param[in] in_type_key キャスト先の型の識別値。
+    /** @brief 格納されている値へのポインタをアップキャストする。
+        @param[in] in_rtti_key アップキャストする上位型のRTTI識別値。
         @retval !=nullptr *thisに格納されている値へのポインタ。
         @retval ==nullptr
             *thisに格納されている値のポインタ型を、
-            template_value のポインタ型にキャストできなかった。
+            template_value のポインタ型にアップキャストできなかった。
      */
-    protected: virtual void* get_void_pointer(
-        psyq::any_rtti_key const in_type_key) = 0;
+    protected: virtual void* up_cast_non_const(
+        psyq::any_rtti_key const in_rtti_key) = 0;
 
-    /// @copydoc get_void_pointer()
-    protected: virtual void const* get_void_const_pointer(
-        psyq::any_rtti_key const in_type_key) const = 0;
+    /// @copydoc up_cast_non_const()
+    protected: virtual void const* up_cast_const(
+        psyq::any_rtti_key const in_rtti_key) const = 0;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -173,7 +172,7 @@ template<typename template_value>
 class psyq::any_storage::concrete: public psyq::any_storage
 {
     private: typedef concrete self;          ///< thisが指す値の型。
-    public: typedef psyq::any_storage super; ///< self の上位型。
+    public: typedef psyq::any_storage super; ///< self の基底型。
 
     //-------------------------------------------------------------------------
     /** @brief 格納する値の型。
@@ -239,21 +238,20 @@ class psyq::any_storage::concrete: public psyq::any_storage
     //-------------------------------------------------------------------------
     public: psyq::any_rtti const* get_rtti() const override
     {
-        return psyq::any_rtti::find_value<template_value>();
+        return psyq::any_rtti::find<template_value>();
     }
 
-    protected: void* get_void_pointer(
-        psyq::any_rtti_key const in_type_key)
+    protected: void* up_cast_non_const(
+        psyq::any_rtti_key const in_rtti_key)
     override
     {
+        /// @note static_ifを使いたい。
         return std::is_const<template_value>::value?
-            nullptr:
-            const_cast<void*>(
-                this->self::get_void_const_pointer(in_type_key));
+            nullptr: const_cast<void*>(this->self::up_cast_const(in_rtti_key));
     }
 
-    protected: void const* get_void_const_pointer(
-        psyq::any_rtti_key const in_type_key)
+    protected: void const* up_cast_const(
+        psyq::any_rtti_key const in_rtti_key)
     const override
     {
         auto const local_rtti(this->self::get_rtti());
@@ -264,7 +262,7 @@ class psyq::any_storage::concrete: public psyq::any_storage
             PSYQ_ASSERT(false);
             return nullptr;
         }
-        return local_rtti->find_base(in_type_key) != nullptr?
+        return psyq::any_rtti::find_up(in_rtti_key, local_rtti) != nullptr?
             &this->value: nullptr;
     }
 
@@ -290,7 +288,7 @@ class psyq::any_static_storage
             template_value のポインタ型にキャストできなかった。
      */
     public: template<typename template_value>
-    template_value* cast_pointer()
+    template_value* up_cast()
     {
         auto const local_rtti(psyq::any_rtti::equip_value<template_value>());
         if (local_rtti == nullptr)
@@ -302,15 +300,15 @@ class psyq::any_static_storage
         return static_cast<template_value*>(
             /// @note static_ifを使いたい。
             std::is_const<template_value>::value?
-                const_cast<void*>(this->get_void_const_pointer(local_key)):
+                const_cast<void*>(this->up_cast_const(local_key)):
                 std::is_const<template_value>::value?
                     nullptr:
-                    const_cast<void*>(this->get_void_const_pointer(in_type_key)));
+                    const_cast<void*>(this->up_cast_const(in_rtti_key)));
     }
 
-    /// @copydoc cast_pointer()
+    /// @copydoc up_cast()
     public: template<typename template_value>
-    template_value const* cast_pointer() const
+    template_value const* up_cast() const
     {
         auto const local_rtti(psyq::any_rtti::equip_value<template_value>());
         if (local_rtti == nullptr)
@@ -319,7 +317,7 @@ class psyq::any_static_storage
             return nullptr;
         }
         return static_cast<template_value const*>(
-            this->get_void_const_pointer(local_rtti->get_key()));
+            this->up_cast_const(local_rtti->get_key()));
     }
 
     //-------------------------------------------------------------------------
@@ -328,21 +326,21 @@ class psyq::any_static_storage
         return this->rtti_key_;
     }
 
-    private: void const* get_void_const_pointer(
-        psyq::any_rtti_key const in_type_key)
+    private: void const* up_cast_const(
+        psyq::any_rtti_key const in_rtti_key)
     const
     {
         if (this->body_offset_ <= 0)
         {
             return nullptr;
         }
-        auto const local_rtti(psyq::any_rtti::find_value(this->get_rtti_key()));
+        auto const local_rtti(psyq::any_rtti::find(this->get_rtti_key()));
         if (local_rtti == nullptr)
         {
             PSYQ_ASSERT(false);
             return nullptr;
         }
-        return local_rtti->find_base(in_type_key) != nullptr?
+        return local_rtti->find_up(in_rtti_key) != nullptr?
             reinterpret_cast<char const*>(this) + this->body_offset_:
             nullptr;
     }
@@ -412,31 +410,31 @@ namespace psyq
             struct class_b {int_object b;};
             struct class_ab: class_a, class_b {int_object ab;};
 
-            PSYQ_ASSERT((psyq::any_rtti::make_value<class_a>()) != nullptr);
-            PSYQ_ASSERT((psyq::any_rtti::make_value<class_b>()) != nullptr);
-            PSYQ_ASSERT((psyq::any_rtti::make_value<class_ab, class_a>()) != nullptr);
+            PSYQ_ASSERT((psyq::any_rtti::make<class_a>()) != nullptr);
+            PSYQ_ASSERT((psyq::any_rtti::make<class_b>()) != nullptr);
+            PSYQ_ASSERT((psyq::any_rtti::make<class_ab, class_a>()) != nullptr);
 
             std::shared_ptr<psyq::any_storage> local_a(
                 new psyq::any_storage::concrete<class_a>(class_a()));
             std::shared_ptr<psyq::any_storage> local_b(
                 new psyq::any_storage::concrete<class_b>(class_b()));
-            PSYQ_ASSERT(local_a->cast_pointer<class_a>() != nullptr);
-            PSYQ_ASSERT(local_a->cast_pointer<class_a>() != nullptr);
-            PSYQ_ASSERT(local_a->cast_pointer<class_b>() == nullptr);
-            PSYQ_ASSERT(local_b->cast_pointer<class_b>() != nullptr);
+            PSYQ_ASSERT(local_a->up_cast<class_a>() != nullptr);
+            PSYQ_ASSERT(local_a->up_cast<class_a>() != nullptr);
+            PSYQ_ASSERT(local_a->up_cast<class_b>() == nullptr);
+            PSYQ_ASSERT(local_b->up_cast<class_b>() != nullptr);
 
             std::shared_ptr<psyq::any_storage> local_const_a(
                 new psyq::any_storage::concrete<class_a const>(class_a()));
-            PSYQ_ASSERT(local_const_a->cast_pointer<class_a>() == nullptr);
-            PSYQ_ASSERT(local_const_a->cast_pointer<class_a const>() != nullptr);
+            PSYQ_ASSERT(local_const_a->up_cast<class_a>() == nullptr);
+            PSYQ_ASSERT(local_const_a->up_cast<class_a const>() != nullptr);
             auto const& local_const_a_ref(*local_const_a);
-            PSYQ_ASSERT(local_const_a_ref.cast_pointer<class_a>() != nullptr);
+            PSYQ_ASSERT(local_const_a_ref.up_cast<class_a>() != nullptr);
 
             std::shared_ptr<psyq::any_storage> local_ab(
                 new psyq::any_storage::concrete<class_ab>(class_ab()));
-            PSYQ_ASSERT(local_ab->cast_pointer<class_ab>() != nullptr);
-            PSYQ_ASSERT(local_ab->cast_pointer<class_a>() != nullptr);
-            PSYQ_ASSERT(local_ab->cast_pointer<class_b>() == nullptr);
+            PSYQ_ASSERT(local_ab->up_cast<class_ab>() != nullptr);
+            PSYQ_ASSERT(local_ab->up_cast<class_a>() != nullptr);
+            PSYQ_ASSERT(local_ab->up_cast<class_b>() == nullptr);
         }
     }
 }

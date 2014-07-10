@@ -115,10 +115,10 @@ class psyq::mosp_leaf
 template<typename template_space, typename template_shape>
 class psyq::mosp_leaf_shape: public psyq::mosp_leaf<template_space>
 {
-    /// *thisの型。
+    /// thisが指す値の型。
     private: typedef psyq::mosp_leaf_shape<template_space, template_shape>
         self;
-    /// *thisの上位型。
+    /// selfの基底型。
     public: typedef psyq::mosp_leaf<template_space> super;
 
     /// 衝突判定オブジェクトの幾何形状。

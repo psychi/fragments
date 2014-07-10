@@ -203,7 +203,7 @@ class psyq::basic_fixed_string:
         template_char_type, template_max_size, template_char_traits>
             self;
 
-    /// self の上位型。
+    /// self の基底型。
     public: typedef psyq::internal::string_view_interface<
         psyq::internal::fixed_length_string<
             template_char_traits, template_max_size>>

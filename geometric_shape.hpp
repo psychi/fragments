@@ -187,9 +187,9 @@ class psyq::geometric_segment
 template<typename template_vector>
 class psyq::geometric_ray: public psyq::geometric_segment<template_vector>
 {
-    /// *thisの型。
+    /// thisが指す値の型。
     private: typedef psyq::geometric_ray<template_vector> self;
-    /// *thisの上位型。
+    /// self の基底型。
     public: typedef psyq::geometric_segment<template_vector> super;
 
     /// @copydoc psyq::geometric_vector::type

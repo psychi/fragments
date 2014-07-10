@@ -413,7 +413,7 @@ struct psyq::internal::message_pack_extended:
 {
     /// thisが指す値の型。
     private: typedef message_pack_extended self;
-    /// thisの上位型。
+    /// thisの基底型。
     public: typedef psyq::internal::message_pack_container<std::uint8_t const>
         super;
 
@@ -516,7 +516,7 @@ struct psyq::internal::message_pack_map:
 {
     /// thisが指す値の型。
     private: typedef message_pack_map<template_object> self;
-    /// thisの上位型。
+    /// thisの基底型。
     public: typedef psyq::internal::message_pack_container<
         std::pair<template_object, template_object>>
             super;

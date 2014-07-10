@@ -222,9 +222,9 @@ class psyq::mosp_space
 template<typename template_coordinates>
 class psyq::mosp_space_2d: public psyq::mosp_space<template_coordinates>
 {
-    /// *thisの型。
+    /// thisが指す値の型。
     private: typedef mosp_space_2d<template_coordinates> self;
-    /// *thisの上位型。
+    /// selfの基底型。
     public: typedef mosp_space<template_coordinates> super;
 
     public: enum: unsigned
@@ -288,9 +288,9 @@ class psyq::mosp_space_2d: public psyq::mosp_space<template_coordinates>
 template<typename template_coordinates>
 class psyq::mosp_space_3d: public psyq::mosp_space<template_coordinates>
 {
-    /// *thisの型。
+    /// thisが指す値の型。
     private: typedef mosp_space_3d<template_coordinates> self;
-    /// *thisの上位型。
+    /// selfの上位型。
     public: typedef mosp_space<template_coordinates> super;
 
     public: enum: unsigned
@@ -571,7 +571,7 @@ class psyq::mosp_pool_allocator: public template_allocator
             // 要素の大きさがポインタ値以上であること。
             sizeof(void*) <= sizeof(typename super::value_type),
             "sizeof(value_type) is less than sizeof(void*).");
-       *reinterpret_cast<void**>(in_pointer) = this->idle_list_;
+        *reinterpret_cast<void**>(in_pointer) = this->idle_list_;
         this->idle_list_ = in_pointer;
     }
 

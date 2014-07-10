@@ -159,7 +159,7 @@ class psyq::internal::string_view_interface:
         typename self::value_type, typename super::traits_type>
             view;
 
-    /// 部分文字列の上位型。
+    /// 部分文字列の基底型。
     protected: typedef psyq::internal::string_view_base<
         typename super::traits_type>
             super_view;

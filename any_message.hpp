@@ -202,7 +202,7 @@ template<typename template_value>
 class psyq::any_message_method::with_argument: public psyq::any_message_method
 {
     private: typedef with_argument self; ///< thisが指す値の型。
-    public: typedef psyq::any_message_method super; ///< self の上位型。
+    public: typedef psyq::any_message_method super; ///< self の基底型。
 
     //-------------------------------------------------------------------------
     public: typedef template_value value_type; ///< メッセージの引数。

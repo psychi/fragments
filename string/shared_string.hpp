@@ -618,7 +618,7 @@ class psyq::basic_shared_string:
         template_char_type, template_char_traits, template_allocator_type>
             self;
 
-    /// self の上位型。
+    /// self の基底型。
     public: typedef psyq::internal::string_view_interface<
         psyq::internal::shared_string_holder<
             template_char_traits, template_allocator_type>>

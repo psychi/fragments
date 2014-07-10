@@ -303,7 +303,7 @@ template<typename template_pool>
 class psyq::message_pack::root_object: public psyq::message_pack::object
 {
     private: typedef root_object self; ///< thisが指す値の型。
-    public: typedef psyq::message_pack::object super; ///< thisの上位型。
+    public: typedef psyq::message_pack::object super; ///< selfの基底型。
 
     /// psyq::message_pack::pool 互換のメモリ割当子。下位オブジェクトを保持する。
     public: typedef template_pool pool;

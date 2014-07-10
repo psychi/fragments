@@ -89,8 +89,7 @@ class psyq::basic_string_view:
     private: typedef psyq::basic_string_view<
         template_char_type, template_char_traits>
             self;
-
-    /// self の上位型。
+    /// self の基底型。
     public: typedef psyq::internal::string_view_interface<
         psyq::internal::string_view_base<template_char_traits>>
             super;

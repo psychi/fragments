@@ -81,7 +81,6 @@ namespace psyq
 
     - psyq::any_rtti::make() で、型ごとに固有のRTTIを構築する。
     - psyq::any_rtti::find() で、型ごとに固有のRTTIを取得する。
-    - psyq::any_rtti::find_up() で、上位型のRTTIを検索できる。
     - psyq::any_rtti::get_key() で、型ごとに固有のRTTI識別値を取得できる。
     - psyq::any_rtti::get_size() で、型の値のバイトサイズを取得できる。
 
@@ -325,28 +324,13 @@ class psyq::any_rtti
         return nullptr;
     }
 
-    //-------------------------------------------------------------------------
-    /** @brief 上位型のRTTIを検索する。
-        @param[in] in_base_rtti    検索対象となる上位型のRTTI。
-        @param[in] in_derived_rtti 検索基準となる派生型のRTTI。
-        @retval !=nullptr 上位型のRTTI。派生型を上位型にアップキャストできる。
-        @retval ==nullptr 派生型を上位型にアップキャストできない。
-     */
-    public: static self const* find_up(
-        self const* const in_base_rtti,
-        self const* const in_derived_rtti)
-    {
-        return in_base_rtti != nullptr?
-            self::find_up(in_base_rtti->get_key(), in_derived_rtti): nullptr;
-    }
-
     /** @brief 上位型のRTTIを検索する。
         @param[in] in_base_key     検索対象となる上位型のRTTI識別値。
         @param[in] in_derived_rtti 検索基準となる派生型のRTTI。
         @retval !=nullptr 上位型のRTTI。派生型を上位型にアップキャストできる。
         @retval ==nullptr 派生型を上位型にアップキャストできない。
      */
-    public: static self const* find_up(
+    public: static self const* find(
         psyq::any_rtti_key const in_base_key,
         self const* const        in_derived_rtti)
     {
@@ -361,6 +345,20 @@ class psyq::any_rtti
             }
         }
         return nullptr;
+    }
+
+    /** @brief 上位型のRTTIを検索する。
+        @param[in] in_base_rtti    検索対象となる上位型のRTTI。
+        @param[in] in_derived_rtti 検索基準となる派生型のRTTI。
+        @retval !=nullptr 上位型のRTTI。派生型を上位型にアップキャストできる。
+        @retval ==nullptr 派生型を上位型にアップキャストできない。
+     */
+    public: static self const* find(
+        self const* const in_base_rtti,
+        self const* const in_derived_rtti)
+    {
+        return in_base_rtti != nullptr?
+            self::find(in_base_rtti->get_key(), in_derived_rtti): nullptr;
     }
 
     //-------------------------------------------------------------------------
@@ -553,31 +551,31 @@ namespace psyq
             PSYQ_ASSERT(psyq::any_rtti::find<class_b>()->get_key() == 1000);
             PSYQ_ASSERT(psyq::any_rtti::find<class_ab>()->get_key() == 1001);
             PSYQ_ASSERT(
-                nullptr != psyq::any_rtti::find_up(
+                nullptr != psyq::any_rtti::find(
                     psyq::any_rtti::find<class_a>(),
                     psyq::any_rtti::find<class_ab>()));
             PSYQ_ASSERT(
-                nullptr == psyq::any_rtti::find_up(
+                nullptr == psyq::any_rtti::find(
                     psyq::any_rtti::find<class_b>(),
                     psyq::any_rtti::find<class_ab>()));
             PSYQ_ASSERT(
-                nullptr != psyq::any_rtti::find_up(
+                nullptr != psyq::any_rtti::find(
                     psyq::any_rtti::find<class_ab>(),
                     psyq::any_rtti::find<class_ab>()));
             PSYQ_ASSERT(
-                nullptr == psyq::any_rtti::find_up(
+                nullptr == psyq::any_rtti::find(
                     psyq::any_rtti::find<class_ab>(),
                     psyq::any_rtti::find<class_a>()));
             PSYQ_ASSERT(
-                nullptr != psyq::any_rtti::find_up(
+                nullptr != psyq::any_rtti::find(
                     psyq::ANY_RTTI_VOID_KEY,
                     psyq::any_rtti::find<class_a>()));
             PSYQ_ASSERT(
-                nullptr != psyq::any_rtti::find_up(
+                nullptr != psyq::any_rtti::find(
                     psyq::ANY_RTTI_VOID_KEY,
                     psyq::any_rtti::find<class_b>()));
             PSYQ_ASSERT(
-                nullptr != psyq::any_rtti::find_up(
+                nullptr != psyq::any_rtti::find(
                     psyq::ANY_RTTI_VOID_KEY,
                     psyq::any_rtti::find<class_ab>()));
         }

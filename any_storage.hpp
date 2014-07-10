@@ -262,7 +262,7 @@ class psyq::any_storage::concrete: public psyq::any_storage
             PSYQ_ASSERT(false);
             return nullptr;
         }
-        return psyq::any_rtti::find_up(in_rtti_key, local_rtti) != nullptr?
+        return psyq::any_rtti::find(in_rtti_key, local_rtti) != nullptr?
             &this->value: nullptr;
     }
 
@@ -340,7 +340,7 @@ class psyq::any_static_storage
             PSYQ_ASSERT(false);
             return nullptr;
         }
-        return local_rtti->find_up(in_rtti_key) != nullptr?
+        return psyq::any_rtti::find(in_rtti_key, local_rtti) != nullptr?
             reinterpret_cast<char const*>(this) + this->body_offset_:
             nullptr;
     }

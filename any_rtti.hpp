@@ -49,10 +49,12 @@
 //#include "psyq/assert.hpp"
 //#include "psyq/atomic_count.hpp"
 
+/// RTTI識別値の型。
 #ifndef PSYQ_ANY_RTTI_KEY_TYPE
 #define PSYQ_ANY_RTTI_KEY_TYPE std::uint32_t
 #endif // !defined(PSYQ_ANY_RTTI_KEY_TYPE)
 
+/// void型のRTTI識別値。
 #ifndef PSYQ_ANY_RTTI_VOID_KEY
 #define PSYQ_ANY_RTTI_VOID_KEY (any_rtti_key(1) << (sizeof(any_rtti_key) * 8 - 1))
 #endif // !defined(PSYQ_ANY_RTTI_VOID_KEY)
@@ -95,12 +97,13 @@ class psyq::any_rtti
     /** @brief RTTIを構築する。
 
         - RTTIのインスタンスの数は、1つの型につき1つ以下である。
-        - RTTIのインスタンスは、
-          self::get_static_rtti() 関数内のstatic変数として構築している。
-          - 構築したRTTIのインスタンスは、main関数を終了するまで変更されない。
-          - main関数の終了後、RTTIのインスタンスを参照してはならない。
         - self::make<void>() はstatic_assertする。
           void型のRTTIは予め用意されており、 self::find<void>() で取得できる。
+        - RTTIのインスタンスは、
+          self::get_static_rtti() 関数内のstatic変数として構築している。
+          - 構築したRTTIのインスタンスは、main関数を終了するまで変更・破棄されない。
+          - RTTIのインスタンスを破棄するタイミングは実装依存のため、
+            main関数の終了後はRTTIのインスタンスを参照してはならない。
 
         @warning
             RTTIのインスタンスは、
@@ -117,12 +120,6 @@ class psyq::any_rtti
             RTTIを構築する型。
             - template_type のRTTIインスタンスがすでに構築されてた場合は、
               RTTIの構築に失敗する。
-        @tparam template_key
-            構築するRTTIの識別値。構築後は self::get_key() で取得できる。
-            - psyq::ANY_RTTI_VOID_KEY より小さい値なら、任意の値を指定できる。
-              - 同じ識別値がすでに使われていた場合は、RTTIの構築に失敗する。
-            - psyq::ANY_RTTI_VOID_KEY の場合は、RTTI識別値を実行時に自動で決定する。
-            - psyq::ANY_RTTI_VOID_KEY より大きい値は、static_assertする。
         @tparam template_super_type
             RTTIを構築する型の基底型。
             - 基底型がない場合は、voidを指定する。
@@ -131,20 +128,18 @@ class psyq::any_rtti
             - template_type が多重継承していて、
               template_super_type が2番目以降の基底型だった場合は、
               RTTIの構築に失敗する。
+        @param[in] in_key
+            構築するRTTIの識別値。構築後は self::get_key() で取得できる。
+            - psyq::ANY_RTTI_VOID_KEY 以上の値なら、RTTI識別値を実行時に自動で決定する。
+            - psyq::ANY_RTTI_VOID_KEY 未満の値なら、そのままRTTI識別値として採用する。
+              - 同じRTTI識別値がすでに使われていた場合は、RTTIの構築に失敗する。
 
         @retval !=nullptr 構築したRTTI。以後は self::find() で取得できる。
         @retval ==nullptr 失敗。RTTIを構築できなかった。
      */
-    public: template<
-        typename           template_type,
-        psyq::any_rtti_key template_key,
-        typename           template_super_type>
-    static self const* make()
+    public: template<typename template_type, typename template_super_type = void>
+    static self const* make(psyq::any_rtti_key in_key = psyq::ANY_RTTI_VOID_KEY)
     {
-        static_assert(
-            // template_key は、 psyq::ANY_RTTI_VOID_KEY 以下であること。
-            template_key <= psyq::ANY_RTTI_VOID_KEY,
-            "'template_key' is greater than 'psyq::ANY_RTTI_VOID_KEY'.");
         static_assert(
             // template_type と template_super_type が異なる型であること。
             !std::is_same<
@@ -181,37 +176,19 @@ class psyq::any_rtti
             // 基底型のRTTIが make() でまだ構築されてなかった。
             return nullptr;
         }
-        if (template_key < psyq::ANY_RTTI_VOID_KEY
-            && self::find(template_key) != nullptr)
+        if (psyq::ANY_RTTI_VOID_KEY <= in_key)
         {
-            // 同じ識別値がすでに使われていた。
+            in_key = psyq::ANY_RTTI_VOID_KEY;
+        }
+        else if (self::find(in_key) != nullptr)
+        {
+            // 同じRTTI識別値がすでに使われていた。
             return nullptr;
         }
         return self::get_static_rtti(
             local_super_rtti,
-            template_key,
+            in_key,
             static_cast<typename std::remove_cv<template_type>::type*>(nullptr));
-    }
-
-    /// @copydoc make()
-    public: template<typename template_type, typename template_super_type>
-    static self const* make()
-    {
-        return self::make<template_type, psyq::ANY_RTTI_VOID_KEY, template_super_type>();
-    }
-
-    /// @copydoc make()
-    public: template<typename template_type, psyq::any_rtti_key template_key>
-    static self const* make()
-    {
-        return self::make<template_type, template_key, void>();
-    }
-
-    /// @copydoc make()
-    public: template<typename template_type>
-    static self const* make()
-    {
-        return self::make<template_type, psyq::ANY_RTTI_VOID_KEY, void>();
     }
 
     //-------------------------------------------------------------------------
@@ -561,13 +538,13 @@ namespace psyq
             PSYQ_ASSERT(psyq::any_rtti::find<class_a>() != nullptr);
             PSYQ_ASSERT(psyq::any_rtti::find<class_a const>() != nullptr);
 
-            PSYQ_ASSERT((psyq::any_rtti::make<class_a, 1000>()) == nullptr);
+            PSYQ_ASSERT((psyq::any_rtti::make<class_a>(1000)) == nullptr);
             //PSYQ_ASSERT((psyq::any_rtti::make<class_a, class_b>()) == nullptr); // static_assert!
-            PSYQ_ASSERT((psyq::any_rtti::make<class_b const, 1000>()) != nullptr);
+            PSYQ_ASSERT((psyq::any_rtti::make<class_b const>(1000)) != nullptr);
             PSYQ_ASSERT(psyq::any_rtti::find<class_b>() != nullptr);
             PSYQ_ASSERT(psyq::any_rtti::make<class_b>() == nullptr);
-            PSYQ_ASSERT((psyq::any_rtti::make<class_ab, 1000, class_a>()) == nullptr);
-            PSYQ_ASSERT((psyq::any_rtti::make<class_ab, 1001, class_a>()) != nullptr);
+            PSYQ_ASSERT((psyq::any_rtti::make<class_ab, class_a>(1000)) == nullptr);
+            PSYQ_ASSERT((psyq::any_rtti::make<class_ab, class_a>(1001)) != nullptr);
 
             PSYQ_ASSERT((psyq::any_rtti::make<class_ab, class_b>()) == nullptr);
             //PSYQ_ASSERT((psyq::any_rtti::make<class_ab_c, class_ab>()) != nullptr); // compile error!

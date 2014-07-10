@@ -83,6 +83,7 @@ namespace psyq
     - psyq::any_rtti::find() で、型ごとに固有のRTTIを取得する。
     - psyq::any_rtti::get_key() で、型ごとに固有のRTTI識別値を取得できる。
     - psyq::any_rtti::get_size() で、型の値のバイトサイズを取得できる。
+    - psyq::any_rtti::get_super() で、基底型のRTTIを取得できる。
 
     @sa psyq::any_storage
  */
@@ -243,7 +244,7 @@ class psyq::any_rtti
             local_rtti = self::make<template_type, template_super_type>();
             PSYQ_ASSERT(local_rtti != nullptr);
         }
-        else if (self::find<template_super_type>() != local_rtti->super_)
+        else if (self::find<template_super_type>() != local_rtti->get_super())
         {
             PSYQ_ASSERT(false);
             return nullptr;
@@ -337,7 +338,7 @@ class psyq::any_rtti
         for (
             auto local_rtti(in_derived_rtti);
             local_rtti != nullptr;
-            local_rtti = local_rtti->super_)
+            local_rtti = local_rtti->get_super())
         {
             if (local_rtti->get_key() == in_base_key)
             {
@@ -399,6 +400,28 @@ class psyq::any_rtti
     public: std::size_t get_size() const PSYQ_NOEXCEPT
     {
         return this->size_;
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief 基底型のRTTIを取得する。
+        @param[in] in_derived_rtti 基底型を取得する型のRTTI。
+        @retval !=nullptr 基底型のRTTI
+        @retval ==nullptr RTTIが空だったか、void型のRTTIだった。
+     */
+    public: static self const* get_super(self const* const in_derived_rtti)
+    PSYQ_NOEXCEPT
+    {
+        return in_derived_rtti != nullptr?
+            in_derived_rtti->get_super(): nullptr;
+    }
+
+    /** @brief 基底型のRTTIを取得する。
+        @retval !=nullptr 基底型のRTTI。
+        @retval ==nullptr void型のRTTIだったので、基底型は存在しない。
+     */
+    public: self const* get_super() const PSYQ_NOEXCEPT
+    {
+        return this->super_;
     }
 
     //-------------------------------------------------------------------------

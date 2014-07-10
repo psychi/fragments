@@ -77,17 +77,13 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief psyq::any_storage から使われる 簡易的なRTTI（実行時型情報）。
-
-    C++標準のRTTIを使わずに、RTTIの機能を実現する。
+/** @brief C++標準のRTTIを使わない、簡易的なRTTI（実行時型情報）。
 
     - psyq::any_rtti::make() で、型ごとに固有のRTTIを構築する。
     - psyq::any_rtti::find() で、型ごとに固有のRTTIを取得する。
     - psyq::any_rtti::get_key() で、型ごとに固有のRTTI識別値を取得できる。
     - psyq::any_rtti::get_size() で、型の値のバイトサイズを取得できる。
     - psyq::any_rtti::get_super() で、基底型のRTTIを取得できる。
-
-    @sa psyq::any_storage
  */
 class psyq::any_rtti
 {
@@ -105,16 +101,14 @@ class psyq::any_rtti
           - RTTIのインスタンスを破棄するタイミングは実装依存のため、
             main関数の終了後はRTTIのインスタンスを参照してはならない。
 
-        @warning
-            RTTIのインスタンスは、
-            self::get_static_rtti() 関数内のstatic変数として構築している。
-            関数内のstatic変数の構築は、C++11の仕様ではスレッドセーフだが、
-            VisualStudio2013以前ではスレッドセーフになっていない。
-            https://sites.google.com/site/cpprefjp/implementation-status
-        @warning
-            VisualStudio以外でも、今のところ psyq::any_rtti::any_rtti
-            の実装がスレッドセーフになっていないので、メインスレッド以外からの
-            self::make() の呼び出しは禁止する。
+        @warning メインスレッド以外からの self::make() の呼び出しは禁止する。
+            - RTTIのインスタンスは、
+              self::get_static_rtti() 関数内のstatic変数として構築している。
+              関数内のstatic変数の構築は、C++11の仕様ではスレッドセーフだが、
+              VisualStudio2013以前ではスレッドセーフになっていない。
+              https://sites.google.com/site/cpprefjp/implementation-status
+            - VisualStudio以外でも、今のところ psyq::any_rtti::any_rtti
+              の実装がスレッドセーフになっていない。
 
         @tparam template_type
             RTTIを構築する型。

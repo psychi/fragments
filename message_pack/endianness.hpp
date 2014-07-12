@@ -176,14 +176,14 @@ namespace psyq
 template<typename template_value>
 struct psyq::message_pack::endianness_converter
 {
-    private: typedef endianness_converter self;
+    private: typedef endianness_converter this_type;
 
     /** @brief エンディアン性を変換する値の型。
 
         この実装では、整数型か浮動小数点数型にのみに対応している。
         これらの型以外に対応するには、テンプレートの特殊化をした
         psyq::message_pack::endianness_converter を実装し、
-        staticメンバ関数として self::write_value() を実装すること。
+        staticメンバ関数として this_type::write_value() を実装すること。
      */
     public: typedef template_value value_type;
     static_assert(
@@ -191,7 +191,7 @@ struct psyq::message_pack::endianness_converter
         || std::is_floating_point<template_value>::value,
         "template_value is not integer or floating point type.");
 
-    /// self::value_type のRAWバイト列の型。
+    /// this_type::value_type のRAWバイト列の型。
     public: typedef typename psyq::internal
         ::message_pack_bytes<sizeof(template_value)>::type
             bytes;
@@ -212,7 +212,7 @@ struct psyq::message_pack::endianness_converter
         template_value const in_value,
         psyq::message_pack::endianness const in_endianness)
     {
-        auto const local_bytes(self::pack_bytes(in_value, in_endianness));
+        auto const local_bytes(this_type::pack_bytes(in_value, in_endianness));
         auto const local_pre_offset(io_ostream.tellp());
         io_ostream.write(
             reinterpret_cast<typename template_stream::char_type const*>(&local_bytes),
@@ -232,14 +232,14 @@ struct psyq::message_pack::endianness_converter
         @param[in] in_endianness RAWバイト列のエンディアン性。
         @return 値から変換されたRAWバイト列。
      */
-    public: static typename self::bytes pack_bytes(
+    public: static typename this_type::bytes pack_bytes(
         template_value const in_value,
         psyq::message_pack::endianness const in_endianness)
     PSYQ_NOEXCEPT
     {
         return psyq::internal::message_pack_endianness_converter
             <std::is_integral<template_value>::value>
-                ::template convert<typename self::bytes>(in_value, in_endianness);
+                ::template convert<typename this_type::bytes>(in_value, in_endianness);
     }
 
     /** @brief RAWバイト列を値に変換する。
@@ -248,7 +248,7 @@ struct psyq::message_pack::endianness_converter
         @return バイト列から変換された値。
      */
     public: static template_value unpack_bytes(
-        typename self::bytes const in_bytes,
+        typename this_type::bytes const in_bytes,
         psyq::message_pack::endianness const in_endianness)
     PSYQ_NOEXCEPT
     {
@@ -266,9 +266,9 @@ struct psyq::message_pack::endianness_converter
         psyq::message_pack::endianness const in_endianness)
     PSYQ_NOEXCEPT
     {
-        typename self::bytes local_bytes;
+        typename this_type::bytes local_bytes;
         std::memcpy(&local_bytes, in_bytes, sizeof(template_value));
-        return self::unpack_bytes(local_bytes, in_endianness);
+        return this_type::unpack_bytes(local_bytes, in_endianness);
     }
 }; // struct psyq::message_pack::endianness_converter;
 

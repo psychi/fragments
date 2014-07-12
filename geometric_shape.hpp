@@ -46,8 +46,8 @@ namespace psyq
 template<typename template_vector>
 class psyq::geometric_sphere
 {
-    /// *thisの型。
-    private: typedef psyq::geometric_sphere<template_vector> self;
+    /// thisが指す値の型。
+    private: typedef geometric_sphere this_type;
 
     /// @copydoc psyq::geometric_vector::type
     public: typedef template_vector vector;
@@ -105,12 +105,12 @@ class psyq::geometric_sphere
         @param[in] in_center 球の中心位置。
         @param[in] in_radius 球の半径。0未満の場合は0になる。
      */
-    public: static self make(
+    public: static this_type make(
         template_vector const& in_center,
         typename psyq::geometric_vector<template_vector>::element const
             in_radius)
     {
-        return self(in_center, 0 < in_radius? in_radius: 0);
+        return this_type(in_center, 0 < in_radius? in_radius: 0);
     }
 
     /// 球の中心位置。
@@ -126,8 +126,8 @@ class psyq::geometric_sphere
 template<typename template_vector>
 class psyq::geometric_segment
 {
-    /// *thisの型。
-    private: typedef psyq::geometric_segment<template_vector> self;
+    /// thisが指す値の型。
+    private: typedef psyq::geometric_segment<template_vector> this_type;
 
     /// @copydoc psyq::geometric_vector::type
     public: typedef template_vector vector;
@@ -188,8 +188,8 @@ template<typename template_vector>
 class psyq::geometric_ray: public psyq::geometric_segment<template_vector>
 {
     /// thisが指す値の型。
-    private: typedef psyq::geometric_ray<template_vector> self;
-    /// self の基底型。
+    private: typedef geometric_ray this_type;
+    /// this_type の基底型。
     public: typedef psyq::geometric_segment<template_vector> super;
 
     /// @copydoc psyq::geometric_vector::type
@@ -221,7 +221,7 @@ class psyq::geometric_ray: public psyq::geometric_segment<template_vector>
      */
     public: void set_direction(template_vector const& in_direction)
     {
-        this->direction_ = self::make_direction(in_direction);
+        this->direction_ = this_type::make_direction(in_direction);
     }
 
     /** @brief 半線分を構築する。
@@ -231,11 +231,11 @@ class psyq::geometric_ray: public psyq::geometric_segment<template_vector>
             内部で正規化するので、正規化されてなくともよい。
             ただし0ベクトルの場合は、任意の単位ベクトルが設定される。
      */
-    public: static self make(
+    public: static this_type make(
         template_vector const& in_origin,
         template_vector const& in_direction)
     {
-        return self(in_origin, self::make_direction(in_direction));
+        return this_type(in_origin, this_type::make_direction(in_direction));
     }
 
     /** @brief 半線分の方向ベクトルを構築する。
@@ -268,8 +268,8 @@ class psyq::geometric_ray: public psyq::geometric_segment<template_vector>
 template<typename template_vector>
 class psyq::geometric_ray<template_vector>::triangle
 {
-    /// *thisの型。
-    private: typedef triangle self;
+    /// thisが指す値の型。
+    private: typedef triangle this_type;
 
     /// @copydoc psyq::geometric_vector::type
     public: typedef template_vector vector;
@@ -408,8 +408,8 @@ class psyq::geometric_ray<template_vector>::triangle
 template<typename template_vector>
 class psyq::geometric_cuboid
 {
-    /// *thisの型。
-    private: typedef psyq::geometric_cuboid<template_vector> self;
+    /// thisが指す値の型。
+    private: typedef geometric_cuboid this_type;
 
     /// @copydoc psyq::geometric_vector::type
     public: typedef template_vector vector;

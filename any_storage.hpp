@@ -74,18 +74,17 @@ namespace psyq
  */
 class psyq::any_storage
 {
-    private: typedef any_storage self; ///< thisが指す値の型。
+    private: typedef any_storage this_type; ///< thisが指す値の型。
 
-    //-------------------------------------------------------------------------
     public: template<typename template_value> class concrete;
 
     //-------------------------------------------------------------------------
     /// デフォルト構築子。
     protected: PSYQ_CONSTEXPR any_storage() PSYQ_NOEXCEPT {}
     /// コピー構築子は使用禁止。
-    private: any_storage(self const&); //= delete;
+    private: any_storage(this_type const&); //= delete;
     /// コピー代入演算子は使用禁止。
-    private: self& operator=(self const&); //= delete;
+    private: this_type& operator=(this_type const&); //= delete;
     /// 破棄する。
     public: virtual ~any_storage() {}
 
@@ -93,7 +92,7 @@ class psyq::any_storage
     /** @brief 格納されている値へのポインタを、アップキャストして取得する。
         @warning
             この関数を最初に呼び出すより前に、 psyq::any_rtti::make()
-            を呼び出して、 template_type 型と self::concrete::value_type
+            を呼び出して、 template_type 型と this_type::concrete::value_type
             型のRTTIを事前に構築しておく必要がある。
         @tparam template_type
             アップキャストして取得するポインタが指す値の型。
@@ -101,7 +100,7 @@ class psyq::any_storage
             などで、事前にRTTIを構築しておく必要がある。
         @retval !=nullptr *thisに格納されている値へのポインタ。
         @retval ==nullptr
-            self::concrete::value_type のポインタ型を、
+            格納されている値のポインタ型を、
             template_type のポインタ型にアップキャストできなかった。
      */
     public: template<typename template_type>
@@ -169,8 +168,8 @@ class psyq::any_storage
 template<typename template_value>
 class psyq::any_storage::concrete: public psyq::any_storage
 {
-    private: typedef concrete self; ///< thisが指す値の型。
-    public: typedef psyq::any_storage super; ///< self の基底型。
+    private: typedef concrete this_type; ///< thisが指す値の型。
+    public: typedef psyq::any_storage base_type; ///< this_type の基底型。
 
     //-------------------------------------------------------------------------
     /** @brief 格納する値の型。
@@ -179,9 +178,9 @@ class psyq::any_storage::concrete: public psyq::any_storage
         - 構築と代入で、コピーかムーブができる必要がある。
 
         @warning
-            super::up_cast() を最初に呼び出すより前に、
-            psyq::any_rtti::make<self::value_type>() を呼び出して、
-            self::value_type 型のRTTIを事前に構築しておく必要がある。
+            base_type::up_cast() を最初に呼び出すより前に、
+            psyq::any_rtti::make<this_type::value_type>() を呼び出して、
+            this_type::value_type 型のRTTIを事前に構築しておく必要がある。
      */
     public: typedef typename std::remove_cv<template_value>::type value_type;
 
@@ -189,28 +188,28 @@ class psyq::any_storage::concrete: public psyq::any_storage
     /** @brief 値をコピーして格納する。
         @param[in] in_value コピーする初期値。
      */
-    public: explicit concrete(typename self::value_type const& in_value):
+    public: explicit concrete(typename this_type::value_type const& in_value):
         value(in_value)
     {}
 
     /** @brief 値をムーブして格納する。
         @param[in,out] io_value ムーブする初期値。
      */
-    public: explicit concrete(typename self::value_type&& io_value):
+    public: explicit concrete(typename this_type::value_type&& io_value):
         value(std::move(io_value))
     {}
 
     /** @brief コピー構築子。
         @param[in] in_source コピー元となるインスタンス。
      */
-    public: concrete(self const& in_source):
+    public: concrete(this_type const& in_source):
         value(in_source.value)
     {}
 
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
-    public: concrete(self&& io_source):
+    public: concrete(this_type&& io_source):
         value(std::move(in_source.value))
     {}
 
@@ -218,7 +217,7 @@ class psyq::any_storage::concrete: public psyq::any_storage
         @param[in] in_source コピー元となるインスタンス。
         @return *this
      */
-    public: self& operator=(self const& in_source)
+    public: this_type& operator=(this_type const& in_source)
     {
         this->value = in_source.value;
         return *this;
@@ -228,7 +227,7 @@ class psyq::any_storage::concrete: public psyq::any_storage
         @param[in,out] io_source ムーブ元となるインスタンス。
         @return *this
      */
-    public: self& operator=(self&& io_source)
+    public: this_type& operator=(this_type&& io_source)
     {
         this->value = std::move(io_source.value);
         return *this;
@@ -246,13 +245,13 @@ class psyq::any_storage::concrete: public psyq::any_storage
         /// @note static_ifを使いたい。
         return std::is_const<template_value>::value?
             nullptr:
-            const_cast<void*>(this->self::up_cast_const(in_upward_key));
+            const_cast<void*>(this->this_type::up_cast_const(in_upward_key));
     }
 
     protected: void const* up_cast_const(psyq::any_rtti_key const in_upward_key)
     const override
     {
-        auto const local_rtti(this->self::get_rtti());
+        auto const local_rtti(this->this_type::get_rtti());
         if (psyq::any_rtti::find(in_upward_key, local_rtti) != nullptr)
         {
             return &this->value;
@@ -264,7 +263,7 @@ class psyq::any_storage::concrete: public psyq::any_storage
     }
 
     //-------------------------------------------------------------------------
-    public: typename self::value_type value; ///< 保持してる値。
+    public: typename this_type::value_type value; ///< 保持してる値。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

@@ -73,11 +73,9 @@ namespace psyq
 template<typename template_char_traits>
 class psyq::internal::string_view_base
 {
-    /// thisが指す値の型。
-    private: typedef string_view_base<template_char_traits> self;
+    private: typedef string_view_base this_type; ///< thisが指す値の型。
 
-    /// 文字特性の型。
-    public: typedef template_char_traits traits_type;
+    public: typedef template_char_traits traits_type; ///< 文字特性の型。
 
     //-------------------------------------------------------------------------
     /// @name constructor / destructor
@@ -94,8 +92,8 @@ class psyq::internal::string_view_base
         @param[in] in_length 参照する文字列の長さ。
      */
     public: PSYQ_CONSTEXPR string_view_base(
-        typename self::traits_type::char_type const* const in_begin,
-        std::size_t const                                  in_length)
+        typename this_type::traits_type::char_type const* const in_begin,
+        std::size_t const in_length)
     PSYQ_NOEXCEPT:
         data_((PSYQ_ASSERT(in_begin != nullptr || in_length == 0), in_begin)),
         length_(in_begin != nullptr && 0 < in_length? in_length: 0)
@@ -111,18 +109,16 @@ class psyq::internal::string_view_base
      */
     public: template <std::size_t template_size>
     PSYQ_CONSTEXPR string_view_base(
-        typename self::traits_type::char_type const
-            (&in_literal)[template_size])
+        typename this_type::traits_type::char_type const (&in_literal)[template_size])
     PSYQ_NOEXCEPT:
-        data_((
-            PSYQ_ASSERT(in_literal[template_size - 1] == 0), &in_literal[0])),
+        data_((PSYQ_ASSERT(in_literal[template_size - 1] == 0), &in_literal[0])),
         length_(template_size - 1)
     {
         static_assert(0 < template_size, "");
     }
 
     /** @brief 任意型の文字列を参照する。
-        @tparam template_string_type @copydoc string_view_interface::super
+        @tparam template_string_type @copydoc string_view_interface::base_type
         @param[in] in_string 参照する文字列。
      */
     public: template<typename template_string_type>
@@ -184,7 +180,7 @@ class psyq::internal::string_view_base
             文字列の先頭文字から末尾文字までのmemory連続性は保証されているが、
             文字列の終端がnull文字となっている保証はない。
      */
-    public: PSYQ_CONSTEXPR typename self::traits_type::char_type const* data()
+    public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type const* data()
     const PSYQ_NOEXCEPT
     {
         return this->data_;
@@ -244,8 +240,8 @@ class psyq::internal::string_view_base
     template_string_type make_upper_copy() const
     {
         return this->make_copy<template_string_type>(
-            [](typename self::traits_type::char_type const in_char)
-            ->typename self::traits_type::char_type
+            [](typename this_type::traits_type::char_type const in_char)
+            ->typename this_type::traits_type::char_type
             {
                 return std::toupper(in_char);
             });
@@ -259,8 +255,8 @@ class psyq::internal::string_view_base
     template_string_type make_lower_copy() const
     {
         return this->make_copy<template_string_type>(
-            [](typename self::traits_type::char_type const in_char)
-            ->typename self::traits_type::char_type
+            [](typename this_type::traits_type::char_type const in_char)
+            ->typename this_type::traits_type::char_type
             {
                 return std::tolower(in_char);
             });
@@ -269,7 +265,7 @@ class psyq::internal::string_view_base
     /** @brief 先頭と末尾にある空白文字を取り除いた文字列を作る。
         @return 先頭と末尾にある空白文字を取り除いた文字列。
      */
-    protected: self trim_copy() const PSYQ_NOEXCEPT
+    protected: this_type trim_copy() const PSYQ_NOEXCEPT
     {
         return this->trim_prefix_copy().trim_suffix_copy();
     }
@@ -277,7 +273,7 @@ class psyq::internal::string_view_base
     /** @brief 先頭にある空白文字を取り除いた文字列を作る。
         @return 先頭にある空白文字を取り除いた文字列。
      */
-    protected: self trim_prefix_copy() const PSYQ_NOEXCEPT
+    protected: this_type trim_prefix_copy() const PSYQ_NOEXCEPT
     {
         auto const local_end(this->data() + this->length());
         for (auto i(this->data()); i < local_end; ++i)
@@ -285,27 +281,27 @@ class psyq::internal::string_view_base
             if (!std::isspace(*i))
             {
                 auto const local_position(i - this->data());
-                return self(
+                return this_type(
                     this->data() + local_position,
                     this->length() - local_position);
             }
         }
-        return self(this->data() + this->length(), 0);
+        return this_type(this->data() + this->length(), 0);
     }
 
     /** @brief 末尾にある空白文字を取り除いた文字列を作る。
         @return 末尾にある空白文字を取り除いた文字列。
      */
-    protected: self trim_suffix_copy() const PSYQ_NOEXCEPT
+    protected: this_type trim_suffix_copy() const PSYQ_NOEXCEPT
     {
         for (auto i(this->data() + this->length()); this->data() < i; --i)
         {
             if (!std::isspace(*(i - 1)))
             {
-                return self(this->data(), i - this->data());
+                return this_type(this->data(), i - this->data());
             }
         }
-        return self(this->data(), 0);
+        return this_type(this->data(), 0);
     }
 
     /** @brief *thisの部分文字列を構築する。
@@ -313,12 +309,12 @@ class psyq::internal::string_view_base
         @param[in] in_count  部分文字列の開始offset値からの文字数。
         @return 部分文字列。
      */
-    protected: PSYQ_CONSTEXPR self substr(
+    protected: PSYQ_CONSTEXPR this_type substr(
         std::size_t const in_offset,
         std::size_t const in_count)
     const PSYQ_NOEXCEPT
     {
-        return self(
+        return this_type(
             this->data() + (std::min)(in_offset, this->length()),
             in_offset < this->length()?
                 (std::min)(this->length() - in_offset, in_count): 0);
@@ -328,21 +324,21 @@ class psyq::internal::string_view_base
     /// @name 文字列の比較
     //@{
     /// @copydoc psyq::internal::string_view_interface::operator==()
-    public: bool operator==(self const& in_right) const PSYQ_NOEXCEPT
+    public: bool operator==(this_type const& in_right) const PSYQ_NOEXCEPT
     {
         return this->length() == in_right.length()
-            && 0 == self::traits_type::compare(
+            && 0 == this_type::traits_type::compare(
                 this->data(), in_right.data(), in_right.length());
     }
 
     /// @copydoc psyq::internal::string_view_interface::operator!=()
-    public: bool operator!=(self const& in_right) const PSYQ_NOEXCEPT
+    public: bool operator!=(this_type const& in_right) const PSYQ_NOEXCEPT
     {
         return !this->operator==(in_right);
     }
 
     /// @copydoc psyq::internal::string_view_interface::compare()
-    public: int compare(self const& in_right) const PSYQ_NOEXCEPT
+    public: int compare(this_type const& in_right) const PSYQ_NOEXCEPT
     {
         int local_compare_length;
         if (this->length() != in_right.length())
@@ -358,7 +354,7 @@ class psyq::internal::string_view_base
             return 0;
         }
         int const local_compare_string(
-            self::traits_type::compare(
+            this_type::traits_type::compare(
                 this->data(),
                 in_right.data(),
                 local_compare_length < 0? this->length(): in_right.length()));
@@ -367,7 +363,7 @@ class psyq::internal::string_view_base
     }
 
     /// @copydoc psyq::internal::string_view_interface::starts_with()
-    public: PSYQ_CONSTEXPR bool starts_with(self const& in_prefix)
+    public: PSYQ_CONSTEXPR bool starts_with(this_type const& in_prefix)
     const PSYQ_NOEXCEPT
     {
         return this->substr(0, in_prefix.length()) == in_string;
@@ -375,14 +371,14 @@ class psyq::internal::string_view_base
 
     /// @copydoc psyq::internal::string_view_interface::starts_with()
     public: PSYQ_CONSTEXPR bool starts_with(
-        typename self::traits_type::char_type const in_prefix)
+        typename this_type::traits_type::char_type const in_prefix)
     const PSYQ_NOEXCEPT
     {
         return 0 < this->length() && in_prefix == *(this->data());
     }
 
     /// @copydoc psyq::internal::string_view_interface::ends_with()
-    public: PSYQ_CONSTEXPR bool ends_with(self const& in_suffix)
+    public: PSYQ_CONSTEXPR bool ends_with(this_type const& in_suffix)
     const PSYQ_NOEXCEPT
     {
         return in_suffix.length() <= this->length()
@@ -391,7 +387,7 @@ class psyq::internal::string_view_base
 
     /// @copydoc psyq::internal::string_view_interface::ends_with()
     public: PSYQ_CONSTEXPR bool ends_with(
-        typename self::traits_type::char_type const in_suffix)
+        typename this_type::traits_type::char_type const in_suffix)
     const PSYQ_NOEXCEPT
     {
         return 0 < this->length()
@@ -415,11 +411,11 @@ class psyq::internal::string_view_base
     {
         auto local_iterator(this->data());
         auto const local_end(local_iterator + this->length());
-        auto const local_sign(self::parse_sign(local_iterator, local_end));
+        auto const local_sign(this_type::parse_sign(local_iterator, local_end));
         template_integer_type const local_base(
-            self::parse_base(local_iterator, local_end));
+            this_type::parse_base(local_iterator, local_end));
         auto const local_integer(
-            self::parse_numbers(local_iterator, local_end, local_base));
+            this_type::parse_numbers(local_iterator, local_end, local_base));
         if (out_rest_length != nullptr)
         {
             *out_rest_length = local_end - local_iterator;
@@ -442,17 +438,17 @@ class psyq::internal::string_view_base
         // 整数部を解析する。
         auto local_iterator(this->data());
         auto const local_end(local_iterator + this->length());
-        auto const local_sign(self::parse_sign(local_iterator, local_end));
+        auto const local_sign(this_type::parse_sign(local_iterator, local_end));
         template_real_type const local_base(
-            self::parse_base(local_iterator, local_end));
+            this_type::parse_base(local_iterator, local_end));
         auto local_real(
-            self::parse_numbers(local_iterator, local_end, local_base));
+            this_type::parse_numbers(local_iterator, local_end, local_base));
 
         // 小数部を解析する。
         if (local_iterator < local_end && *local_iterator == '.')
         {
             ++local_iterator;
-            local_real = self::merge_decimal_numbers(
+            local_real = this_type::merge_decimal_numbers(
                 local_iterator, local_end, local_base, local_real);
         }
 
@@ -471,8 +467,8 @@ class psyq::internal::string_view_base
         @return 文字列から取り出した符号。
      */
     private: static signed parse_sign(
-        typename self::traits_type::char_type const*&      io_iterator,
-        typename self::traits_type::char_type const* const in_end)
+        typename this_type::traits_type::char_type const*& io_iterator,
+        typename this_type::traits_type::char_type const* const in_end)
     PSYQ_NOEXCEPT
     {
         if (io_iterator < in_end)
@@ -497,8 +493,8 @@ class psyq::internal::string_view_base
         @return 文字列から取り出した基数。
      */
     private: static unsigned parse_base(
-        typename self::traits_type::char_type const*&      io_iterator,
-        typename self::traits_type::char_type const* const in_end)
+        typename this_type::traits_type::char_type const*& io_iterator,
+        typename this_type::traits_type::char_type const* const in_end)
     PSYQ_NOEXCEPT
     {
         if (in_end <= io_iterator)
@@ -549,15 +545,15 @@ class psyq::internal::string_view_base
      */
     private: template<typename template_number_type>
     static template_number_type parse_numbers(
-        typename self::traits_type::char_type const*& io_iterator,
-        typename self::traits_type::char_type const* const in_end,
+        typename this_type::traits_type::char_type const*& io_iterator,
+        typename this_type::traits_type::char_type const* const in_end,
         template_number_type const in_base)
     PSYQ_NOEXCEPT
     {
         // 基数が10以下なら、アラビア数字だけを解析する。
         if (in_base <= 10)
         {
-            return self::parse_digits(io_iterator, in_end, in_base);
+            return this_type::parse_digits(io_iterator, in_end, in_base);
         }
         PSYQ_ASSERT(in_base <= ('9' - '0') + ('z' - 'a'));
 
@@ -606,8 +602,8 @@ class psyq::internal::string_view_base
      */
     private: template<typename template_number_type>
     static template_number_type parse_digits(
-        typename self::traits_type::char_type const*& io_iterator,
-        typename self::traits_type::char_type const* const in_end,
+        typename this_type::traits_type::char_type const*& io_iterator,
+        typename this_type::traits_type::char_type const* const in_end,
         template_number_type const in_base)
     PSYQ_NOEXCEPT
     {
@@ -649,10 +645,10 @@ class psyq::internal::string_view_base
      */
     private: template<typename template_real_type>
     static template_real_type merge_decimal_numbers(
-        typename self::traits_type::char_type const*&      io_iterator,
-        typename self::traits_type::char_type const* const in_end,
-        template_real_type const                           in_base,
-        template_real_type const                           in_real)
+        typename this_type::traits_type::char_type const*& io_iterator,
+        typename this_type::traits_type::char_type const* const in_end,
+        template_real_type const in_base,
+        template_real_type const in_real)
     PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(0 <= in_real);
@@ -660,7 +656,7 @@ class psyq::internal::string_view_base
 
         // 小数部の範囲を決定する。
         auto const local_decimal_begin(io_iterator);
-        self::parse_numbers(io_iterator, in_end, in_base);
+        this_type::parse_numbers(io_iterator, in_end, in_base);
         auto const local_decimal_end(io_iterator);
 
         // 指数部を解析し、入力値と合成する。
@@ -670,9 +666,9 @@ class psyq::internal::string_view_base
         {
             ++io_iterator;
             auto const local_exponent_sign(
-                self::parse_sign(io_iterator, in_end));
+                this_type::parse_sign(io_iterator, in_end));
             auto const local_exponent_count(
-                self::parse_numbers(io_iterator, in_end, in_base));
+                this_type::parse_numbers(io_iterator, in_end, in_base));
             for (auto i(local_exponent_count); 0 < i; --i)
             {
                 local_multiple *= in_base;
@@ -700,7 +696,7 @@ class psyq::internal::string_view_base
 
     //-------------------------------------------------------------------------
     /// 文字列の先頭位置。
-    private: typename self::traits_type::char_type const* data_;
+    private: typename this_type::traits_type::char_type const* data_;
     /// 文字列の長さ。
     private: std::size_t length_;
 };

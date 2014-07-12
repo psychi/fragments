@@ -50,8 +50,7 @@
 
 /// psyq::basic_string_view で使う、defaultの文字特性の型。
 #ifndef PSYQ_BASIC_STRING_VIEW_TRAITS_DEFAULT
-#define PSYQ_BASIC_STRING_VIEW_TRAITS_DEFAULT\
-    std::char_traits<template_char_type>
+#define PSYQ_BASIC_STRING_VIEW_TRAITS_DEFAULT std::char_traits<template_char_type>
 #endif // !PSYQ_BASIC_STRING_VIEW_TRAITS_DEFAULT
 
 namespace psyq
@@ -77,8 +76,8 @@ namespace psyq
         文字の配列を単純にconst参照しているので、
         参照してる文字の配列が変更／破壊されると、動作を保証できなくなる。
 
-    @tparam template_char_type   @copydoc super::value_type
-    @tparam template_char_traits @copydoc super::traits_type
+    @tparam template_char_type   @copydoc base_type::value_type
+    @tparam template_char_traits @copydoc base_type::traits_type
  */
 template<typename template_char_type, typename template_char_traits>
 class psyq::basic_string_view:
@@ -86,13 +85,11 @@ class psyq::basic_string_view:
         psyq::internal::string_view_base<template_char_traits>>
 {
     /// thisが指す値の型。
-    private: typedef psyq::basic_string_view<
-        template_char_type, template_char_traits>
-            self;
-    /// self の基底型。
+    private: typedef basic_string_view this_type;
+    /// this_type の基底型。
     public: typedef psyq::internal::string_view_interface<
         psyq::internal::string_view_base<template_char_traits>>
-            super;
+            base_type;
 
     //-------------------------------------------------------------------------
     /// @name constructor / destructor
@@ -101,9 +98,9 @@ class psyq::basic_string_view:
         @param[in] in_string 参照する文字列。
      */
     public: PSYQ_CONSTEXPR basic_string_view(
-        typename super::super in_string = super::super())
+        typename base_type::base_type in_string = base_type::base_type())
     PSYQ_NOEXCEPT:
-        super(std::move(in_string))
+        base_type(std::move(in_string))
     {}
 
     /** @brief 文字列を参照する。
@@ -111,10 +108,10 @@ class psyq::basic_string_view:
         @param[in] in_length 参照する文字列の長さ。
      */
     public: PSYQ_CONSTEXPR basic_string_view(
-        typename super::const_pointer const in_begin,
-        typename super::size_type const     in_length)
+        typename base_type::const_pointer const in_begin,
+        typename base_type::size_type const     in_length)
     PSYQ_NOEXCEPT:
-        super(super::super(in_begin, in_length))
+        base_type(base_type::base_type(in_begin, in_length))
     {}
 
     /** @brief 文字列を参照する。
@@ -123,23 +120,23 @@ class psyq::basic_string_view:
         @param[in] in_count  参照する文字数の開始offset位置からの文字数。
      */
     public: PSYQ_CONSTEXPR basic_string_view(
-        typename super::super const&    in_string,
-        typename super::size_type const in_offset,
-        typename super::size_type const in_count = super::npos)
+        typename base_type::base_type const&    in_string,
+        typename base_type::size_type const in_offset,
+        typename base_type::size_type const in_count = base_type::npos)
     PSYQ_NOEXCEPT:
-        super(in_string.substr(in_offset, in_count))
+        base_type(in_string.substr(in_offset, in_count))
     {}
     //@}
 
     /// @name 文字列の代入
     //@{
-    /** @copydoc basic_string_view(super::super)
+    /** @copydoc basic_string_view(base_type::base_type)
         @return *this
      */
-    public: self& operator=(typename super::super const& in_string)
+    public: this_type& operator=(typename base_type::base_type const& in_string)
     PSYQ_NOEXCEPT
     {
-        return *new(this) self(in_string);
+        return *new(this) this_type(in_string);
     }
     //@}
 
@@ -148,37 +145,37 @@ class psyq::basic_string_view:
     /// @copydoc psyq::internal::string_view_base::clear()
     public: void clear() PSYQ_NOEXCEPT
     {
-        this->super::super::clear();
+        this->base_type::base_type::clear();
     }
     //@}
 
     /// @name 文字列の操作
     //@{
     /// @copydoc psyq::internal::string_view_base::substr()
-    public: PSYQ_CONSTEXPR self substr(
-        typename super::size_type const in_offset = 0,
-        typename super::size_type const in_count = super::npos)
+    public: PSYQ_CONSTEXPR this_type substr(
+        typename base_type::size_type const in_offset = 0,
+        typename base_type::size_type const in_count = base_type::npos)
     const PSYQ_NOEXCEPT
     {
-        return self(*this, in_offset, in_count);
+        return this_type(*this, in_offset, in_count);
     }
 
     /// @copydoc psyq::internal::string_view_base::trim_copy()
-    public: self trim_copy() const PSYQ_NOEXCEPT
+    public: this_type trim_copy() const PSYQ_NOEXCEPT
     {
-        return this->super::super::trim_copy();
+        return this->base_type::base_type::trim_copy();
     }
 
     /// @copydoc psyq::internal::string_view_base::trim_prefix_copy()
-    public: self trim_prefix_copy() const PSYQ_NOEXCEPT
+    public: this_type trim_prefix_copy() const PSYQ_NOEXCEPT
     {
-        return this->super::super::trim_prefix_copy();
+        return this->base_type::base_type::trim_prefix_copy();
     }
 
     /// @copydoc psyq::internal::string_view_base::trim_suffix_copy()
-    public: self trim_suffix_copy() const PSYQ_NOEXCEPT
+    public: this_type trim_suffix_copy() const PSYQ_NOEXCEPT
     {
-        return this->super::super::trim_suffix_copy();
+        return this->base_type::base_type::trim_suffix_copy();
     }
     //@}
 };

@@ -43,8 +43,8 @@ namespace psyq
 template<typename template_vector>
 class psyq::geometric_aabb
 {
-    /// *thisの型。
-    private: typedef psyq::geometric_aabb<template_vector> self;
+    /// thisが指す値の型。
+    private: typedef geometric_aabb this_type;
 
     /// @copydoc psyq::geometric_vector::type
     public: typedef template_vector vector;
@@ -94,8 +94,8 @@ class psyq::geometric_aabb
         @retval false 衝突してない。
      */
     public: static bool detect_collision(
-        self const& in_aabb0,
-        self const& in_aabb1)
+        this_type const& in_aabb0,
+        this_type const& in_aabb1)
     {
         auto const local_diff0(in_aabb0.get_min() - in_aabb1.get_max());
         auto const local_diff1(in_aabb1.get_min() - in_aabb0.get_max());

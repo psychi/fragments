@@ -17,24 +17,25 @@ namespace psyq
 template<typename template_space>
 class psyq::mosp_leaf
 {
-    private: typedef psyq::mosp_leaf<template_space> self; ///< *thisの型。
+    /// thisが指す値の型。
+    private: typedef mosp_leaf this_type;
 
     /// @copydoc psyq::mosp_tree::space
     public: typedef template_space space;
     /// mosp_leaf で使うAABBの型。
-    public: typedef typename self::space::coordinates::aabb aabb;
+    public: typedef typename this_type::space::coordinates::aabb aabb;
     /// mosp_leaf で使う幾何ベクトルの型。
-    public: typedef typename self::space::coordinates::vector vector;
+    public: typedef typename this_type::space::coordinates::vector vector;
     /// mosp_leaf を取りつける、 mosp_tree 空間分割木。
-    public: typedef psyq::mosp_tree<self*, template_space> tree;
+    public: typedef psyq::mosp_tree<this_type*, template_space> tree;
 
     //-------------------------------------------------------------------------
     protected: mosp_leaf():
         handle_(this),
         aabb_(
-            typename self::aabb(
-                psyq::geometric_vector<typename self::vector>::make(0),
-                psyq::geometric_vector<typename self::vector>::make(0)))
+            typename this_type::aabb(
+                psyq::geometric_vector<typename this_type::vector>::make(0),
+                psyq::geometric_vector<typename this_type::vector>::make(0)))
     {}
 
     /// *thisを mosp_tree から取り外す。
@@ -49,7 +50,7 @@ class psyq::mosp_leaf
         @param[in,out] io_tree *thisを取りつける mosp_tree 。
         @sa detach_tree() is_attached()
      */
-    public: void attach_tree(typename self::tree& io_tree)
+    public: void attach_tree(typename this_type::tree& io_tree)
     {
         // AABBを更新してから取りつける。
         if (!this->handle_.is_attached())
@@ -73,7 +74,7 @@ class psyq::mosp_leaf
 
     /** @brief thisが持つAABBを取得する。
      */
-    public: typename self::aabb const& get_aabb() const
+    public: typename this_type::aabb const& get_aabb() const
     {
         return this->aabb_;
     }
@@ -83,8 +84,8 @@ class psyq::mosp_leaf
     protected: virtual void update_aabb() = 0;
 
     public: static void detect_collision(
-        self const* const in_leaf0,
-        self const* const in_leaf1)
+        this_type const* const in_leaf0,
+        this_type const* const in_leaf1)
     {
         PSYQ_ASSERT(in_leaf0 != nullptr);
         PSYQ_ASSERT(in_leaf1 != nullptr);
@@ -92,7 +93,7 @@ class psyq::mosp_leaf
 
         // AABBが衝突しているか判定する。
         const auto local_aabb_collision(
-            self::aabb::detect_collision(
+            this_type::aabb::detect_collision(
                 in_leaf0->get_aabb(), in_leaf1->get_aabb()));
         if (!local_aabb_collision)
         {
@@ -102,9 +103,9 @@ class psyq::mosp_leaf
 
     //-------------------------------------------------------------------------
     /// 衝突判定オブジェクトに対応する衝突判定ハンドル。
-    private: typename self::tree::handle handle_;
+    private: typename this_type::tree::handle handle_;
     /// 衝突判定オブジェクトの絶対座標系AABB。
-    protected: typename self::aabb aabb_;
+    protected: typename this_type::aabb aabb_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -116,10 +117,9 @@ template<typename template_space, typename template_shape>
 class psyq::mosp_leaf_shape: public psyq::mosp_leaf<template_space>
 {
     /// thisが指す値の型。
-    private: typedef psyq::mosp_leaf_shape<template_space, template_shape>
-        self;
-    /// selfの基底型。
-    public: typedef psyq::mosp_leaf<template_space> super;
+    private: typedef mosp_leaf_shape this_type;
+    /// this_type の基底型。
+    public: typedef psyq::mosp_leaf<template_space> base_type;
 
     /// 衝突判定オブジェクトの幾何形状。
     public: typedef template_shape shape;
@@ -145,7 +145,7 @@ class psyq::mosp_leaf_shape: public psyq::mosp_leaf<template_space>
 
         衝突判定に使う幾何形状を更新したい場合は、
         この関数の戻り値が参照する幾何形状を書き換えた後、
-        super::attach_tree() で mosp_tree に取りつける。
+        base_type::attach_tree() で mosp_tree に取りつける。
 
         @return 衝突判定に使う形状。
      */
@@ -165,9 +165,8 @@ class psyq::mosp_leaf_shape: public psyq::mosp_leaf<template_space>
     //-------------------------------------------------------------------------
     protected: virtual void update_aabb() override
     {
-        this->aabb_ = psyq::geometric_shape_aabb<
-            typename super::vector, template_shape>
-                ::make(this->get_shape());
+        this->aabb_ = psyq::geometric_shape_aabb<typename base_type::vector, template_shape>
+            ::make(this->get_shape());
     };
 
     //-------------------------------------------------------------------------

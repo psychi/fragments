@@ -101,19 +101,19 @@ template<
 class psyq::message_pack::deserializer
 {
     /// thisが指す値の型。
-    private: typedef deserializer self;
+    private: typedef deserializer this_type;
 
     /// 直列化復元に使う、 std::basic_istream 互換の入力ストリーム。
     public: typedef template_stream stream;
     static_assert(
-        sizeof(typename self::stream::char_type) == 1,
-        "sizeof(self::stream::char_type) is not 1.");
+        sizeof(typename this_type::stream::char_type) == 1,
+        "sizeof(this_type::stream::char_type) is not 1.");
 
     /// 直列化復元に使う、 psyq::message_pack::pool 互換のメモリ割当子。
     public: typedef template_pool pool;
 
     /// 最上位のMessagePackオブジェクト。
-    public: typedef psyq::message_pack::root_object<typename self::pool>
+    public: typedef psyq::message_pack::root_object<typename this_type::pool>
         root_object;
 
     /// 直列化復元途中のコンテナのスタック限界数。
@@ -143,7 +143,7 @@ class psyq::message_pack::deserializer
         psyq::message_pack::object object;  ///< 復元中のオブジェクト。
         psyq::message_pack::object map_key; ///< 直前に復元した連想配列のキー。
         std::size_t rest_count;             ///< コンテナ要素の残数。
-        typename self::value_kind kind;     ///< 次に直列化復元する値の種類。
+        typename this_type::value_kind kind;     ///< 次に直列化復元する値の種類。
     };
 
     //-------------------------------------------------------------------------
@@ -154,8 +154,8 @@ class psyq::message_pack::deserializer
         @param[in] in_pool    直列化復元に使うメモリ割当子の初期値。
      */
     public: deserializer(
-        typename self::stream in_istream,
-        typename self::pool in_pool)
+        typename this_type::stream in_istream,
+        typename this_type::pool in_pool)
     :
         stream_(std::move(in_istream)),
         pool_(std::move(in_pool)),
@@ -167,7 +167,7 @@ class psyq::message_pack::deserializer
     /** @brief move構築子。
         @param[in,out] io_source 移動元。
      */
-    public: deserializer(self&& io_source):
+    public: deserializer(this_type&& io_source):
         stream_(std::move(io_source.stream_)),
         pool_(std::move(io_source.pool_)),
         stack_(std::move(io_source.stack_)),
@@ -181,7 +181,7 @@ class psyq::message_pack::deserializer
     /** @brief move代入演算子。
         @param[in,out] io_source 移動元。
      */
-    public: self& operator=(self&& io_source)
+    public: this_type& operator=(this_type&& io_source)
     {
         this->stream_ = std::move(io_source.stream_);
         this->pool_ = std::move(io_source.pool_);
@@ -194,9 +194,9 @@ class psyq::message_pack::deserializer
     }
     //@}
     /// copy構築子は使用禁止。
-    private: deserializer(self const&);// = delete;
+    private: deserializer(this_type const&);// = delete;
     /// copy代入演算子は使用禁止。
-    private: self& operator=(self const&);// = delete;
+    private: this_type& operator=(this_type const&);// = delete;
 
     //-------------------------------------------------------------------------
     /// @name インスタンス変数の操作
@@ -206,9 +206,9 @@ class psyq::message_pack::deserializer
         @param[in] in_pool    新たに設定するメモリ割当子。
         @return これまで使っていた入力ストリーム。
      */
-    public: typename self::stream reset(
-        typename self::stream in_istream,
-        typename self::pool in_pool)
+    public: typename this_type::stream reset(
+        typename this_type::stream in_istream,
+        typename this_type::pool in_pool)
     {
         this->stream_.swap(in_istream);
         this->pool_ = std::move(in_pool);
@@ -219,7 +219,7 @@ class psyq::message_pack::deserializer
     /** @brief 直列化復元で読み込む入力ストリームを取得する。
         @return 直列化復元で読み込む入力ストリーム。
      */
-    public: typename self::stream const& get_stream() const PSYQ_NOEXCEPT
+    public: typename this_type::stream const& get_stream() const PSYQ_NOEXCEPT
     {
         return this->stream_;
     }
@@ -227,7 +227,7 @@ class psyq::message_pack::deserializer
     /** @brief 直列化復元で使うメモリ割当子を取得する。
         @return 直列化復元で使うメモリ割当子
      */
-    public: typename self::pool const& get_pool() const PSYQ_NOEXCEPT
+    public: typename this_type::pool const& get_pool() const PSYQ_NOEXCEPT
     {
         return this->pool_;
     }
@@ -250,13 +250,13 @@ class psyq::message_pack::deserializer
 
     /** @brief 次に直列化復元するMessagePack値の種別を取得する。
         @return 次に直列化復元するMessagePack値の種別。
-        @sa self::read_object()
+        @sa this_type::read_object()
      */
-    public: typename self::value_kind get_next_value_kind() const PSYQ_NOEXCEPT
+    public: typename this_type::value_kind get_next_value_kind() const PSYQ_NOEXCEPT
     {
         return 0 < this->get_rest_container_count()?
             this->container_stack_.at(this->get_rest_container_count() - 1).kind:
-            typename self::value_kind_ROOT;
+            typename this_type::value_kind_ROOT;
     }
 
     /** @brief 直前に直列化復元を開始したMessagePackコンテナの残り要素数を取得する。
@@ -264,7 +264,7 @@ class psyq::message_pack::deserializer
             直前に直列化復元を開始したMessagePackコンテナが…
             - 文字列／バイナリ／拡張バイナリなら、残りバイト数。
             - 配列／連想配列なら、残り要素数。
-        @sa self::read_object()
+        @sa this_type::read_object()
      */
     public: std::size_t get_rest_element_count() const PSYQ_NOEXCEPT
     {
@@ -275,7 +275,7 @@ class psyq::message_pack::deserializer
 
     /** @brief 直列化復元途中のMessagePackコンテナの数を取得する。
         @return 直列化復元途中のMessagePackコンテナの数。
-        @sa self::read_object()
+        @sa this_type::read_object()
      */
     public: std::size_t get_rest_container_count() const PSYQ_NOEXCEPT
     {
@@ -291,7 +291,7 @@ class psyq::message_pack::deserializer
             - 直列化復元が完了しなかった場合は、空値を格納する。
         @return *this
      */
-    public: self& operator>>(typename self::root_object& out_object)
+    public: this_type& operator>>(typename this_type::root_object& out_object)
     {
         auto const local_result(this->read_object(out_object));
         if (local_result <= 0)
@@ -310,13 +310,13 @@ class psyq::message_pack::deserializer
         @return
             - 正なら、MessagePackオブジェクトの直列化復元を完了。
             - 0 なら、MessagePackオブジェクトの直列化復元途中で中断。
-              self::read_object(self::root_object&) で、直列化復元を続行できる。
+              this_type::read_object(this_type::root_object&) で、直列化復元を続行できる。
             - 負なら、直列化復元に失敗。
-        @sa self::get_rest_container_count()
+        @sa this_type::get_rest_container_count()
      */
     public: int read_object(
-        typename self::root_object& out_object,
-        typename self::pool in_pool)
+        typename this_type::root_object& out_object,
+        typename this_type::pool in_pool)
     {
         if (0 < this->get_rest_container_count())
         {
@@ -334,31 +334,31 @@ class psyq::message_pack::deserializer
         @return
             - 正なら、MessagePackオブジェクトの直列化復元を完了。
             - 0 なら、MessagePackオブジェクトの直列化復元途中で中断。
-              self::read_object(self::root_object&) で、直列化復元を続行できる。
+              this_type::read_object(this_type::root_object&) で、直列化復元を続行できる。
             - 負なら、直列化復元に失敗。
-        @sa self::get_rest_container_count()
+        @sa this_type::get_rest_container_count()
      */
-    public: int read_object(typename self::root_object& out_object)
+    public: int read_object(typename this_type::root_object& out_object)
     {
         for (;;)
         {
             auto const local_pre_position(this->stream_.tellg());
             switch (this->read_value())
             {
-            case self::read_result_FINISH:
-                out_object = typename self::root_object(
+            case this_type::read_result_FINISH:
+                out_object = typename this_type::root_object(
                     this->container_stack_.front().object,
                     std::move(this->pool_));
                 return 1;
 
-            case self::read_result_CONTINUE:
+            case this_type::read_result_CONTINUE:
                 if (this->stream_.eof())
                 {
                     return 0;
                 }
                 break;
 
-            case self::read_result_ABORT:
+            case this_type::read_result_ABORT:
                 if (this->stream_.fail())
                 {
                     return -1;
@@ -376,12 +376,12 @@ class psyq::message_pack::deserializer
     //-------------------------------------------------------------------------
     /** @brief ストリームを読み込み、MessagePack値を復元する。
      */
-    private: typename self::read_result read_value()
+    private: typename this_type::read_result read_value()
     {
         // ストリームからMessagePack直列化形式を読み込む。
         if (!this->stream_.good())
         {
-            return self::read_result_ABORT;
+            return this_type::read_result_ABORT;
         }
         auto const local_header(static_cast<unsigned>(this->stream_.get()));
 
@@ -463,7 +463,7 @@ class psyq::message_pack::deserializer
     /** @brief ストリームを読み込み、MessagePack値を復元する。
         @param[in] in_header 復元するMessagePack値のヘッダ。
      */
-    private: typename self::read_result read_value(unsigned const in_header)
+    private: typename this_type::read_result read_value(unsigned const in_header)
     {
         switch (in_header)
         {
@@ -541,7 +541,7 @@ class psyq::message_pack::deserializer
 
         default:
             PSYQ_ASSERT(false);
-            return self::read_result_FAILED;
+            return this_type::read_result_FAILED;
         }
     }
 
@@ -550,12 +550,12 @@ class psyq::message_pack::deserializer
         @tparam template_value 復元する値の型。
      */
     private: template<typename template_value>
-    typename self::read_result read_big_endian()
+    typename this_type::read_result read_big_endian()
     {
         template_value local_value;
-        return self::read_big_endian(local_value, this->stream_)?
+        return this_type::read_big_endian(local_value, this->stream_)?
             this->add_container_element(psyq::message_pack::object(local_value)):
-            self::read_result_ABORT;
+            this_type::read_result_ABORT;
     }
     /** @brief ストリームを読み込み、big-endianで値を復元する。
         @tparam template_value 復元する値の型。
@@ -565,7 +565,7 @@ class psyq::message_pack::deserializer
     private: template<typename template_value>
     static bool read_big_endian(
         template_value& out_value,
-        typename self::stream& io_istream)
+        typename this_type::stream& io_istream)
     {
         typedef psyq::message_pack::endianness_converter<template_value>
             endianness_converter;
@@ -588,19 +588,19 @@ class psyq::message_pack::deserializer
         @tparam template_raw    MessagePackRAWバイト列の型。
      */
     private: template<typename template_raw, typename template_length>
-    typename self::read_result read_raw()
+    typename this_type::read_result read_raw()
     {
         template_length local_size;
-        return self::read_big_endian(local_size, this->stream_)?
+        return this_type::read_big_endian(local_size, this->stream_)?
             this->read_raw<template_raw>(local_size):
-            self::read_result_ABORT;
+            this_type::read_result_ABORT;
     }
     /** @brief ストリームを読み込み、MessagePackRAWバイト列を復元する。
         @tparam template_raw MessagePackRAWバイト列の型。
         @param[in] in_size RAWバイト列のバイト数。
      */
     private: template<typename template_raw>
-    typename self::read_result read_raw(std::size_t in_size)
+    typename this_type::read_result read_raw(std::size_t in_size)
     {
         if (std::is_same<template_raw, psyq::message_pack::object::extended>::value)
         {
@@ -608,11 +608,11 @@ class psyq::message_pack::deserializer
         }
         auto const local_bytes(
             static_cast<typename template_raw::pointer>(
-                self::read_raw(
+                this_type::read_raw(
                     this->stream_, this->pool_, in_size, this->allocate_raw_)));
         if (local_bytes == nullptr && 0 < in_size)
         {
-            return self::read_result_ABORT;
+            return this_type::read_result_ABORT;
         }
         template_raw local_raw;
         local_raw.reset(local_bytes, in_size);
@@ -625,8 +625,8 @@ class psyq::message_pack::deserializer
         @param[in]     in_allocate メモリ割当てをするかどうか。
      */
     private: static void* read_raw(
-        typename self::stream& io_istream,
-        typename self::pool& io_pool,
+        typename this_type::stream& io_istream,
+        typename this_type::pool& io_pool,
         std::size_t const in_size,
         bool const in_allocate)
     {
@@ -675,19 +675,19 @@ class psyq::message_pack::deserializer
         @tparam template_length    コンテナ容量の型。
      */
     private: template<typename template_container, typename template_length>
-    typename self::read_result reserve_container()
+    typename this_type::read_result reserve_container()
     {
         // コンテナ容量をストリームから読み込み、コンテナを予約する。
         template_length local_length;
-        return self::read_big_endian(local_length, this->stream_)?
+        return this_type::read_big_endian(local_length, this->stream_)?
             this->reserve_container<template_container>(local_length):
-            self::read_result_ABORT;
+            this_type::read_result_ABORT;
     }
     /** @brief MessagePackコンテナを予約し、スタックに積む。
         @param[in] in_capacity 予約するコンテナの容量。
      */
     private: template<typename template_container>
-    typename self::read_result reserve_container(std::size_t const in_capacity)
+    typename this_type::read_result reserve_container(std::size_t const in_capacity)
     {
         static_assert(
             std::is_same<template_container, psyq::message_pack::object::array>::value
@@ -697,13 +697,13 @@ class psyq::message_pack::deserializer
         if (this->container_stack_.size() <= this->get_rest_container_count())
         {
             PSYQ_ASSERT(false);
-            return self::read_result_FAILED;
+            return this_type::read_result_FAILED;
         }
 
         // コンテナを構築する。
         template_container local_container;
         bool local_reserve_container(
-            self::reserve_container(
+            this_type::reserve_container(
                 local_container,
                 this->pool_,
                 in_capacity,
@@ -711,7 +711,7 @@ class psyq::message_pack::deserializer
         if (!local_reserve_container)
         {
             PSYQ_ASSERT(false);
-            return self::read_result_FAILED;
+            return this_type::read_result_FAILED;
         }
         else if (in_capacity <= 0)
         {
@@ -726,11 +726,11 @@ class psyq::message_pack::deserializer
         local_stack_top.kind =
             std::is_same<template_container, psyq::message_pack::object::array>
                 ::value?
-                    self::value_kind_ARRAY_ELEMENT:
-                    self::value_kind_MAP_KEY;
+                    this_type::value_kind_ARRAY_ELEMENT:
+                    this_type::value_kind_MAP_KEY;
         local_stack_top.rest_count = in_capacity;
         ++this->stack_size_;
-        return self::read_result_CONTINUE;
+        return this_type::read_result_CONTINUE;
     }
     /** @brief MessagePackコンテナを予約する。
         @param[out]    out_container 予約したMessagePackコンテナの格納先。
@@ -743,7 +743,7 @@ class psyq::message_pack::deserializer
     private: template<typename template_container>
     static bool reserve_container(
         template_container& out_container,
-        typename self::pool& io_pool,
+        typename this_type::pool& io_pool,
         std::size_t const in_capacity,
         std::size_t const in_alignment)
     {
@@ -772,14 +772,14 @@ class psyq::message_pack::deserializer
     /** @brief コンテナスタックを更新する。
         @param[in] in_object コンテナに追加するオブジェクト。
      */
-    private: typename self::read_result add_container_element(
+    private: typename this_type::read_result add_container_element(
         psyq::message_pack::object in_object)
     PSYQ_NOEXCEPT
     {
         if (this->get_rest_container_count() <= 0)
         {
             this->container_stack_.front().object = in_object;
-            return self::read_result_FINISH;
+            return this_type::read_result_FINISH;
         }
         for (;;)
         {
@@ -788,7 +788,7 @@ class psyq::message_pack::deserializer
                 this->container_stack_[this->get_rest_container_count() - 1]);
             switch (local_stack_top.kind)
             {
-            case self::value_kind_ARRAY_ELEMENT:
+            case this_type::value_kind_ARRAY_ELEMENT:
             {
                 // 配列に要素を追加する。
                 auto const local_array(local_stack_top.object.get_array());
@@ -805,18 +805,18 @@ class psyq::message_pack::deserializer
                 --local_stack_top.rest_count;
                 if (0 < local_stack_top.rest_count)
                 {
-                    return self::read_result_CONTINUE;
+                    return this_type::read_result_CONTINUE;
                 }
                 break;
             }
 
-            case self::value_kind_MAP_KEY:
+            case this_type::value_kind_MAP_KEY:
                 // 連想配列のキーを保存する。
                 local_stack_top.map_key = in_object;
-                local_stack_top.kind = self::value_kind_MAP_VALUE;
-                return self::read_result_CONTINUE;
+                local_stack_top.kind = this_type::value_kind_MAP_VALUE;
+                return this_type::read_result_CONTINUE;
 
-            case self::value_kind_MAP_VALUE:
+            case this_type::value_kind_MAP_VALUE:
             {
                 // 連想配列に要素を追加する。
                 auto const local_map(local_stack_top.object.get_unordered_map());
@@ -828,15 +828,15 @@ class psyq::message_pack::deserializer
                 else
                 {
                     PSYQ_ASSERT(false);
-                    return self::read_result_FAILED;
+                    return this_type::read_result_FAILED;
                 }
 
                 // 残り要素数を更新する。
                 --local_stack_top.rest_count;
                 if (0 < local_stack_top.rest_count)
                 {
-                    local_stack_top.kind = self::value_kind_MAP_KEY;
-                    return self::read_result_CONTINUE;
+                    local_stack_top.kind = this_type::value_kind_MAP_KEY;
+                    return this_type::read_result_CONTINUE;
                 }
 
                 // 連想配列の全要素が揃ったので、ソートする。
@@ -849,7 +849,7 @@ class psyq::message_pack::deserializer
 
             default:
                 PSYQ_ASSERT(false);
-                return self::read_result_FAILED;
+                return this_type::read_result_FAILED;
             }
 
             // オブジェクトをスタックから取り出す。
@@ -861,18 +861,18 @@ class psyq::message_pack::deserializer
             else
             {
                 this->stack_size_ = 0;
-                return self::read_result_FINISH;
+                return this_type::read_result_FINISH;
             }
         }
     }
 
     //-------------------------------------------------------------------------
     /// @copydoc stream
-    private: typename self::stream stream_;
+    private: typename this_type::stream stream_;
     /// @copydoc pool
-    private: typename self::pool pool_;
+    private: typename this_type::pool pool_;
     /// @copydoc container_stack
-    private: std::array<typename self::container_stack, template_stack_capacity>
+    private: std::array<typename this_type::container_stack, template_stack_capacity>
         container_stack_;
     /// 直列化復元している途中のコンテナのスタック階層数。
     private: std::size_t stack_size_;

@@ -79,25 +79,20 @@ namespace psyq
     - memory割り当てを一切行わない。
     - 文字列の終端がnull文字となっている保証はない。
 
-    @warning self::MAX_SIZE より多い文字数は保持できない。
+    @warning this_type::MAX_SIZE より多い文字数は保持できない。
 
-    @tparam template_char_traits @copydoc self::traits_type
-    @tparam template_max_size    @copydoc self::MAX_SIZE
+    @tparam template_char_traits @copydoc this_type::traits_type
+    @tparam template_max_size    @copydoc this_type::MAX_SIZE
  */
 template<typename template_char_traits, std::size_t template_max_size>
 class psyq::internal::fixed_length_string
 {
-    /// thisが指す値の型。
-    private: typedef fixed_length_string<
-        template_char_traits, template_max_size>
-            self;
+    private: typedef fixed_length_string this_type; ///< thisが指す値の型。
 
     /// 文字特性の型。
     public: typedef template_char_traits traits_type;
-
     /// 部分文字列の型。
-    protected:
-    typedef psyq::internal::string_view_base<typename self::traits_type> view;
+    protected: typedef psyq::internal::string_view_base<typename this_type::traits_type> view;
 
     public: enum: std::size_t
     {
@@ -114,59 +109,59 @@ class psyq::internal::fixed_length_string
     /** @brief 文字列をcopyする。
         @param[in] in_string copy元とする文字列。
      */
-    protected: fixed_length_string(self const& in_string) PSYQ_NOEXCEPT:
+    protected: fixed_length_string(this_type const& in_string) PSYQ_NOEXCEPT:
         length_(in_string.length())
     {
-        self::traits_type::copy(
+        this_type::traits_type::copy(
             &this->array_[0], in_string.data(), in_string.length());
     }
 
     /** @brief 文字列をcopyする。
         @param[in] in_string copy元とする文字列。
      */
-    protected: fixed_length_string(typename self::view const& in_string):
-        length_((std::min<std::size_t>)(in_string.length(), self::MAX_SIZE))
+    protected: fixed_length_string(typename this_type::view const& in_string):
+        length_((std::min<std::size_t>)(in_string.length(), this_type::MAX_SIZE))
     {
-        PSYQ_ASSERT(in_string.length() <= self::MAX_SIZE);
-        self::traits_type::copy(
+        PSYQ_ASSERT(in_string.length() <= this_type::MAX_SIZE);
+        this_type::traits_type::copy(
             &this->array_[0], in_string.data(), this->length());
     }
 
-    /** @copydoc fixed_length_string(self const&)
+    /** @copydoc fixed_length_string(this_type const&)
         @return *this
      */
-    protected: self& operator=(self const& in_string) PSYQ_NOEXCEPT
+    protected: this_type& operator=(this_type const& in_string) PSYQ_NOEXCEPT
     {
-        return *new(this) self(in_string);
+        return *new(this) this_type(in_string);
     }
 
     //-------------------------------------------------------------------------
     /// @name 文字列の操作
     //@{
-    /// @copydoc self::view::data()
-    public: PSYQ_CONSTEXPR typename self::traits_type::char_type const* data()
+    /// @copydoc this_type::view::data()
+    public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type const* data()
     const PSYQ_NOEXCEPT
     {
         return &this->array_[0];
     }
 
-    /// @copydoc self::view::length()
+    /// @copydoc this_type::view::length()
     public: PSYQ_CONSTEXPR std::size_t length() const PSYQ_NOEXCEPT
     {
         return this->length_;
     }
 
-    /// @copydoc self::view::max_size()
+    /// @copydoc this_type::view::max_size()
     public: PSYQ_CONSTEXPR std::size_t max_size() const PSYQ_NOEXCEPT
     {
-        return self::MAX_SIZE;
+        return this_type::MAX_SIZE;
     }
     //@}
     //-------------------------------------------------------------------------
     /// 文字列の文字数。
     private: std::size_t length_;
     /// 文字列を保存する配列。
-    private: typename self::traits_type::char_type array_[template_max_size];
+    private: typename this_type::traits_type::char_type array_[template_max_size];
 
     //-------------------------------------------------------------------------
     /// @cond
@@ -183,11 +178,11 @@ class psyq::internal::fixed_length_string
     - memory割り当てを一切行わない。
     - 文字列の終端がnull文字となっている保証はない。
 
-    @warning super::MAX_SIZE より多い文字数は保持できない。
+    @warning base_type::MAX_SIZE より多い文字数は保持できない。
 
-    @tparam template_char_type   @copydoc super::value_type
-    @tparam template_max_size    @copydoc super::MAX_SIZE
-    @tparam template_char_traits @copydoc super::traits_type
+    @tparam template_char_type   @copydoc base_type::value_type
+    @tparam template_max_size    @copydoc base_type::MAX_SIZE
+    @tparam template_char_traits @copydoc base_type::traits_type
  */
 template<
     typename    template_char_type,
@@ -201,13 +196,13 @@ class psyq::basic_fixed_string:
     /// thisが指す値の型。
     private: typedef basic_fixed_string<
         template_char_type, template_max_size, template_char_traits>
-            self;
+            this_type;
 
-    /// self の基底型。
+    /// this_type の基底型。
     public: typedef psyq::internal::string_view_interface<
         psyq::internal::fixed_length_string<
             template_char_traits, template_max_size>>
-                super;
+                base_type;
 
     //-------------------------------------------------------------------------
     /// @name constructor / destructor
@@ -219,16 +214,16 @@ class psyq::basic_fixed_string:
     /** @brief 文字列をcopyする。
         @param[in] in_string copy元の文字列。
      */
-    public: basic_fixed_string(self const& in_string) PSYQ_NOEXCEPT:
-        super(in_string)
+    public: basic_fixed_string(this_type const& in_string) PSYQ_NOEXCEPT:
+        base_type(in_string)
     {}
 
     /** @brief 文字列をcopyする。
         @param[in] in_string copy元の文字列。
      */
-    public: basic_fixed_string(typename super::super::view const& in_string)
+    public: basic_fixed_string(typename base_type::base_type::view const& in_string)
     {
-        new(this) typename super::super(in_string);
+        new(this) typename base_type::base_type(in_string);
     }
 
     /** @brief 文字列をcopyする。
@@ -236,31 +231,31 @@ class psyq::basic_fixed_string:
         @param[in] in_length copy元の文字列の長さ。
      */
     public: basic_fixed_string(
-        typename super::const_pointer const in_begin,
-        typename super::size_type const     in_length)
+        typename base_type::const_pointer const in_begin,
+        typename base_type::size_type const     in_length)
     {
-        new(this) typename super::super(
-            typename super::super::view(in_begin, in_length));
+        new(this) typename base_type::base_type(
+            typename base_type::base_type::view(in_begin, in_length));
     }
     //@}
     //-------------------------------------------------------------------------
     /// @name 文字列の代入
     //@{
-    /** @copydoc basic_fixed_string(self const&)
+    /** @copydoc basic_fixed_string(this_type const&)
         @return *this
      */
-    public: self& operator=(self const& in_string) PSYQ_NOEXCEPT
+    public: this_type& operator=(this_type const& in_string) PSYQ_NOEXCEPT
     {
-        this->super::super::operator=(in_string);
+        this->base_type::base_type::operator=(in_string);
         return *this;
     }
 
-    /** @copydoc basic_fixed_string(typename super::super::view const&)
+    /** @copydoc basic_fixed_string(typename base_type::base_type::view const&)
         @return *this
      */
-    public: self& operator=(typename super::super::view const& in_string)
+    public: this_type& operator=(typename base_type::base_type::view const& in_string)
     {
-        return *new(this) self(in_string);
+        return *new(this) this_type(in_string);
     }
     //@}
 };

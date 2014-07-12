@@ -20,7 +20,7 @@
 
 #ifndef PSYQ_MOSP_SPACE_DEFAULT
 #define PSYQ_MOSP_SPACE_DEFAULT psyq::mosp_space_2d<>
-#endif
+#endif // !defined(PSYQ_MOSP_SPACE_DEFAULT)
 
 namespace psyq
 {
@@ -51,13 +51,8 @@ template<
     unsigned template_element2>
 class psyq::mosp_coordinates
 {
-    /// *thisの型。
-    private: typedef mosp_coordinates<
-        template_vector,
-        template_element0,
-        template_element1,
-        template_element2>
-            self;
+    /// thisが指す値の型。
+    private: typedef mosp_coordinates this_type;
 
     public: enum: unsigned
     {
@@ -73,8 +68,8 @@ class psyq::mosp_coordinates
     public: typedef template_vector vector;
 
     /// morton座標を表すvectorの成分の型。
-    public: typedef typename
-        psyq::geometric_vector<template_vector>::element element;
+    public: typedef typename psyq::geometric_vector<template_vector>::element
+        element;
 
     /// morton座標のAABB。
     public: typedef psyq::geometric_aabb<template_vector> aabb;
@@ -83,12 +78,11 @@ class psyq::mosp_coordinates
         @param[in] in_morton_size morton座標の最大値。
         @param[in] in_world_size  絶対座標系でのmorton空間の大きさ。
      */
-    public: static typename self::element calc_scale(
-        typename self::element const in_morton_size,
-        typename self::element const in_world_size)
+    public: static typename this_type::element calc_scale(
+        typename this_type::element const in_morton_size,
+        typename this_type::element const in_world_size)
     {
-        if (in_world_size
-            < std::numeric_limits<typename self::element>::epsilon())
+        if (in_world_size < std::numeric_limits<typename this_type::element>::epsilon())
         {
             return 0;
         }
@@ -99,19 +93,19 @@ class psyq::mosp_coordinates
         @param[in] in_aabb      衝突判定領域の全体を包む、絶対座標系AABB。
         @param[in] in_level_cap 空間分割の最大深度。
      */
-    public: static typename self::vector calc_scale(
-        typename self::aabb const& in_aabb,
-        unsigned const             in_level_cap)
+    public: static typename this_type::vector calc_scale(
+        typename this_type::aabb const& in_aabb,
+        unsigned const in_level_cap)
     {
         auto const local_size(in_aabb.get_max() - in_aabb.get_min());
         auto const local_unit(
-            static_cast<typename self::element>(1 << in_level_cap));
-        return psyq::geometric_vector<self::vector>::make(
-            self::calc_scale(
+            static_cast<typename this_type::element>(1 << in_level_cap));
+        return psyq::geometric_vector<this_type::vector>::make(
+            this_type::calc_scale(
                 local_unit, psyq::geometric_vector_element(local_size, 0)),
-            self::calc_scale(
+            this_type::calc_scale(
                 local_unit, psyq::geometric_vector_element(local_size, 1)),
-            self::calc_scale(
+            this_type::calc_scale(
                 local_unit, psyq::geometric_vector_element(local_size, 2)));
     }
 };
@@ -123,8 +117,8 @@ class psyq::mosp_coordinates
 template<typename template_coordinates>
 class psyq::mosp_space
 {
-    /// *thisの型。
-    private: typedef mosp_space<template_coordinates> self;
+    /// thisが指す値の型。
+    private: typedef mosp_space this_type;
 
     /// 衝突判定に使う psyq::mosp_coordinates の型。
     public: typedef template_coordinates coordinates;
@@ -143,17 +137,17 @@ class psyq::mosp_space
         @param[in] in_level_cap 空間分割の最深レベル。
      */
     protected: mosp_space(
-        typename self::coordinates::aabb const& in_aabb,
+        typename this_type::coordinates::aabb const& in_aabb,
         unsigned const                          in_level_cap)
     :
         aabb_(in_aabb),
-        scale_(self::coordinates::calc_scale(in_aabb, in_level_cap))
+        scale_(this_type::coordinates::calc_scale(in_aabb, in_level_cap))
     {}
 
     /** @brief 衝突判定を行う領域の全体を包む、絶対座標系AABBを取得する。
         @return 衝突判定を行う領域の全体を包む、絶対座標系AABB。
      */
-    public: typename self::coordinates::aabb const& get_aabb() const
+    public: typename this_type::coordinates::aabb const& get_aabb() const
     {
         return this->aabb_;
     }
@@ -163,8 +157,8 @@ class psyq::mosp_space
         @param[in] in_element_index 変換する要素のインデックス番号。
         @return morton座標でのベクトル要素の値。
      */
-    protected: typename self::coordinates::element transform_element(
-        typename self::coordinates::vector const& in_vector,
+    protected: typename this_type::coordinates::element transform_element(
+        typename this_type::coordinates::vector const& in_vector,
         unsigned const                            in_element_index)
     const
     {
@@ -192,24 +186,24 @@ class psyq::mosp_space
         @param[in] in_element clampするmorton座標値。
         @param[in] in_max     morton座標の最大値。
      */
-    protected: static typename self::order clamp_axis_order(
-        typename self::coordinates::element const in_element,
-        typename self::order const                in_max)
+    protected: static typename this_type::order clamp_axis_order(
+        typename this_type::coordinates::element const in_element,
+        typename this_type::order const                in_max)
     {
         if (in_element < 1)
         {
             return 0;
         }
         return (std::min)(
-            static_cast<typename self::order>(in_element), in_max);
+            static_cast<typename this_type::order>(in_element), in_max);
     }
 
     //-------------------------------------------------------------------------
     /// 衝突判定を行う領域全体の、絶対座標系AABB。
-    private: typename self::coordinates::aabb aabb_;
+    private: typename this_type::coordinates::aabb aabb_;
 
     /// 最小となる分割空間の、絶対座標系での大きさの逆数。
-    private: typename self::coordinates::vector scale_;
+    private: typename this_type::coordinates::vector scale_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -223,9 +217,9 @@ template<typename template_coordinates>
 class psyq::mosp_space_2d: public psyq::mosp_space<template_coordinates>
 {
     /// thisが指す値の型。
-    private: typedef mosp_space_2d<template_coordinates> self;
-    /// selfの基底型。
-    public: typedef mosp_space<template_coordinates> super;
+    private: typedef mosp_space_2d this_type;
+    /// this_type の基底型。
+    public: typedef mosp_space<template_coordinates> base_type;
 
     public: enum: unsigned
     {
@@ -235,10 +229,10 @@ class psyq::mosp_space_2d: public psyq::mosp_space<template_coordinates>
     //-------------------------------------------------------------------------
     /// @copydoc mosp_space::mosp_space
     public: mosp_space_2d(
-        typename super::coordinates::aabb const& in_aabb,
-        unsigned const                           in_level_cap)
+        typename base_type::coordinates::aabb const& in_aabb,
+        unsigned const in_level_cap)
     :
-        super(in_aabb, in_level_cap)
+        base_type(in_aabb, in_level_cap)
     {}
 
     /** @brief 2次元座標上の点から、線形4分木のmorton順序を算出する。
@@ -246,30 +240,30 @@ class psyq::mosp_space_2d: public psyq::mosp_space<template_coordinates>
         @param[in] in_max   morton座標の最大値。
         @return 2次元座標に対応するmorton順序。
      */
-    public: typename super::order calc_order(
-        typename super::coordinates::vector const& in_point,
-        typename super::order const                in_max)
+    public: typename base_type::order calc_order(
+        typename base_type::coordinates::vector const& in_point,
+        typename base_type::order const in_max)
     const
     {
         auto const local_element0(
             this->transform_element(
-                in_point, super::coordinates::ELEMENT0_INDEX));
+                in_point, base_type::coordinates::ELEMENT0_INDEX));
         auto const local_element1(
             this->transform_element(
-                in_point, super::coordinates::ELEMENT1_INDEX));
-        return self::separate_bits(local_element0, in_max) << 0
-            |  self::separate_bits(local_element1, in_max) << 1;
+                in_point, base_type::coordinates::ELEMENT1_INDEX));
+        return this_type::separate_bits(local_element0, in_max) << 0
+            |  this_type::separate_bits(local_element1, in_max) << 1;
     }
 
     /** @brief morton座標を、軸ごとのbitに分割する。
         @param[in] in_element morton座標の成分値。
         @param[in] in_max     morton座標の最大値。
      */
-    private: static typename super::order separate_bits(
-        typename super::coordinates::element const in_element,
-        typename super::order const                in_max)
+    private: static typename base_type::order separate_bits(
+        typename base_type::coordinates::element const in_element,
+        typename base_type::order const in_max)
     {
-        auto local_bits(super::clamp_axis_order(in_element, in_max));
+        auto local_bits(base_type::clamp_axis_order(in_element, in_max));
         local_bits = (local_bits | (local_bits << 8)) & 0x00ff00ff;
         local_bits = (local_bits | (local_bits << 4)) & 0x0f0f0f0f;
         local_bits = (local_bits | (local_bits << 2)) & 0x33333333;
@@ -289,9 +283,9 @@ template<typename template_coordinates>
 class psyq::mosp_space_3d: public psyq::mosp_space<template_coordinates>
 {
     /// thisが指す値の型。
-    private: typedef mosp_space_3d<template_coordinates> self;
-    /// selfの上位型。
-    public: typedef mosp_space<template_coordinates> super;
+    private: typedef mosp_space_3d this_type;
+    /// this_type の基底型。
+    public: typedef mosp_space<template_coordinates> base_type;
 
     public: enum: unsigned
     {
@@ -301,10 +295,10 @@ class psyq::mosp_space_3d: public psyq::mosp_space<template_coordinates>
     //-------------------------------------------------------------------------
     /// @copydoc mosp_space::mosp_space
     public: mosp_space_3d(
-        typename super::coordinates::aabb const& in_aabb,
-        unsigned const                           in_level_cap)
+        typename base_type::coordinates::aabb const& in_aabb,
+        unsigned const in_level_cap)
     :
-        super(in_aabb, in_level_cap)
+        base_type(in_aabb, in_level_cap)
     {}
 
     /** @brief 3次元座標上の点から、線形8分木のmorton順序を算出する。
@@ -312,31 +306,31 @@ class psyq::mosp_space_3d: public psyq::mosp_space<template_coordinates>
         @param[in] in_max   morton順序の最大値。
         @return 3次元座標に対応するmorton順序。
      */
-    public: typename super::order calc_order(
-        typename super::coordinates::vector const& in_point,
-        typename self::order const                 in_max)
+    public: typename base_type::order calc_order(
+        typename base_type::coordinates::vector const& in_point,
+        typename this_type::order const in_max)
     const
     {
         auto const local_element0(
             this->transform_element(
-                in_point, super::coordinates::ELEMENT0_INDEX));
+                in_point, base_type::coordinates::ELEMENT0_INDEX));
         auto const local_element1(
             this->transform_element(
-                in_point, super::coordinates::ELEMENT1_INDEX));
+                in_point, base_type::coordinates::ELEMENT1_INDEX));
         auto const local_element2(
             this->transform_element(
-                in_point, super::coordinates::ELEMENT2_INDEX));
-        return self::separate_bits(local_element0, in_max) << 0
-            |  self::separate_bits(local_element1, in_max) << 1
-            |  self::separate_bits(local_element2, in_max) << 2;
+                in_point, base_type::coordinates::ELEMENT2_INDEX));
+        return this_type::separate_bits(local_element0, in_max) << 0
+            |  this_type::separate_bits(local_element1, in_max) << 1
+            |  this_type::separate_bits(local_element2, in_max) << 2;
     }
 
     /// @copydoc mosp_space_2d::separate_bits
-    private: static typename super::order separate_bits(
-        typename super::coordinates::element const in_element,
-        typename self::order const                 in_max)
+    private: static typename base_type::order separate_bits(
+        typename base_type::coordinates::element const in_element,
+        typename this_type::order const                 in_max)
     {
-        auto local_bits(super::clamp_axis_order(in_element, in_max));
+        auto local_bits(base_type::clamp_axis_order(in_element, in_max));
         local_bits = (local_bits | (local_bits << 8)) & 0x0000f00f;
         local_bits = (local_bits | (local_bits << 4)) & 0x000c30c3;
         local_bits = (local_bits | (local_bits << 2)) & 0x00249249;
@@ -361,10 +355,8 @@ class psyq::mosp_space_3d: public psyq::mosp_space<template_coordinates>
 template<typename template_collision_object, typename template_morton_order>
 class psyq::mosp_handle
 {
-    /// *thisの型。
-    private: typedef psyq::mosp_handle<
-        template_collision_object, template_morton_order>
-            self;
+    /// thisが指す値の型。
+    private: typedef mosp_handle this_type;
 
     /// 衝突判定オブジェクトの識別子。
     public: typedef template_collision_object collision_object;
@@ -381,12 +373,12 @@ class psyq::mosp_handle
     {}
 
     /// copy-constructorは使用禁止。
-    private: mosp_handle(self const&);
+    private: mosp_handle(this_type const&);
 
     /** @brief move-constructor。
         @param[in,out] io_source 移動元となるinstance。
      */
-    public: mosp_handle(self&& io_source):
+    public: mosp_handle(this_type&& io_source):
         cell_(io_source.cell_),
         object_(std::move(io_source.object_))
     {
@@ -404,17 +396,17 @@ class psyq::mosp_handle
     }
 
     /// copy代入演算子は使用禁止。
-    private: self& operator=(const self&);
+    private: this_type& operator=(const this_type&);
 
     /** @brief move代入演算子。
         @param[in,out] io_source 移動元となるinstance。
      */
-    public: self& operator=(self&& io_source)
+    public: this_type& operator=(this_type&& io_source)
     {
         if (this != &io_source)
         {
-            this->~self();
-            new(this) self(std::move(io_source));
+            this->~this_type();
+            new(this) this_type(std::move(io_source));
         }
         return *this;
     }
@@ -479,7 +471,7 @@ class psyq::mosp_handle
 
     //-------------------------------------------------------------------------
     /// *thisに対応する分割空間。
-    private: std::pair<template_morton_order const, self*>* cell_;
+    private: std::pair<template_morton_order const, this_type*>* cell_;
 
     /** @brief *thisに対応する、衝突判定オブジェクトの識別子。
 
@@ -493,22 +485,22 @@ class psyq::mosp_handle
 template<typename template_allocator>
 class psyq::mosp_pool_allocator: public template_allocator
 {
-    private: typedef mosp_pool_allocator<template_allocator> self;
-    public: typedef template_allocator super;
+    private: typedef mosp_pool_allocator this_type;
+    public: typedef template_allocator base_type;
 
     public: template<typename template_other>
     struct rebind
     {
         typedef mosp_pool_allocator<
-            typename super::template rebind<template_other>::other>
+            typename base_type::template rebind<template_other>::other>
                 other;
     };
 
     //-------------------------------------------------------------------------
     public: mosp_pool_allocator(): idle_list_(nullptr) {}
 
-    public: mosp_pool_allocator(self const& in_allocator):
-        super(in_allocator),
+    public: mosp_pool_allocator(this_type const& in_allocator):
+        base_type(in_allocator),
         idle_list_(nullptr)
     {}
 
@@ -516,7 +508,7 @@ class psyq::mosp_pool_allocator: public template_allocator
     mosp_pool_allocator(
         psyq::mosp_pool_allocator<template_other> const& in_allocator)
     :
-        super(in_allocator),
+        base_type(in_allocator),
         idle_list_(nullptr)
     {}
 
@@ -526,17 +518,17 @@ class psyq::mosp_pool_allocator: public template_allocator
         while (local_pointer != nullptr)
         {
             auto const local_next(*static_cast<void**>(local_pointer));
-            this->super::deallocate(
-                static_cast<typename super::pointer>(local_pointer), 1);
+            this->base_type::deallocate(
+                static_cast<typename base_type::pointer>(local_pointer), 1);
             local_pointer = local_next;
         }
     }
 
-    public: self& operator=(self const&) {return *this;}
+    public: this_type& operator=(this_type const&) {return *this;}
 
     //-------------------------------------------------------------------------
-    public: typename super::pointer allocate(
-        typename super::size_type const           in_size,
+    public: typename base_type::pointer allocate(
+        typename base_type::size_type const           in_size,
         std::allocator<void>::const_pointer const in_hint = 0)
     {
         if (in_size <= 0)
@@ -545,17 +537,17 @@ class psyq::mosp_pool_allocator: public template_allocator
         }
         if (1 < in_size || this->idle_list_ == nullptr)
         {
-            return this->super::allocate(in_size, in_hint);
+            return this->base_type::allocate(in_size, in_hint);
         }
         auto const local_result(
-            static_cast<typename super::pointer>(this->idle_list_));
+            static_cast<typename base_type::pointer>(this->idle_list_));
         this->idle_list_ = *static_cast<void**>(this->idle_list_);
         return local_result;
     }
 
     public: void deallocate(
-        typename super::pointer const   in_pointer,
-        typename super::size_type const in_size)
+        typename base_type::pointer const   in_pointer,
+        typename base_type::size_type const in_size)
     {
         if (in_pointer == nullptr)
         {
@@ -564,12 +556,12 @@ class psyq::mosp_pool_allocator: public template_allocator
         }
         if (in_size != 1)
         {
-            this->super::deallocate(in_pointer, in_size);
+            this->base_type::deallocate(in_pointer, in_size);
             return;
         }
         static_assert(
             // 要素の大きさがポインタ値以上であること。
-            sizeof(void*) <= sizeof(typename super::value_type),
+            sizeof(void*) <= sizeof(typename base_type::value_type),
             "sizeof(value_type) is less than sizeof(void*).");
         *reinterpret_cast<void**>(in_pointer) = this->idle_list_;
         this->idle_list_ = in_pointer;
@@ -602,7 +594,7 @@ class psyq::mosp_pool_allocator: public template_allocator
 template<typename template_collision_object, typename template_space>
 class psyq::mosp_tree
 {
-    private: typedef mosp_tree self; ///< *thisの型。
+    private: typedef mosp_tree this_type; ///< *thisの型。
 
     /// 使用するmorton空間。 morton_space_2d や morton_space_3d を使う。
     public: typedef template_space space;
@@ -617,7 +609,7 @@ class psyq::mosp_tree
 
     private: struct order_hash
     {
-        std::size_t operator()(typename self::space::order in_order) const
+        std::size_t operator()(typename this_type::space::order in_order) const
         {
             return in_order;
         }
@@ -625,22 +617,22 @@ class psyq::mosp_tree
 
     /// 分割空間の辞書。
     private: typedef std::unordered_multimap<
-        typename self::space::order,
-        typename self::handle*,
-        typename self::order_hash,
-        std::equal_to<typename self::space::order>,
+        typename this_type::space::order,
+        typename this_type::handle*,
+        typename this_type::order_hash,
+        std::equal_to<typename this_type::space::order>,
         psyq::mosp_pool_allocator<
             std::allocator<
                 std::pair<
-                    typename self::space::order,
-                    typename self::handle*>>>>
+                    typename this_type::space::order,
+                    typename this_type::handle*>>>>
                         cell_map;
 
     public: enum: unsigned
     {
         /// 対応できる空間分割の限界深度。
-        LEVEL_LIMIT = (8 * sizeof(typename self::space::order) - 1)
-            / self::space::DIMENSION
+        LEVEL_LIMIT = (8 * sizeof(typename this_type::space::order) - 1)
+            / this_type::space::DIMENSION
     };
 
     //-------------------------------------------------------------------------
@@ -650,9 +642,9 @@ class psyq::mosp_tree
         @param[in] in_level_cap 空間分割の最深レベル。
      */
     public: explicit mosp_tree(
-        typename self::space::coordinates::aabb const& in_aabb,
+        typename this_type::space::coordinates::aabb const& in_aabb,
         std::size_t const in_bucket_count,
-        unsigned const in_level_cap = self::LEVEL_LIMIT)
+        unsigned const in_level_cap = this_type::LEVEL_LIMIT)
     :
         space_(in_aabb, in_level_cap),
         cell_map_(in_bucket_count),
@@ -660,20 +652,20 @@ class psyq::mosp_tree
         detect_collision_(false)
     {
         // 限界レベルより深い分割空間は作れない。
-        if (self::LEVEL_LIMIT < in_level_cap)
+        if (this_type::LEVEL_LIMIT < in_level_cap)
         {
             PSYQ_ASSERT(false);
-            this->level_cap_ = self::LEVEL_LIMIT;
+            this->level_cap_ = this_type::LEVEL_LIMIT;
         }
     }
 
     /// copy-constructorは使用禁止。
-    private: mosp_tree(self const&);
+    private: mosp_tree(this_type const&);
 
     /** @brief move-constructor。
         @param[in,out] io_source 移動元となるinstance。
      */
-    public: mosp_tree(self&& io_source):
+    public: mosp_tree(this_type&& io_source):
         space_(io_source.space_),
         cell_map_(std::move(io_source.cell_map_)),
         level_cap_(io_source.level_cap_),
@@ -708,17 +700,17 @@ class psyq::mosp_tree
     }
 
     /// copy代入演算子は使用禁止。
-    private: self& operator=(self const&);
+    private: this_type& operator=(this_type const&);
 
     /** @brief move代入演算子。
         @param[in,out] io_source 移動元となるinstance。
      */
-    public: self& operator=(self&& io_source)
+    public: this_type& operator=(this_type&& io_source)
     {
         if (this != &io_source)
         {
-            this->~self();
-            new(this) self(std::move(io_source));
+            this->~this_type();
+            new(this) this_type(std::move(io_source));
         }
         return *this;
     }
@@ -754,7 +746,7 @@ class psyq::mosp_tree
         // 衝突判定を行う。
         for (auto i(local_cell_map->begin()); i != local_cell_map->end(); ++i)
         {
-            self::collide_cell_map(*local_cell_map, i, in_detect_callback);
+            this_type::collide_cell_map(*local_cell_map, i, in_detect_callback);
         }
 
         // 衝突判定を終了する。
@@ -770,7 +762,7 @@ class psyq::mosp_tree
         @retval !=nullptr 衝突判定を行うcellの辞書。 detect_cell() で使う。
         @retval ==nullptr 失敗。すでに begin_detect() が呼び出されていた。
      */
-    private: typename self::cell_map const* begin_detect()
+    private: typename this_type::cell_map const* begin_detect()
     {
         // ひとつのインスタンスで多重に detect_collision() できない。
         if (this->detect_collision_)
@@ -821,8 +813,8 @@ class psyq::mosp_tree
      */
     private: template<typename template_detect_callback>
     static void collide_cell_map(
-        typename self::cell_map const&                 in_cell_map,
-        typename self::cell_map::const_iterator const& in_target_cell,
+        typename this_type::cell_map const&                 in_cell_map,
+        typename this_type::cell_map::const_iterator const& in_target_cell,
         template_detect_callback const&                in_detect_callback)
     {
         // 対象となる分割空間を、同じmorton順序の分割空間に衝突させる。
@@ -834,7 +826,7 @@ class psyq::mosp_tree
             && in_target_cell->first == local_next_cell->first)
         {
             auto const local_target_handle(
-                self::collide_cell_list(
+                this_type::collide_cell_list(
                     local_next_cell,
                     local_cell_map_end,
                     local_target_cell,
@@ -847,23 +839,23 @@ class psyq::mosp_tree
 
         // 対象となる分割空間を、上位の分割空間に衝突させる。
         for (
-            auto local_super_order(in_target_cell->first);
-            0 < local_super_order;)
+            auto local_base_type_order(in_target_cell->first);
+            0 < local_base_type_order;)
         {
             // 上位の分割空間を取得する。
-            local_super_order
-                = (local_super_order - 1) >> self::space::DIMENSION;
-            auto const local_super_iterator(
-                in_cell_map.find(local_super_order));
-            if (local_super_iterator == local_cell_map_end)
+            local_base_type_order
+                = (local_base_type_order - 1) >> this_type::space::DIMENSION;
+            auto const local_base_type_iterator(
+                in_cell_map.find(local_base_type_order));
+            if (local_base_type_iterator == local_cell_map_end)
             {
                 continue;
             }
 
             // 上位の分割空間に衝突させる。
             auto const local_target_handle(
-                self::collide_cell_list(
-                    local_super_iterator,
+                this_type::collide_cell_list(
+                    local_base_type_iterator,
                     local_cell_map_end,
                     local_target_cell,
                     in_detect_callback));
@@ -885,11 +877,11 @@ class psyq::mosp_tree
             - 戻り値はなくてよい。
      */
     private: template<typename template_detect_callback>
-    static typename self::handle const* collide_cell_list(
-        typename self::cell_map::const_iterator const& in_list_begin,
-        typename self::cell_map::const_iterator const& in_list_end,
-        typename self::cell_map::value_type const&     in_target_cell,
-        template_detect_callback const&                in_detect_callback)
+    static typename this_type::handle const* collide_cell_list(
+        typename this_type::cell_map::const_iterator const& in_list_begin,
+        typename this_type::cell_map::const_iterator const& in_list_end,
+        typename this_type::cell_map::value_type const& in_target_cell,
+        template_detect_callback const& in_detect_callback)
     {
         PSYQ_ASSERT(in_list_begin != in_list_end);
         auto const local_list_order(in_list_begin->first);
@@ -924,9 +916,9 @@ class psyq::mosp_tree
         @retval !=nullptr AABBを包む最小の分割空間。
         @retval ==nullptr 失敗。
      */
-    private: typename self::cell_map::value_type* make_cell(
-        typename self::space::coordinates::aabb const& in_aabb,
-        typename self::handle* const                   in_handle)
+    private: typename this_type::cell_map::value_type* make_cell(
+        typename this_type::space::coordinates::aabb const& in_aabb,
+        typename this_type::handle* const in_handle)
     {
         if (this->detect_collision_)
         {
@@ -937,7 +929,7 @@ class psyq::mosp_tree
 
         // morton順序に対応する分割空間を用意する。
         auto const local_morton_order(
-            self::calc_order(this->level_cap_, this->space_, in_aabb));
+            this_type::calc_order(this->level_cap_, this->space_, in_aabb));
         auto const local_cell_iterator(
             this->cell_map_.emplace(local_morton_order, in_handle));
         return &(*local_cell_iterator);
@@ -949,10 +941,10 @@ class psyq::mosp_tree
         @param[in] in_aabb      絶対座標系AABB。
         @return AABBを包む最小の分割空間のmorton順序。
      */
-    private: static typename self::space::order calc_order(
-        unsigned const                                 in_level_cap,
-        typename self::space const&                    in_space,
-        typename self::space::coordinates::aabb const& in_aabb)
+    private: static typename this_type::space::order calc_order(
+        unsigned const in_level_cap,
+        typename this_type::space const& in_space,
+        typename this_type::space::coordinates::aabb const& in_aabb)
     {
         if (in_level_cap <= 0)
         {
@@ -973,7 +965,7 @@ class psyq::mosp_tree
             auto const local_clz(
                 psyq::count_leading_0bits(local_morton_distance));
             local_level = (sizeof(local_morton_distance) * 8 + 1 - local_clz)
-                / self::space::DIMENSION;
+                / this_type::space::DIMENSION;
         }
         else
         {
@@ -981,17 +973,17 @@ class psyq::mosp_tree
         }
         auto const local_cell_count(
             psyq::bitwise_shift_left_fast<unsigned>(
-                1, (in_level_cap - local_level) * self::space::DIMENSION));
-        return (local_cell_count - 1) / ((1 << self::space::DIMENSION) - 1)
+                1, (in_level_cap - local_level) * this_type::space::DIMENSION));
+        return (local_cell_count - 1) / ((1 << this_type::space::DIMENSION) - 1)
             + psyq::bitwise_shift_right_fast(
-                local_max_morton, local_level * self::space::DIMENSION);
+                local_max_morton, local_level * this_type::space::DIMENSION);
     }
 
     //-------------------------------------------------------------------------
-    private: typename self::space space_; ///< @copydoc space
-    private: typename self::cell_map cell_map_; ///< @copydoc cell_map
-    private: std::uint8_t level_cap_; ///< 空間分割の最大深度。
-    private: bool detect_collision_; ///< detect_collision() を実行中かどうか。
+    private: typename this_type::space space_;       ///< @copydoc space
+    private: typename this_type::cell_map cell_map_; ///< @copydoc cell_map
+    private: std::uint8_t level_cap_;                ///< 空間分割の最大深度。
+    private: bool detect_collision_;                 ///< detect_collision() を実行中かどうか。
 };
 
 #endif // !defined(PSYQ_MOSP_TREE_HPP_)

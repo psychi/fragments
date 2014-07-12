@@ -38,7 +38,7 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 class psyq::any_message_header
 {
-    private: typedef any_message_header self;
+    private: typedef any_message_header this_type;
 
     //-------------------------------------------------------------------------
     /** @brief メッセージヘッダを構築する。
@@ -112,7 +112,7 @@ class psyq::any_message_header
  */
 class psyq::any_message_method
 {
-    private: typedef any_message_method self;
+    private: typedef any_message_method this_type;
 
     //-------------------------------------------------------------------------
     /** @brief 任意の引数を持つRPCメッセージ。
@@ -201,8 +201,8 @@ class psyq::any_message_method
 template<typename template_value>
 class psyq::any_message_method::with_argument: public psyq::any_message_method
 {
-    private: typedef with_argument self; ///< thisが指す値の型。
-    public: typedef psyq::any_message_method super; ///< self の基底型。
+    private: typedef with_argument this_type; ///< thisが指す値の型。
+    public: typedef psyq::any_message_method base_type; ///< this_type の基底型。
 
     //-------------------------------------------------------------------------
     public: typedef template_value value_type; ///< メッセージの引数。
@@ -215,10 +215,10 @@ class psyq::any_message_method::with_argument: public psyq::any_message_method
      */
     public: with_argument(
         typename psyq::any_message_method_key const     in_method_key,
-        typename self::value_type&&                     in_argument,
+        typename this_type::value_type&&                     in_argument,
         typename psyq::any_message_sequence_index const in_sequence_index = 0)
     :
-        super(
+        base_type(
             psyq::any_rtti::find_key<template_value>(),
             in_method_key,
             in_sequence_index)
@@ -228,10 +228,10 @@ class psyq::any_message_method::with_argument: public psyq::any_message_method
     /// @copydoc with_argument
     public: with_argument(
         typename psyq::any_message_method_key const     in_method_key,
-        typename self::value_type const&                in_argument,
+        typename this_type::value_type const&                in_argument,
         typename psyq::any_message_sequence_index const in_sequence_index = 0)
     :
-        super(
+        base_type(
             psyq::any_rtti::find_key<template_value>(),
             in_method_key,
             in_sequence_index)
@@ -241,19 +241,19 @@ class psyq::any_message_method::with_argument: public psyq::any_message_method
     /** @brief メッセージ引数を取得する。
         @return メッセージ引数。
      */
-    typename self::value_type const& get_argument() const PSYQ_NOEXCEPT
+    typename this_type::value_type const& get_argument() const PSYQ_NOEXCEPT
     {
         return this->argument_;
     }
 
     //-------------------------------------------------------------------------
-    private: typename self::value_type argument_; ///< メッセージの引数。
+    private: typename this_type::value_type argument_; ///< メッセージの引数。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 class psyq::any_message_router
 {
-    private: typedef any_message_router self; ///< thisが指す値の型。
+    private: typedef any_message_router this_type; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
     /** @brief このルータから送信するメッセージのヘッダを構築する。

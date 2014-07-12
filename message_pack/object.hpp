@@ -11,7 +11,7 @@
 /// MessagePackオブジェクト。
 class psyq::message_pack::object
 {
-    private: typedef object self; ///< thisが指す値の型。
+    private: typedef object this_type; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
     /// MessagePackオブジェクトの値。
@@ -47,7 +47,7 @@ class psyq::message_pack::object
     /// @name MessagePackオブジェクトの構築
     //@{
     /// 空のMessagePackオブジェクトを構築する。
-    public: PSYQ_CONSTEXPR object(): type_(self::type::NIL) {}
+    public: PSYQ_CONSTEXPR object(): type_(this_type::type::NIL) {}
 
     /** @brief MessagePackオブジェクトに真偽値を格納する。
         @param[in] in_boolean MessagePackオブジェクトに格納する真偽値。
@@ -55,7 +55,7 @@ class psyq::message_pack::object
     public: PSYQ_CONSTEXPR object(bool const in_boolean)
     PSYQ_NOEXCEPT:
         value_(in_boolean),
-        type_(self::type::BOOLEAN)
+        type_(this_type::type::BOOLEAN)
     {}
 
     /** @brief MessagePackオブジェクトに無符号整数を格納する。
@@ -64,31 +64,31 @@ class psyq::message_pack::object
     public: PSYQ_CONSTEXPR object(unsigned long long const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        type_(self::type::UNSIGNED_INTEGER)
+        type_(this_type::type::UNSIGNED_INTEGER)
     {}
     /// @copydoc object(unsigned long long const)
     public: PSYQ_CONSTEXPR object(unsigned long const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        type_(self::type::UNSIGNED_INTEGER)
+        type_(this_type::type::UNSIGNED_INTEGER)
     {}
     /// @copydoc object(unsigned long long const)
     public: PSYQ_CONSTEXPR object(unsigned int const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        type_(self::type::UNSIGNED_INTEGER)
+        type_(this_type::type::UNSIGNED_INTEGER)
     {}
     /// @copydoc object(unsigned long long const)
     public: PSYQ_CONSTEXPR object(unsigned short const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        type_(self::type::UNSIGNED_INTEGER)
+        type_(this_type::type::UNSIGNED_INTEGER)
     {}
     /// @copydoc object(unsigned long long const)
     public: PSYQ_CONSTEXPR object(unsigned char const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        type_(self::type::UNSIGNED_INTEGER)
+        type_(this_type::type::UNSIGNED_INTEGER)
     {}
 
     /** @brief MessagePackオブジェクトに有符号整数を格納する。
@@ -97,116 +97,116 @@ class psyq::message_pack::object
     public: PSYQ_CONSTEXPR object(signed long long const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        type_(self::tell_signed_integer_type(in_integer))
+        type_(this_type::tell_signed_integer_type(in_integer))
     {}
     /// @copydoc object(signed long long const)
     public: PSYQ_CONSTEXPR object(signed long const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        type_(self::tell_signed_integer_type(in_integer))
+        type_(this_type::tell_signed_integer_type(in_integer))
     {}
     /// @copydoc object(signed long long const)
     public: PSYQ_CONSTEXPR object(signed int const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        type_(self::tell_signed_integer_type(in_integer))
+        type_(this_type::tell_signed_integer_type(in_integer))
     {}
     /// @copydoc object(signed long long const)
     public: PSYQ_CONSTEXPR object(signed short const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        type_(self::tell_signed_integer_type(in_integer))
+        type_(this_type::tell_signed_integer_type(in_integer))
     {}
     /// @copydoc object(signed long long const)
     public: PSYQ_CONSTEXPR object(signed char const in_integer)
     PSYQ_NOEXCEPT:
         value_(static_cast<std::int64_t>(in_integer)),
-        type_(self::tell_signed_integer_type(in_integer))
+        type_(this_type::tell_signed_integer_type(in_integer))
     {}
 
     /** @brief MessagePackオブジェクトに浮動小数点数を格納する。
         @param[in] in_float MessagePackオブジェクトに格納する浮動小数点数。
      */
-    public: PSYQ_CONSTEXPR object(self::floating_point_64 const in_float)
+    public: PSYQ_CONSTEXPR object(this_type::floating_point_64 const in_float)
     PSYQ_NOEXCEPT:
         value_(in_float),
-        type_(self::type::FLOATING_POINT_64)
+        type_(this_type::type::FLOATING_POINT_64)
     {}
-    /// @copydoc object(self::floating_point_64 const)
-    public: PSYQ_CONSTEXPR object(self::floating_point_32 const in_float)
+    /// @copydoc object(this_type::floating_point_64 const)
+    public: PSYQ_CONSTEXPR object(this_type::floating_point_32 const in_float)
     PSYQ_NOEXCEPT:
         value_(in_float),
-        type_(self::type::FLOATING_POINT_32)
+        type_(this_type::type::FLOATING_POINT_32)
     {}
 
     /** @brief MessagePackオブジェクトに文字列を格納する。
         @param[in] in_string MessagePackオブジェクトに格納する文字列。
      */
-    public: PSYQ_CONSTEXPR object(self::string const& in_string)
+    public: PSYQ_CONSTEXPR object(this_type::string const& in_string)
     PSYQ_NOEXCEPT:
         value_(in_string),
-        type_(self::type::STRING)
+        type_(this_type::type::STRING)
     {}
 
     /** @brief MessagePackオブジェクトにバイナリを格納する。
         @param[in] in_binary MessagePackオブジェクトに格納するバイナリ。
      */
-    public: PSYQ_CONSTEXPR object(self::binary const& in_binary)
+    public: PSYQ_CONSTEXPR object(this_type::binary const& in_binary)
     PSYQ_NOEXCEPT:
         value_(in_binary),
-        type_(self::type::BINARY)
+        type_(this_type::type::BINARY)
     {}
     /** @brief MessagePackオブジェクトに拡張バイナリを格納する。
         @param[in] in_binary MessagePackオブジェクトに格納する拡張バイナリ。
      */
-    public: PSYQ_CONSTEXPR object(self::extended const& in_binary)
+    public: PSYQ_CONSTEXPR object(this_type::extended const& in_binary)
     PSYQ_NOEXCEPT:
         value_(in_binary),
-        type_(self::type::EXTENDED)
+        type_(this_type::type::EXTENDED)
     {}
 
     /** @brief MessagePackオブジェクトに配列を格納する。
         @param[in] in_array MessagePackオブジェクトに格納する配列。
      */
-    public: PSYQ_CONSTEXPR object(self::array const& in_array)
+    public: PSYQ_CONSTEXPR object(this_type::array const& in_array)
     PSYQ_NOEXCEPT:
         value_(in_array),
-        type_(self::type::ARRAY)
+        type_(this_type::type::ARRAY)
     {}
 
     /** @brief MessagePackオブジェクトに連想配列を格納する。
         @param[in] in_map MessagePackオブジェクトに格納する連想配列。
      */
-    public: PSYQ_CONSTEXPR object(self::unordered_map const& in_map)
+    public: PSYQ_CONSTEXPR object(this_type::unordered_map const& in_map)
     PSYQ_NOEXCEPT:
         value_(in_map),
-        type_(self::type::UNORDERED_MAP)
+        type_(this_type::type::UNORDERED_MAP)
     {}
 
     /// @brief MessagePackオブジェクトを空にする。
     public: void reset() PSYQ_NOEXCEPT
     {
-        new(this) self();
+        new(this) this_type();
     }
     //@}
     /** @brief MessagePackオブジェクトに連想配列を格納する。
         @param[in] in_map MessagePackオブジェクトに格納する連想配列。
      */
-    private: explicit PSYQ_CONSTEXPR object(self::map const& in_map)
+    private: explicit PSYQ_CONSTEXPR object(this_type::map const& in_map)
     PSYQ_NOEXCEPT:
         value_(in_map),
-        type_(self::type::MAP)
+        type_(this_type::type::MAP)
     {}
 
     /** @brief 文字列を参照するMessagePackオブジェクトを構築する。
         @param[in] in_string 参照する文字列。
      */
     public: template<typename template_string>
-    static self make_string(template_string const& in_string) PSYQ_NOEXCEPT
+    static this_type make_string(template_string const& in_string) PSYQ_NOEXCEPT
     {
-        self::string local_string;
+        this_type::string local_string;
         local_string.reset(in_string.data(), in_string.length());
-        return self(local_string);
+        return this_type(local_string);
     }
     /** @brief 文字列literalを参照するMessagePackオブジェクトを構築する。
         @tparam template_size 参照する文字列literalの要素数。終端文字も含む。
@@ -217,14 +217,14 @@ class psyq::message_pack::object
             user定義literalを経由して呼び出すようにしたい。
      */
     public: template<typename template_char, std::size_t template_size>
-    static self make_string(template_char const (&in_literal)[template_size])
+    static this_type make_string(template_char const (&in_literal)[template_size])
     PSYQ_NOEXCEPT
     {
         static_assert(0 < template_size, "");
         PSYQ_ASSERT(in_literal[template_size - 1] == 0);
-        self::string local_string;
+        this_type::string local_string;
         local_string.reset(&in_literal[0], template_size - 1);
-        return self(local_string);
+        return this_type(local_string);
     }
 
     //-------------------------------------------------------------------------
@@ -235,9 +235,9 @@ class psyq::message_pack::object
         @retval true  等値だった 。
         @retval false 非等値だった。
      */
-    public: bool operator==(self const& in_right) const PSYQ_NOEXCEPT
+    public: bool operator==(this_type const& in_right) const PSYQ_NOEXCEPT
     {
-        return self::value::equal(
+        return this_type::value::equal(
             this->value_,
             this->get_type(),
             in_right.value_,
@@ -249,7 +249,7 @@ class psyq::message_pack::object
         @retval true  非等値だった 。
         @retval false 等値だった。
      */
-    public: bool operator!=(self const& in_right) const PSYQ_NOEXCEPT
+    public: bool operator!=(this_type const& in_right) const PSYQ_NOEXCEPT
     {
         return !(*this == in_right);
     }
@@ -260,9 +260,9 @@ class psyq::message_pack::object
         @retval 0  等値。
         @retval 負 *thisのほうが小さい。
      */
-    public: int compare(self const& in_object) const PSYQ_NOEXCEPT
+    public: int compare(this_type const& in_object) const PSYQ_NOEXCEPT
     {
-        return self::value::compare(
+        return this_type::value::compare(
             this->value_,
             this->get_type(),
             in_object.value_,
@@ -273,7 +273,7 @@ class psyq::message_pack::object
         @param[in] in_right 右辺のMessagePackオブジェクト。
         @return 左辺 < 右辺
      */
-    private: bool operator<(self const& in_right) const PSYQ_NOEXCEPT
+    private: bool operator<(this_type const& in_right) const PSYQ_NOEXCEPT
     {
         return this->compare(in_right) < 0;
     }
@@ -282,7 +282,7 @@ class psyq::message_pack::object
         @param[in] in_right 右辺のMessagePackオブジェクト。
         @return 左辺 <= 右辺
      */
-    private: bool operator<=(self const& in_right) const PSYQ_NOEXCEPT
+    private: bool operator<=(this_type const& in_right) const PSYQ_NOEXCEPT
     {
         return this->compare(in_right) <= 0;
     }
@@ -291,7 +291,7 @@ class psyq::message_pack::object
         @param[in] in_right 右辺のMessagePackオブジェクト。
         @return 左辺 > 右辺
      */
-    private: bool operator>(self const& in_right) const PSYQ_NOEXCEPT
+    private: bool operator>(this_type const& in_right) const PSYQ_NOEXCEPT
     {
         return 0 < this->compare(in_right);
     }
@@ -300,7 +300,7 @@ class psyq::message_pack::object
         @param[in] in_right 右辺のMessagePackオブジェクト。
         @return 左辺 >= 右辺
      */
-    private: bool operator>=(self const& in_right) const PSYQ_NOEXCEPT
+    private: bool operator>=(this_type const& in_right) const PSYQ_NOEXCEPT
     {
         return 0 <= this->compare(in_right);
     }
@@ -309,9 +309,9 @@ class psyq::message_pack::object
     /// @name MessagePackオブジェクトに格納されてる値の取得
     //@{
     /** @brief MessagePackオブジェクトに格納されてる値の種別を取得する。
-        @return @copydoc self::type
+        @return @copydoc this_type::type
      */
-    public: PSYQ_CONSTEXPR self::type get_type() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR this_type::type get_type() const PSYQ_NOEXCEPT
     {
         return this->type_;
     }
@@ -324,7 +324,7 @@ class psyq::message_pack::object
      */
     public: PSYQ_CONSTEXPR bool const* get_boolean() const PSYQ_NOEXCEPT
     {
-        return this->get_type() == self::type::BOOLEAN?
+        return this->get_type() == this_type::type::BOOLEAN?
             &this->value_.boolean_: nullptr;
     }
 
@@ -334,10 +334,10 @@ class psyq::message_pack::object
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは正の整数ではない。
      */
-    public: PSYQ_CONSTEXPR self::unsigned_integer const* get_unsigned_integer()
+    public: PSYQ_CONSTEXPR this_type::unsigned_integer const* get_unsigned_integer()
     const PSYQ_NOEXCEPT
     {
-        return this->get_type() == self::type::UNSIGNED_INTEGER?
+        return this->get_type() == this_type::type::UNSIGNED_INTEGER?
             &this->value_.unsigned_integer_: nullptr;
     }
     /** @brief MessagePackオブジェクトに格納されてる0未満の整数を取得する。
@@ -346,10 +346,10 @@ class psyq::message_pack::object
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは負の整数ではない。
      */
-    public: PSYQ_CONSTEXPR self::negative_integer const* get_negative_integer()
+    public: PSYQ_CONSTEXPR this_type::negative_integer const* get_negative_integer()
     const PSYQ_NOEXCEPT
     {
-        return this->get_type() == self::type::NEGATIVE_INTEGER?
+        return this->get_type() == this_type::type::NEGATIVE_INTEGER?
             &this->value_.negative_integer_: nullptr;
     }
 
@@ -359,17 +359,17 @@ class psyq::message_pack::object
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは浮動小数点数ではない。
      */
-    public: PSYQ_CONSTEXPR self::floating_point_64 const* get_floating_point_64()
+    public: PSYQ_CONSTEXPR this_type::floating_point_64 const* get_floating_point_64()
     const PSYQ_NOEXCEPT
     {
-        return this->get_type() == self::type::FLOATING_POINT_64?
+        return this->get_type() == this_type::type::FLOATING_POINT_64?
             &this->value_.floating_point_64_: nullptr;
     }
-    /// @copydoc self::get_floating_point_64()
-    public: PSYQ_CONSTEXPR self::floating_point_32 const* get_floating_point_32()
+    /// @copydoc this_type::get_floating_point_64()
+    public: PSYQ_CONSTEXPR this_type::floating_point_32 const* get_floating_point_32()
     const PSYQ_NOEXCEPT
     {
-        return this->get_type() == self::type::FLOATING_POINT_32?
+        return this->get_type() == this_type::type::FLOATING_POINT_32?
             &this->value_.floating_point_32_: nullptr;
     }
 
@@ -387,20 +387,20 @@ class psyq::message_pack::object
     {
         switch (this->get_type())
         {
-        case self::type::UNSIGNED_INTEGER:
+        case this_type::type::UNSIGNED_INTEGER:
             out_value = static_cast<template_value_type>(this->value_.unsigned_integer_);
             return 0 <= out_value
-                && static_cast<self::unsigned_integer>(out_value) == this->value_.unsigned_integer_;
-        case self::type::NEGATIVE_INTEGER:
+                && static_cast<this_type::unsigned_integer>(out_value) == this->value_.unsigned_integer_;
+        case this_type::type::NEGATIVE_INTEGER:
             out_value = static_cast<template_value_type>(this->value_.negative_integer_);
             return out_value < 0
-                && static_cast<self::negative_integer>(out_value) == this->value_.negative_integer_;
-        case self::type::FLOATING_POINT_32:
+                && static_cast<this_type::negative_integer>(out_value) == this->value_.negative_integer_;
+        case this_type::type::FLOATING_POINT_32:
             out_value = static_cast<template_value_type>(this->value_.floating_point_32_);
-            return static_cast<self::floating_point_32>(out_value) == this->value_.floating_point_32_;
-        case self::type::FLOATING_POINT_64:
+            return static_cast<this_type::floating_point_32>(out_value) == this->value_.floating_point_32_;
+        case this_type::type::FLOATING_POINT_64:
             out_value = static_cast<template_value_type>(this->value_.floating_point_64_);
-            return static_cast<self::floating_point_64>(out_value) == this->value_.floating_point_64_;
+            return static_cast<this_type::floating_point_64>(out_value) == this->value_.floating_point_64_;
         default:
             //out_value = template_value_type();
             return false; // 数値以外が格納されていたので、必ず不等値となる。
@@ -416,9 +416,9 @@ class psyq::message_pack::object
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは文字列ではない。
      */
-    public: PSYQ_CONSTEXPR self::string const* get_string() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR this_type::string const* get_string() const PSYQ_NOEXCEPT
     {
-        return this->get_type() == self::type::STRING?
+        return this->get_type() == this_type::type::STRING?
             &this->value_.string_: nullptr;
     }
     /** @brief MessagePackオブジェクトに格納されてるバイナリを取得する。
@@ -427,9 +427,9 @@ class psyq::message_pack::object
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのはバイナリではない。
      */
-    public: PSYQ_CONSTEXPR self::binary const* get_binary() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR this_type::binary const* get_binary() const PSYQ_NOEXCEPT
     {
-        return this->get_type() == self::type::BINARY?
+        return this->get_type() == this_type::type::BINARY?
             &this->value_.binary_: nullptr;
     }
     /** @brief MessagePackオブジェクトに格納されてる拡張バイナリを取得する。
@@ -438,10 +438,10 @@ class psyq::message_pack::object
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは拡張バイナリではない。
      */
-    public: PSYQ_CONSTEXPR self::extended const* get_extended()
+    public: PSYQ_CONSTEXPR this_type::extended const* get_extended()
     const PSYQ_NOEXCEPT
     {
-        return this->get_type() == self::type::EXTENDED?
+        return this->get_type() == this_type::type::EXTENDED?
             &this->value_.extended_: nullptr;
     }
     //@}
@@ -454,15 +454,15 @@ class psyq::message_pack::object
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは配列ではない。
      */
-    public: PSYQ_CONSTEXPR self::array* get_array() PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR this_type::array* get_array() PSYQ_NOEXCEPT
     {
-        return this->get_type() == self::type::ARRAY?
+        return this->get_type() == this_type::type::ARRAY?
             &this->value_.array_: nullptr;
     }
     /// @copydoc get_array()
-    public: PSYQ_CONSTEXPR self::array const* get_array() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR this_type::array const* get_array() const PSYQ_NOEXCEPT
     {
-        return const_cast<self*>(this)->get_array();
+        return const_cast<this_type*>(this)->get_array();
     }
     //@}
     //-------------------------------------------------------------------------
@@ -474,17 +474,17 @@ class psyq::message_pack::object
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは連想配列ではない。
      */
-    public: PSYQ_CONSTEXPR self::unordered_map* get_unordered_map() PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR this_type::unordered_map* get_unordered_map() PSYQ_NOEXCEPT
     {
-        return this->get_type() == self::type::UNORDERED_MAP
-            || this->get_type() == self::type::MAP?
+        return this->get_type() == this_type::type::UNORDERED_MAP
+            || this->get_type() == this_type::type::MAP?
                 &this->value_.map_: nullptr;
     }
     /// @copydoc get_map()
-    public: PSYQ_CONSTEXPR self::unordered_map const* get_unordered_map()
+    public: PSYQ_CONSTEXPR this_type::unordered_map const* get_unordered_map()
     const PSYQ_NOEXCEPT
     {
-        return const_cast<self*>(this)->get_unordered_map();
+        return const_cast<this_type*>(this)->get_unordered_map();
     }
 
     /** @brief MessagePackオブジェクトに格納されてる連想配列を取得する。
@@ -493,15 +493,15 @@ class psyq::message_pack::object
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは連想配列ではない。
      */
-    public: PSYQ_CONSTEXPR self::map* get_map() PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR this_type::map* get_map() PSYQ_NOEXCEPT
     {
-        return this->get_type() == self::type::MAP?
+        return this->get_type() == this_type::type::MAP?
             &this->value_.map_: nullptr;
     }
     /// @copydoc get_map()
-    public: PSYQ_CONSTEXPR self::map const* get_map() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR this_type::map const* get_map() const PSYQ_NOEXCEPT
     {
-        return const_cast<self*>(this)->get_map();
+        return const_cast<this_type*>(this)->get_map();
     }
 
     /** @brief MessagePackオブジェクトに格納されてる unordered_map を並び替え、
@@ -511,15 +511,15 @@ class psyq::message_pack::object
         @retval ==nullptr
             MessagePackオブジェクトに格納されてるのは連想配列ではない。
      */
-    public: self::map const* sort_map()
+    public: this_type::map const* sort_map()
     {
         switch (this->get_type())
         {
-        case self::type::UNORDERED_MAP:
+        case this_type::type::UNORDERED_MAP:
             this->value_.map_.sort();
-            this->type_ = self::type::MAP;
+            this->type_ = this_type::type::MAP;
             return &this->value_.map_;
-        case self::type::MAP:
+        case this_type::type::MAP:
             return &this->value_.map_;
         default:
             return nullptr;
@@ -529,11 +529,11 @@ class psyq::message_pack::object
     //-------------------------------------------------------------------------
     /** @brief 有符号整数値のMessagePackオブジェクト種別を判定する。
         @param[in] in_integer 判定する整数値。
-        @retval self::type_NEGATIVE_INTEGER 0未満の整数だった。
-        @retval self::type_UNSIGNED_INTEGER 0以上の整数だった。
+        @retval this_type::type_NEGATIVE_INTEGER 0未満の整数だった。
+        @retval this_type::type_UNSIGNED_INTEGER 0以上の整数だった。
      */
     private: template<typename template_signed_type>
-    PSYQ_CONSTEXPR static self::type tell_signed_integer_type(
+    PSYQ_CONSTEXPR static this_type::type tell_signed_integer_type(
         template_signed_type const in_integer)
     PSYQ_NOEXCEPT
     {
@@ -541,12 +541,12 @@ class psyq::message_pack::object
             !std::is_unsigned<template_signed_type>::value,
             "template_signed_type is not signed integer type.");
         return in_integer < 0?
-            self::type::NEGATIVE_INTEGER: self::type::UNSIGNED_INTEGER;
+            this_type::type::NEGATIVE_INTEGER: this_type::type::UNSIGNED_INTEGER;
     }
 
     //-------------------------------------------------------------------------
-    private: self::value value_; ///< @copydoc self::value
-    private: self::type type_;   ///< @copydoc self::type
+    private: this_type::value value_; ///< @copydoc this_type::value
+    private: this_type::type type_;   ///< @copydoc this_type::type
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

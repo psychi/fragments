@@ -152,13 +152,13 @@ template<typename template_stream, std::size_t template_stack_capacity>
 class psyq::message_pack::serializer
 {
     /// thisが指す値の型。
-    private: typedef serializer self;
+    private: typedef serializer this_type;
 
     /// 直列化したMessagePack値を出力する、std::basic_ostream 互換のストリーム。
     public: typedef template_stream stream;
     static_assert(
-        sizeof(typename self::stream::char_type) == 1,
-        "sizeof(self::stream::char_type) is not 1.");
+        sizeof(typename this_type::stream::char_type) == 1,
+        "sizeof(this_type::stream::char_type) is not 1.");
 
     /// 直列化途中のMessagePackコンテナのスタック限界数。
     public: static std::size_t const stack_capacity = template_stack_capacity;
@@ -177,7 +177,7 @@ class psyq::message_pack::serializer
     private: struct container_stack
     {
         std::size_t rest_count;         ///< MessagePackコンテナ要素の残数。
-        typename self::value_kind kind; ///< @copydoc value_kind
+        typename this_type::value_kind kind; ///< @copydoc value_kind
     };
 
     //-------------------------------------------------------------------------
@@ -186,7 +186,7 @@ class psyq::message_pack::serializer
     /** @brief 出力ストリームを構築する。
         @param[in] in_ostream MessagePackを書き出すストリームの初期値。
      */
-    public: explicit serializer(typename self::stream in_ostream):
+    public: explicit serializer(typename this_type::stream in_ostream):
         stream_(std::move(in_ostream)),
         stack_size_(0)
     {}
@@ -194,7 +194,7 @@ class psyq::message_pack::serializer
     /** @brief move構築子。
         @param[in,out] io_source 移動元インスタンス。
      */
-    public: serializer(self&& io_source):
+    public: serializer(this_type&& io_source):
         stream_(std::move(io_source.stream_)),
         container_stack_(std::move(io_source.container_stack_)),
         stack_size_(std::move(io_source.stack_size_))
@@ -212,20 +212,20 @@ class psyq::message_pack::serializer
         @param[in,out] io_source 移動元インスタンス。
         @return *this
      */
-    public: self& operator=(self&& io_source)
+    public: this_type& operator=(this_type&& io_source)
     {
         if (this != &io_source)
         {
-            this->~self();
-            return *new(this) self(std::move(io_source));
+            this->~this_type();
+            return *new(this) this_type(std::move(io_source));
         }
         return *this;
     }
     //@}
     /// copy構築子は使用禁止。
-    private: serializer(self const&);// = delete;
+    private: serializer(this_type const&);// = delete;
     /// copy代入演算子は使用禁止。
-    private: self& operator=(self const&);// = delete;
+    private: this_type& operator=(this_type const&);// = delete;
 
     //-------------------------------------------------------------------------
     /// @name 出力ストリームの操作
@@ -234,7 +234,7 @@ class psyq::message_pack::serializer
         @param[in] in_ostream 新たに使う出力ストリーム。
         @return これまで使っていた出力ストリーム。
      */
-    public: typename self::stream reset(typename self::stream in_ostream)
+    public: typename this_type::stream reset(typename this_type::stream in_ostream)
     {
         this->stream_.swap(in_ostream);
         this->stack_size_ = 0;
@@ -244,7 +244,7 @@ class psyq::message_pack::serializer
     /** @brief 出力ストリームを取得する。
         @return 出力ストリーム。
      */
-    public: typename self::stream const& get_stream() const PSYQ_NOEXCEPT
+    public: typename this_type::stream const& get_stream() const PSYQ_NOEXCEPT
     {
         return this->stream_;
     }
@@ -254,17 +254,17 @@ class psyq::message_pack::serializer
     //@{
     /** @brief 次に直列化するMessagePack値の種別を取得する。
         @return 次に直列化するMessagePack値の種別。
-        @sa self::make_serial_string()
-        @sa self::make_serial_binary()
-        @sa self::make_serial_extended()
-        @sa self::make_serial_array()
-        @sa self::make_serial_map()
+        @sa this_type::make_serial_string()
+        @sa this_type::make_serial_binary()
+        @sa this_type::make_serial_extended()
+        @sa this_type::make_serial_array()
+        @sa this_type::make_serial_map()
      */
-    public: typename self::value_kind get_next_value_kind() const PSYQ_NOEXCEPT
+    public: typename this_type::value_kind get_next_value_kind() const PSYQ_NOEXCEPT
     {
         return 0 < this->get_rest_container_count()?
             this->container_stack_.at(this->get_rest_container_count() - 1).kind:
-            typename self::value_kind_ROOT;
+            typename this_type::value_kind_ROOT;
     }
 
     /** @brief 直前に直列化を開始したMessagePackコンテナの残り要素数を取得する。
@@ -272,11 +272,11 @@ class psyq::message_pack::serializer
             直前に直列化を開始したMessagePackコンテナが…
             - 文字列／バイナリ／拡張バイナリなら、残りバイト数。
             - 配列／連想配列なら、残り要素数。
-        @sa self::make_serial_string()
-        @sa self::make_serial_binary()
-        @sa self::make_serial_extended()
-        @sa self::make_serial_array()
-        @sa self::make_serial_map()
+        @sa this_type::make_serial_string()
+        @sa this_type::make_serial_binary()
+        @sa this_type::make_serial_extended()
+        @sa this_type::make_serial_array()
+        @sa this_type::make_serial_map()
      */
     public: std::size_t get_rest_element_count() const PSYQ_NOEXCEPT
     {
@@ -287,11 +287,11 @@ class psyq::message_pack::serializer
 
     /** @brief 直列化途中のMessagePackコンテナの数を取得する。
         @return 直列化途中のMessagePackコンテナの数。
-        @sa self::make_serial_string()
-        @sa self::make_serial_binary()
-        @sa self::make_serial_extended()
-        @sa self::make_serial_array()
-        @sa self::make_serial_map()
+        @sa this_type::make_serial_string()
+        @sa this_type::make_serial_binary()
+        @sa this_type::make_serial_extended()
+        @sa this_type::make_serial_array()
+        @sa this_type::make_serial_map()
      */
     public: std::size_t get_rest_container_count() const PSYQ_NOEXCEPT
     {
@@ -326,7 +326,7 @@ class psyq::message_pack::serializer
         @param[in] in_boolean 直列化する真偽値。
         @return *this
      */
-    public: self& operator<<(bool const in_boolean)
+    public: this_type& operator<<(bool const in_boolean)
     {
         if (!this->write_boolean(in_boolean))
         {
@@ -365,7 +365,7 @@ class psyq::message_pack::serializer
         @param[in] in_integer 直列化する無符号整数。
         @return *this
      */
-    public: self& operator<<(unsigned char const in_integer)
+    public: this_type& operator<<(unsigned char const in_integer)
     {
         if (!this->write_unsigned_integer(in_integer))
         {
@@ -374,7 +374,7 @@ class psyq::message_pack::serializer
         return *this;
     }
     /// @copydoc operator<<(unsigned char const)
-    public: self& operator<<(unsigned short const in_integer)
+    public: this_type& operator<<(unsigned short const in_integer)
     {
         if (!this->write_unsigned_integer(in_integer))
         {
@@ -383,7 +383,7 @@ class psyq::message_pack::serializer
         return *this;
     }
     /// @copydoc operator<<(unsigned char const)
-    public: self& operator<<(unsigned int const in_integer)
+    public: this_type& operator<<(unsigned int const in_integer)
     {
         if (!this->write_unsigned_integer(in_integer))
         {
@@ -392,7 +392,7 @@ class psyq::message_pack::serializer
         return *this;
     }
     /// @copydoc operator<<(unsigned char const)
-    public: self& operator<<(unsigned long const in_integer)
+    public: this_type& operator<<(unsigned long const in_integer)
     {
         if (!this->write_unsigned_integer(in_integer))
         {
@@ -401,7 +401,7 @@ class psyq::message_pack::serializer
         return *this;
     }
     /// @copydoc operator<<(unsigned char const)
-    public: self& operator<<(unsigned long long const in_integer)
+    public: this_type& operator<<(unsigned long long const in_integer)
     {
         if (!this->write_unsigned_integer(in_integer))
         {
@@ -488,7 +488,7 @@ class psyq::message_pack::serializer
         @param[in] in_integer 直列化する有符号整数。
         @return *this
      */
-    public: self& operator<<(signed char const in_integer)
+    public: this_type& operator<<(signed char const in_integer)
     {
         if (!this->write_signed_integer(in_integer))
         {
@@ -497,7 +497,7 @@ class psyq::message_pack::serializer
         return *this;
     }
     /// @copydoc operator<<(signed char const)
-    public: self& operator<<(signed short const in_integer)
+    public: this_type& operator<<(signed short const in_integer)
     {
         if (!this->write_signed_integer(in_integer))
         {
@@ -506,7 +506,7 @@ class psyq::message_pack::serializer
         return *this;
     }
     /// @copydoc operator<<(signed char const)
-    public: self& operator<<(signed int const in_integer)
+    public: this_type& operator<<(signed int const in_integer)
     {
         if (!this->write_signed_integer(in_integer))
         {
@@ -515,7 +515,7 @@ class psyq::message_pack::serializer
         return *this;
     }
     /// @copydoc operator<<(signed char const)
-    public: self& operator<<(signed long const in_integer)
+    public: this_type& operator<<(signed long const in_integer)
     {
         if (!this->write_signed_integer(in_integer))
         {
@@ -524,7 +524,7 @@ class psyq::message_pack::serializer
         return *this;
     }
     /// @copydoc operator<<(signed char const)
-    public: self& operator<<(signed long long const in_integer)
+    public: this_type& operator<<(signed long long const in_integer)
     {
         if (!this->write_signed_integer(in_integer))
         {
@@ -609,7 +609,7 @@ class psyq::message_pack::serializer
         @param[in] in_float 直列化する浮動小数点数。
         @return *this
      */
-    public: self& operator<<(float const in_float)
+    public: this_type& operator<<(float const in_float)
     {
         if (!this->write_floating_point(in_float))
         {
@@ -618,7 +618,7 @@ class psyq::message_pack::serializer
         return *this;
     }
     /// @copydoc operator<<(float const)
-    public: self& operator<<(double const in_float)
+    public: this_type& operator<<(double const in_float)
     {
         if (!this->write_floating_point(in_float))
         {
@@ -674,7 +674,7 @@ class psyq::message_pack::serializer
             user定義literalを経由して呼び出すようにしたい。
      */
     public: template <typename template_char, std::size_t template_size>
-    self& operator<<(template_char const (&in_string)[template_size])
+    this_type& operator<<(template_char const (&in_string)[template_size])
     {
         if (!this->write_raw_string(in_string))
         {
@@ -691,7 +691,7 @@ class psyq::message_pack::serializer
         typename template_char,
         typename template_traits,
         typename template_allocator>
-    self& operator<<(
+    this_type& operator<<(
         std::basic_string<template_char, template_traits, template_allocator>
             const& in_string)
     {
@@ -708,7 +708,7 @@ class psyq::message_pack::serializer
         @return *this
      */
     public: template<typename template_char_traits>
-    self& operator<<(
+    this_type& operator<<(
         psyq::internal::string_view_base<template_char_traits> const& in_string)
     {
         if (!this->write_raw_string(in_string))
@@ -810,10 +810,10 @@ class psyq::message_pack::serializer
 
     /** @brief MessagePack文字列の直列化を開始する。
 
-        以後、 in_size バイトの文字を、 self::fill_container_raw() で直列化できる。
+        以後、 in_size バイトの文字を、 this_type::fill_container_raw() で直列化できる。
 
         @param[in] in_size 直列化するMessagePack文字列のバイト数。
-        @sa self::fill_rest_elements()
+        @sa this_type::fill_rest_elements()
      */
     public: bool make_serial_string(std::size_t const in_size)
     {
@@ -826,7 +826,7 @@ class psyq::message_pack::serializer
                 return true;
             }
         }
-        else if (self::stack_capacity <= this->get_rest_container_count())
+        else if (this_type::stack_capacity <= this->get_rest_container_count())
         {
             // スタック限界を超えたので失敗。
             PSYQ_ASSERT(false);
@@ -836,7 +836,7 @@ class psyq::message_pack::serializer
             // RAWバイト列をスタックに積む。
             auto& local_stack(
                 this->container_stack_.at(this->get_rest_container_count()));
-            local_stack.kind = self::value_kind_RAW_BYTES;
+            local_stack.kind = this_type::value_kind_RAW_BYTES;
             local_stack.rest_count = in_size;
             ++this->stack_size_;
             return true;
@@ -930,11 +930,11 @@ class psyq::message_pack::serializer
 
     /** @brief MessagePackバイナリの直列化を開始する。
 
-        以後 in_length 個の要素を、 self::fill_container_raw() で直列化できる。
+        以後 in_length 個の要素を、 this_type::fill_container_raw() で直列化できる。
 
         @tparam template_element 直列化する標準コンテナの要素の型。
         @param[in] in_length 直列化する標準コンテナの要素数。
-        @sa self::fill_rest_elements()
+        @sa this_type::fill_rest_elements()
      */
     public: template<typename template_element>
     bool make_serial_binary(std::size_t const in_length)
@@ -948,7 +948,7 @@ class psyq::message_pack::serializer
                 return true;
             }
         }
-        else if (self::stack_capacity <= this->get_rest_container_count())
+        else if (this_type::stack_capacity <= this->get_rest_container_count())
         {
             // スタック限界を超えたので失敗。
             PSYQ_ASSERT(false);
@@ -958,7 +958,7 @@ class psyq::message_pack::serializer
             // RAWバイト列をスタックに積む。
             auto& local_stack(
                 this->container_stack_.at(this->get_rest_container_count()));
-            local_stack.kind = self::value_kind_RAW_BYTES;
+            local_stack.kind = this_type::value_kind_RAW_BYTES;
             local_stack.rest_count = local_size;
             ++this->stack_size_;
             return true;
@@ -1006,11 +1006,11 @@ class psyq::message_pack::serializer
 
     /** @brief MessagePack拡張バイナリの直列化を開始する。
 
-        以後 in_size バイトを、 self::fill_container_raw() で直列化できる。
+        以後 in_size バイトを、 this_type::fill_container_raw() で直列化できる。
 
         @param[in] in_type 直列化する拡張型識別値。
         @param[in] in_size 直列化する拡張バイナリのバイト数。
-        @sa self::fill_rest_elements()
+        @sa this_type::fill_rest_elements()
      */
     public: bool make_serial_extended(
         std::int8_t const in_type,
@@ -1020,7 +1020,7 @@ class psyq::message_pack::serializer
         {
             return this->write_extended(in_type);
         }
-        else if (self::stack_capacity <= this->get_rest_container_count())
+        else if (this_type::stack_capacity <= this->get_rest_container_count())
         {
             // スタック限界を超えたので失敗。
             PSYQ_ASSERT(false);
@@ -1030,7 +1030,7 @@ class psyq::message_pack::serializer
             // RAWバイト列をスタックに積む。
             auto& local_stack(
                 this->container_stack_.at(this->get_rest_container_count()));
-            local_stack.kind = self::value_kind_RAW_BYTES;
+            local_stack.kind = this_type::value_kind_RAW_BYTES;
             local_stack.rest_count = in_size;
             ++this->stack_size_;
             return true;
@@ -1095,7 +1095,7 @@ class psyq::message_pack::serializer
               可変長テンプレート引数が使えるようになったら、対応したい。
      */
     public: template<typename template_element0>
-    self& operator<<(std::tuple<template_element0> const& in_tuple)
+    this_type& operator<<(std::tuple<template_element0> const& in_tuple)
     {
         if (!this->write_tuple(in_tuple))
         {
@@ -1105,7 +1105,7 @@ class psyq::message_pack::serializer
     }
     /// @copydoc operator<<(std::tuple<template_element0> const&)
     public: template<typename template_element0, typename template_element1>
-    self& operator<<(
+    this_type& operator<<(
         std::tuple<template_element0, template_element1> const& in_tuple)
     {
         this->write_tuple(in_tuple);
@@ -1116,7 +1116,7 @@ class psyq::message_pack::serializer
         typename template_element0,
         typename template_element1,
         typename template_element2>
-    self& operator<<(
+    this_type& operator<<(
         std::tuple<template_element0, template_element1, template_element2>
             const& in_tuple)
     {
@@ -1132,7 +1132,7 @@ class psyq::message_pack::serializer
         typename template_element1,
         typename template_element2,
         typename template_element3>
-    self& operator<<(
+    this_type& operator<<(
         std::tuple<
             template_element0,
             template_element1,
@@ -1153,7 +1153,7 @@ class psyq::message_pack::serializer
         typename template_element2,
         typename template_element3,
         typename template_element4>
-    self& operator<<(
+    this_type& operator<<(
         std::tuple<
             template_element0,
             template_element1,
@@ -1176,7 +1176,7 @@ class psyq::message_pack::serializer
         typename template_element3,
         typename template_element4,
         typename template_element5>
-    self& operator<<(
+    this_type& operator<<(
         std::tuple<
             template_element0,
             template_element1,
@@ -1201,7 +1201,7 @@ class psyq::message_pack::serializer
         typename template_element4,
         typename template_element5,
         typename template_element6>
-    self& operator<<(
+    this_type& operator<<(
         std::tuple<
             template_element0,
             template_element1,
@@ -1228,7 +1228,7 @@ class psyq::message_pack::serializer
         typename template_element5,
         typename template_element6,
         typename template_element7>
-    self& operator<<(
+    this_type& operator<<(
         std::tuple<
             template_element0,
             template_element1,
@@ -1257,7 +1257,7 @@ class psyq::message_pack::serializer
         typename template_element6,
         typename template_element7,
         typename template_element8>
-    self& operator<<(
+    this_type& operator<<(
         std::tuple<
             template_element0,
             template_element1,
@@ -1288,7 +1288,7 @@ class psyq::message_pack::serializer
         typename template_element7,
         typename template_element8,
         typename template_element9>
-    self& operator<<(
+    this_type& operator<<(
         std::tuple<
             template_element0,
             template_element1,
@@ -1335,7 +1335,7 @@ class psyq::message_pack::serializer
         @return *this
      */
     public: template<typename template_value, std::size_t template_size>
-    self& operator<<(std::array<template_value, template_size> const& in_array)
+    this_type& operator<<(std::array<template_value, template_size> const& in_array)
     {
         this->write_array(in_array);
         return *this;
@@ -1347,7 +1347,7 @@ class psyq::message_pack::serializer
         @return *this
      */
     public: template<typename template_value, typename template_allocator>
-    self& operator<<(
+    this_type& operator<<(
         std::vector<template_value, template_allocator> const& in_vector)
     {
         this->write_array(in_vector);
@@ -1360,7 +1360,7 @@ class psyq::message_pack::serializer
         @return *this
      */
     public: template<typename template_value, typename template_allocator>
-    self& operator<<(
+    this_type& operator<<(
         std::deque<template_value, template_allocator> const& in_deque)
     {
         this->write_array(in_deque);
@@ -1373,7 +1373,7 @@ class psyq::message_pack::serializer
         @return *this
      */
     public: template<typename template_value, typename template_allocator>
-    self& operator<<(
+    this_type& operator<<(
         std::list<template_value, template_allocator> const& in_list)
     {
         this->write_array(in_list);
@@ -1417,33 +1417,33 @@ class psyq::message_pack::serializer
         以後 in_length 個のMessagePack値を、配列の要素として直列化できる。
 
         以下の関数を1回呼び出す毎に、MessagePack値を1つ直列化する。
-        - self::write_nil()
-        - self::write_boolean()
-        - self::write_unsigned_integer()
-        - self::write_signed_integer()
-        - self::write_floating_point()
-        - self::write_raw_string()
-        - self::write_raw_binary()
-        - self::write_container_string()
-        - self::write_container_binary()
-        - self::write_extended()
-        - self::write_tuple()
-        - self::write_array()
-        - self::write_set()
-        - self::write_map()
-        - self::make_serial_string()
-        - self::make_serial_binary()
-        - self::make_serial_extended()
-        - self::make_serial_array()
-        - self::make_serial_map()
+        - this_type::write_nil()
+        - this_type::write_boolean()
+        - this_type::write_unsigned_integer()
+        - this_type::write_signed_integer()
+        - this_type::write_floating_point()
+        - this_type::write_raw_string()
+        - this_type::write_raw_binary()
+        - this_type::write_container_string()
+        - this_type::write_container_binary()
+        - this_type::write_extended()
+        - this_type::write_tuple()
+        - this_type::write_array()
+        - this_type::write_set()
+        - this_type::write_map()
+        - this_type::make_serial_string()
+        - this_type::make_serial_binary()
+        - this_type::make_serial_extended()
+        - this_type::make_serial_array()
+        - this_type::make_serial_map()
 
         @param[in] in_length 直列化する配列の要素数。
-        @sa self::fill_rest_elements()
+        @sa this_type::fill_rest_elements()
      */
     public: bool make_serial_array(std::size_t const in_length)
     {
         return this->make_serial_container<
-            self::value_kind_ARRAY_ELEMENT,
+            this_type::value_kind_ARRAY_ELEMENT,
             psyq::internal::message_pack_format_ARRAY_16,
             psyq::internal::message_pack_format_FIX_ARRAY_MIN,
             psyq::internal::message_pack_format_FIX_ARRAY_MAX>(
@@ -1462,7 +1462,7 @@ class psyq::message_pack::serializer
         typename template_key,
         typename template_compare,
         typename template_allocator>
-    self& operator<<(
+    this_type& operator<<(
         std::set<template_key, template_compare, template_allocator>
             const& in_set)
     {
@@ -1481,7 +1481,7 @@ class psyq::message_pack::serializer
         typename template_key,
         typename template_compare,
         typename template_allocator>
-    self& operator<<(
+    this_type& operator<<(
         std::multiset<template_key, template_compare, template_allocator>
             const& in_set)
     {
@@ -1501,7 +1501,7 @@ class psyq::message_pack::serializer
         typename template_hash,
         typename template_compare,
         typename template_allocator>
-    self& operator<<(
+    this_type& operator<<(
         std::unordered_set
             <template_key, template_hash, template_compare, template_allocator>
                 const& in_set)
@@ -1522,7 +1522,7 @@ class psyq::message_pack::serializer
         typename template_hash,
         typename template_compare,
         typename template_allocator>
-    self& operator<<(
+    this_type& operator<<(
         std::unordered_multiset
             <template_key, template_hash, template_compare, template_allocator>
                 const& in_set)
@@ -1543,7 +1543,7 @@ class psyq::message_pack::serializer
         typename template_mapped,
         typename template_compare,
         typename template_allocator>
-    self& operator<<(
+    this_type& operator<<(
         std::map<template_key, template_mapped, template_compare, template_allocator>
             const& in_map)
     {
@@ -1563,7 +1563,7 @@ class psyq::message_pack::serializer
         typename template_mapped,
         typename template_compare,
         typename template_allocator>
-    self& operator<<(
+    this_type& operator<<(
         std::multimap
             <template_key, template_mapped, template_compare, template_allocator>
                 const& in_map)
@@ -1585,7 +1585,7 @@ class psyq::message_pack::serializer
         typename template_hash,
         typename template_compare,
         typename template_allocator>
-    self& operator<<(
+    this_type& operator<<(
         std::unordered_map<
             template_key,
             template_mapped,
@@ -1611,7 +1611,7 @@ class psyq::message_pack::serializer
         typename template_hash,
         typename template_compare,
         typename template_allocator>
-    self& operator<<(
+    this_type& operator<<(
         std::unordered_multimap<
             template_key,
             template_mapped,
@@ -1704,33 +1704,33 @@ class psyq::message_pack::serializer
         次のMessagePack値を連想配列のマップ値として直列化する。
 
         以下の関数を1回呼び出す毎に、MessagePack値を1つ直列化する。
-        - self::write_nil()
-        - self::write_boolean()
-        - self::write_unsigned_integer()
-        - self::write_signed_integer()
-        - self::write_floating_point()
-        - self::write_raw_string()
-        - self::write_raw_binary()
-        - self::write_container_string()
-        - self::write_container_binary()
-        - self::write_extended()
-        - self::write_tuple()
-        - self::write_array()
-        - self::write_set()
-        - self::write_map()
-        - self::make_serial_string()
-        - self::make_serial_binary()
-        - self::make_serial_extended()
-        - self::make_serial_array()
-        - self::make_serial_map()
+        - this_type::write_nil()
+        - this_type::write_boolean()
+        - this_type::write_unsigned_integer()
+        - this_type::write_signed_integer()
+        - this_type::write_floating_point()
+        - this_type::write_raw_string()
+        - this_type::write_raw_binary()
+        - this_type::write_container_string()
+        - this_type::write_container_binary()
+        - this_type::write_extended()
+        - this_type::write_tuple()
+        - this_type::write_array()
+        - this_type::write_set()
+        - this_type::write_map()
+        - this_type::make_serial_string()
+        - this_type::make_serial_binary()
+        - this_type::make_serial_extended()
+        - this_type::make_serial_array()
+        - this_type::make_serial_map()
 
         @param[in] in_length 直列化する連想配列の要素数。
-        @sa self::fill_rest_elements()
+        @sa this_type::fill_rest_elements()
      */
     public: bool make_serial_map(std::size_t const in_length)
     {
         return this->make_serial_container<
-            self::value_kind_MAP_KEY,
+            this_type::value_kind_MAP_KEY,
             psyq::internal::message_pack_format_MAP_16,
             psyq::internal::message_pack_format_FIX_MAP_MIN,
             psyq::internal::message_pack_format_FIX_MAP_MAX>(
@@ -1743,7 +1743,7 @@ class psyq::message_pack::serializer
         @return *this
      */
     private: template<typename template_first, typename template_second>
-    self& operator<<(std::pair<template_first, template_second> const& in_pair)
+    this_type& operator<<(std::pair<template_first, template_second> const& in_pair)
     {
         return *this << in_pair.first << in_pair.second;
     }
@@ -1757,9 +1757,9 @@ class psyq::message_pack::serializer
                ストリームへ出力する。
         @param[in] in_value      直列化する値。
         @param[in] in_endianness コンテナ要素を直列化する際のエンディアン性。
-        @sa self::make_serial_string()
-        @sa self::make_serial_binary()
-        @sa self::make_serial_extended()
+        @sa this_type::make_serial_string()
+        @sa this_type::make_serial_binary()
+        @sa this_type::make_serial_extended()
      */
     public: template<typename template_value>
     std::size_t fill_value_raw(
@@ -1776,9 +1776,9 @@ class psyq::message_pack::serializer
         @param[in] in_container  直列化する標準コンテナ。
         @param[in] in_endianness コンテナ要素を直列化する際のエンディアン性。
         @return 残り要素の数。
-        @sa self::make_serial_string()
-        @sa self::make_serial_binary()
-        @sa self::make_serial_extended()
+        @sa this_type::make_serial_string()
+        @sa this_type::make_serial_binary()
+        @sa this_type::make_serial_extended()
      */
     public: template<typename template_container>
     std::size_t fill_container_raw(
@@ -1797,9 +1797,9 @@ class psyq::message_pack::serializer
         @param[in] in_length     直列化する標準コンテナの要素数。
         @param[in] in_endianness コンテナ要素を直列化する際のエンディアン性。
         @return 残りバイト数。
-        @sa self::make_serial_string()
-        @sa self::make_serial_binary()
-        @sa self::make_serial_extended()
+        @sa this_type::make_serial_string()
+        @sa this_type::make_serial_binary()
+        @sa this_type::make_serial_extended()
      */
     public: template<typename template_iterator>
     std::size_t fill_container_raw(
@@ -1838,12 +1838,12 @@ class psyq::message_pack::serializer
     /** @brief 直前に直列化を開始したMessagePackコンテナの残り要素を、
                空値で埋める。
         @return 残りバイト数。0以外の場合は、途中で失敗している。
-        @sa self::make_serial_string()
-        @sa self::make_serial_binary()
-        @sa self::make_serial_extended()
-        @sa self::make_serial_array()
-        @sa self::make_serial_map()
-        @sa self::fill_rest_containers()
+        @sa this_type::make_serial_string()
+        @sa this_type::make_serial_binary()
+        @sa this_type::make_serial_extended()
+        @sa this_type::make_serial_array()
+        @sa this_type::make_serial_map()
+        @sa this_type::fill_rest_containers()
      */
     public: std::size_t fill_rest_elements()
     {
@@ -1859,22 +1859,22 @@ class psyq::message_pack::serializer
         std::uint8_t local_empty_value;
         switch (local_stack.kind)
         {
-        case self::value_kind_RAW_BYTES:
+        case this_type::value_kind_RAW_BYTES:
             local_empty_value = 0;
             local_empty_count = local_stack.rest_count;
             break;
 
-        case self::value_kind_ARRAY_ELEMENT:
+        case this_type::value_kind_ARRAY_ELEMENT:
             local_empty_value = psyq::internal::message_pack_format_NIL;
             local_empty_count = local_stack.rest_count;
             break;
 
-        case self::value_kind_MAP_KEY:
+        case this_type::value_kind_MAP_KEY:
             local_empty_value = psyq::internal::message_pack_format_NIL;
             local_empty_count = local_stack.rest_count * 2;
             break;
 
-        case self::value_kind_MAP_VALUE:
+        case this_type::value_kind_MAP_VALUE:
             local_empty_value = psyq::internal::message_pack_format_NIL;
             local_empty_count = local_stack.rest_count * 2 + 1;
             break;
@@ -1900,12 +1900,12 @@ class psyq::message_pack::serializer
 
     /** @brief 直列化を終了してないすべてのMessagePackコンテナの残り要素を、
                空値で埋める。
-        @sa self::make_serial_string()
-        @sa self::make_serial_binary()
-        @sa self::make_serial_extended()
-        @sa self::make_serial_array()
-        @sa self::make_serial_map()
-        @sa self::fill_rest_elements()
+        @sa this_type::make_serial_string()
+        @sa this_type::make_serial_binary()
+        @sa this_type::make_serial_extended()
+        @sa this_type::make_serial_array()
+        @sa this_type::make_serial_map()
+        @sa this_type::fill_rest_elements()
      */
     public: std::size_t fill_rest_containers()
     {
@@ -1923,7 +1923,7 @@ class psyq::message_pack::serializer
         @param[in] in_object 直列化するMessagePackオブジェクト。
         @return *this
      */
-    public: self& operator<<(psyq::message_pack::object const& in_object)
+    public: this_type& operator<<(psyq::message_pack::object const& in_object)
     {
         if (!this->write_object(in_object))
         {
@@ -2078,7 +2078,7 @@ class psyq::message_pack::serializer
                 return false;
             }
             this->stream_.write(
-                static_cast<typename self::stream::char_type const*>(in_begin),
+                static_cast<typename this_type::stream::char_type const*>(in_begin),
                 in_size);
             if (this->stream_.fail())
             {
@@ -2092,13 +2092,13 @@ class psyq::message_pack::serializer
 
     /** @brief 最上段スタックがRAWバイト列なら、それを取得する。
      */
-    private: typename self::container_stack* get_stack_top_raw()
+    private: typename this_type::container_stack* get_stack_top_raw()
     {
         if (0 < this->get_rest_container_count())
         {
             auto& local_stack(
                 this->container_stack_.at(this->get_rest_container_count() - 1));
-            if (local_stack.kind == self::value_kind_RAW_BYTES)
+            if (local_stack.kind == this_type::value_kind_RAW_BYTES)
             {
                 return &local_stack;
             }
@@ -2114,7 +2114,7 @@ class psyq::message_pack::serializer
         @param[in] in_length 直列化するコンテナの要素数。
      */
     private: template<
-        typename self::value_kind template_value_kind,
+        typename this_type::value_kind template_value_kind,
         std::uint8_t template_format_begin,
         std::uint8_t template_format_fix_min,
         std::uint8_t template_format_fix_max>
@@ -2131,7 +2131,7 @@ class psyq::message_pack::serializer
             }
             return false;
         }
-        else if (self::stack_capacity <= this->get_rest_container_count())
+        else if (this_type::stack_capacity <= this->get_rest_container_count())
         {
             // スタック限界を超えたので失敗。
             PSYQ_ASSERT(false);
@@ -2197,7 +2197,7 @@ class psyq::message_pack::serializer
             this->container_stack_.at(this->get_rest_container_count() - 1));
         switch (local_stack.kind)
         {
-        case self::value_kind_ARRAY_ELEMENT:
+        case this_type::value_kind_ARRAY_ELEMENT:
             if (1 < local_stack.rest_count)
             {
                 --local_stack.rest_count;
@@ -2209,14 +2209,14 @@ class psyq::message_pack::serializer
             }
             break;
 
-        case self::value_kind_MAP_KEY:
-            local_stack.kind = self::value_kind_MAP_VALUE;
+        case this_type::value_kind_MAP_KEY:
+            local_stack.kind = this_type::value_kind_MAP_VALUE;
             break;
 
-        case self::value_kind_MAP_VALUE:
+        case this_type::value_kind_MAP_VALUE:
             if (1 < local_stack.rest_count)
             {
-                local_stack.kind = self::value_kind_MAP_KEY;
+                local_stack.kind = this_type::value_kind_MAP_KEY;
                 --local_stack.rest_count;
             }
             else
@@ -2226,7 +2226,7 @@ class psyq::message_pack::serializer
             }
             break;
 
-        case self::value_kind_RAW_BYTES:
+        case this_type::value_kind_RAW_BYTES:
         default:
             PSYQ_ASSERT(false);
             break;
@@ -2235,9 +2235,9 @@ class psyq::message_pack::serializer
 
     //-------------------------------------------------------------------------
     /// @copydoc stream
-    private: typename self::stream stream_;
+    private: typename this_type::stream stream_;
     /// @copydoc container_stack
-    private: std::array<typename self::container_stack, template_stack_capacity>
+    private: std::array<typename this_type::container_stack, template_stack_capacity>
         container_stack_;
     /// 直列化途中のコンテナのスタック階層数。
     private: std::size_t stack_size_;

@@ -90,6 +90,7 @@ class psyq::basic_string_view:
     public: typedef psyq::internal::string_view_interface<
         psyq::internal::string_view_base<template_char_traits>>
             base_type;
+    private: typedef typename base_type::base_type base_base;
 
     //-------------------------------------------------------------------------
     /// @name constructor / destructor
@@ -98,7 +99,7 @@ class psyq::basic_string_view:
         @param[in] in_string 参照する文字列。
      */
     public: PSYQ_CONSTEXPR basic_string_view(
-        typename base_type::base_type in_string = base_type::base_type())
+        typename base_type::base_type in_string = base_base())
     PSYQ_NOEXCEPT:
         base_type(std::move(in_string))
     {}
@@ -111,7 +112,7 @@ class psyq::basic_string_view:
         typename base_type::const_pointer const in_begin,
         typename base_type::size_type const     in_length)
     PSYQ_NOEXCEPT:
-        base_type(base_type::base_type(in_begin, in_length))
+        base_type(base_base(in_begin, in_length))
     {}
 
     /** @brief 文字列を参照する。
@@ -258,7 +259,7 @@ namespace psyq
     /// @copydoc psyq::internal::parse_number()
     template<typename template_string_type>
     bool deserialize_string(
-        char& out_value,
+        signed char& out_value,
         template_string_type const* const in_string)
     PSYQ_NOEXCEPT
     {
@@ -278,7 +279,7 @@ namespace psyq
     /// @copydoc psyq::internal::parse_number()
     template<typename template_string_type>
     bool deserialize_string(
-        short& out_value,
+        signed short& out_value,
         template_string_type const* const in_string)
     PSYQ_NOEXCEPT
     {
@@ -298,7 +299,7 @@ namespace psyq
     /// @copydoc psyq::internal::parse_number()
     template<typename template_string_type>
     bool deserialize_string(
-        int& out_value,
+        signed int& out_value,
         template_string_type const* const in_string)
     PSYQ_NOEXCEPT
     {
@@ -318,7 +319,7 @@ namespace psyq
     /// @copydoc psyq::internal::parse_number()
     template<typename template_string_type>
     bool deserialize_string(
-        long& out_value,
+        signed long& out_value,
         template_string_type const* const in_string)
     PSYQ_NOEXCEPT
     {
@@ -338,7 +339,7 @@ namespace psyq
     /// @copydoc psyq::internal::parse_number()
     template<typename template_string_type>
     bool deserialize_string(
-        long long& out_value,
+        signed long long& out_value,
         template_string_type const* const in_string)
     PSYQ_NOEXCEPT
     {
@@ -406,7 +407,7 @@ namespace psyq
         {
             return false;
         }
-        out_value = template_value_type(local_string);
+        out_value = local_string;
         return true;
     }
 }

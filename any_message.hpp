@@ -221,7 +221,7 @@ class psyq::any_message_method::with_argument: public psyq::any_message_method
         base_type(
             psyq::any_rtti::find_key<template_value>(),
             in_method_key,
-            in_sequence_index)
+            in_sequence_index),
         argument_(std::move(in_argument))
     {}
 
@@ -234,7 +234,7 @@ class psyq::any_message_method::with_argument: public psyq::any_message_method
         base_type(
             psyq::any_rtti::find_key<template_value>(),
             in_method_key,
-            in_sequence_index)
+            in_sequence_index),
         argument_(in_argument)
     {}
 

@@ -613,6 +613,9 @@ class psyq::basic_shared_string:
         psyq::internal::shared_string_holder<
             template_char_traits, template_allocator_type>>
                 base_type;
+    private: typedef typename base_type::allocator_type base_allocator;
+    private: typedef typename base_type::base_type base_base;
+    private: typedef typename base_base::view base_view;
 
     //-------------------------------------------------------------------------
     /// @name constructor / destructor
@@ -621,10 +624,9 @@ class psyq::basic_shared_string:
         @param[in] in_allocator memory割当子の初期値。
      */
     public: explicit basic_shared_string(
-        typename base_type::allocator_type const& in_allocator
-        = base_type::allocator_type())
+        typename base_type::allocator_type const& in_allocator = base_allocator())
     :
-        base_type(base_type::base_type(in_allocator))
+        base_type(base_base(in_allocator))
     {}
 
     /** @brief 文字列を参照する。memory割り当ては行わない。
@@ -653,10 +655,9 @@ class psyq::basic_shared_string:
     public: template <std::size_t template_size>
     basic_shared_string(
         typename base_type::value_type const (&in_literal)[template_size],
-        typename base_type::allocator_type const& in_allocator
-        = base_type::allocator_type())
+        typename base_type::allocator_type const& in_allocator = base_allocator())
     PSYQ_NOEXCEPT:
-        base_type(base_type::base_type(in_literal, in_allocator))
+        base_type(base_base(in_literal, in_allocator))
     {}
 
     /** @brief memory割り当てを行い、文字列をcopyする。
@@ -665,10 +666,9 @@ class psyq::basic_shared_string:
      */
     public: basic_shared_string(
         typename base_type::base_type::view const& in_string,
-        typename base_type::allocator_type const& in_allocator
-        = base_type::allocator_type())
+        typename base_type::allocator_type const& in_allocator = base_allocator())
     :
-        base_type(base_type::base_type(in_string, base_type::base_type::view(), in_allocator))
+        base_type(base_base(in_string, base_view(), in_allocator))
     {}
 
     /** @brief memory割り当てを行い、文字列をcopyする。

@@ -90,7 +90,7 @@ class psyq::basic_string_view:
     public: typedef psyq::internal::string_view_interface<
         psyq::internal::string_view_base<template_char_traits>>
             base_type;
-    private: typedef typename base_type::base_type base_base;
+    private: typedef typename base_type::base_type base_string;
 
     //-------------------------------------------------------------------------
     /// @name constructor / destructor
@@ -99,29 +99,29 @@ class psyq::basic_string_view:
         @param[in] in_string 参照する文字列。
      */
     public: PSYQ_CONSTEXPR basic_string_view(
-        typename base_type::base_type in_string = base_base())
+        typename base_type::base_type in_string = base_string())
     PSYQ_NOEXCEPT:
         base_type(std::move(in_string))
     {}
 
     /** @brief 文字列を参照する。
-        @param[in] in_begin  参照する文字列の先頭位置。
-        @param[in] in_length 参照する文字列の長さ。
+        @param[in] in_begin 参照する文字列の先頭位置。
+        @param[in] in_size  参照する文字列の要素数。
      */
     public: PSYQ_CONSTEXPR basic_string_view(
         typename base_type::const_pointer const in_begin,
-        typename base_type::size_type const     in_length)
+        typename base_type::size_type const in_size)
     PSYQ_NOEXCEPT:
-        base_type(base_base(in_begin, in_length))
+        base_type(base_string(in_begin, in_size))
     {}
 
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
         @param[in] in_offset 参照する文字列の開始offset位置。
-        @param[in] in_count  参照する文字数の開始offset位置からの文字数。
+        @param[in] in_count  参照する文字数の開始offset位置からの要素数。
      */
     public: PSYQ_CONSTEXPR basic_string_view(
-        typename base_type::base_type const&    in_string,
+        typename base_type::base_type const& in_string,
         typename base_type::size_type const in_offset,
         typename base_type::size_type const in_count = base_type::npos)
     PSYQ_NOEXCEPT:
@@ -240,14 +240,14 @@ namespace psyq
             }
 
             // 文字列を解析し、値を取り出す。
-            std::size_t local_rest_length(0);
+            std::size_t local_rest_size(0);
             auto const local_value(
                 std::is_integral<template_number_type>::value?
                     local_string.template parse_integer<template_number_type>(
-                        &local_rest_length):
+                        &local_rest_size):
                     local_string.template parse_real<template_number_type>(
-                        &local_rest_length));
-            if (0 < local_rest_length)
+                        &local_rest_size));
+            if (0 < local_rest_size)
             {
                 return false;
             }

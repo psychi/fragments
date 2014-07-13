@@ -75,8 +75,8 @@ class psyq::internal::string_view_interface: public template_string_type
     /** @brief 操作する文字列型。
 
         - 文字列の先頭から末尾までのmemory連続性が保証されてること。
-        - copy-constructorとcopy代入演算子、
-          move-constructorとmove代入演算子が使えること。
+        - copy-constructorとcopy代入演算子が使えること。
+        - move-constructorとmove代入演算子が使えて、例外を投げないこと。
         - std::char_traits 互換の文字特性の型として、以下の型を使えること。
           @code
           template_string_type::traits_type
@@ -85,11 +85,11 @@ class psyq::internal::string_view_interface: public template_string_type
           @code
           template_string_type::traits_type::char_type const* template_string_type::data() const PSYQ_NOEXCEPT
           @endcode
-        - 文字列の長さを取得するため、以下の関数を使えること。
+        - 文字列の要素数を取得するため、以下の関数を使えること。
           @code
-          std::size_t template_string_type::length() const PSYQ_NOEXCEPT
+          std::size_t template_string_type::size() const PSYQ_NOEXCEPT
           @endcode
-        - 文字列の最大長を取得するため、以下の関数を使えること。
+        - 文字列の最大要素数を取得するため、以下の関数を使えること。
           @code
           std::size_t template_string_type::max_size() const PSYQ_NOEXCEPT
           @endcode
@@ -109,10 +109,10 @@ class psyq::internal::string_view_interface: public template_string_type
         const PSYQ_NOEXCEPT
         {
             return template_hash::make(
-                in_string.data(), in_string.data() + in_string.length());
+                in_string.data(), in_string.data() + in_string.size());
         }
     };
-    public: typedef typename this_type::hash<psyq::fnv1_hash>   fnv1_hash;
+    public: typedef typename this_type::hash<psyq::fnv1_hash> fnv1_hash;
     public: typedef typename this_type::hash<psyq::fnv1_hash32> fnv1_hash32;
     public: typedef typename this_type::hash<psyq::fnv1_hash64> fnv1_hash64;
 
@@ -149,7 +149,7 @@ class psyq::internal::string_view_interface: public template_string_type
     /// 部分文字列の基底型。
     protected: typedef psyq::internal::string_view_base<
         typename base_type::traits_type>
-            base_type_view;
+            base_view;
 
     //-------------------------------------------------------------------------
     /// @name constructor / destructor
@@ -170,7 +170,8 @@ class psyq::internal::string_view_interface: public template_string_type
     /** @brief 文字列を移動する。
         @param[in,out] io_string 移動する文字列。
      */
-    protected: PSYQ_CONSTEXPR explicit string_view_interface(this_type&& io_string)
+    protected: PSYQ_CONSTEXPR explicit string_view_interface(
+        this_type&& io_string)
     PSYQ_NOEXCEPT:
         base_type(std::move(io_string))
     {}
@@ -178,7 +179,8 @@ class psyq::internal::string_view_interface: public template_string_type
     /** @brief 文字列を移動する。
         @param[in,out] io_string 移動する文字列。
      */
-    protected: PSYQ_CONSTEXPR explicit string_view_interface(base_type&& io_string)
+    protected: PSYQ_CONSTEXPR explicit string_view_interface(
+        base_type&& io_string)
     PSYQ_NOEXCEPT:
         base_type(std::move(io_string))
     {}
@@ -198,9 +200,9 @@ class psyq::internal::string_view_interface: public template_string_type
      */
     public: void swap(this_type& io_target) PSYQ_NOEXCEPT
     {
-        this_type local_temp(std::move(io_target));
+        this_type local_swap_temp(std::move(io_target));
         io_target.base_type::operator=(std::move(*this));
-        this->base_type::operator=(std::move(local_temp));
+        this->base_type::operator=(std::move(local_swap_temp));
     }
     //@}
     //-------------------------------------------------------------------------
@@ -214,7 +216,7 @@ class psyq::internal::string_view_interface: public template_string_type
         typename this_type::size_type const in_index)
     const
     {
-        if (this->length() <= in_index)
+        if (this->size() <= in_index)
         {
             PSYQ_ASSERT(false);
             //throw std::out_of_range; // 例外は使いたくない。
@@ -230,7 +232,7 @@ class psyq::internal::string_view_interface: public template_string_type
         typename this_type::size_type const in_index)
     const
     {
-        PSYQ_ASSERT(in_index < this->length());
+        PSYQ_ASSERT(in_index < this->size());
         return *(this->data() + in_index);
     }
 
@@ -247,7 +249,7 @@ class psyq::internal::string_view_interface: public template_string_type
      */
     public: typename this_type::const_reference back() const
     {
-        return (*this)[this->length() - 1];
+        return (*this)[this->size() - 1];
     }
     //@}
     //-------------------------------------------------------------------------
@@ -268,7 +270,7 @@ class psyq::internal::string_view_interface: public template_string_type
     public: PSYQ_CONSTEXPR typename this_type::const_iterator end()
     const PSYQ_NOEXCEPT
     {
-        return this->begin() + this->length();
+        return this->begin() + this->size();
     }
 
     /** @brief 文字列の先頭位置を取得する。
@@ -334,15 +336,15 @@ class psyq::internal::string_view_interface: public template_string_type
      */
     public: PSYQ_CONSTEXPR bool empty() const PSYQ_NOEXCEPT
     {
-        return this->length() <= 0;
+        return this->size() <= 0;
     }
 
-    /** @brief 文字列の長さを取得する。
-        @return 文字列の長さ。
+    /** @brief 文字列の要素数を取得する。 base_type::size() と同じ機能。
+        @return 文字列の要素数。
      */
-    public: PSYQ_CONSTEXPR typename this_type::size_type size() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR typename this_type::size_type length() const PSYQ_NOEXCEPT
     {
-        return this->length();
+        return this->size();
     }
     //@}
     //-------------------------------------------------------------------------
@@ -355,10 +357,10 @@ class psyq::internal::string_view_interface: public template_string_type
         @param[in] in_right 右辺の文字列。
         @return 左辺 == 右辺
      */
-    public: bool operator==(typename this_type::base_type_view const& in_right)
+    public: bool operator==(typename this_type::base_view const& in_right)
     const PSYQ_NOEXCEPT
     {
-        return this_type::base_type_view(*this) == in_right;
+        return this_type::base_view(*this) == in_right;
     }
 
     /** @brief 文字列を比較する。
@@ -368,10 +370,10 @@ class psyq::internal::string_view_interface: public template_string_type
         @param[in] in_right 右辺の文字列。
         @return 左辺 != 右辺
      */
-    public: bool operator!=(typename this_type::base_type_view const& in_right)
+    public: bool operator!=(typename this_type::base_view const& in_right)
     const PSYQ_NOEXCEPT
     {
-        return this_type::base_type_view(*this) != in_right;
+        return this_type::base_view(*this) != in_right;
     }
 
     /** @brief 文字列を比較する。
@@ -381,7 +383,7 @@ class psyq::internal::string_view_interface: public template_string_type
         @param[in] in_right 右辺の文字列。
         @return 左辺 < 右辺
      */
-    public: bool operator<(typename this_type::base_type_view const& in_right)
+    public: bool operator<(typename this_type::base_view const& in_right)
     const PSYQ_NOEXCEPT
     {
         return 0 < in_right.compare(*this);
@@ -394,7 +396,7 @@ class psyq::internal::string_view_interface: public template_string_type
         @param[in] in_right 右辺の文字列。
         @return 左辺 <= 右辺
      */
-    public: bool operator<=(typename this_type::base_type_view const& in_right)
+    public: bool operator<=(typename this_type::base_view const& in_right)
     const PSYQ_NOEXCEPT
     {
         return 0 <= in_right.compare(*this);
@@ -407,7 +409,7 @@ class psyq::internal::string_view_interface: public template_string_type
         @param[in] in_right 右辺の文字列。
         @return 左辺 > 右辺
      */
-    public: bool operator>(typename this_type::base_type_view const& in_right)
+    public: bool operator>(typename this_type::base_view const& in_right)
     const PSYQ_NOEXCEPT
     {
         return in_right.compare(*this) < 0;
@@ -420,7 +422,7 @@ class psyq::internal::string_view_interface: public template_string_type
         @param[in] in_right 右辺の文字列。
         @return 左辺 >= 右辺
      */
-    public: bool operator>=(typename this_type::base_type_view const& in_right)
+    public: bool operator>=(typename this_type::base_view const& in_right)
     const PSYQ_NOEXCEPT
     {
         return in_right.compare(*this) <= 0;
@@ -435,7 +437,7 @@ class psyq::internal::string_view_interface: public template_string_type
         @retval + 左辺のほうが大きい。
         @retval 0 左辺と右辺は等価。
      */
-    public: int compare(typename this_type::base_type_view const& in_right)
+    public: int compare(typename this_type::base_view const& in_right)
     const PSYQ_NOEXCEPT
     {
         return -(in_right.compare(*this));
@@ -452,35 +454,35 @@ class psyq::internal::string_view_interface: public template_string_type
     public: int compare(
         typename this_type::size_type const in_left_offset,
         typename this_type::size_type const in_left_count,
-        typename this_type::base_type_view const& in_right)
+        typename this_type::base_view const& in_right)
     const PSYQ_NOEXCEPT
     {
         auto const local_left(
-            typename this_type::base_type_view(*this).substr(
+            typename this_type::base_view(*this).substr(
                 in_left_offset, in_left_count));
         return local_left.compare(in_right);
     }
 
     /** @brief 文字列を比較する。
-        @param[in] in_left_offset  左辺の文字列の開始offset値。
-        @param[in] in_left_count   左辺の文字列の開始offset値からの文字数。
-        @param[in] in_right_begin  右辺の文字列の先頭位置。
-        @param[in] in_right_length 右辺の文字列の長さ。
+        @param[in] in_left_offset 左辺の文字列の開始offset値。
+        @param[in] in_left_count  左辺の文字列の開始offset値からの文字数。
+        @param[in] in_right_begin 右辺の文字列の先頭位置。
+        @param[in] in_right_size  右辺の文字列の要素数。
         @retval - 右辺のほうが大きい。
         @retval + 左辺のほうが大きい。
         @retval 0 左辺と右辺は等価。
      */
     public: int compare(
-        typename this_type::size_type const     in_left_offset,
-        typename this_type::size_type const     in_left_count,
+        typename this_type::size_type const in_left_offset,
+        typename this_type::size_type const in_left_count,
         typename this_type::const_pointer const in_right_begin,
-        typename this_type::size_type const     in_right_length)
+        typename this_type::size_type const in_right_size)
     const PSYQ_NOEXCEPT
     {
         this->compare(
             in_left_offset,
             in_left_count,
-            typename this_type::base_type_view(in_right_begin, in_right_length));
+            typename this_type::base_view(in_right_begin, in_right_size));
     }
 
     /** @brief 文字列を比較する。
@@ -496,7 +498,7 @@ class psyq::internal::string_view_interface: public template_string_type
     public: int compare(
         typename this_type::size_type const in_left_offset,
         typename this_type::size_type const in_left_count,
-        typename this_type::base_type_view const& in_right,
+        typename this_type::base_view const& in_right,
         typename this_type::size_type const in_right_offset,
         typename this_type::size_type const in_right_count)
     const PSYQ_NOEXCEPT
@@ -520,14 +522,14 @@ class psyq::internal::string_view_interface: public template_string_type
         typename this_type::size_type const  in_offset = 0)
     const PSYQ_NOEXCEPT
     {
-        auto const local_this_length(this->length());
-        if (in_offset < local_this_length)
+        auto const local_this_size(this->size());
+        if (in_offset < local_this_size)
         {
             auto const local_this_data(this->data());
             auto const local_find(
                 base_type::traits_type::find(
                     local_this_data + in_offset,
-                    local_this_length - in_offset,
+                    local_this_size - in_offset,
                     in_char));
             if (local_find != nullptr)
             {
@@ -543,36 +545,36 @@ class psyq::internal::string_view_interface: public template_string_type
         @return 検索文字列が現れた位置。現れない場合は this_type::npos を返す。
      */
     public: typename this_type::size_type find(
-        typename this_type::base_type_view const& in_string,
+        typename this_type::base_view const& in_string,
         typename this_type::size_type in_offset = 0)
     const PSYQ_NOEXCEPT
     {
-        return this->find(in_string.data(), in_offset, in_string.length());
+        return this->find(in_string.data(), in_offset, in_string.size());
     }
 
     /** @brief 文字列を検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
-        @param[in] in_length 検索文字列の長さ。
+        @param[in] in_size   検索文字列の要素数。
         @return 検索文字列が現れた位置。現れない場合は this_type::npos を返す。
      */
     public: typename this_type::size_type find(
         typename this_type::const_pointer const in_string,
-        typename this_type::size_type const     in_offset,
-        typename this_type::size_type const     in_length)
+        typename this_type::size_type const in_offset,
+        typename this_type::size_type const in_size)
     const PSYQ_NOEXCEPT
     {
-        auto const local_this_length(this->length());
-        if (in_length <= 0)
+        auto const local_this_size(this->size());
+        if (in_size <= 0)
         {
-            return in_offset <= local_this_length? in_offset: this_type::npos;
+            return in_offset <= local_this_size? in_offset: this_type::npos;
         }
         PSYQ_ASSERT(nullptr != in_string);
 
-        auto local_rest_length(local_this_length - in_offset);
-        if (in_offset < local_this_length && in_length <= local_rest_length)
+        auto local_rest_size(local_this_size - in_offset);
+        if (in_offset < local_this_size && in_size <= local_rest_size)
         {
-            local_rest_length -= in_length - 1;
+            local_rest_size -= in_size - 1;
             auto const local_this_data(this->data());
             auto local_rest_string(local_this_data + in_offset);
             for (;;)
@@ -580,7 +582,7 @@ class psyq::internal::string_view_interface: public template_string_type
                 // 検索文字列の先頭文字と合致する位置を見つける。
                 auto const local_find(
                     base_type::traits_type::find(
-                        local_rest_string, local_rest_length, *in_string));
+                        local_rest_string, local_rest_size, *in_string));
                 if (local_find == nullptr)
                 {
                     break;
@@ -589,14 +591,14 @@ class psyq::internal::string_view_interface: public template_string_type
                 // 検索文字列と合致するか判定。
                 int const local_compare(
                     base_type::traits_type::compare(
-                        local_find, in_string, in_length));
+                        local_find, in_string, in_size));
                 if (local_compare == 0)
                 {
                     return local_find - local_this_data;
                 }
 
                 // 次の候補へ。
-                local_rest_length -= local_find + 1 - local_rest_string;
+                local_rest_size -= local_find + 1 - local_rest_string;
                 local_rest_string = local_find + 1;
             }
         }
@@ -609,10 +611,10 @@ class psyq::internal::string_view_interface: public template_string_type
         @retval false 先頭が文字列と一致しなかった。
      */
     public: PSYQ_CONSTEXPR bool starts_with(
-        typename this_type::base_type_view const& in_prefix)
+        typename this_type::base_view const& in_prefix)
     const PSYQ_NOEXCEPT
     {
-        return this_type::base_type_view(*this).starts_with(in_prefix);
+        return this_type::base_view(*this).starts_with(in_prefix);
     }
 
     /** @brief 先頭が文字と一致するか判定する。
@@ -624,7 +626,7 @@ class psyq::internal::string_view_interface: public template_string_type
         typename this_type::value_type const in_prefix)
     const PSYQ_NOEXCEPT
     {
-        return this_type::base_type_view(*this).starts_with(in_prefix);
+        return this_type::base_view(*this).starts_with(in_prefix);
     }
     //@}
     //-------------------------------------------------------------------------
@@ -643,7 +645,7 @@ class psyq::internal::string_view_interface: public template_string_type
         if (!this->empty())
         {
             auto const local_begin(this->data());
-            auto const local_offset((std::min)(in_offset, this->length()));
+            auto const local_offset((std::min)(in_offset, this->size()));
             for (auto i(local_begin + local_offset); ; --i)
             {
                 if (base_type::traits_type::eq(*i, in_char))
@@ -665,40 +667,40 @@ class psyq::internal::string_view_interface: public template_string_type
         @return 検索文字列が現れた位置。現れない場合は this_type::npos を返す。
      */
     public: typename this_type::size_type rfind(
-        typename this_type::base_type_view const& in_string,
+        typename this_type::base_view const& in_string,
         typename this_type::size_type const in_offset = this_type::npos)
     const PSYQ_NOEXCEPT
     {
-        return this->rfind(in_string.data(), in_offset, in_string.length());
+        return this->rfind(in_string.data(), in_offset, in_string.size());
     }
 
     /** @brief 後ろから文字列を検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
-        @param[in] in_length 検索文字列の長さ。
+        @param[in] in_size   検索文字列の要素数。
         @return 検索文字列が現れた位置。現れない場合は this_type::npos を返す。
      */
     public: typename this_type::size_type rfind(
         typename this_type::const_pointer const in_string,
-        typename this_type::size_type const     in_offset,
-        typename this_type::size_type const     in_length)
+        typename this_type::size_type const in_offset,
+        typename this_type::size_type const in_size)
     const PSYQ_NOEXCEPT
     {
-        auto const local_this_length(this->length());
-        if (in_length <= 0)
+        auto const local_this_size(this->size());
+        if (in_size <= 0)
         {
-            return (std::min)(in_offset, local_this_length);
+            return (std::min)(in_offset, local_this_size);
         }
         PSYQ_ASSERT(nullptr != in_string);
-        if (in_length <= local_this_length)
+        if (in_size <= local_this_size)
         {
             auto const local_begin(this->data());
             auto const local_offset(
-                (std::min)(in_offset, local_this_length - in_length));
+                (std::min)(in_offset, local_this_size - in_size));
             for (auto i(local_begin + local_offset); ; --i)
             {
                 if (base_type::traits_type::eq(*i, *in_string)
-                    && base_type::traits_type::compare(i, in_string, in_length) == 0)
+                    && base_type::traits_type::compare(i, in_string, in_size) == 0)
                 {
                     return i - local_begin;
                 }
@@ -717,10 +719,10 @@ class psyq::internal::string_view_interface: public template_string_type
         @retval false 末尾が文字列と一致しなかった。
      */
     public: PSYQ_CONSTEXPR bool end_with(
-        typename this_type::base_type_view const& in_suffix)
+        typename this_type::base_view const& in_suffix)
     const PSYQ_NOEXCEPT
     {
-        return this_type::base_type_view(*this).ends_with(in_suffix);
+        return this_type::base_view(*this).ends_with(in_suffix);
     }
 
     /** @brief 末尾が文字と一致するか判定する。
@@ -732,7 +734,7 @@ class psyq::internal::string_view_interface: public template_string_type
         typename this_type::value_type const in_suffix)
     const PSYQ_NOEXCEPT
     {
-        return this_type::base_type_view(*this).ends_with(in_suffix);
+        return this_type::base_view(*this).ends_with(in_suffix);
     }
     //@}
     //-------------------------------------------------------------------------
@@ -757,36 +759,36 @@ class psyq::internal::string_view_interface: public template_string_type
         @return 検索文字が現れた位置。現れない場合は this_type::npos を返す。
      */
     public: typename this_type::size_type find_first_of(
-        typename this_type::base_type_view const& in_string,
+        typename this_type::base_view const& in_string,
         typename this_type::size_type const in_offset = 0)
     const PSYQ_NOEXCEPT
     {
         return this->find_first_of(
-            in_string.data(), in_offset, in_string.length());
+            in_string.data(), in_offset, in_string.size());
     }
 
     /** @brief 検索文字列に含まれるいずれかの文字を検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
-        @param[in] in_length 検索文字列の長さ。
+        @param[in] in_size   検索文字列の要素数。
         @return 検索文字が現れた位置。現れない場合は this_type::npos を返す。
      */
     public: typename this_type::size_type find_first_of(
         typename this_type::const_pointer const in_string,
-        typename this_type::size_type const     in_offset,
-        typename this_type::size_type const     in_length)
+        typename this_type::size_type const in_offset,
+        typename this_type::size_type const in_size)
     const PSYQ_NOEXCEPT
     {
-        PSYQ_ASSERT(in_length <= 0 || nullptr != in_string);
-        auto const local_this_length(this->length());
-        if (0 < in_length && in_offset < local_this_length)
+        PSYQ_ASSERT(in_size <= 0 || nullptr != in_string);
+        auto const local_this_size(this->size());
+        if (0 < in_size && in_offset < local_this_size)
         {
             auto const local_begin(this->data());
-            auto const local_end(local_begin + local_this_length);
+            auto const local_end(local_begin + local_this_size);
             for (auto i(local_begin + in_offset); i < local_end; ++i)
             {
                 auto const local_find(
-                    base_type::traits_type::find(in_string, in_length, *i));
+                    base_type::traits_type::find(in_string, in_size, *i));
                 if (local_find != nullptr)
                 {
                     return i - local_begin;
@@ -818,39 +820,39 @@ class psyq::internal::string_view_interface: public template_string_type
         @return 検索文字が現れた位置。現れない場合は this_type::npos を返す。
      */
     public: typename this_type::size_type find_last_of(
-        typename this_type::base_type_view const& in_string,
+        typename this_type::base_view const& in_string,
         typename this_type::size_type const in_offset = this_type::npos)
     const PSYQ_NOEXCEPT
     {
         return this->find_last_of(
-            in_string.data(), in_offset, in_string.length());
+            in_string.data(), in_offset, in_string.size());
     }
 
     /** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
-        @param[in] in_length 検索文字列の長さ。
+        @param[in] in_size   検索文字列の要素数。
         @return 検索文字が現れた位置。現れない場合は this_type::npos を返す。
      */
     public: typename this_type::size_type find_last_of(
         typename this_type::const_pointer const in_string,
-        typename this_type::size_type const     in_offset,
-        typename this_type::size_type const     in_length)
+        typename this_type::size_type const in_offset,
+        typename this_type::size_type const in_size)
     const PSYQ_NOEXCEPT
     {
-        PSYQ_ASSERT(in_length <= 0 || nullptr != in_string);
-        auto const local_this_length(this->length());
-        if (in_length <= local_this_length
-            && 0 < in_length
-            && 0 < local_this_length)
+        PSYQ_ASSERT(in_size <= 0 || nullptr != in_string);
+        auto const local_this_size(this->size());
+        if (in_size <= local_this_size
+            && 0 < in_size
+            && 0 < local_this_size)
         {
             auto const local_begin(this->data());
             auto const local_offset(
-                (std::min)(in_offset, local_this_length - in_length));
+                (std::min)(in_offset, local_this_size - in_size));
             for (auto i(local_begin + local_offset); ; --i)
             {
                 auto const local_find(
-                    base_type::traits_type::find(in_string, in_length, *i));
+                    base_type::traits_type::find(in_string, in_size, *i));
                 if (local_find != nullptr)
                 {
                     return i - local_begin;
@@ -879,7 +881,7 @@ class psyq::internal::string_view_interface: public template_string_type
     const PSYQ_NOEXCEPT
     {
         auto const local_begin(this->data());
-        auto const local_end(local_begin + this->length());
+        auto const local_end(local_begin + this->size());
         for (auto i(local_begin + in_offset); i < local_end; ++i)
         {
             if (!base_type::traits_type::eq(*i, in_char))
@@ -897,37 +899,37 @@ class psyq::internal::string_view_interface: public template_string_type
             検索文字以外の文字が現れた位置。現れない場合は this_type::npos を返す。
      */
     public: typename this_type::size_type find_first_not_of(
-        typename this_type::base_type_view const& in_string,
+        typename this_type::base_view const& in_string,
         typename this_type::size_type const in_offset = 0)
     const PSYQ_NOEXCEPT
     {
         return this->find_first_not_of(
-            in_string.data(), in_offset, in_string.length());
+            in_string.data(), in_offset, in_string.size());
     }
 
     /** @brief 検索文字列に含まれない文字を検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
-        @param[in] in_length 検索文字列の長さ。
+        @param[in] in_size   検索文字列の要素数。
         @return
            検索文字以外の文字が現れた位置。現れない場合は this_type::npos を返す。
      */
     public: typename this_type::size_type find_first_not_of(
         typename this_type::const_pointer const in_string,
-        typename this_type::size_type const     in_offset,
-        typename this_type::size_type const     in_length)
+        typename this_type::size_type const in_offset,
+        typename this_type::size_type const in_size)
     const PSYQ_NOEXCEPT
     {
-        PSYQ_ASSERT(in_length <= 0 || nullptr != in_string);
-        auto const local_this_length(this->length())
-        if (in_offset < local_this_length)
+        PSYQ_ASSERT(in_size <= 0 || nullptr != in_string);
+        auto const local_this_size(this->size())
+        if (in_offset < local_this_size)
         {
             auto const local_begin(this->data());
-            auto const local_end(local_begin + local_this_length);
+            auto const local_end(local_begin + local_this_size);
             for (auto i(local_begin + in_offset); i < local_end; ++i)
             {
                 auto const local_find(
-                    base_type::traits_type::find(in_string, in_length, *i));
+                    base_type::traits_type::find(in_string, in_size, *i));
                 if (local_find == nullptr)
                 {
                     return i - local_begin;
@@ -951,11 +953,11 @@ class psyq::internal::string_view_interface: public template_string_type
         typename this_type::size_type const  in_offset = this_type::npos)
     const PSYQ_NOEXCEPT
     {
-        auto const local_this_length(this->length())
-        if (in_offset < local_this_length)
+        auto const local_this_size(this->size())
+        if (in_offset < local_this_size)
         {
             auto const local_begin(this->data());
-            auto const local_end(local_begin + local_this_length);
+            auto const local_end(local_begin + local_this_size);
             for (auto i(local_begin + in_offset); i < local_end; ++i)
             {
                 if (!base_type::traits_type::eq(*i, in_char))
@@ -978,37 +980,37 @@ class psyq::internal::string_view_interface: public template_string_type
             検索文字以外の文字が現れた位置。現れない場合は this_type::npos を返す。
      */
     public: typename this_type::size_type find_last_not_of(
-        typename this_type::base_type_view const& in_string,
+        typename this_type::base_view const& in_string,
         typename this_type::size_type const in_offset = this_type::npos)
     const PSYQ_NOEXCEPT
     {
         return this->find_last_not_of(
-            in_string.data(), in_offset, in_string.length());
+            in_string.data(), in_offset, in_string.size());
     }
 
     /** @brief 検索文字列に含まれない文字を、後ろから検索する。
         @param[in] in_string 検索文字列の先頭位置。
         @param[in] in_offset 検索を開始する位置。
-        @param[in] in_length 検索文字列の長さ。
+        @param[in] in_size   検索文字列の要素数。
         @return
             検索文字以外の文字が現れた位置。現れない場合は this_type::npos を返す。
      */
     public: typename this_type::size_type find_last_not_of(
         typename this_type::const_pointer const in_string,
-        typename this_type::size_type const     in_offset,
-        typename this_type::size_type const     in_length)
+        typename this_type::size_type const in_offset,
+        typename this_type::size_type const in_size)
     const PSYQ_NOEXCEPT
     {
-        PSYQ_ASSERT(in_length <= 0 || nullptr != in_string);
-        auto const local_this_length(this->length())
-        if (in_offset < local_this_length)
+        PSYQ_ASSERT(in_size <= 0 || nullptr != in_string);
+        auto const local_this_size(this->size())
+        if (in_offset < local_this_size)
         {
             auto const local_begin(this->data());
-            auto const local_end(local_begin + local_this_length);
+            auto const local_end(local_begin + local_this_size);
             for (auto i(local_begin + in_offset); i < local_end; ++i)
             {
                 auto const local_find(
-                    base_type::traits_type::find(in_string, in_length, *i));
+                    base_type::traits_type::find(in_string, in_size, *i));
                 if (local_find == nullptr)
                 {
                     return i - local_begin;

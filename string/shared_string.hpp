@@ -98,18 +98,19 @@ class psyq::internal::shared_string_holder
     /// memory割当子の型。
     public: typedef template_allocator_type allocator_type;
     /// 部分文字列の型。
-    protected:
-    typedef psyq::internal::string_view_base<template_char_traits> view;
+    protected: typedef psyq::internal::string_view_base<template_char_traits>
+        view;
     /// 共有文字列buffer。
     private: struct shared_buffer
     {
-        /// @param[in] in_length 共有文字列の長さ。
-        explicit shared_buffer(std::size_t const in_length) PSYQ_NOEXCEPT:
-            hold_count(1), length(in_length)
+        /// @param[in] in_size 共有文字列の要素数。
+        explicit shared_buffer(std::size_t const in_size) PSYQ_NOEXCEPT:
+            hold_count(1),
+            size(in_size)
         {}
 
         psyq::atomic_count hold_count; ///< 共有文字列bufferの被参照数。
-        std::size_t length;            ///< 共有文字列の長さ。
+        std::size_t size;              ///< 共有文字列の長さ。
     };
     /// 共有文字列bufferに使うmemory割当子。
     private: typedef typename this_type::allocator_type::template
@@ -123,18 +124,17 @@ class psyq::internal::shared_string_holder
         @param[in] in_allocator memory割当子の初期値。
      */
     protected: explicit shared_string_holder(
-        typename this_type::allocator_type const& in_allocator)
+        typename this_type::allocator_type in_allocator)
     PSYQ_NOEXCEPT:
         buffer_(nullptr),
         data_(nullptr),
-        allocator_(in_allocator)
+        allocator_(std::move(in_allocator))
     {}
 
     /** @brief 文字列を参照する。memory割り当ては行わない。
         @param[in] in_string copy元の文字列。
      */
-    protected: explicit shared_string_holder(this_type const& in_string)
-    PSYQ_NOEXCEPT:
+    protected: explicit shared_string_holder(this_type const& in_string):
         buffer_(nullptr),
         data_(nullptr),
         allocator_(in_string.get_allocator())
@@ -145,7 +145,8 @@ class psyq::internal::shared_string_holder
     /** @brief 文字列を移動する。memory割り当ては行わない。
         @param[in,out] io_string move元の文字列。
      */
-    protected: explicit shared_string_holder(this_type&& io_string) PSYQ_NOEXCEPT:
+    protected: explicit shared_string_holder(this_type&& io_string)
+    PSYQ_NOEXCEPT:
         buffer_(nullptr),
         data_(nullptr),
         allocator_(std::move(io_string.allocator_))
@@ -164,11 +165,10 @@ class psyq::internal::shared_string_holder
      */
     protected: template <std::size_t template_size>
     shared_string_holder(
-        typename this_type::traits_type::char_type const
-            (&in_literal)[template_size],
-        typename this_type::allocator_type const& in_allocator)
+        typename this_type::traits_type::char_type const (&in_literal)[template_size],
+        typename this_type::allocator_type in_allocator)
     PSYQ_NOEXCEPT:
-        allocator_(in_allocator)
+        allocator_(std::move(in_allocator))
     {
         this->set_literal(in_literal);
     }
@@ -179,19 +179,19 @@ class psyq::internal::shared_string_holder
         @param[in] in_allocator    memory割当子の初期値。
      */
     protected: shared_string_holder(
-        typename this_type::view const&           in_left_string,
-        typename this_type::view const&           in_right_string,
-        typename this_type::allocator_type const& in_allocator)
+        typename this_type::view const& in_left_string,
+        typename this_type::view const& in_right_string,
+        typename this_type::allocator_type in_allocator)
     :
         buffer_(nullptr),
         data_(nullptr),
-        allocator_(in_allocator)
+        allocator_(std::move(in_allocator))
     {
         this->create_concatenate_buffer(in_left_string, in_right_string);
     }
 
     /// @brief 文字列を解放する。
-    public: ~shared_string_holder()
+    public: ~shared_string_holder() PSYQ_NOEXCEPT
     {
         this_type::release_buffer(this->get_buffer(), this->get_allocator());
     }
@@ -210,7 +210,7 @@ class psyq::internal::shared_string_holder
         }
         else
         {
-            PSYQ_ASSERT(this->length_ == in_string.length_);
+            PSYQ_ASSERT(this->size_ == in_string.size_);
         }
         return *this;
     }
@@ -218,7 +218,7 @@ class psyq::internal::shared_string_holder
     /** @copydoc shared_string_holder(this_type&&)
         @return *this
      */
-    protected: this_type& operator=(this_type&& io_string)
+    protected: this_type& operator=(this_type&& io_string) PSYQ_NOEXCEPT
     {
         if (this->buffer_ != io_string.buffer_)
         {
@@ -228,7 +228,7 @@ class psyq::internal::shared_string_holder
         }
         else
         {
-            PSYQ_ASSERT(this->length_ == io_string.length_);
+            PSYQ_ASSERT(this->size_ == io_string.size_);
         }
         return *this;
     }
@@ -243,8 +243,8 @@ class psyq::internal::shared_string_holder
      */
     protected: template <std::size_t template_size>
     void assign(
-        typename this_type::traits_type::char_type const
-            (&in_literal)[template_size])
+        typename this_type::traits_type::char_type const (&in_literal)[template_size])
+    PSYQ_NOEXCEPT
     {
         this_type::release_buffer(this->get_buffer(), this->get_allocator());
         this->set_literal(in_literal);
@@ -276,11 +276,11 @@ class psyq::internal::shared_string_holder
         return this->data_;
     }
 
-    /// @copydoc this_type::view::length()
-    public: PSYQ_CONSTEXPR std::size_t length() const PSYQ_NOEXCEPT
+    /// @copydoc this_type::view::size()
+    public: PSYQ_CONSTEXPR std::size_t size() const PSYQ_NOEXCEPT
     {
         return this->get_buffer() != nullptr?
-            this->buffer_->length: this->length_ >> 1;
+            this->buffer_->size: this->size_ >> 1;
     }
 
     /// @copydoc this_type::view::max_size()
@@ -306,7 +306,7 @@ class psyq::internal::shared_string_holder
     }
 
     /// @copydoc psyq::internal::string_view_interface::clear()
-    protected: void clear()
+    protected: void clear() PSYQ_NOEXCEPT
     {
         this_type::release_buffer(this->get_buffer(), this->get_allocator());
         this->reset_data();
@@ -344,7 +344,7 @@ class psyq::internal::shared_string_holder
         {
             // 文字列literalは、moveせずにcopyする。
             this->data_ = io_string.data_;
-            this->length_ = io_string.length_;
+            this->size_ = io_string.size_;
         }
     }
 
@@ -364,7 +364,7 @@ class psyq::internal::shared_string_holder
         {
             // 文字列literalをcopyする。
             this->data_ = in_string.data_;
-            this->length_ = in_string.length_;
+            this->size_ = in_string.size_;
         }
     }
 
@@ -377,12 +377,12 @@ class psyq::internal::shared_string_holder
         typename this_type::traits_type::char_type const (&in_string)[template_size])
     PSYQ_NOEXCEPT
     {
-        static_assert(0 < template_size, "");
+        static_assert(0 < template_size, "template_size is not greater than 0.");
         PSYQ_ASSERT(in_string[template_size - 1] == 0);
         if (1 < template_size)
         {
             this->data_ = &in_string[0];
-            this->length_ = ((template_size - 1) << 1) | 1;
+            this->size_ = ((template_size - 1) << 1) | 1;
         }
         else
         {
@@ -397,7 +397,7 @@ class psyq::internal::shared_string_holder
     private: PSYQ_CONSTEXPR typename this_type::shared_buffer* get_buffer()
     const PSYQ_NOEXCEPT
     {
-        return (this->length_ & 1) != 0? nullptr: this->buffer_;
+        return (this->size_ & 1) != 0? nullptr: this->buffer_;
     }
 
     /** @brief 共有文字列bufferを設定する。
@@ -413,28 +413,28 @@ class psyq::internal::shared_string_holder
     }
 
     /** @brief 共有文字列bufferを確保する。
-        @param[in] in_length 文字列の長さ。
+        @param[in] in_size 文字列の要素数。
         @return 共有文字列bufferの先頭位置。
      */
     private: typename this_type::traits_type::char_type* allocate_buffer(
-        std::size_t const in_length)
+        std::size_t const in_size)
     {
         if (!this->empty())
         {
             PSYQ_ASSERT(false);
             return nullptr;
         }
-        if (0 < in_length)
+        if (0 < in_size)
         {
             // 共有文字列bufferを構築する。
             void* const local_buffer(
                 typename this_type::buffer_allocator(this->allocator_).allocate(
-                    this_type::count_allocate_size(in_length)));
+                    this_type::count_allocate_size(in_size)));
             if (local_buffer != nullptr)
             {
                 // 共有文字列bufferを保持する。
                 this->set_buffer(
-                    *new(local_buffer) typename this_type::shared_buffer(in_length));
+                    *new(local_buffer) typename this_type::shared_buffer(in_size));
                 return const_cast<typename this_type::traits_type::char_type*>(
                     this->data());
             }
@@ -453,19 +453,19 @@ class psyq::internal::shared_string_holder
         typename this_type::view const& in_right_string)
     {
         // 共有文字列bufferを確保する。
-        auto const local_length(
-            in_left_string.length() + in_right_string.length());
-        auto const local_string(this->allocate_buffer(local_length));
+        auto const local_size(
+            in_left_string.size() + in_right_string.size());
+        auto const local_string(this->allocate_buffer(local_size));
         if (local_string != nullptr)
         {
             // 共有文字列bufferを初期化する。
             this_type::traits_type::copy(
-                local_string, in_left_string.data(), in_left_string.length());
+                local_string, in_left_string.data(), in_left_string.size());
             this_type::traits_type::copy(
-                local_string + in_left_string.length(),
+                local_string + in_left_string.size(),
                 in_right_string.data(),
-                in_right_string.length());
-            local_string[local_length] = 0;
+                in_right_string.size());
+            local_string[local_size] = 0;
         }
     }
 
@@ -476,12 +476,12 @@ class psyq::internal::shared_string_holder
     private: template<typename template_map_type>
     void create_replaced_buffer(
         typename this_type::view const& in_string,
-        template_map_type const&   in_char_map)
+        template_map_type const& in_char_map)
     {
-        auto const local_begin(this->allocate_buffer(in_string.length()));
+        auto const local_begin(this->allocate_buffer(in_string.size()));
         if (local_begin != nullptr)
         {
-            for (std::size_t i(0); i < in_string.length(); ++i)
+            for (std::size_t i(0); i < in_string.size(); ++i)
             {
                 auto const local_source_char(*(in_string.data() + i));
                 auto const local_find_char(in_char_map.find(local_source_char));
@@ -489,7 +489,7 @@ class psyq::internal::shared_string_holder
                     local_find_char != in_char_map.end()?
                         local_find_char->second: local_source_char);
             }
-            local_begin[in_string.length()] = 0;
+            local_begin[in_string.size()] = 0;
         }
     }
 
@@ -509,8 +509,9 @@ class psyq::internal::shared_string_holder
         @param[in]     in_allocator 共有文字列bufferの破棄に使うmemory割当子。
      */
     private: static void release_buffer(
-        typename this_type::shared_buffer* const  io_buffer,
+        typename this_type::shared_buffer* const io_buffer,
         typename this_type::allocator_type const& in_allocator)
+    PSYQ_NOEXCEPT
     {
         if (io_buffer == nullptr)
         {
@@ -524,7 +525,7 @@ class psyq::internal::shared_string_holder
         }
         psyq::atomic_count::acquire_fence();
         auto const local_allocate_size(
-            this_type::count_allocate_size(io_buffer->length));
+            this_type::count_allocate_size(io_buffer->size));
         io_buffer->~shared_buffer();
         typename this_type::buffer_allocator(in_allocator).deallocate(
             reinterpret_cast<typename this_type::buffer_allocator::pointer>(
@@ -533,18 +534,18 @@ class psyq::internal::shared_string_holder
     }
 
     /** @brief 共有文字列bufferに必要な要素数を決定する。
-        @param[in] in_string_length 共有文字列bufferに格納する最大文字数。
+        @param[in] in_string_size 共有文字列bufferに格納する最大要素数。
         @return 共有文字列bufferに必要な要素数。
      */
     private:
     static typename this_type::allocator_type::size_type count_allocate_size(
-        std::size_t const in_string_length)
+        std::size_t const in_string_size)
     PSYQ_NOEXCEPT
     {
         auto const local_header_bytes(sizeof(typename this_type::shared_buffer));
         auto const local_string_bytes(
             sizeof(typename this_type::traits_type::char_type)
-            * (in_string_length + 1));
+            * (in_string_size + 1));
         auto const local_unit_bytes(
             sizeof(typename this_type::buffer_allocator::value_type));
         return (local_header_bytes + local_string_bytes + local_unit_bytes - 1)
@@ -559,7 +560,7 @@ class psyq::internal::shared_string_holder
     {
         this_type local_string(this->get_allocator());
         local_sring.create_replaced_buffer(
-            typename this_type::view(this->data(), this->length()), in_char_map);
+            typename this_type::view(this->data(), this->size()), in_char_map);
         return local_sring;
     }
 
@@ -568,8 +569,8 @@ class psyq::internal::shared_string_holder
     {
         /// 保持している共有文字列buffer。
         typename this_type::shared_buffer* buffer_;
-        /// 参照している文字列literalの長さ。
-        std::size_t length_;
+        /// 参照している文字列literalの要素数。
+        std::size_t size_;
     };
     /// 文字列の先頭位置。
     typename this_type::traits_type::char_type const* data_;
@@ -614,8 +615,8 @@ class psyq::basic_shared_string:
             template_char_traits, template_allocator_type>>
                 base_type;
     private: typedef typename base_type::allocator_type base_allocator;
-    private: typedef typename base_type::base_type base_base;
-    private: typedef typename base_base::view base_view;
+    private: typedef typename base_type::base_type base_string;
+    private: typedef typename base_string::view base_view;
 
     //-------------------------------------------------------------------------
     /// @name constructor / destructor
@@ -624,9 +625,9 @@ class psyq::basic_shared_string:
         @param[in] in_allocator memory割当子の初期値。
      */
     public: explicit basic_shared_string(
-        typename base_type::allocator_type const& in_allocator = base_allocator())
-    :
-        base_type(base_base(in_allocator))
+        typename base_type::allocator_type in_allocator = base_allocator())
+    PSYQ_NOEXCEPT:
+        base_type(base_string(std::move(in_allocator)))
     {}
 
     /** @brief 文字列を参照する。memory割り当ては行わない。
@@ -655,9 +656,9 @@ class psyq::basic_shared_string:
     public: template <std::size_t template_size>
     basic_shared_string(
         typename base_type::value_type const (&in_literal)[template_size],
-        typename base_type::allocator_type const& in_allocator = base_allocator())
+        typename base_type::allocator_type in_allocator = base_allocator())
     PSYQ_NOEXCEPT:
-        base_type(base_base(in_literal, in_allocator))
+        base_type(base_string(in_literal, std::move(in_allocator)))
     {}
 
     /** @brief memory割り当てを行い、文字列をcopyする。
@@ -666,27 +667,26 @@ class psyq::basic_shared_string:
      */
     public: basic_shared_string(
         typename base_type::base_type::view const& in_string,
-        typename base_type::allocator_type const& in_allocator = base_allocator())
+        typename base_type::allocator_type in_allocator = base_allocator())
     :
-        base_type(base_base(in_string, base_view(), in_allocator))
+        base_type(base_string(in_string, base_view(), std::move(in_allocator)))
     {}
 
     /** @brief memory割り当てを行い、文字列をcopyする。
-        @param[in] in_begin     copy元の文字列の先頭位置。
-        @param[in] in_length    copy元の文字列の長さ。
+        @param[in] in_data      copy元の文字列の先頭位置。
+        @param[in] in_size      copy元の文字列の要素数。
         @param[in] in_allocator memory割当子の初期値。
      */
     public: basic_shared_string(
-        typename base_type::const_pointer const in_begin,
-        typename base_type::size_type const in_length,
-        typename base_type::allocator_type const& in_allocator
-        = base_type::allocator_type())
+        typename base_type::const_pointer const in_data,
+        typename base_type::size_type const in_size,
+        typename base_type::allocator_type in_allocator = base_allocator())
     :
         base_type(
-            base_type::base_type(
-                base_type::base_type::view(in_begin, in_length),
-                base_type::base_type::view(),
-                in_allocator))
+            base_string(
+                base_view(in_data, in_size),
+                base_view(),
+                std::move(in_allocator)))
     {}
 
     /** @brief memory割り当てを行い、2つの文字列を連結してcopyする。
@@ -697,10 +697,11 @@ class psyq::basic_shared_string:
     public: basic_shared_string(
         typename base_type::base_type::view const& in_left_string,
         typename base_type::base_type::view const& in_right_string,
-        typename base_type::allocator_type const& in_allocator
-        = base_type::allocator_type())
+        typename base_type::allocator_type in_allocator = base_allocator())
     :
-        base_type(base_type::base_type(in_left_string, in_right_string, in_allocator))
+        base_type(
+            base_string(
+                in_left_string, in_right_string, std::move(in_allocator)))
     {}
     //@}
     //-------------------------------------------------------------------------
@@ -718,7 +719,7 @@ class psyq::basic_shared_string:
     /** @copydoc basic_shared_string(this_type&&)
         @return *this
      */
-    public: this_type& operator=(this_type&& io_string)
+    public: this_type& operator=(this_type&& io_string) PSYQ_NOEXCEPT
     {
         this->base_type::base_type::operator=(std::move(io_string));
         return *this;
@@ -729,8 +730,8 @@ class psyq::basic_shared_string:
      */
     public: template <std::size_t template_size>
     this_type& operator=(
-        typename this_type::traits_type::char_type const
-            (&in_literal)[template_size])
+        typename this_type::traits_type::char_type const (&in_literal)[template_size])
+    PSYQ_NOEXCEPT
     {
         this->base_type::base_type::assign(in_literal);
         return *this;

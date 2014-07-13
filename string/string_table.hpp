@@ -74,8 +74,7 @@ namespace psyq
 template<typename template_cell_map>
 class psyq::string_table
 {
-    /// @brief thisが指す値の型。
-    private: typedef string_table this_type;
+    private: typedef string_table this_type; ///< thisが指す値の型。
 
     /** @brief 文字列表のcellの辞書。
 
@@ -171,7 +170,7 @@ class psyq::string_table
         column_map_(std::move(in_column_map))
     {}
 
-    /** @brief move-constructor
+    /** @brief move構築子。
         @param[in,out] io_source move元となる文字列表。
      */
     public: string_table(this_type&& io_source):
@@ -367,8 +366,8 @@ class psyq::string_table
 
     /** @brief 列の辞書を検索し、cell文字列を取得する。
         @param[in] in_column_map 検索する列の辞書。
-        @param[in] in_row_key        取得したいcellの、行番号。
-        @param[in] in_column_key     取得したいcellの、列番号。
+        @param[in] in_row_key    取得したいcellの、行番号。
+        @param[in] in_column_key 取得したいcellの、列番号。
         @retval !=nullptr 見つかったcell文字列。
         @retval ==nullptr 対応するcellが見つからなかった。
      */
@@ -455,7 +454,7 @@ class psyq::string_table
 
     /** @brief 列の辞書を検索し、cellの辞書を取得する。
         @param[in] in_column_map 検索する列の辞書。
-        @param[in] in_column_key     取得したいcellの辞書の、列番号。
+        @param[in] in_column_key 取得したいcellの辞書の、列番号。
         @retval !=nullptr 見つかったcellの辞書。
         @retval ==nullptr 対応するcellの辞書が見つからなかった。
      */

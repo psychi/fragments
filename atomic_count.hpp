@@ -22,7 +22,7 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 class psyq::atomic_count
 {
-    private: typedef psyq::atomic_count self;
+    private: typedef atomic_count this_type;
 
     //-------------------------------------------------------------------------
     public: explicit atomic_count(std::size_t const in_count) PSYQ_NOEXCEPT:

@@ -274,8 +274,8 @@ namespace psyq
             PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_16));
             PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_32));
             PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_integer_64));
-            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_float_32));
-            PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_float_64));
+            //PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_float_32));
+            //PSYQ_ASSERT(!local_message_pack_object->get_numeric_value(local_float_64));
             ++local_message_pack_object;
 
             PSYQ_ASSERT(

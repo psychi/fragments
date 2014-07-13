@@ -130,7 +130,7 @@ struct psyq::internal::message_pack_container
      */
     public: typename this_type::const_reference operator[](
         typename this_type::size_type const in_index)
-    const
+    const PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(in_index < this->size());
         return *(this->data() + in_index);

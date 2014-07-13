@@ -91,9 +91,9 @@ namespace psyq
 
         //---------------------------------------------------------------------
         /** @brief タプルをストリームへ出力する。
-            @tparam template_length 出力するタプルの要素数。
+            @tparam template_size 出力するタプルの要素数。
          */
-        template<std::size_t template_length>
+        template<std::size_t template_size>
         struct message_pack_tuple_serializer
         {
             /** @brief タプルをストリームへ出力する。
@@ -108,9 +108,9 @@ namespace psyq
                 template_tuple const& in_tuple)
             {
                 psyq::internal
-                    ::message_pack_tuple_serializer<template_length - 1>
+                    ::message_pack_tuple_serializer<template_size - 1>
                         ::write(out_stream, in_tuple);
-                out_stream << std::get<template_length - 1>(in_tuple);
+                out_stream << std::get<template_size - 1>(in_tuple);
             }
         };
         /// @copydoc message_pack_tuple_serializer
@@ -745,7 +745,7 @@ class psyq::message_pack::serializer
             // 文字列の先頭位置を取得する。
             in_string.data();
             // 文字列の要素数を取得する。
-            in_string.length();
+            in_string.size();
             @endcode
         @retval true  成功。
         @retval false 失敗。
@@ -753,26 +753,26 @@ class psyq::message_pack::serializer
     public: template<typename template_string>
     bool write_raw_string(template_string const& in_string)
     {
-        return this->write_raw_string(in_string.data(), in_string.length());
+        return this->write_raw_string(in_string.data(), in_string.size());
     }
     /** @brief 連続するメモリ領域にある文字列を、
                MessagePack形式の文字列として直列化し、ストリームへ出力する。
-        @param[in] in_begin  直列化する文字列の先頭位置。
-        @param[in] in_length 直列化する文字列の要素数。
+        @param[in] in_data 直列化する文字列の先頭位置。
+        @param[in] in_size 直列化する文字列の要素数。
         @retval true  成功。
         @retval false 失敗。
      */
     public: template<typename template_char>
     bool write_raw_string(
-        template_char const* const in_begin,
-        std::size_t const in_length)
+        template_char const* const in_data,
+        std::size_t const in_size)
     {
         static_assert(
             // MessagePack文字列はUTF-8なので、文字は1バイト単位となる。
             sizeof(template_char) == 1, "MessagePack string is only UTF-8.");
-        auto const local_size(in_length * sizeof(template_char));
+        auto const local_size(in_size * sizeof(template_char));
         return this->write_string_header(local_size)
-            && this->write_raw_data(in_begin, local_size);
+            && this->write_raw_data(in_data, local_size);
     }
 
     /** @brief 標準コンテナをMessagePack形式の文字列として直列化し、

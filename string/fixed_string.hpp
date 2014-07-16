@@ -110,9 +110,7 @@ class psyq::internal::fixed_size_string
     //-------------------------------------------------------------------------
     /** @brief 空文字列を構築する。
      */
-    protected: PSYQ_CONSTEXPR fixed_size_string() PSYQ_NOEXCEPT:
-        size_(0)
-    {}
+    protected: PSYQ_CONSTEXPR fixed_size_string() PSYQ_NOEXCEPT: size_(0) {}
 
     /** @brief 文字列をcopyする。
         @param[in] in_string copy元とする文字列。
@@ -127,7 +125,8 @@ class psyq::internal::fixed_size_string
     /** @brief 文字列をcopyする。
         @param[in] in_string copy元とする文字列。
      */
-    protected: fixed_size_string(typename this_type::view const& in_string):
+    protected: fixed_size_string(typename this_type::view const& in_string)
+    PSYQ_NOEXCEPT:
         size_((std::min<std::size_t>)(in_string.size(), this_type::MAX_SIZE))
     {
         PSYQ_ASSERT(in_string.size() <= this_type::MAX_SIZE);
@@ -203,9 +202,8 @@ class psyq::basic_fixed_string:
     private: typedef basic_fixed_string this_type;
     /// this_type の基底型。
     public: typedef psyq::internal::string_view_interface<
-        psyq::internal::fixed_size_string<
-            template_char_traits, template_max_size>>
-                base_type;
+        psyq::internal::fixed_size_string<template_char_traits, template_max_size>>
+            base_type;
 
     //-------------------------------------------------------------------------
     /// @name constructor / destructor
@@ -226,17 +224,19 @@ class psyq::basic_fixed_string:
      */
     public: basic_fixed_string(
         typename base_type::base_type::view const& in_string)
+    PSYQ_NOEXCEPT
     {
         new(this) typename base_type::base_type(in_string);
     }
 
     /** @brief 文字列をcopyする。
         @param[in] in_data copy元の文字列の先頭位置。
-        @param[in] in_size copy元の文字列の長さ。
+        @param[in] in_size copy元の文字列の要素数。
      */
     public: basic_fixed_string(
         typename base_type::const_pointer const in_data,
         typename base_type::size_type const in_size)
+    PSYQ_NOEXCEPT
     {
         new(this) typename base_type::base_type(
             typename base_type::base_type::view(in_data, in_size));
@@ -259,6 +259,7 @@ class psyq::basic_fixed_string:
      */
     public: this_type& operator=(
         typename base_type::base_type::view const& in_string)
+    PSYQ_NOEXCEPT
     {
         return *new(this) this_type(in_string);
     }

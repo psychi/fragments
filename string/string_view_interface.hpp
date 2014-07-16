@@ -64,10 +64,10 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_string_view を模した、immutableな文字列のinterface。
-    @tparam template_string_type @copydoc string_view_interface::base_type
+    @tparam template_base_string @copydoc string_view_interface::base_type
  */
-template<typename template_string_type>
-class psyq::internal::string_view_interface: public template_string_type
+template<typename template_base_string>
+class psyq::internal::string_view_interface: public template_base_string
 {
     /// thisが指す値の型。
     private: typedef string_view_interface this_type;
@@ -79,22 +79,22 @@ class psyq::internal::string_view_interface: public template_string_type
         - move-constructorとmove代入演算子が使えて、例外を投げないこと。
         - std::char_traits 互換の文字特性の型として、以下の型を使えること。
           @code
-          template_string_type::traits_type
+          template_base_string::traits_type
           @endcode
         - 文字列の先頭位置を取得するため、以下の関数を使えること。
           @code
-          template_string_type::traits_type::char_type const* template_string_type::data() const PSYQ_NOEXCEPT
+          template_base_string::traits_type::char_type const* template_base_string::data() const PSYQ_NOEXCEPT
           @endcode
         - 文字列の要素数を取得するため、以下の関数を使えること。
           @code
-          std::size_t template_string_type::size() const PSYQ_NOEXCEPT
+          std::size_t template_base_string::size() const PSYQ_NOEXCEPT
           @endcode
         - 文字列の最大要素数を取得するため、以下の関数を使えること。
           @code
-          std::size_t template_string_type::max_size() const PSYQ_NOEXCEPT
+          std::size_t template_base_string::max_size() const PSYQ_NOEXCEPT
           @endcode
      */
-    public: typedef template_string_type base_type;
+    public: typedef template_base_string base_type;
 
     //-------------------------------------------------------------------------
     /** @brief std::hash 互換のハッシュ関数オブジェクト。
@@ -104,7 +104,7 @@ class psyq::internal::string_view_interface: public template_string_type
     {
         typename template_hash::value_type operator()(
             psyq::internal::string_view_base<
-                typename template_string_type::traits_type>
+                typename template_base_string::traits_type>
                     const& in_string)
         const PSYQ_NOEXCEPT
         {
@@ -230,7 +230,7 @@ class psyq::internal::string_view_interface: public template_string_type
      */
     public: typename this_type::const_reference operator[](
         typename this_type::size_type const in_index)
-    const
+    const PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(in_index < this->size());
         return *(this->data() + in_index);
@@ -519,7 +519,7 @@ class psyq::internal::string_view_interface: public template_string_type
      */
     public: typename this_type::size_type find(
         typename this_type::value_type const in_char,
-        typename this_type::size_type const  in_offset = 0)
+        typename this_type::size_type const in_offset = 0)
     const PSYQ_NOEXCEPT
     {
         auto const local_this_size(this->size());
@@ -639,7 +639,7 @@ class psyq::internal::string_view_interface: public template_string_type
      */
     public: typename this_type::size_type rfind(
         typename this_type::value_type const in_char,
-        typename this_type::size_type const  in_offset = this_type::npos)
+        typename this_type::size_type const in_offset = this_type::npos)
     const PSYQ_NOEXCEPT
     {
         if (!this->empty())
@@ -747,7 +747,7 @@ class psyq::internal::string_view_interface: public template_string_type
      */
     public: typename this_type::size_type find_first_of(
         typename this_type::value_type const in_char,
-        typename this_type::size_type const  in_offset = 0)
+        typename this_type::size_type const in_offset = 0)
     const PSYQ_NOEXCEPT
     {
         return this->find(in_char, in_offset);
@@ -808,7 +808,7 @@ class psyq::internal::string_view_interface: public template_string_type
      */
     public: typename this_type::size_type find_last_of(
         typename this_type::value_type const in_char,
-        typename this_type::size_type const  in_offset = this_type::npos)
+        typename this_type::size_type const in_offset = this_type::npos)
     const PSYQ_NOEXCEPT
     {
         return this->rfind(in_char, in_offset);
@@ -877,7 +877,7 @@ class psyq::internal::string_view_interface: public template_string_type
      */
     public: typename this_type::size_type find_first_not_of(
         typename this_type::value_type const in_char,
-        typename this_type::size_type const  in_offset = 0)
+        typename this_type::size_type const in_offset = 0)
     const PSYQ_NOEXCEPT
     {
         auto const local_begin(this->data());
@@ -950,7 +950,7 @@ class psyq::internal::string_view_interface: public template_string_type
      */
     public: typename this_type::size_type find_last_not_of(
         typename this_type::value_type const in_char,
-        typename this_type::size_type const  in_offset = this_type::npos)
+        typename this_type::size_type const in_offset = this_type::npos)
     const PSYQ_NOEXCEPT
     {
         auto const local_this_size(this->size())

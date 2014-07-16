@@ -76,8 +76,8 @@ namespace psyq
         文字の配列を単純にconst参照しているので、
         参照してる文字の配列が変更／破壊されると、動作を保証できなくなる。
 
-    @tparam template_char_type   @copydoc base_type::value_type
-    @tparam template_char_traits @copydoc base_type::traits_type
+    @tparam template_char_type   @copydoc psyq::internal::string_view_interface::value_type
+    @tparam template_char_traits @copydoc psyq::internal::string_view_base::traits_type
  */
 template<typename template_char_type, typename template_char_traits>
 class psyq::basic_string_view:
@@ -86,15 +86,22 @@ class psyq::basic_string_view:
 {
     /// thisが指す値の型。
     private: typedef basic_string_view this_type;
+    private: typedef psyq::internal::string_view_base<template_char_traits>
+        base_string;
     /// this_type の基底型。
-    public: typedef psyq::internal::string_view_interface<
-        psyq::internal::string_view_base<template_char_traits>>
-            base_type;
-    private: typedef typename base_type::base_type base_string;
+    public: typedef psyq::internal::string_view_interface<base_string>
+        base_type;
 
     //-------------------------------------------------------------------------
     /// @name constructor / destructor
     //@{
+    /** @brief 文字列を参照する。
+        @param[in] in_string 参照する文字列。
+     */
+    public: PSYQ_CONSTEXPR basic_string_view(this_type const& in_string)
+    PSYQ_NOEXCEPT:
+        base_type(static_cast<base_string const&>(in_string))
+    {}
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
      */
@@ -103,18 +110,16 @@ class psyq::basic_string_view:
     PSYQ_NOEXCEPT:
         base_type(std::move(in_string))
     {}
-
     /** @brief 文字列を参照する。
-        @param[in] in_begin 参照する文字列の先頭位置。
-        @param[in] in_size  参照する文字列の要素数。
+        @param[in] in_data 参照する文字列の先頭位置。
+        @param[in] in_size 参照する文字列の要素数。
      */
     public: PSYQ_CONSTEXPR basic_string_view(
-        typename base_type::const_pointer const in_begin,
+        typename base_type::const_pointer const in_data,
         typename base_type::size_type const in_size)
     PSYQ_NOEXCEPT:
-        base_type(base_string(in_begin, in_size))
+        base_type(base_string(in_data, in_size))
     {}
-
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
         @param[in] in_offset 参照する文字列の開始offset位置。
@@ -131,13 +136,21 @@ class psyq::basic_string_view:
 
     /// @name 文字列の代入
     //@{
-    /** @copydoc basic_string_view(base_type::base_type)
+    /** @copydoc basic_string_view(this_type const&)
         @return *this
      */
-    public: this_type& operator=(typename base_type::base_type const& in_string)
+    public: this_type& operator=(this_type const& in_string)
     PSYQ_NOEXCEPT
     {
         return *new(this) this_type(in_string);
+    }
+    /** @copydoc basic_string_view(base_type::base_type)
+        @return *this
+     */
+    public: this_type& operator=(typename base_type::base_type in_string)
+    PSYQ_NOEXCEPT
+    {
+        return *new(this) this_type(std::move(in_string));
     }
     //@}
 
@@ -409,6 +422,32 @@ namespace psyq
         }
         out_value = local_string;
         return true;
+    }
+}
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+namespace psyq
+{
+    namespace test
+    {
+        inline void string_view()
+        {
+            psyq::string_view local_string_0;
+            PSYQ_ASSERT(local_string_0.empty());
+            std::string const local_std_string("std::string");
+            local_string_0 = local_std_string;
+            PSYQ_ASSERT(local_string_0 == local_std_string);
+            psyq::string_view const local_string_1(local_std_string);
+            local_string_0 = local_string_1;
+            PSYQ_ASSERT(local_string_1 == local_string_0);
+            PSYQ_ASSERT(local_string_1 == local_std_string);
+            psyq::string_view const local_string_2(local_string_1);
+            PSYQ_ASSERT(local_string_1 == local_string_2);
+            psyq::string_view const local_string_3("literal_string");
+            psyq::string_view const local_string_4(
+                local_string_3.data(), local_string_3.size());
+            PSYQ_ASSERT(local_string_3 == local_string_4);
+        }
     }
 }
 

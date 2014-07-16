@@ -147,9 +147,8 @@ class psyq::any_rtti
         {
             PSYQ_ASSERT(in_left != nullptr);
             PSYQ_ASSERT(in_right != nullptr);
-            //return *static_cast<template_type const*>(in_left)
-            //    == *static_cast<template_type const*>(in_right);
-            return false;
+            return *static_cast<template_type const*>(in_left)
+                == *static_cast<template_type const*>(in_right);
         }
     };
 
@@ -517,7 +516,7 @@ class psyq::any_rtti
         @retval true  等値だった。
         @retval false 等値ではなかった。
      */
-    public: bool apply_equal_operator(
+    private: bool apply_equal_operator(
         void const* const in_left,
         void const* const in_right)
     const
@@ -617,7 +616,8 @@ class psyq::any_rtti
         copy_constructor_(&this_type::table<template_type>::copy_construct_value),
         move_constructor_(&this_type::table<template_type>::move_construct_value),
         destructor_(&this_type::table<template_type>::destruct_value),
-        equal_operator_(&this_type::table<template_type>::equal_value),
+        equal_operator_(nullptr),
+        //equal_operator_(&this_type::table<template_type>::equal_value),
         base_(in_base),
         key_(in_key < psyq::ANY_RTTI_VOID_KEY? in_key: this_type::add_key()),
         size_(sizeof(template_type))

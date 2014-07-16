@@ -89,6 +89,70 @@ class psyq::any_rtti
 {
     private: typedef any_rtti this_type; ///< thisが指す値の型。
 
+    //-----------------------------------------------------------------
+    /// 値をコピーして構築する関数
+    private: typedef void (*value_copy_constructor)(void* const, void const* const);
+    /// 値をムーブして構築する関数。
+    private: typedef void (*value_move_constructor)(void* const, void* const);
+    /// 値を破棄する関数。
+    private: typedef void (*value_destructor)(void* const);
+    /// 値を等値比較する関数。
+    private: typedef bool (*value_equal_operator)(void const* const, void const* const);
+    /// RTTI関数の一覧。
+    private: template<typename template_type> struct table
+    {
+        /** @brief 値をコピー構築する。
+            @param[out] out_target コピー構築されるメモリの先頭アドレス。
+            @param[in]  in_source  コピー構築の初期値。
+         */
+        static void copy_construct_value(
+            void* const out_target,
+            void const* const in_source)
+        {
+            PSYQ_ASSERT(out_target != nullptr);
+            PSYQ_ASSERT(in_source != nullptr);
+            new(out_target) template_type(
+                *static_cast<template_type const*>(in_source));
+        }
+        /** @brief 値をムーブ構築する。
+            @param[out]    out_target ムーブ構築されるメモリの先頭アドレス。
+            @param[in,out] io_source  ムーブ構築の初期値。
+         */
+        static void move_construct_value(
+            void* const out_target,
+            void* const io_source)
+        {
+            PSYQ_ASSERT(out_target != nullptr);
+            PSYQ_ASSERT(io_source != nullptr);
+            new(out_target) template_type(
+                std::move(*static_cast<template_type*>(io_source)));
+        }
+        /** @brief 値を破壊する。
+            @param[in,out] io_value 破壊する値。
+         */
+        static void destruct_value(void* const io_value)
+        {
+            PSYQ_ASSERT(io_value != nullptr);
+            static_cast<template_type*>(io_value)->~template_type();
+        }
+        /** @brief 値を等値比較する。
+            @param[in] in_left  左辺値へのポインタ。
+            @param[in] in_right 右辺値へのポインタ。
+            @retval true  等値だった。
+            @retval false 等値ではなかった。
+         */
+        static bool equal_value(
+            void const* const in_left,
+            void const* const in_right)
+        {
+            PSYQ_ASSERT(in_left != nullptr);
+            PSYQ_ASSERT(in_right != nullptr);
+            //return *static_cast<template_type const*>(in_left)
+            //    == *static_cast<template_type const*>(in_right);
+            return false;
+        }
+    };
+
     //-------------------------------------------------------------------------
     /** @brief RTTIを構築する。
 
@@ -196,7 +260,7 @@ class psyq::any_rtti
         return this_type::get_static_rtti(
             local_base_rtti,
             in_key,
-            static_cast<typename std::remove_cv<template_type>::type*>(nullptr));
+            this_type::table<typename std::remove_cv<template_type>::type>());
     }
 
     //-------------------------------------------------------------------------
@@ -255,7 +319,7 @@ class psyq::any_rtti
         return this_type::get_static_rtti(
             nullptr,
             psyq::ANY_RTTI_VOID_KEY + 1,
-            static_cast<typename std::remove_cv<template_type>::type*>(nullptr));
+            this_type::table<typename std::remove_cv<template_type>::type>());
     }
 
     /** @brief RTTIを取得する。
@@ -387,18 +451,101 @@ class psyq::any_rtti
         return this->base_;
     }
 
+    //-----------------------------------------------------------------
+    /** @brief 値をコピー構築する関数を呼び出す。
+        @param[out] out_target 構築されるメモリの先頭アドレス。
+        @param[in]  in_source  コピーする値へのポインタ。
+        @retval true  成功。構築を行った。
+        @retval false 失敗。構築を行なわなかった。
+     */
+    public: bool apply_copy_constructor(
+        void* const out_target,
+        void const* const in_source)
+    const
+    {
+        if (out_target == nullptr || in_source == nullptr)
+        {
+            return false;
+        }
+        if (this->copy_constructor_ != nullptr)
+        {
+            (*this->copy_constructor_)(out_target, in_source);
+        }
+        return true;
+    }
+    /** @brief 値をムーブ構築する関数を呼び出す。
+        @param[out]    out_target 構築されるメモリの先頭アドレス。
+        @param[in,out] io_source  ムーブする値へのポインタ。
+        @retval true  成功。構築を行った。
+        @retval false 失敗。構築を行なわなかった。
+     */
+    public: bool apply_move_constructor(
+        void* const out_target,
+        void* const io_source)
+    const
+    {
+        if (out_target == nullptr || io_source == nullptr)
+        {
+            return false;
+        }
+        if (this->move_constructor_ != nullptr)
+        {
+            (*this->move_constructor_)(out_target, io_source);
+        }
+        return true;
+    }
+    /** @brief 値を破壊する関数を呼び出す。
+        @param[in,out] io_value 破壊する値へのポインタ。
+        @retval true  成功。破壊を行った。
+        @retval false 失敗。破壊を行なわなかった。
+     */
+    public: bool apply_destructor(void* const io_value) const
+    {
+        if (io_value == nullptr)
+        {
+            return false;
+        }
+        if (this->destructor_ != nullptr)
+        {
+            (*this->destructor_)(io_value);
+        }
+        return true;
+    }
+    /** @brief 値を等値比較する関数を呼び出す。
+        @param[in] in_left  左辺値へのポインタ。
+        @param[in] in_right 右辺値へのポインタ。
+        @retval true  等値だった。
+        @retval false 等値ではなかった。
+     */
+    public: bool apply_equal_operator(
+        void const* const in_left,
+        void const* const in_right)
+    const
+    {
+        if (in_left == in_right || this->equal_operator_ == nullptr)
+        {
+            return true;
+        }
+        if (in_left == nullptr || in_right == nullptr)
+        {
+            return false;
+        }
+        return (*this->equal_operator_)(in_left, in_right);
+    }
+
     //-------------------------------------------------------------------------
     /** @brief RTTIを取得する。
         @tparam template_type RTTIを取得したい型。
-        @param[in] in_base 初期化に使う、型の基底型のRTTI。
-        @param[in] in_key  初期化に使う、RTTI識別値。
+        @param[in] in_base  初期化に使う、型の基底型のRTTI。
+        @param[in] in_key   初期化に使う、RTTI識別値。
+        @param[in] in_table 型の関数テーブル。
         @return 型ごとに固有のRTTI。
      */
     private: template<typename template_type>
     static this_type const* get_static_rtti(
         this_type const* const in_base,
         psyq::any_rtti_key const in_key,
-        template_type*)
+        this_type::table<template_type> const& in_table)
     {
         static_assert(
             // const修飾子とvolatile修飾子がないことを確認する。
@@ -413,8 +560,7 @@ class psyq::any_rtti
         if (static_make)
         {
             // このstatic変数を、 template_type 型のRTTIとして使う。
-            static this_type const static_rtti(
-                in_base, in_key, sizeof(template_type));
+            static this_type const static_rtti(in_base, in_key, in_table);
             return &static_rtti;
         }
         return nullptr;
@@ -424,7 +570,9 @@ class psyq::any_rtti
         @return void型のRTTI。
      */
     private: static this_type const* get_static_rtti(
-        this_type const* const, psyq::any_rtti_key const, void*)
+        this_type const* const,
+        psyq::any_rtti_key const,
+        this_type::table<void> const&)
     {
         // このstatic変数を、void型のRTTIとして使う。
         static this_type const static_rtti;
@@ -439,7 +587,7 @@ class psyq::any_rtti
             this_type::get_static_rtti(
                 nullptr,
                 psyq::ANY_RTTI_VOID_KEY,
-                static_cast<void*>(nullptr)));
+                this_type::table<void>()));
         return static_list_begin;
     }
 
@@ -458,17 +606,21 @@ class psyq::any_rtti
     //-------------------------------------------------------------------------
     /** @brief RTTIを構築する。
         @param[in] in_base 基底型のRTTI。
-        @param[in] in_key   RTTI識別値。
-        @param[in] in_size  型の値のバイトサイズ。
+        @param[in] in_key  RTTI識別値。
      */
-    private: any_rtti(
+    private: template<typename template_type>
+    any_rtti(
         this_type const* const in_base,
         psyq::any_rtti_key const in_key,
-        std::size_t const in_size)
+        this_type::table<template_type> const&)
     :
+        copy_constructor_(&this_type::table<template_type>::copy_construct_value),
+        move_constructor_(&this_type::table<template_type>::move_construct_value),
+        destructor_(&this_type::table<template_type>::destruct_value),
+        equal_operator_(&this_type::table<template_type>::equal_value),
         base_(in_base),
         key_(in_key < psyq::ANY_RTTI_VOID_KEY? in_key: this_type::add_key()),
-        size_(in_size)
+        size_(sizeof(template_type))
     {
         PSYQ_ASSERT(in_base != nullptr);
 
@@ -483,6 +635,10 @@ class psyq::any_rtti
 
     /// void型のRTTIを構築する。
     private: PSYQ_CONSTEXPR any_rtti() PSYQ_NOEXCEPT:
+        copy_constructor_(nullptr),
+        move_constructor_(nullptr),
+        destructor_(nullptr),
+        equal_operator_(nullptr),
         next_(nullptr),
         base_(nullptr),
         key_(psyq::ANY_RTTI_VOID_KEY),
@@ -495,10 +651,19 @@ class psyq::any_rtti
     private: this_type& operator=(this_type const&); //= delete;
 
     //-------------------------------------------------------------------------
-    private: this_type const* next_; ///< RTTIリストの、次のRTTI。
-    private: this_type const* const base_; ///< 基底型のRTTI。
+    /// @copydoc value_copy_constructor
+    private: this_type::value_copy_constructor copy_constructor_;
+    /// @copydoc value_move_constructor
+    private: this_type::value_move_constructor move_constructor_;
+    /// @copydoc value_destructor
+    private: this_type::value_destructor destructor_;
+    /// @copydoc value_equal_operator
+    private: this_type::value_equal_operator equal_operator_;
+
+    private: this_type const* next_;        ///< RTTIリストの、次のRTTI。
+    private: this_type const* const base_;  ///< 基底型のRTTI。
     private: psyq::any_rtti_key const key_; ///< RTTI識別値。
-    private: std::size_t const size_; ///< 型の値のバイトサイズ。
+    private: std::size_t const size_;       ///< 型の値のバイトサイズ。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

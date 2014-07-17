@@ -54,16 +54,16 @@ namespace psyq
     // psyq::any_rtti::make() などで、RTTIを構築しておく必要がある。
     psyq::any_rtti::make<int>();
     psyq::any_rtti::make<double>();
-    // psyq::any_storage::buffer をint型の値で初期化する。
-    psyq::any_storage::buffer<16> local_any(int(-12));
+    // 16バイトの psyq::any_storage::buffer に、int型の値を代入する。
+    auto local_any(psyq::any_storage::buffer<16>::make(int(-12)));
     // psyq::any_storage に格納されているint型の値を参照する。
     PSYQ_ASSERT(
         local_any.rtti_cast<int>() != nullptr
         && *(local_any.rtti_cast<int>()) == -12);
     // psyq::any_storage に現在格納されている型以外へはキャストできない。
     PSYQ_ASSERT(local_any.rtti_cast<double>() == nullptr);
-    // int型の値が格納されていた psyq::any_storage インスタンスに、
-    // double型の値を代入する。元の値は解放される。
+    // int型の値が代入されていた psyq::any_storage インスタンスに、
+    // double型の値を代入する。元の値は、自動で破棄される。
     local_any.assign_value(double(0.5));
     PSYQ_ASSERT(local_any.rtti_cast<int>() == nullptr);
     PSYQ_ASSERT(

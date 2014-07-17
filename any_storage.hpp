@@ -147,7 +147,7 @@ class psyq::any_storage
         auto const local_buffer(const_cast<void*>(io_source.get_buffer()));
         return this->move_rtti_value(local_rtti, local_buffer) != nullptr;
     }
-    /** @brief 任意型の値をコピー代入する。
+    /** @brief 任意型の値を、動的型にコピー代入する。
         @tparam template_value コピー代入する値の型。
         @param[in] in_value コピー代入する値。
         @retval true  成功。値を代入した。
@@ -163,7 +163,7 @@ class psyq::any_storage
         auto const local_rtti(psyq::any_rtti::find<template_value>());
         return this->copy_rtti_value(local_rtti, &in_value) != nullptr;
     }
-    /** @brief 任意型の値をムーブ代入する。
+    /** @brief 任意型の値を、動的型にムーブ代入する。
         @tparam template_value ムーブ代入する値の型。
         @param[in,out] io_value ムーブ代入する値。
         @retval true  成功。値を代入した。
@@ -182,12 +182,9 @@ class psyq::any_storage
 
     /** @brief 格納値を空にする。
 
-        格納値が空かどうかは、 is_empty() で判定できる。
+        格納値が空かどうかは、 psyq::any_storage::is_empty() で判定できる。
      */
-    public: void assign_empty()
-    {
-        this->destruct_value();
-    }
+    public: virtual void assign_empty() = 0;
     /** @brief 格納値が空か判定する。
      */
     public: bool is_empty() const
@@ -279,9 +276,6 @@ class psyq::any_storage
         psyq::any_rtti const* const in_rtti,
         void* const io_value)
     PSYQ_NOEXCEPT = 0;
-    /** @brief 格納値を破棄する。
-     */
-    protected: virtual psyq::any_rtti const* destruct_value() = 0;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -346,14 +340,14 @@ class psyq::any_storage::buffer: public psyq::any_storage
     /// 値を破棄する。
     public: ~buffer() PSYQ_NOEXCEPT override
     {
-        this->this_type::destruct_value();
+        this->this_type::assign_empty();
     }
     //@}
     /// @name 任意型の値を構築
     //@{
-    /** @brief 任意型の値をコピー構築する。
+    /** @brief 任意型の値をコピー代入し、動的型を構築する。
         @tparam template_value 構築する値の型。
-        @param[in] in_value 値の初期値。
+        @param[in] in_value コピー代入する値。
         @warning
             この関数を最初に呼び出すより前に、
             psyq::any_rtti::make<template_value>() などを呼び出し、
@@ -369,9 +363,9 @@ class psyq::any_storage::buffer: public psyq::any_storage
         }
         return local_this;
     }
-    /** @brief 任意型の値をムーブ構築する。
+    /** @brief 任意型の値をムーブ代入し、動的型を構築する。
         @tparam template_value 構築する値の型。
-        @param[in,out] io_value 値の初期値。
+        @param[in,out] io_value ムーブ代入する値。
         @warning
             この関数を最初に呼び出すより前に、
             psyq::any_rtti::make<template_value>() などを呼び出し、
@@ -411,6 +405,21 @@ class psyq::any_storage::buffer: public psyq::any_storage
     {
         return static_cast<this_type&>(
             this->base_type::operator=(std::move(io_source)));
+    }
+
+    public: void assign_empty() override
+    {
+        auto const local_rtti(this->this_type::get_rtti());
+        if (local_rtti != nullptr)
+        {
+            local_rtti->apply_destructor(
+                const_cast<void*>(this->this_type::get_buffer()));
+        }
+        else
+        {
+            PSYQ_ASSERT(false);
+        }
+        this->rtti_ = psyq::any_rtti::find<void>();
     }
     //@}
     //-------------------------------------------------------------------------
@@ -461,21 +470,6 @@ class psyq::any_storage::buffer: public psyq::any_storage
         }
         return local_buffer;
     }
-    protected: psyq::any_rtti const* destruct_value() override
-    {
-        auto const local_rtti(this->this_type::get_rtti());
-        if (local_rtti != nullptr)
-        {
-            local_rtti->apply_destructor(
-                const_cast<void*>(this->this_type::get_buffer()));
-        }
-        else
-        {
-            PSYQ_ASSERT(false);
-        }
-        this->rtti_ = psyq::any_rtti::find<void>();
-        return local_rtti;
-    }
 
     /** @brief 次に格納する値のRTTIを設定する。
         @param[in] in_rtti  次に格納する値のRTTI。
@@ -516,7 +510,7 @@ class psyq::any_storage::buffer: public psyq::any_storage
             // メモリ境界が合わない型は、格納に失敗する。
             return -1;
         }
-        this->this_type::destruct_value();
+        this->this_type::assign_empty();
         this->rtti_ = in_rtti;
         return 1;
     }

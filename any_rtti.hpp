@@ -196,7 +196,7 @@ class psyq::any_rtti
         @retval !=nullptr 構築したRTTI。以後は this_type::find() で取得できる。
         @retval ==nullptr 失敗。RTTIを構築できなかった。
      */
-    public: template<typename template_type, typename template_base_type = void>
+    public: template<typename template_type, typename template_base_type>
     static this_type const* make(psyq::any_rtti_key in_key = psyq::ANY_RTTI_VOID_KEY)
     {
         static_assert(
@@ -261,6 +261,13 @@ class psyq::any_rtti
             in_key,
             this_type::table<typename std::remove_cv<template_type>::type>());
     }
+    /// @copydoc make()
+    public: template<typename template_type>
+    static this_type const* make(
+        psyq::any_rtti_key const in_key = psyq::ANY_RTTI_VOID_KEY)
+    {
+        return this_type::make<template_type, void>(in_key);
+    }
 
     //-------------------------------------------------------------------------
     /** @brief RTTIを用意する。
@@ -286,7 +293,7 @@ class psyq::any_rtti
         @retval !=nullptr 型ごとに固有のRTTI。
         @retval ==nullptr RTTIの用意に失敗した。
      */
-    public: template<typename template_type, typename template_base_type = void>
+    public: template<typename template_type, typename template_base_type>
     static this_type const* equip(
         psyq::any_rtti_key const in_key = psyq::ANY_RTTI_VOID_KEY)
     {
@@ -304,6 +311,13 @@ class psyq::any_rtti
             return nullptr;
         }
         return local_rtti;
+    }
+    /// @copydoc equip()
+    public: template<typename template_type>
+    static this_type const* equip(
+        psyq::any_rtti_key const in_key = psyq::ANY_RTTI_VOID_KEY)
+    {
+        return this_type::equip<template_type, void>(in_key);
     }
 
     //-------------------------------------------------------------------------
@@ -426,6 +440,26 @@ class psyq::any_rtti
     public: std::size_t get_size() const PSYQ_NOEXCEPT
     {
         return this->size_;
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief 型の値のメモリ境界バイト数を取得する。
+        @param[in] in_rtti メモリ境界バイト数を取得する型のRTTI。
+        @retval 正の数 型の値のメモリ境界バイト数。
+        @retval 0以下  RTTIが空だったか、void型のRTTIだった。
+     */
+    public: static std::size_t get_alignment(this_type const* const in_rtti)
+    PSYQ_NOEXCEPT
+    {
+        return in_rtti != nullptr? in_rtti->get_alignment(): 0;
+    }
+
+    /** @brief 型の値のメモリ境界バイト数を取得する。
+        @return 型の値のメモリ境界バイト数。
+     */
+    public: std::size_t get_alignment() const PSYQ_NOEXCEPT
+    {
+        return this->alignment_;
     }
 
     //-------------------------------------------------------------------------
@@ -572,6 +606,7 @@ class psyq::any_rtti
         this_type const* const,
         psyq::any_rtti_key const,
         this_type::table<void> const&)
+    PSYQ_NOEXCEPT
     {
         // このstatic変数を、void型のRTTIとして使う。
         static this_type const static_rtti;
@@ -620,8 +655,12 @@ class psyq::any_rtti
         //equal_operator_(&this_type::table<template_type>::equal_value),
         base_(in_base),
         key_(in_key < psyq::ANY_RTTI_VOID_KEY? in_key: this_type::add_key()),
-        size_(sizeof(template_type))
+        size_(sizeof(template_type)),
+        alignment_(std::alignment_of<template_type>::value)
     {
+        static_assert(
+            0 < std::alignment_of<template_type>::value,
+            "alignof(template_type) is not greater than 0.");
         PSYQ_ASSERT(in_base != nullptr);
 
         // RTTIリストの先頭に挿入する。
@@ -642,7 +681,8 @@ class psyq::any_rtti
         next_(nullptr),
         base_(nullptr),
         key_(psyq::ANY_RTTI_VOID_KEY),
-        size_(0)
+        size_(0),
+        alignment_(0)
     {}
 
     /// copy構築子は使用禁止。
@@ -664,6 +704,7 @@ class psyq::any_rtti
     private: this_type const* const base_;  ///< 基底型のRTTI。
     private: psyq::any_rtti_key const key_; ///< RTTI識別値。
     private: std::size_t const size_;       ///< 型の値のバイトサイズ。
+    private: std::size_t const alignment_;  ///< 型の値のメモリ境界バイト数。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

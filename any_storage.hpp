@@ -2,12 +2,18 @@
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
+   ソースコード形式かバイナリ形式か、変更するかしないかを問わず、
+   以下の条件を満たす場合に限り、再頒布および使用が許可されます。
 
    1. Redistributions of source code must retain the above copyright notice,
       this list of conditions and the following disclaimer.
+      ソースコードを再頒布する場合、上記の著作権表示、本条件一覧、
+      および下記の免責条項を含めること。
    2. Redistributions in binary form must reproduce the above copyright notice,
       this list of conditions and the following disclaimer in the documentation
       and/or other materials provided with the distribution.
+      バイナリ形式で再頒布する場合、頒布物に付属のドキュメント等の資料に、
+      上記の著作権表示、本条件一覧、および下記の免責条項を含めること。
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
@@ -20,9 +26,21 @@
    WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
    OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
    ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+   本ソフトウェアは、著作権者およびコントリビューターによって
+   「現状のまま」提供されており、明示黙示を問わず、商業的な使用可能性、
+   および特定の目的に対する適合性に関する暗黙の保証も含め、
+   またそれに限定されない、いかなる保証もありません。
+   著作権者もコントリビューターも、事由のいかんを問わず、
+   損害発生の原因いかんを問わず、かつ責任の根拠が契約であるか厳格責任であるか
+   （過失その他の）不法行為であるかを問わず、
+   仮にそのような損害が発生する可能性を知らされていたとしても、
+   本ソフトウェアの使用によって発生した（代替品または代用サービスの調達、
+   使用の喪失、データの喪失、利益の喪失、業務の中断も含め、
+   またそれに限定されない）直接損害、間接損害、偶発的な損害、特別損害、
+   懲罰的損害、または結果損害について、一切責任を負わないものとします。
  */
 /** @file
-    @brief 任意型の値を格納できる動的型。
+    @brief 任意型の値を格納できる動的オブジェクト。
     @copydetails psyq::any_storage
     @author Hillco Psychi (https://twitter.com/psychi)
  */
@@ -41,21 +59,22 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 任意型の値を格納する動的型の抽象型。
+/** @brief 任意型の値を格納できる動的オブジェクトの抽象型。
 
-    - psyq::any_storage::buffer::make() で、任意型の値を格納した動的型の値を構築する。
-    - psyq::any_storage::rtti_cast() で、動的型に格納されている値のポインタを取得する。
-    - psyq::any_storage::assign_value() で、任意型の値を代入できる。
-    - psyq::any_storage::assign_storage() で、動的型の値を代入できる。
+    - psyq::any_storage::fixed_pool::make() で、
+      任意型の値を格納した動的オブジェクトを構築する。
+    - psyq::any_storage::rtti_cast() で、
+      動的オブジェクトに格納されている値のポインタを取得する。
+    - psyq::any_storage::assign_value() で、任意型の値を代入する。
 
     使用例
     @code
-    // psyq::any_storage::buffer に格納する値の型は、事前に
+    // psyq::any_storage::fixed_pool に格納する値の型は、事前に
     // psyq::any_rtti::make() などで、RTTIを構築しておく必要がある。
     psyq::any_rtti::make<int>();
     psyq::any_rtti::make<double>();
-    // 16バイトの psyq::any_storage::buffer に、int型の値を代入する。
-    auto local_any(psyq::any_storage::buffer<16>::make(int(-12)));
+    // 16バイトの psyq::any_storage::fixed_pool に、int型の値を代入する。
+    auto local_any(psyq::any_storage::fixed_pool<16>::make(int(-12)));
     // psyq::any_storage に格納されているint型の値を参照する。
     PSYQ_ASSERT(
         local_any.rtti_cast<int>() != nullptr
@@ -74,24 +93,44 @@ namespace psyq
 class psyq::any_storage
 {
     private: typedef any_storage this_type; ///< thisが指す値の型。
+
     public: template<
         std::size_t template_size,
         std::size_t template_alignment = sizeof(double)>
-            class buffer;
+            class fixed_pool;
+
+    /// 動的オブジェクトに格納されている値の属性。
+    protected: struct dynamic_property
+    {
+        /** @brief 属性を構築する。
+            @param[in] in_rtti  dynamic_property::rtti の初期値。
+            @param[in] in_value dynamic_property::value の初期値。
+         */
+        PSYQ_CONSTEXPR dynamic_property(
+            psyq::any_rtti const* const in_rtti,
+            void* const in_value)
+        PSYQ_NOEXCEPT:
+            rtti(in_rtti),
+            value(in_value)
+        {}
+
+        psyq::any_rtti const* rtti; ///< 格納値のRTTI。
+        void* value;                ///< 格納値の先頭位置。
+    };
 
     //-------------------------------------------------------------------------
     /// デフォルト構築子。
     protected: PSYQ_CONSTEXPR any_storage() PSYQ_NOEXCEPT {}
     /// コピー構築子は使用禁止。
     private: any_storage(this_type const&); //= delete;
-    /// @warning 格納値の破棄は、派生型で行うこと。
-    protected: virtual ~any_storage() PSYQ_NOEXCEPT {}
+    /// @note 格納値の破棄は、派生型で行われる。
+    public: virtual ~any_storage() PSYQ_NOEXCEPT {}
 
     //-------------------------------------------------------------------------
     /// @name 値の代入
     //@{
-    /** @brief 動的型のコピー代入演算子。
-        @param[in] in_source コピー元となる動的型の値。
+    /** @brief 動的オブジェクトをコピー代入する。
+        @param[in] in_source コピー元となる動的オブジェクト。
         @return *this
         @note
             assign_storage() と assign_value()
@@ -101,14 +140,14 @@ class psyq::any_storage
      */
     public: this_type& operator=(this_type const& in_source)
     {
-        if (!this->assign_storage(in_source))
+        if (this->assign_storage(in_source) == nullptr)
         {
             PSYQ_ASSERT(false);
         }
         return *this;
     }
-    /** @brief 動的型のムーブ代入演算子。
-        @param[in,out] io_source ムーブ元となる動的型の値。
+    /** @brief 動的オブジェクトをムーブ代入する。
+        @param[in,out] io_source ムーブ元となる動的オブジェクト。
         @return *this
         @note
             assign_storage() と assign_value()
@@ -116,78 +155,81 @@ class psyq::any_storage
             this_type の派生型の引数と、それ以外の型の引数が、
             関数オーバーロードでうまく区別できない模様。
      */
-    public: this_type& operator=(this_type&& io_source)
+    public: this_type& operator=(this_type&& io_source) PSYQ_NOEXCEPT
     {
-        if (!this->assign_storage(std::move(io_source)))
+        if (this->assign_storage(std::move(io_source)) == nullptr)
         {
             PSYQ_ASSERT(false);
         }
         return *this;
     }
 
-    /** @brief 動的型の値をコピー代入する。
-        @param[in] in_source コピー元となる動的型の値。
-        @retval true  成功。コピー代入した。
-        @retval false 失敗。何も行なわなかった。
+    /** @brief 動的オブジェクトをコピー代入する。
+        @param[in] in_source コピー元となる動的オブジェクト。
+        @retval !=nullptr 成功。コピー先の格納値を指すポインタ。
+        @retval ==nullptr 失敗。何も行なわなかった。
      */
-    public: bool assign_storage(this_type const& in_source)
+    public: void* assign_storage(this_type const& in_source)
     {
-        auto const local_rtti(in_source.get_rtti());
-        auto const local_buffer(in_source.get_buffer());
-        return this->copy_rtti_value(local_rtti, local_buffer) != nullptr;
+        auto const local_property(in_source.get_dynamic_property());
+        return this->dynamic_copy(local_property.rtti, local_property.value);
     }
-    /** @brief 動的型の値をムーブ代入する。
-        @param[in,out] io_source ムーブ元となる動的型の値。
-        @retval true  成功。ムーブ代入した。
-        @retval false 失敗。何も行なわなかった。
+    /** @brief 動的オブジェクトをムーブ代入する。
+        @param[in,out] io_source ムーブ元となる動的オブジェクト。
+        @retval !=nullptr 成功。ムーブ先の格納値を指すポインタ。
+        @retval ==nullptr 失敗。何も行なわなかった。
      */
-    public: bool assign_storage(this_type&& io_source)
+    public: void* assign_storage(this_type&& io_source) PSYQ_NOEXCEPT
     {
-        auto const local_rtti(io_source.get_rtti());
-        auto const local_buffer(const_cast<void*>(io_source.get_buffer()));
-        return this->move_rtti_value(local_rtti, local_buffer) != nullptr;
+        auto const local_property(io_source.get_dynamic_property());
+        return this->dynamic_move(local_property.rtti, local_property.value);
     }
-    /** @brief 任意型の値を、動的型にコピー代入する。
+    /** @brief 任意型の値をコピー代入する。
         @tparam template_value コピー代入する値の型。
         @param[in] in_value コピー代入する値。
-        @retval true  成功。値を代入した。
-        @retval false 失敗。何も行なわなかった。
+        @retval !=nullptr 成功。コピー先の格納値を指すポインタ。
+        @retval ==nullptr 失敗。何も行なわなかった。
         @warning
             この関数を最初に呼び出すより前に、
             psyq::any_rtti::make<template_value>() などを呼び出し、
             template_value 型のRTTIを事前に構築しておく必要がある。
      */
     public: template<typename template_value>
-    bool assign_value(template_value const& in_value)
+    template_value* assign_value(template_value const& in_value)
     {
-        auto const local_rtti(psyq::any_rtti::find<template_value>());
-        return this->copy_rtti_value(local_rtti, &in_value) != nullptr;
+        return static_cast<template_value*>(
+            this->dynamic_copy(
+                psyq::any_rtti::find<template_value>(), &in_value));
     }
-    /** @brief 任意型の値を、動的型にムーブ代入する。
+    /** @brief 任意型の値をムーブ代入する。
         @tparam template_value ムーブ代入する値の型。
         @param[in,out] io_value ムーブ代入する値。
-        @retval true  成功。値を代入した。
-        @retval false 失敗。何も行なわなかった。
+        @retval !=nullptr 成功。ムーブ先の格納値を指すポインタ。
+        @retval ==nullptr 失敗。何も行なわなかった。
         @warning
             この関数を最初に呼び出すより前に、
             psyq::any_rtti::make<template_value>() などを呼び出し、
             template_value 型のRTTIを事前に構築しておく必要がある。
      */
     public: template<typename template_value>
-    bool assign_value(template_value&& io_value)
+    template_value* assign_value(template_value&& io_value) PSYQ_NOEXCEPT
     {
-        auto const local_rtti(psyq::any_rtti::find<template_value>());
-        return this->move_rtti_value(local_rtti, &io_value) != nullptr;
+        return static_cast<template_value*>(
+            this->dynamic_move(
+                psyq::any_rtti::find<template_value>(), &io_value));
     }
 
-    /** @brief 格納値を空にする。
+    /** @brief 動的オブジェクトを空にする。
 
-        格納値が空かどうかは、 psyq::any_storage::is_empty() で判定できる。
+        動的オブジェクトが空かどうかは、 this_type::is_empty() で判定できる。
      */
-    public: virtual void assign_empty() = 0;
-    /** @brief 格納値が空か判定する。
+    public: virtual void assign_empty() PSYQ_NOEXCEPT = 0;
+
+    /** @brief 空の動的オブジェクトか判定する。
+        @retval true  空の動的オブジェクトだった。
+        @retval false 空の動的オブジェクトではなかった。
      */
-    public: bool is_empty() const
+    public: PSYQ_CONSTEXPR bool is_empty() const PSYQ_NOEXCEPT
     {
         return this_type::is_void_rtti(this->get_rtti());
     }
@@ -196,29 +238,33 @@ class psyq::any_storage
         @retval true  空型のRTTIだった。
         @retval false 空型のRTTIではなかった。
      */
-    private: static bool is_void_rtti(psyq::any_rtti const* const in_rtti)
+    private: static PSYQ_CONSTEXPR bool is_void_rtti(
+        psyq::any_rtti const* const in_rtti)
+    PSYQ_NOEXCEPT
     {
-        if (in_rtti != nullptr)
-        {
-            return in_rtti == psyq::any_rtti::find<void>();
-        }
-        else
-        {
+        return in_rtti != nullptr?
+            (in_rtti == psyq::any_rtti::find<void>()):
             // 空型はvoid型のRTTIとして扱うので、nullptrは想定外。
-            PSYQ_ASSERT(false);
-            return true;
-        }
+            (PSYQ_ASSERT(false), true);
     }
 
     //-------------------------------------------------------------------------
     /// @name 動的型情報
     //@{
-    /** @brief 格納値へのポインタを、動的にキャストして取得する。
+    /** @brief 格納値のRTTIを取得する。
+        @retval !=nullptr 格納値のRTTI。
+        @retval ==nullptr 格納値のRTTIがまだ構築されてない。
+     */
+    public: psyq::any_rtti const* get_rtti() const PSYQ_NOEXCEPT
+    {
+        return this->get_dynamic_property().rtti;
+    }
+    /** @brief 格納値を指すポインタを、キャストして取得する。
         @tparam template_cast_type
-            動的にキャストして取得するポインタが指す値の型。
+            キャストして取得するポインタが指す値の型。
             psyq::any_rtti::make<template_cast_type>()
             などで、事前にRTTIを構築しておく必要がある。
-        @retval !=nullptr *thisに格納されている値へのポインタ。
+        @retval !=nullptr 格納値を指すポインタ。
         @retval ==nullptr
             格納値のポインタ型を、
             template_cast_type のポインタ型にキャストできなかった。
@@ -228,126 +274,138 @@ class psyq::any_storage
             template_cast_type 型のRTTIを事前に構築しておく必要がある。
      */
     public: template<typename template_cast_type>
-    template_cast_type const* rtti_cast() const
+    template_cast_type const* rtti_cast() const PSYQ_NOEXCEPT
     {
-        // 格納値をキャストできるか判定する。
-        auto const local_cast_rtti(psyq::any_rtti::find<template_cast_type>());
-        auto const local_this_rtti(this->get_rtti());
-        return !this_type::is_void_rtti(local_this_rtti)
-            && psyq::any_rtti::find(local_cast_rtti, local_this_rtti) != nullptr?
-                static_cast<template_cast_type const*>(this->get_buffer()):
-                nullptr;
+        // 空の動的オブジェクトではないか判定する。
+        auto const local_this_property(this->get_dynamic_property());
+        if (!this_type::is_void_rtti(local_this_property.rtti))
+        {
+            // 格納値を template_cast_type へキャストできるか判定する。
+            auto const local_cast_rtti(
+                psyq::any_rtti::find(
+                    psyq::any_rtti::find<template_cast_type>(),
+                    local_this_property.rtti));
+            if (local_cast_rtti != nullptr)
+            {
+                return static_cast<template_cast_type const*>(
+                    local_this_property.value);
+            }
+        }
+        return nullptr;
     }
     /// @brief @copydoc rtti_cast() const
     public: template<typename template_cast_type>
-    template_cast_type* rtti_cast()
+    template_cast_type* rtti_cast() PSYQ_NOEXCEPT
     {
         return const_cast<template_cast_type*>(
             const_cast<this_type const*>(this)->rtti_cast<template_cast_type>());
     }
-    /** @brief 格納値のRTTIを取得する。
-        @retval !=nullptr 格納値のRTTI。
-        @retval ==nullptr 格納値が空だった。
-     */
-    public: virtual psyq::any_rtti const* get_rtti() const PSYQ_NOEXCEPT = 0;
     //@}
     //-------------------------------------------------------------------------
-    /** @brief 値を格納する領域を取得する。
-        @return 値を格納する領域の先頭位置。
+    /** @brief 格納値の属性を取得する。
+        @return 格納値の属性。
      */
-    protected: virtual void const* get_buffer() const PSYQ_NOEXCEPT = 0;
-    /** @brief 値を格納値へコピーする。
+    protected: virtual this_type::dynamic_property get_dynamic_property()
+    const PSYQ_NOEXCEPT = 0;
+    /** @brief 任意型の値を格納値へコピーする。
         @param[in] in_rtti  コピーする値のRTTIを指すポインタ。
         @param[in] in_value コピーする値を指すポインタ。
-        @retval !=nullptr 成功。値をコピー代入先の値を指すポインタ。
+        @retval !=nullptr 成功。格納値を指すポインタ。
         @retval ==nullptr 失敗。何も行なわなかった。
      */
-    protected: virtual void* copy_rtti_value(
+    protected: virtual void* dynamic_copy(
         psyq::any_rtti const* const in_rtti,
         void const* const in_value)
     = 0;
-    /** @brief 値を格納値へムーブする。
+    /** @brief 任意型の値を格納値へムーブする。
         @param[in]     in_rtti  ムーブする値のRTTIを指すポインタ。
         @param[in,out] io_value ムーブする値を指すポインタ。
-        @retval !=nullptr 成功。値をムーブ代入先の値を指すポインタ。
+        @retval !=nullptr 成功。格納値を指すポインタ。
         @retval ==nullptr 失敗。何も行なわなかった。
      */
-    protected: virtual void* move_rtti_value(
+    protected: virtual void* dynamic_move(
         psyq::any_rtti const* const in_rtti,
         void* const io_value)
     PSYQ_NOEXCEPT = 0;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 任意型の値を格納する動的型の具象型。
+/** @brief 任意型の値を格納できる固定長メモリ領域を持つ動的オブジェクト。
 
-    psyq::any_storage::buffer::make() で、任意型の値を格納した動的型を構築し、
-    psyq::any_storage のインタフェイスでアクセスする。
+    - this_type::make() で、任意型の値を格納した動的オブジェクトを構築し、
+      psyq::any_storage のインターフェイスでアクセスする。
+    - 値のバイトサイズが this_type::MAX_SIZE より大きいか、
+      値のメモリ境界バイト数が this_type::ALIGNMENT より大きい型は、
+      base_type::assign_value() で失敗する。
+      - this_type::make() だとassertする。
 
-    @tparam template_size      @copydoc psyq::any_storage::buffer::MAX_SIZE
-    @tparam template_alignment @copydoc psyq::any_storage::buffer::ALIGNMENT
+    @tparam template_size      @copydoc psyq::any_storage::fixed_pool::MAX_SIZE
+    @tparam template_alignment @copydoc psyq::any_storage::fixed_pool::ALIGNMENT
  */
 template<std::size_t template_size, std::size_t template_alignment>
-class psyq::any_storage::buffer: public psyq::any_storage
+class psyq::any_storage::fixed_pool: public psyq::any_storage
 {
     /// thisが指す値の型。
-    private: typedef buffer this_type;
+    private: typedef fixed_pool this_type;
     /// this_type の基底型。
     public: typedef psyq::any_storage base_type;
-    /// 値を格納する領域。
-    public: typedef std::aligned_storage<template_size, template_alignment>
-        aligned_storage;
+    /// 値を格納するメモリ領域。
+    private: typedef
+        typename std::aligned_storage<template_size, template_alignment>::type
+            storage_type;
     public: enum: std::size_t
     {
-        MAX_SIZE = template_size,       ///< 格納できる値の最大バイト数。
+        MAX_SIZE = template_size,       ///< 格納できる値の最大バイトサイズ。
         ALIGNMENT = template_alignment, ///< 格納できる値のメモリ境界バイト数。
     };
 
     //-------------------------------------------------------------------------
     /// @name 構築と破棄
     //@{
-    /// 格納値が空の状態を構築する。
-    public: PSYQ_CONSTEXPR buffer(): rtti_(psyq::any_rtti::find<void>()) {}
-    /** @brief 動的型のコピー構築子。
+    /// 空の動的オブジェクトを構築する。
+    public: PSYQ_CONSTEXPR fixed_pool(): rtti_(psyq::any_rtti::find<void>()) {}
+    /** @brief 動的オブジェクトをコピー構築する。
         @param[in] in_source コピー元となるインスタンス。
      */
-    public: buffer(this_type const& in_source):
+    public: fixed_pool(this_type const& in_source):
         rtti_(psyq::any_rtti::find<void>())
     {
         this->operator=(in_source);
     }
-    /** @brief 動的型のムーブ構築子。
+    /** @brief 動的オブジェクトをムーブ構築する。
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
-    public: buffer(this_type&& io_source):
+    public: fixed_pool(this_type&& io_source) PSYQ_NOEXCEPT:
         rtti_(psyq::any_rtti::find<void>())
     {
         this->operator=(std::move(io_source));
     }
-    /// @copydoc buffer(this_type const&)
-    public: buffer(base_type const& in_source):
+    /// @copydoc fixed_pool(this_type const&)
+    public: fixed_pool(base_type const& in_source):
         rtti_(psyq::any_rtti::find<void>())
     {
         this->operator=(in_source);
     }
-    /// @copydoc buffer(this_type&&)
-    public: buffer(base_type&& io_source):
+    /// @copydoc fixed_pool(this_type&&)
+    public: fixed_pool(base_type&& io_source) PSYQ_NOEXCEPT:
         rtti_(psyq::any_rtti::find<void>())
     {
         this->operator=(std::move(io_source));
     }
 
-    /// 値を破棄する。
-    public: ~buffer() PSYQ_NOEXCEPT override
+    /// 動的オブジェクトを破棄する。
+    public: ~fixed_pool() PSYQ_NOEXCEPT override
     {
         this->this_type::assign_empty();
     }
     //@}
-    /// @name 任意型の値を構築
+    //-------------------------------------------------------------------------
+    /// @name 任意型の値で動的オブジェクトを構築
     //@{
-    /** @brief 任意型の値をコピー代入し、動的型を構築する。
-        @tparam template_value 構築する値の型。
+    /** @brief 任意型の値をコピー代入し、動的オブジェクトを構築する。
+        @tparam template_value コピー代入する値の型。
         @param[in] in_value コピー代入する値。
+        @return 構築した動的オブジェクト。
         @warning
             この関数を最初に呼び出すより前に、
             psyq::any_rtti::make<template_value>() などを呼び出し、
@@ -357,25 +415,26 @@ class psyq::any_storage::buffer: public psyq::any_storage
     static this_type make(template_value const& in_value)
     {
         this_type local_this;
-        if (!local_this.assign_value(in_value))
+        if (local_this.assign_value(in_value) == nullptr)
         {
             PSYQ_ASSERT(false);
         }
         return local_this;
     }
-    /** @brief 任意型の値をムーブ代入し、動的型を構築する。
-        @tparam template_value 構築する値の型。
+    /** @brief 任意型の値をムーブ代入し、動的オブジェクトを構築する。
+        @tparam template_value ムーブ代入する値の型。
         @param[in,out] io_value ムーブ代入する値。
+        @return 構築した動的オブジェクト。
         @warning
             この関数を最初に呼び出すより前に、
             psyq::any_rtti::make<template_value>() などを呼び出し、
             template_value 型のRTTIを事前に構築しておく必要がある。
      */
     public: template<typename template_value>
-    static this_type make(template_value&& io_value)
+    static this_type make(template_value&& io_value) PSYQ_NOEXCEPT
     {
         this_type local_this;
-        if (!local_this.assign_value(std::move(io_value)))
+        if (local_this.assign_value(std::move(io_value)) == nullptr)
         {
             PSYQ_ASSERT(false);
         }
@@ -391,7 +450,7 @@ class psyq::any_storage::buffer: public psyq::any_storage
         return this->operator=(static_cast<base_type const&>(in_source));
     }
     /// @copydoc base_type::operator=(this_type&&)
-    public: this_type& operator=(this_type&& io_source)
+    public: this_type& operator=(this_type&& io_source) PSYQ_NOEXCEPT
     {
         return this->operator=(std::move(static_cast<base_type&>(io_source)));
     }
@@ -401,19 +460,18 @@ class psyq::any_storage::buffer: public psyq::any_storage
         return static_cast<this_type&>(this->base_type::operator=(in_source));
     }
     /// @copydoc base_type::operator=(this_type&&)
-    public: this_type& operator=(base_type&& io_source)
+    public: this_type& operator=(base_type&& io_source) PSYQ_NOEXCEPT
     {
         return static_cast<this_type&>(
             this->base_type::operator=(std::move(io_source)));
     }
 
-    public: void assign_empty() override
+    public: void assign_empty() PSYQ_NOEXCEPT override
     {
-        auto const local_rtti(this->this_type::get_rtti());
+        auto const local_rtti(this->get_this_rtti());
         if (local_rtti != nullptr)
         {
-            local_rtti->apply_destructor(
-                const_cast<void*>(this->this_type::get_buffer()));
+            local_rtti->apply_destructor(this->get_this_storage());
         }
         else
         {
@@ -423,18 +481,13 @@ class psyq::any_storage::buffer: public psyq::any_storage
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name 動的型情報
-    //@{
-    public: psyq::any_rtti const* get_rtti() const PSYQ_NOEXCEPT override
+    protected: base_type::dynamic_property get_dynamic_property()
+    const PSYQ_NOEXCEPT override
     {
-        return this->rtti_;
+        return base_type::dynamic_property(
+            this->get_this_rtti(), this->get_this_storage());
     }
-    //@}
-     protected: void const* get_buffer() const PSYQ_NOEXCEPT override
-    {
-        return &this->aligned_storage_;
-    }
-    protected: void* copy_rtti_value(
+    protected: void* dynamic_copy(
         psyq::any_rtti const* const in_rtti,
         void const* const in_value)
     override
@@ -444,15 +497,14 @@ class psyq::any_storage::buffer: public psyq::any_storage
         {
             return nullptr;
         }
-        auto const local_buffer(
-            const_cast<void*>(this->this_type::get_buffer()));
+        auto const local_buffer(this->get_this_storage());
         if (0 < local_reset)
         {
             in_rtti->apply_copy_constructor(local_buffer, in_value);
         }
         return local_buffer;
     }
-    protected: void* move_rtti_value(
+    protected: void* dynamic_move(
         psyq::any_rtti const* const in_rtti,
         void* const io_value)
     PSYQ_NOEXCEPT override
@@ -462,8 +514,7 @@ class psyq::any_storage::buffer: public psyq::any_storage
         {
             return nullptr;
         }
-        auto const local_buffer(
-            const_cast<void*>(this->this_type::get_buffer()));
+        auto const local_buffer(this->get_this_storage());
         if (0 < local_reset)
         {
             in_rtti->apply_move_constructor(local_buffer, io_value);
@@ -471,6 +522,18 @@ class psyq::any_storage::buffer: public psyq::any_storage
         return local_buffer;
     }
 
+    //-------------------------------------------------------------------------
+    /// @brief 格納値のRTTIを取得する。
+    private: PSYQ_CONSTEXPR psyq::any_rtti const* get_this_rtti()
+    const PSYQ_NOEXCEPT
+    {
+        return this->rtti_;
+    }
+    /// @brief 値を格納するメモリ領域の先頭位置を取得する。
+    private: PSYQ_CONSTEXPR void* get_this_storage() const PSYQ_NOEXCEPT
+    {
+        return const_cast<typename this_type::storage_type*>(&this->storage_);
+    }
     /** @brief 次に格納する値のRTTIを設定する。
         @param[in] in_rtti  次に格納する値のRTTI。
         @param[in] in_value 次に格納する値を指すポインタ。
@@ -489,15 +552,15 @@ class psyq::any_storage::buffer: public psyq::any_storage
             PSYQ_ASSERT(false);
             return -1;
         }
-        else if (this->this_type::get_buffer() == in_value)
+        else if (this->get_this_storage() == in_value)
         {
             // 値のポインタが同じなのに、型が違うのは想定外。
-            PSYQ_ASSERT(this->this_type::get_rtti() == in_rtti);
-            return this->this_type::get_rtti() == in_rtti? 0: -1;
+            PSYQ_ASSERT(this->get_this_rtti() == in_rtti);
+            return this->get_this_rtti() == in_rtti? 0: -1;
         }
         else if (this_type::MAX_SIZE < in_rtti->get_size())
         {
-            // バッファの最大容量より大きい値は、格納に失敗する。
+            // メモリ領域の最大容量より大きい値は、格納に失敗する。
             return -1;
         }
         else if (in_rtti->get_alignment() <= 0)
@@ -529,8 +592,8 @@ class psyq::any_storage::buffer: public psyq::any_storage
     //-------------------------------------------------------------------------
     /// 格納されている値のRTTI。
     private: psyq::any_rtti const* rtti_;
-    /// 値を格納する領域。
-    private: typename this_type::aligned_storage::type aligned_storage_;
+    /// 値を格納するメモリ領域。
+    private: typename this_type::storage_type storage_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -557,21 +620,21 @@ namespace psyq
             PSYQ_ASSERT((psyq::any_rtti::make<floating_wrapper::shared_ptr>()) != nullptr);
 
             integer_wrapper::value_type const INTEGER_VALUE(10);
-            typedef psyq::any_storage::buffer<32, 4> any_32_4;
+            typedef psyq::any_storage::fixed_pool<32, 4> any_32_4;
             auto local_any_32_4(any_32_4::make(integer_wrapper(INTEGER_VALUE)));
             local_any_32_4 = local_any_32_4;
             PSYQ_ASSERT(!local_any_32_4.is_empty());
             floating_wrapper::value_type const FLOATING_VALUE(0.5);
-            PSYQ_ASSERT(!local_any_32_4.assign_value(floating_wrapper(FLOATING_VALUE)));
+            PSYQ_ASSERT(local_any_32_4.assign_value(floating_wrapper(FLOATING_VALUE)) == nullptr);
             PSYQ_ASSERT(local_any_32_4.rtti_cast<integer_wrapper>()->value == INTEGER_VALUE);
 
-            typedef psyq::any_storage::buffer<32, 8> any_32_8;
+            typedef psyq::any_storage::fixed_pool<32, 8> any_32_8;
             any_32_8 local_any_32_8(local_any_32_4);
             PSYQ_ASSERT(local_any_32_8.rtti_cast<integer_wrapper>()->value == INTEGER_VALUE);
-            PSYQ_ASSERT(local_any_32_8.assign_value(floating_wrapper(FLOATING_VALUE)));
+            PSYQ_ASSERT(local_any_32_8.assign_value(floating_wrapper(FLOATING_VALUE)) != nullptr);
             PSYQ_ASSERT(local_any_32_8.rtti_cast<integer_wrapper>() == nullptr);
             PSYQ_ASSERT(local_any_32_8.rtti_cast<floating_wrapper>()->value == FLOATING_VALUE);
-            PSYQ_ASSERT(local_any_32_8.assign_value(integer_wrapper(INTEGER_VALUE)));
+            PSYQ_ASSERT(local_any_32_8.assign_value(integer_wrapper(INTEGER_VALUE)) != nullptr);
             PSYQ_ASSERT(local_any_32_8.rtti_cast<floating_wrapper>() == nullptr);
             PSYQ_ASSERT(local_any_32_8.rtti_cast<integer_wrapper>()->value == INTEGER_VALUE);
 
@@ -580,16 +643,26 @@ namespace psyq
             local_any_32_8.assign_value(local_integer_wrapper_ptr);
             PSYQ_ASSERT(!local_any_32_8.is_empty());
             PSYQ_ASSERT(local_integer_wrapper_ptr->value == INTEGER_VALUE);
-            PSYQ_ASSERT(local_any_32_8.rtti_cast<integer_wrapper::shared_ptr>()->get()->value == INTEGER_VALUE);
-            PSYQ_ASSERT(local_any_32_8.rtti_cast<floating_wrapper::shared_ptr>() == nullptr);
-            local_any_32_4.assign_value(std::move(*(local_any_32_8.rtti_cast<integer_wrapper::shared_ptr>()->get())));
+            PSYQ_ASSERT(
+                (**local_any_32_8.rtti_cast<integer_wrapper::shared_ptr>()).value
+                == INTEGER_VALUE);
+            PSYQ_ASSERT(
+                local_any_32_8.rtti_cast<floating_wrapper::shared_ptr>() == nullptr);
+            PSYQ_ASSERT(
+                local_any_32_4.assign_value(
+                    std::move(
+                        **local_any_32_8.rtti_cast<integer_wrapper::shared_ptr>()))
+                != nullptr);
 
             floating_wrapper::shared_ptr local_floating_wrapper_ptr(
                 new floating_wrapper(FLOATING_VALUE));
             local_any_32_8.assign_value(std::move(local_floating_wrapper_ptr));
             PSYQ_ASSERT(local_floating_wrapper_ptr.get() == nullptr);
-            PSYQ_ASSERT(local_any_32_8.rtti_cast<integer_wrapper::shared_ptr>() == nullptr);
-            PSYQ_ASSERT(local_any_32_8.rtti_cast<floating_wrapper::shared_ptr>()->get()->value == FLOATING_VALUE);
+            PSYQ_ASSERT(
+                local_any_32_8.rtti_cast<integer_wrapper::shared_ptr>() == nullptr);
+            PSYQ_ASSERT(
+                (**local_any_32_8.rtti_cast<floating_wrapper::shared_ptr>()).value
+                == FLOATING_VALUE);
         }
     }
 }

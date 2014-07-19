@@ -401,11 +401,53 @@ class psyq::any_storage::fixed_pool: public psyq::any_storage
     {
         this->operator=(std::move(io_source));
     }
-
+    //@}
+    /** @brief 任意型の値をコピー代入し、動的オブジェクトを構築する。
+        @param[in] in_rtti  コピー元の値のRTTI。
+        @param[in] in_value コピー元の値を指すポインタ。
+     */
+    private: fixed_pool(
+        psyq::any_rtti const* const in_rtti,
+        void const* const in_value)
+    PSYQ_NOEXCEPT:
+        rtti_(psyq::any_rtti::find<void>())
+    {
+        if (0 < this->agree_value(in_rtti, in_value))
+        {
+            this->rtti_ = in_rtti;
+            in_rtti->apply_copy_constructor(this->get_this_storage(), in_value);
+        }
+        else
+        {
+            PSYQ_ASSERT(false);
+        }
+    }
+    /** @brief 任意型の値をムーブ代入し、動的オブジェクトを構築する。
+        @param[in]     in_rtti  ムーブ元の値のRTTI。
+        @param[in,out] io_value ムーブ元の値を指すポインタ。
+     */
+    private: fixed_pool(
+        psyq::any_rtti const* const in_rtti,
+        void* const io_value)
+    PSYQ_NOEXCEPT:
+        rtti_(psyq::any_rtti::find<void>())
+    {
+        if (0 < this->agree_value(in_rtti, io_value))
+        {
+            this->rtti_ = in_rtti;
+            in_rtti->apply_move_constructor(this->get_this_storage(), io_value);
+        }
+        else
+        {
+            PSYQ_ASSERT(false);
+        }
+    }
+    /// @name 構築と破棄
+    //@{
     /// 動的オブジェクトを破棄する。
     public: ~fixed_pool() PSYQ_NOEXCEPT override
     {
-        this->this_type::assign_empty();
+        this->destruct_value();
     }
     //@}
     //-------------------------------------------------------------------------
@@ -423,12 +465,7 @@ class psyq::any_storage::fixed_pool: public psyq::any_storage
     public: template<typename template_value>
     static this_type make(template_value const& in_value)
     {
-        this_type local_this;
-        if (local_this.assign_value(in_value) == nullptr)
-        {
-            PSYQ_ASSERT(false);
-        }
-        return local_this;
+        return this_type(psyq::any_rtti::find<template_value>(), &in_value);
     }
     /** @brief 任意型の値をムーブ代入し、動的オブジェクトを構築する。
         @tparam template_value ムーブ代入する値の型。
@@ -442,12 +479,7 @@ class psyq::any_storage::fixed_pool: public psyq::any_storage
     public: template<typename template_value>
     static this_type make(template_value&& io_value) PSYQ_NOEXCEPT
     {
-        this_type local_this;
-        if (local_this.assign_value(std::move(io_value)) == nullptr)
-        {
-            PSYQ_ASSERT(false);
-        }
-        return local_this;
+        return this_type(psyq::any_rtti::find<template_value>(), &io_value);
     }
     //@}
     //-------------------------------------------------------------------------
@@ -477,15 +509,7 @@ class psyq::any_storage::fixed_pool: public psyq::any_storage
 
     public: void assign_empty() PSYQ_NOEXCEPT override
     {
-        auto const local_rtti(this->get_this_rtti());
-        if (local_rtti != nullptr)
-        {
-            local_rtti->apply_destructor(this->get_this_storage());
-        }
-        else
-        {
-            PSYQ_ASSERT(false);
-        }
+        this->destruct_value();
         this->rtti_ = psyq::any_rtti::find<void>();
     }
     //@}
@@ -501,34 +525,42 @@ class psyq::any_storage::fixed_pool: public psyq::any_storage
         void const* const in_value)
     override
     {
-        auto const local_reset(this->reset_rtti(in_rtti, in_value));
-        if (local_reset < 0)
+        auto const local_agreement(this->agree_value(in_rtti, in_value));
+        if (local_agreement < 0)
         {
+            // 格納できない値だった。
             return nullptr;
         }
-        auto const local_buffer(this->get_this_storage());
-        if (0 < local_reset)
+        auto const local_storage(this->get_this_storage());
+        if (0 < local_agreement)
         {
-            in_rtti->apply_copy_constructor(local_buffer, in_value);
+            // 格納値を破壊した後、コピー代入する。
+            this->destruct_value();
+            this->rtti_ = in_rtti;
+            in_rtti->apply_copy_constructor(local_storage, in_value);
         }
-        return local_buffer;
+        return local_storage;
     }
     protected: void* dynamic_move(
         psyq::any_rtti const* const in_rtti,
         void* const io_value)
     PSYQ_NOEXCEPT override
     {
-        auto const local_reset(this->reset_rtti(in_rtti, io_value));
-        if (local_reset < 0)
+        auto const local_agreement(this->agree_value(in_rtti, io_value));
+        if (local_agreement < 0)
         {
+            // 格納できない値だった。
             return nullptr;
         }
-        auto const local_buffer(this->get_this_storage());
-        if (0 < local_reset)
+        auto const local_storage(this->get_this_storage());
+        if (0 < local_agreement)
         {
-            in_rtti->apply_move_constructor(local_buffer, io_value);
+            // 格納値を破壊した後、ムーブ代入する。
+            this->destruct_value();
+            this->rtti_ = in_rtti;
+            in_rtti->apply_move_constructor(local_storage, io_value);
         }
-        return local_buffer;
+        return local_storage;
     }
 
     //-------------------------------------------------------------------------
@@ -543,17 +575,17 @@ class psyq::any_storage::fixed_pool: public psyq::any_storage
     {
         return const_cast<typename this_type::storage_type*>(&this->storage_);
     }
-    /** @brief 次に格納する値のRTTIを設定する。
-        @param[in] in_rtti  次に格納する値のRTTI。
-        @param[in] in_value 次に格納する値を指すポインタ。
-        @retval 正 値を格納できる状態にした。
+    /** @brief 格納できる値か判定する。
+        @param[in] in_rtti  格納したい値のRTTI。
+        @param[in] in_value 格納したい値を指すポインタ。
+        @retval 正 格納できる値だった。
         @retval 0  値の格納は必要ない。
-        @retval 負 値を格納できる状態にしなかった。
+        @retval 負 格納できない値だった。
      */
-    private: int reset_rtti(
+    private: int agree_value(
         psyq::any_rtti const* const in_rtti,
         void const* const in_value)
-    PSYQ_NOEXCEPT
+    const PSYQ_NOEXCEPT
     {
         if (in_rtti == nullptr || in_value == nullptr)
         {
@@ -564,8 +596,8 @@ class psyq::any_storage::fixed_pool: public psyq::any_storage
         else if (this->get_this_storage() == in_value)
         {
             // 値のポインタが同じなのに、型が違うのは想定外。
-            PSYQ_ASSERT(this->get_this_rtti() == in_rtti);
-            return this->get_this_rtti() == in_rtti? 0: -1;
+            return this->get_this_rtti() == in_rtti?
+                0: (PSYQ_ASSERT(false), -1);
         }
         else if (this_type::MAX_SIZE < in_rtti->get_size())
         {
@@ -574,17 +606,28 @@ class psyq::any_storage::fixed_pool: public psyq::any_storage
         }
         else if (in_rtti->get_alignment() <= 0)
         {
-            PSYQ_ASSERT(in_rtti == psyq::any_rtti::find<void>());
-            return in_rtti == psyq::any_rtti::find<void>()? 0: -1;
+            return in_rtti == psyq::any_rtti::find<void>()?
+                0: (PSYQ_ASSERT(false), -1);
         }
         else if (this_type::ALIGNMENT % in_rtti->get_alignment() != 0)
         {
             // メモリ境界が合わない型は、格納に失敗する。
             return -1;
         }
-        this->this_type::assign_empty();
-        this->rtti_ = in_rtti;
         return 1;
+    }
+    /// @brief 格納値を破壊する。
+    private: void destruct_value() PSYQ_NOEXCEPT
+    {
+        auto const local_rtti(this->get_this_rtti());
+        if (local_rtti != nullptr)
+        {
+            local_rtti->apply_destructor(this->get_this_storage());
+        }
+        else
+        {
+            PSYQ_ASSERT(false);
+        }
     }
 
     //-------------------------------------------------------------------------

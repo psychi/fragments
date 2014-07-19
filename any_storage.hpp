@@ -89,6 +89,15 @@ namespace psyq
         local_any.rtti_cast<double>() != nullptr
         && *(local_any.rtti_cast<double>()) == 0.5);
     @endcode
+
+    @note 2014.07.19
+        RTTIと格納領域の情報を psyq::any_storage 側に持たせることで、
+        psyq::any_storage から仮想関数を排除するような実装も可能だが、
+        そうすると継承関係が psyq::any_storage と
+        psyq::any_storage::fixed_pool に限定されてしまう。
+        将来的には psyq::any_storage::fixed_pool 以外の、
+        例えばヒープメモリに格納値を保持するような実装なども用意したいので、
+        今のところは仮想関数として実装しておく。
  */
 class psyq::any_storage
 {
@@ -308,9 +317,9 @@ class psyq::any_storage
     protected: virtual this_type::dynamic_property get_dynamic_property()
     const PSYQ_NOEXCEPT = 0;
     /** @brief 任意型の値を格納値へコピーする。
-        @param[in] in_rtti  コピーする値のRTTIを指すポインタ。
-        @param[in] in_value コピーする値を指すポインタ。
-        @retval !=nullptr 成功。格納値を指すポインタ。
+        @param[in] in_rtti  コピー元の値のRTTIを指すポインタ。
+        @param[in] in_value コピー元の値を指すポインタ。
+        @retval !=nullptr 成功。コピー先の格納値を指すポインタ。
         @retval ==nullptr 失敗。何も行なわなかった。
      */
     protected: virtual void* dynamic_copy(
@@ -318,9 +327,9 @@ class psyq::any_storage
         void const* const in_value)
     = 0;
     /** @brief 任意型の値を格納値へムーブする。
-        @param[in]     in_rtti  ムーブする値のRTTIを指すポインタ。
-        @param[in,out] io_value ムーブする値を指すポインタ。
-        @retval !=nullptr 成功。格納値を指すポインタ。
+        @param[in]     in_rtti  ムーブ元の値のRTTIを指すポインタ。
+        @param[in,out] io_value ムーブ元の値を指すポインタ。
+        @retval !=nullptr 成功。ムーブ先の格納値を指すポインタ。
         @retval ==nullptr 失敗。何も行なわなかった。
      */
     protected: virtual void* dynamic_move(

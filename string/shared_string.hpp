@@ -120,7 +120,7 @@ class psyq::internal::shared_string_holder
             constant_allocator;
 
     //-------------------------------------------------------------------------
-    /// @name constructor / destructor
+    /// @name 文字列の構築
     //@{
     /** @brief 空文字列を構築する。メモリ確保は行わない。
         @param[in] in_allocator メモリ割当子の初期値。
@@ -132,7 +132,6 @@ class psyq::internal::shared_string_holder
         data_(nullptr),
         allocator_(std::move(in_allocator))
     {}
-
     /** @brief 文字列を参照する。メモリ確保は行わない。
         @param[in] in_string コピー元の文字列。
      */
@@ -143,7 +142,6 @@ class psyq::internal::shared_string_holder
     {
         this->copy_data(in_string);
     }
-
     /** @brief 文字列を移動する。メモリ確保は行わない。
         @param[in,out] io_string ムーブ元の文字列。
      */
@@ -155,7 +153,6 @@ class psyq::internal::shared_string_holder
     {
         this->move_data(std::move(io_string));
     }
-
     /** @brief 文字列リテラルを参照する。メモリ確保は行わない。
         @tparam template_size 参照する文字列リテラルの要素数。空文字も含む。
         @param[in] in_literal   参照する文字列リテラル。
@@ -174,7 +171,6 @@ class psyq::internal::shared_string_holder
     {
         this->set_literal(in_literal);
     }
-
     /** @brief メモリ確保を行い、2つの文字列を連結した共有文字列定数を構築する。
         @param[in] in_left_string  コピー元の左辺文字列。
         @param[in] in_right_string コピー元の右辺文字列。
@@ -191,14 +187,13 @@ class psyq::internal::shared_string_holder
     {
         this->create_concatenated(in_left_string, in_right_string);
     }
-
+    //@}
     /// @brief 文字列を解放する。
     public: ~shared_string_holder() PSYQ_NOEXCEPT
     {
         this_type::release_constant(
             this->get_constant(), this->get_allocator());
     }
-    //@}
     //-------------------------------------------------------------------------
     /** @copydoc shared_string_holder(this_type const&)
         @return *this
@@ -218,7 +213,6 @@ class psyq::internal::shared_string_holder
         }
         return *this;
     }
-
     /** @copydoc shared_string_holder(this_type&&)
         @return *this
      */
@@ -234,6 +228,33 @@ class psyq::internal::shared_string_holder
         else
         {
             PSYQ_ASSERT(this->twice_size_ == io_string.twice_size_);
+        }
+        return *this;
+    }
+    /** @brief 異なる文字列ならメモリ確保を行い、コピー代入する。
+        @param[in] in_string コピー元となる文字列。
+        @return *this
+     */
+    protected: this_type& operator=(typename this_type::view const& in_string)
+    {
+        auto const local_constant(this->get_constant());
+        auto const local_contained(
+            this->data() <= in_string.data()
+            && in_string.data() < this->data() + this->size());
+        if (local_constant == nullptr && local_contained)
+        {
+            // 文字列リテラルならメモリ確保しない。
+            this->data_ = in_string.data();
+            this->set_literal_size(in_string.size());
+        }
+        else if (this->data() != in_string.data() || this->size() != in_string.size())
+        {
+            // 非等値な文字列なので、メモリ確保してコピー代入する。
+            auto const local_hold(
+                local_contained?
+                    this_type(*this): this_type(this->get_allocator()));
+            this_type::release_constant(local_constant, this->get_allocator());
+            this->create_concatenated(in_string, this_type::view());
         }
         return *this;
     }
@@ -256,22 +277,6 @@ class psyq::internal::shared_string_holder
         this->set_literal(in_literal);
     }
 
-    //-------------------------------------------------------------------------
-    /// @name 文字列の変更
-    //@{
-    /** @brief メモリ確保を行い、2つの文字列を連結してコピーする。
-        @param[in] in_left_string  コピー元の左辺文字列。
-        @param[in] in_right_string コピー元の右辺文字列。
-        @return *this
-     */
-    public: void concatenate(
-        typename this_type::view const& in_left_string,
-        typename this_type::view const& in_right_string)
-    {
-        this->clear();
-        this->create_concatenated(in_left_string, in_right_string);
-    }
-    //@}
     //-------------------------------------------------------------------------
     /// @name 文字列の操作
     //@{
@@ -324,6 +329,34 @@ class psyq::internal::shared_string_holder
     {
         std::swap(this->data_, io_target.data_);
         std::swap(this->constant_header_, io_target.constant_header_);
+    }
+
+    /** @brief メモリ確保を行い、末尾に文字列を追加した文字列を作る。
+        @param[in] in_append_string 末尾に追加する文字列。
+        @return 新たに構築した文字列。
+     */
+    protected: this_type make_appended(
+        typename this_type::view const& in_append_string)
+    const
+    {
+        this_type local_string(this->get_allocator());
+        local_string.create_concatenated(
+            typename this_type::view(this->data(), this->size()),
+            in_append_string);
+        return local_string;
+    }
+
+    /** @brief メモリ確保を行い、文字を置換した文字列を作る。
+        @param[in] in_char_map 文字の置換に使う辞書。
+        @return 新たに構築した文字列。
+     */
+    protected: template<typename template_map_type>
+    this_type make_replaced(template_map_type const& in_char_map) const
+    {
+        this_type local_string(this->get_allocator());
+        local_sring.create_replaced(
+            typename this_type::view(this->data(), this->size()), in_char_map);
+        return local_sring;
     }
 
     //-------------------------------------------------------------------------
@@ -389,12 +422,17 @@ class psyq::internal::shared_string_holder
         if (1 < template_size)
         {
             this->data_ = &in_string[0];
-            this->twice_size_ = ((template_size - 1) << 1) | 1;
+            this->set_literal_size(template_size - 1);
         }
         else
         {
             this->reset_data();
         }
+    }
+
+    private: void set_literal_size(std::size_t const in_size)
+    {
+        this->twice_size_ = (in_size << 1) | 1;
     }
 
     /** @brief 保持してる文字列定数を取得する。
@@ -549,7 +587,8 @@ class psyq::internal::shared_string_holder
         std::size_t const in_string_size)
     PSYQ_NOEXCEPT
     {
-        auto const local_header_bytes(sizeof(typename this_type::constant_header));
+        auto const local_header_bytes(
+            sizeof(typename this_type::constant_header));
         auto const local_string_bytes(
             sizeof(typename this_type::traits_type::char_type)
             * (in_string_size + 1));
@@ -557,18 +596,6 @@ class psyq::internal::shared_string_holder
             sizeof(typename this_type::constant_allocator::value_type));
         return (local_header_bytes + local_string_bytes + local_unit_bytes - 1)
             / local_unit_bytes;
-    }
-
-    /** @brief 文字を置換した文字列を作る。
-        @param[in] in_char_map 文字の置換に使う辞書。
-     */
-    private: template<typename template_map_type>
-    this_type make_replaced(template_map_type const& in_char_map)
-    {
-        this_type local_string(this->get_allocator());
-        local_sring.create_replaced(
-            typename this_type::view(this->data(), this->size()), in_char_map);
-        return local_sring;
     }
 
     //-------------------------------------------------------------------------
@@ -628,7 +655,7 @@ class psyq::basic_shared_string:
     private: typedef typename base_string::view base_view;
 
     //-------------------------------------------------------------------------
-    /// @name constructor / destructor
+    /// @name 文字列の構築
     //@{
     /** @brief 空文字列を構築する。メモリ確保は行わない。
         @param[in] in_allocator メモリ割当子の初期値。
@@ -724,7 +751,6 @@ class psyq::basic_shared_string:
         this->base_type::base_type::operator=(in_string);
         return *this;
     }
-
     /** @copydoc basic_shared_string(this_type&&)
         @return *this
      */
@@ -733,7 +759,6 @@ class psyq::basic_shared_string:
         this->base_type::base_type::operator=(std::move(io_string));
         return *this;
     }
-
     /** @copydoc base_type::base_type::assign()
         @return *this
      */
@@ -745,15 +770,14 @@ class psyq::basic_shared_string:
         this->base_type::base_type::assign(in_literal);
         return *this;
     }
-
-    /** @brief メモリ確保を行い、文字列をコピーする。
+    /** @brief 異なる文字列ならメモリ確保を行い、コピー代入する。
         @param[in] in_string コピー元の文字列。
         @return *this
      */
     public: this_type& operator=(typename base_type::base_type::view const& in_string)
     {
-        this->concatenate(in_string, base_type::base_type::view());
-        return *this;
+        return static_cast<this_type&>(
+            this->base_type::base_type::operator=(in_string));
     }
     //@}
     //-------------------------------------------------------------------------

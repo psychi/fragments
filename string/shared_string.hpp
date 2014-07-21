@@ -238,23 +238,29 @@ class psyq::internal::shared_string_holder
     protected: this_type& operator=(typename this_type::view const& in_string)
     {
         auto const local_constant(this->get_constant());
-        auto const local_contained(
-            this->data() <= in_string.data()
-            && in_string.data() < this->data() + this->size());
-        if (local_constant == nullptr && local_contained)
+        auto const local_size(
+            this_type::select_size(local_constant, this->twice_size_));
+        if (this->data() != in_string.data() || local_size != in_string.size())
         {
-            // 文字列リテラルならメモリ確保しない。
-            this->data_ = in_string.data();
-            this->set_literal_size(in_string.size());
-        }
-        else if (this->data() != in_string.data() || this->size() != in_string.size())
-        {
-            // 非等値な文字列なので、メモリ確保してコピー代入する。
-            auto const local_hold(
-                local_contained?
-                    this_type(*this): this_type(this->get_allocator()));
-            this_type::release_constant(local_constant, this->get_allocator());
-            this->create_concatenated(in_string, this_type::view());
+            auto const local_contained(
+                this->data() <= in_string.data()
+                && in_string.data() < this->data() + local_size);
+            if (local_constant == nullptr && local_contained)
+            {
+                // 文字列リテラルならメモリ確保しない。
+                this->data_ = in_string.data();
+                this->set_literal_size(in_string.size());
+            }
+            else
+            {
+                // 非等値な文字列なので、メモリ確保してコピー代入する。
+                auto const local_hold(
+                    local_contained?
+                        this_type(*this): this_type(this->get_allocator()));
+                this_type::release_constant(
+                    local_constant, this->get_allocator());
+                this->create_concatenated(in_string, this_type::view());
+            }
         }
         return *this;
     }
@@ -290,8 +296,8 @@ class psyq::internal::shared_string_holder
     /// @copydoc this_type::view::size()
     public: PSYQ_CONSTEXPR std::size_t size() const PSYQ_NOEXCEPT
     {
-        return this->get_constant() != nullptr?
-            this->constant_header_->size: this->twice_size_ >> 1;
+        return this_type::select_size(
+            this->get_constant(), this->twice_size_);
     }
 
     /// @copydoc this_type::view::max_size()
@@ -433,6 +439,14 @@ class psyq::internal::shared_string_holder
     private: void set_literal_size(std::size_t const in_size)
     {
         this->twice_size_ = (in_size << 1) | 1;
+    }
+
+    private: static PSYQ_CONSTEXPR std::size_t select_size(
+        typename this_type::constant_header const* const in_constant,
+        std::size_t const in_twice_size)
+    PSYQ_NOEXCEPT
+    {
+        return in_constant != nullptr? in_constant->size: in_twice_size >> 1;
     }
 
     /** @brief 保持してる文字列定数を取得する。

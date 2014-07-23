@@ -59,6 +59,228 @@ namespace psyq
     typedef psyq::string_table<
         std::unordered_map<std::size_t, psyq::shared_string>>
             shared_string_table;
+
+    //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+    namespace internal
+    {
+        /** @brief 文字列を解析し、数値に変換する。
+            @param[out] out_value
+              - 文字列の解析に成功した場合、解析して取り出した値が代入される。
+              - 文字列の解析に失敗した場合、代入は行われない。
+            @param[in]  in_string  解析する文字列。
+            @retval true  文字列の解析に成功した。
+            @retval false 文字列の解析に失敗した。
+         */
+        template<typename template_number_type, typename template_string_type>
+        bool string_table_deserialize_number(
+            template_number_type& out_value,
+            template_string_type const* const in_string)
+        PSYQ_NOEXCEPT
+        {
+            if (in_string == nullptr)
+            {
+                return false;
+            }
+
+            // 文字列の前後の空白を取り除く。
+            typedef psyq::basic_string_view<
+                typename template_string_type::value_type,
+                typename template_string_type::traits_type>
+                    string_view;
+            auto const local_string(string_view(*in_string).trim_copy());
+            if (local_string.empty())
+            {
+                return false;
+            }
+
+            // 文字列を解析し、値を取り出す。
+            std::size_t local_rest_size(0);
+            auto const local_value(
+                local_string.template make_number<template_number_type>(
+                    &local_rest_size));
+            if (0 < local_rest_size)
+            {
+                return false;
+            }
+            out_value = local_value;
+            return true;
+        }
+
+        /** @brief 文字列を解析し、文字列に変換する。
+            @param[out] out_value
+              - 文字列の解析に成功した場合、解析して取り出した値が代入される。
+              - 文字列の解析に失敗した場合、代入は行われない。
+            @param[in]  in_string  解析する文字列。
+            @retval true  文字列の解析に成功した。
+            @retval false 文字列の解析に失敗した。
+         */
+        template<typename template_value_type, typename template_string_type>
+        bool string_table_deserialize(
+            template_value_type& out_value,
+            template_string_type const* const in_string)
+        {
+            if (in_string == nullptr)
+            {
+                return false;
+            }
+
+            // 文字列の前後の空白を取り除く。
+            typedef psyq::basic_string_view<
+                typename template_string_type::value_type,
+            typename template_string_type::traits_type>
+                string_view;
+            auto const local_string(string_view(*in_string).trim_copy());
+            if (local_string.empty())
+            {
+                return false;
+            }
+            out_value = local_string;
+            return true;
+        }
+
+        /// @copydoc psyq::internal::string_table_deserialize_number()
+        template<typename template_string_type>
+        bool string_table_deserialize(
+            signed char& out_value,
+            template_string_type const* const in_string)
+        PSYQ_NOEXCEPT
+        {
+            return psyq::internal::string_table_deserialize_number(
+                out_value, in_string);
+        }
+
+        /// @copydoc psyq::internal::string_table_deserialize_number()
+        template<typename template_string_type>
+        bool string_table_deserialize(
+            unsigned char& out_value,
+            template_string_type const* const in_string)
+        PSYQ_NOEXCEPT
+        {
+            return psyq::internal::string_table_deserialize_number(
+                out_value, in_string);
+        }
+
+        /// @copydoc psyq::internal::string_table_deserialize_number()
+        template<typename template_string_type>
+        bool string_table_deserialize(
+            signed short& out_value,
+            template_string_type const* const in_string)
+        PSYQ_NOEXCEPT
+        {
+            return psyq::internal::string_table_deserialize_number(
+                out_value, in_string);
+        }
+
+        /// @copydoc psyq::internal::string_table_deserialize_number()
+        template<typename template_string_type>
+        bool string_table_deserialize(
+            unsigned short& out_value,
+            template_string_type const* const in_string)
+        PSYQ_NOEXCEPT
+        {
+            return psyq::internal::string_table_deserialize_number(
+                out_value, in_string);
+        }
+
+        /// @copydoc psyq::internal::string_table_deserialize_number()
+        template<typename template_string_type>
+        bool string_table_deserialize(
+            signed int& out_value,
+            template_string_type const* const in_string)
+        PSYQ_NOEXCEPT
+        {
+            return psyq::internal::string_table_deserialize_number(
+                out_value, in_string);
+        }
+
+        /// @copydoc psyq::internal::string_table_deserialize_number()
+        template<typename template_string_type>
+        bool string_table_deserialize(
+            unsigned int& out_value,
+            template_string_type const* const in_string)
+        PSYQ_NOEXCEPT
+        {
+            return psyq::internal::string_table_deserialize_number(
+                out_value, in_string);
+        }
+
+        /// @copydoc psyq::internal::string_table_deserialize_number()
+        template<typename template_string_type>
+        bool string_table_deserialize(
+            signed long& out_value,
+            template_string_type const* const in_string)
+        PSYQ_NOEXCEPT
+        {
+            return psyq::internal::string_table_deserialize_number(
+                out_value, in_string);
+        }
+
+        /// @copydoc psyq::internal::string_table_deserialize_number()
+        template<typename template_string_type>
+        bool string_table_deserialize(
+            unsigned long& out_value,
+            template_string_type const* const in_string)
+        PSYQ_NOEXCEPT
+        {
+            return psyq::internal::string_table_deserialize_number(
+                out_value, in_string);
+        }
+
+        /// @copydoc psyq::internal::string_table_deserialize_number()
+        template<typename template_string_type>
+        bool string_table_deserialize(
+            signed long long& out_value,
+            template_string_type const* const in_string)
+        PSYQ_NOEXCEPT
+        {
+            return psyq::internal::string_table_deserialize_number(
+                out_value, in_string);
+        }
+
+        /// @copydoc psyq::internal::string_table_deserialize_number()
+        template<typename template_string_type>
+        bool string_table_deserialize(
+            unsigned long long& out_value,
+            template_string_type const* const in_string)
+        PSYQ_NOEXCEPT
+        {
+            return psyq::internal::string_table_deserialize_number(
+                out_value, in_string);
+        }
+
+        /// @copydoc psyq::internal::string_table_deserialize_number()
+        template<typename template_string_type>
+        bool string_table_deserialize(
+            float& out_value,
+            template_string_type const* const in_string)
+        PSYQ_NOEXCEPT
+        {
+            return psyq::internal::string_table_deserialize_number(
+                out_value, in_string);
+        }
+
+        /// @copydoc psyq::internal::string_table_deserialize_number()
+        template<typename template_string_type>
+        bool string_table_deserialize(
+            double& out_value,
+            template_string_type const* const in_string)
+        PSYQ_NOEXCEPT
+        {
+            return psyq::internal::string_table_deserialize_number(
+                out_value, in_string);
+        }
+
+        /// @copydoc psyq::internal::string_table_deserialize_number()
+        template<typename template_string_type>
+        bool string_table_deserialize(
+            long double& out_value,
+            template_string_type const* const in_string)
+        PSYQ_NOEXCEPT
+        {
+            return psyq::internal::string_table_deserialize_number(
+                out_value, in_string);
+        }
+    }
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -262,7 +484,7 @@ class psyq::string_table
         typename this_type::column_map::key_type const in_attribute_index = 0)
     const
     {
-        return psyq::deserialize_string(
+        return psyq::internal::string_table_deserialize(
             out_value,
             this->find_body_cell(
                 in_row_key, in_attribute_key, in_attribute_index));
@@ -284,7 +506,7 @@ class psyq::string_table
         typename this_type::column_map::key_type const in_column_key)
     const
     {
-        return psyq::deserialize_string(
+        return psyq::internal::string_table_deserialize(
             out_value, this->find_body_cell(in_row_key, in_column_key));
     }
     //@}

@@ -480,7 +480,7 @@ class psyq::string_table
     bool deserialize_body_cell(
         template_value_type& out_value,
         typename this_type::cell_map::key_type const in_row_key,
-        typename this_type::cell_view::base_type::base_type const& in_attribute_key,
+        typename this_type::cell_view const& in_attribute_key,
         typename this_type::column_map::key_type const in_attribute_index = 0)
     const
     {
@@ -522,7 +522,7 @@ class psyq::string_table
      */
     public: typename this_type::cell const* find_body_cell(
         typename this_type::cell_map::key_type const in_row_key,
-        typename this_type::cell_view::base_type::base_type const& in_attribute_key,
+        typename this_type::cell_view const& in_attribute_key,
         typename this_type::column_map::key_type const in_attribute_index = 0)
     const
     {
@@ -566,7 +566,7 @@ class psyq::string_table
         typename this_type::column_map const& in_column_map,
         typename this_type::cell_map::key_type const in_row_key,
         typename this_type::attribute_map const& in_attribute_map,
-        typename this_type::cell_view::base_type::base_type const& in_attribute_key,
+        typename this_type::cell_view const& in_attribute_key,
         typename this_type::column_map::key_type const in_attribute_index = 0)
     {
         auto const local_cell_map(
@@ -621,7 +621,7 @@ class psyq::string_table
         @retval ==nullptr 対応するcellの辞書が見つからなかった。
      */
     public: typename this_type::cell_map const* find_cell_map(
-        typename this_type::cell_view::base_type::base_type const& in_attribute_key,
+        typename this_type::cell_view const& in_attribute_key,
         typename this_type::column_map::key_type const in_attribute_index = 0)
     const
     {
@@ -655,7 +655,7 @@ class psyq::string_table
     public: static typename this_type::cell_map const* find_cell_map(
         typename this_type::column_map const& in_column_map,
         typename this_type::attribute_map const& in_attribute_map,
-        typename this_type::cell_view::base_type::base_type const& in_attribute_key,
+        typename this_type::cell_view const& in_attribute_key,
         typename this_type::column_map::key_type const in_attribute_index = 0)
     {
         auto const local_attribute_iterator(
@@ -953,6 +953,9 @@ namespace psyq
                         "taro,   taro.txt,        -12.34567890e+2, 3, 2\n"
                         "yamada, data/yamada.txt, 1234567890           \n")),
                 0);
+
+            psyq::shared_string local_shared_string("abc");
+            local_shared_string.get_allocator();
 
             psyq::string_view local_name;
             PSYQ_ASSERT(

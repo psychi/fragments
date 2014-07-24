@@ -49,16 +49,16 @@
 //#include "string/string_view_interface.hpp"
 
 /// psyq::basic_string_view で使う、defaultの文字特性の型。
-#ifndef PSYQ_BASIC_STRING_VIEW_TRAITS_DEFAULT
-#define PSYQ_BASIC_STRING_VIEW_TRAITS_DEFAULT std::char_traits<template_char_type>
-#endif // !PSYQ_BASIC_STRING_VIEW_TRAITS_DEFAULT
+#ifndef PSYQ_STRING_VIEW_TRAITS_DEFAULT
+#define PSYQ_STRING_VIEW_TRAITS_DEFAULT std::char_traits<template_char_type>
+#endif // !PSYQ_STRING_VIEW_TRAITS_DEFAULT
 
 namespace psyq
 {
     /// @cond
     template<
         typename template_char_type,
-        typename = PSYQ_BASIC_STRING_VIEW_TRAITS_DEFAULT>
+        typename = PSYQ_STRING_VIEW_TRAITS_DEFAULT>
             class basic_string_view;
     /// @endcond
 
@@ -93,8 +93,13 @@ class psyq::basic_string_view:
         base_type;
 
     //-------------------------------------------------------------------------
-    /// @name constructor / destructor
+    /// @name コンストラクタ
     //@{
+    /// @brief 空の文字列を構築する。
+    public: PSYQ_CONSTEXPR basic_string_view() PSYQ_NOEXCEPT:
+        base_type(base_type::base_type::make(nullptr, 0))
+    {}
+
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
      */
@@ -102,14 +107,28 @@ class psyq::basic_string_view:
     PSYQ_NOEXCEPT:
         base_type(static_cast<base_string const&>(in_string))
     {}
-    /** @brief 文字列を参照する。
+
+    /** @brief 文字列リテラルを参照する。
+        @param[in] in_literal 参照する文字列リテラル。
+     */
+    public: template <std::size_t template_size>
+    PSYQ_CONSTEXPR basic_string_view(
+        typename base_type::traits_type::char_type const (&in_literal)[template_size])
+    PSYQ_NOEXCEPT:
+        base_type(base_type::base_type::make(in_literal))
+    {}
+
+    /** @brief 任意型の文字列を参照する。
+        @tparam template_string_type @copydoc psyq::internal::string_view_interface::base_type
         @param[in] in_string 参照する文字列。
      */
-    public: PSYQ_CONSTEXPR basic_string_view(
-        typename base_type::base_type in_string = base_string())
+    public: template<typename template_string_type>
+    PSYQ_CONSTEXPR basic_string_view(template_string_type const& in_string)
     PSYQ_NOEXCEPT:
-        base_type(std::move(in_string))
+        base_type(
+            base_type::base_type::make(in_string.data(), in_string.size()))
     {}
+
     /** @brief 文字列を参照する。
         @param[in] in_data 参照する文字列の先頭位置。
         @param[in] in_size 参照する文字列の要素数。
@@ -118,23 +137,24 @@ class psyq::basic_string_view:
         typename base_type::const_pointer const in_data,
         typename base_type::size_type const in_size)
     PSYQ_NOEXCEPT:
-        base_type(base_string(in_data, in_size))
+        base_type(base_type::base_type::make(in_data, in_size))
     {}
+
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
         @param[in] in_offset 参照する文字列の開始offset位置。
         @param[in] in_count  参照する文字数の開始offset位置からの要素数。
      */
     public: PSYQ_CONSTEXPR basic_string_view(
-        typename base_type::base_type const& in_string,
+        this_type const& in_string,
         typename base_type::size_type const in_offset,
         typename base_type::size_type const in_count = base_type::npos)
     PSYQ_NOEXCEPT:
-        base_type(in_string.substr(in_offset, in_count))
+        base_type(base_type::base_type::make(in_string, in_offset, in_count))
     {}
     //@}
-
-    /// @name 文字列の代入
+    //-------------------------------------------------------------------------
+    /// @name 文字列参照の代入
     //@{
     /** @copydoc basic_string_view(this_type const&)
         @return *this
@@ -144,16 +164,179 @@ class psyq::basic_string_view:
     {
         return *new(this) this_type(in_string);
     }
-    /** @copydoc basic_string_view(base_type::base_type)
-        @return *this
-     */
-    public: this_type& operator=(typename base_type::base_type in_string)
-    PSYQ_NOEXCEPT
-    {
-        return *new(this) this_type(std::move(in_string));
-    }
     //@}
 
+    //-------------------------------------------------------------------------
+    /// @name 文字列の比較
+    //@{
+    /** @brief 文字列を等価比較する。
+
+        *thisを左辺として、右辺の文字列と等価比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @retval true  左辺と右辺は等価。
+        @retval false 左辺と右辺は非等価。
+     */
+    public: bool operator==(this_type const& in_right) const PSYQ_NOEXCEPT
+    {
+        return this->operator==(static_cast<base_type const&>(in_right));
+    }
+    /// @copydoc operator==(this_type const&) const
+    public: bool operator==(typename base_type::base_type const& in_right) const PSYQ_NOEXCEPT
+    {
+        return this->size() == in_right.size()
+            && 0 == base_type::traits_type::compare(
+                this->data(), in_right.data(), in_right.size());
+    }
+
+    /** @brief 文字列を非等価比較する。
+
+        *thisを左辺として、右辺の文字列と非等価比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @retval true  左辺と右辺は非等価。
+        @retval false 左辺と右辺は等価。
+     */
+    public: bool operator!=(this_type const& in_right) const PSYQ_NOEXCEPT
+    {
+        return !this->operator==(in_right);
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 < 右辺
+     */
+    public: bool operator<(this_type const& in_right) const PSYQ_NOEXCEPT
+    {
+        return this->compare(in_right) < 0;
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 <= 右辺
+     */
+    public: bool operator<=(this_type const& in_right) const PSYQ_NOEXCEPT
+    {
+        return this->compare(in_right) <= 0;
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 > 右辺
+     */
+    public: bool operator>(this_type const& in_right) const PSYQ_NOEXCEPT
+    {
+        return 0 < this->compare(in_right);
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 >= 右辺
+     */
+    public: bool operator>=(this_type const& in_right) const PSYQ_NOEXCEPT
+    {
+        return 0 <= this->compare(in_right);
+    }
+
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @retval 負 右辺のほうが大きい。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  左辺と右辺は等価。
+     */
+    public: int compare(this_type const& in_right) const PSYQ_NOEXCEPT
+    {
+        return this->compare(static_cast<base_type const&>(in_right));
+    }
+    /// @copydoc compare(this_type const&) const
+    public: int compare(typename base_type::base_type const& in_right) const PSYQ_NOEXCEPT
+    {
+        int local_compare_size;
+        if (this->size() != in_right.size())
+        {
+            local_compare_size = (this->size() < in_right.size()? -1: 1);
+        }
+        else if (this->data() != in_right.data())
+        {
+            local_compare_size = 0;
+        }
+        else
+        {
+            return 0;
+        }
+        int const local_compare_string(
+            base_type::traits_type::compare(
+                this->data(),
+                in_right.data(),
+                local_compare_size < 0? this->size(): in_right.size()));
+        return local_compare_string != 0?
+            local_compare_string: local_compare_size;
+    }
+
+    /** @brief 先頭が文字列と一致するか判定する。
+        @param[in] in_prefix 比較する文字列。
+        @retval true  先頭が文字列と一致した。
+        @retval false 先頭が文字列と一致しなかった。
+     */
+    public: PSYQ_CONSTEXPR bool starts_with(this_type const& in_prefix)
+    const PSYQ_NOEXCEPT
+    {
+        return this->substr(0, in_prefix.size()) == in_string;
+    }
+
+    /** @brief 先頭が文字と一致するか判定する。
+        @param[in] in_prefix 比較する文字。
+        @retval true  先頭が文字と一致した。
+        @retval false 先頭が文字と一致しなかった。
+     */
+    public: PSYQ_CONSTEXPR bool starts_with(
+        typename base_type::traits_type::char_type const in_prefix)
+    const PSYQ_NOEXCEPT
+    {
+        return 0 < this->size() && in_prefix == *(this->data());
+    }
+
+    /** @brief 末尾が文字列と一致するか判定する。
+        @param[in] in_suffix 比較する文字列。
+        @retval true  末尾が文字列と一致した。
+        @retval false 末尾が文字列と一致しなかった。
+     */
+    public: PSYQ_CONSTEXPR bool ends_with(this_type const& in_suffix)
+    const PSYQ_NOEXCEPT
+    {
+        return in_suffix.size() <= this->size()
+            && in_suffix == this->substr(this->size() - in_suffix.size());
+    }
+
+    /** @brief 末尾が文字と一致するか判定する。
+        @param[in] in_suffix 比較する文字。
+        @retval true  末尾が文字と一致した。
+        @retval false 末尾が文字と一致しなかった。
+     */
+    public: PSYQ_CONSTEXPR bool ends_with(
+        typename base_type::traits_type::char_type const in_suffix)
+    const PSYQ_NOEXCEPT
+    {
+        return 0 < this->size()
+            && in_suffix == *(this->data() + this->size() - 1);
+    }
+    //@}
+    //-------------------------------------------------------------------------
     /// @name 文字列の変更
     //@{
     /// @copydoc psyq::internal::string_view_base::clear()
@@ -163,9 +346,13 @@ class psyq::basic_string_view:
     }
     //@}
 
-    /// @name 文字列の操作
+    /// @name 文字列の構築
     //@{
-    /// @copydoc psyq::internal::string_view_base::substr()
+    /** @brief *thisの部分文字列を作る。
+        @param[in] in_offset 部分文字列の開始オフセット値。
+        @param[in] in_count  部分文字列の開始オフセット値からの要素数。
+        @return 部分文字列。
+     */
     public: PSYQ_CONSTEXPR this_type substr(
         typename base_type::size_type const in_offset = 0,
         typename base_type::size_type const in_count = base_type::npos)
@@ -174,22 +361,106 @@ class psyq::basic_string_view:
         return this_type(*this, in_offset, in_count);
     }
 
-    /// @copydoc psyq::internal::string_view_base::trim_copy()
+    /** @brief 文字列のコピーを作る。
+        @tparam template_string_type 作る文字列の型。
+        @return 新たに作った文字列。
+     */
+    public: template<typename template_string_type>
+    template_string_type make_copy() const
+    {
+        return template_string_type(this->data(), this->size());
+    }
+
+    /** @brief 文字を変換した文字列を作る。
+        @tparam template_string_type 作る文字列の型。std::string互換。
+        @param[in] in_predecate
+            引数に文字を受け取り、変換した文字を返す関数object。
+        @return 文字を変換した文字列。
+     */
+    public: template<
+        typename template_string_type,
+        typename template_predicate_type>
+    template_string_type make_copy(template_predicate_type in_predecate) const
+    {
+        template_string_type local_string;
+        local_string.reserve(this->size());
+        for (std::size_t i(0); i < this->size(); ++i)
+        {
+            local_string.push_back(in_predecate(*(this->data() + i)));
+        }
+        return local_string;
+    }
+
+    /** @brief 大文字に変換した文字列を作る。
+        @tparam template_string_type 作る文字列の型。std::string互換。
+        @return 大文字に変換した文字列。
+     */
+    public: template<typename template_string_type>
+    template_string_type make_upper_copy() const
+    {
+        return this->make_copy<template_string_type>(
+            [](typename base_type::traits_type::char_type const in_char)
+            ->typename base_type::traits_type::char_type
+            {
+                return std::toupper(in_char);
+            });
+    }
+
+    /** @brief 小文字に変換した文字列を作る。
+        @tparam template_string_type 作る文字列の型。std::string互換。
+        @return 小文字に変換した文字列。
+     */
+    public: template<typename template_string_type>
+    template_string_type make_lower_copy() const
+    {
+        return this->make_copy<template_string_type>(
+            [](typename base_type::traits_type::char_type const in_char)
+            ->typename base_type::traits_type::char_type
+            {
+                return std::tolower(in_char);
+            });
+    }
+
+    /** @brief 先頭と末尾にある空白文字を取り除いた文字列を作る。
+        @return 先頭と末尾にある空白文字を取り除いた文字列。
+     */
     public: this_type trim_copy() const PSYQ_NOEXCEPT
     {
-        return this->base_type::base_type::trim_copy();
+        return this->trim_prefix_copy().trim_suffix_copy();
     }
 
-    /// @copydoc psyq::internal::string_view_base::trim_prefix_copy()
+    /** @brief 先頭にある空白文字を取り除いた文字列を作る。
+        @return 先頭にある空白文字を取り除いた文字列。
+     */
     public: this_type trim_prefix_copy() const PSYQ_NOEXCEPT
     {
-        return this->base_type::base_type::trim_prefix_copy();
+        auto const local_end(this->data() + this->size());
+        for (auto i(this->data()); i < local_end; ++i)
+        {
+            if (!std::isspace(*i))
+            {
+                auto const local_position(i - this->data());
+                return this_type(
+                    this->data() + local_position,
+                    this->size() - local_position);
+            }
+        }
+        return this_type(this->data() + this->size(), 0);
     }
 
-    /// @copydoc psyq::internal::string_view_base::trim_suffix_copy()
+    /** @brief 末尾にある空白文字を取り除いた文字列を作る。
+        @return 末尾にある空白文字を取り除いた文字列。
+     */
     public: this_type trim_suffix_copy() const PSYQ_NOEXCEPT
     {
-        return this->base_type::base_type::trim_suffix_copy();
+        for (auto i(this->data() + this->size()); this->data() < i; --i)
+        {
+            if (!std::isspace(*(i - 1)))
+            {
+                return this_type(this->data(), i - this->data());
+            }
+        }
+        return this_type(this->data(), 0);
     }
     //@}
 };
@@ -216,31 +487,5 @@ namespace std
         io_left.swap(io_right);
     }
 };
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-namespace psyq
-{
-    namespace test
-    {
-        inline void string_view()
-        {
-            psyq::string_view local_string_0;
-            PSYQ_ASSERT(local_string_0.empty());
-            std::string const local_std_string("std::string");
-            local_string_0 = local_std_string;
-            PSYQ_ASSERT(local_string_0 == local_std_string);
-            psyq::string_view const local_string_1(local_std_string);
-            local_string_0 = local_string_1;
-            PSYQ_ASSERT(local_string_1 == local_string_0);
-            PSYQ_ASSERT(local_string_1 == local_std_string);
-            psyq::string_view const local_string_2(local_string_1);
-            PSYQ_ASSERT(local_string_1 == local_string_2);
-            psyq::string_view const local_string_3("literal_string");
-            psyq::string_view const local_string_4(
-                local_string_3.data(), local_string_3.size());
-            PSYQ_ASSERT(local_string_3 == local_string_4);
-        }
-    }
-}
 
 #endif // !PSYQ_STRING_VIEW_HPP_

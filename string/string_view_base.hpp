@@ -65,6 +65,9 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief immutableな文字列への参照の基底型。
+
+    実際は、 psyq::basic_string_view を使う。
+
     @tparam template_char_traits @copydoc string_view_base::traits_type
     @warning
         文字の配列を単純にconst参照しているので、
@@ -78,61 +81,31 @@ class psyq::internal::string_view_base
     public: typedef template_char_traits traits_type; ///< 文字特性の型。
 
     //-------------------------------------------------------------------------
-    /// @name constructor / destructor
-    //@{
-    /** @brief 空の文字列を構築する。
+    /** @brief 文字列を参照する。
+        @param[in] in_string 参照する文字列。
      */
-    public: PSYQ_CONSTEXPR string_view_base() PSYQ_NOEXCEPT:
-        data_(nullptr),
-        size_(0)
+    protected: PSYQ_CONSTEXPR string_view_base(this_type const& in_string)
+    PSYQ_NOEXCEPT:
+        data_(in_string.data()),
+        size_(in_string.size())
     {}
 
     /** @brief 文字列を参照する。
         @param[in] in_data 参照する文字列の先頭位置。
         @param[in] in_size 参照する文字列の要素数。
      */
-    public: PSYQ_CONSTEXPR string_view_base(
+    private: PSYQ_CONSTEXPR string_view_base(
         typename this_type::traits_type::char_type const* const in_data,
         std::size_t const in_size)
     PSYQ_NOEXCEPT:
-        data_((PSYQ_ASSERT(in_data != nullptr || in_size == 0), in_data)),
-        size_(in_data != nullptr && 0 < in_size? in_size: 0)
+        data_(in_data),
+        size_(in_size)
     {}
 
-    /** @brief 文字列literalを参照する。
-        @tparam template_size 参照する文字列literalの要素数。終端文字も含む。
-        @param[in] in_literal 参照する文字列literal。
-        @warning 文字列literal以外の文字列を引数に渡すのは禁止。
-        @note
-            引数が文字列literalであることを保証するため、
-            user定義literalを経由して呼び出すようにしたい。
-     */
-    public: template <std::size_t template_size>
-    PSYQ_CONSTEXPR string_view_base(
-        typename this_type::traits_type::char_type const (&in_literal)[template_size])
-    PSYQ_NOEXCEPT:
-        data_((PSYQ_ASSERT(in_literal[template_size - 1] == 0), &in_literal[0])),
-        size_(template_size - 1)
-    {
-        static_assert(
-            0 < template_size, "'template_size' is not greater than 0.");
-    }
-
-    /** @brief 任意型の文字列を参照する。
-        @tparam template_string_type @copydoc string_view_interface::base_type
-        @param[in] in_string 参照する文字列。
-     */
-    public: template<typename template_string_type>
-    PSYQ_CONSTEXPR string_view_base(template_string_type const& in_string)
-    PSYQ_NOEXCEPT:
-        data_(in_string.data()),
-        size_(in_string.size())
-    {}
-    //@}
     //-------------------------------------------------------------------------
     /// @name 文字列の変更
     //@{
-    /// @copydoc psyq::internal::string_view_interface::clear()
+    /// @brief 文字列を空にする。
     public: void clear() PSYQ_NOEXCEPT
     {
         this->size_ = 0;
@@ -173,7 +146,7 @@ class psyq::internal::string_view_base
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name 文字列の操作
+    /// @name 文字列のプロパティ
     //@{
     /** @brief 文字列の先頭文字へのpointerを取得する。
         @return 文字列の先頭文字へのpointer。
@@ -202,204 +175,12 @@ class psyq::internal::string_view_base
     {
         return (std::numeric_limits<std::size_t>::max)();
     }
-
-    /** @brief 文字列のcopyを作る。
-        @tparam template_string_type 作る文字列の型。
-        @return 新たに作った文字列。
-     */
-    public: template<typename template_string_type>
-    template_string_type make_copy() const
-    {
-        return template_string_type(this->data(), this->size());
-    }
-
-    /** @brief 文字を変換した文字列を作る。
-        @tparam template_string_type 作る文字列の型。std::string互換。
-        @param[in] in_predecate
-            引数に文字を受け取り、変換した文字を返す関数object。
-        @return 文字を変換した文字列。
-     */
-    public: template<
-        typename template_string_type,
-        typename template_predicate_type>
-    template_string_type make_copy(template_predicate_type in_predecate) const
-    {
-        template_string_type local_string;
-        local_string.reserve(this->size());
-        for (std::size_t i(0); i < this->size(); ++i)
-        {
-            local_string.push_back(in_predecate(*(this->data() + i)));
-        }
-        return local_string;
-    }
-
-    /** @brief 大文字に変換した文字列を作る。
-        @tparam template_string_type 作る文字列の型。std::string互換。
-        @return 大文字に変換した文字列。
-     */
-    public: template<typename template_string_type>
-    template_string_type make_upper_copy() const
-    {
-        return this->make_copy<template_string_type>(
-            [](typename this_type::traits_type::char_type const in_char)
-            ->typename this_type::traits_type::char_type
-            {
-                return std::toupper(in_char);
-            });
-    }
-
-    /** @brief 小文字に変換した文字列を作る。
-        @tparam template_string_type 作る文字列の型。std::string互換。
-        @return 小文字に変換した文字列。
-     */
-    public: template<typename template_string_type>
-    template_string_type make_lower_copy() const
-    {
-        return this->make_copy<template_string_type>(
-            [](typename this_type::traits_type::char_type const in_char)
-            ->typename this_type::traits_type::char_type
-            {
-                return std::tolower(in_char);
-            });
-    }
-    //@}
-    /** @brief 先頭と末尾にある空白文字を取り除いた文字列を作る。
-        @return 先頭と末尾にある空白文字を取り除いた文字列。
-     */
-    protected: this_type trim_copy() const PSYQ_NOEXCEPT
-    {
-        return this->trim_prefix_copy().trim_suffix_copy();
-    }
-
-    /** @brief 先頭にある空白文字を取り除いた文字列を作る。
-        @return 先頭にある空白文字を取り除いた文字列。
-     */
-    protected: this_type trim_prefix_copy() const PSYQ_NOEXCEPT
-    {
-        auto const local_end(this->data() + this->size());
-        for (auto i(this->data()); i < local_end; ++i)
-        {
-            if (!std::isspace(*i))
-            {
-                auto const local_position(i - this->data());
-                return this_type(
-                    this->data() + local_position,
-                    this->size() - local_position);
-            }
-        }
-        return this_type(this->data() + this->size(), 0);
-    }
-
-    /** @brief 末尾にある空白文字を取り除いた文字列を作る。
-        @return 末尾にある空白文字を取り除いた文字列。
-     */
-    protected: this_type trim_suffix_copy() const PSYQ_NOEXCEPT
-    {
-        for (auto i(this->data() + this->size()); this->data() < i; --i)
-        {
-            if (!std::isspace(*(i - 1)))
-            {
-                return this_type(this->data(), i - this->data());
-            }
-        }
-        return this_type(this->data(), 0);
-    }
-
-    /** @brief *thisの部分文字列を構築する。
-        @param[in] in_offset 部分文字列の開始offset値。
-        @param[in] in_count  部分文字列の開始offset値からの文字数。
-        @return 部分文字列。
-     */
-    protected: PSYQ_CONSTEXPR this_type substr(
-        std::size_t const in_offset,
-        std::size_t const in_count)
-    const PSYQ_NOEXCEPT
-    {
-        return this_type(
-            this->data() + (std::min)(in_offset, this->size()),
-            in_offset < this->size()?
-                (std::min)(this->size() - in_offset, in_count): 0);
-    }
-
-    //-------------------------------------------------------------------------
-    /// @name 文字列の比較
-    //@{
-    /// @copydoc psyq::internal::string_view_interface::operator==()
-    public: bool operator==(this_type const& in_right) const PSYQ_NOEXCEPT
-    {
-        return this->size() == in_right.size()
-            && 0 == this_type::traits_type::compare(
-                this->data(), in_right.data(), in_right.size());
-    }
-
-    /// @copydoc psyq::internal::string_view_interface::operator!=()
-    public: bool operator!=(this_type const& in_right) const PSYQ_NOEXCEPT
-    {
-        return !this->operator==(in_right);
-    }
-
-    /// @copydoc psyq::internal::string_view_interface::compare()
-    public: int compare(this_type const& in_right) const PSYQ_NOEXCEPT
-    {
-        int local_compare_size;
-        if (this->size() != in_right.size())
-        {
-            local_compare_size = (this->size() < in_right.size()? -1: 1);
-        }
-        else if (this->data() != in_right.data())
-        {
-            local_compare_size = 0;
-        }
-        else
-        {
-            return 0;
-        }
-        int const local_compare_string(
-            this_type::traits_type::compare(
-                this->data(),
-                in_right.data(),
-                local_compare_size < 0? this->size(): in_right.size()));
-        return local_compare_string != 0?
-            local_compare_string: local_compare_size;
-    }
-
-    /// @copydoc psyq::internal::string_view_interface::starts_with()
-    public: PSYQ_CONSTEXPR bool starts_with(this_type const& in_prefix)
-    const PSYQ_NOEXCEPT
-    {
-        return this->substr(0, in_prefix.size()) == in_string;
-    }
-
-    /// @copydoc psyq::internal::string_view_interface::starts_with()
-    public: PSYQ_CONSTEXPR bool starts_with(
-        typename this_type::traits_type::char_type const in_prefix)
-    const PSYQ_NOEXCEPT
-    {
-        return 0 < this->size() && in_prefix == *(this->data());
-    }
-
-    /// @copydoc psyq::internal::string_view_interface::ends_with()
-    public: PSYQ_CONSTEXPR bool ends_with(this_type const& in_suffix)
-    const PSYQ_NOEXCEPT
-    {
-        return in_suffix.size() <= this->size()
-            && in_suffix == this->substr(this->size() - in_suffix.size());
-    }
-
-    /// @copydoc psyq::internal::string_view_interface::ends_with()
-    public: PSYQ_CONSTEXPR bool ends_with(
-        typename this_type::traits_type::char_type const in_suffix)
-    const PSYQ_NOEXCEPT
-    {
-        return 0 < this->size()
-            && in_suffix == *(this->data() + this->size() - 1);
-    }
     //@}
     //-------------------------------------------------------------------------
     /// @name 文字列の変換
     //@{
     /** @brief 文字列を解析し、数値を構築する。
-        @tparam template_integer_type 構築する数値の型。
+        @tparam template_number_type 構築する数値の型。
         @param[out] out_rest_size
             解析できなかった要素数を格納する先。nullptrの場合は格納しない。
         @return 文字列を解析して構築した数値。
@@ -475,6 +256,61 @@ class psyq::internal::string_view_base
         return local_real * local_sign;
     }
     //@}
+    //-------------------------------------------------------------------------
+    /** @brief 文字列リテラルを参照して構築する。
+        @tparam template_size 参照する文字列リテラルの要素数。終端文字も含む。
+        @param[in] in_literal 参照する文字列リテラル。
+        @return 構築した文字列。
+        @warning 文字列リテラル以外の文字列を引数に渡すのは禁止。
+        @note
+            引数が文字列リテラルであることを保証するため、
+            ユーザー定義リテラルを経由して呼び出すようにしたい。
+     */
+    protected: template <std::size_t template_size>
+    static PSYQ_CONSTEXPR this_type make(
+        typename this_type::traits_type::char_type const (&in_literal)[template_size])
+    PSYQ_NOEXCEPT
+    {
+        static_assert(
+            0 < template_size, "'template_size' is not greater than 0.");
+        return this_type(
+            (PSYQ_ASSERT(in_literal[template_size - 1] == 0), &in_literal[0]),
+            template_size - 1);
+    }
+
+    /** @brief 文字列を参照して構築する。
+        @param[in] in_data 文字列の先頭位置。
+        @param[in] in_size 文字列の要素数。
+        @return 構築した文字列。
+     */
+    protected: static PSYQ_CONSTEXPR this_type make(
+        typename this_type::traits_type::char_type const* const in_data,
+        std::size_t const in_size)
+    PSYQ_NOEXCEPT
+    {
+        return this_type(
+            (PSYQ_ASSERT(in_data != nullptr || in_size == 0), in_data),
+            in_data != nullptr && 0 < in_size? in_size: 0);
+    }
+
+    /** @brief 部分文字列を参照して構築する。
+        @param[in] in_string 参照する文字列。
+        @param[in] in_offset 部分文字列の開始オフセット値。
+        @param[in] in_count  部分文字列の開始オフセット値からの要素数。
+        @return 構築した文字列。
+     */
+    protected: static PSYQ_CONSTEXPR this_type make(
+        this_type const& in_string,
+        std::size_t const in_offset,
+        std::size_t const in_count)
+    PSYQ_NOEXCEPT
+    {
+        return this_type(
+            in_string.data() + (std::min)(in_offset, in_string.size()),
+            in_offset < in_string.size()?
+                (std::min)(in_string.size() - in_offset, in_count): 0);
+    }
+
     //-------------------------------------------------------------------------
     /** @brief 文字列を解析し、数値の符号を読み取る。
         @param[in,out] io_iterator 文字を解析する位置。

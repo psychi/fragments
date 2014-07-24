@@ -50,18 +50,18 @@
 //#include "psyq/atomic_count.hpp"
 
 /// psyq::basic_shared_string で使う、defaultのメモリ割当子の型。
-#ifndef PSYQ_BASIC_SHARED_STRING_ALLOCATOR_DEFAULT
-#define PSYQ_BASIC_SHARED_STRING_ALLOCATOR_DEFAULT\
+#ifndef PSYQ_SHARED_STRING_ALLOCATOR_DEFAULT
+#define PSYQ_SHARED_STRING_ALLOCATOR_DEFAULT\
     std::allocator<template_char_type>
-#endif // !defined(PSYQ_BASIC_SHARED_STRING_ALLOCATOR_DEFAULT)
+#endif // !defined(PSYQ_SHARED_STRING_ALLOCATOR_DEFAULT)
 
 namespace psyq
 {
     /// @cond
     template<
         typename template_char_type,
-        typename = PSYQ_BASIC_STRING_VIEW_TRAITS_DEFAULT,
-        typename = PSYQ_BASIC_SHARED_STRING_ALLOCATOR_DEFAULT>
+        typename = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
+        typename = PSYQ_SHARED_STRING_ALLOCATOR_DEFAULT>
             class basic_shared_string;
     /// @endcond
 
@@ -78,15 +78,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 共有の文字列定数か文字列リテラルを保持する。
-
-    - immutableな文字列を保持する。
-      - 共有の文字列定数は、被参照数で保持する。
-      - 文字列リテラルは、そのまま保持する。
-    - 文字列リテラルを代入した場合は、メモリ確保を行わない。
-    - 同じ型の文字列を代入した場合は、メモリ確保を行わない。
-    - 違う型の文字列を代入した場合は、メモリ確保を行う。
-
+/** @brief 共有の文字列定数か文字列リテラルの保持子。
     @tparam template_char_traits    @copydoc this_type::traits_type
     @tparam template_allocator_type @copydoc this_type::allocator_type
  */
@@ -100,7 +92,7 @@ class psyq::internal::shared_string_holder
     /// メモリ割当子の型。
     public: typedef template_allocator_type allocator_type;
     /// 部分文字列の型。
-    protected: typedef psyq::internal::string_view_base<template_char_traits>
+    private: typedef psyq::internal::string_view_base<template_char_traits>
         view;
     /// 共有文字列定数のヘッダ。
     private: struct constant_header
@@ -121,115 +113,67 @@ class psyq::internal::shared_string_holder
         "std::alignment_of<this_type::constant_header>::value is greater than "
         "std::alignment_of<this_type::traits_type::char_type>::value");
     /// 文字列定数に使うメモリ割当子。
-    private: typedef typename this_type::allocator_type::template
+    protected: typedef typename this_type::allocator_type::template
         rebind<std::size_t>::other
             constant_allocator;
 
     //-------------------------------------------------------------------------
-    /// @name 文字列の構築
-    //@{
-    /** @brief 空文字列を構築する。メモリ確保は行わない。
-        @param[in] in_allocator メモリ割当子の初期値。
-     */
-    protected: explicit shared_string_holder(
-        typename this_type::allocator_type in_allocator)
+    /// @copydoc psyq::basic_shared_string::basic_shared_string(this_type const&)
+    protected: shared_string_holder(this_type const& in_string)
     PSYQ_NOEXCEPT:
         twice_size_(0),
         data_(nullptr),
-        allocator_(std::move(in_allocator))
-    {}
-
-    /** @brief 文字列を参照する。メモリ確保は行わない。
-        @param[in] in_string 参照元の文字列。
-     */
-    protected: explicit shared_string_holder(this_type const& in_string)
-    PSYQ_NOEXCEPT:
-        twice_size_(0),
-        data_(nullptr),
-        allocator_(in_string.get_allocator())
+        constant_allocator_(in_string.constant_allocator_)
     {
         this->copy_holder(in_string);
     }
 
-    /** @brief 文字列をムーブ構築する。メモリ確保は行わない。
-        @param[in,out] io_string ムーブ元の文字列。
-     */
-    protected: explicit shared_string_holder(this_type&& io_string)
+    /// @copydoc psyq::basic_shared_string::basic_shared_string(this_type&&)
+    protected: shared_string_holder(this_type&& io_string)
     PSYQ_NOEXCEPT:
         twice_size_(0),
         data_(nullptr),
-        allocator_(std::move(io_string.allocator_))
+        constant_allocator_(std::move(io_string.constant_allocator_))
     {
         this->move_holder(std::move(io_string));
     }
 
-    /** @brief 文字列リテラルを参照する。メモリ確保は行わない。
-        @tparam template_size 参照する文字列リテラルの要素数。空文字も含む。
-        @param[in] in_literal   参照する文字列リテラル。
-        @param[in] in_allocator メモリ割当子の初期値。
-        @warning 文字列リテラル以外を in_literal に渡すのは禁止。
-        @note
-            引数が文字列リテラルであることを保証するため、
-            ユーザー定義リテラルを経由して呼び出すようにしたい。
-     */
-    protected: template <std::size_t template_size>
-    shared_string_holder(
-        typename this_type::traits_type::char_type const (&in_literal)[template_size],
-        typename this_type::allocator_type in_allocator)
+    /// @copydoc psyq::basic_shared_string::basic_shared_string()
+    private: explicit PSYQ_CONSTEXPR shared_string_holder(
+        typename this_type::constant_allocator in_allocator)
     PSYQ_NOEXCEPT:
-        allocator_(std::move(in_allocator))
-    {
-        this->set_literal(in_literal);
-    }
-
-    /** @brief メモリ確保を行い、2つの文字列を連結した共有文字列定数を構築する。
-        @param[in] in_left_string  コピー元の左辺文字列。
-        @param[in] in_right_string コピー元の右辺文字列。
-        @param[in] in_allocator    メモリ割当子の初期値。
-     */
-    protected: shared_string_holder(
-        typename this_type::view const& in_left_string,
-        typename this_type::view const& in_right_string,
-        typename this_type::allocator_type in_allocator)
-    :
         twice_size_(0),
         data_(nullptr),
-        allocator_(std::move(in_allocator))
-    {
-        this->create_concatenated(in_left_string, in_right_string);
-    }
-    //@}
-    /// @brief 文字列を解放する。
+        constant_allocator_(std::move(in_allocator))
+    {}
+
+    /// @brief 文字列保持子を解放する。
     public: ~shared_string_holder() PSYQ_NOEXCEPT
     {
         this->release_constant();
     }
 
     //-------------------------------------------------------------------------
-    /** @copydoc shared_string_holder(this_type const&)
-        @return *this
-     */
+    /// @copydoc psyq::basic_shared_string::operator=(this_type const&)
     protected: this_type& operator=(this_type const& in_string)
     {
         if (this->constant_header_ != in_string.constant_header_)
         {
             this->release_constant();
             this->copy_holder(in_string);
-            this->allocator_ = in_string.get_allocator();
+            this->constant_allocator_ = in_string.constant_allocator_;
         }
         return *this;
     }
 
-    /** @copydoc shared_string_holder(this_type&&)
-        @return *this
-     */
+    /// @copydoc psyq::basic_shared_string::operator=(this_type&&)
     protected: this_type& operator=(this_type&& io_string) PSYQ_NOEXCEPT
     {
         if (this->constant_header_ != io_string.constant_header_)
         {
             this->release_constant();
             this->move_holder(std::move(io_string));
-            this->allocator_ = std::move(io_string.allocator_);
+            this->constant_allocator_ = std::move(io_string.constant_allocator_);
         }
         return *this;
     }
@@ -247,8 +191,8 @@ class psyq::internal::shared_string_holder
     /// @copydoc this_type::view::size()
     public: PSYQ_CONSTEXPR std::size_t size() const PSYQ_NOEXCEPT
     {
-        return this->is_literal()?
-            this->twice_size_ >> 1: this->constant_header_->size;
+        return this->get_constant() != nullptr?
+            this->constant_header_->size: this->twice_size_ >> 1;
     }
 
     /// @copydoc this_type::view::max_size()
@@ -257,30 +201,37 @@ class psyq::internal::shared_string_holder
         return (std::numeric_limits<std::size_t>::max)();
     }
 
-    /** @brief 使っているメモリ割当子を取得する。
-        @return 使っているメモリ割当子。
+    /** @brief 文字のメモリ割当子を取得する。
+        @return 文字のメモリ割当子。
      */
-    public: PSYQ_CONSTEXPR typename this_type::allocator_type const& get_allocator()
+    public: PSYQ_CONSTEXPR typename this_type::allocator_type get_allocator()
     const PSYQ_NOEXCEPT
     {
-        return this->allocator_;
+        return typename this_type::allocator_type(this->constant_allocator_);
     }
     //@}
-    //-------------------------------------------------------------------------
-    /// @copydoc psyq::internal::string_view_interface::empty()
+    /** @brief 文字列が空か判定する。
+        @retval true  文字列が空である。
+        @retval false 文字列が空ではない。
+     */
     protected: PSYQ_CONSTEXPR bool empty() const PSYQ_NOEXCEPT
     {
         return this->data() == nullptr;
     }
 
-    /// @copydoc psyq::internal::string_view_interface::clear()
-    protected: void clear() PSYQ_NOEXCEPT
+    //-------------------------------------------------------------------------
+    /// @name 文字列の変更
+    //@{
+    /// @brief 文字列を空にする。
+    public: void clear() PSYQ_NOEXCEPT
     {
         this->release_constant();
         this->set_empty();
     }
-
-    /// @copydoc psyq::internal::string_view_interface::swap()
+    //@}
+    /** @brief 文字列を交換する。
+        @param[in,out] io_target 交換する対象。
+     */
     protected: void swap(this_type& io_target) PSYQ_NOEXCEPT
     {
         std::swap(this->twice_size_, io_target.twice_size_);
@@ -300,18 +251,10 @@ class psyq::internal::shared_string_holder
      */
     protected: void assign_view(typename this_type::view const& in_string)
     {
-        typename this_type::constant_header* local_constant;
-        std::size_t local_size;
-        if (this->is_literal())
-        {
-            local_constant = nullptr;
-            local_size = this->twice_size_ >> 1;
-        }
-        else
-        {
-            local_constant = this->constant_header_;
-            local_size = local_constant->size;
-        }
+        auto const local_constant(this->get_constant());
+        auto const local_size(
+            local_constant != nullptr?
+                local_constant->size: this->twice_size_ >> 1);
         if (this->data() == in_string.data() && local_size == in_string.size())
         {
             // 等値な文字列なので、何もしない。
@@ -329,8 +272,9 @@ class psyq::internal::shared_string_holder
         {
             // 非等値な文字列なので、共有文字列定数を構築して代入する。
             this->set_empty();
-            this->create_concatenated(in_string, this_type::view());
-            this_type::release_constant(local_constant, this->get_allocator());
+            this->create_duplicated(in_string);
+            this_type::release_constant(
+                local_constant, this->constant_allocator_);
         }
     }
 
@@ -352,41 +296,79 @@ class psyq::internal::shared_string_holder
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列をコピーする。
-        @param[in] in_string コピー元となる文字列。
+    /** @brief 文字列リテラルを参照する保持子を構築する。メモリ確保は行わない。
+        @tparam template_size 参照する文字列リテラルの要素数。空文字も含む。
+        @param[in] in_literal   参照する文字列リテラル。
+        @param[in] in_allocator メモリ割当子の初期値。
+        @warning 文字列リテラル以外を in_literal に渡すのは禁止。
+        @return 文字列リテラルを参照する保持子。
+        @note
+            引数が文字列リテラルであることを保証するため、
+            ユーザー定義リテラルを経由して呼び出すようにしたい。
+     */
+    protected: template <std::size_t template_size>
+    static this_type make(
+        typename this_type::traits_type::char_type const (&in_literal)[template_size],
+        typename this_type::allocator_type const& in_allocator)
+    PSYQ_NOEXCEPT
+    {
+        this_type local_string(in_allocator);
+        local_string.set_literal(in_literal);
+        return local_string;
+    }
+
+    /** @brief メモリ確保を行い、2つの文字列を連結した共有文字列定数を構築する。
+        @param[in] in_left_string  コピー元の左辺文字列。
+        @param[in] in_right_string コピー元の右辺文字列。
+        @param[in] in_allocator    メモリ割当子の初期値。
+        @return 共有文字列定数の保持子。
+     */
+    protected: static this_type make(
+        typename this_type::view const& in_left_string,
+        typename this_type::view const& in_right_string,
+        typename this_type::allocator_type const& in_allocator)
+    {
+        this_type local_string(in_allocator);
+        local_string.create_concatenated(in_left_string, in_right_string);
+        return local_string;
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief 文字列保持子をコピーする。
+        @param[in] in_string コピー元となる文字列保持子。
      */
     private: void copy_holder(this_type const& in_string) PSYQ_NOEXCEPT
     {
         auto const local_constant(in_string.get_constant());
         if (local_constant != nullptr)
         {
-            // 共有文字列定数をコピーする。
+            // 共有文字列定数の保持子を参照する。
             this->set_constant(*local_constant);
             this_type::hold_constant(*local_constant);
         }
         else
         {
-            // 文字列リテラルをコピーする。
+            // 文字列リテラルを参照する。
             this->data_ = in_string.data_;
             this->twice_size_ = in_string.twice_size_;
         }
     }
 
-    /** @brief 文字列をムーブする。
-        @param[in,out] io_string ムーブ元となる文字列。
+    /** @brief 文字列保持子をムーブする。
+        @param[in,out] io_string ムーブ元となる文字列保持子。
      */
     private: void move_holder(this_type&& io_string) PSYQ_NOEXCEPT
     {
         auto const local_constant(io_string.get_constant());
         if (local_constant != nullptr)
         {
-            // 共有文字列定数をムーブする。
+            // 共有文字列定数の保持子をムーブする。
             this->set_constant(*local_constant);
             io_string.set_empty();
         }
         else
         {
-            // 文字列リテラルは、ムーブせずにコピーする。
+            // 文字列リテラルは、ムーブせずに参照する。
             this->data_ = io_string.data_;
             this->twice_size_ = io_string.twice_size_;
         }
@@ -483,7 +465,7 @@ class psyq::internal::shared_string_holder
         {
             // 文字列定数に使うメモリ領域を確保する。
             void* const local_constant(
-                typename this_type::constant_allocator(this->allocator_).allocate(
+                this->constant_allocator_.allocate(
                     this_type::count_allocate_size(in_size)));
             if (local_constant != nullptr)
             {
@@ -498,6 +480,22 @@ class psyq::internal::shared_string_holder
         }
         this->set_empty();
         return nullptr;
+    }
+
+    /** @brief 文字列定数を確保し、文字列をコピーする。
+        @param[in] in_string  コピー元となる文字列。
+     */
+    private: void create_duplicated(typename this_type::view const& in_string)
+    {
+        // 文字列定数を確保する。
+        auto const local_string(this->allocate_constant(in_string.size()));
+        if (local_string != nullptr)
+        {
+            // 文字列定数を初期化する。
+            this_type::traits_type::copy(
+                local_string, in_string.data(), in_string.size());
+            local_string[in_string.size()] = 0;
+        }
     }
 
     /** @brief 文字列定数を確保し、2つの文字列をコピーして結合する。
@@ -562,15 +560,16 @@ class psyq::internal::shared_string_holder
     /// @brief 保持してる文字列定数を解放する。
     private: void release_constant() PSYQ_NOEXCEPT
     {
-        this_type::release_constant(this->get_constant(), this->get_allocator());
+        this_type::release_constant(
+            this->get_constant(), this->constant_allocator_);
     }
     /** @brief 文字列定数を解放する。
         @param[in,out] io_constant  解放する文字列定数のヘッダ。
-        @param[in]     in_allocator 文字列定数の破棄に使うメモリ割当子。
+        @param[in,out] io_allocator 文字列定数の破棄に使うメモリ割当子。
      */
     private: static void release_constant(
         typename this_type::constant_header* const io_constant,
-        typename this_type::allocator_type const& in_allocator)
+        typename this_type::constant_allocator& io_allocator)
     PSYQ_NOEXCEPT
     {
         if (io_constant == nullptr)
@@ -587,7 +586,7 @@ class psyq::internal::shared_string_holder
         auto const local_allocate_size(
             this_type::count_allocate_size(io_constant->size));
         io_constant->~constant_header();
-        typename this_type::constant_allocator(in_allocator).deallocate(
+        io_allocator.deallocate(
             reinterpret_cast<typename this_type::constant_allocator::pointer>(
                 io_constant),
             local_allocate_size);
@@ -627,20 +626,12 @@ class psyq::internal::shared_string_holder
     };
     /// 文字列の先頭位置。
     typename this_type::traits_type::char_type const* data_;
-    /// 使っているメモリ割当子。
-    private: typename this_type::allocator_type allocator_;
-
-    //-------------------------------------------------------------------------
-    /// @cond
-    friend psyq::basic_shared_string<
-        typename template_char_traits::char_type,
-        template_char_traits,
-        template_allocator_type>;
-    /// @endcond
+    /// 文字列定数のメモリ割当子。
+    private: typename this_type::constant_allocator constant_allocator_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string_view を模した、immutableな共有文字列の保持子。
+/** @brief std::basic_string_view を模した、immutableな文字列の保持子。
 
     - immutableな文字列を保持する。
       - 共有の文字列定数は、被参照数で保持する。
@@ -670,30 +661,32 @@ class psyq::basic_shared_string:
             template_char_traits, template_allocator_type>>
                 base_type;
     private: typedef typename base_type::allocator_type base_allocator;
-    private: typedef typename base_type::base_type base_string;
-    private: typedef typename base_string::view base_view;
 
     //-------------------------------------------------------------------------
     /// @name 文字列の構築
     //@{
-    /** @brief 空文字列を構築する。メモリ確保は行わない。
+    /** @brief 空の文字列を構築する。メモリ確保は行わない。
         @param[in] in_allocator メモリ割当子の初期値。
      */
     public: explicit PSYQ_CONSTEXPR basic_shared_string(
-        typename base_type::allocator_type in_allocator = base_allocator())
+        typename base_type::allocator_type const& in_allocator = base_allocator())
     PSYQ_NOEXCEPT:
-        base_type(base_string(std::move(in_allocator)))
+        base_type(
+            base_type::base_type::make(
+                typename base_type::view(),
+                typename base_type::view(),
+                in_allocator))
     {}
 
-    /** @brief 文字列を参照する。メモリ確保は行わない。
-        @param[in] in_string コピー元の文字列。
+    /** @brief 文字列保持子をコピー構築する。メモリ確保は行わない。
+        @param[in] in_string コピー元となる文字列保持子。
      */
     public: basic_shared_string(this_type const& in_string) PSYQ_NOEXCEPT:
         base_type(in_string)
     {}
 
-    /** @brief 文字列を移動する。メモリ確保は行わない。
-        @param[in,out] io_string ムーブ元の文字列。
+    /** @brief 文字列保持子をムーブ構築する。メモリ確保は行わない。
+        @param[in,out] io_string ムーブ元となる文字列保持子。
      */
     public: basic_shared_string(this_type&& io_string) PSYQ_NOEXCEPT:
         base_type(std::move(io_string))
@@ -711,9 +704,9 @@ class psyq::basic_shared_string:
     public: template <std::size_t template_size>
     basic_shared_string(
         typename base_type::value_type const (&in_literal)[template_size],
-        typename base_type::allocator_type in_allocator = base_allocator())
+        typename base_type::allocator_type const& in_allocator = base_allocator())
     PSYQ_NOEXCEPT:
-        base_type(base_string(in_literal, std::move(in_allocator)))
+        base_type(base_type::base_type::make(in_literal, in_allocator))
     {}
 
     /** @brief メモリ確保を行い、共有文字列定数を構築する。
@@ -721,10 +714,12 @@ class psyq::basic_shared_string:
         @param[in] in_allocator メモリ割当子の初期値。
      */
     public: basic_shared_string(
-        typename base_type::base_type::view const& in_string,
-        typename base_type::allocator_type in_allocator = base_allocator())
+        typename base_type::view const& in_string,
+        typename base_type::allocator_type const& in_allocator = base_allocator())
     :
-        base_type(base_string(in_string, base_view(), std::move(in_allocator)))
+        base_type(
+            base_type::base_type::make(
+                in_string, typename base_type::view(), in_allocator))
     {}
 
     /** @brief メモリ確保を行い、共有文字列定数を構築する。
@@ -735,13 +730,13 @@ class psyq::basic_shared_string:
     public: basic_shared_string(
         typename base_type::const_pointer const in_data,
         typename base_type::size_type const in_size,
-        typename base_type::allocator_type in_allocator = base_allocator())
+        typename base_type::allocator_type const& in_allocator = base_allocator())
     :
         base_type(
-            base_string(
-                base_view(in_data, in_size),
-                base_view(),
-                std::move(in_allocator)))
+            base_type::base_type::make(
+                typename base_type::view(in_data, in_size),
+                typename base_type::view(),
+                in_allocator))
     {}
 
     /** @brief メモリ確保を行い、2つの文字列を連結した共有文字列定数を構築する。
@@ -750,25 +745,31 @@ class psyq::basic_shared_string:
         @param[in] in_allocator    メモリ割当子の初期値。
      */
     public: basic_shared_string(
-        typename base_type::base_type::view const& in_left_string,
-        typename base_type::base_type::view const& in_right_string,
-        typename base_type::allocator_type in_allocator = base_allocator())
+        typename base_type::view const& in_left_string,
+        typename base_type::view const& in_right_string,
+        typename base_type::allocator_type const& in_allocator = base_allocator())
     :
         base_type(
-            base_string(
-                in_left_string, in_right_string, std::move(in_allocator)))
+            base_type::base_type::make(
+                in_left_string, in_right_string, in_allocator))
     {}
     //@}
     //-------------------------------------------------------------------------
     /// @name 文字列の代入
     //@{
-    /// @copydoc psyq::internal::shared_string_holder::operator=(this_type const&)
+    /** @brief 文字列保持子をコピー代入する。メモリ確保は行わない。
+        @param[in] in_string コピー元となる文字列保持子。
+        @return *this
+     */
     public: this_type& operator=(this_type const& in_string)
     {
         this->base_type::base_type::operator=(in_string);
         return *this;
     }
-    /// @copydoc psyq::internal::shared_string_holder::operator=(this_type&&)
+    /** @brief 文字列保持子をムーブ代入する。メモリ確保は行わない。
+        @param[in,out] io_string コピー元となる文字列保持子。
+        @return *this
+     */
     public: this_type& operator=(this_type&& io_string) PSYQ_NOEXCEPT
     {
         this->base_type::base_type::operator=(std::move(io_string));
@@ -777,8 +778,7 @@ class psyq::basic_shared_string:
     /** @copydoc psyq::internal::shared_string_holder::assign_view()
         @return *this
      */
-    public: this_type& operator=(
-        typename base_type::base_type::view const& in_string)
+    public: this_type& operator=(typename base_type::view const& in_string)
     {
         this->base_type::base_type::assign_view(in_string);
         return *this;
@@ -811,7 +811,7 @@ class psyq::basic_shared_string:
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name 文字列の操作
+    /// @name 文字列のプロパティ
     //@{
     /// @copydoc psyq::internal::shared_string_holder::empty()
     public: bool empty() const PSYQ_NOEXCEPT

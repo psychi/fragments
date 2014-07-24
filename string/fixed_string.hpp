@@ -43,24 +43,24 @@
     @author Hillco Psychi (https://twitter.com/psychi)
     @brief @copybrief psyq::basic_fixed_string
  */
-#ifndef PSYQ_FIXED_STRING_HPP_
-#define PSYQ_FIXED_STRING_HPP_
+#ifndef PSYQ_STRING_STORAGE_HPP_
+#define PSYQ_STRING_STORAGE_HPP_
 
-#include<array>
-//#include "string/string_view_base.hpp"
+#include<type_traits>
+//#include "string/string_view.hpp"
 
 /// psyq::basic_fixed_string で使う、defaultの最大文字数。
-#ifndef PSYQ_BASIC_FIXED_STRING_MAX_SIZE_DEFAULT
-#define PSYQ_BASIC_FIXED_STRING_MAX_SIZE_DEFAULT 160
-#endif // !defined(PSYQ_BASIC_FIXED_STRING_MAX_SIZE_DEFAULT)
+#ifndef PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT
+#define PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT 160
+#endif // !defined(PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT)
 
 namespace psyq
 {
     /// @cond
     template<
         typename template_char_type,
-        std::size_t = PSYQ_BASIC_FIXED_STRING_MAX_SIZE_DEFAULT,
-        typename = PSYQ_BASIC_STRING_VIEW_TRAITS_DEFAULT>
+        std::size_t = PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT,
+        typename = PSYQ_STRING_VIEW_TRAITS_DEFAULT>
             class basic_fixed_string;
     /// @endcond
 
@@ -76,7 +76,7 @@ namespace psyq
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 文字の固定長配列を使った文字列の基底型。
+/** @brief 文字の固定長領域を使った文字列の基底型。
 
     - memory割り当てを一切行わない。
     - 文字列の終端がnull文字となっている保証はない。
@@ -93,14 +93,18 @@ class psyq::internal::fixed_size_string
 
     /// 文字特性の型。
     public: typedef template_char_traits traits_type;
+    static_assert(
+        std::is_pod<typename this_type::traits_type::char_type>::value,
+        "this_type::traits_type::char_type is not POD type.");
     /// 部分文字列の型。
-    protected: typedef psyq::internal::string_view_base<
+    private: typedef psyq::internal::string_view_base<
         typename this_type::traits_type>
             view;
-    /// 文字の配列。
-    private: typedef std::array<
-        typename this_type::traits_type::char_type, template_max_size>
-            char_array;
+    /// 文字列を格納する領域。
+    private: typedef typename std::aligned_storage<
+        sizeof(typename this_type::traits_type::char_type) * template_max_size,
+        std::alignment_of<typename this_type::traits_type::char_type>::value>
+            ::type storage_type;
 
     public: enum: std::size_t
     {
@@ -108,30 +112,15 @@ class psyq::internal::fixed_size_string
     };
 
     //-------------------------------------------------------------------------
-    /** @brief 空文字列を構築する。
-     */
-    protected: PSYQ_CONSTEXPR fixed_size_string() PSYQ_NOEXCEPT: size_(0) {}
+    /// @brief 空の文字列を構築する。
+    private: PSYQ_CONSTEXPR fixed_size_string() PSYQ_NOEXCEPT: size_(0) {}
 
-    /** @brief 文字列をcopyする。
-        @param[in] in_string copy元とする文字列。
+    /** @brief 文字列をコピーする。
+        @param[in] in_string コピー元となる文字列。
      */
-    protected: fixed_size_string(this_type const& in_string) PSYQ_NOEXCEPT:
-        size_(in_string.size())
+    protected: fixed_size_string(this_type const& in_string) PSYQ_NOEXCEPT
     {
-        this_type::traits_type::copy(
-            &this->array_[0], in_string.data(), in_string.size());
-    }
-
-    /** @brief 文字列をcopyする。
-        @param[in] in_string copy元とする文字列。
-     */
-    protected: fixed_size_string(typename this_type::view const& in_string)
-    PSYQ_NOEXCEPT:
-        size_((std::min<std::size_t>)(in_string.size(), this_type::MAX_SIZE))
-    {
-        PSYQ_ASSERT(in_string.size() <= this_type::MAX_SIZE);
-        this_type::traits_type::copy(
-            &this->array_[0], in_string.data(), this->size());
+        this->copy_string(in_string.data(), in_string.size());
     }
 
     /** @copydoc fixed_size_string(this_type const&)
@@ -142,14 +131,23 @@ class psyq::internal::fixed_size_string
         return *new(this) this_type(in_string);
     }
 
+    /** @brief 空の文字列を構築する。
+        @return 空の文字列。
+     */
+    protected: static PSYQ_CONSTEXPR this_type make() PSYQ_NOEXCEPT
+    {
+        return this_type();
+    }
+
     //-------------------------------------------------------------------------
-    /// @name 文字列の操作
+    /// @name 文字列のプロパティ
     //@{
     /// @copydoc this_type::view::data()
     public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type const* data()
     const PSYQ_NOEXCEPT
     {
-        return &this->array_[0];
+        return reinterpret_cast<typename this_type::traits_type::char_type const*>(
+            &this->storage_);
     }
 
     /// @copydoc this_type::view::size()
@@ -165,20 +163,42 @@ class psyq::internal::fixed_size_string
     }
     //@}
     //-------------------------------------------------------------------------
-    private: std::size_t size_;                     ///< 文字列の要素数。
-    private: typename this_type::char_array array_; ///< 文字を保存する配列。
+    /// @name 文字列の変更
+    //@{
+    /// @brief 文字列を空にする。
+    public: void clear() PSYQ_NOEXCEPT
+    {
+        this->size_ = 0;
+    }
+    //@}
+    /** @brief 文字列をコピーする。
+        @param[in] in_data コピー元となる文字列の先頭位置。
+        @param[in] in_size コピー元となる文字列の要素数。
+     */
+    protected: void copy_string(
+        typename traits_type::char_type const* const in_data,
+        std::size_t const in_size)
+    PSYQ_NOEXCEPT
+    {
+        PSYQ_ASSERT(in_size <= this_type::MAX_SIZE);
+        auto const local_size(
+            (std::min<std::size_t>)(in_size, this_type::MAX_SIZE));
+        auto const local_data(
+            reinterpret_cast<typename this_type::traits_type::char_type*>(
+                &this->storage_));
+        this->size_ = local_size;
+        this_type::traits_type::copy(local_data, in_data, local_size);
+    }
 
     //-------------------------------------------------------------------------
-    /// @cond
-    friend psyq::basic_fixed_string<
-        typename template_char_traits::char_type,
-        template_max_size,
-        template_char_traits>;
-    /// @endcond
+    /// 文字列を保存する領域。
+    private: typename this_type::storage_type storage_;
+    /// 文字列の要素数。
+    private: std::size_t size_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string_view を模した、固定長配列を使った文字列。
+/** @brief std::basic_string_view を模した、固定長領域を使った文字列。
 
     - memory割り当てを一切行わない。
     - 文字列の終端がnull文字となっている保証はない。
@@ -202,15 +222,18 @@ class psyq::basic_fixed_string:
     private: typedef basic_fixed_string this_type;
     /// this_type の基底型。
     public: typedef psyq::internal::string_view_interface<
-        psyq::internal::fixed_size_string<template_char_traits, template_max_size>>
-            base_type;
+        psyq::internal::fixed_size_string<
+            template_char_traits, template_max_size>>
+                base_type;
 
     //-------------------------------------------------------------------------
     /// @name constructor / destructor
     //@{
     /** @brief 空文字列を構築する。
      */
-    public: PSYQ_CONSTEXPR basic_fixed_string() PSYQ_NOEXCEPT {}
+    public: basic_fixed_string() PSYQ_NOEXCEPT:
+        base_type(base_type::base_type::make())
+    {}
 
     /** @brief 文字列をcopyする。
         @param[in] in_string copy元の文字列。
@@ -222,11 +245,11 @@ class psyq::basic_fixed_string:
     /** @brief 文字列をcopyする。
         @param[in] in_string copy元の文字列。
      */
-    public: basic_fixed_string(
-        typename base_type::base_type::view const& in_string)
-    PSYQ_NOEXCEPT
+    public: basic_fixed_string(typename base_type::view const& in_string)
+    PSYQ_NOEXCEPT:
+        base_type(base_type::base_type::make())
     {
-        new(this) typename base_type::base_type(in_string);
+        this->copy_string(in_string.data(), in_string.size());
     }
 
     /** @brief 文字列をcopyする。
@@ -236,10 +259,10 @@ class psyq::basic_fixed_string:
     public: basic_fixed_string(
         typename base_type::const_pointer const in_data,
         typename base_type::size_type const in_size)
-    PSYQ_NOEXCEPT
+    PSYQ_NOEXCEPT:
+        base_type(base_type::base_type::make())
     {
-        new(this) typename base_type::base_type(
-            typename base_type::base_type::view(in_data, in_size));
+        this->copy_string(in_data, in_size);
     }
     //@}
     //-------------------------------------------------------------------------
@@ -257,8 +280,7 @@ class psyq::basic_fixed_string:
     /** @copydoc basic_fixed_string(typename base_type::base_type::view const&)
         @return *this
      */
-    public: this_type& operator=(
-        typename base_type::base_type::view const& in_string)
+    public: this_type& operator=(typename base_type::view const& in_string)
     PSYQ_NOEXCEPT
     {
         return *new(this) this_type(in_string);
@@ -266,4 +288,4 @@ class psyq::basic_fixed_string:
     //@}
 };
 
-#endif // !defined(PSYQ_FIXED_STRING_HPP_)
+#endif // !defined(PSYQ_STRING_STORAGE_HPP_)

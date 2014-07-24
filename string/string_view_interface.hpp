@@ -186,7 +186,7 @@ class psyq::internal::string_view_interface: public template_base_string
     //-------------------------------------------------------------------------
     /// @name 文字列の変更
     //@{
-    /// @copydoc psyq::basic_shared_string::swap()
+    /// @copydoc psyq::basic_string_holder::swap()
     public: void swap(this_type& io_target) PSYQ_NOEXCEPT
     {
         this_type local_swap_temp(std::move(io_target));
@@ -319,7 +319,7 @@ class psyq::internal::string_view_interface: public template_base_string
     //-------------------------------------------------------------------------
     /// @name 文字列のプロパティ
     //@{
-    /// @copydoc psyq::basic_shared_string::empty()
+    /// @copydoc psyq::basic_string_holder::empty()
     public: PSYQ_CONSTEXPR bool empty() const PSYQ_NOEXCEPT
     {
         return this->size() <= 0;

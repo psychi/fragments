@@ -47,7 +47,7 @@
 #define PSYQ_STRING_TABLE_HPP_
 
 #include <unordered_map>
-//#include "psyq/string/shared_string.hpp"
+//#include "psyq/string/string_holder.hpp"
 
 namespace psyq
 {
@@ -55,10 +55,10 @@ namespace psyq
     template<typename> class string_table;
     /// @endcond
 
-    /// psyq::shared_string を使った、文字列の表。
+    /// psyq::string_holder を使った、文字列の表。
     typedef psyq::string_table<
-        std::unordered_map<std::size_t, psyq::shared_string>>
-            shared_string_table;
+        std::unordered_map<std::size_t, psyq::string_holder>>
+            string_holder_table;
 
     //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
     namespace internal
@@ -303,7 +303,7 @@ class psyq::string_table
         - std::unordered_map 互換の型。
         - this_type::cell_map::key_type は、文字列表の行の番号。
         - this_type::cell_map::mapped_type は、文字列表のcell文字列となる、
-          psyq::basic_shared_string 相当の文字列。
+          psyq::basic_string_holder 相当の文字列。
      */
     public: typedef template_cell_map cell_map;
 
@@ -331,7 +331,7 @@ class psyq::string_table
             rebind<typename this_type::column_map_element>::other>
                 column_map;
 
-    /// @brief 文字列表のcellとなる、 psyq::basic_shared_string 相当の文字列。
+    /// @brief 文字列表のcellとなる、 psyq::basic_string_holder 相当の文字列。
     public: typedef typename this_type::cell_map::mapped_type cell;
 
     /// @brief 文字列表のcell文字列への参照。
@@ -946,16 +946,16 @@ namespace psyq
     {
         inline void string_table()
         {
-            psyq::shared_string_table const local_string_table(
-                psyq::shared_string_table::make_column_map(
+            psyq::string_holder_table const local_string_table(
+                psyq::string_holder_table::make_column_map(
                     std::string(
                         "name,   path,            count                \n"
                         "taro,   taro.txt,        -12.34567890e+2, 3, 2\n"
                         "yamada, data/yamada.txt, 1234567890           \n")),
                 0);
 
-            psyq::shared_string local_shared_string("abc");
-            local_shared_string.get_allocator();
+            psyq::string_holder local_string_holder("abc");
+            local_string_holder.get_allocator();
 
             psyq::string_view local_name;
             PSYQ_ASSERT(

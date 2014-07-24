@@ -555,7 +555,7 @@ class psyq::internal::string_view_interface: public template_base_string
         return typename this_type::view(*this).starts_with(in_prefix);
     }
 
-    /// @copydoc psyq::basic_string_view::starts_with(this_type::traits_type::char_type const) const
+    /// @copydoc psyq::basic_string_view::starts_with(base_type::traits_type::char_type const) const
     public: PSYQ_CONSTEXPR bool starts_with(
         typename this_type::value_type const in_prefix)
     const PSYQ_NOEXCEPT
@@ -655,7 +655,7 @@ class psyq::internal::string_view_interface: public template_base_string
         return typename this_type::view(*this).ends_with(in_suffix);
     }
 
-    /// @copydoc psyq::basic_string_view::ends_with(this_type::traits_type::char_type const) const
+    /// @copydoc psyq::basic_string_view::ends_with(base_type::traits_type::char_type const) const
     public: PSYQ_CONSTEXPR bool ends_with(
         typename this_type::value_type const in_suffix)
     const PSYQ_NOEXCEPT

@@ -119,7 +119,16 @@ class psyq::basic_string_view:
     {}
 
     /** @brief 任意型の文字列を参照する。
-        @tparam template_string_type @copydoc psyq::internal::string_view_interface::base_type
+        @tparam template_string_type 参照する文字列の型。
+        - 文字列の先頭から末尾までのメモリ連続性が保証されてること。
+        - 文字列の先頭位置を取得するため、以下のpublicメンバ関数が使えること。
+          @code
+          template_base_string::traits_type::char_type const* template_base_string::data() const noexcept
+          @endcode
+        - 文字列の要素数を取得するため、以下のpublicメンバ関数が使えること。
+          @code
+          std::size_t template_base_string::size() const noexcept
+          @endcode
         @param[in] in_string 参照する文字列。
      */
     public: template<typename template_string_type>
@@ -140,10 +149,10 @@ class psyq::basic_string_view:
         base_type(base_type::base_type::make(in_data, in_size))
     {}
 
-    /** @brief 文字列を参照する。
+    /** @brief 文字列の一部を参照する。
         @param[in] in_string 参照する文字列。
-        @param[in] in_offset 参照する文字列の開始offset位置。
-        @param[in] in_count  参照する文字数の開始offset位置からの要素数。
+        @param[in] in_offset 参照する文字列の開始オフセット位置。
+        @param[in] in_count  参照する文字数の開始オフセット位置からの要素数。
      */
     public: PSYQ_CONSTEXPR basic_string_view(
         this_type const& in_string,
@@ -154,13 +163,12 @@ class psyq::basic_string_view:
     {}
     //@}
     //-------------------------------------------------------------------------
-    /// @name 文字列参照の代入
+    /// @name 文字列の代入
     //@{
     /** @copydoc basic_string_view(this_type const&)
         @return *this
      */
-    public: this_type& operator=(this_type const& in_string)
-    PSYQ_NOEXCEPT
+    public: this_type& operator=(this_type const& in_string) PSYQ_NOEXCEPT
     {
         return *new(this) this_type(in_string);
     }
@@ -182,7 +190,8 @@ class psyq::basic_string_view:
         return this->operator==(static_cast<base_type const&>(in_right));
     }
     /// @copydoc operator==(this_type const&) const
-    public: bool operator==(typename base_type::base_type const& in_right) const PSYQ_NOEXCEPT
+    public: bool operator==(typename base_type::base_type const& in_right)
+    const PSYQ_NOEXCEPT
     {
         return this->size() == in_right.size()
             && 0 == base_type::traits_type::compare(

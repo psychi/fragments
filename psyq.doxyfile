@@ -682,7 +682,7 @@ INPUT                  = \
                          ./string/string_view_interface.hpp \
                          ./string/string_view.hpp \
                          ./string/shared_string.hpp \
-                         ./string/fixed_string.hpp \
+                         ./string/string_storage.hpp \
                          ./string/string_table.hpp \
                          ./bit_algorithm.hpp \
                          ./fnv_hash.hpp \

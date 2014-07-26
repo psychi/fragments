@@ -90,9 +90,6 @@ class psyq::internal::string_holder_base
     public: typedef template_char_traits traits_type;
     /// メモリ割当子の型。
     public: typedef template_allocator_type allocator_type;
-    /// 部分文字列の型。
-    private: typedef psyq::internal::string_view_base<template_char_traits>
-        view;
     /// 文字列定数のヘッダ。
     private: struct constant_header
     {
@@ -180,21 +177,21 @@ class psyq::internal::string_holder_base
     //-------------------------------------------------------------------------
     /// @name 文字列のプロパティ
     //@{
-    /// @copydoc this_type::view::data()
+    /// @copydoc psyq::basic_string_view::data()
     public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type const* data()
     const PSYQ_NOEXCEPT
     {
         return this->data_;
     }
 
-    /// @copydoc this_type::view::size()
+    /// @copydoc psyq::basic_string_view::size()
     public: PSYQ_CONSTEXPR std::size_t size() const PSYQ_NOEXCEPT
     {
         return this->get_constant() != nullptr?
             this->constant_header_->size: this->twice_size_ >> 1;
     }
 
-    /// @copydoc this_type::view::max_size()
+    /// @copydoc psyq::basic_string_view::max_size()
     public: PSYQ_CONSTEXPR std::size_t max_size() const PSYQ_NOEXCEPT
     {
         return (std::numeric_limits<std::size_t>::max)();
@@ -237,7 +234,7 @@ class psyq::internal::string_holder_base
         std::swap(this->data_, io_target.data_);
     }
 
-    /** @brief 部分文字列を代入する。
+    /** @brief 文字列を代入する。
 
         - コピー元が空なら、空にする。メモリ確保しない。
         - コピー元と*thisが等値なら、何も変更しない。メモリ確保しない。
@@ -246,32 +243,34 @@ class psyq::internal::string_holder_base
           文字列リテラルとして代入する。
         - 上記以外はメモリ確保を行い、文字列定数を構築して代入する。
 
-        @param[in] in_string コピー元となる部分文字列。
+        @param[in] in_data コピー元となる文字列の先頭位置。
+        @param[in] in_size コピー元となる文字列の要素数。
      */
-    protected: void assign_view(typename this_type::view const& in_string)
+    protected: void assign_view(
+        typename this_type::traits_type::char_type const* const in_data,
+        std::size_t const in_size)
     {
         auto const local_constant(this->get_constant());
         auto const local_size(
             local_constant != nullptr?
                 local_constant->size: this->twice_size_ >> 1);
-        if (this->data() == in_string.data() && local_size == in_string.size())
+        if (this->data() == in_data && local_size == in_size)
         {
             // 等値な文字列なので、何もしない。
             return;
         }
         auto const local_contained(
-            this->data() <= in_string.data()
-            && in_string.data() < this->data() + local_size);
+            this->data() <= in_data && in_data < this->data() + local_size);
         if (local_constant == nullptr && local_contained)
         {
             // 非等値な文字列リテラルなので、メモリ確保せずに参照する。
-            this->set_literal(in_string.data(), in_string.size());
+            this->set_literal(in_data, in_size);
         }
         else
         {
             // 非等値な文字列なので、文字列定数を構築して保持する。
             this->set_empty();
-            this->duplicate(in_string);
+            this->concatenate(in_data, in_size, nullptr, 0);
             this_type::release_constant(
                 local_constant, this->constant_allocator_);
         }
@@ -314,19 +313,20 @@ class psyq::internal::string_holder_base
         return local_string;
     }
 
-    /** @brief メモリ確保を行い、2つの文字列を連結した文字列定数を構築する。
-        @param[in] in_left_string  コピー元の左辺文字列。
-        @param[in] in_right_string コピー元の右辺文字列。
-        @param[in] in_allocator    メモリ割当子の初期値。
+    /** @copydoc this_type::concatenate()
+        @param[in] in_allocator メモリ割当子の初期値。
         @return 文字列定数の保持子。
      */
     protected: static this_type make_constant_holder(
-        typename this_type::view const& in_left_string,
-        typename this_type::view const& in_right_string,
+        typename this_type::traits_type::char_type const* const in_head_data,
+        std::size_t const in_head_size,
+        typename this_type::traits_type::char_type const* const in_tail_data,
+        std::size_t const in_tail_size,
         typename this_type::allocator_type const& in_allocator)
     {
         this_type local_string(in_allocator);
-        local_string.concatenate(in_left_string, in_right_string);
+        local_string.concatenate(
+            in_head_data, in_head_size, in_tail_data, in_tail_size);
         return local_string;
     }
 
@@ -479,67 +479,55 @@ class psyq::internal::string_holder_base
         return nullptr;
     }
 
-    /** @brief メモリを確保し、部分文字列を文字列定数へコピーする。
-        @param[in] in_string コピー元となる文字列。
-     */
-    private: void duplicate(typename this_type::view const& in_string)
-    {
-        // 文字列定数を確保する。
-        auto const local_string(this->allocate_constant(in_string.size()));
-        if (local_string != nullptr)
-        {
-            // 文字列定数を初期化する。
-            this_type::traits_type::copy(
-                local_string, in_string.data(), in_string.size());
-            local_string[in_string.size()] = 0;
-        }
-    }
-
-    /** @brief メモリを確保し、2つの部分文字列を結合して文字列定数へコピーする。
-        @param[in] in_left_string  結合する左辺の文字列。
-        @param[in] in_right_string 結合する右辺の文字列。
+    /** @brief メモリを確保し、2つの文字列を連結して文字列定数へコピーする。
+        @param[in] in_head_data 連結する先頭文字列の先頭位置。
+        @param[in] in_head_size 連結する先頭文字列の要素数。
+        @param[in] in_tail_data 連結する末尾文字列の先頭位置。
+        @param[in] in_tail_size 連結する末尾文字列の要素数。
      */
     private: void concatenate(
-        typename this_type::view const& in_left_string,
-        typename this_type::view const& in_right_string)
+        typename this_type::traits_type::char_type const* const in_head_data,
+        std::size_t const in_head_size,
+        typename this_type::traits_type::char_type const* const in_tail_data,
+        std::size_t const in_tail_size)
     {
         // 文字列定数を確保する。
-        auto const local_size(in_left_string.size() + in_right_string.size());
-        auto const local_string(this->allocate_constant(local_size));
-        if (local_string != nullptr)
+        auto const local_size(in_head_size + in_tail_size);
+        auto const local_data(this->allocate_constant(local_size));
+        if (local_data != nullptr)
         {
-            // 文字列定数を初期化する。
+            // 文字列をコピーする。
             this_type::traits_type::copy(
-                local_string, in_left_string.data(), in_left_string.size());
+                local_data, in_head_data, in_head_size);
             this_type::traits_type::copy(
-                local_string + in_left_string.size(),
-                in_right_string.data(),
-                in_right_string.size());
-            local_string[local_size] = 0;
+                local_data + in_head_size, in_tail_data, in_tail_size);
+            local_data[local_size] = 0;
         }
     }
 
-    /** @brief メモリを確保し、部分文字列の文字を置換して文字列定数へコピーする。
-        @param[in] in_string   コピー元となる文字列。
+    /** @brief メモリを確保し、文字列の文字を置換して文字列定数へコピーする。
+        @param[in] in_data     コピー元となる文字列の先頭位置。
+        @param[in] in_size     コピー元となる文字列の要素数。
         @param[in] in_char_map 文字の置換に使う辞書。
      */
     private: template<typename template_map_type>
     void replace(
-        typename this_type::view const& in_string,
+        typename this_type::traits_type::char_type const* const in_data,
+        std::size_t const in_size,
         template_map_type const& in_char_map)
     {
-        auto const local_data(this->allocate_constant(in_string.size()));
+        auto const local_data(this->allocate_constant(in_size));
         if (local_data != nullptr)
         {
-            for (std::size_t i(0); i < in_string.size(); ++i)
+            for (std::size_t i(0); i < in_size; ++i)
             {
-                auto const local_source_char(*(in_string.data() + i));
+                auto const local_source_char(*(in_data + i));
                 auto const local_find_char(in_char_map.find(local_source_char));
                 local_data[i] = (
                     local_find_char != in_char_map.end()?
                         local_find_char->second: local_source_char);
             }
-            local_data[in_string.size()] = 0;
+            local_data[in_size] = 0;
         }
     }
 
@@ -670,9 +658,7 @@ class psyq::basic_string_holder:
     PSYQ_NOEXCEPT:
         base_type(
             base_type::base_type::make_constant_holder(
-                typename base_type::view(),
-                typename base_type::view(),
-                in_allocator))
+                nullptr, 0, nullptr, 0, in_allocator))
     {}
 
     /** @brief 文字列保持子をコピー構築する。メモリ確保は行わない。
@@ -710,7 +696,7 @@ class psyq::basic_string_holder:
     :
         base_type(
             base_type::base_type::make_constant_holder(
-                in_string, typename base_type::view(), in_allocator))
+                in_string.data(), in_string.size(), nullptr, 0, in_allocator))
     {}
 
     /** @brief メモリ確保を行い、文字列定数を構築する。
@@ -725,24 +711,26 @@ class psyq::basic_string_holder:
     :
         base_type(
             base_type::base_type::make_constant_holder(
-                typename base_type::view(in_data, in_size),
-                typename base_type::view(),
-                in_allocator))
+                in_data, in_size, nullptr, 0, in_allocator))
     {}
 
     /** @brief メモリ確保を行い、2つの文字列を連結した文字列定数を構築する。
-        @param[in] in_left_string  コピー元の左辺文字列。
-        @param[in] in_right_string コピー元の右辺文字列。
-        @param[in] in_allocator    メモリ割当子の初期値。
+        @param[in] in_head_string コピー元の先頭文字列。
+        @param[in] in_tail_string コピー元の末尾文字列。
+        @param[in] in_allocator   メモリ割当子の初期値。
      */
     public: basic_string_holder(
-        typename base_type::view const& in_left_string,
-        typename base_type::view const& in_right_string,
+        typename base_type::view const& in_head_string,
+        typename base_type::view const& in_tail_string,
         typename base_type::allocator_type const& in_allocator = base_allocator())
     :
         base_type(
             base_type::base_type::make_constant_holder(
-                in_left_string, in_right_string, in_allocator))
+                in_head_string.data(),
+                in_head_string.size(),
+                in_tail_string.data(),
+                in_tail_string.size(),
+                in_allocator))
     {}
     //@}
     //-------------------------------------------------------------------------
@@ -766,12 +754,21 @@ class psyq::basic_string_holder:
         this->base_type::base_type::operator=(std::move(io_string));
         return *this;
     }
-    /** @copydoc psyq::internal::string_holder_base::assign_view()
+    /** @brief 文字列を代入する。
+
+        - コピー元が空なら、空にする。メモリ確保しない。
+        - コピー元と*thisが等値なら、何も変更しない。メモリ確保しない。
+        - *thisが文字列リテラルを参照していて、かつ、
+          コピー元が*thisに内包される文字列なら、メモリ確保しない。
+          文字列リテラルとして代入する。
+        - 上記以外はメモリ確保を行い、文字列定数を構築して代入する。
+
+        @param[in] in_string コピー元となる文字列。
         @return *this
      */
     public: this_type& operator=(typename base_type::view const& in_string)
     {
-        this->base_type::base_type::assign_view(in_string);
+        this->base_type::base_type::assign_view(in_string.data(), in_string.size());
         return *this;
     }
     /** @copydoc base_type::assign_literal()

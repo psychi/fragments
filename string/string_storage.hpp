@@ -96,10 +96,6 @@ class psyq::internal::string_storage_base
     static_assert(
         std::is_pod<typename this_type::traits_type::char_type>::value,
         "this_type::traits_type::char_type is not POD type.");
-    /// 部分文字列の型。
-    private: typedef psyq::internal::string_view_base<
-        typename this_type::traits_type>
-            view;
     /// 文字列を格納する領域。
     private: typedef typename std::aligned_storage<
         sizeof(typename this_type::traits_type::char_type) * template_max_size,
@@ -142,7 +138,7 @@ class psyq::internal::string_storage_base
     //-------------------------------------------------------------------------
     /// @name 文字列のプロパティ
     //@{
-    /// @copydoc this_type::view::data()
+    /// @copydoc psyq::basic_string_view::data()
     public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type const* data()
     const PSYQ_NOEXCEPT
     {
@@ -150,13 +146,13 @@ class psyq::internal::string_storage_base
             &this->storage_);
     }
 
-    /// @copydoc this_type::view::size()
+    /// @copydoc psyq::basic_string_view::size()
     public: PSYQ_CONSTEXPR std::size_t size() const PSYQ_NOEXCEPT
     {
         return this->size_;
     }
 
-    /// @copydoc this_type::view::max_size()
+    /// @copydoc psyq::basic_string_view::max_size()
     public: PSYQ_CONSTEXPR std::size_t max_size() const PSYQ_NOEXCEPT
     {
         return this_type::MAX_SIZE;

@@ -197,6 +197,15 @@ class psyq::internal::string_holder_base
         return (std::numeric_limits<std::size_t>::max)();
     }
 
+    /** @brief 文字列が空か判定する。
+        @retval true  文字列が空である。
+        @retval false 文字列が空ではない。
+     */
+    public: PSYQ_CONSTEXPR bool empty() const PSYQ_NOEXCEPT
+    {
+        return this->data() == nullptr;
+    }
+
     /** @brief 文字のメモリ割当子を取得する。
         @return 文字のメモリ割当子。
      */
@@ -206,15 +215,6 @@ class psyq::internal::string_holder_base
         return typename this_type::allocator_type(this->constant_allocator_);
     }
     //@}
-    /** @brief 文字列が空か判定する。
-        @retval true  文字列が空である。
-        @retval false 文字列が空ではない。
-     */
-    protected: PSYQ_CONSTEXPR bool empty() const PSYQ_NOEXCEPT
-    {
-        return this->data() == nullptr;
-    }
-
     //-------------------------------------------------------------------------
     /// @name 文字列の変更
     //@{

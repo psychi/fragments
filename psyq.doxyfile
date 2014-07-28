@@ -688,6 +688,7 @@ INPUT                  = \
                          ./fnv_hash.hpp \
                          ./any_rtti.hpp \
                          ./any_storage.hpp \
+                         ./any_message.hpp \
                          ./geometric_vector.hpp \
                          ./geometric_shape.hpp \
                          ./geometric_aabb.hpp \

@@ -5,6 +5,9 @@
 #ifndef PSYQ_ANY_MESSAGE_HPP_
 #define PSYQ_ANY_MESSAGE_HPP_
 
+#include <functional>
+#include <unordered_map>
+
 #ifndef PSYQ_ANY_MESSAGE_OBJECT_KEY
 #define PSYQ_ANY_MESSAGE_OBJECT_KEY std::uint32_t
 #endif // !defined(PSYQ_ANY_MESSAGE_OBJECT_KEY)
@@ -44,7 +47,7 @@ class psyq::any_message_header
     /** @brief メッセージヘッダを構築する。
         @param[in] in_receiving_address メッセージ受信先アドレス。
         @param[in] in_receiving_port    メッセージ受信先ポート番号。
-        @param[in] in_sending_port      メッセージ送信元アドレス。
+        @param[in] in_sending_address   メッセージ送信元アドレス。
         @param[in] in_sending_port      メッセージ送信元ポート番号。
      */
     public: explicit PSYQ_CONSTEXPR any_message_header(
@@ -116,17 +119,13 @@ class psyq::any_message_method
 
     //-------------------------------------------------------------------------
     /** @brief 任意の引数を持つRPCメッセージ。
-        @tparam template_value @copydoc with_argument::value_type
      */
     public: template<typename template_value> class with_argument;
 
     //-------------------------------------------------------------------------
     /** @brief 引数を持たないメッセージを構築する。
-        @param[in] in_method_key        呼び出しメソッドの識別子。
-        @param[in] in_sequence          メッセージのシーケンス番号。
-        @param[in] in_receiving_address メッセージ受信先アドレス。
-        @param[in] in_receiving_port    メッセージ受信先ポート番号。
-        @param[in] in_sending_port      メッセージ送信元ポート番号。
+        @param[in] in_method_key     呼び出しメソッドの識別子。
+        @param[in] in_sequence_index メッセージのシーケンス番号。
      */
     public: explicit PSYQ_CONSTEXPR any_message_method(
         psyq::any_message_method_key const     in_method_key,
@@ -138,12 +137,9 @@ class psyq::any_message_method
     {}
 
     /** @brief メッセージを構築する。
-        @param[in] in_argument_type     メッセージ引数の型の識別子。
-        @param[in] in_method_key        呼び出しメソッドの識別子。
-        @param[in] in_sequence          メッセージのシーケンス番号。
-        @param[in] in_receiving_address メッセージ受信先アドレス。
-        @param[in] in_receiving_port    メッセージ受信先ポート番号。
-        @param[in] in_sending_port      メッセージ送信元ポート番号。
+        @param[in] in_argument_type  メッセージ引数の型の識別子。
+        @param[in] in_method_key     呼び出しメソッドの識別子。
+        @param[in] in_sequence_index メッセージのシーケンス番号。
      */
     protected: PSYQ_CONSTEXPR any_message_method(
         psyq::any_rtti_key const               in_argument_type,
@@ -196,7 +192,7 @@ class psyq::any_message_method
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 任意の引数を持つメッセージ。
-    @tparam template_value @copydoc psyq::any_message::with_argument::value_type
+    @tparam template_value @copydoc value_type
  */
 template<typename template_value>
 class psyq::any_message_method::with_argument: public psyq::any_message_method
@@ -254,8 +250,161 @@ class psyq::any_message_method::with_argument: public psyq::any_message_method
 class psyq::any_message_router
 {
     private: typedef any_message_router this_type; ///< thisが指す値の型。
+    private: typedef std::allocator<std::size_t> template_allocator;
+
+    /// メッセージ受信コールバック関数オブジェクト。
+    public: typedef std::function<
+        void(psyq::any_message_header const&, psyq::any_message_method const&)>
+            callback_functor;
+    /// メッセージ受信コールバック関数オブジェクトの保持子。
+    public: typedef std::shared_ptr<this_type::callback_functor>
+        callback_shared_ptr;
+    /// メッセージ受信コールバック関数オブジェクトの監視子。
+    public: typedef std::weak_ptr<this_type::callback_functor>
+        callback_weak_ptr;
+    /** @brief メッセージ受信コールバック関数の辞書のキー。
+
+        - 要素#0は、メッセージを受信するポート番号。
+        - 要素#1は、呼び出しメッセージの識別子。
+     */
+    public: typedef std::pair<
+        psyq::any_message_object_key, psyq::any_message_method_key>
+            callback_key;
+    /// コールバック関数辞書のキーからハッシュ値を生成する関数オブジェクト。
+    public: struct callback_hash_maker
+    {
+        std::size_t operator()(callback_key const& in_key) const
+        {
+            return static_cast<std::size_t>(in_key.first ^ in_key.second);
+        }
+    };
+    /// メッセージ受信コールバック関数の辞書。
+    public: typedef std::unordered_multimap<
+        this_type::callback_key,
+        this_type::callback_weak_ptr,
+        this_type::callback_hash_maker,
+        std::equal_to<this_type::callback_key>,
+        template_allocator>
+            callback_map;
 
     //-------------------------------------------------------------------------
+    /** @brief メッセージ受信コールバック関数の辞書を取得する。
+        @return メッセージ受信コールバック関数の辞書。
+     */
+    public: this_type::callback_map const& get_callback_map() const
+    {
+        return this->callback_map_;
+    }
+
+    /** @brief メッセージ受信コールバック関数を登録する。
+        @param[in] in_key     登録するメッセージ受信コールバック関数の辞書キー。
+        @param[in] in_functor 登録するメッセージ受信コールバック関数。
+     */
+    public: void register_callback(
+        this_type::callback_key const& in_key,
+        this_type::callback_shared_ptr const& in_functor)
+    {
+        auto const local_functor(in_functor.get());
+        if (local_functor != nullptr)
+        {
+            auto const local_position(
+                this->find_callback_iterator(in_key, *local_functor));
+            if (local_position == this->get_callback_map().end() ||
+                local_position->first != in_key)
+            {
+                this->callback_map_.insert(
+                    local_position,
+                    this_type::callback_map::value_type(in_key, in_functor));
+            }
+        }
+    }
+
+    /** @brief メッセージ受信コールバック関数を削除する。
+        @param[in] in_key     削除するメッセージ受信コールバック関数の辞書キー。
+        @param[in] in_functor 削除するメッセージ受信コールバック関数。
+     */
+    public: void unregister_callback(
+        this_type::callback_key const& in_key,
+        this_type::callback_shared_ptr const& in_functor)
+    {
+        auto const local_functor(in_functor.get());
+        if (local_functor != nullptr)
+        {
+            auto const local_iterator(
+                this->find_callback_iterator(in_key, *local_functor));
+            if (local_iterator != this->get_callback_map().end()
+                && local_iterator->first == in_key)
+            {
+                this->callback_map_.erase(local_iterator);
+            }
+        }
+    }
+
+    /** @brief メッセージ受信コールバック関数をすべて削除する。
+        @param[in] in_functor 削除するメッセージ受信コールバック関数。
+     */
+    public: void unregister_callback(
+        this_type::callback_functor const* const in_functor)
+    {
+        if (in_functor != nullptr)
+        {
+            for (
+                auto i(this->callback_map_.begin());
+                i != this->callback_map_.end();)
+            {
+                auto const local_functor(i->second.lock().get());
+                if (local_functor != nullptr && local_functor != in_functor)
+                {
+                    ++i;
+                }
+                else
+                {
+                    i = this->callback_map_.erase(i);
+                }
+            }
+        }
+    }
+
+    /** @brief メッセージを送信する。
+        @param[in] in_header    送信するメッセージのヘッダ。
+        @param[in] in_method    送信するメッセージのメソッド。
+        @param[in] in_parameter 送信するメッセージのメソッド引数。
+     */
+    public: template<typename template_parameter>
+    void send_message(
+        psyq::any_message_header const& in_header,
+        psyq::any_message_method const& in_method,
+        template_parameter in_parameter);
+
+    /** @brief メッセージを受信し、コールバック関数を呼び出す。
+        @param[in] in_header 受信したメッセージのヘッダ。
+        @param[in] in_method 受信したメッセージのメソッド。
+     */
+    public: void receive_message(
+        psyq::any_message_header const& in_header,
+        psyq::any_message_method const& in_method)
+    {
+        auto const local_key(
+            std::make_pair(
+                in_header.get_receiving_port(), in_method.get_method_key()));
+        for (
+            auto i(this->callback_map_.find(local_key));
+            i != this->callback_map_.end() && i->first == local_key;)
+        {
+            auto const local_holder(i->second.lock());
+            auto const local_functor(local_holder.get());
+            if (local_functor != nullptr)
+            {
+                (*local_functor)(in_header, in_method);
+                ++i;
+            }
+            else
+            {
+                i = this->callback_map_.erase(i);
+            }
+        }
+    }
+
     /** @brief このルータから送信するメッセージのヘッダを構築する。
         @param[in] in_receiving_address メッセージ受信先アドレス。
         @param[in] in_receiving_port    メッセージ受信先ポート番号。
@@ -275,6 +424,25 @@ class psyq::any_message_router
     }
 
     //-------------------------------------------------------------------------
+    private: this_type::callback_map::const_iterator find_callback_iterator(
+        this_type::callback_key const& in_key,
+        this_type::callback_functor const& in_functor)
+    const
+    {
+        auto local_iterator(this->get_callback_map().find(in_key));
+        while (
+            local_iterator != this->get_callback_map().end()
+            && local_iterator->first == in_key
+            && local_iterator->second.lock().get() != &in_functor)
+        {
+            ++local_iterator;
+        }
+        return local_iterator;
+    }
+
+    //-------------------------------------------------------------------------
+    /// メッセージ受信コールバック関数の辞書。
+    private: this_type::callback_map callback_map_;
     /// このルータのアドレス。
     private: psyq::any_message_object_key message_address_;
 };

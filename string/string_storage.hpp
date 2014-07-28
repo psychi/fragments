@@ -180,8 +180,7 @@ class psyq::internal::string_storage_base
         auto const local_size(
             (std::min<std::size_t>)(in_size, this_type::MAX_SIZE));
         auto const local_data(
-            reinterpret_cast<typename this_type::traits_type::char_type*>(
-                &this->storage_));
+            const_cast<typename this_type::traits_type::char_type*>(this->data()));
         this->size_ = local_size;
         this_type::traits_type::copy(local_data, in_data, local_size);
     }
@@ -200,6 +199,10 @@ class psyq::internal::string_storage_base
     - 文字列の終端がnull文字となっている保証はない。
 
     @warning base_type::MAX_SIZE より多い文字数は保持できない。
+
+    @note
+        せっかくインスタンス毎に個別のメモリ領域を持っているので、
+        std::stringと同じように変更できる文字列を扱えるようにしたい。
 
     @tparam template_char_type   @copydoc base_type::value_type
     @tparam template_max_size    @copydoc base_type::MAX_SIZE
@@ -223,23 +226,23 @@ class psyq::basic_string_storage:
                 base_type;
 
     //-------------------------------------------------------------------------
-    /// @name constructor / destructor
+    /// @name コンストラクタ
     //@{
     /** @brief 空文字列を構築する。
      */
-    public: basic_string_storage() PSYQ_NOEXCEPT:
+    public: PSYQ_CONSTEXPR basic_string_storage() PSYQ_NOEXCEPT:
         base_type(base_type::base_type::make())
     {}
 
-    /** @brief 文字列をcopyする。
-        @param[in] in_string copy元の文字列。
+    /** @brief 文字列をコピーする。
+        @param[in] in_string コピー元の文字列。
      */
     public: basic_string_storage(this_type const& in_string) PSYQ_NOEXCEPT:
         base_type(in_string)
     {}
 
-    /** @brief 文字列をcopyする。
-        @param[in] in_string copy元の文字列。
+    /** @brief 文字列をコピーする。
+        @param[in] in_string コピー元の文字列。
      */
     public: basic_string_storage(typename base_type::view const& in_string)
     PSYQ_NOEXCEPT:
@@ -248,9 +251,9 @@ class psyq::basic_string_storage:
         this->copy_string(in_string.data(), in_string.size());
     }
 
-    /** @brief 文字列をcopyする。
-        @param[in] in_data copy元の文字列の先頭位置。
-        @param[in] in_size copy元の文字列の要素数。
+    /** @brief 文字列をコピーする。
+        @param[in] in_data コピー元の文字列の先頭位置。
+        @param[in] in_size コピー元の文字列の要素数。
      */
     public: basic_string_storage(
         typename base_type::const_pointer const in_data,

@@ -261,7 +261,7 @@ class psyq::any_storage
     /// @name 動的型情報
     //@{
     /** @brief 格納値のRTTIを取得する。
-        @retval !=nullptr 格納値のRTTI。
+        @retval !=nullptr 格納値のRTTI。格納値が空なら、void型のRTTIを返す。
         @retval ==nullptr 格納値のRTTIがまだ構築されてない。
      */
     public: psyq::any_rtti const* get_rtti() const PSYQ_NOEXCEPT

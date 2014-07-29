@@ -1,450 +1,851 @@
 ﻿/** @file
+    @brief スレッド間RPCメッセージの送受信。
+    @copydetails psyq::any_message_router
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::any_rtti
  */
-#ifndef PSYQ_ANY_MESSAGE_HPP_
-#define PSYQ_ANY_MESSAGE_HPP_
+#ifndef PSYQ_RPC_MESSAGE_HPP_
+#define PSYQ_RPC_MESSAGE_HPP_
 
+#include <memory>
 #include <functional>
+#include <vector>
+#include <list>
 #include <unordered_map>
-
-#ifndef PSYQ_ANY_MESSAGE_OBJECT_KEY
-#define PSYQ_ANY_MESSAGE_OBJECT_KEY std::uint32_t
-#endif // !defined(PSYQ_ANY_MESSAGE_OBJECT_KEY)
-
-#ifndef PSYQ_ANY_MESSAGE_METHOD_KEY
-#define PSYQ_ANY_MESSAGE_METHOD_KEY std::uint32_t
-#endif // !defined(PSYQ_ANY_MESSAGE_METHOD_KEY)
-
-#ifndef PSYQ_ANY_MESSAGE_SEQUENCE_INDEX
-#define PSYQ_ANY_MESSAGE_SEQUENCE_INDEX std::uint32_t
-#endif // !defined(PSYQ_ANY_MESSAGE_SEQUENCE_INDEX)
 
 namespace psyq
 {
     /// @cond
-    class any_message_header;
-    class any_message_method;
-    class any_message_router;
+    template<typename> class any_message_tag;
+    template<typename> class any_message_call;
+    template<typename, typename> class any_message_receiver;
+    template<typename, typename> class any_message_packet;
+    template<typename, typename, typename> class any_message_router;
     /// @endcond
-
-    /// メッセージを使用するオブジェクトの識別子。
-    typedef PSYQ_ANY_MESSAGE_OBJECT_KEY any_message_object_key;
-    /// メッセージ呼び出しメソッドの識別子。
-    typedef PSYQ_ANY_MESSAGE_METHOD_KEY any_message_method_key;
-    /// メッセージのシーケンス番号。
-    typedef PSYQ_ANY_MESSAGE_SEQUENCE_INDEX any_message_sequence_index;
-    /// 未知のメッセージ使用者の識別子。
-    static any_message_object_key const ANY_MESSAGE_UNKNOWN_OBJECT = 0;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class psyq::any_message_header
+/** @brief メッセージの荷札。
+    @tparam template_key @copydoc key
+ */
+template<typename template_key>
+class psyq::any_message_tag
 {
-    private: typedef any_message_header this_type;
+    private: typedef any_message_tag this_type; ///< thisが指す値の型。
+
+    /// メッセージの荷札の属性値。
+    public: typedef template_key key;
+    static_assert(
+        std::is_integral<template_key>::value,
+        "'template_key' is not integral type.");
+
+    public: enum: typename this_type::key
+    {
+        EMPTY_KEY = 0, ///< 空の属性値。
+    };
 
     //-------------------------------------------------------------------------
-    /** @brief メッセージヘッダを構築する。
-        @param[in] in_receiving_address メッセージ受信先アドレス。
-        @param[in] in_receiving_port    メッセージ受信先ポート番号。
-        @param[in] in_sending_address   メッセージ送信元アドレス。
-        @param[in] in_sending_port      メッセージ送信元ポート番号。
+    /** @brief メッセージの荷札を構築する。
+        @param[in] in_sender_address   メッセージ送信アドレス。
+        @param[in] in_receiver_address メッセージ受信アドレス。
+        @param[in] in_receiver_mask    メッセージ受信マスク。
      */
-    public: explicit PSYQ_CONSTEXPR any_message_header(
-        psyq::any_message_object_key const in_receiving_address,
-        psyq::any_message_object_key const in_receiving_port,
-        psyq::any_message_object_key const in_sending_address,
-        psyq::any_message_object_key const in_sending_port)
+    public: explicit PSYQ_CONSTEXPR any_message_tag(
+        typename this_type::key const in_sender_address,
+        typename this_type::key const in_receiver_address,
+        typename this_type::key const in_receiver_mask)
     PSYQ_NOEXCEPT:
-        receiver_address_(in_receiving_address),
-        receiving_port_(in_receiving_port),
-        sending_address_(in_sending_address),
-        sending_port_(in_sending_port)
+        sender_address_(in_sender_address),
+        receiver_address_(in_receiver_address),
+        receiver_mask_(in_receiver_mask)
     {}
 
     //-------------------------------------------------------------------------
-    /** @brief メッセージ受信先アドレスを取得する。
-        @return メッセージ受信先アドレス。
+    /** @brief メッセージ送信アドレスを取得する。
+        @return メッセージ送信アドレス。
      */
-    public: PSYQ_CONSTEXPR psyq::any_message_object_key get_receiving_address()
+    public: PSYQ_CONSTEXPR typename this_type::key get_sender_address()
     const PSYQ_NOEXCEPT
     {
-        return this->sending_address_;
+        return this->sender_address_;
     }
 
-    /** @brief メッセージ受信先ポートを取得する。
-        @return メッセージ受信先ポート番号。
+    /** @brief メッセージ受信アドレスを取得する。
+        @return メッセージ受信アドレス。
      */
-    public: PSYQ_CONSTEXPR psyq::any_message_object_key get_receiving_port()
+    public: PSYQ_CONSTEXPR typename this_type::key get_receiver_address()
     const PSYQ_NOEXCEPT
     {
-        return this->receiving_port_;
+        return this->receiver_address_;
     }
 
-    /** @brief メッセージ送信元アドレスを取得する。
-        @return メッセージ送信元アドレス。
+    /** @brief メッセージ受信マスクを取得する。
+        @return メッセージ受信マスク。
      */
-    public: PSYQ_CONSTEXPR psyq::any_message_object_key get_sending_address()
+    public: PSYQ_CONSTEXPR typename this_type::key get_receiver_mask()
     const PSYQ_NOEXCEPT
     {
-        return this->sending_address_;
+        return this->receiver_mask_;
     }
 
-    /** @brief メッセージ送信元ポートを取得する。
-        @return メッセージ送信元ポート番号。
+    /** @brief メッセージ受信アドレスに該当するか判定する。
+        @retval true  メッセージ受信アドレスに該当する。
+        @retval false メッセージ受信アドレスに該当しない。
      */
-    public: PSYQ_CONSTEXPR psyq::any_message_object_key get_sending_port()
+    public: PSYQ_CONSTEXPR bool agree_receiver_address(
+        typename this_type::key const in_address)
     const PSYQ_NOEXCEPT
     {
-        return this->sending_port_;
+        return (in_address & this->get_receiver_mask())
+            == this->get_receiver_address();
     }
 
     //-------------------------------------------------------------------------
-    /// メッセージ受信先アドレス。
-    private: psyq::any_message_object_key receiver_address_;
-    /// メッセージ受信先ポート番号。
-    private: psyq::any_message_object_key receiving_port_;
-    /// メッセージ送信元アドレス。
-    private: psyq::any_message_object_key sending_address_;
-    /// メッセージ送信元ポート番号。
-    private: psyq::any_message_object_key sending_port_;
+    /// メッセージ送信アドレス。
+    private: typename this_type::key sender_address_;
+    /// メッセージ受信アドレス。
+    private: typename this_type::key receiver_address_;
+    /// メッセージ受信マスク。
+    private: typename this_type::key receiver_mask_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 引数を持たないRPCメッセージ。
+/** @brief 呼び出しメッセージ。
+    @tparam template_key @copydoc key
  */
-class psyq::any_message_method
+template<typename template_key>
+class psyq::any_message_call
 {
-    private: typedef any_message_method this_type;
+    private: typedef any_message_call this_type; ///< thisが指す値の型。
+
+    /// 呼び出しメッセージの属性値。
+    public: typedef template_key key;
+    static_assert(
+        std::is_integral<template_key>::value,
+        "'template_key' is not integral type.");
 
     //-------------------------------------------------------------------------
-    /** @brief 任意の引数を持つRPCメッセージ。
+    /** @brief 呼び出しメッセージを構築する。
+        @param[in] in_sequence sequence_ の初期値。
+        @param[in] in_method   method_ の初期値。
      */
-    public: template<typename template_value> class with_argument;
-
-    //-------------------------------------------------------------------------
-    /** @brief 引数を持たないメッセージを構築する。
-        @param[in] in_method_key     呼び出しメソッドの識別子。
-        @param[in] in_sequence_index メッセージのシーケンス番号。
-     */
-    public: explicit PSYQ_CONSTEXPR any_message_method(
-        psyq::any_message_method_key const     in_method_key,
-        psyq::any_message_sequence_index const in_sequence_index = 0)
+    public: PSYQ_CONSTEXPR any_message_call(
+        typename this_type::key const in_sequence,
+        typename this_type::key const in_method)
     PSYQ_NOEXCEPT:
-        argument_type_(psyq::ANY_RTTI_VOID_KEY),
-        method_key_(in_method_key),
-        sequence_index_(in_sequence_index)
-    {}
-
-    /** @brief メッセージを構築する。
-        @param[in] in_argument_type  メッセージ引数の型の識別子。
-        @param[in] in_method_key     呼び出しメソッドの識別子。
-        @param[in] in_sequence_index メッセージのシーケンス番号。
-     */
-    protected: PSYQ_CONSTEXPR any_message_method(
-        psyq::any_rtti_key const               in_argument_type,
-        psyq::any_message_method_key const     in_method_key,
-        psyq::any_message_sequence_index const in_sequence_index)
-    PSYQ_NOEXCEPT:
-        argument_type_((
-            PSYQ_ASSERT(in_argument_type != psyq::ANY_RTTI_VOID_KEY),
-            in_argument_type)),
-        method_key_(in_method_key),
-        sequence_index_(in_sequence_index)
+        sequence_(in_sequence),
+        method_(in_method)
     {}
 
     //-------------------------------------------------------------------------
-    /** @brief メッセージ引数の型を取得する。
-        @return メッセージ引数の型の識別子。
+    /** @brief 呼び出しの順序番号を取得する。
+        @return @copydoc sequence_
      */
-    public: PSYQ_CONSTEXPR psyq::any_rtti_key get_argument_type()
+    public: PSYQ_CONSTEXPR typename this_type::key get_sequence()
     const PSYQ_NOEXCEPT
     {
-        return this->argument_type_;
+        return this->sequence_;
     }
 
-    /** @brief 呼び出しメソッドを取得する。
-        @return 呼び出しメソッドの識別子。
+    /** @brief 呼び出しメソッドの種別を取得する。
+        @return @copydoc method_
      */
-    public: PSYQ_CONSTEXPR psyq::any_message_method_key get_method_key()
+    public: PSYQ_CONSTEXPR typename this_type::key get_method()
     const PSYQ_NOEXCEPT
     {
-        return this->method_key_;
-    }
-
-    /** @brief メッセージのシーケンス番号を取得する。
-        @return メッセージのシーケンス番号。
-     */
-    public: PSYQ_CONSTEXPR psyq::any_message_sequence_index get_sequence_index()
-    const PSYQ_NOEXCEPT
-    {
-        return this->sequence_index_;
+        return this->method_;
     }
 
     //-------------------------------------------------------------------------
-    /// メッセージ引数の型識別子。
-    private: psyq::any_rtti_key argument_type_;
-    /// 呼び出しメソッドの識別子。
-    private: psyq::any_message_method_key method_key_;
-    /// メッセージのシーケンス番号。
-    private: psyq::any_message_sequence_index sequence_index_;
+    /// @brief 呼び出しの順序番号。
+    private: typename this_type::key sequence_;
+    /// @brief 呼び出しメソッドの種別番号。
+    private: typename this_type::key method_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 任意の引数を持つメッセージ。
-    @tparam template_value @copydoc value_type
+/** @brief 引数を持たないメッセージのパケット。
+    @tparam template_tag_key  @copydoc psyq::any_message_tag::key
+    @tparam template_call_key @copydoc psyq::any_message_call::key
  */
-template<typename template_value>
-class psyq::any_message_method::with_argument: public psyq::any_message_method
+template<typename template_tag_key, typename template_call_key>
+class psyq::any_message_packet
 {
-    private: typedef with_argument this_type; ///< thisが指す値の型。
-    public: typedef psyq::any_message_method base_type; ///< this_type の基底型。
+    private: typedef any_message_packet this_type; ///< thisが指す値の型。
+
+    /// メッセージの荷札。
+    public: typedef psyq::any_message_tag<template_tag_key> tag;
+    /// 呼び出しメッセージ。
+    public: typedef psyq::any_message_call<template_call_key> call;
+
+    /// @cond
+    public: template<typename template_parameter> class parametric;
+    public: template<std::size_t template_size> class external;
+    /// @endcond
 
     //-------------------------------------------------------------------------
-    public: typedef template_value value_type; ///< メッセージの引数。
-
-    //-------------------------------------------------------------------------
-    /** @brief メッセージを構築する。
-        @param[in] in_method_key     呼び出しメソッドの識別子。
-        @param[in] in_argument       メッセージ引数の値。
-        @param[in] in_sequence_index メッセージのシーケンス番号。
+    /** @brief メッセージパケットを構築する。
+        @param[in] in_tag  this_type::tag_ の初期値。
+        @param[in] in_call this_type::call_ の初期値。
      */
-    public: with_argument(
-        typename psyq::any_message_method_key const     in_method_key,
-        typename this_type::value_type&&                     in_argument,
-        typename psyq::any_message_sequence_index const in_sequence_index = 0)
-    :
-        base_type(
-            psyq::any_rtti::find_key<template_value>(),
-            in_method_key,
-            in_sequence_index),
-        argument_(std::move(in_argument))
+    public: PSYQ_CONSTEXPR any_message_packet(
+        typename this_type::tag const& in_tag,
+        typename this_type::call const& in_call)
+    PSYQ_NOEXCEPT:
+        tag_(in_tag),
+        call_(in_call)
     {}
 
-    /// @copydoc with_argument
-    public: with_argument(
-        typename psyq::any_message_method_key const     in_method_key,
-        typename this_type::value_type const&                in_argument,
-        typename psyq::any_message_sequence_index const in_sequence_index = 0)
-    :
-        base_type(
-            psyq::any_rtti::find_key<template_value>(),
-            in_method_key,
-            in_sequence_index),
-        argument_(in_argument)
-    {}
+    public: virtual ~any_message_packet() PSYQ_NOEXCEPT {}
+
+    /** @brief メッセージの荷札を取得する。
+        @return メッセージの荷札。
+     */
+    public: PSYQ_CONSTEXPR typename this_type::tag const& get_tag()
+    const PSYQ_NOEXCEPT
+    {
+        return this->tag_;
+    }
+
+    /** @brief 呼び出しメッセージを取得する。
+        @return 呼び出しメッセージ。
+     */
+    public: PSYQ_CONSTEXPR typename this_type::call const& get_call()
+    const PSYQ_NOEXCEPT
+    {
+        return this->call_;
+    }
 
     /** @brief メッセージ引数を取得する。
-        @return メッセージ引数。
+        @retval !=nullptr メッセージ引数の先頭位置。
+        @retval ==nullptr メッセージ引数を持ってない。
      */
-    typename this_type::value_type const& get_argument() const PSYQ_NOEXCEPT
+    public: virtual void const* get_parameter() const PSYQ_NOEXCEPT
     {
-        return this->argument_;
+        return nullptr;
     }
 
     //-------------------------------------------------------------------------
-    private: typename this_type::value_type argument_; ///< メッセージの引数。
+    private: typename this_type::tag tag_;   ///< メッセージの荷札。
+    private: typename this_type::call call_; ///< 呼び出しメッセージ。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 任意型の引数を持つメッセージのパケット。
+    @tparam template_tag_key  @copydoc psyq::any_message_tag::key
+    @tparam template_call_key @copydoc psyq::any_message_call::key
+    @tparam template_parameter @copydoc parameter
+ */
+template<typename template_tag_key, typename template_call_key>
+template<typename template_parameter>
+class psyq::any_message_packet<template_tag_key, template_call_key>::parametric:
+    public psyq::any_message_packet<template_tag_key, template_call_key>
+{
+    private: typedef parametric this_type;  ///< thisが指す値の型。
+    /// this_type の基底型。
+    public: typedef psyq::any_message_packet<template_tag_key, template_call_key>
+        base_type;
+
+    /// メッセージの引数。
+    public: typedef template_parameter parameter;
+
+    /** @brief メッセージパケットを構築する。
+        @param[in] in_tag       base_type::tag_ の初期値。
+        @param[in] in_call      base_type::call_ の初期値。
+        @param[in] in_parameter this_type::parameter_ の初期値。
+     */
+    public: PSYQ_CONSTEXPR parametric(
+        typename this_type::tag const& in_tag,
+        typename this_type::call const& in_call,
+        typename this_type::parameter in_parameter)
+    PSYQ_NOEXCEPT:
+        base_type(in_tag, in_call),
+        parameter_(std::move(in_parameter))
+    {}
+
+    public: void const* get_parameter() const PSYQ_NOEXCEPT override
+    {
+        return &this->parameter_;
+    }
+
+    private: typename this_type::parameter parameter_; ///< メッセージの引数。
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief メッセージ受信器。
+    @tparam template_tag_key  @copydoc psyq::any_message_tag::key
+    @tparam template_call_key @copydoc psyq::any_message_call::key
+ */
+template<typename template_tag_key, typename template_call_key>
+class psyq::any_message_receiver
+{
+    private: typedef any_message_receiver this_type; ///< thisが指す値の型。
+
+    /// メッセージ受信器の保持子。
+    public: typedef std::shared_ptr<this_type> shared_ptr;
+    /// メッセージ受信器の監視子。
+    public: typedef std::weak_ptr<this_type> weak_ptr;
+    /// メッセージ受信関数の引数となるメッセージパケット。
+    public: typedef psyq::any_message_packet<template_tag_key, template_call_key>
+        packet;
+    /// @copydoc functor_
+    public: typedef std::function<void(typename this_type::packet const&)>
+        functor;
+
+    //-------------------------------------------------------------------------
+    /** @brief メッセージ受信器を構築する。
+        @param[in] in_functor functor_ の初期値。
+        @param[in] in_address address_ の初期値。
+     */
+    public: PSYQ_CONSTEXPR any_message_receiver(
+        typename this_type::functor in_functor,
+        typename this_type::packet::tag::key const in_address)
+    :
+        functor_((PSYQ_ASSERT(bool(in_functor)), std::move(in_functor))),
+        address_(in_address)
+    {}
+
+    //-------------------------------------------------------------------------
+    /// immutable値として扱いたいので、代入演算子は使用禁止。
+    private: this_type operator=(this_type const& in_source)
+    {
+        this->functor_ = in_source.get_functor();
+        this->address_ = in_source.get_address();
+        return *this;
+    }
+
+    /// immutable値として扱いたいので、代入演算子は使用禁止。
+    private: this_type operator=(this_type&& io_source)
+    {
+        this->functor_ = std::move(in_source.functor_);
+        this->address_ = in_source.get_address();
+        return *this;
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief メッセージ受信関数オブジェクトを取得する。
+        @return @copydoc functor_
+     */
+    public: PSYQ_CONSTEXPR typename this_type::functor const& get_functor()
+    const PSYQ_NOEXCEPT
+    {
+        return this->functor_;
+    }
+
+    /** @brief メッセージ受信アドレスを取得する。
+        @return @copydoc address_
+     */
+    public: PSYQ_CONSTEXPR typename this_type::packet::tag::key get_address()
+    const PSYQ_NOEXCEPT
+    {
+        return this->address_;
+    }
+
+    /** @brief メッセージ受信関数を呼び出す。
+        @param[in] in_packet 受信したメッセージパケット。
+     */
+    public: void receive_message(typename this_type::packet const& in_packet)
+    {
+        if (in_packet.get_tag().agree_receiver_address(this->get_address())
+            && bool(this->functor_))
+        {
+            this->functor_(in_packet);
+        }
+    }
+
+    //-------------------------------------------------------------------------
+    /// メッセージ受信関数オブジェクト。
+    private: typename this_type::functor functor_;
+    /// メッセージ受信アドレス。
+    private: typename this_type::packet::tag::key address_;
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief メッセージ中継器。
+
+    - psyq::any_message_router をメッセージ送受信アドレスを指定して構築する。
+    - psyq::any_message_router::register_receiver() でメッセージ受信関数を登録する。
+    - psyq::any_message_router::send_message() でメッセージを送信すると、
+      psyq::any_message_router::register_receiver() で登録したメッセージ受信関数が呼び出される。
+
+    @tparam template_tag_key   @copydoc psyq::any_message_tag::key
+    @tparam template_call_key  @copydoc psyq::any_message_call::key
+    @tparam template_allocator @copydoc psyq::any_message_router::allocator_type
+ */
+template<
+    typename template_tag_key,
+    typename template_call_key,
+    typename template_allocator>
 class psyq::any_message_router
 {
     private: typedef any_message_router this_type; ///< thisが指す値の型。
-    private: typedef std::allocator<std::size_t> template_allocator;
 
-    /// メッセージ受信コールバック関数オブジェクト。
-    public: typedef std::function<
-        void(psyq::any_message_header const&, psyq::any_message_method const&)>
-            callback_functor;
-    /// メッセージ受信コールバック関数オブジェクトの保持子。
-    public: typedef std::shared_ptr<this_type::callback_functor>
-        callback_shared_ptr;
-    /// メッセージ受信コールバック関数オブジェクトの監視子。
-    public: typedef std::weak_ptr<this_type::callback_functor>
-        callback_weak_ptr;
-    /** @brief メッセージ受信コールバック関数の辞書のキー。
+    /// コンテナに用いるメモリ割当子。
+    public: typedef template_allocator allocator_type;
 
-        - 要素#0は、メッセージを受信するポート番号。
-        - 要素#1は、呼び出しメッセージの識別子。
-     */
-    public: typedef std::pair<
-        psyq::any_message_object_key, psyq::any_message_method_key>
-            callback_key;
-    /// コールバック関数辞書のキーからハッシュ値を生成する関数オブジェクト。
-    public: struct callback_hash_maker
+    /// メッセージ受信器。
+    public: typedef psyq::any_message_receiver<template_tag_key, template_call_key>
+        receiver;
+
+    /// メッセージのメソッド種別からハッシュ値を生成する関数オブジェクト。
+    private: struct method_hash
     {
-        std::size_t operator()(callback_key const& in_key) const
+        PSYQ_CONSTEXPR std::size_t operator()(
+            typename this_type::receiver::packet::call::key const in_method)
+        const PSYQ_NOEXCEPT
         {
-            return static_cast<std::size_t>(in_key.first ^ in_key.second);
+            return static_cast<std::size_t>(in_method);
         }
     };
-    /// メッセージ受信コールバック関数の辞書。
-    public: typedef std::unordered_multimap<
-        this_type::callback_key,
-        this_type::callback_weak_ptr,
-        this_type::callback_hash_maker,
-        std::equal_to<this_type::callback_key>,
+
+    /// @copydoc receiver_map_
+    private: typedef std::unordered_multimap<
+        typename this_type::receiver::packet::call::key,
+        typename this_type::receiver::weak_ptr,
+        typename this_type::method_hash,
+        std::equal_to<typename this_type::receiver::packet::call::key>,
         template_allocator>
-            callback_map;
+            receiver_map;
+
+    /// @copydoc provisional_list_
+    private: typedef std::list<
+        typename this_type::receiver_map::value_type, template_allocator>
+            provisional_list;
+
+    /// メッセージパケットの保持子。
+    private: typedef std::unique_ptr<
+        typename this_type::receiver::packet,
+        void(*)(typename this_type::receiver::packet* const)>
+            packet_unique_ptr;
+
+    /// メッセージパケットの動的配列。
+    private: typedef std::vector<
+        typename this_type::packet_unique_ptr, template_allocator>
+            packet_array;
 
     //-------------------------------------------------------------------------
-    /** @brief メッセージ受信コールバック関数の辞書を取得する。
-        @return メッセージ受信コールバック関数の辞書。
+    /** @brief メッセージ中継器を構築する。
+        @param[in] in_address   構築する中継器のメッセージ送受信アドレス。
+        @param[in] in_allocator メモリ割当子の初期値。
      */
-    public: this_type::callback_map const& get_callback_map() const
+    public: any_message_router(
+        typename this_type::receiver::packet::tag::key const in_address,
+        typename this_type::allocator_type const& in_allocator)
+    PSYQ_NOEXCEPT:
+        receiver_map_(in_allocator),
+        provisional_list_(in_allocator),
+        packet_array_(in_allocator),
+        address_((
+            PSYQ_ASSERT(
+                in_address != this_type::receiver::packet::tag::EMPTY_KEY),
+            in_address)),
+        transmitting_(false)
+    {}
+
+    /// コピー構築子は使用禁止。
+    private: any_message_router(this_type const&);
+
+    /** @brief ムーブ構築子。
+        @param[in,out] io_source ムーブ元インスタンス。
+     */
+    public: any_message_router(this_type&& io_source) PSYQ_NOEXCEPT:
+        receiver_map_(io_source.receiver_map_.get_allocator()),
+        provisional_list_(io_source.provisional_list_.get_allocator()),
+        packet_array_(io_source.packet_array_.get_allocator()),
+        address_(this_type::receiver::packet::tag::EMPTY_KEY),
+        transmitting_(false)
     {
-        return this->callback_map_;
+        if (!this->move(std::move(io_source)))
+        {
+            PSYQ_ASSERT(false);
+        }
     }
 
-    /** @brief メッセージ受信コールバック関数を登録する。
-        @param[in] in_key     登録するメッセージ受信コールバック関数の辞書キー。
-        @param[in] in_functor 登録するメッセージ受信コールバック関数。
+    /// コピー代入演算子は使用禁止。
+    private: this_type& operator=(this_type const&);
+
+    /** @brief ムーブ代入演算子。
+        @param[in,out] io_source ムーブ元インスタンス。
+        @return *this
      */
-    public: void register_callback(
-        this_type::callback_key const& in_key,
-        this_type::callback_shared_ptr const& in_functor)
+    public: this_type& operator=(this_type&& io_source)
     {
-        auto const local_functor(in_functor.get());
-        if (local_functor != nullptr)
+        if (!this->move(std::move(io_source)))
         {
-            auto const local_position(
-                this->find_callback_iterator(in_key, *local_functor));
-            if (local_position == this->get_callback_map().end() ||
-                local_position->first != in_key)
+            PSYQ_ASSERT(false);
+        }
+        return *this;
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief メッセージの送受信に使うアドレスを取得する。
+        @return メッセージの送受信に使うアドレス。
+     */
+    public: PSYQ_CONSTEXPR typename this_type::receiver::packet::tag::key const get_address()
+    const PSYQ_NOEXCEPT
+    {
+        return this->address_;
+    }
+
+    /** @brief このルータから送信するメッセージの荷札を構築する。
+        @param[in] in_receiver_address メッセージ受信アドレス。
+        @param[in] in_receiver_mask    メッセージ受信マスク。
+     */
+    public: PSYQ_CONSTEXPR typename this_type::receiver::packet::tag make_receiver_tag(
+        typename this_type::receiver::packet::tag::key const in_receiver_address,
+        typename this_type::receiver::packet::tag::key const in_receiver_mask =
+            ~this_type::receiver::packet::tag::EMPTY_KEY)
+    const PSYQ_NOEXCEPT
+    {
+        return typename this_type::receiver::packet::tag(
+            this->get_address(), in_receiver_address, in_receiver_mask);
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief メッセージ受信器を登録する。
+
+        this_type::unregister_receiver で登録を除去できる。
+
+        @param[in] in_method   登録するメッセージ受信メソッドの種別。
+        @param[in] in_receiver 登録するメッセージ受信器。
+     */
+    public: void register_receiver(
+        typename this_type::receiver::packet::call::key const in_method,
+        typename this_type::receiver::shared_ptr const& in_receiver)
+    {
+        // 仮登録する。 transmit() で実際に登録される。
+        this->provisional_list_.emplace_back(
+            typename this_type::receiver_map::value_type(in_method, in_receiver));
+    }
+
+    /** @brief メッセージ受信器の登録を除去する。
+
+        this_type::register_receiver() で登録したメッセージ受信器を解放する。
+
+        @param[in] in_receiver 登録を除去するメッセージ受信器。
+     */
+    public: void unregister_receiver(
+        typename this_type::receiver const* const in_receiver)
+    {
+        if (in_receiver != nullptr)
+        {
+            // メッセージ受信器の辞書から削除する。
+            for (auto& local_value: this->receiver_map_)
             {
-                this->callback_map_.insert(
-                    local_position,
-                    this_type::callback_map::value_type(in_key, in_functor));
+                auto const local_receiver(local_value.second.lock().get());
+                if (local_receiver == nullptr || local_receiver == in_receiver)
+                {
+                    local_value.second.reset();
+                }
+            }
+
+            // 仮登録リストからも削除する。
+            for (auto& local_value: this->provisional_list_)
+            {
+                if (local_value.second.lock().get() == in_receiver)
+                {
+                    local_value.second.reset();
+                }
             }
         }
     }
 
-    /** @brief メッセージ受信コールバック関数を削除する。
-        @param[in] in_key     削除するメッセージ受信コールバック関数の辞書キー。
-        @param[in] in_functor 削除するメッセージ受信コールバック関数。
+    /** @brief メッセージ受信器の登録を除去する。
+
+        this_type::register_receiver() で登録したメッセージ受信器を解放する。
+
+        @param[in] in_method   登録を除去するメッセージ受信器のメソッド番号。
+        @param[in] in_receiver 登録を除去するメッセージ受信器。
      */
-    public: void unregister_callback(
-        this_type::callback_key const& in_key,
-        this_type::callback_shared_ptr const& in_functor)
+    public: void unregister_receiver(
+        typename this_type::receiver::packet::call::key const in_method,
+        typename this_type::receiver const* const in_receiver)
     {
-        auto const local_functor(in_functor.get());
-        if (local_functor != nullptr)
+        if (in_receiver != nullptr)
         {
+            // メッセージ受信器の辞書から削除する。
             auto const local_iterator(
-                this->find_callback_iterator(in_key, *local_functor));
-            if (local_iterator != this->get_callback_map().end()
-                && local_iterator->first == in_key)
+                this_type::find_receiver_iterator(
+                    this->receiver_map_, in_method, in_receiver));
+            if (local_iterator != this->receiver_map_.end()
+                && local_iterator->first == in_method)
             {
-                this->callback_map_.erase(local_iterator);
+                const_cast<typename this_type::receiver::weak_ptr&>
+                    (local_iterator->second).reset();
+            }
+
+            // 仮登録リストからも削除する。
+            for (auto& local_value: this->provisional_list_)
+            {
+                if (local_value.first == in_method
+                    && local_value.second.lock().get() == in_receiver)
+                {
+                    local_value.second.reset();
+                }
             }
         }
     }
 
-    /** @brief メッセージ受信コールバック関数をすべて削除する。
-        @param[in] in_functor 削除するメッセージ受信コールバック関数。
+    //-------------------------------------------------------------------------
+    /** @brief 引数のないメッセージを送信する。
+        @param[in] in_tag  送信するメッセージの荷札。
+        @param[in] in_call 送信する呼び出しメッセージ。
      */
-    public: void unregister_callback(
-        this_type::callback_functor const* const in_functor)
+    public: bool send_message(
+        typename this_type::receiver::packet::tag const& in_tag,
+        typename this_type::receiver::packet::call const& in_call)
     {
-        if (in_functor != nullptr)
+        typename this_type::allocator_type::template
+            rebind<typename this_type::receiver::packet>::other
+                local_allocator;
+        auto const local_storage(local_allocator.allocate(1));
+        if (local_storage == nullptr)
         {
-            for (
-                auto i(this->callback_map_.begin());
-                i != this->callback_map_.end();)
-            {
-                auto const local_functor(i->second.lock().get());
-                if (local_functor != nullptr && local_functor != in_functor)
-                {
-                    ++i;
-                }
-                else
-                {
-                    i = this->callback_map_.erase(i);
-                }
-            }
+            PSYQ_ASSERT(false);
+            return false;
         }
+        this->packet_array_.push_back(
+            typename this_type::packet_unique_ptr(
+                new(local_storage) typename this_type::receiver::packet(
+                    in_tag, in_call),
+                this_type::destroy_packet<typename this_type::receiver::packet>));
+        return true;
     }
 
-    /** @brief メッセージを送信する。
-        @param[in] in_header    送信するメッセージのヘッダ。
-        @param[in] in_method    送信するメッセージのメソッド。
-        @param[in] in_parameter 送信するメッセージのメソッド引数。
+    /** @brief 引数のあるメッセージを送信する。
+        @param[in] in_tag       送信するメッセージの荷札。
+        @param[in] in_call      送信する呼び出しメッセージ。
+        @param[in] in_parameter メッセージの引数。
      */
     public: template<typename template_parameter>
-    void send_message(
-        psyq::any_message_header const& in_header,
-        psyq::any_message_method const& in_method,
-        template_parameter in_parameter);
-
-    /** @brief メッセージを受信し、コールバック関数を呼び出す。
-        @param[in] in_header 受信したメッセージのヘッダ。
-        @param[in] in_method 受信したメッセージのメソッド。
-     */
-    public: void receive_message(
-        psyq::any_message_header const& in_header,
-        psyq::any_message_method const& in_method)
+    bool send_parameteric_message(
+        typename this_type::receiver::packet::tag const& in_tag,
+        typename this_type::receiver::packet::call const& in_call,
+        template_parameter in_parameter)
     {
-        auto const local_key(
-            std::make_pair(
-                in_header.get_receiving_port(), in_method.get_method_key()));
-        for (
-            auto i(this->callback_map_.find(local_key));
-            i != this->callback_map_.end() && i->first == local_key;)
+        typedef typename this_type::receiver::packet::template
+            parametric<template_parameter>
+                parametric_packet;
+        typename this_type::allocator_type::template
+            rebind<parametric_packet>::other
+                local_allocator;
+        auto const local_storage(local_allocator.allocate(1));
+        if (local_storage == nullptr)
         {
-            auto const local_holder(i->second.lock());
-            auto const local_functor(local_holder.get());
-            if (local_functor != nullptr)
-            {
-                (*local_functor)(in_header, in_method);
-                ++i;
-            }
-            else
-            {
-                i = this->callback_map_.erase(i);
-            }
+            PSYQ_ASSERT(false);
+            return false;
         }
+        this->packet_array_.push_back(
+            typename this_type::packet_unique_ptr(
+                new(local_storage) parametric_packet(
+                    in_tag, in_call, std::move(in_parameter)),
+                this_type::destroy_packet<parametric_packet>));
+        return true;
     }
 
-    /** @brief このルータから送信するメッセージのヘッダを構築する。
-        @param[in] in_receiving_address メッセージ受信先アドレス。
-        @param[in] in_receiving_port    メッセージ受信先ポート番号。
-        @param[in] in_sending_port      メッセージ送信元アドレス。
+    /** @brief メッセージを受信し、メッセージ受信関数を呼び出す。
+        @param[in] in_packet 受信するメッセージのパケット。
      */
-    public: psyq::any_message_header make_header(
-        psyq::any_message_object_key const in_receiving_address,
-        psyq::any_message_object_key const in_receiving_port = psyq::ANY_MESSAGE_UNKNOWN_OBJECT,
-        psyq::any_message_object_key const in_sending_port = psyq::ANY_MESSAGE_UNKNOWN_OBJECT)
-    const
+    public: void receive_message(
+        typename this_type::receiver::packet const& in_packet)
     {
-        return psyq::any_message_header(
-            in_receiving_address,
-            in_receiving_port,
-            this->message_address_,
-            in_sending_port);
+        this_type::transmit_packet(this->receiver_map_, in_packet);
     }
 
     //-------------------------------------------------------------------------
-    private: this_type::callback_map::const_iterator find_callback_iterator(
-        this_type::callback_key const& in_key,
-        this_type::callback_functor const& in_functor)
-    const
+    public: bool transmit()
     {
-        auto local_iterator(this->get_callback_map().find(in_key));
+        if (this->is_transmitting())
+        {
+            return false;
+        }
+        this->transmitting_ = true;
+        this_type::remove_empty_receiver(this->receiver_map_);
+        this_type::merge_receiver_container(this->receiver_map_, this->provisional_list_);
+        this->provisional_list_.clear();
+        this_type::transmit_packet(this->receiver_map_, this->packet_array_);
+        this->transmitting_ = false;
+        return true;
+    }
+
+    public: PSYQ_CONSTEXPR bool is_transmitting() const PSYQ_NOEXCEPT
+    {
+        return this->transmitting_;
+    }
+
+    //-------------------------------------------------------------------------
+    private: bool move(this_type&& io_source)
+    {
+        if (this->is_transmitting() || io_source.is_transmitting())
+        {
+            return false;
+        }
+        io_source.transmitting_ = true;
+        this->transmitting_ = true;
+        this->receiver_map_ = std::move(io_source.receiver_map_);
+        this->provisional_list_ = std::move(io_source.provisional_list_);
+        this->packet_array_ = std::move(io_source.packet_array_);
+        this->address_ = io_source.get_address();
+        io_source.address_ = this_type::receiver::packet::tag::EMPTY_KEY;
+        this->transmitting_ = false;
+        io_source.transmitting_ = false;
+        return true;
+    }
+
+    private: static typename this_type::receiver_map::const_iterator
+    find_receiver_iterator(
+        typename this_type::receiver_map const& in_receiver_map,
+        typename this_type::receiver::packet::call::key const in_method,
+        void const* const in_receiver)
+    PSYQ_NOEXCEPT
+    {
+        auto local_iterator(in_receiver_map.find(in_method));
         while (
-            local_iterator != this->get_callback_map().end()
-            && local_iterator->first == in_key
-            && local_iterator->second.lock().get() != &in_functor)
+            local_iterator != in_receiver_map.end()
+            && local_iterator->first == in_method
+            && local_iterator->second.lock().get() != in_receiver)
         {
             ++local_iterator;
         }
         return local_iterator;
     }
 
+    /** @brief 空になったメッセージ受信器を削除する。
+        @param[in,out] io_receiver_map 空のメッセージ受信器を削除する辞書。
+     */
+    private: static void remove_empty_receiver(
+        typename this_type::receiver_map& io_receiver_map)
+    {
+        for (auto i(io_receiver_map.begin()); i != io_receiver_map.end();)
+        {
+            if (i->second.lock().get() != nullptr)
+            {
+                ++i;
+            }
+            else
+            {
+                i = io_receiver_map.erase(i);
+            }
+        }
+    }
+
+    /** @brief 仮登録されたメッセージ受信器を、実際に登録する。
+        @param[in,out] io_receiver_map     メッセージ受信器を登録する辞書。
+        @param[in]     in_provisional_list 仮登録されたメッセージ受信器のリスト。
+     */
+    private: static void merge_receiver_container(
+        typename this_type::receiver_map& io_receiver_map,
+        typename this_type::provisional_list const& in_provisional_list)
+    {
+        for (auto& local_provision: in_provisional_list)
+        {
+            auto const local_receiver(local_provision.second.lock().get());
+            if (local_receiver != nullptr)
+            {
+                auto const local_position(
+                    this_type::find_receiver_iterator(
+                        io_receiver_map, local_provision.first, local_receiver));
+                if (local_position == io_receiver_map.end() ||
+                    local_position->first != local_provision.first)
+                {
+                    io_receiver_map.emplace_hint(
+                        local_position, std::move(local_provision));
+                }
+            }
+        }
+    }
+
+    private: static void transmit_packet(
+        typename this_type::receiver_map const& in_receiver_map,
+        typename this_type::packet_array& io_packet_array)
+    {
+        auto const local_packet_array(std::move(io_packet_array));
+        io_packet_array.clear();
+        io_packet_array.reserve(local_packet_array.size());
+        for (auto& local_packet_holder: local_packet_array)
+        {
+            auto const local_packet(local_packet_holder.get());
+            if (local_packet != nullptr)
+            {
+                this_type::transmit_packet(in_receiver_map, *local_packet);
+            }
+            else
+            {
+                PSYQ_ASSERT(false);
+            }
+        }
+    }
+
+    private: static void transmit_packet(
+        typename this_type::receiver_map const& in_receiver_map,
+        typename this_type::receiver::packet const& in_packet)
+    {
+        auto const local_method(in_packet.get_call().get_method());
+        for (
+            auto i(in_receiver_map.find(local_method));
+            i != in_receiver_map.end() && i->first == local_method;
+            ++i)
+        {
+            auto const local_holder(i->second.lock());
+            auto const local_receiver(local_holder.get());
+            if (local_receiver != nullptr)
+            {
+                local_receiver->receive_message(in_packet);
+            }
+        }
+    }
+
+    private: template<typename template_packet>
+    static void destroy_packet(
+        typename this_type::receiver::packet* const in_packet)
+    {
+        if (in_packet != nullptr)
+        {
+            typename this_type::allocator_type::template
+                rebind<template_packet>::other
+                    local_allocator;
+            local_allocator.destroy(in_packet);
+            local_allocator.deallocate(
+                static_cast<template_packet*>(in_packet), 1);
+        }
+    }
+
     //-------------------------------------------------------------------------
-    /// メッセージ受信コールバック関数の辞書。
-    private: this_type::callback_map callback_map_;
-    /// このルータのアドレス。
-    private: psyq::any_message_object_key message_address_;
+    /// メッセージ受信器の辞書。
+    private: typename this_type::receiver_map receiver_map_;
+    /// 仮登録したメッセージ受信器のリスト。
+    private: typename this_type::provisional_list provisional_list_;
+    /// 中継するパケットの配列。
+    private: typename this_type::packet_array packet_array_;
+    /// このルータのメッセージ送受信アドレス。
+    private: typename this_type::receiver::packet::tag::key address_;
+    /// メッセージ中継の途中かどうか。
+    private: bool transmitting_;
 };
 
-#endif // !defined(PSYQ_ANY_MESSAGE_HPP_)
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+namespace psyq
+{
+    namespace test
+    {
+        inline void any_message()
+        {
+            typedef psyq::any_message_router<
+                std::uint32_t, std::uint32_t, std::allocator<void*>>
+                    message_router;
+
+            message_router local_router(0x7f000001, message_router::allocator_type());
+            local_router.send_message(
+                local_router.make_receiver_tag(local_router.get_address()),
+                message_router::receiver::packet::call(0, 1));
+            local_router.send_parameteric_message(
+                local_router.make_receiver_tag(local_router.get_address()),
+                message_router::receiver::packet::call(0, 1),
+                0.5);
+            local_router.transmit();
+            local_router.unregister_receiver(0, nullptr);
+            local_router.unregister_receiver(nullptr);
+        }
+    }
+}
+
+#endif // !defined(PSYQ_RPC_MESSAGE_HPP_)

@@ -299,7 +299,7 @@ class psyq::any_message_receiver
     public: PSYQ_CONSTEXPR any_message_receiver(
         typename this_type::functor in_functor,
         typename this_type::packet::tag::key const in_address)
-    :
+    PSYQ_NOEXCEPT:
         functor_((PSYQ_ASSERT(bool(in_functor)), std::move(in_functor))),
         address_(in_address)
     {}
@@ -314,7 +314,7 @@ class psyq::any_message_receiver
     }
 
     /// immutable値として扱いたいので、代入演算子は使用禁止。
-    private: this_type operator=(this_type&& io_source)
+    private: this_type operator=(this_type&& io_source) PSYQ_NOEXCEPT
     {
         this->functor_ = std::move(in_source.functor_);
         this->address_ = in_source.get_address();
@@ -480,8 +480,8 @@ class psyq::any_message_router
     /** @brief メッセージの送受信に使うアドレスを取得する。
         @return メッセージの送受信に使うアドレス。
      */
-    public: PSYQ_CONSTEXPR typename this_type::receiver::packet::tag::key const get_address()
-    const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR typename this_type::receiver::packet::tag::key const
+    get_address() const PSYQ_NOEXCEPT
     {
         return this->address_;
     }
@@ -490,10 +490,12 @@ class psyq::any_message_router
         @param[in] in_receiver_address メッセージ受信アドレス。
         @param[in] in_receiver_mask    メッセージ受信マスク。
      */
-    public: PSYQ_CONSTEXPR typename this_type::receiver::packet::tag make_receiver_tag(
-        typename this_type::receiver::packet::tag::key const in_receiver_address,
-        typename this_type::receiver::packet::tag::key const in_receiver_mask =
-            ~this_type::receiver::packet::tag::EMPTY_KEY)
+    public: PSYQ_CONSTEXPR typename this_type::receiver::packet::tag
+    make_receiver_tag(
+        typename this_type::receiver::packet::tag::key const
+            in_receiver_address,
+        typename this_type::receiver::packet::tag::key const
+            in_receiver_mask = ~this_type::receiver::packet::tag::EMPTY_KEY)
     const PSYQ_NOEXCEPT
     {
         return typename this_type::receiver::packet::tag(
@@ -514,7 +516,8 @@ class psyq::any_message_router
     {
         // 仮登録する。 transmit() で実際に登録される。
         this->provisional_list_.emplace_back(
-            typename this_type::receiver_map::value_type(in_method, in_receiver));
+            typename this_type::receiver_map::value_type(
+                in_method, in_receiver));
     }
 
     /** @brief メッセージ受信器の登録を除去する。
@@ -660,8 +663,8 @@ class psyq::any_message_router
         }
         this->transmitting_ = true;
         this_type::remove_empty_receiver(this->receiver_map_);
-        this_type::merge_receiver_container(this->receiver_map_, this->provisional_list_);
-        this->provisional_list_.clear();
+        this_type::merge_receiver_container(
+            this->receiver_map_, this->provisional_list_);
         this_type::transmit_packet(this->receiver_map_, this->packet_array_);
         this->transmitting_ = false;
         return true;
@@ -730,13 +733,15 @@ class psyq::any_message_router
 
     /** @brief 仮登録されたメッセージ受信器を、実際に登録する。
         @param[in,out] io_receiver_map     メッセージ受信器を登録する辞書。
-        @param[in]     in_provisional_list 仮登録されたメッセージ受信器のリスト。
+        @param[in,out] io_provisional_list 仮登録されたメッセージ受信器のリスト。
      */
     private: static void merge_receiver_container(
         typename this_type::receiver_map& io_receiver_map,
-        typename this_type::provisional_list const& in_provisional_list)
+        typename this_type::provisional_list& io_provisional_list)
     {
-        for (auto& local_provision: in_provisional_list)
+        auto const local_provisional_list(std::move(io_provisional_list));
+        io_provisional_list.clear();
+        for (auto& local_provision: local_provisional_list)
         {
             auto const local_receiver(local_provision.second.lock().get());
             if (local_receiver != nullptr)

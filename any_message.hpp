@@ -19,6 +19,7 @@ namespace psyq
     template<typename> class any_message_call;
     template<typename, typename> class any_message_receiver;
     template<typename, typename> class any_message_packet;
+    template<typename, typename> class any_message_wrapper;
     template<typename, typename, typename> class any_message_router;
     /// @endcond
 }
@@ -163,7 +164,7 @@ class psyq::any_message_call
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 引数を持たないメッセージのパケット。
+/** @brief メッセージパケットの基底型。
     @tparam template_tag_key  @copydoc psyq::any_message_tag::key
     @tparam template_call_key @copydoc psyq::any_message_call::key
  */
@@ -179,7 +180,6 @@ class psyq::any_message_packet
 
     /// @cond
     public: template<typename template_parameter> class parametric;
-    public: template<std::size_t template_size> class external;
     /// @endcond
 
     //-------------------------------------------------------------------------
@@ -194,8 +194,6 @@ class psyq::any_message_packet
         tag_(in_tag),
         call_(in_call)
     {}
-
-    public: virtual ~any_message_packet() PSYQ_NOEXCEPT {}
 
     /** @brief メッセージの荷札を取得する。
         @return メッセージの荷札。
@@ -215,22 +213,13 @@ class psyq::any_message_packet
         return this->call_;
     }
 
-    /** @brief メッセージ引数を取得する。
-        @retval !=nullptr メッセージ引数の先頭位置。
-        @retval ==nullptr メッセージ引数を持ってない。
-     */
-    public: virtual void const* get_parameter() const PSYQ_NOEXCEPT
-    {
-        return nullptr;
-    }
-
     //-------------------------------------------------------------------------
     private: typename this_type::tag tag_;   ///< メッセージの荷札。
     private: typename this_type::call call_; ///< 呼び出しメッセージ。
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 任意型の引数を持つメッセージのパケット。
+/** @brief 任意型の引数を持つメッセージパケット。
     @tparam template_tag_key  @copydoc psyq::any_message_tag::key
     @tparam template_call_key @copydoc psyq::any_message_call::key
     @tparam template_parameter @copydoc parameter
@@ -244,7 +233,6 @@ class psyq::any_message_packet<template_tag_key, template_call_key>::parametric:
     /// this_type の基底型。
     public: typedef psyq::any_message_packet<template_tag_key, template_call_key>
         base_type;
-
     /// メッセージの引数。
     public: typedef template_parameter parameter;
 
@@ -262,12 +250,79 @@ class psyq::any_message_packet<template_tag_key, template_call_key>::parametric:
         parameter_(std::move(in_parameter))
     {}
 
-    public: void const* get_parameter() const PSYQ_NOEXCEPT override
+    public: PSYQ_CONSTEXPR parametric(this_type&& io_source) PSYQ_NOEXCEPT:
+        base_type(io_source.get_tag(), io_source.get_call()),
+        parameter_(std::move(io_source.parameter_))
+    {}
+
+    public: typename this_type::parameter const& get_parameter()
+    const PSYQ_NOEXCEPT
     {
-        return &this->parameter_;
+        return this->parameter_;
+    }
+
+    public: this_type& operator=(this_type&& io_source) PSYQ_NOEXCEPT
+    {
+        if (this != &io_source)
+        {
+            static_assert<base_type&>(*this) = std::move(io_source);
+            this->parameter_ = std::move(io_source.parameter_);
+        }
+        return *this;
     }
 
     private: typename this_type::parameter parameter_; ///< メッセージの引数。
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief メッセージラッパーの基底型。
+    @tparam template_tag_key  @copydoc psyq::any_message_tag::key
+    @tparam template_call_key @copydoc psyq::any_message_call::key
+ */
+template<typename template_tag_key, typename template_call_key>
+class psyq::any_message_wrapper
+{
+    private: typedef any_message_wrapper this_type;
+    public: typedef psyq::any_message_packet<template_tag_key, template_call_key> packet;
+    /// @cond
+    public: template<typename template_packet> class concrete;
+    /// @endcond
+
+    protected: any_message_wrapper() PSYQ_NOEXCEPT {}
+
+    public: virtual ~any_message_wrapper() PSYQ_NOEXCEPT {}
+
+    public: virtual typename this_type::packet const& get_packet()
+    const PSYQ_NOEXCEPT = 0;
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief メッセージラッパーの具象型。
+    @tparam template_tag_key  @copydoc psyq::any_message_tag::key
+    @tparam template_call_key @copydoc psyq::any_message_call::key
+    @tparam template_packet   @copydoc this_type::packet
+ */
+template<typename template_tag_key, typename template_call_key>
+template<typename template_packet>
+class psyq::any_message_wrapper<template_tag_key, template_call_key>::concrete:
+    public psyq::any_message_wrapper<template_tag_key, template_call_key>
+{
+    private: typedef concrete this_type;
+    public: typedef psyq::any_message_wrapper<template_tag_key, template_call_key> base_type;
+    /// ラップしてるメッセージパケット。
+    public: typedef template_packet packet;
+
+    public: concrete(typename this_type::packet in_packet) PSYQ_NOEXCEPT:
+        packet_(std::move(in_packet))
+    {}
+
+    public: typename base_type::packet const& get_packet()
+    const PSYQ_NOEXCEPT override
+    {
+        return this->packet_;
+    }
+
+    private: typename this_type::packet packet_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -293,8 +348,8 @@ class psyq::any_message_receiver
 
     //-------------------------------------------------------------------------
     /** @brief メッセージ受信器を構築する。
-        @param[in] in_functor functor_ の初期値。
-        @param[in] in_address address_ の初期値。
+        @param[in] in_functor this_type::functor_ の初期値。
+        @param[in] in_address this_type::address_ の初期値。
      */
     public: PSYQ_CONSTEXPR any_message_receiver(
         typename this_type::functor in_functor,
@@ -411,13 +466,16 @@ class psyq::any_message_router
         typename this_type::receiver_map::value_type, template_allocator>
             provisional_list;
 
-    /// メッセージパケットの保持子。
+    private: typedef psyq::any_message_wrapper<template_tag_key, template_call_key>
+        packet_wrapper;
+
+    /// メッセージラッパーの保持子。
     private: typedef std::unique_ptr<
-        typename this_type::receiver::packet,
-        void(*)(typename this_type::receiver::packet* const)>
+        typename this_type::packet_wrapper,
+        void(*)(typename this_type::packet_wrapper* const)>
             packet_unique_ptr;
 
-    /// メッセージパケットの動的配列。
+    /// メッセージラッパーの動的配列。
     private: typedef std::vector<
         typename this_type::packet_unique_ptr, template_allocator>
             packet_array;
@@ -597,24 +655,12 @@ class psyq::any_message_router
         typename this_type::receiver::packet::tag const& in_tag,
         typename this_type::receiver::packet::call const& in_call)
     {
-        typename this_type::allocator_type::template
-            rebind<typename this_type::receiver::packet>::other
-                local_allocator;
-        auto const local_storage(local_allocator.allocate(1));
-        if (local_storage == nullptr)
-        {
-            PSYQ_ASSERT(false);
-            return false;
-        }
-        this->packet_array_.push_back(
-            typename this_type::packet_unique_ptr(
-                new(local_storage) typename this_type::receiver::packet(
-                    in_tag, in_call),
-                this_type::destroy_packet<typename this_type::receiver::packet>));
-        return true;
+        return this_type::create_packet_wrapper(
+            this->packet_array_,
+            typename this_type::receiver::packet(in_tag, in_call));
     }
 
-    /** @brief 引数のあるメッセージを送信する。
+    /** @brief 任意型の引数を持つプロセス内メッセージを送信する。
         @param[in] in_tag       送信するメッセージの荷札。
         @param[in] in_call      送信する呼び出しメッセージ。
         @param[in] in_parameter メッセージの引数。
@@ -625,25 +671,23 @@ class psyq::any_message_router
         typename this_type::receiver::packet::call const& in_call,
         template_parameter in_parameter)
     {
-        typedef typename this_type::receiver::packet::template
-            parametric<template_parameter>
-                parametric_packet;
-        typename this_type::allocator_type::template
-            rebind<parametric_packet>::other
-                local_allocator;
-        auto const local_storage(local_allocator.allocate(1));
-        if (local_storage == nullptr)
-        {
-            PSYQ_ASSERT(false);
-            return false;
-        }
-        this->packet_array_.push_back(
-            typename this_type::packet_unique_ptr(
-                new(local_storage) parametric_packet(
-                    in_tag, in_call, std::move(in_parameter)),
-                this_type::destroy_packet<parametric_packet>));
-        return true;
+        return this_type::create_packet_wrapper(
+            this->packet_array_,
+            typename this_type::receiver::packet::template
+                parametric<template_parameter>(
+                    in_tag, in_call, std::move(in_parameter)));
     }
+
+    /** @brief POD型の引数を持つプロセス外メッセージを送信する。
+        @param[in] in_tag       送信するメッセージの荷札。
+        @param[in] in_call      送信する呼び出しメッセージ。
+        @param[in] in_parameter メッセージの引数。必ずPOD型。
+     */
+    public: template<typename template_parameter>
+    bool send_external_message(
+        typename this_type::receiver::packet::tag const& in_tag,
+        typename this_type::receiver::packet::call const& in_call,
+        template_parameter in_parameter);
 
     /** @brief メッセージを受信し、メッセージ受信関数を呼び出す。
         @param[in] in_packet 受信するメッセージのパケット。
@@ -768,10 +812,10 @@ class psyq::any_message_router
         io_packet_array.reserve(local_packet_array.size());
         for (auto& local_packet_holder: local_packet_array)
         {
-            auto const local_packet(local_packet_holder.get());
-            if (local_packet != nullptr)
+            auto const local_packet_wrapper(local_packet_holder.get());
+            if (local_packet_wrapper != nullptr)
             {
-                this_type::transmit_packet(in_receiver_map, *local_packet);
+                this_type::transmit_packet(in_receiver_map, *local_packet_wrapper);
             }
             else
             {
@@ -782,9 +826,10 @@ class psyq::any_message_router
 
     private: static void transmit_packet(
         typename this_type::receiver_map const& in_receiver_map,
-        typename this_type::receiver::packet const& in_packet)
+        typename this_type::packet_wrapper const& in_wrapper)
     {
-        auto const local_method(in_packet.get_call().get_method());
+        auto& local_packet(in_wrapper.get_packet());
+        auto const local_method(local_packet.get_call().get_method());
         for (
             auto i(in_receiver_map.find(local_method));
             i != in_receiver_map.end() && i->first == local_method;
@@ -794,23 +839,47 @@ class psyq::any_message_router
             auto const local_receiver(local_holder.get());
             if (local_receiver != nullptr)
             {
-                local_receiver->receive_message(in_packet);
+                local_receiver->receive_message(local_packet);
             }
         }
     }
 
     private: template<typename template_packet>
-    static void destroy_packet(
-        typename this_type::receiver::packet* const in_packet)
+    static bool create_packet_wrapper(
+        typename this_type::packet_array& io_packet_array,
+        template_packet&& in_packet)
     {
-        if (in_packet != nullptr)
+        typedef typename this_type::packet_wrapper::template
+            concrete<template_packet>
+                concrete_wrapper;
+        typename this_type::allocator_type::template
+            rebind<concrete_wrapper>::other
+                local_allocator;
+        auto const local_storage(local_allocator.allocate(1));
+        if (local_storage == nullptr)
+        {
+            PSYQ_ASSERT(false);
+            return false;
+        }
+        io_packet_array.emplace_back(
+            typename this_type::packet_unique_ptr(
+                new(local_storage) concrete_wrapper(std::move(in_packet)),
+                this_type::destroy_packet_wrapper<concrete_wrapper>));
+        return true;
+    }
+
+    private: template<typename template_wrapper>
+    static void destroy_packet_wrapper(
+        typename this_type::packet_wrapper* const in_wrapper)
+    {
+        if (in_wrapper != nullptr)
         {
             typename this_type::allocator_type::template
-                rebind<template_packet>::other
+                rebind<template_wrapper>::other
                     local_allocator;
-            local_allocator.destroy(in_packet);
+            local_allocator.destroy(in_wrapper);
             local_allocator.deallocate(
-                static_cast<template_packet*>(in_packet), 1);
+                static_cast<template_wrapper*>(in_wrapper), 1);
         }
     }
 

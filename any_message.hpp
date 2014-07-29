@@ -17,9 +17,9 @@ namespace psyq
     /// @cond
     template<typename> class any_message_tag;
     template<typename> class any_message_call;
-    template<typename, typename> class any_message_receiver;
     template<typename, typename> class any_message_packet;
     template<typename, typename> class any_message_wrapper;
+    template<typename, typename> class any_message_receiver;
     template<typename, typename, typename> class any_message_router;
     /// @endcond
 }
@@ -339,11 +339,11 @@ class psyq::any_message_receiver
     public: typedef std::shared_ptr<this_type> shared_ptr;
     /// メッセージ受信器の監視子。
     public: typedef std::weak_ptr<this_type> weak_ptr;
-    /// メッセージ受信関数の引数となるメッセージパケット。
-    public: typedef psyq::any_message_packet<template_tag_key, template_call_key>
-        packet;
+    /// メッセージ受信関数の引数となるメッセージパケットのラッパー。
+    public: typedef psyq::any_message_wrapper<template_tag_key, template_call_key>
+        message_wrapper;
     /// @copydoc functor_
-    public: typedef std::function<void(typename this_type::packet const&)>
+    public: typedef std::function<void(typename this_type::message_wrapper const&)>
         functor;
 
     //-------------------------------------------------------------------------
@@ -353,7 +353,7 @@ class psyq::any_message_receiver
      */
     public: PSYQ_CONSTEXPR any_message_receiver(
         typename this_type::functor in_functor,
-        typename this_type::packet::tag::key const in_address)
+        typename this_type::message_wrapper::packet::tag::key const in_address)
     PSYQ_NOEXCEPT:
         functor_((PSYQ_ASSERT(bool(in_functor)), std::move(in_functor))),
         address_(in_address)
@@ -389,7 +389,7 @@ class psyq::any_message_receiver
     /** @brief メッセージ受信アドレスを取得する。
         @return @copydoc address_
      */
-    public: PSYQ_CONSTEXPR typename this_type::packet::tag::key get_address()
+    public: PSYQ_CONSTEXPR typename this_type::message_wrapper::packet::tag::key get_address()
     const PSYQ_NOEXCEPT
     {
         return this->address_;
@@ -398,12 +398,13 @@ class psyq::any_message_receiver
     /** @brief メッセージ受信関数を呼び出す。
         @param[in] in_packet 受信したメッセージパケット。
      */
-    public: void receive_message(typename this_type::packet const& in_packet)
+    public: void receive_message(typename this_type::message_wrapper const& in_message)
     {
-        if (in_packet.get_tag().agree_receiver_address(this->get_address())
+        auto& local_packet(in_message.get_packet());
+        if (local_packet.get_tag().agree_receiver_address(this->get_address())
             && bool(this->functor_))
         {
-            this->functor_(in_packet);
+            this->functor_(in_message);
         }
     }
 
@@ -411,7 +412,7 @@ class psyq::any_message_receiver
     /// メッセージ受信関数オブジェクト。
     private: typename this_type::functor functor_;
     /// メッセージ受信アドレス。
-    private: typename this_type::packet::tag::key address_;
+    private: typename this_type::message_wrapper::packet::tag::key address_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -445,7 +446,7 @@ class psyq::any_message_router
     private: struct method_hash
     {
         PSYQ_CONSTEXPR std::size_t operator()(
-            typename this_type::receiver::packet::call::key const in_method)
+            typename this_type::receiver::message_wrapper::packet::call::key const in_method)
         const PSYQ_NOEXCEPT
         {
             return static_cast<std::size_t>(in_method);
@@ -454,10 +455,10 @@ class psyq::any_message_router
 
     /// @copydoc receiver_map_
     private: typedef std::unordered_multimap<
-        typename this_type::receiver::packet::call::key,
+        typename this_type::receiver::message_wrapper::packet::call::key,
         typename this_type::receiver::weak_ptr,
         typename this_type::method_hash,
-        std::equal_to<typename this_type::receiver::packet::call::key>,
+        std::equal_to<typename this_type::receiver::message_wrapper::packet::call::key>,
         template_allocator>
             receiver_map;
 
@@ -486,7 +487,7 @@ class psyq::any_message_router
         @param[in] in_allocator メモリ割当子の初期値。
      */
     public: any_message_router(
-        typename this_type::receiver::packet::tag::key const in_address,
+        typename this_type::receiver::message_wrapper::packet::tag::key const in_address,
         typename this_type::allocator_type const& in_allocator)
     PSYQ_NOEXCEPT:
         receiver_map_(in_allocator),
@@ -494,7 +495,7 @@ class psyq::any_message_router
         packet_array_(in_allocator),
         address_((
             PSYQ_ASSERT(
-                in_address != this_type::receiver::packet::tag::EMPTY_KEY),
+                in_address != this_type::receiver::message_wrapper::packet::tag::EMPTY_KEY),
             in_address)),
         transmitting_(false)
     {}
@@ -509,7 +510,7 @@ class psyq::any_message_router
         receiver_map_(io_source.receiver_map_.get_allocator()),
         provisional_list_(io_source.provisional_list_.get_allocator()),
         packet_array_(io_source.packet_array_.get_allocator()),
-        address_(this_type::receiver::packet::tag::EMPTY_KEY),
+        address_(this_type::receiver::message_wrapper::packet::tag::EMPTY_KEY),
         transmitting_(false)
     {
         if (!this->move(std::move(io_source)))
@@ -538,7 +539,7 @@ class psyq::any_message_router
     /** @brief メッセージの送受信に使うアドレスを取得する。
         @return メッセージの送受信に使うアドレス。
      */
-    public: PSYQ_CONSTEXPR typename this_type::receiver::packet::tag::key const
+    public: PSYQ_CONSTEXPR typename this_type::receiver::message_wrapper::packet::tag::key const
     get_address() const PSYQ_NOEXCEPT
     {
         return this->address_;
@@ -548,15 +549,15 @@ class psyq::any_message_router
         @param[in] in_receiver_address メッセージ受信アドレス。
         @param[in] in_receiver_mask    メッセージ受信マスク。
      */
-    public: PSYQ_CONSTEXPR typename this_type::receiver::packet::tag
+    public: PSYQ_CONSTEXPR typename this_type::receiver::message_wrapper::packet::tag
     make_receiver_tag(
-        typename this_type::receiver::packet::tag::key const
+        typename this_type::receiver::message_wrapper::packet::tag::key const
             in_receiver_address,
-        typename this_type::receiver::packet::tag::key const
-            in_receiver_mask = ~this_type::receiver::packet::tag::EMPTY_KEY)
+        typename this_type::receiver::message_wrapper::packet::tag::key const
+            in_receiver_mask = ~this_type::receiver::message_wrapper::packet::tag::EMPTY_KEY)
     const PSYQ_NOEXCEPT
     {
-        return typename this_type::receiver::packet::tag(
+        return typename this_type::receiver::message_wrapper::packet::tag(
             this->get_address(), in_receiver_address, in_receiver_mask);
     }
 
@@ -569,7 +570,7 @@ class psyq::any_message_router
         @param[in] in_receiver 登録するメッセージ受信器。
      */
     public: void register_receiver(
-        typename this_type::receiver::packet::call::key const in_method,
+        typename this_type::receiver::message_wrapper::packet::call::key const in_method,
         typename this_type::receiver::shared_ptr const& in_receiver)
     {
         // 仮登録する。 transmit() で実際に登録される。
@@ -618,7 +619,7 @@ class psyq::any_message_router
         @param[in] in_receiver 登録を除去するメッセージ受信器。
      */
     public: void unregister_receiver(
-        typename this_type::receiver::packet::call::key const in_method,
+        typename this_type::receiver::message_wrapper::packet::call::key const in_method,
         typename this_type::receiver const* const in_receiver)
     {
         if (in_receiver != nullptr)
@@ -652,12 +653,12 @@ class psyq::any_message_router
         @param[in] in_call 送信する呼び出しメッセージ。
      */
     public: bool send_message(
-        typename this_type::receiver::packet::tag const& in_tag,
-        typename this_type::receiver::packet::call const& in_call)
+        typename this_type::receiver::message_wrapper::packet::tag const& in_tag,
+        typename this_type::receiver::message_wrapper::packet::call const& in_call)
     {
         return this_type::create_packet_wrapper(
             this->packet_array_,
-            typename this_type::receiver::packet(in_tag, in_call));
+            typename this_type::receiver::message_wrapper::packet(in_tag, in_call));
     }
 
     /** @brief 任意型の引数を持つプロセス内メッセージを送信する。
@@ -667,13 +668,13 @@ class psyq::any_message_router
      */
     public: template<typename template_parameter>
     bool send_parameteric_message(
-        typename this_type::receiver::packet::tag const& in_tag,
-        typename this_type::receiver::packet::call const& in_call,
+        typename this_type::receiver::message_wrapper::packet::tag const& in_tag,
+        typename this_type::receiver::message_wrapper::packet::call const& in_call,
         template_parameter in_parameter)
     {
         return this_type::create_packet_wrapper(
             this->packet_array_,
-            typename this_type::receiver::packet::template
+            typename this_type::receiver::message_wrapper::packet::template
                 parametric<template_parameter>(
                     in_tag, in_call, std::move(in_parameter)));
     }
@@ -685,15 +686,15 @@ class psyq::any_message_router
      */
     public: template<typename template_parameter>
     bool send_external_message(
-        typename this_type::receiver::packet::tag const& in_tag,
-        typename this_type::receiver::packet::call const& in_call,
+        typename this_type::receiver::message_wrapper::packet::tag const& in_tag,
+        typename this_type::receiver::message_wrapper::packet::call const& in_call,
         template_parameter in_parameter);
 
     /** @brief メッセージを受信し、メッセージ受信関数を呼び出す。
         @param[in] in_packet 受信するメッセージのパケット。
      */
     public: void receive_message(
-        typename this_type::receiver::packet const& in_packet)
+        typename this_type::receiver::message_wrapper::packet const& in_packet)
     {
         this_type::transmit_packet(this->receiver_map_, in_packet);
     }
@@ -709,7 +710,8 @@ class psyq::any_message_router
         this_type::remove_empty_receiver(this->receiver_map_);
         this_type::merge_receiver_container(
             this->receiver_map_, this->provisional_list_);
-        this_type::transmit_packet(this->receiver_map_, this->packet_array_);
+        this_type::transmit_packet_wrapper(
+            this->receiver_map_, this->packet_array_);
         this->transmitting_ = false;
         return true;
     }
@@ -732,7 +734,7 @@ class psyq::any_message_router
         this->provisional_list_ = std::move(io_source.provisional_list_);
         this->packet_array_ = std::move(io_source.packet_array_);
         this->address_ = io_source.get_address();
-        io_source.address_ = this_type::receiver::packet::tag::EMPTY_KEY;
+        io_source.address_ = this_type::receiver::message_wrapper::packet::tag::EMPTY_KEY;
         this->transmitting_ = false;
         io_source.transmitting_ = false;
         return true;
@@ -741,7 +743,7 @@ class psyq::any_message_router
     private: static typename this_type::receiver_map::const_iterator
     find_receiver_iterator(
         typename this_type::receiver_map const& in_receiver_map,
-        typename this_type::receiver::packet::call::key const in_method,
+        typename this_type::receiver::message_wrapper::packet::call::key const in_method,
         void const* const in_receiver)
     PSYQ_NOEXCEPT
     {
@@ -803,7 +805,7 @@ class psyq::any_message_router
         }
     }
 
-    private: static void transmit_packet(
+    private: static void transmit_packet_wrapper(
         typename this_type::receiver_map const& in_receiver_map,
         typename this_type::packet_array& io_packet_array)
     {
@@ -815,7 +817,8 @@ class psyq::any_message_router
             auto const local_packet_wrapper(local_packet_holder.get());
             if (local_packet_wrapper != nullptr)
             {
-                this_type::transmit_packet(in_receiver_map, *local_packet_wrapper);
+                this_type::transmit_packet_wrapper(
+                    in_receiver_map, *local_packet_wrapper);
             }
             else
             {
@@ -824,11 +827,11 @@ class psyq::any_message_router
         }
     }
 
-    private: static void transmit_packet(
+    private: static void transmit_packet_wrapper(
         typename this_type::receiver_map const& in_receiver_map,
-        typename this_type::packet_wrapper const& in_wrapper)
+        typename this_type::packet_wrapper const& in_packet_wrapper)
     {
-        auto& local_packet(in_wrapper.get_packet());
+        auto& local_packet(in_packet_wrapper.get_packet());
         auto const local_method(local_packet.get_call().get_method());
         for (
             auto i(in_receiver_map.find(local_method));
@@ -839,7 +842,7 @@ class psyq::any_message_router
             auto const local_receiver(local_holder.get());
             if (local_receiver != nullptr)
             {
-                local_receiver->receive_message(local_packet);
+                local_receiver->receive_message(in_packet_wrapper);
             }
         }
     }
@@ -891,7 +894,7 @@ class psyq::any_message_router
     /// 中継するパケットの配列。
     private: typename this_type::packet_array packet_array_;
     /// このルータのメッセージ送受信アドレス。
-    private: typename this_type::receiver::packet::tag::key address_;
+    private: typename this_type::receiver::message_wrapper::packet::tag::key address_;
     /// メッセージ中継の途中かどうか。
     private: bool transmitting_;
 };
@@ -910,10 +913,10 @@ namespace psyq
             message_router local_router(0x7f000001, message_router::allocator_type());
             local_router.send_message(
                 local_router.make_receiver_tag(local_router.get_address()),
-                message_router::receiver::packet::call(0, 1));
+                message_router::receiver::message_wrapper::packet::call(0, 1));
             local_router.send_parameteric_message(
                 local_router.make_receiver_tag(local_router.get_address()),
-                message_router::receiver::packet::call(0, 1),
+                message_router::receiver::message_wrapper::packet::call(0, 1),
                 0.5);
             local_router.transmit();
             local_router.unregister_receiver(0, nullptr);

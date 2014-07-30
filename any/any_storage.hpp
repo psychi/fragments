@@ -662,10 +662,10 @@ namespace psyq
             value_wrapper(template_value const in_value): value(in_value) {}
             template_value value;
         };
+        typedef value_wrapper<std::int32_t> integer_wrapper;
+        typedef value_wrapper<double> floating_wrapper;
         inline void any_storage()
         {
-            typedef value_wrapper<std::int32_t> integer_wrapper;
-            typedef value_wrapper<double> floating_wrapper;
             PSYQ_ASSERT((psyq::any_rtti::make<integer_wrapper>()) != nullptr);
             PSYQ_ASSERT((psyq::any_rtti::make<floating_wrapper>()) != nullptr);
             PSYQ_ASSERT((psyq::any_rtti::make<integer_wrapper::shared_ptr>()) != nullptr);

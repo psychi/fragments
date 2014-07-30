@@ -10,7 +10,7 @@
 #include <vector>
 #include <list>
 #include <unordered_map>
-//#include "psyq/any/any_message_router.hpp"
+//#include "psyq/any/any_message_receiver.hpp"
 
 namespace psyq
 {
@@ -93,6 +93,8 @@ class psyq::any_message_router
             packet_array;
 
     //-------------------------------------------------------------------------
+    /// @name メッセージ中継器の構築
+    //@{
     /** @brief メッセージ中継器を構築する。
         @param[in] in_address   構築する中継器のメッセージ送受信アドレス。
         @param[in] in_allocator メモリ割当子の初期値。
@@ -110,9 +112,6 @@ class psyq::any_message_router
         flushing_(false)
     {}
 
-    /// コピー構築子は使用禁止。
-    private: any_message_router(this_type const&);
-
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元インスタンス。
      */
@@ -129,9 +128,6 @@ class psyq::any_message_router
         }
     }
 
-    /// コピー代入演算子は使用禁止。
-    private: this_type& operator=(this_type const&);
-
     /** @brief ムーブ代入演算子。
         @param[in,out] io_source ムーブ元インスタンス。
         @return *this
@@ -144,8 +140,15 @@ class psyq::any_message_router
         }
         return *this;
     }
+    //@}
+    /// コピー構築子は使用禁止。
+    private: any_message_router(this_type const&);
+    /// コピー代入演算子は使用禁止。
+    private: this_type& operator=(this_type const&);
 
     //-------------------------------------------------------------------------
+    /// @name メッセージのアドレス
+    //@{
     /** @brief メッセージの送受信に使うアドレスを取得する。
         @return メッセージの送受信に使うアドレス。
      */
@@ -168,8 +171,10 @@ class psyq::any_message_router
         return typename this_type::tag(
             this->get_address(), in_receiver_address, in_receiver_mask);
     }
-
+    //@}
     //-------------------------------------------------------------------------
+    /// @name メッセージ受信機の登録
+    //@{
     /** @brief メッセージ受信器を登録する。
 
         this_type::unregister_receiver() で登録を除去できる。
@@ -254,8 +259,10 @@ class psyq::any_message_router
             }
         }
     }
-
+    //@}
     //-------------------------------------------------------------------------
+    /// @name メッセージの送信
+    //@{
     /** @brief 引数を持たないメッセージを送信する。
 
         引数を持つメッセージを送信するには、以下の関数を使う。
@@ -330,9 +337,11 @@ class psyq::any_message_router
     {
         this_type::transmit_message(this->receiver_map_, in_packet);
     }
-
+    //@}
     //-------------------------------------------------------------------------
-    /** @brief メッセージを処理する。
+    /// @name メッセージの中継
+    //@{
+    /** @brief メッセージを中継する。
         @warning
             flush() している途中に flush() すると失敗する。
             flush() している途中かどうかは、 is_flushing() で判定できる。
@@ -355,15 +364,15 @@ class psyq::any_message_router
         return true;
     }
 
-    /** @brief メッセージの処理途中か判定する。
-        @retval true  メッセージの処理途中。
-        @retval false メッセージの処理途中ではない。
+    /** @brief メッセージ中継の途中か判定する。
+        @retval true  メッセージ中継の途中。
+        @retval false メッセージ中継の途中ではない。
      */
     public: PSYQ_CONSTEXPR bool is_flushing() const PSYQ_NOEXCEPT
     {
         return this->flushing_;
     }
-
+    //@}
     //-------------------------------------------------------------------------
     /** @brief メッセージ中継器のインスタンスをムーブする。
         @param[in,out] io_source ムーブ元インスタンス。

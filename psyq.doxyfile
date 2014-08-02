@@ -678,12 +678,12 @@ WARN_LOGFILE           =
 # with spaces.
 
 INPUT                  = \
-                         ./string/string_view_base.hpp \
-                         ./string/string_view_interface.hpp \
-                         ./string/string_view.hpp \
-                         ./string/string_storage.hpp \
-                         ./string/string_holder.hpp \
-                         ./string/string_table.hpp \
+                         ./string/view_base.hpp \
+                         ./string/view_interface.hpp \
+                         ./string/view.hpp \
+                         ./string/storage.hpp \
+                         ./string/holder.hpp \
+                         ./string/table.hpp \
                          ./any/any_rtti.hpp \
                          ./any/any_storage.hpp \
                          ./any/any_message_tag.hpp \
@@ -703,7 +703,7 @@ INPUT                  = \
                          ./message_pack/endianness.hpp \
                          ./message_pack/serializer.hpp \
                          ./message_pack/container.hpp \
-                         ./message_pack/value.hpp \
+                         ./message_pack/storage.hpp \
                          ./message_pack/object.hpp \
                          ./message_pack/root_object.hpp \
                          ./message_pack/deserializer.hpp \

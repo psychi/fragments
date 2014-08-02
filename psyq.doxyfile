@@ -704,8 +704,8 @@ INPUT                  = \
                          ./message_pack/serializer.hpp \
                          ./message_pack/container.hpp \
                          ./message_pack/storage.hpp \
+                         ./message_pack/pool.hpp \
                          ./message_pack/object.hpp \
-                         ./message_pack/root_object.hpp \
                          ./message_pack/deserializer.hpp \
 
 #                         ./async_file.hpp \

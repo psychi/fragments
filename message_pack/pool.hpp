@@ -1,21 +1,21 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copydoc psyq::message_pack::root_object
+    @brief @copydoc psyq::message_pack::pool
  */
-#ifndef PSYQ_MESSAGE_PACK_ROOT_OBJECT_HPP_
-#define PSYQ_MESSAGE_PACK_ROOT_OBJECT_HPP_
+#ifndef PSYQ_MESSAGE_PACK_POOL_HPP_
+#define PSYQ_MESSAGE_PACK_POOL_HPP_
 
 //#include "psyq/message_pack/object.hpp"
 
 /// psyq::message_pack::pool のチャンク容量のデフォルト値。
-#ifndef PSYQ_MESSAGE_PACK_MEMORY_POOL_CHUNK_CAPACITY_DEFAULT
-#define PSYQ_MESSAGE_PACK_MEMORY_POOL_CHUNK_CAPACITY_DEFAULT 4096
-#endif // !defined(PSYQ_MESSAGE_PACK_SERIALIZER_STACK_CAPACITY_DEFAULT)
+#ifndef PSYQ_MESSAGE_PACK_POOL_CHUNK_CAPACITY_DEFAULT
+#define PSYQ_MESSAGE_PACK_POOL_CHUNK_CAPACITY_DEFAULT 4096
+#endif // !defined(PSYQ_MESSAGE_PACK_POOL_CHUNK_CAPACITY_DEFAULT)
 
-#ifndef PSYQ_MESSAGE_PACK_MEMORY_POOL_STD_ALGIN_PATCH
-#define PSYQ_MESSAGE_PACK_MEMORY_POOL_STD_ALGIN_PATCH\
+#ifndef PSYQ_MESSAGE_PACK_POOL_STD_ALGIN_PATCH
+#define PSYQ_MESSAGE_PACK_POOL_STD_ALGIN_PATCH\
     defined(_MSC_VER) && _MSC_VER <= 1700
-#endif // !defined(PSYQ_MESSAGE_PACK_MEMORY_POOL_STD_ALGIN_PATCH)
+#endif // !defined(PSYQ_MESSAGE_PACK_POOL_STD_ALGIN_PATCH)
 
 namespace psyq
 {
@@ -23,7 +23,6 @@ namespace psyq
     {
         /// @cond
         template<typename = std::allocator<long long>> class pool;
-        template<typename> class root_object;
         /// @endcond
     } // namespace message_pack
 } // namespace psyq
@@ -64,7 +63,7 @@ class psyq::message_pack::pool
      */
     public: explicit pool(
         std::size_t const in_default_capacity
-            = PSYQ_MESSAGE_PACK_MEMORY_POOL_CHUNK_CAPACITY_DEFAULT,
+            = PSYQ_MESSAGE_PACK_POOL_CHUNK_CAPACITY_DEFAULT,
         typename this_type::allocator_type in_allocator = this_type::allocator_type())
     :
         chunk_list_(nullptr),
@@ -261,13 +260,13 @@ class psyq::message_pack::pool
         auto local_free_size(io_chunk.free_size);
         void* const local_memory(
             std::align(in_alignment, in_size, local_pool, local_free_size));
-#if PSYQ_MESSAGE_PACK_MEMORY_POOL_STD_ALGIN_PATCH
+#if PSYQ_MESSAGE_PACK_POOL_STD_ALGIN_PATCH
         /** @note 2014.05.12
             VisualStudio2012では、 std::align() の実装に問題がある？
             「_Space -= _Off + _Size」と実装されてたので、その対応をしておく。
          */
         local_free_size += (local_memory != nullptr? in_size: 0);
-#endif // PSYQ_MESSAGE_PACK_MEMORY_POOL_STD_ALGIN_PATCH
+#endif // PSYQ_MESSAGE_PACK_POOL_STD_ALGIN_PATCH
         if (local_memory == nullptr || local_free_size < in_size)
         {
             return nullptr;
@@ -294,84 +293,4 @@ class psyq::message_pack::pool
     private: template_allocator allocator_; ///< @copydoc allocator_type
 }; // class psyq::message_pack::pool
 
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 直列化復元の際に、最上位となるMessagePackオブジェクト。
-    @tparam template_pool @copydoc psyq::message_pack::root_object::pool
-    @sa psyq::message_pack::deserializer
- */
-template<typename template_pool>
-class psyq::message_pack::root_object: public psyq::message_pack::object
-{
-    private: typedef root_object this_type; ///< thisが指す値の型。
-    public: typedef psyq::message_pack::object base_type; ///< this_typeの基底型。
-
-    /// psyq::message_pack::pool 互換のメモリ割当子。下位オブジェクトを保持する。
-    public: typedef template_pool pool;
-
-    //-------------------------------------------------------------------------
-    /// @name 構築
-    //@{
-    /// @brief 空のMessagePackオブジェクトを構築する。
-    public: root_object() {}
-
-    /** @brief 最上位のMessagePackオブジェクトを構築する。
-        @param[in] in_root 最上位のMessagePackオブジェクト。
-        @param[in] in_pool 下位オブジェクトを保持するメモリ割当子。
-     */
-    public: root_object(base_type const& in_root, typename this_type::pool in_pool):
-        base_type(in_root),
-        pool_(std::move(in_pool))
-    {}
-
-    /** @brief move構築子。
-        @param[in,out] io_source 移動元。
-     */
-    public: root_object(this_type&& io_source):
-        base_type(io_source),
-        pool_(std::move(io_source.reset()))
-    {}
-
-    /** @brief move代入演算子。
-        @param[in,out] io_source 移動元。
-     */
-    public: this_type& operator=(this_type&& io_source)
-    {
-        if (this != &io_source)
-        {
-            this->base_type::operator=(io_source);
-            this->pool_ = std::move(io_source.reset());
-        }
-        return *this;
-    }
-    //@}
-    /// copy構築子は使用禁止。
-    private: root_object(this_type const&);// = delete;
-    /// copy代入演算子は使用禁止。
-    private: this_type& operator=(this_type const&);// = delete;
-
-    //-------------------------------------------------------------------------
-    /// @name インスタンス変数の操作
-    //@{
-    /** @brief 空にする。
-        @return 下位オブジェクトを保持するのに使っていたメモリ割当子。
-     */
-    public: typename this_type::pool reset()
-    {
-        this->base_type::reset();
-        auto local_pool(std::move(this->pool_));
-        return local_pool;
-    }
-
-    /** @brief 下位オブジェクトを保持するメモリ割当子を取得する。
-        @return 下位オブジェクトを保持するメモリ割当子。
-     */
-    public: typename this_type::pool const& get_pool() const
-    {
-        return this->pool_;
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    private: typename this_type::pool pool_; ///< @copydoc pool
-}; // class psyq::message_pack::root_object
-
-#endif // !defined(PSYQ_MESSAGE_PACK_ROOT_OBJECT_HPP_)
+#endif // !defined(PSYQ_MESSAGE_PACK_POOL_HPP_)

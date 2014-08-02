@@ -113,7 +113,7 @@ class psyq::message_pack::deserializer
     public: typedef template_pool pool;
 
     /// 最上位のMessagePackオブジェクト。
-    public: typedef psyq::message_pack::root_object<typename this_type::pool>
+    public: typedef psyq::message_pack::object::root<typename this_type::pool>
         root_object;
 
     /// 直列化復元途中のコンテナのスタック限界数。

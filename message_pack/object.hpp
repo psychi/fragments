@@ -5,7 +5,8 @@
 #ifndef PSYQ_MESSAGE_PACK_OBJECT_HPP_
 #define PSYQ_MESSAGE_PACK_OBJECT_HPP_
 
-//#include "psyq/message_pack/value.hpp"
+//#include "psyq/message_pack/storage.hpp"
+//#include "psyq/message_pack/pool.hpp"
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// 数値／文字列／バイト列／コンテナを格納するMessagePackオブジェクト。
@@ -49,6 +50,11 @@ class psyq::message_pack::object
     /// @copydoc psyq::message_pack::_private::storage::type::MAP
     public: typedef psyq::message_pack::_private::storage::map map;
     //@}
+
+    /// @cond
+    public: template<typename template_pool> class root;
+    /// @endcond
+
     //-------------------------------------------------------------------------
     /// @name MessagePackオブジェクトの構築
     //@{
@@ -556,6 +562,86 @@ class psyq::message_pack::object
     private: this_type::storage storage_; ///< @copydoc this_type::storage
     private: this_type::type type_;       ///< @copydoc this_type::type
 };
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 直列化復元の際に、最上位となるMessagePackオブジェクト。
+    @tparam template_pool @copydoc psyq::message_pack::object::root::pool
+    @sa psyq::message_pack::deserializer
+ */
+template<typename template_pool>
+class psyq::message_pack::object::root: public psyq::message_pack::object
+{
+    private: typedef root this_type; ///< thisが指す値の型。
+    public: typedef psyq::message_pack::object base_type; ///< this_typeの基底型。
+
+    /// psyq::message_pack::pool 互換のメモリ割当子。下位オブジェクトを保持する。
+    public: typedef template_pool pool;
+
+    //-------------------------------------------------------------------------
+    /// @name 構築
+    //@{
+    /// @brief 空のMessagePackオブジェクトを構築する。
+    public: root() {}
+
+    /** @brief 最上位のMessagePackオブジェクトを構築する。
+        @param[in] in_root 最上位のMessagePackオブジェクト。
+        @param[in] in_pool 下位オブジェクトを保持するメモリ割当子。
+     */
+    public: root(base_type const& in_root, typename this_type::pool in_pool):
+        base_type(in_root),
+        pool_(std::move(in_pool))
+    {}
+
+    /** @brief move構築子。
+        @param[in,out] io_source 移動元。
+     */
+    public: root(this_type&& io_source):
+        base_type(io_source),
+        pool_(std::move(io_source.reset()))
+    {}
+
+    /** @brief move代入演算子。
+        @param[in,out] io_source 移動元。
+     */
+    public: this_type& operator=(this_type&& io_source)
+    {
+        if (this != &io_source)
+        {
+            this->base_type::operator=(io_source);
+            this->pool_ = std::move(io_source.reset());
+        }
+        return *this;
+    }
+    //@}
+    /// copy構築子は使用禁止。
+    private: root(this_type const&);// = delete;
+    /// copy代入演算子は使用禁止。
+    private: this_type& operator=(this_type const&);// = delete;
+
+    //-------------------------------------------------------------------------
+    /// @name インスタンス変数の操作
+    //@{
+    /** @brief 空にする。
+        @return 下位オブジェクトを保持するのに使っていたメモリ割当子。
+     */
+    public: typename this_type::pool reset()
+    {
+        this->base_type::reset();
+        auto local_pool(std::move(this->pool_));
+        return local_pool;
+    }
+
+    /** @brief 下位オブジェクトを保持するメモリ割当子を取得する。
+        @return 下位オブジェクトを保持するメモリ割当子。
+     */
+    public: typename this_type::pool const& get_pool() const
+    {
+        return this->pool_;
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    private: typename this_type::pool pool_; ///< @copydoc pool
+}; // class psyq::message_pack::object::root
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq

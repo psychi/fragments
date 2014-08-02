@@ -25,8 +25,8 @@ namespace psyq
         template<typename = std::allocator<long long>> class pool;
         template<typename> class root_object;
         /// @endcond
-    }
-}
+    } // namespace message_pack
+} // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief MessagePackの直列化復元に使うメモリ割当子。
@@ -292,7 +292,7 @@ class psyq::message_pack::pool
     private: typename this_type::chunk_header* chunk_list_; ///< 先頭チャンク。
     private: std::size_t default_capacity_; ///< チャンク容量のデフォルト値。
     private: template_allocator allocator_; ///< @copydoc allocator_type
-}; // psyq::message_pack::pool
+}; // class psyq::message_pack::pool
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 直列化復元の際に、最上位となるMessagePackオブジェクト。

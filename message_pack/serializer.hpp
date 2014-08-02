@@ -34,95 +34,95 @@ namespace psyq
             std::size_t = PSYQ_MESSAGE_PACK_SERIALIZER_STACK_CAPACITY_DEFAULT>
                 class serializer;
         /// @endcond
-    } // namespace message_pack
 
-    /// この名前空間をuserが直接accessするのは禁止。
-    namespace internal
-    {
-        //---------------------------------------------------------------------
-        /** @brief MessagePackに格納されている値の形式。
-
-            以下のウェブページにある仕様を参照した。
-            https://github.com/msgpack/msgpack/blob/d257d3c143c9fa21ba22afc666fe50cc66943ece/spec.md#formats
-         */
-        enum message_pack_format
+        /// この名前空間をユーザーが直接アクセスするのは禁止。
+        namespace _private
         {
-            message_pack_format_FIX_INTEGER_MIN     =-0x20, ///< 最小の固定値整数。
-            message_pack_format_FIX_INTEGER_MAX     = 0x7f, ///< 最大の固定値整数。
-            message_pack_format_FIX_MAP_MIN         = 0x80, ///< 最小長の固定長連想配列。
-            message_pack_format_FIX_MAP_MAX         = 0x8f, ///< 最大長の固定長連想配列。
-            message_pack_format_FIX_ARRAY_MIN       = 0x90, ///< 最小長の固定長配列。
-            message_pack_format_FIX_ARRAY_MAX       = 0x9f, ///< 最大長の固定長配列。
-            message_pack_format_FIX_STRING_MIN      = 0xa0, ///< 最小長の固定長文字列。
-            message_pack_format_FIX_STRING_MAX      = 0xbf, ///< 最大長の固定長文字列。
-            message_pack_format_NIL                 = 0xc0, ///< 空値。
-            message_pack_format_NEVER_USED          = 0xc1, ///< 未使用。
-            message_pack_format_FALSE               = 0xc2, ///< false
-            message_pack_format_TRUE                = 0xc3, ///< true
-            message_pack_format_BINARY_8            = 0xc4, ///< 長さが8bit以下のバイナリ。
-            message_pack_format_BINARY_16           = 0xc5, ///< 長さが16bit以下のバイナリ。
-            message_pack_format_BINARY_32           = 0xc6, ///< 長さが32bit以下のバイナリ。
-            message_pack_format_EXTENDED_8          = 0xc7, ///< 長さが8bit以下の拡張バイナリ。
-            message_pack_format_EXTENDED_16         = 0xc8, ///< 長さが16bit以下の拡張バイナリ。
-            message_pack_format_EXTENDED_32         = 0xc9, ///< 長さが32bit以下の拡張バイナリ。
-            message_pack_format_FLOATING_POINT_32   = 0xca, ///< IEEE754単精度浮動小数点数。
-            message_pack_format_FLOATING_POINT_64   = 0xcb, ///< IEEE754倍精度浮動小数点数。
-            message_pack_format_UNSIGNED_INTEGER_8  = 0xcc, ///< 0以上の8bit整数。
-            message_pack_format_UNSIGNED_INTEGER_16 = 0xcd, ///< 0以上の16bit整数。
-            message_pack_format_UNSIGNED_INTEGER_32 = 0xce, ///< 0以上の32bit整数。
-            message_pack_format_UNSIGNED_INTEGER_64 = 0xcf, ///< 0以上の64bit整数。
-            message_pack_foramt_NEGATIVE_INTEGER_8  = 0xd0, ///< 0未満の8bit整数。
-            message_pack_foramt_NEGATIVE_INTEGER_16 = 0xd1, ///< 0未満の16bit整数。
-            message_pack_foramt_NEGATIVE_INTEGER_32 = 0xd2, ///< 0未満の32bit整数。
-            message_pack_foramt_NEGATIVE_INTEGER_64 = 0xd3, ///< 0未満の64bit整数。
-            message_pack_format_FIX_EXTENDED_1      = 0xd4, ///< 長さが1の拡張バイナリ。
-            message_pack_format_FIX_EXTENDED_2      = 0xd5, ///< 長さが2の拡張バイナリ。
-            message_pack_format_FIX_EXTENDED_4      = 0xd6, ///< 長さが4の拡張バイナリ。
-            message_pack_format_FIX_EXTENDED_8      = 0xd7, ///< 長さが8の拡張バイナリ。
-            message_pack_format_FIX_EXTENDED_16     = 0xd8, ///< 長さが16の拡張バイナリ。
-            message_pack_format_STRING_8            = 0xd9, ///< 長さが8bit以下の文字列。
-            message_pack_format_STRING_16           = 0xda, ///< 長さが16bit以下の文字列。
-            message_pack_format_STRING_32           = 0xdb, ///< 長さが32bit以下の文字列。
-            message_pack_format_ARRAY_16            = 0xdc, ///< 長さが16bit以下の配列。
-            message_pack_format_ARRAY_32            = 0xdd, ///< 長さが32bit以下の配列。
-            message_pack_format_MAP_16              = 0xde, ///< 長さが16bit以下の連想配列。
-            message_pack_format_MAP_32              = 0xdf, ///< 長さが32bit以下の連想配列。
-        };
+            //---------------------------------------------------------------------
+            /** @brief MessagePackに格納されている値の形式。
 
-        //---------------------------------------------------------------------
-        /** @brief タプルをストリームへ出力する。
-            @tparam template_size 出力するタプルの要素数。
-         */
-        template<std::size_t template_size>
-        struct message_pack_tuple_serializer
-        {
-            /** @brief タプルをストリームへ出力する。
-                @tparam template_stream 出力演算子が使えるストリーム型。
-                @tparam template_tuple  std::get() で要素を取得できるタプル型。
-                @param[out] out_stream 出力先ストリーム。
-                @param[in]  in_tuple   出力するタプル。
+                以下のウェブページにある仕様を参照した。
+                https://github.com/msgpack/msgpack/blob/d257d3c143c9fa21ba22afc666fe50cc66943ece/spec.md#formats
              */
-            template<typename template_stream, typename template_tuple>
-            static void write(
-                template_stream& out_stream,
-                template_tuple const& in_tuple)
+            enum format
             {
-                psyq::internal
-                    ::message_pack_tuple_serializer<template_size - 1>
-                        ::write(out_stream, in_tuple);
-                out_stream << std::get<template_size - 1>(in_tuple);
-            }
-        };
-        /// @copydoc message_pack_tuple_serializer
-        template<> struct message_pack_tuple_serializer<0>
-        {
-            /// タプルの要素数が0なので、何もしない。
-            template<typename template_stream, typename template_tuple>
-            static void write(template_stream&, template_tuple const&)
-            PSYQ_NOEXCEPT
-            {}
-        };
-    } // namespace internal
+                format_FIX_INTEGER_MIN     =-0x20, ///< 最小の固定値整数。
+                format_FIX_INTEGER_MAX     = 0x7f, ///< 最大の固定値整数。
+                format_FIX_MAP_MIN         = 0x80, ///< 最小長の固定長連想配列。
+                format_FIX_MAP_MAX         = 0x8f, ///< 最大長の固定長連想配列。
+                format_FIX_ARRAY_MIN       = 0x90, ///< 最小長の固定長配列。
+                format_FIX_ARRAY_MAX       = 0x9f, ///< 最大長の固定長配列。
+                format_FIX_STRING_MIN      = 0xa0, ///< 最小長の固定長文字列。
+                format_FIX_STRING_MAX      = 0xbf, ///< 最大長の固定長文字列。
+                format_NIL                 = 0xc0, ///< 空値。
+                format_NEVER_USED          = 0xc1, ///< 未使用。
+                format_FALSE               = 0xc2, ///< false
+                format_TRUE                = 0xc3, ///< true
+                format_BINARY_8            = 0xc4, ///< 長さが8bit以下のバイナリ。
+                format_BINARY_16           = 0xc5, ///< 長さが16bit以下のバイナリ。
+                format_BINARY_32           = 0xc6, ///< 長さが32bit以下のバイナリ。
+                format_EXTENDED_8          = 0xc7, ///< 長さが8bit以下の拡張バイナリ。
+                format_EXTENDED_16         = 0xc8, ///< 長さが16bit以下の拡張バイナリ。
+                format_EXTENDED_32         = 0xc9, ///< 長さが32bit以下の拡張バイナリ。
+                format_FLOATING_POINT_32   = 0xca, ///< IEEE754単精度浮動小数点数。
+                format_FLOATING_POINT_64   = 0xcb, ///< IEEE754倍精度浮動小数点数。
+                format_UNSIGNED_INTEGER_8  = 0xcc, ///< 0以上の8bit整数。
+                format_UNSIGNED_INTEGER_16 = 0xcd, ///< 0以上の16bit整数。
+                format_UNSIGNED_INTEGER_32 = 0xce, ///< 0以上の32bit整数。
+                format_UNSIGNED_INTEGER_64 = 0xcf, ///< 0以上の64bit整数。
+                foramt_NEGATIVE_INTEGER_8  = 0xd0, ///< 0未満の8bit整数。
+                foramt_NEGATIVE_INTEGER_16 = 0xd1, ///< 0未満の16bit整数。
+                foramt_NEGATIVE_INTEGER_32 = 0xd2, ///< 0未満の32bit整数。
+                foramt_NEGATIVE_INTEGER_64 = 0xd3, ///< 0未満の64bit整数。
+                format_FIX_EXTENDED_1      = 0xd4, ///< 長さが1の拡張バイナリ。
+                format_FIX_EXTENDED_2      = 0xd5, ///< 長さが2の拡張バイナリ。
+                format_FIX_EXTENDED_4      = 0xd6, ///< 長さが4の拡張バイナリ。
+                format_FIX_EXTENDED_8      = 0xd7, ///< 長さが8の拡張バイナリ。
+                format_FIX_EXTENDED_16     = 0xd8, ///< 長さが16の拡張バイナリ。
+                format_STRING_8            = 0xd9, ///< 長さが8bit以下の文字列。
+                format_STRING_16           = 0xda, ///< 長さが16bit以下の文字列。
+                format_STRING_32           = 0xdb, ///< 長さが32bit以下の文字列。
+                format_ARRAY_16            = 0xdc, ///< 長さが16bit以下の配列。
+                format_ARRAY_32            = 0xdd, ///< 長さが32bit以下の配列。
+                format_MAP_16              = 0xde, ///< 長さが16bit以下の連想配列。
+                format_MAP_32              = 0xdf, ///< 長さが32bit以下の連想配列。
+            };
+
+            //---------------------------------------------------------------------
+            /** @brief タプルをストリームへ出力する。
+                @tparam template_size 出力するタプルの要素数。
+             */
+            template<std::size_t template_size>
+            struct tuple_serializer
+            {
+                /** @brief タプルをストリームへ出力する。
+                    @tparam template_stream 出力演算子が使えるストリーム型。
+                    @tparam template_tuple  std::get() で要素を取得できるタプル型。
+                    @param[out] out_stream 出力先ストリーム。
+                    @param[in]  in_tuple   出力するタプル。
+                 */
+                template<typename template_stream, typename template_tuple>
+                static void write(
+                    template_stream& out_stream,
+                    template_tuple const& in_tuple)
+                {
+                    psyq::message_pack::_private
+                        ::tuple_serializer<template_size - 1>
+                            ::write(out_stream, in_tuple);
+                    out_stream << std::get<template_size - 1>(in_tuple);
+                }
+            };
+            /// @copydoc tuple_serializer
+            template<> struct tuple_serializer<0>
+            {
+                /// タプルの要素数が0なので、何もしない。
+                template<typename template_stream, typename template_tuple>
+                static void write(template_stream&, template_tuple const&)
+                PSYQ_NOEXCEPT
+                {}
+            };
+        } // namespace _private
+    } // namespace message_pack
 } // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -311,7 +311,7 @@ class psyq::message_pack::serializer
         {
             PSYQ_ASSERT(false);
         }
-        else if (this->write_big_endian<std::uint8_t>(psyq::internal::message_pack_format_NIL))
+        else if (this->write_big_endian<std::uint8_t>(psyq::message_pack::_private::format_NIL))
         {
             this->update_container_stack();
             return true;
@@ -349,8 +349,8 @@ class psyq::message_pack::serializer
         else if (
             this->write_big_endian<std::uint8_t>(
                 in_boolean?
-                    psyq::internal::message_pack_format_TRUE:
-                    psyq::internal::message_pack_format_FALSE))
+                    psyq::message_pack::_private::format_TRUE:
+                    psyq::message_pack::_private::format_FALSE))
         {
             this->update_container_stack();
             return true;
@@ -429,8 +429,8 @@ class psyq::message_pack::serializer
         }
         else if (in_integer <= (std::numeric_limits<std::uint8_t>::max)())
         {
-            if (psyq::internal::message_pack_format_FIX_INTEGER_MAX < in_integer
-                && !this->write_big_endian<std::uint8_t>(psyq::internal::message_pack_format_UNSIGNED_INTEGER_8))
+            if (psyq::message_pack::_private::format_FIX_INTEGER_MAX < in_integer
+                && !this->write_big_endian<std::uint8_t>(psyq::message_pack::_private::format_UNSIGNED_INTEGER_8))
             {
                 return false;
             }
@@ -441,7 +441,7 @@ class psyq::message_pack::serializer
         }
         else if (in_integer <= (std::numeric_limits<std::uint16_t>::max)())
         {
-            if (!this->write_big_endian<std::uint8_t>(psyq::internal::message_pack_format_UNSIGNED_INTEGER_16)
+            if (!this->write_big_endian<std::uint8_t>(psyq::message_pack::_private::format_UNSIGNED_INTEGER_16)
                 || !this->write_big_endian(static_cast<std::uint16_t>(in_integer)))
             {
                 return false;
@@ -449,7 +449,7 @@ class psyq::message_pack::serializer
         }
         else if (in_integer <= (std::numeric_limits<std::uint32_t>::max)())
         {
-            if (!this->write_big_endian<std::uint8_t>(psyq::internal::message_pack_format_UNSIGNED_INTEGER_32)
+            if (!this->write_big_endian<std::uint8_t>(psyq::message_pack::_private::format_UNSIGNED_INTEGER_32)
                 || !this->write_big_endian(static_cast<std::uint32_t>(in_integer)))
             {
                 return false;
@@ -459,7 +459,7 @@ class psyq::message_pack::serializer
         {
             PSYQ_ASSERT(
                 in_integer <= (std::numeric_limits<std::uint64_t>::max)());
-            if (!this->write_big_endian<std::uint8_t>(psyq::internal::message_pack_format_UNSIGNED_INTEGER_64)
+            if (!this->write_big_endian<std::uint8_t>(psyq::message_pack::_private::format_UNSIGNED_INTEGER_64)
                 || !this->write_big_endian(static_cast<std::uint64_t>(in_integer)))
             {
                 return false;
@@ -562,8 +562,8 @@ class psyq::message_pack::serializer
         // 0未満の整数を直列化する。
         if ((std::numeric_limits<std::int8_t>::min)() <= in_integer)
         {
-            if (in_integer < psyq::internal::message_pack_format_FIX_INTEGER_MIN
-                && !this->write_big_endian<std::uint8_t>(psyq::internal::message_pack_foramt_NEGATIVE_INTEGER_8))
+            if (in_integer < psyq::message_pack::_private::format_FIX_INTEGER_MIN
+                && !this->write_big_endian<std::uint8_t>(psyq::message_pack::_private::foramt_NEGATIVE_INTEGER_8))
             {
                 return false;
             }
@@ -574,7 +574,7 @@ class psyq::message_pack::serializer
         }
         else if ((std::numeric_limits<std::int16_t>::min)() <= in_integer)
         {
-            if (!this->write_big_endian<std::uint8_t>(psyq::internal::message_pack_foramt_NEGATIVE_INTEGER_16)
+            if (!this->write_big_endian<std::uint8_t>(psyq::message_pack::_private::foramt_NEGATIVE_INTEGER_16)
                 || !this->write_big_endian(static_cast<std::int16_t>(in_integer)))
             {
                 return false;
@@ -582,7 +582,7 @@ class psyq::message_pack::serializer
         }
         else if ((std::numeric_limits<std::int32_t>::min)() <= in_integer)
         {
-            if (!this->write_big_endian<std::uint8_t>(psyq::internal::message_pack_foramt_NEGATIVE_INTEGER_32)
+            if (!this->write_big_endian<std::uint8_t>(psyq::message_pack::_private::foramt_NEGATIVE_INTEGER_32)
                 || !this->write_big_endian(static_cast<std::int32_t>(in_integer)))
             {
                 return false;
@@ -592,7 +592,7 @@ class psyq::message_pack::serializer
         {
             PSYQ_ASSERT(
                 (std::numeric_limits<std::int64_t>::min)() <= in_integer);
-            if (!this->write_big_endian<std::uint8_t>(psyq::internal::message_pack_foramt_NEGATIVE_INTEGER_64)
+            if (!this->write_big_endian<std::uint8_t>(psyq::message_pack::_private::foramt_NEGATIVE_INTEGER_64)
                 || !this->write_big_endian(static_cast<std::int64_t>(in_integer)))
             {
                 return false;
@@ -634,12 +634,12 @@ class psyq::message_pack::serializer
      */
     public: bool write_floating_point(float const in_float)
     {
-        return this->write_floating_point<psyq::internal::message_pack_format_FLOATING_POINT_32>(in_float);
+        return this->write_floating_point<psyq::message_pack::_private::format_FLOATING_POINT_32>(in_float);
     }
     /// @copydoc write_floating_point(float const)
     public: bool write_floating_point(double const in_float)
     {
-        return this->write_floating_point<psyq::internal::message_pack_format_FLOATING_POINT_64>(in_float);
+        return this->write_floating_point<psyq::message_pack::_private::format_FLOATING_POINT_64>(in_float);
     }
     //@}
     /// @copydoc write_floating_point(float const)
@@ -820,7 +820,7 @@ class psyq::message_pack::serializer
         if (in_size <= 0)
         {
             // 空の文字列を直列化する。
-            if (this->write_big_endian<std::uint8_t>(psyq::internal::message_pack_format_FIX_STRING_MIN))
+            if (this->write_big_endian<std::uint8_t>(psyq::message_pack::_private::format_FIX_STRING_MIN))
             {
                 this->update_container_stack();
                 return true;
@@ -852,17 +852,17 @@ class psyq::message_pack::serializer
     private: bool write_string_header(std::size_t const in_size)
     {
         unsigned const local_fix_size(
-            psyq::internal::message_pack_format_FIX_STRING_MAX
-                - psyq::internal::message_pack_format_FIX_STRING_MIN);
+            psyq::message_pack::_private::format_FIX_STRING_MAX
+                - psyq::message_pack::_private::format_FIX_STRING_MIN);
         if (local_fix_size < in_size)
         {
-            return this->write_raw_header<psyq::internal::message_pack_format_STRING_8>(in_size);
+            return this->write_raw_header<psyq::message_pack::_private::format_STRING_8>(in_size);
         }
         else if (this->get_stack_top_raw() == nullptr)
         {
             return this->write_big_endian(
                 static_cast<std::uint8_t>(
-                    psyq::internal::message_pack_format_FIX_STRING_MIN + in_size));
+                    psyq::message_pack::_private::format_FIX_STRING_MIN + in_size));
         }
         else
         {
@@ -887,7 +887,7 @@ class psyq::message_pack::serializer
         std::size_t const in_length)
     {
         auto const local_size(in_length * sizeof(template_element));
-        return this->write_raw_header<psyq::internal::message_pack_format_BINARY_8>(local_size)
+        return this->write_raw_header<psyq::message_pack::_private::format_BINARY_8>(local_size)
             && this->write_raw_data(in_begin, local_size);
     }
 
@@ -942,7 +942,7 @@ class psyq::message_pack::serializer
         auto const local_size(in_length * sizeof(template_element));
         if (local_size <= 0)
         {
-            if (this->write_raw_header<psyq::internal::message_pack_format_BINARY_8>(0))
+            if (this->write_raw_header<psyq::message_pack::_private::format_BINARY_8>(0))
             {
                 this->update_container_stack();
                 return true;
@@ -953,7 +953,7 @@ class psyq::message_pack::serializer
             // スタック限界を超えたので失敗。
             PSYQ_ASSERT(false);
         }
-        else if (this->write_raw_header<psyq::internal::message_pack_format_BINARY_8>(local_size))
+        else if (this->write_raw_header<psyq::message_pack::_private::format_BINARY_8>(local_size))
         {
             // RAWバイト列をスタックに積む。
             auto& local_stack(
@@ -1053,19 +1053,19 @@ class psyq::message_pack::serializer
         switch (in_size)
         {
         case 1:
-            local_header = psyq::internal::message_pack_format_FIX_EXTENDED_1;
+            local_header = psyq::message_pack::_private::format_FIX_EXTENDED_1;
             goto PSYQ_MESSAGE_PACK_SERIALIZER_WRITE_EXTENDED_BINARY_SIZE;
         case 2:
-            local_header = psyq::internal::message_pack_format_FIX_EXTENDED_2;
+            local_header = psyq::message_pack::_private::format_FIX_EXTENDED_2;
             goto PSYQ_MESSAGE_PACK_SERIALIZER_WRITE_EXTENDED_BINARY_SIZE;
         case 4:
-            local_header = psyq::internal::message_pack_format_FIX_EXTENDED_4;
+            local_header = psyq::message_pack::_private::format_FIX_EXTENDED_4;
             goto PSYQ_MESSAGE_PACK_SERIALIZER_WRITE_EXTENDED_BINARY_SIZE;
         case 8:
-            local_header = psyq::internal::message_pack_format_FIX_EXTENDED_8;
+            local_header = psyq::message_pack::_private::format_FIX_EXTENDED_8;
             goto PSYQ_MESSAGE_PACK_SERIALIZER_WRITE_EXTENDED_BINARY_SIZE;
         case 16:
-            local_header = psyq::internal::message_pack_format_FIX_EXTENDED_16;
+            local_header = psyq::message_pack::_private::format_FIX_EXTENDED_16;
             goto PSYQ_MESSAGE_PACK_SERIALIZER_WRITE_EXTENDED_BINARY_SIZE;
         PSYQ_MESSAGE_PACK_SERIALIZER_WRITE_EXTENDED_BINARY_SIZE:
             if (this->get_stack_top_raw() != nullptr)
@@ -1076,7 +1076,7 @@ class psyq::message_pack::serializer
             local_write = this->write_big_endian<std::uint8_t>(local_header);
             break;
         default:
-            local_write = this->write_raw_header<psyq::internal::message_pack_format_EXTENDED_8>(in_size);
+            local_write = this->write_raw_header<psyq::message_pack::_private::format_EXTENDED_8>(in_size);
             break;
         }
 
@@ -1320,7 +1320,7 @@ class psyq::message_pack::serializer
     bool write_tuple(template_tuple const& in_tuple)
     {
         this->make_serial_array(std::tuple_size<template_tuple>::value);
-        psyq::internal::message_pack_tuple_serializer
+        psyq::message_pack::_private::tuple_serializer
             <std::tuple_size<template_tuple>::value>
                 ::write(*this, in_tuple);
         return !this->stream_.fail();
@@ -1444,9 +1444,9 @@ class psyq::message_pack::serializer
     {
         return this->make_serial_container<
             this_type::value_kind_ARRAY_ELEMENT,
-            psyq::internal::message_pack_format_ARRAY_16,
-            psyq::internal::message_pack_format_FIX_ARRAY_MIN,
-            psyq::internal::message_pack_format_FIX_ARRAY_MAX>(
+            psyq::message_pack::_private::format_ARRAY_16,
+            psyq::message_pack::_private::format_FIX_ARRAY_MIN,
+            psyq::message_pack::_private::format_FIX_ARRAY_MAX>(
                 in_length);
     }
     //@}
@@ -1731,9 +1731,9 @@ class psyq::message_pack::serializer
     {
         return this->make_serial_container<
             this_type::value_kind_MAP_KEY,
-            psyq::internal::message_pack_format_MAP_16,
-            psyq::internal::message_pack_format_FIX_MAP_MIN,
-            psyq::internal::message_pack_format_FIX_MAP_MAX>(
+            psyq::message_pack::_private::format_MAP_16,
+            psyq::message_pack::_private::format_FIX_MAP_MIN,
+            psyq::message_pack::_private::format_FIX_MAP_MAX>(
                 in_length);
     }
     //@}
@@ -1865,17 +1865,17 @@ class psyq::message_pack::serializer
             break;
 
         case this_type::value_kind_ARRAY_ELEMENT:
-            local_empty_value = psyq::internal::message_pack_format_NIL;
+            local_empty_value = psyq::message_pack::_private::format_NIL;
             local_empty_count = local_stack.rest_count;
             break;
 
         case this_type::value_kind_MAP_KEY:
-            local_empty_value = psyq::internal::message_pack_format_NIL;
+            local_empty_value = psyq::message_pack::_private::format_NIL;
             local_empty_count = local_stack.rest_count * 2;
             break;
 
         case this_type::value_kind_MAP_VALUE:
-            local_empty_value = psyq::internal::message_pack_format_NIL;
+            local_empty_value = psyq::message_pack::_private::format_NIL;
             local_empty_count = local_stack.rest_count * 2 + 1;
             break;
 

@@ -1,51 +1,54 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::internal::message_pack_container
+    @brief @copybrief psyq::message_pack::_private::container
  */
 #ifndef PSYQ_MESSAGE_PACK_CONTAINER_HPP_
 #define PSYQ_MESSAGE_PACK_CONTAINER_HPP_
 
 namespace psyq
 {
-    /// この名前空間をuserが直接accessするのは禁止。
-    namespace internal
+    namespace message_pack
     {
-        /// @cond
-        template<typename> struct message_pack_container;
-        struct message_pack_extended;
-        template<typename> struct message_pack_map;
-        /// @endcond
-
-        /** @brief コンテナ要素を比較する。
-            @param[in] in_left  左辺のコンテナ要素。
-            @param[in] in_right 右辺のコンテナ要素。
-            @retval 正 左辺のほうが大きい。
-            @retval 0  等値。
-            @retval 負 右辺のほうが小さい。
-         */
-        template<typename template_value>
-        int message_pack_object_compare(
-            template_value const& in_left,
-            template_value const& in_right)
+        /// この名前空間をユーザーが直接アクセスするのは禁止。
+        namespace _private
         {
-            return in_left < in_right? -1: (in_right < in_left? 1: 0);
-        }
+            /// @cond
+            template<typename> struct container;
+            struct extended;
+            template<typename> struct map;
+            /// @endcond
 
-        /** @brief コンテナ要素が等値か判定する。
-            @param[in] in_left  左辺のコンテナ要素。
-            @param[in] in_right 右辺のコンテナ要素。
-            @retval true  左辺と右辺は等値。
-            @retval false 左辺と右辺は非等値。
-         */
-        template<typename template_value>
-        bool message_pack_object_equal(
-            template_value const& in_left,
-            template_value const& in_right)
-        {
-            return in_left == in_right;
-        }
-    }
-}
+            /** @brief コンテナ要素を比較する。
+                @param[in] in_left  左辺のコンテナ要素。
+                @param[in] in_right 右辺のコンテナ要素。
+                @retval 正 左辺のほうが大きい。
+                @retval 0  等値。
+                @retval 負 右辺のほうが小さい。
+             */
+            template<typename template_value>
+            int compare_value(
+                template_value const& in_left,
+                template_value const& in_right)
+            {
+                return in_left < in_right? -1: (in_right < in_left? 1: 0);
+            }
+
+            /** @brief コンテナ要素が等値か判定する。
+                @param[in] in_left  左辺のコンテナ要素。
+                @param[in] in_right 右辺のコンテナ要素。
+                @retval true  左辺と右辺は等値。
+                @retval false 左辺と右辺は非等値。
+             */
+            template<typename template_value>
+            bool equal_value(
+                template_value const& in_left,
+                template_value const& in_right)
+            {
+                return in_left == in_right;
+            }
+        } // namespace _private
+    } // namespace message_pack
+} // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief MessagePackオブジェクトで使うコンテナの基底型。
@@ -54,10 +57,10 @@ namespace psyq
     @sa psyq::message_pack::object::map
  */
 template<typename template_value>
-struct psyq::internal::message_pack_container
+struct psyq::message_pack::_private::container
 {
     /// thisが指す値の型。
-    private: typedef message_pack_container<template_value> this_type;
+    private: typedef container<template_value> this_type;
 
     //-------------------------------------------------------------------------
     /// コンテナ要素の型。
@@ -88,10 +91,10 @@ struct psyq::internal::message_pack_container
     /** @brief 空のコンテナを構築する。
         @note 2014.04.25
         VisualStudio2013以前では、C++11の仕様であるunionの制限解除に未対応。
-        そのため psyq::internal::message_pack_value でビルドエラーが発生する。
+        そのため psyq::message_pack::_private::value でビルドエラーが発生する。
         対応時期が現時点では不明なので、VisualStudioでは無効にしておく。
      */
-    public: PSYQ_CONSTEXPR message_pack_container() PSYQ_NOEXCEPT:
+    public: PSYQ_CONSTEXPR container() PSYQ_NOEXCEPT:
        data_(nullptr),
        size_(0)
     {}
@@ -267,7 +270,7 @@ struct psyq::internal::message_pack_container
             for (typename this_type::size_type i(0); i < this->size(); ++i)
             {
                 bool const local_equal(
-                    psyq::internal::message_pack_object_equal(
+                    psyq::message_pack::_private::equal_value(
                         this->at(i), in_right.at(i)));
                 if (!local_equal)
                 {
@@ -349,7 +352,7 @@ struct psyq::internal::message_pack_container
             for (typename this_type::size_type i(0); i < local_size; ++i)
             {
                 int const local_compare_element(
-                    psyq::internal::message_pack_object_compare(
+                    psyq::message_pack::_private::compare_value(
                         this->at(i), in_right.at(i)));
                 if (local_compare_element != 0)
                 {
@@ -397,7 +400,8 @@ struct psyq::internal::message_pack_container
     //-------------------------------------------------------------------------
     private: typename this_type::pointer data_;   ///< コンテナの先頭位置。
     private: typename this_type::size_type size_; ///< コンテナの要素数。
-};
+
+}; // struct psyq::message_pack::_private::container
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief MessagePackオブジェクトで使う拡張バイナリ。
@@ -407,13 +411,13 @@ struct psyq::internal::message_pack_container
 
     @sa psyq::message_pack::object::extended
  */
-struct psyq::internal::message_pack_extended:
-    public psyq::internal::message_pack_container<std::uint8_t const>
+struct psyq::message_pack::_private::extended:
+    public psyq::message_pack::_private::container<std::uint8_t const>
 {
     /// thisが指す値の型。
-    private: typedef message_pack_extended this_type;
+    private: typedef extended this_type;
     /// thisの基底型。
-    public: typedef psyq::internal::message_pack_container<std::uint8_t const>
+    public: typedef psyq::message_pack::_private::container<std::uint8_t const>
         base_type;
 
     //-------------------------------------------------------------------------
@@ -501,7 +505,8 @@ struct psyq::internal::message_pack_extended:
         return this->base_type::empty()?
             in_empty_type: static_cast<std::int8_t>(*this->base_type::data());
     }
-};
+
+}; // struct psyq::message_pack::_private::extended
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief MessagePackオブジェクトで使う連想配列。
@@ -509,14 +514,14 @@ struct psyq::internal::message_pack_extended:
     @sa psyq::message_pack::object::map
  */
 template<typename template_object>
-struct psyq::internal::message_pack_map:
-    public psyq::internal::message_pack_container<
+struct psyq::message_pack::_private::map:
+    public psyq::message_pack::_private::container<
         std::pair<template_object, template_object>>
 {
     /// thisが指す値の型。
-    private: typedef message_pack_map<template_object> this_type;
-    /// thisの基底型。
-    public: typedef psyq::internal::message_pack_container<
+    private: typedef map this_type;
+    /// this_type の基底型。
+    public: typedef psyq::message_pack::_private::container<
         std::pair<template_object, template_object>>
             base_type;
 
@@ -537,8 +542,8 @@ struct psyq::internal::message_pack_map:
                 typename base_type::value_type const& in_left,
                 typename base_type::value_type const& in_right)
             {
-                return psyq::internal
-                    ::message_pack_object_compare(in_left, in_right) < 0;
+                return psyq::message_pack::_private
+                    ::compare_value(in_left, in_right) < 0;
             });
     }
 
@@ -582,8 +587,8 @@ struct psyq::internal::message_pack_map:
                 typename base_type::value_type const& in_left,
                 typename base_type::value_type const& in_right)
             {
-                return psyq::internal
-                    ::message_pack_object_compare(in_left, in_right) < 0;
+                return psyq::message_pack::_private
+                    ::compare_value(in_left, in_right) < 0;
             });
     }
 
@@ -602,8 +607,8 @@ struct psyq::internal::message_pack_map:
                 typename base_type::value_type const& in_left,
                 typename base_type::value_type const& in_right)
             {
-                return psyq::internal
-                    ::message_pack_object_compare(in_left, in_right) < 0;
+                return psyq::message_pack::_private
+                    ::compare_value(in_left, in_right) < 0;
             });
     }
 
@@ -622,8 +627,8 @@ struct psyq::internal::message_pack_map:
                 typename base_type::value_type const& in_left,
                 typename base_type::value_type const& in_right)
             {
-                return psyq::internal
-                    ::message_pack_object_compare(in_left, in_right) < 0;
+                return psyq::message_pack::_private
+                    ::compare_value(in_left, in_right) < 0;
             });
     }
 
@@ -635,6 +640,7 @@ struct psyq::internal::message_pack_map:
     private: typename base_type::const_reference operator[](
         typename base_type::size_type const)
     const;
-};
+
+}; // struct psyq::message_pack::_private::map
 
 #endif // PSYQ_MESSAGE_PACK_CONTAINER_HPP_

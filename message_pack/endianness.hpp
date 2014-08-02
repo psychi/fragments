@@ -16,7 +16,7 @@
 
 namespace psyq
 {
-    /// MessagePackの直列化／直列化復元。
+    /// MessagePackの直列化と直列化復元を行う。
     namespace message_pack
     {
         /// @cond
@@ -85,88 +85,88 @@ namespace psyq
                 ((in_value >> 16) & 0x0000ffff0000ffff));
             return static_cast<std::uint64_t>((in_value << 32) | (in_value >> 32));
         }
-    } // namespace message_pack
 
-    /// この名前空間をuserが直接accessするのは禁止。
-    namespace internal
-    {
-        //---------------------------------------------------------------------
-        /// バイト列として使う型。
-        template<std::size_t> struct message_pack_bytes;
-        /// 1バイトのバイト列として使う型。
-        template<> struct message_pack_bytes<1> {typedef std::uint8_t  type;};
-        /// 2バイトのバイト列として使う型。
-        template<> struct message_pack_bytes<2> {typedef std::uint16_t type;};
-        /// 4バイトのバイト列として使う型。
-        template<> struct message_pack_bytes<4> {typedef std::uint32_t type;};
-        /// 8バイトのバイト列として使う型。
-        template<> struct message_pack_bytes<8> {typedef std::uint64_t type;};
+        /// この名前空間をユーザーが直接アクセスするのは禁止。
+        namespace _private
+        {
+            //-----------------------------------------------------------------
+            /// バイト列として使う型。
+            template<std::size_t> struct raw_bytes;
+            /// 1バイトのバイト列として使う型。
+            template<> struct raw_bytes<1> {typedef std::uint8_t  type;};
+            /// 2バイトのバイト列として使う型。
+            template<> struct raw_bytes<2> {typedef std::uint16_t type;};
+            /// 4バイトのバイト列として使う型。
+            template<> struct raw_bytes<4> {typedef std::uint32_t type;};
+            /// 8バイトのバイト列として使う型。
+            template<> struct raw_bytes<8> {typedef std::uint64_t type;};
 
-        //---------------------------------------------------------------------
-        /// @brief 整数値のエンディアン性を変換する。
-        template<bool template_integral>
-        struct message_pack_endianness_converter
-        {
-            /** @brief 値のエンディアン性を変換する。
-                @tparam template_target 変換先の値の型。
-                @tparam template_source 変換元の値の型。
-                @param[in] in_source     変換元の値。ネイティブエンディアン。
-                @param[in] in_endianness 変換先のエンディアン性。
-                @return エンディアン性を変換した値。
-             */
-            template<typename template_target, typename template_source>
-            static template_target convert(
-                template_source const in_source,
-                psyq::message_pack::endianness const in_endianness)
-            PSYQ_NOEXCEPT
+            //-----------------------------------------------------------------
+            /// @brief 整数値のエンディアン性を変換する。
+            template<bool template_integral>
+            struct endianness_converter
             {
-                static_assert(
-                    std::is_integral<template_source>::value,
-                    "template_source is not integer type.");
-                typedef typename psyq::internal
-                    ::message_pack_bytes<sizeof(template_source)>::type
-                        bytes_type;
-                return static_cast<template_target>(
-                    in_endianness != psyq::message_pack::get_native_endian()?
-                        psyq::message_pack::swap_endianness(
-                            static_cast<bytes_type>(in_source)):
-                        in_source);
-            }
-        };
-        /// @brief 値のエンディアン性を変換する。
-        template<> struct message_pack_endianness_converter<false>
-        {
-            /// @copydoc message_pack_endianness_converter::convert()
-            template<typename template_target, typename template_source>
-            static template_target convert(
-                template_source const in_source,
-                psyq::message_pack::endianness const in_endianness)
-            PSYQ_NOEXCEPT
-            {
-                typedef typename psyq::internal
-                    ::message_pack_bytes<sizeof(template_source)>::type
-                        bytes_type;
-                /** @note 2014.05.13
-                    strict-aliasingの対応のためにunionを使う手法は、
-                    C++標準では許容されておらず、リスクを伴う。
-                    でも、ほとんどのコンパイラでは問題はないはず。
-                    http://d.hatena.ne.jp/yohhoy/20120220/p1
+                /** @brief 値のエンディアン性を変換する。
+                    @tparam template_target 変換先の値の型。
+                    @tparam template_source 変換元の値の型。
+                    @param[in] in_source     変換元の値。ネイティブエンディアン。
+                    @param[in] in_endianness 変換先のエンディアン性。
+                    @return エンディアン性を変換した値。
                  */
-                union
+                template<typename template_target, typename template_source>
+                static template_target convert(
+                    template_source const in_source,
+                    psyq::message_pack::endianness const in_endianness)
+                PSYQ_NOEXCEPT
                 {
-                    template_source source;
-                    bytes_type bytes;
-                    template_target target;
-                } local_union = {in_source};
-                if (in_endianness != psyq::message_pack::get_native_endian())
-                {
-                    local_union.bytes = psyq::message_pack::swap_endianness(
-                        local_union.bytes);
+                    static_assert(
+                        std::is_integral<template_source>::value,
+                        "template_source is not integer type.");
+                    typedef typename psyq::message_pack::_private
+                        ::raw_bytes<sizeof(template_source)>::type
+                            bytes_type;
+                    return static_cast<template_target>(
+                        in_endianness != psyq::message_pack::get_native_endian()?
+                            psyq::message_pack::swap_endianness(
+                                static_cast<bytes_type>(in_source)):
+                            in_source);
                 }
-                return local_union.target;
-            }
-        };
-    } // namespace internal
+            };
+            /// @brief 値のエンディアン性を変換する。
+            template<> struct endianness_converter<false>
+            {
+                /// @copydoc endianness_converter::convert()
+                template<typename template_target, typename template_source>
+                static template_target convert(
+                    template_source const in_source,
+                    psyq::message_pack::endianness const in_endianness)
+                PSYQ_NOEXCEPT
+                {
+                    typedef typename psyq::message_pack::_private
+                        ::raw_bytes<sizeof(template_source)>::type
+                            bytes_type;
+                    /** @note 2014.05.13
+                        strict-aliasingの対応のためにunionを使う手法は、
+                        C++標準では許容されておらず、リスクを伴う。
+                        でも、ほとんどのコンパイラでは問題はないはず。
+                        http://d.hatena.ne.jp/yohhoy/20120220/p1
+                     */
+                    union
+                    {
+                        template_source source;
+                        bytes_type bytes;
+                        template_target target;
+                    } local_union = {in_source};
+                    if (in_endianness != psyq::message_pack::get_native_endian())
+                    {
+                        local_union.bytes = psyq::message_pack::swap_endianness(
+                            local_union.bytes);
+                    }
+                    return local_union.target;
+                }
+            };
+        } // namespace _private
+    } // namespace message_pack
 } // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -192,8 +192,8 @@ struct psyq::message_pack::endianness_converter
         "template_value is not integer or floating point type.");
 
     /// this_type::value_type のRAWバイト列の型。
-    public: typedef typename psyq::internal
-        ::message_pack_bytes<sizeof(template_value)>::type
+    public: typedef typename psyq::message_pack::_private
+        ::raw_bytes<sizeof(template_value)>::type
             bytes;
 
     //-------------------------------------------------------------------------
@@ -237,7 +237,7 @@ struct psyq::message_pack::endianness_converter
         psyq::message_pack::endianness const in_endianness)
     PSYQ_NOEXCEPT
     {
-        return psyq::internal::message_pack_endianness_converter
+        return psyq::message_pack::_private::endianness_converter
             <std::is_integral<template_value>::value>
                 ::template convert<typename this_type::bytes>(in_value, in_endianness);
     }
@@ -252,7 +252,7 @@ struct psyq::message_pack::endianness_converter
         psyq::message_pack::endianness const in_endianness)
     PSYQ_NOEXCEPT
     {
-        return psyq::internal::message_pack_endianness_converter
+        return psyq::message_pack::_private::endianness_converter
             <std::is_integral<template_value>::value>
                 ::template convert<template_value>(in_bytes, in_endianness);
     }

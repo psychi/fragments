@@ -24,45 +24,45 @@ namespace psyq
             std::size_t = PSYQ_MESSAGE_PACK_DESERIALIZER_STACK_CAPACITY_DEFAULT>
                 class deserializer;
         /// @endcond
-    } // namespace message_pack
 
-    /// この名前空間をuserが直接accessするのは禁止。
-    namespace internal
-    {
-        //---------------------------------------------------------------------
-        /** @brief ストリームからRAWバイト列を読み込む。
-            @param[out]    out_bytes    ストリームから読み込んだRAWバイト列を格納する。
-            @param[in,out] io_istream   読み込むストリーム。
-            @param[in]     in_read_size 読み込むバイト数。
-            @return 読み込んだバイト数。
-         */
-        template<typename template_stream>
-        std::size_t message_pack_read_bytes(
-            void* const out_bytes,
-            template_stream& io_istream,
-            std::size_t const in_read_size)
+        /// この名前空間をユーザーが直接アクセスするのは禁止。
+        namespace _private
         {
-            if (io_istream.fail())
+            //---------------------------------------------------------------------
+            /** @brief ストリームからRAWバイト列を読み込む。
+                @param[out]    out_bytes    ストリームから読み込んだRAWバイト列を格納する。
+                @param[in,out] io_istream   読み込むストリーム。
+                @param[in]     in_read_size 読み込むバイト数。
+                @return 読み込んだバイト数。
+             */
+            template<typename template_stream>
+            std::size_t read_bytes(
+                void* const out_bytes,
+                template_stream& io_istream,
+                std::size_t const in_read_size)
             {
-                return 0;
-            }
+                if (io_istream.fail())
+                {
+                    return 0;
+                }
 
-            // ストリームを読み込む。
-            auto const local_pre_position(io_istream.tellg());
-            typedef typename template_stream::char_type char_type;
-            io_istream.read(
-                static_cast<char_type*>(out_bytes),
-                in_read_size / sizeof(char_type));
-            if (io_istream.fail())
-            {
-                PSYQ_ASSERT(false);
-                io_istream.seekg(local_pre_position);
-                return 0;
+                // ストリームを読み込む。
+                auto const local_pre_position(io_istream.tellg());
+                typedef typename template_stream::char_type char_type;
+                io_istream.read(
+                    static_cast<char_type*>(out_bytes),
+                    in_read_size / sizeof(char_type));
+                if (io_istream.fail())
+                {
+                    PSYQ_ASSERT(false);
+                    io_istream.seekg(local_pre_position);
+                    return 0;
+                }
+                return static_cast<std::size_t>(io_istream.tellg() - local_pre_position)
+                    * sizeof(char_type);
             }
-            return static_cast<std::size_t>(io_istream.tellg() - local_pre_position)
-                * sizeof(char_type);
-        }
-    } // namespace internal
+        } // namespace _private
+    } // namespace message_pack
 } // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -386,27 +386,27 @@ class psyq::message_pack::deserializer
         auto const local_header(static_cast<unsigned>(this->stream_.get()));
 
         // MessagePackの直列化形式によって、復元処理を分岐する。
-        if (local_header <= psyq::internal::message_pack_format_FIX_INTEGER_MAX)
+        if (local_header <= psyq::message_pack::_private::format_FIX_INTEGER_MAX)
         {
             // [0x00, 0x7f]: positive fixnum
             return this->add_container_element(psyq::message_pack::object(local_header));
         }
-        else if (local_header <= psyq::internal::message_pack_format_FIX_MAP_MAX)
+        else if (local_header <= psyq::message_pack::_private::format_FIX_MAP_MAX)
         {
             // [0x80, 0x8f]: fix map
             return this->reserve_container<psyq::message_pack::object::unordered_map>(local_header & 0x0f);
         }
-        else if (local_header <= psyq::internal::message_pack_format_FIX_ARRAY_MAX)
+        else if (local_header <= psyq::message_pack::_private::format_FIX_ARRAY_MAX)
         {
             // [0x90, 0x9f]: fix array
             return this->reserve_container<psyq::message_pack::object::array>(local_header & 0x0f);
         }
-        else if (local_header <= psyq::internal::message_pack_format_FIX_STRING_MAX)
+        else if (local_header <= psyq::message_pack::_private::format_FIX_STRING_MAX)
         {
             // [0xa0, 0xbf]: fix str
             return this->read_raw<psyq::message_pack::object::string>(local_header & 0x1f);
         }
-        else if (local_header <= psyq::internal::message_pack_foramt_NEGATIVE_INTEGER_64)
+        else if (local_header <= psyq::message_pack::_private::foramt_NEGATIVE_INTEGER_64)
         {
             // 0xc0: nil
             // 0xc1: never used
@@ -430,7 +430,7 @@ class psyq::message_pack::deserializer
             // 0xd3: signed int 64
             return this->read_value(local_header);
         }
-        else if (local_header <= psyq::internal::message_pack_format_FIX_EXTENDED_16)
+        else if (local_header <= psyq::message_pack::_private::format_FIX_EXTENDED_16)
         {
             // 0xd4: fix ext 1
             // 0xd5: fix ext 2
@@ -438,9 +438,9 @@ class psyq::message_pack::deserializer
             // 0xd7: fix ext 8
             // 0xd8: fix ext 16
             return this->read_raw<psyq::message_pack::object::extended>(
-                1 << (local_header - psyq::internal::message_pack_format_FIX_EXTENDED_1));
+                1 << (local_header - psyq::message_pack::_private::format_FIX_EXTENDED_1));
         }
-        else if (local_header <= psyq::internal::message_pack_format_MAP_32)
+        else if (local_header <= psyq::message_pack::_private::format_MAP_32)
         {
             // 0xd9: str 8
             // 0xda: str 16
@@ -468,75 +468,75 @@ class psyq::message_pack::deserializer
         switch (in_header)
         {
         // 空値
-        case psyq::internal::message_pack_format_NIL:
+        case psyq::message_pack::_private::format_NIL:
             return this->add_container_element(psyq::message_pack::object());
 
         // 真偽値
-        case psyq::internal::message_pack_format_FALSE:
+        case psyq::message_pack::_private::format_FALSE:
             return this->add_container_element(psyq::message_pack::object(false));
-        case psyq::internal::message_pack_format_TRUE:
+        case psyq::message_pack::_private::format_TRUE:
             return this->add_container_element(psyq::message_pack::object(true));
 
         // 0以上の整数
-        case psyq::internal::message_pack_format_UNSIGNED_INTEGER_8:
+        case psyq::message_pack::_private::format_UNSIGNED_INTEGER_8:
             return this->read_big_endian<std::uint8_t >();
-        case psyq::internal::message_pack_format_UNSIGNED_INTEGER_16:
+        case psyq::message_pack::_private::format_UNSIGNED_INTEGER_16:
             return this->read_big_endian<std::uint16_t>();
-        case psyq::internal::message_pack_format_UNSIGNED_INTEGER_32:
+        case psyq::message_pack::_private::format_UNSIGNED_INTEGER_32:
             return this->read_big_endian<std::uint32_t>();
-        case psyq::internal::message_pack_format_UNSIGNED_INTEGER_64:
+        case psyq::message_pack::_private::format_UNSIGNED_INTEGER_64:
             return this->read_big_endian<std::uint64_t>();
 
         // 0未満の整数
-        case psyq::internal::message_pack_foramt_NEGATIVE_INTEGER_8:
+        case psyq::message_pack::_private::foramt_NEGATIVE_INTEGER_8:
             return this->read_big_endian<std::int8_t >();
-        case psyq::internal::message_pack_foramt_NEGATIVE_INTEGER_16:
+        case psyq::message_pack::_private::foramt_NEGATIVE_INTEGER_16:
             return this->read_big_endian<std::int16_t>();
-        case psyq::internal::message_pack_foramt_NEGATIVE_INTEGER_32:
+        case psyq::message_pack::_private::foramt_NEGATIVE_INTEGER_32:
             return this->read_big_endian<std::int32_t>();
-        case psyq::internal::message_pack_foramt_NEGATIVE_INTEGER_64:
+        case psyq::message_pack::_private::foramt_NEGATIVE_INTEGER_64:
             return this->read_big_endian<std::int64_t>();
 
         // 浮動小数点数
-        case psyq::internal::message_pack_format_FLOATING_POINT_32:
+        case psyq::message_pack::_private::format_FLOATING_POINT_32:
             return this->read_big_endian<psyq::message_pack::object::floating_point_32>();
-        case psyq::internal::message_pack_format_FLOATING_POINT_64:
+        case psyq::message_pack::_private::format_FLOATING_POINT_64:
             return this->read_big_endian<psyq::message_pack::object::floating_point_64>();
 
         // 文字列
-        case psyq::internal::message_pack_format_STRING_8:
+        case psyq::message_pack::_private::format_STRING_8:
             return this->read_raw<psyq::message_pack::object::string, std::uint8_t >();
-        case psyq::internal::message_pack_format_STRING_16:
+        case psyq::message_pack::_private::format_STRING_16:
             return this->read_raw<psyq::message_pack::object::string, std::uint16_t>();
-        case psyq::internal::message_pack_format_STRING_32:
+        case psyq::message_pack::_private::format_STRING_32:
             return this->read_raw<psyq::message_pack::object::string, std::uint32_t>();
 
         // バイナリ
-        case psyq::internal::message_pack_format_BINARY_8:
+        case psyq::message_pack::_private::format_BINARY_8:
             return this->read_raw<psyq::message_pack::object::binary, std::uint8_t >();
-        case psyq::internal::message_pack_format_BINARY_16:
+        case psyq::message_pack::_private::format_BINARY_16:
             return this->read_raw<psyq::message_pack::object::binary, std::uint16_t>();
-        case psyq::internal::message_pack_format_BINARY_32:
+        case psyq::message_pack::_private::format_BINARY_32:
             return this->read_raw<psyq::message_pack::object::binary, std::uint32_t>();
 
         // 拡張バイナリ
-        case psyq::internal::message_pack_format_EXTENDED_8:
+        case psyq::message_pack::_private::format_EXTENDED_8:
             return this->read_raw<psyq::message_pack::object::extended, std::uint8_t >();
-        case psyq::internal::message_pack_format_EXTENDED_16:
+        case psyq::message_pack::_private::format_EXTENDED_16:
             return this->read_raw<psyq::message_pack::object::extended, std::uint16_t>();
-        case psyq::internal::message_pack_format_EXTENDED_32:
+        case psyq::message_pack::_private::format_EXTENDED_32:
             return this->read_raw<psyq::message_pack::object::extended, std::uint32_t>();
 
         // 配列
-        case psyq::internal::message_pack_format_ARRAY_16:
+        case psyq::message_pack::_private::format_ARRAY_16:
             return this->reserve_container<psyq::message_pack::object::array, std::uint16_t>();
-        case psyq::internal::message_pack_format_ARRAY_32:
+        case psyq::message_pack::_private::format_ARRAY_32:
             return this->reserve_container<psyq::message_pack::object::array, std::uint32_t>();
 
         // 連想配列
-        case psyq::internal::message_pack_format_MAP_16:
+        case psyq::message_pack::_private::format_MAP_16:
             return this->reserve_container<psyq::message_pack::object::unordered_map, std::uint16_t>();
-        case psyq::internal::message_pack_format_MAP_32:
+        case psyq::message_pack::_private::format_MAP_32:
             return this->reserve_container<psyq::message_pack::object::unordered_map, std::uint32_t>();
 
         default:
@@ -571,7 +571,7 @@ class psyq::message_pack::deserializer
             endianness_converter;
         typename endianness_converter::bytes local_bytes;
         auto const local_read_size(
-            psyq::internal::message_pack_read_bytes(
+            psyq::message_pack::_private::read_bytes(
                 &local_bytes, io_istream, sizeof(local_bytes)));
         if (local_read_size != sizeof(local_bytes))
         {
@@ -648,7 +648,7 @@ class psyq::message_pack::deserializer
                 return nullptr;
             }
             auto const local_read_size(
-                psyq::internal::message_pack_read_bytes(
+                psyq::message_pack::_private::read_bytes(
                     local_bytes, io_istream, local_allocate_size));
             if (local_read_size != local_allocate_size)
             {

@@ -1,23 +1,23 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copydoc psyq::internal::message_pack_value
+    @brief @copydoc psyq::message_pack::_private::storage
  */
-#ifndef PSYQ_MESSAGE_PACK_VALUE_HPP_
-#define PSYQ_MESSAGE_PACK_VALUE_HPP_
+#ifndef PSYQ_MESSAGE_PACK_STORAGE_HPP_
+#define PSYQ_MESSAGE_PACK_STORAGE_HPP_
 
 //#include "psyq/message_pack/container.hpp"
 
 /// 倍精度浮動小数点数で許容する誤差の最大値。
-#ifndef PSYQ_MESSAGE_PACK_VALUE_FLOATING_POINT_32_EPSILON
-#define PSYQ_MESSAGE_PACK_VALUE_FLOATING_POINT_32_EPSILON\
+#ifndef PSYQ_MESSAGE_PACK_STORAGE_FLOATING_POINT_32_EPSILON
+#define PSYQ_MESSAGE_PACK_STORAGE_FLOATING_POINT_32_EPSILON\
     (std::numeric_limits<this_type::floating_point_32>::epsilon() * 4)
-#endif // !defined(PSYQ_MESSAGE_PACK_VALUE_FLOATING_POINT_32_EPSILON)
+#endif // !defined(PSYQ_MESSAGE_PACK_STORAGE_FLOATING_POINT_32_EPSILON)
 
 /// 単精度浮動小数点数で許容する誤差の最大値。
-#ifndef PSYQ_MESSAGE_PACK_VALUE_FLOATING_POINT_64_EPSILON
-#define PSYQ_MESSAGE_PACK_VALUE_FLOATING_POINT_64_EPSILON\
+#ifndef PSYQ_MESSAGE_PACK_STORAGE_FLOATING_POINT_64_EPSILON
+#define PSYQ_MESSAGE_PACK_STORAGE_FLOATING_POINT_64_EPSILON\
     (std::numeric_limits<this_type::floating_point_64>::epsilon() * 4)
-#endif // !defined(PSYQ_MESSAGE_PACK_VALUE_FLOATING_POINT_64_EPSILON)
+#endif // !defined(PSYQ_MESSAGE_PACK_STORAGE_FLOATING_POINT_64_EPSILON)
 
 namespace psyq
 {
@@ -26,24 +26,24 @@ namespace psyq
         /// @cond
         class object;
         /// @endcond
-    }
 
-    /// この名前空間をuserが直接accessするのは禁止。
-    namespace internal
-    {
-        /// @cond
-        union message_pack_value;
-        /// @endcond
-    }
-}
+        /// この名前空間をユーザーが直接アクセスするのは禁止。
+        namespace _private
+        {
+            /// @cond
+            union storage;
+            /// @endcond
+        } // namespace _private
+    } // namespace message_pack
+} // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief MessagePackオブジェクトの値。
+/** @brief MessagePackオブジェクトの値を保持する共用体。
     @sa psyq::message_pack::object
  */
-union psyq::internal::message_pack_value
+union psyq::message_pack::_private::storage
 {
-    private: typedef message_pack_value this_type; ///< thisが指す値の型。
+    private: typedef storage this_type; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
     public: struct type
@@ -78,15 +78,15 @@ union psyq::internal::message_pack_value
     /// @copydoc this_type::type::FLOATING_POINT_64
     public: typedef double floating_point_64;
     /// @copydoc this_type::type::STRING
-    public: typedef psyq::internal::message_pack_container<char const> string;
+    public: typedef psyq::message_pack::_private::container<char const> string;
     /// @copydoc this_type::type::BINARY
-    public: typedef psyq::internal::message_pack_extended::base_type binary;
+    public: typedef psyq::message_pack::_private::extended::base_type binary;
     /// @copydoc this_type::type::EXTENDED
-    public: typedef psyq::internal::message_pack_extended extended;
+    public: typedef psyq::message_pack::_private::extended extended;
     /// @copydoc this_type::type::ARRAY
-    public: typedef psyq::internal::message_pack_container<psyq::message_pack::object> array;
+    public: typedef psyq::message_pack::_private::container<psyq::message_pack::object> array;
     /// @copydoc this_type::type::MAP
-    public: typedef psyq::internal::message_pack_map<psyq::message_pack::object> map;
+    public: typedef psyq::message_pack::_private::map<psyq::message_pack::object> map;
     /// @copydoc this_type::type::UNORDERED_MAP
     public: typedef this_type::map::base_type unordered_map;
     //@}
@@ -94,12 +94,12 @@ union psyq::internal::message_pack_value
     /// @name MessagePackオブジェクト値の構築
     //@{
     /// 空のMessagePackオブジェクト値を構築する。
-    public: PSYQ_CONSTEXPR message_pack_value() PSYQ_NOEXCEPT {}
+    public: PSYQ_CONSTEXPR storage() PSYQ_NOEXCEPT {}
 
     /** @brief MessagePackオブジェクトに真偽値を格納する。
         @param[in] in_boolean MessagePackオブジェクトに格納する真偽値。
      */
-    public: explicit PSYQ_CONSTEXPR message_pack_value(bool const in_boolean)
+    public: explicit PSYQ_CONSTEXPR storage(bool const in_boolean)
     PSYQ_NOEXCEPT:
         boolean_(in_boolean)
     {}
@@ -107,7 +107,7 @@ union psyq::internal::message_pack_value
     /** @brief MessagePackオブジェクトに整数を格納する。
         @param[in] in_integer MessagePackオブジェクトに格納する整数。
      */
-    public: explicit PSYQ_CONSTEXPR message_pack_value(
+    public: explicit PSYQ_CONSTEXPR storage(
         std::int64_t const in_integer)
     PSYQ_NOEXCEPT:
         negative_integer_(in_integer)
@@ -116,13 +116,13 @@ union psyq::internal::message_pack_value
     /** @brief MessagePackオブジェクトに浮動小数点数を格納する。
         @param[in] in_float MessagePackオブジェクトに格納する浮動小数点数。
      */
-    public: explicit PSYQ_CONSTEXPR message_pack_value(
+    public: explicit PSYQ_CONSTEXPR storage(
         this_type::floating_point_64 const in_float)
     PSYQ_NOEXCEPT:
         floating_point_64_(in_float)
     {}
-    /// @copydoc message_pack_value(this_type::floating_point_64 const)
-    public: explicit PSYQ_CONSTEXPR message_pack_value(
+    /// @copydoc storage(this_type::floating_point_64 const)
+    public: explicit PSYQ_CONSTEXPR storage(
         this_type::floating_point_32 const in_float)
     PSYQ_NOEXCEPT:
         floating_point_32_(in_float)
@@ -131,7 +131,7 @@ union psyq::internal::message_pack_value
     /** @brief MessagePackオブジェクトに文字列を格納する。
         @param[in] in_string MessagePackオブジェクトに格納する文字列。
      */
-    public: explicit PSYQ_CONSTEXPR message_pack_value(
+    public: explicit PSYQ_CONSTEXPR storage(
         this_type::string const& in_string)
     PSYQ_NOEXCEPT:
         string_(in_string)
@@ -139,7 +139,7 @@ union psyq::internal::message_pack_value
     /** @brief MessagePackオブジェクトにバイナリを格納する。
         @param[in] in_binary MessagePackオブジェクトに格納するバイナリ。
      */
-    public: explicit PSYQ_CONSTEXPR message_pack_value(
+    public: explicit PSYQ_CONSTEXPR storage(
         this_type::binary const& in_binary)
     PSYQ_NOEXCEPT:
         binary_(in_binary)
@@ -147,7 +147,7 @@ union psyq::internal::message_pack_value
     /** @brief MessagePackオブジェクトに文字列を格納する。
         @param[in] in_extended MessagePackオブジェクトに格納する文字列。
      */
-    public: explicit PSYQ_CONSTEXPR message_pack_value(
+    public: explicit PSYQ_CONSTEXPR storage(
         this_type::extended const& in_extended)
     PSYQ_NOEXCEPT:
         extended_(in_extended)
@@ -156,7 +156,7 @@ union psyq::internal::message_pack_value
     /** @brief MessagePackオブジェクトに配列を格納する。
         @param[in] in_array MessagePackオブジェクトに格納する配列。
      */
-    public: explicit PSYQ_CONSTEXPR message_pack_value(
+    public: explicit PSYQ_CONSTEXPR storage(
         this_type::array const& in_array)
     PSYQ_NOEXCEPT:
         array_(in_array)
@@ -165,7 +165,7 @@ union psyq::internal::message_pack_value
     /** @brief MessagePackオブジェクトに連想配列を格納する。
         @param[in] in_map MessagePackオブジェクトに格納する連想配列。
      */
-    public: explicit PSYQ_CONSTEXPR message_pack_value(
+    public: explicit PSYQ_CONSTEXPR storage(
         this_type::unordered_map const& in_map)
     PSYQ_NOEXCEPT:
         unordered_map_(in_map)
@@ -173,7 +173,7 @@ union psyq::internal::message_pack_value
     /** @brief MessagePackオブジェクトに連想配列を格納する。
         @param[in] in_map MessagePackオブジェクトに格納する連想配列。
      */
-    public: explicit PSYQ_CONSTEXPR message_pack_value(
+    public: explicit PSYQ_CONSTEXPR storage(
         this_type::map const& in_map)
     PSYQ_NOEXCEPT:
         map_(in_map)
@@ -225,12 +225,12 @@ union psyq::internal::message_pack_value
             return 0 == this_type::compare_floating_point(
                 in_left_value.floating_point_32_,
                 in_right_value.floating_point_32_,
-                PSYQ_MESSAGE_PACK_VALUE_FLOATING_POINT_32_EPSILON);
+                PSYQ_MESSAGE_PACK_STORAGE_FLOATING_POINT_32_EPSILON);
         case this_type::type::FLOATING_POINT_64:
             return 0 == this_type::compare_floating_point(
                 in_left_value.floating_point_64_,
                 in_right_value.floating_point_64_,
-                PSYQ_MESSAGE_PACK_VALUE_FLOATING_POINT_64_EPSILON);
+                PSYQ_MESSAGE_PACK_STORAGE_FLOATING_POINT_64_EPSILON);
         case this_type::type::STRING:
             return in_left_value.string_ == in_right_value.string_;
         case this_type::type::BINARY:
@@ -494,7 +494,7 @@ union psyq::internal::message_pack_value
             return this_type::compare_floating_point<template_float_type>(
                 in_left_value.floating_point_32_,
                 in_right_float,
-                PSYQ_MESSAGE_PACK_VALUE_FLOATING_POINT_32_EPSILON);
+                PSYQ_MESSAGE_PACK_STORAGE_FLOATING_POINT_32_EPSILON);
         case this_type::type::FLOATING_POINT_64:
             return this_type::compare_floating_point<this_type::floating_point_64>(
                 in_left_value.floating_point_64_,
@@ -608,14 +608,14 @@ union psyq::internal::message_pack_value
      */
     private: static this_type::floating_point_64 get_epsilon(this_type::floating_point_64 const)
     {
-        return PSYQ_MESSAGE_PACK_VALUE_FLOATING_POINT_64_EPSILON;
+        return PSYQ_MESSAGE_PACK_STORAGE_FLOATING_POINT_64_EPSILON;
     }
     /** @brief 単精度浮動小数点数で許容する誤差の最大値を取得する。
         @return 単精度浮動小数点数で許容する誤差の最大値。
      */
     private: static this_type::floating_point_32 get_epsilon(this_type::floating_point_32 const)
     {
-        return PSYQ_MESSAGE_PACK_VALUE_FLOATING_POINT_32_EPSILON;
+        return PSYQ_MESSAGE_PACK_STORAGE_FLOATING_POINT_32_EPSILON;
     }
     //@}
     //-------------------------------------------------------------------------
@@ -656,12 +656,12 @@ union psyq::internal::message_pack_value
             return this_type::compare_floating_point<this_type::floating_point_64>(
                 in_left_value.floating_point_32_,
                 static_cast<this_type::floating_point_64>(in_right_integer),
-                PSYQ_MESSAGE_PACK_VALUE_FLOATING_POINT_32_EPSILON);
+                PSYQ_MESSAGE_PACK_STORAGE_FLOATING_POINT_32_EPSILON);
         case this_type::type::FLOATING_POINT_64:
             return this_type::compare_floating_point<this_type::floating_point_64>(
                 in_left_value.floating_point_64_,
                 static_cast<this_type::floating_point_64>(in_right_integer),
-                PSYQ_MESSAGE_PACK_VALUE_FLOATING_POINT_64_EPSILON);
+                PSYQ_MESSAGE_PACK_STORAGE_FLOATING_POINT_64_EPSILON);
         case this_type::type::STRING:
         case this_type::type::BINARY:
         case this_type::type::EXTENDED:
@@ -794,12 +794,12 @@ union psyq::internal::message_pack_value
                 in_right_integer,
                 static_cast<this_type::floating_point_64>(in_left_value.floating_point_32_),
                 static_cast<this_type::floating_point_64>(
-                    PSYQ_MESSAGE_PACK_VALUE_FLOATING_POINT_32_EPSILON));
+                    PSYQ_MESSAGE_PACK_STORAGE_FLOATING_POINT_32_EPSILON));
         case this_type::type::FLOATING_POINT_64:
             return -this_type::compare_unsigned_integer(
                 in_right_integer,
                 in_left_value.floating_point_64_,
-                PSYQ_MESSAGE_PACK_VALUE_FLOATING_POINT_64_EPSILON);
+                PSYQ_MESSAGE_PACK_STORAGE_FLOATING_POINT_64_EPSILON);
         case this_type::type::STRING:
         case this_type::type::BINARY:
         case this_type::type::EXTENDED:
@@ -911,12 +911,12 @@ union psyq::internal::message_pack_value
             return this_type::compare_floating_point(
                 in_left_value.floating_point_32_,
                 in_right_boolean,
-                PSYQ_MESSAGE_PACK_VALUE_FLOATING_POINT_32_EPSILON);
+                PSYQ_MESSAGE_PACK_STORAGE_FLOATING_POINT_32_EPSILON);
         case this_type::type::FLOATING_POINT_64:
             return this_type::compare_floating_point(
                 in_left_value.floating_point_64_,
                 in_right_boolean,
-                PSYQ_MESSAGE_PACK_VALUE_FLOATING_POINT_64_EPSILON);
+                PSYQ_MESSAGE_PACK_STORAGE_FLOATING_POINT_64_EPSILON);
         case this_type::type::STRING:
         case this_type::type::BINARY:
         case this_type::type::EXTENDED:
@@ -970,6 +970,7 @@ union psyq::internal::message_pack_value
     public: this_type::unordered_map unordered_map_;
     /// @copydoc this_type::type::MAP
     public: this_type::map map_;
-};
 
-#endif // !defined(PSYQ_MESSAGE_PACK_VALUE_HPP_)
+}; // union psyq::message_pack::_private::storage
+
+#endif // !defined(PSYQ_MESSAGE_PACK_STORAGE_HPP_)

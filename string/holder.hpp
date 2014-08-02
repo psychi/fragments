@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::basic_string_holder
+    @brief @copybrief psyq::string::holder
  */
 #ifndef PSYQ_STRING_HOLDER_HPP_
 #define PSYQ_STRING_HOLDER_HPP_
@@ -49,32 +49,30 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //#include "psyq/string/view.hpp"
 //#include "psyq/atomic_count.hpp"
 
-/// psyq::basic_string_holder で使う、defaultのメモリ割当子の型。
+/// psyq::string::holder で使う、defaultのメモリ割当子の型。
 #ifndef PSYQ_STRING_HOLDER_ALLOCATOR_DEFAULT
 #define PSYQ_STRING_HOLDER_ALLOCATOR_DEFAULT\
     std::allocator<template_char_type>
 #endif // !defined(PSYQ_STRING_HOLDER_ALLOCATOR_DEFAULT)
 
+/// @cond
 namespace psyq
 {
-    /// @cond
-    template<
-        typename template_char_type,
-        typename = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
-        typename = PSYQ_STRING_HOLDER_ALLOCATOR_DEFAULT>
-            class basic_string_holder;
-    /// @endcond
-
-    /// char型の文字を扱う basic_string_holder
-    typedef psyq::basic_string_holder<char> string_holder;
-
-    namespace internal
+    namespace string
     {
-        /// @cond
-        template<typename, typename> class string_holder_base;
-        /// @endcond
-    }
-}
+        template<
+            typename template_char_type,
+            typename = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
+            typename = PSYQ_STRING_HOLDER_ALLOCATOR_DEFAULT>
+                class holder;
+
+        namespace _private
+        {
+            template<typename, typename> class holder_base;
+        } // namespace _private
+    } // namespace string
+} // namespace psyq
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 共有の文字列定数か文字列リテラルの保持子。
@@ -82,9 +80,9 @@ namespace psyq
     @tparam template_allocator_type @copydoc this_type::allocator_type
  */
 template<typename template_char_traits, typename template_allocator_type>
-class psyq::internal::string_holder_base
+class psyq::string::_private::holder_base
 {
-    private: typedef string_holder_base this_type; ///< thisが指す値の型。
+    private: typedef holder_base this_type; ///< thisが指す値の型。
 
     /// 文字特性の型。
     public: typedef template_char_traits traits_type;
@@ -114,8 +112,8 @@ class psyq::internal::string_holder_base
             constant_allocator;
 
     //-------------------------------------------------------------------------
-    /// @copydoc psyq::basic_string_holder::basic_string_holder(this_type const&)
-    protected: string_holder_base(this_type const& in_string)
+    /// @copydoc psyq::string::holder::holder(this_type const&)
+    protected: holder_base(this_type const& in_string)
     PSYQ_NOEXCEPT:
         twice_size_(0),
         data_(nullptr),
@@ -124,8 +122,8 @@ class psyq::internal::string_holder_base
         this->copy_holder(in_string);
     }
 
-    /// @copydoc psyq::basic_string_holder::basic_string_holder(this_type&&)
-    protected: string_holder_base(this_type&& io_string)
+    /// @copydoc psyq::string::holder::holder(this_type&&)
+    protected: holder_base(this_type&& io_string)
     PSYQ_NOEXCEPT:
         twice_size_(0),
         data_(nullptr),
@@ -134,8 +132,8 @@ class psyq::internal::string_holder_base
         this->move_holder(std::move(io_string));
     }
 
-    /// @copydoc psyq::basic_string_holder::basic_string_holder()
-    private: explicit PSYQ_CONSTEXPR string_holder_base(
+    /// @copydoc psyq::string::holder::holder()
+    private: explicit PSYQ_CONSTEXPR holder_base(
         typename this_type::constant_allocator in_allocator)
     PSYQ_NOEXCEPT:
         twice_size_(0),
@@ -144,13 +142,13 @@ class psyq::internal::string_holder_base
     {}
 
     /// @brief 文字列を解放する。
-    public: ~string_holder_base() PSYQ_NOEXCEPT
+    public: ~holder_base() PSYQ_NOEXCEPT
     {
         this->release_constant();
     }
 
     //-------------------------------------------------------------------------
-    /// @copydoc psyq::basic_string_holder::operator=(this_type const&)
+    /// @copydoc psyq::string::holder::operator=(this_type const&)
     protected: this_type& operator=(this_type const& in_string)
     {
         if (this->constant_header_ != in_string.constant_header_)
@@ -162,7 +160,7 @@ class psyq::internal::string_holder_base
         return *this;
     }
 
-    /// @copydoc psyq::basic_string_holder::operator=(this_type&&)
+    /// @copydoc psyq::string::holder::operator=(this_type&&)
     protected: this_type& operator=(this_type&& io_string) PSYQ_NOEXCEPT
     {
         if (this->constant_header_ != io_string.constant_header_)
@@ -177,21 +175,21 @@ class psyq::internal::string_holder_base
     //-------------------------------------------------------------------------
     /// @name 文字列のプロパティ
     //@{
-    /// @copydoc psyq::basic_string_view::data()
+    /// @copydoc psyq::string::view::data()
     public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type const* data()
     const PSYQ_NOEXCEPT
     {
         return this->data_;
     }
 
-    /// @copydoc psyq::basic_string_view::size()
+    /// @copydoc psyq::string::view::size()
     public: PSYQ_CONSTEXPR std::size_t size() const PSYQ_NOEXCEPT
     {
         return this->get_constant() != nullptr?
             this->constant_header_->size: this->twice_size_ >> 1;
     }
 
-    /// @copydoc psyq::basic_string_view::max_size()
+    /// @copydoc psyq::string::view::max_size()
     public: PSYQ_CONSTEXPR std::size_t max_size() const PSYQ_NOEXCEPT
     {
         return (std::numeric_limits<std::size_t>::max)();
@@ -633,16 +631,16 @@ template<
     typename template_char_type,
     typename template_char_traits,
     typename template_allocator_type>
-class psyq::basic_string_holder:
-    public psyq::internal::string_view_interface<
-        psyq::internal::string_holder_base<
+class psyq::string::holder:
+    public psyq::string::_private::view_interface<
+        psyq::string::_private::holder_base<
             template_char_traits, template_allocator_type>>
 {
     /// thisが指す値の型。
-    private: typedef basic_string_holder this_type;
+    private: typedef holder this_type;
     /// this_type の基底型。
-    public: typedef psyq::internal::string_view_interface<
-        psyq::internal::string_holder_base<
+    public: typedef psyq::string::_private::view_interface<
+        psyq::string::_private::holder_base<
             template_char_traits, template_allocator_type>>
                 base_type;
     private: typedef typename base_type::allocator_type base_allocator;
@@ -653,7 +651,7 @@ class psyq::basic_string_holder:
     /** @brief 空の文字列を構築する。メモリ確保は行わない。
         @param[in] in_allocator メモリ割当子の初期値。
      */
-    public: explicit PSYQ_CONSTEXPR basic_string_holder(
+    public: explicit PSYQ_CONSTEXPR holder(
         typename base_type::allocator_type const& in_allocator = base_allocator())
     PSYQ_NOEXCEPT:
         base_type(
@@ -664,14 +662,14 @@ class psyq::basic_string_holder:
     /** @brief 文字列保持子をコピー構築する。メモリ確保は行わない。
         @param[in] in_string コピー元となる文字列保持子。
      */
-    public: basic_string_holder(this_type const& in_string) PSYQ_NOEXCEPT:
+    public: holder(this_type const& in_string) PSYQ_NOEXCEPT:
         base_type(in_string)
     {}
 
     /** @brief 文字列保持子をムーブ構築する。メモリ確保は行わない。
         @param[in,out] io_string ムーブ元となる文字列保持子。
      */
-    public: basic_string_holder(this_type&& io_string) PSYQ_NOEXCEPT:
+    public: holder(this_type&& io_string) PSYQ_NOEXCEPT:
         base_type(std::move(io_string))
     {}
 
@@ -679,7 +677,7 @@ class psyq::basic_string_holder:
         @param[in] in_allocator メモリ割当子の初期値。
      */
     public: template <std::size_t template_size>
-    basic_string_holder(
+    holder(
         typename base_type::value_type const (&in_literal)[template_size],
         typename base_type::allocator_type const& in_allocator = base_allocator())
     PSYQ_NOEXCEPT:
@@ -690,7 +688,7 @@ class psyq::basic_string_holder:
         @param[in] in_string    コピー元の文字列。
         @param[in] in_allocator メモリ割当子の初期値。
      */
-    public: basic_string_holder(
+    public: holder(
         typename base_type::view const& in_string,
         typename base_type::allocator_type const& in_allocator = base_allocator())
     :
@@ -704,7 +702,7 @@ class psyq::basic_string_holder:
         @param[in] in_size      コピー元の文字列の要素数。
         @param[in] in_allocator メモリ割当子の初期値。
      */
-    public: basic_string_holder(
+    public: holder(
         typename base_type::const_pointer const in_data,
         typename base_type::size_type const in_size,
         typename base_type::allocator_type const& in_allocator = base_allocator())
@@ -719,7 +717,7 @@ class psyq::basic_string_holder:
         @param[in] in_tail_string コピー元の末尾文字列。
         @param[in] in_allocator   メモリ割当子の初期値。
      */
-    public: basic_string_holder(
+    public: holder(
         typename base_type::view const& in_head_string,
         typename base_type::view const& in_tail_string,
         typename base_type::allocator_type const& in_allocator = base_allocator())
@@ -786,13 +784,13 @@ class psyq::basic_string_holder:
     //-------------------------------------------------------------------------
     /// @name 文字列の変更
     //@{
-    /// @copydoc psyq::internal::string_holder_base::clear()
+    /// @copydoc psyq::string::_private::holder_base::clear()
     public: void clear() PSYQ_NOEXCEPT
     {
         this->base_type::base_type::clear();
     }
 
-    /// @copydoc psyq::internal::string_holder_base::swap()
+    /// @copydoc psyq::string::_private::holder_base::swap()
     public: void swap(this_type& io_target) PSYQ_NOEXCEPT
     {
         this->base_type::base_type::swap(io_target);
@@ -801,7 +799,7 @@ class psyq::basic_string_holder:
     //-------------------------------------------------------------------------
     /// @name 文字列のプロパティ
     //@{
-    /// @copydoc psyq::internal::string_holder_base::empty()
+    /// @copydoc psyq::string::_private::holder_base::empty()
     public: bool empty() const PSYQ_NOEXCEPT
     {
         return this->base_type::base_type::empty();
@@ -813,12 +811,9 @@ class psyq::basic_string_holder:
 namespace std
 {
     /** @brief 文字列の交換。
-        @tparam template_char_type
-            @copydoc psyq::basic_string_holder::value_type
-        @tparam template_char_traits
-            @copydoc psyq::basic_string_holder::traits_type
-        @tparam template_allocator_type
-            @copydoc psyq::basic_string_holder::allocator_type
+        @tparam template_char_type      @copydoc psyq::string::holder::value_type
+        @tparam template_char_traits    @copydoc psyq::string::holder::traits_type
+        @tparam template_allocator_type @copydoc psyq::string::holder::allocator_type
         @param[in] in_left  交換する文字列。
         @param[in] in_right 交換する文字列。
      */
@@ -827,10 +822,10 @@ namespace std
         typename template_char_traits,
         typename template_allocator_type>
     void swap(
-        psyq::basic_string_holder<
+        psyq::string::holder<
             template_char_type, template_char_traits, template_allocator_type>&
                 io_left,
-        psyq::basic_string_holder<
+        psyq::string::holder<
             template_char_type, template_char_traits, template_allocator_type>&
                 io_right)
     PSYQ_NOEXCEPT

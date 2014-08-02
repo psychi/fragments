@@ -709,7 +709,7 @@ class psyq::message_pack::serializer
      */
     public: template<typename template_char_traits>
     this_type& operator<<(
-        psyq::internal::string_view_base<template_char_traits> const& in_string)
+        psyq::string::_private::view_base<template_char_traits> const& in_string)
     {
         if (!this->write_raw_string(in_string))
         {

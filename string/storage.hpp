@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::basic_string_storage
+    @brief @copybrief psyq::string::storage
  */
 #ifndef PSYQ_STRING_STORAGE_HPP_
 #define PSYQ_STRING_STORAGE_HPP_
@@ -49,31 +49,29 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include<type_traits>
 //#include "string/view.hpp"
 
-/// psyq::basic_string_storage で使う、defaultの最大文字数。
+/// psyq::string::storage で使う、defaultの最大文字数。
 #ifndef PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT
 #define PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT 160
 #endif // !defined(PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT)
 
+/// @cond
 namespace psyq
 {
-    /// @cond
-    template<
-        typename template_char_type,
-        std::size_t = PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT,
-        typename = PSYQ_STRING_VIEW_TRAITS_DEFAULT>
-            class basic_string_storage;
-    /// @endcond
-
-    /// char型の文字を扱う basic_string_storage
-    typedef psyq::basic_string_storage<char> string_storage;
-
-    namespace internal
+    namespace string
     {
-        /// @cond
-        template<typename, std::size_t> class string_storage_base;
-        /// @endcond
-    }
-}
+        template<
+            typename template_char_type,
+            std::size_t = PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT,
+            typename = PSYQ_STRING_VIEW_TRAITS_DEFAULT>
+                class storage;
+
+        namespace _private
+        {
+            template<typename, std::size_t> class storage_base;
+        } // namespace _private
+    } // namespace string
+} // namespace psyq
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 文字の固定長領域を使った文字列の基底型。
@@ -87,9 +85,9 @@ namespace psyq
     @tparam template_max_size    @copydoc this_type::MAX_SIZE
  */
 template<typename template_char_traits, std::size_t template_max_size>
-class psyq::internal::string_storage_base
+class psyq::string::_private::storage_base
 {
-    private: typedef string_storage_base this_type; ///< thisが指す値の型。
+    private: typedef storage_base this_type; ///< thisが指す値の型。
 
     /// 文字特性の型。
     public: typedef template_char_traits traits_type;
@@ -109,17 +107,17 @@ class psyq::internal::string_storage_base
 
     //-------------------------------------------------------------------------
     /// @brief 空の文字列を構築する。
-    private: PSYQ_CONSTEXPR string_storage_base() PSYQ_NOEXCEPT: size_(0) {}
+    private: PSYQ_CONSTEXPR storage_base() PSYQ_NOEXCEPT: size_(0) {}
 
     /** @brief 文字列をコピーする。
         @param[in] in_string コピー元となる文字列。
      */
-    protected: string_storage_base(this_type const& in_string) PSYQ_NOEXCEPT
+    protected: storage_base(this_type const& in_string) PSYQ_NOEXCEPT
     {
         this->copy_string(in_string.data(), in_string.size());
     }
 
-    /** @copydoc string_storage_base(this_type const&)
+    /** @copydoc storage_base(this_type const&)
         @return *this
      */
     protected: this_type& operator=(this_type const& in_string) PSYQ_NOEXCEPT
@@ -138,7 +136,7 @@ class psyq::internal::string_storage_base
     //-------------------------------------------------------------------------
     /// @name 文字列のプロパティ
     //@{
-    /// @copydoc psyq::basic_string_view::data()
+    /// @copydoc psyq::string::view::data()
     public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type const* data()
     const PSYQ_NOEXCEPT
     {
@@ -146,13 +144,13 @@ class psyq::internal::string_storage_base
             &this->storage_);
     }
 
-    /// @copydoc psyq::basic_string_view::size()
+    /// @copydoc psyq::string::view::size()
     public: PSYQ_CONSTEXPR std::size_t size() const PSYQ_NOEXCEPT
     {
         return this->size_;
     }
 
-    /// @copydoc psyq::basic_string_view::max_size()
+    /// @copydoc psyq::string::view::max_size()
     public: PSYQ_CONSTEXPR std::size_t max_size() const PSYQ_NOEXCEPT
     {
         return this_type::MAX_SIZE;
@@ -212,16 +210,16 @@ template<
     typename template_char_type,
     std::size_t template_max_size,
     typename template_char_traits>
-class psyq::basic_string_storage:
-    public psyq::internal::string_view_interface<
-        psyq::internal::string_storage_base<
+class psyq::string::storage:
+    public psyq::string::_private::view_interface<
+        psyq::string::_private::storage_base<
             template_char_traits, template_max_size>>
 {
     /// thisが指す値の型。
-    private: typedef basic_string_storage this_type;
+    private: typedef storage this_type;
     /// this_type の基底型。
-    public: typedef psyq::internal::string_view_interface<
-        psyq::internal::string_storage_base<
+    public: typedef psyq::string::_private::view_interface<
+        psyq::string::_private::storage_base<
             template_char_traits, template_max_size>>
                 base_type;
 
@@ -230,22 +228,21 @@ class psyq::basic_string_storage:
     //@{
     /** @brief 空文字列を構築する。
      */
-    public: PSYQ_CONSTEXPR basic_string_storage() PSYQ_NOEXCEPT:
+    public: PSYQ_CONSTEXPR storage() PSYQ_NOEXCEPT:
         base_type(base_type::base_type::make())
     {}
 
     /** @brief 文字列をコピーする。
         @param[in] in_string コピー元の文字列。
      */
-    public: basic_string_storage(this_type const& in_string) PSYQ_NOEXCEPT:
+    public: storage(this_type const& in_string) PSYQ_NOEXCEPT:
         base_type(in_string)
     {}
 
     /** @brief 文字列をコピーする。
         @param[in] in_string コピー元の文字列。
      */
-    public: basic_string_storage(typename base_type::view const& in_string)
-    PSYQ_NOEXCEPT:
+    public: storage(typename base_type::view const& in_string) PSYQ_NOEXCEPT:
         base_type(base_type::base_type::make())
     {
         this->copy_string(in_string.data(), in_string.size());
@@ -255,7 +252,7 @@ class psyq::basic_string_storage:
         @param[in] in_data コピー元の文字列の先頭位置。
         @param[in] in_size コピー元の文字列の要素数。
      */
-    public: basic_string_storage(
+    public: storage(
         typename base_type::const_pointer const in_data,
         typename base_type::size_type const in_size)
     PSYQ_NOEXCEPT:
@@ -267,7 +264,7 @@ class psyq::basic_string_storage:
     //-------------------------------------------------------------------------
     /// @name 文字列の代入
     //@{
-    /** @copydoc basic_string_storage(this_type const&)
+    /** @copydoc storage(this_type const&)
         @return *this
      */
     public: this_type& operator=(this_type const& in_string) PSYQ_NOEXCEPT
@@ -276,7 +273,7 @@ class psyq::basic_string_storage:
         return *this;
     }
 
-    /** @copydoc basic_string_storage(typename base_type::base_type::view const&)
+    /** @copydoc storage(typename base_type::base_type::view const&)
         @return *this
      */
     public: this_type& operator=(typename base_type::view const& in_string)

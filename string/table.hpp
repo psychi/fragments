@@ -41,262 +41,265 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::string_table
+    @brief @copybrief psyq::string::table
  */
 #ifndef PSYQ_STRING_TABLE_HPP_
 #define PSYQ_STRING_TABLE_HPP_
 
 #include <unordered_map>
-//#include "psyq/string/string_holder.hpp"
+//#include "psyq/string/holder.hpp"
 
 namespace psyq
 {
-    /// @cond
-    template<typename> class string_table;
-    /// @endcond
-
-    /// psyq::string_holder を使った、文字列の表。
-    typedef psyq::string_table<
-        std::unordered_map<std::size_t, psyq::string_holder>>
-            string_holder_table;
-
-    //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-    namespace internal
+    namespace string
     {
-        /** @brief 文字列を解析し、数値に変換する。
-            @param[out] out_value
-              - 文字列の解析に成功した場合、解析して取り出した値が代入される。
-              - 文字列の解析に失敗した場合、代入は行われない。
-            @param[in]  in_string  解析する文字列。
-            @retval true  文字列の解析に成功した。
-            @retval false 文字列の解析に失敗した。
-         */
-        template<typename template_number_type, typename template_string_type>
-        bool string_table_deserialize_number(
-            template_number_type& out_value,
-            template_string_type const* const in_string)
-        PSYQ_NOEXCEPT
+        /// @cond
+        template<typename> class table;
+        /// @endcond
+
+        /// psyq::string::holder を使った、文字列の表。
+        typedef psyq::string::table<
+            std::unordered_map<std::size_t, psyq::string::holder<char>>>
+                holder_table;
+
+        //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+        namespace _private
         {
-            if (in_string == nullptr)
+            /** @brief 文字列を解析し、数値に変換する。
+                @param[out] out_value
+                  - 文字列の解析に成功した場合、解析して取り出した値が代入される。
+                  - 文字列の解析に失敗した場合、代入は行われない。
+                @param[in]  in_string  解析する文字列。
+                @retval true  文字列の解析に成功した。
+                @retval false 文字列の解析に失敗した。
+             */
+            template<typename template_number_type, typename template_string_type>
+            bool deserialize_table_cell_number(
+                template_number_type& out_value,
+                template_string_type const* const in_string)
+            PSYQ_NOEXCEPT
             {
-                return false;
+                if (in_string == nullptr)
+                {
+                    return false;
+                }
+
+                // 文字列の前後の空白を取り除く。
+                typedef psyq::string::view<
+                    typename template_string_type::value_type,
+                    typename template_string_type::traits_type>
+                        string_view;
+                auto const local_string(string_view(*in_string).trim_copy());
+                if (local_string.empty())
+                {
+                    return false;
+                }
+
+                // 文字列を解析し、値を取り出す。
+                std::size_t local_rest_size(0);
+                auto const local_value(
+                    local_string.template make_number<template_number_type>(
+                        &local_rest_size));
+                if (0 < local_rest_size)
+                {
+                    return false;
+                }
+                out_value = local_value;
+                return true;
             }
 
-            // 文字列の前後の空白を取り除く。
-            typedef psyq::basic_string_view<
-                typename template_string_type::value_type,
-                typename template_string_type::traits_type>
-                    string_view;
-            auto const local_string(string_view(*in_string).trim_copy());
-            if (local_string.empty())
+            /** @brief 文字列を解析し、文字列に変換する。
+                @param[out] out_value
+                  - 文字列の解析に成功した場合、解析して取り出した値が代入される。
+                  - 文字列の解析に失敗した場合、代入は行われない。
+                @param[in]  in_string  解析する文字列。
+                @retval true  文字列の解析に成功した。
+                @retval false 文字列の解析に失敗した。
+             */
+            template<typename template_value_type, typename template_string_type>
+            bool deserialize_table_cell(
+                template_value_type& out_value,
+                template_string_type const* const in_string)
             {
-                return false;
+                if (in_string == nullptr)
+                {
+                    return false;
+                }
+
+                // 文字列の前後の空白を取り除く。
+                typedef psyq::string::view<
+                    typename template_string_type::value_type,
+                    typename template_string_type::traits_type>
+                        string_view;
+                auto const local_string(string_view(*in_string).trim_copy());
+                if (local_string.empty())
+                {
+                    return false;
+                }
+                out_value = local_string;
+                return true;
             }
 
-            // 文字列を解析し、値を取り出す。
-            std::size_t local_rest_size(0);
-            auto const local_value(
-                local_string.template make_number<template_number_type>(
-                    &local_rest_size));
-            if (0 < local_rest_size)
+            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
+            template<typename template_string_type>
+            bool deserialize_table_cell(
+                signed char& out_value,
+                template_string_type const* const in_string)
+            PSYQ_NOEXCEPT
             {
-                return false;
-            }
-            out_value = local_value;
-            return true;
-        }
-
-        /** @brief 文字列を解析し、文字列に変換する。
-            @param[out] out_value
-              - 文字列の解析に成功した場合、解析して取り出した値が代入される。
-              - 文字列の解析に失敗した場合、代入は行われない。
-            @param[in]  in_string  解析する文字列。
-            @retval true  文字列の解析に成功した。
-            @retval false 文字列の解析に失敗した。
-         */
-        template<typename template_value_type, typename template_string_type>
-        bool string_table_deserialize(
-            template_value_type& out_value,
-            template_string_type const* const in_string)
-        {
-            if (in_string == nullptr)
-            {
-                return false;
+                return psyq::string::_private::deserialize_table_cell_number(
+                    out_value, in_string);
             }
 
-            // 文字列の前後の空白を取り除く。
-            typedef psyq::basic_string_view<
-                typename template_string_type::value_type,
-            typename template_string_type::traits_type>
-                string_view;
-            auto const local_string(string_view(*in_string).trim_copy());
-            if (local_string.empty())
+            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
+            template<typename template_string_type>
+            bool deserialize_table_cell(
+                unsigned char& out_value,
+                template_string_type const* const in_string)
+            PSYQ_NOEXCEPT
             {
-                return false;
+                return psyq::string::_private::deserialize_table_cell_number(
+                    out_value, in_string);
             }
-            out_value = local_string;
-            return true;
-        }
 
-        /// @copydoc psyq::internal::string_table_deserialize_number()
-        template<typename template_string_type>
-        bool string_table_deserialize(
-            signed char& out_value,
-            template_string_type const* const in_string)
-        PSYQ_NOEXCEPT
-        {
-            return psyq::internal::string_table_deserialize_number(
-                out_value, in_string);
-        }
+            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
+            template<typename template_string_type>
+            bool deserialize_table_cell(
+                signed short& out_value,
+                template_string_type const* const in_string)
+            PSYQ_NOEXCEPT
+            {
+                return psyq::string::_private::deserialize_table_cell_number(
+                    out_value, in_string);
+            }
 
-        /// @copydoc psyq::internal::string_table_deserialize_number()
-        template<typename template_string_type>
-        bool string_table_deserialize(
-            unsigned char& out_value,
-            template_string_type const* const in_string)
-        PSYQ_NOEXCEPT
-        {
-            return psyq::internal::string_table_deserialize_number(
-                out_value, in_string);
-        }
+            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
+            template<typename template_string_type>
+            bool deserialize_table_cell(
+                unsigned short& out_value,
+                template_string_type const* const in_string)
+            PSYQ_NOEXCEPT
+            {
+                return psyq::string::_private::deserialize_table_cell_number(
+                    out_value, in_string);
+            }
 
-        /// @copydoc psyq::internal::string_table_deserialize_number()
-        template<typename template_string_type>
-        bool string_table_deserialize(
-            signed short& out_value,
-            template_string_type const* const in_string)
-        PSYQ_NOEXCEPT
-        {
-            return psyq::internal::string_table_deserialize_number(
-                out_value, in_string);
-        }
+            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
+            template<typename template_string_type>
+            bool deserialize_table_cell(
+                signed int& out_value,
+                template_string_type const* const in_string)
+            PSYQ_NOEXCEPT
+            {
+                return psyq::string::_private::deserialize_table_cell_number(
+                    out_value, in_string);
+            }
 
-        /// @copydoc psyq::internal::string_table_deserialize_number()
-        template<typename template_string_type>
-        bool string_table_deserialize(
-            unsigned short& out_value,
-            template_string_type const* const in_string)
-        PSYQ_NOEXCEPT
-        {
-            return psyq::internal::string_table_deserialize_number(
-                out_value, in_string);
-        }
+            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
+            template<typename template_string_type>
+            bool deserialize_table_cell(
+                unsigned int& out_value,
+                template_string_type const* const in_string)
+            PSYQ_NOEXCEPT
+            {
+                return psyq::string::_private::deserialize_table_cell_number(
+                    out_value, in_string);
+            }
 
-        /// @copydoc psyq::internal::string_table_deserialize_number()
-        template<typename template_string_type>
-        bool string_table_deserialize(
-            signed int& out_value,
-            template_string_type const* const in_string)
-        PSYQ_NOEXCEPT
-        {
-            return psyq::internal::string_table_deserialize_number(
-                out_value, in_string);
-        }
+            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
+            template<typename template_string_type>
+            bool deserialize_table_cell(
+                signed long& out_value,
+                template_string_type const* const in_string)
+            PSYQ_NOEXCEPT
+            {
+                return psyq::string::_private::deserialize_table_cell_number(
+                    out_value, in_string);
+            }
 
-        /// @copydoc psyq::internal::string_table_deserialize_number()
-        template<typename template_string_type>
-        bool string_table_deserialize(
-            unsigned int& out_value,
-            template_string_type const* const in_string)
-        PSYQ_NOEXCEPT
-        {
-            return psyq::internal::string_table_deserialize_number(
-                out_value, in_string);
-        }
+            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
+            template<typename template_string_type>
+            bool deserialize_table_cell(
+                unsigned long& out_value,
+                template_string_type const* const in_string)
+            PSYQ_NOEXCEPT
+            {
+                return psyq::string::_private::deserialize_table_cell_number(
+                    out_value, in_string);
+            }
 
-        /// @copydoc psyq::internal::string_table_deserialize_number()
-        template<typename template_string_type>
-        bool string_table_deserialize(
-            signed long& out_value,
-            template_string_type const* const in_string)
-        PSYQ_NOEXCEPT
-        {
-            return psyq::internal::string_table_deserialize_number(
-                out_value, in_string);
-        }
+            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
+            template<typename template_string_type>
+            bool deserialize_table_cell(
+                signed long long& out_value,
+                template_string_type const* const in_string)
+            PSYQ_NOEXCEPT
+            {
+                return psyq::string::_private::deserialize_table_cell_number(
+                    out_value, in_string);
+            }
 
-        /// @copydoc psyq::internal::string_table_deserialize_number()
-        template<typename template_string_type>
-        bool string_table_deserialize(
-            unsigned long& out_value,
-            template_string_type const* const in_string)
-        PSYQ_NOEXCEPT
-        {
-            return psyq::internal::string_table_deserialize_number(
-                out_value, in_string);
-        }
+            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
+            template<typename template_string_type>
+            bool deserialize_table_cell(
+                unsigned long long& out_value,
+                template_string_type const* const in_string)
+            PSYQ_NOEXCEPT
+            {
+                return psyq::string::_private::deserialize_table_cell_number(
+                    out_value, in_string);
+            }
 
-        /// @copydoc psyq::internal::string_table_deserialize_number()
-        template<typename template_string_type>
-        bool string_table_deserialize(
-            signed long long& out_value,
-            template_string_type const* const in_string)
-        PSYQ_NOEXCEPT
-        {
-            return psyq::internal::string_table_deserialize_number(
-                out_value, in_string);
-        }
+            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
+            template<typename template_string_type>
+            bool deserialize_table_cell(
+                float& out_value,
+                template_string_type const* const in_string)
+            PSYQ_NOEXCEPT
+            {
+                return psyq::string::_private::deserialize_table_cell_number(
+                    out_value, in_string);
+            }
 
-        /// @copydoc psyq::internal::string_table_deserialize_number()
-        template<typename template_string_type>
-        bool string_table_deserialize(
-            unsigned long long& out_value,
-            template_string_type const* const in_string)
-        PSYQ_NOEXCEPT
-        {
-            return psyq::internal::string_table_deserialize_number(
-                out_value, in_string);
-        }
+            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
+            template<typename template_string_type>
+            bool deserialize_table_cell(
+                double& out_value,
+                template_string_type const* const in_string)
+            PSYQ_NOEXCEPT
+            {
+                return psyq::string::_private::deserialize_table_cell_number(
+                    out_value, in_string);
+            }
 
-        /// @copydoc psyq::internal::string_table_deserialize_number()
-        template<typename template_string_type>
-        bool string_table_deserialize(
-            float& out_value,
-            template_string_type const* const in_string)
-        PSYQ_NOEXCEPT
-        {
-            return psyq::internal::string_table_deserialize_number(
-                out_value, in_string);
-        }
-
-        /// @copydoc psyq::internal::string_table_deserialize_number()
-        template<typename template_string_type>
-        bool string_table_deserialize(
-            double& out_value,
-            template_string_type const* const in_string)
-        PSYQ_NOEXCEPT
-        {
-            return psyq::internal::string_table_deserialize_number(
-                out_value, in_string);
-        }
-
-        /// @copydoc psyq::internal::string_table_deserialize_number()
-        template<typename template_string_type>
-        bool string_table_deserialize(
-            long double& out_value,
-            template_string_type const* const in_string)
-        PSYQ_NOEXCEPT
-        {
-            return psyq::internal::string_table_deserialize_number(
-                out_value, in_string);
-        }
-    }
-}
+            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
+            template<typename template_string_type>
+            bool deserialize_table_cell(
+                long double& out_value,
+                template_string_type const* const in_string)
+            PSYQ_NOEXCEPT
+            {
+                return psyq::string::_private::deserialize_table_cell_number(
+                    out_value, in_string);
+            }
+        } // namespace _private
+    } // namespace string
+} // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 文字列の表。CSV形式の文字列から構築する。
 
     使い方の概略。
     -# this_type::make_column_map() で、列の辞書を構築する。
-    -# this_type::string_table() に列の辞書を渡し、文字列表を構築する。
+    -# this_type::table() に列の辞書を渡し、文字列表を構築する。
     -# this_type::deserialize_body_cell() で任意のcell文字列を解析し、値を取り出す。
 
     @tparam template_cell_map @copydoc this_type::cell_map
  */
 template<typename template_cell_map>
-class psyq::string_table
+class psyq::string::table
 {
-    private: typedef string_table this_type; ///< thisが指す値の型。
+    private: typedef table this_type; ///< thisが指す値の型。
 
     /** @brief 文字列表のcellの辞書。
 
@@ -335,7 +338,7 @@ class psyq::string_table
     public: typedef typename this_type::cell_map::mapped_type cell;
 
     /// @brief 文字列表のcell文字列への参照。
-    public: typedef psyq::basic_string_view<
+    public: typedef psyq::string::view<
         typename this_type::cell::value_type const,
         typename this_type::cell::traits_type>
             cell_view;
@@ -382,7 +385,7 @@ class psyq::string_table
             this_type::make_column_map() で構築した、列の辞書。
         @param[in] in_attribute_row 文字列表の列属性として使う、行の番号。
      */
-    public: string_table(
+    public: table(
         typename this_type::column_map in_column_map,
         typename this_type::cell_map::key_type const in_attribute_row)
     :
@@ -395,7 +398,7 @@ class psyq::string_table
     /** @brief move構築子。
         @param[in,out] io_source move元となる文字列表。
      */
-    public: string_table(this_type&& io_source):
+    public: table(this_type&& io_source):
         attribute_map_(std::move(io_source.attribute_map_)),
         attribute_row_(std::move(io_source.attribute_row_)),
         column_map_(std::move(io_source.column_map_))
@@ -484,7 +487,7 @@ class psyq::string_table
         typename this_type::column_map::key_type const in_attribute_index = 0)
     const
     {
-        return psyq::internal::string_table_deserialize(
+        return psyq::string::_private::deserialize_table_cell(
             out_value,
             this->find_body_cell(
                 in_row_key, in_attribute_key, in_attribute_index));
@@ -506,7 +509,7 @@ class psyq::string_table
         typename this_type::column_map::key_type const in_column_key)
     const
     {
-        return psyq::internal::string_table_deserialize(
+        return psyq::string::_private::deserialize_table_cell(
             out_value, this->find_body_cell(in_row_key, in_column_key));
     }
     //@}
@@ -946,18 +949,20 @@ namespace psyq
     {
         inline void string_table()
         {
-            psyq::string_holder_table const local_string_table(
-                psyq::string_holder_table::make_column_map(
+            psyq::string::holder_table const local_string_table(
+                psyq::string::holder_table::make_column_map(
                     std::string(
                         "name,   path,            count                \n"
                         "taro,   taro.txt,        -12.34567890e+2, 3, 2\n"
                         "yamada, data/yamada.txt, 1234567890           \n")),
                 0);
 
-            psyq::string_holder local_string_holder("abc");
+            psyq::string::holder_table::cell_map::mapped_type
+                local_string_holder("abc");
             local_string_holder.get_allocator();
 
-            psyq::string_view local_name;
+            psyq::string::holder_table::cell_map::mapped_type::view
+                local_name;
             PSYQ_ASSERT(
                 local_string_table.deserialize_body_cell(
                     local_name, 1, "name"));

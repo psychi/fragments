@@ -41,30 +41,30 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::basic_string_view
+    @brief @copybrief psyq::string::view
  */
 #ifndef PSYQ_STRING_VIEW_HPP_
 #define PSYQ_STRING_VIEW_HPP_
 
 //#include "string/view_interface.hpp"
 
-/// psyq::basic_string_view で使う、defaultの文字特性の型。
+/// psyq::string::view で使う、defaultの文字特性の型。
 #ifndef PSYQ_STRING_VIEW_TRAITS_DEFAULT
 #define PSYQ_STRING_VIEW_TRAITS_DEFAULT std::char_traits<template_char_type>
 #endif // !PSYQ_STRING_VIEW_TRAITS_DEFAULT
 
+/// @cond
 namespace psyq
 {
-    /// @cond
-    template<
-        typename template_char_type,
-        typename = PSYQ_STRING_VIEW_TRAITS_DEFAULT>
-            class basic_string_view;
-    /// @endcond
-
-    /// char型の文字を扱う psyq::basic_string_view
-    typedef psyq::basic_string_view<char> string_view;
-}
+    namespace string
+    {
+        template<
+            typename template_char_type,
+            typename = PSYQ_STRING_VIEW_TRAITS_DEFAULT>
+                class view;
+    } // namespace string
+} // namespace psyq
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_string_view を模した、immutableな文字列への参照。
@@ -76,34 +76,34 @@ namespace psyq
         文字の配列を単純にconst参照しているので、
         参照してる文字の配列が変更／破壊されると、動作を保証できなくなる。
 
-    @tparam template_char_type   @copydoc psyq::internal::string_view_interface::value_type
-    @tparam template_char_traits @copydoc psyq::internal::string_view_base::traits_type
+    @tparam template_char_type   @copydoc psyq::string::_private::view_interface::value_type
+    @tparam template_char_traits @copydoc psyq::string::_private::view_base::traits_type
  */
 template<typename template_char_type, typename template_char_traits>
-class psyq::basic_string_view:
-    public psyq::internal::string_view_interface<
-        psyq::internal::string_view_base<template_char_traits>>
+class psyq::string::view:
+    public psyq::string::_private::view_interface<
+        psyq::string::_private::view_base<template_char_traits>>
 {
     /// thisが指す値の型。
-    private: typedef basic_string_view this_type;
-    private: typedef psyq::internal::string_view_base<template_char_traits>
+    private: typedef view this_type;
+    private: typedef psyq::string::_private::view_base<template_char_traits>
         base_string;
     /// this_type の基底型。
-    public: typedef psyq::internal::string_view_interface<base_string>
+    public: typedef psyq::string::_private::view_interface<base_string>
         base_type;
 
     //-------------------------------------------------------------------------
     /// @name コンストラクタ
     //@{
     /// @brief 空の文字列を構築する。
-    public: PSYQ_CONSTEXPR basic_string_view() PSYQ_NOEXCEPT:
+    public: PSYQ_CONSTEXPR view() PSYQ_NOEXCEPT:
         base_type(base_type::base_type::make(nullptr, 0))
     {}
 
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
      */
-    public: PSYQ_CONSTEXPR basic_string_view(this_type const& in_string)
+    public: PSYQ_CONSTEXPR view(this_type const& in_string)
     PSYQ_NOEXCEPT:
         base_type(static_cast<base_string const&>(in_string))
     {}
@@ -112,7 +112,7 @@ class psyq::basic_string_view:
         @param[in] in_literal 参照する文字列リテラル。
      */
     public: template <std::size_t template_size>
-    PSYQ_CONSTEXPR basic_string_view(
+    PSYQ_CONSTEXPR view(
         typename base_type::traits_type::char_type const (&in_literal)[template_size])
     PSYQ_NOEXCEPT:
         base_type(base_type::base_type::make(in_literal))
@@ -132,7 +132,7 @@ class psyq::basic_string_view:
         @param[in] in_string 参照する文字列。
      */
     public: template<typename template_string_type>
-    PSYQ_CONSTEXPR basic_string_view(template_string_type const& in_string)
+    PSYQ_CONSTEXPR view(template_string_type const& in_string)
     PSYQ_NOEXCEPT:
         base_type(
             base_type::base_type::make(in_string.data(), in_string.size()))
@@ -142,7 +142,7 @@ class psyq::basic_string_view:
         @param[in] in_data 参照する文字列の先頭位置。
         @param[in] in_size 参照する文字列の要素数。
      */
-    public: PSYQ_CONSTEXPR basic_string_view(
+    public: PSYQ_CONSTEXPR view(
         typename base_type::const_pointer const in_data,
         typename base_type::size_type const in_size)
     PSYQ_NOEXCEPT:
@@ -154,7 +154,7 @@ class psyq::basic_string_view:
         @param[in] in_offset 参照する文字列の開始オフセット位置。
         @param[in] in_count  参照する文字数の開始オフセット位置からの要素数。
      */
-    public: PSYQ_CONSTEXPR basic_string_view(
+    public: PSYQ_CONSTEXPR view(
         this_type const& in_string,
         typename base_type::size_type const in_offset,
         typename base_type::size_type const in_count = base_type::npos)
@@ -165,7 +165,7 @@ class psyq::basic_string_view:
     //-------------------------------------------------------------------------
     /// @name 文字列の代入
     //@{
-    /** @copydoc basic_string_view(this_type const&)
+    /** @copydoc view(this_type const&)
         @return *this
      */
     public: this_type& operator=(this_type const& in_string) PSYQ_NOEXCEPT
@@ -348,7 +348,7 @@ class psyq::basic_string_view:
     //-------------------------------------------------------------------------
     /// @name 文字列の変更
     //@{
-    /// @copydoc psyq::internal::string_view_base::clear()
+    /// @copydoc psyq::string::_private::view_base::clear()
     public: void clear() PSYQ_NOEXCEPT
     {
         this->base_type::base_type::clear();
@@ -478,19 +478,15 @@ class psyq::basic_string_view:
 namespace std
 {
     /** @brief 文字列の交換。
-        @tparam template_char_type
-            @copydoc psyq::basic_string_view::value_type
-        @tparam template_char_traits
-            @copydoc psyq::basic_string_view::traits_type
+        @tparam template_char_type   @copydoc psyq::string::view::value_type
+        @tparam template_char_traits @copydoc psyq::string::view::traits_type
         @param[in] in_left  交換する文字列。
         @param[in] in_right 交換する文字列。
      */
     template<typename template_char_type, typename template_char_traits>
     void swap(
-        psyq::basic_string_view<template_char_type, template_char_traits>&
-            io_left,
-        psyq::basic_string_view<template_char_type, template_char_traits>&
-            io_right)
+        psyq::string::view<template_char_type, template_char_traits>& io_left,
+        psyq::string::view<template_char_type, template_char_traits>& io_right)
     PSYQ_NOEXCEPT
     {
         io_left.swap(io_right);

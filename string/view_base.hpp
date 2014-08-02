@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::internal::string_view_base
+    @brief @copybrief psyq::string::_private::view_base
  */
 #ifndef PSYQ_STRING_VIEW_BASE_HPP_
 #define PSYQ_STRING_VIEW_BASE_HPP_
@@ -55,28 +55,30 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace psyq
 {
-    namespace internal
+    /// 動的メモリ確保を抑制した文字列
+    namespace string
     {
-        /// @cond
-        template<typename> class string_view_base;
-        /// @endcond
-    }
-}
+        /// この名前空間をユーザーが直接アクセスするのは禁止。
+        namespace _private
+        {
+            /// @cond
+            template<typename> class view_base;
+            /// @endcond
+        } // namespace _private
+    } // namespace string
+} // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief immutableな文字列への参照の基底型。
-
-    実際は、 psyq::basic_string_view を使う。
-
-    @tparam template_char_traits @copydoc string_view_base::traits_type
+    @tparam template_char_traits @copydoc psyq::string::_private::view_base::traits_type
     @warning
         文字の配列を単純にconst参照しているので、
         参照してる文字の配列が変更／破壊されると、動作を保証できなくなる。
  */
 template<typename template_char_traits>
-class psyq::internal::string_view_base
+class psyq::string::_private::view_base
 {
-    private: typedef string_view_base this_type; ///< thisが指す値の型。
+    private: typedef view_base this_type; ///< thisが指す値の型。
 
     public: typedef template_char_traits traits_type; ///< 文字特性の型。
 
@@ -84,7 +86,7 @@ class psyq::internal::string_view_base
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
      */
-    protected: PSYQ_CONSTEXPR string_view_base(this_type const& in_string)
+    protected: PSYQ_CONSTEXPR view_base(this_type const& in_string)
     PSYQ_NOEXCEPT:
         data_(in_string.data()),
         size_(in_string.size())
@@ -94,7 +96,7 @@ class psyq::internal::string_view_base
         @param[in] in_data 参照する文字列の先頭位置。
         @param[in] in_size 参照する文字列の要素数。
      */
-    private: PSYQ_CONSTEXPR string_view_base(
+    private: PSYQ_CONSTEXPR view_base(
         typename this_type::traits_type::char_type const* const in_data,
         std::size_t const in_size)
     PSYQ_NOEXCEPT:

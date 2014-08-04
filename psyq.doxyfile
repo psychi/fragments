@@ -684,14 +684,14 @@ INPUT                  = \
                          ./string/storage.hpp \
                          ./string/holder.hpp \
                          ./string/table.hpp \
-                         ./any/any_rtti.hpp \
-                         ./any/any_storage.hpp \
-                         ./any/any_message_tag.hpp \
-                         ./any/any_message_call.hpp \
-                         ./any/any_message_suite.hpp \
-                         ./any/any_message_packet.hpp \
-                         ./any/any_message_receiver.hpp \
-                         ./any/any_message_router.hpp \
+                         ./any/rtti.hpp \
+                         ./any/storage.hpp \
+                         ./any/message/tag.hpp \
+                         ./any/message/call.hpp \
+                         ./any/message/suite.hpp \
+                         ./any/message/packet.hpp \
+                         ./any/message/receiver.hpp \
+                         ./any/message/router.hpp \
                          ./bit_algorithm.hpp \
                          ./fnv_hash.hpp \
                          ./geometric_vector.hpp \

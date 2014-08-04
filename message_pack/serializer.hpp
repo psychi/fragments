@@ -154,6 +154,7 @@ class psyq::message_pack::serializer
     /// thisが指す値の型。
     private: typedef serializer this_type;
 
+    //-------------------------------------------------------------------------
     /// 直列化したMessagePack値を出力する、std::basic_ostream 互換のストリーム。
     public: typedef template_stream stream;
     static_assert(
@@ -2241,6 +2242,7 @@ class psyq::message_pack::serializer
         container_stack_;
     /// 直列化途中のコンテナのスタック階層数。
     private: std::size_t stack_size_;
+
 }; // class psyq::message_pack::serializer
 
 #endif // !defined(PSYQ_MESSAGE_PACK_SERIALIZER_HPP_)

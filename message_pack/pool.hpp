@@ -12,8 +12,8 @@
 #define PSYQ_MESSAGE_PACK_POOL_CHUNK_CAPACITY_DEFAULT 4096
 #endif // !defined(PSYQ_MESSAGE_PACK_POOL_CHUNK_CAPACITY_DEFAULT)
 
-#ifndef PSYQ_MESSAGE_PACK_POOL_STD_ALGIN_PATCH
-#define PSYQ_MESSAGE_PACK_POOL_STD_ALGIN_PATCH\
+#ifndef PSYQ_MESSAGE_PACK_POOL_STD_ALIGN_PATCH
+#define PSYQ_MESSAGE_PACK_POOL_STD_ALIGN_PATCH\
     defined(_MSC_VER) && _MSC_VER <= 1700
 #endif // !defined(PSYQ_MESSAGE_PACK_POOL_STD_ALGIN_PATCH)
 
@@ -62,10 +62,11 @@ class psyq::message_pack::pool
         @param[in] in_allocator        メモリ割当子の初期値。
      */
     public: explicit pool(
-        std::size_t const in_default_capacity
-            = PSYQ_MESSAGE_PACK_POOL_CHUNK_CAPACITY_DEFAULT,
-        typename this_type::allocator_type in_allocator = this_type::allocator_type())
-    :
+        std::size_t const in_default_capacity =
+            PSYQ_MESSAGE_PACK_POOL_CHUNK_CAPACITY_DEFAULT,
+        typename this_type::allocator_type in_allocator =
+            this_type::allocator_type())
+    PSYQ_NOEXCEPT:
         chunk_list_(nullptr),
         default_capacity_(in_default_capacity),
         allocator_(std::move(in_allocator))
@@ -83,7 +84,7 @@ class psyq::message_pack::pool
     /** @brief move構築子。
         @param[in,out] io_source move元。
      */
-    public: pool(this_type&& io_source):
+    public: pool(this_type&& io_source) PSYQ_NOEXCEPT:
         chunk_list_(std::move(io_source.chunk_list_)),
         default_capacity_(std::move(io_source.default_capacity_)),
         allocator_(std::move(io_source.allocator_))
@@ -93,7 +94,7 @@ class psyq::message_pack::pool
 
     /** @brief this_type::allocate() で確保したメモリを、すべて解放する。
      */
-    public: ~pool()
+    public: ~pool() PSYQ_NOEXCEPT
     {
         auto local_chunk(this->chunk_list_);
         while (local_chunk != nullptr)
@@ -126,7 +127,7 @@ class psyq::message_pack::pool
         @param[in,out] io_source move元。
         @return *this
      */
-    public: this_type& operator=(this_type&& io_source)
+    public: this_type& operator=(this_type&& io_source) PSYQ_NOEXCEPT
     {
         if (this != &io_source)
         {
@@ -260,13 +261,13 @@ class psyq::message_pack::pool
         auto local_free_size(io_chunk.free_size);
         void* const local_memory(
             std::align(in_alignment, in_size, local_pool, local_free_size));
-#if PSYQ_MESSAGE_PACK_POOL_STD_ALGIN_PATCH
+#if PSYQ_MESSAGE_PACK_POOL_STD_ALIGN_PATCH
         /** @note 2014.05.12
             VisualStudio2012では、 std::align() の実装に問題がある？
             「_Space -= _Off + _Size」と実装されてたので、その対応をしておく。
          */
         local_free_size += (local_memory != nullptr? in_size: 0);
-#endif // PSYQ_MESSAGE_PACK_POOL_STD_ALGIN_PATCH
+#endif // PSYQ_MESSAGE_PACK_POOL_STD_ALIGN_PATCH
         if (local_memory == nullptr || local_free_size < in_size)
         {
             return nullptr;
@@ -288,9 +289,13 @@ class psyq::message_pack::pool
     }
 
     //-------------------------------------------------------------------------
-    private: typename this_type::chunk_header* chunk_list_; ///< 先頭チャンク。
-    private: std::size_t default_capacity_; ///< チャンク容量のデフォルト値。
-    private: template_allocator allocator_; ///< @copydoc allocator_type
+    /// チャンクリストの先頭。
+    private: typename this_type::chunk_header* chunk_list_;
+    /// チャンク容量のデフォルト値。
+    private: std::size_t default_capacity_;
+    /// @copydoc allocator_type
+    private: typename this_type::allocator_type allocator_;
+
 }; // class psyq::message_pack::pool
 
 #endif // !defined(PSYQ_MESSAGE_PACK_POOL_HPP_)

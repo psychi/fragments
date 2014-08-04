@@ -165,8 +165,7 @@ class psyq::string::_private::view_interface: public template_base_string
         @param[in,out] io_string ムーブ元となる文字列。
      */
     protected: PSYQ_CONSTEXPR view_interface(this_type&& io_string)
-    PSYQ_NOEXCEPT:
-        base_type(std::move(io_string))
+    PSYQ_NOEXCEPT: base_type(std::move(io_string))
     {}
 
     /** @brief 文字列をコピー構築する。
@@ -329,7 +328,8 @@ class psyq::string::_private::view_interface: public template_base_string
     /** @brief 文字列の要素数を取得する。 base_type::size() と同じ機能。
         @return 文字列の要素数。
      */
-    public: PSYQ_CONSTEXPR typename this_type::size_type length() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR typename this_type::size_type length()
+    const PSYQ_NOEXCEPT
     {
         return this->size();
     }

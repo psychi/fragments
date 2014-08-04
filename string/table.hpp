@@ -62,7 +62,7 @@ namespace psyq
             std::unordered_map<std::size_t, psyq::string::holder<char>>>
                 holder_table;
 
-        //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+        //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
         namespace _private
         {
             /** @brief 文字列を解析し、数値に変換する。
@@ -940,7 +940,8 @@ class psyq::string::table
     private: typename this_type::cell_map::key_type attribute_row_;
     /// 文字列表の列の辞書。
     private: typename this_type::column_map column_map_;
-};
+
+}; // class psyq::string::table
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq

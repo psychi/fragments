@@ -103,8 +103,7 @@ class psyq::string::view:
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
      */
-    public: PSYQ_CONSTEXPR view(this_type const& in_string)
-    PSYQ_NOEXCEPT:
+    public: PSYQ_CONSTEXPR view(this_type const& in_string) PSYQ_NOEXCEPT:
         base_type(static_cast<base_string const&>(in_string))
     {}
 
@@ -132,8 +131,7 @@ class psyq::string::view:
         @param[in] in_string 参照する文字列。
      */
     public: template<typename template_string_type>
-    PSYQ_CONSTEXPR view(template_string_type const& in_string)
-    PSYQ_NOEXCEPT:
+    PSYQ_CONSTEXPR view(template_string_type const& in_string) PSYQ_NOEXCEPT:
         base_type(
             base_type::base_type::make(in_string.data(), in_string.size()))
     {}
@@ -273,7 +271,8 @@ class psyq::string::view:
         return this->compare(static_cast<base_type const&>(in_right));
     }
     /// @copydoc compare(this_type const&) const
-    public: int compare(typename base_type::base_type const& in_right) const PSYQ_NOEXCEPT
+    public: int compare(typename base_type::base_type const& in_right)
+    const PSYQ_NOEXCEPT
     {
         int local_compare_size;
         if (this->size() != in_right.size())
@@ -472,25 +471,6 @@ class psyq::string::view:
         return this_type(this->data(), 0);
     }
     //@}
-};
-
-//-----------------------------------------------------------------------------
-namespace std
-{
-    /** @brief 文字列の交換。
-        @tparam template_char_type   @copydoc psyq::string::view::value_type
-        @tparam template_char_traits @copydoc psyq::string::view::traits_type
-        @param[in] in_left  交換する文字列。
-        @param[in] in_right 交換する文字列。
-     */
-    template<typename template_char_type, typename template_char_traits>
-    void swap(
-        psyq::string::view<template_char_type, template_char_traits>& io_left,
-        psyq::string::view<template_char_type, template_char_traits>& io_right)
-    PSYQ_NOEXCEPT
-    {
-        io_left.swap(io_right);
-    }
-};
+}; // class psyq::string::view
 
 #endif // !PSYQ_STRING_VIEW_HPP_

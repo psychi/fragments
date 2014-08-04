@@ -84,6 +84,7 @@ class psyq::string::_private::holder_base
 {
     private: typedef holder_base this_type; ///< thisが指す値の型。
 
+    //-------------------------------------------------------------------------
     /// 文字特性の型。
     public: typedef template_char_traits traits_type;
     /// メモリ割当子の型。
@@ -113,8 +114,7 @@ class psyq::string::_private::holder_base
 
     //-------------------------------------------------------------------------
     /// @copydoc psyq::string::holder::holder(this_type const&)
-    protected: holder_base(this_type const& in_string)
-    PSYQ_NOEXCEPT:
+    protected: holder_base(this_type const& in_string) PSYQ_NOEXCEPT:
         twice_size_(0),
         data_(nullptr),
         constant_allocator_(in_string.constant_allocator_)
@@ -123,8 +123,7 @@ class psyq::string::_private::holder_base
     }
 
     /// @copydoc psyq::string::holder::holder(this_type&&)
-    protected: holder_base(this_type&& io_string)
-    PSYQ_NOEXCEPT:
+    protected: holder_base(this_type&& io_string) PSYQ_NOEXCEPT:
         twice_size_(0),
         data_(nullptr),
         constant_allocator_(std::move(io_string.constant_allocator_))
@@ -611,7 +610,8 @@ class psyq::string::_private::holder_base
     typename this_type::traits_type::char_type const* data_;
     /// 文字列定数のメモリ割当子。
     private: typename this_type::constant_allocator constant_allocator_;
-};
+
+}; // class psyq::string::_private::holder_base
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_string_view を模した、immutableな文字列の保持子。
@@ -766,7 +766,8 @@ class psyq::string::holder:
      */
     public: this_type& operator=(typename base_type::view const& in_string)
     {
-        this->base_type::base_type::assign_view(in_string.data(), in_string.size());
+        this->base_type::base_type::assign_view(
+            in_string.data(), in_string.size());
         return *this;
     }
     /** @copydoc base_type::assign_literal()
@@ -805,33 +806,6 @@ class psyq::string::holder:
         return this->base_type::base_type::empty();
     }
     //@}
-};
-
-//-----------------------------------------------------------------------------
-namespace std
-{
-    /** @brief 文字列の交換。
-        @tparam template_char_type      @copydoc psyq::string::holder::value_type
-        @tparam template_char_traits    @copydoc psyq::string::holder::traits_type
-        @tparam template_allocator_type @copydoc psyq::string::holder::allocator_type
-        @param[in] in_left  交換する文字列。
-        @param[in] in_right 交換する文字列。
-     */
-    template<
-        typename template_char_type,
-        typename template_char_traits,
-        typename template_allocator_type>
-    void swap(
-        psyq::string::holder<
-            template_char_type, template_char_traits, template_allocator_type>&
-                io_left,
-        psyq::string::holder<
-            template_char_type, template_char_traits, template_allocator_type>&
-                io_right)
-    PSYQ_NOEXCEPT
-    {
-        io_left.swap(io_right);
-    }
-};
+}; // psyq::string::holder
 
 #endif // !defined(PSYQ_STRING_HOLDER_HPP_)

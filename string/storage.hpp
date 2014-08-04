@@ -188,7 +188,8 @@ class psyq::string::_private::storage_base
     private: typename this_type::storage_type storage_;
     /// 文字列の要素数。
     private: std::size_t size_;
-};
+
+}; // class psyq::string::_private::storage_base
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_string_view を模した、固定長領域を使った文字列。
@@ -282,6 +283,6 @@ class psyq::string::storage:
         return *new(this) this_type(in_string);
     }
     //@}
-};
+}; // class psyq::string::storage
 
 #endif // !defined(PSYQ_STRING_STORAGE_HPP_)

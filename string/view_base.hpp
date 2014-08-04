@@ -552,6 +552,7 @@ class psyq::string::_private::view_base
     private: typename this_type::traits_type::char_type const* data_;
     /// 文字列の要素数。
     private: std::size_t size_;
-};
+
+}; // class psyq::string::_private::view_base
 
 #endif // !PSYQ_STRING_VIEW_BASE_HPP_

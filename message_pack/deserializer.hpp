@@ -103,6 +103,7 @@ class psyq::message_pack::deserializer
     /// thisが指す値の型。
     private: typedef deserializer this_type;
 
+    //-------------------------------------------------------------------------
     /// 直列化復元に使う、 std::basic_istream 互換の入力ストリーム。
     public: typedef template_stream stream;
     static_assert(
@@ -119,14 +120,6 @@ class psyq::message_pack::deserializer
     /// 直列化復元途中のコンテナのスタック限界数。
     public: static std::size_t const stack_capacity = template_stack_capacity;
 
-    private: enum read_result
-    {
-        read_result_ABORT    = -2,
-        read_result_FAILED   = -1,
-        read_result_CONTINUE =  0,
-        read_result_FINISH   =  1,
-    };
-
     /// 次に直列化復元する値の種類。
     public: enum value_kind
     {
@@ -140,10 +133,18 @@ class psyq::message_pack::deserializer
     /// 直列化復元途中のコンテナのスタック。
     private: struct container_stack
     {
-        psyq::message_pack::object object;  ///< 復元中のオブジェクト。
-        psyq::message_pack::object map_key; ///< 直前に復元した連想配列のキー。
-        std::size_t rest_count;             ///< コンテナ要素の残数。
-        typename this_type::value_kind kind;     ///< 次に直列化復元する値の種類。
+        psyq::message_pack::object object;   ///< 復元中のオブジェクト。
+        psyq::message_pack::object map_key;  ///< 直前に復元した連想配列のキー。
+        std::size_t rest_count;              ///< コンテナ要素の残数。
+        typename this_type::value_kind kind; ///< 次に直列化復元する値の種類。
+    };
+
+    private: enum read_result
+    {
+        read_result_ABORT    = -2,
+        read_result_FAILED   = -1,
+        read_result_CONTINUE =  0,
+        read_result_FINISH   =  1,
     };
 
     //-------------------------------------------------------------------------
@@ -164,8 +165,8 @@ class psyq::message_pack::deserializer
         sort_map_(true)
     {}
 
-    /** @brief move構築子。
-        @param[in,out] io_source 移動元。
+    /** @brief ムーブ構築子。
+        @param[in,out] io_source ムーブ元インスタンス。
      */
     public: deserializer(this_type&& io_source):
         stream_(std::move(io_source.stream_)),
@@ -178,8 +179,8 @@ class psyq::message_pack::deserializer
         io_source.stack_size_ = 0;
     }
 
-    /** @brief move代入演算子。
-        @param[in,out] io_source 移動元。
+    /** @brief ムーブ代入演算子。
+        @param[in,out] io_source ムーブ元インスタンス。
      */
     public: this_type& operator=(this_type&& io_source)
     {
@@ -193,9 +194,9 @@ class psyq::message_pack::deserializer
         return *this;
     }
     //@}
-    /// copy構築子は使用禁止。
+    /// コピー構築子は使用禁止。
     private: deserializer(this_type const&);// = delete;
-    /// copy代入演算子は使用禁止。
+    /// コピー代入演算子は使用禁止。
     private: this_type& operator=(this_type const&);// = delete;
 
     //-------------------------------------------------------------------------
@@ -880,6 +881,7 @@ class psyq::message_pack::deserializer
     private: bool allocate_raw_;
     /// 連想配列の構築で、要素をソートするかどうか。
     private: bool sort_map_;
+
 }; // class psyq::message_pack::deserializer
 
 #endif // !defined(PSYQ_MESSAGE_PACK_DESIRIALIZER_HPP_)

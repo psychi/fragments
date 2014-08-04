@@ -6,21 +6,27 @@
 
 #include <type_traits>
 
+/// @cond
 namespace psyq
 {
-    /// @cond
-    template<typename> class any_message_call;
-    /// @endcond
-}
+    namespace any
+    {
+        namespace message
+        {
+            template<typename> class call;
+        } // namespace message
+    } // namespace any
+} // namespace psyq
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief メッセージの呼出状。
-    @tparam template_key @copydoc psyq::any_message_call::key
+    @tparam template_key @copydoc psyq::any::message::call::key
  */
 template<typename template_key>
-class psyq::any_message_call
+class psyq::any::message::call
 {
-    private: typedef any_message_call this_type; ///< thisが指す値の型。
+    private: typedef call this_type; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
     /// メッセージの呼出状の属性値。
@@ -34,7 +40,7 @@ class psyq::any_message_call
         @param[in] in_method   this_type::method_ の初期値。
         @param[in] in_sequence this_type::sequence_ の初期値。
      */
-    public: explicit PSYQ_CONSTEXPR any_message_call(
+    public: explicit PSYQ_CONSTEXPR call(
         typename this_type::key const in_method,
         typename this_type::key const in_sequence = 0)
     PSYQ_NOEXCEPT:
@@ -66,6 +72,7 @@ class psyq::any_message_call
     private: typename this_type::key sequence_;
     /// 呼び出しメソッドの種別番号。
     private: typename this_type::key method_;
-};
+
+}; // class psyq::any::message::call
 
 #endif // !defined(PSYQ_ANY_MESSAGE_CALL_HPP_)

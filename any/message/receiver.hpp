@@ -5,23 +5,29 @@
 #define PSYQ_ANY_MESSAGE_RECEIVER_HPP_
 
 #include <functional>
-//#include "psyq/any/any_message_packet.hpp"
+//#include "psyq/any/message/packet.hpp"
 
+/// @cond
 namespace psyq
 {
-    /// @cond
-    template<typename> class any_message_receiver;
-    /// @endcond
-}
+    namespace any
+    {
+        namespace message
+        {
+            template<typename> class receiver;
+        } // namespace message
+    } // namespace any
+} // namespace psyq
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief メッセージ受信器。
-    @tparam template_base_suite @copydoc psyq::any_message_packet::suite
+    @tparam template_base_suite @copydoc psyq::any::message::packet::suite
  */
 template<typename template_base_suite>
-class psyq::any_message_receiver
+class psyq::any::message::receiver
 {
-    private: typedef any_message_receiver this_type; ///< thisが指す値の型。
+    private: typedef receiver this_type; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
     /// メッセージ受信器の保持子。
@@ -29,7 +35,7 @@ class psyq::any_message_receiver
     /// メッセージ受信器の監視子。
     public: typedef std::weak_ptr<this_type> weak_ptr;
     /// メッセージスイートを保持するパケットの基底型。
-    public: typedef psyq::any_message_packet<template_base_suite> packet;
+    public: typedef psyq::any::message::packet<template_base_suite> packet;
     /// @copydoc this_type::functor_
     public: typedef std::function<void(typename this_type::packet const&)>
         functor;
@@ -39,7 +45,7 @@ class psyq::any_message_receiver
         @param[in] in_functor this_type::functor_ の初期値。
         @param[in] in_address this_type::address_ の初期値。
      */
-    public: PSYQ_CONSTEXPR any_message_receiver(
+    public: PSYQ_CONSTEXPR receiver(
         typename this_type::functor in_functor,
         typename this_type::packet::suite::tag::key const in_address)
     PSYQ_NOEXCEPT:
@@ -88,6 +94,7 @@ class psyq::any_message_receiver
     private: typename this_type::functor functor_;
     /// メッセージ受信アドレス。
     private: typename this_type::packet::suite::tag::key address_;
-};
+
+}; // class psyq::any::message::receiver
 
 #endif // !defined(PSYQ_ANY_MESSAGE_RECEIVER_HPP_)

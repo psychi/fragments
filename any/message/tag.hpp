@@ -8,19 +8,26 @@
 
 namespace psyq
 {
-    /// @cond
-    template<typename> class any_message_tag;
-    /// @endcond
-}
+    namespace any
+    {
+        /// psyq::any::rtti を使ったRPCメッセージ。
+        namespace message
+        {
+            /// @cond
+            template<typename> class tag;
+            /// @endcond
+        } // namespace message
+    } // namespace any
+} // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief メッセージの荷札。
-    @tparam template_key @copydoc psyq::any_message_tag::key
+/** @brief RPCメッセージの荷札。
+    @tparam template_key @copydoc psyq::any::message::tag::key
  */
 template<typename template_key>
-class psyq::any_message_tag
+class psyq::any::message::tag
 {
-    private: typedef any_message_tag this_type; ///< thisが指す値の型。
+    private: typedef tag this_type; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
     /// メッセージの荷札の属性値。
@@ -40,7 +47,7 @@ class psyq::any_message_tag
         @param[in] in_receiver_address メッセージ受信アドレス。
         @param[in] in_receiver_mask    メッセージ受信マスク。
      */
-    public: explicit PSYQ_CONSTEXPR any_message_tag(
+    public: explicit PSYQ_CONSTEXPR tag(
         typename this_type::key const in_sender_address,
         typename this_type::key const in_receiver_address,
         typename this_type::key const in_receiver_mask)
@@ -96,6 +103,7 @@ class psyq::any_message_tag
     private: typename this_type::key receiver_address_;
     /// メッセージ受信マスク。
     private: typename this_type::key receiver_mask_;
-};
+
+}; // class psyq::any::message::tag
 
 #endif // !defined(PSYQ_ANY_MESSAGE_TAG_HPP_)

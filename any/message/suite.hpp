@@ -5,35 +5,41 @@
 #define PSYQ_ANY_MESSAGE_SUITE_HPP_
 
 //#include "psyq/assert.hpp"
-//#include "psyq/any/any_message_tag.hpp"
-//#include "psyq/any/any_message_call.hpp"
+//#include "psyq/any/message/tag.hpp"
+//#include "psyq/any/message/call.hpp"
 
+/// @cond
 namespace psyq
 {
-    /// @cond
-    template<typename, typename, typename> class any_message_suite;
-    /// @endcond
-}
+    namespace any
+    {
+        namespace message
+        {
+            template<typename, typename, typename> class suite;
+        } // namespace message
+    } // namespace any
+} // namespace psyq
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief メッセージの荷札と呼出状と引数を一揃いにしたスイートの基底型。
-    @tparam template_tag_key  @copydoc psyq::any_message_tag::key
-    @tparam template_call_key @copydoc psyq::any_message_call::key
-    @tparam template_size     @copydoc psyq::any_message_suite::size_type
+    @tparam template_tag_key  @copydoc psyq::any::message::tag::key
+    @tparam template_call_key @copydoc psyq::any::message::call::key
+    @tparam template_size     @copydoc psyq::any::message::suite::size_type
  */
 template<
     typename template_tag_key,
     typename template_call_key,
     typename template_size>
-class psyq::any_message_suite
+class psyq::any::message::suite
 {
-    private: typedef any_message_suite this_type; ///< thisが指す値の型。
+    private: typedef suite this_type; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
     /// @copydoc this_type::tag_
-    public: typedef psyq::any_message_tag<template_tag_key> tag;
+    public: typedef psyq::any::message::tag<template_tag_key> tag;
     /// @copydoc this_type::call_
-    public: typedef psyq::any_message_call<template_call_key> call;
+    public: typedef psyq::any::message::call<template_call_key> call;
     /// バイト数を表す型。
     public: typedef template_size size_type;
     static_assert(
@@ -50,7 +56,7 @@ class psyq::any_message_suite
         @param[in] in_tag  this_type::tag_ の初期値。
         @param[in] in_call this_type::call_ の初期値。
      */
-    public: PSYQ_CONSTEXPR any_message_suite(
+    public: PSYQ_CONSTEXPR suite(
         typename this_type::tag const& in_tag,
         typename this_type::call const& in_call)
     PSYQ_NOEXCEPT:
@@ -66,7 +72,7 @@ class psyq::any_message_suite
         @param[in] in_parameter   引数の先頭位置。
         @param[in] in_suite_size メッセージスイート全体のバイトサイズ。
      */
-    protected: PSYQ_CONSTEXPR any_message_suite(
+    protected: PSYQ_CONSTEXPR suite(
         typename this_type::tag const& in_tag,
         typename this_type::call const& in_call,
         void const* const in_parameter,
@@ -132,27 +138,28 @@ class psyq::any_message_suite
     private: typename this_type::size_type parameter_offset_;
     /// メッセージ引数のバイトサイズ。
     private: typename this_type::size_type parameter_size_;
-};
+
+}; // class psyq::any::message::suite
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief メッセージの荷札と呼出状と引数をひとまとめにしたスイート。
-    @tparam template_tag_key   @copydoc psyq::any_message_tag::key
-    @tparam template_call_key  @copydoc psyq::any_message_call::key
-    @tparam template_size      @copydoc psyq::any_message_suite::size_type
-    @tparam template_parameter @copydoc psyq::any_message_suite::parametric::parameter
+    @tparam template_tag_key   @copydoc psyq::any::message::tag::key
+    @tparam template_call_key  @copydoc psyq::any::message::call::key
+    @tparam template_size      @copydoc psyq::any::message::suite::size_type
+    @tparam template_parameter @copydoc psyq::any::message::suite::parametric::parameter
  */
 template<
     typename template_tag_key,
     typename template_call_key,
     typename template_size>
 template<typename template_parameter>
-class psyq::any_message_suite<template_tag_key, template_call_key, template_size>::parametric:
-    public psyq::any_message_suite<template_tag_key, template_call_key, template_size>
+class psyq::any::message::suite<template_tag_key, template_call_key, template_size>::parametric:
+    public psyq::any::message::suite<template_tag_key, template_call_key, template_size>
 {
     /// thisが指す値の型。
     private: typedef parametric this_type;
     /// this_type の基底型。
-    public: typedef psyq::any_message_suite<
+    public: typedef psyq::any::message::suite<
         template_tag_key, template_call_key, template_size>
             base_type;
 
@@ -201,6 +208,7 @@ class psyq::any_message_suite<template_tag_key, template_call_key, template_size
 
     //-------------------------------------------------------------------------
     private: typename this_type::parameter parameter_; ///< メッセージの引数。
-};
+
+}; // class psyq::any::message::suite::parametric:
 
 #endif // !defined(PSYQ_ANY_MESSAGE_SUITE_HPP_)

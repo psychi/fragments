@@ -1,47 +1,47 @@
-﻿/* Copyright (c) 2013, Hillco Psychi, All rights reserved.
+﻿/*
+Copyright (c) 2013, Hillco Psychi, All rights reserved.
 
-   Redistribution and use in source and binary forms, with or without
-   modification, are permitted provided that the following conditions are met:
-   ソースコード形式かバイナリ形式か、変更するかしないかを問わず、
-   以下の条件を満たす場合に限り、再頒布および使用が許可されます。
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met: 
+ソースコード形式かバイナリ形式か、変更するかしないかを問わず、
+以下の条件を満たす場合に限り、再頒布および使用が許可されます。
 
-   1. Redistributions of source code must retain the above copyright notice,
-      this list of conditions and the following disclaimer.
-      ソースコードを再頒布する場合、上記の著作権表示、本条件一覧、
-      および下記の免責条項を含めること。
-   2. Redistributions in binary form must reproduce the above copyright notice,
-      this list of conditions and the following disclaimer in the documentation
-      and/or other materials provided with the distribution.
-      バイナリ形式で再頒布する場合、頒布物に付属のドキュメント等の資料に、
-      上記の著作権表示、本条件一覧、および下記の免責条項を含めること。
+1. Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer. 
+   ソースコードを再頒布する場合、上記の著作権表示、本条件一覧、
+   および下記の免責条項を含めること。
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution. 
+   バイナリ形式で再頒布する場合、頒布物に付属のドキュメント等の資料に、
+   上記の著作権表示、本条件一覧、および下記の免責条項を含めること。
 
-   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-   THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
-   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
-   OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
-   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-   本ソフトウェアは、著作権者およびコントリビューターによって
-   「現状のまま」提供されており、明示黙示を問わず、商業的な使用可能性、
-   および特定の目的に対する適合性に関する暗黙の保証も含め、
-   またそれに限定されない、いかなる保証もありません。
-   著作権者もコントリビューターも、事由のいかんを問わず、
-   損害発生の原因いかんを問わず、かつ責任の根拠が契約であるか厳格責任であるか
-   （過失その他の）不法行為であるかを問わず、
-   仮にそのような損害が発生する可能性を知らされていたとしても、
-   本ソフトウェアの使用によって発生した（代替品または代用サービスの調達、
-   使用の喪失、データの喪失、利益の喪失、業務の中断も含め、
-   またそれに限定されない）直接損害、間接損害、偶発的な損害、特別損害、
-   懲罰的損害、または結果損害について、一切責任を負わないものとします。
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+本ソフトウェアは、著作権者およびコントリビューターによって
+「現状のまま」提供されており、明示黙示を問わず、商業的な使用可能性、
+および特定の目的に対する適合性に関する暗黙の保証も含め、
+またそれに限定されない、いかなる保証もありません。
+著作権者もコントリビューターも、事由のいかんを問わず、
+損害発生の原因いかんを問わず、かつ責任の根拠が契約であるか厳格責任であるか
+（過失その他の）不法行為であるかを問わず、
+仮にそのような損害が発生する可能性を知らされていたとしても、
+本ソフトウェアの使用によって発生した（代替品または代用サービスの調達、
+使用の喪失、データの喪失、利益の喪失、業務の中断も含め、
+またそれに限定されない）直接損害、間接損害、偶発的な損害、特別損害、
+懲罰的損害、または結果損害について、一切責任を負わないものとします。
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::any_rtti
+    @brief @copybrief psyq::any::rtti
  */
 #ifndef PSYQ_ANY_RTTI_HPP_
 #define PSYQ_ANY_RTTI_HPP_
@@ -56,39 +56,46 @@
 
 /// void型のRTTI識別値。
 #ifndef PSYQ_ANY_RTTI_VOID_KEY
-#define PSYQ_ANY_RTTI_VOID_KEY (any_rtti_key(1) << (sizeof(any_rtti_key) * 8 - 1))
+#define PSYQ_ANY_RTTI_VOID_KEY\
+    (psyq::any::rtti_key(1) << (sizeof(psyq::any::rtti_key) * 8 - 1))
 #endif // !defined(PSYQ_ANY_RTTI_VOID_KEY)
 
 namespace psyq
 {
-    /// 型ごとに固有のRTTI識別値。
-    typedef PSYQ_ANY_RTTI_KEY_TYPE any_rtti_key;
+    /** @brief std::type_infoを使わない、
+               独自に実装したRTTI（実行時型情報）を用いた動的オブジェクト。
+     */
+    namespace any
+    {
+        /// 型ごとに固有のRTTI識別値。
+        typedef PSYQ_ANY_RTTI_KEY_TYPE rtti_key;
 
-    /// void型のRTTI識別値。
-    static any_rtti_key const ANY_RTTI_VOID_KEY = PSYQ_ANY_RTTI_VOID_KEY;
-    static_assert(
-        // 実行時に自動で割り当てる識別値の数が、1つ以上あること。
-        PSYQ_ANY_RTTI_VOID_KEY < psyq::any_rtti_key(0) - 1,
-        "There is no key value to be assigned to the runtime.");
+        /// void型のRTTI識別値。
+        static rtti_key const RTTI_VOID_KEY = PSYQ_ANY_RTTI_VOID_KEY;
+        static_assert(
+            // 実行時に自動で割り当てる識別値の数が、1つ以上あること。
+            PSYQ_ANY_RTTI_VOID_KEY < psyq::any::rtti_key(0) - 1,
+            "There is no key value to be assigned to the runtime.");
 
-    /// @cond
-    class any_rtti;
-    /// @endcond
+        /// @cond
+        class rtti;
+        /// @endcond
+    }
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief C++標準のRTTIを使わない、簡易的なRTTI（実行時型情報）。
+/** @brief std::type_infoを使わない、独自に実装したRTTI（実行時型情報）。
 
-    - psyq::any_rtti::make() で、型ごとに固有のRTTIを構築する。
-    - psyq::any_rtti::find() で、型ごとに固有のRTTIを取得する。
-    - psyq::any_rtti::get_key() で、型ごとに固有のRTTI識別値を取得できる。
-    - psyq::any_rtti::get_size() で、型の値のバイトサイズを取得できる。
-    - psyq::any_rtti::get_alignment() で、型の値のメモリ境界バイト数を取得できる。
-    - psyq::any_rtti::get_base() で、基底型のRTTIを取得できる。
+    - psyq::any::rtti::make() で、型ごとに固有のRTTIを構築する。
+    - psyq::any::rtti::find() で、型ごとに固有のRTTIを取得する。
+    - psyq::any::rtti::get_key() で、型ごとに固有のRTTI識別値を取得できる。
+    - psyq::any::rtti::get_size() で、型の値のバイトサイズを取得できる。
+    - psyq::any::rtti::get_alignment() で、型の値のメモリ境界バイト数を取得できる。
+    - psyq::any::rtti::get_base() で、基底型のRTTIを取得できる。
  */
-class psyq::any_rtti
+class psyq::any::rtti
 {
-    private: typedef any_rtti this_type; ///< thisが指す値の型。
+    private: typedef rtti this_type; ///< thisが指す値の型。
 
     //-----------------------------------------------------------------
     /// 値をコピーして構築する関数
@@ -173,7 +180,7 @@ class psyq::any_rtti
               関数内のstatic変数の構築は、C++11の仕様ではスレッドセーフだが、
               VisualStudio2013以前ではスレッドセーフになっていない。
               https://sites.google.com/site/cpprefjp/implementation-status
-            - VisualStudio以外でも、今のところ psyq::any_rtti::any_rtti
+            - VisualStudio以外でも、今のところ psyq::any::rtti::any::rtti
               の実装がスレッドセーフになっていない。
 
         @tparam template_type
@@ -196,8 +203,8 @@ class psyq::any_rtti
             文字列リテラルかnullptrを指定すること。
         @param[in] in_key
             構築するRTTIの識別値。構築後は this_type::get_key() で取得できる。
-            - psyq::ANY_RTTI_VOID_KEY 以上の値なら、RTTI識別値を実行時に自動で決定する。
-            - psyq::ANY_RTTI_VOID_KEY 未満の値なら、そのままRTTI識別値として採用する。
+            - psyq::any::RTTI_VOID_KEY 以上の値なら、RTTI識別値を実行時に自動で決定する。
+            - psyq::any::RTTI_VOID_KEY 未満の値なら、そのままRTTI識別値として採用する。
               - 同じRTTI識別値がすでに使われていた場合は、RTTIの構築に失敗する。
 
         @retval !=nullptr 構築したRTTI。以後は this_type::find() で取得できる。
@@ -208,7 +215,7 @@ class psyq::any_rtti
     public: template<typename template_type, typename template_base_type>
     static this_type const* make(
         char const* const in_name = nullptr,
-        psyq::any_rtti_key in_key = psyq::ANY_RTTI_VOID_KEY)
+        psyq::any::rtti_key in_key = psyq::any::RTTI_VOID_KEY)
     {
         static_assert(
             // template_type と template_base_type が異なる型であること。
@@ -258,9 +265,9 @@ class psyq::any_rtti
             // 基底型のRTTIが make() でまだ構築されてなかった。
             return nullptr;
         }
-        if (psyq::ANY_RTTI_VOID_KEY <= in_key)
+        if (psyq::any::RTTI_VOID_KEY <= in_key)
         {
-            in_key = psyq::ANY_RTTI_VOID_KEY;
+            in_key = psyq::any::RTTI_VOID_KEY;
         }
         else if (this_type::find(in_key) != nullptr)
         {
@@ -277,7 +284,7 @@ class psyq::any_rtti
     public: template<typename template_type>
     static this_type const* make(
         char const* const in_name = nullptr,
-        psyq::any_rtti_key const in_key = psyq::ANY_RTTI_VOID_KEY)
+        psyq::any::rtti_key const in_key = psyq::any::RTTI_VOID_KEY)
     {
         return this_type::make<template_type, void>(in_name, in_key);
     }
@@ -304,8 +311,8 @@ class psyq::any_rtti
             文字列リテラルかnullptrを指定すること。
         @param[in] in_key
             用意するRTTIの識別値。
-            - psyq::ANY_RTTI_VOID_KEY 以上の値なら、RTTI識別値を実行時に自動で決定する。
-            - psyq::ANY_RTTI_VOID_KEY 未満の値なら、そのままRTTI識別値として採用する。
+            - psyq::any::RTTI_VOID_KEY 以上の値なら、RTTI識別値を実行時に自動で決定する。
+            - psyq::any::RTTI_VOID_KEY 未満の値なら、そのままRTTI識別値として採用する。
               - すでに構築されていたRTTIの識別値と異なる場合は、RTTIの用意に失敗する。
         @retval !=nullptr 型ごとに固有のRTTI。
         @retval ==nullptr RTTIの用意に失敗した。
@@ -313,7 +320,7 @@ class psyq::any_rtti
     public: template<typename template_type, typename template_base_type>
     static this_type const* equip(
         char const* const in_name = nullptr,
-        psyq::any_rtti_key const in_key = psyq::ANY_RTTI_VOID_KEY)
+        psyq::any::rtti_key const in_key = psyq::any::RTTI_VOID_KEY)
     {
         auto local_rtti(this_type::find<template_type>());
         if (local_rtti == nullptr)
@@ -324,7 +331,7 @@ class psyq::any_rtti
         {
             return nullptr;
         }
-        else if (in_key < psyq::ANY_RTTI_VOID_KEY && local_rtti->get_key() != in_key)
+        else if (in_key < psyq::any::RTTI_VOID_KEY && local_rtti->get_key() != in_key)
         {
             return nullptr;
         }
@@ -338,7 +345,7 @@ class psyq::any_rtti
     public: template<typename template_type>
     static this_type const* equip(
         char const* const in_name = nullptr,
-        psyq::any_rtti_key const in_key = psyq::ANY_RTTI_VOID_KEY)
+        psyq::any::rtti_key const in_key = psyq::any::RTTI_VOID_KEY)
     {
         return this_type::equip<template_type, void>(in_name, in_key);
     }
@@ -355,7 +362,7 @@ class psyq::any_rtti
         return this_type::get_static_rtti(
             nullptr,
             nullptr,
-            psyq::ANY_RTTI_VOID_KEY + 1,
+            psyq::any::RTTI_VOID_KEY + 1,
             this_type::table<typename std::remove_cv<template_type>::type>());
     }
 
@@ -364,9 +371,9 @@ class psyq::any_rtti
         @retval !=nullptr 型ごとに固有のRTTI。
         @retval ==nullptr this_type::make() で、RTTIがまだ構築されてなかった。
      */
-    public: static this_type const* find(psyq::any_rtti_key const in_key)
+    public: static this_type const* find(psyq::any::rtti_key const in_key)
     {
-        if (in_key == psyq::ANY_RTTI_VOID_KEY)
+        if (in_key == psyq::any::RTTI_VOID_KEY)
         {
             return this_type::find<void>();
         }
@@ -396,7 +403,7 @@ class psyq::any_rtti
         @retval ==nullptr 派生型を上位型にアップキャストできない。
      */
     public: static this_type const* find(
-        psyq::any_rtti_key const in_base_key,
+        psyq::any::rtti_key const in_base_key,
         this_type const* const in_derived_rtti)
     {
         for (
@@ -429,19 +436,19 @@ class psyq::any_rtti
     //-------------------------------------------------------------------------
     /** @brief RTTI識別値を取得する。
         @param[in] in_rtti 識別値を取得する型のRTTI。
-        @retval !=psyq::ANY_RTTI_VOID_KEY 型ごとに固有のRTTI識別値。
-        @retval ==psyq::ANY_RTTI_VOID_KEY RTTIが空だったか、void型のRTTIだった。
+        @retval !=psyq::any::RTTI_VOID_KEY 型ごとに固有のRTTI識別値。
+        @retval ==psyq::any::RTTI_VOID_KEY RTTIが空だったか、void型のRTTIだった。
      */
-    public: static psyq::any_rtti_key get_key(this_type const* const in_rtti)
+    public: static psyq::any::rtti_key get_key(this_type const* const in_rtti)
     PSYQ_NOEXCEPT
     {
-        return in_rtti != nullptr? in_rtti->get_key(): psyq::ANY_RTTI_VOID_KEY;
+        return in_rtti != nullptr? in_rtti->get_key(): psyq::any::RTTI_VOID_KEY;
     }
 
     /** @brief RTTI識別値を取得する。
         @return 型ごとに固有のRTTI識別値。
      */
-    public: psyq::any_rtti_key get_key() const PSYQ_NOEXCEPT
+    public: psyq::any::rtti_key get_key() const PSYQ_NOEXCEPT
     {
         return this->key_;
     }
@@ -624,7 +631,7 @@ class psyq::any_rtti
     static this_type const* get_static_rtti(
         this_type const* const in_base,
         char const* const in_name,
-        psyq::any_rtti_key const in_key,
+        psyq::any::rtti_key const in_key,
         this_type::table<template_type> const& in_table)
     {
         static_assert(
@@ -633,7 +640,7 @@ class psyq::any_rtti
             && !std::is_volatile<template_type>::value,
             "'template_type' is const-qualified or volatile-qualified type.");
         static bool static_make(false);
-        if (in_key <= psyq::ANY_RTTI_VOID_KEY)
+        if (in_key <= psyq::any::RTTI_VOID_KEY)
         {
             static_make = true;
         }
@@ -652,7 +659,7 @@ class psyq::any_rtti
     private: static this_type const* get_static_rtti(
         this_type const* const,
         char const* const,
-        psyq::any_rtti_key const,
+        psyq::any::rtti_key const,
         this_type::table<void> const&)
     PSYQ_NOEXCEPT
     {
@@ -669,7 +676,7 @@ class psyq::any_rtti
             this_type::get_static_rtti(
                 nullptr,
                 nullptr,
-                psyq::ANY_RTTI_VOID_KEY,
+                psyq::any::RTTI_VOID_KEY,
                 this_type::table<void>()));
         return static_list_begin;
     }
@@ -677,12 +684,12 @@ class psyq::any_rtti
     /** @brief RTTI識別値を追加する。
         @return 追加された型のRTTI識別値。
      */
-    private: static psyq::any_rtti_key add_key()
+    private: static psyq::any::rtti_key add_key()
     {
-        static psyq::atomic_count static_key(psyq::ANY_RTTI_VOID_KEY);
+        static psyq::atomic_count static_key(psyq::any::RTTI_VOID_KEY);
         auto const local_key(static_key.add(1));
         // 自動で決定する識別値をすべて使いきった場合にassertする。
-        PSYQ_ASSERT(psyq::ANY_RTTI_VOID_KEY < local_key);
+        PSYQ_ASSERT(psyq::any::RTTI_VOID_KEY < local_key);
         return local_key;
     }
 
@@ -693,10 +700,10 @@ class psyq::any_rtti
         @param[in] in_key  RTTI識別値。
      */
     private: template<typename template_type>
-    any_rtti(
+    rtti(
         this_type const* const in_base,
         char const* const in_name,
-        psyq::any_rtti_key const in_key,
+        psyq::any::rtti_key const in_key,
         this_type::table<template_type> const&)
     :
         copy_constructor_(&this_type::table<template_type>::copy_construct_value),
@@ -706,7 +713,7 @@ class psyq::any_rtti
         //next_(nullptr),
         base_(in_base),
         name_(in_name),
-        key_(in_key < psyq::ANY_RTTI_VOID_KEY? in_key: this_type::add_key()),
+        key_(in_key < psyq::any::RTTI_VOID_KEY? in_key: this_type::add_key()),
         size_(sizeof(template_type)),
         alignment_(std::alignment_of<template_type>::value)
     {
@@ -725,7 +732,7 @@ class psyq::any_rtti
     }
 
     /// void型のRTTIを構築する。
-    private: PSYQ_CONSTEXPR any_rtti() PSYQ_NOEXCEPT:
+    private: PSYQ_CONSTEXPR rtti() PSYQ_NOEXCEPT:
         copy_constructor_(nullptr),
         move_constructor_(nullptr),
         destructor_(nullptr),
@@ -733,13 +740,13 @@ class psyq::any_rtti
         next_(nullptr),
         base_(nullptr),
         name_("void"),
-        key_(psyq::ANY_RTTI_VOID_KEY),
+        key_(psyq::any::RTTI_VOID_KEY),
         size_(0),
         alignment_(0)
     {}
 
     /// copy構築子は使用禁止。
-    private: any_rtti(this_type const&); //= delete;
+    private: rtti(this_type const&); //= delete;
     /// copy代入演算子は使用禁止。
     private: this_type& operator=(this_type const&); //= delete;
 
@@ -753,13 +760,14 @@ class psyq::any_rtti
     /// @copydoc value_equal_operator
     private: this_type::value_equal_operator equal_operator_;
 
-    private: this_type const* next_;        ///< RTTIリストの、次のRTTI。
-    private: this_type const* const base_;  ///< 基底型のRTTI。
-    private: char const* name_;             ///< RTTIの名前文字列。
-    private: psyq::any_rtti_key const key_; ///< RTTI識別値。
-    private: std::size_t const size_;       ///< 型の値のバイトサイズ。
-    private: std::size_t const alignment_;  ///< 型の値のメモリ境界バイト数。
-};
+    private: this_type const* next_;         ///< RTTIリストの、次のRTTI。
+    private: this_type const* const base_;   ///< 基底型のRTTI。
+    private: char const* name_;              ///< RTTIの名前文字列。
+    private: psyq::any::rtti_key const key_; ///< RTTI識別値。
+    private: std::size_t const size_;        ///< 型の値のバイトサイズ。
+    private: std::size_t const alignment_;   ///< 型の値のメモリ境界バイト数。
+
+}; // class psyq::any::rtti
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq
@@ -778,56 +786,56 @@ namespace psyq
             struct class_ab: class_a, class_b {};
             struct class_ab_c: private class_ab {int_object c;};
 
-            //PSYQ_ASSERT(psyq::any_rtti::make<void>() == nullptr); // static_assert!
-            PSYQ_ASSERT(psyq::any_rtti::find<void>() != nullptr);
-            PSYQ_ASSERT(psyq::any_rtti::find<void const>() != nullptr);
-            PSYQ_ASSERT(psyq::any_rtti::find<void>() == psyq::any_rtti::find<void const>());
-            PSYQ_ASSERT(psyq::any_rtti::find<class_a>() == nullptr);
-            PSYQ_ASSERT(psyq::any_rtti::make<class_a>() != nullptr);
-            PSYQ_ASSERT(psyq::any_rtti::equip<class_a>() != nullptr);
-            PSYQ_ASSERT(psyq::any_rtti::find<class_a>() != nullptr);
-            PSYQ_ASSERT(psyq::any_rtti::find<class_a>() == psyq::any_rtti::find<class_a const>());
-            PSYQ_ASSERT(psyq::any_rtti::find<class_a>() == psyq::any_rtti::equip<class_a>());
-            PSYQ_ASSERT((psyq::any_rtti::make<class_a>("class_a", 1000)) == nullptr);
-            PSYQ_ASSERT((psyq::any_rtti::equip<class_a>("class_a", 1000)) == nullptr);
-            //PSYQ_ASSERT((psyq::any_rtti::make<class_a, class_b>()) == nullptr); // static_assert!
-            PSYQ_ASSERT((psyq::any_rtti::equip<class_b const>("class_b", 1000)) != nullptr);
-            PSYQ_ASSERT(psyq::any_rtti::find<class_b>() != nullptr);
-            PSYQ_ASSERT(psyq::any_rtti::make<class_b>() == nullptr);
-            PSYQ_ASSERT((psyq::any_rtti::equip<class_ab, class_a>("class_ab", 1000)) == nullptr);
-            //PSYQ_ASSERT((psyq::any_rtti::make<class_ab, class_b>(1001)) == nullptr); // assert!
-            PSYQ_ASSERT((psyq::any_rtti::make<class_ab, class_a>("class_ab", 1001)) != nullptr);
-            //PSYQ_ASSERT((psyq::any_rtti::make<class_ab_c, class_ab>()) != nullptr); // compile error!
-            PSYQ_ASSERT(psyq::any_rtti::get_key(psyq::any_rtti::find<class_b>()) == 1000);
-            PSYQ_ASSERT(psyq::any_rtti::get_key(psyq::any_rtti::find<class_ab>()) == 1001);
+            //PSYQ_ASSERT(psyq::any::rtti::make<void>() == nullptr); // static_assert!
+            PSYQ_ASSERT(psyq::any::rtti::find<void>() != nullptr);
+            PSYQ_ASSERT(psyq::any::rtti::find<void const>() != nullptr);
+            PSYQ_ASSERT(psyq::any::rtti::find<void>() == psyq::any::rtti::find<void const>());
+            PSYQ_ASSERT(psyq::any::rtti::find<class_a>() == nullptr);
+            PSYQ_ASSERT(psyq::any::rtti::make<class_a>() != nullptr);
+            PSYQ_ASSERT(psyq::any::rtti::equip<class_a>() != nullptr);
+            PSYQ_ASSERT(psyq::any::rtti::find<class_a>() != nullptr);
+            PSYQ_ASSERT(psyq::any::rtti::find<class_a>() == psyq::any::rtti::find<class_a const>());
+            PSYQ_ASSERT(psyq::any::rtti::find<class_a>() == psyq::any::rtti::equip<class_a>());
+            PSYQ_ASSERT((psyq::any::rtti::make<class_a>("class_a", 1000)) == nullptr);
+            PSYQ_ASSERT((psyq::any::rtti::equip<class_a>("class_a", 1000)) == nullptr);
+            //PSYQ_ASSERT((psyq::any::rtti::make<class_a, class_b>()) == nullptr); // static_assert!
+            PSYQ_ASSERT((psyq::any::rtti::equip<class_b const>("class_b", 1000)) != nullptr);
+            PSYQ_ASSERT(psyq::any::rtti::find<class_b>() != nullptr);
+            PSYQ_ASSERT(psyq::any::rtti::make<class_b>() == nullptr);
+            PSYQ_ASSERT((psyq::any::rtti::equip<class_ab, class_a>("class_ab", 1000)) == nullptr);
+            //PSYQ_ASSERT((psyq::any::rtti::make<class_ab, class_b>(1001)) == nullptr); // assert!
+            PSYQ_ASSERT((psyq::any::rtti::make<class_ab, class_a>("class_ab", 1001)) != nullptr);
+            //PSYQ_ASSERT((psyq::any::rtti::make<class_ab_c, class_ab>()) != nullptr); // compile error!
+            PSYQ_ASSERT(psyq::any::rtti::get_key(psyq::any::rtti::find<class_b>()) == 1000);
+            PSYQ_ASSERT(psyq::any::rtti::get_key(psyq::any::rtti::find<class_ab>()) == 1001);
             PSYQ_ASSERT(
-                nullptr != psyq::any_rtti::find(
-                    psyq::any_rtti::find<class_a>(),
-                    psyq::any_rtti::find<class_ab>()));
+                nullptr != psyq::any::rtti::find(
+                    psyq::any::rtti::find<class_a>(),
+                    psyq::any::rtti::find<class_ab>()));
             PSYQ_ASSERT(
-                nullptr == psyq::any_rtti::find(
-                    psyq::any_rtti::find<class_b>(),
-                    psyq::any_rtti::find<class_ab>()));
+                nullptr == psyq::any::rtti::find(
+                    psyq::any::rtti::find<class_b>(),
+                    psyq::any::rtti::find<class_ab>()));
             PSYQ_ASSERT(
-                nullptr != psyq::any_rtti::find(
-                    psyq::any_rtti::find<class_ab>(),
-                    psyq::any_rtti::find<class_ab>()));
+                nullptr != psyq::any::rtti::find(
+                    psyq::any::rtti::find<class_ab>(),
+                    psyq::any::rtti::find<class_ab>()));
             PSYQ_ASSERT(
-                nullptr == psyq::any_rtti::find(
-                    psyq::any_rtti::find<class_ab>(),
-                    psyq::any_rtti::find<class_a>()));
+                nullptr == psyq::any::rtti::find(
+                    psyq::any::rtti::find<class_ab>(),
+                    psyq::any::rtti::find<class_a>()));
             PSYQ_ASSERT(
-                nullptr != psyq::any_rtti::find(
-                    psyq::ANY_RTTI_VOID_KEY,
-                    psyq::any_rtti::find<class_a>()));
+                nullptr != psyq::any::rtti::find(
+                    psyq::any::RTTI_VOID_KEY,
+                    psyq::any::rtti::find<class_a>()));
             PSYQ_ASSERT(
-                nullptr != psyq::any_rtti::find(
-                    psyq::ANY_RTTI_VOID_KEY,
-                    psyq::any_rtti::find<class_b>()));
+                nullptr != psyq::any::rtti::find(
+                    psyq::any::RTTI_VOID_KEY,
+                    psyq::any::rtti::find<class_b>()));
             PSYQ_ASSERT(
-                nullptr != psyq::any_rtti::find(
-                    psyq::ANY_RTTI_VOID_KEY,
-                    psyq::any_rtti::find<class_ab>()));
+                nullptr != psyq::any::rtti::find(
+                    psyq::any::RTTI_VOID_KEY,
+                    psyq::any::rtti::find<class_ab>()));
         }
     }
 }

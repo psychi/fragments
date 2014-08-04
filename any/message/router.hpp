@@ -1,6 +1,6 @@
 ﻿/** @file
     @brief RPCメッセージの送受信。
-    @copydetails psyq::any_message_router
+    @copydetails psyq::any::message::router
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_ANY_MESSAGE_ROUTER_HPP_
@@ -10,43 +10,53 @@
 #include <vector>
 #include <list>
 #include <unordered_map>
-//#include "psyq/any/any_message_receiver.hpp"
+//#include "psyq/any/message/receiver.hpp"
 
+/// @cond
 namespace psyq
 {
-    /// @cond
-    template<
-        typename = psyq::any_message_suite<std::uint32_t, std::uint32_t, std::uint32_t>,
-        typename = std::allocator<void*>>
-            class any_message_router;
-    /// @endcond
-}
+    namespace any
+    {
+        namespace message
+        {
+            template<
+                typename = psyq::any::message::suite<std::uint32_t, std::uint32_t, std::uint32_t>,
+                typename = std::allocator<void*>>
+                    class router;
+            template<
+                typename = psyq::any::message::suite<std::uint32_t, std::uint32_t, std::uint32_t>,
+                typename = std::allocator<void*>>
+                    class thread;
+        } // namespace message
+    } // namespace any
+} // namespace psyq
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief メッセージ中継器。
 
-    - メッセージ送受信アドレスを指定し、 psyq::any_message_router を構築する。
-    - psyq::any_message_router::register_receiver() でメッセージ受信関数を登録する。
-    - psyq::any_message_router::send_message() でメッセージを送信する。
-    - psyq::any_message_router::flush() でメッセージ送受信の処理をすると、
-      psyq::any_message_router::send_message() で送信されたメッセージに対応する、
-      psyq::any_message_router::register_receiver() で登録した
+    - メッセージ送受信アドレスを指定し、 psyq::any::message::router を構築する。
+    - psyq::any::message::router::register_receiver() でメッセージ受信関数を登録する。
+    - psyq::any::message::router::send_message() でメッセージを送信する。
+    - psyq::any::message::router::flush() でメッセージ送受信の処理をすると、
+      psyq::any::message::router::send_message() で送信されたメッセージに対応する、
+      psyq::any::message::router::register_receiver() で登録した
       メッセージ受信器が持つ関数オブジェクトが呼び出される。
 
-    @tparam template_base_suite @copydoc psyq::any_message_packet::suite
-    @tparam template_allocator   @copydoc psyq::any_message_router::allocator_type
+    @tparam template_base_suite @copydoc psyq::any::message::packet::suite
+    @tparam template_allocator  @copydoc psyq::any::message::router::allocator_type
  */
 template<typename template_base_suite, typename template_allocator>
-class psyq::any_message_router
+class psyq::any::message::router
 {
-    private: typedef any_message_router this_type; ///< thisが指す値の型。
+    private: typedef router this_type; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
     /// パケットに用いるメモリ割当子。
     public: typedef template_allocator allocator_type;
     /// メッセージ受信器。
-    public: typedef psyq::any_message_receiver<template_base_suite> receiver;
-    /// @copydoc psyq::any_message_receiver::packet
+    public: typedef psyq::any::message::receiver<template_base_suite> receiver;
+    /// @copydoc psyq::any::message::receiver::packet
     public: typedef typename this_type::receiver::packet packet;
     /// メッセージの荷札と呼出状と引数をひとまとめにしたスイート。
     public: typedef typename this_type::packet::suite suite;
@@ -99,7 +109,7 @@ class psyq::any_message_router
         @param[in] in_address   構築する中継器のメッセージ送受信アドレス。
         @param[in] in_allocator メモリ割当子の初期値。
      */
-    public: any_message_router(
+    public: router(
         typename this_type::tag::key const in_address,
         typename this_type::allocator_type const& in_allocator)
     PSYQ_NOEXCEPT:
@@ -115,7 +125,7 @@ class psyq::any_message_router
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元インスタンス。
      */
-    public: any_message_router(this_type&& io_source) PSYQ_NOEXCEPT:
+    public: router(this_type&& io_source) PSYQ_NOEXCEPT:
         receiver_map_(io_source.receiver_map_.get_allocator()),
         provisional_list_(io_source.provisional_list_.get_allocator()),
         packet_array_(io_source.packet_array_.get_allocator()),
@@ -142,7 +152,7 @@ class psyq::any_message_router
     }
     //@}
     /// コピー構築子は使用禁止。
-    private: any_message_router(this_type const&);
+    private: router(this_type const&);
     /// コピー代入演算子は使用禁止。
     private: this_type& operator=(this_type const&);
 
@@ -588,7 +598,43 @@ class psyq::any_message_router
     private: typename this_type::tag::key address_;
     /// メッセージ中継の途中かどうか。
     private: bool flushing_;
-};
+
+}; // class psyq::any::message::router
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template<typename template_base_suite, typename template_allocator>
+class psyq::any::message::thread
+{
+    private: typedef thread this_type; ///< thisが指す値の型。
+
+    //-------------------------------------------------------------------------
+    /// パケットに用いるメモリ割当子。
+    public: typedef template_allocator allocator_type;
+    /// メッセージ受信器。
+    public: typedef psyq::any::message::receiver<template_base_suite> receiver;
+    /// @copydoc psyq::any::message::receiver::packet
+    public: typedef typename this_type::receiver::packet packet;
+    /// メッセージの荷札と呼出状と引数をひとまとめにしたスイート。
+    public: typedef typename this_type::packet::suite suite;
+    /// メッセージの呼出状。
+    public: typedef typename this_type::suite::call call;
+    /// メッセージの荷札。
+    public: typedef typename this_type::suite::tag tag;
+
+    /// メッセージパケットの保持子。
+    private: typedef std::shared_ptr<typename this_type::receiver::packet>
+        packet_shared_ptr;
+    private: typedef std::weak_ptr<typename this_type::receiver::packet>
+        packet_weak_ptr;
+    private: typedef std::list<
+        typename this_type::packet_weak_ptr, template_allocator>
+            packet_weak_list;
+
+    //-------------------------------------------------------------------------
+    private: typename this_type::packet_shared_list import_packet_list_;
+    private: typename this_type::packet_shared_list export_packet_list_;
+
+}; // psyq::any::message::thread
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq
@@ -597,9 +643,9 @@ namespace psyq
     {
         inline void any_message()
         {
-            psyq::any_rtti::make<psyq::test::floating_wrapper>();
+            psyq::any::rtti::make<psyq::test::floating_wrapper>();
 
-            typedef psyq::any_message_router<> message_router;
+            typedef psyq::any::message::router<> message_router;
             message_router local_router(
                 0x7f000001, message_router::allocator_type());
             enum: message_router::call::key
@@ -613,7 +659,7 @@ namespace psyq
                     {
                         PSYQ_ASSERT(
                             in_packet.get_parameter_rtti()
-                            == psyq::any_rtti::find<void>());
+                            == psyq::any::rtti::find<void>());
                     },
                     local_router.get_address()));
             double const local_double(0.5);

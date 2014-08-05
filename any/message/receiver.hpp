@@ -36,24 +36,29 @@ class psyq::any::message::receiver
     public: typedef std::weak_ptr<this_type> weak_ptr;
     /// メッセージスイートを保持するパケットの基底型。
     public: typedef psyq::any::message::packet<template_base_suite> packet;
+    /// メッセージの呼出状。
+    public: typedef typename this_type::packet::suite::call call;
+    /// メッセージの荷札。
+    public: typedef typename this_type::packet::suite::tag tag;
     /// @copydoc this_type::functor_
     public: typedef std::function<void(typename this_type::packet const&)>
         functor;
 
     //-------------------------------------------------------------------------
+    /// @name メッセージ受信機の構築
+    //@{
     /** @brief メッセージ受信器を構築する。
         @param[in] in_functor this_type::functor_ の初期値。
         @param[in] in_address this_type::address_ の初期値。
      */
     public: PSYQ_CONSTEXPR receiver(
         typename this_type::functor in_functor,
-        typename this_type::packet::suite::tag::key const in_address)
+        typename this_type::tag::key const in_address)
     PSYQ_NOEXCEPT:
         functor_((PSYQ_ASSERT(bool(in_functor)), std::move(in_functor))),
         address_(in_address)
     {}
-
-    //-------------------------------------------------------------------------
+    //@}
     /// immutable値として扱いたいので、代入演算子は使用禁止。
     private: this_type operator=(this_type const& in_source)
     {
@@ -71,6 +76,8 @@ class psyq::any::message::receiver
     }
 
     //-------------------------------------------------------------------------
+    /// @name メッセージ受信機のプロパティ
+    //@{
     /** @brief メッセージ受信関数オブジェクトを取得する。
         @return @copydoc this_type::functor_
      */
@@ -83,17 +90,17 @@ class psyq::any::message::receiver
     /** @brief メッセージ受信アドレスを取得する。
         @return @copydoc this_type::address_
      */
-    public: PSYQ_CONSTEXPR typename this_type::packet::suite::tag::key
-    get_address() const PSYQ_NOEXCEPT
+    public: PSYQ_CONSTEXPR typename this_type::tag::key get_address()
+    const PSYQ_NOEXCEPT
     {
         return this->address_;
     }
-
+    //@}
     //-------------------------------------------------------------------------
     /// メッセージ受信時に呼び出すコールバック関数オブジェクト。
     private: typename this_type::functor functor_;
     /// メッセージ受信アドレス。
-    private: typename this_type::packet::suite::tag::key address_;
+    private: typename this_type::tag::key address_;
 
 }; // class psyq::any::message::receiver
 

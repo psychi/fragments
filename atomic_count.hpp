@@ -16,13 +16,14 @@ namespace psyq
 {
     /// @cond
     class atomic_count;
+    class spinlock;
     /// @endcond
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 class psyq::atomic_count
 {
-    private: typedef atomic_count this_type;
+    private: typedef atomic_count this_type; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
     public: explicit atomic_count(std::size_t const in_count) PSYQ_NOEXCEPT:
@@ -69,5 +70,46 @@ class psyq::atomic_count
     private: std::size_t count_;
 #endif // PSYQ_ATOMIC_COUNT_ENABLE_THREADS
 };
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief スピンロック
+
+     http://www.boost.org/doc/libs/1_53_0/doc/html/atomic/usage_examples.html#boost_atomic.usage_examples.example_spinlock
+ */
+class psyq::spinlock
+{
+    private: typedef spinlock this_type; ///< thisが指す値の型。
+
+    //-------------------------------------------------------------------------
+    public: spinlock(): state_(false) {}
+
+    public: void lock()
+    {
+        // busy-wait...アンロックされるまで待機する。
+#if PSYQ_ATOMIC_COUNT_ENABLE_THREADS
+        while (this->state_.exchange(true, std::memory_order_acquire)) {}
+#else
+        while (this->state_) {}
+#endif // PSYQ_ATOMIC_COUNT_ENABLE_THREADS
+    }
+
+    public: void unlock()
+    {
+        // 状態をfalseに更新する。
+#if PSYQ_ATOMIC_COUNT_ENABLE_THREADS
+        this->state_.store(false, std::memory_order_release);
+#else
+        this->state_ = false;
+#endif // PSYQ_ATOMIC_COUNT_ENABLE_THREADS
+    }
+
+    //-------------------------------------------------------------------------
+#if PSYQ_ATOMIC_COUNT_ENABLE_THREADS
+    private: std::atomic<bool> state_;
+#else
+    private: bool state_;
+#endif // PSYQ_ATOMIC_COUNT_ENABLE_THREADS
+
+}; // class psyq::spinlock
 
 #endif // !defined(PSYQ_ATOMIC_COUNT_HPP_)

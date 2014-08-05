@@ -691,6 +691,7 @@ INPUT                  = \
                          ./any/message/suite.hpp \
                          ./any/message/packet.hpp \
                          ./any/message/receiver.hpp \
+                         ./any/message/hub.hpp \
                          ./any/message/router.hpp \
                          ./bit_algorithm.hpp \
                          ./fnv_hash.hpp \

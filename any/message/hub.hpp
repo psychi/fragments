@@ -1,15 +1,17 @@
 ﻿/** @file
-    @brief RPCメッセージの送受信。
-    @copydetails psyq::any::message::router
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_ANY_MESSAGE_HUB_HPP_
 #define PSYQ_ANY_MESSAGE_HUB_HPP_
 
+#ifdef _MSC_VER
+#include <eh.h>
+#endif // _MSC_VER
 #include <memory>
 #include <vector>
 #include <list>
 #include <unordered_map>
+#include <thread>
 #include <mutex>
 //#include "psyq/any/message/receiver.hpp"
 
@@ -23,24 +25,38 @@ namespace psyq
             template<
                 typename = psyq::any::message::suite<std::uint32_t, std::uint32_t, std::uint32_t>,
                 typename = std::allocator<void*>>
-                    class hub;
+                    class router;
+            template<typename, typename> class hub;
         } // namespace message
     } // namespace any
 } // namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief メッセージ中継器。
+
+    初期化の手順
+    -# psyq::any::message::router::equip_hub() で、
+       スレッド毎に固有のメッセージ中継器を用意する。
+    -# psyq::any::message::hub::register_receiver() で、
+       メッセージ受信関数を設定した
+       psyq::any::message::receiver インスタンスを登録する。
+
+    @tparam template_base_suite @copydoc psyq::any::message::packet::suite
+    @tparam template_allocator  @copydoc psyq::any::message::hub::allocator_type
+ */
 template<typename template_base_suite, typename template_allocator>
 class psyq::any::message::hub
 {
     private: typedef hub this_type; ///< thisが指す値の型。
 
-    //-------------------------------------------------------------------------
-    /// メッセージ分配器の保持子。
-    public: typedef std::shared_ptr<this_type> shared_ptr;
-    /// メッセージ分配器の監視子。
-    public: typedef std::weak_ptr<this_type> weak_ptr;
+    friend router<template_base_suite, template_allocator>;
 
+    //-------------------------------------------------------------------------
+    /// メッセージ中継器の保持子。
+    public: typedef std::shared_ptr<this_type> shared_ptr;
+    /// メッセージ中継器の監視子。
+    public: typedef std::weak_ptr<this_type> weak_ptr;
     /// パケットに用いるメモリ割当子。
     public: typedef template_allocator allocator_type;
     /// メッセージ受信器。
@@ -49,24 +65,18 @@ class psyq::any::message::hub
     public: typedef typename this_type::receiver::packet packet;
     /// メッセージの荷札と呼出状と引数をひとまとめにしたスイート。
     public: typedef typename this_type::receiver::packet::suite suite;
-    /// メッセージの呼出状。
-    public: typedef typename this_type::receiver::packet::suite::call call;
-    /// メッセージの荷札。
-    public: typedef typename this_type::receiver::packet::suite::tag tag;
     /// メッセージパケット保持子のコンテナ。
     public: typedef std::vector<
         typename this_type::packet::shared_ptr,
         typename this_type::allocator_type>
             shared_packet_container;
-    /// @cond
-    public: class router;
-    /// @endcond
+
     //-------------------------------------------------------------------------
     /// メッセージのメソッド種別からハッシュ値を生成する関数オブジェクト。
     private: struct method_hash
     {
         PSYQ_CONSTEXPR std::size_t operator()(
-            typename this_type::call::key const in_method)
+            typename this_type::receiver::call::key const in_method)
         const PSYQ_NOEXCEPT
         {
             return static_cast<std::size_t>(in_method);
@@ -75,21 +85,19 @@ class psyq::any::message::hub
 
     /// @copydoc receiver_map_
     private: typedef std::unordered_multimap<
-        typename this_type::call::key,
+        typename this_type::receiver::call::key,
         typename this_type::receiver::weak_ptr,
         typename this_type::method_hash,
-        std::equal_to<typename this_type::call::key>,
+        std::equal_to<typename this_type::receiver::call::key>,
         typename this_type::allocator_type>
             receiver_map;
 
     //-------------------------------------------------------------------------
-    /// @name メッセージ分配器の構築
-    //@{
-    /** @brief メッセージ分配器を構築する。
+    /** @brief メッセージ中継器を構築する。
         @param[in] in_thread_id このインスタンスが活動するスレッドの識別子。
         @param[in] in_allocator メモリ割当子の初期値。
      */
-    public: hub(
+    protected: hub(
         std::thread::id in_thread_id,
         typename this_type::allocator_type const& in_allocator)
     :
@@ -99,27 +107,12 @@ class psyq::any::message::hub
         distribution_packets_(in_allocator),
         thread_id_(std::move(in_thread_id))
     {}
-    //@}
+
     /// コピー構築子は使用禁止。
     private: hub(this_type const&);
     /// コピー代入演算子は使用禁止。
     private: this_type& operator=(this_type const&);
 
-    //-------------------------------------------------------------------------
-    /// @name プロパティ
-    //@{
-    public: PSYQ_CONSTEXPR typename this_type::allocator_type get_allocator()
-    const PSYQ_NOEXCEPT
-    {
-        return this->receiver_map_.get_allocator();
-    }
-
-    public: PSYQ_CONSTEXPR std::thread::id const& get_thread_id()
-    const PSYQ_NOEXCEPT
-    {
-        return this->thread_id_;
-    }
-    //@}
     //-------------------------------------------------------------------------
     /// @name メッセージ受信機の登録
     //@{
@@ -131,7 +124,7 @@ class psyq::any::message::hub
         @param[in] in_receiver 登録するメッセージ受信器。
      */
     public: void register_receiver(
-        typename this_type::call::key const in_method,
+        typename this_type::receiver::call::key const in_method,
         typename this_type::receiver::shared_ptr const& in_receiver)
     {
         std::lock_guard<psyq::spinlock> local_lock(this->lock_);
@@ -170,7 +163,7 @@ class psyq::any::message::hub
         @param[in] in_receiver 登録を除去するメッセージ受信器。
      */
     public: void unregister_receiver(
-        typename this_type::call::key const in_method,
+        typename this_type::receiver::call::key const in_method,
         typename this_type::receiver const* const in_receiver)
     {
         if (in_receiver != nullptr)
@@ -188,6 +181,29 @@ class psyq::any::message::hub
         }
     }
     //@}
+    /** @brief メッセージ受信器を辞書から検索する。
+        @param[in] in_receiver_map メッセージ受信器の辞書。
+        @param[in] in_method       メッセージのメソッド番号。
+        @param[in] in_receiver     メッセージ受信器。
+     */
+    private: static typename this_type::receiver_map::const_iterator
+    find_receiver_iterator(
+        typename this_type::receiver_map const& in_receiver_map,
+        typename this_type::receiver::call::key const in_method,
+        void const* const in_receiver)
+    PSYQ_NOEXCEPT
+    {
+        auto local_iterator(in_receiver_map.find(in_method));
+        while (
+            local_iterator != in_receiver_map.end()
+            && local_iterator->first == in_method
+            && local_iterator->second.lock().get() != in_receiver)
+        {
+            ++local_iterator;
+        }
+        return local_iterator;
+    }
+
     /** @brief 空になったメッセージ受信器を辞書から削除する。
         @param[in,out] io_receivers 空のメッセージ受信器を削除する辞書。
      */
@@ -225,73 +241,29 @@ class psyq::any::message::hub
         this->export_packets_.emplace_back(std::move(in_packet));
         return true;
     }
-#if 0
-    /** @brief 引数を持たないメッセージを構築し、送信する。
 
-        引数を持つメッセージを送信するには、以下の関数を使う。
-        - this_type::send_internal_message()
-        - this_type::send_external_message()
+    /** @brief 引数を持たないメッセージを構築し、プロセス内へ送信する。
 
-        @param[in] in_tag      送信するメッセージの荷札。
-        @param[in] in_call     送信するメッセージの呼出状。
-        @param[in] in_external プロセス外にもメッセージを送信するかどうか。
+        プロセスの内と外にメッセージを送信するには、
+        this_type::send_external_message() を使う。
+
+        @param[in] in_tag  送信するメッセージの荷札。
+        @param[in] in_call 送信するメッセージの呼出状。
      */
-    public: bool send_message(
-        typename this_type::tag const& in_tag,
-        typename this_type::call const& in_call,
-        bool const in_external)
+    public: bool send_internal_message(
+        typename this_type::receiver::tag const& in_tag,
+        typename this_type::receiver::call const& in_call)
     {
-        if (in_external)
-        {
-            return false;
-        }
-        else
-        {
-            auto const local_packet(
-                this_type::create_packet(
-                    typename this_type::suite(in_tag, in_call),
-                    this->get_allocator()));
-            return true;
-        }
-    }
-
-    public: template<typename template_suite>
-    static typename this_type::packet::shared_ptr create_packet(
-        template_suite in_suite,
-        typename this_type::allocator_type const& in_allocator)
-    {
-        typedef psyq::any::message::internal_packet<typename this_type::suite, template_suite>
-            internal_packet;
-        typedef typename template_allocator::template rebind<internal_packet>::other
-            packet_allocator;
-        packet_allocator local_allocator(in_allocator);
-        auto const local_storage(local_allocator.allocate(1));
-        if (local_storage == nullptr)
-        {
-            PSYQ_ASSERT(false);
-            return typename this_type::packet::shared_ptr();
-        }
-        new(local_storage) internal_packet(std::move(in_suite));
-        typename this_type::packet::shared_ptr local_packet(local_storage);
-        /*
-        return typename this_type::packet::shared_ptr(
-            new(local_storage) internal_packet(std::move(in_suite)),
-            [local_allocator](internal_packet* const io_packet)
-            {
-                const_cast<decltype(local_allocator)&>(local_allocator).destroy(io_packet);
-                const_cast<decltype(local_allocator)&>(local_allocator).deallocate(io_packet, 1);
-            },
-            local_allocator);
-         */
-        return typename this_type::packet::shared_ptr();
+        return this->send_message(
+            this_type::create_internal_packet(
+                typename this_type::suite(in_tag, in_call),
+                this->get_allocator()));
     }
 
     /** @brief 任意型の引数を持つメッセージを構築し、プロセス内へ送信する。
 
-        - 引数を持たないメッセージを送信するには、
-          this_type::send_message() を使う。
-        - 引数を持つメッセージをプロセス外にも送信するには、
-          this_type::send_internal_message() を使う。
+        プロセスの内と外にメッセージを送信するには、
+        this_type::send_external_message() を使う。
 
         @param[in] in_tag       送信するメッセージの荷札。
         @param[in] in_call      送信するメッセージの呼出状。
@@ -299,28 +271,23 @@ class psyq::any::message::hub
      */
     public: template<typename template_parameter>
     bool send_internal_message(
-        typename this_type::tag const& in_tag,
-        typename this_type::call const& in_call,
+        typename this_type::receiver::tag const& in_tag,
+        typename this_type::receiver::call const& in_call,
         template_parameter in_parameter)
     {
-        /*
         typedef typename this_type::suite::template
             parametric<template_parameter>
                 parametric_suite;
         return this->send_message(
-            this_type::packet::template internal<parametric_suite>::create(
+            this_type::create_internal_packet(
                 parametric_suite(in_tag, in_call, std::move(in_parameter)),
                 this->get_allocator()));
-         */
-        return false;
     }
 
     /** @brief POD型の引数を持つメッセージを構築し、プロセスの内と外へ送信する。
 
-        - 引数を持たないメッセージを送信するには、
-          this_type::send_message() を使う。
-        - 引数を持つメッセージをプロセス内だけに送信するには、
-          this_type::send_internal_message() を使う。
+        プロセス内にのみメッセージを送信するには、
+        this_type::send_internal_message() を使う。
 
         @param[in] in_tag       送信するメッセージの荷札。
         @param[in] in_call      送信するメッセージの呼出状。
@@ -328,31 +295,9 @@ class psyq::any::message::hub
      */
     public: template<typename template_parameter>
     bool send_external_message(
-        typename this_type::tag const& in_tag,
-        typename this_type::call const& in_call,
+        typename this_type::receiver::tag const& in_tag,
+        typename this_type::receiver::call const& in_call,
         template_parameter in_parameter);
-#endif
-    /** @brief 外部とメッセージを交換する。
-        @param[in,out] io_export_packets 輸出するメッセージパケットのコンテナ。
-        @param[in]     in_import_packets 輸入するメッセージパケットのコンテナ。
-     */
-    public: void trade_message(
-        typename this_type::shared_packet_container& io_export_packets,
-        typename this_type::shared_packet_container const& in_import_packets)
-    {
-        std::lock_guard<psyq::spinlock> local_lock(this->lock_);
-        this->import_packets_.insert(
-            this->import_packets_.end(),
-            in_import_packets.begin(),
-            in_import_packets.end());
-        io_export_packets.reserve(
-            io_export_packets.size() + this->export_packets_.size());
-        for (auto& local_packet_holder: this->export_packets_)
-        {
-            io_export_packets.emplace_back(std::move(local_packet_holder));
-        }
-        this->export_packets_.clear();
-    }
 
     /** @brief メッセージ受信器へメッセージを配信する。
      */
@@ -374,17 +319,62 @@ class psyq::any::message::hub
         this->distribution_packets_.clear();
     }
     //@}
-    private: void export_message(
-        typename this_type::packet::shared_ptr in_packet)
+    /** @brief 外部とメッセージを交換する。
+        @param[in,out] io_export_packets 輸出するメッセージパケットのコンテナ。
+        @param[in]     in_import_packets 輸入するメッセージパケットのコンテナ。
+     */
+    protected: void trade_message(
+        typename this_type::shared_packet_container& io_export_packets,
+        typename this_type::shared_packet_container const& in_import_packets)
     {
-        if (std::this_thread::get_id() == this->get_thread_id())
+        std::lock_guard<psyq::spinlock> local_lock(this->lock_);
+        this->import_packets_.insert(
+            this->import_packets_.end(),
+            in_import_packets.begin(),
+            in_import_packets.end());
+        io_export_packets.reserve(
+            io_export_packets.size() + this->export_packets_.size());
+        for (auto& local_packet_holder: this->export_packets_)
         {
-            this->export_packets_.emplace_back(std::move(in_packet));
+            io_export_packets.emplace_back(std::move(local_packet_holder));
         }
-        else
+        this->export_packets_.clear();
+    }
+
+    private: template<typename template_suite>
+    static typename this_type::packet::shared_ptr create_internal_packet(
+        template_suite in_suite,
+        typename this_type::allocator_type const& in_allocator)
+    {
+        typedef typename this_type::packet::template internal<template_suite>
+            internal_packet;
+        return this_type::create_packet<internal_packet>(
+            std::move(in_suite), in_allocator);
+    }
+
+    private: template<typename template_packet>
+    static typename template_packet::shared_ptr create_packet(
+        typename template_packet::suite in_suite,
+        typename this_type::allocator_type const& in_allocator)
+    {
+        typename this_type::allocator_type::template
+            rebind<template_packet>::other
+                local_allocator(in_allocator);
+        auto const local_storage(local_allocator.allocate(1));
+        if (local_storage == nullptr)
         {
             PSYQ_ASSERT(false);
+            return typename template_packet::shared_ptr();
         }
+        return typename template_packet::shared_ptr(
+            new(local_storage) template_packet(std::move(in_suite)),
+            [local_allocator](template_packet* const io_packet)
+            {
+                auto local_deallocator(local_allocator);
+                local_deallocator.destroy(io_packet);
+                local_deallocator.deallocate(io_packet, 1);
+            },
+            local_allocator);
     }
 
     /** @brief メッセージ受信器へメッセージを配信する。
@@ -443,6 +433,21 @@ class psyq::any::message::hub
         }
     }
 
+    //-------------------------------------------------------------------------
+    /// @name メッセージ中継器のプロパティ
+    //@{
+    public: PSYQ_CONSTEXPR typename this_type::allocator_type get_allocator()
+    const PSYQ_NOEXCEPT
+    {
+        return this->receiver_map_.get_allocator();
+    }
+
+    public: PSYQ_CONSTEXPR std::thread::id const& get_thread_id()
+    const PSYQ_NOEXCEPT
+    {
+        return this->thread_id_;
+    }
+    //@}
     //-------------------------------------------------------------------------
     /// メッセージ受信器の辞書。
     private: typename this_type::receiver_map receiver_map_;

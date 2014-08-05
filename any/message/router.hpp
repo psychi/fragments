@@ -6,11 +6,7 @@
 #ifndef PSYQ_ANY_MESSAGE_ROUTER_HPP_
 #define PSYQ_ANY_MESSAGE_ROUTER_HPP_
 
-#include <memory>
-#include <vector>
-#include <list>
-#include <unordered_map>
-//#include "psyq/any/message/receiver.hpp"
+//#include "psyq/any/message/hub.hpp"
 
 /// @cond
 namespace psyq
@@ -23,10 +19,6 @@ namespace psyq
                 typename = psyq::any::message::suite<std::uint32_t, std::uint32_t, std::uint32_t>,
                 typename = std::allocator<void*>>
                     class router;
-            template<
-                typename = psyq::any::message::suite<std::uint32_t, std::uint32_t, std::uint32_t>,
-                typename = std::allocator<void*>>
-                    class thread;
         } // namespace message
     } // namespace any
 } // namespace psyq
@@ -603,38 +595,202 @@ class psyq::any::message::router
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 template<typename template_base_suite, typename template_allocator>
-class psyq::any::message::thread
+class psyq::any::message::hub<template_base_suite, template_allocator>::router
 {
-    private: typedef thread this_type; ///< thisが指す値の型。
+    private: typedef router this_type; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
-    /// パケットに用いるメモリ割当子。
-    public: typedef template_allocator allocator_type;
-    /// メッセージ受信器。
-    public: typedef psyq::any::message::receiver<template_base_suite> receiver;
-    /// @copydoc psyq::any::message::receiver::packet
-    public: typedef typename this_type::receiver::packet packet;
-    /// メッセージの荷札と呼出状と引数をひとまとめにしたスイート。
-    public: typedef typename this_type::packet::suite suite;
-    /// メッセージの呼出状。
-    public: typedef typename this_type::suite::call call;
-    /// メッセージの荷札。
-    public: typedef typename this_type::suite::tag tag;
-
-    /// メッセージパケットの保持子。
-    private: typedef std::shared_ptr<typename this_type::receiver::packet>
-        packet_shared_ptr;
-    private: typedef std::weak_ptr<typename this_type::receiver::packet>
-        packet_weak_ptr;
-    private: typedef std::list<
-        typename this_type::packet_weak_ptr, template_allocator>
-            packet_weak_list;
+    public: typedef psyq::any::message
+        ::hub<template_base_suite, template_allocator>
+            hub;
+    private: typedef std::vector<
+        typename this_type::hub::weak_ptr, template_allocator>
+            weak_hub_container;
 
     //-------------------------------------------------------------------------
-    private: typename this_type::packet_shared_list import_packet_list_;
-    private: typename this_type::packet_shared_list export_packet_list_;
+    /// @name メッセージルータの構築
+    //@{
+    /** @brief メッセージルータを構築する。
+        @param[in] in_address   構築するインスタンスのメッセージ送受信アドレス。
+        @param[in] in_allocator メモリ割当子の初期値。
+     */
+    public: router(
+        typename this_type::hub::tag::key const in_address,
+        typename this_type::hub::allocator_type const& in_allocator)
+    :
+        hubs_(in_allocator),
+        import_packets_(in_allocator),
+        export_packets_(in_allocator),
+        address_((
+            PSYQ_ASSERT(in_address != this_type::hub::tag::EMPTY_KEY),
+            in_address))
+    {}
+    //@}
+    /// コピー構築子は使用禁止。
+    private: router(this_type const&);
+    /// コピー代入演算子は使用禁止。
+    private: this_type& operator=(this_type const&);
 
-}; // psyq::any::message::thread
+    //-------------------------------------------------------------------------
+    /// @name プロパティ
+    //@{
+    public: PSYQ_CONSTEXPR typename this_type::hub::allocator_type get_allocator()
+    const PSYQ_NOEXCEPT
+    {
+        return this->hubs_.get_allocator();
+    }
+
+    /** @brief メッセージの送受信に使うアドレスを取得する。
+        @return メッセージの送受信に使うアドレス。
+     */
+    public: PSYQ_CONSTEXPR typename this_type::hub::tag::key const get_address()
+    const PSYQ_NOEXCEPT
+    {
+        return this->address_;
+    }
+
+    /** @brief このルータから送信するメッセージの荷札を構築する。
+        @param[in] in_receiver_address メッセージ受信アドレス。
+        @param[in] in_receiver_mask    メッセージ受信マスク。
+     */
+    public: PSYQ_CONSTEXPR typename this_type::hub::tag make_receiver_tag(
+        typename this_type::hub::tag::key const in_receiver_address,
+        typename this_type::hub::tag::key const in_receiver_mask =
+            ~this_type::hub::tag::EMPTY_KEY)
+    const PSYQ_NOEXCEPT
+    {
+        return typename this_type::hub::tag(
+            this->get_address(), in_receiver_address, in_receiver_mask);
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    public: typename this_type::hub::shared_ptr equip_hub()
+    {
+        return this->equip_hub(std::this_thread::get_id());
+    }
+    public: typename this_type::hub::shared_ptr equip_hub(
+        std::thread::id const& in_thread_id)
+    {
+        std::lock_guard<psyq::spinlock> local_lock(this->lock_);
+        auto const local_hub(
+            this_type::find_hub(this->hubs_, in_thread_id));
+        if (local_hub.get() != nullptr)
+        {
+            return local_hub;
+        }
+        return this_type::make_hub(this->hubs_, in_thread_id);
+    }
+
+    private: static typename this_type::hub::shared_ptr find_hub(
+        typename this_type::weak_hub_container const& in_hubs,
+        std::thread::id const& in_thread_id)
+    {
+        for (auto const& local_observer: in_hubs)
+        {
+            auto const local_holder(local_observer.lock());
+            auto const local_hub(local_holder.get());
+            if (local_hub != nullptr
+                && local_hub->get_thread_id() == in_thread_id)
+            {
+                return local_holder;
+            }
+        }
+        return typename this_type::hub::shared_ptr();
+    }
+
+    private: static typename this_type::hub::shared_ptr make_hub(
+        typename this_type::weak_hub_container& io_hubs,
+        std::thread::id const& in_thread_id)
+    {
+        typename this_type::hub::allocator_type::template
+            rebind<typename this_type::hub>::other
+                local_allocator(io_hubs.get_allocator());
+        void* const local_storage(local_allocator.allocate(1));
+        if (local_storage == nullptr)
+        {
+            PSYQ_ASSERT(false);
+            return typename this_type::hub::shared_ptr();
+        }
+        typename this_type::hub::shared_ptr const local_hub(
+            new(local_storage) typename this_type::hub(in_thread_id, local_allocator),
+            [local_allocator](typename this_type::hub* const io_hub)
+            {
+                const_cast<decltype(local_allocator)&>(local_allocator).destroy(io_hub);
+                const_cast<decltype(local_allocator)&>(local_allocator).deallocate(io_hub, 1);
+            },
+            local_allocator);
+        if (local_hub.get() != nullptr)
+        {
+            io_hubs.push_back(local_hub);
+        }
+        else
+        {
+            PSYQ_ASSERT(false);
+        }
+        return local_hub;
+    }
+
+    //-------------------------------------------------------------------------
+    public: void flush()
+    {
+        std::lock_guard<psyq::spinlock> local_lock(this->lock_);
+        this_type::trade_message(
+            this->hubs_, this->export_packets_, this->import_packets_);
+        this_type::swap_packet_container(
+            this->export_packets_, this->import_packets_);
+    }
+
+    private: static void trade_message(
+        typename this_type::weak_hub_container& io_hubs,
+        this_type::hub::shared_packet_container& io_export_packets,
+        this_type::hub::shared_packet_container const& in_import_packets)
+    {
+        auto local_last_iterator(io_hubs.begin());
+        for (auto i(local_last_iterator); i != io_hubs.end(); ++i)
+        {
+            auto const local_holder(i->lock());
+            auto const local_hub(local_holder.get());
+            if (local_hub != nullptr)
+            {
+                local_hub->trade_message(
+                    io_export_packets, in_import_packets);
+                i->swap(*local_last_iterator);
+                ++local_last_iterator;
+            }
+        }
+        io_hubs.erase(local_last_iterator, io_hubs.end());
+    }
+
+    private: static void swap_packet_container(
+        typename this_type::hub::shared_packet_container& io_export_packets,
+        typename this_type::hub::shared_packet_container& io_import_packets)
+    {
+        if (io_import_packets.capacity() < io_export_packets.size() * 2
+            || io_export_packets.size() < 16)
+        {
+            io_import_packets.clear();
+        }
+        else
+        {
+            io_import_packets =
+                typename this_type::hub::shared_packet_container();
+            io_import_packets.reserve(io_export_packets.size() * 2);
+        }
+        io_import_packets.swap(io_export_packets);
+    }
+
+    //-------------------------------------------------------------------------
+    /// スレッド毎メッセージ分配器のコンテナ。
+    private: typename this_type::weak_hub_container hubs_;
+    /// 分配器から輸入したメッセージパケットのコンテナ。
+    private: typename this_type::hub::shared_packet_container import_packets_;
+    /// 分配器へ輸出するメッセージパケットのコンテナ。
+    private: typename this_type::hub::shared_packet_container export_packets_;
+    /// このインスタンスのメッセージアドレス。
+    private: typename this_type::hub::tag::key address_;
+    private: psyq::spinlock lock_;
+
+}; // psyq::any::message::hub::router
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq
@@ -644,6 +800,13 @@ namespace psyq
         inline void any_message()
         {
             psyq::any::rtti::make<psyq::test::floating_wrapper>();
+
+            typedef psyq::any::message::hub<> message_hub;
+            message_hub::router local_message_router(
+                0x7f000001, message_hub::allocator_type());
+            auto const local_message_hub(
+                local_message_router.equip_hub());
+
 
             typedef psyq::any::message::router<> message_router;
             message_router local_router(
@@ -680,6 +843,24 @@ namespace psyq
                         }
                     },
                     local_router.get_address()));
+
+            local_message_hub->register_receiver(METHOD_PARAMETER_VOID, local_method_a);
+            local_message_hub->register_receiver(METHOD_PARAMETER_DOUBLE, local_method_b);
+            /*
+            local_message_hub->send_message(
+                message_hub::packet::template internal<message_hub::suite>::create(
+                    message_hub::suite(
+                        local_router.make_receiver_tag(local_router.get_address()),
+                        message_hub::call(METHOD_PARAMETER_VOID)),
+                    local_message_hub->get_allocator()));
+            local_message_hub->send_internal_message(
+                local_router.make_receiver_tag(local_router.get_address()),
+                message_hub::call(METHOD_PARAMETER_DOUBLE),
+                floating_wrapper(0.5));
+             */
+            local_message_router.flush();
+            local_message_hub->flush();
+
             local_router.register_receiver(METHOD_PARAMETER_VOID, local_method_a);
             local_router.register_receiver(METHOD_PARAMETER_DOUBLE, local_method_b);
             local_router.send_message(

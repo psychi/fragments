@@ -226,22 +226,6 @@ class psyq::any::message::hub
     //-------------------------------------------------------------------------
     /// @name メッセージの送受信
     //@{
-    public: bool send_message(
-        typename this_type::packet::shared_ptr in_packet)
-    {
-        if (std::this_thread::get_id() != this->get_thread_id())
-        {
-            PSYQ_ASSERT(false);
-            return false;
-        }
-        else if (in_packet.get() == nullptr)
-        {
-            return false;
-        }
-        this->export_packets_.emplace_back(std::move(in_packet));
-        return true;
-    }
-
     /** @brief 引数を持たないメッセージを構築し、プロセス内へ送信する。
 
         プロセスの内と外にメッセージを送信するには、
@@ -249,6 +233,8 @@ class psyq::any::message::hub
 
         @param[in] in_tag  送信するメッセージの荷札。
         @param[in] in_call 送信するメッセージの呼出状。
+        @retval true  成功。メッセージを送信した。
+        @retval false 失敗。メッセージを送信しなかった。
      */
     public: bool send_internal_message(
         typename this_type::receiver::tag const& in_tag,
@@ -268,6 +254,8 @@ class psyq::any::message::hub
         @param[in] in_tag       送信するメッセージの荷札。
         @param[in] in_call      送信するメッセージの呼出状。
         @param[in] in_parameter 送信するメッセージの引数。
+        @retval true  成功。メッセージを送信した。
+        @retval false 失敗。メッセージを送信しなかった。
      */
     public: template<typename template_parameter>
     bool send_internal_message(
@@ -292,6 +280,8 @@ class psyq::any::message::hub
         @param[in] in_tag       送信するメッセージの荷札。
         @param[in] in_call      送信するメッセージの呼出状。
         @param[in] in_parameter 送信するメッセージの引数。必ずPOD型。
+        @retval true  成功。メッセージを送信した。
+        @retval false 失敗。メッセージを送信しなかった。
      */
     public: template<typename template_parameter>
     bool send_external_message(
@@ -299,7 +289,7 @@ class psyq::any::message::hub
         typename this_type::receiver::call const& in_call,
         template_parameter in_parameter);
 
-    /** @brief メッセージ受信器へメッセージを配信する。
+    /** @brief メッセージ受信器へメッセージを分配する。
      */
     public: void flush()
     {
@@ -319,6 +309,32 @@ class psyq::any::message::hub
         this->distribution_packets_.clear();
     }
     //@}
+    /** @brief メッセージを送信する。
+
+        メッセージを構築と送信をするには、以下のメンバ関数を使う。
+        - this_type::send_internal_message()
+        - this_type::send_external_message()
+
+        @param[in] in_packet 送信するメッセージパケット。
+        @retval true  成功。メッセージを送信した。
+        @retval false 失敗。メッセージを送信しなかった。
+     */
+    private: bool send_message(
+        typename this_type::packet::shared_ptr in_packet)
+    {
+        if (std::this_thread::get_id() != this->get_thread_id())
+        {
+            PSYQ_ASSERT(false);
+            return false;
+        }
+        else if (in_packet.get() == nullptr)
+        {
+            return false;
+        }
+        this->export_packets_.emplace_back(std::move(in_packet));
+        return true;
+    }
+
     /** @brief 外部とメッセージを交換する。
         @param[in,out] io_export_packets 輸出するメッセージパケットのコンテナ。
         @param[in]     in_import_packets 輸入するメッセージパケットのコンテナ。

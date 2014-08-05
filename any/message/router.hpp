@@ -21,13 +21,15 @@
        psyq::any::message::receiver インスタンスを登録する。
 
     メッセージ送受信の手順
-    -# hubに対応するスレッドで psyq::any::message::hub::send_message()
-       を実行し、メッセージを送信する。
-    -# メインスレッドで psyq::any::message::router::flush() を実行する。
-    -# hubに対応するスレッドで psyq::any::message::hub::flush() を実行すると、
-       psyq::any::message::hub::send_message() で送信されたメッセージに対応する、
-       psyq::any::message::hub::register_receiver() で登録した
-       メッセージ受信器が持つ関数オブジェクトが呼び出される。
+    -# それぞれのメッセージ中継器に対応するスレッドで
+       psyq::any::message::hub::send_internal_message() を実行し、メッセージを送信する。
+    -# メインスレッドで psyq::any::message::router::flush()
+       を実行し、メッセージ中継器にメッセージの集配／分配をする。
+    -# それぞれのメッセージ中継器に対応するスレッドで
+       psyq::any::message::hub::flush() を実行すると、
+       メッセージ受信器にメッセージが分配され、メッセージに対応する
+       psyq::any::message::receiver::get_functor()
+       で取得できるメッセージ受信関数が呼び出される。
 
     @tparam template_base_suite @copydoc psyq::any::message::packet::suite
     @tparam template_allocator  @copydoc psyq::any::message::router::allocator_type
@@ -136,8 +138,9 @@ class psyq::any::message::router
             new(local_storage) typename this_type::hub(in_thread_id, local_allocator),
             [local_allocator](typename this_type::hub* const io_hub)
             {
-                const_cast<decltype(local_allocator)&>(local_allocator).destroy(io_hub);
-                const_cast<decltype(local_allocator)&>(local_allocator).deallocate(io_hub, 1);
+                auto local_deallocator(local_allocator);
+                local_deallocator.destroy(io_hub);
+                local_deallocator.deallocate(io_hub, 1);
             },
             local_allocator);
         if (local_hub.get() != nullptr)
@@ -154,6 +157,8 @@ class psyq::any::message::router
     //-------------------------------------------------------------------------
     /// @name メッセージの送受信
     //@{
+    /** @brief メッセージ中継器のメッセージを集配／分配する。
+     */
     public: void flush()
     {
         std::lock_guard<psyq::spinlock> local_lock(this->lock_);

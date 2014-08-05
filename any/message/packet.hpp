@@ -172,6 +172,45 @@ class psyq::any::message::packet<template_base_suite>::external:
 
     //-------------------------------------------------------------------------
     public: typedef template_suite suite;
+    public: typedef std::unique_ptr<template_suite> suite_unique_ptr;
+
+    //-------------------------------------------------------------------------
+    /** @brief メッセージパケットを構築する。
+        @param[in] in_suite this_type::suite_ の初期値。
+     */
+    public: explicit external(typename this_type::suite in_suite)
+    PSYQ_NOEXCEPT: suite_(std::move(in_suite))
+    {}
+
+    public: typename base_type::suite const& get_suite()
+    const PSYQ_NOEXCEPT override
+    {
+        return this->suite_;
+    }
+
+    public: typename this_type::suite const* get_external_suite()
+    const PSYQ_NOEXCEPT override
+    {
+        return &this->suite_;
+    }
+
+    public: psyq::any::rtti const* get_parameter_rtti()
+    const PSYQ_NOEXCEPT override
+    {
+        return psyq::any::rtti::find<typename this_type::suite::parameter>();
+    }
+
+    public: void const* get_parameter_data(
+        psyq::any::rtti const* const in_rtti)
+    const PSYQ_NOEXCEPT override
+    {
+        return psyq::any::rtti::find(in_rtti, this->this_type::get_parameter_rtti()) != nullptr?
+            this->suite_.get_parameter_data(): nullptr;
+    }
+
+    //-------------------------------------------------------------------------
+    /// 保持しているメッセージスイート。
+    private: typename this_type::suite suite_;
 
 }; // class psyq::any::message::packet::external
 

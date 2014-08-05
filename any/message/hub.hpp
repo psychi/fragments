@@ -226,10 +226,47 @@ class psyq::any::message::hub
     //-------------------------------------------------------------------------
     /// @name メッセージの送受信
     //@{
+    /** @brief 引数を持たないメッセージを構築し、プロセスの内と外へ送信する。
+
+        プロセス内にのみメッセージを送信するには、
+        this_type::send_internal_message() を使う。
+
+        @param[in] in_tag  送信するメッセージの荷札。
+        @param[in] in_call 送信するメッセージの呼出状。
+        @retval true  成功。メッセージを送信した。
+        @retval false 失敗。メッセージを送信しなかった。
+     */
+    public: bool send_message(
+        typename this_type::receiver::tag const& in_tag,
+        typename this_type::receiver::call const& in_call)
+    {
+        return this->export_packet(
+            this_type::create_external_packet(
+                typename this_type::suite(in_tag, in_call),
+                this->get_allocator()));
+    }
+
+    /** @brief POD型の引数を持つメッセージを構築し、プロセスの内と外へ送信する。
+
+        プロセス内にのみメッセージを送信するには、
+        this_type::send_internal_message() を使う。
+
+        @param[in] in_tag       送信するメッセージの荷札。
+        @param[in] in_call      送信するメッセージの呼出状。
+        @param[in] in_parameter 送信するメッセージの引数。必ずPOD型。
+        @retval true  成功。メッセージを送信した。
+        @retval false 失敗。メッセージを送信しなかった。
+     */
+    public: template<typename template_parameter>
+    bool send_message(
+        typename this_type::receiver::tag const& in_tag,
+        typename this_type::receiver::call const& in_call,
+        template_parameter in_parameter);
+
     /** @brief 引数を持たないメッセージを構築し、プロセス内へ送信する。
 
         プロセスの内と外にメッセージを送信するには、
-        this_type::send_external_message() を使う。
+        this_type::send_message() を使う。
 
         @param[in] in_tag  送信するメッセージの荷札。
         @param[in] in_call 送信するメッセージの呼出状。
@@ -240,7 +277,7 @@ class psyq::any::message::hub
         typename this_type::receiver::tag const& in_tag,
         typename this_type::receiver::call const& in_call)
     {
-        return this->send_message(
+        return this->export_packet(
             this_type::create_internal_packet(
                 typename this_type::suite(in_tag, in_call),
                 this->get_allocator()));
@@ -249,7 +286,7 @@ class psyq::any::message::hub
     /** @brief 任意型の引数を持つメッセージを構築し、プロセス内へ送信する。
 
         プロセスの内と外にメッセージを送信するには、
-        this_type::send_external_message() を使う。
+        this_type::send_message() を使う。
 
         @param[in] in_tag       送信するメッセージの荷札。
         @param[in] in_call      送信するメッセージの呼出状。
@@ -266,28 +303,11 @@ class psyq::any::message::hub
         typedef typename this_type::suite::template
             parametric<template_parameter>
                 parametric_suite;
-        return this->send_message(
+        return this->export_packet(
             this_type::create_internal_packet(
                 parametric_suite(in_tag, in_call, std::move(in_parameter)),
                 this->get_allocator()));
     }
-
-    /** @brief POD型の引数を持つメッセージを構築し、プロセスの内と外へ送信する。
-
-        プロセス内にのみメッセージを送信するには、
-        this_type::send_internal_message() を使う。
-
-        @param[in] in_tag       送信するメッセージの荷札。
-        @param[in] in_call      送信するメッセージの呼出状。
-        @param[in] in_parameter 送信するメッセージの引数。必ずPOD型。
-        @retval true  成功。メッセージを送信した。
-        @retval false 失敗。メッセージを送信しなかった。
-     */
-    public: template<typename template_parameter>
-    bool send_external_message(
-        typename this_type::receiver::tag const& in_tag,
-        typename this_type::receiver::call const& in_call,
-        template_parameter in_parameter);
 
     /** @brief メッセージ受信器へメッセージを分配する。
      */
@@ -309,17 +329,12 @@ class psyq::any::message::hub
         this->distribution_packets_.clear();
     }
     //@}
-    /** @brief メッセージを送信する。
-
-        メッセージを構築と送信をするには、以下のメンバ関数を使う。
-        - this_type::send_internal_message()
-        - this_type::send_external_message()
-
+    /** @brief メッセージの送信を予約する。
         @param[in] in_packet 送信するメッセージパケット。
-        @retval true  成功。メッセージを送信した。
-        @retval false 失敗。メッセージを送信しなかった。
+        @retval true  成功。メッセージ送信を予約した。
+        @retval false 失敗。メッセージ送信を予約しなかった。
      */
-    private: bool send_message(
+    private: bool export_packet(
         typename this_type::packet::shared_ptr in_packet)
     {
         if (std::this_thread::get_id() != this->get_thread_id())
@@ -355,6 +370,17 @@ class psyq::any::message::hub
             io_export_packets.emplace_back(std::move(local_packet_holder));
         }
         this->export_packets_.clear();
+    }
+
+    private: template<typename template_suite>
+    static typename this_type::packet::shared_ptr create_external_packet(
+        template_suite in_suite,
+        typename this_type::allocator_type const& in_allocator)
+    {
+        typedef typename this_type::packet::template external<template_suite>
+            external_packet;
+        return this_type::create_packet<external_packet>(
+            std::move(in_suite), in_allocator);
     }
 
     private: template<typename template_suite>

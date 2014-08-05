@@ -22,7 +22,7 @@
 
     メッセージ送受信の手順
     -# それぞれのメッセージ中継器に対応するスレッドで
-       psyq::any::message::hub::send_internal_message() を実行し、メッセージを送信する。
+       psyq::any::message::hub::send_message() を実行し、メッセージを送信する。
     -# メインスレッドで psyq::any::message::router::flush()
        を実行し、メッセージ中継器にメッセージの集配／分配をする。
     -# それぞれのメッセージ中継器に対応するスレッドで
@@ -300,7 +300,7 @@ namespace psyq
 
             local_hub->register_receiver(METHOD_PARAMETER_VOID, local_method_a);
             local_hub->register_receiver(METHOD_PARAMETER_DOUBLE, local_method_b);
-            local_hub->send_internal_message(
+            local_hub->send_message(
                 local_router.make_receiver_tag(local_router.get_address()),
                 message_router::receiver::call(METHOD_PARAMETER_VOID));
             local_hub->send_internal_message(

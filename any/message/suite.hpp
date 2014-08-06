@@ -22,7 +22,7 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief メッセージの荷札と呼出状と引数を一揃いにしたスイートの基底型。
+/** @brief 荷札と呼出状を一揃いにしたメッセージ一式。
     @tparam template_tag_key  @copydoc psyq::any::message::tag::key
     @tparam template_call_key @copydoc psyq::any::message::call::key
     @tparam template_size     @copydoc psyq::any::message::suite::size_type
@@ -52,7 +52,9 @@ class psyq::any::message::suite
     /// @endcond
 
     //-------------------------------------------------------------------------
-    /** @brief メッセージスイートを構築する。
+    /// @name メッセージ一式の構築
+    //@{
+    /** @brief メッセージ一式を構築する。
         @param[in] in_tag  this_type::tag_ の初期値。
         @param[in] in_call this_type::call_ の初期値。
      */
@@ -65,12 +67,12 @@ class psyq::any::message::suite
         parameter_offset_(sizeof(this_type)),
         parameter_size_(0)
     {}
-
-    /** @brief 引数を持つメッセージスイートを構築する。
+    //@}
+    /** @brief 引数を持つメッセージ一式を構築する。
         @param[in] in_tag         this_type::tag_ の初期値。
         @param[in] in_call        this_type::call_ の初期値。
         @param[in] in_parameter   引数の先頭位置。
-        @param[in] in_suite_size メッセージスイート全体のバイトサイズ。
+        @param[in] in_suite_size メッセージ一式全体のバイトサイズ。
      */
     protected: PSYQ_CONSTEXPR suite(
         typename this_type::tag const& in_tag,
@@ -92,6 +94,9 @@ class psyq::any::message::suite
                 in_suite_size - this->parameter_offset_)))
     {}
 
+    //-------------------------------------------------------------------------
+    /// @name メッセージ一式のプロパティ
+    //@{
     /** @brief メッセージの荷札を取得する。
         @return メッセージの荷札。
      */
@@ -128,7 +133,7 @@ class psyq::any::message::suite
     {
         return this->parameter_size_;
     }
-
+    //@}
     //-------------------------------------------------------------------------
     /// メッセージの荷札。
     private: typename this_type::tag tag_;
@@ -142,7 +147,7 @@ class psyq::any::message::suite
 }; // class psyq::any::message::suite
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief メッセージの荷札と呼出状と引数をひとまとめにしたスイート。
+/** @brief 荷札と呼出状と任意型の引数を一揃いにしたメッセージ一式。
     @tparam template_tag_key   @copydoc psyq::any::message::tag::key
     @tparam template_call_key  @copydoc psyq::any::message::call::key
     @tparam template_size      @copydoc psyq::any::message::suite::size_type
@@ -168,7 +173,9 @@ class psyq::any::message::suite<template_tag_key, template_call_key, template_si
     public: typedef template_parameter parameter;
 
     //-------------------------------------------------------------------------
-    /** @brief メッセージスイートを構築する。
+    /// @name メッセージ一式の構築
+    //@{
+    /** @brief メッセージ一式を構築する。
         @param[in] in_tag       base_type::tag_ の初期値。
         @param[in] in_call      base_type::call_ の初期値。
         @param[in] in_parameter this_type::parameter_ の初期値。
@@ -190,12 +197,10 @@ class psyq::any::message::suite<template_tag_key, template_call_key, template_si
         parameter_(std::move(io_source.parameter_))
     {}
 
-    public: typename this_type::parameter const& get_parameter()
-    const PSYQ_NOEXCEPT
-    {
-        return this->parameter_;
-    }
-
+    /** @brief ムーブ代入演算子。
+        @param[in,out] io_source ムーブ元インスタンス。
+        @return *this
+     */
     public: this_type& operator=(this_type&& io_source) PSYQ_NOEXCEPT
     {
         if (this != &io_source)
@@ -205,10 +210,20 @@ class psyq::any::message::suite<template_tag_key, template_call_key, template_si
         }
         return *this;
     }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name メッセージ一式のプロパティ
+    //@{
+    public: typename this_type::parameter const& get_parameter()
+    const PSYQ_NOEXCEPT
+    {
+        return this->parameter_;
+    }
+    //@}
 
     //-------------------------------------------------------------------------
     private: typename this_type::parameter parameter_; ///< メッセージの引数。
 
-}; // class psyq::any::message::suite::parametric:
+}; // class psyq::any::message::suite::parametric
 
 #endif // !defined(PSYQ_ANY_MESSAGE_SUITE_HPP_)

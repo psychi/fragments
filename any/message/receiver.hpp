@@ -49,21 +49,21 @@ class psyq::any::message::receiver
     //@{
     /** @brief メッセージ受信器を構築する。
         @param[in] in_functor this_type::functor_ の初期値。
-        @param[in] in_address this_type::address_ の初期値。
+        @param[in] in_message_address this_type::message_address_ の初期値。
      */
     public: PSYQ_CONSTEXPR receiver(
         typename this_type::functor in_functor,
-        typename this_type::tag::key const in_address)
+        typename this_type::tag::key const in_message_address)
     PSYQ_NOEXCEPT:
         functor_((PSYQ_ASSERT(bool(in_functor)), std::move(in_functor))),
-        address_(in_address)
+        message_address_(in_message_address)
     {}
     //@}
     /// immutable値として扱いたいので、代入演算子は使用禁止。
     private: this_type operator=(this_type const& in_source)
     {
         this->functor_ = in_source.get_functor();
-        this->address_ = in_source.get_address();
+        this->message_address_ = in_source.get_message_address();
         return *this;
     }
 
@@ -71,7 +71,7 @@ class psyq::any::message::receiver
     private: this_type operator=(this_type&& io_source) PSYQ_NOEXCEPT
     {
         this->functor_ = std::move(in_source.functor_);
-        this->address_ = in_source.get_address();
+        this->message_address_ = in_source.get_message_address();
         return *this;
     }
 
@@ -88,19 +88,19 @@ class psyq::any::message::receiver
     }
 
     /** @brief メッセージ受信アドレスを取得する。
-        @return @copydoc this_type::address_
+        @return @copydoc this_type::message_address_
      */
-    public: PSYQ_CONSTEXPR typename this_type::tag::key get_address()
+    public: PSYQ_CONSTEXPR typename this_type::tag::key get_message_address()
     const PSYQ_NOEXCEPT
     {
-        return this->address_;
+        return this->message_address_;
     }
     //@}
     //-------------------------------------------------------------------------
     /// メッセージ受信時に呼び出すコールバック関数オブジェクト。
     private: typename this_type::functor functor_;
     /// メッセージ受信アドレス。
-    private: typename this_type::tag::key address_;
+    private: typename this_type::tag::key message_address_;
 
 }; // class psyq::any::message::receiver
 

@@ -87,7 +87,7 @@ class psyq::any::message::transmitter
 
     //-------------------------------------------------------------------------
     /** @brief メッセージ伝送器を構築する。
-        @param[in] in_thread_id       このメッセージ伝送器が稼働するスレッドの識別子。
+        @param[in] in_thread_id       このメッセージ伝送器に対応するスレッドの識別子。
         @param[in] in_message_address このメッセージ伝送器のメッセージ送受信アドレス。
         @param[in] in_allocator       このメッセージ伝送器が使うメモリ割当子の初期値。
      */
@@ -114,20 +114,28 @@ class psyq::any::message::transmitter
     //@{
     /** @brief メッセージ受信器を登録する。
 
+        - このメッセージ受信器に対応しないスレッドで実行すると失敗する。
         - 登録したメッセージ受信器は this_type::receiver::weak_ptr
           で監視しているだけで、このメッセージ伝送器では所有権を持たない。
         - this_type::unregister_receiver() で登録を除去できる。
 
         @param[in] in_method   登録するメッセージ受信メソッドの種別。
         @param[in] in_receiver 登録するメッセージ受信器。
+        @retval true  成功。メッセージ受信器を登録した。
+        @retval false 失敗。メッセージ受信器を登録しなかった。
      */
-    public: void register_receiver(
+    public: bool register_receiver(
         typename this_type::receiver::call::key in_method,
         typename this_type::receiver::weak_ptr in_receiver)
     {
-        std::lock_guard<psyq::spinlock> local_lock(this->lock_);
+        if (std::this_thread::get_id() != this->get_thread_id())
+        {
+            PSYQ_ASSERT(false);
+            return false;
+        }
         this->receiver_map_.emplace(
             std::move(in_method), std::move(in_receiver));
+        return true;
     }
 
     /** @brief メッセージ受信器の登録を除去する。
@@ -225,6 +233,7 @@ class psyq::any::message::transmitter
     //@{
     /** @brief 引数を持たないメッセージを構築し、メッセージゾーンの内と外への送信を予約する。
 
+        - このメッセージ受信器に対応しないスレッドで実行すると失敗する。
         - メッセージ送信の予約のみを行う。実際のメッセージ送受信処理は、
           psyq::any::message::zone::flush() と this_type::flush()
           で非同期で行われる。
@@ -250,6 +259,7 @@ class psyq::any::message::transmitter
 
     /** @brief POD型の引数を持つメッセージを構築し、メッセージゾーンの内と外への送信を予約する。
 
+        - このメッセージ受信器に対応しないスレッドで実行すると失敗する。
         - メッセージ送信の予約のみを行う。実際のメッセージ送受信処理は、
           psyq::any::message::zone::flush() と this_type::flush()
           で非同期で行われる。
@@ -272,6 +282,7 @@ class psyq::any::message::transmitter
 
     /** @brief 引数を持たないメッセージを構築し、メッセージゾーン内への送信を予約する。
 
+        - このメッセージ受信器に対応しないスレッドで実行すると失敗する。
         - メッセージ送信の予約のみを行う。実際のメッセージ送受信処理は、
           psyq::any::message::zone::flush() と this_type::flush()
           で非同期で行われる。
@@ -297,6 +308,7 @@ class psyq::any::message::transmitter
 
     /** @brief 任意型の引数を持つメッセージを構築し、メッセージゾーン内への送信を予約する。
 
+        - このメッセージ受信器に対応しないスレッドで実行すると失敗する。
         - メッセージ送信の予約のみを行う。実際のメッセージ送受信処理は、
           psyq::any::message::zone::flush() と this_type::flush()
           で非同期で行われる。
@@ -328,6 +340,7 @@ class psyq::any::message::transmitter
 
     /** @brief このメッセージ伝送器に登録されている受信器へのみメッセージを送信する。
 
+        - このメッセージ受信器に対応しないスレッドで実行すると失敗する。
         - メッセージを送信し、メッセージ受信関数の終了までブロックする。
         - メッセージゾーンの内と外にメッセージを送信するには、
           this_type::post_message() を使う。
@@ -352,6 +365,7 @@ class psyq::any::message::transmitter
 
     /** @brief このメッセージ伝送器に登録されている受信器へのみメッセージを送信する。
 
+        - このメッセージ受信器に対応しないスレッドで実行すると失敗する。
         - メッセージを送信し、メッセージ受信関数の終了までブロックする。
         - メッセージゾーンの内と外にメッセージを送信するには、
           this_type::post_message() を使う。
@@ -375,6 +389,7 @@ class psyq::any::message::transmitter
 
     /** @brief このメッセージ伝送器に登録されている受信器へのみメッセージを送信する。
 
+        - このメッセージ受信器に対応しないスレッドで実行すると失敗する。
         - メッセージを送信し、メッセージ受信関数の終了までブロックする。
         - メッセージゾーンの内と外にメッセージを送信するには、
           this_type::post_message() を使う。
@@ -404,29 +419,34 @@ class psyq::any::message::transmitter
 
     /** @brief メッセージ受信器へメッセージを配信する。
 
-        psyq::any::message::zone::flush() とこの関数を定期的に実行し、
-        メッセージを循環させること。
+        - このメッセージ受信器に対応しないスレッドで実行すると失敗する。
+        - psyq::any::message::zone::flush() とこの関数を定期的に実行し、
+          メッセージを循環させること。
+
+        @retval true  成功。メッセージ受信器へメッセージを配信した。
+        @retval false 失敗。メッセージ受信器へメッセージを配信しなかった。
      */
-    public: void flush()
+    public: bool flush()
     {
         if (std::this_thread::get_id() != this->get_thread_id())
         {
             PSYQ_ASSERT(false);
-            return;
+            return false;
         }
         else
         {
-            // メッセージ受信器とメッセージパケットを更新する。
+            // 配信するメッセージパケットを取得する。
             std::lock_guard<psyq::spinlock> local_lock(this->lock_);
-            this_type::remove_empty_receiver(this->receiver_map_);
             this->delivery_packets_.swap(this->import_packets_);
         }
+        this_type::remove_empty_receiver(this->receiver_map_);
 
         // メッセージ受信器へメッセージを配信する。
         this_type::deliver_packet(
             this->receiver_map_, this->delivery_packets_);
         this_type::clear_packet_container(
             this->delivery_packets_, this->delivery_packets_.size());
+        return true;
     }
     //@}
     /** @brief メッセージの送信を予約する。

@@ -1,7 +1,7 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
     @namespace psyq::any::message
-    @brief psyq::any::rtti を使ったRPCメッセージ。
+    @brief psyq::any::rtti を使った、プロセス間スレッド間のRPCメッセージ。
 
      初期化の手順
     -# psyq::any::message::zone インスタンスを用意する。
@@ -9,7 +9,8 @@
        psyq::any::message::transmitter インスタンスを用意し、保持しておく。
     -# メッセージ受信関数を設定した
        psyq::any::message::receiver インスタンスを用意し、
-       psyq::any::message::transmitter::register_receiver() で登録する。
+       psyq::any::message::transmitter::register_receiver() で登録して、
+       保持しておく。
 
     メッセージ送受信の手順
     -# それぞれのメッセージ伝送器に対応するスレッドで

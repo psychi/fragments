@@ -36,11 +36,6 @@ class psyq::any::message::tag
         std::is_integral<template_key>::value,
         "'template_key' is not integral type.");
 
-    public: enum: typename this_type::key
-    {
-        EMPTY_KEY = 0, ///< 空の属性値。
-    };
-
     //-------------------------------------------------------------------------
     /** @brief メッセージの荷札を構築する。
         @param[in] in_sender_address   メッセージ送信アドレス。

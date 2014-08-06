@@ -6,19 +6,18 @@
 
 #include <type_traits>
 
+/// @cond
 namespace psyq
 {
     namespace any
     {
-        /// psyq::any::rtti を使ったRPCメッセージ。
-        namespace message
+       namespace message
         {
-            /// @cond
             template<typename> class tag;
-            /// @endcond
         } // namespace message
     } // namespace any
 } // namespace psyq
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief RPCメッセージの荷札。

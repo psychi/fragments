@@ -20,7 +20,7 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief メッセージの呼出状。
+/** @brief RPCメッセージの呼出状。
     @tparam template_key @copydoc psyq::any::message::call::key
  */
 template<typename template_key>

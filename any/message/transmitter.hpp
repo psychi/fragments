@@ -32,9 +32,14 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief スレッド別のメッセージ伝送器。
+/** @brief スレッド別のRPCメッセージ伝送器。
 
-    @copydetails psyq::any::message::zone
+    - this_type::register_receiver() で、メッセージ受信器を登録する。
+    - this_type::post_message() で、メッセージを送信する。
+    - this_type::flush() で、メッセージ伝送器が持つメッセージを集配する。
+
+    @tparam template_base_suite @copydoc psyq::any::message::packet::suite
+    @tparam template_allocator  @copydoc psyq::any::message::transmitter::allocator_type
  */
 template<typename template_base_suite, typename template_allocator>
 class psyq::any::message::transmitter
@@ -484,7 +489,7 @@ class psyq::any::message::transmitter
     }
 
     /** @brief メッセージゾーン外パケットを生成する。
-        @param[in,out] io_suite     パケットに設定するメッセージスイート。
+        @param[in,out] io_suite     パケットに設定するメッセージ一式。
         @param[in]     in_allocator 使用するメモリ割当子。
         @return
             生成したメッセージパケットの保持子。
@@ -503,7 +508,7 @@ class psyq::any::message::transmitter
     }
 
     /** @brief メッセージゾーン内パケットを生成する。
-        @param[in,out] io_suite     パケットに設定するメッセージスイート。
+        @param[in,out] io_suite     パケットに設定するメッセージ一式。
         @param[in]     in_allocator 使用するメモリ割当子。
         @return
             生成したメッセージパケットの保持子。
@@ -522,7 +527,7 @@ class psyq::any::message::transmitter
     }
 
     /** @brief メッセージパケットを生成する。
-        @param[in,out] io_suite     パケットに設定するメッセージスイート。
+        @param[in,out] io_suite     パケットに設定するメッセージ一式。
         @param[in]     in_allocator 使用するメモリ割当子。
         @return
             生成したメッセージパケットの保持子。

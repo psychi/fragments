@@ -22,7 +22,10 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 荷札と呼出状を一揃いにしたメッセージ一式。
+/** @brief 荷札と呼出状を一揃いにしたRPCメッセージ一式。
+
+    - 任意型の引数を含めるには、 this_type::parametric を使う。
+
     @tparam template_tag_key  @copydoc psyq::any::message::tag::key
     @tparam template_call_key @copydoc psyq::any::message::call::key
     @tparam template_size     @copydoc psyq::any::message::suite::size_type
@@ -147,7 +150,7 @@ class psyq::any::message::suite
 }; // class psyq::any::message::suite
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 荷札と呼出状と任意型の引数を一揃いにしたメッセージ一式。
+/** @brief 荷札と呼出状と任意型の引数を一揃いにしたRPCメッセージ一式。
     @tparam template_tag_key   @copydoc psyq::any::message::tag::key
     @tparam template_call_key  @copydoc psyq::any::message::call::key
     @tparam template_size      @copydoc psyq::any::message::suite::size_type

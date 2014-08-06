@@ -21,7 +21,7 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief メッセージ受信器。
+/** @brief RPCメッセージ受信器。メッセージ受信関数オブジェクトを持つ。
     @tparam template_base_suite @copydoc psyq::any::message::packet::suite
  */
 template<typename template_base_suite>
@@ -34,7 +34,7 @@ class psyq::any::message::receiver
     public: typedef std::shared_ptr<this_type> shared_ptr;
     /// メッセージ受信器の監視子。
     public: typedef std::weak_ptr<this_type> weak_ptr;
-    /// メッセージスイートを保持するパケットの基底型。
+    /// メッセージ一式を保持するパケットの基底型。
     public: typedef psyq::any::message::packet<template_base_suite> packet;
     /// メッセージの呼出状。
     public: typedef typename this_type::packet::suite::call call;

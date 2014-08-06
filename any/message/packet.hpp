@@ -20,7 +20,7 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief メッセージスイートを保持し、仮想関数でアクセスするパケットの基底型。
+/** @brief RPCメッセージ一式を保持し、仮想関数でアクセスするパケットの基底型。
     @tparam template_base_suite @copydoc psyq::any::message::packet::suite
  */
 template<typename template_base_suite>
@@ -34,7 +34,7 @@ class psyq::any::message::packet
     /// this_type の監視子。
     public: typedef std::weak_ptr<this_type> weak_ptr;
 
-    /** @brief 保持しているメッセージスイートの基底型。
+    /** @brief 保持しているメッセージ一式の基底型。
 
         psyq::any::message::suite に準拠している必要がある。
      */
@@ -48,17 +48,17 @@ class psyq::any::message::packet
     //-------------------------------------------------------------------------
     /// デフォルト構築子。
     protected: packet() PSYQ_NOEXCEPT {}
-    /// メッセージスイートを破壊する。
+    /// メッセージ一式を破壊する。
     public: virtual ~packet() PSYQ_NOEXCEPT {}
 
-    /** @brief 保持しているメッセージスイートを取得する。
-        @return 保持しているメッセージスイート。
+    /** @brief 保持しているメッセージ一式を取得する。
+        @return 保持しているメッセージ一式。
      */
     public: virtual typename this_type::suite const& get_suite()
     const PSYQ_NOEXCEPT = 0;
 
-    /** @brief 外部に送信可能なメッセージスイートを取得する。
-        @return 外部に送信可能なメッセージスイート。
+    /** @brief 外部に送信可能なメッセージ一式を取得する。
+        @return 外部に送信可能なメッセージ一式。
      */
     public: virtual typename this_type::suite const* get_external_suite()
     const PSYQ_NOEXCEPT = 0;
@@ -97,7 +97,7 @@ class psyq::any::message::packet
 }; // class psyq::any::message::packet
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief メッセージゾーン内で送受信するメッセージスイートのパケット。
+/** @brief RPCメッセージゾーン内で送受信するメッセージ一式を持つパケット。
     @tparam template_base_suite @copydoc psyq::any::message::packet::suite
     @tparam template_suite      @copydoc psyq::any::message::packet::zonal::suite
  */
@@ -150,13 +150,13 @@ class psyq::any::message::packet<template_base_suite>::zonal:
     }
 
     //-------------------------------------------------------------------------
-    /// 保持しているメッセージスイート。
+    /// 保持しているメッセージ一式。
     private: typename this_type::suite suite_;
 
 }; // class psyq::any::message::packet::zonal
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief メッセージゾーン外に送受信するメッセージスイートのパケット。
+/** @brief RPCメッセージゾーン外に送受信するメッセージ一式を持つパケット。
     @tparam template_base_suite @copydoc psyq::any::message::packet::suite
     @tparam template_suite      @copydoc psyq::any::message::packet::external::suite
  */
@@ -209,7 +209,7 @@ class psyq::any::message::packet<template_base_suite>::external:
     }
 
     //-------------------------------------------------------------------------
-    /// 保持しているメッセージスイート。
+    /// 保持しているメッセージ一式。
     private: typename this_type::suite suite_;
 
 }; // class psyq::any::message::packet::external

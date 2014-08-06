@@ -1,18 +1,12 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
- */
-#ifndef PSYQ_ANY_MESSAGE_ZONE_HPP_
-#define PSYQ_ANY_MESSAGE_ZONE_HPP_
+    @namespace psyq::any::message
+    @brief psyq::any::rtti を使ったRPCメッセージ。
 
-//#include "psyq/any/message/transmitter.hpp"
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief ANYメッセージを送受信する範囲の単位。
-
-    初期化の手順
+     初期化の手順
     -# psyq::any::message::zone インスタンスを用意する。
     -# psyq::any::message::zone::equip_transmitter() で、スレッド毎に固有の
-       psyq::any::message::transmitter インスタンスを保持しておく。
+       psyq::any::message::transmitter インスタンスを用意し、保持しておく。
     -# メッセージ受信関数を設定した
        psyq::any::message::receiver インスタンスを用意し、
        psyq::any::message::transmitter::register_receiver() で登録する。
@@ -28,6 +22,17 @@
        メッセージに対応するメッセージ受信器にメッセージが配信され、
        psyq::any::message::receiver::get_functor()
        で取得できるメッセージ受信関数が呼び出される。
+ */
+#ifndef PSYQ_ANY_MESSAGE_ZONE_HPP_
+#define PSYQ_ANY_MESSAGE_ZONE_HPP_
+
+//#include "psyq/any/message/transmitter.hpp"
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief RPCメッセージを送受信する範囲の単位。
+
+    - this_type::equip_transmitter() で、メッセージ伝送器を用意する。
+    - this_type::flush() で、メッセージ伝送器が持つメッセージを集配する。
 
     @tparam template_base_suite @copydoc psyq::any::message::packet::suite
     @tparam template_allocator  @copydoc psyq::any::message::zone::allocator_type

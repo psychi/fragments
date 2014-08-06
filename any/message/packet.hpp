@@ -4,7 +4,7 @@
 #ifndef PSYQ_ANY_MESSAGE_PACKET_HPP_
 #define PSYQ_ANY_MESSAGE_PACKET_HPP_
 
-//#include "psyq/any/message/suite.hpp"
+#include <memory>
 
 /// @cond
 namespace psyq
@@ -41,7 +41,7 @@ class psyq::any::message::packet
     public: typedef template_base_suite suite;
 
     /// @cond
-    public: template<typename template_suite> class internal;
+    public: template<typename template_suite> class zonal;
     public: template<typename template_suite> class external;
     /// @endcond
 
@@ -97,17 +97,17 @@ class psyq::any::message::packet
 }; // class psyq::any::message::packet
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief プロセス内で送受信するメッセージスイートのパケット。
+/** @brief メッセージゾーン内で送受信するメッセージスイートのパケット。
     @tparam template_base_suite @copydoc psyq::any::message::packet::suite
-    @tparam template_suite      @copydoc psyq::any::message::packet::internal::suite
+    @tparam template_suite      @copydoc psyq::any::message::packet::zonal::suite
  */
 template<typename template_base_suite>
 template<typename template_suite>
-class psyq::any::message::packet<template_base_suite>::internal:
+class psyq::any::message::packet<template_base_suite>::zonal:
     public psyq::any::message::packet<template_base_suite>
 {
     /// thisが指す値の型。
-    private: typedef internal this_type;
+    private: typedef zonal this_type;
     /// this_type の基底型。
     public: typedef psyq::any::message::packet<template_base_suite> base_type;
 
@@ -119,7 +119,7 @@ class psyq::any::message::packet<template_base_suite>::internal:
     /** @brief メッセージパケットを構築する。
         @param[in] in_suite this_type::suite_ の初期値。
      */
-    public: explicit internal(typename this_type::suite in_suite)
+    public: explicit zonal(typename this_type::suite in_suite)
     PSYQ_NOEXCEPT: suite_(std::move(in_suite))
     {}
 
@@ -153,10 +153,10 @@ class psyq::any::message::packet<template_base_suite>::internal:
     /// 保持しているメッセージスイート。
     private: typename this_type::suite suite_;
 
-}; // class psyq::any::message::packet::internal
+}; // class psyq::any::message::packet::zonal
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief プロセス外に送受信するメッセージスイートのパケット。
+/** @brief メッセージゾーン外に送受信するメッセージスイートのパケット。
     @tparam template_base_suite @copydoc psyq::any::message::packet::suite
     @tparam template_suite      @copydoc psyq::any::message::packet::external::suite
  */

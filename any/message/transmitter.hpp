@@ -285,7 +285,7 @@ class psyq::any::message::transmitter
         typename this_type::receiver::call const& in_call)
     {
         return this->export_packet(
-            this_type::create_internal_packet(
+            this_type::create_zonal_packet(
                 typename this_type::suite(in_tag, in_call),
                 this->get_allocator()));
     }
@@ -316,7 +316,7 @@ class psyq::any::message::transmitter
             parametric<template_parameter>
                 parametric_suite;
         return this->export_packet(
-            this_type::create_internal_packet(
+            this_type::create_zonal_packet(
                 parametric_suite(in_tag, in_call, std::move(in_parameter)),
                 this->get_allocator()));
     }
@@ -365,7 +365,7 @@ class psyq::any::message::transmitter
         typedef typename this_type::receiver::packet::suite suite;
         return this->send_local_message(
             typename this_type::receiver::packet::template
-                internal<suite>(suite(in_tag, in_call)));
+                zonal<suite>(suite(in_tag, in_call)));
     }
 
     /** @brief このメッセージ伝送器に登録されている受信器へのみメッセージを送信する。
@@ -393,7 +393,7 @@ class psyq::any::message::transmitter
                 suite;
         return this->send_local_message(
             typename this_type::receiver::packet::template
-                internal<suite>(
+                zonal<suite>(
                     suite(in_tag, in_call, std::move(in_parameter))));
     }
 
@@ -510,14 +510,14 @@ class psyq::any::message::transmitter
             生成に失敗した場合は、保持子は空となる。
      */
     private: template<typename template_suite>
-    static typename this_type::receiver::packet::shared_ptr create_internal_packet(
+    static typename this_type::receiver::packet::shared_ptr create_zonal_packet(
         template_suite&& io_suite,
         typename this_type::allocator_type const& in_allocator)
     {
         typedef typename this_type::receiver::packet::template
-            internal<template_suite>
-                internal_packet;
-        return this_type::create_packet<internal_packet>(
+            zonal<template_suite>
+                zonal_packet;
+        return this_type::create_packet<zonal_packet>(
             std::move(io_suite), in_allocator);
     }
 

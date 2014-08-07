@@ -5,22 +5,24 @@
 
      初期化の手順
     -# psyq::any::message::zone インスタンスを用意する。
-    -# psyq::any::message::zone::equip_transmitter() で、スレッド毎に固有の
-       psyq::any::message::transmitter インスタンスを用意し、保持しておく。
+    -# psyq::any::message::zone::equip_transmitter()
+       で、それぞれのスレッドに合致する psyq::any::message::transmitter
+       インスタンスを用意し、保持しておく。
     -# メッセージ受信関数を設定した
-       psyq::any::message::receiver インスタンスを用意し、
-       psyq::any::message::transmitter::register_receiver() で登録して、
+       psyq::any::message::receiver インスタンスを用意した後、
+       psyq::any::message::transmitter::register_receiver() で登録し、
        保持しておく。
 
     メッセージ送受信の手順
-    -# それぞれのメッセージ伝送器に対応するスレッドで
+    -# それぞれのスレッドに合致する psyq::any::message::transmitter で
        psyq::any::message::transmitter::post_message() を実行し、
-       メッセージを送信する。
+       メッセージパケットを送信する。
     -# psyq::any::message::zone::flush() をメインスレッドで定期的に実行し、
-       スレッド毎に固有のメッセージ伝送器にメッセージを集配する。
-    -# それぞれのメッセージ伝送器に対応するスレッドで
+       それぞれのスレッドに合致する psyq::any::message::transmitter
+       からメッセージパケットを集配する。
+    -# それぞれのスレッドに合致する psyq::any::message::transmitter で
        psyq::any::message::transmitter::flush() を定期的に実行すると、
-       メッセージに対応するメッセージ受信器にメッセージが配信され、
+       psyq::any::message::receiver にメッセージパケットが配信され、
        psyq::any::message::receiver::get_functor()
        で取得できるメッセージ受信関数が呼び出される。
  */
@@ -32,8 +34,9 @@
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief RPCメッセージを送受信する範囲の単位。
 
-    - this_type::equip_transmitter() で、メッセージ伝送器を用意する。
-    - this_type::flush() で、メッセージ伝送器が持つメッセージを集配する。
+    - this_type::equip_transmitter() で、 this_type::transmitter を用意する。
+    - this_type::flush() で、
+      this_type::transmitter が持つメッセージパケットを集配する。
 
     @tparam template_base_suite @copydoc psyq::any::message::packet::suite
     @tparam template_allocator  @copydoc psyq::any::message::zone::allocator_type
@@ -44,24 +47,24 @@ class psyq::any::message::zone
     private: typedef zone this_type; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
-    /// 使用するメモリ割当子。
+    /// this_type で使うメモリ割当子。
     public: typedef template_allocator allocator_type;
-    /// メッセージ伝送器。
-    public: typedef psyq::any::message
-        ::transmitter<template_base_suite, template_allocator>
+    /// this_type で使うメッセージ伝送器。
+    public: typedef psyq::any::message::transmitter<
+        template_base_suite, template_allocator>
             transmitter;
-    /// メッセージ受信器。
+    /// this_type で使うメッセージ受信器。
     public: typedef typename this_type::transmitter::receiver receiver;
-    /// メッセージ伝送器のコンテナ。
+    /// @copydoc transmitters_
     private: typedef std
         ::vector<typename this_type::transmitter::weak_ptr, template_allocator>
             weak_transmitter_container;
 
     //-------------------------------------------------------------------------
-    /// @name メッセージゾーンの構築
+    /// @name this_type の構築
     //@{
-    /** @brief メッセージゾーンを構築する。
-        @param[in] in_allocator このメッセージゾーンが使うメモリ割当子の初期値。
+    /** @brief this_type を構築する。
+        @param[in] in_allocator *thisが使うメモリ割当子の初期値。
      */
     public: explicit zone(
         typename this_type::allocator_type const& in_allocator =
@@ -78,26 +81,28 @@ class psyq::any::message::zone
     private: this_type& operator=(this_type const&);
 
     //-------------------------------------------------------------------------
-    /// @name メッセージ伝送器の取得
+    /// @name this_type::transmitter の取得
     //@{
-    /** @brief このスレッドに対応するメッセージ伝送器を用意する。
+    /** @brief このスレッドに合致する this_type::transmitter を用意する。
 
-        - 用意したメッセージ伝送器は this_type::transmitter::weak_ptr
-          で監視しているだけで、このメッセージゾーンでは所有権を持たない。
+        - スレッドに合致する this_type::transmitter を検索する。
+          存在しないなら、新たに生成する。
+        - this_type::lock_ でロックの獲得を待ってから実行される。
+          ロックを獲得している他のスレッドからブロックされることに注意。
+        - 用意した this_type::transmitter は this_type::transmitter::weak_ptr
+          で監視しているだけで、 this_type では所有権を持たない。
+          this_type::transmitter の所有権は、ユーザーが管理すること。
 
-        @return このスレッドに対応するメッセージ伝送器。
+        @return スレッドに合致する this_type::transmitter 。
      */
     public: typename this_type::transmitter::shared_ptr equip_transmitter()
     {
         return this->equip_transmitter(std::this_thread::get_id());
     }
-    /** @brief スレッドに対応するメッセージ伝送器を用意する。
+    /** @brief スレッドに合致する this_type::transmitter を用意する。
 
-        - 用意したメッセージ伝送器は this_type::transmitter::weak_ptr
-          で監視しているだけで、このメッセージゾーンでは所有権を持たない。
-
+        @copydetails equip_transmitter()
         @param[in] in_thread_id スレッド識別子。
-        @return スレッドに対応するメッセージ伝送器。
      */
     public: typename this_type::transmitter::shared_ptr equip_transmitter(
         std::thread::id const& in_thread_id)
@@ -167,12 +172,14 @@ class psyq::any::message::zone
     }
 
     //-------------------------------------------------------------------------
-    /// @name メッセージの送受信
+    /// @name メッセージパケットの送受信
     //@{
-    /** @brief メッセージ伝送器のメッセージを集配する。
+    /** @brief this_type::transmitter が持つメッセージパケットを集配する。
 
-        psyq::any::message::transmitter::flush() とこの関数を定期的に実行し、
-        メッセージを循環させること。
+        - this_type::transmitter::flush() とこの関数を定期的に実行し、
+          メッセージパケットを循環させること。
+        - this_type::lock_ でロックの獲得を待ってから実行される。
+          ロックを獲得している他のスレッドからブロックされることに注意。
      */
     public: void flush()
     {
@@ -214,8 +221,11 @@ class psyq::any::message::zone
     }
 
     //-------------------------------------------------------------------------
-    /// @name メッセージゾーンのプロパティ
+    /// @name this_type のプロパティ
     //@{
+    /** @brief *thisが使うメモリ割当子を取得する。
+        @return *thisが使うメモリ割当子。
+     */
     public: PSYQ_CONSTEXPR typename this_type::allocator_type get_allocator()
     const PSYQ_NOEXCEPT
     {
@@ -223,12 +233,13 @@ class psyq::any::message::zone
     }
     //@}
     //-------------------------------------------------------------------------
-    /// スレッド毎のメッセージ伝送器のコンテナ。
+    /// 各スレッドに合致する this_type::transmitter のコンテナ。
     private: typename this_type::weak_transmitter_container transmitters_;
-    /// メッセージ伝送器から輸入したメッセージパケットのコンテナ。
+    /// this_type::transmitter から輸入したメッセージパケットのコンテナ。
     private: typename this_type::transmitter::shared_packet_container import_packets_;
-    /// メッセージ伝送器へ輸出するメッセージパケットのコンテナ。
+    /// this_type::transmitter へ輸出するメッセージパケットのコンテナ。
     private: typename this_type::transmitter::shared_packet_container export_packets_;
+    /// 排他的処理に使うロックオブジェクト。
     private: psyq::spinlock lock_;
 
 }; // class psyq::any::message::zone
@@ -280,9 +291,9 @@ namespace psyq
                     local_transmitter.get_message_address()));
 
             local_transmitter.register_receiver(
-                METHOD_PARAMETER_VOID, local_method_a);
+                local_method_a, METHOD_PARAMETER_VOID);
             local_transmitter.register_receiver(
-                METHOD_PARAMETER_DOUBLE, local_method_b);
+                local_method_b, METHOD_PARAMETER_DOUBLE);
             local_transmitter.send_local_message(
                 local_transmitter.make_receiver_tag(
                     local_transmitter.get_message_address()),
@@ -306,7 +317,7 @@ namespace psyq
             local_zone.flush();
             local_transmitter.flush();
             local_transmitter.unregister_receiver(nullptr);
-            local_transmitter.unregister_receiver(0, nullptr);
+            local_transmitter.unregister_receiver(nullptr, 0);
         }
     }
 }

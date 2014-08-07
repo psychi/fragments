@@ -55,9 +55,9 @@ class psyq::any::message::suite
     /// @endcond
 
     //-------------------------------------------------------------------------
-    /// @name メッセージ一式の構築
+    /// @name this_type の構築
     //@{
-    /** @brief メッセージ一式を構築する。
+    /** @brief this_type を構築する。
         @param[in] in_tag  this_type::tag_ の初期値。
         @param[in] in_call this_type::call_ の初期値。
      */
@@ -71,7 +71,7 @@ class psyq::any::message::suite
         parameter_size_(0)
     {}
     //@}
-    /** @brief 引数を持つメッセージ一式を構築する。
+    /** @brief 引数を持つ this_type を構築する。
         @param[in] in_tag         this_type::tag_ の初期値。
         @param[in] in_call        this_type::call_ の初期値。
         @param[in] in_parameter   引数の先頭位置。
@@ -98,7 +98,7 @@ class psyq::any::message::suite
     {}
 
     //-------------------------------------------------------------------------
-    /// @name メッセージ一式のプロパティ
+    /// @name this_type のプロパティ
     //@{
     /** @brief メッセージの荷札を取得する。
         @return メッセージの荷札。
@@ -176,9 +176,9 @@ class psyq::any::message::suite<template_tag_key, template_call_key, template_si
     public: typedef template_parameter parameter;
 
     //-------------------------------------------------------------------------
-    /// @name メッセージ一式の構築
+    /// @name this_type の構築
     //@{
-    /** @brief メッセージ一式を構築する。
+    /** @brief this_type を構築する。
         @param[in] in_tag       base_type::tag_ の初期値。
         @param[in] in_call      base_type::call_ の初期値。
         @param[in] in_parameter this_type::parameter_ の初期値。
@@ -215,15 +215,14 @@ class psyq::any::message::suite<template_tag_key, template_call_key, template_si
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name メッセージ一式のプロパティ
+    /// @name this_type のプロパティ
     //@{
-    public: typename this_type::parameter const& get_parameter()
+    public: PSYQ_CONSTEXPR typename this_type::parameter const& get_parameter()
     const PSYQ_NOEXCEPT
     {
         return this->parameter_;
     }
     //@}
-
     //-------------------------------------------------------------------------
     private: typename this_type::parameter parameter_; ///< メッセージの引数。
 

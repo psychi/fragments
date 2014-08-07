@@ -22,6 +22,12 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief RPCメッセージ受信器。メッセージ受信関数オブジェクトを持つ。
+
+    - 動的メモリ確保で生成し、 this_type::shared_ptr で保持する。
+    - psyq::any::message::transmitter::register_receiver() で登録しておくと、
+      メッセージアドレスとメソッド種別が合致するメッセージパケットの受信時に、
+      this_type::get_functor() で取得できる関数オブジェクトが実行される。
+
     @tparam template_base_suite @copydoc psyq::any::message::packet::suite
  */
 template<typename template_base_suite>
@@ -30,9 +36,9 @@ class psyq::any::message::receiver
     private: typedef receiver this_type; ///< thisが指す値の型。
 
     //-------------------------------------------------------------------------
-    /// メッセージ受信器の保持子。
+    /// this_type の保持子。
     public: typedef std::shared_ptr<this_type> shared_ptr;
-    /// メッセージ受信器の監視子。
+    /// this_type の監視子。
     public: typedef std::weak_ptr<this_type> weak_ptr;
     /// メッセージ一式を保持するパケットの基底型。
     public: typedef psyq::any::message::packet<template_base_suite> packet;
@@ -45,11 +51,11 @@ class psyq::any::message::receiver
         functor;
 
     //-------------------------------------------------------------------------
-    /// @name メッセージ受信機の構築
+    /// @name this_type の構築
     //@{
-    /** @brief メッセージ受信器を構築する。
-        @param[in] in_functor this_type::functor_ の初期値。
-        @param[in] in_message_address this_type::message_address_ の初期値。
+    /** @brief this_type を構築する。
+        @param[in] in_functor         @copydoc this_type::functor_
+        @param[in] in_message_address @copydoc this_type::message_address_
      */
     public: PSYQ_CONSTEXPR receiver(
         typename this_type::functor in_functor,
@@ -76,7 +82,7 @@ class psyq::any::message::receiver
     }
 
     //-------------------------------------------------------------------------
-    /// @name メッセージ受信機のプロパティ
+    /// @name this_type のプロパティ
     //@{
     /** @brief メッセージ受信関数オブジェクトを取得する。
         @return @copydoc this_type::functor_

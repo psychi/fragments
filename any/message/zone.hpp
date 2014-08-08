@@ -86,7 +86,7 @@ class psyq::any::message::zone
     /** @brief このスレッドに合致する this_type::transmitter を用意する。
 
         - スレッドに合致する this_type::transmitter を検索する。
-          存在しないなら、新たに生成する。
+          存在しないなら、動的メモリ確保して生成する。
         - this_type::lock_ でロックの獲得を待ってから実行される。
           ロックを獲得している他のスレッドからブロックされることに注意。
         - 用意した this_type::transmitter は this_type::transmitter::weak_ptr

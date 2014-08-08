@@ -85,6 +85,7 @@ class psyq::any::message::receiver
     /// @name this_type のプロパティ
     //@{
     /** @brief メッセージ受信関数オブジェクトを取得する。
+        @sa receiver() で、メッセージ受信関数オブジェクトを初期化する。
         @return @copydoc this_type::functor_
      */
     public: PSYQ_CONSTEXPR typename this_type::functor const& get_functor()
@@ -94,6 +95,7 @@ class psyq::any::message::receiver
     }
 
     /** @brief メッセージ受信アドレスを取得する。
+        @sa receiver() で、メッセージ受信アドレスを初期化する。
         @return @copydoc this_type::message_address_
      */
     public: PSYQ_CONSTEXPR typename this_type::tag::key get_message_address()

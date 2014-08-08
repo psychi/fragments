@@ -125,11 +125,14 @@ class psyq::any::message::transmitter
     /** @brief this_type::receiver を登録する。
 
         - this_type::get_thread_id() と合致しないスレッドで実行すると失敗する。
-        - 登録した this_type::receiver は this_type::receiver::weak_ptr
+        - 登録に成功した後は、メッセージ受信アドレスとメソッド種別が合致する
+          メッセージパケットを受信するたび、 this_type::receiver::get_functor()
+          で取得できるメッセージ受信関数が実行される。
+        - 登録した this_type::receiver は、 this_type::receiver::weak_ptr
           で監視しているだけで、 this_type では所有権を持たない。
           this_type::receiver の所有権は、ユーザーが管理すること。
-
-        @sa this_type::unregister_receiver() で登録を除去できる。
+        - 登録した this_type::receiver が破棄されると、登録から解放される。
+          または this_type::unregister_receiver() でも、登録から解放できる。
 
         @retval true  成功。 this_type::receiver を登録した。
         @retval false 失敗。 this_type::receiver を登録しなかった。
@@ -146,21 +149,27 @@ class psyq::any::message::transmitter
             PSYQ_ASSERT(false);
             return false;
         }
+        if (in_receiver.expired())
+        {
+            return false;
+        }
         this->receiver_map_.emplace(
             std::move(in_method), std::move(in_receiver));
         return true;
     }
 
-    /** @brief this_type::receiver の登録を除去する。
+    /** @brief this_type::receiver を登録から解放する。
 
         this_type::register_receiver() で登録した
         this_type::receiver を解放する。
 
-        @param[in] in_receiver 登録を除去する this_type::receiver 。
+        @return 登録から解放した this_type::receiver の監視子。
+        @param[in] in_receiver 登録から解放する this_type::receiver 。
      */
-    public: void unregister_receiver(
+    public: typename this_type::receiver::weak_ptr unregister_receiver(
         typename this_type::receiver const* const in_receiver)
     {
+        typename this_type::receiver::weak_ptr local_receiver;
         if (in_receiver != nullptr)
         {
             // メッセージ受信器の辞書から削除する。
@@ -168,20 +177,23 @@ class psyq::any::message::transmitter
             {
                 if (local_value.second.lock().get() == in_receiver)
                 {
-                    local_value.second.reset();
+                    local_receiver = std::move(local_value.second);
+                    //local_value.second.reset();
                 }
             }
         }
+        return local_receiver;
     }
 
-    /** @brief this_type::receiver の登録を除去する。
+    /** @brief this_type::receiver を登録から解放する。
         @copydetails unregister_receiver(typename this_type::receiver const* const)
-        @param[in] in_method 除去する this_type::receiver のメソッド種別。
+        @param[in] in_method 解放する this_type::receiver のメソッド種別。
      */
-    public: void unregister_receiver(
+    public: typename this_type::receiver::weak_ptr unregister_receiver(
         typename this_type::receiver const* const in_receiver,
         typename this_type::receiver::call::key const in_method)
     {
+        typename this_type::receiver::weak_ptr local_receiver;
         if (in_receiver != nullptr)
         {
             // メッセージ受信器の辞書から削除する。
@@ -191,10 +203,14 @@ class psyq::any::message::transmitter
             if (local_iterator != this->receiver_map_.end()
                 && local_iterator->first == in_method)
             {
-                const_cast<typename this_type::receiver::weak_ptr&>
-                    (local_iterator->second).reset();
+                local_receiver = std::move(
+                    const_cast<typename this_type::receiver::weak_ptr&>(
+                        local_iterator->second));
+                //const_cast<typename this_type::receiver::weak_ptr&>
+                //    (local_iterator->second).reset();
             }
         }
+        return local_receiver;
     }
     //@}
     /** @brief this_type::receiver を辞書から検索する。
@@ -229,13 +245,13 @@ class psyq::any::message::transmitter
     {
         for (auto i(io_receivers.begin()); i != io_receivers.end();)
         {
-            if (i->second.lock().get() != nullptr)
+            if (i->second.expired())
             {
-                ++i;
+                i = io_receivers.erase(i);
             }
             else
             {
-                i = io_receivers.erase(i);
+                ++i;
             }
         }
     }
@@ -258,7 +274,7 @@ class psyq::any::message::transmitter
           送信予約順序と同じになる。
      */
     /** @brief
-        引数を持たないメッセージパケットを生成し、
+        引数を持たないメッセージパケットを動的メモリ確保で生成し、
         メッセージゾーンの内と外への送信を予約する。
 
         @copydetails interface_post_message
@@ -285,7 +301,7 @@ class psyq::any::message::transmitter
     }
 
     /** @brief
-        POD型の引数を持つメッセージパケットを生成し、
+        POD型の引数を持つメッセージパケットを動的メモリ確保で生成し、
         メッセージゾーンの内と外への送信を予約する。
 
         @copydetails post_message()
@@ -299,7 +315,7 @@ class psyq::any::message::transmitter
         template_parameter in_parameter);
 
     /** @brief
-        引数を持たないメッセージパケットを生成し、
+        引数を持たないメッセージパケットを動的メモリ確保で生成し、
         メッセージゾーン内への送信を予約する。
 
         @copydetails interface_post_message
@@ -321,12 +337,12 @@ class psyq::any::message::transmitter
     {
         return this->add_export_packet(
             this_type::create_zonal_packet(
-                typename this_type::suite(in_tag, in_call),
+                typename this_type::receiver::packet::suite(in_tag, in_call),
                 this->get_allocator()));
     }
 
     /** @brief
-        任意型の引数を持つメッセージパケットを生成し、
+        任意型の引数を持つメッセージパケットを動的メモリ確保で生成し、
         メッセージゾーン内への送信を予約する。
 
         @copydetails post_zonal_message()
@@ -340,10 +356,10 @@ class psyq::any::message::transmitter
     {
         typedef typename this_type::receiver::packet::suite::template
             parametric<template_parameter>
-                parametric_suite;
+                suite;
         return this->add_export_packet(
             this_type::create_zonal_packet(
-                parametric_suite(in_tag, in_call, std::move(in_parameter)),
+                suite(in_tag, in_call, std::move(in_parameter)),
                 this->get_allocator()));
     }
 
@@ -353,6 +369,8 @@ class psyq::any::message::transmitter
         - this_type::get_thread_id() と合致しないスレッドで実行すると失敗する。
         - メッセージパケットを送信し、受信関数の終了までブロックする。
 
+        @sa this_type::receiver を*thisに登録するには、
+            this_type::register_receiver() を使う。
         @sa メッセージゾーンの内と外にメッセージパケットを送信するには、
             this_type::post_message() を使う。
         @sa メッセージゾーン内にだけメッセージパケットを送信するには、
@@ -396,8 +414,8 @@ class psyq::any::message::transmitter
     {
         typedef typename this_type::receiver::packet::suite suite;
         return this->send_local_message(
-            typename this_type::receiver::packet::template
-                zonal<suite>(suite(in_tag, in_call)));
+            typename this_type::receiver::packet::template zonal<suite>(
+                suite(in_tag, in_call)));
     }
 
     /** @brief
@@ -418,9 +436,8 @@ class psyq::any::message::transmitter
             parametric<template_parameter>
                 suite;
         return this->send_local_message(
-            typename this_type::receiver::packet::template
-                zonal<suite>(
-                    suite(in_tag, in_call, std::move(in_parameter))));
+            typename this_type::receiver::packet::template zonal<suite>(
+                suite(in_tag, in_call, std::move(in_parameter))));
     }
 
     /** @brief *thisに登録されている this_type::receiver に、メッセージパケットを配信する。
@@ -428,6 +445,9 @@ class psyq::any::message::transmitter
         - this_type::get_thread_id() と合致しないスレッドで実行すると失敗する。
         - psyq::any::message::zone::flush() とこの関数を定期的に実行し、
           メッセージパケットを循環させること。
+
+        @sa this_type::receiver を*thisに登録するには、
+            this_type::register_receiver() を使う。
 
         @retval true  成功。メッセージパケットを配信した。
         @retval false 失敗。メッセージパケットを配信しなかった。

@@ -163,12 +163,12 @@ struct rb_node
             return nullptr;
         }
 
-        // If we have a right-hand child, go down and then left as far
-        // as we can.
-        // 右側の下位ノードがあるなら、右側の下位ノードの左端を手繰る。
+        // If we have a right-hand child,
+        // go down and then left as far as we can.
+        // 下位ノード右側があるなら、下位ノード右側の左端を手繰る。
         if (this->rb_right != nullptr)
         {
-            return this->rb_right->find_left_limit();
+            return this->rb_right->find_leftmost();
         }
 
         // No right-hand children. Everything down and left is smaller than us,
@@ -195,12 +195,12 @@ struct rb_node
             return nullptr;
         }
 
-        // If we have a left-hand child, go down and then right as far
-        // as we can.
-        // 左側の下位ノードがあるなら、左側の下位ノードの右端を手繰る。
+        // If we have a left-hand child,
+        // go down and then right as far as we can.
+        // 下位ノード左側があるなら、下位ノード左側の右端を手繰る。
         if (this->rb_left != nullptr)
         {
-            return this->rb_left->find_right_limit();
+            return this->rb_left->find_rightmost();
         }
 
         // No left-hand children. Go up till we find an ancestor which
@@ -237,8 +237,8 @@ struct rb_node
         }
         else
         {
-            // Otherwise we are the parent's right node, and the parent
-            // should be next
+            // Otherwise we are the parent's right node,
+            // and the parent should be next
             return local_parent;
         }
     }
@@ -319,7 +319,7 @@ struct rb_node
     }
 
     //-------------------------------------------------------------------------
-    private: rb_node const* find_left_limit() const
+    private: rb_node const* find_leftmost() const
     {
         auto local_node(this);
         while (local_node->rb_left != nullptr)
@@ -329,7 +329,7 @@ struct rb_node
         return local_node;
     }
 
-    private: rb_node const* find_right_limit() const
+    private: rb_node const* find_rightmost() const
     {
         auto local_node(this);
         while (local_node->rb_right != nullptr)
@@ -407,13 +407,13 @@ struct rb_node
     public: static rb_node const* rb_first(rb_node const* const in_root)
     {
         return rb_node::RB_EMPTY_ROOT(in_root)?
-            nullptr: in_root->find_left_limit();
+            nullptr: in_root->find_leftmost();
     }
 
     public: static rb_node const* rb_last(rb_node const* const in_root)
     {
         return rb_node::RB_EMPTY_ROOT(in_root)?
-            nullptr: in_root->find_right_limit();
+            nullptr: in_root->find_rightmost();
     }
 
     public: static rb_node const* rb_first_postorder(rb_node const* const in_root)
@@ -564,7 +564,8 @@ struct rb_node
             rb_node* const local_gparent_right(local_gparent->rb_right);
             if (local_parent != local_gparent_right) // local_parent == local_gparent->rb_left
             {
-                if (local_gparent_right != nullptr && local_gparent_right->rb_is_red())
+                if (local_gparent_right != nullptr
+                    && local_gparent_right->rb_is_red())
                 {
                     /*  Case 1 - color flips
 
@@ -578,11 +579,14 @@ struct rb_node
                         4) does not allow this, we need to recurse
                         at g.
                      */
-                    local_gparent_right->rb_set_parent_color(local_gparent, rb_node::RB_BLACK);
-                    local_parent->rb_set_parent_color(local_gparent, rb_node::RB_BLACK);
+                    local_gparent_right->rb_set_parent_color(
+                        local_gparent, rb_node::RB_BLACK);
+                    local_parent->rb_set_parent_color(
+                        local_gparent, rb_node::RB_BLACK);
                     local_node = local_gparent;
                     local_parent = local_node->rb_parent();
-                    local_node->rb_set_parent_color(local_parent, rb_node::RB_RED);
+                    local_node->rb_set_parent_color(
+                        local_parent, rb_node::RB_RED);
                     continue;
                 }
 
@@ -600,13 +604,16 @@ struct rb_node
                         This still leaves us in violation of 4), the
                         continuation into Case 3 will fix that.
                      */
-                    local_parent->rb_right = local_parent_right = local_node->rb_left;
+                    local_parent_right = local_node->rb_left;
+                    local_parent->rb_right = local_node->rb_left;
                     local_node->rb_left = local_parent;
                     if (local_parent_right != nullptr)
                     {
-                        local_parent_right->rb_set_parent_color(local_parent, rb_node::RB_BLACK);
+                        local_parent_right->rb_set_parent_color(
+                            local_parent, rb_node::RB_BLACK);
                     }
-                    local_parent->rb_set_parent_color(local_node, rb_node::RB_RED);
+                    local_parent->rb_set_parent_color(
+                        local_node, rb_node::RB_RED);
                     in_augment_rotate(local_parent, local_node);
                     local_parent = local_node;
                     local_parent_right = local_node->rb_right;
@@ -624,7 +631,8 @@ struct rb_node
                 local_parent->rb_right = local_gparent;
                 if (local_parent_right != nullptr)
                 {
-                    local_parent_right->rb_set_parent_color(local_gparent, rb_node::RB_BLACK);
+                    local_parent_right->rb_set_parent_color(
+                        local_gparent, rb_node::RB_BLACK);
                 }
                 rb_node::_rb_rotate_set_parents(
                     *local_gparent, *local_parent, io_root, rb_node::RB_RED);
@@ -634,14 +642,18 @@ struct rb_node
             else
             {
                 rb_node* const local_gparent_left(local_gparent->rb_left);
-                if (local_gparent_left != nullptr && local_gparent_left->rb_is_red())
+                if (local_gparent_left != nullptr
+                    && local_gparent_left->rb_is_red())
                 {
                     // Case 1 - color flips
-                    local_gparent_left->rb_set_parent_color(local_gparent, rb_node::RB_BLACK);
-                    local_parent->rb_set_parent_color(local_gparent, rb_node::RB_BLACK);
+                    local_gparent_left->rb_set_parent_color(
+                        local_gparent, rb_node::RB_BLACK);
+                    local_parent->rb_set_parent_color(
+                        local_gparent, rb_node::RB_BLACK);
                     local_node = local_gparent;
                     local_parent = local_node->rb_parent();
-                    local_node->rb_set_parent_color(local_parent, rb_node::RB_RED);
+                    local_node->rb_set_parent_color(
+                        local_parent, rb_node::RB_RED);
                     continue;
                 }
 
@@ -649,11 +661,13 @@ struct rb_node
                 if (local_node == local_parent_left)
                 {
                     // Case 2 - right rotate at parent
-                    local_parent->rb_left = local_parent_left = local_node->rb_right;
+                    local_parent_left = local_node->rb_right;
+                    local_parent->rb_left = local_node->rb_right;
                     local_node->rb_right = local_parent;
                     if (local_parent_left != nullptr)
                     {
-                        local_parent_left->rb_set_parent_color(local_parent, rb_node::RB_BLACK);
+                        local_parent_left->rb_set_parent_color(
+                            local_parent, rb_node::RB_BLACK);
                     }
                     local_parent->rb_set_parent_color(local_node, rb_node::RB_RED);
                     in_augment_rotate(local_parent, local_node);
@@ -677,9 +691,6 @@ struct rb_node
     }
 
     //-------------------------------------------------------------------------
-    /*  Inline version for rb_erase() use - we want to be able to inline
-        and eliminate the dummy_rotate callback there
-     */
     private: template<typename template_rotate>
     static void _rb_erase_color(
         rb_node& io_parent,
@@ -693,15 +704,23 @@ struct rb_node
             /*  Loop invariants:
                 - local_node is black (or nullptr on first iteration)
                 - local_node is not the root (local_parent is not nullptr)
-                - All leaf paths going through local_parent and local_node have a
-                  black local_node count that is 1 lower than other leaf paths.
+                - All leaf paths going through local_parent and local_node have
+                  a black node count that is 1 lower than other leaf paths.
+
+                ループ不変条件:
+                - local_node は黒。ただし、ループの最初のみnullptr。
+                - local_node は最上位ノードでない。
+                  つまり local_parent は、nullptrにならない。
+                - local_parent と local_node を通過するすべての葉のパスは、
+                  他の葉の経路よりも1つ少ない黒のノード数を持っている。
              */
             rb_node* local_sibling(local_parent->rb_right);
             if (local_node != local_sibling) // local_node == local_parent->rb_left
             {
                 if (local_sibling->rb_is_red())
                 {
-                    /*  Case 1 - left rotate at local_parent
+                    /*  Case 1 - left rotate at parent.
+                        ケース1 - 親ノードを左回転する。
 
                             P               S
                            / \             / \
@@ -712,20 +731,25 @@ struct rb_node
                     rb_node* const local_sibling_left(local_sibling->rb_left);
                     local_parent->rb_right = local_sibling_left;
                     local_sibling->rb_left = local_parent;
-                    local_sibling_left->rb_set_parent_color(local_parent, rb_node::RB_BLACK);
+                    local_sibling_left->rb_set_parent_color(
+                        local_parent, rb_node::RB_BLACK);
                     rb_node::_rb_rotate_set_parents(
                         *local_parent, *local_sibling, io_root, rb_node::RB_RED);
                     in_augment_rotate(local_parent, local_sibling);
                     local_sibling = local_sibling_left;
                 }
                 rb_node* local_sibling_right(local_sibling->rb_right);
-                if (local_sibling_right == nullptr || local_sibling_right->rb_is_black())
+                if (local_sibling_right == nullptr
+                    || local_sibling_right->rb_is_black())
                 {
-                    rb_node* const local_sibling_left = local_sibling->rb_left;
-                    if (local_sibling_left == nullptr || local_sibling_left->rb_is_black())
+                    rb_node* const local_sibling_left(local_sibling->rb_left);
+                    if (local_sibling_left == nullptr
+                        || local_sibling_left->rb_is_black())
                     {
-                        /*  Case 2 - local_sibling color flip
+                        /*  Case 2 - sibling color flip
                             (p could be either color here)
+                            ケース2 - 隣接ノードの色を反転する。
+                            (ノードpは、ここではいずれかの色かもしれない)
 
                                (p)           (p)
                                / \           / \
@@ -737,8 +761,12 @@ struct rb_node
                             can be fixed by flipping p to black
                             if it was red, or by recursing at p.
                             p is red when coming from Case 1.
+                            ノードpが赤だった場合に黒へ反転するか、
+                            ノードpで再帰することで、5)の違反を修正できる。
+                            ケース1から来るときは、ノードpは赤である。
                          */
-                        local_sibling->rb_set_parent_color(local_parent, rb_node::RB_RED);
+                        local_sibling->rb_set_parent_color(
+                            local_parent, rb_node::RB_RED);
                         if (local_parent->rb_is_red())
                         {
                             local_parent->rb_set_black();
@@ -754,8 +782,10 @@ struct rb_node
                         }
                         break;
                     }
-                    /*  Case 3 - right rotate at local_sibling
+                    /*  Case 3 - right rotate at sibling
                         (p could be either color here)
+                        ケース3 - 隣接ノードを右回転する。
+                        (ノードpは、ここではいずれかの色かもしれない)
 
                           (p)           (p)
                           / \           / \
@@ -771,16 +801,21 @@ struct rb_node
                     local_parent->rb_right = local_sibling_left;
                     if (local_sibling_right != nullptr)
                     {
-                        local_sibling_right->rb_set_parent_color(local_sibling, rb_node::RB_BLACK);
+                        local_sibling_right->rb_set_parent_color(
+                            local_sibling, rb_node::RB_BLACK);
                     }
                     in_augment_rotate(local_sibling, local_sibling_left);
                     local_sibling_right = local_sibling;
                     local_sibling = local_sibling_left;
                 }
-                /*  Case 4 - left rotate at local_parent + color flips
+                /*  Case 4 - left rotate at parent + color flips
                     (p and sl could be either color here.
-                     After rotation, p becomes black, s acquires
-                     p's color, and sl keeps its color)
+                    After rotation, p becomes black, s acquires
+                    p's color, and sl keeps its color)
+                    ケース4 - 親ノードを左回転し、色を反転する。
+                    ノードpとノードslは、ここではいずれかの色かもしれない。
+                    回転した後、ノードpの色は黒となり、ノードsはpの色となる。
+                    ノードslの色は不変。
 
                          (p)             (s)
                          / \             / \
@@ -791,7 +826,8 @@ struct rb_node
                 rb_node* const local_sibling_reft(local_sibling->rb_left);
                 local_parent->rb_right = local_sibling_reft;
                 local_sibling->rb_left = local_parent;
-                local_sibling_right->rb_set_parent_color(local_sibling, rb_node::RB_BLACK);
+                local_sibling_right->rb_set_parent_color(
+                    local_sibling, rb_node::RB_BLACK);
                 if (local_sibling_reft != nullptr)
                 {
                     local_sibling_reft->rb_set_parent(local_parent);
@@ -806,24 +842,28 @@ struct rb_node
                 local_sibling = local_parent->rb_left;
                 if (local_sibling->rb_is_red())
                 {
-                    // Case 1 - right rotate at local_parent.
+                    // Case 1 - right rotate at parent.
                     rb_node* const local_sibling_right(local_sibling->rb_right);
                     local_parent->rb_left = local_sibling_right;
                     local_sibling->rb_right = local_parent;
-                    local_sibling_right->rb_set_parent_color(local_parent, rb_node::RB_BLACK);
+                    local_sibling_right->rb_set_parent_color(
+                        local_parent, rb_node::RB_BLACK);
                     rb_node::_rb_rotate_set_parents(
                         *local_parent, *local_sibling, io_root, rb_node::RB_RED);
                     in_augment_rotate(local_parent, local_sibling);
                     local_sibling = local_sibling_right;
                 }
                 rb_node* local_sibling_left(local_sibling->rb_left);
-                if (local_sibling_left == nullptr || local_sibling_left->rb_is_black())
+                if (local_sibling_left == nullptr
+                    || local_sibling_left->rb_is_black())
                 {
                     rb_node* const local_sibling_right(local_sibling->rb_right);
-                    if (local_sibling_right == nullptr || local_sibling_right->rb_is_black())
+                    if (local_sibling_right == nullptr
+                        || local_sibling_right->rb_is_black())
                     {
-                        // Case 2 - local_sibling color flip.
-                        local_sibling->rb_set_parent_color(local_parent, rb_node::RB_RED);
+                        // Case 2 - sibling color flip.
+                        local_sibling->rb_set_parent_color(
+                            local_parent, rb_node::RB_RED);
                         if (local_parent->rb_is_red())
                         {
                             local_parent->rb_set_black();
@@ -839,24 +879,26 @@ struct rb_node
                         }
                         break;
                     }
-                    // Case 3 - right rotate at local_sibling.
+                    // Case 3 - right rotate at sibling.
                     local_sibling_left = local_sibling_right->rb_left;
                     local_sibling->rb_right = local_sibling_left;
                     local_sibling_right->rb_left = local_sibling;
                     local_parent->rb_left = local_sibling_right;
                     if (local_sibling_left != nullptr)
                     {
-                        local_sibling_left->rb_set_parent_color(local_sibling, rb_node::RB_BLACK);
+                        local_sibling_left->rb_set_parent_color(
+                            local_sibling, rb_node::RB_BLACK);
                     }
                     in_augment_rotate(local_sibling, local_sibling_right);
                     local_sibling_left = local_sibling;
                     local_sibling = local_sibling_right;
                 }
-                // Case 4 - left rotate at local_parent + color flips.
+                // Case 4 - left rotate at parent + color flips.
                 rb_node* const local_sibling_right(local_sibling->rb_right);
                 local_parent->rb_left = local_sibling_right;
                 local_sibling->rb_right = local_parent;
-                local_sibling_left->rb_set_parent_color(local_sibling, rb_node::RB_BLACK);
+                local_sibling_left->rb_set_parent_color(
+                    local_sibling, rb_node::RB_BLACK);
                 if (local_sibling_right != nullptr)
                 {
                     local_sibling_right->rb_set_parent(local_parent);
@@ -879,21 +921,28 @@ struct rb_node
     {
         rb_node* const local_child(io_node.rb_right);
         rb_node* local_tmp(io_node.rb_left);
-        rb_node* local_parent;
         rb_node* local_rebalance;
 
         if (local_tmp == nullptr)
         {
-            /*  Case 1: io_node to erase has no more than 1 local_child (easy!)
+            /*  Case 1: io_node to erase has no more than 1 child (easy!)
 
-                Note that if there is one local_child it must be red due to 5)
+                Note that if there is one child it must be red due to 5)
                 and io_node must be black due to 4). We adjust colors locally
                 so as to bypass _rb_erase_color() later on.
+
+                ケース1a: io_node の下位ノードが1つ以下(簡単!)。
+
+                右側下位ノードがある場合、下位ノードは5)に起因して赤となり、
+                io_node は4)に起因して黒となる必要がある。
+                _rb_erase_color() を後ほど経由させ、色を調整すること。
              */
             unsigned long const local_parent_color(io_node._rb_parent_color);
-            local_parent = rb_node::_rb_parent(local_parent_color);
-            rb_node::_rb_change_child(&io_node, local_child, local_parent, io_root);
-            if (local_child)
+            rb_node* const local_parent(
+                rb_node::_rb_parent(local_parent_color));
+            rb_node::_rb_change_child(
+                &io_node, local_child, local_parent, io_root);
+            if (local_child != nullptr)
             {
                 local_child->_rb_parent_color = local_parent_color;
                 local_rebalance = nullptr;
@@ -907,56 +956,67 @@ struct rb_node
         }
         else if (local_child == nullptr)
         {
-            // Still case 1, but this time the local_child is io_node.rb_left.
+            // Still case 1, but this time the child is io_node.rb_left.
+            // ケース1b: io_node の左側下位ノードの1つだけ。
             unsigned long const local_parent_color(io_node._rb_parent_color);
             local_tmp->_rb_parent_color = local_parent_color;
-            local_parent = rb_node::_rb_parent(local_parent_color);
-            rb_node::_rb_change_child(&io_node, local_tmp, local_parent, io_root);
+            rb_node* const local_parent(
+                rb_node::_rb_parent(local_parent_color));
+            rb_node::_rb_change_child(
+                &io_node, local_tmp, local_parent, io_root);
             local_rebalance = nullptr;
             local_tmp = local_parent;
         }
         else
         {
             rb_node* local_successor(local_child);
-            rb_node* local_child2;
+            rb_node* local_successor_child;
+            rb_node* local_parent;
             local_tmp = local_child->rb_left;
-            if (!local_tmp) {
-                /*  Case 2: io_node's local_successor is its right local_child
+            if (local_tmp == nullptr)
+            {
+                /*  Case 2: io_node's successor is its right child.
+                    ケース2: io_node を引き継ぐのは、右側下位ノード。
 
-                       (n)          (s)
-                       / \          / \
-                     (x) (s)  ->  (x) (c)
+                       (n)           (s)
+                       / \           / \
+                     (x) (s)  -->  (x) (c)
                            \
                            (c)
                  */
                 local_parent = local_successor;
-                local_child2 = local_successor->rb_right;
+                local_successor_child = local_successor->rb_right;
                 in_augment_copy(&io_node, local_successor);
             }
             else
             {
-                /*  Case 3: io_node's local_successor is leftmost under
-                    io_node's right local_child subtree
+                /*  Case 3: io_node's successor is leftmost under
+                    io_node's right child subtree
+                    ケース3: io_node を引き継ぐのは、
+                    io_node の右側下位ツリーの最左端ノード。
 
-                       (n)          (s)
-                       / \          / \
-                     (x) (y)  ->  (x) (y)
-                         /            /
-                       (p)          (p)
-                       /            /
-                     (s)          (c)
+                       (n)           (s)
+                       / \           / \
+                     (x) (y)  -->  (x) (y)
+                         /             /
+                       (p)           (p)
+                       /             /
+                     (s)           (c)
                        \
                        (c)
                  */
-                do
+                for (;;)
                 {
                     local_parent = local_successor;
                     local_successor = local_tmp;
                     local_tmp = local_tmp->rb_left;
+                    if (local_tmp == nullptr)
+                    {
+                        break;
+                    }
                 }
-                while (local_tmp != nullptr);
-                local_child2 = local_successor->rb_right;
-                local_parent->rb_left = local_child2;
+                local_successor_child = local_successor->rb_right;
+                local_parent->rb_left = local_successor_child;
                 local_successor->rb_right = local_child;
                 local_child->rb_set_parent(local_successor);
                 in_augment_copy(&io_node, local_successor);
@@ -969,19 +1029,23 @@ struct rb_node
 
             unsigned long const local_parent_color(io_node._rb_parent_color);
             local_tmp = rb_node::_rb_parent(local_parent_color);
-            rb_node::_rb_change_child(&io_node, local_successor, local_tmp, io_root);
-            if (local_child2 != nullptr)
+            rb_node::_rb_change_child(
+                &io_node, local_successor, local_tmp, io_root);
+            if (local_successor_child != nullptr)
             {
                 local_successor->_rb_parent_color = local_parent_color;
-                local_child2->rb_set_parent_color(local_parent, rb_node::RB_BLACK);
+                local_successor_child->rb_set_parent_color(
+                    local_parent, rb_node::RB_BLACK);
                 local_rebalance = nullptr;
             }
             else
             {
-                unsigned long const local_parent_color_2(local_successor->_rb_parent_color);
+                unsigned long const local_successor_parent_color(
+                    local_successor->_rb_parent_color);
                 local_successor->_rb_parent_color = local_parent_color;
-                local_rebalance = rb_node::_rb_is_black(local_parent_color_2)?
-                    local_parent: nullptr;
+                local_rebalance =
+                    rb_node::_rb_is_black(local_successor_parent_color)?
+                        local_parent: nullptr;
             }
             local_tmp = local_successor;
         }

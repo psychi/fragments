@@ -60,25 +60,67 @@ rbstatic const struct rb_augment_callbacks rbname = { \
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-struct rb_node
+/** @brief オブジェクトにmixinして使えるRB木のノード。
+ */
+class rb_node
 {
-    public: enum
+    public: enum: unsigned
     {
         RB_RED   = 0,
         RB_BLACK = 1,
     };
 
     //-------------------------------------------------------------------------
-    public: template<typename template_value>
+    /** @brief RB木を検索する。
+        @retval !=nullptr 検索キーと合致するノード。
+        @retval ==nullptr 検索キーと合致するノードが存在しない。
+        @param[in] in_root 検索するRB木の最上位ノード。
+        @param[in] in_key  検索する値に対応するキー。
+     */
+    public: template<typename template_key>
     static rb_node const* find(
         rb_node const* const in_root,
-        template_value const& in_key)
+        template_key const& in_key)
+    {
+        return rb_node::find(
+            in_root,
+            in_key,
+            [](template_key const& in_left, rb_node const& in_right)->signed
+            {
+                return rb_node::compare_key_and_node(in_left, in_right);
+            });
+    }
+
+    /// @copydoc find(rb_node const* const, template_key const&)
+    public: template<typename template_key>
+    static rb_node* find(
+        rb_node* const in_root,
+        template_key const& in_key)
+    {
+        return const_cast<rb_node*>(
+            rb_node::find(const_cast<rb_node const*>(in_root), in_key));
+    }
+
+    /** @copydoc find(rb_node const* const, template_key const&)
+        @param[in] in_compare_node
+            ノードを比較する関数オブジェクト。
+            - 戻り値は、
+              - 「引数#0 < 引数#1」なら、負の整数値。
+              - 「引数#0 > 引数#1」なら、正の整数値。
+              - 引数#0と引数#1が等価なら、0。
+            - 引数#0は、 template_key const& 型の左辺値。
+            - 引数#1は、 rb_node const& 型の右辺値。
+     */
+    public: template<typename template_key, typename template_comparison>
+    static rb_node const* find(
+        rb_node const* const in_root,
+        template_key const& in_key,
+        template_comparison in_compare_node)
     {
         rb_node const* local_node(in_root);
         while (local_node != nullptr)
         {
-            int const local_compare(
-                template_value::compare_rb_node(in_key, *local_node));
+            auto const local_compare(in_compare_node(in_key, *local_node));
             if (local_compare < 0)
             {
                 local_node = local_node->rb_left;
@@ -95,20 +137,79 @@ struct rb_node
         return nullptr;
     }
 
+    /// @copydoc find(rb_node const* const, template_key const&, template_comparison)
+    public: template<typename template_key, typename template_comparison>
+    static rb_node* find(
+        rb_node* const in_root,
+        template_key const& in_key,
+        template_comparison in_compare_node)
+    {
+        return const_cast<rb_node*>(
+            rb_node::find(
+                const_cast<rb_node const*>(in_root),
+                in_key,
+                std::move(in_compare_node)));
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief RB木に値を挿入する。
+        @retval !=nullptr 挿入に失敗。挿入する値と衝突するノード。
+        @retval ==nullptr 挿入に成功。
+        @param[in]     in_root  値を挿入するRB木の最上位ノード。
+        @param[in,out] io_value 挿入する値。
+     */
     public: template<typename template_value>
-    static bool insert(
+    static rb_node* insert(
         rb_node*& io_root,
         template_value& io_value)
     {
+        return rb_node::insert(
+            io_root,
+            io_value,
+            [](template_value const& in_left, rb_node const& in_right)->signed
+            {
+                return rb_node::compare_key_and_node(in_left, in_right);
+            },
+            [](template_value& io_value)->rb_node&
+            {
+                return static_cast<rb_node&>(io_value);
+            });
+    }
+
+    /** @copydoc insert(rb_node*&, template_value&)
+        @param[in] in_compare_node
+            挿入する値とノードを比較する関数オブジェクト。
+            - 戻り値は、
+              - 「引数#0 < 引数#1」なら、負の整数値。
+              - 「引数#0 > 引数#1」なら、正の整数値。
+              - 引数#0と引数#1が等価なら、0。
+            - 引数#0は、 template_value const& 型の左辺値。
+            - 引数#1は、 rb_node const& 型の右辺値。
+        @param[in] in_get_node
+            挿入する値に対応するノードを取得する関数オブジェクト。
+            - 戻り値は、引数に対応する rb_node& 型。
+            - 引数は、 template_value& 型。
+     */
+    public: template<
+        typename template_value,
+        typename template_comparison,
+        typename template_getter>
+    static rb_node* insert(
+        rb_node*& io_root,
+        template_value& io_value,
+        template_comparison in_compare_node,
+        template_getter in_get_node)
+    {
         rb_node** local_node_position(&io_root);
         rb_node* local_parent(nullptr);
+        PSYQ_ASSERT(io_root == nullptr || io_root->rb_parent() == nullptr);
 
         // Figure out where to put new node.
+        // 新しいノードを挿入する位置を検索する。
         while (*local_node_position != nullptr)
         {
             local_parent = *local_node_position;
-            int const local_compare(
-                template_value::compare_rb_node(io_value, *local_parent));
+            int const local_compare(in_compare_node(io_value, *local_parent));
             if (local_compare < 0)
             {
                 local_node_position = &((**local_node_position).rb_left);
@@ -119,38 +220,102 @@ struct rb_node
             }
             else
             {
-                return false;
+                return *local_node_position;
             }
         }
 
         // Add new node and rebalance tree.
-        auto& local_node(template_value::get_rb_node(io_value));
-        local_node.rb_link_node(local_parent, *local_node_position);
-        rb_node::rb_insert_color(local_node, io_root);
-        return true;
+        // 新しいノードを挿入し、RB木のバランスを調整する。
+        auto& local_node(in_get_node(io_value));
+        *local_node_position = local_node.rb_link_node(local_parent);
+        rb_node::rb_insert_color(*local_node, io_root);
+        return nullptr;
     }
 
-    public: template<typename template_value>
+    //-------------------------------------------------------------------------
+    /** @brief RB木から値を削除する。
+        @retval !=nullptr 削除に成功。RB木から削除された値に対応するノード。
+        @retval ==nullptr 削除に失敗。削除キーに対応するノードがRB木にない。
+        @param[in] in_root 値を削除するRB木の最上位ノード。
+        @param[in] in_key  削除する値に対応するキー。
+     */
+    public: template<typename template_key>
     static rb_node* erase(
-        rb_node* const io_root,
-        template_value const& in_key)
+        rb_node*& io_root,
+        template_key const& in_key)
+    {
+        return rb_node::erase(
+            io_root,
+            in_key, 
+            [](template_key const& in_left, rb_node const& in_right)->signed
+            {
+                return rb_node::compare_key_and_node(in_left, in_right);
+            });
+    }
+
+    /** @copydoc erase(rb_node*&, template_key&)
+        @param[in] in_compare_node
+            ノードを比較する関数オブジェクト。
+            - 戻り値は、
+              - 「引数#0 < 引数#1」なら、負の整数値。
+              - 「引数#0 > 引数#1」なら、正の整数値。
+              - 引数#0と引数#1が等価なら、0。
+            - 引数#0は、 template_key const& 型の左辺値。
+            - 引数#1は、 rb_node const& 型の右辺値。
+     */
+    public: template<typename template_key, typename template_comparison>
+    static rb_node* erase(
+        rb_node*& io_root,
+        template_key const& in_key,
+        template_comparison in_compare_node)
     {
         auto const local_node(
-            const_cast<rb_node*>(rb_node::find(io_root, in_key)));
-        if (local_node == nullptr)
+            rb_node::find(io_root, in_key, std::move(in_compare_node)));
+        if (local_node != nullptr)
         {
-            return nullptr;
+            rb_node::rb_erase(*local_node, io_root);
         }
-        rb_node::rb_erase(local_node, io_root);
         return local_node;
     }
 
     //-------------------------------------------------------------------------
+    /** @brief 比較キーとノードを比較する。
+        @retval 負の整数 右辺値が大きい。
+        @retval 正の整数 左辺値が大きい。
+        @retval 0        左辺値と右辺値は等価。
+        @param[in] in_left_key   左辺値として使う比較キー。
+        @param[in] in_right_node 右辺値として使うノード。
+     */
+    private: template<typename template_key>
+    static signed compare_key_and_node(
+        template_key const& in_left_key,
+        rb_node const& in_right_node)
+    {
+        auto& local_right_key(static_cast<template_key const&>(in_right_node));
+        if (in_left_key < local_right_key)
+        {
+            return -1;
+        }
+        else if (local_right_key < in_left_key)
+        {
+            return 1;
+        }
+        return 0;
+    }
+
+    //-------------------------------------------------------------------------
     public: PSYQ_CONSTEXPR rb_node() PSYQ_NOEXCEPT: 
-        _rb_parent_color(reinterpret_cast<unsigned long>(this)),
+        _rb_parent_color(RB_BLACK),
         rb_left(nullptr),
         rb_right(nullptr)
     {}
+
+    public: ~rb_node()
+    {
+        //PSYQ_ASSERT(this->_rb_parent_color == RB_BLACK);
+        //PSYQ_ASSERT(this->rb_left == nullptr);
+        //PSYQ_ASSERT(this->rb_right == nullptr);
+    }
 
     //-------------------------------------------------------------------------
     /*  Find logical next and previous nodes in a tree
@@ -244,11 +409,11 @@ struct rb_node
     }
 
     //-------------------------------------------------------------------------
-    private: rb_node const* rb_parent() const
+    public: rb_node const* rb_parent() const
     {
         return rb_node::_rb_parent(this->_rb_parent_color);
     }
-    private: rb_node* rb_parent()
+    public: rb_node* rb_parent()
     {
         return rb_node::_rb_parent(this->_rb_parent_color);
     }
@@ -261,7 +426,7 @@ struct rb_node
         return reinterpret_cast<rb_node*>(in_parent_color & ~3);
     }
 
-    public: unsigned long rb_color() const
+    private: unsigned long rb_color() const
     {
         return rb_node::_rb_color(this->_rb_parent_color);
     }
@@ -289,56 +454,37 @@ struct rb_node
     }
 
     // 'empty' nodes are nodes that are known not to be inserted in an rbree.
-    public: bool RB_EMPTY_NODE() const
+    private: bool RB_EMPTY_NODE() const
     {
         return this->_rb_parent_color == reinterpret_cast<unsigned long>(this);
     }
-    public: unsigned long RB_CLEAR_NODE()
+    private: unsigned long RB_CLEAR_NODE()
     {
         this->_rb_parent_color = reinterpret_cast<unsigned long>(this);
         return this->_rb_parent_color;
     }
 
-    public: void rb_set_parent(rb_node* const in_parent)
+    private: void rb_set_parent(rb_node* const in_parent)
     {
         this->_rb_parent_color =
             this->rb_color() | reinterpret_cast<unsigned long>(in_parent);
     }
 
-    public: void rb_set_parent_color(rb_node* const in_parent, int const in_color)
+    private: void rb_set_parent_color(rb_node* const in_parent, int const in_color)
     {
         this->_rb_parent_color =
             reinterpret_cast<unsigned long>(in_parent) | in_color;
     }
 
-    public: void rb_link_node(rb_node* const in_parent, rb_node*& out_link)
+    private: rb_node* rb_link_node(rb_node* const in_parent)
     {
         this->_rb_parent_color = reinterpret_cast<unsigned long>(in_parent);
-        this->rb_left = this->rb_right = nullptr;
-        out_link = this;
+        this->rb_left = nullptr;
+        this->rb_right = nullptr;
+        return this;
     }
 
     //-------------------------------------------------------------------------
-    private: rb_node const* find_leftmost() const
-    {
-        auto local_node(this);
-        while (local_node->rb_left != nullptr)
-        {
-            local_node = local_node->rb_left;
-        }
-        return local_node;
-    }
-
-    private: rb_node const* find_rightmost() const
-    {
-        auto local_node(this);
-        while (local_node->rb_right != nullptr)
-        {
-            local_node = local_node->rb_right;
-        }
-        return local_node;
-    }
-
     /*  red-black trees properties:  http://en.wikipedia.org/wiki/Rbtree
 
          1) A node is either red or black
@@ -390,7 +536,7 @@ struct rb_node
         See Documentation/rbtree.txt for documentation and samples.
      */
 
-    public: struct rb_augment_callbacks
+    private: struct rb_augment_callbacks
     {
         void (*propagate)(rb_node* const node, rb_node* const stop);
         void (*copy)(rb_node* const old_node, rb_node* const new_node);
@@ -398,6 +544,26 @@ struct rb_node
     };
 
     //-------------------------------------------------------------------------
+    public: rb_node const* find_leftmost() const
+    {
+        auto local_node(this);
+        while (local_node->rb_left != nullptr)
+        {
+            local_node = local_node->rb_left;
+        }
+        return local_node;
+    }
+
+    public: rb_node const* find_rightmost() const
+    {
+        auto local_node(this);
+        while (local_node->rb_right != nullptr)
+        {
+            local_node = local_node->rb_right;
+        }
+        return local_node;
+    }
+
     public: static bool RB_EMPTY_ROOT(rb_node const* const in_root)
     {
         return in_root == nullptr;
@@ -423,7 +589,7 @@ struct rb_node
     }
 
     //-------------------------------------------------------------------------
-    public: static void rb_insert_color(rb_node& io_node, rb_node*& io_root)
+    private: static void rb_insert_color(rb_node& io_node, rb_node*& io_root)
     {
         rb_node::rb_insert_augmented(
             io_node,
@@ -431,7 +597,7 @@ struct rb_node
             [](rb_node* const old_node, rb_node* const new_node) {});
     }
 
-    public: static void rb_erase(rb_node& io_node, rb_node*& io_root)
+    private: static void rb_erase(rb_node& io_node, rb_node*& io_root)
     {
         rb_node::rb_erase_augmented(
             io_node,
@@ -442,7 +608,7 @@ struct rb_node
     }
 
     // Fast replacement of a single node without remove/rebalance/add/rebalance.
-    public: static void rb_replace_node(
+    private: static void rb_replace_node(
         rb_node& in_old_node,
         rb_node& io_new_node,
         rb_node*& io_root)
@@ -463,7 +629,7 @@ struct rb_node
         io_new_node = in_old_node;
     }
 
-    public: template<typename template_rotate>
+    private: template<typename template_rotate>
     static void rb_insert_augmented(
         rb_node& io_node,
         rb_node*& io_root,
@@ -472,7 +638,7 @@ struct rb_node
         rb_node::_rb_insert(io_node, io_root, std::move(in_augment_rotate));
     }
 
-    public: template<
+    private: template<
         typename template_propage,
         typename template_copy,
         typename template_rotate>

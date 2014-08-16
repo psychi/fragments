@@ -30,15 +30,15 @@ class psyq::memory_arena::allocator
 
     /** @brief 実際にメモリを管理するメモリアリーナ。
 
-        - std::shared_ptr 互換の、以下の型が定義されている必要がある。
+        - std::shared_ptr<template_arena> 互換の、以下の型を使える必要がある。
           @code
           template_arena::shared_ptr
           @endcode
-        - std::weak_ptr 互換の、以下の型が定義されている必要がある。
+        - std::weak_ptr<template_arena> 互換の、以下の型を使える必要がある。
           @code
           template_arena::weak_ptr
           @endcode
-        - メモリを確保するために以下のメンバ関数が実装されている必要がある。
+        - メモリを確保するため、以下に相当するメンバ関数を使える必要がある。
           @code
           // @return 確保したメモリの先頭位置。
           // @param[in] in_size      確保するメモリのバイト数。
@@ -46,7 +46,7 @@ class psyq::memory_arena::allocator
           // @param[in] in_offset    確保するメモリのオフセットバイト数。
           void* template_arena::allocate(std::size_t in_size, std::size_t in_alignment, std::size_t in_offset);
           @endcode
-        - メモリを解放するために以下のメンバ関数が実装されている必要がある。
+        - メモリを解放するため、以下に相当するメンバ関数を使える必要がある。
           @code
           // @param[in] in_memory 解放するメモリの先頭位置。
           // @param[in] in_size   解放するメモリのバイト数。
@@ -95,7 +95,7 @@ class psyq::memory_arena::allocator
     allocator(
         psyq::memory_arena::allocator<template_other, template_arena> in_source)
     PSYQ_NOEXCEPT:
-        arena_(std::move(in_source.arena_)),
+        arena_(std::move(in_source.arena_))
     {
         PSYQ_ASSERT(!this->get_arena().expired());
     }

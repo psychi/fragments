@@ -693,6 +693,7 @@ INPUT                  = \
                          ./any/message/receiver.hpp \
                          ./any/message/transmitter.hpp \
                          ./any/message/zone.hpp \
+                         ./memory_arena.hpp \
                          ./bit_algorithm.hpp \
                          ./fnv_hash.hpp \
                          ./geometric_vector.hpp \

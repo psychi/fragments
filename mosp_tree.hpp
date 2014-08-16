@@ -22,9 +22,13 @@
 #define PSYQ_MOSP_SPACE_DEFAULT psyq::mosp_space_2d<>
 #endif // !defined(PSYQ_MOSP_SPACE_DEFAULT)
 
+#ifndef PSYQ_MOSP_ALLOCATOR_DEFAULT
+#define PSYQ_MOSP_ALLOCATOR_DEFAULT psyq::mosp_pool_allocator<std::allocator<void*>>
+#endif // !defined(PSYQ_MOSP_ALLOCATOR_DEFAULT)
+
+/// @cond
 namespace psyq
 {
-    /// @cond
     template<typename, unsigned, unsigned, unsigned> class mosp_coordinates;
     template<typename> class mosp_space;
     template<typename = mosp_coordinates<PSYQ_MOSP_VECTOR_DEFAULT, 0, 2, 1>>
@@ -33,9 +37,13 @@ namespace psyq
         class mosp_space_3d;
     template<typename> class mosp_pool_allocator;
     template<typename, typename> class mosp_handle;
-    template<typename, typename = PSYQ_MOSP_SPACE_DEFAULT> class mosp_tree;
-    /// @endcond
+    template<
+        typename,
+        typename = PSYQ_MOSP_SPACE_DEFAULT,
+        typename = PSYQ_MOSP_ALLOCATOR_DEFAULT>
+            class mosp_tree;
 }
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief モートン座標の型特性。 psyq::mosp_space のtemplate引数に使う。
@@ -482,6 +490,10 @@ class psyq::mosp_handle
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief mortonハンドルに使うメモリ割当子。
+
+    このメモリ割当子は、C++のメモリ割当子の規格に適合しないことに注意。
+ */
 template<typename template_allocator>
 class psyq::mosp_pool_allocator: public template_allocator
 {
@@ -585,19 +597,26 @@ class psyq::mosp_pool_allocator: public template_allocator
 
     @tparam template_collision_object @copydoc mosp_handle::collision_object
     @tparam template_space            @copydoc mosp_tree::space
+    @tparam template_allocator        @copydoc mosp_tree::allocator_type
 
     @note
     - mosp_tree::cell_map に任意の辞書template型を指定できるようにしたい。
     - mosp_tree::cell_map のメモリ割当子に、メモリプールを使いたい。
       挿入と削除を頻繁に行うので、高速なメモリ割当子が必要。
  */
-template<typename template_collision_object, typename template_space>
+template<
+    typename template_collision_object,
+    typename template_space,
+    typename template_allocator>
 class psyq::mosp_tree
 {
     private: typedef mosp_tree this_type; ///< *thisの型。
 
     /// 使用するモートン空間。 morton_space_2d や morton_space_3d を使う。
     public: typedef template_space space;
+
+    /// 使用するメモリ割当子。
+    public: typedef template_allocator allocator_type;
 
     /// 空間分割木に取りつける mosp_handle 。
     public: typedef psyq::mosp_handle<
@@ -621,12 +640,8 @@ class psyq::mosp_tree
         typename this_type::handle*,
         typename this_type::order_hash,
         std::equal_to<typename this_type::space::order>,
-        psyq::mosp_pool_allocator<
-            std::allocator<
-                std::pair<
-                    typename this_type::space::order,
-                    typename this_type::handle*>>>>
-                        cell_map;
+        template_allocator>
+            cell_map;
 
     public: enum: unsigned
     {
@@ -637,17 +652,23 @@ class psyq::mosp_tree
 
     //-------------------------------------------------------------------------
     /** @brief 衝突判定を行う領域を設定する。
-        @param[in] in_aabb 衝突判定を行う領域の全体を包む、絶対座標系AABB。
-        @param[in] in_bucket_count 分割空間の辞書のバケット数。
-        @param[in] in_level_cap 空間分割の最深レベル。
+        @param[in] in_aabb         衝突判定を行う領域の全体を包む、絶対座標系AABB。
+        @param[in] in_bucket_count 分割空間の辞書のバケット数の初期値。
+        @param[in] in_allocator    メモリ割当子の初期値。
+        @param[in] in_level_cap    空間分割の最深レベル。
      */
     public: explicit mosp_tree(
         typename this_type::space::coordinates::aabb const& in_aabb,
         std::size_t const in_bucket_count,
+        typename this_type::allocator_type const& in_allocator,
         unsigned const in_level_cap = this_type::LEVEL_LIMIT)
     :
         space_(in_aabb, in_level_cap),
-        cell_map_(in_bucket_count),
+        cell_map_(
+            in_bucket_count,
+            typename this_type::cell_map::hasher(),
+            typename this_type::cell_map::key_equal(),
+            in_allocator),
         level_cap_(static_cast<decltype(level_cap_)>(in_level_cap)),
         detect_collision_(false)
     {
@@ -759,7 +780,7 @@ class psyq::mosp_tree
 
         end_detection() と対になるように呼び出すこと。
 
-        @retval !=nullptr 衝突判定を行うcellの辞書。 detect_cell() で使う。
+        @retval !=nullptr 衝突判定を行うcellの辞書。 detect_collision_map() で使う。
         @retval ==nullptr 失敗。すでに begin_detection() が呼び出されていた。
      */
     public: typename this_type::cell_map const* begin_detection()
@@ -843,25 +864,23 @@ class psyq::mosp_tree
             0 < local_super_order;)
         {
             // 上位の分割空間を取得する。
-            local_super_order
-                = (local_super_order - 1) >> this_type::space::DIMENSION;
+            local_super_order =
+                (local_super_order - 1) >> this_type::space::DIMENSION;
             auto const local_super_iterator(
                 in_cell_map.find(local_super_order));
-            if (local_super_iterator == local_cell_map_end)
+            if (local_super_iterator != local_cell_map_end)
             {
-                continue;
-            }
-
-            // 上位の分割空間に衝突させる。
-            auto const local_target_handle(
-                this_type::detect_collision_container(
-                    in_collide_callback,
-                    local_target_cell,
-                    local_super_iterator,
-                    local_cell_map_end));
-            if (local_target_handle == nullptr)
-            {
-                return;
+                // 上位の分割空間に衝突させる。
+                auto const local_target_handle(
+                    this_type::detect_collision_container(
+                        in_collide_callback,
+                        local_target_cell,
+                        local_super_iterator,
+                        local_cell_map_end));
+                if (local_target_handle == nullptr)
+                {
+                    return;
+                }
             }
         }
     }
@@ -892,19 +911,19 @@ class psyq::mosp_tree
             ++local_container_cell)
         {
             auto const local_container_handle(local_container_cell->second);
-            if (local_container_handle == nullptr)
+            if (local_container_handle != nullptr)
             {
-                continue;
-            }
-            auto const local_target_handle(in_target_cell.second);
-            if (local_target_handle == nullptr)
-            {
-                return nullptr;
-            }
+                auto const local_target_handle(in_target_cell.second);
+                if (local_target_handle == nullptr)
+                {
+                    return nullptr;
+                }
 
-            // 衝突コールバック関数を呼び出す。
-            in_collide_callback(
-                local_target_handle->object_, local_container_handle->object_);
+                // 衝突コールバック関数を呼び出す。
+                in_collide_callback(
+                    local_target_handle->object_,
+                    local_container_handle->object_);
+            }
         }
         return in_target_cell.second;
     }
@@ -974,9 +993,16 @@ class psyq::mosp_tree
         auto const local_cell_count(
             psyq::bitwise_shift_left_fast<unsigned>(
                 1, (in_level_cap - local_level) * this_type::space::DIMENSION));
-        return (local_cell_count - 1) / ((1 << this_type::space::DIMENSION) - 1)
-            + psyq::bitwise_shift_right_fast(
-                local_max_morton, local_level * this_type::space::DIMENSION);
+        auto const local_order(
+            (local_cell_count - 1) / ((1 << this_type::space::DIMENSION) - 1));
+        return local_order + psyq::bitwise_shift_right_fast(
+            local_max_morton, local_level * this_type::space::DIMENSION);
+    }
+
+    public: typename this_type::allocator_type get_allocator()
+    const PSYQ_NOEXCEPT
+    {
+        return this->cell_map_.get_allocator();
     }
 
     //-------------------------------------------------------------------------

@@ -1,6 +1,8 @@
 ﻿#ifndef PSYQ_MEMORY_ARENA_HPP_
 #define PSYQ_MEMORY_ARENA_HPP_
 
+#include <array>
+
 namespace psyq
 {
     namespace memory_arena
@@ -8,12 +10,16 @@ namespace psyq
         /// @cond
         template<typename, typename> class allocator;
         template<typename> class fixed_pool;
+        template<std::size_t, typename> class pool_table;
         /// @endcond
     }
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief メモリアリーナでメモリを管理するメモリ割当子。
+/** @brief メモリ管理をメモリアリーナ経由で行うメモリ割当子。
+
+    std::allocator_traits 経由で使うことを想定している。
+
     @tparam template_value @copydoc this_type::value_type
     @tparam template_arena @copydoc this_type::arena
  */
@@ -30,6 +36,10 @@ class psyq::memory_arena::allocator
 
     /** @brief 実際にメモリを管理するメモリアリーナ。
 
+        - 確保するメモリの境界バイト数を定義した以下の定数を使える必要がある。
+          @code
+          template_arena::ALIGNMENT
+          @endcode
         - std::shared_ptr<template_arena> 互換の、以下の型を使える必要がある。
           @code
           template_arena::shared_ptr
@@ -41,10 +51,8 @@ class psyq::memory_arena::allocator
         - メモリを確保するため、以下に相当するメンバ関数を使える必要がある。
           @code
           // @return 確保したメモリの先頭位置。
-          // @param[in] in_size      確保するメモリのバイト数。
-          // @param[in] in_alignment 確保するメモリの境界バイト数。
-          // @param[in] in_offset    確保するメモリのオフセットバイト数。
-          void* template_arena::allocate(std::size_t in_size, std::size_t in_alignment, std::size_t in_offset);
+          // @param[in] in_size 確保するメモリのバイト数。
+          void* template_arena::allocate(std::size_t in_size);
           @endcode
         - メモリを解放するため、以下に相当するメンバ関数を使える必要がある。
           @code
@@ -54,6 +62,10 @@ class psyq::memory_arena::allocator
           @endcode
      */
     public: typedef template_arena arena;
+    static_assert(
+        this_type::arena::ALIGNMENT %
+            std::alignment_of<typename this_type::value_type>::value == 0,
+        "");
 
     //-------------------------------------------------------------------------
     /// @name メモリ割当子の構築
@@ -132,11 +144,11 @@ class psyq::memory_arena::allocator
     /** @brief メモリを確保する。
         @retval !=nullptr 確保したメモリの先頭位置。
         @retval ==nullptr メモリの確保に失敗した。
-        @param[in] in_size 確保する値の数。
-        @param[in] in_hint メモリ確保のヒント。
+        @param[in] in_count 構築するインスタンスの数。
+        @param[in] in_hint  メモリ確保のヒント。
      */
     public: typename this_type::value_type* allocate(
-        std::size_t const in_size,
+        std::size_t const in_count,
         std::allocator<void>::const_pointer const in_hint = 0)
     {
         auto const local_arena_holder(this->arena_.lock());
@@ -148,22 +160,20 @@ class psyq::memory_arena::allocator
         }
         return static_cast<typename this_type::value_type*>(
             local_arena->allocate(
-                in_size * sizeof(typename this_type::value_type),
-                std::alignment_of<typename this_type::value_type>::value,
-                0));
+                in_count * sizeof(typename this_type::value_type)));
     }
 
     /** @brief メモリを解放する。
-        @param[in] in_pointer 解放する値の先頭位置。
-        @param[in] in_size    解放する値の数。
+        @param[in] in_pointer 解放するメモリの先頭位置。
+        @param[in] in_count   解体したインスタンスの数。
      */
     public: void deallocate(
         typename this_type::value_type* const in_pointer,
-        std::size_t const in_size)
+        std::size_t const in_count)
     {
         if (in_pointer == nullptr)
         {
-            PSYQ_ASSERT(in_size <= 0);
+            PSYQ_ASSERT(in_count <= 0);
             return;
         }
         auto const local_arena_holder(this->arena_.lock());
@@ -174,7 +184,7 @@ class psyq::memory_arena::allocator
             return;
         }
         local_arena->deallocate(
-            in_pointer, in_size * sizeof(typename this_type::value_type));
+            in_pointer, in_count * sizeof(typename this_type::value_type));
     }
     //@}
     //-------------------------------------------------------------------------
@@ -189,9 +199,9 @@ class psyq::memory_arena::allocator
         @param[in] in_right 比較するメモリ割当子。
      */
     public: template<typename template_other>
-    this_type& operator==(
+    bool operator==(
         psyq::memory_arena::allocator<template_other, template_arena> const& in_right)
-    const
+    const PSYQ_NOEXCEPT
     {
         auto const local_left_holder(this->get_arena().lock());
         auto const local_left_arena(local_left_holder.get());
@@ -218,9 +228,9 @@ class psyq::memory_arena::allocator
         @param[in] in_right 比較するメモリ割当子。
      */
     public: template<typename template_other>
-    this_type& operator!=(
+    bool operator!=(
         psyq::memory_arena::allocator<template_other, template_arena> const& in_right)
-    const
+    const PSYQ_NOEXCEPT
     {
         return !this->operator==(in_right);
     }
@@ -239,9 +249,19 @@ class psyq::memory_arena::allocator
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 固定長のメモリブロックを貯めこむメモリアリーナ。
+/** @brief 固定長のメモリをプールして再利用する、高速なメモリアリーナ。
 
-    psyq::memory_arena::allocator に使う。
+    - psyq::memory_arena::allocator を経由させることで、
+      以下のSTLコンテナで使うことを想定している。
+      - std::list
+      - std::map
+      - std::multimap
+      - std::set
+      - std::multiset
+      - std::unordered_map
+      - std::unordered_multimap
+      - std::unordered_set
+      - std::unordered_multiset
 
     @tparam template_allocator this_type::allocator_type
  */
@@ -264,15 +284,16 @@ class psyq::memory_arena::fixed_pool
     static_assert(
         this_type::ALIGNMENT % std::alignment_of<void*>::value == 0, "");
     /// メモリ確保する単位のバイト数。
-    private: static std::size_t const UNIT_SIZE =
+    public: static std::size_t const UNIT_SIZE =
         sizeof(typename this_type::allocator_type::value_type);
+    static_assert(sizeof(void*) <= this_type::UNIT_SIZE, "");
 
     //-------------------------------------------------------------------------
     /// @name メモリアリーナの構築と解体
     //@{
     /** @brief メモリアリーナを構築する。
 
-        確保するメモリブロックのバイト数は、
+        プールするメモリブロックのバイト数は、
         this_type::allocator_type::value_type と同じになる。
 
         @param[in] in_allocator 使用するメモリ割当子の初期値。
@@ -281,13 +302,12 @@ class psyq::memory_arena::fixed_pool
         typename this_type::allocator_type in_allocator = template_allocator())
     PSYQ_NOEXCEPT:
         idle_block_(nullptr),
-        idle_count_(0),
         block_size_(sizeof(typename this_type::allocator_type::value_type)),
         allocator_(std::move(in_allocator))
     {}
 
     /** @brief メモリアリーナを構築する。
-        @param[in] in_block_size 確保するメモリブロックのバイト数。
+        @param[in] in_block_size プールするメモリブロックのバイト数。
         @param[in] in_allocator  使用するメモリ割当子の初期値。
      */
     public: explicit fixed_pool(
@@ -295,7 +315,6 @@ class psyq::memory_arena::fixed_pool
         typename this_type::allocator_type in_allocator = template_allocator())
     PSYQ_NOEXCEPT:
         idle_block_(nullptr),
-        idle_count_(0),
         block_size_(
             (PSYQ_ASSERT(sizeof(void*) <= in_block_size), in_block_size)),
         allocator_(std::move(in_allocator))
@@ -306,7 +325,6 @@ class psyq::memory_arena::fixed_pool
      */
     public: fixed_pool(this_type const& in_source) PSYQ_NOEXCEPT:
         idle_block_(nullptr),
-        idle_count_(0),
         block_size_(in_source.get_block_size()),
         allocator_(in_source.get_allocator())
     {}
@@ -316,18 +334,16 @@ class psyq::memory_arena::fixed_pool
      */
     public: fixed_pool(this_type&& io_source) PSYQ_NOEXCEPT:
         idle_block_(io_source.idle_block_),
-        idle_count_(io_source.get_idle_count()),
         block_size_(io_source.get_block_size()),
         allocator_(std::move(io_source.allocator_))
     {
         io_source.idle_block_ = nullptr;
-        io_source.idle_count_ = 0;
     }
 
     /// メモリアリーナが管理するメモリをすべて解放する。
     public: ~fixed_pool()
     {
-        this->release_idle_block(0);
+        this->release_idle_block();
     }
     //@}
     private: this_type& operator=(this_type const& in_source);
@@ -336,43 +352,248 @@ class psyq::memory_arena::fixed_pool
     /// @name メモリの確保と解放
     //@{
     /** @brief メモリを確保する。
+
+        - 固定長メモリブロックと同じ大きさのメモリを確保する場合は、
+          空メモリブロックを再利用する。
+          - sizeof(this_type::allocator_type::value_type) が、
+            固定長メモリブロックの大きさとなる。
+        - 空メモリブロックが存在しないか、
+          固定長メモリブロックと異なる大きさのメモリを確保する場合は、
+          this_type::allocator_type::allocate() を呼び出す。
+
         @retval !=nullptr 確保したメモリの先頭位置。
         @retval ==nullptr メモリの確保に失敗した。
-        @param[in] in_size      確保するメモリのバイト数。
-        @param[in] in_alignment 確保するメモリの境界バイト数。
-        @param[in] in_offset    確保するメモリのオフセットバイト数。
+        @param[in] in_size 確保するメモリのバイト数。
      */
-    public: void* allocate(
-        std::size_t const in_size,
-        std::size_t const in_alignment = this_type::ALIGNMENT,
-        std::size_t const in_offset = 0)
+    public: void* allocate(std::size_t const in_size)
     {
-        if (in_offset != 0)
+        if (this->get_block_size() != in_size)
         {
-            PSYQ_ASSERT(false);
-            return nullptr;
+            // ブロックサイズと異なるサイズは、メモリ割当子に任せる。
+            return 0 < in_size? this->allocator_.allocate(in_size): nullptr;
         }
-        if (this_type::ALIGNMENT % in_alignment != 0)
+
+        auto const local_block(this->idle_block_);
+        if (local_block != nullptr)
         {
-            PSYQ_ASSERT(false);
-            return nullptr;
-        }
-        if (in_size <= 0)
-        {
-            return nullptr;
-        }
-        if (this->get_block_size() < in_size)
-        {
-            return this->allocator_.allocate(in_size);
-        }
-        if (this->idle_block_ != nullptr)
-        {
-            auto const local_block(this->idle_block_);
-            this->idle_block_ = *static_cast<void**>(this->idle_block_);
+            // プールしている空メモリブロックを再利用する。
+            this->idle_block_ = *static_cast<void**>(local_block);
             return local_block;
         }
-        return this->allocator_.allocate(
+        else
+        {
+            // 空メモリブロックがないのでメモリ確保する。
+            return this->allocator_.allocate(
+                this_type::calc_unit_size(this->get_block_size()));
+        }
+    }
+
+    /** @brief メモリを解放する。
+
+        - 固定長メモリブロックと同じ大きさのメモリを解放する場合は、
+          空メモリブロックとしてプールする。
+        - 固定長メモリブロックと異なる大きさのメモリを解放する場合は、
+          this_type::allocator_type::deallocate() を呼び出す。
+
+        @param[in] in_block 解放するメモリの先頭位置。
+        @param[in] in_size  解放するメモリのバイト数。
+     */
+    void deallocate(
+        void* const in_block,
+        std::size_t const in_size)
+    {
+        if (this->get_block_size() != in_size)
+        {
+            // ブロックサイズと異なるサイズは、プールせずすぐに解放する。
+            this->allocator_.deallocate(
+                static_cast<typename this_type::allocator_type::value_type*>(in_block),
+                in_size);
+        }
+        else if (in_block != nullptr && 0 < in_size)
+        {
+            // 空メモリブロックのリストに追加する。
+            *static_cast<void**>(in_block) = this->idle_block_;
+            this->idle_block_ = in_block;
+        }
+    }
+
+    /** @brief 空メモリブロックを実際に解放する。
+     */
+    public: void release_idle_block()
+    {
+        auto local_idle_block(this->idle_block_);
+        auto const local_deallocate_size(
             this_type::calc_unit_size(this->get_block_size()));
+        while (local_idle_block != nullptr)
+        {
+            auto const local_deallocate_block(
+                static_cast<typename this_type::allocator_type::value_type*>(
+                    local_idle_block));
+            local_idle_block = *static_cast<void**>(local_idle_block);
+            this->allocator_.deallocate(
+                local_deallocate_block, local_deallocate_size);
+        }
+        this->idle_block_ = local_idle_block;
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name メモリアリーナのプロパティ
+    //@{
+    /** @brief 等価なメモリアリーナか判定する
+
+        メモリアリーナが等価なら、互いに確保したメモリが、互いに解放できる。
+
+        @retval true  等価である。
+        @retval false 不等価である。
+        @param[in] in_right 比較するメモリアリーナ。
+     */
+    public: bool operator==(this_type const& in_right) const PSYQ_NOEXCEPT
+    {
+        return this == &in_right
+            || this->get_allocator() == in_right.get_allocator();
+    }
+
+    /** @brief 不等価なメモリアリーナか判定する
+
+        メモリアリーナが等価なら、互いに確保したメモリが、互いに解放できる。
+
+        @retval true  不等価である。
+        @retval false 等価である。
+        @param[in] in_right 比較するメモリアリーナ。
+     */
+    public: bool operator!=(this_type const& in_right) const PSYQ_NOEXCEPT
+    {
+        return !this->operator==(in_right);
+    }
+
+    /** @brief メモリ管理に使用しているメモリ割当子を取得する。
+        @return メモリ管理に使用しているメモリ割当子。
+     */
+    public: typename this_type::allocator_type const& get_allocator()
+    const PSYQ_NOEXCEPT
+    {
+        return this->allocator_;
+    }
+
+    /** @brief プールするメモリブロックのバイト数を取得する。
+        @return プールするメモリブロックのバイト数。
+     */
+    public: std::size_t get_block_size() const PSYQ_NOEXCEPT
+    {
+        return this->block_size_;
+    }
+    //@}
+    private: static std::size_t calc_unit_size(std::size_t const in_byte_size)
+    {
+        return
+            (in_byte_size + this_type::UNIT_SIZE - 1) / this_type::UNIT_SIZE;
+    }
+
+    //-------------------------------------------------------------------------
+    /// 空メモリブロックのリスト。
+    private: void* idle_block_;
+    /// プールするメモリブロックのバイトサイズ。
+    private: std::size_t block_size_;
+    /// 使用しているメモリ割当子。
+    private: typename this_type::allocator_type allocator_;
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template<std::size_t template_size, typename template_allocator>
+class psyq::memory_arena::pool_table
+{
+    /// thisが指す値の型。
+    private: typedef pool_table this_type;
+
+    //-------------------------------------------------------------------------
+    /// this_type の保持子。
+    public: typedef std::shared_ptr<this_type> shared_ptr;
+    /// this_type の監視子。
+    public: typedef std::weak_ptr<this_type> weak_ptr;
+
+    /// 実際にメモリ管理をする固定長メモリアリーナ。
+    public: typedef psyq::memory_arena::fixed_pool<template_allocator> arena;
+
+    /// @copydoc arena::ALIGNMENT
+    public: static std::size_t const ALIGNMENT = this_type::arena::ALIGNMENT;
+
+    /// 保持している固定長メモリアリーナの数。
+    public: static std::size_t const ARENA_COUNT =
+        (template_size + this_type::arena::UNIT_SIZE - 1) /
+            this_type::arena::UNIT_SIZE;
+    static_assert(0 < template_size, "");
+
+    /// 固定長メモリアリーナで再利用するメモリブロックの最大バイト数。
+    public: static std::size_t const POOL_LIMIT_SIZE =
+        this_type::ARENA_COUNT * this_type::arena::UNIT_SIZE;
+
+    /// 固定長メモリアリーナの配列。
+    private: typedef std::array<
+        typename this_type::arena, this_type::ARENA_COUNT>
+            arena_array;
+
+    //-------------------------------------------------------------------------
+    /// @name メモリアリーナの構築
+    //@{
+    /** @brief メモリアリーナを構築する。
+        @param[in] in_allocator 使用するメモリ割当子の初期値。
+     */
+    public: explicit pool_table(
+        typename this_type::arena::allocator_type const& in_allocator =
+            template_allocator())
+    {
+        for (std::size_t i(0); i < this_type::ARENA_COUNT; ++i)
+        {
+            auto& local_arena(this->arenas_.at(i));
+            local_arena.~arena();
+            new(&local_arena) typename this_type::arena(
+                (i + 1) * this_type::arena::UNIT_SIZE, in_allocator);
+        }
+    }
+
+    /** @brief コピー構築子。
+        @param[in] in_source コピー元インスタンス。
+     */
+    public: pool_table(this_type const& in_source) PSYQ_NOEXCEPT
+    {
+        for (std::size_t i(0); i < this_type::ARENA_COUNT; ++i)
+        {
+            auto& local_arena(this->arenas_.at(i));
+            local_arena.~arena();
+            new(&local_arena) typename this_type::arena(in_source.arenas_.at(i));
+        }
+    }
+
+    /** @brief ムーブ構築子。
+        @param[in,out] io_source ムーブ元インスタンス。
+     */
+    public: pool_table(this_type&& io_source) PSYQ_NOEXCEPT
+    {
+        for (std::size_t i(0); i < this_type::ARENA_COUNT; ++i)
+        {
+            auto& local_arena(this->arenas_.at(i));
+            local_arena.~arena();
+            new(&local_arena) typename this_type::arena(
+                std::move(io_source.arenas_.at(i)));
+        }
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name メモリの確保と解放
+    //@{
+    /** @brief メモリを確保する。
+        @retval !=nullptr 確保したメモリの先頭位置。
+        @retval ==nullptr メモリの確保に失敗した。
+        @param[in] in_size 確保するメモリのバイト数。
+     */
+    public: void* allocate(std::size_t const in_size)
+    {
+        auto local_arena(this->find_arena(in_size));
+        if (local_arena == nullptr)
+        {
+            local_arena = &this->arenas_.at(0);
+        }
+        return local_arena->allocate(in_size);
     }
 
     /** @brief メモリを解放する。
@@ -383,17 +604,21 @@ class psyq::memory_arena::fixed_pool
         void* const in_block,
         std::size_t const in_size)
     {
-        if (this->get_block_size() < in_size)
+        auto local_arena(this->find_arena(in_size));
+        if (local_arena == nullptr)
         {
-            this->allocator_.deallocate(
-                static_cast<typename this_type::allocator_type::value_type*>(in_block),
-                in_size);
+            local_arena = &this->arenas_.at(0);
         }
-        else if (in_block != nullptr && 0 < in_size)
+        local_arena->deallocate(in_block, in_size);
+    }
+
+    /** @brief 空メモリブロックを実際に解放する。
+     */
+    public: void release_idle_block()
+    {
+        for (auto& local_arena: this->arenas_)
         {
-            *static_cast<void**>(in_block) = this->idle_block_;
-            this->idle_block_ = in_block;
-            ++this->idle_count_;
+            local_arena.release_idle_block();
         }
     }
     //@}
@@ -408,10 +633,9 @@ class psyq::memory_arena::fixed_pool
         @retval false 不等価である。
         @param[in] in_right 比較するメモリアリーナ。
      */
-    public: bool operator==(this_type const& in_right) const
+    public: bool operator==(this_type const& in_right) const PSYQ_NOEXCEPT
     {
-        return this == &in_right
-            || this->get_allocator() == in_right.get_allocator();
+        return this == &in_right || this->arenas_.at(0) == in_right.arenas_.at(0);
     }
 
     /** @brief 不等価なメモリアリーナか判定する
@@ -422,70 +646,44 @@ class psyq::memory_arena::fixed_pool
         @retval false 等価である。
         @param[in] in_right 比較するメモリアリーナ。
      */
-    public: bool operator!=(this_type const& in_right) const
+    public: bool operator!=(this_type const& in_right) const PSYQ_NOEXCEPT
     {
         return !this->operator==(in_right);
     }
 
-    /** @brief メモリ管理に使用しているメモリ割当子を取得する。
-        @return メモリ管理に使用しているメモリ割当子。
-     */
-    public: typename this_type::allocator_type const& get_allocator()
+    public: typename this_type::arena* get_arena(std::size_t const in_index)
+    PSYQ_NOEXCEPT
+    {
+        return const_cast<typename this_type::arena*>(
+            const_cast<this_type const*>(this)->get_arena(in_index));
+    }
+
+    public: typename this_type::arena const* get_arena(std::size_t const in_index)
     const PSYQ_NOEXCEPT
     {
-        return this->allocator_;
+        return in_index < this_type::ARENA_COUNT?
+            &(this->arenas_.at(in_index)): nullptr;
     }
 
-    /** @brief 空メモリブロックの数を取得する。
-        @return 空メモリブロックの数。
-     */
-    public: std::size_t get_idle_count() const PSYQ_NOEXCEPT
+    public: typename this_type::arena* find_arena(std::size_t const in_size)
+    PSYQ_NOEXCEPT
     {
-        return this->idle_count_;
+        return const_cast<typename this_type::arena*>(
+            const_cast<this_type const*>(this)->find_arena(in_size));
     }
 
-    /** @brief メモリブロックのバイト数を取得する。
-        @return メモリブロックのバイト数。
-     */
-    public: std::size_t get_block_size() const PSYQ_NOEXCEPT
+    public: typename this_type::arena const* find_arena(std::size_t const in_size)
+    const PSYQ_NOEXCEPT
     {
-        return this->block_size_;
-    }
-
-    /** @brief 空メモリブロックを実際に解放する。
-        @param[in] in_keep_count 残しておく空メモリブロックの数。
-     */
-    public: void release_idle_block(std::size_t const in_keep_count = 0)
-    {
-        auto local_idle_block(this->idle_block_);
-        auto local_idle_count(this->get_idle_count());
-        auto const local_deallocate_size(
-            this_type::calc_unit_size(this->get_block_size()));
-        while (local_idle_block != nullptr && in_keep_count < local_idle_count)
-        {
-            auto const local_deallocate_block(
-                static_cast<typename this_type::allocator_type::value_type*>(
-                    local_idle_block));
-            local_idle_block = *static_cast<void**>(local_idle_block);
-            this->allocator_.deallocate(
-                local_deallocate_block, local_deallocate_size);
-            --local_idle_count;
-        }
-        this->idle_block_ = local_idle_block;
-        this->idle_count_ = local_idle_count;
+        return this_type::POOL_LIMIT_SIZE < in_size?
+            nullptr:
+            &this->arenas_.at(
+                this_type::arena::UNIT_SIZE < in_size?
+                    (in_size - 1) / this_type::arena::UNIT_SIZE: 0);
     }
     //@}
-    private: static std::size_t calc_unit_size(std::size_t const in_byte_size)
-    {
-        return
-            (in_byte_size + this_type::UNIT_SIZE - 1) / this_type::UNIT_SIZE;
-    }
-
     //-------------------------------------------------------------------------
-    private: void* idle_block_;
-    private: std::size_t idle_count_;
-    private: std::size_t block_size_;
-    private: typename this_type::allocator_type allocator_;
+    private: typename this_type::arena_array arenas_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -495,20 +693,35 @@ namespace psyq
     {
         inline void memory_arena_fixed_pool()
         {
-            typedef psyq::memory_arena::fixed_pool<std::allocator<double>>
-                fixed_pool_arena;
-            typedef psyq::memory_arena::allocator<int, fixed_pool_arena>
-                fixed_pool_allocator;
-            typedef std::list<int, fixed_pool_allocator> fixed_pool_list;
-            fixed_pool_arena::shared_ptr local_fixed_arena(
-                new fixed_pool_arena(64));
-            fixed_pool_allocator local_fixed_pool_allocator(local_fixed_arena);
-            std::allocator_traits<fixed_pool_allocator>::allocate(
-                local_fixed_pool_allocator, 0);
-            std::allocator_traits<fixed_pool_allocator>::deallocate(
-                local_fixed_pool_allocator, nullptr, 0);
-            fixed_pool_list local_list(local_fixed_pool_allocator);
+            typedef psyq::memory_arena::pool_table<32, std::allocator<void*>>
+                pool_table_arena;
+            pool_table_arena::shared_ptr local_table_arena_arena(new pool_table_arena);
+
+            typedef psyq::memory_arena::allocator<int, pool_table_arena>
+                pool_table_allocator;
+            pool_table_allocator local_pool_table_allocator(local_table_arena_arena);
+
+            typedef std::list<int, pool_table_allocator> list;
+            list local_list(local_pool_table_allocator);
+            local_list.push_back(1);
             local_list.push_back(10);
+            local_list.erase(local_list.begin());
+/*
+            typedef psyq::memory_arena::fixed_arena<std::allocator<void*>>
+                fixed_arena_arena;
+            typedef psyq::memory_arena::allocator<int, fixed_arena_arena>
+                fixed_arena_allocator;
+            typedef std::list<int, fixed_arena_allocator> fixed_arena_list;
+            fixed_arena_arena::shared_ptr local_fixed_arena(
+                new fixed_arena_arena(64));
+            fixed_arena_allocator local_fixed_arena_allocator(local_fixed_arena);
+            std::allocator_traits<fixed_arena_allocator>::allocate(
+                local_fixed_arena_allocator, 0);
+            std::allocator_traits<fixed_arena_allocator>::deallocate(
+                local_fixed_arena_allocator, nullptr, 0);
+            fixed_arena_list local_list(local_fixed_arena_allocator);
+            local_list.push_back(10);
+ */
         }
     }
 }

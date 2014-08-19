@@ -999,10 +999,10 @@ class psyq::mosp_tree
             local_max_morton, local_level * this_type::space::DIMENSION);
     }
 
-    public: typename this_type::allocator_type get_allocator()
+    public: typename this_type::cell_map const& get_cell_map()
     const PSYQ_NOEXCEPT
     {
-        return this->cell_map_.get_allocator();
+        return this->cell_map_;
     }
 
     //-------------------------------------------------------------------------

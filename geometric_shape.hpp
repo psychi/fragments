@@ -190,7 +190,7 @@ class psyq::geometric_ray: public psyq::geometric_segment<template_vector>
     /// thisが指す値の型。
     private: typedef geometric_ray this_type;
     /// this_type の基底型。
-    public: typedef psyq::geometric_segment<template_vector> super;
+    public: typedef psyq::geometric_segment<template_vector> base_type;
 
     /// @copydoc psyq::geometric_vector::type
     public: typedef template_vector vector;
@@ -200,21 +200,23 @@ class psyq::geometric_ray: public psyq::geometric_segment<template_vector>
     /// @endcond
 
     /** @brief 半線分を構築する。
-        @param[in] in_origin    半線分の始点位置。
-        @param[in] in_direction 半線分の方向のベクトル。
+        @param[in] in_origin     半線分の始点位置。
+        @param[in] in_direction  半線分の方向ベクトル。
+        @param[in] in_normalized in_direction が正規化されているか。
      */
     public: geometric_ray(
         template_vector const& in_origin,
         template_vector const& in_direction,
-        bool const in_normalize = true)
+        bool const in_normalized = false)
     PSYQ_NOEXCEPT:
-        super(
+        base_type(
             in_origin,
-            in_normalize?
-                this_type::make_direction(in_direction): (
+            in_normalized?
+                (
                     PSYQ_ASSERT(
                         psyq::geometric_vector_is_normalized(in_direction)),
-                    in_direction))
+                    in_direction):
+                this_type::make_direction(in_direction))
     {}
 
     /** @brief 半線分の方向ベクトルを設定する。

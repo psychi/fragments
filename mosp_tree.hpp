@@ -1,7 +1,7 @@
 ﻿/** @file
     @brief モートン順序を用いた空間分割木による衝突判定。
 
-    使い方は、 psyq::mosp_handle と psyq::mosp_tree
+    使い方は、 psyq::mosp_cell と psyq::mosp_tree
     の詳細説明を参照すること。
 
     以下のweb-pageを参考にして実装した。
@@ -38,7 +38,7 @@ namespace psyq
         class mosp_space_2d;
     template<typename = mosp_coordinates<PSYQ_MOSP_VECTOR_DEFAULT, 0, 1, 2>>
         class mosp_space_3d;
-    template<typename, typename> class mosp_handle;
+    template<typename, typename> class mosp_cell;
     template<typename = PSYQ_MOSP_SPACE_DEFAULT> class mosp_node;
     template<
         typename = mosp_node<PSYQ_MOSP_SPACE_DEFAULT>*,
@@ -353,21 +353,21 @@ class psyq::mosp_space_3d: public psyq::mosp_space<template_coordinates>
 /** @brief モートン順序による空間分割木を用いた衝突判定ハンドル。
 
     使い方の概要。
-    -# 衝突判定オブジェクトの識別子を、 mosp_handle::object_ に代入する。
-    -# mosp_handle::attach_tree() を呼び出し、
-       mosp_handle を mosp_tree 空間分割木に取りつける。
+    -# 衝突判定オブジェクトの識別子を、 mosp_cell::object_ に代入する。
+    -# mosp_cell::attach_tree() を呼び出し、
+       mosp_cell を mosp_tree 空間分割木に取りつける。
     -# mosp_tree::detect_collision() を呼び出し、衝突判定を行う。
       衝突した2つの衝突判定オブジェクトの識別子を引数に、
       衝突コールバック関数が呼び出される。
 
-    @tparam template_collision_object @copydoc mosp_handle::collision_object
-    @tparam template_morton_order     @copydoc mosp_handle::order
+    @tparam template_collision_object @copydoc mosp_cell::collision_object
+    @tparam template_morton_order     @copydoc mosp_cell::order
  */
 template<typename template_collision_object, typename template_morton_order>
-class psyq::mosp_handle
+class psyq::mosp_cell
 {
     /// thisが指す値の型。
-    private: typedef mosp_handle this_type;
+    private: typedef mosp_cell this_type;
 
     /// 衝突判定オブジェクトの識別子。
     public: typedef template_collision_object collision_object;
@@ -378,30 +378,30 @@ class psyq::mosp_handle
     /** @brief 衝突判定ハンドルを構築する。
         @param[in] in_object *thisに対応する、衝突判定オブジェクトの識別子。
      */
-    public: explicit mosp_handle(template_collision_object in_object):
-        link_(nullptr),
+    public: explicit mosp_cell(template_collision_object in_object):
+        map_link_(nullptr),
         object_(std::move(in_object))
     {}
 
     /// copy-constructorは使用禁止。
-    private: mosp_handle(this_type const&);
+    private: mosp_cell(this_type const&);
 
     /** @brief move-constructor。
         @param[in,out] io_source 移動元となるinstance。
      */
-    public: mosp_handle(this_type&& io_source):
-        link_(io_source.link_),
+    public: mosp_cell(this_type&& io_source):
+        map_link_(io_source.map_link_),
         object_(std::move(io_source.object_))
     {
-        if (io_source.link_ != nullptr)
+        if (io_source.map_link_ != nullptr)
         {
-            io_source.link_ = nullptr;
-            this->link_->second = this;
+            io_source.map_link_ = nullptr;
+            this->map_link_->second = this;
         }
     }
 
     /// @brief *thisを mosp_tree 空間分割木から取り外す。
-    public: ~mosp_handle()
+    public: ~mosp_cell()
     {
         this->detach_tree();
     }
@@ -438,19 +438,19 @@ class psyq::mosp_handle
         typename template_mosp_tree::space::coordinates::aabb const& in_aabb)
     {
         // 新たな分割空間を用意する。
-        auto const local_link(io_tree.make_link(in_aabb, this));
+        auto const local_link(io_tree.make_cell(in_aabb, this));
         if (local_link == nullptr)
         {
             return false;
         }
 
         // 古い分割空間から新たな分割空間へ切り替える。
-        if (this->link_ != nullptr)
+        if (this->map_link_ != nullptr)
         {
-            PSYQ_ASSERT(this == this->link_->second);
-            this->link_->second = nullptr;
+            PSYQ_ASSERT(this == this->map_link_->second);
+            this->map_link_->second = nullptr;
         }
-        this->link_ = local_link;
+        this->map_link_ = local_link;
         return true;
     }
 
@@ -462,11 +462,11 @@ class psyq::mosp_handle
      */
     public: void detach_tree()
     {
-        if (this->link_ != nullptr)
+        if (this->map_link_ != nullptr)
         {
-            PSYQ_ASSERT(this == this->link_->second);
-            this->link_->second = nullptr;
-            this->link_ = nullptr;
+            PSYQ_ASSERT(this == this->map_link_->second);
+            this->map_link_->second = nullptr;
+            this->map_link_ = nullptr;
         }
     }
 
@@ -477,12 +477,12 @@ class psyq::mosp_handle
      */
     public: bool is_attached() const
     {
-        return this->link_ != nullptr;
+        return this->map_link_ != nullptr;
     }
 
     //-------------------------------------------------------------------------
-    /// *thisに対応する分割空間。
-    private: std::pair<template_morton_order const, this_type*>* link_;
+    /// *thisに対応する分割空間の辞書へのリンク。
+    private: std::pair<template_morton_order const, this_type*>* map_link_;
 
     /** @brief *thisに対応する、衝突判定オブジェクトの識別子。
 
@@ -498,17 +498,17 @@ class psyq::mosp_handle
     使い方の概要は、以下の通り。
     -# mosp_tree::mosp_tree() を呼び出し、
        衝突判定を行う領域を空間分割木に設定する。
-    -# mosp_handle::attach_tree() を呼び出し、
-       mosp_handle を mosp_tree に取りつける。
+    -# mosp_cell::attach_tree() を呼び出し、
+       mosp_cell を mosp_tree に取りつける。
     -# mosp_tree::detect_collision() を呼び出し、衝突判定を行う。
       衝突した2つの衝突判定オブジェクトの識別子を引数に、
       衝突コールバック関数が呼び出される。
 
-    @tparam template_collision_object @copydoc mosp_handle::collision_object
+    @tparam template_collision_object @copydoc mosp_cell::collision_object
     @tparam template_space            @copydoc mosp_tree::space
     @tparam template_allocator        @copydoc mosp_tree::allocator_type
 
-    @note mosp_tree::handle_map に任意の辞書template型を指定できるようにしたい。
+    @note mosp_tree::cell_map に任意の辞書template型を指定できるようにしたい。
  */
 template<
     typename template_collision_object,
@@ -530,12 +530,12 @@ class psyq::mosp_tree
     /// mosp_tree で使う幾何ベクトルの型。
     public: typedef typename this_type::space::coordinates::vector vector;
 
-    /// 空間分割木に取りつける mosp_handle 。
-    public: typedef psyq::mosp_handle<
+    /// 空間分割木に取りつける mosp_cell 。
+    public: typedef psyq::mosp_cell<
         template_collision_object, typename template_space::order>
-            handle;
+            cell;
     /// @cond
-    friend handle;
+    friend cell;
     /// @endcond
 
     /// @copydoc psyq::mosp_node
@@ -552,11 +552,11 @@ class psyq::mosp_tree
     /// 分割空間の辞書。
     public: typedef std::unordered_multimap<
         typename this_type::space::order,
-        typename this_type::handle*,
+        typename this_type::cell*,
         typename this_type::order_hash,
         std::equal_to<typename this_type::space::order>,
         template_allocator>
-            handle_map;
+            cell_map;
 
     public: enum: unsigned
     {
@@ -579,10 +579,10 @@ class psyq::mosp_tree
         unsigned const in_level_cap = this_type::LEVEL_LIMIT)
     :
         space_(in_aabb, in_level_cap),
-        handle_map_(
+        cell_map_(
             in_bucket_count,
-            typename this_type::handle_map::hasher(),
-            typename this_type::handle_map::key_equal(),
+            typename this_type::cell_map::hasher(),
+            typename this_type::cell_map::key_equal(),
             in_allocator),
         level_cap_(static_cast<decltype(level_cap_)>(in_level_cap)),
         detect_collision_(false)
@@ -603,20 +603,20 @@ class psyq::mosp_tree
      */
     public: mosp_tree(this_type&& io_source):
         space_(io_source.space_),
-        handle_map_(std::move(io_source.handle_map_)),
+        cell_map_(std::move(io_source.cell_map_)),
         level_cap_(io_source.level_cap_),
         detect_collision_(false)
     {
-        io_source.handle_map_.clear();
+        io_source.cell_map_.clear();
         if (io_source.detect_collision_)
         {
             // 衝突判定中はmoveできない。
             PSYQ_ASSERT(false);
-            this->handle_map_.swap(io_source.handle_map_);
+            this->cell_map_.swap(io_source.cell_map_);
         }
     }
 
-    /** @brief 取りつけられてる this_type::handle をすべて取り外し、
+    /** @brief 取りつけられてる this_type::cell をすべて取り外し、
                空間分割木を破棄する。
      */
     public: ~mosp_tree()
@@ -625,12 +625,12 @@ class psyq::mosp_tree
         PSYQ_ASSERT(!this->detect_collision_);
 
         // ハンドルをすべて切り離す。
-        for (auto& local_value: this->handle_map_)
+        for (auto& local_value: this->cell_map_)
         {
-            auto const local_handle(local_value.second);
-            if (local_handle != nullptr)
+            auto const local_cell(local_value.second);
+            if (local_cell != nullptr)
             {
-                local_handle->detach_tree();
+                local_cell->detach_tree();
             }
         }
     }
@@ -652,19 +652,19 @@ class psyq::mosp_tree
     }
 
     //-------------------------------------------------------------------------
-    /** @brief thisに取りつけられたすべての this_type::handle の衝突判定を行う。
+    /** @brief thisに取りつけられたすべての this_type::cell の衝突判定を行う。
 
-        - this_type::handle::attach_tree() によってthisに取りつけられた
-          this_type::handle のうち、分割空間が重なった2つの this_type::handle
-          が持つそれぞれの this_type::handle::collision_object
+        - this_type::cell::attach_tree() によってthisに取りつけられた
+          this_type::cell のうち、モートン空間で重なる2つの this_type::cell
+          が持つそれぞれの this_type::cell::collision_object
           を引数に、衝突コールバック関数を呼び出す。
-        - スレッドなどで衝突判定を分割して行いたい場合は、この関数ではなく
+        - スレッドなどで衝突判定処理を分割したい場合は、この関数ではなく
           this_type::detect_collision() を使う。
 
         @param[in] in_collide_callback
             衝突コールバック関数オブジェクト。
-            - 2つの this_type::handle が所属する分割空間が衝突した時、呼び出される。
-            - 引数として、2つの this_type::handle::collision_object を受け取ること。
+            - 2つの this_type::cell がモートン空間で衝突した時、呼び出される。
+            - 引数として、2つの this_type::cell::collision_object を受け取ること。
             - 戻り値はなくてよい。
 
         @retval ture 成功。衝突判定を行った。
@@ -708,16 +708,16 @@ class psyq::mosp_tree
         this->detect_collision_ = true;
 
         // 空になった分割空間を削除する。
-        for (auto i(this->handle_map_.begin()); i != this->handle_map_.end();)
+        for (auto i(this->cell_map_.begin()); i != this->cell_map_.end();)
         {
-            auto const local_handle(i->second);
-            if (local_handle != nullptr)
+            auto const local_cell(i->second);
+            if (local_cell != nullptr)
             {
                 ++i;
             }
             else
             {
-                i = this->handle_map_.erase(i);
+                i = this->cell_map_.erase(i);
             }
         }
         return true;
@@ -739,8 +739,8 @@ class psyq::mosp_tree
 
         @param[in] in_collide_callback
             衝突コールバック関数オブジェクト。
-            - 2つの this_type::handle が所属する分割空間が衝突した時、呼び出される。
-            - 引数として、2つの this_type::handle::collision_object を受け取ること。
+            - 2つの this_type::cell がモートン空間で衝突した時、呼び出される。
+            - 引数として、2つの this_type::cell::collision_object を受け取ること。
             - 戻り値はなくてよい。
         @param[in] in_offset 衝突判定を開始する辞書要素の開始オフセット値。
         @param[in] in_step   衝突判定をする辞書要素の間隔。
@@ -756,7 +756,7 @@ class psyq::mosp_tree
         PSYQ_ASSERT(0 < in_step);
         PSYQ_ASSERT(in_offset < in_step);
         auto local_count(in_offset);
-        for (auto i(this->handle_map_.begin()); i != this->handle_map_.end(); ++i)
+        for (auto i(this->cell_map_.begin()); i != this->cell_map_.end(); ++i)
         {
             if (0 < local_count)
             {
@@ -765,7 +765,7 @@ class psyq::mosp_tree
             else
             {
                 this_type::detect_collision_map(
-                    in_collide_callback, i, this->handle_map_);
+                    in_collide_callback, i, this->cell_map_);
                 local_count = in_step - 1;
             }
         }
@@ -777,35 +777,35 @@ class psyq::mosp_tree
 
         @param[in] in_collide_callback
             衝突コールバック関数オブジェクト。
-            - 2つの this_type::handle が所属する分割空間が衝突した時、呼び出される。
-            - 引数として、2つの this_type::handle::collision_object を受け取ること。
+            - 2つの this_type::cell が衝突した時、呼び出される。
+            - 引数として、2つの this_type::cell::collision_object を受け取ること。
             - 戻り値はなくてよい。
         @param[in] in_target_link
             衝突させる分割空間の反復子。
-            in_handle_map が持つ値を指していること。
-        @param[in] in_handle_map 衝突させる分割空間の辞書。
+            in_cell_map が持つ値を指していること。
+        @param[in] in_cell_map 衝突させる分割空間の辞書。
      */
     private: template<typename template_collide_callback>
     static void detect_collision_map(
         template_collide_callback const& in_collide_callback,
-        typename this_type::handle_map::const_iterator const& in_target_link,
-        typename this_type::handle_map const& in_handle_map)
+        typename this_type::cell_map::const_iterator const& in_target_link,
+        typename this_type::cell_map const& in_cell_map)
     {
         // 対象となる分割空間を、同じモートン順序の分割空間に衝突させる。
-        auto const local_handle_map_end(in_handle_map.end());
-        PSYQ_ASSERT(in_target_link != local_handle_map_end);
-        auto const& local_target_node(*in_target_link);
+        auto const local_cell_map_end(in_cell_map.end());
+        PSYQ_ASSERT(in_target_link != local_cell_map_end);
+        auto const& local_target_link(*in_target_link);
         auto const local_next_node(std::next(in_target_link));
-        if (local_next_node != local_handle_map_end
+        if (local_next_node != local_cell_map_end
             && in_target_link->first == local_next_node->first)
         {
-            auto const local_target_handle(
+            auto const local_target_cell(
                 this_type::detect_collision_container(
                     in_collide_callback,
-                    local_target_node,
+                    local_target_link,
                     local_next_node,
-                    local_handle_map_end));
-            if (local_target_handle == nullptr)
+                    local_cell_map_end));
+            if (local_target_cell == nullptr)
             {
                 return;
             }
@@ -820,17 +820,17 @@ class psyq::mosp_tree
             local_super_order =
                 (local_super_order - 1) >> this_type::space::DIMENSION;
             auto const local_super_iterator(
-                in_handle_map.find(local_super_order));
-            if (local_super_iterator != local_handle_map_end)
+                in_cell_map.find(local_super_order));
+            if (local_super_iterator != local_cell_map_end)
             {
                 // 上位の分割空間に衝突させる。
-                auto const local_target_handle(
+                auto const local_target_cell(
                     this_type::detect_collision_container(
                         in_collide_callback,
-                        local_target_node,
+                        local_target_link,
                         local_super_iterator,
-                        local_handle_map_end));
-                if (local_target_handle == nullptr)
+                        local_cell_map_end));
+                if (local_target_cell == nullptr)
                 {
                     return;
                 }
@@ -841,19 +841,19 @@ class psyq::mosp_tree
     /** @brief 分割空間に分割空間コンテナを衝突させる。
         @param[in] in_collide_callback
             衝突コールバック関数オブジェクト。
-            - 2つの this_type::handle が所属する分割空間が衝突した時、呼び出される。
-            - 引数として、2つの this_type::handle::collision_object を受け取ること。
+            - 2つの this_type::cell が衝突した時、呼び出される。
+            - 引数として、2つの this_type::cell::collision_object を受け取ること。
             - 戻り値はなくてよい。
         @param[in] in_target_link     衝突させる分割空間。
         @param[in] in_container_begin 衝突させる分割空間コンテナの先頭位置。
         @param[in] in_container_end   衝突させる分割空間コンテナの終端位置。
      */
     private: template<typename template_collide_callback>
-    static typename this_type::handle const* detect_collision_container(
+    static typename this_type::cell const* detect_collision_container(
         template_collide_callback const& in_collide_callback,
-        typename this_type::handle_map::value_type const& in_target_link,
-        typename this_type::handle_map::const_iterator const& in_container_begin,
-        typename this_type::handle_map::const_iterator const& in_container_end)
+        typename this_type::cell_map::value_type const& in_target_link,
+        typename this_type::cell_map::const_iterator const& in_container_begin,
+        typename this_type::cell_map::const_iterator const& in_container_end)
     {
         PSYQ_ASSERT(in_container_begin != in_container_end);
         auto const local_container_order(in_container_begin->first);
@@ -863,19 +863,19 @@ class psyq::mosp_tree
             && local_container_order == local_container_node->first;
             ++local_container_node)
         {
-            auto const local_container_handle(local_container_node->second);
-            if (local_container_handle != nullptr)
+            auto const local_container_cell(local_container_node->second);
+            if (local_container_cell != nullptr)
             {
-                auto const local_target_handle(in_target_link.second);
-                if (local_target_handle == nullptr)
+                auto const local_target_cell(in_target_link.second);
+                if (local_target_cell == nullptr)
                 {
                     return nullptr;
                 }
 
                 // 衝突コールバック関数を呼び出す。
                 in_collide_callback(
-                    local_target_handle->object_,
-                    local_container_handle->object_);
+                    local_target_cell->object_,
+                    local_container_cell->object_);
             }
         }
         return in_target_link.second;
@@ -883,14 +883,14 @@ class psyq::mosp_tree
 
     //-------------------------------------------------------------------------
     /** @brief AABBを包む最小の分割空間を構築する。
-        @param[in] in_aabb   衝突判定ハンドルの絶対座標系AABB。
-        @param[in] in_handle 分割空間に取りつける衝突判定ハンドル。
+        @param[in] in_aabb 衝突判定ハンドルの絶対座標系AABB。
+        @param[in] in_cell 空間分割木に取りつける分割空間。
         @retval !=nullptr AABBを包む最小の分割空間。
         @retval ==nullptr 失敗。
      */
-    private: typename this_type::handle_map::value_type* make_link(
+    private: typename this_type::cell_map::value_type* make_cell(
         typename this_type::space::coordinates::aabb const& in_aabb,
-        typename this_type::handle* const in_handle)
+        typename this_type::cell* const in_cell)
     {
         if (this->detect_collision_)
         {
@@ -903,7 +903,7 @@ class psyq::mosp_tree
         auto const local_morton_order(
             this_type::calc_order(this->level_cap_, this->space_, in_aabb));
         auto const local_map_iterator(
-            this->handle_map_.emplace(local_morton_order, in_handle));
+            this->cell_map_.emplace(local_morton_order, in_cell));
         return &(*local_map_iterator);
     }
 
@@ -952,17 +952,17 @@ class psyq::mosp_tree
             local_max_morton, local_level * this_type::space::DIMENSION);
     }
 
-    public: typename this_type::handle_map const& get_handle_map()
+    public: typename this_type::cell_map const& get_cell_map()
     const PSYQ_NOEXCEPT
     {
-        return this->handle_map_;
+        return this->cell_map_;
     }
 
     //-------------------------------------------------------------------------
     /// @copydoc space
     private: typename this_type::space space_;
-    /// @copydoc handle_map
-    private: typename this_type::handle_map handle_map_;
+    /// @copydoc cell_map
+    private: typename this_type::cell_map cell_map_;
     /// 空間分割の最大深度。
     private: std::uint8_t level_cap_;
     /// detect_collision() を実行中かどうか。

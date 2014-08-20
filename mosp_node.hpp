@@ -15,9 +15,9 @@ class psyq::mosp_node
     //-------------------------------------------------------------------------
     /// mosp_node で使うモートン空間の型。
     public: typedef template_space space;
-    /// 空間分割木に取りつける mosp_handle 。
-    public: typedef psyq::mosp_handle<this_type*, typename this_type::space::order>
-        handle;
+    /// 空間分割木に取りつける mosp_cell 。
+    public: typedef psyq::mosp_cell<this_type*, typename this_type::space::order>
+        cell;
 
     /// @cond
     public: template<typename template_shape> class concrete;
@@ -37,7 +37,7 @@ class psyq::mosp_node
 
     //-------------------------------------------------------------------------
     protected: mosp_node():
-        handle_(this),
+        cell_(this),
         aabb_(
             typename this_type::space::coordinates::aabb(
                 psyq::geometric_vector<typename this_type::space::coordinates::vector>::make(0),
@@ -60,23 +60,23 @@ class psyq::mosp_node
     void attach_tree(template_tree& io_tree)
     {
         // AABBを更新してから取りつける。
-        if (!this->handle_.is_attached())
+        if (!this->cell_.is_attached())
         {
             this->update_aabb();
         }
-        this->handle_.attach_tree(io_tree, this->get_aabb());
+        this->cell_.attach_tree(io_tree, this->get_aabb());
     }
 
-    /// @copydoc this_type::handle::detach_tree()
+    /// @copydoc this_type::cell::detach_tree()
     protected: void detach_tree()
     {
-        this->handle_.detach_tree();
+        this->cell_.detach_tree();
     }
 
-    /// @copydoc this_type::handle::is_attached()
+    /// @copydoc this_type::cell::is_attached()
     protected: bool is_attached() const
     {
-        return this->handle_.is_attached();
+        return this->cell_.is_attached();
     }
 
     /** @brief thisが持つAABBを取得する。
@@ -92,7 +92,7 @@ class psyq::mosp_node
 
     //-------------------------------------------------------------------------
     /// 衝突判定オブジェクトに対応する衝突判定ハンドル。
-    private: typename this_type::handle handle_;
+    private: typename this_type::cell cell_;
     /// 衝突判定オブジェクトの絶対座標系AABB。
     protected: typename this_type::space::coordinates::aabb aabb_;
 };
@@ -176,9 +176,9 @@ namespace psyq
         inline void mosp_tree()
         {
             typedef psyq::mosp_tree<> psyq_mosp_tree;
-            psyq_mosp_tree::handle_map::allocator_type::arena::shared_ptr
+            psyq_mosp_tree::cell_map::allocator_type::arena::shared_ptr
                 local_mosp_arena(
-                    new psyq_mosp_tree::handle_map::allocator_type::arena(16));
+                    new psyq_mosp_tree::cell_map::allocator_type::arena(16));
             psyq_mosp_tree local_mosp_tree(
                 psyq_mosp_tree::aabb(
                     psyq_mosp_tree::vector(-65536, -65536, -65536),

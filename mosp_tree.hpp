@@ -350,15 +350,15 @@ class psyq::mosp_space_3d: public psyq::mosp_space<template_coordinates>
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief モートン順序による空間分割木を用いた衝突判定ハンドル。
+/** @brief モートン順序による空間分割木に取りつける分割空間。
 
     使い方の概要。
     -# 衝突判定オブジェクトの識別子を、 mosp_cell::nucleus_ に代入する。
-    -# mosp_cell::attach_tree() を呼び出し、
-       mosp_cell を mosp_tree 空間分割木に取りつける。
-    -# mosp_tree::detect_collision() を呼び出し、衝突判定を行う。
-      衝突した2つの衝突判定オブジェクトの識別子を引数に、
-      衝突コールバック関数が呼び出される。
+    -# mosp_cell::attach_tree() で、 mosp_cell を mosp_tree に取りつける。
+    -# mosp_tree::detect_collision() で、 mosp_tree に取りつけられている
+       mosp_cell の衝突判定を行う。ある mosp_cell が別の mosp_cell に衝突すると、
+       ぞれぞれの mosp_cell が内包する衝突判定オブジェクト識別子を引数に、
+       衝突コールバック関数が呼び出される。
 
     @tparam template_nucleus      @copydoc mosp_cell::nucleus
     @tparam template_morton_order @copydoc mosp_cell::order
@@ -369,7 +369,7 @@ class psyq::mosp_cell
     /// thisが指す値の型。
     private: typedef mosp_cell this_type;
 
-    /// 衝突判定オブジェクトの識別子。
+    /// 分割空間が内包する、衝突判定オブジェクトの識別子。
     public: typedef template_nucleus nucleus;
     /// @copydoc psyq::mosp_space::order
     public: typedef template_morton_order order;
@@ -500,15 +500,16 @@ class psyq::mosp_cell
        衝突判定を行う領域を空間分割木に設定する。
     -# mosp_cell::attach_tree() を呼び出し、
        mosp_cell を mosp_tree に取りつける。
-    -# mosp_tree::detect_collision() を呼び出し、衝突判定を行う。
-      衝突した2つの衝突判定オブジェクトの識別子を引数に、
-      衝突コールバック関数が呼び出される。
+    -# mosp_tree::detect_collision() で、 mosp_tree に取りつけられている
+       mosp_cell の衝突判定を行う。ある mosp_cell が別の mosp_cell に衝突すると、
+       ぞれぞれの mosp_cell が内包する衝突判定オブジェクト識別子を引数に、
+       衝突コールバック関数が呼び出される。
 
     @tparam template_nucleus   @copydoc mosp_cell::nucleus
     @tparam template_space     @copydoc mosp_tree::space
     @tparam template_allocator @copydoc mosp_tree::allocator_type
 
-    @note mosp_tree::cell_map に任意の辞書template型を指定できるようにしたい。
+    @note mosp_tree::cell_map に、任意の辞書コンテナを指定できるようにしたい。
  */
 template<
     typename template_nucleus,

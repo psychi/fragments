@@ -353,24 +353,24 @@ class psyq::mosp_space_3d: public psyq::mosp_space<template_coordinates>
 /** @brief モートン順序による空間分割木を用いた衝突判定ハンドル。
 
     使い方の概要。
-    -# 衝突判定オブジェクトの識別子を、 mosp_cell::object_ に代入する。
+    -# 衝突判定オブジェクトの識別子を、 mosp_cell::nucleus_ に代入する。
     -# mosp_cell::attach_tree() を呼び出し、
        mosp_cell を mosp_tree 空間分割木に取りつける。
     -# mosp_tree::detect_collision() を呼び出し、衝突判定を行う。
       衝突した2つの衝突判定オブジェクトの識別子を引数に、
       衝突コールバック関数が呼び出される。
 
-    @tparam template_collision_object @copydoc mosp_cell::collision_object
-    @tparam template_morton_order     @copydoc mosp_cell::order
+    @tparam template_nucleus      @copydoc mosp_cell::nucleus
+    @tparam template_morton_order @copydoc mosp_cell::order
  */
-template<typename template_collision_object, typename template_morton_order>
+template<typename template_nucleus, typename template_morton_order>
 class psyq::mosp_cell
 {
     /// thisが指す値の型。
     private: typedef mosp_cell this_type;
 
     /// 衝突判定オブジェクトの識別子。
-    public: typedef template_collision_object collision_object;
+    public: typedef template_nucleus nucleus;
     /// @copydoc psyq::mosp_space::order
     public: typedef template_morton_order order;
 
@@ -378,9 +378,9 @@ class psyq::mosp_cell
     /** @brief 衝突判定ハンドルを構築する。
         @param[in] in_object *thisに対応する、衝突判定オブジェクトの識別子。
      */
-    public: explicit mosp_cell(template_collision_object in_object):
+    public: explicit mosp_cell(typename this_type::nucleus in_object):
         map_link_(nullptr),
-        object_(std::move(in_object))
+        nucleus_(std::move(in_object))
     {}
 
     /// copy-constructorは使用禁止。
@@ -391,7 +391,7 @@ class psyq::mosp_cell
      */
     public: mosp_cell(this_type&& io_source):
         map_link_(io_source.map_link_),
-        object_(std::move(io_source.object_))
+        nucleus_(std::move(io_source.nucleus_))
     {
         if (io_source.map_link_ != nullptr)
         {
@@ -489,7 +489,7 @@ class psyq::mosp_cell
         mosp_tree::detect_collision() で他の分割空間と重なったとき、
         この値を引数として衝突コールバック関数が呼び出される。
      */
-    public: template_collision_object object_;
+    public: typename this_type::nucleus nucleus_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -504,14 +504,14 @@ class psyq::mosp_cell
       衝突した2つの衝突判定オブジェクトの識別子を引数に、
       衝突コールバック関数が呼び出される。
 
-    @tparam template_collision_object @copydoc mosp_cell::collision_object
-    @tparam template_space            @copydoc mosp_tree::space
-    @tparam template_allocator        @copydoc mosp_tree::allocator_type
+    @tparam template_nucleus   @copydoc mosp_cell::nucleus
+    @tparam template_space     @copydoc mosp_tree::space
+    @tparam template_allocator @copydoc mosp_tree::allocator_type
 
     @note mosp_tree::cell_map に任意の辞書template型を指定できるようにしたい。
  */
 template<
-    typename template_collision_object,
+    typename template_nucleus,
     typename template_space,
     typename template_allocator>
 class psyq::mosp_tree
@@ -532,7 +532,7 @@ class psyq::mosp_tree
 
     /// 空間分割木に取りつける mosp_cell 。
     public: typedef psyq::mosp_cell<
-        template_collision_object, typename template_space::order>
+        template_nucleus, typename template_space::order>
             cell;
     /// @cond
     friend cell;
@@ -656,7 +656,7 @@ class psyq::mosp_tree
 
         - this_type::cell::attach_tree() によってthisに取りつけられた
           this_type::cell のうち、モートン空間で重なる2つの this_type::cell
-          が持つそれぞれの this_type::cell::collision_object
+          が持つそれぞれの this_type::cell::nucleus
           を引数に、衝突コールバック関数を呼び出す。
         - スレッドなどで衝突判定処理を分割したい場合は、この関数ではなく
           this_type::detect_collision() を使う。
@@ -664,7 +664,7 @@ class psyq::mosp_tree
         @param[in] in_collide_callback
             衝突コールバック関数オブジェクト。
             - 2つの this_type::cell がモートン空間で衝突した時、呼び出される。
-            - 引数として、2つの this_type::cell::collision_object を受け取ること。
+            - 引数として、2つの this_type::cell::nucleus を受け取ること。
             - 戻り値はなくてよい。
 
         @retval ture 成功。衝突判定を行った。
@@ -740,7 +740,7 @@ class psyq::mosp_tree
         @param[in] in_collide_callback
             衝突コールバック関数オブジェクト。
             - 2つの this_type::cell がモートン空間で衝突した時、呼び出される。
-            - 引数として、2つの this_type::cell::collision_object を受け取ること。
+            - 引数として、2つの this_type::cell::nucleus を受け取ること。
             - 戻り値はなくてよい。
         @param[in] in_offset 衝突判定を開始する辞書要素の開始オフセット値。
         @param[in] in_step   衝突判定をする辞書要素の間隔。
@@ -778,7 +778,7 @@ class psyq::mosp_tree
         @param[in] in_collide_callback
             衝突コールバック関数オブジェクト。
             - 2つの this_type::cell が衝突した時、呼び出される。
-            - 引数として、2つの this_type::cell::collision_object を受け取ること。
+            - 引数として、2つの this_type::cell::nucleus を受け取ること。
             - 戻り値はなくてよい。
         @param[in] in_target_link
             衝突させる分割空間の反復子。
@@ -842,7 +842,7 @@ class psyq::mosp_tree
         @param[in] in_collide_callback
             衝突コールバック関数オブジェクト。
             - 2つの this_type::cell が衝突した時、呼び出される。
-            - 引数として、2つの this_type::cell::collision_object を受け取ること。
+            - 引数として、2つの this_type::cell::nucleus を受け取ること。
             - 戻り値はなくてよい。
         @param[in] in_target_link     衝突させる分割空間。
         @param[in] in_container_begin 衝突させる分割空間コンテナの先頭位置。
@@ -874,8 +874,8 @@ class psyq::mosp_tree
 
                 // 衝突コールバック関数を呼び出す。
                 in_collide_callback(
-                    local_target_cell->object_,
-                    local_container_cell->object_);
+                    local_target_cell->nucleus_,
+                    local_container_cell->nucleus_);
             }
         }
         return in_target_link.second;

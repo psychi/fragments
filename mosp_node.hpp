@@ -176,9 +176,9 @@ namespace psyq
         inline void mosp_tree()
         {
             typedef psyq::mosp_tree<> psyq_mosp_tree;
-            psyq_mosp_tree::node_map::allocator_type::arena::shared_ptr
+            psyq_mosp_tree::handle_map::allocator_type::arena::shared_ptr
                 local_mosp_arena(
-                    new psyq_mosp_tree::node_map::allocator_type::arena(16));
+                    new psyq_mosp_tree::handle_map::allocator_type::arena(16));
             psyq_mosp_tree local_mosp_tree(
                 psyq_mosp_tree::aabb(
                     psyq_mosp_tree::vector(-65536, -65536, -65536),

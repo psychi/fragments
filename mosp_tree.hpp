@@ -11,6 +11,7 @@
 #define PSYQ_MOSP_TREE_HPP_
 //#include "psyq/bit_algorithm.hpp"
 //#include "psyq/geometric_aabb.hpp"
+//#include "psyq/memory_arena.hpp"
 
 /// psyq::mosp_coordinates で使う、defaultのvector型。
 #ifndef PSYQ_MOSP_VECTOR_DEFAULT
@@ -23,7 +24,9 @@
 #endif // !defined(PSYQ_MOSP_SPACE_DEFAULT)
 
 #ifndef PSYQ_MOSP_ALLOCATOR_DEFAULT
-#define PSYQ_MOSP_ALLOCATOR_DEFAULT psyq::mosp_pool_allocator<std::allocator<void*>>
+#define PSYQ_MOSP_ALLOCATOR_DEFAULT\
+    psyq::memory_arena::allocator<\
+        void*, psyq::memory_arena::fixed_pool<std::allocator<void*>>>
 #endif // !defined(PSYQ_MOSP_ALLOCATOR_DEFAULT)
 
 /// @cond
@@ -35,10 +38,10 @@ namespace psyq
         class mosp_space_2d;
     template<typename = mosp_coordinates<PSYQ_MOSP_VECTOR_DEFAULT, 0, 1, 2>>
         class mosp_space_3d;
-    template<typename> class mosp_pool_allocator;
     template<typename, typename> class mosp_handle;
+    template<typename = PSYQ_MOSP_SPACE_DEFAULT> class mosp_leaf;
     template<
-        typename,
+        typename = mosp_leaf<PSYQ_MOSP_SPACE_DEFAULT>*,
         typename = PSYQ_MOSP_SPACE_DEFAULT,
         typename = PSYQ_MOSP_ALLOCATOR_DEFAULT>
             class mosp_tree;
@@ -490,100 +493,6 @@ class psyq::mosp_handle
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief mortonハンドルに使うメモリ割当子。
-
-    このメモリ割当子は、C++のメモリ割当子の規格に適合しないことに注意。
- */
-template<typename template_allocator>
-class psyq::mosp_pool_allocator: public template_allocator
-{
-    private: typedef mosp_pool_allocator this_type;
-    public: typedef template_allocator base_type;
-
-    public: template<typename template_other>
-    struct rebind
-    {
-        typedef mosp_pool_allocator<
-            typename base_type::template rebind<template_other>::other>
-                other;
-    };
-
-    //-------------------------------------------------------------------------
-    public: mosp_pool_allocator(): idle_list_(nullptr) {}
-
-    public: mosp_pool_allocator(this_type const& in_allocator):
-        base_type(in_allocator),
-        idle_list_(nullptr)
-    {}
-
-    public: template<typename template_other>
-    mosp_pool_allocator(
-        psyq::mosp_pool_allocator<template_other> const& in_allocator)
-    :
-        base_type(in_allocator),
-        idle_list_(nullptr)
-    {}
-
-    public: ~mosp_pool_allocator()
-    {
-        auto local_pointer(this->idle_list_);
-        while (local_pointer != nullptr)
-        {
-            auto const local_next(*static_cast<void**>(local_pointer));
-            this->base_type::deallocate(
-                static_cast<typename base_type::pointer>(local_pointer), 1);
-            local_pointer = local_next;
-        }
-    }
-
-    public: this_type& operator=(this_type const&) {return *this;}
-
-    //-------------------------------------------------------------------------
-    public: typename base_type::pointer allocate(
-        typename base_type::size_type const       in_size,
-        std::allocator<void>::const_pointer const in_hint = 0)
-    {
-        if (in_size <= 0)
-        {
-            return nullptr;
-        }
-        if (1 < in_size || this->idle_list_ == nullptr)
-        {
-            return this->base_type::allocate(in_size, in_hint);
-        }
-        auto const local_result(
-            static_cast<typename base_type::pointer>(this->idle_list_));
-        this->idle_list_ = *static_cast<void**>(this->idle_list_);
-        return local_result;
-    }
-
-    public: void deallocate(
-        typename base_type::pointer const   in_pointer,
-        typename base_type::size_type const in_size)
-    {
-        if (in_pointer == nullptr)
-        {
-            PSYQ_ASSERT(in_size <= 0);
-            return;
-        }
-        if (in_size != 1)
-        {
-            this->base_type::deallocate(in_pointer, in_size);
-            return;
-        }
-        static_assert(
-            // 要素の大きさがポインタ値以上であること。
-            sizeof(void*) <= sizeof(typename base_type::value_type),
-            "sizeof(value_type) is less than sizeof(void*).");
-        *reinterpret_cast<void**>(in_pointer) = this->idle_list_;
-        this->idle_list_ = in_pointer;
-    }
-
-    //-------------------------------------------------------------------------
-    private: void* idle_list_;
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief モートン順序による空間分割木。
 
     使い方の概要は、以下の通り。
@@ -625,6 +534,9 @@ class psyq::mosp_tree
     /// @cond
     friend handle;
     /// @endcond
+
+    /// @copydoc psyq::mosp_leaf
+    public: typedef psyq::mosp_leaf<typename this_type::space> leaf;
 
     private: struct order_hash
     {
@@ -701,7 +613,7 @@ class psyq::mosp_tree
         }
     }
 
-    /** @brief 取りつけられてる mosp_handle をすべて取り外し、
+    /** @brief 取りつけられてる this_type::handle をすべて取り外し、
                空間分割木を破棄する。
      */
     public: ~mosp_tree()
@@ -737,16 +649,19 @@ class psyq::mosp_tree
     }
 
     //-------------------------------------------------------------------------
-    /** @brief thisに取りつけられたすべての mosp_handle の衝突判定を行う。
+    /** @brief thisに取りつけられたすべての this_type::handle の衝突判定を行う。
 
-        mosp_handle::attach_tree() によってthisに取りつけられた
-        mosp_handle のうち、分割空間が重なった2つの mosp_handle の持つ
-        mosp_handle::collision_object を引数に、衝突コールバック関数を呼び出す。
+        - this_type::handle::attach_tree() によってthisに取りつけられた
+          this_type::handle のうち、分割空間が重なった2つの this_type::handle
+          が持つそれぞれの this_type::handle::collision_object
+          を引数に、衝突コールバック関数を呼び出す。
+        - スレッドなどで衝突判定を分割して行いたい場合は、この関数ではなく
+          this_type::detect_collision() を使う。
 
         @param[in] in_collide_callback
             衝突コールバック関数オブジェクト。
-            - 2つの mosp_handle が所属する分割空間が衝突した時、呼び出される。
-            - 引数として、2つの mosp_handle::collision_object を受け取ること。
+            - 2つの this_type::handle が所属する分割空間が衝突した時、呼び出される。
+            - 引数として、2つの this_type::handle::collision_object を受け取ること。
             - 戻り値はなくてよい。
 
         @retval ture 成功。衝突判定を行った。
@@ -755,7 +670,8 @@ class psyq::mosp_tree
             原因は、すでに衝突判定を行なってる最中だから。
      */
     public: template<typename template_collide_callback>
-    bool detect_collision(template_collide_callback const& in_collide_callback)
+    bool detect_collision_batch(
+        template_collide_callback const& in_collide_callback)
     {
         // 衝突判定を開始する。
         auto const local_cell_map(this->begin_detection());
@@ -765,10 +681,8 @@ class psyq::mosp_tree
         }
 
         // 衝突判定を行う。
-        for (auto i(local_cell_map->begin()); i != local_cell_map->end(); ++i)
-        {
-            this_type::detect_collision_map(in_collide_callback, i, *local_cell_map);
-        }
+        this_type::detect_collision(
+            in_collide_callback, *local_cell_map, 0, 1);
 
         // 衝突判定を終了する。
         this->end_detection();
@@ -780,7 +694,7 @@ class psyq::mosp_tree
 
         end_detection() と対になるように呼び出すこと。
 
-        @retval !=nullptr 衝突判定を行うcellの辞書。 detect_collision_map() で使う。
+        @retval !=nullptr 衝突判定を行うcellの辞書。 detect_collision() で使う。
         @retval ==nullptr 失敗。すでに begin_detection() が呼び出されていた。
      */
     public: typename this_type::cell_map const* begin_detection()
@@ -818,21 +732,60 @@ class psyq::mosp_tree
         this->detect_collision_ = false;
     }
 
+    /** @brief 分割空間の辞書の要素同士で衝突しているか判定する。
+
+        begin_detection() と end_detection() の間で呼び出すこと。
+
+        @param[in] in_collide_callback
+            衝突コールバック関数オブジェクト。
+            - 2つの this_type::handle が所属する分割空間が衝突した時、呼び出される。
+            - 引数として、2つの this_type::handle::collision_object を受け取ること。
+            - 戻り値はなくてよい。
+        @param[in] in_cell_map
+            this_type::begin_detection() の戻り値が指す、分割空間の辞書。
+        @param[in] in_offset 衝突判定を開始する辞書要素の開始オフセット値。
+        @param[in] in_step   衝突判定をする辞書要素の間隔。
+     */
+    public: template<typename template_collide_callback>
+    static void detect_collision(
+        template_collide_callback const& in_collide_callback,
+        typename this_type::cell_map const& in_cell_map,
+        std::size_t const in_offset,
+        std::size_t const in_step)
+    {
+        PSYQ_ASSERT(0 < in_step);
+        PSYQ_ASSERT(in_offset < in_step);
+        auto local_count(in_offset);
+        for (auto i(in_cell_map.begin()); i != in_cell_map.end(); ++i)
+        {
+            if (0 < local_count)
+            {
+                --local_count;
+            }
+            else
+            {
+                this_type::detect_collision_map(
+                    in_collide_callback, i, in_cell_map);
+                local_count = in_step - 1;
+            }
+        }
+    }
+
     /** @brief 分割空間に分割空間の辞書を衝突させる。
 
         begin_detection() と end_detection() の間で呼び出すこと。
 
         @param[in] in_collide_callback
             衝突コールバック関数オブジェクト。
-            - 2つの mosp_handle が所属する分割空間が衝突した時、呼び出される。
-            - 引数として、2つの mosp_handle::collision_object を受け取ること。
+            - 2つの this_type::handle が所属する分割空間が衝突した時、呼び出される。
+            - 引数として、2つの this_type::handle::collision_object を受け取ること。
             - 戻り値はなくてよい。
         @param[in] in_target_cell
             衝突させる分割空間の反復子。
             in_cell_map が持つ値を指していること。
         @param[in] in_cell_map 衝突させる分割空間の辞書。
      */
-    public: template<typename template_collide_callback>
+    private: template<typename template_collide_callback>
     static void detect_collision_map(
         template_collide_callback const& in_collide_callback,
         typename this_type::cell_map::const_iterator const& in_target_cell,
@@ -888,8 +841,8 @@ class psyq::mosp_tree
     /** @brief 分割空間に分割空間コンテナを衝突させる。
         @param[in] in_collide_callback
             衝突コールバック関数オブジェクト。
-            - 2つの mosp_handle が所属する分割空間が衝突した時、呼び出される。
-            - 引数として、2つの mosp_handle::collision_object を受け取ること。
+            - 2つの this_type::handle が所属する分割空間が衝突した時、呼び出される。
+            - 引数として、2つの this_type::handle::collision_object を受け取ること。
             - 戻り値はなくてよい。
         @param[in] in_target_cell     衝突させる分割空間。
         @param[in] in_container_begin 衝突させる分割空間コンテナの先頭位置。

@@ -706,22 +706,6 @@ namespace psyq
             local_list.push_back(1);
             local_list.push_back(10);
             local_list.erase(local_list.begin());
-/*
-            typedef psyq::memory_arena::fixed_arena<std::allocator<void*>>
-                fixed_arena_arena;
-            typedef psyq::memory_arena::allocator<int, fixed_arena_arena>
-                fixed_arena_allocator;
-            typedef std::list<int, fixed_arena_allocator> fixed_arena_list;
-            fixed_arena_arena::shared_ptr local_fixed_arena(
-                new fixed_arena_arena(64));
-            fixed_arena_allocator local_fixed_arena_allocator(local_fixed_arena);
-            std::allocator_traits<fixed_arena_allocator>::allocate(
-                local_fixed_arena_allocator, 0);
-            std::allocator_traits<fixed_arena_allocator>::deallocate(
-                local_fixed_arena_allocator, nullptr, 0);
-            fixed_arena_list local_list(local_fixed_arena_allocator);
-            local_list.push_back(10);
- */
         }
     }
 }

@@ -200,18 +200,22 @@ class psyq::geometric_ray: public psyq::geometric_segment<template_vector>
     /// @endcond
 
     /** @brief 半線分を構築する。
-        @param[in] in_origin 半線分の始点位置。
-        @param[in] in_direction
-            半線分の方向の単位ベクトル。正規化されていること。
+        @param[in] in_origin    半線分の始点位置。
+        @param[in] in_direction 半線分の方向のベクトル。
      */
     public: geometric_ray(
         template_vector const& in_origin,
-        template_vector const& in_direction)
-    :
-        super(in_origin, in_direction)
-    {
-        PSYQ_ASSERT(psyq::geometric_vector_is_normalized(in_direction));
-    }
+        template_vector const& in_direction,
+        bool const in_normalize = true)
+    PSYQ_NOEXCEPT:
+        super(
+            in_origin,
+            in_normalize?
+                this_type::make_direction(in_direction): (
+                    PSYQ_ASSERT(
+                        psyq::geometric_vector_is_normalized(in_direction)),
+                    in_direction))
+    {}
 
     /** @brief 半線分の方向ベクトルを設定する。
         @param[in] in_direction

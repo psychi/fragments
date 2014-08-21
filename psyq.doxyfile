@@ -700,7 +700,7 @@ INPUT                  = \
                          ./geometric_shape.hpp \
                          ./geometric_aabb.hpp \
                          ./mosp_tree.hpp \
-                         ./mosp_node.hpp \
+                         ./mosp_nut.hpp \
                          ./assert.hpp \
                          ./message_pack/endianness.hpp \
                          ./message_pack/serializer.hpp \

@@ -384,7 +384,7 @@ class psyq::mosp_node
         handle_(io_source.handle_),
         argument_(std::move(io_source.argument_))
     {
-        if (io_source.handle_ != nullptr)
+        if (this->handle_->second != nullptr)
         {
             io_source.handle_ = nullptr;
             this->handle_->second = this;
@@ -453,10 +453,11 @@ class psyq::mosp_node
      */
     public: void detach_tree()
     {
-        if (this->handle_ != nullptr)
+        auto const local_handle(this->handle_);
+        if (local_handle != nullptr)
         {
-            PSYQ_ASSERT(this == this->handle_->second);
-            this->handle_->second = nullptr;
+            PSYQ_ASSERT(this == local_handle->second);
+            local_handle->second = nullptr;
             this->handle_ = nullptr;
         }
     }
@@ -677,7 +678,7 @@ class psyq::mosp_tree
 
         @param[in] in_collide_callback
             衝突関数オブジェクト。
-            - 2つの this_type::node が同じ分割空間にあるとき、呼び出される。
+            - 2つの this_type::node の分割空間が衝突するとき、呼び出される。
             - 引数として、2つの this_type::node::argument を受け取ること。
             - 戻り値はなくてよい。
         @param[in] in_offset 衝突判定を開始する分割空間辞書の要素の開始オフセット値。
@@ -694,7 +695,8 @@ class psyq::mosp_tree
         PSYQ_ASSERT(0 < in_step);
         PSYQ_ASSERT(in_offset < in_step);
         auto local_count(in_offset);
-        for (auto i(this->node_map_.begin()); i != this->node_map_.end(); ++i)
+        auto const local_map_end(this->node_map_.end());
+        for (auto i(this->node_map_.begin()); i != local_map_end; ++i)
         {
             if (0 < local_count)
             {
@@ -704,6 +706,7 @@ class psyq::mosp_tree
             {
                 this_type::detect_collision_map(
                     in_collide_callback, i, this->node_map_);
+                PSYQ_ASSERT(local_map_end == this->node_map_.end());
                 local_count = in_step - 1;
             }
         }
@@ -725,7 +728,7 @@ class psyq::mosp_tree
 
         @param[in] in_collide_callback
             衝突関数オブジェクト。
-            - 2つの this_type::node が同じ分割空間にあるとき、呼び出される。
+            - 2つの this_type::node の分割空間が衝突するとき、呼び出される。
             - 引数として、2つの this_type::node::argument を受け取ること。
             - 戻り値はなくてよい。
      */
@@ -753,7 +756,7 @@ class psyq::mosp_tree
 
         @param[in] in_collide_callback
             衝突関数オブジェクト。
-            - 2つの this_type::node が同じ分割空間にあるとき、呼び出される。
+            - 2つの this_type::node の分割空間が衝突するとき、呼び出される。
             - 引数として、2つの this_type::node::argument を受け取ること。
             - 戻り値はなくてよい。
         @param[in] in_node_handle
@@ -775,13 +778,12 @@ class psyq::mosp_tree
         if (local_next_handle != local_node_map_end
             && local_node_handle.first == local_next_handle->first)
         {
-            auto const local_target_node(
-                this_type::detect_collision_container(
-                    in_collide_callback,
-                    local_node_handle,
-                    local_next_handle,
-                    local_node_map_end));
-            if (local_target_node == nullptr)
+            this_type::detect_collision_container(
+                in_collide_callback,
+                local_node_handle,
+                local_next_handle,
+                local_node_map_end);
+            if (local_node_handle.second == nullptr)
             {
                 return;
             }
@@ -800,13 +802,12 @@ class psyq::mosp_tree
             if (local_super_iterator != local_node_map_end)
             {
                 // 上位の分割空間ノードに衝突させる。
-                auto const local_target_node(
-                    this_type::detect_collision_container(
-                        in_collide_callback,
-                        local_node_handle,
-                        local_super_iterator,
-                        local_node_map_end));
-                if (local_target_node == nullptr)
+                this_type::detect_collision_container(
+                    in_collide_callback,
+                    local_node_handle,
+                    local_super_iterator,
+                    local_node_map_end);
+                if (local_node_handle.second == nullptr)
                 {
                     return;
                 }
@@ -817,7 +818,7 @@ class psyq::mosp_tree
     /** @brief 分割空間ノードに分割空間コンテナを衝突させる。
         @param[in] in_collide_callback
             衝突関数オブジェクト。
-            - 2つの this_type::node が同じ分割空間にあるとき、呼び出される。
+            - 2つの this_type::node の分割空間が衝突するとき、呼び出される。
             - 引数として、2つの this_type::node::argument を受け取ること。
             - 戻り値はなくてよい。
         @param[in] in_node_handle     衝突させる分割空間ノードのハンドル。
@@ -825,7 +826,7 @@ class psyq::mosp_tree
         @param[in] in_container_end   衝突させる分割空間コンテナの終端位置。
      */
     private: template<typename template_collide_callback>
-    static typename this_type::node const* detect_collision_container(
+    static void detect_collision_container(
         template_collide_callback const& in_collide_callback,
         typename this_type::node_map::value_type const& in_node_handle,
         typename this_type::node_map::const_iterator const& in_container_begin,
@@ -844,7 +845,7 @@ class psyq::mosp_tree
                 auto const local_handle_node(in_node_handle.second);
                 if (local_handle_node == nullptr)
                 {
-                    return nullptr;
+                    return;
                 }
 
                 // 衝突関数を呼び出す。
@@ -853,7 +854,6 @@ class psyq::mosp_tree
                     local_container_node->argument_);
             }
         }
-        return in_node_handle.second;
     }
 
     //-------------------------------------------------------------------------

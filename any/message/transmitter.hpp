@@ -124,8 +124,8 @@ class psyq::any::message::transmitter
     //@{
     /** @brief this_type::receiver を登録する。
 
-        - this_type::get_thread_id() と合致しないスレッドで実行すると失敗する。
-        - 登録に成功した後は、メッセージ受信アドレスとメソッド種別が合致する
+        - 登録に成功した後は、
+          メッセージ受信アドレスとメッセージ受信メソッド種別が合致する
           メッセージパケットを受信するたび、 this_type::receiver::get_functor()
           で取得できるメッセージ受信関数が実行される。
         - 登録した this_type::receiver は、 this_type::receiver::weak_ptr
@@ -134,27 +134,37 @@ class psyq::any::message::transmitter
         - 登録した this_type::receiver が破棄されると、登録から解放される。
           または this_type::unregister_receiver() でも、登録から解放できる。
 
-        @retval true  成功。 this_type::receiver を登録した。
-        @retval false 失敗。 this_type::receiver を登録しなかった。
+        @retval true 成功。 in_receiver / in_method の組み合わせを登録した。
+        @retval false
+            失敗。 this_type::receiver を登録しなかった。
+            - in_receiver が空だと失敗する。
+            - this_type::get_thread_id() と合致しないスレッドで実行すると失敗する。
+            - in_receiver / in_method と等価な組み合わせがすでに登録されていると失敗する。
 
         @param[in] in_receiver 登録する this_type::receiver 。
         @param[in] in_method   登録するメッセージ受信メソッドの種別。
      */
     public: bool register_receiver(
-        typename this_type::receiver::weak_ptr in_receiver,
+        typename this_type::receiver::shared_ptr const& in_receiver,
         typename this_type::receiver::call::key in_method)
     {
-        if (std::this_thread::get_id() != this->get_thread_id())
+        auto const local_receiver(in_receiver.get());
+        if (local_receiver == nullptr || !this->agree_this_thread())
         {
-            PSYQ_ASSERT(false);
             return false;
         }
-        if (in_receiver.expired())
+        auto const local_iterator(
+            this_type::find_receiver_iterator(
+                this->receiver_map_, *local_receiver, in_method));
+        if (local_iterator != this->receiver_map_.end()
+            && local_iterator->first == in_method)
         {
+            // 等価な組み合わせがすでに登録されていた。
             return false;
         }
         this->receiver_map_.emplace(
-            std::move(in_method), std::move(in_receiver));
+            typename this_type::receiver_map::value_type(
+                in_method, in_receiver));
         return true;
     }
 
@@ -199,7 +209,7 @@ class psyq::any::message::transmitter
             // メッセージ受信器の辞書から削除する。
             auto const local_iterator(
                 this_type::find_receiver_iterator(
-                    this->receiver_map_, in_method, in_receiver));
+                    this->receiver_map_, *in_receiver, in_method));
             if (local_iterator != this->receiver_map_.end()
                 && local_iterator->first == in_method)
             {
@@ -216,21 +226,21 @@ class psyq::any::message::transmitter
     /** @brief this_type::receiver を辞書から検索する。
         @return 検索した位置。
         @param[in] in_receiver_map 検索範囲となる this_type::receiver の辞書。
-        @param[in] in_method       検索する this_type::receiver のメソッド種別。
         @param[in] in_receiver     検索する this_type::receiver 。
+        @param[in] in_method       検索する this_type::receiver のメソッド種別。
      */
     private: static typename this_type::receiver_map::const_iterator
     find_receiver_iterator(
         typename this_type::receiver_map const& in_receiver_map,
-        typename this_type::receiver::call::key const in_method,
-        void const* const in_receiver)
+        typename this_type::receiver const& in_receiver,
+        typename this_type::receiver::call::key const in_method)
     PSYQ_NOEXCEPT
     {
         auto local_iterator(in_receiver_map.find(in_method));
         while (
             local_iterator != in_receiver_map.end()
             && local_iterator->first == in_method
-            && local_iterator->second.lock().get() != in_receiver)
+            && local_iterator->second.lock().get() != &in_receiver)
         {
             ++local_iterator;
         }
@@ -289,6 +299,7 @@ class psyq::any::message::transmitter
 
         @param[in] in_tag  送信するメッセージの荷札。
         @param[in] in_call 送信するメッセージの呼出状。
+        @todo ゾーンの外へ送信する処理は未実装。
      */
     public: bool post_message(
         typename this_type::receiver::tag const& in_tag,
@@ -307,6 +318,7 @@ class psyq::any::message::transmitter
         @copydetails post_message()
 
         @param[in] in_parameter 送信するメッセージの引数。必ずPOD型。
+        @todo 未実装。
      */
     public: template<typename template_parameter>
     bool post_message(
@@ -390,9 +402,8 @@ class psyq::any::message::transmitter
     public: bool send_local_message(
         typename this_type::receiver::packet const& in_packet)
     {
-        if (std::this_thread::get_id() != this->get_thread_id())
+        if (!this->agree_this_thread())
         {
-            PSYQ_ASSERT(false);
             return false;
         }
         this_type::deliver_packet(this->receiver_map_, in_packet);
@@ -454,17 +465,14 @@ class psyq::any::message::transmitter
      */
     public: bool flush()
     {
-        if (std::this_thread::get_id() != this->get_thread_id())
+        if (!this->agree_this_thread())
         {
-            PSYQ_ASSERT(false);
             return false;
         }
-        else
-        {
-            // 配信するメッセージパケットを取得する。
-            std::lock_guard<psyq::spinlock> local_lock(this->lock_);
-            this->delivery_packets_.swap(this->import_packets_);
-        }
+
+        // 配信するメッセージパケットを取得する。
+        std::lock_guard<psyq::spinlock> local_lock(this->lock_);
+        this->delivery_packets_.swap(this->import_packets_);
         this_type::remove_empty_receiver(this->receiver_map_);
 
         // メッセージ受信器へメッセージを配信する。
@@ -487,12 +495,7 @@ class psyq::any::message::transmitter
     private: bool add_export_packet(
         typename this_type::receiver::packet::shared_ptr in_packet)
     {
-        if (std::this_thread::get_id() != this->get_thread_id())
-        {
-            PSYQ_ASSERT(false);
-            return false;
-        }
-        else if (in_packet.get() == nullptr)
+        if (in_packet.get() == nullptr || !this->agree_this_thread())
         {
             return false;
         }
@@ -608,9 +611,12 @@ class psyq::any::message::transmitter
             new(local_storage) template_packet(std::move(io_suite)),
             [local_allocator](template_packet* const io_packet)
             {
-                auto local_deallocator(local_allocator);
-                local_deallocator.destroy(io_packet);
-                local_deallocator.deallocate(io_packet, 1);
+                if (io_packet != nullptr)
+                {
+                    auto local_deallocator(local_allocator);
+                    local_deallocator.destroy(io_packet);
+                    local_deallocator.deallocate(io_packet, 1);
+                }
             },
             local_allocator);
     }
@@ -716,6 +722,18 @@ class psyq::any::message::transmitter
             this->get_message_address(), in_receiver_address, in_receiver_mask);
     }
     //@}
+    /** @brief 現在のスレッドが処理が許可されているスレッドか判定する。
+        @retval true  現在のスレッドは、処理が許可されている。
+        @retval false 現在のスレッドは、処理が許可されてない。
+     */
+    private: bool agree_this_thread() const PSYQ_NOEXCEPT
+    {
+        bool const local_agree(
+            std::this_thread::get_id() == this->get_thread_id());
+        PSYQ_ASSERT(local_agree);
+        return local_agree;
+    }
+
     //-------------------------------------------------------------------------
     /// メッセージパケットを配信する this_type::receiver の辞書。
     private: typename this_type::receiver_map receiver_map_;

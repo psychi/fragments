@@ -99,6 +99,7 @@ class psyq::any::message::zone
     {
         return this->equip_transmitter(std::this_thread::get_id());
     }
+
     /** @brief スレッドに合致する this_type::transmitter を用意する。
 
         @copydetails equip_transmitter()
@@ -119,6 +120,14 @@ class psyq::any::message::zone
             this->transmitters_, in_thread_id, local_message_address);
     }
     //@}
+    /** @brief this_type::transmitter をコンテナから検索する。
+        @return
+            検索した this_type::transmitter の保持子。
+            見つからなかった場合、保持子は空となる。
+        @param[in] in_transmitters this_type::transmitter を検索するコンテナ。
+        @param[in] in_thread_id
+            検索する this_type::transmitter に対応するスレッドの識別子。
+     */
     private: static typename this_type::transmitter::shared_ptr find_transmitter(
         typename this_type::weak_transmitter_container const& in_transmitters,
         std::thread::id const& in_thread_id)
@@ -136,11 +145,23 @@ class psyq::any::message::zone
         return typename this_type::transmitter::shared_ptr();
     }
 
+    /** @brief this_type::transmitter を生成し、コンテナに追加する。
+        @return
+            生成した this_type::transmitter の保持子。
+            生成に失敗した場合、保持子は空となる。
+        @param[in,out] io_transmitters
+            生成した this_type::transmitter を追加するコンテナ。
+        @param[in] in_thread_id
+            生成する this_type::transmitter に対応するスレッドの識別子。
+        @param[in] in_mesasge_address
+            生成する this_type::transmitter に与えるメッセージ送受信アドレス。
+     */
     private: static typename this_type::transmitter::shared_ptr make_transmitter(
         typename this_type::weak_transmitter_container& io_transmitters,
         std::thread::id const& in_thread_id,
         typename this_type::receiver::tag::key const in_mesasge_address)
     {
+        // this_type::transmitter に割り当てるメモリを確保する。
         typename this_type::transmitter::allocator_type::template
             rebind<typename this_type::transmitter>::other
                 local_allocator(io_transmitters.get_allocator());
@@ -150,6 +171,8 @@ class psyq::any::message::zone
             PSYQ_ASSERT(false);
             return typename this_type::transmitter::shared_ptr();
         }
+
+        // this_type::transmitter を構築する。
         typename this_type::transmitter::shared_ptr const local_transmitter(
             new(local_storage) typename this_type::transmitter(
                 in_thread_id, in_mesasge_address, local_allocator),
@@ -190,6 +213,14 @@ class psyq::any::message::zone
             this->export_packets_, this->import_packets_);
     }
     //@}
+    /** @brief this_type::transmitter が持つメッセージパケットを集配する。
+        @param[in,out] io_transmitters
+            メッセージパケットを集配する this_type::transmitter のコンテナ。
+        @param[in,out] io_export_packets
+            this_type::transmitter からメッセージパケットを集めて格納するコンテナ。
+        @param[in] in_import_packets
+            this_type::transmitter へ配るメッセージパケットのコンテナ。
+     */
     private: static void trade_packet_container(
         typename this_type::weak_transmitter_container& io_transmitters,
         typename this_type::transmitter::shared_packet_container& io_export_packets,
@@ -211,13 +242,20 @@ class psyq::any::message::zone
         io_transmitters.erase(local_last_iterator, io_transmitters.end());
     }
 
+    /** @brief 集配されたメッセージパケットのコンテナを交換する。
+        @param[in,out] io_export_packets
+            this_type::transmitter から集めたメッセージパケットのコンテナ。
+        @param[in,out] io_import_packets
+            this_type::transmitter へ配ったメッセージパケットのコンテナ。
+     */
     private: static void swap_packet_container(
         typename this_type::transmitter::shared_packet_container& io_export_packets,
         typename this_type::transmitter::shared_packet_container& io_import_packets)
     {
-        io_export_packets.swap(io_import_packets);
+        // 配信済コンテナを空にしてから交換する。
         this_type::transmitter::clear_packet_container(
-            io_export_packets, io_import_packets.size());
+            io_import_packets, io_export_packets.size());
+        io_export_packets.swap(io_import_packets);
     }
 
     //-------------------------------------------------------------------------
@@ -257,11 +295,6 @@ namespace psyq
             message_zone local_zone;
             auto const local_transmitter_holder(local_zone.equip_transmitter());
             auto& local_transmitter(*local_transmitter_holder);
-            enum: message_zone::receiver::call::key
-            {
-                METHOD_PARAMETER_VOID = 1,
-                METHOD_PARAMETER_DOUBLE,
-            };
             message_zone::receiver::shared_ptr const local_method_a(
                 new message_zone::receiver(
                     [](message_zone::receiver::packet const& in_packet)
@@ -290,6 +323,11 @@ namespace psyq
                     },
                     local_transmitter.get_message_address()));
 
+            enum: message_zone::receiver::call::key
+            {
+                METHOD_PARAMETER_VOID = 1,
+                METHOD_PARAMETER_DOUBLE,
+            };
             local_transmitter.register_receiver(
                 local_method_a, METHOD_PARAMETER_VOID);
             local_transmitter.register_receiver(

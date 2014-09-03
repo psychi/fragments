@@ -47,7 +47,10 @@ namespace psyq
             @param[in] in_element_0 要素#0の初期値。
             @param[in] in_element_1 要素#1の初期値。
          */
-        template<typename template_vector, typename template_element>
+        template<
+            unsigned template_dimension,
+            typename template_vector,
+            typename template_element>
         template_vector make_vector(
             template_element const in_element_0,
             template_element const in_element_1)
@@ -65,7 +68,10 @@ namespace psyq
             @param[in] in_element_1 要素#1の初期値。
             @param[in] in_element_2 要素#2の初期値。
          */
-        template<typename template_vector, typename template_element>
+        template<
+            unsigned template_dimension,
+            typename template_vector,
+            typename template_element>
         template_vector make_vector(
             template_element const in_element_0,
             template_element const in_element_1,

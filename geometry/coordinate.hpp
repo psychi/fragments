@@ -10,8 +10,12 @@
 
 /// psyq::geometry::coordinate で使う、デフォルトのベクトル型。
 #ifndef PSYQ_GEOMETRY_COORDINATE_VECTOR_DEFAULT
-#define PSYQ_GEOMETRY_COORDINATE_VECTOR_DEFAULT glm::vec3
-#include <glm/glm.hpp> // OpenGL Mathematics
+#include <glm/gtx/simd_vec4.hpp> // OpenGL Mathematics
+# if GLM_ARCH != GLM_ARCH_PURE
+#   define PSYQ_GEOMETRY_COORDINATE_VECTOR_DEFAULT glm::simdVec4
+# else
+#   define PSYQ_GEOMETRY_COORDINATE_VECTOR_DEFAULT glm::vec3
+# endif
 //#include "psyq/geometry/glm_vec.hpp"
 #endif // !defined(PSYQ_GEOMETRY_COORDINATE_VECTOR_DEFAULT)
 
@@ -125,6 +129,9 @@ class psyq::geometry::coordinate
         typename this_type::vector const& in_left,
         typename this_type::vector const& in_right)
     {
+        static_assert(
+            3 <= this_type::DIMENSION,
+            "'this_type::DIMENSION is less than 3.");
         return psyq::geometry::cross_product_vector
             <typename this_type::element>(in_left, in_right);
     }
@@ -242,7 +249,9 @@ class psyq::geometry::coordinate_2d:
         typename this_type::element const in_element_0,
         typename this_type::element const in_element_1)
     {
-        return psyq::geometry::make_vector<typename this_type::vector>(in_element_0, in_element_1);
+        return psyq::geometry::make_vector
+            <this_type::DIMENSION, typename this_type::vector>
+                (in_element_0, in_element_1);
     }
 
     /** @brief 要素が全て同じ値の幾何ベクトルを構築する。
@@ -311,8 +320,9 @@ class psyq::geometry::coordinate_3d:
         typename this_type::element const in_element_1,
         typename this_type::element const in_element_2)
     {
-        return psyq::geometry::make_vector<typename this_type::vector>(
-            in_element_0, in_element_1, in_element_2);
+        return psyq::geometry::make_vector
+            <this_type::DIMENSION, typename this_type::vector>
+                (in_element_0, in_element_1, in_element_2);
     }
 
     /// @copydoc psyq::geometry::coordinate_2d::make(this_type::element)
@@ -379,6 +389,10 @@ namespace psyq
                     local_segment.get_direction()));
             auto const local_ray_aabb(
                 psyq::geometry::make_aabb(local_ray));
+
+            coordinate_type::cross_product(
+                coordinate_type::make(1, 0, 0),
+                coordinate_type::make(0, 1, 0));
         }
     }
 }

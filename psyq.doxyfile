@@ -693,6 +693,12 @@ INPUT                  = \
                          ./any/message/receiver.hpp \
                          ./any/message/transmitter.hpp \
                          ./any/message/zone.hpp \
+                         ./geometry/vector.hpp \
+                         ./geometry/glm_vec.hpp \
+                         ./geometry/aabb.hpp \
+                         ./geometry/shape.hpp \
+                         ./geometry/coordinate.hpp \
+                         ./geometry/mosp/nut.hpp \
                          ./memory_arena.hpp \
                          ./bit_algorithm.hpp \
                          ./fnv_hash.hpp \

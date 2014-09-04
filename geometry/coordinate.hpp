@@ -15,6 +15,7 @@ namespace psyq
 {
     namespace geometry
     {
+        template<typename, unsigned> class coordinate_traits;
         template<typename, unsigned> class coordinate;
         template<typename> class coordinate_2d;
         template<typename> class coordinate_3d;
@@ -25,19 +26,14 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 座標の型特性の基底型。
 
-    座標を表す幾何ベクトルの基本的な処理を行う。
-    この実装では汎用的な手法でベクトル処理を実装しているが、
-    他に適切な実装手法があるなら、
-    テンプレート特殊化などで互換性のある別の実装をユーザーが用意すること。
-
     @tparam template_vector_traits @copydoc psyq::geometry::coordinate::vector_traits
     @tparam template_dimension     @copydoc psyq::geometry::coordinate::dimension
  */
 template<typename template_vector_traits, unsigned template_dimension>
-class psyq::geometry::coordinate
+class psyq::geometry::coordinate_traits
 {
     /// thisが指す値の型。
-    private: typedef coordinate this_type;
+    private: typedef coordinate_traits this_type;
 
     /** 座標を表す幾何ベクトルの型特性。
         psyq::geometry::vector_traits と互換性があること。
@@ -71,6 +67,30 @@ class psyq::geometry::coordinate
 
     /// 最小座標と最大座標を要素とするAABB。
     public: typedef psyq::geometry::aabb<this_type> aabb;
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 任意型の幾何ベクトルを使う座標のベクトル処理。
+
+    座標を表す幾何ベクトルの基本的な処理を行う。
+    この実装では汎用的な手法でベクトル処理を実装しているが、
+    他に適切な実装手法があるなら、
+    テンプレート特殊化などで互換性のある別の実装をユーザーが用意すること。
+
+    @tparam template_vector_traits @copydoc psyq::geometry::coordinate::vector_traits
+    @tparam template_dimension     @copydoc psyq::geometry::coordinate::dimension
+ */
+template<typename template_vector_traits, unsigned template_dimension>
+class psyq::geometry::coordinate:
+    public psyq::geometry::coordinate_traits<template_vector_traits, template_dimension>
+{
+    /// thisが指す値の型。
+    private: typedef coordinate this_type;
+
+    /// this_type の基底型。
+    public: typedef psyq::geometry::coordinate_traits
+        <template_vector_traits, template_dimension>
+            base_type;
 
     //-------------------------------------------------------------------------
     /** @brief 幾何ベクトルの要素から値を取得する。
@@ -78,19 +98,19 @@ class psyq::geometry::coordinate
         @param[in] in_vector 要素の値を取得する幾何ベクトル。
         @param[in] in_index  取得する要素のインデックス番号。
      */
-    public: static typename this_type::element get_element(
-        typename this_type::vector const& in_vector,
+    public: static typename base_type::element get_element(
+        typename base_type::vector const& in_vector,
         unsigned const in_index)
     {
         static_assert(
-            true,//std::is_standard_layout<typename this_type::vector>::value,
+            true,//std::is_standard_layout<typename base_type::vector>::value,
             "'template_vector' is not standard layout type.");
         static_assert(
-            this_type::dimension * sizeof(typename this_type::element) <=
-                sizeof(typename this_type::vector),
+            this_type::dimension * sizeof(typename base_type::element) <=
+                sizeof(typename base_type::vector),
             "");
         auto const local_elements(
-            reinterpret_cast<typename this_type::element const*>(&in_vector));
+            reinterpret_cast<typename base_type::element const*>(&in_vector));
         PSYQ_ASSERT(in_index < this_type::dimension);
         return *(local_elements + in_index);
     }
@@ -101,20 +121,20 @@ class psyq::geometry::coordinate
         @param[in]     in_index  設定する要素のインデックス番号。
         @param[in]     in_value  設定する要素の値。
      */
-    public: static typename this_type::element set_element(
-        typename this_type::vector& io_vector,
+    public: static typename base_type::element set_element(
+        typename base_type::vector& io_vector,
         unsigned const in_index,
-        typename this_type::element const in_value)
+        typename base_type::element const in_value)
     {
         static_assert(
-            true,//std::is_standard_layout<typename this_type::vector>::value,
+            true,//std::is_standard_layout<typename base_type::vector>::value,
             "'template_vector' is not standard layout type.");
         static_assert(
-            this_type::dimension * sizeof(typename this_type::element) <=
-                sizeof(typename this_type::vector),
+            this_type::dimension * sizeof(typename base_type::element) <=
+                sizeof(typename base_type::vector),
             "");
         auto const local_elements(
-            reinterpret_cast<typename this_type::element*>(&io_vector));
+            reinterpret_cast<typename base_type::element*>(&io_vector));
         PSYQ_ASSERT(in_index < template_dimension);
         *(local_elements + in_index) = in_value;
         return in_value;
@@ -126,9 +146,9 @@ class psyq::geometry::coordinate
         @param[in] in_left  内積の左辺となる幾何ベクトル。
         @param[in] in_right 内積の右辺となる幾何ベクトル。
      */
-    public: static typename this_type::element dot_product(
-        typename this_type::vector const& in_left,
-        typename this_type::vector const& in_right)
+    public: static typename base_type::element dot_product(
+        typename base_type::vector const& in_left,
+        typename base_type::vector const& in_right)
     {
         auto local_dot(
             this_type::get_element(in_left, 0) *
@@ -147,9 +167,9 @@ class psyq::geometry::coordinate
         @param[in] in_left  外積の左辺となる3次元幾何ベクトル。
         @param[in] in_right 外積の右辺となる3次元幾何ベクトル。
      */
-    public: static typename this_type::vector cross_product(
-        typename this_type::vector const& in_left,
-        typename this_type::vector const& in_right)
+    public: static typename base_type::vector cross_product(
+        typename base_type::vector const& in_left,
+        typename base_type::vector const& in_right)
     {
         auto const local_left_0(this_type::get_element(in_left, 0));
         auto const local_left_1(this_type::get_element(in_left, 1));
@@ -158,7 +178,7 @@ class psyq::geometry::coordinate
         auto const local_right_1(this_type::get_element(in_right, 1));
         auto const local_right_2(this_type::get_element(in_right, 2));
         return psyq::geometry::_private::vector_maker
-            <typename this_type::vector, this_type::vector_traits::size>
+            <typename base_type::vector, base_type::vector_traits::size>
                 ::make(
                     local_left_1 * local_right_2 - local_left_2 * local_right_1,
                     local_left_2 * local_right_0 - local_left_0 * local_right_2,
@@ -170,8 +190,8 @@ class psyq::geometry::coordinate
         @return 幾何ベクトルの長さ。
         @param[in] in_vector 長さを算出する幾何ベクトル。
      */
-    public: static typename this_type::element compute_length(
-        typename this_type::vector const& in_vector)
+    public: static typename base_type::element compute_length(
+        typename base_type::vector const& in_vector)
     {
         return std::sqrt(this_type::dot_product(in_vector, in_vector));
     }
@@ -181,9 +201,9 @@ class psyq::geometry::coordinate
         @param[in] in_vector 元となる幾何ベクトル。
         @param[in] in_length 調整後の長さ。
      */
-    public: static typename this_type::vector arrange_length(
-        typename this_type::vector const& in_vector,
-        typename this_type::element const in_length)
+    public: static typename base_type::vector arrange_length(
+        typename base_type::vector const& in_vector,
+        typename base_type::element const in_length)
     {
         auto const local_square_length(
             this_type::dot_product(in_vector, in_vector));
@@ -214,13 +234,13 @@ class psyq::geometry::coordinate
         @param[in]  in_level_cap 空間分割の最大深度。
      */
     protected: static void compute_mosp_scale(
-        std::array<typename this_type::element, this_type::dimension>& out_elements,
+        std::array<typename base_type::element, this_type::dimension>& out_elements,
         typename this_type::aabb const& in_aabb,
         unsigned const in_level_cap)
     {
         auto const local_size(in_aabb.get_max() - in_aabb.get_min());
         auto const local_unit(
-            static_cast<typename this_type::element>(1 << in_level_cap));
+            static_cast<typename base_type::element>(1 << in_level_cap));
         for (unsigned i(0); i < this_type::dimension; ++i)
         {
             out_elements[i] = this_type::compute_mosp_scale(
@@ -232,11 +252,11 @@ class psyq::geometry::coordinate
         @param[in] in_morton_size モートン座標の最大値。
         @param[in] in_world_size  絶対座標系でのモートン空間の大きさ。
      */
-    protected: static typename this_type::element compute_mosp_scale(
-        typename this_type::element const in_morton_size,
-        typename this_type::element const in_world_size)
+    protected: static typename base_type::element compute_mosp_scale(
+        typename base_type::element const in_morton_size,
+        typename base_type::element const in_world_size)
     {
-        return in_world_size < std::numeric_limits<typename this_type::element>::epsilon()?
+        return in_world_size < std::numeric_limits<typename base_type::element>::epsilon()?
             0: in_morton_size / in_world_size;
     }
 
@@ -340,8 +360,8 @@ class psyq::geometry::coordinate_3d:
                 ::make(in_element_0, in_element_1, in_element_2);
     }
 
-    /// @copydoc psyq::geometry::coordinate_2d::make(this_type::element)
-    public: static typename this_type::vector make(
+    /// @copydoc psyq::geometry::coordinate_2d::make(base_type::element)
+    public: static typename base_type::vector make(
         typename base_type::element const in_element)
     {
         return this_type::make(in_element, in_element, in_element);
@@ -349,7 +369,7 @@ class psyq::geometry::coordinate_3d:
 
     /// @copydoc psyq::geometry::coordinate_2d::make(template_container const&)
     public: template<typename template_container>
-    static typename this_type::vector make(
+    static typename base_type::vector make(
         template_container const& in_container)
     {
         return this_type::make(

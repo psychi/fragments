@@ -5,8 +5,6 @@
 #ifndef PSYQ_GEOMETRY_SHAPE_HPP_
 #define PSYQ_GEOMETRY_SHAPE_HPP_
 
-//#include "psyq/geometry/aabb.hpp"
-
 /// @cond
 namespace psyq
 {
@@ -103,27 +101,6 @@ class psyq::geometry::ball
 
 }; // class psyq::geometry::ball
 
-namespace psyq
-{
-    namespace geometry
-    {
-        /** @brief 球のAABBを構築する。
-            @param[in] in_ball AABBを構築する球。
-            @return 球のAABB。
-         */
-        template<typename template_coordinate>
-        psyq::geometry::aabb<template_coordinate> make_aabb(
-            psyq::geometry::ball<template_coordinate> const& in_ball)
-        {
-            auto const local_extent(
-                template_coordinate::make(in_ball.get_radius()));
-            return psyq::geometry::aabb<template_coordinate>(
-                in_ball.get_center() - local_extent,
-                in_ball.get_center() + local_extent);
-        }
-    } // namespace geometry
-} // namespace psyq
-
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 線分。
     @tparam template_coordinate @copydoc this_type::coordinate
@@ -194,54 +171,6 @@ class psyq::geometry::segment
 
 }; // class psyq::geometry::segment
 
-namespace psyq
-{
-    namespace geometry
-    {
-        /** @brief 線分のAABBを構築する。
-            @param[in] in_segment AABBを構築する線分。
-            @return 線分のAABB。
-         */
-        template<typename template_coordinate>
-        psyq::geometry::aabb<template_coordinate> make_aabb(
-            psyq::geometry::segment<template_coordinate> const& in_segment)
-        {
-            typedef std::array<
-                typename template_coordinate::element,
-                template_coordinate::DIMENSION>
-                    element_array;
-            element_array local_min;
-            element_array local_max;
-            auto const local_end(
-                in_segment.get_origin() + in_segment.get_direction());
-            for (unsigned i(0); i < template_coordinate::DIMENSION; ++i)
-            {
-                auto const local_direction(
-                    template_coordinate::get_element(
-                        in_segment.get_direction(), i));
-                auto const local_origin(
-                    template_coordinate::get_element(
-                        in_segment.get_origin(), i));
-                auto const local_end_element(
-                    template_coordinate::get_element(local_end, i));
-                if (local_direction < 0)
-                {
-                    local_min[i] = local_end_element;
-                    local_max[i] = local_origin;
-                }
-                else
-                {
-                    local_min[i] = local_origin;
-                    local_max[i] = local_end_element;
-                }
-            }
-            return psyq::geometry::aabb<template_coordinate>(
-                template_coordinate::make(local_min),
-                template_coordinate::make(local_max));
-        }
-    } // namespace geometry
-} // namespace psyq
-
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief半直線。
     @tparam template_coordinate @copydoc this_type::coordinate
@@ -270,7 +199,7 @@ class psyq::geometry::ray:
     PSYQ_NOEXCEPT:
         base_type(
             in_origin,
-            (PSYQ_ASSERT(this_type::coordinate::is_normalized(in_direction)), in_direction))
+            (PSYQ_ASSERT(psyq::geometry::is_nearly_length<typename base_type::coordinate>(in_direction, 1)), in_direction))
     {}
 
     /** @brief 半直線の方向ベクトルを設定する。
@@ -282,7 +211,7 @@ class psyq::geometry::ray:
     public: void set_direction(
         typename base_type::coordinate::vector const& in_direction)
     {
-        this->direction_ = this_type::coordinate::normalize(in_direction);
+        this->direction_ = this_type::coordinate::arrange_length(in_direction, 1);
     }
 
     /** @brief 半直線を構築する。
@@ -297,57 +226,10 @@ class psyq::geometry::ray:
         typename base_type::coordinate::vector const& in_direction)
     {
         return this_type(
-            in_origin, this_type::coordinate::normalize(in_direction));
+            in_origin, this_type::coordinate::arrange_length(in_direction, 1));
     }
 
 }; // namespace psyq::geometry::ray
-
-namespace psyq
-{
-    namespace geometry
-    {
-        /** @brief 半直線のAABBを構築する。
-            @param[in] in_ray AABBを構築する半直線。
-            @return 半直線のAABB。
-         */
-        template<typename template_coordinate>
-        psyq::geometry::aabb<template_coordinate> make_aabb(
-            psyq::geometry::ray<template_coordinate> const& in_ray)
-        {
-            typedef std::array<
-                typename template_coordinate::element,
-                template_coordinate::DIMENSION>
-                    element_array;
-            element_array local_min;
-            element_array local_max;
-            for (unsigned i(0); i < template_coordinate::DIMENSION; ++i)
-            {
-                auto const local_direction(
-                    template_coordinate::get_element(in_ray.get_direction(), i));
-                auto const local_origin(
-                    template_coordinate::get_element(in_ray.get_origin(), i));
-                if (local_direction < 0)
-                {
-                    local_min[i] = -(std::numeric_limits<typename template_coordinate::element>::max)();
-                    local_max[i] = local_origin;
-                }
-                else if (0 < local_direction)
-                {
-                    local_min[i] = local_origin;
-                    local_max[i] = (std::numeric_limits<typename template_coordinate::element>::max)();
-                }
-                else
-                {
-                    local_min[i] = local_origin;
-                    local_max[i] = local_origin;
-                }
-            }
-            return psyq::geometry::aabb<template_coordinate>(
-                template_coordinate::make(local_min),
-                template_coordinate::make(local_max));
-        }
-    } // namespace geometry
-} // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 半直線と衝突する三角形。
@@ -359,7 +241,7 @@ class psyq::geometry::ray<template_coordinate>::triangle
     /// thisが指す値の型。
     private: typedef triangle this_type;
 
-    /// psyq::geometry::coordinate 互換の幾何ベクトル型特性。
+    /// psyq::geometry::coordinate 互換の座標の型特性。
     public: typedef template_coordinate coordinate;
 
     //-------------------------------------------------------------------------
@@ -510,28 +392,28 @@ class psyq::geometry::box
     /// 直方体の軸方向の単位ベクトルの配列。
     public: typedef std::array<
         typename template_coordinate::vector,
-        template_coordinate::DIMENSION>
+        template_coordinate::dimension>
             axis_array;
 
     //-------------------------------------------------------------------------
     /** @brief 直方体を構築する。
         @param[in] in_center 直方体の中心位置。
         @param[in] in_extent 直方体の大きさの1/2。すべての要素が0以上であること。
-        @param[in] in_axis   直方体の各軸方向の単位ベクトル。
+        @param[in] in_axes   直方体の各軸方向の単位ベクトルの配列。
      */
     public: box(
         typename this_type::coordinate::vector const& in_center,
         typename this_type::coordinate::vector const& in_extent,
-        typename this_type::axis_array const& in_axis)
+        typename this_type::axis_array const& in_axes)
     :
         center_(in_center),
         extent_(in_extent),
-        axis_(in_axis)
+        axes_(in_axes)
     {
-        for (unsigned i(0); i < this_type::coordinate::DIMENSION; ++i)
+        for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
         {
             PSYQ_ASSERT(0 <= this_type::coordinate::get_element(in_extent, i));
-            PSYQ_ASSERT(this_type::coordinate::is_normalized(in_axis[i]));
+            PSYQ_ASSERT(psyq::geometry::is_nearly_length<typename this_type::coordinate>(in_axes[i], 1));
         }
     }
 
@@ -556,10 +438,10 @@ class psyq::geometry::box
     /** @brief 直方体の軸方向ベクトルの配列を取得する。
         @return 直方体の軸方向の単位ベクトルの配列。
      */
-    public: typename this_type::axis_array const& get_axis()
+    public: typename this_type::axis_array const& get_axes()
     const PSYQ_NOEXCEPT
     {
-        return this->axis_;
+        return this->axes_;
     }
 
     /** @brief 直方体を作る。
@@ -570,18 +452,18 @@ class psyq::geometry::box
      */
     public: static this_type make_cuboid(
         typename this_type::coordinate::vector const& in_center,
-        typename this_type::coordinate::vector const in_extent,
+        typename this_type::coordinate::vector const& in_extent,
         typename this_type::coordinate::element const in_rotation,
         typename this_type::coordinate::vector const& in_axis)
     {
         static_assert(
-            3 <= this_type::coordinate::DIMENSION,
-            "'this_type::coordinate::DIMENSION' is less than 3.");
+            3 <= this_type::coordinate::dimension,
+            "'this_type::coordinate::dimension' is less than 3.");
 
         // 回転軸と回転角度から四元数を算出する。
         auto const local_half_rotation(in_rotation / 2);
         auto const local_half_sin(std::sin(local_half_rotation));
-        auto const local_axis(this_type::coordinate::normalize(in_axis));
+        auto const local_axis(this_type::coordinate::arrange_length(in_axis, 1));
         auto const local_qx(
             local_half_sin * this_type::coordinate::get_element(local_axis, 0));
         auto const local_qy(
@@ -600,31 +482,32 @@ class psyq::geometry::box
         auto const local_yw(local_qy * local_qw);
         auto const local_zz(local_qz * local_qz);
         auto const local_zw(local_qz * local_qw);
-        typename this_type::axis_array local_axis;
-        local_axis[0] = this_type::coordinate::make(
-            1 - 2 * (local_yy + local_zz),
-            0 + 2 * (local_xy + local_zw),
-            0 + 2 * (local_xz - local_yw));
-        local_axis[1] = this_type::coordinate::make(
-            0 + 2 * (local_xy - local_zw),
-            1 - 2 * (local_xx + local_zz),
-            0 + 2 * (local_yz + local_xw));
-        local_axis[2] = this_type::coordinate::make(
-            0 + 2 * (local_xz + local_yw),
-            0 + 2 * (local_yz - local_xw),
-            1 - 2 * (local_xx + local_yy));
+        typename this_type::axis_array local_axes;
+        local_axes[0] = this_type::coordinate::make(
+            (local_yy + local_zz) * -2 + 1,
+            (local_xy + local_zw) * 2,
+            (local_xz - local_yw) * 2);
+        local_axes[1] = this_type::coordinate::make(
+            (local_xy - local_zw) * 2,
+            (local_xx + local_zz) * -2 + 1,
+            (local_yz + local_xw) * 2);
+        local_axes[2] = this_type::coordinate::make(
+            (local_xz + local_yw) * 2,
+            (local_yz - local_xw) * 2,
+            (local_xx + local_yy) * -2 + 1);
 
         // 大きさを正規化する。
-        for (unsigned i(0); i < this_type::coordinate::DIMENSION; ++i)
+        auto local_extent(in_extent);
+        for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
         {
-            auto const local_extent(
+            auto const local_element(
                 this_type::coordinate::get_element(in_extent, i));
-            if (local_extent < 0)
+            if (local_element < 0)
             {
-                this_type::coordinate::set_element(in_extent, i, -local_extent);
+                this_type::coordinate::set_element(local_extent, i, -local_element);
             }
         }
-        return this_type(in_center, in_extent, local_axis);
+        return this_type(in_center, local_extent, local_axes);
     }
 
     //-------------------------------------------------------------------------
@@ -633,48 +516,8 @@ class psyq::geometry::box
     /// 直方体の大きさの1/2。
     private: typename this_type::coordinate::vector extent_;
     /// 直方体の軸方向の単位ベクトルの配列。
-    private: typename this_type::axis_array axis_;
+    private: typename this_type::axis_array axes_;
 
 }; // class psyq::geometry::box
-
-namespace psyq
-{
-    namespace geometry
-    {
-        /** @brief 直方体のAABBを構築する。
-            @param[in] in_box AABBを構築する直方体。
-            @return 直方体のAABB。
-         */
-        template<typename template_coordinate>
-        psyq::geometry::aabb<template_coordinate> make_aabb(
-            psyq::geometry::box<template_coordinate> const& in_box)
-        {
-            typedef std::array<
-                typename template_coordinate::element,
-                template_coordinate::DIMENSION>
-                    element_array;
-            element_array local_elements;
-            auto local_half_diagonal(template_coordinate::make(0));
-            for (unsigned i(0); i < template_coordinate::DIMENSION; ++i)
-            {
-                auto const local_axis(
-                    in_box.get_axis()[i] *
-                        template_coordinate::get_element(
-                            in_box.get_extent(), i));
-                for (unsigned j(0); j < template_coordinate::DIMENSION; ++j)
-                {
-                    local_elements[j] = std::abs(
-                        this_type::coordinate::get_element(local_axis, j));
-                }
-                local_half_diagonal = local_half_diagonal +
-                    template_coordinate::make(local_elements);
-            }
-            return psyq::geometry::aabb<template_coordinate>(
-                in_box.get_center() - local_half_diagonal,
-                in_box.get_center() + local_half_diagonal);
-        }
-
-    } // namespace geometry
-} // namespace psyq
 
 #endif // !defined(PSYQ_GEOMETRY_SHAPE_HPP_)

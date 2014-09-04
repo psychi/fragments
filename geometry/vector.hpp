@@ -1,6 +1,9 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
     @brief 任意の幾何ベクトル型を扱うユーティリティ関数群。
+    @defgroup psyq_geometry ベクトルや図形など、幾何学的な処理
+    @defgroup psyq_geometry_vector_traits 幾何ベクトルの型特性
+    @ingroup psyq_geometry
  */
 #ifndef PSYQ_GEOMETRY_VECTOR_HPP_
 #define PSYQ_GEOMETRY_VECTOR_HPP_
@@ -14,7 +17,7 @@ namespace psyq
     /// ベクトルや図形など、幾何学的な処理を行う。
     namespace geometry
     {
-        /** @brief 幾何ベクトルの型特性。
+        /** @brief 幾何ベクトルの型特性の宣言。
 
             ここでは宣言のみを行い、実装は用意しない。
             ユーザーが使うベクトル型にテンプレート特殊化した実装を、
@@ -39,6 +42,7 @@ namespace psyq
             @endcode
 
             @tparam template_vector 型特性を定義する幾何ベクトルの型。
+            @ingroup psyq_geometry_vector_traits
          */
         template<typename template_vector> class vector_traits;
 

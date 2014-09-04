@@ -20,6 +20,7 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief glm::tvec2 にテンプレート特殊化した幾何ベクトル型特性。
+    @ingroup psyq_geometry_vector_traits
  */
 template<typename template_element, glm::precision template_precision>
 class psyq::geometry::vector_traits<
@@ -35,6 +36,7 @@ class psyq::geometry::vector_traits<
 };
 
 /** @brief glm::tvec3 にテンプレート特殊化した幾何ベクトル型特性。
+    @ingroup psyq_geometry_vector_traits
  */
 template<typename template_element, glm::precision template_precision>
 class psyq::geometry::vector_traits<
@@ -50,6 +52,7 @@ class psyq::geometry::vector_traits<
 };
 
 /** @brief glm::tvec4 にテンプレート特殊化した幾何ベクトル型特性。
+    @ingroup psyq_geometry_vector_traits
  */
 template<typename template_element, glm::precision template_precision>
 class psyq::geometry::vector_traits<
@@ -65,6 +68,7 @@ class psyq::geometry::vector_traits<
 };
 
 /** @brief glm::simdVec4 にテンプレート特殊化した幾何ベクトル型特性。
+    @ingroup psyq_geometry_vector_traits
  */
 template<>
 class psyq::geometry::vector_traits<glm::simdVec4>
@@ -79,6 +83,7 @@ class psyq::geometry::vector_traits<glm::simdVec4>
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief OpenGL Mathematics のベクトルを使う座標系のベクトル処理。
+    @ingroup psyq_geometry_coordinate
  */
 template<typename template_vector, unsigned template_dimension>
 class psyq::geometry::glm_coordinate:
@@ -147,6 +152,7 @@ public psyq::geometry::coordinate_traits<template_vector, template_dimension>
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief glm::tvec2 を使う座標系のテンプレート特殊化。
+    @ingroup psyq_geometry_coordinate
  */
 template<
     typename template_element,
@@ -169,6 +175,7 @@ public psyq::geometry::glm_coordinate<
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief glm::tvec3 を使う座標系のテンプレート特殊化。
+    @ingroup psyq_geometry_coordinate
  */
 template<
     typename template_element,
@@ -191,6 +198,7 @@ public psyq::geometry::glm_coordinate<
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief glm::tvec4 を使う座標系のテンプレート特殊化。
+    @ingroup psyq_geometry_coordinate
  */
 template<
     typename template_element,
@@ -213,6 +221,7 @@ public psyq::geometry::glm_coordinate<
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief glm::simdVec4 を使う座標系のテンプレート特殊化。
+    @ingroup psyq_geometry_coordinate
  */
 template<unsigned template_dimension>
 class psyq::geometry::coordinate<glm::simdVec4, template_dimension>:

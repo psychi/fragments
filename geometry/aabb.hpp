@@ -20,6 +20,7 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 座標軸に平行な直方体。Axis-Aligned-Bounding-Box.
     @tparam template_coordinate @copydoc this_type::coordinate
+    @ingroup psyq_geometry_shape
  */
 template<typename template_coordinate>
 class psyq::geometry::aabb
@@ -131,6 +132,7 @@ namespace psyq
         /** @brief 球のAABBを構築する。
             @return 球のAABB。
             @param[in] in_ball AABBを構築する球。
+            @ingroup psyq_geometry_shape
          */
         template<typename template_coordinate>
         psyq::geometry::aabb<template_coordinate> make_aabb(
@@ -147,6 +149,7 @@ namespace psyq
         /** @brief 線分のAABBを構築する。
             @return 線分のAABB。
             @param[in] in_segment AABBを構築する線分。
+            @ingroup psyq_geometry_shape
          */
         template<typename template_coordinate>
         psyq::geometry::aabb<template_coordinate> make_aabb(
@@ -190,6 +193,7 @@ namespace psyq
         /** @brief 半直線のAABBを構築する。
             @return 半直線のAABB。
             @param[in] in_ray AABBを構築する半直線。
+            @ingroup psyq_geometry_shape
          */
         template<typename template_coordinate>
         psyq::geometry::aabb<template_coordinate> make_aabb(
@@ -232,6 +236,7 @@ namespace psyq
         /** @brief 直方体のAABBを構築する。
             @return 直方体のAABB。
             @param[in] in_box AABBを構築する直方体。
+            @ingroup psyq_geometry_shape
          */
         template<typename template_coordinate>
         psyq::geometry::aabb<template_coordinate> make_aabb(
@@ -268,6 +273,7 @@ namespace psyq
         /** @brief AABBのAABBを構築する。
             @return AABBのAABB。
             @param[in] in_aabb AABBを構築するAABB。
+            @ingroup psyq_geometry_shape
          */
         template<typename template_coordinate>
         psyq::geometry::aabb<template_coordinate> make_aabb(

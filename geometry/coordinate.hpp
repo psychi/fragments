@@ -1,6 +1,8 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
     @brief @copybrief psyq::geometry::coordinate
+    @defgroup psyq_geometry_coordinate 座標系の型特性
+    @ingroup psyq_geometry psyq::geometry
  */
 #ifndef PSYQ_GEOMETRY_COORDINATE_HPP_
 #define PSYQ_GEOMETRY_COORDINATE_HPP_
@@ -28,6 +30,7 @@ namespace psyq
 
     @tparam template_vector    @copydoc psyq::geometry::coordinate::vector
     @tparam template_dimension @copydoc psyq::geometry::coordinate::dimension
+    @ingroup psyq_geometry_coordinate
  */
 template<typename template_vector, unsigned template_dimension>
 class psyq::geometry::coordinate_traits
@@ -82,6 +85,7 @@ class psyq::geometry::coordinate_traits
 
     @tparam template_vector    @copydoc psyq::geometry::coordinate::vector
     @tparam template_dimension @copydoc psyq::geometry::coordinate::dimension
+    @ingroup psyq_geometry_coordinate
  */
 template<typename template_vector, unsigned template_dimension>
 class psyq::geometry::coordinate:
@@ -267,6 +271,7 @@ class psyq::geometry::coordinate:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 二次元座標の型特性。 psyq::mosp_space のtemplate引数に使う。
     @tparam template_vector @copydoc psyq::geometry::coordinate::vector
+    @ingroup psyq_geometry_coordinate
  */
 template<typename template_vector>
 class psyq::geometry::coordinate_2d:
@@ -334,6 +339,7 @@ class psyq::geometry::coordinate_2d:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 三次元座標の型特性。 psyq::mosp_space のtemplate引数に使う。
     @tparam template_vector @copydoc psyq::geometry::coordinate::vector
+    @ingroup psyq_geometry_coordinate
  */
 template<typename template_vector>
 class psyq::geometry::coordinate_3d:

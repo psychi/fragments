@@ -42,6 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
     @brief @copybrief psyq::string::_private::view_base
+    @defgroup psyq_string 動的メモリ確保を抑制した文字列オブジェクト
  */
 #ifndef PSYQ_STRING_VIEW_BASE_HPP_
 #define PSYQ_STRING_VIEW_BASE_HPP_

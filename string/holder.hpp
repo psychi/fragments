@@ -626,6 +626,7 @@ class psyq::string::_private::holder_base
     @tparam template_char_type      @copydoc base_type::value_type
     @tparam template_char_traits    @copydoc base_type::traits_type
     @tparam template_allocator_type @copydoc base_type::allocator_type
+    @ingroup psyq_string
  */
 template<
     typename template_char_type,

@@ -1,6 +1,8 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
     @brief 幾何形状オブジェクト群。
+    @defgroup psyq_geometry_shape 幾何形状オブジェクト
+    @ingroup psyq_geometry psyq::geometry
  */
 #ifndef PSYQ_GEOMETRY_SHAPE_HPP_
 #define PSYQ_GEOMETRY_SHAPE_HPP_
@@ -21,6 +23,7 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 球。
     @tparam template_coordinate @copydoc this_type::coordinate
+    @ingroup psyq_geometry_shape
  */
 template<typename template_coordinate>
 class psyq::geometry::ball
@@ -104,6 +107,7 @@ class psyq::geometry::ball
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 線分。
     @tparam template_coordinate @copydoc this_type::coordinate
+    @ingroup psyq_geometry_shape
  */
 template<typename template_coordinate>
 class psyq::geometry::segment
@@ -174,6 +178,7 @@ class psyq::geometry::segment
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief半直線。
     @tparam template_coordinate @copydoc this_type::coordinate
+    @ingroup psyq_geometry_shape
  */
 template<typename template_coordinate>
 class psyq::geometry::ray:
@@ -234,6 +239,7 @@ class psyq::geometry::ray:
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 半直線と衝突する三角形。
     @tparam template_coordinate @copydoc this_type::coordinate
+    @ingroup psyq_geometry_shape
  */
 template<typename template_coordinate>
 class psyq::geometry::ray<template_coordinate>::triangle
@@ -379,6 +385,7 @@ class psyq::geometry::ray<template_coordinate>::triangle
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 直方体。
     @tparam template_coordinate @copydoc this_type::coordinate
+    @ingroup psyq_geometry_shape
  */
 template<typename template_coordinate>
 class psyq::geometry::box

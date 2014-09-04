@@ -78,6 +78,7 @@ namespace psyq
 
     @tparam template_char_type   @copydoc psyq::string::_private::view_interface::value_type
     @tparam template_char_traits @copydoc psyq::string::_private::view_base::traits_type
+    @ingroup psyq_string
  */
 template<typename template_char_type, typename template_char_traits>
 class psyq::string::view:

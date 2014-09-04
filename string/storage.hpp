@@ -206,6 +206,7 @@ class psyq::string::_private::storage_base
     @tparam template_char_type   @copydoc base_type::value_type
     @tparam template_max_size    @copydoc base_type::MAX_SIZE
     @tparam template_char_traits @copydoc base_type::traits_type
+    @ingroup psyq_string
  */
 template<
     typename template_char_type,

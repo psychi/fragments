@@ -80,18 +80,16 @@ class psyq::geometry::vector_traits<glm::simdVec4>
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief OpenGL Mathematics のベクトルを使う座標系のベクトル処理。
  */
-template<typename template_vector_traits, unsigned template_dimension>
+template<typename template_vector, unsigned template_dimension>
 class psyq::geometry::glm_coordinate:
-public psyq::geometry::coordinate_traits<
-    template_vector_traits, template_dimension>
+public psyq::geometry::coordinate_traits<template_vector, template_dimension>
 {
     /// thisが指す値の型。
     private: typedef glm_coordinate this_type;
 
     /// this_type の基底型。
-    public: typedef psyq::geometry::coordinate_traits<
-        template_vector_traits, template_dimension>
-            base_type;
+    public: typedef psyq::geometry::coordinate_traits<vector, dimension>
+        base_type;
 
     //-------------------------------------------------------------------------
     /// @copydoc psyq::geometry::coordinate::get_element()
@@ -155,19 +153,17 @@ template<
     glm::precision template_precision,
     unsigned template_dimension>
 class psyq::geometry::coordinate<
-    psyq::geometry::vector_traits<
-        glm::detail::tvec2<template_element, template_precision>>,
+    glm::detail::tvec2<template_element, template_precision>,
     template_dimension>:
 public psyq::geometry::glm_coordinate<
-    psyq::geometry::vector_traits<
-        glm::detail::tvec2<template_element, template_precision>>,
+    glm::detail::tvec2<template_element, template_precision>,
     template_dimension>
 {
     /// thisが指す値の型。
     private: typedef coordinate this_type;
 
     /// this_type の基底型。
-    public: typedef psyq::geometry::glm_coordinate<vector_traits, dimension>
+    public: typedef psyq::geometry::glm_coordinate<vector, dimension>
         base_type;
 };
 
@@ -179,19 +175,17 @@ template<
     glm::precision template_precision,
     unsigned template_dimension>
 class psyq::geometry::coordinate<
-    psyq::geometry::vector_traits<
-        glm::detail::tvec3<template_element, template_precision>>,
+    glm::detail::tvec3<template_element, template_precision>,
     template_dimension>:
 public psyq::geometry::glm_coordinate<
-    psyq::geometry::vector_traits<
-        glm::detail::tvec3<template_element, template_precision>>,
+    glm::detail::tvec3<template_element, template_precision>,
     template_dimension>
 {
     /// thisが指す値の型。
     private: typedef coordinate this_type;
 
     /// this_type の基底型。
-    public: typedef psyq::geometry::glm_coordinate<vector_traits, dimension>
+    public: typedef psyq::geometry::glm_coordinate<vector, dimension>
         base_type;
 };
 
@@ -203,19 +197,17 @@ template<
     glm::precision template_precision,
     unsigned template_dimension>
 class psyq::geometry::coordinate<
-    psyq::geometry::vector_traits<
-        glm::detail::tvec4<template_element, template_precision>>,
+    glm::detail::tvec4<template_element, template_precision>,
     template_dimension>:
 public psyq::geometry::glm_coordinate<
-    psyq::geometry::vector_traits<
-        glm::detail::tvec4<template_element, template_precision>>,
+    glm::detail::tvec4<template_element, template_precision>,
     template_dimension>
 {
     /// thisが指す値の型。
     private: typedef coordinate this_type;
 
     /// this_type の基底型。
-    public: typedef psyq::geometry::glm_coordinate<vector_traits, dimension>
+    public: typedef psyq::geometry::glm_coordinate<vector, dimension>
         base_type;
 };
 
@@ -223,18 +215,15 @@ public psyq::geometry::glm_coordinate<
 /** @brief glm::simdVec4 を使う座標系のテンプレート特殊化。
  */
 template<unsigned template_dimension>
-class psyq::geometry::coordinate<
-    psyq::geometry::vector_traits<glm::simdVec4>, template_dimension>:
-public psyq::geometry::coordinate_traits<
-    psyq::geometry::vector_traits<glm::simdVec4>, template_dimension>
+class psyq::geometry::coordinate<glm::simdVec4, template_dimension>:
+public psyq::geometry::coordinate_traits<glm::simdVec4, template_dimension>
 {
     /// thisが指す値の型。
     private: typedef coordinate this_type;
 
     /// this_type の基底型。
-    public: typedef psyq::geometry::coordinate_traits<
-        psyq::geometry::vector_traits<glm::simdVec4>, template_dimension>
-            base_type;
+    public: typedef psyq::geometry::coordinate_traits<vector, dimension>
+        base_type;
 
     //-------------------------------------------------------------------------
     /// @copydoc psyq::geometry::coordinate::get_element()

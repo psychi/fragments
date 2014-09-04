@@ -26,19 +26,22 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 座標の型特性の基底型。
 
-    @tparam template_vector_traits @copydoc psyq::geometry::coordinate::vector_traits
-    @tparam template_dimension     @copydoc psyq::geometry::coordinate::dimension
+    @tparam template_vector    @copydoc psyq::geometry::coordinate::vector
+    @tparam template_dimension @copydoc psyq::geometry::coordinate::dimension
  */
-template<typename template_vector_traits, unsigned template_dimension>
+template<typename template_vector, unsigned template_dimension>
 class psyq::geometry::coordinate_traits
 {
     /// thisが指す値の型。
     private: typedef coordinate_traits this_type;
 
-    /** 座標を表す幾何ベクトルの型特性。
-        psyq::geometry::vector_traits と互換性があること。
+    /** @brief 座標を表す幾何ベクトルの型特性。
+
+        template_vector でテンプレート特殊化した
+        psyq::geometry::vector_traits を用意しておくこと。
      */
-    public: typedef template_vector_traits vector_traits;
+    public: typedef psyq::geometry::vector_traits<template_vector>
+        vector_traits;
 
     /** @brief 座標を表す幾何ベクトルの型。
 
@@ -77,20 +80,19 @@ class psyq::geometry::coordinate_traits
     他に適切な実装手法があるなら、
     テンプレート特殊化などで互換性のある別の実装をユーザーが用意すること。
 
-    @tparam template_vector_traits @copydoc psyq::geometry::coordinate::vector_traits
-    @tparam template_dimension     @copydoc psyq::geometry::coordinate::dimension
+    @tparam template_vector    @copydoc psyq::geometry::coordinate::vector
+    @tparam template_dimension @copydoc psyq::geometry::coordinate::dimension
  */
-template<typename template_vector_traits, unsigned template_dimension>
+template<typename template_vector, unsigned template_dimension>
 class psyq::geometry::coordinate:
-    public psyq::geometry::coordinate_traits<template_vector_traits, template_dimension>
+    public psyq::geometry::coordinate_traits<template_vector, template_dimension>
 {
     /// thisが指す値の型。
     private: typedef coordinate this_type;
 
     /// this_type の基底型。
-    public: typedef psyq::geometry::coordinate_traits
-        <template_vector_traits, template_dimension>
-            base_type;
+    public: typedef psyq::geometry::coordinate_traits<vector, dimension>
+        base_type;
 
     //-------------------------------------------------------------------------
     /** @brief 幾何ベクトルの要素から値を取得する。
@@ -264,17 +266,17 @@ class psyq::geometry::coordinate:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 二次元座標の型特性。 psyq::mosp_space のtemplate引数に使う。
-    @tparam template_vector_traits @copydoc psyq::geometry::coordinate::vector_traits
+    @tparam template_vector @copydoc psyq::geometry::coordinate::vector
  */
-template<typename template_vector_traits>
+template<typename template_vector>
 class psyq::geometry::coordinate_2d:
-    public psyq::geometry::coordinate<template_vector_traits, 2>
+    public psyq::geometry::coordinate<template_vector, 2>
 {
     /// thisが指す値の型。
     private: typedef coordinate_2d this_type;
 
     /// this_type の基底型。
-    public: typedef psyq::geometry::coordinate<template_vector_traits, 2> base_type;
+    public: typedef psyq::geometry::coordinate<vector, 2> base_type;
 
     //-------------------------------------------------------------------------
     /** @brief 幾何ベクトルを構築する。
@@ -331,17 +333,17 @@ class psyq::geometry::coordinate_2d:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 三次元座標の型特性。 psyq::mosp_space のtemplate引数に使う。
-    @tparam template_vector_traits @copydoc psyq::geometry::coordinate::vector_traits
+    @tparam template_vector @copydoc psyq::geometry::coordinate::vector
  */
-template<typename template_vector_traits>
+template<typename template_vector>
 class psyq::geometry::coordinate_3d:
-    public psyq::geometry::coordinate<template_vector_traits, 3>
+    public psyq::geometry::coordinate<template_vector, 3>
 {
     /// thisが指す値の型。
     private: typedef coordinate_3d this_type;
 
     /// this_type の基底型。
-    public: typedef psyq::geometry::coordinate<template_vector_traits, 3> base_type;
+    public: typedef psyq::geometry::coordinate<vector, 3> base_type;
 
     //-------------------------------------------------------------------------
     /** @brief 幾何ベクトルを構築する。

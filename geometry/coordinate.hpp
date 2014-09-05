@@ -366,7 +366,7 @@ class psyq::geometry::coordinate_traits
  */
 template<typename template_vector, unsigned template_dimension>
 class psyq::geometry::coordinate:
-    public psyq::geometry::coordinate_traits<template_vector, template_dimension>
+public psyq::geometry::coordinate_traits<template_vector, template_dimension>
 {
     /// thisが指す値の型。
     private: typedef coordinate this_type;
@@ -375,39 +375,6 @@ class psyq::geometry::coordinate:
     public: typedef psyq::geometry::coordinate_traits<
         template_vector, template_dimension>
             base_type;
-
-    //-------------------------------------------------------------------------
-    /** @brief 絶対座標系からモートン座標系への変換スケールを算出する。
-        @param[out] out_elements 変換スケールの各要素を出力する先。
-        @param[in]  in_aabb      衝突判定領域の全体を包む、絶対座標系AABB。
-        @param[in]  in_level_cap 空間分割の最大深度。
-     */
-    protected: static void compute_mosp_scale(
-        typename base_type::element_array& out_elements,
-        typename base_type::aabb const& in_aabb,
-        unsigned const in_level_cap)
-    {
-        auto const local_size(in_aabb.get_max() - in_aabb.get_min());
-        auto const local_unit(
-            static_cast<typename base_type::element>(1 << in_level_cap));
-        for (unsigned i(0); i < this_type::dimension; ++i)
-        {
-            out_elements[i] = this_type::compute_mosp_scale(
-                local_unit, this_type::get_element(local_size, i));
-        }
-    }
-
-    /** @brief 絶対座標系からモートン座標系への変換スケールを算出する。
-        @param[in] in_morton_size モートン座標の最大値。
-        @param[in] in_world_size  絶対座標系でのモートン空間の大きさ。
-     */
-    protected: static typename base_type::element compute_mosp_scale(
-        typename base_type::element const in_morton_size,
-        typename base_type::element const in_world_size)
-    {
-        return in_world_size < std::numeric_limits<typename base_type::element>::epsilon()?
-            0: in_morton_size / in_world_size;
-    }
 
 }; // class psyq::geometry::coordinate
 
@@ -418,7 +385,7 @@ class psyq::geometry::coordinate:
  */
 template<typename template_vector>
 class psyq::geometry::coordinate_2d:
-    public psyq::geometry::coordinate<template_vector, 2>
+public psyq::geometry::coordinate<template_vector, 2>
 {
     /// thisが指す値の型。
     private: typedef coordinate_2d this_type;
@@ -463,20 +430,6 @@ class psyq::geometry::coordinate_2d:
         return this_type::make(in_container[0], in_container[1]);
     }
 
-    //-------------------------------------------------------------------------
-    /** @brief 絶対座標系からモートン座標系への変換スケールを算出する。
-        @param[in] in_aabb      衝突判定領域の全体を包む、絶対座標系AABB。
-        @param[in] in_level_cap 空間分割の最大深度。
-     */
-    public: static typename base_type::vector compute_mosp_scale(
-        typename base_type::aabb const& in_aabb,
-        unsigned const in_level_cap)
-    {
-        typename base_type::element_array local_elements;
-        base_type::compute_mosp_scale(local_elements, in_aabb, in_level_cap);
-        return this_type::make(local_elements);
-    }
-
 }; // class psyq::geometry::coordinate_2d
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -486,7 +439,7 @@ class psyq::geometry::coordinate_2d:
  */
 template<typename template_vector>
 class psyq::geometry::coordinate_3d:
-    public psyq::geometry::coordinate<template_vector, 3>
+public psyq::geometry::coordinate<template_vector, 3>
 {
     /// thisが指す値の型。
     private: typedef coordinate_3d this_type;
@@ -525,20 +478,6 @@ class psyq::geometry::coordinate_3d:
     {
         return this_type::make(
             in_container[0], in_container[1], in_container[2]);
-    }
-
-    //-------------------------------------------------------------------------
-    /** @brief 絶対座標系からモートン座標系への変換スケールを算出する。
-        @param[in] in_aabb      衝突判定領域の全体を包む、絶対座標系AABB。
-        @param[in] in_level_cap 空間分割の最大深度。
-     */
-    public: static typename base_type::vector compute_mosp_scale(
-        typename base_type::aabb const& in_aabb,
-        unsigned const in_level_cap)
-    {
-        typename base_type::element_array local_elements;
-        base_type::compute_mosp_scale(local_elements, in_aabb, in_level_cap);
-        return this_type::make(local_elements);
     }
 
 }; // class psyq::geometry::coordinate_3d

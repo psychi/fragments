@@ -698,6 +698,7 @@ INPUT                  = \
                          ./geometry/aabb.hpp \
                          ./geometry/coordinate.hpp \
                          ./geometry/glm_coordinate.hpp \
+                         ./geometry/mosp/space.hpp \
                          ./geometry/mosp/nut.hpp \
                          ./memory_arena.hpp \
                          ./bit_algorithm.hpp \

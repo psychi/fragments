@@ -1,25 +1,29 @@
-﻿#ifndef PSYQ_GEOMETRY_MOSP_NUT_HPP_
+﻿/** @file
+    @author Hillco Psychi (https://twitter.com/psychi)
+    @brief
+ */
+#ifndef PSYQ_GEOMETRY_MOSP_NUT_HPP_
 #define PSYQ_GEOMETRY_MOSP_NUT_HPP_
 
 //#include "psyq/geometry/shape.hpp"
 
+/// @cond
 namespace psyq
 {
     namespace geometry
     {
-        /// モートン順序を用いた空間分割木で、衝突判定を行う。
         namespace mosp
         {
-            /// @cond
-            template<typename = PSYQ_MOSP_SPACE_DEFAULT> class nut;
-            /// @endcond
+            template<typename> class nut;
         } // namespace mosp
     } // namespace geometry
 } // namespace psyq
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief  mosp_tree 空間分割木に取りつける、衝突判定オブジェクトの基底型。
-    @tparam template_space @copydoc psyq::mosp_tree::space
+    @tparam template_space @copydoc psyq::geometry::mosp::nut::space
+    @ingroup psyq_geometry_mosp
  */
 template<typename template_space>
 class psyq::geometry::mosp::nut
@@ -28,8 +32,12 @@ class psyq::geometry::mosp::nut
     private: typedef nut this_type;
 
     //-------------------------------------------------------------------------
-    /// nut で使うモートン空間の型。
+    /** @brief nut で使うモートン空間の型。
+
+        psyq::geometry::mosp::space と互換性があること。
+     */
     public: typedef template_space space;
+
     /// 空間分割木に取りつける mosp_node 。
     public: typedef psyq::mosp_node<this_type*, typename this_type::space::order>
         node;
@@ -54,11 +62,13 @@ class psyq::geometry::mosp::nut
 
     //-------------------------------------------------------------------------
     protected: nut():
-        node_(this),
-        aabb_(
-            typename this_type::space::coordinate::aabb(
-                this_type::space::coordinate::make(0),
-                this_type::space::coordinate::make(0)))
+    node_(this),
+    aabb_(
+        typename this_type::space::coordinate::aabb(
+            this_type::space::coordinate::make(
+                static_cast<typename this_type::space::coordinate::element>(0)),
+            this_type::space::coordinate::make(
+                static_cast<typename this_type::space::coordinate::element>(0))))
     {}
 
     /// *thisを mosp_tree から取り外す。
@@ -123,7 +133,7 @@ class psyq::geometry::mosp::nut
 template<typename template_space>
 template<typename template_shape>
 class psyq::geometry::mosp::nut<template_space>::concrete:
-    public psyq::geometry::mosp::nut<template_space>
+public psyq::geometry::mosp::nut<template_space>
 {
     /// thisが指す値の型。
     private: typedef concrete this_type;
@@ -138,7 +148,7 @@ class psyq::geometry::mosp::nut<template_space>::concrete:
         @param[in] in_shape 衝突判定に使う形状の初期値。
      */
     public: explicit concrete(typename this_type::shape in_shape):
-        shape_(std::move(in_shape))
+    shape_(std::move(in_shape))
     {}
 
     //-------------------------------------------------------------------------
@@ -170,7 +180,7 @@ class psyq::geometry::mosp::nut<template_space>::concrete:
     //-------------------------------------------------------------------------
     protected: void update_aabb() override
     {
-        this->aabb_ = psyq::geometry::make_aabb(this->get_shape());
+        this->base_type::aabb_ = psyq::geometry::make_aabb(this->get_shape());
     };
 
     //-------------------------------------------------------------------------
@@ -184,28 +194,32 @@ namespace psyq
 {
     namespace test
     {
-        inline void mosp_collision()
+        template<typename template_mosp_space>
+        void geometry_mosp()
         {
-            typedef PSYQ_MOSP_SPACE_DEFAULT psyq_mosp_space;
-            typedef psyq::mosp_collision::nut<psyq_mosp_space> psyq_mosp_nut;
-            typedef psyq::mosp_tree<psyq_mosp_nut*> psyq_mosp_tree;
+            typedef template_mosp_space psyq_mosp_space;
+            typedef psyq::geometry::mosp::nut<psyq_mosp_space> psyq_mosp_nut;
+            typedef psyq::mosp_tree<psyq_mosp_nut*, template_mosp_space>
+                psyq_mosp_tree;
             psyq_mosp_tree::node_map::allocator_type::arena::shared_ptr
                 local_mosp_arena(
                     new psyq_mosp_tree::node_map::allocator_type::arena(16));
             psyq_mosp_tree local_mosp_tree(
-                psyq_mosp_space::coordinate::aabb(
-                    psyq_mosp_space::coordinate::vector(-65536, -65536, -65536),
-                    psyq_mosp_space::coordinate::vector( 65536,  65536,  65536)),
+                typename psyq_mosp_space::coordinate::aabb(
+                    psyq_mosp_space::coordinate::make(
+                        typename psyq_mosp_space::coordinate::element(-65536)),
+                    psyq_mosp_space::coordinate::make(
+                        typename psyq_mosp_space::coordinate::element( 65536))),
                 1024,
                 psyq_mosp_tree::allocator_type(local_mosp_arena));
             psyq_mosp_nut::ball local_mosp_ball(
                 psyq_mosp_nut::ball::shape(
-                    psyq_mosp_space::coordinate::vector(2, 3, 4), 1));
+                    psyq_mosp_space::coordinate::make(2, 3, 4), 1));
             local_mosp_ball.attach_tree(local_mosp_tree);
             psyq_mosp_nut::ray local_mosp_ray(
-                psyq_mosp_nut::ray::shape(
-                    psyq_mosp_space::coordinate::vector(1, 2, 3),
-                    psyq_mosp_space::coordinate::vector(4, 5, 6)));
+                psyq_mosp_nut::ray::shape::make(
+                    psyq_mosp_space::coordinate::make(1, 2, 3),
+                    psyq_mosp_space::coordinate::make(4, 5, 6)));
             local_mosp_ray.attach_tree(local_mosp_tree);
             local_mosp_tree.detect_collision_batch(
                 [](
@@ -218,8 +232,7 @@ namespace psyq
 
                     // AABBが衝突しているか判定する。
                     bool const local_aabb_collision(
-                        psyq_mosp_space::coordinate::aabb::detect_collision(
-                            in_nut_0->get_aabb(), in_nut_1->get_aabb()));
+                        in_nut_0->get_aabb().detect_collision(in_nut_1->get_aabb()));
                     if (local_aabb_collision)
                     {
                     }

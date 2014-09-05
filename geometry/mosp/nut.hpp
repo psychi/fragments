@@ -147,8 +147,8 @@ public psyq::geometry::mosp::nut<template_space>
     /** @brief 衝突判定に使う形状を構築する。
         @param[in] in_shape 衝突判定に使う形状の初期値。
      */
-    public: explicit concrete(typename this_type::shape in_shape):
-    shape_(std::move(in_shape))
+    public: explicit concrete(typename this_type::shape const& in_shape):
+    shape_(in_shape)
     {}
 
     //-------------------------------------------------------------------------

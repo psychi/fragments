@@ -43,8 +43,8 @@ class psyq::geometry::ball
         typename this_type::coordinate::vector const& in_center,
         typename this_type::coordinate::element const in_radius)
     :
-        center_(in_center),
-        radius_(in_radius)
+    center_(in_center),
+    radius_(in_radius)
     {
         PSYQ_ASSERT(0 <= in_radius);
     }
@@ -142,8 +142,8 @@ class psyq::geometry::segment
         typename this_type::coordinate::vector const& in_origin,
         typename this_type::coordinate::vector const& in_direction)
     :
-        origin_(in_origin),
-        direction_(in_direction)
+    origin_(in_origin),
+    direction_(in_direction)
     {}
 
     /** @brief 線分の始点位置を取得する。
@@ -217,9 +217,11 @@ class psyq::geometry::ray:
         typename base_type::coordinate::vector const& in_origin,
         typename base_type::coordinate::vector const& in_direction)
     PSYQ_NOEXCEPT:
-        base_type(
-            in_origin,
-            (PSYQ_ASSERT(base_type::coordinate::nearly_length(in_direction, 1)), in_direction))
+    base_type(
+        in_origin,
+        (
+            PSYQ_ASSERT(base_type::coordinate::nearly_length(in_direction, 1)),
+            in_direction))
     {}
 
     /** @brief 半直線の方向ベクトルを設定する。
@@ -276,7 +278,7 @@ class psyq::geometry::ray<template_coordinate>::triangle
         typename this_type::coordinate::vector const& in_vertex1,
         typename this_type::coordinate::vector const& in_vertex2)
     :
-        origin_(in_vertex0)
+    origin_(in_vertex0)
     {
 #if 1
         auto local_edge1(in_vertex1 - in_vertex0);
@@ -428,9 +430,9 @@ class psyq::geometry::box
         typename this_type::coordinate::vector const& in_extent,
         typename this_type::axis_array const& in_axes)
     :
-        center_(in_center),
-        extent_(in_extent),
-        axes_(in_axes)
+    center_(in_center),
+    extent_(in_extent),
+    axes_(in_axes)
     {
         for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
         {

@@ -68,8 +68,8 @@ class psyq::geometry::aabb
         typename this_type::coordinate::vector const& in_min,
         typename this_type::coordinate::vector const& in_max)
     :
-        min_(in_min),
-        max_(in_max)
+    min_(in_min),
+    max_(in_max)
     {
         PSYQ_ASSERT(this_type::coordinate::less_than_equal(in_min, in_max));
     }
@@ -277,12 +277,12 @@ namespace psyq
             @ingroup psyq_geometry_shape
          */
         template<typename template_coordinate>
-        psyq::geometry::aabb<template_coordinate> make_aabb(
+        typename template_coordinate::aabb make_aabb(
             psyq::geometry::ball<template_coordinate> const& in_ball)
         {
             auto const local_extent(
                 template_coordinate::make(in_ball.get_radius()));
-            return psyq::geometry::aabb<template_coordinate>(
+            return typename template_coordinate::aabb(
                 in_ball.get_center() - local_extent,
                 in_ball.get_center() + local_extent);
         }
@@ -294,7 +294,7 @@ namespace psyq
             @ingroup psyq_geometry_shape
          */
         template<typename template_coordinate>
-        psyq::geometry::aabb<template_coordinate> make_aabb(
+        typename template_coordinate::aabb make_aabb(
             psyq::geometry::segment<template_coordinate> const& in_segment)
         {
             typename template_coordinate::element_array local_min;
@@ -322,7 +322,7 @@ namespace psyq
                     local_max[i] = local_end_element;
                 }
             }
-            return psyq::geometry::aabb<template_coordinate>(
+            return typename template_coordinate::aabb(
                 template_coordinate::make(local_min),
                 template_coordinate::make(local_max));
         }
@@ -334,7 +334,7 @@ namespace psyq
             @ingroup psyq_geometry_shape
          */
         template<typename template_coordinate>
-        psyq::geometry::aabb<template_coordinate> make_aabb(
+        typename template_coordinate::aabb make_aabb(
             psyq::geometry::ray<template_coordinate> const& in_ray)
         {
             typename template_coordinate::element_array local_min;
@@ -361,7 +361,7 @@ namespace psyq
                     local_max[i] = local_origin;
                 }
             }
-            return psyq::geometry::aabb<template_coordinate>(
+            return typename template_coordinate::aabb(
                 template_coordinate::make(local_min),
                 template_coordinate::make(local_max));
         }
@@ -373,7 +373,7 @@ namespace psyq
             @ingroup psyq_geometry_shape
          */
         template<typename template_coordinate>
-        psyq::geometry::aabb<template_coordinate> make_aabb(
+        typename template_coordinate::aabb make_aabb(
             psyq::geometry::box<template_coordinate> const& in_box)
         {
             typename template_coordinate::element_array local_elements;
@@ -394,7 +394,7 @@ namespace psyq
                 local_half_diagonal = local_half_diagonal +
                     template_coordinate::make(local_elements);
             }
-            return psyq::geometry::aabb<template_coordinate>(
+            return typename template_coordinate::aabb(
                 in_box.get_center() - local_half_diagonal,
                 in_box.get_center() + local_half_diagonal);
         }
@@ -406,7 +406,7 @@ namespace psyq
             @ingroup psyq_geometry_shape
          */
         template<typename template_coordinate>
-        psyq::geometry::aabb<template_coordinate> make_aabb(
+        typename template_coordinate::aabb make_aabb(
             psyq::geometry::aabb<template_coordinate> const& in_aabb)
         {
             return in_aabb

@@ -31,6 +31,34 @@ class psyq::geometry::aabb
     /// psyq::geometry::coordinate 互換の座標の型特性。
     public: typedef template_coordinate coordinate;
 
+    /** @brief this_type::detect_line_collision() で使う、直線との衝突情報。
+
+        - タプル要素#0は、直線の基準位置から直線上の衝突区間の開始位置までの距離。
+          - 直線とAABBが衝突してる場合は、タプル要素#1より必ず小さい値となる。
+          - 直線とAABBが衝突してない場合は、タプル要素#1以上の値となる。
+        - タプル要素#1は、直線の基準位置から直線上の衝突区間の終了位置までの距離。
+          - 直線とAABBが衝突してる場合は、タプル要素#0より必ず大きい値となる。
+          - 直線とAABBが衝突してない場合は、タプル要素#0以下の値となる。
+        - タプル要素#2が…
+          - 0なら、直線上の衝突区間の開始位置を検知しなかった。
+          - 負値なら、直線上の衝突区間の開始位置がAABBの最小面にある。
+            「1 - (タプル要素#2)」が、軸のインデックス番号。
+          - 正値なら、直線上の衝突区間の開始位置がAABBの最大面にある。
+            「(タプル要素#2) - 1」が、軸のインデックス番号。
+        - タプル要素#3が…
+          - 0なら、直線上の衝突区間の終了位置を検知しなかった。
+          - 負値なら、直線上の衝突区間の終了位置がAABBの最小面にある。
+            「1 - (タプル要素#3)」が、軸のインデックス番号。
+          - 正値なら、直線上の衝突区間の終了位置がAABBの最大面にある。
+            「(タプル要素#3) - 1」が、軸のインデックス番号。
+     */
+    public: typedef std::tuple<
+        typename this_type::coordinate::element,
+        typename this_type::coordinate::element,
+        std::int8_t,
+        std::int8_t>
+            line_collision;
+
     //-------------------------------------------------------------------------
     /** @brief AABBを構築する。
         @param[in] in_min AABBの最小座標。
@@ -43,12 +71,7 @@ class psyq::geometry::aabb
         min_(in_min),
         max_(in_max)
     {
-        for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
-        {
-            PSYQ_ASSERT(
-                this_type::coordinate::get_element(in_min, i) <=
-                this_type::coordinate::get_element(in_max, i));
-        }
+        PSYQ_ASSERT(this_type::coordinate::less_than_equal(in_min, in_max));
     }
 
     /** @brief AABBの最小座標を取得する。
@@ -67,26 +90,6 @@ class psyq::geometry::aabb
     const PSYQ_NOEXCEPT
     {
         return this->max_;
-    }
-
-    /** @brief 他のAABBと衝突しているか判定する。
-        @retval true  衝突している。
-        @retval false 衝突してない。
-        @param[in] in_target 判定対象となるAABB。
-     */
-    public: bool detect_collision(this_type const& in_target) const
-    {
-        auto const local_diff_a(this->get_min() - in_target.get_max());
-        auto const local_diff_b(in_target.get_min() - this->get_max());
-        for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
-        {
-            if (0 <= this_type::coordinate::get_element(local_diff_a, i) ||
-                0 <= this_type::coordinate::get_element(local_diff_b, i))
-            {
-                return false;
-            }
-        }
-        return true;
     }
 
     /** @brief 2つの点を含む最小のAABBを構築する。
@@ -115,6 +118,146 @@ class psyq::geometry::aabb
             }
         }
         return this_type(local_min, local_max);
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief 他のAABBと衝突しているか判定する。
+        @retval true  衝突している。
+        @retval false 衝突してない。
+        @param[in] in_target 判定対象となるAABB。
+     */
+    public: bool detect_collision(this_type const& in_target) const
+    {
+        return this_type::coordinate::less_than_equal(this->get_min(), in_target.get_max())
+            && this_type::coordinate::less_than_equal(in_target.get_min(), this->get_max());
+    }
+
+    /** @brief AABBと点が衝突しているか判定する。
+        @param[in] in_point 判定対象となる点。
+     */
+    public: bool detect_point_collision(
+        typename this_type::coordinate::vector const& in_point)
+    {
+        return this_type::coordinate::less_than_equal(this->get_min(), in_point)
+            && this_type::coordinate::less_than_equal(in_point, this->get_max());
+    }
+
+    /** @brief AABBと球が衝突しているか判定する。
+        @param[in] in_center 判定対象となる球の中心座標。
+        @param[in] in_radius 判定対象となる球の半径。
+     */
+    public: bool detect_ball_collision(
+        typename this_type::coordinate::vector const& in_center,
+        typename this_type::coordinate::element const in_radius);
+
+    //-------------------------------------------------------------------------
+    /** @brief AABBと直線が衝突しているか判定する。
+
+        以下のウェブページを参考にして実装した。
+        http://marupeke296.com/COL_3D_No18_LineAndAABB.html
+
+        @return AABBと直線の衝突判定の結果。
+        @param[in] in_line_position 直線上の基準位置。
+        @param[in] in_line_normal   直線方向の正規化ベクトル。
+        @param[in] in_epsilon_mag   誤差の範囲に使うエプシロン値の倍率。
+     */
+    public: typename this_type::line_collision detect_line_collision(
+        typename this_type::coordinate::vector const& in_line_position,
+        typename this_type::coordinate::vector const& in_line_normal,
+        unsigned const in_epsilon_mag =
+            PSYQ_GEOMETRY_NEARLY_EQUAL_EPSILON_MAG_DEFAULT)
+    const
+    {
+        auto const local_odd(
+            this_type::make_normal_odd(
+                in_line_normal,
+                std::numeric_limits<typename this_type::coordinate::element>::epsilon()
+                * in_epsilon_mag));
+        std::int8_t local_face_max(0);
+        std::int8_t local_face_min(0);
+        auto local_t_max(
+            (std::numeric_limits<typename this_type::coordinate::element>::max)());
+        auto local_t_min(-local_t_max);
+        auto const local_diff_max(
+            (this->get_max() - in_line_position) * local_odd);
+        auto const local_diff_min(
+            (this->get_min() - in_line_position) * local_odd);
+        for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
+        {
+            if (this_type::coordinate::get_element(local_odd, i) != 0)
+            {
+                // スラブとの距離を算出する。
+                auto local_t_far(
+                    this_type::coordinate::get_element(local_diff_max, i));
+                auto local_t_near(
+                    this_type::coordinate::get_element(local_diff_min, i));
+                auto local_face_far(static_cast<std::int8_t>(i + 1));
+                auto local_face_near(-local_face_far);
+                if (local_t_far < local_t_near)
+                {
+                    std::swap(local_t_near, local_t_far);
+                    std::swap(local_face_near, local_face_far);
+                }
+                if (local_t_min < local_t_near)
+                {
+                    local_t_min = local_t_near;
+                    local_face_min = local_face_near;
+                }
+                if (local_t_far < local_t_max)
+                {
+                    local_t_max = local_t_far;
+                    local_face_max = local_face_far;
+                }
+
+                // スラブ交差判定。
+                if (local_t_max <= local_t_min)
+                {
+                    return std::make_tuple(
+                        local_t_max,
+                        local_t_min,
+                        local_face_max,
+                        local_face_min);
+                }
+            }
+            else
+            {
+                // 直線方向と軸が平行だった。
+                auto const local_line(
+                    this_type::coordinate::get_element(in_line_position, i));
+                auto const local_aabb_min(
+                    this_type::coordinate::get_element(this->get_min(), i));
+                auto const local_aabb_max(
+                    this_type::coordinate::get_element(this->get_max(), i));
+                if (local_line < local_aabb_min || local_aabb_max < local_line)
+                {
+                    return std::make_tuple(
+                        local_t_max,
+                        local_t_min,
+                        local_face_max,
+                        local_face_min);
+                }
+            }
+        }
+        return std::make_tuple(
+            local_t_min, local_t_max, local_face_min, local_face_max);
+    }
+
+    private: static typename this_type::coordinate::vector make_normal_odd(
+        typename this_type::coordinate::vector const& in_nomral,
+        typename this_type::coordinate::element const in_epsilon)
+    {
+        PSYQ_ASSERT(
+            psyq::geometry::is_nearly_length<typename this_type::coordinate>(
+                in_line_normal, 1));
+        typename this_type::coordinate::element_array local_odd;
+        for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
+        {
+            auto const local_element(
+                this_type::coordinate::get_element(in_nomral, i));
+            local_odd[i] = in_epsilon < std::abs(local_element)?
+                1 / local_element: 0;
+        }
+        return this_type::coordinate::make(local_odd);
     }
 
     //-------------------------------------------------------------------------
@@ -155,12 +298,8 @@ namespace psyq
         psyq::geometry::aabb<template_coordinate> make_aabb(
             psyq::geometry::segment<template_coordinate> const& in_segment)
         {
-            typedef std::array<
-                typename template_coordinate::element,
-                template_coordinate::dimension>
-                    element_array;
-            element_array local_min;
-            element_array local_max;
+            typename template_coordinate::element_array local_min;
+            typename template_coordinate::element_array local_max;
             auto const local_end(
                 in_segment.get_origin() + in_segment.get_direction());
             for (unsigned i(0); i < template_coordinate::dimension; ++i)
@@ -199,12 +338,8 @@ namespace psyq
         psyq::geometry::aabb<template_coordinate> make_aabb(
             psyq::geometry::ray<template_coordinate> const& in_ray)
         {
-            typedef std::array<
-                typename template_coordinate::element,
-                template_coordinate::dimension>
-                    element_array;
-            element_array local_min;
-            element_array local_max;
+            typename template_coordinate::element_array local_min;
+            typename template_coordinate::element_array local_max;
             for (unsigned i(0); i < template_coordinate::dimension; ++i)
             {
                 auto const local_direction(
@@ -242,11 +377,7 @@ namespace psyq
         psyq::geometry::aabb<template_coordinate> make_aabb(
             psyq::geometry::box<template_coordinate> const& in_box)
         {
-            typedef std::array<
-                typename template_coordinate::element,
-                template_coordinate::dimension>
-                    element_array;
-            element_array local_elements;
+            typename template_coordinate::element_array local_elements;
             auto local_half_diagonal(
                 template_coordinate::make(
                     static_cast<typename template_coordinate::element>(0)));

@@ -1,11 +1,15 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief OpenGL Mathematics にテンプレート特殊化した座標系。
+    @brief OpenGL Mathematics (http://glm.g-truc.net)
+           にテンプレート特殊化した座標系。
  */
 #ifndef PSYQ_GEOMETRY_GLM_COORDINATE_HPP_
 #define PSYQ_GEOMETRY_GLM_COORDINATE_HPP_
 
 #include <glm/gtx/simd_vec4.hpp>
+#if GLM_ARCH == GLM_ARCH_PURE
+# define PSYQ_GEOMETRY_GLM_ARCH_PURE
+#endif // GLM_ARCH == GLM_ARCH_PURE
 //#include "psyq/geometry/coordinate.hpp"
 
 /// @cond
@@ -79,6 +83,7 @@ class psyq::geometry::vector_traits<
     };
 };
 
+#ifndef PSYQ_GEOMETRY_GLM_ARCH_PURE
 /** @brief glm::simdVec4 にテンプレート特殊化した幾何ベクトル型特性。
     @ingroup psyq_geometry_vector_traits
  */
@@ -96,9 +101,10 @@ class psyq::geometry::vector_traits<glm::simdVec4>
         size = 4,
     };
 };
+#endif // !defined(PSYQ_GEOMETRY_GLM_ARCH_PURE)
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief OpenGL Mathematics のベクトルを使う座標系のベクトル処理。
+/** @brief OpenGL Mathematics (http://glm.g-truc.net) のベクトルを使う座標系のベクトル処理。
     @ingroup psyq_geometry_coordinate
  */
 template<typename template_vector, unsigned template_dimension>
@@ -140,6 +146,7 @@ public psyq::geometry::coordinate_traits<template_vector, template_dimension>
         return in_value;
     }
     //@}
+#ifndef PSYQ_GEOMETRY_GLM_ARCH_PURE
     private: static typename base_type::element const& vector_at(
         typename glm::simdVec4 const& in_vector,
         unsigned const in_index)
@@ -147,6 +154,7 @@ public psyq::geometry::coordinate_traits<template_vector, template_dimension>
         PSYQ_ASSERT(in_index < 4);
         return in_vector.Data.m128_f32[in_index];
     }
+#endif // !defined(PSYQ_GEOMETRY_GLM_ARCH_PURE)
 
     private: template<typename template_glm_vec>
     static typename base_type::element const& vector_at(
@@ -355,6 +363,7 @@ public psyq::geometry::glm_coordinate<
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+#ifndef PSYQ_GEOMETRY_GLM_ARCH_PURE
 /** @brief glm::simdVec4 を使う座標系のテンプレート特殊化。
     @ingroup psyq_geometry_coordinate
  */
@@ -370,5 +379,6 @@ public psyq::geometry::glm_coordinate<glm::simdVec4, template_dimension>
         base_type;
 
 }; // class psyq::geometry::coordinate
+#endif // !defined(PSYQ_GEOMETRY_GLM_ARCH_PURE)
 
 #endif // !defined(PSYQ_GEOMETRY_GLM_COORDINATE_HPP_)

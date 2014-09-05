@@ -1,20 +1,16 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
     @brief 任意の幾何ベクトル型を扱うユーティリティ関数群。
-    @defgroup psyq_geometry ベクトルや図形など、幾何学的な処理
+    @defgroup psyq_geometry 幾何学的な処理の実装
     @defgroup psyq_geometry_vector_traits 幾何ベクトルの型特性
     @ingroup psyq_geometry
  */
 #ifndef PSYQ_GEOMETRY_VECTOR_HPP_
 #define PSYQ_GEOMETRY_VECTOR_HPP_
 
-#ifndef PSYQ_GEOMETRY_NEARLY_EQUAL_EPSILON_MAG_DEFAULT
-#define PSYQ_GEOMETRY_NEARLY_EQUAL_EPSILON_MAG_DEFAULT 3
-#endif // !defined(PSYQ_GEOMETRY_NEARLY_EQUAL_EPSILON_MAG_DEFAULT)
-
 namespace psyq
 {
-    /// ベクトルや図形など、幾何学的な処理を行う。
+    /// ベクトルや空間内での衝突判定など、幾何学的な処理の実装。
     namespace geometry
     {
         /** @brief 幾何ベクトルの型特性の宣言。
@@ -28,6 +24,7 @@ namespace psyq
               template_vectorが持つ成分の型が定義されている。
             - psyq::geometry::vector_traits::size に、
               template_vectorが持つ成分の数がunsigned型で定義されている。
+
             @code
             // 幾何ベクトル型特性の実装例。
             template<> class psyq::geometry::vector_traits<D3DXVECTOR3>
@@ -45,49 +42,6 @@ namespace psyq
             @ingroup psyq_geometry_vector_traits
          */
         template<typename template_vector> class vector_traits;
-
-        /** @brief 2つの浮動小数点値がほぼ等値か比較する。
-            @retval true  ほぼ等値だった。
-            @retval false 等値ではなかった。
-            @param[in] in_left_value  比較する浮動小数点値の左辺値。
-            @param[in] in_right_value 比較する浮動小数点値の右辺値。
-            @param[in] in_epsilon_mag 誤差の範囲に使うエプシロン値の倍率。
-         */
-        template<typename template_value>
-        bool is_nearly_equal(
-            template_value const in_left_value,
-            template_value const in_right_value,
-            unsigned const in_epsilon_mag =
-                PSYQ_GEOMETRY_NEARLY_EQUAL_EPSILON_MAG_DEFAULT)
-        {
-            auto const local_epsilon(
-                std::numeric_limits<template_value>::epsilon() * in_epsilon_mag);
-            auto const local_diff(in_left_value - in_right_value);
-            return -local_epsilon <= local_diff && local_diff <= local_epsilon;
-        }
-
-        /** @brief 幾何ベクトルの長さを比較する。
-            @retval true  in_vector の長さと in_length は、ほぼ等しい。
-            @retval false in_vector の長さと in_length は、等しくない。
-            @tparam template_coordinate
-                使用する座標系の型。
-                psyq::geometry::coordinate と互換性があること。
-            @param[in] in_vector      判定する幾何ベクトル。
-            @param[in] in_length      判定する長さ。
-            @param[in] in_epsilon_mag 誤差の範囲に使うエプシロン値の倍率。
-         */
-        template<typename template_coordinate>
-        bool is_nearly_length(
-            typename template_coordinate::vector const& in_vector,
-            typename template_coordinate::element const in_length,
-            unsigned const in_epsilon_mag =
-                PSYQ_GEOMETRY_NEARLY_EQUAL_EPSILON_MAG_DEFAULT)
-        {
-            return psyq::geometry::is_nearly_equal(
-                template_coordinate::dot_product(in_vector, in_vector),
-                in_length * in_length,
-                in_epsilon_mag);
-        }
 
         /// この名前空間をユーザーが直接アクセスするのは禁止。
         namespace _private

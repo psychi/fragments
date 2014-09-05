@@ -12,6 +12,10 @@
 //#include "psyq/geometry/shape.hpp"
 //#include "psyq/geometry/aabb.hpp"
 
+#ifndef PSYQ_GEOMETRY_NEARLY_EQUAL_EPSILON_MAG_DEFAULT
+#define PSYQ_GEOMETRY_NEARLY_EQUAL_EPSILON_MAG_DEFAULT 3
+#endif // !defined(PSYQ_GEOMETRY_NEARLY_EQUAL_EPSILON_MAG_DEFAULT)
+
 /// @cond
 namespace psyq
 {
@@ -162,6 +166,44 @@ class psyq::geometry::coordinate_traits
     //-------------------------------------------------------------------------
     /// @name 座標の比較
     //@{
+    /** @brief 2つの成分がほぼ等値か比較する。
+        @retval true  ほぼ等値だった。
+        @retval false 等値ではなかった。
+        @param[in] in_left_value  比較する浮動小数点値の左辺値。
+        @param[in] in_right_value 比較する浮動小数点値の右辺値。
+        @param[in] in_epsilon_mag 誤差の範囲に使うエプシロン値の倍率。
+     */
+    public: static bool nearly_equal(
+        typename this_type::element const in_left_value,
+        typename this_type::element const in_right_value,
+        unsigned const in_epsilon_mag =
+            PSYQ_GEOMETRY_NEARLY_EQUAL_EPSILON_MAG_DEFAULT)
+    {
+        auto const local_epsilon(
+            std::numeric_limits<typename this_type::element>::epsilon() * in_epsilon_mag);
+        auto const local_diff(in_left_value - in_right_value);
+        return -local_epsilon <= local_diff && local_diff <= local_epsilon;
+    }
+
+    /** @brief 座標を表す幾何ベクトルの長さを比較する。
+        @retval true  in_vector の長さと in_length は、ほぼ等しい。
+        @retval false in_vector の長さと in_length は、等しくない。
+        @param[in] in_vector      判定する幾何ベクトル。
+        @param[in] in_length      判定する長さ。
+        @param[in] in_epsilon_mag 誤差の範囲に使うエプシロン値の倍率。
+     */
+    public: static bool nearly_length(
+        typename this_type::vector const& in_vector,
+        typename this_type::element const in_length,
+        unsigned const in_epsilon_mag =
+            PSYQ_GEOMETRY_NEARLY_EQUAL_EPSILON_MAG_DEFAULT)
+    {
+        return this_type::nearly_equal(
+            this_type::dot_product(in_vector, in_vector),
+            in_length * in_length,
+            in_epsilon_mag);
+    }
+
     /** @brief 座標のすべての成分が「左辺値 < 右辺値」か判定する。
         @param[in] in_left  比較の左辺値となる座標を表す幾何ベクトル。
         @param[in] in_right 比較の右辺値となる座標を表す幾何ベクトル。

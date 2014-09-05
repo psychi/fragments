@@ -219,7 +219,7 @@ class psyq::geometry::ray:
     PSYQ_NOEXCEPT:
         base_type(
             in_origin,
-            (PSYQ_ASSERT(psyq::geometry::is_nearly_length<typename base_type::coordinate>(in_direction, 1)), in_direction))
+            (PSYQ_ASSERT(base_type::coordinate::nearly_length(in_direction, 1)), in_direction))
     {}
 
     /** @brief 半直線の方向ベクトルを設定する。
@@ -435,7 +435,7 @@ class psyq::geometry::box
         for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
         {
             PSYQ_ASSERT(0 <= this_type::coordinate::get_element(in_extent, i));
-            PSYQ_ASSERT(psyq::geometry::is_nearly_length<typename this_type::coordinate>(in_axes[i], 1));
+            PSYQ_ASSERT(this_type::coordinate::nearly_length(in_axes[i], 1));
         }
     }
 

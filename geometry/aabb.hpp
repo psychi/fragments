@@ -247,8 +247,7 @@ class psyq::geometry::aabb
         typename this_type::coordinate::element const in_epsilon)
     {
         PSYQ_ASSERT(
-            psyq::geometry::is_nearly_length<typename this_type::coordinate>(
-                in_line_normal, 1));
+            this_type::coordinate::nearly_length(in_line_normal, 1));
         typename this_type::coordinate::element_array local_odd;
         for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
         {

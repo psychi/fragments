@@ -97,6 +97,21 @@ class psyq::geometry::ball
     }
 
     //-------------------------------------------------------------------------
+    /** @brief 他の球と衝突しているか判定する。
+        @retval true  衝突している。
+        @retval false 衝突してない。
+        @param[in] in_target 判定対象となる球。
+     */
+    public: bool detect_collision(this_type const& in_target) const
+    {
+        auto const local_diff(in_target.get_center() - this->get_center());
+        auto const local_square_distance(
+            this_type::coordinate::dot_product(local_diff, local_diff));
+        auto const local_range(in_target.get_radius() + this->get_radius());
+        return local_square_distance <= local_range * local_range;
+    }
+
+    //-------------------------------------------------------------------------
     /// 球の中心位置。
     private: typename this_type::coordinate::vector center_;
     /// 球の半径。
@@ -216,7 +231,7 @@ class psyq::geometry::ray:
     public: void set_direction(
         typename base_type::coordinate::vector const& in_direction)
     {
-        this->direction_ = this_type::coordinate::arrange_length(in_direction, 1);
+        this->direction_ = this_type::coordinate::arrange_length(in_direction);
     }
 
     /** @brief 半直線を構築する。
@@ -231,7 +246,7 @@ class psyq::geometry::ray:
         typename base_type::coordinate::vector const& in_direction)
     {
         return this_type(
-            in_origin, this_type::coordinate::arrange_length(in_direction, 1));
+            in_origin, this_type::coordinate::arrange_length(in_direction));
     }
 
 }; // namespace psyq::geometry::ray
@@ -398,8 +413,8 @@ class psyq::geometry::box
 
     /// 直方体の軸方向の単位ベクトルの配列。
     public: typedef std::array<
-        typename template_coordinate::vector,
-        template_coordinate::dimension>
+        typename this_type::coordinate::vector,
+        this_type::coordinate::dimension>
             axis_array;
 
     //-------------------------------------------------------------------------
@@ -470,7 +485,7 @@ class psyq::geometry::box
         // 回転軸と回転角度から四元数を算出する。
         auto const local_half_rotation(in_rotation / 2);
         auto const local_half_sin(std::sin(local_half_rotation));
-        auto const local_axis(this_type::coordinate::arrange_length(in_axis, 1));
+        auto const local_axis(this_type::coordinate::arrange_length(in_axis));
         auto const local_qx(
             local_half_sin * this_type::coordinate::get_element(local_axis, 0));
         auto const local_qy(

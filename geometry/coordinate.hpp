@@ -26,7 +26,25 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 座標の型特性の基底型。
+/** @brief 座標系の型特性の基底型。
+
+    座標を表す幾何ベクトルの基本的な演算処理を行う。
+
+    @note
+        this_type で実装している幾何ベクトル演算処理は、
+        汎用的な手法で実装している。
+        幾何ベクトル処理に特化した適切な実装があるなら、
+        psyq::geometry::coordinate_traits を派生させるか、
+        psyq::geometry::coordinate をテンプレート特殊化し、
+        互換性のある別の実装をユーザーが用意すること。
+
+    @warning
+        psyq::geometry::coordinate_traits で実装している
+        幾何ベクトル演算処理を実際に使う場合は、以下の条件を満たす必要がある。
+        条件を満たさない場合は、ユーザーが実装を用意すること。
+        - 幾何ベクトルの成分は、連続したメモリに配置されている。
+        - 幾何ベクトルの最初の成分のメモリ配置位置は、
+          幾何ベクトルの先頭位置と一致する。
 
     @tparam template_vector    @copydoc psyq::geometry::coordinate::vector
     @tparam template_dimension @copydoc psyq::geometry::coordinate::dimension
@@ -48,113 +66,156 @@ class psyq::geometry::coordinate_traits
 
     /** @brief 座標を表す幾何ベクトルの型。
 
-        以下の条件は、必ず満たしていること。
-        - コピー構築子とコピー代入演算子が使える。
-        - 以下に相当する二項演算子が使える。
-          @code
-          vector operator+(vector, vector);
-          vector operator-(vector, vector);
-          vector operator*(vector, vector);
-          vector operator*(vector, element);
-          vector operator/(vector, vector);
-          vector operator/(vector, element);
-          @endcode
+        - 座標を現す幾何ベクトルでは、幾何ベクトルの成分のうち、
+          最初の psyq::geometry::coordinate_traits::dimension 個のみを使用する。
+        - 座標を表す幾何ベクトルは、 psyq::geometry::coordinate_2d::make() か
+          psyq::geometry::coordinate_3d::make() で構築すること。
+        - 座標を表す幾何ベクトルを構築した後で、
+          座標が使ってない幾何ベクトルの成分を変更すると、
+          座標を表す幾何ベクトルの処理が正しく動作しなくなるので注意。
+        - 以下の条件を満たしていること。
+          - コピー構築子とコピー代入演算子が使える。
+          - element 型の引数を成分数だけ渡す構築子が使える。
+          - 以下に相当する二項演算子が使える。
+            @code
+            vector operator+(vector, vector);
+            vector operator-(vector, vector);
+            vector operator*(vector, vector);
+            vector operator*(vector, element);
+            vector operator/(vector, vector);
+            vector operator/(vector, element);
+            @endcode
+
      */
     public: typedef typename this_type::vector_traits::type vector;
 
-    /// 座標を表す幾何ベクトルの成分の型。
+    /// 座標を表す成分の型。
     public: typedef typename this_type::vector_traits::element element;
 
     public: enum: unsigned
     {
-        /// 座標を表す幾何ベクトルの成分の数。
+        /// 座標を表す成分の数。
         dimension = template_dimension,
     };
+    static_assert(
+        template_dimension <= this_type::vector_traits::size,
+        "'template_dimension' is greater than 'vector_traits::size'");
+
+    /// 座標を表す成分の配列。
+    public: typedef std::array<
+        typename this_type::element, this_type::dimension>
+            element_array;
 
     /// 最小座標と最大座標を要素とするAABB。
     public: typedef psyq::geometry::aabb<this_type> aabb;
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 任意型の幾何ベクトルを使う座標のベクトル処理。
-
-    座標を表す幾何ベクトルの基本的な処理を行う。
-    この実装では汎用的な手法でベクトル処理を実装しているが、
-    他に適切な実装手法があるなら、
-    テンプレート特殊化などで互換性のある別の実装をユーザーが用意すること。
-
-    @tparam template_vector    @copydoc psyq::geometry::coordinate::vector
-    @tparam template_dimension @copydoc psyq::geometry::coordinate::dimension
-    @ingroup psyq_geometry_coordinate
- */
-template<typename template_vector, unsigned template_dimension>
-class psyq::geometry::coordinate:
-    public psyq::geometry::coordinate_traits<template_vector, template_dimension>
-{
-    /// thisが指す値の型。
-    private: typedef coordinate this_type;
-
-    /// this_type の基底型。
-    public: typedef psyq::geometry::coordinate_traits<vector, dimension>
-        base_type;
 
     //-------------------------------------------------------------------------
-    /** @brief 幾何ベクトルの要素から値を取得する。
-        @return 幾何ベクトルの要素の値。
+    /// @name 座標の成分
+    //@{
+    /** @brief 座標を表す幾何ベクトルの要素から値を取得する。
+        @return 座標を表す幾何ベクトルの要素の値。
         @param[in] in_vector 要素の値を取得する幾何ベクトル。
         @param[in] in_index  取得する要素のインデックス番号。
      */
-    public: static typename base_type::element get_element(
-        typename base_type::vector const& in_vector,
+    public: static typename this_type::element get_element(
+        typename this_type::vector const& in_vector,
         unsigned const in_index)
     {
         static_assert(
-            true,//std::is_standard_layout<typename base_type::vector>::value,
+            std::is_standard_layout<typename this_type::vector>::value,
             "'template_vector' is not standard layout type.");
         static_assert(
-            this_type::dimension * sizeof(typename base_type::element) <=
-                sizeof(typename base_type::vector),
+            this_type::dimension * sizeof(typename this_type::element) <=
+                sizeof(typename this_type::vector),
             "");
         auto const local_elements(
-            reinterpret_cast<typename base_type::element const*>(&in_vector));
+            reinterpret_cast<typename this_type::element const*>(&in_vector));
         PSYQ_ASSERT(in_index < this_type::dimension);
         return *(local_elements + in_index);
     }
 
-    /** @brief 幾何ベクトルの要素に値を設定する。
-        @return 幾何ベクトルの要素に設定した値。
+    /** @brief 座標を表す幾何ベクトルの要素に値を設定する。
+        @return 座標を表す幾何ベクトルの要素に設定した値。
         @param[in,out] io_vector 要素に値を設定する幾何ベクトル。
         @param[in]     in_index  設定する要素のインデックス番号。
         @param[in]     in_value  設定する要素の値。
      */
-    public: static typename base_type::element set_element(
-        typename base_type::vector& io_vector,
+    public: static typename this_type::element set_element(
+        typename this_type::vector& io_vector,
         unsigned const in_index,
-        typename base_type::element const in_value)
+        typename this_type::element const in_value)
     {
         static_assert(
-            true,//std::is_standard_layout<typename base_type::vector>::value,
+            std::is_standard_layout<typename this_type::vector>::value,
             "'template_vector' is not standard layout type.");
         static_assert(
-            this_type::dimension * sizeof(typename base_type::element) <=
-                sizeof(typename base_type::vector),
+            this_type::dimension * sizeof(typename this_type::element) <=
+                sizeof(typename this_type::vector),
             "");
         auto const local_elements(
-            reinterpret_cast<typename base_type::element*>(&io_vector));
+            reinterpret_cast<typename this_type::element*>(&io_vector));
         PSYQ_ASSERT(in_index < template_dimension);
         *(local_elements + in_index) = in_value;
         return in_value;
     }
-
+    //@}
     //-------------------------------------------------------------------------
-    /** @brief 2つの幾何ベクトルの内積を算出する。
-        @return 2つの幾何ベクトルの内積。
-        @param[in] in_left  内積の左辺となる幾何ベクトル。
-        @param[in] in_right 内積の右辺となる幾何ベクトル。
+    /// @name 座標の比較
+    //@{
+    /** @brief 座標のすべての成分が「左辺値 < 右辺値」か判定する。
+        @param[in] in_left  比較の左辺値となる座標を表す幾何ベクトル。
+        @param[in] in_right 比較の右辺値となる座標を表す幾何ベクトル。
+        @note
+            座標を表す幾何ベクトルの構築後に
+            座標が使ってない幾何ベクトルの成分が変更されていた場合、
+            正しい動作を保証できない。
      */
-    public: static typename base_type::element dot_product(
-        typename base_type::vector const& in_left,
-        typename base_type::vector const& in_right)
+    public: static bool less_than(
+        typename this_type::vector const& in_left,
+        typename this_type::vector const& in_right)
+    {
+        return !this_type::less_than_equal(in_right, in_left);
+    }
+
+    /** @brief 座標のすべての成分が「左辺値 <= 右辺値」か判定する。
+        @param[in] in_left  比較の左辺値となる座標を表す幾何ベクトル。
+        @param[in] in_right 比較の右辺値となる座標を表す幾何ベクトル。
+        @note
+            座標を表す幾何ベクトルの構築後に
+            座標が使ってない幾何ベクトルの成分が変更されていた場合、
+            正しい動作を保証できない。
+     */
+    public: static bool less_than_equal(
+        typename this_type::vector const& in_left,
+        typename this_type::vector const& in_right)
+    {
+        for (unsigned i(0); i < this_type::dimension; ++i)
+        {
+            auto const local_left(this_type::get_element(in_left, i));
+            auto const local_right(this_type::get_element(in_right, i));
+            if (local_right < local_left)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 座標の演算
+    //@{
+    /** @brief 2つの座標を表す幾何ベクトルの内積を算出する。
+        @return 2つの座標を表す幾何ベクトルの内積。
+        @param[in] in_left  内積の左辺値となる座標を表す幾何ベクトル。
+        @param[in] in_right 内積の右辺値となる座標を表す幾何ベクトル。
+        @note
+            座標を表す幾何ベクトルの構築後に
+            座標が使ってない幾何ベクトルの成分が変更されていた場合、
+            正しい動作を保証できない。
+     */
+    public: static typename this_type::element dot_product(
+        typename this_type::vector const& in_left,
+        typename this_type::vector const& in_right)
     {
         auto local_dot(
             this_type::get_element(in_left, 0) *
@@ -172,11 +233,17 @@ class psyq::geometry::coordinate:
         @return 2つの3次元幾何ベクトルの外積。
         @param[in] in_left  外積の左辺となる3次元幾何ベクトル。
         @param[in] in_right 外積の右辺となる3次元幾何ベクトル。
+        @note
+            座標を表す幾何ベクトルの構築後に
+            座標が使ってない幾何ベクトルの成分が変更されていた場合、
+            正しい動作を保証できない。
      */
-    public: static typename base_type::vector cross_product(
-        typename base_type::vector const& in_left,
-        typename base_type::vector const& in_right)
+    public: static typename this_type::vector cross_product(
+        typename this_type::vector const& in_left,
+        typename this_type::vector const& in_right)
     {
+        static_assert(
+            this_type::dimension == 3, "'this_type::dimension' is not 3.");
         auto const local_left_0(this_type::get_element(in_left, 0));
         auto const local_left_1(this_type::get_element(in_left, 1));
         auto const local_left_2(this_type::get_element(in_left, 2));
@@ -184,32 +251,42 @@ class psyq::geometry::coordinate:
         auto const local_right_1(this_type::get_element(in_right, 1));
         auto const local_right_2(this_type::get_element(in_right, 2));
         return psyq::geometry::_private::vector_maker
-            <typename base_type::vector, base_type::vector_traits::size>
+            <typename this_type::vector, this_type::vector_traits::size>
                 ::make(
                     local_left_1 * local_right_2 - local_left_2 * local_right_1,
                     local_left_2 * local_right_0 - local_left_0 * local_right_2,
                     local_left_0 * local_right_1 - local_left_1 * local_right_0);
     }
-
+    //@}
     //-------------------------------------------------------------------------
-    /** @brief 幾何ベクトルの長さを算出する。
-        @return 幾何ベクトルの長さ。
+    /// @name 座標の大きさ
+    //@{
+    /** @brief 座標を表す幾何ベクトルの長さを算出する。
+        @return 座標を表す幾何ベクトルの長さ。
         @param[in] in_vector 長さを算出する幾何ベクトル。
+        @note
+            座標を表す幾何ベクトルの構築後に
+            座標が使ってない幾何ベクトルの成分が変更されていた場合、
+            正しい動作を保証できない。
      */
-    public: static typename base_type::element compute_length(
-        typename base_type::vector const& in_vector)
+    public: static typename this_type::element compute_length(
+        typename this_type::vector const& in_vector)
     {
         return std::sqrt(this_type::dot_product(in_vector, in_vector));
     }
 
-    /** @brief 幾何ベクトルの長さを調整する。
+    /** @brief 座標を表す幾何ベクトルの長さを調整する。
         @return 長さを調整した幾何ベクトル。
         @param[in] in_vector 元となる幾何ベクトル。
         @param[in] in_length 調整後の長さ。
+        @note
+            座標を表す幾何ベクトルの構築後に
+            座標が使ってない幾何ベクトルの成分が変更されていた場合、
+            正しい動作を保証できない。
      */
-    public: static typename base_type::vector arrange_length(
-        typename base_type::vector const& in_vector,
-        typename base_type::element const in_length)
+    public: static typename this_type::vector arrange_length(
+        typename this_type::vector const& in_vector,
+        typename this_type::element const in_length = 1)
     {
         auto const local_square_length(
             this_type::dot_product(in_vector, in_vector));
@@ -232,6 +309,30 @@ class psyq::geometry::coordinate:
         }
         return local_vector;
     }
+    //@}
+}; // class psyq::geometry::coordinate_traits
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 任意型の幾何ベクトルを使う座標系。
+
+    ユーザーが使う幾何ベクトルの専用処理をテンプレート特殊化して実装するなら、
+    このクラスをテンプレート特殊化する。
+
+    @tparam template_vector    @copydoc psyq::geometry::coordinate::vector
+    @tparam template_dimension @copydoc psyq::geometry::coordinate::dimension
+    @ingroup psyq_geometry_coordinate
+ */
+template<typename template_vector, unsigned template_dimension>
+class psyq::geometry::coordinate:
+    public psyq::geometry::coordinate_traits<template_vector, template_dimension>
+{
+    /// thisが指す値の型。
+    private: typedef coordinate this_type;
+
+    /// this_type の基底型。
+    public: typedef psyq::geometry::coordinate_traits<
+        template_vector, template_dimension>
+            base_type;
 
     //-------------------------------------------------------------------------
     /** @brief 絶対座標系からモートン座標系への変換スケールを算出する。
@@ -240,8 +341,8 @@ class psyq::geometry::coordinate:
         @param[in]  in_level_cap 空間分割の最大深度。
      */
     protected: static void compute_mosp_scale(
-        std::array<typename base_type::element, this_type::dimension>& out_elements,
-        typename this_type::aabb const& in_aabb,
+        typename base_type::element_array& out_elements,
+        typename base_type::aabb const& in_aabb,
         unsigned const in_level_cap)
     {
         auto const local_size(in_aabb.get_max() - in_aabb.get_min());
@@ -281,13 +382,13 @@ class psyq::geometry::coordinate_2d:
     private: typedef coordinate_2d this_type;
 
     /// this_type の基底型。
-    public: typedef psyq::geometry::coordinate<vector, 2> base_type;
+    public: typedef psyq::geometry::coordinate<template_vector, 2> base_type;
 
     //-------------------------------------------------------------------------
-    /** @brief 幾何ベクトルを構築する。
+    /** @brief 座標を表す幾何ベクトルを構築する。
         @return 構築した幾何ベクトル。
-        @param[in] in_element_0 幾何ベクトルの要素#0の初期値。
-        @param[in] in_element_1 幾何ベクトルの要素#1の初期値。
+        @param[in] in_element_0 座標の要素#0の初期値。
+        @param[in] in_element_1 座標の要素#1の初期値。
      */
     public: static typename base_type::vector make(
         typename base_type::element const in_element_0,
@@ -298,9 +399,9 @@ class psyq::geometry::coordinate_2d:
                 ::make(in_element_0, in_element_1);
     }
 
-    /** @brief 要素が全て同じ値の幾何ベクトルを構築する。
+    /** @brief 要素が全て同じ値の座標を表す幾何ベクトルを構築する。
         @return 構築した幾何ベクトル。
-        @param[in] in_element 幾何ベクトルの全要素の初期値。
+        @param[in] in_element 座標の全要素の初期値。
      */
     public: static typename base_type::vector make(
         typename base_type::element const in_element)
@@ -308,9 +409,10 @@ class psyq::geometry::coordinate_2d:
         return this_type::make(in_element, in_element);
     }
 
-    /** @brief 任意のランダムアクセスコンテナから幾何ベクトルを構築する。
+    /** @brief ランダムアクセスが可能な任意型のコンテナから、
+               座標を表す幾何ベクトルを構築する。
         @return 構築した幾何ベクトル。
-        @param[in] in_container 要素の初期値が格納されているコンテナ。
+        @param[in] in_container 座標要素の初期値が格納されているコンテナ。
      */
     public: template<typename template_container>
     static typename base_type::vector make(
@@ -328,10 +430,9 @@ class psyq::geometry::coordinate_2d:
         typename base_type::aabb const& in_aabb,
         unsigned const in_level_cap)
     {
-        std::array<typename base_type::element, base_type::dimension>
-            local_container;
-        base_type::compute_mosp_scale(local_container, in_aabb, in_level_cap);
-        return this_type::make(local_container);
+        typename base_type::element_array local_elements;
+        base_type::compute_mosp_scale(local_elements, in_aabb, in_level_cap);
+        return this_type::make(local_elements);
     }
 
 }; // class psyq::geometry::coordinate_2d
@@ -349,14 +450,14 @@ class psyq::geometry::coordinate_3d:
     private: typedef coordinate_3d this_type;
 
     /// this_type の基底型。
-    public: typedef psyq::geometry::coordinate<vector, 3> base_type;
+    public: typedef psyq::geometry::coordinate<template_vector, 3> base_type;
 
     //-------------------------------------------------------------------------
-    /** @brief 幾何ベクトルを構築する。
+    /** @brief 座標を表す幾何ベクトルを構築する。
         @return 構築した幾何ベクトル。
-        @param[in] in_element_0 幾何ベクトルの要素#0の初期値。
-        @param[in] in_element_1 幾何ベクトルの要素#1の初期値。
-        @param[in] in_element_2 幾何ベクトルの要素#2の初期値。
+        @param[in] in_element_0 座標の要素#0の初期値。
+        @param[in] in_element_1 座標の要素#1の初期値。
+        @param[in] in_element_2 座標の要素#2の初期値。
      */
     public: static typename base_type::vector make(
         typename base_type::element const in_element_0,
@@ -393,10 +494,9 @@ class psyq::geometry::coordinate_3d:
         typename base_type::aabb const& in_aabb,
         unsigned const in_level_cap)
     {
-        std::array<typename base_type::element, base_type::dimension>
-            local_container;
-        base_type::compute_mosp_scale(local_container, in_aabb, in_level_cap);
-        return this_type::make(local_container);
+        typename base_type::element_array local_elements;
+        base_type::compute_mosp_scale(local_elements, in_aabb, in_level_cap);
+        return this_type::make(local_elements);
     }
 
 }; // class psyq::geometry::coordinate_3d

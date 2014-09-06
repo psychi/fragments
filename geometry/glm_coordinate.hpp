@@ -120,6 +120,9 @@ public psyq::geometry::coordinate_traits<template_vector, template_dimension>
     static_assert(
         template_dimension <= 4, "'base_type::dimension' is greater than 4.");
 
+    /// 最小座標と最大座標を要素とするAABB。
+    public: typedef psyq::geometry::aabb<this_type> aabb;
+
     //-------------------------------------------------------------------------
     /// @name 座標の成分
     //@{

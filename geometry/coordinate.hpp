@@ -110,9 +110,6 @@ class psyq::geometry::coordinate_traits
         typename this_type::element, this_type::dimension>
             element_array;
 
-    /// 最小座標と最大座標を要素とするAABB。
-    public: typedef psyq::geometry::aabb<this_type> aabb;
-
     //-------------------------------------------------------------------------
     /// @name 座標の成分
     //@{
@@ -375,6 +372,9 @@ public psyq::geometry::coordinate_traits<template_vector, template_dimension>
     public: typedef psyq::geometry::coordinate_traits<
         template_vector, template_dimension>
             base_type;
+
+    /// 最小座標と最大座標を要素とするAABB。
+    public: typedef psyq::geometry::aabb<this_type> aabb;
 
 }; // class psyq::geometry::coordinate
 

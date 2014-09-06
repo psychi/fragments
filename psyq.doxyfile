@@ -694,11 +694,11 @@ INPUT                  = \
                          ./any/message/transmitter.hpp \
                          ./any/message/zone.hpp \
                          ./geometry/vector.hpp \
+                         ./geometry/glm_vector.hpp \
+                         ./geometry/d3dx_vector.hpp \
                          ./geometry/shape.hpp \
                          ./geometry/aabb.hpp \
                          ./geometry/coordinate.hpp \
-                         ./geometry/glm_coordinate.hpp \
-                         ./geometry/d3dx_coordinate.hpp \
                          ./geometry/mosp/space.hpp \
                          ./geometry/mosp/nut.hpp \
                          ./memory_arena.hpp \

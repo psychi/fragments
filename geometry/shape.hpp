@@ -43,10 +43,22 @@ class psyq::geometry::ball
         typename this_type::coordinate::vector const& in_center,
         typename this_type::coordinate::element const in_radius)
     :
-    center_(in_center),
-    radius_(in_radius)
+    center_((
+        PSYQ_ASSERT(this_type::coordinate::validate(in_center)), in_center)),
+    radius_((PSYQ_ASSERT(0 <= in_radius), in_radius))
+    {}
+
+    /** @brief 球を構築する。
+        @param[in] in_center 球の中心位置。
+        @param[in] in_radius 球の半径。0未満の場合は0になる。
+     */
+    public: static this_type make(
+        typename this_type::coordinate::vector const& in_center,
+        typename this_type::coordinate::element const in_radius)
     {
-        PSYQ_ASSERT(0 <= in_radius);
+        return this_type(
+            this_type::coordinate::make(in_center),
+            0 < in_radius? in_radius: 0);
     }
 
     /** @brief 球の中心位置を取得する。
@@ -64,7 +76,7 @@ class psyq::geometry::ball
     public: void set_center(
         typename this_type::coordinate::vector const& in_center)
     {
-        this->center_ = in_center;
+        this->center_ = this_type::coordinate::make(in_center);
     }
 
     /** @brief 球の半径を取得する。
@@ -85,17 +97,6 @@ class psyq::geometry::ball
         this->radius_ = 0 < in_radius? in_radius: 0;
     }
 
-    /** @brief 球を構築する。
-        @param[in] in_center 球の中心位置。
-        @param[in] in_radius 球の半径。0未満の場合は0になる。
-     */
-    public: static this_type make(
-        typename this_type::coordinate::vector const& in_center,
-        typename this_type::coordinate::element const in_radius)
-    {
-        return this_type(in_center, 0 < in_radius? in_radius: 0);
-    }
-
     //-------------------------------------------------------------------------
     /** @brief 他の球と衝突しているか判定する。
         @retval true  衝突している。
@@ -106,7 +107,7 @@ class psyq::geometry::ball
     {
         auto const local_diff(in_target.get_center() - this->get_center());
         auto const local_square_distance(
-            this_type::coordinate::dot_product(local_diff, local_diff));
+            this_type::coordinate::dot(local_diff, local_diff));
         auto const local_range(in_target.get_radius() + this->get_radius());
         return local_square_distance <= local_range * local_range;
     }
@@ -142,9 +143,24 @@ class psyq::geometry::segment
         typename this_type::coordinate::vector const& in_origin,
         typename this_type::coordinate::vector const& in_direction)
     :
-    origin_(in_origin),
-    direction_(in_direction)
+    origin_((
+        PSYQ_ASSERT(this_type::coordinate::validate(in_origin)), in_origin)),
+    direction_((
+        PSYQ_ASSERT(this_type::coordinate::validate(in_direction)), in_direction))
     {}
+
+    /** @brief 線分を構築する。
+        @param[in] in_origin    線分の始点位置。
+        @param[in] in_direction 線分の方向ベクトル。
+     */
+    public: static this_type make(
+        typename this_type::coordinate::vector const& in_origin,
+        typename this_type::coordinate::vector const& in_direction)
+    {
+        return this_type(
+            this_type::coordinate::make(in_origin),
+            this_type::coordinate::make(in_direction));
+    }
 
     /** @brief 線分の始点位置を取得する。
         @return 線分の始点位置。
@@ -161,7 +177,7 @@ class psyq::geometry::segment
     public: void set_origin(
         typename this_type::coordinate::vector const& in_origin)
     {
-        this->origin_ = in_origin;
+        this->origin_ = this_type::coordinate::make(in_origin);
     }
 
     /** @brief 線分の方向ベクトルを取得する。
@@ -179,7 +195,7 @@ class psyq::geometry::segment
     public: void set_direction(
         typename this_type::coordinate::vector const& in_direction)
     {
-        this->direction_ = in_direction;
+        this->direction_ = this_type::coordinate::make(in_direction);
     }
 
     //-------------------------------------------------------------------------
@@ -206,7 +222,7 @@ class psyq::geometry::ray:
     public: typedef psyq::geometry::segment<template_coordinate> base_type;
 
     /// @cond
-    public: class triangle;
+    public: class triangle_3d;
     /// @endcond
     //-------------------------------------------------------------------------
     /** @brief 半直線を構築する。
@@ -218,9 +234,13 @@ class psyq::geometry::ray:
         typename base_type::coordinate::vector const& in_direction)
     PSYQ_NOEXCEPT:
     base_type(
-        in_origin,
         (
-            PSYQ_ASSERT(base_type::coordinate::nearly_length(in_direction, 1)),
+            PSYQ_ASSERT(base_type::coordinate::validate(in_origin)),
+            in_origin),
+        (
+            PSYQ_ASSERT(
+                base_type::coordinate::validate(in_direction) &&
+                psyq::geometry::vector::nearly_length(in_direction, 1)),
             in_direction))
     {}
 
@@ -233,7 +253,8 @@ class psyq::geometry::ray:
     public: void set_direction(
         typename base_type::coordinate::vector const& in_direction)
     {
-        this->direction_ = this_type::coordinate::normalize_length(in_direction);
+        this->direction_ = psyq::geometry::vector::normalize(
+            this_type::coordinate::make(in_direction));
     }
 
     /** @brief 半直線を構築する。
@@ -248,7 +269,9 @@ class psyq::geometry::ray:
         typename base_type::coordinate::vector const& in_direction)
     {
         return this_type(
-            in_origin, this_type::coordinate::normalize_length(in_direction));
+            this_type::coordinate::make(in_origin),
+            psyq::geometry::vector::normalize(
+                this_type::coordinate::make(in_direction)));
     }
 
 }; // namespace psyq::geometry::ray
@@ -259,10 +282,10 @@ class psyq::geometry::ray:
     @ingroup psyq_geometry_shape
  */
 template<typename template_coordinate>
-class psyq::geometry::ray<template_coordinate>::triangle
+class psyq::geometry::ray<template_coordinate>::triangle_3d
 {
     /// thisが指す値の型。
-    private: typedef triangle this_type;
+    private: typedef triangle_3d this_type;
 
     /// psyq::geometry::coordinate 互換の座標の型特性。
     public: typedef template_coordinate coordinate;
@@ -273,41 +296,44 @@ class psyq::geometry::ray<template_coordinate>::triangle
         @param[in] in_vertex1 三角形の頂点#1
         @param[in] in_vertex2 三角形の頂点#2
      */
-    public: triangle(
+    public: triangle_3d(
         typename this_type::coordinate::vector const& in_vertex0,
         typename this_type::coordinate::vector const& in_vertex1,
         typename this_type::coordinate::vector const& in_vertex2)
     :
     origin_(in_vertex0)
     {
+        PSYQ_ASSERT(base_type::coordinate::validate(in_vertex0));
+        PSYQ_ASSERT(base_type::coordinate::validate(in_vertex1));
+        PSYQ_ASSERT(base_type::coordinate::validate(in_vertex2));
 #if 1
         auto local_edge1(in_vertex1 - in_vertex0);
         auto local_edge2(in_vertex2 - in_vertex0);
-        this->normal_ = this_type::coordinate::cross_product(
+        this->normal_ = this_type::coordinate::cross_3d(
             local_edge1, local_edge2);
         auto const local_nx(
-            this_type::coordinate::cross_product(local_edge2, this->normal_));
+            this_type::coordinate::cross_3d(local_edge2, this->normal_));
         auto const local_ny(
-            this_type::coordinate::cross_product(local_edge1, this->normal_));
+            this_type::coordinate::cross_3d(local_edge1, this->normal_));
         this->binormal_u_ = local_nx /
-            this_type::coordinate::dot_product(local_edge1, local_nx);
+            this_type::coordinate::dot(local_edge1, local_nx);
         this->binormal_v_ = local_ny /
-            this_type::coordinate::dot_product(local_edge2, local_ny);
+            this_type::coordinate::dot(local_edge2, local_ny);
 #else
         auto const local_e2(
-            this_type::coordinate::cross_product(in_vertex0, in_vertex1));
+            this_type::coordinate::cross_3d(in_vertex0, in_vertex1));
         auto const local_d(
-            this_type::coordinate::dot_product(local_e2, in_vertex2));
+            this_type::coordinate::dot(local_e2, in_vertex2));
         if (local_d <= 0)
         {
             PSYQ_ASSERT(false);
             return;
         }
         auto const local_e1(
-            this_type::coordinate::cross_product(in_vertex2, in_vertex0));
+            this_type::coordinate::cross_3d(in_vertex2, in_vertex0));
         this->binormal_u_ = local_e1 / local_d;
         this->binormal_v_ = local_e2 / local_d;
-        this->normal_ = this_type::coordinate::cross_product(
+        this->normal_ = this_type::coordinate::cross_3d(
             in_vertex1 - in_vertex0, in_vertex2 - in_vertex0);
 #endif
     }
@@ -340,7 +366,7 @@ class psyq::geometry::ray<template_coordinate>::triangle
     const
     {
         auto const local_nv(
-            -this_type::coordinate::dot_product(
+            -this_type::coordinate::dot(
                 in_ray.get_direction(), this->get_normal()));
         if (local_nv <= in_epsilon)
         {
@@ -349,7 +375,7 @@ class psyq::geometry::ray<template_coordinate>::triangle
 
         auto const local_origin_diff(in_ray.get_origin() - this->get_origin());
         auto const local_t(
-            this_type::coordinate::dot_product(
+            this_type::coordinate::dot(
                 local_origin_diff, this->get_normal()) / local_nv);
         if (local_t < 0 || in_ray_length < local_t)
         {
@@ -359,15 +385,14 @@ class psyq::geometry::ray<template_coordinate>::triangle
         auto const local_position(
             in_ray.get_direction() * local_t + local_origin_diff);
         auto const local_u(
-            this_type::coordinate::dot_product(
+            this_type::coordinate::dot(
                 local_position, this->binormal_u_));
         if (local_u < in_epsilon)
         {
             return false;
         }
         auto const local_v(
-            this_type::coordinate::dot_product(
-                local_position, this->binormal_v_));
+            this_type::coordinate::dot(local_position, this->binormal_v_));
         if (local_v < in_epsilon || 1 - in_epsilon < local_u + local_v)
         {
             return false;
@@ -397,7 +422,7 @@ class psyq::geometry::ray<template_coordinate>::triangle
     /// 三角形の重心座標V 
     private: typename this_type::coordinate::vector binormal_v_;
 
-}; // class psyq::geometry::ray::triangle
+}; // class psyq::geometry::ray::triangle_3d
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 直方体。
@@ -430,14 +455,17 @@ class psyq::geometry::box
         typename this_type::coordinate::vector const& in_extent,
         typename this_type::axis_array const& in_axes)
     :
-    center_(in_center),
-    extent_(in_extent),
+    center_((
+        PSYQ_ASSERT(this_type::coordinate::validate(in_center)), in_center)),
+    extent_((
+        PSYQ_ASSERT(this_type::coordinate::validate(in_extent)), in_extent)),
     axes_(in_axes)
     {
         for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
         {
-            PSYQ_ASSERT(0 <= this_type::coordinate::get_element(in_extent, i));
-            PSYQ_ASSERT(this_type::coordinate::nearly_length(in_axes[i], 1));
+            PSYQ_ASSERT(0 <= psyq::geometry::vector::const_at(in_extent, i));
+            PSYQ_ASSERT(this_type::coordinate::validate(in_axes[i]));
+            PSYQ_ASSERT(psyq::geometry::vector::nearly_length(in_axes[i], 1));
         }
     }
 
@@ -487,13 +515,15 @@ class psyq::geometry::box
         // 回転軸と回転角度から四元数を算出する。
         auto const local_half_rotation(in_rotation / 2);
         auto const local_half_sin(std::sin(local_half_rotation));
-        auto const local_axis(this_type::coordinate::normalize_length(in_axis));
+        auto const local_axis(
+            psyq::geometry::vector::normalize(
+                this_type::coordinate::make(in_axis)));
         auto const local_qx(
-            local_half_sin * this_type::coordinate::get_element(local_axis, 0));
+            local_half_sin * psyq::geometry::vector::const_at(local_axis, 0));
         auto const local_qy(
-            local_half_sin * this_type::coordinate::get_element(local_axis, 1));
+            local_half_sin * psyq::geometry::vector::const_at(local_axis, 1));
         auto const local_qz(
-            local_half_sin * this_type::coordinate::get_element(local_axis, 2));
+            local_half_sin * psyq::geometry::vector::const_at(local_axis, 2));
         auto const local_qw(std::cos(local_half_rotation));
 
         // 四元数から軸ベクトルを算出する。
@@ -521,17 +551,18 @@ class psyq::geometry::box
             (local_xx + local_yy) * -2 + 1);
 
         // 大きさを正規化する。
-        auto local_extent(in_extent);
+        auto local_extent(this_type::coordinate::make(in_extent));
         for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
         {
             auto const local_element(
-                this_type::coordinate::get_element(in_extent, i));
+                psyq::geometry::vector::const_at(in_extent, i));
             if (local_element < 0)
             {
-                this_type::coordinate::set_element(local_extent, i, -local_element);
+                psyq::geometry::vector::at(local_extent, i) = -local_element;
             }
         }
-        return this_type(in_center, local_extent, local_axes);
+        return this_type(
+            this_type::coordinate::make(in_center), local_extent, local_axes);
     }
 
     //-------------------------------------------------------------------------

@@ -202,9 +202,9 @@ namespace psyq
             typedef psyq::geometry::mosp::nut<psyq_mosp_space> psyq_mosp_nut;
             typedef psyq::mosp_tree<psyq_mosp_nut*, template_mosp_space>
                 psyq_mosp_tree;
-            psyq_mosp_tree::node_map::allocator_type::arena::shared_ptr
+            typename psyq_mosp_tree::node_map::allocator_type::arena::shared_ptr
                 local_mosp_arena(
-                    new psyq_mosp_tree::node_map::allocator_type::arena(16));
+                    new typename psyq_mosp_tree::node_map::allocator_type::arena(16));
             psyq_mosp_tree local_mosp_tree(
                 typename psyq_mosp_space::coordinate::aabb(
                     psyq_mosp_space::coordinate::make(
@@ -212,12 +212,12 @@ namespace psyq
                     psyq_mosp_space::coordinate::make(
                         typename psyq_mosp_space::coordinate::element( 65536))),
                 1024,
-                psyq_mosp_tree::allocator_type(local_mosp_arena));
-            psyq_mosp_nut::ball local_mosp_ball(
-                psyq_mosp_nut::ball::shape(
+                typename psyq_mosp_tree::allocator_type(local_mosp_arena));
+            typename psyq_mosp_nut::ball local_mosp_ball(
+                psyq_mosp_nut::ball::shape::make(
                     psyq_mosp_space::coordinate::make(2, 3, 4), 1));
             local_mosp_ball.attach_tree(local_mosp_tree);
-            psyq_mosp_nut::ray local_mosp_ray(
+            typename psyq_mosp_nut::ray local_mosp_ray(
                 psyq_mosp_nut::ray::shape::make(
                     psyq_mosp_space::coordinate::make(1, 2, 3),
                     psyq_mosp_space::coordinate::make(4, 5, 6)));

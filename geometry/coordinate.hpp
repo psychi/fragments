@@ -37,13 +37,11 @@ class psyq::geometry::coordinate
     /// thisが指す値の型。
     private: typedef coordinate this_type;
 
-    /** @brief 座標を表す幾何ベクトルの型特性。
+    public: typedef psyq::geometry::vector_processor<template_vector>
+        processor;
 
-        template_vector でテンプレート特殊化した
-        psyq::geometry::vector_traits を用意しておくこと。
-     */
-    public: typedef psyq::geometry::vector::traits<template_vector>
-        vector_traits;
+    /// @copydoc psyq::geometry::generic_vector_processor::traits
+    public: typedef typename this_type::processor::traits traits;
 
     /** @brief 座標を表す幾何ベクトルの型。
 
@@ -67,10 +65,10 @@ class psyq::geometry::coordinate
             vector operator/(vector, element);
             @endcode
      */
-    public: typedef typename this_type::vector_traits::type vector;
+    public: typedef typename this_type::traits::type vector;
 
     /// 座標を表す成分の型。
-    public: typedef typename this_type::vector_traits::element element;
+    public: typedef typename this_type::traits::element element;
 
     public: enum: unsigned
     {
@@ -78,8 +76,8 @@ class psyq::geometry::coordinate
         dimension = template_dimension,
     };
     static_assert(
-        template_dimension <= this_type::vector_traits::size,
-        "'template_dimension' is greater than 'vector_traits::size'");
+        template_dimension <= this_type::traits::size,
+        "'template_dimension' is greater than 'traits::size'");
 
     /// 座標を表す成分の配列。
     public: typedef std::array<
@@ -93,10 +91,10 @@ class psyq::geometry::coordinate
         auto local_vector(in_vector);
         for (
             unsigned i(this_type::dimension);
-            i < this_type::vector_traits::size;
+            i < this_type::traits::size;
             ++i)
         {
-            psyq::geometry::vector::at(local_vector, i) = 0;
+            this_type::processor::at(local_vector, i) = 0;
         }
         return local_vector;
     }
@@ -104,18 +102,18 @@ class psyq::geometry::coordinate
     public: static bool validate(
         typename this_type::vector const& in_vector)
     {
-        return (this_type::vector_traits::size <= 0
+        return (this_type::traits::size <= 0
                 || 0 < this_type::dimension
-                || psyq::geometry::vector::const_at(in_vector, 0) == 0)
-            && (this_type::vector_traits::size <= 1
+                || this_type::processor::const_at(in_vector, 0) == 0)
+            && (this_type::traits::size <= 1
                 || 1 < this_type::dimension
-                || psyq::geometry::vector::const_at(in_vector, 1) == 0)
-            && (this_type::vector_traits::size <= 2
+                || this_type::processor::const_at(in_vector, 1) == 0)
+            && (this_type::traits::size <= 2
                 || 2 < this_type::dimension
-                || psyq::geometry::vector::const_at(in_vector, 2) == 0)
-            && (this_type::vector_traits::size <= 3
+                || this_type::processor::const_at(in_vector, 2) == 0)
+            && (this_type::traits::size <= 3
                 || 3 < this_type::dimension
-                || psyq::geometry::vector::const_at(in_vector, 3) == 0);
+                || this_type::processor::const_at(in_vector, 3) == 0);
     }
 
 }; // class psyq::geometry::coordinate
@@ -149,7 +147,7 @@ public psyq::geometry::coordinate<template_vector, 2>
         typename base_type::element const in_element_1)
     {
         return psyq::geometry::_private::vector_maker
-            <typename base_type::vector, base_type::vector_traits::size>
+            <typename base_type::vector, base_type::traits::size>
                 ::make(in_element_0, in_element_1);
     }
 
@@ -218,7 +216,7 @@ public psyq::geometry::coordinate<template_vector, 3>
         typename base_type::element const in_element_2)
     {
         return psyq::geometry::_private::vector_maker
-            <typename base_type::vector, base_type::vector_traits::size>
+            <typename base_type::vector, base_type::traits::size>
                 ::make(in_element_0, in_element_1, in_element_2);
     }
 

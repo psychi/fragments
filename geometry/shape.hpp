@@ -240,7 +240,7 @@ class psyq::geometry::ray:
         (
             PSYQ_ASSERT(
                 base_type::coordinate::validate(in_direction) &&
-                psyq::geometry::vector::nearly_length(in_direction, 1)),
+                this_type::coordinate::processor::nearly_length(in_direction, 1)),
             in_direction))
     {}
 
@@ -253,7 +253,7 @@ class psyq::geometry::ray:
     public: void set_direction(
         typename base_type::coordinate::vector const& in_direction)
     {
-        this->direction_ = psyq::geometry::vector::normalize(
+        this->direction_ = this_type::coordinate::processor::normalize(
             this_type::coordinate::make(in_direction));
     }
 
@@ -270,7 +270,7 @@ class psyq::geometry::ray:
     {
         return this_type(
             this_type::coordinate::make(in_origin),
-            psyq::geometry::vector::normalize(
+            this_type::coordinate::processor::normalize(
                 this_type::coordinate::make(in_direction)));
     }
 
@@ -463,9 +463,9 @@ class psyq::geometry::box
     {
         for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
         {
-            PSYQ_ASSERT(0 <= psyq::geometry::vector::const_at(in_extent, i));
+            PSYQ_ASSERT(0 <= this_type::coordinate::processor::const_at(in_extent, i));
             PSYQ_ASSERT(this_type::coordinate::validate(in_axes[i]));
-            PSYQ_ASSERT(psyq::geometry::vector::nearly_length(in_axes[i], 1));
+            PSYQ_ASSERT(this_type::coordinate::processor::nearly_length(in_axes[i], 1));
         }
     }
 
@@ -516,14 +516,14 @@ class psyq::geometry::box
         auto const local_half_rotation(in_rotation / 2);
         auto const local_half_sin(std::sin(local_half_rotation));
         auto const local_axis(
-            psyq::geometry::vector::normalize(
+            this_type::coordinate::processor::normalize(
                 this_type::coordinate::make(in_axis)));
         auto const local_qx(
-            local_half_sin * psyq::geometry::vector::const_at(local_axis, 0));
+            local_half_sin * this_type::coordinate::processor::const_at(local_axis, 0));
         auto const local_qy(
-            local_half_sin * psyq::geometry::vector::const_at(local_axis, 1));
+            local_half_sin * this_type::coordinate::processor::const_at(local_axis, 1));
         auto const local_qz(
-            local_half_sin * psyq::geometry::vector::const_at(local_axis, 2));
+            local_half_sin * this_type::coordinate::processor::const_at(local_axis, 2));
         auto const local_qw(std::cos(local_half_rotation));
 
         // 四元数から軸ベクトルを算出する。
@@ -555,10 +555,10 @@ class psyq::geometry::box
         for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
         {
             auto const local_element(
-                psyq::geometry::vector::const_at(in_extent, i));
+                this_type::coordinate::processor::const_at(in_extent, i));
             if (local_element < 0)
             {
-                psyq::geometry::vector::at(local_extent, i) = -local_element;
+                this_type::coordinate::processor::at(local_extent, i) = -local_element;
             }
         }
         return this_type(

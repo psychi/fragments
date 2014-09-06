@@ -85,23 +85,23 @@ class psyq::geometry::mosp::space
     const
     {
         auto local_element(
-            psyq::geometry::vector::const_at(in_vector, in_element_index));
+            this_type::coordinate::processor::const_at(in_vector, in_element_index));
         auto const local_min(
-            psyq::geometry::vector::const_at(
+            this_type::coordinate::processor::const_at(
                 this->get_aabb().get_min(), in_element_index));
         if (local_element < local_min)
         {
             return 0;
         }
         auto const local_max(
-            psyq::geometry::vector::const_at(
+            this_type::coordinate::processor::const_at(
                 this->get_aabb().get_max(), in_element_index));
         if (local_max < local_element)
         {
             local_element = local_max;
         }
         return (local_element - local_min) *
-            psyq::geometry::vector::const_at(
+            this_type::coordinate::processor::const_at(
                 this->get_scale(), in_element_index);
     }
 
@@ -134,7 +134,7 @@ class psyq::geometry::mosp::space
         for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
         {
             local_elements[i] = this_type::compute_mosp_scale(
-                local_unit, psyq::geometry::vector::const_at(local_size, i));
+                local_unit, this_type::coordinate::processor::const_at(local_size, i));
         }
         return this_type::coordinate::make(local_elements);
     }

@@ -12,7 +12,7 @@
 /** @brief D3DXVECTOR2 にテンプレート特殊化した幾何ベクトル型特性。
     @ingroup psyq_geometry_vector_traits
  */
-template<> class psyq::geometry::vector::traits<D3DXVECTOR2>
+template<> class psyq::geometry::vector_traits<D3DXVECTOR2>
 {
     /// 幾何ベクトルの型。
     public: typedef D3DXVECTOR2 type;
@@ -26,11 +26,10 @@ template<> class psyq::geometry::vector::traits<D3DXVECTOR2>
     };
 };
 
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief D3DXVECTOR3 にテンプレート特殊化した幾何ベクトル型特性。
     @ingroup psyq_geometry_vector_traits
  */
-template<> class psyq::geometry::vector::traits<D3DXVECTOR3>
+template<> class psyq::geometry::vector_traits<D3DXVECTOR3>
 {
     /// 幾何ベクトルの型。
     public: typedef D3DXVECTOR3 type;
@@ -44,6 +43,25 @@ template<> class psyq::geometry::vector::traits<D3DXVECTOR3>
     };
 };
 
+/** @brief D3DXVECTOR4 にテンプレート特殊化した幾何ベクトル型特性。
+    @ingroup psyq_geometry_vector_traits
+ */
+template<> class psyq::geometry::vector_traits<D3DXVECTOR4>
+{
+    /// 幾何ベクトルの型。
+    public: typedef D3DXVECTOR4 type;
+    /// 幾何ベクトルが持つ成分の型。
+    public: typedef FLOAT element;
+
+    public: enum: unsigned
+    {
+        /// 幾何ベクトルが持つ成分の数。
+        size = 4,
+    };
+};
+
+#if 0
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq {
 namespace geometry {
 namespace vector {
@@ -53,7 +71,7 @@ inline FLOAT& at(
     D3DXVECTOR3& io_vector,
     unsigned const in_index)
 {
-    typedef psyq::geometry::vector::traits<D3DXVECTOR3> vector_traits;
+    typedef psyq::geometry::vector_traits<D3DXVECTOR3> vector_traits;
     PSYQ_ASSERT(in_index < vector_traits::size);
     return *(((FLOAT*)io_vector) + in_index);
 }
@@ -63,7 +81,7 @@ inline FLOAT& at(
 //-----------------------------------------------------------------------------
 /// @copydoc psyq::geometry::vector::dot
 template<>
-typename psyq::geometry::vector::traits<D3DXVECTOR3>::element
+typename psyq::geometry::vector_traits<D3DXVECTOR3>::element
 psyq::geometry::vector::dot<D3DXVECTOR3>(
     D3DXVECTOR3 const& in_left,
     D3DXVECTOR3 const& in_right)
@@ -85,7 +103,7 @@ D3DXVECTOR3 psyq::geometry::vector::cross_3d<D3DXVECTOR3>(
 //-------------------------------------------------------------------------
 /// @copydoc psyq::geometry::vector::length
 template<>
-typename psyq::geometry::vector::traits<D3DXVECTOR3>::element
+typename psyq::geometry::vector_traits<D3DXVECTOR3>::element
 psyq::geometry::vector::length<D3DXVECTOR3>(
     D3DXVECTOR3 const& in_vector)
 {
@@ -102,22 +120,6 @@ D3DXVECTOR3 psyq::geometry::vector::normalize<D3DXVECTOR3>(
     return local_vector;
 }
 /// @endcond
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief D3DXVECTOR4 にテンプレート特殊化した幾何ベクトル型特性。
-    @ingroup psyq_geometry_vector_traits
- */
-template<> class psyq::geometry::vector::traits<D3DXVECTOR4>
-{
-    /// 幾何ベクトルの型。
-    public: typedef D3DXVECTOR4 type;
-    /// 幾何ベクトルが持つ成分の型。
-    public: typedef FLOAT element;
-
-    public: enum: unsigned
-    {
-        /// 幾何ベクトルが持つ成分の数。
-        size = 4,
-    };
-};
+#endif
 
 #endif // !defined(PSYQ_GEOMETRY_D3DX_VECTOR_HPP_)

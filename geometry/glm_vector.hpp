@@ -40,8 +40,7 @@ class traits<glm::detail::tvec2<template_element, template_precision>>
 /// @name 幾何ベクトルの成分
 //@{
 /// @copydoc psyq::geometry::vector::at
-template<>
-inline typename traits<glm::vec2>::element& at<glm::vec2>(
+inline psyq::geometry::vector::traits<glm::vec2>::element& at(
     glm::vec2& io_vector,
     unsigned const in_index)
 {
@@ -52,8 +51,7 @@ inline typename traits<glm::vec2>::element& at<glm::vec2>(
 /// @name 幾何ベクトルの演算
 //@{
 /// @copydoc psyq::geometry::vector::dot
-template<>
-inline typename traits<glm::vec2>::element dot<glm::vec2>(
+inline psyq::geometry::vector::traits<glm::vec2>::element dot(
     glm::vec2 const& in_left,
     glm::vec2 const& in_right)
 {
@@ -64,16 +62,14 @@ inline typename traits<glm::vec2>::element dot<glm::vec2>(
 /// @name 幾何ベクトルの大きさ
 //@{
 /// @copydoc psyq::geometry::vector::length
-template<>
-inline typename traits<glm::vec2>::element length<glm::vec2>(
+inline psyq::geometry::vector::traits<glm::vec2>::element length(
     glm::vec2 const& in_vector)
 {
     return glm::length(in_vector);
 }
 
 /// @copydoc psyq::geometry::vector::normalize
-template<>
-inline glm::vec2 normalize<glm::vec2>(glm::vec2 const& in_vector)
+inline glm::vec2 normalize(glm::vec2 const& in_vector)
 {
     return glm::normalize(in_vector);
 }
@@ -102,8 +98,7 @@ class traits<glm::detail::tvec3<template_element, template_precision>>
 /// @name 幾何ベクトルの成分
 //@{
 /// @copydoc psyq::geometry::vector::at
-template<>
-inline typename traits<glm::vec3>::element& at<glm::vec3>(
+inline psyq::geometry::vector::traits<glm::vec3>::element& at(
     glm::vec3& io_vector,
     unsigned const in_index)
 {
@@ -114,8 +109,7 @@ inline typename traits<glm::vec3>::element& at<glm::vec3>(
 /// @name 幾何ベクトルの演算
 //@{
 /// @copydoc psyq::geometry::vector::dot
-template<>
-inline typename traits<glm::vec3>::element dot<glm::vec3>(
+inline psyq::geometry::vector::traits<glm::vec3>::element dot(
     glm::vec3 const& in_left,
     glm::vec3 const& in_right)
 {
@@ -123,8 +117,7 @@ inline typename traits<glm::vec3>::element dot<glm::vec3>(
 }
 
 /// @copydoc psyq::geometry::vector::cross_3d
-template<>
-inline glm::vec3 cross_3d<glm::vec3>(
+inline glm::vec3 cross_3d(
     glm::vec3 const& in_left,
     glm::vec3 const& in_right)
 {
@@ -135,16 +128,14 @@ inline glm::vec3 cross_3d<glm::vec3>(
 /// @name 幾何ベクトルの大きさ
 //@{
 /// @copydoc psyq::geometry::vector::length
-template<>
-inline typename traits<glm::vec3>::element length<glm::vec3>(
+inline psyq::geometry::vector::traits<glm::vec3>::element length(
     glm::vec3 const& in_vector)
 {
     return glm::length(in_vector);
 }
 
 /// @copydoc psyq::geometry::vector::normalize
-template<>
-inline glm::vec3 normalize<glm::vec3>(glm::vec3 const& in_vector)
+inline glm::vec3 normalize(glm::vec3 const& in_vector)
 {
     return glm::normalize(in_vector);
 }
@@ -173,8 +164,7 @@ class traits<glm::detail::tvec4<template_element, template_precision>>
 /// @name 幾何ベクトルの成分
 //@{
 /// @copydoc psyq::geometry::vector::at
-template<>
-inline typename traits<glm::vec4>::element& at<glm::vec4>(
+inline psyq::geometry::vector::traits<glm::vec4>::element& at(
     glm::vec4& io_vector,
     unsigned const in_index)
 {
@@ -185,8 +175,7 @@ inline typename traits<glm::vec4>::element& at<glm::vec4>(
 /// @name 幾何ベクトルの演算
 //@{
 /// @copydoc psyq::geometry::vector::dot
-template<>
-inline typename traits<glm::vec4>::element dot<glm::vec4>(
+inline psyq::geometry::vector::traits<glm::vec4>::element dot(
     glm::vec4 const& in_left,
     glm::vec4 const& in_right)
 {
@@ -197,16 +186,14 @@ inline typename traits<glm::vec4>::element dot<glm::vec4>(
 /// @name 幾何ベクトルの大きさ
 //@{
 /// @copydoc psyq::geometry::vector::length
-template<>
-inline typename traits<glm::vec4>::element length<glm::vec4>(
+inline psyq::geometry::vector::traits<glm::vec4>::element length(
     glm::vec4 const& in_vector)
 {
     return glm::length(in_vector);
 }
 
 /// @copydoc psyq::geometry::vector::normalize
-template<>
-inline glm::vec4 normalize<glm::vec4>(glm::vec4 const& in_vector)
+inline glm::vec4 normalize(glm::vec4 const& in_vector)
 {
     return glm::normalize(in_vector);
 }
@@ -235,13 +222,11 @@ class traits<glm::simdVec4>
 /// @name 幾何ベクトルの成分
 //@{
 /// @copydoc psyq::geometry::vector::at
-template<>
-inline glm::f32& at<glm::simdVec4>(
+inline glm::f32& at(
     glm::simdVec4& io_vector,
     unsigned const in_index)
 {
-    typedef psyq::geometry::vector::traits<glm::simdVec4> vector_traits;
-    PSYQ_ASSERT(in_index < vector_traits::size);
+    PSYQ_ASSERT(in_index < 4);
     return io_vector.Data.m128_f32[in_index];
 }
 //@}
@@ -249,8 +234,7 @@ inline glm::f32& at<glm::simdVec4>(
 /// @name 幾何ベクトルの演算
 //@{
 /// @copydoc psyq::geometry::vector::dot
-template<>
-inline typename traits<glm::simdVec4>::element dot<glm::simdVec4>(
+inline psyq::geometry::vector::traits<glm::simdVec4>::element dot(
     glm::simdVec4 const& in_left,
     glm::simdVec4 const& in_right)
 {
@@ -258,8 +242,7 @@ inline typename traits<glm::simdVec4>::element dot<glm::simdVec4>(
 }
 
 /// @copydoc psyq::geometry::vector::cross_3d
-template<>
-inline glm::simdVec4 cross_3d<glm::simdVec4>(
+inline glm::simdVec4 cross_3d(
     glm::simdVec4 const& in_left,
     glm::simdVec4 const& in_right)
 {
@@ -270,16 +253,14 @@ inline glm::simdVec4 cross_3d<glm::simdVec4>(
 /// @name 幾何ベクトルの大きさ
 //@{
 /// @copydoc psyq::geometry::vector::length
-template<>
-inline typename traits<glm::simdVec4>::element length<glm::simdVec4>(
+inline psyq::geometry::vector::traits<glm::simdVec4>::element length(
     glm::simdVec4 const& in_vector)
 {
     return glm::length(in_vector);
 }
 
 /// @copydoc psyq::geometry::vector::normalize
-template<>
-inline glm::simdVec4 normalize<glm::simdVec4>(glm::simdVec4 const& in_vector)
+inline glm::simdVec4 normalize(glm::simdVec4 const& in_vector)
 {
     return glm::normalize(in_vector);
 }

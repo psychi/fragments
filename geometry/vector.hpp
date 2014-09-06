@@ -81,7 +81,8 @@ namespace geometry
     @note
         ここで実装している幾何ベクトル処理は、汎用的な手法で実装している。
         幾何ベクトル処理に特化した適切な実装が可能なら、
-        psyq::geometry::vector で定義されている関数をテンプレート特殊化し、
+        psyq::geometry::vector で定義されている関数を
+        オーバーロードするかテンプレート特殊化し、
         互換性のある別の適切な実装をユーザーが用意すること。
  */
 namespace vector
@@ -133,7 +134,7 @@ template<typename template_vector> class traits;
           幾何ベクトルの先頭位置と一致する。
  */
 template<typename template_vector>
-typename traits<template_vector>::element& at(
+typename psyq::geometry::vector::traits<template_vector>::element& at(
     template_vector& io_vector,
     unsigned const in_index)
 {
@@ -158,7 +159,8 @@ typename traits<template_vector>::element& at(
     @ingroup psyq_geometry_vector
  */
 template<typename template_vector>
-typename traits<template_vector>::element const& const_at(
+typename psyq::geometry::vector::traits<template_vector>::element const&
+const_at(
     template_vector const& in_vector,
     unsigned const in_index)
 {
@@ -176,7 +178,7 @@ typename traits<template_vector>::element const& const_at(
     @ingroup psyq_geometry_vector
  */
 template<typename template_vector>
-typename traits<template_vector>::element dot(
+typename psyq::geometry::vector::traits<template_vector>::element dot(
     template_vector const& in_left,
     template_vector const& in_right)
 {
@@ -200,7 +202,7 @@ typename traits<template_vector>::element dot(
     @ingroup psyq_geometry_vector
  */
 template<typename template_vector>
-typename traits<template_vector>::element cross_2d(
+typename psyq::geometry::vector::traits<template_vector>::element cross_2d(
     template_vector const& in_left,
     template_vector const& in_right)
 {
@@ -426,7 +428,7 @@ bool less_than_equal(
     @ingroup psyq_geometry_vector
  */
 template<typename template_vector>
-typename traits<template_vector>::element length(
+typename psyq::geometry::vector::traits<template_vector>::element length(
     template_vector const& in_vector)
 {
     return std::sqrt(psyq::geometry::vector::dot(in_vector, in_vector));

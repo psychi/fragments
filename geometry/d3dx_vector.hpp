@@ -36,8 +36,7 @@ template<> class traits<D3DXVECTOR2>
 /// @name 幾何ベクトルの成分
 //@{
 /// @copydoc psyq::geometry::vector::at
-template<>
-inline typename traits<D3DXVECTOR2>::element& at<D3DXVECTOR2>(
+inline psyq::geometry::vector::traits<D3DXVECTOR2>::element& at(
     D3DXVECTOR2& io_vector,
     unsigned const in_index)
 {
@@ -49,8 +48,7 @@ inline typename traits<D3DXVECTOR2>::element& at<D3DXVECTOR2>(
 /// @name 幾何ベクトルの演算
 //@{
 /// @copydoc psyq::geometry::vector::dot
-template<>
-inline typename traits<D3DXVECTOR2>::element dot<D3DXVECTOR2>(
+inline psyq::geometry::vector::traits<D3DXVECTOR2>::element dot(
     D3DXVECTOR2 const& in_left,
     D3DXVECTOR2 const& in_right)
 {
@@ -61,17 +59,14 @@ inline typename traits<D3DXVECTOR2>::element dot<D3DXVECTOR2>(
 /// @name 幾何ベクトルの大きさ
 //@{
 /// @copydoc psyq::geometry::vector::length
-template<>
-inline typename traits<D3DXVECTOR2>::element length<D3DXVECTOR2>(
+inline psyq::geometry::vector::traits<D3DXVECTOR2>::element length(
     D3DXVECTOR2 const& in_vector)
 {
     return D3DXVec2Length(&in_vector);
 }
 
 /// @copydoc psyq::geometry::vector::normalize
-template<>
-inline D3DXVECTOR2 normalize<D3DXVECTOR2>(
-    D3DXVECTOR2 const& in_vector)
+inline D3DXVECTOR2 normalize(D3DXVECTOR2 const& in_vector)
 {
     D3DXVECTOR2 local_vector;
     D3DXVec2Normalize(&local_vector, &in_vector);
@@ -100,8 +95,7 @@ template<> class traits<D3DXVECTOR3>
 /// @name 幾何ベクトルの成分
 //@{
 /// @copydoc psyq::geometry::vector::at
-template<>
-inline typename traits<D3DXVECTOR3>::element& at<D3DXVECTOR3>(
+inline psyq::geometry::vector::traits<D3DXVECTOR3>::element& at(
     D3DXVECTOR3& io_vector,
     unsigned const in_index)
 {
@@ -113,8 +107,7 @@ inline typename traits<D3DXVECTOR3>::element& at<D3DXVECTOR3>(
 /// @name 幾何ベクトルの演算
 //@{
 /// @copydoc psyq::geometry::vector::dot
-template<>
-inline typename traits<D3DXVECTOR3>::element dot<D3DXVECTOR3>(
+inline psyq::geometry::vector::traits<D3DXVECTOR3>::element dot(
     D3DXVECTOR3 const& in_left,
     D3DXVECTOR3 const& in_right)
 {
@@ -122,8 +115,7 @@ inline typename traits<D3DXVECTOR3>::element dot<D3DXVECTOR3>(
 }
 
 /// @copydoc psyq::geometry::vector::cross_3d
-template<>
-inline D3DXVECTOR3 cross_3d<D3DXVECTOR3>(
+inline D3DXVECTOR3 cross_3d(
     D3DXVECTOR3 const& in_left,
     D3DXVECTOR3 const& in_right)
 {
@@ -136,17 +128,14 @@ inline D3DXVECTOR3 cross_3d<D3DXVECTOR3>(
 /// @name 幾何ベクトルの大きさ
 //@{
 /// @copydoc psyq::geometry::vector::length
-template<>
-inline typename traits<D3DXVECTOR3>::element length<D3DXVECTOR3>(
+inline psyq::geometry::vector::traits<D3DXVECTOR3>::element length(
     D3DXVECTOR3 const& in_vector)
 {
     return D3DXVec3Length(&in_vector);
 }
 
 /// @copydoc psyq::geometry::vector::normalize
-template<>
-inline D3DXVECTOR3 normalize<D3DXVECTOR3>(
-    D3DXVECTOR3 const& in_vector)
+inline D3DXVECTOR3 normalize(D3DXVECTOR3 const& in_vector)
 {
     D3DXVECTOR3 local_vector;
     D3DXVec3Normalize(&local_vector, &in_vector);
@@ -175,8 +164,7 @@ template<> class traits<D3DXVECTOR4>
 /// @name 幾何ベクトルの成分
 //@{
 /// @copydoc psyq::geometry::vector::at
-template<>
-inline typename traits<D3DXVECTOR4>::element& at<D3DXVECTOR4>(
+inline psyq::geometry::vector::traits<D3DXVECTOR4>::element& at(
     D3DXVECTOR4& io_vector,
     unsigned const in_index)
 {
@@ -188,8 +176,7 @@ inline typename traits<D3DXVECTOR4>::element& at<D3DXVECTOR4>(
 /// @name 幾何ベクトルの演算
 //@{
 /// @copydoc psyq::geometry::vector::dot
-template<>
-inline typename traits<D3DXVECTOR4>::element dot<D3DXVECTOR4>(
+inline psyq::geometry::vector::traits<D3DXVECTOR4>::element dot(
     D3DXVECTOR4 const& in_left,
     D3DXVECTOR4 const& in_right)
 {
@@ -197,8 +184,7 @@ inline typename traits<D3DXVECTOR4>::element dot<D3DXVECTOR4>(
 }
 
 /// @copydoc psyq::geometry::vector::cross_4d
-template<>
-inline D3DXVECTOR4 cross_4d<D3DXVECTOR4>(
+inline D3DXVECTOR4 cross_4d(
     D3DXVECTOR4 const& in_left,
     D3DXVECTOR4 const& in_middle,
     D3DXVECTOR4 const& in_right)
@@ -212,17 +198,14 @@ inline D3DXVECTOR4 cross_4d<D3DXVECTOR4>(
 /// @name 幾何ベクトルの大きさ
 //@{
 /// @copydoc psyq::geometry::vector::length
-template<>
-inline typename traits<D3DXVECTOR4>::element length<D3DXVECTOR4>(
+inline psyq::geometry::vector::traits<D3DXVECTOR4>::element length(
     D3DXVECTOR4 const& in_vector)
 {
     return D3DXVec4Length(&in_vector);
 }
 
 /// @copydoc psyq::geometry::vector::normalize
-template<>
-inline D3DXVECTOR4 normalize<D3DXVECTOR4>(
-    D3DXVECTOR4 const& in_vector)
+inline D3DXVECTOR4 normalize(D3DXVECTOR4 const& in_vector)
 {
     D3DXVECTOR4 local_vector;
     D3DXVec4Normalize(&local_vector, &in_vector);

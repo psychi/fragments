@@ -231,27 +231,12 @@ public psyq::geometry::coordinate_traits<template_vector, template_dimension>
         return glm::length(in_vector);
     }
 
-    /** @brief 正規化した幾何ベクトルを算出する。
-        @return 正規化した幾何ベクトル。
-        @param[in] in_vector 元となる幾何ベクトル。
-        @note
-            座標を表す幾何ベクトルの構築後に
-            座標が使ってない幾何ベクトルの成分が変更されていた場合、
-            正しい動作を保証できない。
-     */
-    public: static typename base_type::vector arrange_length(
+    /// @copydoc psyq::geometry::coordinate::normalize_length()
+    public: static typename base_type::vector normalize_length(
         typename base_type::vector const& in_vector)
     {
         PSYQ_ASSERT(this_type::check_unused_elements(in_vector));
         return glm::normalize(in_vector);
-    }
-
-    /// @copydoc psyq::geometry::coordinate::arrange_length()
-    public: static typename base_type::vector arrange_length(
-        typename base_type::vector const& in_vector,
-        typename base_type::element const in_length)
-    {
-        return this_type::arrange_length(in_vector) * in_length;
     }
     //@}
     //-------------------------------------------------------------------------

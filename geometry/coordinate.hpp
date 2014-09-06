@@ -314,6 +314,20 @@ class psyq::geometry::coordinate_traits
         return std::sqrt(this_type::dot_product(in_vector, in_vector));
     }
 
+     /** @brief 正規化した幾何ベクトルを算出する。
+        @return 正規化した幾何ベクトル。
+        @param[in] in_vector 元となる幾何ベクトル。
+        @note
+            座標を表す幾何ベクトルの構築後に
+            座標が使ってない幾何ベクトルの成分が変更されていた場合、
+            正しい動作を保証できない。
+     */
+   public: static typename this_type::vector normalize_length(
+        typename this_type::vector const& in_vector)
+    {
+        return this_type::arrange_length(in_vector, 1);
+    }
+    //@}
     /** @brief 座標を表す幾何ベクトルの長さを調整する。
         @return 長さを調整した幾何ベクトル。
         @param[in] in_vector 元となる幾何ベクトル。
@@ -323,7 +337,7 @@ class psyq::geometry::coordinate_traits
             座標が使ってない幾何ベクトルの成分が変更されていた場合、
             正しい動作を保証できない。
      */
-    public: static typename this_type::vector arrange_length(
+    protected: static typename this_type::vector arrange_length(
         typename this_type::vector const& in_vector,
         typename this_type::element const in_length = 1)
     {
@@ -348,7 +362,7 @@ class psyq::geometry::coordinate_traits
         }
         return local_vector;
     }
-    //@}
+
 }; // class psyq::geometry::coordinate_traits
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -520,10 +534,6 @@ namespace psyq
                     template_coordinate::make(float(1))));
             auto const local_box_aabb(
                 psyq::geometry::make_aabb(local_box));
-
-            template_coordinate::cross_product(
-                template_coordinate::make(1, 0, 0),
-                template_coordinate::make(0, 1, 0));
         }
     }
 }

@@ -233,7 +233,7 @@ class psyq::geometry::ray:
     public: void set_direction(
         typename base_type::coordinate::vector const& in_direction)
     {
-        this->direction_ = this_type::coordinate::arrange_length(in_direction);
+        this->direction_ = this_type::coordinate::normalize_length(in_direction);
     }
 
     /** @brief 半直線を構築する。
@@ -248,7 +248,7 @@ class psyq::geometry::ray:
         typename base_type::coordinate::vector const& in_direction)
     {
         return this_type(
-            in_origin, this_type::coordinate::arrange_length(in_direction));
+            in_origin, this_type::coordinate::normalize_length(in_direction));
     }
 
 }; // namespace psyq::geometry::ray
@@ -487,7 +487,7 @@ class psyq::geometry::box
         // 回転軸と回転角度から四元数を算出する。
         auto const local_half_rotation(in_rotation / 2);
         auto const local_half_sin(std::sin(local_half_rotation));
-        auto const local_axis(this_type::coordinate::arrange_length(in_axis));
+        auto const local_axis(this_type::coordinate::normalize_length(in_axis));
         auto const local_qx(
             local_half_sin * this_type::coordinate::get_element(local_axis, 0));
         auto const local_qy(

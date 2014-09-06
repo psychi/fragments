@@ -21,7 +21,7 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief  mosp_tree 空間分割木に取りつける、衝突判定オブジェクトの基底型。
+/** @brief  モートン空間分割木に取りつける、衝突判定オブジェクトの基底型。
     @tparam template_space @copydoc psyq::geometry::mosp::nut::space
     @ingroup psyq_geometry_mosp
  */
@@ -32,30 +32,27 @@ class psyq::geometry::mosp::nut
     private: typedef nut this_type;
 
     //-------------------------------------------------------------------------
-    /** @brief nut で使うモートン空間の型。
-
-        psyq::geometry::mosp::space と互換性があること。
-     */
+    /// nut で使う、 psyq::geometry::mosp::space 互換のモートン空間の型。
     public: typedef template_space space;
 
-    /// 空間分割木に取りつける mosp_node 。
+    /// モートン空間分割木に取りつけるノードの型。
     public: typedef psyq::mosp_node<this_type*, typename this_type::space::order>
         node;
 
     public: template<typename template_shape> class concrete;
-    /// mosp_tree に取付可能な、球の衝突判定オブジェクト。
+    /// モートン空間分割木に取付可能な、球の衝突判定オブジェクト。
     public: typedef concrete<
         psyq::geometry::ball<typename this_type::space::coordinate>>
             ball;
-    /// mosp_tree に取付可能な、線分の衝突判定オブジェクト。
+    /// モートン空間分割木に取付可能な、線分の衝突判定オブジェクト。
     public: typedef concrete<
         psyq::geometry::segment<typename this_type::space::coordinate>>
             segment;
-    /// mosp_tree に取付可能な、半直線の衝突判定オブジェクト。
+    /// モートン空間分割木に取付可能な、半直線の衝突判定オブジェクト。
     public: typedef concrete<
         psyq::geometry::ray<typename this_type::space::coordinate>>
             ray;
-    /// mosp_tree に取付可能な、直方体の衝突判定オブジェクト。
+    /// モートン空間分割木に取付可能な、直方体の衝突判定オブジェクト。
     public: typedef concrete<
         psyq::geometry::box<typename this_type::space::coordinate>>
             box;
@@ -71,17 +68,20 @@ class psyq::geometry::mosp::nut
                 static_cast<typename this_type::space::coordinate::element>(0))))
     {}
 
-    /// *thisを mosp_tree から取り外す。
+    /// *thisをモートン空間分割木から取り外す。
     public: virtual ~nut() {}
 
     //-------------------------------------------------------------------------
-    /** @brief *thisを mosp_tree 空間分割木に取りつける。
+    /** @brief モートン空間分割木に取りつける。
 
-        現在取りつけられている mosp_tree から*thisを切り離し、
-        新しい mosp_tree に*thisを取りつける。
+        現在取りつけられているモートン空間分割木から*thisを取り外し、
+        新しいモートン空間分割木に*thisを取りつける。
 
-        @param[in,out] io_tree *thisを取りつける mosp_tree 。
-        @sa detach_tree() is_attached()
+        @tparam template_tree
+            *thisを取りつける、 psyq::mosp_tree 互換のモートン空間分割木の型。
+        @param[in,out] io_tree *thisを取りつけるモートン空間分割木。
+        @sa detach_tree()
+        @sa is_attached()
      */
     public: template<typename template_tree>
     void attach_tree(template_tree& io_tree)
@@ -126,7 +126,7 @@ class psyq::geometry::mosp::nut
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief  mosp_tree 空間分割木に取りつける、衝突判定オブジェクト。
+/** @brief  モートン空間分割木に取りつける、衝突判定オブジェクト。
     @tparam template_space @copydoc psyq::mosp_tree::space
     @tparam template_shape @copydoc psyq::geometry::mosp::nut::shape
  */
@@ -140,7 +140,7 @@ public psyq::geometry::mosp::nut<template_space>
     /// this_type の基底型。
     public: typedef psyq::geometry::mosp::nut<template_space> base_type;
 
-    /// 衝突判定オブジェクトの幾何形状。
+    /// 衝突判定オブジェクトの幾何形状の型。
     public: typedef template_shape shape;
 
     //-------------------------------------------------------------------------
@@ -160,11 +160,11 @@ public psyq::geometry::mosp::nut<template_space>
         return this->shape_;
     }
 
-    /** @brief *thisを mosp_tree から取り外し、衝突判定に使う形状を取得する。
+    /** @brief モートン空間分割木から取り外し、衝突判定に使う形状を取得する。
 
         衝突判定に使う幾何形状を更新したい場合は、
         この関数の戻り値が参照する幾何形状を書き換えた後、
-        base_type::attach_tree() で mosp_tree に取りつける。
+        base_type::attach_tree() でモートン空間分割木に取りつける。
 
         @return 衝突判定に使う形状。
      */
@@ -186,7 +186,8 @@ public psyq::geometry::mosp::nut<template_space>
     //-------------------------------------------------------------------------
     /// 衝突判定オブジェクトの形状。
     protected: typename this_type::shape shape_;
-};
+
+}; // class psyq::geometry::mosp::nut<template_space>::concrete
 
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

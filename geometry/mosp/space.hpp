@@ -24,7 +24,7 @@ namespace psyq
 } // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief psyq::mosp_tree のテンプレート引数に使う、モートン空間の基底型。
+/** @brief モートン空間の基底型。
     @tparam template_coordinate @copydoc psyq::geometry::mosp::space::coordinate
     @ingroup psyq_geometry_mosp
  */
@@ -34,10 +34,7 @@ class psyq::geometry::mosp::space
     /// thisが指す値の型。
     private: typedef space this_type;
 
-    /** @brief 衝突判定に使う座標系の型特性。
-
-        psyq::geometry::coordinate と互換性があること。
-     */
+    /// psyq::geometry::coordinate 互換の、モートン空間の座標系の型特性。
     public: typedef template_coordinate coordinate;
 
     /** @brief モートン順序の型。
@@ -49,8 +46,8 @@ class psyq::geometry::mosp::space
     public: typedef std::uint32_t order;
 
     //-------------------------------------------------------------------------
-    /** @brief 衝突判定を行う領域を設定する。
-        @param[in] in_aabb      衝突判定を行う領域の全体を包む、絶対座標系AABB。
+    /** @brief 衝突判定を行うモートン空間の範囲を定義する。
+        @param[in] in_aabb      モートン空間の全体を包む、絶対座標系AABB。
         @param[in] in_level_cap 空間分割の最深レベル。
      */
     protected: space(
@@ -61,18 +58,26 @@ class psyq::geometry::mosp::space
     scale_(this_type::compute_mosp_scale(in_aabb, in_level_cap))
     {}
 
-    /** @brief 衝突判定を行う領域の全体を包む、絶対座標系AABBを取得する。
-        @return 衝突判定を行う領域の全体を包む、絶対座標系AABB。
+    /** @brief 衝突判定を行う範囲の全体を包む、絶対座標系AABBを取得する。
+        @return 衝突判定を行う範囲の全体を包む、絶対座標系AABB。
      */
     public: typename this_type::coordinate::aabb const& get_aabb() const
     {
         return this->aabb_;
     }
 
-    /** @brief 絶対座標系ベクトルの要素を、モートン座標に変換する。
-        @return モートン座標でのベクトル要素の値。
+    /** @brief 絶対座標系からモートン空間の座標系への変換スケールを取得する。
+        @return 絶対座標系からモートン空間の座標系への、全軸の変換スケール。
+     */
+    public: typename this_type::coordinate::vector const& get_scale() const
+    {
+        return this->scale_;
+    }
+
+    /** @brief 絶対座標系ベクトルの成分を、モートン空間の座標へ変換する。
+        @return モートン空間での座標成分の値。
         @param[in] in_vector        変換する絶対座標系ベクトル。
-        @param[in] in_element_index 変換する要素のインデックス番号。
+        @param[in] in_element_index 変換する成分のインデックス番号。
      */
     protected: typename this_type::coordinate::element transform_element(
         typename this_type::coordinate::vector const& in_vector,
@@ -83,41 +88,38 @@ class psyq::geometry::mosp::space
             this_type::coordinate::get_element(in_vector, in_element_index));
         auto const local_min(
             this_type::coordinate::get_element(
-                this->aabb_.get_min(), in_element_index));
+                this->get_aabb().get_min(), in_element_index));
         if (local_element < local_min)
         {
             return 0;
         }
         auto const local_max(
             this_type::coordinate::get_element(
-                this->aabb_.get_max(), in_element_index));
+                this->get_aabb().get_max(), in_element_index));
         if (local_max < local_element)
         {
             local_element = local_max;
         }
         return (local_element - local_min) *
-            this_type::coordinate::get_element(this->scale_, in_element_index);
+            this_type::coordinate::get_element(
+                this->get_scale(), in_element_index);
     }
 
-    /** @brief モートン空間に収まるように、モートン座標値をクランプする。
-        @param[in] in_element クランプするモートン座標値。
-        @param[in] in_max     モートン座標の最大値。
+    /** @brief モートン空間に収まるように、座標値を丸める。
+        @param[in] in_element 丸めるモートン空間の座標成分。
+        @param[in] in_max     モートン空間の座標成分の最大値。
      */
     protected: static typename this_type::order clamp_axis_order(
         typename this_type::coordinate::element const in_element,
         typename this_type::order const in_max)
     {
-        if (in_element < 1)
-        {
-            return 0;
-        }
         return in_element < 1?
             0:
             (std::min)(static_cast<typename this_type::order>(in_element), in_max);
     }
 
-    /** @brief 絶対座標系からモートン座標系への変換スケールを算出する。
-        @param[in] in_aabb      衝突判定領域の全体を包む、絶対座標系AABB。
+    /** @brief 絶対座標系からモートン空間の座標への変換スケールを算出する。
+        @param[in] in_aabb      モートン空間の全体を包む、絶対座標系AABB。
         @param[in] in_level_cap 空間分割の最大深度。
      */
     private: static typename this_type::coordinate::vector compute_mosp_scale(
@@ -137,8 +139,8 @@ class psyq::geometry::mosp::space
         return this_type::coordinate::make(local_elements);
     }
 
-    /** @brief 絶対座標系からモートン座標系への変換スケールを算出する。
-        @param[in] in_morton_size モートン座標の最大値。
+    /** @brief 絶対座標系からモートン空間の座標系への変換スケールを算出する。
+        @param[in] in_morton_size モートン空間の座標の最大値。
         @param[in] in_world_size  絶対座標系でのモートン空間の大きさ。
      */
     private: static typename this_type::coordinate::element compute_mosp_scale(
@@ -150,7 +152,7 @@ class psyq::geometry::mosp::space
     }
 
     //-------------------------------------------------------------------------
-    /// 衝突判定を行う領域全体の、絶対座標系AABB。
+    /// 衝突判定を行うモートン空間の全体を包む、絶対座標系AABB。
     private: typename this_type::coordinate::aabb aabb_;
 
     /// 最小となる分割空間の、絶対座標系での大きさの逆数。
@@ -159,9 +161,9 @@ class psyq::geometry::mosp::space
 }; // class psyq::geometry::mosp::space
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 2次元座標で衝突判定を行うモートン空間。
+/** @brief 2次元のモートン空間分割木で使うモートン空間。
 
-    psyq::mosp_tree のtemplate引数に使う。
+    psyq::mosp_tree のテンプレート引数に使う。
 
     @tparam template_coordinate @copydoc psyq::geometry::mosp::space::coordinate
     @tparam template_element_0  @copydoc psyq::geometry::mosp::space_2d::element_index_0
@@ -183,11 +185,11 @@ public psyq::geometry::mosp::space<template_coordinate>
 
     public: enum: unsigned
     {
-        /// モートン空間で使う座標の成分#0のインデックス番号。
+        /// モートン空間の座標成分#0のインデックス番号。
         element_index_0 = template_element_0,
-        /// モートン空間で使う座標の成分#1のインデックス番号。
+        /// モートン空間の座標成分#1のインデックス番号。
         element_index_1 = template_element_1,
-        /// 衝突判定に使う座標の成分の数。
+        /// モートン空間の座標成分の数。
         DIMENSION = 2,
     };
 
@@ -200,27 +202,27 @@ public psyq::geometry::mosp::space<template_coordinate>
     base_type(in_aabb, in_level_cap)
     {}
 
-    /** @brief 2次元座標上の点から、線形4分木のモートン順序を算出する。
-        @return 2次元座標に対応するモートン順序。
-        @param[in] in_point 2次元座標上の点。
-        @param[in] in_max   モートン座標の最大値。
+    /** @brief 絶対座標系の点から、線形4分木のモートン順序を算出する。
+        @return 2次元のモートン空間に対応するモートン順序。
+        @param[in] in_point 絶対座標系の点。
+        @param[in] in_max   モートン空間座標の最大値。
      */
     public: typename base_type::order calc_order(
         typename base_type::coordinate::vector const& in_point,
         typename base_type::order const in_max)
     const
     {
-        auto const local_element0(
+        auto const local_element_0(
             this->transform_element(in_point, this_type::element_index_0));
-        auto const local_element1(
+        auto const local_element_1(
             this->transform_element(in_point, this_type::element_index_1));
-        return this_type::separate_bits(local_element0, in_max) << 0
-            |  this_type::separate_bits(local_element1, in_max) << 1;
+        return (this_type::separate_bits(local_element_0, in_max) << 0)
+            |  (this_type::separate_bits(local_element_1, in_max) << 1);
     }
 
-    /** @brief モートン座標を、軸ごとのbitに分割する。
-        @param[in] in_element モートン座標の成分値。
-        @param[in] in_max     モートン座標の最大値。
+    /** @brief モートン座標の成分を、軸ごとのビットに分割する。
+        @param[in] in_element モートン空間の座標の成分値。
+        @param[in] in_max     モートン空間の座標の最大値。
      */
     private: static typename base_type::order separate_bits(
         typename base_type::coordinate::element const in_element,
@@ -234,26 +236,12 @@ public psyq::geometry::mosp::space<template_coordinate>
         return local_bits;
     }
 
-    //-------------------------------------------------------------------------
-    /** @brief 絶対座標系からモートン座標系への変換スケールを算出する。
-        @param[in] in_aabb      衝突判定領域の全体を包む、絶対座標系AABB。
-        @param[in] in_level_cap 空間分割の最大深度。
-     */
-    public: static typename base_type::coordinate::vector compute_mosp_scale(
-        typename base_type::coordinate::aabb const& in_aabb,
-        unsigned const in_level_cap)
-    {
-        typename base_type::coordinate::element_array local_elements;
-        base_type::compute_mosp_scale(local_elements, in_aabb, in_level_cap);
-        return this_type::make(local_elements);
-    }
-
 }; // class psyq::geometry::mosp::space_2d
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 3次元座標で衝突判定を行うモートン空間。
+/** @brief 3次元のモートン空間分割木で使うモートン空間。
 
-    mosp_tree のtemplate引数に使う。
+    mosp_tree のテンプレート引数に使う。
 
     @tparam template_coordinate @copydoc psyq::geometry::mosp::space::coordinate
     @tparam template_element_0  @copydoc psyq::geometry::mosp::space_3d::element_0
@@ -281,7 +269,7 @@ public psyq::geometry::mosp::space<template_coordinate>
         element_index_0 = template_element_0,
         /// @copydoc psyq::geometry::mosp::space_2d::element_index_1
         element_index_1 = template_element_1,
-        /// モートン空間で使う座標の成分#2のインデックス番号。
+        /// モートン空間の座標成分#2のインデックス番号。
         element_index_2 = template_element_2,
         /// @copydoc psyq::geometry::mosp::space_2d::dimension
         DIMENSION = 3,
@@ -296,10 +284,10 @@ public psyq::geometry::mosp::space<template_coordinate>
     base_type(in_aabb, in_level_cap)
     {}
 
-    /** @brief 3次元座標上の点から、線形8分木のモートン順序を算出する。
-        @return 3次元座標に対応するモートン順序。
-        @param[in] in_point 3次元座標上の点。
-        @param[in] in_max   モートン順序の最大値。
+    /** @brief 絶対座標系の点から、線形8分木のモートン順序を算出する。
+        @return 3次元のモートン空間に対応するモートン順序。
+        @param[in] in_point 絶対座標系の点。
+        @param[in] in_max   モートン空間座標の最大値。
      */
     public: typename base_type::order calc_order(
         typename base_type::coordinate::vector const& in_point,

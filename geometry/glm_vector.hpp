@@ -264,8 +264,8 @@ inline glm::simdVec4 normalize(glm::simdVec4 const& in_vector)
 {
     return glm::normalize(in_vector);
 }
-#endif // GLM_ARCH != GLM_ARCH_PURE
 //@}
+#endif // GLM_ARCH != GLM_ARCH_PURE
 } // namespace vector
 } // namespace geometry
 } // namespace psyq

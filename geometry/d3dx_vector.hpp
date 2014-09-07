@@ -16,7 +16,7 @@ namespace vector
 {
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief D3DXVECTOR2 にテンプレート特殊化した幾何ベクトル型特性。
-    @ingroup psyq_geometry_vector_traits
+    @ingroup psyq_geometry_vector
  */
 template<> class traits<D3DXVECTOR2>
 {
@@ -75,7 +75,7 @@ inline D3DXVECTOR2 normalize(D3DXVECTOR2 const& in_vector)
 //@}
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief D3DXVECTOR3 にテンプレート特殊化した幾何ベクトル型特性。
-    @ingroup psyq_geometry_vector_traits
+    @ingroup psyq_geometry_vector
  */
 template<> class traits<D3DXVECTOR3>
 {
@@ -144,7 +144,7 @@ inline D3DXVECTOR3 normalize(D3DXVECTOR3 const& in_vector)
 //@}
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief D3DXVECTOR4 にテンプレート特殊化した幾何ベクトル型特性。
-    @ingroup psyq_geometry_vector_traits
+    @ingroup psyq_geometry_vector
  */
 template<> class traits<D3DXVECTOR4>
 {

@@ -28,7 +28,7 @@ class psyq::geometry::aabb
     /// thisが指す値の型。
     private: typedef aabb this_type;
 
-    /// psyq::geometry::coordinate 互換の座標の型特性。
+    /// @copydoc psyq::geometry::ball::coordinate
     public: typedef template_coordinate coordinate;
 
     /** @brief this_type::detect_line_collision() で使う、直線との衝突情報。
@@ -277,6 +277,7 @@ namespace psyq
         //---------------------------------------------------------------------
         /** @brief 球のAABBを構築する。
             @return 球のAABB。
+            @tparam template_coordinate @copydoc psyq::geometry::aabb::coordinate
             @param[in] in_ball AABBを構築する球。
             @ingroup psyq_geometry_shape
          */
@@ -294,6 +295,7 @@ namespace psyq
         //---------------------------------------------------------------------
         /** @brief 線分のAABBを構築する。
             @return 線分のAABB。
+            @tparam template_coordinate @copydoc psyq::geometry::aabb::coordinate
             @param[in] in_segment AABBを構築する線分。
             @ingroup psyq_geometry_shape
          */
@@ -334,6 +336,7 @@ namespace psyq
         //---------------------------------------------------------------------
         /** @brief 半直線のAABBを構築する。
             @return 半直線のAABB。
+            @tparam template_coordinate @copydoc psyq::geometry::aabb::coordinate
             @param[in] in_ray AABBを構築する半直線。
             @ingroup psyq_geometry_shape
          */
@@ -373,6 +376,7 @@ namespace psyq
         //---------------------------------------------------------------------
         /** @brief 直方体のAABBを構築する。
             @return 直方体のAABB。
+            @tparam template_coordinate @copydoc psyq::geometry::aabb::coordinate
             @param[in] in_box AABBを構築する直方体。
             @ingroup psyq_geometry_shape
          */
@@ -404,6 +408,7 @@ namespace psyq
         //---------------------------------------------------------------------
         /** @brief AABBのAABBを構築する。
             @return AABBのAABB。
+            @tparam template_coordinate @copydoc psyq::geometry::aabb::coordinate
             @param[in] in_aabb AABBを構築するAABB。
             @ingroup psyq_geometry_shape
          */

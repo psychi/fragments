@@ -32,7 +32,11 @@ class psyq::geometry::mosp::nut
     private: typedef nut this_type;
 
     //-------------------------------------------------------------------------
-    /// nut で使う、 psyq::geometry::mosp::space 互換のモートン空間の型。
+    /** @brief this_type で使うモートン空間の型。
+
+        psyq::geometry::mosp::space_2d か psyq::geometry::mosp::space_3d
+        と互換性のあるインターフェイスを持っている必要がある。
+     */
     public: typedef template_space space;
 
     /// モートン空間分割木に取りつけるノードの型。
@@ -76,7 +80,8 @@ class psyq::geometry::mosp::nut
         新しいモートン空間分割木に*thisを取りつける。
 
         @tparam template_tree
-            *thisを取りつける、 psyq::mosp_tree 互換のモートン空間分割木の型。
+            *thisを取りつけるモートン空間分割木の型。
+            psyq::mosp_tree 互換のインターフェイスを持っている必要がある。
         @param[in,out] io_tree *thisを取りつけるモートン空間分割木。
         @sa detach_tree()
         @sa is_attached()
@@ -104,7 +109,7 @@ class psyq::geometry::mosp::nut
         return this->node_.is_attached();
     }
 
-    /** @brief thisが持つAABBを取得する。
+    /** @brief *thisが持つAABBを取得する。
      */
     public: typename this_type::space::coordinate::aabb const& get_aabb()
     const PSYQ_NOEXCEPT
@@ -112,7 +117,7 @@ class psyq::geometry::mosp::nut
         return this->aabb_;
     }
 
-    /** @brief thisが持つAABBを更新する。
+    /** @brief *thisが持つAABBを更新する。
      */
     protected: virtual void update_aabb() = 0;
 
@@ -125,8 +130,8 @@ class psyq::geometry::mosp::nut
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief  モートン空間分割木に取りつける、衝突判定オブジェクト。
-    @tparam template_space @copydoc psyq::mosp_tree::space
-    @tparam template_shape @copydoc psyq::geometry::mosp::nut::shape
+    @tparam template_space @copydoc psyq::geometry::mosp::nut::space
+    @tparam template_shape @copydoc psyq::geometry::mosp::nut::concrete::shape
  */
 template<typename template_space>
 template<typename template_shape>

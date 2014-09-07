@@ -31,7 +31,10 @@ class psyq::geometry::ball
     /// thisが指す値の型。
     private: typedef ball this_type;
 
-    /// psyq::geometry::coordinate 互換の座標の型特性。
+    /** @brief 座標系の型特性。
+
+        psyq::geometry::coordinate 互換のインターフェイスを持っていること。
+     */
     public: typedef template_coordinate coordinate;
 
     //-------------------------------------------------------------------------
@@ -107,7 +110,7 @@ class psyq::geometry::ball
     {
         auto const local_diff(in_target.get_center() - this->get_center());
         auto const local_square_distance(
-            this_type::coordinate::dot(local_diff, local_diff));
+            psyq::geometry::vector::dot(local_diff, local_diff));
         auto const local_range(in_target.get_radius() + this->get_radius());
         return local_square_distance <= local_range * local_range;
     }
@@ -131,7 +134,7 @@ class psyq::geometry::segment
     /// thisが指す値の型。
     private: typedef segment this_type;
 
-    /// psyq::geometry::coordinate 互換の座標の型特性。
+    /// @copydoc psyq::geometry::ball::coordinate
     public: typedef template_coordinate coordinate;
 
     //-------------------------------------------------------------------------
@@ -287,7 +290,7 @@ class psyq::geometry::ray<template_coordinate>::triangle_3d
     /// thisが指す値の型。
     private: typedef triangle_3d this_type;
 
-    /// psyq::geometry::coordinate 互換の座標の型特性。
+    /// @copydoc psyq::geometry::ball::coordinate
     public: typedef template_coordinate coordinate;
 
     //-------------------------------------------------------------------------
@@ -309,31 +312,31 @@ class psyq::geometry::ray<template_coordinate>::triangle_3d
 #if 1
         auto local_edge1(in_vertex1 - in_vertex0);
         auto local_edge2(in_vertex2 - in_vertex0);
-        this->normal_ = this_type::coordinate::cross_3d(
+        this->normal_ = psyq::geometry::vector::cross_3d(
             local_edge1, local_edge2);
         auto const local_nx(
-            this_type::coordinate::cross_3d(local_edge2, this->normal_));
+            psyq::geometry::vector::cross_3d(local_edge2, this->normal_));
         auto const local_ny(
-            this_type::coordinate::cross_3d(local_edge1, this->normal_));
+            psyq::geometry::vector::cross_3d(local_edge1, this->normal_));
         this->binormal_u_ = local_nx /
-            this_type::coordinate::dot(local_edge1, local_nx);
+            psyq::geometry::vector::dot(local_edge1, local_nx);
         this->binormal_v_ = local_ny /
-            this_type::coordinate::dot(local_edge2, local_ny);
+            psyq::geometry::vector::dot(local_edge2, local_ny);
 #else
         auto const local_e2(
-            this_type::coordinate::cross_3d(in_vertex0, in_vertex1));
+            psyq::geometry::vector::cross_3d(in_vertex0, in_vertex1));
         auto const local_d(
-            this_type::coordinate::dot(local_e2, in_vertex2));
+            psyq::geometry::vector::dot(local_e2, in_vertex2));
         if (local_d <= 0)
         {
             PSYQ_ASSERT(false);
             return;
         }
         auto const local_e1(
-            this_type::coordinate::cross_3d(in_vertex2, in_vertex0));
+            psyq::geometry::vector::cross_3d(in_vertex2, in_vertex0));
         this->binormal_u_ = local_e1 / local_d;
         this->binormal_v_ = local_e2 / local_d;
-        this->normal_ = this_type::coordinate::cross_3d(
+        this->normal_ = psyq::geometry::vector::cross_3d(
             in_vertex1 - in_vertex0, in_vertex2 - in_vertex0);
 #endif
     }
@@ -366,7 +369,7 @@ class psyq::geometry::ray<template_coordinate>::triangle_3d
     const
     {
         auto const local_nv(
-            -this_type::coordinate::dot(
+            -psyq::geometry::vector::dot(
                 in_ray.get_direction(), this->get_normal()));
         if (local_nv <= in_epsilon)
         {
@@ -375,7 +378,7 @@ class psyq::geometry::ray<template_coordinate>::triangle_3d
 
         auto const local_origin_diff(in_ray.get_origin() - this->get_origin());
         auto const local_t(
-            this_type::coordinate::dot(
+            psyq::geometry::vector::dot(
                 local_origin_diff, this->get_normal()) / local_nv);
         if (local_t < 0 || in_ray_length < local_t)
         {
@@ -385,14 +388,14 @@ class psyq::geometry::ray<template_coordinate>::triangle_3d
         auto const local_position(
             in_ray.get_direction() * local_t + local_origin_diff);
         auto const local_u(
-            this_type::coordinate::dot(
+            psyq::geometry::vector::dot(
                 local_position, this->binormal_u_));
         if (local_u < in_epsilon)
         {
             return false;
         }
         auto const local_v(
-            this_type::coordinate::dot(local_position, this->binormal_v_));
+            psyq::geometry::vector::dot(local_position, this->binormal_v_));
         if (local_v < in_epsilon || 1 - in_epsilon < local_u + local_v)
         {
             return false;
@@ -435,7 +438,7 @@ class psyq::geometry::box
     /// thisが指す値の型。
     private: typedef box this_type;
 
-    /// psyq::geometry::coordinate 互換の幾何ベクトル型特性。
+    /// @copydoc psyq::geometry::ball::coordinate
     public: typedef template_coordinate coordinate;
 
     /// 直方体の軸方向の単位ベクトルの配列。

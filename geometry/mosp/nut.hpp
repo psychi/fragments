@@ -1,24 +1,51 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief
+    @brief モートン空間分割木に取りつける、衝突判定オブジェクトの実装。
  */
 #ifndef PSYQ_GEOMETRY_MOSP_NUT_HPP_
 #define PSYQ_GEOMETRY_MOSP_NUT_HPP_
 
 //#include "psyq/geometry/shape.hpp"
 
-/// @cond
 namespace psyq
 {
-    namespace geometry
-    {
-        namespace mosp
-        {
-            template<typename> class nut;
-        } // namespace mosp
-    } // namespace geometry
+namespace geometry
+{
+/** @brief モートン順序を用いた空間分割木による衝突判定の実装。
+
+    使い方の概要。
+    -# psyq::geometry::mosp::nut インスタンスを用意する。
+       - psyq::geometry::mosp::nut は抽象型なので、実際には
+         psyq::geometry::mosp::nut::ball などの
+         具象型のインスタンスを用意することになる。
+    -# psyq::mosp_tree インスタンスを用意する。
+       - psyq::mosp_tree::argument には、
+         psyq::geometry::mosp::nut* を適用する。
+       - psyq::mosp_tree::space には、
+         psyq::geometry::mosp::nut::space を適用する。
+       - psyq::mosp_tree::allocator_type には、
+         std::allocator 互換の任意のメモリ割当子を適用する。
+         - 高速なメモリ管理を求めるので、
+           psyq::memory_arena::fixed_pool を適用した
+           psyq::memory_arena::allocator を推奨する。
+    -# psyq::geometry::mosp::nut::attach_tree で、
+       psyq::geometry::mosp::nut インスタンス を
+       psyq::mosp_tree インスタンスに取りつける。
+    -# psyq::mosp_tree::detect_collision で、
+       psyq::mosp_tree インスタンスに取りつけられているすべての
+       psyq::geometry::mosp::nut インスタンスで衝突判定を行う。
+       - 2つの psyq::geometry::mosp::nut インスタンスの、
+         それぞれが所属している分割空間が衝突していると、それら2つの
+         psyq::geometry::mosp::nut* を引数に、衝突関数が呼び出される。
+ */
+namespace mosp
+{
+    /// @cond
+    template<typename> class nut;
+    /// @endcond
+} // namespace mosp
+} // namespace geometry
 } // namespace psyq
-/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief  モートン空間分割木に取りつける、衝突判定オブジェクトの基底型。
@@ -40,10 +67,13 @@ class psyq::geometry::mosp::nut
     public: typedef template_space space;
 
     /// モートン空間分割木に取りつけるノードの型。
-    public: typedef psyq::mosp_node<this_type*, typename this_type::space::order>
-        node;
+    public: typedef psyq::mosp_node<
+        this_type*, typename this_type::space::order>
+            node;
 
+    /// @cond
     public: template<typename template_shape> class concrete;
+    /// @endcond
     /// モートン空間分割木に取付可能な、球の衝突判定オブジェクト。
     public: typedef concrete<
         psyq::geometry::ball<typename this_type::space::coordinate>>
@@ -129,7 +159,7 @@ class psyq::geometry::mosp::nut
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief  モートン空間分割木に取りつける、衝突判定オブジェクト。
+/** @brief  モートン空間分割木に取りつける、衝突判定オブジェクトの具象型。
     @tparam template_space @copydoc psyq::geometry::mosp::nut::space
     @tparam template_shape @copydoc psyq::geometry::mosp::nut::concrete::shape
  */
@@ -194,6 +224,7 @@ public psyq::geometry::mosp::nut<template_space>
 
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @cond
 namespace psyq
 {
     namespace test
@@ -243,5 +274,6 @@ namespace psyq
         }
     }
 }
+/// @endcond
 
 #endif // !defined(PSYQ_GEOMETRY_MOSP_NUT_HPP_)

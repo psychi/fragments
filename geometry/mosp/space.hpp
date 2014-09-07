@@ -1,30 +1,29 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief 
+    @brief モートン空間分割木が使う空間の実装。
     @defgroup psyq_geometry_mosp モートン順序による衝突判定
     @ingroup psyq_geometry
  */
 #ifndef PSYQ_GEOMETRY_MOSP_SPACE_HPP_
 #define PSYQ_GEOMETRY_MOSP_SPACE_HPP_
 
+/// @cond
 namespace psyq
 {
     namespace geometry
     {
-        /// モートン順序を用いた空間分割木による衝突判定の実装。
         namespace mosp
         {
-            /// @cond
             template<typename> class space;
             template<typename, unsigned, unsigned> class space_2d;
             template<typename, unsigned, unsigned, unsigned> class space_3d;
-            /// @endcond
         } // namespace mosp
     } // namespace geometry
 } // namespace psyq
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief モートン空間の基底型。
+/** @brief モートン空間分割木が使う空間の基底型。
     @tparam template_coordinate @copydoc psyq::geometry::mosp::space::coordinate
     @ingroup psyq_geometry_mosp
  */
@@ -165,7 +164,7 @@ class psyq::geometry::mosp::space
 }; // class psyq::geometry::mosp::space
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 2次元のモートン空間分割木で使うモートン空間。
+/** @brief 2次元のモートン空間分割木が使う空間。
 
     psyq::mosp_tree のテンプレート引数に使う。
 
@@ -244,9 +243,9 @@ public psyq::geometry::mosp::space<template_coordinate>
 }; // class psyq::geometry::mosp::space_2d
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 3次元のモートン空間分割木で使うモートン空間。
+/** @brief 3次元のモートン空間分割木が使う空間。
 
-    mosp_tree のテンプレート引数に使う。
+    psyq::mosp_tree のテンプレート引数に使う。
 
     @tparam template_coordinate @copydoc psyq::geometry::mosp::space::coordinate
     @tparam template_element_0  @copydoc psyq::geometry::mosp::space_3d::element_0

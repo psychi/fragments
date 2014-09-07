@@ -47,16 +47,10 @@ class psyq::geometry::coordinate
 
     /** @brief 座標を表す幾何ベクトルの型。
 
-        - 座標を現す幾何ベクトルでは、幾何ベクトルの成分のうち、
-          最初の psyq::geometry::coordinate::dimension 個のみを使用する。
-        - 座標を表す幾何ベクトルは、 psyq::geometry::coordinate_2d::make() か
-          psyq::geometry::coordinate_3d::make() で構築すること。
-        - 座標を表す幾何ベクトルを構築した後で、
-          座標が使ってない幾何ベクトルの成分を変更すると、
-          座標を表す幾何ベクトルの処理が正しく動作しなくなるので注意。
         - 以下の条件を満たしていること。
           - コピー構築子とコピー代入演算子が使える。
-          - element 型の引数を成分数だけ渡す構築子が使える。
+          - this_type::vector_traits::size 個の this_type::element
+            型の引数を渡す構築子が使える。
           - 以下に相当する二項演算子が使える。
             @code
             vector operator+(vector, vector);
@@ -66,6 +60,20 @@ class psyq::geometry::coordinate
             vector operator/(vector, vector);
             vector operator/(vector, element);
             @endcode
+        - 座標を表す幾何ベクトルでは、幾何ベクトルの成分のうち、
+          最初の psyq::geometry::coordinate::dimension 個のみを使用する。
+          それら以外の成分を変更すると、有効な座標として機能しなくなる。
+        - 有効な座標を表す幾何ベクトルは、以下の関数で構築できる。
+          - psyq::geometry::coordinate::make
+          - psyq::geometry::coordinate_2d::make
+          - psyq::geometry::coordinate_2d::make_filled
+          - psyq::geometry::coordinate_3d::make
+          - psyq::geometry::coordinate_3d::make_filled
+        - 有効な座標を表す幾何ベクトルを構築した後で、
+          座標が使ってない幾何ベクトルの成分を変更すると、
+          有効な座標として機能しなくなる。
+          psyq::geometry::coordinate::validate
+          で、幾何ベクトルが有効な座標を表しているか判定できる。
      */
     public: typedef typename this_type::vector_traits::type vector;
 
@@ -90,7 +98,7 @@ class psyq::geometry::coordinate
     /** @brief 有効な座標を表す幾何ベクトルを構築する。
         @return 有効な座標を表す幾何ベクトル。
         @param[in] in_vector 元となる幾何ベクトル。
-        @sa validate() で、幾何ベクトルが有効な座標を表しているか判定できる。
+        @sa this_type::validate で、幾何ベクトルが有効な座標を表しているか判定できる。
      */
     public: static typename this_type::vector make(
         typename this_type::vector const& in_vector)
@@ -158,6 +166,7 @@ public psyq::geometry::coordinate<template_vector, 2>
         @return 構築した幾何ベクトル。
         @param[in] in_element_0 座標の要素#0の初期値。
         @param[in] in_element_1 座標の要素#1の初期値。
+        @sa base_type::validate で、幾何ベクトルが有効な座標を表しているか判定できる。
      */
     public: static typename base_type::vector make(
         typename base_type::element const in_element_0,
@@ -179,6 +188,7 @@ public psyq::geometry::coordinate<template_vector, 2>
                有効な座標を表す幾何ベクトルを構築する。
         @return 構築した幾何ベクトル。
         @param[in] in_container 座標の初期値が格納されているコンテナ。
+        @sa base_type::validate で、幾何ベクトルが有効な座標を表しているか判定できる。
      */
     public: template<typename template_container>
     static typename base_type::vector make(
@@ -190,6 +200,7 @@ public psyq::geometry::coordinate<template_vector, 2>
     /** @brief 成分が全て同じ値の座標を表す幾何ベクトルを構築する。
         @return 構築した幾何ベクトル。
         @param[in] in_element 座標の全成分の初期値。
+        @sa base_type::validate で、幾何ベクトルが有効な座標を表しているか判定できる。
      */
     public: static typename base_type::vector make_filled(
         typename base_type::element const in_element)
@@ -223,6 +234,7 @@ public psyq::geometry::coordinate<template_vector, 3>
         @param[in] in_element_0 座標の要素#0の初期値。
         @param[in] in_element_1 座標の要素#1の初期値。
         @param[in] in_element_2 座標の要素#2の初期値。
+        @sa base_type::validate で、幾何ベクトルが有効な座標を表しているか判定できる。
      */
     public: static typename base_type::vector make(
         typename base_type::element const in_element_0,

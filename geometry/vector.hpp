@@ -83,7 +83,7 @@ namespace geometry
         幾何ベクトル処理に特化した適切な実装が可能なら、
         psyq::geometry::vector で定義されている関数を
         オーバーロードするかテンプレート特殊化し、
-        互換性のある別の適切な実装をユーザーが用意すること。
+        別の適切な実装をユーザーが用意すること。
  */
 namespace vector
 {
@@ -125,22 +125,23 @@ template<typename template_vector> class traits;
     @param[in,out] io_vector 成分を参照する幾何ベクトル。
     @param[in]     in_index  参照する成分のインデックス番号。
     @ingroup psyq_geometry_vector
-    @note
-        この実装を実際に使う場合は、以下の条件を満たす必要がある。
-        条件を満たさない場合は、
-        テンプレート特殊化した実装をユーザーが用意すること。
-        - 幾何ベクトルの成分は、連続したメモリに配置されている。
-        - 幾何ベクトルの最初の成分のメモリ配置位置は、
-          幾何ベクトルの先頭位置と一致する。
  */
 template<typename template_vector>
 typename psyq::geometry::vector::traits<template_vector>::element& at(
     template_vector& io_vector,
     unsigned const in_index)
 {
+    /** @note
+        この実装を実際に使う場合は、以下の条件を満たす必要がある。
+        条件を満たさない場合は、
+        テンプレート特殊化した実装をユーザーが用意すること。
+        - 幾何ベクトルの成分は、連続したメモリに配置されている。
+        - 幾何ベクトルの最初の成分のメモリ配置位置は、
+          幾何ベクトルの先頭位置と一致する。
+     */
     typedef psyq::geometry::vector::traits<template_vector> vector_traits;
     static_assert(
-        true,//std::is_standard_layout<typename vector_traits::type>::value,
+        std::is_standard_layout<typename vector_traits::type>::value,
         "'template_vector' is not standard layout type.");
     static_assert(
         vector_traits::size * sizeof(typename vector_traits::element) <=
@@ -249,10 +250,6 @@ template_vector cross_3d(
     @param[in] in_left   外積の左辺となる幾何ベクトル。
     @param[in] in_middle 外積の中辺となる幾何ベクトル。
     @param[in] in_right  外積の右辺となる幾何ベクトル。
-    @note
-        D3DXVec4Cross() と同じアルゴリズムのはず。
-        下記のウェブページを参考に実装。
-        http://www.gamedev.net/topic/298066-vector-cross-product-question
     @ingroup psyq_geometry_vector
  */
 template<typename template_vector>
@@ -261,6 +258,11 @@ template_vector cross_4d(
     template_vector const& in_middle,
     template_vector const& in_right)
 {
+    /** @note
+        D3DXVec4Cross() と同じアルゴリズムのはず。
+        下記のウェブページを参考に実装。
+        http://www.gamedev.net/topic/298066-vector-cross-product-question
+     */
     typedef psyq::geometry::vector::traits<template_vector> vector_traits;
     static_assert(
         4 <= vector_traits::size, "'vector_traits::size' is less than 4.");

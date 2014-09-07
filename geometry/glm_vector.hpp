@@ -39,6 +39,12 @@ class traits<glm::detail::tvec2<template_element, template_precision>>
 //-----------------------------------------------------------------------------
 /// @name 幾何ベクトルの成分
 //@{
+/** @brief 幾何ベクトルの成分を参照する。
+    @return 幾何ベクトルの成分への参照。
+    @param[in,out] io_vector 成分を参照する幾何ベクトル。
+    @param[in]     in_index  参照する成分のインデックス番号。
+    @ingroup psyq_geometry_vector
+ */
 /// @copydoc psyq::geometry::vector::at
 inline psyq::geometry::vector::traits<glm::vec2>::element& at(
     glm::vec2& io_vector,

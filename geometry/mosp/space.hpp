@@ -34,14 +34,18 @@ class psyq::geometry::mosp::space
     /// thisが指す値の型。
     private: typedef space this_type;
 
-    /// psyq::geometry::coordinate 互換の、モートン空間の座標系の型特性。
+    /** @brief モートン空間の座標系の型特性。
+
+        psyq::geometry::coordinate_2d か psyq::geometry::coordinate_3d
+        と互換性のあるインターフェイスを持っている必要がある。
+     */
     public: typedef template_coordinate coordinate;
 
     /** @brief モートン順序の型。
         @note
-            64ビット整数だと、座標の要素の型が32ビット浮動小数点だった場合に、
-            精度が足らなくなる。
-            separate_bits() も32ビット整数に特化したものしか用意してない。
+            64ビット整数だと、座標の要素の型が32ビット浮動小数点だった場合、
+            精度が足りない。 psyq::geometry::mosp::space_2d::separate_bits()
+            も32ビット整数に特化したものしか実装してない。
      */
     public: typedef std::uint32_t order;
 
@@ -223,6 +227,7 @@ public psyq::geometry::mosp::space<template_coordinate>
     /** @brief モートン座標の成分を、軸ごとのビットに分割する。
         @param[in] in_element モートン空間の座標の成分値。
         @param[in] in_max     モートン空間の座標の最大値。
+        @note 64ビット精度の実装も用意したい。
      */
     private: static typename base_type::order separate_bits(
         typename base_type::coordinate::element const in_element,

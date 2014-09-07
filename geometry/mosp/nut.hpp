@@ -62,10 +62,8 @@ class psyq::geometry::mosp::nut
     node_(this),
     aabb_(
         typename this_type::space::coordinate::aabb(
-            this_type::space::coordinate::make(
-                static_cast<typename this_type::space::coordinate::element>(0)),
-            this_type::space::coordinate::make(
-                static_cast<typename this_type::space::coordinate::element>(0))))
+            this_type::space::coordinate::make_filled(0),
+            this_type::space::coordinate::make_filled(0)))
     {}
 
     /// *thisをモートン空間分割木から取り外す。
@@ -207,10 +205,8 @@ namespace psyq
                     new typename psyq_mosp_tree::node_map::allocator_type::arena(16));
             psyq_mosp_tree local_mosp_tree(
                 typename psyq_mosp_space::coordinate::aabb(
-                    psyq_mosp_space::coordinate::make(
-                        typename psyq_mosp_space::coordinate::element(-65536)),
-                    psyq_mosp_space::coordinate::make(
-                        typename psyq_mosp_space::coordinate::element( 65536))),
+                    psyq_mosp_space::coordinate::make_filled(-65536),
+                    psyq_mosp_space::coordinate::make_filled( 65536)),
                 1024,
                 typename psyq_mosp_tree::allocator_type(local_mosp_arena));
             typename psyq_mosp_nut::ball local_mosp_ball(

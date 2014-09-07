@@ -285,7 +285,7 @@ namespace psyq
             psyq::geometry::ball<template_coordinate> const& in_ball)
         {
             auto const local_extent(
-                template_coordinate::make(in_ball.get_radius()));
+                template_coordinate::make_filled(in_ball.get_radius()));
             return typename template_coordinate::aabb(
                 in_ball.get_center() - local_extent,
                 in_ball.get_center() + local_extent);
@@ -381,9 +381,7 @@ namespace psyq
             psyq::geometry::box<template_coordinate> const& in_box)
         {
             typename template_coordinate::element_array local_elements;
-            auto local_half_diagonal(
-                template_coordinate::make(
-                    static_cast<typename template_coordinate::element>(0)));
+            auto local_half_diagonal(template_coordinate::make_filled(0));
             for (unsigned i(0); i < template_coordinate::dimension; ++i)
             {
                 auto const local_axis(

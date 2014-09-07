@@ -40,7 +40,7 @@ class psyq::geometry::coordinate
     /** @brief 座標を表す幾何ベクトルの型特性。
 
         template_vector でテンプレート特殊化した
-        psyq::geometry::vector_traits を用意しておくこと。
+        psyq::geometry::vector::traits を用意しておくこと。
      */
     public: typedef psyq::geometry::vector::traits<template_vector>
         vector_traits;
@@ -48,7 +48,7 @@ class psyq::geometry::coordinate
     /** @brief 座標を表す幾何ベクトルの型。
 
         - 座標を現す幾何ベクトルでは、幾何ベクトルの成分のうち、
-          最初の psyq::geometry::coordinate_traits::dimension 個のみを使用する。
+          最初の psyq::geometry::coordinate::dimension 個のみを使用する。
         - 座標を表す幾何ベクトルは、 psyq::geometry::coordinate_2d::make() か
           psyq::geometry::coordinate_3d::make() で構築すること。
         - 座標を表す幾何ベクトルを構築した後で、
@@ -81,12 +81,17 @@ class psyq::geometry::coordinate
         template_dimension <= this_type::vector_traits::size,
         "'template_dimension' is greater than 'vector_traits::size'");
 
-    /// 座標を表す成分の配列。
+    /// 座標を表す成分の配列の型。
     public: typedef std::array<
         typename this_type::element, this_type::dimension>
             element_array;
 
     //-------------------------------------------------------------------------
+    /** @brief 有効な座標を表す幾何ベクトルを構築する。
+        @return 有効な座標を表す幾何ベクトル。
+        @param[in] in_vector 元となる幾何ベクトル。
+        @sa validate() で、幾何ベクトルが有効な座標を表しているか判定できる。
+     */
     public: static typename this_type::vector make(
         typename this_type::vector const& in_vector)
     {
@@ -101,6 +106,16 @@ class psyq::geometry::coordinate
         return local_vector;
     }
 
+    /** @brief 幾何ベクトルが有効な座標を表しているか判定する。
+
+        座標を表す幾何ベクトルを構築した後で、
+        座標が使ってない幾何ベクトルの成分を変更すると、
+        座標として正常に動作しなくなってしまうので、その判定をする。
+
+        @retval true  幾何ベクトルは有効な座標を表している。
+        @retval false 幾何ベクトルは有効な座標を表していない。
+        @param[in] in_vector
+     */
     public: static bool validate(
         typename this_type::vector const& in_vector)
     {
@@ -121,7 +136,7 @@ class psyq::geometry::coordinate
 }; // class psyq::geometry::coordinate
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 二次元座標の型特性。 psyq::mosp_space のtemplate引数に使う。
+/** @brief 2次元座標の型特性。
     @tparam template_vector @copydoc psyq::geometry::coordinate::vector
     @ingroup psyq_geometry_coordinate
  */
@@ -153,30 +168,17 @@ public psyq::geometry::coordinate<template_vector, 2>
                 ::make(in_element_0, in_element_1);
     }
 
-    /** @brief 座標を表す幾何ベクトルを構築する。
-        @return 構築した幾何ベクトル。
-        @param[in] in_vector 座標の初期値となる幾何ベクトル。
-     */
+    /// @copydoc psyq::geometry::coordinate::make
     public: static typename base_type::vector make(
         typename base_type::vector const& in_vector)
     {
         return base_type::make(in_vector);
     }
 
-    /** @brief 要素が全て同じ値の座標を表す幾何ベクトルを構築する。
-        @return 構築した幾何ベクトル。
-        @param[in] in_element 座標の全要素の初期値。
-     */
-    public: static typename base_type::vector make(
-        typename base_type::element const in_element)
-    {
-        return this_type::make(in_element, in_element);
-    }
-
     /** @brief ランダムアクセスが可能な任意型のコンテナから、
-               座標を表す幾何ベクトルを構築する。
+               有効な座標を表す幾何ベクトルを構築する。
         @return 構築した幾何ベクトル。
-        @param[in] in_container 座標要素の初期値が格納されているコンテナ。
+        @param[in] in_container 座標の初期値が格納されているコンテナ。
      */
     public: template<typename template_container>
     static typename base_type::vector make(
@@ -185,10 +187,20 @@ public psyq::geometry::coordinate<template_vector, 2>
         return this_type::make(in_container[0], in_container[1]);
     }
 
+    /** @brief 成分が全て同じ値の座標を表す幾何ベクトルを構築する。
+        @return 構築した幾何ベクトル。
+        @param[in] in_element 座標の全成分の初期値。
+     */
+    public: static typename base_type::vector make_filled(
+        typename base_type::element const in_element)
+    {
+        return this_type::make(in_element, in_element);
+    }
+
 }; // class psyq::geometry::coordinate_2d
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 三次元座標の型特性。 psyq::mosp_space のtemplate引数に使う。
+/** @brief 3次元座標の型特性。
     @tparam template_vector @copydoc psyq::geometry::coordinate::vector
     @ingroup psyq_geometry_coordinate
  */
@@ -206,7 +218,7 @@ public psyq::geometry::coordinate<template_vector, 3>
     public: typedef psyq::geometry::aabb<this_type> aabb;
 
     //-------------------------------------------------------------------------
-    /** @brief 座標を表す幾何ベクトルを構築する。
+    /** @brief 有効な座標を表す幾何ベクトルを構築する。
         @return 構築した幾何ベクトル。
         @param[in] in_element_0 座標の要素#0の初期値。
         @param[in] in_element_1 座標の要素#1の初期値。
@@ -222,18 +234,11 @@ public psyq::geometry::coordinate<template_vector, 3>
                 ::make(in_element_0, in_element_1, in_element_2);
     }
 
-    /// @copydoc psyq::geometry::coordinate_2d::make(base_type::vector const&)
+    /// @copydoc psyq::geometry::coordinate::make
     public: static typename base_type::vector make(
         typename base_type::vector const& in_vector)
     {
         return base_type::make(in_vector);
-    }
-
-    /// @copydoc psyq::geometry::coordinate_2d::make(base_type::element)
-    public: static typename base_type::vector make(
-        typename base_type::element const in_element)
-    {
-        return this_type::make(in_element, in_element, in_element);
     }
 
     /// @copydoc psyq::geometry::coordinate_2d::make(template_container const&)
@@ -243,6 +248,13 @@ public psyq::geometry::coordinate<template_vector, 3>
     {
         return this_type::make(
             in_container[0], in_container[1], in_container[2]);
+    }
+
+    /// @copydoc psyq::geometry::coordinate_2d::make_filled(base_type::element)
+    public: static typename base_type::vector make_filled(
+        typename base_type::element const in_element)
+    {
+        return this_type::make(in_element, in_element, in_element);
     }
 
 }; // class psyq::geometry::coordinate_3d
@@ -257,14 +269,14 @@ namespace psyq
         {
             typedef psyq::geometry::ball<template_coordinate> ball_type;
             auto const local_ball(
-                ball_type::make(template_coordinate::make(float(2)), 10));
+                ball_type::make(template_coordinate::make_filled(2), 10));
             auto const local_ball_aabb(
                 psyq::geometry::make_aabb(local_ball));
 
             typedef psyq::geometry::segment<template_coordinate> segment_type;
             segment_type const local_segment(
                 local_ball.get_center(),
-                template_coordinate::make(local_ball.get_radius()));
+                template_coordinate::make_filled(local_ball.get_radius()));
             auto const local_segment_aabb(
                 psyq::geometry::make_aabb(local_segment));
 
@@ -282,7 +294,7 @@ namespace psyq
                     local_segment.get_origin(),
                     local_segment.get_direction(),
                     60 * 3.1415926535f / 180,
-                    template_coordinate::make(float(1))));
+                    template_coordinate::make_filled(1)));
             auto const local_box_aabb(
                 psyq::geometry::make_aabb(local_box));
         }

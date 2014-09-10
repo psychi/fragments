@@ -167,7 +167,7 @@ class psyq::geometry::aabb
         typename this_type::coordinate::vector const& in_line_position,
         typename this_type::coordinate::vector const& in_line_normal,
         unsigned const in_epsilon_mag =
-            PSYQ_GEOMETRY_NEARLY_EQUAL_EPSILON_MAG_DEFAULT)
+            PSYQ_GEOMETRY_NEARLY_SCALAR_EPSILON_MAG_DEFAULT)
     const
     {
         PSYQ_ASSERT(this_type::coordinate::validate(in_line_position));

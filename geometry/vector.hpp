@@ -8,9 +8,9 @@
 #ifndef PSYQ_GEOMETRY_VECTOR_HPP_
 #define PSYQ_GEOMETRY_VECTOR_HPP_
 
-#ifndef PSYQ_GEOMETRY_NEARLY_EQUAL_EPSILON_MAG_DEFAULT
-#define PSYQ_GEOMETRY_NEARLY_EQUAL_EPSILON_MAG_DEFAULT 3
-#endif // !defined(PSYQ_GEOMETRY_NEARLY_EQUAL_EPSILON_MAG_DEFAULT)
+#ifndef PSYQ_GEOMETRY_NEARLY_SCALAR_EPSILON_MAG_DEFAULT
+#define PSYQ_GEOMETRY_NEARLY_SCALAR_EPSILON_MAG_DEFAULT 3
+#endif // !defined(PSYQ_GEOMETRY_NEARLY_SCALAR_EPSILON_MAG_DEFAULT)
 
 namespace psyq
 {
@@ -311,7 +311,7 @@ bool nearly_scalar(
     template_element const in_left_scalar,
     template_element const in_right_scalar,
     unsigned const in_epsilon_mag =
-        PSYQ_GEOMETRY_NEARLY_EQUAL_EPSILON_MAG_DEFAULT)
+        PSYQ_GEOMETRY_NEARLY_SCALAR_EPSILON_MAG_DEFAULT)
 {
     auto const local_epsilon(
         std::numeric_limits<template_element>::epsilon() * in_epsilon_mag);
@@ -332,7 +332,7 @@ bool nearly_length(
     template_vector const& in_vector,
     template_element const in_length,
     unsigned const in_epsilon_mag =
-        PSYQ_GEOMETRY_NEARLY_EQUAL_EPSILON_MAG_DEFAULT)
+        PSYQ_GEOMETRY_NEARLY_SCALAR_EPSILON_MAG_DEFAULT)
 {
     typedef psyq::geometry::vector::traits<template_vector> vector_traits;
     return psyq::geometry::vector::nearly_scalar(

@@ -6,6 +6,7 @@
 #define PSYQ_GEOMETRY_MOSP_NUT_HPP_
 
 //#include "psyq/geometry/shape.hpp"
+//#include "psyq/geometry/mosp/node.hpp"
 
 namespace psyq
 {
@@ -14,25 +15,33 @@ namespace geometry
 /** @brief モートン順序を用いた空間分割木による衝突判定の実装。
 
     使い方の概要。
+    -# 使用する幾何ベクトル型でテンプレート特殊化した
+       psyq::geometry::vector::traits の実装を用意する。
     -# psyq::geometry::mosp::nut インスタンスを用意する。
+       - psyq::geometry::mosp::nut::space には、
+         モートン順序による空間分割木を使った衝突判定を行う空間を適用する。
+         - 空間分割木が2次元（4分木）なら、
+           psyq::geometry::mosp::space_2d を適用する。
+         - 空間分割木が3次元（8分木）なら、
+           psyq::geometry::mosp::space_3d を適用する。
        - psyq::geometry::mosp::nut は抽象型なので、実際には
          psyq::geometry::mosp::nut::ball などの
          具象型のインスタンスを用意することになる。
-    -# psyq::mosp_tree インスタンスを用意する。
-       - psyq::mosp_tree::argument には、
+    -# psyq::geometry::mosp::tree インスタンスを用意する。
+       - psyq::geometry::mosp::tree::argument には、
          psyq::geometry::mosp::nut* を適用する。
-       - psyq::mosp_tree::space には、
+       - psyq::geometry::mosp::tree::space には、
          psyq::geometry::mosp::nut::space を適用する。
-       - psyq::mosp_tree::allocator_type には、
+       - psyq::geometry::mosp::tree::allocator_type には、
          std::allocator 互換の任意のメモリ割当子を適用する。
          - 高速なメモリ管理を求めるので、
            psyq::memory_arena::fixed_pool を適用した
            psyq::memory_arena::allocator を推奨する。
     -# psyq::geometry::mosp::nut::attach_tree で、
        psyq::geometry::mosp::nut インスタンス を
-       psyq::mosp_tree インスタンスに取りつける。
-    -# psyq::mosp_tree::detect_collision で、
-       psyq::mosp_tree インスタンスに取りつけられているすべての
+       psyq::geometry::mosp::tree インスタンスに取りつける。
+    -# psyq::geometry::mosp::tree::detect_collision で、
+       psyq::geometry::mosp::tree インスタンスに取りつけられているすべての
        psyq::geometry::mosp::nut インスタンスで衝突判定を行う。
        - 2つの psyq::geometry::mosp::nut インスタンスの、
          それぞれが所属している分割空間が衝突していると、それら2つの
@@ -49,6 +58,8 @@ namespace mosp
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief  モートン空間分割木に取りつける、衝突判定オブジェクトの基底型。
+    @copydetails psyq::geometry::mosp
+
     @tparam template_space @copydoc psyq::geometry::mosp::nut::space
     @ingroup psyq_geometry_mosp
  */
@@ -67,7 +78,7 @@ class psyq::geometry::mosp::nut
     public: typedef template_space space;
 
     /// モートン空間分割木に取りつけるノードの型。
-    public: typedef psyq::mosp_node<
+    public: typedef psyq::geometry::mosp::node<
         this_type*, typename this_type::space::order>
             node;
 
@@ -111,10 +122,10 @@ class psyq::geometry::mosp::nut
 
         @tparam template_tree
             *thisを取りつけるモートン空間分割木の型。
-            psyq::mosp_tree 互換のインターフェイスを持っている必要がある。
+            psyq::geometry::mosp::tree 互換のインターフェイスを持っている必要がある。
         @param[in,out] io_tree *thisを取りつけるモートン空間分割木。
-        @sa detach_tree()
-        @sa is_attached()
+        @sa this_type::detach_tree
+        @sa this_type::is_attached
      */
     public: template<typename template_tree>
     void attach_tree(template_tree& io_tree)
@@ -127,13 +138,13 @@ class psyq::geometry::mosp::nut
         this->node_.attach_tree(io_tree, this->get_aabb());
     }
 
-    /// @copydoc this_type::node::detach_tree()
+    /// @copydoc this_type::node::detach_tree
     public: void detach_tree()
     {
         this->node_.detach_tree();
     }
 
-    /// @copydoc this_type::node::is_attached()
+    /// @copydoc this_type::node::is_attached
     protected: bool is_attached() const PSYQ_NOEXCEPT
     {
         return this->node_.is_attached();
@@ -197,7 +208,7 @@ public psyq::geometry::mosp::nut<template_space>
 
         衝突判定に使う幾何形状を更新したい場合は、
         この関数の戻り値が参照する幾何形状を書き換えた後、
-        base_type::attach_tree() でモートン空間分割木に取りつける。
+        base_type::attach_tree でモートン空間分割木に取りつける。
 
         @return 衝突判定に使う形状。
      */
@@ -234,7 +245,7 @@ namespace psyq
         {
             typedef template_mosp_space psyq_mosp_space;
             typedef psyq::geometry::mosp::nut<psyq_mosp_space> psyq_mosp_nut;
-            typedef psyq::mosp_tree<psyq_mosp_nut*, template_mosp_space>
+            typedef psyq::geometry::mosp::tree<psyq_mosp_nut*, template_mosp_space>
                 psyq_mosp_tree;
             typename psyq_mosp_tree::node_map::allocator_type::arena::shared_ptr
                 local_mosp_arena(

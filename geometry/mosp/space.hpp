@@ -43,7 +43,7 @@ class psyq::geometry::mosp::space
     /** @brief モートン順序の型。
         @note
             64ビット整数だと、座標の要素の型が32ビット浮動小数点だった場合、
-            精度が足りない。 psyq::geometry::mosp::space_2d::separate_bits()
+            精度が足りない。 psyq::geometry::mosp::space_2d::separate_bits
             も32ビット整数に特化したものしか実装してない。
      */
     public: typedef std::uint32_t order;

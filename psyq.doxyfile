@@ -700,15 +700,12 @@ INPUT                  = \
                          ./geometry/aabb.hpp \
                          ./geometry/coordinate.hpp \
                          ./geometry/mosp/space.hpp \
+                         ./geometry/mosp/node.hpp \
+                         ./geometry/mosp/tree.hpp \
                          ./geometry/mosp/nut.hpp \
                          ./memory_arena.hpp \
                          ./bit_algorithm.hpp \
                          ./fnv_hash.hpp \
-                         ./geometric_vector.hpp \
-                         ./geometric_shape.hpp \
-                         ./geometric_aabb.hpp \
-                         ./mosp_tree.hpp \
-                         ./mosp_nut.hpp \
                          ./assert.hpp \
                          ./message_pack/endianness.hpp \
                          ./message_pack/serializer.hpp \

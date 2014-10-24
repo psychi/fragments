@@ -5,7 +5,7 @@
 #ifndef PSYQ_GEOMETRY_AABB_HPP_
 #define PSYQ_GEOMETRY_AABB_HPP_
 
-//#include "psyq/geometry/shape.hpp"
+//#include "psyq/geometry/line.hpp"
 
 /// @cond
 namespace psyq

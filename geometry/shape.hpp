@@ -12,13 +12,225 @@ namespace psyq
 {
     namespace geometry
     {
+        template<typename> class direction;
+        template<typename> class point;
         template<typename> class ball;
-        template<typename> class segment;
+        template<typename> class line;
         template<typename> class ray;
+        template<typename> class plane;
         template<typename> class box;
     } // namespace geometry
 } // namespace psyq
 /// @endcond
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 方向。
+    @tparam template_coordinate @copydoc psyq::geometry::direction::coordinate
+    @ingroup psyq_geometry_shape
+ */
+template<typename template_coordinate>
+class psyq::geometry::direction
+{
+    /// thisが指す値の型。
+    private: typedef direction this_type;
+
+    /** @brief 座標系の型特性。
+
+        psyq::geometry::coordinate 互換のインターフェイスを持っていること。
+     */
+    public: typedef template_coordinate coordinate;
+
+    //-------------------------------------------------------------------------
+    /** @brief 方向を構築する。
+        @param[in] in_unit 方向の単位ベクトル。
+     */
+    public: explicit direction(
+        typename this_type::coordinate::vector const& in_unit)
+    :
+    unit_((
+        PSYQ_ASSERT(
+            this_type::coordinate::validate(in_unit) &&
+            psyq::geometry::vector::nearly_length(in_unit, 1)),
+        in_unit))
+    {}
+
+    /** @brief 方向を構築する。
+        @param[in] in_direction
+            方向ベクトル。正規化されてなくともよい。
+            ただし0ベクトルの場合は、任意の単位ベクトルに変換する。
+        @return 方向。
+     */
+   public: static this_type make(
+        typename this_type::coordinate::vector const& in_direction)
+    {
+        return this_type(
+            psyq::geometry::vector::normalize(
+                this_type::coordinate::make(in_direction)));
+    }
+
+    /** @brief 方向の単位ベクトルを取得する。
+        @return @copydoc this_type::unit_
+     */
+    public: typename this_type::coordinate::vector const& get_unit()
+    const PSYQ_NOEXCEPT
+    {
+        return this->unit_;
+    }
+
+    /** @brief 方向の単位ベクトルを設定する。
+        @param[in] in_direction 新たに設定する方向ベクトル。
+     */
+    public: void set_unit(
+        typename this_type::coordinate::vector const& in_direction)
+    {
+        *this = this_type::make(in_direction);
+    }
+
+    //-------------------------------------------------------------------------
+    /// 方向の単位ベクトル。
+    private: typename this_type::coordinate::vector unit_;
+
+}; // class psyq::geometry::direction
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 点。
+    @tparam template_coordinate @copydoc this_type::coordinate
+    @ingroup psyq_geometry_shape
+ */
+template<typename template_coordinate>
+class psyq::geometry::point
+{
+    /// thisが指す値の型。
+    private: typedef point this_type;
+
+    /// @copydoc psyq::geometry::direction::coordinate
+    public: typedef template_coordinate coordinate;
+
+    /// @cond
+    public: class point_collision;
+    /// @endcond
+
+    //-------------------------------------------------------------------------
+    /** @brief 点を構築する。
+        @param[in] in_position 点の位置ベクトル。
+     */
+    public: explicit point(
+        typename this_type::coordinate::vector const& in_position)
+    :
+    position_((
+        PSYQ_ASSERT(this_type::coordinate::validate(in_position)),
+        in_position))
+    {}
+
+    /** @brief 点を構築する。
+        @param[in] in_position 点の位置ベクトル。
+        @return 点。
+     */
+    public: static this_type make(
+        typename this_type::coordinate::vector const& in_position)
+    {
+        return this_type(this_type::coordinate::make(in_position));
+    }
+
+    /** @brief 点の位置ベクトルを取得する。
+        @return @copydoc this_type::position_
+     */
+    public: typename this_type::coordinate::vector const& get_position()
+    const PSYQ_NOEXCEPT
+    {
+        return this->position_;
+    }
+
+    /** @brief 点の位置ベクトルを設定する。
+        @param[in] in_position 新たに設定する点の位置ベクトル。
+     */
+    public: void set_position(
+        typename this_type::coordinate::vector const& in_position)
+    {
+        *this = this_type::make(in_position);
+    }
+
+    //-------------------------------------------------------------------------
+    /// 点の位置ベクトル。
+    private: typename this_type::coordinate::vector position_;
+
+}; // class psyq::geometry::point
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 点と点の衝突判定。
+    @tparam template_coordinate @copydoc psyq::geometry::point::coordinate
+    @ingroup psyq_geometry_shape
+ */
+template<typename template_coordinate>
+class psyq::geometry::point<template_coordinate>::point_collision
+{
+    /// thisが指す値の型。
+    private: typedef point_collision this_type;
+
+    /// @copydoc psyq::geometry::point::coordinate
+    public: typedef template_coordinate coordinate;
+
+    //-------------------------------------------------------------------------
+    /** @brief 点と点の衝突判定を構築する。
+        @param[in] in_source 衝突判定の左辺となる点の位置。
+        @param[in] in_target 衝突判定の右辺となる点の位置。
+     */
+    public: static this_type make(
+        typename this_type::coordinate::vector const& in_source,
+        typename this_type::coordinate::vector const& in_target)
+    {
+        return this_type(this_type::coordinate::make(in_target - in_source));
+    }
+
+    /** @brief 点と点が衝突していたか判定する。
+        @param[in] in_range 衝突と判定する距離。
+        @retval true  衝突している。
+        @retval false 衝突していない。
+     */
+    public: bool detect(typename this_type::coordinate::element in_range)
+    const PSYQ_NOEXCEPT
+    {
+        return this->get_square_distance() <= in_range * in_range;
+    }
+
+    /** @brief 点と点の差分を取得する。
+        @return @copydoc this_type::difference_
+     */
+    public: typename this_type::coordinate::vector const& get_difference()
+    const PSYQ_NOEXCEPT
+    {
+        return this->difference_;
+    }
+
+    /** @brief 点と点の距離の自乗を取得する。
+        @return @copydoc this_type::square_distance_
+     */
+    public: typename this_type::coordinate::element get_square_distance()
+    const PSYQ_NOEXCEPT
+    {
+        return this->square_distance_;
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief 点と点の衝突判定を構築する。
+        @param[in] in_difference 点と点の差分。
+     */
+    protected: explicit point_collision(
+        typename this_type::coordinate::vector const& in_difference)
+    :
+    difference_(in_difference),
+    square_distance_(
+        psyq::geometry::vector::dot(in_difference, in_difference))
+    {}
+
+    //-------------------------------------------------------------------------
+    /// 点と点の差分。
+    private: typename this_type::coordinate::vector difference_;
+
+    /// 点と点の距離の自乗。
+    private: typename this_type::coordinate::element square_distance_;
+
+}; // psyq::geometry::point::point_collision
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 球。
@@ -31,28 +243,27 @@ class psyq::geometry::ball
     /// thisが指す値の型。
     private: typedef ball this_type;
 
-    /** @brief 座標系の型特性。
-
-        psyq::geometry::coordinate 互換のインターフェイスを持っていること。
-     */
+    /// @copydoc psyq::geometry::point::coordinate
     public: typedef template_coordinate coordinate;
+
+    /// @copydoc psyq::geometry::point
+    public: typedef psyq::geometry::point<template_coordinate> point;
 
     //-------------------------------------------------------------------------
     /** @brief 球を構築する。
-        @param[in] in_center 球の中心位置。
+        @param[in] in_center 球の中心点。
         @param[in] in_radius 球の半径。0以上であること。
      */
     public: ball(
-        typename this_type::coordinate::vector const& in_center,
+        typename this_type::point const& in_center,
         typename this_type::coordinate::element const in_radius)
     :
-    center_((
-        PSYQ_ASSERT(this_type::coordinate::validate(in_center)), in_center)),
+    center_(in_center),
     radius_((PSYQ_ASSERT(0 <= in_radius), in_radius))
     {}
 
     /** @brief 球を構築する。
-        @param[in] in_center 球の中心位置。
+        @param[in] in_center 球の中心点。
         @param[in] in_radius 球の半径。0未満の場合は0になる。
      */
     public: static this_type make(
@@ -60,26 +271,8 @@ class psyq::geometry::ball
         typename this_type::coordinate::element const in_radius)
     {
         return this_type(
-            this_type::coordinate::make(in_center),
-            0 < in_radius? in_radius: 0);
-    }
-
-    /** @brief 球の中心位置を取得する。
-        @return 球の中心位置。
-     */
-    public: typename this_type::coordinate::vector const& get_center()
-    const PSYQ_NOEXCEPT
-    {
-        return this->center_;
-    }
-
-    /** @brief 球の中心位置を設定する。
-        @param[in] in_center 新たに設定する球の中心位置。
-     */
-    public: void set_center(
-        typename this_type::coordinate::vector const& in_center)
-    {
-        this->center_ = this_type::coordinate::make(in_center);
+            this_type::point::make(in_center),
+            this_type::arrange_radius(in_radius));
     }
 
     /** @brief 球の半径を取得する。
@@ -97,187 +290,618 @@ class psyq::geometry::ball
     public: void set_radius(
         typename this_type::coordinate::element const in_radius)
     {
-        this->radius_ = 0 < in_radius? in_radius: 0;
+        this->radius_ = this_type::arrange_radius(in_radius);
     }
 
-    //-------------------------------------------------------------------------
-    /** @brief 他の球と衝突しているか判定する。
-        @retval true  衝突している。
-        @retval false 衝突してない。
-        @param[in] in_target 判定対象となる球。
-     */
-    public: bool detect_collision(this_type const& in_target) const
+    private: static typename this_type::coordinate::element arrange_radius(
+        typename this_type::coordinate::element const in_radius)
     {
-        auto const local_diff(in_target.get_center() - this->get_center());
-        auto const local_square_distance(
-            psyq::geometry::vector::dot(local_diff, local_diff));
-        auto const local_range(in_target.get_radius() + this->get_radius());
-        return local_square_distance <= local_range * local_range;
+        return 0 < in_radius? in_radius: 0;
     }
 
     //-------------------------------------------------------------------------
-    /// 球の中心位置。
-    private: typename this_type::coordinate::vector center_;
+    /// 球の中心点。
+    public: typename this_type::point center_;
     /// 球の半径。
     private: typename this_type::coordinate::element radius_;
 
 }; // class psyq::geometry::ball
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 線分。
+/** @brief 直線。
     @tparam template_coordinate @copydoc this_type::coordinate
     @ingroup psyq_geometry_shape
  */
 template<typename template_coordinate>
-class psyq::geometry::segment
+class psyq::geometry::line
 {
     /// thisが指す値の型。
-    private: typedef segment this_type;
+    private: typedef line this_type;
 
-    /// @copydoc psyq::geometry::ball::coordinate
+    /// @copydoc psyq::geometry::direction::coordinate
+    public: typedef template_coordinate coordinate;
+
+    /// 直線上の点。
+    public: typedef psyq::geometry::point<template_coordinate> point;
+
+    /// 直線の方向。
+    public: typedef psyq::geometry::direction<template_coordinate> direction;
+
+    /// @cond
+    public: class point_collision;
+    public: class line_collision;
+    /// @endcond
+
+    //-------------------------------------------------------------------------
+    /** @brief 直線を構築する。
+        @param[in] in_origin    直線の原点。
+        @param[in] in_direction 直線の方向。
+     */
+    public: line(
+        typename this_type::point const& in_origin,
+        typename this_type::direction const& in_direction)
+    PSYQ_NOEXCEPT:
+    origin_(in_origin),
+    direction_(in_direction)
+    {}
+
+    /** @brief 直線上の点を構築する。
+        @param[in] in_position 直線の原点からの位置。
+        @return 直線上の点。
+     */
+    public: typename this_type::point make_point(
+        typename this_type::coordinate::element in_position)
+    const
+    {
+        return this_type::point(
+            this->origin_.get_position()
+            + this->direction_.get_unit() * in_position);
+    }
+
+    //-------------------------------------------------------------------------
+    /// 直線の原点。
+    public: typename this_type::point origin_;
+    /// 直線の方向。
+    public: typename this_type::direction direction_;
+
+}; // namespace psyq::geometry::line
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 直線と点の衝突判定。
+    @tparam template_coordinate @copydoc psyq::geometry::line::coordinate
+ */
+template<typename template_coordinate>
+class psyq::geometry::line<template_coordinate>::point_collision
+{
+    /// thisが指す値の型。
+    private: typedef point_collision this_type;
+
+    /// @copydoc psyq::geometry::line::coordinate
     public: typedef template_coordinate coordinate;
 
     //-------------------------------------------------------------------------
-    /** @brief 線分を構築する。
-        @param[in] in_origin    線分の始点位置。
-        @param[in] in_direction 線分の方向ベクトル。
-     */
-    public: segment(
-        typename this_type::coordinate::vector const& in_origin,
-        typename this_type::coordinate::vector const& in_direction)
-    :
-    origin_((
-        PSYQ_ASSERT(this_type::coordinate::validate(in_origin)), in_origin)),
-    direction_((
-        PSYQ_ASSERT(this_type::coordinate::validate(in_direction)), in_direction))
-    {}
-
-    /** @brief 線分を構築する。
-        @param[in] in_origin    線分の始点位置。
-        @param[in] in_direction 線分の方向ベクトル。
+    /** @brief 直線と点の衝突判定を構築する。
+        @param[in] in_line  衝突判定の左辺となる直線。
+        @param[in] in_point 衝突判定の右辺となる点。
      */
     public: static this_type make(
-        typename this_type::coordinate::vector const& in_origin,
-        typename this_type::coordinate::vector const& in_direction)
+        psyq::geometry::line<template_coordinate> const& in_line,
+        typename this_type::coordinate::vector const& in_point)
     {
+        auto const local_difference(
+            this_type::coordinate::make(in_point - in_line.origin_.get_position()));
+        auto const local_cross_position(
+            psyq::geometry::dot(in_line.direction_.get_unit(), local_difference));
+        auto const local_perpendicular(
+            in_line.direction_.get_unit() * local_cross_position - local_difference);
         return this_type(
-            this_type::coordinate::make(in_origin),
-            this_type::coordinate::make(in_direction));
+            local_difference,
+            local_perpendicular,
+            local_cross_position,
+            psyq::geometry::dot(local_perpendicular, local_perpendicular));
     }
 
-    /** @brief 線分の始点位置を取得する。
-        @return 線分の始点位置。
+    /** @brief 直線と点の衝突判定を構築する。
+        @param[in] in_line       衝突判定の左辺となる直線。
+        @param[in] in_line_begin 直線上にある衝突区間の始点の位置。
+        @param[in] in_line_end   直線上にある衝突区間の終点の位置。
+        @param[in] in_point      衝突判定の右辺となる点。
      */
-    public: typename this_type::coordinate::vector const& get_origin()
+    public: static this_type make(
+        psyq::geometry::line<template_coordinate> const& in_line,
+        typename this_type::coordinate::element const in_line_begin,
+        typename this_type::coordinate::element const in_line_end,
+        typename this_type::coordinate::vector const& in_point)
+    {
+        PSYQ_ASSERT(in_line_begin <= in_line_end);
+        auto const local_difference(
+            this_type::coordinate::make(in_point - in_line.origin_.get_position()));
+        auto const local_cross_position(
+            psyq::geometry::dot(in_line.direction_.get_unit(), local_difference));
+        if (local_cross_position < in_line_begin || in_line_end < local_cross_position)
+        {
+            // 衝突区間の外で交わっている。
+            return this_type(
+                local_difference,
+                local_difference,
+                local_cross_position,
+                (std::numeric_limits<typename this_type::coordinate::element>::max)());
+        }
+        else
+        {
+            // 衝突区間の内で交わっている。
+            auto const local_perpendicular(
+                in_line.direction_.get_unit() * local_cross_position - local_difference);
+            return this_type(
+                local_difference,
+                local_perpendicular,
+                local_cross_position,
+                psyq::geometry::dot(local_perpendicular, local_perpendicular));
+        }
+    }
+
+    /** @brief 直線と点が衝突しているか判定する。
+        @param[in] in_range 衝突と判定する距離。
+        @retval true  衝突している。
+        @retval false 衝突していない。
+     */
+    public: bool detect(typename this_type::coordinate::element in_range)
     const PSYQ_NOEXCEPT
     {
-        return this->origin_;
+        return this->get_square_distance() <= in_range * in_range;
     }
 
-    /** @brief 線分の始点位置を設定する。
-        @param[in] in_origin 新たに設定する線分の始点位置。
+    /** @brief 直線の始点から点へのベクトルを取得する。
+        @return @copydoc this_type::difference_
      */
-    public: void set_origin(
-        typename this_type::coordinate::vector const& in_origin)
-    {
-        this->origin_ = this_type::coordinate::make(in_origin);
-    }
-
-    /** @brief 線分の方向ベクトルを取得する。
-        @return 線分の方向ベクトル。
-     */
-    public: typename this_type::coordinate::vector const& get_direction()
+    public: typename this_type::coordinate::vector const& get_difference()
     const PSYQ_NOEXCEPT
     {
-        return this->direction_;
+        return this->difference_;
     }
 
-    /** @brief 線分の方向ベクトルを設定する。
-        @param[in] in_direction 新たに設定する線分の方向ベクトル。
+    /** @brief 点から直線への垂線を取得する。
+        @return @copydoc this_type::perpendicular_
      */
-    public: void set_direction(
-        typename this_type::coordinate::vector const& in_direction)
+    public: typename this_type::coordinate::vector const& get_perpendicular()
+    const PSYQ_NOEXCEPT
     {
-        this->direction_ = this_type::coordinate::make(in_direction);
+        return this->perpendicular_;
+    }
+
+    /** @brief 直線と、点から直線への垂線が交わる、直線上の位置を取得する。
+        @return @copydoc this_type::cross_position_
+     */
+    public: typename this_type::coordinate::element get_cross_position()
+    const PSYQ_NOEXCEPT
+    {
+        return this->cross_position_;
+    }
+
+    /** @brief 直線と点の距離の自乗を取得する。
+        @return @copydoc this_type::square_distance_
+     */
+    public: typename this_type::coordinate::element get_square_distance()
+    const PSYQ_NOEXCEPT
+    {
+        return this->square_distance_;
     }
 
     //-------------------------------------------------------------------------
-    /// 線分の始点。
-    private: typename this_type::coordinate::vector origin_;
-    /// 線分の方向と大きさ。
-    private: typename this_type::coordinate::vector direction_;
+    protected: point_collision(
+        typename this_type::coordinate::vector const& in_difference,
+        typename this_type::coordinate::vector const& in_perpendicular,
+        typename this_type::coordinate::element const in_cross_position,
+        typename this_type::coordinate::element const in_square_distance)
+    :
+    difference_(in_difference),
+    perpendicular_(in_perpendicular),
+    cross_position_(in_cross_position),
+    square_distance_(in_square_distance)
+    {}
 
-}; // class psyq::geometry::segment
+    //-------------------------------------------------------------------------
+    /// 直線の始点から点へのベクトル。
+    private: typename this_type::coordinate::vector difference_;
+    /// 点から直線への垂線。
+    private: typename this_type::coordinate::vector perpendicular_;
+    /// 直線と、点から直線への垂線が交わる、直線上の位置。
+    private: typename this_type::coordinate::element cross_position_;
+    /// 直線と点の距離の自乗。
+    private: typename this_type::coordinate::element square_distance_;
+
+}; // class psyq::geometry::line::point_collision
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief半直線。
+/** @brief 直線と直線の衝突判定。
+    @tparam template_coordinate @copydoc psyq::geometry::line::coordinate
+ */
+template<typename template_coordinate>
+class psyq::geometry::line<template_coordinate>::line_collision
+{
+    /// thisが指す値の型。
+    private: typedef line_collision this_type;
+
+    /// @copydoc psyq::geometry::line::coordinate
+    public: typedef template_coordinate coordinate;
+
+    //-------------------------------------------------------------------------
+    /** @brief 直線と直線の衝突判定を行う。
+        @param[in] in_source 衝突判定の左辺となる直線。
+        @param[in] in_target 衝突判定の右辺となる直線。
+     */
+    public: static this_type make(
+        psyq::geometry::line<template_coordinate> const& in_source,
+        psyq::geometry::line<template_coordinate> const& in_target,
+        typename this_type::coordinate::element const in_epsilon)
+    {
+        PSYQ_ASSERT(0 <= in_epsilon);
+        auto const local_origin_difference(
+            in_target.origin_.get_position() - in_source.origin_.get_position());
+        auto const local_direction_dot(
+            psyq::geometry::dot(
+                in_source.direction_.get_unit(), in_target.direction_.get_unit()));
+        auto const local_denominator(
+            1 - local_direction_dot * local_direction_dot);
+        if (local_denominator < -in_epsilon || in_epsilon < local_denominator)
+        {
+            auto const local_source_dot(
+                psyq::geometry::dot(
+                    local_origin_difference, in_source.direction_.get_unit()));
+            auto const local_target_dot(
+                psyq::geometry::dot(
+                    local_origin_difference, in_target.direction_.get_unit()));
+            auto const local_inverse_denominator(1 / local_denominator);
+            auto const local_source_position(
+                (local_source_dot - local_target_dot * local_direction_dot)
+                * local_inverse_denominator);
+            auto const local_target_position(
+                (local_target_dot - local_source_dot * local_direction_dot)
+                * -local_inverse_denominator);
+            auto const local_source_point(
+                in_source.make_point(local_source_position).get_position());
+            auto const local_target_point(
+                in_target.make_point(local_target_position).get_position());
+            auto const local_point_difference(
+                local_target_point - local_source_point);
+            return this_type(
+                local_source_point,
+                local_source_position,
+                local_target_point,
+                local_target_position,
+                local_origin_difference,
+                local_direction_dot,
+                local_point_difference,
+                psyq::geometry::dot(
+                    local_point_difference, local_point_difference));
+        }
+        else
+        {
+            // 左辺と右辺の直線が平行だったので、
+            // 左辺の直線と右辺の原点の衝突判定を構築する。
+            auto const local_cross_position(
+                psyq::geometry::dot(
+                    local_origin_difference, in_source.direction_.get_unit()));
+            auto const local_perpendicular(
+                local_origin_difference
+                - in_source.direction_.get_unit() * local_cross_position);
+            return this_type(
+                in_target.origin_.get_position() - local_perpendicular,
+                local_cross_position,
+                in_target.origin_.get_position(),
+                0,
+                local_origin_difference,
+                1,
+                local_perpendicular,
+                psyq::geometry::vector::dot(
+                    local_perpendicular, local_perpendicular));
+        }
+    }
+
+    /** @brief 左辺となる直線上にある最短点を取得する。
+        @return @copydoc this_type::source_point_
+     */
+    public: typename this_type::coordinate::vector const& get_source_point()
+    const PSYQ_NOEXCEPT
+    {
+        return this->source_point_;
+    }
+
+    /** @brief 左辺となる直線上の、最短点の位置を取得する。
+        @return @copydoc this_type::source_position_
+     */
+    public: typename this_type::coordinate::element const get_source_position()
+    const PSYQ_NOEXCEPT
+    {
+        return this->source_position_;
+    }
+
+    /** @brief 右辺となる直線上にある最短点を取得する。
+        @return @copydoc this_type::target_point_
+     */
+    public: typename this_type::coordinate::vector const& get_target_point()
+    const PSYQ_NOEXCEPT
+    {
+        return this->target_point_;
+    }
+
+    /** @brief 右辺となる直線上の、最短点の位置を取得する。
+        @return @copydoc this_type::target_position_
+     */
+    public: typename this_type::coordinate::element const get_target_position()
+    const PSYQ_NOEXCEPT
+    {
+        return this->target_position_;
+    }
+
+    //-------------------------------------------------------------------------
+    protected: line_collision(
+        typename this_type::coordinate::vector const& in_source_point,
+        typename this_type::coordinate::element const in_source_position,
+        typename this_type::coordinate::vector const& in_target_point,
+        typename this_type::coordinate::element const in_target_position,
+        typename this_type::coordinate::vector const& in_origin_difference,
+        typename this_type::coordinate::element const in_direction_dot,
+        typename this_type::coordinate::vector const& in_point_difference,
+        typename this_type::coordinate::element const in_square_distance)
+    :
+    source_point_(in_source_point),
+    target_point_(in_target_point),
+    point_difference_(in_point_difference),
+    origin_difference_(in_origin_difference),
+    source_position_(in_source_position),
+    target_position_(in_target_position),
+    square_distance_(in_square_distance),
+    direction_dot_(in_direction_dot)
+    {}
+
+    //-------------------------------------------------------------------------
+    /// 左辺となる直線上にある最短点。
+    private: typename this_type::coordinate::vector source_point_;
+    /// 右辺となる直線上にある最短点。
+    private: typename this_type::coordinate::vector target_point_;
+    /// 左辺の最短点から右辺の最短点へのベクトル。
+    private: typename this_type::coordinate::vector point_difference_;
+    /// 左辺の原点から右辺の原点へのベクトル。
+    private: typename this_type::coordinate::vector origin_difference_;
+    /// 左辺となる直線上の、最短点の位置。
+    private: typename this_type::coordinate::element source_position_;
+    /// 右辺となる直線上の、最短点の位置。
+    private: typename this_type::coordinate::element target_position_;
+    /// 直線と直線の最短距離の自乗。
+    private: typename this_type::coordinate::element square_distance_;
+    /// 左辺の方向と右辺の方向の内積。
+    private: typename this_type::coordinate::element direction_dot_;
+
+}; // class psyq::geometry::line::line_collision
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 半直線。
     @tparam template_coordinate @copydoc this_type::coordinate
     @ingroup psyq_geometry_shape
  */
 template<typename template_coordinate>
-class psyq::geometry::ray:
-    public psyq::geometry::segment<template_coordinate>
+class psyq::geometry::ray: public psyq::geometry::line<template_coordinate>
 {
     /// thisが指す値の型。
     private: typedef ray this_type;
 
     /// this_type の基底型。
-    public: typedef psyq::geometry::segment<template_coordinate> base_type;
+    public: typedef psyq::geometry::line<template_coordinate> base_type;
 
     /// @cond
     public: class triangle_3d;
     /// @endcond
+
     //-------------------------------------------------------------------------
     /** @brief 半直線を構築する。
-        @param[in] in_origin    半直線の始点位置。
-        @param[in] in_direction 半直線の方向ベクトル。
+        @param[in] in_origin    半直線の原点。
+        @param[in] in_direction 半直線の方向。
      */
     public: ray(
-        typename base_type::coordinate::vector const& in_origin,
-        typename base_type::coordinate::vector const& in_direction)
+        typename base_type::point const& in_origin,
+        typename base_type::direction const& in_direction)
     PSYQ_NOEXCEPT:
-    base_type(
-        (
-            PSYQ_ASSERT(base_type::coordinate::validate(in_origin)),
-            in_origin),
-        (
-            PSYQ_ASSERT(
-                base_type::coordinate::validate(in_direction) &&
-                psyq::geometry::vector::nearly_length(in_direction, 1)),
-            in_direction))
+    base_type(in_origin, in_direction)
     {}
 
-    /** @brief 半直線の方向ベクトルを設定する。
-        @param[in] in_direction
-            新たに設定する半直線の方向ベクトル。
-            内部で正規化するので、正規化されてなくともよい。
-            ただし0ベクトルの場合は、任意の単位ベクトルが設定される。
-     */
-    public: void set_direction(
-        typename base_type::coordinate::vector const& in_direction)
-    {
-        this->direction_ = psyq::geometry::vector::normalize(
-            this_type::coordinate::make(in_direction));
-    }
-
     /** @brief 半直線を構築する。
-        @param[in] in_origin 半直線の始点位置。
-        @param[in] in_direction
-            半直線の方向ベクトル。
-            内部で正規化するので、正規化されてなくともよい。
-            ただし0ベクトルの場合は、任意の単位ベクトルが設定される。
+        @param[in] in_line 半直線として用いる直線。
      */
-    public: static this_type make(
-        typename base_type::coordinate::vector const& in_origin,
-        typename base_type::coordinate::vector const& in_direction)
-    {
-        return this_type(
-            this_type::coordinate::make(in_origin),
-            psyq::geometry::vector::normalize(
-                this_type::coordinate::make(in_direction)));
-    }
+    public: explicit ray(base_type const& in_line): base_type(in_line) {}
 
 }; // namespace psyq::geometry::ray
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 平面。
+    @tparam template_coordinate @copydoc this_type::coordinate
+    @ingroup psyq_geometry_shape
+ */
+template<typename template_coordinate>
+class psyq::geometry::plane: public psyq::geometry::ray<template_coordinate>
+{
+    /// thisが指す値の型。
+    private: typedef plane this_type;
+
+    /// this_type の基底型。
+    public: typedef psyq::geometry::ray<template_coordinate> base_type;
+
+    /// @cond
+    public: class point_collision;
+    public: class line_collision;
+    public: class plane_collision;
+    /// @endcond
+
+    //-------------------------------------------------------------------------
+    /** @brief 平面を構築する。
+        @param[in] in_origin    平面の原点。
+        @param[in] in_direction 平面の法線。
+     */
+    public: plane(
+        typename base_type::point const& in_origin,
+        typename base_type::direction const& in_direction)
+    PSYQ_NOEXCEPT:
+    base_type(in_origin, in_direction)
+    {}
+
+    /** @brief 平面を構築する。
+        @param[in] in_line 平面の法線として用いる直線。
+     */
+    public: explicit plane(typename base_type::base_type const& in_line):
+    base_type(in_line)
+    {}
+
+}; // namespace psyq::geometry::plane
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 平面と点の衝突判定。
+    @tparam template_coordinate @copydoc psyq::geometry::plane::coordinate
+    @ingroup psyq_geometry_shape
+ */
+template<typename template_coordinate>
+class psyq::geometry::plane<template_coordinate>::point_collision
+{
+    /// thisが指す値の型。
+    private: typedef point_collision this_type;
+
+    /// @copydoc psyq::geometry::point::coordinate
+    public: typedef template_coordinate coordinate;
+
+    //-------------------------------------------------------------------------
+    /** @brief 平面と点の衝突判定を構築する。
+        @param[in] in_plane 衝突判定の左辺となる平面。
+        @param[in] in_point 衝突判定の右辺となる点の位置。
+     */
+    public: static this_type make(
+        psyq::geometry::plane<template_coordinate> const& in_plane,
+        typename this_type::coordinate::vector const& in_point)
+    {
+        auto const local_difference(in_point - in_plane.origin_.get_position());
+        return this_type(
+            local_difference,
+            psyq::geometry::vector::dot(
+                local_difference, in_plane.direction_.get_unit()));
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief 平面と点の衝突判定を構築する。
+        @param[in] in_difference @copydoc this_type::difference_
+        @param[in] in_distance   @copydoc this_type::distance_
+     */
+    protected: point_collision(
+        typename this_type::coordinate::vector const& in_difference,
+        typename this_type::coordinate::element const in_distance)
+    :
+    difference_(in_difference),
+    distance_(in_distance)
+    {}
+
+    //-------------------------------------------------------------------------
+    /// 平面の原点から点までのベクトル。
+    private: typename this_type::coordinate::vector difference_;
+    /// 平面から点までの相対位置。
+    private: typename this_type::coordinate::element distance_;
+
+}; // psyq::geometry::plane::point_collision
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 平面と直線の衝突判定。
+    @tparam template_coordinate @copydoc psyq::geometry::plane::coordinate
+    @ingroup psyq_geometry_shape
+ */
+template<typename template_coordinate>
+class psyq::geometry::plane<template_coordinate>::line_collision
+{
+    /// thisが指す値の型。
+    private: typedef line_collision this_type;
+
+    /// @copydoc psyq::geometry::point::coordinate
+    public: typedef template_coordinate coordinate;
+
+    //-------------------------------------------------------------------------
+    /** @brief 平面と直線の衝突判定を構築する。
+        @param[in] in_plane 衝突判定の左辺となる平面。
+        @param[in] in_line 衝突判定の右辺となる直線。
+     */
+    public: static this_type make(
+        psyq::geometry::plane<template_coordinate> const& in_plane,
+        psyq::geometry::line<template_coordinate> const& in_line,
+        typename this_type::coordinate::element const in_epsilon)
+    {
+        PSYQ_ASSERT(0 <= in_epsilon);
+        auto const local_direction_dot(
+            psyq::geometry::vector::dot(
+                in_plane.direction_.get_unit(),
+                in_line.direction_.get_unit()));
+        if (local_direction_dot < -in_epsilon || in_epsilon < local_direction_dot)
+        {
+            auto const local_begin_dot(
+                psyq::geometry::vector::dot(
+                    in_plane.origin_.get_position(),
+                    in_line.origin_.get_position()));
+            auto const local_end_dot(
+                psyq::geometry::vector::dot(
+                    in_plane.origin_.get_position(),
+                    in_line.origin_.get_position() + in_line.direction_.get_unit()));
+            return this_type(
+                local_direction_dot,
+                local_begin_dot / (local_begin_dot + local_end_dot))
+        }
+        else
+        {
+            // 平面と直線が平行だった。
+            return this_type(
+                0,
+                psyq::geometry::vector::dot(
+                    in_line.origin_.get_position() - in_plane.origin_.get_position(),
+                    in_plane.direction_.get_unit()));
+        }
+    }
+
+    /** @brief 平面の法線と直線の方向の内積を取得する。
+        @return this_type::direction_dot_
+     */
+    public: typename this_type::coordinate::element get_direction_dot()
+    const PSYQ_NOEXCEPT
+    {
+        return this->direction_dot_;
+    }
+
+    /** @brief 平面と直線の交点の、直線上の位置を取得する。
+     */
+    public: typename this_type::coordinate::element const* get_cross_position()
+    const PSYQ_NOEXCEPT
+    {
+        return this->get_direction_dot() != 0 || this->distance_ == 0?
+            &this->distance_: nullptr;
+    }
+
+    /** @brief 平面と直線が平行していた場合の、平面から直線の位置を取得する。
+     */
+    public: typename this_type::coordinate::element const* get_parralel_position()
+    {
+        return this->get_direction_dot() != 0? nullptr: &this->distance_;
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief 平面と点の衝突判定を構築する。
+        @param[in] in_difference @copydoc this_type::difference_
+        @param[in] in_distance   @copydoc this_type::distance_
+     */
+    protected: line_collision(
+        typename this_type::coordinate::element const in_direction_dot,
+        typename this_type::coordinate::element const in_distance)
+    :
+    direction_dot_(in_direction_dot),
+    distance_(in_distance)
+    {}
+
+    //-------------------------------------------------------------------------
+    /// 平面の法線と直線の方向の内積。
+    private: typename this_type::coordinate::element direction_dot_;
+    private: typename this_type::coordinate::element distance_;
+
+}; // psyq::geometry::plane::line_collision
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 半直線と衝突する三角形。
@@ -370,13 +994,13 @@ class psyq::geometry::ray<template_coordinate>::triangle_3d
     {
         auto const local_nv(
             -psyq::geometry::vector::dot(
-                in_ray.get_direction(), this->get_normal()));
+                in_ray.direction_.get_unit(), this->get_normal()));
         if (local_nv <= in_epsilon)
         {
             return false;
         }
 
-        auto const local_origin_diff(in_ray.get_origin() - this->get_origin());
+        auto const local_origin_diff(in_ray.origin_.get_position() - this->origin_.get_position());
         auto const local_t(
             psyq::geometry::vector::dot(
                 local_origin_diff, this->get_normal()) / local_nv);
@@ -386,7 +1010,7 @@ class psyq::geometry::ray<template_coordinate>::triangle_3d
         }
 
         auto const local_position(
-            in_ray.get_direction() * local_t + local_origin_diff);
+            in_ray.direction_.get_unit() * local_t + local_origin_diff);
         auto const local_u(
             psyq::geometry::vector::dot(
                 local_position, this->binormal_u_));

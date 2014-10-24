@@ -31,33 +31,9 @@ class psyq::geometry::aabb
     /// @copydoc psyq::geometry::ball::coordinate
     public: typedef template_coordinate coordinate;
 
-    /** @brief this_type::detect_line_collision() で使う、直線との衝突情報。
-
-        - タプル要素#0は、直線の基準位置から直線上の衝突区間の開始位置までの距離。
-          - 直線とAABBが衝突してる場合は、タプル要素#1より必ず小さい値となる。
-          - 直線とAABBが衝突してない場合は、タプル要素#1以上の値となる。
-        - タプル要素#1は、直線の基準位置から直線上の衝突区間の終了位置までの距離。
-          - 直線とAABBが衝突してる場合は、タプル要素#0より必ず大きい値となる。
-          - 直線とAABBが衝突してない場合は、タプル要素#0以下の値となる。
-        - タプル要素#2が…
-          - 0なら、直線上の衝突区間の開始位置を検知しなかった。
-          - 負値なら、直線上の衝突区間の開始位置がAABBの最小面にある。
-            「1 - (タプル要素#2)」が、軸のインデックス番号。
-          - 正値なら、直線上の衝突区間の開始位置がAABBの最大面にある。
-            「(タプル要素#2) - 1」が、軸のインデックス番号。
-        - タプル要素#3が…
-          - 0なら、直線上の衝突区間の終了位置を検知しなかった。
-          - 負値なら、直線上の衝突区間の終了位置がAABBの最小面にある。
-            「1 - (タプル要素#3)」が、軸のインデックス番号。
-          - 正値なら、直線上の衝突区間の終了位置がAABBの最大面にある。
-            「(タプル要素#3) - 1」が、軸のインデックス番号。
-     */
-    public: typedef std::tuple<
-        typename this_type::coordinate::element,
-        typename this_type::coordinate::element,
-        std::int8_t,
-        std::int8_t>
-            line_collision;
+    public: class point_collision;
+    public: class line_collision;
+    public: class aabb_collision;
 
     //-------------------------------------------------------------------------
     /** @brief AABBを構築する。
@@ -122,35 +98,54 @@ class psyq::geometry::aabb
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 他のAABBと衝突しているか判定する。
+    private: typename this_type::coordinate::vector min_; ///< AABBの最小座標。
+    private: typename this_type::coordinate::vector max_; ///< AABBの最大座標。
+
+}; // class psyq::geometry::aabb
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief AABBと点の衝突判定。
+    @tparam template_coordinate @copydoc psyq::geometry::aabb::coordinate
+ */
+template<typename template_coordinate>
+class psyq::geometry::aabb<template_coordinate>::point_collision
+{
+    /// thisが指す値の型。
+    private: typedef point_collision this_type;
+
+    /// @copydoc psyq::geometry::aabb::coordinate
+    public: typedef template_coordinate coordinate;
+
+    //-------------------------------------------------------------------------
+    /** @brief AABBと点が衝突しているか判定する。
         @retval true  衝突している。
         @retval false 衝突してない。
-        @param[in] in_target 判定対象となるAABB。
+        @param[in] in_aabb  衝突判定の左辺となるAABB。
+        @param[in] in_point 衝突判定の右辺となる点。
      */
-    public: bool detect_collision(this_type const& in_target) const
-    {
-        return psyq::geometry::vector::less_than_equal(this->get_min(), in_target.get_max())
-            && psyq::geometry::vector::less_than_equal(in_target.get_min(), this->get_max());
-    }
-
-    /** @brief AABBと点が衝突しているか判定する。
-        @param[in] in_point 判定対象となる点。
-     */
-    public: bool detect_point_collision(
+    public: static bool detect(
+        psyq::geometry::aabb<template_coordinate> const& in_aabb,
         typename this_type::coordinate::vector const& in_point)
     {
         PSYQ_ASSERT(this_type::coordinate::validate(in_point));
-        return psyq::geometry::vector::less_than_equal(this->get_min(), in_point)
-            && psyq::geometry::vector::less_than_equal(in_point, this->get_max());
+        return psyq::geometry::vector::less_than_equal(in_aabb.get_min(), in_point)
+            && psyq::geometry::vector::less_than_equal(in_point, in_aabb.get_max());
     }
 
-    /** @brief AABBと球が衝突しているか判定する。
-        @param[in] in_center 判定対象となる球の中心座標。
-        @param[in] in_radius 判定対象となる球の半径。
-     */
-    public: bool detect_ball_collision(
-        typename this_type::coordinate::vector const& in_center,
-        typename this_type::coordinate::element const in_radius);
+}; // class psyq::geometry::aabb::point_collision
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief AABBと直線の衝突判定。
+    @tparam template_coordinate @copydoc psyq::geometry::aabb::coordinate
+ */
+template<typename template_coordinate>
+class psyq::geometry::aabb<template_coordinate>::line_collision
+{
+    /// thisが指す値の型。
+    private: typedef line_collision this_type;
+
+    /// @copydoc psyq::geometry::aabb::coordinate
+    public: typedef template_coordinate coordinate;
 
     //-------------------------------------------------------------------------
     /** @brief AABBと直線が衝突しているか判定する。
@@ -158,34 +153,37 @@ class psyq::geometry::aabb
         以下のウェブページを参考にして実装した。
         http://marupeke296.com/COL_3D_No18_LineAndAABB.html
 
-        @return AABBと直線の衝突判定の結果。
-        @param[in] in_line_position 直線上の基準位置。
-        @param[in] in_line_normal   直線方向の正規化ベクトル。
-        @param[in] in_epsilon_mag   誤差の範囲に使うエプシロン値の倍率。
+        @param[in] in_aabb        衝突判定を行うAABB。
+        @param[in] in_line        衝突判定を行う直線。
+        @param[in] in_epsilon_mag 誤差の範囲に使うエプシロン値の倍率。
      */
-    public: typename this_type::line_collision detect_line_collision(
-        typename this_type::coordinate::vector const& in_line_position,
-        typename this_type::coordinate::vector const& in_line_normal,
+    public: line_collision(
+        psyq::geometry::aabb<template_coordinate> const& in_aabb,
+        psyq::geometry::line<template_coordinate> const& in_line,
         unsigned const in_epsilon_mag =
             PSYQ_GEOMETRY_NEARLY_SCALAR_EPSILON_MAG_DEFAULT)
-    const
+    :
+    t_min_(-(std::numeric_limits<typename this_type::coordinate::element>::max)()),
+    t_max_( (std::numeric_limits<typename this_type::coordinate::element>::max)()),
+    face_min_(0),
+    face_max_(0)
     {
-        PSYQ_ASSERT(this_type::coordinate::validate(in_line_position));
-        PSYQ_ASSERT(this_type::coordinate::validate(in_line_normal));
-        auto const local_odd(
-            this_type::make_normal_odd(
-                in_line_normal,
-                std::numeric_limits<typename this_type::coordinate::element>::epsilon()
-                * in_epsilon_mag));
-        std::int8_t local_face_max(0);
-        std::int8_t local_face_min(0);
-        auto local_t_max(
-            (std::numeric_limits<typename this_type::coordinate::element>::max)());
-        auto local_t_min(-local_t_max);
+        typename this_type::coordinate::element_array local_odd_elements;
+        auto const local_epsilon(
+            std::numeric_limits<typename this_type::coordinate::element>::epsilon()
+            * in_epsilon_mag);
+        for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
+        {
+            auto const local_element(
+                psyq::geometry::vector::const_at(in_line.direction_.get_unit(), i));
+            local_odd_elements[i] = local_epsilon < std::abs(local_element)?
+                1 / local_element: 0;
+        }
+        auto const local_odd(this_type::coordinate::make(local_odd_elements));
         auto const local_diff_max(
-            (this->get_max() - in_line_position) * local_odd);
+            (in_aabb.get_max() - in_line.origin_.get_position()) * local_odd);
         auto const local_diff_min(
-            (this->get_min() - in_line_position) * local_odd);
+            (in_aabb.get_min() - in_line.origin_.get_position()) * local_odd);
         for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
         {
             if (psyq::geometry::vector::const_at(local_odd, i) != 0)
@@ -202,72 +200,144 @@ class psyq::geometry::aabb
                     std::swap(local_t_near, local_t_far);
                     std::swap(local_face_near, local_face_far);
                 }
-                if (local_t_min < local_t_near)
+                if (this->t_min_ < local_t_near)
                 {
-                    local_t_min = local_t_near;
-                    local_face_min = local_face_near;
+                    this->t_min_ = local_t_near;
+                    this->face_min_ = local_face_near;
                 }
-                if (local_t_far < local_t_max)
+                if (local_t_far < this->t_max_)
                 {
-                    local_t_max = local_t_far;
-                    local_face_max = local_face_far;
+                    this->t_max_ = local_t_far;
+                    this->face_max_ = local_face_far;
                 }
 
                 // スラブ交差判定。
-                if (local_t_max <= local_t_min)
+                if (!this->is_collide())
                 {
-                    return std::make_tuple(
-                        local_t_max,
-                        local_t_min,
-                        local_face_max,
-                        local_face_min);
+                    return;
                 }
             }
             else
             {
                 // 直線方向と軸が平行だった。
-                auto const local_line(
-                    psyq::geometry::vector::const_at(in_line_position, i));
+                auto const local_line_origin(
+                    psyq::geometry::vector::const_at(in_line.origin_.get_position(), i));
                 auto const local_aabb_min(
-                    psyq::geometry::vector::const_at(this->get_min(), i));
+                    psyq::geometry::vector::const_at(in_aabb.get_min(), i));
                 auto const local_aabb_max(
-                    psyq::geometry::vector::const_at(this->get_max(), i));
-                if (local_line < local_aabb_min || local_aabb_max < local_line)
+                    psyq::geometry::vector::const_at(in_aabb.get_max(), i));
+                if (local_line_origin < local_aabb_min || local_aabb_max < local_line_origin)
                 {
-                    return std::make_tuple(
-                        local_t_max,
-                        local_t_min,
-                        local_face_max,
-                        local_face_min);
+                    return;
                 }
             }
         }
-        return std::make_tuple(
-            local_t_min, local_t_max, local_face_min, local_face_max);
     }
 
-    private: static typename this_type::coordinate::vector make_normal_odd(
-        typename this_type::coordinate::vector const& in_nomral,
-        typename this_type::coordinate::element const in_epsilon)
+    /// @copydoc psyq::geometry::collision::is_collide
+    public: bool detect() const
     {
-        PSYQ_ASSERT(
-            this_type::coordinate::nearly_length(in_line_normal, 1));
-        typename this_type::coordinate::element_array local_odd;
-        for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
-        {
-            auto const local_element(
-                psyq::geometry::vector::const_at(in_nomral, i));
-            local_odd[i] = in_epsilon < std::abs(local_element)?
-                1 / local_element: 0;
-        }
-        return this_type::coordinate::make(local_odd);
+        return this->get_t_min() <= this->get_t_max();
+    }
+
+    /** @brief 直線の始点位置から直線上の衝突区間の開始位置までの距離を取得する。
+        @return @copydoc t_min_
+     */
+    public: typename this_type::coordinate::element get_t_min() const
+    {
+        return this->t_min_;
+    }
+
+    /** @brief 直線の始点位置から直線上の衝突区間の終了位置までの距離を取得する。
+        @return @copydoc t_max_
+     */
+    public: typename this_type::coordinate::element get_t_max() const
+    {
+        return this->t_max_;
+    }
+
+    /** @brief 衝突区間の開始位置の座標軸番号を取得する。
+        @return @copydoc face_min_
+     */
+    public: std::int8_t get_face_min() const
+    {
+        return this->face_min_;
+    }
+
+    /** @brief 衝突区間の終了位置の座標軸番号を取得する。
+        @return @copydoc face_max_
+     */
+    public: std::int8_t get_face_max() const
+    {
+        return this->face_max_;
     }
 
     //-------------------------------------------------------------------------
-    private: typename this_type::coordinate::vector min_; ///< AABBの最小座標。
-    private: typename this_type::coordinate::vector max_; ///< AABBの最大座標。
+    /** @brief 直線の始点位置から直線上の衝突区間の開始位置までの距離。
 
-}; // class psyq::geometry::aabb
+        - AABBと直線が衝突してる場合は、 t_max_ 以下の値となる。
+        - AABBと直線が衝突してない場合は、t_max_ より大きい値となる。
+     */
+    private: typename this_type::coordinate::element t_min_;
+
+    /** @brief 直線の始点位置から直線上の衝突区間の終了位置までの距離。
+
+        - AABBと直線が衝突してる場合は、 t_min_ 以上の値となる。
+        - AABBと直線が衝突してない場合は、 t_min_ より小さい値となる。
+     */
+    private: typename this_type::coordinate::element t_max_;
+
+    /** @brief 衝突区間の開始位置の座標軸番号。
+
+        - 0なら、直線上の衝突区間の開始位置を検知しなかった。
+        - 負値なら、直線上の衝突区間の開始位置がAABBの最小面にある。
+          (1 - face_min_)が、座標軸のインデックス番号。
+        - 正値なら、直線上の衝突区間の開始位置がAABBの最大面にある。
+          (face_min_ - 1)が、座標軸のインデックス番号。
+     */
+    private: std::int8_t face_min_;
+
+    /** @brief 衝突区間の終了位置の座標軸番号。
+
+        - 0なら、直線上の衝突区間の終了位置を検知しなかった。
+        - 負値なら、直線上の衝突区間の終了位置がAABBの最小面にある。
+          (1 - face_max_)が、座標軸のインデックス番号。
+        - 正値なら、直線上の衝突区間の終了位置がAABBの最大面にある。
+          (face_max_ - 1)が、座標軸のインデックス番号。
+     */
+    private: std::int8_t face_max_;
+
+}; // class psyq::geometry::aabb::line_collision
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief AABBとAABBの衝突判定。
+    @tparam template_coordinate @copydoc psyq::geometry::aabb::coordinate
+ */
+template<typename template_coordinate>
+class psyq::geometry::aabb<template_coordinate>::aabb_collision
+{
+    /// thisが指す値の型。
+    private: typedef aabb_collision this_type;
+
+    /// @copydoc psyq::geometry::aabb::coordinate
+    public: typedef template_coordinate coordinate;
+
+    //-------------------------------------------------------------------------
+    /** @brief AABBとAABBが衝突しているか判定する。
+        @retval true  衝突している。
+        @retval false 衝突してない。
+        @param[in] in_source 衝突判定の左辺となるAABB。
+        @param[in] in_target 衝突判定の右辺となるAABB。
+     */
+    public: static bool detect(
+        psyq::geometry::aabb<template_coordinate> const& in_source,
+        psyq::geometry::aabb<template_coordinate> const& in_target)
+     {
+        return psyq::geometry::vector::less_than_equal(in_source.get_min(), in_target.get_max())
+            && psyq::geometry::vector::less_than_equal(in_target.get_min(), in_source.get_max());
+    }
+
+}; // class psyq::geometry::aabb::aabb_collision
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq
@@ -288,8 +358,8 @@ namespace psyq
             auto const local_extent(
                 template_coordinate::make_filled(in_ball.get_radius()));
             return typename template_coordinate::aabb(
-                in_ball.get_center() - local_extent,
-                in_ball.get_center() + local_extent);
+                in_ball.center_.get_position() - local_extent,
+                in_ball.center_.get_position() + local_extent);
         }
 
         //---------------------------------------------------------------------
@@ -301,20 +371,20 @@ namespace psyq
          */
         template<typename template_coordinate>
         typename template_coordinate::aabb make_aabb(
-            psyq::geometry::segment<template_coordinate> const& in_segment)
+            psyq::geometry::line<template_coordinate> const& in_segment)
         {
             typename template_coordinate::element_array local_min;
             typename template_coordinate::element_array local_max;
             auto const local_end(
-                in_segment.get_origin() + in_segment.get_direction());
+                in_segment.origin_.get_position() + in_segment.direction_.get_unit());
             for (unsigned i(0); i < template_coordinate::dimension; ++i)
             {
                 auto const local_direction(
                     psyq::geometry::vector::const_at(
-                        in_segment.get_direction(), i));
+                        in_segment.direction_.get_unit(), i));
                 auto const local_origin(
                     psyq::geometry::vector::const_at(
-                        in_segment.get_origin(), i));
+                        in_segment.origin_.get_position(), i));
                 auto const local_end_element(
                     psyq::geometry::vector::const_at(local_end, i));
                 if (local_direction < 0)
@@ -349,9 +419,9 @@ namespace psyq
             for (unsigned i(0); i < template_coordinate::dimension; ++i)
             {
                 auto const local_direction(
-                    psyq::geometry::vector::const_at(in_ray.get_direction(), i));
+                    psyq::geometry::vector::const_at(in_ray.direction_.get_unit(), i));
                 auto const local_origin(
-                    psyq::geometry::vector::const_at(in_ray.get_origin(), i));
+                    psyq::geometry::vector::const_at(in_ray.origin_.get_position(), i));
                 if (local_direction < 0)
                 {
                     local_min[i] = -(std::numeric_limits<typename template_coordinate::element>::max)();

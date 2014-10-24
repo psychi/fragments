@@ -285,26 +285,28 @@ namespace psyq
             auto const local_ball_aabb(
                 psyq::geometry::make_aabb(local_ball));
 
-            typedef psyq::geometry::segment<template_coordinate> segment_type;
-            segment_type const local_segment(
-                local_ball.get_center(),
-                template_coordinate::make_filled(local_ball.get_radius()));
-            auto const local_segment_aabb(
-                psyq::geometry::make_aabb(local_segment));
+            auto local_point(
+                ball_type::point::make(template_coordinate::make_filled(2)));
+            local_point = ball_type::point::make(template_coordinate::make_filled(3));
+
+            typedef psyq::geometry::line<template_coordinate> line_type;
+            line_type const local_line(
+                local_ball.center_,
+                line_type::direction::make(
+                    template_coordinate::make_filled(local_ball.get_radius())));
+            auto const local_line_aabb(
+                psyq::geometry::make_aabb(local_line));
 
             typedef psyq::geometry::ray<template_coordinate> ray_type;
-            auto const local_ray(
-                ray_type::make(
-                    local_segment.get_origin(),
-                    local_segment.get_direction()));
+            ray_type const local_ray(local_line);
             auto const local_ray_aabb(
                 psyq::geometry::make_aabb(local_ray));
 
             typedef psyq::geometry::box<template_coordinate> box_type;
             auto const local_box(
                 box_type::make_cuboid(
-                    local_segment.get_origin(),
-                    local_segment.get_direction(),
+                    local_line.origin_.get_position(),
+                    local_line.direction_.get_unit(),
                     60 * 3.1415926535f / 180,
                     template_coordinate::make_filled(1)));
             auto const local_box_aabb(

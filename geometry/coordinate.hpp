@@ -311,6 +311,13 @@ namespace psyq
                     template_coordinate::make_filled(1)));
             auto const local_box_aabb(
                 psyq::geometry::make_aabb(local_box));
+
+            typedef psyq::geometry::barycentric_triangle<template_coordinate> triangle_type;
+            auto const local_triangle(
+                triangle_type::make(
+                    template_coordinate::make(0, 0, 0),
+                    template_coordinate::make(1, 0, 0),
+                    template_coordinate::make(0, 1, 0)));
         }
     }
 }

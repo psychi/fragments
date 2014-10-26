@@ -696,7 +696,13 @@ INPUT                  = \
                          ./geometry/vector.hpp \
                          ./geometry/glm_vector.hpp \
                          ./geometry/d3dx_vector.hpp \
-                         ./geometry/shape.hpp \
+                         ./geometry/direction.hpp \
+                         ./geometry/point.hpp \
+                         ./geometry/ball.hpp \
+                         ./geometry/line.hpp \
+                         ./geometry/ray.hpp \
+                         ./geometry/plane.hpp \
+                         ./geometry/box.hpp \
                          ./geometry/aabb.hpp \
                          ./geometry/coordinate.hpp \
                          ./geometry/mosp/space.hpp \

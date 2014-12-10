@@ -60,28 +60,40 @@ class psyq::binarc_node
     /// thisが指す値の型。
     private: typedef binarc_node this_type;
 
+    /// ノードが指す値の種別。
     public: enum kind: std::uint8_t
     {
-        kind_NIL,
-        kind_UNSIGNED_IMMEDIATE,
-        kind_UNSIGNED_INTEGER_32,
-        kind_UNSIGNED_INTEGER_64,
-        kind_BOOLEAN,
-        kind_NEGATIVE_IMMEDIATE,
-        kind_NEGATIVE_INTEGER_32,
-        kind_NEGATIVE_INTEGER_64,
-        kind_FLOATING_32,
-        kind_FLOATING_64,
-        kind_STRING,
-        kind_EXTENDED,
-        kind_ARRAY,
-        kind_MAP,
+        kind_NIL,           ///< 空。
+        kind_UNSIGNED,      ///< 符号なし整数。
+        kind_BOOLEAN = 4,   ///< 真偽値。
+        kind_NEGATIVE,      ///< 負の整数。
+        kind_STRING = 8,    ///< 文字列。
+        kind_EXTENDED,      ///< 拡張バイナリ。
+        kind_ARRAY,         ///< 配列。
+        kind_MAP,           ///< 辞書。
+        kind_FLOATING = 14, ///< IEEE754浮動小数点数。
     };
 
+    /// ノードが指す数値の種別。
+    private: enum numerics: std::uint8_t
+    {
+        numerics_UNSIGNED_IMMEDIATE = this_type::kind_UNSIGNED,
+        numerics_UNSIGNED_32,
+        numerics_UNSIGNED_64,
+        numerics_NEGATIVE_IMMEDIATE = this_type::kind_NEGATIVE,
+        numerics_NEGATIVE_32,
+        numerics_NEGATIVE_64,
+        numerics_FLOATING_32 = this_type::kind_FLOATING,
+        numerics_FLOATING_64,
+    };
+
+    private: static const unsigned TAG_KIND_BITS_SIZE = 4;
+    private: static const unsigned TAG_KIND_BITS_MAX
+        = (1 << this_type::TAG_KIND_BITS_SIZE) - 1;
     private: static const unsigned TAG_IMMEDIATE_BITS_SIZE
-        = sizeof(binarc_archive::unit) * 4 - 4;
+        = sizeof(binarc_archive::unit) * 4 - this_type::TAG_KIND_BITS_SIZE;
     private: static const unsigned TAG_IMMEDIATE_BITS_MASK
-        = ~(0xf << this_type::TAG_IMMEDIATE_BITS_SIZE);
+        = ~(this_type::TAG_KIND_BITS_MAX << this_type::TAG_IMMEDIATE_BITS_SIZE);
 
     //-------------------------------------------------------------------------
     /** @brief 空のノードを構築する。
@@ -116,15 +128,39 @@ class psyq::binarc_node
     archive_(in_archive)
     {}
 
+    //-------------------------------------------------------------------------
     public: binarc_archive::shared_ptr const& get_archive() const
     {
         return this->archive_;
     }
 
+    public: bool is_empty() const
+    {
+        return this->get_archive().get() == nullptr;
+    }
+
     public: this_type::kind get_kind() const
     {
+        auto const local_tag_kind(this->get_tag_kind());
+        switch (local_tag_kind)
+        {
+        case this_type::numerics_UNSIGNED_32:
+        case this_type::numerics_UNSIGNED_64:
+            return this_type::kind_UNSIGNED;
+        case this_type::numerics_NEGATIVE_32:
+        case this_type::numerics_NEGATIVE_64:
+            return this_type::kind_NEGATIVE;
+        case this_type::numerics_FLOATING_64:
+            return this_type::kind_FLOATING;
+        default:
+            return static_cast<this_type::kind>(local_tag_kind);
+        }
+    }
+
+    private: std::uint8_t get_tag_kind() const
+    {
         return this->tag_ != nullptr?
-            static_cast<this_type::kind>(
+            static_cast<std::uint8_t>(
                 *(this->tag_) >> this_type::TAG_IMMEDIATE_BITS_SIZE):
             this_type::kind_NIL;
     }
@@ -136,70 +172,70 @@ class psyq::binarc_node
             ノードが指す数値。
             ただし数値が取得できなかった場合は、 in_default を返す。
      */
-    public: template<typename template_number>
-    template_number make_number(template_number const in_default) const
+    public: template<typename template_numerics>
+    template_numerics make_numerics(template_numerics const in_default) const
     {
-        template_number local_number;
-        return this->read_number(local_number)? local_number: in_default;
+        template_numerics local_numerics;
+        return this->read_numerics(local_numerics)? local_numerics: in_default;
     }
 
     /** @brief ノードが指す数値を取得する。
-        @param[out] out_number 読み取った数値を格納する。
-        @retval true  成功。 out_number に読み取った数値を格納した。
+        @param[out] out_numerics 読み取った数値を格納する。
+        @retval true  成功。 out_numerics に読み取った数値を格納した。
         @retval false
             失敗。ノードが数値を指してないか、
-            out_number に数値を格納すると、異なる値となってしまう。
-            out_number は変化しない。
+            out_numerics に数値を格納すると、異なる値となってしまう。
+            out_numerics は変化しない。
      */
-    public: template<typename template_number>
-    bool read_number(template_number& out_number) const
+    public: template<typename template_numerics>
+    bool read_numerics(template_numerics& out_numerics) const
     {
-        switch (this->get_kind())
+        switch (this->get_tag_kind())
         {
-        case this_type::kind_UNSIGNED_IMMEDIATE:
-            return this->read_immediate_number<
-                template_number,
+        case this_type::numerics_UNSIGNED_IMMEDIATE:
+            return this->read_immediate_numerics<
+                template_numerics,
                 std::make_unsigned<binarc_archive::unit>::type>(
-                    out_number);
-        case this_type::kind_UNSIGNED_INTEGER_32:
-            return this->read_body_number<template_number, std::uint32_t>(out_number)
-        case this_type::kind_UNSIGNED_INTEGER_64:
-            return this->read_body_number<template_number, std::uint64_t>(out_number)
-        case this_type::kind_NEGATIVE_IMMEDIATE:
-            return this->read_immediate_number<
-                template_number,
+                    out_numerics);
+        case this_type::numerics_UNSIGNED_32:
+            return this->read_body_numerics<template_numerics, std::uint32_t>(out_numerics)
+        case this_type::numerics_UNSIGNED_64:
+            return this->read_body_numerics<template_numerics, std::uint64_t>(out_numerics)
+        case this_type::numerics_NEGATIVE_IMMEDIATE:
+            return this->read_immediate_numerics<
+                template_numerics,
                 std::make_signed<binarc_archive::unit>::type>(
-                    out_number);
-        case this_type::kind_NEGATIVE_INTEGER_32:
-            return this->read_body_number<template_number, std::int32_t>(out_number)
-        case this_type::kind_NEGATIVE_INTEGER_64:
-            return this->read_body_number<template_number, std::int64_t>(out_number)
-        case this_type::kind_FLOATING_32:
-            return this->read_body_number<template_number, float>(out_number)
-        case this_type::kind_FLOATING_64:
-            return this->read_body_number<template_number, double>(out_number)
+                    out_numerics);
+        case this_type::numerics_NEGATIVE_32:
+            return this->read_body_numerics<template_numerics, std::int32_t>(out_numerics)
+        case this_type::numerics_NEGATIVE_64:
+            return this->read_body_numerics<template_numerics, std::int64_t>(out_numerics)
+        case this_type::numerics_FLOATING_32:
+            return this->read_body_numerics<template_numerics, float>(out_numerics)
+        case this_type::numerics_FLOATING_64:
+            return this->read_body_numerics<template_numerics, double>(out_numerics)
         default:
             return false;
         }
     }
 
     private: template<typename template_write, typename template_read>
-    bool read_immediate_number(template_write& out_number) const
+    bool read_immediate_numerics(template_write& out_numerics) const
     {
         static_assert(std::is_integral<template_read>::value, "");
         PSYQ_ASSERT(this->tag_ != nullptr);
         auto const local_immediate(
             *this->tag_ & this_type::TAG_IMMEDIATE_BITS_MASK);
         auto const local_sign(
-            (0xf << this_type::TAG_IMMEDIATE_BITS_SIZE)
+            (this_type::TAG_KIND_BITS_MAX << this_type::TAG_IMMEDIATE_BITS_SIZE)
             * std::is_signed<template_read>::value);
-        return this_type::write_number(
-            out_number,
+        return this_type::write_numerics(
+            out_numerics,
             static_cast<template_read>(local_immediate | local_sign));
     }
 
     private: template<typename template_write, typename template_read>
-    void read_body_number(template_write& out_number) const
+    void read_body_numerics(template_write& out_numerics) const
     {
         PSYQ_ASSERT(this->tag_ != nullptr && this->archive_.get() != nullptr);
         auto const local_body(
@@ -207,28 +243,56 @@ class psyq::binarc_node
                 *this->tag_ & this_type::TAG_IMMEDIATE_BITS_MASK));
         PSYQ_ASSERT(local_body != nullptr);
         PSYQ_ASSERT(reinterpret_cast<std::size_t>(local_body) % sizeof(template_read) == 0);
-        return this_type::write_number(
-            out_number, *reinterpret_cast<template_read const*>(local_body));
+        return this_type::write_numerics(
+            out_numerics, *reinterpret_cast<template_read const*>(local_body));
     }
 
     private: template<typename template_write, typename template_read>
-    static bool write_number(
-        template_write& out_number,
-        template_read const in_number)
+    static bool write_numerics(
+        template_write& out_numerics,
+        template_read const in_numerics)
     {
-        auto const local_number(static_cast<template_write>(in_number));
-        if (in_number != local_number
-            || ((in_number < 0) ^ (local_number < 0)) != 0)
+        auto const local_numerics(static_cast<template_write>(in_numerics));
+        if (in_numerics != local_numerics
+            || ((in_numerics < 0) ^ (local_numerics < 0)) != 0)
         {
             // 読み込み値と書き込み値のビット配置が異なるか、
             // 符号が異なる場合は、正しい値を取得できない。
             return false;
         }
-        out_number = local_number;
+        out_numerics = local_numerics;
         return true;
     }
 
     //-------------------------------------------------------------------------
+    /** @brief ノードが指す真偽値を取得する。
+        @retval 正 ノードはtrueを指している。
+        @retval 0  ノードはfalseを指している。
+        @retval 負 ノードは真偽値を指してない。
+     */
+    public: int get_boolean_state() const
+    {
+        return this->get_tag_kind() == this_type::kind_BOOLEAN?
+            (*this->tag_ & this_type::TAG_IMMEDIATE_BITS_MASK) != 0: -1;
+    }
+
+    /** @brief ノードが指す真偽値を取得する。
+        @param[out] out_boolean 読み取った真偽値を格納する。
+        @retval true 成功。 out_boolean に読み取った真偽値を格納した。
+        @retval false
+            失敗。ノードが真偽値を指してない。 out_boolean は変化しない。
+     */
+    public: bool read_boolean(bool& out_boolean) const
+    {
+        auto const local_state(this->get_boolean_state());
+        if (local_state < 0)
+        {
+            return false;
+        }
+        out_boolean = (0 < local_state);
+        return true;
+    }
+
     /** @brief ノードが指す文字列の要素数を取得する。
         @return
             ノードが指す文字列の要素数。

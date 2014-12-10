@@ -169,8 +169,8 @@ class psyq::binarc_node
     /** @brief ノードが指す数値を取得する。
         @param[in] in_default 数値の取得に失敗した場合に返す値。
         @return
-            ノードが指す数値。
-            ただし数値が取得できなかった場合は、 in_default を返す。
+            ノードが指す値を template_numerics にキャストした値。
+            ただし、ノードが数値を指してない場合は、 in_default を返す。
      */
     public: template<typename template_numerics>
     template_numerics make_numerics(template_numerics const in_default) const
@@ -181,14 +181,12 @@ class psyq::binarc_node
 
     /** @brief ノードが指す数値を取得する。
         @param[out] out_numerics 読み取った数値を格納する。
-        @retval true  成功。 out_numerics に読み取った数値を格納した。
-        @retval false
-            失敗。ノードが数値を指してないか、
-            out_numerics に数値を格納すると、異なる値となってしまう。
-            out_numerics は変化しない。
+        @retval 正 ノードが指す値の等値を out_numerics へ格納。
+        @retval 0  ノードが指す値を template_numerics にキャストして out_numerics へ格納。
+        @retval 負 失敗。ノードは数値を指してない。 out_numerics は変わらない。
      */
     public: template<typename template_numerics>
-    bool read_numerics(template_numerics& out_numerics) const
+    int read_numerics(template_numerics& out_numerics) const
     {
         switch (this->get_tag_kind())
         {
@@ -198,24 +196,24 @@ class psyq::binarc_node
                 std::make_unsigned<binarc_archive::unit>::type>(
                     out_numerics);
         case this_type::numerics_UNSIGNED_32:
-            return this->read_body_numerics<template_numerics, std::uint32_t>(out_numerics)
+            return this->read_body_numerics<template_numerics, std::uint32_t>(out_numerics);
         case this_type::numerics_UNSIGNED_64:
-            return this->read_body_numerics<template_numerics, std::uint64_t>(out_numerics)
+            return this->read_body_numerics<template_numerics, std::uint64_t>(out_numerics);
         case this_type::numerics_NEGATIVE_IMMEDIATE:
             return this->read_immediate_numerics<
                 template_numerics,
                 std::make_signed<binarc_archive::unit>::type>(
                     out_numerics);
         case this_type::numerics_NEGATIVE_32:
-            return this->read_body_numerics<template_numerics, std::int32_t>(out_numerics)
+            return this->read_body_numerics<template_numerics, std::int32_t>(out_numerics);
         case this_type::numerics_NEGATIVE_64:
-            return this->read_body_numerics<template_numerics, std::int64_t>(out_numerics)
+            return this->read_body_numerics<template_numerics, std::int64_t>(out_numerics);
         case this_type::numerics_FLOATING_32:
-            return this->read_body_numerics<template_numerics, float>(out_numerics)
+            return this->read_body_numerics<template_numerics, float>(out_numerics);
         case this_type::numerics_FLOATING_64:
-            return this->read_body_numerics<template_numerics, double>(out_numerics)
+            return this->read_body_numerics<template_numerics, double>(out_numerics);
         default:
-            return false;
+            return -1;
         }
     }
 
@@ -235,7 +233,7 @@ class psyq::binarc_node
     }
 
     private: template<typename template_write, typename template_read>
-    void read_body_numerics(template_write& out_numerics) const
+    bool read_body_numerics(template_write& out_numerics) const
     {
         PSYQ_ASSERT(this->tag_ != nullptr && this->archive_.get() != nullptr);
         auto const local_body(
@@ -252,16 +250,11 @@ class psyq::binarc_node
         template_write& out_numerics,
         template_read const in_numerics)
     {
-        auto const local_numerics(static_cast<template_write>(in_numerics));
-        if (in_numerics != local_numerics
-            || ((in_numerics < 0) ^ (local_numerics < 0)) != 0)
-        {
-            // 読み込み値と書き込み値のビット配置が異なるか、
-            // 符号が異なる場合は、正しい値を取得できない。
-            return false;
-        }
-        out_numerics = local_numerics;
-        return true;
+        // 読み込み値と書き込み値のビット配置が異なるか、
+        // 符号が異なる場合は、正しい値を取得できない。
+        out_numerics = static_cast<template_write>(in_numerics);
+        return in_numerics == out_numerics
+            && ((in_numerics < 0) ^ (out_numerics < 0)) == 0;
     }
 
     //-------------------------------------------------------------------------
@@ -293,9 +286,9 @@ class psyq::binarc_node
         return true;
     }
 
-    /** @brief ノードが指す文字列の要素数を取得する。
+    /** @brief ノードが指す文字列のバイト数を取得する。
         @return
-            ノードが指す文字列の要素数。
+            ノードが指す文字列のバイト数。
             ただし、ノードが文字列を指してない場合は、0を返す。
      */
     public: std::size_t get_string_size() const
@@ -413,6 +406,12 @@ class psyq::binarc_node
             this_type();
     }
 
+    /** @brief キーに対応する辞書要素のインデックス番号を取得する。
+        @return キーに対応する辞書要素のインデックス番号。
+        @todo 未実装。
+     */
+    public: std::size_t find_map_index() const;
+
     //-------------------------------------------------------------------------
     private: psyq::binarc_archive::unit const* get_body(
         psyq::binarc_archive::unit const in_kind)
@@ -441,6 +440,103 @@ class psyq::binarc_node
     //-------------------------------------------------------------------------
     private: psyq::binarc_archive::unit const* tag_;
     private: psyq::binarc_archive::shared_ptr archive_;
+};
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+class binarc_to_block_yaml
+{
+    /// thisが指す値の型。
+    private: typedef binarc_to_block_yaml this_type;
+
+    //-------------------------------------------------------------------------
+    public: static void convert(
+        std::ostringstream& out_stream,
+        psyq::binarc_archive::shared_ptr const& in_archive)
+    {
+        psyq::binarc_node const local_node(in_archive);
+        if (!local_node.is_empty())
+        {
+            this_type::convert_node(out_stream, local_node);
+        }
+    }
+
+    //-------------------------------------------------------------------------
+    private: static void convert_node(
+        std::ostringstream& out_stream,
+        psyq::binarc_node const& in_node)
+    {
+        switch (in_node.get_kind())
+        {
+        case psyq::binarc_node::kind_UNSIGNED:
+            out_stream << in_node.make_numerics<std::uint64_t>(0);
+            break;
+        case psyq::binarc_node::kind_NEGATIVE:
+            out_stream << in_node.make_numerics<std::int64_t>(0);
+            break;
+        case psyq::binarc_node::kind_FLOATING:
+            out_stream << in_node.make_numerics<double>(0);
+            break;
+        case psyq::binarc_node::kind_STRING:
+            this_type::convert_string(out_stream, in_node);
+            break;
+        case psyq::binarc_node::kind_ARRAY:
+            this_type::convert_sequence(out_stream, in_node);
+            break;
+        case psyq::binarc_node::kind_MAP:
+            this_type::convert_mapping(out_stream, in_node);
+            break;
+        default:
+            PSYQ_ASSERT(false);
+            break;
+        }
+    }
+
+    private: static void convert_string(
+        std::ostringstream& out_stream,
+        psyq::binarc_node const& in_node)
+    {
+        auto const local_data(in_node.get_string_data());
+        assert(local_data != nullptr);
+        out_stream << '\'';
+        out_stream.write(local_data, in_node.get_string_size());
+        out_stream << '\'';
+    }
+
+    private: static void convert_sequence(
+        std::ostringstream& out_stream,
+        psyq::binarc_node const& in_node)
+    {
+        out_stream << '[';
+        auto const local_size(in_node.get_array_size());
+        for (unsigned i(0); i < local_size; ++i)
+        {
+            if (0 < i)
+            {
+                out_stream << ',';
+            }
+            this_type::convert_node(out_stream, in_node.make_array_element(i));
+        }
+        out_stream << ']';
+    }
+
+    private: static void convert_mapping(
+        std::ostringstream& out_stream,
+        psyq::binarc_node const& in_node)
+    {
+        out_stream << '{';
+        auto const local_size(in_node.get_map_size());
+        for (unsigned i(0); i < local_size; ++i)
+        {
+            if (0 < i)
+            {
+                out_stream << ',';
+            }
+            this_type::convert_node(out_stream, in_node.make_map_key(i));
+            out_stream << ':';
+            this_type::convert_node(out_stream, in_node.make_map_value(i));
+        }
+        out_stream << '}';
+    }
 };
 
 #endif // PSYQ_BINARC_HPP_

@@ -15,22 +15,75 @@
 
 namespace psyq
 {
-    class binarc_archive;
-    class binarc_node;
+    namespace binarc
+    {
+        typedef std::uint32_t memory_unit;
+        class archive;
+        class node;
+
+        /// ノードが指す値の種別。
+        enum kind: std::uint8_t
+        {
+            kind_NIL,      ///< 空。
+            kind_BOOLEAN,  ///< 真偽値。
+            kind_STRING,   ///< 文字列。
+            kind_EXTENDED, ///< 拡張型バイト列。
+            kind_ARRAY,    ///< 配列。
+            kind_MAP,      ///< 辞書。
+            kind_UNSIGNED, ///< 符号なし整数。
+            kind_NEGATIVE = kind_UNSIGNED + 3, ///< 負の整数。
+            kind_FLOATING = kind_NEGATIVE + 3, ///< IEEE754浮動小数点数。
+        }; // enum kind
+
+        std::size_t const MAP_INDEX_NONE = 0 - std::size_t(1);
+
+        namespace _private
+        {
+            class map_key;
+            class less_map;
+
+            /// ノードが指す数値の格納形式。
+            enum numerics: std::uint8_t
+            {
+                numerics_UNSIGNED_IMMEDIATE = psyq::binarc::kind_UNSIGNED,
+                numerics_UNSIGNED_32,
+                numerics_UNSIGNED_64,
+                numerics_NEGATIVE_IMMEDIATE = psyq::binarc::kind_NEGATIVE,
+                numerics_NEGATIVE_32,
+                numerics_NEGATIVE_64,
+                numerics_FLOATING_32 = psyq::binarc::kind_FLOATING,
+                numerics_FLOATING_64,
+            }; // enum numerics
+
+            unsigned const TAG_FORMAT_BITS_SIZE = 4;
+            unsigned const TAG_FORMAT_BITS_MAX = (1 << TAG_FORMAT_BITS_SIZE) - 1;
+            unsigned const TAG_FORMAT_BITS_POSITION
+                = sizeof(psyq::binarc::memory_unit) * 4 - TAG_FORMAT_BITS_SIZE;
+            unsigned const TAG_IMMEDIATE_BITS_MASK
+                = ~(TAG_FORMAT_BITS_MAX << TAG_FORMAT_BITS_POSITION);
+            unsigned const CONTAINER_HASH = 0;
+            unsigned const CONTAINER_SIZE = CONTAINER_HASH + 1;
+            unsigned const CONTAINER_FRONT = CONTAINER_SIZE + 1;
+            unsigned const EXTENDED_KIND = CONTAINER_HASH + 1;
+            unsigned const EXTENDED_FRONT = EXTENDED_KIND + 1;
+            unsigned const UNIT_COUNT_PER_MAP_ELEMENT = 2;
+        } // namespace _private
+    } // namespace binarc
 } // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class psyq::binarc_archive
+/// binarc形式の書庫。
+class psyq::binarc::archive
 {
     /// thisが指す値の型。
-    private: typedef binarc_archive this_type;
+    private: typedef archive this_type;
 
     public: typedef std::shared_ptr<this_type> shared_ptr;
     public: typedef std::weak_ptr<this_type> weak_ptr;
 
     public: typedef std::uint32_t unit;
 
-    public: binarc_archive(
+    public: archive(
         void const* const in_front,
         std::size_t const in_size):
     unit_front_(static_cast<this_type::unit const*>(in_front)),
@@ -56,63 +109,362 @@ class psyq::binarc_archive
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class psyq::binarc_node
+/// 辞書の検索に使うキー。
+class psyq::binarc::_private::map_key
+{
+    private: typedef map_key this_type;
+
+    //-------------------------------------------------------------------------
+    /** @brief 辞書検索キーを初期化する。
+        @param[in] in_key 辞書検索キーの初期値。
+     */
+    public: map_key(bool const in_key)
+    {
+        this->bits_32[0] = in_key;
+        this->hash = in_key;
+        this->format = psyq::binarc::kind_BOOLEAN;
+    }
+
+    /** @brief 辞書検索キーを初期化する。
+        @param[in] in_key 辞書検索キーの初期値。
+     */
+    public: map_key(std::uint64_t const in_key)
+    {
+        if ((std::numeric_limits<std::uint32_t>::max)() < in_key)
+        {
+            // 64ビット無符号整数キーとして初期化。
+            this->bits_64 = in_key;
+            this->hash = static_cast<std::uint32_t>(in_key)
+                ^ static_cast<std::uint32_t>(in_key >> 32);
+            this->format = psyq::binarc::_private::numerics_UNSIGNED_64;
+        }
+        else
+        {
+            // 無符号整数キーとして初期化。
+            auto const local_key(static_cast<std::uint32_t>(in_key));
+            this->bits_32[0] = local_key;
+            this->hash = local_key;
+            this->format = psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK < local_key?
+                psyq::binarc::_private::numerics_UNSIGNED_32:
+                psyq::binarc::_private::numerics_UNSIGNED_IMMEDIATE;
+        }
+    }
+
+    /** @brief 辞書検索キーを初期化する。
+        @param[in] in_key 辞書検索キーの初期値。
+     */
+    public: map_key(std::int64_t const in_key)
+    {
+        if (0 <= in_key)
+        {
+            // 無符号整数キーとして初期化
+            new(this) this_type(static_cast<std::uint64_t>(in_key));
+        }
+        else if (in_key < (std::numeric_limits<std::int32_t>::min)())
+        {
+            // 64ビットで負の整数のキーとして初期化。
+            this->bits_64 = static_cast<std::uint64_t>(in_key);
+            this->hash = this->bits_32[0] ^ this->bits_32[1];
+            this->format = psyq::binarc::_private::numerics_NEGATIVE_64;
+        }
+        else
+        {
+            auto const local_key(static_cast<std::uint32_t>(in_key));
+            this->bits_32[0] = local_key;
+            auto const local_immediate_limits(
+                psyq::binarc::_private::TAG_FORMAT_BITS_MAX
+                << psyq::binarc::_private::TAG_FORMAT_BITS_POSITION);
+            if (local_key < local_immediate_limits)
+            {
+                // 32ビットで負の整数のキーとして初期化。
+                this->hash = local_key;
+                this->format = psyq::binarc::_private::numerics_NEGATIVE_32;
+            }
+            else
+            {
+                // 負の整数として初期化。
+                this->hash = local_key & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK;
+                this->format = psyq::binarc::_private::numerics_NEGATIVE_IMMEDIATE;
+            }
+        }
+    }
+
+    /** @brief 辞書検索キーを初期化する。
+        @param[in] in_key 辞書検索キーの初期値。
+     */
+    public: map_key(double const in_key)
+    {
+        auto const local_integer_key(static_cast<std::int64_t>(in_key));
+        if (in_key == local_integer_key)
+        {
+            // 整数キーとして初期化。
+            new(this) this_type(local_integer_key);
+            return;
+        }
+        this->floating_32 = static_cast<float>(in_key);
+        if (in_key == this->floating_32)
+        {
+            // 単精度浮動小数点数キーとして初期化。
+            this->hash = this->bits_32[0];
+            this->format = psyq::binarc::_private::numerics_FLOATING_32;
+        }
+        else
+        {
+            // 倍精度浮動小数点数キーとして初期化。
+            this->floating_64 = in_key;
+            this->hash = this->bits_32[0] ^ this->bits_32[1];
+            this->format = psyq::binarc::_private::numerics_FLOATING_64;
+        }
+    }
+
+    //-------------------------------------------------------------------------
+    public: int compare_node_value(
+        psyq::binarc::archive const& in_archive,
+        psyq::binarc::memory_unit const in_node_tag)
+    const
+    {
+        auto const local_node_format(
+            in_node_tag >> psyq::binarc::_private::TAG_FORMAT_BITS_POSITION);
+        if (local_node_format != this->format)
+        {
+            return -1;
+        }
+        auto const local_node_immediate(
+            in_node_tag & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK);
+        switch (local_node_format)
+        {
+        case psyq::binarc::kind_BOOLEAN:
+        case psyq::binarc::_private::numerics_UNSIGNED_IMMEDIATE:
+        case psyq::binarc::_private::numerics_NEGATIVE_IMMEDIATE:
+            return local_node_immediate == this->bits_32[0]? 1: -1;
+        case psyq::binarc::_private::numerics_UNSIGNED_32:
+        case psyq::binarc::_private::numerics_NEGATIVE_32:
+        case psyq::binarc::_private::numerics_FLOATING_32:
+        {
+            auto const local_body(
+                in_archive.get_unit(local_node_immediate));
+            if (local_body == nullptr)
+            {
+                break;
+            }
+            return *local_body == this->bits_32[0]? 1: -1;
+        }
+        case psyq::binarc::_private::numerics_UNSIGNED_64:
+        case psyq::binarc::_private::numerics_NEGATIVE_64:
+        case psyq::binarc::_private::numerics_FLOATING_64:
+        {
+            auto const local_body(
+                reinterpret_cast<std::uint64_t const*>(
+                    in_archive.get_unit(local_node_immediate)));
+            if (local_body == nullptr)
+            {
+                break;
+            }
+            return *local_body == this->bits_64? 1: -1;
+        }
+        case psyq::binarc::kind_STRING:
+        case psyq::binarc::kind_EXTENDED:
+        {
+            auto const local_body(
+                in_archive.get_unit(local_node_immediate));
+            if (local_body == nullptr)
+            {
+                break;
+            }
+            if (this->hash != local_body[psyq::binarc::_private::CONTAINER_HASH])
+            {
+                return -1;
+            }
+            if (this->raw.size != local_body[psyq::binarc::_private::CONTAINER_SIZE])
+            {
+                return 0;
+            }
+            auto local_node_string(local_body);
+            if (local_node_format == psyq::binarc::kind_STRING)
+            {
+                local_node_string += psyq::binarc::_private::CONTAINER_FRONT;
+            }
+            else if (this->raw.kind == local_body[psyq::binarc::_private::EXTENDED_KIND])
+            {
+                local_node_string += psyq::binarc::_private::EXTENDED_FRONT;
+            }
+            else
+            {
+                return 0;
+            }
+            return std::memcmp(local_node_string, this->raw.data, this->raw.size) == 0? 1: 0;
+        }
+        case psyq::binarc::kind_ARRAY:
+        case psyq::binarc::kind_MAP:
+        default:
+            break;
+        }
+        return 0;
+    }
+
+    /** @brief ノードのハッシュ値を比較する。
+        @param[in] in_archive  右辺ノードを含む書庫。
+        @param[in] in_node_tag 右辺ノードのタグ値。
+        @retval 正 左辺のほうが大きい。
+        @retval 0  左辺と右辺は等価。
+        @retval 負 左辺のほうが小さい。
+     */
+    public: int compare_node_hash(
+        psyq::binarc::archive const& in_archive,
+        psyq::binarc::memory_unit const in_node_tag)
+    const
+    {
+        auto const local_left_format(this->format);
+        auto const local_right_format(
+            in_node_tag >> psyq::binarc::_private::TAG_FORMAT_BITS_POSITION);
+        if (local_left_format < local_right_format)
+        {
+            return -1;
+        }
+        if (local_right_format < local_left_format)
+        {
+            return 1;
+        }
+        auto const local_left_hash(this->hash);
+        auto const local_right_hash(
+            this_type::get_node_hash(in_archive, in_node_tag));
+        if (local_left_hash < local_right_hash)
+        {
+            return -1;
+        }
+        if (local_right_hash < local_left_hash)
+        {
+            return 1;
+        }
+        return 0;
+    }
+
+    /** @brief ノードが指す値のハッシュ値を取得する。
+        @param[in] in_archive  ノードを含む書庫。
+        @param[in] in_node_tag ノードのタグ値。
+        @return ノードが指す値のハッシュ値。
+     */
+    private: static psyq::binarc::memory_unit get_node_hash(
+        psyq::binarc::archive const& in_archive,
+        psyq::binarc::memory_unit const in_node_tag)
+    {
+        auto const local_format(
+            in_node_tag >> psyq::binarc::_private::TAG_FORMAT_BITS_POSITION);
+        auto const local_immediate(
+            in_node_tag & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK);
+        switch (local_format)
+        {
+        case psyq::binarc::kind_BOOLEAN:
+        case psyq::binarc::_private::numerics_UNSIGNED_IMMEDIATE:
+        case psyq::binarc::_private::numerics_NEGATIVE_IMMEDIATE:
+            return local_immediate;
+        case psyq::binarc::_private::numerics_UNSIGNED_32:
+        case psyq::binarc::_private::numerics_NEGATIVE_32:
+        case psyq::binarc::_private::numerics_FLOATING_32:
+        case psyq::binarc::kind_STRING:
+        case psyq::binarc::kind_EXTENDED:
+        case psyq::binarc::kind_ARRAY:
+        case psyq::binarc::kind_MAP:
+        {
+            auto const local_body(in_archive.get_unit(local_immediate));
+            if (local_body != nullptr)
+            {
+                static_assert(psyq::binarc::_private::CONTAINER_HASH == 0, "");
+                return *local_body;
+            }
+            break;
+        }
+        case psyq::binarc::_private::numerics_UNSIGNED_64:
+        case psyq::binarc::_private::numerics_NEGATIVE_64:
+        case psyq::binarc::_private::numerics_FLOATING_64:
+        {
+            auto const local_body(in_archive.get_unit(local_immediate));
+            if (local_body != nullptr)
+            {
+                return local_body[0] ^ local_body[1];
+            }
+            break;
+        }
+        default:
+            break;
+        }
+        PSYQ_ASSERT(false);
+        return 0 - psyq::binarc::memory_unit(1);
+    }
+
+    //-------------------------------------------------------------------------
+    private: psyq::binarc::memory_unit hash;
+    private: psyq::binarc::memory_unit format;
+    private: union
+    {
+        double floating_64;
+        float floating_32;
+        std::uint64_t bits_64;
+        std::uint32_t bits_32[2];
+        struct
+        {
+            void const* data;
+            std::size_t size;
+            psyq::binarc::memory_unit kind;
+        } raw;
+    };
+
+}; // class psyq::binarc::_private::map_key
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// 辞書の要素を比較する関数オブジェクト。
+class psyq::binarc::_private::less_map
+{
+    private: typedef less_map this_type;
+
+    /// 辞書の要素。
+    public: typedef psyq::binarc::memory_unit element[2];
+
+    public: less_map(psyq::binarc::archive const& in_archive):
+    archive(in_archive)
+    {}
+
+    public: bool operator()(
+        psyq::binarc::_private::map_key const& in_left_key,
+        this_type::element const& in_right_element)
+        const
+    {
+        auto const local_compare(
+            in_left_key.compare_node_hash(
+                this->archive, in_right_element[0]));
+        return local_compare < 0;
+    }
+
+    public: bool operator()(
+        this_type::element const& in_left_element,
+        psyq::binarc::_private::map_key const& in_right_key)
+        const
+    {
+        auto const local_compare(
+            in_right_key.compare_node_hash(
+                this->archive, in_left_element[0]));
+        return 0 < local_compare;
+    }
+
+    private: psyq::binarc::archive const& archive;
+
+}; // class psyq::binarc::_private::less_map
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+class psyq::binarc::node
 {
     /// thisが指す値の型。
-    private: typedef binarc_node this_type;
-
-    /// ノードが指す値の種別。
-    public: enum kind: std::uint8_t
-    {
-        kind_NIL,      ///< 空。
-        kind_BOOLEAN,  ///< 真偽値。
-        kind_STRING,   ///< 文字列。
-        kind_EXTENDED, ///< 拡張型バイト列。
-        kind_ARRAY,    ///< 配列。
-        kind_MAP,      ///< 辞書。
-        kind_UNSIGNED, ///< 符号なし整数。
-        kind_NEGATIVE = kind_UNSIGNED + 3, ///< 負の整数。
-        kind_FLOATING = kind_NEGATIVE + 3, ///< IEEE754浮動小数点数。
-    };
-
-    /// ノードが指す数値の格納形式。
-    private: enum numerics: std::uint8_t
-    {
-        numerics_UNSIGNED_IMMEDIATE = this_type::kind_UNSIGNED,
-        numerics_UNSIGNED_32,
-        numerics_UNSIGNED_64,
-        numerics_NEGATIVE_IMMEDIATE = this_type::kind_NEGATIVE,
-        numerics_NEGATIVE_32,
-        numerics_NEGATIVE_64,
-        numerics_FLOATING_32 = this_type::kind_FLOATING,
-        numerics_FLOATING_64,
-    };
-
-    public: static std::size_t const MAP_INDEX_NONE = 0 - std::size_t(1);
-
-    private: static unsigned const TAG_FORMAT_BITS_SIZE = 4;
-    private: static unsigned const TAG_FORMAT_BITS_MAX
-        = (1 << this_type::TAG_FORMAT_BITS_SIZE) - 1;
-    private: static unsigned const TAG_FORMAT_BITS_POSITION
-        = sizeof(binarc_archive::unit) * 4 - this_type::TAG_FORMAT_BITS_SIZE;
-    private: static unsigned const TAG_IMMEDIATE_BITS_MASK
-        = ~(this_type::TAG_FORMAT_BITS_MAX << this_type::TAG_FORMAT_BITS_POSITION);
-    private: static unsigned const CONTAINER_HASH = 0;
-    private: static unsigned const CONTAINER_SIZE = this_type::CONTAINER_HASH + 1;
-    private: static unsigned const CONTAINER_FRONT = this_type::CONTAINER_SIZE + 1;
-    private: static unsigned const EXTENDED_KIND = this_type::CONTAINER_HASH + 1;
-    private: static unsigned const EXTENDED_FRONT = this_type::EXTENDED_KIND + 1;
-    private: static unsigned const UNIT_COUNT_PER_MAP_ELEMENT = 2;
+    private: typedef node this_type;
 
     //-------------------------------------------------------------------------
     /** @brief 空のノードを構築する。
      */
-    public: binarc_node(): tag_(nullptr) {}
+    public: node(): tag_(nullptr) {}
 
     /** @brief binarc書庫の最上位ノードを構築する。
         @param[in] in_archive 保持するbinarc書庫。
      */
-    public: explicit binarc_node(psyq::binarc_archive::shared_ptr in_archive):
+    public: explicit node(psyq::binarc::archive::shared_ptr in_archive):
     archive_(std::move(in_archive))
     {
         auto const local_archive(this->archive_.get());
@@ -130,15 +482,15 @@ class psyq::binarc_node
         }
     }
 
-    private: binarc_node(
-        psyq::binarc_archive::unit const* const in_tag,
-        psyq::binarc_archive::shared_ptr const& in_archive):
+    private: node(
+        psyq::binarc::memory_unit const* const in_tag,
+        psyq::binarc::archive::shared_ptr const& in_archive):
     tag_(in_tag),
     archive_(in_archive)
     {}
 
     //-------------------------------------------------------------------------
-    public: binarc_archive::shared_ptr const& get_archive() const
+    public: binarc::archive::shared_ptr const& get_archive() const
     {
         return this->archive_;
     }
@@ -148,7 +500,7 @@ class psyq::binarc_node
         return this->get_archive().get() == nullptr;
     }
 
-    public: this_type::kind get_kind() const
+    public: psyq::binarc::kind get_kind() const
     {
         return this_type::make_kind(this->get_format());
     }
@@ -156,32 +508,32 @@ class psyq::binarc_node
     private: unsigned get_format() const
     {
         return this->tag_ != nullptr?
-            *(this->tag_) >> this_type::TAG_FORMAT_BITS_POSITION:
-            this_type::kind_NIL;
+            *(this->tag_) >> psyq::binarc::_private::TAG_FORMAT_BITS_POSITION:
+            psyq::binarc::kind_NIL;
     }
 
-    private: static this_type::kind make_kind(unsigned const in_format)
+    private: static psyq::binarc::kind make_kind(unsigned const in_format)
     {
         switch (in_format)
         {
-        case this_type::numerics_UNSIGNED_32:
-        case this_type::numerics_UNSIGNED_64:
-            return this_type::kind_UNSIGNED;
-        case this_type::numerics_NEGATIVE_32:
-        case this_type::numerics_NEGATIVE_64:
-            return this_type::kind_NEGATIVE;
-        case this_type::numerics_FLOATING_64:
-            return this_type::kind_FLOATING;
+        case psyq::binarc::_private::numerics_UNSIGNED_32:
+        case psyq::binarc::_private::numerics_UNSIGNED_64:
+            return psyq::binarc::kind_UNSIGNED;
+        case psyq::binarc::_private::numerics_NEGATIVE_32:
+        case psyq::binarc::_private::numerics_NEGATIVE_64:
+            return psyq::binarc::kind_NEGATIVE;
+        case psyq::binarc::_private::numerics_FLOATING_64:
+            return psyq::binarc::kind_FLOATING;
         default:
-            return in_format <= this_type::numerics_FLOATING_64?
-                static_cast<this_type::kind>(in_format): this_type::kind_NIL;
+            return in_format <= psyq::binarc::_private::numerics_FLOATING_64?
+                static_cast<psyq::binarc::kind>(in_format): psyq::binarc::kind_NIL;
         }
     }
 
     //-------------------------------------------------------------------------
     public: bool is_numerics() const
     {
-        return this_type::kind_UNSIGNED <= this->get_format();
+        return psyq::binarc::kind_UNSIGNED <= this->get_format();
     }
 
     /** @brief ノードが指す数値を取得する。
@@ -209,27 +561,27 @@ class psyq::binarc_node
     {
         switch (this->get_format())
         {
-        case this_type::numerics_UNSIGNED_IMMEDIATE:
+        case psyq::binarc::_private::numerics_UNSIGNED_IMMEDIATE:
             return this->read_immediate_numerics<
                 template_numerics,
-                std::make_unsigned<binarc_archive::unit>::type>(
+                std::make_unsigned<binarc::memory_unit>::type>(
                     out_numerics);
-        case this_type::numerics_UNSIGNED_32:
+        case psyq::binarc::_private::numerics_UNSIGNED_32:
             return this->read_body_numerics<template_numerics, std::uint32_t>(out_numerics);
-        case this_type::numerics_UNSIGNED_64:
+        case psyq::binarc::_private::numerics_UNSIGNED_64:
             return this->read_body_numerics<template_numerics, std::uint64_t>(out_numerics);
-        case this_type::numerics_NEGATIVE_IMMEDIATE:
+        case psyq::binarc::_private::numerics_NEGATIVE_IMMEDIATE:
             return this->read_immediate_numerics<
                 template_numerics,
-                std::make_signed<binarc_archive::unit>::type>(
+                std::make_signed<binarc::memory_unit>::type>(
                     out_numerics);
-        case this_type::numerics_NEGATIVE_32:
+        case psyq::binarc::_private::numerics_NEGATIVE_32:
             return this->read_body_numerics<template_numerics, std::int32_t>(out_numerics);
-        case this_type::numerics_NEGATIVE_64:
+        case psyq::binarc::_private::numerics_NEGATIVE_64:
             return this->read_body_numerics<template_numerics, std::int64_t>(out_numerics);
-        case this_type::numerics_FLOATING_32:
+        case psyq::binarc::_private::numerics_FLOATING_32:
             return this->read_body_numerics<template_numerics, float>(out_numerics);
-        case this_type::numerics_FLOATING_64:
+        case psyq::binarc::_private::numerics_FLOATING_64:
             return this->read_body_numerics<template_numerics, double>(out_numerics);
         default:
             return -1;
@@ -242,9 +594,9 @@ class psyq::binarc_node
         static_assert(std::is_integral<template_read>::value, "");
         PSYQ_ASSERT(this->tag_ != nullptr);
         auto const local_immediate(
-            *this->tag_ & this_type::TAG_IMMEDIATE_BITS_MASK);
+            *this->tag_ & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK);
         auto const local_sign(
-            (this_type::TAG_FORMAT_BITS_MAX << this_type::TAG_FORMAT_BITS_POSITION)
+            (psyq::binarc::_private::TAG_FORMAT_BITS_MAX << psyq::binarc::_private::TAG_FORMAT_BITS_POSITION)
             * std::is_signed<template_read>::value);
         return this_type::read_argument_numerics(
             out_numerics,
@@ -257,7 +609,7 @@ class psyq::binarc_node
         PSYQ_ASSERT(this->tag_ != nullptr && this->archive_.get() != nullptr);
         auto const local_body(
             this->archive_->get_unit(
-                *this->tag_ & this_type::TAG_IMMEDIATE_BITS_MASK));
+                *this->tag_ & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK));
         PSYQ_ASSERT(local_body != nullptr);
         PSYQ_ASSERT(reinterpret_cast<std::size_t>(local_body) % sizeof(template_read) == 0);
         return this_type::read_argument_numerics(
@@ -284,8 +636,8 @@ class psyq::binarc_node
      */
     public: int get_boolean_state() const
     {
-        return this->get_format() == this_type::kind_BOOLEAN?
-            (*this->tag_ & this_type::TAG_IMMEDIATE_BITS_MASK) != 0: -1;
+        return this->get_format() == psyq::binarc::kind_BOOLEAN?
+            (*this->tag_ & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK) != 0: -1;
     }
 
     /** @brief ノードが指す真偽値を取得する。
@@ -312,8 +664,8 @@ class psyq::binarc_node
      */
     public: std::size_t get_string_size() const
     {
-        auto const local_body(this->get_body(this_type::kind_STRING));
-        return local_body != nullptr? local_body[this_type::CONTAINER_SIZE]: 0;
+        auto const local_body(this->get_body(psyq::binarc::kind_STRING));
+        return local_body != nullptr? local_body[psyq::binarc::_private::CONTAINER_SIZE]: 0;
     }
 
     /** @brief ノードが指す文字列の先頭位置を取得する。
@@ -323,9 +675,9 @@ class psyq::binarc_node
      */
     public: char const* get_string_data() const
     {
-        auto const local_body(this->get_body(this_type::kind_STRING));
+        auto const local_body(this->get_body(psyq::binarc::kind_STRING));
         return local_body != nullptr?
-            reinterpret_cast<char const*>(local_body + this_type::CONTAINER_FRONT):
+            reinterpret_cast<char const*>(local_body + psyq::binarc::_private::CONTAINER_FRONT):
             nullptr;
     }
 
@@ -336,8 +688,8 @@ class psyq::binarc_node
      */
     public: std::size_t get_extended_size() const
     {
-        auto const local_body(this->get_body(this_type::kind_EXTENDED));
-        return local_body != nullptr? local_body[this_type::CONTAINER_SIZE]: 0;
+        auto const local_body(this->get_body(psyq::binarc::kind_EXTENDED));
+        return local_body != nullptr? local_body[psyq::binarc::_private::CONTAINER_SIZE]: 0;
     }
 
     /** @brief ノードが指す拡張バイナリの種別を取得する。
@@ -345,10 +697,10 @@ class psyq::binarc_node
             ノードが指す拡張バイナリの種別。
             ただし、ノードが拡張バイナリを指してない場合は、0を返す。
      */
-    public: psyq::binarc_archive::unit get_extended_kind() const
+    public: psyq::binarc::memory_unit get_extended_kind() const
     {
-        auto const local_body(this->get_body(this_type::kind_EXTENDED));
-        return local_body != nullptr? local_body[this_type::EXTENDED_KIND]: 0;
+        auto const local_body(this->get_body(psyq::binarc::kind_EXTENDED));
+        return local_body != nullptr? local_body[psyq::binarc::_private::EXTENDED_KIND]: 0;
     }
 
     /** @brief ノードが指す拡張バイナリの先頭位置を取得する。
@@ -358,9 +710,9 @@ class psyq::binarc_node
      */
     public: void const* get_extended_data() const
     {
-        auto const local_body(this->get_body(this_type::kind_EXTENDED));
-        return local_body != nullptr && 0 < local_body[this_type::CONTAINER_SIZE]?
-            local_body + this_type::EXTENDED_FRONT: nullptr;
+        auto const local_body(this->get_body(psyq::binarc::kind_EXTENDED));
+        return local_body != nullptr && 0 < local_body[psyq::binarc::_private::CONTAINER_SIZE]?
+            local_body + psyq::binarc::_private::EXTENDED_FRONT: nullptr;
     }
 
     /** @brief ノードが指す配列の要素数を取得する。
@@ -370,8 +722,8 @@ class psyq::binarc_node
      */
     public: std::size_t get_array_size() const
     {
-        auto const local_body(this->get_body(this_type::kind_ARRAY));
-        return local_body != nullptr? local_body[this_type::CONTAINER_SIZE]: 0;
+        auto const local_body(this->get_body(psyq::binarc::kind_ARRAY));
+        return local_body != nullptr? local_body[psyq::binarc::_private::CONTAINER_SIZE]: 0;
     }
 
     /** @brief ノードが指す配列の要素を取得する。
@@ -382,9 +734,9 @@ class psyq::binarc_node
      */
     public: this_type make_array_element(std::size_t const in_index) const
     {
-        auto const local_body(this->get_body(this_type::kind_ARRAY));
+        auto const local_body(this->get_body(psyq::binarc::kind_ARRAY));
         return local_body != nullptr && in_index < *local_body?
-            this_type(local_body + this_type::CONTAINER_FRONT + in_index, this->archive_):
+            this_type(local_body + psyq::binarc::_private::CONTAINER_FRONT + in_index, this->archive_):
             this_type();
     }
 
@@ -395,8 +747,8 @@ class psyq::binarc_node
      */
     public: std::size_t get_map_size() const
     {
-        auto const local_body(this->get_body(this_type::kind_MAP));
-        return local_body != nullptr? local_body[this_type::CONTAINER_SIZE]: 0;
+        auto const local_body(this->get_body(psyq::binarc::kind_MAP));
+        return local_body != nullptr? local_body[psyq::binarc::_private::CONTAINER_SIZE]: 0;
     }
 
     /** @brief ノードが指す辞書のキーを取得する。
@@ -407,11 +759,11 @@ class psyq::binarc_node
      */
     public: this_type make_map_key(std::size_t const in_index) const
     {
-        auto const local_body(this->get_body(this_type::kind_MAP));
+        auto const local_body(this->get_body(psyq::binarc::kind_MAP));
         return local_body != nullptr && in_index < *local_body?
             this_type(
-                local_body + this_type::CONTAINER_FRONT
-                + in_index * this_type::UNIT_COUNT_PER_MAP_ELEMENT,
+                local_body + psyq::binarc::_private::CONTAINER_FRONT
+                + in_index * psyq::binarc::_private::UNIT_COUNT_PER_MAP_ELEMENT,
                 this->archive_):
             this_type();
     }
@@ -424,261 +776,68 @@ class psyq::binarc_node
      */
     public: this_type make_map_value(std::size_t const in_index) const
     {
-        auto const local_body(this->get_body(this_type::kind_MAP));
+        auto const local_body(this->get_body(psyq::binarc::kind_MAP));
         return local_body != nullptr && in_index < *local_body?
             this_type(
-                local_body + this_type::CONTAINER_FRONT + 1
-                + in_index * this_type::UNIT_COUNT_PER_MAP_ELEMENT,
+                local_body + psyq::binarc::_private::CONTAINER_FRONT + 1
+                + in_index * psyq::binarc::_private::UNIT_COUNT_PER_MAP_ELEMENT,
                 this->archive_):
             this_type();
     }
 
-    //-------------------------------------------------------------------------
-    /// 辞書の検索に使うキー。
-    private: struct map_key
+    public: std::size_t find_map_index(bool const in_key) const
     {
-        void initialize(std::uint64_t const in_key)
-        {
-            if ((std::numeric_limits<std::uint32_t>::max)() < in_key)
-            {
-                // 64ビット無符号整数としてハッシュ化。
-                this->bits_64 = in_key;
-                this->hash = static_cast<std::uint32_t>(in_key)
-                    ^ static_cast<std::uint32_t>(in_key >> 32);
-                this->format = psyq::binarc_node::numerics_UNSIGNED_64;
-            }
-            else
-            {
-                // 無符号整数としてハッシュ化。
-                auto const local_key(static_cast<std::uint32_t>(in_key));
-                this->bits_32[0] = local_key;
-                this->hash = local_key;
-                this->format = psyq::binarc_node::TAG_IMMEDIATE_BITS_MASK < in_key?
-                    psyq::binarc_node::numerics_UNSIGNED_32:
-                    psyq::binarc_node::numerics_UNSIGNED_IMMEDIATE;
-            }
-        }
-
-        void initialize(std::int64_t const in_key)
-        {
-            if (0 <= in_key)
-            {
-                // 無符号整数としてハッシュ化。
-                this->initialize(static_cast<std::uint64_t>(in_key));
-            }
-            else if (in_key < (std::numeric_limits<std::int32_t>::min)())
-            {
-                // 64ビットで負の整数としてハッシュ化。
-                this->bits_64 = static_cast<std::uint64_t>(in_key);
-                this->hash = this->bits_32[0] ^ this->bits_32[1];
-                this->format = psyq::binarc_node::numerics_NEGATIVE_64;
-            }
-            else
-            {
-                auto const local_key(static_cast<std::uint32_t>(in_key));
-                this->bits_32[0] = local_key;
-                if (local_key < (this_type::TAG_FORMAT_BITS_MAX << this_type::TAG_FORMAT_BITS_POSITION))
-                {
-                    // 32ビットで負の整数としてハッシュ化。
-                    this->hash = local_key;
-                    this->format = psyq::binarc_node::numerics_NEGATIVE_32;
-                }
-                else
-                {
-                    // 負の整数としてハッシュ化。
-                    this->hash = local_key & psyq::binarc_node::TAG_IMMEDIATE_BITS_MASK;
-                    this->format = psyq::binarc_node::numerics_NEGATIVE_IMMEDIATE;
-                }
-            }
-        }
-
-        void initialize(double const in_key)
-        {
-            auto const local_integer_key(static_cast<std::int64_t>(in_key));
-            if (in_key == local_integer_key)
-            {
-                // 整数としてハッシュ化。
-                this->initialize(local_integer_key);
-                return;
-            }
-            this->floating_32 = static_cast<float>(in_key);
-            if (in_key == this->floating_32)
-            {
-                // 単精度浮動小数点数としてハッシュ化。
-                this->hash = this->bits_32[0];
-                this->format = psyq::binarc_node::numerics_FLOATING_32;
-            }
-            else
-            {
-                // 倍精度浮動小数点数としてハッシュ化。
-                this->floating_64 = in_key;
-                this->hash = this->bits_32[0] ^ this->bits_32[1];
-                this->format = psyq::binarc_node::numerics_FLOATING_64;
-            }
-        }
-
-        int compare_node_value(
-            psyq::binarc_archive const& in_archive,
-            psyq::binarc_archive::unit const in_node_tag)
-        const
-        {
-            auto const local_node_format(
-                in_node_tag >> psyq::binarc_node::TAG_FORMAT_BITS_POSITION);
-            if (local_node_format != this->format)
-            {
-                return -1;
-            }
-            auto const local_node_immediate(
-                in_node_tag & psyq::binarc_node::TAG_IMMEDIATE_BITS_MASK);
-            switch (local_node_format)
-            {
-            case this_type::kind_BOOLEAN:
-            case this_type::numerics_UNSIGNED_IMMEDIATE:
-            case this_type::numerics_NEGATIVE_IMMEDIATE:
-                return local_node_immediate == this->bits_32[0]? 1: -1;
-            case this_type::numerics_UNSIGNED_32:
-            case this_type::numerics_NEGATIVE_32:
-            case this_type::numerics_FLOATING_32:
-            {
-                auto const local_body(
-                    in_archive.get_unit(local_node_immediate));
-                if (local_body != nullptr)
-                {
-                    return *local_body == this->bits_32[0]? 1: -1;
-                }
-                break;
-            }
-            case this_type::numerics_UNSIGNED_64:
-            case this_type::numerics_NEGATIVE_64:
-            case this_type::numerics_FLOATING_64:
-            {
-                auto const local_body(
-                    reinterpret_cast<std::uint64_t const*>(
-                        in_archive.get_unit(local_node_immediate)));
-                if (local_body != nullptr)
-                {
-                    return *local_body == this->bits_64? 1: -1;
-                }
-                break;
-            }
-            case this_type::kind_STRING:
-            case this_type::kind_EXTENDED:
-            {
-                auto const local_body(
-                    in_archive.get_unit(local_node_immediate));
-                if (local_body != nullptr)
-                {
-                    if (this->hash != local_body[psyq::binarc_node::CONTAINER_HASH])
-                    {
-                        return -1;
-                    }
-                    if (this->raw.size != local_body[psyq::binarc_node::CONTAINER_SIZE])
-                    {
-                        return 0;
-                    }
-                    auto local_node_string(local_body);
-                    if (local_node_format == this_type::kind_STRING)
-                    {
-                        local_node_string += psyq::binarc_node::CONTAINER_FRONT;
-                    }
-                    else if (this->raw.kind == local_body[psyq::binarc_node::EXTENDED_KIND])
-                    {
-                        local_node_string += psyq::binarc_node::EXTENDED_FRONT;
-                    }
-                    else
-                    {
-                        return 0;
-                    }
-                    return std::memcmp(local_node_string, this->raw.data, this->raw.size) == 0? 1: -1;
-                }
-                break;
-            }
-            case this_type::kind_ARRAY:
-            case this_type::kind_MAP:
-            default:
-                break;
-            }
-            return 0;
-        }
-
-        psyq::binarc_archive::unit hash;
-        psyq::binarc_archive::unit format;
-        union
-        {
-            double floating_64;
-            float floating_32;
-            std::uint64_t bits_64;
-            std::uint32_t bits_32[2];
-            struct
-            {
-                void const* data;
-                std::size_t size;
-                psyq::binarc_archive::unit kind;
-            } raw;
-        };
-    };
-
-    /// 辞書の要素。
-    private: typedef psyq::binarc_archive::unit map_element[2];
-
-    /// 辞書の要素を比較する関数オブジェクト。
-    private: struct less_map
+        return this->find_map_index(psyq::binarc::_private::map_key(in_key));
+    }
+    public: template<typename template_key>
+    std::size_t find_map_index(template_key const in_key) const
     {
-        less_map(psyq::binarc_archive const& in_archive):
-        archive(in_archive)
-        {}
-
-        bool operator()(
-            psyq::binarc_node::map_key const& in_left_key,
-            psyq::binarc_node::map_element const& in_right_element)
-        const
+        static_assert(
+            std::is_unsigned<template_key>::value
+            || std::is_signed<template_key>::value
+            || std::is_floating_point<template_key>::value,
+            "");
+        if (std::is_unsigned<template_key>::value)
         {
-            auto const local_compare(
-                psyq::binarc_node::compare_node_hash(
-                    this->archive, in_right_element[0], in_left_key));
-            return 0 < local_compare;
+            return this->find_map_index(
+                psyq::binarc::_private::map_key(static_cast<std::uint64_t>(in_key)));
         }
-
-        bool operator()(
-            psyq::binarc_node::map_element const& in_left_element,
-            psyq::binarc_node::map_key const& in_right_key)
-        const
+        if (std::is_signed<template_key>::value)
         {
-            auto const local_compare(
-                psyq::binarc_node::compare_node_hash(
-                    this->archive, in_left_element[0], in_right_key));
-            return local_compare < 0;
+            return this->find_map_index(
+                psyq::binarc::_private::map_key(static_cast<std::int64_t>(in_key)));
         }
-
-        psyq::binarc_archive const& archive;
-    };
-
-    public: std::size_t find_map_index(double const in_key) const
+        if (std::is_floating_point<template_key>::value)
+        {
+            return this->find_map_index(
+                psyq::binarc::_private::map_key(static_cast<double>(in_key)));
+        }
+        return psyq::binarc::MAP_INDEX_NONE;
+    }
+    private: std::size_t find_map_index(
+        psyq::binarc::_private::map_key const& in_key)
+    const
     {
-        this_type::map_key local_map_key;
-        local_map_key.initialize(in_key);
-
-        auto const local_body(this->get_body(this_type::kind_MAP));
+        auto const local_body(this->get_body(psyq::binarc::kind_MAP));
         if (local_body != nullptr)
         {
             auto const local_archive(this->archive_.get());
             PSYQ_ASSERT(local_archive != nullptr);
-
             auto const local_begin(
-                reinterpret_cast<this_type::map_element const*>(
-                    local_body + this_type::CONTAINER_FRONT));
+                reinterpret_cast<psyq::binarc::_private::less_map::element const*>(
+                    local_body + psyq::binarc::_private::CONTAINER_FRONT));
             auto const local_end(
-                local_begin + local_body[this_type::CONTAINER_SIZE]);
+                local_begin + local_body[psyq::binarc::_private::CONTAINER_SIZE]);
             auto const local_position(
                 std::lower_bound(
                     local_begin,
                     local_end,
-                    local_map_key,
-                    this_type::less_map(*this->archive_)));
+                    in_key,
+                    psyq::binarc::_private::less_map(*local_archive)));
             for (auto i(local_position); i < local_end; ++i)
             {
                 auto const local_compare(
-                    local_map_key.compare_node_value(*local_archive, (*i)[0]));
+                    in_key.compare_node_value(*local_archive, (*i)[0]));
                 if (local_compare < 0)
                 {
                     break;
@@ -689,114 +848,24 @@ class psyq::binarc_node
                 }
             }
         }
-        return this_type::MAP_INDEX_NONE;
-    }
-
-    /** @brief ノードのハッシュ値を比較する。
-        @param[in] in_archive    左辺ノードを含む書庫。
-        @param[in] in_left_tag   左辺ノードのタグ値。
-        @param[in] in_right_key  右辺キー。
-        @retval 正 左辺のほうが大きい。
-        @retval 0  左辺と右辺は等価。
-        @retval 負 左辺のほうが小さい。
-     */
-    private: static int compare_node_hash(
-        psyq::binarc_archive const& in_archive,
-        psyq::binarc_archive::unit const in_left_tag,
-        this_type::map_key const& in_right_key)
-    {
-        auto const local_left_format(
-            in_left_tag >> this_type::TAG_FORMAT_BITS_POSITION);
-        auto const local_right_format(in_right_key.format);
-        if (local_left_format < local_right_format)
-        {
-            return -1;
-        }
-        if (local_right_format < local_left_format)
-        {
-            return 1;
-        }
-        auto const local_left_hash(this_type::get_node_hash(in_archive, in_left_tag));
-        auto const local_right_hash(in_right_key.hash);
-        if (local_left_hash < local_right_hash)
-        {
-            return -1;
-        }
-        if (local_right_hash < local_left_hash)
-        {
-            return 1;
-        }
-        return 0;
-    }
-
-    /** @brief ノードが指す値のハッシュ値を取得する。
-        @param[in] in_archive  ノードを含む書庫。
-        @param[in] in_node_tag ノードのタグ値。
-        @return ノードが指す値のハッシュ値。
-     */
-    private: static psyq::binarc_archive::unit get_node_hash(
-        psyq::binarc_archive const& in_archive,
-        psyq::binarc_archive::unit const in_node_tag)
-    {
-        auto const local_format(
-            in_node_tag >> this_type::TAG_FORMAT_BITS_POSITION);
-        auto const local_immediate(
-            in_node_tag & this_type::TAG_IMMEDIATE_BITS_MASK);
-        switch (local_format)
-        {
-        case this_type::kind_BOOLEAN:
-        case this_type::numerics_UNSIGNED_IMMEDIATE:
-        case this_type::numerics_NEGATIVE_IMMEDIATE:
-            return local_immediate;
-        case this_type::numerics_UNSIGNED_32:
-        case this_type::numerics_NEGATIVE_32:
-        case this_type::numerics_FLOATING_32:
-        case this_type::kind_STRING:
-        case this_type::kind_EXTENDED:
-        case this_type::kind_ARRAY:
-        case this_type::kind_MAP:
-        {
-            auto const local_body(in_archive.get_unit(local_immediate));
-            if (local_body != nullptr)
-            {
-                static_assert(this_type::CONTAINER_HASH == 0, "");
-                return *local_body;
-            }
-            break;
-        }
-        case this_type::numerics_UNSIGNED_64:
-        case this_type::numerics_NEGATIVE_64:
-        case this_type::numerics_FLOATING_64:
-        {
-            auto const local_body(in_archive.get_unit(local_immediate));
-            if (local_body != nullptr)
-            {
-                return local_body[0] ^ local_body[1];
-            }
-            break;
-        }
-        default:
-            break;
-        }
-        PSYQ_ASSERT(false);
-        return 0 - psyq::binarc_archive::unit(1);
+        return psyq::binarc::MAP_INDEX_NONE;
     }
 
     //-------------------------------------------------------------------------
-    private: psyq::binarc_archive::unit const* get_body(unsigned const in_format)
+    private: psyq::binarc::memory_unit const* get_body(unsigned const in_format)
     const
     {
         if (this->tag_ != nullptr)
         {
             auto const local_tag(*this->tag_);
-            if ((local_tag >> this_type::TAG_FORMAT_BITS_POSITION) == in_format)
+            if ((local_tag >> psyq::binarc::_private::TAG_FORMAT_BITS_POSITION) == in_format)
             {
                 auto const local_archive(this->archive_.get());
                 if (local_archive != nullptr)
                 {
                     auto const local_body(
                         local_archive->get_unit(
-                            local_tag & this_type::TAG_IMMEDIATE_BITS_MASK));
+                            local_tag & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK));
                     PSYQ_ASSERT(local_body != nullptr);
                     return local_body;
                 }
@@ -807,8 +876,8 @@ class psyq::binarc_node
     }
 
     //-------------------------------------------------------------------------
-    private: psyq::binarc_archive::unit const* tag_;
-    private: psyq::binarc_archive::shared_ptr archive_;
+    private: psyq::binarc::memory_unit const* tag_;
+    private: psyq::binarc::archive::shared_ptr archive_;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -820,9 +889,9 @@ class binarc_to_block_yaml
     //-------------------------------------------------------------------------
     public: static void convert(
         std::ostringstream& out_stream,
-        psyq::binarc_archive::shared_ptr const& in_archive)
+        psyq::binarc::archive::shared_ptr const& in_archive)
     {
-        psyq::binarc_node const local_node(in_archive);
+        psyq::binarc::node const local_node(in_archive);
         if (!local_node.is_empty())
         {
             this_type::convert_node(out_stream, local_node);
@@ -832,26 +901,26 @@ class binarc_to_block_yaml
     //-------------------------------------------------------------------------
     private: static void convert_node(
         std::ostringstream& out_stream,
-        psyq::binarc_node const& in_node)
+        psyq::binarc::node const& in_node)
     {
         switch (in_node.get_kind())
         {
-        case psyq::binarc_node::kind_UNSIGNED:
+        case psyq::binarc::kind_UNSIGNED:
             out_stream << in_node.make_numerics<std::uint64_t>(0);
             break;
-        case psyq::binarc_node::kind_NEGATIVE:
+        case psyq::binarc::kind_NEGATIVE:
             out_stream << in_node.make_numerics<std::int64_t>(0);
             break;
-        case psyq::binarc_node::kind_FLOATING:
+        case psyq::binarc::kind_FLOATING:
             out_stream << in_node.make_numerics<double>(0);
             break;
-        case psyq::binarc_node::kind_STRING:
+        case psyq::binarc::kind_STRING:
             this_type::convert_string(out_stream, in_node);
             break;
-        case psyq::binarc_node::kind_ARRAY:
+        case psyq::binarc::kind_ARRAY:
             this_type::convert_sequence(out_stream, in_node);
             break;
-        case psyq::binarc_node::kind_MAP:
+        case psyq::binarc::kind_MAP:
             this_type::convert_mapping(out_stream, in_node);
             break;
         default:
@@ -862,7 +931,7 @@ class binarc_to_block_yaml
 
     private: static void convert_string(
         std::ostringstream& out_stream,
-        psyq::binarc_node const& in_node)
+        psyq::binarc::node const& in_node)
     {
         auto const local_data(in_node.get_string_data());
         assert(local_data != nullptr);
@@ -873,7 +942,7 @@ class binarc_to_block_yaml
 
     private: static void convert_sequence(
         std::ostringstream& out_stream,
-        psyq::binarc_node const& in_node)
+        psyq::binarc::node const& in_node)
     {
         out_stream << '[';
         auto const local_size(in_node.get_array_size());
@@ -890,10 +959,11 @@ class binarc_to_block_yaml
 
     private: static void convert_mapping(
         std::ostringstream& out_stream,
-        psyq::binarc_node const& in_node)
+        psyq::binarc::node const& in_node)
     {
         out_stream << '{';
         auto const local_size(in_node.get_map_size());
+in_node.find_map_index(0.0);
         for (unsigned i(0); i < local_size; ++i)
         {
             if (0 < i)

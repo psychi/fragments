@@ -720,6 +720,7 @@ INPUT                  = \
                          ./message_pack/pool.hpp \
                          ./message_pack/object.hpp \
                          ./message_pack/deserializer.hpp \
+                         ./binarc.hpp \
 
 #                         ./async_file.hpp \
 #                         ./async_queue.hpp \

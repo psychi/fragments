@@ -636,7 +636,7 @@ class psyq::binarc::node
             ただし、ノードが数値を指してない場合は、 in_default を返す。
      */
     public: template<typename template_numerics>
-    template_numerics make_numerics(template_numerics const in_default) const
+    template_numerics get_numerics(template_numerics const in_default) const
     {
         template_numerics local_numerics;
         return this->read_numerics(local_numerics) < 0?
@@ -834,7 +834,7 @@ class psyq::binarc::node
             配列の要素を指すノード。
             ただし、該当する配列要素が存在しない場合は、空ノードを返す。
      */
-    public: this_type make_array_element(std::size_t const in_index) const
+    public: this_type get_array_element(std::size_t const in_index) const
     {
         auto const local_body(this->get_body(psyq::binarc::kind_ARRAY));
         return local_body != nullptr && in_index < *local_body?
@@ -867,7 +867,7 @@ class psyq::binarc::node
             辞書要素のキーを指すノード。
             ただし、該当する辞書要素が存在しない場合は、空ノードを返す。
      */
-    public: this_type make_map_key(std::size_t const in_index) const
+    public: this_type get_map_key(std::size_t const in_index) const
     {
         auto const local_body(this->get_body(psyq::binarc::kind_MAP));
         return local_body != nullptr && in_index < *local_body?
@@ -886,7 +886,7 @@ class psyq::binarc::node
             辞書要素の値を指すノード。
             ただし、該当する辞書要素が存在しない場合は、空ノードを返す。
      */
-    public: this_type make_map_value(std::size_t const in_index) const
+    public: this_type get_map_value(std::size_t const in_index) const
     {
         auto const local_body(this->get_body(psyq::binarc::kind_MAP));
         return local_body != nullptr && in_index < *local_body?
@@ -906,7 +906,7 @@ class psyq::binarc::node
     public: template<typename template_key>
     this_type find_map_value(template_key const& in_key) const
     {
-        return this->make_map_value(this->find_map_index(in_key));
+        return this->get_map_value(this->find_map_index(in_key));
     }
 
     /** @brief ノードが指す辞書から、値を検索して取得する。
@@ -921,7 +921,7 @@ class psyq::binarc::node
         std::size_t const in_raw_size)
     const
     {
-        return this->make_map_value(
+        return this->get_map_value(
             this->find_map_index(in_raw_data, in_raw_size));
     }
 
@@ -1088,13 +1088,13 @@ local_node.find_map_value(local_map_key.data(), local_map_key.size());
         switch (in_node.get_kind())
         {
         case psyq::binarc::kind_UNSIGNED:
-            out_stream << in_node.make_numerics<std::uint64_t>(0);
+            out_stream << in_node.get_numerics<std::uint64_t>(0);
             break;
         case psyq::binarc::kind_NEGATIVE:
-            out_stream << in_node.make_numerics<std::int64_t>(0);
+            out_stream << in_node.get_numerics<std::int64_t>(0);
             break;
         case psyq::binarc::kind_FLOATING:
-            out_stream << in_node.make_numerics<double>(0);
+            out_stream << in_node.get_numerics<double>(0);
             break;
         case psyq::binarc::kind_STRING:
             this_type::convert_string(out_stream, in_node);
@@ -1134,7 +1134,7 @@ local_node.find_map_value(local_map_key.data(), local_map_key.size());
             {
                 out_stream << ',';
             }
-            this_type::convert_node(out_stream, in_node.make_array_element(i));
+            this_type::convert_node(out_stream, in_node.get_array_element(i));
         }
         out_stream << ']';
     }
@@ -1151,9 +1151,9 @@ local_node.find_map_value(local_map_key.data(), local_map_key.size());
             {
                 out_stream << ',';
             }
-            this_type::convert_node(out_stream, in_node.make_map_key(i));
+            this_type::convert_node(out_stream, in_node.get_map_key(i));
             out_stream << ':';
-            this_type::convert_node(out_stream, in_node.make_map_value(i));
+            this_type::convert_node(out_stream, in_node.get_map_value(i));
         }
         out_stream << '}';
     }

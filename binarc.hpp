@@ -28,8 +28,8 @@ namespace psyq
             kind_BOOLEAN,  ///< 真偽値。
             kind_STRING,   ///< 文字列。
             kind_EXTENDED, ///< 拡張バイト列。
-            kind_ARRAY,    ///< 配列。
-            kind_MAP,      ///< 辞書。
+            kind_ARRAY,    ///< 配列コンテナ。
+            kind_MAP,      ///< 辞書コンテナ。
             kind_UNSIGNED, ///< 符号なし整数。
             kind_NEGATIVE = kind_UNSIGNED + 3, ///< 負の整数。
             kind_FLOATING = kind_NEGATIVE + 3, ///< IEEE754浮動小数点数。
@@ -529,6 +529,12 @@ class psyq::binarc::node
     /// thisが指す値の型。
     private: typedef node this_type;
 
+    private: struct container_header
+    {
+        psyq::binarc::memory_unit hash;
+        psyq::binarc::memory_unit size;
+    };
+
     //-------------------------------------------------------------------------
     /// @name ノードの構築
     //@{
@@ -567,25 +573,25 @@ class psyq::binarc::node
     //-------------------------------------------------------------------------
     /// @name ノードの情報
     //@{
-    /** @brief ノードが指す値を含む書庫を取得する。
-        @return ノードが指す値を含む書庫。
+    /** @brief *thisが指す値を含む書庫を取得する。
+        @return *thisが指す値を含む書庫。
      */
     public: binarc::archive::shared_ptr const& get_archive() const
     {
         return this->archive_;
     }
 
-    /** @brief 空ノードか判定する。
-        @retval true  ノードは値を指しておらず、空。
-        @retval false ノードは値を指していて、空ではない。
+    /** @brief *thisが空か判定する。
+        @retval true  *thisは値を指しておらず、空。
+        @retval false *thisは値を指していて、空ではない。
      */
     public: bool is_empty() const
     {
         return this->get_archive().get() == nullptr;
     }
 
-    /** @brief ノードが指す値の種別を取得する。
-        @return ノードが指す値の種別。
+    /** @brief *thisが指す値の種別を取得する。
+        @return *thisが指す値の種別。
      */
     public: psyq::binarc::kind get_kind() const
     {
@@ -620,20 +626,20 @@ class psyq::binarc::node
     //-------------------------------------------------------------------------
     /// @name 数値ノード
     //@{
-    /** @brief ノードが数値を指すか判定する。
-        @retval true  ノードは数値を指している。
-        @retval false ノードは数値を指していない。
+    /** @brief *thisが数値を指すか判定する。
+        @retval true  *thisは数値を指している。
+        @retval false *thisは数値を指していない。
      */
     public: bool is_numerics() const
     {
         return psyq::binarc::kind_UNSIGNED <= this->get_format();
     }
 
-    /** @brief ノードが指す数値を取得する。
+    /** @brief *thisが指す数値を取得する。
         @param[in] in_default 数値の取得に失敗した場合に返す値。
         @return
-            ノードが指す値を template_numerics にキャストした値。
-            ただし、ノードが数値を指してない場合は、 in_default を返す。
+            *thisが指す値を template_numerics にキャストした値。
+            ただし、*thisが数値を指してない場合は、 in_default を返す。
      */
     public: template<typename template_numerics>
     template_numerics get_numerics(template_numerics const in_default) const
@@ -643,11 +649,11 @@ class psyq::binarc::node
             in_default: local_numerics;
     }
 
-    /** @brief ノードが指す数値を取得する。
-        @param[out] out_numerics ノードから取得した数値が代入される。
-        @retval 正 ノードが指す値の等値を out_numerics へ代入。
-        @retval 0  ノードが指す値を template_numerics にキャストして out_numerics へ代入。
-        @retval 負 失敗。ノードは数値を指してない。 out_numerics は変わらない。
+    /** @brief *thisが指す数値を取得する。
+        @param[out] out_numerics *thisから取得した数値が代入される。
+        @retval 正 *thisが指す値の等値を out_numerics へ代入。
+        @retval 0  *thisが指す値を template_numerics にキャストして out_numerics へ代入。
+        @retval 負 失敗。*thisは数値を指してない。 out_numerics は変わらない。
      */
     public: template<typename template_numerics>
     int read_numerics(template_numerics& out_numerics) const
@@ -722,10 +728,10 @@ class psyq::binarc::node
     //-------------------------------------------------------------------------
     /// @name 真偽値ノード
     //@{
-    /** @brief ノードが指す真偽値を取得する。
-        @retval 正 ノードはtrueを指している。
-        @retval 0  ノードはfalseを指している。
-        @retval 負 ノードは真偽値を指してない。
+    /** @brief *thisが指す真偽値を取得する。
+        @retval 正 *thisはtrueを指している。
+        @retval 0  *thisはfalseを指している。
+        @retval 負 *thisは真偽値を指してない。
      */
     public: int get_boolean_state() const
     {
@@ -733,11 +739,11 @@ class psyq::binarc::node
             (*this->tag_ & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK) != 0: -1;
     }
 
-    /** @brief ノードが指す真偽値を取得する。
+    /** @brief *thisが指す真偽値を取得する。
         @param[out] out_boolean 取得した真偽値が代入される。
         @retval true 成功。 out_boolean に取得した真偽値を代入。
         @retval false
-            失敗。ノードが真偽値を指してない。 out_boolean は変化しない。
+            失敗。*thisが真偽値を指してない。 out_boolean は変化しない。
      */
     public: bool read_boolean(bool& out_boolean) const
     {
@@ -753,176 +759,352 @@ class psyq::binarc::node
     //-------------------------------------------------------------------------
     /// @name 文字列ノード
     //@{
-    /** @brief ノードが指す文字列のバイト数を取得する。
+    /** @brief *thisが指す文字列のバイト数を取得する。
         @return
-            ノードが指す文字列のバイト数。
-            ただし、ノードが文字列を指してない場合は、0を返す。
+            *thisが指す文字列のバイト数。
+            ただし、*thisが文字列を指してない場合は、0を返す。
      */
     public: std::size_t get_string_size() const
     {
         auto const local_body(this->get_body(psyq::binarc::kind_STRING));
-        return local_body != nullptr? local_body[psyq::binarc::_private::CONTAINER_SIZE]: 0;
+        return local_body != nullptr?
+            local_body[psyq::binarc::_private::CONTAINER_SIZE]: 0;
     }
 
-    /** @brief ノードが指す文字列の先頭位置を取得する。
+    /** @brief *thisが指す文字列の先頭位置を取得する。
         @return
-            ノードが指す文字列の先頭位置。
-            ただし、ノードが文字列を指してない場合は、nullptrを返す。
+            *thisが指す文字列の先頭位置。
+            ただし、*thisが文字列を指してない場合は、nullptrを返す。
      */
     public: char const* get_string_data() const
     {
         auto const local_body(this->get_body(psyq::binarc::kind_STRING));
         return local_body != nullptr?
-            reinterpret_cast<char const*>(local_body + psyq::binarc::_private::CONTAINER_FRONT):
+            reinterpret_cast<char const*>(
+                local_body + psyq::binarc::_private::CONTAINER_FRONT):
             nullptr;
     }
     //@}
     //-------------------------------------------------------------------------
     /// @name 拡張バイト列ノード
     //@{
-    /** @brief ノードが指す拡張バイト列のバイト数を取得する。
+    /** @brief *thisが指す拡張バイト列のバイト数を取得する。
         @return
-            ノードが指す拡張バイト列のバイト数。
-            ただし、ノードが拡張バイト列を指してない場合は、0を返す。
+            *thisが指す拡張バイト列のバイト数。
+            ただし、*thisが拡張バイト列を指してない場合は、0を返す。
      */
     public: std::size_t get_extended_size() const
     {
         auto const local_body(this->get_body(psyq::binarc::kind_EXTENDED));
-        return local_body != nullptr? local_body[psyq::binarc::_private::CONTAINER_SIZE]: 0;
-    }
-
-    /** @brief ノードが指す拡張バイト列の種別を取得する。
-        @return
-            ノードが指す拡張バイト列の種別。
-            ただし、ノードが拡張バイト列を指してない場合は、0を返す。
-     */
-    public: psyq::binarc::memory_unit get_extended_kind() const
-    {
-        auto const local_body(this->get_body(psyq::binarc::kind_EXTENDED));
-        return local_body != nullptr? local_body[psyq::binarc::_private::EXTENDED_KIND]: 0;
-    }
-
-    /** @brief ノードが指す拡張バイト列の先頭位置を取得する。
-        @return
-            ノードが指す拡張バイト列の先頭位置。
-            ただし、ノードが拡張バイト列を指してない場合は、nullptrを返す。
-     */
-    public: void const* get_extended_data() const
-    {
-        auto const local_body(this->get_body(psyq::binarc::kind_EXTENDED));
-        return local_body != nullptr && 0 < local_body[psyq::binarc::_private::CONTAINER_SIZE]?
-            local_body + psyq::binarc::_private::EXTENDED_FRONT: nullptr;
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name 配列ノード
-    //@{
-    /** @brief ノードが指す配列の要素数を取得する。
-        @return
-            ノードが指す配列の要素数。
-            ただし、ノードが配列を指してない場合は、0を返す。
-     */
-    public: std::size_t get_array_size() const
-    {
-        auto const local_body(this->get_body(psyq::binarc::kind_ARRAY));
-        return local_body != nullptr? local_body[psyq::binarc::_private::CONTAINER_SIZE]: 0;
-    }
-
-    /** @brief ノードが指す配列の要素を取得する。
-        @param[in] in_index 取得する配列要素のインデックス番号。
-        @return
-            配列の要素を指すノード。
-            ただし、該当する配列要素が存在しない場合は、空ノードを返す。
-     */
-    public: this_type get_array_element(std::size_t const in_index) const
-    {
-        auto const local_body(this->get_body(psyq::binarc::kind_ARRAY));
-        return local_body != nullptr && in_index < *local_body?
-            this_type(
-                local_body + psyq::binarc::_private::CONTAINER_FRONT + in_index,
-                this->archive_):
-            this_type();
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name 辞書ノード
-    //@{
-    /** @brief ノードが指す辞書の要素数を取得する。
-        @return
-            ノードが指す辞書の要素数。
-            ただし、ノードが辞書を指してない場合は、0を返す。
-     */
-    public: std::size_t get_map_size() const
-    {
-        auto const local_body(this->get_body(psyq::binarc::kind_MAP));
         return local_body != nullptr?
             local_body[psyq::binarc::_private::CONTAINER_SIZE]: 0;
     }
 
-    /** @brief ノードが指す辞書のキーを取得する。
-        @param[in] in_index
-            取得するキーを持つ辞書要素のインデックス番号。
-            this_type::find_map_index から取得する。
+    /** @brief *thisが指す拡張バイト列の種別を取得する。
         @return
-            辞書要素のキーを指すノード。
-            ただし、該当する辞書要素が存在しない場合は、空ノードを返す。
+            *thisが指す拡張バイト列の種別。
+            ただし、*thisが拡張バイト列を指してない場合は、0を返す。
      */
-    public: this_type get_map_key(std::size_t const in_index) const
+    public: psyq::binarc::memory_unit get_extended_kind() const
     {
-        auto const local_body(this->get_body(psyq::binarc::kind_MAP));
-        return local_body != nullptr && in_index < *local_body?
-            this_type(
-                local_body + psyq::binarc::_private::CONTAINER_FRONT
-                + in_index * psyq::binarc::_private::UNIT_COUNT_PER_MAP_ELEMENT,
-                this->archive_):
-            this_type();
+        auto const local_body(this->get_body(psyq::binarc::kind_EXTENDED));
+        return local_body != nullptr?
+            local_body[psyq::binarc::_private::EXTENDED_KIND]: 0;
     }
 
-    /** @brief ノードが指す辞書の値を取得する。
-        @param[in] in_index
-            取得するキーを持つ辞書要素のインデックス番号。
-            this_type::find_map_index から取得する。
+    /** @brief *thisが指す拡張バイト列の先頭位置を取得する。
         @return
-            辞書要素の値を指すノード。
-            ただし、該当する辞書要素が存在しない場合は、空ノードを返す。
+            *thisが指す拡張バイト列の先頭位置。
+            ただし、*thisが拡張バイト列を指してない場合は、nullptrを返す。
      */
-    public: this_type get_map_value(std::size_t const in_index) const
+    public: void const* get_extended_data() const
     {
-        auto const local_body(this->get_body(psyq::binarc::kind_MAP));
-        return local_body != nullptr && in_index < *local_body?
-            this_type(
-                local_body + psyq::binarc::_private::CONTAINER_FRONT + 1
-                + in_index * psyq::binarc::_private::UNIT_COUNT_PER_MAP_ELEMENT,
-                this->archive_):
-            this_type();
+        auto const local_body(this->get_body(psyq::binarc::kind_EXTENDED));
+        return local_body != nullptr
+            && 0 < local_body[psyq::binarc::_private::CONTAINER_SIZE]?
+                local_body + psyq::binarc::_private::EXTENDED_FRONT: nullptr;
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name コンテナノード
+    //@{
+    /** @brief *thisがコンテナを指すか判定する。
+        @retval true  *thisはコンテナを指している。
+        @retval false *thisはコンテナを指していない。
+     */
+    public: bool is_container() const
+    {
+        switch (this->get_format())
+        {
+        case psyq::binarc::kind_ARRAY:
+        case psyq::binarc::kind_MAP:
+            return true;
+        default:
+            return false;
+        }
     }
 
-    /** @brief ノードが指す辞書から、値を検索して取得する。
-        @param[in] in_key 取得する値に対応するキー。
+    /** @brief *thisが指すコンテナの要素数を取得する。
         @return
-            辞書要素の値を指すノード。
-            ただし、該当する辞書要素が存在しない場合は、空ノードを返す。
+            *thisが指すコンテナの要素数。
+            ただし、*thisがコンテナを指していない場合は、0を返す。
      */
-    public: template<typename template_key>
-    this_type find_map_value(template_key const& in_key) const
+    public: std::size_t get_container_size() const
     {
-        return this->get_map_value(this->find_map_index(in_key));
+        switch (this->get_format())
+        {
+        case psyq::binarc::kind_ARRAY:
+            return this->get_container().size;
+        case psyq::binarc::kind_MAP:
+            return this->get_container().size / 2;
+        default:
+            return 0;
+        }
     }
 
-    /** @brief ノードが指す辞書から、値を検索して取得する。
-        @param[in] in_key 取得する値に対応するキーとなる文字列の先頭位置。
-        @param[in] in_key 取得する値に対応するキーとなる文字列の要素数。
+    /** @brief コンテナ要素のキーを取得する。
+        @param[in] in_index 取得する要素の要素のインデックス番号。
         @return
-            辞書要素の値を指すノード。
+            *thisが指すコンテナが持つ、要素のキーを指すノード。
+            ただし、該当する要素が存在しない場合は、空ノードを返す。
+     */
+    public: this_type get_container_key(std::size_t const in_index) const
+    {
+        auto local_key(*this);
+        return local_key.switch_container_key(in_index)?
+            local_key: this_type();
+    }
+
+    /** @brief *thisが指すコンテナの、要素の値を取得する。
+        @param[in] in_index 取得する要素のインデックス番号。
+        @return
+            コンテナの要素の値を指すノード。
+            ただし、該当する要素が存在しない場合は、空ノードを返す。
+     */
+    public: this_type get_container_value(std::size_t const in_index) const
+    {
+        auto local_value(*this);
+        return local_value.switch_container_value(in_index)?
+            local_value: this_type();
+    }
+
+    /** @brief *thisが指すコンテナの、要素のキーへ切り替える。
+        @param[in] in_index 切り替える要素のインデックス番号。
+        @retval true  成功。*thisは、コンテナの要素のキーへ切り替わった。
+        @retval false 失敗。該当する要素が存在しない。*thisは変わらない。
+     */
+    public: bool switch_container_key(std::size_t in_index)
+    {
+        switch (this->get_format())
+        {
+        case psyq::binarc::kind_ARRAY:
+            break;
+        case psyq::binarc::kind_MAP:
+            in_index *= psyq::binarc::_private::UNIT_COUNT_PER_MAP_ELEMENT;
+        default:
+            return false;
+        }
+        return this->switch_container_node(in_index);
+    }
+
+    /** @brief コンテナの要素値に切り替える。
+        @param[in] in_index 切り替える要素のインデックス番号。
+        @retval true  成功。*thisは、コンテナの要素値へ切り替わった。
+        @retval false 失敗。該当するコンテナ要素が存在しない。*thisは変わらない。
+     */
+    public: bool switch_container_value(std::size_t in_index)
+    {
+        switch (this->get_format())
+        {
+        case psyq::binarc::kind_ARRAY:
+            break;
+        case psyq::binarc::kind_MAP:
+            in_index = in_index * psyq::binarc::_private::UNIT_COUNT_PER_MAP_ELEMENT + 1;
+        default:
+            return false;
+        }
+        return this->switch_container_node(in_index);
+    }
+    //@}
+    /** @brief コンテナの下位ノードに切り替える。
+        @param[in] in_index 切り替える下位ノードのインデックス番号。
+        @retval true  成功。*thisは、コンテナの下位ノードへ切り替わった。
+        @retval false 失敗。該当する下位ノードが存在しない。*thisは変わらない。
+     */
+    private: bool switch_container_node(std::size_t const in_index)
+    {
+        auto const& local_container(this->get_container());
+        if (local_container.size <= in_index)
+        {
+            return false;
+        }
+        this->tag_ = in_index
+            + reinterpret_cast<psyq::binarc::memory_unit const*>(
+                &local_container + 1);
+        return true;
+    }
+
+    private: this_type::container_header const& get_container() const
+    {
+        PSYQ_ASSERT(this->is_container());
+        auto const local_container(
+            reinterpret_cast<this_type::container_header const*>(
+                this->archive_->get_unit(
+                    *this->tag_
+                    & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK)));
+        PSYQ_ASSERT(local_container != nullptr);
+        return *local_container;
+    }
+
+    //-------------------------------------------------------------------------
+    /// @name 辞書ノード
+    //@{
+    /** @brief 辞書の要素キーを取得する。
+        @param[in] in_key 取得する要素に対応するキーとなる数値。
+        @return
+            辞書の要素キーを指すノード。
             ただし、該当する辞書要素が存在しない場合は、空ノードを返す。
      */
-    public: this_type find_map_value(
+    public: template<typename template_numerics>
+    this_type get_map_key(template_numerics const in_key) const
+    {
+        auto local_node(*this);
+        return local_node.switch_map_key(in_key)? local_node: this_type();
+    }
+
+    /** @brief 辞書の要素キーを取得する。
+        @param[in] in_raw_data 取得する要素に対応するキー文字列の先頭位置。
+        @param[in] in_raw_size 取得する要素に対応するキー文字列の要素数。
+        @return
+            辞書の要素キーを指すノード。
+            ただし、該当する辞書要素が存在しない場合は、空ノードを返す。
+     */
+    public: this_type get_map_key(
         void const* const in_raw_data,
         std::size_t const in_raw_size)
     const
     {
-        return this->get_map_value(
-            this->find_map_index(in_raw_data, in_raw_size));
+        auto local_node(*this);
+        return local_node.switch_map_key(in_raw_data, in_raw_size)?
+            local_node: this_type();
+    }
+
+    /** @brief 辞書の要素値を取得する。
+        @param[in] in_key 取得する辞書要素に対応するキー数値。
+        @return
+            辞書の要素値を指すノード。
+            ただし、該当する辞書要素が存在しない場合は、空ノードを返す。
+     */
+    public: template<typename template_numerics>
+    this_type get_map_value(template_numerics const in_key) const
+    {
+        auto local_node(*this);
+        return local_node.switch_map_value(in_key)? local_node: this_type();
+    }
+
+    /** @brief 辞書の要素値を取得する。
+        @param[in] in_raw_data 取得する要素に対応するキー文字列の先頭位置。
+        @param[in] in_raw_size 取得する要素に対応するキー文字列の要素数。
+        @return
+            辞書の要素値を指すノード。
+            ただし、該当する辞書要素が存在しない場合は、空ノードを返す。
+     */
+    public: this_type get_map_value(
+        void const* const in_raw_data,
+        std::size_t const in_raw_size)
+    const
+    {
+        auto local_node(*this);
+        return local_node.switch_map_value(in_raw_data, in_raw_size)?
+            local_node: this_type();
+    }
+
+    /** @brief 辞書の要素キーに切り替える。
+        @param[in] in_key 切り替える辞書要素に対応する数値キー。
+        @retval true  成功。*thisは、辞書の要素キーへ切り替わった。
+        @retval false 失敗。該当する辞書要素が存在しない。*thisは変わらない。
+     */
+    public: template<typename template_numerics>
+    bool switch_map_key(template_numerics const in_key)
+    {
+        return this->switch_container_key(this->find_map_index(in_key));
+    }
+
+    /** @brief 辞書の要素キーに切り替える。
+        @param[in] in_raw_data 切り替える辞書要素に対応するキー文字列の先頭位置。
+        @param[in] in_raw_size 切り替える辞書要素に対応するキー文字列の要素数。
+        @retval true  成功。*thisは、辞書の要素キーへ切り替わった。
+        @retval false 失敗。該当する辞書要素が存在しない。*thisは変わらない。
+     */
+    public: bool switch_map_key(
+        void const* const in_raw_data,
+        std::size_t const in_raw_size)
+    {
+        return 0 < in_raw_size?
+            this->switch_container_key(
+                this->find_map_index(in_raw_data, in_raw_size)):
+            false;
+    }
+
+    /** @brief 辞書要素の値に切り替える。
+        @param[in] in_key 切り替える要素のキー。
+        @retval true  成功。*thisは、辞書要素の値へ切り替わった。
+        @retval false 失敗。該当する辞書要素が存在しない。*thisは変わらない。
+     */
+    public: template<typename template_numerics>
+    bool switch_map_value(template_numerics const in_key)
+    {
+        if (this->switch_map_key(in_key))
+        {
+            ++this->tag_;
+            return true;
+        }
+        return false;
+    }
+
+    /** @brief 辞書要素の値に切り替える。
+        @param[in] in_raw_data 切り替える辞書要素に対応するキー文字列の先頭位置。
+        @param[in] in_raw_size 切り替える辞書要素に対応するキー文字列の要素数。
+        @retval true  成功。*thisは、辞書要素の値へ切り替わった。
+        @retval false 失敗。該当する辞書要素が存在しない。*thisは変わらない。
+     */
+    public: bool switch_map_value(
+        void const* const in_raw_data,
+        std::size_t const in_raw_size)
+    {
+        if (this->switch_map_key(in_raw_data, in_raw_size))
+        {
+            ++this->tag_;
+            return true;
+        }
+        return false;
+    }
+
+    /** @brief 辞書要素を検索する。
+        @param[in] in_key 検索する辞書要素に対応するキー数値。
+        @retval true  キーに対応する辞書要素が存在する。
+        @retval false キーに対応する辞書要素が存在しない。
+     */
+    public: template<typename template_numerics>
+    bool find_map_key(template_numerics const in_key) const
+    {
+        return this->find_map_index(in_key) != this_type::MAP_INDEX_NONE;
+    }
+
+    /** @brief 辞書要素を検索する。
+        @param[in] in_raw_data 検索する要素に対応するキー文字列の先頭位置。
+        @param[in] in_raw_size 検索する要素に対応するキー文字列の要素数。
+        @retval true  キーに対応する辞書要素が存在する。
+        @retval false キーに対応する辞書要素が存在しない。
+     */
+    public: bool find_map_key(
+        void const* const in_raw_data,
+        std::size_t const in_raw_size)
+    const
+    {
+        return 0 < in_raw_size
+            && psyq::binarc::MAP_INDEX_NONE != this->find_map_index(
+                in_raw_data, in_raw_size);
     }
 
     /** @brief 辞書要素のインデックス番号を検索する。
@@ -1070,10 +1252,10 @@ class binarc_to_block_yaml
         psyq::binarc::archive::shared_ptr const& in_archive)
     {
         psyq::binarc::node const local_node(in_archive);
-local_node.find_map_value(false);
-local_node.find_map_value(0.1);
+local_node.get_map_value(false);
+local_node.get_map_value(0.1);
 std::string local_map_key("key");
-local_node.find_map_value(local_map_key.data(), local_map_key.size());
+local_node.get_map_value(local_map_key.data(), local_map_key.size());
         if (!local_node.is_empty())
         {
             this_type::convert_node(out_stream, local_node);
@@ -1127,14 +1309,14 @@ local_node.find_map_value(local_map_key.data(), local_map_key.size());
         psyq::binarc::node const& in_node)
     {
         out_stream << '[';
-        auto const local_size(in_node.get_array_size());
+        auto const local_size(in_node.get_container_size());
         for (unsigned i(0); i < local_size; ++i)
         {
             if (0 < i)
             {
                 out_stream << ',';
             }
-            this_type::convert_node(out_stream, in_node.get_array_element(i));
+            this_type::convert_node(out_stream, in_node.get_container_value(i));
         }
         out_stream << ']';
     }
@@ -1144,16 +1326,16 @@ local_node.find_map_value(local_map_key.data(), local_map_key.size());
         psyq::binarc::node const& in_node)
     {
         out_stream << '{';
-        auto const local_size(in_node.get_map_size());
+        auto const local_size(in_node.get_container_size());
         for (unsigned i(0); i < local_size; ++i)
         {
             if (0 < i)
             {
                 out_stream << ',';
             }
-            this_type::convert_node(out_stream, in_node.get_map_key(i));
+            this_type::convert_node(out_stream, in_node.get_container_key(i));
             out_stream << ':';
-            this_type::convert_node(out_stream, in_node.get_map_value(i));
+            this_type::convert_node(out_stream, in_node.get_container_value(i));
         }
         out_stream << '}';
     }

@@ -75,16 +75,20 @@ class psyq::binarc::archive
         numerics_NEGATIVE_64,
         numerics_FLOATING_32 = this_type::kind_FLOATING,
         numerics_FLOATING_64,
+
     }; // enum numerics
 
-    private: static unsigned const TAG_FORMAT_BITS_SIZE = 4;
-    private: static unsigned const TAG_FORMAT_BITS_MAX
-        = (1 << this_type::TAG_FORMAT_BITS_SIZE) - 1;
-    private: static unsigned const TAG_FORMAT_BITS_POSITION
-        = sizeof(this_type::memory_unit) * 4 - this_type::TAG_FORMAT_BITS_SIZE;
-    private: static unsigned const TAG_IMMEDIATE_BITS_MASK
-        = (1 << this_type::TAG_FORMAT_BITS_POSITION) - 1;
-    private: static unsigned const NODE_COUNT_PER_MAP_ELEMENT = 2;
+    private: enum: unsigned
+    {
+        TAG_FORMAT_BITS_SIZE = 4,
+        TAG_FORMAT_BITS_MAX = (1 << this_type::TAG_FORMAT_BITS_SIZE) - 1,
+        TAG_FORMAT_BITS_POSITION = sizeof(this_type::memory_unit) * 8
+            - this_type::TAG_FORMAT_BITS_SIZE,
+        TAG_IMMEDIATE_BITS_MASK
+            = (1 << this_type::TAG_FORMAT_BITS_POSITION) - 1,
+        NODE_COUNT_PER_MAP_ELEMENT = 2,
+        ROOT_UNIT_POSITION = 1,
+    };
 
     //-------------------------------------------------------------------------
     /// binarc辞書の検索に使うキー。
@@ -220,6 +224,7 @@ class psyq::binarc::archive
                 psyq::binarc::archive::memory_unit kind;
             } raw;
         };
+
     }; // class map_key
 
     //-------------------------------------------------------------------------
@@ -279,7 +284,7 @@ class psyq::binarc::archive
      */
     public: this_type::iterator get_root() const
     {
-        return this->get_unit(1U);
+        return this->get_unit(this_type::ROOT_UNIT_POSITION);
     }
 
     /** @brief binarc書庫内のメモリ位置を取得する。
@@ -1133,6 +1138,40 @@ class binarc_to_block_yaml
     private: typedef binarc_to_block_yaml this_type;
 
     //-------------------------------------------------------------------------
+    public: static void convert(std::string const& in_file_path)
+    {
+        // ファイルを開く。
+        std::ifstream local_file_stream(
+            in_file_path, std::ios::in | std::ios::binary);
+        if (!local_file_stream)
+        {
+            PSYQ_ASSERT(false);
+            return;
+        }
+
+        // ファイルの大きさを取得する。
+        local_file_stream.seekg(0, std::ios::end);
+        auto const local_file_size(
+            static_cast<std::size_t>(local_file_stream.tellg()));
+
+        // ファイルを、std::vectorへ読み込む。
+        std::vector<psyq::binarc::archive::memory_unit> local_file_buffer(
+            (local_file_size + sizeof(psyq::binarc::archive::memory_unit) - 1)
+            / sizeof(psyq::binarc::archive::memory_unit));
+        local_file_stream.seekg(0, std::ios::beg);
+        local_file_stream.read(
+            reinterpret_cast<char*>(&local_file_buffer.front()),
+            local_file_size);
+
+        // BINARCバイナリをYAML文字列に変換する。
+        psyq::binarc::archive local_archive(
+            &local_file_buffer.front(), local_file_size);
+        std::ostringstream local_string_stream;
+        convert(local_string_stream, local_archive);
+        std::cout << local_string_stream.str();
+    }
+
+    //-------------------------------------------------------------------------
     public: static void convert(
         std::ostringstream& out_stream,
         psyq::binarc::archive const& in_archive)
@@ -1140,7 +1179,6 @@ class binarc_to_block_yaml
         auto local_iterator(in_archive.get_root());
         if (local_iterator != nullptr)
         {
-in_archive.get_map_key(local_iterator, 0.25);
             this_type::convert_node(out_stream, in_archive, local_iterator);
         }
     }

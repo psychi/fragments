@@ -29,9 +29,10 @@ _BINARC_FORMAT_FLOATING_64        = 13 # IEEE754倍精度浮動小数点数。
 #ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 class _SerializeNode(object):
 
-    def __init__(self, in_format, in_value):
+    def __init__(self, in_format, in_value, in_hash=0xffffffff):
         self._format = in_format
         self._value = in_value
+        self._hash = in_hash & 0xffffffff
 
     #--------------------------------------------------------------------------
     ## @brief 値から、binarc形式のバイト列を構築する。
@@ -112,14 +113,12 @@ class _SerializeNode(object):
         local_current_size = out_stream.tell()
         assert local_current_size % 4 == 0
         if self._format == _BINARC_FORMAT_STRING:
-            ## @todo 文字列のハッシュ値を決定する処理が未実装。
-            local_hash = hash(self._value) & ((1 << 32) - 1)
             local_length = len(self._value)
             assert local_length < (1 << 32)
             out_stream.write(
                 struct.pack(
                     ''.join(('<II', str(((local_length + 3) // 4) * 4), 's')),
-                    local_hash,
+                    self._hash,
                     local_length,
                     self._value))
         else:
@@ -202,7 +201,7 @@ class _SerializeNode(object):
     @staticmethod
     def _make_node(io_value_map, in_value):
         if isinstance(in_value, bool):
-            return _SerializeNode(_BINARC_FORMAT_BOOLEAN, in_value)
+            return _SerializeNode(_BINARC_FORMAT_BOOLEAN, in_value, in_value)
         elif isinstance(in_value, (int, long)):
             return _SerializeNode._make_integer_node(io_value_map, in_value)
         elif isinstance(in_value, float):
@@ -211,7 +210,10 @@ class _SerializeNode(object):
             local_string = in_value.encode('utf-8')
             local_node = io_value_map.get(local_string)
             if local_node is None:
-                local_node = _SerializeNode(_BINARC_FORMAT_STRING, local_string)
+                local_node = _SerializeNode(
+                    _BINARC_FORMAT_STRING,
+                    local_string, 
+                    _SerializeNode._make_bytes_hash(local_string))
                 io_value_map[local_string] = local_node
             return local_node
         elif isinstance(in_value, (list, tuple)):
@@ -221,14 +223,18 @@ class _SerializeNode(object):
                     _SerializeNode._make_node(io_value_map, local_element))
             return _SerializeNode(_BINARC_FORMAT_ARRAY, tuple(local_array))
         elif isinstance(in_value, dict):
-            ## @todo 辞書のソートをすること。
+            # 辞書をソートする。
             local_map = []
             for local_key, local_value in in_value.items():
-                local_map.append(
-                    _SerializeNode._make_node(io_value_map, local_key))
-                local_map.append(
-                    _SerializeNode._make_node(io_value_map, local_value))
-            return _SerializeNode(_BINARC_FORMAT_MAP, tuple(local_map))
+                local_map.append((
+                    _SerializeNode._make_node(io_value_map, local_key),
+                    _SerializeNode._make_node(io_value_map, local_value)))
+            local_map.sort(key=lambda x: (x[0]._hash << 4) | x[0]._format)
+            local_array = []
+            for local_key, local_value in local_map:
+                local_array.append(local_key)
+                local_array.append(local_value)
+            return _SerializeNode(_BINARC_FORMAT_MAP, tuple(local_array))
         else:
             # 値が未対応の型だった。
             assert False
@@ -243,19 +249,23 @@ class _SerializeNode(object):
         local_node = io_value_map.get(in_value)
         if local_node is not None:
             return local_node
-        elif (
-            in_value.is_integer() and
+        if (in_value.is_integer() and
             -(1 << 63) <= in_value and in_value < (1 << 64)
         ):
             # 整数に変換できるなら、整数としてシリアライズする。
             return _SerializeNode._make_integer_node(io_value_map, long(in_value))
-        elif struct.unpack('f', struct.pack('f', in_value))[0] == in_value:
+
+        local_pack = struct.pack('f', in_value)
+        if struct.unpack('f', local_pack)[0] == in_value:
             # 単精度浮動小数点としてシリアライズする。
             local_format = _BINARC_FORMAT_FLOATING_32
+            local_hash = struct.unpack('I', local_pack)[0]
         else:
             # 倍精度浮動小数点としてシリアライズする。
             local_format = _BINARC_FORMAT_FLOATING_64
-        local_node = _SerializeNode(local_format, in_value)
+            local_pack = struct.unpack('II', struct.pack('d', in_value))
+            local_hash = local_pack[0] ^ local_pack[1]
+        local_node = _SerializeNode(local_format, in_value, local_hash)
         io_value_map[in_value] = local_node
         return local_node
 
@@ -274,23 +284,50 @@ class _SerializeNode(object):
             return _SerializeNode(_BINARC_FORMAT_NIL, None)
         elif in_value < -(1 << 31):
             local_format = _BINARC_FORMAT_NEGATIVE_64
+            local_hash = _SerializeNode._make_64bits_integer_hash(in_value)
         elif in_value < -(_BINARC_IMMEDIATE_BITS_MASK + 1):
             local_format = _BINARC_FORMAT_NEGATIVE_32
+            local_hash = in_value
         elif in_value < 0:
-            return _SerializeNode(_BINARC_FORMAT_NEGATIVE_IMMEDIATE, in_value)
+            return _SerializeNode(
+                _BINARC_FORMAT_NEGATIVE_IMMEDIATE, in_value, in_value)
         elif in_value <= _BINARC_IMMEDIATE_BITS_MASK:
-            return _SerializeNode(_BINARC_FORMAT_UNSIGNED_IMMEDIATE, in_value)
+            return _SerializeNode(
+                _BINARC_FORMAT_UNSIGNED_IMMEDIATE, in_value, in_value)
         elif in_value < (1 << 32):
             local_format = _BINARC_FORMAT_UNSIGNED_32
+            local_hash = in_value
         elif in_value < (1 << 64):
             local_format = _BINARC_FORMAT_UNSIGNED_64
+            local_hash = _SerializeNode._make_64bits_integer_hash(in_value)
         else:
             # 64ビットより大きい整数は未対応。
             assert False, 'Integer greater than 64-bit is not supported.'
             return _SerializeNode(_BINARC_FORMAT_NIL, None)
-        local_node = _SerializeNode(local_format, in_value)
+        local_node = _SerializeNode(local_format, in_value, local_hash)
         io_value_map[in_value] = local_node
         return local_node
+
+    #--------------------------------------------------------------------------
+    ## @brief バイト列のハッシュ値を算出する。
+    #  @param[in] in_bytes ハッシュ値を算出するバイト列。
+    #  @return バイト列のハッシュ値。
+    @staticmethod
+    def _make_bytes_hash(in_bytes):
+        # 32ビットFNV-1でハッシュ値を算出する。
+        FNV_OFFSET_BASIS_32 = 0x811c9dc5
+        FNV_PRIME_32 = 0x1000193
+        local_hash = FNV_OFFSET_BASIS_32
+        for local_char in in_bytes:
+            local_hash = ord(local_char) ^ (
+                (FNV_PRIME_32 * local_hash) & 0xffffffff);
+        return local_hash
+
+    @staticmethod
+    def _make_64bits_integer_hash(in_value):
+        local_pack = struct.unpack(
+            '<II', struct.pack('<Q', in_value & 0xffffffffffffffff))
+        return local_pack[0] ^ local_pack[1]
 
 
 #ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -305,8 +342,16 @@ def pack(in_value):
 import binascii
 if __name__ == '__main__':
     local_sample_data = {
-        'UNSIGNED': [   0xfffffff,  0xffffffff,  0x100000000],
-        'NEGATIVE': [-0x010000000, -0x80000000, -0x100000000],
+        0xfffffff: 'UNSIGNED_IMMEDIATE',
+        0xffffffff: 'UNSIGNED_32',
+        0x100000000: 'UNSIGNED_64',
+        -0x10000000: 'NEGATIVE_IMMEDIATE',
+        -0x80000000: 'NEGATIVE_32',
+        -0x100000000: 'NEGATIVE_64',
+        0.5: 'FLOATING_32',
+        0.1: 'FLOATING_64',
+        'UNSIGNED': [  0xfffffff,  0xffffffff,  0x100000000],
+        'NEGATIVE': [-0x10000000, -0x80000000, -0x100000000],
         'FLOATING': [
             0.5, 0.1,
             float(0xfffffff), float(0xffffffff),

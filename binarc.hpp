@@ -1397,25 +1397,22 @@ class binarc_to_block_yaml
     {
         out_stream << '{';
         auto const local_size(in_archive.get_container_size(in_iterator));
-in_archive.get_map_key(in_iterator, true);
-in_archive.get_map_key(in_iterator, 10);
-in_archive.get_map_key(in_iterator, 10.1);
-in_archive.get_map_key(in_iterator, 10.2f);
         for (unsigned i(0); i < local_size; ++i)
         {
             if (0 < i)
             {
                 out_stream << ',';
             }
-            this_type::convert_node(
-                out_stream,
-                in_archive,
+            auto const local_key_iterator(
                 in_archive.get_container_key(in_iterator, i));
-            out_stream << ':';
             this_type::convert_node(
-                out_stream,
-                in_archive,
+                out_stream, in_archive, local_key_iterator);
+            out_stream << ':';
+            auto const local_value_iterator(
+                //in_archive.get_map_value(in_iterator, local_key_iterator));
                 in_archive.get_container_value(in_iterator, i));
+            this_type::convert_node(
+                out_stream, in_archive, local_value_iterator);
         }
         out_stream << '}';
     }

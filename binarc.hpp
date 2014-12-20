@@ -213,7 +213,7 @@ class psyq::binarc::_private::map_key
 
     /** @brief 文字列で、辞書検索キーを初期化する。
         @param[in] in_raw_data 文字列の先頭位置。
-        @param[in] in_raw_size 文字列の要素数。
+        @param[in] in_raw_size 文字列のバイト数。
      */
     public: map_key(
         void const* const in_raw_data,
@@ -844,9 +844,9 @@ class psyq::binarc::node
         }
     }
 
-    /** @brief *thisが指すコンテナの要素数を取得する。
+    /** @brief *thisが指すコンテナから、要素の数を取得する。
         @return
-            *thisが指すコンテナの要素数。
+            *thisが指すコンテナの要素の数。
             ただし、*thisがコンテナを指していない場合は、0を返す。
      */
     public: std::size_t get_container_size() const
@@ -862,11 +862,11 @@ class psyq::binarc::node
         }
     }
 
-    /** @brief コンテナ要素のキーを取得する。
+    /** @brief *thisが指すコンテナから、要素のキーを取得する。
         @param[in] in_index 取得する要素の要素のインデックス番号。
         @return
-            *thisが指すコンテナが持つ、要素のキーを指すノード。
-            ただし、該当する要素が存在しない場合は、空ノードを返す。
+            *thisが指すコンテナの、要素のキーを指すノード。
+            ただし、該当する要素がコンテナに存在しない場合は、空ノードを返す。
      */
     public: this_type get_container_key(std::size_t const in_index) const
     {
@@ -875,11 +875,11 @@ class psyq::binarc::node
             local_key: this_type();
     }
 
-    /** @brief *thisが指すコンテナの、要素の値を取得する。
+    /** @brief *thisが指すコンテナから、要素の値を取得する。
         @param[in] in_index 取得する要素のインデックス番号。
         @return
-            コンテナの要素の値を指すノード。
-            ただし、該当する要素が存在しない場合は、空ノードを返す。
+            *thisが指すコンテナの、要素の値を指すノード。
+            ただし、該当する要素がコンテナに存在しない場合は、空ノードを返す。
      */
     public: this_type get_container_value(std::size_t const in_index) const
     {
@@ -907,10 +907,10 @@ class psyq::binarc::node
         return this->switch_container_node(in_index);
     }
 
-    /** @brief コンテナの要素値に切り替える。
+    /** @brief *thisが指すコンテナの、要素の値へ切り替える。
         @param[in] in_index 切り替える要素のインデックス番号。
-        @retval true  成功。*thisは、コンテナの要素値へ切り替わった。
-        @retval false 失敗。該当するコンテナ要素が存在しない。*thisは変わらない。
+        @retval true  成功。*thisは、コンテナの要素の値へ切り替わった。
+        @retval false 失敗。該当する要素がコンテナに存在しない。*thisは変わらない。
      */
     public: bool switch_container_value(std::size_t in_index)
     {
@@ -926,10 +926,10 @@ class psyq::binarc::node
         return this->switch_container_node(in_index);
     }
     //@}
-    /** @brief コンテナの下位ノードに切り替える。
+    /** @brief *thisが指すコンテナの、下位ノードへ切り替える。
         @param[in] in_index 切り替える下位ノードのインデックス番号。
         @retval true  成功。*thisは、コンテナの下位ノードへ切り替わった。
-        @retval false 失敗。該当する下位ノードが存在しない。*thisは変わらない。
+        @retval false 失敗。該当する下位ノードがコンテナに存在しない。*thisは変わらない。
      */
     private: bool switch_container_node(std::size_t const in_index)
     {
@@ -959,11 +959,11 @@ class psyq::binarc::node
     //-------------------------------------------------------------------------
     /// @name 辞書ノード
     //@{
-    /** @brief 辞書の要素キーを取得する。
+    /** @brief *thisが指す辞書から、要素のキーを取得する。
         @param[in] in_key 取得する要素に対応するキーとなる数値。
         @return
-            辞書の要素キーを指すノード。
-            ただし、該当する辞書要素が存在しない場合は、空ノードを返す。
+            辞書の要素のキーを指すノード。
+            ただし、該当する要素が辞書に存在しない場合は、空ノードを返す。
      */
     public: template<typename template_numerics>
     this_type get_map_key(template_numerics const in_key) const
@@ -972,12 +972,12 @@ class psyq::binarc::node
         return local_node.switch_map_key(in_key)? local_node: this_type();
     }
 
-    /** @brief 辞書の要素キーを取得する。
+    /** @brief *thisが指す辞書から、要素のキーを取得する。
         @param[in] in_raw_data 取得する要素に対応するキー文字列の先頭位置。
-        @param[in] in_raw_size 取得する要素に対応するキー文字列の要素数。
+        @param[in] in_raw_size 取得する要素に対応するキー文字列のバイト数。
         @return
-            辞書の要素キーを指すノード。
-            ただし、該当する辞書要素が存在しない場合は、空ノードを返す。
+            辞書の要素のキーを指すノード。
+            ただし、該当する要素が辞書に存在しない場合は、空ノードを返す。
      */
     public: this_type get_map_key(
         void const* const in_raw_data,
@@ -989,11 +989,11 @@ class psyq::binarc::node
             local_node: this_type();
     }
 
-    /** @brief 辞書の要素値を取得する。
+    /** @brief *thisが指す辞書から、要素の値を取得する。
         @param[in] in_key 取得する辞書要素に対応するキー数値。
         @return
-            辞書の要素値を指すノード。
-            ただし、該当する辞書要素が存在しない場合は、空ノードを返す。
+            辞書の要素の値を指すノード。
+            ただし、該当する要素が辞書に存在しない場合は、空ノードを返す。
      */
     public: template<typename template_numerics>
     this_type get_map_value(template_numerics const in_key) const
@@ -1002,12 +1002,12 @@ class psyq::binarc::node
         return local_node.switch_map_value(in_key)? local_node: this_type();
     }
 
-    /** @brief 辞書の要素値を取得する。
+    /** @brief *thisが指す辞書から、要素の値を取得する。
         @param[in] in_raw_data 取得する要素に対応するキー文字列の先頭位置。
-        @param[in] in_raw_size 取得する要素に対応するキー文字列の要素数。
+        @param[in] in_raw_size 取得する要素に対応するキー文字列のバイト数。
         @return
-            辞書の要素値を指すノード。
-            ただし、該当する辞書要素が存在しない場合は、空ノードを返す。
+            辞書の要素の値を指すノード。
+            ただし、該当する要素が辞書に存在しない場合は、空ノードを返す。
      */
     public: this_type get_map_value(
         void const* const in_raw_data,
@@ -1019,21 +1019,21 @@ class psyq::binarc::node
             local_node: this_type();
     }
 
-    /** @brief 辞書の要素キーに切り替える。
-        @param[in] in_key 切り替える辞書要素に対応する数値キー。
-        @retval true  成功。*thisは、辞書の要素キーへ切り替わった。
-        @retval false 失敗。該当する辞書要素が存在しない。*thisは変わらない。
+    /** @brief *thisが指す辞書の、要素のキーへ切り替える。
+        @param[in] in_key 切り替える要素に対応するキー。
+        @retval true  成功。*thisは、辞書の要素のキーへ切り替わった。
+        @retval false 失敗。該当する要素が辞書に存在しない。*thisは変わらない。
      */
-    public: template<typename template_numerics>
-    bool switch_map_key(template_numerics const in_key)
+    public: template<typename template_key>
+    bool switch_map_key(template_key const in_key)
     {
         return this->switch_container_key(this->find_map_index(in_key));
     }
 
-    /** @brief 辞書の要素キーに切り替える。
-        @param[in] in_raw_data 切り替える辞書要素に対応するキー文字列の先頭位置。
-        @param[in] in_raw_size 切り替える辞書要素に対応するキー文字列の要素数。
-        @retval true  成功。*thisは、辞書の要素キーへ切り替わった。
+    /** @brief *thisが指す辞書の、要素のキーへ切り替える。
+        @param[in] in_raw_data 切り替える要素に対応するキー文字列の先頭位置。
+        @param[in] in_raw_size 切り替える要素に対応するキー文字列のバイト数。
+        @retval true  成功。*thisは、辞書の要素のキーへ切り替わった。
         @retval false 失敗。該当する辞書要素が存在しない。*thisは変わらない。
      */
     public: bool switch_map_key(
@@ -1046,10 +1046,10 @@ class psyq::binarc::node
             false;
     }
 
-    /** @brief 辞書要素の値に切り替える。
+    /** @brief *thisが指す辞書の、要素の値へ切り替える。
         @param[in] in_key 切り替える要素のキー。
-        @retval true  成功。*thisは、辞書要素の値へ切り替わった。
-        @retval false 失敗。該当する辞書要素が存在しない。*thisは変わらない。
+        @retval true  成功。*thisは、辞書の要素の値へ切り替わった。
+        @retval false 失敗。該当する要素が辞書に存在しない。*thisは変わらない。
      */
     public: template<typename template_numerics>
     bool switch_map_value(template_numerics const in_key)
@@ -1062,11 +1062,11 @@ class psyq::binarc::node
         return false;
     }
 
-    /** @brief 辞書要素の値に切り替える。
-        @param[in] in_raw_data 切り替える辞書要素に対応するキー文字列の先頭位置。
-        @param[in] in_raw_size 切り替える辞書要素に対応するキー文字列の要素数。
-        @retval true  成功。*thisは、辞書要素の値へ切り替わった。
-        @retval false 失敗。該当する辞書要素が存在しない。*thisは変わらない。
+    /** @brief *thisが指す辞書の、要素の値へ切り替える。
+        @param[in] in_raw_data 切り替える要素に対応するキー文字列の先頭位置。
+        @param[in] in_raw_size 切り替える要素に対応するキー文字列のバイト数。
+        @retval true  成功。*thisは、辞書の要素の値へ切り替わった。
+        @retval false 失敗。該当する要素が辞書に存在しない。*thisは変わらない。
      */
     public: bool switch_map_value(
         void const* const in_raw_data,
@@ -1080,10 +1080,10 @@ class psyq::binarc::node
         return false;
     }
 
-    /** @brief 辞書要素を検索する。
-        @param[in] in_key 検索する辞書要素に対応するキー数値。
-        @retval true  キーに対応する辞書要素が存在する。
-        @retval false キーに対応する辞書要素が存在しない。
+    /** @brief *thisが指す辞書から、要素を検索する。
+        @param[in] in_key 検索する要素に対応するキー。
+        @retval true  キーに対応する要素が存在する。
+        @retval false キーに対応する要素が存在しない。
      */
     public: template<typename template_numerics>
     bool find_map_key(template_numerics const in_key) const
@@ -1091,11 +1091,11 @@ class psyq::binarc::node
         return this->find_map_index(in_key) != this_type::MAP_INDEX_NONE;
     }
 
-    /** @brief 辞書要素を検索する。
+    /** @brief *thisが指す辞書から、要素を検索する。
         @param[in] in_raw_data 検索する要素に対応するキー文字列の先頭位置。
-        @param[in] in_raw_size 検索する要素に対応するキー文字列の要素数。
-        @retval true  キーに対応する辞書要素が存在する。
-        @retval false キーに対応する辞書要素が存在しない。
+        @param[in] in_raw_size 検索する要素に対応するキー文字列のバイト数。
+        @retval true  キーに対応する要素が存在する。
+        @retval false キーに対応する要素が存在しない。
      */
     public: bool find_map_key(
         void const* const in_raw_data,
@@ -1107,17 +1107,24 @@ class psyq::binarc::node
                 in_raw_data, in_raw_size);
     }
 
-    /** @brief 辞書要素のインデックス番号を検索する。
-        @param[in] in_key 検索する辞書要素の真偽値キー。
-        @retval !=MAP_INDEX_NONE 真偽値キーに対応する辞書要素のインデックス番号。
-        @retval ==MAP_INDEX_NONE 真偽値キーに対応する辞書要素が存在しない。
+    /** @brief *thisが指す辞書から、要素のインデックス番号を検索する。
+        @param[in] in_key 検索する要素の真偽値キー。
+        @retval !=MAP_INDEX_NONE 真偽値キーに対応する要素のインデックス番号。
+        @retval ==MAP_INDEX_NONE 真偽値キーに対応する要素が存在しない。
      */
     public: std::size_t find_map_index(bool const in_key) const
     {
         return this->find_map_index(psyq::binarc::_private::map_key(in_key));
     }
 
-    /** @brief 辞書要素のインデックス番号を検索する。
+    /** @brief *thisが指す辞書から、要素のインデックス番号を検索する。
+        @param[in] in_key 検索する要素のキー。
+        @retval !=MAP_INDEX_NONE キーに対応する要素のインデックス番号。
+        @retval ==MAP_INDEX_NONE キーに対応する要素が存在しない。
+     */
+    public: std::size_t find_map_index(this_type const& in_key) const;
+
+    /** @brief *thisが指す辞書から、要素のインデックス番号を検索する。
         @param[in] in_key 検索する辞書要素の数値キー。
         @retval !=MAP_INDEX_NONE 数値キーに対応する辞書要素のインデックス番号。
         @retval ==MAP_INDEX_NONE 数値キーに対応する辞書要素が存在しない。
@@ -1148,11 +1155,11 @@ class psyq::binarc::node
         return psyq::binarc::MAP_INDEX_NONE;
     }
 
-    /** @brief 辞書要素のインデックス番号を検索する。
-        @param[in] in_raw_data 検索する辞書要素のキーとなる文字列の先頭位置。
-        @param[in] in_raw_size 検索する辞書要素のキーとなる文字列の要素数。
-        @retval !=MAP_INDEX_NONE 文字列キーに対応する辞書要素のインデックス番号。
-        @retval ==MAP_INDEX_NONE 文字列キーに対応する辞書要素が存在しない。
+    /** @brief *thisが指す辞書から、要素のインデックス番号を検索する。
+        @param[in] in_raw_data 検索する要素のキーとなる文字列の先頭位置。
+        @param[in] in_raw_size 検索する要素のキーとなる文字列のバイト数。
+        @retval !=MAP_INDEX_NONE 文字列キーに対応する要素のインデックス番号。
+        @retval ==MAP_INDEX_NONE 文字列キーに対応する要素が存在しない。
      */
     public: std::size_t find_map_index(
         void const* const in_raw_data,
@@ -1167,10 +1174,10 @@ class psyq::binarc::node
             psyq::binarc::_private::map_key(in_raw_data, in_raw_size));
     }
     //@}
-    /** @brief 辞書要素のインデックス番号を検索する。
-        @param[in] in_key 検索する辞書要素のキー。
-        @retval !=MAP_INDEX_NONE キーに対応する辞書要素のインデックス番号。
-        @retval ==MAP_INDEX_NONE キーに対応する辞書要素が存在しない。
+    /** @brief *thisが指す辞書から、要素のインデックス番号を検索する。
+        @param[in] in_key 検索する要素のキー。
+        @retval !=MAP_INDEX_NONE キーに対応する要素のインデックス番号。
+        @retval ==MAP_INDEX_NONE キーに対応する要素が存在しない。
      */
     private: std::size_t find_map_index(
         psyq::binarc::_private::map_key const& in_key)

@@ -68,7 +68,7 @@ namespace psyq
             unsigned const CONTAINER_FRONT = CONTAINER_SIZE + 1;
             unsigned const EXTENDED_KIND = CONTAINER_HASH + 1;
             unsigned const EXTENDED_FRONT = EXTENDED_KIND + 1;
-            unsigned const UNIT_COUNT_PER_MAP_ELEMENT = 2;
+            unsigned const NODE_COUNT_PER_MAP_ELEMENT = 2;
         } // namespace _private
     } // namespace binarc
 } // namespace psyq
@@ -581,9 +581,9 @@ class psyq::binarc::node
         return this->archive_;
     }
 
-    /** @brief *thisが空か判定する。
-        @retval true  *thisは値を指しておらず、空。
-        @retval false *thisは値を指していて、空ではない。
+    /** @brief *thisが空値か判定する。
+        @retval true  *thisは空値。
+        @retval false *thisは空値ではない。
      */
     public: bool is_empty() const
     {
@@ -729,6 +729,18 @@ class psyq::binarc::node
     /// @name 真偽値ノード
     //@{
     /** @brief *thisが指す真偽値を取得する。
+        @param[in] in_default 真偽値の取得に失敗した場合に返す値。
+        @return
+            *thisが指す真偽値。
+            ただし、*thisが真偽値を指してない場合は、 in_default を返す。
+     */
+    public: bool get_boolean(bool const in_default) const
+    {
+        auto const local_state(this->get_boolean_state());
+        return local_state < 0? in_default: (0 < local_state);
+    }
+
+    /** @brief *thisが指す真偽値を取得する。
         @retval 正 *thisはtrueを指している。
         @retval 0  *thisはfalseを指している。
         @retval 負 *thisは真偽値を指してない。
@@ -736,30 +748,28 @@ class psyq::binarc::node
     public: int get_boolean_state() const
     {
         return this->get_format() == psyq::binarc::kind_BOOLEAN?
-            (*this->tag_ & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK) != 0: -1;
-    }
-
-    /** @brief *thisが指す真偽値を取得する。
-        @param[out] out_boolean 取得した真偽値が代入される。
-        @retval true 成功。 out_boolean に取得した真偽値を代入。
-        @retval false
-            失敗。*thisが真偽値を指してない。 out_boolean は変化しない。
-     */
-    public: bool read_boolean(bool& out_boolean) const
-    {
-        auto const local_state(this->get_boolean_state());
-        if (local_state < 0)
-        {
-            return false;
-        }
-        out_boolean = (0 < local_state);
-        return true;
+            (*this->tag_ & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK): -1;
     }
     //@}
     //-------------------------------------------------------------------------
     /// @name 文字列ノード
     //@{
-    /** @brief *thisが指す文字列のバイト数を取得する。
+    /** @brief *thisが指す文字列の、先頭位置を取得する。
+        @retval !=nullptr
+            *thisが指す文字列の先頭位置。
+            *thisが文字列を指す場合は、必ずnullptr以外となる。
+        @retval ==nullptr *thisが文字列を指してない。
+     */
+    public: char const* get_string_data() const
+    {
+        auto const local_body(this->get_body(psyq::binarc::kind_STRING));
+        return local_body != nullptr?
+            reinterpret_cast<char const*>(
+                local_body + psyq::binarc::_private::CONTAINER_FRONT):
+            nullptr;
+    }
+
+    /** @brief *thisが指す文字列の、バイト数を取得する。
         @return
             *thisが指す文字列のバイト数。
             ただし、*thisが文字列を指してない場合は、0を返す。
@@ -770,25 +780,24 @@ class psyq::binarc::node
         return local_body != nullptr?
             local_body[psyq::binarc::_private::CONTAINER_SIZE]: 0;
     }
-
-    /** @brief *thisが指す文字列の先頭位置を取得する。
-        @return
-            *thisが指す文字列の先頭位置。
-            ただし、*thisが文字列を指してない場合は、nullptrを返す。
-     */
-    public: char const* get_string_data() const
-    {
-        auto const local_body(this->get_body(psyq::binarc::kind_STRING));
-        return local_body != nullptr?
-            reinterpret_cast<char const*>(
-                local_body + psyq::binarc::_private::CONTAINER_FRONT):
-            nullptr;
-    }
     //@}
     //-------------------------------------------------------------------------
     /// @name 拡張バイト列ノード
     //@{
-    /** @brief *thisが指す拡張バイト列のバイト数を取得する。
+    /** @brief *thisが指す拡張バイト列の、先頭位置を取得する。
+        @retval !=nullptr
+            *thisが指す拡張バイト列の先頭位置。
+            *thisが文字列を指す場合は、必ずnullptr以外となる。
+        @retval ==nullptr *thisが拡張バイト列を指してない。
+     */
+    public: void const* get_extended_data() const
+    {
+        auto const local_body(this->get_body(psyq::binarc::kind_EXTENDED));
+        return local_body != nullptr?
+            local_body + psyq::binarc::_private::EXTENDED_FRONT: nullptr;
+    }
+
+    /** @brief *thisが指す拡張バイト列の、バイト数を取得する。
         @return
             *thisが指す拡張バイト列のバイト数。
             ただし、*thisが拡張バイト列を指してない場合は、0を返す。
@@ -800,7 +809,7 @@ class psyq::binarc::node
             local_body[psyq::binarc::_private::CONTAINER_SIZE]: 0;
     }
 
-    /** @brief *thisが指す拡張バイト列の種別を取得する。
+    /** @brief *thisが指す拡張バイト列の、種別を取得する。
         @return
             *thisが指す拡張バイト列の種別。
             ただし、*thisが拡張バイト列を指してない場合は、0を返す。
@@ -810,19 +819,6 @@ class psyq::binarc::node
         auto const local_body(this->get_body(psyq::binarc::kind_EXTENDED));
         return local_body != nullptr?
             local_body[psyq::binarc::_private::EXTENDED_KIND]: 0;
-    }
-
-    /** @brief *thisが指す拡張バイト列の先頭位置を取得する。
-        @return
-            *thisが指す拡張バイト列の先頭位置。
-            ただし、*thisが拡張バイト列を指してない場合は、nullptrを返す。
-     */
-    public: void const* get_extended_data() const
-    {
-        auto const local_body(this->get_body(psyq::binarc::kind_EXTENDED));
-        return local_body != nullptr
-            && 0 < local_body[psyq::binarc::_private::CONTAINER_SIZE]?
-                local_body + psyq::binarc::_private::EXTENDED_FRONT: nullptr;
     }
     //@}
     //-------------------------------------------------------------------------
@@ -856,7 +852,8 @@ class psyq::binarc::node
         case psyq::binarc::kind_ARRAY:
             return this->get_container().size;
         case psyq::binarc::kind_MAP:
-            return this->get_container().size / 2;
+            return this->get_container().size
+                / psyq::binarc::_private::NODE_COUNT_PER_MAP_ELEMENT;
         default:
             return 0;
         }
@@ -866,7 +863,7 @@ class psyq::binarc::node
         @param[in] in_index 取得する要素の要素のインデックス番号。
         @return
             *thisが指すコンテナの、要素のキーを指すノード。
-            ただし、該当する要素がコンテナに存在しない場合は、空ノードを返す。
+            ただし、該当する要素が存在しない場合は、空値を返す。
      */
     public: this_type get_container_key(std::size_t const in_index) const
     {
@@ -879,7 +876,7 @@ class psyq::binarc::node
         @param[in] in_index 取得する要素のインデックス番号。
         @return
             *thisが指すコンテナの、要素の値を指すノード。
-            ただし、該当する要素がコンテナに存在しない場合は、空ノードを返す。
+            ただし、該当する要素が存在しない場合は、空値を返す。
      */
     public: this_type get_container_value(std::size_t const in_index) const
     {
@@ -900,7 +897,7 @@ class psyq::binarc::node
         case psyq::binarc::kind_ARRAY:
             break;
         case psyq::binarc::kind_MAP:
-            in_index *= psyq::binarc::_private::UNIT_COUNT_PER_MAP_ELEMENT;
+            in_index *= psyq::binarc::_private::NODE_COUNT_PER_MAP_ELEMENT;
         default:
             return false;
         }
@@ -910,7 +907,7 @@ class psyq::binarc::node
     /** @brief *thisが指すコンテナの、要素の値へ切り替える。
         @param[in] in_index 切り替える要素のインデックス番号。
         @retval true  成功。*thisは、コンテナの要素の値へ切り替わった。
-        @retval false 失敗。該当する要素がコンテナに存在しない。*thisは変わらない。
+        @retval false 失敗。該当する要素が存在しない。*thisは変わらない。
      */
     public: bool switch_container_value(std::size_t in_index)
     {
@@ -919,7 +916,7 @@ class psyq::binarc::node
         case psyq::binarc::kind_ARRAY:
             break;
         case psyq::binarc::kind_MAP:
-            in_index = in_index * psyq::binarc::_private::UNIT_COUNT_PER_MAP_ELEMENT + 1;
+            in_index = in_index * psyq::binarc::_private::NODE_COUNT_PER_MAP_ELEMENT + 1;
         default:
             return false;
         }
@@ -963,7 +960,7 @@ class psyq::binarc::node
         @param[in] in_key 取得する要素に対応するキーとなる数値。
         @return
             辞書の要素のキーを指すノード。
-            ただし、該当する要素が辞書に存在しない場合は、空ノードを返す。
+            ただし、該当する要素が存在しない場合は、空値を返す。
      */
     public: template<typename template_numerics>
     this_type get_map_key(template_numerics const in_key) const
@@ -977,7 +974,7 @@ class psyq::binarc::node
         @param[in] in_raw_size 取得する要素に対応するキー文字列のバイト数。
         @return
             辞書の要素のキーを指すノード。
-            ただし、該当する要素が辞書に存在しない場合は、空ノードを返す。
+            ただし、該当する要素が存在しない場合は、空値を返す。
      */
     public: this_type get_map_key(
         void const* const in_raw_data,
@@ -990,10 +987,10 @@ class psyq::binarc::node
     }
 
     /** @brief *thisが指す辞書から、要素の値を取得する。
-        @param[in] in_key 取得する辞書要素に対応するキー数値。
+        @param[in] in_key 取得する要素に対応するキー。
         @return
             辞書の要素の値を指すノード。
-            ただし、該当する要素が辞書に存在しない場合は、空ノードを返す。
+            ただし、該当する要素が存在しない場合は、空値を返す。
      */
     public: template<typename template_numerics>
     this_type get_map_value(template_numerics const in_key) const
@@ -1007,7 +1004,7 @@ class psyq::binarc::node
         @param[in] in_raw_size 取得する要素に対応するキー文字列のバイト数。
         @return
             辞書の要素の値を指すノード。
-            ただし、該当する要素が辞書に存在しない場合は、空ノードを返す。
+            ただし、該当する要素が存在しない場合は、空値を返す。
      */
     public: this_type get_map_value(
         void const* const in_raw_data,
@@ -1022,7 +1019,7 @@ class psyq::binarc::node
     /** @brief *thisが指す辞書の、要素のキーへ切り替える。
         @param[in] in_key 切り替える要素に対応するキー。
         @retval true  成功。*thisは、辞書の要素のキーへ切り替わった。
-        @retval false 失敗。該当する要素が辞書に存在しない。*thisは変わらない。
+        @retval false 失敗。該当する要素が存在しない。*thisは変わらない。
      */
     public: template<typename template_key>
     bool switch_map_key(template_key const in_key)
@@ -1034,7 +1031,7 @@ class psyq::binarc::node
         @param[in] in_raw_data 切り替える要素に対応するキー文字列の先頭位置。
         @param[in] in_raw_size 切り替える要素に対応するキー文字列のバイト数。
         @retval true  成功。*thisは、辞書の要素のキーへ切り替わった。
-        @retval false 失敗。該当する辞書要素が存在しない。*thisは変わらない。
+        @retval false 失敗。該当する要素が存在しない。*thisは変わらない。
      */
     public: bool switch_map_key(
         void const* const in_raw_data,
@@ -1049,7 +1046,7 @@ class psyq::binarc::node
     /** @brief *thisが指す辞書の、要素の値へ切り替える。
         @param[in] in_key 切り替える要素のキー。
         @retval true  成功。*thisは、辞書の要素の値へ切り替わった。
-        @retval false 失敗。該当する要素が辞書に存在しない。*thisは変わらない。
+        @retval false 失敗。該当する要素が存在しない。*thisは変わらない。
      */
     public: template<typename template_numerics>
     bool switch_map_value(template_numerics const in_key)
@@ -1066,7 +1063,7 @@ class psyq::binarc::node
         @param[in] in_raw_data 切り替える要素に対応するキー文字列の先頭位置。
         @param[in] in_raw_size 切り替える要素に対応するキー文字列のバイト数。
         @retval true  成功。*thisは、辞書の要素の値へ切り替わった。
-        @retval false 失敗。該当する要素が辞書に存在しない。*thisは変わらない。
+        @retval false 失敗。該当する要素が存在しない。*thisは変わらない。
      */
     public: bool switch_map_value(
         void const* const in_raw_data,
@@ -1118,16 +1115,16 @@ class psyq::binarc::node
     }
 
     /** @brief *thisが指す辞書から、要素のインデックス番号を検索する。
-        @param[in] in_key 検索する要素のキー。
-        @retval !=MAP_INDEX_NONE キーに対応する要素のインデックス番号。
-        @retval ==MAP_INDEX_NONE キーに対応する要素が存在しない。
+        @param[in] in_key 検索する要素のノードキー。
+        @retval !=MAP_INDEX_NONE ノードキーに対応する要素のインデックス番号。
+        @retval ==MAP_INDEX_NONE ノードキーに対応する要素が存在しない。
      */
     public: std::size_t find_map_index(this_type const& in_key) const;
 
     /** @brief *thisが指す辞書から、要素のインデックス番号を検索する。
         @param[in] in_key 検索する辞書要素の数値キー。
-        @retval !=MAP_INDEX_NONE 数値キーに対応する辞書要素のインデックス番号。
-        @retval ==MAP_INDEX_NONE 数値キーに対応する辞書要素が存在しない。
+        @retval !=MAP_INDEX_NONE 数値キーに対応する要素のインデックス番号。
+        @retval ==MAP_INDEX_NONE 数値キーに対応する要素が存在しない。
      */
     public: template<typename template_key>
     std::size_t find_map_index(template_key const in_key) const

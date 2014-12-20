@@ -207,6 +207,24 @@ class psyq::binarc::archive
                 in_string_data, in_string_size);
             this->format = psyq::binarc::archive::kind_STRING;
         }
+        /** @brief 拡張型バイト列で、辞書検索キーを初期化する。
+            @param[in] in_extended_data 拡張型バイト列の先頭位置。
+            @param[in] in_extended_size 拡張型バイト列のバイト数。
+            @param[in] in_extended_kind 拡張型バイト列の種別。
+         */
+        public: map_key(
+            void const* const in_extended_data,
+            std::size_t const in_extended_size,
+            psyq::binarc::archive::memory_unit const in_extended_kind)
+        {
+            PSYQ_ASSERT(in_extended_data != nullptr || in_extended_data <= 0);
+            this->raw.data = in_extended_data;
+            this->raw.size = in_extended_size;
+            this->raw.kind = in_extended_kind;
+            this->hash = psyq::binarc::archive::make_hash(
+                in_extended_data, in_extended_size);
+            this->format = psyq::binarc::archive::kind_EXTENDED;
+        }
 
         //.....................................................................
         public: psyq::binarc::archive::memory_unit hash;
@@ -813,13 +831,44 @@ class psyq::binarc::archive
             失敗。 in_map が辞書を指してないか、
             in_key に対応する要素が存在しない。
      */
+    public: this_type::iterator get_map_key(
+        this_type::iterator const in_map,
+        bool const in_key)
+    const
+    {
+        return this->find_map_key(in_map, this_type::map_key(in_key));
+    }
+
+    /// @copydoc get_map_key(this_type::iterator, bool) const
     public: template<typename template_key>
     this_type::iterator get_map_key(
         this_type::iterator const in_map,
         template_key const in_key)
     const
     {
-        return this->find_map_key(in_map, this_type::map_key(in_key));
+        static_assert(
+            std::is_floating_point<template_key>::value
+            || std::is_integral<template_key>::value,
+            "");
+        if (std::is_floating_point<template_key>::value)
+        {
+            return this->find_map_key(
+                in_map,
+                this_type::map_key(static_cast<double>(in_key)));
+        }
+        if (std::is_unsigned<template_key>::value)
+        {
+            return this->find_map_key(
+                in_map,
+                this_type::map_key(static_cast<std::uint64_t>(in_key)));
+        }
+        if (std::is_signed<template_key>::value)
+        {
+            return this->find_map_key(
+                in_map,
+                this_type::map_key(static_cast<std::int64_t>(in_key)));
+        }
+        return nullptr;
     }
 
     /** @brief 反復子が指す辞書から、要素のキーへの反復子を取得する。
@@ -841,6 +890,121 @@ class psyq::binarc::archive
             in_map, this_type::map_key(in_string_data, in_string_size));
     }
 
+    /** @brief 反復子が指す辞書から、要素のキーへの反復子を取得する。
+        @param[in] in_map           辞書を指す反復子。
+        @param[in] in_extended_data キーとなる拡張バイト列の先頭位置。
+        @param[in] in_extended_size キーとなる拡張バイト列のバイト数。
+        @param[in] in_extended_kind キーとなる拡張バイト列の種別。
+        @retval !=nullptr 辞書が持つ要素の、キーへの反復子。
+        @retval ==nullptr
+            失敗。 in_map が辞書を指してないか、
+            in_key に対応する要素が存在しない。
+     */
+    public: this_type::iterator get_map_key(
+        this_type::iterator const in_map,
+        void const* const in_extended_data,
+        std::size_t const in_extended_size,
+        this_type::memory_unit const in_extended_kind)
+    const
+    {
+        return this->find_map_key(
+            in_map,
+            this_type::map_key(
+                in_extended_data, in_extended_size, in_extended_kind));
+    }
+
+    /** @brief 反復子が指す辞書から、要素のキーへの反復子を取得する。
+        @param[in] in_map 辞書を指す反復子。
+        @param[in] in_key 要素に対応するキーの反復子。*thisが持つ値を指していること。
+        @retval !=nullptr 辞書が持つ要素の、キーへの反復子。
+        @retval ==nullptr
+            失敗。 in_map が辞書を指してないか、
+            in_key に対応する要素が存在しない。
+     */
+    public: this_type::iterator get_map_key(
+        this_type::iterator const in_map,
+        this_type::iterator const in_key)
+    const
+    {
+        return this->get_map_key(in_map, in_key, *this);
+    }
+
+    /** @brief 反復子が指す辞書から、要素のキーへの反復子を取得する。
+        @param[in] in_map 辞書を指す反復子。
+        @param[in] in_key_iterator
+            要素に対応するキーの反復子。
+            in_key_archive が持つ値を指していること。
+        @param[in] in_key_archive  キーとなる反復子が指す書庫。
+        @retval !=nullptr 辞書が持つ要素の、キーへの反復子。
+        @retval ==nullptr
+            失敗。 in_map が辞書を指してないか、
+            in_key_iterator が指す値に対応する要素が存在しない。
+     */
+    public: this_type::iterator get_map_key(
+        this_type::iterator const in_map,
+        this_type::iterator const in_key_iterator,
+        this_type const& in_key_archive)
+    const
+    {
+        auto const local_key_format(
+            in_key_archive.get_format(in_key_iterator));
+        switch (local_key_format)
+        {
+        case this_type::kind_BOOLEAN:
+        {
+            auto const local_boolean_state(
+                in_key_archive.get_boolean_state(in_key_iterator));
+            if (local_boolean_state < 0)
+            {
+                break;
+            }
+            return this->get_map_key(in_map, 0 < local_boolean_state);
+        }
+        case this_type::numerics_UNSIGNED_IMMEDIATE:
+        case this_type::numerics_UNSIGNED_32:
+        case this_type::numerics_UNSIGNED_64:
+            return this->find_map_key<std::uint64_t>(
+                in_map, in_key_iterator, in_key_archive);
+        case this_type::numerics_NEGATIVE_IMMEDIATE:
+        case this_type::numerics_NEGATIVE_32:
+        case this_type::numerics_NEGATIVE_64:
+            return this->find_map_key<std::int64_t>(
+                in_map, in_key_iterator, in_key_archive);
+        case this_type::numerics_FLOATING_32:
+        case this_type::numerics_FLOATING_64:
+            return this->find_map_key<double>(
+                in_map, in_key_iterator, in_key_archive);
+        case this_type::kind_STRING:
+        {
+            auto const local_string_data(
+                in_key_archive.get_string_data(in_key_iterator));
+            PSYQ_ASSERT(local_string_data != nullptr);
+            return this->get_map_key(
+                in_map,
+                local_string_data,
+                in_key_archive.get_string_size(in_key_iterator));
+        }
+        case this_type::kind_EXTENDED:
+        {
+            auto const local_extended_data(
+                in_key_archive.get_extended_data(in_key_iterator));
+            PSYQ_ASSERT(local_extended_data != nullptr);
+            return this->get_map_key(
+                in_map,
+                local_extended_data,
+                in_key_archive.get_extended_size(in_key_iterator),
+                in_key_archive.get_extended_kind(in_key_iterator));
+        }
+        case this_type::kind_ARRAY:
+        case this_type::kind_MAP:
+            /// @note コンテナをキーとする検索は未実装。
+            break;
+        default:
+            break;
+        }
+        return nullptr;
+    }
+
     /** @brief 反復子が指す辞書から、要素の値への反復子を取得する。
         @param[in] in_map 辞書を指す反復子。
         @param[in] in_key 要素に対応するキー。
@@ -855,11 +1019,8 @@ class psyq::binarc::archive
         template_key const in_key)
     const
     {
-        auto const local_key(
+        return this_type::get_map_value(
             this->get_map_key(in_map, in_string_data, in_string_size));
-        return local_key != nullptr?
-            static_cast<this_type::memory_unit const*>(local_key) + 1:
-            nullptr;
     }
 
     /** @brief 反復子が指す辞書の、要素の値への反復子を取得する。
@@ -869,7 +1030,7 @@ class psyq::binarc::archive
         @retval !=nullptr 辞書が持つ要素の、値への反復子。
         @retval ==nullptr
             失敗。 in_map が辞書を指してないか、
-            in_key に対応する要素が存在しない。
+            キー文字列に対応する要素が存在しない。
      */
     public: this_type::iterator get_map_value(
         this_type::iterator const in_map,
@@ -877,13 +1038,93 @@ class psyq::binarc::archive
         std::size_t const in_string_size)
     const
     {
-        auto const local_key(
+        return this_type::get_map_value(
             this->get_map_key(in_map, in_string_data, in_string_size));
-        return local_key != nullptr?
-            static_cast<this_type::memory_unit const*>(local_key) + 1:
-            nullptr;
+    }
+
+    /** @brief 反復子が指す辞書から、要素の値への反復子を取得する。
+        @param[in] in_map           辞書を指す反復子。
+        @param[in] in_extended_data キーとなる拡張バイト列の先頭位置。
+        @param[in] in_extended_size キーとなる拡張バイト列のバイト数。
+        @param[in] in_extended_kind キーとなる拡張バイト列の種別。
+        @retval !=nullptr 辞書が持つ要素の、値への反復子。
+        @retval ==nullptr
+            失敗。 in_map が辞書を指してないか、
+            キーバイト列に対応する要素が存在しない。
+     */
+    public: this_type::iterator get_map_value(
+        this_type::iterator const in_map,
+        void const* const in_extended_data,
+        std::size_t const in_extended_size,
+        this_type::memory_unit const in_extended_kind)
+    const
+    {
+        return this_type::get_map_value(
+            this->get_map_key(
+                in_map, in_extended_data, in_extended_size, in_extended_kind));
+    }
+
+    /** @brief 反復子が指す辞書から、要素の値への反復子を取得する。
+        @param[in] in_map 辞書を指す反復子。
+        @param[in] in_key 要素に対応するキーの反復子。*thisが持つ値を指していること。
+        @retval !=nullptr 辞書が持つ要素の、値への反復子。
+        @retval ==nullptr
+            失敗。 in_map が辞書を指してないか、
+            in_key に対応する要素が存在しない。
+     */
+    public: this_type::iterator get_map_value(
+        this_type::iterator const in_map,
+        this_type::iterator const in_key)
+    const
+    {
+        return this->get_map_value(in_map, in_key, *this);
+    }
+
+    /** @brief 反復子が指す辞書から、要素の値への反復子を取得する。
+        @param[in] in_map 辞書を指す反復子。
+        @param[in] in_key_iterator
+            要素に対応するキーの反復子。
+            in_key_archive が持つ値を指していること。
+        @param[in] in_key_archive キーとなる反復子が指す書庫。
+        @retval !=nullptr 辞書が持つ要素の、値への反復子。
+        @retval ==nullptr
+            失敗。 in_map が辞書を指してないか、
+            in_key_iterator に対応する要素が存在しない。
+     */
+    public: this_type::iterator get_map_value(
+        this_type::iterator const in_map,
+        this_type::iterator const in_key_iterator,
+        this_type const& in_key_archive)
+    const
+    {
+        return this_type::get_map_value(
+            this->get_map_key(in_map, in_key_iterator, in_key_archive));
     }
     //@}
+    /** @brief キーに対応する値の反復子を取得する。
+        @param[in] in_key キーを指す反復子。
+        @return 値を指す反復子。
+     */
+    private: static this_type::iterator get_map_value(
+        this_type::iterator const in_key)
+    {
+        return in_key != nullptr?
+            static_cast<this_type::memory_unit const*>(in_key) + 1:
+            nullptr;
+    }
+
+    private: template<typename template_numerics>
+    this_type::iterator find_map_key(
+        this_type::iterator const in_map,
+        this_type::iterator const in_key_iterator,
+        this_type const& in_key_archive)
+    const
+    {
+        template_numerics local_numerics;
+        return in_key_archive.read_numerics(in_key_iterator, local_numerics)?
+            this->get_map_key(in_map, local_numerics): nullptr;
+    }
+
     /** @brief 反復子が指す辞書から、要素のキーを検索する。
         @param[in] in_map 辞書を指す反復子。
         @param[in] in_key 検索する要素のキー。
@@ -905,7 +1146,8 @@ class psyq::binarc::archive
                 reinterpret_cast<this_type::less_map::element const*>(
                     &local_container + 1));
             auto const local_end(
-                local_begin + local_container.size / this_type::NODE_COUNT_PER_MAP_ELEMENT);
+                local_begin + local_container.size
+                / this_type::NODE_COUNT_PER_MAP_ELEMENT);
             auto const local_position(
                 std::lower_bound(
                     local_begin,
@@ -941,8 +1183,7 @@ class psyq::binarc::archive
         this_type::memory_unit const in_node_tag)
     const
     {
-        auto const local_node_format(
-            in_node_tag >> this_type::TAG_FORMAT_BITS_POSITION);
+        auto const local_node_format(this_type::get_format(in_node_tag));
         if (local_node_format != in_map_key.format)
         {
             return 1;
@@ -966,8 +1207,7 @@ class psyq::binarc::archive
         case this_type::numerics_NEGATIVE_32:
         case this_type::numerics_FLOATING_32:
         {
-            auto const local_body(
-                this->get_unit(local_node_immediate));
+            auto const local_body(this->get_unit(local_node_immediate));
             if (local_body == nullptr)
             {
                 break;
@@ -1022,11 +1262,18 @@ class psyq::binarc::archive
             {
                 return -1;
             }
-            return std::memcmp(local_raw_data, in_map_key.raw.data, in_map_key.raw.size) != 0;
+            /** @note
+                バイト列が完全に一致するかの確認は、
+                高速化のため、デバッグ時にのみ確認する。
+             */
+            PSYQ_ASSERT(std::memcmp(local_raw_data, in_map_key.raw.data, in_map_key.raw.size) == 0);
+            return 0;
         }
         case this_type::kind_ARRAY:
         case this_type::kind_MAP:
         default:
+            /// @note コンテナの比較は未実装。
+            PSYQ_ASSERT(false);
             break;
         }
         return 1;
@@ -1255,6 +1502,7 @@ class binarc_to_block_yaml
     {
         out_stream << '{';
         auto const local_size(in_archive.get_container_size(in_iterator));
+in_archive.get_map_key(in_iterator, in_iterator);
         for (unsigned i(0); i < local_size; ++i)
         {
             if (0 < i)

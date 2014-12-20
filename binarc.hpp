@@ -91,30 +91,29 @@ class psyq::binarc::archive
     public: typedef std::shared_ptr<this_type> shared_ptr;
     public: typedef std::weak_ptr<this_type> weak_ptr;
 
-    public: typedef std::uint32_t unit;
-
     public: archive(
         void const* const in_front,
         std::size_t const in_size):
-    unit_front_(static_cast<this_type::unit const*>(in_front)),
-    unit_count_(in_size / sizeof(this_type::unit))
+    unit_front_(static_cast<psyq::binarc::memory_unit const*>(in_front)),
+    unit_count_(in_size / sizeof(psyq::binarc::memory_unit))
     {
         PSYQ_ASSERT(
             reinterpret_cast<std::size_t>(in_front) % sizeof(std::uint64_t) == 0
-            && in_size % sizeof(this_type::unit) == 0);
+            && in_size % sizeof(psyq::binarc::memory_unit) == 0);
         PSYQ_ASSERT(in_front != nullptr || in_size == 0);
     }
 
     /** @brief binarc書庫内のメモリ位置を取得する。
         @param[in] in_index メモリ単位のインデックス番号。
      */
-    public: this_type::unit const* get_unit(std::size_t const in_index) const
+    public: psyq::binarc::memory_unit const* get_unit(std::size_t const in_index) const
     {
         return in_index < this->unit_count_?
             this->unit_front_ + in_index: nullptr;
     }
 
-    private: this_type::unit const* unit_front_;
+    //-------------------------------------------------------------------------
+    private: psyq::binarc::memory_unit const* unit_front_;
     private: std::size_t unit_count_;
 };
 
@@ -871,9 +870,9 @@ class psyq::binarc::node
      */
     public: this_type get_container_key(std::size_t const in_index) const
     {
-        auto local_key(*this);
-        return local_key.switch_container_key(in_index)?
-            local_key: this_type();
+        auto local_node(*this);
+        return local_node.switch_container_key(in_index)?
+            local_node: this_type();
     }
 
     /** @brief *thisが指すコンテナから、要素の値を取得する。
@@ -884,9 +883,9 @@ class psyq::binarc::node
      */
     public: this_type get_container_value(std::size_t const in_index) const
     {
-        auto local_value(*this);
-        return local_value.switch_container_value(in_index)?
-            local_value: this_type();
+        auto local_node(*this);
+        return local_node.switch_container_value(in_index)?
+            local_node: this_type();
     }
 
     /** @brief *thisが指すコンテナの、要素のキーへ切り替える。

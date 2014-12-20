@@ -34,9 +34,6 @@ namespace psyq
             kind_FLOATING = kind_NEGATIVE + 3, ///< IEEE754浮動小数点数。
         }; // enum kind
 
-        /// 辞書要素が存在しない場合のインデックス番号。
-        std::size_t const MAP_INDEX_NONE = 0 - std::size_t(1);
-
         /// この名前空間をユーザーが直接アクセスするのは禁止。
         namespace _private
         {
@@ -343,8 +340,11 @@ class psyq::binarc::archive
     {
         auto const local_unit(this->get_unit(in_iterator));
         return local_unit != nullptr?
-            *local_unit >> psyq::binarc::_private::TAG_FORMAT_BITS_POSITION:
-            psyq::binarc::kind_NIL;
+            this_type::get_format(*local_unit): psyq::binarc::kind_NIL;
+    }
+    private: static unsigned get_format(psyq::binarc::memory_unit const in_tag)
+    {
+        return in_tag >> psyq::binarc::_private::TAG_FORMAT_BITS_POSITION;
     }
 
     private: psyq::binarc::memory_unit get_tag(
@@ -362,8 +362,7 @@ class psyq::binarc::archive
     const
     {
         auto const local_tag(this->get_tag(in_iterator));
-        if ((local_tag >> psyq::binarc::_private::TAG_FORMAT_BITS_POSITION)
-            != in_format)
+        if (this_type::get_format(local_tag) != in_format)
         {
             return nullptr;
         }
@@ -395,20 +394,20 @@ class psyq::binarc::archive
             ^  static_cast<std::uint32_t>(in_value >> 32);
     }
 
-    /** @brief 文字列のハッシュ値を算出する。
-        @param[in] in_string_data 文字列の先頭位置。
-        @param[in] in_string_size 文字列のバイト数。
-        @return 文字列のハッシュ値。
+    /** @brief バイト列のハッシュ値を算出する。
+        @param[in] in_raw_data バイト列の先頭位置。
+        @param[in] in_raw_size バイト列のバイト数。
+        @return バイト列のハッシュ値。
      */
     private: static std::uint32_t make_hash(
-        void const* const in_string_data,
-        std::size_t const in_string_size)
+        void const* const in_raw_data,
+        std::size_t const in_raw_size)
     {
         // 32ビットのFNV-1でハッシュ化する。
         std::uint32_t const FNV_OFFSET_BASIS_32(0x811c9dc5U);
         std::uint32_t const FNV_PRIME_32(0x1000193U);
-        auto const local_begin(static_cast<std::uint8_t const*>(in_string_data));
-        auto const local_end(local_begin + in_string_size);
+        auto const local_begin(static_cast<std::uint8_t const*>(in_raw_data));
+        auto const local_end(local_begin + in_raw_size);
         auto local_hash(FNV_OFFSET_BASIS_32);
         for (auto i(local_begin); i < local_end ; ++i)
         {
@@ -462,7 +461,7 @@ class psyq::binarc::archive
     const
     {
         auto const local_tag(this->get_tag(in_iterator));
-        switch (local_tag >> psyq::binarc::_private::TAG_FORMAT_BITS_POSITION)
+        switch (this_type::get_format(local_tag))
         {
         case psyq::binarc::_private::numerics_UNSIGNED_IMMEDIATE:
             return this_type::read_immediate_numerics<template_numerics, std::make_unsigned<psyq::binarc::memory_unit>::type>(
@@ -564,10 +563,8 @@ class psyq::binarc::archive
     public: int get_boolean_state(this_type::iterator const in_iterator) const
     {
         auto const local_tag(this->get_tag(in_iterator));
-        return (local_tag >> psyq::binarc::_private::TAG_FORMAT_BITS_POSITION)
-            == psyq::binarc::kind_BOOLEAN?
-                (local_tag & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK):
-                -1;
+        return this_type::get_format(local_tag) == psyq::binarc::kind_BOOLEAN?
+            (local_tag & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK): -1;
     }
     //@}
     //-------------------------------------------------------------------------
@@ -696,12 +693,13 @@ class psyq::binarc::archive
         this_type::iterator const in_container)
     const
     {
-        switch (this->get_format(in_container))
+        auto const local_tag(this->get_tag(in_container));
+        switch (this_type::get_format(local_tag))
         {
         case psyq::binarc::kind_ARRAY:
-            return this->get_container_header(in_container).size;
+            return this->get_container_header(local_tag).size;
         case psyq::binarc::kind_MAP:
-            return this->get_container_header(in_container).size
+            return this->get_container_header(local_tag).size
                 / psyq::binarc::_private::NODE_COUNT_PER_MAP_ELEMENT;
         default:
             return 0;
@@ -721,13 +719,14 @@ class psyq::binarc::archive
         std::size_t const in_index)
     const
     {
-        switch (this->get_format(in_container))
+        auto const local_tag(this->get_tag(in_container));
+        switch (this_type::get_format(local_tag))
         {
         case psyq::binarc::kind_ARRAY:
-            return this->get_container_node(in_container, in_index);
+            return this->get_container_node(local_tag, in_index);
         case psyq::binarc::kind_MAP:
             return this->get_container_node(
-                in_container,
+                local_tag,
                 in_index * psyq::binarc::_private::NODE_COUNT_PER_MAP_ELEMENT);
         default:
             return nullptr;
@@ -747,13 +746,14 @@ class psyq::binarc::archive
         std::size_t const in_index)
     const
     {
-        switch (this->get_format(in_container))
+        auto const local_tag(this->get_tag(in_container));
+        switch (this_type::get_format(local_tag))
         {
         case psyq::binarc::kind_ARRAY:
-            return this->get_container_node(in_container, in_index);
+            return this->get_container_node(local_tag, in_index);
         case psyq::binarc::kind_MAP:
             return this->get_container_node(
-                in_container,
+                local_tag,
                 in_index * psyq::binarc::_private::NODE_COUNT_PER_MAP_ELEMENT
                 + 1);
         default:
@@ -770,11 +770,11 @@ class psyq::binarc::archive
             in_index に対応する下位ノードが存在しない。
      */
     private: this_type::iterator get_container_node(
-        this_type::iterator const in_container,
+        psyq::binarc::memory_unit const in_tag,
         std::size_t const in_index)
     const
     {
-        auto const& local_container(this->get_container_header(in_container));
+        auto const& local_container(this->get_container_header(in_tag));
         return in_index < local_container.size?
             in_index + reinterpret_cast<psyq::binarc::memory_unit const*>(
                 &local_container + 1):
@@ -782,14 +782,16 @@ class psyq::binarc::archive
     }
 
     private: this_type::container_header const& get_container_header(
-        this_type::iterator const in_iterator)
+        psyq::binarc::memory_unit const in_tag)
     const
     {
-        PSYQ_ASSERT(this->is_container(in_iterator));
+        PSYQ_ASSERT(
+            this_type::get_format(in_tag) == psyq::binarc::kind_ARRAY
+            || this_type::get_format(in_tag) == psyq::binarc::kind_MAP);
         auto const local_container(
             reinterpret_cast<this_type::container_header const*>(
                 this->get_unit(
-                    *static_cast<psyq::binarc::memory_unit const*>(in_iterator)
+                    in_tag
                     & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK)));
         PSYQ_ASSERT(local_container != nullptr);
         return *local_container;
@@ -863,11 +865,11 @@ class psyq::binarc::archive
             nullptr;
     }
     //@}
-    /** @brief 反復子が指す辞書から、要素のインデックス番号を検索する。
+    /** @brief 反復子が指す辞書から、要素のキーを検索する。
         @param[in] in_map 辞書を指す反復子。
         @param[in] in_key 検索する要素のキー。
-        @retval !=MAP_INDEX_NONE in_key に対応する要素のインデックス番号。
-        @retval ==MAP_INDEX_NONE
+        @retval !=nullptr in_key に対応する要素のキーへの反復子。
+        @retval ==nullptr
             失敗。 in_map が辞書ではないか、in_key に対応する要素が存在しない。
      */
     private: this_type::iterator find_map_key(
@@ -875,9 +877,11 @@ class psyq::binarc::archive
         this_type::map_key const& in_key)
     const
     {
-        if (this->get_format(in_map) == psyq::binarc::kind_MAP)
+        auto const local_tag(this->get_tag(in_map));
+        if (this_type::get_format(local_tag) == psyq::binarc::kind_MAP)
         {
-            auto const& local_container(this->get_container_header(in_map));
+            auto const& local_container(
+                this->get_container_header(local_tag));
             auto const local_begin(
                 reinterpret_cast<this_type::less_map::element const*>(
                     &local_container + 1));

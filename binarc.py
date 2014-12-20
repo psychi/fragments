@@ -159,9 +159,9 @@ class _SerializeNode(object):
         ## @todo コンテナのハッシュ値は未実装。
         local_hash = (1 << 32) - 1
         local_length = len(self._value)
-        if self._format == _BINARC_FORMAT_MAP:
-            assert local_length % 2 == 0
-            local_length >>= 1
+        #if self._format == _BINARC_FORMAT_MAP:
+        #    assert local_length % 2 == 0
+        #    local_length >>= 1
         assert local_length < (1 << 32)
         assert out_stream.tell() == self._container_offset * 4
         out_stream.write(struct.pack('<II', local_hash, local_length))
@@ -170,7 +170,7 @@ class _SerializeNode(object):
             local_sub_node._write_node_tag(out_stream, in_scalar_offset)
         # 下位のコンテナを出力する。
         for local_sub_node in self._value:
-            if isinstance(local_sub_node, tuple):
+            if isinstance(local_sub_node._value, tuple):
                 local_sub_node._write_tag_tree(out_stream, in_scalar_offset)
 
     ## @brief ノードタグを出力する。
@@ -195,7 +195,7 @@ class _SerializeNode(object):
         out_stream.write(struct.pack('<I', local_tag))
 
     #--------------------------------------------------------------------------
-    ## 値をシリアライズするノードを構築する。
+    ## @brief 値をシリアライズするノードを構築する。
     #  @param[in,out] io_value_map 値を登録する辞書。
     #  @param[in]     in_value     シリアライズする値。
     #  @return 値をシリアライズする _SerializeNode インスタンス。
@@ -312,7 +312,7 @@ if __name__ == '__main__':
             float(0xfffffff), float(0xffffffff),
             float(-0x010000000), float(-0x80000000)],
         'STRING': 'STRING'}
-    local_sample_data = {0x01234567: 0x89abcdef, 'abcd': 'efgh'}
+    #local_sample_data = {0x01234567: 0x89abcdef, 'abcd': 'efgh'}
     local_binary = pack(local_sample_data)
     with open('sample.binarc', 'wb') as local_file:
         local_file.write(local_binary)

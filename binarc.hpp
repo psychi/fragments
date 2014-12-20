@@ -91,6 +91,9 @@ class psyq::binarc::archive
     public: typedef std::shared_ptr<this_type> shared_ptr;
     public: typedef std::weak_ptr<this_type> weak_ptr;
 
+    /// binarc書庫の中にある値を指す反復子。
+    public: typedef void const* iterator;
+
     public: archive(
         void const* const in_front,
         std::size_t const in_size):
@@ -103,6 +106,14 @@ class psyq::binarc::archive
         PSYQ_ASSERT(in_front != nullptr || in_size == 0);
     }
 
+    /** @brief binarc書庫の最上位の値を指す反復子を取得する。
+        @return *thisの最上位の値を指す反復子。
+     */
+    public: this_type::iterator get_root() const
+    {
+        return this->get_unit(1U);
+    }
+
     /** @brief binarc書庫内のメモリ位置を取得する。
         @param[in] in_index メモリ単位のインデックス番号。
      */
@@ -111,6 +122,533 @@ class psyq::binarc::archive
         return in_index < this->unit_count_?
             this->unit_front_ + in_index: nullptr;
     }
+
+    private: psyq::binarc::memory_unit const* get_unit(
+        this_type::iterator const in_iterator)
+    const
+    {
+        return this->unit_front_ <= in_iterator
+            && in_iterator < this->unit_front_ + this->unit_count_?
+                static_cast<psyq::binarc::memory_unit const*>(in_iterator):
+                nullptr;
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief 反復子が指す値の種別を取得する。
+        @param[in] in_iterator 値の種別を取得する反復子。
+        @return 反復子が指す値の種別。
+     */
+    public: psyq::binarc::kind get_kind(this_type::iterator const in_iterator)
+    const
+    {
+        return this_type::make_kind(this->get_format(in_iterator));
+    }
+
+    private: static psyq::binarc::kind make_kind(unsigned const in_format)
+    {
+        switch (in_format)
+        {
+        case psyq::binarc::_private::numerics_UNSIGNED_32:
+        case psyq::binarc::_private::numerics_UNSIGNED_64:
+            return psyq::binarc::kind_UNSIGNED;
+        case psyq::binarc::_private::numerics_NEGATIVE_32:
+        case psyq::binarc::_private::numerics_NEGATIVE_64:
+            return psyq::binarc::kind_NEGATIVE;
+        case psyq::binarc::_private::numerics_FLOATING_64:
+            return psyq::binarc::kind_FLOATING;
+        default:
+            return in_format <= psyq::binarc::_private::numerics_FLOATING_64?
+                static_cast<psyq::binarc::kind>(in_format): psyq::binarc::kind_NIL;
+        }
+    }
+
+    /** @brief 反復子が指す値の、格納形式を取得する。
+        @param[in] in_iterator 格納形式を取得する反復子。
+        @return in_iterator が指す値の格納形式。
+     */
+    private: unsigned get_format(this_type::iterator const in_iterator) const
+    {
+        auto const local_unit(this->get_unit(in_iterator));
+        return local_unit != nullptr?
+            *local_unit >> psyq::binarc::_private::TAG_FORMAT_BITS_POSITION:
+            psyq::binarc::kind_NIL;
+    }
+
+    private: psyq::binarc::memory_unit get_tag(
+        this_type::iterator const in_iterator)
+    const
+    {
+        auto const local_unit(this->get_unit(in_iterator));
+        return local_unit != nullptr? *local_unit: 0;
+    }
+
+    private: template<typename template_body>
+    template_body const* get_body(
+        this_type::iterator const in_iterator,
+        unsigned const in_format)
+    const
+    {
+        auto const local_tag(this->get_tag(in_iterator));
+        if ((local_tag >> psyq::binarc::_private::TAG_FORMAT_BITS_POSITION)
+            != in_format)
+        {
+            return nullptr;
+        }
+        auto const local_body(
+            this->get_unit(
+                local_tag & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK));
+        PSYQ_ASSERT(local_body != nullptr);
+        return reinterpret_cast<template_body const*>(local_body);
+    }
+
+    //-------------------------------------------------------------------------
+    /// @name 数値ノード
+    //@{
+    /** @brief 反復子が数値を指すか判定する。
+        @param[in] in_iterator 判定する反復子。
+        @retval true  in_iterator は数値を指している。
+        @retval false in_iterator は数値を指していない。
+     */
+    public: bool is_numerics(this_type::iterator const in_iterator) const
+    {
+        return psyq::binarc::kind_UNSIGNED <= this->get_format(in_iterator);
+    }
+
+    /** @brief 反復子が指す数値を取得する。
+        @param[in] in_iterator 数値を指す反復子。
+        @param[in] in_default  数値の取得に失敗した場合に返す値。
+        @return
+            in_iterator が指す値を template_numerics にキャストした値。
+            ただし in_iterator が数値を指してない場合は、 in_default を返す。
+     */
+    public: template<typename template_numerics>
+    template_numerics get_numerics(
+        this_type::iterator const in_iterator,
+        template_numerics const in_default)
+    const
+    {
+        template_numerics local_numerics;
+        return this->read_numerics(in_iterator, local_numerics) < 0?
+            in_default: local_numerics;
+    }
+
+    /** @brief 反復子が指す数値を取得する。
+        @param[in]  in_iterator  数値を指す反復子。
+        @param[out] out_numerics in_iterator から取得した数値が代入される。
+        @retval 正 in_iterator が指す値の等値を out_numerics へ代入。
+        @retval 0  in_iterator が指す値を template_numerics にキャストして out_numerics へ代入。
+        @retval 負 失敗。 in_iterator は数値を指してない。 out_numerics は変わらない。
+     */
+    public: template<typename template_numerics>
+    int read_numerics(
+        this_type::iterator const in_iterator,
+        template_numerics& out_numerics)
+    const
+    {
+        auto const local_tag(this->get_tag(in_iterator));
+        switch (local_tag >> psyq::binarc::_private::TAG_FORMAT_BITS_POSITION)
+        {
+        case psyq::binarc::_private::numerics_UNSIGNED_IMMEDIATE:
+            return this_type::read_immediate_numerics<template_numerics, std::make_unsigned<psyq::binarc::memory_unit>::type>(
+                local_tag, out_numerics);
+        case psyq::binarc::_private::numerics_UNSIGNED_32:
+            return this->read_body_numerics<template_numerics, std::uint32_t>(
+                local_tag, out_numerics);
+        case psyq::binarc::_private::numerics_UNSIGNED_64:
+            return this->read_body_numerics<template_numerics, std::uint64_t>(
+                local_tag, out_numerics);
+        case psyq::binarc::_private::numerics_NEGATIVE_IMMEDIATE:
+            return this_type::read_immediate_numerics<template_numerics, std::make_signed<psyq::binarc::memory_unit>::type>(
+                local_tag, out_numerics);
+        case psyq::binarc::_private::numerics_NEGATIVE_32:
+            return this->read_body_numerics<template_numerics, std::int32_t>(
+                local_tag, out_numerics);
+        case psyq::binarc::_private::numerics_NEGATIVE_64:
+            return this->read_body_numerics<template_numerics, std::int64_t>(
+                local_tag, out_numerics);
+        case psyq::binarc::_private::numerics_FLOATING_32:
+            return this->read_body_numerics<template_numerics, float>(
+                local_tag, out_numerics);
+        case psyq::binarc::_private::numerics_FLOATING_64:
+            return this->read_body_numerics<template_numerics, double>(
+                local_tag, out_numerics);
+        default:
+            return -1;
+        }
+    }
+    //@}
+    private: template<typename template_write, typename template_read>
+    static bool read_immediate_numerics(
+        psyq::binarc::memory_unit const in_tag,
+        template_write& out_numerics)
+    {
+        static_assert(std::is_integral<template_read>::value, "");
+        auto const local_immediate(
+            in_tag & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK);
+        auto const local_sign(
+            (psyq::binarc::_private::TAG_FORMAT_BITS_MAX << psyq::binarc::_private::TAG_FORMAT_BITS_POSITION)
+            * std::is_signed<template_read>::value);
+        return this_type::read_argument_numerics(
+            out_numerics,
+            static_cast<template_read>(local_immediate | local_sign));
+    }
+
+    private: template<typename template_write, typename template_read>
+    bool read_body_numerics(
+        psyq::binarc::memory_unit const in_tag,
+        template_write& out_numerics)
+    const
+    {
+        auto const local_body(
+            this->get_unit(
+                in_tag & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK));
+        PSYQ_ASSERT(local_body != nullptr);
+        PSYQ_ASSERT(reinterpret_cast<std::size_t>(local_body) % sizeof(template_read) == 0);
+        return this_type::read_argument_numerics(
+            out_numerics, *reinterpret_cast<template_read const*>(local_body));
+    }
+
+    private: template<typename template_write, typename template_read>
+    static bool read_argument_numerics(
+        template_write& out_numerics,
+        template_read const in_numerics)
+    {
+        // 読み込み値と書き込み値のビット配置が異なるか、
+        // 符号が異なる場合は、等値が代入できてない。
+        out_numerics = static_cast<template_write>(in_numerics);
+        return in_numerics == out_numerics
+            && ((in_numerics < 0) ^ (out_numerics < 0)) == 0;
+    }
+
+    //-------------------------------------------------------------------------
+    /// @name 真偽値ノード
+    //@{
+    /** @brief 反復子が指す真偽値を取得する。
+        @param[in] in_iterator 真偽値を指す反復子。
+        @param[in] in_default  真偽値の取得に失敗した場合に返す値。
+        @return
+            in_iterator が指す真偽値。
+            ただし in_iterator が真偽値を指してない場合は、 in_default を返す。
+     */
+    public: bool get_boolean(
+        this_type::iterator const in_iterator,
+        bool const in_default)
+    const
+    {
+        auto const local_state(this->get_boolean_state(in_iterator));
+        return local_state < 0? in_default: (0 < local_state);
+    }
+
+    /** @brief 反復子が指す真偽値を取得する。
+        @param[in] in_iterator 真偽値を指す反復子。
+        @retval 正 in_iterator はtrueを指している。
+        @retval 0  in_iterator はfalseを指している。
+        @retval 負 in_iterator は真偽値を指してない。
+     */
+    public: int get_boolean_state(this_type::iterator const in_iterator) const
+    {
+        auto const local_tag(this->get_tag(in_iterator));
+        return (local_tag >> psyq::binarc::_private::TAG_FORMAT_BITS_POSITION)
+            == psyq::binarc::kind_BOOLEAN?
+                (local_tag & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK):
+                -1;
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 文字列ノード
+    //@{
+    /** @brief 反復子が指す文字列の、先頭位置を取得する。
+        @param[in] in_iterator 文字列を指す反復子。
+        @retval !=nullptr
+            反復子が指す文字列の先頭位置。
+            反復子が文字列を指す場合は、必ずnullptr以外となる。
+        @retval ==nullptr 反復子が文字列を指してない。
+     */
+    public: char const* get_string_data(
+        this_type::iterator const in_iterator)
+    const
+    {
+        auto const local_string(this->get_string_header(in_iterator));
+        return local_string != nullptr?
+            reinterpret_cast<char const*>(local_string + 1): nullptr;
+    }
+
+    /** @brief 反復子が指す文字列の、バイト数を取得する。
+        @param[in] in_iterator 文字列を指す反復子。
+        @return
+            反復子が指す文字列のバイト数。
+            ただし、反復子が文字列を指してない場合は、0を返す。
+     */
+    public: std::size_t get_string_size(
+        this_type::iterator const in_iterator)
+    const
+    {
+        auto const local_string(this->get_string_header(in_iterator));
+        return local_string != nullptr? local_string->size: 0;
+    }
+    //@}
+    private: psyq::binarc::_private::string_header const* get_string_header(
+        this_type::iterator const in_iterator)
+    const
+    {
+        return this->get_body<psyq::binarc::_private::string_header>(
+            in_iterator, psyq::binarc::kind_STRING);
+    }
+
+    //-------------------------------------------------------------------------
+    /// @name 拡張バイト列ノード
+    //@{
+    /** @brief 反復子が指す拡張バイト列の、先頭位置を取得する。
+        @param[in] in_iterator 拡張バイト列を指す反復子。
+        @retval !=nullptr
+            反復子が指す拡張バイト列の先頭位置。
+            反復子が拡張バイト列を指す場合は、必ずnullptr以外となる。
+        @retval ==nullptr 反復子が拡張バイト列を指してない。
+     */
+    public: void const* get_extended_data(
+        this_type::iterator const in_iterator)
+    const
+    {
+        auto const local_extended(this->get_extended_header(in_iterator));
+        return local_extended != nullptr?
+            reinterpret_cast<char const*>(local_extended + 1): nullptr;
+    }
+
+    /** @brief 反復子が指す拡張バイト列の、バイト数を取得する。
+        @param[in] in_iterator 拡張バイト列を指す反復子。
+        @return
+            反復子が指す拡張バイト列のバイト数。
+            ただし、反復子が拡張バイト列を指してない場合は、0を返す。
+     */
+    public: std::size_t get_extended_size(
+        this_type::iterator const in_iterator)
+    const
+    {
+        auto const local_extended(this->get_extended_header(in_iterator));
+        return local_extended != nullptr? local_extended->size: 0;
+    }
+
+    /** @brief 反復子が指す拡張バイト列の、種別を取得する。
+        @param[in] in_iterator 拡張バイト列を指す反復子。
+        @return
+            反復子が指す拡張バイト列の種別。
+            ただし、反復子が拡張バイト列を指してない場合は、0を返す。
+     */
+    public: psyq::binarc::memory_unit get_extended_kind(
+        this_type::iterator const in_iterator)
+    const
+    {
+        auto const local_extended(this->get_extended_header(in_iterator));
+        return local_extended != nullptr? local_extended->kind: 0;
+    }
+    //@}
+    private: psyq::binarc::_private::extended_header const* get_extended_header(
+        this_type::iterator const in_iterator)
+    const
+    {
+        return this->get_body<psyq::binarc::_private::extended_header>(
+            in_iterator, psyq::binarc::kind_EXTENDED);
+    }
+
+    //-------------------------------------------------------------------------
+    /// @name コンテナ
+    //@{
+    /** @brief 反復子がコンテナを指すか判定する。
+        @param[in] in_iterator コンテナを指すか判定する反復子。
+        @retval true  in_iterator はコンテナを指している。
+        @retval false in_iterator はコンテナを指していない。
+     */
+    public: bool is_container(this_type::iterator const in_iterator) const
+    {
+        switch (this->get_format(in_iterator))
+        {
+        case psyq::binarc::kind_ARRAY:
+        case psyq::binarc::kind_MAP:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    /** @brief 反復子が指すコンテナの、要素の数を取得する。
+        @param[in] in_container コンテナを指す反復子。
+        @return
+            in_iterator が指すコンテナの要素の数。
+            ただし in_iterator がコンテナを指していない場合は、0を返す。
+     */
+    public: std::size_t get_container_size(
+        this_type::iterator const in_container)
+    const
+    {
+        switch (this->get_format(in_container))
+        {
+        case psyq::binarc::kind_ARRAY:
+            return this->get_container_header(in_container).size;
+        case psyq::binarc::kind_MAP:
+            return this->get_container_header(in_container).size
+                / psyq::binarc::_private::NODE_COUNT_PER_MAP_ELEMENT;
+        default:
+            return 0;
+        }
+    }
+
+    /** @brief 反復子が指すコンテナの、要素のキーへの反復子を取得する。
+        @param[in] in_container コンテナを指す反復子。
+        @param[in] in_index     要素のインデックス番号。
+        @retval !=nullptr コンテナの要素のキーへの反復子。
+        @retval ==nullptr
+            失敗。 in_container がコンテナを指してないか、
+            in_index に対応する要素が存在しない。
+     */
+    public: this_type::iterator get_container_key(
+        this_type::iterator const in_container,
+        std::size_t const in_index)
+    const
+    {
+        switch (this->get_format(in_container))
+        {
+        case psyq::binarc::kind_ARRAY:
+            return this->get_container_node(in_container, in_index);
+        case psyq::binarc::kind_MAP:
+            return this->get_container_node(
+                in_container,
+                in_index * psyq::binarc::_private::NODE_COUNT_PER_MAP_ELEMENT);
+        default:
+            return nullptr;
+        }
+    }
+
+    /** @brief 反復子が指すコンテナの、要素の値への反復子を取得する。
+        @param[in] in_container コンテナを指す反復子。
+        @param[in] in_index     要素のインデックス番号。
+        @retval !=nullptr コンテナの要素のキーへの反復子。
+        @retval ==nullptr
+            失敗。 in_container がコンテナを指してないか、
+            in_index に対応する要素が存在しない。
+     */
+    public: this_type::iterator get_container_value(
+        this_type::iterator const in_container,
+        std::size_t const in_index)
+    const
+    {
+        switch (this->get_format(in_container))
+        {
+        case psyq::binarc::kind_ARRAY:
+            return this->get_container_node(in_container, in_index);
+        case psyq::binarc::kind_MAP:
+            return this->get_container_node(
+                in_container,
+                in_index * psyq::binarc::_private::NODE_COUNT_PER_MAP_ELEMENT
+                + 1);
+        default:
+            return nullptr;
+        }
+    }
+    //@}
+    /** @brief 反復子が指すコンテナの、下位ノードの反復子を取得する。
+        @param[in] in_container コンテナを指す反復子。
+        @param[in] in_index     下位ノードのインデックス番号。
+        @retval !=nullptr コンテナの下位ノードへの反復子。
+        @retval ==nullptr
+            失敗。 in_container がコンテナを指してないか、
+            in_index に対応する下位ノードが存在しない。
+     */
+    private: this_type::iterator get_container_node(
+        this_type::iterator const in_container,
+        std::size_t const in_index)
+    const
+    {
+        auto const& local_container(this->get_container_header(in_container));
+        return in_index < local_container.size?
+            in_index + reinterpret_cast<psyq::binarc::memory_unit const*>(
+                &local_container + 1):
+            nullptr;
+    }
+
+    private: psyq::binarc::_private::container_header const& get_container_header(
+        this_type::iterator const in_iterator)
+    const
+    {
+        PSYQ_ASSERT(this->is_container(in_iterator));
+        auto const local_container(
+            reinterpret_cast<psyq::binarc::_private::container_header const*>(
+                this->get_unit(
+                    *static_cast<psyq::binarc::memory_unit const*>(in_iterator)
+                    & psyq::binarc::_private::TAG_IMMEDIATE_BITS_MASK)));
+        PSYQ_ASSERT(local_container != nullptr);
+        return *local_container;
+    }
+
+    //-------------------------------------------------------------------------
+    /// @name 辞書
+    //@{
+    /** @brief 反復子が指す辞書から、要素のキーへの反復子を取得する。
+        @param[in] in_map 辞書を指す反復子。
+        @param[in] in_key 要素に対応するキー。
+     */
+    public: template<typename template_key>
+    this_type::iterator get_map_key(
+        this_type::iterator const in_map,
+        template_key const in_key)
+    const;
+
+    /** @brief 反復子が指す辞書から、要素のキーへの反復子を取得する。
+        @param[in] in_map         辞書を指す反復子。
+        @param[in] in_string_data 要素に対応するキー文字列の先頭位置。
+        @param[in] in_string_size 要素に対応するキー文字列のバイト数。
+     */
+    public: this_type::iterator get_map_key(
+        this_type::iterator const in_map,
+        void const* const in_string_data,
+        std::size_t const in_string_size)
+    const;
+
+    /** @brief 反復子が指す辞書から、要素の値への反復子を取得する。
+        @param[in] in_map 辞書を指す反復子。
+        @param[in] in_key 要素に対応するキー。
+     */
+    public: template<typename template_key>
+    this_type::iterator get_map_value(
+        this_type::iterator const in_map,
+        template_key const in_key)
+    const
+    {
+        auto const local_key(
+            this->get_map_key(in_map, in_string_data, in_string_size));
+        return local_key != nullptr?
+            static_cast<psyq::binarc::memory_unit const*>(local_key) + 1:
+            nullptr;
+    }
+
+    /** @brief 反復子が指す辞書の、要素の値への反復子を取得する。
+        @param[in] in_map         辞書を指す反復子。
+        @param[in] in_string_data 要素に対応するキー文字列の先頭位置。
+        @param[in] in_string_size 要素に対応するキー文字列のバイト数。
+     */
+    public: this_type::iterator get_map_value(
+        this_type::iterator const in_map,
+        void const* const in_string_data,
+        std::size_t const in_string_size)
+    const
+    {
+        auto const local_key(
+            this->get_map_key(in_map, in_string_data, in_string_size));
+        return local_key != nullptr?
+            static_cast<psyq::binarc::memory_unit const*>(local_key) + 1:
+            nullptr;
+    }
+    //@}
+    /** @brief 反復子が指す辞書から、要素のキーへの反復子を取得する。
+        @param[in] in_map 辞書を指す反復子。
+        @param[in] in_key 検索する要素のキー。
+        @retval !=nullptr in_key に対応する要素のキーへの反復子。
+        @retval ==nullptr
+            失敗。 in_map が辞書ではないか、in_key に対応する要素が存在しない。
+     */
+    private: this_type::iterator find_map_key(
+        this_type::iterator const in_map,
+        psyq::binarc::_private::map_key const& in_key)
+    const;
 
     //-------------------------------------------------------------------------
     private: psyq::binarc::memory_unit const* unit_front_;
@@ -1257,6 +1795,109 @@ class binarc_to_block_yaml
     //-------------------------------------------------------------------------
     public: static void convert(
         std::ostringstream& out_stream,
+        psyq::binarc::archive const& in_archive)
+    {
+        auto local_iterator(in_archive.get_root());
+        if (local_iterator != nullptr)
+        {
+            this_type::convert_node(out_stream, in_archive, local_iterator);
+        }
+    }
+
+    //-------------------------------------------------------------------------
+    private: static void convert_node(
+        std::ostringstream& out_stream,
+        psyq::binarc::archive const& in_archive,
+        psyq::binarc::archive::iterator const in_iterator)
+    {
+        switch (in_archive.get_kind(in_iterator))
+        {
+        case psyq::binarc::kind_UNSIGNED:
+            out_stream << in_archive.get_numerics<std::uint64_t>(in_iterator, 0);
+            break;
+        case psyq::binarc::kind_NEGATIVE:
+            out_stream << in_archive.get_numerics<std::int64_t>(in_iterator, 0);
+            break;
+        case psyq::binarc::kind_FLOATING:
+            out_stream << in_archive.get_numerics<double>(in_iterator, 0);
+            break;
+        case psyq::binarc::kind_STRING:
+            this_type::convert_string(out_stream, in_archive, in_iterator);
+            break;
+        case psyq::binarc::kind_ARRAY:
+            this_type::convert_sequence(out_stream, in_archive, in_iterator);
+            break;
+        case psyq::binarc::kind_MAP:
+            this_type::convert_mapping(out_stream, in_archive, in_iterator);
+            break;
+        default:
+            PSYQ_ASSERT(false);
+            break;
+        }
+    }
+
+    private: static void convert_string(
+        std::ostringstream& out_stream,
+        psyq::binarc::archive const& in_archive,
+        psyq::binarc::archive::iterator const in_iterator)
+    {
+        auto const local_data(in_archive.get_string_data(in_iterator));
+        assert(local_data != nullptr);
+        out_stream << '\'';
+        out_stream.write(local_data, in_archive.get_string_size(in_iterator));
+        out_stream << '\'';
+    }
+
+    private: static void convert_sequence(
+        std::ostringstream& out_stream,
+        psyq::binarc::archive const& in_archive,
+        psyq::binarc::archive::iterator const in_iterator)
+    {
+        out_stream << '[';
+        auto const local_size(in_archive.get_container_size(in_iterator));
+        for (unsigned i(0); i < local_size; ++i)
+        {
+            if (0 < i)
+            {
+                out_stream << ',';
+            }
+            this_type::convert_node(
+                out_stream,
+                in_archive,
+                in_archive.get_container_value(in_iterator, i));
+        }
+        out_stream << ']';
+    }
+
+    private: static void convert_mapping(
+        std::ostringstream& out_stream,
+        psyq::binarc::archive const& in_archive,
+        psyq::binarc::archive::iterator const in_iterator)
+    {
+        out_stream << '{';
+        auto const local_size(in_archive.get_container_size(in_iterator));
+        for (unsigned i(0); i < local_size; ++i)
+        {
+            if (0 < i)
+            {
+                out_stream << ',';
+            }
+            this_type::convert_node(
+                out_stream,
+                in_archive,
+                in_archive.get_container_key(in_iterator, i));
+            out_stream << ':';
+            this_type::convert_node(
+                out_stream,
+                in_archive,
+                in_archive.get_container_value(in_iterator, i));
+        }
+        out_stream << '}';
+    }
+
+    //-------------------------------------------------------------------------
+    public: static void convert(
+        std::ostringstream& out_stream,
         psyq::binarc::archive::shared_ptr const& in_archive)
     {
         psyq::binarc::node const local_node(in_archive);
@@ -1348,5 +1989,80 @@ local_node.get_map_value(local_map_key.data(), local_map_key.size());
         out_stream << '}';
     }
 };
+
+//-----------------------------------------------------------------------------
+    /** @brief 反復子が指す辞書から、要素のキーへの反復子を取得する。
+        @param[in] in_map 辞書を指す反復子。
+        @param[in] in_key 要素に対応するキー。
+     */
+     template<typename template_key>
+     psyq::binarc::archive::iterator psyq::binarc::archive::get_map_key(
+        this_type::iterator const in_map,
+        template_key const in_key)
+    const
+    {
+        return this->find_map_key(
+            in_map, psyq::binarc::_private::map_key(in_key));
+    }
+
+    /** @brief 反復子が指す辞書から、要素のキーへの反復子を取得する。
+        @param[in] in_map         辞書を指す反復子。
+        @param[in] in_string_data 要素に対応するキー文字列の先頭位置。
+        @param[in] in_string_size 要素に対応するキー文字列のバイト数。
+     */
+    psyq::binarc::archive::iterator psyq::binarc::archive::get_map_key(
+        this_type::iterator const in_map,
+        void const* const in_string_data,
+        std::size_t const in_string_size)
+    const
+    {
+        return this->find_map_key(
+            in_map,
+            psyq::binarc::_private::map_key(in_string_data, in_string_size));
+    }
+
+    /** @brief 反復子が指す辞書から、要素のインデックス番号を検索する。
+        @param[in] in_map 辞書を指す反復子。
+        @param[in] in_key 検索する要素のキー。
+        @retval !=MAP_INDEX_NONE in_key に対応する要素のインデックス番号。
+        @retval ==MAP_INDEX_NONE
+            失敗。 in_map が辞書ではないか、in_key に対応する要素が存在しない。
+     */
+    psyq::binarc::archive::iterator psyq::binarc::archive::find_map_key(
+        this_type::iterator const in_map,
+        psyq::binarc::_private::map_key const& in_key)
+    const
+    {
+        if (this->get_format(in_map) == psyq::binarc::kind_MAP)
+        {
+            auto const& local_container(this->get_container_header(in_map));
+            auto const local_begin(
+                reinterpret_cast<psyq::binarc::_private::less_map::element const*>(
+                    &local_container + 1));
+            auto const local_end(
+                local_begin
+                + local_container.size
+                / psyq::binarc::_private::NODE_COUNT_PER_MAP_ELEMENT);
+            auto const local_position(
+                std::lower_bound(
+                    local_begin,
+                    local_end,
+                    in_key,
+                    psyq::binarc::_private::less_map(*this)));
+            for (auto i(local_position); i < local_end; ++i)
+            {
+                auto const local_compare(in_key.compare_value(*this, (*i)[0]));
+                if (0 < local_compare)
+                {
+                    break;
+                }
+                if (local_compare == 0)
+                {
+                    return &((*i)[0]);
+                }
+            }
+        }
+        return nullptr;
+    }
 
 #endif // PSYQ_BINARC_HPP_

@@ -51,18 +51,20 @@ class psyq::binarc::archive
     }; // enum kind
 
     //-------------------------------------------------------------------------
-    private: struct string_header
+    private: struct container_header
+    {
+        this_type::memory_unit size;
+    };
+
+    private: struct string_header: public this_type::container_header
     {
         this_type::memory_unit hash;
-        this_type::memory_unit size;
     };
 
     private: struct extended_header: public this_type::string_header
     {
         this_type::memory_unit kind;
     };
-
-    private: typedef this_type::string_header container_header;
 
     /// ノードが指す数値の格納形式。
     private: enum numerics: std::uint8_t
@@ -782,10 +784,10 @@ class psyq::binarc::archive
         }
     }
 
-    /** @brief 反復子が指すコンテナの、要素の値への反復子を取得する。
+    /** @brief 反復子が指すコンテナの、要素のマップ値への反復子を取得する。
         @param[in] in_container コンテナを指す反復子。
         @param[in] in_index     要素のインデックス番号。
-        @retval !=nullptr コンテナの要素のキーへの反復子。
+        @retval !=nullptr コンテナの要素のマップ値への反復子。
         @retval ==nullptr
             失敗。 in_container がコンテナを指してないか、
             in_index に対応する要素が存在しない。
@@ -987,10 +989,10 @@ class psyq::binarc::archive
         return nullptr;
     }
 
-    /** @brief 反復子が指す辞書から、要素の値への反復子を取得する。
+    /** @brief 反復子が指す辞書から、要素のマップ値への反復子を取得する。
         @param[in] in_map 辞書を指す反復子。
         @param[in] in_key 要素に対応するキー。
-        @retval !=nullptr 辞書が持つ要素の、値への反復子。
+        @retval !=nullptr 辞書が持つ要素の、マップ値への反復子。
         @retval ==nullptr
             失敗。 in_map が辞書を指してないか、
             in_key に対応する要素が存在しない。
@@ -1003,10 +1005,10 @@ class psyq::binarc::archive
         return this_type::get_map_value(this->get_map_key(in_map, in_key));
     }
 
-    /** @brief 反復子が指す辞書から、要素の値への反復子を取得する。
+    /** @brief 反復子が指す辞書から、要素のマップ値への反復子を取得する。
         @param[in] in_map 辞書を指す反復子。
         @param[in] in_key 要素に対応するキーの反復子。*thisが持つ値を指していること。
-        @retval !=nullptr 辞書が持つ要素の、値への反復子。
+        @retval !=nullptr 辞書が持つ要素の、マップ値への反復子。
         @retval ==nullptr
             失敗。 in_map が辞書を指してないか、
             in_key に対応する要素が存在しない。
@@ -1019,13 +1021,13 @@ class psyq::binarc::archive
         return this->get_map_value(in_map, in_key, *this);
     }
 
-    /** @brief 反復子が指す辞書から、要素の値への反復子を取得する。
+    /** @brief 反復子が指す辞書から、要素のマップ値への反復子を取得する。
         @param[in] in_map 辞書を指す反復子。
         @param[in] in_key_iterator
             要素に対応するキーの反復子。
             in_key_archive が持つ値を指していること。
         @param[in] in_key_archive キーとなる反復子が指す書庫。
-        @retval !=nullptr 辞書が持つ要素の、値への反復子。
+        @retval !=nullptr 辞書が持つ要素の、マップ値への反復子。
         @retval ==nullptr
             失敗。 in_map が辞書を指してないか、
             in_key_iterator に対応する要素が存在しない。
@@ -1234,18 +1236,25 @@ class psyq::binarc::archive
         case this_type::numerics_UNSIGNED_32:
         case this_type::numerics_NEGATIVE_32:
         case this_type::numerics_FLOATING_32:
-        case this_type::kind_STRING:
-        case this_type::kind_EXTENDED:
-        case this_type::kind_ARRAY:
-        case this_type::kind_MAP:
         {
             auto const local_body(this->get_unit(local_immediate));
             if (local_body == nullptr)
             {
                 break;
             }
-            PSYQ_ASSERT(local_body == &(reinterpret_cast<this_type::string_header const*>(local_body)->hash));
             return *local_body;
+        }
+        case this_type::kind_STRING:
+        case this_type::kind_EXTENDED:
+        {
+            auto const local_header(
+                reinterpret_cast<this_type::string_header const*>(
+                    this->get_unit(local_immediate)));
+            if (local_header == nullptr)
+            {
+                break;
+            }
+            return local_header->hash;
         }
         case this_type::numerics_UNSIGNED_64:
         case this_type::numerics_NEGATIVE_64:
@@ -1260,11 +1269,14 @@ class psyq::binarc::archive
             }
             return this_type::make_hash(*local_body);
         }
+        case this_type::kind_ARRAY:
+        case this_type::kind_MAP:
+            break;
         default:
+            PSYQ_ASSERT(false);
             break;
         }
-        PSYQ_ASSERT(false);
-        return 0 - this_type::memory_unit(1);
+        return 0xffffffff;
     }
 
     //-------------------------------------------------------------------------
@@ -1409,8 +1421,8 @@ class binarc_to_block_yaml
                 out_stream, in_archive, local_key_iterator);
             out_stream << ':';
             auto const local_value_iterator(
-                //in_archive.get_map_value(in_iterator, local_key_iterator));
-                in_archive.get_container_value(in_iterator, i));
+                in_archive.get_map_value(in_iterator, local_key_iterator));
+                //in_archive.get_container_value(in_iterator, i));
             this_type::convert_node(
                 out_stream, in_archive, local_value_iterator);
         }

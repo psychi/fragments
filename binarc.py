@@ -118,8 +118,8 @@ class _SerializeNode(object):
             out_stream.write(
                 struct.pack(
                     ''.join(('<II', str(((local_length + 3) // 4) * 4), 's')),
-                    self._hash,
                     local_length,
+                    self._hash,
                     self._value))
         else:
             if self._format == _BINARC_FORMAT_UNSIGNED_32:
@@ -142,7 +142,7 @@ class _SerializeNode(object):
     def _initialize_container_offset(self, in_offset):
         if isinstance(self._value, tuple):
             self._container_offset = in_offset
-            local_offset = in_offset + 2 + len(self._value)
+            local_offset = in_offset + 1 + len(self._value)
             for local_sub_node in self._value:
                 local_offset = local_sub_node._initialize_container_offset(
                     local_offset)
@@ -163,7 +163,7 @@ class _SerializeNode(object):
         #    local_length >>= 1
         assert local_length < (1 << 32)
         assert out_stream.tell() == self._container_offset * 4
-        out_stream.write(struct.pack('<II', local_hash, local_length))
+        out_stream.write(struct.pack('<I', local_length))
         # コンテナのタグ配列を出力する
         for local_sub_node in self._value:
             local_sub_node._write_node_tag(out_stream, in_scalar_offset)

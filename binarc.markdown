@@ -6,7 +6,7 @@ binarcは、**汎用的でプラットフォームに依存しないデータ交
 
 ### binarcの特長
 
-汎用的でプラットフォームに依存しないデータ交換形式としては、JSONやXML、YAML、MessagePack、ProtocolBufferなどがすでに広まっています。それらに対するbinarcのメリットとしては、以下のような点が挙げられます。
+汎用的でプラットフォームに依存しないデータ交換形式としては、[JSON](http://www.json.org/json-ja.html)や[XML](http://www.techscore.com/tech/XML)、[YAML](http://magazine.rubyist.net/?0009-YAML)、[MessagePack](http://frsyuki.hatenablog.com/entry/20080816/p1)、[Protocol Buffers](http://ja.wikipedia.org/wiki/Protocol_Buffers)などがすでに広まっています。それらに対するbinarcのメリットとしては、以下のような点が挙げられます。
 
 * binarcはバイナリ形式のフォーマットなので、JSONやXML、YAMLなどのテキスト形式のフォーマットと比べて **書庫のサイズが小さく、処理も高速**です。
 * binarcは、 **デシリアライズで動的なメモリ確保を行いません** 。

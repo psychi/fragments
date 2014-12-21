@@ -737,10 +737,10 @@ class psyq::binarc::archive
         }
     }
 
-    /** @brief コンテナを指す反復子から、コンテナが持つ要素の数を取得する。
+    /** @brief コンテナを指す反復子から、コンテナが持つ値の数を取得する。
         @param[in] in_container コンテナを指す反復子。
         @return
-            in_iterator が指すコンテナの要素の数。
+            in_iterator が指すコンテナが持つ値の数。
             ただし in_iterator がコンテナを指していない場合は、0を返す。
      */
     public: std::size_t get_container_size(
@@ -760,10 +760,10 @@ class psyq::binarc::archive
         }
     }
 
-    /** @brief コンテナを指す反復子から、コンテナが持つ要素のインデックス番号を取得する。
+    /** @brief コンテナを指す反復子から、コンテナが持つ値のインデックス番号を取得する。
         @param[in] in_container 基準となるコンテナを指す反復子。
-        @param[in] in_element  この反復子が指す要素のインデックス番号を取得する。
-        @retval !=CONTAINER_INDEX_NONE 要素のインデックス番号。
+        @param[in] in_element  この反復子が指す値のインデックス番号を取得する。
+        @retval !=CONTAINER_INDEX_NONE 値のインデックス番号。
         @retval ==CONTAINER_INDEX_NONE 失敗。
       */
     public: std::size_t get_container_index(
@@ -790,10 +790,10 @@ class psyq::binarc::archive
             local_node_index / local_count: this_type::CONTAINER_INDEX_NONE;
     }
 
-    /** @brief コンテナを指す反復子から、コンテナの先頭要素への反復子を取得する。
+    /** @brief コンテナを指す反復子から、コンテナの先頭の値への反復子を取得する。
         @param[in] in_container コンテナを指す反復子。
         @param[in] in_offset
-        @retval !=nullptr コンテナの先頭要素への反復子。
+        @retval !=nullptr コンテナの先頭の値への反復子。
         @retval ==nullptr
             失敗。 in_container がコンテナを指してないか、コンテナが空。
      */
@@ -805,10 +805,10 @@ class psyq::binarc::archive
         return this->get_container_iterator(in_container, in_offset);
     }
 
-    /** @brief コンテナを指す反復子から、コンテナの末尾要素への反復子を取得する。
+    /** @brief コンテナを指す反復子から、コンテナの末尾の値への反復子を取得する。
         @param[in] in_container コンテナを指す反復子。
         @param[in] in_offset
-        @retval !=nullptr コンテナの末尾要素への反復子。
+        @retval !=nullptr コンテナの末尾の値への反復子。
         @retval ==nullptr
             失敗。 in_container がコンテナを指してないか、コンテナが空。
      */
@@ -823,13 +823,13 @@ class psyq::binarc::archive
             nullptr;
     }
 
-    /** @brief コンテナを指す反復子から、コンテナが持つ要素への反復子を取得する。
+    /** @brief コンテナを指す反復子から、コンテナが持つ値への反復子を取得する。
         @param[in] in_container コンテナを指す反復子。
-        @param[in] in_index     取得する要素のインデックス番号。
-        @retval !=nullptr コンテナが持つ要素のへの反復子。
+        @param[in] in_index     取得する値のインデックス番号。
+        @retval !=nullptr コンテナが持つ値のへの反復子。
         @retval ==nullptr
             失敗。 in_container がコンテナを指してないか、
-            in_index に対応する要素が存在しない。
+            in_index に対応する値が存在しない。
      */
     public: this_type::iterator get_container_iterator(
         this_type::iterator const in_container,
@@ -850,14 +850,14 @@ class psyq::binarc::archive
         }
     }
 
-    /** @brief コンテナの要素を指す反復子を進める。
+    /** @brief コンテナの値を指す反復子を進める。
         @param[in] in_container コンテナを指す反復子。
-        @param[in] in_iterator  コンテナの要素を指す反復子。
+        @param[in] in_iterator  コンテナの値を指す反復子。
         @param[in] in_count     反復子を進める回数。負の場合は、戻す回数。
-        @retval !=nullptr コンテナの要素への反復子。
+        @retval !=nullptr コンテナの値への反復子。
         @retval ==nullptr
             失敗。 in_container がコンテナを指してないか、
-            反復子がコンテナの範囲外となった。
+            値を指す反復子がコンテナの範囲外となった。
      */
     public: this_type::iterator advance_container_iterator(
         this_type::iterator const in_container,
@@ -949,13 +949,13 @@ class psyq::binarc::archive
     //-------------------------------------------------------------------------
     /// @name 辞書
     //@{
-    /** @brief 辞書を指す反復子から、辞書が持つ要素のキーへの反復子を取得する。
+    /** @brief 辞書を指す反復子から、辞書が持つ値のキーへの反復子を取得する。
         @param[in] in_map   辞書を指す反復子。
-        @param[in] in_index 取得する要素のインデックス番号。
-        @retval !=nullptr 辞書が持つ要素のキーへの反復子。
+        @param[in] in_index 値のインデックス番号。
+        @retval !=nullptr 辞書が持つキーへの反復子。
         @retval ==nullptr
             失敗。 in_map が辞書を指してないか、
-            in_index に対応する要素が存在しない。
+            in_index に対応する値が存在しない。
      */
     public: this_type::iterator get_map_key(
         this_type::iterator const in_map,
@@ -969,9 +969,9 @@ class psyq::binarc::archive
             nullptr;
     }
 
-    /** @brief 辞書の要素を指す反復子から、対応するキーを指す反復子を取得する。
+    /** @brief 辞書の値を指す反復子から、値に対応するキーを指す反復子を取得する。
         @param[in] in_map   辞書を指す反復子。
-        @param[in] in_value 辞書のキーかマップ値を指す反復子。
+        @param[in] in_value 辞書の値かキーを指す反復子。
         @retval !=nullptr in_value に対応するキーを指す反復子。
         @retval ==nullptr 失敗。
      */
@@ -995,13 +995,13 @@ class psyq::binarc::archive
         return nullptr;
     }
 
-    /** @brief 辞書を指す反復子から、辞書が持つ要素のマップ値への反復子を取得する。
+    /** @brief 辞書を指す反復子から、辞書が持つ値への反復子を取得する。
         @param[in] in_map   辞書を指す反復子。
-        @param[in] in_index 取得する要素のインデックス番号。
-        @retval !=nullptr 辞書が持つ要素のマップ値への反復子。
+        @param[in] in_index 値のインデックス番号。
+        @retval !=nullptr 辞書が持つ値への反復子。
         @retval ==nullptr
             失敗。 in_map が辞書を指してないか、
-            in_index に対応する要素が存在しない。
+            in_index に対応する値が存在しない。
      */
     public: this_type::iterator get_map_value(
         this_type::iterator const in_map,
@@ -1016,13 +1016,13 @@ class psyq::binarc::archive
             nullptr;
     }
 
-    /** @brief 辞書を指す反復子から、辞書が持つ要素のマップ値への反復子を取得する。
+    /** @brief 辞書を指す反復子から、辞書が持つ値への反復子を取得する。
         @param[in] in_map 辞書を指す反復子。
-        @param[in] in_key マップ値に対応するキー。
-        @retval !=nullptr 辞書が持つ要素の、マップ値への反復子。
+        @param[in] in_key 値に対応するキー。
+        @retval !=nullptr 辞書が持つ値への反復子。
         @retval ==nullptr
             失敗。 in_map が辞書を指してないか、
-            in_key に対応する要素が存在しない。
+            in_key に対応する値が存在しない。
      */
     public: this_type::iterator get_map_value(
         this_type::iterator const in_map,
@@ -1062,14 +1062,14 @@ class psyq::binarc::archive
         return nullptr;
     }
 
-    /** @brief 辞書を指す反復子から、辞書が持つ要素のマップ値への反復子を取得する。
+    /** @brief 辞書を指す反復子から、辞書が持つ値への反復子を取得する。
         @param[in] in_map 辞書を指す反復子。
         @param[in] in_key
-            マップ値に対応するキーの反復子。*thisが持つ値を指していること。
-        @retval !=nullptr 辞書が持つ要素の、マップ値への反復子。
+            値に対応するキーの反復子。*thisが持つ値を指していること。
+        @retval !=nullptr 辞書が持つ値への反復子。
         @retval ==nullptr
             失敗。 in_map が辞書を指してないか、
-            in_key に対応する要素が存在しない。
+            in_key に対応する値が存在しない。
      */
     public: this_type::iterator get_map_value(
         this_type::iterator const in_map,
@@ -1079,16 +1079,16 @@ class psyq::binarc::archive
         return this->get_map_value(in_map, in_key, *this);
     }
 
-    /** @brief 辞書を指す反復子から、辞書が持つ要素のマップ値への反復子を取得する。
+    /** @brief 辞書を指す反復子から、辞書が持つ値への反復子を取得する。
         @param[in] in_map 辞書を指す反復子。
         @param[in] in_key_iterator
-            マップ値に対応するキーの反復子。
+            値に対応するキーの反復子。
             in_key_archive が持つ値を指していること。
         @param[in] in_key_archive キーとなる反復子が指す書庫。
-        @retval !=nullptr 辞書が持つ要素の、マップ値への反復子。
+        @retval !=nullptr 辞書が持つ値への反復子。
         @retval ==nullptr
             失敗。 in_map が辞書を指してないか、
-            in_key_iterator に対応する要素が存在しない。
+            in_key_iterator に対応する値が存在しない。
      */
     public: this_type::iterator get_map_value(
         this_type::iterator const in_map,

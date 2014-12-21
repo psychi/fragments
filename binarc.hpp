@@ -718,72 +718,136 @@ class psyq::binarc::archive
     }
 
     //-------------------------------------------------------------------------
-    /// @name 配列
+    /// @name コンテナ
     //@{
-    /** @brief 配列を指す反復子から、配列が持つ要素の数を取得する。
-        @param[in] in_array 配列を指す反復子。
+    /** @brief 反復子がコンテナを指すか判定する。
+        @param[in] in_iterator この反復子から値を取得する。
+        @retval true  in_iterator はコンテナを指している。
+        @retval false in_iterator はコンテナを指していない。
+     */
+    public: bool is_container(this_type::iterator const in_iterator) const
+    {
+        switch (this->get_format(in_iterator))
+        {
+        case this_type::kind_ARRAY:
+        case this_type::kind_MAP:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    /** @brief コンテナを指す反復子から、コンテナが持つ要素の数を取得する。
+        @param[in] in_container コンテナを指す反復子。
         @return
-            in_array が指す配列の要素の数。
-            ただし in_array が配列を指していない場合は、0を返す。
+            in_iterator が指すコンテナの要素の数。
+            ただし in_iterator がコンテナを指していない場合は、0を返す。
      */
-    public: std::size_t get_array_size(
-        this_type::iterator const in_array)
+    public: std::size_t get_container_size(
+        this_type::iterator const in_container)
     const
     {
-        auto const local_tag(this->get_tag(in_array));
-        return this_type::get_format(local_tag) == this_type::kind_ARRAY?
-            this->get_container_header(local_tag).size: 0;
+        auto const local_tag(this->get_tag(in_container));
+        switch (this_type::get_format(local_tag))
+        {
+        case this_type::kind_ARRAY:
+            return this->get_container_header(local_tag).size;
+        case this_type::kind_MAP:
+            return this->get_container_header(local_tag).size
+                / this_type::NODE_COUNT_PER_MAP_ELEMENT;
+        default:
+            return 0;
+        }
     }
 
-    /** @brief 配列を指す反復子から、配列が持つ要素への反復子を取得する。
-        @param[in] in_array 配列を指す反復子。
-        @param[in] in_index 取得する要素のインデックス番号。
-        @retval !=nullptr 配列が持つ要素への反復子。
-        @retval ==nullptr
-            失敗。 in_array が配列を指してないか、
-            in_index に対応する要素が存在しない。
-     */
-    public: this_type::iterator get_array_value(
-        this_type::iterator const in_array,
-        std::size_t const in_index)
-    const
-    {
-        auto const local_tag(this->get_tag(in_array));
-        return this_type::get_format(local_tag) == this_type::kind_ARRAY?
-            this->get_container_node(local_tag, in_index):
-            nullptr;
-    }
-
-    /** @brief 配列を指す反復子から、要素のインデックス番号を取得する。
-        @param[in] in_array    基準となる配列を指す反復子。
-        @param[in] in_iterator この反復子のインデックス番号を取得する。
+    /** @brief コンテナを指す反復子から、コンテナが持つ要素のインデックス番号を取得する。
+        @param[in] in_container 基準となるコンテナを指す反復子。
+        @param[in] in_element  この反復子が指す要素のインデックス番号を取得する。
         @retval !=CONTAINER_INDEX_NONE 要素のインデックス番号。
         @retval ==CONTAINER_INDEX_NONE 失敗。
       */
-    public: std::size_t get_array_index(
-        this_type::iterator const in_array,
-        this_type::iterator const in_iterator)
+    public: std::size_t get_container_index(
+        this_type::iterator const in_container,
+        this_type::iterator const in_element)
     const
     {
-        auto const local_tag(this->get_tag(in_array));
-        return this_type::get_format(local_tag) == this_type::kind_ARRAY?
-            this->get_node_index(local_tag, in_iterator):
-            this_type::CONTAINER_INDEX_NONE;
+        auto const local_tag(this->get_tag(in_container));
+        std::size_t local_count;
+        switch (this_type::get_format(local_tag))
+        {
+        case this_type::kind_ARRAY:
+            local_count = 1;
+            break;
+        case this_type::kind_MAP:
+            local_count = this_type::NODE_COUNT_PER_MAP_ELEMENT;
+            break;
+        default:
+            return this_type::CONTAINER_INDEX_NONE;
+        }
+        auto const local_node_index(
+            this->get_node_index(local_tag, in_element));
+        return local_node_index != this_type::CONTAINER_INDEX_NONE?
+            local_node_index / local_count: this_type::CONTAINER_INDEX_NONE;
     }
-    //@}
-    private: std::size_t get_node_index(
-        this_type::memory_unit const in_tag,
-        this_type::iterator const in_iterator)
+
+    /** @brief コンテナを指す反復子から、コンテナの先頭要素への反復子を取得する。
+        @param[in] in_container コンテナを指す反復子。
+        @param[in] in_offset
+        @retval !=nullptr コンテナの先頭要素への反復子。
+        @retval ==nullptr
+            失敗。 in_container がコンテナを指してないか、コンテナが空。
+     */
+    public: this_type::iterator get_container_front(
+        this_type::iterator const in_container,
+        std::size_t const in_offset = 0)
     const
     {
-        auto const& local_container(this->get_container_header(in_tag));
-        auto const local_begin(
-            reinterpret_cast<this_type::memory_unit const*>(
-                &local_container + 1));
-        auto const local_end(local_begin + local_container.size);
-        return local_begin <= in_iterator && in_iterator < local_end?
-            static_cast<this_type::memory_unit const*>(in_iterator) - local_begin:
-            this_type::CONTAINER_INDEX_NONE;
+        return this->get_container_iterator(in_container, in_offset);
+    }
+
+    /** @brief コンテナを指す反復子から、コンテナの末尾要素への反復子を取得する。
+        @param[in] in_container コンテナを指す反復子。
+        @param[in] in_offset
+        @retval !=nullptr コンテナの末尾要素への反復子。
+        @retval ==nullptr
+            失敗。 in_container がコンテナを指してないか、コンテナが空。
+     */
+    public: this_type::iterator get_container_back(
+        this_type::iterator const in_container,
+        std::size_t const in_offset = 0)
+    const
+    {
+        auto const local_size(this->get_container_size(in_container));
+        return in_offset < local_size?
+            this->get_container_iterator(in_container, local_size - in_offset - 1):
+            nullptr;
+    }
+
+    /** @brief コンテナを指す反復子から、コンテナが持つ要素への反復子を取得する。
+        @param[in] in_container コンテナを指す反復子。
+        @param[in] in_index     取得する要素のインデックス番号。
+        @retval !=nullptr コンテナが持つ要素のへの反復子。
+        @retval ==nullptr
+            失敗。 in_container がコンテナを指してないか、
+            in_index に対応する要素が存在しない。
+     */
+    public: this_type::iterator get_container_iterator(
+        this_type::iterator const in_container,
+        std::size_t const in_index)
+    const
+    {
+        auto const local_tag(this->get_tag(in_container));
+        switch (this_type::get_format(local_tag))
+        {
+        case this_type::kind_ARRAY:
+            return this->get_container_node(local_tag, in_index);
+        case this_type::kind_MAP:
+            return this->get_container_node(
+                local_tag,
+                in_index * this_type::NODE_COUNT_PER_MAP_ELEMENT + 1);
+        default:
+            return nullptr;
+        }
     }
 
     /** @brief コンテナの要素を指す反復子を進める。
@@ -795,7 +859,7 @@ class psyq::binarc::archive
             失敗。 in_container がコンテナを指してないか、
             反復子がコンテナの範囲外となった。
      */
-    private: this_type::iterator advance_container_iterator(
+    public: this_type::iterator advance_container_iterator(
         this_type::iterator const in_container,
         this_type::iterator const in_iterator,
         int const in_count)
@@ -831,6 +895,21 @@ class psyq::binarc::archive
             }
         }
         return nullptr;
+    }
+    //@}
+    private: std::size_t get_node_index(
+        this_type::memory_unit const in_tag,
+        this_type::iterator const in_iterator)
+    const
+    {
+        auto const& local_container(this->get_container_header(in_tag));
+        auto const local_begin(
+            reinterpret_cast<this_type::memory_unit const*>(
+                &local_container + 1));
+        auto const local_end(local_begin + local_container.size);
+        return local_begin <= in_iterator && in_iterator < local_end?
+            static_cast<this_type::memory_unit const*>(in_iterator) - local_begin:
+            this_type::CONTAINER_INDEX_NONE;
     }
 
     /** @brief タグが指すコンテナの、下位ノードの反復子を取得する。
@@ -870,21 +949,6 @@ class psyq::binarc::archive
     //-------------------------------------------------------------------------
     /// @name 辞書
     //@{
-    /** @brief 辞書を指す反復子から、辞書が持つ要素の数を取得する。
-        @param[in] in_map 辞書を指す反復子。
-        @return
-            in_map が指す辞書の要素の数。
-            ただし in_map が辞書を指していない場合は、0を返す。
-     */
-    public: std::size_t get_map_size(this_type::iterator const in_map) const
-    {
-        auto const local_tag(this->get_tag(in_map));
-        return this_type::get_format(local_tag) == this_type::kind_MAP?
-            this->get_container_header(local_tag).size
-                / this_type::NODE_COUNT_PER_MAP_ELEMENT:
-            0;
-    }
-
     /** @brief 辞書を指す反復子から、辞書が持つ要素のキーへの反復子を取得する。
         @param[in] in_map   辞書を指す反復子。
         @param[in] in_index 取得する要素のインデックス番号。
@@ -903,6 +967,32 @@ class psyq::binarc::archive
             this->get_container_node(
                 local_tag, in_index * this_type::NODE_COUNT_PER_MAP_ELEMENT):
             nullptr;
+    }
+
+    /** @brief 辞書の要素を指す反復子から、対応するキーを指す反復子を取得する。
+        @param[in] in_map   辞書を指す反復子。
+        @param[in] in_value 辞書のキーかマップ値を指す反復子。
+        @retval !=nullptr in_value に対応するキーを指す反復子。
+        @retval ==nullptr 失敗。
+     */
+    public: this_type::iterator get_map_key(
+        this_type::iterator const in_map,
+        this_type::iterator const in_value)
+    const
+    {
+        auto const local_tag(this->get_tag(in_map));
+        if (this_type::get_format(local_tag) == this_type::kind_MAP)
+        {
+            auto const local_index(
+                this->get_node_index(local_tag, in_value));
+            if (local_index != this_type::CONTAINER_INDEX_NONE)
+            {
+                return (local_index & 1) == 0?
+                    in_value:
+                    static_cast<this_type::memory_unit const*>(in_value) - 1;
+            }
+        }
+        return nullptr;
     }
 
     /** @brief 辞書を指す反復子から、辞書が持つ要素のマップ値への反復子を取得する。
@@ -1024,16 +1114,16 @@ class psyq::binarc::archive
         case this_type::numerics_UNSIGNED_IMMEDIATE:
         case this_type::numerics_UNSIGNED_32:
         case this_type::numerics_UNSIGNED_64:
-            return this->find_numerics_map_value<std::uint64_t>(
+            return this->get_numerics_map_value<std::uint64_t>(
                 in_map, in_key_iterator, in_key_archive);
         case this_type::numerics_NEGATIVE_IMMEDIATE:
         case this_type::numerics_NEGATIVE_32:
         case this_type::numerics_NEGATIVE_64:
-            return this->find_numerics_map_value<std::int64_t>(
+            return this->get_numerics_map_value<std::int64_t>(
                 in_map, in_key_iterator, in_key_archive);
         case this_type::numerics_FLOATING_32:
         case this_type::numerics_FLOATING_64:
-            return this->find_numerics_map_value<double>(
+            return this->get_numerics_map_value<double>(
                 in_map, in_key_iterator, in_key_archive);
         case this_type::kind_STRING:
         {
@@ -1067,33 +1157,9 @@ class psyq::binarc::archive
         }
         return nullptr;
     }
-
-    /** @brief 辞書を指す反復子から、要素のインデックス番号を取得する。
-        @param[in] in_container 基準となる辞書を指す反復子。
-        @param[in] in_iterator  この反復子のインデックス番号を取得する。
-        @retval !=CONTAINER_INDEX_NONE 要素のインデックス番号。
-        @retval ==CONTAINER_INDEX_NONE 失敗。
-      */
-    public: std::size_t get_map_index(
-        this_type::iterator const in_map,
-        this_type::iterator const in_iterator)
-    const
-    {
-        auto const local_tag(this->get_tag(in_map));
-        if (this_type::get_format(local_tag) == this_type::kind_MAP)
-        {
-            auto const local_node_index(
-                this->get_node_index(local_tag, in_iterator));
-            if (local_node_index != this_type::CONTAINER_INDEX_NONE)
-            {
-                return local_node_index / this_type::NODE_COUNT_PER_MAP_ELEMENT;
-            }
-        }
-        return this_type::CONTAINER_INDEX_NONE;
-    }
     //@}
     private: template<typename template_numerics>
-    this_type::iterator find_numerics_map_value(
+    this_type::iterator get_numerics_map_value(
         this_type::iterator const in_map,
         this_type::iterator const in_value_iterator,
         this_type const& in_value_archive)
@@ -1103,31 +1169,6 @@ class psyq::binarc::archive
         return in_value_archive.read_numerics(in_value_iterator, local_numerics)?
             this->get_map_value(in_map, this_type::map_key(local_numerics)):
             nullptr;
-    }
-
-    /** @brief 辞書のマップ値を指す反復子から、対応するキーを指す反復子を取得する。
-        @param[in] in_map   辞書を指す反復子。
-        @param[in] in_value 辞書のマップ値を指す反復子。
-        @retval !=nullptr in_value に対応するキーを指す反復子。
-        @retval ==nullptr 失敗。
-     */
-    private: this_type::iterator get_map_key(
-        this_type::iterator const in_map,
-        this_type::iterator const in_value)
-    {
-        auto const local_tag(this->get_tag(in_map));
-        if (this_type::get_format(local_tag) == this_type::kind_MAP)
-        {
-            auto const local_index(
-                this->get_node_index(local_tag, in_value));
-            if (local_index != this_type::CONTAINER_INDEX_NONE)
-            {
-                return (local_index & 1) == 0?
-                    in_value:
-                    static_cast<this_type::memory_unit const*>(in_value) - 1;
-            }
-        }
-        return nullptr;
     }
 
     //-------------------------------------------------------------------------
@@ -1450,7 +1491,7 @@ class binarc_to_block_yaml
         psyq::binarc::archive::iterator const in_iterator)
     {
         out_stream << '[';
-        auto const local_size(in_archive.get_array_size(in_iterator));
+        auto const local_size(in_archive.get_container_size(in_iterator));
         for (unsigned i(0); i < local_size; ++i)
         {
             if (0 < i)
@@ -1460,7 +1501,7 @@ class binarc_to_block_yaml
             this_type::convert_node(
                 out_stream,
                 in_archive,
-                in_archive.get_array_value(in_iterator, i));
+                in_archive.get_container_iterator(in_iterator, i));
         }
         out_stream << ']';
     }
@@ -1471,7 +1512,7 @@ class binarc_to_block_yaml
         psyq::binarc::archive::iterator const in_iterator)
     {
         out_stream << '{';
-        auto const local_size(in_archive.get_map_size(in_iterator));
+        auto const local_size(in_archive.get_container_size(in_iterator));
         for (unsigned i(0); i < local_size; ++i)
         {
             if (0 < i)
@@ -1484,8 +1525,8 @@ class binarc_to_block_yaml
                 out_stream, in_archive, local_key_iterator);
             out_stream << ':';
             auto const local_value_iterator(
-                //in_archive.get_map_value(in_iterator, local_key_iterator));
-                in_archive.get_map_value(in_iterator, i));
+                in_archive.get_map_value(in_iterator, local_key_iterator));
+                //in_archive.get_map_value(in_iterator, i));
             this_type::convert_node(
                 out_stream, in_archive, local_value_iterator);
         }

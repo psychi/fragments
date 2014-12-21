@@ -237,7 +237,7 @@ class _SerializeNode(object):
             return _SerializeNode(_BINARC_FORMAT_MAP, tuple(local_array))
         else:
             # 値が未対応の型だった。
-            assert False
+            assert in_value is None
             return _SerializeNode(_BINARC_FORMAT_NIL, None)
 
     ## 浮動小数点数をシリアライズするノードを構築する。

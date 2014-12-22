@@ -51,10 +51,11 @@ class _SerializeNode(object):
         local_stream.write(
             struct.pack(
                 '<I',
-                (ord('I') << 24) |
-                (ord('N') << 16) |
-                (ord('D') <<  8) |
-                (ord('x'))))
+                # 'RooT'
+                (ord('R') << 24) |
+                (ord('o') << 16) |
+                (ord('o') <<  8) |
+                (ord('T'))))
         assert local_stream.tell() % 4 == 0
         # タグ木をストリームへ出力する
         local_scalar_offset = local_tree._initialize_container_offset(
@@ -143,6 +144,10 @@ class _SerializeNode(object):
         if isinstance(self._value, tuple):
             self._container_offset = in_offset
             local_offset = in_offset + 1 + len(self._value)
+            if self._format == _BINARC_FORMAT_MAP:
+                local_offset += 1
+            else:
+                assert self._format == _BINARC_FORMAT_ARRAY
             for local_sub_node in self._value:
                 local_offset = local_sub_node._initialize_container_offset(
                     local_offset)
@@ -154,23 +159,33 @@ class _SerializeNode(object):
     #  @param[out] out_stream       ノードタグを出力するストリーム。
     #  @param[in]  in_scalar_offset 値バイト列の先頭位置へのオフセット値。
     def _write_tag_tree(self, out_stream, in_scalar_offset):
-        # コンテナのハッシュ値と要素数を出力する。
-        ## @todo コンテナのハッシュ値は未実装。
-        local_hash = (1 << 32) - 1
-        local_length = len(self._value)
-        #if self._format == _BINARC_FORMAT_MAP:
-        #    assert local_length % 2 == 0
-        #    local_length >>= 1
-        assert local_length < (1 << 32)
         assert out_stream.tell() == self._container_offset * 4
-        out_stream.write(struct.pack('<I', local_length))
-        # コンテナのタグ配列を出力する
-        for local_sub_node in self._value:
-            local_sub_node._write_node_tag(out_stream, in_scalar_offset)
+        if self._format == _BINARC_FORMAT_MAP:
+            assert len(self._value) % 2 == 0
+            local_length = len(self._value) / 2
+            # 値コンテナ、キーコンテナの順に出力する。
+            _SerializeNode._write_tag_container(
+                out_stream, in_scalar_offset, self._value[:local_length])
+            _SerializeNode._write_tag_container(
+                out_stream, in_scalar_offset, self._value[local_length:])
+        else:
+            assert self._format == _BINARC_FORMAT_ARRAY
+            _SerializeNode._write_tag_container(
+                out_stream, in_scalar_offset, self._value)
         # 下位のコンテナを出力する。
         for local_sub_node in self._value:
             if isinstance(local_sub_node._value, tuple):
                 local_sub_node._write_tag_tree(out_stream, in_scalar_offset)
+
+    @staticmethod
+    def _write_tag_container(out_stream, in_scalar_offset, in_container):
+        # コンテナの要素数を出力する。
+        local_length = len(in_container)
+        assert local_length < (1 << 32)
+        out_stream.write(struct.pack('<I', local_length))
+        # コンテナのタグ配列を出力する
+        for local_sub_node in in_container:
+            local_sub_node._write_node_tag(out_stream, in_scalar_offset)
 
     ## @brief ノードタグを出力する。
     #  @param[out] out_stream       ノードタグを出力するストリーム。
@@ -230,11 +245,14 @@ class _SerializeNode(object):
                     _SerializeNode._make_node(io_value_map, local_key),
                     _SerializeNode._make_node(io_value_map, local_value)))
             local_map.sort(key=lambda x: (x[0]._hash << 4) | x[0]._format)
-            local_array = []
+            local_key_array = []
+            local_value_array = []
             for local_key, local_value in local_map:
-                local_array.append(local_key)
-                local_array.append(local_value)
-            return _SerializeNode(_BINARC_FORMAT_MAP, tuple(local_array))
+                local_key_array.append(local_key)
+                local_value_array.append(local_value)
+            return _SerializeNode(
+                _BINARC_FORMAT_MAP, 
+                tuple(local_value_array + local_key_array))
         else:
             # 値が未対応の型だった。
             assert in_value is None

@@ -33,7 +33,7 @@ class psyq::binarc::archive
     /// binarc書庫の中にある値を指す反復子。
     public: typedef void const* iterator;
 
-    public: typedef std::uint32_t memory_unit;
+    public: typedef std::uint32_t word;
 
     /// 書庫が含む値の種別。
     public: enum kind: std::uint8_t
@@ -50,20 +50,24 @@ class psyq::binarc::archive
 
     }; // enum kind
 
+    /// コンテナの先頭位置と終端位置のペア。
+    public: typedef std::pair<this_type::iterator, this_type::iterator>
+        container_range;
+
     //-------------------------------------------------------------------------
     private: struct container_header
     {
-        this_type::memory_unit size;
+        this_type::word size;
     };
 
     private: struct string_header: public this_type::container_header
     {
-        this_type::memory_unit hash;
+        this_type::word hash;
     };
 
     private: struct extended_header: public this_type::string_header
     {
-        this_type::memory_unit kind;
+        this_type::word kind;
     };
 
     /// ノードが指す数値の格納形式。
@@ -84,11 +88,10 @@ class psyq::binarc::archive
     {
         TAG_FORMAT_BITS_SIZE = 4,
         TAG_FORMAT_BITS_MAX = (1 << this_type::TAG_FORMAT_BITS_SIZE) - 1,
-        TAG_FORMAT_BITS_POSITION = sizeof(this_type::memory_unit) * 8
+        TAG_FORMAT_BITS_POSITION = sizeof(this_type::word) * 8
             - this_type::TAG_FORMAT_BITS_SIZE,
         TAG_IMMEDIATE_BITS_MASK
             = (1 << this_type::TAG_FORMAT_BITS_POSITION) - 1,
-        NODE_COUNT_PER_MAP_ELEMENT = 2,
         ROOT_UNIT_POSITION = 1,
     };
 
@@ -242,7 +245,7 @@ class psyq::binarc::archive
         public: map_key(
             void const* const in_extended_data,
             std::size_t const in_extended_size,
-            psyq::binarc::archive::memory_unit const in_extended_kind)
+            psyq::binarc::archive::word const in_extended_kind)
         {
             PSYQ_ASSERT(in_extended_data != nullptr || in_extended_data <= 0);
             this->raw_.data = in_extended_data;
@@ -264,7 +267,7 @@ class psyq::binarc::archive
             {
                 void const* data;
                 std::size_t size;
-                psyq::binarc::archive::memory_unit kind;
+                psyq::binarc::archive::word kind;
             } raw_;
         };
         private: std::uint32_t hash_;
@@ -278,31 +281,27 @@ class psyq::binarc::archive
     {
         private: typedef less_map this_type;
 
-        /// binarc辞書の要素。
-        public: typedef psyq::binarc::archive::memory_unit
-            element[this_type::NODE_COUNT_PER_MAP_ELEMENT];
-
         public: less_map(psyq::binarc::archive const& in_archive):
             archive_(in_archive)
         {}
 
         public: bool operator()(
             psyq::binarc::archive::map_key const& in_left_key,
-            this_type::element const& in_right_element)
+            psyq::binarc::archive::word const& in_right_element)
         const
         {
             auto const local_compare(
-                this->archive_.compare_hash(in_left_key, in_right_element[0]));
+                this->archive_.compare_hash(in_left_key, in_right_element));
             return local_compare < 0;
         }
 
         public: bool operator()(
-            this_type::element const& in_left_element,
+            psyq::binarc::archive::word const& in_left_element,
             psyq::binarc::archive::map_key const& in_right_key)
         const
         {
             auto const local_compare(
-                this->archive_.compare_hash(in_right_key, in_left_element[0]));
+                this->archive_.compare_hash(in_right_key, in_left_element));
             return 0 < local_compare;
         }
 
@@ -315,12 +314,12 @@ class psyq::binarc::archive
         void const* const in_front,
         std::size_t const in_size)
     :
-        unit_front_(static_cast<this_type::memory_unit const*>(in_front)),
-        unit_count_(in_size / sizeof(this_type::memory_unit))
+        unit_front_(static_cast<this_type::word const*>(in_front)),
+        unit_count_(in_size / sizeof(this_type::word))
     {
         PSYQ_ASSERT(
             reinterpret_cast<std::size_t>(in_front) % sizeof(std::uint64_t) == 0
-            && in_size % sizeof(this_type::memory_unit) == 0);
+            && in_size % sizeof(this_type::word) == 0);
         PSYQ_ASSERT(in_front != nullptr || in_size == 0);
     }
 
@@ -329,13 +328,13 @@ class psyq::binarc::archive
      */
     public: this_type::iterator get_root() const
     {
-        return this->get_unit(this_type::ROOT_UNIT_POSITION);
+        return this->get_word(this_type::ROOT_UNIT_POSITION);
     }
 
     /** @brief binarc書庫内のメモリ位置を取得する。
         @param[in] in_index メモリ単位のインデックス番号。
      */
-    private: this_type::memory_unit const* get_unit(
+    private: this_type::word const* get_word(
         std::size_t const in_index)
     const
     {
@@ -343,13 +342,13 @@ class psyq::binarc::archive
             this->unit_front_ + in_index: nullptr;
     }
 
-    private: this_type::memory_unit const* get_unit(
+    private: this_type::word const* get_word(
         this_type::iterator const in_iterator)
     const
     {
         return this->unit_front_ <= in_iterator
             && in_iterator < this->unit_front_ + this->unit_count_?
-                static_cast<this_type::memory_unit const*>(in_iterator):
+                static_cast<this_type::word const*>(in_iterator):
                 nullptr;
     }
 
@@ -388,7 +387,7 @@ class psyq::binarc::archive
      */
     private: unsigned get_format(this_type::iterator const in_iterator) const
     {
-        auto const local_unit(this->get_unit(in_iterator));
+        auto const local_unit(this->get_word(in_iterator));
         return local_unit != nullptr?
             this_type::get_format(*local_unit): this_type::kind_NIL;
     }
@@ -397,16 +396,16 @@ class psyq::binarc::archive
         @param[in] in_tag 格納形式を取得するタグ。
         @return in_tag が指す値の格納形式。
      */
-    private: static unsigned get_format(this_type::memory_unit const in_tag)
+    private: static unsigned get_format(this_type::word const in_tag)
     {
         return in_tag >> this_type::TAG_FORMAT_BITS_POSITION;
     }
 
-    private: this_type::memory_unit get_tag(
+    private: this_type::word get_tag(
         this_type::iterator const in_iterator)
     const
     {
-        auto const local_unit(this->get_unit(in_iterator));
+        auto const local_unit(this->get_word(in_iterator));
         return local_unit != nullptr? *local_unit: 0;
     }
 
@@ -422,7 +421,7 @@ class psyq::binarc::archive
             return nullptr;
         }
         auto const local_body(
-            this->get_unit(
+            this->get_word(
                 local_tag & this_type::TAG_IMMEDIATE_BITS_MASK));
         PSYQ_ASSERT(local_body != nullptr);
         return reinterpret_cast<template_body const*>(local_body);
@@ -519,7 +518,7 @@ class psyq::binarc::archive
         switch (this_type::get_format(local_tag))
         {
         case this_type::numerics_UNSIGNED_IMMEDIATE:
-            return this_type::read_immediate_numerics<template_numerics, std::make_unsigned<this_type::memory_unit>::type>(
+            return this_type::read_immediate_numerics<template_numerics, std::make_unsigned<this_type::word>::type>(
                 local_tag, out_numerics);
         case this_type::numerics_UNSIGNED_32:
             return this->read_body_numerics<template_numerics, std::uint32_t>(
@@ -528,7 +527,7 @@ class psyq::binarc::archive
             return this->read_body_numerics<template_numerics, std::uint64_t>(
                 local_tag, out_numerics);
         case this_type::numerics_NEGATIVE_IMMEDIATE:
-            return this_type::read_immediate_numerics<template_numerics, std::make_signed<this_type::memory_unit>::type>(
+            return this_type::read_immediate_numerics<template_numerics, std::make_signed<this_type::word>::type>(
                 local_tag, out_numerics);
         case this_type::numerics_NEGATIVE_32:
             return this->read_body_numerics<template_numerics, std::int32_t>(
@@ -549,7 +548,7 @@ class psyq::binarc::archive
     //@}
     private: template<typename template_write, typename template_read>
     static bool read_immediate_numerics(
-        this_type::memory_unit const in_tag,
+        this_type::word const in_tag,
         template_write& out_numerics)
     {
         static_assert(std::is_integral<template_read>::value, "");
@@ -565,12 +564,12 @@ class psyq::binarc::archive
 
     private: template<typename template_write, typename template_read>
     bool read_body_numerics(
-        this_type::memory_unit const in_tag,
+        this_type::word const in_tag,
         template_write& out_numerics)
     const
     {
         auto const local_body(
-            this->get_unit(in_tag & this_type::TAG_IMMEDIATE_BITS_MASK));
+            this->get_word(in_tag & this_type::TAG_IMMEDIATE_BITS_MASK));
         PSYQ_ASSERT(local_body != nullptr);
         PSYQ_ASSERT(reinterpret_cast<std::size_t>(local_body) % sizeof(template_read) == 0);
         return this_type::read_argument_numerics(
@@ -701,7 +700,7 @@ class psyq::binarc::archive
             反復子が指す拡張バイト列の種別。
             ただし、反復子が拡張バイト列を指してない場合は、0を返す。
      */
-    public: this_type::memory_unit get_extended_kind(
+    public: this_type::word get_extended_kind(
         this_type::iterator const in_iterator)
     const
     {
@@ -751,10 +750,8 @@ class psyq::binarc::archive
         switch (this_type::get_format(local_tag))
         {
         case this_type::kind_ARRAY:
-            return this->get_container_header(local_tag).size;
         case this_type::kind_MAP:
-            return this->get_container_header(local_tag).size
-                / this_type::NODE_COUNT_PER_MAP_ELEMENT;
+            return this->get_container_header(local_tag).size;
         default:
             return 0;
         }
@@ -772,64 +769,23 @@ class psyq::binarc::archive
     const
     {
         auto const local_tag(this->get_tag(in_container));
-        std::size_t local_count;
         switch (this_type::get_format(local_tag))
         {
         case this_type::kind_ARRAY:
-            local_count = 1;
-            break;
         case this_type::kind_MAP:
-            local_count = this_type::NODE_COUNT_PER_MAP_ELEMENT;
-            break;
+            return this->get_node_index(local_tag, in_element);
         default:
             return this_type::CONTAINER_INDEX_NONE;
         }
-        auto const local_node_index(
-            this->get_node_index(local_tag, in_element));
-        return local_node_index != this_type::CONTAINER_INDEX_NONE?
-            local_node_index / local_count: this_type::CONTAINER_INDEX_NONE;
-    }
-
-    /** @brief コンテナを指す反復子から、コンテナの先頭の値への反復子を取得する。
-        @param[in] in_container コンテナを指す反復子。
-        @param[in] in_offset
-        @retval !=nullptr コンテナの先頭の値への反復子。
-        @retval ==nullptr
-            失敗。 in_container がコンテナを指してないか、コンテナが空。
-     */
-    public: this_type::iterator get_container_front(
-        this_type::iterator const in_container,
-        std::size_t const in_offset = 0)
-    const
-    {
-        return this->get_container_iterator(in_container, in_offset);
-    }
-
-    /** @brief コンテナを指す反復子から、コンテナの末尾の値への反復子を取得する。
-        @param[in] in_container コンテナを指す反復子。
-        @param[in] in_offset
-        @retval !=nullptr コンテナの末尾の値への反復子。
-        @retval ==nullptr
-            失敗。 in_container がコンテナを指してないか、コンテナが空。
-     */
-    public: this_type::iterator get_container_back(
-        this_type::iterator const in_container,
-        std::size_t const in_offset = 0)
-    const
-    {
-        auto const local_size(this->get_container_size(in_container));
-        return in_offset < local_size?
-            this->get_container_iterator(in_container, local_size - in_offset - 1):
-            nullptr;
     }
 
     /** @brief コンテナを指す反復子から、コンテナが持つ値への反復子を取得する。
         @param[in] in_container コンテナを指す反復子。
         @param[in] in_index     取得する値のインデックス番号。
-        @retval !=nullptr コンテナが持つ値のへの反復子。
+        @retval !=nullptr コンテナが持つ値への反復子。
         @retval ==nullptr
             失敗。 in_container がコンテナを指してないか、
-            in_index に対応する値が存在しない。
+            in_index はコンテナの範囲外。
      */
     public: this_type::iterator get_container_iterator(
         this_type::iterator const in_container,
@@ -840,14 +796,83 @@ class psyq::binarc::archive
         switch (this_type::get_format(local_tag))
         {
         case this_type::kind_ARRAY:
-            return this->get_container_node(local_tag, in_index);
         case this_type::kind_MAP:
-            return this->get_container_node(
-                local_tag,
-                in_index * this_type::NODE_COUNT_PER_MAP_ELEMENT + 1);
+            return this->get_container_node(local_tag, in_index);
         default:
             return nullptr;
         }
+    }
+
+    /** @brief コンテナの範囲から、コンテナが持つ値への反復子を取得する。
+        @param[in] in_range コンテナの範囲。
+        @param[in] in_index 取得する値のインデックス番号。
+        @retval !=nullptr コンテナが持つ値への反復子。
+        @retval ==nullptr 失敗。 in_index はコンテナの範囲外。
+     */
+    public: this_type::iterator get_container_iterator(
+        this_type::container_range const& in_range,
+        std::size_t const in_index)
+    const
+    {
+        PSYQ_ASSERT(in_range.first <= in_range.second);
+        auto const local_begin(
+            static_cast<this_type::word const*>(in_range.first));
+        auto const local_end(
+            static_cast<this_type::word const*>(in_range.second));
+        return in_index < static_cast<std::size_t>(local_end - local_begin)?
+            local_begin + in_index: nullptr;
+    }
+
+    /** @brief コンテナを指す反復子から、コンテナの範囲を取得する。
+        @param[in] in_container コンテナを指す反復子。
+        @return コンテナの範囲。
+     */
+    public: this_type::container_range get_container_range(
+        this_type::iterator const in_container)
+    const
+    {
+        auto const local_tag(this->get_tag(in_container));
+        switch (this_type::get_format(local_tag))
+        {
+        case this_type::kind_ARRAY:
+        case this_type::kind_MAP:
+            break;
+        default:
+            return this_type::container_range(nullptr, nullptr);
+        }
+        auto const& local_container(this->get_container_header(local_tag));
+        auto const local_begin(
+            reinterpret_cast<this_type::word const*>(
+                &local_container + 1));
+        return this_type::container_range(
+            local_begin, local_begin + local_container.size);
+    }
+
+    /** @brief コンテナの値を指す反復子を進める。
+        @param[in] in_range    コンテナの範囲。
+        @param[in] in_iterator コンテナの値を指す反復子。
+        @param[in] in_count    反復子を進める回数。負の場合は、戻す回数。
+        @retval !=nullptr コンテナの値への反復子。
+        @retval ==nullptr
+            失敗。 in_container がコンテナを指してないか、
+            値を指す反復子がコンテナの範囲外となった。
+     */
+    public: this_type::iterator advance_container_iterator(
+        this_type::container_range const& in_range,
+        this_type::iterator const in_iterator,
+        int const in_count)
+    const
+    {
+        PSYQ_ASSERT(in_range.first <= in_range.second);
+        auto const local_begin(
+            static_cast<this_type::word const*>(in_range.first));
+        auto const local_end(
+            static_cast<this_type::word const*>(in_range.second));
+        auto const local_iterator(
+            static_cast<this_type::word const*>(in_iterator)
+            + in_count);
+        return local_begin <= local_iterator && local_iterator < local_end?
+            local_iterator: nullptr;
     }
 
     /** @brief コンテナの値を指す反復子を進める。
@@ -866,29 +891,26 @@ class psyq::binarc::archive
     const
     {
         auto const local_container_tag(this->get_tag(in_container));
-        int local_step;
         switch (this_type::get_format(local_container_tag))
         {
         case this_type::kind_ARRAY:
-            local_step = 1;
-            break;
         case this_type::kind_MAP:
-            local_step = this_type::NODE_COUNT_PER_MAP_ELEMENT;
             break;
         default:
             return nullptr;
         }
+
         auto const& local_container(
             this->get_container_header(local_container_tag));
         auto const local_begin(
-            reinterpret_cast<this_type::memory_unit const*>(
+            reinterpret_cast<this_type::word const*>(
                 &local_container + 1));
         auto const local_end(local_begin + local_container.size);
         if (local_begin <= in_iterator && in_iterator < local_end)
         {
             void const* const local_new_iterator(
-                static_cast<this_type::memory_unit const*>(in_iterator)
-                + in_count * local_step);
+                static_cast<this_type::word const*>(in_iterator)
+                + in_count);
             if (local_begin <= local_new_iterator && local_new_iterator < local_end)
             {
                 return local_new_iterator;
@@ -898,17 +920,17 @@ class psyq::binarc::archive
     }
     //@}
     private: std::size_t get_node_index(
-        this_type::memory_unit const in_tag,
+        this_type::word const in_tag,
         this_type::iterator const in_iterator)
     const
     {
         auto const& local_container(this->get_container_header(in_tag));
         auto const local_begin(
-            reinterpret_cast<this_type::memory_unit const*>(
+            reinterpret_cast<this_type::word const*>(
                 &local_container + 1));
         auto const local_end(local_begin + local_container.size);
         return local_begin <= in_iterator && in_iterator < local_end?
-            static_cast<this_type::memory_unit const*>(in_iterator) - local_begin:
+            static_cast<this_type::word const*>(in_iterator) - local_begin:
             this_type::CONTAINER_INDEX_NONE;
     }
 
@@ -921,19 +943,19 @@ class psyq::binarc::archive
             in_index に対応する下位ノードが存在しない。
      */
     private: this_type::iterator get_container_node(
-        this_type::memory_unit const in_tag,
+        this_type::word const in_tag,
         std::size_t const in_index)
     const
     {
         auto const& local_container(this->get_container_header(in_tag));
         return in_index < local_container.size?
-            in_index + reinterpret_cast<this_type::memory_unit const*>(
+            in_index + reinterpret_cast<this_type::word const*>(
                 &local_container + 1):
             nullptr;
     }
 
     private: this_type::container_header const& get_container_header(
-        this_type::memory_unit const in_tag)
+        this_type::word const in_tag)
     const
     {
         PSYQ_ASSERT(
@@ -941,7 +963,7 @@ class psyq::binarc::archive
             || this_type::get_format(in_tag) == this_type::kind_MAP);
         auto const local_container(
             reinterpret_cast<this_type::container_header const*>(
-                this->get_unit(in_tag & this_type::TAG_IMMEDIATE_BITS_MASK)));
+                this->get_word(in_tag & this_type::TAG_IMMEDIATE_BITS_MASK)));
         PSYQ_ASSERT(local_container != nullptr);
         return *local_container;
     }
@@ -949,13 +971,13 @@ class psyq::binarc::archive
     //-------------------------------------------------------------------------
     /// @name 辞書
     //@{
-    /** @brief 辞書を指す反復子から、辞書が持つ値のキーへの反復子を取得する。
+    /** @brief 辞書を指す反復子から、辞書が持つ値に対応するキーへの反復子を取得する。
         @param[in] in_map   辞書を指す反復子。
         @param[in] in_index 値のインデックス番号。
-        @retval !=nullptr 辞書が持つキーへの反復子。
+        @retval !=nullptr 辞書が持つ値に対応するキーへの反復子。
         @retval ==nullptr
             失敗。 in_map が辞書を指してないか、
-            in_index に対応する値が存在しない。
+            in_index に対応する値が辞書に存在しない。
      */
     public: this_type::iterator get_map_key(
         this_type::iterator const in_map,
@@ -965,13 +987,15 @@ class psyq::binarc::archive
         auto const local_tag(this->get_tag(in_map));
         return this_type::get_format(local_tag) == this_type::kind_MAP?
             this->get_container_node(
-                local_tag, in_index * this_type::NODE_COUNT_PER_MAP_ELEMENT):
+                this_type::make_key_container_tag(
+                    local_tag, this->get_container_header(local_tag)),
+                in_index):
             nullptr;
     }
 
     /** @brief 辞書の値を指す反復子から、値に対応するキーを指す反復子を取得する。
         @param[in] in_map   辞書を指す反復子。
-        @param[in] in_value 辞書の値かキーを指す反復子。
+        @param[in] in_value 辞書の値を指す反復子。
         @retval !=nullptr in_value に対応するキーを指す反復子。
         @retval ==nullptr 失敗。
      */
@@ -983,37 +1007,21 @@ class psyq::binarc::archive
         auto const local_tag(this->get_tag(in_map));
         if (this_type::get_format(local_tag) == this_type::kind_MAP)
         {
-            auto const local_index(
-                this->get_node_index(local_tag, in_value));
-            if (local_index != this_type::CONTAINER_INDEX_NONE)
+            auto const& local_container(this->get_container_header(local_tag));
+            auto const local_begin(
+                reinterpret_cast<this_type::word const*>(
+                    &local_container + 1));
+            if (local_begin <= in_value)
             {
-                return (local_index & 1) == 0?
-                    in_value:
-                    static_cast<this_type::memory_unit const*>(in_value) - 1;
+                // 値配列のすぐ後ろに、キー配列が格納されている。
+                return this->get_container_node(
+                    this_type::make_key_container_tag(
+                        local_tag, local_container),
+                    static_cast<this_type::word const*>(in_value)
+                    - local_begin);
             }
         }
         return nullptr;
-    }
-
-    /** @brief 辞書を指す反復子から、辞書が持つ値への反復子を取得する。
-        @param[in] in_map   辞書を指す反復子。
-        @param[in] in_index 値のインデックス番号。
-        @retval !=nullptr 辞書が持つ値への反復子。
-        @retval ==nullptr
-            失敗。 in_map が辞書を指してないか、
-            in_index に対応する値が存在しない。
-     */
-    public: this_type::iterator get_map_value(
-        this_type::iterator const in_map,
-        std::size_t const in_index)
-    const
-    {
-        auto const local_tag(this->get_tag(in_map));
-        return this_type::get_format(local_tag) == this_type::kind_MAP?
-            this->get_container_node(
-                local_tag,
-                in_index * this_type::NODE_COUNT_PER_MAP_ELEMENT + 1):
-            nullptr;
     }
 
     /** @brief 辞書を指す反復子から、辞書が持つ値への反復子を取得する。
@@ -1022,7 +1030,7 @@ class psyq::binarc::archive
         @retval !=nullptr 辞書が持つ値への反復子。
         @retval ==nullptr
             失敗。 in_map が辞書を指してないか、
-            in_key に対応する値が存在しない。
+            in_key に対応する値が辞書に存在しない。
      */
     public: this_type::iterator get_map_value(
         this_type::iterator const in_map,
@@ -1032,30 +1040,36 @@ class psyq::binarc::archive
         auto const local_tag(this->get_tag(in_map));
         if (this_type::get_format(local_tag) == this_type::kind_MAP)
         {
-            auto const& local_container(
+            auto const& local_value_container(
                 this->get_container_header(local_tag));
-            auto const local_begin(
-                reinterpret_cast<this_type::less_map::element const*>(
-                    &local_container + 1));
-            auto const local_end(
-                local_begin + local_container.size
-                / this_type::NODE_COUNT_PER_MAP_ELEMENT);
-            auto const local_position(
+            auto const& local_key_container(
+                this->get_container_header(
+                    this_type::make_key_container_tag(
+                        local_tag, local_value_container)));
+            auto const local_key_begin(
+                reinterpret_cast<this_type::word const*>(
+                    &local_key_container + 1));
+            auto const local_key_end(
+                local_key_begin + local_key_container.size);
+            auto const local_key_position(
                 std::lower_bound(
-                    local_begin,
-                    local_end,
+                    local_key_begin,
+                    local_key_end,
                     in_key,
                     this_type::less_map(*this)));
-            for (auto i(local_position); i < local_end; ++i)
+            for (auto i(local_key_position); i < local_key_end; ++i)
             {
-                auto const local_compare(this->compare_value(in_key, (*i)[0]));
-                if (0 < local_compare)
+                auto const local_compare(this->compare_value(in_key, *i));
+                if (0 <= local_compare)
                 {
-                    break;
-                }
-                else if (local_compare == 0)
-                {
-                    return &((*i)[1]);
+                    if (0 < local_compare)
+                    {
+                        break;
+                    }
+                    auto const local_value_begin(
+                        reinterpret_cast<this_type::word const*>(
+                            &local_value_container + 1));
+                    return local_value_begin + (i - local_key_begin);
                 }
             }
         }
@@ -1069,7 +1083,7 @@ class psyq::binarc::archive
         @retval !=nullptr 辞書が持つ値への反復子。
         @retval ==nullptr
             失敗。 in_map が辞書を指してないか、
-            in_key に対応する値が存在しない。
+            in_key に対応する値が辞書に存在しない。
      */
     public: this_type::iterator get_map_value(
         this_type::iterator const in_map,
@@ -1088,7 +1102,7 @@ class psyq::binarc::archive
         @retval !=nullptr 辞書が持つ値への反復子。
         @retval ==nullptr
             失敗。 in_map が辞書を指してないか、
-            in_key_iterator に対応する値が存在しない。
+            in_key_iterator に対応する値が辞書に存在しない。
      */
     public: this_type::iterator get_map_value(
         this_type::iterator const in_map,
@@ -1171,6 +1185,14 @@ class psyq::binarc::archive
             nullptr;
     }
 
+    private: static this_type::word make_key_container_tag(
+        this_type::word const in_value_container_tag,
+        this_type::container_header const& in_value_container_header)
+    {
+        return in_value_container_tag + in_value_container_header.size
+            + sizeof(this_type::container_header) / sizeof(this_type::word);
+    }
+
     //-------------------------------------------------------------------------
     /** @brief 辞書検索キーとノードが指す値を比較する。
         @param[in] in_map_key  左辺となる辞書検索キー。
@@ -1181,7 +1203,7 @@ class psyq::binarc::archive
      */
     private: int compare_value(
         this_type::map_key const& in_map_key,
-        this_type::memory_unit const in_node_tag)
+        this_type::word const in_node_tag)
     const
     {
         auto const local_node_format(this_type::get_format(in_node_tag));
@@ -1208,7 +1230,7 @@ class psyq::binarc::archive
         case this_type::numerics_NEGATIVE_32:
         case this_type::numerics_FLOATING_32:
         {
-            auto const local_body(this->get_unit(local_node_immediate));
+            auto const local_body(this->get_word(local_node_immediate));
             if (local_body == nullptr)
             {
                 break;
@@ -1221,7 +1243,7 @@ class psyq::binarc::archive
         {
             auto const local_body(
                 reinterpret_cast<std::uint64_t const*>(
-                    this->get_unit(local_node_immediate)));
+                    this->get_word(local_node_immediate)));
             if (local_body == nullptr)
             {
                 break;
@@ -1237,7 +1259,7 @@ class psyq::binarc::archive
         {
             auto const local_raw(
                 reinterpret_cast<this_type::extended_header const*>(
-                    this->get_unit(local_node_immediate)));
+                    this->get_word(local_node_immediate)));
             if (local_raw == nullptr)
             {
                 break;
@@ -1289,7 +1311,7 @@ class psyq::binarc::archive
      */
     private: int compare_hash(
         this_type::map_key const& in_map_key,
-        this_type::memory_unit const in_node_tag)
+        this_type::word const in_node_tag)
     const
     {
         auto const local_key_hash(in_map_key.hash_);
@@ -1320,8 +1342,8 @@ class psyq::binarc::archive
         @param[in] in_node_tag ノードのタグ値。
         @return ノードが指す値のハッシュ値。
      */
-    private: this_type::memory_unit get_node_hash(
-        this_type::memory_unit const in_node_tag)
+    private: this_type::word get_node_hash(
+        this_type::word const in_node_tag)
     const
     {
         auto const local_format(
@@ -1341,7 +1363,7 @@ class psyq::binarc::archive
         case this_type::numerics_NEGATIVE_32:
         case this_type::numerics_FLOATING_32:
         {
-            auto const local_body(this->get_unit(local_immediate));
+            auto const local_body(this->get_word(local_immediate));
             if (local_body == nullptr)
             {
                 break;
@@ -1353,7 +1375,7 @@ class psyq::binarc::archive
         {
             auto const local_header(
                 reinterpret_cast<this_type::string_header const*>(
-                    this->get_unit(local_immediate)));
+                    this->get_word(local_immediate)));
             if (local_header == nullptr)
             {
                 break;
@@ -1366,7 +1388,7 @@ class psyq::binarc::archive
         {
             auto const local_body(
                 reinterpret_cast<std::uint64_t const*>(
-                    this->get_unit(local_immediate)));
+                    this->get_word(local_immediate)));
             if (local_body == nullptr)
             {
                 break;
@@ -1384,7 +1406,7 @@ class psyq::binarc::archive
     }
 
     //-------------------------------------------------------------------------
-    private: this_type::memory_unit const* unit_front_;
+    private: this_type::word const* unit_front_;
     private: std::size_t unit_count_;
 
 }; // class psyq::binarc::archive
@@ -1413,9 +1435,9 @@ class binarc_to_block_yaml
             static_cast<std::size_t>(local_file_stream.tellg()));
 
         // ファイルを、std::vectorへ読み込む。
-        std::vector<psyq::binarc::archive::memory_unit> local_file_buffer(
-            (local_file_size + sizeof(psyq::binarc::archive::memory_unit) - 1)
-            / sizeof(psyq::binarc::archive::memory_unit));
+        std::vector<psyq::binarc::archive::word> local_file_buffer(
+            (local_file_size + sizeof(psyq::binarc::archive::word) - 1)
+            / sizeof(psyq::binarc::archive::word));
         local_file_stream.seekg(0, std::ios::beg);
         local_file_stream.read(
             reinterpret_cast<char*>(&local_file_buffer.front()),
@@ -1488,10 +1510,24 @@ class binarc_to_block_yaml
     private: static void convert_sequence(
         std::ostringstream& out_stream,
         psyq::binarc::archive const& in_archive,
-        psyq::binarc::archive::iterator const in_iterator)
+        psyq::binarc::archive::iterator const in_array)
     {
         out_stream << '[';
-        auto const local_size(in_archive.get_container_size(in_iterator));
+#if 1
+        auto const local_range(in_archive.get_container_range(in_array));
+        for (
+            auto i(local_range.first);
+            i != nullptr;
+            i = in_archive.advance_container_iterator(local_range, i, 1))
+        {
+            if (i != local_range.first)
+            {
+                out_stream << ',';
+            }
+            this_type::convert_node(out_stream, in_archive, i);
+        }
+#else
+        auto const local_size(in_archive.get_container_size(in_array));
         for (unsigned i(0); i < local_size; ++i)
         {
             if (0 < i)
@@ -1501,18 +1537,36 @@ class binarc_to_block_yaml
             this_type::convert_node(
                 out_stream,
                 in_archive,
-                in_archive.get_container_iterator(in_iterator, i));
+                in_archive.get_container_iterator(in_array, i));
         }
+#endif // 1
         out_stream << ']';
     }
 
     private: static void convert_mapping(
         std::ostringstream& out_stream,
         psyq::binarc::archive const& in_archive,
-        psyq::binarc::archive::iterator const in_iterator)
+        psyq::binarc::archive::iterator const in_map)
     {
         out_stream << '{';
-        auto const local_size(in_archive.get_container_size(in_iterator));
+#if 1
+        auto const local_range(in_archive.get_container_range(in_map));
+        for (
+            auto i(local_range.first);
+            i != nullptr;
+            i = in_archive.advance_container_iterator(local_range, i, 1))
+        {
+            if (i != local_range.first)
+            {
+                out_stream << ',';
+            }
+            this_type::convert_node(
+                out_stream, in_archive, in_archive.get_map_key(in_map, i));
+            out_stream << ':';
+            this_type::convert_node(out_stream, in_archive, i);
+        }
+#else
+        auto const local_size(in_archive.get_container_size(in_map));
         for (unsigned i(0); i < local_size; ++i)
         {
             if (0 < i)
@@ -1520,16 +1574,17 @@ class binarc_to_block_yaml
                 out_stream << ',';
             }
             auto const local_key_iterator(
-                in_archive.get_map_key(in_iterator, i));
+                in_archive.get_map_key(in_map, i));
             this_type::convert_node(
                 out_stream, in_archive, local_key_iterator);
             out_stream << ':';
             auto const local_value_iterator(
-                in_archive.get_map_value(in_iterator, local_key_iterator));
-                //in_archive.get_map_value(in_iterator, i));
+                in_archive.get_map_value(in_map, local_key_iterator));
+                //in_archive.get_container_iterator(in_map, i));
             this_type::convert_node(
                 out_stream, in_archive, local_value_iterator);
         }
+#endif
         out_stream << '}';
     }
 

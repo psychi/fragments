@@ -181,7 +181,7 @@ class _SerializeNode(object):
     def _write_tag_container(out_stream, in_scalar_offset, in_container):
         # コンテナの要素数を出力する。
         local_length = len(in_container)
-        assert local_length < (1 << 32)
+        assert local_length < ((1 << 32) - 1)
         out_stream.write(struct.pack('<I', local_length))
         # コンテナのタグ配列を出力する
         for local_sub_node in in_container:
@@ -273,6 +273,7 @@ class _SerializeNode(object):
             # 整数に変換できるなら、整数としてシリアライズする。
             return _SerializeNode._make_integer_node(io_value_map, long(in_value))
 
+        ## @todo INFとNANの扱いをどうする？ 単精度に変換しなくてもいい？
         local_pack = struct.pack('f', in_value)
         if struct.unpack('f', local_pack)[0] == in_value:
             # 単精度浮動小数点としてシリアライズする。
@@ -377,5 +378,5 @@ if __name__ == '__main__':
         'STRING': 'STRING'}
     #local_sample_data = {0x01234567: 0x89abcdef, 'abcd': 'efgh'}
     local_binary = pack(local_sample_data)
-    with open('sample.binarc', 'wb') as local_file:
+    with open('./test/sample.binarc', 'wb') as local_file:
         local_file.write(local_binary)

@@ -115,6 +115,7 @@ class psyq::any::message::zone
         {
             return local_transmitter;
         }
+        /// @todo メッセージアドレスを指定できるようにすること。
         typename this_type::receiver::tag::key const local_message_address(0);
         return this_type::make_transmitter(
             this->transmitters_, in_thread_id, local_message_address);

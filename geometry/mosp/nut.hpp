@@ -167,6 +167,7 @@ class psyq::geometry::mosp::nut
     }
 
     /** @brief *thisの this_type::node を取得する。
+        @return @copydoc this_type::node_
      */
     public: typename this_type::node const& get_node() const PSYQ_NOEXCEPT
     {
@@ -174,6 +175,7 @@ class psyq::geometry::mosp::nut
     }
 
     /** @brief *thisのAABBを取得する。
+        @return @copydoc this_type::aabb_
      */
     public: typename this_type::space::coordinate::aabb const& get_aabb()
     const PSYQ_NOEXCEPT
@@ -274,6 +276,9 @@ class psyq::geometry::mosp::nut<template_space, template_allocator>::cluster
         this->initialize_nuts();
     }
 
+    /** @brief コピー構築子。
+        @param[in] in_source コピー元となるインスタンス。
+     */
     public: cluster(this_type const& in_source):
     nuts_(in_source.nuts_),
     self_topology_(in_source.self_topology_),
@@ -287,6 +292,9 @@ class psyq::geometry::mosp::nut<template_space, template_allocator>::cluster
         this->remove_nuts();
     }
 
+    /** @brief コピー代入演算子。
+        @param[in] in_source コピー元となるインスタンス。
+     */
     public: this_type& operator=(this_type const& in_source)
     {
         if (this != &in_source)

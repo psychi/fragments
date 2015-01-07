@@ -1,0 +1,99 @@
+set encoding=utf-8
+scriptencoding utf-8
+lcd ~
+" 無名レジスタに入るデータを、*レジスタにも入れる。
+set clipboard+=unnamed
+" 自動改行を禁止
+set formatoptions=q
+set display=lastline
+" undo履歴を記録
+set undofile
+" 行番号の表示
+set number
+" タブを挿入するときの幅
+set tabstop=4
+" タブを表示するときの幅
+set shiftwidth=4
+" タブをタブとして扱う(スペースに展開しない)
+"set noexpandtab
+set softtabstop=0
+" タブ、空白、改行の可視化
+set list
+set listchars=tab:»»,trail:␣,eol:$,extends:»,precedes:«,nbsp:%
+" 補完ポップアップメニューの行数
+set pumheight=10
+" 全角スペースをハイライト表示
+function! ZenkakuSpace()
+    highlight ZenkakuSpace cterm=reverse ctermfg=DarkMagenta gui=reverse guifg=DarkMagenta
+endfunction
+if has('syntax')
+    augroup ZenkakuSpace
+        autocmd!
+        autocmd ColorScheme       * call ZenkakuSpace()
+        autocmd VimEnter,WinEnter * match ZenkakuSpace /　/
+    augroup END
+    call ZenkakuSpace()
+endif
+" 検索で大文字小文字を区別する
+set noignorecase
+
+" 表示行単位で上下移動するように
+noremap j gj
+noremap k gk
+noremap <Down> gj
+noremap <Up>   gk
+inoremap <silent> <Down> <C-o>gj
+inoremap <silent> <Up>   <C-o>gk
+" 逆に普通の行単位で移動したい時のために逆の map も設定しておく
+noremap gj j
+noremap gk k
+" 「Y」カーソルから行末までをコピーする。
+nnoremap Y y$
+" Esc Esc でハイライトOFF
+nnoremap <Esc><Esc> :<C-u>set nohlsearch<Return>
+" エラーメッセージの表示時にビープを鳴らさない
+set vb t_vb=
+set visualbell
+set noerrorbells
+" ファイルを開くと、そのファイルと同じディレクトリに移動
+:source $VIMRUNTIME/macros/cd.vim
+
+" Vim で C++ の設定例
+" filetype=cpp が設定された時に呼ばれる関数
+" Vim で C++ の設定を行う場合はこの関数内で記述する
+" ここで設定する項目は各自好きに行って下さい
+function! s:cpp()
+    " インクルードパスを設定する
+    " gf などでヘッダーファイルを開きたい場合に影響する
+    "setlocal path+=D:/home/cpp/boost,D:/home/cpp/sprout
+
+    "タブ文字の長さ
+    setlocal tabstop=4
+    setlocal shiftwidth=4
+
+    " 空白文字ではなくてタブ文字を使用する
+    setlocal noexpandtab
+
+    " 括弧を構成する設定に <> を追加する。
+    setlocal matchpairs+=<:>
+
+    " 行を折り返さない。
+    setlocal nowrap
+
+    " 最後に定義された include 箇所へ移動してを挿入モードへ
+    "nnoremap <buffer><silent> <Space>ii :execute "?".&include<CR> :noh<CR> o
+
+    " BOOST_PP_XXX 等のハイライトを行う
+    "syntax match boost_pp /BOOST_PP_[A-z0-9_]*/
+    "highlight link boost_pp cppStatement
+endfunction
+augroup vimrc-cpp
+    autocmd!
+    " filetype=cpp が設定された場合に関数を呼ぶ
+    autocmd FileType cpp call s:cpp()
+augroup END
+
+" ファイルエンコーディングや文字コードをステータス行に表示する。
+set laststatus=2
+set statusline=%<%f\ %m\ %r%h%w%{'['.(&fenc!=''?&fenc:&enc).']['.&ff.']'}%=\ (%v,%l)/%L%8P\ 
+

@@ -109,8 +109,10 @@ if has('vim_starting')
 endif
 
 call neobundle#begin(expand('~/_vim/bundle/'))
-NeoBundleFetch 'Shougo/neobundle.vim'
-NeoBundle 'soramugi/auto-ctags.vim'
+NeoBundleFetch 'Shougo/neobundle.vim' ", {'type__protocol': 'ssh'}
+NeoBundle 'Shougo/unite.vim' ", {'type__protocol': 'ssh'}
+NeoBundle 'Shougo/neomru.vim'
+NeoBundle 'soramugi/auto-ctags.vim' ",{'type__protocol' : 'ssh' }
 call neobundle#end()
 
 filetype plugin indent on     " Required!

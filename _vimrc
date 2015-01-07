@@ -24,7 +24,7 @@ set listchars=tab:»»,trail:␣,eol:$,extends:»,precedes:«,nbsp:%
 set pumheight=10
 " 全角スペースをハイライト表示
 function! ZenkakuSpace()
-    highlight ZenkakuSpace cterm=reverse ctermfg=DarkMagenta gui=reverse guifg=DarkMagenta
+    highlight ZenkakuSpace cterm=none ctermbg=0 gui=none guibg=#282a2e
 endfunction
 if has('syntax')
     augroup ZenkakuSpace
@@ -58,6 +58,7 @@ set noerrorbells
 " ファイルを開くと、そのファイルと同じディレクトリに移動
 :source $VIMRUNTIME/macros/cd.vim
 
+"--------------------------------------------------------------------------
 " Vim で C++ の設定例
 " filetype=cpp が設定された時に呼ばれる関数
 " Vim で C++ の設定を行う場合はこの関数内で記述する
@@ -93,7 +94,31 @@ augroup vimrc-cpp
     autocmd FileType cpp call s:cpp()
 augroup END
 
+"--------------------------------------------------------------------------
 " ファイルエンコーディングや文字コードをステータス行に表示する。
 set laststatus=2
-set statusline=%<%f\ %m\ %r%h%w%{'['.(&fenc!=''?&fenc:&enc).']['.&ff.']'}%=\ (%v,%l)/%L%8P\ 
+set statusline=%<%f\ %m\ %r%h%w%{(&bomb?'[BOM]':'').'['.(&fenc!=''?&fenc:&enc).']['.&ff.']'}%=\ (%v,%l)/%L%8P\ 
 
+"--------------------------------------------------------------------------
+" neobundleの設定。
+set nocompatible               " Be iMproved
+filetype off                   " Required!
+
+if has('vim_starting')
+  set runtimepath+=~/_vim/bundle/neobundle.vim/
+endif
+
+call neobundle#begin(expand('~/_vim/bundle/'))
+NeoBundleFetch 'Shougo/neobundle.vim'
+NeoBundle 'soramugi/auto-ctags.vim'
+call neobundle#end()
+
+filetype plugin indent on     " Required!
+
+" Installation check.
+if neobundle#exists_not_installed_bundles()
+  echomsg 'Not installed bundles : ' .
+        \ string(neobundle#get_not_installed_bundle_names())
+  echomsg 'Please execute ":NeoBundleInstall" command.'
+  "finish
+endif

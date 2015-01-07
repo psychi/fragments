@@ -14,5 +14,9 @@ set guifont=Consolas:h12
 set guifontwide=IPAゴシック:h14
 set ambiwidth=double
 
+" kaoriya版vimでmru.vimを正しく稼働させる。
+" https://sites.google.com/site/fudist/Home/modify
+source $VIM/plugins/mru.vim
+
 " エンコードを元に戻しておく
 "set encoding=utf-8

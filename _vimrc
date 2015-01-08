@@ -3,9 +3,6 @@ scriptencoding utf-8
 lcd ~
 " 無名レジスタに入るデータを、*レジスタにも入れる。
 set clipboard+=unnamed
-" 自動改行を禁止
-set formatoptions=q
-set display=lastline
 " undo履歴を記録
 set undofile
 " 行番号の表示
@@ -97,7 +94,7 @@ augroup END
 "--------------------------------------------------------------------------
 " ファイルエンコーディングや文字コードをステータス行に表示する。
 set laststatus=2
-set statusline=%<%f\ %m\ %r%h%w%{(&bomb?'[BOM]':'').'['.(&fenc!=''?&fenc:&enc).']['.&ff.']'}%=\ (%v,%l)/%L%8P\ 
+set statusline=%<%f\ %m\ %r%h%w%{'['.(&filetype).']'.(&bomb?'[BOM]':'').'['.(&fenc!=''?&fenc:&enc).']['.&ff.']'}%=\ (%v,%l)/%L%8P\ 
 
 "--------------------------------------------------------------------------
 " neobundleの設定。
@@ -108,13 +105,34 @@ if has('vim_starting')
   set runtimepath+=~/_vim/bundle/neobundle.vim/
 endif
 
+" neobundle プラグイン記述の開始。
 call neobundle#begin(expand('~/_vim/bundle/'))
-NeoBundleFetch 'Shougo/neobundle.vim' ", {'type__protocol': 'ssh'}
-NeoBundle 'Shougo/unite.vim' ", {'type__protocol': 'ssh'}
-NeoBundle 'Shougo/neomru.vim'
-NeoBundle 'soramugi/auto-ctags.vim' ",{'type__protocol' : 'ssh' }
-call neobundle#end()
+NeoBundleFetch 'Shougo/neobundle.vim'
 
+NeoBundle 'Shougo/unite.vim'
+let g:unite_data_directory='~/_vim/_cache/unite/'
+let g:unite_split_rule = 'rightbelow'
+
+NeoBundle 'Shougo/neomru.vim'
+"let g:neomru#file_mru_path='~/_vim/_cache/neomru/file'
+let g:neomru#directory_mru_path='~/_vim/_cache/neomru/directory'
+" バッファ一覧
+nnoremap <silent> ,ub :<C-u>Unite buffer<CR>
+" ファイル一覧
+nnoremap <silent> ,uf :<C-u>UniteWithBufferDir -buffer-name=files file<CR>
+" レジスタ一覧
+nnoremap <silent> ,ur :<C-u>Unite -buffer-name=register register<CR>
+" 最近使用したファイル一覧
+nnoremap <silent> ,um :<C-u>Unite file_mru<CR>
+" 常用セット
+nnoremap <silent> ,uu :<C-u>Unite buffer file_mru<CR>
+" 全部乗せ
+nnoremap <silent> ,ua :<C-u>UniteWithBufferDir -buffer-name=files buffer file_mru bookmark file<CR>
+
+NeoBundle 'soramugi/auto-ctags.vim'
+
+" neobundle プラグイン記述の終了。
+call neobundle#end()
 filetype plugin indent on     " Required!
 
 " Installation check.
@@ -124,3 +142,8 @@ if neobundle#exists_not_installed_bundles()
   echomsg 'Please execute ":NeoBundleInstall" command.'
   "finish
 endif
+
+"--------------------------------------------------------------------------
+" 自動改行を禁止
+set formatoptions=q
+set display=lastline

@@ -41,11 +41,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::string::_private::view_base
+    @brief @copybrief psyq::string::_private::reference_base
     @defgroup psyq_string 動的メモリ確保を抑制した文字列オブジェクト
  */
-#ifndef PSYQ_STRING_VIEW_BASE_HPP_
-#define PSYQ_STRING_VIEW_BASE_HPP_
+#ifndef PSYQ_STRING_REFERENCE_BASE_HPP_
+#define PSYQ_STRING_REFERENCE_BASE_HPP_
 
 #include <iosfwd>
 #include <iterator>
@@ -59,11 +59,11 @@ namespace psyq
     /// 動的メモリ確保を抑制した文字列
     namespace string
     {
-        /// この名前空間をユーザーが直接アクセスするのは禁止。
+        /// psyq::string 管理者以外がこの名前空間に直接アクセスするのは禁止。
         namespace _private
         {
             /// @cond
-            template<typename> class view_base;
+            template<typename> class reference_base;
             /// @endcond
         } // namespace _private
     } // namespace string
@@ -71,15 +71,15 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief immutableな文字列への参照の基底型。
-    @tparam template_char_traits @copydoc psyq::string::_private::view_base::traits_type
+    @tparam template_char_traits @copydoc psyq::string::_private::reference_base::traits_type
     @warning
         文字の配列を単純にconst参照しているので、
         参照してる文字の配列が変更／破壊されると、動作を保証できなくなる。
  */
 template<typename template_char_traits>
-class psyq::string::_private::view_base
+class psyq::string::_private::reference_base
 {
-    private: typedef view_base this_type; ///< thisが指す値の型。
+    private: typedef reference_base this_type; ///< thisが指す値の型。
 
     public: typedef template_char_traits traits_type; ///< 文字特性の型。
 
@@ -87,22 +87,22 @@ class psyq::string::_private::view_base
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
      */
-    protected: PSYQ_CONSTEXPR view_base(this_type const& in_string)
+    protected: PSYQ_CONSTEXPR reference_base(this_type const& in_string)
     PSYQ_NOEXCEPT:
-        data_(in_string.data()),
-        size_(in_string.size())
+    size_(in_string.size()),
+    data_(in_string.data())
     {}
 
     /** @brief 文字列を参照する。
         @param[in] in_data 参照する文字列の先頭位置。
         @param[in] in_size 参照する文字列の要素数。
      */
-    private: PSYQ_CONSTEXPR view_base(
+    private: PSYQ_CONSTEXPR reference_base(
         typename this_type::traits_type::char_type const* const in_data,
         std::size_t const in_size)
     PSYQ_NOEXCEPT:
-        data_(in_data),
-        size_(in_size)
+    size_(in_size),
+    data_(in_data)
     {}
 
     //-------------------------------------------------------------------------
@@ -121,8 +121,8 @@ class psyq::string::_private::view_base
     {
         if (in_remove_size <= this->size())
         {
-            this->data_ += in_remove_size;
             this->size_ -= in_remove_size;
+            this->data_ += in_remove_size;
         }
         else
         {
@@ -549,11 +549,11 @@ class psyq::string::_private::view_base
     }
 
     //-------------------------------------------------------------------------
-    /// 文字列の先頭位置。
-    private: typename this_type::traits_type::char_type const* data_;
     /// 文字列の要素数。
     private: std::size_t size_;
+    /// 文字列の先頭位置。
+    private: typename this_type::traits_type::char_type const* data_;
 
-}; // class psyq::string::_private::view_base
+}; // class psyq::string::_private::reference_base
 
-#endif // !PSYQ_STRING_VIEW_BASE_HPP_
+#endif // !PSYQ_STRING_REFERENCE_BASE_HPP_

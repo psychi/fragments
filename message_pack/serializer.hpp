@@ -702,7 +702,7 @@ class psyq::message_pack::serializer
         }
         return *this;
     }
-#ifdef PSYQ_STRING_VIEW_BASE_HPP_
+#ifdef PSYQ_STRING_REFERENCE_BASE_HPP_
     /** @brief 文字列をMessagePack形式の文字列として直列化し、
                ストリームへ出力する。
         @param[in] in_string 直列化する文字列。
@@ -710,7 +710,7 @@ class psyq::message_pack::serializer
      */
     public: template<typename template_char_traits>
     this_type& operator<<(
-        psyq::string::_private::view_base<template_char_traits> const& in_string)
+        psyq::string::_private::reference_base<template_char_traits> const& in_string)
     {
         if (!this->write_raw_string(in_string))
         {
@@ -718,7 +718,7 @@ class psyq::message_pack::serializer
         }
         return *this;
     }
-#endif // defined(PSYQ_STRING_VIEW_BASE_HPP_)
+#endif // defined(PSYQ_STRING_REFERENCE_BASE_HPP_)
 
     /** @brief 文字列literalをMessagePack形式の文字列として直列化し、
                ストリームへ出力する。

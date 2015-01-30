@@ -77,17 +77,17 @@ namespace psyq
         参照してる文字の配列が変更／破壊されると、動作を保証できなくなる。
 
     @tparam template_char_type   @copydoc psyq::string::_private::view_interface::value_type
-    @tparam template_char_traits @copydoc psyq::string::_private::view_base::traits_type
+    @tparam template_char_traits @copydoc psyq::string::_private::reference_base::traits_type
     @ingroup psyq_string
  */
 template<typename template_char_type, typename template_char_traits>
 class psyq::string::view:
     public psyq::string::_private::view_interface<
-        psyq::string::_private::view_base<template_char_traits>>
+        psyq::string::_private::reference_base<template_char_traits>>
 {
     /// thisが指す値の型。
     private: typedef view this_type;
-    private: typedef psyq::string::_private::view_base<template_char_traits>
+    private: typedef psyq::string::_private::reference_base<template_char_traits>
         base_string;
     /// this_type の基底型。
     public: typedef psyq::string::_private::view_interface<base_string>
@@ -98,14 +98,14 @@ class psyq::string::view:
     //@{
     /// @brief 空の文字列を構築する。
     public: PSYQ_CONSTEXPR view() PSYQ_NOEXCEPT:
-        base_type(base_type::base_type::make(nullptr, 0))
+    base_type(base_type::base_type::make(nullptr, 0))
     {}
 
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
      */
     public: PSYQ_CONSTEXPR view(this_type const& in_string) PSYQ_NOEXCEPT:
-        base_type(static_cast<base_string const&>(in_string))
+    base_type(static_cast<base_string const&>(in_string))
     {}
 
     /** @brief 文字列リテラルを参照する。
@@ -115,7 +115,7 @@ class psyq::string::view:
     PSYQ_CONSTEXPR view(
         typename base_type::traits_type::char_type const (&in_literal)[template_size])
     PSYQ_NOEXCEPT:
-        base_type(base_type::base_type::make(in_literal))
+    base_type(base_type::base_type::make(in_literal))
     {}
 
     /** @brief 任意型の文字列を参照する。
@@ -132,9 +132,10 @@ class psyq::string::view:
         @param[in] in_string 参照する文字列。
      */
     public: template<typename template_string_type>
-    PSYQ_CONSTEXPR view(template_string_type const& in_string) PSYQ_NOEXCEPT:
-        base_type(
-            base_type::base_type::make(in_string.data(), in_string.size()))
+    PSYQ_CONSTEXPR view(template_string_type const& in_string)
+    PSYQ_NOEXCEPT:
+    base_type(
+        base_type::base_type::make(in_string.data(), in_string.size()))
     {}
 
     /** @brief 文字列を参照する。
@@ -145,7 +146,7 @@ class psyq::string::view:
         typename base_type::const_pointer const in_data,
         typename base_type::size_type const in_size)
     PSYQ_NOEXCEPT:
-        base_type(base_type::base_type::make(in_data, in_size))
+    base_type(base_type::base_type::make(in_data, in_size))
     {}
 
     /** @brief 文字列の一部を参照する。
@@ -158,7 +159,7 @@ class psyq::string::view:
         typename base_type::size_type const in_offset,
         typename base_type::size_type const in_count = base_type::npos)
     PSYQ_NOEXCEPT:
-        base_type(base_type::base_type::make(in_string, in_offset, in_count))
+    base_type(base_type::base_type::make(in_string, in_offset, in_count))
     {}
     //@}
     //-------------------------------------------------------------------------
@@ -348,7 +349,7 @@ class psyq::string::view:
     //-------------------------------------------------------------------------
     /// @name 文字列の変更
     //@{
-    /// @copydoc psyq::string::_private::view_base::clear()
+    /// @copydoc psyq::string::_private::reference_base::clear()
     public: void clear() PSYQ_NOEXCEPT
     {
         this->base_type::base_type::clear();

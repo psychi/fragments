@@ -371,66 +371,6 @@ class psyq::string::view:
         return this_type(*this, in_offset, in_count);
     }
 
-    /** @brief 文字列のコピーを作る。
-        @tparam template_string_type 作る文字列の型。
-        @return 新たに作った文字列。
-     */
-    public: template<typename template_string_type>
-    template_string_type make_copy() const
-    {
-        return template_string_type(this->data(), this->size());
-    }
-
-    /** @brief 文字を変換した文字列を作る。
-        @tparam template_string_type 作る文字列の型。std::string互換。
-        @param[in] in_predecate
-            引数に文字を受け取り、変換した文字を返す関数object。
-        @return 文字を変換した文字列。
-     */
-    public: template<
-        typename template_string_type,
-        typename template_predicate_type>
-    template_string_type make_copy(template_predicate_type in_predecate) const
-    {
-        template_string_type local_string;
-        local_string.reserve(this->size());
-        for (std::size_t i(0); i < this->size(); ++i)
-        {
-            local_string.push_back(in_predecate(*(this->data() + i)));
-        }
-        return local_string;
-    }
-
-    /** @brief 大文字に変換した文字列を作る。
-        @tparam template_string_type 作る文字列の型。std::string互換。
-        @return 大文字に変換した文字列。
-     */
-    public: template<typename template_string_type>
-    template_string_type make_upper_copy() const
-    {
-        return this->make_copy<template_string_type>(
-            [](typename base_type::traits_type::char_type const in_char)
-            ->typename base_type::traits_type::char_type
-            {
-                return std::toupper(in_char);
-            });
-    }
-
-    /** @brief 小文字に変換した文字列を作る。
-        @tparam template_string_type 作る文字列の型。std::string互換。
-        @return 小文字に変換した文字列。
-     */
-    public: template<typename template_string_type>
-    template_string_type make_lower_copy() const
-    {
-        return this->make_copy<template_string_type>(
-            [](typename base_type::traits_type::char_type const in_char)
-            ->typename base_type::traits_type::char_type
-            {
-                return std::tolower(in_char);
-            });
-    }
-
     /** @brief 先頭と末尾にある空白文字を取り除いた文字列を作る。
         @return 先頭と末尾にある空白文字を取り除いた文字列。
      */

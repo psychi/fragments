@@ -920,6 +920,353 @@ class psyq::string::_private::view_interface: public template_base_string
     }
     //@}
     //-------------------------------------------------------------------------
+    /// @name 文字列の変換
+    //@{
+    /** @brief 文字列を解析し、整数値を構築する。
+        @tparam template_integer_type 構築する整数値の型。
+        @param[out] out_rest_size
+            解析できなかった要素数を格納する先。nullptrの場合は格納しない。
+        @return 文字列を解析して構築した整数値。
+     */
+    public: template<typename template_integer_type>
+    template_integer_type to_integer(
+        std::size_t* const out_rest_size = nullptr)
+    const PSYQ_NOEXCEPT
+    {
+        auto local_iterator(this->data());
+        auto const local_end(local_iterator + this->size());
+        auto const local_sign(this_type::read_sign(local_iterator, local_end));
+        auto const local_radix(
+            this_type::read_radix(local_iterator, local_end));
+        auto const local_integer(
+            this_type::read_numbers(local_iterator, local_end, local_radix));
+        if (out_rest_size != nullptr)
+        {
+            *out_rest_size = local_end - local_iterator;
+        }
+        return static_cast<template_integer_type>(local_integer * local_sign);
+    }
+
+    /** @brief 文字列を解析し、実数値を構築する。
+        @tparam template_real_type 構築する実数の型。
+        @param[out] out_rest_size
+            解析できなかった要素数を格納する先。nullptrの場合は格納しない。
+        @return 文字列を解析して構築した実数値。
+     */
+    public: template<typename template_real_type>
+    template_real_type to_real(
+        std::size_t* const out_rest_size = nullptr)
+    const PSYQ_NOEXCEPT
+    {
+        // 符号と基数を解析する。
+        auto local_iterator(this->data());
+        auto const local_end(local_iterator + this->size());
+        auto const local_sign(this_type::read_sign(local_iterator, local_end));
+        auto const local_radix(
+            this_type::read_radix(local_iterator, local_end));
+
+        // 整数部と小数部を解析する。
+        auto const local_real(
+            this_type::merge_fraction_part(
+                local_iterator,
+                local_end,
+                local_radix,
+                static_cast<template_real_type>(
+                    this_type::read_numbers(
+                        local_iterator, local_end, local_radix))));
+
+        // 戻り値を決定する。
+        if (out_rest_size != nullptr)
+        {
+            *out_rest_size = local_end - local_iterator;
+        }
+        return local_real * local_sign;
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /** @brief 文字列を解析し、数値の符号を読み取る。
+        @param[in,out] io_iterator 文字を解析する位置。
+        @param[in]     in_end      文字列の末尾位置。
+        @retval  1 正符号。
+        @retval -1 負符号。
+     */
+    private: static signed read_sign(
+        typename base_type::traits_type::char_type const*& io_iterator,
+        typename base_type::traits_type::char_type const* const in_end)
+    PSYQ_NOEXCEPT
+    {
+        if (io_iterator < in_end)
+        {
+            switch (*io_iterator)
+            {
+                case '-':
+                ++io_iterator;
+                return -1;
+
+                case '+':
+                ++io_iterator;
+                break;
+            }
+        }
+        return 1;
+    }
+
+    /** @brief 文字列を解析し、数値の基数を読み取る。
+        @param[in,out] io_iterator 文字を解析する位置。
+        @param[in]     in_end      文字列の末尾位置。
+        @return 文字列から読み取った基数。
+     */
+    private: static unsigned read_radix(
+        typename base_type::traits_type::char_type const*& io_iterator,
+        typename base_type::traits_type::char_type const* const in_end)
+    PSYQ_NOEXCEPT
+    {
+        if (in_end <= io_iterator)
+        {
+            return 0; // 失敗
+        }
+        if (*io_iterator != '0')
+        {
+            return 10; // 10進数
+        }
+        ++io_iterator;
+        if (in_end <= io_iterator)
+        {
+            return 10; // 10進数
+        }
+        switch (*io_iterator)
+        {
+        case 'x':
+        case 'X':
+            ++io_iterator;
+            return 16; // 16進数
+
+        case 'b':
+        case 'B':
+            ++io_iterator;
+            return 2; // 2進数
+
+        case 'q':
+        case 'Q':
+            ++io_iterator;
+            return 4; // 4進数
+
+        default:
+            return 8; // 8進数
+        }
+    }
+
+    /** @brief 文字列を解析し、整数値を読み取る。
+
+        数字で構成される文字列を解析し、整数値を読み取る。
+        数字以外を見つけたら、解析はそこで停止する。
+
+        @tparam template_number_type 整数の型。
+        @param[in,out] io_iterator 文字を解析する位置。
+        @param[in]     in_end      文字列の末尾位置。
+        @param[in]     in_radix    整数の基数。
+        @return 文字列から読み取った整数の値。
+     */
+    private: static unsigned read_numbers(
+        typename base_type::traits_type::char_type const*& io_iterator,
+        typename base_type::traits_type::char_type const* const in_end,
+        unsigned const in_radix)
+    PSYQ_NOEXCEPT
+    {
+        // 基数が10以下なら、アラビア数字だけを解析する。
+        if (in_radix <= 10)
+        {
+            return this_type::read_digits(io_iterator, in_end, in_radix);
+        }
+        PSYQ_ASSERT(in_radix <= ('9' - '0') + ('z' - 'a'));
+
+        // 任意の基数の数値を取り出す。
+        unsigned local_value(0);
+        auto i(io_iterator);
+        for (; i < in_end; ++i)
+        {
+            unsigned local_number(*i);
+            if ('a' <= local_number)
+            {
+                local_number -= 'a' - 0xA;
+            }
+            else if ('A' <= local_number)
+            {
+                local_number -= 'A' - 0xA;
+            }
+            else if ('0' <= local_number && local_number <= '9')
+            {
+                local_number -= '0';
+            }
+            else
+            {
+                break;
+            }
+            if (in_radix <= local_number)
+            {
+                break;
+            }
+            local_value = local_value * in_radix + local_number;
+        }
+        io_iterator = i;
+        return local_value;
+    }
+
+    /** @brief 文字列を解析し、整数値を読み取る。
+
+        アラビア数字で構成される文字列を解析し、整数値を読み取る。
+        アラビア数字以外を見つけたら、変換はそこで停止する。
+
+        @tparam template_number_type 整数の型。
+        @param[in,out] io_iterator 文字を解析する位置。
+        @param[in]     in_end      文字列の末尾位置。
+        @param[in]     in_radix    整数の基数。
+        @return 文字列から読み取った整数の値。
+     */
+    private: static unsigned read_digits(
+        typename base_type::traits_type::char_type const*& io_iterator,
+        typename base_type::traits_type::char_type const* const in_end,
+        unsigned const in_radix)
+    PSYQ_NOEXCEPT
+    {
+        if (in_radix <= 0)
+        {
+            return 0;
+        }
+        PSYQ_ASSERT(in_radix <= 10);
+        unsigned local_value(0);
+        auto i(io_iterator);
+        for (; i < in_end; ++i)
+        {
+            if (*i < '0')
+            {
+                break;
+            }
+            unsigned const local_digit(*i - '0');
+            if (in_radix <= local_digit)
+            {
+                break;
+            }
+            local_value = local_value * in_radix + local_digit;
+        }
+        io_iterator = i;
+        return local_value;
+    }
+
+    private: template<typename template_real_type>
+    static template_real_type read_exponent(
+        typename base_type::traits_type::char_type const*& io_iterator,
+        typename base_type::traits_type::char_type const* const in_end,
+        unsigned const in_radix)
+    PSYQ_NOEXCEPT
+    {
+        if (in_end <= io_iterator)
+        {
+            return 1;
+        }
+        switch (*io_iterator)
+        {
+            case 'e':
+            case 'E':
+            if (0xE <= in_radix)
+            {
+                return 1;
+            }
+            break;
+
+            case 'p':
+            case 'P':
+            break;
+
+            default:
+            return 1;
+        }
+        ++io_iterator;
+        auto const local_exponent_sign(
+            this_type::read_sign(io_iterator, in_end));
+        auto const local_exponent_count(
+            this_type::read_numbers(io_iterator, in_end, 10));
+        unsigned local_multiple(1);
+        for (auto i(local_exponent_count); 0 < i; --i)
+        {
+            local_multiple *= in_radix;
+        }
+        if (local_exponent_sign < 0)
+        {
+            return template_real_type(1) / local_multiple;
+        }
+        return local_multiple;
+    }
+
+    /** @brief 文字列を解析し、実数値を読み取る。
+
+        数字で構成される文字列を解析し、小数と指数を取り出して合成する。
+        数字以外を見つけたら、解析はそこで停止する。
+
+        @tparam template_real_type 実数の型。
+        @param[in,out] io_iterator 文字を解析する位置。
+        @param[in]     in_end      文字列の末尾位置。
+        @param[in]     in_radix    実数の基数。
+        @param[in]     in_real     実数の入力値。
+        @return 実数の入力値と文字列から読み取った小数と指数を合成した値。
+     */
+    private: template<typename template_real_type>
+    static template_real_type merge_fraction_part(
+        typename base_type::traits_type::char_type const*& io_iterator,
+        typename base_type::traits_type::char_type const* const in_end,
+        unsigned const in_radix,
+        template_real_type const in_real)
+    PSYQ_NOEXCEPT
+    {
+        PSYQ_ASSERT(0 <= in_real);
+        PSYQ_ASSERT(0 < in_radix);
+
+        // 小数部の範囲を決定する。
+        if (io_iterator < in_end && *io_iterator == '.')
+        {
+            ++io_iterator;
+        }
+        auto const local_decimal_begin(io_iterator);
+        this_type::read_numbers(io_iterator, in_end, in_radix);
+        auto const local_decimal_end(io_iterator);
+
+        // 指数部を解析し、入力値と合成する。
+        auto local_multiple(
+            this_type::read_exponent<template_real_type>(
+                io_iterator, in_end, in_radix));
+        auto local_real(in_real * local_multiple);
+
+        // 小数部を実数に変換し、入力値と合成する。
+        for (auto i(local_decimal_begin); i < local_decimal_end; ++i)
+        {
+            unsigned local_number(*i);
+            if ('a' <= local_number)
+            {
+                local_number -= 'a' - 0xA;
+            }
+            else if ('A' <= local_number)
+            {
+                local_number -= 'A' - 0xA;
+            }
+            else if ('0' <= local_number && local_number <= '9')
+            {
+                local_number -= '0';
+            }
+            else
+            {
+                break;
+            }
+            if (in_radix <= local_number)
+            {
+                break;
+            }
+            local_multiple /= in_radix;
+            local_real += local_multiple * local_number;
+        }
+        return local_real;
+    }
+
+    //-------------------------------------------------------------------------
     public: enum: typename this_type::size_type
     {
         /// 無効な位置を表す。 find() などで使われる。
@@ -1092,10 +1439,11 @@ namespace psyq
             PSYQ_ASSERT(!(local_std_string > local_string_0));
 #endif // PSYQ_STRING_VIEW_INTERFACE_COMPARE_OPERATOR_2
 
-            psyq::string::view<
+            typedef psyq::string::view<
                 typename template_string::value_type,
                 typename template_string::traits_type>
-                    const local_string_view(local_string_0);
+                    string_view;
+            string_view const local_string_view(local_string_0);
             PSYQ_ASSERT(local_string_0 == local_string_view);
             PSYQ_ASSERT(local_string_0 <= local_string_view);
             PSYQ_ASSERT(local_string_0 >= local_string_view);
@@ -1125,6 +1473,19 @@ namespace psyq
             PSYQ_ASSERT(local_string_3 == local_string_4);
             template_string const local_string_5("literal_string");
             PSYQ_ASSERT(local_string_3 == local_string_5);
+
+            std::size_t local_rest_size;
+            if (string_view("1234").to_integer<int>(&local_rest_size) != 1234
+                || local_rest_size != 0)
+            {
+                PSYQ_ASSERT(false);
+            }
+            PSYQ_ASSERT(
+                string_view("0x1234").to_integer<int>(&local_rest_size) == 0x1234
+                && local_rest_size == 0);
+            PSYQ_ASSERT(
+                string_view("0x10.8p1").to_real<double>(&local_rest_size) == 0x108
+                && local_rest_size == 0);
         }
     }
 }

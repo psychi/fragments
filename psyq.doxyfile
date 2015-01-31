@@ -678,7 +678,7 @@ WARN_LOGFILE           =
 # with spaces.
 
 INPUT                  = \
-                         ./string/view_base.hpp \
+                         ./string/reference_base.hpp \
                          ./string/view_interface.hpp \
                          ./string/view.hpp \
                          ./string/storage.hpp \

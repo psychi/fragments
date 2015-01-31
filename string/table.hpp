@@ -98,13 +98,12 @@ namespace psyq
                 // 文字列を解析し、値を取り出す。
                 std::size_t local_rest_size(0);
                 auto const local_value(
-                    local_string.template make_number<template_number_type>(
-                        &local_rest_size));
+                    local_string.template to_real<double>(&local_rest_size));
                 if (0 < local_rest_size)
                 {
                     return false;
                 }
-                out_value = local_value;
+                out_value = static_cast<template_number_type>(local_value);
                 return true;
             }
 

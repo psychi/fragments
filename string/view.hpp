@@ -297,54 +297,6 @@ class psyq::string::view:
         return local_compare_string != 0?
             local_compare_string: local_compare_size;
     }
-
-    /** @brief 先頭が文字列と一致するか判定する。
-        @param[in] in_prefix 比較する文字列。
-        @retval true  先頭が文字列と一致した。
-        @retval false 先頭が文字列と一致しなかった。
-     */
-    public: PSYQ_CONSTEXPR bool starts_with(this_type const& in_prefix)
-    const PSYQ_NOEXCEPT
-    {
-        return this->substr(0, in_prefix.size()) == in_string;
-    }
-
-    /** @brief 先頭が文字と一致するか判定する。
-        @param[in] in_prefix 比較する文字。
-        @retval true  先頭が文字と一致した。
-        @retval false 先頭が文字と一致しなかった。
-     */
-    public: PSYQ_CONSTEXPR bool starts_with(
-        typename base_type::traits_type::char_type const in_prefix)
-    const PSYQ_NOEXCEPT
-    {
-        return 0 < this->size() && in_prefix == *(this->data());
-    }
-
-    /** @brief 末尾が文字列と一致するか判定する。
-        @param[in] in_suffix 比較する文字列。
-        @retval true  末尾が文字列と一致した。
-        @retval false 末尾が文字列と一致しなかった。
-     */
-    public: PSYQ_CONSTEXPR bool ends_with(this_type const& in_suffix)
-    const PSYQ_NOEXCEPT
-    {
-        return in_suffix.size() <= this->size()
-            && in_suffix == this->substr(this->size() - in_suffix.size());
-    }
-
-    /** @brief 末尾が文字と一致するか判定する。
-        @param[in] in_suffix 比較する文字。
-        @retval true  末尾が文字と一致した。
-        @retval false 末尾が文字と一致しなかった。
-     */
-    public: PSYQ_CONSTEXPR bool ends_with(
-        typename base_type::traits_type::char_type const in_suffix)
-    const PSYQ_NOEXCEPT
-    {
-        return 0 < this->size()
-            && in_suffix == *(this->data() + this->size() - 1);
-    }
     //@}
     //-------------------------------------------------------------------------
     /// @name 文字列の変更

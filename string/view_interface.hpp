@@ -195,6 +195,45 @@ class psyq::string::_private::view_interface: public template_base_string
     }
     //@}
     //-------------------------------------------------------------------------
+    /// @name 文字列の構築
+    //@{
+    /** @brief *thisの部分文字列をコピーする。
+
+        コピー先の文字列に、終端文字は追加されない。
+
+        @param[out] out_string コピー先の先頭位置。
+        @param[in]  in_size    コピーする要素数。
+        @param[in]  in_offset  部分文字列の開始オフセット値。
+        @return コピーした要素数。
+     */
+    public: typename this_type::size_type copy(
+        typename base_type::traits_type::char_type* const out_string,
+        typename this_type::size_type const in_size,
+        typename this_type::size_type const in_offset = 0)
+    const PSYQ_NOEXCEPT
+    {
+        if (out_string == nullptr)
+        {
+            PSYQ_ASSERT(in_size == 0);
+            return 0;
+        }
+        auto local_size(this->size());
+        if (local_size <= in_offset)
+        {
+            return 0;
+        }
+        local_size -= in_offset;
+        if (in_size < local_size)
+        {
+            local_size = in_size;
+        }
+        base_type::traits_type::copy(
+            out_string, this->data() + in_offset, local_size);
+        return local_size;
+    }
+    //@}
+
+    //-------------------------------------------------------------------------
     /// @name 文字列の要素を参照
     //@{
     /** @brief 文字列が持つ文字を参照する。

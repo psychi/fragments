@@ -46,7 +46,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STRING_STORAGE_HPP_
 #define PSYQ_STRING_STORAGE_HPP_
 
-#include<type_traits>
 //#include "string/view.hpp"
 
 /// psyq::string::storage で使う、defaultの最大文字数。
@@ -91,14 +90,6 @@ class psyq::string::_private::storage_base
 
     /// 文字特性の型。
     public: typedef template_char_traits traits_type;
-    static_assert(
-        std::is_pod<typename this_type::traits_type::char_type>::value,
-        "this_type::traits_type::char_type is not POD type.");
-    /// 文字列を格納する領域。
-    private: typedef typename std::aligned_storage<
-        sizeof(typename this_type::traits_type::char_type) * template_max_size,
-        std::alignment_of<typename this_type::traits_type::char_type>::value>
-            ::type storage_type;
 
     public: enum: std::size_t
     {
@@ -140,8 +131,7 @@ class psyq::string::_private::storage_base
     public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type const* data()
     const PSYQ_NOEXCEPT
     {
-        return reinterpret_cast<typename this_type::traits_type::char_type const*>(
-            &this->storage_);
+        return &this->storage_[0];
     }
 
     /// @copydoc psyq::string::view::size()
@@ -177,17 +167,15 @@ class psyq::string::_private::storage_base
         PSYQ_ASSERT(in_size <= this_type::MAX_SIZE);
         auto const local_size(
             (std::min<std::size_t>)(in_size, this_type::MAX_SIZE));
-        auto const local_data(
-            const_cast<typename this_type::traits_type::char_type*>(this->data()));
         this->size_ = local_size;
-        this_type::traits_type::copy(local_data, in_data, local_size);
+        this_type::traits_type::copy(&this->storage_[0], in_data, local_size);
     }
 
     //-------------------------------------------------------------------------
-    /// 文字列を保存する領域。
-    private: typename this_type::storage_type storage_;
     /// 文字列の要素数。
     private: std::size_t size_;
+    /// 文字列を保存する領域。
+    private: typename this_type::traits_type::char_type storage_[this_type::MAX_SIZE];
 
 }; // class psyq::string::_private::storage_base
 
@@ -231,21 +219,21 @@ class psyq::string::storage:
     /** @brief 空文字列を構築する。
      */
     public: PSYQ_CONSTEXPR storage() PSYQ_NOEXCEPT:
-        base_type(base_type::base_type::make())
+    base_type(base_type::base_type::make())
     {}
 
     /** @brief 文字列をコピーする。
         @param[in] in_string コピー元の文字列。
      */
     public: storage(this_type const& in_string) PSYQ_NOEXCEPT:
-        base_type(in_string)
+    base_type(in_string)
     {}
 
     /** @brief 文字列をコピーする。
         @param[in] in_string コピー元の文字列。
      */
     public: storage(typename base_type::view const& in_string) PSYQ_NOEXCEPT:
-        base_type(base_type::base_type::make())
+    base_type(base_type::base_type::make())
     {
         this->copy_string(in_string.data(), in_string.size());
     }
@@ -258,7 +246,7 @@ class psyq::string::storage:
         typename base_type::const_pointer const in_data,
         typename base_type::size_type const in_size)
     PSYQ_NOEXCEPT:
-        base_type(base_type::base_type::make())
+    base_type(base_type::base_type::make())
     {
         this->copy_string(in_data, in_size);
     }

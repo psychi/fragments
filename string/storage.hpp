@@ -50,7 +50,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /// psyq::string::storage で使う、defaultの最大文字数。
 #ifndef PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT
-#define PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT 160
+#define PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT 99
 #endif // !defined(PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT)
 
 /// @cond
@@ -75,8 +75,7 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 文字の固定長領域を使った文字列の基底型。
 
-    - memory割り当てを一切行わない。
-    - 文字列の終端がnull文字となっている保証はない。
+    - 動的memory割り当てを一切行わない。
 
     @warning this_type::MAX_SIZE より多い文字数は保持できない。
 
@@ -127,11 +126,21 @@ class psyq::string::_private::storage_base
     //-------------------------------------------------------------------------
     /// @name 文字列のプロパティ
     //@{
-    /// @copydoc psyq::string::view::data()
-    public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type const* data()
+    //@{
+    /** @brief 文字列の先頭文字へのpointerを取得する。
+        @return 終端がnull文字となっている文字列の、先頭文字へのpointer。
+     */
+    public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type const* c_str()
     const PSYQ_NOEXCEPT
     {
         return &this->storage_[0];
+    }
+
+    /// @copydoc c_str()
+    public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type const* data()
+    const PSYQ_NOEXCEPT
+    {
+        return this->c_str();
     }
 
     /// @copydoc psyq::string::view::size()
@@ -169,27 +178,23 @@ class psyq::string::_private::storage_base
             (std::min<std::size_t>)(in_size, this_type::MAX_SIZE));
         this->size_ = local_size;
         this_type::traits_type::copy(&this->storage_[0], in_data, local_size);
+        this->storage_[local_size] = 0;
     }
 
     //-------------------------------------------------------------------------
     /// 文字列の要素数。
     private: std::size_t size_;
     /// 文字列を保存する領域。
-    private: typename this_type::traits_type::char_type storage_[this_type::MAX_SIZE];
+    private: typename this_type::traits_type::char_type storage_[this_type::MAX_SIZE + 1];
 
 }; // class psyq::string::_private::storage_base
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string_view を模した、固定長領域を使った文字列。
+/** @brief std::basic_string を模した、固定長領域を使った文字列。
 
-    - memory割り当てを一切行わない。
-    - 文字列の終端がnull文字となっている保証はない。
+    - 動的memory割り当てを一切行わない。
 
     @warning base_type::MAX_SIZE より多い文字数は保持できない。
-
-    @note
-        せっかくインスタンス毎に個別のメモリ領域を持っているので、
-        std::stringと同じように変更できる文字列を扱えるようにしたい。
 
     @tparam template_char_type   @copydoc base_type::value_type
     @tparam template_max_size    @copydoc base_type::MAX_SIZE
@@ -249,6 +254,54 @@ class psyq::string::storage:
     base_type(base_type::base_type::make())
     {
         this->copy_string(in_data, in_size);
+    }
+    /** @brief 文字列の一部をコピーして構築する。
+        @param[in] in_string コピーする文字列。
+        @param[in] in_offset コピーする文字列の開始オフセット位置。
+        @param[in] in_count  コピーする要素数。
+     */
+    public: storage(
+        typename base_type::view const& in_string,
+        typename base_type::size_type const in_offset,
+        typename base_type::size_type const in_count = base_type::npos)
+    PSYQ_NOEXCEPT:
+    base_type(base_type::base_type::make())
+    {
+        base_type::view const local_string(in_string, in_offset, in_count);
+        this->copy_string(local_string.data(), local_string.size());
+    }
+
+    /** @brief 文字を繰り返す文字列を構築する。
+        @param[in] in_char  繰り返す文字。
+        @param[in] in_count 文字を繰り返す回数。
+     */
+    public: storage(
+        typename base_type::traits_type::char_type const in_char,
+        typename base_type::size_type const in_count)
+    PSYQ_NOEXCEPT:
+    base_type(base_type::base_type::make())
+    {
+        PSYQ_ASSERT(in_count < this_type::MAX_SIZE);
+        auto const local_count((std::min)(in_size, this_type::MAX_SIZE));
+        for (auto i(0); i < local_count; ++i)
+        {
+            this->storage_[i] = in_char;
+        }
+        this->size_ = local_count;
+    }
+
+    /** @brief 文字列をコピーして構築する。
+        @param[in] in_begin コピーする文字列の先頭位置。
+        @param[in] in_end   コピーする文字列の末尾位置。
+     */
+    public: template<typename template_iterator>
+    storage(
+        template_iterator const in_begin,
+        template_iterator const in_end)
+    PSYQ_NOEXCEPT:
+    base_type(base_type::base_type::make())
+    {
+        this->copy_string(&(*in_begin), std::distance(in_begin, in_end));
     }
     //@}
     //-------------------------------------------------------------------------

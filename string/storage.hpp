@@ -255,6 +255,21 @@ class psyq::string::storage:
     {
         this->copy_string(in_data, in_size);
     }
+
+    /** @brief 文字列をコピーする。
+        @param[in] in_begin コピー元の文字列の先頭位置。
+        @param[in] in_end   コピー元の文字列の末尾位置。
+     */
+    public: template<typename template_iterator>
+    storage(
+        template_iterator const in_begin,
+        template_iterator const in_end)
+    PSYQ_NOEXCEPT:
+    base_type(base_type::base_type::make())
+    {
+        this->copy_string(&(*in_begin), std::distance(in_begin, in_end));
+    }
+
     /** @brief 文字列の一部をコピーして構築する。
         @param[in] in_string コピーする文字列。
         @param[in] in_offset コピーする文字列の開始オフセット位置。
@@ -288,20 +303,6 @@ class psyq::string::storage:
             this->storage_[i] = in_char;
         }
         this->size_ = local_count;
-    }
-
-    /** @brief 文字列をコピーして構築する。
-        @param[in] in_begin コピーする文字列の先頭位置。
-        @param[in] in_end   コピーする文字列の末尾位置。
-     */
-    public: template<typename template_iterator>
-    storage(
-        template_iterator const in_begin,
-        template_iterator const in_end)
-    PSYQ_NOEXCEPT:
-    base_type(base_type::base_type::make())
-    {
-        this->copy_string(&(*in_begin), std::distance(in_begin, in_end));
     }
     //@}
     //-------------------------------------------------------------------------

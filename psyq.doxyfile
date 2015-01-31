@@ -683,6 +683,7 @@ INPUT                  = \
                          ./string/view.hpp \
                          ./string/storage.hpp \
                          ./string/holder.hpp \
+                         ./string/flyweight.hpp \
                          ./string/table.hpp \
                          ./any/rtti.hpp \
                          ./any/storage.hpp \

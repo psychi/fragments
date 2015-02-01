@@ -370,7 +370,7 @@ class psyq::string::table
     public: typedef std::unordered_map<
         typename this_type::cell_view,
         typename this_type::attribute,
-        typename this_type::cell_view::fnv1_hash,
+        typename this_type::cell_view::fnv1_hash32,
         std::equal_to<typename this_type::cell_view>,
         typename this_type::cell_map::allocator_type::template
             rebind<typename this_type::attribute_map_element>::other>

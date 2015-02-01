@@ -52,7 +52,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <algorithm>
 #include <cctype>
 //#include "psyq/assert.hpp"
-//#include "psyq/fnv_hash.hpp"
 
 namespace psyq
 {

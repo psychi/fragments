@@ -83,8 +83,8 @@ class psyq::string::flyweight_factory
     public: typedef std::shared_ptr<this_type> shared_ptr;
     public: typedef std::weak_ptr<this_type> weak_ptr;
 
-    // 文字列のハッシュ値の型。
-    public: typedef std::uint32_t hash;
+    /// 文字列のハッシュ計算機。
+    public: typedef psyq::fnv1_hash32 hash;
 
     public: typedef psyq::string::view<
         template_char_type, template_char_traits>
@@ -92,14 +92,16 @@ class psyq::string::flyweight_factory
 
     private: struct item
     {
-        typename template_char_traits::char_type const* data() const
+        typename flyweight_factory::view::const_pointer data() const
         {
             return reinterpret_cast<
-                typename template_char_traits::char_type const*>(this + 1);
+                typename flyweight_factory::view::const_pointer>(this + 1);
         }
 
-        typename this_type::view::size_type size; ///< 文字列の要素数。
-        std::uint32_t hash; ///< 文字列のハッシュ値。
+        /// 文字列の要素数。
+        typename flyweight_factory::view::size_type size;
+        /// 文字列のハッシュ値。
+        typename flyweight_factory::hash::value_type hash;
     };
 
     private: typedef std::vector<
@@ -108,75 +110,33 @@ class psyq::string::flyweight_factory
             rebind<typename this_type::item*>::other>
                 item_array;
 
+    public: class item_base;
+
     //-------------------------------------------------------------------------
-    public: class item_base
+    /** @brief 文字列のハッシュ値を算出する。
+        @param[in] in_string ハッシュ値を算出する文字列。
+        @return 文字列のハッシュ値。
+     */
+    public: static typename this_type::hash::value_type compute_hash(
+        typename this_type::view const& in_string)
+    PSYQ_NOEXCEPT
     {
-        /// thisが指す値の型。
-        private: typedef item_base this_type;
+        return this_type::hash::compute(
+            in_string.data(), in_string.data() + in_string.size());
+    }
 
-        public: typedef template_char_traits traits_type; ///< 文字特性の型。
+    /** @brief 文字列を辞書に登録する。
 
-        public: PSYQ_CONSTEXPR item_base() PSYQ_NOEXCEPT: item_(nullptr) {}
+        登録する文字列と等価な文字列がすでに存在するなら、
+        登録済の文字列を再利用する。
 
-        public: item_base(this_type&& io_source) PSYQ_NOEXCEPT:
-        factory_(std::move(io_source.factory_)),
-        item_(std::move(io_source.item_))
-        {
-            io_source.clear();
-        }
-
-        /// @copydoc psyq::string::view::clear
-        public: void clear() PSYQ_NOEXCEPT
-        {
-            this->factory_.reset();
-            this->item_ = nullptr;
-        }
-
-        /// @copydoc psyq::string::view::data
-        public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type const* data()
-        const PSYQ_NOEXCEPT
-        {
-            return this->factory_.expired()? nullptr: this->item_->data();
-        }
-
-        /// @copydoc psyq::string::view::size
-        public: PSYQ_CONSTEXPR typename flyweight_factory::view::size_type size()
-        const PSYQ_NOEXCEPT
-        {
-            return this->factory_.expired()? 0: this->item_->size;
-        }
-
-        /// @copydoc psyq::string::view::max_size
-        public: PSYQ_CONSTEXPR std::size_t max_size() const PSYQ_NOEXCEPT
-        {
-            return (std::numeric_limits<std::size_t>::max)();
-        }
-
-        public: typename flyweight_factory::hash hash() const PSYQ_NOEXCEPT;
-
-        /// 文字列の本体を所有する flyweight_factory インスタンス。
-        private: typename flyweight_factory::weak_ptr factory_;
-        /// 文字列の本体。
-        private: typename flyweight_factory::item const* item_;
-
-    }; // class item_base
-
-    //-------------------------------------------------------------------------
-    public: typename this_type::hash make_hash(
-        typename this_type::view const& in_string);
-
-    /** @brief 文字列を追加する。
-
-        追加する文字列と等価な文字列がすでに存在するなら追加せず、
-        既存の文字列を再利用する。
-
-        @param[in] in_string 追加する文字列。
+        @param[in] in_string 登録する文字列。
      */
     private: typename this_type::item const& equip_item(
         typename this_type::view const& in_string)
     {
         // 等価な文字列を、辞書から検索する。
-        auto const local_hash(this->make_hash(in_string));
+        auto const local_hash(this_type::compute_hash(in_string));
         auto const local_position(
             std::lower_bound(
                 this->items_.begin(),
@@ -197,7 +157,7 @@ class psyq::string::flyweight_factory
             }
         }
 
-        // 等価な文字列が辞書になかったので、新たに追加する。
+        // 等価な文字列が辞書になかったので、新たに登録する。
         auto const& local_item(this->make_item(in_string, local_hash));
         this->items_.insert(local_position, &local_item);
         return local_item;
@@ -218,31 +178,155 @@ template<
     typename template_char_type,
     typename template_char_traits,
     typename template_allocator_type>
+class psyq::string::flyweight_factory<
+    template_char_type, template_char_traits, template_allocator_type>
+        ::item_base
+{
+    /// thisが指す値の型。
+    private: typedef item_base this_type;
+
+    public: typedef template_char_traits traits_type; ///< 文字特性の型。
+
+    public: typedef psyq::string::flyweight_factory<
+        template_char_type, template_char_traits, template_allocator_type>
+            factory;
+
+    //-------------------------------------------------------------------------
+    protected: item_base(this_type const& in_source) PSYQ_NOEXCEPT:
+    factory_(io_source.factory_),
+    item_(io_source.item_)
+    {}
+
+    protected: item_base(this_type&& io_source) PSYQ_NOEXCEPT:
+    factory_(std::move(io_source.factory_)),
+    item_(std::move(io_source.item_))
+    {
+        io_source.clear();
+    }
+
+    private: item_base(
+        typename this_type::factory::weak_ptr in_factory,
+        typename this_type::factory::item const* const in_item)
+    PSYQ_NOEXCEPT:
+    factory_(std::move(in_factory)),
+    item_(in_item)
+    {}
+
+    protected: static this_type make() PSYQ_NOEXCEPT
+    {
+        return this_type(typename this_type::factory::weak_ptr(), nullptr);
+    }
+
+    protected: static this_type make(
+        typename this_type::factory::view const& in_string,
+        typename this_type::factory::shared_ptr const& in_factory)
+    PSYQ_NOEXCEPT
+    {
+        return in_factory.get() != nullptr?
+            this_type(in_factory, &in_factory->equip_item(in_string)):
+            this_type::make();
+    }
+
+    /// @copydoc psyq::string::view::clear
+    public: void clear() PSYQ_NOEXCEPT
+    {
+        this->factory_.reset();
+        this->item_ = nullptr;
+    }
+
+    /// @copydoc psyq::string::view::data
+    public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type const* data()
+    const PSYQ_NOEXCEPT
+    {
+        return this->factory_.expired()? nullptr: this->item_->data();
+    }
+
+    /// @copydoc psyq::string::view::size
+    public: PSYQ_CONSTEXPR typename this_type::factory::view::size_type size()
+    const PSYQ_NOEXCEPT
+    {
+        return this->factory_.expired()? 0: this->item_->size;
+    }
+
+    /// @copydoc psyq::string::view::max_size
+    public: PSYQ_CONSTEXPR std::size_t max_size() const PSYQ_NOEXCEPT
+    {
+        return (std::numeric_limits<std::size_t>::max)();
+    }
+
+    public: typename this_type::factory::hash get_hash() const PSYQ_NOEXCEPT
+    {
+        return this->factory_.expired()? 0: this->item_.hash;
+    }
+
+    public: typename this_type::factory::weak_ptr const& get_factory()
+    const PSYQ_NOEXCEPT
+    {
+        return this->factory_;
+    }
+
+    //-------------------------------------------------------------------------
+    /// 文字列の本体を所有する flyweight_factory インスタンス。
+    private: typename this_type::factory::weak_ptr factory_;
+    /// 文字列の本体。
+    private: typename this_type::factory::item const* item_;
+
+}; // class psyq::string::flyweight_factory::item_base
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template<
+    typename template_char_type,
+    typename template_char_traits,
+    typename template_allocator_type>
 class psyq::string::flyweight_view:
-    public psyq::string::_private::view_interface<
+public psyq::string::_private::view_interface<
+    typename psyq::string::flyweight_factory<
+        template_char_type,
+        template_char_traits,
+        template_allocator_type>
+            ::item_base>
+{
+    /// thisが指す値の型。
+    private: typedef flyweight_view this_type;
+
+    /// this_type の基底型。
+    public: typedef psyq::string::_private::view_interface<
         typename psyq::string::flyweight_factory<
             template_char_type,
             template_char_traits,
             template_allocator_type>
                 ::item_base>
-{
-    /// thisが指す値の型。
-    private: typedef flyweight_view this_type;
+                    base_type;
 
-    /// this_type を構築するオブジェクト。
-    public: typedef psyq::string::flyweight_factory<
-        template_char_type,
-        template_char_traits,
-        template_allocator_type>
-            factory;
+    /** @brief 空の文字列を構築する。メモリ確保は行わない。
+     */
+    public: flyweight_view() PSYQ_NOEXCEPT:
+    base_type(base_type::make())
+    {}
 
-    /// this_type の基底型。
-    public: typedef psyq::string::_private::view_interface<
-        typename this_type::factory::item_base>
-            base_type;
+    /** @brief 文字列をコピー構築する。メモリ確保は行わない。
+        @param[in] in_source コピー元となる文字列。
+     */
+    public: flyweight_view(this_type const& in_source) PSYQ_NOEXCEPT:
+    base_type(in_source)
+    {}
 
-    public: PSYQ_CONSTEXPR flyweight_view() PSYQ_NOEXCEPT:
-    base_type(base_type::base_type())
+    /** @brief 文字列をムーブ構築する。メモリ確保は行わない。
+        @param[in,out] io_source ムーブ元となる文字列。
+     */
+    public: flyweight_view(this_type && io_source) PSYQ_NOEXCEPT:
+    base_type(std::move(io_source))
+    {}
+
+    /** @brief 文字列をコピー構築する。メモリ確保を行う場合ある。
+        @param[in] in_string  コピー元となる文字列。
+        @param[in] in_factory 保持する文字列工場。
+     */
+    public: flyweight_view(
+        typename base_type::factory::view const& in_string,
+        typename base_type::factory::shared_ptr const& in_factory)
+    PSYQ_NOEXCEPT:
+    base_type(base_type::make(in_string, in_factory))
     {}
 
 }; // class psyq::string::flyweight_view

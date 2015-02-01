@@ -120,6 +120,7 @@ struct psyq::_private::fnv_hash
         template_char_type const* const in_string,
         typename this_type::value_type const in_offset = this_type::traits_type::EMPTY,
         typename this_type::value_type const in_prime = this_type::traits_type::PRIME)
+    PSYQ_NOEXCEPT
     {
         auto local_hash(in_offset);
         if (in_string != nullptr)
@@ -146,6 +147,7 @@ struct psyq::_private::fnv_hash
         template_value_type const* const in_end,
         typename this_type::value_type const  in_offset = this_type::traits_type::EMPTY,
         typename this_type::value_type const  in_prime = this_type::traits_type::PRIME)
+    PSYQ_NOEXCEPT
     {
         return template_hash_algorithm::compute(
             in_begin, in_end, in_offset, in_prime);
@@ -164,6 +166,7 @@ struct psyq::_private::fnv_hash
         template_iterator_type const&   in_end,
         typename this_type::value_type const in_offset = this_type::traits_type::EMPTY,
         typename this_type::value_type const in_prime = this_type::traits_type::PRIME)
+    PSYQ_NOEXCEPT
     {
         auto local_hash(in_offset);
         for (template_iterator_type i(in_begin); in_end != i; ++i)
@@ -193,6 +196,7 @@ struct psyq::_private::fnv1_algorithm
         void const* const          in_end,
         template_value_type const& in_offset,
         template_value_type const& in_prime)
+    PSYQ_NOEXCEPT
     {
         auto local_hash(in_offset);
         for (auto i(static_cast<char const*>(in_begin)); i < in_end; ++i)
@@ -221,6 +225,7 @@ struct psyq::_private::fnv1a_algorithm
         void const* const          in_end,
         template_value_type const& in_offset,
         template_value_type const& in_prime)
+    PSYQ_NOEXCEPT
     {
         auto local_hash(in_offset);
         for (auto i(static_cast<char const*>(in_begin)); i < in_end; ++i)

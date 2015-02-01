@@ -157,30 +157,29 @@ class psyq::string::_private::view_interface: public template_base_string
     /** @brief 文字列をコピー構築する。
         @param[in] in_string コピー元となる文字列。
      */
-    protected: PSYQ_CONSTEXPR view_interface(this_type const& in_string):
-        base_type(in_string)
+    protected: view_interface(this_type const& in_string):
+    base_type(in_string)
     {}
 
     /** @brief 文字列をムーブ構築する。
         @param[in,out] io_string ムーブ元となる文字列。
      */
-    protected: PSYQ_CONSTEXPR view_interface(this_type&& io_string)
-    PSYQ_NOEXCEPT: base_type(std::move(io_string))
+    protected: view_interface(this_type&& io_string) PSYQ_NOEXCEPT:
+    base_type(std::move(io_string))
     {}
 
     /** @brief 文字列をコピー構築する。
         @param[in] in_string コピー元となる文字列。
      */
-    protected: explicit PSYQ_CONSTEXPR view_interface(base_type const& in_string):
-        base_type(in_string)
+    protected: explicit view_interface(base_type const& in_string):
+    base_type(in_string)
     {}
 
     /** @brief 文字列をムーブ構築する。
         @param[in,out] io_string ムーブ元となる文字列。
      */
-    protected: explicit PSYQ_CONSTEXPR view_interface(base_type&& io_string)
-    PSYQ_NOEXCEPT:
-        base_type(std::move(io_string))
+    protected: explicit view_interface(base_type&& io_string) PSYQ_NOEXCEPT:
+    base_type(std::move(io_string))
     {}
     //@}
     //-------------------------------------------------------------------------
@@ -286,8 +285,7 @@ class psyq::string::_private::view_interface: public template_base_string
     /** @brief 文字列の先頭位置を取得する。
         @return 文字列の先頭位置への反復子。
      */
-    public: PSYQ_CONSTEXPR typename this_type::const_iterator begin()
-    const PSYQ_NOEXCEPT
+    public: typename this_type::const_iterator begin() const PSYQ_NOEXCEPT
     {
         return this->data();
     }
@@ -295,8 +293,7 @@ class psyq::string::_private::view_interface: public template_base_string
     /** @brief 文字列の末尾位置を取得する。
         @return 文字列の末尾位置への反復子。
      */
-    public: PSYQ_CONSTEXPR typename this_type::const_iterator end()
-    const PSYQ_NOEXCEPT
+    public: typename this_type::const_iterator end() const PSYQ_NOEXCEPT
     {
         return this->begin() + this->size();
     }
@@ -304,8 +301,7 @@ class psyq::string::_private::view_interface: public template_base_string
     /** @brief 文字列の先頭位置を取得する。
         @return 文字列の先頭位置への反復子。
      */
-    public: PSYQ_CONSTEXPR typename this_type::const_iterator cbegin()
-    const PSYQ_NOEXCEPT
+    public: typename this_type::const_iterator cbegin() const PSYQ_NOEXCEPT
     {
         return this->begin();
     }
@@ -313,8 +309,7 @@ class psyq::string::_private::view_interface: public template_base_string
     /** @brief 文字列の末尾位置を取得する。
         @return 文字列の末尾位置への反復子。
      */
-    public: PSYQ_CONSTEXPR typename this_type::const_iterator cend()
-    const PSYQ_NOEXCEPT
+    public: typename this_type::const_iterator cend() const PSYQ_NOEXCEPT
     {
         return this->end();
     }
@@ -322,7 +317,7 @@ class psyq::string::_private::view_interface: public template_base_string
     /** @brief 文字列の末尾位置を取得する。
         @return 文字列の末尾位置への逆反復子。
      */
-    public: PSYQ_CONSTEXPR typename this_type::const_reverse_iterator rbegin()
+    public: typename this_type::const_reverse_iterator rbegin()
     const PSYQ_NOEXCEPT
     {
         return typename this_type::const_reverse_iterator(this->end());
@@ -331,7 +326,7 @@ class psyq::string::_private::view_interface: public template_base_string
     /** @brief 文字列の先頭位置を取得する。
         @return 文字列の先頭位置への逆反復子。
      */
-    public: PSYQ_CONSTEXPR typename this_type::const_reverse_iterator rend()
+    public: typename this_type::const_reverse_iterator rend()
     const PSYQ_NOEXCEPT
     {
         return typename this_type::const_reverse_iterator(this->begin());
@@ -340,7 +335,7 @@ class psyq::string::_private::view_interface: public template_base_string
     /** @brief 文字列の末尾位置を取得する。
         @return 文字列の末尾位置への逆反復子。
      */
-    public: PSYQ_CONSTEXPR typename this_type::const_reverse_iterator crbegin()
+    public: typename this_type::const_reverse_iterator crbegin()
     const PSYQ_NOEXCEPT
     {
         return this->rbegin();
@@ -349,7 +344,7 @@ class psyq::string::_private::view_interface: public template_base_string
     /** @brief 文字列の先頭位置を取得する。
         @return 文字列の先頭位置への逆反復子。
      */
-    public: PSYQ_CONSTEXPR typename this_type::const_reverse_iterator crend()
+    public: typename this_type::const_reverse_iterator crend()
     const PSYQ_NOEXCEPT
     {
         return this->rend();
@@ -359,7 +354,7 @@ class psyq::string::_private::view_interface: public template_base_string
     /// @name 文字列のプロパティ
     //@{
     /// @copydoc psyq::string::holder::empty()
-    public: PSYQ_CONSTEXPR bool empty() const PSYQ_NOEXCEPT
+    public: bool empty() const PSYQ_NOEXCEPT
     {
         return this->size() <= 0;
     }
@@ -367,7 +362,7 @@ class psyq::string::_private::view_interface: public template_base_string
     /** @brief 文字列の要素数を取得する。 base_type::size() と同じ機能。
         @return 文字列の要素数。
      */
-    public: PSYQ_CONSTEXPR typename this_type::size_type length()
+    public: typename this_type::size_type length()
     const PSYQ_NOEXCEPT
     {
         return this->size();

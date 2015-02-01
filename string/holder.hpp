@@ -93,10 +93,9 @@ class psyq::string::_private::holder_base
     private: struct constant_header
     {
         /// @param[in] in_size 文字列の要素数。
-        explicit PSYQ_CONSTEXPR constant_header(std::size_t const in_size)
-        PSYQ_NOEXCEPT:
-            hold_count(1),
-            size(in_size)
+        explicit constant_header(std::size_t const in_size) PSYQ_NOEXCEPT:
+        hold_count(1),
+        size(in_size)
         {}
 
         psyq::atomic_count hold_count; ///< 文字列定数の被参照数。
@@ -115,29 +114,29 @@ class psyq::string::_private::holder_base
     //-------------------------------------------------------------------------
     /// @copydoc psyq::string::holder::holder(this_type const&)
     protected: holder_base(this_type const& in_string) PSYQ_NOEXCEPT:
-        twice_size_(0),
-        data_(nullptr),
-        constant_allocator_(in_string.constant_allocator_)
+    twice_size_(0),
+    data_(nullptr),
+    constant_allocator_(in_string.constant_allocator_)
     {
         this->copy_holder(in_string);
     }
 
     /// @copydoc psyq::string::holder::holder(this_type&&)
     protected: holder_base(this_type&& io_string) PSYQ_NOEXCEPT:
-        twice_size_(0),
-        data_(nullptr),
-        constant_allocator_(std::move(io_string.constant_allocator_))
+    twice_size_(0),
+    data_(nullptr),
+    constant_allocator_(std::move(io_string.constant_allocator_))
     {
         this->move_holder(std::move(io_string));
     }
 
     /// @copydoc psyq::string::holder::holder()
-    private: explicit PSYQ_CONSTEXPR holder_base(
+    private: explicit holder_base(
         typename this_type::constant_allocator in_allocator)
     PSYQ_NOEXCEPT:
-        twice_size_(0),
-        data_(nullptr),
-        constant_allocator_(std::move(in_allocator))
+    twice_size_(0),
+    data_(nullptr),
+    constant_allocator_(std::move(in_allocator))
     {}
 
     /// @brief 文字列を解放する。
@@ -175,21 +174,21 @@ class psyq::string::_private::holder_base
     /// @name 文字列のプロパティ
     //@{
     /// @copydoc psyq::string::view::data()
-    public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type const* data()
+    public: typename this_type::traits_type::char_type const* data()
     const PSYQ_NOEXCEPT
     {
         return this->data_;
     }
 
     /// @copydoc psyq::string::view::size()
-    public: PSYQ_CONSTEXPR std::size_t size() const PSYQ_NOEXCEPT
+    public: std::size_t size() const PSYQ_NOEXCEPT
     {
         return this->get_constant() != nullptr?
             this->constant_header_->size: this->twice_size_ >> 1;
     }
 
     /// @copydoc psyq::string::view::max_size()
-    public: PSYQ_CONSTEXPR std::size_t max_size() const PSYQ_NOEXCEPT
+    public: std::size_t max_size() const PSYQ_NOEXCEPT
     {
         return (std::numeric_limits<std::size_t>::max)();
     }
@@ -198,7 +197,7 @@ class psyq::string::_private::holder_base
         @retval true  文字列が空である。
         @retval false 文字列が空ではない。
      */
-    public: PSYQ_CONSTEXPR bool empty() const PSYQ_NOEXCEPT
+    public: bool empty() const PSYQ_NOEXCEPT
     {
         return this->data() == nullptr;
     }
@@ -206,7 +205,7 @@ class psyq::string::_private::holder_base
     /** @brief 文字のメモリ割当子を取得する。
         @return 文字のメモリ割当子。
      */
-    public: PSYQ_CONSTEXPR typename this_type::allocator_type get_allocator()
+    public: typename this_type::allocator_type get_allocator()
     const PSYQ_NOEXCEPT
     {
         return typename this_type::allocator_type(this->constant_allocator_);
@@ -416,7 +415,7 @@ class psyq::string::_private::holder_base
         @retval true  文字列リテラルを保持してる。
         @retval false 文字列リテラルを保持してない。
      */
-    private: PSYQ_CONSTEXPR bool is_literal() const PSYQ_NOEXCEPT
+    private: bool is_literal() const PSYQ_NOEXCEPT
     {
         return (this->twice_size_ & 1) != 0;
     }
@@ -425,7 +424,7 @@ class psyq::string::_private::holder_base
         @retval !=nullptr 保持してる文字列定数のヘッダ。
         @retval ==nullptr 文字列定数を保持してない。
      */
-    private: PSYQ_CONSTEXPR typename this_type::constant_header* get_constant()
+    private: typename this_type::constant_header* get_constant()
     const PSYQ_NOEXCEPT
     {
         return this->is_literal()? nullptr: this->constant_header_;
@@ -633,9 +632,9 @@ template<
     typename template_char_traits,
     typename template_allocator_type>
 class psyq::string::holder:
-    public psyq::string::_private::view_interface<
-        psyq::string::_private::holder_base<
-            template_char_traits, template_allocator_type>>
+public psyq::string::_private::view_interface<
+    psyq::string::_private::holder_base<
+        template_char_traits, template_allocator_type>>
 {
     /// thisが指す値の型。
     private: typedef holder this_type;
@@ -652,26 +651,26 @@ class psyq::string::holder:
     /** @brief 空の文字列を構築する。メモリ確保は行わない。
         @param[in] in_allocator メモリ割当子の初期値。
      */
-    public: explicit PSYQ_CONSTEXPR holder(
+    public: explicit holder(
         typename base_type::allocator_type const& in_allocator = base_allocator())
     PSYQ_NOEXCEPT:
-        base_type(
-            base_type::base_type::make_constant_holder(
-                nullptr, 0, nullptr, 0, in_allocator))
+    base_type(
+        base_type::base_type::make_constant_holder(
+            nullptr, 0, nullptr, 0, in_allocator))
     {}
 
     /** @brief 文字列保持子をコピー構築する。メモリ確保は行わない。
         @param[in] in_string コピー元となる文字列保持子。
      */
     public: holder(this_type const& in_string) PSYQ_NOEXCEPT:
-        base_type(in_string)
+    base_type(in_string)
     {}
 
     /** @brief 文字列保持子をムーブ構築する。メモリ確保は行わない。
         @param[in,out] io_string ムーブ元となる文字列保持子。
      */
     public: holder(this_type&& io_string) PSYQ_NOEXCEPT:
-        base_type(std::move(io_string))
+    base_type(std::move(io_string))
     {}
 
     /** @copydoc base_type::assign_literal()
@@ -682,7 +681,7 @@ class psyq::string::holder:
         typename base_type::value_type const (&in_literal)[template_size],
         typename base_type::allocator_type const& in_allocator = base_allocator())
     PSYQ_NOEXCEPT:
-        base_type(base_type::base_type::make_literal_holder(in_literal, in_allocator))
+    base_type(base_type::base_type::make_literal_holder(in_literal, in_allocator))
     {}
 
     /** @brief メモリ確保を行い、文字列定数を構築する。
@@ -693,9 +692,9 @@ class psyq::string::holder:
         typename base_type::view const& in_string,
         typename base_type::allocator_type const& in_allocator = base_allocator())
     :
-        base_type(
-            base_type::base_type::make_constant_holder(
-                in_string.data(), in_string.size(), nullptr, 0, in_allocator))
+    base_type(
+        base_type::base_type::make_constant_holder(
+            in_string.data(), in_string.size(), nullptr, 0, in_allocator))
     {}
 
     /** @brief メモリ確保を行い、文字列定数を構築する。
@@ -708,9 +707,9 @@ class psyq::string::holder:
         typename base_type::size_type const in_size,
         typename base_type::allocator_type const& in_allocator = base_allocator())
     :
-        base_type(
-            base_type::base_type::make_constant_holder(
-                in_data, in_size, nullptr, 0, in_allocator))
+    base_type(
+        base_type::base_type::make_constant_holder(
+            in_data, in_size, nullptr, 0, in_allocator))
     {}
 
     /** @brief メモリ確保を行い、2つの文字列を連結した文字列定数を構築する。
@@ -723,13 +722,13 @@ class psyq::string::holder:
         typename base_type::view const& in_tail_string,
         typename base_type::allocator_type const& in_allocator = base_allocator())
     :
-        base_type(
-            base_type::base_type::make_constant_holder(
-                in_head_string.data(),
-                in_head_string.size(),
-                in_tail_string.data(),
-                in_tail_string.size(),
-                in_allocator))
+    base_type(
+        base_type::base_type::make_constant_holder(
+            in_head_string.data(),
+            in_head_string.size(),
+            in_tail_string.data(),
+            in_tail_string.size(),
+            in_allocator))
     {}
     //@}
     //-------------------------------------------------------------------------

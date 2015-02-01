@@ -206,9 +206,9 @@ template<
     std::size_t template_max_size,
     typename template_char_traits>
 class psyq::string::storage:
-    public psyq::string::_private::view_interface<
-        psyq::string::_private::storage_base<
-            template_char_traits, template_max_size>>
+public psyq::string::_private::view_interface<
+    psyq::string::_private::storage_base<
+        template_char_traits, template_max_size>>
 {
     /// thisが指す値の型。
     private: typedef storage this_type;
@@ -223,9 +223,7 @@ class psyq::string::storage:
     //@{
     /** @brief 空文字列を構築する。
      */
-    public: PSYQ_CONSTEXPR storage() PSYQ_NOEXCEPT:
-    base_type(base_type::base_type::make())
-    {}
+    public: storage() PSYQ_NOEXCEPT: base_type(base_type::base_type::make()) {}
 
     /** @brief 文字列をコピーする。
         @param[in] in_string コピー元の文字列。

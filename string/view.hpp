@@ -82,8 +82,8 @@ namespace psyq
  */
 template<typename template_char_type, typename template_char_traits>
 class psyq::string::view:
-    public psyq::string::_private::view_interface<
-        psyq::string::_private::reference_base<template_char_traits>>
+public psyq::string::_private::view_interface<
+    psyq::string::_private::reference_base<template_char_traits>>
 {
     /// thisが指す値の型。
     private: typedef view this_type;
@@ -97,14 +97,14 @@ class psyq::string::view:
     /// @name コンストラクタ
     //@{
     /// @brief 空の文字列を構築する。
-    public: PSYQ_CONSTEXPR view() PSYQ_NOEXCEPT:
+    public: view() PSYQ_NOEXCEPT:
     base_type(base_type::base_type::make(nullptr, 0))
     {}
 
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
      */
-    public: PSYQ_CONSTEXPR view(this_type const& in_string) PSYQ_NOEXCEPT:
+    public: view(this_type const& in_string) PSYQ_NOEXCEPT:
     base_type(static_cast<base_string const&>(in_string))
     {}
 
@@ -112,8 +112,7 @@ class psyq::string::view:
         @param[in] in_literal 参照する文字列リテラル。
      */
     public: template <std::size_t template_size>
-    PSYQ_CONSTEXPR view(
-        typename base_type::traits_type::char_type const (&in_literal)[template_size])
+    view(typename base_type::traits_type::char_type const (&in_literal)[template_size])
     PSYQ_NOEXCEPT:
     base_type(base_type::base_type::make(in_literal))
     {}
@@ -132,7 +131,7 @@ class psyq::string::view:
         @param[in] in_string 参照する文字列。
      */
     public: template<typename template_string_type>
-    PSYQ_CONSTEXPR view(template_string_type const& in_string)
+    view(template_string_type const& in_string)
     PSYQ_NOEXCEPT:
     base_type(
         base_type::base_type::make(in_string.data(), in_string.size()))
@@ -142,7 +141,7 @@ class psyq::string::view:
         @param[in] in_data 参照する文字列の先頭位置。
         @param[in] in_size 参照する文字列の要素数。
      */
-    public: PSYQ_CONSTEXPR view(
+    public: view(
         typename base_type::const_pointer const in_data,
         typename base_type::size_type const in_size)
     PSYQ_NOEXCEPT:
@@ -154,7 +153,7 @@ class psyq::string::view:
         @param[in] in_offset 参照する文字列の開始オフセット位置。
         @param[in] in_count  参照する文字数の開始オフセット位置からの要素数。
      */
-    public: PSYQ_CONSTEXPR view(
+    public: view(
         this_type const& in_string,
         typename base_type::size_type const in_offset,
         typename base_type::size_type const in_count = base_type::npos)
@@ -315,7 +314,7 @@ class psyq::string::view:
         @param[in] in_count  部分文字列の開始オフセット値からの要素数。
         @return 部分文字列。
      */
-    public: PSYQ_CONSTEXPR this_type substr(
+    public: this_type substr(
         typename base_type::size_type const in_offset = 0,
         typename base_type::size_type const in_count = base_type::npos)
     const PSYQ_NOEXCEPT

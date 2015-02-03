@@ -75,9 +75,8 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 文字の固定長領域を使った文字列の基底型。
 
+    - this_type::MAX_SIZE より多い文字数は保持できない。
     - 動的memory割り当てを一切行わない。
-
-    @warning this_type::MAX_SIZE より多い文字数は保持できない。
 
     @tparam template_char_traits @copydoc this_type::traits_type
     @tparam template_max_size    @copydoc this_type::MAX_SIZE
@@ -97,7 +96,10 @@ class psyq::string::_private::storage_base
 
     //-------------------------------------------------------------------------
     /// @brief 空の文字列を構築する。
-    private: PSYQ_CONSTEXPR storage_base() PSYQ_NOEXCEPT: size_(0) {}
+    private: storage_base() PSYQ_NOEXCEPT: size_(0)
+    {
+        this->storage_[0] = 0;
+    }
 
     /** @brief 文字列をコピーする。
         @param[in] in_string コピー元となる文字列。
@@ -162,6 +164,7 @@ class psyq::string::_private::storage_base
     public: void clear() PSYQ_NOEXCEPT
     {
         this->size_ = 0;
+        this->storage_[0] = 0;
     }
     //@}
     /** @brief 文字列をコピーする。
@@ -192,9 +195,8 @@ class psyq::string::_private::storage_base
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_string を模した、固定長領域を使った文字列。
 
+    - base_type::MAX_SIZE より多い文字数は保持できない。
     - 動的memory割り当てを一切行わない。
-
-    @warning base_type::MAX_SIZE より多い文字数は保持できない。
 
     @tparam template_char_type   @copydoc base_type::value_type
     @tparam template_max_size    @copydoc base_type::MAX_SIZE
@@ -225,14 +227,14 @@ public psyq::string::_private::view_interface<
      */
     public: storage() PSYQ_NOEXCEPT: base_type(base_type::base_type::make()) {}
 
-    /** @brief 文字列をコピーする。
+    /** @brief 文字列をコピーして構築する。
         @param[in] in_string コピー元の文字列。
      */
     public: storage(this_type const& in_string) PSYQ_NOEXCEPT:
     base_type(in_string)
     {}
 
-    /** @brief 文字列をコピーする。
+    /** @brief 文字列をコピーして構築する。
         @param[in] in_string コピー元の文字列。
      */
     public: storage(typename base_type::view const& in_string) PSYQ_NOEXCEPT:
@@ -241,7 +243,7 @@ public psyq::string::_private::view_interface<
         this->copy_string(in_string.data(), in_string.size());
     }
 
-    /** @brief 文字列をコピーする。
+    /** @brief 文字列をコピーして構築する。
         @param[in] in_data コピー元の文字列の先頭位置。
         @param[in] in_size コピー元の文字列の要素数。
      */
@@ -254,7 +256,7 @@ public psyq::string::_private::view_interface<
         this->copy_string(in_data, in_size);
     }
 
-    /** @brief 文字列をコピーする。
+    /** @brief 文字列をコピーして構築する。
         @param[in] in_begin コピー元の文字列の先頭位置。
         @param[in] in_end   コピー元の文字列の末尾位置。
      */
@@ -280,7 +282,7 @@ public psyq::string::_private::view_interface<
     PSYQ_NOEXCEPT:
     base_type(base_type::base_type::make())
     {
-        base_type::view const local_string(in_string, in_offset, in_count);
+        typename base_type::view const local_string(in_string, in_offset, in_count);
         this->copy_string(local_string.data(), local_string.size());
     }
 
@@ -295,11 +297,12 @@ public psyq::string::_private::view_interface<
     base_type(base_type::base_type::make())
     {
         PSYQ_ASSERT(in_count < this_type::MAX_SIZE);
-        auto const local_count((std::min)(in_size, this_type::MAX_SIZE));
+        auto const local_count((std::min)(in_count, this_type::MAX_SIZE));
         for (auto i(0); i < local_count; ++i)
         {
             this->storage_[i] = in_char;
         }
+        this->storage_[local_count] = 0;
         this->size_ = local_count;
     }
     //@}

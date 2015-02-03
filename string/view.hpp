@@ -298,15 +298,6 @@ public psyq::string::_private::view_interface<
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name 文字列の変更
-    //@{
-    /// @copydoc psyq::string::_private::reference_base::clear()
-    public: void clear() PSYQ_NOEXCEPT
-    {
-        this->base_type::base_type::clear();
-    }
-    //@}
-
     /// @name 文字列の構築
     //@{
     /** @brief *thisの部分文字列を作る。

@@ -90,19 +90,62 @@ class psyq::string::flyweight_factory
         template_char_type, template_char_traits>
             view;
 
+    public: enum: std::size_t
+    {
+        CHUNK_SIZE = 4096,
+    };
+
     private: struct item
     {
-        typename flyweight_factory::view::const_pointer data() const
+        PSYQ_CONSTEXPR item(
+            typename flyweight_factory::hash::value_type const in_hash,
+            typename flyweight_factory::view::size_type const in_size)
+        PSYQ_NOEXCEPT:
+        hash(in_hash),
+        size(in_size)
+        {}
+
+        typename PSYQ_CONSTEXPR flyweight_factory::view::const_pointer data()
+        const PSYQ_NOEXCEPT
         {
             return reinterpret_cast<
                 typename flyweight_factory::view::const_pointer>(this + 1);
         }
 
-        /// 文字列の要素数。
-        typename flyweight_factory::view::size_type size;
         /// 文字列のハッシュ値。
         typename flyweight_factory::hash::value_type hash;
-    };
+        /// 文字列の要素数。
+        typename flyweight_factory::view::size_type size;
+
+    }; // struct item
+
+    private: struct compare_item
+    {
+        PSYQ_CONSTEXPR bool operator()(
+            typename flyweight_factory::item const* const in_left,
+            typename flyweight_factory::item const& in_right)
+        const PSYQ_NOEXCEPT
+        {
+            return in_left->hash < in_right.hash
+                || in_left->size < in_right.size;
+        }
+
+        PSYQ_CONSTEXPR bool operator()(
+            typename flyweight_factory::item const& in_left,
+            typename flyweight_factory::item const* const in_right)
+        const PSYQ_NOEXCEPT
+        {
+            return in_left.hash < in_right->hash
+                || in_left.size < in_right->size;
+        }
+
+    }; // struct compare_item
+
+    private: struct chunk_header
+    {
+        typename flyweight_factory::chunk_header* next_chunk;
+        typename flyweight_factory::item first_item;
+    }; // struct chunk_header
 
     private: typedef std::vector<
         typename this_type::item*,
@@ -113,6 +156,20 @@ class psyq::string::flyweight_factory
     public: class item_base;
 
     //-------------------------------------------------------------------------
+    public: explicit flyweight_factory(
+        typename this_type::allocator_type const& in_allocator)
+    :
+    items_(in_allocator),
+    chunk_(nullptr)
+    {}
+
+    private: flyweight_factory(this_type const&);
+
+    public: ~flyweight_factory()
+    {
+        /// @todo チャンクをすべて破棄すること。
+    }
+
     /** @brief 文字列のハッシュ値を算出する。
         @param[in] in_string ハッシュ値を算出する文字列。
         @return 文字列のハッシュ値。
@@ -121,8 +178,12 @@ class psyq::string::flyweight_factory
         typename this_type::view const& in_string)
     PSYQ_NOEXCEPT
     {
-        return this_type::hash::compute(
-            in_string.data(), in_string.data() + in_string.size());
+        auto const local_data(in_string.data());
+        auto const local_size(in_string.size());
+        auto const local_hash(
+            this_type::hash::compute(local_data, local_data + local_size));
+        return local_hash == this_type::hash::EMPTY && 0 < local_size?
+            this_type::EMPTY + 1: local_hash;
     }
 
     /** @brief 文字列を辞書に登録する。
@@ -130,46 +191,150 @@ class psyq::string::flyweight_factory
         登録する文字列と等価な文字列がすでに存在するなら、
         登録済の文字列を再利用する。
 
-        @param[in] in_string 登録する文字列。
+        @param[in] in_string 辞書に登録されている文字列。
      */
     private: typename this_type::item const& equip_item(
         typename this_type::view const& in_string)
     {
-        // 等価な文字列を、辞書から検索する。
+        PSYQ_ASSERT(!in_string.empty());
+
+        // in_string と等価な文字列を、辞書から検索する。
         auto const local_hash(this_type::compute_hash(in_string));
+        auto const local_size(in_string.size());
         auto const local_position(
             std::lower_bound(
                 this->items_.begin(),
                 this->items_.end(),
-                local_hash));
+                typename this_type::item(local_hash, local_size)
+                typename this_type::compare_item()));
         if (local_position != this->items_.end())
         {
             auto const& local_item(**local_position);
-            if (local_hash == local_item.hash
-                && in_string.size() == local_item.size)
+            if (local_hash == local_item.hash)
             {
                 typename this_type::view const local_string(
                     local_item.data(), local_item.size);
                 if (in_string == local_string)
                 {
+                    // 登録済の文字列を再利用する。
                     return local_item;
                 }
             }
         }
 
         // 等価な文字列が辞書になかったので、新たに登録する。
-        auto const& local_item(this->make_item(in_string, local_hash));
-        this->items_.insert(local_position, &local_item);
+        auto const& local_item(
+            *new(this->allocate_item(local_size + 1))
+                typename this_type::item(local_hash, local_size));
+        // 文字列をコピーする。
+        auto const local_data(
+            const_cast<typename this_type::view::pointer>(local_item.data()));
+        this_type::view::traits_type::copy(
+            local_data, in_string.data(), local_size);
+        local_data[local_size] = 0;
+        // 辞書をソートする。
+        std::sort(
+            this->items_.begin(),
+            this->items_.end(),
+            typename this_type::compare_item());
         return local_item;
     }
 
-    private: typename this_type::item const& make_item(
-        typename this_type::view const& in_string,
-        typename this_type::hash const in_hash);
+    private: void* allocate_item(
+        typename this_type::view::size_type const in_string_size)
+    {
+        // in_string_size が収まる空文字列を検索する。
+        auto const local_necessary_size(
+            this_type::align_string_size(in_string_size));
+        auto const local_just_position(
+            std::lower_bound(
+                this->items_.begin(),
+                this->items_.end(),
+                typename this_type::item(
+                    this_type::hash::EMPTY, local_necessary_size),
+                typename this_type::compare_item()));
+        if (local_just_position == this->items.end())
+        {
+            // 空文字列がなかったので、新たにチャンクを用意する。
+            return this->allocate_chunk(in_string_size);
+        }
+        auto& local_just_item(**local_just_position);
+        if (local_just_item.hash != this_type::hash::EMPTY)
+        {
+            // 空文字列がなかったので、新たにチャンクを用意する。
+            return this->allocate_chunk(in_string_size);
+        }
+        else if (local_just_item.size == local_necessary_size)
+        {
+            return &local_just_item;
+        }
+
+        // 分割可能な空文字列を検索する。
+        auto const local_distribute_position(
+            std::lower_bound(
+                local_just_position,
+                this->items_.end(),
+                typename this_type::item(this_type::hash::EMPTY + 1, 0),
+                typename this_type::compare_item()));
+        auto& local_distribute_item(**(local_distribute_position - 1));
+        PSYQ_ASSERT(local_distribute_item.hash == this_type::hash::EMPTY);
+        static_assert(
+            0 == sizeof(typename this_type::item)
+                % sizeof(typename this_type::view::value_type));
+        auto const local_distribute_size(
+            local_necessary_size + sizeof(typename this_type::item) 
+                / sizeof(typename this_type::view::value_type));
+        if (local_distribute_item.size < local_distribute_size)
+        {
+            // 空文字列がなかったので、新たにチャンクを用意する。
+            return this->allocate_chunk(in_string_size);
+        }
+        // 空文字列を2つに分割し、後方を辞書に追加する。
+        auto const local_empty_block(
+            const_cast<typename this_type::view::pointer>(
+                local_distribute_item.data() + local_necessary_size));
+        this->items_.push_back(
+            new(local_empty_block) typename this_type::item(
+                this_type::hash::EMPTY,
+                local_distribute_item.size - local_distribute_size));
+        return &local_distribute_item;
+    }
+
+    private: void* allocate_chunk(
+        typename this_type::view::size_type const in_string_size)
+    {
+        auto const local_header_size(sizeof(typename this_type::chunk_header));
+        auto const local_chunk_size(
+            (std::max)(
+                this_type::CHUNK_SIZE,
+                local_header_size + in_string_size * sizeof(
+                    typename this_type::view::value_type)));
+        typename this_type::item_array::allocator_type::template
+            rebind<typename this_type::chunk_header>::other
+                local_allocator(this->items_.get_allocator());
+        auto const local_allocate_count(
+            (local_chunk_size + local_header_size - 1) / local_header_size);
+        auto const local_chunk(
+            new(local_allocator.allocate(local_allocate_count))
+                typename this_type::chunk_header());
+        PSYQ_ASSERT(local_chunk != nullptr);
+    }
+
+    private: static std::size_t align_string_size(
+        std::size_t const in_string_size)
+    {
+        auto const local_size(sizeof(typename this_type::view::value_type));
+        auto const local_align(alignof(typename this_type::item));
+        auto const local_count(
+            (in_string_size * local_size + local_align - 1) / local_align);
+        return (local_count * local_align) / local_size;
+    }
 
     //-------------------------------------------------------------------------
     /// ハッシュ値をキーにソートされている、文字列の辞書。
     private: typename this_type::item_array items_;
+    /// 先頭のチャンク。
+    private: typename this_type::chunk_header* chunk_;
 
 }; // class psyq::string::flyweight_factory
 
@@ -222,9 +387,10 @@ class psyq::string::flyweight_factory<
         typename this_type::factory::shared_ptr const& in_factory)
     PSYQ_NOEXCEPT
     {
-        return in_factory.get() != nullptr?
-            this_type(in_factory, &in_factory->equip_item(in_string)):
-            this_type::make();
+        auto const local_factory(in_factory.get());
+        return local_factory == nullptr || in_string.empty()?
+            this_type::make():
+            this_type(in_factory, &local_factory->equip_item(in_string));
     }
 
     /// @copydoc psyq::string::view::clear
@@ -254,11 +420,17 @@ class psyq::string::flyweight_factory<
         return (std::numeric_limits<std::size_t>::max)();
     }
 
+    /** @brief 文字列のハッシュ値を取得する。
+        @return flyweight文字列辞書で使われているハッシュ値。
+     */
     public: typename this_type::factory::hash get_hash() const PSYQ_NOEXCEPT
     {
         return this->factory_.expired()? 0: this->item_.hash;
     }
 
+    /** @brief 文字列が所属するflyweight文字列辞書を取得する。
+        @return 文字列が所属するflyweight文字列辞書。
+     */
     public: typename this_type::factory::weak_ptr const& get_factory()
     const PSYQ_NOEXCEPT
     {
@@ -266,9 +438,9 @@ class psyq::string::flyweight_factory<
     }
 
     //-------------------------------------------------------------------------
-    /// 文字列の本体を所有する flyweight_factory インスタンス。
+    /// 文字列を所有するflyweight文字列辞書。
     private: typename this_type::factory::weak_ptr factory_;
-    /// 文字列の本体。
+    /// flyweight文字列。
     private: typename this_type::factory::item const* item_;
 
 }; // class psyq::string::flyweight_factory::item_base

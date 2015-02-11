@@ -16,7 +16,7 @@ set shiftwidth=4
 set softtabstop=0
 " タブ、空白、改行の可視化
 set list
-set listchars=tab:»»,trail:␣,eol:$,extends:»,precedes:«,nbsp:%
+set listchars=tab:»･,trail:␣,eol:¬,extends:»,precedes:«,nbsp:%
 " 補完ポップアップメニューの行数
 set pumheight=10
 " 全角スペースをハイライト表示
@@ -69,14 +69,19 @@ function! s:cpp()
     setlocal tabstop=4
     setlocal shiftwidth=4
 
-    " 空白文字ではなくてタブ文字を使用する
-    setlocal noexpandtab
+    " タブ文字ではなくて空白文字を使用する
+    setlocal expandtab
 
     " 括弧を構成する設定に <> を追加する。
     setlocal matchpairs+=<:>
 
     " 行を折り返さない。
     setlocal nowrap
+
+    if (exists('+colorcolumn'))
+        setlocal colorcolumn=80
+        highlight ColorColumn ctermbg=9
+    endif
 
     " 最後に定義された include 箇所へ移動してを挿入モードへ
     "nnoremap <buffer><silent> <Space>ii :execute "?".&include<CR> :noh<CR> o
@@ -114,8 +119,11 @@ let g:unite_data_directory='~/_vim/_cache/unite/'
 let g:unite_split_rule = 'rightbelow'
 
 NeoBundle 'Shougo/neomru.vim'
-"let g:neomru#file_mru_path='~/_vim/_cache/neomru/file'
+let g:neomru#file_mru_path='~/_vim/_cache/neomru/file'
 let g:neomru#directory_mru_path='~/_vim/_cache/neomru/directory'
+" yank履歴一覧
+let g:unite_source_history_yank_enable=1  "history/yankの有効化
+nnoremap <silent> ,uy :<C-u>Unite history/yank<CR>
 " バッファ一覧
 nnoremap <silent> ,ub :<C-u>Unite buffer<CR>
 " ファイル一覧
@@ -128,6 +136,9 @@ nnoremap <silent> ,um :<C-u>Unite file_mru<CR>
 nnoremap <silent> ,uu :<C-u>Unite buffer file_mru<CR>
 " 全部乗せ
 nnoremap <silent> ,ua :<C-u>UniteWithBufferDir -buffer-name=files buffer file_mru bookmark file<CR>
+
+NeoBundle 'Shougo/vimfiler'
+let g:vimfiler_as_default_explorer = 1
 
 NeoBundle 'soramugi/auto-ctags.vim'
 

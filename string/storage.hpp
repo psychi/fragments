@@ -46,6 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STRING_STORAGE_HPP_
 #define PSYQ_STRING_STORAGE_HPP_
 
+#include<array>
 //#include "string/view.hpp"
 //#include "string/mutable_interface.hpp"
 
@@ -94,6 +95,10 @@ class psyq::string::_private::storage_base
     {
         MAX_SIZE = template_max_size, ///< 最大の要素数。
     };
+
+    private: typedef std::array<
+         typename this_type::traits_type::char_type, this_type::MAX_SIZE + 1>
+             char_array;
 
     //-------------------------------------------------------------------------
     /// @brief 空の文字列を構築する。
@@ -152,6 +157,14 @@ class psyq::string::_private::storage_base
         return this->size_;
     }
 
+    /** @brief メモリを再確保せずに格納できる最大の要素数を取得する。
+        @return メモリを再確保せずに格納できる最大の要素数。
+     */
+    public: PSYQ_CONSTEXPR std::size_t capacity() const PSYQ_NOEXCEPT
+    {
+        return this_type::MAX_SIZE;
+    }
+
     /// @copydoc psyq::string::view::max_size()
     public: PSYQ_CONSTEXPR std::size_t max_size() const PSYQ_NOEXCEPT
     {
@@ -164,6 +177,70 @@ class psyq::string::_private::storage_base
     {
         return const_cast<typename this_type::traits_type::char_type*>(
             this->c_str());
+    }
+
+    //-------------------------------------------------------------------------
+    protected: void insert(
+        std::size_t const in_position,
+        typename this_type::traits_type::char_type const* const in_string,
+        std::size_t const in_size)
+    {
+        if (in_size <= 0 || in_string == nullptr)
+        {
+            PSYQ_ASSERT(in_size <= 0);
+        }
+        else if (
+            in_string < this->data()
+            || this->data() + this_type::MAX_SIZE < in_string)
+        {
+            this->insert_string(in_position, in_string, in_size);
+        }
+        else
+        {
+            this_type local_string;
+            local_string.copy_string(in_string, in_size);
+            this->insert_string(
+                in_position, local_string.data(), local_string.size());
+        }
+    }
+
+    private: void insert_string(
+        std::size_t const in_position,
+        typename this_type::traits_type::char_type const* const in_string,
+        std::size_t const in_size)
+    {
+        PSYQ_ASSERT(in_string != nullptr);
+        auto const local_position((std::min)(in_position, this->size()));
+        this_type::traits_type::copy(
+            &this->storage_[local_position],
+            in_string,
+            this->insert_space(local_position, in_size));
+    }
+
+    private: std::size_t insert_space(
+        std::size_t const in_position,
+        std::size_t const in_size)
+    {
+        PSYQ_ASSERT(0 < in_size);
+        auto const local_insert_size(
+            (std::min)(in_size, this_type::MAX_SIZE - in_position));
+        if (in_position < this->size())
+        {
+            auto const local_insert_end(in_position + local_insert_size);
+            if (local_insert_end < this_type::MAX_SIZE)
+            {
+                auto const local_position(&this->storage_[in_position]);
+                this_type::traits_type::move(
+                    local_position + in_size,
+                    local_position,
+                    (std::min)(
+                        this->size() - in_position,
+                        this_type::MAX_SIZE - local_insert_end));
+            }
+        }
+        this->size_ += local_insert_size;
+        this->storage_[this->size()] = 0;
+        return local_insert_size;
     }
 
     //-------------------------------------------------------------------------
@@ -189,7 +266,7 @@ class psyq::string::_private::storage_base
         auto const local_size(
             (std::min<std::size_t>)(in_size, this_type::MAX_SIZE));
         this->size_ = local_size;
-        this_type::traits_type::copy(&this->storage_[0], in_data, local_size);
+        this_type::traits_type::copy(this->begin(), in_data, local_size);
         this->storage_[local_size] = 0;
     }
 
@@ -197,7 +274,7 @@ class psyq::string::_private::storage_base
     /// 文字列の要素数。
     private: std::size_t size_;
     /// 文字列を保存する領域。
-    private: typename this_type::traits_type::char_type storage_[this_type::MAX_SIZE + 1];
+    private: typename this_type::char_array storage_;
 
 }; // class psyq::string::_private::storage_base
 
@@ -309,10 +386,7 @@ public psyq::string::_private::mutable_interface<
     {
         PSYQ_ASSERT(in_count < this_type::MAX_SIZE);
         auto const local_count((std::min)(in_count, this_type::MAX_SIZE));
-        for (auto i(0); i < local_count; ++i)
-        {
-            this->storage_[i] = in_char;
-        }
+        base_type::traits_type::assign(this->begin(), local_count, in_char);
         this->storage_[local_count] = 0;
         this->size_ = local_count;
     }

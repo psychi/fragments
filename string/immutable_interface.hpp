@@ -67,13 +67,16 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_string_view を模した、immutableな文字列のinterface。
-    @tparam template_base_string @copydoc immutable_interface::base_type
+    @tparam template_base_string @copydoc immutable_interface::base_string
  */
 template<typename template_base_string>
 class psyq::string::_private::immutable_interface: public template_base_string
 {
     /// thisが指す値の型。
     private: typedef immutable_interface this_type;
+
+    /// this_type の基底型。
+    public: typedef template_base_string base_type;
 
     /** @brief 操作する文字列型。
 
@@ -101,7 +104,7 @@ class psyq::string::_private::immutable_interface: public template_base_string
           std::size_t template_base_string::clear() noexcept
           @endcode
      */
-    public: typedef template_base_string base_type;
+    protected: typedef template_base_string base_string;
 
     //-------------------------------------------------------------------------
     /// std::hash互換インターフェイスの、ハッシュ関数オブジェクト。

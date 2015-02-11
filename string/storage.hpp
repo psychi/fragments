@@ -47,6 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define PSYQ_STRING_STORAGE_HPP_
 
 //#include "string/view.hpp"
+//#include "string/mutable_interface.hpp"
 
 /// psyq::string::storage で使う、defaultの最大文字数。
 #ifndef PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT
@@ -145,14 +146,6 @@ class psyq::string::_private::storage_base
         return this->c_str();
     }
 
-    /// @copydoc c_str()
-    public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type* begin()
-    PSYQ_NOEXCEPT
-    {
-        return const_cast<typename this_type::traits_type::char_type*>(
-            this->c_str());
-    }
-
     /// @copydoc psyq::string::view::size()
     public: PSYQ_CONSTEXPR std::size_t size() const PSYQ_NOEXCEPT
     {
@@ -165,6 +158,14 @@ class psyq::string::_private::storage_base
         return this_type::MAX_SIZE;
     }
     //@}
+    /// @copydoc c_str()
+    protected: PSYQ_CONSTEXPR typename this_type::traits_type::char_type* begin()
+    PSYQ_NOEXCEPT
+    {
+        return const_cast<typename this_type::traits_type::char_type*>(
+            this->c_str());
+    }
+
     //-------------------------------------------------------------------------
     /// @name 文字列の変更
     //@{
@@ -216,19 +217,17 @@ template<
     std::size_t template_max_size,
     typename template_char_traits>
 class psyq::string::storage:
-public psyq::string::_private::immutable_interface<
+public psyq::string::_private::mutable_interface<
     psyq::string::_private::storage_base<
         template_char_traits, template_max_size>>
 {
     /// thisが指す値の型。
     private: typedef storage this_type;
-    private: typedef psyq::string::_private::storage_base<
-        template_char_traits, template_max_size>
-            base_string;
     /// this_type の基底型。
-    public: typedef psyq::string::_private::immutable_interface<base_string>
-        base_type;
-
+    public: typedef psyq::string::_private::mutable_interface<
+        psyq::string::_private::storage_base<
+            template_char_traits, template_max_size>>
+                base_type;
 
     //-------------------------------------------------------------------------
     /// @name コンストラクタ

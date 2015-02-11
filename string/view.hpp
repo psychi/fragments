@@ -316,15 +316,15 @@ public psyq::string::_private::view_interface<
     /** @brief 先頭と末尾にある空白文字を取り除いた文字列を作る。
         @return 先頭と末尾にある空白文字を取り除いた文字列。
      */
-    public: this_type trim_copy() const PSYQ_NOEXCEPT
+    public: this_type trim() const PSYQ_NOEXCEPT
     {
-        return this->trim_prefix_copy().trim_suffix_copy();
+        return this->trim_prefix().trim_suffix();
     }
 
     /** @brief 先頭にある空白文字を取り除いた文字列を作る。
         @return 先頭にある空白文字を取り除いた文字列。
      */
-    public: this_type trim_prefix_copy() const PSYQ_NOEXCEPT
+    public: this_type trim_prefix() const PSYQ_NOEXCEPT
     {
         auto const local_end(this->data() + this->size());
         for (auto i(this->data()); i < local_end; ++i)
@@ -343,7 +343,7 @@ public psyq::string::_private::view_interface<
     /** @brief 末尾にある空白文字を取り除いた文字列を作る。
         @return 末尾にある空白文字を取り除いた文字列。
      */
-    public: this_type trim_suffix_copy() const PSYQ_NOEXCEPT
+    public: this_type trim_suffix() const PSYQ_NOEXCEPT
     {
         for (auto i(this->data() + this->size()); this->data() < i; --i)
         {

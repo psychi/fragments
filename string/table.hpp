@@ -89,7 +89,7 @@ namespace psyq
                     typename template_string_type::value_type,
                     typename template_string_type::traits_type>
                         string_view;
-                auto const local_string(string_view(*in_string).trim_copy());
+                auto const local_string(string_view(*in_string).trim());
                 if (local_string.empty())
                 {
                     return false;
@@ -130,7 +130,7 @@ namespace psyq
                     typename template_string_type::value_type,
                     typename template_string_type::traits_type>
                         string_view;
-                auto const local_string(string_view(*in_string).trim_copy());
+                auto const local_string(string_view(*in_string).trim());
                 if (local_string.empty())
                 {
                     return false;
@@ -662,7 +662,7 @@ class psyq::string::table
     {
         auto const local_attribute_iterator(
             in_attribute_map.find(
-                typename this_type::cell_view(in_attribute_key).trim_copy()));
+                typename this_type::cell_view(in_attribute_key).trim()));
         if (local_attribute_iterator != in_attribute_map.end())
         {
             auto& local_attribute(local_attribute_iterator->second);
@@ -730,7 +730,7 @@ class psyq::string::table
             {
                 local_attribute_map.emplace(
                     typename this_type::attribute_map::key_type(
-                        local_row_iterator->second).trim_copy(),
+                        local_row_iterator->second).trim(),
                     typename this_type::attribute_map::mapped_type(
                         local_column_value.first, 0));
             }

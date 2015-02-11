@@ -41,12 +41,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::string::_private::view_interface
+    @brief @copybrief psyq::string::_private::immutable_interface
  */
-#ifndef PSYQ_STRING_VIEW_INTERFACE_HPP_
-#define PSYQ_STRING_VIEW_INTERFACE_HPP_
+#ifndef PSYQ_STRING_IMMUTABLE_INTERFACE_HPP_
+#define PSYQ_STRING_IMMUTABLE_INTERFACE_HPP_
 
-//#include "string/view_base.hpp"
+//#include "string/reference_base.hpp"
 //#include "fnv_hash.hpp"
 
 /// @cond
@@ -58,7 +58,8 @@ namespace psyq
 
         namespace _private
         {
-            template<typename> class view_interface;
+            template<typename> class immutable_interface;
+            template<typename> class mutable_interface;
         } // namespace _private
     } // namespace string
 } // namespace psyq
@@ -66,13 +67,13 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_string_view を模した、immutableな文字列のinterface。
-    @tparam template_base_string @copydoc view_interface::base_type
+    @tparam template_base_string @copydoc immutable_interface::base_type
  */
 template<typename template_base_string>
-class psyq::string::_private::view_interface: public template_base_string
+class psyq::string::_private::immutable_interface: public template_base_string
 {
     /// thisが指す値の型。
-    private: typedef view_interface this_type;
+    private: typedef immutable_interface this_type;
 
     /** @brief 操作する文字列型。
 
@@ -85,19 +86,19 @@ class psyq::string::_private::view_interface: public template_base_string
           @endcode
         - 文字列の先頭位置を取得するため、以下のpublicメンバ関数が使えること。
           @code
-          template_base_string::traits_type::char_type const* template_base_string::data() const PSYQ_NOEXCEPT
+          template_base_string::traits_type::char_type const* template_base_string::data() const noexcept
           @endcode
         - 文字列の要素数を取得するため、以下のpublicメンバ関数が使えること。
           @code
-          std::size_t template_base_string::size() const PSYQ_NOEXCEPT
+          std::size_t template_base_string::size() const noexcept
           @endcode
         - 文字列の最大要素数を取得するため、以下のpublicメンバ関数が使えること。
           @code
-          std::size_t template_base_string::max_size() const PSYQ_NOEXCEPT
+          std::size_t template_base_string::max_size() const noexcept
           @endcode
         - 文字列を空にするため、以下のpublicメンバ関数が使えること。
           @code
-          std::size_t template_base_string::clear() PSYQ_NOEXCEPT
+          std::size_t template_base_string::clear() noexcept
           @endcode
      */
     public: typedef template_base_string base_type;
@@ -168,31 +169,35 @@ class psyq::string::_private::view_interface: public template_base_string
     //-------------------------------------------------------------------------
     /// @name コンストラクタ
     //@{
+    /** @brief 空文字列を構築する。
+     */
+    protected: PSYQ_CONSTEXPR immutable_interface() PSYQ_NOEXCEPT {}
+
     /** @brief 文字列をコピー構築する。
         @param[in] in_string コピー元となる文字列。
      */
-    protected: view_interface(this_type const& in_string):
+    protected: immutable_interface(this_type const& in_string):
     base_type(in_string)
     {}
 
     /** @brief 文字列をムーブ構築する。
         @param[in,out] io_string ムーブ元となる文字列。
      */
-    protected: view_interface(this_type&& io_string) PSYQ_NOEXCEPT:
+    protected: immutable_interface(this_type&& io_string) PSYQ_NOEXCEPT:
     base_type(std::move(io_string))
     {}
 
     /** @brief 文字列をコピー構築する。
         @param[in] in_string コピー元となる文字列。
      */
-    protected: explicit view_interface(base_type const& in_string):
+    protected: explicit immutable_interface(base_type const& in_string):
     base_type(in_string)
     {}
 
     /** @brief 文字列をムーブ構築する。
         @param[in,out] io_string ムーブ元となる文字列。
      */
-    protected: explicit view_interface(base_type&& io_string) PSYQ_NOEXCEPT:
+    protected: explicit immutable_interface(base_type&& io_string) PSYQ_NOEXCEPT:
     base_type(std::move(io_string))
     {}
     //@}
@@ -257,12 +262,8 @@ class psyq::string::_private::view_interface: public template_base_string
         typename this_type::size_type const in_index)
     const
     {
-        if (this->size() <= in_index)
-        {
-            PSYQ_ASSERT(false);
-            //throw std::out_of_range; // 例外は使いたくない。
-        }
-        return *(this->data() + in_index);
+        return *this_type::get_char_pointer(
+            this->data(), this->size(), in_index, true);
     }
 
     /** @brief 文字列が持つ文字を参照する。
@@ -273,8 +274,8 @@ class psyq::string::_private::view_interface: public template_base_string
         typename this_type::size_type const in_index)
     const PSYQ_NOEXCEPT
     {
-        PSYQ_ASSERT(in_index < this->size());
-        return *(this->data() + in_index);
+        return *this_type::get_char_pointer(
+            this->data(), this->size(), in_index, false);
     }
 
     /** @brief 文字列の最初の文字を参照する。
@@ -293,6 +294,38 @@ class psyq::string::_private::view_interface: public template_base_string
         return (*this)[this->size() - 1];
     }
     //@}
+    protected: template<typename template_pointer_type>
+    static template_pointer_type get_char_pointer(
+        template_pointer_type const in_begin,
+        typename this_type::size_type const in_size,
+        typename this_type::size_type const in_index,
+        bool const in_exception)
+    {
+        if (in_index < in_size)
+        {
+            return in_begin + in_index;
+        }
+        else
+        {
+            /** @note
+                本当はここで例外を投げるべきだが、
+                できれば例外を使いたくないので、とりあえず抑制しておく。
+             */
+#if 0
+            if (in_exception)
+            {
+                throw std::out_of_range(__FILE__ __LINE__);
+            }
+            else
+#endif // 0
+            {
+                PSYQ_ASSERT(false);
+            }
+            static typename this_type::value_type local_char(0);
+            return &local_char;
+        }
+    }
+
     //-------------------------------------------------------------------------
     /// @name イテレータの取得
     //@{
@@ -1321,21 +1354,21 @@ class psyq::string::_private::view_interface: public template_base_string
         npos = static_cast<typename this_type::size_type>(-1)
     };
 
-}; // class psyq::string::_private::view_interface
+}; // class psyq::string::_private::immutable_interface
 
 //-----------------------------------------------------------------------------
 /** @note
     左辺に任意の文字列型を指定できる2項比較演算子を実装したいが、
-    psyq::string::_private::view_interface メンバ関数の比較演算子と衝突するため
+    psyq::string::_private::immutable_interface メンバ関数の比較演算子と衝突するため
     コンパイルできない。今のところ回避策がないので、無効にしておく。
  */
-#define PSYQ_STRING_VIEW_INTERFACE_COMPARE_OPERATOR_2 0
-#if PSYQ_STRING_VIEW_INTERFACE_COMPARE_OPERATOR_2
+#define PSYQ_STRING_IMMUTABLE_INTERFACE_COMPARE_OPERATOR_2 0
+#if PSYQ_STRING_IMMUTABLE_INTERFACE_COMPARE_OPERATOR_2
 /** @brief 文字列を比較する。
     @tparam template_left_string_type
-        @copydoc psyq::string::_private::view_interface::base_type
+        @copydoc psyq::string::_private::immutable_interface::base_type
     @tparam template_right_string_type
-        @copydoc psyq::string::_private::view_interface::base_type
+        @copydoc psyq::string::_private::immutable_interface::base_type
     @param[in] in_left  左辺の文字列。
     @param[in] in_right 右辺の文字列。
     @return 左辺 == 右辺
@@ -1345,7 +1378,7 @@ template<
     typename template_right_string_type>
 bool operator==(
     template_left_string_type const& in_left,
-    psyq::string::_private::view_interface<template_right_string_type> const&
+    psyq::string::_private::immutable_interface<template_right_string_type> const&
         in_right)
 PSYQ_NOEXCEPT
 {
@@ -1354,9 +1387,9 @@ PSYQ_NOEXCEPT
 
 /** @brief 文字列を比較する。
     @tparam template_left_string_type
-        @copydoc psyq::string::_private::view_interface::base_type
+        @copydoc psyq::string::_private::immutable_interface::base_type
     @tparam template_right_string_type
-        @copydoc psyq::string::_private::view_interface::base_type
+        @copydoc psyq::string::_private::immutable_interface::base_type
     @param[in] in_left  左辺の文字列。
     @param[in] in_right 右辺の文字列。
     @return 左辺 != 右辺
@@ -1366,7 +1399,7 @@ template<
     typename template_right_string_type>
 bool operator!=(
     template_left_string_type const& in_left,
-    psyq::string::_private::view_interface<template_right_string_type> const&
+    psyq::string::_private::immutable_interface<template_right_string_type> const&
         in_right)
 PSYQ_NOEXCEPT
 {
@@ -1375,9 +1408,9 @@ PSYQ_NOEXCEPT
 
 /** @brief 文字列を比較する。
     @tparam template_left_string_type
-        @copydoc psyq::string::_private::view_interface::base_type
+        @copydoc psyq::string::_private::immutable_interface::base_type
     @tparam template_right_string_type
-        @copydoc psyq::string::_private::view_interface::base_type
+        @copydoc psyq::string::_private::immutable_interface::base_type
     @param[in] in_left  左辺の文字列。
     @param[in] in_right 右辺の文字列。
     @return 左辺 < 右辺
@@ -1387,7 +1420,7 @@ template<
     typename template_right_string_type>
 bool operator<(
     template_left_string_type const& in_left,
-    psyq::string::_private::view_interface<template_right_string_type> const&
+    psyq::string::_private::immutable_interface<template_right_string_type> const&
         in_right)
 PSYQ_NOEXCEPT
 {
@@ -1396,9 +1429,9 @@ PSYQ_NOEXCEPT
 
 /** @brief 文字列を比較する。
     @tparam template_left_string_type
-        @copydoc psyq::string::_private::view_interface::base_type
+        @copydoc psyq::string::_private::immutable_interface::base_type
     @tparam template_right_string_type
-        @copydoc psyq::string::_private::view_interface::base_type
+        @copydoc psyq::string::_private::immutable_interface::base_type
     @param[in] in_left  左辺の文字列。
     @param[in] in_right 右辺の文字列。
     @return 左辺 <= 右辺
@@ -1408,7 +1441,7 @@ template<
     typename template_right_string_type>
 bool operator<=(
     template_left_string_type const& in_left,
-    psyq::string::_private::view_interface<template_right_string_type> const&
+    psyq::string::_private::immutable_interface<template_right_string_type> const&
         in_right)
 PSYQ_NOEXCEPT
 {
@@ -1417,9 +1450,9 @@ PSYQ_NOEXCEPT
 
 /** @brief 文字列を比較する。
     @tparam template_left_string_type
-        @copydoc psyq::string::_private::view_interface::base_type
+        @copydoc psyq::string::_private::immutable_interface::base_type
     @tparam template_right_string_type
-        @copydoc psyq::string::_private::view_interface::base_type
+        @copydoc psyq::string::_private::immutable_interface::base_type
     @param[in] in_left  左辺の文字列。
     @param[in] in_right 右辺の文字列。
     @return 左辺 > 右辺
@@ -1429,7 +1462,7 @@ template<
     typename template_right_string_type>
 bool operator>(
     template_left_string_type const& in_left,
-    psyq::string::_private::view_interface<template_right_string_type> const&
+    psyq::string::_private::immutable_interface<template_right_string_type> const&
         in_right)
 PSYQ_NOEXCEPT
 {
@@ -1438,9 +1471,9 @@ PSYQ_NOEXCEPT
 
 /** @brief 文字列を比較する。
     @tparam template_left_string_type
-        @copydoc psyq::string::_private::view_interface::base_type
+        @copydoc psyq::string::_private::immutable_interface::base_type
     @tparam template_right_string_type
-        @copydoc psyq::string::_private::view_interface::base_type
+        @copydoc psyq::string::_private::immutable_interface::base_type
     @param[in] in_left  左辺の文字列。
     @param[in] in_right 右辺の文字列。
     @return 左辺 >= 右辺
@@ -1450,13 +1483,13 @@ template<
     typename template_right_string_type>
 bool operator>=(
     template_left_string_type const& in_left,
-    psyq::string::_private::view_interface<template_right_string_type> const&
+    psyq::string::_private::immutable_interface<template_right_string_type> const&
         in_right)
 PSYQ_NOEXCEPT
 {
     return in_right.operator<=(in_left);
 }
-#endif // PSYQ_STRING_VIEW_INTERFACE_COMPARE_OPERATOR_2
+#endif // PSYQ_STRING_IMMUTABLE_INTERFACE_COMPARE_OPERATOR_2
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq
@@ -1478,14 +1511,14 @@ namespace psyq
             PSYQ_ASSERT(!(local_string_0 != local_std_string));
             PSYQ_ASSERT(!(local_string_0 < local_std_string));
             PSYQ_ASSERT(!(local_string_0 > local_std_string));
-#if PSYQ_STRING_VIEW_INTERFACE_COMPARE_OPERATOR_2
+#if PSYQ_STRING_IMMUTABLE_INTERFACE_COMPARE_OPERATOR_2
             PSYQ_ASSERT(local_std_string == local_string_0);
             PSYQ_ASSERT(local_std_string <= local_string_0);
             PSYQ_ASSERT(local_std_string >= local_string_0);
             PSYQ_ASSERT(!(local_std_string != local_string_0));
             PSYQ_ASSERT(!(local_std_string < local_string_0));
             PSYQ_ASSERT(!(local_std_string > local_string_0));
-#endif // PSYQ_STRING_VIEW_INTERFACE_COMPARE_OPERATOR_2
+#endif // PSYQ_STRING_IMMUTABLE_INTERFACE_COMPARE_OPERATOR_2
 
             typedef psyq::string::view<
                 typename template_string::value_type,
@@ -1538,4 +1571,4 @@ namespace psyq
     }
 }
 
-#endif // !defined(PSYQ_STRING_VIEW_INTERFACE_HPP_)
+#endif // !defined(PSYQ_STRING_IMMUTABLE_INTERFACE_HPP_)

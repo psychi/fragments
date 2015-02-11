@@ -46,7 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STRING_VIEW_HPP_
 #define PSYQ_STRING_VIEW_HPP_
 
-//#include "string/view_interface.hpp"
+//#include "string/immutable_interface.hpp"
 
 /// psyq::string::view で使う、defaultの文字特性の型。
 #ifndef PSYQ_STRING_VIEW_TRAITS_DEFAULT
@@ -76,13 +76,13 @@ namespace psyq
         文字の配列を単純にconst参照しているので、
         参照してる文字の配列が変更／破壊されると、動作を保証できなくなる。
 
-    @tparam template_char_type   @copydoc psyq::string::_private::view_interface::value_type
+    @tparam template_char_type   @copydoc psyq::string::_private::immutable_interface::value_type
     @tparam template_char_traits @copydoc psyq::string::_private::reference_base::traits_type
     @ingroup psyq_string
  */
 template<typename template_char_type, typename template_char_traits>
 class psyq::string::view:
-public psyq::string::_private::view_interface<
+public psyq::string::_private::immutable_interface<
     psyq::string::_private::reference_base<template_char_traits>>
 {
     /// thisが指す値の型。
@@ -90,7 +90,7 @@ public psyq::string::_private::view_interface<
     private: typedef psyq::string::_private::reference_base<template_char_traits>
         base_string;
     /// this_type の基底型。
-    public: typedef psyq::string::_private::view_interface<base_string>
+    public: typedef psyq::string::_private::immutable_interface<base_string>
         base_type;
 
     //-------------------------------------------------------------------------

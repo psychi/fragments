@@ -511,7 +511,7 @@ template<
     typename template_char_traits,
     typename template_allocator_type>
 class psyq::string::flyweight_view:
-public psyq::string::_private::view_interface<
+public psyq::string::_private::immutable_interface<
     typename psyq::string::flyweight_factory<
         template_char_type,
         template_char_traits,
@@ -522,7 +522,7 @@ public psyq::string::_private::view_interface<
     private: typedef flyweight_view this_type;
 
     /// this_type の基底型。
-    public: typedef psyq::string::_private::view_interface<
+    public: typedef psyq::string::_private::immutable_interface<
         typename psyq::string::flyweight_factory<
             template_char_type,
             template_char_traits,

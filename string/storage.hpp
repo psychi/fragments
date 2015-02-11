@@ -145,6 +145,14 @@ class psyq::string::_private::storage_base
         return this->c_str();
     }
 
+    /// @copydoc c_str()
+    public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type* begin()
+    PSYQ_NOEXCEPT
+    {
+        return const_cast<typename this_type::traits_type::char_type*>(
+            this->c_str());
+    }
+
     /// @copydoc psyq::string::view::size()
     public: PSYQ_CONSTEXPR std::size_t size() const PSYQ_NOEXCEPT
     {
@@ -208,24 +216,28 @@ template<
     std::size_t template_max_size,
     typename template_char_traits>
 class psyq::string::storage:
-public psyq::string::_private::view_interface<
+public psyq::string::_private::immutable_interface<
     psyq::string::_private::storage_base<
         template_char_traits, template_max_size>>
 {
     /// thisが指す値の型。
     private: typedef storage this_type;
+    private: typedef psyq::string::_private::storage_base<
+        template_char_traits, template_max_size>
+            base_string;
     /// this_type の基底型。
-    public: typedef psyq::string::_private::view_interface<
-        psyq::string::_private::storage_base<
-            template_char_traits, template_max_size>>
-                base_type;
+    public: typedef psyq::string::_private::immutable_interface<base_string>
+        base_type;
+
 
     //-------------------------------------------------------------------------
     /// @name コンストラクタ
     //@{
     /** @brief 空文字列を構築する。
      */
-    public: storage() PSYQ_NOEXCEPT: base_type(base_type::base_type::make()) {}
+    public: storage() PSYQ_NOEXCEPT:
+    base_type(base_string::make())
+    {}
 
     /** @brief 文字列をコピーして構築する。
         @param[in] in_string コピー元の文字列。
@@ -238,7 +250,7 @@ public psyq::string::_private::view_interface<
         @param[in] in_string コピー元の文字列。
      */
     public: storage(typename base_type::view const& in_string) PSYQ_NOEXCEPT:
-    base_type(base_type::base_type::make())
+    base_type(base_string::make())
     {
         this->copy_string(in_string.data(), in_string.size());
     }
@@ -251,7 +263,7 @@ public psyq::string::_private::view_interface<
         typename base_type::const_pointer const in_data,
         typename base_type::size_type const in_size)
     PSYQ_NOEXCEPT:
-    base_type(base_type::base_type::make())
+    base_type(base_string::make())
     {
         this->copy_string(in_data, in_size);
     }
@@ -265,7 +277,7 @@ public psyq::string::_private::view_interface<
         template_iterator const in_begin,
         template_iterator const in_end)
     PSYQ_NOEXCEPT:
-    base_type(base_type::base_type::make())
+    base_type(base_string::make())
     {
         this->copy_string(&(*in_begin), std::distance(in_begin, in_end));
     }
@@ -280,7 +292,7 @@ public psyq::string::_private::view_interface<
         typename base_type::size_type const in_offset,
         typename base_type::size_type const in_count = base_type::npos)
     PSYQ_NOEXCEPT:
-    base_type(base_type::base_type::make())
+    base_type(base_string::make())
     {
         typename base_type::view const local_string(in_string, in_offset, in_count);
         this->copy_string(local_string.data(), local_string.size());
@@ -294,7 +306,7 @@ public psyq::string::_private::view_interface<
         typename base_type::traits_type::char_type const in_char,
         typename base_type::size_type const in_count)
     PSYQ_NOEXCEPT:
-    base_type(base_type::base_type::make())
+    base_type(base_string::make())
     {
         PSYQ_ASSERT(in_count < this_type::MAX_SIZE);
         auto const local_count((std::min)(in_count, this_type::MAX_SIZE));
@@ -314,11 +326,11 @@ public psyq::string::_private::view_interface<
      */
     public: this_type& operator=(this_type const& in_string) PSYQ_NOEXCEPT
     {
-        this->base_type::base_type::operator=(in_string);
+        this->base_string::operator=(in_string);
         return *this;
     }
 
-    /** @copydoc storage(typename base_type::base_type::view const&)
+    /** @copydoc storage(typename base_type::view const&)
         @return *this
      */
     public: this_type& operator=(typename base_type::view const& in_string)

@@ -112,7 +112,7 @@ class psyq::string::_private::storage_base
      */
     protected: storage_base(this_type const& in_string) PSYQ_NOEXCEPT
     {
-        this->copy_string(in_string.data(), in_string.size());
+        this->copy_string_noexcept(in_string.data(), in_string.size());
     }
 
     /** @copydoc storage_base(this_type const&)
@@ -126,7 +126,7 @@ class psyq::string::_private::storage_base
     /** @brief 空の文字列を構築する。
         @return 空の文字列。
      */
-    protected: static PSYQ_CONSTEXPR this_type make() PSYQ_NOEXCEPT
+    protected: static this_type make() PSYQ_NOEXCEPT
     {
         return this_type();
     }
@@ -138,21 +138,21 @@ class psyq::string::_private::storage_base
     /** @brief 文字列の先頭文字へのpointerを取得する。
         @return 終端がnull文字となっている文字列の、先頭文字へのpointer。
      */
-    public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type const* c_str()
+    public: typename this_type::traits_type::char_type const* c_str()
     const PSYQ_NOEXCEPT
     {
         return &this->storage_[0];
     }
 
     /// @copydoc c_str()
-    public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type const* data()
+    public: typename this_type::traits_type::char_type const* data()
     const PSYQ_NOEXCEPT
     {
         return this->c_str();
     }
 
     /// @copydoc psyq::string::view::size()
-    public: PSYQ_CONSTEXPR std::size_t size() const PSYQ_NOEXCEPT
+    public: std::size_t size() const PSYQ_NOEXCEPT
     {
         return this->size_;
     }
@@ -160,19 +160,19 @@ class psyq::string::_private::storage_base
     /** @brief メモリを再確保せずに格納できる最大の要素数を取得する。
         @return メモリを再確保せずに格納できる最大の要素数。
      */
-    public: PSYQ_CONSTEXPR std::size_t capacity() const PSYQ_NOEXCEPT
+    public: std::size_t capacity() const PSYQ_NOEXCEPT
     {
         return this_type::MAX_SIZE;
     }
 
     /// @copydoc psyq::string::view::max_size()
-    public: PSYQ_CONSTEXPR std::size_t max_size() const PSYQ_NOEXCEPT
+    public: std::size_t max_size() const PSYQ_NOEXCEPT
     {
         return this_type::MAX_SIZE;
     }
     //@}
     /// @copydoc c_str()
-    protected: PSYQ_CONSTEXPR typename this_type::traits_type::char_type* begin()
+    protected: typename this_type::traits_type::char_type* begin()
     PSYQ_NOEXCEPT
     {
         return const_cast<typename this_type::traits_type::char_type*>(
@@ -253,11 +253,22 @@ class psyq::string::_private::storage_base
         this->storage_[0] = 0;
     }
     //@}
+    /// @copydoc copy_string_noexcept
+    protected: void copy_string(
+        typename traits_type::char_type const* const in_data,
+        std::size_t const in_size)
+    {
+        if (this_type::MAX_SIZE < in_size)
+        {
+            //throw std::out_of_range(__FILE__ __LINE__);
+        }
+        this->copy_string_noexcept(in_data, in_size);
+    }
     /** @brief 文字列をコピーする。
         @param[in] in_data コピー元となる文字列の先頭位置。
         @param[in] in_size コピー元となる文字列の要素数。
      */
-    protected: void copy_string(
+    protected: void copy_string_noexcept(
         typename traits_type::char_type const* const in_data,
         std::size_t const in_size)
     PSYQ_NOEXCEPT
@@ -325,7 +336,7 @@ public psyq::string::_private::interface_mutable<
     /** @brief 文字列をコピーして構築する。
         @param[in] in_string コピー元の文字列。
      */
-    public: storage(typename base_type::view const& in_string) PSYQ_NOEXCEPT:
+    public: storage(typename base_type::view const& in_string):
     base_type(base_type::string_type::make())
     {
         this->copy_string(in_string.data(), in_string.size());
@@ -333,15 +344,18 @@ public psyq::string::_private::interface_mutable<
 
     /** @brief 文字列をコピーして構築する。
         @param[in] in_data コピー元の文字列の先頭位置。
-        @param[in] in_size コピー元の文字列の要素数。
+        @param[in] in_size 
+            コピー元の文字列の要素数。 base_type::npos が指定された場合は、
+            null文字を検索して自動で要素数を決定する。
      */
     public: storage(
         typename base_type::const_pointer const in_data,
         typename base_type::size_type const in_size)
-    PSYQ_NOEXCEPT:
+    :
     base_type(base_type::string_type::make())
     {
-        this->copy_string(in_data, in_size);
+        this->copy_string(
+            in_data, base_type::adjust_size(in_data, in_size));
     }
 
     /** @brief 文字列をコピーして構築する。
@@ -352,7 +366,7 @@ public psyq::string::_private::interface_mutable<
     storage(
         template_iterator const in_begin,
         template_iterator const in_end)
-    PSYQ_NOEXCEPT:
+    :
     base_type(base_type::string_type::make())
     {
         this->copy_string(&(*in_begin), std::distance(in_begin, in_end));
@@ -367,10 +381,11 @@ public psyq::string::_private::interface_mutable<
         typename base_type::view const& in_string,
         typename base_type::size_type const in_offset,
         typename base_type::size_type const in_count = base_type::npos)
-    PSYQ_NOEXCEPT:
+    :
     base_type(base_type::string_type::make())
     {
-        typename base_type::view const local_string(in_string, in_offset, in_count);
+        typename base_type::view const local_string(
+            in_string, in_offset, in_count);
         this->copy_string(local_string.data(), local_string.size());
     }
 
@@ -381,7 +396,7 @@ public psyq::string::_private::interface_mutable<
     public: storage(
         typename base_type::traits_type::char_type const in_char,
         typename base_type::size_type const in_count)
-    PSYQ_NOEXCEPT:
+    :
     base_type(base_type::string_type::make())
     {
         PSYQ_ASSERT(in_count < this_type::MAX_SIZE);
@@ -407,7 +422,6 @@ public psyq::string::_private::interface_mutable<
         @return *this
      */
     public: this_type& operator=(typename base_type::view const& in_string)
-    PSYQ_NOEXCEPT
     {
         return *new(this) this_type(in_string);
     }

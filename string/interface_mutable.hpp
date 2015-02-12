@@ -116,10 +116,6 @@ public psyq::string::_private::interface_immutable<template_base_string>
     //-------------------------------------------------------------------------
     /// @name コンストラクタ
     //@{
-    /** @brief 空文字列を構築する。
-     */
-    protected: PSYQ_CONSTEXPR interface_mutable() PSYQ_NOEXCEPT {}
-
     /** @brief 文字列をコピー構築する。
         @param[in] in_string コピー元となる文字列。
      */
@@ -167,7 +163,7 @@ public psyq::string::_private::interface_immutable<template_base_string>
         typename base_type::size_type const in_index)
     {
         return *base_type::get_char_pointer(
-            this->begin(), this->size(), in_index, true);
+            this->begin(), this->size(), in_index);
     }
 
     /// @copydoc psyq::string::_private::interface_immutable::operator[]
@@ -183,8 +179,8 @@ public psyq::string::_private::interface_immutable<template_base_string>
         typename base_type::size_type const in_index)
     PSYQ_NOEXCEPT
     {
-        return *base_type::get_char_pointer(
-            this->begin(), this->size(), in_index, false);
+        return *base_type::get_char_pointer_noexcept(
+            this->begin(), this->size(), in_index);
     }
 
     /// @copydoc psyq::string::_private::interface_immutable::front
@@ -196,7 +192,7 @@ public psyq::string::_private::interface_immutable<template_base_string>
     /// @copydoc psyq::string::_private::interface_immutable::front
     public: typename this_type::reference front()
     {
-        return (*this)[0];
+        return this->at(0);
     }
 
     /// @copydoc psyq::string::_private::interface_immutable::back
@@ -208,7 +204,7 @@ public psyq::string::_private::interface_immutable<template_base_string>
     /// @copydoc psyq::string::_private::interface_immutable::back
     public: typename this_type::reference back()
     {
-        return (*this)[this->size() - 1];
+        return this->at(this->size() - 1);
     }
     //@}
     //-------------------------------------------------------------------------

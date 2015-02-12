@@ -193,10 +193,7 @@ class psyq::string::_private::holder_base
         return (std::numeric_limits<std::size_t>::max)();
     }
 
-    /** @brief 文字列が空か判定する。
-        @retval true  文字列が空である。
-        @retval false 文字列が空ではない。
-     */
+    /// @copydoc psyq::string::_private::interface_immutable::empty()
     public: bool empty() const PSYQ_NOEXCEPT
     {
         return this->data() == nullptr;
@@ -221,9 +218,7 @@ class psyq::string::_private::holder_base
         this->set_empty();
     }
     //@}
-    /** @brief 文字列を交換する。
-        @param[in,out] io_target 交換する対象。
-     */
+    /// @copydoc psyq::string::_private::interface_immutable::swap
     protected: void swap(this_type& io_target) PSYQ_NOEXCEPT
     {
         std::swap(this->twice_size_, io_target.twice_size_);

@@ -208,7 +208,6 @@ class psyq::string::_private::reference_base
     protected: static PSYQ_CONSTEXPR this_type make(
         typename this_type::traits_type::char_type const* const in_data,
         std::size_t const in_size)
-    PSYQ_NOEXCEPT
     {
         return this_type(
             (PSYQ_ASSERT(in_data != nullptr || in_size == 0), in_data),
@@ -221,16 +220,20 @@ class psyq::string::_private::reference_base
         @param[in] in_count  部分文字列の開始オフセット値からの要素数。
         @return 構築した文字列。
      */
-    protected: static PSYQ_CONSTEXPR this_type make(
+    protected: static this_type make(
         this_type const& in_string,
-        std::size_t const in_offset,
+        std::size_t in_offset,
         std::size_t const in_count)
-    PSYQ_NOEXCEPT
     {
+        if (in_string.size() < in_offset)
+        {
+            //throw std::out_of_range(__FILE__ __LINE__);
+            PSYQ_ASSERT(false);
+            in_offset = in_string.size();
+        }
         return this_type(
-            in_string.data() + (std::min)(in_offset, in_string.size()),
-            in_offset < in_string.size()?
-                (std::min)(in_string.size() - in_offset, in_count): 0);
+            in_string.data() + in_offset,
+            (std::min)(in_string.size() - in_offset, in_count));
     }
 
     //-------------------------------------------------------------------------

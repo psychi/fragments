@@ -172,10 +172,6 @@ class psyq::string::_private::interface_immutable: public template_string_type
     //-------------------------------------------------------------------------
     /// @name コンストラクタ
     //@{
-    /** @brief 空文字列を構築する。
-     */
-    protected: PSYQ_CONSTEXPR interface_immutable() PSYQ_NOEXCEPT {}
-
     /** @brief 文字列をコピー構築する。
         @param[in] in_string コピー元となる文字列。
      */
@@ -207,7 +203,9 @@ class psyq::string::_private::interface_immutable: public template_string_type
     //-------------------------------------------------------------------------
     /// @name 文字列の変更
     //@{
-    /// @copydoc psyq::string::holder::swap()
+    /** @brief 文字列を交換する。
+        @param[in,out] io_target 交換する対象。
+     */
     public: void swap(this_type& io_target) PSYQ_NOEXCEPT
     {
         this_type local_swap_temp(std::move(io_target));
@@ -231,7 +229,7 @@ class psyq::string::_private::interface_immutable: public template_string_type
         typename base_type::traits_type::char_type* const out_string,
         typename this_type::size_type const in_size,
         typename this_type::size_type const in_offset = 0)
-    const PSYQ_NOEXCEPT
+    const
     {
         if (out_string == nullptr)
         {
@@ -241,6 +239,11 @@ class psyq::string::_private::interface_immutable: public template_string_type
         auto local_size(this->size());
         if (local_size <= in_offset)
         {
+            if (local_size < in_offset)
+            {
+                //throw std::out_of_range(__FILE__ __LINE__);
+                PSYQ_ASSERT(false);
+            }
             return 0;
         }
         local_size -= in_offset;
@@ -266,7 +269,7 @@ class psyq::string::_private::interface_immutable: public template_string_type
     const
     {
         return *this_type::get_char_pointer(
-            this->data(), this->size(), in_index, true);
+            this->data(), this->size(), in_index);
     }
 
     /** @brief 文字列が持つ文字を参照する。
@@ -277,8 +280,8 @@ class psyq::string::_private::interface_immutable: public template_string_type
         typename this_type::size_type const in_index)
     const PSYQ_NOEXCEPT
     {
-        return *this_type::get_char_pointer(
-            this->data(), this->size(), in_index, false);
+        return *this_type::get_char_pointer_noexcept(
+            this->data(), this->size(), in_index);
     }
 
     /** @brief 文字列の最初の文字を参照する。
@@ -286,7 +289,7 @@ class psyq::string::_private::interface_immutable: public template_string_type
      */
     public: typename this_type::const_reference front() const
     {
-        return (*this)[0];
+        return this->at(0);
     }
 
     /** @brief 文字列の最後の文字を参照する。
@@ -294,15 +297,27 @@ class psyq::string::_private::interface_immutable: public template_string_type
      */
     public: typename this_type::const_reference back() const
     {
-        return (*this)[this->size() - 1];
+        return this->at(this->size() - 1);
     }
     //@}
     protected: template<typename template_pointer_type>
     static template_pointer_type get_char_pointer(
         template_pointer_type const in_begin,
         typename this_type::size_type const in_size,
-        typename this_type::size_type const in_index,
-        bool const in_exception)
+        typename this_type::size_type const in_index)
+    {
+        if (in_size <= in_index)
+        {
+            //throw std::out_of_range(__FILE__ __LINE__);
+        }
+        return this->get_char_pointer_noexcept(in_begin, in_size, in_index);
+    }
+    protected: template<typename template_pointer_type>
+    static template_pointer_type get_char_pointer_noexcept(
+        template_pointer_type const in_begin,
+        typename this_type::size_type const in_size,
+        typename this_type::size_type const in_index)
+    PSYQ_NOEXCEPT
     {
         if (in_index < in_size)
         {
@@ -310,22 +325,9 @@ class psyq::string::_private::interface_immutable: public template_string_type
         }
         else
         {
-            /** @note
-                本当はここで例外を投げるべきだが、
-                できれば例外を使いたくないので、とりあえず抑制しておく。
-             */
-#if 0
-            if (in_exception)
-            {
-                throw std::out_of_range(__FILE__ __LINE__);
-            }
-            else
-#endif // 0
-            {
-                PSYQ_ASSERT(false);
-            }
-            static typename this_type::value_type local_char(0);
-            return &local_char;
+            PSYQ_ASSERT(false);
+            static typename this_type::value_type local_null(0);
+            return &local_null;
         }
     }
 
@@ -403,7 +405,10 @@ class psyq::string::_private::interface_immutable: public template_string_type
     //-------------------------------------------------------------------------
     /// @name 文字列のプロパティ
     //@{
-    /// @copydoc psyq::string::holder::empty()
+    /** @brief 文字列が空か判定する。
+        @retval true  文字列が空である。
+        @retval false 文字列が空ではない。
+     */
     public: bool empty() const PSYQ_NOEXCEPT
     {
         return this->size() <= 0;
@@ -418,6 +423,15 @@ class psyq::string::_private::interface_immutable: public template_string_type
         return this->size();
     }
     //@}
+    protected: static typename this_type::size_type adjust_size(
+        typename this_type::const_pointer const in_data,
+        typename this_type::size_type const in_size)
+    PSYQ_NOEXCEPT
+    {
+        return in_size != this_type::npos || in_data == nullptr?
+            in_size: this_type::traits_type::length(in_data);
+    }
+
     //-------------------------------------------------------------------------
     /// @name 文字列の比較
     //@{

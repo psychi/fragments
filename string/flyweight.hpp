@@ -456,7 +456,7 @@ class psyq::string::flyweight_factory<
     }
 
     /// @copydoc psyq::string::view::data
-    public: PSYQ_CONSTEXPR typename this_type::traits_type::char_type const*
+    public: typename this_type::traits_type::char_type const*
     data() const PSYQ_NOEXCEPT
     {
         return this->factory_.expired()? 
@@ -464,7 +464,7 @@ class psyq::string::flyweight_factory<
     }
 
     /// @copydoc psyq::string::view::size
-    public: PSYQ_CONSTEXPR typename this_type::factory::view::size_type size()
+    public: typename this_type::factory::view::size_type size()
     const PSYQ_NOEXCEPT
     {
         return this->factory_.expired()?
@@ -472,7 +472,7 @@ class psyq::string::flyweight_factory<
     }
 
     /// @copydoc psyq::string::view::max_size
-    public: PSYQ_CONSTEXPR std::size_t max_size() const PSYQ_NOEXCEPT
+    public: std::size_t max_size() const PSYQ_NOEXCEPT
     {
         return (std::numeric_limits<std::size_t>::max)();
     }
@@ -480,7 +480,7 @@ class psyq::string::flyweight_factory<
     /** @brief 文字列のハッシュ値を取得する。
         @return flyweight文字列辞書で使われているハッシュ値。
      */
-    public: PSYQ_CONSTEXPR typename this_type::factory::hash::value_type
+    public: typename this_type::factory::hash::value_type
     get_hash() const PSYQ_NOEXCEPT
     {
         return this->factory_.expired()?
@@ -491,7 +491,7 @@ class psyq::string::flyweight_factory<
     /** @brief 文字列が所属するflyweight文字列辞書を取得する。
         @return 文字列が所属するflyweight文字列辞書。
      */
-    public: PSYQ_CONSTEXPR typename this_type::factory::weak_ptr const&
+    public: typename this_type::factory::weak_ptr const&
     get_factory() const PSYQ_NOEXCEPT
     {
         return this->factory_;

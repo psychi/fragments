@@ -108,6 +108,13 @@ public psyq::string::_private::interface_immutable<
     base_type(static_cast<typename base_type::string_type const&>(in_string))
     {}
 
+    /** @brief 文字列を参照する。
+        @param[in] in_string 参照する文字列。
+     */
+    public: view(this_type&& in_string) PSYQ_NOEXCEPT:
+    base_type(static_cast<typename base_type::string_type&&>(in_string))
+    {}
+
     /** @brief 文字列リテラルを参照する。
         @param[in] in_literal 参照する文字列リテラル。
      */
@@ -139,13 +146,17 @@ public psyq::string::_private::interface_immutable<
 
     /** @brief 文字列を参照する。
         @param[in] in_data 参照する文字列の先頭位置。
-        @param[in] in_size 参照する文字列の要素数。
+        @param[in] in_size
+            参照する文字列の要素数。 base_type::npos が指定された場合は、
+            null文字を検索して自動で要素数を決定する。
      */
     public: view(
         typename base_type::const_pointer const in_data,
         typename base_type::size_type const in_size)
-    PSYQ_NOEXCEPT:
-    base_type(base_type::string_type::make(in_data, in_size))
+    :
+    base_type(
+        base_type::string_type::make(
+            in_data, base_type::adjust_size(in_data, in_size)))
     {}
 
     /** @brief 文字列の一部を参照する。
@@ -157,7 +168,7 @@ public psyq::string::_private::interface_immutable<
         this_type const& in_string,
         typename base_type::size_type const in_offset,
         typename base_type::size_type const in_count = base_type::npos)
-    PSYQ_NOEXCEPT:
+    :
     base_type(base_type::string_type::make(in_string, in_offset, in_count))
     {}
     //@}
@@ -308,7 +319,7 @@ public psyq::string::_private::interface_immutable<
     public: this_type substr(
         typename base_type::size_type const in_offset = 0,
         typename base_type::size_type const in_count = base_type::npos)
-    const PSYQ_NOEXCEPT
+    const
     {
         return this_type(*this, in_offset, in_count);
     }

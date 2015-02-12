@@ -679,8 +679,8 @@ WARN_LOGFILE           =
 
 INPUT                  = \
                          ./string/reference_base.hpp \
-                         ./string/immutable_interface.hpp \
-                         ./string/mutable_interface.hpp \
+                         ./string/interface_immutable.hpp \
+                         ./string/interface_mutable.hpp \
                          ./string/view.hpp \
                          ./string/storage.hpp \
                          ./string/holder.hpp \

@@ -41,12 +41,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::string::_private::mutable_interface
+    @brief @copybrief psyq::string::_private::interface_mutable
  */
 #ifndef PSYQ_STRING_MUTABLE_INTERFACE_HPP_
 #define PSYQ_STRING_MUTABLE_INTERFACE_HPP_
 
-//#include "string/immutable_interface.hpp"
+//#include "string/interface_immutable.hpp"
 
 /// @cond
 namespace psyq
@@ -55,7 +55,7 @@ namespace psyq
     {
         namespace _private
         {
-            template<typename> class mutable_interface;
+            template<typename> class interface_mutable;
         } // namespace _private
     } // namespace string
 } // namespace psyq
@@ -92,14 +92,14 @@ namespace psyq
           @endcode
  */
 template<typename template_base_string>
-class psyq::string::_private::mutable_interface:
-public psyq::string::_private::immutable_interface<template_base_string>
+class psyq::string::_private::interface_mutable:
+public psyq::string::_private::interface_immutable<template_base_string>
 {
     /// thisが指す値の型。
-    private: typedef mutable_interface this_type;
+    private: typedef interface_mutable this_type;
 
     /// this_type の基底型。
-    public: typedef psyq::string::_private::immutable_interface<
+    public: typedef psyq::string::_private::interface_immutable<
         template_base_string>
             base_type;
 
@@ -118,26 +118,26 @@ public psyq::string::_private::immutable_interface<template_base_string>
     //@{
     /** @brief 空文字列を構築する。
      */
-    protected: PSYQ_CONSTEXPR mutable_interface() PSYQ_NOEXCEPT {}
+    protected: PSYQ_CONSTEXPR interface_mutable() PSYQ_NOEXCEPT {}
 
     /** @brief 文字列をコピー構築する。
         @param[in] in_string コピー元となる文字列。
      */
-    protected: mutable_interface(this_type const& in_string):
+    protected: interface_mutable(this_type const& in_string):
     base_type(in_string)
     {}
 
     /** @brief 文字列をムーブ構築する。
         @param[in,out] io_string ムーブ元となる文字列。
      */
-    protected: mutable_interface(this_type&& io_string) PSYQ_NOEXCEPT:
+    protected: interface_mutable(this_type&& io_string) PSYQ_NOEXCEPT:
     base_type(std::move(io_string))
     {}
 
     /** @brief 文字列をコピー構築する。
         @param[in] in_string コピー元となる文字列。
      */
-    protected: explicit mutable_interface(
+    protected: explicit interface_mutable(
         typename base_type::base_type const& in_string):
     base_type(in_string)
     {}
@@ -145,7 +145,7 @@ public psyq::string::_private::immutable_interface<template_base_string>
     /** @brief 文字列をムーブ構築する。
         @param[in,out] io_string ムーブ元となる文字列。
      */
-    protected: explicit mutable_interface(
+    protected: explicit interface_mutable(
         typename base_type::base_type&& io_string)
     PSYQ_NOEXCEPT:
     base_type(std::move(io_string))
@@ -154,7 +154,7 @@ public psyq::string::_private::immutable_interface<template_base_string>
     //-------------------------------------------------------------------------
     /// @name 文字列の要素を参照
     //@{
-    /// @copydoc psyq::string::_private::immutable_interface::at
+    /// @copydoc psyq::string::_private::interface_immutable::at
     public: typename base_type::const_reference at(
         typename base_type::size_type const in_index)
     const
@@ -162,7 +162,7 @@ public psyq::string::_private::immutable_interface<template_base_string>
         return this->base_type::at(in_index);
     }
 
-    /// @copydoc psyq::string::_private::immutable_interface::at
+    /// @copydoc psyq::string::_private::interface_immutable::at
     public: typename this_type::reference at(
         typename base_type::size_type const in_index)
     {
@@ -170,7 +170,7 @@ public psyq::string::_private::immutable_interface<template_base_string>
             this->begin(), this->size(), in_index, true);
     }
 
-    /// @copydoc psyq::string::_private::immutable_interface::operator[]
+    /// @copydoc psyq::string::_private::interface_immutable::operator[]
     public: typename base_type::const_reference operator[](
         typename base_type::size_type const in_index)
     const PSYQ_NOEXCEPT
@@ -178,7 +178,7 @@ public psyq::string::_private::immutable_interface<template_base_string>
         return this->base_type::operator[](in_index);
     }
 
-    /// @copydoc psyq::string::_private::immutable_interface::operator[]
+    /// @copydoc psyq::string::_private::interface_immutable::operator[]
     public: typename this_type::reference operator[](
         typename base_type::size_type const in_index)
     PSYQ_NOEXCEPT
@@ -187,25 +187,25 @@ public psyq::string::_private::immutable_interface<template_base_string>
             this->begin(), this->size(), in_index, false);
     }
 
-    /// @copydoc psyq::string::_private::immutable_interface::front
+    /// @copydoc psyq::string::_private::interface_immutable::front
     public: typename base_type::const_reference front() const
     {
         return this->base_type::front();
     }
 
-    /// @copydoc psyq::string::_private::immutable_interface::front
+    /// @copydoc psyq::string::_private::interface_immutable::front
     public: typename this_type::reference front()
     {
         return (*this)[0];
     }
 
-    /// @copydoc psyq::string::_private::immutable_interface::back
+    /// @copydoc psyq::string::_private::interface_immutable::back
     public: typename base_type::const_reference back() const
     {
         return this->base_type::back();
     }
 
-    /// @copydoc psyq::string::_private::immutable_interface::back
+    /// @copydoc psyq::string::_private::interface_immutable::back
     public: typename this_type::reference back()
     {
         return (*this)[this->size() - 1];
@@ -214,56 +214,56 @@ public psyq::string::_private::immutable_interface<template_base_string>
     //-------------------------------------------------------------------------
     /// @name イテレータの取得
     //@{
-    /// @copydoc psyq::string::_private::immutable_interface::begin
+    /// @copydoc psyq::string::_private::interface_immutable::begin
     public: typename base_type::const_iterator begin() const PSYQ_NOEXCEPT
     {
         return this->base_type::begin();
     }
 
-    /// @copydoc psyq::string::_private::immutable_interface::begin
+    /// @copydoc psyq::string::_private::interface_immutable::begin
     public: typename this_type::iterator begin() PSYQ_NOEXCEPT
     {
         return &(*this->base_string::begin());
     }
 
-    /// @copydoc psyq::string::_private::immutable_interface::end
+    /// @copydoc psyq::string::_private::interface_immutable::end
     public: typename base_type::const_iterator end() const PSYQ_NOEXCEPT
     {
         return this->base_type::end();
     }
 
-    /// @copydoc psyq::string::_private::immutable_interface::end
+    /// @copydoc psyq::string::_private::interface_immutable::end
     public: typename this_type::iterator end() PSYQ_NOEXCEPT
     {
         return this->begin() + this->size();
     }
 
-    /// @copydoc psyq::string::_private::immutable_interface::rbegin
+    /// @copydoc psyq::string::_private::interface_immutable::rbegin
     public: typename base_type::const_reverse_iterator rbegin()
     const PSYQ_NOEXCEPT
     {
         return this->base_type::rbegin();
     }
 
-    /// @copydoc psyq::string::_private::immutable_interface::rbegin
+    /// @copydoc psyq::string::_private::interface_immutable::rbegin
     public: typename this_type::reverse_iterator rbegin() PSYQ_NOEXCEPT
     {
         return typename this_type::reverse_iterator(this->end());
     }
 
-    /// @copydoc psyq::string::_private::immutable_interface::rend
+    /// @copydoc psyq::string::_private::interface_immutable::rend
     public: typename base_type::const_reverse_iterator rend()
     const PSYQ_NOEXCEPT
     {
         return this->base_type::rend();
     }
 
-    /// @copydoc psyq::string::_private::immutable_interface::rend
+    /// @copydoc psyq::string::_private::interface_immutable::rend
     public: typename this_type::reverse_iterator rend() PSYQ_NOEXCEPT
     {
         return typename this_type::reverse_iterator(this->begin());
     }
     //@}
-}; // class psyq::string::_private::mutable_interface
+}; // class psyq::string::_private::interface_mutable
 
 #endif // !defined(PSYQ_STRING_MUTABLE_INTERFACE_HPP_)

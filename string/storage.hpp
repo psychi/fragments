@@ -48,7 +48,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include<array>
 //#include "string/view.hpp"
-//#include "string/mutable_interface.hpp"
+//#include "string/interface_mutable.hpp"
 
 /// psyq::string::storage で使う、defaultの最大文字数。
 #ifndef PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT
@@ -294,14 +294,14 @@ template<
     std::size_t template_max_size,
     typename template_char_traits>
 class psyq::string::storage:
-public psyq::string::_private::mutable_interface<
+public psyq::string::_private::interface_mutable<
     psyq::string::_private::storage_base<
         template_char_traits, template_max_size>>
 {
     /// thisが指す値の型。
     private: typedef storage this_type;
     /// this_type の基底型。
-    public: typedef psyq::string::_private::mutable_interface<
+    public: typedef psyq::string::_private::interface_mutable<
         psyq::string::_private::storage_base<
             template_char_traits, template_max_size>>
                 base_type;
@@ -312,7 +312,7 @@ public psyq::string::_private::mutable_interface<
     /** @brief 空文字列を構築する。
      */
     public: storage() PSYQ_NOEXCEPT:
-    base_type(base_string::make())
+    base_type(base_type::string_type::make())
     {}
 
     /** @brief 文字列をコピーして構築する。
@@ -326,7 +326,7 @@ public psyq::string::_private::mutable_interface<
         @param[in] in_string コピー元の文字列。
      */
     public: storage(typename base_type::view const& in_string) PSYQ_NOEXCEPT:
-    base_type(base_string::make())
+    base_type(base_type::string_type::make())
     {
         this->copy_string(in_string.data(), in_string.size());
     }
@@ -339,7 +339,7 @@ public psyq::string::_private::mutable_interface<
         typename base_type::const_pointer const in_data,
         typename base_type::size_type const in_size)
     PSYQ_NOEXCEPT:
-    base_type(base_string::make())
+    base_type(base_type::string_type::make())
     {
         this->copy_string(in_data, in_size);
     }
@@ -353,7 +353,7 @@ public psyq::string::_private::mutable_interface<
         template_iterator const in_begin,
         template_iterator const in_end)
     PSYQ_NOEXCEPT:
-    base_type(base_string::make())
+    base_type(base_type::string_type::make())
     {
         this->copy_string(&(*in_begin), std::distance(in_begin, in_end));
     }
@@ -368,7 +368,7 @@ public psyq::string::_private::mutable_interface<
         typename base_type::size_type const in_offset,
         typename base_type::size_type const in_count = base_type::npos)
     PSYQ_NOEXCEPT:
-    base_type(base_string::make())
+    base_type(base_type::string_type::make())
     {
         typename base_type::view const local_string(in_string, in_offset, in_count);
         this->copy_string(local_string.data(), local_string.size());
@@ -382,7 +382,7 @@ public psyq::string::_private::mutable_interface<
         typename base_type::traits_type::char_type const in_char,
         typename base_type::size_type const in_count)
     PSYQ_NOEXCEPT:
-    base_type(base_string::make())
+    base_type(base_type::string_type::make())
     {
         PSYQ_ASSERT(in_count < this_type::MAX_SIZE);
         auto const local_count((std::min)(in_count, this_type::MAX_SIZE));
@@ -399,7 +399,7 @@ public psyq::string::_private::mutable_interface<
      */
     public: this_type& operator=(this_type const& in_string) PSYQ_NOEXCEPT
     {
-        this->base_string::operator=(in_string);
+        this->base_type::string_type::operator=(in_string);
         return *this;
     }
 

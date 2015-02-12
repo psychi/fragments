@@ -46,7 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STRING_VIEW_HPP_
 #define PSYQ_STRING_VIEW_HPP_
 
-//#include "string/immutable_interface.hpp"
+//#include "string/interface_immutable.hpp"
 
 /// psyq::string::view で使う、defaultの文字特性の型。
 #ifndef PSYQ_STRING_VIEW_TRAITS_DEFAULT
@@ -76,20 +76,20 @@ namespace psyq
         文字の配列を単純にconst参照しているので、
         参照してる文字の配列が変更／破壊されると、動作を保証できなくなる。
 
-    @tparam template_char_type   @copydoc psyq::string::_private::immutable_interface::value_type
+    @tparam template_char_type   @copydoc psyq::string::_private::interface_immutable::value_type
     @tparam template_char_traits @copydoc psyq::string::_private::reference_base::traits_type
     @ingroup psyq_string
  */
 template<typename template_char_type, typename template_char_traits>
 class psyq::string::view:
-public psyq::string::_private::immutable_interface<
+public psyq::string::_private::interface_immutable<
     psyq::string::_private::reference_base<template_char_traits>>
 {
     /// thisが指す値の型。
     private: typedef view this_type;
 
     /// this_type の基底型。
-    public: typedef psyq::string::_private::immutable_interface<
+    public: typedef psyq::string::_private::interface_immutable<
         psyq::string::_private::reference_base<template_char_traits>>
             base_type;
 
@@ -98,14 +98,14 @@ public psyq::string::_private::immutable_interface<
     //@{
     /// @brief 空の文字列を構築する。
     public: view() PSYQ_NOEXCEPT:
-    base_type(base_string::make(nullptr, 0))
+    base_type(base_type::string_type::make(nullptr, 0))
     {}
 
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
      */
     public: view(this_type const& in_string) PSYQ_NOEXCEPT:
-    base_type(static_cast<base_string const&>(in_string))
+    base_type(static_cast<typename base_type::string_type const&>(in_string))
     {}
 
     /** @brief 文字列リテラルを参照する。
@@ -114,7 +114,7 @@ public psyq::string::_private::immutable_interface<
     public: template <std::size_t template_size>
     view(typename base_type::traits_type::char_type const (&in_literal)[template_size])
     PSYQ_NOEXCEPT:
-    base_type(base_string::make(in_literal))
+    base_type(base_type::string_type::make(in_literal))
     {}
 
     /** @brief 任意型の文字列を参照する。
@@ -122,19 +122,19 @@ public psyq::string::_private::immutable_interface<
         - 文字列の先頭から末尾までのメモリ連続性が保証されてること。
         - 文字列の先頭位置を取得するため、以下のpublicメンバ関数が使えること。
           @code
-          this_type::const_pointer template_string_type::data() const noexcept
+          this_type::const_pointer template_other_type::data() const noexcept
           @endcode
         - 文字列の要素数を取得するため、以下のpublicメンバ関数が使えること。
           @code
-          this_type::size_type template_string_type::size() const noexcept
+          this_type::size_type template_other_type::size() const noexcept
           @endcode
         @param[in] in_string 参照する文字列。
      */
-    public: template<typename template_string_type>
-    view(template_string_type const& in_string)
+    public: template<typename template_other_type>
+    view(template_other_type const& in_string)
     PSYQ_NOEXCEPT:
     base_type(
-        base_string::make(in_string.data(), in_string.size()))
+        base_type::string_type::make(in_string.data(), in_string.size()))
     {}
 
     /** @brief 文字列を参照する。
@@ -145,7 +145,7 @@ public psyq::string::_private::immutable_interface<
         typename base_type::const_pointer const in_data,
         typename base_type::size_type const in_size)
     PSYQ_NOEXCEPT:
-    base_type(base_string::make(in_data, in_size))
+    base_type(base_type::string_type::make(in_data, in_size))
     {}
 
     /** @brief 文字列の一部を参照する。
@@ -158,7 +158,7 @@ public psyq::string::_private::immutable_interface<
         typename base_type::size_type const in_offset,
         typename base_type::size_type const in_count = base_type::npos)
     PSYQ_NOEXCEPT:
-    base_type(base_string::make(in_string, in_offset, in_count))
+    base_type(base_type::string_type::make(in_string, in_offset, in_count))
     {}
     //@}
     //-------------------------------------------------------------------------
@@ -189,7 +189,7 @@ public psyq::string::_private::immutable_interface<
         return this->operator==(static_cast<base_type const&>(in_right));
     }
     /// @copydoc operator==(this_type const&) const
-    public: bool operator==(typename base_string const& in_right)
+    public: bool operator==(typename base_type::string_type const& in_right)
     const PSYQ_NOEXCEPT
     {
         return this->size() == in_right.size()
@@ -272,7 +272,7 @@ public psyq::string::_private::immutable_interface<
         return this->compare(static_cast<base_type const&>(in_right));
     }
     /// @copydoc compare(this_type const&) const
-    public: int compare(typename base_string const& in_right)
+    public: int compare(typename base_type::string_type const& in_right)
     const PSYQ_NOEXCEPT
     {
         int local_compare_size;

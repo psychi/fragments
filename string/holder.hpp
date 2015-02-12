@@ -632,14 +632,14 @@ template<
     typename template_char_traits,
     typename template_allocator_type>
 class psyq::string::holder:
-public psyq::string::_private::immutable_interface<
+public psyq::string::_private::interface_immutable<
     psyq::string::_private::holder_base<
         template_char_traits, template_allocator_type>>
 {
     /// thisが指す値の型。
     private: typedef holder this_type;
     /// this_type の基底型。
-    public: typedef psyq::string::_private::immutable_interface<
+    public: typedef psyq::string::_private::interface_immutable<
         psyq::string::_private::holder_base<
             template_char_traits, template_allocator_type>>
                 base_type;

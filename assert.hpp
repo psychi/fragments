@@ -35,13 +35,13 @@
 #   include <cstdlib>
 #   include <iostream>
 #   define PSYQ_ASSERT(define_expression) (\
-        (void)psyq::internal::assertion_check(\
+        (void)psyq::_private::assertion_check(\
             (define_expression),\
             PSYQ_ASSERTION_FAILED_STRING(\
                 define_expression, __FILE__, __LINE__)))
 namespace psyq
 {
-    namespace internal
+    namespace _private
     {
         /** @brief assertionしたときに呼び出される。
             @param[in] in_message assertionしたとき、consoleに出力する文字列。
@@ -68,5 +68,16 @@ namespace psyq
     }
 }
 #endif // defined(PSYQ_DISABLE_ASSERT) || defined(NDEBUG)
+
+#ifdef PSYQ_ENABLE_EXCEPTION
+#   define PSYQ_ASSERT_THROW(define_expression, define_exception)\
+        if (!(define_expression))\
+            throw define_exception(\
+                PSYQ_ASSERTION_FAILED_STRING(\
+                    define_expression, __FILE__, __LINE__))
+#else
+#   define PSYQ_ASSERT_THROW(define_expression, define_exception)\
+        PSYQ_ASSERT(define_expression)
+#endif // define(PSYQ_ENABLE_EXCEPTION)
 
 #endif // !defined(PSYQ_ASSERT_HPP_)

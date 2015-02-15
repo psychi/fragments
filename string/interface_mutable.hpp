@@ -504,6 +504,13 @@ public psyq::string::_private::interface_immutable<template_string_type>
     {
         return this->string_type::erase(in_begin, in_end);
     }
+
+    /** @brief 末尾の要素をひとつ削除する。
+     */
+    public: void pop_back()
+    {
+        this->erase(this->size() - 1, 1);
+    }
     //@}
 }; // class psyq::string::_private::interface_mutable
 

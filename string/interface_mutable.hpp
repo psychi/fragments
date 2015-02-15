@@ -674,32 +674,14 @@ public psyq::string::_private::interface_immutable<template_string_type>
         typename base_type::size_type const in_source_count,
         typename base_type::value_type const in_source_char)
     {
-        typename this_type::iterator local_copy_end;
-        if (in_target_count < in_source_count)
-        {
-            // 置換する文字列のほうが大きいので、あふれる文字列を挿入する。
-            local_copy_end = this->insert(
-                in_target_end, 
-                in_source_count - in_target_count, 
-                in_source_char);
-        }
-        else if (in_source_count < local_target_size)
-        {
-            // 置換される文字列のほうが大きいので、不要な文字列を削除する。
-            local_copy_end = this->erase(
-                in_target_end,
-                in_target_end + in_target_size - in_source_count);
-        }
-        else
-        {
-            local_copy_end = const_cast<typename this_type::iterator>(in_target_end);
-        }
-        base_type::traits_type::assign(
-            const_cast<typename this_type::iterator>(in_target_begin),
-            local_copy_end - in_target_begin,
+        auto const local_target_begin(this->begin() + in_target_offset);
+        return this->replace(
+            local_target_begin,
+            local_target_begin + in_target_count,
+            in_source_count,
             in_source_char);
-        return *this;
     }
+
     /** @brief 文字列を一部を置換する。
         @param[in] in_target_begin  置き換えられる文字列の開始位置を指す反復子。
         @param[in] in_target_end    置き換えられる文字列の末尾位置を指す反復子。
@@ -750,28 +732,20 @@ public psyq::string::_private::interface_immutable<template_string_type>
         typename base_type::size_type const in_source_count,
         typename base_type::value_type const in_source_char)
     {
-        if (in_target_end < in_target_begin)
+        auto local_target_begin(this->adjust_iterator(in_target_begin));
+        auto local_target_end(this->adjust_iterator(in_target_end));
+        if (local_target_end < local_target_begin)
         {
             PSYQ_ASSERT_THROW(false, std::invalid_argument);
-            std::swap(in_target_begin, in_target_end);
+            std::swap(local_target_begin, local_target_end);
         }
-        if (in_target_begin < this->begin())
-        {
-            PSYQ_ASSERT_THROW(false, std::out_of_range);
-            in_target_begin = this->begin();
-        }
-        if (this->end() < in_target_end)
-        {
-            PSYQ_ASSERT_THROW(false, std::out_of_range);
-            in_target_end = this->end();
-        }
-        auto const local_target_size(in_target_end - in_target_begin);
+        auto const local_target_size(local_target_end - local_target_begin);
         typename this_type::iterator local_copy_end;
         if (local_target_size < in_source_count)
         {
             // 置換する文字列のほうが大きいので、あふれる文字列を挿入する。
             local_copy_end = this->insert(
-                in_target_end, 
+                local_target_end, 
                 in_source_count - local_target_size, 
                 in_source_char);
         }
@@ -779,16 +753,16 @@ public psyq::string::_private::interface_immutable<template_string_type>
         {
             // 置換される文字列のほうが大きいので、不要な文字列を削除する。
             local_copy_end = this->erase(
-                in_target_end, 
-                in_target_end + local_target_size - in_source_count);
+                local_target_end, 
+                local_target_end + local_target_size - in_source_count);
         }
         else
         {
-            local_copy_end = const_cast<typename this_type::iterator>(in_target_end);
+            local_copy_end = local_target_end;
         }
         base_type::traits_type::assign(
-            const_cast<typename this_type::iterator>(in_target_begin),
-            local_copy_end - in_target_begin,
+            local_target_begin,
+            local_copy_end - local_target_begin,
             in_source_char);
         return *this;
     }
@@ -807,22 +781,14 @@ public psyq::string::_private::interface_immutable<template_string_type>
         template_iterator const in_source_begin,
         template_iterator const in_source_end)
     {
-        if (in_target_end < in_target_begin)
+        auto local_target_begin(this->adjust_iterator(in_target_begin));
+        auto local_target_end(this->adjust_iterator(in_target_end));
+        if (local_target_end < local_target_begin)
         {
             PSYQ_ASSERT_THROW(false, std::invalid_argument);
-            std::swap(in_target_begin, in_target_end);
+            std::swap(local_target_begin, local_target_end);
         }
-        if (in_target_begin < this->begin())
-        {
-            PSYQ_ASSERT_THROW(false, std::out_of_range);
-            in_target_begin = this->begin();
-        }
-        if (this->end() < in_target_end)
-        {
-            PSYQ_ASSERT_THROW(false, std::out_of_range);
-            in_target_end = this->end();
-        }
-        auto const local_target_size(in_target_end - in_target_begin);
+        auto const local_target_size(local_target_end - local_target_begin);
         auto const local_source_size(
             std::distance(in_source_begin, in_source_end));
         typename this_type::iterator local_copy_end;
@@ -832,7 +798,7 @@ public psyq::string::_private::interface_immutable<template_string_type>
             auto const local_post_begin(
                 std::next(in_source_begin, local_target_size));
             local_copy_end = this->insert(
-                in_target_end,
+                local_target_end,
                 local_post_begin,
                 std::next(
                     local_post_begin, local_source_size - local_target_size));
@@ -841,16 +807,16 @@ public psyq::string::_private::interface_immutable<template_string_type>
         {
             // 置換される文字列のほうが大きいので、不要な文字列を削除する。
             local_copy_end = this->erase(
-                in_target_end,
-                in_target_end + local_target_size - local_source_size);
+                local_target_end,
+                local_target_end + local_target_size - local_source_size);
         }
         else
         {
-            local_copy_end = const_cast<typename this_type::iterator>(in_target_end);
+            local_copy_end = local_target_end;
         }
         auto local_source(in_source_begin);
         for (
-            auto i(const_cast<typename this_type::iterator>(in_target_begin));
+            auto i(local_target_begin);
             i != local_copy_end;
             ++i, ++local_source)
         {
@@ -859,6 +825,25 @@ public psyq::string::_private::interface_immutable<template_string_type>
         return *this;
     }
     //@}
+    private: typename this_type::iterator adjust_iterator(
+        typename base_type::const_iterator const in_iterator)
+    {
+        if (in_iterator < this->begin())
+        {
+            PSYQ_ASSERT_THROW(false, std::out_of_range);
+            return this->begin();
+        }
+        else if (this->end() < in_iterator)
+        {
+            PSYQ_ASSERT_THROW(false, std::out_of_range);
+            return this->end();
+        }
+        else
+        {
+            return const_cast<this_type::iterator>(in_iterator);
+        }
+    }
+
 }; // class psyq::string::_private::interface_mutable
 
 #endif // !defined(PSYQ_STRING_MUTABLE_INTERFACE_HPP_)

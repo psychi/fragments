@@ -91,11 +91,12 @@ namespace psyq
           @endcode
         - 文字列の要素を削除するため、以下に相当するメンバ関数が使えること。
           @code
-          // @param[in] in_offset 削除を開始するオフセット位置。
-          // @param[in] in_count  削除する要素数。
-          void template_string_type::erase(
-              std::size_t const in_offset,
-              std::size_t const in_count)
+          // @param[in] in_begin 削除範囲の先頭を指す反復子。
+          // @param[in] in_end   削除範囲の末尾を指す反復子。
+          // @return 最後に削除した要素の次を指す反復子。
+          typename template_string_type::traits_type::char_type* template_string_type::erase(
+              typename template_string_type::traits_type::char_type const* const in_begin,
+              typename template_string_type::traits_type::char_type const* const in_end)
           @endcode
  */
 template<typename template_string_type>
@@ -456,6 +457,44 @@ public psyq::string::_private::interface_immutable<template_string_type>
         template_iterator const in_end)
     {
         return this->string_type::insert(in_position, in_begin, in_end);
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 文字列の削除
+    //@{
+    /** @brief 文字列の要素を削除する。
+        @param[in] in_offset 削除を開始するオフセット位置。
+        @param[in] in_count  削除する要素数。
+     */
+    public: this_type& erase(
+        std::size_t const in_offset,
+        std::size_t const in_count)
+    {
+        auto const local_erase_begin(this->data() + in_offset)
+        this->erase(local_erase_begin, local_erase_begin + in_count);
+        return *this;
+    }
+
+    /** @brief 文字列の要素を削除する。
+        @param[in] in_position 削除する要素を指す反復子。
+        @return 削除した要素の次を指す反復子。
+     */
+    public: typename this_type::iterator erase(
+        typename base_type::const_iterator const in_position)
+    {
+        return this->erase(in_position, std::next(in_position, 1));
+    }
+
+    /** @brief 文字列の要素を削除する。
+        @param[in] in_begin 削除範囲の先頭を指す反復子。
+        @param[in] in_end   削除範囲の末尾を指す反復子。
+        @return 最後に削除した要素の次を指す反復子。
+     */
+    public: typename this_type::iterator erase(
+        typename base_type::const_iterator const in_begin,
+        typename base_type::const_iterator const in_end)
+    {
+        return this->string_type::erase(in_begin, in_end);
     }
     //@}
 }; // class psyq::string::_private::interface_mutable

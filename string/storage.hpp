@@ -288,30 +288,40 @@ class psyq::string::_private::storage_base
     }
 
     /** @brief 文字列の要素を削除する。
-        @param[in] in_offset 削除を開始するオフセット位置。
-        @param[in] in_count  削除する要素数。
+        @param[in] in_begin 削除範囲の先頭を指す反復子。
+        @param[in] in_end   削除範囲の末尾を指す反復子。
+        @return 最後に削除した要素の次を指す反復子。
      */
-    protected: void erase(
-        std::size_t const in_offset,
-        std::size_t const in_count)
-    PSYQ_NOEXCEPT
+    protected: typename this_type::traits_type::char_type* erase(
+        typename this_type::traits_type::char_type const* in_begin,
+        typename this_type::traits_type::char_type const* const in_end)
     {
-        PSYQ_ASSERT(in_offset <= this->size() && in_count <= this->size());
-        auto const local_erase_end(in_offset + in_count);
-        if (local_erase_end < this->size())
+        if (in_begin < this->data())
         {
-            auto const local_position(this->begin() + in_offset);
+            PSYQ_ASSERT_THROW(false, std::out_of_range);
+            in_begin = this->data();
+        }
+        if (in_begin == in_end)
+        {
+            return in_begin;
+        }
+        PSYQ_ASSERT_THROW(in_begin < in_end, std::invalid_argument);
+        auto const local_end(this->data() + this->size());
+        if (in_end < local_end)
+        {
             this_type::traits_type::move(
-                local_position,
-                local_position + in_count,
-                this->size() - local_erase_end);
-            this->size_ -= in_count;
+                const_cast<typename this_type::traits_type::char_type*>(in_begin),
+                in_end,
+                local_end - in_end);
+            this->size_ -= in_end - in_begin;
         }
         else
         {
-            this->size_ = in_offset;
+            PSYQ_ASSERT_THROW(in_end == local_end, std::out_of_range);
+            this->size_ = in_begin - this->data();
         }
         this->storage_[this->size()] = 0;
+        return const_cast<typename this_type::traits_type::char_type*>(in_begin);
     }
 
     /** @brief 外部の文字列をコピーする。

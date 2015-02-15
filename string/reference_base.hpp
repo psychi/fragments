@@ -227,8 +227,7 @@ class psyq::string::_private::reference_base
     {
         if (in_string.size() < in_offset)
         {
-            //throw std::out_of_range(__FILE__ __LINE__);
-            PSYQ_ASSERT(false);
+            PSYQ_ASSERT_THROW(false, std::out_of_range);
             in_offset = in_string.size();
         }
         return this_type(

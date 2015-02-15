@@ -233,17 +233,13 @@ class psyq::string::_private::interface_immutable: public template_string_type
     {
         if (out_string == nullptr)
         {
-            PSYQ_ASSERT(in_size == 0);
+            PSYQ_ASSERT_THROW(in_size == 0, std::invalid_argument);
             return 0;
         }
         auto local_size(this->size());
         if (local_size <= in_offset)
         {
-            if (local_size < in_offset)
-            {
-                //throw std::out_of_range(__FILE__ __LINE__);
-                PSYQ_ASSERT(false);
-            }
+            PSYQ_ASSERT_THROW(local_size == in_offset, std::out_of_range);
             return 0;
         }
         local_size -= in_offset;
@@ -306,10 +302,7 @@ class psyq::string::_private::interface_immutable: public template_string_type
         typename this_type::size_type const in_size,
         typename this_type::size_type const in_index)
     {
-        if (in_size <= in_index)
-        {
-            //throw std::out_of_range(__FILE__ __LINE__);
-        }
+        PSYQ_ASSERT_THROW(in_index < in_size, std::out_of_range);
         return this->get_char_pointer_noexcept(in_begin, in_size, in_index);
     }
     protected: template<typename template_pointer_type>
@@ -332,42 +325,42 @@ class psyq::string::_private::interface_immutable: public template_string_type
     }
 
     //-------------------------------------------------------------------------
-    /// @name イテレータの取得
+    /// @name 反復子の取得
     //@{
-    /** @brief 文字列の先頭位置を取得する。
-        @return 文字列の先頭位置への反復子。
+    /** @brief 文字列の先頭を指す反復子を取得する。
+        @return 文字列の先頭を指す反復子。
      */
     public: typename this_type::const_iterator begin() const PSYQ_NOEXCEPT
     {
         return this->data();
     }
 
-    /** @brief 文字列の末尾位置を取得する。
-        @return 文字列の末尾位置への反復子。
+    /** @brief 文字列の末尾を指す反復子を取得する。
+        @return 文字列の末尾を指す反復子。
      */
     public: typename this_type::const_iterator end() const PSYQ_NOEXCEPT
     {
         return this->begin() + this->size();
     }
 
-    /** @brief 文字列の先頭位置を取得する。
-        @return 文字列の先頭位置への反復子。
+    /** @brief 文字列の先頭を指す反復子を取得する。
+        @return 文字列の先頭を指す反復子。
      */
     public: typename this_type::const_iterator cbegin() const PSYQ_NOEXCEPT
     {
         return this->begin();
     }
 
-    /** @brief 文字列の末尾位置を取得する。
-        @return 文字列の末尾位置への反復子。
+    /** @brief 文字列の末尾を指す反復子を取得する。
+        @return 文字列の末尾を指す反復子。
      */
     public: typename this_type::const_iterator cend() const PSYQ_NOEXCEPT
     {
         return this->end();
     }
 
-    /** @brief 文字列の末尾位置を取得する。
-        @return 文字列の末尾位置への逆反復子。
+    /** @brief 文字列の末尾を指す逆反復子を取得する。
+        @return 文字列の末尾を指す逆反復子。
      */
     public: typename this_type::const_reverse_iterator rbegin()
     const PSYQ_NOEXCEPT
@@ -375,8 +368,8 @@ class psyq::string::_private::interface_immutable: public template_string_type
         return typename this_type::const_reverse_iterator(this->end());
     }
 
-    /** @brief 文字列の先頭位置を取得する。
-        @return 文字列の先頭位置への逆反復子。
+    /** @brief 文字列の先頭を指す逆反復子を取得する。
+        @return 文字列の先頭を指す逆反復子。
      */
     public: typename this_type::const_reverse_iterator rend()
     const PSYQ_NOEXCEPT
@@ -384,8 +377,8 @@ class psyq::string::_private::interface_immutable: public template_string_type
         return typename this_type::const_reverse_iterator(this->begin());
     }
 
-    /** @brief 文字列の末尾位置を取得する。
-        @return 文字列の末尾位置への逆反復子。
+    /** @brief 文字列の末尾を指す逆反復子を取得する。
+        @return 文字列の末尾を指す逆反復子。
      */
     public: typename this_type::const_reverse_iterator crbegin()
     const PSYQ_NOEXCEPT
@@ -393,8 +386,8 @@ class psyq::string::_private::interface_immutable: public template_string_type
         return this->rbegin();
     }
 
-    /** @brief 文字列の先頭位置を取得する。
-        @return 文字列の先頭位置への逆反復子。
+    /** @brief 文字列の先頭を指す逆反復子を取得する。
+        @return 文字列の先頭を指す逆反復子。
      */
     public: typename this_type::const_reverse_iterator crend()
     const PSYQ_NOEXCEPT

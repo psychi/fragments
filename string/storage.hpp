@@ -222,13 +222,12 @@ class psyq::string::_private::storage_base
 
     /** @brief 文字列を挿入する。
         @param[in] in_position 文字列を挿入する位置。
-        @param[in] in_begin    挿入する文字列の先頭位置。
-        @param[in] in_end      挿入する文字列の末尾位置。
-        @return *this
+        @param[in] in_begin    挿入する文字列の先頭を指す反復子。
+        @param[in] in_end      挿入する文字列の末尾を指す反復子。
      */
     protected: template<typename template_iterator>
-    void insert(
-        typename this_type::traits_type::char_type* const in_position,
+    typename this_type::traits_type::char_type* insert(
+        typename this_type::traits_type::char_type const* const in_position,
         template_iterator const in_begin,
         template_iterator const in_end)
     {
@@ -236,6 +235,7 @@ class psyq::string::_private::storage_base
         {
             PSYQ_ASSERT_THROW(
                 &(*in_begin) != nullptr, std::invalid_argument);
+            return this->begin() + this->size();
         }
         else if (this->is_included(this_type::MAX_SIZE, &(*in_begin)))
         {
@@ -243,20 +243,25 @@ class psyq::string::_private::storage_base
             // 別の文字列にコピーしてから挿入する。
             this_type local_string;
             local_string.assign_external(in_begin, in_end);
-            this->insert_external(
+            return this->insert_external(
                 in_position,
                 local_string.data(),
                 local_string.data() + local_string.size());
         }
         else
         {
-            this->insert_external(in_position, in_begin, in_end);
+            return this->insert_external(in_position, in_begin, in_end);
         }
     }
 
+    /** @brief 外部の文字列を挿入する。
+        @param[in] in_position 文字列を挿入する位置。
+        @param[in] in_begin    挿入する文字列の先頭位置。
+        @param[in] in_end      挿入する文字列の末尾位置。
+     */
     private: template<typename template_iterator>
-    void insert_external(
-        typename this_type::traits_type::char_type* const in_position,
+    typename this_type::traits_type::char_type* insert_external(
+        typename this_type::traits_type::char_type const* const in_position,
         template_iterator const in_begin,
         template_iterator const in_end)
     {
@@ -279,6 +284,7 @@ class psyq::string::_private::storage_base
             this->make_gap(local_offset, std::distance(in_begin, in_end)));
         this->replace_external_noexcept(
             local_gap.first, in_begin, std::next(in_begin, local_gap.second));
+        return this->begin() + local_gap.first;
     }
 
     /** @brief 文字列の要素を削除する。
@@ -288,6 +294,7 @@ class psyq::string::_private::storage_base
     protected: void erase(
         std::size_t const in_offset,
         std::size_t const in_count)
+    PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(in_offset <= this->size() && in_count <= this->size());
         auto const local_erase_end(in_offset + in_count);
@@ -350,7 +357,7 @@ class psyq::string::_private::storage_base
         PSYQ_ASSERT(&(*in_begin) != nullptr || in_begin != in_end);
         PSYQ_ASSERT(
             in_offset + std::distance(in_begin, in_end) <= this->size());
-        auto local_last(this->begin());
+        auto local_last(this->begin() + in_offset);
         auto const local_limit(this->begin() + this_type::MAX_SIZE);
         for (auto i(in_begin); i != in_end; ++i, ++local_last)
         {

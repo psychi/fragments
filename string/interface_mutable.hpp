@@ -84,8 +84,8 @@ namespace psyq
           // @param[in] in_begin    挿入する文字列の先頭を指す反復子。
           // @param[in] in_end      挿入する文字列の末尾を指す反復子。
           template<typename template_iterator>
-          void template_string_type::insert(
-              typename template_string_type::traits_type::char_type* const in_position,
+          typename template_string_type::traits_type::char_type* template_string_type::insert(
+              typename template_string_type::traits_type::char_type const* const in_position,
               template_iterator const in_begin,
               template_iterator const in_end)
           @endcode
@@ -215,7 +215,7 @@ public psyq::string::_private::interface_immutable<template_string_type>
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name イテレータの取得
+    /// @name 反復子の取得
     //@{
     /// @copydoc psyq::string::_private::interface_immutable::begin
     public: typename base_type::const_iterator begin() const PSYQ_NOEXCEPT
@@ -350,6 +350,112 @@ public psyq::string::_private::interface_immutable<template_string_type>
     public: this_type& operator+=(typename base_type::value_type const in_char)
     {
         return this->insert(1, in_char);
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 文字列の挿入
+    //@{
+    /** @brief 文字列を挿入する。
+        @param[in] in_position 文字列を挿入するオフセット位置。
+        @param[in] in_string   挿入する文字列。
+        @return *this
+     */
+    public: this_type& insert(
+        typename base_type::size_type const in_position,
+        typename base_type::view const& in_string)
+    {
+        this->string_type::insert(
+            this->begin() + in_position, in_string.begin(), in_string.end());
+        return *this;
+    }
+
+    /** @brief 文字列を挿入する。
+        @param[in] in_position 文字列を挿入するオフセット位置。
+        @param[in] in_string   挿入する文字列。
+        @param[in] in_offset   挿入する文字列の開始オフセット位置。
+        @param[in] in_count    挿入する文字列の、開始オフセット位置からの要素数。
+        @return *this
+     */
+    public: this_type& insert(
+        typename base_type::size_type const in_position,
+        typename base_type::view const& in_string,
+        typename base_type::size_type const in_offset,
+        typename base_type::size_type const in_count)
+    {
+        return this->insert(
+            in_position, in_string.substr(in_offset, in_count));
+    }
+
+    /** @brief 文字列を挿入する。
+        @param[in] in_position 文字列を挿入するオフセット位置。
+        @param[in] in_data     挿入する文字列の先頭位置。
+        @param[in] in_size     挿入する文字列の要素数。
+        @return *this
+     */
+    public: this_type& insert(
+        typename base_type::size_type const in_position,
+        typename base_type::const_pointer const in_data,
+        typename base_type::size_type const in_size)
+    {
+        return this->insert(
+            in_position, typename base_type::view(in_data, in_size));
+    }
+
+    /** @brief 文字を挿入する。
+        @param[in] in_position 文字を挿入するオフセット位置。
+        @param[in] in_count    挿入する文字の数。
+        @param[in] in_char     挿入する文字。
+        @return *this
+     */
+    public: this_type& insert(
+        typename base_type::size_type const in_position,
+        typename base_type::size_type const in_count,
+        typename base_type::value_type const in_char)
+    {
+        this->string_type::insert(in_position, in_count, in_char);
+        return *this;
+    }
+
+    /** @brief 文字を挿入する。
+        @param[in] in_position 文字を挿入する位置を指す反復子。
+        @param[in] in_char     挿入する文字。
+        @return 挿入された文字を指す反復子。
+     */
+    public: typename this_type::iterator insert(
+        typename base_type::const_iterator const in_position,
+        typename base_type::value_type const in_char)
+    {
+        return this->insert(in_position, 1, in_char);
+    }
+
+    /** @brief 文字を挿入する。
+        @param[in] in_position 文字を挿入する位置を指す反復子。
+        @param[in] in_count    挿入する文字の数。
+        @param[in] in_char     挿入する文字。
+        @return 挿入された最初の文字を指す反復子。
+     */
+    public: typename this_type::iterator insert(
+        typename base_type::const_iterator const in_position,
+        typename base_type::size_type const in_count,
+        typename base_type::value_type const in_char)
+    {
+        return this->string_type::insert(
+            in_position - this->begin(), in_count, in_char);
+    }
+
+    /** @brief 文字列を挿入する。
+        @param[in] in_position 文字列を挿入する位置を指す反復子。
+        @param[in] in_begin    挿入する文字列の先頭を指す反復子。
+        @param[in] in_end      挿入する文字列の末尾を指す反復子。
+        @return 挿入された最初の文字を指す反復子。
+     */
+    public: template<typename template_iterator>
+    typename this_type::iterator insert(
+        typename base_type::const_iterator const in_position,
+        template_iterator const in_begin,
+        template_iterator const in_end)
+    {
+        return this->string_type::insert(in_position, in_begin, in_end);
     }
     //@}
 }; // class psyq::string::_private::interface_mutable

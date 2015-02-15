@@ -63,44 +63,51 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_string を模した、mutableな文字列のinterface。
-    @tparam template_base_string 
+    @tparam template_string_type 
         操作する文字列型。
 
-        - 文字列の先頭から末尾までのメモリ連続性が保証されてること。
-        - コピー構築子とコピー代入演算子が使えること。
-        - ムーブ構築子とムーブ代入演算子が使えて、例外を投げないこと。
-        - std::char_traits 互換の文字特性の型として、以下の型を使えること。
+        - psyq::string::_private::interface_immutable::string_type
+          の要件を満たしていること。
+        - 文字を挿入するため、以下に相当するメンバ関数が使えること。
           @code
-          template_base_string::traits_type
+          // @param[in] in_offset 文字を挿入するオフセット位置。
+          // @param[in] in_count  挿入する文字の数。
+          // @param[in] in_char   挿入する文字。
+          void template_string_type::insert(
+              std::size_t const in_offset, 
+              std::size_t const in_count,
+              typename template_string_type::traits_type::char_type const in_char)
           @endcode
-        - 文字列の先頭位置を取得するため、以下のpublicメンバ関数が使えること。
+        - 文字列を挿入するため、以下に相当するメンバ関数が使えること。
           @code
-          template_base_string::traits_type::char_type const* template_base_string::data() const noexcept
-          template_base_string::traits_type::char_type* template_base_string::begin() noexcept
+          // @param[in] in_position 文字列を挿入する位置。
+          // @param[in] in_begin    挿入する文字列の先頭を指す反復子。
+          // @param[in] in_end      挿入する文字列の末尾を指す反復子。
+          template<typename template_iterator>
+          void template_string_type::insert(
+              typename template_string_type::traits_type::char_type* const in_position,
+              template_iterator const in_begin,
+              template_iterator const in_end)
           @endcode
-        - 文字列の要素数を取得するため、以下のpublicメンバ関数が使えること。
+        - 文字列の要素を削除するため、以下に相当するメンバ関数が使えること。
           @code
-          std::size_t template_base_string::size() const noexcept
-          @endcode
-        - 文字列の最大要素数を取得するため、以下のpublicメンバ関数が使えること。
-          @code
-          std::size_t template_base_string::max_size() const noexcept
-          @endcode
-        - 文字列を空にするため、以下のpublicメンバ関数が使えること。
-          @code
-          std::size_t template_base_string::clear() noexcept
+          // @param[in] in_offset 削除を開始するオフセット位置。
+          // @param[in] in_count  削除する要素数。
+          void template_string_type::erase(
+              std::size_t const in_offset,
+              std::size_t const in_count)
           @endcode
  */
-template<typename template_base_string>
+template<typename template_string_type>
 class psyq::string::_private::interface_mutable:
-public psyq::string::_private::interface_immutable<template_base_string>
+public psyq::string::_private::interface_immutable<template_string_type>
 {
     /// thisが指す値の型。
     private: typedef interface_mutable this_type;
 
     /// this_type の基底型。
     public: typedef psyq::string::_private::interface_immutable<
-        template_base_string>
+        template_string_type>
             base_type;
 
     //-------------------------------------------------------------------------
@@ -219,7 +226,7 @@ public psyq::string::_private::interface_immutable<template_base_string>
     /// @copydoc psyq::string::_private::interface_immutable::begin
     public: typename this_type::iterator begin() PSYQ_NOEXCEPT
     {
-        return &(*this->base_string::begin());
+        return &(*this->string_type::begin());
     }
 
     /// @copydoc psyq::string::_private::interface_immutable::end
@@ -258,6 +265,91 @@ public psyq::string::_private::interface_immutable<template_base_string>
     public: typename this_type::reverse_iterator rend() PSYQ_NOEXCEPT
     {
         return typename this_type::reverse_iterator(this->begin());
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 文字列の追加
+    //@{
+    /** @brief 末尾に文字列を追加する。
+        @param[in] in_string 追加する文字列。
+        @return *this
+     */
+    public: this_type& append(typename base_type::view const& in_string)
+    {
+        this->string_type::insert(
+            this->size(), in_string.begin(), in_string.end());
+        return *this;
+    }
+
+    /** @brief 末尾に文字列を追加する。
+        @param[in] in_string 追加する文字列。
+        @param[in] in_offset 追加する文字列の開始オフセット位置。
+        @param[in] in_count  追加する文字列の開始オフセット位置からの要素数。
+        @return *this
+     */
+    public: this_type& append(
+        typename base_type::view const& in_string,
+        typename base_type::size_type const in_offset,
+        typename base_type::size_type const in_count)
+    {
+        return this->insert(in_string.substr(in_offset, in_count));
+    }
+
+    /** @brief 末尾に文字列を追加する。
+        @param[in] in_data 追加する文字列の先頭位置。
+        @param[in] in_size 追加する文字列の要素数。
+        @return *this
+     */
+    public: this_type& append(
+        typename base_type::const_pointer const in_data,
+        typename base_type::size_type const in_size)
+    {
+        return this->insert(typename base_type::view(in_data, in_size));
+    }
+
+    /** @brief 末尾に文字を追加する。
+        @param[in] in_count 追加する文字の数。
+        @param[in] in_char  追加する文字。
+        @return *this
+     */
+    public: this_type& append(
+        typename base_type::size_type const in_count,
+        typename base_type::value_type const in_char)
+    {
+        this->string_type::insert(this->size(), in_count, in_char);
+        return *this;
+    }
+
+    /** @brief 末尾に文字列を追加する。
+        @param[in] in_begin 追加する文字列の先頭を指す反復子。
+        @param[in] in_end   追加する文字列の末尾を指す反復子。
+        @return *this
+     */
+    public: template<typename template_iterator>
+    this_type& append(
+        template_iterator const in_begin,
+        template_iterator const in_end)
+    {
+        this->string_type::insert(this->size(), in_begin, in_end);
+        return *this;
+    }
+
+    /** @brief 末尾に文字列を追加する。
+        @param[in] in_string 追加する文字列。
+        @return *this
+     */
+    public: this_type& operator+=(typename base_type::view const& in_string)
+    {
+        return this->insert(in_string);
+    }
+
+    /** @brief 末尾に文字を追加する。
+        @param[in] in_char 追加する文字。
+        @return *this
+     */
+    public: this_type& operator+=(typename base_type::value_type const in_char)
+    {
+        return this->insert(1, in_char);
     }
     //@}
 }; // class psyq::string::_private::interface_mutable

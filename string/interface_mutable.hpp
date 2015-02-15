@@ -335,6 +335,14 @@ public psyq::string::_private::interface_immutable<template_string_type>
         return *this;
     }
 
+    /** @brief 末尾に要素をひとつ挿入する。
+        @param[in] in_char 挿入する要素。
+     */
+    public: void push_back(typename base_type::value_type const in_char)
+    {
+        this->append(1, in_char);
+    }
+
     /** @brief 末尾に文字列を追加する。
         @param[in] in_string 追加する文字列。
         @return *this

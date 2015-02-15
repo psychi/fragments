@@ -512,6 +512,93 @@ public psyq::string::_private::interface_immutable<template_string_type>
         this->erase(this->size() - 1, 1);
     }
     //@}
+    //-------------------------------------------------------------------------
+    /// @name 文字列の再代入
+    //@{
+    /** @brief 文字列をコピー代入する。
+        @param[in] in_string コピー元となる文字列。
+        @return *this
+     */
+    public: this_type& assign(this_type const& in_string)
+    {
+        this->string_type::operator=(in_string);
+        return *this;
+    }
+
+    /** @brief 文字列をムーブ代入する。
+        @param[in] in_string ムーブ元となる文字列。
+        @return *this
+     */
+    public: this_type& assign(this_type&& in_string)
+    {
+        this->string_type::operator=(std::move(in_string));
+        return *this;
+    }
+
+    /** @brief 文字列をコピー代入する。
+        @param[in] in_string コピー元となる文字列。
+        @return *this
+     */
+    public: this_type& assign(
+        typename base_type::view const& in_string)
+    {
+        this->assign(in_string.begin(), in_string.end());
+        return *this;
+    }
+
+    /** @brief 文字列をコピー代入する。
+        @param[in] in_string コピー元となる文字列。
+        @param[in] in_offset コピー元となる文字列の開始オフセット位置。
+        @param[in] in_count  コピー元となる文字列の、開始オフセット位置からの要素数。
+        @return *this
+     */
+    public: this_type& assign(
+        typename base_type::view const& in_string,
+        typename base_type::size_type const in_offset,
+        typename base_type::size_type const in_count)
+    {
+        return this->assing(in_string.substr(in_offset, in_count));
+    }
+
+    /** @brief 文字列をコピー代入する。
+        @param[in] in_data コピー元となる文字列の先頭位置。
+        @param[in] in_size コピー元となる文字列の要素数。
+        @return *this
+     */
+    public: this_type& assign(
+        typename base_type::const_pointer const in_data,
+        typename base_type::size_type const in_size)
+    {
+        return this->assign(typename base_type::view(in_data, in_size));
+    }
+
+    /** @brief 文字をコピー代入する。
+        @param[in] in_count コピーする文字の数。
+        @param[in] in_char  コピーする文字。
+        @return *this
+     */
+    public: this_type& assign(
+        typename base_type::size_type const in_count,
+        typename base_type::value_type const in_char)
+    {
+        this->clear();
+        return this->append(in_count, in_char);
+    }
+
+    /** @brief 文字をコピー代入する。
+        @param[in] in_begin コピーする文字列の先頭を指す反復子。
+        @param[in] in_end   コピーする文字列の末尾を指す反復子。
+        @return *this
+     */
+    public: template<typename template_iterator>
+    this_type& assign(
+        template_iterator const in_begin,
+        template_iterator const in_end)
+    {
+        this->clear();
+        return this->append(in_begin, in_end);
+    }
+    //@}
 }; // class psyq::string::_private::interface_mutable
 
 #endif // !defined(PSYQ_STRING_MUTABLE_INTERFACE_HPP_)

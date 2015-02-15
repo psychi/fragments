@@ -599,6 +599,266 @@ public psyq::string::_private::interface_immutable<template_string_type>
         return this->append(in_begin, in_end);
     }
     //@}
+    //-------------------------------------------------------------------------
+    /// @name 文字列の置換
+    //@{
+    /** @brief 文字列を一部を置換する。
+        @param[in] in_target_offset 置き換えられる文字列の開始オフセット位置。
+        @param[in] in_target_count  置き換えられる文字列の、開始オフセット位置からの要素数。
+        @param[in] in_source_string 置き換える文字列。
+        @return *this
+     */
+    public: this_type& replace(
+        typename base_type::size_type const in_target_offset,
+        typename base_type::size_type const in_target_count,
+        typename base_type::view const& in_source_string)
+    {
+        auto const local_target_begin(this->begin() + in_target_offset)
+        return this->replace(
+            local_target_begin,
+            local_target_begin + in_target_count,
+            in_source_string.begin(),
+            in_source_string.end());
+    }
+
+    /** @brief 文字列を一部を置換する。
+        @param[in] in_target_offset 置き換えられる文字列の開始オフセット位置。
+        @param[in] in_target_count  置き換えられる文字列の、開始オフセット位置からの要素数。
+        @param[in] in_source_string 置き換える文字列。
+        @param[in] in_source_offset 置き換える文字列の開始オフセット位置。
+        @param[in] in_source_count  置き換えられる文字列の、開始オフセット位置からの要素数。
+        @return *this
+     */
+    public: this_type& replace(
+        typename base_type::size_type in_target_offset,
+        typename base_type::size_type const in_target_count,
+        typename base_type::view const& in_source_string,
+        typename base_type::size_type const in_source_offset,
+        typename base_type::size_type const in_source_count)
+    {
+        return this->replace(
+            in_target_offset,
+            in_target_count,
+            in_source_string.substr(in_source_offset, in_target_count));
+    }
+
+    /** @brief 文字列を一部を置換する。
+        @param[in] in_target_offset 置き換えられる文字列の開始オフセット位置。
+        @param[in] in_target_count  置き換えられる文字列の、開始オフセット位置からの要素数。
+        @param[in] in_source_data   置き換える文字列の先頭位置。
+        @param[in] in_source_size   置き換える文字列の要素数。
+        @return *this
+     */
+    public: this_type& replace(
+        typename base_type::size_type in_target_offset,
+        typename base_type::size_type const in_target_count,
+        typename base_type::const_pointer const in_source_data,
+        typename base_type::size_type const in_source_size)
+    {
+        return this->replace(
+            in_target_offset,
+            in_target_count,
+            typename base_type::view(in_source_data, in_source_size));
+    }
+
+    /** @brief 文字列を一部を置換する。
+        @param[in] in_target_offset 置き換えられる文字列の開始オフセット位置。
+        @param[in] in_target_count  置き換えられる文字列の、開始オフセット位置からの要素数。
+        @param[in] in_source_count  置き換える文字の数。
+        @param[in] in_source_char   置き換える文字。
+        @return *this
+     */
+    public: this_type& replace(
+        typename base_type::size_type in_target_offset,
+        typename base_type::size_type const in_target_count,
+        typename base_type::size_type const in_source_count,
+        typename base_type::value_type const in_source_char)
+    {
+        typename this_type::iterator local_copy_end;
+        if (in_target_count < in_source_count)
+        {
+            // 置換する文字列のほうが大きいので、あふれる文字列を挿入する。
+            local_copy_end = this->insert(
+                in_target_end, 
+                in_source_count - in_target_count, 
+                in_source_char);
+        }
+        else if (in_source_count < local_target_size)
+        {
+            // 置換される文字列のほうが大きいので、不要な文字列を削除する。
+            local_copy_end = this->erase(
+                in_target_end,
+                in_target_end + in_target_size - in_source_count);
+        }
+        else
+        {
+            local_copy_end = const_cast<typename this_type::iterator>(in_target_end);
+        }
+        base_type::traits_type::assign(
+            const_cast<typename this_type::iterator>(in_target_begin),
+            local_copy_end - in_target_begin,
+            in_source_char);
+        return *this;
+    }
+    /** @brief 文字列を一部を置換する。
+        @param[in] in_target_begin  置き換えられる文字列の開始位置を指す反復子。
+        @param[in] in_target_end    置き換えられる文字列の末尾位置を指す反復子。
+        @param[in] in_source_string 置き換える文字列。
+        @return *this
+     */
+    public: this_type& replace(
+        typename base_type::const_iterator in_target_begin,
+        typename base_type::const_iterator in_target_end,
+        typename base_type::view const& in_source_string)
+    {
+        return this->replace(
+            in_target_begin,
+            in_target_end,
+            in_source_string.begin(),
+            in_source_string.end());
+    }
+
+    /** @brief 文字列を一部を置換する。
+        @param[in] in_target_begin 置き換えられる文字列の開始位置を指す反復子。
+        @param[in] in_target_end   置き換えられる文字列の末尾位置を指す反復子。
+        @param[in] in_source_data  置き換える文字列の先頭位置。
+        @param[in] in_source_size  置き換える文字列の要素数。
+        @return *this
+     */
+    public: this_type& replace(
+        typename base_type::const_iterator in_target_begin,
+        typename base_type::const_iterator in_target_end,
+        typename base_type::const_pointer const in_source_data,
+        typename base_type::size_type const in_source_size)
+    {
+        return this->replace(
+            in_target_begin,
+            in_target_end,
+            typename base_type::view(in_source_data, in_source_size));
+    }
+
+    /** @brief 文字列を一部を置換する。
+        @param[in] in_target_begin 置き換えられる文字列の開始位置を指す反復子。
+        @param[in] in_target_end   置き換えられる文字列の末尾位置を指す反復子。
+        @param[in] in_source_count 置き換える文字の数。
+        @param[in] in_source_char  置き換える文字。
+        @return *this
+     */
+    public: this_type& replace(
+        typename base_type::const_iterator in_target_begin,
+        typename base_type::const_iterator in_target_end,
+        typename base_type::size_type const in_source_count,
+        typename base_type::value_type const in_source_char)
+    {
+        if (in_target_end < in_target_begin)
+        {
+            PSYQ_ASSERT_THROW(false, std::invalid_argument);
+            std::swap(in_target_begin, in_target_end);
+        }
+        if (in_target_begin < this->begin())
+        {
+            PSYQ_ASSERT_THROW(false, std::out_of_range);
+            in_target_begin = this->begin();
+        }
+        if (this->end() < in_target_end)
+        {
+            PSYQ_ASSERT_THROW(false, std::out_of_range);
+            in_target_end = this->end();
+        }
+        auto const local_target_size(in_target_end - in_target_begin);
+        typename this_type::iterator local_copy_end;
+        if (local_target_size < in_source_count)
+        {
+            // 置換する文字列のほうが大きいので、あふれる文字列を挿入する。
+            local_copy_end = this->insert(
+                in_target_end, 
+                in_source_count - local_target_size, 
+                in_source_char);
+        }
+        else if (in_source_count < local_target_size)
+        {
+            // 置換される文字列のほうが大きいので、不要な文字列を削除する。
+            local_copy_end = this->erase(
+                in_target_end, 
+                in_target_end + local_target_size - in_source_count);
+        }
+        else
+        {
+            local_copy_end = const_cast<typename this_type::iterator>(in_target_end);
+        }
+        base_type::traits_type::assign(
+            const_cast<typename this_type::iterator>(in_target_begin),
+            local_copy_end - in_target_begin,
+            in_source_char);
+        return *this;
+    }
+
+    /** @brief 文字列を一部を置換する。
+        @param[in] in_target_begin 置き換えられる文字列の開始位置を指す反復子。
+        @param[in] in_target_end   置き換えられる文字列の末尾位置を指す反復子。
+        @param[in] in_source_begin 置き換える文字列の開始位置を指す反復子。
+        @param[in] in_source_end   置き換える文字列の末尾位置を指す反復子。
+        @return *this
+     */
+    public: template<typename template_iterator>
+    this_type& replace(
+        typename base_type::const_iterator in_target_begin,
+        typename base_type::const_iterator in_target_end,
+        template_iterator const in_source_begin,
+        template_iterator const in_source_end)
+    {
+        if (in_target_end < in_target_begin)
+        {
+            PSYQ_ASSERT_THROW(false, std::invalid_argument);
+            std::swap(in_target_begin, in_target_end);
+        }
+        if (in_target_begin < this->begin())
+        {
+            PSYQ_ASSERT_THROW(false, std::out_of_range);
+            in_target_begin = this->begin();
+        }
+        if (this->end() < in_target_end)
+        {
+            PSYQ_ASSERT_THROW(false, std::out_of_range);
+            in_target_end = this->end();
+        }
+        auto const local_target_size(in_target_end - in_target_begin);
+        auto const local_source_size(
+            std::distance(in_source_begin, in_source_end));
+        typename this_type::iterator local_copy_end;
+        if (local_target_size < local_source_size)
+        {
+            // 置換する文字列のほうが大きいので、あふれる文字列を挿入する。
+            auto const local_post_begin(
+                std::next(in_source_begin, local_target_size));
+            local_copy_end = this->insert(
+                in_target_end,
+                local_post_begin,
+                std::next(
+                    local_post_begin, local_source_size - local_target_size));
+        }
+        else if (local_source_size < local_target_size)
+        {
+            // 置換される文字列のほうが大きいので、不要な文字列を削除する。
+            local_copy_end = this->erase(
+                in_target_end,
+                in_target_end + local_target_size - local_source_size);
+        }
+        else
+        {
+            local_copy_end = const_cast<typename this_type::iterator>(in_target_end);
+        }
+        auto local_source(in_source_begin);
+        for (
+            auto i(const_cast<typename this_type::iterator>(in_target_begin));
+            i != local_copy_end;
+            ++i, ++local_source)
+        {
+            *i = *local_source;
+        }
+        return *this;
+    }
+    //@}
 }; // class psyq::string::_private::interface_mutable
 
 #endif // !defined(PSYQ_STRING_MUTABLE_INTERFACE_HPP_)

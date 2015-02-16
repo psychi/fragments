@@ -217,7 +217,7 @@ class psyq::string::_private::storage_base
     {
         auto const local_gap(this->make_gap(in_offset, in_count));
         this_type::traits_type::assign(
-            this->begin() + local_gap.first, local.gap.second, in_char);
+            this->begin() + local_gap.first, local_gap.second, in_char);
     }
 
     /** @brief 文字列を挿入する。
@@ -294,19 +294,30 @@ class psyq::string::_private::storage_base
      */
     protected: typename this_type::traits_type::char_type* erase(
         typename this_type::traits_type::char_type const* in_begin,
-        typename this_type::traits_type::char_type const* const in_end)
+        typename this_type::traits_type::char_type const* in_end)
     {
+        auto const local_end(this->data() + this->size());
         if (in_begin < this->data())
         {
             PSYQ_ASSERT_THROW(false, std::out_of_range);
             in_begin = this->data();
         }
+        else if (local_end < in_begin)
+        {
+            PSYQ_ASSERT_THROW(false, std::out_of_range);
+            in_begin = local_end;
+        }
+
         if (in_begin == in_end)
         {
             return in_begin;
         }
-        PSYQ_ASSERT_THROW(in_begin < in_end, std::invalid_argument);
-        auto const local_end(this->data() + this->size());
+        else if (in_end < in_begin)
+        {
+            PSYQ_ASSERT_THROW(false, std::invalid_argument);
+            std::swap(in_begin, in_end);
+        }
+
         if (in_end < local_end)
         {
             this_type::traits_type::move(

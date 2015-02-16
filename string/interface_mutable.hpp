@@ -478,7 +478,7 @@ public psyq::string::_private::interface_immutable<template_string_type>
         std::size_t const in_offset,
         std::size_t const in_count)
     {
-        auto const local_erase_begin(this->data() + in_offset)
+        auto const local_erase_begin(this->data() + in_offset);
         this->erase(local_erase_begin, local_erase_begin + in_count);
         return *this;
     }
@@ -613,7 +613,7 @@ public psyq::string::_private::interface_immutable<template_string_type>
         typename base_type::size_type const in_target_count,
         typename base_type::view const& in_source_string)
     {
-        auto const local_target_begin(this->begin() + in_target_offset)
+        auto const local_target_begin(this->begin() + in_target_offset);
         return this->replace(
             local_target_begin,
             local_target_begin + in_target_count,

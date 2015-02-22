@@ -40,7 +40,7 @@ public PSYQ_STD_UNIQUE_PTR_BASE<template_element, template_deleter>
     private: typedef std_unique_ptr this_type;
 
     /// this_type の基底型。
-    public: typedef
+    private: typedef
         PSYQ_STD_UNIQUE_PTR_BASE<template_element, template_deleter> base_type;
 
     //-------------------------------------------------------------------------
@@ -48,17 +48,13 @@ public PSYQ_STD_UNIQUE_PTR_BASE<template_element, template_deleter>
      */
     public: PSYQ_CONSTEXPR std_unique_ptr() PSYQ_NOEXCEPT {}
 
-    /** @copydoc unique_ptr()
-        @param[in] in_null 空ポインタ。
-     */
-    public: PSYQ_CONSTEXPR std_unique_ptr(psyq::std_nullptr_t const in_null)
+#ifndef PSYQ_STD_NO_NULLPTR
+    /// @copydoc unique_ptr()
+    public: PSYQ_CONSTEXPR std_unique_ptr(psyq::std_nullptr_t const)
     PSYQ_NOEXCEPT:
-#ifdef PSYQ_STD_NO_NULLPTR
-    base_type()
-#else
-    base_type(in_null)
-#endif // defined(PSYQ_STD_NO_NULLPTR)
+    base_type(PSYQ_NULLPTR)
     {}
+#endif // !defined(PSYQ_STD_NO_NULLPTR)
 
     /** @brief オブジェクトを所有するスマートポインタを構築する。
         @param[in] in_pointer 所有するオブジェクトを指すポインタ。
@@ -137,17 +133,15 @@ public PSYQ_STD_UNIQUE_PTR_BASE<template_element, template_deleter>
         return *this;
     }
 
-    /** @copydoc operator=(unique_ptr&&)
-        @param[in] in_null 空ポインタ。
-     */
-    public: this_type& operator=(psyq::std_nullptr_t const in_null)
+    /// @brief スマートポインタを空にする。
+    public: this_type& operator=(psyq::std_nullptr_t const)
     PSYQ_NOEXCEPT
     {
 #ifdef PSYQ_STD_NO_NULLPTR
         this->reset();
 #else
-        this->base_type::operator=(in_null);
-#endif // defined(PSYQ_STD_NO_NULLPTR)
+        this->base_type::operator=(PSYQ_NULLPTR);
+#endif // !defined(PSYQ_STD_NO_NULLPTR)
         return *this;
     }
 
@@ -159,5 +153,19 @@ public PSYQ_STD_UNIQUE_PTR_BASE<template_element, template_deleter>
     private: this_type& operator=(this_type const&);
 
 }; // class psyq::std_unique_ptr
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+namespace psyq_test
+{
+    inline void std_unique_ptr()
+    {
+        typedef psyq::std_unique_ptr<int> int_unique_ptr;
+        int_unique_ptr local_ptr_a(PSYQ_NULLPTR);
+        int_unique_ptr local_ptr_b(new int);
+        *local_ptr_b = 10;
+        local_ptr_a = PSYQ_MOVE(local_ptr_b);
+        local_ptr_b = PSYQ_NULLPTR;
+    }
+} // namespace psyq_test
 
 #endif // PSYQ_STD_UNIQUE_PTR_HPP_

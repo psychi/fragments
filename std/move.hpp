@@ -10,7 +10,7 @@
 #define PSYQ_STD_MOVE_HPP_
 
 //#define PSYQ_STD_NO_MOVE
-//#define PSYQ_STD_NO_NULLPTR
+//define PSYQ_STD_NO_NULLPTR
 //#define PSYQ_STD_NO_DEFAULT_DELETE
 //#define PSYQ_STD_NO_UNIQUE_PTR
 //#define PSYQ_STD_NO_SHARED_PTR
@@ -27,18 +27,23 @@ namespace boost
 #endif // defined(PSYQ_STD_NO_NOEXCEPT)
 
 #ifdef PSYQ_STD_NO_NULLPTR
+#define PSYQ_NULLPTR NULL
 namespace psyq
 {
-    struct _nullptr {};
-    typedef _nullptr const* std_nullptr_t;
+    struct std_nullptr_t
+    {
+        std_nullptr_t(void const* const in_null)
+        {
+            PSYQ_ASSERT(in_null == PSYQ_NULLPTR);
+        }
+    };
 }
-#define PSYQ_NULLPTR NULL
 #else
+#define PSYQ_NULLPTR nullptr
 namespace psyq
 {
     typedef std::nullptr_t std_nullptr_t;
 }
-#define PSYQ_NULLPTR nullptr
 #endif // defined(PSYQ_STD_NO_NULLPTR)
 
 #ifdef PSYQ_STD_NO_MOVE

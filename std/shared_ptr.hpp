@@ -43,22 +43,20 @@ public PSYQ_STD_SHARED_PTR_BASE<template_element>
      */
     public: PSYQ_CONSTEXPR std_shared_ptr() PSYQ_NOEXCEPT {}
 
-    /** @copydoc std_shared_ptr()
-        @param[in] in_null 空ポインタ。
-     */
-    public: std_shared_ptr(psyq::std_nullptr_t const in_null) PSYQ_NOEXCEPT:
-    base_type(in_null)
+    /// @copydoc std_shared_ptr()
+    public: std_shared_ptr(psyq::std_nullptr_t const) PSYQ_NOEXCEPT:
+    base_type(PSYQ_NULLPTR)
     {}
 
-    /** @copydoc std_shared_ptr(psyq::std_nullptr_t)
+    /** @copydoc std_shared_ptr()
         @param[in] in_deleter 不要なオブジェクトを破棄する関数オブジェクト。
      */
     public: template<typename template_deleter>
     std_shared_ptr(
-        psyq::std_nullptr_t const in_null,
+        psyq::std_nullptr_t const,
         template_deleter in_deleter)
     :
-    base_type(in_null, PSYQ_MOVE(in_deleter))
+    base_type(PSYQ_NULLPTR, PSYQ_MOVE(in_deleter))
     {}
 
     /** @copydoc std_shared_ptr(psyq::std_nullptr_t, template_deleter)
@@ -66,11 +64,11 @@ public PSYQ_STD_SHARED_PTR_BASE<template_element>
      */
     public: template<typename template_deleter, typename template_allocator>
     std_shared_ptr(
-        psyq::std_nullptr_t const in_null,
+        psyq::std_nullptr_t const,
         template_deleter in_deleter,
         template_allocator in_allocator)
     :
-    base_type(in_null, PSYQ_MOVE(in_deleter), PSYQ_MOVE(in_allocator))
+    base_type(PSYQ_NULLPTR, PSYQ_MOVE(in_deleter), PSYQ_MOVE(in_allocator))
     {}
 
     /** @brief オブジェクトを所有するスマートポインタを構築する。

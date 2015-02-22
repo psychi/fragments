@@ -678,6 +678,11 @@ WARN_LOGFILE           =
 # with spaces.
 
 INPUT                  = \
+                         ./std/move.hpp \
+                         ./std/default_delete.hpp \
+                         ./std/unique_ptr.hpp \
+                         ./std/shared_ptr.hpp \
+                         ./std/weak_ptr.hpp \
                          ./string/reference_base.hpp \
                          ./string/interface_immutable.hpp \
                          ./string/interface_mutable.hpp \

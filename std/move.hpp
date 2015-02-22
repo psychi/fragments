@@ -19,14 +19,19 @@
 #define PSYQ_NOEXCEPT BOOST_NOEXCEPT
 namespace boost
 {
-	template<class E> void throw_exception(E const& e)
-	{
-		PSYQ_ASSERT(false, "boost throw exception '%s'.\n", e.what());
-	}
+    template<class E> void throw_exception(E const& e)
+    {
+        PSYQ_ASSERT(false, "boost throw exception '%s'.\n", e.what());
+    }
 }
 #endif // defined(PSYQ_STD_NO_NOEXCEPT)
 
 #ifdef PSYQ_STD_NO_NULLPTR
+namespace psyq
+{
+    struct _nullptr {};
+    typedef _nullptr const* std_nullptr_t;
+}
 #define PSYQ_NULLPTR NULL
 #else
 namespace psyq

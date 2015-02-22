@@ -10,7 +10,7 @@
 #define PSYQ_STD_MOVE_HPP_
 
 //#define PSYQ_STD_NO_MOVE
-//define PSYQ_STD_NO_NULLPTR
+//#define PSYQ_STD_NO_NULLPTR
 //#define PSYQ_STD_NO_DEFAULT_DELETE
 //#define PSYQ_STD_NO_UNIQUE_PTR
 //#define PSYQ_STD_NO_SHARED_PTR
@@ -32,7 +32,7 @@ namespace psyq
 {
     struct std_nullptr_t
     {
-        std_nullptr_t(void const* const in_null)
+        std_nullptr_t(char const in_null)
         {
             PSYQ_ASSERT(in_null == PSYQ_NULLPTR);
         }

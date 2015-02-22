@@ -43,6 +43,7 @@ public PSYQ_STD_SHARED_PTR_BASE<template_element>
      */
     public: PSYQ_CONSTEXPR std_shared_ptr() PSYQ_NOEXCEPT {}
 
+#ifndef PSYQ_STD_NO_NULLPTR
     /// @copydoc std_shared_ptr()
     public: std_shared_ptr(psyq::std_nullptr_t const) PSYQ_NOEXCEPT:
     base_type(PSYQ_NULLPTR)
@@ -70,6 +71,7 @@ public PSYQ_STD_SHARED_PTR_BASE<template_element>
     :
     base_type(PSYQ_NULLPTR, PSYQ_MOVE(in_deleter), PSYQ_MOVE(in_allocator))
     {}
+#endif // !defined(PSYQ_STD_NO_NULLPTR)
 
     /** @brief オブジェクトを所有するスマートポインタを構築する。
         @param[in] in_hold_element 所有するオブジェクトを指すポインタ。

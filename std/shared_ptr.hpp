@@ -22,8 +22,8 @@
 
 namespace psyq
 {
-	template<typename> class std_shared_ptr;
-	template<typename> class std_weak_ptr;
+    template<typename> class std_shared_ptr;
+    template<typename> class std_weak_ptr;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -32,185 +32,185 @@ namespace psyq
 template<typename template_element> class psyq::std_shared_ptr:
 public PSYQ_STD_SHARED_PTR_BASE<template_element>
 {
-	/// thisが指す値の型。
-	private: typedef std_shared_ptr this_type;
+    /// thisが指す値の型。
+    private: typedef std_shared_ptr this_type;
 
-	/// this_type の基底型。
-	private: typedef PSYQ_STD_SHARED_PTR_BASE<template_element> base_type;
+    /// this_type の基底型。
+    private: typedef PSYQ_STD_SHARED_PTR_BASE<template_element> base_type;
 
-	//-------------------------------------------------------------------------
-	/** @brief 空のスマートポインタを構築する。
-	 */
-	public: PSYQ_CONSTEXPR std_shared_ptr() PSYQ_NOEXCEPT {}
+    //-------------------------------------------------------------------------
+    /** @brief 空のスマートポインタを構築する。
+     */
+    public: PSYQ_CONSTEXPR std_shared_ptr() PSYQ_NOEXCEPT {}
 
-	/** @copydoc std_shared_ptr()
-	    @param[in] in_null 空ポインタ。
-	 */
+    /** @copydoc std_shared_ptr()
+        @param[in] in_null 空ポインタ。
+     */
     public: std_shared_ptr(psyq::std_nullptr_t const in_null) PSYQ_NOEXCEPT:
-	base_type(in_null)
-	{}
+    base_type(in_null)
+    {}
 
-	/** @copydoc std_shared_ptr(psyq::std_nullptr_t)
-	    @param[in] in_deleter 不要なオブジェクトを破棄する関数オブジェクト。
-	 */
-	public: template<typename template_deleter>
-	std_shared_ptr(
-		psyq::std_nullptr_t const in_null,
-		template_deleter in_deleter)
-	:
-	base_type(in_null, PSYQ_MOVE(in_deleter))
-	{}
+    /** @copydoc std_shared_ptr(psyq::std_nullptr_t)
+        @param[in] in_deleter 不要なオブジェクトを破棄する関数オブジェクト。
+     */
+    public: template<typename template_deleter>
+    std_shared_ptr(
+        psyq::std_nullptr_t const in_null,
+        template_deleter in_deleter)
+    :
+    base_type(in_null, PSYQ_MOVE(in_deleter))
+    {}
 
-	/** @copydoc std_shared_ptr(psyq::std_nullptr_t, template_deleter)
-	    @param[in] in_allocator 使用するメモリ割当子。
-	 */
-	public: template<typename template_deleter, typename template_allocator>
-	std_shared_ptr(
-		psyq::std_nullptr_t const in_null,
-		template_deleter in_deleter,
+    /** @copydoc std_shared_ptr(psyq::std_nullptr_t, template_deleter)
+        @param[in] in_allocator 使用するメモリ割当子。
+     */
+    public: template<typename template_deleter, typename template_allocator>
+    std_shared_ptr(
+        psyq::std_nullptr_t const in_null,
+        template_deleter in_deleter,
         template_allocator in_allocator)
-	:
-	base_type(in_null, PSYQ_MOVE(in_deleter), PSYQ_MOVE(in_allocator))
-	{}
+    :
+    base_type(in_null, PSYQ_MOVE(in_deleter), PSYQ_MOVE(in_allocator))
+    {}
 
-	/** @brief オブジェクトを所有するスマートポインタを構築する。
-	    @param[in] in_hold_element 所有するオブジェクトを指すポインタ。
-	 */
-	public: explicit std_shared_ptr(template_element* const in_hold_element):
-	base_type(in_hold_element)
-	{}
+    /** @brief オブジェクトを所有するスマートポインタを構築する。
+        @param[in] in_hold_element 所有するオブジェクトを指すポインタ。
+     */
+    public: explicit std_shared_ptr(template_element* const in_hold_element):
+    base_type(in_hold_element)
+    {}
 
-	/** @brief @copydoc std_shared_ptr(template_element*)
-	    @param[in] in_deleter 不要なオブジェクトを破棄する関数オブジェクト。
-	 */
-	public: template<typename template_deleter>
-	std_shared_ptr(
-		template_element* const in_hold_element,
-		template_deleter in_deleter)
-	:
-	base_type(in_hold_element, PSYQ_MOVE(in_deleter))
-	{}
+    /** @brief @copydoc std_shared_ptr(template_element*)
+        @param[in] in_deleter 不要なオブジェクトを破棄する関数オブジェクト。
+     */
+    public: template<typename template_deleter>
+    std_shared_ptr(
+        template_element* const in_hold_element,
+        template_deleter in_deleter)
+    :
+    base_type(in_hold_element, PSYQ_MOVE(in_deleter))
+    {}
 
-	/** @brief @copydoc std_shared_ptr(template_element*, template_deleter)
-	    @param[in] in_allocator 使用するメモリ割当子。
-	 */
-	public: template<typename template_deleter, typename template_allocator>
-	std_shared_ptr(
-		template_element* const in_hold_element,
-		template_deleter in_deleter,
+    /** @brief @copydoc std_shared_ptr(template_element*, template_deleter)
+        @param[in] in_allocator 使用するメモリ割当子。
+     */
+    public: template<typename template_deleter, typename template_allocator>
+    std_shared_ptr(
+        template_element* const in_hold_element,
+        template_deleter in_deleter,
         template_allocator in_allocator)
-	:
-	base_type(in_hold_element, PSYQ_MOVE(in_deleter), PSYQ_MOVE(in_allocator))
-	{}
+    :
+    base_type(in_hold_element, PSYQ_MOVE(in_deleter), PSYQ_MOVE(in_allocator))
+    {}
 
-	/** @brief スマートポインタをコピー構築する。
-	    @param[in] in_source コピー元となるスマートポインタ。
-	 */
-	public: std_shared_ptr(this_type const& in_source) PSYQ_NOEXCEPT:
+    /** @brief スマートポインタをコピー構築する。
+        @param[in] in_source コピー元となるスマートポインタ。
+     */
+    public: std_shared_ptr(this_type const& in_source) PSYQ_NOEXCEPT:
     base_type(in_source)
     {}
 
-	/// @copydoc std_shared_ptr(this_type const&)
-	public: template<typename template_other_element>
-	std_shared_ptr(
+    /// @copydoc std_shared_ptr(this_type const&)
+    public: template<typename template_other_element>
+    std_shared_ptr(
         psyq::std_shared_ptr<template_other_element> const& in_source)
-	PSYQ_NOEXCEPT:
-	base_type(in_source)
-	{}
+    PSYQ_NOEXCEPT:
+    base_type(in_source)
+    {}
 
-	/// @copydoc std_shared_ptr(this_type const&)
-	public: template<typename template_other_element>
-	explicit std_shared_ptr(
+    /// @copydoc std_shared_ptr(this_type const&)
+    public: template<typename template_other_element>
+    explicit std_shared_ptr(
         psyq::std_weak_ptr<template_other_element> const& in_source)
-	PSYQ_NOEXCEPT:
-	base_type(in_source)
-	{}
+    PSYQ_NOEXCEPT:
+    base_type(in_source)
+    {}
 
-	/** @copydoc std_shared_ptr(this_type const&)
-	    @param[in] in_member in_source のメンバ。
-	 */
-	public: template<typename template_other_element>
-	std_shared_ptr(
-		psyq::std_shared_ptr<template_other_element> const& in_source,
-		template_element* const in_member)
-	PSYQ_NOEXCEPT:
-	base_type(in_source, in_member)
-	{}
+    /** @copydoc std_shared_ptr(this_type const&)
+        @param[in] in_member in_source のメンバ。
+     */
+    public: template<typename template_other_element>
+    std_shared_ptr(
+        psyq::std_shared_ptr<template_other_element> const& in_source,
+        template_element* const in_member)
+    PSYQ_NOEXCEPT:
+    base_type(in_source, in_member)
+    {}
 
-	/** @brief スマートポインタをムーブ構築する。
-	    @param[in,out] io_source ムーブ元となるスマートポインタ。
-	 */
-	public: std_shared_ptr(PSYQ_RV_REF(this_type) io_source) PSYQ_NOEXCEPT:
-	base_type(PSYQ_MOVE(io_source))
-	{}
+    /** @brief スマートポインタをムーブ構築する。
+        @param[in,out] io_source ムーブ元となるスマートポインタ。
+     */
+    public: std_shared_ptr(PSYQ_RV_REF(this_type) io_source) PSYQ_NOEXCEPT:
+    base_type(PSYQ_MOVE(io_source))
+    {}
 
-	/// @copydoc std_shared_ptr(this_type&&)
-	public: template<typename template_other_element>
-	std_shared_ptr(
-		PSYQ_RV_REF(std_shared_ptr<template_other_element>) io_source)
-	PSYQ_NOEXCEPT:
-	base_type(PSYQ_MOVE(io_source))
-	{}
+    /// @copydoc std_shared_ptr(this_type&&)
+    public: template<typename template_other_element>
+    std_shared_ptr(
+        PSYQ_RV_REF(std_shared_ptr<template_other_element>) io_source)
+    PSYQ_NOEXCEPT:
+    base_type(PSYQ_MOVE(io_source))
+    {}
 
-	/// @copydoc std_shared_ptr(this_type&&)
-	public: template<
-		typename template_other_element,
-		typename template_deleter>
-	std_shared_ptr(
-		PSYQ_RV_REF_2_TEMPL_ARGS(
-			psyq::std_unique_ptr,
+    /// @copydoc std_shared_ptr(this_type&&)
+    public: template<
+        typename template_other_element,
+        typename template_deleter>
+    std_shared_ptr(
+        PSYQ_RV_REF_2_TEMPL_ARGS(
+            psyq::std_unique_ptr,
             template_other_element,
             template_deleter)
                 io_source)
-	:
+    :
 #ifdef PSYQ_STD_NO_UNIQUE_PTR
-	base_type(io_source.release(), io_source.get_deleter())
+    base_type(io_source.release(), io_source.get_deleter())
 #else
-	base_type(PSYQ_MOVE(io_source))
+    base_type(PSYQ_MOVE(io_source))
 #endif // defined(PSYQ_STD_NO_UNIQUE_PTR)
-	{}
+    {}
 
-	//-------------------------------------------------------------------------
-	/** @brief スマートポインタをコピー代入する。
-	    @param[in] in_source コピー元となるスマートポインタ。
+    //-------------------------------------------------------------------------
+    /** @brief スマートポインタをコピー代入する。
+        @param[in] in_source コピー元となるスマートポインタ。
         @return *this
-	 */
-	public: this_type& operator=(this_type const& in_source) PSYQ_NOEXCEPT
-	{
-		this->base_type::operator=(in_source);
-		return *this;
-	}
+     */
+    public: this_type& operator=(this_type const& in_source) PSYQ_NOEXCEPT
+    {
+        this->base_type::operator=(in_source);
+        return *this;
+    }
 
-	/// @copydoc operator=(this_type const&)
-	public: template<typename template_other_element>
-	this_type& operator=(
+    /// @copydoc operator=(this_type const&)
+    public: template<typename template_other_element>
+    this_type& operator=(
         psyq::std_shared_ptr<template_other_element> const& in_source)
-	PSYQ_NOEXCEPT
-	{
-		this->base_type::operator=(in_source);
-		return *this;
-	}
-
-	/** @brief スマートポインタをムーブ代入する。
-	    @param[in,out] io_source ムーブ元となるスマートポインタ。
-        @return *this
-	 */
-	public: this_type& operator=(PSYQ_RV_REF(this_type) io_source)
     PSYQ_NOEXCEPT
-	{
-		this->base_type::operator=(PSYQ_MOVE(io_source));
-		return *this;
-	}
+    {
+        this->base_type::operator=(in_source);
+        return *this;
+    }
 
-	/// @copydoc operator=(this_type&&)
-	public: template<typename template_other_element>
-	this_type& operator=(
-		PSYQ_RV_REF(psyq::std_shared_ptr<template_other_element>) io_source)
-	PSYQ_NOEXCEPT
-	{
-		this->base_type::operator=(PSYQ_MOVE(io_source));
-		return *this;
-	}
+    /** @brief スマートポインタをムーブ代入する。
+        @param[in,out] io_source ムーブ元となるスマートポインタ。
+        @return *this
+     */
+    public: this_type& operator=(PSYQ_RV_REF(this_type) io_source)
+    PSYQ_NOEXCEPT
+    {
+        this->base_type::operator=(PSYQ_MOVE(io_source));
+        return *this;
+    }
+
+    /// @copydoc operator=(this_type&&)
+    public: template<typename template_other_element>
+    this_type& operator=(
+        PSYQ_RV_REF(psyq::std_shared_ptr<template_other_element>) io_source)
+    PSYQ_NOEXCEPT
+    {
+        this->base_type::operator=(PSYQ_MOVE(io_source));
+        return *this;
+    }
 
 }; // class psyq::std_shared_ptr
 

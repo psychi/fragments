@@ -24,14 +24,14 @@ namespace psyq
  */
 template<typename template_element> struct psyq::std_default_delete
 {
-	/** @brief インスタンスを破棄する。
-	    @param[in] in_delete_element 破棄するインスタンスのポインタ。
-	 */
-	void operator()(template_element* const in_delete_element)
+    /** @brief インスタンスを破棄する。
+        @param[in] in_delete_element 破棄するインスタンスのポインタ。
+     */
+    void operator()(template_element* const in_delete_element)
     const PSYQ_NOEXCEPT
-	{
-		delete in_delete_element;
-	}
+    {
+        delete in_delete_element;
+    }
 };
 
 /** @brief std::default_delete 互換の配列破棄関数オブジェクト。
@@ -41,18 +41,18 @@ template<typename template_element> struct psyq::std_default_delete
 template<typename template_element>
 struct psyq::std_default_delete<template_element[]>
 {
-	/** @brief 配列を破棄する。
-	    @param[in] in_delete_array 破棄する配列。
-	 */
-	void operator()(template_element* const in_delete_array)
+    /** @brief 配列を破棄する。
+        @param[in] in_delete_array 破棄する配列。
+     */
+    void operator()(template_element* const in_delete_array)
     const PSYQ_NOEXCEPT
-	{
-		delete[] in_delete_array;
-	}
+    {
+        delete[] in_delete_array;
+    }
 
-	/// 他の型の配列は破棄できない。
-	private: template <typename template_other_element>
-	void operator()(template_other_element* const) const;
+    /// 他の型の配列は破棄できない。
+    private: template <typename template_other_element>
+    void operator()(template_other_element* const) const;
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

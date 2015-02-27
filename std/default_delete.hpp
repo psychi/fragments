@@ -9,6 +9,14 @@
 #ifndef PSYQ_STD_DEFAULT_DELETE_HPP_
 #define PSYQ_STD_DEFAULT_DELETE_HPP_
 
+#ifndef PSYQ_STD_DEFAULT_DELETE_OBJECT
+#define PSYQ_STD_DEFAULT_DELETE_OBJECT(define_object) delete define_object
+#endif // !defined(PSYQ_STD_DEFAULT_DELETE_OBJECT)
+
+#ifndef PSYQ_STD_DEFAULT_DELETE_ARRAY
+#define PSYQ_STD_DEFAULT_DELETE_ARRAY(define_array) delete[] define_array
+#endif // !defined(PSYQ_STD_DEFAULT_DELETE_ARRAY)
+
 /// @cond
 namespace psyq
 {
@@ -20,7 +28,7 @@ namespace psyq
 #ifdef PSYQ_STD_NO_DEFAULT_DELETE
 /** @brief std::default_delete 互換のインスタンス破棄関数オブジェクト。
 
-    std::default_deleteがない開発環境では、独自の実装を用意する。
+    std::default_delete がない開発環境では、独自の実装を用意する。
  */
 template<typename template_element> struct psyq::std_default_delete
 {
@@ -30,13 +38,13 @@ template<typename template_element> struct psyq::std_default_delete
     void operator()(template_element* const in_delete_element)
     const PSYQ_NOEXCEPT
     {
-        delete in_delete_element;
+        PSYQ_STD_DEFAULT_DELETE_OBJECT(in_delete_element);
     }
 };
 
 /** @brief std::default_delete 互換の配列破棄関数オブジェクト。
 
-    std::default_deleteがない開発環境では、独自の実装を用意する。
+    std::default_delete がない開発環境では、独自の実装を用意する。
  */
 template<typename template_element>
 struct psyq::std_default_delete<template_element[]>
@@ -47,7 +55,7 @@ struct psyq::std_default_delete<template_element[]>
     void operator()(template_element* const in_delete_array)
     const PSYQ_NOEXCEPT
     {
-        delete[] in_delete_array;
+        PSYQ_STD_DEFAULT_DELETE_ARRAY(in_delete_array);
     }
 
     /// 他の型の配列は破棄できない。

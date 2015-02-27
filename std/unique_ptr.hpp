@@ -1,10 +1,11 @@
 ﻿/** @file
     @brief @copydoc psyq::std_unique_ptr
 
-    std::unique_ptr がある開発環境では std::unique_ptr を、
-    std::unique_ptr がない開発環境では boost::interprocess::unique_ptr を、
-    psyq::std_unique_ptr でラップする。
-    http://d.hatena.ne.jp/gintenlabo/20101205/1291555934
+    - std::unique_ptr がある開発環境では std::unique_ptr を、
+      psyq::std_unique_ptr でラップする。
+    - std::unique_ptr がない開発環境では boost::interprocess::unique_ptr を、
+      psyq::std_unique_ptr でラップする。
+      http://d.hatena.ne.jp/gintenlabo/20101205/1291555934
 
     @author Hillco Psychi (https://twitter.com/psychi)
 */
@@ -22,10 +23,12 @@
 #include <memory>
 #endif // defined(PSYQ_STD_NO_UNIQUE_PTR)
 
+/// @cond
 namespace psyq
 {
     template<typename, typename> class std_unique_ptr;
 } // namespace psyq
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::unique_ptr 互換のスマートポインタ。
@@ -44,6 +47,8 @@ public PSYQ_STD_UNIQUE_PTR_BASE<template_element, template_deleter>
         PSYQ_STD_UNIQUE_PTR_BASE<template_element, template_deleter> base_type;
 
     //-------------------------------------------------------------------------
+    /// @name コンストラクタ
+    //@{
     /** @brief 空のスマートポインタを構築する。
      */
     public: PSYQ_CONSTEXPR std_unique_ptr() PSYQ_NOEXCEPT {}
@@ -105,8 +110,10 @@ public PSYQ_STD_UNIQUE_PTR_BASE<template_element, template_deleter>
     PSYQ_NOEXCEPT:
     base_type(PSYQ_MOVE(io_source))
     {}
-
+    //@}
     //-------------------------------------------------------------------------
+    /// @name 代入演算子
+    //@{
     /** @brief スマートポインタをムーブ代入する。
         @param[in,out] io_source ムーブ元となるスマートポインタ。
      */
@@ -144,8 +151,7 @@ public PSYQ_STD_UNIQUE_PTR_BASE<template_element, template_deleter>
 #endif // !defined(PSYQ_STD_NO_NULLPTR)
         return *this;
     }
-
-    //-------------------------------------------------------------------------
+    //@}
     /// コピー構築は禁止。
     private: std_unique_ptr(this_type const&);
 

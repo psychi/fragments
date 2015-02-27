@@ -1,9 +1,10 @@
 ﻿/** @file
     @brief @copydoc psyq::std_weak_ptr
 
-    std::shared_ptr がある開発環境では std::weak_ptr を、
-    std::shared_ptr がない開発環境では boost::weak_ptr を、
-    psyq::std_weak_ptr でラップする。
+    - std::shared_ptr がある開発環境では std::weak_ptr を、
+      psyq::std_weak_ptr でラップする。
+    - std::shared_ptr がない開発環境では boost::weak_ptr を、
+      psyq::std_weak_ptr でラップする。
 
     @author Hillco Psychi (https://twitter.com/psychi)
 */
@@ -32,6 +33,8 @@ public PSYQ_STD_WEAK_PTR_BASE<template_element>
     private: typedef PSYQ_STD_WEAK_PTR_BASE<template_element> base_type;
 
     //-------------------------------------------------------------------------
+    /// @name コンストラクタ
+    //@{
     /** @brief 空のスマートポインタを構築する。
      */
     public: PSYQ_CONSTEXPR std_weak_ptr() PSYQ_NOEXCEPT: base_type() {}
@@ -44,15 +47,15 @@ public PSYQ_STD_WEAK_PTR_BASE<template_element>
     {}
 
     /// @copydoc std_weak_ptr(this_type const&)
-    public: template<typename template_other_element>
-    std_weak_ptr(psyq::std_weak_ptr<template_other_element> const& in_source)
+    public: template<typename template_observe_element>
+    std_weak_ptr(psyq::std_weak_ptr<template_observe_element> const& in_source)
     PSYQ_NOEXCEPT:
     base_type(in_source)
     {}
 
     /// @copydoc std_weak_ptr(this_type const&)
-    public: template<typename template_other_element>
-    std_weak_ptr(psyq::std_shared_ptr<template_other_element> const& in_source)
+    public: template<typename template_observe_element>
+    std_weak_ptr(psyq::std_shared_ptr<template_observe_element> const& in_source)
     PSYQ_NOEXCEPT:
     base_type(in_source)
     {}
@@ -65,14 +68,16 @@ public PSYQ_STD_WEAK_PTR_BASE<template_element>
     {}
 
     /// @copydoc std_weak_ptr(this_type&&)
-    public: template<typename template_other_element>
+    public: template<typename template_observe_element>
     std_weak_ptr(
-        PSYQ_RV_REF(psyq::std_weak_ptr<template_other_element>) io_source)
+        PSYQ_RV_REF(psyq::std_weak_ptr<template_observe_element>) io_source)
     PSYQ_NOEXCEPT:
     base_type(PSYQ_MOVE(io_source))
     {}
-
+    //@}
     //-------------------------------------------------------------------------
+    /// @name 代入演算子
+    //@{
     /** @brief スマートポインタをコピー代入する。
         @param[in] in_source コピー元となるスマートポインタ。
      */
@@ -83,9 +88,9 @@ public PSYQ_STD_WEAK_PTR_BASE<template_element>
     }
 
     /// @copydoc operator=(this_type const&)
-    public: template<typename template_other_element>
+    public: template<typename template_observe_element>
     this_type& operator=(
-        psyq::std_weak_ptr<template_other_element> const& in_source)
+        psyq::std_weak_ptr<template_observe_element> const& in_source)
     PSYQ_NOEXCEPT
     {
         this->base_type::operator=(in_source);
@@ -93,9 +98,9 @@ public PSYQ_STD_WEAK_PTR_BASE<template_element>
     }
 
     /// @copydoc operator=(this_type const&)
-    public: template<typename template_other_element>
+    public: template<typename template_observe_element>
     this_type& operator=(
-        psyq::std_shared_ptr<template_other_element> const& in_source)
+        psyq::std_shared_ptr<template_observe_element> const& in_source)
     PSYQ_NOEXCEPT
     {
         this->base_type::operator=(in_source);
@@ -113,15 +118,15 @@ public PSYQ_STD_WEAK_PTR_BASE<template_element>
     }
 
     /// @copydoc operator=(this_type&&)
-    public: template<typename template_other_element>
+    public: template<typename template_observe_element>
     this_type& operator=(
-        PSYQ_RV_REF(psyq::std_weak_ptr<template_other_element>) io_source)
+        PSYQ_RV_REF(psyq::std_weak_ptr<template_observe_element>) io_source)
     PSYQ_NOEXCEPT
     {
         this->base_type::operator=(PSYQ_MOVE(io_source));
         return *this;
     }
-
+    //@}
     //-------------------------------------------------------------------------
     /** @brief 監視しているオブジェクトのスマートポインタを取得する。
         @return 監視しているオブジェクトのスマートポインタ。

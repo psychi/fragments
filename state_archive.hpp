@@ -18,6 +18,8 @@ class psyq::state_archive
     //-------------------------------------------------------------------------
     public: typedef std::allocator<void*> allocator_type;
 
+    public: typedef std::uint32_t key_type;
+    public: typedef std::uint32_t size_type;
     public: typedef std::int32_t format_type;
 
     public: enum kind: this_type::format_type
@@ -29,11 +31,9 @@ class psyq::state_archive
         kind_UNSIGNED,
     };
 
-    public: typedef std::uint32_t key_type;
-    public: typedef std::uint32_t pos_type;
-    public: typedef std::uint32_t size_type;
-
     //-------------------------------------------------------------------------
+    private: typedef std::uint32_t pos_type;
+
     private: struct empty_block
     {
         state_archive::pos_type position;
@@ -76,7 +76,7 @@ class psyq::state_archive
 
     private: struct record
     {
-        empty_block block;
+        state_archive::empty_block block;
         state_archive::format_type format;
     }; // struct record
 
@@ -97,7 +97,8 @@ class psyq::state_archive
     };
 
     //-------------------------------------------------------------------------
-    public: explicit state_archive(this_type::allocator_type const& in_allocator)
+    public: explicit state_archive(
+        this_type::allocator_type const& in_allocator)
     PSYQ_NOEXCEPT:
     empty_blocks_(in_allocator),
     records_(in_allocator),
@@ -115,13 +116,61 @@ class psyq::state_archive
         {
             return false;
         }
-        auto const local_get_bits(
+        auto const local_bits(
             this_type::get_bits(
-                this->units_, local_record->block.position, 1, local_bits));
+                this->units_, local_record->block.position, 1));
         out_value = (local_bits != 0);
-        return local_get_bits;
+        return true;
     }
 
+    public: template<typename template_unsigned>
+    bool get_unsigned(
+        this_type::key_type const in_key,
+        template_unsigned& out_value)
+    {
+        auto const local_record(this->records_.find(in_key));
+        if (local_record == this->records_.end()
+            || local_record->format != this_type::kind_UNSIGNED)
+        {
+            return false;
+        }
+        PSYQ_ASSERT(
+            local_record->block.bit_size
+            <= sizeof(template_unsigned) * this_type::BITS_PER_BYTE);
+        out_value = static_cast<template_unsigned>(
+            this_type::get_bits(
+                this->units_,
+                local_record->block.position,
+                local_record->block.bit_size));
+        return true;
+    }
+
+    public: template<typename template_signed>
+    bool get_signed(
+        this_type::key_type const in_key,
+        template_signed& out_value)
+    {
+        auto const local_record(this->records_.find(in_key));
+        if (local_record == this->records_.end()
+            || local_record->format != this_type::kind_SIGNED)
+        {
+            return false;
+        }
+        PSYQ_ASSERT(
+            local_record->block.bit_size
+            <= sizeof(template_signed) * this_type::BITS_PER_BYTE);
+        auto const local_sign(
+            (std::numeric_limits<this_type::unit_vector::value_type>::max)()
+            << local_record->block.bit_size);
+        out_value = static_cast<template_signed>(
+            local_sign | this_type::get_bits(
+                this->units_,
+                local_record->block.position,
+                local_record->block.bit_size));
+        return true;
+    }
+
+    //-------------------------------------------------------------------------
     public: bool set_bool(
         this_type::key_type const in_key,
         bool const in_value)
@@ -134,6 +183,42 @@ class psyq::state_archive
         }
         return this_type::set_bits(
             this->units_, local_record->block.position, 1, in_value);
+    }
+
+    public: template<typename template_unsigned>
+    bool set_unsigned(
+        this_type::key_type const in_key,
+        template_unsigned const in_value)
+    {
+        auto const local_record(this->records_.find(in_key));
+        if (local_record == this->records_.end()
+            || local_record->format != this_type::kind_UNSIGNED)
+        {
+            return false;
+        }
+        return this_type::set_bits(
+            this->units_,
+            local_record->block.position,
+            local_record->block.bit_size,
+            in_value);
+    }
+
+    public: template<typename template_signed>
+    bool set_unsigned(
+        this_type::key_type const in_key,
+        template_signed const in_value)
+    {
+        auto const local_record(this->records_.find(in_key));
+        if (local_record == this->records_.end()
+            || local_record->format != this_type::kind_SIGNED)
+        {
+            return false;
+        }
+        return this_type::set_bits(
+            this->units_,
+            local_record->block.position,
+            local_record->block.bit_size,
+            in_value);
     }
 
     //-------------------------------------------------------------------------
@@ -163,6 +248,34 @@ class psyq::state_archive
             static_cast<this_type::format_type>(in_bit_size));
         if (local_format < this_type::kind_UNSIGNED
             || static_cast<std::uint32_t>(local_format) != in_bit_size)
+        {
+            return false;
+        }
+        auto const local_record(this->make_record(in_key, local_format));
+        if (local_record == nullptr)
+        {
+            return false;
+        }
+        PSYQ_ASSERT((in_initial_value >> in_bit_size) == 0);
+        return this_type::set_bits(
+            this->units_,
+            local_record.block.position,
+            in_bit_size,
+            in_initial_value);
+    }
+
+    public: template<typename template_signed>
+    bool insert_signed(
+        this_type::key_type const in_key,
+        template_signed const in_initial_value,
+        this_type::size_type const in_bit_size =
+            sizeof(template_unsigned) * this_type::BITS_PER_BYTE)
+    {
+        static_assert(std::is_signed<template_signed>::value, "");
+        auto const local_format(
+            -static_cast<this_type::format_type>(in_bit_size));
+        if (this_type::kind_SIGNED < local_format
+            || static_cast<std::uint32_t>(-local_format) != in_bit_size)
         {
             return false;
         }
@@ -291,7 +404,8 @@ class psyq::state_archive
         PSYQ_ASSERT(
             (in_bit_size < UNIT_BIT_SIZE && local_mod_bit_size < UNIT_BIT_SIZE)
             || (in_bit_size == UNIT_BIT_SIZE && local_mod_bit_size == 0));
-        return in_units.at(local_unit_index) >> local_mod_bit_size;
+        return (in_units.at(local_unit_index) >> local_mod_bit_size)
+            & this_type::make_bit_mask(in_bit_size);
     }
 
     private: static bool set_bits(
@@ -316,23 +430,26 @@ class psyq::state_archive
             return false;
         }
 
-        auto& local_unit(in_units.at(local_unit_index));
         auto const local_mod_bit_size(
             in_position - local_unit_index * UNIT_BIT_SIZE);
-        if (in_bit_size < UNIT_BIT_SIZE)
-        {
-            PSYQ_ASSERT(local_mod_bit_size < UNIT_BIT_SIZE);
-            auto const local_bit_mask(
-                ((this_type::unit_vector::value_type(1) << in_bit_size) - 1));
-            local_unit = (~(local_bit_mask << local_mod_bit_size) & local_unit)
-                | ((in_value & local_bit_mask) << local_mod_bit_size);
-        }
-        else
-        {
-            PSYQ_ASSERT(local_mod_bit_size == 0);
-            local_unit = in_value;
-        }
+        PSYQ_ASSERT(local_mod_bit_size + in_bit_size <= UNIT_BIT_SIZE);
+        auto const local_bit_mask(this_type::make_bit_mask(in_bit_size));
+        auto& local_unit(in_units.at(local_unit_index));
+        local_unit = (~(local_bit_mask << local_mod_bit_size) & local_unit)
+            | ((in_value & local_bit_mask) << local_mod_bit_size);
         return true;
+    }
+
+    private: static this_type::unit_vector::value_type make_bit_mask(
+        this_type::size_type const in_bit_size)
+    {
+        auto const UNIT_BIT_SIZE(
+            sizeof(this_type::unit_vector::value_type)
+            * this_type::BITS_PER_BYTE);
+        auto const local_max(
+            (std::numeric_limits<this_type::unit_vector::value_type>::max)());
+        return in_bit_size < UNIT_BIT_SIZE?
+            ~(local_max << in_bit_size): local_max;
     }
 
     //-------------------------------------------------------------------------

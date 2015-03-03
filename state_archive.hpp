@@ -36,42 +36,58 @@ class psyq::state_archive
     };
 
     //-------------------------------------------------------------------------
+    private: typedef std::make_unsigned<this_type::format_type>::type
+        size_type;
     private: typedef std::uint32_t pos_type;
-    private: typedef std::uint32_t size_type;
-    private: typedef this_type::size_type block_type;
-
-    private: struct empty_block
-    {
-        empty_block(
-            state_archive::pos_type const in_position,
-            state_archive::size_type const in_size)
-        PSYQ_NOEXCEPT:
-        position(in_position),
-        size(in_size)
-        {}
-
-        state_archive::pos_type position;
-        state_archive::size_type size;
-    }; // struct empty_block
+    private: typedef this_type::pos_type block_type;
 
     private: struct empty_block_less
     {
         bool operator()(
-            state_archive::empty_block const& in_left,
-            state_archive::empty_block const& in_right)
+            state_archive::block_type const in_left,
+            state_archive::block_type const in_right)
         const PSYQ_NOEXCEPT
         {
-            return in_left.size != in_right.size?
-                in_left.size < in_right.size:
-                in_left.position < in_right.position;
+            auto const local_left_size(
+                state_archive::get_block_size(in_left));
+            auto const local_right_size(
+                state_archive::get_block_size(in_right));
+            if (local_left_size != local_right_size)
+            {
+                return local_left_size < local_right_size;
+            }
+            auto const local_left_position(
+                state_archive::get_block_position(in_left));
+            auto const local_right_position(
+                state_archive::get_block_position(in_right));
+            return local_left_position < local_right_position;
         }
-    }; // empty_block_less
 
-    private: typedef std::set<
-        this_type::empty_block,
-        this_type::empty_block_less,
-        this_type::allocator_type>
-            empty_block_set;
+        bool operator()(
+            state_archive::block_type const in_left,
+            state_archive::size_type const in_right)
+        const PSYQ_NOEXCEPT
+        {
+            auto const local_left_size(
+                state_archive::get_block_size(in_left));
+            return local_left_size < in_right;
+        }
+
+        bool operator()(
+            state_archive::size_type const in_left,
+            state_archive::block_type const in_right)
+        const PSYQ_NOEXCEPT
+        {
+            auto const local_right_size(
+                state_archive::get_block_size(in_right));
+            return in_left < local_right_size;
+        }
+
+    }; // struct empty_block_less
+
+    private: typedef
+        std::vector<this_type::block_type, this_type::allocator_type>
+            empty_block_vector;
 
     private: struct record
     {
@@ -119,7 +135,7 @@ class psyq::state_archive
     private: enum: this_type::size_type
     {
         BITS_PER_BYTE = 8,
-        RECORD_POSITION_SIZE = 24,
+        BLOCK_POSITION_SIZE = 24,
     };
 
     //-------------------------------------------------------------------------
@@ -606,6 +622,7 @@ class psyq::state_archive
 
         // 新たに構築した書庫を移動する。
         *this = std::move(local_states);
+        this->empty_blocks_.shrink_to_fit();
         this->records_.shrink_to_fit();
         this->units_.shrink_to_fit();
     }
@@ -636,10 +653,12 @@ class psyq::state_archive
 
         // ビット配列を用意する。
         auto const local_empty_block(
-            this->empty_blocks_.lower_bound(
-                this_type::empty_block(0, local_size)));
-        if (local_empty_block == this->empty_blocks_.end()
-            || local_empty_block->size < local_size)
+            std::lower_bound(
+                this->empty_blocks_.begin(),
+                this->empty_blocks_.end(),
+                local_size,
+                this_type::empty_block_less()));
+        if (local_empty_block == this->empty_blocks_.end())
         {
             // 新たにビット配列を追加する。
             auto const UNIT_SIZE(
@@ -660,16 +679,20 @@ class psyq::state_archive
             auto const local_add_size(local_add_unit_size * UNIT_SIZE);
             if (local_size < local_add_size)
             {
-                this->empty_blocks_.emplace(
-                    local_position + local_size, local_add_size - local_size);
+                this_type::add_empty_block(
+                    this->empty_blocks_,
+                    local_position + local_size,
+                    local_add_size - local_size);
             }
         }
         else
         {
             // 既存のビット配列を使う。
+            auto const local_empty_position(
+                this_type::get_block_position(*local_empty_block));
             auto const local_set_record_position(
                 this_type::set_record_position(
-                    local_record, local_empty_block->position));
+                    local_record, local_empty_position));
             if (!local_set_record_position)
             {
                 PSYQ_ASSERT(false);
@@ -677,15 +700,41 @@ class psyq::state_archive
             }
 
             // 空き領域を更新する。
-            if (local_size < local_empty_block->size)
-            {
-                this->empty_blocks_.emplace(
-                    local_empty_block->position + local_size,
-                    local_empty_block->size - local_size);
-            }
+            auto const local_empty_size(
+                this_type::get_block_size(*local_empty_block));
             this->empty_blocks_.erase(local_empty_block);
+            if (local_size < local_empty_size)
+            {
+                this_type::add_empty_block(
+                    this->empty_blocks_,
+                    local_empty_position + local_size,
+                    local_empty_size - local_size);
+            }
         }
         return &local_record;
+    }
+
+    private: static void add_empty_block(
+        this_type::empty_block_vector& io_empty_blocks,
+        this_type::pos_type const in_position,
+        std::size_t const in_size)
+    {
+        auto const local_size(static_cast<this_type::size_type>(in_size));
+        if ((in_position >> this_type::BLOCK_POSITION_SIZE) != 0
+            || local_size != in_size)
+        {
+            PSYQ_ASSERT(false);
+            return;
+        }
+        this_type::block_type const local_empty_block(
+           (local_size << this_type::BLOCK_POSITION_SIZE) | in_position);
+        io_empty_blocks.insert(
+            std::lower_bound(
+                io_empty_blocks.begin(),
+                io_empty_blocks.end(),
+                local_empty_block,
+                this_type::empty_block_less()),
+            local_empty_block);
     }
 
     //-------------------------------------------------------------------------
@@ -713,22 +762,35 @@ class psyq::state_archive
                 in_key));
     }
 
+    private: static this_type::pos_type get_block_position(
+        this_type::block_type const in_block)
+    {
+        return in_block & ((1 << this_type::BLOCK_POSITION_SIZE) - 1);
+    }
+
+    private: static this_type::size_type get_block_size(
+        this_type::block_type const in_block)
+    {
+        return static_cast<this_type::size_type>(
+            in_block >> this_type::BLOCK_POSITION_SIZE);
+    }
+
     private: static this_type::pos_type get_record_position(
         this_type::record_vector::value_type const& in_record)
     {
-        return in_record.block & ((1 << this_type::RECORD_POSITION_SIZE) - 1);
+        return this_type::get_block_position(in_record.block);
     }
 
     private: static bool set_record_position(
         this_type::record_vector::value_type& io_record,
         std::size_t const in_position)
     {
-        if ((in_position >> this_type::RECORD_POSITION_SIZE) != 0)
+        if ((in_position >> this_type::BLOCK_POSITION_SIZE) != 0)
         {
             return false;
         }
         auto const local_mask(
-            (1 << this_type::RECORD_POSITION_SIZE) - 1);
+            (1 << this_type::BLOCK_POSITION_SIZE) - 1);
         io_record.block = (~local_mask & io_record.block)
             | static_cast<this_type::block_type>(local_mask & in_position);
         return true;
@@ -738,7 +800,7 @@ class psyq::state_archive
         this_type::record_vector::value_type const& in_record)
     {
         return static_cast<this_type::format_type>(
-            in_record.block >> this_type::RECORD_POSITION_SIZE);
+            in_record.block >> this_type::BLOCK_POSITION_SIZE);
     }
 
     private: static void set_record_format(
@@ -746,9 +808,9 @@ class psyq::state_archive
         this_type::format_type const in_format)
     {
         auto const local_mask(
-            ~((1 << this_type::RECORD_POSITION_SIZE) - 1));
+            ~((1 << this_type::BLOCK_POSITION_SIZE) - 1));
         io_record.block = (io_record.block & local_mask)
-            | (in_format << this_type::RECORD_POSITION_SIZE);
+            | (in_format << this_type::BLOCK_POSITION_SIZE);
     }
 
     private: static this_type::size_type get_record_size(
@@ -790,7 +852,7 @@ class psyq::state_archive
     }
 
     //-------------------------------------------------------------------------
-    private: this_type::empty_block_set empty_blocks_;
+    private: this_type::empty_block_vector empty_blocks_;
     private: this_type::record_vector records_;
     private: this_type::unit_vector units_;
 

@@ -38,6 +38,7 @@ class psyq::state_archive
     //-------------------------------------------------------------------------
     private: typedef std::uint32_t pos_type;
     private: typedef std::uint32_t size_type;
+    private: typedef this_type::size_type block_type;
 
     private: struct empty_block
     {
@@ -72,32 +73,46 @@ class psyq::state_archive
         this_type::allocator_type>
             empty_block_set;
 
-    private: struct key_hash
+    private: struct record
     {
-        std::size_t operator()(state_archive::key_type const in_key)
+        this_type::key_type key;
+        this_type::block_type block;
+    };
+
+    private: struct record_key_less
+    {
+        bool operator()(
+            state_archive::record const& in_left,
+            state_archive::record const& in_right)
         const PSYQ_NOEXCEPT
         {
-            return in_key;
+            return in_left.key < in_right.key;
         }
+
         bool operator()(
             state_archive::key_type const in_left,
+            state_archive::record const& in_right)
+        const PSYQ_NOEXCEPT
+        {
+            return in_left < in_right.key;
+        }
+
+        bool operator()(
+            state_archive::record const& in_left,
             state_archive::key_type const in_right)
         const PSYQ_NOEXCEPT
         {
-            return in_left == in_right;
+            return in_left.key < in_right;
         }
-    }; // struct key_hash
 
-    private: typedef std::unordered_map<
-        this_type::key_type,
-        this_type::size_type,
-        this_type::key_hash,
-        this_type::key_hash,
-        this_type::allocator_type>
-            record_map;
+    }; // struct record_key_less
+
+    private: typedef std::vector<this_type::record, this_type::allocator_type>
+         record_vector;
 
     private: typedef std::vector<std::uint64_t, this_type::allocator_type>
          unit_vector;
+
     private: typedef std::make_signed<this_type::unit_vector::value_type>::type
          signed_unit;
 
@@ -526,7 +541,7 @@ class psyq::state_archive
     public: void shrink_to_fit()
     {
         // 状態値を大きさの降順で並び替える。
-        std::vector<this_type::record_map::value_type const*> local_records(
+        std::vector<this_type::record_vector::value_type const*> local_records(
             this->records_.get_allocator());
         local_records.reserve(this->records_.size());
         for (auto& local_record: this->records_)
@@ -536,8 +551,8 @@ class psyq::state_archive
         struct record_size_greater
         {
             bool operator()(
-                this_type::record_map::value_type const* const in_left,
-                this_type::record_map::value_type const* const in_right)
+                this_type::record_vector::value_type const* const in_left,
+                this_type::record_vector::value_type const* const in_right)
             const
             {
                 return this_type::get_record_size(*in_right)
@@ -563,7 +578,7 @@ class psyq::state_archive
 
                 case this_type::kind_BOOL:
                 local_states.add_bool(
-                    local_record->first,
+                    local_record->key,
                     0 != this_type::get_bits(this->units_, local_position, 1));
                 continue;
 
@@ -580,38 +595,42 @@ class psyq::state_archive
             if (0 < local_format)
             {
                 local_states.add_unsigned(
-                    local_record->first, local_bits, local_size);
+                    local_record->key, local_bits, local_size);
             }
             else
             {
                 local_states.add_signed(
-                    local_record->first, local_bits, local_size);
+                    local_record->key, local_bits, local_size);
             }
         }
 
         // 新たに構築した書庫を移動する。
         *this = std::move(local_states);
+        this->records_.shrink_to_fit();
         this->units_.shrink_to_fit();
     }
 
     //-------------------------------------------------------------------------
-    private: this_type::record_map::value_type* make_record(
+    private: this_type::record_vector::value_type* make_record(
         this_type::key_type const in_key,
         this_type::format_type const in_format)
     {
-        if (this_type::find_record(this->records_, in_key) != nullptr)
+        auto const local_record_iterator(
+            std::lower_bound(
+                this->records_.begin(),
+                this->records_.end(),
+                in_key,
+                this_type::record_key_less()));
+        if (local_record_iterator != this->records_.end()
+            && local_record_iterator->key == in_key)
         {
             return nullptr;
         }
-        auto const local_emplace(
-            this->records_.emplace(
-                in_key, this_type::record_map::mapped_type()));
-        if (!local_emplace.second)
-        {
-            PSYQ_ASSERT(false);
-            return nullptr;
-        }
-        auto& local_record(*local_emplace.first);
+        auto& local_record(
+            *(this->records_.insert(
+                local_record_iterator,
+                this_type::record_vector::value_type())));
+        local_record.key = in_key;
         this_type::set_record_format(local_record, in_format);
         auto const local_size(this_type::get_format_size(in_format));
 
@@ -670,32 +689,38 @@ class psyq::state_archive
     }
 
     //-------------------------------------------------------------------------
-    private: static this_type::record_map::value_type const* find_record(
-        this_type::record_map const& in_records,
-        this_type::record_map::key_type const in_key)
+    private: static this_type::record_vector::value_type const* find_record(
+        this_type::record_vector const& in_records,
+        this_type::key_type const in_key)
     {
-        auto const local_record(in_records.find(in_key));
-        return local_record != in_records.end()? &(*local_record): nullptr;
+        auto const local_record(
+            std::lower_bound(
+                in_records.begin(),
+                in_records.end(),
+                in_key,
+                this_type::record_key_less()));
+        return local_record != in_records.end() && local_record->key == in_key?
+            &(*local_record): nullptr;
     }
 
-    private: static this_type::record_map::value_type* find_record(
-        this_type::record_map& in_records,
-        this_type::record_map::key_type const in_key)
+    private: static this_type::record_vector::value_type* find_record(
+        this_type::record_vector& in_records,
+        this_type::key_type const in_key)
     {
-        return const_cast<this_type::record_map::value_type*>(
+        return const_cast<this_type::record_vector::value_type*>(
             this_type::find_record(
-                const_cast<this_type::record_map const&>(in_records), in_key));
+                const_cast<this_type::record_vector const&>(in_records),
+                in_key));
     }
 
-    //-------------------------------------------------------------------------
     private: static this_type::pos_type get_record_position(
-        this_type::record_map::value_type const& in_record)
+        this_type::record_vector::value_type const& in_record)
     {
-        return in_record.second & ((1 << this_type::RECORD_POSITION_SIZE) - 1);
+        return in_record.block & ((1 << this_type::RECORD_POSITION_SIZE) - 1);
     }
 
     private: static bool set_record_position(
-        this_type::record_map::value_type& io_record,
+        this_type::record_vector::value_type& io_record,
         std::size_t const in_position)
     {
         if ((in_position >> this_type::RECORD_POSITION_SIZE) != 0)
@@ -704,31 +729,30 @@ class psyq::state_archive
         }
         auto const local_mask(
             (1 << this_type::RECORD_POSITION_SIZE) - 1);
-        io_record.second = (~local_mask & io_record.second)
-            | static_cast<this_type::record_map::mapped_type>(
-                local_mask & in_position);
+        io_record.block = (~local_mask & io_record.block)
+            | static_cast<this_type::block_type>(local_mask & in_position);
         return true;
     }
 
     private: static this_type::format_type get_record_format(
-        this_type::record_map::value_type const& in_record)
+        this_type::record_vector::value_type const& in_record)
     {
         return static_cast<this_type::format_type>(
-            in_record.second >> this_type::RECORD_POSITION_SIZE);
+            in_record.block >> this_type::RECORD_POSITION_SIZE);
     }
 
     private: static void set_record_format(
-        this_type::record_map::value_type& io_record,
+        this_type::record_vector::value_type& io_record,
         this_type::format_type const in_format)
     {
         auto const local_mask(
             ~((1 << this_type::RECORD_POSITION_SIZE) - 1));
-        io_record.second = (io_record.second & local_mask)
+        io_record.block = (io_record.block & local_mask)
             | (in_format << this_type::RECORD_POSITION_SIZE);
     }
 
     private: static this_type::size_type get_record_size(
-        this_type::record_map::value_type const& in_record)
+        this_type::record_vector::value_type const& in_record)
     {
         return this_type::get_format_size(
             this_type::get_record_format(in_record));
@@ -767,7 +791,7 @@ class psyq::state_archive
 
     //-------------------------------------------------------------------------
     private: this_type::empty_block_set empty_blocks_;
-    private: this_type::record_map records_;
+    private: this_type::record_vector records_;
     private: this_type::unit_vector units_;
 
 }; // class psyq::state_archive

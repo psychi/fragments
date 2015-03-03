@@ -139,8 +139,9 @@ class psyq::state_archive
     public: this_type::kind get_kind(this_type::key_type const in_key)
     const PSYQ_NOEXCEPT
     {
-        auto const local_record(this->records_.find(in_key));
-        if (local_record == this->records_.end())
+        auto const local_record(
+            this_type::find_record(this->records_, in_key));
+        if (local_record == nullptr)
         {
             return this_type::kind_NULL;
         }
@@ -167,8 +168,9 @@ class psyq::state_archive
     public: std::size_t get_size(this_type::key_type const in_key)
     const PSYQ_NOEXCEPT
     {
-        auto const local_record(this->records_.find(in_key));
-        if (local_record == this->records_.end())
+        auto const local_record(
+            this_type::find_record(this->records_, in_key));
+        if (local_record == nullptr)
         {
             return 0;
         }
@@ -188,18 +190,18 @@ class psyq::state_archive
         template_value& out_value)
     const PSYQ_NOEXCEPT
     {
-        auto const local_record_iterator(this->records_.find(in_key));
-        if (local_record_iterator == this->records_.end())
+        auto const local_record(
+            this_type::find_record(this->records_, in_key));
+        if (local_record == nullptr)
         {
             return false;
         }
-        auto const& local_record(*local_record_iterator);
-        auto const local_format(this_type::get_record_format(local_record));
+        auto const local_format(this_type::get_record_format(*local_record));
         auto const local_size(this_type::get_format_size(local_format));
         auto local_bits(
             this_type::get_bits(
                 this->units_,
-                this_type::get_record_position(local_record),
+                this_type::get_record_position(*local_record),
                 local_size));
         switch (local_format)
         {
@@ -309,15 +311,15 @@ class psyq::state_archive
         template_value const in_value)
     PSYQ_NOEXCEPT
     {
-        auto const local_record_iterator(this->records_.find(in_key));
-        if (local_record_iterator == this->records_.end())
+        auto const local_record(
+            this_type::find_record(this->records_, in_key));
+        if (local_record == nullptr)
         {
             return false;
         }
-        auto const& local_record(*local_record_iterator);
-        auto const local_format(this_type::get_record_format(local_record));
+        auto const local_format(this_type::get_record_format(*local_record));
         auto const local_position(
-            this_type::get_record_position(local_record));
+            this_type::get_record_position(*local_record));
         switch (local_format)
         {
             case this_type::kind_NULL:
@@ -597,7 +599,7 @@ class psyq::state_archive
         this_type::key_type const in_key,
         this_type::format_type const in_format)
     {
-        if (this->records_.find(in_key) != this->records_.end())
+        if (this_type::find_record(this->records_, in_key) != nullptr)
         {
             return nullptr;
         }
@@ -665,6 +667,24 @@ class psyq::state_archive
             this->empty_blocks_.erase(local_empty_block);
         }
         return &local_record;
+    }
+
+    //-------------------------------------------------------------------------
+    private: static this_type::record_map::value_type const* find_record(
+        this_type::record_map const& in_records,
+        this_type::record_map::key_type const in_key)
+    {
+        auto const local_record(in_records.find(in_key));
+        return local_record != in_records.end()? &(*local_record): nullptr;
+    }
+
+    private: static this_type::record_map::value_type* find_record(
+        this_type::record_map& in_records,
+        this_type::record_map::key_type const in_key)
+    {
+        return const_cast<this_type::record_map::value_type*>(
+            this_type::find_record(
+                const_cast<this_type::record_map const&>(in_records), in_key));
     }
 
     //-------------------------------------------------------------------------

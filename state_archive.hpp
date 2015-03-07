@@ -38,7 +38,7 @@ class psyq::state_archive
     /// @brief 各種コンテナに用いるメモリ割当子の型。
     public: typedef template_allocator allocator_type;
 
-    /// @brief 状態値の識別番号を表す型。
+    /// @brief 識別番号を表す型。
     public: typedef std::uint32_t key_type;
 
     /// @brief 状態値の構成を表す型。
@@ -517,16 +517,19 @@ class psyq::state_archive
 
     //-------------------------------------------------------------------------
     /** @brief 真偽型の状態値を追加する。
+        @param[in] in_chunk 追加する状態値が所属するチャンクの識別番号。
         @param[in] in_key   追加する状態値の識別番号。
         @param[in] in_value 追加する状態値の初期値。
         @retval true  成功。状態値を追加した。
         @retval false 失敗。状態値を追加できなかった。
      */
     public: bool add_bool(
+        typename this_type::key_type const in_chunk,
         typename this_type::key_type const in_key,
         bool const in_value)
     {
-        auto const local_entry(this->make_entry(in_key, this_type::kind_BOOL));
+        auto const local_entry(
+            this->make_entry(in_chunk, in_key, this_type::kind_BOOL));
         if (local_entry == nullptr)
         {
             return false;
@@ -539,6 +542,7 @@ class psyq::state_archive
     }
 
     /** @brief 符号なし整数型の状態値を追加する。
+        @param[in] in_chunk 追加する状態値が所属するチャンクの識別番号。
         @param[in] in_key   追加する状態値の識別番号。
         @param[in] in_value 追加する状態値の初期値。
         @param[in] in_size  状態値のビット数。
@@ -546,6 +550,7 @@ class psyq::state_archive
         @retval false 失敗。状態値を追加できなかった。
      */
     public: bool add_unsigned(
+        typename this_type::key_type const in_chunk,
         typename this_type::key_type const in_key,
         typename this_type::block_type const in_value,
         std::size_t const in_size =
@@ -559,7 +564,8 @@ class psyq::state_archive
         {
             return false;
         }
-        auto const local_entry(this->make_entry(in_key, local_format));
+        auto const local_entry(
+            this->make_entry(in_chunk, in_key, local_format));
         if (local_entry == nullptr)
         {
             return false;
@@ -572,6 +578,7 @@ class psyq::state_archive
     }
 
     /** @brief 符号あり整数型の状態値を追加する。
+        @param[in] in_chunk 追加する状態値が所属するチャンクの識別番号。
         @param[in] in_key   追加する状態値の識別番号。
         @param[in] in_value 追加する状態値の初期値。
         @param[in] in_size  状態値のビット数。
@@ -579,6 +586,7 @@ class psyq::state_archive
         @retval false 失敗。状態値を追加できなかった。
      */
     public: bool add_signed(
+        typename this_type::key_type const in_chunk,
         typename this_type::key_type const in_key,
         typename this_type::signed_block_type const in_value,
         std::size_t const in_size =
@@ -593,7 +601,8 @@ class psyq::state_archive
         {
             return false;
         }
-        auto const local_entry(this->make_entry(in_key, local_format));
+        auto const local_entry(
+            this->make_entry(in_chunk, in_key, local_format));
         if (local_entry == nullptr)
         {
             return false;
@@ -643,6 +652,7 @@ class psyq::state_archive
                 this_type::get_entry_position(*local_entry));
             auto const local_format(
                 this_type::get_entry_format(*local_entry));
+            unsigned const local_chunk(0);
             switch (local_format)
             {
                 case this_type::kind_NULL:
@@ -651,9 +661,9 @@ class psyq::state_archive
 
                 case this_type::kind_BOOL:
                 local_states.add_bool(
+                    local_chunk,
                     local_entry->key,
-                    0 != this_type::get_bits(
-                        this->blocks_, local_position, 1));
+                    this_type::get_bits(this->blocks_, local_position, 1) != 0);
                 continue;
 
                 case this_type::kind_FLOAT:
@@ -670,12 +680,12 @@ class psyq::state_archive
             if (0 < local_format)
             {
                 local_states.add_unsigned(
-                    local_entry->key, local_bits, local_size);
+                    local_chunk, local_entry->key, local_bits, local_size);
             }
             else
             {
                 local_states.add_signed(
-                    local_entry->key, local_bits, local_size);
+                    local_chunk, local_entry->key, local_bits, local_size);
             }
         }
 
@@ -687,13 +697,15 @@ class psyq::state_archive
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 状態値登記を新たに生成する。
-        @param[in] in_key    新たに生成する状態値登記の識別番号。
+    /** @brief 状態値の登記を新たに生成する。
+        @param[in] in_chunk  新たに生成する状態値が所属するチャンクの識別番号。
+        @param[in] in_key    新たに生成する状態値の識別番号。
         @param[in] in_format 新たに生成する状態値登記の構成。
         @retval !=nullptr 成功。新たに生成した状態値登記。
         @retval ==nullptr 失敗。状態値登記は生成されなかった。
      */
     private: typename this_type::entry_vector::value_type* make_entry(
+        typename this_type::key_type const in_chunk,
         typename this_type::key_type const in_key,
         typename this_type::format_type const in_format)
     {
@@ -710,76 +722,116 @@ class psyq::state_archive
             return nullptr;
         }
 
-        // 新たに状態値登記を追加する。
+        // 状態値の登記を新たに追加する。
         auto& local_entry(
             *(this->entries_.insert(
                 local_entry_iterator,
                 this_type::entry_vector::value_type())));
         local_entry.key = in_key;
         this_type::set_entry_format(local_entry, in_format);
-        auto const local_size(this_type::get_format_size(in_format));
 
+        // 状態値のビット位置を決定する。
+        auto const local_set_entry_position(
+            this_type::set_entry_position(
+                local_entry,
+                this_type::make_state_field(
+                    this_type::get_format_size(in_format),
+                    this->empty_fields_,
+                    this->blocks_)));
+        if (!local_set_entry_position)
+        {
+            PSYQ_ASSERT(false);
+            local_entry.field = 0;
+            return nullptr;
+        }
+        return &local_entry;
+    }
+
+    /** @brief 状態値の領域を生成する。
+        @param[in] in_size             生成する領域のビット数。
+        @param[in,out] io_empty_fields 空き領域のコンテナ。
+        @param[in,out] io_blocks       状態値の領域に使うブロックのコンテナ。
+        @return 生成した領域のビット位置。
+     */
+    private: static std::size_t make_state_field(
+        typename this_type::size_type const in_size,
+        typename this_type::empty_field_vector& io_empty_fields,
+        typename this_type::block_vector& io_blocks)
+    {
         // 状態値を格納するビット領域を用意する。
         auto const local_empty_field(
             std::lower_bound(
-                this->empty_fields_.begin(),
-                this->empty_fields_.end(),
-                local_size,
+                io_empty_fields.begin(),
+                io_empty_fields.end(),
+                in_size,
                 this_type::empty_field_less()));
-        if (local_empty_field == this->empty_fields_.end())
+        if (local_empty_field != io_empty_fields.end())
         {
-            // 新たにビット列ブロックを追加する。
-            auto const BLOCK_SIZE(
-                sizeof(typename this_type::block_type)
-                * this_type::BITS_PER_BYTE);
-            auto const local_position(this->blocks_.size() * BLOCK_SIZE);
-            if (!this_type::set_entry_position(local_entry, local_position))
-            {
-                PSYQ_ASSERT(false);
-                return nullptr;
-            }
-            auto const local_add_block_size(
-                (local_size + BLOCK_SIZE - 1) / BLOCK_SIZE);
-            this->blocks_.insert(
-                this->blocks_.end(), local_add_block_size, 0);
+            // 既存の空き領域を再利用する。
+            return this_type::reuse_empty_field(
+                in_size, io_empty_fields, local_empty_field);
+        }
+        else
+        {
+            // 新たな領域を追加する。
+            return this_type::add_state_field(
+                in_size, io_empty_fields, io_blocks);
+        }
+    }
 
-            // 空きビット領域を追加する。
+    private: static std::size_t reuse_empty_field(
+        typename this_type::size_type const in_size,
+        typename this_type::empty_field_vector& io_empty_fields,
+        typename this_type::empty_field_vector::iterator const in_empty_field)
+    {
+        // 既存の空き領域を再利用する。
+        auto const local_empty_position(
+            this_type::get_field_position(*in_empty_field));
+
+        // 空き領域を更新する。
+        auto const local_empty_size(
+            this_type::get_field_size(*in_empty_field));
+        io_empty_fields.erase(in_empty_field);
+        if (in_size < local_empty_size)
+        {
+            this_type::add_empty_field(
+                io_empty_fields,
+                local_empty_position + in_size,
+                local_empty_size - in_size);
+        }
+        return local_empty_position;
+    }
+
+    private: static std::size_t add_state_field(
+        typename this_type::size_type const in_size,
+        typename this_type::empty_field_vector& io_empty_fields,
+        typename this_type::block_vector& io_blocks)
+    {
+        // 新たにビット列ブロックを追加する。
+        auto const BLOCK_SIZE(
+            sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE);
+        auto const local_position(io_blocks.size() * BLOCK_SIZE);
+        if ((local_position >> this_type::FIELD_POSITION_SIZE) == 0)
+        {
+            auto const local_add_block_size(
+                (in_size + BLOCK_SIZE - 1) / BLOCK_SIZE);
+            io_blocks.insert(io_blocks.end(), local_add_block_size, 0);
+
+            // 空き領域を追加する。
             auto const local_add_size(local_add_block_size * BLOCK_SIZE);
-            if (local_size < local_add_size)
+            if (in_size < local_add_size)
             {
                 this_type::add_empty_field(
-                    this->empty_fields_,
-                    local_position + local_size,
-                    local_add_size - local_size);
+                    io_empty_fields,
+                    local_position + in_size,
+                    local_add_size - in_size);
             }
         }
         else
         {
-            // 既存のビット列ブロックを使う。
-            auto const local_empty_position(
-                this_type::get_field_position(*local_empty_field));
-            auto const local_set_entry_position(
-                this_type::set_entry_position(
-                    local_entry, local_empty_position));
-            if (!local_set_entry_position)
-            {
-                PSYQ_ASSERT(false);
-                return nullptr;
-            }
-
-            // 空きビット領域を更新する。
-            auto const local_empty_size(
-                this_type::get_field_size(*local_empty_field));
-            this->empty_fields_.erase(local_empty_field);
-            if (local_size < local_empty_size)
-            {
-                this_type::add_empty_field(
-                    this->empty_fields_,
-                    local_empty_position + local_size,
-                    local_empty_size - local_size);
-            }
+            PSYQ_ASSERT(false);
         }
-        return &local_entry;
+        return local_position;
     }
 
     private: static void add_empty_field(
@@ -986,13 +1038,14 @@ namespace psyq_test
 
         std::int64_t local_signed(0);
         std::uint64_t local_unsigned(0);
+        unsigned local_chunk(0);
         for (int i(2); i <= 64; ++i)
         {
-            PSYQ_ASSERT(local_states.add_unsigned(i, i - 1, i));
+            PSYQ_ASSERT(local_states.add_unsigned(local_chunk, i, i - 1, i));
             PSYQ_ASSERT(local_states.get_value(i, local_unsigned));
             PSYQ_ASSERT(local_unsigned == i - 1);
 
-            PSYQ_ASSERT(local_states.add_signed(-i, 1 - i, i));
+            PSYQ_ASSERT(local_states.add_signed(local_chunk, -i, 1 - i, i));
             PSYQ_ASSERT(local_states.get_value(-i, local_signed));
             PSYQ_ASSERT(local_signed == 1 - i);
         }
@@ -1013,7 +1066,7 @@ namespace psyq_test
         }
 
         bool local_bool(false);
-        PSYQ_ASSERT(local_states.add_bool(1, true));
+        PSYQ_ASSERT(local_states.add_bool(local_chunk, 1, true));
         PSYQ_ASSERT(local_states.get_value(1, local_bool));
         PSYQ_ASSERT(local_bool);
         PSYQ_ASSERT(local_states.set_value(1, local_bool));

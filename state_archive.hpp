@@ -1,6 +1,6 @@
 ﻿/** @file
+    @brief @copydoc psyq::state_archive
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief
  */
 #ifndef PSYQ_STATE_ARCHIVE_HPP_
 #define PSYQ_STATE_ARCHIVE_HPP_
@@ -38,26 +38,20 @@ class psyq::state_archive
     /// @brief 各種コンテナに用いるメモリ割当子の型。
     public: typedef template_allocator allocator_type;
 
-    /// @brief 識別番号を表す型。
+    /// @brief 状態値の識別番号を表す型。
     public: typedef std::uint32_t key_type;
 
     /// @brief 状態値の構成を表す型。
-    public: typedef std::int8_t format_type;
+    private: typedef std::int8_t format_type;
 
     /// @brief 状態値の型の種別。
     public: enum kind: typename this_type::format_type
     {
-        kind_SIGNED = -2, ///< 有符号整数。
+        kind_SIGNED = -2, ///< 符号あり整数。
         kind_FLOAT,       ///< 浮動小数点数。
         kind_NULL,        ///< 空。
         kind_BOOL,        ///< 真偽値。
-        kind_UNSIGNED,    ///< 無符号整数。
-    };
-
-    public: enum: std::size_t
-    {
-        /// @todo 今のところ複数のチャンクに対応してない。
-        MAX_CHUNKS = 1,
+        kind_UNSIGNED,    ///< 符号なし整数。
     };
 
     //-------------------------------------------------------------------------
@@ -93,6 +87,18 @@ class psyq::state_archive
     {
         BITS_PER_BYTE = 8,
         FIELD_POSITION_SIZE = 24,
+        /// @brief ビット列ブロックのビット数。
+        BLOCK_SIZE =
+            sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE,
+    };
+
+    public: enum: std::size_t
+    {
+        /// @brief 状態値のビット数の最大値。
+        MAX_STATE_SIZE = this_type::BLOCK_SIZE,
+        /// @brief ビット列チャンクの最大数。
+        /// @todo 今のところ複数のビット列チャンクに対応してない。
+        MAX_CHUNKS = 1,
     };
 
     /// @brief 空きビット領域を比較する関数オブジェクト。
@@ -213,21 +219,21 @@ class psyq::state_archive
     /// @name 構築と代入
     //@{
     /** @brief 空の状態値書庫を構築する。
-        @param[in] in_reserve_entries_size 予約しておく状態値の数。
-        @param[in] in_reserve_chunks_size  予約しておくチャンクの数。
-        @param[in] in_allocator            使用するメモリ割当子の初期値。
+        @param[in] in_reserve_entries 予約しておく状態値の数。
+        @param[in] in_reserve_chunks  予約しておくビット列チャンクの数。
+        @param[in] in_allocator       使用するメモリ割当子の初期値。
      */
     public: explicit state_archive(
-        std::size_t const in_reserve_entries_size,
-        std::size_t const in_reserve_chunks_size = this_type::MAX_CHUNKS,
+        std::size_t const in_reserve_entries,
+        std::size_t const in_reserve_chunks = this_type::MAX_CHUNKS,
         typename this_type::allocator_type const& in_allocator =
             this_type::allocator_type())
     :
     entries_(in_allocator),
     chunks_(in_allocator)
     {
-        this->entries_.reserve(in_reserve_entries_size);
-        this->chunks_.reserve(in_reserve_chunks_size);
+        this->entries_.reserve(in_reserve_entries);
+        this->chunks_.reserve(in_reserve_chunks);
     }
 
     /** @brief ムーブ構築子。
@@ -254,7 +260,9 @@ class psyq::state_archive
     //@{
     /** @brief 状態値の型の種別を取得する。
         @param[in] in_key 取得する状態値の識別番号。
-        @return in_key に対応する状態値の型の種別。
+        @return
+            in_key に対応する状態値の型の種別。
+            対応する状態値がない場合は this_type::kind_NULL となる。
      */
     public: typename this_type::kind get_kind(
         typename this_type::key_type const in_key)
@@ -285,7 +293,9 @@ class psyq::state_archive
 
     /** @brief 状態値のビット数を取得する。
         @param[in] in_key 取得する状態値の識別番号。
-        @return in_key に対応する状態値のビット数。
+        @return
+            in_key に対応する状態値のビット数。
+            対応する状態値がない場合は0となる。
      */
     public: std::size_t get_size(typename this_type::key_type const in_key)
     const PSYQ_NOEXCEPT
@@ -318,7 +328,7 @@ class psyq::state_archive
         template_value& out_value)
     const PSYQ_NOEXCEPT
     {
-        // 状態値登記を検索し、チャンクから状態値のビット列を取得する。
+        // 状態値登記を検索し、ビット列チャンクから状態値のビット列を取得する。
         auto const local_entry(
             this_type::find_entry(this->entries_, in_key));
         if (local_entry == nullptr)
@@ -412,24 +422,24 @@ class psyq::state_archive
         typename this_type::size_type const in_size)
     PSYQ_NOEXCEPT
     {
-        auto const BLOCK_SIZE(
-            sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE);
-        if (BLOCK_SIZE < in_size)
+        if (this_type::BLOCK_SIZE < in_size)
         {
             PSYQ_ASSERT(false);
             return 0;
         }
-        auto const local_block_index(in_position / BLOCK_SIZE);
+        auto const local_block_index(in_position / this_type::BLOCK_SIZE);
         if (in_blocks.size() <= local_block_index)
         {
             PSYQ_ASSERT(false);
             return 0;
         }
 
-        auto const local_mod_size(in_position - local_block_index * BLOCK_SIZE);
+        auto const local_mod_size(
+            in_position - local_block_index * this_type::BLOCK_SIZE);
         PSYQ_ASSERT(
-            (in_size < BLOCK_SIZE && local_mod_size < BLOCK_SIZE)
-            || (in_size == BLOCK_SIZE && local_mod_size == 0));
+            (in_size == this_type::BLOCK_SIZE && local_mod_size == 0)
+            || (in_size < this_type::BLOCK_SIZE
+                && local_mod_size < this_type::BLOCK_SIZE));
         return (in_blocks.at(local_block_index) >> local_mod_size)
             & this_type::make_block_mask(in_size);
     }
@@ -559,14 +569,12 @@ class psyq::state_archive
     PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT((in_value >> in_size) == 0);
-        auto const BLOCK_SIZE(
-            sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE);
-        if (BLOCK_SIZE < in_size)
+        if (this_type::BLOCK_SIZE < in_size)
         {
             PSYQ_ASSERT(false);
             return false;
         }
-        auto const local_block_index(in_position / BLOCK_SIZE);
+        auto const local_block_index(in_position / this_type::BLOCK_SIZE);
         if (io_blocks.size() <= local_block_index)
         {
             PSYQ_ASSERT(false);
@@ -574,8 +582,8 @@ class psyq::state_archive
         }
 
         auto const local_mod_size(
-            in_position - local_block_index * BLOCK_SIZE);
-        PSYQ_ASSERT(local_mod_size + in_size <= BLOCK_SIZE);
+            in_position - local_block_index * this_type::BLOCK_SIZE);
+        PSYQ_ASSERT(local_mod_size + in_size <= this_type::BLOCK_SIZE);
         auto const local_mask(this_type::make_block_mask(in_size));
         auto& local_block(io_blocks.at(local_block_index));
         local_block = (~(local_mask << local_mod_size) & local_block)
@@ -591,11 +599,14 @@ class psyq::state_archive
         登録した状態値は
         this_type::get_value と this_type::set_value でアクセスできる。
 
-        @param[in] in_chunk 登録する状態値が所属するチャンクの識別番号。
+        @param[in] in_chunk 登録する状態値が所属するビット列チャンクのインデクス番号。
         @param[in] in_key   登録する状態値の識別番号。
         @param[in] in_value 登録する状態値の初期値。
         @retval true  成功。状態値を登録した。
-        @retval false 失敗。状態値を登録できなかった。
+        @retval false
+            失敗。状態値を登録できなかった。
+            - in_chunk が this_type::MAX_CHUNKS 以上だと失敗する。
+            - in_key に対応する状態値がすでに登録されていると失敗する。
      */
     public: bool register_bool(
         std::size_t const in_chunk,
@@ -621,26 +632,28 @@ class psyq::state_archive
         登録した状態値は
         this_type::get_value と this_type::set_value でアクセスできる。
 
-        @param[in] in_chunk 登録する状態値が所属するチャンクの識別番号。
+        @param[in] in_chunk 登録する状態値が所属するビット列チャンクのインデクス番号。
         @param[in] in_key   登録する状態値の識別番号。
         @param[in] in_value 登録する状態値の初期値。
         @param[in] in_size  登録する状態値のビット数。
         @retval true  成功。状態値を登録した。
-        @retval false 失敗。状態値を登録できなかった。
+        @retval false
+            失敗。状態値を登録できなかった。
+            - in_chunk が this_type::MAX_CHUNKS 以上だと失敗する。
+            - in_key に対応する状態値がすでに登録されていると失敗する。
+            - this_type::MAX_STATE_SIZE より in_size が大きければ失敗する。
      */
     public: bool register_unsigned(
         std::size_t const in_chunk,
         typename this_type::key_type const in_key,
         typename this_type::block_type const in_value,
-        std::size_t const in_size =
-            sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE)
+        std::size_t const in_size = this_type::BLOCK_SIZE)
     {
         // 登録可能な状態値か判定する。
-        auto const BLOCK_SIZE(
-            sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE);
         auto const local_format(
             static_cast<typename this_type::format_type>(in_size));
-        if (BLOCK_SIZE < in_size || local_format < this_type::kind_UNSIGNED)
+        if (this_type::BLOCK_SIZE < in_size
+            || local_format < this_type::kind_UNSIGNED)
         {
             return false;
         }
@@ -664,27 +677,28 @@ class psyq::state_archive
         登録した状態値は
         this_type::get_value と this_type::set_value でアクセスできる。
 
-        @param[in] in_chunk 登録する状態値が所属するチャンクの識別番号。
+        @param[in] in_chunk 登録する状態値が所属するビット列チャンクのインデクス番号。
         @param[in] in_key   登録する状態値の識別番号。
         @param[in] in_value 登録する状態値の初期値。
         @param[in] in_size  登録する状態値のビット数。
         @retval true  成功。状態値を登録した。
-        @retval false 失敗。状態値を登録できなかった。
+        @retval false
+            失敗。状態値を登録できなかった。
+            - in_chunk が this_type::MAX_CHUNKS 以上だと失敗する。
+            - in_key に対応する状態値がすでに登録されていると失敗する。
+            - this_type::MAX_STATE_SIZE より in_size が大きければ失敗する。
      */
     public: bool register_signed(
         std::size_t const in_chunk,
         typename this_type::key_type const in_key,
         typename this_type::signed_block_type const in_value,
-        std::size_t const in_size =
-            sizeof(typename this_type::signed_block_type)
-            * this_type::BITS_PER_BYTE)
+        std::size_t const in_size = this_type::BLOCK_SIZE)
     {
         // 登録可能な状態値か判定する。
-        auto const BLOCK_SIZE(
-            sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE);
         auto const local_format(
             -static_cast<typename this_type::format_type>(in_size));
-        if (BLOCK_SIZE < in_size || this_type::kind_SIGNED < local_format)
+        if (this_type::BLOCK_SIZE < in_size
+            || this_type::kind_SIGNED < local_format)
         {
             return false;
         }
@@ -704,17 +718,17 @@ class psyq::state_archive
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name チャンク
+    /// @name ビット列チャンク
     //@{
-    /** @brief チャンクを予約する。
-        @param[in] in_chunk                     予約するチャンクの識別番号。
-        @param[in] in_reserve_blocks_size       予約しておくブロックの数。
-        @param[in] in_reserve_empty_fields_size 予約しておく空き領域の数。
+    /** @brief ビット列チャンクを予約する。
+        @param[in] in_chunk                予約するビット列チャンクの識別番号。
+        @param[in] in_reserve_blocks       予約しておくブロックの数。
+        @param[in] in_reserve_empty_fields 予約しておく空き領域の数。
      */
     public: void reserve_chunk(
         std::size_t const in_chunk,
-        std::size_t const in_reserve_blocks_size,
-        std::size_t const in_reserve_empty_fields_size)
+        std::size_t const in_reserve_blocks,
+        std::size_t const in_reserve_empty_fields)
     {
         if (this_type::MAX_CHUNKS <= in_chunk)
         {
@@ -725,21 +739,22 @@ class psyq::state_archive
             this->chunks_.resize(in_chunk + 1);
         }
         auto& local_chunk(this->chunks_.at(in_chunk));
-        local_chunk.blocks.reserve(in_reserve_blocks_size);
-        local_chunk.empty_fields.reserve(in_reserve_empty_fields_size);
+        local_chunk.blocks.reserve(in_reserve_blocks);
+        local_chunk.empty_fields.reserve(in_reserve_empty_fields);
     }
 
-    /** @brief チャンクをバイト列としてシリアル化する。
-        @param[in] in_chunk シリアル化するチャンクの識別番号。
+    /** @brief ビット列チャンクをシリアル化する。
+        @param[in] in_chunk シリアル化するビット列チャンクの識別番号。
+        @return シリアル化したビット列チャンク。
         @todo 未実装。
      */
     public: typename this_type::block_vector serialize_chunk(
         std::size_t const in_chunk)
     const;
 
-    /** @brief バイト列としてシリアル化されたチャンクを復元する。
-        @param[in] in_chunk            復元するチャンクの識別番号。
-        @param[in] in_serialized_chunk シリアル化されたチャンク。
+    /** @brief シリアル化されたビット列チャンクを復元する。
+        @param[in] in_chunk            復元するビット列チャンクの識別番号。
+        @param[in] in_serialized_chunk シリアル化されたビット列チャンク。
         @todo 未実装。
      */
     public: bool deserialize_chunk(
@@ -856,11 +871,14 @@ class psyq::state_archive
     //@}
     //-------------------------------------------------------------------------
     /** @brief 状態値を登録する。
-        @param[in] in_chunk  登録する状態値が所属するチャンクの識別番号。
+        @param[in] in_chunk  登録する状態値が所属するビット列チャンクのインデクス番号。
         @param[in] in_key    登録する状態値の識別番号。
         @param[in] in_format 登録する状態値の構成。
         @retval !=nullptr 成功。登録した状態値の登記。
-        @retval ==nullptr 失敗。状態値は登録されなかった。
+        @retval ==nullptr
+            失敗。状態値を登録できなかった。
+            - in_chunk が this_type::MAX_CHUNKS 以上だと失敗する。
+            - in_key に対応する状態値がすでに登録されていると失敗する。
      */
     private: typename this_type::entry_vector::value_type* register_state(
         std::size_t const in_chunk,
@@ -891,9 +909,10 @@ class psyq::state_archive
                 local_entry_iterator,
                 this_type::entry_vector::value_type())));
         local_entry.key = in_key;
+        PSYQ_ASSERT(in_format != this_type::kind_NULL);
         this_type::set_entry_format(local_entry, in_format);
 
-        // 状態値を格納するチャンクを決定する。
+        // 状態値を格納するビット列チャンクを決定する。
         if (this->chunks_.size() <= in_chunk)
         {
             this->chunks_.resize(in_chunk + 1);
@@ -978,17 +997,16 @@ class psyq::state_archive
         typename this_type::block_vector& io_blocks)
     {
         // 新たにビット列ブロックを追加する。
-        auto const BLOCK_SIZE(
-            sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE);
-        auto const local_position(io_blocks.size() * BLOCK_SIZE);
+        auto const local_position(io_blocks.size() * this_type::BLOCK_SIZE);
         if ((local_position >> this_type::FIELD_POSITION_SIZE) == 0)
         {
             auto const local_add_block_size(
-                (in_size + BLOCK_SIZE - 1) / BLOCK_SIZE);
+                (in_size + this_type::BLOCK_SIZE - 1) / this_type::BLOCK_SIZE);
             io_blocks.insert(io_blocks.end(), local_add_block_size, 0);
 
             // 空き領域を追加する。
-            auto const local_add_size(local_add_block_size * BLOCK_SIZE);
+            auto const local_add_size(
+                local_add_block_size * this_type::BLOCK_SIZE);
             if (in_size < local_add_size)
             {
                 this_type::add_empty_field(
@@ -1085,14 +1103,14 @@ class psyq::state_archive
             in_field >> this_type::FIELD_POSITION_SIZE);
     }
 
-    /** @brief 状態値の登記から、状態値のチャンクの番号を取得する。
+    /** @brief 状態値の登記から、状態値のビット列チャンクの番号を取得する。
         @param[in] in_entry 状態値の登記。
-        @return 状態値のビット列があるチャンクの番号。
+        @return 状態値のビット列があるビット列チャンクの番号。
      */
     private: static typename this_type::size_type get_chunk_index(
         typename this_type::entry_vector::value_type const& in_entry)
     {
-        /// @todo 今のところ複数のチャンクに対応してない。
+        /// @todo 今のところ複数のビット列チャンクに対応してない。
         return 0;
     }
 
@@ -1196,11 +1214,10 @@ class psyq::state_archive
         typename this_type::size_type const in_size)
     PSYQ_NOEXCEPT
     {
-        auto const BLOCK_SIZE(
-            sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE);
         auto const local_max(
             (std::numeric_limits<typename this_type::block_type>::max)());
-        return in_size < BLOCK_SIZE? ~(local_max << in_size): local_max;
+        return in_size < this_type::BLOCK_SIZE?
+            ~(local_max << in_size): local_max;
     }
 
     //-------------------------------------------------------------------------

@@ -12,171 +12,228 @@
 
 namespace psyq
 {
-    class state_archive;
+    template<typename> class state_archive;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 状態値書庫。任意のビット長の状態値を管理する。
+
+    使い方の概略。
+    - 以下の関数で、状態値を登録する。
+      - state_archive::add_bool
+      - state_archive::add_unsigned
+      - state_archive::add_signed
+    - state_archive::get_value で、状態値を取得する。
+    - state_archive::set_value で、状態値を更新する。
+
+    @tparam template_allocator @copydoc allocator_type
+ */
+template<typename template_allocator = std::allocator<void*>>
 class psyq::state_archive
 {
+    /// thisが指す値の型。
     private: typedef state_archive this_type;
 
     //-------------------------------------------------------------------------
-    public: typedef std::allocator<void*> allocator_type;
+    /// @brief 各種コンテナに用いるメモリ割当子の型。
+    public: typedef template_allocator allocator_type;
 
+    /// @brief 状態値の識別番号を表す型。
     public: typedef std::uint32_t key_type;
+
+    /// @brief 状態値の構成を表す型。
     public: typedef std::int8_t format_type;
 
-    public: enum kind: this_type::format_type
+    /// @brief 状態値の型の種別。
+    public: enum kind: typename this_type::format_type
     {
-        kind_SIGNED = -2,
-        kind_FLOAT,
-        kind_NULL,
-        kind_BOOL,
-        kind_UNSIGNED,
+        kind_SIGNED = -2, ///< 有符号整数。
+        kind_FLOAT,       ///< 浮動小数点数。
+        kind_NULL,        ///< 空。
+        kind_BOOL,        ///< 真偽値。
+        kind_UNSIGNED,    ///< 無符号整数。
     };
 
     //-------------------------------------------------------------------------
-    private: typedef std::make_unsigned<this_type::format_type>::type
-        size_type;
-    private: typedef std::uint32_t pos_type;
-    private: typedef this_type::pos_type block_type;
+    /// @brief 状態値のビット数を表す型。
+    private: typedef
+        typename std::make_unsigned<typename this_type::format_type>::type
+            size_type;
 
-    private: struct empty_block_less
+    /// @brief 状態値のビット位置を表す型。
+    private: typedef std::uint32_t pos_type;
+
+    /// @brief 状態値のビット位置とビット数を表す型。
+    private: typedef typename this_type::pos_type field_type;
+
+    /// @brief 空きビット領域を比較する関数オブジェクト。
+    private: struct empty_field_less
     {
         bool operator()(
-            state_archive::block_type const in_left,
-            state_archive::block_type const in_right)
+            typename state_archive::field_type const in_left,
+            typename state_archive::field_type const in_right)
         const PSYQ_NOEXCEPT
         {
+            // ビット領域のビット数で比較する。
             auto const local_left_size(
-                state_archive::get_block_size(in_left));
+                state_archive::get_field_size(in_left));
             auto const local_right_size(
-                state_archive::get_block_size(in_right));
+                state_archive::get_field_size(in_right));
             if (local_left_size != local_right_size)
             {
                 return local_left_size < local_right_size;
             }
+
+            // ビット領域のビット位置で比較する。
             auto const local_left_position(
-                state_archive::get_block_position(in_left));
+                state_archive::get_field_position(in_left));
             auto const local_right_position(
-                state_archive::get_block_position(in_right));
+                state_archive::get_field_position(in_right));
             return local_left_position < local_right_position;
         }
 
         bool operator()(
-            state_archive::block_type const in_left,
-            state_archive::size_type const in_right)
+            typename state_archive::field_type const in_left,
+            typename state_archive::size_type const in_right)
         const PSYQ_NOEXCEPT
         {
+            // ビット領域のビット数で比較する。
             auto const local_left_size(
-                state_archive::get_block_size(in_left));
+                state_archive::get_field_size(in_left));
             return local_left_size < in_right;
         }
 
         bool operator()(
-            state_archive::size_type const in_left,
-            state_archive::block_type const in_right)
+            typename state_archive::size_type const in_left,
+            typename state_archive::field_type const in_right)
         const PSYQ_NOEXCEPT
         {
+            // ビット領域のビット数で比較する。
             auto const local_right_size(
-                state_archive::get_block_size(in_right));
+                state_archive::get_field_size(in_right));
             return in_left < local_right_size;
         }
 
-    }; // struct empty_block_less
+    }; // struct empty_field_less
 
+    /// @brief 空きビット領域のコンテナ。
+    private: typedef std::vector<
+         typename this_type::field_type, typename this_type::allocator_type>
+            empty_field_vector;
+
+    //-------------------------------------------------------------------------
+    /// @brief ビット列ブロックを表す型。
+    private: typedef std::uint64_t block_type;
+
+    /// @brief 符号つきのビット列ブロックを表す型。
     private: typedef
-        std::vector<this_type::block_type, this_type::allocator_type>
-            empty_block_vector;
+         typename std::make_signed<typename this_type::block_type>::type
+             signed_block_type;
 
-    private: struct record
+    /// @brief ビット列ブロックを格納するコンテナ。
+    private: typedef
+         std::vector<
+             typename this_type::block_type,
+             typename this_type::allocator_type>
+                 block_vector;
+
+    //-------------------------------------------------------------------------
+    /// @brief 状態値の登記。
+    private: struct entry
     {
-        this_type::key_type key;
-        this_type::block_type block;
+        /// 状態値の識別番号。
+        typename state_archive::key_type key;
+        /// 状態値が格納されているビット領域。
+        typename state_archive::field_type field;
     };
 
-    private: struct record_key_less
+    /// @brief 状態値の識別番号を比較する関数オブジェクト。
+    private: struct entry_key_less
     {
         bool operator()(
-            state_archive::record const& in_left,
-            state_archive::record const& in_right)
+            typename state_archive::entry const& in_left,
+            typename state_archive::entry const& in_right)
         const PSYQ_NOEXCEPT
         {
             return in_left.key < in_right.key;
         }
 
         bool operator()(
-            state_archive::key_type const in_left,
-            state_archive::record const& in_right)
+            typename state_archive::key_type const in_left,
+            typename state_archive::entry const& in_right)
         const PSYQ_NOEXCEPT
         {
             return in_left < in_right.key;
         }
 
         bool operator()(
-            state_archive::record const& in_left,
-            state_archive::key_type const in_right)
+            typename state_archive::entry const& in_left,
+            typename state_archive::key_type const in_right)
         const PSYQ_NOEXCEPT
         {
             return in_left.key < in_right;
         }
 
-    }; // struct record_key_less
+    }; // struct entry_key_less
 
-    private: typedef std::vector<this_type::record, this_type::allocator_type>
-         record_vector;
+    /// @brief 状態値登記のコンテナ。　
+    private: typedef std::vector<
+         typename this_type::entry, typename this_type::allocator_type>
+             entry_vector;
 
-    private: typedef std::vector<std::uint64_t, this_type::allocator_type>
-         unit_vector;
-
-    private: typedef std::make_signed<this_type::unit_vector::value_type>::type
-         signed_unit;
-
-    private: enum: this_type::size_type
+    private: enum: typename this_type::size_type
     {
         BITS_PER_BYTE = 8,
-        BLOCK_POSITION_SIZE = 24,
+        FIELD_POSITION_SIZE = 24,
     };
 
     //-------------------------------------------------------------------------
-    public: explicit state_archive(
-        this_type::allocator_type const& in_allocator =
+    public: state_archive(
+        std::size_t const in_reserved_entry_size,
+        std::size_t const in_reserved_block_size,
+        std::size_t const in_reserved_empty_field_size,
+        typename this_type::allocator_type const& in_allocator =
             this_type::allocator_type())
-    PSYQ_NOEXCEPT:
-    empty_blocks_(in_allocator),
-    records_(in_allocator),
-    units_(in_allocator)
-    {}
+    :
+    entries_(in_allocator),
+    blocks_(in_allocator),
+    empty_fields_(in_allocator)
+    {
+        this->entries_.reserve(in_reserved_entry_size);
+        this->blocks_.reserve(in_reserved_block_size);
+        this->empty_fields_.reserve(in_reserved_empty_field_size);
+    }
 
     public: state_archive(this_type&& io_source) PSYQ_NOEXCEPT:
-    empty_blocks_(std::move(io_source.empty_blocks_)),
-    records_(std::move(io_source.records_)),
-    units_(std::move(io_source.units_))
+    entries_(std::move(io_source.entries_)),
+    blocks_(std::move(io_source.blocks_)),
+    empty_fields_(std::move(io_source.empty_fields_))
     {}
 
     public: this_type& operator=(this_type&& io_source) PSYQ_NOEXCEPT
     {
-        this->empty_blocks_ = std::move(io_source.empty_blocks_);
-        this->records_ = std::move(io_source.records_);
-        this->units_ = std::move(io_source.units_);
+        this->entries_ = std::move(io_source.entries_);
+        this->blocks_ = std::move(io_source.blocks_);
+        this->empty_fields_ = std::move(io_source.empty_fields_);
         return *this;
     }
 
     //-------------------------------------------------------------------------
     /** @brief 状態値の型の種別を取得する。
-        @param[in] in_key 取得する状態値のキー。
+        @param[in] in_key 取得する状態値の識別番号。
         @return in_key に対応する状態値の型の種別。
      */
-    public: this_type::kind get_kind(this_type::key_type const in_key)
+    public: typename this_type::kind get_kind(
+        typename this_type::key_type const in_key)
     const PSYQ_NOEXCEPT
     {
-        auto const local_record(
-            this_type::find_record(this->records_, in_key));
-        if (local_record == nullptr)
+        auto const local_entry(
+            this_type::find_entry(this->entries_, in_key));
+        if (local_entry == nullptr)
         {
             return this_type::kind_NULL;
         }
-        auto const local_format(this_type::get_record_format(*local_record));
+        auto const local_format(this_type::get_entry_format(*local_entry));
         switch (local_format)
         {
             case this_type::kind_NULL:
@@ -193,46 +250,46 @@ class psyq::state_archive
     }
 
     /** @brief 状態値のビット数を取得する。
-        @param[in] in_key 取得する状態値のキー。
+        @param[in] in_key 取得する状態値の識別番号。
         @return in_key に対応する状態値のビット数。
      */
-    public: std::size_t get_size(this_type::key_type const in_key)
+    public: std::size_t get_size(typename this_type::key_type const in_key)
     const PSYQ_NOEXCEPT
     {
-        auto const local_record(
-            this_type::find_record(this->records_, in_key));
-        if (local_record == nullptr)
+        auto const local_entry(
+            this_type::find_entry(this->entries_, in_key));
+        if (local_entry == nullptr)
         {
             return 0;
         }
-        return this_type::get_record_size(*local_record);
+        return this_type::get_entry_size(*local_entry);
     }
 
     //-------------------------------------------------------------------------
     /** @brief 状態値を取得する。
-        @param[in] in_key 取得する状態値のキー。
+        @param[in] in_key 取得する状態値の識別番号。
         @param[out] out_value 取得した状態値の格納先。
         @retval true  成功。取得した状態値を out_value に格納した。
         @retval false 失敗。 out_value は変化しない。
      */
     public: template<typename template_value>
     bool get_value(
-        this_type::key_type const in_key,
+        typename this_type::key_type const in_key,
         template_value& out_value)
     const PSYQ_NOEXCEPT
     {
-        auto const local_record(
-            this_type::find_record(this->records_, in_key));
-        if (local_record == nullptr)
+        auto const local_entry(
+            this_type::find_entry(this->entries_, in_key));
+        if (local_entry == nullptr)
         {
             return false;
         }
-        auto const local_format(this_type::get_record_format(*local_record));
+        auto const local_format(this_type::get_entry_format(*local_entry));
         auto const local_size(this_type::get_format_size(local_format));
         auto local_bits(
             this_type::get_bits(
-                this->units_,
-                this_type::get_record_position(*local_record),
+                this->blocks_,
+                this_type::get_entry_position(*local_entry),
                 local_size));
         switch (local_format)
         {
@@ -259,8 +316,8 @@ class psyq::state_archive
         if (0 < local_format)
         {
             PSYQ_ASSERT(
-                this_type::make_unit_mask(local_size)
-                <= static_cast<this_type::unit_vector::value_type>(
+                this_type::make_block_mask(local_size)
+                <= static_cast<typename this_type::block_type>(
                     (std::numeric_limits<template_value>::max)()));
             this_type::copy_value(out_value, local_bits);
             return true;
@@ -268,18 +325,19 @@ class psyq::state_archive
 
         // 有符号整数を取得する。
         PSYQ_ASSERT(
-            (this_type::make_unit_mask(local_size) >> 1)
-            <= static_cast<this_type::unit_vector::value_type>(
+            (this_type::make_block_mask(local_size) >> 1)
+            <= static_cast<typename this_type::block_type>(
                 (std::numeric_limits<template_value>::max)()));
         if ((local_bits >> (local_size - 1)) != 0)
         {
             // 符号ビットを拡張する。
             local_bits |= (
-                (std::numeric_limits<this_type::unit_vector::value_type>::max)()
+                (std::numeric_limits<typename this_type::block_type>::max)()
                 << local_size);
         }
         this_type::copy_value(
-            out_value, static_cast<this_type::signed_unit>(local_bits));
+            out_value,
+            static_cast<typename this_type::signed_block_type>(local_bits));
         return true;
     }
 
@@ -300,57 +358,56 @@ class psyq::state_archive
         out_value = static_cast<template_target>(in_value);
     }
 
-    private: static this_type::unit_vector::value_type get_bits(
-        this_type::unit_vector const& in_units,
-        this_type::pos_type const in_position,
-        this_type::size_type const in_size)
+    private: static typename this_type::block_type get_bits(
+        typename this_type::block_vector const& in_blocks,
+        typename this_type::pos_type const in_position,
+        typename this_type::size_type const in_size)
     PSYQ_NOEXCEPT
     {
-        auto const UNIT_SIZE(
-            sizeof(this_type::unit_vector::value_type)
-            * this_type::BITS_PER_BYTE);
-        if (UNIT_SIZE < in_size)
+        auto const BLOCK_SIZE(
+            sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE);
+        if (BLOCK_SIZE < in_size)
         {
             PSYQ_ASSERT(false);
             return 0;
         }
-        auto const local_unit_index(in_position / UNIT_SIZE);
-        if (in_units.size() <= local_unit_index)
+        auto const local_block_index(in_position / BLOCK_SIZE);
+        if (in_blocks.size() <= local_block_index)
         {
             PSYQ_ASSERT(false);
             return 0;
         }
 
-        auto const local_mod_size(in_position - local_unit_index * UNIT_SIZE);
+        auto const local_mod_size(in_position - local_block_index * BLOCK_SIZE);
         PSYQ_ASSERT(
-            (in_size < UNIT_SIZE && local_mod_size < UNIT_SIZE)
-            || (in_size == UNIT_SIZE && local_mod_size == 0));
-        return (in_units.at(local_unit_index) >> local_mod_size)
-            & this_type::make_unit_mask(in_size);
+            (in_size < BLOCK_SIZE && local_mod_size < BLOCK_SIZE)
+            || (in_size == BLOCK_SIZE && local_mod_size == 0));
+        return (in_blocks.at(local_block_index) >> local_mod_size)
+            & this_type::make_block_mask(in_size);
     }
 
     //-------------------------------------------------------------------------
     /** @brief 状態値を設定する。
-        @param[in] in_key   設定する状態値のキー。
+        @param[in] in_key   設定する状態値の識別番号。
         @param[in] in_value 設定する値。
         @retval true  成功。状態値を設定した。
         @retval false 失敗。状態値は変化しない。
      */
     public: template<typename template_value>
     bool set_value(
-        this_type::key_type const in_key,
+        typename this_type::key_type const in_key,
         template_value const in_value)
     PSYQ_NOEXCEPT
     {
-        auto const local_record(
-            this_type::find_record(this->records_, in_key));
-        if (local_record == nullptr)
+        auto const local_entry(
+            this_type::find_entry(this->entries_, in_key));
+        if (local_entry == nullptr)
         {
             return false;
         }
-        auto const local_format(this_type::get_record_format(*local_record));
+        auto const local_format(this_type::get_entry_format(*local_entry));
         auto const local_position(
-            this_type::get_record_position(*local_record));
+            this_type::get_entry_position(*local_entry));
         switch (local_format)
         {
             case this_type::kind_NULL:
@@ -364,7 +421,7 @@ class psyq::state_archive
                 return false;
             }
             return this_type::set_bits(
-                this->units_, local_position, 1, in_value);
+                this->blocks_, local_position, 1, in_value);
 
             // 浮動小数点数を設定する。
             case this_type::kind_FLOAT:
@@ -385,207 +442,207 @@ class psyq::state_archive
         if (0 < local_format)
         {
             return this_type::set_bits(
-                this->units_,
+                this->blocks_,
                 local_position,
                 local_size,
-                static_cast<this_type::unit_vector::value_type>(in_value));
+                static_cast<typename this_type::block_type>(in_value));
         }
 
         // 有符号整数を設定する。
         return this_type::set_signed(
-            this->units_, local_position, local_size, in_value);
+            this->blocks_, local_position, local_size, in_value);
     }
 
     private: static bool set_signed(
-        this_type::unit_vector& io_units,
-        this_type::pos_type const in_position,
-        this_type::size_type const in_size,
+        typename this_type::block_vector& io_blocks,
+        typename this_type::pos_type const in_position,
+        typename this_type::size_type const in_size,
         bool const in_value)
     PSYQ_NOEXCEPT
     {
-        return this_type::set_bits(io_units, in_position, in_size, in_value);
+        return this_type::set_bits(io_blocks, in_position, in_size, in_value);
     }
 
     private: template<typename template_value>
     static bool set_signed(
-        this_type::unit_vector& io_units,
-        this_type::pos_type const in_position,
-        this_type::size_type const in_size,
+        typename this_type::block_vector& io_blocks,
+        typename this_type::pos_type const in_position,
+        typename this_type::size_type const in_size,
         template_value const in_value)
     PSYQ_NOEXCEPT
     {
         auto local_bits(
-            static_cast<this_type::unit_vector::value_type>(
-                static_cast<this_type::signed_unit>(in_value)));
+            static_cast<typename this_type::block_type>(
+                static_cast<typename this_type::signed_block_type>(in_value)));
         if (in_value < 0)
         {
-            auto const local_mask(this_type::make_unit_mask(in_size));
+            auto const local_mask(this_type::make_block_mask(in_size));
             PSYQ_ASSERT((~local_mask & local_bits) == ~local_mask);
             local_bits &= local_mask;
         }
-        return this_type::set_bits(io_units, in_position, in_size, local_bits);
+        return this_type::set_bits(io_blocks, in_position, in_size, local_bits);
     }
 
     private: static bool set_bits(
-        this_type::unit_vector& io_units,
-        this_type::pos_type const in_position,
-        this_type::size_type const in_size,
-        this_type::unit_vector::value_type const in_value)
+        typename this_type::block_vector& io_blocks,
+        typename this_type::pos_type const in_position,
+        typename this_type::size_type const in_size,
+        typename this_type::block_type const in_value)
     PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT((in_value >> in_size) == 0);
-        auto const UNIT_SIZE(
-            sizeof(this_type::unit_vector::value_type)
-            * this_type::BITS_PER_BYTE);
-        if (UNIT_SIZE < in_size)
+        auto const BLOCK_SIZE(
+            sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE);
+        if (BLOCK_SIZE < in_size)
         {
             PSYQ_ASSERT(false);
             return false;
         }
-        auto const local_unit_index(in_position / UNIT_SIZE);
-        if (io_units.size() <= local_unit_index)
+        auto const local_block_index(in_position / BLOCK_SIZE);
+        if (io_blocks.size() <= local_block_index)
         {
             PSYQ_ASSERT(false);
             return false;
         }
 
-        auto const local_mod_size(in_position - local_unit_index * UNIT_SIZE);
-        PSYQ_ASSERT(local_mod_size + in_size <= UNIT_SIZE);
-        auto const local_mask(this_type::make_unit_mask(in_size));
-        auto& local_unit(io_units.at(local_unit_index));
-        local_unit = (~(local_mask << local_mod_size) & local_unit)
+        auto const local_mod_size(
+            in_position - local_block_index * BLOCK_SIZE);
+        PSYQ_ASSERT(local_mod_size + in_size <= BLOCK_SIZE);
+        auto const local_mask(this_type::make_block_mask(in_size));
+        auto& local_block(io_blocks.at(local_block_index));
+        local_block = (~(local_mask << local_mod_size) & local_block)
             | ((in_value & local_mask) << local_mod_size);
         return true;
     }
 
     //-------------------------------------------------------------------------
     /** @brief 真偽型の状態値を追加する。
-        @param[in] in_key   追加する状態値のキー。
+        @param[in] in_key   追加する状態値の識別番号。
         @param[in] in_value 追加する状態値の初期値。
         @retval true  成功。状態値を追加した。
         @retval false 失敗。状態値を追加できなかった。
      */
     public: bool add_bool(
-        this_type::key_type const in_key,
+        typename this_type::key_type const in_key,
         bool const in_value)
-    PSYQ_NOEXCEPT
     {
-        auto const local_record(
-            this->make_record(in_key, this_type::kind_BOOL));
-        if (local_record == nullptr)
+        auto const local_entry(this->make_entry(in_key, this_type::kind_BOOL));
+        if (local_entry == nullptr)
         {
             return false;
         }
         return this_type::set_bits(
-            this->units_,
-            this_type::get_record_position(*local_record),
+            this->blocks_,
+            this_type::get_entry_position(*local_entry),
             1,
             in_value);
     }
 
     /** @brief 符号なし整数型の状態値を追加する。
-        @param[in] in_key   追加する状態値のキー。
+        @param[in] in_key   追加する状態値の識別番号。
         @param[in] in_value 追加する状態値の初期値。
         @param[in] in_size  状態値のビット数。
         @retval true  成功。状態値を追加した。
         @retval false 失敗。状態値を追加できなかった。
      */
     public: bool add_unsigned(
-        this_type::key_type const in_key,
-        this_type::unit_vector::value_type const in_value,
+        typename this_type::key_type const in_key,
+        typename this_type::block_type const in_value,
         std::size_t const in_size =
-            sizeof(this_type::unit_vector::value_type)
-            * this_type::BITS_PER_BYTE)
-    PSYQ_NOEXCEPT
+            sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE)
     {
-        auto const UNIT_SIZE(
-            sizeof(this_type::unit_vector::value_type)
-            * this_type::BITS_PER_BYTE);
-        auto const local_format(static_cast<this_type::format_type>(in_size));
-        if (UNIT_SIZE < in_size || local_format < this_type::kind_UNSIGNED)
+        auto const BLOCK_SIZE(
+            sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE);
+        auto const local_format(
+            static_cast<typename this_type::format_type>(in_size));
+        if (BLOCK_SIZE < in_size || local_format < this_type::kind_UNSIGNED)
         {
             return false;
         }
-        auto const local_record(this->make_record(in_key, local_format));
-        if (local_record == nullptr)
+        auto const local_entry(this->make_entry(in_key, local_format));
+        if (local_entry == nullptr)
         {
             return false;
         }
         return this_type::set_bits(
-            this->units_,
-            this_type::get_record_position(*local_record),
-            static_cast<this_type::size_type>(in_size),
+            this->blocks_,
+            this_type::get_entry_position(*local_entry),
+            static_cast<typename this_type::size_type>(in_size),
             in_value);
     }
 
     /** @brief 符号あり整数型の状態値を追加する。
-        @param[in] in_key   追加する状態値のキー。
+        @param[in] in_key   追加する状態値の識別番号。
         @param[in] in_value 追加する状態値の初期値。
         @param[in] in_size  状態値のビット数。
         @retval true  成功。状態値を追加した。
         @retval false 失敗。状態値を追加できなかった。
      */
     public: bool add_signed(
-        this_type::key_type const in_key,
-        this_type::signed_unit const in_value,
+        typename this_type::key_type const in_key,
+        typename this_type::signed_block_type const in_value,
         std::size_t const in_size =
-            sizeof(this_type::signed_unit) * this_type::BITS_PER_BYTE)
-    PSYQ_NOEXCEPT
+            sizeof(typename this_type::signed_block_type)
+            * this_type::BITS_PER_BYTE)
     {
-        auto const UNIT_SIZE(
-            sizeof(this_type::unit_vector::value_type)
-            * this_type::BITS_PER_BYTE);
+        auto const BLOCK_SIZE(
+            sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE);
         auto const local_format(
-            -static_cast<this_type::format_type>(in_size));
-        if (UNIT_SIZE < in_size || this_type::kind_SIGNED < local_format)
+            -static_cast<typename this_type::format_type>(in_size));
+        if (BLOCK_SIZE < in_size || this_type::kind_SIGNED < local_format)
         {
             return false;
         }
-        auto const local_record(this->make_record(in_key, local_format));
-        if (local_record == nullptr)
+        auto const local_entry(this->make_entry(in_key, local_format));
+        if (local_entry == nullptr)
         {
             return false;
         }
         return this_type::set_signed(
-            this->units_,
-            this_type::get_record_position(*local_record),
-            static_cast<this_type::size_type>(in_size),
+            this->blocks_,
+            this_type::get_entry_position(*local_entry),
+            static_cast<typename this_type::size_type>(in_size),
             in_value);
     }
 
     //-------------------------------------------------------------------------
+    /// @brief コンテナが使うメモリ領域を必要最小限にする。
     public: void shrink_to_fit()
     {
         // 状態値を大きさの降順で並び替える。
-        std::vector<this_type::record_vector::value_type const*> local_records(
-            this->records_.get_allocator());
-        local_records.reserve(this->records_.size());
-        for (auto& local_record: this->records_)
+        std::vector<typename this_type::entry_vector::value_type const*>
+            local_entries(this->entries_.get_allocator());
+        local_entries.reserve(this->entries_.size());
+        for (auto& local_entry: this->entries_)
         {
-            local_records.push_back(&local_record);
+            local_entries.push_back(&local_entry);
         }
-        struct record_size_greater
+        struct entry_size_greater
         {
             bool operator()(
-                this_type::record_vector::value_type const* const in_left,
-                this_type::record_vector::value_type const* const in_right)
+                typename this_type::entry_vector::value_type const* const in_left,
+                typename this_type::entry_vector::value_type const* const in_right)
             const
             {
-                return this_type::get_record_size(*in_right)
-                    <  this_type::get_record_size(*in_left);
+                return this_type::get_entry_size(*in_right)
+                    <  this_type::get_entry_size(*in_left);
             }
         };
         std::sort(
-            local_records.begin(), local_records.end(), record_size_greater());
+            local_entries.begin(), local_entries.end(), entry_size_greater());
 
         // 新たな書庫を構築する。
-        this_type local_states(this->records_.get_allocator());
-        for (auto local_record: local_records)
+        this_type local_states(
+            this->entries_.size(),
+            this->blocks_.size(),
+            this->empty_fields_.size(),
+            this->entries_.get_allocator());
+        for (auto local_entry: local_entries)
         {
             auto const local_position(
-                this_type::get_record_position(*local_record));
+                this_type::get_entry_position(*local_entry));
             auto const local_format(
-                this_type::get_record_format(*local_record));
+                this_type::get_entry_format(*local_entry));
             switch (local_format)
             {
                 case this_type::kind_NULL:
@@ -594,8 +651,9 @@ class psyq::state_archive
 
                 case this_type::kind_BOOL:
                 local_states.add_bool(
-                    local_record->key,
-                    0 != this_type::get_bits(this->units_, local_position, 1));
+                    local_entry->key,
+                    0 != this_type::get_bits(
+                        this->blocks_, local_position, 1));
                 continue;
 
                 case this_type::kind_FLOAT:
@@ -607,221 +665,282 @@ class psyq::state_archive
             }
             auto const local_size(this_type::get_format_size(local_format));
             auto const local_bits(
-                this_type::get_bits(this->units_, local_position, local_size));
+                this_type::get_bits(
+                    this->blocks_, local_position, local_size));
             if (0 < local_format)
             {
                 local_states.add_unsigned(
-                    local_record->key, local_bits, local_size);
+                    local_entry->key, local_bits, local_size);
             }
             else
             {
                 local_states.add_signed(
-                    local_record->key, local_bits, local_size);
+                    local_entry->key, local_bits, local_size);
             }
         }
 
         // 新たに構築した書庫を移動する。
         *this = std::move(local_states);
-        this->empty_blocks_.shrink_to_fit();
-        this->records_.shrink_to_fit();
-        this->units_.shrink_to_fit();
+        this->entries_.shrink_to_fit();
+        this->blocks_.shrink_to_fit();
+        this->empty_fields_.shrink_to_fit();
     }
 
     //-------------------------------------------------------------------------
-    private: this_type::record_vector::value_type* make_record(
-        this_type::key_type const in_key,
-        this_type::format_type const in_format)
+    /** @brief 状態値登記を新たに生成する。
+        @param[in] in_key    新たに生成する状態値登記の識別番号。
+        @param[in] in_format 新たに生成する状態値登記の構成。
+        @retval !=nullptr 成功。新たに生成した状態値登記。
+        @retval ==nullptr 失敗。状態値登記は生成されなかった。
+     */
+    private: typename this_type::entry_vector::value_type* make_entry(
+        typename this_type::key_type const in_key,
+        typename this_type::format_type const in_format)
     {
-        auto const local_record_iterator(
+        // in_key と同じ状態値登記がないことを確認する。
+        auto const local_entry_iterator(
             std::lower_bound(
-                this->records_.begin(),
-                this->records_.end(),
+                this->entries_.begin(),
+                this->entries_.end(),
                 in_key,
-                this_type::record_key_less()));
-        if (local_record_iterator != this->records_.end()
-            && local_record_iterator->key == in_key)
+                this_type::entry_key_less()));
+        if (local_entry_iterator != this->entries_.end()
+            && local_entry_iterator->key == in_key)
         {
             return nullptr;
         }
-        auto& local_record(
-            *(this->records_.insert(
-                local_record_iterator,
-                this_type::record_vector::value_type())));
-        local_record.key = in_key;
-        this_type::set_record_format(local_record, in_format);
+
+        // 新たに状態値登記を追加する。
+        auto& local_entry(
+            *(this->entries_.insert(
+                local_entry_iterator,
+                this_type::entry_vector::value_type())));
+        local_entry.key = in_key;
+        this_type::set_entry_format(local_entry, in_format);
         auto const local_size(this_type::get_format_size(in_format));
 
-        // ビット配列を用意する。
-        auto const local_empty_block(
+        // 状態値を格納するビット領域を用意する。
+        auto const local_empty_field(
             std::lower_bound(
-                this->empty_blocks_.begin(),
-                this->empty_blocks_.end(),
+                this->empty_fields_.begin(),
+                this->empty_fields_.end(),
                 local_size,
-                this_type::empty_block_less()));
-        if (local_empty_block == this->empty_blocks_.end())
+                this_type::empty_field_less()));
+        if (local_empty_field == this->empty_fields_.end())
         {
-            // 新たにビット配列を追加する。
-            auto const UNIT_SIZE(
-                sizeof(this_type::unit_vector::value_type)
+            // 新たにビット列ブロックを追加する。
+            auto const BLOCK_SIZE(
+                sizeof(typename this_type::block_type)
                 * this_type::BITS_PER_BYTE);
-            auto const local_position(this->units_.size() * UNIT_SIZE);
-            if (!this_type::set_record_position(local_record, local_position))
+            auto const local_position(this->blocks_.size() * BLOCK_SIZE);
+            if (!this_type::set_entry_position(local_entry, local_position))
             {
                 PSYQ_ASSERT(false);
                 return nullptr;
             }
-            auto const local_add_unit_size(
-                (local_size + UNIT_SIZE - 1) / UNIT_SIZE);
-            this->units_.insert(
-                this->units_.end(), local_add_unit_size, 0);
+            auto const local_add_block_size(
+                (local_size + BLOCK_SIZE - 1) / BLOCK_SIZE);
+            this->blocks_.insert(
+                this->blocks_.end(), local_add_block_size, 0);
 
-            // 空き領域を追加する。
-            auto const local_add_size(local_add_unit_size * UNIT_SIZE);
+            // 空きビット領域を追加する。
+            auto const local_add_size(local_add_block_size * BLOCK_SIZE);
             if (local_size < local_add_size)
             {
-                this_type::add_empty_block(
-                    this->empty_blocks_,
+                this_type::add_empty_field(
+                    this->empty_fields_,
                     local_position + local_size,
                     local_add_size - local_size);
             }
         }
         else
         {
-            // 既存のビット配列を使う。
+            // 既存のビット列ブロックを使う。
             auto const local_empty_position(
-                this_type::get_block_position(*local_empty_block));
-            auto const local_set_record_position(
-                this_type::set_record_position(
-                    local_record, local_empty_position));
-            if (!local_set_record_position)
+                this_type::get_field_position(*local_empty_field));
+            auto const local_set_entry_position(
+                this_type::set_entry_position(
+                    local_entry, local_empty_position));
+            if (!local_set_entry_position)
             {
                 PSYQ_ASSERT(false);
                 return nullptr;
             }
 
-            // 空き領域を更新する。
+            // 空きビット領域を更新する。
             auto const local_empty_size(
-                this_type::get_block_size(*local_empty_block));
-            this->empty_blocks_.erase(local_empty_block);
+                this_type::get_field_size(*local_empty_field));
+            this->empty_fields_.erase(local_empty_field);
             if (local_size < local_empty_size)
             {
-                this_type::add_empty_block(
-                    this->empty_blocks_,
+                this_type::add_empty_field(
+                    this->empty_fields_,
                     local_empty_position + local_size,
                     local_empty_size - local_size);
             }
         }
-        return &local_record;
+        return &local_entry;
     }
 
-    private: static void add_empty_block(
-        this_type::empty_block_vector& io_empty_blocks,
-        this_type::pos_type const in_position,
+    private: static void add_empty_field(
+        typename this_type::empty_field_vector& io_empty_fields,
+        typename this_type::pos_type const in_position,
         std::size_t const in_size)
     {
-        auto const local_size(static_cast<this_type::size_type>(in_size));
-        if ((in_position >> this_type::BLOCK_POSITION_SIZE) != 0
+        auto const local_size(
+            static_cast<typename this_type::size_type>(in_size));
+        if ((in_position >> this_type::FIELD_POSITION_SIZE) != 0
             || local_size != in_size)
         {
             PSYQ_ASSERT(false);
             return;
         }
-        this_type::block_type const local_empty_block(
-           (local_size << this_type::BLOCK_POSITION_SIZE) | in_position);
-        io_empty_blocks.insert(
+        typename this_type::field_type const local_empty_field(
+           (local_size << this_type::FIELD_POSITION_SIZE) | in_position);
+        io_empty_fields.insert(
             std::lower_bound(
-                io_empty_blocks.begin(),
-                io_empty_blocks.end(),
-                local_empty_block,
-                this_type::empty_block_less()),
-            local_empty_block);
+                io_empty_fields.begin(),
+                io_empty_fields.end(),
+                local_empty_field,
+                this_type::empty_field_less()),
+            local_empty_field);
     }
 
     //-------------------------------------------------------------------------
-    private: static this_type::record_vector::value_type const* find_record(
-        this_type::record_vector const& in_records,
-        this_type::key_type const in_key)
+    /** @brief 状態値の登記を検索する。
+        @param[in] in_entries 状態値の登記を検索するコンテナ。
+        @param[in] in_key     検索対象とな状態値の識別番号。
+        @retval !=nullptr in_key に対応する状態値の登記。
+        @retval ==nullptr in_key に対応する状態値の登記が見つからなかった。
+     */
+    private: static typename this_type::entry_vector::value_type const* find_entry(
+        typename this_type::entry_vector const& in_entries,
+        typename this_type::key_type const in_key)
+    PSYQ_NOEXCEPT
     {
-        auto const local_record(
+        auto const local_entry(
             std::lower_bound(
-                in_records.begin(),
-                in_records.end(),
+                in_entries.begin(),
+                in_entries.end(),
                 in_key,
-                this_type::record_key_less()));
-        return local_record != in_records.end() && local_record->key == in_key?
-            &(*local_record): nullptr;
+                this_type::entry_key_less()));
+        return local_entry != in_entries.end() && local_entry->key == in_key?
+            &(*local_entry): nullptr;
     }
 
-    private: static this_type::record_vector::value_type* find_record(
-        this_type::record_vector& in_records,
-        this_type::key_type const in_key)
+    /// @copydoc find_entry
+    private: static typename this_type::entry_vector::value_type* find_entry(
+        typename this_type::entry_vector& in_entries,
+        typename this_type::key_type const in_key)
+    PSYQ_NOEXCEPT
     {
-        return const_cast<this_type::record_vector::value_type*>(
-            this_type::find_record(
-                const_cast<this_type::record_vector const&>(in_records),
+        return const_cast<typename this_type::entry_vector::value_type*>(
+            this_type::find_entry(
+                const_cast<typename this_type::entry_vector const&>(in_entries),
                 in_key));
     }
 
-    private: static this_type::pos_type get_block_position(
-        this_type::block_type const in_block)
+    /** @brief ビット領域のビット位置を取得する。
+        @param[in] in_field ビット領域。
+        @return ビット領域のビット位置。
+     */
+    private: static typename this_type::pos_type get_field_position(
+        typename this_type::field_type const in_field)
+    PSYQ_NOEXCEPT
     {
-        return in_block & ((1 << this_type::BLOCK_POSITION_SIZE) - 1);
+        return in_field & ((1 << this_type::FIELD_POSITION_SIZE) - 1);
     }
 
-    private: static this_type::size_type get_block_size(
-        this_type::block_type const in_block)
+    /** @brief ビット領域のビット数を取得する。
+        @param[in] in_field ビット領域。
+        @return ビット領域のビット数。
+     */
+    private: static typename this_type::size_type get_field_size(
+        typename this_type::field_type const in_field)
+    PSYQ_NOEXCEPT
     {
-        return static_cast<this_type::size_type>(
-            in_block >> this_type::BLOCK_POSITION_SIZE);
+        return static_cast<typename this_type::size_type>(
+            in_field >> this_type::FIELD_POSITION_SIZE);
     }
 
-    private: static this_type::pos_type get_record_position(
-        this_type::record_vector::value_type const& in_record)
+    /** @brief 状態値の登記から、状態値のビット位置を取得する。
+        @param[in] in_entry 状態値の登記。
+        @return 状態値のビット位置。
+     */
+    private: static typename this_type::pos_type get_entry_position(
+        typename this_type::entry_vector::value_type const& in_entry)
+    PSYQ_NOEXCEPT
     {
-        return this_type::get_block_position(in_record.block);
+        return this_type::get_field_position(in_entry.field);
     }
 
-    private: static bool set_record_position(
-        this_type::record_vector::value_type& io_record,
+    /** @brief 状態値の登記に、状態値のビット位置を設定する。
+        @param[in,out] io_entry ビット位置を設定する状態値の登記。
+        @param[in] in_position  状態値に設定するビット位置。
+     */
+    private: static bool set_entry_position(
+        typename this_type::entry_vector::value_type& io_entry,
         std::size_t const in_position)
+    PSYQ_NOEXCEPT
     {
-        if ((in_position >> this_type::BLOCK_POSITION_SIZE) != 0)
+        if ((in_position >> this_type::FIELD_POSITION_SIZE) != 0)
         {
             return false;
         }
         auto const local_mask(
-            (1 << this_type::BLOCK_POSITION_SIZE) - 1);
-        io_record.block = (~local_mask & io_record.block)
-            | static_cast<this_type::block_type>(local_mask & in_position);
+            (1 << this_type::FIELD_POSITION_SIZE) - 1);
+        io_entry.field = (~local_mask & io_entry.field)
+            | static_cast<typename this_type::field_type>(
+                  local_mask & in_position);
         return true;
     }
 
-    private: static this_type::format_type get_record_format(
-        this_type::record_vector::value_type const& in_record)
+    /** @brief 状態値の登記から、状態値の構成を取得する。
+        @param[in] in_entry 状態値の登記。
+        @return 状態値の構成。
+     */
+    private: static typename this_type::format_type get_entry_format(
+        typename this_type::entry_vector::value_type const& in_entry)
+    PSYQ_NOEXCEPT
     {
-        return static_cast<this_type::format_type>(
-            in_record.block >> this_type::BLOCK_POSITION_SIZE);
+        return static_cast<typename this_type::format_type>(
+            in_entry.field >> this_type::FIELD_POSITION_SIZE);
     }
 
-    private: static void set_record_format(
-        this_type::record_vector::value_type& io_record,
-        this_type::format_type const in_format)
+    /** @brief 状態値の登記に、状態値の構成を設定する。
+        @param[in,out] io_entry 構成を設定する状態値の登記。
+        @param[in] in_format    状態値に設定する構成。
+     */
+    private: static void set_entry_format(
+        typename this_type::entry_vector::value_type& io_entry,
+        typename this_type::format_type const in_format)
+    PSYQ_NOEXCEPT
     {
         auto const local_mask(
-            ~((1 << this_type::BLOCK_POSITION_SIZE) - 1));
-        io_record.block = (io_record.block & local_mask)
-            | (in_format << this_type::BLOCK_POSITION_SIZE);
+            ~((1 << this_type::FIELD_POSITION_SIZE) - 1));
+        io_entry.field = (io_entry.field & local_mask)
+            | (in_format << this_type::FIELD_POSITION_SIZE);
     }
 
-    private: static this_type::size_type get_record_size(
-        this_type::record_vector::value_type const& in_record)
+    /** @brief 状態値の登記から、状態値のビット数を取得する。
+        @param[in] in_entry 状態値の登記。
+        @return 状態値のビット数。
+     */
+    private: static typename this_type::size_type get_entry_size(
+        typename this_type::entry_vector::value_type const& in_entry)
+    PSYQ_NOEXCEPT
     {
         return this_type::get_format_size(
-            this_type::get_record_format(in_record));
+            this_type::get_entry_format(in_entry));
     }
 
-    private: static this_type::size_type get_format_size(
-        this_type::format_type const in_format)
+    /** @brief 状態値の構成から、状態値のビット数を取得する。
+        @param[in] in_format 状態値の構成。
+        @return 状態値のビット数。
+     */
+    private: static typename this_type::size_type get_format_size(
+        typename this_type::format_type const in_format)
+    PSYQ_NOEXCEPT
     {
         switch (in_format)
         {
@@ -840,21 +959,21 @@ class psyq::state_archive
         }
     }
 
-    private: static this_type::unit_vector::value_type make_unit_mask(
-        this_type::size_type const in_size)
+    private: static typename this_type::block_type make_block_mask(
+        typename this_type::size_type const in_size)
+    PSYQ_NOEXCEPT
     {
-        auto const UNIT_SIZE(
-            sizeof(this_type::unit_vector::value_type)
-            * this_type::BITS_PER_BYTE);
+        auto const BLOCK_SIZE(
+            sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE);
         auto const local_max(
-            (std::numeric_limits<this_type::unit_vector::value_type>::max)());
-        return in_size < UNIT_SIZE? ~(local_max << in_size): local_max;
+            (std::numeric_limits<typename this_type::block_type>::max)());
+        return in_size < BLOCK_SIZE? ~(local_max << in_size): local_max;
     }
 
     //-------------------------------------------------------------------------
-    private: this_type::empty_block_vector empty_blocks_;
-    private: this_type::record_vector records_;
-    private: this_type::unit_vector units_;
+    private: typename this_type::entry_vector entries_;
+    private: typename this_type::block_vector blocks_;
+    private: typename this_type::empty_field_vector empty_fields_;
 
 }; // class psyq::state_archive
 
@@ -863,7 +982,7 @@ namespace psyq_test
 {
     inline void state_archive()
     {
-        psyq::state_archive local_states;
+        psyq::state_archive<> local_states(128, 128, 128);
 
         std::int64_t local_signed(0);
         std::uint64_t local_unsigned(0);

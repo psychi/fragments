@@ -24,7 +24,7 @@ namespace psyq
       - state_archive::add_unsigned
       - state_archive::add_signed
     - state_archive::get_value で、状態値を取得する。
-    - state_archive::set_value で、状態値を更新する。
+    - state_archive::set_value で、状態値を設定する。
 
     @tparam template_allocator @copydoc allocator_type
  */
@@ -54,6 +54,12 @@ class psyq::state_archive
         kind_UNSIGNED,    ///< 無符号整数。
     };
 
+    public: enum: std::size_t
+    {
+        /// @todo 今のところ複数のチャンクに対応してない。
+        MAX_CHUNKS = 1,
+    };
+
     //-------------------------------------------------------------------------
     /// @brief 状態値のビット数を表す型。
     private: typedef
@@ -63,8 +69,31 @@ class psyq::state_archive
     /// @brief 状態値のビット位置を表す型。
     private: typedef std::uint32_t pos_type;
 
+    //-------------------------------------------------------------------------
+    /// @brief ビット列ブロックを表す型。
+    private: typedef std::uint64_t block_type;
+
+    /// @brief 符号つきのビット列ブロックを表す型。
+    private: typedef
+         typename std::make_signed<typename this_type::block_type>::type
+             signed_block_type;
+
+    /// @brief ビット列ブロックを格納するコンテナ。
+    public: typedef
+         std::vector<
+             typename this_type::block_type,
+             typename this_type::allocator_type>
+                 block_vector;
+
+    //-------------------------------------------------------------------------
     /// @brief 状態値のビット位置とビット数を表す型。
     private: typedef typename this_type::pos_type field_type;
+
+    private: enum: typename this_type::size_type
+    {
+        BITS_PER_BYTE = 8,
+        FIELD_POSITION_SIZE = 24,
+    };
 
     /// @brief 空きビット領域を比較する関数オブジェクト。
     private: struct empty_field_less
@@ -116,26 +145,25 @@ class psyq::state_archive
 
     }; // struct empty_field_less
 
-    /// @brief 空きビット領域のコンテナ。
+    /// @brief 空き領域のコンテナ。
     private: typedef std::vector<
          typename this_type::field_type, typename this_type::allocator_type>
             empty_field_vector;
 
     //-------------------------------------------------------------------------
-    /// @brief ビット列ブロックを表す型。
-    private: typedef std::uint64_t block_type;
+    /// @brief ビット列チャンク。
+    private: struct chunk
+    {
+        /// @copydoc block_vector
+        typename state_archive::block_vector blocks;
+        /// @copydoc empty_field_vector
+        typename state_archive::empty_field_vector empty_fields;
+    };
 
-    /// @brief 符号つきのビット列ブロックを表す型。
-    private: typedef
-         typename std::make_signed<typename this_type::block_type>::type
-             signed_block_type;
-
-    /// @brief ビット列ブロックを格納するコンテナ。
-    private: typedef
-         std::vector<
-             typename this_type::block_type,
-             typename this_type::allocator_type>
-                 block_vector;
+    /// @brief ビット列チャンクのコンテナ。
+    private: typedef std::vector<
+         typename this_type::chunk, typename this_type::allocator_type>
+             chunk_vector;
 
     //-------------------------------------------------------------------------
     /// @brief 状態値の登記。
@@ -181,44 +209,37 @@ class psyq::state_archive
          typename this_type::entry, typename this_type::allocator_type>
              entry_vector;
 
-    private: enum: typename this_type::size_type
-    {
-        BITS_PER_BYTE = 8,
-        FIELD_POSITION_SIZE = 24,
-    };
-
     //-------------------------------------------------------------------------
-    public: state_archive(
+    /// @name 構築子と代入演算子
+    ///@{
+    public: explicit state_archive(
         std::size_t const in_reserved_entry_size,
-        std::size_t const in_reserved_block_size,
-        std::size_t const in_reserved_empty_field_size,
+        std::size_t const in_reserved_chunk_size = this_type::MAX_CHUNKS,
         typename this_type::allocator_type const& in_allocator =
             this_type::allocator_type())
     :
     entries_(in_allocator),
-    blocks_(in_allocator),
-    empty_fields_(in_allocator)
+    chunks_(in_allocator)
     {
         this->entries_.reserve(in_reserved_entry_size);
-        this->blocks_.reserve(in_reserved_block_size);
-        this->empty_fields_.reserve(in_reserved_empty_field_size);
+        this->chunks_.reserve(in_reserved_chunk_size);
     }
 
     public: state_archive(this_type&& io_source) PSYQ_NOEXCEPT:
     entries_(std::move(io_source.entries_)),
-    blocks_(std::move(io_source.blocks_)),
-    empty_fields_(std::move(io_source.empty_fields_))
+    chunks_(std::move(io_source.chunks_))
     {}
 
     public: this_type& operator=(this_type&& io_source) PSYQ_NOEXCEPT
     {
         this->entries_ = std::move(io_source.entries_);
-        this->blocks_ = std::move(io_source.blocks_);
-        this->empty_fields_ = std::move(io_source.empty_fields_);
+        this->chunks_= std::move(io_source.chunks_);
         return *this;
     }
-
+    ///@}
     //-------------------------------------------------------------------------
+    /// @name 状態値の取得
+    ///@{
     /** @brief 状態値の型の種別を取得する。
         @param[in] in_key 取得する状態値の識別番号。
         @return in_key に対応する状態値の型の種別。
@@ -265,12 +286,17 @@ class psyq::state_archive
         return this_type::get_entry_size(*local_entry);
     }
 
-    //-------------------------------------------------------------------------
     /** @brief 状態値を取得する。
+
+        すでに登録されている状態値から、値を取得する。
+
         @param[in] in_key 取得する状態値の識別番号。
         @param[out] out_value 取得した状態値の格納先。
         @retval true  成功。取得した状態値を out_value に格納した。
         @retval false 失敗。 out_value は変化しない。
+        @sa this_type::add_bool
+        @sa this_type::add_unsigned
+        @sa this_type::add_signed
      */
     public: template<typename template_value>
     bool get_value(
@@ -278,9 +304,17 @@ class psyq::state_archive
         template_value& out_value)
     const PSYQ_NOEXCEPT
     {
+        // 状態値登記を検索する。
         auto const local_entry(
             this_type::find_entry(this->entries_, in_key));
         if (local_entry == nullptr)
+        {
+            return false;
+        }
+
+        // チャンクから状態値のビット列を取得する。
+        auto const local_chunk_index(this_type::get_chunk_index(*local_entry));
+        if (this->chunks_.size() <= local_chunk_index)
         {
             return false;
         }
@@ -288,9 +322,11 @@ class psyq::state_archive
         auto const local_size(this_type::get_format_size(local_format));
         auto local_bits(
             this_type::get_bits(
-                this->blocks_,
+                this->chunks_.at(local_chunk_index).blocks,
                 this_type::get_entry_position(*local_entry),
                 local_size));
+
+        // 状態値の構成から、出力値のコピー処理を分岐する。
         switch (local_format)
         {
             case this_type::kind_NULL:
@@ -308,8 +344,7 @@ class psyq::state_archive
             PSYQ_ASSERT(false);
             return false;
 
-            default:
-            break;
+            default: break;
         }
 
         // 無符号整数を取得する。
@@ -340,7 +375,7 @@ class psyq::state_archive
             static_cast<typename this_type::signed_block_type>(local_bits));
         return true;
     }
-
+    ///@}
     private: template<typename template_source>
     static void copy_value(
         bool& out_value,
@@ -388,10 +423,16 @@ class psyq::state_archive
 
     //-------------------------------------------------------------------------
     /** @brief 状態値を設定する。
+
+        すでに登録されている状態値に、新たな値を設定する。
+
         @param[in] in_key   設定する状態値の識別番号。
         @param[in] in_value 設定する値。
         @retval true  成功。状態値を設定した。
         @retval false 失敗。状態値は変化しない。
+        @sa this_type::add_bool
+        @sa this_type::add_unsigned
+        @sa this_type::add_signed
      */
     public: template<typename template_value>
     bool set_value(
@@ -399,15 +440,25 @@ class psyq::state_archive
         template_value const in_value)
     PSYQ_NOEXCEPT
     {
+        // 状態値登記を検索する。
         auto const local_entry(
             this_type::find_entry(this->entries_, in_key));
         if (local_entry == nullptr)
         {
             return false;
         }
+
+        // 状態値を設定するビット列チャンクを決定する。
+        auto const local_chunk_index(this_type::get_chunk_index(*local_entry));
+        if (this->chunks_.size() <= local_chunk_index)
+        {
+            return false;
+        }
+        auto& local_chunk_blocks(this->chunks_.at(local_chunk_index).blocks);
+
+        // 状態値の構成によって、設定処理を分岐する。
         auto const local_format(this_type::get_entry_format(*local_entry));
-        auto const local_position(
-            this_type::get_entry_position(*local_entry));
+        auto const local_position(this_type::get_entry_position(*local_entry));
         switch (local_format)
         {
             case this_type::kind_NULL:
@@ -421,7 +472,7 @@ class psyq::state_archive
                 return false;
             }
             return this_type::set_bits(
-                this->blocks_, local_position, 1, in_value);
+                local_chunk_blocks, local_position, 1, in_value);
 
             // 浮動小数点数を設定する。
             case this_type::kind_FLOAT:
@@ -429,8 +480,7 @@ class psyq::state_archive
             PSYQ_ASSERT(false);
             return false;
 
-            default:
-            break;
+            default: break;
         }
         if (!std::is_integral<template_value>::value)
         {
@@ -442,7 +492,7 @@ class psyq::state_archive
         if (0 < local_format)
         {
             return this_type::set_bits(
-                this->blocks_,
+                local_chunk_blocks,
                 local_position,
                 local_size,
                 static_cast<typename this_type::block_type>(in_value));
@@ -450,7 +500,7 @@ class psyq::state_archive
 
         // 有符号整数を設定する。
         return this_type::set_signed(
-            this->blocks_, local_position, local_size, in_value);
+            local_chunk_blocks, local_position, local_size, in_value);
     }
 
     private: static bool set_signed(
@@ -516,7 +566,13 @@ class psyq::state_archive
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 真偽型の状態値を追加する。
+    /// @name 状態値の登録
+    ///@{
+    /** @brief 真偽値型の状態値を追加する。
+
+        追加した状態値は
+        this_type::get_value と this_type::set_value でアクセスできる。
+
         @param[in] in_chunk 追加する状態値が所属するチャンクの識別番号。
         @param[in] in_key   追加する状態値の識別番号。
         @param[in] in_value 追加する状態値の初期値。
@@ -524,24 +580,32 @@ class psyq::state_archive
         @retval false 失敗。状態値を追加できなかった。
      */
     public: bool add_bool(
-        typename this_type::key_type const in_chunk,
+        std::size_t const in_chunk,
         typename this_type::key_type const in_key,
         bool const in_value)
     {
+        // 状態値を追加する。
         auto const local_entry(
-            this->make_entry(in_chunk, in_key, this_type::kind_BOOL));
+            this->add_state(in_chunk, in_key, this_type::kind_BOOL));
         if (local_entry == nullptr)
         {
             return false;
         }
+
+        // 状態値に初期値を設定する。
+        PSYQ_ASSERT(in_chunk < this->chunks_.size());
         return this_type::set_bits(
-            this->blocks_,
+            this->chunks_.at(in_chunk).blocks,
             this_type::get_entry_position(*local_entry),
             1,
             in_value);
     }
 
     /** @brief 符号なし整数型の状態値を追加する。
+
+        追加した状態値は
+        this_type::get_value と this_type::set_value でアクセスできる。
+
         @param[in] in_chunk 追加する状態値が所属するチャンクの識別番号。
         @param[in] in_key   追加する状態値の識別番号。
         @param[in] in_value 追加する状態値の初期値。
@@ -550,12 +614,13 @@ class psyq::state_archive
         @retval false 失敗。状態値を追加できなかった。
      */
     public: bool add_unsigned(
-        typename this_type::key_type const in_chunk,
+        std::size_t const in_chunk,
         typename this_type::key_type const in_key,
         typename this_type::block_type const in_value,
         std::size_t const in_size =
             sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE)
     {
+        // 追加可能な状態値か判定する。
         auto const BLOCK_SIZE(
             sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE);
         auto const local_format(
@@ -564,20 +629,29 @@ class psyq::state_archive
         {
             return false;
         }
+
+        // 状態値を追加する。
         auto const local_entry(
-            this->make_entry(in_chunk, in_key, local_format));
+            this->add_state(in_chunk, in_key, local_format));
         if (local_entry == nullptr)
         {
             return false;
         }
+
+        // 状態値に初期値を設定する。
+        PSYQ_ASSERT(in_chunk < this->chunks_.size());
         return this_type::set_bits(
-            this->blocks_,
+            this->chunks_.at(in_chunk).blocks,
             this_type::get_entry_position(*local_entry),
             static_cast<typename this_type::size_type>(in_size),
             in_value);
     }
 
     /** @brief 符号あり整数型の状態値を追加する。
+
+        追加した状態値は
+        this_type::get_value と this_type::set_value でアクセスできる。
+
         @param[in] in_chunk 追加する状態値が所属するチャンクの識別番号。
         @param[in] in_key   追加する状態値の識別番号。
         @param[in] in_value 追加する状態値の初期値。
@@ -586,13 +660,14 @@ class psyq::state_archive
         @retval false 失敗。状態値を追加できなかった。
      */
     public: bool add_signed(
-        typename this_type::key_type const in_chunk,
+        std::size_t const in_chunk,
         typename this_type::key_type const in_key,
         typename this_type::signed_block_type const in_value,
         std::size_t const in_size =
             sizeof(typename this_type::signed_block_type)
             * this_type::BITS_PER_BYTE)
     {
+        // 追加可能な状態値か判定する。
         auto const BLOCK_SIZE(
             sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE);
         auto const local_format(
@@ -601,19 +676,67 @@ class psyq::state_archive
         {
             return false;
         }
+
+        // 状態値を追加する。
         auto const local_entry(
-            this->make_entry(in_chunk, in_key, local_format));
+            this->add_state(in_chunk, in_key, local_format));
         if (local_entry == nullptr)
         {
             return false;
         }
+
+        // 状態値に初期値を設定する。
+        PSYQ_ASSERT(in_chunk < this->chunks_.size());
         return this_type::set_signed(
-            this->blocks_,
+            this->chunks_.at(in_chunk).blocks,
             this_type::get_entry_position(*local_entry),
             static_cast<typename this_type::size_type>(in_size),
             in_value);
     }
+    ///@}
+    //-------------------------------------------------------------------------
+    /// @name チャンク
+    ///@{
+    /** @brief チャンクを予約する。
+        @param[in] in_chunk 予約するチャンクの識別番号。
+        @param[in] in_reserved_blocks_size 予約しておくブロックの数。
+        @param[in] in_reserved_empty_fields_size 予約しておく空き領域の数。
+     */
+    public: void reserve_chunk(
+        std::size_t const in_chunk,
+        std::size_t const in_reserved_blocks_size,
+        std::size_t const in_reserved_empty_fields_size)
+    {
+        if (this_type::MAX_CHUNKS <= in_chunk)
+        {
+            return;
+        }
+        else if (this->chunks_.size() <= in_chunk)
+        {
+            this->chunks_.resize(in_chunk + 1);
+        }
+        auto& local_chunk(this->chunks_.at(in_chunk));
+        local_chunk.blocks.reserve(in_reserved_blocks_size);
+        local_chunk.empty_fields.reserve(in_reserved_empty_fields_size);
+    }
 
+    /** @brief チャンクをバイト列としてシリアル化する。
+        @param[in] in_chunk シリアル化するチャンクの識別番号。
+        @todo 未実装。
+     */
+    public: typename this_type::block_vector serialize_chunk(
+        std::size_t const in_chunk)
+    const;
+
+    /** @brief バイト列としてシリアル化されたチャンクを復元する。
+        @param[in] in_chunk            復元するチャンクの識別番号。
+        @param[in] in_serialized_chunk シリアル化されたチャンク。
+        @todo 未実装。
+     */
+    public: bool deserialize_chunk(
+        std::size_t const in_chunk,
+        typename this_type::block_vector const& in_serialized_chunk);
+    ///@}
     //-------------------------------------------------------------------------
     /// @brief コンテナが使うメモリ領域を必要最小限にする。
     public: void shrink_to_fit()
@@ -640,19 +763,32 @@ class psyq::state_archive
         std::sort(
             local_entries.begin(), local_entries.end(), entry_size_greater());
 
-        // 新たな書庫を構築する。
+        // 新たな書庫を用意する。
+        auto const local_chunks_size(this->chunks_.size());
         this_type local_states(
             this->entries_.size(),
-            this->blocks_.size(),
-            this->empty_fields_.size(),
+            local_chunks_size,
             this->entries_.get_allocator());
+        local_states.chunks_.resize(local_chunks_size);
+        for (std::size_t i(0); i < local_chunks_size; ++i)
+        {
+            auto& local_new_chunk(local_states.chunks_.at(i));
+            auto const& local_old_chunk(this->chunks_.at(i));
+            local_new_chunk.blocks.reserve(local_old_chunk.blocks.size());
+            local_new_chunk.empty_fields.reserve(local_old_chunk.empty_fields.size());
+        }
+
+        // 新たな書庫を構築する。
         for (auto local_entry: local_entries)
         {
             auto const local_position(
                 this_type::get_entry_position(*local_entry));
             auto const local_format(
                 this_type::get_entry_format(*local_entry));
-            unsigned const local_chunk(0);
+            auto const local_chunk_index(
+                this_type::get_chunk_index(*local_entry));
+            auto const& local_chunk_blocks(
+                this->chunks_.at(local_chunk_index).blocks);
             switch (local_format)
             {
                 case this_type::kind_NULL:
@@ -661,9 +797,10 @@ class psyq::state_archive
 
                 case this_type::kind_BOOL:
                 local_states.add_bool(
-                    local_chunk,
+                    local_chunk_index,
                     local_entry->key,
-                    this_type::get_bits(this->blocks_, local_position, 1) != 0);
+                    0 != this_type::get_bits(
+                        local_chunk_blocks, local_position, 1));
                 continue;
 
                 case this_type::kind_FLOAT:
@@ -676,39 +813,54 @@ class psyq::state_archive
             auto const local_size(this_type::get_format_size(local_format));
             auto const local_bits(
                 this_type::get_bits(
-                    this->blocks_, local_position, local_size));
+                    local_chunk_blocks, local_position, local_size));
             if (0 < local_format)
             {
                 local_states.add_unsigned(
-                    local_chunk, local_entry->key, local_bits, local_size);
+                    local_chunk_index,
+                    local_entry->key,
+                    local_bits,
+                    local_size);
             }
             else
             {
                 local_states.add_signed(
-                    local_chunk, local_entry->key, local_bits, local_size);
+                    local_chunk_index,
+                    local_entry->key,
+                    local_bits,
+                    local_size);
             }
         }
 
-        // 新たに構築した書庫を移動する。
+        // 新たに構築した書庫を移動して整理する。
         *this = std::move(local_states);
         this->entries_.shrink_to_fit();
-        this->blocks_.shrink_to_fit();
-        this->empty_fields_.shrink_to_fit();
+        this->chunks_.shrink_to_fit();
+        for (auto& local_chunk: this->chunks_)
+        {
+            local_chunk.blocks.shrink_to_fit();
+            local_chunk.empty_fields.shrink_to_fit();
+        }
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 状態値の登記を新たに生成する。
-        @param[in] in_chunk  新たに生成する状態値が所属するチャンクの識別番号。
-        @param[in] in_key    新たに生成する状態値の識別番号。
-        @param[in] in_format 新たに生成する状態値登記の構成。
-        @retval !=nullptr 成功。新たに生成した状態値登記。
-        @retval ==nullptr 失敗。状態値登記は生成されなかった。
+    /** @brief 状態値を追加する。
+        @param[in] in_chunk  追加する状態値が所属するチャンクの識別番号。
+        @param[in] in_key    追加する状態値の識別番号。
+        @param[in] in_format 追加する状態値の構成。
+        @retval !=nullptr 成功。追加した状態値の登記。
+        @retval ==nullptr 失敗。状態値は追加されなかった。
      */
-    private: typename this_type::entry_vector::value_type* make_entry(
-        typename this_type::key_type const in_chunk,
+    private: typename this_type::entry_vector::value_type* add_state(
+        std::size_t const in_chunk,
         typename this_type::key_type const in_key,
         typename this_type::format_type const in_format)
     {
+        if (this_type::MAX_CHUNKS <= in_chunk)
+        {
+            return nullptr;
+        }
+
         // in_key と同じ状態値登記がないことを確認する。
         auto const local_entry_iterator(
             std::lower_bound(
@@ -730,14 +882,21 @@ class psyq::state_archive
         local_entry.key = in_key;
         this_type::set_entry_format(local_entry, in_format);
 
+        // 状態値を格納するチャンクを決定する。
+        if (this->chunks_.size() <= in_chunk)
+        {
+            this->chunks_.resize(in_chunk + 1);
+        }
+        auto& local_chunk(this->chunks_.at(in_chunk));
+
         // 状態値のビット位置を決定する。
         auto const local_set_entry_position(
             this_type::set_entry_position(
                 local_entry,
                 this_type::make_state_field(
                     this_type::get_format_size(in_format),
-                    this->empty_fields_,
-                    this->blocks_)));
+                    local_chunk.empty_fields,
+                    local_chunk.blocks)));
         if (!local_set_entry_position)
         {
             PSYQ_ASSERT(false);
@@ -915,6 +1074,17 @@ class psyq::state_archive
             in_field >> this_type::FIELD_POSITION_SIZE);
     }
 
+    /** @brief 状態値の登記から、状態値のチャンクの番号を取得する。
+        @param[in] in_entry 状態値の登記。
+        @return 状態値のビット列があるチャンクの番号。
+     */
+    private: static typename this_type::size_type get_chunk_index(
+        typename this_type::entry_vector::value_type const& in_entry)
+    {
+        /// @todo 今のところ複数のチャンクに対応してない。
+        return 0;
+    }
+
     /** @brief 状態値の登記から、状態値のビット位置を取得する。
         @param[in] in_entry 状態値の登記。
         @return 状態値のビット位置。
@@ -1023,9 +1193,10 @@ class psyq::state_archive
     }
 
     //-------------------------------------------------------------------------
+    /// @brief 状態値登記のコンテナ。
     private: typename this_type::entry_vector entries_;
-    private: typename this_type::block_vector blocks_;
-    private: typename this_type::empty_field_vector empty_fields_;
+    /// @brief ビット列チャンクのコンテナ。
+    private: typename this_type::chunk_vector chunks_;
 
 }; // class psyq::state_archive
 
@@ -1034,11 +1205,12 @@ namespace psyq_test
 {
     inline void state_archive()
     {
-        psyq::state_archive<> local_states(128, 128, 128);
+        psyq::state_archive<> local_states(128);
+        std::size_t local_chunk(0);
+        local_states.reserve_chunk(local_chunk, 128, 128);
 
         std::int64_t local_signed(0);
         std::uint64_t local_unsigned(0);
-        unsigned local_chunk(0);
         for (int i(2); i <= 64; ++i)
         {
             PSYQ_ASSERT(local_states.add_unsigned(local_chunk, i, i - 1, i));

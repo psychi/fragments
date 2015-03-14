@@ -134,19 +134,18 @@ struct psyq::_private::fnv_hash
         return local_hash;
     }
 
-    /** @brief 配列のhash値を算出する。
+    /** @brief バイト列のhash値を算出する。
         @tparam template_value_type 配列の要素の型。
         @param[in] in_begin  配列の先頭位置。
         @param[in] in_end    配列の末尾位置。
         @param[in] in_offset FNV-hash開始値。
         @param[in] in_prime  FNV-hash素数。
      */
-    template<typename template_value_type>
     static typename this_type::value_type compute(
-        template_value_type const* const in_begin,
-        template_value_type const* const in_end,
-        typename this_type::value_type const  in_offset = this_type::traits_type::EMPTY,
-        typename this_type::value_type const  in_prime = this_type::traits_type::PRIME)
+        void const* const in_begin,
+        void const* const in_end,
+        typename this_type::value_type const in_offset = this_type::traits_type::EMPTY,
+        typename this_type::value_type const in_prime = this_type::traits_type::PRIME)
     PSYQ_NOEXCEPT
     {
         return template_hash_algorithm::compute(
@@ -162,8 +161,8 @@ struct psyq::_private::fnv_hash
      */
     template<typename template_iterator_type>
     static typename this_type::value_type compute(
-        template_iterator_type const&   in_begin,
-        template_iterator_type const&   in_end,
+        template_iterator_type const& in_begin,
+        template_iterator_type const& in_end,
         typename this_type::value_type const in_offset = this_type::traits_type::EMPTY,
         typename this_type::value_type const in_prime = this_type::traits_type::PRIME)
     PSYQ_NOEXCEPT

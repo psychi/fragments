@@ -107,39 +107,6 @@ class psyq::string::_private::interface_immutable: public template_string_type
     protected: typedef template_string_type string_type;
 
     //-------------------------------------------------------------------------
-    /// std::hash互換インターフェイスの、ハッシュ関数オブジェクト。
-    public: template<typename template_hash> struct hash: public template_hash
-    {
-        /// 基底型。
-        typedef template_hash base_type;
-        /// ハッシュ値の型。
-        typedef typename template_hash::value_type result_type;
-        /// ハッシュキーの型。
-        typedef psyq::string::_private::reference_base<
-            typename template_string_type::traits_type>
-                argument_type;
-
-        /** @brief ハッシュキーに対応するハッシュ値を算出する。
-            @param[in] in_string ハッシュキーとなる文字列。
-            @return ハッシュキーに対応するハッシュ値。
-         */
-        result_type operator()(argument_type const& in_string)
-        const PSYQ_NOEXCEPT
-        {
-            return template_hash::compute(
-                in_string.data(), in_string.data() + in_string.size());
-        }
-    };
-    /// std::hash互換インターフェイスの、32ビットFNV-1形式ハッシュ関数オブジェクト。
-    public: typedef typename this_type::hash<psyq::fnv1_hash32> fnv1_hash32;
-    /// std::hash互換インターフェイスの、64ビットFNV-1形式ハッシュ関数オブジェクト。
-    public: typedef typename this_type::hash<psyq::fnv1_hash64> fnv1_hash64;
-    /// std::hash互換インターフェイスの、32ビットFNV-1a形式ハッシュ関数オブジェクト。
-    public: typedef typename this_type::hash<psyq::fnv1a_hash32> fnv1a_hash32;
-    /// std::hash互換インターフェイスの、64ビットFNV-1a形式ハッシュ関数オブジェクト。
-    public: typedef typename this_type::hash<psyq::fnv1a_hash64> fnv1a_hash64;
-
-    //-------------------------------------------------------------------------
     /// 文字の型。
     public: typedef typename base_type::traits_type::char_type value_type;
     /// 文字数の型。
@@ -168,6 +135,37 @@ class psyq::string::_private::interface_immutable: public template_string_type
     public: typedef psyq::string::view<
         typename this_type::value_type, typename base_type::traits_type>
             view;
+
+    //-------------------------------------------------------------------------
+    /// std::hash互換インターフェイスの、ハッシュ関数オブジェクト。
+    public: template<typename template_hash> struct hash: public template_hash
+    {
+        /// 基底型。
+        typedef template_hash base_type;
+        /// ハッシュ値の型。
+        typedef typename template_hash::value_type result_type;
+        /// ハッシュキーの型。
+        typedef typename interface_immutable::view argument_type;
+
+        /** @brief ハッシュキーに対応するハッシュ値を算出する。
+            @param[in] in_string ハッシュキーとなる文字列。
+            @return ハッシュキーに対応するハッシュ値。
+         */
+        result_type operator()(argument_type const& in_string)
+        const PSYQ_NOEXCEPT
+        {
+            return template_hash::compute(
+                in_string.data(), in_string.data() + in_string.size());
+        }
+    };
+    /// std::hash互換インターフェイスの、32ビットFNV-1形式ハッシュ関数オブジェクト。
+    public: typedef typename this_type::hash<psyq::fnv1_hash32> fnv1_hash32;
+    /// std::hash互換インターフェイスの、64ビットFNV-1形式ハッシュ関数オブジェクト。
+    public: typedef typename this_type::hash<psyq::fnv1_hash64> fnv1_hash64;
+    /// std::hash互換インターフェイスの、32ビットFNV-1a形式ハッシュ関数オブジェクト。
+    public: typedef typename this_type::hash<psyq::fnv1a_hash32> fnv1a_hash32;
+    /// std::hash互換インターフェイスの、64ビットFNV-1a形式ハッシュ関数オブジェクト。
+    public: typedef typename this_type::hash<psyq::fnv1a_hash64> fnv1a_hash64;
 
     //-------------------------------------------------------------------------
     /// @name コンストラクタ

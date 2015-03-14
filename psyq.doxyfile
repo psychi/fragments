@@ -691,6 +691,7 @@ INPUT                  = \
                          ./string/holder.hpp \
                          ./string/flyweight.hpp \
                          ./string/table.hpp \
+                         ./string/csv_table.hpp \
                          ./any/rtti.hpp \
                          ./any/storage.hpp \
                          ./any/message/tag.hpp \
@@ -716,6 +717,9 @@ INPUT                  = \
                          ./geometry/mosp/node.hpp \
                          ./geometry/mosp/tree.hpp \
                          ./geometry/mosp/nut.hpp \
+                         ./scenario_engine/state_archive.hpp \
+                         ./scenario_engine/evaluator.hpp \
+                         ./scenario_engine/driver.hpp \
                          ./memory_arena.hpp \
                          ./bit_algorithm.hpp \
                          ./fnv_hash.hpp \

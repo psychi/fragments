@@ -112,9 +112,6 @@ class psyq::scenario_engine::state_archive
     {
         /// @brief 状態値のビット数の最大値。
         MAX_STATE_SIZE = this_type::BLOCK_SIZE,
-        /// @brief ビット列チャンクの最大数。
-        /// @todo 今のところ複数のビット列チャンクに対応してない。
-        MAX_CHUNKS = 1,
     };
 
     /// @brief 空きビット領域を比較する関数オブジェクト。
@@ -173,36 +170,13 @@ class psyq::scenario_engine::state_archive
             empty_field_vector;
 
     //-------------------------------------------------------------------------
-    /// @brief ビット列チャンク。
-    private: struct chunk_struct
-    {
-        /// @copydoc block_vector
-        typename state_archive::block_vector blocks;
-        /// @copydoc empty_field_vector
-        typename state_archive::empty_field_vector empty_fields;
-    };
-
-    /// @brief ビット列チャンクのコンテナ。
-    private: typedef std::vector<
-         typename this_type::chunk_struct, typename this_type::allocator_type>
-             chunk_vector;
-
-    //-------------------------------------------------------------------------
-    /// @brief 状態値の登記。
-    private: struct entry_struct
-    {
-        /// 状態値の識別番号。
-        typename state_archive::key_type key;
-        /// 状態値が格納されているビット領域。
-        typename state_archive::field_type field;
-    };
-
-    /// @brief 状態値の識別番号を比較する関数オブジェクト。
-    private: struct entry_key_less
+    /// @brief キーを比較する関数オブジェクト。
+    private: template<typename template_value>
+    struct key_less
     {
         bool operator()(
-            typename state_archive::entry_struct const& in_left,
-            typename state_archive::entry_struct const& in_right)
+            template_value const& in_left,
+            template_value const& in_right)
         const PSYQ_NOEXCEPT
         {
             return in_left.key < in_right.key;
@@ -210,26 +184,92 @@ class psyq::scenario_engine::state_archive
 
         bool operator()(
             typename state_archive::key_type const& in_left,
-            typename state_archive::entry_struct const& in_right)
+            template_value const& in_right)
         const PSYQ_NOEXCEPT
         {
             return in_left < in_right.key;
         }
 
         bool operator()(
-            typename state_archive::entry_struct const& in_left,
+            template_value const& in_left,
             typename state_archive::key_type const& in_right)
         const PSYQ_NOEXCEPT
         {
             return in_left.key < in_right;
         }
 
-    }; // struct entry_key_less
+    }; // struct key_less
+
+    //-------------------------------------------------------------------------
+    /// @brief ビット列チャンク。
+    private: struct chunk_struct
+    {
+        chunk_struct() {}
+
+        chunk_struct(
+            typename state_archive::key_type in_key,
+            typename state_archive::allocator_type const& in_allocator)
+        :
+        key(std::move(in_key)),
+        blocks(in_allocator),
+        empty_fields(in_allocator)
+        {}
+
+        chunk_struct(chunk_struct&& io_source):
+        key(std::move(io_source.key)),
+        blocks(std::move(io_source.blocks)),
+        empty_fields(std::move(io_source.empty_fields))
+        {}
+
+        chunk_struct& operator=(chunk_struct&& io_source)
+        {
+            this->key = std::move(io_source.key);
+            this->blocks = std::move(io_source.blocks);
+            this->empty_fields = std::move(io_source.empty_fields);
+            return *this;
+        }
+
+        /// @brief チャンクを識別するキー。
+        typename state_archive::key_type key;
+        /// @copydoc block_vector
+        typename state_archive::block_vector blocks;
+        /// @copydoc empty_field_vector
+        typename state_archive::empty_field_vector empty_fields;
+
+    }; // struct chunk_struct
+
+    /// @brief ビット列チャンクのコンテナ。
+    private: typedef std::vector<
+         typename this_type::chunk_struct, typename this_type::allocator_type>
+             chunk_vector;
+
+    /// @brief チャンクキーを比較する関数オブジェクト。
+    private: typedef
+         typename this_type::key_less<typename this_type::chunk_struct>
+             chunk_key_less;
+
+    //-------------------------------------------------------------------------
+    /// @brief 状態値の登記。
+    private: struct entry_struct
+    {
+        /// @brief 状態値のチャンクを識別するキー。
+        typename state_archive::key_type chunk;
+        /// @brief 状態値を識別するキー。
+        typename state_archive::key_type key;
+        /// @brief 状態値が格納されているビット領域。
+        typename state_archive::field_type field;
+
+    }; // struct entry_struct
 
     /// @brief 状態値登記のコンテナ。　
     private: typedef std::vector<
          typename this_type::entry_struct, typename this_type::allocator_type>
              entry_vector;
+
+    /// @brief 状態キーを比較する関数オブジェクト。
+    private: typedef
+         typename this_type::key_less<typename this_type::entry_struct>
+             entry_key_less;
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
@@ -239,9 +279,9 @@ class psyq::scenario_engine::state_archive
         @param[in] in_reserve_chunks  予約しておくビット列チャンクの数。
         @param[in] in_allocator       使用するメモリ割当子の初期値。
      */
-    public: explicit state_archive(
+    public: state_archive(
         std::size_t const in_reserve_entries,
-        std::size_t const in_reserve_chunks = this_type::MAX_CHUNKS,
+        std::size_t const in_reserve_chunks,
         typename this_type::allocator_type const& in_allocator =
             this_type::allocator_type())
     :
@@ -325,6 +365,24 @@ class psyq::scenario_engine::state_archive
         return this_type::get_entry_size(*local_entry);
     }
 
+    /** @brief 状態値のチャンクキーを取得する。
+        @param[in] in_key 取得する状態値のキー。
+        @retval !=nullptr in_key に対応する状態値のチャンクキーへのポインタ。
+        @retval ==nullptr in_key に対応する状態値がない。
+     */
+    public: typename this_type::key_type const* get_chunk(
+        typename this_type::key_type const& in_key)
+    const PSYQ_NOEXCEPT
+    {
+        // 状態登記を検索し、状態登記から状態値のチャンクキーを取得する。
+        auto const local_entry(this_type::find_entry(this->entries_, in_key));
+        if (local_entry == nullptr)
+        {
+            return nullptr;
+        }
+        return &local_entry->chunk;
+    }
+
     /** @brief 状態値を取得する。
 
         すでに登録されている状態値から、値を取得する。
@@ -349,8 +407,9 @@ class psyq::scenario_engine::state_archive
         {
             return false;
         }
-        auto const local_chunk_index(this_type::get_chunk_index(*local_entry));
-        if (this->chunks_.size() <= local_chunk_index)
+        auto const local_chunk(
+            this_type::find_chunk(this->chunks_, local_entry->chunk));
+        if (local_chunk == nullptr)
         {
             return false;
         }
@@ -358,7 +417,7 @@ class psyq::scenario_engine::state_archive
         auto const local_size(this_type::get_format_size(local_format));
         auto local_bits(
             this_type::get_bits(
-                this->chunks_.at(local_chunk_index).blocks,
+                local_chunk->blocks,
                 this_type::get_entry_position(*local_entry),
                 local_size));
 
@@ -487,12 +546,15 @@ class psyq::scenario_engine::state_archive
         }
 
         // 状態値を設定するビット列チャンクを決定する。
-        auto const local_chunk_index(this_type::get_chunk_index(*local_entry));
-        if (this->chunks_.size() <= local_chunk_index)
+        auto const local_chunk(
+            this_type::find_chunk(this->chunks_, local_entry->chunk));
+        if (local_chunk == nullptr)
         {
             return false;
         }
-        auto& local_chunk_blocks(this->chunks_.at(local_chunk_index).blocks);
+        auto& local_chunk_blocks(
+            const_cast<typename this_type::block_vector&>(
+                local_chunk->blocks));
 
         // 状態値の構成によって、設定処理を分岐する。
         auto const local_format(this_type::get_entry_format(*local_entry));
@@ -612,30 +674,31 @@ class psyq::scenario_engine::state_archive
         登録した状態値は
         this_type::get_value と this_type::set_value でアクセスできる。
 
-        @param[in] in_chunk 登録する状態値が所属するビット列チャンクのインデクス番号。
+        @param[in] in_chunk 登録する状態値が所属するビット列チャンクのキー。
         @param[in] in_key   登録する状態値の識別番号。
         @param[in] in_value 登録する状態値の初期値。
         @retval true  成功。状態値を登録した。
         @retval false
             失敗。状態値を登録できなかった。
-            - in_chunk が this_type::MAX_CHUNKS 以上だと失敗する。
             - in_key に対応する状態値がすでに登録されていると失敗する。
      */
     public: bool register_bool(
-        std::size_t const in_chunk,
+        typename this_type::key_type in_chunk,
         typename this_type::key_type in_key,
         bool const in_value)
     {
         // 状態値登記を登録した後、状態値に初期値を設定する。
         auto const local_entry(
             this->register_state(
-                in_chunk, std::move(in_key), this_type::kind_BOOL));
+                std::move(in_chunk), std::move(in_key), this_type::kind_BOOL));
         if (local_entry == nullptr)
         {
             return false;
         }
+        auto& local_chunk(
+            this_type::equip_chunk(this->chunks_, local_entry->chunk));
         return this_type::set_bits(
-            this->chunks_.at(in_chunk).blocks,
+            local_chunk.blocks,
             this_type::get_entry_position(*local_entry),
             1,
             in_value);
@@ -646,19 +709,18 @@ class psyq::scenario_engine::state_archive
         登録した状態値は
         this_type::get_value と this_type::set_value でアクセスできる。
 
-        @param[in] in_chunk 登録する状態値が所属するビット列チャンクのインデクス番号。
+        @param[in] in_chunk 登録する状態値が所属するビット列チャンクのキー。
         @param[in] in_key   登録する状態値の識別番号。
         @param[in] in_value 登録する状態値の初期値。
         @param[in] in_size  登録する状態値のビット数。
         @retval true  成功。状態値を登録した。
         @retval false
             失敗。状態値を登録できなかった。
-            - in_chunk が this_type::MAX_CHUNKS 以上だと失敗する。
             - in_key に対応する状態値がすでに登録されていると失敗する。
             - this_type::MAX_STATE_SIZE より in_size が大きければ失敗する。
      */
     public: bool register_unsigned(
-        std::size_t const in_chunk,
+        typename this_type::key_type in_chunk,
         typename this_type::key_type in_key,
         typename this_type::block_type const in_value,
         std::size_t const in_size = this_type::BLOCK_SIZE)
@@ -674,13 +736,16 @@ class psyq::scenario_engine::state_archive
 
         // 状態値を登録した後、状態値に初期値を設定する。
         auto const local_entry(
-            this->register_state(in_chunk, std::move(in_key), local_format));
+            this->register_state(
+                std::move(in_chunk), std::move(in_key), local_format));
         if (local_entry == nullptr)
         {
             return false;
         }
+        auto& local_chunk(
+            this_type::equip_chunk(this->chunks_, local_entry->chunk));
         return this_type::set_bits(
-            this->chunks_.at(in_chunk).blocks,
+            local_chunk.blocks,
             this_type::get_entry_position(*local_entry),
             static_cast<typename this_type::size_type>(in_size),
             in_value);
@@ -691,19 +756,18 @@ class psyq::scenario_engine::state_archive
         登録した状態値は
         this_type::get_value と this_type::set_value でアクセスできる。
 
-        @param[in] in_chunk 登録する状態値が所属するビット列チャンクのインデクス番号。
+        @param[in] in_chunk 登録する状態値が所属するビット列チャンクのキー。
         @param[in] in_key   登録する状態値の識別番号。
         @param[in] in_value 登録する状態値の初期値。
         @param[in] in_size  登録する状態値のビット数。
         @retval true  成功。状態値を登録した。
         @retval false
             失敗。状態値を登録できなかった。
-            - in_chunk が this_type::MAX_CHUNKS 以上だと失敗する。
             - in_key に対応する状態値がすでに登録されていると失敗する。
             - this_type::MAX_STATE_SIZE より in_size が大きければ失敗する。
      */
     public: bool register_signed(
-        std::size_t const in_chunk,
+        typename this_type::key_type in_chunk,
         typename this_type::key_type in_key,
         typename this_type::signed_block_type const in_value,
         std::size_t const in_size = this_type::BLOCK_SIZE)
@@ -719,13 +783,16 @@ class psyq::scenario_engine::state_archive
 
         // 状態値を登録した後、状態値に初期値を設定する。
         auto const local_entry(
-            this->register_state(in_chunk, std::move(in_key), local_format));
+            this->register_state(
+                std::move(in_chunk), std::move(in_key), local_format));
         if (local_entry == nullptr)
         {
             return false;
         }
+        auto& local_chunk(
+            this_type::equip_chunk(this->chunks_, local_entry->chunk));
         return this_type::set_signed(
-            this->chunks_.at(in_chunk).blocks,
+            local_chunk.blocks,
             this_type::get_entry_position(*local_entry),
             static_cast<typename this_type::size_type>(in_size),
             in_value);
@@ -740,19 +807,12 @@ class psyq::scenario_engine::state_archive
         @param[in] in_reserve_empty_fields 予約しておく空き領域の数。
      */
     public: void reserve_chunk(
-        std::size_t const in_chunk,
+        typename this_type::key_type const in_chunk,
         std::size_t const in_reserve_blocks,
         std::size_t const in_reserve_empty_fields)
     {
-        if (this_type::MAX_CHUNKS <= in_chunk)
-        {
-            return;
-        }
-        else if (this->chunks_.size() <= in_chunk)
-        {
-            this->chunks_.resize(in_chunk + 1);
-        }
-        auto& local_chunk(this->chunks_.at(in_chunk));
+        auto& local_chunk(
+            this_type::equip_chunk(this->chunks_, std::move(in_chunk)));
         local_chunk.blocks.reserve(in_reserve_blocks);
         local_chunk.empty_fields.reserve(in_reserve_empty_fields);
     }
@@ -775,6 +835,43 @@ class psyq::scenario_engine::state_archive
         std::size_t const in_chunk,
         typename this_type::block_vector const& in_serialized_chunk);
     //@}
+    private:
+    static typename this_type::chunk_vector::value_type const* find_chunk(
+        typename this_type::chunk_vector const& in_chunks,
+        typename this_type::key_type const& in_chunk_key)
+    {
+        auto const local_lower_bound(
+            std::lower_bound(
+                in_chunks.begin(),
+                in_chunks.end(),
+                in_chunk_key,
+                typename this_type::chunk_key_less()));
+        return local_lower_bound != in_chunks.end()
+            && local_lower_bound->key == in_chunk_key?
+                &(*local_lower_bound): nullptr;
+    }
+
+    private: static typename this_type::chunk_vector::value_type& equip_chunk(
+        typename this_type::chunk_vector& io_chunks,
+        typename this_type::key_type const& in_chunk_key)
+    {
+        auto const local_lower_bound(
+            std::lower_bound(
+                io_chunks.begin(),
+                typename io_chunks.end(),
+                in_chunk_key,
+                typename this_type::chunk_key_less()));
+        if (local_lower_bound != io_chunks.end()
+            && local_lower_bound->key == in_chunk_key)
+        {
+            return *local_lower_bound;
+        }
+        return *io_chunks.insert(
+            local_lower_bound,
+            typename this_type::chunk_vector::value_type(
+                in_chunk_key, io_chunks.get_allocator()));
+    }
+
     //-------------------------------------------------------------------------
     /// @name 構築と代入
     //@{
@@ -804,18 +901,20 @@ class psyq::scenario_engine::state_archive
             local_entries.begin(), local_entries.end(), entry_size_greater());
 
         // 新たな書庫を用意する。
-        auto const local_chunks_size(this->chunks_.size());
         this_type local_states(
             this->entries_.size(),
-            local_chunks_size,
+            this->chunks_.size(),
             this->entries_.get_allocator());
-        local_states.chunks_.resize(local_chunks_size);
-        for (std::size_t i(0); i < local_chunks_size; ++i)
+        for (auto& local_old_chunk: this->chunks_)
         {
-            auto& local_new_chunk(local_states.chunks_.at(i));
-            auto const& local_old_chunk(this->chunks_.at(i));
+            auto& local_new_chunk(
+                *local_states.chunks_.insert(
+                    local_states.chunks_.end(),
+                    typename this_type::chunk_vector::value_type(
+                        local_old_chunk.key, this->entries_.get_allocator())));
             local_new_chunk.blocks.reserve(local_old_chunk.blocks.size());
-            local_new_chunk.empty_fields.reserve(local_old_chunk.empty_fields.size());
+            local_new_chunk.empty_fields.reserve(
+                local_old_chunk.empty_fields.size());
         }
 
         // 現在の書庫をもとに、新たな書庫を構築する。
@@ -891,26 +990,20 @@ class psyq::scenario_engine::state_archive
         @retval !=nullptr 成功。登録した状態登記。
         @retval ==nullptr
             失敗。状態値を登録できなかった。
-            - in_chunk が this_type::MAX_CHUNKS 以上だと失敗する。
             - in_key に対応する状態値がすでに登録されていると失敗する。
      */
     private: typename this_type::entry_vector::value_type* register_state(
-        std::size_t const in_chunk,
+        typename this_type::key_type in_chunk,
         typename this_type::key_type in_key,
         typename this_type::format_type const in_format)
     {
-        if (this_type::MAX_CHUNKS <= in_chunk)
-        {
-            return nullptr;
-        }
-
         // in_key と同じ状態登記がないことを確認する。
         auto const local_entry_iterator(
             std::lower_bound(
                 this->entries_.begin(),
                 this->entries_.end(),
                 in_key,
-                this_type::entry_key_less()));
+                typename this_type::entry_key_less()));
         if (local_entry_iterator != this->entries_.end()
             && local_entry_iterator->key == in_key)
         {
@@ -922,6 +1015,7 @@ class psyq::scenario_engine::state_archive
             *(this->entries_.insert(
                 local_entry_iterator,
                 this_type::entry_vector::value_type())));
+        local_entry.chunk = std::move(in_chunk);
         local_entry.key = std::move(in_key);
         PSYQ_ASSERT(in_format != this_type::kind_NULL);
         this_type::set_entry_format(local_entry, in_format);
@@ -1077,7 +1171,7 @@ class psyq::scenario_engine::state_archive
                 in_entries.begin(),
                 in_entries.end(),
                 in_key,
-                this_type::entry_key_less()));
+                typename this_type::entry_key_less()));
         return local_entry != in_entries.end() && local_entry->key == in_key?
             &(*local_entry): nullptr;
     }
@@ -1247,8 +1341,8 @@ namespace psyq_test
 {
     inline void state_archive()
     {
-        psyq::scenario_engine::state_archive<> local_states(128);
-        std::size_t local_chunk(0);
+        psyq::scenario_engine::state_archive<> local_states(128, 1);
+        psyq::scenario_engine::state_archive<>::key_type local_chunk(0);
         local_states.reserve_chunk(local_chunk, 128, 128);
 
         std::int64_t local_signed(0);

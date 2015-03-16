@@ -125,6 +125,7 @@ class psyq::scenario_engine::evaluator
             logic_OR,  ///< 論理和。
         };
 
+        typename this_type::key_type   chunk; ///< チャンクキー。
         typename this_type::key_type   key;   ///< 条件式キー。
         typename this_type::index_type begin; ///< 要素条件の先頭インデクス番号。
         typename this_type::index_type end;   ///< 要素条件の末尾インデクス番号。
@@ -204,15 +205,15 @@ class psyq::scenario_engine::evaluator
     /// @brief 状態比較条件式の要素条件。
     public: struct state_comparison_struct
     {
-        /// @brief 比較演算子の種別。
+        /// @brief 比較演算子の種類。
         enum operator_enum: std::uint8_t
         {
-            operator_EQUAL,
-            operator_NOT_EQUAL,
-            operator_LESS,
-            operator_LESS_EQUAL,
-            operator_GREATER,
-            operator_GREATER_EQUAL,
+            operator_EQUAL,         ///< 等価演算子。
+            operator_NOT_EQUAL,     ///< 不等価演算子。
+            operator_LESS,          ///< 小なり演算子。
+            operator_LESS_EQUAL,    ///< 小なりイコール演算子。
+            operator_GREATER,       ///< 大なり演算子。
+            operator_GREATER_EQUAL, ///< 大なりイコール演算子。
         };
 
         typedef std::int32_t value_type;
@@ -223,7 +224,7 @@ class psyq::scenario_engine::evaluator
         /// @brief 比較する値。
         value_type value;
 
-        /// @brief 比較演算子の種別。
+        /// @brief 比較演算子の種類。
         typename evaluator::state_comparison_struct::operator_enum operation;
 
     }; // struct state_comparison_struct
@@ -413,7 +414,7 @@ class psyq::scenario_engine::evaluator
         typename this_type::compound_vector const& in_elements)
     {
         PSYQ_ASSERT(
-            this_type::is_valid_compound(this->expressions_, in_elements));
+            this_type::is_valid_compound(in_elements, this->expressions_));
         return this_type::register_expression(
             this->expressions_,
             this->compounds_,
@@ -427,14 +428,18 @@ class psyq::scenario_engine::evaluator
         @param[in] in_key      追加する状態比較条件式のキー。
         @param[in] in_logic    追加する状態比較条件式で用いる論理演算子。
         @param[in] in_elements 追加する状態比較条件式の要素条件の配列。
+        @param[in] in_states   条件式の評価に用いる状態値書庫。
         @retval true  成功。状態比較条件式を追加した。
         @retval false 失敗。状態比較条件式は追加されなかった。
      */
     public: bool register_expression(
         typename this_type::expression_struct::key_type const in_key,
         typename this_type::expression_struct::logic_enum const in_logic,
-        typename this_type::state_comparison_vector const& in_elements)
+        typename this_type::state_comparison_vector const& in_elements,
+        typename this_type::state_archive const& in_states)
     {
+        PSYQ_ASSERT(
+            this_type::is_valid_state_comparison(in_elements, in_states));
         return this_type::register_expression(
             this->expressions_,
             this->state_comparisons_,
@@ -507,8 +512,8 @@ class psyq::scenario_engine::evaluator
     }
 
     private: static bool is_valid_compound(
-        typename this_type::expression_vector const& in_expressions,
-        typename this_type::compound_vector const& in_elements)
+        typename this_type::compound_vector const& in_elements,
+        typename this_type::expression_vector const& in_expressions)
     {
         for (auto& local_element: in_elements)
         {
@@ -519,6 +524,20 @@ class psyq::scenario_engine::evaluator
                     local_element.expression_key,
                     typename this_type::expression_key_less()));
             if (!local_find)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private: static bool is_valid_state_comparison(
+        typename this_type::state_comparison_vector const& in_elements,
+        typename this_type::state_archive const& in_states)
+    {
+        for (auto& local_element: in_elements)
+        {
+            if (in_states.get_size(local_element.key) <= 0)
             {
                 return false;
             }

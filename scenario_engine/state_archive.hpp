@@ -310,6 +310,15 @@ class psyq::scenario_engine::state_archive
         this->chunks_ = std::move(io_source.chunks_);
         return *this;
     }
+
+    /** @brief 状態値書庫で使われているメモリ割当子を取得する。
+        @return 状態値書庫で使われているメモリ割当子。
+     */
+    public: typename this_type::allocator_type get_allocator()
+    const PSYQ_NOEXCEPT
+    {
+        return this->entries_.get_allocator();
+    }
     //@}
     //-------------------------------------------------------------------------
     /// @name 状態値の取得と設定

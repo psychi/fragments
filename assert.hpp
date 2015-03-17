@@ -5,7 +5,10 @@
 #ifndef PSYQ_ASSERT_HPP_
 #define PSYQ_ASSERT_HPP_
 
-#if defined(__GNUC__)
+#if defined(__clang__)
+#   define PSYQ_NOEXCEPT noexcept
+#   define PSYQ_CONSTEXPR constexpr
+#elif defined(__GNUC__)
 #   if (4 < __GNUC__ || (__GNUC__ == 4 && 6 <= __GNUC_MINOR__))
 #       define PSYQ_NOEXCEPT noexcept
 #       define PSYQ_CONSTEXPR constexpr

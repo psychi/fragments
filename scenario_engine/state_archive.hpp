@@ -967,14 +967,17 @@ class psyq::scenario_engine::state_archive
         // 現在の書庫をもとに、新たな書庫を構築する。
         for (auto local_entry: local_entries)
         {
+            auto const local_chunk(
+                this_type::find_chunk(this->chunks_, local_entry->chunk));
+            if (local_chunk == nullptr)
+            {
+                PSYQ_ASSERT(false);
+                continue;
+            }
             auto const local_position(
                 this_type::get_entry_position(*local_entry));
             auto const local_format(
                 this_type::get_entry_format(*local_entry));
-            auto const local_chunk_index(
-                this_type::get_chunk_index(*local_entry));
-            auto const& local_chunk_blocks(
-                this->chunks_.at(local_chunk_index).blocks);
             switch (local_format)
             {
                 case this_type::kind_NULL:
@@ -983,10 +986,10 @@ class psyq::scenario_engine::state_archive
 
                 case this_type::kind_BOOL:
                 local_states.register_bool(
-                    local_chunk_index,
+                    local_entry->chunk,
                     local_entry->key,
                     0 != this_type::get_bits(
-                        local_chunk_blocks, local_position, 1));
+                        local_chunk->blocks, local_position, 1));
                 continue;
 
                 case this_type::kind_FLOAT:
@@ -999,11 +1002,11 @@ class psyq::scenario_engine::state_archive
             auto const local_size(this_type::get_format_size(local_format));
             auto const local_bits(
                 this_type::get_bits(
-                    local_chunk_blocks, local_position, local_size));
+                    local_chunk->blocks, local_position, local_size));
             if (0 < local_format)
             {
                 local_states.register_unsigned(
-                    local_chunk_index,
+                    local_entry->chunk,
                     local_entry->key,
                     local_bits,
                     local_size);
@@ -1011,7 +1014,7 @@ class psyq::scenario_engine::state_archive
             else
             {
                 local_states.register_signed(
-                    local_chunk_index,
+                    local_entry->chunk,
                     local_entry->key,
                     local_bits,
                     local_size);
@@ -1061,7 +1064,7 @@ class psyq::scenario_engine::state_archive
         auto& local_entry(
             *this->entries_.insert(
                 local_entry_iterator,
-                this_type::entry_vector::value_type()));
+                typename this_type::entry_vector::value_type()));
         local_entry.chunk = io_chunk.key;
         local_entry.key = std::move(in_key);
         PSYQ_ASSERT(in_format != this_type::kind_NULL);
@@ -1172,7 +1175,7 @@ class psyq::scenario_engine::state_archive
 
     private: static void add_empty_field(
         typename this_type::empty_field_vector& io_empty_fields,
-        typename this_type::pos_type const in_position,
+        std::size_t const in_position,
         std::size_t const in_size)
     {
         auto const local_size(
@@ -1183,8 +1186,9 @@ class psyq::scenario_engine::state_archive
             PSYQ_ASSERT(false);
             return;
         }
-        typename this_type::field_type const local_empty_field(
-           (local_size << this_type::FIELD_POSITION_SIZE) | in_position);
+        auto const local_empty_field(
+           (local_size << this_type::FIELD_POSITION_SIZE)
+           | static_cast<typename this_type::field_type>(in_position));
         io_empty_fields.insert(
             std::lower_bound(
                 io_empty_fields.begin(),
@@ -1249,17 +1253,6 @@ class psyq::scenario_engine::state_archive
     {
         return static_cast<typename this_type::size_type>(
             in_field >> this_type::FIELD_POSITION_SIZE);
-    }
-
-    /** @brief 状態値の登記から、状態値のビット列チャンクの番号を取得する。
-        @param[in] in_entry 状態値の登記。
-        @return 状態値のビット列があるビット列チャンクの番号。
-     */
-    private: static typename this_type::size_type get_chunk_index(
-        typename this_type::entry_vector::value_type const& in_entry)
-    {
-        /// @todo 今のところ複数のビット列チャンクに対応してない。
-        return 0;
     }
 
     /** @brief 状態値の登記から、状態値のビット位置を取得する。

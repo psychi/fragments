@@ -1,5 +1,5 @@
 ﻿/** @file
-    @brief @copydoc psyq::scenario_engine::evaluator
+    @copydoc psyq::scenario_engine::evaluator
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_HPP_
@@ -42,8 +42,6 @@ class psyq::scenario_engine::evaluator
 
     /// @brief 条件評価器で用いるメモリ割当子の型。
     public: typedef template_allocator allocator_type;
-
-    public: struct maker;
 
     //-------------------------------------------------------------------------
     /// @brief 条件式。
@@ -241,9 +239,9 @@ class psyq::scenario_engine::evaluator
     compounds_(in_allocator),
     state_comparisons_(in_allocator)
     {
-        this->expressions_.reserve(local_row_count);
-        this->compounds_.reserve(local_row_count);
-        this->state_comparisons_.reserve(local_row_count);
+        this->expressions_.reserve(in_reserve_expressions);
+        this->compounds_.reserve(in_reserve_compounds);
+        this->state_comparisons_.reserve(in_reserve_state_comparisons);
     }
 
     /** @brief ムーブ構築子。
@@ -369,6 +367,7 @@ class psyq::scenario_engine::evaluator
 
     //-------------------------------------------------------------------------
     /** @brief 複合条件式を追加する。
+        @param[in] in_chunk    追加する複合条件式が所属するチャンクのキー。
         @param[in] in_key      追加する複合条件式のキー。
         @param[in] in_logic    追加する複合条件式で用いる論理演算子。
         @param[in] in_elements 追加する複合条件式の要素条件の配列。
@@ -376,7 +375,8 @@ class psyq::scenario_engine::evaluator
         @retval false 失敗。複合条件式は追加されなかった。
      */
     public: bool register_expression(
-        typename this_type::expression_struct::key_type const in_key,
+        typename this_type::expression_struct::key_type const& in_chunk,
+        typename this_type::expression_struct::key_type in_key,
         typename this_type::expression_struct::logic_enum const in_logic,
         typename this_type::compound_vector const& in_elements)
     {
@@ -386,12 +386,13 @@ class psyq::scenario_engine::evaluator
             this->expressions_,
             this->compounds_,
             in_elements,
-            in_key,
+            std::move(in_key),
             in_logic,
             this_type::expression_struct::kind_COMPOUND);
     }
 
     /** @brief 状態比較条件式を追加する。
+        @param[in] in_chunk    追加する状態比較条件式が所属するチャンクのキー。
         @param[in] in_key      追加する状態比較条件式のキー。
         @param[in] in_logic    追加する状態比較条件式で用いる論理演算子。
         @param[in] in_elements 追加する状態比較条件式の要素条件の配列。
@@ -400,7 +401,8 @@ class psyq::scenario_engine::evaluator
         @retval false 失敗。状態比較条件式は追加されなかった。
      */
     public: bool register_expression(
-        typename this_type::expression_struct::key_type const in_key,
+        typename this_type::expression_struct::key_type const& in_chunk,
+        typename this_type::expression_struct::key_type in_key,
         typename this_type::expression_struct::logic_enum const in_logic,
         typename this_type::state_comparison_vector const& in_elements,
         typename this_type::state_archive const& in_states)
@@ -411,7 +413,7 @@ class psyq::scenario_engine::evaluator
             this->expressions_,
             this->state_comparisons_,
             in_elements,
-            in_key,
+            std::move(in_key),
             in_logic,
             this_type::expression_struct::kind_STATE_COMPARISON);
     }
@@ -431,7 +433,7 @@ class psyq::scenario_engine::evaluator
         typename this_type::expression_vector& io_expressions,
         template_element_container& io_elements,
         template_element_container const& in_elements,
-        typename this_type::expression_struct::key_type const in_key,
+        typename this_type::expression_struct::key_type in_key,
         typename this_type::expression_struct::logic_enum const in_logic,
         typename this_type::expression_struct::kind_enum const in_kind)
     {
@@ -463,16 +465,16 @@ class psyq::scenario_engine::evaluator
 
         // 条件式を初期化する。
         auto& local_expression(*local_insert);
-        local_expression.key = in_key;
+        local_expression.key = std::move(in_key);
         local_expression.logic = in_logic;
         local_expression.kind = in_kind;
         local_expression.begin =
-            static_cast<this_type::expression_struct::index_type>(
+            static_cast<typename this_type::expression_struct::index_type>(
                 local_element_begin);
         PSYQ_ASSERT(local_expression.begin == local_element_begin);
         auto const local_element_end(io_elements.size());
         local_expression.end =
-            static_cast<this_type::expression_struct::index_type>(
+            static_cast<typename this_type::expression_struct::index_type>(
                 local_element_end);
         PSYQ_ASSERT(local_expression.end == local_element_end);
         return true;
@@ -567,506 +569,5 @@ class psyq::scenario_engine::evaluator
     private: typename this_type::state_comparison_vector state_comparisons_;
 
 }; // class psyq::scenario_engine::evaluator
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-#ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_KEY
-#define PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_KEY "KEY"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_KEY)
-
-#ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_LOGIC
-#define PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_LOGIC "LOGIC"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_LOGIC)
-
-#ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_KIND
-#define PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_KIND "KIND"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_KIND)
-
-#ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_ELEMENT
-#define PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_ELEMENT "ELEMENT"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_ELEMENT)
-
-#ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_EQUAL
-#define PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_EQUAL "=="
-#endif // !define(PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_EQUAL)
-
-#ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_NOT_EQUAL
-#define PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_NOT_EQUAL "!="
-#endif // !define(PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_NOT_EQUAL)
-
-#ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_LESS
-#define PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_LESS "<"
-#endif // !define(PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_LESS)
-
-#ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_LESS_EQUAL
-#define PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_LESS_EQUAL "<="
-#endif // !define(PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_LESS_EQUAL)
-
-#ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_GREATER
-#define PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_GREATER ">"
-#endif // !define(PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_GREATER)
-
-#ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_GREATER_EQUAL
-#define PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_GREATER_EQUAL ">="
-#endif // !define(PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_GREATER_EQUAL)
-
-#ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_LOGIC_AND
-#define PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_LOGIC_AND "AND"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_LOGIC_AND)
-
-#ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_LOGIC_OR
-#define PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_LOGIC_OR "OR"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_LOGIC_OR)
-
-#ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_COMPOUND
-#define PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_COMPOUND "COMPOUND"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_COMPOUND)
-
-#ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_STATE_COMPARISON
-#define PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_STATE_COMPARISON "STATE_COMPARISON"
-#endif // !define(PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_STATE_COMPARISON)
-
-template<
-    typename template_state_archive,
-    typename template_key,
-    typename template_allocator>
-struct psyq::scenario_engine::evaluator
-    <template_state_archive, template_key, template_allocator>::maker
-{
-    private: typedef maker this_type;
-
-    public: typedef psyq::scenario_engine::evaluator<
-        template_state_archive, template_key, template_allocator>
-            evaluator;
-
-    /** @brief 文字列表から、条件式の一覧を構築する。
-        @param[in,out] io_hasher   文字列からハッシュ値を生成する関数オブジェクト。
-        @param[in] in_states       条件式が参照する状態値を持つコンテナ。
-        @param[in] in_string_table 条件式が記述されている文字列表。
-     */
-    public: template<typename template_hasher, typename template_string>
-    static typename this_type::evaluator make(
-        template_hasher& io_hasher,
-        typename this_type::state_archive const& in_states,
-        psyq::string::csv_table<template_string> const& in_string_table)
-    {
-        auto const local_row_count(in_string_table.get_row_count());
-        typename this_type::evaluator local_evaluator(
-            local_row_count, local_row_count, local_row_count);
-
-        // 文字列表を解析し、条件式の一覧を構築する。
-        for (
-            psyq::string::csv_table<template_string>::index_type i(0);
-            i < local_row_count;
-            ++i)
-        {
-            // 現在の行を解析し、条件式を構築して、条件式コンテナへ追加する。
-            this_type::construct_expression(
-                local_evaluator, io_hasher, in_states, in_string_table, i);
-        }
-        local_evaluator.shrink_to_fit();
-        return local_evaluator;
-    }
-
-    //-------------------------------------------------------------------------
-    /** @brief 文字列表を解析し、条件式を構築する。
-        @param[in,out] io_evaluator  構築した条件式を追加する条件評価器。
-        @param[in,out] io_hasher     文字列からハッシュ値を生成する関数オブジェクト。
-        @param[in] in_states         条件式が参照する状態値を持つコンテナ。
-        @param[in] in_string_table   解析する文字列表。
-        @param[in] in_row_index      解析する文字列表の行番号。
-        @retval true  成功。条件式を構築し、配列に追加した。
-        @retval false 失敗。条件式を構築しなかった。
-     */
-    private: template<typename template_hasher, typename template_string>
-    static bool construct_expression(
-        typename this_type::evaluator& io_evaluator,
-        template_hasher& io_hasher,
-        typename this_type::state_archive const& in_states,
-        typename psyq::string::csv_table<template_string> const& in_string_table,
-        typename psyq::string::csv_table<template_string>::index_type const
-            in_row_index)
-    {
-        // 条件式キーを取得する。
-        auto const local_key_cell(
-            in_string_table.find_body_cell(
-                in_row_index, PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_KEY));
-        if (local_key_cell.empty())
-        {
-            return false;
-        }
-        this_type::evaluator::expression_struct local_expression;
-        local_expression.key = io_hasher(local_key_cell);
-        PSYQ_ASSERT(
-            local_expression.key != io_hasher(
-                typename template_hasher::argument_type()));
-        auto const local_lower_bound(
-            std::lower_bound(
-                io_evaluator.expressions_.begin(),
-                io_evaluator.expressions_.end(),
-                local_expression.key,
-                this_type::evaluator::expression_key_less()));
-        if (local_lower_bound != io_evaluator.expressions_.end()
-            && local_lower_bound->key == local_expression.key)
-        {
-            // 条件キーが重複している。　
-            PSYQ_ASSERT(false);
-            return false;
-        }
-
-        // 要素条件の論理演算子を取得する。
-        auto const local_logic_cell(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_LOGIC));
-        if (local_logic_cell
-            == PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_LOGIC_AND)
-        {
-            local_expression.logic =
-                this_type::evaluator::expression_struct::logic_AND;
-        }
-        else if (
-            local_logic_cell
-            == PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_LOGIC_OR)
-        {
-            local_expression.logic =
-                this_type::evaluator::expression_struct::logic_OR;
-        }
-        else
-        {
-            // 未知の要素条件結合種別だった。
-            PSYQ_ASSERT(false);
-            return false;
-        }
-
-        // 条件式の種類ごとに、条件式の要素条件を構築する。
-        auto const local_kind_cell(
-            in_string_table.find_body_cell(
-                in_row_index, PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_KIND));
-        bool local_construct_elements(false);
-        if (local_kind_cell
-            == PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_COMPOUND)
-        {
-            // 複合条件式の要素条件を構築する。
-            local_construct_elements = this_type::construct_element_container<
-                this_type::evaluator::expression_struct::kind_COMPOUND>(
-                    local_expression,
-                    io_evaluator.compounds_,
-                    io_hasher,
-                    io_evaluator.expressions_,
-                    in_string_table,
-                    in_row_index);
-        }
-        else if (
-            local_kind_cell
-            == PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_STATE_COMPARISON)
-        {
-            // 状態比較条件式の要素条件を構築する。
-            local_construct_elements = this_type::construct_element_container<
-                this_type::evaluator.expression_struct::kind_STATE_COMPARISON>(
-                    local_expression,
-                    io_evaluator.state_comparisons_,
-                    io_hahser,
-                    in_states,
-                    in_string_table,
-                    in_row_index);
-        }
-        else
-        {
-            // 未知の条件式種別だった。
-            PSYQ_ASSERT(false);
-        }
-
-        // 構築した条件式をコンテナに追加する。
-        if (local_construct_elements)
-        {
-            io_evaluator.expressions_.insert(local_lower_bound, local_expression);
-        }
-        return local_construct_elements;
-    }
-
-    /** @brief 文字列表を解析し、条件式の要素条件コンテナを構築する。
-        @param[out] out_expression 構築した要素条件のコンテナを使う条件式。
-        @param[in,out] io_elements 条件式が使う要素条件のコンテナ。
-        @param[in,out] io_hasher   文字列からハッシュ値を生成する関数オブジェクト。
-        @param[in] in_states       条件式が参照する状態コンテナ。
-        @param[in] in_string_table 解析する文字列表。
-        @param[in] in_row_index    解析する文字列表の行番号。
-        @retval true  成功。 out_expression に条件式を構築した。
-        @retval false 失敗。
-     */
-    private: template<
-        typename this_type::evaluator::expression_struct::kind_enum template_kind,
-        typename template_element_container,
-        typename template_hasher,
-        typename template_state_container,
-        typename template_string>
-    static bool construct_element_container(
-        typename this_type::evaluator::expression_struct& out_expression,
-        template_element_container& io_elements,
-        template_hasher& io_hasher,
-        template_state_container const & in_states,
-        psyq::string::csv_table<template_string> const& in_string_table,
-        typename psyq::string::csv_table<template_string>::index_type const
-            in_row_index)
-    {
-        // 要素条件のコンテナを構築する。
-        auto const local_element_begin(io_elements.size());
-        for (;;)
-        {
-            auto const local_construct_element(
-                this_type::construct_element(
-                    io_elements,
-                    io_hasher,
-                    io_elements.size() - local_element_begin,
-                    in_states,
-                    in_string_table,
-                    in_row_index));
-            if (!local_construct_element)
-            {
-                break;
-            }
-        }
-        auto const local_element_end(io_elements.size());
-        if (local_element_begin == local_element_end)
-        {
-            return false;
-        }
-        PSYQ_ASSERT(local_element_begin < local_element_end);
-
-        // 条件式に要素条件を設定する。
-        out_expression.kind = template_kind;
-        out_expression.begin =
-            static_cast<typename this_type::evaluator::expression_struct::index_type>(
-                local_element_begin);
-        PSYQ_ASSERT(out_expression.begin == local_element_begin);
-        out_expression.end =
-            static_cast<typename this_type::evaluator::expression_struct::index_type>(
-                local_element_end);
-        PSYQ_ASSERT(out_expression.end == local_element_end);
-        return true;
-    }
-
-    /** @brief 文字列表を解析し、複合条件式の要素条件を構築する。
-        @param[in,out] io_elements   構築した要素条件を追加するコンテナ。
-        @param[in,out] io_hasher     文字列からハッシュ値を生成する関数オブジェクト。
-        @param[in] in_element_index  構築する要素条件のインデクス番号。
-        @param[in] in_expressions    複合条件式が参照する条件式コンテナ。
-        @param[in] in_string_table   解析する文字列表。
-        @param[in] in_row_index      解析する文字列表の行番号。
-        @retval true  文字列表から要素条件を構築した。
-        @retval false 文字列表に要素条件が存在しなかった。
-     */
-    private: template<typename template_hasher, typename template_string>
-    static bool construct_element(
-        typename this_type::evaluator::compound_vector& io_elements,
-        template_hasher& io_hasher,
-        typename this_type::evaluator::compound_vector::size_type const in_element_index,
-        typename this_type::evaluator::expression_vector const& in_expressions,
-        psyq::string::csv_table<template_string> const& in_string_table,
-        typename psyq::string::csv_table<template_string>::index_type const
-            in_row_index)
-    {
-        unsigned const local_element_size(2);
-        auto const local_element_column(in_element_index * local_element_size);
-
-        // 複合条件式のキーを取得する。
-        auto const local_compound_key_cell(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_ELEMENT,
-                local_element_column));
-        if (local_compound_key_cell.empty())
-        {
-            return false;
-        }
-        this_type::evaluator::compound_vector::value_type local_element;
-        local_element.expression_key = io_hasher(local_compound_key_cell);
-        PSYQ_ASSERT(
-            local_elemet.expression_key != io_hasher(
-                typename template_hasher::argument_type()));
-        auto const local_lower_bound(
-            std::lower_bound(
-                in_expressions.begin(),
-                in_expressions.end(),
-                local_element.key,
-                this_type::evaluator::expression_key_less()));
-        if (local_lower_bound == in_expressions.end()
-            || local_lower_bound->key != local_element.key)
-        {
-            PSYQ_ASSERT(false);
-        }
-
-        // 複合条件式の条件を取得する。
-        auto const local_get_bool(
-            this_type::get_bool(
-                in_string_table.find_body_cell(
-                    in_row_index,
-                    PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_ELEMENT,
-                    local_element_column + 1)));
-        if (local_get_bool < 0)
-        {
-            PSYQ_ASSERT(false);
-            return true;
-        }
-        local_element.condition = (local_get_bool != 0);
-
-        // 複合条件式に要素条件を追加する。
-        io_elements.push_back(local_element);
-        return true;
-    }
-
-    /** @brief 文字列表を解析し、状態比較条件式の要素条件を構築する。
-        @param[in,out] io_elements  構築した要素条件を追加するコンテナ。
-        @param[in,out] io_hasher    文字列からハッシュ値を生成する関数オブジェクト。
-        @param[in] in_element_index 構築する要素条件のインデクス番号。
-        @param[in] in_states        条件式が参照する状態値を持つコンテナ。
-        @param[in] in_string_table  解析する文字列表。
-        @param[in] in_row_index     解析する文字列表の行番号。
-        @retval true  文字列表から要素条件を構築した。
-        @retval false 文字列表に要素条件が存在しなかった。
-     */
-    private: template<typename template_hasher, typename template_string>
-    static bool construct_element(
-        typename this_type::evaluator::state_comparison_vector& io_elements,
-        template_hasher& io_hasher,
-        typename this_type::evaluator::state_comparison_vector::size_type const
-            in_element_index,
-        typename this_type::evaluator::state_archive const& in_states,
-        psyq::string::csv_table<template_string> const& in_string_table,
-        typename psyq::string::csv_table<template_string>::index_type const
-            in_row_index)
-    {
-        unsigned const local_element_size(3);
-        auto const local_element_column(in_element_index * local_element_size);
-
-        // 状態キーを取得する。
-        auto const local_state_key_cell(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_ELEMENT,
-                local_element_column));
-        if (local_state_key_cell.empty())
-        {
-            return false;
-        }
-        typename this_type::evaluator::state_comparison_struct local_state;
-        local_state.key = io_hasher(local_state_key_cell);
-        PSYQ_ASSERT(
-            local_state.key != io_hasher(
-                typename template_hasher::argument_type()));
-
-        // 比較演算子を取得する。
-        auto const local_get_comparison_operator(
-            this_type::evaluator::get_comparison_operator(
-                local_state.operation,
-                in_string_table.find_body_cell(
-                    in_row_index,
-                    PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_ELEMENT,
-                    local_element_column + 1)));
-        if (!local_get_comparison_operator)
-        {
-            return true;
-        }
-
-        // 比較条件値を取得する。
-        auto const local_comparison_value_cell(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_COLUMN_ELEMENT,
-                local_element_column + 1));
-        auto const local_get_bool(
-            this_type::get_bool(local_comparison_value_cell));
-        if (0 <= local_get_bool)
-        {
-            local_state.value = (local_get_bool != 0);
-        }
-        else
-        {
-            std::size_t local_rest_size;
-            local_state.value = local_comparison_value_cell.to_integer<
-                typename evaluator::state_comparison_struct::value_type>(
-                    &local_rest_size);
-            if (local_rest_size != 0)
-            {
-                PSYQ_ASSERT(false);
-                return true;
-            }
-        }
-
-        // 要素条件を追加する。
-        io_elements.push_back(local_state);
-        return true;
-    }
-
-    private: template<typename template_string>
-    static int get_bool(template_string const& in_string)
-    {
-        if (in_string == PSYQ_SCENARIO_ENGINE_STATE_CSV_TRUE)
-        {
-            return 1;
-        }
-        else if (in_string == PSYQ_SCENARIO_ENGINE_STATE_CSV_FALSE)
-        {
-            return 0;
-        }
-        return -1;
-    }
-
-    private: template<typename template_string>
-    static bool get_comparison_operator(
-        typename this_type::evaluator::state_comparison_struct::operator_enum&
-            out_operator,
-        template_string const& in_string)
-    {
-        if (in_string == PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_EQUAL)
-        {
-            out_operator =
-                this_type::evaluator::expression_struct::operator_EQUAL;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_NOT_EQUAL)
-        {
-            out_operator =
-                this_type::evaluator::expression_struct::operator_NOT_EQUAL;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_LESS)
-        {
-            out_operator =
-                this_type::evaluator::expression_struct::operator_LESS;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_LESS_EQUAL)
-        {
-            out_operator =
-                this_type::evaluator::expression_struct::operator_LESS_EQUAL;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_GREATER)
-        {
-            out_operator =
-                this_type::evaluator::expression_struct::operator_GREATER;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_EVALUATOR_CSV_OPERATOR_GREATER_EQUAL)
-        {
-            out_operator =
-                this_type::evaluator::expression_struct::operator_GREATER_EQUAL;
-        }
-        else
-        {
-            // 比較演算子が見つからなかった。
-            PSYQ_ASSERT(false);
-            return false;
-        }
-        return true;
-    }
-
-}; // struct psyq::scenario_engine::evaluator::maker
 
 #endif // !defined(PSYQ_SCENARIO_ENGINE_EVALUATOR_HPP_)

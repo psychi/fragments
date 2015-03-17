@@ -20,12 +20,20 @@
 
 namespace psyq
 {
-    /// ビデオゲームでのシナリオ進行を管理するための実装
+    /// @brief ビデオゲームでのシナリオ進行を管理するための実装
     namespace scenario_engine
     {
         /// @cond
         template<typename, typename> class state_archive;
         /// @endcond
+
+        /// @brief psyq::scenario_engine の管理者以外は、直接アクセス禁止。
+        namespace _private
+        {
+            /// @cond
+            template<typename, typename> struct key_less;
+            /// @endcond
+        } // namespace _private
     } // namespace scenario_engine
 } // namespace psyq
 
@@ -170,37 +178,6 @@ class psyq::scenario_engine::state_archive
             empty_field_vector;
 
     //-------------------------------------------------------------------------
-    /// @brief キーを比較する関数オブジェクト。
-    private: template<typename template_value>
-    struct key_less
-    {
-        bool operator()(
-            template_value const& in_left,
-            template_value const& in_right)
-        const PSYQ_NOEXCEPT
-        {
-            return in_left.key < in_right.key;
-        }
-
-        bool operator()(
-            typename state_archive::key_type const& in_left,
-            template_value const& in_right)
-        const PSYQ_NOEXCEPT
-        {
-            return in_left < in_right.key;
-        }
-
-        bool operator()(
-            template_value const& in_left,
-            typename state_archive::key_type const& in_right)
-        const PSYQ_NOEXCEPT
-        {
-            return in_left.key < in_right;
-        }
-
-    }; // struct key_less
-
-    //-------------------------------------------------------------------------
     /// @brief ビット列チャンク。
     private: struct chunk_struct
     {
@@ -244,8 +221,8 @@ class psyq::scenario_engine::state_archive
              chunk_vector;
 
     /// @brief チャンクキーを比較する関数オブジェクト。
-    private: typedef
-         typename this_type::key_less<typename this_type::chunk_struct>
+    private: typedef psyq::scenario_engine::_private::key_less<
+         typename this_type::chunk_struct, typename this_type::key_type>
              chunk_key_less;
 
     //-------------------------------------------------------------------------
@@ -267,8 +244,8 @@ class psyq::scenario_engine::state_archive
              entry_vector;
 
     /// @brief 状態キーを比較する関数オブジェクト。
-    private: typedef
-         typename this_type::key_less<typename this_type::entry_struct>
+    private: typedef psyq::scenario_engine::_private::key_less<
+         typename this_type::entry_struct, typename this_type::key_type>
              entry_key_less;
 
     //-------------------------------------------------------------------------
@@ -1368,6 +1345,37 @@ class psyq::scenario_engine::state_archive
     private: typename this_type::chunk_vector chunks_;
 
 }; // class psyq::state_archive
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief キーを比較する関数オブジェクト。
+template<typename template_value, typename template_key>
+struct psyq::scenario_engine::_private::key_less
+{
+    bool operator()(
+        template_value const& in_left,
+        template_value const& in_right)
+    const PSYQ_NOEXCEPT
+    {
+        return in_left.key < in_right.key;
+    }
+
+    bool operator()(
+        template_key const& in_left,
+        template_value const& in_right)
+    const PSYQ_NOEXCEPT
+    {
+        return in_left < in_right.key;
+    }
+
+    bool operator()(
+        template_value const& in_left,
+        template_key const& in_right)
+    const PSYQ_NOEXCEPT
+    {
+        return in_left.key < in_right;
+    }
+
+}; // struct psyq::scenario_engine::_private::key_less
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq_test

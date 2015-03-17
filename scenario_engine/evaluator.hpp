@@ -228,6 +228,28 @@ class psyq::scenario_engine::evaluator
     }; // struct state_comparison_evaluator
 
     //-------------------------------------------------------------------------
+    /// @brief 要素条件チャンク。
+    private: struct chunk_struct
+    {
+        /// @brief 複合条件式で使う要素条件のコンテナ。
+        typename evaluator::compound_vector compounds_;
+        /// @brief 状態比較条件式で使う要素条件のコンテナ。
+        typename evaluator::state_comparison_vector state_comparisons_;
+        /// @brief チャンクを識別するキー。
+        typename evaluator::key_type key;
+    }; // struct chunk
+
+    /// @brief 要素条件チャンクのコンテナ。
+    private: typedef std::vector<
+         typename this_type::chunk_struct, typename this_type::allocator_type>
+             chunk_vector;
+
+    /// @brief チャンクキーを比較する関数オブジェクト。
+    private: typedef psyq::scenario_engine::_private::key_less<
+         typename this_type::chunk_struct, typename this_type::key_type>
+             chunk_key_less;
+
+    //-------------------------------------------------------------------------
     public: evaluator(
         std::size_t const in_reserve_expressions,
         std::size_t const in_reserve_compounds,
@@ -567,6 +589,7 @@ class psyq::scenario_engine::evaluator
     private: typename this_type::compound_vector compounds_;
     /// @brief 状態比較条件式で使う要素条件のコンテナ。
     private: typename this_type::state_comparison_vector state_comparisons_;
+    private: typename this_type::chunk_vector chunks_;
 
 }; // class psyq::scenario_engine::evaluator
 

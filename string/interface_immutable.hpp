@@ -301,7 +301,7 @@ class psyq::string::_private::interface_immutable: public template_string_type
         typename this_type::size_type const in_index)
     {
         PSYQ_ASSERT_THROW(in_index < in_size, std::out_of_range);
-        return this->get_char_pointer_noexcept(in_begin, in_size, in_index);
+        return this_type::get_char_pointer_noexcept(in_begin, in_size, in_index);
     }
     protected: template<typename template_pointer_type>
     static template_pointer_type get_char_pointer_noexcept(
@@ -905,7 +905,7 @@ class psyq::string::_private::interface_immutable: public template_string_type
     const PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(in_size <= 0 || nullptr != in_string);
-        auto const local_this_size(this->size())
+        auto const local_this_size(this->size());
         if (in_offset < local_this_size)
         {
             auto const local_begin(this->data());
@@ -937,7 +937,7 @@ class psyq::string::_private::interface_immutable: public template_string_type
         typename this_type::size_type const in_offset = this_type::npos)
     const PSYQ_NOEXCEPT
     {
-        auto const local_this_size(this->size())
+        auto const local_this_size(this->size());
         if (in_offset < local_this_size)
         {
             auto const local_begin(this->data());
@@ -986,7 +986,7 @@ class psyq::string::_private::interface_immutable: public template_string_type
     const PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(in_size <= 0 || nullptr != in_string);
-        auto const local_this_size(this->size())
+        auto const local_this_size(this->size());
         if (in_offset < local_this_size)
         {
             auto const local_begin(this->data());
@@ -1564,16 +1564,16 @@ namespace psyq
             PSYQ_ASSERT(local_string_3 == local_string_5);
 
             std::size_t local_rest_size;
-            if (string_view("1234").to_integer<int>(&local_rest_size) != 1234
+            if (string_view("1234").template to_integer<int>(&local_rest_size) != 1234
                 || local_rest_size != 0)
             {
                 PSYQ_ASSERT(false);
             }
             PSYQ_ASSERT(
-                string_view("0x1234").to_integer<int>(&local_rest_size) == 0x1234
+                string_view("0x1234").template to_integer<int>(&local_rest_size) == 0x1234
                 && local_rest_size == 0);
             PSYQ_ASSERT(
-                string_view("0x10.8p1").to_real<double>(&local_rest_size) == 0x108
+                string_view("0x10.8p1").template to_real<double>(&local_rest_size) == 0x108
                 && local_rest_size == 0);
         }
     }

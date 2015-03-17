@@ -86,7 +86,7 @@ class psyq::string::csv_table
     }; // struct cell_index_less
 
     /// @brief 文字列表の列の属性。
-    private: struct attribute
+    public: struct attribute
     {
         attribute(
             typename csv_table::string_view const& in_name,
@@ -98,9 +98,9 @@ class psyq::string::csv_table
         size(in_size)
         {}
 
-        typename csv_table::string_view name; ///< 属性の名前。
-        typename csv_table::index_type column;     ///< 属性の列番号。
-        typename csv_table::index_type size;       ///< 属性の要素数。
+        typename csv_table::string_view name;  ///< 属性の名前。
+        typename csv_table::index_type column; ///< 属性の列番号。
+        typename csv_table::index_type size;   ///< 属性の要素数。
     }; // struct attribute
 
     /// @brief 属性を名前で比較する関数オブジェクト。
@@ -448,17 +448,32 @@ class psyq::string::csv_table
             return in_attribute_index < this->get_column_count()?
                 in_attribute_index: this_type::NULL_INDEX;
         }
-        auto const local_attribute(
+        auto const local_attribute(this->find_attribute(in_attribute_name));
+        return local_attribute != nullptr
+            && local_attribute->name == in_attribute_name
+            && in_attribute_index < local_attribute->size?
+                local_attribute->column + in_attribute_index:
+                this_type::NULL_INDEX;
+    }
+
+    /** @brief 属性名から、文字列表の属性を検索する。
+        @param[in] in_attribute_name  検索する属性の名前。
+        @retval !=nullptr 属性名に対応する属性を指すポインタ。
+        @retval ==nullptr 属性名に対応する属性が存在しない。
+     */
+    public: typename this_type::attribute const* find_attribute(
+        typename this_type::string_view const& in_attribute_name)
+    const PSYQ_NOEXCEPT
+    {
+        auto const local_lower_bound(
             std::lower_bound(
                 this->attributes_.begin(),
                 this->attributes_.end(),
                 in_attribute_name,
                 typename this_type::attribute_name_less()));
-        return local_attribute != this->attributes_.end()
-            && local_attribute->name == in_attribute_name
-            && in_attribute_index < local_attribute->size?
-                local_attribute->column + in_attribute_index:
-                this_type::NULL_INDEX;
+        return local_lower_bound != this->attributes_.end()
+            && local_lower_bound->name == in_attribute_name?
+                &(*local_lower_bound): nullptr;
     }
     //@}
     //-------------------------------------------------------------------------

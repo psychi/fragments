@@ -111,7 +111,7 @@ class psyq::scenario_engine::expression_builder
             local_element_attribute->size,
             io_evaluator.get_allocator());
 
-        // 文字列表を解析し、条件式の一覧を構築する。
+        // 文字列表を行ごとに解析し、条件式を構築して、条件評価器へ登録する。
         auto const local_row_count(in_string_table.get_row_count());
         std::size_t local_count(0);
         for (
@@ -119,7 +119,6 @@ class psyq::scenario_engine::expression_builder
             i < local_row_count;
             ++i)
         {
-            // 現在の行を解析し、条件式を構築して、条件評価器へ登録する。
             auto const local_build_expression(
                 local_builder.build_expression(
                     io_evaluator,
@@ -259,9 +258,10 @@ class psyq::scenario_engine::expression_builder
         return local_register_expression;
     }
 
-    /** @brief 文字列表を解析し、条件式の要素条件コンテナを構築して、条件式を条件評価器へ登録する。
+    /** @brief 文字列表を解析し、条件式の要素条件コンテナを構築して、
+               条件式を条件評価器へ登録する。
         @param[in,out] io_evaluator 条件式を登録する条件評価器。
-        @param[in,out] io_elements  条件式が使う要素条件の作業領域。
+        @param[in,out] io_elements  条件式の構築に使う要素条件の作業領域。
         @param[in,out] io_hasher    文字列からハッシュ値を生成する関数オブジェクト。
         @param[in] in_chunk         登録する条件式が所属するチャンクのキー。
         @param[in] in_key           登録する条件式のキー。
@@ -270,7 +270,7 @@ class psyq::scenario_engine::expression_builder
         @param[in] in_string_table  解析する文字列表。
         @param[in] in_row_index     解析する文字列表の行番号。
         @retval true  成功。 io_evaluator に条件式を登録した。
-        @retval false 失敗。
+        @retval false 失敗。条件式は登録されなかった。
      */
     private: template<
         typename template_element_container,
@@ -289,22 +289,16 @@ class psyq::scenario_engine::expression_builder
         typename psyq::string::csv_table<template_string>::index_type const
             in_row_index)
     {
-        // 要素条件のコンテナを構築する。
+        // 要素条件のコンテナを構築し、条件式を条件評価器へ登録する。
         io_elements.clear();
-        for (;;)
-        {
-            auto const local_build_element(
-                this_type::build_element(
-                    io_elements,
-                    io_hasher,
-                    in_states,
-                    in_string_table,
-                    in_row_index));
-            if (!local_build_element)
-            {
-                break;
-            }
-        }
+        while (
+            this_type::build_element(
+                io_elements,
+                io_hasher,
+                in_states,
+                in_string_table,
+                in_row_index))
+        {}
         if (io_elements.empty())
         {
             return false;
@@ -352,7 +346,12 @@ class psyq::scenario_engine::expression_builder
         PSYQ_ASSERT(
             local_element.expression_key != io_hasher(
                 typename template_hasher::argument_type()));
-        PSYQ_ASSERT(in_evaluator.find(local_element.key) == nullptr);
+        PSYQ_ASSERT(
+            /** @note
+                無限ループを防ぐため、複合条件式で使う下位の条件式は、
+                条件評価器で定義済みのものしか使わないようにする。
+             */
+            in_evaluator.find(local_element.key) != nullptr);
 
         // 複合条件式の条件を取得する。
         auto const local_get_bool(

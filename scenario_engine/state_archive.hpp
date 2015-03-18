@@ -187,31 +187,31 @@ class psyq::scenario_engine::state_archive
             typename state_archive::key_type in_key,
             typename state_archive::allocator_type const& in_allocator)
         :
-        key(std::move(in_key)),
         blocks(in_allocator),
-        empty_fields(in_allocator)
+        empty_fields(in_allocator),
+        key(std::move(in_key))
         {}
 
         chunk_struct(chunk_struct&& io_source):
-        key(std::move(io_source.key)),
         blocks(std::move(io_source.blocks)),
-        empty_fields(std::move(io_source.empty_fields))
+        empty_fields(std::move(io_source.empty_fields)),
+        key(std::move(io_source.key))
         {}
 
         chunk_struct& operator=(chunk_struct&& io_source)
         {
-            this->key = std::move(io_source.key);
             this->blocks = std::move(io_source.blocks);
             this->empty_fields = std::move(io_source.empty_fields);
+            this->key = std::move(io_source.key);
             return *this;
         }
 
-        /// @brief チャンクを識別するキー。
-        typename state_archive::key_type key;
         /// @copydoc block_vector
         typename state_archive::block_vector blocks;
         /// @copydoc empty_field_vector
         typename state_archive::empty_field_vector empty_fields;
+        /// @brief チャンクを識別するキー。
+        typename state_archive::key_type key;
 
     }; // struct chunk_struct
 

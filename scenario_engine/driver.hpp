@@ -6,6 +6,7 @@
 #define PSYQ_SCENARIO_ENGINE_DRIVER_HPP_
 
 //#include "scenario_engine/evaluator.hpp"
+//#include "scenario_engine/dispatcher.hpp"
 
 /// @cond
 namespace psyq
@@ -54,24 +55,66 @@ class psyq::scenario_engine::driver
         typename this_type::allocator_type>
             evaluator;
 
+    /// @brief シナリオ駆動器で用いる条件監視器の型。
+    public: typedef psyq::scenario_engine::dispatcher<
+        typename this_type::hasher::result_type,
+        typename this_type::allocator_type>
+            dispatcher;
+
     //-------------------------------------------------------------------------
-    /** @brief シナリオ駆動器で用いる条件評価器を取得する。
-        @return シナリオ駆動器で用いる条件評価器。
+    /** @brief 空のシナリオ駆動器を構築する。
+        @param[in] in_reserve_chunks      予約しておくチャンクの数。
+        @param[in] in_reserve_states      予約しておく状態値の数。
+        @param[in] in_reserve_expressions 予約しておく条件式の数。
+        @param[in] in_hasher              ハッシュ関数オブジェクトの初期値。
+        @param[in] in_allocator           メモリ割当子の初期値。
      */
-    public: typename this_type::evaluator const& get_evaluator() const
+    public: driver(
+        std::size_t const in_reserve_chunks,
+        std::size_t const in_reserve_states,
+        std::size_t const in_reserve_expressions,
+        typename this_type::hasher in_hasher = typename this_type::hasher(),
+        typename this_type::allocator_type const& in_allocator =
+            typename this_type::allocator_type())
+    :
+    state_archive_(in_reserve_states, in_reserve_chunks, in_allocator),
+    evaluator_(in_reserve_expressions, in_reserve_chunks, in_allocator),
+    dispatcher_(in_allocator),
+    hasher_(std::move(in_hasher))
+    {}
+
+    /** @brief ムーブ構築子。
+        @param[in,out] io_source ムーブ元となるインスタンス。
+     */
+    public: driver(this_type&& io_source):
+    state_archive_(std::move(io_source.state_archive_)),
+    evaluator_(std::move(io_source.evaluator_)),
+    dispatcher_(std::move(io_source.dispatcher_)),
+    hasher_(std::move(io_source.hasher_))
+    {}
+
+    /** @brief ムーブ代入演算子。
+        @param[in,out] io_source ムーブ元となるインスタンス。
+        @return *this
+     */
+    public: this_type& operator=(this_type&& io_source)
     {
-        return this->evaluator_;
+        this->state_archive_ = std::move(io_source.state_archive_);
+        this->evaluator_ = std::move(io_source.evaluator_);
+        this->dispatcher_ = std::move(io_source.dispatcher_);
+        this->hasher_ = std::move(io_source.hasher_);
+        return *this;
     }
 
     /** @brief シナリオ駆動器で用いるハッシュ関数オブジェクトを取得する。
         @return シナリオ駆動器で用いるハッシュ関数オブジェクト。
      */
-    public: typename this_type::hasher hash_function() const
+    public: typename this_type::hasher const& hash_function() const
     {
         return this->hasher_;
     }
 
-    public: typename this_type::key_type make_hash(
+    public: typename this_type::hasher::result_type make_hash(
         typename this_type::hasher::argument_type const& in_key)
     {
         auto const local_hash(this->hasher_(in_key));
@@ -81,15 +124,28 @@ class psyq::scenario_engine::driver
         return local_hash;
     }
 
-    //-------------------------------------------------------------------------
-    /// @brief シナリオ駆動器で用いるハッシュ関数オブジェクト。
-    private: typename this_type::hasher hasher_;
+    /** @brief シナリオ進行を更新する。
 
+        基本的には、フレーム毎に更新すること。
+     */
+    public: void update()
+    {
+        this->dispatcher_.dispatch_function(
+            this->evaluator_, this->state_archive_);
+    }
+
+    //-------------------------------------------------------------------------
     /// @brief シナリオ駆動器で用いる状態値書庫。
-    private: typename this_type::state_archive state_archive_;
+    public: typename this_type::state_archive state_archive_;
 
     /// @brief シナリオ駆動器で用いる条件評価器。
-    private: typename this_type::evaluator evaluator_;
+    public: typename this_type::evaluator evaluator_;
+
+    /// @brief シナリオ駆動器で用いる条件監視器。
+    public: typename this_type::dispatcher dispatcher_;
+
+    /// @brief シナリオ駆動器で用いるハッシュ関数オブジェクト。
+    private: typename this_type::hasher hasher_;
 
 }; // class psyq::scenario_engine::driver
 

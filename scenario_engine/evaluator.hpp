@@ -314,8 +314,7 @@ class psyq::scenario_engine::evaluator
         auto const local_expression(this->find_expression(in_expression_key));
         if (local_expression != nullptr)
         {
-            auto const local_chunk(
-                this_type::find_chunk(this->chunks_, local_expression->chunk));
+            auto const local_chunk(this->find_chunk(local_expression->chunk));
             if (local_chunk != nullptr)
             {
                 // 条件式の種別によって評価方法を分岐する。
@@ -349,7 +348,7 @@ class psyq::scenario_engine::evaluator
     }
 
     /** @brief 条件式を取得する。
-        @param[in] in_expression_key 評価する条件式のキー。
+        @param[in] in_expression_key 取得する条件式のキー。
         @retval !=nullptr 対応する条件式を指すポインタ。
         @retval ==nullptr 対応する条件式が見つからなかった。
      */
@@ -537,14 +536,12 @@ class psyq::scenario_engine::evaluator
     /** @brief 複合条件の要素条件コンテナを取得する。
         @return 複合条件の要素条件コンテナ。
      */
-    public: typename this_type::compound_vector const* find_compounds()
-    const PSYQ_NOEXCEPT;
-
-    /** @brief 状態比較条件の要素条件コンテナを取得する。
-        @return 状態比較条件の要素条件コンテナ。
-     */
-    public: typename this_type::state_comparison_vector const*
-    find_state_comparisons() const PSYQ_NOEXCEPT;
+    public: typename this_type::chunk_struct const* find_chunk(
+        typename this_type::expression_struct::key_type const& in_chunk)
+    const PSYQ_NOEXCEPT
+    {
+        return this_type::find_chunk(this->chunks_, in_chunk);
+    }
 
     /** @brief 要素条件チャンクを予約する。
         @param[in] in_chunk             予約する要素条件チャンクのキー。
@@ -594,6 +591,7 @@ class psyq::scenario_engine::evaluator
     private: static typename this_type::chunk_struct const* find_chunk(
         typename this_type::chunk_vector const& in_chunks,
         typename this_type::expression_struct::key_type const& in_chunk_key)
+    PSYQ_NOEXCEPT
     {
         auto const local_lower_bound(
             std::lower_bound(
@@ -605,6 +603,7 @@ class psyq::scenario_engine::evaluator
             && local_lower_bound->key == in_chunk_key?
                 &(*local_lower_bound): nullptr;
     }
+
     //-------------------------------------------------------------------------
     /** @brief 条件式を評価する。
         @param[in] in_expression 評価する条件式。

@@ -40,10 +40,12 @@ class psyq::scenario_engine::dispatcher
 
     public: typedef template_allocator allocator_type;
 
+    public: typedef template_expression_key expression_key;
     private: typedef template_expression_key state_key;
 
     private: typedef std::vector<
-        template_expression_key, typename this_type::allocator_type>
+        typename this_type::expression_key,
+        typename this_type::allocator_type>
             expression_key_vector;
 
     //-------------------------------------------------------------------------

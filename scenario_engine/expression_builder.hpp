@@ -355,7 +355,7 @@ class psyq::scenario_engine::expression_builder
 
         // 複合条件式の条件を取得する。
         auto const local_get_bool(
-            this_type::get_bool(
+            psyq::scenario_engine::_private::get_bool(
                 in_string_table.find_body_cell(
                     in_row_index,
                     PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_ELEMENT,
@@ -430,7 +430,8 @@ class psyq::scenario_engine::expression_builder
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_ELEMENT,
                 local_element_column + 1));
         auto const local_get_bool(
-            this_type::get_bool(local_comparison_value_cell));
+            psyq::scenario_engine::_private::get_bool(
+                local_comparison_value_cell));
         if (0 <= local_get_bool)
         {
             local_state.value = (local_get_bool != 0);
@@ -451,20 +452,6 @@ class psyq::scenario_engine::expression_builder
         // 要素条件を追加する。
         io_elements.push_back(local_state);
         return true;
-    }
-
-    private: template<typename template_string>
-    static int get_bool(template_string const& in_string)
-    {
-        if (in_string == PSYQ_SCENARIO_ENGINE_STATE_CSV_TRUE)
-        {
-            return 1;
-        }
-        else if (in_string == PSYQ_SCENARIO_ENGINE_STATE_CSV_FALSE)
-        {
-            return 0;
-        }
-        return -1;
     }
 
     private: template<typename template_string>

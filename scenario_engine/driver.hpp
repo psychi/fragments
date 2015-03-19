@@ -6,7 +6,7 @@
 #define PSYQ_SCENARIO_ENGINE_DRIVER_HPP_
 
 //#include "scenario_engine/evaluator.hpp"
-//#include "scenario_engine/dispatcher.hpp"
+//#include "scenario_engine/behavior.hpp"
 
 /// @cond
 namespace psyq
@@ -61,6 +61,11 @@ class psyq::scenario_engine::driver
         typename this_type::allocator_type>
             dispatcher;
 
+    /// @brief シナリオ駆動器で用いる条件挙動器の型。
+    public: typedef psyq::scenario_engine::behavior<
+        typename this_type::dispatcher>
+            behavior;
+
     //-------------------------------------------------------------------------
     /** @brief 空のシナリオ駆動器を構築する。
         @param[in] in_reserve_chunks      予約しておくチャンクの数。
@@ -73,15 +78,18 @@ class psyq::scenario_engine::driver
         std::size_t const in_reserve_chunks,
         std::size_t const in_reserve_states,
         std::size_t const in_reserve_expressions,
-        typename this_type::hasher in_hasher = typename this_type::hasher(),
+        typename this_type::hasher in_hasher = this_type::hasher(),
         typename this_type::allocator_type const& in_allocator =
-            typename this_type::allocator_type())
+            this_type::allocator_type())
     :
     state_archive_(in_reserve_states, in_reserve_chunks, in_allocator),
     evaluator_(in_reserve_expressions, in_reserve_chunks, in_allocator),
     dispatcher_(in_allocator),
+    behaviors_(in_allocator),
     hasher_(std::move(in_hasher))
-    {}
+    {
+        this->behaviors_.reserve(in_reserve_chunks);
+    }
 
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元となるインスタンス。
@@ -144,9 +152,21 @@ class psyq::scenario_engine::driver
     /// @brief シナリオ駆動器で用いる条件監視器。
     public: typename this_type::dispatcher dispatcher_;
 
+    /// @brief シナリオ駆動器で用いる条件挙動器のコンテナ。
+    public: typename this_type::behavior::chunk_vector behaviors_;
+
     /// @brief シナリオ駆動器で用いるハッシュ関数オブジェクト。
     private: typename this_type::hasher hasher_;
 
 }; // class psyq::scenario_engine::driver
 
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+namespace psyq_test
+{
+    inline void scenario_engine()
+    {
+        psyq::scenario_engine::driver<> local_driver(4, 16, 16);
+        local_driver.state_archive_.is_registered(0);
+    }
+}
 #endif // !defined(PSYQ_SCENARIO_ENGINE_DRIVER_HPP_)

@@ -720,6 +720,8 @@ INPUT                  = \
                          ./scenario_engine/state_archive.hpp \
                          ./scenario_engine/evaluator.hpp \
                          ./scenario_engine/expression_builder.hpp \
+                         ./scenario_engine/dispatcher.hpp \
+                         ./scenario_engine/behavior.hpp \
                          ./scenario_engine/driver.hpp \
                          ./memory_arena.hpp \
                          ./bit_algorithm.hpp \

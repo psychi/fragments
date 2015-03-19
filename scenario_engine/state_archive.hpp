@@ -32,6 +32,20 @@ namespace psyq
         {
             /// @cond
             template<typename, typename> struct key_less;
+
+            template<typename template_string>
+            int get_bool(template_string const& in_string)
+            {
+                if (in_string == PSYQ_SCENARIO_ENGINE_STATE_CSV_TRUE)
+                {
+                    return 1;
+                }
+                else if (in_string == PSYQ_SCENARIO_ENGINE_STATE_CSV_FALSE)
+                {
+                    return 0;
+                }
+                return -1;
+            }
             /// @endcond
         } // namespace _private
     } // namespace scenario_engine
@@ -798,6 +812,17 @@ class psyq::scenario_engine::state_archive
             this_type::get_entry_position(*local_entry),
             static_cast<typename this_type::size_type>(in_size),
             in_value);
+    }
+
+    /** @brief 状態値が登録されているか判定する。
+        @param[in] in_key 登録されているか判定する状態値のキー。
+        @retval !=false キーに対応する状態値が登録されている。
+        @retval ==false キーに対応する状態値が登録されてない。
+     */
+    public: bool is_registered(typename this_type::key_type const& in_key)
+    const PSYQ_NOEXCEPT
+    {
+        return this_type::find_entry(this->entries_, in_key) != nullptr;
     }
     //@}
     //-------------------------------------------------------------------------

@@ -244,10 +244,8 @@ struct psyq::scenario_engine::behavior_chunk
                     // 条件と評価が合致すれば、状態値を書き換える。
                     if (in_condition == in_evaluation)
                     {
-                        auto const local_operate_state(
-                            this_type::operate_state(
-                                io_states, in_key, in_operator, in_value));
-                        PSYQ_ASSERT(local_operate_state);
+                        this_type::operate_state(
+                            io_states, in_key, in_operator, in_value);
                     }
                 }));
     }
@@ -261,11 +259,14 @@ struct psyq::scenario_engine::behavior_chunk
     {
         if (in_operator == this_type::state_operator_COPY)
         {
-            return io_states.set_value(in_key, in_value);
+            auto const local_set_value(io_states.set_value(in_key, in_value));
+            PSYQ_ASSERT(local_set_value);
+            return local_set_value;
         }
         template_value local_value;
         if (!io_states.get_value(in_key, local_value))
         {
+            PSYQ_ASSERT(false);
             return false;
         }
         switch (in_operator)
@@ -287,9 +288,13 @@ struct psyq::scenario_engine::behavior_chunk
             local_value %= in_value;
             break;
 
-            default: return false;
+            default:
+            PSYQ_ASSERT(false);
+            return false;
         }
-        return io_states.set_value(in_key, local_value);
+        auto const local_set_value(io_states.set_value(in_key, local_value));
+        PSYQ_ASSERT(local_set_value);
+        return local_set_value;
     }
 
     //-------------------------------------------------------------------------

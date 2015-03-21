@@ -696,7 +696,10 @@ class psyq::scenario_engine::dispatcher
             io_listener.second.flags.test(
                 this_type::listener::flag_LAST_EVALUATION));
         bool const local_new_evaluation(
-            in_evaluator.Evaluate(io_listener.first, in_states));
+            in_evaluator.evaluate_expression(io_listener.first, in_states));
+        PSYQ_ASSERT(
+            local_new_evaluation
+            || in_evaluator.find_expression(io_listener.first) != nullptr);
         if (local_old_evaluation == local_new_evaluation)
         {
             return;

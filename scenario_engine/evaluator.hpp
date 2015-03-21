@@ -121,12 +121,16 @@ class psyq::scenario_engine::evaluator
         evaluator(in_evaluator)
         {}
 
-        bool operator()(typename evaluator::compound_struct const in_compound)
+        bool operator()(typename evaluator::compound_struct const& in_compound)
         const PSYQ_NOEXCEPT
         {
-            return in_compound.condition
-                == this->evaluator.evaluate_expression(
-                    in_compound.key, this->states);
+            auto const local_condition(
+                this->evaluator.evaluate_expression(
+                    in_compound.key, this->states));
+            PSYQ_ASSERT(
+                local_condition
+                || this->evaluator.find_expression(in_compound.key) != nullptr);
+            return local_condition == in_compound.condition;
         }
 
         typename evaluator::state_archive const& states;

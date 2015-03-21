@@ -10,6 +10,26 @@
 #include <vector>
 //#include "string/view.hpp"
 
+#ifndef PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT
+#define PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT ','
+#endif // !defined(PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT)
+
+#ifndef PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT
+#define PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT '\n'
+#endif // !defined(PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT)
+
+#ifndef PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT
+#define PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT '"'
+#endif // !defined(PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT)
+
+#ifndef PSYQ_STRING_CSV_TABLE_QUOTE_END_DEFAULT
+#define PSYQ_STRING_CSV_TABLE_QUOTE_END_DEFAULT '"'
+#endif // !defined(PSYQ_STRING_CSV_TABLE_QUOTE_END_DEFAULT)
+
+#ifndef PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT
+#define PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT '"'
+#endif // !defined(PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT)
+
 /// @cond
 namespace psyq
 {
@@ -182,6 +202,7 @@ class psyq::string::csv_table
         @param[in] in_attribute_row    属性行の番号。
         @param[in] in_attribute_name   主キーとして使う列の、属性名。
         @param[in] in_attribute_index  主キーとして使う列の、属性インデクス番号。
+        @param[in] in_allocator        メモリ割当子の初期値。
         @param[in] in_column_separator CSV文字列の列の区切り文字。
         @param[in] in_row_separator    CSV文字列の行の区切り文字。
         @param[in] in_quote_begin      CSV文字列の引用符の開始文字。
@@ -195,11 +216,16 @@ class psyq::string::csv_table
         typename this_type::index_type const in_attribute_index = 0,
         typename this_type::string::allocator_type const& in_allocator =
             this_type::string::allocator_type(),
-        typename this_type::string_view::value_type const in_column_separator = ',',
-        typename this_type::string_view::value_type const in_row_separator = '\n',
-        typename this_type::string_view::value_type const in_quote_begin = '"',
-        typename this_type::string_view::value_type const in_quote_end = '"',
-        typename this_type::string_view::value_type const in_quote_escape = '"')
+        typename this_type::string_view::value_type const in_column_separator =
+            PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT,
+        typename this_type::string_view::value_type const in_row_separator =
+            PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT,
+        typename this_type::string_view::value_type const in_quote_begin =
+            PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT,
+        typename this_type::string_view::value_type const in_quote_end =
+            PSYQ_STRING_CSV_TABLE_QUOTE_END_DEFAULT,
+        typename this_type::string_view::value_type const in_quote_escape =
+            PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT)
     :
     string_buffer_(in_allocator),
     cells_(in_allocator),

@@ -58,6 +58,7 @@ class psyq::scenario_engine::driver
     /// @brief シナリオ駆動器で用いる条件監視器の型。
     public: typedef psyq::scenario_engine::dispatcher<
         typename this_type::hasher::result_type,
+        typename this_type::hasher::result_type,
         typename this_type::allocator_type>
             dispatcher;
 
@@ -68,9 +69,9 @@ class psyq::scenario_engine::driver
 
     //-------------------------------------------------------------------------
     /** @brief 空のシナリオ駆動器を構築する。
-        @param[in] in_reserve_chunks      予約しておくチャンクの数。
-        @param[in] in_reserve_states      予約しておく状態値の数。
-        @param[in] in_reserve_expressions 予約しておく条件式の数。
+        @param[in] in_reserve_chunks      予約するチャンクの容量。
+        @param[in] in_reserve_states      予約する状態値書庫の容量。
+        @param[in] in_reserve_expressions 予約する条件式評価器の容量。
         @param[in] in_hasher              ハッシュ関数オブジェクトの初期値。
         @param[in] in_allocator           メモリ割当子の初期値。
      */
@@ -114,6 +115,17 @@ class psyq::scenario_engine::driver
         return *this;
     }
 
+    /** @brief シナリオ進行を更新する。
+
+        基本的には、フレーム毎に更新すること。
+     */
+    public: void update()
+    {
+        this->dispatcher_.dispatch_function(
+            this->evaluator_, this->state_archive_);
+    }
+
+    //-------------------------------------------------------------------------
     /** @brief シナリオ駆動器で用いるハッシュ関数オブジェクトを取得する。
         @return シナリオ駆動器で用いるハッシュ関数オブジェクト。
      */
@@ -132,19 +144,36 @@ class psyq::scenario_engine::driver
         return local_hash;
     }
 
-    /** @brief シナリオ進行を更新する。
-
-        基本的には、フレーム毎に更新すること。
+    //-------------------------------------------------------------------------
+    /** @brief シナリオ駆動器で用いる状態値の書庫を取得する。
+        @return シナリオ駆動器で用いる状態値の書庫。
      */
-    public: void update()
+    public: typename this_type::state_archive const& get_state_archive()
+    const PSYQ_NOEXCEPT
     {
-        this->dispatcher_.dispatch_function(
-            this->evaluator_, this->state_archive_);
+        return this->state_archive_;
+    }
+
+    /// @copydoc psyq::scenario_engine::state_archive::set_value
+    public: template<typename template_value>
+    bool set_state_value(
+        typename this_type::state_archive::key_type const& in_key,
+        template_value const& in_value)
+    PSYQ_NOEXCEPT
+    {
+        // 状態値を設定し、状態値の書き換えを条件監視器へ通知する。
+        auto const local_set_value(
+            this->state_archive_.set_value(in_key, in_value));
+        if (local_set_value)
+        {
+            this->dispatcher_.notify_state_change(in_key);
+        }
+        return local_set_value;
     }
 
     //-------------------------------------------------------------------------
     /// @brief シナリオ駆動器で用いる状態値書庫。
-    public: typename this_type::state_archive state_archive_;
+    private: typename this_type::state_archive state_archive_;
 
     /// @brief シナリオ駆動器で用いる条件評価器。
     public: typename this_type::evaluator evaluator_;
@@ -166,7 +195,8 @@ namespace psyq_test
     inline void scenario_engine()
     {
         psyq::scenario_engine::driver<> local_driver(4, 16, 16);
-        local_driver.state_archive_.is_registered(0);
+        local_driver.get_state_archive().is_registered(0);
     }
 }
 #endif // !defined(PSYQ_SCENARIO_ENGINE_DRIVER_HPP_)
+// vim: set expandtab:

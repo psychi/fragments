@@ -15,7 +15,7 @@ namespace psyq
 {
     namespace scenario_engine
     {
-        template<typename, typename> class dispatcher;
+        template<typename, typename, typename> class dispatcher;
     } // namespace scenario_engine
 } // namespace psyq
 /// @endcond
@@ -32,7 +32,10 @@ namespace psyq
     - dispatcher::dispatch_function をフレーム毎に呼び出し、
       条件式の評価結果を更新して、登録された関数を呼び出す。
  */
-template<typename template_expression_key, typename template_allocator>
+template<
+    typename template_expression_key,
+    typename template_monitor_key,
+    typename template_allocator>
 class psyq::scenario_engine::dispatcher
 {
     /// @brief thisが指す値の型。
@@ -41,7 +44,6 @@ class psyq::scenario_engine::dispatcher
     public: typedef template_allocator allocator_type;
 
     public: typedef template_expression_key expression_key;
-    private: typedef template_expression_key state_key;
 
     private: typedef std::vector<
         typename this_type::expression_key,
@@ -55,10 +57,8 @@ class psyq::scenario_engine::dispatcher
         - 引数#1は、変化した後の条件式の評価結果。
      */
     public: typedef std::function<
-        void (
-            typename this_type::expression_key_vector::value_type const&,
-            bool const)>
-                function;
+        void (typename this_type::expression_key const&, bool const)>
+            function;
 
     /// @brief this_type::function の、所有権ありスマートポインタ。
     public: typedef std::shared_ptr<typename this_type::function>
@@ -68,11 +68,6 @@ class psyq::scenario_engine::dispatcher
     public: typedef std::weak_ptr<typename this_type::function>
         function_weak_ptr;
 
-    private: typedef std::vector<
-        typename this_type::function_weak_ptr,
-        typename this_type::allocator_type>
-            function_weak_ptr_vector;
-
     //-------------------------------------------------------------------------
     /** @brief 条件評価受信オブジェクト。
 
@@ -81,6 +76,25 @@ class psyq::scenario_engine::dispatcher
      */
     private: struct listener
     {
+        typedef listener this_type;
+
+        /** @brief 条件評価受信オブジェクトの辞書。
+
+            - key_type は、条件式の識別番号。
+            - mapped_type は、条件評価受信オブジェクト。
+         */
+        typedef std::map<
+            typename dispatcher::expression_key,
+            this_type,
+            std::less<typename dispatcher::expression_key>,
+            typename dispatcher::allocator_type>
+                map;
+
+        typedef std::vector<
+            typename dispatcher::function_weak_ptr,
+            typename dispatcher::allocator_type>
+                function_weak_ptr_vector;
+
         enum flag_enum: std::uint8_t
         {
             flag_LAST_EVALUATION,  ///< 条件式の前回の評価結果。
@@ -89,8 +103,7 @@ class psyq::scenario_engine::dispatcher
 
         listener(
             std::size_t const in_reserve_functions,
-            typename dispatcher::function_weak_ptr_vector::allocator_type const&
-                in_allocator)
+            typename dispatcher::allocator_type const& in_allocator)
         :
         functions(in_allocator)
         {
@@ -98,35 +111,40 @@ class psyq::scenario_engine::dispatcher
         }
 
         /// @brief ディスパッチ関数オブジェクトのコンテナ。
-        typename dispatcher::function_weak_ptr_vector functions;
+        typename this_type::function_weak_ptr_vector functions;
 
         /// @brief フラグの集合。
         std::bitset<8> flags;
-    };
 
-    /** @brief 条件評価受信オブジェクトの辞書。
+    }; // struct listener
 
-        - key_type は、条件式の識別番号。
-        - mapped_type は、条件評価受信オブジェクト。
-     */
-    private: typedef std::map<
-        template_expression_key,
-        typename this_type::listener,
-        std::less<template_expression_key>,
-        template_allocator>
-            listener_map;
-
+    //-------------------------------------------------------------------------
     /** @brief 条件監視オブジェクト。
-    
+
         条件式の要素条件が用いる状態を監視し、
         状態が更新された際に、条件式の評価を更新するために使う。
      */
     private: struct monitor
     {
+        typedef monitor this_type;
+
+        typedef template_monitor_key key_type;
+
+        /** @brief 条件監視オブジェクトの辞書。
+
+            - key_type は、監視する要素条件が持つ識別番号。
+            - mapped_type は、条件監視オブジェクト。
+         */
+        typedef std::map<
+            typename this_type::key_type,
+            this_type,
+            std::less<typename this_type::key_type>,
+            typename dispatcher::allocator_type>
+                map;
+
         monitor(
             std::size_t const in_reserve_keys,
-            typename dispatcher::expression_key_vector::allocator_type const&
-                in_allocator)
+            typename dispatcher::allocator_type const& in_allocator)
         :
         expression_keys(in_allocator),
         notify(false)
@@ -139,19 +157,8 @@ class psyq::scenario_engine::dispatcher
 
         /// @brief 更新通知フラグ。
         bool notify;
-    };
 
-    /** @brief 条件監視オブジェクトの辞書。
-
-        - key_type は、監視する要素条件が持つ識別番号。
-        - mapped_type は、条件監視オブジェクト。
-     */
-    private: typedef std::map<
-        typename this_type::state_key,
-        typename this_type::monitor,
-        std::less<typename this_type::state_key>,
-        template_allocator>
-            monitor_map;
+    }; // struct monitor
 
     //-------------------------------------------------------------------------
     public: explicit dispatcher(
@@ -176,8 +183,8 @@ class psyq::scenario_engine::dispatcher
     public: this_type& operator=(this_type&& io_source)
     {
         this->listeners_ = std::move(io_source.listeners_);
-        this->state_comparison_monitors_ = std::move(
-            io_source.state_comparison_monitors_);
+        this->state_comparison_monitors_ =
+            std::move(io_source.state_comparison_monitors_);
         return *this;
     }
 
@@ -201,14 +208,14 @@ class psyq::scenario_engine::dispatcher
         @param[in] in_expression_key    評価に用いる条件式のキー。
         @param[in] in_evaluator         評価の初期値の決定に用いる条件評価器。
         @param[in] in_states            評価の初期値の決定に用いる状態値書庫。
-        @param[in] in_reserve_functions 予約しておく関数オブジェクトコンテナの容量。
+        @param[in] in_reserve_functions 予約する関数オブジェクトコンテナの容量。
         @retval true  成功。
         @retval false 失敗。関数オブジェクトは登録されなかった。
      */
     public: template<typename template_evaluator>
     bool register_function(
         typename this_type::function_shared_ptr const& in_function,
-        typename template_evaluator::key_type const& in_expression_key,
+        typename this_type::expression_key const& in_expression_key,
         template_evaluator const& in_evaluator,
         typename template_evaluator::state_archive const& in_states,
         std::size_t const in_reserve_functions = 4)
@@ -261,7 +268,7 @@ class psyq::scenario_engine::dispatcher
         @retval false 検索対象がコンテナから見つからなかった。
      */
     private: static bool arrange_function_container(
-        typename this_type::function_weak_ptr_vector& io_functions,
+        typename this_type::listener::function_weak_ptr_vector& io_functions,
         typename this_type::function const& in_function)
     {
         // 関数オブジェクトのコンテナを走査し、検索対象を見つけながら、
@@ -292,8 +299,8 @@ class psyq::scenario_engine::dispatcher
         @return 追加した条件評価受信オブジェクトを指す反復子。
      */
     private: template<typename template_evaluator>
-    typename this_type::listener_map::iterator add_listener(
-        typename template_evaluator::key_type const& in_expression_key,
+    typename this_type::listener::map::iterator add_listener(
+        typename this_type::expression_key const& in_expression_key,
         template_evaluator const& in_evaluator,
         typename template_evaluator::state_archive const& in_states,
         std::size_t const in_reserve_functions)
@@ -304,9 +311,9 @@ class psyq::scenario_engine::dispatcher
             // 条件評価受信オブジェクトを生成し、辞書に挿入する。
             auto const local_insert(
                 this->listeners_.insert(
-                    typename this_type::listener_map::value_type(
+                    typename this_type::listener::map::value_type(
                         in_expression_key,
-                        typename this_type::listener_map::mapped_type(
+                        typename this_type::listener::map::mapped_type(
                             in_reserve_functions,
                             this->listeners_.get_allocator()))));
             if (local_insert.second)
@@ -332,7 +339,7 @@ class psyq::scenario_engine::dispatcher
      */
     private: template<typename template_evaluator>
     bool add_expression(
-        typename template_evaluator::key_type const& in_expression_key,
+        typename this_type::expression_key const& in_expression_key,
         template_evaluator const& in_evaluator)
     {
         // 条件式と要素条件チャンクを検索する。
@@ -383,7 +390,7 @@ class psyq::scenario_engine::dispatcher
     void add_compound_expression(
         template_evaluator const& in_evaluator,
         typename template_evaluator::expression_struct const& in_expression,
-        typename template_evaluator::compound_vector const& in_compounds)
+        typename template_evaluator::compound_struct::vector const& in_compounds)
     {
         // 条件監視オブジェクトに、複合条件式を追加する。
         auto const local_begin(in_compounds.begin());
@@ -414,7 +421,7 @@ class psyq::scenario_engine::dispatcher
         typename template_expression,
         typename template_element_container>
     static void add_monitor_expression(
-        typename this_type::monitor_map& io_monitors,
+        typename this_type::monitor::map& io_monitors,
         template_expression const& in_expression,
         template_element_container const& in_elements)
     {
@@ -434,9 +441,9 @@ class psyq::scenario_engine::dispatcher
                 std::size_t const local_reserve_expression_keys(4);
                 auto const local_insert(
                     io_monitors.insert(
-                        typename this_type::monitor_map::value_type(
+                        typename this_type::monitor::map::value_type(
                             local_element_key,
-                            this_type::monitor_map::mapped_type(
+                            this_type::monitor::map::mapped_type(
                                 local_reserve_expression_keys,
                                 io_monitors.get_allocator()))));
                 if (!local_insert.second)
@@ -468,19 +475,19 @@ class psyq::scenario_engine::dispatcher
     /** @brief 状態値の変更通知を受け取る。
         @param[in] in_state_key 変更された状態値のキー。
      */
-    public: template<typename template_key>
-    void notify_state_change(template_key const& in_state_key)
+    public: void notify_state_change(
+        typename this_type::monitor::map::key_type const& in_state_key)
     {
         this_type::notify_monitor(
             this->state_comparison_monitors_, in_state_key);
     }
 
     private: static void notify_monitor(
-        typename this_type::monitor_map& io_monitors,
-        typename this_type::monitor_map::key_type const& in_monitor_key)
+        typename this_type::monitor::map& io_monitors,
+        typename this_type::monitor::map::key_type const& in_monitor_key)
     {
         auto const local_find(io_monitors.find(in_monitor_key));
-        if (local_find!= io_monitors.end())
+        if (local_find != io_monitors.end())
         {
             local_find->second.notify = true;
         }
@@ -491,8 +498,8 @@ class psyq::scenario_engine::dispatcher
         @param[in,out] io_monitors  条件監視オブジェクトのコンテナ。
      */
     private: static void notify_listener_container(
-        typename this_type::listener_map& io_listeners,
-        typename this_type::monitor_map& io_monitors)
+        typename this_type::listener::map& io_listeners,
+        typename this_type::monitor::map& io_monitors)
     {
         // 条件監視オブジェクトのコンテナを走査しつつ、
         // 不要になった要素を削除し、条件監視オブジェクトのコンテナを整理する。
@@ -523,7 +530,7 @@ class psyq::scenario_engine::dispatcher
         @param[in,out] io_expression_keys 更新を通知する、条件式の識別番号のコンテナ。
      */
     private: static void notify_listener(
-        typename this_type::listener_map& io_listeners,
+        typename this_type::listener::map& io_listeners,
         typename this_type::expression_key_vector& io_expression_keys)
     {
         // 条件式識別番号のコンテナを走査しつつ、
@@ -588,7 +595,7 @@ class psyq::scenario_engine::dispatcher
      */
     private: template<typename template_evaluator>
     static void update_listener_container(
-        typename this_type::listener_map& io_listeners,
+        typename this_type::listener::map& io_listeners,
         template_evaluator const& in_evaluator,
         typename template_evaluator::state_archive const& in_states)
     {
@@ -631,7 +638,7 @@ class psyq::scenario_engine::dispatcher
      */
     private: template<typename template_evaluator>
     static void update_listener(
-        typename this_type::listener_map::value_type& io_listener,
+        typename this_type::listener::map::value_type& io_listener,
         template_evaluator const& in_evaluator,
         typename template_evaluator::state_archive const& in_states)
     {
@@ -667,11 +674,12 @@ class psyq::scenario_engine::dispatcher
 
     //-------------------------------------------------------------------------
     /// 条件評価受信オブジェクトの辞書。
-    private: typename this_type::listener_map listeners_;
+    private: typename this_type::listener::map listeners_;
 
     /// 状態比較監視オブジェクトの辞書。
-    private: typename this_type::monitor_map state_comparison_monitors_;
+    private: typename this_type::monitor::map state_comparison_monitors_;
 
 }; // class psyq::scenario_engine::dispatcher
 
 #endif // !defined(PSYQ_SCENARIO_ENGINE_DISPATCHER_HPP_)
+// vim: set expandtab:

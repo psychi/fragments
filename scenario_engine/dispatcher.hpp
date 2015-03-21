@@ -224,11 +224,20 @@ class psyq::scenario_engine::dispatcher
             local_monitor.expression_keys.shrink_to_fit();
         }
     }
+
+    /** @brief 条件評価器で使われているメモリ割当子を取得する。
+        @return 条件評価器で使われているメモリ割当子。
+     */
+    public: typename this_type::allocator_type get_allocator()
+    const PSYQ_NOEXCEPT
+    {
+        return this->listeners_.get_allocator();
+    }
     //@}
     //-------------------------------------------------------------------------
     /// @name 条件挙動
     //@{
-    /** @brief 条件式の評価の変化を検知して呼び出す関数オブジェクトを登録する。
+    /** @brief 条件式の評価の変化を検知して呼び出す、関数オブジェクトを登録する。
 
         this_type::dispatch で条件式の評価が変化した際に、
         呼び出す関数オブジェクトを登録する。
@@ -384,7 +393,7 @@ class psyq::scenario_engine::dispatcher
         {
             // 条件式の要素条件チャンクが存在しなかった。
             PSYQ_ASSERT(false);
-            return;
+            return false;
         }
 
         // 条件式の種類によって、監視する条件式の追加先を選別する。

@@ -90,10 +90,10 @@ class psyq::scenario_engine::expression_builder
         @return 構築した条件式の数。
      */
     public: template<typename template_hasher, typename template_string>
-    static bool build(
+    static std::size_t build(
         typename this_type::evaluator& io_evaluator,
         template_hasher& io_hasher,
-        typename this_type::evaluator::key_type const& in_chunk,
+        typename this_type::evaluator::expression_struct::key_type const& in_chunk,
         typename this_type::evaluator::state_archive const& in_states,
         psyq::string::csv_table<template_string> const& in_string_table)
     {
@@ -119,6 +119,10 @@ class psyq::scenario_engine::expression_builder
             i < local_row_count;
             ++i)
         {
+            if (i == in_string_table.get_attribute_row())
+            {
+                continue;
+            }
             auto const local_build_expression(
                 local_builder.build_expression(
                     io_evaluator,
@@ -163,7 +167,7 @@ class psyq::scenario_engine::expression_builder
     bool build_expression(
         typename this_type::evaluator& io_evaluator,
         template_hasher& io_hasher,
-        typename this_type::evaluator::key_type const& in_chunk,
+        typename this_type::evaluator::expression_struct::key_type const& in_chunk,
         typename this_type::evaluator::state_archive const& in_states,
         typename psyq::string::csv_table<template_string> const& in_string_table,
         typename psyq::string::csv_table<template_string>::index_type const
@@ -180,7 +184,7 @@ class psyq::scenario_engine::expression_builder
         }
         auto local_key(io_hasher(local_key_cell));
         if (local_key == io_hasher(typename template_hasher::argument_type())
-            || io_evaluator.find(local_key) != nullptr)
+            || io_evaluator.find_expression(local_key) != nullptr)
         {
             // 条件キーが重複している。
             PSYQ_ASSERT(false);
@@ -347,7 +351,7 @@ class psyq::scenario_engine::expression_builder
                 無限ループを防ぐため、複合条件式で使う下位の条件式は、
                 条件評価器で定義済みのものしか使わないようにする。
              */
-            in_evaluator.find(local_element.key) != nullptr);
+            in_evaluator.find_expression(local_element.key) != nullptr);
         if (local_element.key
             == io_hasher(typename template_hasher::argument_type()))
         {
@@ -417,7 +421,7 @@ class psyq::scenario_engine::expression_builder
 
         // 比較演算子を取得する。
         auto const local_get_comparison_operator(
-            this_type::evaluator::get_comparison_operator(
+            this_type::get_comparison_operator(
                 local_state.operation,
                 in_string_table.find_body_cell(
                     in_row_index,
@@ -433,7 +437,7 @@ class psyq::scenario_engine::expression_builder
             in_string_table.find_body_cell(
                 in_row_index,
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_ELEMENT,
-                local_element_column + 1));
+                local_element_column + 2));
         auto const local_get_bool(
             psyq::scenario_engine::_private::get_bool(
                 local_comparison_value_cell));
@@ -469,42 +473,42 @@ class psyq::scenario_engine::expression_builder
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_EQUAL)
         {
             out_operator =
-                this_type::evaluator::expression_struct::operator_EQUAL;
+                this_type::evaluator::state_comparison_struct::operator_EQUAL;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_NOT_EQUAL)
         {
             out_operator =
-                this_type::evaluator::expression_struct::operator_NOT_EQUAL;
+                this_type::evaluator::state_comparison_struct::operator_NOT_EQUAL;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_LESS)
         {
             out_operator =
-                this_type::evaluator::expression_struct::operator_LESS;
+                this_type::evaluator::state_comparison_struct::operator_LESS;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_LESS_EQUAL)
         {
             out_operator =
-                this_type::evaluator::expression_struct::operator_LESS_EQUAL;
+                this_type::evaluator::state_comparison_struct::operator_LESS_EQUAL;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_GREATER)
         {
             out_operator =
-                this_type::evaluator::expression_struct::operator_GREATER;
+                this_type::evaluator::state_comparison_struct::operator_GREATER;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_GREATER_EQUAL)
         {
             out_operator =
-                this_type::evaluator::expression_struct::operator_GREATER_EQUAL;
+                this_type::evaluator::state_comparison_struct::operator_GREATER_EQUAL;
         }
         else
         {

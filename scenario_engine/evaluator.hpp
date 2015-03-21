@@ -425,11 +425,11 @@ class psyq::scenario_engine::evaluator
         typename this_type::expression_struct::key_type const& in_chunk,
         typename this_type::expression_struct::key_type in_key,
         typename this_type::expression_struct::logic_enum const in_logic,
-        typename this_type::state_comparison_struct::vector const& in_elements,
-        typename this_type::state_archive const& in_states)
+        typename this_type::state_comparison_struct::vector const& in_elements)
+        //typename this_type::state_archive const& in_states)
     {
-        PSYQ_ASSERT(
-            this_type::is_valid_state_comparison(in_elements, in_states));
+        //PSYQ_ASSERT(
+        //    this_type::is_valid_state_comparison(in_elements, in_states));
         return this_type::register_expression(
             this->expressions_,
             this_type::equip_chunk(this->chunks_, in_chunk).state_comparisons,

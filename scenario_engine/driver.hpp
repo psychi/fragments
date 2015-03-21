@@ -201,10 +201,32 @@ namespace psyq_test
     inline void scenario_engine()
     {
         typedef psyq::string::csv_table<std::string> csv_table;
-        typedef psyq::scenario_engine::driver<> driver;
+        typedef psyq::scenario_engine::driver<csv_table::string_view::fnv1_hash32> driver;
         driver local_driver(4, 16, 16);
         auto const local_chunk_key(local_driver.hash_function_("chunk_0"));
 
+        csv_table::string_view const local_expression_table_csv(
+            "KEY,          LOGIC, KIND,             ELEMENT\n"
+            "expression_0, AND,   STATE_COMPARISON, state_0, ==, 0\n"
+            "expression_1, AND,   STATE_COMPARISON, state_0, ==, 0\n"
+            "expression_2, AND,   STATE_COMPARISON, state_0, ==, 0\n"
+            "expression_3, AND,   STATE_COMPARISON, state_0, ==, 0\n"
+            "expression_4, AND,   STATE_COMPARISON, state_0, ==, 0\n"
+            "expression_5, AND,   STATE_COMPARISON, state_0, ==, 0\n"
+            "expression_6, AND,   STATE_COMPARISON, state_0, ==, 0\n"
+            "expression_7, AND,   STATE_COMPARISON, state_0, ==, 0\n"
+            "expression_8, AND,   STATE_COMPARISON, state_0, ==, 0\n"
+            "expression_9, AND,   STATE_COMPARISON, state_0, ==, 0\n");
+        typedef psyq::scenario_engine::expression_builder<driver::evaluator>
+            expression_builder;
+        expression_builder::build(
+            local_driver.evaluator_,
+            local_driver.hash_function_,
+            local_chunk_key,
+            local_driver.get_state_archive(),
+            csv_table(local_expression_table_csv, 0, ""));
+
+        // 条件挙動チャンクを登録する。
         csv_table::string_view const local_behavior_table_csv(
             "KEY         , CONDITION, KIND,  ARGUMENT\n"
             "expression_0, TRUE,      STATE, state_0, :=, 1\n"

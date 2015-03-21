@@ -264,6 +264,8 @@ class psyq::scenario_engine::evaluator
     }; // struct chunk_struct
 
     //-------------------------------------------------------------------------
+    /// @name 構築と代入
+    //@{
     /** @brief 空の条件評価器を構築する。
         @param[in] in_reserve_expressions 予約しておく条件式の数。
         @param[in] in_reserve_chunks      予約しておくチャンクの数。
@@ -313,6 +315,18 @@ class psyq::scenario_engine::evaluator
         }
     }
 
+    /** @brief 条件評価器で使われているメモリ割当子を取得する。
+        @return 条件評価器で使われているメモリ割当子。
+     */
+    public: typename this_type::allocator_type get_allocator()
+    const PSYQ_NOEXCEPT
+    {
+        return this->expressions_.get_allocator();
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 条件式
+    //@{
     /** @brief 条件式を評価する。
         @param[in] in_expression_key 評価する条件式のキー。
         @param[in] in_states         評価に用いる状態値書庫。
@@ -373,16 +387,6 @@ class psyq::scenario_engine::evaluator
             this->expressions_, in_expression_key);
     }
 
-    /** @brief 条件評価器で使われているメモリ割当子を取得する。
-        @return 条件評価器で使われているメモリ割当子。
-     */
-    public: typename this_type::allocator_type get_allocator()
-    const PSYQ_NOEXCEPT
-    {
-        return this->expressions_.get_allocator();
-    }
-
-    //-------------------------------------------------------------------------
     /** @brief 複合条件式を登録する。
         @param[in] in_chunk    登録する複合条件式が所属するチャンクのキー。
         @param[in] in_key      登録する複合条件式のキー。
@@ -434,7 +438,7 @@ class psyq::scenario_engine::evaluator
             in_logic,
             this_type::expression_struct::kind_STATE_COMPARISON);
     }
-
+    //@}
     /** @brief 条件式を登録する。
         @param[in,out] io_expressions 条件式を登録するコンテナ。
         @param[in,out] io_elements    要素条件を登録するコンテナ。
@@ -532,8 +536,11 @@ class psyq::scenario_engine::evaluator
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 複合条件の要素条件コンテナを取得する。
-        @return 複合条件の要素条件コンテナ。
+    /// @name 要素条件チャンク
+    //@{
+    /** @brief 要素条件チャンクを取得する。
+        @param[in] in_chunk 取得する要素条件チャンクのキー。
+        @return 要素条件チャンク。
      */
     public: typename this_type::chunk_struct const* find_chunk(
         typename this_type::expression_struct::key_type const& in_chunk)
@@ -566,7 +573,7 @@ class psyq::scenario_engine::evaluator
      */
     public: void remove_chunk(
         typename this_type::expression_struct::key_type const& in_chunk);
-
+    //@}
     private: static typename this_type::chunk_struct& equip_chunk(
         typename this_type::chunk_struct::vector& io_chunks,
         typename this_type::expression_struct::key_type const& in_chunk_key)

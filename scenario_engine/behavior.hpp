@@ -170,7 +170,7 @@ struct psyq::scenario_engine::behavior_chunk
     {
         // 関数オブジェクトを追加する条件挙動チャンクを用意する。
         auto local_iterator(
-            this_type::key_less:find_iterator(io_chunks, in_key));
+            this_type::key_less::find_iterator(io_chunks, in_key));
         if (local_iterator == io_chunks.end())
         {
             local_iterator = io_chunks.insert(
@@ -179,7 +179,9 @@ struct psyq::scenario_engine::behavior_chunk
         }
 
         // 関数オブジェクトを条件挙動チャンクに追加する。
-        auto& local_chunk_functions(local_iterator->functions);
+        auto& local_chunk_functions(
+            const_cast<typename this_type::function_shared_ptr_vector&>(
+                local_iterator->functions));
         local_chunk_functions.reserve(
             local_chunk_functions.size() + in_functions.size());
         for (auto& local_function: in_functions)

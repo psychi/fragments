@@ -72,14 +72,14 @@ class psyq::scenario_engine::driver
         @param[in] in_reserve_chunks      予約するチャンクの容量。
         @param[in] in_reserve_states      予約する状態値書庫の容量。
         @param[in] in_reserve_expressions 予約する条件式評価器の容量。
-        @param[in] in_hasher              ハッシュ関数オブジェクトの初期値。
+        @param[in] in_hash_function       ハッシュ関数オブジェクトの初期値。
         @param[in] in_allocator           メモリ割当子の初期値。
      */
     public: driver(
         std::size_t const in_reserve_chunks,
         std::size_t const in_reserve_states,
         std::size_t const in_reserve_expressions,
-        typename this_type::hasher in_hasher = this_type::hasher(),
+        typename this_type::hasher in_hash_function = this_type::hasher(),
         typename this_type::allocator_type const& in_allocator =
             this_type::allocator_type())
     :
@@ -87,7 +87,7 @@ class psyq::scenario_engine::driver
     evaluator_(in_reserve_expressions, in_reserve_chunks, in_allocator),
     dispatcher_(in_allocator),
     behaviors_(in_allocator),
-    hasher_(std::move(in_hasher))
+    hash_function_(std::move(in_hash_function))
     {
         this->behaviors_.reserve(in_reserve_chunks);
     }
@@ -99,7 +99,7 @@ class psyq::scenario_engine::driver
     state_archive_(std::move(io_source.state_archive_)),
     evaluator_(std::move(io_source.evaluator_)),
     dispatcher_(std::move(io_source.dispatcher_)),
-    hasher_(std::move(io_source.hasher_))
+    hash_function_(std::move(io_source.hash_function_))
     {}
 
     /** @brief ムーブ代入演算子。
@@ -111,7 +111,7 @@ class psyq::scenario_engine::driver
         this->state_archive_ = std::move(io_source.state_archive_);
         this->evaluator_ = std::move(io_source.evaluator_);
         this->dispatcher_ = std::move(io_source.dispatcher_);
-        this->hasher_ = std::move(io_source.hasher_);
+        this->hash_function_ = std::move(io_source.hash_function_);
         return *this;
     }
 
@@ -124,27 +124,12 @@ class psyq::scenario_engine::driver
         this->dispatcher_.dispatch(this->evaluator_, this->state_archive_);
     }
 
-    //-------------------------------------------------------------------------
-    /** @brief シナリオ駆動器で用いるハッシュ関数オブジェクトを取得する。
-        @return シナリオ駆動器で用いるハッシュ関数オブジェクト。
-     */
-    public: typename this_type::hasher const& hash_function()
-    const PSYQ_NOEXCEPT
-    {
-        return this->hasher_;
-    }
-    /// @copydoc hash_function
-    public: typename this_type::hasher& hash_function() PSYQ_NOEXCEPT
-    {
-        return this->hasher_;
-    }
-
     public: typename this_type::hasher::result_type make_hash(
         typename this_type::hasher::argument_type const& in_key)
     {
-        auto const local_hash(this->hasher_(in_key));
+        auto const local_hash(this->hash_functions_(in_key));
         PSYQ_ASSERT(
-            in_key.empty() || local_hash != this->hasher_(
+            in_key.empty() || local_hash != this->hash_functions_(
                 typename this_type::hasher::argument_type()));
         return local_hash;
     }
@@ -206,7 +191,7 @@ class psyq::scenario_engine::driver
     private: typename this_type::behavior_chunk::vector behaviors_;
 
     /// @brief シナリオ駆動器で用いるハッシュ関数オブジェクト。
-    private: typename this_type::hasher hasher_;
+    public: typename this_type::hasher hash_function_;
 
 }; // class psyq::scenario_engine::driver
 
@@ -215,8 +200,32 @@ namespace psyq_test
 {
     inline void scenario_engine()
     {
-        psyq::scenario_engine::driver<> local_driver(4, 16, 16);
-        local_driver.get_state_archive().is_registered(0);
+        typedef psyq::string::csv_table<std::string> csv_table;
+        typedef psyq::scenario_engine::driver<> driver;
+        driver local_driver(4, 16, 16);
+        auto const local_chunk_key(local_driver.hash_function_("chunk_0"));
+
+        csv_table::string_view const local_behavior_table_csv(
+            "KEY         , CONDITION, KIND,  ARGUMENT\n"
+            "expression_0, TRUE,      STATE, state_0, :=, 1\n"
+            "expression_1, TRUE,      STATE, state_0, +=, 1\n"
+            "expression_2, TRUE,      STATE, state_0, -=, 1\n"
+            "expression_3, TRUE,      STATE, state_0, *=, 1\n"
+            "expression_4, TRUE,      STATE, state_0, /=, 1\n"
+            "expression_5, TRUE,      STATE, state_0, %=, 1\n"
+            "expression_6, TRUE,      STATE, state_0, |=, 1\n"
+            "expression_7, TRUE,      STATE, state_0, ^=, 0\n"
+            "expression_8, TRUE,      STATE, state_0, &=, 0\n");
+        typedef psyq::scenario_engine::behavior_builder<driver::behavior_chunk>
+            behavior_builder;
+        local_driver.add_behavior_chunk(
+            local_chunk_key,
+            behavior_builder::build(
+                local_driver.dispatcher_,
+                local_driver.hash_function_,
+                local_driver.evaluator_,
+                local_driver.get_state_archive(),
+                csv_table(local_behavior_table_csv, 0, "")));
     }
 }
 #endif // !defined(PSYQ_SCENARIO_ENGINE_DRIVER_HPP_)

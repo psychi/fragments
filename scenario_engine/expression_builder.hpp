@@ -179,9 +179,8 @@ class psyq::scenario_engine::expression_builder
             return false;
         }
         auto local_key(io_hasher(local_key_cell));
-        PSYQ_ASSERT(
-            local_key != io_hasher(typename template_hasher::argument_type()));
-        if (io_evaluator.find(local_key) != nullptr)
+        if (local_key == io_hasher(typename template_hasher::argument_type())
+            || io_evaluator.find(local_key) != nullptr)
         {
             // 条件キーが重複している。
             PSYQ_ASSERT(false);
@@ -344,14 +343,17 @@ class psyq::scenario_engine::expression_builder
             local_element;
         local_element.key = io_hasher(local_compound_key_cell);
         PSYQ_ASSERT(
-            local_element.key != io_hasher(
-                typename template_hasher::argument_type()));
-        PSYQ_ASSERT(
             /** @note
                 無限ループを防ぐため、複合条件式で使う下位の条件式は、
                 条件評価器で定義済みのものしか使わないようにする。
              */
             in_evaluator.find(local_element.key) != nullptr);
+        if (local_element.key
+            == io_hasher(typename template_hasher::argument_type()))
+        {
+            PSYQ_ASSERT(false);
+            return true;
+        }
 
         // 複合条件式の条件を取得する。
         auto const local_get_bool(
@@ -378,8 +380,8 @@ class psyq::scenario_engine::expression_builder
         @param[in] in_states       条件式が参照する状態値を持つコンテナ。
         @param[in] in_string_table 解析する文字列表。
         @param[in] in_row_index    解析する文字列表の行番号。
-        @retval true  文字列表から要素条件を構築した。
-        @retval false 文字列表に要素条件が存在しなかった。
+        @retval true  要素条件の解析は継続。
+        @retval false 要素条件の解析は終了。
      */
     private: template<typename template_hasher, typename template_string>
     static bool build_element(
@@ -406,9 +408,12 @@ class psyq::scenario_engine::expression_builder
         }
         typename this_type::evaluator::state_comparison_struct local_state;
         local_state.key = io_hasher(local_state_key_cell);
-        PSYQ_ASSERT(
-            local_state.key != io_hasher(
-                typename template_hasher::argument_type()));
+        if (local_state.key
+            == io_hasher(typename template_hasher::argument_type()))
+        {
+            PSYQ_ASSERT(false);
+            return true;
+        }
 
         // 比較演算子を取得する。
         auto const local_get_comparison_operator(

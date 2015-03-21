@@ -264,6 +264,18 @@ class psyq::string::csv_table
         this->copy(in_source);
     }
 
+    /** @brief 文字列表をムーブ構築する。
+        @param[in,out] io_source ムーブ元となる文字列表。
+     */
+    public: csv_table(this_type&& io_source):
+    string_buffer_(std::move(io_source.string_buffer_)),
+    cells_(std::move(io_source.cells_)),
+    attributes_(std::move(io_source.attributes_)),
+    primary_keys_(std::move(io_source.primary_keys_)),
+    attribute_row_(std::move(io_target.attribute_row_)),
+    primary_key_column_(std::move(io_target.primary_key_column_))
+    {}
+
     /** @brief 文字列表をコピー代入する。
         @param[in] in_source コピー元となる文字列表。
         @return *this
@@ -271,6 +283,21 @@ class psyq::string::csv_table
     public: this_type& operator=(this_type const& in_source)
     {
         this->copy(in_source);
+        return *this;
+    }
+
+    /** @brief 文字列表をムーブ代入する。
+        @param[in,out] io_source ムーブ元となる文字列表。
+        @return *this
+     */
+    public: this_type& operator=(this_type&& io_source)
+    {
+        this->string_buffer_ = std::move(io_source.string_buffer_);
+        this->cells_ = std::move(io_source.cells_);
+        this->attributes_ = std::move(io_source.attributes_);
+        this->primary_keys_ = std::move(io_source.primary_keys_);
+        this->attribute_row_ = std::move(io_target.attribute_row_);
+        this->primary_key_column_ = std::move(io_target.primary_key_column_);
         return *this;
     }
 

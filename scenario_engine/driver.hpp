@@ -205,18 +205,29 @@ namespace psyq_test
         driver local_driver(4, 16, 16);
         auto const local_chunk_key(local_driver.hash_function_("chunk_0"));
 
+        // 状態値を登録する。
+        csv_table::string_view const local_state_table_csv(
+            "KEY,            KIND, SIZE,   VALUE,\n"
+            "state_bool,     BOOL,         FALSE,\n"
+            "state_unsigned, UNSIGNED,  7,    10,\n"
+            "state_signed,   SIGNED,   13,   -20,\n"
+            "state_float,    FLOAT,         1.25,\n"
+            );
+        csv_table(local_state_table_csv, 0, "");
+
+        // 条件式を登録する。
         csv_table::string_view const local_expression_table_csv(
-            "KEY,          LOGIC, KIND,             ELEMENT\n"
-            "expression_0, AND,   STATE_COMPARISON, state_0, ==, 0\n"
-            "expression_1, AND,   STATE_COMPARISON, state_0, ==, 0\n"
-            "expression_2, AND,   STATE_COMPARISON, state_0, ==, 0\n"
-            "expression_3, AND,   STATE_COMPARISON, state_0, ==, 0\n"
-            "expression_4, AND,   STATE_COMPARISON, state_0, ==, 0\n"
-            "expression_5, AND,   STATE_COMPARISON, state_0, ==, 0\n"
-            "expression_6, AND,   STATE_COMPARISON, state_0, ==, 0\n"
-            "expression_7, AND,   STATE_COMPARISON, state_0, ==, 0\n"
-            "expression_8, AND,   STATE_COMPARISON, state_0, ==, 0\n"
-            "expression_9, AND,   STATE_COMPARISON, state_0, ==, 0\n");
+            "KEY,          LOGIC, KIND,             ELEMENT,\n"
+            "expression_0, AND,   STATE_COMPARISON, state_0, ==, 0,\n"
+            "expression_1, AND,   STATE_COMPARISON, state_0, ==, 0,\n"
+            "expression_2, AND,   STATE_COMPARISON, state_0, ==, 0,\n"
+            "expression_3, AND,   STATE_COMPARISON, state_0, ==, 0,\n"
+            "expression_4, AND,   STATE_COMPARISON, state_0, ==, 0,\n"
+            "expression_5, AND,   STATE_COMPARISON, state_0, ==, 0,\n"
+            "expression_6, AND,   STATE_COMPARISON, state_0, ==, 0,\n"
+            "expression_7, AND,   STATE_COMPARISON, state_0, ==, 0,\n"
+            "expression_8, AND,   STATE_COMPARISON, state_0, ==, 0,\n"
+            "expression_9, AND,   STATE_COMPARISON, state_0, ==, 0,\n");
         typedef psyq::scenario_engine::expression_builder<driver::evaluator>
             expression_builder;
         expression_builder::build(

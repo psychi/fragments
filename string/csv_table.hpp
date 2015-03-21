@@ -542,6 +542,7 @@ class psyq::string::csv_table
         typename this_type::string_view::value_type local_last_char(0);
         typename this_type::string local_cell_string(
             out_string_buffer.get_allocator());
+        typename this_type::string::size_type local_cell_size(0);
         typename this_type::cell_vector local_cells(
             out_string_buffer.get_allocator());
         typename this_type::string local_string_buffer(
@@ -558,6 +559,7 @@ class psyq::string::csv_table
                         if (*i != in_quote_escape)
                         {
                             local_cell_string.push_back(*i);
+                            local_cell_size = local_cell_string.size();
                         }
                         local_last_char = *i;
                     }
@@ -572,6 +574,7 @@ class psyq::string::csv_table
                 {
                     // 引用符の終了文字をエスケープする。
                     local_cell_string.push_back(*i);
+                    local_cell_size = local_cell_string.size();
                     local_last_char = 0;
                 }
                 else if (local_last_char == in_quote_end)
@@ -585,6 +588,7 @@ class psyq::string::csv_table
                 {
                     local_cell_string.push_back(local_last_char);
                     local_cell_string.push_back(*i);
+                    local_cell_size = local_cell_string.size();
                     local_last_char = *i;
                 }
             }
@@ -603,8 +607,9 @@ class psyq::string::csv_table
                         local_string_buffer,
                         local_row,
                         local_column,
-                        local_cell_string);
+                        local_cell_string.substr(0, local_cell_size));
                     local_cell_string.clear();
+                    local_cell_size = 0;
                 }
                 ++local_column;
             }
@@ -618,8 +623,9 @@ class psyq::string::csv_table
                         local_string_buffer,
                         local_row,
                         local_column,
-                        local_cell_string);
+                        local_cell_string.substr(0, local_cell_size));
                     local_cell_string.clear();
+                    local_cell_size = 0;
                 }
                 else if (0 < local_column)
                 {
@@ -632,9 +638,17 @@ class psyq::string::csv_table
                 local_column = 0;
                 ++local_row;
             }
-            else if (!std::isspace(*i)) 
+            else
             {
-                local_cell_string.push_back(*i);
+                auto const local_is_space(std::isspace(*i));
+                if (!local_is_space || !local_cell_string.empty())
+                {
+                    local_cell_string.push_back(*i);
+                    if (!local_is_space)
+                    {
+                        local_cell_size = local_cell_string.size();
+                    }
+                }
             }
         }
         PSYQ_ASSERT(local_row < this_type::MAX_ROW_COUNT);
@@ -652,7 +666,7 @@ class psyq::string::csv_table
                 local_string_buffer,
                 local_row,
                 local_column,
-                local_cell_string);
+                local_cell_string.substr(0, local_cell_size));
         }
         else if (0 < local_column)
         {
@@ -664,7 +678,7 @@ class psyq::string::csv_table
         }
 
         // テーブル文字列を必要最小限にする。
-        out_string_buffer = local_string_buffer;
+        out_string_buffer.assign(local_string_buffer);
         auto const local_buffer_distance(
             out_string_buffer.data() - local_string_buffer.data());
         for (auto i(local_cells.begin()); i != local_cells.end(); ++i)

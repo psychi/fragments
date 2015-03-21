@@ -29,8 +29,12 @@ namespace psyq
       - dispatcher::notify_state_change
     - dispatcher::register_function を呼び出し、
       条件式の評価結果が変化したときに呼び出す関数を登録する。
-    - dispatcher::dispatch_function をフレーム毎に呼び出し、
+    - dispatcher::dispatch をフレーム毎に呼び出し、
       条件式の評価結果を更新して、登録された関数を呼び出す。
+
+    @tparam template_expression_key @copydoc dispatcher::expression_key
+    @tparam template_monitor_key    @copydoc dispatcher::monitor::key_type
+    @tparam template_allocator      @copydoc dispatcher::allocator_type
  */
 template<
     typename template_expression_key,
@@ -41,10 +45,13 @@ class psyq::scenario_engine::dispatcher
     /// @brief thisが指す値の型。
     private: typedef dispatcher this_type;
 
+    /// @brief コンテナに用いるメモリ割当子を表す型。
     public: typedef template_allocator allocator_type;
 
+    /// @brief 評価に用いる条件式のキーを表す型。
     public: typedef template_expression_key expression_key;
 
+    /// @brief 条件式キーのコンテナ。
     private: typedef std::vector<
         typename this_type::expression_key,
         typename this_type::allocator_type>
@@ -80,8 +87,8 @@ class psyq::scenario_engine::dispatcher
 
         /** @brief 条件評価受信オブジェクトの辞書。
 
-            - key_type は、条件式の識別番号。
-            - mapped_type は、条件評価受信オブジェクト。
+            - map::key_type は、条件式のキー。
+            - map::mapped_type は、条件評価受信オブジェクト。
          */
         typedef std::map<
             typename dispatcher::expression_key,
@@ -90,11 +97,13 @@ class psyq::scenario_engine::dispatcher
             typename dispatcher::allocator_type>
                 map;
 
+        /// @brief 条件挙動関数オブジェクトの所有権なしスマートポインタ。
         typedef std::vector<
             typename dispatcher::function_weak_ptr,
             typename dispatcher::allocator_type>
                 function_weak_ptr_vector;
 
+        /// @brief フラグの位置。
         enum flag_enum: std::uint8_t
         {
             flag_LAST_EVALUATION,  ///< 条件式の前回の評価結果。
@@ -110,9 +119,8 @@ class psyq::scenario_engine::dispatcher
             this->functions.reserve(in_reserve_functions);
         }
 
-        /// @brief ディスパッチ関数オブジェクトのコンテナ。
+        /// @brief 条件挙動関数オブジェクトのコンテナ。
         typename this_type::function_weak_ptr_vector functions;
-
         /// @brief フラグの集合。
         std::bitset<8> flags;
 
@@ -128,12 +136,13 @@ class psyq::scenario_engine::dispatcher
     {
         typedef monitor this_type;
 
+        /// @brief 監視する要素条件のキーを表す型。
         typedef template_monitor_key key_type;
 
         /** @brief 条件監視オブジェクトの辞書。
 
-            - key_type は、監視する要素条件が持つ識別番号。
-            - mapped_type は、条件監視オブジェクト。
+            - map::key_type は、監視する要素条件のキー。
+            - map::mapped_type は、条件監視オブジェクト。
          */
         typedef std::map<
             typename this_type::key_type,
@@ -154,17 +163,22 @@ class psyq::scenario_engine::dispatcher
 
         /// @brief 評価の更新を要求する条件式のキーのコンテナ。
         typename dispatcher::expression_key_vector expression_keys;
-
         /// @brief 更新通知フラグ。
         bool notify;
 
     }; // struct monitor
 
     //-------------------------------------------------------------------------
+    /// @name 構築と代入
+    //@{
+    /** @brief 空の条件監視器を構築する。
+        @param[in] in_allocator メモリ割当子の初期値。
+     */
     public: explicit dispatcher(
         typename this_type::allocator_type const& in_allocator)
     :
     listeners_(in_allocator),
+    state_transition_monitors_(in_allocator),
     state_comparison_monitors_(in_allocator)
     {}
 
@@ -173,6 +187,7 @@ class psyq::scenario_engine::dispatcher
      */
     public: dispatcher(this_type&& io_source):
     listeners_(std::move(io_source.listeners_)),
+    state_transition_monitors_(std::move(io_source.state_transition_monitors_)),
     state_comparison_monitors_(std::move(io_source.state_comparison_monitors_))
     {}
 
@@ -183,6 +198,8 @@ class psyq::scenario_engine::dispatcher
     public: this_type& operator=(this_type&& io_source)
     {
         this->listeners_ = std::move(io_source.listeners_);
+        this->state_transition_monitors_ =
+            std::move(io_source.state_transition_monitors_);
         this->state_comparison_monitors_ =
             std::move(io_source.state_comparison_monitors_);
         return *this;
@@ -192,33 +209,45 @@ class psyq::scenario_engine::dispatcher
     public: void shrink_to_fit()
     {
         //this->listeners_.shrink_to_fit();
+        //this->state_transition_monitors_.shrink_to_fit();
         //this->state_comparison_monitors_.shrink_to_fit();
         for (auto& local_listener: this->listeners_)
         {
             local_listener.functions.shrink_to_fit();
+        }
+        for (auto& local_monitor: this->state_transition_monitors_)
+        {
+            local_monitor.expression_keys.shrink_to_fit();
         }
         for (auto& local_monitor: this->state_comparison_monitors_)
         {
             local_monitor.expression_keys.shrink_to_fit();
         }
     }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 条件挙動
+    //@{
+    /** @brief 条件式の評価の変化を検知して呼び出す関数オブジェクトを登録する。
 
-    /** @brief this_type::dispatch_function で呼び出す関数オブジェクトを登録する。
-        @param[in] in_function          条件式の評価結果の変化で呼び出す関数オブジェクト。
+        this_type::dispatch で条件式の評価が変化した際に、
+        呼び出す関数オブジェクトを登録する。
+
         @param[in] in_expression_key    評価に用いる条件式のキー。
+        @param[in] in_function          登録する関数オブジェクト。
         @param[in] in_evaluator         評価の初期値の決定に用いる条件評価器。
         @param[in] in_states            評価の初期値の決定に用いる状態値書庫。
         @param[in] in_reserve_functions 予約する関数オブジェクトコンテナの容量。
-        @retval true  成功。
+        @retval true  成功。関数オブジェクトを登録した。
         @retval false 失敗。関数オブジェクトは登録されなかった。
      */
     public: template<typename template_evaluator>
     bool register_function(
-        typename this_type::function_shared_ptr const& in_function,
         typename this_type::expression_key const& in_expression_key,
+        typename this_type::function_shared_ptr const& in_function,
         template_evaluator const& in_evaluator,
         typename template_evaluator::state_archive const& in_states,
-        std::size_t const in_reserve_functions = 4)
+        std::size_t const in_reserve_functions = 1)
     {
         auto const local_function(in_function.get());
         if (local_function == nullptr)
@@ -260,7 +289,7 @@ class psyq::scenario_engine::dispatcher
         local_listener->second.functions.push_back(in_function);
         return true;
     }
-
+    //@}
     /** @brief 関数オブジェクトを検索しつつ、コンテナを整理する。
         @param[in,out] io_functions 整理する関数オブジェクトコンテナ。
         @param[in] in_function      検索する関数オブジェクト。
@@ -399,10 +428,9 @@ class psyq::scenario_engine::dispatcher
         {
             auto& local_element(*i);
             auto const local_listener(
-                this->listeners_.find(local_element.expression_key));
+                this->listeners_.find(local_element.key));
             if (local_listener == this->listeners_.end()
-                && !this->add_expression(
-                    local_element.expression_key, in_evaluator))
+                && !this->add_expression(local_element.key, in_evaluator))
             {
                 // 複合条件式の追加に失敗した。
                 PSYQ_ASSERT(false);
@@ -472,16 +500,20 @@ class psyq::scenario_engine::dispatcher
     }
 
     //-------------------------------------------------------------------------
+    /// @name 条件挙動
+    //@{
     /** @brief 状態値の変更通知を受け取る。
         @param[in] in_state_key 変更された状態値のキー。
      */
-    public: void notify_state_change(
+    public: void notify_state_transition(
         typename this_type::monitor::map::key_type const& in_state_key)
     {
         this_type::notify_monitor(
+            this->state_transition_monitors_, in_state_key);
+        this_type::notify_monitor(
             this->state_comparison_monitors_, in_state_key);
     }
-
+    //@}
     private: static void notify_monitor(
         typename this_type::monitor::map& io_monitors,
         typename this_type::monitor::map::key_type const& in_monitor_key)
@@ -551,30 +583,38 @@ class psyq::scenario_engine::dispatcher
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 条件式を評価し、 this_type::register_function で登録した関数を呼び出す。
+    /// @name 条件挙動
+    //@{
+    /** @brief 条件式の評価の変化を検知する。
+
+        条件式の評価が変化していれば、
+        this_type::register_function で登録した関数を呼び出す。
+
         @param[in] in_evaluator 条件式の評価に使う条件評価器。
         @param[in] in_states    条件式の評価に状態値のコンテナ。
 
         @note
-        前回の this_type::dispatch_function と今回の self::dispatch_function
+        前回の this_type::dispatch と今回の self::dispatch
         で条件式の評価が異なる場合に、登録関数の呼び出し判定が行われる。
         前回から今回の間（基本的には1フレームの間）で条件式の評価が
         true → false → true と変化したとしても、
         登録関数の呼び出し判定は行われないことに注意。
-        this_type::dispatch_function の間でも
+        this_type::dispatch の間でも
         条件式の評価の変化を検知するような実装も可能と思われるが、
-        this_type::dispatch_function を呼び出すたびに
+        this_type::dispatch を呼び出すたびに
         登録関数を呼び出すような事態になりかねないため、
-        this_type::dispatch_function の間の条件式の評価の変化は
+        this_type::dispatch の間の条件式の評価の変化は
         今のところ検知してない。
      */
     public: template<typename template_evaluator>
-    void dispatch_function(
+    void dispatch(
         template_evaluator const& in_evaluator,
         typename template_evaluator::state_archive const& in_states)
     {
         // 条件監視オブジェクトへの更新通知を、
         // 条件評価受信オブジェクトに転送する。
+        this_type::notify_listener_container(
+            this->listeners_, this->state_transition_monitors_);
         this_type::notify_listener_container(
             this->listeners_, this->state_comparison_monitors_);
 
@@ -583,7 +623,7 @@ class psyq::scenario_engine::dispatcher
         this_type::update_listener_container(
             this->listeners_, in_evaluator, in_states);
     }
-
+    //@}
     /** @brief 条件式を評価し、ディスパッチ関数を呼び出す。
 
         条件評価受信オブジェクトのコンテナを走査し、条件式の結果によって、
@@ -675,6 +715,9 @@ class psyq::scenario_engine::dispatcher
     //-------------------------------------------------------------------------
     /// 条件評価受信オブジェクトの辞書。
     private: typename this_type::listener::map listeners_;
+
+    /// 状態変化監視オブジェクトの辞書。
+    private: typename this_type::monitor::map state_transition_monitors_;
 
     /// 状態比較監視オブジェクトの辞書。
     private: typename this_type::monitor::map state_comparison_monitors_;

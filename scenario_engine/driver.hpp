@@ -121,8 +121,7 @@ class psyq::scenario_engine::driver
      */
     public: void update()
     {
-        this->dispatcher_.dispatch_function(
-            this->evaluator_, this->state_archive_);
+        this->dispatcher_.dispatch(this->evaluator_, this->state_archive_);
     }
 
     //-------------------------------------------------------------------------
@@ -166,9 +165,42 @@ class psyq::scenario_engine::driver
             this->state_archive_.set_value(in_key, in_value));
         if (local_set_value)
         {
-            this->dispatcher_.notify_state_change(in_key);
+            this->dispatcher_.notify_state_transition(in_key);
         }
         return local_set_value;
+    }
+
+    //-------------------------------------------------------------------------
+    public: template<typename template_builder>
+    std::size_t add_behavior(
+        typename this_type::behavior::chunk_struct::key_type const& in_key,
+        template_builder& io_builder)
+    {
+        auto local_iterator(
+            this_type::behavior::chunk_struct::key_less:find_iterator(
+                this->behaviors_, in_key));
+        if (local_iterator == this->behaviors_.end())
+        {
+            local_iterator = this->behaviors_.insert(
+                local_iterator,
+                typename this_type::behavior::chunk_struct(
+                    in_key, this->behaviors_.get_allocator()));
+        }
+        return io_builder(local_iterator->functions);
+    }
+
+    public: bool remove_behavior_chunk(
+        typename this_type::behavior::chunk_struct::key_type const& in_key)
+    {
+        auto const local_iterator(
+            this_type::behavior::chunk_struct::key_less:find_iterator(
+                this->behaviors_, in_key));
+        auto const local_find(local_iterator != this->behaviors_.end());
+        if (local_find)
+        {
+            this->behaviors_.erase(local_iterator);
+        }
+        return local_find;
     }
 
     //-------------------------------------------------------------------------
@@ -181,8 +213,8 @@ class psyq::scenario_engine::driver
     /// @brief シナリオ駆動器で用いる条件監視器。
     public: typename this_type::dispatcher dispatcher_;
 
-    /// @brief シナリオ駆動器で用いる条件挙動器のコンテナ。
-    public: typename this_type::behavior::chunk_vector behaviors_;
+    /// @brief シナリオ駆動器で用いる条件挙動チャンクのコンテナ。
+    private: typename this_type::behavior::chunk_struct::vector behaviors_;
 
     /// @brief シナリオ駆動器で用いるハッシュ関数オブジェクト。
     private: typename this_type::hasher hasher_;

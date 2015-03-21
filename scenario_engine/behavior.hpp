@@ -107,25 +107,47 @@ class psyq::scenario_engine::behavior
     /// @brief 条件挙動チャンク。
     public: struct chunk_struct
     {
-        /// @brief 条件挙動チャンクを識別するキー。
+        typedef chunk_struct this_type;
+
+        /// @brief 条件挙動チャンクのコンテナ。
+        typedef std::vector<
+            this_type, typename behavior::dispatcher::allocator_type>
+                vector;
+
+        /// @brief 条件挙動チャンクを識別するキーを表す型。
         /// @note ここは条件式キーでなくて、チャンクキーにしないと。
         typedef typename behavior::dispatcher::expression_key key_type;
 
         /// @brief チャンクキーを比較する関数オブジェクト。
         typedef psyq::scenario_engine::_private::key_less<
-             typename behavior::chunk_struct,
-             typename behavior::chunk_struct::key_type>
+             this_type, typename this_type::key_type>
                  key_less;
 
-        typename behavior::function_shared_ptr_vector functions;
-        typename behavior::chunk_struct::key_type key;
-    };
+        chunk_struct(
+            typename this_type::key_type in_key,
+            typename behavior::dispatcher::allocator_type const& in_allocator)
+        :
+        functions(in_allocator),
+        key(std::move(in_key))
+        {}
 
-    /// @brief 条件挙動チャンクのコンテナ。
-    public: typedef std::vector<
-        typename this_type::chunk_struct,
-        typename this_type::dispatcher::allocator_type>
-            chunk_vector;
+        chunk_struct(chunk_struct&& io_source):
+        functions(std::move(io_source.functions)),
+        key(std::move(io_source.key))
+        {}
+
+        chunk_struct& operator=(chunk_struct&& io_source)
+        {
+            this->functions = std::move(io_source.functions);
+            this->key = std::move(io_source.key);
+            return *this;
+        }
+
+        /// @brief 条件挙動関数オブジェクトの所有権ありスマートポインタ。
+        typename behavior::function_shared_ptr_vector functions;
+        /// @brief 条件挙動チャンクを識別するキー。
+        typename this_type::key_type key;
+    };
 
     //-------------------------------------------------------------------------
     /** @brief 状態値を操作する、条件挙動関数オブジェクトを生成する。
@@ -236,7 +258,7 @@ class psyq::scenario_engine::behavior_builder
         typename template_evaluator,
         typename template_string>
     static std::size_t build(
-        typename this_type::behavior::chunk_vector& io_chunks,
+        typename this_type::behavior::chunk_struct::vector& io_chunks,
         typename this_type::behavior::dispatcher& io_dispatcher,
         template_hasher& io_hasher,
         typename this_type::behavior::chunk_struct::key_type const& in_key,
@@ -281,8 +303,8 @@ class psyq::scenario_engine::behavior_builder
                     io_hasher, in_evaluator, in_states, in_string_table, i));
             auto const local_register(
                 io_dispatcher.register_function(
-                    local_function,
                     local_key,
+                    local_function,
                     in_evaluator, 
                     in_states,
                     local_allocator));

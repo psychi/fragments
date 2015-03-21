@@ -319,7 +319,7 @@ class psyq::scenario_engine::expression_builder
      */
     private: template<typename template_hasher, typename template_string>
     static bool build_element(
-        typename this_type::evaluator::compound_vector& io_elements,
+        typename this_type::evaluator::compound_struct::vector& io_elements,
         template_hasher& io_hasher,
         typename this_type::evaluator const& in_evaluator,
         psyq::string::csv_table<template_string> const& in_string_table,
@@ -340,11 +340,11 @@ class psyq::scenario_engine::expression_builder
         {
             return false;
         }
-        typename this_type::evaluator::compound_vector::value_type
+        typename this_type::evaluator::compound_struct::vector::value_type
             local_element;
-        local_element.expression_key = io_hasher(local_compound_key_cell);
+        local_element.key = io_hasher(local_compound_key_cell);
         PSYQ_ASSERT(
-            local_element.expression_key != io_hasher(
+            local_element.key != io_hasher(
                 typename template_hasher::argument_type()));
         PSYQ_ASSERT(
             /** @note
@@ -383,7 +383,7 @@ class psyq::scenario_engine::expression_builder
      */
     private: template<typename template_hasher, typename template_string>
     static bool build_element(
-        typename this_type::evaluator::state_comparison_vector& io_elements,
+        typename this_type::evaluator::state_comparison_struct::vector& io_elements,
         template_hasher& io_hasher,
         typename this_type::evaluator::state_archive const& in_states,
         psyq::string::csv_table<template_string> const& in_string_table,
@@ -512,12 +512,13 @@ class psyq::scenario_engine::expression_builder
 
     //-------------------------------------------------------------------------
     /// @brief 複合条件式の作業領域。
-    private: typename this_type::evaluator::compound_vector compounds_;
+    private: typename this_type::evaluator::compound_struct::vector compounds_;
 
     /// @brief 状態比較条件式の作業領域。
-    private: typename this_type::evaluator::state_comparison_vector
+    private: typename this_type::evaluator::state_comparison_struct::vector
         state_comparisons_;
 
 }; // struct psyq::scenario_engine::expression_builder
 
 #endif // !defined(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_HPP_)
+// vim: set expandtab:

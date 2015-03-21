@@ -24,9 +24,9 @@ namespace psyq
     - evaluator::register_expression で、条件式を登録する。
     - evaluator::evaluate_expression で、条件式キーから条件式を評価する。
 
-    @tparam template_state_archive @copydoc state_archive
-    @tparam template_key           @copydoc expression_struct::key_type
-    @tparam template_allocator     @copydoc allocator_type
+    @tparam template_state_archive @copydoc evaluator::state_archive
+    @tparam template_key           @copydoc evaluator::expression_struct::key_type
+    @tparam template_allocator     @copydoc evaluator::allocator_type
  */
 template<
     typename template_state_archive = psyq::scenario_engine::state_archive<>,
@@ -49,41 +49,47 @@ class psyq::scenario_engine::evaluator
     {
         typedef expression_struct this_type;
 
-        /// @brief 条件式を識別するキーの型。
+        /// @brief 条件式の識別に使うキーの型。
         typedef template_key key_type;
-
-        /// @brief 要素条件のインデクス番号を表す型。
-        typedef std::uint32_t index_type;
-
-        /// @brief 条件式のコンテナ。
-        typedef std::vector<this_type, typename evaluator::allocator_type>
-            vector;
 
         /// @brief 条件式をキーの昇順で並び替えるのに使う、比較関数オブジェクト。
         typedef psyq::scenario_engine::_private::key_less<
             this_type, typename evaluator::expression_struct::key_type>
                 key_less;
 
-        /// @brief 条件式の種別。
+        /// @brief 要素条件のインデクス番号を表す型。
+        typedef std::uint32_t element_index;
+
+        /// @brief 条件式のコンテナを表す型。
+        typedef std::vector<this_type, typename evaluator::allocator_type>
+            vector;
+
+        /// @brief 条件式の種類を表す列挙型。
         enum kind_enum: std::uint8_t
         {
             kind_COMPOUND,         ///< 複合条件式。
             kind_STATE_COMPARISON, ///< 状態比較条件式。
         };
 
-        /// @brief 条件式の要素条件を結合する論理演算子。
+        /// @brief 条件式の要素条件を結合する論理演算子を表す列挙型。
         enum logic_enum: std::uint8_t
         {
             logic_AND, ///< 論理積。
             logic_OR,  ///< 論理和。
         };
 
-        typename this_type::key_type   chunk; ///< 要素条件チャンクキー。
-        typename this_type::key_type   key;   ///< 条件式キー。
-        typename this_type::index_type begin; ///< 要素条件の先頭インデクス番号。
-        typename this_type::index_type end;   ///< 要素条件の末尾インデクス番号。
-        typename this_type::kind_enum  kind;  ///< 条件式の種別。
-        typename this_type::logic_enum logic; ///< 条件式の要素条件を結合する論理演算子。
+        /// @brief 要素条件チャンクの識別に使うキー。
+        typename this_type::key_type chunk;
+        /// @brief 条件式の識別に使うキー。
+        typename this_type::key_type key;
+        /// @brief 条件式が使う要素条件の先頭インデクス番号。
+        typename this_type::element_index begin;
+        /// @brief 条件式が使う要素条件の末尾インデクス番号。
+        typename this_type::element_index end;
+        /// @brief 条件式の種類。
+        typename this_type::kind_enum kind;
+        /// @brief 条件式の要素条件を結合する論理演算子。
+        typename this_type::logic_enum logic;
 
     }; // struct expression_struct
 
@@ -97,7 +103,9 @@ class psyq::scenario_engine::evaluator
         typedef std::vector<this_type, typename evaluator::allocator_type>
             vector;
 
-        typename evaluator::expression_struct::key_type expression_key;
+        /// @brief 結合する条件式のキー。
+        typename evaluator::expression_struct::key_type key;
+        /// @brief 結合する際の条件。
         bool condition;
 
     }; // struct compound_struct
@@ -118,7 +126,7 @@ class psyq::scenario_engine::evaluator
         {
             return in_compound.condition
                 == this->evaluator.evaluate_expression(
-                    in_compound.expression_key, this->states);
+                    in_compound.key, this->states);
         }
 
         typename evaluator::state_archive const& states;
@@ -152,10 +160,8 @@ class psyq::scenario_engine::evaluator
 
         /// @brief 比較する値。
         typename this_type::value_type value;
-
         /// @brief 比較する状態値のキー。
         typename evaluator::state_archive::key_type key;
-
         /// @brief 比較演算子の種類。
         typename this_type::operator_enum operation;
 
@@ -480,12 +486,12 @@ class psyq::scenario_engine::evaluator
         local_expression.logic = in_logic;
         local_expression.kind = in_kind;
         local_expression.begin =
-            static_cast<typename this_type::expression_struct::index_type>(
+            static_cast<typename this_type::expression_struct::element_index>(
                 local_element_begin);
         PSYQ_ASSERT(local_expression.begin == local_element_begin);
         auto const local_element_end(io_elements.size());
         local_expression.end =
-            static_cast<typename this_type::expression_struct::index_type>(
+            static_cast<typename this_type::expression_struct::element_index>(
                 local_element_end);
         PSYQ_ASSERT(local_expression.end == local_element_end);
         return true;
@@ -501,7 +507,7 @@ class psyq::scenario_engine::evaluator
                 std::binary_search(
                     in_expressions.begin(),
                     in_expressions.end(),
-                    local_element.expression_key,
+                    local_element.key,
                     typename this_type::expression_struct::key_less()));
             if (!local_find)
             {

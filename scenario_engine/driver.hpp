@@ -62,10 +62,10 @@ class psyq::scenario_engine::driver
         typename this_type::allocator_type>
             dispatcher;
 
-    /// @brief シナリオ駆動器で用いる条件挙動器の型。
-    public: typedef psyq::scenario_engine::behavior<
+    /// @brief シナリオ駆動器で用いる条件挙動チャンクの型。
+    public: typedef psyq::scenario_engine::behavior_chunk<
         typename this_type::dispatcher>
-            behavior;
+            behavior_chunk;
 
     //-------------------------------------------------------------------------
     /** @brief 空のシナリオ駆動器を構築する。
@@ -128,7 +128,13 @@ class psyq::scenario_engine::driver
     /** @brief シナリオ駆動器で用いるハッシュ関数オブジェクトを取得する。
         @return シナリオ駆動器で用いるハッシュ関数オブジェクト。
      */
-    public: typename this_type::hasher const& hash_function() const
+    public: typename this_type::hasher const& hash_function()
+    const PSYQ_NOEXCEPT
+    {
+        return this->hasher_;
+    }
+    /// @copydoc hash_function
+    public: typename this_type::hasher& hash_function() PSYQ_NOEXCEPT
     {
         return this->hasher_;
     }
@@ -171,36 +177,19 @@ class psyq::scenario_engine::driver
     }
 
     //-------------------------------------------------------------------------
-    public: template<typename template_builder>
-    std::size_t add_behavior(
-        typename this_type::behavior::chunk_struct::key_type const& in_key,
-        template_builder& io_builder)
+    public: void add_behavior_chunk(
+        typename this_type::behavior_chunk::key_type const& in_key,
+        typename this_type::behavior_chunk::function_shared_ptr_vector
+            in_functions)
     {
-        auto local_iterator(
-            this_type::behavior::chunk_struct::key_less:find_iterator(
-                this->behaviors_, in_key));
-        if (local_iterator == this->behaviors_.end())
-        {
-            local_iterator = this->behaviors_.insert(
-                local_iterator,
-                typename this_type::behavior::chunk_struct(
-                    in_key, this->behaviors_.get_allocator()));
-        }
-        return io_builder(local_iterator->functions);
+        this_type::behavior_chunk::add(
+            this->behaviors_, in_key, std::move(in_functions));
     }
 
     public: bool remove_behavior_chunk(
-        typename this_type::behavior::chunk_struct::key_type const& in_key)
+        typename this_type::behavior_chunk::key_type const& in_key)
     {
-        auto const local_iterator(
-            this_type::behavior::chunk_struct::key_less:find_iterator(
-                this->behaviors_, in_key));
-        auto const local_find(local_iterator != this->behaviors_.end());
-        if (local_find)
-        {
-            this->behaviors_.erase(local_iterator);
-        }
-        return local_find;
+        return this_type::behavior_chunk::remove(this->behaviors_, in_key);
     }
 
     //-------------------------------------------------------------------------
@@ -214,7 +203,7 @@ class psyq::scenario_engine::driver
     public: typename this_type::dispatcher dispatcher_;
 
     /// @brief シナリオ駆動器で用いる条件挙動チャンクのコンテナ。
-    private: typename this_type::behavior::chunk_struct::vector behaviors_;
+    private: typename this_type::behavior_chunk::vector behaviors_;
 
     /// @brief シナリオ駆動器で用いるハッシュ関数オブジェクト。
     private: typename this_type::hasher hasher_;

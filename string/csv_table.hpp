@@ -189,20 +189,22 @@ class psyq::string::csv_table
         @param[in] in_quote_escape     CSV文字列の引用符のescape文字。
      */
     public: csv_table(
-        typename this_type::string const& in_csv_string,
+        typename this_type::string_view const& in_csv_string,
         typename this_type::index_type const in_attribute_row,
         typename this_type::string_view const& in_attribute_name,
         typename this_type::index_type const in_attribute_index = 0,
+        typename this_type::string::allocator_type const& in_allocator =
+            this_type::string::allocator_type(),
         typename this_type::string_view::value_type const in_column_separator = ',',
         typename this_type::string_view::value_type const in_row_separator = '\n',
         typename this_type::string_view::value_type const in_quote_begin = '"',
         typename this_type::string_view::value_type const in_quote_end = '"',
         typename this_type::string_view::value_type const in_quote_escape = '"')
     :
-    string_buffer_(in_csv_string.get_allocator()),
-    cells_(in_csv_string.get_allocator()),
-    attributes_(in_csv_string.get_allocator()),
-    primary_keys_(in_csv_string.get_allocator()),
+    string_buffer_(in_allocator),
+    cells_(in_allocator),
+    attributes_(in_allocator),
+    primary_keys_(in_allocator),
     attribute_row_(in_attribute_row),
     primary_key_column_(this_type::NULL_INDEX)
     {
@@ -630,7 +632,7 @@ class psyq::string::csv_table
                 local_column = 0;
                 ++local_row;
             }
-            else
+            else if (!std::isspace(*i)) 
             {
                 local_cell_string.push_back(*i);
             }

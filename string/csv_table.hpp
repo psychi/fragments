@@ -73,6 +73,8 @@ class psyq::string::csv_table
     };
 
     //-------------------------------------------------------------------------
+    private: typedef typename this_type::string::allocator_type allocator_type;
+
     /** @brief 文字列表のセルのコンテナ。
 
         - this_type::cell_vector::value_type::first_type は、
@@ -215,7 +217,7 @@ class psyq::string::csv_table
         typename this_type::string_view const& in_attribute_name,
         typename this_type::index_type const in_attribute_index = 0,
         typename this_type::string::allocator_type const& in_allocator =
-            this_type::string::allocator_type(),
+            allocator_type(),
         typename this_type::string_view::value_type const in_column_separator =
             PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT,
         typename this_type::string_view::value_type const in_row_separator =
@@ -272,8 +274,8 @@ class psyq::string::csv_table
     cells_(std::move(io_source.cells_)),
     attributes_(std::move(io_source.attributes_)),
     primary_keys_(std::move(io_source.primary_keys_)),
-    attribute_row_(std::move(io_target.attribute_row_)),
-    primary_key_column_(std::move(io_target.primary_key_column_))
+    attribute_row_(std::move(io_source.attribute_row_)),
+    primary_key_column_(std::move(io_source.primary_key_column_))
     {}
 
     /** @brief 文字列表をコピー代入する。
@@ -296,8 +298,8 @@ class psyq::string::csv_table
         this->cells_ = std::move(io_source.cells_);
         this->attributes_ = std::move(io_source.attributes_);
         this->primary_keys_ = std::move(io_source.primary_keys_);
-        this->attribute_row_ = std::move(io_target.attribute_row_);
-        this->primary_key_column_ = std::move(io_target.primary_key_column_);
+        this->attribute_row_ = std::move(io_source.attribute_row_);
+        this->primary_key_column_ = std::move(io_source.primary_key_column_);
         return *this;
     }
 
@@ -451,7 +453,10 @@ class psyq::string::csv_table
             && in_row_index != this->get_attribute_row())
         {
             auto const local_cell_index(
-                this_type::compute_cell_index(in_row_index, in_column_index));
+                this_type::compute_cell_index(
+                    static_cast<typename this_type::index_type>(in_row_index),
+                    static_cast<typename this_type::index_type>(
+                        in_column_index)));
             auto const local_lower_bound(
                 std::lower_bound(
                     this->cells_.begin(),
@@ -501,13 +506,15 @@ class psyq::string::csv_table
         if (in_attribute_name.empty())
         {
             return in_attribute_index < this->get_column_count()?
-                in_attribute_index: this_type::NULL_INDEX;
+                static_cast<typename this_type::index_type>(in_attribute_index):
+                this_type::NULL_INDEX;
         }
         auto const local_attribute(this->find_attribute(in_attribute_name));
         return local_attribute != nullptr
             && local_attribute->name == in_attribute_name
             && in_attribute_index < local_attribute->size?
-                local_attribute->column + in_attribute_index:
+                static_cast<typename this_type::index_type>(
+                    local_attribute->column + in_attribute_index):
                 this_type::NULL_INDEX;
     }
 
@@ -725,6 +732,10 @@ class psyq::string::csv_table
         {
             --local_column;
         }
+        else
+        {
+            --local_row;
+        }
         if (local_max_column < local_column)
         {
             local_max_column = local_column;
@@ -926,3 +937,4 @@ class psyq::string::csv_table
 }; // class psyq::string::csv_table
 
 #endif // !defined(PSYQ_STRING_CSV_TABLE_HPP_)
+// vim: set expandtab:

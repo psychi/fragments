@@ -1156,7 +1156,7 @@ class psyq::string::_private::interface_immutable: public template_string_type
         @param[in]     in_radix    整数の基数。
         @return 文字列から読み取った整数の値。
      */
-    private: static unsigned read_numbers(
+	private: static std::uint64_t read_numbers(
         typename base_type::traits_type::char_type const*& io_iterator,
         typename base_type::traits_type::char_type const* const in_end,
         unsigned const in_radix)
@@ -1170,7 +1170,7 @@ class psyq::string::_private::interface_immutable: public template_string_type
         PSYQ_ASSERT(in_radix <= ('9' - '0') + ('z' - 'a'));
 
         // 任意の基数の数値を取り出す。
-        unsigned local_value(0);
+		std::uint64_t local_value(0);
         auto i(io_iterator);
         for (; i < in_end; ++i)
         {
@@ -1580,3 +1580,4 @@ namespace psyq
 }
 
 #endif // !defined(PSYQ_STRING_INTERFACE_IMMUTABLE_HPP_)
+// vim: set expandtab:

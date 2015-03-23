@@ -117,18 +117,19 @@ class psyq::scenario_engine::state_archive
              typename this_type::allocator_type>
                  block_vector;
 
-    //-------------------------------------------------------------------------
-    /// @brief 状態値のビット位置とビット数を表す型。
-    private: typedef typename this_type::pos_type field_type;
-
-    private: enum: typename this_type::size_type
+    public: enum: typename this_type::size_type
     {
+        /// @brief 1バイトあたりのビット数。
         BITS_PER_BYTE = 8,
         FIELD_POSITION_SIZE = 24,
         /// @brief ビット列ブロックのビット数。
         BLOCK_SIZE =
             sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE,
     };
+
+    //-------------------------------------------------------------------------
+    /// @brief 状態値のビット位置とビット数を表す型。
+    private: typedef typename this_type::pos_type field_type;
 
     public: enum: std::size_t
     {
@@ -861,7 +862,7 @@ class psyq::scenario_engine::state_archive
         @param[in] in_chunk 破棄するビット列チャンクのキー。
         @todo 未実装。
      */
-    public: void remove_chunk(typename this_type::key_type const in_chunk);
+    public: bool remove_chunk(typename this_type::key_type const& in_chunk);
 
     /** @brief ビット列チャンクをシリアル化する。
         @param[in] in_chunk シリアル化するビット列チャンクの識別番号。
@@ -1402,51 +1403,6 @@ struct psyq::scenario_engine::_private::key_less
     }
 
 }; // struct psyq::scenario_engine::_private::key_less
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-namespace psyq_test
-{
-    inline void state_archive()
-    {
-        psyq::scenario_engine::state_archive<> local_states(128, 1);
-        psyq::scenario_engine::state_archive<>::key_type local_chunk(0);
-        local_states.reserve_chunk(local_chunk, 128, 128);
-
-        std::int64_t local_signed(0);
-        std::uint64_t local_unsigned(0);
-        for (int i(2); i <= 64; ++i)
-        {
-            PSYQ_ASSERT(local_states.register_unsigned(local_chunk, i, i - 1, i));
-            PSYQ_ASSERT(local_states.get_value(i, local_unsigned));
-            PSYQ_ASSERT(local_unsigned == i - 1);
-
-            PSYQ_ASSERT(local_states.register_signed(local_chunk, -i, 1 - i, i));
-            PSYQ_ASSERT(local_states.get_value(-i, local_signed));
-            PSYQ_ASSERT(local_signed == 1 - i);
-        }
-        local_states.shrink_to_fit();
-        for (int i(2); i <= 64; ++i)
-        {
-            PSYQ_ASSERT(local_states.get_value(i, local_unsigned));
-            PSYQ_ASSERT(local_unsigned == i - 1);
-            PSYQ_ASSERT(local_states.set_value(i, local_unsigned));
-            PSYQ_ASSERT(local_states.get_value(i, local_unsigned));
-            PSYQ_ASSERT(local_unsigned == i - 1);
-
-            PSYQ_ASSERT(local_states.get_value(-i, local_signed));
-            PSYQ_ASSERT(local_signed == 1 - i);
-            PSYQ_ASSERT(local_states.set_value(-i, local_signed));
-            PSYQ_ASSERT(local_states.get_value(-i, local_signed));
-            PSYQ_ASSERT(local_signed == 1 - i);
-        }
-
-        bool local_bool(false);
-        PSYQ_ASSERT(local_states.register_bool(local_chunk, 1, true));
-        PSYQ_ASSERT(local_states.get_value(1, local_bool));
-        PSYQ_ASSERT(local_bool);
-        PSYQ_ASSERT(local_states.set_value(1, local_bool));
-    }
-} // namespace psyq_test
 
 #endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_ARCHIVE_HPP_)
 // vim: set expandtab:

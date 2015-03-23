@@ -201,7 +201,7 @@ struct psyq::scenario_engine::behavior_chunk
         typename this_type::key_type const& in_key)
     {
         auto const local_iterator(
-            this_type::key_less:find_iterator(io_chunks, in_key));
+            this_type::key_less::find_iterator(io_chunks, in_key));
         auto const local_find(local_iterator != io_chunks.end());
         if (local_find)
         {

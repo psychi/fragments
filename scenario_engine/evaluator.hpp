@@ -575,7 +575,7 @@ class psyq::scenario_engine::evaluator
         @param[in] in_chunk 破棄する要素条件チャンクのキー。
         @todo 未実装。
      */
-    public: void remove_chunk(
+    public: bool remove_chunk(
         typename this_type::expression_struct::key_type const& in_chunk);
     //@}
     private: static typename this_type::chunk_struct& equip_chunk(

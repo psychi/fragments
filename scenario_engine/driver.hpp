@@ -83,7 +83,7 @@ class psyq::scenario_engine::driver
         typename this_type::allocator_type const& in_allocator =
             this_type::allocator_type())
     :
-    state_archive_(in_reserve_states, in_reserve_chunks, in_allocator),
+    states_(in_reserve_states, in_reserve_chunks, in_allocator),
     evaluator_(in_reserve_expressions, in_reserve_chunks, in_allocator),
     dispatcher_(in_allocator),
     behaviors_(in_allocator),
@@ -96,7 +96,7 @@ class psyq::scenario_engine::driver
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
     public: driver(this_type&& io_source):
-    state_archive_(std::move(io_source.state_archive_)),
+    states_(std::move(io_source.states_)),
     evaluator_(std::move(io_source.evaluator_)),
     dispatcher_(std::move(io_source.dispatcher_)),
     hash_function_(std::move(io_source.hash_function_))
@@ -108,7 +108,7 @@ class psyq::scenario_engine::driver
      */
     public: this_type& operator=(this_type&& io_source)
     {
-        this->state_archive_ = std::move(io_source.state_archive_);
+        this->states_ = std::move(io_source.states_);
         this->evaluator_ = std::move(io_source.evaluator_);
         this->dispatcher_ = std::move(io_source.dispatcher_);
         this->hash_function_ = std::move(io_source.hash_function_);
@@ -121,15 +121,15 @@ class psyq::scenario_engine::driver
      */
     public: void update()
     {
-        this->dispatcher_.dispatch(this->evaluator_, this->state_archive_);
+        this->dispatcher_.dispatch(this->evaluator_, this->states_);
     }
 
     public: typename this_type::hasher::result_type make_hash(
         typename this_type::hasher::argument_type const& in_key)
     {
-        auto const local_hash(this->hash_functions_(in_key));
+        auto const local_hash(this->hash_function_(in_key));
         PSYQ_ASSERT(
-            in_key.empty() || local_hash != this->hash_functions_(
+            in_key.empty() || local_hash != this->hash_function_(
                 typename this_type::hasher::argument_type()));
         return local_hash;
     }
@@ -138,10 +138,10 @@ class psyq::scenario_engine::driver
     /** @brief シナリオ駆動器で用いる状態値の書庫を取得する。
         @return シナリオ駆動器で用いる状態値の書庫。
      */
-    public: typename this_type::state_archive const& get_state_archive()
+    public: typename this_type::state_archive const& get_states()
     const PSYQ_NOEXCEPT
     {
-        return this->state_archive_;
+        return this->states_;
     }
 
     /// @copydoc psyq::scenario_engine::state_archive::set_value
@@ -153,7 +153,7 @@ class psyq::scenario_engine::driver
     {
         // 状態値を設定し、状態値の書き換えを条件監視器へ通知する。
         auto const local_set_value(
-            this->state_archive_.set_value(in_key, in_value));
+            this->states_.set_value(in_key, in_value));
         if (local_set_value)
         {
             this->dispatcher_.notify_state_transition(in_key);
@@ -161,25 +161,96 @@ class psyq::scenario_engine::driver
         return local_set_value;
     }
 
+    /** @brief シナリオ駆動器に状態値を追加する。
+        @param[in] in_chunk 状態値を追加するチャンクのキー。
+        @param[in] in_state_builder
+            状態値を登録する関数オブジェクト。
+            以下に相当するメンバ関数を使えること。
+            @code
+            // @brief 状態値書庫に状態値を登録する。
+            // @param[in,out] io_states 状態値を登録する書庫。
+            // @param[in,out] io_hasher 文字列からキーを生成する関数オブジェクト。
+            // @param[in] in_chunk      状態値を登録するチャンクを表すキー。
+            // @return 登録した状態値の数。
+            std::size_t template_builder::operator()(
+                driver::state_archive& io_states,
+                driver::hasher& io_hasher,
+                driver::state_archive::key_type const& in_chunk);
+            const
+            @endcode
+        @return 登録した状態値の数。
+     */
+    public: template<typename template_builder>
+    std::size_t add_state_chunk(
+        typename this_type::state_archive::key_type const& in_chunk,
+        template_builder const& in_state_builder)
+    {
+        return in_state_builder(
+            this->states_, this->hash_function_, in_chunk);
+    }
+
+    public: bool remove_state_chunk(
+        typename this_type::state_archive::key_type const& in_chunk)
+    {
+        this->states_.remove_chunk(in_chunk);
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief シナリオ駆動器に条件式を追加する。
+        @param[in] in_chunk 条件式を追加するチャンクのキー。
+        @param[in] in_expression_builder
+            条件式を登録する関数オブジェクト。
+            以下に相当するメンバ関数を使えること。
+            @code
+            // @brief 条件評価器に条件式を登録する。
+            // @param[in,out] io_evaluator 条件式を登録する条件評価器。
+            // @param[in,out] io_hasher    文字列からキーを生成する関数オブジェクト。
+            // @param[in] in_chunk         条件式を登録するチャンクを表すキー。
+            // @param[in] in_states        条件式で使う状態値の書庫。
+            // @return 登録した状態値の数。
+            std::size_t template_builder::operator()(
+                driver::evaluator& io_evaluator,
+                driver::hasher& io_hasher,
+                driver::state_archive::key_type const& in_chunk
+                driver::state_archive const& in_states);
+            const
+            @endcode
+        @return 登録した条件式の数。
+     */
+    public: template<typename template_builder>
+    std::size_t add_evaluator_chunk(
+        typename this_type::evaluator::expression_struct::key_type const& in_chunk,
+        template_builder const& in_expression_builder)
+    {
+        return in_expression_builder(
+            this->evaluator_, this->hash_function_, in_chunk, this->states_);
+    }
+
+    public: bool remove_evaluator_chunk(
+        typename this_type::evaluator::expression_struct::key_type const& in_chunk)
+    {
+        this->evaluator_.remove_chunk(in_chunk);
+    }
+
     //-------------------------------------------------------------------------
     public: void add_behavior_chunk(
-        typename this_type::behavior_chunk::key_type const& in_key,
+        typename this_type::behavior_chunk::key_type const& in_chunk,
         typename this_type::behavior_chunk::function_shared_ptr_vector
             in_functions)
     {
         this_type::behavior_chunk::add(
-            this->behaviors_, in_key, std::move(in_functions));
+            this->behaviors_, in_chunk, std::move(in_functions));
     }
 
     public: bool remove_behavior_chunk(
-        typename this_type::behavior_chunk::key_type const& in_key)
+        typename this_type::behavior_chunk::key_type const& in_chunk)
     {
-        return this_type::behavior_chunk::remove(this->behaviors_, in_key);
+        return this_type::behavior_chunk::remove(this->behaviors_, in_chunk);
     }
 
     //-------------------------------------------------------------------------
     /// @brief シナリオ駆動器で用いる状態値書庫。
-    private: typename this_type::state_archive state_archive_;
+    private: typename this_type::state_archive states_;
 
     /// @brief シナリオ駆動器で用いる条件評価器。
     public: typename this_type::evaluator evaluator_;
@@ -200,45 +271,51 @@ namespace psyq_test
 {
     inline void scenario_engine()
     {
-        typedef psyq::string::csv_table<std::string> csv_table;
-        typedef psyq::scenario_engine::driver<csv_table::string_view::fnv1_hash32> driver;
-        driver local_driver(4, 16, 16);
+        typedef psyq::scenario_engine::state_builder<std::string>
+            state_builder;
+        typedef state_builder::string_table string_table;
+        typedef psyq::scenario_engine
+            ::driver<string_table::string_view::fnv1_hash32>
+                driver;
+        driver local_driver(16, 16, 16);
         auto const local_chunk_key(local_driver.hash_function_("chunk_0"));
 
         // 状態値を登録する。
-        csv_table::string_view const local_state_table_csv(
-            "KEY,            KIND, SIZE,   VALUE,\n"
-            "state_bool,     BOOL,         FALSE,\n"
-            "state_unsigned, UNSIGNED,  7,    10,\n"
-            "state_signed,   SIGNED,   13,   -20,\n"
-            "state_float,    FLOAT,         1.25,\n"
+        string_table::string_view const local_state_table_csv(
+            "KEY,            KIND,     SIZE, VALUE,\n"
+            "state_bool,     BOOL,         , FALSE,\n"
+            "state_unsigned, UNSIGNED,    7,    10,\n"
+            "state_signed,   SIGNED,     13,   -20,\n"
+            "state_float,    FLOAT,      32,  1.25,\n"
             );
-        csv_table(local_state_table_csv, 0, "");
+        local_driver.add_state_chunk(
+            local_chunk_key,
+            state_builder(
+                state_builder::string_table(local_state_table_csv, 0, "")));
 
         // 条件式を登録する。
-        csv_table::string_view const local_expression_table_csv(
+        string_table::string_view const local_expression_table_csv(
             "KEY,          LOGIC, KIND,             ELEMENT,\n"
-            "expression_0, AND,   STATE_COMPARISON, state_0, ==, 0,\n"
-            "expression_1, AND,   STATE_COMPARISON, state_0, ==, 0,\n"
-            "expression_2, AND,   STATE_COMPARISON, state_0, ==, 0,\n"
-            "expression_3, AND,   STATE_COMPARISON, state_0, ==, 0,\n"
-            "expression_4, AND,   STATE_COMPARISON, state_0, ==, 0,\n"
-            "expression_5, AND,   STATE_COMPARISON, state_0, ==, 0,\n"
-            "expression_6, AND,   STATE_COMPARISON, state_0, ==, 0,\n"
-            "expression_7, AND,   STATE_COMPARISON, state_0, ==, 0,\n"
-            "expression_8, AND,   STATE_COMPARISON, state_0, ==, 0,\n"
-            "expression_9, AND,   STATE_COMPARISON, state_0, ==, 0,\n");
-        typedef psyq::scenario_engine::expression_builder<driver::evaluator>
+            "expression_0, AND,   STATE_COMPARISON, state_bool,     ==, FALSE,\n"
+            "expression_1, AND,   STATE_COMPARISON, state_unsigned, <=, 10,\n"
+            "expression_2, AND,   STATE_COMPARISON, state_signed,   >=, -20,\n"
+            "expression_3, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
+            "expression_4, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
+            "expression_5, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
+            "expression_6, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
+            "expression_7, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
+            "expression_8, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
+            "expression_9, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n");
+        typedef psyq::scenario_engine::expression_builder<string_table::string>
             expression_builder;
-        expression_builder::build(
-            local_driver.evaluator_,
-            local_driver.hash_function_,
+        local_driver.add_evaluator_chunk(
             local_chunk_key,
-            local_driver.get_state_archive(),
-            csv_table(local_expression_table_csv, 0, ""));
+            expression_builder(
+                expression_builder::string_table(
+                    local_expression_table_csv, 0, "")));
 
         // 条件挙動チャンクを登録する。
-        csv_table::string_view const local_behavior_table_csv(
+        string_table::string_view const local_behavior_table_csv(
             "KEY         , CONDITION, KIND,  ARGUMENT\n"
             "expression_0, TRUE,      STATE, state_0, :=, 1\n"
             "expression_1, TRUE,      STATE, state_0, +=, 1\n"
@@ -257,8 +334,8 @@ namespace psyq_test
                 local_driver.dispatcher_,
                 local_driver.hash_function_,
                 local_driver.evaluator_,
-                local_driver.get_state_archive(),
-                csv_table(local_behavior_table_csv, 0, "")));
+                local_driver.get_states(),
+                string_table(local_behavior_table_csv, 0, "")));
     }
 }
 #endif // !defined(PSYQ_SCENARIO_ENGINE_DRIVER_HPP_)

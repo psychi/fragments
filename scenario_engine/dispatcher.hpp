@@ -480,7 +480,7 @@ class psyq::scenario_engine::dispatcher
                     io_monitors.insert(
                         typename this_type::monitor::map::value_type(
                             local_element_key,
-                            this_type::monitor::map::mapped_type(
+                            typename this_type::monitor::map::mapped_type(
                                 local_reserve_expression_keys,
                                 io_monitors.get_allocator()))));
                 if (!local_insert.second)

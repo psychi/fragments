@@ -20,7 +20,16 @@ namespace psyq
 
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief シナリオ駆動器。シナリオの進行を管理する。 
+/** @brief シナリオ駆動器。シナリオ進行の全体を統括して管理する。 
+
+    ### 使い方の概略
+    - driver::driver でシナリオ駆動機を構築する。
+    - driver::add_state_chunk で、状態値を登録する。
+    - driver::add_evaluator_chunk で、条件式を登録する。
+    - driver::add_behavior_chunk で、条件挙動を登録する。
+    - driver::update をフレームごとに呼び出す。
+      条件式の評価が変化して条件に合致していたら、
+      条件挙動関数オブジェクトが呼び出される。
 
     @tparam template_hasher @copydoc hasher
     @tparam template_allocator @copydoc allocator_type
@@ -35,7 +44,15 @@ class psyq::scenario_engine::driver
 
     /** @brief 文字列からハッシュ値を生成する、ハッシュ関数オブジェクトの型。
 
-        std::hash 互換インターフェイスを持つこと。
+        - std::hash 互換インターフェイスを持つこと。
+        - hasher::argument_type
+          が文字列型で、以下に相当するメンバ関数を使えること。
+          @code
+          // @brief 文字列の先頭位置を取得する。
+          hasher::argument_type::const_pointer hasher::argument_type::data() const;
+          // @brief 文字列の要素数を取得する。
+          std::size_t hasher::argument_type::size() const;
+          @endcode
      */
     public: typedef template_hasher hasher;
 
@@ -68,6 +85,8 @@ class psyq::scenario_engine::driver
             behavior_chunk;
 
     //-------------------------------------------------------------------------
+    /// @name 構築と代入
+    //@{
     /** @brief 空のシナリオ駆動器を構築する。
         @param[in] in_reserve_chunks      予約するチャンクの容量。
         @param[in] in_reserve_states      予約する状態値書庫の容量。
@@ -115,6 +134,15 @@ class psyq::scenario_engine::driver
         return *this;
     }
 
+    /// @brief シナリオ駆動器を再構築し、メモリ領域を必要最小限にする。
+    public: void shrink_to_fit()
+    {
+        this->states_.shrink_to_fit();
+        this->evaluator_.shrink_to_fit();
+        this->dispatcher_.shrink_to_fit();
+        this->behaviors_.shrink_to_fit();
+    }
+    //@}
     /** @brief シナリオ進行を更新する。
 
         基本的には、フレーム毎に更新すること。
@@ -124,17 +152,23 @@ class psyq::scenario_engine::driver
         this->dispatcher_.dispatch(this->evaluator_, this->states_);
     }
 
+    /** @brief 文字列からハッシュ値を生成する。
+        @param[in] in_string ハッシュ値のもととなる文字列。
+        @return 文字列から生成したハッシュ値。
+     */
     public: typename this_type::hasher::result_type make_hash(
-        typename this_type::hasher::argument_type const& in_key)
+        typename this_type::hasher::argument_type const& in_string)
     {
-        auto const local_hash(this->hash_function_(in_key));
+        auto const local_hash(this->hash_function_(in_string));
         PSYQ_ASSERT(
-            in_key.empty() || local_hash != this->hash_function_(
+            in_string.empty() || local_hash != this->hash_function_(
                 typename this_type::hasher::argument_type()));
         return local_hash;
     }
 
     //-------------------------------------------------------------------------
+    /// @name 状態値
+    //@{
     /** @brief シナリオ駆動器で用いる状態値の書庫を取得する。
         @return シナリオ駆動器で用いる状態値の書庫。
      */
@@ -175,8 +209,8 @@ class psyq::scenario_engine::driver
             std::size_t template_builder::operator()(
                 driver::state_archive& io_states,
                 driver::hasher& io_hasher,
-                driver::state_archive::key_type const& in_chunk);
-            const
+                driver::state_archive::key_type const& in_chunk)
+            const;
             @endcode
         @return 登録した状態値の数。
      */
@@ -189,13 +223,17 @@ class psyq::scenario_engine::driver
             this->states_, this->hash_function_, in_chunk);
     }
 
+    /** @brief シナリオ駆動器から状態値を削除する。
+        @param[in] in_chunk 状態値を削除するチャンクのキー。
+     */
     public: bool remove_state_chunk(
         typename this_type::state_archive::key_type const& in_chunk)
     {
         this->states_.remove_chunk(in_chunk);
     }
-
+    //@}
     //-------------------------------------------------------------------------
+    /// @name 条件式
     /** @brief シナリオ駆動器に条件式を追加する。
         @param[in] in_chunk 条件式を追加するチャンクのキー。
         @param[in] in_expression_builder
@@ -212,8 +250,8 @@ class psyq::scenario_engine::driver
                 driver::evaluator& io_evaluator,
                 driver::hasher& io_hasher,
                 driver::state_archive::key_type const& in_chunk
-                driver::state_archive const& in_states);
-            const
+                driver::state_archive const& in_states)
+            const;
             @endcode
         @return 登録した条件式の数。
      */
@@ -226,13 +264,22 @@ class psyq::scenario_engine::driver
             this->evaluator_, this->hash_function_, in_chunk, this->states_);
     }
 
+    /** @brief シナリオ駆動器から条件式を削除する。
+        @param[in] in_chunk 条件式を削除するチャンクのキー。
+     */
     public: bool remove_evaluator_chunk(
         typename this_type::evaluator::expression_struct::key_type const& in_chunk)
     {
         this->evaluator_.remove_chunk(in_chunk);
     }
-
+    //@}
     //-------------------------------------------------------------------------
+    /// @name 条件挙動
+    //@{
+    /** @brief シナリオ駆動器に条件挙動を追加する。
+        @param[in] in_chunk     条件挙動を追加するチャンクのキー。
+        @param[in] in_functions 追加する条件挙動関数オブジェクトのコンテナ。
+     */
     public: void add_behavior_chunk(
         typename this_type::behavior_chunk::key_type const& in_chunk,
         typename this_type::behavior_chunk::function_shared_ptr_vector
@@ -242,12 +289,15 @@ class psyq::scenario_engine::driver
             this->behaviors_, in_chunk, std::move(in_functions));
     }
 
+    /** @brief シナリオ駆動器から条件挙動を削除する。
+        @param[in] in_chunk 条件挙動を削除するチャンクのキー。
+     */
     public: bool remove_behavior_chunk(
         typename this_type::behavior_chunk::key_type const& in_chunk)
     {
         return this_type::behavior_chunk::remove(this->behaviors_, in_chunk);
     }
-
+    //@}
     //-------------------------------------------------------------------------
     /// @brief シナリオ駆動器で用いる状態値書庫。
     private: typename this_type::state_archive states_;
@@ -336,6 +386,9 @@ namespace psyq_test
                 local_driver.evaluator_,
                 local_driver.get_states(),
                 string_table(local_behavior_table_csv, 0, "")));
+
+        //
+        local_driver.update();
     }
 }
 #endif // !defined(PSYQ_SCENARIO_ENGINE_DRIVER_HPP_)

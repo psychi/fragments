@@ -154,8 +154,9 @@ class psyq::string::_private::interface_immutable: public template_string_type
         result_type operator()(argument_type const& in_string)
         const PSYQ_NOEXCEPT
         {
+            auto const local_data(in_string.data());
             return template_hash::compute(
-                in_string.data(), in_string.data() + in_string.size());
+                local_data, local_data + in_string.size());
         }
     };
     /// std::hash互換インターフェイスの、32ビットFNV-1形式ハッシュ関数オブジェクト。
@@ -1156,7 +1157,7 @@ class psyq::string::_private::interface_immutable: public template_string_type
         @param[in]     in_radix    整数の基数。
         @return 文字列から読み取った整数の値。
      */
-	private: static std::uint64_t read_numbers(
+    private: static std::uint64_t read_numbers(
         typename base_type::traits_type::char_type const*& io_iterator,
         typename base_type::traits_type::char_type const* const in_end,
         unsigned const in_radix)
@@ -1170,7 +1171,7 @@ class psyq::string::_private::interface_immutable: public template_string_type
         PSYQ_ASSERT(in_radix <= ('9' - '0') + ('z' - 'a'));
 
         // 任意の基数の数値を取り出す。
-		std::uint64_t local_value(0);
+        std::uint64_t local_value(0);
         auto i(io_iterator);
         for (; i < in_end; ++i)
         {

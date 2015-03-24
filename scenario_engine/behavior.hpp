@@ -306,6 +306,10 @@ struct psyq::scenario_engine::behavior_chunk
 }; // struct psyq::scenario_engine::behavior_chunk
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 文字列表から条件挙動関数オブジェクトを構築する関数オブジェクト。
+
+    @tparam template_chunk 構築する条件挙動チャンクの型。
+ */
 template<typename template_chunk>
 struct psyq::scenario_engine::behavior_builder
 {

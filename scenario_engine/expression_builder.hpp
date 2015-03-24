@@ -74,6 +74,12 @@ namespace psyq
 #endif // !define(PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_STATE_COMPARISON)
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 文字列表から条件式を構築する関数オブジェクト。
+
+    driver::add_evaluator_chunk の引数として使う。
+
+    @tparam template_string 文字列表で使う文字列の型。
+ */
 template<typename template_string>
 class psyq::scenario_engine::expression_builder
 {

@@ -58,6 +58,12 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 文字列表から状態値を構築する関数オブジェクト。
+
+    driver::add_state_chunk の引数として使う。
+
+    @tparam template_string 文字列表で使う文字列の型。
+ */
 template<typename template_string>
 class psyq::scenario_engine::state_builder
 {

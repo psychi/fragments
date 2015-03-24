@@ -214,7 +214,8 @@ class psyq::string::csv_table
     public: csv_table(
         typename this_type::string_view const& in_csv_string,
         typename this_type::index_type const in_attribute_row,
-        typename this_type::string_view const& in_attribute_name,
+        typename this_type::string_view const& in_attribute_name =
+            string_view(),
         typename this_type::index_type const in_attribute_index = 0,
         typename this_type::string::allocator_type const& in_allocator =
             allocator_type(),

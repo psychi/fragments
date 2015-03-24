@@ -121,16 +121,18 @@ class psyq::scenario_engine::evaluator
         evaluator(in_evaluator)
         {}
 
-        bool operator()(typename evaluator::compound_struct const& in_compound)
+        int operator()(typename evaluator::compound_struct const& in_compound)
         const PSYQ_NOEXCEPT
         {
-            auto const local_condition(
+            auto const local_evaluate_expression(
                 this->evaluator.evaluate_expression(
                     in_compound.key, this->states));
-            PSYQ_ASSERT(
-                local_condition
-                || this->evaluator.find_expression(in_compound.key) != nullptr);
-            return local_condition == in_compound.condition;
+            if (local_evaluate_expression < 0)
+            {
+                return -1;
+            }
+            auto const local_condition(local_evaluate_expression != 0);
+            return local_condition == in_compound.condition? 1: 0;
         }
 
         typename evaluator::state_archive const& states;
@@ -180,7 +182,7 @@ class psyq::scenario_engine::evaluator
         states(in_states)
         {}
 
-        bool operator()(
+        int operator()(
             typename evaluator::state_comparison_struct const& in_state)
         const PSYQ_NOEXCEPT
         {
@@ -191,28 +193,29 @@ class psyq::scenario_engine::evaluator
                 switch (in_state.operation)
                 {
                     case evaluator::state_comparison_struct::operator_EQUAL:
-                    return local_value == in_state.value;
+                    return local_value == in_state.value? 1: 0;
 
                     case evaluator::state_comparison_struct::operator_NOT_EQUAL:
-                    return local_value != in_state.value;
+                    return local_value != in_state.value? 1: 0;
 
                     case evaluator::state_comparison_struct::operator_LESS:
-                    return local_value < in_state.value;
+                    return  local_value < in_state.value? 1: 0;
 
                     case evaluator::state_comparison_struct::operator_LESS_EQUAL:
-                    return local_value <= in_state.value;
+                    return local_value <= in_state.value? 1: 0;
 
                     case evaluator::state_comparison_struct::operator_GREATER:
-                    return in_state.value < local_value;
+                    return  in_state.value < local_value? 1: 0;
 
                     case evaluator::state_comparison_struct::operator_GREATER_EQUAL:
-                    return in_state.value <= local_value;
+                    return in_state.value <= local_value? 1: 0;
 
-                    default: break;
+                    default:
+                    PSYQ_ASSERT(false);
+                    break;
                 }
             }
-            PSYQ_ASSERT(false);
-            return false;
+            return -1;
         }
 
         typename evaluator::state_archive const& states;
@@ -334,9 +337,11 @@ class psyq::scenario_engine::evaluator
     /** @brief 条件式を評価する。
         @param[in] in_expression_key 評価する条件式のキー。
         @param[in] in_states         評価に用いる状態値書庫。
-        @return 条件式の評価結果。
+        @retval 正 条件式の評価は true となった。
+        @retval  0 条件式の評価は false となった。
+        @retval 負 条件式の評価に失敗した。
      */
-    public: bool evaluate_expression(
+    public: int evaluate_expression(
         typename this_type::expression_struct::key_type const in_expression_key,
         typename this_type::state_archive const& in_states)
     const PSYQ_NOEXCEPT
@@ -375,7 +380,7 @@ class psyq::scenario_engine::evaluator
                 PSYQ_ASSERT(false);
             }
         }
-        return false;
+        return -1;
     }
 
     /** @brief 条件式を取得する。
@@ -604,12 +609,14 @@ class psyq::scenario_engine::evaluator
         @param[in] in_expression 評価する条件式。
         @param[in] in_elements   評価に用いる要素条件の配列。
         @param[in] in_evaluator  要素条件を評価する関数オブジェクト。
-        @return 条件式の評価結果。
+        @retval 正 条件式の評価は true となった。
+        @retval  0 条件式の評価は false となった。
+        @retval 負 条件式の評価に失敗した。
      */
     private: template<
         typename template_container_type,
         typename template_evaluator_type>
-    static bool evaluate_elements(
+    static int evaluate_elements(
         typename this_type::expression_struct const& in_expression,
         template_container_type const& in_elements,
         template_evaluator_type const& in_evaluator)
@@ -620,7 +627,7 @@ class psyq::scenario_engine::evaluator
         {
             // 条件式が範囲外の要素条件を参照している。
             PSYQ_ASSERT(false);
-            return false;
+            return -1;
         }
         auto const local_end(in_elements.begin() + in_expression.end);
         auto const local_and(
@@ -630,19 +637,24 @@ class psyq::scenario_engine::evaluator
             i != local_end;
             ++i)
         {
-            if (in_evaluator(*i))
+            auto const local_evaluation(in_evaluator(*i));
+            if (local_evaluation < 0)
+            {
+                return -1;
+            }
+            else if (0 < local_evaluation)
             {
                 if (!local_and)
                 {
-                    return true;
+                    return 1;
                 }
             }
             else if (local_and)
             {
-                return false;
+                return 0;
             }
         }
-        return local_and;
+        return local_and? 1: 0;
     }
 
     //-------------------------------------------------------------------------

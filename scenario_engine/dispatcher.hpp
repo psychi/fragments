@@ -106,7 +106,8 @@ class psyq::scenario_engine::dispatcher
         /// @brief フラグの位置。
         enum flag_enum: std::uint8_t
         {
-            flag_LAST_EVALUATION,  ///< 条件式の前回の評価結果。
+            flag_LAST_EVALUATION,  ///< 条件式の前回の評価の成功／失敗。
+            flag_LAST_CONDITION,   ///< 条件式の前回の評価。
             flag_EVALUATE_REQUEST, ///< 条件式の評価の更新要求。
         };
 
@@ -357,10 +358,18 @@ class psyq::scenario_engine::dispatcher
             if (local_insert.second)
             {
                 // 条件評価の初期値を設定しておく。
-                local_insert.first->second.flags.set(
-                    this_type::listener::flag_LAST_EVALUATION,
+                auto const local_evaluate_expression(
                     in_evaluator.evaluate_expression(
                         in_expression_key, in_states));
+                local_insert.first->second.flags.set(
+                    this_type::listener::flag_LAST_EVALUATION,
+                    0 <= local_evaluate_expression);
+                if (0 <= local_evaluate_expression)
+                {
+                    local_insert.first->second.flags.set(
+                        this_type::listener::flag_LAST_CONDITION,
+                        local_evaluate_expression != 0);
+                }
                 return local_insert.first;
             }
             // 挿入に失敗した。
@@ -661,13 +670,14 @@ class psyq::scenario_engine::dispatcher
             // 評価要求フラグが立っていれば、条件式を評価する。
             if (local_evaluate_request)
             {
-                this_type::update_listener(
-                    local_listener, in_evaluator, in_states);
-
-                // 関数オブジェクトのコンテナが空になったら、
-                // 条件監視オブジェクトを削除する。
-                if (local_listener.second.functions.empty())
+                auto const local_update_listener(
+                    this_type::update_listener(
+                        local_listener, in_evaluator, in_states));
+                if (local_update_listener
+                    && local_listener.second.functions.empty())
                 {
+                    // 関数オブジェクトのコンテナが空になったら、
+                    // 条件監視オブジェクトを削除する。
                     i = io_listeners.erase(i);
                     continue;
                 }
@@ -684,31 +694,45 @@ class psyq::scenario_engine::dispatcher
         @param[in,out] io_listener 更新する条件評価受信オブジェクト。
         @param[in] in_evaluator    評価に用いる条件評価器。
         @param[in] in_states       条件式の評価に用いる状態値のコンテナ。
+        @retval true  ディスパッチ関数を呼び出した。
+        @retval false ディスパッチ関数を呼び出さなかった。
      */
     private: template<typename template_evaluator>
-    static void update_listener(
+    static bool update_listener(
         typename this_type::listener::map::value_type& io_listener,
         template_evaluator const& in_evaluator,
         typename template_evaluator::state_archive const& in_states)
     {
-        // 条件式を評価し、結果が以前と異なっているか判定する。
-        bool const local_old_evaluation(
+        // 条件式を評価する。
+        auto const local_last_evaluation(
             io_listener.second.flags.test(
                 this_type::listener::flag_LAST_EVALUATION));
-        bool const local_new_evaluation(
+        auto const local_evaluate_expression(
             in_evaluator.evaluate_expression(io_listener.first, in_states));
-        PSYQ_ASSERT(
-            local_new_evaluation
-            || in_evaluator.find_expression(io_listener.first) != nullptr);
-        if (local_old_evaluation == local_new_evaluation)
-        {
-            return;
-        }
-
-        // 条件式の結果が以前と異なるので、ディスパッチ関数を呼び出す。
         io_listener.second.flags.set(
             this_type::listener::flag_LAST_EVALUATION,
-            local_new_evaluation);
+            0 <= local_evaluate_expression);
+        if (local_evaluate_expression < 0)
+        {
+            return false;
+        }
+
+        // 条件式の評価結果が以前と異なっているか判定する。
+        auto const local_condition(local_evaluate_expression != 0);
+        if (local_last_evaluation)
+        {
+            auto const local_last_condition(
+                io_listener.second.flags.test(
+                    this_type::listener::flag_LAST_CONDITION));
+            if (local_last_condition == local_condition)
+            {
+                return false;
+            }
+        }
+        io_listener.second.flags.set(
+            this_type::listener::flag_LAST_CONDITION, local_condition);
+
+        // 条件式の結果が以前と異なるので、ディスパッチ関数を呼び出す。
         auto local_last(io_listener.second.functions.begin());
         for (auto& local_function_observer: io_listener.second.functions)
         {
@@ -716,12 +740,13 @@ class psyq::scenario_engine::dispatcher
             if (!local_last->expired())
             {
                 auto const local_function(local_last->lock());
-                (*local_function)(io_listener.first, local_new_evaluation);
+                (*local_function)(io_listener.first, local_condition);
                 ++local_last;
             }
         }
         io_listener.second.functions.erase(
             local_last, io_listener.second.functions.end());
+        return true;
     }
 
     //-------------------------------------------------------------------------

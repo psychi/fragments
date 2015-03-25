@@ -25,7 +25,7 @@ namespace psyq
     - evaluator::evaluate_expression で、条件式キーから条件式を評価する。
 
     @tparam template_state_archive @copydoc evaluator::state_archive
-    @tparam template_key           @copydoc evaluator::expression_struct::key_type
+    @tparam template_key           @copydoc evaluator::expression::key_type
     @tparam template_allocator     @copydoc evaluator::allocator_type
  */
 template<
@@ -45,16 +45,16 @@ class psyq::scenario_engine::evaluator
 
     //-------------------------------------------------------------------------
     /// @brief 条件式。
-    public: struct expression_struct
+    public: struct expression
     {
-        typedef expression_struct this_type;
+        typedef expression this_type;
 
         /// @brief 条件式の識別に使うキーの型。
         typedef template_key key_type;
 
         /// @brief 条件式をキーの昇順で並び替えるのに使う、比較関数オブジェクト。
         typedef psyq::scenario_engine::_private::key_less<
-            this_type, typename evaluator::expression_struct::key_type>
+            this_type, typename evaluator::expression::key_type>
                 key_less;
 
         /// @brief 要素条件のインデクス番号を表す型。
@@ -67,7 +67,7 @@ class psyq::scenario_engine::evaluator
         /// @brief 条件式の種類を表す列挙型。
         enum kind_enum: std::uint8_t
         {
-            kind_COMPOUND,         ///< 複合条件式。
+            kind_SUB_EXPRESSION,   ///< 複合条件式。
             kind_STATE_COMPARISON, ///< 状態比較条件式。
         };
 
@@ -91,29 +91,29 @@ class psyq::scenario_engine::evaluator
         /// @brief 条件式の要素条件を結合する論理演算子。
         typename this_type::logic_enum logic;
 
-    }; // struct expression_struct
+    }; // struct expression
 
     //-------------------------------------------------------------------------
     /// @brief 複合条件式の要素条件。
-    public: struct compound_struct
+    public: struct sub_expression
     {
-        typedef compound_struct this_type;
+        typedef sub_expression this_type;
 
         /// @brief 複合条件式の要素条件のコンテナ。
         typedef std::vector<this_type, typename evaluator::allocator_type>
             vector;
 
         /// @brief 結合する条件式のキー。
-        typename evaluator::expression_struct::key_type key;
+        typename evaluator::expression::key_type key;
         /// @brief 結合する際の条件。
         bool condition;
 
-    }; // struct compound_struct
+    }; // struct sub_expression
 
     /// @brief 複合条件式の要素条件を評価する関数オブジェクト。
-    private: struct compound_evaluator
+    private: struct sub_expression_evaluator
     {
-        compound_evaluator(
+        sub_expression_evaluator(
             typename evaluator::state_archive const& in_states,
             evaluator const& in_evaluator)
         PSYQ_NOEXCEPT:
@@ -121,30 +121,31 @@ class psyq::scenario_engine::evaluator
         evaluator(in_evaluator)
         {}
 
-        int operator()(typename evaluator::compound_struct const& in_compound)
+        int operator()(
+            typename evaluator::sub_expression const& in_sub_expression)
         const PSYQ_NOEXCEPT
         {
             auto const local_evaluate_expression(
                 this->evaluator.evaluate_expression(
-                    in_compound.key, this->states));
+                    in_sub_expression.key, this->states));
             if (local_evaluate_expression < 0)
             {
                 return -1;
             }
             auto const local_condition(local_evaluate_expression != 0);
-            return local_condition == in_compound.condition? 1: 0;
+            return local_condition == in_sub_expression.condition? 1: 0;
         }
 
         typename evaluator::state_archive const& states;
         evaluator const& evaluator;
 
-    }; // struct compound_evaluator
+    }; // struct sub_expression_evaluator
 
     //-------------------------------------------------------------------------
     /// @brief 状態比較条件式の要素条件。
-    public: struct state_comparison_struct
+    public: struct state_comparison
     {
-        typedef state_comparison_struct this_type;
+        typedef state_comparison this_type;
 
         /// @brief 状態比較条件式の要素条件のコンテナ。
         typedef std::vector<this_type, typename evaluator::allocator_type>
@@ -171,7 +172,7 @@ class psyq::scenario_engine::evaluator
         /// @brief 比較演算子の種類。
         typename this_type::operator_enum operation;
 
-    }; // struct state_comparison_struct
+    }; // struct state_comparison
 
     /// @brief 状態比較条件式の要素条件を評価する関数オブジェクト。
     private: struct state_comparison_evaluator
@@ -183,31 +184,31 @@ class psyq::scenario_engine::evaluator
         {}
 
         int operator()(
-            typename evaluator::state_comparison_struct const& in_state)
+            typename evaluator::state_comparison const& in_state)
         const PSYQ_NOEXCEPT
         {
-            typename evaluator::state_comparison_struct::value_type
+            typename evaluator::state_comparison::value_type
                 local_value;
             if (this->states.get_value(in_state.key, local_value))
             {
                 switch (in_state.operation)
                 {
-                    case evaluator::state_comparison_struct::operator_EQUAL:
+                    case evaluator::state_comparison::operator_EQUAL:
                     return local_value == in_state.value? 1: 0;
 
-                    case evaluator::state_comparison_struct::operator_NOT_EQUAL:
+                    case evaluator::state_comparison::operator_NOT_EQUAL:
                     return local_value != in_state.value? 1: 0;
 
-                    case evaluator::state_comparison_struct::operator_LESS:
+                    case evaluator::state_comparison::operator_LESS:
                     return  local_value < in_state.value? 1: 0;
 
-                    case evaluator::state_comparison_struct::operator_LESS_EQUAL:
+                    case evaluator::state_comparison::operator_LESS_EQUAL:
                     return local_value <= in_state.value? 1: 0;
 
-                    case evaluator::state_comparison_struct::operator_GREATER:
+                    case evaluator::state_comparison::operator_GREATER:
                     return  in_state.value < local_value? 1: 0;
 
-                    case evaluator::state_comparison_struct::operator_GREATER_EQUAL:
+                    case evaluator::state_comparison::operator_GREATER_EQUAL:
                     return in_state.value <= local_value? 1: 0;
 
                     default:
@@ -224,51 +225,50 @@ class psyq::scenario_engine::evaluator
 
     //-------------------------------------------------------------------------
     /// @brief 要素条件チャンク。
-    private: struct chunk_struct
+    private: struct chunk
     {
-        typedef chunk_struct this_type;
+        typedef chunk this_type;
 
         /// @brief 要素条件チャンクのコンテナ。
-        typedef std::vector<
-             this_type, typename evaluator::allocator_type>
-                 vector;
+        typedef std::vector<this_type, typename evaluator::allocator_type>
+             vector;
 
         /// @brief 要素条件チャンクのキーを比較する関数オブジェクト。
         typedef psyq::scenario_engine::_private::key_less<
-             this_type, typename evaluator::expression_struct::key_type>
+             this_type, typename evaluator::expression::key_type>
                  key_less;
 
-        chunk_struct(
-            typename evaluator::expression_struct::key_type in_key,
+        chunk(
+            typename evaluator::expression::key_type in_key,
             typename evaluator::allocator_type const& in_allocator)
         :
-        compounds(in_allocator),
+        sub_expressions(in_allocator),
         state_comparisons(in_allocator),
         key(std::move(in_key))
         {}
 
-        chunk_struct(chunk_struct&& io_source):
-        compounds(std::move(io_source.compounds)),
+        chunk(chunk&& io_source):
+        sub_expressions(std::move(io_source.sub_expressions)),
         state_comparisons(std::move(io_source.state_comparisons)),
         key(std::move(io_source.key))
         {}
 
-        chunk_struct& operator=(chunk_struct&& io_source)
+        chunk& operator=(chunk&& io_source)
         {
-            this->compounds = std::move(io_source.compounds);
+            this->sub_expressions = std::move(io_source.sub_expressions);
             this->state_comparisons = std::move(io_source.state_comparisons);
             this->key = std::move(io_source.key);
             return *this;
         }
 
         /// @brief 複合条件式で使う要素条件のコンテナ。
-        typename evaluator::compound_struct::vector compounds;
+        typename evaluator::sub_expression::vector sub_expressions;
         /// @brief 状態比較条件式で使う要素条件のコンテナ。
-        typename evaluator::state_comparison_struct::vector state_comparisons;
+        typename evaluator::state_comparison::vector state_comparisons;
         /// @brief チャンクを識別するキー。
-        typename evaluator::expression_struct::key_type key;
+        typename evaluator::expression::key_type key;
 
-    }; // struct chunk_struct
+    }; // struct chunk
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
@@ -317,7 +317,7 @@ class psyq::scenario_engine::evaluator
         this->chunks_.shrink_to_fit();
         for (auto& local_chunk: this->chunks_)
         {
-            local_chunk.compounds.shrink_to_fit();
+            local_chunk.sub_expressions.shrink_to_fit();
             local_chunk.state_comparisons.shrink_to_fit();
         }
     }
@@ -342,7 +342,7 @@ class psyq::scenario_engine::evaluator
         @retval 負 条件式の評価に失敗した。
      */
     public: int evaluate_expression(
-        typename this_type::expression_struct::key_type const in_expression_key,
+        typename this_type::expression::key_type const in_expression_key,
         typename this_type::state_archive const& in_states)
     const PSYQ_NOEXCEPT
     {
@@ -356,13 +356,13 @@ class psyq::scenario_engine::evaluator
                 // 条件式の種別によって評価方法を分岐する。
                 switch (local_expression->kind)
                 {
-                    case this_type::expression_struct::kind_COMPOUND:
+                    case this_type::expression::kind_SUB_EXPRESSION:
                     return this_type::evaluate_elements(
                         *local_expression,
-                        local_chunk->compounds,
-                        this_type::compound_evaluator(in_states, *this));
+                        local_chunk->sub_expressions,
+                        this_type::sub_expression_evaluator(in_states, *this));
 
-                    case this_type::expression_struct::kind_STATE_COMPARISON:
+                    case this_type::expression::kind_STATE_COMPARISON:
                     return this_type::evaluate_elements(
                         *local_expression,
                         local_chunk->state_comparisons,
@@ -388,53 +388,54 @@ class psyq::scenario_engine::evaluator
         @retval !=nullptr 対応する条件式を指すポインタ。
         @retval ==nullptr 対応する条件式が見つからなかった。
      */
-    public: typename this_type::expression_struct const* find_expression(
-        typename this_type::expression_struct::key_type const in_expression_key)
+    public: typename this_type::expression const* find_expression(
+        typename this_type::expression::key_type const in_expression_key)
     const PSYQ_NOEXCEPT
     {
-        return this_type::expression_struct::key_less::find_pointer(
+        return this_type::expression::key_less::find_pointer(
             this->expressions_, in_expression_key);
     }
 
     /** @brief 複合条件式を登録する。
+        @param[in] in_elements 登録する複合条件式の要素条件の配列。
         @param[in] in_chunk    登録する複合条件式が所属するチャンクのキー。
         @param[in] in_key      登録する複合条件式のキー。
         @param[in] in_logic    登録する複合条件式で用いる論理演算子。
-        @param[in] in_elements 登録する複合条件式の要素条件の配列。
         @retval true  成功。複合条件式を登録した。
         @retval false 失敗。複合条件式は登録されなかった。
      */
     public: bool register_expression(
-        typename this_type::expression_struct::key_type const& in_chunk,
-        typename this_type::expression_struct::key_type in_key,
-        typename this_type::expression_struct::logic_enum const in_logic,
-        typename this_type::compound_struct::vector const& in_elements)
+        typename this_type::sub_expression::vector const& in_elements,
+        typename this_type::expression::key_type const& in_chunk,
+        typename this_type::expression::key_type in_key,
+        typename this_type::expression::logic_enum const in_logic)
     {
         PSYQ_ASSERT(
-            this_type::is_valid_compound(in_elements, this->expressions_));
+            this_type::is_valid_sub_expression(in_elements, this->expressions_));
         return this_type::register_expression(
             this->expressions_,
-            this_type::equip_chunk(this->chunks_, in_chunk).compounds,
+            this_type::equip_chunk(this->chunks_, in_chunk).sub_expressions,
             in_elements,
+            in_chunk,
             std::move(in_key),
             in_logic,
-            this_type::expression_struct::kind_COMPOUND);
+            this_type::expression::kind_SUB_EXPRESSION);
     }
 
     /** @brief 状態比較条件式を登録する。
+        @param[in] in_elements 登録する状態比較条件式の要素条件の配列。
         @param[in] in_chunk    登録する状態比較条件式が所属するチャンクのキー。
         @param[in] in_key      登録する状態比較条件式のキー。
         @param[in] in_logic    登録する状態比較条件式で用いる論理演算子。
-        @param[in] in_elements 登録する状態比較条件式の要素条件の配列。
         @param[in] in_states   条件式の評価に用いる状態値書庫。
         @retval true  成功。状態比較条件式を登録した。
         @retval false 失敗。状態比較条件式は登録されなかった。
      */
     public: bool register_expression(
-        typename this_type::expression_struct::key_type const& in_chunk,
-        typename this_type::expression_struct::key_type in_key,
-        typename this_type::expression_struct::logic_enum const in_logic,
-        typename this_type::state_comparison_struct::vector const& in_elements)
+        typename this_type::state_comparison::vector const& in_elements,
+        typename this_type::expression::key_type const& in_chunk,
+        typename this_type::expression::key_type in_key,
+        typename this_type::expression::logic_enum const in_logic)
         //typename this_type::state_archive const& in_states)
     {
         //PSYQ_ASSERT(
@@ -443,15 +444,17 @@ class psyq::scenario_engine::evaluator
             this->expressions_,
             this_type::equip_chunk(this->chunks_, in_chunk).state_comparisons,
             in_elements,
+            in_chunk,
             std::move(in_key),
             in_logic,
-            this_type::expression_struct::kind_STATE_COMPARISON);
+            this_type::expression::kind_STATE_COMPARISON);
     }
     //@}
     /** @brief 条件式を登録する。
         @param[in,out] io_expressions 条件式を登録するコンテナ。
         @param[in,out] io_elements    要素条件を登録するコンテナ。
         @param[in] in_elements        登録する条件式の要素条件の配列。
+        @param[in] in_chunk           登録する状態比較条件式が所属するチャンクのキー。
         @param[in] in_key             登録する条件式のキー。
         @param[in] in_logic           登録する条件式で用いる論理演算子。
         @param[in] in_kind            登録する条件式の種類。
@@ -460,12 +463,13 @@ class psyq::scenario_engine::evaluator
      */
     private: template<typename template_element_container>
     static bool register_expression(
-        typename this_type::expression_struct::vector& io_expressions,
+        typename this_type::expression::vector& io_expressions,
         template_element_container& io_elements,
         template_element_container const& in_elements,
-        typename this_type::expression_struct::key_type in_key,
-        typename this_type::expression_struct::logic_enum const in_logic,
-        typename this_type::expression_struct::kind_enum const in_kind)
+        typename this_type::expression::key_type const& in_chunk,
+        typename this_type::expression::key_type in_key,
+        typename this_type::expression::logic_enum const in_logic,
+        typename this_type::expression::kind_enum const in_kind)
     {
         if (in_elements.empty())
         {
@@ -478,7 +482,7 @@ class psyq::scenario_engine::evaluator
                 io_expressions.begin(),
                 io_expressions.end(),
                 in_key,
-                typename this_type::expression_struct::key_less()));
+                typename this_type::expression::key_less()));
         if (local_lower_bound != io_expressions.end()
             && local_lower_bound->key == in_key)
         {
@@ -486,7 +490,7 @@ class psyq::scenario_engine::evaluator
         }
         auto const local_insert(
             io_expressions.insert(
-                local_lower_bound, typename this_type::expression_struct()));
+                local_lower_bound, typename this_type::expression()));
 
         // 要素条件を追加する。
         auto const local_element_begin(io_elements.size());
@@ -495,24 +499,25 @@ class psyq::scenario_engine::evaluator
 
         // 条件式を初期化する。
         auto& local_expression(*local_insert);
+        local_expression.chunk = in_chunk;
         local_expression.key = std::move(in_key);
         local_expression.logic = in_logic;
         local_expression.kind = in_kind;
         local_expression.begin =
-            static_cast<typename this_type::expression_struct::element_index>(
+            static_cast<typename this_type::expression::element_index>(
                 local_element_begin);
         PSYQ_ASSERT(local_expression.begin == local_element_begin);
         auto const local_element_end(io_elements.size());
         local_expression.end =
-            static_cast<typename this_type::expression_struct::element_index>(
+            static_cast<typename this_type::expression::element_index>(
                 local_element_end);
         PSYQ_ASSERT(local_expression.end == local_element_end);
         return true;
     }
 
-    private: static bool is_valid_compound(
-        typename this_type::compound_struct::vector const& in_elements,
-        typename this_type::expression_struct::vector const& in_expressions)
+    private: static bool is_valid_sub_expression(
+        typename this_type::sub_expression::vector const& in_elements,
+        typename this_type::expression::vector const& in_expressions)
     {
         for (auto& local_element: in_elements)
         {
@@ -521,7 +526,7 @@ class psyq::scenario_engine::evaluator
                     in_expressions.begin(),
                     in_expressions.end(),
                     local_element.key,
-                    typename this_type::expression_struct::key_less()));
+                    typename this_type::expression::key_less()));
             if (!local_find)
             {
                 return false;
@@ -531,7 +536,7 @@ class psyq::scenario_engine::evaluator
     }
 
     private: static bool is_valid_state_comparison(
-        typename this_type::state_comparison_struct::vector const& in_elements,
+        typename this_type::state_comparison::vector const& in_elements,
         typename this_type::state_archive const& in_states)
     {
         for (auto& local_element: in_elements)
@@ -551,28 +556,29 @@ class psyq::scenario_engine::evaluator
         @param[in] in_chunk 取得する要素条件チャンクのキー。
         @return 要素条件チャンク。
      */
-    public: typename this_type::chunk_struct const* find_chunk(
-        typename this_type::expression_struct::key_type const& in_chunk)
+    public: typename this_type::chunk const* find_chunk(
+        typename this_type::expression::key_type const& in_chunk)
     const PSYQ_NOEXCEPT
     {
-        return this_type::chunk_struct::key_less::find_pointer(
+        return this_type::chunk::key_less::find_pointer(
             this->chunks_, in_chunk);
     }
 
     /** @brief 要素条件チャンクを予約する。
-        @param[in] in_chunk             予約する要素条件チャンクのキー。
-        @param[in] in_reserve_compounds 予約しておく複合条件式の要素条件数。
+        @param[in] in_chunk 予約する要素条件チャンクのキー。
+        @param[in] in_reserve_sub_expressions
+            予約しておく複合条件式の要素条件数。
         @param[in] in_reserve_state_comparisons
             予約しておく状態比較条件式の要素条件数。
      */
     public: void reserve_chunk(
-        typename this_type::expression_struct::key_type const& in_chunk,
-        std::size_t const in_reserve_compounds,
+        typename this_type::expression::key_type const& in_chunk,
+        std::size_t const in_reserve_sub_expressions,
         std::size_t const in_reserve_state_comparisons)
     {
         auto& local_chunk(
             this_type::equip_chunk(this->chunks_, in_chunk));
-        local_chunk.compounds.reserve(in_reserve_compounds);
+        local_chunk.sub_expressions.reserve(in_reserve_sub_expressions);
         local_chunk.state_comparisons.reserve(in_reserve_state_comparisons);
     }
 
@@ -581,18 +587,18 @@ class psyq::scenario_engine::evaluator
         @todo 未実装。
      */
     public: bool remove_chunk(
-        typename this_type::expression_struct::key_type const& in_chunk);
+        typename this_type::expression::key_type const& in_chunk);
     //@}
-    private: static typename this_type::chunk_struct& equip_chunk(
-        typename this_type::chunk_struct::vector& io_chunks,
-        typename this_type::expression_struct::key_type const& in_chunk_key)
+    private: static typename this_type::chunk& equip_chunk(
+        typename this_type::chunk::vector& io_chunks,
+        typename this_type::expression::key_type const& in_chunk_key)
     {
         auto const local_lower_bound(
             std::lower_bound(
                 io_chunks.begin(),
                 io_chunks.end(),
                 in_chunk_key,
-                typename this_type::chunk_struct::key_less()));
+                typename this_type::chunk::key_less()));
         if (local_lower_bound != io_chunks.end()
             && local_lower_bound->key == in_chunk_key)
         {
@@ -600,7 +606,7 @@ class psyq::scenario_engine::evaluator
         }
         return *io_chunks.insert(
             local_lower_bound,
-            typename this_type::chunk_struct::vector::value_type(
+            typename this_type::chunk::vector::value_type(
                 in_chunk_key, io_chunks.get_allocator()));
     }
 
@@ -617,7 +623,7 @@ class psyq::scenario_engine::evaluator
         typename template_container_type,
         typename template_evaluator_type>
     static int evaluate_elements(
-        typename this_type::expression_struct const& in_expression,
+        typename this_type::expression const& in_expression,
         template_container_type const& in_elements,
         template_evaluator_type const& in_evaluator)
     PSYQ_NOEXCEPT
@@ -631,7 +637,7 @@ class psyq::scenario_engine::evaluator
         }
         auto const local_end(in_elements.begin() + in_expression.end);
         auto const local_and(
-            in_expression.logic == this_type::expression_struct::logic_AND);
+            in_expression.logic == this_type::expression::logic_AND);
         for (
             auto i(in_elements.begin() + in_expression.begin);
             i != local_end;
@@ -659,9 +665,9 @@ class psyq::scenario_engine::evaluator
 
     //-------------------------------------------------------------------------
     /// @brief 条件式のコンテナ。
-    private: typename this_type::expression_struct::vector expressions_;
+    private: typename this_type::expression::vector expressions_;
     /// @brief 要素条件チャンクのコンテナ。
-    private: typename this_type::chunk_struct::vector chunks_;
+    private: typename this_type::chunk::vector chunks_;
 
 }; // class psyq::scenario_engine::evaluator
 

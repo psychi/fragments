@@ -75,7 +75,6 @@ class psyq::scenario_engine::driver
     /// @brief シナリオ駆動器で用いる条件監視器の型。
     public: typedef psyq::scenario_engine::dispatcher<
         typename this_type::hasher::result_type,
-        typename this_type::hasher::result_type,
         typename this_type::allocator_type>
             dispatcher;
 
@@ -257,7 +256,7 @@ class psyq::scenario_engine::driver
      */
     public: template<typename template_builder>
     std::size_t add_evaluator_chunk(
-        typename this_type::evaluator::expression_struct::key_type const& in_chunk,
+        typename this_type::evaluator::expression::key_type const& in_chunk,
         template_builder const& in_expression_builder)
     {
         return in_expression_builder(
@@ -268,7 +267,7 @@ class psyq::scenario_engine::driver
         @param[in] in_chunk 条件式を削除するチャンクのキー。
      */
     public: bool remove_evaluator_chunk(
-        typename this_type::evaluator::expression_struct::key_type const& in_chunk)
+        typename this_type::evaluator::expression::key_type const& in_chunk)
     {
         this->evaluator_.remove_chunk(in_chunk);
     }
@@ -341,7 +340,7 @@ namespace psyq_test
         local_driver.add_state_chunk(
             local_chunk_key,
             state_builder(
-                state_builder::string_table(local_state_table_csv, 0, "")));
+                state_builder::string_table(local_state_table_csv, 0)));
 
         // 条件式を登録する。
         string_table::string_view const local_expression_table_csv(
@@ -362,20 +361,20 @@ namespace psyq_test
             local_chunk_key,
             expression_builder(
                 expression_builder::string_table(
-                    local_expression_table_csv, 0, "")));
+                    local_expression_table_csv, 0)));
 
         // 条件挙動チャンクを登録する。
         string_table::string_view const local_behavior_table_csv(
             "KEY         , CONDITION, KIND,  ARGUMENT\n"
-            "expression_0, TRUE,      STATE, state_0, :=, 1\n"
-            "expression_1, TRUE,      STATE, state_0, +=, 1\n"
-            "expression_2, TRUE,      STATE, state_0, -=, 1\n"
-            "expression_3, TRUE,      STATE, state_0, *=, 1\n"
-            "expression_4, TRUE,      STATE, state_0, /=, 1\n"
-            "expression_5, TRUE,      STATE, state_0, %=, 1\n"
-            "expression_6, TRUE,      STATE, state_0, |=, 1\n"
-            "expression_7, TRUE,      STATE, state_0, ^=, 0\n"
-            "expression_8, TRUE,      STATE, state_0, &=, 0\n");
+            "expression_0, TRUE,      STATE, state_unsigned, :=, 1\n"
+            "expression_1, TRUE,      STATE, state_unsigned, +=, 1\n"
+            "expression_2, TRUE,      STATE, state_unsigned, -=, 1\n"
+            "expression_3, TRUE,      STATE, state_unsigned, *=, 1\n"
+            "expression_4, TRUE,      STATE, state_unsigned, /=, 1\n"
+            "expression_5, TRUE,      STATE, state_unsigned, %=, 1\n"
+            "expression_6, TRUE,      STATE, state_unsigned, |=, 1\n"
+            "expression_7, TRUE,      STATE, state_unsigned, ^=, 0\n"
+            "expression_8, TRUE,      STATE, state_unsigned, &=, 0\n");
         typedef psyq::scenario_engine::behavior_builder<driver::behavior_chunk>
             behavior_builder;
         local_driver.add_behavior_chunk(
@@ -385,7 +384,7 @@ namespace psyq_test
                 local_driver.hash_function_,
                 local_driver.evaluator_,
                 local_driver.get_states(),
-                string_table(local_behavior_table_csv, 0, "")));
+                string_table(local_behavior_table_csv, 0)));
 
         //
         local_driver.update();

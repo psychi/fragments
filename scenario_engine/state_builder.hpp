@@ -7,6 +7,14 @@
 
 //#include "scenario_engine/state_archive.hpp"
 
+#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_TRUE
+#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_TRUE "TRUE"
+#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_TRUE)
+
+#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_FALSE
+#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_FALSE "FALSE"
+#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_FALSE)
+
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KEY
 #define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KEY "KEY"
 #endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KEY)
@@ -53,6 +61,23 @@ namespace psyq
     namespace scenario_engine
     {
         template<typename> class state_builder;
+
+        namespace _private
+        {
+            template<typename template_string>
+            int get_bool(template_string const& in_string)
+            {
+                if (in_string == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_TRUE)
+                {
+                    return 1;
+                }
+                else if (in_string == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_FALSE)
+                {
+                    return 0;
+                }
+                return -1;
+            }
+        } // namespace _private
     } // namespace scenario_engine
 } // namespace psyq
 /// @endcond

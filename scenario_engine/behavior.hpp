@@ -94,7 +94,7 @@ struct psyq::scenario_engine::behavior_chunk
 
     /// @brief 条件挙動チャンクを識別するキーを表す型。
     /// @note ここは条件式キーでなくて、チャンクキーにしないと。
-    public: typedef typename this_type::dispatcher::expression_key key_type;
+    public: typedef typename this_type::dispatcher::condition_key key_type;
 
     /// @brief 条件挙動チャンクを識別するキーを比較する関数オブジェクト。
     public: typedef psyq::scenario_engine::_private::key_less<
@@ -238,7 +238,7 @@ struct psyq::scenario_engine::behavior_chunk
             typename this_type::dispatcher::function(
                 /// @todo io_states を参照渡しするのは危険。対策を考えたい。
                 [=, &io_states](
-                    typename this_type::dispatcher::expression_key const&,
+                    typename this_type::dispatcher::condition_key const&,
                     bool const in_evaluation)
                 {
                     // 条件と評価が合致すれば、状態値を書き換える。
@@ -250,6 +250,7 @@ struct psyq::scenario_engine::behavior_chunk
                 }));
     }
     //@}
+    /// @note この関数で状態値を更新すると driver から検知できない。
     private: template<typename template_state_archive, typename template_value>
     static bool operate_state(
         template_state_archive& io_states,
@@ -372,10 +373,10 @@ struct psyq::scenario_engine::behavior_builder
             auto local_function(
                 this_type::make_function(
                     io_hasher, in_evaluator, in_states, in_string_table, i));
-            auto const local_register(
-                io_dispatcher.register_function(
+            auto const local_register_expression(
+                io_dispatcher.register_expression(
                     local_key, local_function, in_evaluator, in_states));
-            if (local_register)
+            if (local_register_expression)
             {
                 local_functions.push_back(std::move(local_function));
             }

@@ -15,7 +15,7 @@ namespace psyq
 {
     namespace scenario_engine
     {
-        template<typename, typename, typename> class dispatcher;
+        template<typename, typename> class dispatcher;
     } // namespace scenario_engine
 } // namespace psyq
 /// @endcond
@@ -27,44 +27,40 @@ namespace psyq
     - 条件式の評価に用いる状態が変化したときに、
       変化した状態に対応する以下の関数を呼び出すよう実装しておく。
       - dispatcher::notify_state_change
-    - dispatcher::register_function を呼び出し、
+    - dispatcher::register_expression を呼び出し、
       条件式の評価結果が変化したときに呼び出す関数を登録する。
     - dispatcher::dispatch をフレーム毎に呼び出し、
       条件式の評価結果を更新して、登録された関数を呼び出す。
 
-    @tparam template_expression_key @copydoc dispatcher::expression_key
-    @tparam template_monitor_key    @copydoc dispatcher::monitor::key_type
-    @tparam template_allocator      @copydoc dispatcher::allocator_type
+    @tparam template_condition_key @copydoc dispatcher::condition_key
+    @tparam template_allocator     @copydoc dispatcher::allocator_type
  */
-template<
-    typename template_expression_key,
-    typename template_monitor_key,
-    typename template_allocator>
+template<typename template_condition_key, typename template_allocator>
 class psyq::scenario_engine::dispatcher
 {
     /// @brief thisが指す値の型。
     private: typedef dispatcher this_type;
 
+    /// @brief 評価に用いる条件のキーを表す型。
+    public: typedef template_condition_key condition_key;
+
     /// @brief コンテナに用いるメモリ割当子を表す型。
     public: typedef template_allocator allocator_type;
 
-    /// @brief 評価に用いる条件式のキーを表す型。
-    public: typedef template_expression_key expression_key;
-
     /// @brief 条件式キーのコンテナ。
     private: typedef std::vector<
-        typename this_type::expression_key,
+        typename this_type::condition_key,
         typename this_type::allocator_type>
-            expression_key_vector;
+            condition_key_vector;
 
     //-------------------------------------------------------------------------
-    /** @brief 条件式の評価結果が変化した際に呼び出す、関数オブジェクトの型。
+    /** @brief 条件の評価結果が変化した際に呼び出す、関数オブジェクトの型。
 
-        - 引数#0は、評価に用いた条件式のキー。
-        - 引数#1は、変化した後の条件式の評価結果。
+        - 引数#0は、評価に用いた条件のキー。
+        - 引数#1は、変化した後の条件の評価結果。
      */
     public: typedef std::function<
-        void (typename this_type::expression_key const&, bool const)>
+        void (typename this_type::condition_key const&, bool const)>
             function;
 
     /// @brief this_type::function の、所有権ありスマートポインタ。
@@ -78,8 +74,8 @@ class psyq::scenario_engine::dispatcher
     //-------------------------------------------------------------------------
     /** @brief 条件評価受信オブジェクト。
 
-        条件式の評価結果と、
-        条件式の評価結果が変化した際に呼び出す関数オブジェクトを保持する。
+        条件の評価結果と、
+        条件の評価結果が変化した際に呼び出す関数オブジェクトを保持する。
      */
     private: struct listener
     {
@@ -87,17 +83,17 @@ class psyq::scenario_engine::dispatcher
 
         /** @brief 条件評価受信オブジェクトの辞書。
 
-            - map::key_type は、条件式のキー。
+            - map::key_type は、条件のキー。
             - map::mapped_type は、条件評価受信オブジェクト。
          */
         typedef std::map<
-            typename dispatcher::expression_key,
+            typename dispatcher::condition_key,
             this_type,
-            std::less<typename dispatcher::expression_key>,
+            std::less<typename dispatcher::condition_key>,
             typename dispatcher::allocator_type>
                 map;
 
-        /// @brief 条件挙動関数オブジェクトの所有権なしスマートポインタ。
+        /// @brief 条件挙動関数オブジェクトの所有権なしスマートポインタのコンテナ。
         typedef std::vector<
             typename dispatcher::function_weak_ptr,
             typename dispatcher::allocator_type>
@@ -106,9 +102,9 @@ class psyq::scenario_engine::dispatcher
         /// @brief フラグの位置。
         enum flag_enum: std::uint8_t
         {
-            flag_LAST_EVALUATION,  ///< 条件式の前回の評価の成功／失敗。
-            flag_LAST_CONDITION,   ///< 条件式の前回の評価。
-            flag_EVALUATE_REQUEST, ///< 条件式の評価の更新要求。
+            flag_LAST_EVALUATION,    ///< 条件の前回の評価の成功／失敗。
+            flag_LAST_CONDITION,     ///< 条件の前回の評価。
+            flag_EVALUATION_REQUEST, ///< 条件評価の更新要求。
         };
 
         listener(
@@ -137,18 +133,15 @@ class psyq::scenario_engine::dispatcher
     {
         typedef monitor this_type;
 
-        /// @brief 監視する要素条件のキーを表す型。
-        typedef template_monitor_key key_type;
-
         /** @brief 条件監視オブジェクトの辞書。
 
             - map::key_type は、監視する要素条件のキー。
             - map::mapped_type は、条件監視オブジェクト。
          */
         typedef std::map<
-            typename this_type::key_type,
+            typename dispatcher::condition_key,
             this_type,
-            std::less<typename this_type::key_type>,
+            std::less<typename dispatcher::condition_key>,
             typename dispatcher::allocator_type>
                 map;
 
@@ -163,7 +156,7 @@ class psyq::scenario_engine::dispatcher
         }
 
         /// @brief 評価の更新を要求する条件式のキーのコンテナ。
-        typename dispatcher::expression_key_vector expression_keys;
+        typename dispatcher::condition_key_vector expression_keys;
         /// @brief 更新通知フラグ。
         bool notify;
 
@@ -252,8 +245,8 @@ class psyq::scenario_engine::dispatcher
         @retval false 失敗。関数オブジェクトは登録されなかった。
      */
     public: template<typename template_evaluator>
-    bool register_function(
-        typename this_type::expression_key const& in_expression_key,
+    bool register_expression(
+        typename this_type::condition_key const& in_expression_key,
         typename this_type::function_shared_ptr const& in_function,
         template_evaluator const& in_evaluator,
         typename template_evaluator::state_archive const& in_states,
@@ -282,8 +275,7 @@ class psyq::scenario_engine::dispatcher
         }
         else
         {
-            // 適切な条件評価受信オブジェクトが見つからなかったので、
-            // 新たな条件評価受信オブジェクトを追加する。
+            // 適切な条件評価受信オブジェクトが見つからなかったので、新たに追加する。
             local_listener = this->add_listener(
                 in_expression_key,
                 in_evaluator,
@@ -339,7 +331,7 @@ class psyq::scenario_engine::dispatcher
      */
     private: template<typename template_evaluator>
     typename this_type::listener::map::iterator add_listener(
-        typename this_type::expression_key const& in_expression_key,
+        typename this_type::condition_key const& in_expression_key,
         template_evaluator const& in_evaluator,
         typename template_evaluator::state_archive const& in_states,
         std::size_t const in_reserve_functions)
@@ -386,7 +378,7 @@ class psyq::scenario_engine::dispatcher
      */
     private: template<typename template_evaluator>
     bool add_expression(
-        typename this_type::expression_key const& in_expression_key,
+        typename this_type::condition_key const& in_expression_key,
         template_evaluator const& in_evaluator)
     {
         // 条件式と要素条件チャンクを検索する。
@@ -398,7 +390,7 @@ class psyq::scenario_engine::dispatcher
         }
         auto const local_chunk(
             in_evaluator.find_chunk(local_expression->chunk));
-        if (local_chunk== nullptr)
+        if (local_chunk == nullptr)
         {
             // 条件式の要素条件チャンクが存在しなかった。
             PSYQ_ASSERT(false);
@@ -408,12 +400,12 @@ class psyq::scenario_engine::dispatcher
         // 条件式の種類によって、監視する条件式の追加先を選別する。
         switch (local_expression->kind)
         {
-            case template_evaluator::expression_struct::kind_COMPOUND:
-            this->add_compound_expression(
-                in_evaluator, *local_expression, local_chunk->compounds);
+            case template_evaluator::expression::kind_SUB_EXPRESSION:
+            this->add_sub_expression(
+                in_evaluator, *local_expression, local_chunk->sub_expressions);
             break;
 
-            case template_evaluator::expression_struct::kind_STATE_COMPARISON:
+            case template_evaluator::expression::kind_STATE_COMPARISON:
             this_type::add_monitor_expression(
                 this->state_comparison_monitors_,
                 *local_expression,
@@ -431,16 +423,17 @@ class psyq::scenario_engine::dispatcher
     /** @brief 複合条件式を、条件監視オブジェクトへ登録する。
         @param[in] in_evaluator  登録する条件式を持つ条件評価器。
         @param[in] in_expression 登録する複合条件式。
-        @param[in] in_compounds  登録する複合条件式が参照する要素条件コンテナ。
+        @param[in] in_sub_expressions
+            登録する複合条件式が参照する要素条件コンテナ。
      */
     private: template<typename template_evaluator>
-    void add_compound_expression(
+    void add_sub_expression(
         template_evaluator const& in_evaluator,
-        typename template_evaluator::expression_struct const& in_expression,
-        typename template_evaluator::compound_struct::vector const& in_compounds)
+        typename template_evaluator::expression const& in_expression,
+        typename template_evaluator::sub_expression::vector const& in_sub_expressions)
     {
         // 条件監視オブジェクトに、複合条件式を追加する。
-        auto const local_begin(in_compounds.begin());
+        auto const local_begin(in_sub_expressions.begin());
         auto const local_end(local_begin + in_expression.end);
         for (auto i(local_begin + in_expression.begin); i != local_end; ++i)
         {
@@ -534,9 +527,9 @@ class psyq::scenario_engine::dispatcher
     //@}
     private: static void notify_monitor(
         typename this_type::monitor::map& io_monitors,
-        typename this_type::monitor::map::key_type const& in_monitor_key)
+        typename this_type::monitor::map::key_type const& in_condition_key)
     {
-        auto const local_find(io_monitors.find(in_monitor_key));
+        auto const local_find(io_monitors.find(in_condition_key));
         if (local_find != io_monitors.end())
         {
             local_find->second.notify = true;
@@ -581,7 +574,7 @@ class psyq::scenario_engine::dispatcher
      */
     private: static void notify_listener(
         typename this_type::listener::map& io_listeners,
-        typename this_type::expression_key_vector& io_expression_keys)
+        typename this_type::condition_key_vector& io_expression_keys)
     {
         // 条件式識別番号のコンテナを走査しつつ、
         // 不要になった要素を削除し、条件識別番号コンテナを整理する。
@@ -593,7 +586,7 @@ class psyq::scenario_engine::dispatcher
             if (local_listener != io_listeners.end())
             {
                 local_listener->second.flags.set(
-                    this_type::listener::flag_EVALUATE_REQUEST);
+                    this_type::listener::flag_EVALUATION_REQUEST);
                 ++local_last;
             }
         }
@@ -606,7 +599,7 @@ class psyq::scenario_engine::dispatcher
     /** @brief 条件式の評価の変化を検知する。
 
         条件式の評価が変化していれば、
-        this_type::register_function で登録した関数を呼び出す。
+        this_type::register_expression で登録した関数を呼び出す。
 
         @param[in] in_evaluator 条件式の評価に使う条件評価器。
         @param[in] in_states    条件式の評価に状態値のコンテナ。
@@ -645,7 +638,7 @@ class psyq::scenario_engine::dispatcher
     /** @brief 条件式を評価し、ディスパッチ関数を呼び出す。
 
         条件評価受信オブジェクトのコンテナを走査し、条件式の結果によって、
-        this_type::register_function で登録された関数オブジェクトを呼び出す。
+        this_type::register_expression で登録された関数オブジェクトを呼び出す。
 
         @param[in,out] io_listeners 条件評価受信オブジェクトのコンテナ。
         @param[in] in_evaluator     評価に使う条件評価器。
@@ -661,14 +654,14 @@ class psyq::scenario_engine::dispatcher
         {
             // 条件評価受信オブジェクトの評価要求フラグを取得し、初期化する。
             auto& local_listener(*i);
-            bool const local_evaluate_request(
+            bool const local_evaluation_request(
                 local_listener.second.flags.test(
-                    this_type::listener::flag_EVALUATE_REQUEST));
+                    this_type::listener::flag_EVALUATION_REQUEST));
             local_listener.second.flags.reset(
-                this_type::listener::flag_EVALUATE_REQUEST);
+                this_type::listener::flag_EVALUATION_REQUEST);
 
-            // 評価要求フラグが立っていれば、条件式を評価する。
-            if (local_evaluate_request)
+            // 評価要求があれば、条件式を評価する。
+            if (local_evaluation_request)
             {
                 auto const local_update_listener(
                     this_type::update_listener(
@@ -689,7 +682,7 @@ class psyq::scenario_engine::dispatcher
     /** @brief 条件式を評価し、ディスパッチ関数を呼び出す。
 
         条件式を評価し、前回の結果と異なるなら、
-        this_type::register_function で登録されたディスパッチ関数を呼び出す。
+        this_type::register_expression で登録されたディスパッチ関数を呼び出す。
 
         @param[in,out] io_listener 更新する条件評価受信オブジェクト。
         @param[in] in_evaluator    評価に用いる条件評価器。
@@ -714,6 +707,7 @@ class psyq::scenario_engine::dispatcher
             0 <= local_evaluate_expression);
         if (local_evaluate_expression < 0)
         {
+            PSYQ_ASSERT(false);
             return false;
         }
 

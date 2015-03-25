@@ -93,15 +93,15 @@ class psyq::scenario_engine::expression_builder
         explicit workspace(
             std::size_t const in_capacity,
             typename template_evaluator::allocator_type const& in_allocator):
-        compounds(in_allocator),
+        sub_expressions(in_allocator),
         state_comparisons(in_allocator)
         {
-            this->compounds.reserve(in_capacity);
+            this->sub_expressions.reserve(in_capacity);
             this->state_comparisons.reserve(in_capacity);
         }
 
-        typename template_evaluator::compound_struct::vector compounds;
-        typename template_evaluator::state_comparison_struct::vector state_comparisons;
+        typename template_evaluator::sub_expression::vector sub_expressions;
+        typename template_evaluator::state_comparison::vector state_comparisons;
     };
 
     //-------------------------------------------------------------------------
@@ -115,7 +115,7 @@ class psyq::scenario_engine::expression_builder
     std::size_t operator()(
         template_evaluator& io_evaluator,
         template_hasher& io_hasher,
-        typename template_evaluator::expression_struct::key_type const& in_chunk,
+        typename template_evaluator::expression::key_type const& in_chunk,
         typename template_evaluator::state_archive const& in_states)
     const
     {
@@ -135,7 +135,7 @@ class psyq::scenario_engine::expression_builder
     static std::size_t build(
         template_evaluator& io_evaluator,
         template_hasher& io_hasher,
-        typename template_evaluator::expression_struct::key_type const& in_chunk,
+        typename template_evaluator::expression::key_type const& in_chunk,
         typename template_evaluator::state_archive const& in_states,
         typename this_type::string_table const& in_string_table)
     {
@@ -163,9 +163,9 @@ class psyq::scenario_engine::expression_builder
             {
                 auto const local_build_expression(
                     this_type::build_expression(
-                        local_workspace,
                         io_evaluator,
                         io_hasher,
+                        local_workspace,
                         in_chunk,
                         in_states,
                         in_string_table,
@@ -182,9 +182,9 @@ class psyq::scenario_engine::expression_builder
 
     //-------------------------------------------------------------------------
     /** @brief 文字列表を解析し、条件式を構築して、条件評価器へ登録する。
-        @param[in,out] io_workspace 作業領域。
         @param[in,out] io_evaluator 構築した条件式を追加する条件評価器。
         @param[in,out] io_hasher    文字列からハッシュ値を生成する関数オブジェクト。
+        @param[in,out] io_workspace 作業領域。
         @param[in] in_chunk         登録する条件式が所属するチャンクのキー。
         @param[in] in_states        条件式が参照する状態値を持つコンテナ。
         @param[in] in_string_table  解析する文字列表。
@@ -194,10 +194,10 @@ class psyq::scenario_engine::expression_builder
      */
     private: template<typename template_evaluator, typename template_hasher>
     static bool build_expression(
-        typename this_type::workspace<template_evaluator>& io_workspace,
         template_evaluator& io_evaluator,
         template_hasher& io_hasher,
-        typename template_evaluator::expression_struct::key_type const& in_chunk,
+        typename this_type::workspace<template_evaluator>& io_workspace,
+        typename template_evaluator::expression::key_type const& in_chunk,
         typename template_evaluator::state_archive const& in_states,
         typename this_type::string_table const& in_string_table,
         typename this_type::string_table::index_type const in_row_index)
@@ -225,17 +225,17 @@ class psyq::scenario_engine::expression_builder
             in_string_table.find_body_cell(
                 in_row_index,
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_LOGIC));
-        typename template_evaluator::expression_struct::logic_enum local_logic;
+        typename template_evaluator::expression::logic_enum local_logic;
         if (local_logic_cell
             == PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_LOGIC_AND)
         {
-            local_logic = template_evaluator::expression_struct::logic_AND;
+            local_logic = template_evaluator::expression::logic_AND;
         }
         else if (
             local_logic_cell
             == PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_LOGIC_OR)
         {
-            local_logic = template_evaluator::expression_struct::logic_OR;
+            local_logic = template_evaluator::expression::logic_OR;
         }
         else
         {
@@ -256,8 +256,8 @@ class psyq::scenario_engine::expression_builder
             // 複合条件式の要素条件を構築する。
             local_register_expression = this_type::register_expression(
                 io_evaluator,
-                io_workspace.compounds,
                 io_hasher,
+                io_workspace.sub_expressions,
                 in_chunk,
                 std::move(local_key),
                 local_logic,
@@ -272,8 +272,8 @@ class psyq::scenario_engine::expression_builder
             // 状態比較条件式の要素条件を構築する。
             local_register_expression = this_type::register_expression(
                 io_evaluator,
-                io_workspace.state_comparisons,
                 io_hasher,
+                io_workspace.state_comparisons,
                 in_chunk,
                 std::move(local_key),
                 local_logic,
@@ -292,8 +292,8 @@ class psyq::scenario_engine::expression_builder
     /** @brief 文字列表を解析し、条件式の要素条件コンテナを構築して、
                条件式を条件評価器へ登録する。
         @param[in,out] io_evaluator 条件式を登録する条件評価器。
-        @param[in,out] io_elements  条件式の構築に使う要素条件の作業領域。
         @param[in,out] io_hasher    文字列からハッシュ値を生成する関数オブジェクト。
+        @param[in,out] io_elements  条件式の構築に使う要素条件の作業領域。
         @param[in] in_chunk         登録する条件式が所属するチャンクのキー。
         @param[in] in_key           登録する条件式のキー。
         @param[in] in_logic         登録する条件式で用いる論理演算子。
@@ -310,11 +310,11 @@ class psyq::scenario_engine::expression_builder
         typename template_state_container>
     static bool register_expression(
         template_evaluator& io_evaluator,
-        template_element_container& io_elements,
         template_hasher& io_hasher,
-        typename template_evaluator::expression_struct::key_type const& in_chunk,
-        typename template_evaluator::expression_struct::key_type in_key,
-        typename template_evaluator::expression_struct::logic_enum const in_logic,
+        template_element_container& io_elements,
+        typename template_evaluator::expression::key_type const& in_chunk,
+        typename template_evaluator::expression::key_type in_key,
+        typename template_evaluator::expression::logic_enum const in_logic,
         template_state_container const & in_states,
         typename this_type::string_table const& in_string_table,
         typename this_type::string_table::index_type const in_row_index)
@@ -334,7 +334,7 @@ class psyq::scenario_engine::expression_builder
             return false;
         }
         io_evaluator.register_expression(
-            in_chunk, std::move(in_key), in_logic, io_elements);
+            io_elements, in_chunk, std::move(in_key), in_logic);
         return true;
     }
 
@@ -349,7 +349,7 @@ class psyq::scenario_engine::expression_builder
      */
     private: template<typename template_evaluator, typename template_hasher>
     static bool build_element(
-        typename template_evaluator::compound_struct::vector& io_elements,
+        typename template_evaluator::sub_expression::vector& io_elements,
         template_hasher& io_hasher,
         template_evaluator const& in_evaluator,
         typename this_type::string_table const& in_string_table,
@@ -360,18 +360,18 @@ class psyq::scenario_engine::expression_builder
             io_elements.size() * local_element_size);
 
         // 複合条件式のキーを取得する。
-        auto const local_compound_key_cell(
+        auto const local_sub_expression_key_cell(
             in_string_table.find_body_cell(
                 in_row_index,
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_ELEMENT,
                 local_element_column));
-        if (local_compound_key_cell.empty())
+        if (local_sub_expression_key_cell.empty())
         {
             return false;
         }
-        typename template_evaluator::compound_struct::vector::value_type
+        typename template_evaluator::sub_expression::vector::value_type
             local_element;
-        local_element.key = io_hasher(local_compound_key_cell);
+        local_element.key = io_hasher(local_sub_expression_key_cell);
         PSYQ_ASSERT(
             /** @note
                 無限ループを防ぐため、複合条件式で使う下位の条件式は、
@@ -415,7 +415,7 @@ class psyq::scenario_engine::expression_builder
      */
     private: template<typename template_evaluator, typename template_hasher>
     static bool build_element(
-        typename template_evaluator::state_comparison_struct::vector& io_elements,
+        typename template_evaluator::state_comparison::vector& io_elements,
         template_hasher& io_hasher,
         typename template_evaluator::state_archive const& in_states,
         typename this_type::string_table const& in_string_table,
@@ -435,7 +435,7 @@ class psyq::scenario_engine::expression_builder
         {
             return false;
         }
-        typename template_evaluator::state_comparison_struct local_state;
+        typename template_evaluator::state_comparison local_state;
         local_state.key = io_hasher(local_state_key_cell);
         if (local_state.key
             == io_hasher(typename template_hasher::argument_type()))
@@ -474,7 +474,7 @@ class psyq::scenario_engine::expression_builder
         {
             std::size_t local_rest_size;
             local_state.value = local_comparison_value_cell.template
-                to_integer<typename template_evaluator::state_comparison_struct::value_type>(
+                to_integer<typename template_evaluator::state_comparison::value_type>(
                     &local_rest_size);
             if (local_rest_size != 0)
             {
@@ -490,49 +490,49 @@ class psyq::scenario_engine::expression_builder
 
     private: template<typename template_evaluator>
     static bool get_comparison_operator(
-        typename template_evaluator::state_comparison_struct::operator_enum& out_operator,
+        typename template_evaluator::state_comparison::operator_enum& out_operator,
         typename this_type::string_table::string_view const& in_string)
     {
         if (in_string ==
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_EQUAL)
         {
             out_operator =
-                template_evaluator::state_comparison_struct::operator_EQUAL;
+                template_evaluator::state_comparison::operator_EQUAL;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_NOT_EQUAL)
         {
             out_operator =
-                template_evaluator::state_comparison_struct::operator_NOT_EQUAL;
+                template_evaluator::state_comparison::operator_NOT_EQUAL;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_LESS)
         {
             out_operator =
-                template_evaluator::state_comparison_struct::operator_LESS;
+                template_evaluator::state_comparison::operator_LESS;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_LESS_EQUAL)
         {
             out_operator =
-                template_evaluator::state_comparison_struct::operator_LESS_EQUAL;
+                template_evaluator::state_comparison::operator_LESS_EQUAL;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_GREATER)
         {
             out_operator =
-                template_evaluator::state_comparison_struct::operator_GREATER;
+                template_evaluator::state_comparison::operator_GREATER;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_GREATER_EQUAL)
         {
             out_operator =
-                template_evaluator::state_comparison_struct::operator_GREATER_EQUAL;
+                template_evaluator::state_comparison::operator_GREATER_EQUAL;
         }
         else
         {

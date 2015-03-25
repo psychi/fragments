@@ -80,6 +80,29 @@ class psyq::scenario_engine::state_archive
     };
 
     //-------------------------------------------------------------------------
+    /** @brief set_value で状態値が変化した際のコールバック関数オブジェクト。
+
+        - 引数#0は、状態値書庫。
+        - 引数#1は、変化した状態値のキー。
+     */
+    public: typedef std::function<
+        void (this_type const&, typename this_type::key_type const&)>
+            function;
+
+    /// @brief this_type::function の、所有権ありスマートポインタ。
+    public: typedef std::shared_ptr<typename this_type::function>
+        function_shared_ptr;
+
+    /// @brief this_type::function の、所有権なしスマートポインタ。
+    public: typedef std::weak_ptr<typename this_type::function>
+        function_weak_ptr;
+
+    private: typedef std::vector<
+        typename this_type::function_weak_ptr,
+        typename this_type::allocator_type>
+            function_weak_ptr_vector;
+
+    //-------------------------------------------------------------------------
     /// @brief ビット列ブロックを表す型。
     private: typedef std::uint64_t block_type;
 
@@ -256,10 +279,12 @@ class psyq::scenario_engine::state_archive
             this_type::allocator_type())
     :
     entries_(in_allocator),
-    chunks_(in_allocator)
+    chunks_(in_allocator),
+    functions_(in_allocator)
     {
         this->entries_.reserve(in_reserve_entries);
         this->chunks_.reserve(in_reserve_chunks);
+        //this->functions_.reserve(in_reserve_functions);
     }
 
     /** @brief ムーブ構築子。
@@ -538,8 +563,7 @@ class psyq::scenario_engine::state_archive
     {
         // 状態値登記を検索する。
         auto const local_entry(
-            this_type::entry::key_less::find_pointer(
-                this->entries_, in_key));
+            this_type::entry::key_less::find_pointer(this->entries_, in_key));
         if (local_entry == nullptr)
         {
             return false;
@@ -568,12 +592,14 @@ class psyq::scenario_engine::state_archive
 
             // 真偽値を設定する。
             case this_type::kind_BOOL:
-            if (!std::is_same<bool, template_value>::value)
+            if (std::is_same<bool, template_value>::value)
             {
-                return false;
+                return this->callback_set_value(
+                    in_key,
+                    this_type::set_bits(
+                        local_chunk_blocks, local_position, 1, in_value));
             }
-            return this_type::set_bits(
-                local_chunk_blocks, local_position, 1, in_value);
+            return false;
 
             // 浮動小数点数を設定する。
             case this_type::kind_FLOAT:
@@ -581,33 +607,66 @@ class psyq::scenario_engine::state_archive
             PSYQ_ASSERT(false);
             return false;
 
-            default: break;
-        }
-
-        // 整数を設定する。
-        if (!std::is_integral<template_value>::value)
-        {
+            // 整数を設定する。
+            default:
+            if (std::is_integral<template_value>::value)
+            {
+                auto const local_size(
+                    this_type::get_format_size(local_format));
+                return this->callback_set_value(
+                    in_key,
+                    local_format < 0?
+                        // 符号あり整数を設定する。
+                        this_type::set_signed(
+                            local_chunk_blocks,
+                            local_position,
+                            local_size,
+                            in_value):
+                        // 符号なし整数を設定する。
+                        this_type::set_bits(
+                            local_chunk_blocks,
+                            local_position,
+                            local_size,
+                            static_cast<typename this_type::block_type>(
+                                in_value)));
+            }
             return false;
-        }
-        auto const local_size(this_type::get_format_size(local_format));
-        if (0 < local_format)
-        {
-            // 符号なし整数を設定する。
-            return this_type::set_bits(
-                local_chunk_blocks,
-                local_position,
-                local_size,
-                static_cast<typename this_type::block_type>(in_value));
-        }
-        else
-        {
-            // 符号あり整数を設定する。
-            return this_type::set_signed(
-                local_chunk_blocks, local_position, local_size, in_value);
         }
     }
     //@}
-    private: static bool set_signed(
+    private: bool callback_set_value(
+        typename this_type::key_type const& in_key,
+        int const in_set_value)
+    {
+        if (in_set_value < 0)
+        {
+            return false;
+        }
+        auto local_functions(std::move(this->functions_));
+        this->functions_.clear();
+        auto local_last(local_functions.begin());
+        for (auto i(local_last); i != local_functions.end(); ++i)
+        {
+            local_last->swap(*i);
+            auto const local_function_holder(local_last->lock());
+            if (local_function_holder.get() != nullptr)
+            {
+                (*local_function_holder)(*this, in_key);
+                ++local_last;
+            }
+        }
+        local_functions.erase(local_last, local_functions.end());
+        local_functions.reserve(
+            local_functions.size() + this->functions_.size());
+        for (auto& local_function: this->functions_)
+        {
+            local_functions.emplace_back(std::move(local_function));
+        }
+        this->functions_ = std::move(local_functions);
+        return true;
+    }
+
+    private: static int set_signed(
         typename this_type::block_vector& io_blocks,
         typename this_type::pos_type const in_position,
         typename this_type::size_type const in_size,
@@ -618,7 +677,7 @@ class psyq::scenario_engine::state_archive
     }
 
     private: template<typename template_value>
-    static bool set_signed(
+    static int set_signed(
         typename this_type::block_vector& io_blocks,
         typename this_type::pos_type const in_position,
         typename this_type::size_type const in_size,
@@ -634,7 +693,8 @@ class psyq::scenario_engine::state_archive
             PSYQ_ASSERT((~local_mask & local_bits) == ~local_mask);
             local_bits &= local_mask;
         }
-        return this_type::set_bits(io_blocks, in_position, in_size, local_bits);
+        return this_type::set_bits(
+            io_blocks, in_position, in_size, local_bits);
     }
 
     /** @brief ビット列に値を設定する。
@@ -643,7 +703,7 @@ class psyq::scenario_engine::state_archive
         @param[in] in_size       値を設定するビット列のビット数。
         @param[in] in_value      設定する値。
      */
-    private: static bool set_bits(
+    private: static int set_bits(
         typename this_type::block_vector& io_blocks,
         typename this_type::pos_type const in_position,
         typename this_type::size_type const in_size,
@@ -654,13 +714,13 @@ class psyq::scenario_engine::state_archive
         if (this_type::BLOCK_SIZE < in_size)
         {
             PSYQ_ASSERT(false);
-            return false;
+            return -1;
         }
         auto const local_block_index(in_position / this_type::BLOCK_SIZE);
         if (io_blocks.size() <= local_block_index)
         {
             PSYQ_ASSERT(false);
-            return false;
+            return -1;
         }
 
         auto const local_mod_size(
@@ -668,9 +728,10 @@ class psyq::scenario_engine::state_archive
         PSYQ_ASSERT(local_mod_size + in_size <= this_type::BLOCK_SIZE);
         auto const local_mask(this_type::make_block_mask(in_size));
         auto& local_block(io_blocks.at(local_block_index));
+        auto const local_last_block(local_block);
         local_block = (~(local_mask << local_mod_size) & local_block)
             | ((in_value & local_mask) << local_mod_size);
-        return true;
+        return local_last_block != local_block? 1: 0;
     }
 
     //-------------------------------------------------------------------------
@@ -704,7 +765,7 @@ class psyq::scenario_engine::state_archive
         {
             return false;
         }
-        return this_type::set_bits(
+        return 0 <= this_type::set_bits(
             local_chunk.blocks,
             this_type::get_entry_position(*local_entry),
             1,
@@ -751,7 +812,7 @@ class psyq::scenario_engine::state_archive
         {
             return false;
         }
-        return this_type::set_bits(
+        return 0 <= this_type::set_bits(
             local_chunk.blocks,
             this_type::get_entry_position(*local_entry),
             static_cast<typename this_type::size_type>(in_size),
@@ -798,7 +859,7 @@ class psyq::scenario_engine::state_archive
         {
             return false;
         }
-        return this_type::set_signed(
+        return 0 <= this_type::set_signed(
             local_chunk.blocks,
             this_type::get_entry_position(*local_entry),
             static_cast<typename this_type::size_type>(in_size),
@@ -1306,6 +1367,8 @@ class psyq::scenario_engine::state_archive
     private: typename this_type::entry::vector entries_;
     /// @brief ビット列チャンクのコンテナ。
     private: typename this_type::chunk::vector chunks_;
+    /// @brief 状態遷移コールバック関数オブジェクトのコンテナ。
+    private: typename this_type::function_weak_ptr_vector functions_;
 
 }; // class psyq::state_archive
 

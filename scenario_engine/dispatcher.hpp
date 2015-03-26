@@ -616,6 +616,10 @@ class psyq::scenario_engine::dispatcher
         登録関数を呼び出すような事態になりかねないため、
         this_type::dispatch の間の条件式の評価の変化は
         今のところ検知してない。
+
+        @todo
+        ディスパッチ関数の中で this / in_evaluator / in_states
+        が破棄される可能性もある。何らかの対策をすること。
      */
     public: template<typename template_evaluator>
     void dispatch(

@@ -148,6 +148,16 @@ class psyq::scenario_engine::driver
      */
     public: void update()
     {
+        for (auto& local_state: this->states_.get_entries())
+        {
+            auto const local_transition(
+                const_cast<typename this_type::state_archive::entry&>
+                    (local_state)._reset_transition());
+            if (local_transition)
+            {
+                this->dispatcher_.notify_state_transition(local_state.key);
+            }
+        }
         this->dispatcher_.dispatch(this->evaluator_, this->states_);
     }
 
@@ -168,32 +178,6 @@ class psyq::scenario_engine::driver
     //-------------------------------------------------------------------------
     /// @name 状態値
     //@{
-    /** @brief シナリオ駆動器で用いる状態値の書庫を取得する。
-        @return シナリオ駆動器で用いる状態値の書庫。
-     */
-    public: typename this_type::state_archive const& get_states()
-    const PSYQ_NOEXCEPT
-    {
-        return this->states_;
-    }
-
-    /// @copydoc psyq::scenario_engine::state_archive::set_value
-    public: template<typename template_value>
-    bool set_state_value(
-        typename this_type::state_archive::key_type const& in_key,
-        template_value const& in_value)
-    PSYQ_NOEXCEPT
-    {
-        // 状態値を設定し、状態値の書き換えを条件監視器へ通知する。
-        auto const local_set_value(
-            this->states_.set_value(in_key, in_value));
-        if (local_set_value)
-        {
-            this->dispatcher_.notify_state_transition(in_key);
-        }
-        return local_set_value;
-    }
-
     /** @brief シナリオ駆動器に状態値を追加する。
         @param[in] in_chunk 状態値を追加するチャンクのキー。
         @param[in] in_state_builder
@@ -299,7 +283,7 @@ class psyq::scenario_engine::driver
     //@}
     //-------------------------------------------------------------------------
     /// @brief シナリオ駆動器で用いる状態値書庫。
-    private: typename this_type::state_archive states_;
+    public: typename this_type::state_archive states_;
 
     /// @brief シナリオ駆動器で用いる条件評価器。
     public: typename this_type::evaluator evaluator_;
@@ -332,7 +316,7 @@ namespace psyq_test
         // 状態値を登録する。
         string_table::string_view const local_state_table_csv(
             "KEY,            KIND,     SIZE, VALUE,\n"
-            "state_bool,     BOOL,         , FALSE,\n"
+            "state_bool,     BOOL,         ,  TRUE,\n"
             "state_unsigned, UNSIGNED,    7,    10,\n"
             "state_signed,   SIGNED,     13,   -20,\n"
             "state_float,    FLOAT,      32,  1.25,\n"
@@ -383,8 +367,11 @@ namespace psyq_test
                 local_driver.dispatcher_,
                 local_driver.hash_function_,
                 local_driver.evaluator_,
-                local_driver.get_states(),
+                local_driver.states_,
                 string_table(local_behavior_table_csv, 0)));
+
+        local_driver.states_.set_value(
+            local_driver.hash_function_("state_bool"), false);
 
         //
         local_driver.update();

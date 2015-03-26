@@ -303,6 +303,17 @@ class psyq::scenario_engine::state_archive
             return state_archive::get_field_position(this->field);
         }
 
+        /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
+         */
+        public: bool _reset_transition()
+        {
+            typename state_archive::field_type const local_mask(
+                1 << state_archive::field_TRANSITION_FRONT);
+            auto const local_transition(this->field & local_mask);
+            this->field &= ~local_mask;
+            return local_transition != 0;
+        }
+
         //.....................................................................
         /// @brief 状態値のチャンクを識別するキー。
         public: typename state_archive::key_type chunk;
@@ -380,6 +391,11 @@ class psyq::scenario_engine::state_archive
     const PSYQ_NOEXCEPT
     {
         return this_type::entry::key_less::find_pointer(this->entries_, in_key);
+    }
+
+    public: typename this_type::entry::vector const& get_entries() const
+    {
+        return this->entries_;
     }
 
     /** @brief 状態値を取得する。
@@ -1069,6 +1085,7 @@ class psyq::scenario_engine::state_archive
                 typename this_type::entry::vector::value_type()));
         local_entry.chunk = io_chunk.key;
         local_entry.key = std::move(in_key);
+        local_entry.field = 1 << this_type::field_TRANSITION_FRONT;
         PSYQ_ASSERT(in_format != this_type::kind_NULL);
         this_type::set_entry_format(local_entry, in_format);
 

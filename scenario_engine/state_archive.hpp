@@ -5,10 +5,8 @@
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_ARCHIVE_HPP_
 #define PSYQ_SCENARIO_ENGINE_STATE_ARCHIVE_HPP_
 
-#include <vector>
-#include <set>
-#include <unordered_map>
 #include <type_traits>
+#include <vector>
 
 namespace psyq
 {
@@ -80,29 +78,6 @@ class psyq::scenario_engine::state_archive
     };
 
     //-------------------------------------------------------------------------
-    /** @brief set_value で状態値が変化した際のコールバック関数オブジェクト。
-
-        - 引数#0は、状態値書庫。
-        - 引数#1は、変化した状態値のキー。
-     */
-    public: typedef std::function<
-        void (this_type const&, typename this_type::key_type const&)>
-            function;
-
-    /// @brief this_type::function の、所有権ありスマートポインタ。
-    public: typedef std::shared_ptr<typename this_type::function>
-        function_shared_ptr;
-
-    /// @brief this_type::function の、所有権なしスマートポインタ。
-    public: typedef std::weak_ptr<typename this_type::function>
-        function_weak_ptr;
-
-    private: typedef std::vector<
-        typename this_type::function_weak_ptr,
-        typename this_type::allocator_type>
-            function_weak_ptr_vector;
-
-    //-------------------------------------------------------------------------
     /// @brief ビット列ブロックを表す型。
     private: typedef std::uint64_t block_type;
 
@@ -122,21 +97,36 @@ class psyq::scenario_engine::state_archive
     {
         /// @brief 1バイトあたりのビット数。
         BITS_PER_BYTE = 8,
-        FIELD_POSITION_SIZE = 24,
         /// @brief ビット列ブロックのビット数。
         BLOCK_SIZE =
             sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE,
+        /// @brief 状態値のビット数の最大値。
+        MAX_STATE_SIZE = this_type::BLOCK_SIZE,
     };
 
     //-------------------------------------------------------------------------
     /// @brief 状態値のビット位置とビット数を表す型。
     private: typedef typename this_type::pos_type field_type;
 
-    public: enum: std::size_t
+    private: enum field_enum: typename this_type::field_type
     {
-        /// @brief 状態値のビット数の最大値。
-        MAX_STATE_SIZE = this_type::BLOCK_SIZE,
+        field_POSITION_FRONT,
+        field_POSITION_BACK= 23,
+        field_TRANSITION_FRONT,
+        field_TRANSITION_BACK = field_TRANSITION_FRONT,
+        field_SIZE_FRONT,
+        field_SIZE_BACK = 31,
+        field_POSITION_MASK = (2 << (field_POSITION_BACK - field_POSITION_FRONT)) - 1,
+        field_SIZE_MASK = (2 << (field_SIZE_BACK - field_SIZE_FRONT)) - 1,
     };
+    static_assert(
+        this_type::field_POSITION_BACK- this_type::field_POSITION_FRONT
+        < sizeof(typename this_type::pos_type) * this_type::BITS_PER_BYTE,
+        "");
+    static_assert(
+        this_type::field_SIZE_BACK - this_type::field_SIZE_FRONT
+        < sizeof(typename this_type::size_type) * this_type::BITS_PER_BYTE,
+        "");
 
     /// @brief 空きビット領域を比較する関数オブジェクト。
     private: struct empty_field_less
@@ -148,9 +138,9 @@ class psyq::scenario_engine::state_archive
         {
             // ビット領域のビット数で比較する。
             auto const local_left_size(
-                state_archive::get_field_size(in_left));
+                state_archive::get_empty_field_size(in_left));
             auto const local_right_size(
-                state_archive::get_field_size(in_right));
+                state_archive::get_empty_field_size(in_right));
             if (local_left_size != local_right_size)
             {
                 return local_left_size < local_right_size;
@@ -171,7 +161,7 @@ class psyq::scenario_engine::state_archive
         {
             // ビット領域のビット数で比較する。
             auto const local_left_size(
-                state_archive::get_field_size(in_left));
+                state_archive::get_empty_field_size(in_left));
             return local_left_size < in_right;
         }
 
@@ -182,7 +172,7 @@ class psyq::scenario_engine::state_archive
         {
             // ビット領域のビット数で比較する。
             auto const local_right_size(
-                state_archive::get_field_size(in_right));
+                state_archive::get_empty_field_size(in_right));
             return in_left < local_right_size;
         }
 
@@ -242,25 +232,84 @@ class psyq::scenario_engine::state_archive
 
     //-------------------------------------------------------------------------
     /// @brief 状態値の登記。
-    private: struct entry
+    public: struct entry
     {
-        typedef entry this_type;
+        private: typedef entry this_type;
 
         /// @brief 状態値登記のコンテナ。
-        typedef std::vector<this_type, typename state_archive::allocator_type>
-             vector;
+        public: typedef std::vector<
+            this_type, typename state_archive::allocator_type>
+                vector;
 
         /// @brief 状態キーを比較する関数オブジェクト。
-        typedef psyq::scenario_engine::_private::key_less<
+        public: typedef psyq::scenario_engine::_private::key_less<
              this_type,typename state_archive::key_type>
                  key_less;
 
+        //.....................................................................
+        /** @brief 状態値の型の種別を取得する。
+            @return 状態値の型の種別。
+         */
+        public: typename state_archive::kind_enum get_kind() const PSYQ_NOEXCEPT
+        {
+            auto const local_format(this->->get_format());
+            switch (local_format)
+            {
+                case state_archive::kind_NULL:
+                PSYQ_ASSERT(false);
+                // case state_archive::kind_BOOLに続く。
+                case state_archive::kind_BOOL:
+                case state_archive::kind_FLOAT:
+                return static_cast<state_archive::kind_enum>(local_format);
+
+                default:
+                return local_format < 0?
+                    state_archive::kind_SIGNED: state_archive::kind_UNSIGNED;
+            }
+        }
+
+        /** @brief 状態値の構成を取得する。
+            @return 状態値の構成。
+         */
+        public: typename state_archive::format_type get_format()
+        const PSYQ_NOEXCEPT
+        {
+            auto const local_mod_size(
+                state_archive::field_SIZE_BACK - state_archive::field_SIZE_FRONT);
+            auto const local_minus(
+                1 & static_cast<typename state_archive::format_type>(
+                    this->field >> state_archive::field_SIZE_BACK));
+            return (-local_minus << local_mod_size)
+                | static_cast<typename state_archive::format_type>(
+                    state_archive::field_SIZE_MASK & (
+                        this->field >> state_archive::field_SIZE_FRONT));
+        }
+
+        /** @brief 状態値のビット数を取得する。
+            @return 状態値のビット数。
+         */
+        public: typename state_archive::size_type get_field_size()
+        const PSYQ_NOEXCEPT
+        {
+            return state_archive::get_format_size(this->get_format());
+        }
+
+        /** @brief 状態値のビット位置を取得する。
+            @return 状態値のビット位置。
+         */
+        public: typename state_archive::pos_type get_field_position()
+        const PSYQ_NOEXCEPT
+        {
+            return state_archive::get_field_position(this->field);
+        }
+
+        //.....................................................................
         /// @brief 状態値のチャンクを識別するキー。
-        typename state_archive::key_type chunk;
+        public: typename state_archive::key_type chunk;
         /// @brief 状態値を識別するキー。
-        typename state_archive::key_type key;
+        public: typename state_archive::key_type key;
         /// @brief 状態値が格納されているビット領域。
-        typename state_archive::field_type field;
+        public: typename state_archive::field_type field;
 
     }; // struct entry
 
@@ -279,12 +328,10 @@ class psyq::scenario_engine::state_archive
             this_type::allocator_type())
     :
     entries_(in_allocator),
-    chunks_(in_allocator),
-    functions_(in_allocator)
+    chunks_(in_allocator)
     {
         this->entries_.reserve(in_reserve_entries);
         this->chunks_.reserve(in_reserve_chunks);
-        //this->functions_.reserve(in_reserve_functions);
     }
 
     /** @brief ムーブ構築子。
@@ -318,79 +365,21 @@ class psyq::scenario_engine::state_archive
     //-------------------------------------------------------------------------
     /// @name 状態値の取得と設定
     //@{
-    /** @brief 状態値の型の種別を取得する。
-        @param[in] in_key 取得する状態値の識別番号。
-        @return
-            in_key に対応する状態値の型の種別。
-            対応する状態値がない場合は this_type::kind_NULL となる。
+    /** @brief 状態値の登記を取得する。
+        @param[in] in_key 取得する状態のキー。
+        @retval !=nullptr
+            in_key に対応する状態値の登記を指すポインタ。このポインタは、
+            register_bool などで他の状態値が登録されると、無効になる。
+        @retval ==nullptr in_key に対応する状態値が登録されてない。
+        @sa register_bool
+        @sa register_unsigned
+        @sa register_signed
      */
-    public: typename this_type::kind_enum get_kind(
+    public: typename this_type::entry const* find_entry(
         typename this_type::key_type const& in_key)
     const PSYQ_NOEXCEPT
     {
-        // 状態値登記を検索し、状態値登記から状態値の構成を決定する。
-        auto const local_entry(
-            this_type::entry::key_less::find_pointer(
-                this->entries_, in_key));
-        if (local_entry == nullptr)
-        {
-            return this_type::kind_NULL;
-        }
-        auto const local_format(this_type::get_entry_format(*local_entry));
-        switch (local_format)
-        {
-            case this_type::kind_NULL:
-            PSYQ_ASSERT(false);
-            // case this_type::kind_BOOLに続く。
-            case this_type::kind_BOOL:
-            case this_type::kind_FLOAT:
-            return static_cast<this_type::kind_enum>(local_format);
-
-            default:
-            return local_format < 0?
-                this_type::kind_SIGNED: this_type::kind_UNSIGNED;
-        }
-    }
-
-    /** @brief 状態値のビット数を取得する。
-        @param[in] in_key 取得する状態値の識別番号。
-        @return
-            in_key に対応する状態値のビット数。
-            対応する状態値がない場合は0となる。
-     */
-    public: typename this_type::size_type get_size(
-        typename this_type::key_type const& in_key)
-    const PSYQ_NOEXCEPT
-    {
-        // 状態登記を検索し、状態登記から状態値のビット数を取得する。
-        auto const local_entry(
-            this_type::entry::key_less::find_pointer(
-                this->entries_, in_key));
-        if (local_entry == nullptr)
-        {
-            return 0;
-        }
-        return this_type::get_entry_size(*local_entry);
-    }
-
-    /** @brief 状態値のチャンクキーを取得する。
-        @param[in] in_key チャンクキーを取得する状態値のキー。
-        @retval !=nullptr in_key に対応する状態値のチャンクキーへのポインタ。
-        @retval ==nullptr in_key に対応する状態値がない。
-     */
-    public: typename this_type::key_type const* get_chunk(
-        typename this_type::key_type const& in_key)
-    const PSYQ_NOEXCEPT
-    {
-        // 状態登記を検索し、状態登記から状態値のチャンクキーを取得する。
-        auto const local_entry(
-            this_type::entry::key_less::find_pointer(
-                this->entries_, in_key));
-        if (local_entry == nullptr)
-        {
-            return nullptr;
-        }
-        return &local_entry->chunk;
+        return this_type::entry::key_less::find_pointer(this->entries_, in_key);
     }
 
     /** @brief 状態値を取得する。
@@ -427,12 +416,12 @@ class psyq::scenario_engine::state_archive
         {
             return false;
         }
-        auto const local_format(this_type::get_entry_format(*local_entry));
+        auto const local_format(local_entry->get_format());
         auto const local_size(this_type::get_format_size(local_format));
-        auto local_bits(
+        auto const local_bits(
             this_type::get_bits(
                 local_chunk->blocks,
-                this_type::get_entry_position(*local_entry),
+                local_entry->get_field_position(),
                 local_size));
 
         // 状態値の構成から、出力値のコピー処理を分岐する。
@@ -471,17 +460,11 @@ class psyq::scenario_engine::state_archive
                 (this_type::make_block_mask(local_size) >> 1)
                 <= static_cast<typename this_type::block_type>(
                     (std::numeric_limits<template_value>::max)()));
-            if ((local_bits >> (local_size - 1)) != 0)
-            {
-                // 符号ビットを拡張する。
-                local_bits |= (
-                    (std::numeric_limits<typename this_type::block_type>::max)()
-                    << local_size);
-            }
+            auto const local_signed_bits(
+                static_cast<typename this_type::signed_block_type>(local_bits));
+            auto const local_minus(1 & (local_signed_bits >> (local_size - 1)));
             this_type::copy_value(
-                out_value,
-                static_cast<typename this_type::signed_block_type>(
-                    local_bits));
+                out_value, local_signed_bits | (-local_minus << local_size));
         }
         return true;
     }
@@ -529,13 +512,14 @@ class psyq::scenario_engine::state_archive
             return 0;
         }
 
-        auto const local_mod_size(
+        // ブロックビット列でのビット位置を決定し、値を取り出す。
+        auto const local_position(
             in_position - local_block_index * this_type::BLOCK_SIZE);
         PSYQ_ASSERT(
-            (in_size == this_type::BLOCK_SIZE && local_mod_size == 0)
+            (in_size == this_type::BLOCK_SIZE && local_position == 0)
             || (in_size < this_type::BLOCK_SIZE
-                && local_mod_size < this_type::BLOCK_SIZE));
-        return (in_blocks.at(local_block_index) >> local_mod_size)
+                && local_position < this_type::BLOCK_SIZE));
+        return (in_blocks.at(local_block_index) >> local_position)
             & this_type::make_block_mask(in_size);
     }
 
@@ -582,8 +566,8 @@ class psyq::scenario_engine::state_archive
                 local_chunk->blocks));
 
         // 状態値の構成によって、設定処理を分岐する。
-        auto const local_format(this_type::get_entry_format(*local_entry));
-        auto const local_position(this_type::get_entry_position(*local_entry));
+        auto const local_format(local_entry->get_format());
+        auto const local_position(local_entry->get_field_position());
         switch (local_format)
         {
             case this_type::kind_NULL:
@@ -594,8 +578,8 @@ class psyq::scenario_engine::state_archive
             case this_type::kind_BOOL:
             if (std::is_same<bool, template_value>::value)
             {
-                return this->callback_set_value(
-                    in_key,
+                return this_type::notify_transition(
+                    const_cast<this_type::field_type&>(local_entry->field),
                     this_type::set_bits(
                         local_chunk_blocks, local_position, 1, in_value));
             }
@@ -613,8 +597,8 @@ class psyq::scenario_engine::state_archive
             {
                 auto const local_size(
                     this_type::get_format_size(local_format));
-                return this->callback_set_value(
-                    in_key,
+                return this_type::notify_transition(
+                    const_cast<this_type::field_type&>(local_entry->field),
                     local_format < 0?
                         // 符号あり整数を設定する。
                         this_type::set_signed(
@@ -634,35 +618,18 @@ class psyq::scenario_engine::state_archive
         }
     }
     //@}
-    private: bool callback_set_value(
-        typename this_type::key_type const& in_key,
-        int const in_set_value)
+    private: static bool notify_transition(
+        typename this_type::field_type& io_field,
+        int const in_set_bits)
     {
-        if (in_set_value < 0)
+        if (in_set_bits < 0)
         {
             return false;
         }
-        auto local_functions(std::move(this->functions_));
-        this->functions_.clear();
-        auto local_last(local_functions.begin());
-        for (auto i(local_last); i != local_functions.end(); ++i)
+        if (0 < in_set_bits)
         {
-            local_last->swap(*i);
-            auto const local_function_holder(local_last->lock());
-            if (local_function_holder.get() != nullptr)
-            {
-                (*local_function_holder)(*this, in_key);
-                ++local_last;
-            }
+            io_field |= 1 << this_type::field_TRANSITION_FRONT;
         }
-        local_functions.erase(local_last, local_functions.end());
-        local_functions.reserve(
-            local_functions.size() + this->functions_.size());
-        for (auto& local_function: this->functions_)
-        {
-            local_functions.emplace_back(std::move(local_function));
-        }
-        this->functions_ = std::move(local_functions);
         return true;
     }
 
@@ -702,6 +669,9 @@ class psyq::scenario_engine::state_archive
         @param[in] in_position   値を設定するビット列のビット位置。
         @param[in] in_size       値を設定するビット列のビット数。
         @param[in] in_value      設定する値。
+        @retval 正 元とは異なる値を設定した。
+        @retval  0 元と同じ値を設定した。
+        @retval 負 失敗。値を設定できなかった。
      */
     private: static int set_bits(
         typename this_type::block_vector& io_blocks,
@@ -723,14 +693,15 @@ class psyq::scenario_engine::state_archive
             return -1;
         }
 
-        auto const local_mod_size(
+        // ブロックビット列でのビット位置を決定し、値を埋め込む。
+        auto const local_position(
             in_position - local_block_index * this_type::BLOCK_SIZE);
-        PSYQ_ASSERT(local_mod_size + in_size <= this_type::BLOCK_SIZE);
+        PSYQ_ASSERT(local_position + in_size <= this_type::BLOCK_SIZE);
         auto const local_mask(this_type::make_block_mask(in_size));
         auto& local_block(io_blocks.at(local_block_index));
         auto const local_last_block(local_block);
-        local_block = (~(local_mask << local_mod_size) & local_block)
-            | ((in_value & local_mask) << local_mod_size);
+        local_block = (~(local_mask << local_position) & local_block)
+            | ((in_value & local_mask) << local_position);
         return local_last_block != local_block? 1: 0;
     }
 
@@ -767,7 +738,7 @@ class psyq::scenario_engine::state_archive
         }
         return 0 <= this_type::set_bits(
             local_chunk.blocks,
-            this_type::get_entry_position(*local_entry),
+            local_entry->get_field_position(),
             1,
             in_value);
     }
@@ -814,7 +785,7 @@ class psyq::scenario_engine::state_archive
         }
         return 0 <= this_type::set_bits(
             local_chunk.blocks,
-            this_type::get_entry_position(*local_entry),
+            local_entry->get_field_position(),
             static_cast<typename this_type::size_type>(in_size),
             in_value);
     }
@@ -861,7 +832,7 @@ class psyq::scenario_engine::state_archive
         }
         return 0 <= this_type::set_signed(
             local_chunk.blocks,
-            this_type::get_entry_position(*local_entry),
+            local_entry->get_field_position(),
             static_cast<typename this_type::size_type>(in_size),
             in_value);
     }
@@ -973,8 +944,7 @@ class psyq::scenario_engine::state_archive
                 typename this_type::entry::vector::value_type const* const in_right)
             const
             {
-                return this_type::get_entry_size(*in_right)
-                    <  this_type::get_entry_size(*in_left);
+                return in_right->get_field_size() < in_left->get_field_size();
             }
         };
         std::sort(
@@ -1008,10 +978,8 @@ class psyq::scenario_engine::state_archive
                 PSYQ_ASSERT(false);
                 continue;
             }
-            auto const local_position(
-                this_type::get_entry_position(*local_entry));
-            auto const local_format(
-                this_type::get_entry_format(*local_entry));
+            auto const local_position(local_entry->get_field_position());
+            auto const local_format(local_entry->get_format());
             switch (local_format)
             {
                 case this_type::kind_NULL:
@@ -1164,7 +1132,7 @@ class psyq::scenario_engine::state_archive
 
         // 空き領域を更新する。
         auto const local_empty_size(
-            this_type::get_field_size(*in_empty_field));
+            this_type::get_empty_field_size(*in_empty_field));
         io_empty_fields.erase(in_empty_field);
         if (in_size < local_empty_size)
         {
@@ -1183,7 +1151,7 @@ class psyq::scenario_engine::state_archive
     {
         // 新たにビット列ブロックを追加する。
         auto const local_position(io_blocks.size() * this_type::BLOCK_SIZE);
-        if ((local_position >> this_type::FIELD_POSITION_SIZE) == 0)
+        if (local_position <= this_type::field_POSITION_MASK)
         {
             auto const local_add_block_size(
                 (in_size + this_type::BLOCK_SIZE - 1) / this_type::BLOCK_SIZE);
@@ -1212,24 +1180,25 @@ class psyq::scenario_engine::state_archive
         std::size_t const in_position,
         std::size_t const in_size)
     {
-        auto const local_size(
-            static_cast<typename this_type::size_type>(in_size));
-        if ((in_position >> this_type::FIELD_POSITION_SIZE) != 0
-            || local_size != in_size)
+        if (in_position <= this_type::field_POSITION_MASK
+            && in_size <= this_type::field_SIZE_MASK)
+        {
+            auto const local_empty_field(
+               static_cast<typename this_type::field_type>(
+                   (in_size << this_type::field_SIZE_FRONT)
+                   | (in_position << this_type::field_POSITION_FRONT)));
+            io_empty_fields.insert(
+                std::lower_bound(
+                    io_empty_fields.begin(),
+                    io_empty_fields.end(),
+                    local_empty_field,
+                    this_type::empty_field_less()),
+                local_empty_field);
+        }
+        else
         {
             PSYQ_ASSERT(false);
-            return;
         }
-        auto const local_empty_field(
-           (local_size << this_type::FIELD_POSITION_SIZE)
-           | static_cast<typename this_type::field_type>(in_position));
-        io_empty_fields.insert(
-            std::lower_bound(
-                io_empty_fields.begin(),
-                io_empty_fields.end(),
-                local_empty_field,
-                this_type::empty_field_less()),
-            local_empty_field);
     }
 
     //-------------------------------------------------------------------------
@@ -1241,30 +1210,21 @@ class psyq::scenario_engine::state_archive
         typename this_type::field_type const in_field)
     PSYQ_NOEXCEPT
     {
-        return in_field & ((1 << this_type::FIELD_POSITION_SIZE) - 1);
+        return (in_field >> this_type::field_POSITION_FRONT)
+            & this_type::field_POSITION_MASK;
     }
 
-    /** @brief ビット領域のビット数を取得する。
-        @param[in] in_field ビット領域。
-        @return ビット領域のビット数。
+    /** @brief 空きビット領域のビット数を取得する。
+        @param[in] in_field 空きビット領域。
+        @return 空きビット領域のビット数。
      */
-    private: static typename this_type::size_type get_field_size(
+    private: static typename this_type::size_type get_empty_field_size(
         typename this_type::field_type const in_field)
     PSYQ_NOEXCEPT
     {
         return static_cast<typename this_type::size_type>(
-            in_field >> this_type::FIELD_POSITION_SIZE);
-    }
-
-    /** @brief 状態値の登記から、状態値のビット位置を取得する。
-        @param[in] in_entry 状態値の登記。
-        @return 状態値のビット位置。
-     */
-    private: static typename this_type::pos_type get_entry_position(
-        typename this_type::entry::vector::value_type const& in_entry)
-    PSYQ_NOEXCEPT
-    {
-        return this_type::get_field_position(in_entry.field);
+            (in_field >> this_type::field_SIZE_FRONT)
+            & this_type::field_SIZE_MASK);
     }
 
     /** @brief 状態値の登記に、状態値のビット位置を設定する。
@@ -1272,32 +1232,23 @@ class psyq::scenario_engine::state_archive
         @param[in] in_position  状態値に設定するビット位置。
      */
     private: static bool set_entry_position(
-        typename this_type::entry::vector::value_type& io_entry,
+        typename this_type::entry& io_entry,
         std::size_t const in_position)
     PSYQ_NOEXCEPT
     {
-        if ((in_position >> this_type::FIELD_POSITION_SIZE) != 0)
+        if (this_type::field_POSITION_MASK < in_position)
         {
             return false;
         }
+        auto const local_position(
+            static_cast<typename this_type::field_type>(in_position)
+            << this_type::field_POSITION_FRONT);
         auto const local_mask(
-            (1 << this_type::FIELD_POSITION_SIZE) - 1);
-        io_entry.field = (~local_mask & io_entry.field)
-            | static_cast<typename this_type::field_type>(
-                  local_mask & in_position);
+            this_type::field_POSITION_MASK
+            << this_type::field_POSITION_FRONT);
+        io_entry.field =
+            (~local_mask & io_entry.field) | (local_mask & local_position);
         return true;
-    }
-
-    /** @brief 状態値の登記から、状態値の構成を取得する。
-        @param[in] in_entry 状態値の登記。
-        @return 状態値の構成。
-     */
-    private: static typename this_type::format_type get_entry_format(
-        typename this_type::entry::vector::value_type const& in_entry)
-    PSYQ_NOEXCEPT
-    {
-        return static_cast<typename this_type::format_type>(
-            in_entry.field >> this_type::FIELD_POSITION_SIZE);
     }
 
     /** @brief 状態値の登記に、状態値の構成を設定する。
@@ -1305,26 +1256,15 @@ class psyq::scenario_engine::state_archive
         @param[in] in_format    状態値に設定する構成。
      */
     private: static void set_entry_format(
-        typename this_type::entry::vector::value_type& io_entry,
+        typename this_type::entry& io_entry,
         typename this_type::format_type const in_format)
     PSYQ_NOEXCEPT
     {
+        typename this_type::field_type const local_format(in_format);
         auto const local_mask(
-            ~((1 << this_type::FIELD_POSITION_SIZE) - 1));
-        io_entry.field = (io_entry.field & local_mask)
-            | (in_format << this_type::FIELD_POSITION_SIZE);
-    }
-
-    /** @brief 状態値の登記から、状態値のビット数を取得する。
-        @param[in] in_entry 状態値の登記。
-        @return 状態値のビット数。
-     */
-    private: static typename this_type::size_type get_entry_size(
-        typename this_type::entry::vector::value_type const& in_entry)
-    PSYQ_NOEXCEPT
-    {
-        return this_type::get_format_size(
-            this_type::get_entry_format(in_entry));
+            this_type::field_SIZE_MASK << this_type::field_SIZE_FRONT);
+        io_entry.field = (~local_mask & io_entry.field)
+            | (local_mask & (local_format << this_type::field_SIZE_FRONT));
     }
 
     /** @brief 状態値の構成から、状態値のビット数を取得する。
@@ -1348,7 +1288,7 @@ class psyq::scenario_engine::state_archive
             return this_type::BITS_PER_BYTE * sizeof(float);
 
             default:
-            return std::abs(in_format);
+            return in_format < 0? -in_format: in_format;
         }
     }
 
@@ -1367,8 +1307,6 @@ class psyq::scenario_engine::state_archive
     private: typename this_type::entry::vector entries_;
     /// @brief ビット列チャンクのコンテナ。
     private: typename this_type::chunk::vector chunks_;
-    /// @brief 状態遷移コールバック関数オブジェクトのコンテナ。
-    private: typename this_type::function_weak_ptr_vector functions_;
 
 }; // class psyq::state_archive
 

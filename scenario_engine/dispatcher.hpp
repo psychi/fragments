@@ -41,13 +41,13 @@ class psyq::scenario_engine::dispatcher
     /// @brief thisが指す値の型。
     private: typedef dispatcher this_type;
 
-    /// @brief 評価に用いる条件のキーを表す型。
+    /// @brief 評価に用いる条件を識別する値を表す型。
     public: typedef template_condition_key condition_key;
 
     /// @brief コンテナに用いるメモリ割当子を表す型。
     public: typedef template_allocator allocator_type;
 
-    /// @brief 条件式キーのコンテナ。
+    /// @brief 条件式の識別値のコンテナ。
     private: typedef std::vector<
         typename this_type::condition_key,
         typename this_type::allocator_type>
@@ -56,7 +56,7 @@ class psyq::scenario_engine::dispatcher
     //-------------------------------------------------------------------------
     /** @brief 条件の評価結果が変化した際に呼び出す、関数オブジェクトの型。
 
-        - 引数#0は、評価に用いた条件のキー。
+        - 引数#0は、評価に用いた条件に対応する識別値。
         - 引数#1は、変化した後の条件の評価結果。
      */
     public: typedef std::function<
@@ -83,7 +83,7 @@ class psyq::scenario_engine::dispatcher
 
         /** @brief 条件評価受信オブジェクトの辞書。
 
-            - map::key_type は、条件のキー。
+            - map::key_type は、条件の識別値。
             - map::mapped_type は、条件評価受信オブジェクト。
          */
         typedef std::map<
@@ -135,7 +135,7 @@ class psyq::scenario_engine::dispatcher
 
         /** @brief 条件監視オブジェクトの辞書。
 
-            - map::key_type は、監視する要素条件のキー。
+            - map::key_type は、監視する要素条件の識別値。
             - map::mapped_type は、条件監視オブジェクト。
          */
         typedef std::map<
@@ -155,7 +155,7 @@ class psyq::scenario_engine::dispatcher
             this->expression_keys.reserve(in_reserve_keys);
         }
 
-        /// @brief 評価の更新を要求する条件式のキーのコンテナ。
+        /// @brief 評価の更新を要求する条件式の識別値のコンテナ。
         typename dispatcher::condition_key_vector expression_keys;
         /// @brief 更新通知フラグ。
         bool notify;
@@ -236,10 +236,10 @@ class psyq::scenario_engine::dispatcher
         this_type::dispatch で条件式の評価が変化した際に、
         呼び出す関数オブジェクトを登録する。
 
-        @param[in] in_expression_key    評価に用いる条件式のキー。
+        @param[in] in_expression_key    評価に用いる条件式の識別値。
         @param[in] in_function          登録する関数オブジェクト。
         @param[in] in_evaluator         評価の初期値の決定に用いる条件評価器。
-        @param[in] in_states            評価の初期値の決定に用いる状態値書庫。
+        @param[in] in_reservoir         評価の初期値の決定に用いる状態貯蔵器。
         @param[in] in_reserve_functions 予約する関数オブジェクトコンテナの容量。
         @retval true  成功。関数オブジェクトを登録した。
         @retval false 失敗。関数オブジェクトは登録されなかった。
@@ -249,7 +249,7 @@ class psyq::scenario_engine::dispatcher
         typename this_type::condition_key const& in_expression_key,
         typename this_type::function_shared_ptr const& in_function,
         template_evaluator const& in_evaluator,
-        typename template_evaluator::state_archive const& in_states,
+        typename template_evaluator::reservoir const& in_reservoir,
         std::size_t const in_reserve_functions = 1)
     {
         auto const local_function(in_function.get());
@@ -279,7 +279,7 @@ class psyq::scenario_engine::dispatcher
             local_listener = this->add_listener(
                 in_expression_key,
                 in_evaluator,
-                in_states,
+                in_reservoir,
                 in_reserve_functions);
             if (local_listener == this->listeners_.end())
             {
@@ -325,7 +325,7 @@ class psyq::scenario_engine::dispatcher
     /** @brief 新たな条件評価受信オブジェクトを生成して追加する。
         @param[in] in_expression_key    評価に用いる条件式の識別番号。
         @param[in] in_evaluator         評価の初期値の決定に用いる条件評価器。
-        @param[in] in_states            評価の初期値の決定に用いる状態値のコンテナ。
+        @param[in] in_reservoir            評価の初期値の決定に用いる状態値のコンテナ。
         @param[in] in_reserve_functions 予約しておく関数オブジェクトコンテナの容量。
         @return 追加した条件評価受信オブジェクトを指す反復子。
      */
@@ -333,7 +333,7 @@ class psyq::scenario_engine::dispatcher
     typename this_type::listener::map::iterator add_listener(
         typename this_type::condition_key const& in_expression_key,
         template_evaluator const& in_evaluator,
-        typename template_evaluator::state_archive const& in_states,
+        typename template_evaluator::reservoir const& in_reservoir,
         std::size_t const in_reserve_functions)
     {
         // 条件式を条件監視オブジェクトへ登録する。
@@ -352,7 +352,7 @@ class psyq::scenario_engine::dispatcher
                 // 条件評価の初期値を設定しておく。
                 auto const local_evaluate_expression(
                     in_evaluator.evaluate_expression(
-                        in_expression_key, in_states));
+                        in_expression_key, in_reservoir));
                 local_insert.first->second.flags.set(
                     this_type::listener::flag_LAST_EVALUATION,
                     0 <= local_evaluate_expression);
@@ -494,7 +494,7 @@ class psyq::scenario_engine::dispatcher
                 local_monitor = local_insert.first;
             }
 
-            // 条件式キーを、条件監視オブジェクトへ登録する。
+            // 条件式の識別値を、条件監視オブジェクトへ登録する。
             auto& local_expression_keys(local_monitor->second.expression_keys);
             auto const local_lower_bound(
                 std::lower_bound(
@@ -514,7 +514,7 @@ class psyq::scenario_engine::dispatcher
     /// @name 条件挙動
     //@{
     /** @brief 状態値の変更通知を受け取る。
-        @param[in] in_state_key 変更された状態値のキー。
+        @param[in] in_state_key 変更された状態値の識別値。
      */
     public: void notify_state_transition(
         typename this_type::monitor::map::key_type const& in_state_key)
@@ -602,7 +602,7 @@ class psyq::scenario_engine::dispatcher
         this_type::register_expression で登録した関数を呼び出す。
 
         @param[in] in_evaluator 条件式の評価に使う条件評価器。
-        @param[in] in_states    条件式の評価に状態値のコンテナ。
+        @param[in] in_reservoir    条件式の評価に状態値のコンテナ。
 
         @note
         前回の this_type::dispatch と今回の self::dispatch
@@ -618,13 +618,13 @@ class psyq::scenario_engine::dispatcher
         今のところ検知してない。
 
         @todo
-        ディスパッチ関数の中で this / in_evaluator / in_states
+        ディスパッチ関数の中で this / in_evaluator / in_reservoir
         が破棄される可能性もある。何らかの対策をすること。
      */
     public: template<typename template_evaluator>
     void dispatch(
         template_evaluator const& in_evaluator,
-        typename template_evaluator::state_archive const& in_states)
+        typename template_evaluator::reservoir const& in_reservoir)
     {
         // 条件監視オブジェクトへの更新通知を、
         // 条件評価受信オブジェクトに転送する。
@@ -636,7 +636,7 @@ class psyq::scenario_engine::dispatcher
         // 要素条件で用いる状態が更新された条件式を再評価し、
         // 評価結果が変化していれば、ディスパッチ関数を呼び出す。
         this_type::update_listener_container(
-            this->listeners_, in_evaluator, in_states);
+            this->listeners_, in_evaluator, in_reservoir);
     }
     //@}
     /** @brief 条件式を評価し、ディスパッチ関数を呼び出す。
@@ -646,13 +646,13 @@ class psyq::scenario_engine::dispatcher
 
         @param[in,out] io_listeners 条件評価受信オブジェクトのコンテナ。
         @param[in] in_evaluator     評価に使う条件評価器。
-        @param[in] in_states        条件式の評価に状態値のコンテナ。
+        @param[in] in_reservoir        条件式の評価に状態値のコンテナ。
      */
     private: template<typename template_evaluator>
     static void update_listener_container(
         typename this_type::listener::map& io_listeners,
         template_evaluator const& in_evaluator,
-        typename template_evaluator::state_archive const& in_states)
+        typename template_evaluator::reservoir const& in_reservoir)
     {
         for (auto i(io_listeners.begin()); i != io_listeners.end();)
         {
@@ -669,7 +669,7 @@ class psyq::scenario_engine::dispatcher
             {
                 auto const local_update_listener(
                     this_type::update_listener(
-                        local_listener, in_evaluator, in_states));
+                        local_listener, in_evaluator, in_reservoir));
                 if (local_update_listener
                     && local_listener.second.functions.empty())
                 {
@@ -690,7 +690,7 @@ class psyq::scenario_engine::dispatcher
 
         @param[in,out] io_listener 更新する条件評価受信オブジェクト。
         @param[in] in_evaluator    評価に用いる条件評価器。
-        @param[in] in_states       条件式の評価に用いる状態値のコンテナ。
+        @param[in] in_reservoir       条件式の評価に用いる状態値のコンテナ。
         @retval true  ディスパッチ関数を呼び出した。
         @retval false ディスパッチ関数を呼び出さなかった。
      */
@@ -698,14 +698,14 @@ class psyq::scenario_engine::dispatcher
     static bool update_listener(
         typename this_type::listener::map::value_type& io_listener,
         template_evaluator const& in_evaluator,
-        typename template_evaluator::state_archive const& in_states)
+        typename template_evaluator::reservoir const& in_reservoir)
     {
         // 条件式を評価する。
         auto const local_last_evaluation(
             io_listener.second.flags.test(
                 this_type::listener::flag_LAST_EVALUATION));
         auto const local_evaluate_expression(
-            in_evaluator.evaluate_expression(io_listener.first, in_states));
+            in_evaluator.evaluate_expression(io_listener.first, in_reservoir));
         io_listener.second.flags.set(
             this_type::listener::flag_LAST_EVALUATION,
             0 <= local_evaluate_expression);

@@ -59,15 +59,15 @@ class psyq::scenario_engine::driver
     /// @brief 各種コンテナに用いるメモリ割当子の型。
     public: typedef template_allocator allocator_type;
 
-    /// @brief シナリオ駆動器で用いる状態値書庫の型。
-    public: typedef psyq::scenario_engine::state_archive<
+    /// @brief シナリオ駆動器で用いる状態貯蔵器の型。
+    public: typedef psyq::scenario_engine::reservoir<
         typename this_type::hasher::result_type,
         typename this_type::allocator_type>
-            state_archive;
+            reservoir;
 
     /// @brief シナリオ駆動器で用いる条件評価器の型。
     public: typedef psyq::scenario_engine::evaluator<
-        typename this_type::state_archive,
+        typename this_type::reservoir,
         typename this_type::hasher::result_type,
         typename this_type::allocator_type>
             evaluator;
@@ -88,7 +88,7 @@ class psyq::scenario_engine::driver
     //@{
     /** @brief 空のシナリオ駆動器を構築する。
         @param[in] in_reserve_chunks      予約するチャンクの容量。
-        @param[in] in_reserve_states      予約する状態値書庫の容量。
+        @param[in] in_reserve_states      予約する状態貯蔵器の容量。
         @param[in] in_reserve_expressions 予約する条件式評価器の容量。
         @param[in] in_hash_function       ハッシュ関数オブジェクトの初期値。
         @param[in] in_allocator           メモリ割当子の初期値。
@@ -101,7 +101,7 @@ class psyq::scenario_engine::driver
         typename this_type::allocator_type const& in_allocator =
             this_type::allocator_type())
     :
-    states_(in_reserve_states, in_reserve_chunks, in_allocator),
+    reservoir_(in_reserve_states, in_reserve_chunks, in_allocator),
     evaluator_(in_reserve_expressions, in_reserve_chunks, in_allocator),
     dispatcher_(in_allocator),
     behaviors_(in_allocator),
@@ -114,7 +114,7 @@ class psyq::scenario_engine::driver
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
     public: driver(this_type&& io_source):
-    states_(std::move(io_source.states_)),
+    reservoir_(std::move(io_source.reservoir_)),
     evaluator_(std::move(io_source.evaluator_)),
     dispatcher_(std::move(io_source.dispatcher_)),
     hash_function_(std::move(io_source.hash_function_))
@@ -126,7 +126,7 @@ class psyq::scenario_engine::driver
      */
     public: this_type& operator=(this_type&& io_source)
     {
-        this->states_ = std::move(io_source.states_);
+        this->reservoir_ = std::move(io_source.reservoir_);
         this->evaluator_ = std::move(io_source.evaluator_);
         this->dispatcher_ = std::move(io_source.dispatcher_);
         this->hash_function_ = std::move(io_source.hash_function_);
@@ -136,7 +136,7 @@ class psyq::scenario_engine::driver
     /// @brief シナリオ駆動器を再構築し、メモリ領域を必要最小限にする。
     public: void shrink_to_fit()
     {
-        this->states_.shrink_to_fit();
+        this->reservoir_.shrink_to_fit();
         this->evaluator_.shrink_to_fit();
         this->dispatcher_.shrink_to_fit();
         this->behaviors_.shrink_to_fit();
@@ -148,17 +148,17 @@ class psyq::scenario_engine::driver
      */
     public: void update()
     {
-        for (auto& local_state: this->states_.get_entries())
+        for (auto& local_state: this->reservoir_.get_state_container())
         {
             auto const local_transition(
-                const_cast<typename this_type::state_archive::entry&>
+                const_cast<typename this_type::reservoir::state&>
                     (local_state)._reset_transition());
             if (local_transition)
             {
                 this->dispatcher_.notify_state_transition(local_state.key);
             }
         }
-        this->dispatcher_.dispatch(this->evaluator_, this->states_);
+        this->dispatcher_.dispatch(this->evaluator_, this->reservoir_);
     }
 
     /** @brief 文字列からハッシュ値を生成する。
@@ -176,64 +176,52 @@ class psyq::scenario_engine::driver
     }
 
     //-------------------------------------------------------------------------
-    /// @name 状態値
-    //@{
+    /// @name チャンクの追加
     /** @brief シナリオ駆動器に状態値を追加する。
-        @param[in] in_chunk 状態値を追加するチャンクのキー。
+        @param[in] in_chunk 状態値を追加するチャンクの識別値。
         @param[in] in_state_builder
             状態値を登録する関数オブジェクト。
             以下に相当するメンバ関数を使えること。
             @code
-            // @brief 状態値書庫に状態値を登録する。
-            // @param[in,out] io_states 状態値を登録する書庫。
-            // @param[in,out] io_hasher 文字列からキーを生成する関数オブジェクト。
-            // @param[in] in_chunk      状態値を登録するチャンクを表すキー。
+            // @brief 状態貯蔵器に状態値を登録する。
+            // @param[in,out] io_reservoir 状態値を登録する書庫。
+            // @param[in,out] io_hasher 文字列から識別値を生成する関数オブジェクト。
+            // @param[in] in_chunk      状態値を登録するチャンクを表す識別値。
             // @return 登録した状態値の数。
             std::size_t template_builder::operator()(
-                driver::state_archive& io_states,
+                driver::reservoir& io_reservoir,
                 driver::hasher& io_hasher,
-                driver::state_archive::key_type const& in_chunk)
+                driver::reservoir::key_type const& in_chunk)
             const;
             @endcode
         @return 登録した状態値の数。
      */
     public: template<typename template_builder>
     std::size_t add_state_chunk(
-        typename this_type::state_archive::key_type const& in_chunk,
+        typename this_type::reservoir::key_type const& in_chunk,
         template_builder const& in_state_builder)
     {
         return in_state_builder(
-            this->states_, this->hash_function_, in_chunk);
+            this->reservoir_, this->hash_function_, in_chunk);
     }
 
-    /** @brief シナリオ駆動器から状態値を削除する。
-        @param[in] in_chunk 状態値を削除するチャンクのキー。
-     */
-    public: bool remove_state_chunk(
-        typename this_type::state_archive::key_type const& in_chunk)
-    {
-        this->states_.remove_chunk(in_chunk);
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name 条件式
     /** @brief シナリオ駆動器に条件式を追加する。
-        @param[in] in_chunk 条件式を追加するチャンクのキー。
+        @param[in] in_chunk 条件式を追加するチャンクの識別値。
         @param[in] in_expression_builder
             条件式を登録する関数オブジェクト。
             以下に相当するメンバ関数を使えること。
             @code
             // @brief 条件評価器に条件式を登録する。
             // @param[in,out] io_evaluator 条件式を登録する条件評価器。
-            // @param[in,out] io_hasher    文字列からキーを生成する関数オブジェクト。
-            // @param[in] in_chunk         条件式を登録するチャンクを表すキー。
-            // @param[in] in_states        条件式で使う状態値の書庫。
+            // @param[in,out] io_hasher    文字列から識別値を生成する関数オブジェクト。
+            // @param[in] in_chunk         条件式を登録するチャンクを表す識別値。
+            // @param[in] in_reservoir        条件式で使う状態値の書庫。
             // @return 登録した状態値の数。
             std::size_t template_builder::operator()(
                 driver::evaluator& io_evaluator,
                 driver::hasher& io_hasher,
-                driver::state_archive::key_type const& in_chunk
-                driver::state_archive const& in_states)
+                driver::reservoir::key_type const& in_chunk
+                driver::reservoir const& in_reservoir)
             const;
             @endcode
         @return 登録した条件式の数。
@@ -244,23 +232,11 @@ class psyq::scenario_engine::driver
         template_builder const& in_expression_builder)
     {
         return in_expression_builder(
-            this->evaluator_, this->hash_function_, in_chunk, this->states_);
+            this->evaluator_, this->hash_function_, in_chunk, this->reservoir_);
     }
 
-    /** @brief シナリオ駆動器から条件式を削除する。
-        @param[in] in_chunk 条件式を削除するチャンクのキー。
-     */
-    public: bool remove_evaluator_chunk(
-        typename this_type::evaluator::expression::key_type const& in_chunk)
-    {
-        this->evaluator_.remove_chunk(in_chunk);
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name 条件挙動
-    //@{
     /** @brief シナリオ駆動器に条件挙動を追加する。
-        @param[in] in_chunk     条件挙動を追加するチャンクのキー。
+        @param[in] in_chunk     条件挙動を追加するチャンクの識別値。
         @param[in] in_functions 追加する条件挙動関数オブジェクトのコンテナ。
      */
     public: void add_behavior_chunk(
@@ -282,8 +258,8 @@ class psyq::scenario_engine::driver
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @brief シナリオ駆動器で用いる状態値書庫。
-    public: typename this_type::state_archive states_;
+    /// @brief シナリオ駆動器で用いる状態貯蔵器。
+    public: typename this_type::reservoir reservoir_;
 
     /// @brief シナリオ駆動器で用いる条件評価器。
     public: typename this_type::evaluator evaluator_;
@@ -367,10 +343,10 @@ namespace psyq_test
                 local_driver.dispatcher_,
                 local_driver.hash_function_,
                 local_driver.evaluator_,
-                local_driver.states_,
+                local_driver.reservoir_,
                 string_table(local_behavior_table_csv, 0)));
 
-        local_driver.states_.set_value(
+        local_driver.reservoir_.set_state(
             local_driver.hash_function_("state_bool"), false);
 
         //

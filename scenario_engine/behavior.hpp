@@ -211,23 +211,23 @@ struct psyq::scenario_engine::behavior_chunk
     }
 
     /** @brief 状態値を操作する関数オブジェクトを生成する。
-        @param[in,out] io_states 関数から参照する状態値書庫。
-        @param[in] in_condition  関数の起動条件。
-        @param[in] in_key        操作する状態値のキー。
-        @param[in] in_operator   状態値の操作で使う演算子。
-        @param[in] in_value      状態値の操作で使う演算値。
-        @param[in] in_allocator  生成に使うメモリ割当子。
+        @param[in,out] io_reservoir 関数から参照する状態貯蔵器。
+        @param[in] in_condition     関数の起動条件。
+        @param[in] in_key           操作する状態値のキー。
+        @param[in] in_operator      状態値の操作で使う演算子。
+        @param[in] in_value         状態値の操作で使う演算値。
+        @param[in] in_allocator     生成に使うメモリ割当子。
         @return 生成した条件挙動関数オブジェクト。
      */
     public: template<
-        typename template_state_archive,
+        typename template_reservoir,
         typename template_value,
         typename template_allocator>
     static typename this_type::dispatcher::function_shared_ptr
     make_state_operation_function(
-        template_state_archive& io_states,
+        template_reservoir& io_reservoir,
         bool const in_condition,
-        typename template_state_archive::key_type const& in_key,
+        typename template_reservoir::key_type const& in_key,
         typename this_type::state_operator_enum const in_operator,
         template_value const& in_value,
         template_allocator const& in_allocator)
@@ -236,8 +236,8 @@ struct psyq::scenario_engine::behavior_chunk
         return std::allocate_shared<typename this_type::dispatcher::function>(
             in_allocator,
             typename this_type::dispatcher::function(
-                /// @todo io_states を参照渡しするのは危険。対策を考えたい。
-                [=, &io_states](
+                /// @todo io_reservoir を参照渡しするのは危険。対策を考えたい。
+                [=, &io_reservoir](
                     typename this_type::dispatcher::condition_key const&,
                     bool const in_evaluation)
                 {
@@ -245,27 +245,27 @@ struct psyq::scenario_engine::behavior_chunk
                     if (in_condition == in_evaluation)
                     {
                         this_type::operate_state(
-                            io_states, in_key, in_operator, in_value);
+                            io_reservoir, in_key, in_operator, in_value);
                     }
                 }));
     }
     //@}
     /// @note この関数で状態値を更新すると driver から検知できない。
-    private: template<typename template_state_archive, typename template_value>
+    private: template<typename template_reservoir, typename template_value>
     static bool operate_state(
-        template_state_archive& io_states,
-        typename template_state_archive::key_type const& in_key,
+        template_reservoir& io_reservoir,
+        typename template_reservoir::key_type const& in_key,
         typename this_type::state_operator_enum const in_operator,
         template_value const& in_value)
     {
         if (in_operator == this_type::state_operator_COPY)
         {
-            auto const local_set_value(io_states.set_value(in_key, in_value));
-            PSYQ_ASSERT(local_set_value);
-            return local_set_value;
+            auto const local_state(io_reservoir.set_state(in_key, in_value));
+            PSYQ_ASSERT(local_state != nullptr);
+            return local_state != nullptr;
         }
         template_value local_value;
-        if (!io_states.get_value(in_key, local_value))
+        if (io_reservoir.get_state(in_key, local_value) == nullptr)
         {
             PSYQ_ASSERT(false);
             return false;
@@ -293,9 +293,9 @@ struct psyq::scenario_engine::behavior_chunk
             PSYQ_ASSERT(false);
             return false;
         }
-        auto const local_set_value(io_states.set_value(in_key, local_value));
-        PSYQ_ASSERT(local_set_value);
-        return local_set_value;
+        auto const local_state(io_reservoir.set_state(in_key, local_value));
+        PSYQ_ASSERT(local_state != nullptr);
+        return local_state != nullptr;
     }
 
     //-------------------------------------------------------------------------
@@ -323,7 +323,7 @@ struct psyq::scenario_engine::behavior_builder
         @param[in,out] io_dispatcher 生成した条件挙動関数オブジェクトを登録する条件監視器。
         @param[in,out] io_hasher     文字列からキーへ変換するハッシュ関数オブジェクト。
         @param[in] in_evaluator      条件挙動関数から参照する条件評価器。
-        @param[in] in_states         条件挙動関数から参照する状態値書庫。
+        @param[in] in_reservoir      条件挙動関数から参照する状態貯蔵器。
         @param[in] in_string_table   条件挙動の文字列表。
         @return 生成した条件挙動関数オブジェクトのコンテナ。
      */
@@ -335,7 +335,7 @@ struct psyq::scenario_engine::behavior_builder
         typename this_type::chunk::dispatcher& io_dispatcher,
         template_hasher& io_hasher,
         template_evaluator const& in_evaluator,
-        typename template_evaluator::state_archive const& in_states,
+        typename template_evaluator::reservoir const& in_reservoir,
         psyq::string::csv_table<template_string> const& in_string_table)
     {
         typename this_type::chunk::function_shared_ptr_vector
@@ -372,10 +372,10 @@ struct psyq::scenario_engine::behavior_builder
             // 条件挙動関数オブジェクトを生成し、条件監視器に登録する。
             auto local_function(
                 this_type::make_function(
-                    io_hasher, in_evaluator, in_states, in_string_table, i));
+                    io_hasher, in_evaluator, in_reservoir, in_string_table, i));
             auto const local_register_expression(
                 io_dispatcher.register_expression(
-                    local_key, local_function, in_evaluator, in_states));
+                    local_key, local_function, in_evaluator, in_reservoir));
             if (local_register_expression)
             {
                 local_functions.push_back(std::move(local_function));
@@ -394,7 +394,7 @@ struct psyq::scenario_engine::behavior_builder
     /** @brief 文字列表から条件挙動関数オブジェクトを生成する。
         @param[in,out] io_hasher   文字列からキーへ変換するハッシュ関数オブジェクト。
         @param[in] in_evaluator    条件挙動関数から参照する条件評価器。
-        @param[in] in_states       条件挙動関数から参照する状態値書庫。
+        @param[in] in_reservoir    条件挙動関数から参照する状態貯蔵器。
         @param[in] in_string_table 条件挙動の文字列表。
         @param[in] in_row_index    文字列表の行番号。
         @return 生成した条件関数オブジェクト。
@@ -407,7 +407,7 @@ struct psyq::scenario_engine::behavior_builder
     make_function(
         template_hasher& io_hasher,
         template_evaluator const& in_evaluator,
-        typename template_evaluator::state_archive const& in_states,
+        typename template_evaluator::reservoir const& in_reservoir,
         psyq::string::csv_table<template_string> const& in_string_table,
         typename psyq::string::csv_table<template_string>::index_type const
             in_row_index)
@@ -437,7 +437,7 @@ struct psyq::scenario_engine::behavior_builder
         {
             return this_type::make_state_operation_function(
                 io_hasher,
-                in_states,
+                in_reservoir,
                 local_condition,
                 in_string_table,
                 in_row_index);
@@ -453,7 +453,7 @@ struct psyq::scenario_engine::behavior_builder
 
     /** @brief 文字列表から状態操作関数オブジェクトを生成する。
         @param[in,out] io_hasher   文字列からキーへ変換するハッシュ関数オブジェクト。
-        @param[in] in_states       条件挙動関数から参照する状態値書庫。
+        @param[in] in_reservoir    条件挙動関数から参照する状態貯蔵器。
         @param[in] in_condition    条件挙動関数を起動する条件。
         @param[in] in_string_table 条件挙動の文字列表。
         @param[in] in_row_index    文字列表の行番号。
@@ -461,12 +461,12 @@ struct psyq::scenario_engine::behavior_builder
      */
     private: template<
         typename template_hasher,
-        typename template_state_archive,
+        typename template_reservoir,
         typename template_string>
     static typename this_type::chunk::dispatcher::function_shared_ptr
     make_state_operation_function(
         template_hasher& io_hasher,
-        template_state_archive const& in_states,
+        template_reservoir const& in_reservoir,
         bool const in_condition,
         psyq::string::csv_table<template_string> const& in_string_table,
         typename psyq::string::csv_table<template_string>::index_type const
@@ -478,9 +478,9 @@ struct psyq::scenario_engine::behavior_builder
                 in_row_index,
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_ARGUMENT));
         auto const local_key(io_hasher(local_key_cell));
-        if (!in_states.is_registered(local_key))
+        if (in_reservoir.find_state(local_key) == nullptr)
         {
-            // 状態値書庫にキーが登録されていなかった。
+            // 状態貯蔵器にキーが登録されていなかった。
             PSYQ_ASSERT(false);
             return typename
                 this_type::chunk::dispatcher::function_shared_ptr();
@@ -526,12 +526,12 @@ struct psyq::scenario_engine::behavior_builder
 
         // 状態値を書き換える関数オブジェクトを生成する。
         return this_type::chunk::make_state_operation_function(
-            const_cast<template_state_archive&>(in_states),
+            const_cast<template_reservoir&>(in_reservoir),
             in_condition,
             local_key,
             local_operator,
             local_value,
-            in_states.get_allocator());
+            in_reservoir.get_allocator());
     }
 
     private: template<typename template_string>

@@ -1,11 +1,11 @@
 ﻿/** @file
-    @copydoc psyq::scenario_engine::state_archive
+    @copydoc psyq::scenario_engine::state_builder
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_HPP_
 #define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_HPP_
 
-//#include "scenario_engine/state_archive.hpp"
+//#include "scenario_engine/reservoir.hpp"
 
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_TRUE
 #define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_TRUE "TRUE"
@@ -102,22 +102,22 @@ class psyq::scenario_engine::state_builder
     string_table_(std::move(in_string_table))
     {}
 
-    public: template<typename template_state_archive, typename template_hasher>
+    public: template<typename template_reservoir, typename template_hasher>
     std::size_t operator()(
-        template_state_archive& io_states,
+        template_reservoir& io_reservoir,
         template_hasher& io_hasher,
-        typename template_state_archive::key_type const& in_chunk)
+        typename template_reservoir::key_type const& in_chunk)
     const
     {
         return this_type::build(
-            io_states, io_hasher, in_chunk, this->string_table_);
+            io_reservoir, io_hasher, in_chunk, this->string_table_);
     }
 
-    public: template<typename template_state_archive, typename template_hasher>
+    public: template<typename template_reservoir, typename template_hasher>
     static std::size_t build(
-        template_state_archive& io_states,
+        template_reservoir& io_reservoir,
         template_hasher& io_hasher,
-        typename template_state_archive::key_type const& in_chunk,
+        typename template_reservoir::key_type const& in_chunk,
         typename this_type::string_table const& in_string_table)
     {
         // 文字列表を行ごとに解析し、状態値を登録する。
@@ -132,7 +132,7 @@ class psyq::scenario_engine::state_builder
             {
                 auto const local_register_state(
                     this_type::register_state(
-                        io_states, io_hasher, in_chunk, in_string_table, i));
+                        io_reservoir, io_hasher, in_chunk, in_string_table, i));
                 if (local_register_state)
                 {
                     ++local_register_count;
@@ -142,11 +142,11 @@ class psyq::scenario_engine::state_builder
         return local_register_count;
     }
 
-    private: template<typename template_state_archive, typename template_hasher>
+    private: template<typename template_reservoir, typename template_hasher>
     static bool register_state(
-        template_state_archive& io_states,
+        template_reservoir& io_reservoir,
         template_hasher& io_hasher,
-        typename template_state_archive::key_type const& in_chunk,
+        typename template_reservoir::key_type const& in_chunk,
         typename this_type::string_table const& in_string_table,
         typename this_type::string_table::index_type const in_row_index)
     {
@@ -162,7 +162,7 @@ class psyq::scenario_engine::state_builder
         }
         auto local_key(io_hasher(local_key_cell));
         if (local_key == io_hasher(typename template_hasher::argument_type())
-            || io_states.is_registered(local_key))
+            || io_reservoir.find_state(local_key) != nullptr)
         {
             // 条件キーが重複している。
             PSYQ_ASSERT(false);
@@ -174,29 +174,29 @@ class psyq::scenario_engine::state_builder
             in_string_table.find_body_cell(
                 in_row_index,
                 PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KIND));
-        typename template_state_archive::kind_enum local_kind;
+        typename template_reservoir::state::kind_enum local_kind;
         if (local_kind_cell
             == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_BOOL)
         {
-            local_kind = template_state_archive::kind_BOOL;
+            local_kind = template_reservoir::state::kind_BOOL;
         }
         else if (
             local_kind_cell
             == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_UNSIGNED)
         {
-            local_kind = template_state_archive::kind_UNSIGNED;
+            local_kind = template_reservoir::state::kind_UNSIGNED;
         }
         else if (
             local_kind_cell
             == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_SIGNED)
         {
-            local_kind = template_state_archive::kind_SIGNED;
+            local_kind = template_reservoir::state::kind_SIGNED;
         }
         else if (
             local_kind_cell
             == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_FLOAT)
         {
-            local_kind = template_state_archive::kind_FLOAT;
+            local_kind = template_reservoir::state::kind_FLOAT;
         }
         else
         {
@@ -210,7 +210,7 @@ class psyq::scenario_engine::state_builder
                 in_row_index,
                 PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_SIZE));
         std::size_t local_size;
-        if (local_kind == template_state_archive::kind_BOOL)
+        if (local_kind == template_reservoir::state::kind_BOOL)
         {
             // 真偽値のビット数は必ず1ビットとなるので、ビット数の指定はナシ。
             PSYQ_ASSERT(local_size_cell.empty());
@@ -221,13 +221,13 @@ class psyq::scenario_engine::state_builder
             // ビット数セルがからの場合は、型の種類ごとのデフォルト値を使う。
             switch (local_kind)
             {
-                case template_state_archive::kind_UNSIGNED:
-                case template_state_archive::kind_SIGNED:
+                case template_reservoir::state::kind_UNSIGNED:
+                case template_reservoir::state::kind_SIGNED:
                 local_size =
                     PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_INTEGER_SIZE_DEFAULT;
                 break;
 
-                case template_state_archive::kind_FLOAT:
+                case template_reservoir::state::kind_FLOAT:
                 local_size =
                     PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_FLOAT_SIZE_DEFAULT;
                 break;
@@ -250,7 +250,7 @@ class psyq::scenario_engine::state_builder
                 return false;
             }
         }
-        PSYQ_ASSERT(local_size <= template_state_archive::BLOCK_SIZE);
+        PSYQ_ASSERT(local_size <= template_reservoir::BLOCK_SIZE);
 
         // 状態値の初期値を取得し、状態値を登録する。
         auto const local_value_cell(
@@ -259,21 +259,21 @@ class psyq::scenario_engine::state_builder
                 PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_VALUE));
         switch (local_kind)
         {
-            case template_state_archive::kind_BOOL:
+            case template_reservoir::state::kind_BOOL:
             return this_type::register_bool(
-                io_states, in_chunk, local_key, local_value_cell);
+                io_reservoir, in_chunk, local_key, local_value_cell);
 
-            case template_state_archive::kind_UNSIGNED:
+            case template_reservoir::state::kind_UNSIGNED:
             return this_type::register_unsigned(
-                io_states, in_chunk, local_key, local_value_cell, local_size);
+                io_reservoir, in_chunk, local_key, local_value_cell, local_size);
 
-            case template_state_archive::kind_SIGNED:
+            case template_reservoir::state::kind_SIGNED:
             return this_type::register_signed(
-                io_states, in_chunk, local_key, local_value_cell, local_size);
+                io_reservoir, in_chunk, local_key, local_value_cell, local_size);
 
-            case template_state_archive::kind_FLOAT:
+            case template_reservoir::state::kind_FLOAT:
             return this_type::register_float(
-                io_states, in_chunk, local_key, local_value_cell, local_size);
+                io_reservoir, in_chunk, local_key, local_value_cell, local_size);
 
             default:
             PSYQ_ASSERT(false);
@@ -281,11 +281,11 @@ class psyq::scenario_engine::state_builder
         }
     }
 
-    private: template<typename template_state_archive>
+    private: template<typename template_reservoir>
     static bool register_bool(
-        template_state_archive& io_states,
-        typename template_state_archive::key_type const& in_chunk,
-        typename template_state_archive::key_type const& in_key,
+        template_reservoir& io_reservoir,
+        typename template_reservoir::key_type const& in_chunk,
+        typename template_reservoir::key_type const& in_key,
         typename this_type::string_table::string_view const& in_value_cell)
     {
         auto const local_get_bool(
@@ -295,14 +295,14 @@ class psyq::scenario_engine::state_builder
             PSYQ_ASSERT(false);
             return false;
         }
-        return io_states.register_bool(in_chunk, in_key, local_get_bool != 0);
+        return io_reservoir.register_bool(in_chunk, in_key, local_get_bool != 0);
     }
 
-    private: template<typename template_state_archive>
+    private: template<typename template_reservoir>
     static bool register_unsigned(
-        template_state_archive& io_states,
-        typename template_state_archive::key_type const& in_chunk,
-        typename template_state_archive::key_type const& in_key,
+        template_reservoir& io_reservoir,
+        typename template_reservoir::key_type const& in_chunk,
+        typename template_reservoir::key_type const& in_key,
         typename this_type::string_table::string_view const& in_value_cell,
         std::size_t const in_size)
     {
@@ -316,15 +316,15 @@ class psyq::scenario_engine::state_builder
             PSYQ_ASSERT(false);
             return false;
         }
-        return io_states.register_unsigned(
+        return io_reservoir.register_unsigned(
             in_chunk, in_key, local_value, in_size);
     }
 
-    private: template<typename template_state_archive>
+    private: template<typename template_reservoir>
     static bool register_signed(
-        template_state_archive& io_states,
-        typename template_state_archive::key_type const& in_chunk,
-        typename template_state_archive::key_type const& in_key,
+        template_reservoir& io_reservoir,
+        typename template_reservoir::key_type const& in_chunk,
+        typename template_reservoir::key_type const& in_key,
         typename this_type::string_table::string_view const& in_value_cell,
         std::size_t const in_size)
     {
@@ -338,15 +338,15 @@ class psyq::scenario_engine::state_builder
             PSYQ_ASSERT(false);
             return false;
         }
-        return io_states.register_signed(
+        return io_reservoir.register_signed(
             in_chunk, in_key, local_value, in_size);
     }
 
-    private: template<typename template_state_archive>
+    private: template<typename template_reservoir>
     static bool register_float(
-        template_state_archive& io_states,
-        typename template_state_archive::key_type const& in_chunk,
-        typename template_state_archive::key_type const& in_key,
+        template_reservoir& io_reservoir,
+        typename template_reservoir::key_type const& in_chunk,
+        typename template_reservoir::key_type const& in_key,
         typename this_type::string_table::string_view const& in_value_cell,
         std::size_t const in_size)
     {
@@ -362,7 +362,7 @@ class psyq::scenario_engine::state_builder
         }
         /// @todo 未実装。
         return false;
-        //return io_states.register_float(in_chunk, in_key, local_value, in_size);
+        //return io_reservoir.register_float(in_chunk, in_key, local_value, in_size);
     }
 
     //-------------------------------------------------------------------------

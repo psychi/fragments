@@ -297,7 +297,7 @@ class psyq::scenario_engine::dispatcher
 
         @param[in] in_expression_key    評価に用いる条件式の識別値。
         @param[in] in_function          登録する関数オブジェクト。
-        @param[in] in_reserve_functions 予約する関数オブジェクトコンテナの容量。
+        @param[in] in_reserve_functions 関数オブジェクトの予約数。
         @retval true  成功。関数オブジェクトを登録した。
         @retval false 失敗。関数オブジェクトは登録されなかった。
      */
@@ -542,6 +542,7 @@ class psyq::scenario_engine::dispatcher
         template_evaluator const& in_evaluator,
         typename template_evaluator::reservoir const& in_reservoir)
     {
+        // 条件式監視器を組み立てる。
         for (auto& local_expression_monitor: this->expression_monitors_)
         {
             auto const local_constructed(
@@ -771,7 +772,7 @@ class psyq::scenario_engine::dispatcher
     /// 条件式監視器の辞書。
     private: typename this_type::expression_monitor::vector expression_monitors_;
 
-    /// 状態監視監視器の辞書。
+    /// 状態監視器の辞書。
     private: typename this_type::state_monitor::vector state_monitors_;
 
 }; // class psyq::scenario_engine::dispatcher

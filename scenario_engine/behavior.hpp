@@ -213,7 +213,7 @@ struct psyq::scenario_engine::behavior_chunk
     /** @brief 状態値を操作する関数オブジェクトを生成する。
         @param[in,out] io_reservoir 関数から参照する状態貯蔵器。
         @param[in] in_condition     関数の起動条件。
-        @param[in] in_key           操作する状態値のキー。
+        @param[in] in_state_key     操作する状態値のキー。
         @param[in] in_operator      状態値の操作で使う演算子。
         @param[in] in_value         状態値の操作で使う演算値。
         @param[in] in_allocator     生成に使うメモリ割当子。
@@ -227,7 +227,7 @@ struct psyq::scenario_engine::behavior_chunk
     make_state_operation_function(
         template_reservoir& io_reservoir,
         bool const in_condition,
-        typename template_reservoir::key_type const& in_key,
+        typename template_reservoir::state_key const& in_state_key,
         typename this_type::state_operator_enum const in_operator,
         template_value const& in_value,
         template_allocator const& in_allocator)
@@ -248,7 +248,7 @@ struct psyq::scenario_engine::behavior_chunk
                         && in_condition == (0 < in_evaluation))
                     {
                         this_type::operate_state(
-                            io_reservoir, in_key, in_operator, in_value);
+                            io_reservoir, in_state_key, in_operator, in_value);
                     }
                 }));
     }
@@ -257,18 +257,19 @@ struct psyq::scenario_engine::behavior_chunk
     private: template<typename template_reservoir, typename template_value>
     static bool operate_state(
         template_reservoir& io_reservoir,
-        typename template_reservoir::key_type const& in_key,
+        typename template_reservoir::state_key const& in_state_key,
         typename this_type::state_operator_enum const in_operator,
         template_value const& in_value)
     {
         if (in_operator == this_type::state_operator_COPY)
         {
-            auto const local_state(io_reservoir.set_state(in_key, in_value));
+            auto const local_state(
+                io_reservoir.set_state(in_state_key, in_value));
             PSYQ_ASSERT(local_state != nullptr);
             return local_state != nullptr;
         }
         template_value local_value;
-        if (io_reservoir.get_state(in_key, local_value) == nullptr)
+        if (io_reservoir.get_state(in_state_key, local_value) == nullptr)
         {
             PSYQ_ASSERT(false);
             return false;
@@ -296,7 +297,8 @@ struct psyq::scenario_engine::behavior_chunk
             PSYQ_ASSERT(false);
             return false;
         }
-        auto const local_state(io_reservoir.set_state(in_key, local_value));
+        auto const local_state(
+            io_reservoir.set_state(in_state_key, local_value));
         PSYQ_ASSERT(local_state != nullptr);
         return local_state != nullptr;
     }

@@ -106,18 +106,18 @@ class psyq::scenario_engine::state_builder
     std::size_t operator()(
         template_reservoir& io_reservoir,
         template_hasher& io_hasher,
-        typename template_reservoir::key_type const& in_chunk)
+        typename template_reservoir::chunk_key const& in_chunk_key)
     const
     {
         return this_type::build(
-            io_reservoir, io_hasher, in_chunk, this->string_table_);
+            io_reservoir, io_hasher, in_chunk_key, this->string_table_);
     }
 
     public: template<typename template_reservoir, typename template_hasher>
     static std::size_t build(
         template_reservoir& io_reservoir,
         template_hasher& io_hasher,
-        typename template_reservoir::key_type const& in_chunk,
+        typename template_reservoir::chunk_key const& in_chunk_key,
         typename this_type::string_table const& in_string_table)
     {
         // 文字列表を行ごとに解析し、状態値を登録する。
@@ -132,7 +132,7 @@ class psyq::scenario_engine::state_builder
             {
                 auto const local_register_state(
                     this_type::register_state(
-                        io_reservoir, io_hasher, in_chunk, in_string_table, i));
+                        io_reservoir, io_hasher, in_chunk_key, in_string_table, i));
                 if (local_register_state)
                 {
                     ++local_register_count;
@@ -146,7 +146,7 @@ class psyq::scenario_engine::state_builder
     static bool register_state(
         template_reservoir& io_reservoir,
         template_hasher& io_hasher,
-        typename template_reservoir::key_type const& in_chunk,
+        typename template_reservoir::chunk_key const& in_chunk_key,
         typename this_type::string_table const& in_string_table,
         typename this_type::string_table::index_type const in_row_index)
     {
@@ -261,19 +261,19 @@ class psyq::scenario_engine::state_builder
         {
             case template_reservoir::state::kind_BOOL:
             return this_type::register_bool(
-                io_reservoir, in_chunk, local_key, local_value_cell);
+                io_reservoir, in_chunk_key, local_key, local_value_cell);
 
             case template_reservoir::state::kind_UNSIGNED:
             return this_type::register_unsigned(
-                io_reservoir, in_chunk, local_key, local_value_cell, local_size);
+                io_reservoir, in_chunk_key, local_key, local_value_cell, local_size);
 
             case template_reservoir::state::kind_SIGNED:
             return this_type::register_signed(
-                io_reservoir, in_chunk, local_key, local_value_cell, local_size);
+                io_reservoir, in_chunk_key, local_key, local_value_cell, local_size);
 
             case template_reservoir::state::kind_FLOAT:
             return this_type::register_float(
-                io_reservoir, in_chunk, local_key, local_value_cell, local_size);
+                io_reservoir, in_chunk_key, local_key, local_value_cell, local_size);
 
             default:
             PSYQ_ASSERT(false);
@@ -284,8 +284,8 @@ class psyq::scenario_engine::state_builder
     private: template<typename template_reservoir>
     static bool register_bool(
         template_reservoir& io_reservoir,
-        typename template_reservoir::key_type const& in_chunk,
-        typename template_reservoir::key_type const& in_key,
+        typename template_reservoir::chunk_key const& in_chunk_key,
+        typename template_reservoir::state_key const& in_state_key,
         typename this_type::string_table::string_view const& in_value_cell)
     {
         auto const local_get_bool(
@@ -295,14 +295,15 @@ class psyq::scenario_engine::state_builder
             PSYQ_ASSERT(false);
             return false;
         }
-        return io_reservoir.register_bool(in_chunk, in_key, local_get_bool != 0);
+        return io_reservoir.register_bool(
+            in_chunk_key, in_state_key, local_get_bool != 0);
     }
 
     private: template<typename template_reservoir>
     static bool register_unsigned(
         template_reservoir& io_reservoir,
-        typename template_reservoir::key_type const& in_chunk,
-        typename template_reservoir::key_type const& in_key,
+        typename template_reservoir::chunk_key const& in_chunk_key,
+        typename template_reservoir::state_key const& in_state_key,
         typename this_type::string_table::string_view const& in_value_cell,
         std::size_t const in_size)
     {
@@ -317,14 +318,14 @@ class psyq::scenario_engine::state_builder
             return false;
         }
         return io_reservoir.register_unsigned(
-            in_chunk, in_key, local_value, in_size);
+            in_chunk_key, in_state_key, local_value, in_size);
     }
 
     private: template<typename template_reservoir>
     static bool register_signed(
         template_reservoir& io_reservoir,
-        typename template_reservoir::key_type const& in_chunk,
-        typename template_reservoir::key_type const& in_key,
+        typename template_reservoir::chunk_key const& in_chunk_key,
+        typename template_reservoir::state_key const& in_state_key,
         typename this_type::string_table::string_view const& in_value_cell,
         std::size_t const in_size)
     {
@@ -339,14 +340,14 @@ class psyq::scenario_engine::state_builder
             return false;
         }
         return io_reservoir.register_signed(
-            in_chunk, in_key, local_value, in_size);
+            in_chunk_key, in_state_key, local_value, in_size);
     }
 
     private: template<typename template_reservoir>
     static bool register_float(
         template_reservoir& io_reservoir,
-        typename template_reservoir::key_type const& in_chunk,
-        typename template_reservoir::key_type const& in_key,
+        typename template_reservoir::chunk_key const& in_chunk_key,
+        typename template_reservoir::state_key const& in_state_key,
         typename this_type::string_table::string_view const& in_value_cell,
         std::size_t const in_size)
     {
@@ -362,7 +363,7 @@ class psyq::scenario_engine::state_builder
         }
         /// @todo 未実装。
         return false;
-        //return io_reservoir.register_float(in_chunk, in_key, local_value, in_size);
+        //return io_reservoir.register_float(in_chunk_key, in_state_key, local_value, in_size);
     }
 
     //-------------------------------------------------------------------------

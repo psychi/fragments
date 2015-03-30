@@ -38,7 +38,7 @@ namespace psyq
     - reservoir::get_state で、状態値を取得する。
     - reservoir::set_state で、状態値を設定する。
 
-    @tparam template_key @copydoc key_type
+    @tparam template_key       @copydoc state_key
     @tparam template_allocator @copydoc allocator_type
  */
 template<
@@ -50,8 +50,11 @@ class psyq::scenario_engine::reservoir
     private: typedef reservoir this_type;
 
     //-------------------------------------------------------------------------
+    /// @brief チャンクを識別するための値を表す型。
+    public: typedef template_key chunk_key;
+
     /// @brief 状態値を識別するための値を表す型。
-    public: typedef template_key key_type;
+    public: typedef template_key state_key;
 
     /// @brief 各種コンテナに用いるメモリ割当子の型。
     public: typedef template_allocator allocator_type;
@@ -77,11 +80,10 @@ class psyq::scenario_engine::reservoir
              signed_block_type;
 
     /// @brief ビット列ブロックを格納するコンテナ。
-    public: typedef
-         std::vector<
-             typename this_type::block_type,
-             typename this_type::allocator_type>
-                 block_vector;
+    public: typedef std::vector<
+         typename this_type::block_type,
+         typename this_type::allocator_type>
+             block_vector;
 
     public: enum: typename this_type::size_type
     {
@@ -186,7 +188,7 @@ class psyq::scenario_engine::reservoir
 
         /// @brief 状態値に対応する識別値を比較する関数オブジェクト。
         public: typedef psyq::scenario_engine::_private::key_less<
-             this_type,typename reservoir::key_type>
+             this_type, typename reservoir::state_key>
                  key_less;
 
         /// @brief 状態値の型の種別。
@@ -271,9 +273,9 @@ class psyq::scenario_engine::reservoir
 
         //.....................................................................
         /// @brief 状態値が格納されているビット列チャンクの識別値。
-        public: typename reservoir::key_type chunk;
+        public: typename reservoir::chunk_key chunk;
         /// @brief 状態値に対応する識別値。
-        public: typename reservoir::key_type key;
+        public: typename reservoir::state_key key;
         /// @brief 状態値が格納されているビット領域。
         public: typename reservoir::field_type field;
 
@@ -291,11 +293,11 @@ class psyq::scenario_engine::reservoir
 
         /// @brief チャンク識別値を比較する関数オブジェクト。
         typedef psyq::scenario_engine::_private::key_less<
-             this_type, typename reservoir::key_type>
+             this_type, typename reservoir::chunk_key>
                  key_less;
 
         chunk(
-            typename reservoir::key_type in_key,
+            typename reservoir::chunk_key in_key,
             typename reservoir::allocator_type const& in_allocator)
         :
         blocks(in_allocator),
@@ -332,7 +334,7 @@ class psyq::scenario_engine::reservoir
         /// @copydoc empty_field_vector
         typename reservoir::empty_field_vector empty_fields;
         /// @brief チャンクの識別値。
-        typename reservoir::key_type key;
+        typename reservoir::chunk_key key;
 
     }; // struct chunk
 
@@ -389,28 +391,28 @@ class psyq::scenario_engine::reservoir
     /// @name 状態値の取得と設定
     //@{
     /** @brief 状態値の登記を取得する。
-        @param[in] in_key 取得する状態値に対応する識別値。
+        @param[in] in_state_key 取得する状態値に対応する識別値。
         @retval !=nullptr
-            in_key に対応する状態値の登記を指すポインタ。このポインタは、
+            in_state_key に対応する状態値の登記を指すポインタ。このポインタは、
             register_bool などで他の状態値が登録されると、無効になる。
-        @retval ==nullptr in_key に対応する状態値が登録されてない。
+        @retval ==nullptr in_state_key に対応する状態値が登録されてない。
         @sa register_bool
         @sa register_unsigned
         @sa register_signed
      */
     public: typename this_type::state const* find_state(
-        typename this_type::key_type const& in_key)
+        typename this_type::state_key const& in_state_key)
     const PSYQ_NOEXCEPT
     {
         return this_type::state::key_less::find_const_pointer(
-            this->states_, in_key);
+            this->states_, in_state_key);
     }
 
     /** @brief 状態値を取得する。
 
         すでに登録されている状態値から、値を取得する。
 
-        @param[in] in_key     取得する状態値に対応する識別値。
+        @param[in] in_state_key     取得する状態値に対応する識別値。
         @param[out] out_value 取得した状態値の格納先。
         @retval !=nullptr
             成功。取得した状態値を out_value に格納した。
@@ -423,14 +425,14 @@ class psyq::scenario_engine::reservoir
      */
     public: template<typename template_value>
     typename this_type::state const* get_state(
-        typename this_type::key_type const& in_key,
+        typename this_type::state_key const& in_state_key,
         template_value& out_value)
     const PSYQ_NOEXCEPT
     {
         // 状態値登記を検索し、ビット列チャンクから状態値のビット列を取得する。
         auto const local_state(
             this_type::state::key_less::find_const_pointer(
-                this->states_, in_key));
+                this->states_, in_state_key));
         if (local_state == nullptr)
         {
             return nullptr;
@@ -556,8 +558,8 @@ class psyq::scenario_engine::reservoir
 
         すでに登録されている状態値に、値を設定する。
 
-        @param[in] in_key   設定する状態値の識別番号。
-        @param[in] in_value 設定する値。
+        @param[in] in_state_key   設定する状態値の識別番号。
+        @param[in] in_state_value 設定する値。
         @retval true  成功。値を設定した状態の登記を返す。
         @retval false 失敗。状態値は変化しない。
         @sa this_type::register_bool
@@ -567,14 +569,14 @@ class psyq::scenario_engine::reservoir
      */
     public: template<typename template_value>
     typename this_type::state const* set_state(
-        typename this_type::key_type const& in_key,
-        template_value const in_value)
+        typename this_type::state_key const& in_state_key,
+        template_value const in_state_value)
     PSYQ_NOEXCEPT
     {
         // 状態値登記を検索する。
         auto const local_state(
             this_type::state::key_less::find_const_pointer(
-                this->states_, in_key));
+                this->states_, in_state_key));
         if (local_state == nullptr)
         {
             return nullptr;
@@ -608,7 +610,7 @@ class psyq::scenario_engine::reservoir
                 return this_type::notify_transition(
                     const_cast<this_type::state&>(*local_state),
                     this_type::set_bits(
-                        local_chunk_blocks, local_position, 1, in_value));
+                        local_chunk_blocks, local_position, 1, in_state_value));
             }
             return nullptr;
 
@@ -632,14 +634,14 @@ class psyq::scenario_engine::reservoir
                             local_chunk_blocks,
                             local_position,
                             local_size,
-                            in_value):
+                            in_state_value):
                         // 符号なし整数を設定する。
                         this_type::set_bits(
                             local_chunk_blocks,
                             local_position,
                             local_size,
                             static_cast<typename this_type::block_type>(
-                                in_value)));
+                                in_state_value)));
             }
             return nullptr;
         }
@@ -751,25 +753,25 @@ class psyq::scenario_engine::reservoir
         登録した状態値は
         this_type::get_state と this_type::set_state でアクセスできる。
 
-        @param[in] in_chunk 登録する状態値を格納するビット列チャンクの識別値。
-        @param[in] in_key   登録する状態値の識別番号。
-        @param[in] in_value 登録する状態値の初期値。
+        @param[in] in_chunk_key 登録する状態値を格納するビット列チャンクの識別値。
+        @param[in] in_state_key   登録する状態値の識別番号。
+        @param[in] in_state_value 登録する状態値の初期値。
         @retval true  成功。状態値を登録した。
         @retval false
             失敗。状態値を登録できなかった。
-            - in_key に対応する状態値がすでに登録されていると失敗する。
+            - in_state_key に対応する状態値がすでに登録されていると失敗する。
      */
     public: bool register_bool(
-        typename this_type::key_type in_chunk,
-        typename this_type::key_type in_key,
-        bool const in_value)
+        typename this_type::chunk_key in_chunk_key,
+        typename this_type::state_key in_state_key,
+        bool const in_state_value)
     {
         // 状態値登記を登録した後、状態値に初期値を設定する。
         auto& local_chunk(
-            this_type::equip_chunk(this->chunks_, std::move(in_chunk)));
+            this_type::equip_chunk(this->chunks_, std::move(in_chunk_key)));
         auto const local_state(
             this->register_state(
-                local_chunk, std::move(in_key), this_type::state::kind_BOOL));
+                local_chunk, std::move(in_state_key), this_type::state::kind_BOOL));
         if (local_state == nullptr)
         {
             return false;
@@ -778,7 +780,7 @@ class psyq::scenario_engine::reservoir
             local_chunk.blocks,
             local_state->get_field_position(),
             1,
-            in_value);
+            in_state_value);
     }
 
     /** @brief 符号なし整数型の状態値を登録する。
@@ -786,26 +788,26 @@ class psyq::scenario_engine::reservoir
         登録した状態値は
         this_type::get_state と this_type::set_state でアクセスできる。
 
-        @param[in] in_chunk 登録する状態値を格納するビット列チャンクの識別値。
-        @param[in] in_key   登録する状態値の識別番号。
-        @param[in] in_value 登録する状態値の初期値。
-        @param[in] in_size  登録する状態値のビット数。
+        @param[in] in_chunk_key   登録する状態値を格納するビット列チャンクの識別値。
+        @param[in] in_state_key   登録する状態値の識別番号。
+        @param[in] in_state_value 登録する状態値の初期値。
+        @param[in] in_state_size  登録する状態値のビット数。
         @retval true  成功。状態値を登録した。
         @retval false
             失敗。状態値を登録できなかった。
-            - in_key に対応する状態値がすでに登録されていると失敗する。
-            - this_type::MAX_STATE_SIZE より in_size が大きければ失敗する。
+            - in_state_key に対応する状態値がすでに登録されていると失敗する。
+            - this_type::MAX_STATE_SIZE より in_state_size が大きければ失敗する。
      */
     public: bool register_unsigned(
-        typename this_type::key_type in_chunk,
-        typename this_type::key_type in_key,
-        typename this_type::block_type const in_value,
-        std::size_t const in_size = this_type::BLOCK_SIZE)
+        typename this_type::chunk_key in_chunk_key,
+        typename this_type::state_key in_state_key,
+        typename this_type::block_type const in_state_value,
+        std::size_t const in_state_size = this_type::BLOCK_SIZE)
     {
         // 登録可能な状態値か判定する。
         auto const local_format(
-            static_cast<typename this_type::format_type>(in_size));
-        if (this_type::BLOCK_SIZE < in_size
+            static_cast<typename this_type::format_type>(in_state_size));
+        if (this_type::BLOCK_SIZE < in_state_size
             || local_format < this_type::state::kind_UNSIGNED)
         {
             return false;
@@ -813,10 +815,10 @@ class psyq::scenario_engine::reservoir
 
         // 状態値を登録した後、状態値に初期値を設定する。
         auto& local_chunk(
-            this_type::equip_chunk(this->chunks_, std::move(in_chunk)));
+            this_type::equip_chunk(this->chunks_, std::move(in_chunk_key)));
         auto const local_state(
             this->register_state(
-                local_chunk, std::move(in_key), local_format));
+                local_chunk, std::move(in_state_key), local_format));
         if (local_state == nullptr)
         {
             return false;
@@ -824,8 +826,8 @@ class psyq::scenario_engine::reservoir
         return 0 <= this_type::set_bits(
             local_chunk.blocks,
             local_state->get_field_position(),
-            static_cast<typename this_type::size_type>(in_size),
-            in_value);
+            static_cast<typename this_type::size_type>(in_state_size),
+            in_state_value);
     }
 
     /** @brief 符号あり整数型の状態値を登録する。
@@ -833,26 +835,26 @@ class psyq::scenario_engine::reservoir
         登録した状態値は
         this_type::get_state と this_type::set_state でアクセスできる。
 
-        @param[in] in_chunk 登録する状態値を格納するビット列チャンクの識別値。
-        @param[in] in_key   登録する状態値の識別番号。
-        @param[in] in_value 登録する状態値の初期値。
-        @param[in] in_size  登録する状態値のビット数。
+        @param[in] in_chunk_key   登録する状態値を格納するビット列チャンクの識別値。
+        @param[in] in_state_key   登録する状態値の識別番号。
+        @param[in] in_state_value 登録する状態値の初期値。
+        @param[in] in_state_size  登録する状態値のビット数。
         @retval true  成功。状態値を登録した。
         @retval false
             失敗。状態値を登録できなかった。
-            - in_key に対応する状態値がすでに登録されていると失敗する。
-            - this_type::MAX_STATE_SIZE より in_size が大きければ失敗する。
+            - in_state_key に対応する状態値がすでに登録されていると失敗する。
+            - this_type::MAX_STATE_SIZE より in_state_size が大きければ失敗する。
      */
     public: bool register_signed(
-        typename this_type::key_type in_chunk,
-        typename this_type::key_type in_key,
-        typename this_type::signed_block_type const in_value,
-        std::size_t const in_size = this_type::BLOCK_SIZE)
+        typename this_type::chunk_key in_chunk_key,
+        typename this_type::state_key in_state_key,
+        typename this_type::signed_block_type const in_state_value,
+        std::size_t const in_state_size = this_type::BLOCK_SIZE)
     {
         // 登録可能な状態値か判定する。
         auto const local_format(
-            -static_cast<typename this_type::format_type>(in_size));
-        if (this_type::BLOCK_SIZE < in_size
+            -static_cast<typename this_type::format_type>(in_state_size));
+        if (this_type::BLOCK_SIZE < in_state_size
             || this_type::state::kind_SIGNED < local_format)
         {
             return false;
@@ -860,10 +862,10 @@ class psyq::scenario_engine::reservoir
 
         // 状態値を登録した後、状態値に初期値を設定する。
         auto& local_chunk(
-            this_type::equip_chunk(this->chunks_, std::move(in_chunk)));
+            this_type::equip_chunk(this->chunks_, std::move(in_chunk_key)));
         auto const local_state(
             this->register_state(
-                local_chunk, std::move(in_key), local_format));
+                local_chunk, std::move(in_state_key), local_format));
         if (local_state == nullptr)
         {
             return false;
@@ -871,51 +873,52 @@ class psyq::scenario_engine::reservoir
         return 0 <= this_type::set_signed(
             local_chunk.blocks,
             local_state->get_field_position(),
-            static_cast<typename this_type::size_type>(in_size),
-            in_value);
+            static_cast<typename this_type::size_type>(in_state_size),
+            in_state_value);
     }
     //@}
     //-------------------------------------------------------------------------
     /// @name ビット列チャンク
     //@{
     /** @brief ビット列チャンクを予約する。
-        @param[in] in_chunk                予約するビット列チャンクの識別番号。
+        @param[in] in_chunk_key                予約するビット列チャンクの識別番号。
         @param[in] in_reserve_blocks       予約しておくブロックの数。
         @param[in] in_reserve_empty_fields 予約しておく空き領域の数。
      */
     public: void reserve_chunk(
-        typename this_type::key_type in_chunk,
+        typename this_type::chunk_key in_chunk_key,
         std::size_t const in_reserve_blocks,
         std::size_t const in_reserve_empty_fields)
     {
         auto& local_chunk(
-            this_type::equip_chunk(this->chunks_, std::move(in_chunk)));
+            this_type::equip_chunk(this->chunks_, std::move(in_chunk_key)));
         local_chunk.blocks.reserve(in_reserve_blocks);
         local_chunk.empty_fields.reserve(in_reserve_empty_fields);
     }
 
     /** @brief ビット列チャンクを破棄する。
-        @param[in] in_chunk 破棄するビット列チャンクの識別値。
+        @param[in] in_chunk_key 破棄するビット列チャンクの識別値。
         @todo 未実装。
      */
-    public: bool remove_chunk(typename this_type::key_type const& in_chunk);
+    public: bool remove_chunk(
+        typename this_type::chunk_key const& in_chunk_key);
 
     /** @brief ビット列チャンクをシリアル化する。
-        @param[in] in_chunk シリアル化するビット列チャンクの識別番号。
+        @param[in] in_chunk_key シリアル化するビット列チャンクの識別番号。
         @return シリアル化したビット列チャンク。
         @todo 未実装。
      */
     public: typename this_type::block_vector serialize_chunk(
-        std::size_t const in_chunk)
+        typename this_type::chunk_key const& in_chunk_key)
     const;
 
     /** @brief シリアル化されたビット列チャンクを復元する。
-        @param[in] in_chunk            復元するビット列チャンクの識別番号。
+        @param[in] in_chunk_key            復元するビット列チャンクの識別番号。
         @param[in] in_serialized_chunk シリアル化されたビット列チャンク。
         @todo 未実装。
      */
     public: bool deserialize_chunk(
-        std::size_t const in_chunk,
+        typename this_type::chunk_key const& in_chunk_key,
         typename this_type::block_vector const& in_serialized_chunk);
     //@}
     /** @brief 識別値に対応するビット列チャンクを用意する。
@@ -930,7 +933,7 @@ class psyq::scenario_engine::reservoir
      */
     private: static typename this_type::chunk::vector::value_type& equip_chunk(
         typename this_type::chunk::vector& io_chunks,
-        typename this_type::key_type in_chunk_key)
+        typename this_type::chunk_key in_chunk_key)
     {
         auto const local_lower_bound(
             std::lower_bound(
@@ -1063,27 +1066,27 @@ class psyq::scenario_engine::reservoir
     //-------------------------------------------------------------------------
     /** @brief 状態値を登録する。
         @param[in,out] io_chunk 登録する状態値が所属するビット列チャンク。
-        @param[in] in_key       登録する状態値の識別番号。
+        @param[in] in_state_key       登録する状態値の識別番号。
         @param[in] in_format    登録する状態値の構成。
         @retval !=nullptr 成功。登録した状態登記。
         @retval ==nullptr
             失敗。状態値を登録できなかった。
-            - in_key に対応する状態値がすでに登録されていると失敗する。
+            - in_state_key に対応する状態値がすでに登録されていると失敗する。
      */
     private: typename this_type::state::vector::value_type* register_state(
         typename this_type::chunk& io_chunk,
-        typename this_type::key_type in_key,
+        typename this_type::state_key in_state_key,
         typename this_type::format_type const in_format)
     {
-        // in_key と同じ状態登記がないことを確認する。
+        // in_state_key と同じ状態登記がないことを確認する。
         auto const local_state_iterator(
             std::lower_bound(
                 this->states_.begin(),
                 this->states_.end(),
-                in_key,
+                in_state_key,
                 typename this_type::state::key_less()));
         if (local_state_iterator != this->states_.end()
-            && local_state_iterator->key == in_key)
+            && local_state_iterator->key == in_state_key)
         {
             return nullptr;
         }
@@ -1094,7 +1097,7 @@ class psyq::scenario_engine::reservoir
                 local_state_iterator,
                 typename this_type::state::vector::value_type()));
         local_state.chunk = io_chunk.key;
-        local_state.key = std::move(in_key);
+        local_state.key = std::move(in_state_key);
         local_state.field = 1 << this_type::field_TRANSITION_FRONT;
         PSYQ_ASSERT(in_format != this_type::state::kind_NULL);
         this_type::set_state_format(local_state, in_format);

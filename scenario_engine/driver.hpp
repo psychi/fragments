@@ -171,35 +171,35 @@ class psyq::scenario_engine::driver
     //-------------------------------------------------------------------------
     /// @name チャンクの追加
     /** @brief シナリオ駆動器に状態値を追加する。
-        @param[in] in_chunk 状態値を追加するチャンクの識別値。
+        @param[in] in_chunk_key 状態値を追加するチャンクの識別値。
         @param[in] in_state_builder
             状態値を登録する関数オブジェクト。
             以下に相当するメンバ関数を使えること。
             @code
             // @brief 状態貯蔵器に状態値を登録する。
             // @param[in,out] io_reservoir 状態値を登録する書庫。
-            // @param[in,out] io_hasher 文字列から識別値を生成する関数オブジェクト。
-            // @param[in] in_chunk      状態値を登録するチャンクを表す識別値。
+            // @param[in,out] io_hasher    文字列から識別値を生成する関数オブジェクト。
+            // @param[in] in_chunk_key     状態値を登録するチャンクを表す識別値。
             // @return 登録した状態値の数。
             std::size_t template_builder::operator()(
                 driver::reservoir& io_reservoir,
                 driver::hasher& io_hasher,
-                driver::reservoir::key_type const& in_chunk)
+                driver::reservoir::chunk_key const& in_chunk_key)
             const;
             @endcode
         @return 登録した状態値の数。
      */
     public: template<typename template_builder>
     std::size_t add_reservoir_chunk(
-        typename this_type::reservoir::key_type const& in_chunk,
+        typename this_type::reservoir::chunk_key const& in_chunk_key,
         template_builder const& in_state_builder)
     {
         return in_state_builder(
-            this->reservoir_, this->hash_function_, in_chunk);
+            this->reservoir_, this->hash_function_, in_chunk_key);
     }
 
     /** @brief シナリオ駆動器に条件式を追加する。
-        @param[in] in_chunk 条件式を追加するチャンクの識別値。
+        @param[in] in_chunk_key 条件式を追加するチャンクの識別値。
         @param[in] in_expression_builder
             条件式を登録する関数オブジェクト。
             以下に相当するメンバ関数を使えること。
@@ -207,8 +207,8 @@ class psyq::scenario_engine::driver
             // @brief 条件評価器に条件式を登録する。
             // @param[in,out] io_evaluator 条件式を登録する条件評価器。
             // @param[in,out] io_hasher    文字列から識別値を生成する関数オブジェクト。
-            // @param[in] in_chunk         条件式を登録するチャンクを表す識別値。
-            // @param[in] in_reservoir        条件式で使う状態値の書庫。
+            // @param[in] in_chunk_key     条件式を登録するチャンクを表す識別値。
+            // @param[in] in_reservoir     条件式で使う状態値の書庫。
             // @return 登録した状態値の数。
             std::size_t template_builder::operator()(
                 driver::evaluator& io_evaluator,
@@ -221,11 +221,14 @@ class psyq::scenario_engine::driver
      */
     public: template<typename template_builder>
     std::size_t add_evaluator_chunk(
-        typename this_type::evaluator::expression::key_type const& in_chunk,
+        typename this_type::evaluator::reservoir::chunk_key const& in_chunk_key,
         template_builder const& in_expression_builder)
     {
         return in_expression_builder(
-            this->evaluator_, this->hash_function_, in_chunk, this->reservoir_);
+            this->evaluator_,
+            this->hash_function_,
+            in_chunk_key,
+            this->reservoir_);
     }
 
     /** @brief シナリオ駆動器に条件挙動を追加する。

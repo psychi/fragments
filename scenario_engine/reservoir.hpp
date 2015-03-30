@@ -14,7 +14,7 @@ namespace psyq
     namespace scenario_engine
     {
         /// @cond
-        template<typename, typename> class reservoir;
+        template<typename, typename, typename> class reservoir;
         /// @endcond
 
         /// @brief psyq::scenario_engine の管理者以外は、直接アクセス禁止。
@@ -38,11 +38,13 @@ namespace psyq
     - reservoir::get_state で、状態値を取得する。
     - reservoir::set_state で、状態値を設定する。
 
-    @tparam template_key       @copydoc state_key
-    @tparam template_allocator @copydoc allocator_type
+    @tparam template_state_key @copydoc reservoir::state_key
+    @tparam template_chunk_key @copydoc reservoir::chunk_key
+    @tparam template_allocator @copydoc reservoir::allocator_type
  */
 template<
-    typename template_key = std::uint32_t,
+    typename template_state_key = std::uint32_t,
+    typename template_chunk_key = template_state_key,
     typename template_allocator = std::allocator<void*>>
 class psyq::scenario_engine::reservoir
 {
@@ -50,11 +52,11 @@ class psyq::scenario_engine::reservoir
     private: typedef reservoir this_type;
 
     //-------------------------------------------------------------------------
-    /// @brief チャンクを識別するための値を表す型。
-    public: typedef template_key chunk_key;
-
     /// @brief 状態値を識別するための値を表す型。
-    public: typedef template_key state_key;
+    public: typedef template_state_key state_key;
+
+    /// @brief チャンクを識別するための値を表す型。
+    public: typedef template_chunk_key chunk_key;
 
     /// @brief 各種コンテナに用いるメモリ割当子の型。
     public: typedef template_allocator allocator_type;
@@ -181,16 +183,6 @@ class psyq::scenario_engine::reservoir
     {
         private: typedef state this_type;
 
-        /// @brief 状態値登記のコンテナ。
-        public: typedef std::vector<
-            this_type, typename reservoir::allocator_type>
-                vector;
-
-        /// @brief 状態値に対応する識別値を比較する関数オブジェクト。
-        public: typedef psyq::scenario_engine::_private::key_less<
-             this_type, typename reservoir::state_key>
-                 key_less;
-
         /// @brief 状態値の型の種別。
         public: enum kind_enum: typename reservoir::format_type
         {
@@ -281,20 +273,21 @@ class psyq::scenario_engine::reservoir
 
     }; // struct state
 
+    /// @brief 状態値登記のコンテナ。
+    private: typedef std::vector<
+        typename this_type::state, typename this_type::allocator_type>
+            state_vector;
+
+    /// @brief 状態値に対応する識別値を比較する関数オブジェクト。
+    private: typedef psyq::scenario_engine::_private::key_less<
+         typename this_type::state, typename this_type::state_key>
+             state_key_less;
+
     //-------------------------------------------------------------------------
     /// @brief 状態値を格納するビット列のチャンク。
     private: struct chunk
     {
         typedef chunk this_type;
-
-        /// @brief ビット列チャンクのコンテナ。
-        typedef std::vector<this_type, typename reservoir::allocator_type>
-             vector;
-
-        /// @brief チャンク識別値を比較する関数オブジェクト。
-        typedef psyq::scenario_engine::_private::key_less<
-             this_type, typename reservoir::chunk_key>
-                 key_less;
 
         chunk(
             typename reservoir::chunk_key in_key,
@@ -337,6 +330,16 @@ class psyq::scenario_engine::reservoir
         typename reservoir::chunk_key key;
 
     }; // struct chunk
+
+    /// @brief ビット列チャンクのコンテナ。
+    private: typedef std::vector<
+         typename this_type::chunk, typename this_type::allocator_type>
+             chunk_vector;
+
+    /// @brief チャンク識別値を比較する関数オブジェクト。
+    private: typedef psyq::scenario_engine::_private::key_less<
+         typename this_type::chunk, typename this_type::chunk_key>
+             chunk_key_less;
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
@@ -404,7 +407,7 @@ class psyq::scenario_engine::reservoir
         typename this_type::state_key const& in_state_key)
     const PSYQ_NOEXCEPT
     {
-        return this_type::state::key_less::find_const_pointer(
+        return this_type::state_key_less::find_const_pointer(
             this->states_, in_state_key);
     }
 
@@ -431,14 +434,14 @@ class psyq::scenario_engine::reservoir
     {
         // 状態値登記を検索し、ビット列チャンクから状態値のビット列を取得する。
         auto const local_state(
-            this_type::state::key_less::find_const_pointer(
+            this_type::state_key_less::find_const_pointer(
                 this->states_, in_state_key));
         if (local_state == nullptr)
         {
             return nullptr;
         }
         auto const local_chunk(
-            this_type::chunk::key_less::find_const_pointer(
+            this_type::chunk_key_less::find_const_pointer(
                 this->chunks_, local_state->chunk));
         if (local_chunk == nullptr)
         {
@@ -575,7 +578,7 @@ class psyq::scenario_engine::reservoir
     {
         // 状態値登記を検索する。
         auto const local_state(
-            this_type::state::key_less::find_const_pointer(
+            this_type::state_key_less::find_const_pointer(
                 this->states_, in_state_key));
         if (local_state == nullptr)
         {
@@ -584,7 +587,7 @@ class psyq::scenario_engine::reservoir
 
         // 状態値を設定するビット列チャンクを決定する。
         auto const local_chunk(
-            this_type::chunk::key_less::find_const_pointer(
+            this_type::chunk_key_less::find_const_pointer(
                 this->chunks_, local_state->chunk));
         if (local_chunk == nullptr)
         {
@@ -931,8 +934,8 @@ class psyq::scenario_engine::reservoir
         @param[in] in_chunk_key  用意するチャンクに対応する識別値。
         @return 用意したチャンクへの参照。
      */
-    private: static typename this_type::chunk::vector::value_type& equip_chunk(
-        typename this_type::chunk::vector& io_chunks,
+    private: static typename this_type::chunk_vector::value_type& equip_chunk(
+        typename this_type::chunk_vector& io_chunks,
         typename this_type::chunk_key in_chunk_key)
     {
         auto const local_lower_bound(
@@ -940,7 +943,7 @@ class psyq::scenario_engine::reservoir
                 io_chunks.begin(),
                 io_chunks.end(),
                 in_chunk_key,
-                typename this_type::chunk::key_less()));
+                typename this_type::chunk_key_less()));
         if (local_lower_bound != io_chunks.end()
             && local_lower_bound->key == in_chunk_key)
         {
@@ -948,7 +951,7 @@ class psyq::scenario_engine::reservoir
         }
         return *io_chunks.insert(
             local_lower_bound,
-            typename this_type::chunk::vector::value_type(
+            typename this_type::chunk_vector::value_type(
                 std::move(in_chunk_key), io_chunks.get_allocator()));
     }
 
@@ -959,7 +962,7 @@ class psyq::scenario_engine::reservoir
     public: void shrink_to_fit()
     {
         // ビット領域の大きさの降順で、状態値を並び替える。
-        std::vector<typename this_type::state::vector::value_type const*>
+        std::vector<typename this_type::state_vector::value_type const*>
             local_states(this->states_.get_allocator());
         local_states.reserve(this->states_.size());
         for (auto& local_state: this->states_)
@@ -969,8 +972,8 @@ class psyq::scenario_engine::reservoir
         struct state_size_greater
         {
             bool operator()(
-                typename this_type::state::vector::value_type const* const in_left,
-                typename this_type::state::vector::value_type const* const in_right)
+                typename this_type::state_vector::value_type const* const in_left,
+                typename this_type::state_vector::value_type const* const in_right)
             const
             {
                 return in_right->get_field_size() < in_left->get_field_size();
@@ -989,7 +992,7 @@ class psyq::scenario_engine::reservoir
             auto& local_new_chunk(
                 *local_reservoir.chunks_.insert(
                     local_reservoir.chunks_.end(),
-                    typename this_type::chunk::vector::value_type(
+                    typename this_type::chunk_vector::value_type(
                         local_old_chunk.key, this->states_.get_allocator())));
             local_new_chunk.blocks.reserve(local_old_chunk.blocks.size());
             local_new_chunk.empty_fields.reserve(
@@ -1000,7 +1003,7 @@ class psyq::scenario_engine::reservoir
         for (auto local_state: local_states)
         {
             auto const local_chunk(
-                this_type::chunk::key_less::find_const_pointer(
+                this_type::chunk_key_less::find_const_pointer(
                     this->chunks_, local_state->chunk));
             if (local_chunk == nullptr)
             {
@@ -1073,7 +1076,7 @@ class psyq::scenario_engine::reservoir
             失敗。状態値を登録できなかった。
             - in_state_key に対応する状態値がすでに登録されていると失敗する。
      */
-    private: typename this_type::state::vector::value_type* register_state(
+    private: typename this_type::state_vector::value_type* register_state(
         typename this_type::chunk& io_chunk,
         typename this_type::state_key in_state_key,
         typename this_type::format_type const in_format)
@@ -1084,7 +1087,7 @@ class psyq::scenario_engine::reservoir
                 this->states_.begin(),
                 this->states_.end(),
                 in_state_key,
-                typename this_type::state::key_less()));
+                typename this_type::state_key_less()));
         if (local_state_iterator != this->states_.end()
             && local_state_iterator->key == in_state_key)
         {
@@ -1095,7 +1098,7 @@ class psyq::scenario_engine::reservoir
         auto& local_state(
             *this->states_.insert(
                 local_state_iterator,
-                typename this_type::state::vector::value_type()));
+                typename this_type::state_vector::value_type()));
         local_state.chunk = io_chunk.key;
         local_state.key = std::move(in_state_key);
         local_state.field = 1 << this_type::field_TRANSITION_FRONT;
@@ -1334,9 +1337,9 @@ class psyq::scenario_engine::reservoir
 
     //-------------------------------------------------------------------------
     /// @brief 状態値登記のコンテナ。
-    private: typename this_type::state::vector states_;
+    private: typename this_type::state_vector states_;
     /// @brief ビット列チャンクのコンテナ。
-    private: typename this_type::chunk::vector chunks_;
+    private: typename this_type::chunk_vector chunks_;
 
 }; // class psyq::reservoir
 

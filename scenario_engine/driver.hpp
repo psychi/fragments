@@ -62,6 +62,7 @@ class psyq::scenario_engine::driver
     /// @brief シナリオ駆動器で用いる状態貯蔵器の型。
     public: typedef psyq::scenario_engine::reservoir<
         typename this_type::hasher::result_type,
+        typename this_type::hasher::result_type,
         typename this_type::allocator_type>
             reservoir;
 
@@ -74,8 +75,8 @@ class psyq::scenario_engine::driver
 
     /// @brief シナリオ駆動器で用いる条件監視器の型。
     public: typedef psyq::scenario_engine::dispatcher<
-        typename this_type::hasher::result_type,
-        typename this_type::hasher::result_type,
+        typename this_type::reservoir::state_key,
+        typename this_type::evaluator::expression_key,
         typename this_type::allocator_type>
             dispatcher;
 

@@ -52,17 +52,8 @@ class psyq::scenario_engine::evaluator
     {
         typedef expression this_type;
 
-        /// @brief 条件式を識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
-        typedef psyq::scenario_engine::_private::key_less<
-            this_type, typename evaluator::expression_key>
-                key_less;
-
         /// @brief 要素条件のインデクス番号を表す型。
         typedef std::uint32_t element_index;
-
-        /// @brief 条件式のコンテナを表す型。
-        typedef std::vector<this_type, typename evaluator::allocator_type>
-            vector;
 
         /// @brief 条件式の種類を表す列挙型。
         enum kind_enum: std::uint8_t
@@ -92,6 +83,16 @@ class psyq::scenario_engine::evaluator
         typename this_type::logic_enum logic;
 
     }; // struct expression
+
+    /// @brief 条件式を識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
+    private: typedef psyq::scenario_engine::_private::key_less<
+        typename this_type::expression, typename this_type::expression_key>
+            expression_key_less;
+
+    /// @brief 条件式のコンテナを表す型。
+    private: typedef std::vector<
+        typename this_type::expression, typename this_type::allocator_type>
+            expression_vector;
 
     //-------------------------------------------------------------------------
     /// @brief 複合条件式の要素条件。
@@ -229,15 +230,6 @@ class psyq::scenario_engine::evaluator
     {
         typedef chunk this_type;
 
-        /// @brief 要素条件チャンクのコンテナ。
-        typedef std::vector<this_type, typename evaluator::allocator_type>
-             vector;
-
-        /// @brief 要素条件チャンクの識別値を比較する関数オブジェクト。
-        typedef psyq::scenario_engine::_private::key_less<
-             this_type, typename evaluator::reservoir::chunk_key>
-                 key_less;
-
         /** @brief チャンクを構築する。
             @param[in] in_key       チャンクの識別値。
             @param[in] in_allocator メモリ割当子の初期値。
@@ -283,6 +275,16 @@ class psyq::scenario_engine::evaluator
         typename evaluator::reservoir::chunk_key key;
 
     }; // struct chunk
+
+    /// @brief 要素条件チャンクのコンテナ。
+    private: typedef std::vector<
+         typename this_type::chunk, typename this_type::allocator_type>
+             chunk_vector;
+
+    /// @brief 要素条件チャンクの識別値を比較する関数オブジェクト。
+    private: typedef psyq::scenario_engine::_private::key_less<
+         typename this_type::chunk, typename this_type::reservoir::chunk_key>
+             chunk_key_less;
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
@@ -406,7 +408,7 @@ class psyq::scenario_engine::evaluator
         typename this_type::expression_key const& in_expression_key)
     const PSYQ_NOEXCEPT
     {
-        return this_type::expression::key_less::find_const_pointer(
+        return this_type::expression_key_less::find_const_pointer(
             this->expressions_, in_expression_key);
     }
 
@@ -473,7 +475,7 @@ class psyq::scenario_engine::evaluator
      */
     private: template<typename template_element_container>
     static bool register_expression(
-        typename this_type::expression::vector& io_expressions,
+        typename this_type::expression_vector& io_expressions,
         template_element_container& io_elements,
         template_element_container const& in_elements,
         typename this_type::reservoir::chunk_key const& in_chunk_key,
@@ -492,7 +494,7 @@ class psyq::scenario_engine::evaluator
                 io_expressions.begin(),
                 io_expressions.end(),
                 in_expression_key,
-                typename this_type::expression::key_less()));
+                typename this_type::expression_key_less()));
         if (local_lower_bound != io_expressions.end()
             && local_lower_bound->key == in_expression_key)
         {
@@ -527,7 +529,7 @@ class psyq::scenario_engine::evaluator
 
     private: static bool is_valid_sub_expression(
         typename this_type::sub_expression::vector const& in_elements,
-        typename this_type::expression::vector const& in_expressions)
+        typename this_type::expression_vector const& in_expressions)
     {
         for (auto& local_element: in_elements)
         {
@@ -536,7 +538,7 @@ class psyq::scenario_engine::evaluator
                     in_expressions.begin(),
                     in_expressions.end(),
                     local_element.key,
-                    typename this_type::expression::key_less()));
+                    typename this_type::expression_key_less()));
             if (!local_find)
             {
                 return false;
@@ -570,7 +572,7 @@ class psyq::scenario_engine::evaluator
         typename this_type::reservoir::chunk_key const& in_chunk_key)
     const PSYQ_NOEXCEPT
     {
-        return this_type::chunk::key_less::find_const_pointer(
+        return this_type::chunk_key_less::find_const_pointer(
             this->chunks_, in_chunk_key);
     }
 
@@ -600,7 +602,7 @@ class psyq::scenario_engine::evaluator
         typename this_type::reservoir::chunk_key const& in_chunk_key);
     //@}
     private: static typename this_type::chunk& equip_chunk(
-        typename this_type::chunk::vector& io_chunks,
+        typename this_type::chunk_vector& io_chunks,
         typename this_type::reservoir::chunk_key const& in_chunk_key)
     {
         auto const local_lower_bound(
@@ -608,7 +610,7 @@ class psyq::scenario_engine::evaluator
                 io_chunks.begin(),
                 io_chunks.end(),
                 in_chunk_key,
-                typename this_type::chunk::key_less()));
+                typename this_type::chunk_key_less()));
         if (local_lower_bound != io_chunks.end()
             && local_lower_bound->key == in_chunk_key)
         {
@@ -616,7 +618,7 @@ class psyq::scenario_engine::evaluator
         }
         return *io_chunks.insert(
             local_lower_bound,
-            typename this_type::chunk::vector::value_type(
+            typename this_type::chunk_vector::value_type(
                 in_chunk_key, io_chunks.get_allocator()));
     }
 
@@ -675,9 +677,9 @@ class psyq::scenario_engine::evaluator
 
     //-------------------------------------------------------------------------
     /// @brief 条件式のコンテナ。
-    private: typename this_type::expression::vector expressions_;
+    private: typename this_type::expression_vector expressions_;
     /// @brief 要素条件チャンクのコンテナ。
-    private: typename this_type::chunk::vector chunks_;
+    private: typename this_type::chunk_vector chunks_;
 
 }; // class psyq::scenario_engine::evaluator
 

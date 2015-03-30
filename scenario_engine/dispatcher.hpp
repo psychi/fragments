@@ -94,15 +94,6 @@ class psyq::scenario_engine::dispatcher
     {
         typedef expression_monitor this_type;
 
-        /// @brief 条件式監視器のコンテナ。
-        typedef std::vector<this_type, typename dispatcher::allocator_type>
-            vector;
-
-        /// @brief 条件式監視器を条件式の識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
-        typedef psyq::scenario_engine::_private::key_less<
-            this_type, typename dispatcher::expression_key>
-                key_less;
-
         /// @brief フラグの位置。
         enum flag_enum: std::uint8_t
         {
@@ -164,6 +155,18 @@ class psyq::scenario_engine::dispatcher
 
     }; // struct expression_monitor
 
+    /// @brief 条件式監視器のコンテナ。
+    private: typedef std::vector<
+        typename this_type::expression_monitor,
+        typename this_type::allocator_type>
+            expression_monitor_vector;
+
+    /// @brief 条件式監視器を条件式の識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
+    private: typedef psyq::scenario_engine::_private::key_less<
+        typename this_type::expression_monitor,
+        typename this_type::expression_key>
+            expression_monitor_key_less;
+
     //-------------------------------------------------------------------------
     /** @brief 状態監視器。
 
@@ -173,15 +176,6 @@ class psyq::scenario_engine::dispatcher
     private: struct state_monitor
     {
         typedef state_monitor this_type;
-
-        /// @brief 状態監視器のコンテナ。
-        typedef std::vector<this_type, typename dispatcher::allocator_type>
-            vector;
-
-        /// @brief 状態監視器を状態値の識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
-        typedef psyq::scenario_engine::_private::key_less<
-            this_type, typename dispatcher::state_key>
-                key_less;
 
         /** @brief 状態監視器を構築する。
             @param[in] in_key       状態値の識別値。
@@ -223,6 +217,16 @@ class psyq::scenario_engine::dispatcher
         typename dispatcher::state_key key;
 
     }; // struct state_monitor
+
+    /// @brief 状態監視器のコンテナ。
+    private: typedef std::vector<
+        typename this_type::state_monitor, typename this_type::allocator_type>
+            state_monitor_vector;
+
+    /// @brief 状態監視器を状態値の識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
+    private: typedef psyq::scenario_engine::_private::key_less<
+        typename this_type::state_monitor, typename this_type::state_key>
+            state_monitor_key_less;
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
@@ -318,7 +322,7 @@ class psyq::scenario_engine::dispatcher
                 this->expression_monitors_.begin(),
                 this->expression_monitors_.end(),
                 in_expression_key,
-                typename this_type::expression_monitor::key_less()));
+                typename this_type::expression_monitor_key_less()));
         if (local_expression_monitor != this->expression_monitors_.end()
             && local_expression_monitor->key == in_expression_key)
         {
@@ -454,7 +458,7 @@ class psyq::scenario_engine::dispatcher
         {
             auto const& local_sub_key(i->key);
             auto const local_expression_monitor(
-                this_type::expression_monitor::key_less::find_const_pointer(
+                this_type::expression_monitor_key_less::find_const_pointer(
                     this->expression_monitors_, local_sub_key));
             if (local_expression_monitor == nullptr
                 && !this->add_expression(local_sub_key, in_evaluator, in_reserve_expressions))
@@ -480,7 +484,7 @@ class psyq::scenario_engine::dispatcher
         typename template_expression,
         typename template_element_container>
     static void add_notify_expression(
-        typename this_type::state_monitor::vector& io_state_monitors,
+        typename this_type::state_monitor_vector& io_state_monitors,
         template_expression const& in_expression,
         template_element_container const& in_elements,
         std::size_t const in_reserve_expressions)
@@ -498,7 +502,7 @@ class psyq::scenario_engine::dispatcher
                     io_state_monitors.begin(),
                     io_state_monitors.end(),
                     local_element_key,
-                    typename this_type::state_monitor::key_less()));
+                    typename this_type::state_monitor_key_less()));
             if (local_state_monitor == io_state_monitors.end()
                 || local_state_monitor->key != local_element_key)
             {
@@ -605,8 +609,8 @@ class psyq::scenario_engine::dispatcher
      */
     private: template<typename template_reservoir>
     static void detect_state_transition(
-        typename this_type::expression_monitor::vector& io_expression_monitors,
-        typename this_type::state_monitor::vector& io_state_monitors,
+        typename this_type::expression_monitor_vector& io_expression_monitors,
+        typename this_type::state_monitor_vector& io_state_monitors,
         template_reservoir const& in_reservoir)
     {
         // 状態監視器のコンテナを走査しつつ、
@@ -643,7 +647,7 @@ class psyq::scenario_engine::dispatcher
         @param[in] in_valid_state             状態値が有効かどうか。
      */
     private: static void notify_state_transition(
-        typename this_type::expression_monitor::vector& io_expression_monitors,
+        typename this_type::expression_monitor_vector& io_expression_monitors,
         typename this_type::expression_key_vector& io_expression_keys,
         bool const in_valid_state)
     {
@@ -653,7 +657,7 @@ class psyq::scenario_engine::dispatcher
         for (auto& local_expression_key: io_expression_keys)
         {
             auto const local_expression_monitor(
-                this_type::expression_monitor::key_less::find_pointer(
+                this_type::expression_monitor_key_less::find_pointer(
                     io_expression_monitors, local_expression_key));
             *local_last = std::move(local_expression_key);
             if (local_expression_monitor != nullptr)
@@ -679,7 +683,7 @@ class psyq::scenario_engine::dispatcher
      */
     private: template<typename template_evaluator>
     static void update_expression_monitor_container(
-        typename this_type::expression_monitor::vector& io_expression_monitors,
+        typename this_type::expression_monitor_vector& io_expression_monitors,
         template_evaluator const& in_evaluator,
         typename template_evaluator::reservoir const& in_reservoir)
     {
@@ -770,10 +774,10 @@ class psyq::scenario_engine::dispatcher
 
     //-------------------------------------------------------------------------
     /// 条件式監視器の辞書。
-    private: typename this_type::expression_monitor::vector expression_monitors_;
+    private: typename this_type::expression_monitor_vector expression_monitors_;
 
     /// 状態監視器の辞書。
-    private: typename this_type::state_monitor::vector state_monitors_;
+    private: typename this_type::state_monitor_vector state_monitors_;
 
 }; // class psyq::scenario_engine::dispatcher
 

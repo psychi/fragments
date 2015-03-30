@@ -24,7 +24,7 @@ namespace psyq
 
     ### 使い方の概略
     - driver::driver でシナリオ駆動機を構築する。
-    - driver::add_state_chunk で、状態値を登録する。
+    - driver::add_reservoir_chunk で、状態値を登録する。
     - driver::add_evaluator_chunk で、条件式を登録する。
     - driver::add_behavior_chunk で、条件挙動を登録する。
     - driver::update をフレームごとに呼び出す。
@@ -75,6 +75,7 @@ class psyq::scenario_engine::driver
     /// @brief シナリオ駆動器で用いる条件監視器の型。
     public: typedef psyq::scenario_engine::dispatcher<
         typename this_type::hasher::result_type,
+        typename this_type::hasher::result_type,
         typename this_type::allocator_type>
             dispatcher;
 
@@ -87,9 +88,9 @@ class psyq::scenario_engine::driver
     /// @name 構築と代入
     //@{
     /** @brief 空のシナリオ駆動器を構築する。
-        @param[in] in_reserve_chunks      予約するチャンクの容量。
-        @param[in] in_reserve_states      予約する状態貯蔵器の容量。
-        @param[in] in_reserve_expressions 予約する条件式評価器の容量。
+        @param[in] in_reserve_chunks      チャンクの予約数。
+        @param[in] in_reserve_states      状態値の予約数。
+        @param[in] in_reserve_expressions 条件式の予約数。
         @param[in] in_hash_function       ハッシュ関数オブジェクトの初期値。
         @param[in] in_allocator           メモリ割当子の初期値。
      */
@@ -103,7 +104,7 @@ class psyq::scenario_engine::driver
     :
     reservoir_(in_reserve_states, in_reserve_chunks, in_allocator),
     evaluator_(in_reserve_expressions, in_reserve_chunks, in_allocator),
-    dispatcher_(in_allocator),
+    dispatcher_(in_reserve_expressions, in_reserve_states, in_allocator),
     behaviors_(in_allocator),
     hash_function_(std::move(in_hash_function))
     {
@@ -148,17 +149,9 @@ class psyq::scenario_engine::driver
      */
     public: void update()
     {
-        for (auto& local_state: this->reservoir_.get_state_container())
-        {
-            auto const local_transition(
-                const_cast<typename this_type::reservoir::state&>
-                    (local_state)._reset_transition());
-            if (local_transition)
-            {
-                this->dispatcher_.notify_state_transition(local_state.key);
-            }
-        }
-        this->dispatcher_.dispatch(this->evaluator_, this->reservoir_);
+        this->dispatcher_._detect(this->evaluator_, this->reservoir_);
+        this->reservoir_._reset_transition();
+        this->dispatcher_._dispatch(this->evaluator_, this->reservoir_);
     }
 
     /** @brief 文字列からハッシュ値を生成する。
@@ -197,7 +190,7 @@ class psyq::scenario_engine::driver
         @return 登録した状態値の数。
      */
     public: template<typename template_builder>
-    std::size_t add_state_chunk(
+    std::size_t add_reservoir_chunk(
         typename this_type::reservoir::key_type const& in_chunk,
         template_builder const& in_state_builder)
     {
@@ -297,7 +290,7 @@ namespace psyq_test
             "state_signed,   SIGNED,     13,   -20,\n"
             "state_float,    FLOAT,      32,  1.25,\n"
             );
-        local_driver.add_state_chunk(
+        local_driver.add_reservoir_chunk(
             local_chunk_key,
             state_builder(
                 state_builder::string_table(local_state_table_csv, 0)));

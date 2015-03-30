@@ -205,7 +205,7 @@ class psyq::scenario_engine::reservoir
          */
         public: typename this_type::kind_enum get_kind() const PSYQ_NOEXCEPT
         {
-            auto const local_format(this->->get_format());
+            auto const local_format(this->get_format());
             switch (local_format)
             {
                 case this_type::kind_NULL:
@@ -258,17 +258,15 @@ class psyq::scenario_engine::reservoir
 
         /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
 
-            直前の状態変化フラグを取り出し、状態変化フラグを初期化する。
+            直前の状態変化フラグを取得する。
 
             @return 直前の状態変化フラグ。
          */
-        public: bool _reset_transition()
+        public: bool _get_transition() const PSYQ_NOEXCEPT
         {
             typename reservoir::field_type const local_mask(
                 1 << reservoir::field_TRANSITION_FRONT);
-            auto const local_transition(this->field & local_mask);
-            this->field &= ~local_mask;
-            return local_transition != 0;
+            return (this->field & local_mask) != 0;
         }
 
         //.....................................................................
@@ -305,17 +303,27 @@ class psyq::scenario_engine::reservoir
         key(std::move(in_key))
         {}
 
-        chunk(chunk&& io_source):
+        /** @brief ムーブ構築子。
+            @param[in,out] io_source ムーブ元となるインスタンス。
+         */
+        chunk(this_type&& io_source):
         blocks(std::move(io_source.blocks)),
         empty_fields(std::move(io_source.empty_fields)),
         key(std::move(io_source.key))
         {}
 
-        chunk& operator=(chunk&& io_source)
+        /** @brief ムーブ代入演算子。
+            @param[in,out] io_source ムーブ元となるインスタンス。
+            @return *this
+         */
+        this_type& operator=(this_type&& io_source)
         {
-            this->blocks = std::move(io_source.blocks);
-            this->empty_fields = std::move(io_source.empty_fields);
-            this->key = std::move(io_source.key);
+            if (this != &io_source)
+            {
+                this->blocks = std::move(io_source.blocks);
+                this->empty_fields = std::move(io_source.empty_fields);
+                this->key = std::move(io_source.key);
+            }
             return *this;
         }
 
@@ -394,16 +402,8 @@ class psyq::scenario_engine::reservoir
         typename this_type::key_type const& in_key)
     const PSYQ_NOEXCEPT
     {
-        return this_type::state::key_less::find_pointer(this->states_, in_key);
-    }
-
-    /** @brief 状態値登記のコンテナを取得する。
-        @return 状態値登記のコンテナ。
-     */
-    public: typename this_type::state::vector const& get_state_container()
-    const PSYQ_NOEXCEPT
-    {
-        return this->states_;
+        return this_type::state::key_less::find_const_pointer(
+            this->states_, in_key);
     }
 
     /** @brief 状態値を取得する。
@@ -429,14 +429,14 @@ class psyq::scenario_engine::reservoir
     {
         // 状態値登記を検索し、ビット列チャンクから状態値のビット列を取得する。
         auto const local_state(
-            this_type::state::key_less::find_pointer(
+            this_type::state::key_less::find_const_pointer(
                 this->states_, in_key));
         if (local_state == nullptr)
         {
             return nullptr;
         }
         auto const local_chunk(
-            this_type::chunk::key_less::find_pointer(
+            this_type::chunk::key_less::find_const_pointer(
                 this->chunks_, local_state->chunk));
         if (local_chunk == nullptr)
         {
@@ -573,7 +573,8 @@ class psyq::scenario_engine::reservoir
     {
         // 状態値登記を検索する。
         auto const local_state(
-            this_type::state::key_less::find_pointer(this->states_, in_key));
+            this_type::state::key_less::find_const_pointer(
+                this->states_, in_key));
         if (local_state == nullptr)
         {
             return nullptr;
@@ -581,7 +582,7 @@ class psyq::scenario_engine::reservoir
 
         // 状態値を設定するビット列チャンクを決定する。
         auto const local_chunk(
-            this_type::chunk::key_less::find_pointer(
+            this_type::chunk::key_less::find_const_pointer(
                 this->chunks_, local_state->chunk));
         if (local_chunk == nullptr)
         {
@@ -644,6 +645,17 @@ class psyq::scenario_engine::reservoir
         }
     }
     //@}
+    public: void _reset_transition()
+    {
+        auto const local_mask(
+            ~static_cast<typename this_type::field_type>(
+                1 << this_type::field_TRANSITION_FRONT));
+        for (auto& local_state: this->states_)
+        {
+            local_state.field &= local_mask;
+        }
+    }
+
     private: static typename this_type::state const* notify_transition(
         typename this_type::state& io_state,
         int const in_set_bits)
@@ -985,7 +997,7 @@ class psyq::scenario_engine::reservoir
         for (auto local_state: local_states)
         {
             auto const local_chunk(
-                this_type::chunk::key_less::find_pointer(
+                this_type::chunk::key_less::find_const_pointer(
                     this->chunks_, local_state->chunk));
             if (local_chunk == nullptr)
             {
@@ -1361,7 +1373,7 @@ struct psyq::scenario_engine::_private::key_less
         @retval ==in_container.end() in_key に対応する値が見つからなかった。
      */
     template<typename template_container>
-    static typename template_container::const_iterator find_iterator(
+    static typename template_container::const_iterator find_const_iterator(
         template_container const& in_container,
         template_key const& in_key)
     PSYQ_NOEXCEPT
@@ -1382,7 +1394,7 @@ struct psyq::scenario_engine::_private::key_less
         @retval ==nullptr in_key に対応する値が見つからなかった。
      */
     template<typename template_container>
-    static typename template_container::value_type const* find_pointer(
+    static typename template_container::value_type const* find_const_pointer(
         template_container const& in_container,
         template_key const& in_key)
     PSYQ_NOEXCEPT
@@ -1394,6 +1406,16 @@ struct psyq::scenario_engine::_private::key_less
         return local_lower_bound != local_end
             && local_lower_bound->key == in_key?
                 &(*local_lower_bound): nullptr;
+    }
+
+    template<typename template_container>
+    static typename template_container::value_type* find_pointer(
+        template_container& in_container,
+        template_key const& in_key)
+    PSYQ_NOEXCEPT
+    {
+        return const_cast<typename template_container::value_type*>(
+            find_const_pointer(in_container, in_key));
     }
 
 }; // struct psyq::scenario_engine::_private::key_less

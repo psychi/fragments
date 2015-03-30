@@ -94,7 +94,7 @@ struct psyq::scenario_engine::behavior_chunk
 
     /// @brief 条件挙動チャンクを識別するキーを表す型。
     /// @note ここは条件式キーでなくて、チャンクキーにしないと。
-    public: typedef typename this_type::dispatcher::condition_key key_type;
+    public: typedef typename this_type::dispatcher::expression_key key_type;
 
     /// @brief 条件挙動チャンクを識別するキーを比較する関数オブジェクト。
     public: typedef psyq::scenario_engine::_private::key_less<
@@ -170,7 +170,7 @@ struct psyq::scenario_engine::behavior_chunk
     {
         // 関数オブジェクトを追加する条件挙動チャンクを用意する。
         auto local_iterator(
-            this_type::key_less::find_iterator(io_chunks, in_key));
+            this_type::key_less::find_const_iterator(io_chunks, in_key));
         if (local_iterator == io_chunks.end())
         {
             local_iterator = io_chunks.insert(
@@ -201,7 +201,7 @@ struct psyq::scenario_engine::behavior_chunk
         typename this_type::key_type const& in_key)
     {
         auto const local_iterator(
-            this_type::key_less::find_iterator(io_chunks, in_key));
+            this_type::key_less::find_const_iterator(io_chunks, in_key));
         auto const local_find(local_iterator != io_chunks.end());
         if (local_find)
         {
@@ -238,11 +238,14 @@ struct psyq::scenario_engine::behavior_chunk
             typename this_type::dispatcher::function(
                 /// @todo io_reservoir を参照渡しするのは危険。対策を考えたい。
                 [=, &io_reservoir](
-                    typename this_type::dispatcher::condition_key const&,
-                    bool const in_evaluation)
+                    typename this_type::dispatcher::expression_key const&,
+                    std::int8_t const in_evaluation,
+                    std::int8_t const in_last_evaluation)
                 {
                     // 条件と評価が合致すれば、状態値を書き換える。
-                    if (in_condition == in_evaluation)
+                    if (0 <= in_last_evaluation
+                        && 0 <= in_evaluation
+                        && in_condition == (0 < in_evaluation))
                     {
                         this_type::operate_state(
                             io_reservoir, in_key, in_operator, in_value);
@@ -374,8 +377,7 @@ struct psyq::scenario_engine::behavior_builder
                 this_type::make_function(
                     io_hasher, in_evaluator, in_reservoir, in_string_table, i));
             auto const local_register_expression(
-                io_dispatcher.register_expression(
-                    local_key, local_function, in_evaluator, in_reservoir));
+                io_dispatcher.register_expression(local_key, local_function));
             if (local_register_expression)
             {
                 local_functions.push_back(std::move(local_function));

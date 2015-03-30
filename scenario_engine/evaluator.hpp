@@ -121,7 +121,7 @@ class psyq::scenario_engine::evaluator
         evaluator(in_evaluator)
         {}
 
-        int operator()(
+        std::int8_t operator()(
             typename evaluator::sub_expression const& in_sub_expression)
         const PSYQ_NOEXCEPT
         {
@@ -132,7 +132,7 @@ class psyq::scenario_engine::evaluator
             {
                 return -1;
             }
-            auto const local_condition(local_evaluate_expression != 0);
+            auto const local_condition(0 < local_evaluate_expression);
             return local_condition == in_sub_expression.condition? 1: 0;
         }
 
@@ -183,7 +183,7 @@ class psyq::scenario_engine::evaluator
         reservoir(in_reservoir)
         {}
 
-        int operator()(
+        std::int8_t operator()(
             typename evaluator::state_comparison const& in_state)
         const PSYQ_NOEXCEPT
         {
@@ -238,6 +238,10 @@ class psyq::scenario_engine::evaluator
              this_type, typename evaluator::expression::key_type>
                  key_less;
 
+        /** @brief チャンクを構築する。
+            @param[in] in_key       チャンクの識別値。
+            @param[in] in_allocator メモリ割当子の初期値。
+         */
         chunk(
             typename evaluator::expression::key_type in_key,
             typename evaluator::allocator_type const& in_allocator)
@@ -247,17 +251,27 @@ class psyq::scenario_engine::evaluator
         key(std::move(in_key))
         {}
 
-        chunk(chunk&& io_source):
+        /** @brief ムーブ構築子。
+            @param[in,out] io_source ムーブ元となるインスタンス。
+         */
+        chunk(this_type&& io_source):
         sub_expressions(std::move(io_source.sub_expressions)),
         state_comparisons(std::move(io_source.state_comparisons)),
         key(std::move(io_source.key))
         {}
 
-        chunk& operator=(chunk&& io_source)
+        /** @brief ムーブ代入演算子。
+            @param[in,out] io_source ムーブ元となるインスタンス。
+            @return *this
+         */
+        this_type& operator=(this_type&& io_source)
         {
-            this->sub_expressions = std::move(io_source.sub_expressions);
-            this->state_comparisons = std::move(io_source.state_comparisons);
-            this->key = std::move(io_source.key);
+            if (this != &io_source)
+            {
+                this->sub_expressions = std::move(io_source.sub_expressions);
+                this->state_comparisons = std::move(io_source.state_comparisons);
+                this->key = std::move(io_source.key);
+            }
             return *this;
         }
 
@@ -341,7 +355,7 @@ class psyq::scenario_engine::evaluator
         @retval  0 条件式の評価は false となった。
         @retval 負 条件式の評価に失敗した。
      */
-    public: int evaluate_expression(
+    public: std::int8_t evaluate_expression(
         typename this_type::expression::key_type const in_expression_key,
         typename this_type::reservoir const& in_reservoir)
     const PSYQ_NOEXCEPT
@@ -392,7 +406,7 @@ class psyq::scenario_engine::evaluator
         typename this_type::expression::key_type const in_expression_key)
     const PSYQ_NOEXCEPT
     {
-        return this_type::expression::key_less::find_pointer(
+        return this_type::expression::key_less::find_const_pointer(
             this->expressions_, in_expression_key);
     }
 
@@ -560,7 +574,8 @@ class psyq::scenario_engine::evaluator
         typename this_type::expression::key_type const& in_chunk)
     const PSYQ_NOEXCEPT
     {
-        return this_type::chunk::key_less::find_pointer(this->chunks_, in_chunk);
+        return this_type::chunk::key_less::find_const_pointer(
+            this->chunks_, in_chunk);
     }
 
     /** @brief 要素条件チャンクを予約する。
@@ -621,7 +636,7 @@ class psyq::scenario_engine::evaluator
     private: template<
         typename template_container_type,
         typename template_evaluator_type>
-    static int evaluate_elements(
+    static std::int8_t evaluate_elements(
         typename this_type::expression const& in_expression,
         template_container_type const& in_elements,
         template_evaluator_type const& in_evaluator)

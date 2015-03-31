@@ -258,12 +258,9 @@ class psyq::scenario_engine::evaluator
          */
         this_type& operator=(this_type&& io_source)
         {
-            if (this != &io_source)
-            {
-                this->sub_expressions = std::move(io_source.sub_expressions);
-                this->state_comparisons = std::move(io_source.state_comparisons);
-                this->key = std::move(io_source.key);
-            }
+            this->sub_expressions = std::move(io_source.sub_expressions);
+            this->state_comparisons = std::move(io_source.state_comparisons);
+            this->key = std::move(io_source.key);
             return *this;
         }
 
@@ -290,8 +287,8 @@ class psyq::scenario_engine::evaluator
     /// @name 構築と代入
     //@{
     /** @brief 空の条件評価器を構築する。
-        @param[in] in_reserve_expressions 予約しておく条件式の数。
-        @param[in] in_reserve_chunks      予約しておくチャンクの数。
+        @param[in] in_reserve_expressions 条件式の予約数。
+        @param[in] in_reserve_chunks      要素条件チャンクの予約数。
         @param[in] in_allocator           メモリ割当子の初期値。
      */
     public: evaluator(
@@ -413,17 +410,17 @@ class psyq::scenario_engine::evaluator
     }
 
     /** @brief 複合条件式を登録する。
-        @param[in] in_elements       登録する複合条件式の要素条件の配列。
-        @param[in] in_chunk_key      登録する複合条件式が所属するチャンクの識別値。
+        @param[in] in_chunk_key      登録する複合条件式が所属する要素条件チャンクの識別値。
         @param[in] in_expression_key 登録する複合条件式の識別値。
+        @param[in] in_elements       登録する複合条件式の要素条件のコンテナ。
         @param[in] in_logic          登録する複合条件式で用いる論理演算子。
         @retval true  成功。複合条件式を登録した。
         @retval false 失敗。複合条件式は登録されなかった。
      */
     public: bool register_expression(
-        typename this_type::sub_expression::vector const& in_elements,
         typename this_type::reservoir::chunk_key const& in_chunk_key,
         typename this_type::expression_key in_expression_key,
+        typename this_type::sub_expression::vector const& in_elements,
         typename this_type::expression::logic_enum const in_logic)
     {
         PSYQ_ASSERT(
@@ -431,33 +428,33 @@ class psyq::scenario_engine::evaluator
         return this_type::register_expression(
             this->expressions_,
             this_type::equip_chunk(this->chunks_, in_chunk_key).sub_expressions,
-            in_elements,
             in_chunk_key,
             std::move(in_expression_key),
+            in_elements,
             in_logic,
             this_type::expression::kind_SUB_EXPRESSION);
     }
 
     /** @brief 状態比較条件式を登録する。
-        @param[in] in_elements       登録する状態比較条件式の要素条件の配列。
-        @param[in] in_chunk_key      登録する状態比較条件式が所属するチャンクに対応する識別値。
+        @param[in] in_chunk_key      登録する状態比較条件式が所属する要素条件チャンクの識別値。
         @param[in] in_expression_key 登録する状態比較条件式に対応する識別値。
+        @param[in] in_elements       登録する状態比較条件式の要素条件のコンテナ。
         @param[in] in_logic          登録する状態比較条件式で用いる論理演算子。
         @retval true  成功。状態比較条件式を登録した。
         @retval false 失敗。状態比較条件式は登録されなかった。
      */
     public: bool register_expression(
-        typename this_type::state_comparison::vector const& in_elements,
         typename this_type::reservoir::chunk_key const& in_chunk_key,
         typename this_type::expression_key in_expression_key,
+        typename this_type::state_comparison::vector const& in_elements,
         typename this_type::expression::logic_enum const in_logic)
     {
         return this_type::register_expression(
             this->expressions_,
             this_type::equip_chunk(this->chunks_, in_chunk_key).state_comparisons,
-            in_elements,
             in_chunk_key,
             std::move(in_expression_key),
+            in_elements,
             in_logic,
             this_type::expression::kind_STATE_COMPARISON);
     }
@@ -465,9 +462,9 @@ class psyq::scenario_engine::evaluator
     /** @brief 条件式を登録する。
         @param[in,out] io_expressions 条件式を登録するコンテナ。
         @param[in,out] io_elements    要素条件を登録するコンテナ。
-        @param[in] in_elements        登録する条件式の要素条件の配列。
-        @param[in] in_chunk_key       登録する状態比較条件式が所属するチャンクに対応する識別値。
+        @param[in] in_chunk_key       登録する状態比較条件式が所属する要素条件チャンクの識別値。
         @param[in] in_expression_key  登録する条件式に対応する識別値。
+        @param[in] in_elements        登録する条件式の要素条件のコンテナ。
         @param[in] in_logic           登録する条件式で用いる論理演算子。
         @param[in] in_kind            登録する条件式の種類。
         @retval true  成功。条件式を登録した。
@@ -477,9 +474,9 @@ class psyq::scenario_engine::evaluator
     static bool register_expression(
         typename this_type::expression_vector& io_expressions,
         template_element_container& io_elements,
-        template_element_container const& in_elements,
         typename this_type::reservoir::chunk_key const& in_chunk_key,
         typename this_type::expression_key in_expression_key,
+        template_element_container const& in_elements,
         typename this_type::expression::logic_enum const in_logic,
         typename this_type::expression::kind_enum const in_kind)
     {
@@ -579,9 +576,9 @@ class psyq::scenario_engine::evaluator
     /** @brief 要素条件チャンクを予約する。
         @param[in] in_chunk_key 予約する要素条件チャンクに対応する識別値。
         @param[in] in_reserve_sub_expressions
-            予約しておく複合条件式の要素条件数。
+            複合条件式の要素条件の予約数。
         @param[in] in_reserve_state_comparisons
-            予約しておく状態比較条件式の要素条件数。
+            状態比較条件式の要素条件の予約数。
      */
     public: void reserve_chunk(
         typename this_type::reservoir::chunk_key const& in_chunk_key,
@@ -625,7 +622,7 @@ class psyq::scenario_engine::evaluator
     //-------------------------------------------------------------------------
     /** @brief 条件式を評価する。
         @param[in] in_expression 評価する条件式。
-        @param[in] in_elements   評価に用いる要素条件の配列。
+        @param[in] in_elements   評価に用いる要素条件のコンテナ。
         @param[in] in_evaluator  要素条件を評価する関数オブジェクト。
         @retval 正 条件式の評価は true となった。
         @retval  0 条件式の評価は false となった。

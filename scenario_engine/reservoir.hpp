@@ -313,12 +313,9 @@ class psyq::scenario_engine::reservoir
          */
         this_type& operator=(this_type&& io_source)
         {
-            if (this != &io_source)
-            {
-                this->blocks = std::move(io_source.blocks);
-                this->empty_fields = std::move(io_source.empty_fields);
-                this->key = std::move(io_source.key);
-            }
+            this->blocks = std::move(io_source.blocks);
+            this->empty_fields = std::move(io_source.empty_fields);
+            this->key = std::move(io_source.key);
             return *this;
         }
 
@@ -345,8 +342,8 @@ class psyq::scenario_engine::reservoir
     /// @name 構築と代入
     //@{
     /** @brief 空の状態貯蔵器を構築する。
-        @param[in] in_reserve_states 予約しておく状態値の数。
-        @param[in] in_reserve_chunks 予約しておくビット列チャンクの数。
+        @param[in] in_reserve_states 状態値の予約数。
+        @param[in] in_reserve_chunks ビット列チャンクの予約数。
         @param[in] in_allocator      使用するメモリ割当子の初期値。
      */
     public: reservoir(
@@ -416,11 +413,11 @@ class psyq::scenario_engine::reservoir
         すでに登録されている状態値から、値を取得する。
 
         @param[in] in_state_key     取得する状態値に対応する識別値。
-        @param[out] out_value 取得した状態値の格納先。
+        @param[out] out_state_value 取得した状態値の格納先。
         @retval !=nullptr
-            成功。取得した状態値を out_value に格納した。
+            成功。取得した状態値を out_state_value に格納した。
             値を取得した状態の登記を指すポインタを返す。
-        @retval ==nullptr 失敗。 out_value は変化しない。
+        @retval ==nullptr 失敗。 out_state_value は変化しない。
         @sa this_type::register_bool
         @sa this_type::register_unsigned
         @sa this_type::register_signed
@@ -429,7 +426,7 @@ class psyq::scenario_engine::reservoir
     public: template<typename template_value>
     typename this_type::state const* get_state(
         typename this_type::state_key const& in_state_key,
-        template_value& out_value)
+        template_value& out_state_value)
     const PSYQ_NOEXCEPT
     {
         // 状態値登記を検索し、ビット列チャンクから状態値のビット列を取得する。
@@ -445,6 +442,7 @@ class psyq::scenario_engine::reservoir
                 this->chunks_, local_state->chunk));
         if (local_chunk == nullptr)
         {
+            PSYQ_ASSERT(false);
             return nullptr;
         }
         auto const local_format(local_state->get_format());
@@ -464,7 +462,7 @@ class psyq::scenario_engine::reservoir
 
             // 真偽値を取得する。
             case this_type::state::kind_BOOL:
-            out_value = (local_bits != 0);
+            out_state_value = (local_bits != 0);
             return local_state;
 
             // 浮動小数点数を取得する。
@@ -482,7 +480,7 @@ class psyq::scenario_engine::reservoir
                 this_type::make_block_mask(local_size)
                 <= static_cast<typename this_type::block_type>(
                     (std::numeric_limits<template_value>::max)()));
-            this_type::copy_value(out_value, local_bits);
+            this_type::copy_value(out_state_value, local_bits);
         }
         else
         {
@@ -495,7 +493,8 @@ class psyq::scenario_engine::reservoir
                 static_cast<typename this_type::signed_block_type>(local_bits));
             auto const local_minus(1 & (local_signed_bits >> (local_size - 1)));
             this_type::copy_value(
-                out_value, local_signed_bits | (-local_minus << local_size));
+                out_state_value,
+                local_signed_bits | (-local_minus << local_size));
         }
         return local_state;
     }
@@ -561,9 +560,9 @@ class psyq::scenario_engine::reservoir
 
         すでに登録されている状態値に、値を設定する。
 
-        @param[in] in_state_key   設定する状態値の識別番号。
-        @param[in] in_state_value 設定する値。
-        @retval true  成功。値を設定した状態の登記を返す。
+        @param[in] in_state_key   設定する状態値に対応する識別値。
+        @param[in] in_state_value 状態値に設定する値。
+        @retval true  成功。値を設定した状態の登記を指すポインタを返す。
         @retval false 失敗。状態値は変化しない。
         @sa this_type::register_bool
         @sa this_type::register_unsigned
@@ -591,6 +590,7 @@ class psyq::scenario_engine::reservoir
                 this->chunks_, local_state->chunk));
         if (local_chunk == nullptr)
         {
+            PSYQ_ASSERT(false);
             return nullptr;
         }
         auto& local_chunk_blocks(
@@ -649,7 +649,11 @@ class psyq::scenario_engine::reservoir
             return nullptr;
         }
     }
-    //@}
+
+    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
+
+        状態変化フラグを初期化する。
+     */
     public: void _reset_transition()
     {
         auto const local_mask(
@@ -660,7 +664,7 @@ class psyq::scenario_engine::reservoir
             local_state.field &= local_mask;
         }
     }
-
+    //@}
     private: static typename this_type::state const* notify_transition(
         typename this_type::state& io_state,
         int const in_set_bits)
@@ -756,7 +760,7 @@ class psyq::scenario_engine::reservoir
         登録した状態値は
         this_type::get_state と this_type::set_state でアクセスできる。
 
-        @param[in] in_chunk_key 登録する状態値を格納するビット列チャンクの識別値。
+        @param[in] in_chunk_key   登録する状態値を格納するビット列チャンクの識別値。
         @param[in] in_state_key   登録する状態値の識別番号。
         @param[in] in_state_value 登録する状態値の初期値。
         @retval true  成功。状態値を登録した。

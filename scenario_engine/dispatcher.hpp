@@ -24,9 +24,10 @@ namespace psyq
 /** @brief 条件挙動器。条件式を監視し、評価結果が変化すると、登録されている関数を呼び出す。
 
     使い方の概略。
-    - dispatcher::register_expression を呼び出し、
-      条件式の評価結果が変化したときに呼び出す関数を登録する。
-    - driver::update をフレーム毎に呼び出し、登録された関数を呼び出す。
+    - dispatcher::register_function を呼び出し、
+      条件式の評価結果が変化したときに呼び出す条件挙動関数を登録する。
+    - driver::update をフレーム毎に呼び出し、
+      条件式の評価結果が変化を検知して、条件挙動関数を呼び出す。
 
     @tparam template_state_key      @copydoc dispatcher::state_key
     @tparam template_expression_key @copydoc dispatcher::expression_key
@@ -47,21 +48,15 @@ class psyq::scenario_engine::dispatcher
     /// @brief 評価に用いる条件式の識別値を表す型。
     public: typedef template_expression_key expression_key;
 
-    /// @brief コンテナに用いるメモリ割当子を表す型。
+    /// @brief コンテナに用いるメモリ割当子の型。
     public: typedef template_allocator allocator_type;
-
-    /// @brief 条件式の識別値のコンテナ。
-    private: typedef std::vector<
-        typename this_type::expression_key,
-        typename this_type::allocator_type>
-            expression_key_vector;
 
     //-------------------------------------------------------------------------
     /** @brief 条件式の評価結果が変化した際に呼び出す、条件挙動関数オブジェクトの型。
 
         - 引数#0は、評価に用いた条件式の識別値。
-        - 引数#1は、条件式の今回の評価結果。
-        - 引数#2は、条件式の前回の評価結果。
+        - 引数#1は、 evaluator::evaluate_expression の今回の戻り値。
+        - 引数#2は、 evaluator::evaluate_expression の前回の戻り値。
      */
     public: typedef std::function<
         void (
@@ -130,12 +125,9 @@ class psyq::scenario_engine::dispatcher
          */
         this_type& operator=(this_type&& io_source)
         {
-            if (this != &io_source)
-            {
-                this->functions = std::move(io_source.functions);
-                this->key = std::move(io_source.key);
-                this->flags = std::move(io_source.flags);
-            }
+            this->functions = std::move(io_source.functions);
+            this->key = std::move(io_source.key);
+            this->flags = std::move(io_source.flags);
             return *this;
         }
 
@@ -166,6 +158,12 @@ class psyq::scenario_engine::dispatcher
         typename this_type::expression_monitor,
         typename this_type::expression_key>
             expression_monitor_key_less;
+
+    /// @brief 条件式の識別値のコンテナの型。
+    private: typedef std::vector<
+        typename this_type::expression_key,
+        typename this_type::allocator_type>
+            expression_key_vector;
 
     //-------------------------------------------------------------------------
     /** @brief 状態監視器。
@@ -203,11 +201,8 @@ class psyq::scenario_engine::dispatcher
          */
         this_type& operator=(this_type&& io_source)
         {
-            if (this != &io_source)
-            {
-                this->expression_keys = std::move(io_source.expression_keys);
-                this->key = std::move(io_source.key);
-            }
+            this->expression_keys = std::move(io_source.expression_keys);
+            this->key = std::move(io_source.key);
             return *this;
         }
 
@@ -229,23 +224,57 @@ class psyq::scenario_engine::dispatcher
             state_monitor_key_less;
 
     //-------------------------------------------------------------------------
+    /// @brief 条件挙動キャッシュ。
+    private: struct behavior_cache
+    {
+        behavior_cache(
+            typename dispatcher::function_weak_ptr in_function,
+            typename dispatcher::expression_key in_expression_key,
+            std::int8_t in_evaluation,
+            std::int8_t in_last_evaluation)
+        :
+        function(std::move(in_function)),
+        expression_key(std::move(in_expression_key)),
+        evaluation(std::move(in_evaluation)),
+        last_evaluation(std::move(in_last_evaluation))
+        {}
+
+        typename dispatcher::function_weak_ptr function;
+        typename dispatcher::expression_key expression_key;
+        std::int8_t evaluation;
+        std::int8_t last_evaluation;
+
+    }; // struct behavior_cache
+
+    /// @brief 条件挙動キャッシュのコンテナ。
+    private: typedef std::vector<
+         typename this_type::behavior_cache,
+         typename this_type::allocator_type>
+             behavior_cache_vector;
+
+    //-------------------------------------------------------------------------
     /// @name 構築と代入
     //@{
     /** @brief 空の条件挙動器を構築する。
         @param[in] in_reserve_expressions 監視する条件式の予約数。
         @param[in] in_reserve_states      監視する状態値の予約数。
+        @param[in] in_reserve_caches      条件挙動キャッシュの予約数。
         @param[in] in_allocator           メモリ割当子の初期値。
      */
     public: dispatcher(
         std::size_t const in_reserve_expressions,
         std::size_t const in_reserve_states,
+        std::size_t const in_reserve_caches,
         typename this_type::allocator_type const& in_allocator)
     :
     expression_monitors_(in_allocator),
-    state_monitors_(in_allocator)
+    state_monitors_(in_allocator),
+    behavior_caches_(in_allocator),
+    dispatch_lock_(false)
     {
         this->expression_monitors_.reserve(in_reserve_expressions);
         this->state_monitors_.reserve(in_reserve_states);
+        this->behavior_caches_.reserve(in_reserve_caches);
     }
 
     /** @brief ムーブ構築子。
@@ -253,8 +282,13 @@ class psyq::scenario_engine::dispatcher
      */
     public: dispatcher(this_type&& io_source):
     expression_monitors_(std::move(io_source.expression_monitors_)),
-    state_monitors_(std::move(io_source.state_monitors_))
-    {}
+    state_monitors_(std::move(io_source.state_monitors_)),
+    behavior_caches_(std::move(io_source.behavior_caches_)),
+    dispatch_lock_(false)
+    {
+        /// @note this_type::_dispatch 実行中はムーブできない。
+        PSYQ_ASSERT(!io_source.dispatch_lock_);
+    }
 
     /** @brief ムーブ代入演算子。
         @param[in,out] io_source ムーブ元となるインスタンス。
@@ -262,9 +296,19 @@ class psyq::scenario_engine::dispatcher
      */
     public: this_type& operator=(this_type&& io_source)
     {
+        /// @note this_type::_dispatch 実行中はムーブできない。
+        PSYQ_ASSERT(!this->dispatch_lock_ && !io_source.dispatch_lock_);
         this->expression_monitors_ = std::move(io_source.expression_monitors_);
         this->state_monitors_ = std::move(io_source.state_monitors_);
+        this->behavior_caches_ = std::move(io_source.behavior_caches_);
         return *this;
+    }
+
+    /// @brief 条件挙動器を解体する。
+    public: ~dispatcher()
+    {
+        /// @note this_type::_dispatch 実行中は解体できない。
+        PSYQ_ASSERT(!this->dispatch_lock_);
     }
 
     /// @brief 条件挙動器を再構築し、メモリ領域を必要最小限にする。
@@ -272,6 +316,7 @@ class psyq::scenario_engine::dispatcher
     {
         this->expression_monitors_.shrink_to_fit();
         this->state_monitors_.shrink_to_fit();
+        //this->behavior_caches_.shrink_to_fit();
         for (auto& local_monitor: this->expression_monitors_)
         {
             local_monitor.functions.shrink_to_fit();
@@ -282,8 +327,8 @@ class psyq::scenario_engine::dispatcher
         }
     }
 
-    /** @brief 条件評価器で使われているメモリ割当子を取得する。
-        @return 条件評価器で使われているメモリ割当子。
+    /** @brief 条件挙動器で使われているメモリ割当子を取得する。
+        @return 条件挙動器で使われているメモリ割当子。
      */
     public: typename this_type::allocator_type get_allocator()
     const PSYQ_NOEXCEPT
@@ -294,18 +339,22 @@ class psyq::scenario_engine::dispatcher
     //-------------------------------------------------------------------------
     /// @name 条件挙動
     //@{
-    /** @brief 条件式の評価の変化を検知して呼び出す、関数オブジェクトを登録する。
+    /** @brief 条件式に対応する条件挙動関数を登録する。
 
-        this_type::_dispatch で条件式の評価が変化した際に、
-        呼び出す関数オブジェクトを登録する。
+        this_type::_dispatch で条件式の評価が変化した際に呼び出す、
+        条件挙動関数を登録する。
+
+        登録された条件挙動関数は、スマートポインタが空になると、
+        自動的に取り除かれる。明示的に条件挙動関数を取り除くには、
+        this_type::unregister_function を呼び出す。
 
         @param[in] in_expression_key    評価に用いる条件式の識別値。
-        @param[in] in_function          登録する関数オブジェクト。
-        @param[in] in_reserve_functions 関数オブジェクトの予約数。
-        @retval true  成功。関数オブジェクトを登録した。
-        @retval false 失敗。関数オブジェクトは登録されなかった。
+        @param[in] in_function          登録する条件挙動関数を指すスマートポインタ。
+        @param[in] in_reserve_functions 条件挙動関数オブジェクトの予約数。
+        @retval true  成功。条件挙動関数を登録した。
+        @retval false 失敗。条件挙動関数は登録されなかった。
      */
-    public: bool register_expression(
+    public: bool register_function(
         typename this_type::expression_key const& in_expression_key,
         typename this_type::function_shared_ptr const& in_function,
         std::size_t const in_reserve_functions = 1)
@@ -316,7 +365,7 @@ class psyq::scenario_engine::dispatcher
             return false;
         }
 
-        // 関数オブジェクトの登録先となる、条件式監視器を検索する。
+        // 関数オブジェクトを登録する条件式監視器を決定する。
         auto local_expression_monitor(
             std::lower_bound(
                 this->expression_monitors_.begin(),
@@ -326,31 +375,87 @@ class psyq::scenario_engine::dispatcher
         if (local_expression_monitor != this->expression_monitors_.end()
             && local_expression_monitor->key == in_expression_key)
         {
-            //local_expression_monitor->functions.reserve(in_reserve_functions);
-            // 同じ関数オブジェクトがすでに登録されているなら、
-            // 何もせずに成功する。
-            bool const local_find(
-                this_type::arrange_function_container(
+            // 同じ関数オブジェクトがすでに登録済みなら、そのままで成功する。
+            auto const local_find_function(
+                this_type::find_function(
                     local_expression_monitor->functions, *local_function));
-            if (local_find)
+            if (local_find_function)
             {
+                local_expression_monitor->functions.reserve(in_reserve_functions);
                 return true;
             }
         }
-        // 条件式を状態監視器へ登録する。
         else
         {
-            // 条件式監視器を生成し、コンテナに挿入する。
+            // 条件式監視器を新たに生成し、コンテナに挿入する。
             local_expression_monitor = this->expression_monitors_.insert(
                 local_expression_monitor,
-                this_type::expression_monitor(
+                typename this_type::expression_monitor(
                     in_expression_key, this->get_allocator()));
-            local_expression_monitor->functions.reserve(in_reserve_functions);
         }
 
-        // 関数オブジェクトを条件式監視器へ登録する。
+        // 関数オブジェクトを条件式監視器へ追加する。
+        local_expression_monitor->functions.reserve(in_reserve_functions);
         local_expression_monitor->functions.push_back(in_function);
         return true;
+    }
+
+    /** @brief 条件式に対応する条件挙動関数を取り除く。
+
+        this_type::register_function で登録した条件挙動関数を、
+        条件式監視器から取り除く。
+
+        @param[in] in_expression_key 条件式の識別値。
+        @param[in] in_function       取り除く条件挙動関数。
+     */
+    public: void unregister_function(
+        typename this_type::expression_key const& in_expression_key,
+        typename this_type::function const& in_function)
+    {
+        auto const local_expression_monitor(
+            this_type::expression_monitor_key_less::find_pointer(
+                this->expression_monitors_, in_expression_key));
+        if (local_expression_monitor != nullptr)
+        {
+            this_type::remove_function(
+                local_expression_monitor->functions, in_function);
+        }
+    }
+
+    /** @brief 条件式に対応する条件挙動関数をすべて取り除く。
+
+        条件式監視器を削除し、 this_type::register_function
+        で同じ条件式に登録した条件挙動関数を、すべて取り除く。
+
+        @param[in] in_expression_key 条件式の識別値。
+     */
+    public: void unregister_function(
+        typename this_type::expression_key const& in_expression_key)
+    {
+        auto const local_expression_monitor(
+            this_type::expression_monitor_key_less::find_const_iterator(
+                this->expression_monitors_, in_expression_key));
+        if (local_expression_monitor != this->expression_monitors_.end())
+        {
+            this->expression_monitors_.erase(local_expression_monitor);
+        }
+    }
+
+    /** @brief 条件挙動関数を取り除く。
+
+        this_type::register_function で登録した条件挙動関数を、
+        すべての条件式監視器から取り除く。
+
+        @param[in] in_function 削除する条件挙動関数。
+     */
+    public: void unregister_function(
+        typename this_type::function const& in_function)
+    {
+        for (auto& local_expression_monitor: this->expression_monitors_)
+        {
+            this_type::remove_function(
+                local_expression_monitor.functions, in_function);
+        }
     }
     //@}
     /** @brief 関数オブジェクトを検索しつつ、コンテナを整理する。
@@ -359,27 +464,58 @@ class psyq::scenario_engine::dispatcher
         @retval true  検索対象がコンテナから見つかった。
         @retval false 検索対象がコンテナから見つからなかった。
      */
-    private: static bool arrange_function_container(
+    private: static bool find_function(
         typename this_type::function_weak_ptr_vector& io_functions,
         typename this_type::function const& in_function)
     {
         // 関数オブジェクトのコンテナを走査し、検索対象を見つけながら、
         // 空になった要素を削除する。
-        auto local_last(io_functions.begin());
         auto local_find(false);
-        for (auto& local_function: io_functions)
+        for (auto i(io_functions.begin()); i != io_functions.end();)
         {
-            if (!local_find && local_function.lock().get() == &in_function)
+            if (!local_find && i->lock().get() == &in_function)
             {
                 local_find = true;
             }
-            local_last->swap(local_function);
-            if (!local_last->expired())
+            if (i->expired())
             {
-                ++local_last;
+                i = io_functions.erase(i);
+            }
+            else
+            {
+                ++i;
             }
         }
-        io_functions.erase(local_last, io_functions.end());
+        return local_find;
+    }
+
+    /** @brief 関数オブジェクトを削除しつつ、コンテナを整理する。
+        @param[in,out] io_functions 整理する関数オブジェクトコンテナ。
+        @param[in] in_function      削除する関数オブジェクト。
+        @retval true  削除対象がコンテナから見つかった。
+        @retval false 削除対象がコンテナから見つからなかった。
+     */
+    private: static bool remove_function(
+        typename this_type::function_weak_ptr_vector& io_functions,
+        typename this_type::function const& in_function)
+    {
+        // 関数オブジェクトのコンテナを走査し、削除対象を見つけながら、
+        // 空になった要素を削除する。
+        auto local_find(false);
+        for (auto i(io_functions.begin()); i != io_functions.end();)
+        {
+            auto const local_function(i->lock().get());
+            if (local_function != nullptr)
+            {
+                if (local_find || local_function != &in_function)
+                {
+                    ++i;
+                    continue;
+                }
+                local_find = true;
+            }
+            i = io_functions.erase(i);
+        }
         return local_find;
     }
 
@@ -407,7 +543,7 @@ class psyq::scenario_engine::dispatcher
             in_evaluator.find_chunk(local_expression->chunk));
         if (local_chunk == nullptr)
         {
-            // 条件式の要素条件チャンクが存在しなかった。
+            // 条件式があれば、要素条件チャンクもあるはず。
             PSYQ_ASSERT(false);
             return false;
         }
@@ -448,10 +584,11 @@ class psyq::scenario_engine::dispatcher
     bool add_sub_expression(
         template_evaluator const& in_evaluator,
         typename template_evaluator::expression const& in_expression,
-        typename template_evaluator::sub_expression::vector const& in_sub_expressions,
+        typename template_evaluator::sub_expression::vector const&
+            in_sub_expressions,
         std::size_t const in_reserve_expressions)
     {
-        // 状態監視器に、複合条件式を追加する。
+        // 複合条件式の要素条件を走査し、状態監視器に条件式を登録する。
         auto const local_begin(in_sub_expressions.begin());
         auto const local_end(local_begin + in_expression.end);
         for (auto i(local_begin + in_expression.begin); i != local_end; ++i)
@@ -460,13 +597,18 @@ class psyq::scenario_engine::dispatcher
             auto const local_expression_monitor(
                 this_type::expression_monitor_key_less::find_const_pointer(
                     this->expression_monitors_, local_sub_key));
-            if (local_expression_monitor == nullptr
-                && !this->add_expression(local_sub_key, in_evaluator, in_reserve_expressions))
+            if (local_expression_monitor == nullptr)
             {
-                // 無限ループを防ぐため、
-                // まだ存在しない条件式を複合条件式で使うのは禁止する。
-                PSYQ_ASSERT(false);
-                return false;
+                auto const local_add_expression(
+                    this->add_expression(
+                        local_sub_key, in_evaluator, in_reserve_expressions));
+                if (!local_add_expression)
+                {
+                    // 無限ループを防ぐため、
+                    // まだ存在しない条件式を複合条件式で使うのは禁止する。
+                    PSYQ_ASSERT(false);
+                    return false;
+                }
             }
         }
         return true;
@@ -496,22 +638,22 @@ class psyq::scenario_engine::dispatcher
         for (auto i(local_begin + in_expression.begin); i != local_end; ++i)
         {
             // 条件式を登録する状態監視器を取得する。
-            auto& local_element_key(i->key);
+            auto const& local_state_key(i->key);
             auto local_state_monitor(
                 std::lower_bound(
                     io_state_monitors.begin(),
                     io_state_monitors.end(),
-                    local_element_key,
+                    local_state_key,
                     typename this_type::state_monitor_key_less()));
             if (local_state_monitor == io_state_monitors.end()
-                || local_state_monitor->key != local_element_key)
+                || local_state_monitor->key != local_state_key)
             {
                 // 要素条件に対応する状態監視器がなかったので、
                 // 状態監視器を新たに生成する。
                 local_state_monitor = io_state_monitors.insert(
                     local_state_monitor,
                     typename this_type::state_monitor(
-                        local_element_key, io_state_monitors.get_allocator()));
+                        local_state_key, io_state_monitors.get_allocator()));
             }
 
             // 条件式の識別値を、状態監視器へ登録する。
@@ -569,7 +711,7 @@ class psyq::scenario_engine::dispatcher
     /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
 
         条件式の評価が変化していれば、
-        this_type::register_expression で登録した関数を呼び出す。
+        this_type::register_function で登録した関数を呼び出す。
 
         @param[in] in_evaluator 条件式の評価に使う条件評価器。
         @param[in] in_reservoir 条件式の評価に使う状態貯蔵器。
@@ -586,20 +728,44 @@ class psyq::scenario_engine::dispatcher
         登録関数を呼び出すような事態になりかねないため、
         this_type::_dispatch の間の条件式の評価の変化は
         今のところ検知してない。
-
-        @todo
-        条件挙動関数の中で this / in_evaluator / in_reservoir
-        が破棄される可能性もある。何らかの対策をすること。
      */
     public: template<typename template_evaluator>
     void _dispatch(
         template_evaluator const& in_evaluator,
         typename template_evaluator::reservoir const& in_reservoir)
     {
+        if (this->dispatch_lock_)
+        {
+            PSYQ_ASSERT(false);
+            return;
+        }
+        this->dispatch_lock_ = true;
+
         // 要素条件で用いる状態が更新された条件式を再評価し、
-        // 評価結果が変化していれば、条件挙動関数を呼び出す。
-        this_type::update_expression_monitor_container(
-            this->expression_monitors_, in_evaluator, in_reservoir);
+        // 評価結果が変化していれば、キャッシュに貯めてから呼び出す。
+        auto local_behavior_caches(std::move(this->behavior_caches_));
+        local_behavior_caches.clear();
+        this_type::receive_evaluation_request(
+            local_behavior_caches,
+            this->expression_monitors_,
+            in_evaluator,
+            in_reservoir);
+        for (auto& local_cache: local_behavior_caches)
+        {
+            auto const local_function_holder(local_cache.function.lock());
+            auto const local_function(local_function_holder.get());
+            if (local_function != nullptr)
+            {
+                (*local_function)(
+                    local_cache.expression_key,
+                    local_cache.evaluation,
+                    local_cache.last_evaluation);
+            }
+        }
+        local_behavior_caches.clear();
+        this->behavior_caches_ = std::move(local_behavior_caches);
+        PSYQ_ASSERT(this->dispatch_lock_);
+        this->dispatch_lock_ = false;
     }
     //@}
     /** @brief 状態の更新を検知する。
@@ -651,38 +817,41 @@ class psyq::scenario_engine::dispatcher
         typename this_type::expression_key_vector& io_expression_keys,
         bool const in_valid_state)
     {
-        // 条件式識別番号のコンテナを走査しつつ、
-        // 不要になった要素を削除し、条件識別番号コンテナを整理する。
-        auto local_last(io_expression_keys.begin());
-        for (auto& local_expression_key: io_expression_keys)
+        // 条件式識別値のコンテナを走査しつつ、
+        // 不要になった要素を削除し、条件識別値コンテナを整理する。
+        for (auto i(io_expression_keys.begin()); i != io_expression_keys.end();)
         {
             auto const local_expression_monitor(
                 this_type::expression_monitor_key_less::find_pointer(
-                    io_expression_monitors, local_expression_key));
-            *local_last = std::move(local_expression_key);
+                    io_expression_monitors, *i));
             if (local_expression_monitor != nullptr)
             {
                 local_expression_monitor->flags.set(
                     this_type::expression_monitor::flag_EVALUATION_REQUEST,
                     in_valid_state || local_expression_monitor->flags.test(
                         this_type::expression_monitor::flag_LAST_EVALUATION));
-                ++local_last;
+                ++i;
+            }
+            else
+            {
+                i = io_expression_keys.erase(i);
             }
         }
-        io_expression_keys.erase(local_last, io_expression_keys.end());
     }
 
-    /** @brief 条件式を評価し、条件挙動関数を呼び出す。
+    /** @brief 条件式の評価要求に応える。
 
         条件式監視器のコンテナを走査し、条件式の結果によって、
-        this_type::register_expression で登録された条件挙動関数を呼び出す。
+        this_type::register_function で登録された条件挙動関数をキャッシュに貯める。
 
+        @param[in,out] io_behavior_caches     条件挙動キャッシュのコンテナ。
         @param[in,out] io_expression_monitors 条件式監視器のコンテナ。
         @param[in] in_evaluator               評価に使う条件評価器。
         @param[in] in_reservoir               条件式の評価に状態値のコンテナ。
      */
     private: template<typename template_evaluator>
-    static void update_expression_monitor_container(
+    static void receive_evaluation_request(
+        typename this_type::behavior_cache_vector& io_behavior_caches,
         typename this_type::expression_monitor_vector& io_expression_monitors,
         template_evaluator const& in_evaluator,
         typename template_evaluator::reservoir const& in_reservoir)
@@ -691,7 +860,7 @@ class psyq::scenario_engine::dispatcher
             auto i(io_expression_monitors.begin());
             i != io_expression_monitors.end();)
         {
-            // 条件式監視器の評価要求があれば、条件式を評価する。
+            // 条件式監視器に評価要求があれば、条件式を評価する。
             auto& local_expression_monitor(*i);
             auto const local_evaluation_request(
                 local_expression_monitor.flags.test(
@@ -700,11 +869,12 @@ class psyq::scenario_engine::dispatcher
             {
                 local_expression_monitor.flags.reset(
                     this_type::expression_monitor::flag_EVALUATION_REQUEST);
-                auto const local_evaluate_expression(
-                    this_type::evaluate_expression(
-                        local_expression_monitor, in_evaluator, in_reservoir));
-                if (local_evaluate_expression
-                    && local_expression_monitor.functions.empty())
+                this_type::evaluate_expression(
+                    io_behavior_caches,
+                    local_expression_monitor,
+                    in_evaluator,
+                    in_reservoir);
+                if (local_expression_monitor.functions.empty())
                 {
                     // 関数オブジェクトのコンテナが空になったら、
                     // 状態監視器を削除する。
@@ -719,26 +889,29 @@ class psyq::scenario_engine::dispatcher
     /** @brief 条件式を評価し、条件挙動関数を呼び出す。
 
         条件式を評価し、前回の結果と異なるなら、
-        this_type::register_expression で登録された条件挙動関数を呼び出す。
+        this_type::register_function で登録された条件挙動関数をキャッシュに貯める。
 
+        @param[in,out] io_behavior_caches    条件挙動キャッシュのコンテナ。
         @param[in,out] io_expression_monitor 更新する条件式監視器。
         @param[in] in_evaluator              評価に用いる条件評価器。
         @param[in] in_reservoir              評価に用いる状態貯蔵器。
-        @retval true  条件挙動関数を呼び出した。
-        @retval false 条件挙動関数を呼び出さなかった。
+        @retval true  条件式の評価が前回と異なっていた。
+        @retval false 条件式の評価が前回と同じだった。
      */
     private: template<typename template_evaluator>
     static bool evaluate_expression(
+        typename this_type::behavior_cache_vector& io_behavior_caches,
         typename this_type::expression_monitor& io_expression_monitor,
         template_evaluator const& in_evaluator,
         typename template_evaluator::reservoir const& in_reservoir)
     {
-        // 条件式を評価し、評価結果が以前と異なっているか判定する。
+        // 条件式を評価し、評価結果が以前と同じか判定する。
         auto const local_last_evaluation(
             io_expression_monitor.get_last_evaluation());
+        auto const local_expression_key(io_expression_monitor.key);
         auto const local_evaluate_expression(
             in_evaluator.evaluate_expression(
-                io_expression_monitor.key, in_reservoir));
+                local_expression_key, in_reservoir));
         io_expression_monitor.flags.set(
             this_type::expression_monitor::flag_LAST_EVALUATION,
             0 <= local_evaluate_expression);
@@ -752,32 +925,40 @@ class psyq::scenario_engine::dispatcher
             return false;
         }
 
-        // 条件式の結果が以前と異なるので、条件挙動関数を呼び出す。
-        auto local_last(io_expression_monitor.functions.begin());
-        for (auto& local_function_observer: io_expression_monitor.functions)
+        // 条件式の評価結果が以前と異なるので、条件挙動キャッシュに貯める。
+        for (
+            auto i(io_expression_monitor.functions.begin());
+            i != io_expression_monitor.functions.end();)
         {
-            local_last->swap(local_function_observer);
-            if (!local_last->expired())
+            if (i->expired())
             {
-                auto const local_function(local_last->lock());
-                (*local_function)(
-                    io_expression_monitor.key,
+                i = io_expression_monitor.functions.erase(i);
+            }
+            else
+            {
+                io_behavior_caches.emplace_back(
+                    *i,
+                    local_expression_key,
                     local_evaluation,
                     local_last_evaluation);
-                ++local_last;
+                ++i;
             }
         }
-        io_expression_monitor.functions.erase(
-            local_last, io_expression_monitor.functions.end());
         return true;
     }
 
     //-------------------------------------------------------------------------
-    /// 条件式監視器の辞書。
+    /// @brief 条件式監視器の辞書。
     private: typename this_type::expression_monitor_vector expression_monitors_;
 
-    /// 状態監視器の辞書。
+    /// @brief 状態監視器の辞書。
     private: typename this_type::state_monitor_vector state_monitors_;
+
+    /// @brief 条件挙動関数のキャッシュ。
+    private: typename this_type::behavior_cache_vector behavior_caches_;
+
+    /// @brief 多重に条件挙動関数を呼び出さないためのロック。
+    private: bool dispatch_lock_;
 
 }; // class psyq::scenario_engine::dispatcher
 

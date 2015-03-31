@@ -92,6 +92,7 @@ class psyq::scenario_engine::driver
         @param[in] in_reserve_chunks      チャンクの予約数。
         @param[in] in_reserve_states      状態値の予約数。
         @param[in] in_reserve_expressions 条件式の予約数。
+        @param[in] in_reserve_caches      条件挙動キャッシュの予約数。
         @param[in] in_hash_function       ハッシュ関数オブジェクトの初期値。
         @param[in] in_allocator           メモリ割当子の初期値。
      */
@@ -99,13 +100,18 @@ class psyq::scenario_engine::driver
         std::size_t const in_reserve_chunks,
         std::size_t const in_reserve_states,
         std::size_t const in_reserve_expressions,
+        std::size_t const in_reserve_caches = 16,
         typename this_type::hasher in_hash_function = this_type::hasher(),
         typename this_type::allocator_type const& in_allocator =
             this_type::allocator_type())
     :
     reservoir_(in_reserve_states, in_reserve_chunks, in_allocator),
     evaluator_(in_reserve_expressions, in_reserve_chunks, in_allocator),
-    dispatcher_(in_reserve_expressions, in_reserve_states, in_allocator),
+    dispatcher_(
+        in_reserve_expressions,
+        in_reserve_states,
+        in_reserve_caches,
+        in_allocator),
     behaviors_(in_allocator),
     hash_function_(std::move(in_hash_function))
     {

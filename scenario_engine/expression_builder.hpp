@@ -338,7 +338,7 @@ class psyq::scenario_engine::expression_builder
             return false;
         }
         io_evaluator.register_expression(
-            io_elements, in_chunk_key, std::move(in_expression_key), in_logic);
+            in_chunk_key, std::move(in_expression_key), io_elements, in_logic);
         return true;
     }
 

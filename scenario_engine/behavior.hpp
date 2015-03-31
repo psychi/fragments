@@ -378,9 +378,9 @@ struct psyq::scenario_engine::behavior_builder
             auto local_function(
                 this_type::make_function(
                     io_hasher, in_evaluator, in_reservoir, in_string_table, i));
-            auto const local_register_expression(
-                io_dispatcher.register_expression(local_key, local_function));
-            if (local_register_expression)
+            auto const local_register_function(
+                io_dispatcher.register_function(local_key, local_function));
+            if (local_register_function)
             {
                 local_functions.push_back(std::move(local_function));
             }

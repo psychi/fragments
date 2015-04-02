@@ -23,10 +23,6 @@
 #define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KIND "KIND"
 #endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KIND)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_SIZE
-#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_SIZE "SIZE"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_SIZE)
-
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_VALUE
 #define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_VALUE "VALUE"
 #endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_VALUE)
@@ -169,116 +165,59 @@ class psyq::scenario_engine::state_builder
             return false;
         }
 
-        // 状態値の種類を取得する。
+        // 状態値の種類と初期値を取得し、状態値を登録する。
         auto const local_kind_cell(
             in_string_table.find_body_cell(
                 in_row_index,
                 PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KIND));
-        typename template_reservoir::state::kind_enum local_kind;
-        if (local_kind_cell
-            == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_BOOL)
-        {
-            local_kind = template_reservoir::state::kind_BOOL;
-        }
-        else if (
-            local_kind_cell
-            == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_UNSIGNED)
-        {
-            local_kind = template_reservoir::state::kind_UNSIGNED;
-        }
-        else if (
-            local_kind_cell
-            == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_SIGNED)
-        {
-            local_kind = template_reservoir::state::kind_SIGNED;
-        }
-        else if (
-            local_kind_cell
-            == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_FLOAT)
-        {
-            local_kind = template_reservoir::state::kind_FLOAT;
-        }
-        else
-        {
-            PSYQ_ASSERT(false);
-            return false;
-        }
-
-        // 状態値のビット数を取得する。
-        auto const local_size_cell(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_SIZE));
-        std::size_t local_size;
-        if (local_kind == template_reservoir::state::kind_BOOL)
-        {
-            // 真偽値のビット数は必ず1ビットとなるので、ビット数の指定はナシ。
-            PSYQ_ASSERT(local_size_cell.empty());
-            local_size = 1;
-        }
-        else if (local_size_cell.empty())
-        {
-            // ビット数セルがからの場合は、型の種類ごとのデフォルト値を使う。
-            switch (local_kind)
-            {
-                case template_reservoir::state::kind_UNSIGNED:
-                case template_reservoir::state::kind_SIGNED:
-                local_size =
-                    PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_INTEGER_SIZE_DEFAULT;
-                break;
-
-                case template_reservoir::state::kind_FLOAT:
-                local_size =
-                    PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_FLOAT_SIZE_DEFAULT;
-                break;
-
-                default:
-                // 状態値の型の種類が未知のものだった。
-                PSYQ_ASSERT(false);
-                return false;
-            }
-        }
-        else
-        {
-            std::size_t local_rest_size;
-            local_size = local_size_cell.template to_integer<std::size_t>(
-                &local_rest_size);
-            if (local_rest_size != 0)
-            {
-                // ビット数セルを整数として解析しきれなかった。
-                PSYQ_ASSERT(false);
-                return false;
-            }
-        }
-        PSYQ_ASSERT(local_size <= template_reservoir::BLOCK_SIZE);
-
-        // 状態値の初期値を取得し、状態値を登録する。
         auto const local_value_cell(
             in_string_table.find_body_cell(
                 in_row_index,
                 PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_VALUE));
-        switch (local_kind)
+        if (local_kind_cell
+            == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_BOOL)
         {
-            case template_reservoir::state::kind_BOOL:
             return this_type::register_bool(
                 io_reservoir, in_chunk_key, local_key, local_value_cell);
-
-            case template_reservoir::state::kind_UNSIGNED:
-            return this_type::register_unsigned(
-                io_reservoir, in_chunk_key, local_key, local_value_cell, local_size);
-
-            case template_reservoir::state::kind_SIGNED:
-            return this_type::register_signed(
-                io_reservoir, in_chunk_key, local_key, local_value_cell, local_size);
-
-            case template_reservoir::state::kind_FLOAT:
-            return this_type::register_float(
-                io_reservoir, in_chunk_key, local_key, local_value_cell, local_size);
-
-            default:
-            PSYQ_ASSERT(false);
-            return false;
         }
+        if (local_kind_cell
+            == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_FLOAT)
+        {
+            return this_type::register_float(
+                io_reservoir, in_chunk_key, local_key, local_value_cell);
+        }
+        std::size_t const local_default_size(8);
+        auto const local_unsigned_size(
+            this_type::get_integer_size(
+                local_kind_cell,
+                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_UNSIGNED,
+                local_default_size));
+        if (0 < local_unsigned_size)
+        {
+            return this_type::register_unsigned(
+                io_reservoir,
+                in_chunk_key,
+                local_key,
+                local_value_cell,
+                local_unsigned_size);
+        }
+        auto const local_signed_size(
+            this_type::get_integer_size(
+                local_kind_cell,
+                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_SIGNED,
+                local_default_size));
+        if (0 < local_signed_size)
+        {
+            return this_type::register_signed(
+                io_reservoir,
+                in_chunk_key,
+                local_key,
+                local_value_cell,
+                local_signed_size);
+        }
+
+        PSYQ_ASSERT(false);
+        return false;
     }
 
     private: template<typename template_reservoir>
@@ -348,22 +287,47 @@ class psyq::scenario_engine::state_builder
         template_reservoir& io_reservoir,
         typename template_reservoir::chunk_key const& in_chunk_key,
         typename template_reservoir::state_key const& in_state_key,
-        typename this_type::string_table::string_view const& in_value_cell,
-        std::size_t const in_size)
+        typename this_type::string_table::string_view const& in_value_cell)
     {
         std::size_t local_rest_size;
         auto const local_value(
-            in_value_cell.template to_real<long double>(
-                &local_rest_size));
+            in_value_cell.template
+                to_real<typename template_reservoir::float_type>(
+                    &local_rest_size));
         if (local_rest_size != 0)
         {
             // 初期値セルを整数として解析しきれなかった。
             PSYQ_ASSERT(false);
             return false;
         }
-        /// @todo 未実装。
-        return false;
-        //return io_reservoir.register_float(in_chunk_key, in_state_key, local_value, in_size);
+        return io_reservoir.register_float(
+            in_chunk_key, in_state_key, local_value);
+    }
+
+    private: static std::size_t get_integer_size(
+        typename this_type::string_table::string_view const& in_cell,
+        typename this_type::string_table::string_view const& in_kind,
+        std::size_t local_default_size)
+    {
+        if (in_cell.substr(0, in_kind.size()) == in_kind)
+        {
+            if (in_cell.size() == in_kind.size())
+            {
+                return local_default_size;
+            }
+            if (in_cell.at(in_kind.size()) == '_')
+            {
+                std::size_t local_rest_size;
+                auto const local_size(
+                    in_cell.substr(in_kind.size() + 1).template
+                        to_integer<std::size_t>(&local_rest_size));
+                if (local_rest_size == 0)
+                {
+                    return local_size;
+                }
+            }
+        }
+        return 0;
     }
 
     //-------------------------------------------------------------------------

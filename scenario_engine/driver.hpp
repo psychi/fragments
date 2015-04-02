@@ -294,11 +294,11 @@ namespace psyq_test
 
         // 状態値を登録する。
         string_table::string_view const local_state_table_csv(
-            "KEY,            KIND,     SIZE, VALUE,\n"
-            "state_bool,     BOOL,         ,  TRUE,\n"
-            "state_unsigned, UNSIGNED,    7,    10,\n"
-            "state_signed,   SIGNED,     13,   -20,\n"
-            "state_float,    FLOAT,      32,  1.25,\n"
+            "KEY,            KIND,      VALUE,\n"
+            "state_bool,     BOOL,       TRUE,\n"
+            "state_unsigned, UNSIGNED_7,   10,\n"
+            "state_signed,   SIGNED_13,   -20,\n"
+            "state_float,    FLOAT,      1.25,\n"
             );
         local_driver.add_reservoir_chunk(
             local_chunk_key,

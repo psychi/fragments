@@ -35,6 +35,7 @@ namespace psyq
       - reservoir::register_bool
       - reservoir::register_unsigned
       - reservoir::register_signed
+      - reservoir::register_float
     - reservoir::get_state で、状態値を取得する。
     - reservoir::set_state で、状態値を設定する。
 
@@ -73,6 +74,22 @@ class psyq::scenario_engine::reservoir
             format_type;
 
     //-------------------------------------------------------------------------
+    /// @brief 浮動小数点数の型。
+    public: typedef float float_type;
+
+    private: union float_32
+    {
+        float value;
+        std::uint32_t bits;
+    };
+
+    private: union float_64
+    {
+        double value;
+        std::uint64_t bits;
+    };
+
+    //-------------------------------------------------------------------------
     /// @brief ビット列ブロックを表す型。
     private: typedef std::uint64_t block_type;
 
@@ -94,9 +111,13 @@ class psyq::scenario_engine::reservoir
         /// @brief ビット列ブロックのビット数。
         BLOCK_SIZE =
             sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE,
+        /// @brief 浮動小数点数型のビット数。
+        FLOAT_SIZE = 
+            sizeof(typename this_type::float_type) * this_type::BITS_PER_BYTE,
         /// @brief 状態値のビット数の最大値。
         MAX_STATE_SIZE = this_type::BLOCK_SIZE,
     };
+    static_assert(this_type::FLOAT_SIZE <= this_type::BLOCK_SIZE, "");
 
     //-------------------------------------------------------------------------
     /// @brief 状態値のビット位置とビット数を表す型。
@@ -399,6 +420,7 @@ class psyq::scenario_engine::reservoir
         @sa register_bool
         @sa register_unsigned
         @sa register_signed
+        @sa register_float
      */
     public: typename this_type::state const* find_state(
         typename this_type::state_key const& in_state_key)
@@ -421,6 +443,7 @@ class psyq::scenario_engine::reservoir
         @sa this_type::register_bool
         @sa this_type::register_unsigned
         @sa this_type::register_signed
+        @sa this_type::register_float
         @sa this_type::set_state
      */
     public: template<typename template_value>
@@ -567,6 +590,7 @@ class psyq::scenario_engine::reservoir
         @sa this_type::register_bool
         @sa this_type::register_unsigned
         @sa this_type::register_signed
+        @sa this_type::register_float
         @sa this_type::get_state
      */
     public: template<typename template_value>
@@ -883,7 +907,59 @@ class psyq::scenario_engine::reservoir
             static_cast<typename this_type::size_type>(in_state_size),
             in_state_value);
     }
+    /** @brief 浮動小数点数型の状態値を登録する。
+
+        登録した状態値は
+        this_type::get_state と this_type::set_state でアクセスできる。
+
+        @param[in] in_chunk_key   登録する状態値を格納するビット列チャンクの識別値。
+        @param[in] in_state_key   登録する状態値の識別番号。
+        @param[in] in_state_value 登録する状態値の初期値。
+        @retval true  成功。状態値を登録した。
+        @retval false
+            失敗。状態値を登録できなかった。
+            in_state_key に対応する状態値がすでに登録されていると失敗する。
+     */
+    public: bool register_float(
+        typename this_type::chunk_key in_chunk_key,
+        typename this_type::state_key in_state_key,
+        typename this_type::float_type const in_state_value)
+    {
+        // 状態値を登録した後、状態値に初期値を設定する。
+        auto& local_chunk(
+            this_type::equip_chunk(this->chunks_, std::move(in_chunk_key)));
+        auto const local_state(
+            this->register_state(
+                local_chunk,
+                std::move(in_state_key),
+                this_type::state::kind_FLOAT));
+        if (local_state == nullptr)
+        {
+            return false;
+        }
+        return 0 <= this_type::set_bits(
+            local_chunk.blocks,
+            local_state->get_field_position(),
+            this_type::FLOAT_SIZE,
+            this_type::get_float_bits(in_state_value));
+    }
     //@}
+    private: static typename this_type::block_type get_float_bits(
+        float const in_value)
+    {
+        typename this_type::float_32 local_float;
+        local_float.value = in_value;
+        return local_float.bits;
+    }
+
+    private: static typename this_type::block_type get_float_bits(
+        double const in_value)
+    {
+        typename this_type::float_64 local_float;
+        local_float.value = in_value;
+        return local_float.bits;
+    }
+
     //-------------------------------------------------------------------------
     /// @name ビット列チャンク
     //@{
@@ -1322,7 +1398,8 @@ class psyq::scenario_engine::reservoir
             return 1;
 
             case this_type::state::kind_FLOAT:
-            return this_type::BITS_PER_BYTE * sizeof(float);
+            return this_type::BITS_PER_BYTE
+                * sizeof(typename this_type::float_type);
 
             default:
             return in_format < 0? -in_format: in_format;

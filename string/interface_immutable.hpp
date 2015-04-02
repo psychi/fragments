@@ -1285,7 +1285,7 @@ class psyq::string::_private::interface_immutable: public template_string_type
         {
             return template_real_type(1) / local_multiple;
         }
-        return local_multiple;
+        return static_cast<template_real_type>(local_multiple);
     }
 
     /** @brief 文字列を解析し、実数値を読み取る。

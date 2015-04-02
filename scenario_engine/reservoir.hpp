@@ -637,15 +637,26 @@ class psyq::scenario_engine::reservoir
                 return this_type::notify_transition(
                     const_cast<this_type::state&>(*local_state),
                     this_type::set_bits(
-                        local_chunk_blocks, local_position, 1, in_state_value));
+                        local_chunk_blocks,
+                        local_position,
+                        1,
+                        static_cast<typename this_type::block_type>(
+                            in_state_value)));
             }
             return nullptr;
 
             // 浮動小数点数を設定する。
             case this_type::state::kind_FLOAT:
-            /// @todo 浮動小数点数の設定は未実装。
-            PSYQ_ASSERT(false);
-            return nullptr;
+            return this_type::notify_transition(
+                const_cast<this_type::state&>(*local_state),
+                this_type::set_bits(
+                    local_chunk_blocks,
+                    local_position,
+                    this_type::get_format_size(local_format),
+                    this_type::get_float_bits(
+                        /// @note このキャストで丸め誤差が出る可能性がある。
+                        static_cast<typename this_type::float_type>(
+                            in_state_value))));
 
             // 整数を設定する。
             default:
@@ -1398,8 +1409,7 @@ class psyq::scenario_engine::reservoir
             return 1;
 
             case this_type::state::kind_FLOAT:
-            return this_type::BITS_PER_BYTE
-                * sizeof(typename this_type::float_type);
+            return this_type::FLOAT_SIZE;
 
             default:
             return in_format < 0? -in_format: in_format;

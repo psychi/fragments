@@ -351,6 +351,12 @@ namespace psyq_test
 
         local_driver.reservoir_.set_state(
             local_driver.hash_function_("state_bool"), false);
+        local_driver.reservoir_.set_state(
+            local_driver.hash_function_("state_unsigned"), 10);
+        local_driver.reservoir_.set_state(
+            local_driver.hash_function_("state_signed"), -20);
+        local_driver.reservoir_.set_state(
+            local_driver.hash_function_("state_float"), 1.25f);
 
         //
         local_driver.update();

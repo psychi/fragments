@@ -14,7 +14,7 @@ namespace psyq
     namespace scenario_engine
     {
         /// @cond
-        template<typename, typename, typename> class reservoir;
+        template<typename, typename, typename, typename> class reservoir;
         /// @endcond
 
         /// @brief psyq::scenario_engine の管理者以外は、直接アクセス禁止。
@@ -22,6 +22,18 @@ namespace psyq
         {
             /// @cond
             template<typename, typename> struct key_less;
+
+            template<typename template_float> union float_union {};
+            template<> union float_union<float>
+            {
+                float value;
+                std::uint32_t bits;
+            };
+            template<> union float_union<double>
+            {
+                double value;
+                std::uint64_t bits;
+            };
             /// @endcond
         } // namespace _private
     } // namespace scenario_engine
@@ -39,11 +51,13 @@ namespace psyq
     - reservoir::get_state で、状態値を取得する。
     - reservoir::set_state で、状態値を設定する。
 
+    @tparam template_float     @copydoc reservoir::float_type
     @tparam template_state_key @copydoc reservoir::state_key
     @tparam template_chunk_key @copydoc reservoir::chunk_key
     @tparam template_allocator @copydoc reservoir::allocator_type
  */
 template<
+    typename template_float = float,
     typename template_state_key = std::uint32_t,
     typename template_chunk_key = template_state_key,
     typename template_allocator = std::allocator<void*>>
@@ -75,19 +89,12 @@ class psyq::scenario_engine::reservoir
 
     //-------------------------------------------------------------------------
     /// @brief 浮動小数点数の型。
-    public: typedef float float_type;
+    public: typedef template_float float_type;
+    static_assert(std::is_floating_point<template_float>::value, "");
 
-    private: union float_32
-    {
-        float value;
-        std::uint32_t bits;
-    };
-
-    private: union float_64
-    {
-        double value;
-        std::uint64_t bits;
-    };
+    private: typedef psyq::scenario_engine::_private::
+        float_union<typename this_type::float_type>
+            float_union;
 
     //-------------------------------------------------------------------------
     /// @brief ビット列ブロックを表す型。
@@ -653,10 +660,7 @@ class psyq::scenario_engine::reservoir
                     local_chunk_blocks,
                     local_position,
                     this_type::get_format_size(local_format),
-                    this_type::get_float_bits(
-                        /// @note このキャストで丸め誤差が出る可能性がある。
-                        static_cast<typename this_type::float_type>(
-                            in_state_value))));
+                    this_type::get_float_bits(in_state_value)));
 
             // 整数を設定する。
             default:
@@ -713,6 +717,45 @@ class psyq::scenario_engine::reservoir
             io_state.field |= 1 << this_type::field_TRANSITION_FRONT;
         }
         return &io_state;
+    }
+
+    private: static typename this_type::block_type get_float_bits(
+        bool const in_value)
+    {
+        typename this_type::float_union local_float;
+        local_float.value = in_value;
+        return local_float.bits;
+    }
+    private: static typename this_type::block_type get_float_bits(
+        float const in_value)
+    {
+        typename this_type::float_union local_float;
+        local_float.value = in_value;
+        return local_float.bits;
+    }
+    private: static typename this_type::block_type get_float_bits(
+        double const in_value)
+    {
+        typename this_type::float_union local_float;
+        /** @note
+            ここでコンパイルエラーか警告が出る場合は
+            double から float への型変換が発生しているのが原因。
+            set_state の引数を手動で型変換する必要がある。
+         */
+        local_float.value = in_value;
+        return local_float.bits;
+    }
+    private: template<typename template_value>
+    static typename this_type::block_type get_float_bits(
+        template_value const in_value)
+    {
+        typename this_type::float_union local_float;
+        local_float.value =
+            static_cast<typename this_type::float_type>(in_value);
+        PSYQ_ASSERT(
+            // 桁あふれが発生してないか確認する。
+            static_cast<template_value>(local_float.value) == in_value);
+        return local_float.bits;
     }
 
     private: static int set_signed(
@@ -948,29 +991,15 @@ class psyq::scenario_engine::reservoir
         {
             return false;
         }
+        typename this_type::float_union local_float;
+        local_float.value = in_state_value;
         return 0 <= this_type::set_bits(
             local_chunk.blocks,
             local_state->get_field_position(),
             this_type::FLOAT_SIZE,
-            this_type::get_float_bits(in_state_value));
+            local_float.bits);
     }
     //@}
-    private: static typename this_type::block_type get_float_bits(
-        float const in_value)
-    {
-        typename this_type::float_32 local_float;
-        local_float.value = in_value;
-        return local_float.bits;
-    }
-
-    private: static typename this_type::block_type get_float_bits(
-        double const in_value)
-    {
-        typename this_type::float_64 local_float;
-        local_float.value = in_value;
-        return local_float.bits;
-    }
-
     //-------------------------------------------------------------------------
     /// @name ビット列チャンク
     //@{
@@ -1432,7 +1461,7 @@ class psyq::scenario_engine::reservoir
     /// @brief ビット列チャンクのコンテナ。
     private: typename this_type::chunk_vector chunks_;
 
-}; // class psyq::reservoir
+}; // class psyq::scenario_engine::reservoir
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 識別値を比較する関数オブジェクト。

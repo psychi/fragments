@@ -61,6 +61,7 @@ class psyq::scenario_engine::driver
 
     /// @brief シナリオ駆動器で用いる状態貯蔵器の型。
     public: typedef psyq::scenario_engine::reservoir<
+        float,
         typename this_type::hasher::result_type,
         typename this_type::hasher::result_type,
         typename this_type::allocator_type>
@@ -355,6 +356,12 @@ namespace psyq_test
             local_driver.hash_function_("state_unsigned"), 10);
         local_driver.reservoir_.set_state(
             local_driver.hash_function_("state_signed"), -20);
+        local_driver.reservoir_.set_state(
+            local_driver.hash_function_("state_float"), true);
+        local_driver.reservoir_.set_state(
+            local_driver.hash_function_("state_float"), 0x20u);
+        local_driver.reservoir_.set_state(
+            local_driver.hash_function_("state_float"), -10);
         local_driver.reservoir_.set_state(
             local_driver.hash_function_("state_float"), 1.25f);
 

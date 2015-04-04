@@ -88,7 +88,7 @@ class psyq::scenario_engine::reservoir
             format_type;
 
     //-------------------------------------------------------------------------
-    /// @brief 浮動小数点数の型。
+    /// @brief 状態貯蔵器で扱う浮動小数点数の型。
     public: typedef template_float float_type;
     static_assert(std::is_floating_point<template_float>::value, "");
 
@@ -227,7 +227,7 @@ class psyq::scenario_engine::reservoir
          */
         public: typename this_type::kind_enum get_kind() const PSYQ_NOEXCEPT
         {
-            auto const local_format(this->get_format());
+            auto const local_format(this->_get_format());
             switch (local_format)
             {
                 case this_type::kind_NULL:
@@ -243,10 +243,13 @@ class psyq::scenario_engine::reservoir
             }
         }
 
-        /** @brief 状態値の構成を取得する。
+        /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
+
+            状態値の構成を取得する。
+
             @return 状態値の構成。
          */
-        public: typename reservoir::format_type get_format()
+        public: typename reservoir::format_type _get_format()
         const PSYQ_NOEXCEPT
         {
             auto const local_mod_size(
@@ -266,13 +269,16 @@ class psyq::scenario_engine::reservoir
         public: typename reservoir::size_type get_field_size()
         const PSYQ_NOEXCEPT
         {
-            return reservoir::get_format_size(this->get_format());
+            return reservoir::get_format_size(this->_get_format());
         }
 
-        /** @brief 状態値のビット位置を取得する。
+        /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
+
+            状態値のビット位置を取得する。
+
             @return 状態値のビット位置。
          */
-        public: typename reservoir::pos_type get_field_position()
+        public: typename reservoir::pos_type _get_field_position()
         const PSYQ_NOEXCEPT
         {
             return reservoir::get_field_position(this->field);
@@ -446,7 +452,14 @@ class psyq::scenario_engine::reservoir
         @retval !=nullptr
             成功。取得した状態値を out_state_value に格納した。
             値を取得した状態の登記を指すポインタを返す。
-        @retval ==nullptr 失敗。 out_state_value は変化しない。
+        @retval ==nullptr
+            失敗。 out_state_value は変化しない。
+            - in_state_key に対応する状態値がない場合は失敗する。
+            - out_state_value が浮動小数点数型ではない場合に、
+              浮動小数点数型の状態値を取得しようとすると、失敗する。
+            - out_state_value が this_type::float_type
+              より精度の低い浮動小数点数型だと、
+              コンパイル時にエラーか警告が発生する。
         @sa this_type::register_bool
         @sa this_type::register_unsigned
         @sa this_type::register_signed
@@ -475,12 +488,12 @@ class psyq::scenario_engine::reservoir
             PSYQ_ASSERT(false);
             return nullptr;
         }
-        auto const local_format(local_state->get_format());
+        auto const local_format(local_state->_get_format());
         auto const local_size(this_type::get_format_size(local_format));
         auto const local_bits(
             this_type::get_bits(
                 local_chunk->blocks,
-                local_state->get_field_position(),
+                local_state->_get_field_position(),
                 local_size));
 
         // 状態値の構成から、出力値のコピー処理を分岐する。
@@ -493,42 +506,86 @@ class psyq::scenario_engine::reservoir
             // 真偽値を取得する。
             case this_type::state::kind_BOOL:
             out_state_value = (local_bits != 0);
-            return local_state;
+            break;
 
             // 浮動小数点数を取得する。
             case this_type::state::kind_FLOAT:
-            /// @todo 浮動小数点数の取得は未実装。
-            PSYQ_ASSERT(false);
+            if (this_type::get_float_value(out_state_value, local_bits))
+            {
+                break;
+            }
             return nullptr;
 
-            default: break;
-        }
-        if (0 < local_format)
-        {
-            // 符号なし整数を取得する。
-            PSYQ_ASSERT(
-                this_type::make_block_mask(local_size)
-                <= static_cast<typename this_type::block_type>(
-                    (std::numeric_limits<template_value>::max)()));
-            this_type::copy_value(out_state_value, local_bits);
-        }
-        else
-        {
-            // 符号あり整数を取得する。
-            PSYQ_ASSERT(
-                (this_type::make_block_mask(local_size) >> 1)
-                <= static_cast<typename this_type::block_type>(
-                    (std::numeric_limits<template_value>::max)()));
-            auto const local_signed_bits(
-                static_cast<typename this_type::signed_block_type>(local_bits));
-            auto const local_minus(1 & (local_signed_bits >> (local_size - 1)));
-            this_type::copy_value(
-                out_state_value,
-                local_signed_bits | (-local_minus << local_size));
+            // 整数を取得する。
+            default:
+            if (0 < local_format)
+            {
+                // 符号なし整数を取得する。
+                PSYQ_ASSERT(
+                    this_type::make_block_mask(local_size)
+                    <= static_cast<typename this_type::block_type>(
+                        (std::numeric_limits<template_value>::max)()));
+                this_type::copy_value(out_state_value, local_bits);
+            }
+            else
+            {
+                // 符号あり整数を取得する。
+                PSYQ_ASSERT(
+                    (this_type::make_block_mask(local_size) >> 1)
+                    <= static_cast<typename this_type::block_type>(
+                        (std::numeric_limits<template_value>::max)()));
+                auto const local_signed_bits(
+                    static_cast<typename this_type::signed_block_type>(
+                        local_bits));
+                auto const local_minus(
+                    1 & (local_signed_bits >> (local_size - 1)));
+                this_type::copy_value(
+                    out_state_value,
+                    local_signed_bits | (-local_minus << local_size));
+            }
+            break;
         }
         return local_state;
     }
     //@}
+    private: static void get_float_value(
+        psyq::scenario_engine::_private::float_union<float>& io_float,
+        typename this_type::block_type const& in_bits)
+    {
+        io_float.bits = static_cast<std::uint32_t>(in_bits);
+        PSYQ_ASSERT(io_float.bits == in_bits);
+    }
+    private: static void get_float_value(
+        psyq::scenario_engine::_private::float_union<double>& io_float,
+        typename this_type::block_type const& in_bits)
+    {
+        io_float.bits = in_bits;
+    }
+    private: static bool get_float_value(
+        float& io_value,
+        typename this_type::block_type const& in_bits)
+    {
+        typename this_type::float_union local_float;
+        this_type::get_float_value(local_float, in_bits);
+        io_value = local_float.value;
+        return true;
+    }
+    private: static bool get_float_value(
+        double& io_value,
+        typename this_type::block_type const& in_bits)
+    {
+        typename this_type::float_union local_float;
+        this_type::get_float_value(local_float, in_bits);
+        io_value = local_float.value;
+        return true;
+    }
+    private: template<typename template_value>
+    static bool get_float_value(
+        template_value&, typename this_type::block_type const&)
+    {
+        return false;
+    }
+
     private: template<typename template_source>
     static void copy_value(
         bool& out_value,
@@ -592,8 +649,15 @@ class psyq::scenario_engine::reservoir
 
         @param[in] in_state_key   設定する状態値に対応する識別値。
         @param[in] in_state_value 状態値に設定する値。
-        @retval true  成功。値を設定した状態の登記を指すポインタを返す。
-        @retval false 失敗。状態値は変化しない。
+        @retval !=nullptr  成功。値を設定した状態の登記を指すポインタを返す。
+        @retval ==nullptr
+            失敗。状態値は変化しない。
+            - in_state_key に対応する状態値がない場合は失敗する。
+            - 真偽値以外を論理型の状態値へ設定しようとすると失敗する。
+            - 整数型以外を整数型の状態値へ設定しようとすると失敗する。
+            - this_type::float_type より精度の高い浮動小数点数を
+              浮動小数点数型の状態値へ設定しようとすると、
+              コンパイル時にエラーか警告が発生する。
         @sa this_type::register_bool
         @sa this_type::register_unsigned
         @sa this_type::register_signed
@@ -617,20 +681,18 @@ class psyq::scenario_engine::reservoir
 
         // 状態値を設定するビット列チャンクを決定する。
         auto const local_chunk(
-            this_type::chunk_key_less::find_const_pointer(
+            this_type::chunk_key_less::find_pointer(
                 this->chunks_, local_state->chunk));
         if (local_chunk == nullptr)
         {
             PSYQ_ASSERT(false);
             return nullptr;
         }
-        auto& local_chunk_blocks(
-            const_cast<typename this_type::block_vector&>(
-                local_chunk->blocks));
+        auto& local_chunk_blocks(local_chunk->blocks);
 
         // 状態値の構成によって、設定処理を分岐する。
-        auto const local_format(local_state->get_format());
-        auto const local_position(local_state->get_field_position());
+        auto const local_format(local_state->_get_format());
+        auto const local_position(local_state->_get_field_position());
         switch (local_format)
         {
             case this_type::state::kind_NULL:
@@ -833,10 +895,11 @@ class psyq::scenario_engine::reservoir
     //-------------------------------------------------------------------------
     /// @name 状態値の登録
     //@{
-    /** @brief 真偽値型の状態値を登録する。
+    /** @brief 論理型の状態値を登録する。
 
-        登録した状態値は
-        this_type::get_state と this_type::set_state でアクセスできる。
+        - 登録した状態値は
+          this_type::get_state と this_type::set_state でアクセスできる。
+        - 登録した状態値は this_type::remove_chunk で削除できる。
 
         @param[in] in_chunk_key   登録する状態値を格納するビット列チャンクの識別値。
         @param[in] in_state_key   登録する状態値の識別番号。
@@ -844,7 +907,7 @@ class psyq::scenario_engine::reservoir
         @retval true  成功。状態値を登録した。
         @retval false
             失敗。状態値を登録できなかった。
-            - in_state_key に対応する状態値がすでに登録されていると失敗する。
+            in_state_key に対応する状態値がすでに登録されていると失敗する。
      */
     public: bool register_bool(
         typename this_type::chunk_key in_chunk_key,
@@ -863,15 +926,16 @@ class psyq::scenario_engine::reservoir
         }
         return 0 <= this_type::set_bits(
             local_chunk.blocks,
-            local_state->get_field_position(),
+            local_state->_get_field_position(),
             1,
             in_state_value);
     }
 
     /** @brief 符号なし整数型の状態値を登録する。
 
-        登録した状態値は
-        this_type::get_state と this_type::set_state でアクセスできる。
+        - 登録した状態値は
+          this_type::get_state と this_type::set_state でアクセスできる。
+        - 登録した状態値は this_type::remove_chunk で削除できる。
 
         @param[in] in_chunk_key   登録する状態値を格納するビット列チャンクの識別値。
         @param[in] in_state_key   登録する状態値の識別番号。
@@ -882,6 +946,7 @@ class psyq::scenario_engine::reservoir
             失敗。状態値を登録できなかった。
             - in_state_key に対応する状態値がすでに登録されていると失敗する。
             - this_type::MAX_STATE_SIZE より in_state_size が大きければ失敗する。
+        @sa remove_chunk
      */
     public: bool register_unsigned(
         typename this_type::chunk_key in_chunk_key,
@@ -910,15 +975,16 @@ class psyq::scenario_engine::reservoir
         }
         return 0 <= this_type::set_bits(
             local_chunk.blocks,
-            local_state->get_field_position(),
+            local_state->_get_field_position(),
             static_cast<typename this_type::size_type>(in_state_size),
             in_state_value);
     }
 
     /** @brief 符号あり整数型の状態値を登録する。
 
-        登録した状態値は
-        this_type::get_state と this_type::set_state でアクセスできる。
+        - 登録した状態値は
+          this_type::get_state と this_type::set_state でアクセスできる。
+        - 登録した状態値は this_type::remove_chunk で削除できる。
 
         @param[in] in_chunk_key   登録する状態値を格納するビット列チャンクの識別値。
         @param[in] in_state_key   登録する状態値の識別番号。
@@ -929,6 +995,7 @@ class psyq::scenario_engine::reservoir
             失敗。状態値を登録できなかった。
             - in_state_key に対応する状態値がすでに登録されていると失敗する。
             - this_type::MAX_STATE_SIZE より in_state_size が大きければ失敗する。
+        @sa remove_chunk
      */
     public: bool register_signed(
         typename this_type::chunk_key in_chunk_key,
@@ -957,14 +1024,15 @@ class psyq::scenario_engine::reservoir
         }
         return 0 <= this_type::set_signed(
             local_chunk.blocks,
-            local_state->get_field_position(),
+            local_state->_get_field_position(),
             static_cast<typename this_type::size_type>(in_state_size),
             in_state_value);
     }
     /** @brief 浮動小数点数型の状態値を登録する。
 
-        登録した状態値は
-        this_type::get_state と this_type::set_state でアクセスできる。
+        - 登録した状態値は
+          this_type::get_state と this_type::set_state でアクセスできる。
+        - 登録した状態値は this_type::remove_chunk で削除できる。
 
         @param[in] in_chunk_key   登録する状態値を格納するビット列チャンクの識別値。
         @param[in] in_state_key   登録する状態値の識別番号。
@@ -973,6 +1041,7 @@ class psyq::scenario_engine::reservoir
         @retval false
             失敗。状態値を登録できなかった。
             in_state_key に対応する状態値がすでに登録されていると失敗する。
+        @sa remove_chunk
      */
     public: bool register_float(
         typename this_type::chunk_key in_chunk_key,
@@ -995,7 +1064,7 @@ class psyq::scenario_engine::reservoir
         local_float.value = in_state_value;
         return 0 <= this_type::set_bits(
             local_chunk.blocks,
-            local_state->get_field_position(),
+            local_state->_get_field_position(),
             this_type::FLOAT_SIZE,
             local_float.bits);
     }
@@ -1130,8 +1199,8 @@ class psyq::scenario_engine::reservoir
                 PSYQ_ASSERT(false);
                 continue;
             }
-            auto const local_position(local_state->get_field_position());
-            auto const local_format(local_state->get_format());
+            auto const local_position(local_state->_get_field_position());
+            auto const local_format(local_state->_get_format());
             switch (local_format)
             {
                 case this_type::state::kind_NULL:

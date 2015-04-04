@@ -457,9 +457,11 @@ class psyq::scenario_engine::reservoir
             - in_state_key に対応する状態値がない場合は失敗する。
             - out_state_value が浮動小数点数型ではない場合に、
               浮動小数点数型の状態値を取得しようとすると、失敗する。
-            - out_state_value が this_type::float_type
-              より精度の低い浮動小数点数型だと、
-              コンパイル時にエラーか警告が発生する。
+        @note
+            out_state_value が
+            this_type::float_type より精度の低い浮動小数点数型で、
+            浮動小数点数型の状態値を取得しようとすると、
+            コンパイル時にエラーか警告が発生する。
         @sa this_type::register_bool
         @sa this_type::register_unsigned
         @sa this_type::register_signed
@@ -567,6 +569,11 @@ class psyq::scenario_engine::reservoir
     {
         typename this_type::float_union local_float;
         this_type::get_float_value(local_float, in_bits);
+        /** @note
+            ここでコンパイルエラーか警告が出る場合は
+            double から float への型変換が発生しているのが原因。
+            get_state の引数を double 型にすることで解決できる。
+         */
         io_value = local_float.value;
         return true;
     }
@@ -655,9 +662,10 @@ class psyq::scenario_engine::reservoir
             - in_state_key に対応する状態値がない場合は失敗する。
             - 真偽値以外を論理型の状態値へ設定しようとすると失敗する。
             - 整数型以外を整数型の状態値へ設定しようとすると失敗する。
-            - this_type::float_type より精度の高い浮動小数点数を
-              浮動小数点数型の状態値へ設定しようとすると、
-              コンパイル時にエラーか警告が発生する。
+        @note
+            this_type::float_type より精度の高い浮動小数点数を
+            浮動小数点数型の状態値へ設定しようとすると、
+            コンパイル時にエラーか警告が発生する。
         @sa this_type::register_bool
         @sa this_type::register_unsigned
         @sa this_type::register_signed

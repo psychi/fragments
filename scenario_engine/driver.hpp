@@ -13,7 +13,7 @@ namespace psyq
 {
     namespace scenario_engine
     {
-        template<typename, typename> class driver;
+        template<typename, typename, typename> class driver;
     } // namespace scenario_engine
 } // namespace psyq
 /// @endcond
@@ -31,10 +31,12 @@ namespace psyq
       条件式の評価が変化して条件に合致していたら、
       条件挙動関数オブジェクトが呼び出される。
 
-    @tparam template_hasher @copydoc hasher
+    @tparam template_float     @copydoc reservoir::float_type
+    @tparam template_hasher    @copydoc hasher
     @tparam template_allocator @copydoc allocator_type
  */
 template<
+    typename template_float = float,
     typename template_hasher = psyq::string::view<char>::fnv1_hash32,
     typename template_allocator = std::allocator<void*>>
 class psyq::scenario_engine::driver
@@ -61,7 +63,7 @@ class psyq::scenario_engine::driver
 
     /// @brief シナリオ駆動器で用いる状態貯蔵器の型。
     public: typedef psyq::scenario_engine::reservoir<
-        float,
+        template_float,
         typename this_type::hasher::result_type,
         typename this_type::hasher::result_type,
         typename this_type::allocator_type>
@@ -288,7 +290,7 @@ namespace psyq_test
             state_builder;
         typedef state_builder::string_table string_table;
         typedef psyq::scenario_engine
-            ::driver<string_table::string_view::fnv1_hash32>
+            ::driver<float, string_table::string_view::fnv1_hash32>
                 driver;
         driver local_driver(16, 16, 16);
         auto const local_chunk_key(local_driver.hash_function_("chunk_0"));
@@ -364,6 +366,13 @@ namespace psyq_test
             local_driver.hash_function_("state_float"), -10);
         local_driver.reservoir_.set_state(
             local_driver.hash_function_("state_float"), 1.25f);
+
+        float local_float;
+        local_driver.reservoir_.get_state(
+            local_driver.hash_function_("state_float"), local_float);
+        double local_double;
+        local_driver.reservoir_.get_state(
+            local_driver.hash_function_("state_float"), local_double);
 
         //
         local_driver.update();

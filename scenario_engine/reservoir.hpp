@@ -363,7 +363,7 @@ class psyq::scenario_engine::reservoir
         return local_state != nullptr?
             local_state->get_format(): this_type::state_value::kind_NULL;
     }
-
+    //@}
     /** @brief 状態値の構成から、状態値のビット数を取得する。
         @param[in] in_format 状態値の構成。
         @return 状態値のビット数。
@@ -413,25 +413,9 @@ class psyq::scenario_engine::reservoir
         }
     }
 
-    /** @brief 状態値の登記を取得する。
-        @param[in] in_state_key 取得する状態値に対応する識別値。
-        @retval !=nullptr
-            in_state_key に対応する状態値の登記を指すポインタ。このポインタは、
-            register_bool などで他の状態値が登録されると、無効になる。
-        @retval ==nullptr in_state_key に対応する状態値が登録されてない。
-        @sa register_bool
-        @sa register_unsigned
-        @sa register_signed
-        @sa register_float
-     */
-    private: typename this_type::state_registry const* find_state(
-        typename this_type::state_key const& in_state_key)
-    const PSYQ_NOEXCEPT
-    {
-        return this_type::state_key_less::find_const_pointer(
-            this->states_, in_state_key);
-    }
-
+    //-------------------------------------------------------------------------
+    /// @name 状態値の取得と設定
+    //@{
     /** @brief 状態値を取得する。
 
         すでに登録されている状態値から、値を取得する。
@@ -513,24 +497,6 @@ class psyq::scenario_engine::reservoir
             PSYQ_ASSERT(false);
             return typename this_type::state_value();
         }
-    }
-
-    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
-
-        直前の状態変化フラグを取得する。
-
-        @retval 0以上 直前の状態変化フラグ。
-        @retval 0未満 状態値がない。
-     */
-    public: int _get_transition(
-        typename this_type::state_key const& in_state_key)
-    const PSYQ_NOEXCEPT
-    {
-        auto local_state(
-            this_type::state_key_less::find_const_pointer(
-                this->states_, in_state_key));
-        return local_state != nullptr?
-            (local_state->field >> reservoir::field_TRANSITION_FRONT) & 1: -1;
     }
     //@}
     /** @brief ビット列から値を取得する。
@@ -689,37 +655,7 @@ class psyq::scenario_engine::reservoir
             return false;
         }
     }
-
-    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
-
-        状態変化フラグを初期化する。
-     */
-    public: void _reset_transition()
-    {
-        auto const local_mask(
-            ~static_cast<typename this_type::field_type>(
-                1 << this_type::field_TRANSITION_FRONT));
-        for (auto& local_state: this->states_)
-        {
-            local_state.field &= local_mask;
-        }
-    }
     //@}
-    private: static bool notify_transition(
-        typename this_type::state_registry& io_state,
-        int const in_set_bits)
-    {
-        if (in_set_bits < 0)
-        {
-            return false;
-        }
-        if (0 < in_set_bits)
-        {
-            io_state.field |= 1 << this_type::field_TRANSITION_FRONT;
-        }
-        return true;
-    }
-
     private: static typename this_type::block_type get_float_bits(
         bool const in_value)
     {
@@ -1010,6 +946,57 @@ class psyq::scenario_engine::reservoir
             local_float.bits);
     }
     //@}
+    //-------------------------------------------------------------------------
+    /// @name 状態値の変化
+    //@{
+    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
+
+        直前の状態変化フラグを取得する。
+
+        @retval 0以上 直前の状態変化フラグ。
+        @retval 0未満 状態値がない。
+     */
+    public: int _get_transition(
+        typename this_type::state_key const& in_state_key)
+    const PSYQ_NOEXCEPT
+    {
+        auto local_state(
+            this_type::state_key_less::find_const_pointer(
+                this->states_, in_state_key));
+        return local_state != nullptr?
+            (local_state->field >> reservoir::field_TRANSITION_FRONT) & 1: -1;
+    }
+
+    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
+
+        状態変化フラグを初期化する。
+     */
+    public: void _reset_transition()
+    {
+        auto const local_mask(
+            ~static_cast<typename this_type::field_type>(
+                1 << this_type::field_TRANSITION_FRONT));
+        for (auto& local_state: this->states_)
+        {
+            local_state.field &= local_mask;
+        }
+    }
+    //@}
+    private: static bool notify_transition(
+        typename this_type::state_registry& io_state,
+        int const in_set_bits)
+    {
+        if (in_set_bits < 0)
+        {
+            return false;
+        }
+        if (0 < in_set_bits)
+        {
+            io_state.field |= 1 << this_type::field_TRANSITION_FRONT;
+        }
+        return true;
+    }
+
     //-------------------------------------------------------------------------
     /// @name ビット列チャンク
     //@{

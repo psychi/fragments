@@ -785,15 +785,15 @@ class psyq::scenario_engine::dispatcher
         {
             // 状態値の更新を検知する。
             auto& local_state_monitor(*i);
-            auto const local_state(
-                in_reservoir.find_state(local_state_monitor.key));
-            if (local_state == nullptr || local_state->_get_transition())
+            auto const local_transition(
+                in_reservoir._get_transition(local_state_monitor.key));
+            if (local_transition != 0)
             {
                 // 状態値の更新を条件式監視器へ知らせる。
                 this_type::notify_state_transition(
                     io_expression_monitors,
                     local_state_monitor.expression_keys,
-                    local_state != nullptr);
+                    0 < local_transition);
 
                 // 状態監視器に対応する条件式監視器がなくなったら、
                 // 状態監視器を削除する。

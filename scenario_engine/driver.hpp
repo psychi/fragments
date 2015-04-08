@@ -352,23 +352,23 @@ namespace psyq_test
                 local_driver.reservoir_,
                 string_table(local_behavior_table_csv, 0)));
 
-        local_driver.reservoir_.set_state(
+        local_driver.reservoir_.set_value(
             local_driver.hash_function_("state_bool"), false);
-        local_driver.reservoir_.set_state(
+        local_driver.reservoir_.set_value(
             local_driver.hash_function_("state_unsigned"), 10);
-        local_driver.reservoir_.set_state(
+        local_driver.reservoir_.set_value(
             local_driver.hash_function_("state_signed"), -20);
-        local_driver.reservoir_.set_state(
+        local_driver.reservoir_.set_value(
             local_driver.hash_function_("state_float"), true);
-        local_driver.reservoir_.set_state(
+        local_driver.reservoir_.set_value(
             local_driver.hash_function_("state_float"), 0x20u);
-        local_driver.reservoir_.set_state(
+        local_driver.reservoir_.set_value(
             local_driver.hash_function_("state_float"), -10);
-        local_driver.reservoir_.set_state(
+        local_driver.reservoir_.set_value(
             local_driver.hash_function_("state_float"), 1.25f);
 
         auto const local_float_state(
-            local_driver.reservoir_.get_state(
+            local_driver.reservoir_.get_value(
                 local_driver.hash_function_("state_float")));
 
         local_driver.update();

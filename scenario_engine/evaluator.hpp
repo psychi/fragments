@@ -186,7 +186,7 @@ class psyq::scenario_engine::evaluator
         const PSYQ_NOEXCEPT
         {
             auto const local_compare(
-                this->reservoir.get_state(in_state.key).compare(
+                this->reservoir.get_value(in_state.key).compare(
                     in_state.value));
             if (local_compare
                 != evaluator::reservoir::state_value::compare_FAILED)

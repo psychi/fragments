@@ -205,7 +205,8 @@ class psyq::scenario_engine::state_builder
         }
         auto local_key(io_hasher(local_key_cell));
         if (local_key == io_hasher(typename template_hasher::argument_type())
-            || io_reservoir.find_state(local_key) != nullptr)
+            || io_reservoir.get_format(local_key)
+               != template_reservoir::state_value::kind_NULL)
         {
             // 条件キーが重複している。
             PSYQ_ASSERT(false);

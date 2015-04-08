@@ -262,12 +262,12 @@ struct psyq::scenario_engine::behavior_chunk
     {
         if (in_operator == this_type::state_operator_COPY)
         {
-            auto const local_set_state(
-                io_reservoir.set_state(in_state_key, in_value));
-            PSYQ_ASSERT(local_set_state);
-            return local_set_state;
+            auto const local_set_value(
+                io_reservoir.set_value(in_state_key, in_value));
+            PSYQ_ASSERT(local_set_value);
+            return local_set_value;
         }
-        auto const local_state(io_reservoir.get_state(in_state_key));
+        auto const local_state(io_reservoir.get_value(in_state_key));
         switch (local_state.get_kind())
         {
             case template_reservoir::state_value::kind_BOOL:
@@ -333,10 +333,10 @@ struct psyq::scenario_engine::behavior_chunk
             PSYQ_ASSERT(false);
             return false;
         }
-        auto const local_set_state(
-            io_reservoir.set_state(in_state_key, local_value));
-        PSYQ_ASSERT(local_set_state);
-        return local_set_state;
+        auto const local_set_value(
+            io_reservoir.set_value(in_state_key, local_value));
+        PSYQ_ASSERT(local_set_value);
+        return local_set_value;
     }
     private: template<
         typename template_reservoir,
@@ -386,10 +386,10 @@ struct psyq::scenario_engine::behavior_chunk
             PSYQ_ASSERT(false);
             return false;
         }
-        auto const local_set_state(
-            io_reservoir.set_state(in_state_key, local_value));
-        PSYQ_ASSERT(local_set_state);
-        return local_set_state;
+        auto const local_set_value(
+            io_reservoir.set_value(in_state_key, local_value));
+        PSYQ_ASSERT(local_set_value);
+        return local_set_value;
     }
     private: template<typename template_reservoir, typename template_value>
     static bool operate_state_float(
@@ -425,10 +425,10 @@ struct psyq::scenario_engine::behavior_chunk
             PSYQ_ASSERT(false);
             return false;
         }
-        auto const local_set_state(
-            io_reservoir.set_state(in_state_key, local_value));
-        PSYQ_ASSERT(local_set_state);
-        return local_set_state;
+        auto const local_set_value(
+            io_reservoir.set_value(in_state_key, local_value));
+        PSYQ_ASSERT(local_set_value);
+        return local_set_value;
     }
 
     //-------------------------------------------------------------------------
@@ -610,7 +610,8 @@ struct psyq::scenario_engine::behavior_builder
                 in_row_index,
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_ARGUMENT));
         auto const local_key(io_hasher(local_key_cell));
-        if (in_reservoir.find_state(local_key) == nullptr)
+        if (in_reservoir.get_format(local_key)
+            == template_reservoir::state_value::kind_NULL)
         {
             // 状態貯蔵器にキーが登録されていなかった。
             PSYQ_ASSERT(false);

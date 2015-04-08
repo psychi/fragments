@@ -61,7 +61,7 @@ namespace psyq
         namespace _private
         {
             template<typename template_string>
-            int get_bool(template_string const& in_string)
+            int parse_string_bool(template_string const& in_string)
             {
                 if (in_string == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_TRUE)
                 {
@@ -72,6 +72,53 @@ namespace psyq
                     return 0;
                 }
                 return -1;
+            }
+
+            /** @brief 文字列から状態値を取り出す。
+                @param[in] in_string 状態値を取り出す文字列。
+             */
+            template<typename template_state, typename template_string>
+            template_state parse_string_state(template_string const& in_string)
+            {
+                // 真偽値と仮定して解析する。
+                auto const local_parse_string_bool(parse_string_bool(in_string));
+                if (0 <= local_parse_string_bool)
+                {
+                    return template_state(local_parse_string_bool != 0);
+                }
+
+                // 整数と仮定して解析する。
+                std::size_t local_rest_size;
+                auto const local_signed(
+                    in_string.template to_integer<std::int64_t>(
+                        &local_rest_size));
+                if (local_rest_size != 0)
+                {
+                    // 浮動小数点数を取り出す。
+                    auto const local_float(
+                        in_string.template to_integer<long double>(
+                            &local_rest_size));
+                    if (local_rest_size != 0)
+                    {
+                        // 解析に失敗した。
+                        return template_state();
+                    }
+                    return template_state(
+                        static_cast<typename template_state::float_type>(
+                            local_float));
+                }
+                else if (local_signed < 0)
+                {
+                    return template_state(
+                        static_cast<typename template_state::signed_type>(
+                            local_signed));
+                }
+                else
+                {
+                    return template_state(
+                        static_cast<typename template_state::unsigned_type>(
+                            local_signed));
+                }
             }
         } // namespace _private
     } // namespace scenario_engine
@@ -227,15 +274,15 @@ class psyq::scenario_engine::state_builder
         typename template_reservoir::state_key const& in_state_key,
         typename this_type::string_table::string_view const& in_value_cell)
     {
-        auto const local_get_bool(
-            psyq::scenario_engine::_private::get_bool(in_value_cell));
-        if (local_get_bool < 0)
+        auto const local_parse_string_bool(
+            psyq::scenario_engine::_private::parse_string_bool(in_value_cell));
+        if (local_parse_string_bool < 0)
         {
             PSYQ_ASSERT(false);
             return false;
         }
         return io_reservoir.register_bool(
-            in_chunk_key, in_state_key, local_get_bool != 0);
+            in_chunk_key, in_state_key, local_parse_string_bool != 0);
     }
 
     private: template<typename template_reservoir>
@@ -292,7 +339,7 @@ class psyq::scenario_engine::state_builder
         std::size_t local_rest_size;
         auto const local_value(
             in_value_cell.template
-                to_real<typename template_reservoir::float_type>(
+                to_real<typename template_reservoir::state_value::float_type>(
                     &local_rest_size));
         if (local_rest_size != 0)
         {

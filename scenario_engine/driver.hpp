@@ -31,7 +31,7 @@ namespace psyq
       条件式の評価が変化して条件に合致していたら、
       条件挙動関数オブジェクトが呼び出される。
 
-    @tparam template_float     @copydoc reservoir::float_type
+    @tparam template_float     @copydoc reservoir::state_value::float_type
     @tparam template_hasher    @copydoc hasher
     @tparam template_allocator @copydoc allocator_type
  */
@@ -367,14 +367,10 @@ namespace psyq_test
         local_driver.reservoir_.set_state(
             local_driver.hash_function_("state_float"), 1.25f);
 
-        float local_float;
-        local_driver.reservoir_.get_state(
-            local_driver.hash_function_("state_float"), local_float);
-        double local_double;
-        local_driver.reservoir_.get_state(
-            local_driver.hash_function_("state_float"), local_double);
+        auto const local_float_state(
+            local_driver.reservoir_.get_state(
+                local_driver.hash_function_("state_float")));
 
-        //
         local_driver.update();
     }
 }

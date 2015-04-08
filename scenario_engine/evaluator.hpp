@@ -152,9 +152,6 @@ class psyq::scenario_engine::evaluator
         typedef std::vector<this_type, typename evaluator::allocator_type>
             vector;
 
-        /// @todo 32ビット整数以外も使いたい。
-        typedef std::int32_t value_type;
-
         /// @brief 比較演算子の種類。
         enum operator_enum: std::uint8_t
         {
@@ -167,7 +164,7 @@ class psyq::scenario_engine::evaluator
         };
 
         /// @brief 比較する値。
-        typename this_type::value_type value;
+        typename evaluator::reservoir::state_value value;
         /// @brief 比較する状態値の識別値。
         typename evaluator::reservoir::state_key key;
         /// @brief 比較演算子の種類。
@@ -188,29 +185,47 @@ class psyq::scenario_engine::evaluator
             typename evaluator::state_comparison const& in_state)
         const PSYQ_NOEXCEPT
         {
-            typename evaluator::state_comparison::value_type
-                local_value;
-            if (this->reservoir.get_state(in_state.key, local_value) != nullptr)
+            auto const local_compare(
+                this->reservoir.get_state(in_state.key).compare(
+                    in_state.value));
+            if (local_compare
+                != evaluator::reservoir::state_value::compare_FAILED)
             {
                 switch (in_state.operation)
                 {
                     case evaluator::state_comparison::operator_EQUAL:
-                    return local_value == in_state.value? 1: 0;
+                    return local_compare
+                        == evaluator::reservoir::state_value::compare_EQUAL?
+                           1: 0;
 
                     case evaluator::state_comparison::operator_NOT_EQUAL:
-                    return local_value != in_state.value? 1: 0;
+                    return local_compare
+                        != evaluator::reservoir::state_value::compare_EQUAL?
+                           1: 0;
 
                     case evaluator::state_comparison::operator_LESS:
-                    return  local_value < in_state.value? 1: 0;
+                    return local_compare
+                        == evaluator::reservoir::state_value::compare_LESS?
+                           1: 0;
 
                     case evaluator::state_comparison::operator_LESS_EQUAL:
-                    return local_value <= in_state.value? 1: 0;
+                    return local_compare
+                        == evaluator::reservoir::state_value::compare_LESS
+                        || local_compare
+                        == evaluator::reservoir::state_value::compare_EQUAL?
+                           1: 0;
 
                     case evaluator::state_comparison::operator_GREATER:
-                    return  in_state.value < local_value? 1: 0;
+                    return local_compare
+                        == evaluator::reservoir::state_value::compare_GREATER?
+                           1: 0;
 
                     case evaluator::state_comparison::operator_GREATER_EQUAL:
-                    return in_state.value <= local_value? 1: 0;
+                    return local_compare
+                        == evaluator::reservoir::state_value::compare_GREATER
+                        || local_compare
+                        == evaluator::reservoir::state_value::compare_EQUAL?
+                           1: 0;
 
                     default:
                     PSYQ_ASSERT(false);

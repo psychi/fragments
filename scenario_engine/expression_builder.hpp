@@ -390,18 +390,18 @@ class psyq::scenario_engine::expression_builder
         }
 
         // 複合条件式の条件を取得する。
-        auto const local_get_bool(
-            psyq::scenario_engine::_private::get_bool(
+        auto const local_parse_string_bool(
+            psyq::scenario_engine::_private::parse_string_bool(
                 in_string_table.find_body_cell(
                     in_row_index,
                     PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_ELEMENT,
                     local_element_column + 1)));
-        if (local_get_bool < 0)
+        if (local_parse_string_bool < 0)
         {
             PSYQ_ASSERT(false);
             return true;
         }
-        local_element.condition = (local_get_bool != 0);
+        local_element.condition = (local_parse_string_bool != 0);
 
         // 複合条件式に要素条件を追加する。
         io_elements.push_back(local_element);
@@ -458,6 +458,7 @@ class psyq::scenario_engine::expression_builder
                     local_element_column + 1)));
         if (!local_get_comparison_operator)
         {
+            PSYQ_ASSERT(false);
             return true;
         }
 
@@ -467,24 +468,15 @@ class psyq::scenario_engine::expression_builder
                 in_row_index,
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_ELEMENT,
                 local_element_column + 2));
-        auto const local_get_bool(
-            psyq::scenario_engine::_private::get_bool(
-                local_comparison_value_cell));
-        if (0 <= local_get_bool)
+        local_state.value =
+            psyq::scenario_engine::_private::parse_string_state<
+                typename template_evaluator::reservoir::state_value>(
+                    local_comparison_value_cell);
+        if (local_state.value.get_kind()
+            == template_evaluator::reservoir::state_value::kind_NULL)
         {
-            local_state.value = (local_get_bool != 0);
-        }
-        else
-        {
-            std::size_t local_rest_size;
-            local_state.value = local_comparison_value_cell.template
-                to_integer<typename template_evaluator::state_comparison::value_type>(
-                    &local_rest_size);
-            if (local_rest_size != 0)
-            {
-                PSYQ_ASSERT(false);
-                return true;
-            }
+            PSYQ_ASSERT(false);
+            return true;
         }
 
         // 要素条件を追加する。
@@ -497,43 +489,43 @@ class psyq::scenario_engine::expression_builder
         typename template_evaluator::state_comparison::operator_enum& out_operator,
         typename this_type::string_table::string_view const& in_string)
     {
-        if (in_string ==
-                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_EQUAL)
+        if (in_string
+            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_EQUAL)
         {
             out_operator =
                 template_evaluator::state_comparison::operator_EQUAL;
         }
         else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_NOT_EQUAL)
+            in_string
+            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_NOT_EQUAL)
         {
             out_operator =
                 template_evaluator::state_comparison::operator_NOT_EQUAL;
         }
         else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_LESS)
+            in_string
+            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_LESS)
         {
             out_operator =
                 template_evaluator::state_comparison::operator_LESS;
         }
         else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_LESS_EQUAL)
+            in_string
+            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_LESS_EQUAL)
         {
             out_operator =
                 template_evaluator::state_comparison::operator_LESS_EQUAL;
         }
         else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_GREATER)
+            in_string
+            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_GREATER)
         {
             out_operator =
                 template_evaluator::state_comparison::operator_GREATER;
         }
         else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_GREATER_EQUAL)
+            in_string
+            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_GREATER_EQUAL)
         {
             out_operator =
                 template_evaluator::state_comparison::operator_GREATER_EQUAL;

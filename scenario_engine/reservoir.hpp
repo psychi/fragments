@@ -21,6 +21,7 @@ namespace psyq
         namespace _private
         {
             /// @cond
+            template<typename, typename> class state_value;
             template<typename, typename> struct key_less;
 
             template<typename template_float> union float_union {};
@@ -51,7 +52,7 @@ namespace psyq
     - reservoir::get_state で、状態値を取得する。
     - reservoir::set_state で、状態値を設定する。
 
-    @tparam template_float     @copydoc reservoir::float_type
+    @tparam template_float     @copydoc reservoir::state_value::float_type
     @tparam template_state_key @copydoc reservoir::state_key
     @tparam template_chunk_key @copydoc reservoir::chunk_key
     @tparam template_allocator @copydoc reservoir::allocator_type
@@ -87,23 +88,12 @@ class psyq::scenario_engine::reservoir
         typename std::make_signed<typename this_type::size_type>::type
             format_type;
 
-    //-------------------------------------------------------------------------
-    /// @brief 状態貯蔵器で扱う浮動小数点数の型。
-    public: typedef template_float float_type;
-    static_assert(std::is_floating_point<template_float>::value, "");
-
-    private: typedef psyq::scenario_engine::_private::
-        float_union<typename this_type::float_type>
-            float_union;
+    private: typedef psyq::scenario_engine::_private::float_union<template_float>
+        float_union;
 
     //-------------------------------------------------------------------------
     /// @brief ビット列ブロックを表す型。
     private: typedef std::uint64_t block_type;
-
-    /// @brief 符号つきのビット列ブロックを表す型。
-    private: typedef
-         typename std::make_signed<typename this_type::block_type>::type
-             signed_block_type;
 
     /// @brief ビット列ブロックを格納するコンテナ。
     public: typedef std::vector<
@@ -120,7 +110,7 @@ class psyq::scenario_engine::reservoir
             sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE,
         /// @brief 浮動小数点数型のビット数。
         FLOAT_SIZE = 
-            sizeof(typename this_type::float_type) * this_type::BITS_PER_BYTE,
+            sizeof(template_float) * this_type::BITS_PER_BYTE,
         /// @brief 状態値のビット数の最大値。
         MAX_STATE_SIZE = this_type::BLOCK_SIZE,
     };
@@ -206,40 +196,38 @@ class psyq::scenario_engine::reservoir
     }; // struct empty_field_less
 
     //-------------------------------------------------------------------------
-    /// @brief 状態値の登記。
-    public: struct state
-    {
-        private: typedef state this_type;
+    /// @brief 状態値。
+    public: typedef psyq::scenario_engine::_private::state_value<
+        typename this_type::block_type, template_float>
+            state_value;
 
-        /// @brief 状態値の型の種別。
-        public: enum kind_enum: typename reservoir::format_type
-        {
-            kind_SIGNED = -2, ///< 符号あり整数。
-            kind_FLOAT,       ///< 浮動小数点数。
-            kind_NULL,        ///< 空。
-            kind_BOOL,        ///< 真偽値。
-            kind_UNSIGNED,    ///< 符号なし整数。
-        };
+    /// @brief 状態値の登記。
+    public: struct state_registry
+    {
+        private: typedef state_registry this_type;
 
         //.....................................................................
         /** @brief 状態値の型の種別を取得する。
             @return 状態値の型の種別。
          */
-        public: typename this_type::kind_enum get_kind() const PSYQ_NOEXCEPT
+        public: typename reservoir::state_value::kind_enum get_kind()
+        const PSYQ_NOEXCEPT
         {
             auto const local_format(this->_get_format());
             switch (local_format)
             {
-                case this_type::kind_NULL:
+                case reservoir::state_value::kind_NULL:
                 PSYQ_ASSERT(false);
                 // case this_type::kind_BOOLに続く。
-                case this_type::kind_BOOL:
-                case this_type::kind_FLOAT:
-                return static_cast<this_type::kind_enum>(local_format);
+                case reservoir::state_value::kind_BOOL:
+                case reservoir::state_value::kind_FLOAT:
+                return static_cast<typename reservoir::state_value::kind_enum>(
+                    local_format);
 
                 default:
                 return local_format < 0?
-                    this_type::kind_SIGNED: this_type::kind_UNSIGNED;
+                    reservoir::state_value::kind_SIGNED:
+                    reservoir::state_value::kind_UNSIGNED;
             }
         }
 
@@ -305,16 +293,16 @@ class psyq::scenario_engine::reservoir
         /// @brief 状態値が格納されているビット領域。
         public: typename reservoir::field_type field;
 
-    }; // struct state
+    }; // struct state_registry
 
     /// @brief 状態値登記のコンテナ。
     private: typedef std::vector<
-        typename this_type::state, typename this_type::allocator_type>
+        typename this_type::state_registry, typename this_type::allocator_type>
             state_vector;
 
     /// @brief 状態値に対応する識別値を比較する関数オブジェクト。
     private: typedef psyq::scenario_engine::_private::key_less<
-         typename this_type::state, typename this_type::state_key>
+         typename this_type::state_registry, typename this_type::state_key>
              state_key_less;
 
     //-------------------------------------------------------------------------
@@ -435,7 +423,7 @@ class psyq::scenario_engine::reservoir
         @sa register_signed
         @sa register_float
      */
-    public: typename this_type::state const* find_state(
+    public: typename this_type::state_registry const* find_state(
         typename this_type::state_key const& in_state_key)
     const PSYQ_NOEXCEPT
     {
@@ -447,169 +435,85 @@ class psyq::scenario_engine::reservoir
 
         すでに登録されている状態値から、値を取得する。
 
-        @param[in] in_state_key     取得する状態値に対応する識別値。
-        @param[out] out_state_value 取得した状態値の格納先。
-        @retval !=nullptr
-            成功。取得した状態値を out_state_value に格納した。
-            値を取得した状態の登記を指すポインタを返す。
-        @retval ==nullptr
-            失敗。 out_state_value は変化しない。
-            - in_state_key に対応する状態値がない場合は失敗する。
-            - out_state_value が浮動小数点数型ではない場合に、
-              浮動小数点数型の状態値を取得しようとすると、失敗する。
-        @note
-            out_state_value が
-            this_type::float_type より精度の低い浮動小数点数型で、
-            浮動小数点数型の状態値を取得しようとすると、
-            コンパイル時にエラーか警告が発生する。
+        @param[in] in_state_key 取得する状態値に対応する識別値。
+        @return
+            取得した状態値。状態値の取得に失敗した場合は、
+            this_type::state_value::get_kind で
+            this_type::state_value::kind_NULL を返す。
         @sa this_type::register_bool
         @sa this_type::register_unsigned
         @sa this_type::register_signed
         @sa this_type::register_float
         @sa this_type::set_state
      */
-    public: template<typename template_value>
-    typename this_type::state const* get_state(
-        typename this_type::state_key const& in_state_key,
-        template_value& out_state_value)
+    public: typename this_type::state_value get_state(
+        typename this_type::state_key const& in_state_key)
     const PSYQ_NOEXCEPT
     {
         // 状態値登記を検索し、ビット列チャンクから状態値のビット列を取得する。
-        auto const local_state(
+        auto const local_state_entry(
             this_type::state_key_less::find_const_pointer(
                 this->states_, in_state_key));
-        if (local_state == nullptr)
+        if (local_state_entry == nullptr)
         {
-            return nullptr;
+            return typename this_type::state_value();
         }
         auto const local_chunk(
             this_type::chunk_key_less::find_const_pointer(
-                this->chunks_, local_state->chunk));
+                this->chunks_, local_state_entry->chunk));
         if (local_chunk == nullptr)
         {
+            // 状態値登記があれば、対応するビット列ちゃんくもあるはず。
             PSYQ_ASSERT(false);
-            return nullptr;
+            return typename this_type::state_value();
         }
-        auto const local_format(local_state->_get_format());
+        auto const local_format(local_state_entry->_get_format());
         auto const local_size(this_type::get_format_size(local_format));
         auto const local_bits(
             this_type::get_bits(
                 local_chunk->blocks,
-                local_state->_get_field_position(),
+                local_state_entry->_get_field_position(),
                 local_size));
 
         // 状態値の構成から、出力値のコピー処理を分岐する。
         switch (local_format)
         {
-            case this_type::state::kind_NULL:
-            PSYQ_ASSERT(false);
-            return nullptr;
-
             // 真偽値を取得する。
-            case this_type::state::kind_BOOL:
-            out_state_value = (local_bits != 0);
-            break;
+            case this_type::state_value::kind_BOOL:
+            return typename this_type::state_value(local_bits != 0);
 
             // 浮動小数点数を取得する。
-            case this_type::state::kind_FLOAT:
-            if (this_type::get_float_value(out_state_value, local_bits))
+            case this_type::state_value::kind_FLOAT:
             {
-                break;
+                typename this_type::float_union local_float;
+                local_float.bits =
+                    static_cast<decltype(local_float.bits)>(local_bits);
+                return typename this_type::state_value(local_float.value);
             }
-            return nullptr;
 
             // 整数を取得する。
             default:
-            if (0 < local_format)
-            {
-                // 符号なし整数を取得する。
-                PSYQ_ASSERT(
-                    this_type::make_block_mask(local_size)
-                    <= static_cast<typename this_type::block_type>(
-                        (std::numeric_limits<template_value>::max)()));
-                this_type::copy_value(out_state_value, local_bits);
-            }
-            else
+            if (local_format < 0)
             {
                 // 符号あり整数を取得する。
-                PSYQ_ASSERT(
-                    (this_type::make_block_mask(local_size) >> 1)
-                    <= static_cast<typename this_type::block_type>(
-                        (std::numeric_limits<template_value>::max)()));
                 auto const local_signed_bits(
-                    static_cast<typename this_type::signed_block_type>(
+                    static_cast<typename this_type::state_value::signed_type>(
                         local_bits));
                 auto const local_minus(
                     1 & (local_signed_bits >> (local_size - 1)));
-                this_type::copy_value(
-                    out_state_value,
+                return typename this_type::state_value(
                     local_signed_bits | (-local_minus << local_size));
             }
-            break;
+            else if (0 < local_format)
+            {
+                // 符号なし整数を取得する。
+                return typename this_type::state_value(local_bits);
+            }
+            PSYQ_ASSERT(false);
+            return typename this_type::state_value();
         }
-        return local_state;
     }
     //@}
-    private: static void get_float_value(
-        psyq::scenario_engine::_private::float_union<float>& io_float,
-        typename this_type::block_type const& in_bits)
-    {
-        io_float.bits = static_cast<std::uint32_t>(in_bits);
-        PSYQ_ASSERT(io_float.bits == in_bits);
-    }
-    private: static void get_float_value(
-        psyq::scenario_engine::_private::float_union<double>& io_float,
-        typename this_type::block_type const& in_bits)
-    {
-        io_float.bits = in_bits;
-    }
-    private: static bool get_float_value(
-        float& io_value,
-        typename this_type::block_type const& in_bits)
-    {
-        typename this_type::float_union local_float;
-        this_type::get_float_value(local_float, in_bits);
-        /** @note
-            ここでコンパイルエラーか警告が出る場合は
-            double から float への型変換が発生しているのが原因。
-            get_state の引数を double 型にすることで解決できる。
-         */
-        io_value = local_float.value;
-        return true;
-    }
-    private: static bool get_float_value(
-        double& io_value,
-        typename this_type::block_type const& in_bits)
-    {
-        typename this_type::float_union local_float;
-        this_type::get_float_value(local_float, in_bits);
-        io_value = local_float.value;
-        return true;
-    }
-    private: template<typename template_value>
-    static bool get_float_value(
-        template_value&, typename this_type::block_type const&)
-    {
-        return false;
-    }
-
-    private: template<typename template_source>
-    static void copy_value(
-        bool& out_value,
-        template_source const in_value)
-    PSYQ_NOEXCEPT
-    {
-        out_value = (in_value != 0);
-    }
-    private: template<typename template_target, typename template_source>
-    static void copy_value(
-        template_target& out_value,
-        template_source const in_value)
-    PSYQ_NOEXCEPT
-    {
-        out_value = static_cast<template_target>(in_value);
-    }
-
     /** @brief ビット列から値を取得する。
         @param[in,out] in_blocks 値を取得するビット列のコンテナ。
         @param[in] in_position   値を取得するビット列のビット位置。
@@ -632,6 +536,7 @@ class psyq::scenario_engine::reservoir
         auto const local_block_index(in_position / this_type::BLOCK_SIZE);
         if (in_blocks.size() <= local_block_index)
         {
+            // 状態値登記があれば、対応するビット列チャンクもあるはず。
             PSYQ_ASSERT(false);
             return 0;
         }
@@ -656,14 +561,14 @@ class psyq::scenario_engine::reservoir
 
         @param[in] in_state_key   設定する状態値に対応する識別値。
         @param[in] in_state_value 状態値に設定する値。
-        @retval !=nullptr  成功。値を設定した状態の登記を指すポインタを返す。
-        @retval ==nullptr
+        @retval true  成功。
+        @retval false
             失敗。状態値は変化しない。
             - in_state_key に対応する状態値がない場合は失敗する。
             - 真偽値以外を論理型の状態値へ設定しようとすると失敗する。
             - 整数型以外を整数型の状態値へ設定しようとすると失敗する。
         @note
-            this_type::float_type より精度の高い浮動小数点数を
+            this_type::state_value::float_type より精度の高い浮動小数点数を
             浮動小数点数型の状態値へ設定しようとすると、
             コンパイル時にエラーか警告が発生する。
         @sa this_type::register_bool
@@ -673,7 +578,7 @@ class psyq::scenario_engine::reservoir
         @sa this_type::get_state
      */
     public: template<typename template_value>
-    typename this_type::state const* set_state(
+    bool set_state(
         typename this_type::state_key const& in_state_key,
         template_value const in_state_value)
     PSYQ_NOEXCEPT
@@ -684,7 +589,7 @@ class psyq::scenario_engine::reservoir
                 this->states_, in_state_key));
         if (local_state == nullptr)
         {
-            return nullptr;
+            return false;
         }
 
         // 状態値を設定するビット列チャンクを決定する。
@@ -693,8 +598,9 @@ class psyq::scenario_engine::reservoir
                 this->chunks_, local_state->chunk));
         if (local_chunk == nullptr)
         {
+            // 状態値の登記があるなら、ビット列チャンクもあるはず。
             PSYQ_ASSERT(false);
-            return nullptr;
+            return false;
         }
         auto& local_chunk_blocks(local_chunk->blocks);
 
@@ -703,16 +609,16 @@ class psyq::scenario_engine::reservoir
         auto const local_position(local_state->_get_field_position());
         switch (local_format)
         {
-            case this_type::state::kind_NULL:
+            case this_type::state_value::kind_NULL:
             PSYQ_ASSERT(false);
-            return nullptr;
+            return false;
 
             // 真偽値を設定する。
-            case this_type::state::kind_BOOL:
+            case this_type::state_value::kind_BOOL:
             if (std::is_same<bool, template_value>::value)
             {
                 return this_type::notify_transition(
-                    const_cast<this_type::state&>(*local_state),
+                    const_cast<this_type::state_registry&>(*local_state),
                     this_type::set_bits(
                         local_chunk_blocks,
                         local_position,
@@ -720,26 +626,31 @@ class psyq::scenario_engine::reservoir
                         static_cast<typename this_type::block_type>(
                             in_state_value)));
             }
-            return nullptr;
+            return false;
 
             // 浮動小数点数を設定する。
-            case this_type::state::kind_FLOAT:
-            return this_type::notify_transition(
-                const_cast<this_type::state&>(*local_state),
-                this_type::set_bits(
-                    local_chunk_blocks,
-                    local_position,
-                    this_type::get_format_size(local_format),
-                    this_type::get_float_bits(in_state_value)));
+            case this_type::state_value::kind_FLOAT:
+            if (!std::is_same<bool, template_value>::value)
+            {
+                return this_type::notify_transition(
+                    const_cast<this_type::state_registry&>(*local_state),
+                    this_type::set_bits(
+                        local_chunk_blocks,
+                        local_position,
+                        this_type::FLOAT_SIZE,
+                        this_type::get_float_bits(in_state_value)));
+            }
+            return false;
 
             // 整数を設定する。
             default:
-            if (std::is_integral<template_value>::value)
+            if (!std::is_same<bool, template_value>::value
+                && std::is_integral<template_value>::value)
             {
                 auto const local_size(
                     this_type::get_format_size(local_format));
                 return this_type::notify_transition(
-                    const_cast<this_type::state&>(*local_state),
+                    const_cast<this_type::state_registry&>(*local_state),
                     local_format < 0?
                         // 符号あり整数を設定する。
                         this_type::set_signed(
@@ -755,7 +666,7 @@ class psyq::scenario_engine::reservoir
                             static_cast<typename this_type::block_type>(
                                 in_state_value)));
             }
-            return nullptr;
+            return false;
         }
     }
 
@@ -774,19 +685,19 @@ class psyq::scenario_engine::reservoir
         }
     }
     //@}
-    private: static typename this_type::state const* notify_transition(
-        typename this_type::state& io_state,
+    private: static bool notify_transition(
+        typename this_type::state_registry& io_state,
         int const in_set_bits)
     {
         if (in_set_bits < 0)
         {
-            return nullptr;
+            return false;
         }
         if (0 < in_set_bits)
         {
             io_state.field |= 1 << this_type::field_TRANSITION_FRONT;
         }
-        return &io_state;
+        return true;
     }
 
     private: static typename this_type::block_type get_float_bits(
@@ -821,7 +732,7 @@ class psyq::scenario_engine::reservoir
     {
         typename this_type::float_union local_float;
         local_float.value =
-            static_cast<typename this_type::float_type>(in_value);
+            static_cast<typename this_type::state_value::float_type>(in_value);
         PSYQ_ASSERT(
             // 桁あふれが発生してないか確認する。
             static_cast<template_value>(local_float.value) == in_value);
@@ -848,7 +759,7 @@ class psyq::scenario_engine::reservoir
     {
         auto local_bits(
             static_cast<typename this_type::block_type>(
-                static_cast<typename this_type::signed_block_type>(in_value)));
+                static_cast<typename this_type::state_value::signed_type>(in_value)));
         if (in_value < 0)
         {
             auto const local_mask(this_type::make_block_mask(in_size));
@@ -927,7 +838,9 @@ class psyq::scenario_engine::reservoir
             this_type::equip_chunk(this->chunks_, std::move(in_chunk_key)));
         auto const local_state(
             this->register_state(
-                local_chunk, std::move(in_state_key), this_type::state::kind_BOOL));
+                local_chunk,
+                std::move(in_state_key),
+                this_type::state_value::kind_BOOL));
         if (local_state == nullptr)
         {
             return false;
@@ -959,14 +872,14 @@ class psyq::scenario_engine::reservoir
     public: bool register_unsigned(
         typename this_type::chunk_key in_chunk_key,
         typename this_type::state_key in_state_key,
-        typename this_type::block_type const in_state_value,
-        std::size_t const in_state_size = this_type::BLOCK_SIZE)
+        typename this_type::state_value::unsigned_type const in_state_value,
+        std::size_t const in_state_size)
     {
-        // 登録可能な状態値か判定する。
+        // 登録不可能な状態値か判定する。
         auto const local_format(
             static_cast<typename this_type::format_type>(in_state_size));
         if (this_type::BLOCK_SIZE < in_state_size
-            || local_format < this_type::state::kind_UNSIGNED)
+            || local_format < this_type::state_value::kind_UNSIGNED)
         {
             return false;
         }
@@ -1008,14 +921,14 @@ class psyq::scenario_engine::reservoir
     public: bool register_signed(
         typename this_type::chunk_key in_chunk_key,
         typename this_type::state_key in_state_key,
-        typename this_type::signed_block_type const in_state_value,
-        std::size_t const in_state_size = this_type::BLOCK_SIZE)
+        typename this_type::state_value::signed_type const in_state_value,
+        std::size_t const in_state_size)
     {
-        // 登録可能な状態値か判定する。
+        // 登録不可能な状態値か判定する。
         auto const local_format(
             -static_cast<typename this_type::format_type>(in_state_size));
         if (this_type::BLOCK_SIZE < in_state_size
-            || this_type::state::kind_SIGNED < local_format)
+            || this_type::state_value::kind_SIGNED < local_format)
         {
             return false;
         }
@@ -1054,7 +967,7 @@ class psyq::scenario_engine::reservoir
     public: bool register_float(
         typename this_type::chunk_key in_chunk_key,
         typename this_type::state_key in_state_key,
-        typename this_type::float_type const in_state_value)
+        typename this_type::state_value::float_type const in_state_value)
     {
         // 状態値を登録した後、状態値に初期値を設定する。
         auto& local_chunk(
@@ -1063,7 +976,7 @@ class psyq::scenario_engine::reservoir
             this->register_state(
                 local_chunk,
                 std::move(in_state_key),
-                this_type::state::kind_FLOAT));
+                this_type::state_value::kind_FLOAT));
         if (local_state == nullptr)
         {
             return false;
@@ -1211,11 +1124,11 @@ class psyq::scenario_engine::reservoir
             auto const local_format(local_state->_get_format());
             switch (local_format)
             {
-                case this_type::state::kind_NULL:
+                case this_type::state_value::kind_NULL:
                 PSYQ_ASSERT(false);
                 continue;
 
-                case this_type::state::kind_BOOL:
+                case this_type::state_value::kind_BOOL:
                 local_reservoir.register_bool(
                     local_state->chunk,
                     local_state->key,
@@ -1223,7 +1136,7 @@ class psyq::scenario_engine::reservoir
                         local_chunk->blocks, local_position, 1));
                 continue;
 
-                case this_type::state::kind_FLOAT:
+                case this_type::state_value::kind_FLOAT:
                 PSYQ_ASSERT(false);
                 continue;
 
@@ -1299,7 +1212,7 @@ class psyq::scenario_engine::reservoir
         local_state.chunk = io_chunk.key;
         local_state.key = std::move(in_state_key);
         local_state.field = 1 << this_type::field_TRANSITION_FRONT;
-        PSYQ_ASSERT(in_format != this_type::state::kind_NULL);
+        PSYQ_ASSERT(in_format != this_type::state_value::kind_NULL);
         this_type::set_state_format(local_state, in_format);
 
         // 状態値のビット位置を決定する。
@@ -1462,7 +1375,7 @@ class psyq::scenario_engine::reservoir
         @param[in] in_position  状態値に設定するビット位置。
      */
     private: static bool set_state_position(
-        typename this_type::state& io_state,
+        typename this_type::state_registry& io_state,
         std::size_t const in_position)
     PSYQ_NOEXCEPT
     {
@@ -1486,7 +1399,7 @@ class psyq::scenario_engine::reservoir
         @param[in] in_format    状態値に設定する構成。
      */
     private: static void set_state_format(
-        typename this_type::state& io_state,
+        typename this_type::state_registry& io_state,
         typename this_type::format_type const in_format)
     PSYQ_NOEXCEPT
     {
@@ -1507,14 +1420,14 @@ class psyq::scenario_engine::reservoir
     {
         switch (in_format)
         {
-            case this_type::state::kind_NULL:
+            case this_type::state_value::kind_NULL:
             PSYQ_ASSERT(false);
             return 0;
 
-            case this_type::state::kind_BOOL:
+            case this_type::state_value::kind_BOOL:
             return 1;
 
-            case this_type::state::kind_FLOAT:
+            case this_type::state_value::kind_FLOAT:
             return this_type::FLOAT_SIZE;
 
             default:
@@ -1539,6 +1452,251 @@ class psyq::scenario_engine::reservoir
     private: typename this_type::chunk_vector chunks_;
 
 }; // class psyq::scenario_engine::reservoir
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief 状態値。
+template<typename template_unsigned, typename template_float>
+class psyq::scenario_engine::_private::state_value
+{
+    /// @brief thisが指す値の型。
+    private: typedef state_value this_type;
+
+    /// @brief 状態値で扱う符号なし整数の型。
+    public: typedef template_unsigned unsigned_type;
+    static_assert(std::is_unsigned<template_unsigned>::value, "");
+
+    /// @brief 状態値で扱う符号あり整数の型。
+    public: typedef
+        typename std::make_signed<typename this_type::unsigned_type>::type
+            signed_type;
+
+    /// @brief 状態値で扱う浮動小数点数の型。
+    public: typedef template_float float_type;
+    static_assert(std::is_floating_point<template_float>::value, "");
+
+    /// @brief 状態値の型の種別。
+    public: enum kind_enum: std::int8_t
+    {
+        kind_SIGNED = -2, ///< 符号あり整数。
+        kind_FLOAT,       ///< 浮動小数点数。
+        kind_NULL,        ///< 空。
+        kind_BOOL,        ///< 真偽値。
+        kind_UNSIGNED,    ///< 符号なし整数。
+    };
+
+    /// @brief this_type::compare の戻り値の型。
+    public: enum compare_enum: std::int8_t
+    {
+        compare_FAILED = -2, ///< 比較に失敗。
+        compare_LESS,        ///< 左辺のほうが小さい。
+        compare_EQUAL,       ///< 左辺と右辺は等価。
+        compare_GREATER,     ///< 左辺のほうが大きい。
+    };
+
+    //-------------------------------------------------------------------------
+    public: state_value() PSYQ_NOEXCEPT: kind_(this_type::kind_NULL) {}
+
+    public: explicit state_value(bool const in_bool)
+    PSYQ_NOEXCEPT:
+    kind_(this_type::kind_BOOL)
+    {
+        this->bool_ = in_bool;
+    }
+
+    public: explicit state_value(typename this_type::unsigned_type in_unsigned)
+    PSYQ_NOEXCEPT:
+    kind_(this_type::kind_UNSIGNED)
+    {
+        this->unsigned_ = in_unsigned;
+    }
+
+    public: explicit state_value(typename this_type::signed_type in_signed)
+    PSYQ_NOEXCEPT:
+    kind_(this_type::kind_SIGNED)
+    {
+        this->signed_ = in_signed;
+    }
+
+    public: explicit state_value(typename this_type::float_type in_float)
+    PSYQ_NOEXCEPT:
+    kind_(this_type::kind_FLOAT)
+    {
+        this->float_ = in_float;
+    }
+
+    //-------------------------------------------------------------------------
+    public: typename this_type::kind_enum get_kind() const PSYQ_NOEXCEPT
+    {
+        return this->kind_;
+    }
+
+    public: bool const* get_bool() const PSYQ_NOEXCEPT
+    {
+        return this->get_kind() == this_type::kind_BOOL? &this->bool_: nullptr;
+    }
+
+    public: typename this_type::unsigned_type const* get_unsigned()
+    const PSYQ_NOEXCEPT
+    {
+        return this->get_kind() == this_type::kind_UNSIGNED?
+            &this->unsigned_: nullptr;
+    }
+
+    public: typename this_type::signed_type const* get_signed()
+    const PSYQ_NOEXCEPT
+    {
+        return this->get_kind() == this_type::kind_SIGNED?
+            &this->signed_: nullptr;
+    }
+
+    public: typename this_type::float_type const* get_float()
+    const PSYQ_NOEXCEPT
+    {
+        return this->get_kind() == this_type::kind_FLOAT?
+            &this->float_: nullptr;
+    }
+
+    //-------------------------------------------------------------------------
+    public: typename this_type::compare_enum compare(this_type const& in_right)
+    const PSYQ_NOEXCEPT
+    {
+        switch (this->get_kind())
+        {
+            case this_type::kind_BOOL:
+            if (in_right.get_kind() != this_type::kind_BOOL)
+            {
+                return this_type::compare_FAILED;
+            }
+            return this->bool_ == in_right.bool_?
+                this_type::compare_EQUAL:
+                (this->bool_?
+                    this_type::compare_GREATER: this_type::compare_LESS);
+
+            case this_type::kind_UNSIGNED:
+            return this_type::compare_unsigned(this->unsigned_, in_right);
+
+            case this_type::kind_SIGNED:
+            return this_type::compare_signed(this->signed_, in_right);
+
+            case this_type::kind_FLOAT:
+            return this_type::compare_float(this->float_, in_right);
+
+            default: return this_type::compare_FAILED;
+        }
+    }
+
+    private: static typename this_type::compare_enum compare_unsigned(
+        typename this_type::unsigned_type const in_left,
+        this_type const& in_right)
+    {
+        switch (in_right.get_kind())
+        {
+            case this_type::kind_UNSIGNED:
+            return this_type::compare_value(in_left, in_right.unsigned_);
+
+            case this_type::kind_SIGNED:
+            return in_right.signed_ < 0?
+                this_type::compare_GREATER:
+                this_type::compare_value(in_left, in_right.unsigned_);
+
+            case this_type::kind_FLOAT:
+            return this_type::compare_float_right(in_left, in_right.float_);
+
+            default: return this_type::compare_FAILED;
+        }
+    }
+
+    private: static typename this_type::compare_enum compare_signed(
+        typename this_type::signed_type const in_left,
+        this_type const& in_right)
+    {
+        switch (in_right.get_kind())
+        {
+            case this_type::kind_UNSIGNED:
+            return in_left < 0?
+                this_type::compare_LESS:
+                this_type::compare_value(
+                    static_cast<typename this_type::unsigned_type>(in_left),
+                    in_right.unsigned_);
+
+            case this_type::kind_SIGNED:
+            return this_type::compare_value(in_left, in_right.signed_);
+
+            case this_type::kind_FLOAT:
+            return this_type::compare_float_right(in_left, in_right.float_);
+
+            default: return this_type::compare_FAILED;
+        }
+    }
+
+    private: template<typename template_value>
+    static typename this_type::compare_enum compare_value(
+        template_value in_left,
+        template_value in_right)
+    {
+        return in_left < in_right?
+            this_type::compare_LESS:
+            (in_right < in_left?
+                this_type::compare_GREATER: this_type::compare_EQUAL);
+    }
+
+    private: static typename this_type::compare_enum compare_float(
+        typename this_type::float_type const in_left,
+        this_type const& in_right)
+    {
+        switch (in_right.get_kind())
+        {
+            case this_type::kind_UNSIGNED:
+            return in_left < 0?
+                this_type::compare_LESS:
+                this_type::compare_float_left(in_left, in_right.unsigned_);
+
+            case this_type::kind_SIGNED:
+            return this_type::compare_float_left(in_left, in_right.signed_);
+
+            case this_type::kind_FLOAT:
+            return this_type::compare_value(in_left, in_right.float_);
+
+            default: return this_type::compare_FAILED;
+        }
+    }
+    private: template<typename template_value>
+    static typename this_type::compare_enum compare_float_left(
+        typename this_type::float_type const in_left,
+        template_value const in_right)
+    {
+        auto const local_right(
+            static_cast<typename this_type::float_type>(in_right));
+        return static_cast<template_value>(local_right) != in_right?
+            this_type::compare_FAILED:
+            this_type::compare_value(in_left, local_right);
+    }
+    private: template<typename template_value>
+    static typename this_type::compare_enum compare_float_right(
+        template_value const in_left,
+        typename this_type::float_type const in_right)
+    {
+        auto const local_comapre(
+            this_type::compare_float_left(in_right, in_left));
+        switch (local_comapre)
+        {
+            case this_type::compare_LESS:    return this_type::compare_GREATER;
+            case this_type::compare_GREATER: return this_type::compare_LESS;
+            default:                         return local_comapre;
+        }
+    }
+
+    //-------------------------------------------------------------------------
+    private: union
+    {
+        bool bool_;
+        typename this_type::unsigned_type unsigned_;
+        typename this_type::signed_type signed_;
+        typename this_type::float_type float_;
+    };
+    private: typename this_type::kind_enum kind_;
+
+}; // class psyq::scenario_engine::_private::state_value
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 識別値を比較する関数オブジェクト。

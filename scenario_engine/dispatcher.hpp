@@ -745,7 +745,7 @@ class psyq::scenario_engine::dispatcher
         // 評価結果が変化していれば、キャッシュに貯めてから呼び出す。
         auto local_behavior_caches(std::move(this->behavior_caches_));
         local_behavior_caches.clear();
-        this_type::receive_evaluation_request(
+        this_type::add_behavior_caches(
             local_behavior_caches,
             this->expression_monitors_,
             in_evaluator,
@@ -839,7 +839,7 @@ class psyq::scenario_engine::dispatcher
         }
     }
 
-    /** @brief 条件式の評価要求に応える。
+    /** @brief 条件式を評価し、条件挙動関数をキャッシュに貯める。
 
         条件式監視器のコンテナを走査し、条件式の結果によって、
         this_type::register_function で登録された条件挙動関数をキャッシュに貯める。
@@ -850,7 +850,7 @@ class psyq::scenario_engine::dispatcher
         @param[in] in_reservoir               条件式の評価に状態値のコンテナ。
      */
     private: template<typename template_evaluator>
-    static void receive_evaluation_request(
+    static void add_behavior_caches(
         typename this_type::behavior_cache_vector& io_behavior_caches,
         typename this_type::expression_monitor_vector& io_expression_monitors,
         template_evaluator const& in_evaluator,
@@ -869,14 +869,14 @@ class psyq::scenario_engine::dispatcher
             {
                 local_expression_monitor.flags.reset(
                     this_type::expression_monitor::flag_EVALUATION_REQUEST);
-                this_type::evaluate_expression(
+                this_type::add_behavior_cache(
                     io_behavior_caches,
                     local_expression_monitor,
                     in_evaluator,
                     in_reservoir);
                 if (local_expression_monitor.functions.empty())
                 {
-                    // 関数オブジェクトのコンテナが空になったら、
+                    // 条件挙動関数のコンテナが空になったら、
                     // 状態監視器を削除する。
                     i = io_expression_monitors.erase(i);
                     continue;
@@ -886,7 +886,7 @@ class psyq::scenario_engine::dispatcher
         }
     }
 
-    /** @brief 条件式を評価し、条件挙動関数を呼び出す。
+    /** @brief 条件式を評価し、条件挙動関数をキャッシュに貯める。
 
         条件式を評価し、前回の結果と異なるなら、
         this_type::register_function で登録された条件挙動関数をキャッシュに貯める。
@@ -895,11 +895,11 @@ class psyq::scenario_engine::dispatcher
         @param[in,out] io_expression_monitor 更新する条件式監視器。
         @param[in] in_evaluator              評価に用いる条件評価器。
         @param[in] in_reservoir              評価に用いる状態貯蔵器。
-        @retval true  条件式の評価が前回と異なっていた。
-        @retval false 条件式の評価が前回と同じだった。
+        @retval true  条件挙動関数をキャッシュに貯めた。
+        @retval false 条件挙動関数はキャッシュに貯めなかった。
      */
     private: template<typename template_evaluator>
-    static bool evaluate_expression(
+    static bool add_behavior_cache(
         typename this_type::behavior_cache_vector& io_behavior_caches,
         typename this_type::expression_monitor& io_expression_monitor,
         template_evaluator const& in_evaluator,
@@ -925,7 +925,7 @@ class psyq::scenario_engine::dispatcher
             return false;
         }
 
-        // 条件式の評価結果が以前と異なるので、条件挙動キャッシュに貯める。
+        // 条件式の評価結果が以前と異なるので、条件挙動関数をキャッシュに貯める。
         for (
             auto i(io_expression_monitor.functions.begin());
             i != io_expression_monitor.functions.end();)

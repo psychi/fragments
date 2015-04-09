@@ -550,8 +550,9 @@ class psyq::scenario_engine::reservoir
         @retval false
             失敗。状態値は変化しない。
             - in_state_key に対応する状態値がない場合は失敗する。
-            - 真偽値以外を論理型の状態値へ設定しようとすると失敗する。
-            - 整数型以外を整数型の状態値へ設定しようとすると失敗する。
+            - 論理型以外の値を論理型の状態値へ設定しようとすると失敗する。
+            - 整数型以外の値を整数型の状態値へ設定しようとすると失敗する。
+            - 論理型の値を浮動小数点数型の状態値へ設定しようとすると失敗する。
         @note
             this_type::state_value::float_type より精度の高い浮動小数点数を
             浮動小数点数型の状態値へ設定しようとすると、
@@ -568,6 +569,11 @@ class psyq::scenario_engine::reservoir
         template_value const in_state_value)
     PSYQ_NOEXCEPT
     {
+        static_assert(
+            std::is_floating_point<template_value>::value
+            || std::is_integral<template_value>::value,
+            "'template_value' is not an integer or floating-point number.");
+
         // 状態値登記を検索する。
         auto const local_state(
             this_type::state_key_less::find_const_pointer(
@@ -953,6 +959,7 @@ class psyq::scenario_engine::reservoir
 
         直前の状態変化フラグを取得する。
 
+        @param[in] in_state_key 登録する状態値に対応する識別値。
         @retval 0以上 直前の状態変化フラグ。
         @retval 0未満 状態値がない。
      */
@@ -1001,7 +1008,7 @@ class psyq::scenario_engine::reservoir
     /// @name ビット列チャンク
     //@{
     /** @brief ビット列チャンクを予約する。
-        @param[in] in_chunk_key                予約するビット列チャンクの識別番号。
+        @param[in] in_chunk_key            予約するビット列チャンクの識別値。
         @param[in] in_reserve_blocks       予約しておくブロックの数。
         @param[in] in_reserve_empty_fields 予約しておく空き領域の数。
      */
@@ -1033,7 +1040,7 @@ class psyq::scenario_engine::reservoir
     const;
 
     /** @brief シリアル化されたビット列チャンクを復元する。
-        @param[in] in_chunk_key            復元するビット列チャンクの識別番号。
+        @param[in] in_chunk_key        復元するビット列チャンクの識別値。
         @param[in] in_serialized_chunk シリアル化されたビット列チャンク。
         @todo 未実装。
      */
@@ -1191,7 +1198,7 @@ class psyq::scenario_engine::reservoir
     //-------------------------------------------------------------------------
     /** @brief 状態値を登録する。
         @param[in,out] io_chunk 登録する状態値が所属するビット列チャンク。
-        @param[in] in_state_key       登録する状態値の識別番号。
+        @param[in] in_state_key 登録する状態値に対応する識別値。
         @param[in] in_format    登録する状態値の構成。
         @retval !=nullptr 成功。登録した状態登記。
         @retval ==nullptr

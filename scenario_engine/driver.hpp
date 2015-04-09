@@ -181,6 +181,10 @@ class psyq::scenario_engine::driver
     //-------------------------------------------------------------------------
     /// @name チャンクの追加
     /** @brief シナリオ駆動器に状態値を追加する。
+
+        追加した状態値を削除するには、 this_type::reservoir_ に対して
+        this_type::reservoir::remove_chunk を呼び出す。
+
         @param[in] in_chunk_key 状態値を追加するチャンクの識別値。
         @param[in] in_state_builder
             状態値を登録する関数オブジェクト。
@@ -209,6 +213,10 @@ class psyq::scenario_engine::driver
     }
 
     /** @brief シナリオ駆動器に条件式を追加する。
+
+        追加した条件式を削除するには、 this_type::evaluator_ に対して
+        this_type::evaluator::remove_chunk を呼び出す。
+
         @param[in] in_chunk_key 条件式を追加するチャンクの識別値。
         @param[in] in_expression_builder
             条件式を登録する関数オブジェクト。
@@ -219,7 +227,7 @@ class psyq::scenario_engine::driver
             // @param[in,out] io_hasher    文字列から識別値を生成する関数オブジェクト。
             // @param[in] in_chunk_key     条件式を登録するチャンクを表す識別値。
             // @param[in] in_reservoir     条件式で使う状態値の書庫。
-            // @return 登録した状態値の数。
+            // @return 登録した条件式の数。
             std::size_t template_builder::operator()(
                 driver::evaluator& io_evaluator,
                 driver::hasher& io_hasher,
@@ -270,7 +278,7 @@ class psyq::scenario_engine::driver
     /// @brief シナリオ駆動器で用いる条件評価器。
     public: typename this_type::evaluator evaluator_;
 
-    /// @brief シナリオ駆動器で用いる条件監視器。
+    /// @brief シナリオ駆動器で用いる条件挙動器。
     public: typename this_type::dispatcher dispatcher_;
 
     /// @brief シナリオ駆動器で用いる条件挙動チャンクのコンテナ。
@@ -366,7 +374,6 @@ namespace psyq_test
             local_driver.hash_function_("state_float"), -10);
         local_driver.reservoir_.set_value(
             local_driver.hash_function_("state_float"), 1.25f);
-
         auto const local_float_state(
             local_driver.reservoir_.get_value(
                 local_driver.hash_function_("state_float")));

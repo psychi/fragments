@@ -195,37 +195,27 @@ class psyq::scenario_engine::evaluator
                 {
                     case evaluator::state_comparison::operator_EQUAL:
                     return local_compare
-                        == evaluator::reservoir::state_value::compare_EQUAL?
-                           1: 0;
+                        == evaluator::reservoir::state_value::compare_EQUAL;
 
                     case evaluator::state_comparison::operator_NOT_EQUAL:
                     return local_compare
-                        != evaluator::reservoir::state_value::compare_EQUAL?
-                           1: 0;
+                        != evaluator::reservoir::state_value::compare_EQUAL;
 
                     case evaluator::state_comparison::operator_LESS:
                     return local_compare
-                        == evaluator::reservoir::state_value::compare_LESS?
-                           1: 0;
+                        == evaluator::reservoir::state_value::compare_LESS;
 
                     case evaluator::state_comparison::operator_LESS_EQUAL:
                     return local_compare
-                        == evaluator::reservoir::state_value::compare_LESS
-                        || local_compare
-                        == evaluator::reservoir::state_value::compare_EQUAL?
-                           1: 0;
+                        != evaluator::reservoir::state_value::compare_GREATER;
 
                     case evaluator::state_comparison::operator_GREATER:
                     return local_compare
-                        == evaluator::reservoir::state_value::compare_GREATER?
-                           1: 0;
+                        == evaluator::reservoir::state_value::compare_GREATER;
 
                     case evaluator::state_comparison::operator_GREATER_EQUAL:
                     return local_compare
-                        == evaluator::reservoir::state_value::compare_GREATER
-                        || local_compare
-                        == evaluator::reservoir::state_value::compare_EQUAL?
-                           1: 0;
+                        != evaluator::reservoir::state_value::compare_LESS;
 
                     default:
                     PSYQ_ASSERT(false);

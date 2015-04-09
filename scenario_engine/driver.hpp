@@ -255,7 +255,7 @@ class psyq::scenario_engine::driver
      */
     public: void add_behavior_chunk(
         typename this_type::behavior_chunk::key_type const& in_chunk,
-        typename this_type::behavior_chunk::function_shared_ptr_vector
+        typename this_type::dispatcher::function_shared_ptr_vector
             in_functions)
     {
         this_type::behavior_chunk::add(
@@ -349,7 +349,7 @@ namespace psyq_test
             "expression_6, TRUE,      STATE, state_unsigned, |=, 1\n"
             "expression_7, TRUE,      STATE, state_unsigned, ^=, 0\n"
             "expression_8, TRUE,      STATE, state_unsigned, &=, 0\n");
-        typedef psyq::scenario_engine::behavior_builder<driver::behavior_chunk>
+        typedef psyq::scenario_engine::behavior_builder<driver::dispatcher>
             behavior_builder;
         local_driver.add_behavior_chunk(
             local_chunk_key,

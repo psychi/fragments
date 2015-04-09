@@ -84,7 +84,7 @@ struct psyq::scenario_engine::behavior_chunk
     /// @brief thisが指す値の型。
     private: typedef behavior_chunk this_type;
 
-    /// @brief 条件挙動関数オブジェクトの登録先となる条件評価器を表す型。
+    /// @brief 条件挙動関数オブジェクトを登録する条件挙動器を表す型。
     public: typedef template_dispatcher dispatcher;
 
     /// @brief 条件挙動チャンクのコンテナを表す型。
@@ -100,26 +100,6 @@ struct psyq::scenario_engine::behavior_chunk
     public: typedef psyq::scenario_engine::_private::key_less<
          this_type, typename this_type::key_type>
              key_less;
-
-    /// @brief 条件挙動関数オブジェクトのコンテナを表す型。
-    public: typedef std::vector<
-        typename this_type::dispatcher::function_shared_ptr,
-        typename this_type::dispatcher::allocator_type>
-            function_shared_ptr_vector;
-
-    /// @brief 状態値を操作する演算子の種類。
-    public: enum state_operator_enum: std::uint8_t
-    {
-        state_operator_COPY, ///< 代入。
-        state_operator_ADD,  ///< 加算。
-        state_operator_SUB,  ///< 減算。
-        state_operator_MULT, ///< 乗算。
-        state_operator_DIV,  ///< 除算。
-        state_operator_MOD,  ///< 除算の余り。
-        state_operator_OR,   ///< 論理和。
-        state_operator_XOR,  ///< 排他的論理和。
-        state_operator_AND,  ///< 論理積。
-    };
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
@@ -156,8 +136,6 @@ struct psyq::scenario_engine::behavior_chunk
     {}
 
     //-------------------------------------------------------------------------
-    /// @name 関数オブジェクト
-    //@{
     /** @brief 条件挙動チャンクに関数オブジェクトを追加する。
         @param[in,out] io_chunks 関数オブジェクトを追加する条件挙動チャンクのコンテナ。
         @param[in] in_key        関数オブジェクトを追加する条件挙動チャンクのキー。
@@ -166,7 +144,7 @@ struct psyq::scenario_engine::behavior_chunk
     public: static void add(
         typename this_type::vector& io_chunks,
         typename this_type::key_type const& in_key,
-        typename this_type::function_shared_ptr_vector in_functions)
+        typename this_type::dispatcher::function_shared_ptr_vector in_functions)
     {
         // 関数オブジェクトを追加する条件挙動チャンクを用意する。
         auto local_iterator(
@@ -180,7 +158,7 @@ struct psyq::scenario_engine::behavior_chunk
 
         // 関数オブジェクトを条件挙動チャンクに追加する。
         auto& local_chunk_functions(
-            const_cast<typename this_type::function_shared_ptr_vector&>(
+            const_cast<typename this_type::dispatcher::function_shared_ptr_vector&>(
                 local_iterator->functions));
         local_chunk_functions.reserve(
             local_chunk_functions.size() + in_functions.size());
@@ -210,230 +188,9 @@ struct psyq::scenario_engine::behavior_chunk
         return local_find;
     }
 
-    /** @brief 状態値を操作する関数オブジェクトを生成する。
-        @param[in,out] io_reservoir 関数から参照する状態貯蔵器。
-        @param[in] in_condition     関数の起動条件。
-        @param[in] in_state_key     操作する状態値のキー。
-        @param[in] in_operator      状態値の操作で使う演算子。
-        @param[in] in_value         状態値の操作で使う演算値。
-        @param[in] in_allocator     生成に使うメモリ割当子。
-        @return 生成した条件挙動関数オブジェクト。
-     */
-    public: template<
-        typename template_reservoir,
-        typename template_value,
-        typename template_allocator>
-    static typename this_type::dispatcher::function_shared_ptr
-    make_state_operation_function(
-        template_reservoir& io_reservoir,
-        bool const in_condition,
-        typename template_reservoir::state_key const& in_state_key,
-        typename this_type::state_operator_enum const in_operator,
-        template_value const& in_value,
-        template_allocator const& in_allocator)
-    {
-        // 状態値を書き換える関数オブジェクトを生成する。
-        return std::allocate_shared<typename this_type::dispatcher::function>(
-            in_allocator,
-            typename this_type::dispatcher::function(
-                /// @todo io_reservoir を参照渡しするのは危険。対策を考えたい。
-                [=, &io_reservoir](
-                    typename this_type::dispatcher::expression_key const&,
-                    std::int8_t const in_evaluation,
-                    std::int8_t const in_last_evaluation)
-                {
-                    // 条件と評価が合致すれば、状態値を書き換える。
-                    if (0 <= in_last_evaluation
-                        && 0 <= in_evaluation
-                        && in_condition == (0 < in_evaluation))
-                    {
-                        this_type::operate_state(
-                            io_reservoir, in_state_key, in_operator, in_value);
-                    }
-                }));
-    }
-    //@}
-    private: template<typename template_reservoir, typename template_value>
-    static bool operate_state(
-        template_reservoir& io_reservoir,
-        typename template_reservoir::state_key const& in_state_key,
-        typename this_type::state_operator_enum const in_operator,
-        template_value const& in_value)
-    {
-        if (in_operator == this_type::state_operator_COPY)
-        {
-            auto const local_set_value(
-                io_reservoir.set_value(in_state_key, in_value));
-            PSYQ_ASSERT(local_set_value);
-            return local_set_value;
-        }
-        auto const local_state(io_reservoir.get_value(in_state_key));
-        switch (local_state.get_kind())
-        {
-            case template_reservoir::state_value::kind_BOOL:
-            return this_type::operate_state_bool(
-                io_reservoir,
-                in_state_key,
-                in_operator,
-                local_state.get_bool(),
-                /// @todo とりあえず真偽値に変換しておくが、うまい対応をしたい。
-                in_value != 0);
-
-            case template_reservoir::state_value::kind_UNSIGNED:
-            return this_type::operate_state_integer(
-                io_reservoir,
-                in_state_key,
-                in_operator,
-                local_state.get_unsigned(),
-                in_value);
-
-            case template_reservoir::state_value::kind_SIGNED:
-            return this_type::operate_state_integer(
-                io_reservoir,
-                in_state_key,
-                in_operator,
-                local_state.get_signed(),
-                in_value);
-
-            case template_reservoir::state_value::kind_FLOAT:
-            return this_type::operate_state_float(
-                io_reservoir,
-                in_state_key,
-                in_operator,
-                local_state.get_float(),
-                in_value);
-
-            default:
-            PSYQ_ASSERT(false);
-            return false;
-        }
-    }
-
-    private: template<typename template_reservoir>
-    static bool operate_state_bool(
-        template_reservoir& io_reservoir,
-        typename template_reservoir::state_key const& in_state_key,
-        typename this_type::state_operator_enum const in_operator,
-        bool const* const in_state_value,
-        bool const in_value)
-    {
-        if (in_state_value == nullptr)
-        {
-            PSYQ_ASSERT(false);
-            return false;
-        }
-        auto local_value(*in_state_value);
-        switch (in_operator)
-        {
-            case this_type::state_operator_OR:  local_value |= in_value; break;
-            case this_type::state_operator_XOR: local_value ^= in_value; break;
-            case this_type::state_operator_AND: local_value &= in_value; break;
-
-            default:
-            PSYQ_ASSERT(false);
-            return false;
-        }
-        auto const local_set_value(
-            io_reservoir.set_value(in_state_key, local_value));
-        PSYQ_ASSERT(local_set_value);
-        return local_set_value;
-    }
-    private: template<
-        typename template_reservoir,
-        typename template_state_value,
-        typename template_value>
-    static bool operate_state_integer(
-        template_reservoir& io_reservoir,
-        typename template_reservoir::state_key const& in_state_key,
-        typename this_type::state_operator_enum const in_operator,
-        template_state_value const* const in_state_value,
-        template_value const& in_value)
-    {
-        if (in_state_value == nullptr)
-        {
-            PSYQ_ASSERT(false);
-            return false;
-        }
-        auto local_value(*in_state_value);
-        switch (in_operator)
-        {
-            case this_type::state_operator_ADD:  local_value += in_value; break;
-            case this_type::state_operator_SUB:  local_value -= in_value; break;
-            case this_type::state_operator_MULT: local_value *= in_value; break;
-            case this_type::state_operator_OR:   local_value |= in_value; break;
-            case this_type::state_operator_XOR:  local_value ^= in_value; break;
-            case this_type::state_operator_AND:  local_value &= in_value; break;
-
-            case this_type::state_operator_DIV:
-            if (in_value == 0)
-            {
-                PSYQ_ASSERT(false);
-                return false;
-            }
-            local_value /= in_value;
-            break;
-
-            case this_type::state_operator_MOD:
-            if (in_value == 0)
-            {
-                PSYQ_ASSERT(false);
-                return false;
-            }
-            local_value %= in_value;
-            break;
-
-            default:
-            PSYQ_ASSERT(false);
-            return false;
-        }
-        auto const local_set_value(
-            io_reservoir.set_value(in_state_key, local_value));
-        PSYQ_ASSERT(local_set_value);
-        return local_set_value;
-    }
-    private: template<typename template_reservoir, typename template_value>
-    static bool operate_state_float(
-        template_reservoir& io_reservoir,
-        typename template_reservoir::state_key const& in_state_key,
-        typename this_type::state_operator_enum const in_operator,
-        typename template_reservoir::state_value::float_type const* const
-            in_state_value,
-        template_value const& in_value)
-    {
-        if (in_state_value == nullptr)
-        {
-            PSYQ_ASSERT(false);
-            return false;
-        }
-        auto local_value(*in_state_value);
-        switch (in_operator)
-        {
-            case this_type::state_operator_ADD:  local_value += in_value; break;
-            case this_type::state_operator_SUB:  local_value -= in_value; break;
-            case this_type::state_operator_MULT: local_value *= in_value; break;
-
-            case this_type::state_operator_DIV:
-            if (in_value == 0)
-            {
-                PSYQ_ASSERT(false);
-                return false;
-            }
-            local_value /= in_value;
-            break;
-
-            default:
-            PSYQ_ASSERT(false);
-            return false;
-        }
-        auto const local_set_value(
-            io_reservoir.set_value(in_state_key, local_value));
-        PSYQ_ASSERT(local_set_value);
-        return local_set_value;
-    }
-
     //-------------------------------------------------------------------------
     /// @brief 条件挙動関数オブジェクトの所有権ありスマートポインタ。
-    public: typename this_type::function_shared_ptr_vector functions;
+    public: typename this_type::dispatcher::function_shared_ptr_vector functions;
     /// @brief 条件挙動チャンクを識別するキー。
     public: typename this_type::key_type key;
 
@@ -442,14 +199,15 @@ struct psyq::scenario_engine::behavior_chunk
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 文字列表から条件挙動関数オブジェクトを構築する関数オブジェクト。
 
-    @tparam template_chunk 構築する条件挙動チャンクの型。
+    @tparam template_dispatcher @copydoc dispatcher
  */
-template<typename template_chunk>
+template<typename template_dispatcher>
 struct psyq::scenario_engine::behavior_builder
 {
     private: typedef behavior_builder this_type;
 
-    private: typedef template_chunk chunk;
+    /// @brief 条件挙動関数オブジェクトの登録先となる条件挙動器を表す型。
+    public: typedef template_dispatcher dispatcher;
 
     //-------------------------------------------------------------------------
     /** @brief 文字列表から条件挙動関数オブジェクトを生成し、条件評価器へ登録する。
@@ -464,14 +222,14 @@ struct psyq::scenario_engine::behavior_builder
         typename template_hasher,
         typename template_evaluator,
         typename template_string>
-    static typename this_type::chunk::function_shared_ptr_vector build(
-        typename this_type::chunk::dispatcher& io_dispatcher,
+    static typename this_type::dispatcher::function_shared_ptr_vector build(
+        typename this_type::dispatcher& io_dispatcher,
         template_hasher& io_hasher,
         template_evaluator const& in_evaluator,
         typename template_evaluator::reservoir const& in_reservoir,
         psyq::string::csv_table<template_string> const& in_string_table)
     {
-        typename this_type::chunk::function_shared_ptr_vector
+        typename this_type::dispatcher::function_shared_ptr_vector
             local_functions(io_dispatcher.get_allocator());
         auto const local_row_count(in_string_table.get_row_count());
         local_functions.reserve(local_row_count);
@@ -535,8 +293,7 @@ struct psyq::scenario_engine::behavior_builder
          typename template_hasher,
          typename template_evaluator,
          typename template_string>
-    static typename this_type::chunk::dispatcher::function_shared_ptr
-    make_function(
+    static typename this_type::dispatcher::function_shared_ptr make_function(
         template_hasher& io_hasher,
         template_evaluator const& in_evaluator,
         typename template_evaluator::reservoir const& in_reservoir,
@@ -555,7 +312,7 @@ struct psyq::scenario_engine::behavior_builder
             // 未知の条件だった。
             PSYQ_ASSERT(false);
             return typename
-                this_type::chunk::dispatcher::function_shared_ptr();
+                this_type::dispatcher::function_shared_ptr();
         }
         bool const local_condition(local_parse_string_bool != 0);
 
@@ -579,7 +336,7 @@ struct psyq::scenario_engine::behavior_builder
             // 未知の種類だった。
             PSYQ_ASSERT(false);
             return typename
-                this_type::chunk::dispatcher::function_shared_ptr();
+                this_type::dispatcher::function_shared_ptr();
         }
     }
 
@@ -595,7 +352,7 @@ struct psyq::scenario_engine::behavior_builder
         typename template_hasher,
         typename template_reservoir,
         typename template_string>
-    static typename this_type::chunk::dispatcher::function_shared_ptr
+    static typename this_type::dispatcher::function_shared_ptr
     make_state_operation_function(
         template_hasher& io_hasher,
         template_reservoir const& in_reservoir,
@@ -616,11 +373,11 @@ struct psyq::scenario_engine::behavior_builder
             // 状態貯蔵器にキーが登録されていなかった。
             PSYQ_ASSERT(false);
             return typename
-                this_type::chunk::dispatcher::function_shared_ptr();
+                this_type::dispatcher::function_shared_ptr();
         }
 
         // 演算子を取得する。
-        typename this_type::chunk::state_operator_enum local_operator;
+        typename this_type::dispatcher::state_operator_enum local_operator;
         auto const local_get_operator(
             this_type::get_operator(
                 local_operator,
@@ -632,7 +389,7 @@ struct psyq::scenario_engine::behavior_builder
         {
             PSYQ_ASSERT(false);
             return typename
-                this_type::chunk::dispatcher::function_shared_ptr();
+                this_type::dispatcher::function_shared_ptr();
         }
 
         // 演算値を取得する。
@@ -650,15 +407,15 @@ struct psyq::scenario_engine::behavior_builder
         {
             PSYQ_ASSERT(false);
             return typename
-                this_type::chunk::dispatcher::function_shared_ptr();
+                this_type::dispatcher::function_shared_ptr();
         }
         PSYQ_ASSERT(
             local_value != 0 || (
-                local_operator != this_type::chunk::state_operator_DIV
-                && local_operator != this_type::chunk::state_operator_MOD));
+                local_operator != this_type::dispatcher::state_operator_DIV
+                && local_operator != this_type::dispatcher::state_operator_MOD));
 
         // 状態値を書き換える関数オブジェクトを生成する。
-        return this_type::chunk::make_state_operation_function(
+        return this_type::dispatcher::make_state_operation_function(
             const_cast<template_reservoir&>(in_reservoir),
             in_condition,
             local_key,
@@ -669,61 +426,61 @@ struct psyq::scenario_engine::behavior_builder
 
     private: template<typename template_string>
     static bool get_operator(
-        typename this_type::chunk::state_operator_enum& out_operator,
+        typename this_type::dispatcher::state_operator_enum& out_operator,
         template_string const& in_string)
     {
         if (in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_COPY)
         {
-            out_operator = this_type::chunk::state_operator_COPY;
+            out_operator = this_type::dispatcher::state_operator_COPY;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_ADD)
         {
-            out_operator = this_type::chunk::state_operator_ADD;
+            out_operator = this_type::dispatcher::state_operator_ADD;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_SUB)
         {
-            out_operator = this_type::chunk::state_operator_SUB;
+            out_operator = this_type::dispatcher::state_operator_SUB;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_MULT)
         {
-            out_operator = this_type::chunk::state_operator_MULT;
+            out_operator = this_type::dispatcher::state_operator_MULT;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_DIV)
         {
-            out_operator = this_type::chunk::state_operator_DIV;
+            out_operator = this_type::dispatcher::state_operator_DIV;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_MOD)
         {
-            out_operator = this_type::chunk::state_operator_MOD;
+            out_operator = this_type::dispatcher::state_operator_MOD;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_OR)
         {
-            out_operator = this_type::chunk::state_operator_OR;
+            out_operator = this_type::dispatcher::state_operator_OR;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_XOR)
         {
-            out_operator = this_type::chunk::state_operator_XOR;
+            out_operator = this_type::dispatcher::state_operator_XOR;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_AND)
         {
-            out_operator = this_type::chunk::state_operator_AND;
+            out_operator = this_type::dispatcher::state_operator_AND;
         }
         else
         {

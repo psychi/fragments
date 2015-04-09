@@ -73,8 +73,14 @@ class psyq::scenario_engine::dispatcher
     public: typedef std::weak_ptr<typename this_type::function>
         function_weak_ptr;
 
-    /// @brief 条件挙動関数オブジェクトの所有権なしスマートポインタのコンテナ。
-    private: typedef std::vector<
+    /// @brief 条件挙動関数オブジェクトの所有権ありスマートポインタのコンテナを表す型。
+    public: typedef std::vector<
+        typename this_type::function_shared_ptr,
+        typename this_type::allocator_type>
+            function_shared_ptr_vector;
+
+    /// @brief 条件挙動関数オブジェクトの所有権なしスマートポインタのコンテナを表す型。
+    public: typedef std::vector<
         typename this_type::function_weak_ptr,
         typename this_type::allocator_type>
             function_weak_ptr_vector;
@@ -945,6 +951,241 @@ class psyq::scenario_engine::dispatcher
             }
         }
         return true;
+    }
+
+    //-------------------------------------------------------------------------
+    /// @brief 状態値を操作する演算子の種類。
+    public: enum state_operator_enum: std::uint8_t
+    {
+        state_operator_COPY, ///< 代入。
+        state_operator_ADD,  ///< 加算。
+        state_operator_SUB,  ///< 減算。
+        state_operator_MULT, ///< 乗算。
+        state_operator_DIV,  ///< 除算。
+        state_operator_MOD,  ///< 除算の余り。
+        state_operator_OR,   ///< 論理和。
+        state_operator_XOR,  ///< 排他的論理和。
+        state_operator_AND,  ///< 論理積。
+    };
+
+    /** @brief 状態値を操作する関数オブジェクトを生成する。
+        @param[in,out] io_reservoir 関数から参照する状態貯蔵器。
+        @param[in] in_condition     関数の起動条件。
+        @param[in] in_state_key     操作する状態値のキー。
+        @param[in] in_operator      状態値の操作で使う演算子。
+        @param[in] in_value         状態値の操作で使う演算値。
+        @param[in] in_allocator     生成に使うメモリ割当子。
+        @return 生成した条件挙動関数オブジェクト。
+     */
+    public: template<typename template_reservoir, typename template_value>
+    static typename this_type::function_shared_ptr
+    make_state_operation_function(
+        template_reservoir& io_reservoir,
+        bool const in_condition,
+        typename template_reservoir::state_key const& in_state_key,
+        typename this_type::state_operator_enum const in_operator,
+        template_value const& in_value,
+        typename this_type::allocator_type const& in_allocator)
+    {
+        // 状態値を書き換える関数オブジェクトを生成する。
+        return std::allocate_shared<typename this_type::function>(
+            in_allocator,
+            typename this_type::function(
+                /// @todo io_reservoir を参照渡しするのは危険。対策を考えたい。
+                [=, &io_reservoir](
+                    typename this_type::expression_key const&,
+                    std::int8_t const in_evaluation,
+                    std::int8_t const in_last_evaluation)
+                {
+                    // 条件と評価が合致すれば、状態値を書き換える。
+                    if (0 <= in_last_evaluation
+                        && 0 <= in_evaluation
+                        && in_condition == (0 < in_evaluation))
+                    {
+                        this_type::operate_state(
+                            io_reservoir, in_state_key, in_operator, in_value);
+                    }
+                }));
+    }
+
+    private: template<typename template_reservoir, typename template_value>
+    static bool operate_state(
+        template_reservoir& io_reservoir,
+        typename template_reservoir::state_key const& in_state_key,
+        typename this_type::state_operator_enum const in_operator,
+        template_value const& in_value)
+    {
+        if (in_operator == this_type::state_operator_COPY)
+        {
+            auto const local_set_value(
+                io_reservoir.set_value(in_state_key, in_value));
+            PSYQ_ASSERT(local_set_value);
+            return local_set_value;
+        }
+        auto const local_state(io_reservoir.get_value(in_state_key));
+        switch (local_state.get_kind())
+        {
+            case template_reservoir::state_value::kind_BOOL:
+            return this_type::operate_state_bool(
+                io_reservoir,
+                in_state_key,
+                in_operator,
+                local_state.get_bool(),
+                /// @todo とりあえず真偽値に変換しておくが、うまい対応をしたい。
+                in_value != 0);
+
+            case template_reservoir::state_value::kind_UNSIGNED:
+            return this_type::operate_state_integer(
+                io_reservoir,
+                in_state_key,
+                in_operator,
+                local_state.get_unsigned(),
+                in_value);
+
+            case template_reservoir::state_value::kind_SIGNED:
+            return this_type::operate_state_integer(
+                io_reservoir,
+                in_state_key,
+                in_operator,
+                local_state.get_signed(),
+                in_value);
+
+            case template_reservoir::state_value::kind_FLOAT:
+            return this_type::operate_state_float(
+                io_reservoir,
+                in_state_key,
+                in_operator,
+                local_state.get_float(),
+                in_value);
+
+            default:
+            PSYQ_ASSERT(false);
+            return false;
+        }
+    }
+
+    private: template<typename template_reservoir>
+    static bool operate_state_bool(
+        template_reservoir& io_reservoir,
+        typename template_reservoir::state_key const& in_state_key,
+        typename this_type::state_operator_enum const in_operator,
+        bool const* const in_state_value,
+        bool const in_value)
+    {
+        if (in_state_value == nullptr)
+        {
+            PSYQ_ASSERT(false);
+            return false;
+        }
+        auto local_value(*in_state_value);
+        switch (in_operator)
+        {
+            case this_type::state_operator_OR:  local_value |= in_value; break;
+            case this_type::state_operator_XOR: local_value ^= in_value; break;
+            case this_type::state_operator_AND: local_value &= in_value; break;
+
+            default:
+            PSYQ_ASSERT(false);
+            return false;
+        }
+        auto const local_set_value(
+            io_reservoir.set_value(in_state_key, local_value));
+        PSYQ_ASSERT(local_set_value);
+        return local_set_value;
+    }
+
+    private: template<
+        typename template_reservoir,
+        typename template_state_value,
+        typename template_value>
+    static bool operate_state_integer(
+        template_reservoir& io_reservoir,
+        typename template_reservoir::state_key const& in_state_key,
+        typename this_type::state_operator_enum const in_operator,
+        template_state_value const* const in_state_value,
+        template_value const& in_value)
+    {
+        if (in_state_value == nullptr)
+        {
+            PSYQ_ASSERT(false);
+            return false;
+        }
+        auto local_value(*in_state_value);
+        switch (in_operator)
+        {
+            case this_type::state_operator_ADD:  local_value += in_value; break;
+            case this_type::state_operator_SUB:  local_value -= in_value; break;
+            case this_type::state_operator_MULT: local_value *= in_value; break;
+            case this_type::state_operator_OR:   local_value |= in_value; break;
+            case this_type::state_operator_XOR:  local_value ^= in_value; break;
+            case this_type::state_operator_AND:  local_value &= in_value; break;
+
+            case this_type::state_operator_DIV:
+            if (in_value == 0)
+            {
+                PSYQ_ASSERT(false);
+                return false;
+            }
+            local_value /= in_value;
+            break;
+
+            case this_type::state_operator_MOD:
+            if (in_value == 0)
+            {
+                PSYQ_ASSERT(false);
+                return false;
+            }
+            local_value %= in_value;
+            break;
+
+            default:
+            PSYQ_ASSERT(false);
+            return false;
+        }
+        auto const local_set_value(
+            io_reservoir.set_value(in_state_key, local_value));
+        PSYQ_ASSERT(local_set_value);
+        return local_set_value;
+    }
+
+    private: template<typename template_reservoir, typename template_value>
+    static bool operate_state_float(
+        template_reservoir& io_reservoir,
+        typename template_reservoir::state_key const& in_state_key,
+        typename this_type::state_operator_enum const in_operator,
+        typename template_reservoir::state_value::float_type const* const
+            in_state_value,
+        template_value const& in_value)
+    {
+        if (in_state_value == nullptr)
+        {
+            PSYQ_ASSERT(false);
+            return false;
+        }
+        auto local_value(*in_state_value);
+        switch (in_operator)
+        {
+            case this_type::state_operator_ADD:  local_value += in_value; break;
+            case this_type::state_operator_SUB:  local_value -= in_value; break;
+            case this_type::state_operator_MULT: local_value *= in_value; break;
+
+            case this_type::state_operator_DIV:
+            if (in_value == 0)
+            {
+                PSYQ_ASSERT(false);
+                return false;
+            }
+            local_value /= in_value;
+            break;
+
+            default:
+            PSYQ_ASSERT(false);
+            return false;
+        }
+        auto const local_set_value(
+            io_reservoir.set_value(in_state_key, local_value));
+        PSYQ_ASSERT(local_set_value);
+        return local_set_value;
     }
 
     //-------------------------------------------------------------------------

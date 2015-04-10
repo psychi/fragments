@@ -390,18 +390,18 @@ class psyq::scenario_engine::expression_builder
         }
 
         // 複合条件式の条件を取得する。
-        auto const local_parse_string_bool(
-            psyq::scenario_engine::_private::parse_string_bool(
-                in_string_table.find_body_cell(
-                    in_row_index,
-                    PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_ELEMENT,
-                    local_element_column + 1)));
-        if (local_parse_string_bool < 0)
+        auto const local_condition_cell(
+            in_string_table.find_body_cell(
+                in_row_index,
+                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_ELEMENT,
+                local_element_column + 1));
+        auto const local_bool_state(local_condition_cell.to_bool());
+        if (local_bool_state < 0)
         {
             PSYQ_ASSERT(false);
             return true;
         }
-        local_element.condition = (local_parse_string_bool != 0);
+        local_element.condition = (local_bool_state != 0);
 
         // 複合条件式に要素条件を追加する。
         io_elements.push_back(local_element);
@@ -468,10 +468,8 @@ class psyq::scenario_engine::expression_builder
                 in_row_index,
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_ELEMENT,
                 local_element_column + 2));
-        local_state.value =
-            psyq::scenario_engine::_private::parse_string_state<
-                typename template_evaluator::reservoir::state_value>(
-                    local_comparison_value_cell);
+        local_state.value = local_comparison_value_cell.template
+            to_scalar<typename template_evaluator::reservoir::state_value>();
         if (local_state.value.get_kind()
             == template_evaluator::reservoir::state_value::kind_NULL)
         {

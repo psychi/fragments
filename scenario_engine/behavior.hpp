@@ -302,19 +302,18 @@ struct psyq::scenario_engine::behavior_builder
             in_row_index)
     {
         // 挙動が起こる条件を取得する。
-        auto const local_parse_string_bool(
-            psyq::scenario_engine::_private::parse_string_bool(
-                in_string_table.find_body_cell(
-                    in_row_index,
-                    PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_CONDITION)));
-        if (local_parse_string_bool < 0)
+        auto const local_condition_cell(
+            in_string_table.find_body_cell(
+                in_row_index,
+                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_CONDITION));
+        auto const local_bool_state(local_condition_cell.to_bool());
+        if (local_bool_state < 0)
         {
             // 未知の条件だった。
             PSYQ_ASSERT(false);
-            return typename
-                this_type::dispatcher::function_shared_ptr();
+            return typename this_type::dispatcher::function_shared_ptr();
         }
-        bool const local_condition(local_parse_string_bool != 0);
+        bool const local_condition(local_bool_state != 0);
 
         // 条件挙動関数の種類を取得する。
         auto const local_kind_cell(
@@ -335,8 +334,7 @@ struct psyq::scenario_engine::behavior_builder
         {
             // 未知の種類だった。
             PSYQ_ASSERT(false);
-            return typename
-                this_type::dispatcher::function_shared_ptr();
+            return typename this_type::dispatcher::function_shared_ptr();
         }
     }
 

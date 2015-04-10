@@ -84,15 +84,20 @@ class psyq::scenario_engine::evaluator
 
     }; // struct expression
 
-    /// @brief 条件式を識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
-    private: typedef psyq::scenario_engine::_private::key_less<
-        typename this_type::expression, typename this_type::expression_key>
-            expression_key_less;
-
     /// @brief 条件式のコンテナを表す型。
     private: typedef std::vector<
         typename this_type::expression, typename this_type::allocator_type>
             expression_vector;
+
+    /// @brief 条件式の識別値のコンテナの型。
+    private: typedef std::vector<
+        typename this_type::expression_key, typename this_type::allocator_type>
+            expression_key_vector;
+
+    /// @brief 条件式を識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
+    private: typedef psyq::scenario_engine::_private::key_less<
+        typename this_type::expression, typename this_type::expression_key>
+            expression_key_less;
 
     //-------------------------------------------------------------------------
     /// @brief 複合条件式の要素条件。
@@ -678,9 +683,9 @@ class psyq::scenario_engine::evaluator
     }
 
     //-------------------------------------------------------------------------
-    /// @brief 条件式のコンテナ。
+    /// @brief 条件式の辞書。
     private: typename this_type::expression_vector expressions_;
-    /// @brief 要素条件チャンクのコンテナ。
+    /// @brief 要素条件チャンクの辞書。
     private: typename this_type::chunk_vector chunks_;
 
 }; // class psyq::scenario_engine::evaluator

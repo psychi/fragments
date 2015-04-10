@@ -49,6 +49,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //#include "string/reference_base.hpp"
 //#include "fnv_hash.hpp"
 
+#ifndef PSYQ_STRING_TRUE
+#define PSYQ_STRING_TRUE "TRUE"
+#endif // !defined(PSYQ_STRING_TRUE)
+
+#ifndef PSYQ_STRING_FALSE
+#define PSYQ_STRING_FALSE "FALSE"
+#endif // !defined(PSYQ_STRING_FALSE)
+
 /// @cond
 namespace psyq
 {
@@ -1012,6 +1020,72 @@ class psyq::string::_private::interface_immutable: public template_string_type
     //-------------------------------------------------------------------------
     /// @name 文字列の変換
     //@{
+    /** @brief 文字列を解析し、真偽値を取得する
+        @retval 正 文字列から true を取得した。
+        @retval 0  文字列から false を取得した。
+        @retval 負 文字列から真偽値を取得できなかった。
+     */
+    public: int to_bool() const PSYQ_NOEXCEPT
+    {
+        return *this != PSYQ_STRING_TRUE?
+            (*this != PSYQ_STRING_FALSE? -1: 0): 1;
+    }
+
+    /** @brief 文字列を解析し、スカラー値を構築する。
+        @tparam template_scalar 構築するスカラー値の型。
+        @return 文字列を解析して構築したスカラー値。
+     */
+    public: template<typename template_scalar>
+    template_scalar to_scalar() const PSYQ_NOEXCEPT
+    {
+        if (this->empty())
+        {
+            return template_scalar();
+        }
+
+        // 真偽値として解析する。
+        auto const local_to_bool(this->to_bool());
+        if (0 <= local_to_bool)
+        {
+            return template_scalar(local_to_bool != 0);
+        }
+
+        // 整数として解析する。
+        auto local_iterator(this->data());
+        auto const local_end(local_iterator + this->size());
+        auto const local_sign(this_type::read_sign(local_iterator, local_end));
+        auto const local_radix(
+            this_type::read_radix(local_iterator, local_end));
+        auto local_real_iterator(local_iterator);
+        auto const local_integer(
+            this_type::read_numbers(local_iterator, local_end, local_radix));
+        if (local_end == local_iterator)
+        {
+            return local_sign < 0?
+                template_scalar(
+                    static_cast<typename template_scalar::signed_type>(
+                        local_integer * local_sign)):
+                template_scalar(
+                    static_cast<typename template_scalar::unsigned_type>(
+                        local_integer));
+        }
+
+        // 浮動小数点数の整数部と小数部を解析する。
+        auto const local_real(
+            this_type::merge_fraction_part(
+                local_real_iterator,
+                local_end,
+                local_radix,
+                static_cast<long double>(
+                    this_type::read_numbers(
+                        local_iterator, local_end, local_radix))));
+        return local_end != local_real_iterator?
+            template_scalar():
+            template_scalar(
+                static_cast<typename template_scalar::float_type>(
+                    local_real * local_sign));
+    }
+
     /** @brief 文字列を解析し、整数値を構築する。
         @tparam template_integer_type 構築する整数値の型。
         @param[out] out_rest_size
@@ -1196,7 +1270,9 @@ class psyq::string::_private::interface_immutable: public template_string_type
             {
                 break;
             }
-            local_value = local_value * in_radix + local_number;
+            auto const local_new_value(local_value * in_radix + local_number);
+            PSYQ_ASSERT(local_value < local_new_value);
+            local_value = local_new_value;
         }
         io_iterator = i;
         return local_value;

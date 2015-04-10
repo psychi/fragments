@@ -1032,8 +1032,11 @@ class psyq::string::_private::interface_immutable: public template_string_type
     }
 
     /** @brief 文字列を解析し、スカラー値を構築する。
-        @tparam template_scalar 構築するスカラー値の型。
-        @return 文字列を解析して構築したスカラー値。
+        @tparam template_scalar
+            構築するスカラー値の型。 psyq::string::scalar 互換であること。
+        @return
+           文字列を解析して構築したスカラー値。
+           ただし文字列の解析に失敗した場合は、空値を返す。
      */
     public: template<typename template_scalar>
     template_scalar to_scalar() const PSYQ_NOEXCEPT

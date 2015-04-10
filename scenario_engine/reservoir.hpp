@@ -21,7 +21,6 @@ namespace psyq
         namespace _private
         {
             /// @cond
-            template<typename, typename> class state_value;
             template<typename, typename> struct key_less;
 
             template<typename template_float> union float_union {};
@@ -197,7 +196,7 @@ class psyq::scenario_engine::reservoir
 
     //-------------------------------------------------------------------------
     /// @brief 状態値。
-    public: typedef psyq::scenario_engine::_private::state_value<
+    public: typedef psyq::string::scalar<
         typename this_type::block_type, template_float>
             state_value;
 
@@ -448,7 +447,7 @@ class psyq::scenario_engine::reservoir
                 this->chunks_, local_state_registry->chunk));
         if (local_chunk == nullptr)
         {
-            // 状態値登記があれば、対応するビット列ちゃんくもあるはず。
+            // 状態値登記があれば、対応するビット列チャンクもあるはず。
             PSYQ_ASSERT(false);
             return typename this_type::state_value();
         }
@@ -959,7 +958,7 @@ class psyq::scenario_engine::reservoir
 
         直前の状態変化フラグを取得する。
 
-        @param[in] in_state_key 登録する状態値に対応する識別値。
+        @param[in] in_state_key 変化フラグを取得する状態値に対応する識別値。
         @retval 0以上 直前の状態変化フラグ。
         @retval 0未満 状態値がない。
      */
@@ -1446,251 +1445,6 @@ class psyq::scenario_engine::reservoir
     private: typename this_type::chunk_vector chunks_;
 
 }; // class psyq::scenario_engine::reservoir
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief 状態値。
-template<typename template_unsigned, typename template_float>
-class psyq::scenario_engine::_private::state_value
-{
-    /// @brief thisが指す値の型。
-    private: typedef state_value this_type;
-
-    /// @brief 状態値で扱う符号なし整数の型。
-    public: typedef template_unsigned unsigned_type;
-    static_assert(std::is_unsigned<template_unsigned>::value, "");
-
-    /// @brief 状態値で扱う符号あり整数の型。
-    public: typedef
-        typename std::make_signed<typename this_type::unsigned_type>::type
-            signed_type;
-
-    /// @brief 状態値で扱う浮動小数点数の型。
-    public: typedef template_float float_type;
-    static_assert(std::is_floating_point<template_float>::value, "");
-
-    /// @brief 状態値の型の種別。
-    public: enum kind_enum: std::int8_t
-    {
-        kind_SIGNED = -2, ///< 符号あり整数。
-        kind_FLOAT,       ///< 浮動小数点数。
-        kind_NULL,        ///< 空。
-        kind_BOOL,        ///< 真偽値。
-        kind_UNSIGNED,    ///< 符号なし整数。
-    };
-
-    /// @brief this_type::compare の戻り値の型。
-    public: enum compare_enum: std::int8_t
-    {
-        compare_FAILED = -2, ///< 比較に失敗。
-        compare_LESS,        ///< 左辺のほうが小さい。
-        compare_EQUAL,       ///< 左辺と右辺は等価。
-        compare_GREATER,     ///< 左辺のほうが大きい。
-    };
-
-    //-------------------------------------------------------------------------
-    public: state_value() PSYQ_NOEXCEPT: kind_(this_type::kind_NULL) {}
-
-    public: explicit state_value(bool const in_bool)
-    PSYQ_NOEXCEPT:
-    kind_(this_type::kind_BOOL)
-    {
-        this->bool_ = in_bool;
-    }
-
-    public: explicit state_value(typename this_type::unsigned_type in_unsigned)
-    PSYQ_NOEXCEPT:
-    kind_(this_type::kind_UNSIGNED)
-    {
-        this->unsigned_ = in_unsigned;
-    }
-
-    public: explicit state_value(typename this_type::signed_type in_signed)
-    PSYQ_NOEXCEPT:
-    kind_(this_type::kind_SIGNED)
-    {
-        this->signed_ = in_signed;
-    }
-
-    public: explicit state_value(typename this_type::float_type in_float)
-    PSYQ_NOEXCEPT:
-    kind_(this_type::kind_FLOAT)
-    {
-        this->float_ = in_float;
-    }
-
-    //-------------------------------------------------------------------------
-    public: typename this_type::kind_enum get_kind() const PSYQ_NOEXCEPT
-    {
-        return this->kind_;
-    }
-
-    public: bool const* get_bool() const PSYQ_NOEXCEPT
-    {
-        return this->get_kind() == this_type::kind_BOOL? &this->bool_: nullptr;
-    }
-
-    public: typename this_type::unsigned_type const* get_unsigned()
-    const PSYQ_NOEXCEPT
-    {
-        return this->get_kind() == this_type::kind_UNSIGNED?
-            &this->unsigned_: nullptr;
-    }
-
-    public: typename this_type::signed_type const* get_signed()
-    const PSYQ_NOEXCEPT
-    {
-        return this->get_kind() == this_type::kind_SIGNED?
-            &this->signed_: nullptr;
-    }
-
-    public: typename this_type::float_type const* get_float()
-    const PSYQ_NOEXCEPT
-    {
-        return this->get_kind() == this_type::kind_FLOAT?
-            &this->float_: nullptr;
-    }
-
-    //-------------------------------------------------------------------------
-    public: typename this_type::compare_enum compare(this_type const& in_right)
-    const PSYQ_NOEXCEPT
-    {
-        switch (this->get_kind())
-        {
-            case this_type::kind_BOOL:
-            if (in_right.get_kind() != this_type::kind_BOOL)
-            {
-                return this_type::compare_FAILED;
-            }
-            return this->bool_ == in_right.bool_?
-                this_type::compare_EQUAL:
-                (this->bool_?
-                    this_type::compare_GREATER: this_type::compare_LESS);
-
-            case this_type::kind_UNSIGNED:
-            return this_type::compare_unsigned(this->unsigned_, in_right);
-
-            case this_type::kind_SIGNED:
-            return this_type::compare_signed(this->signed_, in_right);
-
-            case this_type::kind_FLOAT:
-            return this_type::compare_float(this->float_, in_right);
-
-            default: return this_type::compare_FAILED;
-        }
-    }
-
-    private: static typename this_type::compare_enum compare_unsigned(
-        typename this_type::unsigned_type const in_left,
-        this_type const& in_right)
-    {
-        switch (in_right.get_kind())
-        {
-            case this_type::kind_UNSIGNED:
-            return this_type::compare_value(in_left, in_right.unsigned_);
-
-            case this_type::kind_SIGNED:
-            return in_right.signed_ < 0?
-                this_type::compare_GREATER:
-                this_type::compare_value(in_left, in_right.unsigned_);
-
-            case this_type::kind_FLOAT:
-            return this_type::compare_float_right(in_left, in_right.float_);
-
-            default: return this_type::compare_FAILED;
-        }
-    }
-
-    private: static typename this_type::compare_enum compare_signed(
-        typename this_type::signed_type const in_left,
-        this_type const& in_right)
-    {
-        switch (in_right.get_kind())
-        {
-            case this_type::kind_UNSIGNED:
-            return in_left < 0?
-                this_type::compare_LESS:
-                this_type::compare_value(
-                    static_cast<typename this_type::unsigned_type>(in_left),
-                    in_right.unsigned_);
-
-            case this_type::kind_SIGNED:
-            return this_type::compare_value(in_left, in_right.signed_);
-
-            case this_type::kind_FLOAT:
-            return this_type::compare_float_right(in_left, in_right.float_);
-
-            default: return this_type::compare_FAILED;
-        }
-    }
-
-    private: template<typename template_value>
-    static typename this_type::compare_enum compare_value(
-        template_value in_left,
-        template_value in_right)
-    {
-        return in_left < in_right?
-            this_type::compare_LESS:
-            (in_right < in_left?
-                this_type::compare_GREATER: this_type::compare_EQUAL);
-    }
-
-    private: static typename this_type::compare_enum compare_float(
-        typename this_type::float_type const in_left,
-        this_type const& in_right)
-    {
-        switch (in_right.get_kind())
-        {
-            case this_type::kind_UNSIGNED:
-            return in_left < 0?
-                this_type::compare_LESS:
-                this_type::compare_float_left(in_left, in_right.unsigned_);
-
-            case this_type::kind_SIGNED:
-            return this_type::compare_float_left(in_left, in_right.signed_);
-
-            case this_type::kind_FLOAT:
-            return this_type::compare_value(in_left, in_right.float_);
-
-            default: return this_type::compare_FAILED;
-        }
-    }
-    private: template<typename template_value>
-    static typename this_type::compare_enum compare_float_left(
-        typename this_type::float_type const in_left,
-        template_value const in_right)
-    {
-        auto const local_right(
-            static_cast<typename this_type::float_type>(in_right));
-        return static_cast<template_value>(local_right) != in_right?
-            this_type::compare_FAILED:
-            this_type::compare_value(in_left, local_right);
-    }
-    private: template<typename template_value>
-    static typename this_type::compare_enum compare_float_right(
-        template_value const in_left,
-        typename this_type::float_type const in_right)
-    {
-        auto const local_comapre(
-            this_type::compare_float_left(in_right, in_left));
-        switch (local_comapre)
-        {
-            case this_type::compare_LESS:    return this_type::compare_GREATER;
-            case this_type::compare_GREATER: return this_type::compare_LESS;
-            default:                         return local_comapre;
-        }
-    }
-
-    //-------------------------------------------------------------------------
-    private: union
-    {
-        bool bool_;
-        typename this_type::unsigned_type unsigned_;
-        typename this_type::signed_type signed_;
-        typename this_type::float_type float_;
-    };
-    private: typename this_type::kind_enum kind_;
-
-}; // class psyq::scenario_engine::_private::state_value
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 識別値を比較する関数オブジェクト。

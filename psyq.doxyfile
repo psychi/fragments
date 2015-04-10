@@ -686,6 +686,7 @@ INPUT                  = \
                          ./string/reference_base.hpp \
                          ./string/interface_immutable.hpp \
                          ./string/interface_mutable.hpp \
+                         ./string/scalar.hpp \
                          ./string/view.hpp \
                          ./string/storage.hpp \
                          ./string/holder.hpp \

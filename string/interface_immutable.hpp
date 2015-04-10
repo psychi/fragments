@@ -1085,19 +1085,24 @@ class psyq::string::_private::interface_immutable: public template_string_type
                     static_cast<typename template_scalar::float_type>(
                         local_integer * local_sign));
 
+                case template_scalar::kind_NULL:
+                if (0 < local_sign)
+                {
+                    goto CONSTRUCT_UNSIGNED;
+                }
+                // case template_scalar::kind_SIGNED に続く。
+
                 case template_scalar::kind_SIGNED:
                 return template_scalar(
                     static_cast<typename template_scalar::signed_type>(
                         local_integer * local_sign));
 
                 case template_scalar::kind_UNSIGNED:
-                if (local_sign < 0)
+                if (local_sign <= 0)
                 {
                     break;
                 }
-                // case template_scalar::kind_NULL に続く。
-
-                case template_scalar::kind_NULL:
+                CONSTRUCT_UNSIGNED:
                 return template_scalar(
                     static_cast<typename template_scalar::unsigned_type>(
                         local_integer));
@@ -1107,7 +1112,9 @@ class psyq::string::_private::interface_immutable: public template_string_type
                 break;
             }
         }
-        else if (in_kind == template_scalar::kind_FLOAT)
+        else if (
+            in_kind == template_scalar::kind_FLOAT
+            || in_kind == template_scalar::kind_NULL)
         {
             // 浮動小数点数の整数部と小数部を解析する。
             auto const local_real(

@@ -221,19 +221,19 @@ class psyq::scenario_engine::state_builder
         typename this_type::string_table::string_view const& in_value_cell,
         std::size_t const in_size)
     {
+        std::size_t local_rest_size;
         auto const local_value(
             in_value_cell.template
-                to_scalar<typename template_reservoir::state_value>(
-                    template_reservoir::state_value::kind_UNSIGNED));
-        auto const local_unsigned(local_value.get_unsigned());
-        if (local_unsigned == nullptr)
+                to_integer<typename template_reservoir::state_value::unsigned_type>(
+                    &local_rest_size));
+        if (local_rest_size != 0)
         {
             // 初期値セルを整数として解析しきれなかった。
             PSYQ_ASSERT(false);
             return false;
         }
         return io_reservoir.register_unsigned(
-            in_chunk_key, in_state_key, *local_unsigned, in_size);
+            in_chunk_key, in_state_key, local_value, in_size);
     }
 
     private: template<typename template_reservoir>
@@ -244,19 +244,19 @@ class psyq::scenario_engine::state_builder
         typename this_type::string_table::string_view const& in_value_cell,
         std::size_t const in_size)
     {
+        std::size_t local_rest_size;
         auto const local_value(
             in_value_cell.template
-                to_scalar<typename template_reservoir::state_value>(
-                    template_reservoir::state_value::kind_SIGNED));
-        auto const local_signed(local_value.get_signed());
-        if (local_signed == nullptr)
+                to_integer<typename template_reservoir::state_value::signed_type>(
+                    &local_rest_size));
+        if (local_rest_size != 0)
         {
             // 初期値セルを整数として解析しきれなかった。
             PSYQ_ASSERT(false);
             return false;
         }
         return io_reservoir.register_signed(
-            in_chunk_key, in_state_key, *local_signed, in_size);
+            in_chunk_key, in_state_key, local_value, in_size);
     }
 
     private: template<typename template_reservoir>
@@ -266,19 +266,19 @@ class psyq::scenario_engine::state_builder
         typename template_reservoir::state_key const& in_state_key,
         typename this_type::string_table::string_view const& in_value_cell)
     {
+        std::size_t local_rest_size;
         auto const local_value(
             in_value_cell.template
-                to_scalar<typename template_reservoir::state_value>(
-                    template_reservoir::state_value::kind_FLOAT));
-        auto const local_float(local_value.get_float());
-        if (local_float == nullptr)
+                to_real<typename template_reservoir::state_value::float_type>(
+                    &local_rest_size));
+        if (local_rest_size != 0)
         {
             // 初期値セルを整数として解析しきれなかった。
             PSYQ_ASSERT(false);
             return false;
         }
         return io_reservoir.register_float(
-            in_chunk_key, in_state_key, *local_float);
+            in_chunk_key, in_state_key, local_value);
     }
 
     private: static std::size_t get_integer_size(

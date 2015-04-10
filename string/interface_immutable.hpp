@@ -1328,7 +1328,10 @@ class psyq::string::_private::interface_immutable: public template_string_type
                 break;
             }
             auto const local_new_value(local_value * in_radix + local_number);
-            PSYQ_ASSERT(local_value < local_new_value);
+            if (local_new_value <= local_value)
+            {
+                break;
+            }
             local_value = local_new_value;
         }
         io_iterator = i;
@@ -1370,7 +1373,12 @@ class psyq::string::_private::interface_immutable: public template_string_type
             {
                 break;
             }
-            local_value = local_value * in_radix + local_digit;
+            auto const local_new_value(local_value * in_radix + local_digit);
+            if (local_new_value <= local_value)
+            {
+                break;
+            }
+            local_value = local_new_value;
         }
         io_iterator = i;
         return local_value;

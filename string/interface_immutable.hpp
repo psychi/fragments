@@ -1020,17 +1020,6 @@ class psyq::string::_private::interface_immutable: public template_string_type
     //-------------------------------------------------------------------------
     /// @name 文字列の変換
     //@{
-    /** @brief 文字列を解析し、真偽値を取得する
-        @retval 正 文字列から true を取得した。
-        @retval 0  文字列から false を取得した。
-        @retval 負 文字列から真偽値を取得できなかった。
-     */
-    public: int to_bool() const PSYQ_NOEXCEPT
-    {
-        return *this != PSYQ_STRING_TRUE?
-            (*this != PSYQ_STRING_FALSE? -1: 0): 1;
-    }
-
     /** @brief 文字列を解析し、スカラー値を構築する。
         @tparam template_scalar
             構築するスカラー値の型。 psyq::string::scalar 互換であること。
@@ -1135,6 +1124,17 @@ class psyq::string::_private::interface_immutable: public template_string_type
         return template_scalar();
     }
 
+    /** @brief 文字列を解析し、真偽値を取得する
+        @retval 正 文字列から true を取得した。
+        @retval 0  文字列から false を取得した。
+        @retval 負 文字列から真偽値を取得できなかった。
+     */
+    public: int to_bool() const PSYQ_NOEXCEPT
+    {
+        return *this != PSYQ_STRING_TRUE?
+            (*this != PSYQ_STRING_FALSE? -1: 0): 1;
+    }
+
     /** @brief 文字列を解析し、整数値を構築する。
         @tparam template_integer_type 構築する整数値の型。
         @param[out] out_rest_size
@@ -1149,6 +1149,14 @@ class psyq::string::_private::interface_immutable: public template_string_type
         auto local_iterator(this->data());
         auto const local_end(local_iterator + this->size());
         auto const local_sign(this_type::read_sign(local_iterator, local_end));
+        if (local_sign < 0 && std::is_unsigned<template_integer_type>::value)
+        {
+            if (out_rest_size != nullptr)
+            {
+                *out_rest_size = this->size();
+            }
+            return 0;
+        }
         auto const local_radix(
             this_type::read_radix(local_iterator, local_end));
         auto const local_integer(

@@ -1034,12 +1034,18 @@ class psyq::string::_private::interface_immutable: public template_string_type
     /** @brief 文字列を解析し、スカラー値を構築する。
         @tparam template_scalar
             構築するスカラー値の型。 psyq::string::scalar 互換であること。
+        @param[in] in_kind
+            構築するスカラ値の型。
+            template_scalar::kind_NULL の場合は、自動決定する。
         @return
            文字列を解析して構築したスカラー値。
            ただし文字列の解析に失敗した場合は、空値を返す。
      */
     public: template<typename template_scalar>
-    template_scalar to_scalar() const PSYQ_NOEXCEPT
+    template_scalar to_scalar(
+        typename template_scalar::kind_enum const in_kind =
+            template_scalar::kind_NULL)
+    const PSYQ_NOEXCEPT
     {
         if (this->empty())
         {
@@ -1047,10 +1053,18 @@ class psyq::string::_private::interface_immutable: public template_string_type
         }
 
         // 真偽値として解析する。
-        auto const local_to_bool(this->to_bool());
-        if (0 <= local_to_bool)
+        if (in_kind == template_scalar::kind_BOOL
+            || in_kind == template_scalar::kind_NULL)
         {
-            return template_scalar(local_to_bool != 0);
+            auto const local_to_bool(this->to_bool());
+            if (0 <= local_to_bool)
+            {
+                return template_scalar(local_to_bool != 0);
+            }
+            else if (in_kind == template_scalar::kind_BOOL)
+            {
+                return template_scalar();
+            }
         }
 
         // 整数として解析する。
@@ -1064,29 +1078,54 @@ class psyq::string::_private::interface_immutable: public template_string_type
             this_type::read_numbers(local_iterator, local_end, local_radix));
         if (local_end == local_iterator)
         {
-            return local_sign < 0?
-                template_scalar(
+            switch (in_kind)
+            {
+                case template_scalar::kind_FLOAT:
+                return template_scalar(
+                    static_cast<typename template_scalar::float_type>(
+                        local_integer * local_sign));
+
+                case template_scalar::kind_SIGNED:
+                return template_scalar(
                     static_cast<typename template_scalar::signed_type>(
-                        local_integer * local_sign)):
-                template_scalar(
+                        local_integer * local_sign));
+
+                case template_scalar::kind_UNSIGNED:
+                if (local_sign < 0)
+                {
+                    break;
+                }
+                // case template_scalar::kind_NULL に続く。
+
+                case template_scalar::kind_NULL:
+                return template_scalar(
                     static_cast<typename template_scalar::unsigned_type>(
                         local_integer));
-        }
 
-        // 浮動小数点数の整数部と小数部を解析する。
-        auto const local_real(
-            this_type::merge_fraction_part(
-                local_real_iterator,
-                local_end,
-                local_radix,
-                static_cast<long double>(
-                    this_type::read_numbers(
-                        local_iterator, local_end, local_radix))));
-        return local_end != local_real_iterator?
-            template_scalar():
-            template_scalar(
-                static_cast<typename template_scalar::float_type>(
-                    local_real * local_sign));
+                default:
+                PSYQ_ASSERT(false);
+                break;
+            }
+        }
+        else if (in_kind == template_scalar::kind_FLOAT)
+        {
+            // 浮動小数点数の整数部と小数部を解析する。
+            auto const local_real(
+                this_type::merge_fraction_part(
+                    local_real_iterator,
+                    local_end,
+                    local_radix,
+                    static_cast<long double>(
+                        this_type::read_numbers(
+                            local_real_iterator, local_end, local_radix))));
+            if (local_end == local_real_iterator)
+            {
+                return template_scalar(
+                    static_cast<typename template_scalar::float_type>(
+                        local_real * local_sign));
+            }
+        }
+        return template_scalar();
     }
 
     /** @brief 文字列を解析し、整数値を構築する。

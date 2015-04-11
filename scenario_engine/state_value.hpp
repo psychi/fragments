@@ -7,6 +7,10 @@
 
 #include <type_traits>
 
+#ifndef PSYQ_SCENARIO_ENGINE_STATE_VALUE_EPSILON_MAG
+#define PSYQ_SCENARIO_ENGINE_STATE_VALUE_EPSILON_MAG 4
+#endif // !default(PSYQ_SCENARIO_ENGINE_STATE_VALUE_EPSILON_MAG)
+
 /// @cond
 namespace psyq
 {
@@ -33,7 +37,10 @@ class psyq::scenario_engine::_private::state_value
 
     /// @brief 状態値で扱う符号なし整数の型。
     public: typedef template_unsigned unsigned_type;
-    static_assert(std::is_unsigned<template_unsigned>::value, "");
+    static_assert(
+        std::is_integral<template_unsigned>::value
+        && std::is_unsigned<template_unsigned>::value,
+        "");
 
     /// @brief 状態値で扱う符号あり整数の型。
     public: typedef
@@ -61,6 +68,20 @@ class psyq::scenario_engine::_private::state_value
         compare_LESS,        ///< 左辺のほうが小さい。
         compare_EQUAL,       ///< 左辺と右辺は等価。
         compare_GREATER,     ///< 左辺のほうが大きい。
+    };
+
+    /// @brief 状態値を操作する演算子の種類。
+    public: enum operator_enum: std::uint8_t
+    {
+        operator_COPY, ///< 代入。
+        operator_ADD,  ///< 加算。
+        operator_SUB,  ///< 減算。
+        operator_MULT, ///< 乗算。
+        operator_DIV,  ///< 除算。
+        operator_MOD,  ///< 除算の余り。
+        operator_OR,   ///< 論理和。
+        operator_XOR,  ///< 排他的論理和。
+        operator_AND,  ///< 論理積。
     };
 
     //-------------------------------------------------------------------------
@@ -103,6 +124,15 @@ class psyq::scenario_engine::_private::state_value
     PSYQ_NOEXCEPT: kind_(this_type::kind_FLOAT)
     {
         this->float_ = in_float;
+    }
+
+    public: template<typename template_value>
+    explicit state_value(
+        template_value const in_value,
+        typename this_type::kind_enum in_kind = this_type::kind_NULL)
+    PSYQ_NOEXCEPT: kind_(this_type::kind_NULL)
+    {
+        this->set_value(in_value, in_kind);
     }
     //@}
     //-------------------------------------------------------------------------
@@ -158,6 +188,112 @@ class psyq::scenario_engine::_private::state_value
             &this->float_: nullptr;
     }
     //@}
+    //-------------------------------------------------------------------------
+    /// @name 値の設定
+    //@{
+    public: bool set_value(
+        bool const in_value,
+        typename this_type::kind_enum in_kind = this_type::kind_NULL)
+    {
+        switch (in_kind)
+        {
+            case this_type::kind_BOOL:
+            case this_type::kind_NULL:
+            return this->set_bool(in_value);
+
+            default: return false;
+        }
+    }
+    public: template<typename template_value>
+    bool set_value(
+        template_value const in_value,
+        typename this_type::kind_enum in_kind = this_type::kind_NULL)
+    {
+        static_assert(!std::is_same<template_value, bool>::value, "");
+        if (in_kind == this_type::kind_NULL)
+        {
+            if (std::is_floating_point<template_value>::value)
+            {
+                in_kind = this_type::kind_FLOAT;
+            }
+            else if (std::is_integral<template_value>::value)
+            {
+                in_kind = std::is_unsigned<template_value>::value?
+                    this_type::kind_UNSIGNED: this_type::kind_SIGNED;
+            }
+        }
+        switch (in_kind)
+        {
+            case this_type::kind_UNSIGNED: return this->set_unsigned(in_value);
+            case this_type::kind_SIGNED:   return this->set_signed(in_value);
+            case this_type::kind_FLOAT:    return this->set_float(in_value);
+            default:                       return false;
+        }
+    }
+
+    public: bool set_bool(bool const in_bool) PSYQ_NOEXCEPT
+    {
+        this->bool_ = in_bool;
+        this->kind_ = this_type::kind_BOOL;
+        return true;
+    }
+
+    public: template<typename template_value>
+    bool set_unsigned(template_value const in_value) PSYQ_NOEXCEPT
+    {
+        if (0 <= in_value)
+        {
+            auto const local_unsigned(
+                static_cast<typename this_type::unsigned_type>(in_value));
+            if (static_cast<template_value>(local_unsigned) == in_value)
+            {
+                this->unsigned_ = local_unsigned;
+                this->kind_ = this_type::kind_UNSIGNED;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public: template<typename template_value>
+    bool set_signed(template_value const in_value) PSYQ_NOEXCEPT
+    {
+        auto const local_signed(
+            static_cast<typename this_type::signed_type>(in_value));
+        if (in_value <= 0 || 0 <= local_signed)
+        {
+            if (static_cast<template_value>(local_signed) == in_value)
+            {
+                this->signed_ = local_signed;
+                this->kind_ = this_type::kind_SIGNED;
+                return true;
+            }
+        }
+        return false;
+    }
+    public: template<typename template_value>
+    bool set_float(template_value const in_value) PSYQ_NOEXCEPT
+    {
+        auto const local_float(
+            static_cast<typename this_type::float_type>(in_value));
+        auto const local_diff(
+            static_cast<template_value>(local_float) - in_value);
+        auto const local_epsilon(
+            std::numeric_limits<typename this_type::float_type>::epsilon()
+            * PSYQ_SCENARIO_ENGINE_STATE_VALUE_EPSILON_MAG);
+        if (-local_epsilon <= local_diff && local_diff <= local_epsilon)
+        {
+            this->float_ = local_float;
+            this->kind_ = this_type::kind_FLOAT;
+            return true;
+        }
+        return false;
+    }
+    //@}
+    private: bool set_unsigned(bool const) PSYQ_NOEXCEPT {return false;}
+    private: bool set_signed(bool const) PSYQ_NOEXCEPT {return false;}
+    private: bool set_float(bool const) PSYQ_NOEXCEPT {return false;}
+
     //-------------------------------------------------------------------------
     /// @name 値の比較
     //@{
@@ -291,6 +427,156 @@ class psyq::scenario_engine::_private::state_value
             case this_type::compare_LESS:    return this_type::compare_GREATER;
             case this_type::compare_GREATER: return this_type::compare_LESS;
             default:                         return local_comapre;
+        }
+    }
+
+    //-------------------------------------------------------------------------
+    /// @name 値の演算
+    //@{
+    /** @brief 状態値を演算する。
+        @param[in] in_operator 適用する演算子。
+        @param[in] in_right    演算子の右辺。
+        @retval true  成功。
+        @retval false 失敗。 *this は変化しない。
+     */
+    public: bool compute(
+        typename this_type::operator_enum const in_operator,
+        this_type const& in_right)
+    PSYQ_NOEXCEPT
+    {
+        if (in_operator == this_type::operator_COPY)
+        {
+            *this = in_right;
+            return true;
+        }
+        switch (in_right.get_kind())
+        {
+            case this_type::kind_BOOL:
+            return this->compute(in_operator, in_right.bool_);
+
+            case this_type::kind_UNSIGNED:
+            return this->compute(in_operator, in_right.unsigned_);
+
+            case this_type::kind_SIGNED:
+            return this->compute(in_operator, in_right.signed_);
+
+            case this_type::kind_FLOAT:
+            return this->compute(in_operator, in_right.float_);
+
+            default: return false;
+        }
+    }
+    public: bool compute(
+        typename this_type::operator_enum const in_operator,
+        bool const in_right)
+    PSYQ_NOEXCEPT
+    {
+        if (this->get_kind() != this_type::kind_BOOL)
+        {
+            return false;
+        }
+        switch (in_operator)
+        {
+            case this_type::operator_COPY: this->bool_  = in_right; break;
+            case this_type::operator_OR:   this->bool_ |= in_right; break;
+            case this_type::operator_XOR:  this->bool_ ^= in_right; break;
+            case this_type::operator_AND:  this->bool_ &= in_right; break;
+            default: return false;
+        }
+        return true;
+    }
+    public: template<typename template_value>
+    bool compute(
+        typename this_type::operator_enum const in_operator,
+        template_value const in_right)
+    PSYQ_NOEXCEPT
+    {
+        if (in_operator == this_type::operator_COPY)
+        {
+            return this->set_value(in_right, this->get_kind());
+        }
+        switch (this->get_kind())
+        {
+            case this_type::kind_UNSIGNED:
+            return this->compute_value(
+                std::is_integral<template_value>(),
+                in_operator,
+                this->unsigned_,
+                in_right);
+
+            case this_type::kind_SIGNED:
+            return this->compute_value(
+                std::is_integral<template_value>(),
+                in_operator,
+                this->signed_,
+                in_right);
+
+            case this_type::kind_FLOAT:
+            return this->compute_value(
+                std::false_type(), in_operator, this->float_, in_right);
+
+            default: return false;
+        }
+    }
+    //@}
+    private: template<typename template_left, typename template_right>
+    bool compute_value(
+        std::true_type const,
+        typename this_type::operator_enum const in_operator,
+        template_left const in_left,
+        template_right const in_right)
+    PSYQ_NOEXCEPT
+    {
+        switch (in_operator)
+        {
+            case this_type::operator_MOD:
+            if (in_right == 0)
+            {
+                return false;
+            }
+            return this->set_value(in_left % in_right, this->get_kind());
+
+            case this_type::operator_OR:
+            return this->set_value(in_left | in_right, this->get_kind());
+
+            case this_type::operator_XOR:
+            return this->set_value(in_left ^ in_right, this->get_kind());
+
+            case this_type::operator_AND:
+            return this->set_value(in_left & in_right, this->get_kind());
+
+            default:
+            return this->compute_value(
+                std::false_type(), in_operator, in_left, in_right);
+        }
+    }
+    private: template<typename template_left, typename template_right>
+    bool compute_value(
+        std::false_type const,
+        typename this_type::operator_enum const in_operator,
+        template_left const in_left,
+        template_right const in_right)
+    PSYQ_NOEXCEPT
+    {
+        switch (in_operator)
+        {
+            case this_type::operator_ADD:
+            return this->set_value(in_left + in_right, this->get_kind());
+
+            case this_type::operator_SUB:
+            return this->set_value(in_left - in_right, this->get_kind());
+
+            case this_type::operator_MULT:
+            return this->set_value(in_left * in_right, this->get_kind());
+
+            case this_type::operator_DIV:
+            if (in_right == 0)
+            {
+                return false;
+            }
+            return this->set_value(in_left / in_right, this->get_kind());
+
+            default: return false;
         }
     }
 

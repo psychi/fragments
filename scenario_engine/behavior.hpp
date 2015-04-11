@@ -370,15 +370,15 @@ struct psyq::scenario_engine::behavior_builder
         {
             // 状態貯蔵器にキーが登録されていなかった。
             PSYQ_ASSERT(false);
-            return typename
-                this_type::dispatcher::function_shared_ptr();
+            return typename this_type::dispatcher::function_shared_ptr();
         }
 
         // 演算子を取得する。
-        typename this_type::dispatcher::state_operator_enum local_operator;
+        typename template_reservoir::state_value::operator_enum local_operator;
         auto const local_get_operator(
             this_type::get_operator(
                 local_operator,
+                in_reservoir,
                 in_string_table.find_body_cell(
                     in_row_index,
                     PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_ARGUMENT,
@@ -386,8 +386,7 @@ struct psyq::scenario_engine::behavior_builder
         if (!local_get_operator)
         {
             PSYQ_ASSERT(false);
-            return typename
-                this_type::dispatcher::function_shared_ptr();
+            return typename this_type::dispatcher::function_shared_ptr();
         }
 
         // 演算値を取得する。
@@ -409,8 +408,8 @@ struct psyq::scenario_engine::behavior_builder
         }
         PSYQ_ASSERT(
             local_value != 0 || (
-                local_operator != this_type::dispatcher::state_operator_DIV
-                && local_operator != this_type::dispatcher::state_operator_MOD));
+                local_operator != template_reservoir::state_value::operator_DIV
+                && local_operator != template_reservoir::state_value::operator_MOD));
 
         // 状態値を書き換える関数オブジェクトを生成する。
         return this_type::dispatcher::make_state_operation_function(
@@ -422,63 +421,64 @@ struct psyq::scenario_engine::behavior_builder
             in_reservoir.get_allocator());
     }
 
-    private: template<typename template_string>
+    private: template<typename template_reservoir, typename template_string>
     static bool get_operator(
-        typename this_type::dispatcher::state_operator_enum& out_operator,
+        typename template_reservoir::state_value::operator_enum& out_operator,
+        template_reservoir const&,
         template_string const& in_string)
     {
         if (in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_COPY)
         {
-            out_operator = this_type::dispatcher::state_operator_COPY;
+            out_operator = template_reservoir::state_value::operator_COPY;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_ADD)
         {
-            out_operator = this_type::dispatcher::state_operator_ADD;
+            out_operator = template_reservoir::state_value::operator_ADD;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_SUB)
         {
-            out_operator = this_type::dispatcher::state_operator_SUB;
+            out_operator = template_reservoir::state_value::operator_SUB;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_MULT)
         {
-            out_operator = this_type::dispatcher::state_operator_MULT;
+            out_operator = template_reservoir::state_value::operator_MULT;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_DIV)
         {
-            out_operator = this_type::dispatcher::state_operator_DIV;
+            out_operator = template_reservoir::state_value::operator_DIV;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_MOD)
         {
-            out_operator = this_type::dispatcher::state_operator_MOD;
+            out_operator = template_reservoir::state_value::operator_MOD;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_OR)
         {
-            out_operator = this_type::dispatcher::state_operator_OR;
+            out_operator = template_reservoir::state_value::operator_OR;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_XOR)
         {
-            out_operator = this_type::dispatcher::state_operator_XOR;
+            out_operator = template_reservoir::state_value::operator_XOR;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_AND)
         {
-            out_operator = this_type::dispatcher::state_operator_AND;
+            out_operator = template_reservoir::state_value::operator_AND;
         }
         else
         {

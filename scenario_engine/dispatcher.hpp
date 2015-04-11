@@ -967,20 +967,6 @@ class psyq::scenario_engine::dispatcher
     }
 
     //-------------------------------------------------------------------------
-    /// @brief 状態値を操作する演算子の種類。
-    public: enum state_operator_enum: std::uint8_t
-    {
-        state_operator_COPY, ///< 代入。
-        state_operator_ADD,  ///< 加算。
-        state_operator_SUB,  ///< 減算。
-        state_operator_MULT, ///< 乗算。
-        state_operator_DIV,  ///< 除算。
-        state_operator_MOD,  ///< 除算の余り。
-        state_operator_OR,   ///< 論理和。
-        state_operator_XOR,  ///< 排他的論理和。
-        state_operator_AND,  ///< 論理積。
-    };
-
     /** @brief 状態値を操作する関数オブジェクトを生成する。
         @param[in,out] io_reservoir 関数から参照する状態貯蔵器。
         @param[in] in_condition     関数の起動条件。
@@ -996,7 +982,7 @@ class psyq::scenario_engine::dispatcher
         template_reservoir& io_reservoir,
         bool const in_condition,
         typename template_reservoir::state_key const& in_state_key,
-        typename this_type::state_operator_enum const in_operator,
+        typename template_reservoir::state_value::operator_enum const in_operator,
         template_value const& in_value,
         typename this_type::allocator_type const& in_allocator)
     {
@@ -1025,10 +1011,10 @@ class psyq::scenario_engine::dispatcher
     static bool operate_state(
         template_reservoir& io_reservoir,
         typename template_reservoir::state_key const& in_state_key,
-        typename this_type::state_operator_enum const in_operator,
+        typename template_reservoir::state_value::operator_enum const in_operator,
         template_value const& in_value)
     {
-        if (in_operator == this_type::state_operator_COPY)
+        if (in_operator == template_reservoir::state_value::operator_COPY)
         {
             auto const local_set_value(
                 io_reservoir.set_value(in_state_key, in_value));
@@ -1081,7 +1067,7 @@ class psyq::scenario_engine::dispatcher
     static bool operate_state_bool(
         template_reservoir& io_reservoir,
         typename template_reservoir::state_key const& in_state_key,
-        typename this_type::state_operator_enum const in_operator,
+        typename template_reservoir::state_value::operator_enum const in_operator,
         bool const* const in_state_value,
         bool const in_value)
     {
@@ -1093,9 +1079,9 @@ class psyq::scenario_engine::dispatcher
         auto local_value(*in_state_value);
         switch (in_operator)
         {
-            case this_type::state_operator_OR:  local_value |= in_value; break;
-            case this_type::state_operator_XOR: local_value ^= in_value; break;
-            case this_type::state_operator_AND: local_value &= in_value; break;
+            case template_reservoir::state_value::operator_OR:  local_value |= in_value; break;
+            case template_reservoir::state_value::operator_XOR: local_value ^= in_value; break;
+            case template_reservoir::state_value::operator_AND: local_value &= in_value; break;
 
             default:
             PSYQ_ASSERT(false);
@@ -1114,7 +1100,7 @@ class psyq::scenario_engine::dispatcher
     static bool operate_state_integer(
         template_reservoir& io_reservoir,
         typename template_reservoir::state_key const& in_state_key,
-        typename this_type::state_operator_enum const in_operator,
+        typename template_reservoir::state_value::operator_enum const in_operator,
         template_state_value const* const in_state_value,
         template_value const& in_value)
     {
@@ -1126,14 +1112,14 @@ class psyq::scenario_engine::dispatcher
         auto local_value(*in_state_value);
         switch (in_operator)
         {
-            case this_type::state_operator_ADD:  local_value += in_value; break;
-            case this_type::state_operator_SUB:  local_value -= in_value; break;
-            case this_type::state_operator_MULT: local_value *= in_value; break;
-            case this_type::state_operator_OR:   local_value |= in_value; break;
-            case this_type::state_operator_XOR:  local_value ^= in_value; break;
-            case this_type::state_operator_AND:  local_value &= in_value; break;
+            case template_reservoir::state_value::operator_ADD:  local_value += in_value; break;
+            case template_reservoir::state_value::operator_SUB:  local_value -= in_value; break;
+            case template_reservoir::state_value::operator_MULT: local_value *= in_value; break;
+            case template_reservoir::state_value::operator_OR:   local_value |= in_value; break;
+            case template_reservoir::state_value::operator_XOR:  local_value ^= in_value; break;
+            case template_reservoir::state_value::operator_AND:  local_value &= in_value; break;
 
-            case this_type::state_operator_DIV:
+            case template_reservoir::state_value::operator_DIV:
             if (in_value == 0)
             {
                 PSYQ_ASSERT(false);
@@ -1142,7 +1128,7 @@ class psyq::scenario_engine::dispatcher
             local_value /= in_value;
             break;
 
-            case this_type::state_operator_MOD:
+            case template_reservoir::state_value::operator_MOD:
             if (in_value == 0)
             {
                 PSYQ_ASSERT(false);
@@ -1165,7 +1151,7 @@ class psyq::scenario_engine::dispatcher
     static bool operate_state_float(
         template_reservoir& io_reservoir,
         typename template_reservoir::state_key const& in_state_key,
-        typename this_type::state_operator_enum const in_operator,
+        typename template_reservoir::state_value::operator_enum const in_operator,
         typename template_reservoir::state_value::float_type const* const
             in_state_value,
         template_value const& in_value)
@@ -1178,11 +1164,11 @@ class psyq::scenario_engine::dispatcher
         auto local_value(*in_state_value);
         switch (in_operator)
         {
-            case this_type::state_operator_ADD:  local_value += in_value; break;
-            case this_type::state_operator_SUB:  local_value -= in_value; break;
-            case this_type::state_operator_MULT: local_value *= in_value; break;
+            case template_reservoir::state_value::operator_ADD:  local_value += in_value; break;
+            case template_reservoir::state_value::operator_SUB:  local_value -= in_value; break;
+            case template_reservoir::state_value::operator_MULT: local_value *= in_value; break;
 
-            case this_type::state_operator_DIV:
+            case template_reservoir::state_value::operator_DIV:
             if (in_value == 0)
             {
                 PSYQ_ASSERT(false);

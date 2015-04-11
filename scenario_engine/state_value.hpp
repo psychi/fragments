@@ -126,6 +126,11 @@ class psyq::scenario_engine::_private::state_value
         this->float_ = in_float;
     }
 
+    /** @brief 任意の型の状態値を構築する。
+        @param[in] in_value 格納する値。
+        @param[in] in_kind
+            状態値の型。 this_type::kind_NULL なら、自動で決定する。
+     */
     public: template<typename template_value>
     explicit state_value(
         template_value const in_value,
@@ -191,19 +196,13 @@ class psyq::scenario_engine::_private::state_value
     //-------------------------------------------------------------------------
     /// @name 値の設定
     //@{
-    public: bool set_value(
-        bool const in_value,
-        typename this_type::kind_enum in_kind = this_type::kind_NULL)
-    {
-        switch (in_kind)
-        {
-            case this_type::kind_BOOL:
-            case this_type::kind_NULL:
-            return this->set_bool(in_value);
-
-            default: return false;
-        }
-    }
+    /** @brief 状態値に値を設定する。
+        @param[in] in_value 設定する値。
+        @param[in] in_kind
+            状態値に設定する型。 this_type::kind_NULL の場合は、自動決定する。
+        @retval true  成功。 *this に in_value を設定した。
+        @retval false 失敗。 *this は変化しない。
+     */
     public: template<typename template_value>
     bool set_value(
         template_value const in_value,
@@ -230,14 +229,36 @@ class psyq::scenario_engine::_private::state_value
             default:                       return false;
         }
     }
+    /// @copydoc set_value
+    public: bool set_value(
+        bool const in_value,
+        typename this_type::kind_enum in_kind = this_type::kind_BOOL)
+    {
+        switch (in_kind)
+        {
+            case this_type::kind_BOOL:
+            case this_type::kind_NULL:
+            this->set_bool(in_value);
+            return true;
 
-    public: bool set_bool(bool const in_bool) PSYQ_NOEXCEPT
+            default: return false;
+        }
+    }
+
+    /** @brief 状態値に真偽値を設定する。
+        @param[in] in_bool 設定する真偽値。
+     */
+    public: void set_bool(bool const in_bool) PSYQ_NOEXCEPT
     {
         this->bool_ = in_bool;
         this->kind_ = this_type::kind_BOOL;
-        return true;
     }
 
+    /** @brief 状態値に符号なし整数値を設定する。
+        @param[in] in_value 設定する値。
+        @retval true  成功。 *this に in_value を設定した。
+        @retval false 失敗。 *this は変化しない。
+     */
     public: template<typename template_value>
     bool set_unsigned(template_value const in_value) PSYQ_NOEXCEPT
     {
@@ -255,6 +276,11 @@ class psyq::scenario_engine::_private::state_value
         return false;
     }
 
+    /** @brief 状態値に符号あり整数値を設定する。
+        @param[in] in_value 設定する値。
+        @retval true  成功。 *this に in_value を設定した。
+        @retval false 失敗。 *this は変化しない。
+     */
     public: template<typename template_value>
     bool set_signed(template_value const in_value) PSYQ_NOEXCEPT
     {
@@ -271,6 +297,12 @@ class psyq::scenario_engine::_private::state_value
         }
         return false;
     }
+
+    /** @brief 状態値に浮動小数点数値を設定する。
+        @param[in] in_value 設定する値。
+        @retval true  成功。 *this に in_value を設定した。
+        @retval false 失敗。 *this は変化しない。
+     */
     public: template<typename template_value>
     bool set_float(template_value const in_value) PSYQ_NOEXCEPT
     {
@@ -295,7 +327,7 @@ class psyq::scenario_engine::_private::state_value
     private: bool set_float(bool const) PSYQ_NOEXCEPT {return false;}
 
     //-------------------------------------------------------------------------
-    /// @name 値の比較
+    /// @name 値の演算
     //@{
     /** @brief 状態値と比較する。
         @param[in] in_right 右辺の状態値。
@@ -436,7 +468,7 @@ class psyq::scenario_engine::_private::state_value
     /** @brief 状態値を演算する。
         @param[in] in_operator 適用する演算子。
         @param[in] in_right    演算子の右辺。
-        @retval true  成功。
+        @retval true  成功。演算結果を *this に格納した。
         @retval false 失敗。 *this は変化しない。
      */
     public: bool compute(
@@ -466,6 +498,7 @@ class psyq::scenario_engine::_private::state_value
             default: return false;
         }
     }
+    /// @copydoc compute
     public: bool compute(
         typename this_type::operator_enum const in_operator,
         bool const in_right)
@@ -485,12 +518,14 @@ class psyq::scenario_engine::_private::state_value
         }
         return true;
     }
+    /// @copydoc compute
     public: template<typename template_value>
     bool compute(
         typename this_type::operator_enum const in_operator,
         template_value const in_right)
     PSYQ_NOEXCEPT
     {
+        static_assert(!std::is_same<template_value, bool>::value, "");
         if (in_operator == this_type::operator_COPY)
         {
             return this->set_value(in_right, this->get_kind());

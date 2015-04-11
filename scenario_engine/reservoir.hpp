@@ -5,8 +5,8 @@
 #ifndef PSYQ_SCENARIO_ENGINE_RESERVOIR_HPP_
 #define PSYQ_SCENARIO_ENGINE_RESERVOIR_HPP_
 
-#include <type_traits>
 #include <vector>
+//#include "psyq/scenario_engine/state_value.hpp"
 
 namespace psyq
 {
@@ -196,7 +196,7 @@ class psyq::scenario_engine::reservoir
 
     //-------------------------------------------------------------------------
     /// @brief 状態値。
-    public: typedef psyq::string::scalar<
+    public: typedef psyq::scenario_engine::_private::state_value<
         typename this_type::block_type, template_float>
             state_value;
 

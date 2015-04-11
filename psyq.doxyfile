@@ -686,7 +686,6 @@ INPUT                  = \
                          ./string/reference_base.hpp \
                          ./string/interface_immutable.hpp \
                          ./string/interface_mutable.hpp \
-                         ./string/scalar.hpp \
                          ./string/view.hpp \
                          ./string/storage.hpp \
                          ./string/holder.hpp \
@@ -719,6 +718,7 @@ INPUT                  = \
                          ./geometry/mosp/tree.hpp \
                          ./geometry/mosp/nut.hpp \
                          ./scenario_engine/reservoir.hpp \
+                         ./scenario_engine/state_value.hpp \
                          ./scenario_engine/state_builder.hpp \
                          ./scenario_engine/evaluator.hpp \
                          ./scenario_engine/expression_builder.hpp \

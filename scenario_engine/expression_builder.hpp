@@ -463,13 +463,11 @@ class psyq::scenario_engine::expression_builder
         }
 
         // 比較条件値を取得する。
-        auto const local_comparison_value_cell(
+        local_state.value = template_evaluator::reservoir::state_value::make(
             in_string_table.find_body_cell(
                 in_row_index,
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_ELEMENT,
                 local_element_column + 2));
-        local_state.value = local_comparison_value_cell.template
-            to_scalar<typename template_evaluator::reservoir::state_value>();
         if (local_state.value.get_kind()
             == template_evaluator::reservoir::state_value::kind_NULL)
         {

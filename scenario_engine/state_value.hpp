@@ -1,92 +1,50 @@
-﻿/*
-Copyright (c) 2013, Hillco Psychi, All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met: 
-ソースコード形式かバイナリ形式か、変更するかしないかを問わず、
-以下の条件を満たす場合に限り、再頒布および使用が許可されます。
-
-1. Redistributions of source code must retain the above copyright notice,
-   this list of conditions and the following disclaimer. 
-   ソースコードを再頒布する場合、上記の著作権表示、本条件一覧、
-   および下記の免責条項を含めること。
-2. Redistributions in binary form must reproduce the above copyright notice,
-   this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution. 
-   バイナリ形式で再頒布する場合、頒布物に付属のドキュメント等の資料に、
-   上記の著作権表示、本条件一覧、および下記の免責条項を含めること。
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-本ソフトウェアは、著作権者およびコントリビューターによって
-「現状のまま」提供されており、明示黙示を問わず、商業的な使用可能性、
-および特定の目的に対する適合性に関する暗黙の保証も含め、
-またそれに限定されない、いかなる保証もありません。
-著作権者もコントリビューターも、事由のいかんを問わず、
-損害発生の原因いかんを問わず、かつ責任の根拠が契約であるか厳格責任であるか
-（過失その他の）不法行為であるかを問わず、
-仮にそのような損害が発生する可能性を知らされていたとしても、
-本ソフトウェアの使用によって発生した（代替品または代用サービスの調達、
-使用の喪失、データの喪失、利益の喪失、業務の中断も含め、
-またそれに限定されない）直接損害、間接損害、偶発的な損害、特別損害、
-懲罰的損害、または結果損害について、一切責任を負わないものとします。
- */
-/** @file
-    @copydoc psyq::string::scalar
+﻿/** @file
+    @copydoc psyq::scenario_engine::_private::state_value
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_STRING_SCALAR_HPP_
-#define PSYQ_STRING_SCALAR_HPP_
+#ifndef PSYQ_SCENARIO_ENGINE_STATE_VALUE_HPP_
+#define PSYQ_SCENARIO_ENGINE_STATE_VALUE_HPP_
 
 #include <type_traits>
 
 /// @cond
 namespace psyq
 {
-    namespace string
+    namespace scenario_engine
     {
-        template<typename, typename> class scalar;
-    } // namespace string
+        namespace _private
+        {
+            template<typename, typename> class state_value;
+        } // namespace _private
+    } // namespace scenario_engine
 } // namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 文字列以外のスカラ値。
-
-    psyq::string::_private::interface_immutable::to_scalar
-    で、スカラ値を取得するのに使う。
-
-    @tparam template_unsigned @copydoc psyq::string::scalar::unsigned_type
-    @tparam template_float    @copydoc psyw::string::scalar::float_type
+/** @brief 状態値。
+    @tparam template_unsigned @copydoc psyq::string::state_value::unsigned_type
+    @tparam template_float    @copydoc psyw::string::state_value::float_type
  */
 template<typename template_unsigned, typename template_float>
-class psyq::string::scalar
+class psyq::scenario_engine::_private::state_value
 {
     /// @brief thisが指す値の型。
-    private: typedef scalar this_type;
+    private: typedef state_value this_type;
 
-    /// @brief スカラ値で扱う符号なし整数の型。
+    /// @brief 状態値で扱う符号なし整数の型。
     public: typedef template_unsigned unsigned_type;
     static_assert(std::is_unsigned<template_unsigned>::value, "");
 
-    /// @brief スカラ値で扱う符号あり整数の型。
+    /// @brief 状態値で扱う符号あり整数の型。
     public: typedef
         typename std::make_signed<typename this_type::unsigned_type>::type
             signed_type;
 
-    /// @brief スカラ値で扱う浮動小数点数の型。
+    /// @brief 状態値で扱う浮動小数点数の型。
     public: typedef template_float float_type;
     static_assert(std::is_floating_point<template_float>::value, "");
 
-    /// @brief スカラ値の型の種別。
+    /// @brief 状態値の型の種別。
     public: enum kind_enum: std::int8_t
     {
         kind_SIGNED = -2, ///< 符号あり整数。
@@ -106,48 +64,52 @@ class psyq::string::scalar
     };
 
     //-------------------------------------------------------------------------
-    /// @brief 空のスカラ値を構築する。
-    public: scalar() PSYQ_NOEXCEPT: kind_(this_type::kind_NULL) {}
+    /// @name 構築と代入
+    //@{
+    /// @brief 空の状態値を構築する。
+    public: state_value() PSYQ_NOEXCEPT: kind_(this_type::kind_NULL) {}
 
-    /** @brief スカラ値に真偽値を格納する。
+    /** @brief 真偽値を持つ状態値を構築する。
         @param[in] in_bool 格納する真偽値。
      */
-    public: explicit scalar(bool const in_bool)
+    public: explicit state_value(bool const in_bool)
     PSYQ_NOEXCEPT: kind_(this_type::kind_BOOL)
     {
         this->bool_ = in_bool;
     }
 
-    /** @brief スカラ値に符号なし整数値を格納する。
-        @param[in] in_unsigned 格納する符号なし整数値。
+    /** @brief 符号なし整数を持つ状態値を構築する。
+        @param[in] in_unsigned 格納する符号なし整数。
      */
-    public: explicit scalar(typename this_type::unsigned_type in_unsigned)
+    public: explicit state_value(typename this_type::unsigned_type in_unsigned)
     PSYQ_NOEXCEPT: kind_(this_type::kind_UNSIGNED)
     {
         this->unsigned_ = in_unsigned;
     }
 
-    /** @brief スカラ値に符号あり整数値を格納する。
-        @param[in] in_signed 格納する符号あり整数値。
+    /** @brief 符号あり整数を持つ状態値を構築する。
+        @param[in] in_signed 格納する符号あり整数。
      */
-    public: explicit scalar(typename this_type::signed_type in_signed)
+    public: explicit state_value(typename this_type::signed_type in_signed)
     PSYQ_NOEXCEPT: kind_(this_type::kind_SIGNED)
     {
         this->signed_ = in_signed;
     }
 
-    /** @brief スカラ値に浮動小数点数値を格納する。
-        @param[in] in_float 格納する浮動小数点数値。
+    /** @brief 浮動小数点数を持つ状態値を構築する。
+        @param[in] in_float 格納する浮動小数点数。
      */
-    public: explicit scalar(typename this_type::float_type in_float)
+    public: explicit state_value(typename this_type::float_type in_float)
     PSYQ_NOEXCEPT: kind_(this_type::kind_FLOAT)
     {
         this->float_ = in_float;
     }
-
+    //@}
     //-------------------------------------------------------------------------
-    /** @brief 格納されている値の型の種類を取得する。
-        @return 格納されている値の型の種類。
+    /// @name 値の取得
+    //@{
+    /** @brief 状態値の型の種類を取得する。
+        @return 状態値の型の種類。
      */
     public: typename this_type::kind_enum get_kind() const PSYQ_NOEXCEPT
     {
@@ -195,10 +157,12 @@ class psyq::string::scalar
         return this->get_kind() == this_type::kind_FLOAT?
             &this->float_: nullptr;
     }
-
+    //@}
     //-------------------------------------------------------------------------
-    /** @brief スカラ値と比較する。
-        @param[in] in_right 右辺のスカラ値。
+    /// @name 値の比較
+    //@{
+    /** @brief 状態値と比較する。
+        @param[in] in_right 右辺の状態値。
         @return 比較結果。
      */
     public: typename this_type::compare_enum compare(this_type const& in_right)
@@ -228,7 +192,7 @@ class psyq::string::scalar
             default: return this_type::compare_FAILED;
         }
     }
-
+    //@}
     private: static typename this_type::compare_enum compare_unsigned(
         typename this_type::unsigned_type const in_left,
         this_type const& in_right)
@@ -331,6 +295,100 @@ class psyq::string::scalar
     }
 
     //-------------------------------------------------------------------------
+    /** @brief 文字列を解析し、スカラー値を構築する。
+        @param[in] in_string 解析する文字列。
+        @param[in] in_kind
+            構築する状態値の型。
+            this_type::kind_NULL の場合は、自動決定する。
+        @return
+           文字列を解析して構築したスカラー値。
+           ただし文字列の解析に失敗した場合は、空値を返す。
+     */
+    public: template<typename template_string>
+    static this_type make(
+        template_string const& in_string,
+        typename this_type::kind_enum const in_kind = this_type::kind_NULL)
+    {
+        if (in_string.empty())
+        {
+            return this_type();
+        }
+
+        // 真偽値として構築する。
+        if (in_kind == this_type::kind_BOOL || in_kind == this_type::kind_NULL)
+        {
+            auto const local_bool_state(in_string.to_bool());
+            if (0 <= local_bool_state)
+            {
+                return this_type(local_bool_state != 0);
+            }
+            else if (in_kind == this_type::kind_BOOL)
+            {
+                return this_type();
+            }
+        }
+        PSYQ_ASSERT(in_kind != this_type::kind_BOOL);
+
+        // 符号なし整数として構築する。
+        std::size_t local_rest_size;
+        auto const local_unsigned(
+            in_string.template to_integer<typename this_type::unsigned_type>(
+                &local_rest_size));
+        if (local_rest_size == 0)
+        {
+            switch (in_kind)
+            {
+                case this_type::kind_FLOAT:
+                return this_type(
+                    static_cast<typename this_type::float_type>(
+                        local_unsigned));
+
+                case this_type::kind_SIGNED:
+                return this_type(
+                    static_cast<typename this_type::signed_type>(
+                        local_unsigned));
+
+                default: return this_type(local_unsigned);
+            }
+        }
+
+        // 符号あり整数として構築する。
+        auto const local_signed(
+            in_string.template to_integer<typename this_type::signed_type>(
+                &local_rest_size));
+        if (local_rest_size == 0)
+        {
+            switch (in_kind)
+            {
+                case this_type::kind_FLOAT:
+                return this_type(
+                    static_cast<typename this_type::float_type>(local_signed));
+
+                case this_type::kind_UNSIGNED: return this_type();
+
+                default: return this_type(local_signed);
+            }
+        }
+
+        // 浮動小数点数として構築する。
+        auto const local_float(
+            in_string.template to_real<typename this_type::float_type>(
+                &local_rest_size));
+        if (local_rest_size == 0)
+        {
+            switch (in_kind)
+            {
+                case this_type::kind_NULL:
+                case this_type::kind_FLOAT:
+                return this_type(local_float);
+
+                default: break;
+            }
+        }
+        return this_type();
+    }
+
+    //-------------------------------------------------------------------------
     private: union
     {
         bool bool_;                                  ///< 真偽値。
@@ -338,8 +396,8 @@ class psyq::string::scalar
         typename this_type::signed_type signed_;     ///< 符号あり整数値。
         typename this_type::float_type float_;       ///< 浮動小数点数値。
     };
-    private: typename this_type::kind_enum kind_;    ///< スカラ値の型の種類。
+    private: typename this_type::kind_enum kind_;    ///< 状態値の型の種類。
 
-}; // class psyq::scenario_engine::_private::scalar
+}; // class psyq::scenario_engine::_private::state_value
 
-#endif // !defined(PSYQ_STRING_SCALAR_HPP_)
+#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_VALUE_HPP_)

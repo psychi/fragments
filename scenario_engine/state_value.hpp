@@ -476,11 +476,6 @@ class psyq::scenario_engine::_private::state_value
         this_type const& in_right)
     PSYQ_NOEXCEPT
     {
-        if (in_operator == this_type::operator_COPY)
-        {
-            *this = in_right;
-            return true;
-        }
         switch (in_right.get_kind())
         {
             case this_type::kind_BOOL:

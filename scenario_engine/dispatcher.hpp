@@ -1014,22 +1014,12 @@ class psyq::scenario_engine::dispatcher
         typename template_reservoir::state_value::operator_enum const in_operator,
         typename template_reservoir::state_value const& in_value)
     {
-        if (in_operator == template_reservoir::state_value::operator_COPY)
-        {
-            auto const local_set_value(
-                io_reservoir.set_value(in_state_key, in_value));
-            PSYQ_ASSERT(local_set_value);
-            return local_set_value;
-        }
-        else
-        {
-            auto local_state(io_reservoir.get_value(in_state_key));
-            auto const local_set_value(
-                local_state.compute(in_operator, in_value)
-                && io_reservoir.set_value(in_state_key, local_state));
-            PSYQ_ASSERT(local_set_value);
-            return local_set_value;
-        }
+        auto local_state(io_reservoir.get_value(in_state_key));
+        auto const local_set_value(
+            local_state.compute(in_operator, in_value)
+            && io_reservoir.set_value(in_state_key, local_state));
+        PSYQ_ASSERT(local_set_value);
+        return local_set_value;
     }
 
     //-------------------------------------------------------------------------

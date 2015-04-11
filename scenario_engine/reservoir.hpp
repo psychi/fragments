@@ -539,11 +539,6 @@ class psyq::scenario_engine::reservoir
     //-------------------------------------------------------------------------
     /// @name 状態値の取得と設定
     //@{
-    public: bool set_value(
-        typename this_type::state_key const& in_state_key,
-        typename this_type::state_value const& in_state_value)
-    PSYQ_NOEXCEPT;
-
     /** @brief 状態値を設定する。
 
         すでに登録されている状態値に、値を設定する。
@@ -557,15 +552,45 @@ class psyq::scenario_engine::reservoir
             - in_state_value を状態値の型へ変換できない場合は失敗する。
             - 論理型以外の値を論理型の状態値へ設定しようとすると失敗する。
             - 論理型の値を論理型以外の状態値へ設定しようとすると失敗する。
-        @note
-            this_type::state_value::float_type より精度の高い浮動小数点数を
-            浮動小数点数型の状態値へ設定しようとすると、
-            コンパイル時にエラーか警告が発生する。
         @sa this_type::register_bool
         @sa this_type::register_unsigned
         @sa this_type::register_signed
         @sa this_type::register_float
         @sa this_type::get_value
+     */
+    public: bool set_value(
+        typename this_type::state_key const& in_state_key,
+        typename this_type::state_value const& in_state_value)
+    PSYQ_NOEXCEPT
+    {
+        auto const local_bool(in_state_value.get_bool());
+        if (local_bool != nullptr)
+        {
+            return this->set_value(in_state_key, *local_bool);
+        }
+        auto const local_unsigned(in_state_value.get_unsigned());
+        if (local_unsigned != nullptr)
+        {
+            return this->set_value(in_state_key, *local_unsigned);
+        }
+        auto const local_signed(in_state_value.get_signed());
+        if (local_signed != nullptr)
+        {
+            return this->set_value(in_state_key, *local_signed);
+        }
+        auto const local_float(in_state_value.get_float());
+        if (local_float != nullptr)
+        {
+            return this->set_value(in_state_key, *local_float);
+        }
+        return false;
+    }
+
+    /** @copydoc set_value
+        @note
+            this_type::state_value::float_type より精度の高い浮動小数点数を
+            浮動小数点数型の状態値へ設定しようとすると、
+            コンパイル時にエラーか警告が発生する。
      */
     public: template<typename template_value>
     bool set_value(
@@ -690,8 +715,8 @@ class psyq::scenario_engine::reservoir
     }
 
     private: static typename this_type::size_type make_integer_bits(
-        typename this_type::block_type& out_bits,
-        bool const in_value,
+        typename this_type::block_type&,
+        bool const,
         typename this_type::format_type const)
     {
         return 0;

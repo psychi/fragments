@@ -395,21 +395,13 @@ struct psyq::scenario_engine::behavior_builder
                 in_row_index,
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_ARGUMENT,
                 2));
-        /// @todo とりあえず整数値のみ対応しておくが、他の型も対応すること。
-        std::size_t local_rest_size;
         auto const local_value(
-            local_value_cell.template to_integer<std::int32_t>(
-                &local_rest_size));
-        if (local_rest_size != 0)
+            template_reservoir::state_value::make(local_value_cell));
+        if (local_value.get_kind() == template_reservoir::state_value::kind_NULL)
         {
             PSYQ_ASSERT(false);
-            return typename
-                this_type::dispatcher::function_shared_ptr();
+            return typename this_type::dispatcher::function_shared_ptr();
         }
-        PSYQ_ASSERT(
-            local_value != 0 || (
-                local_operator != template_reservoir::state_value::operator_DIV
-                && local_operator != template_reservoir::state_value::operator_MOD));
 
         // 状態値を書き換える関数オブジェクトを生成する。
         return this_type::dispatcher::make_state_operation_function(

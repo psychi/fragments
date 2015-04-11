@@ -1042,26 +1042,36 @@ class psyq::string::_private::interface_immutable: public template_string_type
         std::size_t* const out_rest_size = nullptr)
     const PSYQ_NOEXCEPT
     {
+        // 符号を解析する。
         auto local_iterator(this->data());
         auto const local_end(local_iterator + this->size());
         auto const local_sign(this_type::read_sign(local_iterator, local_end));
-        if (local_sign < 0 && std::is_unsigned<template_integer_type>::value)
+        template_integer_type local_integer(0);
+        if (0 < local_sign || !std::is_unsigned<template_integer_type>::value)
         {
-            if (out_rest_size != nullptr)
+            if (local_iterator < local_end)
             {
-                *out_rest_size = this->size();
+                // 基数を解析する。
+                auto const local_radix(
+                    this_type::read_radix(local_iterator, local_end));
+                if (local_iterator < local_end)
+                {
+                    // 数字を解析する。
+                    auto const local_numbers(
+                        this_type::read_numbers(
+                            local_iterator, local_end, local_radix));
+                    local_integer = static_cast<template_integer_type>(
+                        local_numbers * local_sign);
+                }
             }
-            return 0;
         }
-        auto const local_radix(
-            this_type::read_radix(local_iterator, local_end));
-        auto const local_integer(
-            this_type::read_numbers(local_iterator, local_end, local_radix));
+
+        // 解析した文字数を決定する。
         if (out_rest_size != nullptr)
         {
             *out_rest_size = local_end - local_iterator;
         }
-        return static_cast<template_integer_type>(local_integer * local_sign);
+        return local_integer;
     }
 
     /** @brief 文字列を解析し、実数値を構築する。
@@ -1075,29 +1085,37 @@ class psyq::string::_private::interface_immutable: public template_string_type
         std::size_t* const out_rest_size = nullptr)
     const PSYQ_NOEXCEPT
     {
-        // 符号と基数を解析する。
+        // 符号を解析する。
         auto local_iterator(this->data());
         auto const local_end(local_iterator + this->size());
         auto const local_sign(this_type::read_sign(local_iterator, local_end));
-        auto const local_radix(
-            this_type::read_radix(local_iterator, local_end));
-
-        // 整数部と小数部を解析する。
-        auto const local_real(
-            this_type::merge_fraction_part(
-                local_iterator,
-                local_end,
-                local_radix,
-                static_cast<template_real_type>(
+        template_real_type local_real(0);
+        if (local_iterator < local_end)
+        {
+            // 基数を解析する。
+            auto const local_radix(
+                this_type::read_radix(local_iterator, local_end));
+            if (local_iterator < local_end)
+            {
+                // 整数部を解析する。
+                local_real = static_cast<template_real_type>(
                     this_type::read_numbers(
-                        local_iterator, local_end, local_radix))));
+                        local_iterator, local_end, local_radix));
+                if (local_iterator < local_end)
+                {
+                    // 小数部を解析する。
+                    local_real = local_sign * this_type::merge_fraction_part(
+                        local_iterator, local_end, local_radix, local_real);
+                }
+            }
+        }
 
-        // 戻り値を決定する。
+        // 解析した文字数を決定する。
         if (out_rest_size != nullptr)
         {
             *out_rest_size = local_end - local_iterator;
         }
-        return local_real * local_sign;
+        return local_real;
     }
     //@}
     //-------------------------------------------------------------------------
@@ -1122,6 +1140,9 @@ class psyq::string::_private::interface_immutable: public template_string_type
 
                 case '+':
                 ++io_iterator;
+                break;
+
+                default:
                 break;
             }
         }

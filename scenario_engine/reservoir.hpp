@@ -545,7 +545,7 @@ class psyq::scenario_engine::reservoir
 
         @param[in] in_state_key   設定する状態値に対応する識別値。
         @param[in] in_state_value 状態値に設定する値。
-        @retval true  成功。
+        @retval true 成功。
         @retval false
             失敗。状態値は変化しない。
             - in_state_key に対応する状態値がない場合は失敗する。
@@ -562,6 +562,11 @@ class psyq::scenario_engine::reservoir
         @sa this_type::register_float
         @sa this_type::get_value
      */
+    public: bool set_value(
+        typename this_type::state_key const& in_state_key,
+        typename this_type::state_value const& in_state_value)
+    PSYQ_NOEXCEPT;
+
     public: template<typename template_value>
     bool set_value(
         typename this_type::state_key const& in_state_key,
@@ -595,9 +600,9 @@ class psyq::scenario_engine::reservoir
         auto& local_chunk_blocks(local_chunk->blocks);
 
         // 状態値の構成によって、設定処理を分岐する。
+        typename this_type::size_type local_size;
+        typename this_type::block_type local_bits;
         auto const local_format(local_state->get_format());
-        auto const local_position(
-            this_type::get_field_position(local_state->field));
         switch (local_format)
         {
             case this_type::state_value::kind_NULL:
@@ -606,76 +611,62 @@ class psyq::scenario_engine::reservoir
 
             // 真偽値を設定する。
             case this_type::state_value::kind_BOOL:
-            if (std::is_same<bool, template_value>::value)
+            if (!std::is_same<bool, template_value>::value)
             {
-                return this_type::notify_transition(
-                    const_cast<this_type::state_registry&>(*local_state),
-                    this_type::set_bits(
-                        local_chunk_blocks,
-                        local_position,
-                        1,
-                        static_cast<typename this_type::block_type>(
-                            in_state_value)));
+                return false;
             }
-            return false;
+            local_size = 1;
+            local_bits =
+                static_cast<typename this_type::block_type>(in_state_value);
+            break;
 
             // 浮動小数点数を設定する。
             case this_type::state_value::kind_FLOAT:
-            if (!std::is_same<bool, template_value>::value)
+            if (std::is_same<bool, template_value>::value)
             {
-                return this_type::notify_transition(
-                    const_cast<this_type::state_registry&>(*local_state),
-                    this_type::set_bits(
-                        local_chunk_blocks,
-                        local_position,
-                        this_type::FLOAT_SIZE,
-                        this_type::get_float_bits(in_state_value)));
+                return false;
             }
-            return false;
+            local_size = this_type::FLOAT_SIZE;
+            local_bits = this_type::make_float_bits(in_state_value);
+            break;
 
             // 整数を設定する。
             default:
-            if (!std::is_same<bool, template_value>::value
-                && std::is_integral<template_value>::value)
+            if (std::is_same<bool, template_value>::value
+                || !std::is_integral<template_value>::value)
             {
-                auto const local_size(
-                    this_type::get_format_size(local_format));
-                return this_type::notify_transition(
-                    const_cast<this_type::state_registry&>(*local_state),
-                    local_format < 0?
-                        // 符号あり整数を設定する。
-                        this_type::set_signed(
-                            local_chunk_blocks,
-                            local_position,
-                            local_size,
-                            in_state_value):
-                        // 符号なし整数を設定する。
-                        this_type::set_bits(
-                            local_chunk_blocks,
-                            local_position,
-                            local_size,
-                            static_cast<typename this_type::block_type>(
-                                in_state_value)));
+                return false;
             }
-            return false;
+            local_size = this_type::get_format_size(local_format);
+            local_bits = local_format < 0?
+                this_type::make_signed_bits(in_state_value, local_size):
+                static_cast<typename this_type::block_type>(in_state_value);
+            break;
         }
+        return this_type::notify_transition(
+            const_cast<this_type::state_registry&>(*local_state),
+            this_type::set_bits(
+                local_chunk_blocks,
+                this_type::get_field_position(local_state->field),
+                local_size,
+                local_bits));
     }
     //@}
-    private: static typename this_type::block_type get_float_bits(
+    private: static typename this_type::block_type make_float_bits(
         bool const in_value)
     {
         typename this_type::float_union local_float;
         local_float.value = in_value;
         return local_float.bits;
     }
-    private: static typename this_type::block_type get_float_bits(
+    private: static typename this_type::block_type make_float_bits(
         float const in_value)
     {
         typename this_type::float_union local_float;
         local_float.value = in_value;
         return local_float.bits;
     }
-    private: static typename this_type::block_type get_float_bits(
+    private: static typename this_type::block_type make_float_bits(
         double const in_value)
     {
         typename this_type::float_union local_float;
@@ -688,7 +679,7 @@ class psyq::scenario_engine::reservoir
         return local_float.bits;
     }
     private: template<typename template_value>
-    static typename this_type::block_type get_float_bits(
+    static typename this_type::block_type make_float_bits(
         template_value const in_value)
     {
         typename this_type::float_union local_float;
@@ -700,35 +691,29 @@ class psyq::scenario_engine::reservoir
         return local_float.bits;
     }
 
-    private: static int set_signed(
-        typename this_type::block_vector& io_blocks,
-        typename this_type::pos_type const in_position,
-        typename this_type::size_type const in_size,
-        bool const in_value)
-    PSYQ_NOEXCEPT
+    private: static typename this_type::block_type make_signed_bits(
+        bool const in_value,
+        typename this_type::size_type const)
     {
-        return this_type::set_bits(io_blocks, in_position, in_size, in_value);
+        return in_value;
     }
-
     private: template<typename template_value>
-    static int set_signed(
-        typename this_type::block_vector& io_blocks,
-        typename this_type::pos_type const in_position,
-        typename this_type::size_type const in_size,
-        template_value const in_value)
+    static typename this_type::block_type make_signed_bits(
+        template_value const in_value,
+        typename this_type::size_type const in_size)
     PSYQ_NOEXCEPT
     {
-        auto local_bits(
+        auto const local_bits(
             static_cast<typename this_type::block_type>(
-                static_cast<typename this_type::state_value::signed_type>(in_value)));
+                static_cast<typename this_type::state_value::signed_type>(
+                    in_value)));
         if (in_value < 0)
         {
             auto const local_mask(this_type::make_block_mask(in_size));
             PSYQ_ASSERT((~local_mask & local_bits) == ~local_mask);
-            local_bits &= local_mask;
+            return local_bits & local_mask;
         }
-        return this_type::set_bits(
-            io_blocks, in_position, in_size, local_bits);
+        return local_bits;
     }
 
     /** @brief ビット列に値を設定する。
@@ -904,11 +889,13 @@ class psyq::scenario_engine::reservoir
         {
             return false;
         }
-        return 0 <= this_type::set_signed(
+        auto const local_size(
+            static_cast<typename this_type::size_type>(in_state_size));
+        return 0 <= this_type::set_bits(
             local_chunk.blocks,
             this_type::get_field_position(local_state->field),
-            static_cast<typename this_type::size_type>(in_state_size),
-            in_state_value);
+            local_size,
+            this_type::make_signed_bits(in_state_value, local_size));
     }
     /** @brief 浮動小数点数型の状態値を登録する。
 

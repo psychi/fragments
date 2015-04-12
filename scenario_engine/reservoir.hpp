@@ -623,17 +623,17 @@ class psyq::scenario_engine::reservoir
             return false;
         }
 
-        // 状態値の構成によって、設定処理を分岐する。
+        // 状態値の構成から、設定するビット列とビット数を決定する。
+        auto const local_format(local_state->get_format());
         typename this_type::size_type local_size;
         typename this_type::block_type local_bits;
-        auto const local_format(local_state->get_format());
         switch (local_format)
         {
             case this_type::state_value::kind_NULL:
             PSYQ_ASSERT(false);
             return false;
 
-            // 真偽値を設定する。
+            // 真偽値のビット列とビット数を決定する。
             case this_type::state_value::kind_BOOL:
             if (!std::is_same<bool, template_value>::value)
             {
@@ -644,13 +644,13 @@ class psyq::scenario_engine::reservoir
                 in_state_value);
             break;
 
-            // 浮動小数点数を設定する。
+            // 浮動小数点数のビット列とビット数を決定する。
             case this_type::state_value::kind_FLOAT:
             local_size = this_type::make_float_bits(
                 local_bits, in_state_value);
             break;
 
-            // 整数を設定する。
+            // 整数のビット列とビット数を決定する。
             default:
             local_size = this_type::make_integer_bits(
                 local_bits, in_state_value, local_format);
@@ -660,21 +660,33 @@ class psyq::scenario_engine::reservoir
         {
             return false;
         }
-        return this_type::notify_transition(
-            const_cast<this_type::state_registry&>(*local_state),
+
+        // 状態値にビット列を設定する。
+        auto const local_set_bits(
             this_type::set_bits(
                 local_chunk->blocks,
                 this_type::get_field_position(local_state->field),
                 local_size,
                 local_bits));
+        if (local_set_bits < 0)
+        {
+            return false;
+        }
+        else if (0 < local_set_bits)
+        {
+            // 状態値の変更を記録する。
+            const_cast<this_type::state_registry&>(*local_state)
+                .field |= 1 << this_type::field_TRANSITION_FRONT;
+        }
+        return true;
     }
     //@}
-    private: static typename this_type::size_type make_float_bits(
-        typename this_type::block_type&,
-        bool const)
-    {
-        return 0;
-    }
+    /** @brief 浮動小数点数のビット列を取得する。
+        @param[out] out_bits 浮動小数点数のビット列を出力する。
+        @param[in] in_value  ビット列を取り出す浮動小数点数。
+        @retval !=0 成功。ビット列のビット数。
+        @retval ==0 失敗。
+     */
     private: static typename this_type::size_type make_float_bits(
         typename this_type::block_type& out_bits,
         float const in_value)
@@ -684,6 +696,7 @@ class psyq::scenario_engine::reservoir
         out_bits = local_float.bits;
         return this_type::FLOAT_SIZE;
     }
+    /// @copydoc make_float_bits
     private: static typename this_type::size_type make_float_bits(
         typename this_type::block_type& out_bits,
         double const in_value)
@@ -698,11 +711,27 @@ class psyq::scenario_engine::reservoir
         out_bits = local_float.bits;
         return this_type::FLOAT_SIZE;
     }
+    /** @brief this_type::make_float_bits の真偽値のためのダミー関数。
+        @return 必ず0。
+     */
+    private: static typename this_type::size_type make_float_bits(
+        typename this_type::block_type&,
+        bool const)
+    {
+        return 0;
+    }
+    /** @brief 整数から浮動小数点数のビット列を取得する。
+        @param[out] out_bits 浮動小数点数のビット列を出力する。
+        @param[in] in_value  ビット列を取り出す整数。
+        @retval !=0 成功。ビット列のビット数。
+        @retval ==0 失敗。
+     */
     private: template<typename template_value>
     static typename this_type::size_type make_float_bits(
         typename this_type::block_type& out_bits,
         template_value const in_value)
     {
+        // 整数を浮動小数点数に変換して、桁あふれが起きてないか判定する。
         typename this_type::float_union local_float;
         local_float.value =
             static_cast<typename this_type::state_value::float_type>(in_value);
@@ -714,13 +743,13 @@ class psyq::scenario_engine::reservoir
         return this_type::FLOAT_SIZE;
     }
 
-    private: static typename this_type::size_type make_integer_bits(
-        typename this_type::block_type&,
-        bool const,
-        typename this_type::format_type const)
-    {
-        return 0;
-    }
+    /** @brief 整数からビット列を取得する。
+        @param[out] out_bits 整数のビット列を出力する。
+        @param[in] in_value  ビット列を取り出す整数。
+        @param[in] in_format 取り出すビット列の構成。
+        @retval !=0 成功。ビット列のビット数。
+        @retval ==0 失敗。
+     */
     private: template<typename template_value>
     static typename this_type::size_type make_integer_bits(
         typename this_type::block_type& out_bits,
@@ -728,13 +757,16 @@ class psyq::scenario_engine::reservoir
         typename this_type::format_type const in_format)
     PSYQ_NOEXCEPT
     {
+        // 整数に変換して、桁あふれが起きてないか判定する。
         auto const local_signed(
-            static_cast<typename this_type::state_value::signed_type>(in_value));
+            static_cast<typename this_type::state_value::signed_type>(
+                in_value));
         if (static_cast<template_value>(local_signed) != in_value)
         {
             return 0;
         }
 
+        // 整数からビット列を取り出す。
         auto const local_size(this_type::get_format_size(in_format));
         auto const local_mask(this_type::make_block_mask(local_size));
         out_bits = static_cast<typename this_type::block_type>(local_signed);
@@ -751,6 +783,16 @@ class psyq::scenario_engine::reservoir
             return 0;
         }
         return local_size;
+    }
+    /** @brief this_type::make_integer_bits の真偽値のためのダミー関数。
+        @return 必ず0。
+     */
+    private: static typename this_type::size_type make_integer_bits(
+        typename this_type::block_type&,
+        bool const,
+        typename this_type::format_type const)
+    {
+        return 0;
     }
 
     /** @brief ビット列に値を設定する。
@@ -945,6 +987,7 @@ class psyq::scenario_engine::reservoir
             local_size,
             local_bits);
     }
+
     /** @brief 浮動小数点数型の状態値を登録する。
 
         - 登録した状態値は
@@ -1023,21 +1066,6 @@ class psyq::scenario_engine::reservoir
         }
     }
     //@}
-    private: static bool notify_transition(
-        typename this_type::state_registry& io_state,
-        int const in_set_bits)
-    {
-        if (in_set_bits < 0)
-        {
-            return false;
-        }
-        if (0 < in_set_bits)
-        {
-            io_state.field |= 1 << this_type::field_TRANSITION_FRONT;
-        }
-        return true;
-    }
-
     //-------------------------------------------------------------------------
     /// @name ビット列チャンク
     //@{

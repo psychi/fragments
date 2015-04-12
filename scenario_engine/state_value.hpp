@@ -494,9 +494,24 @@ class psyq::scenario_engine::_private::state_value
         template_value const& in_right)
     {
         this_type const local_right(in_right, this_type::kind_FLOAT);
-        return local_right.get_kind() != this_type::kind_FLOAT?
-            this_type::compare_FAILED:
-            this_type::compare_value(in_left, local_right.float_);
+        if (local_right.get_kind() != this_type::kind_FLOAT)
+        {
+            return this_type::compare_FAILED;
+        }
+#if 0
+        /// @note 浮動小数点数の誤差を考慮せずに比較する。
+        return this_type::compare_value(in_left, local_right.float_);
+#else
+        /// @note 浮動小数点数の誤差を考慮して比較する。
+        auto const local_diff(in_left - local_right.float_);
+        auto const local_epsilon(
+            std::numeric_limits<typename this_type::float_type>::epsilon()
+            * PSYQ_SCENARIO_ENGINE_STATE_VALUE_EPSILON_MAG);
+        return local_diff < -local_epsilon?
+            this_type::compare_LESS:
+            (local_epsilon < local_diff?
+                this_type::compare_GREATER: this_type::compare_EQUAL);
+#endif
     }
 
     /** @brief 値と浮動小数点数を比較する。

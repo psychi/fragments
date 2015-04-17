@@ -63,16 +63,27 @@ namespace psyq
 template<typename template_string>
 class psyq::scenario_engine::state_builder
 {
+    /// @brief thisが指す値の型。
     private: typedef state_builder this_type;
 
+    /// @brief 解析する文字列表の型。
     public: typedef psyq::string::csv_table<template_string> string_table;
 
     //-------------------------------------------------------------------------
+    /** @brief 文字列表から状態値を構築する関数オブジェクトを構築する。
+        @param[in] in_string_table 解析する文字列表。
+     */
     public: explicit state_builder(
         typename this_type::string_table in_string_table):
     string_table_(std::move(in_string_table))
     {}
 
+    /** @brief 文字列表を解析して状態値を構築し、状態貯蔵器へ登録する。
+        @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
+        @param[in,out] io_hasher    文字列からハッシュ値を作る関数オブジェクト。
+        @param[in] in_chunk_key     状態値を登録するチャンクの識別値。
+        @return 登録した状態値の数。
+     */
     public: template<typename template_reservoir, typename template_hasher>
     std::size_t operator()(
         template_reservoir& io_reservoir,
@@ -84,6 +95,13 @@ class psyq::scenario_engine::state_builder
             io_reservoir, io_hasher, in_chunk_key, this->string_table_);
     }
 
+    /** @brief 文字列表を解析して状態値を構築し、状態貯蔵器へ登録する。
+        @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
+        @param[in,out] io_hasher    文字列からハッシュ値を作る関数オブジェクト。
+        @param[in] in_chunk_key     状態値を登録するチャンクの識別値。
+        @param[in] in_string_table  解析する文字列表。
+        @return 登録した状態値の数。
+     */
     public: template<typename template_reservoir, typename template_hasher>
     static std::size_t build(
         template_reservoir& io_reservoir,
@@ -113,6 +131,15 @@ class psyq::scenario_engine::state_builder
         return local_register_count;
     }
 
+    /** @brief 文字列表を解析して状態値を構築し、状態貯蔵器へ登録する。
+        @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
+        @param[in,out] io_hasher    文字列からハッシュ値を作る関数オブジェクト。
+        @param[in] in_chunk_key     状態値を登録するチャンクの識別値。
+        @param[in] in_string_table  解析する文字列表。
+        @param[in] in_row_index     解析する文字列表の行番号。
+        @retval true  成功。構築した状態値を状態貯蔵器へ登録した。
+        @retval false 失敗。状態値は状態貯蔵器へ登録されなかった。
+     */
     private: template<typename template_reservoir, typename template_hasher>
     static bool register_state(
         template_reservoir& io_reservoir,
@@ -196,6 +223,14 @@ class psyq::scenario_engine::state_builder
         return false;
     }
 
+    /** @brief 文字列を解析して論理型の状態値を構築し、状態貯蔵器へ登録する。
+        @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
+        @param[in] in_chunk_key     状態値を登録するチャンクの識別値。
+        @param[in] in_state_key     登録する状態値に対応する識別値。
+        @param[in] in_value_cell    解析する状態値の文字列。
+        @retval true  成功。構築した状態値を状態貯蔵器へ登録した。
+        @retval false 失敗。状態値は状態貯蔵器へ登録されなかった。
+     */
     private: template<typename template_reservoir>
     static bool register_bool(
         template_reservoir& io_reservoir,
@@ -213,6 +248,15 @@ class psyq::scenario_engine::state_builder
             in_chunk_key, in_state_key, local_bool_state != 0);
     }
 
+    /** @brief 文字列を解析して符号なし整数型の状態値を構築し、状態貯蔵器へ登録する。
+        @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
+        @param[in] in_chunk_key     状態値を登録するチャンクの識別値。
+        @param[in] in_state_key     登録する状態値に対応する識別値。
+        @param[in] in_value_cell    解析する状態値の文字列。
+        @param[in] in_size          状態値のビット数。
+        @retval true  成功。構築した状態値を状態貯蔵器へ登録した。
+        @retval false 失敗。状態値は状態貯蔵器へ登録されなかった。
+     */
     private: template<typename template_reservoir>
     static bool register_unsigned(
         template_reservoir& io_reservoir,
@@ -236,6 +280,15 @@ class psyq::scenario_engine::state_builder
             in_chunk_key, in_state_key, local_value, in_size);
     }
 
+    /** @brief 文字列を解析して符号あり整数型の状態値を構築し、状態貯蔵器へ登録する。
+        @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
+        @param[in] in_chunk_key     状態値を登録するチャンクの識別値。
+        @param[in] in_state_key     登録する状態値に対応する識別値。
+        @param[in] in_value_cell    解析する状態値の文字列。
+        @param[in] in_size          状態値のビット数。
+        @retval true  成功。構築した状態値を状態貯蔵器へ登録した。
+        @retval false 失敗。状態値は状態貯蔵器へ登録されなかった。
+     */
     private: template<typename template_reservoir>
     static bool register_signed(
         template_reservoir& io_reservoir,
@@ -259,6 +312,14 @@ class psyq::scenario_engine::state_builder
             in_chunk_key, in_state_key, local_value, in_size);
     }
 
+    /** @brief 文字列を解析して浮動小数点数型の状態値を構築し、状態貯蔵器へ登録する。
+        @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
+        @param[in] in_chunk_key     状態値を登録するチャンクの識別値。
+        @param[in] in_state_key     登録する状態値に対応する識別値。
+        @param[in] in_value_cell    解析する状態値の文字列。
+        @retval true  成功。構築した状態値を状態貯蔵器へ登録した。
+        @retval false 失敗。状態値は状態貯蔵器へ登録されなかった。
+     */
     private: template<typename template_reservoir>
     static bool register_float(
         template_reservoir& io_reservoir,
@@ -281,16 +342,23 @@ class psyq::scenario_engine::state_builder
             in_chunk_key, in_state_key, local_value);
     }
 
+    /** @brief 整数型のビット数を取得する。
+        @param[in] in_cell         セルの文字列。
+        @param[in] in_kind         整数型を表す文字列。
+        @param[in] in_default_size ビット数がない場合のデフォルト値。
+        @return !=0 成功。整数型のビット数。
+        @return ==0 失敗。
+     */
     private: static std::size_t get_integer_size(
         typename this_type::string_table::string_view const& in_cell,
         typename this_type::string_table::string_view const& in_kind,
-        std::size_t local_default_size)
+        std::size_t const in_default_size)
     {
         if (in_cell.substr(0, in_kind.size()) == in_kind)
         {
             if (in_cell.size() == in_kind.size())
             {
-                return local_default_size;
+                return in_default_size;
             }
             if (in_cell.at(in_kind.size()) == '_')
             {
@@ -308,6 +376,7 @@ class psyq::scenario_engine::state_builder
     }
 
     //-------------------------------------------------------------------------
+    /// @brief 解析する文字列表。
     private: typename this_type::string_table string_table_;
 
 }; // class psyq::scenario_engine::state_builder

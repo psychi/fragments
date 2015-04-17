@@ -83,10 +83,13 @@ namespace psyq
 template<typename template_string>
 class psyq::scenario_engine::expression_builder
 {
+    /// @brief thisが指す値の型。
     private: typedef expression_builder this_type;
 
+    /// @brief 解析する文字列表の型。
     public: typedef psyq::string::csv_table<template_string> string_table;
 
+    /// @brief 要素条件の構築に使う作業領域。
     private: template<typename template_evaluator>
     struct workspace
     {
@@ -105,12 +108,22 @@ class psyq::scenario_engine::expression_builder
     };
 
     //-------------------------------------------------------------------------
+    /** @brief 文字列表から条件式を構築する関数オブジェクトを構築する。
+        @param[in] in_string_table 解析する文字列表。
+     */
     public: explicit expression_builder(
         typename this_type::string_table in_string_table)
     :
     string_table_(std::move(in_string_table))
     {}
 
+    /** @brief 文字列表を解析して条件式を構築し、条件評価器に登録する。
+        @param[in,out] io_evaluator 構築した条件式を登録する条件評価器。
+        @param[in,out] io_hasher    文字列からハッシュ値を作る関数オブジェクト。
+        @param[in] in_chunk_key     登録する条件式が所属するチャンクのキー。
+        @param[in] in_reservoir     条件式が参照する状態貯蔵器。
+        @return 登録した条件式の数。
+     */
     public: template<typename template_evaluator, typename template_hasher>
     std::size_t operator()(
         template_evaluator& io_evaluator,
@@ -127,13 +140,13 @@ class psyq::scenario_engine::expression_builder
             this->string_table_);
     }
 
-    /** @brief 文字列表から条件式を構築し、条件評価器に登録する。
+    /** @brief 文字列表を解析して条件式を構築し、条件評価器に登録する。
         @param[in,out] io_evaluator 構築した条件式を登録する条件評価器。
-        @param[in,out] io_hasher    文字列からハッシュ値を生成する関数オブジェクト。
+        @param[in,out] io_hasher    文字列からハッシュ値を作る関数オブジェクト。
         @param[in] in_chunk_key     登録する条件式が所属するチャンクのキー。
         @param[in] in_reservoir     条件式が参照する状態貯蔵器。
         @param[in] in_string_table  条件式が記述されている文字列表。
-        @return 構築した条件式の数。
+        @return 登録した条件式の数。
      */
     public: template<typename template_evaluator, typename template_hasher>
     static std::size_t build(
@@ -185,7 +198,7 @@ class psyq::scenario_engine::expression_builder
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列表を解析し、条件式を構築して、条件評価器へ登録する。
+    /** @brief 文字列表を解析して条件式を構築し、条件評価器へ登録する。
         @param[in,out] io_evaluator 構築した条件式を追加する条件評価器。
         @param[in,out] io_hasher    文字列からハッシュ値を生成する関数オブジェクト。
         @param[in,out] io_workspace 作業領域。
@@ -193,8 +206,8 @@ class psyq::scenario_engine::expression_builder
         @param[in] in_reservoir     条件式が参照する状態貯蔵器。
         @param[in] in_string_table  解析する文字列表。
         @param[in] in_row_index     解析する文字列表の行番号。
-        @retval true  成功。条件式を構築し、配列に追加した。
-        @retval false 失敗。条件式を構築しなかった。
+        @retval true  成功。条件式を構築し、条件評価器へ登録した。
+        @retval false 失敗。条件式を構築できなかった。
      */
     private: template<typename template_evaluator, typename template_hasher>
     static bool build_expression(
@@ -253,12 +266,11 @@ class psyq::scenario_engine::expression_builder
             in_string_table.find_body_cell(
                 in_row_index,
                 PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_KIND));
-        bool local_register_expression(false);
         if (local_kind_cell
             == PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_COMPOUND)
         {
             // 複合条件式の要素条件を構築する。
-            local_register_expression = this_type::register_expression(
+            return this_type::build_expression(
                 io_evaluator,
                 io_hasher,
                 io_workspace.sub_expressions,
@@ -274,7 +286,7 @@ class psyq::scenario_engine::expression_builder
             == PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_STATE_COMPARISON)
         {
             // 状態比較条件式の要素条件を構築する。
-            local_register_expression = this_type::register_expression(
+            return this_type::build_expression(
                 io_evaluator,
                 io_hasher,
                 io_workspace.state_comparisons,
@@ -289,37 +301,36 @@ class psyq::scenario_engine::expression_builder
         {
             // 未知の条件式種別だった。
             PSYQ_ASSERT(false);
+            return false;
         }
-        return local_register_expression;
     }
 
-    /** @brief 文字列表を解析し、条件式の要素条件コンテナを構築して、
-               条件式を条件評価器へ登録する。
+    /** @brief 文字列表を解析して条件式を構築し、条件評価器へ登録する。
         @param[in,out] io_evaluator  条件式を登録する条件評価器。
         @param[in,out] io_hasher     文字列からハッシュ値を生成する関数オブジェクト。
         @param[in,out] io_elements   条件式の構築に使う要素条件の作業領域。
         @param[in] in_chunk_key      登録する条件式が所属するチャンクの識別値。
         @param[in] in_expression_key 登録する条件式のキー。
         @param[in] in_logic          登録する条件式で用いる論理演算子。
-        @param[in] in_reservoir      条件式が参照する状態貯蔵器。
+        @param[in] in_elements       要素条件が参照する値。
         @param[in] in_string_table   解析する文字列表。
         @param[in] in_row_index      解析する文字列表の行番号。
-        @retval true  成功。 io_evaluator に条件式を登録した。
-        @retval false 失敗。条件式は登録されなかった。
+        @retval true  成功。条件式を構築して io_evaluator に条件式を登録した。
+        @retval false 失敗。条件式を構築できなかった。
      */
     private: template<
         typename template_evaluator,
         typename template_element_container,
         typename template_hasher,
-        typename template_state_container>
-    static bool register_expression(
+        typename template_element_server>
+    static bool build_expression(
         template_evaluator& io_evaluator,
         template_hasher& io_hasher,
         template_element_container& io_elements,
         typename template_evaluator::reservoir::chunk_key const& in_chunk_key,
         typename template_evaluator::expression_key in_expression_key,
         typename template_evaluator::expression::logic_enum const in_logic,
-        template_state_container const & in_reservoir,
+        template_element_server const& in_elements,
         typename this_type::string_table const& in_string_table,
         typename this_type::string_table::index_type const in_row_index)
     {
@@ -329,17 +340,16 @@ class psyq::scenario_engine::expression_builder
             this_type::build_element<template_evaluator>(
                 io_elements,
                 io_hasher,
-                in_reservoir,
+                in_elements,
                 in_string_table,
-                in_row_index))
-        {}
-        if (io_elements.empty())
-        {
-            return false;
-        }
-        io_evaluator.register_expression(
-            in_chunk_key, std::move(in_expression_key), io_elements, in_logic);
-        return true;
+                in_row_index));
+        return io_elements.empty()?
+            false:
+            io_evaluator.register_expression(
+                in_chunk_key,
+                std::move(in_expression_key),
+                io_elements,
+                in_logic);
     }
 
     /** @brief 文字列表を解析し、複合条件式の要素条件を構築する。
@@ -536,6 +546,7 @@ class psyq::scenario_engine::expression_builder
     }
 
     //-------------------------------------------------------------------------
+    /// @brief 解析する文字列表。
     private: typename this_type::string_table string_table_;
 
 }; // struct psyq::scenario_engine::expression_builder

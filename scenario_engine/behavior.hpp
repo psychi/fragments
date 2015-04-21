@@ -92,11 +92,11 @@ struct psyq::scenario_engine::behavior_chunk
         this_type, typename this_type::dispatcher::allocator_type>
             vector;
 
-    /// @brief 条件挙動チャンクを識別するキーを表す型。
+    /// @brief 条件挙動チャンクの識別値を表す型。
     /// @note ここは条件式キーでなくて、チャンクキーにしないと。
     public: typedef typename this_type::dispatcher::expression_key key_type;
 
-    /// @brief 条件挙動チャンクを識別するキーを比較する関数オブジェクト。
+    /// @brief 条件挙動チャンクの識別値を比較する関数オブジェクト。
     public: typedef psyq::scenario_engine::_private::key_less<
          this_type, typename this_type::key_type>
              key_less;
@@ -124,7 +124,7 @@ struct psyq::scenario_engine::behavior_chunk
     }
     //@}
     /** @brief 空の条件挙動チャンクを構築する。
-        @param[in] in_key       条件挙動チャンクを識別するキー。
+        @param[in] in_key       条件挙動チャンクの識別値。
         @param[in] in_allocator メモリ割当子の初期値。
      */
     private: behavior_chunk(
@@ -138,7 +138,7 @@ struct psyq::scenario_engine::behavior_chunk
     //-------------------------------------------------------------------------
     /** @brief 条件挙動チャンクに関数オブジェクトを追加する。
         @param[in,out] io_chunks 関数オブジェクトを追加する条件挙動チャンクのコンテナ。
-        @param[in] in_key        関数オブジェクトを追加する条件挙動チャンクのキー。
+        @param[in] in_key        関数オブジェクトを追加する条件挙動チャンクの識別値。
         @param[in] in_functions  条件挙動チャンクに追加する関数オブジェクトのコンテナ。
      */
     public: static void add(
@@ -170,7 +170,7 @@ struct psyq::scenario_engine::behavior_chunk
 
     /** @brief コンテナから条件挙動チャンクを削除する。
         @param[in,out] io_chunks 条件挙動チャンクを削除するコンテナ。
-        @param[in] in_key        削除する条件挙動チャンクのキー。
+        @param[in] in_key        削除する条件挙動チャンクの識別値。
         @retval true  in_key に対応する条件挙動チャンクを削除した。
         @retval false in_key に対応する条件挙動チャンクがコンテナになかった。
      */
@@ -189,9 +189,9 @@ struct psyq::scenario_engine::behavior_chunk
     }
 
     //-------------------------------------------------------------------------
-    /// @brief 条件挙動関数オブジェクトの所有権ありスマートポインタ。
+    /// @brief 条件挙動関数オブジェクトを所有するコンテナ。
     public: typename this_type::dispatcher::function_shared_ptr_vector functions;
-    /// @brief 条件挙動チャンクを識別するキー。
+    /// @brief 条件挙動チャンクの識別値。
     public: typename this_type::key_type key;
 
 }; // struct psyq::scenario_engine::behavior_chunk

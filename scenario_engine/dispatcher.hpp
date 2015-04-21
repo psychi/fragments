@@ -101,7 +101,7 @@ class psyq::scenario_engine::dispatcher
             flag_LAST_EVALUATION,    ///< 条件の前回の評価の成功／失敗。
             flag_LAST_CONDITION,     ///< 条件の前回の評価。
             flag_EVALUATION_REQUEST, ///< 条件評価の更新要求。
-            flag_CONSTRUCTED,        ///< 構築済みフラグ。
+            flag_REGISTERED,         ///< 条件式の登録済みフラグ。
         };
 
         /** @brief 条件式監視器を構築する。
@@ -243,6 +243,19 @@ class psyq::scenario_engine::dispatcher
         evaluation(in_evaluation),
         last_evaluation(in_last_evaluation)
         {}
+
+        void call_function() const
+        {
+            auto const local_function_holder(this->function.lock());
+            auto const local_function(local_function_holder.get());
+            if (local_function != nullptr)
+            {
+                (*local_function)(
+                    this->expression_key,
+                    this->evaluation,
+                    this->last_evaluation);
+            }
+        }
 
         typename dispatcher::function_weak_ptr function;
         typename dispatcher::expression_key expression_key;
@@ -535,7 +548,7 @@ class psyq::scenario_engine::dispatcher
         @retval false 失敗。
      */
     private: template<typename template_evaluator>
-    bool add_expression_notifying_state(
+    bool register_expression(
         typename this_type::expression_key const& in_expression_key,
         template_evaluator const& in_evaluator,
         std::size_t const in_reserve_expressions)
@@ -560,14 +573,14 @@ class psyq::scenario_engine::dispatcher
         switch (local_expression->kind)
         {
             case template_evaluator::expression::kind_SUB_EXPRESSION:
-            return this->add_sub_expression_notifying_state(
+            return this->register_sub_expression(
                 in_evaluator,
                 *local_expression,
                 local_chunk->sub_expressions,
                 in_reserve_expressions);
 
             case template_evaluator::expression::kind_STATE_COMPARISON:
-            this_type::add_expression_notifying_state(
+            this_type::register_expression(
                 this->state_monitors_,
                 *local_expression,
                 local_chunk->state_comparisons,
@@ -590,7 +603,7 @@ class psyq::scenario_engine::dispatcher
     private: template<
         typename template_expression,
         typename template_element_container>
-    static void add_expression_notifying_state(
+    static void register_expression(
         typename this_type::state_monitor_vector& io_state_monitors,
         template_expression const& in_expression,
         template_element_container const& in_elements,
@@ -646,7 +659,7 @@ class psyq::scenario_engine::dispatcher
         @param[in] in_reserve_expressions 条件式の予約数。
      */
     private: template<typename template_evaluator>
-    bool add_sub_expression_notifying_state(
+    bool register_sub_expression(
         template_evaluator const& in_evaluator,
         typename template_evaluator::expression const& in_expression,
         typename template_evaluator::sub_expression::vector const&
@@ -664,10 +677,10 @@ class psyq::scenario_engine::dispatcher
                     this->expression_monitors_, local_sub_key));
             if (local_expression_monitor == nullptr)
             {
-                auto const local_add_expression_notifying_state(
-                    this->add_expression_notifying_state(
+                auto const local_register_expression(
+                    this->register_expression(
                         local_sub_key, in_evaluator, in_reserve_expressions));
-                if (!local_add_expression_notifying_state)
+                if (!local_register_expression)
                 {
                     // 無限ループを防ぐため、
                     // まだ存在しない条件式を複合条件式で使うのは禁止する。
@@ -699,20 +712,22 @@ class psyq::scenario_engine::dispatcher
         // 条件式監視器を組み立てる。
         for (auto& local_expression_monitor: this->expression_monitors_)
         {
-            auto const local_constructed(
+            auto const local_registered(
                 local_expression_monitor.flags.test(
-                    this_type::expression_monitor::flag_CONSTRUCTED));
-            if (!local_constructed)
+                    this_type::expression_monitor::flag_REGISTERED));
+            if (!local_registered)
             {
-                auto const local_add_expression_notifying_state(
-                    this->add_expression_notifying_state(
+                auto const local_register_expression(
+                    this->register_expression(
                         local_expression_monitor.key,
                         in_evaluator,
                         in_reserve_expressions));
-                if (local_add_expression_notifying_state)
+                if (local_register_expression)
                 {
                     local_expression_monitor.flags.set(
-                        this_type::expression_monitor::flag_CONSTRUCTED);
+                        this_type::expression_monitor::flag_REGISTERED);
+                    local_expression_monitor.flags.set(
+                        this_type::expression_monitor::flag_EVALUATION_REQUEST);
                 }
             }
         }
@@ -767,17 +782,9 @@ class psyq::scenario_engine::dispatcher
             in_reservoir);
 
         // 条件挙動キャッシュに貯まった関数オブジェクトを呼び出す。
-        for (auto& local_cache: local_behavior_caches)
+        for (auto const& local_cache: local_behavior_caches)
         {
-            auto const local_function_holder(local_cache.function.lock());
-            auto const local_function(local_function_holder.get());
-            if (local_function != nullptr)
-            {
-                (*local_function)(
-                    local_cache.expression_key,
-                    local_cache.evaluation,
-                    local_cache.last_evaluation);
-            }
+            local_cache.call_function();
         }
 
         // 条件挙動キャッシュを片付ける。

@@ -1,6 +1,6 @@
 ﻿/** @file
-    @author Hillco Psychi (https://twitter.com/psychi)
     @brief @copybrief psyq::geometry::coordinate
+    @author Hillco Psychi (https://twitter.com/psychi)
     @defgroup psyq_geometry_coordinate 座標系の型特性
     @ingroup psyq_geometry psyq::geometry
  */
@@ -272,54 +272,54 @@ public psyq::geometry::coordinate<template_vector, 3>
 }; // class psyq::geometry::coordinate_3d
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-namespace psyq
+/// @cond
+namespace psyq_test
 {
-    namespace test
-    {
-        template<typename template_coordinate>
-        void geometry_coordinate()
-        {
-            typedef psyq::geometry::ball<template_coordinate> ball_type;
-            auto const local_ball(
-                ball_type::make(template_coordinate::make_filled(2), 10));
-            auto const local_ball_aabb(
-                psyq::geometry::make_aabb(local_ball));
+   template<typename template_coordinate>
+   void geometry_coordinate()
+   {
+       typedef psyq::geometry::ball<template_coordinate> ball_type;
+       auto const local_ball(
+           ball_type::make(template_coordinate::make_filled(2), 10));
+       auto const local_ball_aabb(
+           psyq::geometry::make_aabb(local_ball));
 
-            auto local_point(
-                ball_type::point::make(template_coordinate::make_filled(2)));
-            local_point = ball_type::point::make(template_coordinate::make_filled(3));
+       auto local_point(
+           ball_type::point::make(template_coordinate::make_filled(2)));
+       local_point = ball_type::point::make(template_coordinate::make_filled(3));
 
-            typedef psyq::geometry::line<template_coordinate> line_type;
-            line_type const local_line(
-                local_ball.center_,
-                line_type::direction::make(
-                    template_coordinate::make_filled(local_ball.get_radius())));
-            auto const local_line_aabb(
-                psyq::geometry::make_aabb(local_line));
+       typedef psyq::geometry::line<template_coordinate> line_type;
+       line_type const local_line(
+           local_ball.center_,
+           line_type::direction::make(
+               template_coordinate::make_filled(local_ball.get_radius())));
+       auto const local_line_aabb(
+           psyq::geometry::make_aabb(local_line));
 
-            typedef psyq::geometry::ray<template_coordinate> ray_type;
-            ray_type const local_ray(local_line);
-            auto const local_ray_aabb(
-                psyq::geometry::make_aabb(local_ray));
+       typedef psyq::geometry::ray<template_coordinate> ray_type;
+       ray_type const local_ray(local_line);
+       auto const local_ray_aabb(
+           psyq::geometry::make_aabb(local_ray));
 
-            typedef psyq::geometry::box<template_coordinate> box_type;
-            auto const local_box(
-                box_type::make_cuboid(
-                    local_line.origin_.get_position(),
-                    local_line.direction_.get_unit(),
-                    60 * 3.1415926535f / 180,
-                    template_coordinate::make_filled(1)));
-            auto const local_box_aabb(
-                psyq::geometry::make_aabb(local_box));
+       typedef psyq::geometry::box<template_coordinate> box_type;
+       auto const local_box(
+           box_type::make_cuboid(
+               local_line.origin_.get_position(),
+               local_line.direction_.get_unit(),
+               60 * 3.1415926535f / 180,
+               template_coordinate::make_filled(1)));
+       auto const local_box_aabb(
+           psyq::geometry::make_aabb(local_box));
 
-            typedef psyq::geometry::barycentric_triangle<template_coordinate> triangle_type;
-            auto const local_triangle(
-                triangle_type::make(
-                    template_coordinate::make(0, 0, 0),
-                    template_coordinate::make(1, 0, 0),
-                    template_coordinate::make(0, 1, 0)));
-        }
-    }
+       typedef psyq::geometry::barycentric_triangle<template_coordinate> triangle_type;
+       auto const local_triangle(
+           triangle_type::make(
+               template_coordinate::make(0, 0, 0),
+               template_coordinate::make(1, 0, 0),
+               template_coordinate::make(0, 1, 0)));
+   }
 }
+/// @endcond
 
 #endif // !defined(PSYQ_GEOMETRY_COORDINATE_HPP_)
+// vim: set expandtab:

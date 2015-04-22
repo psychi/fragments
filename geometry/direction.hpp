@@ -1,6 +1,6 @@
 ﻿/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copydoc psyq::geometry::direction
+    @brief @copybrief psyq::geometry::direction
     @defgroup psyq_geometry_shape 幾何形状オブジェクト
     @ingroup psyq_geometry psyq::geometry
  */
@@ -19,13 +19,13 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 方向。
-    @tparam template_coordinate @copydoc psyq::geometry::direction::coordinate
+    @tparam template_coordinate @copydoc direction::coordinate
     @ingroup psyq_geometry_shape
  */
 template<typename template_coordinate>
 class psyq::geometry::direction
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef direction this_type;
 
     /** @brief 座標系の型特性。
@@ -36,7 +36,7 @@ class psyq::geometry::direction
 
     //-------------------------------------------------------------------------
     /** @brief 方向を構築する。
-        @param[in] in_unit 方向の単位ベクトル。
+        @param[in] in_unit 方向の単位ベクトル。正規化されていること。
      */
     public: explicit direction(
         typename this_type::coordinate::vector const& in_unit)
@@ -81,9 +81,10 @@ class psyq::geometry::direction
     }
 
     //-------------------------------------------------------------------------
-    /// 方向の単位ベクトル。
+    /// @brief 方向の単位ベクトル。
     private: typename this_type::coordinate::vector unit_;
 
 }; // class psyq::geometry::direction
 
 #endif // PSYQ_GEOMETRY_DIRECTION_HPP_
+// vim: set expandtab:

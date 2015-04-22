@@ -41,7 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /** @file
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::string::flyweight
  */
 #ifndef PSYQ_STRING_FLYWEIGHT_HPP_
 #define PSYQ_STRING_FLYWEIGHT_HPP_
@@ -564,3 +563,4 @@ public psyq::string::_private::interface_immutable<
 }; // class psyq::string::flyweight_view
 
 #endif // !PSYQ_STRING_FLYWEIGHT_HPP_
+// vim: set expandtab:

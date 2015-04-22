@@ -1,6 +1,6 @@
 ﻿/** @file
+    @brief @copybrief psyq::geometry::line
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copydoc psyq::geometry::line
     @ingroup psyq_geometry psyq::geometry
  */
 #ifndef PSYQ_GEOMETRY_LINE_HPP_
@@ -389,3 +389,4 @@ class psyq::geometry::line<template_coordinate>::line_collision
 }; // class psyq::geometry::line::line_collision
 
 #endif // PSYQ_GEOMETRY_LINE_HPP_
+// vim: set expandtab:

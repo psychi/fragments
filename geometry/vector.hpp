@@ -17,7 +17,7 @@ namespace psyq
     /// ベクトルや空間内での衝突判定など、幾何学的な処理の実装。
     namespace geometry
     {
-        /// この名前空間をユーザーが直接アクセスするのは禁止。
+        /// この名前空間を psyq::geometry 管理者以外が直接アクセスするのは禁止。
         namespace _private
         {
             /// @cond
@@ -464,3 +464,4 @@ template_vector normalize(template_vector const& in_vector)
 } // namespace psyq
 
 #endif // !defined(PSYQ_GEOMETRY_VECTOR_HPP_)
+// vim: set expandtab:

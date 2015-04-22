@@ -1,5 +1,5 @@
 ﻿/** @file
-    @brief @copydoc psyq::std_shared_ptr
+    @brief @copybrief psyq::std_shared_ptr
 
     - std::shared_ptr がある開発環境では std::shared_ptr を、
       psyq::std_shared_ptr でラップする。
@@ -168,7 +168,9 @@ public PSYQ_STD_SHARED_PTR_BASE<template_element>
     base_type(PSYQ_MOVE(io_source))
     {}
 
-    /// @copydoc std_shared_ptr(this_type&&)
+    /** @brief スマートポインタをムーブ構築する。
+        @param[in,out] io_source ムーブ元となるスマートポインタ。
+     */
     public: template<typename template_hold_element>
     std_shared_ptr(
         PSYQ_RV_REF(std_shared_ptr<template_hold_element>) io_source)
@@ -176,7 +178,9 @@ public PSYQ_STD_SHARED_PTR_BASE<template_element>
     base_type(PSYQ_MOVE(io_source))
     {}
 
-    /// @copydoc std_shared_ptr(this_type&&)
+    /** @brief スマートポインタをムーブ構築する。
+        @param[in,out] io_source ムーブ元となるスマートポインタ。
+     */
     public: template<
         typename template_hold_element,
         typename template_deleter>
@@ -229,7 +233,10 @@ public PSYQ_STD_SHARED_PTR_BASE<template_element>
         return *this;
     }
 
-    /// @copydoc operator=(this_type&&)
+    /** @brief スマートポインタをムーブ代入する。
+        @param[in,out] io_source ムーブ元となるスマートポインタ。
+        @return *this
+     */
     public: template<typename template_hold_element>
     this_type& operator=(
         PSYQ_RV_REF(psyq::std_shared_ptr<template_hold_element>) io_source)
@@ -242,3 +249,4 @@ public PSYQ_STD_SHARED_PTR_BASE<template_element>
 }; // class psyq::std_shared_ptr
 
 #endif // PSYQ_STD_SHARED_PTR_HPP_
+// vim: set expandtab:

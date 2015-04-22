@@ -1,5 +1,5 @@
 ﻿/** @file
-    @brief @copydoc psyq::scenario_engine::driver
+    @brief @copybrief psyq::scenario_engine::driver
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_SCENARIO_ENGINE_DRIVER_HPP_

@@ -1,6 +1,6 @@
 ﻿/** @file
+    @brief @copybrief psyq::geometry::plane
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copydoc psyq::geometry::plane
     @ingroup psyq_geometry psyq::geometry
  */
 #ifndef PSYQ_GEOMETRY_PLANE_HPP_
@@ -211,3 +211,4 @@ class psyq::geometry::plane<template_coordinate>::line_collision
 }; // psyq::geometry::plane::line_collision
 
 #endif // PSYQ_GEOMETRY_PLANE_HPP_
+// vim: set expandtab:

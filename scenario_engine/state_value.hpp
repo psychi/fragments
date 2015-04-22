@@ -1,5 +1,5 @@
 ﻿/** @file
-    @copydoc psyq::scenario_engine::_private::state_value
+    @brief @copybrief psyq::scenario_engine::_private::state_value
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_VALUE_HPP_
@@ -26,8 +26,8 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 状態値。
-    @tparam template_unsigned @copydoc psyq::string::state_value::unsigned_type
-    @tparam template_float    @copydoc psyw::string::state_value::float_type
+    @tparam template_unsigned @copydoc state_value::unsigned_type
+    @tparam template_float    @copydoc state_value::float_type
  */
 template<typename template_unsigned, typename template_float>
 class psyq::scenario_engine::_private::state_value

@@ -248,9 +248,9 @@ public psyq::geometry::mosp::space<template_coordinate>
     psyq::mosp_tree のテンプレート引数に使う。
 
     @tparam template_coordinate @copydoc psyq::geometry::mosp::space::coordinate
-    @tparam template_element_0  @copydoc psyq::geometry::mosp::space_3d::element_0
-    @tparam template_element_1  @copydoc psyq::geometry::mosp::space_3d::element_1
-    @tparam template_element_2  @copydoc psyq::geometry::mosp::space_3d::element_2
+    @tparam template_element_0  @copydoc space_3d::element_index_0
+    @tparam template_element_1  @copydoc space_3d::element_index_1
+    @tparam template_element_2  @copydoc space_3d::element_index_2
     @ingroup psyq_geometry_mosp
  */
 template<
@@ -275,7 +275,7 @@ public psyq::geometry::mosp::space<template_coordinate>
         element_index_1 = template_element_1,
         /// モートン空間の座標成分#2のインデックス番号。
         element_index_2 = template_element_2,
-        /// @copydoc psyq::geometry::mosp::space_2d::dimension
+        /// @copydoc psyq::geometry::mosp::space_2d::DIMENSION
         DIMENSION = 3,
     };
 

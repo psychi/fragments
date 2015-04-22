@@ -1,6 +1,6 @@
 ﻿/** @file
+    @brief @copybrief psyq::geometry::ball
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copydoc psyq::geometry::ball
     @ingroup psyq_geometry psyq::geometry
  */
 #ifndef PSYQ_GEOMETRY_BALL_HPP_
@@ -94,3 +94,4 @@ class psyq::geometry::ball
 }; // class psyq::geometry::ball
 
 #endif // PSYQ_GEOMETRY_BALL_HPP_
+// vim: set expandtab:

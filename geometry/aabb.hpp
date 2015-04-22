@@ -1,6 +1,7 @@
 ﻿/** @file
-    @author Hillco Psychi (https://twitter.com/psychi)
     @brief @copybrief psyq::geometry::aabb
+    @author Hillco Psychi (https://twitter.com/psychi)
+    @ingroup psyq_geometry psyq::geometry
  */
 #ifndef PSYQ_GEOMETRY_AABB_HPP_
 #define PSYQ_GEOMETRY_AABB_HPP_
@@ -234,7 +235,6 @@ class psyq::geometry::aabb<template_coordinate>::line_collision
         }
     }
 
-    /// @copydoc psyq::geometry::collision::is_collide
     public: bool detect() const
     {
         return this->get_t_min() <= this->get_t_max();
@@ -493,3 +493,4 @@ namespace psyq
 } // namespace psyq
 
 #endif // !defined(PSYQ_GEOMETRY_AABB_HPP_)
+// vim: set expandtab:

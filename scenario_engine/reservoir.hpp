@@ -1,5 +1,5 @@
 ﻿/** @file
-    @copydoc psyq::scenario_engine::reservoir
+    @brief @copybrief psyq::scenario_engine::reservoir
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_SCENARIO_ENGINE_RESERVOIR_HPP_
@@ -40,7 +40,7 @@ namespace psyq
 } // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 状態貯蔵器。任意のビット長の状態値を管理する。
+/** @brief シナリオ状態貯蔵器。任意のビット長の状態値を管理する。
 
     使い方の概略。
     - 以下の関数で、状態値を登録する。

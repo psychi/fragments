@@ -1,6 +1,6 @@
 ﻿/** @file
+    @brief @copybrief psyq::geometry::ray
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copydoc psyq::geometry::ray
     @ingroup psyq_geometry psyq::geometry
  */
 #ifndef PSYQ_GEOMETRY_RAY_HPP_
@@ -318,3 +318,4 @@ class psyq::geometry::barycentric_triangle<template_coordinate>::line_collision
 }; // psyq::geometry::barycentric_triangle::line_collision
 
 #endif // PSYQ_GEOMETRY_RAY_HPP_
+// vim: set expandtab:

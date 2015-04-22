@@ -1,6 +1,6 @@
 ﻿/** @file
-    @author Hillco Psychi (https://twitter.com/psychi)
     @brief DirectX D3DX にテンプレート特殊化した幾何ベクトル演算。
+    @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_GEOMETRY_D3DX_VECTOR_HPP_
 #define PSYQ_GEOMETRY_D3DX_VECTOR_HPP_
@@ -217,3 +217,4 @@ inline D3DXVECTOR4 normalize(D3DXVECTOR4 const& in_vector)
 } // namespace psyq
 
 #endif // !defined(PSYQ_GEOMETRY_D3DX_VECTOR_HPP_)
+// vim: set expandtab:

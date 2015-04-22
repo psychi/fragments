@@ -1,5 +1,5 @@
 ﻿/** @file
-    @copydoc psyq::scenario_engine::behavior_chunk
+    @brief @copybrief psyq::scenario_engine::behavior_chunk
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_HPP_

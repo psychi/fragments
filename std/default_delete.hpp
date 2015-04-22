@@ -1,8 +1,8 @@
 ﻿/** @file
     @brief std::default_delete 互換のインスタンス破棄関数オブジェクト。
 
-    std::default_delete がある開発環境ではそれをラップし、
-    std::default_delete がない開発環境では、独自の実装を用意する。
+    - std::default_delete がある開発環境では、それをラップする。
+    - std::default_delete がない開発環境では、独自の実装を用意する。
 
     @author Hillco Psychi (https://twitter.com/psychi)
  */
@@ -76,3 +76,4 @@ struct psyq::std_default_delete: public std::default_delete<template_element>
 #endif // defined(PSYQ_STD_NO_DEFAULT_DELETE)
 
 #endif // !defined(PSYQ_STD_DEFAULT_DELETE_HPP_)
+// vim: set expandtab:

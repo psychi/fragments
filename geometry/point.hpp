@@ -1,6 +1,6 @@
 ﻿/** @file
+    @brief @copybrief psyq::geometry::point
     @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copydoc psyq::geometry::point
     @ingroup psyq_geometry psyq::geometry
  */
 #ifndef PSYQ_GEOMETRY_POINT_HPP_
@@ -18,7 +18,7 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 点。
-    @tparam template_coordinate @copydoc this_type::coordinate
+    @tparam template_coordinate @copydoc point::coordinate
     @ingroup psyq_geometry_shape
  */
 template<typename template_coordinate>
@@ -156,3 +156,4 @@ class psyq::geometry::point<template_coordinate>::point_collision
 }; // psyq::geometry::point::point_collision
 
 #endif // PSYQ_GEOMETRY_POINT_HPP_
+// vim: set expandtab:

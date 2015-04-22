@@ -1,8 +1,8 @@
 ﻿/** @file
     @brief std::move の代替。
 
-    std::move がある開発環境ではそれを流用し、
-    std::move がない開発環境では boost::move で代用する。
+    - std::move がある開発環境ではそれを流用する。
+    - std::move がない開発環境では boost::move で代用する。
 
     @author Hillco Psychi (https://twitter.com/psychi)
 */
@@ -103,3 +103,4 @@ namespace psyq
 #endif // defined(PSYQ_STD_NO_MOVE)
 
 #endif // PSYQ_STD_MOVE_HPP_
+// vim: set expandtab:

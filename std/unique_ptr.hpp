@@ -1,5 +1,5 @@
 ﻿/** @file
-    @brief @copydoc psyq::std_unique_ptr
+    @brief @copybrief psyq::std_unique_ptr
 
     - std::unique_ptr がある開発環境では std::unique_ptr を、
       psyq::std_unique_ptr でラップする。
@@ -49,12 +49,11 @@ public PSYQ_STD_UNIQUE_PTR_BASE<template_element, template_deleter>
     //-------------------------------------------------------------------------
     /// @name コンストラクタ
     //@{
-    /** @brief 空のスマートポインタを構築する。
-     */
+    /// @brief 空のスマートポインタを構築する。
     public: PSYQ_CONSTEXPR std_unique_ptr() PSYQ_NOEXCEPT {}
 
 #ifndef PSYQ_STD_NO_NULLPTR
-    /// @copydoc unique_ptr()
+    /// @brief 空のスマートポインタを構築する。
     public: PSYQ_CONSTEXPR std_unique_ptr(psyq::std_nullptr_t const)
     PSYQ_NOEXCEPT:
     base_type(PSYQ_NULLPTR)
@@ -97,7 +96,9 @@ public PSYQ_STD_UNIQUE_PTR_BASE<template_element, template_deleter>
     base_type(PSYQ_MOVE(io_source))
     {}
 
-    /// @copydoc unique_ptr(unique_ptr&&)
+    /** @brief スマートポインタをムーブ構築する。
+        @param[in,out] io_source ムーブ元となるスマートポインタ。
+     */
     public: template<
         typename template_other_element, 
         typename template_other_deleter>
@@ -124,7 +125,9 @@ public PSYQ_STD_UNIQUE_PTR_BASE<template_element, template_deleter>
         return *this;
     }
 
-    /// @copydoc operator==(unique_ptr&&)
+    /** @brief スマートポインタをムーブ代入する。
+        @param[in,out] io_source ムーブ元となるスマートポインタ。
+     */
     public: template<
         typename template_other_element, 
         typename template_other_deleter>
@@ -175,3 +178,4 @@ namespace psyq_test
 } // namespace psyq_test
 
 #endif // PSYQ_STD_UNIQUE_PTR_HPP_
+// vim: set expandtab:

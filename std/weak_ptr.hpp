@@ -1,5 +1,5 @@
 ﻿/** @file
-    @brief @copydoc psyq::std_weak_ptr
+    @brief @copybrief psyq::std_weak_ptr
 
     - std::shared_ptr がある開発環境では std::weak_ptr を、
       psyq::std_weak_ptr でラップする。
@@ -67,7 +67,9 @@ public PSYQ_STD_WEAK_PTR_BASE<template_element>
     base_type(PSYQ_MOVE(io_source))
     {}
 
-    /// @copydoc std_weak_ptr(this_type&&)
+    /** @brief スマートポインタをムーブ構築する。
+        @param[in,out] io_source ムーブ元となるスマートポインタ。
+     */
     public: template<typename template_observe_element>
     std_weak_ptr(
         PSYQ_RV_REF(psyq::std_weak_ptr<template_observe_element>) io_source)
@@ -117,7 +119,9 @@ public PSYQ_STD_WEAK_PTR_BASE<template_element>
         return *this;
     }
 
-    /// @copydoc operator=(this_type&&)
+    /** @brief スマートポインタをムーブ代入する。
+        @param[in,out] io_source ムーブ元となるスマートポインタ。
+     */
     public: template<typename template_observe_element>
     this_type& operator=(
         PSYQ_RV_REF(psyq::std_weak_ptr<template_observe_element>) io_source)
@@ -139,3 +143,4 @@ public PSYQ_STD_WEAK_PTR_BASE<template_element>
 }; // class psyq::std_weak_ptr
 
 #endif // PSYQ_STD_WEAK_PTR_HPP_
+// vim: set expandtab:

@@ -1,5 +1,5 @@
 ﻿/** @file
-    @copydoc psyq::scenario_engine::evaluator
+    @brief @copybrief psyq::scenario_engine::evaluator
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_HPP_
@@ -18,7 +18,7 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 条件評価器。条件式を評価する。
+/** @brief シナリオ条件評価器。条件式を保持して評価する。
 
     使い方の概略。
     - evaluator::register_expression で、条件式を登録する。

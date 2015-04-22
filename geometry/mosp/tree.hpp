@@ -1,9 +1,10 @@
 ﻿/** @file
-    @author Hillco Psychi (https://twitter.com/psychi)
     @brief モートン順序による空間分割木を使った衝突判定の実装。
 
     以下のウェブページを参考にして実装した。
     http://marupeke296.com/COL_2D_No8_QuadTree.html
+
+    @author Hillco Psychi (https://twitter.com/psychi)
 */
 #ifndef PSYQ_GEOMETRY_MOSP_TREE_HPP_
 #define PSYQ_GEOMETRY_MOSP_TREE_HPP_
@@ -47,8 +48,8 @@ namespace mosp
          衝突関数が呼び出される。
 
     @tparam template_argument  @copydoc psyq::geometry::mosp::node::argument
-    @tparam template_space     @copydoc psyq::geometry::mosp::tree::space
-    @tparam template_allocator @copydoc mosp_tree::allocator_type
+    @tparam template_space     @copydoc tree::space
+    @tparam template_allocator @copydoc tree::allocator_type
     @ingroup psyq_geometry_mosp
     @note
         psyq::geometry::mosp::tree::node_map
@@ -156,11 +157,11 @@ class psyq::geometry::mosp::tree
     }
 
     /** @brief 取りつけられてる this_type::node をすべて取り外し、
-               空間分割木を破棄する。
+               空間分割木を解体する。
      */
     public: ~tree()
     {
-        // 衝突判定中は、破棄できない。
+        // 衝突判定中は、解体できない。
         PSYQ_ASSERT(!this->detect_collision_);
 
         // 分割空間ノードをすべて切り離す。
@@ -196,7 +197,9 @@ class psyq::geometry::mosp::tree
     //-------------------------------------------------------------------------
     /// @name 衝突判定
     //@{
-    /** @brief 空間分割木の衝突判定を開始する。
+    /** @brief 空間分割木の衝突判定を開始し、
+               this_type::detect_collision を使える状態にする。
+
         @retval true  成功。あとで this_type::end_detection を呼び出すこと。
         @retval false 失敗。すでに this_type::begin_detection が呼び出されていた。
      */
@@ -225,7 +228,8 @@ class psyq::geometry::mosp::tree
         return true;
     }
 
-    /** @brief 空間分割木の衝突判定を終了する。
+    /** @brief 空間分割木の衝突判定を終了し、
+               this_type::detect_collision を使えない状態にする。
 
         this_type::begin_detection と対になるように呼び出すこと。
      */
@@ -491,17 +495,6 @@ class psyq::geometry::mosp::tree
     }
 
     //-------------------------------------------------------------------------
-    /// @name 空間分割木のプロパティ
-    //@{
-    /** @brief 空間分割木の分割空間辞書を取得する。
-        @return 空間分割木の分割空間辞書。
-     */
-    public: typename this_type::node_map const& get_node_map() const
-    {
-        return this->node_map_;
-    }
-    //@}
-    //-------------------------------------------------------------------------
     /// @copydoc space
     private: typename this_type::space space_;
     /// @copydoc node_map
@@ -514,3 +507,4 @@ class psyq::geometry::mosp::tree
 }; // class psyq::geometry::mosp::tree
 
 #endif // !defined(PSYQ_GEOMETRY_MOSP_TREE_HPP_)
+// vim: set expandtab:

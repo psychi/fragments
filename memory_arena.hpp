@@ -26,7 +26,7 @@ template<typename template_value, typename template_arena>
 class psyq::memory_arena::allocator: public std::allocator<template_value>
 {
     template<typename, typename> friend class psyq::memory_arena::allocator;
-    /// @breif thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef allocator this_type;
     /// @brief this_type の基底型。
     public: typedef std::allocator<template_value> base_type;

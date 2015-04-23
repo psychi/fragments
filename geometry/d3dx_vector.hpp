@@ -28,7 +28,7 @@ template<> class traits<D3DXVECTOR2>
     public: enum: unsigned
     {
         /// 幾何ベクトルが持つ成分の数。
-        size = 2,
+        SIZE = 2,
     };
 };
 
@@ -40,7 +40,7 @@ inline psyq::geometry::vector::traits<D3DXVECTOR2>::element& at(
     D3DXVECTOR2& io_vector,
     unsigned const in_index)
 {
-    PSYQ_ASSERT(in_index < 2);
+    PSYQ_ASSERT(in_index < psyq::geometry::vector::traits<D3DXVECTOR2>::SIZE);
     return *(((FLOAT*)io_vector) + in_index);
 }
 //@}
@@ -87,7 +87,7 @@ template<> class traits<D3DXVECTOR3>
     public: enum: unsigned
     {
         /// 幾何ベクトルが持つ成分の数。
-        size = 3,
+        SIZE = 3,
     };
 };
 
@@ -99,7 +99,7 @@ inline psyq::geometry::vector::traits<D3DXVECTOR3>::element& at(
     D3DXVECTOR3& io_vector,
     unsigned const in_index)
 {
-    PSYQ_ASSERT(in_index < 3);
+    PSYQ_ASSERT(in_index < psyq::geometry::vector::traits<D3DXVECTOR3>::SIZE);
     return *(((FLOAT*)io_vector) + in_index);
 }
 //@}
@@ -156,7 +156,7 @@ template<> class traits<D3DXVECTOR4>
     public: enum: unsigned
     {
         /// 幾何ベクトルが持つ成分の数。
-        size = 4,
+        SIZE = 4,
     };
 };
 
@@ -168,7 +168,7 @@ inline psyq::geometry::vector::traits<D3DXVECTOR4>::element& at(
     D3DXVECTOR4& io_vector,
     unsigned const in_index)
 {
-    PSYQ_ASSERT(in_index < 4);
+    PSYQ_ASSERT(in_index < psyq::geometry::vector::traits<D3DXVECTOR4>::SIZE);
     return *(((FLOAT*)io_vector) + in_index);
 }
 //@}

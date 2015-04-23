@@ -8,6 +8,8 @@
 #ifndef PSYQ_GEOMETRY_VECTOR_HPP_
 #define PSYQ_GEOMETRY_VECTOR_HPP_
 
+#include <functional>
+
 #ifndef PSYQ_GEOMETRY_NEARLY_SCALAR_EPSILON_MAG_DEFAULT
 #define PSYQ_GEOMETRY_NEARLY_SCALAR_EPSILON_MAG_DEFAULT 3
 #endif // !defined(PSYQ_GEOMETRY_NEARLY_SCALAR_EPSILON_MAG_DEFAULT)
@@ -96,7 +98,7 @@ namespace vector
       template_vector型が定義されている。
     - psyq::geometry::vector::traits::element に、
       template_vectorが持つ成分の型が定義されている。
-    - psyq::geometry::vector::traits::size に、
+    - psyq::geometry::vector::traits::SIZE に、
       template_vectorが持つ成分の数がunsigned型で定義されている。
 
     @code
@@ -108,7 +110,7 @@ namespace vector
         /// 幾何ベクトルが持つ成分の型。
         public: typedef FLOAT element; 
         /// 幾何ベクトルが持つ成分の数。
-        public: enum: unsigned { size = 3 };
+        public: enum: unsigned { SIZE = 3 };
     };
     @endcode
 
@@ -144,12 +146,12 @@ typename psyq::geometry::vector::traits<template_vector>::element& at(
         std::is_standard_layout<typename vector_traits::type>::value,
         "'template_vector' is not standard layout type.");
     static_assert(
-        vector_traits::size * sizeof(typename vector_traits::element) <=
+        vector_traits::SIZE * sizeof(typename vector_traits::element) <=
             sizeof(typename vector_traits::type),
         "");
     auto const local_elements(
         reinterpret_cast<typename vector_traits::element*>(&io_vector));
-    PSYQ_ASSERT(in_index < vector_traits::size);
+    PSYQ_ASSERT(in_index < vector_traits::SIZE);
     return *(local_elements + in_index);
 }
 
@@ -187,7 +189,7 @@ typename psyq::geometry::vector::traits<template_vector>::element dot(
     auto local_dot(
         psyq::geometry::vector::const_at(in_left, 0) *
         psyq::geometry::vector::const_at(in_right, 0));
-    for (unsigned i(1); i < vector_traits::size; ++i)
+    for (unsigned i(1); i < vector_traits::SIZE; ++i)
     {
         local_dot +=
             psyq::geometry::vector::const_at(in_left, i) *
@@ -209,7 +211,7 @@ typename psyq::geometry::vector::traits<template_vector>::element cross_2d(
 {
     typedef psyq::geometry::vector::traits<template_vector> vector_traits;
     static_assert(
-        2 <= vector_traits::size, "'vector_traits::size' is less than 2.");
+        2 <= vector_traits::SIZE, "'vector_traits::SIZE' is less than 2.");
     auto const local_lx(psyq::geometry::vector::const_at(in_left, 0));
     auto const local_ly(psyq::geometry::vector::const_at(in_left, 1));
     auto const local_rx(psyq::geometry::vector::const_at(in_right, 0));
@@ -230,7 +232,7 @@ template_vector cross_3d(
 {
     typedef psyq::geometry::vector::traits<template_vector> vector_traits;
     static_assert(
-        3 <= vector_traits::size, "'vector_traits::size' is less than 3.");
+        3 <= vector_traits::SIZE, "'vector_traits::SIZE' is less than 3.");
     auto const local_lx(psyq::geometry::vector::const_at(in_left, 0));
     auto const local_ly(psyq::geometry::vector::const_at(in_left, 1));
     auto const local_lz(psyq::geometry::vector::const_at(in_left, 2));
@@ -238,7 +240,7 @@ template_vector cross_3d(
     auto const local_ry(psyq::geometry::vector::const_at(in_right, 1));
     auto const local_rz(psyq::geometry::vector::const_at(in_right, 2));
     return psyq::geometry::_private::vector_maker
-        <template_vector, vector_traits::size>
+        <template_vector, vector_traits::SIZE>
             ::make(
                 local_ly * local_rz - local_lz * local_ry,
                 local_lz * local_rx - local_lx * local_rz,
@@ -265,7 +267,7 @@ template_vector cross_4d(
      */
     typedef psyq::geometry::vector::traits<template_vector> vector_traits;
     static_assert(
-        4 <= vector_traits::size, "'vector_traits::size' is less than 4.");
+        4 <= vector_traits::SIZE, "'vector_traits::SIZE' is less than 4.");
     auto const local_mx(psyq::geometry::vector::const_at(in_middle, 0));
     auto const local_my(psyq::geometry::vector::const_at(in_middle, 1));
     auto const local_mz(psyq::geometry::vector::const_at(in_middle, 2));
@@ -287,7 +289,7 @@ template_vector cross_4d(
     auto const local_lz(psyq::geometry::vector::const_at(in_left, 2));
     auto const local_lw(psyq::geometry::vector::const_at(in_left, 2));
     return psyq::geometry::_private::vector_maker
-        <template_vector, vector_traits::size>
+        <template_vector, vector_traits::SIZE>
             ::make(
                 local_f * local_ly - local_e * local_lz + local_d * local_lw,
                 local_f * local_lx + local_c * local_lz - local_b * local_lw,
@@ -369,9 +371,9 @@ unsigned compare_all(
     unsigned const in_mask = 0)
 {
     typedef psyq::geometry::vector::traits<template_vector> vector_traits;
-    static_assert(vector_traits::size <= sizeof(unsigned) * 8, "");
+    static_assert(vector_traits::SIZE <= sizeof(unsigned) * 8, "");
     unsigned local_result_bits(0);
-    for (unsigned i(0); i < vector_traits::size; ++i)
+    for (unsigned i(0); i < vector_traits::SIZE; ++i)
     {
         bool const local_compare(
             ((in_mask >> i) & 1) != 0

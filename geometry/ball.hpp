@@ -1,7 +1,7 @@
 ﻿/** @file
     @brief @copybrief psyq::geometry::ball
     @author Hillco Psychi (https://twitter.com/psychi)
-    @ingroup psyq_geometry psyq::geometry
+    @ingroup psyq_geometry_shape
  */
 #ifndef PSYQ_GEOMETRY_BALL_HPP_
 #define PSYQ_GEOMETRY_BALL_HPP_
@@ -20,19 +20,19 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 球。
-    @tparam template_coordinate @copydoc this_type::coordinate
+    @tparam template_coordinate @copydoc ball::coordinate
     @ingroup psyq_geometry_shape
  */
 template<typename template_coordinate>
 class psyq::geometry::ball
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef ball this_type;
 
-    /// @copydoc psyq::geometry::point::coordinate
+    /// @brief @copydoc psyq::geometry::point::coordinate
     public: typedef template_coordinate coordinate;
 
-    /// @copydoc psyq::geometry::point
+    /// @brief @copydoc psyq::geometry::point
     public: typedef psyq::geometry::point<template_coordinate> point;
 
     //-------------------------------------------------------------------------
@@ -86,9 +86,9 @@ class psyq::geometry::ball
     }
 
     //-------------------------------------------------------------------------
-    /// 球の中心点。
+    /// @brief 球の中心点。
     public: typename this_type::point center_;
-    /// 球の半径。
+    /// @brief 球の半径。
     private: typename this_type::coordinate::element radius_;
 
 }; // class psyq::geometry::ball

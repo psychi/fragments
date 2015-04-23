@@ -2,15 +2,14 @@
     @brief @copybrief psyq::geometry::coordinate
     @author Hillco Psychi (https://twitter.com/psychi)
     @defgroup psyq_geometry_coordinate 座標系の型特性
-    @ingroup psyq_geometry psyq::geometry
+    @ingroup psyq_geometry
  */
 #ifndef PSYQ_GEOMETRY_COORDINATE_HPP_
 #define PSYQ_GEOMETRY_COORDINATE_HPP_
 
 #include <type_traits>
-//#include "psyq/geometry/vector.hpp"
-//#include "psyq/geometry/shape.hpp"
-//#include "psyq/geometry/aabb.hpp"
+//#include "./vector.hpp"
+//#include "./aabb.hpp"
 
 /// @cond
 namespace psyq
@@ -27,14 +26,14 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 座標系の型特性の基底型。
 
-    @tparam template_vector    @copydoc psyq::geometry::coordinate::vector
-    @tparam template_dimension @copydoc psyq::geometry::coordinate::dimension
+    @tparam template_vector    @copydoc coordinate::vector
+    @tparam template_dimension @copydoc coordinate::DIMENSION
     @ingroup psyq_geometry_coordinate
  */
 template<typename template_vector, unsigned template_dimension>
 class psyq::geometry::coordinate
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef coordinate this_type;
 
     /** @brief 座標を表す幾何ベクトルの型特性。
@@ -49,7 +48,7 @@ class psyq::geometry::coordinate
 
         - 以下の条件を満たしていること。
           - コピー構築子とコピー代入演算子が使える。
-          - this_type::vector_traits::size 個の this_type::element
+          - this_type::vector_traits::SIZE 個の this_type::element
             型の引数を渡す構築子が使える。
           - 以下に相当する二項演算子が使える。
             @code
@@ -61,7 +60,7 @@ class psyq::geometry::coordinate
             vector operator/(vector, element);
             @endcode
         - 座標を表す幾何ベクトルでは、幾何ベクトルの成分のうち、
-          最初の psyq::geometry::coordinate::dimension 個のみを使用する。
+          最初の psyq::geometry::coordinate::DIMENSION 個のみを使用する。
           それら以外の成分を変更すると、有効な座標として機能しなくなる。
         - 有効な座標を表す幾何ベクトルは、以下の関数で構築できる。
           - psyq::geometry::coordinate::make
@@ -77,21 +76,21 @@ class psyq::geometry::coordinate
      */
     public: typedef typename this_type::vector_traits::type vector;
 
-    /// 座標を表す成分の型。
+    /// @brief 座標を表す成分の型。
     public: typedef typename this_type::vector_traits::element element;
 
     public: enum: unsigned
     {
-        /// 座標を表す成分の数。
-        dimension = template_dimension,
+        /// @brief 座標を表す成分の数。
+        DIMENSION = template_dimension,
     };
     static_assert(
-        template_dimension <= this_type::vector_traits::size,
-        "'template_dimension' is greater than 'vector_traits::size'");
+        template_dimension <= this_type::vector_traits::SIZE,
+        "'template_dimension' is greater than 'vector_traits::SIZE'");
 
-    /// 座標を表す成分の配列の型。
-    public: typedef std::array<
-        typename this_type::element, this_type::dimension>
+    /// @brief 座標を表す成分の配列の型。
+    public: typedef
+        std::array<typename this_type::element, this_type::DIMENSION>
             element_array;
 
     //-------------------------------------------------------------------------
@@ -105,8 +104,8 @@ class psyq::geometry::coordinate
     {
         auto local_vector(in_vector);
         for (
-            unsigned i(this_type::dimension);
-            i < this_type::vector_traits::size;
+            unsigned i(this_type::DIMENSION);
+            i < this_type::vector_traits::SIZE;
             ++i)
         {
             psyq::geometry::vector::at(local_vector, i) = 0;
@@ -127,17 +126,17 @@ class psyq::geometry::coordinate
     public: static bool validate(
         typename this_type::vector const& in_vector)
     {
-        return (this_type::vector_traits::size <= 0
-                || 0 < this_type::dimension
+        return (this_type::vector_traits::SIZE <= 0
+                || 0 < this_type::DIMENSION
                 || psyq::geometry::vector::const_at(in_vector, 0) == 0)
-            && (this_type::vector_traits::size <= 1
-                || 1 < this_type::dimension
+            && (this_type::vector_traits::SIZE <= 1
+                || 1 < this_type::DIMENSION
                 || psyq::geometry::vector::const_at(in_vector, 1) == 0)
-            && (this_type::vector_traits::size <= 2
-                || 2 < this_type::dimension
+            && (this_type::vector_traits::SIZE <= 2
+                || 2 < this_type::DIMENSION
                 || psyq::geometry::vector::const_at(in_vector, 2) == 0)
-            && (this_type::vector_traits::size <= 3
-                || 3 < this_type::dimension
+            && (this_type::vector_traits::SIZE <= 3
+                || 3 < this_type::DIMENSION
                 || psyq::geometry::vector::const_at(in_vector, 3) == 0);
     }
 
@@ -152,13 +151,13 @@ template<typename template_vector>
 class psyq::geometry::coordinate_2d:
 public psyq::geometry::coordinate<template_vector, 2>
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef coordinate_2d this_type;
 
-    /// this_type の基底型。
+    /// @brief this_type の基底型。
     public: typedef psyq::geometry::coordinate<template_vector, 2> base_type;
 
-    /// 最小座標と最大座標を要素とするAABB。
+    /// @brief 最小座標と最大座標を要素とするAABB。
     public: typedef psyq::geometry::aabb<this_type> aabb;
 
     //-------------------------------------------------------------------------
@@ -173,7 +172,7 @@ public psyq::geometry::coordinate<template_vector, 2>
         typename base_type::element const in_element_1)
     {
         return psyq::geometry::_private::vector_maker
-            <typename base_type::vector, base_type::vector_traits::size>
+            <typename base_type::vector, base_type::vector_traits::SIZE>
                 ::make(in_element_0, in_element_1);
     }
 
@@ -219,13 +218,13 @@ template<typename template_vector>
 class psyq::geometry::coordinate_3d:
 public psyq::geometry::coordinate<template_vector, 3>
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef coordinate_3d this_type;
 
-    /// this_type の基底型。
+    /// @brief this_type の基底型。
     public: typedef psyq::geometry::coordinate<template_vector, 3> base_type;
 
-    /// 最小座標と最大座標を要素とするAABB。
+    /// @brief 最小座標と最大座標を要素とするAABB。
     public: typedef psyq::geometry::aabb<this_type> aabb;
 
     //-------------------------------------------------------------------------
@@ -242,11 +241,11 @@ public psyq::geometry::coordinate<template_vector, 3>
         typename base_type::element const in_element_2)
     {
         return psyq::geometry::_private::vector_maker
-            <typename base_type::vector, base_type::vector_traits::size>
+            <typename base_type::vector, base_type::vector_traits::SIZE>
                 ::make(in_element_0, in_element_1, in_element_2);
     }
 
-    /// @copydoc psyq::geometry::coordinate::make
+    /// @copydoc base_type::make
     public: static typename base_type::vector make(
         typename base_type::vector const& in_vector)
     {
@@ -270,56 +269,6 @@ public psyq::geometry::coordinate<template_vector, 3>
     }
 
 }; // class psyq::geometry::coordinate_3d
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @cond
-namespace psyq_test
-{
-   template<typename template_coordinate>
-   void geometry_coordinate()
-   {
-       typedef psyq::geometry::ball<template_coordinate> ball_type;
-       auto const local_ball(
-           ball_type::make(template_coordinate::make_filled(2), 10));
-       auto const local_ball_aabb(
-           psyq::geometry::make_aabb(local_ball));
-
-       auto local_point(
-           ball_type::point::make(template_coordinate::make_filled(2)));
-       local_point = ball_type::point::make(template_coordinate::make_filled(3));
-
-       typedef psyq::geometry::line<template_coordinate> line_type;
-       line_type const local_line(
-           local_ball.center_,
-           line_type::direction::make(
-               template_coordinate::make_filled(local_ball.get_radius())));
-       auto const local_line_aabb(
-           psyq::geometry::make_aabb(local_line));
-
-       typedef psyq::geometry::ray<template_coordinate> ray_type;
-       ray_type const local_ray(local_line);
-       auto const local_ray_aabb(
-           psyq::geometry::make_aabb(local_ray));
-
-       typedef psyq::geometry::box<template_coordinate> box_type;
-       auto const local_box(
-           box_type::make_cuboid(
-               local_line.origin_.get_position(),
-               local_line.direction_.get_unit(),
-               60 * 3.1415926535f / 180,
-               template_coordinate::make_filled(1)));
-       auto const local_box_aabb(
-           psyq::geometry::make_aabb(local_box));
-
-       typedef psyq::geometry::barycentric_triangle<template_coordinate> triangle_type;
-       auto const local_triangle(
-           triangle_type::make(
-               template_coordinate::make(0, 0, 0),
-               template_coordinate::make(1, 0, 0),
-               template_coordinate::make(0, 1, 0)));
-   }
-}
-/// @endcond
 
 #endif // !defined(PSYQ_GEOMETRY_COORDINATE_HPP_)
 // vim: set expandtab:

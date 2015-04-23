@@ -1,10 +1,12 @@
 ﻿/** @file
     @brief @copybrief psyq::geometry::plane
     @author Hillco Psychi (https://twitter.com/psychi)
-    @ingroup psyq_geometry psyq::geometry
+    @ingroup psyq_geometry_shape
  */
 #ifndef PSYQ_GEOMETRY_PLANE_HPP_
 #define PSYQ_GEOMETRY_PLANE_HPP_
+
+//#include "./ray.hpp"
 
 /// @cond
 namespace psyq
@@ -18,23 +20,21 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 平面。
-    @tparam template_coordinate @copydoc this_type::coordinate
+    @tparam template_coordinate @copydoc plane::coordinate
     @ingroup psyq_geometry_shape
  */
 template<typename template_coordinate>
 class psyq::geometry::plane: public psyq::geometry::ray<template_coordinate>
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef plane this_type;
 
-    /// this_type の基底型。
+    /// @brief this_type の基底型。
     public: typedef psyq::geometry::ray<template_coordinate> base_type;
 
-    /// @cond
     public: class point_collision;
     public: class line_collision;
     public: class plane_collision;
-    /// @endcond
 
     //-------------------------------------------------------------------------
     /** @brief 平面を構築する。
@@ -59,15 +59,15 @@ class psyq::geometry::plane: public psyq::geometry::ray<template_coordinate>
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 平面と点の衝突判定。
-    @tparam template_coordinate @copydoc psyq::geometry::plane::coordinate
+    @tparam template_coordinate @copydoc point_collision::coordinate
  */
 template<typename template_coordinate>
 class psyq::geometry::plane<template_coordinate>::point_collision
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef point_collision this_type;
 
-    /// @copydoc psyq::geometry::point::coordinate
+    /// @brief @copydoc psyq::geometry::point::coordinate
     public: typedef template_coordinate coordinate;
 
     //-------------------------------------------------------------------------
@@ -100,24 +100,24 @@ class psyq::geometry::plane<template_coordinate>::point_collision
     {}
 
     //-------------------------------------------------------------------------
-    /// 平面の原点から点までのベクトル。
+    /// @brief 平面の原点から点までのベクトル。
     private: typename this_type::coordinate::vector difference_;
-    /// 平面から点までの相対位置。
+    /// @brief 平面から点までの相対位置。
     private: typename this_type::coordinate::element distance_;
 
 }; // psyq::geometry::plane::point_collision
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 平面と直線の衝突判定。
-    @tparam template_coordinate @copydoc psyq::geometry::plane::coordinate
+    @tparam template_coordinate @copydoc line_collision::coordinate
  */
 template<typename template_coordinate>
 class psyq::geometry::plane<template_coordinate>::line_collision
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef line_collision this_type;
 
-    /// @copydoc psyq::geometry::point::coordinate
+    /// @brief @copydoc psyq::geometry::point::coordinate
     public: typedef template_coordinate coordinate;
 
     //-------------------------------------------------------------------------
@@ -148,7 +148,7 @@ class psyq::geometry::plane<template_coordinate>::line_collision
                     in_line.origin_.get_position() + in_line.direction_.get_unit()));
             return this_type(
                 local_direction_dot,
-                local_begin_dot / (local_begin_dot + local_end_dot))
+                local_begin_dot / (local_begin_dot + local_end_dot));
         }
         else
         {
@@ -204,8 +204,9 @@ class psyq::geometry::plane<template_coordinate>::line_collision
     {}
 
     //-------------------------------------------------------------------------
-    /// 平面の法線と直線の方向の内積。
+    /// @brief 平面の法線と直線の方向の内積。
     private: typename this_type::coordinate::element direction_dot_;
+    /// @brief 平面と直線の交点の、直線上の位置。
     private: typename this_type::coordinate::element distance_;
 
 }; // psyq::geometry::plane::line_collision

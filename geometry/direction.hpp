@@ -2,7 +2,7 @@
     @author Hillco Psychi (https://twitter.com/psychi)
     @brief @copybrief psyq::geometry::direction
     @defgroup psyq_geometry_shape 幾何形状オブジェクト
-    @ingroup psyq_geometry psyq::geometry
+    @ingroup psyq_geometry
  */
 #ifndef PSYQ_GEOMETRY_DIRECTION_HPP_
 #define PSYQ_GEOMETRY_DIRECTION_HPP_
@@ -51,7 +51,7 @@ class psyq::geometry::direction
     /** @brief 方向を構築する。
         @param[in] in_direction
             方向ベクトル。正規化されてなくともよい。
-            ただし0ベクトルの場合は、任意の単位ベクトルに変換する。
+            ただし0ベクトルの場合は、任意の単位ベクトルとなる。
         @return 方向。
      */
    public: static this_type make(
@@ -72,7 +72,8 @@ class psyq::geometry::direction
     }
 
     /** @brief 方向の単位ベクトルを設定する。
-        @param[in] in_direction 新たに設定する方向ベクトル。
+        @param[in] in_direction
+            新たに設定する方向ベクトル。正規化されてなくともよい。
      */
     public: void set_unit(
         typename this_type::coordinate::vector const& in_direction)

@@ -1,10 +1,12 @@
 ﻿/** @file
     @brief @copybrief psyq::geometry::point
     @author Hillco Psychi (https://twitter.com/psychi)
-    @ingroup psyq_geometry psyq::geometry
+    @ingroup psyq_geometry_shape
  */
 #ifndef PSYQ_GEOMETRY_POINT_HPP_
 #define PSYQ_GEOMETRY_POINT_HPP_
+
+//#include "./aabb.hpp"
 
 /// @cond
 namespace psyq
@@ -24,15 +26,14 @@ namespace psyq
 template<typename template_coordinate>
 class psyq::geometry::point
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef point this_type;
 
-    /// @copydoc psyq::geometry::direction::coordinate
+    /// @brief @copydoc psyq::geometry::direction::coordinate
     public: typedef template_coordinate coordinate;
 
-    /// @cond
+    public: class aabb_collision;
     public: class point_collision;
-    /// @endcond
 
     //-------------------------------------------------------------------------
     /** @brief 点を構築する。
@@ -75,22 +76,61 @@ class psyq::geometry::point
     }
 
     //-------------------------------------------------------------------------
-    /// 点の位置ベクトル。
+    /// @brief 点の位置ベクトル。
     private: typename this_type::coordinate::vector position_;
 
 }; // class psyq::geometry::point
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 点とAABBの衝突判定。
+    @tparam template_coordinate @copydoc aabb_collision::coordinate
+ */
+template<typename template_coordinate>
+class psyq::geometry::point<template_coordinate>::aabb_collision
+{
+    /// @brief thisが指す値の型。
+    private: typedef aabb_collision this_type;
+
+    /// @brief @copydoc psyq::geometry::point::coordinate
+    public: typedef template_coordinate coordinate;
+
+    //-------------------------------------------------------------------------
+    /** @brief AABBと点が衝突しているか判定する。
+        @retval true  衝突している。
+        @retval false 衝突してない。
+        @param[in] in_point 衝突判定の右辺となる点。
+        @param[in] in_aabb  衝突判定の左辺となるAABB。
+     */
+    public: static bool detect(
+        typename this_type::coordinate::vector const& in_point,
+        psyq::geometry::aabb<template_coordinate> const& in_aabb)
+    {
+        PSYQ_ASSERT(this_type::coordinate::validate(in_point));
+        return psyq::geometry::vector::less_than_equal(in_aabb.get_min(), in_point)
+            && psyq::geometry::vector::less_than_equal(in_point, in_aabb.get_max());
+    }
+
+    /// @copydoc detect
+    public: static bool detect(
+        psyq::geometry::point<template_coordinate> const& in_point,
+        psyq::geometry::aabb<template_coordinate> const& in_aabb)
+    {
+        return this_type::detect(in_point.get_position(), in_aabb);
+    }
+
+}; // class psyq::geometry::point::aabb_collision
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 点と点の衝突判定。
-    @tparam template_coordinate @copydoc psyq::geometry::point::coordinate
+    @tparam template_coordinate @copydoc point_collision::coordinate
  */
 template<typename template_coordinate>
 class psyq::geometry::point<template_coordinate>::point_collision
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef point_collision this_type;
 
-    /// @copydoc psyq::geometry::point::coordinate
+    /// @brief @copydoc psyq::geometry::point::coordinate
     public: typedef template_coordinate coordinate;
 
     //-------------------------------------------------------------------------
@@ -147,10 +187,10 @@ class psyq::geometry::point<template_coordinate>::point_collision
     {}
 
     //-------------------------------------------------------------------------
-    /// 点と点の差分。
+    /// @brief 点と点の差分。
     private: typename this_type::coordinate::vector difference_;
 
-    /// 点と点の距離の自乗。
+    /// @brief 点と点の距離の自乗。
     private: typename this_type::coordinate::element square_distance_;
 
 }; // psyq::geometry::point::point_collision

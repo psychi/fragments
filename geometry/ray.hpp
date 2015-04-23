@@ -1,12 +1,12 @@
 ﻿/** @file
     @brief @copybrief psyq::geometry::ray
     @author Hillco Psychi (https://twitter.com/psychi)
-    @ingroup psyq_geometry psyq::geometry
+    @ingroup psyq_geometry_shape
  */
 #ifndef PSYQ_GEOMETRY_RAY_HPP_
 #define PSYQ_GEOMETRY_RAY_HPP_
 
-//#include "psyq/geometry/line.hpp"
+//#include "./line.hpp"
 
 /// @cond
 namespace psyq
@@ -21,16 +21,16 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 半直線。
-    @tparam template_coordinate @copydoc this_type::coordinate
+    @tparam template_coordinate @copydoc ray::coordinate
     @ingroup psyq_geometry_shape
  */
 template<typename template_coordinate>
 class psyq::geometry::ray: public psyq::geometry::line<template_coordinate>
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef ray this_type;
 
-    /// this_type の基底型。
+    /// @brief this_type の基底型。
     public: typedef psyq::geometry::line<template_coordinate> base_type;
 
     //-------------------------------------------------------------------------
@@ -58,21 +58,19 @@ class psyq::geometry::ray: public psyq::geometry::line<template_coordinate>
     以下の web page を参考にした。
     http://d.hatena.ne.jp/ototoi/20050320/p1
 
-    @tparam template_coordinate @copydoc this_type::coordinate
+    @tparam template_coordinate @copydoc barycentric_triangle::coordinate
     @ingroup psyq_geometry_shape
  */
 template<typename template_coordinate>
 class psyq::geometry::barycentric_triangle
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef barycentric_triangle this_type;
 
-    /// @copydoc psyq::geometry::plane::coordinate
+    /// @brief @copydoc psyq::geometry::plane::coordinate
     public: typedef template_coordinate coordinate;
 
-    /// @cond
     public: class line_collision;
-    /// @endcond
 
     //-------------------------------------------------------------------------
     /** @brief 初期化。
@@ -160,28 +158,28 @@ class psyq::geometry::barycentric_triangle
     {}
 
     //-------------------------------------------------------------------------
-    /// 三角形の原点
+    /// @brief 三角形の原点
     private: typename this_type::coordinate::vector origin_;
-    /// 三角形の法線
+    /// @brief 三角形の法線
     private: typename this_type::coordinate::vector normal_;
-    /// 三角形の重心座標U
+    /// @brief 三角形の重心座標U
     private: typename this_type::coordinate::vector binormal_u_;
-    /// 三角形の重心座標V
+    /// @brief 三角形の重心座標V
     private: typename this_type::coordinate::vector binormal_v_;
 
 }; // class psyq::geometry::ray::barycentric_triangle
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 三角形と直線の衝突判定。
-    @tparam template_coordinate @copydoc psyq::geometry::plane::coordinate
+    @tparam template_coordinate @copydoc line_collision::coordinate
  */
 template<typename template_coordinate>
 class psyq::geometry::barycentric_triangle<template_coordinate>::line_collision
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef line_collision this_type;
 
-    /// @copydoc psyq::geometry::point::coordinate
+    /// @brief @copydoc psyq::geometry::point::coordinate
     public: typedef template_coordinate coordinate;
 
     //-------------------------------------------------------------------------
@@ -306,13 +304,13 @@ class psyq::geometry::barycentric_triangle<template_coordinate>::line_collision
 
     //-------------------------------------------------------------------------
     private: typename this_type::coordinate::vector cross_position_;
-    /// 直線の原点から交点までの、直線上の位置。
+    /// @brief 直線の原点から交点までの、直線上の位置。
     private: typename this_type::coordinate::element line_position_;
-    /// 三角形の重心座標Uでの、交点の位置。
+    /// @brief 三角形の重心座標Uでの、交点の位置。
     private: typename this_type::coordinate::element u_position_;
-    /// 三角形の重心座標Vでの、交点の位置。
+    /// @brief 三角形の重心座標Vでの、交点の位置。
     private: typename this_type::coordinate::element v_position_;
-    /// 三角形の法線と直線の方向の内積。
+    /// @brief 三角形の法線と直線の方向の内積。
     private: typename this_type::coordinate::element direction_dot_;
 
 }; // psyq::geometry::barycentric_triangle::line_collision

@@ -1,13 +1,13 @@
 ﻿/** @file
     @brief @copybrief psyq::geometry::line
     @author Hillco Psychi (https://twitter.com/psychi)
-    @ingroup psyq_geometry psyq::geometry
+    @ingroup psyq_geometry_shape
  */
 #ifndef PSYQ_GEOMETRY_LINE_HPP_
 #define PSYQ_GEOMETRY_LINE_HPP_
 
-//#include "psyq/geometry/direction.hpp"
-//#include "psyq/geometry/point.hpp"
+//#include "./direction.hpp"
+//#include "./point.hpp"
 
 /// @cond
 namespace psyq
@@ -21,28 +21,27 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 直線。
-    @tparam template_coordinate @copydoc this_type::coordinate
+    @tparam template_coordinate @copydoc line::coordinate
     @ingroup psyq_geometry_shape
  */
 template<typename template_coordinate>
 class psyq::geometry::line
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef line this_type;
 
-    /// @copydoc psyq::geometry::direction::coordinate
+    /// @brief @copydoc psyq::geometry::direction::coordinate
     public: typedef template_coordinate coordinate;
 
-    /// 直線上の点。
+    /// @brief 直線上の点。
     public: typedef psyq::geometry::point<template_coordinate> point;
 
-    /// 直線の方向。
+    /// @brief 直線の方向。
     public: typedef psyq::geometry::direction<template_coordinate> direction;
 
-    /// @cond
+    public: class aabb_collision;
     public: class point_collision;
     public: class line_collision;
-    /// @endcond
 
     //-------------------------------------------------------------------------
     /** @brief 直線を構築する。
@@ -79,16 +78,194 @@ class psyq::geometry::line
 }; // namespace psyq::geometry::line
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 直線とAABBの衝突判定。
+    @tparam template_coordinate @copydoc aabb_collision::coordinate
+ */
+template<typename template_coordinate>
+class psyq::geometry::line<template_coordinate>::aabb_collision
+{
+    /// @brief thisが指す値の型。
+    private: typedef aabb_collision this_type;
+
+    /// @brief @copydoc psyq::geometry::line::coordinate
+    public: typedef template_coordinate coordinate;
+
+    //-------------------------------------------------------------------------
+    /** @brief 直線とAABBが衝突しているか判定する。
+
+        以下のウェブページを参考にして実装した。
+        http://marupeke296.com/COL_3D_No18_LineAndAABB.html
+
+        @param[in] in_line        衝突判定を行う直線。
+        @param[in] in_aabb        衝突判定を行うAABB。
+        @param[in] in_epsilon_mag 誤差の範囲に使うエプシロン値の倍率。
+     */
+    public: aabb_collision(
+        psyq::geometry::line<template_coordinate> const& in_line,
+        psyq::geometry::aabb<template_coordinate> const& in_aabb,
+        unsigned const in_epsilon_mag =
+            PSYQ_GEOMETRY_NEARLY_SCALAR_EPSILON_MAG_DEFAULT)
+    :
+    t_min_(-(std::numeric_limits<typename this_type::coordinate::element>::max)()),
+    t_max_( (std::numeric_limits<typename this_type::coordinate::element>::max)()),
+    face_min_(0),
+    face_max_(0)
+    {
+        typename this_type::coordinate::element_array local_odd_elements;
+        auto const local_epsilon(
+            std::numeric_limits<typename this_type::coordinate::element>::epsilon()
+            * in_epsilon_mag);
+        for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
+        {
+            auto const local_element(
+                psyq::geometry::vector::const_at(in_line.direction_.get_unit(), i));
+            local_odd_elements[i] = local_epsilon < std::abs(local_element)?
+                1 / local_element: 0;
+        }
+        auto const local_odd(this_type::coordinate::make(local_odd_elements));
+        auto const local_diff_max(
+            (in_aabb.get_max() - in_line.origin_.get_position()) * local_odd);
+        auto const local_diff_min(
+            (in_aabb.get_min() - in_line.origin_.get_position()) * local_odd);
+        for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
+        {
+            if (psyq::geometry::vector::const_at(local_odd, i) != 0)
+            {
+                // スラブとの距離を算出する。
+                auto local_t_far(
+                    psyq::geometry::vector::const_at(local_diff_max, i));
+                auto local_t_near(
+                    psyq::geometry::vector::const_at(local_diff_min, i));
+                auto local_face_far(static_cast<std::int8_t>(i + 1));
+                std::int8_t local_face_near(-local_face_far);
+                if (local_t_far < local_t_near)
+                {
+                    std::swap(local_t_near, local_t_far);
+                    std::swap(local_face_near, local_face_far);
+                }
+                if (this->t_min_ < local_t_near)
+                {
+                    this->t_min_ = local_t_near;
+                    this->face_min_ = local_face_near;
+                }
+                if (local_t_far < this->t_max_)
+                {
+                    this->t_max_ = local_t_far;
+                    this->face_max_ = local_face_far;
+                }
+
+                // スラブ交差判定。
+                if (!this->is_collide())
+                {
+                    return;
+                }
+            }
+            else
+            {
+                // 直線方向と軸が平行だった。
+                auto const local_line_origin(
+                    psyq::geometry::vector::const_at(in_line.origin_.get_position(), i));
+                auto const local_aabb_min(
+                    psyq::geometry::vector::const_at(in_aabb.get_min(), i));
+                auto const local_aabb_max(
+                    psyq::geometry::vector::const_at(in_aabb.get_max(), i));
+                if (local_line_origin < local_aabb_min || local_aabb_max < local_line_origin)
+                {
+                    return;
+                }
+            }
+        }
+    }
+
+    /** @brief 直線とAABBが衝突しているか判定する。
+        @retval true  衝突している。
+        @retval false 衝突してない。
+     */
+    public: bool detect() const
+    {
+        return this->get_t_min() <= this->get_t_max();
+    }
+
+    /** @brief 直線の始点位置から直線上の衝突区間の開始位置までの距離を取得する。
+        @return @copydoc t_min_
+     */
+    public: typename this_type::coordinate::element get_t_min() const
+    {
+        return this->t_min_;
+    }
+
+    /** @brief 直線の始点位置から直線上の衝突区間の終了位置までの距離を取得する。
+        @return @copydoc t_max_
+     */
+    public: typename this_type::coordinate::element get_t_max() const
+    {
+        return this->t_max_;
+    }
+
+    /** @brief 衝突区間の開始位置の座標軸番号を取得する。
+        @return @copydoc face_min_
+     */
+    public: std::int8_t get_face_min() const
+    {
+        return this->face_min_;
+    }
+
+    /** @brief 衝突区間の終了位置の座標軸番号を取得する。
+        @return @copydoc face_max_
+     */
+    public: std::int8_t get_face_max() const
+    {
+        return this->face_max_;
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief 直線の始点位置から直線上の衝突区間の開始位置までの距離。
+
+        - AABBと直線が衝突してる場合は、 t_max_ 以下の値となる。
+        - AABBと直線が衝突してない場合は、t_max_ より大きい値となる。
+     */
+    private: typename this_type::coordinate::element t_min_;
+
+    /** @brief 直線の始点位置から直線上の衝突区間の終了位置までの距離。
+
+        - AABBと直線が衝突してる場合は、 t_min_ 以上の値となる。
+        - AABBと直線が衝突してない場合は、 t_min_ より小さい値となる。
+     */
+    private: typename this_type::coordinate::element t_max_;
+
+    /** @brief 衝突区間の開始位置の座標軸番号。
+
+        - 0なら、直線上の衝突区間の開始位置を検知しなかった。
+        - 負値なら、直線上の衝突区間の開始位置がAABBの最小面にある。
+          (1 - face_min_)が、座標軸のインデックス番号。
+        - 正値なら、直線上の衝突区間の開始位置がAABBの最大面にある。
+          (face_min_ - 1)が、座標軸のインデックス番号。
+     */
+    private: std::int8_t face_min_;
+
+    /** @brief 衝突区間の終了位置の座標軸番号。
+
+        - 0なら、直線上の衝突区間の終了位置を検知しなかった。
+        - 負値なら、直線上の衝突区間の終了位置がAABBの最小面にある。
+          (1 - face_max_)が、座標軸のインデックス番号。
+        - 正値なら、直線上の衝突区間の終了位置がAABBの最大面にある。
+          (face_max_ - 1)が、座標軸のインデックス番号。
+     */
+    private: std::int8_t face_max_;
+
+}; // class psyq::geometry::line::aabb_collision
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 直線と点の衝突判定。
-    @tparam template_coordinate @copydoc psyq::geometry::line::coordinate
+    @tparam template_coordinate @copydoc point_collision::coordinate
  */
 template<typename template_coordinate>
 class psyq::geometry::line<template_coordinate>::point_collision
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef point_collision this_type;
 
-    /// @copydoc psyq::geometry::line::coordinate
+    /// @brief @copydoc psyq::geometry::line::coordinate
     public: typedef template_coordinate coordinate;
 
     //-------------------------------------------------------------------------
@@ -101,16 +278,19 @@ class psyq::geometry::line<template_coordinate>::point_collision
         typename this_type::coordinate::vector const& in_point)
     {
         auto const local_difference(
-            this_type::coordinate::make(in_point - in_line.origin_.get_position()));
+            this_type::coordinate::make(
+                in_point - in_line.origin_.get_position()));
         auto const local_cross_position(
-            psyq::geometry::dot(in_line.direction_.get_unit(), local_difference));
+            psyq::geometry::vector::dot(
+                in_line.direction_.get_unit(), local_difference));
         auto const local_perpendicular(
-            in_line.direction_.get_unit() * local_cross_position - local_difference);
+            in_line.direction_.get_unit() * local_cross_position
+            - local_difference);
         return this_type(
             local_difference,
             local_perpendicular,
             local_cross_position,
-            psyq::geometry::dot(local_perpendicular, local_perpendicular));
+            psyq::geometry::vector::dot(local_perpendicular, local_perpendicular));
     }
 
     /** @brief 直線と点の衝突判定を構築する。
@@ -127,9 +307,11 @@ class psyq::geometry::line<template_coordinate>::point_collision
     {
         PSYQ_ASSERT(in_line_begin <= in_line_end);
         auto const local_difference(
-            this_type::coordinate::make(in_point - in_line.origin_.get_position()));
+            this_type::coordinate::make(
+                in_point - in_line.origin_.get_position()));
         auto const local_cross_position(
-            psyq::geometry::dot(in_line.direction_.get_unit(), local_difference));
+            psyq::geometry::vector::dot(
+                in_line.direction_.get_unit(), local_difference));
         if (local_cross_position < in_line_begin || in_line_end < local_cross_position)
         {
             // 衝突区間の外で交わっている。
@@ -143,12 +325,14 @@ class psyq::geometry::line<template_coordinate>::point_collision
         {
             // 衝突区間の内で交わっている。
             auto const local_perpendicular(
-                in_line.direction_.get_unit() * local_cross_position - local_difference);
+                in_line.direction_.get_unit() * local_cross_position
+                - local_difference);
             return this_type(
                 local_difference,
                 local_perpendicular,
                 local_cross_position,
-                psyq::geometry::dot(local_perpendicular, local_perpendicular));
+                psyq::geometry::vector::dot(
+                    local_perpendicular, local_perpendicular));
         }
     }
 
@@ -213,28 +397,28 @@ class psyq::geometry::line<template_coordinate>::point_collision
     {}
 
     //-------------------------------------------------------------------------
-    /// 直線の始点から点へのベクトル。
+    /// @brief 直線の始点から点へのベクトル。
     private: typename this_type::coordinate::vector difference_;
-    /// 点から直線への垂線。
+    /// @brief 点から直線への垂線。
     private: typename this_type::coordinate::vector perpendicular_;
-    /// 直線と、点から直線への垂線が交わる、直線上の位置。
+    /// @brief 直線と、点から直線への垂線が交わる、直線上の位置。
     private: typename this_type::coordinate::element cross_position_;
-    /// 直線と点の距離の自乗。
+    /// @brief 直線と点の距離の自乗。
     private: typename this_type::coordinate::element square_distance_;
 
 }; // class psyq::geometry::line::point_collision
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 直線と直線の衝突判定。
-    @tparam template_coordinate @copydoc psyq::geometry::line::coordinate
+    @tparam template_coordinate @copydoc line_collision::coordinate
  */
 template<typename template_coordinate>
 class psyq::geometry::line<template_coordinate>::line_collision
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef line_collision this_type;
 
-    /// @copydoc psyq::geometry::line::coordinate
+    /// @brief @copydoc psyq::geometry::line::coordinate
     public: typedef template_coordinate coordinate;
 
     //-------------------------------------------------------------------------
@@ -252,17 +436,17 @@ class psyq::geometry::line<template_coordinate>::line_collision
         auto const local_origin_difference(
             in_target.origin_.get_position() - in_source.origin_.get_position());
         auto const local_direction_dot(
-            psyq::geometry::dot(
+            psyq::geometry::vector::dot(
                 in_source.direction_.get_unit(), in_target.direction_.get_unit()));
         auto const local_denominator(
             1 - local_direction_dot * local_direction_dot);
         if (local_denominator < -in_epsilon || in_epsilon < local_denominator)
         {
             auto const local_source_dot(
-                psyq::geometry::dot(
+                psyq::geometry::vector::dot(
                     local_origin_difference, in_source.direction_.get_unit()));
             auto const local_target_dot(
-                psyq::geometry::dot(
+                psyq::geometry::vector::dot(
                     local_origin_difference, in_target.direction_.get_unit()));
             auto const local_inverse_denominator(1 / local_denominator);
             auto const local_source_position(
@@ -285,7 +469,7 @@ class psyq::geometry::line<template_coordinate>::line_collision
                 local_origin_difference,
                 local_direction_dot,
                 local_point_difference,
-                psyq::geometry::dot(
+                psyq::geometry::vector::dot(
                     local_point_difference, local_point_difference));
         }
         else
@@ -293,7 +477,7 @@ class psyq::geometry::line<template_coordinate>::line_collision
             // 左辺と右辺の直線が平行だったので、
             // 左辺の直線と右辺の原点の衝突判定を構築する。
             auto const local_cross_position(
-                psyq::geometry::dot(
+                psyq::geometry::vector::dot(
                     local_origin_difference, in_source.direction_.get_unit()));
             auto const local_perpendicular(
                 local_origin_difference

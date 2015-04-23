@@ -32,7 +32,7 @@ class traits<glm::detail::tvec2<template_element, template_precision>>
     public: enum: unsigned
     {
         /// 幾何ベクトルが持つ成分の数。
-        size = 2,
+        SIZE = 2,
     };
 };
 
@@ -90,7 +90,7 @@ class traits<glm::detail::tvec3<template_element, template_precision>>
     public: enum: unsigned
     {
         /// 幾何ベクトルが持つ成分の数。
-        size = 3,
+        SIZE = 3,
     };
 };
 
@@ -156,7 +156,7 @@ class traits<glm::detail::tvec4<template_element, template_precision>>
     public: enum: unsigned
     {
         /// 幾何ベクトルが持つ成分の数。
-        size = 4,
+        SIZE = 4,
     };
 };
 
@@ -214,7 +214,7 @@ class traits<glm::simdVec4>
     public: enum: unsigned
     {
         /// 幾何ベクトルが持つ成分の数。
-        size = 4,
+        SIZE = 4,
     };
 };
 
@@ -226,7 +226,7 @@ inline glm::f32& at(
     glm::simdVec4& io_vector,
     unsigned const in_index)
 {
-    PSYQ_ASSERT(in_index < 4);
+    PSYQ_ASSERT(in_index < psyq::geometry::vector::traits<glm::simdVec4>::SIZE);
     return io_vector.Data.m128_f32[in_index];
 }
 //@}

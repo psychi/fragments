@@ -134,7 +134,7 @@ class psyq::geometry::mosp::space
         auto const local_unit(
              static_cast<typename this_type::coordinate::element>(
                  1 << in_level_cap));
-        for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
+        for (unsigned i(0); i < this_type::coordinate::DIMENSION; ++i)
         {
             local_elements[i] = this_type::compute_mosp_scale(
                 local_unit, psyq::geometry::vector::const_at(local_size, i));
@@ -169,8 +169,8 @@ class psyq::geometry::mosp::space
     psyq::mosp_tree のテンプレート引数に使う。
 
     @tparam template_coordinate @copydoc psyq::geometry::mosp::space::coordinate
-    @tparam template_element_0  @copydoc psyq::geometry::mosp::space_2d::element_index_0
-    @tparam template_element_1  @copydoc psyq::geometry::mosp::space_2d::element_index_1
+    @tparam template_element_0  @copydoc psyq::geometry::mosp::space_2d::ELEMENT_INDEX_0
+    @tparam template_element_1  @copydoc psyq::geometry::mosp::space_2d::ELEMENT_INDEX_1
     @ingroup psyq_geometry_mosp
  */
 template<
@@ -189,9 +189,9 @@ public psyq::geometry::mosp::space<template_coordinate>
     public: enum: unsigned
     {
         /// モートン空間の座標成分#0のインデックス番号。
-        element_index_0 = template_element_0,
+        ELEMENT_INDEX_0 = template_element_0,
         /// モートン空間の座標成分#1のインデックス番号。
-        element_index_1 = template_element_1,
+        ELEMENT_INDEX_1 = template_element_1,
         /// モートン空間の座標成分の数。
         DIMENSION = 2,
     };
@@ -216,9 +216,9 @@ public psyq::geometry::mosp::space<template_coordinate>
     const
     {
         auto const local_element_0(
-            this->transform_element(in_point, this_type::element_index_0));
+            this->transform_element(in_point, this_type::ELEMENT_INDEX_0));
         auto const local_element_1(
-            this->transform_element(in_point, this_type::element_index_1));
+            this->transform_element(in_point, this_type::ELEMENT_INDEX_1));
         return (this_type::separate_bits(local_element_0, in_max) << 0)
             |  (this_type::separate_bits(local_element_1, in_max) << 1);
     }
@@ -248,9 +248,9 @@ public psyq::geometry::mosp::space<template_coordinate>
     psyq::mosp_tree のテンプレート引数に使う。
 
     @tparam template_coordinate @copydoc psyq::geometry::mosp::space::coordinate
-    @tparam template_element_0  @copydoc space_3d::element_index_0
-    @tparam template_element_1  @copydoc space_3d::element_index_1
-    @tparam template_element_2  @copydoc space_3d::element_index_2
+    @tparam template_element_0  @copydoc space_3d::ELEMENT_INDEX_0
+    @tparam template_element_1  @copydoc space_3d::ELEMENT_INDEX_1
+    @tparam template_element_2  @copydoc space_3d::ELEMENT_INDEX_2
     @ingroup psyq_geometry_mosp
  */
 template<
@@ -269,12 +269,12 @@ public psyq::geometry::mosp::space<template_coordinate>
 
     public: enum: unsigned
     {
-        /// @copydoc psyq::geometry::mosp::space_2d::element_index_0
-        element_index_0 = template_element_0,
-        /// @copydoc psyq::geometry::mosp::space_2d::element_index_1
-        element_index_1 = template_element_1,
+        /// @copydoc psyq::geometry::mosp::space_2d::ELEMENT_INDEX_0
+        ELEMENT_INDEX_0 = template_element_0,
+        /// @copydoc psyq::geometry::mosp::space_2d::ELEMENT_INDEX_1
+        ELEMENT_INDEX_1 = template_element_1,
         /// モートン空間の座標成分#2のインデックス番号。
-        element_index_2 = template_element_2,
+        ELEMENT_INDEX_2 = template_element_2,
         /// @copydoc psyq::geometry::mosp::space_2d::DIMENSION
         DIMENSION = 3,
     };
@@ -298,15 +298,15 @@ public psyq::geometry::mosp::space<template_coordinate>
         typename this_type::order const in_max)
     const
     {
-        auto const local_element0(
-            this->transform_element(in_point, this_type::element_index_0));
-        auto const local_element1(
-            this->transform_element(in_point, this_type::element_index_1));
-        auto const local_element2(
-            this->transform_element(in_point, this_type::element_index_2));
-        return this_type::separate_bits(local_element0, in_max) << 0
-            |  this_type::separate_bits(local_element1, in_max) << 1
-            |  this_type::separate_bits(local_element2, in_max) << 2;
+        auto const local_element_0(
+            this->transform_element(in_point, this_type::ELEMENT_INDEX_0));
+        auto const local_element_1(
+            this->transform_element(in_point, this_type::ELEMENT_INDEX_1));
+        auto const local_element_2(
+            this->transform_element(in_point, this_type::ELEMENT_INDEX_2));
+        return this_type::separate_bits(local_element_0, in_max) << 0
+            |  this_type::separate_bits(local_element_1, in_max) << 1
+            |  this_type::separate_bits(local_element_2, in_max) << 2;
     }
 
     /// @copydoc psyq::geometry::mosp::space_2d::separate_bits
@@ -324,3 +324,4 @@ public psyq::geometry::mosp::space<template_coordinate>
 }; // class psyq::geometry::mosp::space_3d
 
 #endif // !defined(PSYQ_GEOMETRY_MOSP_SPACE_HPP_)
+// vim: set expandtab:

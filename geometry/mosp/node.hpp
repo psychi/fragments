@@ -5,18 +5,18 @@
 #ifndef PSYQ_GEOMETRY_MOSP_NODE_HPP_
 #define PSYQ_GEOMETRY_MOSP_NODE_HPP_
 
+/// @cond
 namespace psyq
 {
-namespace geometry
-{
-namespace mosp
-{
-    /// @cond
-    template<typename, typename> class node;
-    /// @endcond
-} // namespace mosp
-} // namespace geometry
+    namespace geometry
+    {
+        namespace mosp
+        {
+            template<typename, typename> class node;
+        } // namespace mosp
+    } // namespace geometry
 } // namespace psyq
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief モートン順序による空間分割木に取りつける分割空間ノード。
@@ -184,3 +184,4 @@ class psyq::geometry::mosp::node
 }; // class psyq::geometry::mosp::node
 
 #endif // !defined(PSYQ_GEOMETRY_MOSP_NODE_HPP_)
+// vim: set expandtab:

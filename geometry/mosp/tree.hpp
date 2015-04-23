@@ -9,7 +9,10 @@
 #ifndef PSYQ_GEOMETRY_MOSP_TREE_HPP_
 #define PSYQ_GEOMETRY_MOSP_TREE_HPP_
 
-//#include "psyq/geometry/mosp/node.hpp"
+#include <unordered_map>
+//#include "../../memory_arena.hpp"
+//#include "./node.hpp"
+
 
 #ifndef PSYQ_GEOMETRY_MOSP_TREE_ALLOCATOR_DEFAULT
 #define PSYQ_GEOMETRY_MOSP_TREE_ALLOCATOR_DEFAULT\
@@ -17,18 +20,18 @@
         void*, psyq::memory_arena::fixed_pool<std::allocator<void*>>>
 #endif // !defined(PSYQ_MOSP_ALLOCATOR_DEFAULT)
 
+/// @cond
 namespace psyq
 {
-namespace geometry
-{
-namespace mosp
-{
-    /// @cond
-    template<typename, typename, typename> class tree;
-    /// @endcond
-} // namespace mosp
-} // namespace geometry
+    namespace geometry
+    {
+        namespace mosp
+        {
+            template<typename, typename, typename> class tree;
+        } // namespace mosp
+    } // namespace geometry
 } // namespace psyq
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief モートン順序による空間分割木。

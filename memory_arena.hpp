@@ -2,6 +2,7 @@
 #define PSYQ_MEMORY_ARENA_HPP_
 
 #include <array>
+#include <memory>
 
 namespace psyq
 {
@@ -17,23 +18,20 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief メモリ管理をメモリアリーナ経由で行うメモリ割当子。
-
-    std::allocator_traits 経由で使うことを想定している。
-
-    @tparam template_value @copydoc this_type::value_type
-    @tparam template_arena @copydoc this_type::arena
+    @tparam template_value メモリ管理する要素の型。
+    @tparam template_arena @copydoc allocator::arena
+    @note できれば std::allocator_traits 経由で使うようにしたい。
  */
 template<typename template_value, typename template_arena>
-class psyq::memory_arena::allocator
+class psyq::memory_arena::allocator: public std::allocator<template_value>
 {
-    /// thisが指す値の型。
-    private: typedef allocator this_type;
     template<typename, typename> friend class psyq::memory_arena::allocator;
+    /// @breif thisが指す値の型。
+    private: typedef allocator this_type;
+    /// @brief this_type の基底型。
+    public: typedef std::allocator<template_value> base_type;
 
     //-------------------------------------------------------------------------
-    /// メモリを割り当てる値の型。
-    public: typedef template_value value_type;
-
     /** @brief 実際にメモリを管理するメモリアリーナ。
 
         - 確保するメモリの境界バイト数を定義した以下の定数を使える必要がある。
@@ -64,8 +62,20 @@ class psyq::memory_arena::allocator
     public: typedef template_arena arena;
     static_assert(
         this_type::arena::ALIGNMENT %
-            std::alignment_of<typename this_type::value_type>::value == 0,
+            std::alignment_of<typename base_type::value_type>::value == 0,
         "");
+
+    //-------------------------------------------------------------------------
+    /** @brief メモリ割当子を再定義する。
+        @tparam template_other 再定義するメモリ割当子の要素の型。
+     */
+    public: template<typename template_other>
+    struct rebind
+    {
+        /// @brief 再定義したメモリ割当子の型。
+        typedef psyq::memory_arena::allocator<template_other, template_arena>
+            other;
+    };
 
     //-------------------------------------------------------------------------
     /// @name メモリ割当子の構築
@@ -75,8 +85,7 @@ class psyq::memory_arena::allocator
      */ 
     public: explicit allocator(
         typename this_type::arena::shared_ptr const& in_arena)
-    PSYQ_NOEXCEPT:
-        arena_(in_arena)
+    PSYQ_NOEXCEPT: arena_(in_arena)
     {
         PSYQ_ASSERT(!this->get_arena().expired());
     }
@@ -85,8 +94,7 @@ class psyq::memory_arena::allocator
         @param[in] in_arena メモリ管理に使うメモリアリーナの監視子。
      */ 
     public: explicit allocator(typename this_type::arena::weak_ptr in_arena)
-    PSYQ_NOEXCEPT:
-        arena_(std::move(in_arena))
+    PSYQ_NOEXCEPT: arena_(std::move(in_arena))
     {
         PSYQ_ASSERT(!this->get_arena().expired());
     }
@@ -94,8 +102,8 @@ class psyq::memory_arena::allocator
     /** @brief コピー構築子。
         @param[in] in_source コピー元インスタンス。
      */ 
-    public: allocator(this_type const& in_source) PSYQ_NOEXCEPT:
-        arena_(in_source.get_arena())
+    public: allocator(this_type const& in_source)
+    PSYQ_NOEXCEPT: arena_(in_source.get_arena())
     {
         PSYQ_ASSERT(!this->get_arena().expired());
     }
@@ -106,8 +114,7 @@ class psyq::memory_arena::allocator
     public: template<typename template_other>
     allocator(
         psyq::memory_arena::allocator<template_other, template_arena> in_source)
-    PSYQ_NOEXCEPT:
-        arena_(std::move(in_source.arena_))
+    PSYQ_NOEXCEPT: arena_(std::move(in_source.arena_))
     {
         PSYQ_ASSERT(!this->get_arena().expired());
     }
@@ -118,8 +125,8 @@ class psyq::memory_arena::allocator
      */ 
     public: this_type& operator=(this_type const& in_source) PSYQ_NOEXCEPT
     {
+        PSYQ_ASSERT(!in_source.arena_.expired());
         this->arena_ = in_source.get_arena();
-        PSYQ_ASSERT(!this->arena_.expired());
         return *this;
     }
 
@@ -131,8 +138,8 @@ class psyq::memory_arena::allocator
     this_type& operator=(
         psyq::memory_arena::allocator<template_other, template_arena> in_source)
     {
+        PSYQ_ASSERT(!in_source.get_arena().expired());
         this->arena_ = std::move(in_source.arena_);
-        PSYQ_ASSERT(!this->get_arena().expired());
         return *this;
     }
     //@}
@@ -147,8 +154,8 @@ class psyq::memory_arena::allocator
         @param[in] in_count 構築するインスタンスの数。
         @param[in] in_hint  メモリ確保のヒント。
      */
-    public: typename this_type::value_type* allocate(
-        std::size_t const in_count,
+    public: typename base_type::pointer allocate(
+        typename base_type::size_type const in_count,
         std::allocator<void>::const_pointer const in_hint = 0)
     {
         auto const local_arena_holder(this->arena_.lock());
@@ -168,8 +175,8 @@ class psyq::memory_arena::allocator
         @param[in] in_count   解体したインスタンスの数。
      */
     public: void deallocate(
-        typename this_type::value_type* const in_pointer,
-        std::size_t const in_count)
+        typename base_type::pointer const in_pointer,
+        typename base_type::size_type const in_count)
     {
         if (in_pointer == nullptr)
         {
@@ -244,7 +251,7 @@ class psyq::memory_arena::allocator
     }
     //@}
     //-------------------------------------------------------------------------
-    /// 実際にメモリを管理しているメモリアリーナ。
+    /// @brief 実際にメモリを管理しているメモリアリーナ。
     private: typename this_type::arena::weak_ptr arena_;
 };
 
@@ -268,22 +275,22 @@ class psyq::memory_arena::allocator
 template<typename template_allocator>
 class psyq::memory_arena::fixed_pool
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef fixed_pool this_type;
 
     //-------------------------------------------------------------------------
-    /// メモリ管理に使うメモリ割当子。
+    /// @brief メモリ管理に使うメモリ割当子。
     public: typedef template_allocator allocator_type;
-    /// this_type の保持子。
+    /// @brief this_type の保持子。
     public: typedef std::shared_ptr<this_type> shared_ptr;
-    /// this_type の監視子。
+    /// @brief this_type の監視子。
     public: typedef std::weak_ptr<this_type> weak_ptr;
-    /// メモリ確保するときのメモリ境界。
+    /// @brief メモリ確保するときのメモリ境界。
     public: static std::size_t const ALIGNMENT =
         std::alignment_of<typename this_type::allocator_type::value_type>::value;
     static_assert(
         this_type::ALIGNMENT % std::alignment_of<void*>::value == 0, "");
-    /// メモリ確保する単位のバイト数。
+    /// @brief メモリ確保する単位のバイト数。
     public: static std::size_t const UNIT_SIZE =
         sizeof(typename this_type::allocator_type::value_type);
     static_assert(sizeof(void*) <= this_type::UNIT_SIZE, "");
@@ -340,7 +347,7 @@ class psyq::memory_arena::fixed_pool
         io_source.idle_block_ = nullptr;
     }
 
-    /// メモリアリーナが管理するメモリをすべて解放する。
+    /// @brief メモリアリーナが管理するメモリをすべて解放する。
     public: ~fixed_pool()
     {
         this->release_idle_block();
@@ -353,12 +360,12 @@ class psyq::memory_arena::fixed_pool
     //@{
     /** @brief メモリを確保する。
 
-        - 固定長メモリブロックと同じ大きさのメモリを確保する場合は、
+        - 固定長メモリブロック以下の大きさのメモリを確保する場合は、
           空メモリブロックを再利用する。
           - sizeof(this_type::allocator_type::value_type) が、
             固定長メモリブロックの大きさとなる。
         - 空メモリブロックが存在しないか、
-          固定長メモリブロックと異なる大きさのメモリを確保する場合は、
+          固定長メモリブロックより大きいメモリを確保する場合は、
           this_type::allocator_type::allocate() を呼び出す。
 
         @retval !=nullptr 確保したメモリの先頭位置。
@@ -367,10 +374,14 @@ class psyq::memory_arena::fixed_pool
      */
     public: void* allocate(std::size_t const in_size)
     {
-        if (this->get_block_size() != in_size)
+        if (this->get_block_size() < in_size)
         {
-            // ブロックサイズと異なるサイズは、メモリ割当子に任せる。
-            return 0 < in_size? this->allocator_.allocate(in_size): nullptr;
+            // ブロックサイズより大きいサイズは、メモリ割当子に任せる。
+            return this->allocator_.allocate(in_size);
+        }
+        else if (in_size <= 0)
+        {
+            return nullptr;
         }
 
         auto const local_block(this->idle_block_);
@@ -402,18 +413,23 @@ class psyq::memory_arena::fixed_pool
         void* const in_block,
         std::size_t const in_size)
     {
-        if (this->get_block_size() != in_size)
+        if (this->get_block_size() < in_size)
         {
-            // ブロックサイズと異なるサイズは、プールせずすぐに解放する。
+            // ブロックサイズより大きいサイズは、プールせずすぐに解放する。
             this->allocator_.deallocate(
-                static_cast<typename this_type::allocator_type::value_type*>(in_block),
+                static_cast<typename this_type::allocator_type::pointer>(in_block),
                 in_size);
         }
-        else if (in_block != nullptr && 0 < in_size)
+        else if (in_block != nullptr)
         {
             // 空メモリブロックのリストに追加する。
+            PSYQ_ASSERT(0 < in_size);
             *static_cast<void**>(in_block) = this->idle_block_;
             this->idle_block_ = in_block;
+        }
+        else
+        {
+            PSYQ_ASSERT(in_size <= 0);
         }
     }
 
@@ -490,11 +506,11 @@ class psyq::memory_arena::fixed_pool
     }
 
     //-------------------------------------------------------------------------
-    /// 空メモリブロックのリスト。
+    /// @brief 空メモリブロックのリスト。
     private: void* idle_block_;
-    /// プールするメモリブロックのバイトサイズ。
+    /// @brief プールするメモリブロックのバイトサイズ。
     private: std::size_t block_size_;
-    /// 使用しているメモリ割当子。
+    /// @brief 使用しているメモリ割当子。
     private: typename this_type::allocator_type allocator_;
 };
 
@@ -502,32 +518,32 @@ class psyq::memory_arena::fixed_pool
 template<std::size_t template_size, typename template_allocator>
 class psyq::memory_arena::pool_table
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef pool_table this_type;
 
     //-------------------------------------------------------------------------
-    /// this_type の保持子。
+    /// @brief this_type を所有するスマートポインタ。
     public: typedef std::shared_ptr<this_type> shared_ptr;
-    /// this_type の監視子。
+    /// @brief this_type を監視するスマートポインタ。。
     public: typedef std::weak_ptr<this_type> weak_ptr;
 
-    /// 実際にメモリ管理をする固定長メモリアリーナ。
+    /// @brief 実際にメモリ管理をする固定長メモリアリーナ。
     public: typedef psyq::memory_arena::fixed_pool<template_allocator> arena;
 
-    /// @copydoc arena::ALIGNMENT
+    /// @brief @copydoc arena::ALIGNMENT
     public: static std::size_t const ALIGNMENT = this_type::arena::ALIGNMENT;
 
-    /// 保持している固定長メモリアリーナの数。
+    /// @brief 保持している固定長メモリアリーナの数。
     public: static std::size_t const ARENA_COUNT =
         (template_size + this_type::arena::UNIT_SIZE - 1) /
             this_type::arena::UNIT_SIZE;
     static_assert(0 < template_size, "");
 
-    /// 固定長メモリアリーナで再利用するメモリブロックの最大バイト数。
+    /// @brief 固定長メモリアリーナで再利用するメモリブロックの最大バイト数。
     public: static std::size_t const POOL_LIMIT_SIZE =
         this_type::ARENA_COUNT * this_type::arena::UNIT_SIZE;
 
-    /// 固定長メモリアリーナの配列。
+    /// @brief 固定長メモリアリーナの配列。
     private: typedef std::array<
         typename this_type::arena, this_type::ARENA_COUNT>
             arena_array;
@@ -687,27 +703,26 @@ class psyq::memory_arena::pool_table
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-namespace psyq
+#include <list>
+namespace psyq_test
 {
-    namespace test
+    inline void memory_arena_fixed_pool()
     {
-        inline void memory_arena_fixed_pool()
-        {
-            typedef psyq::memory_arena::pool_table<32, std::allocator<void*>>
-                pool_table_arena;
-            pool_table_arena::shared_ptr local_table_arena_arena(new pool_table_arena);
+        typedef psyq::memory_arena::pool_table<32, std::allocator<void*>>
+            pool_table_arena;
+        pool_table_arena::shared_ptr local_table_arena(new pool_table_arena);
 
-            typedef psyq::memory_arena::allocator<int, pool_table_arena>
-                pool_table_allocator;
-            pool_table_allocator local_pool_table_allocator(local_table_arena_arena);
+        typedef psyq::memory_arena::allocator<int, pool_table_arena>
+            pool_table_allocator;
+        pool_table_allocator local_pool_table_allocator(local_table_arena);
 
-            typedef std::list<int, pool_table_allocator> list;
-            list local_list(local_pool_table_allocator);
-            local_list.push_back(1);
-            local_list.push_back(10);
-            local_list.erase(local_list.begin());
-        }
+        typedef std::list<int, pool_table_allocator> list;
+        list local_list(local_pool_table_allocator);
+        local_list.push_back(1);
+        local_list.push_back(10);
+        local_list.erase(local_list.begin());
     }
 }
 
 #endif // !defined(PSYQ_MEMORY_ARENA_HPP_)
+// vim: set expandtab:

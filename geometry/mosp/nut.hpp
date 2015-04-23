@@ -7,8 +7,8 @@
 #define PSYQ_GEOMETRY_MOSP_NUT_HPP_
 
 #include <bitset>
-//#include "psyq/geometry/shape.hpp"
-//#include "psyq/geometry/mosp/node.hpp"
+//#include "../make_aabb.hpp"
+//#include "./node.hpp"
 
 namespace psyq
 {
@@ -62,7 +62,7 @@ namespace mosp
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 衝突判定ナット。
-           モートン空間分割木に取りつける、衝突判定オブジェクトの基底型。
+           モートン空間分割木に取りつける、衝突判定形状の基底型。
     @copydetails psyq::geometry::mosp
 
     @tparam template_space     @copydoc nut::space
@@ -91,15 +91,13 @@ class psyq::geometry::mosp::nut
         this_type*, typename this_type::space::order>
             node;
 
-    /// @brief 衝突判定オブジェクトが所属する衝突判定の位相のフラグ。
+    /// @brief 衝突判定ナットが所属する衝突判定の位相のフラグ。
     public: typedef std::bitset<32> topology;
 
-    /// @cond
     public: class cluster;
     public: template<typename template_shape> class concrete;
-    /// @endcond
 
-    /// @brief 衝突判定が所属するクラスタのコンテナを表す型。
+    /// @brief 衝突判定ナットが所属するクラスタのコンテナ。
     private: typedef std::vector<
         typename this_type::cluster const*, template_allocator>
             cluster_container;
@@ -113,27 +111,27 @@ class psyq::geometry::mosp::nut
     /// @brief this_type の所有権なしスマートポインタ。
     public: typedef std::weak_ptr<this_type> weak_ptr;
 
-    /// @brief this_type の所有権なしスマートポインタのコンテナを表す型。
+    /// @brief this_type の所有権なしスマートポインタのコンテナ。
     public: typedef std::vector<
         typename this_type::weak_ptr, typename this_type::allocator_type>
             weak_ptr_vector;
     //@}
     //-------------------------------------------------------------------------
-    /// @name 衝突判定図形
+    /// @name 衝突判定形状
     //@{
-    /// @brief モートン空間分割木に取付可能な、半直線の衝突判定オブジェクト。
+    /// @brief モートン空間分割木に取付可能な、半直線の衝突判定ナット。
     public: typedef concrete<
         psyq::geometry::ray<typename this_type::space::coordinate>>
             ray;
-    /// @brief モートン空間分割木に取付可能な、線分の衝突判定オブジェクト。
+    /// @brief モートン空間分割木に取付可能な、線分の衝突判定ナット。
     public: typedef concrete<
         psyq::geometry::line_segment<typename this_type::space::coordinate>>
             line_segment;
-    /// @brief モートン空間分割木に取付可能な、球の衝突判定オブジェクト。
+    /// @brief モートン空間分割木に取付可能な、球の衝突判定ナット。
     public: typedef concrete<
         psyq::geometry::ball<typename this_type::space::coordinate>>
             ball;
-    /// @brief モートン空間分割木に取付可能な、直方体の衝突判定オブジェクト。
+    /// @brief モートン空間分割木に取付可能な、直方体の衝突判定ナット。
     public: typedef concrete<
         psyq::geometry::box<typename this_type::space::coordinate>>
             box;
@@ -310,9 +308,9 @@ class psyq::geometry::mosp::nut
     }
 
     //-------------------------------------------------------------------------
-    /// @brief 衝突判定オブジェクトの絶対座標系AABB。
+    /// @brief 衝突判定形状の絶対座標系AABB。
     protected: typename this_type::space::coordinate::aabb aabb_;
-    /// @brief 衝突判定オブジェクトに対応する分割空間ノード。
+    /// @brief 衝突判定形状に対応する分割空間ノード。
     private: typename this_type::node node_;
     /// @brief *thisが属している衝突判定クラスタのコンテナ。
     private: typename this_type::cluster_container clusters_;

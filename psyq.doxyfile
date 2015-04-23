@@ -712,6 +712,7 @@ INPUT                  = \
                          ./geometry/plane.hpp \
                          ./geometry/box.hpp \
                          ./geometry/aabb.hpp \
+                         ./geometry/make_aabb.hpp \
                          ./geometry/coordinate.hpp \
                          ./geometry/mosp/space.hpp \
                          ./geometry/mosp/node.hpp \

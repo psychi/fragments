@@ -199,12 +199,14 @@ namespace psyq
          */
         template<typename template_coordinate>
         typename template_coordinate::aabb make_aabb(
-            psyq::geometry::line<template_coordinate> const& in_segment)
+            typename psyq::geometry::line_segment<template_coordinate> const&
+                in_segment)
         {
             typename template_coordinate::element_array local_min;
             typename template_coordinate::element_array local_max;
             auto const local_end(
-                in_segment.origin_.get_position() + in_segment.direction_.get_unit());
+                in_segment.origin_.get_position()
+                + in_segment.direction_.get_unit() * in_segment.length_);
             for (unsigned i(0); i < template_coordinate::DIMENSION; ++i)
             {
                 auto const local_direction(
@@ -242,35 +244,14 @@ namespace psyq
         typename template_coordinate::aabb make_aabb(
             psyq::geometry::ray<template_coordinate> const& in_ray)
         {
-            typename template_coordinate::element_array local_min;
-            typename template_coordinate::element_array local_max;
-            auto const local_limit(
-                (std::numeric_limits<typename template_coordinate::element>::max)());
-            for (unsigned i(0); i < template_coordinate::DIMENSION; ++i)
-            {
-                auto const local_direction(
-                    psyq::geometry::vector::const_at(in_ray.direction_.get_unit(), i));
-                auto const local_origin(
-                    psyq::geometry::vector::const_at(in_ray.origin_.get_position(), i));
-                if (local_direction < 0)
-                {
-                    local_min[i] = -local_limit;
-                    local_max[i] = local_origin;
-                }
-                else if (0 < local_direction)
-                {
-                    local_min[i] = local_origin;
-                    local_max[i] = local_limit;
-                }
-                else
-                {
-                    local_min[i] = local_origin;
-                    local_max[i] = local_origin;
-                }
-            }
-            return typename template_coordinate::aabb(
-                template_coordinate::make(local_min),
-                template_coordinate::make(local_max));
+            // 極大の線分からAABBを決定する。
+            typedef typename template_coordinate::element element;
+            static_assert(1 <= std::numeric_limits<element>::digits, "");
+            return make_aabb(
+                psyq::geometry::line_segment<template_coordinate>(
+                    in_ray,
+                    static_cast<element>(
+                        1ull << (std::numeric_limits<element>::digits - 1))));
         }
 
         //---------------------------------------------------------------------
@@ -338,13 +319,13 @@ namespace psyq_test
            ball_type::point::make(template_coordinate::make_filled(2)));
        local_point = ball_type::point::make(template_coordinate::make_filled(3));
 
-       typedef psyq::geometry::line<template_coordinate> line_type;
-       line_type const local_line(
-           local_ball.center_,
-           line_type::direction::make(
-               template_coordinate::make_filled(local_ball.get_radius())));
-       auto const local_line_aabb(
-           psyq::geometry::make_aabb(local_line));
+       typedef typename psyq::geometry::line_segment<template_coordinate>
+           line_segment_type;
+       auto const local_line(
+           line_segment_type::make(
+               local_ball.center_,
+               template_coordinate::make(local_ball.get_radius(), -4, 3)));
+       auto const local_line_aabb(psyq::geometry::make_aabb(local_line));
 
        typedef psyq::geometry::ray<template_coordinate> ray_type;
        ray_type const local_ray(local_line);

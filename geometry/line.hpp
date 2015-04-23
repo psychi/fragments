@@ -15,6 +15,7 @@ namespace psyq
     namespace geometry
     {
         template<typename> class line;
+        template<typename> class line_segment;
     } // namespace geometry
 } // namespace psyq
 /// @endcond
@@ -76,6 +77,85 @@ class psyq::geometry::line
     public: typename this_type::direction direction_;
 
 }; // namespace psyq::geometry::line
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 線分。
+    @tparam template_coordinate @copydoc line_segment::coordinate
+    @ingroup psyq_geometry_shape
+ */
+template<typename template_coordinate>
+class psyq::geometry::line_segment:
+public psyq::geometry::line<template_coordinate>
+{
+    /// @brief thisが指す値の型。
+    private: typedef line_segment this_type;
+
+    /// @brief this_type の基底型。
+    public: typedef psyq::geometry::line<template_coordinate> base_type;
+
+    //-------------------------------------------------------------------------
+    /** @brief 線分を構築する。
+        @param[in] in_origin    線分の原点。
+        @param[in] in_direction 線分の方向。
+        @param[in] in_length    線分の長さ。
+     */
+    public: line_segment(
+        typename base_type::point const& in_origin,
+        typename base_type::direction const& in_direction,
+        typename base_type::coordinate::element const in_length)
+    PSYQ_NOEXCEPT:
+    base_type(in_origin, in_direction),
+    length_(in_length)
+    {}
+
+    /** @brief 線分を構築する。
+        @param[in] in_line   線分として用いる直線。
+        @param[in] in_length 線分の長さ。
+     */
+    public: line_segment(
+        base_type const& in_line,
+        typename base_type::coordinate::element const in_length)
+    PSYQ_NOEXCEPT:
+    base_type(in_line),
+    length_(in_length)
+    {}
+
+    /** @brief 線分を構築する。
+        @param[in] in_begin 線分の始点。
+        @param[in] in_end   線分の終点。
+        @return 線分。
+     */
+    public: static this_type make(
+        typename base_type::point const& in_begin,
+        typename base_type::point const& in_end)
+    {
+        return this_type::make(
+            in_begin, in_end.get_position() - in_begin.get_position());
+    }
+
+    /** @brief 線分を構築する。
+        @param[in] in_origin 線分の原点。
+        @param[in] in_vector 線分のベクトル。
+        @return 線分。
+     */
+    public: static this_type make(
+        typename base_type::point const& in_origin,
+        typename base_type::coordinate::vector const& in_vector)
+    {
+        auto const local_length(
+            psyq::geometry::vector::length(
+                this_type::coordinate::make(in_vector)));
+        PSYQ_ASSERT(0 < local_length);
+        return this_type(
+            in_origin,
+            typename base_type::direction(in_vector / local_length),
+            local_length);
+    }
+
+    /// @brief 線分の長さ。
+    public: typename base_type::coordinate::element length_;
+
+}; // namespace psyq::geometry::line_segment
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 直線とAABBの衝突判定。

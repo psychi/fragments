@@ -121,18 +121,18 @@ class psyq::geometry::mosp::nut
     //-------------------------------------------------------------------------
     /// @name 衝突判定図形
     //@{
-    /// @brief モートン空間分割木に取付可能な、球の衝突判定オブジェクト。
-    public: typedef concrete<
-        psyq::geometry::ball<typename this_type::space::coordinate>>
-            ball;
-    /// @brief モートン空間分割木に取付可能な、直線の衝突判定オブジェクト。
-    public: typedef concrete<
-        psyq::geometry::line<typename this_type::space::coordinate>>
-            line;
     /// @brief モートン空間分割木に取付可能な、半直線の衝突判定オブジェクト。
     public: typedef concrete<
         psyq::geometry::ray<typename this_type::space::coordinate>>
             ray;
+    /// @brief モートン空間分割木に取付可能な、線分の衝突判定オブジェクト。
+    public: typedef concrete<
+        psyq::geometry::line_segment<typename this_type::space::coordinate>>
+            line_segment;
+    /// @brief モートン空間分割木に取付可能な、球の衝突判定オブジェクト。
+    public: typedef concrete<
+        psyq::geometry::ball<typename this_type::space::coordinate>>
+            ball;
     /// @brief モートン空間分割木に取付可能な、直方体の衝突判定オブジェクト。
     public: typedef concrete<
         psyq::geometry::box<typename this_type::space::coordinate>>

@@ -95,6 +95,7 @@ class psyq::geometry::mosp::nut
     public: typedef std::bitset<32> topology;
 
     public: class cluster;
+    public: class tree;
     public: template<typename template_shape> class concrete;
 
     /// @brief 衝突判定ナットが所属するクラスタのコンテナ。
@@ -103,13 +104,65 @@ class psyq::geometry::mosp::nut
             cluster_container;
 
     //-------------------------------------------------------------------------
+    public: class connector
+    {
+        private: typedef connector this_type;
+
+        private: connector(
+            nut& in_nut,
+            this_type const* const in_serial_connector,
+            this_type const* const in_parallel_connector):
+        nut_(&in_nut),
+        serial_(in_serial_connector),
+        parallel_(in_parallel_connector)
+        {}
+
+        private: nut* nut_;
+        private: this_type const* serial_;
+        private: this_type const* parallel_;
+    };
+
+    private: typedef
+        typename template_allocator::template rebind<connector>::other
+            connector_allocator;
+
+    private: typename this_type::connector* connect(
+        typename this_type::connector* const io_parallel_connector)
+    {
+        connector_allocator local_allocator;
+        auto const local_connector(local_allocator.allocate(1));
+        if (local_connector != nullptr)
+        {
+            this->connectors_ = new(local_connector) this_type::connector(
+                *this, this->connectors_, io_parallel_connector);
+        }
+        return local_connector;
+    }
+
+    private: static void reset_serial_connector(
+         typename this_type::connector* io_connectors)
+    {
+        auto local_connector(io_connectors);
+        while (local_connector != nullptr)
+        {
+            local_connector->nut_ = nullptr;
+            local_connector = local_connector->serial_;
+        }
+    }
+
+    //-------------------------------------------------------------------------
     /// @name スマートポインタ
     //@{
     /// @brief this_type の所有権ありスマートポインタ。
     public: typedef std::shared_ptr<this_type> shared_ptr;
 
-    /// @brief this_type の所有権なしスマートポインタ。
+        /// @brief this_type の所有権なしスマートポインタ。
     public: typedef std::weak_ptr<this_type> weak_ptr;
+
+    /// @brief this_type の所有権ありスマートポインタのコンテナ。
+    public: typedef std::vector<
+        typename this_type::shared_ptr, typename this_type::allocator_type>
+            shared_ptr_vector;
 
     /// @brief this_type の所有権なしスマートポインタのコンテナ。
     public: typedef std::vector<
@@ -145,10 +198,14 @@ class psyq::geometry::mosp::nut
         typename this_type::space::coordinate::aabb(
             this_type::space::coordinate::make_filled(0),
             this_type::space::coordinate::make_filled(0))),
+    connectors_(nullptr),
     node_(this)
     {
         this->clusters_.reserve(in_cluster_capacity);
     }
+
+    private: nut(this_type const&);
+    private: this_type& operator=(this_type const&);
 
     /// @brief *thisをモートン空間分割木から取り外す。
     public: virtual ~nut()
@@ -175,30 +232,9 @@ class psyq::geometry::mosp::nut
         if (!this->get_node().is_attached())
         {
             this->update_aabb();
+            this->mix_cluster_topology();
         }
         this->node_.attach_tree(io_tree, this->get_aabb());
-    }
-
-    public: template<typename template_tree>
-    static void attach_tree(
-        template_tree& io_tree,
-        typename this_type::weak_ptr_vector& io_nuts)
-    {
-        // 衝突判定ナットを空間分割木に取りつける。
-        for (auto i(io_nuts.begin()); i != io_nuts.end();)
-        {
-            auto const local_holder(i->lock());
-            auto const local_nut(local_holder.get());
-            if (local_nut != nullptr)
-            {
-                local_nut->attach_tree(io_tree);
-                ++i;
-            }
-            else
-            {
-                i = io_nuts.erase(i);
-            }
-        }
     }
 
     /// @copydoc this_type::node::detach_tree
@@ -234,51 +270,52 @@ class psyq::geometry::mosp::nut
             - this が in_target に衝突していたら、ビット#0が1となる。
             - in_target が this に衝突していたら、ビット#1が1となる。
      */
-    protected: unsigned detect_aabb_collision(this_type& in_target)
+    protected: unsigned detect_aabb_collision(this_type const& in_target) const
     {
-        this->update_cluster_topology();
-        in_target.update_cluster_topology();
-        auto const local_topology_0(
-            this->target_topology_ & in_target.self_topology_);
-        auto const local_topology_1(
-            in_target.target_topology_ & this->self_topology_);
-        auto const local_collision(
-            (static_cast<unsigned>(local_topology_1.any()) * 2)
-            | static_cast<unsigned>(local_topology_0.any()));
-        typedef typename this_type::space::coordinate::aabb::aabb_collision
-            collision;
-        return local_collision != 0
-            && collision::detect(this->get_aabb(), in_target.get_aabb())?
-                local_collision: 0;
+        if (this != &in_target)
+        {
+            auto const local_topology_0(
+                this->target_topology_ & in_target.self_topology_);
+            auto const local_topology_1(
+                in_target.target_topology_ & this->self_topology_);
+            auto const local_collision(
+                (static_cast<unsigned>(local_topology_1.any()) * 2)
+                | static_cast<unsigned>(local_topology_0.any()));
+            typedef typename this_type::space::coordinate::aabb::aabb_collision
+                collision;
+            if (local_collision != 0
+                && collision::detect(this->get_aabb(), in_target.get_aabb()))
+            {
+                return local_collision;
+            }
+        }
+        return 0;
     }
 
     //-------------------------------------------------------------------------
     /// @brief 衝突判定ナットが所属するすべての衝突判定クラスタの位相を合成する。
-    private: void update_cluster_topology() PSYQ_NOEXCEPT
+    private: void mix_cluster_topology() PSYQ_NOEXCEPT
     {
-        if (this->target_topology_.none())
+        // 衝突判定クラスタに所属してない場合は何もしない。
+        if (!this->clusters_.empty())
         {
             this->self_topology_.reset();
+            this->target_topology_.reset();
             for (auto local_cluster: this->clusters_)
             {
                 PSYQ_ASSERT(local_cluster != nullptr);
-                this->mix_cluster_topology(*local_cluster);
+                this->self_topology_ |= local_cluster->get_self_topology();
+                this->target_topology_ |= local_cluster->get_target_topology();
             }
         }
     }
 
-    /** @brief 衝突判定クラスタの位相を合成する。
-        @param[in] in_cluster 位相を合成する衝突判定クラスタ。
+    /** @brief 衝突判定クラスタに所属する。
+        @param[in] in_cluster 新たに所属する衝突判定クラスタ。
+        @retval true  成功。新たな衝突判定クラスタに所属した。
+        @retval false 失敗。すでに同じクラスタに所属していた。
      */
-    private: void mix_cluster_topology(
-        typename this_type::cluster const& in_cluster)
-    PSYQ_NOEXCEPT
-    {
-        this->self_topology_ |= in_cluster.get_self_topology();
-        this->target_topology_ |= in_cluster.get_target_topology();
-    }
-
-    private: bool add_cluster(typename this_type::cluster const& in_cluster)
+    private: bool register_cluster(typename this_type::cluster const& in_cluster)
     {
         auto const local_end(this->clusters_.cend());
         auto const local_iterator(
@@ -288,11 +325,11 @@ class psyq::geometry::mosp::nut
             return false;
         }
         this->clusters_.push_back(&in_cluster);
-        this->mix_cluster_topology(in_cluster);
+        this->detach_tree();
         return true;
     }
 
-    private: bool remove_cluster(typename this_type::cluster const& in_cluster)
+    private: bool unregister_cluster(typename this_type::cluster const& in_cluster)
     {
         auto const local_end(this->clusters_.end());
         auto const local_iterator(
@@ -301,22 +338,23 @@ class psyq::geometry::mosp::nut
         {
             return false;
         }
-        *local_iterator = std::move(this->clusters_.back());
-        this->clusters_.pop_back();
-        this->target_topology_.reset();
+        this->clusters_.erase(local_iterator);
+        this->detach_tree();
         return true;
     }
 
     //-------------------------------------------------------------------------
     /// @brief 衝突判定形状の絶対座標系AABB。
     protected: typename this_type::space::coordinate::aabb aabb_;
+    /// @brief 衝突判定ナット連結リストの先頭。
+    private: typename this_type::connector* connectors_;
     /// @brief 衝突判定形状に対応する分割空間ノード。
     private: typename this_type::node node_;
-    /// @brief *thisが属している衝突判定クラスタのコンテナ。
+    /// @brief *thisが所属する衝突判定クラスタのコンテナ。
     private: typename this_type::cluster_container clusters_;
-    /// @brief *thisが属する衝突判定の位相。
+    /// @brief *thisが所属する衝突判定の位相。
     private: typename this_type::topology self_topology_;
-    /// @brief 衝突対象が属する衝突判定の位相。
+    /// @brief 衝突対象となる衝突判定の位相。
     private: typename this_type::topology target_topology_;
 
 }; // class psyq::geometry::mosp::nut
@@ -339,44 +377,68 @@ class psyq::geometry::mosp::nut<template_space, template_allocator>::cluster
     private: typedef
         psyq::geometry::mosp::nut<template_space, template_allocator> nut;
 
-    /// @brief 衝突判定ナットのコンテナ型。
-    public: typedef std::vector<typename this_type::nut::shared_ptr>
-        nut_container;
-
     //-------------------------------------------------------------------------
     /// @name 構築と代入
     //@{
     /** @brief 衝突判定クラスタを構築する。
-        @param[in] in_nuts            衝突判定クラスタに所属する衝突判定ナットのコンテナ。
         @param[in] in_self_topology   衝突判定クラスタが所属する衝突判定の位相。
         @param[in] in_target_topology 衝突判定クラスタが衝突する衝突判定の位相。
+        @param[in] in_nuts            衝突判定クラスタに所属する衝突判定ナットのコンテナ。
      */
     public: cluster(
-        typename this_type::nut_container in_nuts,
         typename this_type::nut::topology const in_self_topology,
-        typename this_type::nut::topology const in_target_topology)
+        typename this_type::nut::topology const in_target_topology,
+        typename this_type::nut::shared_ptr_vector const& in_nuts)
     :
-    nuts_(std::move(in_nuts)),
+    group_(this),
+    nuts_(in_nuts.get_allocator()),
     self_topology_(std::move(in_self_topology)),
     target_topology_(std::move(in_target_topology))
     {
-        this->initialize_nuts();
+        this->register_nuts(in_nuts);
+    }
+
+    /** @copydoc cluster
+        @param[in] in_group 衝突判定グループの識別値。
+     */
+    public: cluster(
+        typename this_type::nut::topology const in_self_topology,
+        typename this_type::nut::topology const in_target_topology,
+        typename this_type::nut::shared_ptr_vector const& in_nuts,
+        void const* const in_group)
+    :
+    group_(in_group),
+    nuts_(in_nuts.get_allocator()),
+    self_topology_(std::move(in_self_topology)),
+    target_topology_(std::move(in_target_topology))
+    {
+        this->register_nuts(in_nuts);
     }
 
     /** @brief コピー構築子。
         @param[in] in_source コピー元となるインスタンス。
      */
     public: cluster(this_type const& in_source):
-    nuts_(in_source.nuts_),
+    group_(this),
+    nuts_(in_source.nuts_.get_allocator()),
     self_topology_(in_source.self_topology_),
     target_topology_(in_source.target_topology_)
     {
-        this->initialize_nuts();
+        this->register_nuts(in_source.nuts_);
     }
 
+    /// @brief 衝突判定クラスタを解体する。
     public: ~cluster()
     {
-        this->remove_nuts();
+        for (auto const& local_observer: this->nuts_)
+        {
+            auto const local_holder(local_observer.lock());
+            auto const local_nut(local_holder.get());
+            if (local_nut != nullptr)
+            {
+                local_nut->unregister_cluster(*this);
+            }
+        }
     }
 
     /** @brief コピー代入演算子。
@@ -392,6 +454,11 @@ class psyq::geometry::mosp::nut<template_space, template_allocator>::cluster
         return *this;
     }
     //@}
+    /// @note ムーブ構築が未実装なので、privateにしておく。
+    private: cluster(this_type&&);
+    /// @note ムーブ代入が未実装なので、privateにしておく。
+    private: this_type& operator=(this_type&&);
+
     //-------------------------------------------------------------------------
     /// @name 衝突判定の位相
     //@{
@@ -422,12 +489,33 @@ class psyq::geometry::mosp::nut<template_space, template_allocator>::cluster
         typename this_type::nut::topology const& in_target_topology)
     PSYQ_NOEXCEPT
     {
-        for (auto& local_nut: this->nuts_)
+        for (auto const& local_observer: this->nuts_)
         {
-            local_nut->target_topology_.reset();
+            auto const local_holder(local_observer.lock());
+            auto const local_nut(local_holder.get());
+            if (local_nut != nullptr)
+            {
+                local_nut->detach_tree();
+            }
         }
         this->self_topology_ = in_self_topology;
         this->target_topology_ = in_target_topology;
+    }
+
+    /** @brief 衝突判定グループを取得する。
+        @return 衝突判定グループの識別値。
+     */
+    public: void const* get_group() const PSYQ_NOEXCEPT
+    {
+        return this->group_;
+    }
+
+    /** @brief 衝突判定グループを設定する。
+        @param[in] in_group 衝突判定グループの識別値。
+     */
+    public: void set_group(void const* const in_group) PSYQ_NOEXCEPT
+    {
+        this->group_ = in_group;
     }
     //@}
     //-------------------------------------------------------------------------
@@ -440,15 +528,31 @@ class psyq::geometry::mosp::nut<template_space, template_allocator>::cluster
             失敗。衝突判定ナットのスマートポインタが空か、
             すでに追加されている衝突判定ナットだった。
      */
-    public: bool add_nut(typename this_type::nut::shared_ptr in_nut)
+    public: bool register_nut(typename this_type::nut::shared_ptr const& in_nut)
     {
         auto const local_nut(in_nut.get());
-        if (local_nut == nullptr || !local_nut->add_cluster(*this))
+        if (local_nut != nullptr && local_nut->register_cluster(*this))
         {
-            return false;
+            this->nuts_.push_back(in_nut);
+            return true;
         }
-        this->nuts_.push_back(std::move(in_nut));
-        return true;
+        return false;
+    }
+
+    /** @brief 衝突判定クラスタに衝突判定ナットを追加する。
+        @param[in] in_nuts 追加する衝突判定ナットを指すスマートポインタのコンテナ。
+        @return 追加した衝突判定ナットの数。
+     */
+    public: template<typename template_container>
+    std::size_t register_nuts(template_container const& in_nuts)
+    {
+        auto const local_last_size(this->nuts_.size());
+        this->nuts_.reserve(local_last_size + in_nuts.size());
+        for (auto& local_nut: in_nuts)
+        {
+            this->register_nut(local_nut);
+        }
+        return this->nuts_.size() - local_last_size;
     }
 
     /** @brief 衝突判定クラスタから衝突判定ナットを削除する。
@@ -457,20 +561,19 @@ class psyq::geometry::mosp::nut<template_space, template_allocator>::cluster
             削除した衝突判定ナットを所有するスマートポインタ。
             ただし in_nut が衝突判定クラスタにない場合は空となる。
      */
-    public: typename this_type::nut::shared_ptr remove_nut(
+    public: typename this_type::nut::shared_ptr unregister_nut(
         typename this_type::nut* const in_nut)
     {
         if (in_nut != nullptr)
         {
-            for (auto& local_nut: this->nuts_)
+            for (auto i(this->nuts_.begin()); i != this->nuts_.end(); ++i)
             {
-                if (local_nut.get() == in_nut)
+                auto const local_holder(i->lock());
+                if (local_holder.get() == in_nut)
                 {
-                    in_nut->remove_cluster(*this);
-                    auto const local_remove_nut(std::move(local_nut));
-                    local_nut = std::move(this->nuts_.back());
-                    this->nuts_.pop_back();
-                    return local_remove_nut;
+                    in_nut->unregister_cluster(*this);
+                    this->nuts_.erase(i);
+                    return local_holder;
                 }
             }
         }
@@ -480,14 +583,22 @@ class psyq::geometry::mosp::nut<template_space, template_allocator>::cluster
     /** @brief 衝突判定クラスタから衝突判定ナットをすべて削除する。
         @return 削除した衝突判定ナット保持子のコンテナ。
      */
-    public: typename this_type::nut_container remove_nuts()
+    public: typename this_type::nut::shared_ptr_vector unregister_nuts()
     {
-        auto const local_nuts(std::move(this->nuts_));
-        this->nuts_.clear();
-        for (auto& local_nut: local_nuts)
+        typename this_type::nut::shared_ptr_vector
+            local_nuts(this->nuts_.get_allocator());
+        local_nuts.reserve(this->nuts.size());
+        for (auto const& local_observer: this->nuts_)
         {
-            local_nut->remove_cluster(*this);
+            auto const local_holder(local_observer.lock());
+            auto const local_nut(local_holder.get());
+            if (local_nut != nullptr)
+            {
+                local_nut->unregister_cluster(*this);
+                local_nuts.push_back(std::move(local_holder));
+            }
         }
+        this->nuts_.clear();
         return local_nuts;
     }
 
@@ -499,38 +610,22 @@ class psyq::geometry::mosp::nut<template_space, template_allocator>::cluster
      */
     public: typename this_type::nut::shared_ptr find_nut(
         typename this_type::nut const* const in_nut)
-    const
+    const PSYQ_NOEXCEPT
     {
         if (in_nut != nullptr)
         {
-            for (auto& local_nut: this->nuts_)
+            for (auto& local_observer: this->nuts_)
             {
-                if (local_nut.get() == in_nut)
+                auto const local_holder(local_observer.lock());
+                if (local_holder.get() == in_nut)
                 {
-                    return local_nut;
+                    return local_holder;
                 }
             }
         }
         return typename this_type::nut::shared_ptr();
     }
     //@}
-    private: void initialize_nuts()
-    {
-        for (auto i(this->nuts_.begin()); i != this->nuts_.end();)
-        {
-            auto const local_nut(i->get());
-            if (local_nut != nullptr)
-            {
-                local_nut->add_cluster(*this);
-                ++i;
-            }
-            else
-            {
-                i = this->nuts_.erase(i);
-            }
-        }
-    }
-
     //-------------------------------------------------------------------------
     /** @brief 衝突したクラスタを検出する。
         @todo 実装中。
@@ -545,24 +640,28 @@ class psyq::geometry::mosp::nut<template_space, template_allocator>::cluster
             // 衝突したクラスタを検知する。
             for (auto local_clustor_0: in_nut_0.clusters_)
             {
+                PSYQ_ASSERT(local_clustor_0 != nullptr);
                 for (auto local_clustor_1: in_nut_1.clusters_)
                 {
-                    // 異なるクラスタなら衝突する。
-                    if (local_clustor_0 != local_clustor_1)
+                    PSYQ_ASSERT(local_clustor_1 != nullptr);
+
+                    // 異なるグループなら衝突する。
+                    if (local_clustor_0->get_group()
+                        != local_clustor_1->get_group())
                     {
                         auto const local_topology_0(
+                            // クラスタ#0がクラスタ#1と衝突。
                             local_clustor_0->get_target_topology()
                             & local_clustor_1->get_self_topology());
-                        if (local_topology_0.any())
-                        {
-                            // クラスタ#0がクラスタ#1と衝突した。
-                        }
                         auto const local_topology_1(
+                            // クラスタ#1がクラスタ#0と衝突。
                             local_clustor_1->get_target_topology()
                             & local_clustor_0->get_self_topology());
-                        if (local_topology_1.any())
+                        auto const local_collision(
+                            (static_cast<unsigned>(local_topology_1.any()) * 2)
+                            | static_cast<unsigned>(local_topology_0.any()));
+                        if (local_collision != 0)
                         {
-                            // クラスタ#1がクラスタ#0と衝突した。
                         }
                     }
                 }
@@ -571,14 +670,120 @@ class psyq::geometry::mosp::nut<template_space, template_allocator>::cluster
     }
 
     //-------------------------------------------------------------------------
+    /// @brief 衝突判定グループの識別値。同じグループとは衝突しない。
+    private: void const* group_;
     /// @brief 衝突判定クラスタに所属する衝突判定ナットのコンテナ。
-    private: typename this_type::nut_container nuts_;
+    private: typename this_type::nut::weak_ptr_vector nuts_;
     /// @brief 衝突判定クラスタが所属する衝突判定の位相。
     private: typename this_type::nut::topology self_topology_;
     /// @brief 衝突判定クラスタが衝突する衝突判定の位相。
     private: typename this_type::nut::topology target_topology_;
 
 }; // class psyq::geometry::mosp::nut::cluster
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 衝突判定ナットを取りつける空間分割木。
+
+    @tparam template_space     @copydoc nut::space
+    @tparam template_allocator @copydoc nut::allocator_type
+ */
+template<typename template_space, typename template_allocator>
+class psyq::geometry::mosp::nut<template_space, template_allocator>::tree:
+public psyq::geometry::mosp::tree<
+    psyq::geometry::mosp::nut<template_space, template_allocator>*,
+    template_space,
+    template_allocator>
+{
+    /// @brief thisが指す値の型。
+    private: typedef tree this_type;
+
+    /// @brief this_type の基底型。
+    public: typedef psyq::geometry::mosp::tree<
+        psyq::geometry::mosp::nut<template_space, template_allocator>*,
+        template_space,
+        template_allocator>
+            base_type;
+
+    /// @brief 扱う衝突判定ナットの基底型。
+    private: typedef
+        psyq::geometry::mosp::nut<template_space, template_allocator>
+            nut;
+
+    //-------------------------------------------------------------------------
+    /** @brief 空間分割木に衝突判定ナットを取りつける。
+        @param[in] in_nut 登録する衝突判定ナットを指すスマートポインタ。
+        @retval true  成功。空間分割木に衝突判定ナットを登録した。
+        @retval false 失敗。
+     */
+    public: bool register_nut(typename this_type::nut::shared_ptr const& in_nut)
+    {
+        auto const local_nut(in_nut.get());
+        if (local_nut != nullptr && 
+            this->nuts_.size() <= this->find_nut(*local_nut))
+        {
+            this->nuts_.push_back(in_nut);
+            return true;
+        }
+        return false;
+    }
+
+    /** @brief 空間分割木から衝突判定ナットを取りはずす。
+        @param[in] in_nut 取り外す衝突判定ナットを指すポインタ。
+        @retval true  成功。空間分割木から衝突判定ナットを取り外した。
+        @retval false 失敗。
+     */
+    public: bool unregister_nut(typename this_type::nut const* const in_nut)
+    {
+        if (in_nut != nullptr)
+        {
+            auto const local_nut_index(this->find_nut(*in_nut));
+            if (local_nut_index < this->nuts_.size())
+            {
+                this->nuts_.at(local_nut_index).reset();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private: std::size_t find_nut(typename this_type::nut const& in_nut)
+    const PSYQ_NOEXCEPT
+    {
+        for (std::size_t i(0); i < this->nuts_.size(); ++i)
+        {
+            if (this->nuts_.at(i).lock().get() == &in_nut)
+            {
+                return i;
+            }
+        }
+        return this->nuts_.size();
+    };
+
+    //-------------------------------------------------------------------------
+    public: void begin_detection() override
+    {
+        // 衝突判定ナットを、空間分割木に取りつける。
+        for (auto i(this->nuts_.begin()); i != this->nuts_.end();)
+        {
+            auto const local_nut_holder(i->lock());
+            auto const local_nut(local_nut_holder.get());
+            if (local_nut != nullptr)
+            {
+                local_nut->attach_tree(*this);
+                ++i;
+            }
+            else
+            {
+                i = this->nuts_.erase(i);
+            }
+        }
+        return this->base_type::begin_detection();
+    }
+
+    //-------------------------------------------------------------------------
+    private: typename this_type::nut::weak_ptr_vector nuts_;
+
+}; // class psyq::geometry::mosp::nut::tree
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief  モートン空間分割木に取りつける、衝突判定オブジェクトの具象型。
@@ -632,10 +837,7 @@ public psyq::geometry::mosp::nut<template_space, template_allocator>
      */
     public: typename this_type::shape& get_mutable_shape()
     {
-        if (this->get_node().is_attached())
-        {
-            this->detach_tree();
-        }
+        this->detach_tree();
         return this->shape_;
     }
 

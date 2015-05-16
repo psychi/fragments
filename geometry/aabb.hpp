@@ -40,7 +40,7 @@ class psyq::geometry::aabb
     public: aabb(
         typename this_type::coordinate::vector const& in_min,
         typename this_type::coordinate::vector const& in_max)
-    :
+    PSYQ_NOEXCEPT:
     min_((
         PSYQ_ASSERT(psyq::geometry::vector::less_than_equal(in_min, in_max)),
         PSYQ_ASSERT(this_type::coordinate::validate(in_min)),
@@ -49,6 +49,34 @@ class psyq::geometry::aabb
         PSYQ_ASSERT(this_type::coordinate::validate(in_min)),
         in_max))
     {}
+
+    /** @brief AABBと点を合成し、AABBを構築する。
+        @param[in] in_aabb  合成するAABB。
+        @param[in] in_point 合成する点の座標。
+     */
+    public: aabb(
+        this_type const& in_aabb,
+        typename this_type::coordinate::vector const& in_point)
+    PSYQ_NOEXCEPT:
+    min_(in_aabb.get_min()),
+    max_(in_aabb.get_max())
+    {
+        this->include(in_point);
+    }
+
+    /** @brief 2つのAABBを合成し、AABBを構築する。
+        @param[in] in_aabb_a 合成するAABB。
+        @param[in] in_aabb_b 合成するAABB。
+     */
+    public: aabb(
+        this_type const& in_aabb_a,
+        this_type const& in_aabb_b)
+    PSYQ_NOEXCEPT:
+    min_(in_aabb_a.get_min()),
+    max_(in_aabb_a.get_max())
+    {
+        this->include(in_aabb_b);
+    }
 
     /** @brief AABBの最小座標を取得する。
         @return AABBの最小座標。
@@ -68,6 +96,53 @@ class psyq::geometry::aabb
         return this->max_;
     }
 
+    /** @brief 任意の点を含むようAABBを広げる。
+        @param[in] in_point 点の座標。
+     */
+    public: void include(
+        typename this_type::coordinate::vector const& in_point)
+    PSYQ_NOEXCEPT
+    {
+        for (unsigned i(0); i < this_type::coordinate::DIMENSION; ++i)
+        {
+            auto const local_element(psyq::geometry::vector::const_at(in_point, i));
+            if (local_element < psyq::geometry::vector::const_at(this->get_min(), i))
+            {
+                psyq::geometry::vector::at(this->min_, i) = local_element;
+            }
+            else if (psyq::geometry::vector::const_at(this->get_max(), i) < local_element)
+            {
+                psyq::geometry::vector::at(this->max_, i) = local_element;
+            }
+        }
+    }
+
+    /** @brief 任意のAABBを含むようAABBを広げる。
+        @param[in] in_aabb 合成するAABB。
+     */
+    public: void include(this_type const& in_aabb) PSYQ_NOEXCEPT
+    {
+        for (unsigned i(0); i < this_type::coordinate::DIMENSION; ++i)
+        {
+            auto const local_min_element_a(
+                psyq::geometry::vector::const_at(this->get_min(), i));
+            auto const local_min_element_b(
+                psyq::geometry::vector::const_at(in_aabb.get_min(), i));
+            if (local_min_element_b < local_min_element_a)
+            {
+                psyq::geometry::vector::at(this->min_, i) = local_min_element_b;
+            }
+            auto const local_max_element_a(
+                psyq::geometry::vector::const_at(this->get_max(), i));
+            auto const local_max_element_b(
+                psyq::geometry::vector::const_at(in_aabb.get_max(), i));
+            if (local_max_element_a < local_max_element_b)
+            {
+                psyq::geometry::vector::at(this->max_, i) = local_max_element_b;
+            }
+        }
+    }
+
     /** @brief 2つの点を含む最小のAABBを構築する。
         @return 点Aと点Bを包むAABB。
         @param[in] in_point_a 点Aの座標。
@@ -76,10 +151,11 @@ class psyq::geometry::aabb
     public: static this_type make(
         typename this_type::coordinate::vector const& in_point_a,
         typename this_type::coordinate::vector const& in_point_b)
+    PSYQ_NOEXCEPT
     {
         auto local_min(this_type::coordinate::make(in_point_a));
         auto local_max(this_type::coordinate::make(in_point_b));
-        for (unsigned i(0); i < this_type::coordinate::dimension; ++i)
+        for (unsigned i(0); i < this_type::coordinate::DIMENSION; ++i)
         {
             auto const local_element_a(
                 psyq::geometry::vector::const_at(in_point_a, i));

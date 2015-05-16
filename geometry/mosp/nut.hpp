@@ -54,7 +54,7 @@ namespace geometry
 namespace mosp
 {
     /// @cond
-    template<typename, typename> class nut;
+    template<typename> class nut;
     /// @endcond
 } // namespace mosp
 } // namespace geometry
@@ -65,11 +65,10 @@ namespace mosp
            モートン空間分割木に取りつける、衝突判定形状の基底型。
     @copydetails psyq::geometry::mosp
 
-    @tparam template_space     @copydoc nut::space
-    @tparam template_allocator @copydoc nut::allocator_type
+    @tparam template_space @copydoc nut::space
     @ingroup psyq_geometry_mosp
  */
-template<typename template_space, typename template_allocator>
+template<typename template_space>
 class psyq::geometry::mosp::nut
 {
     /// @brief thisが指す値の型。
@@ -83,9 +82,6 @@ class psyq::geometry::mosp::nut
      */
     public: typedef template_space space;
 
-    /// @brief コンテナに用いるメモリ割当子の型。
-    public: typedef template_allocator allocator_type;
-
     /// @brief モートン空間分割木に取りつけるノードの型。
     public: typedef psyq::geometry::mosp::node<
         this_type*, typename this_type::space::order>
@@ -97,31 +93,18 @@ class psyq::geometry::mosp::nut
     /// @brief 衝突判定ナットが所属する衝突判定の位相を表す型。
     public: typedef std::bitset<32> topology;
 
-    public: class tree;
-    public: template<typename template_shape> class concrete;
-
-    //-------------------------------------------------------------------------
-    /// @name スマートポインタ
-    //@{
     /// @brief this_type の所有権ありスマートポインタ。
     public: typedef std::shared_ptr<this_type> shared_ptr;
 
-        /// @brief this_type の所有権なしスマートポインタ。
+    /// @brief this_type の所有権なしスマートポインタ。
     public: typedef std::weak_ptr<this_type> weak_ptr;
 
-    /// @brief this_type の所有権ありスマートポインタのコンテナ。
-    public: typedef std::vector<
-        typename this_type::shared_ptr, typename this_type::allocator_type>
-            shared_ptr_vector;
+    public: template<typename template_allocator> class tree;
 
-    /// @brief this_type の所有権なしスマートポインタのコンテナ。
-    public: typedef std::vector<
-        typename this_type::weak_ptr, typename this_type::allocator_type>
-            weak_ptr_vector;
-    //@}
     //-------------------------------------------------------------------------
     /// @name 衝突判定形状
     //@{
+    public: template<typename template_shape> class concrete;
     /// @brief モートン空間分割木に取付可能な、半直線の衝突判定ナット。
     public: typedef concrete<
         psyq::geometry::ray<typename this_type::space::coordinate>>
@@ -245,12 +228,16 @@ class psyq::geometry::mosp::nut
     //-------------------------------------------------------------------------
     /// @brief 衝突判定形状の絶対座標系AABB。
     protected: typename this_type::space::coordinate::aabb aabb_;
+
     /// @brief 衝突判定形状に対応する分割空間ノード。
     private: typename this_type::node node_;
+
     /// @brief 衝突判定グループの識別値。同じグループとは衝突しない。
     private: typename this_type::group group_;
+
     /// @brief 所属する衝突判定の位相。
     private: typename this_type::topology topology_;
+
     /// @brief 衝突する衝突判定の位相。
     private: typename this_type::topology target_topology_;
 
@@ -260,12 +247,13 @@ class psyq::geometry::mosp::nut
 /** @brief 衝突判定ナットを取りつける空間分割木。
 
     @tparam template_space     @copydoc nut::space
-    @tparam template_allocator @copydoc nut::allocator_type
+    @tparam template_allocator @copydoc tree::allocator_type
  */
-template<typename template_space, typename template_allocator>
-class psyq::geometry::mosp::nut<template_space, template_allocator>::tree:
+template<typename template_space>
+template<typename template_allocator>
+class psyq::geometry::mosp::nut<template_space>::tree:
 public psyq::geometry::mosp::tree<
-    psyq::geometry::mosp::nut<template_space, template_allocator>*,
+    psyq::geometry::mosp::nut<template_space>*,
     template_space,
     template_allocator>
 {
@@ -274,15 +262,18 @@ public psyq::geometry::mosp::tree<
 
     /// @brief this_type の基底型。
     public: typedef psyq::geometry::mosp::tree<
-        psyq::geometry::mosp::nut<template_space, template_allocator>*,
+        psyq::geometry::mosp::nut<template_space>*,
         template_space,
         template_allocator>
             base_type;
 
     /// @brief 扱う衝突判定ナットの基底型。
-    private: typedef
-        psyq::geometry::mosp::nut<template_space, template_allocator>
-            nut;
+    private: typedef psyq::geometry::mosp::nut<template_space> nut;
+
+    /// @brief 衝突判定ナットの所有権なしスマートポインタのコンテナ。
+    private: typedef std::vector<
+        typename this_type::nut::weak_ptr, template_allocator>
+            nut_vector;
 
     //-------------------------------------------------------------------------
     /** @brief 空間分割木に衝突判定ナットを取りつける。
@@ -423,7 +414,7 @@ public psyq::geometry::mosp::tree<
     }
 
     //-------------------------------------------------------------------------
-    private: typename this_type::nut::weak_ptr_vector nuts_;
+    private: typename this_type::nut_vector nuts_;
 
 }; // class psyq::geometry::mosp::nut::tree
 
@@ -432,34 +423,48 @@ public psyq::geometry::mosp::tree<
     @tparam template_space @copydoc psyq::geometry::mosp::nut::space
     @tparam template_shape @copydoc psyq::geometry::mosp::nut::concrete::shape
  */
-template<typename template_space, typename template_allocator>
+template<typename template_space>
 template<typename template_shape>
-class psyq::geometry::mosp::nut<template_space, template_allocator>::concrete:
-public psyq::geometry::mosp::nut<template_space, template_allocator>
+class psyq::geometry::mosp::nut<template_space>::concrete:
+public psyq::geometry::mosp::nut<template_space>
 {
     /// @brief thisが指す値の型。
     private: typedef concrete this_type;
 
     /// @brief this_type の基底型。
-    public: typedef
-        psyq::geometry::mosp::nut<template_space, template_allocator>
-            base_type;
+    public: typedef psyq::geometry::mosp::nut<template_space> base_type;
 
     /// @brief 衝突判定オブジェクトの幾何形状の型。
     public: typedef template_shape shape;
 
     //-------------------------------------------------------------------------
     /** @brief 衝突判定に使う形状を構築する。
-        @param[in] in_shape           衝突判定に使う形状の初期値。
         @param[in] in_topology        所属する衝突判定位相。
         @param[in] in_target_topology 衝突する衝突判定位相。
+        @param[in] in_shape           衝突判定に使う形状の初期値。
      */
     public: concrete(
-        typename this_type::topology const& in_topology,
-        typename this_type::topology const& in_target_topology,
+        typename base_type::topology const& in_topology,
+        typename base_type::topology const& in_target_topology,
         typename this_type::shape const& in_shape)
     :
     base_type(this, in_topology, in_target_topology),
+    shape_(in_shape)
+    {}
+
+    /** @brief 衝突判定に使う形状を構築する。
+        @param[in] in_group           所属する衝突判定グループ。
+        @param[in] in_topology        所属する衝突判定位相。
+        @param[in] in_target_topology 衝突する衝突判定位相。
+        @param[in] in_shape           衝突判定に使う形状の初期値。
+     */
+    public: concrete(
+        typename base_type::group const in_group,
+        typename base_type::topology const& in_topology,
+        typename base_type::topology const& in_target_topology,
+        typename this_type::shape const& in_shape)
+    :
+    base_type(in_group, in_topology, in_target_topology),
     shape_(in_shape)
     {}
 
@@ -480,7 +485,7 @@ public psyq::geometry::mosp::nut<template_space, template_allocator>
 
         @return 衝突判定に使う形状。
      */
-    public: typename this_type::shape& get_mutable_shape()
+    public: typename this_type::shape& fetch_shape()
     {
         this->detach_tree();
         return this->shape_;
@@ -493,7 +498,7 @@ public psyq::geometry::mosp::nut<template_space, template_allocator>
     };
 
     //-------------------------------------------------------------------------
-    /// @brief 衝突判定オブジェクトの形状。
+    /// @brief 衝突判定の形状。
     protected: typename this_type::shape shape_;
 
 }; // class psyq::geometry::mosp::nut::concrete
@@ -506,8 +511,7 @@ namespace psyq_test
     void geometry_mosp()
     {
         typedef template_mosp_space psyq_mosp_space;
-        typedef psyq::geometry::mosp::nut<psyq_mosp_space, std::allocator<void*>>
-            psyq_mosp_nut;
+        typedef psyq::geometry::mosp::nut<psyq_mosp_space> psyq_mosp_nut;
         typedef psyq::geometry::mosp::tree<psyq_mosp_nut*, template_mosp_space>
             psyq_mosp_tree;
         typename psyq_mosp_tree::node_map::allocator_type::arena::shared_ptr

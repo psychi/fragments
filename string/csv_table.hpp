@@ -35,16 +35,19 @@ namespace psyq
 {
     namespace string
     {
-        template<typename> class csv_table;
+        template<typename, typename> class csv_table;
     } // namespace string
 } // namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief CSV形式の文字列から構築する、文字列の表。
-@tparam template_string @copybrief psyq::string::csv_table::string
+    @tparam template_string    @copybrief psyq::string::csv_table::string
+    @tparam template_allocator @copybrief psyq::string::csv_table::allocator_type
 */
-template<typename template_string = std::string>
+template<
+    typename template_string = std::string,
+    typename template_allocator = typename template_string::allocator_type>
 class psyq::string::csv_table
 {
     private: typedef csv_table this_type; ///< thisが指す値の型。
@@ -52,6 +55,9 @@ class psyq::string::csv_table
     //-------------------------------------------------------------------------
     /// @brief 文字列表で使う、std::basic_string互換の文字列型。
     public: typedef template_string string;
+
+    /// @brief メモリ割当子を表す型。
+    public: typedef template_allocator allocator_type;
 
     /// @brief 文字列表で使う、文字列参照の型。
     public: typedef psyq::string::view<
@@ -73,8 +79,64 @@ class psyq::string::csv_table
     };
 
     //-------------------------------------------------------------------------
-    private: typedef typename this_type::string::allocator_type allocator_type;
+    /// @brief CSV文字列で使う区切り文字。
+    public: struct delimiter
+    {
+        typedef typename csv_table::string::allocator_type allocator_type;
 
+        /** @brief 区切り文字を構築する。
+            @param[in] in_allocator CSV文字列で使うメモリ割当子。
+         */
+        explicit delimiter(allocator_type const& in_allocator = allocator_type())
+        :
+        column_separator(PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT),
+        row_separator(PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT),
+        quote_begin(PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT),
+        quote_end(PSYQ_STRING_CSV_TABLE_QUOTE_END_DEFAULT),
+        quote_escape(PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT),
+        allocator(in_allocator)
+        {}
+
+        /** @brief 区切り文字を構築する。
+            @param[in] in_column_separator CSV文字列の列の区切り文字。
+            @param[in] in_row_separator    CSV文字列の行の区切り文字。
+            @param[in] in_quote_begin      CSV文字列の引用符の開始文字。
+            @param[in] in_quote_end        CSV文字列の引用符の終了文字。
+            @param[in] in_quote_escape     CSV文字列の引用符のescape文字。
+            @param[in] in_allocator        CSV文字列で使うメモリ割当子。
+         */
+        delimiter(
+            typename csv_table::string::value_type const in_column_separator,
+            typename csv_table::string::value_type const in_row_separator,
+            typename csv_table::string::value_type const in_quote_begin,
+            typename csv_table::string::value_type const in_quote_end,
+            typename csv_table::string::value_type const in_quote_escape,
+            allocator_type const& in_allocator = allocator_type())
+        :
+        column_separator(in_column_separator),
+        row_separator(in_row_separator),
+        quote_begin(in_quote_begin),
+        quote_end(in_quote_end),
+        quote_escape(in_quote_escape),
+        allocator(in_allocator)
+        {}
+
+        /// @brief CSV文字列の列の区切り文字。
+        typename csv_table::string::value_type column_separator;
+        /// @brief CSV文字列の行の区切り文字。
+        typename csv_table::string::value_type row_separator;
+        /// @brief CSV文字列の引用符の開始文字。
+        typename csv_table::string::value_type quote_begin;
+        /// @brief CSV文字列の引用符の終了文字。
+        typename csv_table::string::value_type quote_end;
+        /// @brief CSV文字列の引用符のエスケープ文字。
+        typename csv_table::string::value_type quote_escape;
+        /// @brief CSV文字列で使うメモリ割当子。
+        allocator_type allocator;
+
+    }; // struct delimiter
+
+    //-------------------------------------------------------------------------
     /** @brief 文字列表のセルのコンテナ。
 
         - this_type::cell_vector::value_type::first_type は、
@@ -85,7 +147,7 @@ class psyq::string::csv_table
     private: typedef std::vector<
         std::pair<
             typename this_type::index_type, typename this_type::string_view>,
-        typename this_type::string::allocator_type>
+        typename this_type::allocator_type>
             cell_vector;
 
     /// @brief セルのインデクス番号を比較する関数オブジェクト。
@@ -133,7 +195,9 @@ class psyq::string::csv_table
             typename csv_table::attribute const& in_right)
         const PSYQ_NOEXCEPT
         {
-            return in_left.name < in_right.name;
+            auto const local_compare(in_left.name.compare(in_right.name));
+            return local_compare != 0?
+                local_compare < 0: in_left.column < in_right.column;
         }
         bool operator()(
             typename csv_table::attribute const& in_left,
@@ -149,12 +213,12 @@ class psyq::string::csv_table
         {
             return in_left < in_right.name;
         }
+
     }; // struct attribute_name_less
 
     /// @brief 属性の辞書。
     private: typedef std::vector<
-        typename this_type::attribute,
-        typename this_type::string::allocator_type>
+        typename this_type::attribute, typename this_type::allocator_type>
             attribute_vector;
 
     /** @brief 文字列表の主キーの配列。
@@ -167,10 +231,10 @@ class psyq::string::csv_table
     private: typedef std::vector<
         std::pair<
             typename this_type::string_view, typename this_type::index_type>,
-        typename this_type::string::allocator_type>
+        typename this_type::allocator_type>
             primary_key_vector;
 
-    /// 文字列表の主キーを比較する関数オブジェクト。
+    /// @brief 文字列表の主キーを比較する関数オブジェクト。
     private: struct primary_key_less
     {
         bool operator()(
@@ -178,7 +242,9 @@ class psyq::string::csv_table
             typename csv_table::primary_key_vector::value_type const& in_right)
         const PSYQ_NOEXCEPT
         {
-            return in_left.first < in_right.first;
+            auto const local_compare(in_left.first.compare(in_right.first));
+            return local_compare != 0?
+                local_compare < 0: in_left.second < in_right.second;
         }
         bool operator()(
             typename csv_table::primary_key_vector::value_type const& in_left,
@@ -194,6 +260,7 @@ class psyq::string::csv_table
         {
             return in_left < in_right.first;
         }
+
     }; // struct primary_key_less
 
     //-------------------------------------------------------------------------
@@ -204,33 +271,18 @@ class psyq::string::csv_table
         @param[in] in_attribute_row    属性行の番号。
         @param[in] in_attribute_name   主キーとして使う列の、属性名。
         @param[in] in_attribute_index  主キーとして使う列の、属性インデクス番号。
+        @param[in] in_csv_delimiter    CSV文字列の区切り文字。
         @param[in] in_allocator        メモリ割当子の初期値。
-        @param[in] in_column_separator CSV文字列の列の区切り文字。
-        @param[in] in_row_separator    CSV文字列の行の区切り文字。
-        @param[in] in_quote_begin      CSV文字列の引用符の開始文字。
-        @param[in] in_quote_end        CSV文字列の引用符の終了文字。
-        @param[in] in_quote_escape     CSV文字列の引用符のescape文字。
      */
     public: csv_table(
         typename this_type::string_view const& in_csv_string,
         typename this_type::index_type const in_attribute_row,
-        typename this_type::string_view const& in_attribute_name =
-            string_view(),
+        typename this_type::string_view const& in_attribute_name = string_view(),
         typename this_type::index_type const in_attribute_index = 0,
-        typename this_type::string::allocator_type const& in_allocator =
-            allocator_type(),
-        typename this_type::string_view::value_type const in_column_separator =
-            PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT,
-        typename this_type::string_view::value_type const in_row_separator =
-            PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT,
-        typename this_type::string_view::value_type const in_quote_begin =
-            PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT,
-        typename this_type::string_view::value_type const in_quote_end =
-            PSYQ_STRING_CSV_TABLE_QUOTE_END_DEFAULT,
-        typename this_type::string_view::value_type const in_quote_escape =
-            PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT)
+        typename this_type::delimiter const& in_csv_delimiter = delimiter(),
+        typename this_type::allocator_type const& in_allocator = allocator_type())
     :
-    string_buffer_(in_allocator),
+    string_buffer_(in_csv_delimiter.allocator),
     cells_(in_allocator),
     attributes_(in_allocator),
     primary_keys_(in_allocator),
@@ -241,18 +293,26 @@ class psyq::string::csv_table
         this_type::make_cell_map(
             this->string_buffer_,
             in_csv_string,
-            in_column_separator,
-            in_row_separator,
-            in_quote_begin,
-            in_quote_end,
-            in_quote_escape)
+            in_csv_delimiter.column_separator,
+            in_csv_delimiter.row_separator,
+            in_csv_delimiter.quote_begin,
+            in_csv_delimiter.quote_end,
+            in_csv_delimiter.quote_escape)
                 .swap(this->cells_);
+
         // 属性辞書を構築する。
         this_type::make_attribute_map(
-            this->cells_, in_attribute_row, this->get_column_count())
+            this->cells_, this->get_attribute_row(), this->get_column_count())
                 .swap(this->attributes_);
+
         // 主キー辞書を構築する。
-        this->constraint_primary_key(in_attribute_name, in_attribute_index);
+        if (!in_attribute_name.empty())
+        {
+            auto const local_constraint_primary_key(
+                this->constraint_primary_key(
+                    in_attribute_name, in_attribute_index));
+            PSYQ_ASSERT(local_constraint_primary_key);
+        }
     }
 
     /** @brief 文字列表をコピー構築する。
@@ -381,12 +441,41 @@ class psyq::string::csv_table
     }
 
     /** @brief 主キーの列番号を取得する。
-        @return 主キーの列番号。
+        @retval !=NULL_INDEX 主キーの列番号。
+        @retval ==NULL_INDEX 主キーが決定されてない。
+        @sa this_type::constraint_primary_key
+        @sa this_type::clear_primary_key
      */
     public: typename this_type::index_type get_primary_key_column()
     const PSYQ_NOEXCEPT
     {
         return this->primary_key_column_;
+    }
+
+    /** @brief 等価な主キーを数える。
+        @param[in] in_primary_key 検索する主キー。
+        @return in_primary_key と等価な主キーの数。
+        @sa this_type::constraint_primary_key
+        @sa this_type::clear_primary_key
+     */
+    public: typename this_type::index_type count_primary_key(
+        typename this_type::string_view const& in_primary_key)
+    const PSYQ_NOEXCEPT
+    {
+        typename this_type::index_type local_count(0);
+        for (
+            auto i(
+                std::lower_bound(
+                    this->primary_keys_.begin(),
+                    this->primary_keys_.end(),
+                    in_primary_key,
+                    typename this_type::primary_key_less()));
+            i != this->primary_keys_.end() && i->first == in_primary_key;
+            ++i)
+        {
+            ++local_count;
+        }
+        return local_count;
     }
     //@}
     //-------------------------------------------------------------------------
@@ -456,8 +545,7 @@ class psyq::string::csv_table
             auto const local_cell_index(
                 this_type::compute_cell_index(
                     static_cast<typename this_type::index_type>(in_row_index),
-                    static_cast<typename this_type::index_type>(
-                        in_column_index)));
+                    static_cast<typename this_type::index_type>(in_column_index)));
             auto const local_lower_bound(
                 std::lower_bound(
                     this->cells_.begin(),
@@ -514,8 +602,9 @@ class psyq::string::csv_table
         return local_attribute != nullptr
             && local_attribute->name == in_attribute_name
             && in_attribute_index < local_attribute->size?
-                static_cast<typename this_type::index_type>(
-                    local_attribute->column + in_attribute_index):
+                local_attribute->column
+                    + static_cast<typename this_type::index_type>(
+                        in_attribute_index):
                 this_type::NULL_INDEX;
     }
 
@@ -545,6 +634,8 @@ class psyq::string::csv_table
     /** @brief 主キーを決定する。
         @param[in] in_attribute_name  主キーとする属性の名前。
         @param[in] in_attribute_index 主キーとする属性のインデックス番号。
+        @retval true  成功。
+        @retval false 失敗。
      */
     public: bool constraint_primary_key(
         typename this_type::string_view const& in_attribute_name,
@@ -556,9 +647,10 @@ class psyq::string::csv_table
 
     /** @brief 主キーを決定する。
         @param[in] in_column_index 主キーとする列番号。
+        @retval true  成功。
+        @retval false 失敗。
      */
-    public: bool constraint_primary_key(
-        std::size_t const in_column_index)
+    public: bool constraint_primary_key(std::size_t const in_column_index)
     {
         if (this->get_column_count() <= in_column_index)
         {
@@ -566,13 +658,20 @@ class psyq::string::csv_table
         }
         auto const local_column_index(
             static_cast<typename this_type::index_type>(in_column_index));
-        PSYQ_ASSERT(in_column_index == local_column_index);
         auto local_primary_keys(
             this_type::make_primary_key_map(
                 this->cells_, local_column_index, this->get_attribute_row()));
         this->primary_keys_.swap(local_primary_keys);
         this->primary_key_column_ = local_column_index;
         return true;
+    }
+
+    /** @brief 主キーを空にする。
+     */
+    public: bool clear_primary_key()
+    {
+        this->primary_keys_.clear();
+        this->primary_key_column_ = this_type::NULL_INDEX;
     }
     //@}
     //-------------------------------------------------------------------------
@@ -859,14 +958,14 @@ class psyq::string::csv_table
         typename this_type::index_type const in_primary_column,
         typename this_type::index_type const in_attribute_row)
     {
+        typename this_type::primary_key_vector
+            local_primary_keys(in_cells.get_allocator());
         if (in_cells.empty())
         {
-            return typename this_type::primary_key_vector();
+            return local_primary_keys;
         }
 
         // セル辞書から主キーの列を読み取り、主キーの配列を構築する。
-        typename this_type::primary_key_vector local_primary_keys(
-            in_cells.get_allocator());
         auto local_row_index(
             in_cells.front().first / this_type::MAX_COLUMN_COUNT);
         auto local_cell(in_cells.begin());

@@ -11,6 +11,7 @@
 
 //#define PSYQ_STD_NO_MOVE
 //#define PSYQ_STD_NO_NULLPTR
+//#define PSYQ_STD_NO_ARRAY
 //#define PSYQ_STD_NO_DEFAULT_DELETE
 //#define PSYQ_STD_NO_UNIQUE_PTR
 //#define PSYQ_STD_NO_SHARED_PTR

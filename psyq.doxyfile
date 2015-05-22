@@ -679,6 +679,7 @@ WARN_LOGFILE           =
 
 INPUT                  = \
                          ./std/move.hpp \
+                         ./std/array.hpp \
                          ./std/default_delete.hpp \
                          ./std/unique_ptr.hpp \
                          ./std/shared_ptr.hpp \

@@ -301,9 +301,12 @@ class psyq::string::csv_table
                 .swap(this->cells_);
 
         // 属性辞書を構築する。
-        this_type::make_attribute_map(
-            this->cells_, this->get_attribute_row(), this->get_column_count())
-                .swap(this->attributes_);
+        if (in_attribute_row != this_type::NULL_INDEX)
+        {
+            this_type::make_attribute_map(
+                this->cells_, in_attribute_row, this->get_column_count())
+                    .swap(this->attributes_);
+        }
 
         // 主キー辞書を構築する。
         if (!in_attribute_name.empty())
@@ -430,53 +433,6 @@ class psyq::string::csv_table
         return this->cells_.empty()?
             0: this->cells_.back().first % this_type::MAX_COLUMN_COUNT + 1;
     }
-
-    /** @brief 属性の行番号を取得する。
-        @return 属性の行番号。
-     */
-    public: typename this_type::index_type get_attribute_row()
-    const PSYQ_NOEXCEPT
-    {
-        return this->attribute_row_;
-    }
-
-    /** @brief 主キーの列番号を取得する。
-        @retval !=NULL_INDEX 主キーの列番号。
-        @retval ==NULL_INDEX 主キーが決定されてない。
-        @sa this_type::constraint_primary_key
-        @sa this_type::clear_primary_key
-     */
-    public: typename this_type::index_type get_primary_key_column()
-    const PSYQ_NOEXCEPT
-    {
-        return this->primary_key_column_;
-    }
-
-    /** @brief 等価な主キーを数える。
-        @param[in] in_primary_key 検索する主キー。
-        @return in_primary_key と等価な主キーの数。
-        @sa this_type::constraint_primary_key
-        @sa this_type::clear_primary_key
-     */
-    public: typename this_type::index_type count_primary_key(
-        typename this_type::string_view const& in_primary_key)
-    const PSYQ_NOEXCEPT
-    {
-        typename this_type::index_type local_count(0);
-        for (
-            auto i(
-                std::lower_bound(
-                    this->primary_keys_.begin(),
-                    this->primary_keys_.end(),
-                    in_primary_key,
-                    typename this_type::primary_key_less()));
-            i != this->primary_keys_.end() && i->first == in_primary_key;
-            ++i)
-        {
-            ++local_count;
-        }
-        return local_count;
-    }
     //@}
     //-------------------------------------------------------------------------
     /// @name 検索
@@ -560,25 +516,79 @@ class psyq::string::csv_table
         }
         return typename this_type::string_view();
     }
-
-    /** @brief 主キーから、文字列表の行番号を検索する。
-        @param[in] in_primary_key  検索する主キー。
-        @retval !=NULL_INDEX 主キーに対応する行番号。
-        @retval ==NULL_INDEX 主キーに対応する行番号が存在しない。
+    //@}
+    /** @brief セルの行番号と列番号から、セルのインデクス番号を算出する。
+        @param[in] in_row_index    セルの行番号。
+        @param[in] in_column_index セルの列番号。
+        @return セルのインデクス番号。
      */
-    public: typename this_type::index_type find_row_index(
-        typename this_type::string_view const& in_primary_key)
+    private: static typename this_type::index_type compute_cell_index(
+        typename this_type::index_type const in_row_index,
+        typename this_type::index_type const in_column_index)
+    PSYQ_NOEXCEPT
+    {
+        PSYQ_ASSERT(in_row_index < this_type::MAX_ROW_COUNT);
+        PSYQ_ASSERT(in_column_index < this_type::MAX_COLUMN_COUNT);
+        return in_row_index * this_type::MAX_COLUMN_COUNT + in_column_index;
+    }
+
+    //-------------------------------------------------------------------------
+    /// @name 属性
+    //@{
+    /** @brief 属性の行番号を取得する。
+        @retval !=NULL_INDEX 属性の行番号。
+        @retval ==NULL_INDEX 属性辞書が空。
+     */
+    public: typename this_type::index_type get_attribute_row()
     const PSYQ_NOEXCEPT
     {
-        auto const local_primary_key(
+        return this->attribute_row_;
+    }
+
+    /** @brief 属性辞書を構築する。
+        @param[in] in_attribute_row 属性の行番号。
+        @retval true  成功。
+        @retval false 失敗。
+     */
+    public: bool constraint_attribute(std::size_t const in_attribute_row)
+    {
+        if (this->get_row_count() <= in_attribute_row)
+        {
+            return false;
+        }
+        this->attribute_row_ = in_attribute_row;
+        this_type::make_attribute_map(
+            this->cells_, this->get_attribute_row(), this->get_column_count())
+                .swap(this->attributes_);
+        return true;
+    }
+
+    /** @brief 属性辞書を空にする。
+     */
+    public: void clear_attribute()
+    {
+        this->attributes_.clear();
+        this->attribute_row_ = this_type::NULL_INDEX;
+    }
+
+    /** @brief 属性名から、文字列表の属性を検索する。
+        @param[in] in_attribute_name 検索する属性の名前。
+        @retval !=nullptr 属性名に対応する属性を指すポインタ。
+        @retval ==nullptr 属性名に対応する属性が存在しない。
+     */
+    public: typename this_type::attribute const* find_attribute(
+        typename this_type::string_view const& in_attribute_name)
+    const PSYQ_NOEXCEPT
+    {
+        auto const local_lower_bound(
             std::lower_bound(
-                this->primary_keys_.begin(),
-                this->primary_keys_.end(),
-                in_primary_key,
-                typename this_type::primary_key_less()));
-        return local_primary_key != this->primary_keys_.end()
-            && local_primary_key->first == in_primary_key?
-                local_primary_key->second: this_type::NULL_INDEX;
+                this->attributes_.begin(),
+                this->attributes_.end(),
+                in_attribute_name,
+                typename this_type::attribute_name_less()));
+        return local_lower_bound != this->attributes_.end()
+            && local_lower_bound->name == in_attribute_name?
+                &(*local_lower_bound): nullptr;
     }
 
     /** @brief 属性名から、文字列表の列番号を検索する。
@@ -607,31 +617,81 @@ class psyq::string::csv_table
                         in_attribute_index):
                 this_type::NULL_INDEX;
     }
-
-    /** @brief 属性名から、文字列表の属性を検索する。
-        @param[in] in_attribute_name  検索する属性の名前。
-        @retval !=nullptr 属性名に対応する属性を指すポインタ。
-        @retval ==nullptr 属性名に対応する属性が存在しない。
-     */
-    public: typename this_type::attribute const* find_attribute(
-        typename this_type::string_view const& in_attribute_name)
-    const PSYQ_NOEXCEPT
-    {
-        auto const local_lower_bound(
-            std::lower_bound(
-                this->attributes_.begin(),
-                this->attributes_.end(),
-                in_attribute_name,
-                typename this_type::attribute_name_less()));
-        return local_lower_bound != this->attributes_.end()
-            && local_lower_bound->name == in_attribute_name?
-                &(*local_lower_bound): nullptr;
-    }
     //@}
+    /** @brief 属性辞書を構築する。
+        @param[in] in_cells         文字列表のセル辞書。
+        @param[in] in_attribute_row 属性として使う行の番号。
+        @param[in] in_num_columns   属性行の列数。
+        @return セル辞書から構築した属性辞書。
+     */
+    private: static typename this_type::attribute_vector make_attribute_map(
+        typename this_type::cell_vector const& in_cells,
+        typename this_type::index_type const in_attribute_row,
+        typename this_type::index_type const in_num_columns)
+    {
+        // 属性行の先頭位置と末尾インデクスを決定する。
+        auto const local_attribute_begin(
+            std::lower_bound(
+                in_cells.begin(),
+                in_cells.end(),
+                this_type::compute_cell_index(in_attribute_row, 0),
+                typename this_type::cell_index_less()));
+        auto const local_attribute_end(
+            this_type::compute_cell_index(in_attribute_row + 1, 0));
+
+        // 属性行を読み取り、属性配列を構築する。
+        typename this_type::attribute_vector local_attributes(
+            in_cells.get_allocator());
+        for (
+            auto i(local_attribute_begin);
+            i != in_cells.end() && i->first < local_attribute_end;
+            ++i)
+        {
+            auto const local_column_index(
+                i->first % this_type::MAX_COLUMN_COUNT);
+            if (!local_attributes.empty())
+            {
+                // 直前の属性の要素数を決定する。
+                auto& local_back(local_attributes.back());
+                local_back.size = local_column_index - local_back.column;
+            }
+            local_attributes.push_back(
+                typename this_type::attribute(
+                    i->second, local_column_index, 0));
+        }
+
+        // 属性配列を並び替え、属性辞書として正規化する。
+        if (!local_attributes.empty())
+        {
+            // 末尾の属性の要素数を決定する。
+            auto& local_back(local_attributes.back());
+            local_back.size = local_back.column < in_num_columns?
+                in_num_columns - local_back.column: 1;
+            // 属性名で並び替える。
+            std::sort(
+                local_attributes.begin(),
+                local_attributes.end(),
+                typename this_type::attribute_name_less());
+        }
+        return typename this_type::attribute_vector(local_attributes);
+    }
+
     //-------------------------------------------------------------------------
     /// @name 主キー
     //@{
-    /** @brief 主キーを決定する。
+    /** @brief 主キーの列番号を取得する。
+        @retval !=NULL_INDEX 主キーの列番号。
+        @retval ==NULL_INDEX 主キーが決定されてない。
+        @sa this_type::constraint_primary_key
+        @sa this_type::clear_primary_key
+     */
+    public: typename this_type::index_type get_primary_key_column()
+    const PSYQ_NOEXCEPT
+    {
+        return this->primary_key_column_;
+    }
+
+    /** @brief 主キーの辞書を構築する。
         @param[in] in_attribute_name  主キーとする属性の名前。
         @param[in] in_attribute_index 主キーとする属性のインデックス番号。
         @retval true  成功。
@@ -645,7 +705,7 @@ class psyq::string::csv_table
             this->find_column_index(in_attribute_name, in_attribute_index));
     }
 
-    /** @brief 主キーを決定する。
+    /** @brief 主キーの辞書を構築する。
         @param[in] in_column_index 主キーとする列番号。
         @retval true  成功。
         @retval false 失敗。
@@ -666,14 +726,119 @@ class psyq::string::csv_table
         return true;
     }
 
-    /** @brief 主キーを空にする。
+    /** @brief 主キー辞書を空にする。
      */
     public: bool clear_primary_key()
     {
         this->primary_keys_.clear();
         this->primary_key_column_ = this_type::NULL_INDEX;
     }
+
+    /** @brief 等価な主キーを数える。
+        @param[in] in_primary_key 検索する主キー。
+        @return in_primary_key と等価な主キーの数。
+        @sa this_type::constraint_primary_key
+        @sa this_type::clear_primary_key
+     */
+    public: typename this_type::index_type count_primary_key(
+        typename this_type::string_view const& in_primary_key)
+    const PSYQ_NOEXCEPT
+    {
+        typename this_type::index_type local_count(0);
+        for (
+            auto i(
+                std::lower_bound(
+                    this->primary_keys_.begin(),
+                    this->primary_keys_.end(),
+                    in_primary_key,
+                    typename this_type::primary_key_less()));
+            i != this->primary_keys_.end() && i->first == in_primary_key;
+            ++i)
+        {
+            ++local_count;
+        }
+        return local_count;
+    }
+
+    /** @brief 主キーから、文字列表の行番号を検索する。
+        @param[in] in_primary_key  検索する主キー。
+        @retval !=NULL_INDEX 主キーに対応する行番号。
+        @retval ==NULL_INDEX 主キーに対応する行番号が存在しない。
+     */
+    public: typename this_type::index_type find_row_index(
+        typename this_type::string_view const& in_primary_key)
+    const PSYQ_NOEXCEPT
+    {
+        auto const local_primary_key(
+            std::lower_bound(
+                this->primary_keys_.begin(),
+                this->primary_keys_.end(),
+                in_primary_key,
+                typename this_type::primary_key_less()));
+        return local_primary_key != this->primary_keys_.end()
+            && local_primary_key->first == in_primary_key?
+                local_primary_key->second: this_type::NULL_INDEX;
+    }
     //@}
+
+    /** @brief 主キーの辞書を構築する。
+        @param[in] in_cells          文字列表のセル辞書。
+        @param[in] in_primary_column 主キーとして使う列の番号。
+        @param[in] in_attribute_row  属性として使う行の番号。
+        @return セル辞書から構築した主キーの辞書。
+     */
+    private: static typename this_type::primary_key_vector make_primary_key_map(
+        typename this_type::cell_vector const& in_cells,
+        typename this_type::index_type const in_primary_column,
+        typename this_type::index_type const in_attribute_row)
+    {
+        typename this_type::primary_key_vector
+            local_primary_keys(in_cells.get_allocator());
+        if (in_cells.empty())
+        {
+            return local_primary_keys;
+        }
+
+        // セル辞書から主キーの列を読み取り、主キーの配列を構築する。
+        auto local_row_index(
+            in_cells.front().first / this_type::MAX_COLUMN_COUNT);
+        auto local_cell(in_cells.begin());
+        for (;;)
+        {
+            if (local_row_index == in_attribute_row)
+            {
+                ++local_row_index;
+                continue;
+            }
+            local_cell = std::lower_bound(
+                local_cell,
+                in_cells.end(), 
+                this_type::compute_cell_index(
+                    local_row_index, in_primary_column),
+                typename this_type::cell_index_less());
+            if (local_cell == in_cells.end())
+            {
+                break;
+            }
+            if (local_cell->first % this_type::MAX_COLUMN_COUNT
+                == in_primary_column)
+            {
+                local_primary_keys.push_back(
+                    typename this_type::primary_key_vector::value_type(
+                        local_cell->second, local_row_index));
+            }
+            local_row_index =
+                local_cell->first / this_type::MAX_COLUMN_COUNT + 1;
+        }
+
+        // 主キーの配列を並び替え、主キーの辞書として正規化する。
+        std::sort(
+            local_primary_keys.begin(),
+            local_primary_keys.end(),
+            typename this_type::primary_key_less());
+        return typename this_type::primary_key_vector(local_primary_keys);
+    }
+
     //-------------------------------------------------------------------------
     /** @brief CSV形式の文字列を解析し、セルの辞書を構築する。
         @param[out] out_string_buffer  文字列をまとめて保存するバッファ。
@@ -887,137 +1052,6 @@ class psyq::string::csv_table
                 typename this_type::string_view(
                     io_table_string.data() + local_position,
                     in_cell_string.size())));
-    }
-
-    /** @brief 属性辞書を構築する。
-        @param[in] in_cells         文字列表のセル辞書。
-        @param[in] in_attribute_row 属性として使う行の番号。
-        @param[in] in_num_columns   属性行の列数。
-        @return セル辞書から構築した属性辞書。
-     */
-    private: static typename this_type::attribute_vector make_attribute_map(
-        typename this_type::cell_vector const& in_cells,
-        typename this_type::index_type const in_attribute_row,
-        typename this_type::index_type const in_num_columns)
-    {
-        // 属性行の先頭位置と末尾インデクスを決定する。
-        auto const local_attribute_begin(
-            std::lower_bound(
-                in_cells.begin(),
-                in_cells.end(),
-                this_type::compute_cell_index(in_attribute_row, 0),
-                typename this_type::cell_index_less()));
-        auto const local_attribute_end(
-            this_type::compute_cell_index(in_attribute_row + 1, 0));
-
-        // 属性行を読み取り、属性配列を構築する。
-        typename this_type::attribute_vector local_attributes(
-            in_cells.get_allocator());
-        for (
-            auto i(local_attribute_begin);
-            i != in_cells.end() && i->first < local_attribute_end;
-            ++i)
-        {
-            auto const local_column_index(
-                i->first % this_type::MAX_COLUMN_COUNT);
-            if (!local_attributes.empty())
-            {
-                // 直前の属性の要素数を決定する。
-                auto& local_back(local_attributes.back());
-                local_back.size = local_column_index - local_back.column;
-            }
-            local_attributes.push_back(
-                typename this_type::attribute(
-                    i->second, local_column_index, 0));
-        }
-
-        // 属性配列を並び替え、属性辞書として正規化する。
-        if (!local_attributes.empty())
-        {
-            // 末尾の属性の要素数を決定する。
-            auto& local_back(local_attributes.back());
-            local_back.size = local_back.column < in_num_columns?
-                in_num_columns - local_back.column: 1;
-            // 属性名で並び替える。
-            std::sort(
-                local_attributes.begin(),
-                local_attributes.end(),
-                typename this_type::attribute_name_less());
-        }
-        return typename this_type::attribute_vector(local_attributes);
-    }
-
-    /** @brief 主キーの辞書を構築する。
-        @param[in] in_cells          文字列表のセル辞書。
-        @param[in] in_primary_column 主キーとして使う列の番号。
-        @param[in] in_attribute_row  属性として使う行の番号。
-        @return セル辞書から構築した主キーの辞書。
-     */
-    private: static typename this_type::primary_key_vector make_primary_key_map(
-        typename this_type::cell_vector const& in_cells,
-        typename this_type::index_type const in_primary_column,
-        typename this_type::index_type const in_attribute_row)
-    {
-        typename this_type::primary_key_vector
-            local_primary_keys(in_cells.get_allocator());
-        if (in_cells.empty())
-        {
-            return local_primary_keys;
-        }
-
-        // セル辞書から主キーの列を読み取り、主キーの配列を構築する。
-        auto local_row_index(
-            in_cells.front().first / this_type::MAX_COLUMN_COUNT);
-        auto local_cell(in_cells.begin());
-        for (;;)
-        {
-            if (local_row_index == in_attribute_row)
-            {
-                ++local_row_index;
-                continue;
-            }
-            local_cell = std::lower_bound(
-                local_cell,
-                in_cells.end(), 
-                this_type::compute_cell_index(
-                    local_row_index, in_primary_column),
-                typename this_type::cell_index_less());
-            if (local_cell == in_cells.end())
-            {
-                break;
-            }
-            if (local_cell->first % this_type::MAX_COLUMN_COUNT
-                == in_primary_column)
-            {
-                local_primary_keys.push_back(
-                    typename this_type::primary_key_vector::value_type(
-                        local_cell->second, local_row_index));
-            }
-            local_row_index =
-                local_cell->first / this_type::MAX_COLUMN_COUNT + 1;
-        }
-
-        // 主キーの配列を並び替え、主キーの辞書として正規化する。
-        std::sort(
-            local_primary_keys.begin(),
-            local_primary_keys.end(),
-            typename this_type::primary_key_less());
-        return typename this_type::primary_key_vector(local_primary_keys);
-    }
-
-    /** @brief セルの行番号と列番号から、セルのインデクス番号を算出する。
-        @param[in] in_row_index    セルの行番号。
-        @param[in] in_column_index セルの列番号。
-        @return セルのインデクス番号。
-     */
-    private: static typename this_type::index_type compute_cell_index(
-        typename this_type::index_type const in_row_index,
-        typename this_type::index_type const in_column_index)
-    PSYQ_NOEXCEPT
-    {
-        PSYQ_ASSERT(in_row_index < this_type::MAX_ROW_COUNT);
-        PSYQ_ASSERT(in_column_index < this_type::MAX_COLUMN_COUNT);
-        return in_row_index * this_type::MAX_COLUMN_COUNT + in_column_index;
     }
 
     //-------------------------------------------------------------------------

@@ -157,7 +157,7 @@ class psyq::string::flyweight_factory
         typename this_type::item*,
         typename this_type::allocator_type::template
             rebind<typename this_type::item*>::other>
-                item_array;
+                item_vector;
 
     /** @brief 文字列参照の基底型。
         @note psyq::string::flyweight_factory 管理者以外は、使用禁止。
@@ -183,7 +183,7 @@ class psyq::string::flyweight_factory
             (**i).~item();
         }
         // チャンクをすべて破棄する。
-        typename this_type::item_array::allocator_type::template
+        typename this_type::item_vector::allocator_type::template
             rebind<typename this_type::chunk_header>::other
                 local_allocator(this->items_.get_allocator());
         auto local_chunk(this->chunk_);
@@ -214,6 +214,7 @@ class psyq::string::flyweight_factory
             this_type::EMPTY + 1: local_hash;
     }
 
+    //-------------------------------------------------------------------------
     /** @brief 文字列を辞書に登録する。
 
         登録する文字列と等価な文字列がすでに存在するなら、
@@ -229,24 +230,27 @@ class psyq::string::flyweight_factory
         // in_string と等価な文字列を、辞書から検索する。
         auto const local_hash(this_type::compute_hash(in_string));
         auto const local_size(in_string.size());
-        auto const local_existing_position(
-            std::lower_bound(
-                this->items_.begin(),
-                this->items_.end(),
-                typename this_type::item(local_hash, local_size)
-                typename this_type::compare_item()));
-        if (local_existing_position != this->items_.end())
+        for (
+            auto i(
+                std::lower_bound(
+                    this->items_.begin(),
+                    this->items_.end(),
+                    typename this_type::item(local_hash, local_size)
+                    typename this_type::compare_item()));
+            i != this->items_.end();
+            ++i)
         {
-            auto const& local_existing_item(**local_existing_position);
-            if (local_hash == local_existing_item.hash)
+            auto const& local_existing_item(**i);
+            if (local_hash != local_existing_item.hash)
             {
-                typename this_type::view const local_string(
-                    local_existing_item.data(), local_existing_item.size);
-                if (in_string == local_string)
-                {
-                    // 登録済の文字列を再利用する。
-                    return local_existing_item;
-                }
+                break;
+            }
+            typename this_type::view const local_string(
+                local_existing_item.data(), local_existing_item.size);
+            if (in_string == local_string)
+            {
+                // 登録済の文字列を再利用する。
+                return local_existing_item;
             }
         }
 
@@ -332,7 +336,7 @@ class psyq::string::flyweight_factory
     private: void* allocate_chunk(
         typename this_type::view::size_type const in_string_size)
     {
-        typename this_type::item_array::allocator_type::template
+        typename this_type::item_vector::allocator_type::template
             rebind<typename this_type::chunk_header>::other
                 local_allocator(this->items_.get_allocator());
         auto const local_allocate_count(
@@ -376,7 +380,7 @@ class psyq::string::flyweight_factory
 
     //-------------------------------------------------------------------------
     /// ハッシュ値をキーにソートされている、文字列の辞書。
-    private: typename this_type::item_array items_;
+    private: typename this_type::item_vector items_;
     /// 先頭のチャンク。
     private: typename this_type::chunk_header* chunk_;
 
@@ -455,8 +459,8 @@ class psyq::string::flyweight_factory<
     }
 
     /// @copydoc psyq::string::view::data
-    public: typename this_type::traits_type::char_type const*
-    data() const PSYQ_NOEXCEPT
+    public: typename this_type::traits_type::char_type const* data()
+    const PSYQ_NOEXCEPT
     {
         return this->factory_.expired()? 
             nullptr: PSYQ_ASSERT(this->item_ != nullptr), this->item_->data();
@@ -479,8 +483,8 @@ class psyq::string::flyweight_factory<
     /** @brief 文字列のハッシュ値を取得する。
         @return flyweight文字列辞書で使われているハッシュ値。
      */
-    public: typename this_type::factory::hash::value_type
-    get_hash() const PSYQ_NOEXCEPT
+    public: typename this_type::factory::hash::value_type get_hash()
+    const PSYQ_NOEXCEPT
     {
         return this->factory_.expired()?
             this_type::factory::hash::EMPTY:
@@ -490,8 +494,8 @@ class psyq::string::flyweight_factory<
     /** @brief 文字列が所属するflyweight文字列辞書を取得する。
         @return 文字列が所属するflyweight文字列辞書。
      */
-    public: typename this_type::factory::weak_ptr const&
-    get_factory() const PSYQ_NOEXCEPT
+    public: typename this_type::factory::weak_ptr const& get_factory()
+    const PSYQ_NOEXCEPT
     {
         return this->factory_;
     }
@@ -531,9 +535,7 @@ public psyq::string::_private::interface_immutable<
 
     /** @brief 空の文字列を構築する。メモリ確保は行わない。
      */
-    public: flyweight_view() PSYQ_NOEXCEPT:
-    base_type(base_type::make())
-    {}
+    public: flyweight_view() PSYQ_NOEXCEPT: base_type(base_type::make()) {}
 
     /** @brief 文字列をコピー構築する。メモリ確保は行わない。
         @param[in] in_source コピー元となる文字列。

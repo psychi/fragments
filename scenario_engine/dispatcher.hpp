@@ -618,13 +618,13 @@ class psyq::scenario_engine::dispatcher
     {
         // 条件式と要素条件チャンクを検索する。
         auto const local_expression(
-            in_evaluator.find_expression(in_expression_key));
+            in_evaluator._find_expression(in_expression_key));
         if (local_expression == nullptr)
         {
             return false;
         }
         auto const local_chunk(
-            in_evaluator.find_chunk(local_expression->chunk));
+            in_evaluator._find_chunk(local_expression->chunk));
         if (local_chunk == nullptr)
         {
             // 条件式があれば、要素条件チャンクもあるはず。

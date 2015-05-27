@@ -331,7 +331,7 @@ struct psyq::scenario_engine::behavior_builder
                 continue;
             }
             // 条件評価器に条件式があることを確認する。
-            PSYQ_ASSERT(in_evaluator.find_expression(local_key) != nullptr);
+            PSYQ_ASSERT(in_evaluator._find_expression(local_key) != nullptr);
 
             // 条件挙動関数オブジェクトを生成し、条件監視器に登録する。
             auto local_function(

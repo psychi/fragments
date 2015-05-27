@@ -236,7 +236,7 @@ class psyq::scenario_engine::evaluator
 
     //-------------------------------------------------------------------------
     /// @brief 要素条件チャンク。
-    private: struct chunk
+    public: struct chunk
     {
         typedef chunk this_type;
 
@@ -370,10 +370,10 @@ class psyq::scenario_engine::evaluator
     const PSYQ_NOEXCEPT
     {
         // 条件式の辞書から、該当する条件式を検索する。
-        auto const local_expression(this->find_expression(in_expression_key));
+        auto const local_expression(this->_find_expression(in_expression_key));
         if (local_expression != nullptr)
         {
-            auto const local_chunk(this->find_chunk(local_expression->chunk));
+            auto const local_chunk(this->_find_chunk(local_expression->chunk));
             if (local_chunk != nullptr)
             {
                 // 条件式の種別によって評価方法を分岐する。
@@ -406,12 +406,15 @@ class psyq::scenario_engine::evaluator
         return -1;
     }
 
-    /** @brief 条件式を取得する。
+    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
+
+        条件式を取得する。
+
         @param[in] in_expression_key 取得する条件式に対応する識別値。
         @retval !=nullptr 対応する条件式を指すポインタ。
         @retval ==nullptr 対応する条件式が見つからなかった。
      */
-    public: typename this_type::expression const* find_expression(
+    public: typename this_type::expression const* _find_expression(
         typename this_type::expression_key const& in_expression_key)
     const PSYQ_NOEXCEPT
     {
@@ -571,11 +574,14 @@ class psyq::scenario_engine::evaluator
     //-------------------------------------------------------------------------
     /// @name 要素条件チャンク
     //@{
-    /** @brief 要素条件チャンクを取得する。
+    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
+
+        要素条件チャンクを取得する。
+
         @param[in] in_chunk_key 取得する要素条件チャンクに対応する識別値。
         @return 要素条件チャンク。
      */
-    public: typename this_type::chunk const* find_chunk(
+    public: typename this_type::chunk const* _find_chunk(
         typename this_type::reservoir::chunk_key const& in_chunk_key)
     const PSYQ_NOEXCEPT
     {

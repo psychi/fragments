@@ -266,7 +266,7 @@ class psyq::scenario_engine::expression_builder
         }
         auto local_key(io_hasher(local_key_cell));
         if (local_key == io_hasher(typename template_hasher::argument_type())
-            || io_evaluator.find_expression(local_key) != nullptr)
+            || io_evaluator._find_expression(local_key) != nullptr)
         {
             // 条件キーが重複している。
             PSYQ_ASSERT(false);
@@ -434,7 +434,7 @@ class psyq::scenario_engine::expression_builder
                 無限ループを防ぐため、複合条件式で使う下位の条件式は、
                 条件評価器で定義済みのものしか使わないようにする。
              */
-            in_evaluator.find_expression(local_element.key) != nullptr);
+            in_evaluator._find_expression(local_element.key) != nullptr);
         if (local_element.key
             == io_hasher(typename template_hasher::argument_type()))
         {

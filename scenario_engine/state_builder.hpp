@@ -56,7 +56,7 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 文字列表から状態値を構築する関数オブジェクト。
 
-    driver::add_state_chunk の引数として使う。
+    driver::add_chunk の引数として使う。
 
     @tparam template_string 文字列表で使う文字列の型。
  */
@@ -69,13 +69,42 @@ class psyq::scenario_engine::state_builder
     /// @brief 解析する文字列表の型。
     public: typedef psyq::string::csv_table<template_string> string_table;
 
+    /// @brief 文字列表の属性。
+    private: struct table_attribute
+    {
+        explicit table_attribute(
+            typename state_builder::string_table const& in_table)
+        PSYQ_NOEXCEPT:
+        key(
+            in_table.find_attribute(
+                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KEY)),
+        kind(
+            in_table.find_attribute(
+                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KIND)),
+        value(
+            in_table.find_attribute(
+                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_VALUE))
+        {}
+
+        bool is_valid() const PSYQ_NOEXCEPT
+        {
+            return this->key != nullptr
+                && this->kind != nullptr
+                && this->value != nullptr;
+        }
+
+        typename this_type::string_table::attribute const* key;
+        typename this_type::string_table::attribute const* kind;
+        typename this_type::string_table::attribute const* value;
+
+    }; // struct table_attribute
+
     //-------------------------------------------------------------------------
     /** @brief 文字列表から状態値を構築する関数オブジェクトを構築する。
-        @param[in] in_string_table 解析する文字列表。
+        @param[in] in_table 解析する文字列表。
      */
-    public: explicit state_builder(
-        typename this_type::string_table in_string_table):
-    string_table_(std::move(in_string_table))
+    public: explicit state_builder(typename this_type::string_table in_table):
+    string_table_(std::move(in_table))
     {}
 
     /** @brief 文字列表を解析して状態値を構築し、状態貯蔵器へ登録する。
@@ -99,7 +128,7 @@ class psyq::scenario_engine::state_builder
         @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
         @param[in,out] io_hasher    文字列からハッシュ値を作る関数オブジェクト。
         @param[in] in_chunk_key     状態値を登録するチャンクの識別値。
-        @param[in] in_string_table  解析する文字列表。
+        @param[in] in_table         解析する文字列表。
         @return 登録した状態値の数。
      */
     public: template<typename template_reservoir, typename template_hasher>
@@ -107,21 +136,34 @@ class psyq::scenario_engine::state_builder
         template_reservoir& io_reservoir,
         template_hasher& io_hasher,
         typename template_reservoir::chunk_key const& in_chunk_key,
-        typename this_type::string_table const& in_string_table)
+        typename this_type::string_table const& in_table)
     {
+        // 文字列表の属性を取得する。
+        typename this_type::table_attribute const local_attribute(in_table);
+        if (!local_attribute.is_valid())
+        {
+            PSYQ_ASSERT(false);
+            return 0;
+        }
+
         // 文字列表を行ごとに解析し、状態値を登録する。
-        auto const local_row_count(in_string_table.get_row_count());
+        auto const local_row_count(in_table.get_row_count());
         std::size_t local_register_count(0);
         for (
             typename this_type::string_table::index_type i(0);
             i < local_row_count;
             ++i)
         {
-            if (i != in_string_table.get_attribute_row())
+            if (i != in_table.get_attribute_row())
             {
                 auto const local_register_state(
                     this_type::register_state(
-                        io_reservoir, io_hasher, in_chunk_key, in_string_table, i));
+                        io_reservoir,
+                        io_hasher,
+                        in_chunk_key,
+                        in_table,
+                        i,
+                        local_attribute));
                 if (local_register_state)
                 {
                     ++local_register_count;
@@ -135,8 +177,9 @@ class psyq::scenario_engine::state_builder
         @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
         @param[in,out] io_hasher    文字列からハッシュ値を作る関数オブジェクト。
         @param[in] in_chunk_key     状態値を登録するチャンクの識別値。
-        @param[in] in_string_table  解析する文字列表。
+        @param[in] in_table         解析する文字列表。
         @param[in] in_row_index     解析する文字列表の行番号。
+        @param[in] in_attribute     文字列表の属性。
         @retval true  成功。構築した状態値を状態貯蔵器へ登録した。
         @retval false 失敗。状態値は状態貯蔵器へ登録されなかった。
      */
@@ -145,20 +188,19 @@ class psyq::scenario_engine::state_builder
         template_reservoir& io_reservoir,
         template_hasher& io_hasher,
         typename template_reservoir::chunk_key const& in_chunk_key,
-        typename this_type::string_table const& in_string_table,
-        typename this_type::string_table::index_type const in_row_index)
+        typename this_type::string_table const& in_table,
+        typename this_type::string_table::index_type const in_row_index,
+        typename this_type::table_attribute const& in_attribute)
     {
         // 状態値のキーを取得する。
         auto const local_key_cell(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KEY));
+            in_table.find_body_cell(in_row_index, in_attribute.key->column));
         if (local_key_cell.empty())
         {
             PSYQ_ASSERT(false);
             return false;
         }
-        auto local_key(io_hasher(local_key_cell));
+        auto const local_key(io_hasher(local_key_cell));
         if (local_key == io_hasher(typename template_hasher::argument_type())
             || io_reservoir.get_format(local_key)
                != template_reservoir::state_value::kind_NULL)
@@ -169,56 +211,76 @@ class psyq::scenario_engine::state_builder
         }
 
         // 状態値の種類と初期値を取得し、状態値を登録する。
-        auto const local_kind_cell(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KIND));
-        auto const local_value_cell(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_VALUE));
-        if (local_kind_cell
-            == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_BOOL)
+        return this_type::register_state(
+            io_reservoir,
+            in_chunk_key,
+            local_key,
+            in_table.find_body_cell(in_row_index, in_attribute.kind->column),
+            in_table.find_body_cell(in_row_index, in_attribute.value->column));
+    }
+
+    /** @brief 状態値の型と初期値を解析して状態値を構築し、状態貯蔵器へ登録する。
+        @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
+        @param[in] in_chunk_key     状態値を登録するチャンクの識別値。
+        @param[in] in_state_key     登録する状態値の識別値。
+        @param[in] in_kind          登録する状態値の型を表す文字列。
+        @param[in] in_value         登録する状態値の初期値を表す文字列。
+        @retval true  成功。構築した状態値を状態貯蔵器へ登録した。
+        @retval false 失敗。状態値は状態貯蔵器へ登録されなかった。
+     */
+    private: template<typename template_reservoir>
+    static bool register_state(
+        template_reservoir& io_reservoir,
+        typename template_reservoir::chunk_key const& in_chunk_key,
+        typename template_reservoir::state_key const& in_state_key,
+        typename this_type::string_table::string_view const& in_kind,
+        typename this_type::string_table::string_view const& in_value)
+    {
+        if (in_kind == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_BOOL)
         {
+            // 論理型の状態値を登録する。
             return this_type::register_bool(
-                io_reservoir, in_chunk_key, local_key, local_value_cell);
+                io_reservoir, in_chunk_key, in_state_key, in_value);
         }
-        if (local_kind_cell
-            == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_FLOAT)
+        if (in_kind == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_FLOAT)
         {
+            // 浮動小数点数型の状態値を登録する。
             return this_type::register_float(
-                io_reservoir, in_chunk_key, local_key, local_value_cell);
+                io_reservoir, in_chunk_key, in_state_key, in_value);
         }
         std::size_t const local_default_size(8);
         auto const local_unsigned_size(
             this_type::get_integer_size(
-                local_kind_cell,
+                in_kind,
                 PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_UNSIGNED,
                 local_default_size));
         if (0 < local_unsigned_size)
         {
+            // 符号なし整数型の状態値を登録する。
             return this_type::register_unsigned(
                 io_reservoir,
                 in_chunk_key,
-                local_key,
-                local_value_cell,
+                in_state_key,
+                in_value,
                 local_unsigned_size);
         }
         auto const local_signed_size(
             this_type::get_integer_size(
-                local_kind_cell,
+                in_kind,
                 PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_SIGNED,
                 local_default_size));
         if (0 < local_signed_size)
         {
+            // 符号あり整数型の状態値を登録する。
             return this_type::register_signed(
                 io_reservoir,
                 in_chunk_key,
-                local_key,
-                local_value_cell,
+                in_state_key,
+                in_value,
                 local_signed_size);
         }
 
+        // 適切な型が見つからなかった。
         PSYQ_ASSERT(false);
         return false;
     }
@@ -334,7 +396,7 @@ class psyq::scenario_engine::state_builder
                     &local_rest_size));
         if (local_rest_size != 0)
         {
-            // 初期値セルを整数として解析しきれなかった。
+            // 初期値セルを実数として解析しきれなかった。
             PSYQ_ASSERT(false);
             return false;
         }
@@ -354,13 +416,16 @@ class psyq::scenario_engine::state_builder
         typename this_type::string_table::string_view const& in_kind,
         std::size_t const in_default_size)
     {
-        if (in_cell.substr(0, in_kind.size()) == in_kind)
+        PSYQ_ASSERT(!in_kind.empty());
+        if (in_kind.size() <= in_cell.size()
+            && in_kind == in_cell.substr(0, in_kind.size()))
         {
-            if (in_cell.size() == in_kind.size())
+            if (in_kind.size() == in_cell.size())
             {
                 return in_default_size;
             }
-            if (in_cell.at(in_kind.size()) == '_')
+            if (in_kind.size() + 2 <= in_cell.size()
+                && in_cell.at(in_kind.size()) == '_')
             {
                 std::size_t local_rest_size;
                 auto const local_size(

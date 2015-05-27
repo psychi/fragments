@@ -76,7 +76,7 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 文字列表から条件式を構築する関数オブジェクト。
 
-    driver::add_evaluator_chunk の引数として使う。
+    driver::add_chunk の引数として使う。
 
     @tparam template_string 文字列表で使う文字列の型。
  */
@@ -88,6 +88,41 @@ class psyq::scenario_engine::expression_builder
 
     /// @brief 解析する文字列表の型。
     public: typedef psyq::string::csv_table<template_string> string_table;
+
+    /// @brief 文字列表の属性。
+    private: struct table_attribute
+    {
+        explicit table_attribute(
+            typename expression_builder::string_table const& in_table)
+        PSYQ_NOEXCEPT:
+        key(
+            in_table.find_attribute(
+                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_KEY)),
+        logic(
+            in_table.find_attribute(
+                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_LOGIC)),
+        kind(
+            in_table.find_attribute(
+                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_KIND)),
+        element(
+            in_table.find_attribute(
+                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_ELEMENT))
+        {}
+
+        bool is_valid() const PSYQ_NOEXCEPT
+        {
+            return this->key != nullptr
+                && this->logic != nullptr
+                && this->kind != nullptr
+                && this->element != nullptr;
+        }
+
+        typename this_type::string_table::attribute const* key;
+        typename this_type::string_table::attribute const* logic;
+        typename this_type::string_table::attribute const* kind;
+        typename this_type::string_table::attribute const* element;
+
+    }; // struct table_attribute
 
     /// @brief 要素条件の構築に使う作業領域。
     private: template<typename template_evaluator>
@@ -109,12 +144,12 @@ class psyq::scenario_engine::expression_builder
 
     //-------------------------------------------------------------------------
     /** @brief 文字列表から条件式を構築する関数オブジェクトを構築する。
-        @param[in] in_string_table 解析する文字列表。
+        @param[in] in_table 解析する文字列表。
      */
     public: explicit expression_builder(
-        typename this_type::string_table in_string_table)
+        typename this_type::string_table in_table)
     :
-    string_table_(std::move(in_string_table))
+    string_table_(std::move(in_table))
     {}
 
     /** @brief 文字列表を解析して条件式を構築し、条件評価器に登録する。
@@ -145,7 +180,7 @@ class psyq::scenario_engine::expression_builder
         @param[in,out] io_hasher    文字列からハッシュ値を作る関数オブジェクト。
         @param[in] in_chunk_key     登録する条件式が所属するチャンクのキー。
         @param[in] in_reservoir     条件式が参照する状態貯蔵器。
-        @param[in] in_string_table  条件式が記述されている文字列表。
+        @param[in] in_table         条件式が記述されている文字列表。
         @return 登録した条件式の数。
      */
     public: template<typename template_evaluator, typename template_hasher>
@@ -154,29 +189,29 @@ class psyq::scenario_engine::expression_builder
         template_hasher& io_hasher,
         typename template_evaluator::reservoir::chunk_key const& in_chunk_key,
         typename template_evaluator::reservoir const& in_reservoir,
-        typename this_type::string_table const& in_string_table)
+        typename this_type::string_table const& in_table)
     {
-        // 作業領域を確保する。
-        auto const local_element_attribute(
-            in_string_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_ELEMENT));
-        if (local_element_attribute == nullptr)
+        // 文字列表の属性を取得する。
+        typename this_type::table_attribute const local_attribute(in_table);
+        if (!local_attribute.is_valid())
         {
             PSYQ_ASSERT(false);
             return 0;
         }
+
+        // 作業領域を確保する。
         typename this_type::workspace<template_evaluator> local_workspace(
-            local_element_attribute->size, io_evaluator.get_allocator());
+            local_attribute.element->size, io_evaluator.get_allocator());
 
         // 文字列表を行ごとに解析し、条件式を構築して、条件評価器へ登録する。
-        auto const local_row_count(in_string_table.get_row_count());
+        auto const local_row_count(in_table.get_row_count());
         std::size_t local_count(0);
         for (
             typename this_type::string_table::index_type i(0);
             i < local_row_count;
             ++i)
         {
-            if (i != in_string_table.get_attribute_row())
+            if (i != in_table.get_attribute_row())
             {
                 auto const local_build_expression(
                     this_type::build_expression(
@@ -185,8 +220,9 @@ class psyq::scenario_engine::expression_builder
                         local_workspace,
                         in_chunk_key,
                         in_reservoir,
-                        in_string_table,
-                        i));
+                        in_table,
+                        i,
+                        local_attribute));
                 if (local_build_expression)
                 {
                     ++local_count;
@@ -204,8 +240,9 @@ class psyq::scenario_engine::expression_builder
         @param[in,out] io_workspace 作業領域。
         @param[in] in_chunk_key     登録する条件式が所属するチャンクのキー。
         @param[in] in_reservoir     条件式が参照する状態貯蔵器。
-        @param[in] in_string_table  解析する文字列表。
+        @param[in] in_table         解析する文字列表。
         @param[in] in_row_index     解析する文字列表の行番号。
+        @param[in] in_attribute     文字列表の属性。
         @retval true  成功。条件式を構築し、条件評価器へ登録した。
         @retval false 失敗。条件式を構築できなかった。
      */
@@ -216,14 +253,13 @@ class psyq::scenario_engine::expression_builder
         typename this_type::workspace<template_evaluator>& io_workspace,
         typename template_evaluator::reservoir::chunk_key const& in_chunk_key,
         typename template_evaluator::reservoir const& in_reservoir,
-        typename this_type::string_table const& in_string_table,
-        typename this_type::string_table::index_type const in_row_index)
+        typename this_type::string_table const& in_table,
+        typename this_type::string_table::index_type const in_row_index,
+        typename this_type::table_attribute const& in_attribute)
     {
         // 条件式キーを取得する。
         auto const local_key_cell(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_KEY));
+            in_table.find_body_cell(in_row_index, in_attribute.key->column));
         if (local_key_cell.empty())
         {
             return false;
@@ -239,9 +275,7 @@ class psyq::scenario_engine::expression_builder
 
         // 要素条件の論理演算子を取得する。
         auto const local_logic_cell(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_LOGIC));
+            in_table.find_body_cell(in_row_index, in_attribute.logic->column));
         typename template_evaluator::expression::logic_enum local_logic;
         if (local_logic_cell
             == PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_LOGIC_AND)
@@ -263,9 +297,7 @@ class psyq::scenario_engine::expression_builder
 
         // 条件式の種類ごとに、条件式の要素条件を構築する。
         auto const local_kind_cell(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_KIND));
+            in_table.find_body_cell(in_row_index, in_attribute.kind->column));
         if (local_kind_cell
             == PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_COMPOUND)
         {
@@ -278,8 +310,9 @@ class psyq::scenario_engine::expression_builder
                 std::move(local_key),
                 local_logic,
                 io_evaluator,
-                in_string_table,
-                in_row_index);
+                in_table,
+                in_row_index,
+                in_attribute);
         }
         else if (
             local_kind_cell
@@ -294,8 +327,9 @@ class psyq::scenario_engine::expression_builder
                 std::move(local_key),
                 local_logic,
                 in_reservoir,
-                in_string_table,
-                in_row_index);
+                in_table,
+                in_row_index,
+                in_attribute);
         }
         else
         {
@@ -313,8 +347,9 @@ class psyq::scenario_engine::expression_builder
         @param[in] in_expression_key 登録する条件式のキー。
         @param[in] in_logic          登録する条件式で用いる論理演算子。
         @param[in] in_elements       要素条件が参照する値。
-        @param[in] in_string_table   解析する文字列表。
+        @param[in] in_table          解析する文字列表。
         @param[in] in_row_index      解析する文字列表の行番号。
+        @param[in] in_attribute      文字列表の属性。
         @retval true  成功。条件式を構築して io_evaluator に条件式を登録した。
         @retval false 失敗。条件式を構築できなかった。
      */
@@ -331,8 +366,9 @@ class psyq::scenario_engine::expression_builder
         typename template_evaluator::expression_key in_expression_key,
         typename template_evaluator::expression::logic_enum const in_logic,
         template_element_server const& in_elements,
-        typename this_type::string_table const& in_string_table,
-        typename this_type::string_table::index_type const in_row_index)
+        typename this_type::string_table const& in_table,
+        typename this_type::string_table::index_type const in_row_index,
+        typename this_type::table_attribute const& in_attribute)
     {
         // 要素条件のコンテナを構築し、条件式を条件評価器へ登録する。
         io_elements.clear();
@@ -341,8 +377,9 @@ class psyq::scenario_engine::expression_builder
                 io_elements,
                 io_hasher,
                 in_elements,
-                in_string_table,
-                in_row_index));
+                in_table,
+                in_row_index,
+                in_attribute));
         return io_elements.empty()?
             false:
             io_evaluator.register_expression(
@@ -356,8 +393,9 @@ class psyq::scenario_engine::expression_builder
         @param[in,out] io_elements 構築した要素条件を追加するコンテナ。
         @param[in,out] io_hasher   文字列からハッシュ値を生成する関数オブジェクト。
         @param[in] in_evaluator    複合条件式を追加する条件評価器。
-        @param[in] in_string_table 解析する文字列表。
+        @param[in] in_table        解析する文字列表。
         @param[in] in_row_index    解析する文字列表の行番号。
+        @param[in] in_attribute    文字列表の属性。
         @retval true  文字列表から要素条件を構築した。
         @retval false 文字列表に要素条件が存在しなかった。
      */
@@ -366,21 +404,26 @@ class psyq::scenario_engine::expression_builder
         typename template_evaluator::sub_expression::vector& io_elements,
         template_hasher& io_hasher,
         template_evaluator const& in_evaluator,
-        typename this_type::string_table const& in_string_table,
-        typename this_type::string_table::index_type const in_row_index)
+        typename this_type::string_table const& in_table,
+        typename this_type::string_table::index_type const in_row_index,
+        typename this_type::table_attribute const& in_attribute)
     {
         unsigned const local_element_size(2);
         auto const local_element_column(
-            io_elements.size() * local_element_size);
+            in_attribute.element->column
+            + io_elements.size() * local_element_size);
+        if (in_attribute.element->column + in_attribute.element->size
+            < local_element_column + local_element_size)
+        {
+            return false;
+        }
 
         // 複合条件式のキーを取得する。
         auto const local_sub_expression_key_cell(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_ELEMENT,
-                local_element_column));
+            in_table.find_body_cell(in_row_index, local_element_column));
         if (local_sub_expression_key_cell.empty())
         {
+            PSYQ_ASSERT(false);
             return false;
         }
         typename template_evaluator::sub_expression::vector::value_type
@@ -401,10 +444,7 @@ class psyq::scenario_engine::expression_builder
 
         // 複合条件式の条件を取得する。
         auto const local_condition_cell(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_ELEMENT,
-                local_element_column + 1));
+            in_table.find_body_cell(in_row_index, local_element_column + 1));
         auto const local_bool_state(local_condition_cell.to_bool());
         if (local_bool_state < 0)
         {
@@ -422,8 +462,9 @@ class psyq::scenario_engine::expression_builder
         @param[in,out] io_elements 構築した要素条件を追加するコンテナ。
         @param[in,out] io_hasher   文字列からハッシュ値を生成する関数オブジェクト。
         @param[in] in_reservoir    条件式が参照する状態貯蔵器。
-        @param[in] in_string_table 解析する文字列表。
+        @param[in] in_table        解析する文字列表。
         @param[in] in_row_index    解析する文字列表の行番号。
+        @param[in] in_attribute    文字列表の属性。
         @retval true  要素条件の解析は継続。
         @retval false 要素条件の解析は終了。
      */
@@ -432,21 +473,26 @@ class psyq::scenario_engine::expression_builder
         typename template_evaluator::state_comparison::vector& io_elements,
         template_hasher& io_hasher,
         typename template_evaluator::reservoir const& in_reservoir,
-        typename this_type::string_table const& in_string_table,
-        typename this_type::string_table::index_type const in_row_index)
+        typename this_type::string_table const& in_table,
+        typename this_type::string_table::index_type const in_row_index,
+        typename this_type::table_attribute const& in_attribute)
     {
         unsigned const local_element_size(3);
         auto const local_element_column(
-            io_elements.size() * local_element_size);
+            in_attribute.element->column
+            + io_elements.size() * local_element_size);
+        if (in_attribute.element->column + in_attribute.element->size
+            < local_element_column + local_element_size)
+        {
+            return false;
+        }
 
         // 状態キーを取得する。
         auto const local_state_key_cell(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_ELEMENT,
-                local_element_column));
+            in_table.find_body_cell(in_row_index, local_element_column));
         if (local_state_key_cell.empty())
         {
+            PSYQ_ASSERT(false);
             return false;
         }
         typename template_evaluator::state_comparison local_state;
@@ -462,10 +508,8 @@ class psyq::scenario_engine::expression_builder
         auto const local_get_comparison_operator(
             this_type::get_comparison_operator<template_evaluator>(
                 local_state.operation,
-                in_string_table.find_body_cell(
-                    in_row_index,
-                    PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_ELEMENT,
-                    local_element_column + 1)));
+                in_table.find_body_cell(
+                    in_row_index, local_element_column + 1)));
         if (!local_get_comparison_operator)
         {
             PSYQ_ASSERT(false);
@@ -474,10 +518,7 @@ class psyq::scenario_engine::expression_builder
 
         // 比較条件値を取得する。
         local_state.value = template_evaluator::reservoir::state_value::make(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_COLUMN_ELEMENT,
-                local_element_column + 2));
+            in_table.find_body_cell(in_row_index, local_element_column + 2));
         if (local_state.value.get_kind()
             == template_evaluator::reservoir::state_value::kind_NULL)
         {

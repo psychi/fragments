@@ -24,9 +24,7 @@ namespace psyq
 
     ### 使い方の概略
     - driver::driver でシナリオ駆動機を構築する。
-    - driver::add_reservoir_chunk で、状態値を登録する。
-    - driver::add_evaluator_chunk で、条件式を登録する。
-    - driver::add_behavior_chunk で、条件挙動を登録する。
+    - driver::add_chunk で、状態値と条件式と条件挙動を登録する。
     - driver::update をフレームごとに呼び出す。
       条件式の評価が変化して条件に合致していたら、
       条件挙動関数オブジェクトが呼び出される。
@@ -115,10 +113,10 @@ class psyq::scenario_engine::driver
         in_reserve_states,
         in_reserve_caches,
         in_allocator),
-    behaviors_(in_allocator),
+    behavior_chunks_(in_allocator),
     hash_function_(std::move(in_hash_function))
     {
-        this->behaviors_.reserve(in_reserve_chunks);
+        this->behavior_chunks_.reserve(in_reserve_chunks);
     }
 
     /** @brief ムーブ構築子。
@@ -128,6 +126,7 @@ class psyq::scenario_engine::driver
     reservoir_(std::move(io_source.reservoir_)),
     evaluator_(std::move(io_source.evaluator_)),
     dispatcher_(std::move(io_source.dispatcher_)),
+    behavior_chunks_(std::move(io_source.behavior_chunks_)),
     hash_function_(std::move(io_source.hash_function_))
     {}
 
@@ -140,6 +139,7 @@ class psyq::scenario_engine::driver
         this->reservoir_ = std::move(io_source.reservoir_);
         this->evaluator_ = std::move(io_source.evaluator_);
         this->dispatcher_ = std::move(io_source.dispatcher_);
+        this->behavior_chunks_ = std::move(io_source.behavior_chunks_);
         this->hash_function_ = std::move(io_source.hash_function_);
         return *this;
     }
@@ -150,9 +150,14 @@ class psyq::scenario_engine::driver
         this->reservoir_.shrink_to_fit();
         this->evaluator_.shrink_to_fit();
         this->dispatcher_.shrink_to_fit();
-        this->behaviors_.shrink_to_fit();
+        this->behavior_chunks_.shrink_to_fit();
+        for (auto& local_behavior_chunk: this->behavior_chunks_)
+        {
+            local_behavior_chunk.functions.shrink_to_fit();
+        }
     }
     //@}
+    //-------------------------------------------------------------------------
     /** @brief シナリオ進行を更新する。
 
         基本的には、フレーム毎に更新すること。
@@ -179,45 +184,24 @@ class psyq::scenario_engine::driver
     }
 
     //-------------------------------------------------------------------------
-    /// @name チャンクの追加
-    /** @brief シナリオ駆動器に状態値を追加する。
-
-        追加した状態値を削除するには、 this_type::reservoir_ に対して
-        this_type::reservoir::remove_chunk を呼び出す。
-
-        @param[in] in_chunk_key 状態値を追加するチャンクの識別値。
+    /// @name チャンク
+    /** @brief シナリオ駆動器にチャンクを追加する。
+        @param[in] in_chunk_key 追加するチャンクの識別値。
         @param[in] in_state_builder
             状態値を登録する関数オブジェクト。
             以下に相当するメンバ関数を使えること。
             @code
             // @brief 状態貯蔵器に状態値を登録する。
-            // @param[in,out] io_reservoir 状態値を登録する書庫。
+            // @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
             // @param[in,out] io_hasher    文字列から識別値を生成する関数オブジェクト。
             // @param[in] in_chunk_key     状態値を登録するチャンクを表す識別値。
             // @return 登録した状態値の数。
-            std::size_t template_builder::operator()(
+            void template_state_builder::operator()(
                 driver::reservoir& io_reservoir,
                 driver::hasher& io_hasher,
                 driver::reservoir::chunk_key const& in_chunk_key)
             const;
             @endcode
-        @return 登録した状態値の数。
-     */
-    public: template<typename template_builder>
-    std::size_t add_reservoir_chunk(
-        typename this_type::reservoir::chunk_key const& in_chunk_key,
-        template_builder const& in_state_builder)
-    {
-        return in_state_builder(
-            this->reservoir_, this->hash_function_, in_chunk_key);
-    }
-
-    /** @brief シナリオ駆動器に条件式を追加する。
-
-        追加した条件式を削除するには、 this_type::evaluator_ に対して
-        this_type::evaluator::remove_chunk を呼び出す。
-
-        @param[in] in_chunk_key 条件式を追加するチャンクの識別値。
         @param[in] in_expression_builder
             条件式を登録する関数オブジェクト。
             以下に相当するメンバ関数を使えること。
@@ -226,49 +210,70 @@ class psyq::scenario_engine::driver
             // @param[in,out] io_evaluator 条件式を登録する条件評価器。
             // @param[in,out] io_hasher    文字列から識別値を生成する関数オブジェクト。
             // @param[in] in_chunk_key     条件式を登録するチャンクを表す識別値。
-            // @param[in] in_reservoir     条件式で使う状態値の書庫。
+            // @param[in] in_reservoir     条件式で使う状態貯蔵器。
             // @return 登録した条件式の数。
-            std::size_t template_builder::operator()(
+            void template_expression_builder::operator()(
                 driver::evaluator& io_evaluator,
                 driver::hasher& io_hasher,
                 driver::reservoir::key_type const& in_chunk
                 driver::reservoir const& in_reservoir)
             const;
             @endcode
-        @return 登録した条件式の数。
+        @param[in] in_behavior_builder
+            条件挙動関数を登録する関数オブジェクト。
+            以下に相当するメンバ関数を使えること。
+            @code
+            // @brief 条件評価器に条件式を登録する。
+            // @param[in,out] io_dispatcher 条件挙動関数を登録する条件挙動器。
+            // @param[in,out] io_hasher     文字列から識別値を生成する関数オブジェクト。
+            // @param[in] in_evaluator      条件挙動関数で使う条件評価器。
+            // @param[in] in_reservoir      条件挙動関数で使う状態貯蔵器。
+            // @return 登録した条件式の数。
+            driver::dispatcher::function_shared_ptr_vector
+            template_behavior_builder::operator()(
+                driver::dispatcher& io_dispatcher,
+                driver::hasher& io_hasher,
+                driver::evaluator const& in_evaluator,
+                driver::reservoir const& in_reservoir)
+            const;
+            @endcode
      */
-    public: template<typename template_builder>
-    std::size_t add_evaluator_chunk(
-        typename this_type::evaluator::reservoir::chunk_key const& in_chunk_key,
-        template_builder const& in_expression_builder)
+    public: template<
+        typename template_state_builder,
+        typename template_expression_builder,
+        typename template_behavior_builder>
+    void add_chunk(
+        typename this_type::reservoir::chunk_key const& in_chunk_key,
+        template_state_builder const& in_state_builder,
+        template_expression_builder const& in_expression_builder,
+        template_behavior_builder const& in_behavior_builder) 
     {
-        return in_expression_builder(
+        in_state_builder(
+            this->reservoir_, this->hash_function_, in_chunk_key);
+        in_expression_builder(
             this->evaluator_,
             this->hash_function_,
             in_chunk_key,
             this->reservoir_);
-    }
-
-    /** @brief シナリオ駆動器に条件挙動を追加する。
-        @param[in] in_chunk     条件挙動を追加するチャンクの識別値。
-        @param[in] in_functions 追加する条件挙動関数オブジェクトのコンテナ。
-     */
-    public: void add_behavior_chunk(
-        typename this_type::behavior_chunk::key_type const& in_chunk,
-        typename this_type::dispatcher::function_shared_ptr_vector
-            in_functions)
-    {
         this_type::behavior_chunk::add(
-            this->behaviors_, in_chunk, std::move(in_functions));
+            this->behavior_chunks_,
+            in_chunk_key,
+            in_behavior_builder(
+                this->dispatcher_,
+                this->hash_function_,
+                this->evaluator_,
+                this->reservoir_));
     }
 
-    /** @brief シナリオ駆動器から条件挙動を削除する。
-        @param[in] in_chunk 条件挙動を削除するチャンクのキー。
+    /** @brief シナリオ駆動器からチャンクを削除する。
+        @param[in] in_chunk 削除するチャンクのキー。
      */
-    public: bool remove_behavior_chunk(
+    public: void remove_chunk(
         typename this_type::behavior_chunk::key_type const& in_chunk)
     {
-        return this_type::behavior_chunk::remove(this->behaviors_, in_chunk);
+        this->reservoir_.remove_chunk(in_chunk);
+        this->evaluator_.remove_chunk(in_chunk);
+        this_type::behavior_chunk::remove(this->behavior_chunks_, in_chunk);
     }
     //@}
     //-------------------------------------------------------------------------
@@ -282,7 +287,7 @@ class psyq::scenario_engine::driver
     public: typename this_type::dispatcher dispatcher_;
 
     /// @brief シナリオ駆動器で用いる条件挙動チャンクのコンテナ。
-    private: typename this_type::behavior_chunk::vector behaviors_;
+    private: typename this_type::behavior_chunk::vector behavior_chunks_;
 
     /// @brief シナリオ駆動器で用いるハッシュ関数オブジェクト。
     public: typename this_type::hasher hash_function_;
@@ -294,30 +299,25 @@ namespace psyq_test
 {
     inline void scenario_engine()
     {
-        typedef psyq::scenario_engine::state_builder<std::string>
-            state_builder;
-        typedef state_builder::string_table string_table;
+        typedef psyq::string::csv_table<std::string> string_table;
         typedef psyq::scenario_engine
             ::driver<float, string_table::string_view::fnv1_hash32>
                 driver;
         driver local_driver(16, 16, 16);
         auto const local_chunk_key(local_driver.hash_function_("chunk_0"));
 
-        // 状態値を登録する。
-        string_table::string_view const local_state_table_csv(
+        // 状態値テーブルを構築する。
+        string_table local_state_table(
             "KEY,            KIND,      VALUE,\n"
             "state_bool,     BOOL,       TRUE,\n"
             "state_unsigned, UNSIGNED_7,   10,\n"
             "state_signed,   SIGNED_13,   -20,\n"
             "state_float,    FLOAT,      1.25,\n"
-            );
-        local_driver.add_reservoir_chunk(
-            local_chunk_key,
-            state_builder(
-                state_builder::string_table(local_state_table_csv, 0)));
+            "");
+        local_state_table.constraint_attribute(0);
 
-        // 条件式を登録する。
-        string_table::string_view const local_expression_table_csv(
+        // 条件式テーブルを構築する。
+        string_table local_expression_table(
             "KEY,          LOGIC, KIND,             ELEMENT,\n"
             "expression_0, AND,   STATE_COMPARISON, state_bool,     ==, FALSE,\n"
             "expression_1, AND,   STATE_COMPARISON, state_unsigned, <=, 10,\n"
@@ -328,17 +328,12 @@ namespace psyq_test
             "expression_6, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
             "expression_7, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
             "expression_8, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
-            "expression_9, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n");
-        typedef psyq::scenario_engine::expression_builder<string_table::string>
-            expression_builder;
-        local_driver.add_evaluator_chunk(
-            local_chunk_key,
-            expression_builder(
-                expression_builder::string_table(
-                    local_expression_table_csv, 0)));
+            "expression_9, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
+            "");
+        local_expression_table.constraint_attribute(0);
 
-        // 条件挙動チャンクを登録する。
-        string_table::string_view const local_behavior_table_csv(
+        // 条件挙動テーブルを構築する。
+        string_table local_behavior_table(
             "KEY         , CONDITION, KIND,  ARGUMENT\n"
             "expression_0, TRUE,      STATE, state_unsigned, :=, 1\n"
             "expression_1, TRUE,      STATE, state_unsigned, +=, 1\n"
@@ -348,17 +343,19 @@ namespace psyq_test
             "expression_5, TRUE,      STATE, state_unsigned, %=, 1\n"
             "expression_6, TRUE,      STATE, state_unsigned, |=, 1\n"
             "expression_7, TRUE,      STATE, state_unsigned, ^=, 0\n"
-            "expression_8, TRUE,      STATE, state_unsigned, &=, 0\n");
-        typedef psyq::scenario_engine::behavior_builder<driver::dispatcher>
-            behavior_builder;
-        local_driver.add_behavior_chunk(
+            "expression_8, TRUE,      STATE, state_unsigned, &=, 0\n"
+            "");
+        local_behavior_table.constraint_attribute(0);
+
+        // シナリオ駆動機にチャンクを登録する。
+        local_driver.add_chunk(
             local_chunk_key,
-            behavior_builder::build(
-                local_driver.dispatcher_,
-                local_driver.hash_function_,
-                local_driver.evaluator_,
-                local_driver.reservoir_,
-                string_table(local_behavior_table_csv, 0)));
+            psyq::scenario_engine::state_builder<string_table::string>(
+                std::move(local_state_table)),
+            psyq::scenario_engine::expression_builder<string_table::string>(
+                std::move(local_expression_table)),
+            psyq::scenario_engine::behavior_builder<string_table::string, driver::dispatcher>(
+                std::move(local_behavior_table)));
 
         local_driver.reservoir_.set_value(
             local_driver.hash_function_("state_bool"), false);

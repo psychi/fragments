@@ -267,29 +267,17 @@ class psyq::string::csv_table
     /// @name 構築と代入
     //@{
     /** @brief CSV文字列から、文字列表を構築する。
-        @param[in] in_csv_string       CSV文字列。
-        @param[in] in_attribute_row    属性行の番号。
-        @param[in] in_attribute_name   主キーとして使う列の、属性名。
-        @param[in] in_attribute_index  主キーとして使う列の、属性インデクス番号。
-        @param[in] in_csv_delimiter    CSV文字列の区切り文字。
-        @param[in] in_allocator        メモリ割当子の初期値。
+        @param[in] in_csv_string    CSV文字列。
+        @param[in] in_csv_delimiter CSV文字列の区切り文字。
+        @param[in] in_allocator     メモリ割当子の初期値。
      */
-    public: csv_table(
+    public: explicit csv_table(
         typename this_type::string_view const& in_csv_string,
-        typename this_type::index_type const in_attribute_row,
-        typename this_type::string_view const& in_attribute_name = string_view(),
-        typename this_type::index_type const in_attribute_index = 0,
         typename this_type::delimiter const& in_csv_delimiter = delimiter(),
         typename this_type::allocator_type const& in_allocator = allocator_type())
     :
     string_buffer_(in_csv_delimiter.allocator),
-    cells_(in_allocator),
-    attributes_(in_allocator),
-    primary_keys_(in_allocator),
-    attribute_row_(in_attribute_row),
-    primary_key_column_(this_type::NULL_INDEX)
-    {
-        // セル辞書を構築する。
+    cells_(
         this_type::make_cell_map(
             this->string_buffer_,
             in_csv_string,
@@ -297,26 +285,13 @@ class psyq::string::csv_table
             in_csv_delimiter.row_separator,
             in_csv_delimiter.quote_begin,
             in_csv_delimiter.quote_end,
-            in_csv_delimiter.quote_escape)
-                .swap(this->cells_);
-
-        // 属性辞書を構築する。
-        if (in_attribute_row != this_type::NULL_INDEX)
-        {
-            this_type::make_attribute_map(
-                this->cells_, in_attribute_row, this->get_column_count())
-                    .swap(this->attributes_);
-        }
-
-        // 主キー辞書を構築する。
-        if (!in_attribute_name.empty())
-        {
-            auto const local_constraint_primary_key(
-                this->constraint_primary_key(
-                    in_attribute_name, in_attribute_index));
-            PSYQ_ASSERT(local_constraint_primary_key);
-        }
-    }
+            in_csv_delimiter.quote_escape,
+            in_allocator)),
+    attributes_(in_allocator),
+    primary_keys_(in_allocator),
+    attribute_row_(this_type::NULL_INDEX),
+    primary_key_column_(this_type::NULL_INDEX)
+    {}
 
     /** @brief 文字列表をコピー構築する。
         @param[in] in_source コピー元となる文字列表。
@@ -413,7 +388,7 @@ class psyq::string::csv_table
     }
 
     //-------------------------------------------------------------------------
-    /// @name プロパティ
+    /// @name セル
     //@{
     /** @brief 文字列表の行数を取得する。
         @return 文字列表の行数。
@@ -433,58 +408,63 @@ class psyq::string::csv_table
         return this->cells_.empty()?
             0: this->cells_.back().first % this_type::MAX_COLUMN_COUNT + 1;
     }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name 検索
-    //@{
-    /** @brief 主キーと属性から、文字列表の本体セルを検索する。
-        @param[in] in_primary_key     検索する主キー。
-        @param[in] in_attribute_name  検索する属性の名前。
-        @param[in] in_attribute_index 検索する属性のインデックス番号。
-     */
-    public: typename this_type::string_view find_body_cell(
-        typename this_type::string_view const& in_primary_key,
-        typename this_type::string_view const& in_attribute_name,
-        std::size_t const in_attribute_index = 0)
-    const PSYQ_NOEXCEPT
-    {
-        return this->find_body_cell(
-            this->find_row_index(in_primary_key),
-            this->find_column_index(in_attribute_name, in_attribute_index));
-    }
 
-    /** @brief 行番号と属性から、文字列表の本体セルを検索する。
-        @param[in] in_row_index       検索する行番号。
-        @param[in] in_attribute_name  検索する属性の名前。
-        @param[in] in_attribute_index 検索する属性のインデックス番号。
-     */
-    public: typename this_type::string_view find_body_cell(
-        std::size_t const in_row_index,
-        typename this_type::string_view const& in_attribute_name,
-        std::size_t const in_attribute_index = 0)
-    const PSYQ_NOEXCEPT
-    {
-        return this->find_body_cell(
-            in_row_index,
-            this->find_column_index(in_attribute_name, in_attribute_index));
-    }
+    /** @brief 主キーから、行番号を検索する。
 
-    /** @brief 主キーと列番号から、文字列表の本体セルを検索する。
+        this_type::constraint_primary_key で、主キーの構築を事前にしておくこと。
+
         @param[in] in_primary_key  検索する主キー。
-        @param[in] in_column_index 検索する列番号。
+        @retval !=NULL_INDEX 主キーに対応する行番号。
+        @retval ==NULL_INDEX 主キーに対応する行番号が存在しない。
      */
-    public: typename this_type::string_view find_body_cell(
-        typename this_type::string_view const& in_primary_key,
-        std::size_t const in_column_index)
+    public: typename this_type::index_type find_row_index(
+        typename this_type::string_view const& in_primary_key)
     const PSYQ_NOEXCEPT
     {
-        return this->find_body_cell(
-            this->find_row_index(in_primary_key), in_column_index);
+        auto const local_primary_key(
+            std::lower_bound(
+                this->primary_keys_.begin(),
+                this->primary_keys_.end(),
+                in_primary_key,
+                typename this_type::primary_key_less()));
+        return local_primary_key != this->primary_keys_.end()
+            && local_primary_key->first == in_primary_key?
+                local_primary_key->second: this_type::NULL_INDEX;
+    }
+
+    /** @brief 属性名から、列番号を検索する。
+
+        this_type::constraint_attribute で、属性の構築を事前にしておくこと。
+
+        @param[in] in_attribute_name  検索する属性の名前。
+        @param[in] in_attribute_index 検索する属性のインデックス番号。
+        @retval !=NULL_INDEX 属性名に対応する列番号。
+        @retval ==NULL_INDEX 属性名に対応する列番号が存在しない。
+     */
+    public: typename this_type::index_type find_column_index(
+        typename this_type::string_view const& in_attribute_name,
+        std::size_t const in_attribute_index = 0)
+    const PSYQ_NOEXCEPT
+    {
+        if (in_attribute_name.empty())
+        {
+            return in_attribute_index < this->get_column_count()?
+                static_cast<typename this_type::index_type>(in_attribute_index):
+                this_type::NULL_INDEX;
+        }
+        auto const local_attribute(this->find_attribute(in_attribute_name));
+        return local_attribute != nullptr
+            && local_attribute->name == in_attribute_name
+            && in_attribute_index < local_attribute->size?
+                local_attribute->column
+                    + static_cast<typename this_type::index_type>(
+                        in_attribute_index):
+                this_type::NULL_INDEX;
     }
 
     /** @brief 行番号と属性から、文字列表の本体セルを検索する。
-        @param[in] in_row_index    検索する行番号。
-        @param[in] in_column_index 検索する列番号。
+        @param[in] in_row_index    検索する本体セルの行番号。
+        @param[in] in_column_index 検索する本体セルの列番号。
         @return
             行番号と列番号に対応する本体セル。
             対応する本体セルがない場合は、空文字列を返す。
@@ -556,10 +536,10 @@ class psyq::string::csv_table
         {
             return false;
         }
-        this->attribute_row_ = in_attribute_row;
-        this_type::make_attribute_map(
-            this->cells_, this->get_attribute_row(), this->get_column_count())
-                .swap(this->attributes_);
+        this->attribute_row_ =
+            static_cast<typename this_type::index_type>(in_attribute_row);
+        this->attributes_ = this_type::make_attribute_map(
+            this->cells_, this->get_attribute_row(), this->get_column_count());
         return true;
     }
 
@@ -590,34 +570,7 @@ class psyq::string::csv_table
             && local_lower_bound->name == in_attribute_name?
                 &(*local_lower_bound): nullptr;
     }
-
-    /** @brief 属性名から、文字列表の列番号を検索する。
-        @param[in] in_attribute_name  検索する属性の名前。
-        @param[in] in_attribute_index 検索する属性のインデックス番号。
-        @retval !=NULL_INDEX 属性名に対応する列番号。
-        @retval ==NULL_INDEX 属性名に対応する列番号が存在しない。
-     */
-    public: typename this_type::index_type find_column_index(
-        typename this_type::string_view const& in_attribute_name,
-        std::size_t const in_attribute_index = 0)
-    const PSYQ_NOEXCEPT
-    {
-        if (in_attribute_name.empty())
-        {
-            return in_attribute_index < this->get_column_count()?
-                static_cast<typename this_type::index_type>(in_attribute_index):
-                this_type::NULL_INDEX;
-        }
-        auto const local_attribute(this->find_attribute(in_attribute_name));
-        return local_attribute != nullptr
-            && local_attribute->name == in_attribute_name
-            && in_attribute_index < local_attribute->size?
-                local_attribute->column
-                    + static_cast<typename this_type::index_type>(
-                        in_attribute_index):
-                this_type::NULL_INDEX;
-    }
-    //@}
+   //@}
     /** @brief 属性辞書を構築する。
         @param[in] in_cells         文字列表のセル辞書。
         @param[in] in_attribute_row 属性として使う行の番号。
@@ -759,28 +712,7 @@ class psyq::string::csv_table
         }
         return local_count;
     }
-
-    /** @brief 主キーから、文字列表の行番号を検索する。
-        @param[in] in_primary_key  検索する主キー。
-        @retval !=NULL_INDEX 主キーに対応する行番号。
-        @retval ==NULL_INDEX 主キーに対応する行番号が存在しない。
-     */
-    public: typename this_type::index_type find_row_index(
-        typename this_type::string_view const& in_primary_key)
-    const PSYQ_NOEXCEPT
-    {
-        auto const local_primary_key(
-            std::lower_bound(
-                this->primary_keys_.begin(),
-                this->primary_keys_.end(),
-                in_primary_key,
-                typename this_type::primary_key_less()));
-        return local_primary_key != this->primary_keys_.end()
-            && local_primary_key->first == in_primary_key?
-                local_primary_key->second: this_type::NULL_INDEX;
-    }
     //@}
-
     /** @brief 主キーの辞書を構築する。
         @param[in] in_cells          文字列表のセル辞書。
         @param[in] in_primary_column 主キーとして使う列の番号。
@@ -832,11 +764,12 @@ class psyq::string::csv_table
         }
 
         // 主キーの配列を並び替え、主キーの辞書として正規化する。
+        local_primary_keys.shrink_to_fit();
         std::sort(
             local_primary_keys.begin(),
             local_primary_keys.end(),
             typename this_type::primary_key_less());
-        return typename this_type::primary_key_vector(local_primary_keys);
+        return local_primary_keys;
     }
 
     //-------------------------------------------------------------------------
@@ -848,6 +781,7 @@ class psyq::string::csv_table
         @param[in] in_quote_begin      引用符の開始文字。
         @param[in] in_quote_end        引用符の終了文字。
         @param[in] in_quote_escape     引用符のエスケープ文字。
+        @param[in] in_allocator        セルコンテナで使うメモリ割当子。
         @return CSV形式の文字列を解析して構築した、セルの辞書。
      */
     private: static typename this_type::cell_vector make_cell_map(
@@ -857,7 +791,8 @@ class psyq::string::csv_table
         typename this_type::string_view::value_type const in_row_separator,
         typename this_type::string_view::value_type const in_quote_begin,
         typename this_type::string_view::value_type const in_quote_end,
-        typename this_type::string_view::value_type const in_quote_escape)
+        typename this_type::string_view::value_type const in_quote_escape,
+        typename this_type::allocator_type const& in_allocator)
     {
         PSYQ_ASSERT(in_quote_escape != 0);
         bool local_quote(false);
@@ -868,8 +803,7 @@ class psyq::string::csv_table
         typename this_type::string local_cell_string(
             out_string_buffer.get_allocator());
         typename this_type::string::size_type local_cell_size(0);
-        typename this_type::cell_vector local_cells(
-            out_string_buffer.get_allocator());
+        typename this_type::cell_vector local_cells(in_allocator);
         typename this_type::string local_string_buffer(
             out_string_buffer.get_allocator());
         local_string_buffer.reserve(in_csv_string.size());
@@ -1023,7 +957,8 @@ class psyq::string::csv_table
             typename this_type::cell_vector::value_type(
                 this_type::compute_cell_index(local_row, local_max_column),
                 typename this_type::string_view()));
-        return typename this_type::cell_vector(local_cells);
+        local_cells.shrink_to_fit();
+        return local_cells;
     }
 
     private: static void add_cell(

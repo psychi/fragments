@@ -13,7 +13,7 @@ namespace psyq
     namespace scenario_engine
     {
         template<typename> struct behavior_chunk;
-        template<typename> struct behavior_builder;
+        template<typename, typename> struct behavior_builder;
     } // namespace scenario_engine
 } // namespace psyq
 /// @endcond
@@ -200,8 +200,9 @@ struct psyq::scenario_engine::behavior_chunk
 /** @brief 文字列表から条件挙動関数オブジェクトを構築する関数オブジェクト。
 
     @tparam template_dispatcher @copydoc dispatcher
+    @tparam template_string     文字列表で使う文字列の型。
  */
-template<typename template_dispatcher>
+template<typename template_string, typename template_dispatcher>
 struct psyq::scenario_engine::behavior_builder
 {
     private: typedef behavior_builder this_type;
@@ -209,46 +210,118 @@ struct psyq::scenario_engine::behavior_builder
     /// @brief 条件挙動関数オブジェクトの登録先となる条件挙動器を表す型。
     public: typedef template_dispatcher dispatcher;
 
+    /// @brief 解析する文字列表の型。
+    public: typedef psyq::string::csv_table<template_string> string_table;
+
+    /// @brief 文字列表の属性。
+    private: struct table_attribute
+    {
+        table_attribute(string_table const& in_table)
+        PSYQ_NOEXCEPT:
+        key(
+            in_table.find_attribute(
+                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_KEY)),
+        condition(
+            in_table.find_attribute(
+                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_CONDITION)),
+        kind(
+            in_table.find_attribute(
+                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_KIND)),
+        argument(
+            in_table.find_attribute(
+                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_ARGUMENT))
+        {}
+
+        bool is_valid() const PSYQ_NOEXCEPT
+        {
+            return this->key != nullptr
+                && this->condition != nullptr
+                && this->kind != nullptr
+                && this->argument != nullptr;
+        }
+
+        typename behavior_builder::string_table::attribute const* key;
+        typename behavior_builder::string_table::attribute const* condition;
+        typename behavior_builder::string_table::attribute const* kind;
+        typename behavior_builder::string_table::attribute const* argument;
+
+    }; // struct table_attribute
+
     //-------------------------------------------------------------------------
-    /** @brief 文字列表から条件挙動関数オブジェクトを生成し、条件評価器へ登録する。
-        @param[in,out] io_dispatcher 生成した条件挙動関数オブジェクトを登録する条件監視器。
+    /** @brief 文字列表から状態値を構築する関数オブジェクトを構築する。
+        @param[in] in_table 解析する文字列表。
+     */
+    public: explicit behavior_builder(
+        typename this_type::string_table in_table):
+    string_table_(std::move(in_table))
+    {}
+
+    /** @brief 文字列表を解析して状態値を構築し、状態貯蔵器へ登録する。
+        @param[in,out] io_dispatcher 生成した条件挙動関数オブジェクトを登録する条件挙動器。
         @param[in,out] io_hasher     文字列からキーへ変換するハッシュ関数オブジェクト。
         @param[in] in_evaluator      条件挙動関数から参照する条件評価器。
         @param[in] in_reservoir      条件挙動関数から参照する状態貯蔵器。
-        @param[in] in_string_table   条件挙動の文字列表。
         @return 生成した条件挙動関数オブジェクトのコンテナ。
      */
-    public: template<
-        typename template_hasher,
-        typename template_evaluator,
-        typename template_string>
+    public: template<typename template_hasher, typename template_evaluator>
+    typename this_type::dispatcher::function_shared_ptr_vector operator()(
+        typename this_type::dispatcher& io_dispatcher,
+        template_hasher& io_hasher,
+        template_evaluator const& in_evaluator,
+        typename template_evaluator::reservoir const& in_reservoir)
+    const
+    {
+        return this_type::build(
+            io_dispatcher,
+            io_hasher,
+            in_evaluator,
+            in_reservoir,
+            this->string_table_);
+    }
+
+    /** @brief 文字列表から条件挙動関数オブジェクトを生成し、条件評価器へ登録する。
+        @param[in,out] io_dispatcher 生成した条件挙動関数オブジェクトを登録する条件挙動器。
+        @param[in,out] io_hasher     文字列からキーへ変換するハッシュ関数オブジェクト。
+        @param[in] in_evaluator      条件挙動関数から参照する条件評価器。
+        @param[in] in_reservoir      条件挙動関数から参照する状態貯蔵器。
+        @param[in] in_table          条件挙動の文字列表。
+        @return 生成した条件挙動関数オブジェクトのコンテナ。
+     */
+    public: template<typename template_hasher, typename template_evaluator>
     static typename this_type::dispatcher::function_shared_ptr_vector build(
         typename this_type::dispatcher& io_dispatcher,
         template_hasher& io_hasher,
         template_evaluator const& in_evaluator,
         typename template_evaluator::reservoir const& in_reservoir,
-        psyq::string::csv_table<template_string> const& in_string_table)
+        typename this_type::string_table const& in_table)
     {
         typename this_type::dispatcher::function_shared_ptr_vector
             local_functions(io_dispatcher.get_allocator());
-        auto const local_row_count(in_string_table.get_row_count());
-        local_functions.reserve(local_row_count);
+
+        // 文字列表の属性の桁を取得する。
+        typename this_type::table_attribute const local_attribute(in_table);
+        if (!local_attribute.is_valid())
+        {
+            PSYQ_ASSERT(false);
+            return local_functions;
+        }
 
         // 文字列表を解析し、条件挙動関数オブジェクトの一覧を構築する。
+        auto const local_row_count(in_table.get_row_count());
+        local_functions.reserve(local_row_count);
         for (
-            typename psyq::string::csv_table<template_string>::index_type i(0);
+            typename this_type::string_table::index_type i(0);
             i < local_row_count;
             ++i)
         {
-            if (i == in_string_table.get_attribute_row())
+            if (i == in_table.get_attribute_row())
             {
                 continue;
             }
 
             // 条件式キーを取得する。
             auto const local_key_cell(
-                in_string_table.find_body_cell(
-                    i, PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_KEY));
+                in_table.find_body_cell(i, local_attribute.key->column));
             auto local_key(io_hasher(local_key_cell));
             if (local_key
                 == io_hasher(typename template_hasher::argument_type()))
@@ -263,7 +336,12 @@ struct psyq::scenario_engine::behavior_builder
             // 条件挙動関数オブジェクトを生成し、条件監視器に登録する。
             auto local_function(
                 this_type::make_function(
-                    io_hasher, in_evaluator, in_reservoir, in_string_table, i));
+                    io_hasher,
+                    in_evaluator,
+                    in_reservoir,
+                    in_table,
+                    i,
+                    local_attribute));
             auto const local_register_function(
                 io_dispatcher.register_function(local_key, local_function));
             if (local_register_function)
@@ -282,30 +360,27 @@ struct psyq::scenario_engine::behavior_builder
 
     //-------------------------------------------------------------------------
     /** @brief 文字列表から条件挙動関数オブジェクトを生成する。
-        @param[in,out] io_hasher   文字列からキーへ変換するハッシュ関数オブジェクト。
-        @param[in] in_evaluator    条件挙動関数から参照する条件評価器。
-        @param[in] in_reservoir    条件挙動関数から参照する状態貯蔵器。
-        @param[in] in_string_table 条件挙動の文字列表。
-        @param[in] in_row_index    文字列表の行番号。
+        @param[in,out] io_hasher 文字列からキーへ変換するハッシュ関数オブジェクト。
+        @param[in] in_evaluator  条件挙動関数から参照する条件評価器。
+        @param[in] in_reservoir  条件挙動関数から参照する状態貯蔵器。
+        @param[in] in_table      条件挙動の文字列表。
+        @param[in] in_row_index  文字列表の行番号。
+        @param[in] in_attribute  文字列表の属性。
         @return 生成した条件関数オブジェクト。
      */
-    private: template<
-         typename template_hasher,
-         typename template_evaluator,
-         typename template_string>
+    private: template<typename template_hasher, typename template_evaluator>
     static typename this_type::dispatcher::function_shared_ptr make_function(
         template_hasher& io_hasher,
         template_evaluator const& in_evaluator,
         typename template_evaluator::reservoir const& in_reservoir,
-        psyq::string::csv_table<template_string> const& in_string_table,
-        typename psyq::string::csv_table<template_string>::index_type const
-            in_row_index)
+        typename this_type::string_table const& in_table,
+        typename this_type::string_table::index_type const in_row_index,
+        typename this_type::table_attribute const& in_attribute)
     {
         // 挙動が起こる条件を取得する。
         auto const local_condition_cell(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_CONDITION));
+            in_table.find_body_cell(
+                in_row_index, in_attribute.condition->column));
         auto const local_bool_state(local_condition_cell.to_bool());
         if (local_bool_state < 0)
         {
@@ -317,9 +392,7 @@ struct psyq::scenario_engine::behavior_builder
 
         // 条件挙動関数の種類を取得する。
         auto const local_kind_cell(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_KIND));
+            in_table.find_body_cell(in_row_index, in_attribute.kind->column));
         if (local_kind_cell
             == PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_KIND_STATE)
         {
@@ -327,8 +400,9 @@ struct psyq::scenario_engine::behavior_builder
                 io_hasher,
                 in_reservoir,
                 local_condition,
-                in_string_table,
-                in_row_index);
+                in_table,
+                in_row_index,
+                in_attribute);
         }
         else
         {
@@ -339,31 +413,30 @@ struct psyq::scenario_engine::behavior_builder
     }
 
     /** @brief 文字列表から状態操作関数オブジェクトを生成する。
-        @param[in,out] io_hasher   文字列からキーへ変換するハッシュ関数オブジェクト。
-        @param[in] in_reservoir    条件挙動関数から参照する状態貯蔵器。
-        @param[in] in_condition    条件挙動関数を起動する条件。
-        @param[in] in_string_table 条件挙動の文字列表。
-        @param[in] in_row_index    文字列表の行番号。
+        @param[in,out] io_hasher 文字列からキーへ変換するハッシュ関数オブジェクト。
+        @param[in] in_reservoir  条件挙動関数から参照する状態貯蔵器。
+        @param[in] in_condition  条件挙動関数を起動する条件。
+        @param[in] in_table      条件挙動の文字列表。
+        @param[in] in_row_index  文字列表の行番号。
+        @param[in] in_attribute  文字列表の属性。
         @return 生成した条件関数オブジェクト。
      */
-    private: template<
-        typename template_hasher,
-        typename template_reservoir,
-        typename template_string>
+    private: template<typename template_hasher, typename template_reservoir>
     static typename this_type::dispatcher::function_shared_ptr
     make_state_operation_function(
         template_hasher& io_hasher,
         template_reservoir const& in_reservoir,
         bool const in_condition,
-        psyq::string::csv_table<template_string> const& in_string_table,
-        typename psyq::string::csv_table<template_string>::index_type const
-            in_row_index)
+        typename this_type::string_table const& in_table,
+        typename this_type::string_table::index_type const in_row_index,
+        typename this_type::table_attribute const& in_attribute)
     {
+        PSYQ_ASSERT(2 <= in_attribute.argument->size);
+
         // 状態キーを取得する。
         auto const local_key_cell(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_ARGUMENT));
+            in_table.find_body_cell(
+                in_row_index, in_attribute.argument->column));
         auto const local_key(io_hasher(local_key_cell));
         if (in_reservoir.get_format(local_key)
             == template_reservoir::state_value::kind_NULL)
@@ -379,10 +452,8 @@ struct psyq::scenario_engine::behavior_builder
             this_type::get_operator(
                 local_operator,
                 in_reservoir,
-                in_string_table.find_body_cell(
-                    in_row_index,
-                    PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_ARGUMENT,
-                    1)));
+                in_table.find_body_cell(
+                    in_row_index, in_attribute.argument->column + 1)));
         if (!local_get_operator)
         {
             PSYQ_ASSERT(false);
@@ -391,13 +462,12 @@ struct psyq::scenario_engine::behavior_builder
 
         // 演算値を取得する。
         auto const local_value_cell(
-            in_string_table.find_body_cell(
-                in_row_index,
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_ARGUMENT,
-                2));
+            in_table.find_body_cell(
+                in_row_index, in_attribute.argument->column + 2));
         auto const local_value(
             template_reservoir::state_value::make(local_value_cell));
-        if (local_value.get_kind() == template_reservoir::state_value::kind_NULL)
+        if (local_value.get_kind()
+            == template_reservoir::state_value::kind_NULL)
         {
             PSYQ_ASSERT(false);
             return typename this_type::dispatcher::function_shared_ptr();
@@ -413,11 +483,11 @@ struct psyq::scenario_engine::behavior_builder
             in_reservoir.get_allocator());
     }
 
-    private: template<typename template_reservoir, typename template_string>
+    private: template<typename template_reservoir>
     static bool get_operator(
         typename template_reservoir::state_value::operator_enum& out_operator,
         template_reservoir const&,
-        template_string const& in_string)
+        typename this_type::string_table::string_view const& in_string)
     {
         if (in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_COPY)
@@ -480,6 +550,10 @@ struct psyq::scenario_engine::behavior_builder
         }
         return true;
     }
+
+    //-------------------------------------------------------------------------
+    /// @brief 解析する文字列表。
+    private: typename this_type::string_table string_table_;
 
 }; // struct psyq::scenario_engine::behavior_builder
 

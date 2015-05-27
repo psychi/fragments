@@ -376,6 +376,7 @@ namespace psyq_test
                 local_driver.hash_function_("state_float")));
 
         local_driver.update();
+        local_driver.remove_chunk(local_chunk_key);
     }
 }
 #endif // !defined(PSYQ_SCENARIO_ENGINE_DRIVER_HPP_)

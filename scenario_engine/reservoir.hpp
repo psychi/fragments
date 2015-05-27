@@ -811,8 +811,7 @@ class psyq::scenario_engine::reservoir
         typename this_type::block_type const in_value)
     PSYQ_NOEXCEPT
     {
-        PSYQ_ASSERT((in_value >> in_size) == 0);
-        if (this_type::BLOCK_SIZE < in_size)
+        if (this_type::BLOCK_SIZE < in_size || (in_value >> in_size) != 0)
         {
             PSYQ_ASSERT(false);
             return -1;
@@ -941,7 +940,6 @@ class psyq::scenario_engine::reservoir
             失敗。状態値を登録できなかった。
             - in_state_key に対応する状態値がすでに登録されていると失敗する。
             - this_type::MAX_STATE_SIZE より in_state_size が大きければ失敗する。
-        @sa remove_chunk
      */
     public: bool register_signed(
         typename this_type::chunk_key in_chunk_key,
@@ -1001,7 +999,6 @@ class psyq::scenario_engine::reservoir
         @retval false
             失敗。状態値を登録できなかった。
             in_state_key に対応する状態値がすでに登録されていると失敗する。
-        @sa remove_chunk
      */
     public: bool register_float(
         typename this_type::chunk_key in_chunk_key,
@@ -1087,10 +1084,40 @@ class psyq::scenario_engine::reservoir
 
     /** @brief ビット列チャンクを破棄する。
         @param[in] in_chunk_key 破棄するビット列チャンクの識別値。
-        @todo 未実装。
+        @retval true  成功。チャンクを破棄した。
+        @retval false 失敗。識別値に対応するチャンクが存在しない。
      */
     public: bool remove_chunk(
-        typename this_type::chunk_key const& in_chunk_key);
+        typename this_type::chunk_key const& in_chunk_key)
+    {
+        // ビット列チャンクを削除する。
+        auto const local_lower_bound(
+            std::lower_bound(
+                this->chunks_.begin(),
+                this->chunks_.end(),
+                in_chunk_key,
+                typename this_type::chunk_key_less()));
+        if (local_lower_bound == this->chunks_.end()
+            || local_lower_bound->key != in_chunk_key)
+        {
+            return false;
+        }
+        this->chunks_.erase(local_lower_bound);
+
+        // 状態値を削除する。
+        for (auto i(this->states_.begin()); i != this->states_.end();)
+        {
+            if (in_chunk_key != i->chunk)
+            {
+                ++i;
+            }
+            else
+            {
+                i = this->states_.erase(i);
+            }
+        }
+        return true;
+    }
 
     /** @brief ビット列チャンクをシリアル化する。
         @param[in] in_chunk_key シリアル化するビット列チャンクの識別番号。

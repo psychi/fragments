@@ -446,18 +446,12 @@ class psyq::string::csv_table
         std::size_t const in_attribute_index = 0)
     const PSYQ_NOEXCEPT
     {
-        if (in_attribute_name.empty())
-        {
-            return in_attribute_index < this->get_column_count()?
-                static_cast<typename this_type::index_type>(in_attribute_index):
-                this_type::NULL_INDEX;
-        }
         auto const local_attribute(this->find_attribute(in_attribute_name));
         return local_attribute != nullptr
             && local_attribute->name == in_attribute_name
             && in_attribute_index < local_attribute->size?
-                local_attribute->column
-                    + static_cast<typename this_type::index_type>(
+                local_attribute->column +
+                    static_cast<typename this_type::index_type>(
                         in_attribute_index):
                 this_type::NULL_INDEX;
     }
@@ -481,7 +475,8 @@ class psyq::string::csv_table
             auto const local_cell_index(
                 this_type::compute_cell_index(
                     static_cast<typename this_type::index_type>(in_row_index),
-                    static_cast<typename this_type::index_type>(in_column_index)));
+                    static_cast<typename this_type::index_type>(
+                        in_column_index)));
             auto const local_lower_bound(
                 std::lower_bound(
                     this->cells_.begin(),
@@ -507,9 +502,11 @@ class psyq::string::csv_table
         typename this_type::index_type const in_column_index)
     PSYQ_NOEXCEPT
     {
-        PSYQ_ASSERT(in_row_index < this_type::MAX_ROW_COUNT);
-        PSYQ_ASSERT(in_column_index < this_type::MAX_COLUMN_COUNT);
-        return in_row_index * this_type::MAX_COLUMN_COUNT + in_column_index;
+        auto const local_cell_index(
+            in_row_index * this_type::MAX_COLUMN_COUNT + in_column_index);
+        PSYQ_ASSERT(
+            local_cell_index / this_type::MAX_COLUMN_COUNT == in_row_index);
+        return local_cell_index;
     }
 
     //-------------------------------------------------------------------------
@@ -583,6 +580,7 @@ class psyq::string::csv_table
         typename this_type::index_type const in_num_columns)
     {
         // 属性行の先頭位置と末尾インデクスを決定する。
+        PSYQ_ASSERT(in_attribute_row < this_type::MAX_COLUMN_COUNT);
         auto const local_attribute_begin(
             std::lower_bound(
                 in_cells.begin(),
@@ -626,7 +624,8 @@ class psyq::string::csv_table
                 local_attributes.end(),
                 typename this_type::attribute_name_less());
         }
-        return typename this_type::attribute_vector(local_attributes);
+        local_attributes.shrink_to_fit();
+        return local_attributes;
     }
 
     //-------------------------------------------------------------------------
@@ -716,7 +715,7 @@ class psyq::string::csv_table
     /** @brief 主キーの辞書を構築する。
         @param[in] in_cells          文字列表のセル辞書。
         @param[in] in_primary_column 主キーとして使う列の番号。
-        @param[in] in_attribute_row  属性として使う行の番号。
+        @param[in] in_attribute_row  属性として使われている行の番号。
         @return セル辞書から構築した主キーの辞書。
      */
     private: static typename this_type::primary_key_vector make_primary_key_map(
@@ -955,7 +954,11 @@ class psyq::string::csv_table
         // 列数を記録したセルを末尾に追加する。
         local_cells.push_back(
             typename this_type::cell_vector::value_type(
-                this_type::compute_cell_index(local_row, local_max_column),
+                this_type::compute_cell_index(
+                    (std::min<typename this_type::index_type>)(
+                        local_row, this_type::MAX_ROW_COUNT - 1),
+                    (std::min<typename this_type::index_type>)(
+                        local_max_column, this_type::MAX_COLUMN_COUNT - 1)),
                 typename this_type::string_view()));
         local_cells.shrink_to_fit();
         return local_cells;
@@ -968,6 +971,13 @@ class psyq::string::csv_table
         typename this_type::index_type const in_column_index,
         typename this_type::string const& in_cell_string)
     {
+        if (this_type::MAX_ROW_COUNT <= in_row_index
+            || this_type::MAX_COLUMN_COUNT <= in_column_index)
+        {
+            // 最大行数か最大桁数を超過するセルは、追加できない。
+            PSYQ_ASSERT(false);
+            return;
+        }
         auto local_position(io_table_string.find(in_cell_string));
         if (local_position == this_type::string::npos)
         {

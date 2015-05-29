@@ -10,25 +10,64 @@
 #include <vector>
 //#include "string/view.hpp"
 
-#ifndef PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT
-#define PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT ','
-#endif // !defined(PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT)
+/// @brief CSV文字列の列の区切り文字の有効判定。
+#define PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_VALIDATION(\
+    define_row_separator, define_column_separator) (\
+        (define_column_separator) != (define_row_separator))
 
+/// @brief CSV文字列の引用符文字の有効判定。
+#define PSYQ_STRING_CSV_TABLE_QUOTE_VALIDATION(\
+    define_row_separator, define_column_separator, define_quote) (\
+        (define_quote) != (define_row_separator)\
+        && (define_quote) != (define_column_separator))
+
+/// @brief CSV文字列の行の区切り文字のデフォルト。
 #ifndef PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT
 #define PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT '\n'
 #endif // !defined(PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT)
 
+/// @brief CSV文字列の列の区切り文字のデフォルト。
+#ifndef PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT
+#define PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT ','
+#endif // !defined(PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT)
+static_assert(
+    PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_VALIDATION(
+        PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT,
+        PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT),
+    "PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT is invalid.");
+
+/// @brief CSV文字列の引用符開始文字のデフォルト。
 #ifndef PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT
 #define PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT '"'
 #endif // !defined(PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT)
+static_assert(
+    PSYQ_STRING_CSV_TABLE_QUOTE_VALIDATION(
+        PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT,
+        PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT,
+        PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT),
+    "PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT is invalid.");
 
+/// @brief CSV文字列の引用符終了文字のデフォルト。
 #ifndef PSYQ_STRING_CSV_TABLE_QUOTE_END_DEFAULT
 #define PSYQ_STRING_CSV_TABLE_QUOTE_END_DEFAULT '"'
 #endif // !defined(PSYQ_STRING_CSV_TABLE_QUOTE_END_DEFAULT)
+static_assert(
+    PSYQ_STRING_CSV_TABLE_QUOTE_VALIDATION(
+        PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT,
+        PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT,
+        PSYQ_STRING_CSV_TABLE_QUOTE_END_DEFAULT),
+    "PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_END is invalid.");
 
+/// @brief CSV文字列の引用符エスケープ文字のデフォルト。
 #ifndef PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT
 #define PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT '"'
 #endif // !defined(PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT)
+static_assert(
+    PSYQ_STRING_CSV_TABLE_QUOTE_VALIDATION(
+        PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT,
+        PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT,
+        PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT),
+    "PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT is invalid.");
 
 /// @cond
 namespace psyq
@@ -89,8 +128,8 @@ class psyq::string::csv_table
          */
         explicit delimiter(allocator_type const& in_allocator = allocator_type())
         :
-        column_separator(PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT),
         row_separator(PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT),
+        column_separator(PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT),
         quote_begin(PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT),
         quote_end(PSYQ_STRING_CSV_TABLE_QUOTE_END_DEFAULT),
         quote_escape(PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT),
@@ -98,39 +137,55 @@ class psyq::string::csv_table
         {}
 
         /** @brief 区切り文字を構築する。
-            @param[in] in_column_separator CSV文字列の列の区切り文字。
             @param[in] in_row_separator    CSV文字列の行の区切り文字。
+            @param[in] in_column_separator CSV文字列の列の区切り文字。
             @param[in] in_quote_begin      CSV文字列の引用符の開始文字。
             @param[in] in_quote_end        CSV文字列の引用符の終了文字。
-            @param[in] in_quote_escape     CSV文字列の引用符のescape文字。
+            @param[in] in_quote_escape     CSV文字列の引用符のエスケープ文字。
             @param[in] in_allocator        CSV文字列で使うメモリ割当子。
          */
         delimiter(
-            typename csv_table::string::value_type const in_column_separator,
             typename csv_table::string::value_type const in_row_separator,
+            typename csv_table::string::value_type const in_column_separator,
             typename csv_table::string::value_type const in_quote_begin,
             typename csv_table::string::value_type const in_quote_end,
             typename csv_table::string::value_type const in_quote_escape,
             allocator_type const& in_allocator = allocator_type())
         :
-        column_separator(in_column_separator),
         row_separator(in_row_separator),
-        quote_begin(in_quote_begin),
-        quote_end(in_quote_end),
-        quote_escape(in_quote_escape),
+        column_separator((
+            PSYQ_ASSERT(
+                PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_VALIDATION(
+                    in_row_separator, in_column_separator)),
+            in_column_separator)),
+        quote_begin((
+            PSYQ_ASSERT(
+                PSYQ_STRING_CSV_TABLE_QUOTE_VALIDATION(
+                    in_row_separator, in_column_separator, in_quote_begin)),
+            in_quote_begin)),
+        quote_end((
+            PSYQ_ASSERT(
+                PSYQ_STRING_CSV_TABLE_QUOTE_VALIDATION(
+                    in_row_separator, in_column_separator, in_quote_end)),
+            in_quote_end)),
+        quote_escape((
+            PSYQ_ASSERT(
+                PSYQ_STRING_CSV_TABLE_QUOTE_VALIDATION(
+                    in_row_separator, in_column_separator, in_quote_escape)),
+            in_quote_escape)),
         allocator(in_allocator)
         {}
 
-        /// @brief CSV文字列の列の区切り文字。
-        typename csv_table::string::value_type column_separator;
         /// @brief CSV文字列の行の区切り文字。
-        typename csv_table::string::value_type row_separator;
+        typename csv_table::string::value_type const row_separator;
+        /// @brief CSV文字列の列の区切り文字。
+        typename csv_table::string::value_type const column_separator;
         /// @brief CSV文字列の引用符の開始文字。
-        typename csv_table::string::value_type quote_begin;
+        typename csv_table::string::value_type const quote_begin;
         /// @brief CSV文字列の引用符の終了文字。
-        typename csv_table::string::value_type quote_end;
+        typename csv_table::string::value_type const quote_end;
         /// @brief CSV文字列の引用符のエスケープ文字。
-        typename csv_table::string::value_type quote_escape;
+        typename csv_table::string::value_type const quote_escape;
         /// @brief CSV文字列で使うメモリ割当子。
         allocator_type allocator;
 
@@ -281,11 +336,7 @@ class psyq::string::csv_table
         this_type::make_cell_map(
             this->string_buffer_,
             in_csv_string,
-            in_csv_delimiter.column_separator,
-            in_csv_delimiter.row_separator,
-            in_csv_delimiter.quote_begin,
-            in_csv_delimiter.quote_end,
-            in_csv_delimiter.quote_escape,
+            in_csv_delimiter,
             in_allocator)),
     attributes_(in_allocator),
     primary_keys_(in_allocator),
@@ -396,7 +447,7 @@ class psyq::string::csv_table
     public: typename this_type::index_type get_row_count() const PSYQ_NOEXCEPT
     {
         return this->cells_.empty()?
-            0: this->cells_.back().first / this_type::MAX_COLUMN_COUNT + 1;
+            0: this_type::compute_row_index(this->cells_.back().first);
     }
 
     /** @brief 文字列表の列数を取得する。
@@ -406,7 +457,7 @@ class psyq::string::csv_table
     const PSYQ_NOEXCEPT
     {
         return this->cells_.empty()?
-            0: this->cells_.back().first % this_type::MAX_COLUMN_COUNT + 1;
+            0: this_type::compute_column_index(this->cells_.back().first);
     }
 
     /** @brief 主キーから、行番号を検索する。
@@ -468,8 +519,8 @@ class psyq::string::csv_table
         std::size_t const in_column_index)
     const PSYQ_NOEXCEPT
     {
-        if (in_column_index < this_type::MAX_COLUMN_COUNT
-            && in_row_index < this_type::MAX_ROW_COUNT
+        if (in_column_index < this->get_column_count()
+            && in_row_index < this->get_row_count()
             && in_row_index != this->get_attribute_row())
         {
             auto const local_cell_index(
@@ -492,6 +543,28 @@ class psyq::string::csv_table
         return typename this_type::string_view();
     }
     //@}
+    /** @brief セルのインデクス番号から、セルの行番号を算出する。
+        @param[in] in_cell_index セルのインデクス番号。
+        @return セルの行番号。
+     */
+    private: static typename this_type::index_type compute_row_index(
+        typename this_type::index_type const in_cell_index)
+    PSYQ_NOEXCEPT
+    {
+        return in_cell_index / this_type::MAX_COLUMN_COUNT;
+    }
+
+    /** @brief セルのインデクス番号から、セルの列番号を算出する。
+        @param[in] in_cell_index セルのインデクス番号。
+        @return セルの列番号。
+     */
+    private: static typename this_type::index_type compute_column_index(
+        typename this_type::index_type const in_cell_index)
+    PSYQ_NOEXCEPT
+    {
+        return in_cell_index % this_type::MAX_COLUMN_COUNT;
+    }
+
     /** @brief セルの行番号と列番号から、セルのインデクス番号を算出する。
         @param[in] in_row_index    セルの行番号。
         @param[in] in_column_index セルの列番号。
@@ -505,7 +578,7 @@ class psyq::string::csv_table
         auto const local_cell_index(
             in_row_index * this_type::MAX_COLUMN_COUNT + in_column_index);
         PSYQ_ASSERT(
-            local_cell_index / this_type::MAX_COLUMN_COUNT == in_row_index);
+            in_row_index == this_type::compute_row_index(local_cell_index));
         return local_cell_index;
     }
 
@@ -593,13 +666,14 @@ class psyq::string::csv_table
         // 属性行を読み取り、属性配列を構築する。
         typename this_type::attribute_vector local_attributes(
             in_cells.get_allocator());
+        local_attributes.reserve(in_num_columns);
         for (
             auto i(local_attribute_begin);
             i != in_cells.end() && i->first < local_attribute_end;
             ++i)
         {
             auto const local_column_index(
-                i->first % this_type::MAX_COLUMN_COUNT);
+                this_type::compute_column_index(i->first));
             if (!local_attributes.empty())
             {
                 // 直前の属性の要素数を決定する。
@@ -729,10 +803,12 @@ class psyq::string::csv_table
         {
             return local_primary_keys;
         }
+        local_primary_keys.reserve(
+            this_type::compute_row_index(in_cells.back().first));
 
         // セル辞書から主キーの列を読み取り、主キーの配列を構築する。
         auto local_row_index(
-            in_cells.front().first / this_type::MAX_COLUMN_COUNT);
+            this_type::compute_row_index(in_cells.front().first));
         auto local_cell(in_cells.begin());
         for (;;)
         {
@@ -751,7 +827,7 @@ class psyq::string::csv_table
             {
                 break;
             }
-            if (local_cell->first % this_type::MAX_COLUMN_COUNT
+            if (this_type::compute_column_index(local_cell->first)
                 == in_primary_column)
             {
                 local_primary_keys.push_back(
@@ -759,7 +835,7 @@ class psyq::string::csv_table
                         local_cell->second, local_row_index));
             }
             local_row_index =
-                local_cell->first / this_type::MAX_COLUMN_COUNT + 1;
+                this_type::compute_row_index(local_cell->first) + 1;
         }
 
         // 主キーの配列を並び替え、主キーの辞書として正規化する。
@@ -773,27 +849,18 @@ class psyq::string::csv_table
 
     //-------------------------------------------------------------------------
     /** @brief CSV形式の文字列を解析し、セルの辞書を構築する。
-        @param[out] out_string_buffer  文字列をまとめて保存するバッファ。
-        @param[in] in_csv_string       解析するCSV形式の文字列。
-        @param[in] in_column_separator 列の区切り文字。
-        @param[in] in_row_separator    行の区切り文字。
-        @param[in] in_quote_begin      引用符の開始文字。
-        @param[in] in_quote_end        引用符の終了文字。
-        @param[in] in_quote_escape     引用符のエスケープ文字。
-        @param[in] in_allocator        セルコンテナで使うメモリ割当子。
+        @param[out] out_string_buffer 文字列をまとめて保存するバッファ。
+        @param[in] in_csv_string      解析するCSV形式の文字列。
+        @param[in] in_csv_delimiter   CSV文字列の区切り文字。
+        @param[in] in_allocator       セルコンテナで使うメモリ割当子。
         @return CSV形式の文字列を解析して構築した、セルの辞書。
      */
     private: static typename this_type::cell_vector make_cell_map(
         typename this_type::string& out_string_buffer,
         typename this_type::string_view const& in_csv_string,
-        typename this_type::string_view::value_type const in_column_separator,
-        typename this_type::string_view::value_type const in_row_separator,
-        typename this_type::string_view::value_type const in_quote_begin,
-        typename this_type::string_view::value_type const in_quote_end,
-        typename this_type::string_view::value_type const in_quote_escape,
+        typename this_type::delimiter const& in_csv_delimiter,
         typename this_type::allocator_type const& in_allocator)
     {
-        PSYQ_ASSERT(in_quote_escape != 0);
         bool local_quote(false);
         typename this_type::index_type local_row(0);
         typename this_type::index_type local_column(0);
@@ -810,11 +877,11 @@ class psyq::string::csv_table
         {
             if (local_quote)
             {
-                if (local_last_char != in_quote_escape)
+                if (local_last_char != in_csv_delimiter.quote_escape)
                 {
-                    if (*i != in_quote_end)
+                    if (*i != in_csv_delimiter.quote_end)
                     {
-                        if (*i != in_quote_escape)
+                        if (*i != in_csv_delimiter.quote_escape)
                         {
                             local_cell_string.push_back(*i);
                             local_cell_size = local_cell_string.size();
@@ -828,19 +895,19 @@ class psyq::string::csv_table
                         local_last_char = 0;
                     }
                 }
-                else if (*i == in_quote_end)
+                else if (*i == in_csv_delimiter.quote_end)
                 {
                     // 引用符の終了文字をエスケープする。
                     local_cell_string.push_back(*i);
                     local_cell_size = local_cell_string.size();
                     local_last_char = 0;
                 }
-                else if (local_last_char == in_quote_end)
+                else if (local_last_char == in_csv_delimiter.quote_end)
                 {
                     // 引用符を終了し、文字を巻き戻す。
                     local_quote = false;
-                    --i;
                     local_last_char = 0;
+                    --i;
                 }
                 else
                 {
@@ -850,12 +917,12 @@ class psyq::string::csv_table
                     local_last_char = *i;
                 }
             }
-            else if (*i == in_quote_begin)
+            else if (*i == in_csv_delimiter.quote_begin)
             {
                 // 引用符の開始。
                 local_quote = true;
             }
-            else if (*i == in_column_separator)
+            else if (*i == in_csv_delimiter.column_separator)
             {
                 // 列の区切り。
                 if (!local_cell_string.empty())
@@ -871,7 +938,7 @@ class psyq::string::csv_table
                 }
                 ++local_column;
             }
-            else if (*i == in_row_separator)
+            else if (*i == in_csv_delimiter.row_separator)
             {
                 // 行の区切り。
                 if (!local_cell_string.empty())
@@ -943,22 +1010,22 @@ class psyq::string::csv_table
         out_string_buffer.assign(local_string_buffer);
         auto const local_buffer_distance(
             out_string_buffer.data() - local_string_buffer.data());
-        for (auto i(local_cells.begin()); i != local_cells.end(); ++i)
+        for (auto& local_cell: local_cells)
         {
-            auto& local_string(i->second);
+            auto& local_string(local_cell.second);
             local_string = typename this_type::string_view(
                 local_string.data() + local_buffer_distance,
                 local_string.size());
         }
 
-        // 列数を記録したセルを末尾に追加する。
+        // 行数と列数を記録したセルを末尾に追加する。
         local_cells.push_back(
             typename this_type::cell_vector::value_type(
                 this_type::compute_cell_index(
                     (std::min<typename this_type::index_type>)(
-                        local_row, this_type::MAX_ROW_COUNT - 1),
+                        local_row + 1, this_type::MAX_ROW_COUNT),
                     (std::min<typename this_type::index_type>)(
-                        local_max_column, this_type::MAX_COLUMN_COUNT - 1)),
+                        local_max_column + 1, this_type::MAX_COLUMN_COUNT)),
                 typename this_type::string_view()));
         local_cells.shrink_to_fit();
         return local_cells;
@@ -1000,17 +1067,17 @@ class psyq::string::csv_table
     }
 
     //-------------------------------------------------------------------------
-    /// 文字列表のすべての文字列を保持するバッファ。
+    /// @brief 文字列表のすべての文字列を保持するバッファ。
     private: typename this_type::string string_buffer_;
-    /// セルのインデクス番号でソート済のセルの辞書。
+    /// @brief セルのインデクス番号でソート済のセルの辞書。
     private: typename this_type::cell_vector cells_;
-    /// 属性名でソート済の属性の辞書。
+    /// @brief 属性名でソート済の属性の辞書。
     private: typename this_type::attribute_vector attributes_;
-    /// 主キーでソート済の主キーの辞書。
+    /// @brief 主キーでソート済の主キーの辞書。
     private: typename this_type::primary_key_vector primary_keys_;
-    /// 属性として使っている行の番号。
+    /// @brief 属性として使っている行の番号。
     private: typename this_type::index_type attribute_row_;
-    /// 主キーとして使っている列の番号。
+    /// @brief 主キーとして使っている列の番号。
     private: typename this_type::index_type primary_key_column_;
 
 }; // class psyq::string::csv_table

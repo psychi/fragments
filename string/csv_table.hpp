@@ -332,17 +332,22 @@ class psyq::string::csv_table
         typename this_type::allocator_type const& in_allocator = allocator_type())
     :
     combined_string_(in_csv_delimiter.allocator),
-    cells_(
-        this_type::make_cell_map(
-            this->combined_string_,
-            in_csv_string,
-            in_csv_delimiter,
-            in_allocator)),
+    cells_(in_allocator),
     attributes_(in_allocator),
     primary_keys_(in_allocator),
     attribute_row_(this_type::NULL_INDEX),
     primary_key_column_(this_type::NULL_INDEX)
-    {}
+    {
+        this_type::make_cell_map(
+            this->cells_,
+            this->combined_string_,
+            in_csv_string,
+            in_csv_delimiter.row_separator,
+            in_csv_delimiter.column_separator,
+            in_csv_delimiter.quote_begin,
+            in_csv_delimiter.quote_end,
+            in_csv_delimiter.quote_escape);
+    }
 
     /** @brief 文字列表をコピー構築する。
         @param[in] in_source コピー元となる文字列表。
@@ -849,41 +854,46 @@ class psyq::string::csv_table
 
     //-------------------------------------------------------------------------
     /** @brief CSV形式の文字列を解析し、セルの辞書を構築する。
+        @param[out] out_cells           セルの辞書を構築するコンテナ。
         @param[out] out_combined_string セル文字列をまとめて保存する連結文字列。
         @param[in] in_csv_string        解析するCSV形式の文字列。
-        @param[in] in_csv_delimiter     CSV文字列の区切り文字。
-        @param[in] in_allocator         セルコンテナで使うメモリ割当子。
-        @return CSV形式の文字列を解析して構築した、セルの辞書。
+        @param[in] in_row_separator     CSV文字列の行の区切り文字。
+        @param[in] in_column_separator  CSV文字列の列の区切り文字。
+        @param[in] in_quote_begin       CSV文字列の引用符の開始文字。
+        @param[in] in_quote_end         CSV文字列の引用符の終了文字。
+        @param[in] in_quote_escape      CSV文字列の引用符のエスケープ文字。
      */
-    private: static typename this_type::cell_vector make_cell_map(
+    private: static void make_cell_map(
+        typename this_type::cell_vector& out_cells,
         typename this_type::string& out_combined_string,
         typename this_type::string_view const& in_csv_string,
-        typename this_type::delimiter const& in_csv_delimiter,
-        typename this_type::allocator_type const& in_allocator)
+        typename csv_table::string::value_type const in_row_separator,
+        typename csv_table::string::value_type const in_column_separator,
+        typename csv_table::string::value_type const in_quote_begin,
+        typename csv_table::string::value_type const in_quote_end,
+        typename csv_table::string::value_type const in_quote_escape)
     {
+        PSYQ_ASSERT(out_cells.empty() && out_combined_string.empty());
         bool local_quote(false);
         typename this_type::index_type local_row(0);
         typename this_type::index_type local_column(0);
         typename this_type::index_type local_column_max(0);
         typename this_type::string_view::value_type local_last_char(0);
         typename this_type::string local_cell_string(
-            in_csv_delimiter.allocator);
+            out_combined_string.get_allocator());
         typename this_type::string::size_type local_cell_size(0);
-        typename this_type::cell_vector local_cells(in_allocator);
-        typename this_type::string local_combined_string(
-            in_csv_delimiter.allocator);
-        local_combined_string.reserve(in_csv_string.size());
+        out_combined_string.reserve(in_csv_string.size());
         for (auto i(in_csv_string.begin()); i != in_csv_string.end(); ++i)
         {
             auto const local_char(*i);
             if (local_quote)
             {
-                if (local_last_char != in_csv_delimiter.quote_escape)
+                if (local_last_char != in_quote_escape)
                 {
-                    if (local_char != in_csv_delimiter.quote_end)
+                    if (local_char != in_quote_end)
                     {
                         // エスケープ文字でなければ、文字をセルに追加する。
-                        if (local_char != in_csv_delimiter.quote_escape)
+                        if (local_char != in_quote_escape)
                         {
                             local_cell_string.push_back(local_char);
                             local_cell_size = local_cell_string.size();
@@ -897,14 +907,14 @@ class psyq::string::csv_table
                         local_last_char = 0;
                     }
                 }
-                else if (local_char == in_csv_delimiter.quote_end)
+                else if (local_char == in_quote_end)
                 {
                     // 引用符の終了文字をエスケープする。
                     local_cell_string.push_back(local_char);
                     local_cell_size = local_cell_string.size();
                     local_last_char = 0;
                 }
-                else if (in_csv_delimiter.quote_escape != in_csv_delimiter.quote_end)
+                else if (in_quote_escape != in_quote_end)
                 {
                     // 直前の文字がエスケープとして働かなかったので、
                     // 直前の文字と現在の文字をセルに追加する。
@@ -921,38 +931,40 @@ class psyq::string::csv_table
                     --i;
                 }
             }
-            else if (local_char == in_csv_delimiter.quote_begin)
+            else if (local_char == in_quote_begin)
             {
                 // 引用符の開始。
                 local_quote = true;
             }
-            else if (local_char == in_csv_delimiter.column_separator)
+            else if (local_char == in_column_separator)
             {
                 // 列の区切り。
                 if (!local_cell_string.empty())
                 {
                     this_type::add_cell(
-                        local_cells,
-                        local_combined_string,
+                        out_cells,
+                        out_combined_string,
                         local_row,
                         local_column,
-                        local_cell_string.substr(0, local_cell_size));
+                        local_cell_string.data(),
+                        local_cell_size);
                     local_cell_string.clear();
                     local_cell_size = 0;
                 }
                 ++local_column;
             }
-            else if (local_char == in_csv_delimiter.row_separator)
+            else if (local_char == in_row_separator)
             {
                 // 行の区切り。
                 if (!local_cell_string.empty())
                 {
                     this_type::add_cell(
-                        local_cells,
-                        local_combined_string,
+                        out_cells,
+                        out_combined_string,
                         local_row,
                         local_column,
-                        local_cell_string.substr(0, local_cell_size));
+                        local_cell_string.data(),
+                        local_cell_size);
                     local_cell_string.clear();
                     local_cell_size = 0;
                 }
@@ -969,6 +981,7 @@ class psyq::string::csv_table
             }
             else
             {
+                // セルに文字を追加する。
                 auto const local_is_space(std::isspace(local_char));
                 if (!local_is_space || !local_cell_string.empty())
                 {
@@ -987,17 +1000,17 @@ class psyq::string::csv_table
         {
             // 引用符の開始はあったが終了がなかった場合は、
             // 引用符として処理しない。
-            //local_cell_string.insert(
-            //    local_cell_string.begin(), in_csv_delimiter.quote_begin);
+            //local_cell_string.insert(local_cell_string.begin(), in_quote_begin);
         }
         if (!local_cell_string.empty())
         {
             this_type::add_cell(
-                local_cells,
-                local_combined_string,
+                out_cells,
+                out_combined_string,
                 local_row,
                 local_column,
-                local_cell_string.substr(0, local_cell_size));
+                local_cell_string.data(),
+                local_cell_size);
         }
         else if (0 < local_column)
         {
@@ -1012,11 +1025,12 @@ class psyq::string::csv_table
             local_column_max = local_column;
         }
 
-        // テーブル文字列を必要最小限にする。
-        out_combined_string.assign(local_combined_string);
+        // 連結文字列を必要最小限にする。
+        auto const local_last_string_data(out_combined_string.data());
+        out_combined_string.shrink_to_fit();
         auto const local_string_distance(
-            out_combined_string.data() - local_combined_string.data());
-        for (auto& local_cell: local_cells)
+            out_combined_string.data() - local_last_string_data);
+        for (auto& local_cell: out_cells)
         {
             auto& local_string(local_cell.second);
             local_string = typename this_type::string_view(
@@ -1025,7 +1039,7 @@ class psyq::string::csv_table
         }
 
         // 行数と列数を記録したセルを末尾に追加する。
-        local_cells.push_back(
+        out_cells.push_back(
             typename this_type::cell_vector::value_type(
                 this_type::compute_cell_index(
                     (std::min<typename this_type::index_type>)(
@@ -1033,8 +1047,7 @@ class psyq::string::csv_table
                     (std::min<typename this_type::index_type>)(
                         local_column_max + 1, this_type::MAX_COLUMN_COUNT)),
                 typename this_type::string_view()));
-        local_cells.shrink_to_fit();
-        return local_cells;
+        out_cells.shrink_to_fit();
     }
 
     /** @brief セルを追加する。
@@ -1042,14 +1055,16 @@ class psyq::string::csv_table
         @param[in,out] io_combined_string セル文字列を追加する文字列。
         @param[in] in_row_index           追加するセルの行番号。
         @param[in] in_column_index        追加するセルの列番号。
-        @param[in] in_cell_string         追加するセルの文字列。
+        @param[in] in_cell_string         追加するセル文字列の先頭位置。
+        @param[in] in_cell_size           追加するセル文字列の要素数。
      */
     private: static void add_cell(
         typename this_type::cell_vector& io_cells,
         typename this_type::string& io_combined_string,
         typename this_type::index_type const in_row_index,
         typename this_type::index_type const in_column_index,
-        typename this_type::string const& in_cell_string)
+        typename this_type::string::const_pointer const in_cell_string,
+        typename this_type::string::size_type const in_cell_size)
     {
         // 最大行数か最大桁数を超えるセルは、追加できない。
         if (this_type::MAX_ROW_COUNT <= in_row_index
@@ -1060,18 +1075,19 @@ class psyq::string::csv_table
         }
 
         // セル文字列と同じ部分が連結文字列になければ、新たに追加する。
-        auto local_position(io_combined_string.find(in_cell_string));
+        auto local_position(
+            io_combined_string.find(in_cell_string, 0, in_cell_size));
         if (local_position == this_type::string::npos)
         {
             if (io_combined_string.capacity() - io_combined_string.size()
-                < in_cell_string.size())
+                < in_cell_size)
             {
                 // 予約しておいた容量より大きくなるはずはない。
                 PSYQ_ASSERT(false);
                 return;
             }
             local_position = io_combined_string.size();
-            io_combined_string.append(in_cell_string);
+            io_combined_string.append(in_cell_string, in_cell_size);
         }
 
         // セルを追加する。
@@ -1080,7 +1096,7 @@ class psyq::string::csv_table
                 this_type::compute_cell_index(in_row_index, in_column_index),
                 typename this_type::string_view(
                     io_combined_string.data() + local_position,
-                    in_cell_string.size())));
+                    in_cell_size)));
     }
 
     //-------------------------------------------------------------------------

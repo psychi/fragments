@@ -27,8 +27,18 @@ class psyq::atomic_count
 
     //-------------------------------------------------------------------------
     public: explicit atomic_count(std::size_t const in_count) PSYQ_NOEXCEPT:
-        count_(in_count)
+    count_(in_count)
     {}
+
+    public: std::size_t load() const PSYQ_NOEXCEPT
+    {
+#if PSYQ_ATOMIC_COUNT_ENABLE_THREADS
+        return std::atomic_load_explicit(
+            &this->count_, std::memory_order_relaxed);
+#else
+        return this->count_;
+#endif // PSYQ_ATOMIC_COUNT_ENABLE_THREADS
+    }
 
     public: std::size_t add(std::size_t const in_add) PSYQ_NOEXCEPT
     {
@@ -113,3 +123,4 @@ class psyq::spinlock
 }; // class psyq::spinlock
 
 #endif // !defined(PSYQ_ATOMIC_COUNT_HPP_)
+// vim: set expandtab:

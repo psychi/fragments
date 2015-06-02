@@ -690,6 +690,8 @@ INPUT                  = \
                          ./string/view.hpp \
                          ./string/storage.hpp \
                          ./string/holder.hpp \
+                         ./string/flyweight_string.hpp \
+                         ./string/flyweight_factory.hpp \
                          ./string/flyweight.hpp \
                          ./string/table.hpp \
                          ./string/csv_table.hpp \

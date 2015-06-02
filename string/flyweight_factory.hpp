@@ -323,8 +323,9 @@ class psyq::string::_private::flyweight_factory
         用意する文字列と等価な文字列がすでに存在するなら、
         既存の文字列を再利用する。
 
-        @param[in] in_string     辞書に用意する文字列。
-        @param[in] in_chunk_size チャンクを用意する場合の、デフォルトのチャンク容量。
+        @param[in] in_string 辞書に用意する文字列。
+        @param[in] in_chunk_size
+            文字列チャンクを生成する場合の、デフォルトのチャンク容量。
      */
     private: typename this_type::string& equip_string(
         typename this_type::string::view const& in_string,
@@ -403,7 +404,8 @@ class psyq::string::_private::flyweight_factory
 
     /** @brief 空文字列を用意する。
         @param[in] in_empty_size 空文字列の容量。
-        @param[in] in_chunk_size チャンクを用意する場合の、デフォルトのチャンク容量。
+        @param[in] in_chunk_size
+            文字列チャンクを生成する場合の、デフォルトのチャンク容量。
         @return 用意した空文字列。
      */
     private: typename this_type::string& equip_empty_string(
@@ -502,7 +504,7 @@ class psyq::string::_private::flyweight_factory
 
     /** @brief 空文字列を新たに生成する。
         @param[in] in_string_size 空文字列の容量。
-        @param[in] in_chunk_size  デフォルトのチャンク容量。
+        @param[in] in_chunk_size  文字列チャンクのデフォルトのチャンク容量。
      */
     private: typename this_type::string& create_empty_string(
         typename this_type::string::view::size_type const in_string_size,
@@ -759,7 +761,6 @@ class psyq::string::_private::flyweight_factory<
         typename this_type::factory::shared_ptr const& in_factory,
         typename this_type::factory::string::view const& in_string,
         std::size_t const in_chunk_size)
-    PSYQ_NOEXCEPT
     {
         auto const local_factory(in_factory.get());
         return in_string.empty() || local_factory == nullptr?

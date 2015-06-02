@@ -369,3 +369,4 @@ public psyq::string::_private::interface_immutable<
 }; // class psyq::string::view
 
 #endif // !PSYQ_STRING_VIEW_HPP_
+// vim: set expandtab:

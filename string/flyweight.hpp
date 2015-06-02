@@ -130,7 +130,7 @@ public psyq::string::_private::interface_immutable<
         typename base_type::factory::shared_ptr const& in_factory,
         std::size_t const in_chunk_size =
             PSYQ_STRING_FLYWEIGHT_CHUNK_SIZE_DEFAULT)
-    PSYQ_NOEXCEPT:
+    :
     base_type(base_type::base_type::make(in_factory, in_string, in_chunk_size))
     {}
 

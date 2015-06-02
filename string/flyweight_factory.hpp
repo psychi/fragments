@@ -103,21 +103,40 @@ class psyq::string::_private::flyweight_factory
     /// @brief 文字列チャンク連結リストのノードの型。
     private: struct string_chunk
     {
+        typedef string_chunk this_type;
+
+        typedef typename flyweight_factory::allocator_type::template
+            rebind<typename flyweight_factory::string_chunk>::other
+                allocator_type;
+
         string_chunk(
-            string_chunk* const in_next_chunk,
+            this_type* const in_next_chunk,
             std::size_t const in_capacity)
         PSYQ_NOEXCEPT:
         next_chunk(in_next_chunk),
         capacity((
-            PSYQ_ASSERT(sizeof(string_chunk) < in_capacity), in_capacity)),
+            PSYQ_ASSERT(sizeof(this_type) < in_capacity), in_capacity)),
         front_string(
-            (in_capacity - sizeof(string_chunk)) /
-                sizeof(typename flyweight_factory::string::view::value_type),
+            this_type::compute_empty_size(in_capacity),
             flyweight_factory::hash::traits_type::EMPTY)
         {}
 
+        bool is_empty() const PSYQ_NOEXCEPT
+        {
+            return this->front_string.hash
+                   == flyweight_factory::hash::traits_type::EMPTY
+                && this->front_string.size
+                   == this_type::compute_empty_size(this->capacity);
+        }
+
+        static std::size_t compute_empty_size(std::size_t const in_capacity)
+        {
+            return (in_capacity - sizeof(string_chunk)) /
+                sizeof(typename flyweight_factory::string::view::value_type);
+        }
+
         /// @brief 次の文字列チャンクを指すポインタ。
-        typename flyweight_factory::string_chunk* next_chunk;
+        typename this_type* next_chunk;
         /// @brief チャンクの大きさ。
         std::size_t capacity;
         /// @brief この文字列チャンクでの最初の文字列。
@@ -153,10 +172,13 @@ class psyq::string::_private::flyweight_factory
     public: ~flyweight_factory()
     {
         // 文字列チャンクをすべて破棄する。
-        typename this_type::string_vector::allocator_type::template
-            rebind<typename this_type::string_chunk>::other
-                local_allocator(this->strings_.get_allocator());
-        for (auto local_chunk(this->chunk_); local_chunk != nullptr;)
+        typename this_type::string_chunk::allocator_type local_allocator(
+            this->strings_.get_allocator());
+        for (
+            auto local_chunk(this->chunk_);
+            local_chunk != nullptr;
+            local_chunk = this_type::destroy_chunk(
+                *local_chunk, local_allocator))
         {
             // 文字列チャンクの中にある文字列を解体する。
             auto local_string(&local_chunk->front_string);
@@ -187,15 +209,6 @@ class psyq::string::_private::flyweight_factory
                 local_string = static_cast<typename this_type::string*>(
                     const_cast<void*>(local_string_end));
             }
-
-            // 文字列チャンクを破棄する。
-            auto const local_last_chunk(local_chunk);
-            auto const local_chunk_count(
-                local_chunk->capacity
-                / sizeof(typename this_type::string_chunk));
-            local_chunk = local_chunk->next_chunk;
-            local_last_chunk->~string_chunk();
-            local_allocator.deallocate(local_last_chunk, local_chunk_count);
         }
     }
 
@@ -243,10 +256,10 @@ class psyq::string::_private::flyweight_factory
      */
     public: void collect_garbage()
     {
-        for (
-            auto local_chunk(this->chunk_);
-            local_chunk != nullptr;
-            local_chunk = local_chunk->next_chunk)
+        this_type::string_chunk::allocator_type local_allocator(
+            this->strings_.get_allocator());
+        auto local_chunk_link(&this->chunk_);
+        for (auto local_chunk(this->chunk_); local_chunk != nullptr;)
         {
             typename this_type::string* local_empty_string(nullptr);
             auto local_string(&local_chunk->front_string);
@@ -268,16 +281,8 @@ class psyq::string::_private::flyweight_factory
                 }
                 else if (local_empty_string != nullptr)
                 {
-                    // 辞書から未参照の文字列を削除する。
-                    auto const local_find_iterator(
-                        std::find(
-                            this->strings_.begin(),
-                            this->strings_.end(),
-                            local_string));
-                    PSYQ_ASSERT(local_find_iterator != this->strings_.end());
-                    this->strings_.erase(local_find_iterator);
-
                     // 未参照の文字列を解体し、直前の空文字列に追加する。
+                    this_type::remove_string(this->strings_, *local_string);
                     local_string->~string();
                     local_empty_string->size += local_aligned_size +
                         sizeof(typename this_type::string)
@@ -307,6 +312,21 @@ class psyq::string::_private::flyweight_factory
                 }
                 local_string = static_cast<typename this_type::string*>(
                     const_cast<void*>(local_string_end));
+            }
+
+            // 文字列チャンクが空なら、破棄する。
+            if (local_chunk->is_empty())
+            {
+                this_type::remove_string(
+                    this->strings_, local_chunk->front_string);
+                local_chunk = this_type::destroy_chunk(
+                    *local_chunk, local_allocator);
+                *local_chunk_link = local_chunk;
+            }
+            else
+            {
+                local_chunk_link = &local_chunk->next_chunk;
+                local_chunk = local_chunk->next_chunk;
             }
         }
 
@@ -402,6 +422,16 @@ class psyq::string::_private::flyweight_factory
         return nullptr;
     }
 
+    private: static void remove_string(
+        typename this_type::string_vector& io_strings,
+        typename this_type::string const& in_string)
+    {
+        auto const local_find_iterator(
+            std::find(io_strings.begin(), io_strings.end(), &in_string));
+        PSYQ_ASSERT(local_find_iterator != io_strings.end());
+        io_strings.erase(local_find_iterator);
+    }
+
     /** @brief 空文字列を用意する。
         @param[in] in_empty_size 空文字列の容量。
         @param[in] in_chunk_size
@@ -424,7 +454,7 @@ class psyq::string::_private::flyweight_factory
 
         // 該当する空文字列がなかったので、新たに空き文字列を用意する。
         auto& local_new_string(
-            this->create_empty_string(in_empty_size, in_chunk_size));
+            this->create_chunk(in_empty_size, in_chunk_size));
         this->divide_string(local_new_string, local_necessary_size);
         return local_new_string;
     }
@@ -466,7 +496,7 @@ class psyq::string::_private::flyweight_factory
         return nullptr;
     }
 
-    /** 文字列を2つに分割し、後方を空文字列として辞書に追加する。
+    /** @brief 文字列を2つに分割し、後方を空文字列として辞書に追加する。
         @param[in] in_string 分割する文字列。
         @param[in] in_size   前方の文字列の要素数。
         @retval !=nullptr 分割した後方の空文字列。
@@ -502,11 +532,11 @@ class psyq::string::_private::flyweight_factory
         return local_empty_string;
     }
 
-    /** @brief 空文字列を新たに生成する。
+    /** @brief 文字列チャンクを新たに生成し、空文字列を構築する。
         @param[in] in_string_size 空文字列の容量。
         @param[in] in_chunk_size  文字列チャンクのデフォルトのチャンク容量。
      */
-    private: typename this_type::string& create_empty_string(
+    private: typename this_type::string& create_chunk(
         typename this_type::string::view::size_type const in_string_size,
         std::size_t const in_chunk_size)
     {
@@ -520,9 +550,8 @@ class psyq::string::_private::flyweight_factory
         auto const local_chunk_capacity(local_chunk_size / local_header_size);
 
         // 文字列チャンクを生成する。
-        typename this_type::string_vector::allocator_type::template
-            rebind<typename this_type::string_chunk>::other
-                local_allocator(this->strings_.get_allocator());
+        typename this_type::string_chunk::allocator_type local_allocator(
+            this->strings_.get_allocator());
         this->chunk_ = new(local_allocator.allocate(local_chunk_capacity))
             typename this_type::string_chunk(
                 this->chunk_, local_chunk_capacity * local_header_size);
@@ -532,6 +561,18 @@ class psyq::string::_private::flyweight_factory
         auto& local_empty_string(this->chunk_->front_string);
         this->strings_.push_back(&local_empty_string);
         return local_empty_string;
+    }
+
+    private: static typename this_type::string_chunk* destroy_chunk(
+        typename this_type::string_chunk& io_chunk,
+        typename this_type::string_chunk::allocator_type& io_allocator)
+    {
+        auto const local_next_chunk(io_chunk.next_chunk);
+        auto const local_chunk_count(
+            io_chunk.capacity / sizeof(typename this_type::string_chunk));
+        io_chunk.~string_chunk();
+        io_allocator.deallocate(&io_chunk, local_chunk_count);
+        return local_next_chunk;
     }
 
     /** @brief this_type::string のメモリ境界に接するように、文字列の要素数を調整する。

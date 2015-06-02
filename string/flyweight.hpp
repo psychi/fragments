@@ -67,7 +67,7 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief flyweightパターンを使った文字列のクライアント型。
+/** @brief std::basic_string_view を模した、flyweightパターンの文字列。
 
     psyq::string::flyweight::factory を使って文字列を管理する。
 

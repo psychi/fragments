@@ -362,7 +362,8 @@ class psyq::string::_private::flyweight_factory
             return *local_existing_string;
         }
 
-        // 等価な文字列が辞書になかったので、新たな文字列を登録する。
+        // 等価な文字列が辞書になかったので、新たな文字列を辞書へ追加する。
+        auto const local_last_size(this->strings_.size());
         auto& local_new_string(
             this->equip_empty_string(in_string.size() + 1, in_chunk_size));
         local_new_string.size = in_string.size();
@@ -376,11 +377,19 @@ class psyq::string::_private::flyweight_factory
             local_data, in_string.data(), in_string.size());
         local_data[in_string.size()] = 0;
 
-        // 辞書をソートする。
-        std::sort(
-            this->strings_.begin(),
-            this->strings_.end(),
-            typename this_type::string::less());
+        // 追加された文字列を、辞書の適切な位置へ移動する。
+        for (auto i(this->strings_.size() - local_last_size); 0 < i; --i)
+        {
+            auto& local_string(*this->strings_.back());
+            this->strings_.pop_back();
+            this->strings_.insert(
+                std::lower_bound(
+                    this->strings_.begin(),
+                    this->strings_.end() - (i - 1),
+                    local_string,
+                    typename this_type::string::less()),
+                &local_string);
+        }
         return local_new_string;
     }
 

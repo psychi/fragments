@@ -48,6 +48,7 @@ namespace psyq
       - reservoir::register_unsigned
       - reservoir::register_signed
       - reservoir::register_float
+      - reservoir::register_value
     - reservoir::get_value で、状態値を取得する。
     - reservoir::set_value で、状態値を設定する。
 
@@ -428,6 +429,7 @@ class psyq::scenario_engine::reservoir
         @sa this_type::register_unsigned
         @sa this_type::register_signed
         @sa this_type::register_float
+        @sa this_type::register_value
         @sa this_type::set_value
      */
     public: typename this_type::state_value get_value(
@@ -556,6 +558,7 @@ class psyq::scenario_engine::reservoir
         @sa this_type::register_unsigned
         @sa this_type::register_signed
         @sa this_type::register_float
+        @sa this_type::register_value
         @sa this_type::get_value
      */
     public: bool set_value(
@@ -1024,6 +1027,60 @@ class psyq::scenario_engine::reservoir
             this_type::get_field_position(local_state->field),
             this_type::FLOAT_SIZE,
             local_float.bits);
+    }
+
+    /** @brief 状態値を登録する。
+
+        - 登録した状態値は
+          this_type::get_value と this_type::set_value でアクセスできる。
+        - 登録した状態値は this_type::remove_chunk で削除できる。
+
+        @param[in] in_chunk_key   登録する状態値を格納するビット列チャンクの識別値。
+        @param[in] in_state_key   登録する状態値の識別番号。
+        @param[in] in_state_value 登録する状態値の初期値。
+        @retval true  成功。状態値を登録した。
+        @retval false
+            失敗。状態値を登録できなかった。
+            in_state_key に対応する状態値がすでに登録されていると失敗する。
+     */
+    public: bool register_value(
+        typename this_type::chunk_key in_chunk_key,
+        typename this_type::state_key in_state_key,
+        typename this_type::state_value const& in_state_value)
+    {
+        auto const local_bool(in_state_value.get_bool());
+        if (local_bool != nullptr)
+        {
+            return this->register_bool(
+                std::move(in_chunk_key), std::move(in_state_key), *local_bool);
+        }
+        auto const local_unsigned(in_state_value.get_unsigned());
+        if (local_unsigned != nullptr)
+        {
+            return this->register_unsigned(
+                std::move(in_chunk_key),
+                std::move(in_state_key),
+                *local_unsigned,
+                this_type::BITS_PER_BYTE * sizeof(*local_unsigned));
+        }
+        auto const local_signed(in_state_value.get_signed());
+        if (local_signed != nullptr)
+        {
+            return this->register_signed(
+                std::move(in_chunk_key),
+                std::move(in_state_key),
+                *local_signed,
+                this_type::BITS_PER_BYTE * sizeof(*local_signed));
+        }
+        auto const local_float(in_state_value.get_float());
+        if (local_float != nullptr)
+        {
+            return this->register_float(
+                std::move(in_chunk_key),
+                std::move(in_state_key),
+                std::move(*local_float));
+        }
+        return false;
     }
     //@}
     //-------------------------------------------------------------------------
@@ -1568,12 +1625,23 @@ struct psyq::scenario_engine::_private::key_less
     /** @brief コンテナから値を検索する。
         @param[in] in_container 検索するコンテナ。
         @param[in] in_key       検索する値の識別値。
-        @retval !=in_container.end() in_key に対応する値を指すポインタ。
+        @retval !=in_container.end() in_key に対応する値を指す反復子。
         @retval ==in_container.end() in_key に対応する値が見つからなかった。
      */
     template<typename template_container>
     static typename template_container::const_iterator find_const_iterator(
         template_container const& in_container,
+        template_key const& in_key)
+    PSYQ_NOEXCEPT
+    {
+        return find_iterator(
+            const_cast<template_container&>(in_container), in_key);
+    }
+
+    /// @copydoc find_const_iterator
+    template<typename template_container>
+    static typename template_container::iterator find_iterator(
+        template_container& in_container,
         template_key const& in_key)
     PSYQ_NOEXCEPT
     {
@@ -1607,6 +1675,7 @@ struct psyq::scenario_engine::_private::key_less
                 &(*local_lower_bound): nullptr;
     }
 
+    /// @copydoc find_const_pointer
     template<typename template_container>
     static typename template_container::value_type* find_pointer(
         template_container& in_container,

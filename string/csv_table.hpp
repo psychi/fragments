@@ -878,10 +878,12 @@ class psyq::string::csv_table
         typename this_type::index_type local_row(0);
         typename this_type::index_type local_column(0);
         typename this_type::index_type local_column_max(0);
-        typename this_type::string_view::value_type local_last_char(0);
+        typename this_type::string::value_type local_last_char(0);
         typename this_type::string local_cell_string(
             out_combined_string.get_allocator());
         typename this_type::string::size_type local_cell_size(0);
+        local_cell_string.reserve(32);
+        out_cells.reserve(in_csv_string.size() / 8);
         out_combined_string.reserve(in_csv_string.size());
         for (auto i(in_csv_string.begin()); i != in_csv_string.end(); ++i)
         {

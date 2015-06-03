@@ -353,7 +353,7 @@ namespace psyq_test
             "expression_6, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
             "expression_7, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
             "expression_8, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
-            "expression_9, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
+            "expression_9, OR,    SUB_EXPRESSION,   expression_0, TRUE, expression_1, FALSE,\n"
             "");
         local_expression_table.constraint_attribute(0);
 

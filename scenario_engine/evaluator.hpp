@@ -422,76 +422,48 @@ class psyq::scenario_engine::evaluator
             this->expressions_, in_expression_key);
     }
 
-    /** @brief 複合条件式を登録する。
-        @param[in] in_chunk_key      登録する複合条件式が所属する要素条件チャンクの識別値。
-        @param[in] in_expression_key 登録する複合条件式の識別値。
-        @param[in] in_elements       登録する複合条件式の要素条件のコンテナ。
-        @param[in] in_logic          登録する複合条件式で用いる論理演算子。
+    /** @brief 条件式を登録する。
+        @param[in] in_chunk_key      登録する条件式が所属する要素条件チャンクの識別値。
+        @param[in] in_expression_key 登録する条件式の識別値。
+        @param[in] in_elements       登録する条件式の要素条件のコンテナ。
+        @param[in] in_logic          登録する条件式で用いる論理演算子。
         @retval true  成功。複合条件式を登録した。
         @retval false 失敗。複合条件式は登録されなかった。
      */
-    public: bool register_expression(
+    public: template<typename template_element_container>
+    bool register_expression(
         typename this_type::reservoir::chunk_key const& in_chunk_key,
         typename this_type::expression_key in_expression_key,
-        typename this_type::sub_expression::vector const& in_elements,
+        template_element_container const& in_elements,
         typename this_type::expression::logic_enum const in_logic)
     {
         PSYQ_ASSERT(
-            this_type::is_valid_sub_expression(in_elements, this->expressions_));
+            this_type::is_valid_element_container(
+                in_elements, this->expressions_));
         return this_type::register_expression(
+            this_type::equip_chunk(this->chunks_, in_chunk_key),
             this->expressions_,
-            this_type::equip_chunk(this->chunks_, in_chunk_key).sub_expressions,
-            in_chunk_key,
             std::move(in_expression_key),
             in_elements,
-            in_logic,
-            this_type::expression::kind_SUB_EXPRESSION);
-    }
-
-    /** @brief 状態比較条件式を登録する。
-        @param[in] in_chunk_key      登録する状態比較条件式が所属する要素条件チャンクの識別値。
-        @param[in] in_expression_key 登録する状態比較条件式に対応する識別値。
-        @param[in] in_elements       登録する状態比較条件式の要素条件のコンテナ。
-        @param[in] in_logic          登録する状態比較条件式で用いる論理演算子。
-        @retval true  成功。状態比較条件式を登録した。
-        @retval false 失敗。状態比較条件式は登録されなかった。
-     */
-    public: bool register_expression(
-        typename this_type::reservoir::chunk_key const& in_chunk_key,
-        typename this_type::expression_key in_expression_key,
-        typename this_type::state_comparison::vector const& in_elements,
-        typename this_type::expression::logic_enum const in_logic)
-    {
-        return this_type::register_expression(
-            this->expressions_,
-            this_type::equip_chunk(this->chunks_, in_chunk_key).state_comparisons,
-            in_chunk_key,
-            std::move(in_expression_key),
-            in_elements,
-            in_logic,
-            this_type::expression::kind_STATE_COMPARISON);
+            in_logic);
     }
     //@}
     /** @brief 条件式を登録する。
+        @param[in,out] io_chunk       条件式が所属する要素条件チャンク。
         @param[in,out] io_expressions 条件式を登録するコンテナ。
-        @param[in,out] io_elements    要素条件を登録するコンテナ。
-        @param[in] in_chunk_key       登録する状態比較条件式が所属する要素条件チャンクの識別値。
         @param[in] in_expression_key  登録する条件式に対応する識別値。
         @param[in] in_elements        登録する条件式の要素条件のコンテナ。
         @param[in] in_logic           登録する条件式で用いる論理演算子。
-        @param[in] in_kind            登録する条件式の種類。
         @retval true  成功。条件式を登録した。
         @retval false 失敗。条件式は登録されなかった。
      */
     private: template<typename template_element_container>
     static bool register_expression(
+        typename this_type::chunk& io_chunk,
         typename this_type::expression_vector& io_expressions,
-        template_element_container& io_elements,
-        typename this_type::reservoir::chunk_key const& in_chunk_key,
         typename this_type::expression_key in_expression_key,
         template_element_container const& in_elements,
-        typename this_type::expression::logic_enum const in_logic,
-        typename this_type::expression::kind_enum const in_kind)
+        typename this_type::expression::logic_enum const in_logic)
     {
         if (in_elements.empty())
         {
@@ -514,22 +486,25 @@ class psyq::scenario_engine::evaluator
             io_expressions.insert(
                 local_lower_bound, typename this_type::expression()));
 
-        // 要素条件を追加する。
-        auto const local_element_begin(io_elements.size());
-        io_elements.insert(
-            io_elements.end(), in_elements.begin(), in_elements.end());
+        // 要素条件の種類を決定し、要素条件を追加する。
+        auto const local_element_kind(
+            this_type::make_element_kind(io_chunk, in_elements.front()));
+        auto& local_elements(*local_element_kind.second);
+        auto const local_element_begin(local_elements.size());
+        local_elements.insert(
+            local_elements.end(), in_elements.begin(), in_elements.end());
 
         // 条件式を初期化する。
         auto& local_expression(*local_insert);
-        local_expression.chunk = in_chunk_key;
+        local_expression.chunk = io_chunk.key;
         local_expression.key = std::move(in_expression_key);
         local_expression.logic = in_logic;
-        local_expression.kind = in_kind;
+        local_expression.kind = local_element_kind.first;
         local_expression.begin =
             static_cast<typename this_type::expression::element_index>(
                 local_element_begin);
         PSYQ_ASSERT(local_expression.begin == local_element_begin);
-        auto const local_element_end(io_elements.size());
+        auto const local_element_end(local_elements.size());
         local_expression.end =
             static_cast<typename this_type::expression::element_index>(
                 local_element_end);
@@ -537,23 +512,63 @@ class psyq::scenario_engine::evaluator
         return true;
     }
 
-    private: static bool is_valid_sub_expression(
-        typename this_type::sub_expression::vector const& in_elements,
+    //-------------------------------------------------------------------------
+    private: static std::pair<
+         typename this_type::expression::kind_enum,
+         typename this_type::sub_expression::vector*>
+    make_element_kind(
+        typename this_type::chunk& in_chunk,
+        typename this_type::sub_expression const&)
+    {
+        return std::make_pair(
+            this_type::expression::kind_SUB_EXPRESSION,
+            &in_chunk.sub_expressions);
+    }
+
+    private: static std::pair<
+         typename this_type::expression::kind_enum,
+         typename this_type::state_comparison::vector*>
+    make_element_kind(
+        typename this_type::chunk& in_chunk,
+        typename this_type::state_comparison const&)
+    {
+        return std::make_pair(
+            this_type::expression::kind_STATE_COMPARISON,
+            &in_chunk.state_comparisons);
+    }
+
+    //-------------------------------------------------------------------------
+    private: template<typename template_element_container>
+    static bool is_valid_element_container(
+        template_element_container const& in_elements,
         typename this_type::expression_vector const& in_expressions)
     {
         for (auto& local_element: in_elements)
         {
-            auto const local_find(
-                std::binary_search(
-                    in_expressions.begin(),
-                    in_expressions.end(),
-                    local_element.key,
-                    typename this_type::expression_key_less()));
-            if (!local_find)
+            if (!this_type::is_valid_element(local_element, in_expressions))
             {
                 return false;
             }
         }
+        return true;
+    }
+
+    private: static bool is_valid_element(
+        typename this_type::sub_expression const& in_element,
+        typename this_type::expression_vector const& in_expressions)
+    {
+        return std::binary_search(
+            in_expressions.begin(),
+            in_expressions.end(),
+            in_element.key,
+            typename this_type::expression_key_less());
+    }
+
+    private: template<typename template_element>
+    static bool is_valid_element(
+        template_element const&,
+        typename this_type::expression_vector const&)
+    {
         return true;
     }
 

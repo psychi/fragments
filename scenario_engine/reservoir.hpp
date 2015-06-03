@@ -1078,7 +1078,7 @@ class psyq::scenario_engine::reservoir
             return this->register_float(
                 std::move(in_chunk_key),
                 std::move(in_state_key),
-                std::move(*local_float));
+                *local_float);
         }
         return false;
     }

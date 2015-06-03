@@ -269,11 +269,36 @@ class psyq::scenario_engine::driver
         @param[in] in_chunk 削除するチャンクのキー。
      */
     public: void remove_chunk(
-        typename this_type::behavior_chunk::key_type const& in_chunk)
+        typename this_type::reservoir::chunk_key const& in_chunk)
     {
         this->reservoir_.remove_chunk(in_chunk);
         this->evaluator_.remove_chunk(in_chunk);
         this_type::behavior_chunk::remove(this->behavior_chunks_, in_chunk);
+    }
+
+    /** @brief 条件式に対応する条件挙動関数を、チャンクと条件挙動器へ追加する。
+        @param[in] in_chunk_key      チャンクの識別値。
+        @param[in] in_expression_key 評価に用いる条件式の識別値。
+        @param[in] in_function
+            登録する条件挙動関数オブジェクトを指すスマートポインタ。
+        @retval true  成功。
+        @retval false 失敗。
+     */
+    public: bool register_function(
+        typename this_type::reservoir::chunk_key const& in_chunk_key,
+        typename this_type::dispatcher::expression_key const& in_expression_key,
+        typename this_type::dispatcher::function_shared_ptr const& in_function)
+    {
+        auto const local_register_function(
+            this->dispatcher_.register_function(
+                in_expression_key, in_function));
+        if (!local_register_function)
+        {
+            return false;
+        }
+        this_type::behavior_chunk::add(
+            this->behavior_chunks_, in_chunk_key, in_function);
+        return true;
     }
     //@}
     //-------------------------------------------------------------------------
@@ -356,6 +381,12 @@ namespace psyq_test
                 std::move(local_expression_table)),
             psyq::scenario_engine::behavior_builder<string_table::string, driver::dispatcher>(
                 std::move(local_behavior_table)));
+        PSYQ_ASSERT(
+            local_driver.reservoir_.register_value(
+                local_chunk_key,
+                local_driver.make_hash("10"),
+                driver::reservoir::state_value(10u)));
+        PSYQ_ASSERT(!local_driver.register_function(0, 0, nullptr));
 
         local_driver.reservoir_.set_value(
             local_driver.hash_function_("state_bool"), false);

@@ -139,6 +139,21 @@ struct psyq::scenario_engine::behavior_chunk
     /** @brief 条件挙動チャンクに関数オブジェクトを追加する。
         @param[in,out] io_chunks 関数オブジェクトを追加する条件挙動チャンクのコンテナ。
         @param[in] in_key        関数オブジェクトを追加する条件挙動チャンクの識別値。
+        @param[in] in_function   条件挙動チャンクに追加する関数オブジェクト。
+     */
+    public: static void add(
+        typename this_type::vector& io_chunks,
+        typename this_type::key_type const& in_key,
+        typename this_type::dispatcher::function_shared_ptr in_function)
+    {
+        // 関数オブジェクトを条件挙動チャンクに追加する。
+        this_type::equip(io_chunks, in_key).functions.push_back(
+            std::move(in_function));
+    }
+
+    /** @brief 条件挙動チャンクに関数オブジェクトを追加する。
+        @param[in,out] io_chunks 関数オブジェクトを追加する条件挙動チャンクのコンテナ。
+        @param[in] in_key        関数オブジェクトを追加する条件挙動チャンクの識別値。
         @param[in] in_functions  条件挙動チャンクに追加する関数オブジェクトのコンテナ。
      */
     public: static void add(
@@ -146,25 +161,14 @@ struct psyq::scenario_engine::behavior_chunk
         typename this_type::key_type const& in_key,
         typename this_type::dispatcher::function_shared_ptr_vector in_functions)
     {
-        // 関数オブジェクトを追加する条件挙動チャンクを用意する。
-        auto local_iterator(
-            this_type::key_less::find_const_iterator(io_chunks, in_key));
-        if (local_iterator == io_chunks.end())
-        {
-            local_iterator = io_chunks.insert(
-                local_iterator,
-                this_type(in_key, in_functions.get_allocator()));
-        }
-
         // 関数オブジェクトを条件挙動チャンクに追加する。
         auto& local_chunk_functions(
-            const_cast<typename this_type::dispatcher::function_shared_ptr_vector&>(
-                local_iterator->functions));
+            this_type::equip(io_chunks, in_key).functions);
         local_chunk_functions.reserve(
             local_chunk_functions.size() + in_functions.size());
         for (auto& local_function: in_functions)
         {
-            local_chunk_functions.emplace_back(std::move(local_function));
+            local_chunk_functions.push_back(std::move(local_function));
         }
     }
 
@@ -186,6 +190,19 @@ struct psyq::scenario_engine::behavior_chunk
             io_chunks.erase(local_iterator);
         }
         return local_find;
+    }
+
+    private: static this_type& equip(
+        typename this_type::vector& io_chunks,
+        typename this_type::key_type const& in_key)
+    {
+        // 関数オブジェクトを追加する条件挙動チャンクを用意する。
+        auto const local_iterator(
+            this_type::key_less::find_iterator(io_chunks, in_key));
+        return local_iterator != io_chunks.end()?
+            *local_iterator:
+            *io_chunks.insert(
+                local_iterator, this_type(in_key, io_chunks.get_allocator()));
     }
 
     //-------------------------------------------------------------------------

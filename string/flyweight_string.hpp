@@ -119,7 +119,7 @@ class psyq::string::_private::flyweight_string
      */
     public: flyweight_string(
         typename this_type::view::size_type const in_size,
-        typename template_hash_value const in_hash)
+        template_hash_value const in_hash)
     PSYQ_NOEXCEPT:
     reference_count(0),
     size(in_size),

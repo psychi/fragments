@@ -557,20 +557,6 @@ class psyq::scenario_engine::evaluator
         return true;
     }
 
-    private: static bool is_valid_state_comparison(
-        typename this_type::state_comparison::vector const& in_elements,
-        typename this_type::reservoir const& in_reservoir)
-    {
-        for (auto& local_element: in_elements)
-        {
-            if (in_reservoir.find_entry(local_element.key) == nullptr)
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-
     //-------------------------------------------------------------------------
     /// @name 要素条件チャンク
     //@{

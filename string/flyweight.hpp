@@ -45,7 +45,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STRING_FLYWEIGHT_HPP_
 #define PSYQ_STRING_FLYWEIGHT_HPP_
 
-//#include "string/view.hpp"
+//#include "./view.hpp"
+//#include "./flyweight_factory.hpp"
 
 /// @brief フライ級文字列生成器の文字列チャンクのデフォルト容量。
 #ifndef PSYQ_STRING_FLYWEIGHT_CHUNK_SIZE_DEFAULT
@@ -69,7 +70,7 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_string_view を模した、flyweightパターンの文字列。
 
-    psyq::string::flyweight::factory を使って文字列を管理する。
+    base_type::base_type::factory を介して文字列を管理する。
 
     @tparam template_char_type      @copydoc psyq::string::view::value_type
     @tparam template_char_traits    @copydoc psyq::string::view::traits_type
@@ -127,7 +128,7 @@ public psyq::string::_private::interface_immutable<
      */
     public: flyweight(
         typename base_type::view const& in_string,
-        typename base_type::factory::shared_ptr const& in_factory,
+        typename base_type::base_type::factory::shared_ptr const& in_factory,
         std::size_t const in_chunk_size =
             PSYQ_STRING_FLYWEIGHT_CHUNK_SIZE_DEFAULT)
     :

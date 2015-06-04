@@ -371,10 +371,11 @@ class psyq::scenario_engine::dispatcher
             登録する条件挙動関数オブジェクトを指すスマートポインタ。
         @param[in] in_reserve_functions
             条件式監視器が持つ条件挙動関数オブジェクトコンテナの予約容量。
-        @retval true
-            成功。条件挙動関数オブジェクトを登録した。
-            もしくは、すでに登録されていた。
-        @retval false 失敗。条件挙動関数オブジェクトは登録されなかった。
+        @retval true 成功。条件挙動関数オブジェクトを登録した。
+        @retval false
+            失敗。条件挙動関数オブジェクトは登録されなかった。
+            条件挙動関数を指すスマートポインタが空だったか、
+            同じ条件式に同じ条件挙動関数がすでに登録されていたのが原因。
      */
     public: bool register_function(
         typename this_type::expression_key const& in_expression_key,
@@ -397,14 +398,13 @@ class psyq::scenario_engine::dispatcher
         if (local_expression_monitor != this->expression_monitors_.end()
             && local_expression_monitor->key == in_expression_key)
         {
-            // 同じ関数オブジェクトがすでに登録済みなら、そのままで成功する。
+            // 同じ関数オブジェクトがすでに登録済みなら、失敗する。
             auto const local_find_function(
                 this_type::find_function(
                     local_expression_monitor->functions, *local_function));
             if (local_find_function)
             {
-                local_expression_monitor->functions.reserve(in_reserve_functions);
-                return true;
+                return false;
             }
         }
         else

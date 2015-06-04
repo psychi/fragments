@@ -362,7 +362,7 @@ class psyq::scenario_engine::expression_builder
         template_evaluator& io_evaluator,
         template_hasher& io_hasher,
         template_element_container& io_elements,
-        typename template_evaluator::reservoir::chunk_key const& in_chunk_key,
+        typename template_evaluator::reservoir::chunk_key in_chunk_key,
         typename template_evaluator::expression_key in_expression_key,
         typename template_evaluator::expression::logic_enum const in_logic,
         template_element_server const& in_elements,
@@ -380,13 +380,11 @@ class psyq::scenario_engine::expression_builder
                 in_table,
                 in_row_index,
                 in_attribute));
-        return io_elements.empty()?
-            false:
-            io_evaluator.register_expression(
-                in_chunk_key,
-                std::move(in_expression_key),
-                io_elements,
-                in_logic);
+        return io_evaluator.register_expression(
+            std::move(in_chunk_key),
+            std::move(in_expression_key),
+            in_logic,
+            io_elements);
     }
 
     /** @brief 文字列表を解析し、複合条件式の要素条件を構築する。
@@ -418,24 +416,22 @@ class psyq::scenario_engine::expression_builder
             return false;
         }
 
-        // 複合条件式のキーを取得する。
-        auto const local_sub_expression_key_cell(
+        // 複合条件式の下位条件式キーを取得する。
+        auto const local_sub_key_cell(
             in_table.find_body_cell(in_row_index, local_element_column));
-        if (local_sub_expression_key_cell.empty())
+        if (local_sub_key_cell.empty())
         {
             PSYQ_ASSERT(false);
             return false;
         }
-        typename template_evaluator::sub_expression::vector::value_type
-            local_element;
-        local_element.key = io_hasher(local_sub_expression_key_cell);
+        auto local_sub_key(io_hasher(local_sub_key_cell));
         PSYQ_ASSERT(
             /** @note
                 無限ループを防ぐため、複合条件式で使う下位の条件式は、
                 条件評価器で定義済みのものしか使わないようにする。
              */
-            in_evaluator._find_expression(local_element.key) != nullptr);
-        if (local_element.key
+            in_evaluator._find_expression(local_sub_key) != nullptr);
+        if (local_sub_key
             == io_hasher(typename template_hasher::argument_type()))
         {
             PSYQ_ASSERT(false);
@@ -451,10 +447,10 @@ class psyq::scenario_engine::expression_builder
             PSYQ_ASSERT(false);
             return true;
         }
-        local_element.condition = (local_bool_state != 0);
 
         // 複合条件式に要素条件を追加する。
-        io_elements.push_back(local_element);
+        io_elements.emplace_back(
+            std::move(local_sub_key), local_bool_state != 0);
         return true;
     }
 
@@ -495,9 +491,8 @@ class psyq::scenario_engine::expression_builder
             PSYQ_ASSERT(false);
             return false;
         }
-        typename template_evaluator::state_comparison local_state;
-        local_state.key = io_hasher(local_state_key_cell);
-        if (local_state.key
+        auto local_state_key(io_hasher(local_state_key_cell));
+        if (local_state_key
             == io_hasher(typename template_hasher::argument_type()))
         {
             PSYQ_ASSERT(false);
@@ -505,9 +500,11 @@ class psyq::scenario_engine::expression_builder
         }
 
         // 比較演算子を取得する。
+        typename template_evaluator::state_comparison::operator_enum
+            local_state_operation;
         auto const local_get_comparison_operator(
             this_type::get_comparison_operator<template_evaluator>(
-                local_state.operation,
+                local_state_operation,
                 in_table.find_body_cell(
                     in_row_index, local_element_column + 1)));
         if (!local_get_comparison_operator)
@@ -517,9 +514,11 @@ class psyq::scenario_engine::expression_builder
         }
 
         // 比較条件値を取得する。
-        local_state.value = template_evaluator::reservoir::state_value::make(
-            in_table.find_body_cell(in_row_index, local_element_column + 2));
-        if (local_state.value.get_kind()
+        auto local_state_value(
+            template_evaluator::reservoir::state_value::make(
+                in_table.find_body_cell(
+                    in_row_index, local_element_column + 2)));
+        if (local_state_value.get_kind()
             == template_evaluator::reservoir::state_value::kind_NULL)
         {
             PSYQ_ASSERT(false);
@@ -527,7 +526,10 @@ class psyq::scenario_engine::expression_builder
         }
 
         // 要素条件を追加する。
-        io_elements.push_back(local_state);
+        io_elements.emplace_back(
+            std::move(local_state_key),
+            local_state_operation,
+            std::move(local_state_value));
         return true;
     }
 

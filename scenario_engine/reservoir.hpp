@@ -814,7 +814,8 @@ class psyq::scenario_engine::reservoir
         typename this_type::block_type const in_value)
     PSYQ_NOEXCEPT
     {
-        if (this_type::BLOCK_SIZE < in_size || (in_value >> in_size) != 0)
+        auto const local_mask(this_type::make_block_mask(in_size));
+        if ((~local_mask & in_value) != 0)
         {
             PSYQ_ASSERT(false);
             return -1;
@@ -830,7 +831,6 @@ class psyq::scenario_engine::reservoir
         auto const local_position(
             in_position - local_block_index * this_type::BLOCK_SIZE);
         PSYQ_ASSERT(local_position + in_size <= this_type::BLOCK_SIZE);
-        auto const local_mask(this_type::make_block_mask(in_size));
         auto& local_block(io_blocks.at(local_block_index));
         auto const local_last_block(local_block);
         local_block = (~(local_mask << local_position) & local_block)
@@ -845,12 +845,12 @@ class psyq::scenario_engine::reservoir
 
         - 登録した状態値は
           this_type::get_value と this_type::set_value でアクセスできる。
-        - 登録した状態値は this_type::remove_chunk で削除できる。
+        - 登録した状態値は this_type::remove_chunk でチャンク毎に削除できる。
 
         @param[in] in_chunk_key   登録する状態値を格納するビット列チャンクの識別値。
         @param[in] in_state_key   登録する状態値の識別番号。
         @param[in] in_state_value 登録する状態値の初期値。
-        @retval true  成功。状態値を登録した。
+        @retval true 成功。状態値を登録した。
         @retval false
             失敗。状態値を登録できなかった。
             in_state_key に対応する状態値がすでに登録されていると失敗する。
@@ -889,7 +889,7 @@ class psyq::scenario_engine::reservoir
         @param[in] in_state_key   登録する状態値の識別番号。
         @param[in] in_state_value 登録する状態値の初期値。
         @param[in] in_state_size  登録する状態値のビット数。
-        @retval true  成功。状態値を登録した。
+        @retval true 成功。状態値を登録した。
         @retval false
             失敗。状態値を登録できなかった。
             - in_state_key に対応する状態値がすでに登録されていると失敗する。
@@ -929,20 +929,7 @@ class psyq::scenario_engine::reservoir
     }
 
     /** @brief 符号あり整数型の状態値を登録する。
-
-        - 登録した状態値は
-          this_type::get_value と this_type::set_value でアクセスできる。
-        - 登録した状態値は this_type::remove_chunk で削除できる。
-
-        @param[in] in_chunk_key   登録する状態値を格納するビット列チャンクの識別値。
-        @param[in] in_state_key   登録する状態値の識別番号。
-        @param[in] in_state_value 登録する状態値の初期値。
-        @param[in] in_state_size  登録する状態値のビット数。
-        @retval true  成功。状態値を登録した。
-        @retval false
-            失敗。状態値を登録できなかった。
-            - in_state_key に対応する状態値がすでに登録されていると失敗する。
-            - this_type::MAX_STATE_SIZE より in_state_size が大きければ失敗する。
+        @copydetails register_unsigned
      */
     public: bool register_signed(
         typename this_type::chunk_key in_chunk_key,
@@ -990,18 +977,7 @@ class psyq::scenario_engine::reservoir
     }
 
     /** @brief 浮動小数点数型の状態値を登録する。
-
-        - 登録した状態値は
-          this_type::get_value と this_type::set_value でアクセスできる。
-        - 登録した状態値は this_type::remove_chunk で削除できる。
-
-        @param[in] in_chunk_key   登録する状態値を格納するビット列チャンクの識別値。
-        @param[in] in_state_key   登録する状態値の識別番号。
-        @param[in] in_state_value 登録する状態値の初期値。
-        @retval true  成功。状態値を登録した。
-        @retval false
-            失敗。状態値を登録できなかった。
-            in_state_key に対応する状態値がすでに登録されていると失敗する。
+        @copydetails register_bool
      */
     public: bool register_float(
         typename this_type::chunk_key in_chunk_key,
@@ -1030,18 +1006,7 @@ class psyq::scenario_engine::reservoir
     }
 
     /** @brief 状態値を登録する。
-
-        - 登録した状態値は
-          this_type::get_value と this_type::set_value でアクセスできる。
-        - 登録した状態値は this_type::remove_chunk で削除できる。
-
-        @param[in] in_chunk_key   登録する状態値を格納するビット列チャンクの識別値。
-        @param[in] in_state_key   登録する状態値の識別番号。
-        @param[in] in_state_value 登録する状態値の初期値。
-        @retval true  成功。状態値を登録した。
-        @retval false
-            失敗。状態値を登録できなかった。
-            in_state_key に対応する状態値がすでに登録されていると失敗する。
+        @copydetails register_bool
      */
     public: bool register_value(
         typename this_type::chunk_key in_chunk_key,

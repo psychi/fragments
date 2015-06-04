@@ -185,17 +185,16 @@ class psyq::scenario_engine::driver
 
     //-------------------------------------------------------------------------
     /// @name チャンク
-    /** @brief シナリオ駆動器にチャンクを追加する。
+    /** @brief 状態値と条件式と条件挙動関数を、チャンクへ追加する。
         @param[in] in_chunk_key 追加するチャンクの識別値。
         @param[in] in_state_builder
-            状態値を登録する関数オブジェクト。
+            状態値を状態貯蔵器に登録する関数オブジェクト。
             以下に相当するメンバ関数を使えること。
             @code
-            // @brief 状態貯蔵器に状態値を登録する。
+            // @brief 状態値を状態貯蔵器に登録する。
             // @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
             // @param[in,out] io_hasher    文字列から識別値を生成する関数オブジェクト。
             // @param[in] in_chunk_key     状態値を登録するチャンクを表す識別値。
-            // @return 登録した状態値の数。
             void template_state_builder::operator()(
                 driver::reservoir& io_reservoir,
                 driver::hasher& io_hasher,
@@ -203,15 +202,14 @@ class psyq::scenario_engine::driver
             const;
             @endcode
         @param[in] in_expression_builder
-            条件式を登録する関数オブジェクト。
+            条件式を条件評価器に登録する関数オブジェクト。
             以下に相当するメンバ関数を使えること。
             @code
-            // @brief 条件評価器に条件式を登録する。
+            // @brief 条件式を条件評価器に登録する。
             // @param[in,out] io_evaluator 条件式を登録する条件評価器。
             // @param[in,out] io_hasher    文字列から識別値を生成する関数オブジェクト。
             // @param[in] in_chunk_key     条件式を登録するチャンクを表す識別値。
             // @param[in] in_reservoir     条件式で使う状態貯蔵器。
-            // @return 登録した条件式の数。
             void template_expression_builder::operator()(
                 driver::evaluator& io_evaluator,
                 driver::hasher& io_hasher,
@@ -220,15 +218,17 @@ class psyq::scenario_engine::driver
             const;
             @endcode
         @param[in] in_behavior_builder
-            条件挙動関数を登録する関数オブジェクト。
+            条件挙動関数を条件挙動器に登録する関数オブジェクト。
             以下に相当するメンバ関数を使えること。
             @code
-            // @brief 条件評価器に条件式を登録する。
+            // @brief 条件挙動関数を条件挙動器に登録する。
             // @param[in,out] io_dispatcher 条件挙動関数を登録する条件挙動器。
             // @param[in,out] io_hasher     文字列から識別値を生成する関数オブジェクト。
             // @param[in] in_evaluator      条件挙動関数で使う条件評価器。
             // @param[in] in_reservoir      条件挙動関数で使う状態貯蔵器。
-            // @return 登録した条件式の数。
+            // @return
+            //     条件挙動器に登録した条件挙動関数オブジェクトを指す、
+            //     スマートポインタのコンテナ。
             driver::dispatcher::function_shared_ptr_vector
             template_behavior_builder::operator()(
                 driver::dispatcher& io_dispatcher,
@@ -242,7 +242,7 @@ class psyq::scenario_engine::driver
         typename template_state_builder,
         typename template_expression_builder,
         typename template_behavior_builder>
-    void add_chunk(
+    void extend_chunk(
         typename this_type::reservoir::chunk_key const& in_chunk_key,
         template_state_builder const& in_state_builder,
         template_expression_builder const& in_expression_builder,
@@ -265,7 +265,35 @@ class psyq::scenario_engine::driver
                 this->reservoir_));
     }
 
-    /** @brief シナリオ駆動器からチャンクを削除する。
+    /** @brief 条件式に対応する条件挙動関数を、チャンクへ追加する。
+        @param[in] in_chunk_key      チャンクの識別値。
+        @param[in] in_expression_key 評価に用いる条件式の識別値。
+        @param[in] in_function
+            追加する条件挙動関数オブジェクトを指すスマートポインタ。
+        @retval true  成功。
+        @retval false 失敗。
+     */
+    public: bool extend_chunk(
+        typename this_type::reservoir::chunk_key const& in_chunk_key,
+        typename this_type::dispatcher::expression_key const& in_expression_key,
+        typename this_type::dispatcher::function_shared_ptr in_function)
+    {
+        // 条件挙動関数を条件挙動器へ登録する。
+        auto const local_register_function(
+            this->dispatcher_.register_function(
+                in_expression_key, in_function));
+        if (!local_register_function)
+        {
+            return false;
+        }
+
+        // 条件挙動関数を条件挙動関数チャンクへ追加する。
+        this_type::behavior_chunk::add(
+            this->behavior_chunks_, in_chunk_key, std::move(in_function));
+        return true;
+    }
+
+    /** @brief チャンクを削除する。
         @param[in] in_chunk 削除するチャンクのキー。
      */
     public: void remove_chunk(
@@ -274,31 +302,6 @@ class psyq::scenario_engine::driver
         this->reservoir_.remove_chunk(in_chunk);
         this->evaluator_.remove_chunk(in_chunk);
         this_type::behavior_chunk::remove(this->behavior_chunks_, in_chunk);
-    }
-
-    /** @brief 条件式に対応する条件挙動関数を、チャンクと条件挙動器へ追加する。
-        @param[in] in_chunk_key      チャンクの識別値。
-        @param[in] in_expression_key 評価に用いる条件式の識別値。
-        @param[in] in_function
-            登録する条件挙動関数オブジェクトを指すスマートポインタ。
-        @retval true  成功。
-        @retval false 失敗。
-     */
-    public: bool register_function(
-        typename this_type::reservoir::chunk_key const& in_chunk_key,
-        typename this_type::dispatcher::expression_key const& in_expression_key,
-        typename this_type::dispatcher::function_shared_ptr const& in_function)
-    {
-        auto const local_register_function(
-            this->dispatcher_.register_function(
-                in_expression_key, in_function));
-        if (!local_register_function)
-        {
-            return false;
-        }
-        this_type::behavior_chunk::add(
-            this->behavior_chunks_, in_chunk_key, in_function);
-        return true;
     }
     //@}
     //-------------------------------------------------------------------------
@@ -372,8 +375,8 @@ namespace psyq_test
             "");
         local_behavior_table.constraint_attribute(0);
 
-        // シナリオ駆動機にチャンクを登録する。
-        local_driver.add_chunk(
+        // シナリオ駆動機に登録する。
+        local_driver.extend_chunk(
             local_chunk_key,
             psyq::scenario_engine::state_builder<string_table::string>(
                 std::move(local_state_table)),
@@ -386,7 +389,7 @@ namespace psyq_test
                 local_chunk_key,
                 local_driver.make_hash("10"),
                 driver::reservoir::state_value(10u)));
-        PSYQ_ASSERT(!local_driver.register_function(0, 0, nullptr));
+        PSYQ_ASSERT(!local_driver.extend_chunk(0, 0, nullptr));
 
         local_driver.reservoir_.set_value(
             local_driver.hash_function_("state_bool"), false);

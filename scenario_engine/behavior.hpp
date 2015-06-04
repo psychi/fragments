@@ -137,39 +137,62 @@ struct psyq::scenario_engine::behavior_chunk
 
     //-------------------------------------------------------------------------
     /** @brief 条件挙動チャンクに関数オブジェクトを追加する。
-        @param[in,out] io_chunks 関数オブジェクトを追加する条件挙動チャンクのコンテナ。
-        @param[in] in_key        関数オブジェクトを追加する条件挙動チャンクの識別値。
-        @param[in] in_function   条件挙動チャンクに追加する関数オブジェクト。
+        @param[in,out] io_chunks
+            関数オブジェクトを追加する条件挙動チャンクのコンテナ。
+        @param[in] in_key
+            関数オブジェクトを追加する条件挙動チャンクの識別値。
+        @param[in] in_function
+            条件挙動チャンクに追加する関数オブジェクトを指すスマートポインタ。
+        @retval true  成功。関数オブジェクトを追加した。
+        @retval false 失敗。関数オブジェクトを追加しなかった。
      */
-    public: static void add(
+    public: static bool add(
         typename this_type::vector& io_chunks,
         typename this_type::key_type const& in_key,
         typename this_type::dispatcher::function_shared_ptr in_function)
     {
+        if (in_function.get() == nullptr)
+        {
+            return false;
+        }
+
         // 関数オブジェクトを条件挙動チャンクに追加する。
         this_type::equip(io_chunks, in_key).functions.push_back(
             std::move(in_function));
+        return true;
     }
 
     /** @brief 条件挙動チャンクに関数オブジェクトを追加する。
-        @param[in,out] io_chunks 関数オブジェクトを追加する条件挙動チャンクのコンテナ。
-        @param[in] in_key        関数オブジェクトを追加する条件挙動チャンクの識別値。
-        @param[in] in_functions  条件挙動チャンクに追加する関数オブジェクトのコンテナ。
+        @param[in,out] io_chunks
+            関数オブジェクトを追加する条件挙動チャンクのコンテナ。
+        @param[in] in_key
+            関数オブジェクトを追加する条件挙動チャンクの識別値。
+        @param[in] in_functions
+            条件挙動チャンクに追加する関数オブジェクトの、
+            スマートポインタのコンテナ。
+        @return 追加した関数オブジェクトの数。
      */
-    public: static void add(
+    public: template<typename template_function_container>
+    static std::size_t add(
         typename this_type::vector& io_chunks,
         typename this_type::key_type const& in_key,
-        typename this_type::dispatcher::function_shared_ptr_vector in_functions)
+        template_function_container in_functions)
     {
         // 関数オブジェクトを条件挙動チャンクに追加する。
         auto& local_chunk_functions(
             this_type::equip(io_chunks, in_key).functions);
         local_chunk_functions.reserve(
             local_chunk_functions.size() + in_functions.size());
+        std::size_t local_count(0);
         for (auto& local_function: in_functions)
         {
-            local_chunk_functions.push_back(std::move(local_function));
+            if (local_function.get() != nullptr)
+            {
+                local_chunk_functions.push_back(std::move(local_function));
+                ++local_count;
+            }
         }
+        return local_count;
     }
 
     /** @brief コンテナから条件挙動チャンクを削除する。
@@ -192,6 +215,11 @@ struct psyq::scenario_engine::behavior_chunk
         return local_find;
     }
 
+    /** @brief 条件挙動チャンクを用意する。
+        @param[in,out] io_chunks 条件挙動チャンクのコンテナ。
+        @param[in] in_key        用意する条件挙動チャンクの識別値。
+        @return 用意した条件挙動チャンク。
+     */
     private: static this_type& equip(
         typename this_type::vector& io_chunks,
         typename this_type::key_type const& in_key)

@@ -100,6 +100,7 @@ class psyq::scenario_engine::dispatcher
         {
             flag_LAST_EVALUATION,    ///< 条件の前回の評価の成功／失敗。
             flag_LAST_CONDITION,     ///< 条件の前回の評価。
+            flag_FLUSH_CONDITION,    ///< 条件の前回の評価を忘れる。
             flag_EVALUATION_REQUEST, ///< 条件評価の更新要求。
             flag_REGISTERED,         ///< 条件式の登録済みフラグ。
         };
@@ -591,8 +592,11 @@ class psyq::scenario_engine::dispatcher
                         local_expression_monitor.key,
                         in_evaluator,
                         in_reserve_expressions));
-                if (local_register_expression)
+                if (local_register_expression != 0)
                 {
+                    local_expression_monitor.flags.set(
+                        this_type::expression_monitor::flag_FLUSH_CONDITION,
+                        local_register_expression < 0);
                     local_expression_monitor.flags.set(
                         this_type::expression_monitor::flag_REGISTERED);
                     local_expression_monitor.flags.set(
@@ -607,11 +611,12 @@ class psyq::scenario_engine::dispatcher
         @param[in] in_evaluator      登録する条件式を持つ条件評価器。
         @param[in] in_reserve_expressions
             状態監視器が持つ条件式識別値コンテナの予約容量。
-        @retval true  成功。
-        @retval false 失敗。
+        @retval 正 成功。条件式の評価を維持する。
+        @retval 負 成功。条件式の評価を維持しない。
+        @retval 0  失敗。
      */
     private: template<typename template_evaluator>
-    bool register_expression(
+    int register_expression(
         typename this_type::expression_key const& in_expression_key,
         template_evaluator const& in_evaluator,
         std::size_t const in_reserve_expressions)
@@ -621,7 +626,7 @@ class psyq::scenario_engine::dispatcher
             in_evaluator._find_expression(in_expression_key));
         if (local_expression == nullptr)
         {
-            return false;
+            return 0;
         }
         auto const local_chunk(
             in_evaluator._find_chunk(local_expression->chunk));
@@ -629,7 +634,7 @@ class psyq::scenario_engine::dispatcher
         {
             // 条件式があれば、要素条件チャンクもあるはず。
             PSYQ_ASSERT(false);
-            return false;
+            return 0;
         }
 
         // 条件式の種類によって、監視する条件式の追加先を選別する。
@@ -648,7 +653,7 @@ class psyq::scenario_engine::dispatcher
                 *local_expression,
                 local_chunk->state_transitions,
                 in_reserve_expressions);
-            return true;
+            return -1;
 
             case template_evaluator::expression::kind_STATE_COMPARISON:
             this_type::register_expression(
@@ -656,12 +661,12 @@ class psyq::scenario_engine::dispatcher
                 *local_expression,
                 local_chunk->state_comparisons,
                 in_reserve_expressions);
-            return true;
+            return 1;
 
             default:
             // 未対応の条件式の種類だった。
             PSYQ_ASSERT(false);
-            return false;
+            return 0;
         }
     }
 
@@ -730,11 +735,12 @@ class psyq::scenario_engine::dispatcher
             登録する複合条件式が参照する要素条件コンテナ。
         @param[in] in_reserve_expressions
             状態監視器が持つ条件式識別値コンテナの予約容量。
-        @retval 成功。
-        @retval 失敗。
+        @retval 正 成功。条件式の評価を維持する。
+        @retval 負 成功。条件式の評価を維持しない。
+        @retval 0  失敗。
      */
     private: template<typename template_evaluator>
-    bool register_sub_expression(
+    int register_sub_expression(
         template_evaluator const& in_evaluator,
         typename template_evaluator::expression const& in_expression,
         typename template_evaluator::sub_expression_vector const&
@@ -744,6 +750,7 @@ class psyq::scenario_engine::dispatcher
         // 複合条件式の要素条件を走査し、状態監視器に条件式を登録する。
         auto const local_begin(in_sub_expressions.begin());
         auto const local_end(local_begin + in_expression.end);
+        int local_result(1);
         for (auto i(local_begin + in_expression.begin); i != local_end; ++i)
         {
             auto const& local_sub_key(i->key);
@@ -755,16 +762,20 @@ class psyq::scenario_engine::dispatcher
                 auto const local_register_expression(
                     this->register_expression(
                         local_sub_key, in_evaluator, in_reserve_expressions));
-                if (!local_register_expression)
+                if (local_register_expression == 0)
                 {
                     // 無限ループを防ぐため、
                     // まだ存在しない条件式を複合条件式で使うのは禁止する。
                     PSYQ_ASSERT(false);
-                    return false;
+                    return 0;
+                }
+                if (local_register_expression < 0)
+                {
+                    local_result = -1;
                 }
             }
         }
-        return true;
+        return local_result;
     }
 
     /** @brief 状態の変更を検知し、条件式監視器へ知らせる。
@@ -953,10 +964,6 @@ class psyq::scenario_engine::dispatcher
         @param[in] in_reservoir              評価に用いる状態貯蔵器。
         @retval true  条件挙動関数をキャッシュに貯めた。
         @retval false 条件挙動関数はキャッシュに貯めなかった。
-
-        @todo
-        状態変化条件式で、前回と今回に連続して状態変化が発生した場合に、
-        最初の状態変化しか検出できない不具合がある。
      */
     private: template<typename template_evaluator>
     static bool cache_function(
@@ -965,9 +972,17 @@ class psyq::scenario_engine::dispatcher
         template_evaluator const& in_evaluator,
         typename template_evaluator::reservoir const& in_reservoir)
     {
-        // 条件式を評価し、評価結果が以前と同じか判定する。
-        auto const local_last_evaluation(
+        // 前回の評価結果を取得する。
+        auto local_last_evaluation(
             io_expression_monitor.get_last_evaluation());
+        if (0 < local_last_evaluation
+            && io_expression_monitor.flags.test(
+                this_type::expression_monitor::flag_FLUSH_CONDITION))
+        {
+            local_last_evaluation = 0;
+        }
+
+        // 条件式を評価し、評価結果が以前と同じか判定する。
         auto const local_expression_key(io_expression_monitor.key);
         auto const local_evaluate_expression(
             in_evaluator.evaluate_expression(

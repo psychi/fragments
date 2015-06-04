@@ -73,6 +73,10 @@ namespace psyq
 #define PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_STATE_COMPARISON "STATE_COMPARISON"
 #endif // !define(PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_STATE_COMPARISON)
 
+#ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_STATE_TRANSITION
+#define PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_STATE_TRANSITION "STATE_TRANSITION"
+#endif // !define(PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_STATE_TRANSITION)
+
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 文字列表から条件式を構築する関数オブジェクト。
 
@@ -132,14 +136,17 @@ class psyq::scenario_engine::expression_builder
             std::size_t const in_capacity,
             typename template_evaluator::allocator_type const& in_allocator):
         sub_expressions(in_allocator),
+        state_transitions(in_allocator),
         state_comparisons(in_allocator)
         {
             this->sub_expressions.reserve(in_capacity);
+            this->state_transitions.reserve(in_capacity);
             this->state_comparisons.reserve(in_capacity);
         }
 
-        typename template_evaluator::sub_expression::vector sub_expressions;
-        typename template_evaluator::state_comparison::vector state_comparisons;
+        typename template_evaluator::sub_expression_vector sub_expressions;
+        typename template_evaluator::state_transition_vector state_transitions;
+        typename template_evaluator::state_comparison_vector state_comparisons;
     };
 
     //-------------------------------------------------------------------------
@@ -316,6 +323,23 @@ class psyq::scenario_engine::expression_builder
         }
         else if (
             local_kind_cell
+            == PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_STATE_TRANSITION)
+        {
+            // 状態変化条件式の要素条件を構築する。
+            return this_type::build_expression(
+                io_evaluator,
+                io_hasher,
+                io_workspace.state_transitions,
+                in_chunk_key,
+                std::move(local_key),
+                local_logic,
+                in_reservoir,
+                in_table,
+                in_row_index,
+                in_attribute);
+        }
+        else if (
+            local_kind_cell
             == PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_STATE_COMPARISON)
         {
             // 状態比較条件式の要素条件を構築する。
@@ -372,14 +396,17 @@ class psyq::scenario_engine::expression_builder
     {
         // 要素条件のコンテナを構築し、条件式を条件評価器へ登録する。
         io_elements.clear();
-        while (
+        for (
+            unsigned i(0);
             this_type::build_element<template_evaluator>(
                 io_elements,
                 io_hasher,
                 in_elements,
                 in_table,
                 in_row_index,
-                in_attribute));
+                in_attribute,
+                i);
+            ++i);
         return io_evaluator.register_expression(
             std::move(in_chunk_key),
             std::move(in_expression_key),
@@ -388,28 +415,30 @@ class psyq::scenario_engine::expression_builder
     }
 
     /** @brief 文字列表を解析し、複合条件式の要素条件を構築する。
-        @param[in,out] io_elements 構築した要素条件を追加するコンテナ。
-        @param[in,out] io_hasher   文字列からハッシュ値を生成する関数オブジェクト。
-        @param[in] in_evaluator    複合条件式を追加する条件評価器。
-        @param[in] in_table        解析する文字列表。
-        @param[in] in_row_index    解析する文字列表の行番号。
-        @param[in] in_attribute    文字列表の属性。
+        @param[in,out] io_elements  構築した要素条件を追加するコンテナ。
+        @param[in,out] io_hasher    文字列からハッシュ値を生成する関数オブジェクト。
+        @param[in] in_evaluator     複合条件式を追加する条件評価器。
+        @param[in] in_table         解析する文字列表。
+        @param[in] in_row_index     解析する文字列表の行番号。
+        @param[in] in_attribute     文字列表の属性。
+        @param[in] in_element_count これまで解析した要素条件の数。
         @retval true  文字列表から要素条件を構築した。
         @retval false 文字列表に要素条件が存在しなかった。
      */
     private: template<typename template_evaluator, typename template_hasher>
     static bool build_element(
-        typename template_evaluator::sub_expression::vector& io_elements,
+        typename template_evaluator::sub_expression_vector& io_elements,
         template_hasher& io_hasher,
         template_evaluator const& in_evaluator,
         typename this_type::string_table const& in_table,
         typename this_type::string_table::index_type const in_row_index,
-        typename this_type::table_attribute const& in_attribute)
+        typename this_type::table_attribute const& in_attribute,
+        unsigned const in_element_count)
     {
         unsigned const local_element_size(2);
         auto const local_element_column(
             in_attribute.element->column
-            + io_elements.size() * local_element_size);
+            + in_element_count * local_element_size);
         if (in_attribute.element->column + in_attribute.element->size
             < local_element_column + local_element_size)
         {
@@ -421,8 +450,7 @@ class psyq::scenario_engine::expression_builder
             in_table.find_body_cell(in_row_index, local_element_column));
         if (local_sub_key_cell.empty())
         {
-            PSYQ_ASSERT(false);
-            return false;
+            return true;
         }
         auto local_sub_key(io_hasher(local_sub_key_cell));
         PSYQ_ASSERT(
@@ -454,29 +482,31 @@ class psyq::scenario_engine::expression_builder
         return true;
     }
 
-    /** @brief 文字列表を解析し、状態比較条件式の要素条件を構築する。
-        @param[in,out] io_elements 構築した要素条件を追加するコンテナ。
-        @param[in,out] io_hasher   文字列からハッシュ値を生成する関数オブジェクト。
-        @param[in] in_reservoir    条件式が参照する状態貯蔵器。
-        @param[in] in_table        解析する文字列表。
-        @param[in] in_row_index    解析する文字列表の行番号。
-        @param[in] in_attribute    文字列表の属性。
+    /** @brief 文字列表を解析し、状態変化条件式の要素条件を構築する。
+        @param[in,out] io_elements  構築した要素条件を追加するコンテナ。
+        @param[in,out] io_hasher    文字列からハッシュ値を生成する関数オブジェクト。
+        @param[in] in_reservoir     条件式が参照する状態貯蔵器。
+        @param[in] in_table         解析する文字列表。
+        @param[in] in_row_index     解析する文字列表の行番号。
+        @param[in] in_attribute     文字列表の属性。
+        @param[in] in_element_count これまで解析した要素条件の数。
         @retval true  要素条件の解析は継続。
         @retval false 要素条件の解析は終了。
      */
     private: template<typename template_evaluator, typename template_hasher>
     static bool build_element(
-        typename template_evaluator::state_comparison::vector& io_elements,
+        typename template_evaluator::state_transition_vector& io_elements,
         template_hasher& io_hasher,
         typename template_evaluator::reservoir const& in_reservoir,
         typename this_type::string_table const& in_table,
         typename this_type::string_table::index_type const in_row_index,
-        typename this_type::table_attribute const& in_attribute)
+        typename this_type::table_attribute const& in_attribute,
+        unsigned const in_element_count)
     {
-        unsigned const local_element_size(3);
+        unsigned const local_element_size(1);
         auto const local_element_column(
             in_attribute.element->column
-            + io_elements.size() * local_element_size);
+            + in_element_count * local_element_size);
         if (in_attribute.element->column + in_attribute.element->size
             < local_element_column + local_element_size)
         {
@@ -488,8 +518,58 @@ class psyq::scenario_engine::expression_builder
             in_table.find_body_cell(in_row_index, local_element_column));
         if (local_state_key_cell.empty())
         {
+            return true;
+        }
+        auto local_state_key(io_hasher(local_state_key_cell));
+        if (local_state_key
+            == io_hasher(typename template_hasher::argument_type()))
+        {
             PSYQ_ASSERT(false);
+            return true;
+        }
+
+        // 状態変化条件式に要素条件を追加する。
+        io_elements.push_back(local_state_key);
+        return true;
+    }
+
+    /** @brief 文字列表を解析し、状態比較条件式の要素条件を構築する。
+        @param[in,out] io_elements  構築した要素条件を追加するコンテナ。
+        @param[in,out] io_hasher    文字列からハッシュ値を生成する関数オブジェクト。
+        @param[in] in_reservoir     条件式が参照する状態貯蔵器。
+        @param[in] in_table         解析する文字列表。
+        @param[in] in_row_index     解析する文字列表の行番号。
+        @param[in] in_attribute     文字列表の属性。
+        @param[in] in_element_count これまで解析した要素条件の数。
+        @retval true  要素条件の解析は継続。
+        @retval false 要素条件の解析は終了。
+     */
+    private: template<typename template_evaluator, typename template_hasher>
+    static bool build_element(
+        typename template_evaluator::state_comparison_vector& io_elements,
+        template_hasher& io_hasher,
+        typename template_evaluator::reservoir const& in_reservoir,
+        typename this_type::string_table const& in_table,
+        typename this_type::string_table::index_type const in_row_index,
+        typename this_type::table_attribute const& in_attribute,
+        unsigned const in_element_count)
+    {
+        unsigned const local_element_size(3);
+        auto const local_element_column(
+            in_attribute.element->column
+            + in_element_count * local_element_size);
+        if (in_attribute.element->column + in_attribute.element->size
+            < local_element_column + local_element_size)
+        {
             return false;
+        }
+
+        // 状態キーを取得する。
+        auto const local_state_key_cell(
+            in_table.find_body_cell(in_row_index, local_element_column));
+        if (local_state_key_cell.empty())
+        {
+            return true;
         }
         auto local_state_key(io_hasher(local_state_key_cell));
         if (local_state_key

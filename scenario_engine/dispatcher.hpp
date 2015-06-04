@@ -642,6 +642,14 @@ class psyq::scenario_engine::dispatcher
                 local_chunk->sub_expressions,
                 in_reserve_expressions);
 
+            case template_evaluator::expression::kind_STATE_TRANSITION:
+            this_type::register_expression(
+                this->state_monitors_,
+                *local_expression,
+                local_chunk->state_transitions,
+                in_reserve_expressions);
+            return true;
+
             case template_evaluator::expression::kind_STATE_COMPARISON:
             this_type::register_expression(
                 this->state_monitors_,
@@ -729,7 +737,7 @@ class psyq::scenario_engine::dispatcher
     bool register_sub_expression(
         template_evaluator const& in_evaluator,
         typename template_evaluator::expression const& in_expression,
-        typename template_evaluator::sub_expression::vector const&
+        typename template_evaluator::sub_expression_vector const&
             in_sub_expressions,
         std::size_t const in_reserve_expressions)
     {
@@ -945,6 +953,10 @@ class psyq::scenario_engine::dispatcher
         @param[in] in_reservoir              評価に用いる状態貯蔵器。
         @retval true  条件挙動関数をキャッシュに貯めた。
         @retval false 条件挙動関数はキャッシュに貯めなかった。
+
+        @todo
+        状態変化条件式で、前回と今回に連続して状態変化が発生した場合に、
+        最初の状態変化しか検出できない不具合がある。
      */
     private: template<typename template_evaluator>
     static bool cache_function(

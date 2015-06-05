@@ -55,19 +55,19 @@ class psyq::scenario_engine::evaluator
         /// @brief 要素条件のインデクス番号を表す型。
         typedef std::uint32_t element_index;
 
+        /// @brief 条件式の要素条件を結合する論理演算子を表す列挙型。
+        enum logic_enum: std::uint8_t
+        {
+            logic_AND, ///< 論理積。
+            logic_OR,  ///< 論理和。
+        };
+
         /// @brief 条件式の種類を表す列挙型。
         enum kind_enum: std::uint8_t
         {
             kind_SUB_EXPRESSION,   ///< 複合条件式。
             kind_STATE_TRANSITION, ///< 状態変化条件式。
             kind_STATE_COMPARISON, ///< 状態比較条件式。
-        };
-
-        /// @brief 条件式の要素条件を結合する論理演算子を表す列挙型。
-        enum logic_enum: std::uint8_t
-        {
-            logic_AND, ///< 論理積。
-            logic_OR,  ///< 論理和。
         };
 
         /** @brief 条件式を構築する。
@@ -90,8 +90,8 @@ class psyq::scenario_engine::evaluator
         key(std::move(in_expression_key)),
         begin(in_element_begin),
         end(in_element_end),
-        kind(in_kind),
-        logic(in_logic)
+        logic(in_logic),
+        kind(in_kind)
         {}
 
         /// @brief 要素条件チャンクに対応する識別値。
@@ -102,10 +102,10 @@ class psyq::scenario_engine::evaluator
         typename this_type::element_index begin;
         /// @brief 条件式が使う要素条件の末尾インデクス番号。
         typename this_type::element_index end;
-        /// @brief 条件式の種類。
-        typename this_type::kind_enum kind;
         /// @brief 条件式の要素条件を結合する論理演算子。
         typename this_type::logic_enum logic;
+        /// @brief 条件式の種類。
+        typename this_type::kind_enum kind;
 
     }; // struct expression
 
@@ -195,16 +195,14 @@ class psyq::scenario_engine::evaluator
         /** @brief 状態変化条件式の要素条件を構築する。
             @param[in] in_key this_type::key の初期値。
          */
-        state_transition(
-            typename evaluator::reservoir::state_key in_key)
-        PSYQ_NOEXCEPT:
-        key(std::move(in_key))
+        state_transition(typename evaluator::reservoir::state_key in_key)
+        PSYQ_NOEXCEPT: key(std::move(in_key))
         {}
 
         /// @brief 変化を検知する状態値の識別値。
         typename evaluator::reservoir::state_key key;
 
-    }; // struct sub_expression
+    }; // struct state_transition
 
     /// @brief 状態変化条件式の要素条件のコンテナ。
     public: typedef std::vector<
@@ -215,20 +213,13 @@ class psyq::scenario_engine::evaluator
     /// @brief 状態変化条件式の要素条件を評価する関数オブジェクト。
     private: struct state_transition_evaluator
     {
-        explicit state_transition_evaluator(
-            typename evaluator::reservoir const& in_reservoir)
-        PSYQ_NOEXCEPT:
-        reservoir(in_reservoir)
-        {}
+        explicit state_transition_evaluator() PSYQ_NOEXCEPT {}
 
-        std::int8_t operator()(
-            typename this_type::state_transition const& in_state)
+        std::int8_t operator()(typename this_type::state_transition const&)
         const PSYQ_NOEXCEPT
         {
-            return this->reservoir._get_transition(in_state.key);
+            return 1;
         }
-
-        typename evaluator::reservoir const& reservoir;
 
     }; // struct state_transition_evaluator
 
@@ -500,7 +491,7 @@ class psyq::scenario_engine::evaluator
                     return this_type::evaluate_elements(
                         *local_expression,
                         local_chunk->state_transitions,
-                        this_type::state_transition_evaluator(in_reservoir));
+                        this_type::state_transition_evaluator());
 
                     case this_type::expression::kind_STATE_COMPARISON:
                     return this_type::evaluate_elements(

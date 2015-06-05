@@ -98,10 +98,11 @@ class psyq::scenario_engine::dispatcher
         /// @brief フラグの位置。
         enum flag_enum: std::uint8_t
         {
+            flag_VALID_TRANSITION,   ///< 状態変化の取得に成功。
+            flag_INVALID_TRANSITION, ///< 状態変化の取得に失敗。
             flag_LAST_EVALUATION,    ///< 条件の前回の評価の成功／失敗。
             flag_LAST_CONDITION,     ///< 条件の前回の評価。
-            flag_FLUSH_CONDITION,    ///< 条件の前回の評価を忘れる。
-            flag_EVALUATION_REQUEST, ///< 条件評価の更新要求。
+            flag_FLUSH_CONDITION,    ///< 条件の前回の評価を無視する。
             flag_REGISTERED,         ///< 条件式の登録済みフラグ。
         };
 
@@ -138,11 +139,65 @@ class psyq::scenario_engine::dispatcher
             return *this;
         }
 
-        std::int8_t get_last_evaluation() const PSYQ_NOEXCEPT
+        bool get_evaluation_request() const PSYQ_NOEXCEPT
+        {
+            return this->flags.test(this_type::flag_VALID_TRANSITION)
+                || this->flags.test(this_type::flag_INVALID_TRANSITION);
+        }
+
+        /** @brief 監視している条件式の前回の評価を取得する。
+            @param[in] in_flush 前回の評価を無視する。
+            @retval 正 条件式の評価は true となった。
+            @retval  0 条件式の評価は false となった。
+            @retval 負 条件式の評価に失敗した。
+         */
+        std::int8_t get_last_evaluation(bool const in_flush)
+        const PSYQ_NOEXCEPT
         {
             return this->flags.test(this_type::flag_LAST_EVALUATION)?
-                (this->flags.test(this_type::flag_LAST_CONDITION)? 1: 0):
+                !in_flush && this->flags.test(this_type::flag_LAST_CONDITION):
                 -1;
+        }
+
+        /** @brief 監視している条件式を評価する。
+            @param[in] in_evaluator 評価に用いる条件評価器。
+            @param[in] in_reservoir 評価に用いる状態貯蔵器。
+            @param[in] in_flush     前回の評価を無視するかどうか。
+            @retval 正 条件式の評価は true となった。
+            @retval  0 条件式の評価は false となった。
+            @retval 負 条件式の評価に失敗した。
+         */
+        template<typename template_evaluator>
+        std::int8_t evaluate_expression(
+            template_evaluator const& in_evaluator,
+            typename template_evaluator::reservoir const& in_reservoir,
+            bool const in_flush)
+        {
+            // 状態変化フラグを更新する。
+            auto const local_invalid_transition(
+                this->flags.test(this_type::flag_INVALID_TRANSITION));
+            this->flags.reset(this_type::flag_VALID_TRANSITION);
+            this->flags.reset(this_type::flag_INVALID_TRANSITION);
+
+            // 状態値の取得に失敗していたら、条件式の評価も失敗とみなす。
+            if (local_invalid_transition)
+            //if (in_flush && local_invalid_transition)
+            {
+                this->flags.reset(this_type::flag_LAST_EVALUATION);
+                this->flags.reset(this_type::flag_LAST_CONDITION);
+                return -1;
+            }
+
+            // 条件式を評価し、結果を記録する。
+            auto const local_evaluate_expression(
+                in_evaluator.evaluate_expression(this->key, in_reservoir));
+            this->flags.set(
+                this_type::flag_LAST_EVALUATION,
+                0 <= local_evaluate_expression);
+            this->flags.set(
+                this_type::flag_LAST_CONDITION,
+                0 < local_evaluate_expression);
+            return this->get_last_evaluation(false);
         }
 
         /// @brief 条件挙動関数オブジェクトのコンテナ。
@@ -377,10 +432,16 @@ class psyq::scenario_engine::dispatcher
             失敗。条件挙動関数オブジェクトは登録されなかった。
             条件挙動関数を指すスマートポインタが空だったか、
             同じ条件式に同じ条件挙動関数がすでに登録されていたのが原因。
+
+        @todo
+        実際の条件挙動関数の登録は、 _detect で識別値の昇順に行われる。
+        このため register_function を呼び出した順序と異なってしまう。
+        register_function で優先順位を指定できるようにしたい。
      */
     public: bool register_function(
         typename this_type::expression_key const& in_expression_key,
         typename this_type::function_shared_ptr const& in_function,
+        //int const in_priority,
         std::size_t const in_reserve_functions = 1)
     {
         auto const local_function(in_function.get());
@@ -590,6 +651,7 @@ class psyq::scenario_engine::dispatcher
                 auto const local_register_expression(
                     this->register_expression(
                         local_expression_monitor.key,
+                        local_expression_monitor.key,
                         in_evaluator,
                         in_reserve_expressions));
                 if (local_register_expression != 0)
@@ -599,16 +661,15 @@ class psyq::scenario_engine::dispatcher
                         local_register_expression < 0);
                     local_expression_monitor.flags.set(
                         this_type::expression_monitor::flag_REGISTERED);
-                    local_expression_monitor.flags.set(
-                        this_type::expression_monitor::flag_EVALUATION_REQUEST);
                 }
             }
         }
     }
 
     /** @brief 状態の更新を検知する条件式を、状態監視器へ登録する。
-        @param[in] in_expression_key 登録する条件式の識別値。
-        @param[in] in_evaluator      登録する条件式を持つ条件評価器。
+        @param[in] in_register_key   登録する条件式の識別値。
+        @param[in] in_expression_key 走査する条件式の識別値。
+        @param[in] in_evaluator      走査する条件式を持つ条件評価器。
         @param[in] in_reserve_expressions
             状態監視器が持つ条件式識別値コンテナの予約容量。
         @retval 正 成功。条件式の評価を維持する。
@@ -617,6 +678,7 @@ class psyq::scenario_engine::dispatcher
      */
     private: template<typename template_evaluator>
     int register_expression(
+        typename this_type::expression_key const& in_register_key,
         typename this_type::expression_key const& in_expression_key,
         template_evaluator const& in_evaluator,
         std::size_t const in_reserve_expressions)
@@ -642,14 +704,16 @@ class psyq::scenario_engine::dispatcher
         {
             case template_evaluator::expression::kind_SUB_EXPRESSION:
             return this->register_sub_expression(
-                in_evaluator,
+                in_register_key,
                 *local_expression,
                 local_chunk->sub_expressions,
+                in_evaluator,
                 in_reserve_expressions);
 
             case template_evaluator::expression::kind_STATE_TRANSITION:
             this_type::register_expression(
                 this->state_monitors_,
+                in_register_key,
                 *local_expression,
                 local_chunk->state_transitions,
                 in_reserve_expressions);
@@ -658,6 +722,7 @@ class psyq::scenario_engine::dispatcher
             case template_evaluator::expression::kind_STATE_COMPARISON:
             this_type::register_expression(
                 this->state_monitors_,
+                in_register_key,
                 *local_expression,
                 local_chunk->state_comparisons,
                 in_reserve_expressions);
@@ -672,7 +737,8 @@ class psyq::scenario_engine::dispatcher
 
     /** @brief 状態の更新を検知する条件式を、状態監視器へ登録する。
         @param[in,out] io_state_monitors 条件式を登録する状態監視器のコンテナ。
-        @param[in] in_expression         登録する条件式。
+        @param[in] in_register_key       登録する条件式の識別値。
+        @param[in] in_expression         走査する条件式。
         @param[in] in_elements           条件式が参照する要素条件のコンテナ。
         @param[in] in_reserve_expressions
             状態監視器が持つ条件式識別値コンテナの予約容量。
@@ -682,6 +748,7 @@ class psyq::scenario_engine::dispatcher
         typename template_element_container>
     static void register_expression(
         typename this_type::state_monitor_vector& io_state_monitors,
+        typename this_type::expression_key const& in_register_key,
         template_expression const& in_expression,
         template_element_container const& in_elements,
         std::size_t const in_reserve_expressions)
@@ -718,21 +785,22 @@ class psyq::scenario_engine::dispatcher
                 std::lower_bound(
                     local_expression_keys.begin(),
                     local_expression_keys.end(),
-                    in_expression.key));
+                    in_register_key));
             if (local_lower_bound == local_expression_keys.end()
-                || *local_lower_bound != in_expression.key)
+                || *local_lower_bound != in_register_key)
             {
                 local_expression_keys.insert(
-                    local_lower_bound, in_expression.key);
+                    local_lower_bound, in_register_key);
             }
         }
     }
 
     /** @brief 状態の更新を検知する複合条件式を、状態監視器へ登録する。
-        @param[in] in_evaluator  登録する条件式を持つ条件評価器。
-        @param[in] in_expression 登録する複合条件式。
+        @param[in] in_register_key 登録する条件式の識別値。
+        @param[in] in_expression   走査する複合条件式。
         @param[in] in_sub_expressions
             登録する複合条件式が参照する要素条件コンテナ。
+        @param[in] in_evaluator    登録する条件式を持つ条件評価器。
         @param[in] in_reserve_expressions
             状態監視器が持つ条件式識別値コンテナの予約容量。
         @retval 正 成功。条件式の評価を維持する。
@@ -741,10 +809,11 @@ class psyq::scenario_engine::dispatcher
      */
     private: template<typename template_evaluator>
     int register_sub_expression(
-        template_evaluator const& in_evaluator,
+        typename this_type::expression_key const& in_register_key,
         typename template_evaluator::expression const& in_expression,
         typename template_evaluator::sub_expression_vector const&
             in_sub_expressions,
+        template_evaluator const& in_evaluator,
         std::size_t const in_reserve_expressions)
     {
         // 複合条件式の要素条件を走査し、状態監視器に条件式を登録する。
@@ -757,11 +826,16 @@ class psyq::scenario_engine::dispatcher
             auto const local_expression_monitor(
                 this_type::expression_monitor_key_less::find_const_pointer(
                     this->expression_monitors_, local_sub_key));
-            if (local_expression_monitor == nullptr)
+            if (local_expression_monitor == nullptr
+                || !local_expression_monitor->flags.test(
+                    this_type::expression_monitor::flag_REGISTERED))
             {
                 auto const local_register_expression(
                     this->register_expression(
-                        local_sub_key, in_evaluator, in_reserve_expressions));
+                        in_register_key,
+                        local_sub_key,
+                        in_evaluator,
+                        in_reserve_expressions));
                 if (local_register_expression == 0)
                 {
                     // 無限ループを防ぐため、
@@ -803,7 +877,7 @@ class psyq::scenario_engine::dispatcher
                 this_type::notify_state_transition(
                     io_expression_monitors,
                     local_state_monitor.expression_keys,
-                    0 < local_state_transition);
+                    0 <= local_state_transition);
 
                 // 状態監視器に対応する条件式監視器がなくなったら、
                 // 状態監視器を削除する。
@@ -820,12 +894,12 @@ class psyq::scenario_engine::dispatcher
     /** @brief 状態の更新を条件式監視器へ知らせる。
         @param[in,out] io_expression_monitors 条件式監視器のコンテナ。
         @param[in,out] io_expression_keys     更新を知らせる条件式の識別値のコンテナ。
-        @param[in] in_valid_state             状態値が有効かどうか。
+        @param[in] in_valid_transition        状態値があるかどうか。
      */
     private: static void notify_state_transition(
         typename this_type::expression_monitor_vector& io_expression_monitors,
         typename this_type::expression_key_vector& io_expression_keys,
-        bool const in_valid_state)
+        bool const in_valid_transition)
     {
         // 条件式識別値のコンテナを走査しつつ、
         // 不要になった要素を削除し、条件識別値コンテナを整理する。
@@ -836,10 +910,11 @@ class psyq::scenario_engine::dispatcher
                     io_expression_monitors, *i));
             if (local_expression_monitor != nullptr)
             {
+                // 状態の更新を条件式監視器へ知らせる。
                 local_expression_monitor->flags.set(
-                    this_type::expression_monitor::flag_EVALUATION_REQUEST,
-                    in_valid_state || local_expression_monitor->flags.test(
-                        this_type::expression_monitor::flag_LAST_EVALUATION));
+                    in_valid_transition?
+                        this_type::expression_monitor::flag_VALID_TRANSITION:
+                        this_type::expression_monitor::flag_INVALID_TRANSITION);
                 ++i;
             }
             else
@@ -894,6 +969,7 @@ class psyq::scenario_engine::dispatcher
             this->expression_monitors_,
             in_evaluator,
             in_reservoir);
+        //io_reservoir._reset_transition();
         for (auto const& local_cache: local_function_caches)
         {
             local_cache.call_function();
@@ -929,13 +1005,8 @@ class psyq::scenario_engine::dispatcher
             i != io_expression_monitors.end();)
         {
             auto& local_expression_monitor(*i);
-            auto const local_evaluation_request(
-                local_expression_monitor.flags.test(
-                    this_type::expression_monitor::flag_EVALUATION_REQUEST));
-            if (local_evaluation_request)
+            if (local_expression_monitor.get_evaluation_request())
             {
-                local_expression_monitor.flags.reset(
-                    this_type::expression_monitor::flag_EVALUATION_REQUEST);
                 this_type::cache_function(
                     io_function_caches,
                     local_expression_monitor,
@@ -972,35 +1043,22 @@ class psyq::scenario_engine::dispatcher
         template_evaluator const& in_evaluator,
         typename template_evaluator::reservoir const& in_reservoir)
     {
-        // 前回の評価結果を取得する。
-        auto local_last_evaluation(
-            io_expression_monitor.get_last_evaluation());
-        if (0 < local_last_evaluation
-            && io_expression_monitor.flags.test(
-                this_type::expression_monitor::flag_FLUSH_CONDITION))
-        {
-            local_last_evaluation = 0;
-        }
-
-        // 条件式を評価し、評価結果が以前と同じか判定する。
-        auto const local_expression_key(io_expression_monitor.key);
-        auto const local_evaluate_expression(
-            in_evaluator.evaluate_expression(
-                local_expression_key, in_reservoir));
-        io_expression_monitor.flags.set(
-            this_type::expression_monitor::flag_LAST_EVALUATION,
-            0 <= local_evaluate_expression);
-        io_expression_monitor.flags.set(
-            this_type::expression_monitor::flag_LAST_CONDITION,
-            0 < local_evaluate_expression);
+        // 条件式を評価し、評価結果が前回と同じか判定する。
+        auto const local_flush_condition(
+            io_expression_monitor.flags.test(
+                this_type::expression_monitor::flag_FLUSH_CONDITION));
+        auto const local_last_evaluation(
+            io_expression_monitor.get_last_evaluation(local_flush_condition));
         auto const local_evaluation(
-            io_expression_monitor.get_last_evaluation());
-        if (local_evaluation == local_last_evaluation)
+            io_expression_monitor.evaluate_expression(
+                in_evaluator, in_reservoir, local_flush_condition));
+        if (local_evaluation == local_last_evaluation
+            || local_evaluation * local_last_evaluation < 0)
         {
             return false;
         }
 
-        // 条件式の評価結果が以前と異なるので、条件挙動関数をキャッシュに貯める。
+        // 条件式の評価結果が前回と違うので、条件挙動関数をキャッシュに貯める。
         for (
             auto i(io_expression_monitor.functions.begin());
             i != io_expression_monitor.functions.end();)
@@ -1013,7 +1071,7 @@ class psyq::scenario_engine::dispatcher
             {
                 io_function_caches.emplace_back(
                     *i,
-                    local_expression_key,
+                    io_expression_monitor.key,
                     local_evaluation,
                     local_last_evaluation);
                 ++i;
@@ -1026,7 +1084,7 @@ class psyq::scenario_engine::dispatcher
     /** @brief 状態値を操作する関数オブジェクトを生成する。
         @param[in,out] io_reservoir 関数から参照する状態貯蔵器。
         @param[in] in_condition     関数の起動条件。
-        @param[in] in_state_key     操作する状態値のキー。
+        @param[in] in_state_key     操作する状態値の識別値。
         @param[in] in_operator      状態値の操作で使う演算子。
         @param[in] in_value         状態値の操作で使う演算値。
         @param[in] in_allocator     生成に使うメモリ割当子。

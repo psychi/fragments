@@ -164,8 +164,6 @@ class psyq::scenario_engine::driver
      */
     public: void update()
     {
-        this->dispatcher_._detect(this->evaluator_, this->reservoir_);
-        this->reservoir_._reset_transition();
         this->dispatcher_._dispatch(this->evaluator_, this->reservoir_);
     }
 

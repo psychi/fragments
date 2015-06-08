@@ -178,7 +178,7 @@ class psyq::scenario_engine::evaluator
                 return -1;
             }
             auto const local_condition(0 < local_evaluate_expression);
-            return local_condition == in_sub_expression.condition? 1: 0;
+            return local_condition == in_sub_expression.condition;
         }
 
         typename evaluator::reservoir const& reservoir;
@@ -213,13 +213,20 @@ class psyq::scenario_engine::evaluator
     /// @brief 状態変化条件式の要素条件を評価する関数オブジェクト。
     private: struct state_transition_evaluator
     {
-        explicit state_transition_evaluator() PSYQ_NOEXCEPT {}
+        explicit state_transition_evaluator(
+            typename evaluator::reservoir const& in_reservoir)
+        PSYQ_NOEXCEPT:
+        reservoir(in_reservoir)
+        {}
 
-        std::int8_t operator()(typename this_type::state_transition const&)
+        std::int8_t operator()(
+            typename this_type::state_transition const& in_state)
         const PSYQ_NOEXCEPT
         {
-            return 1;
+            return this->reservoir._get_transition(in_state.key);
         }
+
+        typename evaluator::reservoir const& reservoir;
 
     }; // struct state_transition_evaluator
 
@@ -279,10 +286,20 @@ class psyq::scenario_engine::evaluator
         reservoir(in_reservoir)
         {}
 
+        /** @brief 状態値を比較する。
+            @param[in] in_state 評価する状態比較条件式の要素。
+            @retval 正 比較に成功。結果は true 。
+            @retval  0 比較に成功。結果は false 。
+            @retval 負 比較に失敗。
+         */
         std::int8_t operator()(
             typename evaluator::state_comparison const& in_state)
         const PSYQ_NOEXCEPT
         {
+            /** @todo
+                今のところ状態値と定数の比較しかできないが、
+                状態値と状態値の比較をできるようにしたい。
+             */
             auto const local_compare(
                 this->reservoir.get_value(in_state.key).compare(
                     in_state.value));
@@ -485,13 +502,14 @@ class psyq::scenario_engine::evaluator
                     return this_type::evaluate_elements(
                         *local_expression,
                         local_chunk->sub_expressions,
-                        this_type::sub_expression_evaluator(in_reservoir, *this));
+                        this_type::sub_expression_evaluator(
+                            in_reservoir, *this));
 
                     case this_type::expression::kind_STATE_TRANSITION:
                     return this_type::evaluate_elements(
                         *local_expression,
                         local_chunk->state_transitions,
-                        this_type::state_transition_evaluator());
+                        this_type::state_transition_evaluator(in_reservoir));
 
                     case this_type::expression::kind_STATE_COMPARISON:
                     return this_type::evaluate_elements(
@@ -818,7 +836,7 @@ class psyq::scenario_engine::evaluator
                 return 0;
             }
         }
-        return local_and? 1: 0;
+        return local_and;
     }
 
     //-------------------------------------------------------------------------

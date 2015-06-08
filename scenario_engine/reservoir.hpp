@@ -807,7 +807,7 @@ class psyq::scenario_engine::reservoir
         @retval  0 元と同じ値を設定した。
         @retval 負 失敗。値を設定できなかった。
      */
-    private: static int set_bits(
+    private: static std::int8_t set_bits(
         typename this_type::block_vector& io_blocks,
         typename this_type::pos_type const in_position,
         typename this_type::size_type const in_size,
@@ -835,7 +835,7 @@ class psyq::scenario_engine::reservoir
         auto const local_last_block(local_block);
         local_block = (~(local_mask << local_position) & local_block)
             | ((in_value & local_mask) << local_position);
-        return local_last_block != local_block? 1: 0;
+        return local_last_block != local_block;
     }
 
     //-------------------------------------------------------------------------
@@ -1059,15 +1059,17 @@ class psyq::scenario_engine::reservoir
         @retval 0以上 直前の状態変化フラグ。
         @retval 0未満 状態値がない。
      */
-    public: int _get_transition(
+    public: std::int8_t _get_transition(
         typename this_type::state_key const& in_state_key)
     const PSYQ_NOEXCEPT
     {
         auto local_state(
             this_type::state_key_less::find_const_pointer(
                 this->states_, in_state_key));
-        return local_state != nullptr?
-            (local_state->field >> reservoir::field_TRANSITION_FRONT) & 1: -1;
+        return static_cast<std::int8_t>(
+            local_state != nullptr?
+                (local_state->field >> reservoir::field_TRANSITION_FRONT) & 1:
+                -1);
     }
 
     /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。

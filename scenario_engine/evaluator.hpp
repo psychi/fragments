@@ -372,7 +372,11 @@ class psyq::scenario_engine::evaluator
         state_transitions(std::move(io_source.state_transitions)),
         state_comparisons(std::move(io_source.state_comparisons)),
         key(std::move(io_source.key))
-        {}
+        {
+            io_source.sub_expressions.clear();
+            io_source.state_comparisons.clear();
+            io_source.state_comparisons.clear();
+        }
 
         /** @brief ムーブ代入演算子。
             @param[in,out] io_source ムーブ元となるインスタンス。
@@ -380,10 +384,16 @@ class psyq::scenario_engine::evaluator
          */
         this_type& operator=(this_type&& io_source)
         {
-            this->sub_expressions = std::move(io_source.sub_expressions);
-            this->state_transitions = std::move(io_source.state_transitions);
-            this->state_comparisons = std::move(io_source.state_comparisons);
-            this->key = std::move(io_source.key);
+            if (this != &io_source)
+            {
+                this->sub_expressions = std::move(io_source.sub_expressions);
+                this->state_transitions = std::move(io_source.state_transitions);
+                this->state_comparisons = std::move(io_source.state_comparisons);
+                this->key = std::move(io_source.key);
+                io_source.sub_expressions.clear();
+                io_source.state_comparisons.clear();
+                io_source.state_comparisons.clear();
+            }
             return *this;
         }
 
@@ -435,7 +445,10 @@ class psyq::scenario_engine::evaluator
     public: evaluator(this_type&& io_source):
     expressions_(std::move(io_source.expressions_)),
     chunks_(std::move(io_source.chunks_))
-    {}
+    {
+        io_source.expressions_.clear();
+        io_source.chunks_.clear();
+    }
 
     /** @brief ムーブ代入演算子。
         @param[in,out] io_source ムーブ元となるインスタンス。
@@ -443,8 +456,13 @@ class psyq::scenario_engine::evaluator
      */
     public: this_type& operator=(this_type&& io_source)
     {
-        this->expressions_ = std::move(io_source.expressions_);
-        this->chunks_ = std::move(io_source.chunks_);
+        if (this != &io_source)
+        {
+            this->expressions_ = std::move(io_source.expressions_);
+            this->chunks_ = std::move(io_source.chunks_);
+            io_source.expressions_.clear();
+            io_source.chunks_.clear();
+        }
         return *this;
     }
 

@@ -67,6 +67,12 @@ class psyq::scenario_engine::driver
         typename this_type::allocator_type>
             reservoir;
 
+    /// @brief シナリオ駆動器で用いる状態変更器の型。
+    public: typedef psyq::scenario_engine::modifier<
+        typename this_type::reservoir,
+        typename this_type::allocator_type>
+            modifier;
+
     /// @brief シナリオ駆動器で用いる条件評価器の型。
     public: typedef psyq::scenario_engine::evaluator<
         typename this_type::reservoir,
@@ -107,6 +113,7 @@ class psyq::scenario_engine::driver
             this_type::allocator_type())
     :
     reservoir_(in_reserve_states, in_reserve_chunks, in_allocator),
+    modifier_(in_reserve_caches, in_allocator),
     evaluator_(in_reserve_expressions, in_reserve_chunks, in_allocator),
     dispatcher_(
         in_reserve_expressions,
@@ -124,6 +131,7 @@ class psyq::scenario_engine::driver
      */
     public: driver(this_type&& io_source):
     reservoir_(std::move(io_source.reservoir_)),
+    modifier_(std::move(io_source.modifier_)),
     evaluator_(std::move(io_source.evaluator_)),
     dispatcher_(std::move(io_source.dispatcher_)),
     behavior_chunks_(std::move(io_source.behavior_chunks_)),
@@ -137,6 +145,7 @@ class psyq::scenario_engine::driver
     public: this_type& operator=(this_type&& io_source)
     {
         this->reservoir_ = std::move(io_source.reservoir_);
+        this->modifier_ = std::move(io_source.modifier_);
         this->evaluator_ = std::move(io_source.evaluator_);
         this->dispatcher_ = std::move(io_source.dispatcher_);
         this->behavior_chunks_ = std::move(io_source.behavior_chunks_);
@@ -148,6 +157,7 @@ class psyq::scenario_engine::driver
     public: void shrink_to_fit()
     {
         this->reservoir_.shrink_to_fit();
+        //this->modifier_.shrink_to_fit();
         this->evaluator_.shrink_to_fit();
         this->dispatcher_.shrink_to_fit();
         this->behavior_chunks_.shrink_to_fit();
@@ -164,6 +174,7 @@ class psyq::scenario_engine::driver
      */
     public: void update()
     {
+        this->modifier_.modify(this->reservoir_);
         this->dispatcher_._dispatch(this->evaluator_, this->reservoir_);
     }
 
@@ -305,6 +316,9 @@ class psyq::scenario_engine::driver
     //-------------------------------------------------------------------------
     /// @brief シナリオ駆動器で用いる状態貯蔵器。
     public: typename this_type::reservoir reservoir_;
+
+    /// @brief シナリオ駆動器で用いる状態変更器。
+    public: typename this_type::modifier modifier_;
 
     /// @brief シナリオ駆動器で用いる条件評価器。
     public: typename this_type::evaluator evaluator_;

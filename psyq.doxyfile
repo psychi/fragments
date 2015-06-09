@@ -721,7 +721,9 @@ INPUT                  = \
                          ./geometry/mosp/node.hpp \
                          ./geometry/mosp/tree.hpp \
                          ./geometry/mosp/nut.hpp \
+                         ./scenario_engine/key_less.hpp \
                          ./scenario_engine/reservoir.hpp \
+                         ./scenario_engine/modifier.hpp \
                          ./scenario_engine/state_value.hpp \
                          ./scenario_engine/state_builder.hpp \
                          ./scenario_engine/evaluator.hpp \

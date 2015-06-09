@@ -6,6 +6,7 @@
 #define PSYQ_SCENARIO_ENGINE_RESERVOIR_HPP_
 
 #include <vector>
+//#include "psyq/scenario_engine/key_less.hpp"
 //#include "psyq/scenario_engine/state_value.hpp"
 
 namespace psyq
@@ -21,8 +22,6 @@ namespace psyq
         namespace _private
         {
             /// @cond
-            template<typename, typename> struct key_less;
-
             template<typename template_float> union float_union {};
             template<> union float_union<float>
             {
@@ -261,7 +260,10 @@ class psyq::scenario_engine::reservoir
         blocks(std::move(io_source.blocks)),
         empty_fields(std::move(io_source.empty_fields)),
         key(std::move(io_source.key))
-        {}
+        {
+            io_source.blocks.clear();
+            io_source.empty_fields.clear();
+        }
 
         /** @brief ムーブ代入演算子。
             @param[in,out] io_source ムーブ元となるインスタンス。
@@ -321,7 +323,10 @@ class psyq::scenario_engine::reservoir
     public: reservoir(this_type&& io_source) PSYQ_NOEXCEPT:
     states_(std::move(io_source.states_)),
     chunks_(std::move(io_source.chunks_))
-    {}
+    {
+        io_source.states_.clear();
+        io_source.chunks_.clear();
+    }
 
     /** @brief ムーブ代入演算子。
         @param[in,out] io_source ムーブ元となるインスタンス。
@@ -329,8 +334,13 @@ class psyq::scenario_engine::reservoir
      */
     public: this_type& operator=(this_type&& io_source) PSYQ_NOEXCEPT
     {
-        this->states_ = std::move(io_source.states_);
-        this->chunks_ = std::move(io_source.chunks_);
+        if (this != &io_source)
+        {
+            this->states_ = std::move(io_source.states_);
+            this->chunks_ = std::move(io_source.chunks_);
+            io_source.states_.clear();
+            io_source.chunks_.clear();
+        }
         return *this;
     }
 
@@ -1559,101 +1569,6 @@ class psyq::scenario_engine::reservoir
     private: typename this_type::chunk_vector chunks_;
 
 }; // class psyq::scenario_engine::reservoir
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief 識別値を比較する関数オブジェクト。
-template<typename template_value, typename template_key>
-struct psyq::scenario_engine::_private::key_less
-{
-    bool operator()(
-        template_value const& in_left,
-        template_value const& in_right)
-    const PSYQ_NOEXCEPT
-    {
-        return in_left.key < in_right.key;
-    }
-
-    bool operator()(
-        template_key const& in_left,
-        template_value const& in_right)
-    const PSYQ_NOEXCEPT
-    {
-        return in_left < in_right.key;
-    }
-
-    bool operator()(
-        template_value const& in_left,
-        template_key const& in_right)
-    const PSYQ_NOEXCEPT
-    {
-        return in_left.key < in_right;
-    }
-
-    /** @brief コンテナから値を検索する。
-        @param[in] in_container 検索するコンテナ。
-        @param[in] in_key       検索する値の識別値。
-        @retval !=in_container.end() in_key に対応する値を指す反復子。
-        @retval ==in_container.end() in_key に対応する値が見つからなかった。
-     */
-    template<typename template_container>
-    static typename template_container::const_iterator find_const_iterator(
-        template_container const& in_container,
-        template_key const& in_key)
-    PSYQ_NOEXCEPT
-    {
-        return find_iterator(
-            const_cast<template_container&>(in_container), in_key);
-    }
-
-    /// @copydoc find_const_iterator
-    template<typename template_container>
-    static typename template_container::iterator find_iterator(
-        template_container& in_container,
-        template_key const& in_key)
-    PSYQ_NOEXCEPT
-    {
-        auto const local_end(in_container.end());
-        auto const local_lower_bound(
-            std::lower_bound(
-                in_container.begin(), local_end, in_key, key_less()));
-        return local_lower_bound != local_end
-            && local_lower_bound->key == in_key?
-                local_lower_bound: local_end;
-    }
-
-    /** @brief コンテナから値を検索する。
-        @param[in] in_container 検索するコンテナ。
-        @param[in] in_key       検索する値の識別値。
-        @retval !=nullptr in_key に対応する値を指すポインタ。
-        @retval ==nullptr in_key に対応する値が見つからなかった。
-     */
-    template<typename template_container>
-    static typename template_container::value_type const* find_const_pointer(
-        template_container const& in_container,
-        template_key const& in_key)
-    PSYQ_NOEXCEPT
-    {
-        auto const local_end(in_container.end());
-        auto const local_lower_bound(
-            std::lower_bound(
-                in_container.begin(), local_end, in_key, key_less()));
-        return local_lower_bound != local_end
-            && local_lower_bound->key == in_key?
-                &(*local_lower_bound): nullptr;
-    }
-
-    /// @copydoc find_const_pointer
-    template<typename template_container>
-    static typename template_container::value_type* find_pointer(
-        template_container& in_container,
-        template_key const& in_key)
-    PSYQ_NOEXCEPT
-    {
-        return const_cast<typename template_container::value_type*>(
-            find_const_pointer(in_container, in_key));
-    }
-
-}; // struct psyq::scenario_engine::_private::key_less
 
 #endif // !defined(PSYQ_SCENARIO_ENGINE_RESERVOIR_HPP_)
 // vim: set expandtab:

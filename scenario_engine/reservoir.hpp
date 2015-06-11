@@ -213,8 +213,8 @@ class psyq::scenario_engine::reservoir
             auto const local_minus(
                 1 & static_cast<typename reservoir::format_type>(
                     this->field >> reservoir::field_SIZE_BACK));
-            return (-local_minus << local_mod_size)
-                | static_cast<typename reservoir::format_type>(
+            return (-local_minus << local_mod_size) |
+                static_cast<typename reservoir::format_type>(
                     reservoir::field_SIZE_MASK & (
                         this->field >> reservoir::field_SIZE_FRONT));
         }
@@ -232,6 +232,11 @@ class psyq::scenario_engine::reservoir
     private: typedef std::vector<
         typename this_type::state_registry, typename this_type::allocator_type>
             state_vector;
+
+    private: typedef std::vector<
+        typename this_type::state_registry const*,
+        typename this_type::allocator_type>
+            state_pointer_vector;
 
     /// @brief 状態値に対応する識別値を比較する関数オブジェクト。
     private: typedef psyq::scenario_engine::_private::key_less<
@@ -271,9 +276,14 @@ class psyq::scenario_engine::reservoir
          */
         this_type& operator=(this_type&& io_source)
         {
-            this->blocks = std::move(io_source.blocks);
-            this->empty_fields = std::move(io_source.empty_fields);
-            this->key = std::move(io_source.key);
+            if (this != &io_source)
+            {
+                this->blocks = std::move(io_source.blocks);
+                this->empty_fields = std::move(io_source.empty_fields);
+                this->key = std::move(io_source.key);
+                io_source.blocks.clear();
+                io_source.empty_fields.clear();
+            }
             return *this;
         }
 
@@ -1063,11 +1073,12 @@ class psyq::scenario_engine::reservoir
     //@{
     /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
 
-        直前の状態変化フラグを取得する。
+        状態変化フラグを取得する。
 
         @param[in] in_state_key 変化フラグを取得する状態値に対応する識別値。
-        @retval 0以上 直前の状態変化フラグ。
-        @retval 0未満 状態値がない。
+        @retval 正 状態変化フラグは true 。
+        @retval 0  状態変化フラグは false 。
+        @retval 負 状態値がない。
      */
     public: std::int8_t _get_transition(
         typename this_type::state_key const& in_state_key)
@@ -1076,10 +1087,10 @@ class psyq::scenario_engine::reservoir
         auto local_state(
             this_type::state_key_less::find_const_pointer(
                 this->states_, in_state_key));
-        return static_cast<std::int8_t>(
-            local_state != nullptr?
-                (local_state->field >> reservoir::field_TRANSITION_FRONT) & 1:
-                -1);
+        return local_state != nullptr?
+            1 & static_cast<std::int8_t>(
+                local_state->field >> reservoir::field_TRANSITION_FRONT):
+            -1;
     }
 
     /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
@@ -1088,12 +1099,11 @@ class psyq::scenario_engine::reservoir
      */
     public: void _reset_transition()
     {
-        auto const local_mask(
-            ~static_cast<typename this_type::field_type>(
-                1 << this_type::field_TRANSITION_FRONT));
+        typename this_type::field_type const local_transition_mask(
+            ~(1 << this_type::field_TRANSITION_FRONT));
         for (auto& local_state: this->states_)
         {
-            local_state.field &= local_mask;
+            local_state.field &= local_transition_mask;
         }
     }
     //@}
@@ -1208,32 +1218,7 @@ class psyq::scenario_engine::reservoir
     /// @brief 状態貯蔵器を再構築し、メモリ領域を必要最小限にする。
     public: void shrink_to_fit()
     {
-        // ビット領域の大きさの降順で、状態値を並び替える。
-        std::vector<typename this_type::state_vector::value_type const*>
-            local_states(this->states_.get_allocator());
-        local_states.reserve(this->states_.size());
-        for (auto& local_state: this->states_)
-        {
-            local_states.push_back(&local_state);
-        }
-        struct state_size_greater
-        {
-            bool operator()(
-                typename this_type::state_vector::value_type const* const in_left,
-                typename this_type::state_vector::value_type const* const in_right)
-            const
-            {
-                auto const local_left_size(
-                    this_type::get_format_size(in_left->get_format()));
-                auto const local_right_size(
-                    this_type::get_format_size(in_right->get_format()));
-                return local_right_size < local_left_size;
-            }
-        };
-        std::sort(
-            local_states.begin(), local_states.end(), state_size_greater());
-
-        // 新たな書庫を用意する。
+        // 新たな状態貯蔵器を用意する。
         this_type local_reservoir(
             this->states_.size(),
             this->chunks_.size(),
@@ -1250,64 +1235,13 @@ class psyq::scenario_engine::reservoir
                 local_old_chunk.empty_fields.size());
         }
 
-        // 現在の書庫をもとに、新たな書庫を構築する。
-        for (auto local_state: local_states)
+        // 現在の状態貯蔵器をもとに、新たな状態貯蔵器を構築する。
+        for (auto local_state: this_type::sort_state_by_size(this->states_))
         {
-            auto const local_chunk(
-                this_type::chunk_key_less::find_const_pointer(
-                    this->chunks_, local_state->chunk));
-            if (local_chunk == nullptr)
-            {
-                PSYQ_ASSERT(false);
-                continue;
-            }
-            auto const local_position(
-                this_type::get_field_position(local_state->field));
-            auto const local_format(local_state->get_format());
-            switch (local_format)
-            {
-                case this_type::state_value::kind_NULL:
-                PSYQ_ASSERT(false);
-                continue;
-
-                case this_type::state_value::kind_BOOL:
-                local_reservoir.register_bool(
-                    local_state->chunk,
-                    local_state->key,
-                    0 != this_type::get_bits(
-                        local_chunk->blocks, local_position, 1));
-                continue;
-
-                case this_type::state_value::kind_FLOAT:
-                PSYQ_ASSERT(false);
-                continue;
-
-                default:
-                break;
-            }
-            auto const local_size(this_type::get_format_size(local_format));
-            auto const local_bits(
-                this_type::get_bits(
-                    local_chunk->blocks, local_position, local_size));
-            if (0 < local_format)
-            {
-                local_reservoir.register_unsigned(
-                    local_state->chunk,
-                    local_state->key,
-                    local_bits,
-                    local_size);
-            }
-            else
-            {
-                local_reservoir.register_signed(
-                    local_state->chunk,
-                    local_state->key,
-                    local_bits,
-                    local_size);
-            }
+            local_reservoir.copy_state(*local_state, this->chunks_);
         }
 
-        // 新たに構築した書庫を移動して整理する。
+        // 新たに構築した状態貯蔵器を移動して整理する。
         *this = std::move(local_reservoir);
         this->states_.shrink_to_fit();
         this->chunks_.shrink_to_fit();
@@ -1318,6 +1252,83 @@ class psyq::scenario_engine::reservoir
         }
     }
     //@}
+    /** @brief ビット領域の大きさの降順で並び替えた状態値のコンテナを作る。
+     */
+    private: static typename this_type::state_pointer_vector
+    sort_state_by_size(typename this_type::state_vector const& in_states)
+    {
+        typename this_type::state_pointer_vector local_states(
+            in_states.get_allocator());
+        local_states.reserve(in_states.size());
+        for (auto& local_state: in_states)
+        {
+            local_states.push_back(&local_state);
+        }
+        struct state_size_greater
+        {
+            bool operator()(
+                typename this_type::state_registry const* const in_left,
+                typename this_type::state_registry const* const in_right)
+            const PSYQ_NOEXCEPT
+            {
+                auto const local_left_size(
+                    this_type::get_format_size(in_left->get_format()));
+                auto const local_right_size(
+                    this_type::get_format_size(in_right->get_format()));
+                return local_right_size < local_left_size;
+            }
+        };
+        std::sort(
+            local_states.begin(), local_states.end(), state_size_greater());
+        return local_states;
+    }
+
+    private: void copy_state(
+        typename this_type::state_registry const& in_source_state,
+        typename this_type::chunk_vector const& in_source_chunks)
+    {
+        // コピー元となるビット列チャンクを取得する。
+        auto const local_source_chunk(
+            this_type::chunk_key_less::find_const_pointer(
+                in_source_chunks, in_source_state.chunk));
+        if (local_source_chunk == nullptr)
+        {
+            PSYQ_ASSERT(false);
+            return;
+        }
+
+        // コピー先となる状態値を用意する。
+        auto& local_target_chunk(
+            this_type::equip_chunk(this->chunks_, in_source_state.chunk));
+        auto const local_format(in_source_state.get_format());
+        auto const local_target_state(
+            this->register_state(
+                local_target_chunk, in_source_state.key, local_format));
+        if (local_target_state == nullptr)
+        {
+            PSYQ_ASSERT(false);
+            return;
+        }
+
+        // 状態値ビット列をコピーする。
+        auto const local_size(this_type::get_format_size(local_format));
+        this_type::set_bits(
+            local_target_chunk.blocks,
+            this_type::get_field_position(local_target_state->field),
+            local_size,
+            this_type::get_bits(
+                local_source_chunk->blocks,
+                this_type::get_field_position(in_source_state.field),
+                local_size));
+
+        // 状態変化フラグをコピーする。
+        typename this_type::field_type const local_transition_mask(
+            1 << this_type::field_TRANSITION_FRONT);
+        local_target_state->field =
+            (~local_transition_mask & local_target_state->field)
+            | (local_transition_mask & in_source_state.field);
+    }
+
     //-------------------------------------------------------------------------
     /** @brief 状態値を登録する。
         @param[in,out] io_chunk 登録する状態値が所属するビット列チャンク。

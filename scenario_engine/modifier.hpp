@@ -8,7 +8,6 @@
 /// @cond
 namespace psyq
 {
-    /// @brief ビデオゲームでのシナリオ進行を管理するための実装
     namespace scenario_engine
     {
         template<typename, typename> class modifier;
@@ -19,11 +18,21 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief シナリオ状態変更器。バッチ処理で状態値の変更を行う。
 
+    使い方の概略。
     - modifier::accumulate で、状態変更を予約する。
     - modifier::modify で、状態変更を実際に適用する。
 
     @tparam template_reservoir @copydoc modifier::reservoir
     @tparam template_allocator @copydoc modifier::allocator_type
+
+    @note
+    1度の modifier::modify で、
+    1つの状態値に対して複数回の状態変更が行われないように、
+    状態変更のタイミングを遅延させている。
+    このため、1つの状態値に対してフレーム毎に this_type::accumulate
+    を呼び出すと、状態変更の予約がどんどん蓄積する危険があることに注意。
+    1つの状態値に対してフレーム毎に状態変更する場合は、
+    psyq::scenario_engine::reservoir で直接状態変更するほうが良い。
  */
 template<
     typename template_reservoir = psyq::scenario_engine::reservoir<>,
@@ -39,12 +48,19 @@ class psyq::scenario_engine::modifier
     /// @brief 状態変更器で使うメモリ割当子の型。
     public: typedef template_allocator allocator_type;
 
-    /// @brief 状態変更の優先順位。
-    public: enum priority_enum: std::int8_t
+    /** @brief 状態変更の優先順位。
+
+        this_type::modify で状態変更を適用する際に、
+        すでに状態変更されていた場合の動作を決める。
+     */
+    public: enum priority_enum: std::uint8_t
     {
-        priority_NONE = -1,   ///< 優先順位がない。
-        priority_CONTINUANCE, ///< 直前の優先順位を継続する。
-        priority_ORDERED,     ///< 直前の優先順位の次になる。
+        /// 次回以降の this_type::modify まで、状態変更を遅延する。
+        priority_NONE,
+        /// 以後にある全予約を、次回以降の this_type::modify まで遅延する。
+        priority_ORDERED,
+        /// 直前の予約と同じタイミングになるまで、状態変更を遅延する。
+        priority_CONTINUANCE,
     };
 
     /// @brief 状態変更のキャッシュ。
@@ -135,7 +151,7 @@ class psyq::scenario_engine::modifier
         実際の状態変更は this_type::modify で適用される。
 
         @param[in] in_state_key   変更する状態の識別値。
-        @param[in] in_state_value 設定する状態値。
+        @param[in] in_state_value 新たに設定する状態値。
         @param[in] in_priority    状態変更の優先順位。
      */
     public: void accumulate(
@@ -153,9 +169,13 @@ class psyq::scenario_engine::modifier
             in_priority == this_type::priority_ORDERED);
     }
 
-    /** @brief 状態変更する。
+    /** @brief 状態変更の予約を適用する。
 
         this_type::accumulate で予約した状態変更を、実際に適用する。
+
+        1度の this_type::modify で、1つの状態値が複数回変更されることはない。
+        すでに変更済みの状態値に対し、さらに状態変更の予約があった場合は、
+        次回以降の this_type::modify まで状態変更を遅延する。
 
         @param[in,out] io_reservoir 状態変更を適用する状態貯蔵器。
      */
@@ -181,7 +201,14 @@ class psyq::scenario_engine::modifier
             {
                 for (; i != j; ++i)
                 {
-                    io_reservoir.set_value(i->key, i->value);
+                    if (!io_reservoir.set_value(i->key, i->value))
+                    {
+                        /** @note
+                            状態変更に失敗した場合、どう対応するのがよい？
+                            とりえあえずassertしておく。
+                         */
+                        PSYQ_ASSERT(false);
+                    }
                 }
             }
             else
@@ -192,7 +219,7 @@ class psyq::scenario_engine::modifier
                     || this->pass_states_.back().series == i->series);
                 if (i->ordered)
                 {
-                    // 順序つきの場合は、残り全部を次回に繰り越す。
+                    // 順序つきの場合は、残り全部を次回以降に遅延する。
                     j = local_end;
                 }
                 for (; i != j; ++i)

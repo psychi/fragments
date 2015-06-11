@@ -335,10 +335,16 @@ class psyq::scenario_engine::driver
 }; // class psyq::scenario_engine::driver
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+#include <deque>
 namespace psyq_test
 {
     inline void scenario_engine()
     {
+        std::deque<int> local_deque;
+        for (unsigned i(0); i < 1024; ++i)
+        {
+            local_deque.push_front(i);
+        }
         typedef psyq::string::csv_table<std::string> string_table;
         typedef psyq::scenario_engine
             ::driver<float, string_table::string_view::fnv1_hash32>
@@ -402,6 +408,20 @@ namespace psyq_test
                 local_driver.make_hash("10"),
                 driver::reservoir::state_value(10u)));
         PSYQ_ASSERT(!local_driver.extend_chunk(0, 0, nullptr));
+        local_driver.shrink_to_fit();
+        PSYQ_ASSERT(
+            true == *local_driver.reservoir_.get_value(
+                local_driver.hash_function_("state_bool")).get_bool());
+        PSYQ_ASSERT(
+            10 == *local_driver.reservoir_.get_value(
+                local_driver.hash_function_("state_unsigned")).get_unsigned());
+        PSYQ_ASSERT(
+            -20 == *local_driver.reservoir_.get_value(
+                local_driver.hash_function_("state_signed")).get_signed());
+        PSYQ_ASSERT(
+            1.25 <= *local_driver.reservoir_.get_value(
+                local_driver.hash_function_("state_float")).get_float());
+
 
         local_driver.reservoir_.set_value(
             local_driver.hash_function_("state_bool"), false);

@@ -589,8 +589,7 @@ class psyq::scenario_engine::evaluator
             return false;
         }
         PSYQ_ASSERT(
-            this_type::is_valid_element_container(
-                in_elements, this->expressions_));
+            this_type::is_valid_elements(in_elements, this->expressions_));
 
         // 条件式を追加する位置を決定する。
         auto const local_lower_bound(
@@ -673,7 +672,7 @@ class psyq::scenario_engine::evaluator
 
     //-------------------------------------------------------------------------
     private: template<typename template_element_container>
-    static bool is_valid_element_container(
+    static bool is_valid_elements(
         template_element_container const& in_elements,
         typename this_type::expression_vector const& in_expressions)
     {

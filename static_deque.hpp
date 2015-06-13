@@ -38,6 +38,7 @@ namespace psyq
 template<typename template_value, std::size_t template_max_size>
 class psyq::static_deque
 {
+    /// @brief thisが指す値の型。
     private: typedef static_deque this_type;
 
     //-------------------------------------------------------------------------
@@ -83,7 +84,7 @@ class psyq::static_deque
     private: typedef template_value array_view[template_max_size];
 
     //-------------------------------------------------------------------------
-    /// @name 構築と代入
+    /// @name 構築と解体
     //@{
     /** @brief 空のコンテナを構築する。
      */
@@ -114,9 +115,9 @@ class psyq::static_deque
         }
     }
 
-    /** @brief コンテナを構築する。
-        @param[in] in_count コンテナの要素数。
-        @param[in] in_value 全要素の初期値。
+    /** @brief コンテナをコピー構築する。
+        @param[in] in_count コピーする要素の数。
+        @param[in] in_value コピーする値。
      */
     public: explicit static_deque(
         typename this_type::size_type const in_count,
@@ -134,12 +135,12 @@ class psyq::static_deque
     }
 
     /** @brief コンテナをコピー構築する。
-        @param[in] in_front コピー元コンテナの先頭位置を指す反復子。
+        @param[in] in_first コピー元コンテナの先頭位置を指す反復子。
         @param[in] in_last  コピー元コンテナの末尾位置を指す反復子。
      */
     public: template<typename template_iterator>
     static_deque(
-        template_iterator const& in_front,
+        template_iterator const& in_first,
         template_iterator const& in_last)
 #ifndef PSYQ_STATIC_DEQUE_NO_ARRAY_VIEW
     : array_view_(
@@ -147,7 +148,7 @@ class psyq::static_deque
 #endif // !defined(PSYQ_STATIC_DEQUE_NO_ARRAY_VIEW)
     {
         this->copy_construct_deque(
-            in_front, in_last, std::distance(in_front, in_last));
+            in_first, in_last, std::distance(in_first, in_last));
     }
 
     /** @brief コンテナをコピー構築する。
@@ -187,6 +188,15 @@ class psyq::static_deque
         this->move_construct_deque(io_source);
     }
 
+    /// @brief コンテナを解体する。
+    public: ~static_deque()
+    {
+        this->clear();
+    }
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name 代入
+    //@{
     /** @brief コンテナにコピー代入する。
         @param[in] in_source コピー元となるコンテナ。
         @return *this
@@ -226,6 +236,52 @@ class psyq::static_deque
         return *this;
     }
 
+    /** @brief コンテナにコピー代入する。
+        @param[in] in_first コピー元コンテナの先頭位置を指す反復子。
+        @param[in] in_last  コピー元コンテナの末尾位置を指す反復子。
+     */
+    public: template<typename template_iterator>
+    void assign(
+        template_iterator const& in_first,
+        template_iterator const& in_last)
+    {
+        auto const local_distance(std::distance(in_first, in_last));
+        if (0 < local_distance)
+        {
+            *this = this_type(in_first, in_last);
+        }
+        else if (local_distance == 0)
+        {
+            this->clear();
+        }
+        else if (local_distance < 0)
+        {
+            PSYQ_ASSERT(false);
+        }
+    }
+
+    /** @brief コンテナにコピー代入する。
+        @param[in] in_count コピーする要素の数。
+        @param[in] in_value コピーする値。
+     */
+    public: void assign(
+        typename this_type::size_type const in_count,
+        typename this_type::value_type const in_value)
+    {
+        this->~this_type();
+        new(this) this_type(in_count, in_value);
+    }
+
+    /** @brief コンテナにコピー代入する。
+        @param[in] in_source コピー元となる初期化子リスト。
+        @return *this
+     */
+    public: void assign(
+        std::initializer_list<typename this_type::value_type> const& in_source)
+    {
+        this->operator=(in_source);
+    }
+
     /// @brief コンテナを交換する。
     public: void swap(this_type& io_target)
     {
@@ -235,12 +291,6 @@ class psyq::static_deque
             io_target.move_construct_deque(*this);
             this->move_construct_deque(local_target);
         }
-    }
-
-    /// @brief コンテナを解体する。
-    public: ~static_deque()
-    {
-        this->clear();
     }
     //@}
     //-------------------------------------------------------------------------
@@ -298,11 +348,9 @@ class psyq::static_deque
         typename this_type::size_type const in_index)
     PSYQ_NOEXCEPT
     {
-        PSYQ_ASSERT(in_index < this->size());
-        auto const local_element(this->begin_ + in_index);
-        return *(
-            local_element - this_type::MAX_SIZE * (
-                this->get_pointer(this_type::MAX_SIZE) <= local_element));
+        auto const local_pointer(this->forward_pointer(this->begin_, in_index));
+        PSYQ_ASSERT(local_pointer != nullptr);
+        return *local_pointer;
     }
 
     /// @copydoc operator[]
@@ -356,7 +404,8 @@ class psyq::static_deque
      */
     public: typename this_type::reference back() PSYQ_NOEXCEPT
     {
-        return *this->get_back();
+        PSYQ_ASSERT(!this->empty());
+        return this->backward_pointer(this->end_, 1);
     }
 
     /// @copydoc back
@@ -519,10 +568,9 @@ class psyq::static_deque
             return false;
         }
 
-        // 先頭位置を更新し、直前の先頭要素を破棄する。
+        // 先頭要素を破棄し、先頭位置を更新する。
         this->begin_->~value_type();
-        this->begin_ = this->begin_ + 1 - this_type::MAX_SIZE * (
-            this->get_pointer(this_type::MAX_SIZE - 1) <= this->begin_);
+        this->begin_ = this->forward_pointer(this->begin_, 1);
         return true;
     }
 
@@ -540,9 +588,7 @@ class psyq::static_deque
         }
 
         // 末尾位置を更新し、直前の末尾要素を破棄する。
-        auto const local_end(this->get_end_pointer());
-        this->end_ = local_end - 1 +
-            this_type::MAX_SIZE * (local_end <= this->get_pointer(0));
+        this->end_ = this->backward_pointer(this->end_, 1);
         this->end_->~value_type();
         return true;
     }
@@ -598,17 +644,21 @@ class psyq::static_deque
         }
 
         this->destruct_element(in_first.pointer_, in_last.pointer_);
-        if (local_first_index < local_size - local_last_index)
+        auto const local_last_size(local_size - local_last_index);
+        if (local_first_index < local_last_size)
         {
-            this->slide_element();
-            this->begin_ = ;
+            auto const local_new_begin(
+                this->backward_pointer(in_last.pointer_, local_first_index));
+            this->move_construct_element(
+                 this->begin_, local_first_index, local_new_begin);
+            this->begin_ = local_new_begin;
             return in_last;
         }
         else
         {
-            this->slide_element();
-            this->end_ = ;
-            return in_front;
+            this->end_ = this->move_construct_element(
+                 in_last.pointer_, local_last_size, in_first.pointer_);
+            return in_first;
         }
     }
 
@@ -684,9 +734,19 @@ class psyq::static_deque
         typename this_type::difference_type const in_offset)
     const PSYQ_NOEXCEPT
     {
+        return this->forward_pointer(
+            const_cast<typename this_type::pointer>(in_pointer),
+            in_offset);
+    }
+
+    private: typename this_type::pointer forward_pointer(
+        typename this_type::pointer const in_pointer,
+        typename this_type::difference_type const in_offset)
+    const PSYQ_NOEXCEPT
+    {
         if (in_offset <= 0 || in_pointer == nullptr)
         {
-            PSYQ_ASSERT(false);
+            PSYQ_ASSERT(in_offset == 0);
             return in_pointer;
         }
         auto local_pointer(in_pointer + in_offset);
@@ -701,9 +761,19 @@ class psyq::static_deque
         typename this_type::difference_type const in_offset)
     const PSYQ_NOEXCEPT
     {
+        return this->backward_pointer(
+            const_cast<typename this_type::pointer>(in_pointer),
+            in_offset);
+    }
+
+    private: typename this_type::pointer backward_pointer(
+        typename this_type::pointer const in_pointer,
+        typename this_type::difference_type const in_offset)
+    const PSYQ_NOEXCEPT
+    {
         if (in_offset <= 0)
         {
-            PSYQ_ASSERT(false);
+            PSYQ_ASSERT(in_offset == 0);
             return in_pointer;
         }
         auto const local_pointer(
@@ -713,8 +783,8 @@ class psyq::static_deque
                 local_pointer < this->get_pointer(0)));
     }
 
-    private: typename this_type::const_pointer round_pointer(
-        typename this_type::const_pointer const in_pointer)
+    private: typename this_type::pointer round_pointer(
+        typename this_type::pointer const in_pointer)
     const PSYQ_NOEXCEPT
     {
         if (this->get_pointer(static_deque::MAX_SIZE) <= in_pointer
@@ -731,21 +801,6 @@ class psyq::static_deque
             return nullptr;
         }
         return in_pointer;
-    }
-
-    /** @brief 末尾要素を指すポインタを取得する。
-        @retval !=nullptr 末尾要素を指すポインタ。
-        @retval ==nullptr コンテナが空だったので、末尾要素がない。
-     */
-    private: typename this_type::pointer get_back()
-    {
-        if (this->empty())
-        {
-            return nullptr;
-        }
-        auto const local_end(this->get_end_pointer());
-        return local_end - 1 +
-            this_type::MAX_SIZE * (local_end <= this->get_pointer(0));
     }
 
     private: typename this_type::const_pointer initialize_range(
@@ -840,13 +895,29 @@ class psyq::static_deque
         return local_last_end;
     }
 
+    private: typename this_type::pointer move_construct_element(
+         typename this_type::pointer in_source,
+         typename this_type::size_type const in_count,
+         typename this_type::pointer in_target)
+    {
+        for (auto i(in_count); 0 < i; --i)
+        {
+            new(in_target)
+                typename this_type::value_type(std::move(*in_source));
+            in_target->~value_type();
+            in_source = this->forward_pointer(in_source, 1);
+            in_target = this->forward_pointer(in_target, 1);
+        }
+        return in_target;
+    }
+
     private: void destruct_element(
-        typename this_type::pointer const in_front,
+        typename this_type::pointer const in_first,
         typename this_type::pointer const in_last)
     {
         PSYQ_ASSERT(
-            this->get_pointer(0) <= in_front
-            && in_front < this->get_pointer(this_type::MAX_SIZE)
+            this->get_pointer(0) <= in_first
+            && in_first < this->get_pointer(this_type::MAX_SIZE)
             && this->get_pointer(0) <= in_last
             && in_last < this->get_pointer(this_type::MAX_SIZE));
 
@@ -857,7 +928,7 @@ class psyq::static_deque
             local_element = local_element - 1 +
                 this_type::MAX_SIZE * (local_element <= this->get_pointer(0));
             local_element->~value_type();
-            if (in_front == local_element)
+            if (in_first == local_element)
             {
                 return;
             }
@@ -874,12 +945,12 @@ class psyq::static_deque
 
     private: template<typename template_iterator>
     void copy_construct_deque(
-        template_iterator const& in_front,
+        template_iterator const& in_first,
         template_iterator const& in_last,
         typename this_type::size_type const in_size)
     {
         this->construct_deque(
-            in_front,
+            in_first,
             in_last,
             in_size,
             [](
@@ -899,12 +970,12 @@ class psyq::static_deque
 
     private: template<typename template_iterator>
     void move_construct_deque(
-        template_iterator const& in_front,
+        template_iterator const& in_first,
         template_iterator const& in_last,
         typename this_type::size_type const in_size)
     {
         this->construct_deque(
-            in_front,
+            in_first,
             in_last,
             in_size,
             [](
@@ -917,13 +988,13 @@ class psyq::static_deque
 
     private: template<typename template_iterator, typename template_constructor>
     void construct_deque(
-        template_iterator const& in_front,
+        template_iterator const& in_first,
         template_iterator const& in_last,
         typename this_type::size_type const in_size,
         template_constructor const& in_constructor)
     {
         auto const local_end(this->initialize_range(in_size));
-        auto local_source(in_front);
+        auto local_source(in_first);
         for (auto i(this->begin_); i != local_end; ++i, ++local_source)
         {
             in_constructor(i, *local_source);
@@ -952,20 +1023,13 @@ class psyq::static_deque<template_value, template_max_size>::const_iterator:
     public std::iterator<
         std::random_access_iterator_tag, template_value const>
 {
+    friend static_deque;
+    /// @brief thisが指す値の型。
     private: typedef const_iterator this_type;
-
+    /// @brief this_type の基底型。
     public: typedef std::iterator<
         std::random_access_iterator_tag, template_value const>
             base_type;
-
-    //---------------------------------------------------------------------
-    public: const_iterator(
-        static_deque const* const in_deque,
-        typename base_type::pointer const in_pointer)
-    PSYQ_NOEXCEPT:
-    deque_(in_deque),
-    pointer_(in_pointer)
-    {}
 
     //---------------------------------------------------------------------
     /// @name 値の参照
@@ -1066,6 +1130,15 @@ class psyq::static_deque<template_value, template_max_size>::const_iterator:
     }
     //@}
     //---------------------------------------------------------------------
+    protected: const_iterator(
+        static_deque const* const in_deque,
+        typename base_type::pointer const in_pointer)
+    PSYQ_NOEXCEPT:
+    deque_(in_deque),
+    pointer_(in_pointer)
+    {}
+
+    //---------------------------------------------------------------------
     private: static_deque const* deque_;
     private: typename base_type::pointer pointer_;
 
@@ -1077,7 +1150,10 @@ template<typename template_value, std::size_t template_max_size>
 class psyq::static_deque<template_value, template_max_size>::iterator:
     public static_deque::const_iterator
 {
+    friend static_deque;
+    /// @brief thisが指す値の型。
     private: typedef iterator this_type;
+    /// @brief this_type の基底型。
     public: typedef typename static_deque::const_iterator base_type;
 
     //---------------------------------------------------------------------
@@ -1087,13 +1163,6 @@ class psyq::static_deque<template_value, template_max_size>::iterator:
     public: typedef typename this_type::value_type* pointer;
     /// @copydoc static_deque::reference
     public: typedef typename this_type::value_type& reference;
-
-    //---------------------------------------------------------------------
-    public: iterator(
-        static_deque* const in_deque,
-        typename this_type::pointer const in_pointer)
-    PSYQ_NOEXCEPT: base_type(in_deque, in_pointer)
-    {}
 
     //---------------------------------------------------------------------
     /// @name 値の参照
@@ -1110,6 +1179,12 @@ class psyq::static_deque<template_value, template_max_size>::iterator:
             this->base_type::operator*());
     }
     //@}
+    //---------------------------------------------------------------------
+    protected: iterator(
+        static_deque* const in_deque,
+        typename this_type::pointer const in_pointer)
+    PSYQ_NOEXCEPT: base_type(in_deque, in_pointer)
+    {}
 
 }; // class psyq::static_deque::iterator
 

@@ -731,6 +731,7 @@ INPUT                  = \
                          ./scenario_engine/dispatcher.hpp \
                          ./scenario_engine/behavior.hpp \
                          ./scenario_engine/driver.hpp \
+                         ./static_deque.hpp \
                          ./memory_arena.hpp \
                          ./bit_algorithm.hpp \
                          ./fnv_hash.hpp \

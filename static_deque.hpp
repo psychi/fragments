@@ -735,9 +735,10 @@ class psyq::static_deque
         typename this_type::const_iterator const& in_position)
     {
 #if 1
-        this->erase(in_position, in_position + 1);
+        return this->erase(in_position, in_position + 1);
 #else
-        if (this_type <= in_position.offset_ || in_position.deque_ != this)
+        if (this_type::MAX_SIZE <= in_position.offset_
+            || in_position.deque_ != this)
         {
             // コンテナの範囲外なので削除しない。
             PSYQ_ASSERT(in_position.deque_ == this);
@@ -749,7 +750,7 @@ class psyq::static_deque
             this->pop_front();
             return this->begin();
         }
-        auto const local_index(this->compute_index(in_position.offset_))
+        auto const local_index(this->compute_index(in_position.offset_));
         auto const local_size(this->size());
         if (local_index + 1 < local_size)
         {
@@ -788,7 +789,8 @@ class psyq::static_deque
         auto const local_first_index(this->compute_index(in_first.offset_));
         auto const local_last_index(this->compute_index(in_last.offset_));
         PSYQ_ASSERT(
-            local_last_index < local_size || in_last.offset_ == nullptr);
+            in_last.offset_ == this_type::MAX_SIZE
+            || local_last_index < local_size);
         if (local_last_index <= local_first_index
             || local_size <= local_first_index)
         {
@@ -798,23 +800,23 @@ class psyq::static_deque
                 && local_last_index <= local_size);
             return this->end();
         }
-        else if (in_last.offset_ == nullptr)
+        else if (this_type::MAX_SIZE <= in_last.offset_)
         {
             // 末尾位置に接する範囲を削除する。
             this->destruct_element(in_first.offset_, this->get_end_offset());
             this->end_ = in_first.offset_;
-            return in_last;
+            return this->end();
         }
         else if (in_first.offset_ == this->begin_)
         {
             // 先頭位置に接する範囲を削除する。
             this->destruct_element(this->begin_, in_last.offset_);
-            if (this->end_ == nullptr)
+            if (this_type::MAX_SIZE <= this->end_)
             {
                 this->end_ = this->begin_;
             }
             this->begin_ = in_last.offset_;
-            return in_last;
+            return typename this_type::iterator(this, in_last.offset_);
         }
         else
         {
@@ -1490,6 +1492,7 @@ namespace psyq_test
             local_deque_a.begin(), local_deque_d.begin(), local_deque_d.end());
         local_deque_a.pop_front();
         local_deque_a.pop_back();
+        local_deque_a.erase(local_deque_a.begin() + 1);
     }
 } // namespace psyq_test
 

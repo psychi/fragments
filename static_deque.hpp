@@ -75,12 +75,14 @@ class psyq::static_deque
     static_assert(0 < template_max_size, "'template_max_size' is empty.");
 
     //-------------------------------------------------------------------------
+    /// @brief コンテナとして使う固定長のメモリ領域を表す型。
     private: typedef typename std::aligned_storage<
         sizeof(template_value) * template_max_size,
         PSYQ_ALIGNOF(template_value)>
             ::type
                 storage;
 
+    /// @brief デバッグ時にメモリ領域の内容を見るために使う。
     private: typedef template_value array_view[template_max_size];
 
     //-------------------------------------------------------------------------
@@ -593,19 +595,19 @@ class psyq::static_deque
         typename this_type::size_type const in_count,
         typename this_type::value_type const& in_value)
     {
-        typename this_type::iterator const local_allocate_first(
+        typename this_type::iterator const local_result(
             this, this->allocate(in_count, in_position.pointer_));
-        if (local_allocate_first.pointer_ == nullptr)
+        if (local_result.pointer_ == nullptr)
         {
-            return in_count != 0? local_allocate_first: in_position;
+            return in_count != 0? local_result: in_position;
         }
-        auto local_target(local_allocate_first);
+        auto local_target(local_result);
         for (auto i(in_count); 0 < i; --i, ++local_target)
         {
             new(local_target.pointer_)
                 typename this_type::value_type(in_value);
         }
-        return local_allocate_first;
+        return local_result;
     }
 
     /** @brief コンテナに要素を挿入する。
@@ -621,19 +623,19 @@ class psyq::static_deque
         template_iterator const& in_first,
         template_iterator const& in_last)
     {
-        auto const local_allocate_size(std::distance(in_first, in_last));
-        typename this_type::iterator const local_allocate_first(
-            this, this->allocate(local_allocate_size, in_position.pointer_));
-        if (local_allocate_first.pointer_ == nullptr)
+        auto const local_size(std::distance(in_first, in_last));
+        typename this_type::iterator const local_result(
+            this, this->allocate(local_size, in_position.pointer_));
+        if (local_result.pointer_ == nullptr)
         {
-            return local_allocate_size != 0? local_allocate_first: in_position;
+            return local_size != 0? local_result: in_position;
         }
-        auto local_target(local_allocate_first);
+        auto local_target(local_result);
         for (auto i(in_first); i != in_last; ++i, ++local_target)
         {
             new(local_target.pointer_) typename this_type::value_type(*i);
         }
-        return local_allocate_first;
+        return local_result;
     }
     //@}
     //-------------------------------------------------------------------------
@@ -935,7 +937,7 @@ class psyq::static_deque
      */
     private: typename this_type::pointer allocate(
         typename this_type::size_type const in_size,
-        typename this_type::pointer const in_position)
+        typename this_type::const_pointer const in_position)
     PSYQ_NOEXCEPT
     {
         if (in_size <= 0)
@@ -943,15 +945,62 @@ class psyq::static_deque
             PSYQ_ASSERT(in_size == 0);
             return nullptr;
         }
-        if (in_position == this->begin_)
+        auto const local_index(this->compute_index(in_position));
+        auto const local_size(this->size());
+        PSYQ_ASSERT(local_index <= local_size);
+        if (local_index * 2 < local_size)
         {
-            return this->allocate_front(in_size);
+            // コンテナの前側に空要素を確保する。
+            auto const local_old_begin(this->begin_);
+            auto const local_new_begin(this->allocate_front(in_size));
+            if (local_new_begin == nullptr)
+            {
+                return nullptr;
+            }
+            if (local_old_begin == in_position)
+            {
+                return local_new_begin;
+            }
+
+            // コンテナ前側の要素を移動する。
+            auto local_source(local_old_begin);
+            auto local_target(local_new_begin);
+            while(local_source != in_position)
+            {
+                new(local_target)
+                    typename this_type::value_type(std::move(*local_source));
+                local_source->~value_type();
+                local_source = this->next_pointer(local_source, 1);
+                local_target = this->next_pointer(local_target, 1);
+            }
+            return local_target;
         }
-        if (in_position == nullptr)
+        else
         {
-            return this->allocate_back(in_size);
+            // コンテナの後側に空要素を確保する。
+            auto const local_old_end(this->allocate_back(in_size));
+            if (local_old_end == nullptr)
+            {
+                return nullptr;
+            }
+            if (in_position == nullptr)
+            {
+                return local_old_end;
+            }
+
+            // コンテナ後側の要素を移動する。
+            auto local_target(this->get_end_pointer());
+            auto local_source(local_old_end);
+            while(local_source != in_position)
+            {
+                local_source = this->prev_pointer(local_source, 1);
+                local_target = this->prev_pointer(local_target, 1);
+                new(local_target)
+                    typename this_type::value_type(std::move(*local_source));
+                local_source->~value_type();
+            }
+            return local_source;
         }
-        ///@todo 以下、未実装。
     }
 
     /** @brief コンテナの先頭に空要素を挿入する。
@@ -1047,7 +1096,7 @@ class psyq::static_deque
         auto const local_last_size(in_size - in_last_index);
         if (in_first_index < local_last_size)
         {
-            // 前半の要素を後方へ移動する。
+            // コンテナ前側の要素を後へ移動する。
             auto local_source(in_first_pointer);
             auto local_target(in_last_pointer);
             for (auto i(in_first_index); 0 < i; --i)
@@ -1062,7 +1111,7 @@ class psyq::static_deque
         }
         else
         {
-            // 後半の要素を前方へ移動する。
+            // コンテナ後側の要素を前へ移動する。
             auto local_source(in_last_pointer);
             auto local_target(in_first_pointer);
             for (auto i(local_last_size); 0 < i; --i)
@@ -1081,6 +1130,7 @@ class psyq::static_deque
     private: void destruct_element(
         typename this_type::pointer const in_first,
         typename this_type::pointer const in_last)
+    const
     {
         PSYQ_ASSERT(
             this->get_pointer(0) <= in_first
@@ -1194,7 +1244,6 @@ class psyq::static_deque
     private: typename this_type::pointer end_;
 
 #ifndef PSYQ_STATIC_DEQUE_NO_ARRAY_VIEW
-    /// @brief デバッグ時にメモリ領域の内容を見るために使う。
     private: typename this_type::array_view& array_view_;
 #endif // !defined(PSYQ_STATIC_DEQUE_NO_ARRAY_VIEW)
 

@@ -133,8 +133,8 @@ class psyq::static_deque
      */
     public: static_deque()
     PSYQ_NOEXCEPT:
-    begin_(this->get_pointer(0)),
-    end_(this->get_pointer(0))
+    begin_(0),
+    end_(0)
 #ifndef PSYQ_STATIC_DEQUE_NO_ARRAY_VIEW
     , array_view_(
         *reinterpret_cast<typename this_type::array_view*>(&this->storage_))
@@ -154,7 +154,7 @@ class psyq::static_deque
         auto const local_end(this->initialize_range(in_count));
         for (auto i(this->begin_); i != local_end; ++i)
         {
-            new(i) typename this_type::value_type;
+            new(this->get_pointer(i)) typename this_type::value_type;
         }
     }
 
@@ -173,7 +173,7 @@ class psyq::static_deque
         auto const local_end(this->initialize_range(in_count));
         for (auto i(this->begin_); i != local_end; ++i)
         {
-            new(i) typename this_type::value_type(in_value);
+            new(this->get_pointer(i)) typename this_type::value_type(in_value);
         }
     }
 
@@ -345,7 +345,7 @@ class psyq::static_deque
      */
     public: bool full() const PSYQ_NOEXCEPT
     {
-        return this->end_ == nullptr;
+        return this_type::MAX_SIZE <= this->end_;
     }
 
     /** @brief コンテナが空か判定する。
@@ -385,8 +385,8 @@ class psyq::static_deque
         if (in_size < local_old_size)
         {
             auto const local_new_end(
-                this->forward_pointer(this->begin_, in_size));
-            this->destruct_element(local_new_end, this->get_end_pointer());
+                this->forward_offset(this->begin_, in_size));
+            this->destruct_element(local_new_end, this->get_end_offset());
             this->end_ = local_new_end;
         }
         else if (local_old_size < in_size)
@@ -423,7 +423,7 @@ class psyq::static_deque
      */
     public: typename this_type::iterator end() PSYQ_NOEXCEPT
     {
-        return typename this_type::iterator(this, nullptr);
+        return typename this_type::iterator(this, this_type::MAX_SIZE);
     }
 
     /// @copydoc end
@@ -435,7 +435,7 @@ class psyq::static_deque
     /// @copydoc end
     public: typename this_type::const_iterator cend() const PSYQ_NOEXCEPT
     {
-        return typename this_type::const_iterator(this, nullptr);
+        return typename this_type::const_iterator(this, this_type::MAX_SIZE);
     }
     //@}
     //-------------------------------------------------------------------------
@@ -499,9 +499,9 @@ class psyq::static_deque
         typename this_type::size_type const in_index)
     PSYQ_NOEXCEPT
     {
-        auto const local_pointer(this->forward_pointer(this->begin_, in_index));
-        PSYQ_ASSERT(local_pointer != nullptr);
-        return *local_pointer;
+        auto const local_offset(this->forward_offset(this->begin_, in_index));
+        PSYQ_ASSERT(local_offset < this_type::MAX_SIZE);
+        return *this->get_pointer(local_offset);
     }
 
     /// @copydoc operator[]
@@ -538,7 +538,7 @@ class psyq::static_deque
     public: typename this_type::reference front() PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(!this->empty());
-        return *this->begin_;
+        return *this->get_pointer(this->begin_);
     }
 
     /// @copydoc front
@@ -556,7 +556,7 @@ class psyq::static_deque
     public: typename this_type::reference back() PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(!this->empty());
-        return this->backward_pointer(this->end_, 1);
+        return *this->get_pointer(this->backward_offset(this->end_, 1));
     }
 
     /// @copydoc back
@@ -576,9 +576,9 @@ class psyq::static_deque
     public: typename this_type::pointer push_front(
         typename this_type::value_type in_value)
     {
-        auto const local_storage(this->allocate_front(1));
-        return local_storage != nullptr?
-            new(local_storage)
+        auto const local_offset(this->allocate_front(1));
+        return local_offset < this_type::MAX_SIZE?
+            new(this->get_pointer(local_offset))
                 typename this_type::value_type(std::move(in_value)):
             nullptr;
     }
@@ -591,9 +591,9 @@ class psyq::static_deque
     public: typename this_type::pointer push_back(
         typename this_type::value_type in_value)
     {
-        auto const local_storage(this->allocate_back(1));
-        return local_storage != nullptr?
-            new(local_storage)
+        auto const local_offset(this->allocate_back(1));
+        return local_offset < this_type::MAX_SIZE?
+            new(this->get_pointer(local_offset))
                 typename this_type::value_type(std::move(in_value)):
             nullptr;
     }
@@ -637,8 +637,8 @@ class psyq::static_deque
         typename this_type::value_type const& in_value)
     {
         typename this_type::iterator const local_result(
-            this, this->allocate_element(in_position.pointer_, in_count));
-        if (local_result.pointer_ != nullptr)
+            this, this->allocate_element(in_position.offset_, in_count));
+        if (local_result.offset_ < this_type::MAX_SIZE)
         {
             auto local_target(local_result);
             for (auto i(in_count); 0 < i; --i, ++local_target)
@@ -649,10 +649,7 @@ class psyq::static_deque
         }
         else if (in_count == 0)
         {
-            return typename this_type::iterator(
-                this,
-                const_cast<typename this_type::pointer>(
-                    in_position.operator->()));
+            return typename this_type::iterator(this, in_position.offset_);
         }
         return local_result;
     }
@@ -672,8 +669,8 @@ class psyq::static_deque
     {
         auto const local_size(std::distance(in_first, in_last));
         typename this_type::iterator const local_result(
-            this, this->allocate_element(in_position.pointer_, local_size));
-        if (local_result.pointer_ != nullptr)
+            this, this->allocate_element(in_position.offset_, local_size));
+        if (local_result.offset_ < this_type::MAX_SIZE)
         {
             auto local_target(local_result);
             for (auto i(in_first); i != in_last; ++i, ++local_target)
@@ -684,10 +681,7 @@ class psyq::static_deque
         }
         else if (local_size == 0)
         {
-            return typename this_type::iterator(
-                this,
-                const_cast<typename this_type::pointer>(
-                    in_position.operator->()));
+            return typename this_type::iterator(this, in_position.offset_);
         }
         return local_result;
     }
@@ -709,8 +703,8 @@ class psyq::static_deque
         }
 
         // 先頭要素を破棄し、先頭位置を更新する。
-        this->begin_->~value_type();
-        this->begin_ = this->forward_pointer(this->begin_, 1);
+        this->get_pointer(this->begin_)->~value_type();
+        this->begin_ = this->forward_offset(this->begin_, 1);
         return true;
     }
 
@@ -728,8 +722,8 @@ class psyq::static_deque
         }
 
         // 末尾位置を更新し、直前の末尾要素を破棄する。
-        this->end_ = this->backward_pointer(this->end_, 1);
-        this->end_->~value_type();
+        this->end_ = this->backward_offset(this->end_, 1);
+        this->get_pointer(this->end_)->~value_type();
         return true;
     }
 
@@ -743,28 +737,28 @@ class psyq::static_deque
 #if 1
         this->erase(in_position, in_position + 1);
 #else
-        if (in_position.pointer_ == nullptr || in_position.deque_ != this)
+        if (this_type <= in_position.offset_ || in_position.deque_ != this)
         {
             // コンテナの範囲外なので削除しない。
             PSYQ_ASSERT(in_position.deque_ == this);
             return this->end();
         }
-        if (in_position.pointer_ == this->begin_)
+        if (in_position.offset_ == this->begin_)
         {
             // 先頭要素を削除する。
             this->pop_front();
             return this->begin();
         }
-        auto const local_index(this->compute_index(in_position.pointer_))
+        auto const local_index(this->compute_index(in_position.offset_))
         auto const local_size(this->size());
         if (local_index + 1 < local_size)
         {
             // 先頭と末尾の間にある要素を削除する。w
             return this->erase_element(
                 local_size,
-                in_position.pointer_,
+                in_position.offset_,
                 local_index,
-                this->forward_pointer(in_position.pointer_, 1),
+                this->forward_offset(in_position.offset_, 1),
                 local_index + 1);
         }
         if (local_index < local_size)
@@ -791,10 +785,10 @@ class psyq::static_deque
         typename this_type::const_iterator const& in_last)
     {
         auto const local_size(this->size());
-        auto const local_first_index(this->compute_index(in_first.pointer_));
-        auto const local_last_index(this->compute_index(in_last.pointer_));
+        auto const local_first_index(this->compute_index(in_first.offset_));
+        auto const local_last_index(this->compute_index(in_last.offset_));
         PSYQ_ASSERT(
-            local_last_index < local_size || in_last.pointer_ == nullptr);
+            local_last_index < local_size || in_last.offset_ == nullptr);
         if (local_last_index <= local_first_index
             || local_size <= local_first_index)
         {
@@ -804,22 +798,22 @@ class psyq::static_deque
                 && local_last_index <= local_size);
             return this->end();
         }
-        else if (in_last.pointer_ == nullptr)
+        else if (in_last.offset_ == nullptr)
         {
             // 末尾位置に接する範囲を削除する。
-            this->destruct_element(in_first.pointer_, this->get_end_pointer());
-            this->end_ = in_first.pointer_;
+            this->destruct_element(in_first.offset_, this->get_end_offset());
+            this->end_ = in_first.offset_;
             return in_last;
         }
-        else if (in_first.pointer_ == this->begin_)
+        else if (in_first.offset_ == this->begin_)
         {
             // 先頭位置に接する範囲を削除する。
-            this->destruct_element(this->begin_, in_last.pointer_);
+            this->destruct_element(this->begin_, in_last.offset_);
             if (this->end_ == nullptr)
             {
                 this->end_ = this->begin_;
             }
-            this->begin_ = in_last.pointer_;
+            this->begin_ = in_last.offset_;
             return in_last;
         }
         else
@@ -827,9 +821,9 @@ class psyq::static_deque
             // 先頭と末尾の間にある要素を削除する。
             return this->erase_element(
                 local_size,
-                in_first.pointer_,
+                in_first.offset_,
                 local_first_index,
-                in_last.pointer_,
+                in_last.offset_,
                 local_last_index);
         }
     }
@@ -840,167 +834,146 @@ class psyq::static_deque
     {
         if (!this->empty())
         {
-            this->destruct_element(this->begin_, this->get_end_pointer());
-            this->begin_ = this->get_pointer(0);
+            this->destruct_element(this->begin_, this->get_end_offset());
+            this->begin_ = 0;
             this->end_ = this->begin_;
         }
     }
     //@}
     //-------------------------------------------------------------------------
     /** @brief コンテナ先頭位置からの距離を算出する。
-        @param[in] in_pointer 距離を算出する要素を指すポインタ。
+        @param[in] in_offset 距離を算出する要素を指すオフセット値。
         @return コンテナ先頭位置からの距離。
      */
     private: typename this_type::size_type compute_distance(
-        typename this_type::const_pointer const in_pointer)
+        typename this_type::size_type const in_offset)
     const PSYQ_NOEXCEPT
     {
-        return in_pointer != nullptr?
-            static_cast<typename this_type::size_type>(
-                in_pointer - this->begin_
-                + this_type::MAX_SIZE * (in_pointer < this->begin_)):
+        return in_offset < this_type::MAX_SIZE?
+            in_offset - this->begin_ +
+                this_type::MAX_SIZE * (in_offset < this->begin_):
             this_type::MAX_SIZE;
     }
 
     /** @brief コンテナ先頭位置からのインデクス番号を算出する。
-        @param[in] in_pointer インデクス番号を算出する要素を指すポインタ。
+        @param[in] in_offset インデクス番号を算出する要素を指すオフセット値。
         @return 要素のインデクス番号。
      */
     private: typename this_type::size_type compute_index(
-        typename this_type::const_pointer const in_pointer)
+        typename this_type::size_type const in_offset)
     const PSYQ_NOEXCEPT
     {
         return this->compute_distance(
-            in_pointer != nullptr? in_pointer: this->end_);
+            in_offset < this_type::MAX_SIZE? in_offset: this->end_);
     }
 
     /** @brief 要素を指すポインタを取得する。
-        @param[in] in_index コンテナ領域先頭位置からの要素のインデクス番号。
+        @param[in] in_offset コンテナ領域先頭位置からの要素のオフセット値。
         @return 要素を指すポインタ。
      */
     private: typename this_type::pointer get_pointer(
-        typename this_type::size_type const in_index)
+        typename this_type::size_type const in_offset)
     PSYQ_NOEXCEPT
     {
-        return reinterpret_cast<this_type::pointer>(&this->storage_) + in_index;
+        return reinterpret_cast<this_type::pointer>(&this->storage_) + in_offset;
     }
 
     /// @copydoc get_pointer
     private: typename this_type::const_pointer get_pointer(
-        typename this_type::size_type const in_index)
+        typename this_type::size_type const in_offset)
     const PSYQ_NOEXCEPT
     {
-        return const_cast<this_type*>(this)->get_pointer(in_index);
+        return const_cast<this_type*>(this)->get_pointer(in_offset);
     }
 
-    /** @brief コンテナの末尾位置を指すポインタを取得する。
-        @return コンテナの末尾位置。
+    /** @brief コンテナ末尾位置を指すオフセット値を取得する。
+        @return コンテナ末尾位置のオフセット値。
      */
-    private: typename this_type::pointer get_end_pointer() const PSYQ_NOEXCEPT
+    private: typename this_type::size_type get_end_offset() const PSYQ_NOEXCEPT
     {
         return this->full()? this->begin_: this->end_;
     }
 
-    /** @brief ポインタを進める。
+    /** @brief オフセット値を進める。
      */
-    private: typename this_type::pointer forward_pointer(
-        typename this_type::pointer const in_pointer,
-        typename this_type::difference_type const in_offset)
+    private: typename this_type::size_type forward_offset(
+        typename this_type::size_type const in_offset,
+        typename this_type::difference_type const in_forward)
     const PSYQ_NOEXCEPT
     {
-        if (in_offset <= 0 || in_pointer == nullptr)
+        if (in_forward <= 0 || this_type::MAX_SIZE <= in_offset)
         {
-            PSYQ_ASSERT(in_offset == 0);
-            return in_pointer;
+            PSYQ_ASSERT(in_forward == 0);
+            return in_offset;
         }
-        auto local_pointer(in_pointer + in_offset);
-        local_pointer = this->round_pointer(
-            local_pointer - this_type::MAX_SIZE * (
-                this->get_pointer(this_type::MAX_SIZE) <= local_pointer));
-        return local_pointer != this->begin_? local_pointer: nullptr;
+        auto local_offset(in_offset + in_forward);
+        local_offset = this->round_offset(
+            local_offset - this_type::MAX_SIZE * (
+                this_type::MAX_SIZE <= local_offset));
+        return local_offset != this->begin_? local_offset: this_type::MAX_SIZE;
     }
 
-     /// @copydoc forward_pointer
-    private: typename this_type::const_pointer forward_pointer(
-        typename this_type::const_pointer const in_pointer,
-        typename this_type::difference_type const in_offset)
-    const PSYQ_NOEXCEPT
-    {
-        return this->forward_pointer(
-            const_cast<typename this_type::pointer>(in_pointer), in_offset);
-    }
-
-    /** @brief ポインタを後方に進める。
+    /** @brief オフセット値を戻す。
      */
-    private: typename this_type::pointer backward_pointer(
-        typename this_type::pointer const in_pointer,
-        typename this_type::difference_type const in_offset)
+    private: typename this_type::size_type backward_offset(
+        typename this_type::size_type const in_offset,
+        typename this_type::difference_type const in_backward)
     const PSYQ_NOEXCEPT
     {
-        if (in_offset <= 0)
+        if (this_type::MAX_SIZE <= in_backward)
         {
-            PSYQ_ASSERT(in_offset == 0);
-            return in_pointer;
+            PSYQ_ASSERT(in_backward == this_type::MAX_SIZE);
+            return in_offset;
         }
-        auto const local_pointer(
-            (in_pointer != nullptr? in_pointer: this->begin_) - in_offset);
-        return this->round_pointer(
-            local_pointer + this_type::MAX_SIZE * (
-                local_pointer < this->get_pointer(0)));
+        auto const local_offset(
+            (in_offset < this_type::MAX_SIZE? in_offset: this->begin_)
+            - in_backward);
+        return this->round_offset(
+            local_offset + this_type::MAX_SIZE * (
+                this_type::MAX_SIZE <= local_offset));
     }
 
-    /// @copydoc backward_pointer
-    private: typename this_type::const_pointer backward_pointer(
-        typename this_type::const_pointer const in_pointer,
-        typename this_type::difference_type const in_offset)
-    const PSYQ_NOEXCEPT
-    {
-        return this->backward_pointer(
-            const_cast<typename this_type::pointer>(in_pointer), in_offset);
-    }
-
-    /** @brief コンテナの範囲に収まるようポインタを調整する。
-        @param[in] in_pointer 調整するポインタ。
+    /** @brief コンテナの範囲に収まるようオフセット値を調整する。
+        @param[in] in_offset 調整するオフセット値。
      */
-    private: typename this_type::pointer round_pointer(
-        typename this_type::pointer const in_pointer)
+    private: typename this_type::size_type round_offset(
+        typename this_type::size_type const in_offset)
     const PSYQ_NOEXCEPT
     {
-        if (this->get_pointer(static_deque::MAX_SIZE) <= in_pointer
-            || in_pointer < this->get_pointer(0))
+        if (static_deque::MAX_SIZE <= in_offset)
         {
             PSYQ_ASSERT(false);
         }
         else if (
             !this->full()
-            && this->end_ <= in_pointer
-            && (in_pointer < this->begin_ || this->begin_ <= this->end_))
+            && this->end_ <= in_offset
+            && (in_offset < this->begin_ || this->begin_ <= this->end_))
         {
-            PSYQ_ASSERT(this->end_ == in_pointer);
+            PSYQ_ASSERT(this->end_ == in_offset);
         }
         else
         {
-            return in_pointer;
+            return in_offset;
         }
-        return nullptr;
+        return this_type::MAX_SIZE;
     }
 
     //-------------------------------------------------------------------------
     /** @brief コンテナに空要素を挿入する。
-        @param[in] in_position 空要素を挿入する位置。
+        @param[in] in_position 空要素を挿入するオフセット位置。
         @param[in] in_size     挿入する空要素の数。
-        @retval !=nullptr 挿入した空要素の先頭を指すポインタ。
-        @retval ==nullptr 失敗。空要素を挿入できなかった。
+        @retval <MAX_SIZE  挿入した空要素の先頭を指すオフセット値。
+        @retval >=MAX_SIZE 失敗。空要素を挿入できなかった。
      */
-    private: typename this_type::pointer allocate_element(
-        typename this_type::const_pointer const in_position,
+    private: typename this_type::size_type allocate_element(
+        typename this_type::size_type const in_position,
         typename this_type::size_type const in_size)
     PSYQ_NOEXCEPT
     {
         if (in_size <= 0)
         {
             PSYQ_ASSERT(in_size == 0);
-            return nullptr;
+            return this_type::MAX_SIZE;
         }
         auto const local_index(this->compute_index(in_position));
         auto const local_size(this->size());
@@ -1010,9 +983,9 @@ class psyq::static_deque
             // コンテナの前側に空要素を確保する。
             auto const local_old_begin(this->begin_);
             auto const local_new_begin(this->allocate_front(in_size));
-            if (local_new_begin == nullptr)
+            if (this_type::MAX_SIZE <= local_new_begin)
             {
-                return nullptr;
+                return local_new_begin;
             }
             if (local_old_begin == in_position)
             {
@@ -1027,40 +1000,40 @@ class psyq::static_deque
         {
             // コンテナの後側に空要素を確保する。
             auto const local_old_end(this->allocate_back(in_size));
-            if (local_old_end == nullptr)
+            if (this_type::MAX_SIZE <= local_old_end)
             {
-                return nullptr;
+                return local_old_end;
             }
-            if (in_position == nullptr)
+            if (this_type::MAX_SIZE <= in_position)
             {
                 return local_old_end;
             }
 
             // コンテナ後側の要素を移動する。
             this->move_backward(
-                in_position, local_old_end, this->get_end_pointer());
-            return const_cast<typename this_type::pointer>(in_position);
+                in_position, local_old_end, this->get_end_offset());
+            return in_position;
         }
     }
 
     /** @brief コンテナの先頭に空要素を挿入する。
         @param[in] in_size 挿入する空要素の数。
-        @retval !=nullptr 挿入した空要素の先頭を指すポインタ。
-        @retval ==nullptr 失敗。空要素を挿入できなかった。
+        @retval <MAX_SIZE  挿入した空要素の先頭を指すオフセット値。
+        @retval >=MAX_SIZE 失敗。空要素を挿入できなかった。
      */
-    private: typename this_type::pointer allocate_front(
+    private: typename this_type::size_type allocate_front(
         typename this_type::size_type const in_size)
     PSYQ_NOEXCEPT
     {
         // 残り容量がなければ、失敗する。
         if (this->full() || this_type::MAX_SIZE < in_size)
         {
-            return nullptr;
+            return this_type::MAX_SIZE;
         }
 
         // 新たな先頭位置を決定する。
         auto local_new_begin(this->begin_ - in_size);
-        bool const local_circulate(local_new_begin < this->get_pointer(0));
+        bool const local_circulate(this_type::MAX_SIZE <= local_new_begin);
         if (local_circulate)
         {
             local_new_begin += this_type::MAX_SIZE;
@@ -1069,37 +1042,36 @@ class psyq::static_deque
             && (local_circulate || this->end_ < this->begin_))
         {
             // 新たな先頭位置が末尾位置を追い越していたら、失敗する。
-            return nullptr;
+            return this_type::MAX_SIZE;
         }
 
         // 先頭位置を更新する。
         this->begin_ = local_new_begin;
         if (this->end_ == local_new_begin)
         {
-            this->end_ = nullptr;
+            this->end_ = this_type::MAX_SIZE;
         }
         return local_new_begin;
     }
 
     /** @brief コンテナの末尾に空要素を挿入する。
         @param[in] in_size 挿入する空要素の数。
-        @retval !=nullptr 挿入した空要素の先頭を指すポインタ。
-        @retval ==nullptr 失敗。空要素を挿入できなかった。
+        @retval <MAX_SIZE  挿入した空要素の先頭を指すオフセット値。
+        @retval >=MAX_SIZE 失敗。空要素を挿入できなかった。
      */
-    private: typename this_type::pointer allocate_back(
+    private: typename this_type::size_type allocate_back(
         typename this_type::size_type const in_size)
     PSYQ_NOEXCEPT
     {
         // 残り容量がなければ、失敗する。
         if (this->full() || this_type::MAX_SIZE < in_size)
         {
-            return nullptr;
+            return this_type::MAX_SIZE;
         }
 
         // 新たな末尾位置を決定する。
         auto local_new_end(this->end_ + in_size);
-        bool const local_circulate(
-            this->get_pointer(this_type::MAX_SIZE) <= local_new_end);
+        bool const local_circulate(this_type::MAX_SIZE <= local_new_end);
         if (local_circulate)
         {
             local_new_end -= this_type::MAX_SIZE;
@@ -1108,58 +1080,59 @@ class psyq::static_deque
             && (local_circulate || this->end_ < this->begin_))
         {
             // 新たな末尾位置が先頭位置を追い越していたら、失敗する。
-            return nullptr;
+            return this_type::MAX_SIZE;
         }
 
         // 末尾位置を更新する。
         auto const local_last_end(this->end_);
-        this->end_ = local_new_end != this->begin_? local_new_end: nullptr;
+        this->end_ = local_new_end != this->begin_?
+            local_new_end: this_type::MAX_SIZE;
         return local_last_end;
     }
 
-    private: typename this_type::pointer move_forward(
-        typename this_type::pointer const in_source_first,
-        typename this_type::const_pointer const in_source_last,
-        typename this_type::pointer const in_target_first)
-    const
+    private: typename this_type::size_type move_forward(
+        typename this_type::size_type const in_source_first,
+        typename this_type::size_type const in_source_last,
+        typename this_type::size_type const in_target_first)
     {
         auto local_source(in_source_first);
         auto local_target(in_target_first);
         while(local_source != in_source_last)
         {
-            new(local_target)
-                typename this_type::value_type(std::move(*local_source));
-            local_source->~value_type();
-            local_source = this->forward_pointer(local_source, 1);
-            local_target = this->forward_pointer(local_target, 1);
+            auto& local_element(*this->get_pointer(local_source));
+            new(this->get_pointer(local_target))
+                typename this_type::value_type(std::move(local_element));
+            local_element.~value_type();
+            local_source = this->forward_offset(local_source, 1);
+            local_target = this->forward_offset(local_target, 1);
         }
         return local_target;
     }
 
-    private: typename this_type::pointer move_backward(
-        typename this_type::const_pointer const in_source_first,
-        typename this_type::pointer const in_source_last,
-        typename this_type::pointer const in_target_last)
-    const
+    private: typename this_type::size_type move_backward(
+        typename this_type::size_type const in_source_first,
+        typename this_type::size_type const in_source_last,
+        typename this_type::size_type const in_target_last)
     {
         auto local_target(in_target_last);
         auto local_source(in_source_last);
         while(in_source_first != local_source)
         {
-            local_source = this->backward_pointer(local_source, 1);
-            local_target = this->backward_pointer(local_target, 1);
-            new(local_target)
-                typename this_type::value_type(std::move(*local_source));
-            local_source->~value_type();
+            local_source = this->backward_offset(local_source, 1);
+            local_target = this->backward_offset(local_target, 1);
+            auto& local_element(*this->get_pointer(local_source));
+            new(this->get_pointer(local_target))
+                typename this_type::value_type(std::move(local_element));
+            local_element.~value_type();
         }
         return local_target;
     }
 
     private: typename this_type::iterator erase_element(
          typename this_type::size_type const in_size,
-         typename this_type::pointer const in_first_pointer,
+         typename this_type::size_type const in_first_offset,
          typename this_type::size_type const in_first_index,
-         typename this_type::pointer const in_last_pointer,
+         typename this_type::size_type const in_last_offset,
          typename this_type::size_type const in_last_index)
     {
         PSYQ_ASSERT(
@@ -1167,42 +1140,42 @@ class psyq::static_deque
             && 0 < in_first_index
             && in_last_index < in_size
             && in_first_index < in_last_index
-            && in_first_index == this->compute_index(in_first_pointer)
-            && in_last_index == this->compute_index(in_last_pointer));
+            && in_first_index == this->compute_index(in_first_offset)
+            && in_last_index == this->compute_index(in_last_offset));
 
-        this->destruct_element(in_first_pointer, in_last_pointer);
+        this->destruct_element(in_first_offset, in_last_offset);
         if (in_first_index + in_last_index < in_size)
         {
             // コンテナ前側の要素を後へ移動する。
             this->begin_ = this->move_backward(
-                this->begin_, in_first_pointer, in_last_pointer);
-            return typename this_type::iterator(this, in_last_pointer);
+                this->begin_, in_first_offset, in_last_offset);
+            return typename this_type::iterator(this, in_last_offset);
         }
         else
         {
             // コンテナ後側の要素を前へ移動する。
             this->end_ = this->move_forward(
-                in_last_pointer, this->get_end_pointer(), in_first_pointer);
-            return typename this_type::iterator(this, in_first_pointer);
+                in_last_offset, this->get_end_offset(), in_first_offset);
+            return typename this_type::iterator(this, in_first_offset);
         }
     }
 
     private: void destruct_element(
-        typename this_type::pointer const in_first,
-        typename this_type::pointer const in_last)
+        typename this_type::size_type const in_first,
+        typename this_type::size_type const in_last)
     const
     {
         PSYQ_ASSERT(
-            this->get_pointer(0) <= in_first
-            && in_first < this->get_pointer(this_type::MAX_SIZE)
-            && this->get_pointer(0) <= in_last
-            && in_last < this->get_pointer(this_type::MAX_SIZE));
+            0 <= in_first
+            && in_first < this_type::MAX_SIZE
+            && 0 <= in_last
+            && in_last < this_type::MAX_SIZE);
 
         // 末尾から逆順に要素を解体する。
         for (auto i(in_last);;)
         {
-            i = this->backward_pointer(i, 1);
-            i->~value_type();
+            i = this->backward_offset(i, 1);
+            this->get_pointer(i)->~value_type();
             if (i <= in_first)
             {
                 return;
@@ -1272,14 +1245,14 @@ class psyq::static_deque
         auto local_source(in_first);
         for (auto i(this->begin_); i != local_end; ++i, ++local_source)
         {
-            in_constructor(i, *local_source);
+            in_constructor(this->get_pointer(i), *local_source);
         }
     }
 
-    private: typename this_type::const_pointer initialize_range(
+    private: typename this_type::size_type initialize_range(
         typename this_type::size_type const in_count)
     {
-        auto local_end(this->get_pointer(0));
+        typename this_type::size_type local_end(0);
         this->begin_ = local_end;
         if (in_count < this_type::MAX_SIZE)
         {
@@ -1290,7 +1263,7 @@ class psyq::static_deque
         {
             PSYQ_ASSERT(in_count <= this_type::MAX_SIZE);
             local_end += this_type::MAX_SIZE;
-            this->end_ = nullptr;
+            this->end_ = this_type::MAX_SIZE;
         }
         return local_end;
     }
@@ -1298,16 +1271,16 @@ class psyq::static_deque
     //-------------------------------------------------------------------------
     /// @brief 要素を格納するメモリ領域。
     private: typename this_type::storage storage_;
-    /// @brief コンテナの先頭位置。
-    private: typename this_type::pointer begin_;
-    /// @brief コンテナの末尾位置。
-    private: typename this_type::pointer end_;
+    /// @brief コンテナの先頭位置のオフセット値。
+    private: typename this_type::size_type begin_;
+    /// @brief コンテナの末尾位置のオフセット値。
+    private: typename this_type::size_type end_;
 
 #ifndef PSYQ_STATIC_DEQUE_NO_ARRAY_VIEW
     private: typename this_type::array_view& array_view_;
 #endif // !defined(PSYQ_STATIC_DEQUE_NO_ARRAY_VIEW)
 
-}; // class static_deque
+}; // class psyq::static_deque
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 読み取り専用の要素を指す反復子。
@@ -1323,14 +1296,17 @@ class psyq::static_deque<template_value, template_max_size>::const_iterator:
     public: typedef std::iterator<
         std::random_access_iterator_tag, template_value const>
             base_type;
+    /// @copydoc static_deque::size_type
+    public: typedef typename std::make_unsigned<typename base_type::difference_type>::type size_type;
 
     //---------------------------------------------------------------------
     /// @name 値の参照
     //@{
     public: typename base_type::pointer operator->() const PSYQ_NOEXCEPT
     {
-        PSYQ_ASSERT(this->deque_ != nullptr && this->pointer_ != nullptr);
-        return this->pointer_;
+        PSYQ_ASSERT(
+            this->deque_ != nullptr && this->offset_ < static_deque::MAX_SIZE);
+        return this->deque_->get_pointer(this->offset_);
     }
 
     public: typename base_type::reference operator*() const PSYQ_NOEXCEPT
@@ -1344,7 +1320,7 @@ class psyq::static_deque<template_value, template_max_size>::const_iterator:
     public: bool operator==(this_type const& in_right) const PSYQ_NOEXCEPT
     {
         return this->deque_ == in_right.deque_
-            && this->pointer_ == in_right.pointer_;
+            && this->offset_ == in_right.offset_;
     }
 
     public: bool operator!=(this_type const& in_right) const PSYQ_NOEXCEPT
@@ -1356,11 +1332,11 @@ class psyq::static_deque<template_value, template_max_size>::const_iterator:
     /// @name 加算
     //@{
     public: this_type operator+(
-        typename base_type::difference_type const in_offset)
+        typename base_type::difference_type const in_count)
     const PSYQ_NOEXCEPT
     {
         auto local_new(*this);
-        return local_new.operator+=(in_offset);
+        return local_new.operator+=(in_count);
     }
 
     public: this_type operator++(int) PSYQ_NOEXCEPT
@@ -1376,18 +1352,18 @@ class psyq::static_deque<template_value, template_max_size>::const_iterator:
     }
 
     public: this_type& operator+=(
-        typename base_type::difference_type const in_offset)
+        typename base_type::difference_type const in_count)
     PSYQ_NOEXCEPT
     {
         if (this->deque_ == nullptr)
         {
             PSYQ_ASSERT(false);
         }
-        else if (in_offset != 0)
+        else if (in_count != 0)
         {
-            this->pointer_ = in_offset < 0?
-                this->deque_->backward_pointer(this->pointer_, -in_offset):
-                this->deque_->forward_pointer(this->pointer_, in_offset);
+            this->offset_ = in_count < 0?
+                this->deque_->backward_offset(this->offset_, -in_count):
+                this->deque_->forward_offset(this->offset_, in_count);
         }
         return *this;
     }
@@ -1403,18 +1379,18 @@ class psyq::static_deque<template_value, template_max_size>::const_iterator:
         PSYQ_ASSERT(
             local_deque != nullptr && local_deque == in_right.deque_);
         auto const local_left_index(
-            local_deque->compute_index(this->pointer_));
+            local_deque->compute_index(this->offset_));
         auto const local_right_index(
-            local_deque->compute_index(in_right.pointer_));
+            local_deque->compute_index(in_right.offset_));
         return local_left_index - local_right_index;
     }
 
     public: this_type operator-(
-        typename base_type::difference_type const in_offset)
+        typename base_type::difference_type const in_count)
     PSYQ_NOEXCEPT
     {
         auto local_new(*this);
-        return local_new.operator-=(in_offset);
+        return local_new.operator-=(in_count);
     }
 
     public: this_type operator--(int) PSYQ_NOEXCEPT
@@ -1430,24 +1406,24 @@ class psyq::static_deque<template_value, template_max_size>::const_iterator:
     }
 
     public: this_type& operator-=(
-        typename base_type::difference_type const in_offset)
+        typename base_type::difference_type const in_count)
     PSYQ_NOEXCEPT
     {
-        return this->operator+=(-in_offset);
+        return this->operator+=(-in_count);
     }
     //@}
     //---------------------------------------------------------------------
     protected: const_iterator(
         static_deque const* const in_deque,
-        typename base_type::pointer const in_pointer)
+        typename this_type::size_type const in_offset)
     PSYQ_NOEXCEPT:
     deque_(in_deque),
-    pointer_(in_pointer)
+    offset_(in_offset)
     {}
 
     //---------------------------------------------------------------------
     private: static_deque const* deque_;
-    private: typename base_type::pointer pointer_;
+    private: typename this_type::size_type offset_;
 
 }; // class psyq::static_deque::const_iterator
 
@@ -1482,15 +1458,14 @@ class psyq::static_deque<template_value, template_max_size>::iterator:
 
     public: typename this_type::reference operator*() const PSYQ_NOEXCEPT
     {
-        return const_cast<typename this_type::reference>(
-            this->base_type::operator*());
+        return *(this->operator->());
     }
     //@}
     //---------------------------------------------------------------------
     protected: iterator(
         static_deque* const in_deque,
-        typename this_type::pointer const in_pointer)
-    PSYQ_NOEXCEPT: base_type(in_deque, in_pointer)
+        typename base_type::size_type const in_offset)
+    PSYQ_NOEXCEPT: base_type(in_deque, in_offset)
     {}
 
 }; // class psyq::static_deque::iterator
@@ -1510,11 +1485,11 @@ namespace psyq_test
         local_deque_a = local_deque_d;
         local_deque_a.push_front(10);
         local_deque_a.push_back(20);
-        local_deque_a.pop_front();
-        local_deque_a.pop_back();
         local_deque_a.insert(local_deque_a.end(), 10);
         local_deque_a.insert(
-            local_deque_a.begin(), local_deque_b.begin(), local_deque_b.end());
+            local_deque_a.begin(), local_deque_d.begin(), local_deque_d.end());
+        local_deque_a.pop_front();
+        local_deque_a.pop_back();
     }
 } // namespace psyq_test
 

@@ -403,8 +403,10 @@ class psyq::static_deque
     /** @brief コンテナの要素数を変更する。
         @param[in] in_size  コンテナの新たな要素数。
         @param[in] in_value コンテナの要素数を増やした場合の初期値。
+        @return true  成功。要素数を変更した。
+        @retval false 失敗。要素数を変更できなかった。
      */
-    public: void resize(
+    public: bool resize(
         typename this_type::size_type const in_size,
         typename this_type::value_type const& in_value = value_type())
     {
@@ -418,8 +420,10 @@ class psyq::static_deque
         }
         else if (local_old_size < in_size)
         {
-            this->insert(this->cend(), in_size - local_old_size, in_value);
+            return this->cend() != this->insert(
+                this->cend(), in_size - local_old_size, in_value);
         }
+        return true;
     }
     //@}
     //-------------------------------------------------------------------------

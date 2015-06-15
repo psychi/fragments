@@ -1411,7 +1411,9 @@ class psyq::static_deque<
     private: typedef const_iterator this_type;
     /// @brief this_type の基底型。
     public: typedef std::iterator<
-        std::random_access_iterator_tag, template_value const>
+        std::random_access_iterator_tag,
+        template_value const,
+        template_difference>
             base_type;
 
     //---------------------------------------------------------------------

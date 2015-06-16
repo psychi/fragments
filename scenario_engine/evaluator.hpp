@@ -236,30 +236,19 @@ class psyq::scenario_engine::evaluator
     {
         typedef state_comparison this_type;
 
-        /// @brief 比較演算子の種類。
-        enum operator_enum: std::uint8_t
-        {
-            operator_EQUAL,         ///< 等価演算子。
-            operator_NOT_EQUAL,     ///< 不等価演算子。
-            operator_LESS,          ///< 小なり演算子。
-            operator_LESS_EQUAL,    ///< 小なりイコール演算子。
-            operator_GREATER,       ///< 大なり演算子。
-            operator_GREATER_EQUAL, ///< 大なりイコール演算子。
-        };
-
         /** @brief 状態比較条件式の要素条件を構築する。
-            @param[in] in_key       this_type::key の初期値。
-            @param[in] in_operation this_type::operation の初期値。
-            @param[in] in_value     this_type::value の初期値。
+            @param[in] in_key        this_type::key の初期値。
+            @param[in] in_comparison this_type::comparison の初期値。
+            @param[in] in_value      this_type::value の初期値。
          */
         state_comparison(
             typename evaluator::reservoir::state_key in_key,
-            typename this_type::operator_enum const in_operation,
+            typename evaluator::reservoir::state_value::comparison_enum const in_comparison,
             typename evaluator::reservoir::state_value in_value)
         PSYQ_NOEXCEPT:
         value(std::move(in_value)),
         key(std::move(in_key)),
-        operation(in_operation)
+        comparison(in_comparison)
         {}
 
         /// @brief 比較の右辺値となる値。
@@ -267,7 +256,7 @@ class psyq::scenario_engine::evaluator
         /// @brief 比較の左辺値となる状態値の識別値。
         typename evaluator::reservoir::state_key key;
         /// @brief 比較演算子の種類。
-        typename this_type::operator_enum operation;
+        typename evaluator::reservoir::state_value::comparison_enum comparison;
 
     }; // struct state_comparison
 
@@ -300,44 +289,8 @@ class psyq::scenario_engine::evaluator
                 今のところ状態値と定数の比較しかできないが、
                 状態値と状態値の比較をできるようにしたい。
              */
-            auto const local_compare(
-                this->reservoir.get_value(in_state.key).compare(
-                    in_state.value));
-            if (local_compare
-                != evaluator::reservoir::state_value::compare_FAILED)
-            {
-                switch (in_state.operation)
-                {
-                    case evaluator::state_comparison::operator_EQUAL:
-                    return local_compare
-                        == evaluator::reservoir::state_value::compare_EQUAL;
-
-                    case evaluator::state_comparison::operator_NOT_EQUAL:
-                    return local_compare
-                        != evaluator::reservoir::state_value::compare_EQUAL;
-
-                    case evaluator::state_comparison::operator_LESS:
-                    return local_compare
-                        == evaluator::reservoir::state_value::compare_LESS;
-
-                    case evaluator::state_comparison::operator_LESS_EQUAL:
-                    return local_compare
-                        != evaluator::reservoir::state_value::compare_GREATER;
-
-                    case evaluator::state_comparison::operator_GREATER:
-                    return local_compare
-                        == evaluator::reservoir::state_value::compare_GREATER;
-
-                    case evaluator::state_comparison::operator_GREATER_EQUAL:
-                    return local_compare
-                        != evaluator::reservoir::state_value::compare_LESS;
-
-                    default:
-                    PSYQ_ASSERT(false);
-                    break;
-                }
-            }
-            return -1;
+            return this->reservoir.get_value(in_state.key).compare(
+                    in_state.comparison, in_state.value);
         }
 
         typename evaluator::reservoir const& reservoir;

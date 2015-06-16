@@ -76,7 +76,7 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 条件挙動チャンク。
-           条件式の評価が変化した際に呼び出す関数オブジェクトを所有する。
+           条件式の評価が変化した際に呼び出す条件挙動関数を所有する。
  */
 template<typename template_dispatcher>
 struct psyq::scenario_engine::behavior_chunk
@@ -84,7 +84,7 @@ struct psyq::scenario_engine::behavior_chunk
     /// @brief thisが指す値の型。
     private: typedef behavior_chunk this_type;
 
-    /// @brief 条件挙動関数オブジェクトを登録する条件挙動器を表す型。
+    /// @brief 条件挙動関数を登録する条件挙動器を表す型。
     public: typedef template_dispatcher dispatcher;
 
     /// @brief 条件挙動チャンクのコンテナを表す型。
@@ -123,28 +123,18 @@ struct psyq::scenario_engine::behavior_chunk
         return *this;
     }
     //@}
-    /** @brief 空の条件挙動チャンクを構築する。
-        @param[in] in_key       条件挙動チャンクの識別値。
-        @param[in] in_allocator メモリ割当子の初期値。
-     */
-    private: behavior_chunk(
-        typename this_type::key_type in_key,
-        typename this_type::dispatcher::allocator_type const& in_allocator)
-    :
-    functions(in_allocator),
-    key(std::move(in_key))
-    {}
-
     //-------------------------------------------------------------------------
-    /** @brief 条件挙動チャンクに関数オブジェクトを追加する。
+    /// @name 条件挙動関数
+    //@{
+    /** @brief 条件挙動チャンクに条件挙動関数を追加する。
         @param[in,out] io_chunks
-            関数オブジェクトを追加する条件挙動チャンクのコンテナ。
+            条件挙動関数を追加する条件挙動チャンクのコンテナ。
         @param[in] in_key
-            関数オブジェクトを追加する条件挙動チャンクの識別値。
+            条件挙動関数を追加する条件挙動チャンクの識別値。
         @param[in] in_function
-            条件挙動チャンクに追加する関数オブジェクトを指すスマートポインタ。
-        @retval true  成功。関数オブジェクトを追加した。
-        @retval false 失敗。関数オブジェクトを追加しなかった。
+            条件挙動チャンクに追加する条件挙動関数を指すスマートポインタ。
+        @retval true  成功。条件挙動関数を追加した。
+        @retval false 失敗。条件挙動関数を追加しなかった。
      */
     public: static bool add(
         typename this_type::vector& io_chunks,
@@ -156,21 +146,21 @@ struct psyq::scenario_engine::behavior_chunk
             return false;
         }
 
-        // 関数オブジェクトを条件挙動チャンクに追加する。
+        // 条件挙動関数を条件挙動チャンクに追加する。
         this_type::equip(io_chunks, in_key).functions.push_back(
             std::move(in_function));
         return true;
     }
 
-    /** @brief 条件挙動チャンクに関数オブジェクトを追加する。
+    /** @brief 条件挙動チャンクに条件挙動関数を追加する。
         @param[in,out] io_chunks
-            関数オブジェクトを追加する条件挙動チャンクのコンテナ。
+            条件挙動関数を追加する条件挙動チャンクのコンテナ。
         @param[in] in_key
-            関数オブジェクトを追加する条件挙動チャンクの識別値。
+            条件挙動関数を追加する条件挙動チャンクの識別値。
         @param[in] in_functions
-            条件挙動チャンクに追加する関数オブジェクトの、
+            条件挙動チャンクに追加する条件挙動関数の、
             スマートポインタのコンテナ。
-        @return 追加した関数オブジェクトの数。
+        @return 追加した条件挙動関数の数。
      */
     public: template<typename template_function_container>
     static std::size_t add(
@@ -178,7 +168,7 @@ struct psyq::scenario_engine::behavior_chunk
         typename this_type::key_type const& in_key,
         template_function_container in_functions)
     {
-        // 関数オブジェクトを条件挙動チャンクに追加する。
+        // 条件挙動関数を条件挙動チャンクに追加する。
         auto& local_chunk_functions(
             this_type::equip(io_chunks, in_key).functions);
         local_chunk_functions.reserve(
@@ -224,7 +214,7 @@ struct psyq::scenario_engine::behavior_chunk
         typename this_type::vector& io_chunks,
         typename this_type::key_type const& in_key)
     {
-        // 関数オブジェクトを追加する条件挙動チャンクを用意する。
+        // 条件挙動関数を追加する条件挙動チャンクを用意する。
         auto const local_iterator(
             this_type::key_less::find_iterator(io_chunks, in_key));
         return local_iterator != io_chunks.end()?
@@ -232,9 +222,22 @@ struct psyq::scenario_engine::behavior_chunk
             *io_chunks.insert(
                 local_iterator, this_type(in_key, io_chunks.get_allocator()));
     }
+    //@}
+    //-------------------------------------------------------------------------
+    /** @brief 空の条件挙動チャンクを構築する。
+        @param[in] in_key       条件挙動チャンクの識別値。
+        @param[in] in_allocator メモリ割当子の初期値。
+     */
+    private: behavior_chunk(
+        typename this_type::key_type in_key,
+        typename this_type::dispatcher::allocator_type const& in_allocator)
+    :
+    functions(in_allocator),
+    key(std::move(in_key))
+    {}
 
     //-------------------------------------------------------------------------
-    /// @brief 条件挙動関数オブジェクトを所有するコンテナ。
+    /// @brief 条件挙動関数のコンテナ。
     public: typename this_type::dispatcher::function_shared_ptr_vector functions;
     /// @brief 条件挙動チャンクの識別値。
     public: typename this_type::key_type key;
@@ -242,7 +245,7 @@ struct psyq::scenario_engine::behavior_chunk
 }; // struct psyq::scenario_engine::behavior_chunk
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 文字列表から条件挙動関数オブジェクトを構築する関数オブジェクト。
+/** @brief 文字列表から条件挙動関数を構築する関数オブジェクト。
 
     @tparam template_dispatcher @copydoc dispatcher
     @tparam template_string     文字列表で使う文字列の型。
@@ -252,7 +255,7 @@ struct psyq::scenario_engine::behavior_builder
 {
     private: typedef behavior_builder this_type;
 
-    /// @brief 条件挙動関数オブジェクトの登録先となる条件挙動器を表す型。
+    /// @brief 条件挙動関数の登録先となる条件挙動器を表す型。
     public: typedef template_dispatcher dispatcher;
 
     /// @brief 解析する文字列表の型。
@@ -302,11 +305,11 @@ struct psyq::scenario_engine::behavior_builder
     {}
 
     /** @brief 文字列表を解析して状態値を構築し、状態貯蔵器へ登録する。
-        @param[in,out] io_dispatcher 生成した条件挙動関数オブジェクトを登録する条件挙動器。
+        @param[in,out] io_dispatcher 生成した条件挙動関数を登録する条件挙動器。
         @param[in,out] io_hasher     文字列からキーへ変換するハッシュ関数オブジェクト。
         @param[in] in_evaluator      条件挙動関数から参照する条件評価器。
         @param[in] in_reservoir      条件挙動関数から参照する状態貯蔵器。
-        @return 生成した条件挙動関数オブジェクトのコンテナ。
+        @return 生成した条件挙動関数のコンテナ。
      */
     public: template<typename template_hasher, typename template_evaluator>
     typename this_type::dispatcher::function_shared_ptr_vector operator()(
@@ -324,13 +327,13 @@ struct psyq::scenario_engine::behavior_builder
             this->string_table_);
     }
 
-    /** @brief 文字列表から条件挙動関数オブジェクトを生成し、条件評価器へ登録する。
-        @param[in,out] io_dispatcher 生成した条件挙動関数オブジェクトを登録する条件挙動器。
+    /** @brief 文字列表から条件挙動関数を生成し、条件評価器へ登録する。
+        @param[in,out] io_dispatcher 生成した条件挙動関数を登録する条件挙動器。
         @param[in,out] io_hasher     文字列からキーへ変換するハッシュ関数オブジェクト。
         @param[in] in_evaluator      条件挙動関数から参照する条件評価器。
         @param[in] in_reservoir      条件挙動関数から参照する状態貯蔵器。
         @param[in] in_table          条件挙動の文字列表。
-        @return 生成した条件挙動関数オブジェクトのコンテナ。
+        @return 生成した条件挙動関数のコンテナ。
      */
     public: template<typename template_hasher, typename template_evaluator>
     static typename this_type::dispatcher::function_shared_ptr_vector build(
@@ -351,7 +354,7 @@ struct psyq::scenario_engine::behavior_builder
             return local_functions;
         }
 
-        // 文字列表を解析し、条件挙動関数オブジェクトの一覧を構築する。
+        // 文字列表を解析し、条件挙動関数の一覧を構築する。
         auto const local_row_count(in_table.get_row_count());
         local_functions.reserve(local_row_count);
         for (
@@ -378,7 +381,7 @@ struct psyq::scenario_engine::behavior_builder
             // 条件評価器に条件式があることを確認する。
             PSYQ_ASSERT(in_evaluator._find_expression(local_key) != nullptr);
 
-            // 条件挙動関数オブジェクトを生成し、条件監視器に登録する。
+            // 条件挙動関数を生成し、条件監視器に登録する。
             auto local_function(
                 this_type::make_function(
                     io_hasher,
@@ -395,7 +398,7 @@ struct psyq::scenario_engine::behavior_builder
             }
             else
             {
-                // 条件挙動関数オブジェクトの登録に失敗した。
+                // 条件挙動関数の登録に失敗した。
                 PSYQ_ASSERT(false);
             }
         }
@@ -404,7 +407,7 @@ struct psyq::scenario_engine::behavior_builder
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列表から条件挙動関数オブジェクトを生成する。
+    /** @brief 文字列表から条件挙動関数を生成する。
         @param[in,out] io_hasher 文字列からキーへ変換するハッシュ関数オブジェクト。
         @param[in] in_evaluator  条件挙動関数から参照する条件評価器。
         @param[in] in_reservoir  条件挙動関数から参照する状態貯蔵器。
@@ -492,7 +495,7 @@ struct psyq::scenario_engine::behavior_builder
         }
 
         // 演算子を取得する。
-        typename template_reservoir::state_value::operator_enum local_operator;
+        typename template_reservoir::state_value::operation_enum local_operator;
         auto const local_get_operator(
             this_type::get_operator(
                 local_operator,
@@ -530,62 +533,62 @@ struct psyq::scenario_engine::behavior_builder
 
     private: template<typename template_reservoir>
     static bool get_operator(
-        typename template_reservoir::state_value::operator_enum& out_operator,
+        typename template_reservoir::state_value::operation_enum& out_operator,
         template_reservoir const&,
         typename this_type::string_table::string_view const& in_string)
     {
         if (in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_COPY)
         {
-            out_operator = template_reservoir::state_value::operator_COPY;
+            out_operator = template_reservoir::state_value::operation_COPY;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_ADD)
         {
-            out_operator = template_reservoir::state_value::operator_ADD;
+            out_operator = template_reservoir::state_value::operation_ADD;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_SUB)
         {
-            out_operator = template_reservoir::state_value::operator_SUB;
+            out_operator = template_reservoir::state_value::operation_SUB;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_MULT)
         {
-            out_operator = template_reservoir::state_value::operator_MULT;
+            out_operator = template_reservoir::state_value::operation_MULT;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_DIV)
         {
-            out_operator = template_reservoir::state_value::operator_DIV;
+            out_operator = template_reservoir::state_value::operation_DIV;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_MOD)
         {
-            out_operator = template_reservoir::state_value::operator_MOD;
+            out_operator = template_reservoir::state_value::operation_MOD;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_OR)
         {
-            out_operator = template_reservoir::state_value::operator_OR;
+            out_operator = template_reservoir::state_value::operation_OR;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_XOR)
         {
-            out_operator = template_reservoir::state_value::operator_XOR;
+            out_operator = template_reservoir::state_value::operation_XOR;
         }
         else if (
             in_string ==
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_AND)
         {
-            out_operator = template_reservoir::state_value::operator_AND;
+            out_operator = template_reservoir::state_value::operation_AND;
         }
         else
         {

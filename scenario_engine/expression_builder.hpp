@@ -147,7 +147,8 @@ class psyq::scenario_engine::expression_builder
         typename template_evaluator::sub_expression_vector sub_expressions;
         typename template_evaluator::state_transition_vector state_transitions;
         typename template_evaluator::state_comparison_vector state_comparisons;
-    };
+
+    }; // struct workspace
 
     //-------------------------------------------------------------------------
     /** @brief 文字列表から条件式を構築する関数オブジェクトを構築する。
@@ -580,11 +581,11 @@ class psyq::scenario_engine::expression_builder
         }
 
         // 比較演算子を取得する。
-        typename template_evaluator::state_comparison::operator_enum
-            local_state_operation;
+        typedef typename template_evaluator::reservoir::state_value state_value;
+        typename state_value::comparison_enum local_state_comparison;
         auto const local_get_comparison_operator(
-            this_type::get_comparison_operator<template_evaluator>(
-                local_state_operation,
+            this_type::get_comparison_operator<state_value>(
+                local_state_comparison,
                 in_table.find_body_cell(
                     in_row_index, local_element_column + 1)));
         if (!local_get_comparison_operator)
@@ -608,56 +609,50 @@ class psyq::scenario_engine::expression_builder
         // 要素条件を追加する。
         io_elements.emplace_back(
             std::move(local_state_key),
-            local_state_operation,
+            local_state_comparison,
             std::move(local_state_value));
         return true;
     }
 
-    private: template<typename template_evaluator>
+    private: template<typename template_state_value>
     static bool get_comparison_operator(
-        typename template_evaluator::state_comparison::operator_enum& out_operator,
+        typename template_state_value::comparison_enum& out_comparison,
         typename this_type::string_table::string_view const& in_string)
     {
         if (in_string
             == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_EQUAL)
         {
-            out_operator =
-                template_evaluator::state_comparison::operator_EQUAL;
+            out_comparison = template_state_value::comparison_EQUAL;
         }
         else if (
             in_string
             == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_NOT_EQUAL)
         {
-            out_operator =
-                template_evaluator::state_comparison::operator_NOT_EQUAL;
+            out_comparison = template_state_value::comparison_NOT_EQUAL;
         }
         else if (
             in_string
             == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_LESS)
         {
-            out_operator =
-                template_evaluator::state_comparison::operator_LESS;
+            out_comparison = template_state_value::comparison_LESS;
         }
         else if (
             in_string
             == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_LESS_EQUAL)
         {
-            out_operator =
-                template_evaluator::state_comparison::operator_LESS_EQUAL;
+            out_comparison = template_state_value::comparison_LESS_EQUAL;
         }
         else if (
             in_string
             == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_GREATER)
         {
-            out_operator =
-                template_evaluator::state_comparison::operator_GREATER;
+            out_comparison = template_state_value::comparison_GREATER;
         }
         else if (
             in_string
             == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_CSV_OPERATOR_GREATER_EQUAL)
         {
-            out_operator =
-                template_evaluator::state_comparison::operator_GREATER_EQUAL;
+            out_comparison = template_state_value::comparison_GREATER_EQUAL;
         }
         else
         {

@@ -1156,7 +1156,7 @@ class psyq::scenario_engine::dispatcher
         @param[in,out] io_reservoir 関数から参照する状態貯蔵器。
         @param[in] in_condition     関数の起動条件。
         @param[in] in_state_key     操作する状態値の識別値。
-        @param[in] in_operator      状態値の操作で使う演算子。
+        @param[in] in_operation     状態値の操作で使う演算子。
         @param[in] in_value         状態値の操作で使う演算値。
         @param[in] in_allocator     生成に使うメモリ割当子。
         @return 生成した条件挙動関数オブジェクト。
@@ -1167,7 +1167,7 @@ class psyq::scenario_engine::dispatcher
         template_reservoir& io_reservoir,
         bool const in_condition,
         typename template_reservoir::state_key const& in_state_key,
-        typename template_reservoir::state_value::operator_enum const in_operator,
+        typename template_reservoir::state_value::operation_enum const in_operation,
         typename template_reservoir::state_value const& in_value,
         typename this_type::allocator_type const& in_allocator)
     {
@@ -1187,7 +1187,7 @@ class psyq::scenario_engine::dispatcher
                         && in_condition == (0 < in_evaluation))
                     {
                         this_type::operate_state(
-                            io_reservoir, in_state_key, in_operator, in_value);
+                            io_reservoir, in_state_key, in_operation, in_value);
                     }
                 }));
     }
@@ -1196,7 +1196,7 @@ class psyq::scenario_engine::dispatcher
     static bool operate_state(
         template_reservoir& io_reservoir,
         typename template_reservoir::state_key const& in_state_key,
-        typename template_reservoir::state_value::operator_enum const in_operator,
+        typename template_reservoir::state_value::operation_enum const in_operation,
         typename template_reservoir::state_value const& in_value)
     {
         /** @todo
@@ -1205,7 +1205,7 @@ class psyq::scenario_engine::dispatcher
          */
         auto local_state(io_reservoir.get_value(in_state_key));
         auto const local_set_value(
-            local_state.compute(in_operator, in_value)
+            local_state.compute(in_operation, in_value)
             && io_reservoir.set_value(in_state_key, local_state));
         PSYQ_ASSERT(local_set_value);
         return local_set_value;

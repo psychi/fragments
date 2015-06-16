@@ -144,7 +144,7 @@ class psyq::static_deque
             ::type
                 storage;
 
-    /// @brief デバッグ時にメモリ領域の内容を見るために使う。
+    /// @brief デバッグ時に、コンテナの内容を見るために使う。
     private: typedef template_value array_view[template_max_size];
 
     //-------------------------------------------------------------------------
@@ -402,28 +402,36 @@ class psyq::static_deque
 
     /** @brief コンテナの要素数を変更する。
         @param[in] in_size  コンテナの新たな要素数。
-        @param[in] in_value コンテナの要素数を増やした場合の初期値。
-        @return true  成功。要素数を変更した。
+        @retval true  成功。要素数を変更した。
+        @retval false 失敗。要素数を変更できなかった。
+     */
+    public: bool resize(
+        typename this_type::size_type const in_size)
+    {
+        return this->resize_back(
+            in_size,
+            [](typename this_type::pointer const in_memory)
+            {
+                new(in_memory) value_type;
+            });
+    }
+
+    /** @brief コンテナの要素数を変更する。
+        @param[in] in_size  コンテナの新たな要素数。
+        @param[in] in_value コンテナの要素数を増やす場合の要素の初期値。
+        @retval true  成功。
         @retval false 失敗。要素数を変更できなかった。
      */
     public: bool resize(
         typename this_type::size_type const in_size,
-        typename this_type::value_type const& in_value = value_type())
+        typename this_type::value_type const& in_value)
     {
-        auto const local_old_size(this->size());
-        if (in_size < local_old_size)
-        {
-            auto const local_new_end(
-                this->forward_offset(this->begin_, in_size));
-            this->destruct_element(local_new_end, this->get_end_offset());
-            this->end_ = local_new_end;
-        }
-        else if (local_old_size < in_size)
-        {
-            return this->cend() != this->insert(
-                this->cend(), in_size - local_old_size, in_value);
-        }
-        return true;
+        return this->resize_back(
+            in_size,
+            [&](typename this_type::pointer const in_memory)
+            {
+                new(in_memory) value_type(in_value);
+            });
     }
     //@}
     //-------------------------------------------------------------------------
@@ -801,9 +809,6 @@ class psyq::static_deque
     public: typename this_type::iterator erase(
         typename this_type::const_iterator const& in_position)
     {
-#if 1
-        return this->erase(in_position, in_position + 1);
-#else
         if (this_type::MAX_SIZE <= in_position.offset_
             || in_position.deque_ != this)
         {
@@ -811,36 +816,21 @@ class psyq::static_deque
             PSYQ_ASSERT(in_position.deque_ == this);
             return this->end();
         }
-        if (in_position.offset_ == this->begin_)
+        if (this->begin_ == in_position.offset_)
         {
             // 先頭要素を削除する。
             this->pop_front();
             return this->begin();
         }
-        auto const local_index(this->compute_index(in_position.offset_));
-        auto const local_size(this->size());
-        if (local_index + 1 < local_size)
-        {
-            // 先頭と末尾の間にある要素を削除する。w
-            return this->erase_element(
-                local_size,
-                in_position.offset_,
-                local_index,
-                this->forward_offset(in_position.offset_, 1),
-                local_index + 1);
-        }
-        if (local_index < local_size)
+        auto const local_last(this->forward_offset(in_position.offset_, 1));
+        if (this->end_ == local_last)
         {
             // 末尾要素を削除する。
             this->pop_back();
+            return this->end();
         }
-        else
-        {
-            // 範囲外なので削除しない。
-            PSYQ_ASSERT(false);
-        }
-        return this->end();
-#endif // 1
+        // 先頭と末尾の間にある要素を削除する。
+        return this->erase_element(in_position.offset_, local_last);
     }
 
     /** @brief コンテナから要素を削除する。
@@ -852,49 +842,39 @@ class psyq::static_deque
         typename this_type::const_iterator const& in_first,
         typename this_type::const_iterator const& in_last)
     {
-        auto const local_size(this->size());
-        auto const local_first_index(this->compute_index(in_first.offset_));
-        auto const local_last_index(this->compute_index(in_last.offset_));
-        PSYQ_ASSERT(
-            in_last.offset_ == this_type::MAX_SIZE
-            || local_last_index < local_size);
-        if (local_last_index <= local_first_index
-            || local_size <= local_first_index)
+        if (in_first.deque_ != this
+            || in_last.deque_ != this
+            || !this->is_contained_range(in_first.offset_, in_last.offset_))
         {
-            // コンテナの範囲外だったので削除しない。
-            PSYQ_ASSERT(
-                local_first_index <= local_last_index
-                && local_last_index <= local_size);
+            // コンテナの範囲外なので削除しない。
+            PSYQ_ASSERT(false);
             return this->end();
         }
-        else if (this_type::MAX_SIZE <= in_last.offset_)
+        if (this_type::MAX_SIZE <= in_last.offset_)
         {
-            // 末尾位置に接する範囲を削除する。
-            this->destruct_element(in_first.offset_, this->get_end_offset());
-            this->end_ = in_first.offset_;
-            return this->end();
-        }
-        else if (in_first.offset_ == this->begin_)
-        {
-            // 先頭位置に接する範囲を削除する。
-            this->destruct_element(this->begin_, in_last.offset_);
-            if (this_type::MAX_SIZE <= this->end_)
+            if (in_first.offset_ < this_type::MAX_SIZE)
             {
-                this->end_ = this->begin_;
+                // 末尾位置に接する範囲を削除する。
+                this->destruct_element(
+                    in_first.offset_, this->get_end_offset());
+                this->end_ = in_first.offset_;
             }
-            this->begin_ = in_last.offset_;
-            return typename this_type::iterator(this, in_last.offset_);
+            return this->end();
         }
-        else
+        if (in_first.offset_ != this->begin_)
         {
             // 先頭と末尾の間にある要素を削除する。
-            return this->erase_element(
-                local_size,
-                in_first.offset_,
-                local_first_index,
-                in_last.offset_,
-                local_last_index);
+            return this->erase_element(in_first.offset_, in_last.offset_);
         }
+
+        // 先頭位置に接する範囲を削除する。
+        this->destruct_element(this->begin_, in_last.offset_);
+        if (this_type::MAX_SIZE <= this->end_)
+        {
+            this->end_ = this->begin_;
+        }
+        this->begin_ = in_last.offset_;
+        return this->begin();
     }
 
     /** @brief コンテナの要素を全て削除する。
@@ -1030,7 +1010,7 @@ class psyq::static_deque
     /** @brief コンテナに含まれている値か判定する。
         @param[in] in_value 判定する値。
         @retval true  コンテナに含まれてる値だった。
-        @retval false コンテナに含まれない値だった。
+        @retval false コンテナに含まれてない値だった。
      */
     private: bool is_contained(typename this_type::const_reference in_value)
     const PSYQ_NOEXCEPT
@@ -1041,9 +1021,9 @@ class psyq::static_deque
 
     /** @brief コンテナに含まれている値か判定する。
         @param[in] in_iterator 基準となる反復子。
-        @param[in] in_offset   判定する値の相対位置。
+        @param[in] in_offset   判定する値の反復子からの相対位置。
         @retval true  コンテナに含まれてる値だった。
-        @retval false コンテナに含まれない値だった。
+        @retval false コンテナに含まれてない値だった。
      */
     private: template<typename template_iterator>
     bool is_contained(
@@ -1055,7 +1035,76 @@ class psyq::static_deque
         return this->is_contained(*in_iterator);
     }
 
+    /** @brief コンテナに含まれている範囲か判定する。
+        @param[in] in_first 判定する範囲の先頭位置。
+        @param[in] in_last  判定する範囲の末尾位置。
+        @retval true  コンテナに含まれてる範囲だった。
+        @retval false コンテナに含まれてない範囲だった。
+     */
+    private: bool is_contained_range(
+        typename this_type::size_type const in_first,
+        typename this_type::size_type const in_last)
+    const PSYQ_NOEXCEPT
+    {
+        auto const local_last(this->compute_index(in_last));
+        return this->compute_index(in_first) <= local_last
+            && local_last <= this->size();
+    }
+
     //-------------------------------------------------------------------------
+    /** @brief コンテナの要素数を変更する。
+
+        要素数が変化する場合は、後側の要素を操作する。
+
+        @param[in] in_size コンテナの新たな要素数。
+        @param[in] in_constructor
+            コンテナの要素数を増やした場合に、要素を構築する関数オブジェクト。
+        @retval true  成功。
+        @retval false 失敗。要素数を変更できなかった。
+     */
+    private: template<typename template_constructor>
+    bool resize_back(
+        typename this_type::size_type const in_size,
+        template_constructor const& in_constructor)
+    {
+        auto const local_old_size(this->size());
+        if (local_old_size < in_size)
+        {
+            // コンテナの末尾に要素を挿入する。
+            auto const local_position(
+                this->allocate_back(in_size - local_old_size));
+            if (this_type::MAX_SIZE <= local_position)
+            {
+                return false;
+            }
+            for (
+                auto i(local_position);
+                i != this->end_;
+                i = this->forward_offset(i, 1))
+            {
+                in_constructor(this->get_pointer(i));
+            }
+        }
+        else if (in_size < local_old_size)
+        {
+            // コンテナの末尾から要素を削除する。
+            auto const local_new_end(
+                this->forward_offset(this->begin_, in_size));
+            this->destruct_element(local_new_end, this->get_end_offset());
+            this->end_ = local_new_end;
+        }
+        return true;
+    }
+
+    /** @brief コンテナに要素を挿入する。
+        @param[in] in_position    要素を挿入するオフセット位置。
+        @param[in] in_size        挿入する要素の数。
+        @param[in] in_first       挿入する値の先頭位置。
+        @param[in] in_last        挿入する値の末尾位置。
+        @param[in] in_constructor 要素を構築する関数オブジェクト。
+        @retval !=this->end() 挿入した要素の先頭を指す反復子。
+        @retval ==this->end() 失敗。要素を挿入できなかった。
+     */
     private: template<typename template_iterator, typename template_constructor>
     typename this_type::iterator insert_construct(
         typename this_type::size_type const in_position,
@@ -1205,6 +1254,12 @@ class psyq::static_deque
         return local_last_end;
     }
 
+    /** @brief コンテナの要素を前から順に移動する。
+        @param[in] in_source_first 移動元の範囲の先頭位置。
+        @param[in] in_source_last  移動元の範囲の末尾位置。
+        @param[in] in_target_first 移動先の範囲の先頭位置。
+        @return 移動先の範囲の末尾位置。
+     */
     private: typename this_type::size_type move_forward(
         typename this_type::size_type const in_source_first,
         typename this_type::size_type const in_source_last,
@@ -1224,6 +1279,12 @@ class psyq::static_deque
         return local_target;
     }
 
+    /** @brief コンテナの要素を後ろから順に移動する。
+        @param[in] in_source_first 移動元の範囲の先頭位置。
+        @param[in] in_source_last  移動元の範囲の末尾位置。
+        @param[in] in_target_last  移動先の範囲の末尾位置。
+        @return 移動先の範囲の先頭位置。
+     */
     private: typename this_type::size_type move_backward(
         typename this_type::size_type const in_source_first,
         typename this_type::size_type const in_source_last,
@@ -1243,50 +1304,43 @@ class psyq::static_deque
         return local_target;
     }
 
+    /** @brief コンテナから要素を削除する。
+        @param[in] in_first 削除する範囲の先頭位置。
+        @param[in] in_last  削除する範囲の末尾位置。
+        @return 削除した要素の次を指す反復子。
+     */
     private: typename this_type::iterator erase_element(
-         typename this_type::size_type const in_size,
-         typename this_type::size_type const in_first_offset,
-         typename this_type::size_type const in_first_index,
-         typename this_type::size_type const in_last_offset,
-         typename this_type::size_type const in_last_index)
+         typename this_type::size_type const in_first,
+         typename this_type::size_type const in_last)
     {
-        PSYQ_ASSERT(
-            in_size == this->size()
-            && 0 < in_first_index
-            && in_last_index < in_size
-            && in_first_index < in_last_index
-            && in_first_index == this->compute_index(in_first_offset)
-            && in_last_index == this->compute_index(in_last_offset));
-
-        this->destruct_element(in_first_offset, in_last_offset);
-        if (in_first_index + in_last_index < in_size)
+        this->destruct_element(in_first, in_last);
+        if (this->compute_index(in_first) * 2 < this->size())
         {
             // コンテナ前側の要素を後へ移動する。
             this->begin_ = this->move_backward(
-                this->begin_, in_first_offset, in_last_offset);
-            return typename this_type::iterator(this, in_last_offset);
+                this->begin_, in_first, in_last);
+            return typename this_type::iterator(this, in_last);
         }
         else
         {
             // コンテナ後側の要素を前へ移動する。
             this->end_ = this->move_forward(
-                in_last_offset, this->get_end_offset(), in_first_offset);
-            return typename this_type::iterator(this, in_first_offset);
+                in_last, this->get_end_offset(), in_first);
+            return typename this_type::iterator(this, in_first);
         }
     }
 
+    /** @brief コンテナの要素を解体する。
+        @param[in] in_first 解体する範囲の先頭位置。
+        @param[in] in_last  解体する範囲の末尾位置。
+     */
     private: void destruct_element(
         typename this_type::size_type const in_first,
         typename this_type::size_type const in_last)
     const
     {
-        PSYQ_ASSERT(
-            0 <= in_first
-            && in_first < this_type::MAX_SIZE
-            && 0 <= in_last
-            && in_last < this_type::MAX_SIZE);
-
         // 末尾から逆順に要素を解体する。
+        PSYQ_ASSERT(this->is_contained_range(in_first, in_last));
         for (auto i(in_last);;)
         {
             i = this->backward_offset(i, 1);
@@ -1364,19 +1418,23 @@ class psyq::static_deque
         }
     }
 
+    /** @brief コンテナの範囲を初期化する。
+        @param[in] in_size コンテナに持たせる要素の数。
+        @return コンテナ末尾位置となるオフセット値。
+     */
     private: typename this_type::size_type initialize_range(
-        typename this_type::size_type const in_count)
+        typename this_type::size_type const in_size)
     {
         typename this_type::size_type local_end(0);
         this->begin_ = local_end;
-        if (in_count < this_type::MAX_SIZE)
+        if (in_size < this_type::MAX_SIZE)
         {
-            local_end += in_count;
+            local_end += in_size;
             this->end_ = local_end;
         }
         else
         {
-            PSYQ_ASSERT(in_count <= this_type::MAX_SIZE);
+            PSYQ_ASSERT(in_size<= this_type::MAX_SIZE);
             local_end += this_type::MAX_SIZE;
             this->end_ = this_type::MAX_SIZE;
         }
@@ -1392,6 +1450,7 @@ class psyq::static_deque
     private: typename this_type::size_type end_;
 
 #ifndef PSYQ_STATIC_DEQUE_NO_ARRAY_VIEW
+    /// @copydoc array_view
     private: typename this_type::array_view& array_view_;
 #endif // !defined(PSYQ_STATIC_DEQUE_NO_ARRAY_VIEW)
 
@@ -1627,6 +1686,7 @@ namespace psyq_test
             local_deque_d.begin() + 1,
             local_deque_d.begin(),
             local_deque_d.end());
+        local_deque_d.resize(local_deque_d.max_size(), 5);
     }
 } // namespace psyq_test
 

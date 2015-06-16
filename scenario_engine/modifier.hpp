@@ -32,7 +32,7 @@ namespace psyq
     このため、1つの状態値に対してフレーム毎に this_type::accumulate
     を呼び出すと、状態変更の予約がどんどん蓄積する危険があることに注意。
     1つの状態値に対してフレーム毎に状態変更する場合は、
-    psyq::scenario_engine::reservoir で直接状態変更するほうが良い。
+    psyq::scenario_engine::reservoir::set_value で直接状態変更するほうが良い。
  */
 template<
     typename template_reservoir = psyq::scenario_engine::reservoir<>,
@@ -237,7 +237,6 @@ class psyq::scenario_engine::modifier
         this->accumulated_states_.swap(this->pass_states_);
     }
     //@}
-
     //-------------------------------------------------------------------------
     /// @brief 予約された状態変更のコンテナ。
     private: typename this_type::state_vector accumulated_states_;

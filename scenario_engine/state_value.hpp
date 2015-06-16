@@ -386,13 +386,13 @@ class psyq::scenario_engine::_private::state_value
         @retval 負 比較演算に失敗した。
      */
     public: std::int8_t compare(
-        typename this_type::comparison_enum const in_comparision,
+        typename this_type::comparison_enum const in_comparison,
         this_type const& in_right)
     {
         auto const local_magnitude(this->compare(in_right));
         if (local_magnitude != this_type::magnitude_NONE)
         {
-            switch (in_comparision)
+            switch (in_comparison)
             {
                 case this_type::comparison_EQUAL:
                 return local_magnitude == this_type::magnitude_EQUAL;

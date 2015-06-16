@@ -173,6 +173,7 @@ class psyq::scenario_engine::state_builder
         return local_register_count;
     }
 
+    //-------------------------------------------------------------------------
     /** @brief 文字列表を解析して状態値を構築し、状態貯蔵器へ登録する。
         @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
         @param[in,out] io_hasher    文字列からハッシュ値を作る関数オブジェクト。

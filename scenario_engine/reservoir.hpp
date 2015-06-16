@@ -91,10 +91,10 @@ class psyq::scenario_engine::reservoir
         float_union;
 
     //-------------------------------------------------------------------------
-    /// @brief ビット列ブロックを表す型。
+    /// @brief 状態値ビット列ブロックを表す型。
     private: typedef std::uint64_t block_type;
 
-    /// @brief ビット列ブロックを格納するコンテナ。
+    /// @brief 状態値ビット列ブロックを格納するコンテナ。
     public: typedef std::vector<
          typename this_type::block_type,
          typename this_type::allocator_type>
@@ -104,7 +104,7 @@ class psyq::scenario_engine::reservoir
     {
         /// @brief 1バイトあたりのビット数。
         BITS_PER_BYTE = 8,
-        /// @brief ビット列ブロックのビット数。
+        /// @brief 状態値ビット列ブロックのビット数。
         BLOCK_SIZE =
             sizeof(typename this_type::block_type) * this_type::BITS_PER_BYTE,
         /// @brief 浮動小数点数型のビット数。
@@ -144,55 +144,7 @@ class psyq::scenario_engine::reservoir
          typename this_type::field_type, typename this_type::allocator_type>
             empty_field_vector;
 
-    /// @brief 空きビット領域を比較する関数オブジェクト。
-    private: struct empty_field_less
-    {
-        bool operator()(
-            typename reservoir::field_type const in_left,
-            typename reservoir::field_type const in_right)
-        const PSYQ_NOEXCEPT
-        {
-            // ビット領域のビット数で比較する。
-            auto const local_left_size(
-                reservoir::get_empty_field_size(in_left));
-            auto const local_right_size(
-                reservoir::get_empty_field_size(in_right));
-            if (local_left_size != local_right_size)
-            {
-                return local_left_size < local_right_size;
-            }
-
-            // ビット領域のビット位置で比較する。
-            auto const local_left_position(
-                reservoir::get_field_position(in_left));
-            auto const local_right_position(
-                reservoir::get_field_position(in_right));
-            return local_left_position < local_right_position;
-        }
-
-        bool operator()(
-            typename reservoir::field_type const in_left,
-            typename reservoir::size_type const in_right)
-        const PSYQ_NOEXCEPT
-        {
-            // ビット領域のビット数で比較する。
-            auto const local_left_size(
-                reservoir::get_empty_field_size(in_left));
-            return local_left_size < in_right;
-        }
-
-        bool operator()(
-            typename reservoir::size_type const in_left,
-            typename reservoir::field_type const in_right)
-        const PSYQ_NOEXCEPT
-        {
-            // ビット領域のビット数で比較する。
-            auto const local_right_size(
-                reservoir::get_empty_field_size(in_right));
-            return in_left < local_right_size;
-        }
-
-    }; // struct empty_field_less
+    private: struct empty_field_less;
 
     //-------------------------------------------------------------------------
     /// @brief 状態値。
@@ -200,39 +152,14 @@ class psyq::scenario_engine::reservoir
         typename this_type::block_type, template_float>
             state_value;
 
-    /// @brief 状態値の登記。
-    private: struct state_registry
-    {
-        /** @brief 状態値の構成を取得する。
-            @return 状態値の構成。
-         */
-        typename reservoir::format_type get_format() const PSYQ_NOEXCEPT
-        {
-            auto const local_mod_size(
-                reservoir::field_SIZE_BACK - reservoir::field_SIZE_FRONT);
-            auto const local_minus(
-                1 & static_cast<typename reservoir::format_type>(
-                    this->field >> reservoir::field_SIZE_BACK));
-            return (-local_minus << local_mod_size) |
-                static_cast<typename reservoir::format_type>(
-                    reservoir::field_SIZE_MASK & (
-                        this->field >> reservoir::field_SIZE_FRONT));
-        }
-
-        /// @brief 状態値が格納されているビット列チャンクの識別値。
-        typename reservoir::chunk_key chunk;
-        /// @brief 状態値に対応する識別値。
-        typename reservoir::state_key key;
-        /// @brief 状態値が格納されているビット領域。
-        typename reservoir::field_type field;
-
-    }; // struct state_registry
+    private: struct state_registry;
 
     /// @brief 状態値登記のコンテナ。
     private: typedef std::vector<
         typename this_type::state_registry, typename this_type::allocator_type>
             state_vector;
 
+    /// @brief 状態値登記ポインタのコンテナ。
     private: typedef std::vector<
         typename this_type::state_registry const*,
         typename this_type::allocator_type>
@@ -244,59 +171,9 @@ class psyq::scenario_engine::reservoir
              state_key_less;
 
     //-------------------------------------------------------------------------
-    /// @brief 状態値を格納するビット列のチャンク。
-    private: struct chunk
-    {
-        typedef chunk this_type;
+    private: struct chunk;
 
-        chunk(
-            typename reservoir::chunk_key in_key,
-            typename reservoir::allocator_type const& in_allocator)
-        :
-        blocks(in_allocator),
-        empty_fields(in_allocator),
-        key(std::move(in_key))
-        {}
-
-        /** @brief ムーブ構築子。
-            @param[in,out] io_source ムーブ元となるインスタンス。
-         */
-        chunk(this_type&& io_source):
-        blocks(std::move(io_source.blocks)),
-        empty_fields(std::move(io_source.empty_fields)),
-        key(std::move(io_source.key))
-        {
-            io_source.blocks.clear();
-            io_source.empty_fields.clear();
-        }
-
-        /** @brief ムーブ代入演算子。
-            @param[in,out] io_source ムーブ元となるインスタンス。
-            @return *this
-         */
-        this_type& operator=(this_type&& io_source)
-        {
-            if (this != &io_source)
-            {
-                this->blocks = std::move(io_source.blocks);
-                this->empty_fields = std::move(io_source.empty_fields);
-                this->key = std::move(io_source.key);
-                io_source.blocks.clear();
-                io_source.empty_fields.clear();
-            }
-            return *this;
-        }
-
-        /// @copydoc block_vector
-        typename reservoir::block_vector blocks;
-        /// @copydoc empty_field_vector
-        typename reservoir::empty_field_vector empty_fields;
-        /// @brief チャンクの識別値。
-        typename reservoir::chunk_key key;
-
-    }; // struct chunk
-
-    /// @brief ビット列チャンクのコンテナ。
+    /// @brief 状態値ビット列チャンクのコンテナ。
     private: typedef std::vector<
          typename this_type::chunk, typename this_type::allocator_type>
              chunk_vector;
@@ -311,7 +188,7 @@ class psyq::scenario_engine::reservoir
     //@{
     /** @brief 空の状態貯蔵器を構築する。
         @param[in] in_reserve_states 状態値の予約数。
-        @param[in] in_reserve_chunks ビット列チャンクの予約数。
+        @param[in] in_reserve_chunks 状態値ビット列チャンクの予約数。
         @param[in] in_allocator      使用するメモリ割当子の初期値。
      */
     public: reservoir(
@@ -362,502 +239,44 @@ class psyq::scenario_engine::reservoir
     {
         return this->states_.get_allocator();
     }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name 状態値の取得と設定
-    //@{
-    /** @brief 状態値の構成を取得する。
-        @param[in] in_state_key 構成を取得する状態値に対応する識別値。
-        @retval !=this_type::state_value::kind_NULL 状態値の構成。
-        @retval ==this_type::state_value::kind_NULL in_state_key に対応する状態値がない。
-        @sa this_type::get_format_size
-        @sa this_type::get_format_kind
-     */
-    public: typename this_type::format_type get_format(
-        typename this_type::state_key const& in_state_key)
-    const PSYQ_NOEXCEPT
+
+    /// @brief 状態貯蔵器を再構築し、メモリ領域を必要最小限にする。
+    public: void shrink_to_fit()
     {
-        auto local_state(
-            this_type::state_key_less::find_const_pointer(
-                this->states_, in_state_key));
-        return local_state != nullptr?
-            local_state->get_format(): this_type::state_value::kind_NULL;
-    }
-    //@}
-    /** @brief 状態値の構成から、状態値のビット数を取得する。
-        @param[in] in_format 状態値の構成。
-        @return 状態値のビット数。
-        @sa this_type::get_format
-     */
-    public: static typename this_type::size_type get_format_size(
-        typename this_type::format_type const in_format)
-    PSYQ_NOEXCEPT
-    {
-        switch (in_format)
+        // 新たな状態貯蔵器を用意する。
+        this_type local_reservoir(
+            this->states_.size(),
+            this->chunks_.size(),
+            this->states_.get_allocator());
+        for (auto& local_old_chunk: this->chunks_)
         {
-            case this_type::state_value::kind_NULL:
-            return 0;
-
-            case this_type::state_value::kind_BOOL:
-            return 1;
-
-            case this_type::state_value::kind_FLOAT:
-            return this_type::FLOAT_SIZE;
-
-            default:
-            return in_format < 0? -in_format: in_format;
+            auto& local_new_chunk(
+                *local_reservoir.chunks_.insert(
+                    local_reservoir.chunks_.end(),
+                    typename this_type::chunk_vector::value_type(
+                        local_old_chunk.key, this->states_.get_allocator())));
+            local_new_chunk.blocks.reserve(local_old_chunk.blocks.size());
+            local_new_chunk.empty_fields.reserve(
+                local_old_chunk.empty_fields.size());
         }
-    }
 
-    /** @brief 状態値の構成から、状態値の型の種別を取得する。
-        @param[in] in_format 状態値の構成。
-        @return 状態値の型の種別。
-        @sa this_type::get_format
-     */
-    public: static typename this_type::state_value::kind_enum get_format_kind(
-        typename this_type::format_type const in_format)
-    PSYQ_NOEXCEPT
-    {
-        switch (in_format)
+        // 現在の状態貯蔵器をもとに、新たな状態貯蔵器を構築する。
+        for (auto local_state: this_type::sort_state_by_size(this->states_))
         {
-            case this_type::state_value::kind_NULL:
-            case this_type::state_value::kind_BOOL:
-            case this_type::state_value::kind_FLOAT:
-            return static_cast<typename this_type::state_value::kind_enum>(
-                in_format);
-
-            default:
-            return in_format < 0?
-                this_type::state_value::kind_SIGNED:
-                this_type::state_value::kind_UNSIGNED;
+            local_reservoir.copy_state(*local_state, this->chunks_);
         }
-    }
 
-    //-------------------------------------------------------------------------
-    /// @name 状態値の取得と設定
-    //@{
-    /** @brief 状態値を取得する。
-
-        すでに登録されている状態値から、値を取得する。
-
-        @param[in] in_state_key 取得する状態値に対応する識別値。
-        @return
-            取得した状態値。状態値の取得に失敗した場合は、
-            this_type::state_value::get_kind で
-            this_type::state_value::kind_NULL を返す。
-        @sa this_type::register_bool
-        @sa this_type::register_unsigned
-        @sa this_type::register_signed
-        @sa this_type::register_float
-        @sa this_type::register_value
-        @sa this_type::set_value
-     */
-    public: typename this_type::state_value get_value(
-        typename this_type::state_key const& in_state_key)
-    const PSYQ_NOEXCEPT
-    {
-        // 状態値登記を検索し、ビット列チャンクから状態値のビット列を取得する。
-        auto const local_state_registry(
-            this_type::state_key_less::find_const_pointer(
-                this->states_, in_state_key));
-        if (local_state_registry == nullptr)
+        // 新たに構築した状態貯蔵器を移動して整理する。
+        *this = std::move(local_reservoir);
+        this->states_.shrink_to_fit();
+        this->chunks_.shrink_to_fit();
+        for (auto& local_chunk: this->chunks_)
         {
-            return typename this_type::state_value();
-        }
-        auto const local_chunk(
-            this_type::chunk_key_less::find_const_pointer(
-                this->chunks_, local_state_registry->chunk));
-        if (local_chunk == nullptr)
-        {
-            // 状態値登記があれば、対応するビット列チャンクもあるはず。
-            PSYQ_ASSERT(false);
-            return typename this_type::state_value();
-        }
-        auto const local_format(local_state_registry->get_format());
-        auto const local_size(this_type::get_format_size(local_format));
-        auto const local_bits(
-            this_type::get_bits(
-                local_chunk->blocks,
-                this_type::get_field_position(local_state_registry->field),
-                local_size));
-
-        // 状態値の構成から、出力値のコピー処理を分岐する。
-        switch (local_format)
-        {
-            // 真偽値を取得する。
-            case this_type::state_value::kind_BOOL:
-            return typename this_type::state_value(local_bits != 0);
-
-            // 浮動小数点数を取得する。
-            case this_type::state_value::kind_FLOAT:
-            {
-                typename this_type::float_union local_float;
-                local_float.bits =
-                    static_cast<decltype(local_float.bits)>(local_bits);
-                return typename this_type::state_value(local_float.value);
-            }
-
-            // 整数を取得する。
-            default:
-            if (local_format < 0)
-            {
-                // 符号あり整数を取得する。
-                auto const local_signed_bits(
-                    static_cast<typename this_type::state_value::signed_type>(
-                        local_bits));
-                auto const local_minus(
-                    1 & (local_signed_bits >> (local_size - 1)));
-                return typename this_type::state_value(
-                    local_signed_bits | (-local_minus << local_size));
-            }
-            else if (0 < local_format)
-            {
-                // 符号なし整数を取得する。
-                return typename this_type::state_value(local_bits);
-            }
-            PSYQ_ASSERT(false);
-            return typename this_type::state_value();
+            local_chunk.blocks.shrink_to_fit();
+            local_chunk.empty_fields.shrink_to_fit();
         }
     }
     //@}
-    /** @brief ビット列から値を取得する。
-        @param[in,out] in_blocks 値を取得するビット列のコンテナ。
-        @param[in] in_position   値を取得するビット列のビット位置。
-        @param[in] in_size       値を取得するビット列のビット数。
-        @return
-            ビット列から取得した値。
-            ただし、該当する値がない場合は、0を返す。
-     */
-    private: static typename this_type::block_type get_bits(
-        typename this_type::block_vector const& in_blocks,
-        typename this_type::pos_type const in_position,
-        typename this_type::size_type const in_size)
-    PSYQ_NOEXCEPT
-    {
-        if (this_type::BLOCK_SIZE < in_size)
-        {
-            PSYQ_ASSERT(false);
-            return 0;
-        }
-        auto const local_block_index(in_position / this_type::BLOCK_SIZE);
-        if (in_blocks.size() <= local_block_index)
-        {
-            // 状態値登記があれば、対応するビット列チャンクもあるはず。
-            PSYQ_ASSERT(false);
-            return 0;
-        }
-
-        // ブロックビット列でのビット位置を決定し、値を取り出す。
-        auto const local_position(
-            in_position - local_block_index * this_type::BLOCK_SIZE);
-        PSYQ_ASSERT(
-            (in_size == this_type::BLOCK_SIZE && local_position == 0)
-            || (in_size < this_type::BLOCK_SIZE
-                && local_position < this_type::BLOCK_SIZE));
-        return (in_blocks.at(local_block_index) >> local_position)
-            & this_type::make_block_mask(in_size);
-    }
-
-    //-------------------------------------------------------------------------
-    /// @name 状態値の取得と設定
-    //@{
-    /** @brief 状態値を設定する。
-
-        すでに登録されている状態値に、値を設定する。
-
-        @param[in] in_state_key   設定する状態値に対応する識別値。
-        @param[in] in_state_value 状態値に設定する値。
-        @retval true 成功。
-        @retval false
-            失敗。状態値は変化しない。
-            - in_state_key に対応する状態値がない場合は失敗する。
-            - in_state_value を状態値の型へ変換できない場合は失敗する。
-            - 論理型以外の値を論理型の状態値へ設定しようとすると失敗する。
-            - 論理型の値を論理型以外の状態値へ設定しようとすると失敗する。
-        @sa this_type::register_bool
-        @sa this_type::register_unsigned
-        @sa this_type::register_signed
-        @sa this_type::register_float
-        @sa this_type::register_value
-        @sa this_type::get_value
-     */
-    public: bool set_value(
-        typename this_type::state_key const& in_state_key,
-        typename this_type::state_value const& in_state_value)
-    PSYQ_NOEXCEPT
-    {
-        auto const local_bool(in_state_value.get_bool());
-        if (local_bool != nullptr)
-        {
-            return this->set_value(in_state_key, *local_bool);
-        }
-        auto const local_unsigned(in_state_value.get_unsigned());
-        if (local_unsigned != nullptr)
-        {
-            return this->set_value(in_state_key, *local_unsigned);
-        }
-        auto const local_signed(in_state_value.get_signed());
-        if (local_signed != nullptr)
-        {
-            return this->set_value(in_state_key, *local_signed);
-        }
-        auto const local_float(in_state_value.get_float());
-        if (local_float != nullptr)
-        {
-            return this->set_value(in_state_key, *local_float);
-        }
-        return false;
-    }
-
-    /** @copydoc set_value
-        @note
-            this_type::state_value::float_type より精度の高い浮動小数点数を
-            浮動小数点数型の状態値へ設定しようとすると、
-            コンパイル時にエラーか警告が発生する。
-     */
-    public: template<typename template_value>
-    bool set_value(
-        typename this_type::state_key const& in_state_key,
-        template_value const in_state_value)
-    PSYQ_NOEXCEPT
-    {
-        static_assert(
-            std::is_floating_point<template_value>::value
-            || std::is_integral<template_value>::value,
-            "'template_value' is not an integer or floating-point number.");
-
-        // 状態値登記を検索する。
-        auto const local_state(
-            this_type::state_key_less::find_const_pointer(
-                this->states_, in_state_key));
-        if (local_state == nullptr)
-        {
-            return false;
-        }
-
-        // 状態値を設定するビット列チャンクを決定する。
-        auto const local_chunk(
-            this_type::chunk_key_less::find_pointer(
-                this->chunks_, local_state->chunk));
-        if (local_chunk == nullptr)
-        {
-            // 状態値の登記があるなら、ビット列チャンクもあるはず。
-            PSYQ_ASSERT(false);
-            return false;
-        }
-
-        // 状態値の構成から、設定するビット列とビット数を決定する。
-        auto const local_format(local_state->get_format());
-        typename this_type::size_type local_size;
-        typename this_type::block_type local_bits;
-        switch (local_format)
-        {
-            case this_type::state_value::kind_NULL:
-            PSYQ_ASSERT(false);
-            return false;
-
-            // 真偽値のビット列とビット数を決定する。
-            case this_type::state_value::kind_BOOL:
-            if (!std::is_same<bool, template_value>::value)
-            {
-                return false;
-            }
-            local_size = 1;
-            local_bits = static_cast<typename this_type::block_type>(
-                in_state_value);
-            break;
-
-            // 浮動小数点数のビット列とビット数を決定する。
-            case this_type::state_value::kind_FLOAT:
-            local_size = this_type::make_float_bits(
-                local_bits, in_state_value);
-            break;
-
-            // 整数のビット列とビット数を決定する。
-            default:
-            local_size = this_type::make_integer_bits(
-                local_bits, in_state_value, local_format);
-            break;
-        }
-        if (local_size <= 0)
-        {
-            return false;
-        }
-
-        // 状態値にビット列を設定する。
-        auto const local_set_bits(
-            this_type::set_bits(
-                local_chunk->blocks,
-                this_type::get_field_position(local_state->field),
-                local_size,
-                local_bits));
-        if (local_set_bits < 0)
-        {
-            return false;
-        }
-        else if (0 < local_set_bits)
-        {
-            // 状態値の変更を記録する。
-            const_cast<this_type::state_registry&>(*local_state)
-                .field |= 1 << this_type::field_TRANSITION_FRONT;
-        }
-        return true;
-    }
-    //@}
-    /** @brief 浮動小数点数のビット列を取得する。
-        @param[out] out_bits 浮動小数点数のビット列を出力する。
-        @param[in] in_value  ビット列を取り出す浮動小数点数。
-        @retval !=0 成功。ビット列のビット数。
-        @retval ==0 失敗。
-     */
-    private: static typename this_type::size_type make_float_bits(
-        typename this_type::block_type& out_bits,
-        float const in_value)
-    {
-        typename this_type::float_union local_float;
-        local_float.value = in_value;
-        out_bits = local_float.bits;
-        return this_type::FLOAT_SIZE;
-    }
-    /// @copydoc make_float_bits
-    private: static typename this_type::size_type make_float_bits(
-        typename this_type::block_type& out_bits,
-        double const in_value)
-    {
-        typename this_type::float_union local_float;
-        /** @note
-            ここでコンパイルエラーか警告が出る場合は
-            double から float への型変換が発生しているのが原因。
-            set_value の引数を手動で型変換すれば解決するはず。
-         */
-        local_float.value = in_value;
-        out_bits = local_float.bits;
-        return this_type::FLOAT_SIZE;
-    }
-    /** @brief this_type::make_float_bits の真偽値のためのダミー関数。
-        @return 必ず0。
-     */
-    private: static typename this_type::size_type make_float_bits(
-        typename this_type::block_type&,
-        bool const)
-    {
-        return 0;
-    }
-    /** @brief 整数から浮動小数点数のビット列を取得する。
-        @param[out] out_bits 浮動小数点数のビット列を出力する。
-        @param[in] in_value  ビット列を取り出す整数。
-        @retval !=0 成功。ビット列のビット数。
-        @retval ==0 失敗。
-     */
-    private: template<typename template_value>
-    static typename this_type::size_type make_float_bits(
-        typename this_type::block_type& out_bits,
-        template_value const in_value)
-    {
-        // 整数を浮動小数点数に変換して、桁あふれが起きてないか判定する。
-        typename this_type::float_union local_float;
-        local_float.value =
-            static_cast<typename this_type::state_value::float_type>(in_value);
-        if (static_cast<template_value>(local_float.value) != in_value)
-        {
-            return 0;
-        }
-        out_bits = local_float.bits;
-        return this_type::FLOAT_SIZE;
-    }
-
-    /** @brief 整数からビット列を取得する。
-        @param[out] out_bits 整数のビット列を出力する。
-        @param[in] in_value  ビット列を取り出す整数。
-        @param[in] in_format 取り出すビット列の構成。
-        @retval !=0 成功。ビット列のビット数。
-        @retval ==0 失敗。
-     */
-    private: template<typename template_value>
-    static typename this_type::size_type make_integer_bits(
-        typename this_type::block_type& out_bits,
-        template_value const in_value,
-        typename this_type::format_type const in_format)
-    PSYQ_NOEXCEPT
-    {
-        // 整数に変換して、桁あふれが起きてないか判定する。
-        auto const local_signed(
-            static_cast<typename this_type::state_value::signed_type>(
-                in_value));
-        if (static_cast<template_value>(local_signed) != in_value)
-        {
-            return 0;
-        }
-
-        // 整数からビット列を取り出す。
-        auto const local_size(this_type::get_format_size(in_format));
-        auto const local_mask(this_type::make_block_mask(local_size));
-        out_bits = static_cast<typename this_type::block_type>(local_signed);
-        if (in_value < 0)
-        {
-            if (0 < in_format || (~local_mask & out_bits) != ~local_mask)
-            {
-                return 0;
-            }
-            out_bits &= local_mask;
-        }
-        else if ((~local_mask & out_bits) != 0)
-        {
-            return 0;
-        }
-        return local_size;
-    }
-    /** @brief this_type::make_integer_bits の真偽値のためのダミー関数。
-        @return 必ず0。
-     */
-    private: static typename this_type::size_type make_integer_bits(
-        typename this_type::block_type&,
-        bool const,
-        typename this_type::format_type const)
-    {
-        return 0;
-    }
-
-    /** @brief ビット列に値を設定する。
-        @param[in,out] io_blocks 値を設定するビット列のコンテナ。
-        @param[in] in_position   値を設定するビット列のビット位置。
-        @param[in] in_size       値を設定するビット列のビット数。
-        @param[in] in_value      設定する値。
-        @retval 正 元とは異なる値を設定した。
-        @retval  0 元と同じ値を設定した。
-        @retval 負 失敗。値を設定できなかった。
-     */
-    private: static std::int8_t set_bits(
-        typename this_type::block_vector& io_blocks,
-        typename this_type::pos_type const in_position,
-        typename this_type::size_type const in_size,
-        typename this_type::block_type const in_value)
-    PSYQ_NOEXCEPT
-    {
-        auto const local_mask(this_type::make_block_mask(in_size));
-        if ((~local_mask & in_value) != 0)
-        {
-            PSYQ_ASSERT(false);
-            return -1;
-        }
-        auto const local_block_index(in_position / this_type::BLOCK_SIZE);
-        if (io_blocks.size() <= local_block_index)
-        {
-            PSYQ_ASSERT(false);
-            return -1;
-        }
-
-        // ブロックビット列でのビット位置を決定し、値を埋め込む。
-        auto const local_position(
-            in_position - local_block_index * this_type::BLOCK_SIZE);
-        PSYQ_ASSERT(local_position + in_size <= this_type::BLOCK_SIZE);
-        auto& local_block(io_blocks.at(local_block_index));
-        auto const local_last_block(local_block);
-        local_block = (~(local_mask << local_position) & local_block)
-            | ((in_value & local_mask) << local_position);
-        return local_last_block != local_block;
-    }
-
     //-------------------------------------------------------------------------
     /// @name 状態値の登録
     //@{
@@ -867,7 +286,7 @@ class psyq::scenario_engine::reservoir
           this_type::get_value と this_type::set_value でアクセスできる。
         - 登録した状態値は this_type::remove_chunk でチャンク毎に削除できる。
 
-        @param[in] in_chunk_key   登録する状態値を格納するビット列チャンクの識別値。
+        @param[in] in_chunk_key   登録する状態値を格納する状態値ビット列チャンクの識別値。
         @param[in] in_state_key   登録する状態値の識別番号。
         @param[in] in_state_value 登録する状態値の初期値。
         @retval true 成功。状態値を登録した。
@@ -905,7 +324,7 @@ class psyq::scenario_engine::reservoir
           this_type::get_value と this_type::set_value でアクセスできる。
         - 登録した状態値は this_type::remove_chunk で削除できる。
 
-        @param[in] in_chunk_key   登録する状態値を格納するビット列チャンクの識別値。
+        @param[in] in_chunk_key   登録する状態値を格納する状態値ビット列チャンクの識別値。
         @param[in] in_state_key   登録する状態値の識別番号。
         @param[in] in_state_value 登録する状態値の初期値。
         @param[in] in_state_size  登録する状態値のビット数。
@@ -914,7 +333,6 @@ class psyq::scenario_engine::reservoir
             失敗。状態値を登録できなかった。
             - in_state_key に対応する状態値がすでに登録されていると失敗する。
             - this_type::MAX_STATE_SIZE より in_state_size が大きければ失敗する。
-        @sa remove_chunk
      */
     public: bool register_unsigned(
         typename this_type::chunk_key in_chunk_key,
@@ -1069,6 +487,302 @@ class psyq::scenario_engine::reservoir
     }
     //@}
     //-------------------------------------------------------------------------
+    /// @name 状態値の取得と設定
+    //@{
+    /** @brief 状態値の構成を取得する。
+        @param[in] in_state_key 構成を取得する状態値に対応する識別値。
+        @retval !=this_type::state_value::kind_NULL 状態値の構成。
+        @retval ==this_type::state_value::kind_NULL in_state_key に対応する状態値がない。
+        @sa this_type::get_format_size
+        @sa this_type::get_format_kind
+     */
+    public: typename this_type::format_type get_format(
+        typename this_type::state_key const& in_state_key)
+    const PSYQ_NOEXCEPT
+    {
+        auto local_state(
+            this_type::state_key_less::find_const_pointer(
+                this->states_, in_state_key));
+        return local_state != nullptr?
+            local_state->get_format(): this_type::state_value::kind_NULL;
+    }
+
+    /** @brief 状態値を取得する。
+
+        すでに登録されている状態値から、値を取得する。
+
+        @param[in] in_state_key 取得する状態値に対応する識別値。
+        @return
+            取得した状態値。状態値の取得に失敗した場合は、
+            this_type::state_value::get_kind で
+            this_type::state_value::kind_NULL を返す。
+        @sa this_type::register_bool
+        @sa this_type::register_unsigned
+        @sa this_type::register_signed
+        @sa this_type::register_float
+        @sa this_type::register_value
+        @sa this_type::set_value
+     */
+    public: typename this_type::state_value get_value(
+        typename this_type::state_key const& in_state_key)
+    const PSYQ_NOEXCEPT
+    {
+        // 状態値登記を検索し、状態値ビット列チャンクから状態値のビット列を取得する。
+        auto const local_state_registry(
+            this_type::state_key_less::find_const_pointer(
+                this->states_, in_state_key));
+        if (local_state_registry == nullptr)
+        {
+            return typename this_type::state_value();
+        }
+        auto const local_chunk(
+            this_type::chunk_key_less::find_const_pointer(
+                this->chunks_, local_state_registry->chunk));
+        if (local_chunk == nullptr)
+        {
+            // 状態値登記があれば、対応する状態値ビット列チャンクもあるはず。
+            PSYQ_ASSERT(false);
+            return typename this_type::state_value();
+        }
+        auto const local_format(local_state_registry->get_format());
+        auto const local_size(this_type::get_format_size(local_format));
+        auto const local_bits(
+            this_type::get_bits(
+                local_chunk->blocks,
+                this_type::get_field_position(local_state_registry->field),
+                local_size));
+
+        // 状態値の構成から、出力値のコピー処理を分岐する。
+        switch (local_format)
+        {
+            // 真偽値を取得する。
+            case this_type::state_value::kind_BOOL:
+            return typename this_type::state_value(local_bits != 0);
+
+            // 浮動小数点数を取得する。
+            case this_type::state_value::kind_FLOAT:
+            {
+                typename this_type::float_union local_float;
+                local_float.bits =
+                    static_cast<decltype(local_float.bits)>(local_bits);
+                return typename this_type::state_value(local_float.value);
+            }
+
+            // 整数を取得する。
+            default:
+            if (local_format < 0)
+            {
+                // 符号あり整数を取得する。
+                auto const local_signed_bits(
+                    static_cast<typename this_type::state_value::signed_type>(
+                        local_bits));
+                auto const local_minus(
+                    1 & (local_signed_bits >> (local_size - 1)));
+                return typename this_type::state_value(
+                    local_signed_bits | (-local_minus << local_size));
+            }
+            else if (0 < local_format)
+            {
+                // 符号なし整数を取得する。
+                return typename this_type::state_value(local_bits);
+            }
+            PSYQ_ASSERT(false);
+            return typename this_type::state_value();
+        }
+    }
+
+    /** @brief 状態値を設定する。
+
+        すでに登録されている状態値に、値を設定する。
+
+        @param[in] in_state_key   設定する状態値に対応する識別値。
+        @param[in] in_state_value 状態値に設定する値。
+        @retval true 成功。
+        @retval false
+            失敗。状態値は変化しない。
+            - in_state_key に対応する状態値がない場合は失敗する。
+            - in_state_value を状態値の型へ変換できない場合は失敗する。
+            - 論理型以外の値を論理型の状態値へ設定しようとすると失敗する。
+            - 論理型の値を論理型以外の状態値へ設定しようとすると失敗する。
+        @sa this_type::register_bool
+        @sa this_type::register_unsigned
+        @sa this_type::register_signed
+        @sa this_type::register_float
+        @sa this_type::register_value
+        @sa this_type::get_value
+     */
+    public: bool set_value(
+        typename this_type::state_key const& in_state_key,
+        typename this_type::state_value const& in_state_value)
+    PSYQ_NOEXCEPT
+    {
+        auto const local_bool(in_state_value.get_bool());
+        if (local_bool != nullptr)
+        {
+            return this->set_value(in_state_key, *local_bool);
+        }
+        auto const local_unsigned(in_state_value.get_unsigned());
+        if (local_unsigned != nullptr)
+        {
+            return this->set_value(in_state_key, *local_unsigned);
+        }
+        auto const local_signed(in_state_value.get_signed());
+        if (local_signed != nullptr)
+        {
+            return this->set_value(in_state_key, *local_signed);
+        }
+        auto const local_float(in_state_value.get_float());
+        if (local_float != nullptr)
+        {
+            return this->set_value(in_state_key, *local_float);
+        }
+        return false;
+    }
+
+    /** @copydoc set_value
+        @note
+            this_type::state_value::float_type より精度の高い浮動小数点数を
+            浮動小数点数型の状態値へ設定しようとすると、
+            コンパイル時にエラーか警告が発生する。
+     */
+    public: template<typename template_value>
+    bool set_value(
+        typename this_type::state_key const& in_state_key,
+        template_value const in_state_value)
+    PSYQ_NOEXCEPT
+    {
+        static_assert(
+            std::is_floating_point<template_value>::value
+            || std::is_integral<template_value>::value,
+            "'template_value' is not an integer or floating-point number.");
+
+        // 状態値登記を検索する。
+        auto const local_state(
+            this_type::state_key_less::find_pointer(
+                this->states_, in_state_key));
+        if (local_state == nullptr)
+        {
+            return false;
+        }
+
+        // 状態値を設定する状態値ビット列チャンクを決定する。
+        auto const local_chunk(
+            this_type::chunk_key_less::find_pointer(
+                this->chunks_, local_state->chunk));
+        if (local_chunk == nullptr)
+        {
+            // 状態値の登記があるなら、状態値ビット列チャンクもあるはず。
+            PSYQ_ASSERT(false);
+            return false;
+        }
+
+        // 状態値の構成から、設定するビット列とビット数を決定する。
+        auto const local_format(local_state->get_format());
+        typename this_type::size_type local_size;
+        typename this_type::block_type local_bits;
+        switch (local_format)
+        {
+            case this_type::state_value::kind_NULL:
+            PSYQ_ASSERT(false);
+            return false;
+
+            // 真偽値のビット列とビット数を決定する。
+            case this_type::state_value::kind_BOOL:
+            if (!std::is_same<bool, template_value>::value)
+            {
+                return false;
+            }
+            local_size = 1;
+            local_bits = static_cast<typename this_type::block_type>(
+                in_state_value);
+            break;
+
+            // 浮動小数点数のビット列とビット数を決定する。
+            case this_type::state_value::kind_FLOAT:
+            local_size = this_type::make_float_bits(
+                local_bits, in_state_value);
+            break;
+
+            // 整数のビット列とビット数を決定する。
+            default:
+            local_size = this_type::make_integer_bits(
+                local_bits, in_state_value, local_format);
+            break;
+        }
+        if (local_size <= 0)
+        {
+            return false;
+        }
+
+        // 状態値にビット列を設定する。
+        auto const local_set_bits(
+            this_type::set_bits(
+                local_chunk->blocks,
+                this_type::get_field_position(local_state->field),
+                local_size,
+                local_bits));
+        if (local_set_bits < 0)
+        {
+            return false;
+        }
+        else if (0 < local_set_bits)
+        {
+            // 状態値の変更を記録する。
+            local_state->field |= 1 << this_type::field_TRANSITION_FRONT;
+        }
+        return true;
+    }
+    //@}
+    /** @brief 状態値の構成から、状態値のビット数を取得する。
+        @param[in] in_format 状態値の構成。
+        @return 状態値のビット数。
+        @sa this_type::get_format
+     */
+    public: static typename this_type::size_type get_format_size(
+        typename this_type::format_type const in_format)
+    PSYQ_NOEXCEPT
+    {
+        switch (in_format)
+        {
+            case this_type::state_value::kind_NULL:
+            return 0;
+
+            case this_type::state_value::kind_BOOL:
+            return 1;
+
+            case this_type::state_value::kind_FLOAT:
+            return this_type::FLOAT_SIZE;
+
+            default:
+            return in_format < 0? -in_format: in_format;
+        }
+    }
+
+    /** @brief 状態値の構成から、状態値の型の種別を取得する。
+        @param[in] in_format 状態値の構成。
+        @return 状態値の型の種別。
+        @sa this_type::get_format
+     */
+    public: static typename this_type::state_value::kind_enum get_format_kind(
+        typename this_type::format_type const in_format)
+    PSYQ_NOEXCEPT
+    {
+        switch (in_format)
+        {
+            case this_type::state_value::kind_NULL:
+            case this_type::state_value::kind_BOOL:
+            case this_type::state_value::kind_FLOAT:
+            return static_cast<typename this_type::state_value::kind_enum>(
+                in_format);
+
+            default:
+            return in_format < 0?
+                this_type::state_value::kind_SIGNED:
+                this_type::state_value::kind_UNSIGNED;
+        }
+    }
+
+    //-------------------------------------------------------------------------
     /// @name 状態値の変化
     //@{
     /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
@@ -1108,10 +822,10 @@ class psyq::scenario_engine::reservoir
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name ビット列チャンク
+    /// @name 状態値ビット列チャンク
     //@{
-    /** @brief ビット列チャンクを予約する。
-        @param[in] in_chunk_key            予約するビット列チャンクの識別値。
+    /** @brief 状態値ビット列チャンクを予約する。
+        @param[in] in_chunk_key            予約する状態値ビット列チャンクの識別値。
         @param[in] in_reserve_blocks       予約しておくブロックの数。
         @param[in] in_reserve_empty_fields 予約しておく空き領域の数。
      */
@@ -1126,15 +840,15 @@ class psyq::scenario_engine::reservoir
         local_chunk.empty_fields.reserve(in_reserve_empty_fields);
     }
 
-    /** @brief ビット列チャンクを破棄する。
-        @param[in] in_chunk_key 破棄するビット列チャンクの識別値。
+    /** @brief 状態値ビット列チャンクを破棄する。
+        @param[in] in_chunk_key 破棄する状態値ビット列チャンクの識別値。
         @retval true  成功。チャンクを破棄した。
         @retval false 失敗。識別値に対応するチャンクが存在しない。
      */
     public: bool remove_chunk(
         typename this_type::chunk_key const& in_chunk_key)
     {
-        // ビット列チャンクを削除する。
+        // 状態値ビット列チャンクを削除する。
         auto const local_lower_bound(
             std::lower_bound(
                 this->chunks_.begin(),
@@ -1163,95 +877,25 @@ class psyq::scenario_engine::reservoir
         return true;
     }
 
-    /** @brief ビット列チャンクをシリアル化する。
-        @param[in] in_chunk_key シリアル化するビット列チャンクの識別番号。
-        @return シリアル化したビット列チャンク。
+    /** @brief 状態値ビット列チャンクをシリアル化する。
+        @param[in] in_chunk_key シリアル化する状態値ビット列チャンクの識別番号。
+        @return シリアル化した状態値ビット列チャンク。
         @todo 未実装。
      */
     public: typename this_type::block_vector serialize_chunk(
         typename this_type::chunk_key const& in_chunk_key)
     const;
 
-    /** @brief シリアル化されたビット列チャンクを復元する。
-        @param[in] in_chunk_key        復元するビット列チャンクの識別値。
-        @param[in] in_serialized_chunk シリアル化されたビット列チャンク。
+    /** @brief シリアル化された状態値ビット列チャンクを復元する。
+        @param[in] in_chunk_key        復元する状態値ビット列チャンクの識別値。
+        @param[in] in_serialized_chunk シリアル化された状態値ビット列チャンク。
         @todo 未実装。
      */
     public: bool deserialize_chunk(
         typename this_type::chunk_key const& in_chunk_key,
         typename this_type::block_vector const& in_serialized_chunk);
     //@}
-    /** @brief 識別値に対応するビット列チャンクを用意する。
-
-        識別値に対応するビット列チャンクを、コンテナに用意する。
-        同じ識別値のチャンクがすでにコンテナにあれば、それを返す。
-        同じ識別値のチャンクがコンテナになければ、新たにチャンクを生成する。
-
-        @param[in,out] io_chunks チャンクを用意するコンテナ。
-        @param[in] in_chunk_key  用意するチャンクに対応する識別値。
-        @return 用意したチャンクへの参照。
-     */
-    private: static typename this_type::chunk_vector::value_type& equip_chunk(
-        typename this_type::chunk_vector& io_chunks,
-        typename this_type::chunk_key in_chunk_key)
-    {
-        auto const local_lower_bound(
-            std::lower_bound(
-                io_chunks.begin(),
-                io_chunks.end(),
-                in_chunk_key,
-                typename this_type::chunk_key_less()));
-        if (local_lower_bound != io_chunks.end()
-            && local_lower_bound->key == in_chunk_key)
-        {
-            return *local_lower_bound;
-        }
-        return *io_chunks.insert(
-            local_lower_bound,
-            typename this_type::chunk_vector::value_type(
-                std::move(in_chunk_key), io_chunks.get_allocator()));
-    }
-
     //-------------------------------------------------------------------------
-    /// @name 構築と代入
-    //@{
-    /// @brief 状態貯蔵器を再構築し、メモリ領域を必要最小限にする。
-    public: void shrink_to_fit()
-    {
-        // 新たな状態貯蔵器を用意する。
-        this_type local_reservoir(
-            this->states_.size(),
-            this->chunks_.size(),
-            this->states_.get_allocator());
-        for (auto& local_old_chunk: this->chunks_)
-        {
-            auto& local_new_chunk(
-                *local_reservoir.chunks_.insert(
-                    local_reservoir.chunks_.end(),
-                    typename this_type::chunk_vector::value_type(
-                        local_old_chunk.key, this->states_.get_allocator())));
-            local_new_chunk.blocks.reserve(local_old_chunk.blocks.size());
-            local_new_chunk.empty_fields.reserve(
-                local_old_chunk.empty_fields.size());
-        }
-
-        // 現在の状態貯蔵器をもとに、新たな状態貯蔵器を構築する。
-        for (auto local_state: this_type::sort_state_by_size(this->states_))
-        {
-            local_reservoir.copy_state(*local_state, this->chunks_);
-        }
-
-        // 新たに構築した状態貯蔵器を移動して整理する。
-        *this = std::move(local_reservoir);
-        this->states_.shrink_to_fit();
-        this->chunks_.shrink_to_fit();
-        for (auto& local_chunk: this->chunks_)
-        {
-            local_chunk.blocks.shrink_to_fit();
-            local_chunk.empty_fields.shrink_to_fit();
-        }
-    }
-    //@}
     /** @brief ビット領域の大きさの降順で並び替えた状態値のコンテナを作る。
      */
     private: static typename this_type::state_pointer_vector
@@ -1287,7 +931,7 @@ class psyq::scenario_engine::reservoir
         typename this_type::state_registry const& in_source_state,
         typename this_type::chunk_vector const& in_source_chunks)
     {
-        // コピー元となるビット列チャンクを取得する。
+        // コピー元となる状態値ビット列チャンクを取得する。
         auto const local_source_chunk(
             this_type::chunk_key_less::find_const_pointer(
                 in_source_chunks, in_source_state.chunk));
@@ -1331,7 +975,7 @@ class psyq::scenario_engine::reservoir
 
     //-------------------------------------------------------------------------
     /** @brief 状態値を登録する。
-        @param[in,out] io_chunk 登録する状態値が所属するビット列チャンク。
+        @param[in,out] io_chunk 登録する状態値が所属する状態値ビット列チャンク。
         @param[in] in_state_key 登録する状態値に対応する識別値。
         @param[in] in_format    登録する状態値の構成。
         @retval !=nullptr 成功。登録した状態登記。
@@ -1357,14 +1001,13 @@ class psyq::scenario_engine::reservoir
             return nullptr;
         }
 
-        // 状態登記を新たに追加し、ビット列チャンクを用意する。
+        // 状態登記を新たに追加し、状態値ビット列チャンクを用意する。
         auto& local_state(
-            *this->states_.insert(
+            *this->states_.emplace(
                 local_state_iterator,
-                typename this_type::state_vector::value_type()));
-        local_state.chunk = io_chunk.key;
-        local_state.key = std::move(in_state_key);
-        local_state.field = 1 << this_type::field_TRANSITION_FRONT;
+                std::move(in_state_key),
+                io_chunk.key,
+                1 << this_type::field_TRANSITION_FRONT));
         PSYQ_ASSERT(in_format != this_type::state_value::kind_NULL);
         this_type::set_state_format(local_state, in_format);
 
@@ -1574,12 +1217,410 @@ class psyq::scenario_engine::reservoir
     }
 
     //-------------------------------------------------------------------------
+    /** @brief ビット列から値を取得する。
+        @param[in,out] in_blocks 値を取得するビット列のコンテナ。
+        @param[in] in_position   値を取得するビット列のビット位置。
+        @param[in] in_size       値を取得するビット列のビット数。
+        @return
+            ビット列から取得した値。
+            ただし、該当する値がない場合は、0を返す。
+     */
+    private: static typename this_type::block_type get_bits(
+        typename this_type::block_vector const& in_blocks,
+        typename this_type::pos_type const in_position,
+        typename this_type::size_type const in_size)
+    PSYQ_NOEXCEPT
+    {
+        if (this_type::BLOCK_SIZE < in_size)
+        {
+            PSYQ_ASSERT(false);
+            return 0;
+        }
+        auto const local_block_index(in_position / this_type::BLOCK_SIZE);
+        if (in_blocks.size() <= local_block_index)
+        {
+            // 状態値登記があれば、対応する状態値ビット列チャンクもあるはず。
+            PSYQ_ASSERT(false);
+            return 0;
+        }
+
+        // ブロックビット列でのビット位置を決定し、値を取り出す。
+        auto const local_position(
+            in_position - local_block_index * this_type::BLOCK_SIZE);
+        PSYQ_ASSERT(
+            (in_size == this_type::BLOCK_SIZE && local_position == 0)
+            || (in_size < this_type::BLOCK_SIZE
+                && local_position < this_type::BLOCK_SIZE));
+        return (in_blocks.at(local_block_index) >> local_position)
+            & this_type::make_block_mask(in_size);
+    }
+
+    /** @brief 浮動小数点数のビット列を取得する。
+        @param[out] out_bits 浮動小数点数のビット列を出力する。
+        @param[in] in_value  ビット列を取り出す浮動小数点数。
+        @retval !=0 成功。ビット列のビット数。
+        @retval ==0 失敗。
+     */
+    private: static typename this_type::size_type make_float_bits(
+        typename this_type::block_type& out_bits,
+        float const in_value)
+    {
+        typename this_type::float_union local_float;
+        local_float.value = in_value;
+        out_bits = local_float.bits;
+        return this_type::FLOAT_SIZE;
+    }
+    /// @copydoc make_float_bits
+    private: static typename this_type::size_type make_float_bits(
+        typename this_type::block_type& out_bits,
+        double const in_value)
+    {
+        typename this_type::float_union local_float;
+        /** @note
+            ここでコンパイルエラーか警告が出る場合は
+            double から float への型変換が発生しているのが原因。
+            set_value の引数を手動で型変換すれば解決するはず。
+         */
+        local_float.value = in_value;
+        out_bits = local_float.bits;
+        return this_type::FLOAT_SIZE;
+    }
+    /** @brief this_type::make_float_bits の真偽値のためのダミー関数。
+        @return 必ず0。
+     */
+    private: static typename this_type::size_type make_float_bits(
+        typename this_type::block_type&,
+        bool const)
+    {
+        return 0;
+    }
+    /** @brief 整数から浮動小数点数のビット列を取得する。
+        @param[out] out_bits 浮動小数点数のビット列を出力する。
+        @param[in] in_value  ビット列を取り出す整数。
+        @retval !=0 成功。ビット列のビット数。
+        @retval ==0 失敗。
+     */
+    private: template<typename template_value>
+    static typename this_type::size_type make_float_bits(
+        typename this_type::block_type& out_bits,
+        template_value const in_value)
+    {
+        // 整数を浮動小数点数に変換して、桁あふれが起きてないか判定する。
+        typename this_type::float_union local_float;
+        local_float.value =
+            static_cast<typename this_type::state_value::float_type>(in_value);
+        if (static_cast<template_value>(local_float.value) != in_value)
+        {
+            return 0;
+        }
+        out_bits = local_float.bits;
+        return this_type::FLOAT_SIZE;
+    }
+
+    /** @brief 整数からビット列を取得する。
+        @param[out] out_bits 整数のビット列を出力する。
+        @param[in] in_value  ビット列を取り出す整数。
+        @param[in] in_format 取り出すビット列の構成。
+        @retval !=0 成功。ビット列のビット数。
+        @retval ==0 失敗。
+     */
+    private: template<typename template_value>
+    static typename this_type::size_type make_integer_bits(
+        typename this_type::block_type& out_bits,
+        template_value const in_value,
+        typename this_type::format_type const in_format)
+    PSYQ_NOEXCEPT
+    {
+        // 整数に変換して、桁あふれが起きてないか判定する。
+        auto const local_signed(
+            static_cast<typename this_type::state_value::signed_type>(
+                in_value));
+        if (static_cast<template_value>(local_signed) != in_value)
+        {
+            return 0;
+        }
+
+        // 整数からビット列を取り出す。
+        auto const local_size(this_type::get_format_size(in_format));
+        auto const local_mask(this_type::make_block_mask(local_size));
+        out_bits = static_cast<typename this_type::block_type>(local_signed);
+        if (in_value < 0)
+        {
+            if (0 < in_format || (~local_mask & out_bits) != ~local_mask)
+            {
+                return 0;
+            }
+            out_bits &= local_mask;
+        }
+        else if ((~local_mask & out_bits) != 0)
+        {
+            return 0;
+        }
+        return local_size;
+    }
+    /** @brief this_type::make_integer_bits の真偽値のためのダミー関数。
+        @return 必ず0。
+     */
+    private: static typename this_type::size_type make_integer_bits(
+        typename this_type::block_type&,
+        bool const,
+        typename this_type::format_type const)
+    {
+        return 0;
+    }
+
+    /** @brief ビット列に値を設定する。
+        @param[in,out] io_blocks 値を設定するビット列のコンテナ。
+        @param[in] in_position   値を設定するビット列のビット位置。
+        @param[in] in_size       値を設定するビット列のビット数。
+        @param[in] in_value      設定する値。
+        @retval 正 元とは異なる値を設定した。
+        @retval  0 元と同じ値を設定した。
+        @retval 負 失敗。値を設定できなかった。
+     */
+    private: static std::int8_t set_bits(
+        typename this_type::block_vector& io_blocks,
+        typename this_type::pos_type const in_position,
+        typename this_type::size_type const in_size,
+        typename this_type::block_type const in_value)
+    PSYQ_NOEXCEPT
+    {
+        auto const local_mask(this_type::make_block_mask(in_size));
+        if ((~local_mask & in_value) != 0)
+        {
+            PSYQ_ASSERT(false);
+            return -1;
+        }
+        auto const local_block_index(in_position / this_type::BLOCK_SIZE);
+        if (io_blocks.size() <= local_block_index)
+        {
+            PSYQ_ASSERT(false);
+            return -1;
+        }
+
+        // ブロックビット列でのビット位置を決定し、値を埋め込む。
+        auto const local_position(
+            in_position - local_block_index * this_type::BLOCK_SIZE);
+        PSYQ_ASSERT(local_position + in_size <= this_type::BLOCK_SIZE);
+        auto& local_block(io_blocks.at(local_block_index));
+        auto const local_last_block(local_block);
+        local_block = (~(local_mask << local_position) & local_block)
+            | ((in_value & local_mask) << local_position);
+        return local_last_block != local_block;
+    }
+
+    //-------------------------------------------------------------------------
+    /** @brief 識別値に対応する状態値ビット列チャンクを用意する。
+
+        識別値に対応する状態値ビット列チャンクを、コンテナに用意する。
+        同じ識別値のチャンクがすでにコンテナにあれば、それを返す。
+        同じ識別値のチャンクがコンテナになければ、新たにチャンクを生成する。
+
+        @param[in,out] io_chunks チャンクを用意するコンテナ。
+        @param[in] in_chunk_key  用意するチャンクに対応する識別値。
+        @return 用意したチャンクへの参照。
+     */
+    private: static typename this_type::chunk_vector::value_type& equip_chunk(
+        typename this_type::chunk_vector& io_chunks,
+        typename this_type::chunk_key in_chunk_key)
+    {
+        auto const local_lower_bound(
+            std::lower_bound(
+                io_chunks.begin(),
+                io_chunks.end(),
+                in_chunk_key,
+                typename this_type::chunk_key_less()));
+        if (local_lower_bound != io_chunks.end()
+            && local_lower_bound->key == in_chunk_key)
+        {
+            return *local_lower_bound;
+        }
+        return *io_chunks.insert(
+            local_lower_bound,
+            typename this_type::chunk_vector::value_type(
+                std::move(in_chunk_key), io_chunks.get_allocator()));
+    }
+
+    //-------------------------------------------------------------------------
     /// @brief 状態値登記のコンテナ。
     private: typename this_type::state_vector states_;
-    /// @brief ビット列チャンクのコンテナ。
+    /// @brief 状態値ビット列チャンクのコンテナ。
     private: typename this_type::chunk_vector chunks_;
 
 }; // class psyq::scenario_engine::reservoir
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief 空きビット領域を比較する関数オブジェクト。
+template<
+    typename template_float,
+    typename template_state_key,
+    typename template_chunk_key,
+    typename template_allocator>
+struct psyq::scenario_engine::reservoir<
+    template_float,
+    template_state_key,
+    template_chunk_key,
+    template_allocator>
+        ::empty_field_less
+{
+    bool operator()(
+        typename reservoir::field_type const in_left,
+        typename reservoir::field_type const in_right)
+    const PSYQ_NOEXCEPT
+    {
+        // ビット領域のビット数で比較する。
+        auto const local_left_size(
+            reservoir::get_empty_field_size(in_left));
+        auto const local_right_size(
+            reservoir::get_empty_field_size(in_right));
+        if (local_left_size != local_right_size)
+        {
+            return local_left_size < local_right_size;
+        }
+
+        // ビット領域のビット位置で比較する。
+        auto const local_left_position(
+            reservoir::get_field_position(in_left));
+        auto const local_right_position(
+            reservoir::get_field_position(in_right));
+        return local_left_position < local_right_position;
+    }
+
+    bool operator()(
+        typename reservoir::field_type const in_left,
+        typename reservoir::size_type const in_right)
+    const PSYQ_NOEXCEPT
+    {
+        // ビット領域のビット数で比較する。
+        auto const local_left_size(
+            reservoir::get_empty_field_size(in_left));
+        return local_left_size < in_right;
+    }
+
+    bool operator()(
+        typename reservoir::size_type const in_left,
+        typename reservoir::field_type const in_right)
+    const PSYQ_NOEXCEPT
+    {
+        // ビット領域のビット数で比較する。
+        auto const local_right_size(
+            reservoir::get_empty_field_size(in_right));
+        return in_left < local_right_size;
+    }
+
+}; // struct psyq::scenario_engine::reservoir::empty_field_less
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief 状態値の登記。
+template<
+    typename template_float,
+    typename template_state_key,
+    typename template_chunk_key,
+    typename template_allocator>
+struct psyq::scenario_engine::reservoir<
+    template_float,
+    template_state_key,
+    template_chunk_key,
+    template_allocator>
+        ::state_registry
+{
+    state_registry(
+        typename reservoir::state_key in_state_key,
+        typename reservoir::chunk_key in_chunk_key,
+        typename reservoir::field_type const in_field)
+    PSYQ_NOEXCEPT:
+    chunk(std::move(in_chunk_key)),
+    key(std::move(in_state_key)),
+    field(in_field)
+    {}
+
+    /** @brief 状態値の構成を取得する。
+        @return 状態値の構成。
+     */
+    typename reservoir::format_type get_format() const PSYQ_NOEXCEPT
+    {
+        auto const local_mod_size(
+            reservoir::field_SIZE_BACK - reservoir::field_SIZE_FRONT);
+        auto const local_minus(
+            1 & static_cast<typename reservoir::format_type>(
+                this->field >> reservoir::field_SIZE_BACK));
+        return (-local_minus << local_mod_size) |
+            static_cast<typename reservoir::format_type>(
+                reservoir::field_SIZE_MASK & (
+                    this->field >> reservoir::field_SIZE_FRONT));
+    }
+
+    /// @brief 状態値が格納されているビット列チャンクの識別値。
+    typename reservoir::chunk_key chunk;
+    /// @brief 状態値に対応する識別値。
+    typename reservoir::state_key key;
+    /// @brief 状態値が格納されているビット領域。
+    typename reservoir::field_type field;
+
+}; // struct psyq::scenario_engine::reservoir::state_registry
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief 状態値を格納するビット列のチャンク。
+template<
+    typename template_float,
+    typename template_state_key,
+    typename template_chunk_key,
+    typename template_allocator>
+struct psyq::scenario_engine::reservoir<
+    template_float,
+    template_state_key,
+    template_chunk_key,
+    template_allocator>
+        ::chunk
+{
+    typedef chunk this_type;
+
+    chunk(
+        typename reservoir::chunk_key in_key,
+        typename reservoir::allocator_type const& in_allocator)
+    :
+    blocks(in_allocator),
+    empty_fields(in_allocator),
+    key(std::move(in_key))
+    {}
+
+    /** @brief ムーブ構築子。
+        @param[in,out] io_source ムーブ元となるインスタンス。
+     */
+    chunk(this_type&& io_source):
+    blocks(std::move(io_source.blocks)),
+    empty_fields(std::move(io_source.empty_fields)),
+    key(std::move(io_source.key))
+    {
+        io_source.blocks.clear();
+        io_source.empty_fields.clear();
+    }
+
+    /** @brief ムーブ代入演算子。
+        @param[in,out] io_source ムーブ元となるインスタンス。
+        @return *this
+     */
+    this_type& operator=(this_type&& io_source)
+    {
+        if (this != &io_source)
+        {
+            this->blocks = std::move(io_source.blocks);
+            this->empty_fields = std::move(io_source.empty_fields);
+            this->key = std::move(io_source.key);
+            io_source.blocks.clear();
+            io_source.empty_fields.clear();
+        }
+        return *this;
+    }
+
+    /// @copydoc block_vector
+    typename reservoir::block_vector blocks;
+    /// @copydoc empty_field_vector
+    typename reservoir::empty_field_vector empty_fields;
+    /// @brief チャンクの識別値。
+    typename reservoir::chunk_key key;
+
+}; // struct psyq::scenario_engine::reservoir::chunk
 
 #endif // !defined(PSYQ_SCENARIO_ENGINE_RESERVOIR_HPP_)
 // vim: set expandtab:

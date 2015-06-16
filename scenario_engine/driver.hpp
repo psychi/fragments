@@ -178,22 +178,9 @@ class psyq::scenario_engine::driver
         this->dispatcher_._dispatch(this->evaluator_, this->reservoir_);
     }
 
-    /** @brief 文字列からハッシュ値を生成する。
-        @param[in] in_string ハッシュ値のもととなる文字列。
-        @return 文字列から生成したハッシュ値。
-     */
-    public: typename this_type::hasher::result_type make_hash(
-        typename this_type::hasher::argument_type const& in_string)
-    {
-        auto const local_hash(this->hash_function_(in_string));
-        PSYQ_ASSERT(
-            in_string.empty() || local_hash != this->hash_function_(
-                typename this_type::hasher::argument_type()));
-        return local_hash;
-    }
-
     //-------------------------------------------------------------------------
     /// @name チャンク
+    //@{
     /** @brief 状態値と条件式と条件挙動関数を、チャンクへ追加する。
         @param[in] in_chunk_key 追加するチャンクの識別値。
         @param[in] in_state_builder
@@ -340,11 +327,6 @@ namespace psyq_test
 {
     inline void scenario_engine()
     {
-        std::deque<int> local_deque;
-        for (unsigned i(0); i < 1024; ++i)
-        {
-            local_deque.push_front(i);
-        }
         typedef psyq::string::csv_table<std::string> string_table;
         typedef psyq::scenario_engine
             ::driver<float, string_table::string_view::fnv1_hash32>
@@ -405,7 +387,7 @@ namespace psyq_test
         PSYQ_ASSERT(
             local_driver.reservoir_.register_value(
                 local_chunk_key,
-                local_driver.make_hash("10"),
+                local_driver.hash_function_("10"),
                 driver::reservoir::state_value(10u)));
         PSYQ_ASSERT(!local_driver.extend_chunk(0, 0, nullptr));
         local_driver.shrink_to_fit();

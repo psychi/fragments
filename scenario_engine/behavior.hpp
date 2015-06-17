@@ -495,7 +495,7 @@ struct psyq::scenario_engine::behavior_builder
         }
 
         // 演算子を取得する。
-        typename template_reservoir::state_value::operation_enum local_operator;
+        typename template_reservoir::state_value::operation local_operator;
         auto const local_get_operator(
             this_type::get_operator(
                 local_operator,
@@ -533,7 +533,7 @@ struct psyq::scenario_engine::behavior_builder
 
     private: template<typename template_reservoir>
     static bool get_operator(
-        typename template_reservoir::state_value::operation_enum& out_operator,
+        typename template_reservoir::state_value::operation& out_operator,
         template_reservoir const&,
         typename this_type::string_table::string_view const& in_string)
     {

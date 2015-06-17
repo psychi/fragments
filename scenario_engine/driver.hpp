@@ -83,7 +83,7 @@ class psyq::scenario_engine::driver
     /// @brief シナリオ駆動器で用いる条件監視器の型。
     public: typedef psyq::scenario_engine::dispatcher<
         typename this_type::reservoir::state_key,
-        typename this_type::evaluator::expression_key,
+        typename this_type::evaluator::expression::key,
         typename this_type::allocator_type>
             dispatcher;
 
@@ -271,7 +271,7 @@ class psyq::scenario_engine::driver
      */
     public: bool extend_chunk(
         typename this_type::reservoir::chunk_key const& in_chunk_key,
-        typename this_type::dispatcher::expression_key const& in_expression_key,
+        typename this_type::evaluator::expression::key const& in_expression_key,
         typename this_type::dispatcher::function_shared_ptr in_function)
     {
         // 条件挙動関数を条件挙動器へ登録する。

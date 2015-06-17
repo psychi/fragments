@@ -53,7 +53,7 @@ class psyq::scenario_engine::modifier
         this_type::modify で状態変更を適用する際に、
         すでに状態変更されていた場合の動作を決める。
      */
-    public: enum priority_enum: std::uint8_t
+    public: enum priority: std::uint8_t
     {
         /// 次回以降の this_type::modify まで、状態変更を遅延する。
         priority_NONE,
@@ -157,7 +157,7 @@ class psyq::scenario_engine::modifier
     public: void accumulate(
         typename this_type::reservoir::state_key const& in_state_key,
         typename this_type::reservoir::state_value const& in_state_value,
-        typename this_type::priority_enum const in_priority =
+        typename this_type::priority const in_priority =
             this_type::priority_NONE)
     {
         this->accumulated_states_.emplace_back(

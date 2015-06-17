@@ -24,7 +24,7 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 条件式。
-    @tparam template_key           @copydoc expression::key_type
+    @tparam template_key           @copydoc expression::key
     @tparam template_chunk_key     @copydoc expression::chunk_key
     @tparam template_element_index @copydoc expression::element_index
  */
@@ -38,7 +38,7 @@ class psyq::scenario_engine::_private::expression
     private: typedef expression this_type;
 
     /// @brief 条件式の識別値を表す型。
-    public: typedef template_key key_type;
+    public: typedef template_key key;
 
     /// @brief 要素条件チャンクの識別値を表す型。
     public: typedef template_chunk_key chunk_key;
@@ -47,14 +47,14 @@ class psyq::scenario_engine::_private::expression
     public: typedef template_element_index element_index;
 
     /// @brief 条件式の要素条件を結合する論理演算子を表す列挙型。
-    public: enum logic_enum: std::uint8_t
+    public: enum logic: std::uint8_t
     {
         logic_AND, ///< 論理積。
         logic_OR,  ///< 論理和。
     };
 
     /// @brief 条件式の種類を表す列挙型。
-    public: enum kind_enum: std::uint8_t
+    public: enum kind: std::uint8_t
     {
         kind_SUB_EXPRESSION,   ///< 複合条件式。
         kind_STATE_TRANSITION, ///< 状態変化条件式。
@@ -72,9 +72,9 @@ class psyq::scenario_engine::_private::expression
      */
     public: expression(
         typename this_type::chunk_key in_chunk_key,
-        typename this_type::key_type in_expression_key,
-        typename this_type::logic_enum const in_logic,
-        typename this_type::kind_enum const in_kind,
+        typename this_type::key in_expression_key,
+        typename this_type::logic const in_logic,
+        typename this_type::kind const in_kind,
         typename this_type::element_index const in_element_begin,
         typename this_type::element_index const in_element_end)
     PSYQ_NOEXCEPT:
@@ -136,15 +136,15 @@ class psyq::scenario_engine::_private::expression
     /// @brief 要素条件チャンクに対応する識別値。
     public: typename this_type::chunk_key chunk_key_;
     /// @brief 条件式に対応する識別値。
-    public: typename this_type::key_type key_;
+    public: typename this_type::key key_;
     /// @brief 条件式が使う要素条件の先頭インデクス番号。
     public: typename this_type::element_index begin_;
     /// @brief 条件式が使う要素条件の末尾インデクス番号。
     public: typename this_type::element_index end_;
     /// @brief 条件式の要素条件を結合する論理演算子。
-    public: typename this_type::logic_enum logic_;
+    public: typename this_type::logic logic_;
     /// @brief 条件式の種類。
-    public: typename this_type::kind_enum kind_;
+    public: typename this_type::kind kind_;
 
 }; // class psyq::scenario_engine::_private::expression
 
@@ -156,7 +156,7 @@ class psyq::scenario_engine::_private::expression
     - evaluator::evaluate_expression で、条件式を評価する。
 
     @tparam template_reservoir      @copydoc evaluator::reservoir
-    @tparam template_expression_key @copydoc evaluator::expression_key
+    @tparam template_expression_key @copydoc evaluator::expression::key
     @tparam template_allocator      @copydoc evaluator::allocator_type
  */
 template<
@@ -170,9 +170,6 @@ class psyq::scenario_engine::evaluator
 
     /// @brief 条件評価器で用いる状態貯蔵器の型。
     public: typedef template_reservoir reservoir;
-
-    /// @brief 条件式の識別に使う値の型。
-    public: typedef template_expression_key expression_key;
 
     /// @brief 条件評価器で用いるメモリ割当子の型。
     public: typedef template_allocator allocator_type;
@@ -192,12 +189,12 @@ class psyq::scenario_engine::evaluator
 
     /// @brief 条件式の識別値のコンテナの型。
     private: typedef std::vector<
-        typename this_type::expression_key, typename this_type::allocator_type>
+        typename this_type::expression::key, typename this_type::allocator_type>
             expression_key_vector;
 
     /// @brief 条件式を識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
     private: typedef psyq::scenario_engine::_private::key_less<
-        typename this_type::expression, typename this_type::expression_key>
+        typename this_type::expression, typename this_type::expression::key>
             expression_key_less;
 
     //-------------------------------------------------------------------------
@@ -211,7 +208,7 @@ class psyq::scenario_engine::evaluator
             @param[in] in_condition this_type::condition の初期値。
          */
         sub_expression(
-            typename evaluator::expression_key in_key,
+            typename evaluator::expression::key in_key,
             bool const in_condition)
         PSYQ_NOEXCEPT:
         key_(std::move(in_key)),
@@ -219,7 +216,7 @@ class psyq::scenario_engine::evaluator
         {}
 
         /// @brief 結合する条件式の識別値。
-        typename evaluator::expression_key key_;
+        typename evaluator::expression::key key_;
         /// @brief 結合する際の条件。
         bool condition;
 
@@ -268,7 +265,7 @@ class psyq::scenario_engine::evaluator
          */
         state_comparison(
             typename evaluator::reservoir::state_key in_key,
-            typename evaluator::reservoir::state_value::comparison_enum const
+            typename evaluator::reservoir::state_value::comparison const
                 in_comparison,
             typename evaluator::reservoir::state_value in_value)
         PSYQ_NOEXCEPT:
@@ -282,7 +279,7 @@ class psyq::scenario_engine::evaluator
         /// @brief 比較の左辺値となる状態値の識別値。
         typename evaluator::reservoir::state_key key_;
         /// @brief 比較演算子の種類。
-        typename evaluator::reservoir::state_value::comparison_enum comparison;
+        typename evaluator::reservoir::state_value::comparison comparison;
 
     }; // struct state_comparison
 
@@ -454,8 +451,8 @@ class psyq::scenario_engine::evaluator
     public: template<typename template_element_container>
     bool register_expression(
         typename this_type::reservoir::chunk_key in_chunk_key,
-        typename this_type::expression_key in_expression_key,
-        typename this_type::expression::logic_enum const in_logic,
+        typename this_type::expression::key in_expression_key,
+        typename this_type::expression::logic const in_logic,
         template_element_container const& in_elements)
     {
         if (in_elements.empty())
@@ -518,7 +515,7 @@ class psyq::scenario_engine::evaluator
         @retval 負 条件式の評価に失敗した。
      */
     public: std::int8_t evaluate_expression(
-        typename this_type::expression_key const in_expression_key,
+        typename this_type::expression::key const in_expression_key,
         typename this_type::reservoir const& in_reservoir)
     const PSYQ_NOEXCEPT
     {
@@ -599,7 +596,7 @@ class psyq::scenario_engine::evaluator
         @retval ==nullptr 対応する条件式が見つからなかった。
      */
     public: typename this_type::expression const* _find_expression(
-        typename this_type::expression_key const& in_expression_key)
+        typename this_type::expression::key const& in_expression_key)
     const PSYQ_NOEXCEPT
     {
         return this_type::expression_key_less::find_const_pointer(
@@ -681,7 +678,7 @@ class psyq::scenario_engine::evaluator
     //@}
     //-------------------------------------------------------------------------
     private: static std::pair<
-         typename this_type::expression::kind_enum,
+         typename this_type::expression::kind,
          typename this_type::sub_expression_vector*>
     make_element_kind(
         typename this_type::chunk& in_chunk,
@@ -693,7 +690,7 @@ class psyq::scenario_engine::evaluator
     }
 
     private: static std::pair<
-         typename this_type::expression::kind_enum,
+         typename this_type::expression::kind,
          typename this_type::state_transition_vector*>
     make_element_kind(
         typename this_type::chunk& in_chunk,
@@ -705,7 +702,7 @@ class psyq::scenario_engine::evaluator
     }
 
     private: static std::pair<
-         typename this_type::expression::kind_enum,
+         typename this_type::expression::kind,
          typename this_type::state_comparison_vector*>
     make_element_kind(
         typename this_type::chunk& in_chunk,

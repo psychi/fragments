@@ -454,7 +454,7 @@ class psyq::scenario_engine::dispatcher
         template_reservoir& io_reservoir,
         bool const in_condition,
         typename template_reservoir::state_key const& in_state_key,
-        typename template_reservoir::state_value::operation_enum const in_operator,
+        typename template_reservoir::state_value::operation const in_operator,
         typename template_reservoir::state_value const& in_value,
         typename this_type::allocator_type const& in_allocator)
     {
@@ -1018,7 +1018,7 @@ class psyq::scenario_engine::dispatcher
     static bool operate_state(
         template_reservoir& io_reservoir,
         typename template_reservoir::state_key const& in_state_key,
-        typename template_reservoir::state_value::operation_enum const in_operator,
+        typename template_reservoir::state_value::operation const in_operator,
         typename template_reservoir::state_value const& in_value)
     {
         /** @todo
@@ -1067,7 +1067,7 @@ struct psyq::scenario_engine::dispatcher<
     typedef expression_monitor this_type;
 
     /// @brief フラグの位置。
-    enum flag_enum: std::uint8_t
+    enum flag: std::uint8_t
     {
         flag_VALID_TRANSITION,   ///< 状態変化の取得に成功。
         flag_INVALID_TRANSITION, ///< 状態変化の取得に失敗。

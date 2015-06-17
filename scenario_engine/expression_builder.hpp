@@ -284,7 +284,7 @@ class psyq::scenario_engine::expression_builder
         // 要素条件の論理演算子を取得する。
         auto const local_logic_cell(
             in_table.find_body_cell(in_row_index, in_attribute.logic->column));
-        typename template_evaluator::expression::logic_enum local_logic;
+        typename template_evaluator::expression::logic local_logic;
         if (local_logic_cell
             == PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_LOGIC_AND)
         {
@@ -388,8 +388,8 @@ class psyq::scenario_engine::expression_builder
         template_hasher& io_hasher,
         template_element_container& io_elements,
         typename template_evaluator::reservoir::chunk_key in_chunk_key,
-        typename template_evaluator::expression_key in_expression_key,
-        typename template_evaluator::expression::logic_enum const in_logic,
+        typename template_evaluator::expression::key in_expression_key,
+        typename template_evaluator::expression::logic const in_logic,
         template_element_server const& in_elements,
         typename this_type::string_table const& in_table,
         typename this_type::string_table::index_type const in_row_index,
@@ -582,7 +582,7 @@ class psyq::scenario_engine::expression_builder
 
         // 比較演算子を取得する。
         typedef typename template_evaluator::reservoir::state_value state_value;
-        typename state_value::comparison_enum local_state_comparison;
+        typename state_value::comparison local_state_comparison;
         auto const local_get_comparison_operator(
             this_type::get_comparison_operator<state_value>(
                 local_state_comparison,
@@ -616,7 +616,7 @@ class psyq::scenario_engine::expression_builder
 
     private: template<typename template_state_value>
     static bool get_comparison_operator(
-        typename template_state_value::comparison_enum& out_comparison,
+        typename template_state_value::comparison& out_comparison,
         typename this_type::string_table::string_view const& in_string)
     {
         if (in_string

@@ -728,7 +728,7 @@ class psyq::scenario_engine::reservoir
         @param[in] in_variety 状態値の種別。
         @return 状態値の型の種別。
      */
-    public: static typename this_type::state_value::kind_enum get_kind(
+    public: static typename this_type::state_value::kind get_kind(
         typename this_type::state_registry::variety const in_variety)
     PSYQ_NOEXCEPT
     {
@@ -737,7 +737,7 @@ class psyq::scenario_engine::reservoir
             case this_type::state_value::kind_NULL:
             case this_type::state_value::kind_BOOL:
             case this_type::state_value::kind_FLOAT:
-            return static_cast<typename this_type::state_value::kind_enum>(
+            return static_cast<typename this_type::state_value::kind>(
                 in_variety);
 
             default:

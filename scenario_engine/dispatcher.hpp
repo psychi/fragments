@@ -294,7 +294,7 @@ class psyq::scenario_engine::dispatcher
                 in_expression_key,
                 typename this_type::expression_monitor_key_less()));
         if (local_expression_monitor != this->expression_monitors_.end()
-            && local_expression_monitor->key == in_expression_key)
+            && local_expression_monitor->key_ == in_expression_key)
         {
             // 同じ関数オブジェクトがすでに登録済みなら、失敗する。
             auto const local_find_function(
@@ -527,7 +527,7 @@ class psyq::scenario_engine::dispatcher
         /// @note std::vector なら、逆順で走査したほうが効率いいかも。
         for (auto i(io_state_monitors.begin()); i != io_state_monitors.end();)
         {
-            auto& local_expression_keys(i->expression_keys);
+            auto& local_expression_keys(i->expression_keys_);
             for (
                 auto j(local_expression_keys.begin());
                 j != local_expression_keys.end();)
@@ -642,8 +642,8 @@ class psyq::scenario_engine::dispatcher
             {
                 auto const local_register_expression(
                     this->register_expression(
-                        local_expression_monitor.key,
-                        local_expression_monitor.key,
+                        local_expression_monitor.key_,
+                        local_expression_monitor.key_,
                         in_evaluator,
                         in_reserve_expressions));
                 if (local_register_expression != 0)
@@ -683,7 +683,7 @@ class psyq::scenario_engine::dispatcher
             return 0;
         }
         auto const local_chunk(
-            in_evaluator._find_chunk(local_expression->chunk));
+            in_evaluator._find_chunk(local_expression->chunk_key_));
         if (local_chunk == nullptr)
         {
             // 条件式があれば、要素条件チャンクもあるはず。
@@ -692,13 +692,13 @@ class psyq::scenario_engine::dispatcher
         }
 
         // 条件式の種類によって、監視する条件式の追加先を選別する。
-        switch (local_expression->kind)
+        switch (local_expression->kind_)
         {
             case template_evaluator::expression::kind_SUB_EXPRESSION:
             return this->register_sub_expression(
                 in_register_key,
                 *local_expression,
-                local_chunk->sub_expressions,
+                local_chunk->sub_expressions_,
                 in_evaluator,
                 in_reserve_expressions);
 
@@ -707,7 +707,7 @@ class psyq::scenario_engine::dispatcher
                 this->state_monitors_,
                 in_register_key,
                 *local_expression,
-                local_chunk->state_transitions,
+                local_chunk->state_transitions_,
                 in_reserve_expressions);
             return -1;
 
@@ -716,7 +716,7 @@ class psyq::scenario_engine::dispatcher
                 this->state_monitors_,
                 in_register_key,
                 *local_expression,
-                local_chunk->state_comparisons,
+                local_chunk->state_comparisons_,
                 in_reserve_expressions);
             return 1;
 
@@ -748,11 +748,11 @@ class psyq::scenario_engine::dispatcher
         // 条件式が使う要素条件を走査し、
         // 要素条件ごとに状態監視器へ条件式を登録する。
         auto const local_begin(in_elements.begin());
-        auto const local_end(local_begin + in_expression.end);
-        for (auto i(local_begin + in_expression.begin); i != local_end; ++i)
+        auto const local_end(local_begin + in_expression.end_);
+        for (auto i(local_begin + in_expression.begin_); i != local_end; ++i)
         {
             // 条件式を登録する状態監視器を取得する。
-            auto const& local_state_key(i->key);
+            auto const& local_state_key(i->key_);
             auto local_state_monitor(
                 std::lower_bound(
                     io_state_monitors.begin(),
@@ -760,7 +760,7 @@ class psyq::scenario_engine::dispatcher
                     local_state_key,
                     typename this_type::state_monitor_key_less()));
             if (local_state_monitor == io_state_monitors.end()
-                || local_state_monitor->key != local_state_key)
+                || local_state_monitor->key_ != local_state_key)
             {
                 // 要素条件に対応する状態監視器がなかったので、
                 // 状態監視器を新たに生成する。
@@ -771,7 +771,7 @@ class psyq::scenario_engine::dispatcher
             }
 
             // 条件式の識別値を、状態監視器へ登録する。
-            auto& local_expression_keys(local_state_monitor->expression_keys);
+            auto& local_expression_keys(local_state_monitor->expression_keys_);
             local_expression_keys.reserve(in_reserve_expressions);
             auto const local_lower_bound(
                 std::lower_bound(
@@ -810,11 +810,11 @@ class psyq::scenario_engine::dispatcher
     {
         // 複合条件式の要素条件を走査し、状態監視器に条件式を登録する。
         auto const local_begin(in_sub_expressions.begin());
-        auto const local_end(local_begin + in_expression.end);
+        auto const local_end(local_begin + in_expression.end_);
         std::int8_t local_result(1);
-        for (auto i(local_begin + in_expression.begin); i != local_end; ++i)
+        for (auto i(local_begin + in_expression.begin_); i != local_end; ++i)
         {
-            auto const& local_sub_key(i->key);
+            auto const& local_sub_key(i->key_);
             auto const local_expression_monitor(
                 this_type::expression_monitor_key_less::find_const_pointer(
                     this->expression_monitors_, local_sub_key));
@@ -862,17 +862,17 @@ class psyq::scenario_engine::dispatcher
             // 状態変化を検知したら、条件式監視器へ知らせる。
             auto& local_state_monitor(*i);
             auto const local_state_transition(
-                in_reservoir._get_transition(local_state_monitor.key));
+                in_reservoir._get_transition(local_state_monitor.key_));
             if (local_state_transition != 0)
             {
                 this_type::notify_state_transition(
                     io_expression_monitors,
-                    local_state_monitor.expression_keys,
+                    local_state_monitor.expression_keys_,
                     0 <= local_state_transition);
 
                 // 状態監視器に対応する条件式監視器がなくなったら、
                 // 状態監視器を削除する。
-                if (local_state_monitor.expression_keys.empty())
+                if (local_state_monitor.expression_keys_.empty())
                 {
                     i = io_state_monitors.erase(i);
                     continue;
@@ -1004,7 +1004,7 @@ class psyq::scenario_engine::dispatcher
             {
                 io_function_caches.emplace_back(
                     *i,
-                    io_expression_monitor.key,
+                    io_expression_monitor.key_,
                     local_evaluation,
                     local_last_evaluation);
                 ++i;
@@ -1085,7 +1085,7 @@ struct psyq::scenario_engine::dispatcher<
         typename dispatcher::expression_key in_key,
         typename dispatcher::allocator_type const& in_allocator)
     :
-    key(std::move(in_key)),
+    key_(std::move(in_key)),
     functions(in_allocator)
     {}
 
@@ -1094,7 +1094,7 @@ struct psyq::scenario_engine::dispatcher<
      */
     expression_monitor(this_type&& io_source):
     functions(std::move(io_source.functions)),
-    key(std::move(io_source.key)),
+    key_(std::move(io_source.key_)),
     flags(std::move(io_source.flags))
     {
         io_source.functions.clear();
@@ -1109,7 +1109,7 @@ struct psyq::scenario_engine::dispatcher<
         if (this != &io_source)
         {
             this->functions = std::move(io_source.functions);
-            this->key = std::move(io_source.key);
+            this->key_ = std::move(io_source.key_);
             this->flags = std::move(io_source.flags);
             io_source.functions.clear();
         }
@@ -1167,7 +1167,7 @@ struct psyq::scenario_engine::dispatcher<
 
         // 条件式を評価し、結果を記録する。
         auto const local_evaluate_expression(
-            in_evaluator.evaluate_expression(this->key, in_reservoir));
+            in_evaluator.evaluate_expression(this->key_, in_reservoir));
         this->flags.set(
             this_type::flag_LAST_EVALUATION,
             0 <= local_evaluate_expression);
@@ -1180,7 +1180,7 @@ struct psyq::scenario_engine::dispatcher<
     /// @brief 条件挙動関数オブジェクトのコンテナ。
     typename dispatcher::function_weak_ptr_vector functions;
     /// @brief 監視している条件式の識別値。
-    typename dispatcher::expression_key key;
+    typename dispatcher::expression_key key_;
     /// @brief フラグの集合。
     std::bitset<8> flags;
 
@@ -1212,18 +1212,18 @@ struct psyq::scenario_engine::dispatcher<
         typename dispatcher::state_key in_key,
         typename dispatcher::allocator_type const& in_allocator)
     :
-    expression_keys(in_allocator),
-    key(std::move(in_key))
+    expression_keys_(in_allocator),
+    key_(std::move(in_key))
     {}
 
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
     state_monitor(this_type&& io_source):
-    expression_keys(std::move(io_source.expression_keys)),
-    key(std::move(io_source.key))
+    expression_keys_(std::move(io_source.expression_keys_)),
+    key_(std::move(io_source.key_))
     {
-        io_source.expression_keys.clear();
+        io_source.expression_keys_.clear();
     }
 
     /** @brief ムーブ代入演算子。
@@ -1234,17 +1234,17 @@ struct psyq::scenario_engine::dispatcher<
     {
         if (this != &io_source)
         {
-            this->expression_keys = std::move(io_source.expression_keys);
-            this->key = std::move(io_source.key);
-            io_source.expression_keys.clear();
+            this->expression_keys_ = std::move(io_source.expression_keys_);
+            this->key_ = std::move(io_source.key_);
+            io_source.expression_keys_.clear();
         }
         return *this;
     }
 
     /// @brief 評価の更新を要求する条件式の識別値のコンテナ。
-    typename dispatcher::expression_key_vector expression_keys;
+    typename dispatcher::expression_key_vector expression_keys_;
     /// @brief 状態値の識別値。
-    typename dispatcher::state_key key;
+    typename dispatcher::state_key key_;
 
 }; // struct psyq::scenario_engine::dispatcher::state_monitor
 

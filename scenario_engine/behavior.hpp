@@ -109,7 +109,7 @@ struct psyq::scenario_engine::behavior_chunk
      */
     public: behavior_chunk(this_type&& io_source):
     functions(std::move(io_source.functions)),
-    key(std::move(io_source.key))
+    key_(std::move(io_source.key_))
     {}
 
     /** @brief ムーブ代入演算子。
@@ -119,7 +119,7 @@ struct psyq::scenario_engine::behavior_chunk
     public: this_type& operator=(this_type&& io_source)
     {
         this->functions = std::move(io_source.functions);
-        this->key = std::move(io_source.key);
+        this->key_ = std::move(io_source.key_);
         return *this;
     }
     //@}
@@ -233,14 +233,14 @@ struct psyq::scenario_engine::behavior_chunk
         typename this_type::dispatcher::allocator_type const& in_allocator)
     :
     functions(in_allocator),
-    key(std::move(in_key))
+    key_(std::move(in_key))
     {}
 
     //-------------------------------------------------------------------------
     /// @brief 条件挙動関数のコンテナ。
     public: typename this_type::dispatcher::function_shared_ptr_vector functions;
     /// @brief 条件挙動チャンクの識別値。
-    public: typename this_type::key_type key;
+    public: typename this_type::key_type key_;
 
 }; // struct psyq::scenario_engine::behavior_chunk
 
@@ -266,7 +266,7 @@ struct psyq::scenario_engine::behavior_builder
     {
         table_attribute(string_table const& in_table)
         PSYQ_NOEXCEPT:
-        key(
+        key_(
             in_table.find_attribute(
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_KEY)),
         condition(
@@ -282,13 +282,13 @@ struct psyq::scenario_engine::behavior_builder
 
         bool is_valid() const PSYQ_NOEXCEPT
         {
-            return this->key != nullptr
+            return this->key_ != nullptr
                 && this->condition != nullptr
                 && this->kind != nullptr
                 && this->argument != nullptr;
         }
 
-        typename behavior_builder::string_table::attribute const* key;
+        typename behavior_builder::string_table::attribute const* key_;
         typename behavior_builder::string_table::attribute const* condition;
         typename behavior_builder::string_table::attribute const* kind;
         typename behavior_builder::string_table::attribute const* argument;
@@ -369,7 +369,7 @@ struct psyq::scenario_engine::behavior_builder
 
             // 条件式キーを取得する。
             auto const local_key_cell(
-                in_table.find_body_cell(i, local_attribute.key->column));
+                in_table.find_body_cell(i, local_attribute.key_->column));
             auto local_key(io_hasher(local_key_cell));
             if (local_key
                 == io_hasher(typename template_hasher::argument_type()))
@@ -486,7 +486,7 @@ struct psyq::scenario_engine::behavior_builder
             in_table.find_body_cell(
                 in_row_index, in_attribute.argument->column));
         auto const local_key(io_hasher(local_key_cell));
-        if (in_reservoir.get_format(local_key)
+        if (in_reservoir.get_variety(local_key)
             == template_reservoir::state_value::kind_NULL)
         {
             // 状態貯蔵器にキーが登録されていなかった。

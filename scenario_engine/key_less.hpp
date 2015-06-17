@@ -28,7 +28,7 @@ struct psyq::scenario_engine::_private::key_less
         template_value const& in_right)
     const PSYQ_NOEXCEPT
     {
-        return in_left.key < in_right.key;
+        return in_left.key_ < in_right.key_;
     }
 
     bool operator()(
@@ -36,7 +36,7 @@ struct psyq::scenario_engine::_private::key_less
         template_value const& in_right)
     const PSYQ_NOEXCEPT
     {
-        return in_left < in_right.key;
+        return in_left < in_right.key_;
     }
 
     bool operator()(
@@ -44,7 +44,7 @@ struct psyq::scenario_engine::_private::key_less
         template_key const& in_right)
     const PSYQ_NOEXCEPT
     {
-        return in_left.key < in_right;
+        return in_left.key_ < in_right;
     }
 
     /** @brief コンテナから値を検索する。
@@ -75,7 +75,7 @@ struct psyq::scenario_engine::_private::key_less
             std::lower_bound(
                 in_container.begin(), local_end, in_key, key_less()));
         return local_lower_bound != local_end
-            && local_lower_bound->key == in_key?
+            && local_lower_bound->key_ == in_key?
                 local_lower_bound: local_end;
     }
 
@@ -96,7 +96,7 @@ struct psyq::scenario_engine::_private::key_less
             std::lower_bound(
                 in_container.begin(), local_end, in_key, key_less()));
         return local_lower_bound != local_end
-            && local_lower_bound->key == in_key?
+            && local_lower_bound->key_ == in_key?
                 &(*local_lower_bound): nullptr;
     }
 

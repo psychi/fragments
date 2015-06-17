@@ -203,7 +203,7 @@ class psyq::scenario_engine::state_builder
         }
         auto const local_key(io_hasher(local_key_cell));
         if (local_key == io_hasher(typename template_hasher::argument_type())
-            || io_reservoir.get_format(local_key)
+            || io_reservoir.get_variety(local_key)
                != template_reservoir::state_value::kind_NULL)
         {
             // 条件キーが重複している。

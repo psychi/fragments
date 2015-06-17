@@ -73,13 +73,13 @@ class psyq::scenario_engine::modifier
             bool const in_ordered)
         PSYQ_NOEXCEPT:
         value(in_value),
-        key(in_key),
+        key_(in_key),
         series(in_series),
         ordered(in_ordered)
         {}
 
         typename modifier::reservoir::state_value value;
-        typename modifier::reservoir::state_key key;
+        typename modifier::reservoir::state_key key_;
         bool series;
         bool ordered;
     };
@@ -189,7 +189,7 @@ class psyq::scenario_engine::modifier
             auto j(i);
             for (; j != local_end && i->series == j->series; ++j)
             {
-                if (local_modify && 0 < io_reservoir._get_transition(j->key))
+                if (local_modify && 0 < io_reservoir._get_transition(j->key_))
                 {
                     // すでに状態変更されていたら、今回は状態変更しない。
                     local_modify = false;
@@ -201,7 +201,7 @@ class psyq::scenario_engine::modifier
             {
                 for (; i != j; ++i)
                 {
-                    if (!io_reservoir.set_value(i->key, i->value))
+                    if (!io_reservoir.set_value(i->key_, i->value))
                     {
                         /** @note
                             状態変更に失敗した場合、どう対応するのがよい？
@@ -226,7 +226,7 @@ class psyq::scenario_engine::modifier
                 {
                     this->pass_states_.push_back(
                         typename this_type::state(
-                            i->key,
+                            i->key_,
                             i->value,
                             i->series ^ local_series,
                             i->ordered));

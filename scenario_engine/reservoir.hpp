@@ -515,7 +515,7 @@ class psyq::scenario_engine::reservoir
             return typename this_type::state_value();
         }
         auto const local_variety(local_state_registry->get_variety());
-        auto const local_size(this_type::get_state_size(local_variety));
+        auto const local_size(this_type::get_size(local_variety));
         auto const local_bits(
             local_chunk->get_bits(
                 local_state_registry->get_position(), local_size));
@@ -704,7 +704,7 @@ class psyq::scenario_engine::reservoir
         @return 状態値のビット数。
      */
     public:
-    static typename this_type::state_registry::bit_size get_state_size(
+    static typename this_type::state_registry::bit_size get_size(
         typename this_type::state_registry::variety const in_variety)
     PSYQ_NOEXCEPT
     {
@@ -728,7 +728,7 @@ class psyq::scenario_engine::reservoir
         @param[in] in_variety 状態値の種別。
         @return 状態値の型の種別。
      */
-    public: static typename this_type::state_value::kind_enum get_state_kind(
+    public: static typename this_type::state_value::kind_enum get_kind(
         typename this_type::state_registry::variety const in_variety)
     PSYQ_NOEXCEPT
     {
@@ -879,9 +879,9 @@ class psyq::scenario_engine::reservoir
             const PSYQ_NOEXCEPT
             {
                 auto const local_left_size(
-                    this_type::get_state_size(in_left->get_variety()));
+                    this_type::get_size(in_left->get_variety()));
                 auto const local_right_size(
-                    this_type::get_state_size(in_right->get_variety()));
+                    this_type::get_size(in_right->get_variety()));
                 return local_right_size < local_left_size;
             }
         };
@@ -918,7 +918,7 @@ class psyq::scenario_engine::reservoir
         }
 
         // 状態値ビット列をコピーする。
-        auto const local_size(this_type::get_state_size(local_variety));
+        auto const local_size(this_type::get_size(local_variety));
         local_target_chunk.set_bits(
             local_target_state->get_position(),
             local_size,
@@ -969,7 +969,7 @@ class psyq::scenario_engine::reservoir
             local_state.set_position(
                 io_chunk.template
                     make_state_field<typename this_type::state_registry>(
-                        this_type::get_state_size(in_variety))));
+                        this_type::get_size(in_variety))));
         if (!local_set_position)
         {
             PSYQ_ASSERT(false);
@@ -1072,7 +1072,7 @@ class psyq::scenario_engine::reservoir
         }
 
         // 整数からビット列を取り出す。
-        auto const local_size(this_type::get_state_size(in_variety));
+        auto const local_size(this_type::get_size(in_variety));
         auto const local_mask(this_type::chunk::make_block_mask(local_size));
         out_bits = static_cast<typename this_type::chunk::block>(local_signed);
         if (in_value < 0)

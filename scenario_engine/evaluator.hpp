@@ -521,12 +521,12 @@ class psyq::scenario_engine::evaluator
     {
         // 条件式の辞書から、該当する条件式を検索する。
         auto const local_expression(this->_find_expression(in_expression_key));
-        if (local_expression != nullptr)
+        if (local_expression == nullptr)
         {
             return -1;
         }
         auto const local_chunk(this->_find_chunk(local_expression->chunk_key_));
-        if (local_chunk != nullptr)
+        if (local_chunk == nullptr)
         {
             // 条件式があれば、要素条件チャンクもあるはず。
             PSYQ_ASSERT(false);

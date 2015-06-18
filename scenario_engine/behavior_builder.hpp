@@ -90,6 +90,10 @@ class psyq::scenario_engine::behavior_builder
     /// @brief 解析する文字列表の型。
     public: typedef psyq::string::csv_table<template_string> string_table;
 
+    public: typedef typename psyq::scenario_engine
+        ::behavior_chunk<template_dispatcher>::function_shared_ptr_vector
+            function_shared_ptr_vector;
+
     /// @brief 文字列表の属性。
     private: struct table_attribute
     {
@@ -141,7 +145,7 @@ class psyq::scenario_engine::behavior_builder
         @return 生成した条件挙動関数のコンテナ。
      */
     public: template<typename template_hasher, typename template_evaluator>
-    typename this_type::dispatcher::function_shared_ptr_vector operator()(
+    typename this_type::function_shared_ptr_vector operator()(
         typename this_type::dispatcher& io_dispatcher,
         template_hasher& io_hasher,
         template_evaluator const& in_evaluator,
@@ -165,14 +169,14 @@ class psyq::scenario_engine::behavior_builder
         @return 生成した条件挙動関数のコンテナ。
      */
     public: template<typename template_hasher, typename template_evaluator>
-    static typename this_type::dispatcher::function_shared_ptr_vector build(
+    static typename this_type::function_shared_ptr_vector build(
         typename this_type::dispatcher& io_dispatcher,
         template_hasher& io_hasher,
         template_evaluator const& in_evaluator,
         typename template_evaluator::reservoir const& in_reservoir,
         typename this_type::string_table const& in_table)
     {
-        typename this_type::dispatcher::function_shared_ptr_vector
+        typename this_type::function_shared_ptr_vector
             local_functions(io_dispatcher.get_allocator());
 
         // 文字列表の属性の桁を取得する。

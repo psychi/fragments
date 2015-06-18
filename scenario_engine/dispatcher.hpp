@@ -40,18 +40,18 @@ class psyq::scenario_engine::_private::state_monitor
     private: typedef state_monitor this_type;
 
     /// @brief 状態監視器のコンテナ。
-    public: typedef std::vector<this_type, template_allocator>
-        container;
+    public: typedef std::vector<this_type, template_allocator> container;
 
     /// @brief 状態監視器を状態値の識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
-    public: typedef psyq::scenario_engine::_private::key_less<
-        this_type, template_state_key>
-            key_less;
+    public: typedef
+        psyq::scenario_engine::_private::key_less<
+            this_type, template_state_key>
+        key_less;
 
     /// @brief 条件式の識別値のコンテナの型。
-    public: typedef std::vector<
-        typename template_expression_key, template_allocator>
-            expression_key_container;
+    public: typedef
+        std::vector<typename template_expression_key, template_allocator>
+        expression_key_container;
 
     /** @brief 状態監視器を構築する。
         @param[in] in_key       状態値の識別値。
@@ -127,35 +127,41 @@ class psyq::scenario_engine::dispatcher
     public: typedef template_priority function_priority;
 
     /// @brief コンテナに用いるメモリ割当子の型。
-    public: typedef typename this_type::evaluator::allocator_type
+    public:
+        typedef typename this_type::evaluator::allocator_type
         allocator_type;
 
     //-------------------------------------------------------------------------
     /// @brief 状態監視器。
-    private: typedef psyq::scenario_engine::_private::state_monitor<
-         typename this_type::evaluator::reservoir::state_key,
-         typename this_type::evaluator::expression::key,
-         typename this_type::allocator_type>
-             state_monitor;
+    private: typedef
+         psyq::scenario_engine::_private::state_monitor<
+             typename this_type::evaluator::reservoir::state_key,
+             typename this_type::evaluator::expression::key,
+             typename this_type::allocator_type>
+         state_monitor;
 
     /// @brief 条件式監視器。
-    private: typedef psyq::scenario_engine::_private::expression_monitor<
-        typename this_type::evaluator::expression::key,
-        typename this_type::evaluator::expression::evaluation,
-        typename this_type::function_priority,
-        typename this_type::allocator_type>
-            expression_monitor;
+    private: typedef
+        psyq::scenario_engine::_private::expression_monitor<
+            typename this_type::evaluator::expression::key,
+            typename this_type::evaluator::expression::evaluation,
+            typename this_type::function_priority,
+            typename this_type::allocator_type>
+        expression_monitor;
 
     /// @copydoc expression_monitor::behavior::function
-    public: typedef typename this_type::expression_monitor::behavior::function
+    public: typedef
+        typename this_type::expression_monitor::behavior::function
         function;
 
     /// @copydoc expression_monitor::behavior::function_shared_ptr
-    public: typedef typename this_type::expression_monitor::behavior::function_shared_ptr
+    public: typedef
+        typename this_type::expression_monitor::behavior::function_shared_ptr
         function_shared_ptr;
 
     /// @copydoc expression_monitor::behavior::function_weak_ptr
-    public: typedef typename this_type::expression_monitor::behavior::function_weak_ptr
+    public: typedef
+        typename this_type::expression_monitor::behavior::function_weak_ptr
         function_weak_ptr;
 
     //-------------------------------------------------------------------------
@@ -259,6 +265,7 @@ class psyq::scenario_engine::dispatcher
         @param[in] in_expression_key 評価に用いる条件式の識別値。
         @param[in] in_function
             登録する条件挙動関数オブジェクトを指すスマートポインタ。
+        @param[in] in_priority 条件挙動関数の呼び出し優先順位。
         @param[in] in_reserve_functions
             条件式監視器が持つ条件挙動関数オブジェクトコンテナの予約容量。
         @retval true 成功。条件挙動関数オブジェクトを登録した。
@@ -275,14 +282,16 @@ class psyq::scenario_engine::dispatcher
     public: bool register_function(
         typename this_type::evaluator::expression::key const& in_expression_key,
         typename this_type::function_shared_ptr const& in_function,
-        //std::int32_t const in_priority = 0,
+        typename this_type::function_priority const in_priority = 0,
         std::size_t const in_reserve_functions = 1)
     {
+        /// @note 今のところ優先順位に未対応なので、優先順位は0のみを許容する。
+        PSYQ_ASSERT(in_priority == 0);
         return this_type::expression_monitor::register_function(
             this->expression_monitors_,
             in_expression_key,
             in_function,
-            0,
+            in_priority,
             in_reserve_functions);
     }
 
@@ -410,6 +419,9 @@ class psyq::scenario_engine::dispatcher
         @param[in] in_value         状態値の操作で使う演算値。
         @param[in] in_allocator     生成に使うメモリ割当子。
         @return 生成した条件挙動関数オブジェクト。
+        @todo
+            psyq::scenario_engine::reservoir ではなく
+            psyq::scenario_engine::modifier を使うようにしたい。
      */
     public: template<typename template_reservoir>
     static typename this_type::function_shared_ptr
@@ -438,7 +450,7 @@ class psyq::scenario_engine::dispatcher
                         && 0 <= in_evaluation
                         && in_condition == (0 < in_evaluation))
                     {
-                        this_type::operate_state(
+                        this_type::compute_state(
                             io_reservoir, in_state_key, in_operator, in_value);
                     }
                 }));
@@ -816,7 +828,7 @@ class psyq::scenario_engine::dispatcher
 
     //-------------------------------------------------------------------------
     private: template<typename template_reservoir>
-    static bool operate_state(
+    static bool compute_state(
         template_reservoir& io_reservoir,
         typename template_reservoir::state_key const& in_state_key,
         typename template_reservoir::state_value::operation const in_operator,

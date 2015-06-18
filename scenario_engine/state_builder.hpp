@@ -70,34 +70,34 @@ class psyq::scenario_engine::state_builder
     public: typedef psyq::string::csv_table<template_string> string_table;
 
     /// @brief 文字列表の属性。
-    private: struct table_attribute
+    private: class table_attribute
     {
-        explicit table_attribute(
+        public: explicit table_attribute(
             typename state_builder::string_table const& in_table)
         PSYQ_NOEXCEPT:
-        key(
+        key_(
             in_table.find_attribute(
                 PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KEY)),
-        kind(
+        kind_(
             in_table.find_attribute(
                 PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KIND)),
-        value(
+        value_(
             in_table.find_attribute(
                 PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_VALUE))
         {}
 
-        bool is_valid() const PSYQ_NOEXCEPT
+        public: bool is_valid() const PSYQ_NOEXCEPT
         {
-            return this->key != nullptr
-                && this->kind != nullptr
-                && this->value != nullptr;
+            return this->key_ != nullptr
+                && this->kind_ != nullptr
+                && this->value_ != nullptr;
         }
 
-        typename this_type::string_table::attribute const* key;
-        typename this_type::string_table::attribute const* kind;
-        typename this_type::string_table::attribute const* value;
+        public: typename this_type::string_table::attribute const* key_;
+        public: typename this_type::string_table::attribute const* kind_;
+        public: typename this_type::string_table::attribute const* value_;
 
-    }; // struct table_attribute
+    }; // class table_attribute
 
     //-------------------------------------------------------------------------
     /** @brief 文字列表から状態値を構築する関数オブジェクトを構築する。
@@ -195,7 +195,7 @@ class psyq::scenario_engine::state_builder
     {
         // 状態値のキーを取得する。
         auto const local_key_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.key->column));
+            in_table.find_body_cell(in_row_index, in_attribute.key_->column));
         if (local_key_cell.empty())
         {
             PSYQ_ASSERT(false);
@@ -216,8 +216,8 @@ class psyq::scenario_engine::state_builder
             io_reservoir,
             in_chunk_key,
             local_key,
-            in_table.find_body_cell(in_row_index, in_attribute.kind->column),
-            in_table.find_body_cell(in_row_index, in_attribute.value->column));
+            in_table.find_body_cell(in_row_index, in_attribute.kind_->column),
+            in_table.find_body_cell(in_row_index, in_attribute.value_->column));
     }
 
     /** @brief 状態値の型と初期値を解析して状態値を構築し、状態貯蔵器へ登録する。

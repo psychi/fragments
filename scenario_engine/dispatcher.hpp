@@ -714,7 +714,7 @@ class psyq::scenario_engine::dispatcher
     private: std::int8_t register_sub_expression(
         typename this_type::evaluator::expression::key const& in_register_key,
         typename this_type::evaluator::expression const& in_expression,
-        typename this_type::evaluator::sub_expression_vector const&
+        typename this_type::evaluator::sub_expression_container const&
             in_sub_expressions,
         typename this_type::evaluator const& in_evaluator,
         std::size_t const in_reserve_expressions)

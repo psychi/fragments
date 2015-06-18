@@ -55,7 +55,7 @@ class psyq::scenario_engine::behavior_chunk
         std::vector<
             typename template_dispatcher::function_shared_ptr,
             typename template_dispatcher::allocator_type>
-        function_shared_ptr_vector;
+        function_shared_ptr_container;
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
@@ -194,7 +194,7 @@ class psyq::scenario_engine::behavior_chunk
 
     //-------------------------------------------------------------------------
     /// @brief 条件挙動関数のコンテナ。
-    public: typename this_type::function_shared_ptr_vector functions_;
+    public: typename this_type::function_shared_ptr_container functions_;
     /// @brief 条件挙動チャンクの識別値。
     public: typename this_type::key key_;
 

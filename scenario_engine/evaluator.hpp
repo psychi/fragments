@@ -92,7 +92,9 @@ class psyq::scenario_engine::_private::expression
     end_(in_element_end),
     logic_(in_logic),
     kind_(in_kind)
-    {}
+    {
+        PSYQ_ASSERT(in_element_begin < in_element_end);
+    }
 
     /** @brief 条件式を評価する。
         @param[in] in_elements  評価に用いる要素条件のコンテナ。
@@ -199,14 +201,7 @@ class psyq::scenario_engine::evaluator
         std::vector<
             typename this_type::expression,
             typename this_type::allocator_type>
-        expression_vector;
-
-    /// @brief 条件式の識別値のコンテナの型。
-    private: typedef
-        std::vector<
-            typename this_type::expression::key,
-            typename this_type::allocator_type>
-        expression_key_vector;
+        expression_container;
 
     /// @brief 条件式を識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
     private: typedef
@@ -245,7 +240,7 @@ class psyq::scenario_engine::evaluator
         std::vector<
             typename this_type::sub_expression,
             typename evaluator::allocator_type>
-        sub_expression_vector;
+        sub_expression_container;
 
     //-------------------------------------------------------------------------
     /// @brief 状態変化条件式の要素条件。
@@ -270,7 +265,7 @@ class psyq::scenario_engine::evaluator
         std::vector<
             typename this_type::state_transition,
             typename evaluator::allocator_type>
-        state_transition_vector;
+        state_transition_container;
 
     //-------------------------------------------------------------------------
     /// @brief 状態比較条件式の要素条件。
@@ -308,7 +303,7 @@ class psyq::scenario_engine::evaluator
         std::vector<
             typename this_type::state_comparison,
             typename evaluator::allocator_type>
-        state_comparison_vector;
+        state_comparison_container;
 
     //-------------------------------------------------------------------------
     /// @brief 要素条件チャンク。
@@ -364,11 +359,11 @@ class psyq::scenario_engine::evaluator
         }
 
         /// @brief 複合条件式で使う要素条件のコンテナ。
-        typename evaluator::sub_expression_vector sub_expressions_;
+        typename evaluator::sub_expression_container sub_expressions_;
         /// @brief 状態変化条件式で使う要素条件のコンテナ。
-        typename evaluator::state_transition_vector state_transitions_;
+        typename evaluator::state_transition_container state_transitions_;
         /// @brief 状態比較条件式で使う要素条件のコンテナ。
-        typename evaluator::state_comparison_vector state_comparisons_;
+        typename evaluator::state_comparison_container state_comparisons_;
         /// @brief この要素条件チャンクに対応する識別値。
         typename evaluator::reservoir::chunk_key key_;
 
@@ -379,7 +374,7 @@ class psyq::scenario_engine::evaluator
          std::vector<
              typename this_type::chunk,
              typename this_type::allocator_type>
-         chunk_vector;
+         chunk_container;
 
     /// @brief 要素条件チャンクの識別値を比較する関数オブジェクト。
     private: typedef
@@ -704,10 +699,10 @@ class psyq::scenario_engine::evaluator
     //-------------------------------------------------------------------------
     private: static std::pair<
          typename this_type::expression::kind,
-         typename this_type::sub_expression_vector*>
+         typename this_type::sub_expression_container*>
     make_element_kind(
         typename this_type::chunk& in_chunk,
-        typename this_type::sub_expression_vector::value_type const&)
+        typename this_type::sub_expression_container::value_type const&)
     {
         return std::make_pair(
             this_type::expression::kind_SUB_EXPRESSION,
@@ -716,10 +711,10 @@ class psyq::scenario_engine::evaluator
 
     private: static std::pair<
          typename this_type::expression::kind,
-         typename this_type::state_transition_vector*>
+         typename this_type::state_transition_container*>
     make_element_kind(
         typename this_type::chunk& in_chunk,
-        typename this_type::state_transition_vector::value_type const&)
+        typename this_type::state_transition_container::value_type const&)
     {
         return std::make_pair(
             this_type::expression::kind_STATE_TRANSITION,
@@ -728,10 +723,10 @@ class psyq::scenario_engine::evaluator
 
     private: static std::pair<
          typename this_type::expression::kind,
-         typename this_type::state_comparison_vector*>
+         typename this_type::state_comparison_container*>
     make_element_kind(
         typename this_type::chunk& in_chunk,
-        typename this_type::state_comparison_vector::value_type const&)
+        typename this_type::state_comparison_container::value_type const&)
     {
         return std::make_pair(
             this_type::expression::kind_STATE_COMPARISON,
@@ -742,7 +737,7 @@ class psyq::scenario_engine::evaluator
     private: template<typename template_element_container>
     static bool is_valid_elements(
         template_element_container const& in_elements,
-        typename this_type::expression_vector const& in_expressions)
+        typename this_type::expression_container const& in_expressions)
     {
         for (auto& local_element: in_elements)
         {
@@ -756,7 +751,7 @@ class psyq::scenario_engine::evaluator
 
     private: static bool is_valid_element(
         typename this_type::sub_expression const& in_element,
-        typename this_type::expression_vector const& in_expressions)
+        typename this_type::expression_container const& in_expressions)
     {
         // 要素条件にある条件式がすでにあることを確認する。
         auto const local_validation(
@@ -772,14 +767,14 @@ class psyq::scenario_engine::evaluator
     private: template<typename template_element>
     static bool is_valid_element(
         template_element const&,
-        typename this_type::expression_vector const&)
+        typename this_type::expression_container const&)
     {
         return true;
     }
 
     //-------------------------------------------------------------------------
     private: static typename this_type::chunk& equip_chunk(
-        typename this_type::chunk_vector& io_chunks,
+        typename this_type::chunk_container& io_chunks,
         typename this_type::reservoir::chunk_key const& in_chunk_key)
     {
         auto const local_lower_bound(
@@ -795,15 +790,15 @@ class psyq::scenario_engine::evaluator
         }
         return *io_chunks.insert(
             local_lower_bound,
-            typename this_type::chunk_vector::value_type(
+            typename this_type::chunk_container::value_type(
                 in_chunk_key, io_chunks.get_allocator()));
     }
 
     //-------------------------------------------------------------------------
     /// @brief 条件式の辞書。
-    private: typename this_type::expression_vector expressions_;
+    private: typename this_type::expression_container expressions_;
     /// @brief 要素条件チャンクの辞書。
-    private: typename this_type::chunk_vector chunks_;
+    private: typename this_type::chunk_container chunks_;
 
 }; // class psyq::scenario_engine::evaluator
 

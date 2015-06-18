@@ -25,6 +25,10 @@ namespace psyq
 #define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_CONDITION "CONDITION"
 #endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_CONDITION)
 
+#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_PRIORITY
+#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_PRIORITY "PRIORITY"
+#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_PRIORITY)
+
 #ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_KIND
 #define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_KIND "KIND"
 #endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_KIND)
@@ -92,24 +96,27 @@ class psyq::scenario_engine::behavior_builder
 
     public: typedef
         typename psyq::scenario_engine::behavior_chunk<template_dispatcher>
-            ::function_shared_ptr_vector
-        function_shared_ptr_vector;
+            ::function_shared_ptr_container
+        function_shared_ptr_container;
 
     /// @brief 文字列表の属性。
-    private: struct table_attribute
+    private: class table_attribute
     {
-        table_attribute(string_table const& in_table)
+        public: table_attribute(string_table const& in_table)
         PSYQ_NOEXCEPT:
         key_(
             in_table.find_attribute(
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_KEY)),
-        condition(
+        condition_(
             in_table.find_attribute(
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_CONDITION)),
-        kind(
+        priority_(
+            in_table.find_attribute(
+                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_PRIORITY)),
+        kind_(
             in_table.find_attribute(
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_KIND)),
-        argument(
+        argument_(
             in_table.find_attribute(
                 PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_ARGUMENT))
         {}
@@ -117,17 +124,19 @@ class psyq::scenario_engine::behavior_builder
         bool is_valid() const PSYQ_NOEXCEPT
         {
             return this->key_ != nullptr
-                && this->condition != nullptr
-                && this->kind != nullptr
-                && this->argument != nullptr;
+                && this->condition_ != nullptr
+                && this->priority_ != nullptr
+                && this->kind_ != nullptr
+                && this->argument_ != nullptr;
         }
 
-        typename behavior_builder::string_table::attribute const* key_;
-        typename behavior_builder::string_table::attribute const* condition;
-        typename behavior_builder::string_table::attribute const* kind;
-        typename behavior_builder::string_table::attribute const* argument;
+        public: typename behavior_builder::string_table::attribute const* key_;
+        public: typename behavior_builder::string_table::attribute const* condition_;
+        public: typename behavior_builder::string_table::attribute const* priority_;
+        public: typename behavior_builder::string_table::attribute const* kind_;
+        public: typename behavior_builder::string_table::attribute const* argument_;
 
-    }; // struct table_attribute
+    }; // class table_attribute
 
     //-------------------------------------------------------------------------
     /** @brief 文字列表から状態値を構築する関数オブジェクトを構築する。
@@ -146,7 +155,7 @@ class psyq::scenario_engine::behavior_builder
         @return 生成した条件挙動関数のコンテナ。
      */
     public: template<typename template_hasher, typename template_evaluator>
-    typename this_type::function_shared_ptr_vector operator()(
+    typename this_type::function_shared_ptr_container operator()(
         typename this_type::dispatcher& io_dispatcher,
         template_hasher& io_hasher,
         template_evaluator const& in_evaluator,
@@ -170,14 +179,14 @@ class psyq::scenario_engine::behavior_builder
         @return 生成した条件挙動関数のコンテナ。
      */
     public: template<typename template_hasher, typename template_evaluator>
-    static typename this_type::function_shared_ptr_vector build(
+    static typename this_type::function_shared_ptr_container build(
         typename this_type::dispatcher& io_dispatcher,
         template_hasher& io_hasher,
         template_evaluator const& in_evaluator,
         typename template_evaluator::reservoir const& in_reservoir,
         typename this_type::string_table const& in_table)
     {
-        typename this_type::function_shared_ptr_vector
+        typename this_type::function_shared_ptr_container
             local_functions(io_dispatcher.get_allocator());
 
         // 文字列表の属性の桁を取得する。
@@ -215,6 +224,21 @@ class psyq::scenario_engine::behavior_builder
             // 条件評価器に条件式があることを確認する。
             PSYQ_ASSERT(in_evaluator._find_expression(local_key) != nullptr);
 
+            // 条件挙動の優先順位を取得する。
+            auto const local_priority_cell(
+                in_table.find_body_cell(i, local_attribute.priority_->column));
+            std::size_t local_rest_size;
+            auto const local_priority(
+                local_priority_cell.template
+                    to_integer<typename this_type::dispatcher::function_priority>(
+                        &local_rest_size));
+            if (local_rest_size != 0)
+            {
+                // 優先順位として解析しきれなかった。
+                PSYQ_ASSERT(false);
+                continue;
+            }
+
             // 条件挙動関数を生成し、条件監視器に登録する。
             auto local_function(
                 this_type::make_function(
@@ -225,7 +249,8 @@ class psyq::scenario_engine::behavior_builder
                     i,
                     local_attribute));
             auto const local_register_function(
-                io_dispatcher.register_function(local_key, local_function));
+                io_dispatcher.register_function(
+                    local_key, local_function, local_priority));
             if (local_register_function)
             {
                 local_functions.push_back(std::move(local_function));
@@ -262,7 +287,7 @@ class psyq::scenario_engine::behavior_builder
         // 挙動が起こる条件を取得する。
         auto const local_condition_cell(
             in_table.find_body_cell(
-                in_row_index, in_attribute.condition->column));
+                in_row_index, in_attribute.condition_->column));
         auto const local_bool_state(local_condition_cell.to_bool());
         if (local_bool_state < 0)
         {
@@ -274,7 +299,7 @@ class psyq::scenario_engine::behavior_builder
 
         // 条件挙動関数の種類を取得する。
         auto const local_kind_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.kind->column));
+            in_table.find_body_cell(in_row_index, in_attribute.kind_->column));
         if (local_kind_cell
             == PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_KIND_STATE)
         {
@@ -313,12 +338,12 @@ class psyq::scenario_engine::behavior_builder
         typename this_type::string_table::index_type const in_row_index,
         typename this_type::table_attribute const& in_attribute)
     {
-        PSYQ_ASSERT(2 <= in_attribute.argument->size);
+        PSYQ_ASSERT(2 <= in_attribute.argument_->size);
 
         // 状態キーを取得する。
         auto const local_key_cell(
             in_table.find_body_cell(
-                in_row_index, in_attribute.argument->column));
+                in_row_index, in_attribute.argument_->column));
         auto const local_key(io_hasher(local_key_cell));
         if (in_reservoir.get_variety(local_key)
             == template_reservoir::state_value::kind_NULL)
@@ -335,7 +360,7 @@ class psyq::scenario_engine::behavior_builder
                 local_operator,
                 in_reservoir,
                 in_table.find_body_cell(
-                    in_row_index, in_attribute.argument->column + 1)));
+                    in_row_index, in_attribute.argument_->column + 1)));
         if (!local_get_operator)
         {
             PSYQ_ASSERT(false);
@@ -345,7 +370,7 @@ class psyq::scenario_engine::behavior_builder
         // 演算値を取得する。
         auto const local_value_cell(
             in_table.find_body_cell(
-                in_row_index, in_attribute.argument->column + 2));
+                in_row_index, in_attribute.argument_->column + 2));
         auto const local_value(
             template_reservoir::state_value::make(local_value_cell));
         if (local_value.get_kind()

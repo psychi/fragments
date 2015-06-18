@@ -225,7 +225,7 @@ class psyq::scenario_engine::driver
             // @return
             //     条件挙動器に登録した条件挙動関数オブジェクトを指す、
             //     スマートポインタのコンテナ。
-            driver::dispatcher::function_shared_ptr_vector
+            template_behavior_builder::function_shared_ptr_container
             template_behavior_builder::operator()(
                 driver::dispatcher& io_dispatcher,
                 driver::hasher& io_hasher,
@@ -364,16 +364,16 @@ namespace psyq_test
 
         // 条件挙動テーブルを構築する。
         string_table local_behavior_table(
-            "KEY         , CONDITION, KIND,  ARGUMENT\n"
-            "expression_0, TRUE,      STATE, state_unsigned, :=, 1\n"
-            "expression_1, TRUE,      STATE, state_unsigned, +=, 1\n"
-            "expression_2, TRUE,      STATE, state_unsigned, -=, 1\n"
-            "expression_3, TRUE,      STATE, state_unsigned, *=, 1\n"
-            "expression_4, TRUE,      STATE, state_unsigned, /=, 1\n"
-            "expression_5, TRUE,      STATE, state_unsigned, %=, 1\n"
-            "expression_6, TRUE,      STATE, state_unsigned, |=, 1\n"
-            "expression_7, TRUE,      STATE, state_unsigned, ^=, 0\n"
-            "expression_8, TRUE,      STATE, state_unsigned, &=, 0\n"
+            "KEY         , CONDITION, PRIORITY, KIND,  ARGUMENT\n"
+            "expression_0, TRUE,      0,       STATE, state_unsigned, :=, 1\n"
+            "expression_1, TRUE,      0,       STATE, state_unsigned, +=, 1\n"
+            "expression_2, TRUE,      0,       STATE, state_unsigned, -=, 1\n"
+            "expression_3, TRUE,      0,       STATE, state_unsigned, *=, 1\n"
+            "expression_4, TRUE,      0,       STATE, state_unsigned, /=, 1\n"
+            "expression_5, TRUE,      0,       STATE, state_unsigned, %=, 1\n"
+            "expression_6, TRUE,      0,       STATE, state_unsigned, |=, 1\n"
+            "expression_7, TRUE,      0,       STATE, state_unsigned, ^=, 0\n"
+            "expression_8, TRUE,      0,       STATE, state_unsigned, &=, 0\n"
             "");
         local_behavior_table.constraint_attribute(0);
 

@@ -1,609 +1,123 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::behavior_chunk
+    @brief @copybrief psyq::scenario_engine::_private::behavior
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_HPP_
 #define PSYQ_SCENARIO_ENGINE_BEHAVIOR_HPP_
-
-//#include "scenario_engine/dispatcher.hpp"
 
 /// @cond
 namespace psyq
 {
     namespace scenario_engine
     {
-        template<typename> struct behavior_chunk;
-        template<typename, typename> struct behavior_builder;
+        namespace _private
+        {
+            template<typename, typename> class behavior;
+        } // namespace _private
     } // namespace scenario_engine
 } // namespace psyq
 /// @endcond
 
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_KEY
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_KEY "KEY"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_KEY)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_CONDITION
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_CONDITION "CONDITION"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_CONDITION)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_KIND
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_KIND "KIND"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_KIND)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_KIND_STATE
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_KIND_STATE "STATE"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_KIND_STATE)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_ARGUMENT
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_ARGUMENT "ARGUMENT"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_ARGUMENT)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_COPY
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_COPY ":="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_COPY)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_ADD
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_ADD "+="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_ADD)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_SUB
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_SUB "-="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_SUB)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_MULT
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_MULT "*="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_MULT)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_DIV
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_DIV "/="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_DIV)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_MOD
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_MOD "%="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_MOD)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_OR
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_OR "|="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_OR)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_XOR
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_XOR "^="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_XOR)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_AND
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_AND "&="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_AND)
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 条件挙動チャンク。
-           条件式の評価が変化した際に呼び出す条件挙動関数を所有する。
+//-------------------------------------------------------------------------
+/** @brief 条件挙動。
  */
-template<typename template_dispatcher>
-struct psyq::scenario_engine::behavior_chunk
+template<typename template_expression_key, typename template_priority>
+class psyq::scenario_engine::_private::behavior
 {
     /// @brief thisが指す値の型。
-    private: typedef behavior_chunk this_type;
+    private: typedef behavior this_type;
 
-    /// @brief 条件挙動関数を登録する条件挙動器を表す型。
-    public: typedef template_dispatcher dispatcher;
+    /** @brief 条件式の評価結果が変化した際に呼び出す、条件挙動関数オブジェクトの型。
 
-    /// @brief 条件挙動チャンクのコンテナを表す型。
-    public: typedef std::vector<
-        this_type, typename this_type::dispatcher::allocator_type>
-            vector;
-
-    /// @brief 条件挙動チャンクの識別値を表す型。
-    /// @note ここは条件式キーでなくて、チャンクキーにしないと。
-    public: typedef typename this_type::dispatcher::expression_key key_type;
-
-    /// @brief 条件挙動チャンクの識別値を比較する関数オブジェクト。
-    public: typedef psyq::scenario_engine::_private::key_less<
-         this_type, typename this_type::key_type>
-             key_less;
-
-    //-------------------------------------------------------------------------
-    /// @name 構築と代入
-    //@{
-    /** @brief ムーブ構築子。
-        @param[in,out] io_source ムーブ元となるインスタンス。
+        - 引数#0は、評価に用いた条件式の識別値。
+        - 引数#1は、 evaluator::evaluate_expression の今回の戻り値。
+        - 引数#2は、 evaluator::evaluate_expression の前回の戻り値。
      */
-    public: behavior_chunk(this_type&& io_source):
-    functions(std::move(io_source.functions)),
-    key_(std::move(io_source.key_))
-    {}
+    public: typedef std::function<
+        void (
+            template_expression_key const&,
+            std::int8_t const,
+            std::int8_t const)>
+                function;
 
-    /** @brief ムーブ代入演算子。
-        @param[in,out] io_source ムーブ元となるインスタンス。
-        @return *this
-     */
-    public: this_type& operator=(this_type&& io_source)
+    /// @brief this_type::function の、所有権ありスマートポインタ。
+    public: typedef std::shared_ptr<typename this_type::function>
+        function_shared_ptr;
+
+    /// @brief this_type::function の、所有権なしスマートポインタ。
+    public: typedef std::weak_ptr<typename this_type::function>
+        function_weak_ptr;
+
+    /// @brief 条件挙動の優先順位。
+    public: typedef template_priority priority;
+
+    /// @brief 条件式の評価結果のキャッシュ。
+    public: class cache
     {
-        this->functions = std::move(io_source.functions);
-        this->key_ = std::move(io_source.key_);
-        return *this;
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name 条件挙動関数
-    //@{
-    /** @brief 条件挙動チャンクに条件挙動関数を追加する。
-        @param[in,out] io_chunks
-            条件挙動関数を追加する条件挙動チャンクのコンテナ。
-        @param[in] in_key
-            条件挙動関数を追加する条件挙動チャンクの識別値。
-        @param[in] in_function
-            条件挙動チャンクに追加する条件挙動関数を指すスマートポインタ。
-        @retval true  成功。条件挙動関数を追加した。
-        @retval false 失敗。条件挙動関数を追加しなかった。
-     */
-    public: static bool add(
-        typename this_type::vector& io_chunks,
-        typename this_type::key_type const& in_key,
-        typename this_type::dispatcher::function_shared_ptr in_function)
-    {
-        if (in_function.get() == nullptr)
-        {
-            return false;
-        }
+        private: typedef cache this_type;
 
-        // 条件挙動関数を条件挙動チャンクに追加する。
-        this_type::equip(io_chunks, in_key).functions.push_back(
-            std::move(in_function));
-        return true;
-    }
-
-    /** @brief 条件挙動チャンクに条件挙動関数を追加する。
-        @param[in,out] io_chunks
-            条件挙動関数を追加する条件挙動チャンクのコンテナ。
-        @param[in] in_key
-            条件挙動関数を追加する条件挙動チャンクの識別値。
-        @param[in] in_functions
-            条件挙動チャンクに追加する条件挙動関数の、
-            スマートポインタのコンテナ。
-        @return 追加した条件挙動関数の数。
-     */
-    public: template<typename template_function_container>
-    static std::size_t add(
-        typename this_type::vector& io_chunks,
-        typename this_type::key_type const& in_key,
-        template_function_container in_functions)
-    {
-        // 条件挙動関数を条件挙動チャンクに追加する。
-        auto& local_chunk_functions(
-            this_type::equip(io_chunks, in_key).functions);
-        local_chunk_functions.reserve(
-            local_chunk_functions.size() + in_functions.size());
-        std::size_t local_count(0);
-        for (auto& local_function: in_functions)
-        {
-            if (local_function.get() != nullptr)
-            {
-                local_chunk_functions.push_back(std::move(local_function));
-                ++local_count;
-            }
-        }
-        return local_count;
-    }
-
-    /** @brief コンテナから条件挙動チャンクを削除する。
-        @param[in,out] io_chunks 条件挙動チャンクを削除するコンテナ。
-        @param[in] in_key        削除する条件挙動チャンクの識別値。
-        @retval true  in_key に対応する条件挙動チャンクを削除した。
-        @retval false in_key に対応する条件挙動チャンクがコンテナになかった。
-     */
-    public: static bool remove(
-        typename this_type::vector& io_chunks,
-        typename this_type::key_type const& in_key)
-    {
-        auto const local_iterator(
-            this_type::key_less::find_const_iterator(io_chunks, in_key));
-        auto const local_find(local_iterator != io_chunks.end());
-        if (local_find)
-        {
-            io_chunks.erase(local_iterator);
-        }
-        return local_find;
-    }
-
-    /** @brief 条件挙動チャンクを用意する。
-        @param[in,out] io_chunks 条件挙動チャンクのコンテナ。
-        @param[in] in_key        用意する条件挙動チャンクの識別値。
-        @return 用意した条件挙動チャンク。
-     */
-    private: static this_type& equip(
-        typename this_type::vector& io_chunks,
-        typename this_type::key_type const& in_key)
-    {
-        // 条件挙動関数を追加する条件挙動チャンクを用意する。
-        auto const local_iterator(
-            this_type::key_less::find_iterator(io_chunks, in_key));
-        return local_iterator != io_chunks.end()?
-            *local_iterator:
-            *io_chunks.insert(
-                local_iterator, this_type(in_key, io_chunks.get_allocator()));
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /** @brief 空の条件挙動チャンクを構築する。
-        @param[in] in_key       条件挙動チャンクの識別値。
-        @param[in] in_allocator メモリ割当子の初期値。
-     */
-    private: behavior_chunk(
-        typename this_type::key_type in_key,
-        typename this_type::dispatcher::allocator_type const& in_allocator)
-    :
-    functions(in_allocator),
-    key_(std::move(in_key))
-    {}
-
-    //-------------------------------------------------------------------------
-    /// @brief 条件挙動関数のコンテナ。
-    public: typename this_type::dispatcher::function_shared_ptr_vector functions;
-    /// @brief 条件挙動チャンクの識別値。
-    public: typename this_type::key_type key_;
-
-}; // struct psyq::scenario_engine::behavior_chunk
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 文字列表から条件挙動関数を構築する関数オブジェクト。
-
-    @tparam template_dispatcher @copydoc dispatcher
-    @tparam template_string     文字列表で使う文字列の型。
- */
-template<typename template_string, typename template_dispatcher>
-struct psyq::scenario_engine::behavior_builder
-{
-    private: typedef behavior_builder this_type;
-
-    /// @brief 条件挙動関数の登録先となる条件挙動器を表す型。
-    public: typedef template_dispatcher dispatcher;
-
-    /// @brief 解析する文字列表の型。
-    public: typedef psyq::string::csv_table<template_string> string_table;
-
-    /// @brief 文字列表の属性。
-    private: struct table_attribute
-    {
-        table_attribute(string_table const& in_table)
-        PSYQ_NOEXCEPT:
-        key_(
-            in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_KEY)),
-        condition(
-            in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_CONDITION)),
-        kind(
-            in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_KIND)),
-        argument(
-            in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_COLUMN_ARGUMENT))
+        public: cache(
+            template_expression_key in_expression_key,
+            std::int8_t const in_evaluation,
+            std::int8_t const in_last_evaluation)
+        :
+        expression_key_(std::move(in_expression_key)),
+        evaluation_(in_evaluation),
+        last_evaluation_(in_last_evaluation)
         {}
 
-        bool is_valid() const PSYQ_NOEXCEPT
+        /** @brief 条件挙動関数を呼び出す。
+            @param[in] in_behavior 呼び出す条件挙動。
+         */
+        public: void call_function(typename behavior const& in_behavior)
+        const
         {
-            return this->key_ != nullptr
-                && this->condition != nullptr
-                && this->kind != nullptr
-                && this->argument != nullptr;
+            auto const local_function_holder(in_behavior.function_.lock());
+            auto const local_function(local_function_holder.get());
+            if (local_function != nullptr)
+            {
+                (*local_function)(
+                    this->expression_key_,
+                    this->evaluation_,
+                    this->last_evaluation_);
+            }
         }
 
-        typename behavior_builder::string_table::attribute const* key_;
-        typename behavior_builder::string_table::attribute const* condition;
-        typename behavior_builder::string_table::attribute const* kind;
-        typename behavior_builder::string_table::attribute const* argument;
+        /// @brief 条件式の識別値。
+        public: template_expression_key expression_key_;
+        /// @brief 今回の条件式の評価結果。
+        public: std::int8_t evaluation_;
+        /// @brief 前回の条件式の評価結果。
+        public: std::int8_t last_evaluation_;
 
-    }; // struct table_attribute
+    }; // class cache
 
-    //-------------------------------------------------------------------------
-    /** @brief 文字列表から状態値を構築する関数オブジェクトを構築する。
-        @param[in] in_table 解析する文字列表。
-     */
-    public: explicit behavior_builder(
-        typename this_type::string_table in_table):
-    string_table_(std::move(in_table))
+    //---------------------------------------------------------------------
+    public: behavior(
+        typename this_type::function_weak_ptr in_function,
+        typename this_type::priority const in_priority)
+    :
+    function_(std::move(in_function)),
+    priority_(in_priority)
     {}
 
-    /** @brief 文字列表を解析して状態値を構築し、状態貯蔵器へ登録する。
-        @param[in,out] io_dispatcher 生成した条件挙動関数を登録する条件挙動器。
-        @param[in,out] io_hasher     文字列からキーへ変換するハッシュ関数オブジェクト。
-        @param[in] in_evaluator      条件挙動関数から参照する条件評価器。
-        @param[in] in_reservoir      条件挙動関数から参照する状態貯蔵器。
-        @return 生成した条件挙動関数のコンテナ。
-     */
-    public: template<typename template_hasher, typename template_evaluator>
-    typename this_type::dispatcher::function_shared_ptr_vector operator()(
-        typename this_type::dispatcher& io_dispatcher,
-        template_hasher& io_hasher,
-        template_evaluator const& in_evaluator,
-        typename template_evaluator::reservoir const& in_reservoir)
-    const
+    public: behavior(this_type&& io_source):
+    function_(std::move(io_source.function_)),
+    priority_(std::move(io_source.priority_))
+    {}
+
+    public: this_type& operator=(this_type&& io_source)
     {
-        return this_type::build(
-            io_dispatcher,
-            io_hasher,
-            in_evaluator,
-            in_reservoir,
-            this->string_table_);
+        this->function_ = std::move(io_source.function_);
+        this->priority_ = std::move(io_source.priority_);
+        return *this;
     }
 
-    /** @brief 文字列表から条件挙動関数を生成し、条件評価器へ登録する。
-        @param[in,out] io_dispatcher 生成した条件挙動関数を登録する条件挙動器。
-        @param[in,out] io_hasher     文字列からキーへ変換するハッシュ関数オブジェクト。
-        @param[in] in_evaluator      条件挙動関数から参照する条件評価器。
-        @param[in] in_reservoir      条件挙動関数から参照する状態貯蔵器。
-        @param[in] in_table          条件挙動の文字列表。
-        @return 生成した条件挙動関数のコンテナ。
-     */
-    public: template<typename template_hasher, typename template_evaluator>
-    static typename this_type::dispatcher::function_shared_ptr_vector build(
-        typename this_type::dispatcher& io_dispatcher,
-        template_hasher& io_hasher,
-        template_evaluator const& in_evaluator,
-        typename template_evaluator::reservoir const& in_reservoir,
-        typename this_type::string_table const& in_table)
-    {
-        typename this_type::dispatcher::function_shared_ptr_vector
-            local_functions(io_dispatcher.get_allocator());
+    //---------------------------------------------------------------------
+    public: typename this_type::function_weak_ptr function_;
+    public: typename this_type::priority priority_;
 
-        // 文字列表の属性の桁を取得する。
-        typename this_type::table_attribute const local_attribute(in_table);
-        if (!local_attribute.is_valid())
-        {
-            PSYQ_ASSERT(false);
-            return local_functions;
-        }
-
-        // 文字列表を解析し、条件挙動関数の一覧を構築する。
-        auto const local_row_count(in_table.get_row_count());
-        local_functions.reserve(local_row_count);
-        for (
-            typename this_type::string_table::index_type i(0);
-            i < local_row_count;
-            ++i)
-        {
-            if (i == in_table.get_attribute_row())
-            {
-                continue;
-            }
-
-            // 条件式キーを取得する。
-            auto const local_key_cell(
-                in_table.find_body_cell(i, local_attribute.key_->column));
-            auto local_key(io_hasher(local_key_cell));
-            if (local_key
-                == io_hasher(typename template_hasher::argument_type()))
-            {
-                // 条件式キーが正しくなかった。
-                PSYQ_ASSERT(false);
-                continue;
-            }
-            // 条件評価器に条件式があることを確認する。
-            PSYQ_ASSERT(in_evaluator._find_expression(local_key) != nullptr);
-
-            // 条件挙動関数を生成し、条件監視器に登録する。
-            auto local_function(
-                this_type::make_function(
-                    io_hasher,
-                    in_evaluator,
-                    in_reservoir,
-                    in_table,
-                    i,
-                    local_attribute));
-            auto const local_register_function(
-                io_dispatcher.register_function(local_key, local_function));
-            if (local_register_function)
-            {
-                local_functions.push_back(std::move(local_function));
-            }
-            else
-            {
-                // 条件挙動関数の登録に失敗した。
-                PSYQ_ASSERT(false);
-            }
-        }
-        local_functions.shrink_to_fit();
-        return local_functions;
-    }
-
-    //-------------------------------------------------------------------------
-    /** @brief 文字列表から条件挙動関数を生成する。
-        @param[in,out] io_hasher 文字列からキーへ変換するハッシュ関数オブジェクト。
-        @param[in] in_evaluator  条件挙動関数から参照する条件評価器。
-        @param[in] in_reservoir  条件挙動関数から参照する状態貯蔵器。
-        @param[in] in_table      条件挙動の文字列表。
-        @param[in] in_row_index  文字列表の行番号。
-        @param[in] in_attribute  文字列表の属性。
-        @return 生成した条件関数オブジェクト。
-     */
-    private: template<typename template_hasher, typename template_evaluator>
-    static typename this_type::dispatcher::function_shared_ptr make_function(
-        template_hasher& io_hasher,
-        template_evaluator const& in_evaluator,
-        typename template_evaluator::reservoir const& in_reservoir,
-        typename this_type::string_table const& in_table,
-        typename this_type::string_table::index_type const in_row_index,
-        typename this_type::table_attribute const& in_attribute)
-    {
-        // 挙動が起こる条件を取得する。
-        auto const local_condition_cell(
-            in_table.find_body_cell(
-                in_row_index, in_attribute.condition->column));
-        auto const local_bool_state(local_condition_cell.to_bool());
-        if (local_bool_state < 0)
-        {
-            // 未知の条件だった。
-            PSYQ_ASSERT(false);
-            return typename this_type::dispatcher::function_shared_ptr();
-        }
-        bool const local_condition(local_bool_state != 0);
-
-        // 条件挙動関数の種類を取得する。
-        auto const local_kind_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.kind->column));
-        if (local_kind_cell
-            == PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_KIND_STATE)
-        {
-            return this_type::make_state_operation_function(
-                io_hasher,
-                in_reservoir,
-                local_condition,
-                in_table,
-                in_row_index,
-                in_attribute);
-        }
-        else
-        {
-            // 未知の種類だった。
-            PSYQ_ASSERT(false);
-            return typename this_type::dispatcher::function_shared_ptr();
-        }
-    }
-
-    /** @brief 文字列表から状態操作関数オブジェクトを生成する。
-        @param[in,out] io_hasher 文字列からキーへ変換するハッシュ関数オブジェクト。
-        @param[in] in_reservoir  条件挙動関数から参照する状態貯蔵器。
-        @param[in] in_condition  条件挙動関数を起動する条件。
-        @param[in] in_table      条件挙動の文字列表。
-        @param[in] in_row_index  文字列表の行番号。
-        @param[in] in_attribute  文字列表の属性。
-        @return 生成した条件関数オブジェクト。
-     */
-    private: template<typename template_hasher, typename template_reservoir>
-    static typename this_type::dispatcher::function_shared_ptr
-    make_state_operation_function(
-        template_hasher& io_hasher,
-        template_reservoir const& in_reservoir,
-        bool const in_condition,
-        typename this_type::string_table const& in_table,
-        typename this_type::string_table::index_type const in_row_index,
-        typename this_type::table_attribute const& in_attribute)
-    {
-        PSYQ_ASSERT(2 <= in_attribute.argument->size);
-
-        // 状態キーを取得する。
-        auto const local_key_cell(
-            in_table.find_body_cell(
-                in_row_index, in_attribute.argument->column));
-        auto const local_key(io_hasher(local_key_cell));
-        if (in_reservoir.get_variety(local_key)
-            == template_reservoir::state_value::kind_NULL)
-        {
-            // 状態貯蔵器にキーが登録されていなかった。
-            PSYQ_ASSERT(false);
-            return typename this_type::dispatcher::function_shared_ptr();
-        }
-
-        // 演算子を取得する。
-        typename template_reservoir::state_value::operation local_operator;
-        auto const local_get_operator(
-            this_type::get_operator(
-                local_operator,
-                in_reservoir,
-                in_table.find_body_cell(
-                    in_row_index, in_attribute.argument->column + 1)));
-        if (!local_get_operator)
-        {
-            PSYQ_ASSERT(false);
-            return typename this_type::dispatcher::function_shared_ptr();
-        }
-
-        // 演算値を取得する。
-        auto const local_value_cell(
-            in_table.find_body_cell(
-                in_row_index, in_attribute.argument->column + 2));
-        auto const local_value(
-            template_reservoir::state_value::make(local_value_cell));
-        if (local_value.get_kind()
-            == template_reservoir::state_value::kind_NULL)
-        {
-            PSYQ_ASSERT(false);
-            return typename this_type::dispatcher::function_shared_ptr();
-        }
-
-        // 状態値を書き換える関数オブジェクトを生成する。
-        return this_type::dispatcher::make_state_operation_function(
-            const_cast<template_reservoir&>(in_reservoir),
-            in_condition,
-            local_key,
-            local_operator,
-            local_value,
-            in_reservoir.get_allocator());
-    }
-
-    private: template<typename template_reservoir>
-    static bool get_operator(
-        typename template_reservoir::state_value::operation& out_operator,
-        template_reservoir const&,
-        typename this_type::string_table::string_view const& in_string)
-    {
-        if (in_string ==
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_COPY)
-        {
-            out_operator = template_reservoir::state_value::operation_COPY;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_ADD)
-        {
-            out_operator = template_reservoir::state_value::operation_ADD;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_SUB)
-        {
-            out_operator = template_reservoir::state_value::operation_SUB;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_MULT)
-        {
-            out_operator = template_reservoir::state_value::operation_MULT;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_DIV)
-        {
-            out_operator = template_reservoir::state_value::operation_DIV;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_MOD)
-        {
-            out_operator = template_reservoir::state_value::operation_MOD;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_OR)
-        {
-            out_operator = template_reservoir::state_value::operation_OR;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_XOR)
-        {
-            out_operator = template_reservoir::state_value::operation_XOR;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_OPERATOR_AND)
-        {
-            out_operator = template_reservoir::state_value::operation_AND;
-        }
-        else
-        {
-            // 演算子が見つからなかった。
-            PSYQ_ASSERT(false);
-            return false;
-        }
-        return true;
-    }
-
-    //-------------------------------------------------------------------------
-    /// @brief 解析する文字列表。
-    private: typename this_type::string_table string_table_;
-
-}; // struct psyq::scenario_engine::behavior_builder
+}; // class behavior
 
 #endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_HPP_)
 // vim: set expandtab:

@@ -163,7 +163,7 @@ class psyq::scenario_engine::driver
         this->behavior_chunks_.shrink_to_fit();
         for (auto& local_behavior_chunk: this->behavior_chunks_)
         {
-            local_behavior_chunk.functions.shrink_to_fit();
+            local_behavior_chunk.functions_.shrink_to_fit();
         }
     }
     //@}
@@ -314,7 +314,7 @@ class psyq::scenario_engine::driver
     public: typename this_type::dispatcher dispatcher_;
 
     /// @brief シナリオ駆動器で用いる条件挙動チャンクのコンテナ。
-    private: typename this_type::behavior_chunk::vector behavior_chunks_;
+    private: typename this_type::behavior_chunk::container behavior_chunks_;
 
     /// @brief シナリオ駆動器で用いるハッシュ関数オブジェクト。
     public: typename this_type::hasher hash_function_;

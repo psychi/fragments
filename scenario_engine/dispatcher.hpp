@@ -36,6 +36,7 @@ template<
     typename template_allocator>
 class psyq::scenario_engine::_private::state_monitor
 {
+    /// @brief thisが指す値の型。
     private: typedef state_monitor this_type;
 
     /// @brief 状態監視器のコンテナ。
@@ -128,46 +129,30 @@ class psyq::scenario_engine::dispatcher
     public: typedef template_allocator allocator_type;
 
     //-------------------------------------------------------------------------
-    /** @brief 条件式の評価結果が変化した際に呼び出す、条件挙動関数オブジェクトの型。
-
-        - 引数#0は、評価に用いた条件式の識別値。
-        - 引数#1は、 evaluator::evaluate_expression の今回の戻り値。
-        - 引数#2は、 evaluator::evaluate_expression の前回の戻り値。
-     */
-    public: typedef std::function<
-        void (
-            typename this_type::expression_key const&,
-            std::int8_t const,
-            std::int8_t const)>
-                function;
-
-    /// @brief this_type::function の、所有権ありスマートポインタ。
-    public: typedef std::shared_ptr<typename this_type::function>
-        function_shared_ptr;
-
-    /// @brief this_type::function の、所有権なしスマートポインタ。
-    public: typedef std::weak_ptr<typename this_type::function>
-        function_weak_ptr;
-
-    /// @brief 条件挙動関数オブジェクトの所有権ありスマートポインタのコンテナを表す型。
-    public: typedef std::vector<
-        typename this_type::function_shared_ptr,
-        typename this_type::allocator_type>
-            function_shared_ptr_vector;
-
-    /// @brief 条件式監視器。
-    private: typedef psyq::scenario_engine::_private::expression_monitor<
-        typename this_type::expression_key,
-        typename this_type::function_weak_ptr,
-        typename this_type::allocator_type>
-            expression_monitor;
-
     /// @brief 状態監視器。
     private: typedef psyq::scenario_engine::_private::state_monitor<
          typename this_type::state_key,
          typename this_type::expression_key,
          typename this_type::allocator_type>
              state_monitor;
+
+    /// @brief 条件式監視器。
+    private: typedef psyq::scenario_engine::_private::expression_monitor<
+        typename this_type::expression_key,
+        typename this_type::allocator_type>
+            expression_monitor;
+
+    /// @copydoc expression_monitor::behavior::function
+    public: typedef typename this_type::expression_monitor::behavior::function
+        function;
+
+    /// @copydoc expression_monitor::behavior::function_shared_ptr
+    public: typedef typename this_type::expression_monitor::behavior::function_shared_ptr
+        function_shared_ptr;
+
+    /// @copydoc expression_monitor::behavior::function_weak_ptr
+    public: typedef typename this_type::expression_monitor::behavior::function_weak_ptr
+        function_weak_ptr;
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
@@ -289,43 +274,12 @@ class psyq::scenario_engine::dispatcher
         //std::int32_t const in_priority = 0,
         std::size_t const in_reserve_functions = 1)
     {
-        auto const local_function(in_function.get());
-        if (local_function == nullptr)
-        {
-            return false;
-        }
-
-        // 関数オブジェクトを登録する条件式監視器を決定する。
-        auto local_expression_monitor(
-            std::lower_bound(
-                this->expression_monitors_.begin(),
-                this->expression_monitors_.end(),
-                in_expression_key,
-                typename this_type::expression_monitor::key_less()));
-        if (local_expression_monitor != this->expression_monitors_.end()
-            && local_expression_monitor->key_ == in_expression_key)
-        {
-            // 同じ関数オブジェクトがすでに登録済みなら、失敗する。
-            auto const local_find_function(
-                local_expression_monitor->find_function(*local_function));
-            if (local_find_function)
-            {
-                return false;
-            }
-        }
-        else
-        {
-            // 条件式監視器を新たに生成し、コンテナに挿入する。
-            local_expression_monitor = this->expression_monitors_.insert(
-                local_expression_monitor,
-                typename this_type::expression_monitor(
-                    in_expression_key, this->get_allocator()));
-        }
-
-        // 関数オブジェクトを条件式監視器へ追加する。
-        local_expression_monitor->behaviors_.reserve(in_reserve_functions);
-        local_expression_monitor->behaviors_.emplace_back(in_function, 0);
-        return true;
+        return this_type::expression_monitor::register_function(
+            this->expression_monitors_,
+            in_expression_key,
+            in_function,
+            0,
+            in_reserve_functions);
     }
 
     /** @brief 条件式に対応する条件挙動関数を取り除く。
@@ -436,7 +390,7 @@ class psyq::scenario_engine::dispatcher
         // キャッシュに貯まった条件挙動関数を呼び出す。
         for (auto const& local_cache: this->behavior_caches_)
         {
-            local_cache.call_function();
+            local_cache.second.call_function(local_cache.first);
         }
 
         // 条件挙動関数のキャッシュを片づける。
@@ -888,7 +842,7 @@ class psyq::scenario_engine::dispatcher
     private: typename this_type::state_monitor::container state_monitors_;
 
     /// @brief 条件挙動キャッシュのコンテナ。
-    private: typename this_type::expression_monitor::behavior_cache::container
+    private: typename this_type::expression_monitor::behavior_cache_container
         behavior_caches_;
 
     /// @brief 多重に条件挙動関数を呼び出さないためのロック。

@@ -15,7 +15,7 @@ namespace psyq
 {
     namespace scenario_engine
     {
-        template<typename, typename, typename> class dispatcher;
+        template<typename, typename> class dispatcher;
         namespace _private
         {
             template<typename, typename, typename> class state_monitor;
@@ -106,43 +106,42 @@ class psyq::scenario_engine::_private::state_monitor
     - driver::update をフレーム毎に呼び出し、
       条件式の評価結果が変化を検知して、条件挙動関数を呼び出す。
 
-    @tparam template_state_key      @copydoc dispatcher::state_key
-    @tparam template_expression_key @copydoc dispatcher::expression_key
-    @tparam template_allocator      @copydoc dispatcher::allocator_type
+    @tparam template_evaluator @copydoc dispatcher::evaluator
+    @tparam template_priority  @copydoc dispatcher::function_priority
  */
 template<
-    typename template_state_key,
-    typename template_expression_key,
-    typename template_allocator>
+    typename template_evaluator,
+    typename template_priority = std::int32_t>
 class psyq::scenario_engine::dispatcher
 {
     /// @brief thisが指す値の型。
     private: typedef dispatcher this_type;
 
-    /// @brief 評価に用いる状態値の識別値を表す型。
-    public: typedef template_state_key state_key;
+    /** @brief 条件挙動器で使う条件評価器の型。
 
-    /// @brief 評価に用いる条件式の識別値を表す型。
-    public: typedef template_expression_key expression_key;
+        psyq::scenario_engine::evaluator と互換性があること。
+     */
+    public: typedef template_evaluator evaluator;
+
+    /// @brief 条件挙動関数の呼び出し優先順位の型。
+    public: typedef template_priority function_priority;
 
     /// @brief コンテナに用いるメモリ割当子の型。
-    public: typedef template_allocator allocator_type;
+    public: typedef typename this_type::evaluator::allocator_type
+        allocator_type;
 
     //-------------------------------------------------------------------------
-    /// @brief 条件挙動関数の呼び出し優先順位。
-    public: typedef std::int32_t function_priority;
-
     /// @brief 状態監視器。
     private: typedef psyq::scenario_engine::_private::state_monitor<
-         typename this_type::state_key,
-         typename this_type::expression_key,
+         typename this_type::evaluator::reservoir::state_key,
+         typename this_type::evaluator::expression::key,
          typename this_type::allocator_type>
              state_monitor;
 
     /// @brief 条件式監視器。
     private: typedef psyq::scenario_engine::_private::expression_monitor<
-        typename this_type::expression_key,
-        psyq::scenario_engine::_private::evaluation,
+        typename this_type::evaluator::expression::key,
+        typename this_type::evaluator::expression::evaluation,
         typename this_type::function_priority,
         typename this_type::allocator_type>
             expression_monitor;
@@ -274,7 +273,7 @@ class psyq::scenario_engine::dispatcher
         register_function で優先順位を指定できるようにしたい。
      */
     public: bool register_function(
-        typename this_type::expression_key const& in_expression_key,
+        typename this_type::evaluator::expression::key const& in_expression_key,
         typename this_type::function_shared_ptr const& in_function,
         //std::int32_t const in_priority = 0,
         std::size_t const in_reserve_functions = 1)
@@ -296,7 +295,7 @@ class psyq::scenario_engine::dispatcher
         @param[in] in_function       取り除く条件挙動関数。
      */
     public: void unregister_function(
-        typename this_type::expression_key const& in_expression_key,
+        typename this_type::evaluator::expression::key const& in_expression_key,
         typename this_type::function const& in_function)
     {
         auto const local_expression_monitor(
@@ -316,7 +315,7 @@ class psyq::scenario_engine::dispatcher
         @param[in] in_expression_key 条件式の識別値。
      */
     public: void unregister_function(
-        typename this_type::expression_key const& in_expression_key)
+        typename this_type::evaluator::expression::key const& in_expression_key)
     {
         auto const local_expression_monitor(
             this_type::expression_monitor::key_less::find_const_iterator(
@@ -360,10 +359,9 @@ class psyq::scenario_engine::dispatcher
         true → false → true と変化した場合、
         条件挙動関数を呼び出さないことに注意。
      */
-    public: template<typename template_evaluator>
-    void _dispatch(
-        template_evaluator const& in_evaluator,
-        typename template_evaluator::reservoir& io_reservoir,
+    public: void _dispatch(
+        typename this_type::evaluator const& in_evaluator,
+        typename this_type::evaluator::reservoir& io_reservoir,
         std::size_t const in_reserve_expressions = 1)
     {
         // _dispatch を多重に実行しないようにロックする。
@@ -429,9 +427,11 @@ class psyq::scenario_engine::dispatcher
             typename this_type::function(
                 /// @todo io_reservoir を参照渡しするのは危険。対策を考えたい。
                 [=, &io_reservoir](
-                    typename this_type::expression_key const&,
-                    std::int8_t const in_evaluation,
-                    std::int8_t const in_last_evaluation)
+                    typename this_type::evaluator::expression::key const&,
+                    typename this_type::evaluator::expression::evaluation const
+                        in_evaluation,
+                    typename this_type::evaluator::expression::evaluation const
+                        in_last_evaluation)
                 {
                     // 条件と評価が合致すれば、状態値を書き換える。
                     if (0 <= in_last_evaluation
@@ -529,9 +529,8 @@ class psyq::scenario_engine::dispatcher
         @param[in] in_reserve_expressions
             状態監視器が持つ条件式識別値コンテナの予約容量。
      */
-    private: template<typename template_evaluator>
-    void register_expressions(
-        template_evaluator const& in_evaluator,
+    private: void register_expressions(
+        typename this_type::evaluator const& in_evaluator,
         std::size_t const in_reserve_expressions)
     {
         // 条件式監視器のコンテナを走査し、
@@ -571,11 +570,10 @@ class psyq::scenario_engine::dispatcher
         @retval 負 成功。条件式の評価を維持しない。
         @retval 0  失敗。
      */
-    private: template<typename template_evaluator>
-    std::int8_t register_expression(
-        typename this_type::expression_key const& in_register_key,
-        typename this_type::expression_key const& in_expression_key,
-        template_evaluator const& in_evaluator,
+    private: std::int8_t register_expression(
+        typename this_type::evaluator::expression::key const& in_register_key,
+        typename this_type::evaluator::expression::key const& in_expression_key,
+        typename this_type::evaluator const& in_evaluator,
         std::size_t const in_reserve_expressions)
     {
         // 条件式と要素条件チャンクを検索する。
@@ -597,7 +595,7 @@ class psyq::scenario_engine::dispatcher
         // 条件式の種類によって、監視する条件式の追加先を選別する。
         switch (local_expression->kind_)
         {
-            case template_evaluator::expression::kind_SUB_EXPRESSION:
+            case this_type::evaluator::expression::kind_SUB_EXPRESSION:
             return this->register_sub_expression(
                 in_register_key,
                 *local_expression,
@@ -605,7 +603,7 @@ class psyq::scenario_engine::dispatcher
                 in_evaluator,
                 in_reserve_expressions);
 
-            case template_evaluator::expression::kind_STATE_TRANSITION:
+            case this_type::evaluator::expression::kind_STATE_TRANSITION:
             this_type::register_expression(
                 this->state_monitors_,
                 in_register_key,
@@ -614,7 +612,7 @@ class psyq::scenario_engine::dispatcher
                 in_reserve_expressions);
             return -1;
 
-            case template_evaluator::expression::kind_STATE_COMPARISON:
+            case this_type::evaluator::expression::kind_STATE_COMPARISON:
             this_type::register_expression(
                 this->state_monitors_,
                 in_register_key,
@@ -638,13 +636,11 @@ class psyq::scenario_engine::dispatcher
         @param[in] in_reserve_expressions
             状態監視器が持つ条件式識別値コンテナの予約容量。
      */
-    private: template<
-        typename template_expression,
-        typename template_element_container>
+    private: template<typename template_element_container>
     static void register_expression(
         typename this_type::state_monitor::container& io_state_monitors,
-        typename this_type::expression_key const& in_register_key,
-        template_expression const& in_expression,
+        typename this_type::evaluator::expression::key const& in_register_key,
+        typename this_type::evaluator::expression const& in_expression,
         template_element_container const& in_elements,
         std::size_t const in_reserve_expressions)
     {
@@ -702,13 +698,12 @@ class psyq::scenario_engine::dispatcher
         @retval 負 成功。条件式の評価を維持しない。
         @retval 0  失敗。
      */
-    private: template<typename template_evaluator>
-    std::int8_t register_sub_expression(
-        typename this_type::expression_key const& in_register_key,
-        typename template_evaluator::expression const& in_expression,
-        typename template_evaluator::sub_expression_vector const&
+    private: std::int8_t register_sub_expression(
+        typename this_type::evaluator::expression::key const& in_register_key,
+        typename this_type::evaluator::expression const& in_expression,
+        typename this_type::evaluator::sub_expression_vector const&
             in_sub_expressions,
-        template_evaluator const& in_evaluator,
+        typename this_type::evaluator const& in_evaluator,
         std::size_t const in_reserve_expressions)
     {
         // 複合条件式の要素条件を走査し、状態監視器に条件式を登録する。

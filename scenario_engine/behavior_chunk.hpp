@@ -37,11 +37,13 @@ class psyq::scenario_engine::behavior_chunk
 
     /// @brief 条件挙動チャンクの識別値を表す型。
     /// @note ここは条件式キーでなくて、チャンクキーにしないと。
-    public: typedef typename this_type::dispatcher::expression_key key_type;
+    public: typedef
+        typename this_type::dispatcher::evaluator::reservoir::chunk_key
+            key;
 
     /// @brief 条件挙動チャンクの識別値を比較する関数オブジェクト。
     public: typedef psyq::scenario_engine::_private::key_less<
-         this_type, typename this_type::key_type>
+         this_type, typename this_type::key>
              key_less;
 
     /// @brief 条件挙動関数オブジェクトの所有権ありスマートポインタのコンテナを表す型。
@@ -87,7 +89,7 @@ class psyq::scenario_engine::behavior_chunk
      */
     public: static bool add(
         typename this_type::container& io_chunks,
-        typename this_type::key_type const& in_key,
+        typename this_type::key const& in_key,
         typename this_type::dispatcher::function_shared_ptr in_function)
     {
         if (in_function.get() == nullptr)
@@ -114,7 +116,7 @@ class psyq::scenario_engine::behavior_chunk
     public: template<typename template_function_container>
     static std::size_t add(
         typename this_type::container& io_chunks,
-        typename this_type::key_type const& in_key,
+        typename this_type::key const& in_key,
         template_function_container in_functions)
     {
         // 条件挙動関数を条件挙動チャンクに追加する。
@@ -142,7 +144,7 @@ class psyq::scenario_engine::behavior_chunk
      */
     public: static bool remove(
         typename this_type::container& io_chunks,
-        typename this_type::key_type const& in_key)
+        typename this_type::key const& in_key)
     {
         auto const local_iterator(
             this_type::key_less::find_const_iterator(io_chunks, in_key));
@@ -161,7 +163,7 @@ class psyq::scenario_engine::behavior_chunk
      */
     private: static this_type& equip(
         typename this_type::container& io_chunks,
-        typename this_type::key_type const& in_key)
+        typename this_type::key const& in_key)
     {
         // 条件挙動関数を追加する条件挙動チャンクを用意する。
         auto const local_iterator(
@@ -178,7 +180,7 @@ class psyq::scenario_engine::behavior_chunk
         @param[in] in_allocator メモリ割当子の初期値。
      */
     private: behavior_chunk(
-        typename this_type::key_type in_key,
+        typename this_type::key in_key,
         typename this_type::dispatcher::allocator_type const& in_allocator)
     :
     functions_(in_allocator),
@@ -189,7 +191,7 @@ class psyq::scenario_engine::behavior_chunk
     /// @brief 条件挙動関数のコンテナ。
     public: typename this_type::function_shared_ptr_vector functions_;
     /// @brief 条件挙動チャンクの識別値。
-    public: typename this_type::key_type key_;
+    public: typename this_type::key key_;
 
 }; // class psyq::scenario_engine::behavior_chunk
 

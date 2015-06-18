@@ -12,7 +12,7 @@ namespace psyq
 {
     namespace scenario_engine
     {
-        template<typename, typename, typename> class evaluator;
+        template<typename, typename> class evaluator;
 
         namespace _private
         {
@@ -157,7 +157,7 @@ class psyq::scenario_engine::_private::expression
 }; // class psyq::scenario_engine::_private::expression
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief シナリオ条件評価器。条件式を保持して評価する。
+/** @brief シナリオ条件評価器。条件式を保持し、評価する。
 
     使い方の概略。
     - evaluator::register_expression で、条件式を登録する。
@@ -165,22 +165,24 @@ class psyq::scenario_engine::_private::expression
 
     @tparam template_reservoir      @copydoc evaluator::reservoir
     @tparam template_expression_key @copydoc evaluator::expression::key
-    @tparam template_allocator      @copydoc evaluator::allocator_type
  */
 template<
-    typename template_reservoir = psyq::scenario_engine::reservoir<>,
-    typename template_expression_key = typename template_reservoir::state_key,
-    typename template_allocator = typename template_reservoir::allocator_type>
+    typename template_reservoir,
+    typename template_expression_key = typename template_reservoir::state_key>
 class psyq::scenario_engine::evaluator
 {
     /// @brief thisが指す値の型。
     private: typedef evaluator this_type;
 
-    /// @brief 条件評価器で用いる状態貯蔵器の型。
+    /** @brief 条件評価器で使う状態貯蔵器の型。
+
+        psyq::scenario_engine::reservoir と互換性があること。
+     */
     public: typedef template_reservoir reservoir;
 
-    /// @brief 条件評価器で用いるメモリ割当子の型。
-    public: typedef template_allocator allocator_type;
+    /// @brief 条件評価器で使うメモリ割当子の型。
+    public: typedef typename this_type::reservoir::allocator_type
+        allocator_type;
 
     //-------------------------------------------------------------------------
     /// @brief 条件式

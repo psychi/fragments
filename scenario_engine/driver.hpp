@@ -69,22 +69,17 @@ class psyq::scenario_engine::driver
 
     /// @brief シナリオ駆動器で用いる状態変更器の型。
     public: typedef psyq::scenario_engine::modifier<
-        typename this_type::reservoir,
-        typename this_type::allocator_type>
+        typename this_type::reservoir>
             modifier;
 
     /// @brief シナリオ駆動器で用いる条件評価器の型。
     public: typedef psyq::scenario_engine::evaluator<
-        typename this_type::reservoir,
-        typename this_type::hasher::result_type,
-        typename this_type::allocator_type>
+        typename this_type::reservoir, typename this_type::hasher::result_type>
             evaluator;
 
     /// @brief シナリオ駆動器で用いる条件監視器の型。
     public: typedef psyq::scenario_engine::dispatcher<
-        typename this_type::reservoir::state_key,
-        typename this_type::evaluator::expression::key,
-        typename this_type::allocator_type>
+        typename this_type::evaluator, std::int32_t>
             dispatcher;
 
     /// @brief シナリオ駆動器で用いる条件挙動チャンクの型。

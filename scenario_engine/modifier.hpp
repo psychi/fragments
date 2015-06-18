@@ -10,7 +10,7 @@ namespace psyq
 {
     namespace scenario_engine
     {
-        template<typename, typename> class modifier;
+        template<typename> class modifier;
     } // namespace scenario_engine
 } // namespace psyq
 /// @endcond
@@ -34,19 +34,21 @@ namespace psyq
     1つの状態値に対してフレーム毎に状態変更する場合は、
     psyq::scenario_engine::reservoir::set_value で直接状態変更するほうが良い。
  */
-template<
-    typename template_reservoir = psyq::scenario_engine::reservoir<>,
-    typename template_allocator = typename template_reservoir::allocator_type>
+template<typename template_reservoir>
 class psyq::scenario_engine::modifier
 {
     /// @brief thisが指す値の型。
     private: typedef modifier this_type;
 
-    /// @brief 状態変更を適用する状態貯蔵器の型。
+    /** @brief 状態変更を適用する状態貯蔵器の型。
+
+        psyq::scenario_engine::reservoir と互換性があること。
+     */
     public: typedef template_reservoir reservoir;
 
     /// @brief 状態変更器で使うメモリ割当子の型。
-    public: typedef template_allocator allocator_type;
+    public: typedef typename this_type::reservoir::allocator_type
+        allocator_type;
 
     /** @brief 状態変更の優先順位。
 

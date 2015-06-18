@@ -85,6 +85,29 @@ class psyq::scenario_engine::_private::expression_monitor
         behavior_cache_container;
 
     //-------------------------------------------------------------------------
+    /// @brief 条件挙動キャッシュから優先順位を取得する関数オブジェクト。
+    private: struct behavior_cache_key_getter
+    {
+        /// @brief オブジェクトの型。
+        typedef
+            typename expression_monitor::behavior_cache_container::value_type
+            object;
+
+        /// @brief オブジェクトから取り出すキーの型。
+        typedef template_priority key;
+
+        /** @brief 条件挙動キャッシュから優先順位を取得する。
+            @param[in] in_behavior_cache 優先順位を取得する条件挙動キャッシュ。
+            @return 条件挙動の優先順位。
+         */
+        static key const& get(object const& in_behavior_cache) PSYQ_NOEXCEPT
+        {
+            return in_behavior_cache.first.priority_;
+        }
+
+    }; // struct behavior_cache_key_getter
+
+    //-------------------------------------------------------------------------
     /** @brief 条件式監視器を構築する。
         @param[in] in_key       監視する条件式の識別値。
         @param[in] in_allocator メモリ割当子の初期値。
@@ -325,18 +348,16 @@ class psyq::scenario_engine::_private::expression_monitor
             }
             else
             {
-#if 0
+                // 優先順位の昇順となるように、条件挙動キャッシュを挿入する。
                 io_behavior_caches.insert(
-                    std::lower_bound(
+                    std::upper_bound(
                         io_behavior_caches.begin(),
                         io_behavior_caches.end(),
-                        in_cache.priority_,
-                        typename this_type::priority_less()),
+                        local_behavior.priority_,
+                        psyq::scenario_engine::_private::key_less<
+                            typename this_type::behavior_cache_key_getter>()),
                     this_type::behavior_cache_container::value_type(
-                        in_behavior, in_cache));
-#else
-                io_behavior_caches.emplace_back(local_behavior, local_cache);
-#endif // 0
+                        local_behavior, local_cache));
                 ++i;
             }
         }
@@ -400,8 +421,7 @@ class psyq::scenario_engine::_private::expression_monitor
     const PSYQ_NOEXCEPT
     {
         return this->flags_.test(this_type::flag_LAST_EVALUATION)?
-            !in_flush && this->flags_.test(this_type::flag_LAST_CONDITION):
-            -1;
+            !in_flush && this->flags_.test(this_type::flag_LAST_CONDITION): -1;
     }
 
     //-------------------------------------------------------------------------

@@ -365,15 +365,15 @@ namespace psyq_test
         // 条件挙動テーブルを構築する。
         string_table local_behavior_table(
             "KEY         , CONDITION, PRIORITY, KIND,  ARGUMENT\n"
-            "expression_0, TRUE,      0,       STATE, state_unsigned, :=, 1\n"
-            "expression_1, TRUE,      0,       STATE, state_unsigned, +=, 1\n"
-            "expression_2, TRUE,      0,       STATE, state_unsigned, -=, 1\n"
-            "expression_3, TRUE,      0,       STATE, state_unsigned, *=, 1\n"
-            "expression_4, TRUE,      0,       STATE, state_unsigned, /=, 1\n"
-            "expression_5, TRUE,      0,       STATE, state_unsigned, %=, 1\n"
-            "expression_6, TRUE,      0,       STATE, state_unsigned, |=, 1\n"
-            "expression_7, TRUE,      0,       STATE, state_unsigned, ^=, 0\n"
-            "expression_8, TRUE,      0,       STATE, state_unsigned, &=, 0\n"
+            "expression_0, TRUE,      9,       STATE, state_unsigned, :=, 1\n"
+            "expression_1, TRUE,      8,       STATE, state_unsigned, +=, 1\n"
+            "expression_2, TRUE,      7,       STATE, state_unsigned, -=, 1\n"
+            "expression_3, TRUE,      6,       STATE, state_unsigned, *=, 1\n"
+            "expression_4, TRUE,      5,       STATE, state_unsigned, /=, 1\n"
+            "expression_5, TRUE,      4,       STATE, state_unsigned, %=, 1\n"
+            "expression_6, TRUE,      3,       STATE, state_unsigned, |=, 1\n"
+            "expression_7, TRUE,      2,       STATE, state_unsigned, ^=, 0\n"
+            "expression_8, TRUE,      1,       STATE, state_unsigned, &=, 0\n"
             "");
         local_behavior_table.constraint_attribute(0);
 

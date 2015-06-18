@@ -274,11 +274,6 @@ class psyq::scenario_engine::dispatcher
             失敗。条件挙動関数オブジェクトは登録されなかった。
             条件挙動関数を指すスマートポインタが空だったか、
             同じ条件式に同じ条件挙動関数がすでに登録されていたのが原因。
-
-        @todo
-        実際の条件挙動関数の登録は、 _dispatch で識別値の昇順に行われる。
-        このため register_function を呼び出した順序と異なってしまう。
-        register_function で優先順位を指定できるようにしたい。
      */
     public: bool register_function(
         typename this_type::evaluator::expression::key const& in_expression_key,
@@ -286,8 +281,6 @@ class psyq::scenario_engine::dispatcher
         typename this_type::function_priority const in_priority = 0,
         std::size_t const in_reserve_functions = 1)
     {
-        /// @note 今のところ優先順位に未対応なので、優先順位は0のみを許容する。
-        PSYQ_ASSERT(in_priority == 0);
         return this_type::expression_monitor::register_function(
             this->expression_monitors_,
             in_expression_key,

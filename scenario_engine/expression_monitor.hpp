@@ -15,7 +15,7 @@ namespace psyq
     {
         namespace _private
         {
-            template<typename, typename> class expression_monitor;
+            template<typename, typename, typename, typename> class expression_monitor;
         } // namespace _private
     } // namespace scenario_engine
 } // namespace psyq
@@ -28,9 +28,15 @@ namespace psyq
     条件式の評価結果が変化した際に呼び出す条件挙動関数オブジェクトを保持する。
 
     @tparam template_expression_key @copydoc psyq::scenario_engine::evaluator::expression::key
+    @tparam template_evaluation     @copydoc psyq::scenario_engine::_private::expression::evaluation
+    @tparam template_priority       @copydoc psyq::scenario_engine::dispatcher::function_priority
     @tparam template_allocator      @copydoc psyq::scenario_engine::reservoir::allocator_type
  */
-template<typename template_expression_key, typename template_allocator>
+template<
+    typename template_expression_key,
+    typename template_evaluation,
+    typename template_priority,
+    typename template_allocator>
 class psyq::scenario_engine::_private::expression_monitor
 {
     /// @brief thisが指す値の型。
@@ -57,7 +63,7 @@ class psyq::scenario_engine::_private::expression_monitor
 
     /// @brief 条件挙動。
     public: typedef psyq::scenario_engine::_private::behavior<
-        template_expression_key, std::int32_t>
+        template_expression_key, template_evaluation, template_priority>
             behavior;
 
     /// @brief 条件挙動のコンテナ。
@@ -136,7 +142,7 @@ class psyq::scenario_engine::_private::expression_monitor
         typename this_type::container& io_expression_monitors,
         template_expression_key const& in_expression_key,
         typename this_type::behavior::function_shared_ptr const& in_function,
-        typename this_type::behavior::priority const in_priority,
+        template_priority const in_priority,
         std::size_t const in_reserve_behaviors)
     {
         auto const local_function(in_function.get());

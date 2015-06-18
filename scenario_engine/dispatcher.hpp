@@ -129,6 +129,9 @@ class psyq::scenario_engine::dispatcher
     public: typedef template_allocator allocator_type;
 
     //-------------------------------------------------------------------------
+    /// @brief 条件挙動関数の呼び出し優先順位。
+    public: typedef std::int32_t function_priority;
+
     /// @brief 状態監視器。
     private: typedef psyq::scenario_engine::_private::state_monitor<
          typename this_type::state_key,
@@ -139,6 +142,8 @@ class psyq::scenario_engine::dispatcher
     /// @brief 条件式監視器。
     private: typedef psyq::scenario_engine::_private::expression_monitor<
         typename this_type::expression_key,
+        psyq::scenario_engine::_private::evaluation,
+        typename this_type::function_priority,
         typename this_type::allocator_type>
             expression_monitor;
 

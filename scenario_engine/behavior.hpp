@@ -12,7 +12,7 @@ namespace psyq
     {
         namespace _private
         {
-            template<typename, typename> class behavior;
+            template<typename, typename, typename> class behavior;
         } // namespace _private
     } // namespace scenario_engine
 } // namespace psyq
@@ -20,8 +20,15 @@ namespace psyq
 
 //-------------------------------------------------------------------------
 /** @brief 条件挙動。
+
+    @tparam template_expression_key @copydoc psyq::scenario_engine::_private::expression::key
+    @tparam template_evaluation     @copydoc psyq::scenario_engine::_private::expression::evaluation
+    @tparam template_priority       @copydoc psyq::scenario_engine::dispatcher::function_priority
  */
-template<typename template_expression_key, typename template_priority>
+template<
+    typename template_expression_key,
+    typename template_evaluation,
+    typename template_priority>
 class psyq::scenario_engine::_private::behavior
 {
     /// @brief thisが指す値の型。
@@ -36,8 +43,8 @@ class psyq::scenario_engine::_private::behavior
     public: typedef std::function<
         void (
             template_expression_key const&,
-            std::int8_t const,
-            std::int8_t const)>
+            template_evaluation const,
+            template_evaluation const)>
                 function;
 
     /// @brief this_type::function の、所有権ありスマートポインタ。
@@ -48,9 +55,6 @@ class psyq::scenario_engine::_private::behavior
     public: typedef std::weak_ptr<typename this_type::function>
         function_weak_ptr;
 
-    /// @brief 条件挙動の優先順位。
-    public: typedef template_priority priority;
-
     /// @brief 条件式の評価結果のキャッシュ。
     public: class cache
     {
@@ -58,8 +62,8 @@ class psyq::scenario_engine::_private::behavior
 
         public: cache(
             template_expression_key in_expression_key,
-            std::int8_t const in_evaluation,
-            std::int8_t const in_last_evaluation)
+            template_evaluation const in_evaluation,
+            template_evaluation const in_last_evaluation)
         :
         expression_key_(std::move(in_expression_key)),
         evaluation_(in_evaluation),
@@ -85,17 +89,17 @@ class psyq::scenario_engine::_private::behavior
 
         /// @brief 条件式の識別値。
         public: template_expression_key expression_key_;
-        /// @brief 今回の条件式の評価結果。
-        public: std::int8_t evaluation_;
-        /// @brief 前回の条件式の評価結果。
-        public: std::int8_t last_evaluation_;
+        /// @brief 条件式の今回の評価結果。
+        public: template_evaluation evaluation_;
+        /// @brief 条件式の前回の評価結果。
+        public: template_evaluation last_evaluation_;
 
     }; // class cache
 
     //---------------------------------------------------------------------
     public: behavior(
         typename this_type::function_weak_ptr in_function,
-        typename this_type::priority const in_priority)
+        template_priority const in_priority)
     :
     function_(std::move(in_function)),
     priority_(in_priority)
@@ -115,7 +119,7 @@ class psyq::scenario_engine::_private::behavior
 
     //---------------------------------------------------------------------
     public: typename this_type::function_weak_ptr function_;
-    public: typename this_type::priority priority_;
+    public: template_priority priority_;
 
 }; // class behavior
 

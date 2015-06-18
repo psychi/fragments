@@ -46,6 +46,14 @@ class psyq::scenario_engine::_private::expression
     /// @brief 要素条件のインデクス番号を表す型。
     public: typedef template_element_index element_index;
 
+    /** @brief 条件式の評価結果。
+
+        - 正なら、条件式の評価は真。
+        - 0 なら、条件式の評価は偽。
+        - 負なら、条件式の評価に失敗。
+     */
+    public: typedef psyq::scenario_engine::_private::evaluation evaluation;
+
     /// @brief 条件式の要素条件を結合する論理演算子を表す列挙型。
     public: enum logic: std::uint8_t
     {
@@ -96,7 +104,7 @@ class psyq::scenario_engine::_private::expression
     public: template<
         typename template_element_container,
         typename template_element_evaluator>
-    std::int8_t evaluate(
+    typename this_type::evaluation evaluate(
         template_element_container const& in_elements,
         template_element_evaluator const& in_evaluator)
     const PSYQ_NOEXCEPT
@@ -514,7 +522,7 @@ class psyq::scenario_engine::evaluator
         @retval 0  条件式の評価は false となった。
         @retval 負 条件式の評価に失敗した。
      */
-    public: std::int8_t evaluate_expression(
+    public: typename this_type::expression::evaluation evaluate_expression(
         typename this_type::expression::key const in_expression_key,
         typename this_type::reservoir const& in_reservoir)
     const PSYQ_NOEXCEPT
@@ -542,7 +550,7 @@ class psyq::scenario_engine::evaluator
                 local_chunk->sub_expressions_,
                 [&, this](
                     typename this_type::sub_expression const& in_expression)
-                ->std::int8_t
+                ->typename this_type::expression::evaluation
                 {
                     auto const local_evaluate_expression(
                         this->evaluate_expression(
@@ -560,7 +568,7 @@ class psyq::scenario_engine::evaluator
             return local_expression->evaluate(
                 local_chunk->state_transitions_,
                 [&](typename this_type::state_transition const& in_state)
-                ->std::int8_t
+                ->typename this_type::expression::evaluation
                 {
                     return in_reservoir._get_transition(in_state.key_);
                 });
@@ -570,7 +578,7 @@ class psyq::scenario_engine::evaluator
             return local_expression->evaluate(
                 local_chunk->state_comparisons_,
                 [&](typename this_type::state_comparison const& in_state)
-                ->std::int8_t
+                ->typename this_type::expression::evaluation
                 {
                     /** @todo
                         今のところ状態値と定数の比較しかできないが、

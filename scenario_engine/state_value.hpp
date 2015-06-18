@@ -19,6 +19,7 @@ namespace psyq
         namespace _private
         {
             template<typename, typename> class state_value;
+            typedef std::int8_t evaluation;
         } // namespace _private
     } // namespace scenario_engine
 } // namespace psyq
@@ -385,7 +386,7 @@ class psyq::scenario_engine::_private::state_value
         @retval 0  比較演算の結果が偽だった。
         @retval 負 比較演算に失敗した。
      */
-    public: std::int8_t compare(
+    public: evaluation compare(
         typename this_type::comparison const in_comparison,
         this_type const& in_right)
     {

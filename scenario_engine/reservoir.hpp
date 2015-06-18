@@ -105,23 +105,21 @@ class psyq::scenario_engine::reservoir
     /// @brief 状態値ビット列チャンクのコンテナ。
     private: typedef
          std::vector<
-             typename this_type::chunk,
-             typename this_type::allocator_type>
+             typename this_type::chunk, typename this_type::allocator_type>
          chunk_container;
 
     /// @brief チャンク識別値を比較する関数オブジェクト。
     private: typedef
          psyq::scenario_engine::_private::key_less<
-             typename this_type::chunk,
-             typename this_type::chunk_key>
+             psyq::scenario_engine::_private::object_key_getter<
+                 typename this_type::chunk, typename this_type::chunk_key>>
          chunk_key_less;
 
     //-------------------------------------------------------------------------
     /// @brief 状態値。
     public: typedef
         psyq::scenario_engine::_private::state_value<
-            typename this_type::chunk::block,
-            template_float>
+            typename this_type::chunk::block, template_float>
         state_value;
 
     /// @brief 状態値登記のコンテナ。
@@ -141,8 +139,9 @@ class psyq::scenario_engine::reservoir
     /// @brief 状態値に対応する識別値を比較する関数オブジェクト。
     private: typedef
          psyq::scenario_engine::_private::key_less<
-             typename this_type::state_registry,
-             typename this_type::state_key>
+             psyq::scenario_engine::_private::object_key_getter<
+                 typename this_type::state_registry,
+                 typename this_type::state_key>>
          state_key_less;
 
     //-------------------------------------------------------------------------

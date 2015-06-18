@@ -31,10 +31,8 @@ class psyq::scenario_engine::behavior_chunk
     public: typedef template_dispatcher dispatcher;
 
     /// @brief 条件挙動チャンクのコンテナを表す型。
-    public:
-        typedef std::vector<
-            this_type,
-            typename this_type::dispatcher::allocator_type>
+    public: typedef
+        std::vector<this_type, typename this_type::dispatcher::allocator_type>
         container;
 
     /// @brief 条件挙動チャンクの識別値を表す型。
@@ -46,8 +44,8 @@ class psyq::scenario_engine::behavior_chunk
     /// @brief 条件挙動チャンクの識別値を比較する関数オブジェクト。
     public: typedef
          psyq::scenario_engine::_private::key_less<
-             this_type,
-             typename this_type::key>
+             psyq::scenario_engine::_private::object_key_getter<
+                 this_type, typename this_type::key>>
          key_less;
 
     /// @brief 条件挙動関数オブジェクトの所有権ありスマートポインタのコンテナを表す型。

@@ -199,15 +199,15 @@ class psyq::scenario_engine::evaluator
     /// @brief 条件式のコンテナを表す型。
     private: typedef
         std::vector<
-            typename this_type::expression,
-            typename this_type::allocator_type>
+            typename this_type::expression, typename this_type::allocator_type>
         expression_container;
 
     /// @brief 条件式を識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
     private: typedef
         psyq::scenario_engine::_private::key_less<
-            typename this_type::expression,
-            typename this_type::expression::key>
+            psyq::scenario_engine::_private::object_key_getter<
+                typename this_type::expression,
+                typename this_type::expression::key>>
         expression_key_less;
 
     //-------------------------------------------------------------------------
@@ -379,8 +379,9 @@ class psyq::scenario_engine::evaluator
     /// @brief 要素条件チャンクの識別値を比較する関数オブジェクト。
     private: typedef
          psyq::scenario_engine::_private::key_less<
-             typename this_type::chunk,
-             typename this_type::reservoir::chunk_key>
+             psyq::scenario_engine::_private::object_key_getter<
+                 typename this_type::chunk,
+                 typename this_type::reservoir::chunk_key>>
          chunk_key_less;
 
     //-------------------------------------------------------------------------

@@ -12,39 +12,71 @@ namespace psyq
     {
         namespace _private
         {
-            template<typename, typename> struct key_less;
+            template<typename, typename> struct object_key_getter;
+            template<typename> struct key_less;
         } // namespace _private
     } // namespace scenario_engine
 } // namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief オブジェクトからキーを取得する関数オブジェクト。
+template<typename template_object, typename template_key>
+struct psyq::scenario_engine::_private::object_key_getter
+{
+    /// @brief オブジェクトの型。
+    typedef template_object object;
+    /// @brief オブジェクトから取り出すキーの型。
+    typedef template_key key;
+
+    /** @brief オブジェクトからキーを取得する。
+        @param[in] in_object キーを取得するオブジェクト。
+        @return オブジェクトのキー。
+     */
+    static key const& get(object const& in_object) PSYQ_NOEXCEPT
+    {
+        return in_object.key_;
+    }
+
+}; // struct object_key_getter
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 識別値を比較する関数オブジェクト。
-template<typename template_value, typename template_key>
+template<typename template_key_getter>
 struct psyq::scenario_engine::_private::key_less
 {
     bool operator()(
-        template_value const& in_left,
-        template_value const& in_right)
+        typename template_key_getter::object const& in_left,
+        typename template_key_getter::object const& in_right)
     const PSYQ_NOEXCEPT
     {
-        return in_left.key_ < in_right.key_;
+        return this->operator()(
+            template_key_getter::get(in_left),
+            template_key_getter::get(in_right));
     }
 
     bool operator()(
-        template_key const& in_left,
-        template_value const& in_right)
+        typename template_key_getter::key const& in_left,
+        typename template_key_getter::object const& in_right)
     const PSYQ_NOEXCEPT
     {
-        return in_left < in_right.key_;
+        return this->operator()(in_left, template_key_getter::get(in_right));
     }
 
     bool operator()(
-        template_value const& in_left,
-        template_key const& in_right)
+        typename template_key_getter::object const& in_left,
+        typename template_key_getter::key const& in_right)
     const PSYQ_NOEXCEPT
     {
-        return in_left.key_ < in_right;
+        return this->operator()(template_key_getter::get(in_left), in_right);
+    }
+
+    bool operator()(
+        typename template_key_getter::key const& in_left,
+        typename template_key_getter::key const& in_right)
+    const PSYQ_NOEXCEPT
+    {
+        return in_left < in_right;
     }
 
     /** @brief コンテナから値を検索する。
@@ -56,7 +88,7 @@ struct psyq::scenario_engine::_private::key_less
     template<typename template_container>
     static typename template_container::const_iterator find_const_iterator(
         template_container const& in_container,
-        template_key const& in_key)
+        typename template_key_getter::key const& in_key)
     PSYQ_NOEXCEPT
     {
         return find_iterator(
@@ -67,7 +99,7 @@ struct psyq::scenario_engine::_private::key_less
     template<typename template_container>
     static typename template_container::iterator find_iterator(
         template_container& in_container,
-        template_key const& in_key)
+        typename template_key_getter::key const& in_key)
     PSYQ_NOEXCEPT
     {
         auto const local_end(in_container.end());
@@ -88,7 +120,7 @@ struct psyq::scenario_engine::_private::key_less
     template<typename template_container>
     static typename template_container::value_type const* find_const_pointer(
         template_container const& in_container,
-        template_key const& in_key)
+        typename template_key_getter::key const& in_key)
     PSYQ_NOEXCEPT
     {
         auto const local_end(in_container.end());
@@ -104,7 +136,7 @@ struct psyq::scenario_engine::_private::key_less
     template<typename template_container>
     static typename template_container::value_type* find_pointer(
         template_container& in_container,
-        template_key const& in_key)
+        typename template_key_getter::key const& in_key)
     PSYQ_NOEXCEPT
     {
         return const_cast<typename template_container::value_type*>(

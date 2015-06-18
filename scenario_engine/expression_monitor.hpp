@@ -1,5 +1,5 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::_private::key_less
+    @brief @copybrief psyq::scenario_engine::_private::expression_monitor
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_MONITOR_HPP_
@@ -60,16 +60,14 @@ class psyq::scenario_engine::_private::expression_monitor
     /// @brief 条件式監視器を条件式の識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
     public: typedef
         psyq::scenario_engine::_private::key_less<
-            this_type,
-            template_expression_key>
+            psyq::scenario_engine::_private::object_key_getter<
+                this_type, template_expression_key>>
         key_less;
 
     /// @brief 条件挙動。
     public: typedef
         psyq::scenario_engine::_private::behavior<
-            template_expression_key,
-            template_evaluation,
-            template_priority>
+            template_expression_key, template_evaluation, template_priority>
         behavior;
 
     /// @brief 条件挙動のコンテナ。
@@ -78,8 +76,8 @@ class psyq::scenario_engine::_private::expression_monitor
         behavior_container;
 
     /// @brief 条件挙動と条件式評価キャッシュのコンテナ。
-    public:
-        typedef std::vector<
+    public: typedef
+        std::vector<
             std::pair<
                 typename this_type::behavior,
                 typename this_type::behavior::cache>,
@@ -293,7 +291,7 @@ class psyq::scenario_engine::_private::expression_monitor
         @param[in] in_evaluator           評価に用いる条件評価器。
         @param[in] in_reservoir           評価に用いる状態貯蔵器。
         @retval true  条件挙動関数をキャッシュに貯めた。
-        @retval false 条件挙動関数はキャッシュに貯めなかった。
+        @retval false 条件挙動関数をキャッシュに貯めなかった。
      */
     private: template<typename template_evaluator>
     bool cache_behavior(
@@ -316,6 +314,8 @@ class psyq::scenario_engine::_private::expression_monitor
         }
 
         // 条件式の評価結果が前回と違うので、条件挙動関数をキャッシュに貯める。
+        typename this_type::behavior::cache const local_cache(
+            this->key_, local_evaluation, local_last_evaluation);
         for (auto i(this->behaviors_.begin()); i != this->behaviors_.end();)
         {
             auto& local_behavior(*i);
@@ -325,14 +325,18 @@ class psyq::scenario_engine::_private::expression_monitor
             }
             else
             {
-                io_behavior_caches.emplace_back(
-                    typename this_type::behavior(
-                        local_behavior.function_,
-                        local_behavior.priority_),
-                    typename this_type::behavior::cache(
-                        this->key_,
-                        local_evaluation,
-                        local_last_evaluation));
+#if 0
+                io_behavior_caches.insert(
+                    std::lower_bound(
+                        io_behavior_caches.begin(),
+                        io_behavior_caches.end(),
+                        in_cache.priority_,
+                        typename this_type::priority_less()),
+                    this_type::behavior_cache_container::value_type(
+                        in_behavior, in_cache));
+#else
+                io_behavior_caches.emplace_back(local_behavior, local_cache);
+#endif // 0
                 ++i;
             }
         }

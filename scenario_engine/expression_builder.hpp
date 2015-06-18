@@ -581,7 +581,9 @@ class psyq::scenario_engine::expression_builder
         }
 
         // 比較演算子を取得する。
-        typedef typename template_evaluator::reservoir::state_value state_value;
+        typedef
+            typename template_evaluator::reservoir::state_value
+            state_value;
         typename state_value::comparison local_state_comparison;
         auto const local_get_comparison_operator(
             this_type::get_comparison_operator<state_value>(

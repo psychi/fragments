@@ -60,32 +60,37 @@ class psyq::scenario_engine::driver
     public: typedef template_allocator allocator_type;
 
     /// @brief シナリオ駆動器で用いる状態貯蔵器の型。
-    public: typedef psyq::scenario_engine::reservoir<
-        template_float,
-        typename this_type::hasher::result_type,
-        typename this_type::hasher::result_type,
-        typename this_type::allocator_type>
-            reservoir;
+    public: typedef
+        psyq::scenario_engine::reservoir<
+            template_float,
+            typename this_type::hasher::result_type,
+            typename this_type::hasher::result_type,
+            typename this_type::allocator_type>
+        reservoir;
 
     /// @brief シナリオ駆動器で用いる状態変更器の型。
-    public: typedef psyq::scenario_engine::modifier<
-        typename this_type::reservoir>
-            modifier;
+    public: typedef
+        psyq::scenario_engine::modifier<typename this_type::reservoir>
+        modifier;
 
     /// @brief シナリオ駆動器で用いる条件評価器の型。
-    public: typedef psyq::scenario_engine::evaluator<
-        typename this_type::reservoir, typename this_type::hasher::result_type>
-            evaluator;
+    public: typedef
+        psyq::scenario_engine::evaluator<
+            typename this_type::reservoir,
+            typename this_type::hasher::result_type>
+        evaluator;
 
     /// @brief シナリオ駆動器で用いる条件監視器の型。
-    public: typedef psyq::scenario_engine::dispatcher<
-        typename this_type::evaluator, std::int32_t>
-            dispatcher;
+    public: typedef
+        psyq::scenario_engine::dispatcher<
+            typename this_type::evaluator,
+            std::int32_t>
+        dispatcher;
 
     /// @brief シナリオ駆動器で用いる条件挙動チャンクの型。
-    public: typedef psyq::scenario_engine::behavior_chunk<
-        typename this_type::dispatcher>
-            behavior_chunk;
+    public: typedef
+        psyq::scenario_engine::behavior_chunk<typename this_type::dispatcher>
+        behavior_chunk;
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
@@ -323,9 +328,11 @@ namespace psyq_test
     inline void scenario_engine()
     {
         typedef psyq::string::csv_table<std::string> string_table;
-        typedef psyq::scenario_engine
-            ::driver<float, string_table::string_view::fnv1_hash32>
-                driver;
+        typedef
+            psyq::scenario_engine::driver<
+                float,
+                string_table::string_view::fnv1_hash32>
+            driver;
         driver local_driver(16, 16, 16);
         auto const local_chunk_key(local_driver.hash_function_("chunk_0"));
 

@@ -23,7 +23,6 @@ namespace psyq
     - modifier::modify で、状態変更を実際に適用する。
 
     @tparam template_reservoir @copydoc modifier::reservoir
-    @tparam template_allocator @copydoc modifier::allocator_type
 
     @note
     1度の modifier::modify で、
@@ -47,7 +46,8 @@ class psyq::scenario_engine::modifier
     public: typedef template_reservoir reservoir;
 
     /// @brief 状態変更器で使うメモリ割当子の型。
-    public: typedef typename this_type::reservoir::allocator_type
+    public: typedef
+        typename this_type::reservoir::allocator_type
         allocator_type;
 
     /** @brief 状態変更の優先順位。
@@ -87,9 +87,11 @@ class psyq::scenario_engine::modifier
 
     }; // class state_cache
 
-    private: typedef std::vector<
-        typename this_type::state_cache, typename this_type::allocator_type>
-            state_container;
+    private: typedef
+        std::vector<
+            typename this_type::state_cache,
+            typename this_type::allocator_type>
+        state_container;
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入

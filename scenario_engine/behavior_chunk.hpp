@@ -31,26 +31,31 @@ class psyq::scenario_engine::behavior_chunk
     public: typedef template_dispatcher dispatcher;
 
     /// @brief 条件挙動チャンクのコンテナを表す型。
-    public: typedef std::vector<
-        this_type, typename this_type::dispatcher::allocator_type>
-            container;
+    public:
+        typedef std::vector<
+            this_type,
+            typename this_type::dispatcher::allocator_type>
+        container;
 
     /// @brief 条件挙動チャンクの識別値を表す型。
     /// @note ここは条件式キーでなくて、チャンクキーにしないと。
     public: typedef
         typename this_type::dispatcher::evaluator::reservoir::chunk_key
-            key;
+        key;
 
     /// @brief 条件挙動チャンクの識別値を比較する関数オブジェクト。
-    public: typedef psyq::scenario_engine::_private::key_less<
-         this_type, typename this_type::key>
-             key_less;
+    public: typedef
+         psyq::scenario_engine::_private::key_less<
+             this_type,
+             typename this_type::key>
+         key_less;
 
     /// @brief 条件挙動関数オブジェクトの所有権ありスマートポインタのコンテナを表す型。
-    public: typedef std::vector<
-        typename template_dispatcher::function_shared_ptr,
-        typename template_dispatcher::allocator_type>
-            function_shared_ptr_vector;
+    public: typedef
+        std::vector<
+            typename template_dispatcher::function_shared_ptr,
+            typename template_dispatcher::allocator_type>
+        function_shared_ptr_vector;
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入

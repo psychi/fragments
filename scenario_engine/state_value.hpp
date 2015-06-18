@@ -46,7 +46,7 @@ class psyq::scenario_engine::_private::state_value
     /// @brief 状態値で扱う符号あり整数の型。
     public: typedef
         typename std::make_signed<typename this_type::unsigned_type>::type
-            signed_type;
+        signed_type;
 
     /// @brief 状態値で扱う浮動小数点数の型。
     public: typedef template_float float_type;

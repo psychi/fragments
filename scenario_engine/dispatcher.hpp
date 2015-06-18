@@ -45,7 +45,8 @@ class psyq::scenario_engine::_private::state_monitor
     /// @brief 状態監視器を状態値の識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
     public: typedef
         psyq::scenario_engine::_private::key_less<
-            this_type, template_state_key>
+            this_type,
+            template_state_key>
         key_less;
 
     /// @brief 条件式の識別値のコンテナの型。

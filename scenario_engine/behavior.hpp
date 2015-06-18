@@ -40,19 +40,22 @@ class psyq::scenario_engine::_private::behavior
         - 引数#1は、 evaluator::evaluate_expression の今回の戻り値。
         - 引数#2は、 evaluator::evaluate_expression の前回の戻り値。
      */
-    public: typedef std::function<
-        void (
-            template_expression_key const&,
-            template_evaluation const,
-            template_evaluation const)>
-                function;
+    public: typedef
+        std::function<
+            void (
+                template_expression_key const&,
+                template_evaluation const,
+                template_evaluation const)>
+        function;
 
     /// @brief this_type::function の、所有権ありスマートポインタ。
-    public: typedef std::shared_ptr<typename this_type::function>
+    public: typedef
+        std::shared_ptr<typename this_type::function>
         function_shared_ptr;
 
     /// @brief this_type::function の、所有権なしスマートポインタ。
-    public: typedef std::weak_ptr<typename this_type::function>
+    public: typedef
+        std::weak_ptr<typename this_type::function>
         function_weak_ptr;
 
     /// @brief 条件式の評価結果のキャッシュ。

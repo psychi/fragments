@@ -181,31 +181,39 @@ class psyq::scenario_engine::evaluator
     public: typedef template_reservoir reservoir;
 
     /// @brief 条件評価器で使うメモリ割当子の型。
-    public: typedef typename this_type::reservoir::allocator_type
+    public: typedef
+        typename this_type::reservoir::allocator_type
         allocator_type;
 
     //-------------------------------------------------------------------------
     /// @brief 条件式
-    public: typedef psyq::scenario_engine::_private::expression<
-        template_expression_key,
-        typename template_reservoir::chunk_key,
-        std::uint32_t>
-            expression;
+    public: typedef
+        psyq::scenario_engine::_private::expression<
+            template_expression_key,
+            typename template_reservoir::chunk_key,
+            std::uint32_t>
+        expression;
 
     /// @brief 条件式のコンテナを表す型。
-    private: typedef std::vector<
-        typename this_type::expression, typename this_type::allocator_type>
-            expression_vector;
+    private: typedef
+        std::vector<
+            typename this_type::expression,
+            typename this_type::allocator_type>
+        expression_vector;
 
     /// @brief 条件式の識別値のコンテナの型。
-    private: typedef std::vector<
-        typename this_type::expression::key, typename this_type::allocator_type>
-            expression_key_vector;
+    private: typedef
+        std::vector<
+            typename this_type::expression::key,
+            typename this_type::allocator_type>
+        expression_key_vector;
 
     /// @brief 条件式を識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
-    private: typedef psyq::scenario_engine::_private::key_less<
-        typename this_type::expression, typename this_type::expression::key>
-            expression_key_less;
+    private: typedef
+        psyq::scenario_engine::_private::key_less<
+            typename this_type::expression,
+            typename this_type::expression::key>
+        expression_key_less;
 
     //-------------------------------------------------------------------------
     /// @brief 複合条件式の要素条件。
@@ -233,10 +241,11 @@ class psyq::scenario_engine::evaluator
     }; // struct sub_expression
 
     /// @brief 複合条件式の要素条件のコンテナ。
-    public: typedef std::vector<
-        typename this_type::sub_expression,
-        typename evaluator::allocator_type>
-            sub_expression_vector;
+    public: typedef
+        std::vector<
+            typename this_type::sub_expression,
+            typename evaluator::allocator_type>
+        sub_expression_vector;
 
     //-------------------------------------------------------------------------
     /// @brief 状態変化条件式の要素条件。
@@ -257,10 +266,11 @@ class psyq::scenario_engine::evaluator
     }; // struct state_transition
 
     /// @brief 状態変化条件式の要素条件のコンテナ。
-    public: typedef std::vector<
-        typename this_type::state_transition,
-        typename evaluator::allocator_type>
-            state_transition_vector;
+    public: typedef
+        std::vector<
+            typename this_type::state_transition,
+            typename evaluator::allocator_type>
+        state_transition_vector;
 
     //-------------------------------------------------------------------------
     /// @brief 状態比較条件式の要素条件。
@@ -294,10 +304,11 @@ class psyq::scenario_engine::evaluator
     }; // struct state_comparison
 
     /// @brief 状態比較条件式の要素条件のコンテナ。
-    public: typedef std::vector<
-        typename this_type::state_comparison,
-        typename evaluator::allocator_type>
-            state_comparison_vector;
+    public: typedef
+        std::vector<
+            typename this_type::state_comparison,
+            typename evaluator::allocator_type>
+        state_comparison_vector;
 
     //-------------------------------------------------------------------------
     /// @brief 要素条件チャンク。
@@ -364,14 +375,18 @@ class psyq::scenario_engine::evaluator
     }; // struct chunk
 
     /// @brief 要素条件チャンクのコンテナ。
-    private: typedef std::vector<
-         typename this_type::chunk, typename this_type::allocator_type>
-             chunk_vector;
+    private: typedef
+         std::vector<
+             typename this_type::chunk,
+             typename this_type::allocator_type>
+         chunk_vector;
 
     /// @brief 要素条件チャンクの識別値を比較する関数オブジェクト。
-    private: typedef psyq::scenario_engine::_private::key_less<
-         typename this_type::chunk, typename this_type::reservoir::chunk_key>
-             chunk_key_less;
+    private: typedef
+         psyq::scenario_engine::_private::key_less<
+             typename this_type::chunk,
+             typename this_type::reservoir::chunk_key>
+         chunk_key_less;
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入

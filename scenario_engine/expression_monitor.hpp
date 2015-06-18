@@ -15,7 +15,8 @@ namespace psyq
     {
         namespace _private
         {
-            template<typename, typename, typename, typename> class expression_monitor;
+            template<typename, typename, typename, typename>
+                class expression_monitor;
         } // namespace _private
     } // namespace scenario_engine
 } // namespace psyq
@@ -57,26 +58,33 @@ class psyq::scenario_engine::_private::expression_monitor
     public: typedef std::vector<this_type, template_allocator> container;
 
     /// @brief 条件式監視器を条件式の識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
-    public: typedef psyq::scenario_engine::_private::key_less<
-        this_type, template_expression_key>
-            key_less;
+    public: typedef
+        psyq::scenario_engine::_private::key_less<
+            this_type,
+            template_expression_key>
+        key_less;
 
     /// @brief 条件挙動。
-    public: typedef psyq::scenario_engine::_private::behavior<
-        template_expression_key, template_evaluation, template_priority>
-            behavior;
+    public: typedef
+        psyq::scenario_engine::_private::behavior<
+            template_expression_key,
+            template_evaluation,
+            template_priority>
+        behavior;
 
     /// @brief 条件挙動のコンテナ。
-    public: typedef std::vector<
-        typename this_type::behavior, template_allocator>
-            behavior_container;
+    public: typedef
+        std::vector<typename this_type::behavior, template_allocator>
+        behavior_container;
 
     /// @brief 条件挙動と条件式評価キャッシュのコンテナ。
-    public: typedef std::vector<
-        std::pair<
-            typename this_type::behavior, typename this_type::behavior::cache>,
-        template_allocator>
-            behavior_cache_container;
+    public:
+        typedef std::vector<
+            std::pair<
+                typename this_type::behavior,
+                typename this_type::behavior::cache>,
+            template_allocator>
+        behavior_cache_container;
 
     //-------------------------------------------------------------------------
     /** @brief 条件式監視器を構築する。
@@ -340,7 +348,7 @@ class psyq::scenario_engine::_private::expression_monitor
         @retval 負 条件式の評価に失敗した。
      */
     private: template<typename template_evaluator>
-    std::int8_t evaluate_expression(
+    template_evaluation evaluate_expression(
         template_evaluator const& in_evaluator,
         typename template_evaluator::reservoir const& in_reservoir,
         bool const in_flush)
@@ -384,7 +392,7 @@ class psyq::scenario_engine::_private::expression_monitor
         @retval  0 条件式の評価は false となった。
         @retval 負 条件式の評価に失敗した。
      */
-    private: std::int8_t get_last_evaluation(bool const in_flush)
+    private: template_evaluation get_last_evaluation(bool const in_flush)
     const PSYQ_NOEXCEPT
     {
         return this->flags_.test(this_type::flag_LAST_EVALUATION)?

@@ -87,7 +87,7 @@ class psyq::scenario_engine::_private::state_registry
     /// @brief 状態値の種別を表す型。
     public: typedef
         typename std::make_signed<typename this_type::bit_size>::type
-            variety;
+        variety;
 
     /// @brief 状態値のビット位置とビット数を表す型。
     public: typedef typename this_type::bit_position format;

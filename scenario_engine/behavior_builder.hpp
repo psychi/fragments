@@ -90,9 +90,10 @@ class psyq::scenario_engine::behavior_builder
     /// @brief 解析する文字列表の型。
     public: typedef psyq::string::csv_table<template_string> string_table;
 
-    public: typedef typename psyq::scenario_engine
-        ::behavior_chunk<template_dispatcher>::function_shared_ptr_vector
-            function_shared_ptr_vector;
+    public: typedef
+        typename psyq::scenario_engine::behavior_chunk<template_dispatcher>
+            ::function_shared_ptr_vector
+        function_shared_ptr_vector;
 
     /// @brief 文字列表の属性。
     private: struct table_attribute

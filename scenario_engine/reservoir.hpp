@@ -80,57 +80,70 @@ class psyq::scenario_engine::reservoir
 
     private: typedef
         psyq::scenario_engine::_private::float_union<template_float>
-            float_union;
+        float_union;
 
     /// @brief 状態値の登記情報。
-    private: typedef psyq::scenario_engine::_private::state_registry<
-         typename this_type::state_key,
-         typename this_type::chunk_key,
-         std::uint32_t,
-         std::uint8_t>
-             state_registry;
+    private: typedef
+         psyq::scenario_engine::_private::state_registry<
+             typename this_type::state_key,
+             typename this_type::chunk_key,
+             std::uint32_t,
+             std::uint8_t>
+         state_registry;
 
     //-------------------------------------------------------------------------
     /// @brief 状態値を格納するビット列のチャンク。
-    private: typedef psyq::scenario_engine::_private::state_chunk<
-        typename this_type::chunk_key,
-        std::vector<std::uint64_t, typename this_type::allocator_type>,
-        std::vector<
-            typename this_type::state_registry::format,
-            typename this_type::allocator_type>>
-                chunk;
+    private: typedef
+        psyq::scenario_engine::_private::state_chunk<
+            typename this_type::chunk_key,
+            std::vector<std::uint64_t, typename this_type::allocator_type>,
+            std::vector<
+                typename this_type::state_registry::format,
+                typename this_type::allocator_type>>
+        chunk;
 
     /// @brief 状態値ビット列チャンクのコンテナ。
-    private: typedef std::vector<
-         typename this_type::chunk, typename this_type::allocator_type>
-             chunk_container;
+    private: typedef
+         std::vector<
+             typename this_type::chunk,
+             typename this_type::allocator_type>
+         chunk_container;
 
     /// @brief チャンク識別値を比較する関数オブジェクト。
-    private: typedef psyq::scenario_engine::_private::key_less<
-         typename this_type::chunk, typename this_type::chunk_key>
-             chunk_key_less;
+    private: typedef
+         psyq::scenario_engine::_private::key_less<
+             typename this_type::chunk,
+             typename this_type::chunk_key>
+         chunk_key_less;
 
     //-------------------------------------------------------------------------
     /// @brief 状態値。
-    public: typedef psyq::scenario_engine::_private::state_value<
-        typename this_type::chunk::block, template_float>
-            state_value;
+    public: typedef
+        psyq::scenario_engine::_private::state_value<
+            typename this_type::chunk::block,
+            template_float>
+        state_value;
 
     /// @brief 状態値登記のコンテナ。
-    private: typedef std::vector<
-        typename this_type::state_registry, typename this_type::allocator_type>
-            state_container;
+    private: typedef
+        std::vector<
+            typename this_type::state_registry,
+            typename this_type::allocator_type>
+        state_container;
 
     /// @brief 状態値登記ポインタのコンテナ。
-    private: typedef std::vector<
-        typename this_type::state_registry const*,
-        typename this_type::allocator_type>
-            state_pointer_container;
+    private: typedef
+        std::vector<
+            typename this_type::state_registry const*,
+            typename this_type::allocator_type>
+        state_pointer_container;
 
     /// @brief 状態値に対応する識別値を比較する関数オブジェクト。
-    private: typedef psyq::scenario_engine::_private::key_less<
-         typename this_type::state_registry, typename this_type::state_key>
-             state_key_less;
+    private: typedef
+         psyq::scenario_engine::_private::key_less<
+             typename this_type::state_registry,
+             typename this_type::state_key>
+         state_key_less;
 
     //-------------------------------------------------------------------------
     public: enum: typename this_type::state_registry::bit_size

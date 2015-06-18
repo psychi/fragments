@@ -64,29 +64,30 @@ class psyq::scenario_engine::modifier
     };
 
     /// @brief 状態変更のキャッシュ。
-    private: struct state
+    private: class state_cache
     {
-        state(
+        public: state_cache(
             typename modifier::reservoir::state_key const& in_key,
             typename modifier::reservoir::state_value const& in_value,
             bool const in_series,
             bool const in_ordered)
         PSYQ_NOEXCEPT:
-        value(in_value),
+        value_(in_value),
         key_(in_key),
-        series(in_series),
-        ordered(in_ordered)
+        series_(in_series),
+        ordered_(in_ordered)
         {}
 
-        typename modifier::reservoir::state_value value;
-        typename modifier::reservoir::state_key key_;
-        bool series;
-        bool ordered;
-    };
+        public: typename modifier::reservoir::state_value value_;
+        public: typename modifier::reservoir::state_key key_;
+        public: bool series_;
+        public: bool ordered_;
+
+    }; // class state_cache
 
     private: typedef std::vector<
-        typename this_type::state, typename this_type::allocator_type>
-            state_vector;
+        typename this_type::state_cache, typename this_type::allocator_type>
+            state_container;
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
@@ -96,7 +97,7 @@ class psyq::scenario_engine::modifier
         @param[in] in_allocator      使用するメモリ割当子の初期値。
      */
     public: explicit modifier(
-        typename this_type::state_vector::size_type const in_reserve_states,
+        typename this_type::state_container::size_type const in_reserve_states,
         typename this_type::allocator_type const& in_allocator =
             allocator_type())
     :
@@ -164,7 +165,7 @@ class psyq::scenario_engine::modifier
             in_state_key,
             in_state_value,
             this->accumulated_states_.empty()
-            || this->accumulated_states_.back().series ^ (
+            || this->accumulated_states_.back().series_ ^ (
                 in_priority != this_type::priority_CONTINUANCE),
             in_priority == this_type::priority_ORDERED);
     }
@@ -187,7 +188,7 @@ class psyq::scenario_engine::modifier
             // 同系列の状態変更の末尾を検知する。
             auto local_modify(true);
             auto j(i);
-            for (; j != local_end && i->series == j->series; ++j)
+            for (; j != local_end && i->series_ == j->series_; ++j)
             {
                 if (local_modify && 0 < io_reservoir._get_transition(j->key_))
                 {
@@ -201,7 +202,7 @@ class psyq::scenario_engine::modifier
             {
                 for (; i != j; ++i)
                 {
-                    if (!io_reservoir.set_value(i->key_, i->value))
+                    if (!io_reservoir.set_value(i->key_, i->value_))
                     {
                         /** @note
                             状態変更に失敗した場合、どう対応するのがよい？
@@ -216,8 +217,8 @@ class psyq::scenario_engine::modifier
                 // 状態変更を次回に繰り越す。
                 auto const local_series(
                     this->pass_states_.empty()
-                    || this->pass_states_.back().series == i->series);
-                if (i->ordered)
+                    || this->pass_states_.back().series_ == i->series_);
+                if (i->ordered_)
                 {
                     // 順序つきの場合は、残り全部を次回以降に遅延する。
                     j = local_end;
@@ -225,11 +226,11 @@ class psyq::scenario_engine::modifier
                 for (; i != j; ++i)
                 {
                     this->pass_states_.push_back(
-                        typename this_type::state(
+                        typename this_type::state_cache(
                             i->key_,
-                            i->value,
-                            i->series ^ local_series,
-                            i->ordered));
+                            i->value_,
+                            i->series_ ^ local_series,
+                            i->ordered_));
                 }
             }
         }
@@ -239,9 +240,9 @@ class psyq::scenario_engine::modifier
     //@}
     //-------------------------------------------------------------------------
     /// @brief 予約された状態変更のコンテナ。
-    private: typename this_type::state_vector accumulated_states_;
+    private: typename this_type::state_container accumulated_states_;
     /// @brief 次回に行う状態変更のコンテナ。
-    private: typename this_type::state_vector pass_states_;
+    private: typename this_type::state_container pass_states_;
 
 }; // class psyq::scenario_engine::modifier
 

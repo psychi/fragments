@@ -1,5 +1,5 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::behavior_chunk
+    @brief @copybrief psyq::scenario_engine::_private::behavior_chunk
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_CHUNK_HPP_
@@ -12,7 +12,10 @@ namespace psyq
 {
     namespace scenario_engine
     {
-        template<typename> class behavior_chunk;
+        namespace _private
+        {
+            template<typename> class behavior_chunk;
+        } // namespace _private
     } // namespace scenario_engine
 } // namespace psyq
 /// @endcond
@@ -22,7 +25,7 @@ namespace psyq
            条件式の評価が変化した際に呼び出す条件挙動関数を所有する。
  */
 template<typename template_dispatcher>
-class psyq::scenario_engine::behavior_chunk
+class psyq::scenario_engine::_private::behavior_chunk
 {
     /// @brief thisが指す値の型。
     private: typedef behavior_chunk this_type;
@@ -49,7 +52,7 @@ class psyq::scenario_engine::behavior_chunk
          key_less;
 
     /// @brief 条件挙動関数オブジェクトの所有権ありスマートポインタのコンテナを表す型。
-    public: typedef
+    private: typedef
         std::vector<
             typename template_dispatcher::function_shared_ptr,
             typename template_dispatcher::allocator_type>
@@ -90,7 +93,7 @@ class psyq::scenario_engine::behavior_chunk
         @retval true  成功。条件挙動関数を追加した。
         @retval false 失敗。条件挙動関数を追加しなかった。
      */
-    public: static bool add(
+    public: static bool extend(
         typename this_type::container& io_chunks,
         typename this_type::key const& in_key,
         typename this_type::dispatcher::function_shared_ptr in_function)
@@ -117,7 +120,7 @@ class psyq::scenario_engine::behavior_chunk
         @return 追加した条件挙動関数の数。
      */
     public: template<typename template_function_container>
-    static std::size_t add(
+    static std::size_t extend(
         typename this_type::container& io_chunks,
         typename this_type::key const& in_key,
         template_function_container in_functions)
@@ -145,7 +148,7 @@ class psyq::scenario_engine::behavior_chunk
         @retval true  in_key に対応する条件挙動チャンクを削除した。
         @retval false in_key に対応する条件挙動チャンクがコンテナになかった。
      */
-    public: static bool remove(
+    public: static bool erase(
         typename this_type::container& io_chunks,
         typename this_type::key const& in_key)
     {

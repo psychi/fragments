@@ -5,6 +5,10 @@
 #ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_HPP_
 #define PSYQ_SCENARIO_ENGINE_BEHAVIOR_HPP_
 
+#if defined(_MSC_VER) && _MSC_VER <= 1700
+#define PSYQ_STD_NO_DEFAULTED_FUNCTION
+#endif // defined(_MSC_VER) && _MSC_VER <= 1700
+
 /// @cond
 namespace psyq
 {
@@ -76,7 +80,7 @@ class psyq::scenario_engine::_private::behavior
         /** @brief 条件挙動関数を呼び出す。
             @param[in] in_behavior 呼び出す条件挙動。
          */
-        public: void call_function(typename behavior const& in_behavior)
+        public: void call_function(behavior const& in_behavior)
         const
         {
             auto const local_function_holder(in_behavior.function_.lock());
@@ -108,6 +112,7 @@ class psyq::scenario_engine::_private::behavior
     priority_(in_priority)
     {}
 
+#ifdef PSYQ_STD_NO_DEFAULTED_FUNCTION
     public: behavior(this_type&& io_source):
     function_(std::move(io_source.function_)),
     priority_(std::move(io_source.priority_))
@@ -119,9 +124,12 @@ class psyq::scenario_engine::_private::behavior
         this->priority_ = std::move(io_source.priority_);
         return *this;
     }
+#endif // defined(PSYQ_STD_NO_DEFAULTED_FUNCTION)
 
     //---------------------------------------------------------------------
+    /// @brief 条件挙動関数を指すスマートポインタ。
     public: typename this_type::function_weak_ptr function_;
+    /// @brief 条件挙動関数を呼び出す優先順位。昇順に呼び出される。
     public: template_priority priority_;
 
 }; // class behavior

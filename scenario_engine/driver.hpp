@@ -24,7 +24,7 @@ namespace psyq
 
     ### 使い方の概略
     - driver::driver でシナリオ駆動機を構築する。
-    - driver::add_chunk で、状態値と条件式と条件挙動を登録する。
+    - driver::extend_chunk で、状態値と条件式と条件挙動を登録する。
     - driver::update をフレームごとに呼び出す。
       条件式の評価が変化して条件に合致していたら、
       条件挙動関数オブジェクトが呼び出される。
@@ -88,8 +88,9 @@ class psyq::scenario_engine::driver
         dispatcher;
 
     /// @brief シナリオ駆動器で用いる条件挙動チャンクの型。
-    public: typedef
-        psyq::scenario_engine::behavior_chunk<typename this_type::dispatcher>
+    private: typedef
+        psyq::scenario_engine::_private::behavior_chunk<
+            typename this_type::dispatcher>
         behavior_chunk;
 
     //-------------------------------------------------------------------------
@@ -174,7 +175,7 @@ class psyq::scenario_engine::driver
      */
     public: void update()
     {
-        this->modifier_.modify(this->reservoir_);
+        this->modifier_._modify(this->reservoir_);
         this->dispatcher_._dispatch(this->evaluator_, this->reservoir_);
     }
 
@@ -225,7 +226,8 @@ class psyq::scenario_engine::driver
             // @return
             //     条件挙動器に登録した条件挙動関数オブジェクトを指す、
             //     スマートポインタのコンテナ。
-            template_behavior_builder::function_shared_ptr_container
+            template<typename template_function_shared_ptr_container>
+            template_function_shared_ptr_container
             template_behavior_builder::operator()(
                 driver::dispatcher& io_dispatcher,
                 driver::hasher& io_hasher,
@@ -251,7 +253,7 @@ class psyq::scenario_engine::driver
             this->hash_function_,
             in_chunk_key,
             this->reservoir_);
-        this_type::behavior_chunk::add(
+        this_type::behavior_chunk::extend(
             this->behavior_chunks_,
             in_chunk_key,
             in_behavior_builder(
@@ -284,7 +286,7 @@ class psyq::scenario_engine::driver
         }
 
         // 条件挙動関数を条件挙動関数チャンクへ追加する。
-        this_type::behavior_chunk::add(
+        this_type::behavior_chunk::extend(
             this->behavior_chunks_, in_chunk_key, std::move(in_function));
         return true;
     }
@@ -292,12 +294,12 @@ class psyq::scenario_engine::driver
     /** @brief チャンクを削除する。
         @param[in] in_chunk 削除するチャンクのキー。
      */
-    public: void remove_chunk(
+    public: void erase_chunk(
         typename this_type::reservoir::chunk_key const& in_chunk)
     {
-        this->reservoir_.remove_chunk(in_chunk);
-        this->evaluator_.remove_chunk(in_chunk);
-        this_type::behavior_chunk::remove(this->behavior_chunks_, in_chunk);
+        this->reservoir_.erase_chunk(in_chunk);
+        this->evaluator_.erase_chunk(in_chunk);
+        this_type::behavior_chunk::erase(this->behavior_chunks_, in_chunk);
     }
     //@}
     //-------------------------------------------------------------------------
@@ -426,7 +428,7 @@ namespace psyq_test
                 local_driver.hash_function_("state_float")));
 
         local_driver.update();
-        local_driver.remove_chunk(local_chunk_key);
+        local_driver.erase_chunk(local_chunk_key);
     }
 }
 #endif // !defined(PSYQ_SCENARIO_ENGINE_DRIVER_HPP_)

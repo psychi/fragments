@@ -94,9 +94,11 @@ class psyq::scenario_engine::behavior_builder
     /// @brief 解析する文字列表の型。
     public: typedef psyq::string::csv_table<template_string> string_table;
 
+    /// @brief 条件挙動関数オブジェクトの、所有権ありスマートポインタのコンテナを表す型。
     public: typedef
-        typename psyq::scenario_engine::behavior_chunk<template_dispatcher>
-            ::function_shared_ptr_container
+        std::vector<
+            typename this_type::dispatcher::function_shared_ptr,
+            typename this_type::dispatcher::allocator_type>
         function_shared_ptr_container;
 
     /// @brief 文字列表の属性。

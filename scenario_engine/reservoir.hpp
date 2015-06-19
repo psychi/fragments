@@ -272,7 +272,7 @@ class psyq::scenario_engine::reservoir
 
         - 登録した状態値は
           this_type::get_value と this_type::set_value でアクセスできる。
-        - 登録した状態値は this_type::remove_chunk でチャンク毎に削除できる。
+        - 登録した状態値は this_type::erase_chunk でチャンク毎に削除できる。
 
         @param[in] in_chunk_key   登録する状態値を格納する状態値ビット列チャンクの識別値。
         @param[in] in_state_key   登録する状態値の識別番号。
@@ -307,7 +307,7 @@ class psyq::scenario_engine::reservoir
 
         - 登録した状態値は
           this_type::get_value と this_type::set_value でアクセスできる。
-        - 登録した状態値は this_type::remove_chunk で削除できる。
+        - 登録した状態値は this_type::erase_chunk で削除できる。
 
         @param[in] in_chunk_key   登録する状態値を格納する状態値ビット列チャンクの識別値。
         @param[in] in_state_key   登録する状態値の識別番号。
@@ -532,7 +532,7 @@ class psyq::scenario_engine::reservoir
             local_chunk->get_bits(
                 local_state_registry->get_position(), local_size));
 
-        // 状態値の構成から、出力値のコピー処理を分岐する。
+        // 状態値の種別から、出力値のコピー処理を分岐する。
         switch (local_variety)
         {
             // 真偽値を取得する。
@@ -819,7 +819,7 @@ class psyq::scenario_engine::reservoir
         @retval true  成功。チャンクを破棄した。
         @retval false 失敗。識別値に対応するチャンクが存在しない。
      */
-    public: bool remove_chunk(
+    public: bool erase_chunk(
         typename this_type::chunk_key const& in_chunk_key)
     {
         // 状態値ビット列チャンクを削除する。

@@ -11,14 +11,16 @@
 #ifndef PSYQ_STD_ARRAY_HPP_
 #define PSYQ_STD_ARRAY_HPP_
 
-#ifdef PSYQ_STD_NO_ARRAY
+#include "./config.hpp"
+
+#ifdef PSYQ_NO_STD_ARRAY
 #define PSYQ_STD_ARRAY_BASE boost::array
 #include <boost/array.hpp>
 #else
 /// psyq::std_array の基底クラステンプレート。
 #define PSYQ_STD_ARRAY_BASE std::array
 #include <array>
-#endif // defined(PSYQ_STD_NO_ARRAY)
+#endif // defined(PSYQ_NO_STD_ARRAY)
 
 /// @cond
 namespace psyq
@@ -38,7 +40,8 @@ public PSYQ_STD_ARRAY_BASE<template_value, template_size>
     private: typedef std_array this_type;
 
     /// @brief this_type の基底型。
-    public: typedef PSYQ_STD_ARRAY_BASE<template_value, template_size>
+    public: typedef
+        PSYQ_STD_ARRAY_BASE<template_value, template_size>
         base_type;
 
 }; // class psyq::std_array

@@ -9,14 +9,9 @@
 #ifndef PSYQ_STD_MOVE_HPP_
 #define PSYQ_STD_MOVE_HPP_
 
-//#define PSYQ_STD_NO_MOVE
-//#define PSYQ_STD_NO_NULLPTR
-//#define PSYQ_STD_NO_ARRAY
-//#define PSYQ_STD_NO_DEFAULT_DELETE
-//#define PSYQ_STD_NO_UNIQUE_PTR
-//#define PSYQ_STD_NO_SHARED_PTR
+#include "../assert.hpp"
 
-#ifdef PSYQ_STD_NO_NOEXCEPT
+#ifdef PSYQ_NO_STD_NOEXCEPT
 #define PSYQ_NOEXCEPT BOOST_NOEXCEPT
 namespace boost
 {
@@ -25,9 +20,9 @@ namespace boost
         PSYQ_ASSERT(false, "boost throw exception '%s'.\n", e.what());
     }
 }
-#endif // defined(PSYQ_STD_NO_NOEXCEPT)
+#endif // defined(PSYQ_NO_STD_NOEXCEPT)
 
-#ifdef PSYQ_STD_NO_NULLPTR
+#ifdef PSYQ_NO_STD_NULLPTR
 #define PSYQ_NULLPTR NULL
 namespace psyq
 {
@@ -45,9 +40,9 @@ namespace psyq
 {
     typedef std::nullptr_t std_nullptr_t;
 }
-#endif // defined(PSYQ_STD_NO_NULLPTR)
+#endif // defined(PSYQ_NO_STD_NULLPTR)
 
-#ifdef PSYQ_STD_NO_MOVE
+#ifdef PSYQ_NO_STD_MOVE
 #include <boost/move/move.hpp>
 #define PSYQ_MOVE(define_value) boost::move(define_value)
 #define PSYQ_RV_REF(define_type) BOOST_RV_REF(define_type)
@@ -101,7 +96,7 @@ namespace psyq
     define_argument_1,\
     define_argument_2)\
         define_template<define_argument_0, define_argument_1, define_argument_2>&&
-#endif // defined(PSYQ_STD_NO_MOVE)
+#endif // defined(PSYQ_NO_STD_MOVE)
 
 #endif // PSYQ_STD_MOVE_HPP_
 // vim: set expandtab:

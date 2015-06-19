@@ -11,15 +11,15 @@
 #ifndef PSYQ_STD_SHARED_PTR_HPP_
 #define PSYQ_STD_SHARED_PTR_HPP_
 
-//#include "psyq/std/unique_ptr.hpp"
+#include "./unique_ptr.hpp"
 
-#ifdef PSYQ_STD_NO_SHARED_PTR
+#ifdef PSYQ_NO_STD_SHARED_PTR
 #define PSYQ_STD_SHARED_PTR_BASE boost::shared_ptr
 #include <boost/shared_ptr.hpp>
 #else
 #define PSYQ_STD_SHARED_PTR_BASE std::shared_ptr
 #include <memory>
-#endif // defined(PSYQ_STD_NO_SHARED_PTR)
+#endif // defined(PSYQ_NO_STD_SHARED_PTR)
 
 #ifndef PSYQ_STD_SHARED_PTR_DEFAULT_ALLOCATOR
 #define PSYQ_STD_SHARED_PTR_DEFAULT_ALLOCATOR std::allocator<void*>
@@ -54,7 +54,7 @@ public PSYQ_STD_SHARED_PTR_BASE<template_element>
      */
     public: PSYQ_CONSTEXPR std_shared_ptr() PSYQ_NOEXCEPT {}
 
-#ifndef PSYQ_STD_NO_NULLPTR
+#ifndef PSYQ_NO_STD_NULLPTR
     /// @copydoc std_shared_ptr()
     public: std_shared_ptr(psyq::std_nullptr_t const) PSYQ_NOEXCEPT:
     base_type(
@@ -85,7 +85,7 @@ public PSYQ_STD_SHARED_PTR_BASE<template_element>
     :
     base_type(PSYQ_NULLPTR, PSYQ_MOVE(in_deleter), PSYQ_MOVE(in_allocator))
     {}
-#endif // !defined(PSYQ_STD_NO_NULLPTR)
+#endif // !defined(PSYQ_NO_STD_NULLPTR)
 
     /** @brief オブジェクトを所有するスマートポインタを構築する。
         @param[in] in_hold_element 所有するオブジェクトを指すポインタ。
@@ -189,14 +189,14 @@ public PSYQ_STD_SHARED_PTR_BASE<template_element>
             psyq::std_unique_ptr, template_hold_element, template_deleter)
                 io_source)
     :
-#ifdef PSYQ_STD_NO_UNIQUE_PTR
+#ifdef PSYQ_NO_STD_UNIQUE_PTR
     base_type(
         io_source.release(),
         io_source.get_deleter(),
         typename this_type::default_allocator())
 #else
     base_type(PSYQ_MOVE(io_source))
-#endif // defined(PSYQ_STD_NO_UNIQUE_PTR)
+#endif // defined(PSYQ_NO_STD_UNIQUE_PTR)
     {}
     //@}
     //-------------------------------------------------------------------------

@@ -11,14 +11,14 @@
 #ifndef PSYQ_STD_WEAK_PTR_HPP_
 #define PSYQ_STD_WEAK_PTR_HPP_
 
-//#include "psyq/std/shared_ptr.hpp"
+#include "./shared_ptr.hpp"
 
-#ifdef PSYQ_STD_NO_SHARED_PTR
+#ifdef PSYQ_NO_STD_SHARED_PTR
 #define PSYQ_STD_WEAK_PTR_BASE boost::weak_ptr
 #include <boost/weak_ptr.hpp>
 #else
 #define PSYQ_STD_WEAK_PTR_BASE std::weak_ptr
-#endif // defined(PSYQ_STD_NO_SHARED_PTR)
+#endif // defined(PSYQ_NO_STD_SHARED_PTR)
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::weak_ptr 互換のスマートポインタ。

@@ -5,21 +5,7 @@
 #ifndef PSYQ_ASSERT_HPP_
 #define PSYQ_ASSERT_HPP_
 
-#if defined(__clang__)
-#   define PSYQ_NOEXCEPT noexcept
-#   define PSYQ_CONSTEXPR constexpr
-#elif defined(__GNUC__)
-#   if (4 < __GNUC__ || (__GNUC__ == 4 && 6 <= __GNUC_MINOR__))
-#       define PSYQ_NOEXCEPT noexcept
-#       define PSYQ_CONSTEXPR constexpr
-#   endif
-#elif defined(_MSC_VER)
-#   define PSYQ_NOEXCEPT throw()
-#   define PSYQ_CONSTEXPR
-#else
-#   define PSYQ_NOEXCEPT noexcept
-#   define PSYQ_CONSTEXPR
-#endif
+#include "./std/config.hpp"
 
 #define PSYQ_PP_STRINGIZE(define_text) PSYQ_INTERNAL_PP_STRINGIZE(define_text)
 #define PSYQ_INTERNAL_PP_STRINGIZE(define_text) #define_text

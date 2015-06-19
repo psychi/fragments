@@ -9,6 +9,8 @@
 #ifndef PSYQ_STD_DEFAULT_DELETE_HPP_
 #define PSYQ_STD_DEFAULT_DELETE_HPP_
 
+#include "./config.hpp"
+
 #ifndef PSYQ_STD_DEFAULT_DELETE_OBJECT
 #define PSYQ_STD_DEFAULT_DELETE_OBJECT(define_object) delete define_object
 #endif // !defined(PSYQ_STD_DEFAULT_DELETE_OBJECT)
@@ -25,7 +27,7 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-#ifdef PSYQ_STD_NO_DEFAULT_DELETE
+#ifdef PSYQ_NO_STD_DEFAULT_DELETE
 /** @brief std::default_delete 互換のインスタンス破棄関数オブジェクト。
 
     std::default_delete がない開発環境では、独自の実装を用意する。
@@ -73,7 +75,7 @@ struct psyq::std_default_delete<template_element[]>
 template<typename template_element>
 struct psyq::std_default_delete: public std::default_delete<template_element>
 {};
-#endif // defined(PSYQ_STD_NO_DEFAULT_DELETE)
+#endif // defined(PSYQ_NO_STD_DEFAULT_DELETE)
 
 #endif // !defined(PSYQ_STD_DEFAULT_DELETE_HPP_)
 // vim: set expandtab:

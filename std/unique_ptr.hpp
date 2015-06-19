@@ -11,17 +11,18 @@
 */
 #ifndef PSYQ_STD_UNIQUE_PTR_HPP_
 #define PSYQ_STD_UNIQUE_PTR_HPP_
-//#include "psyq/std/move.hpp"
-//#include "psyq/std/default_delete.hpp"
 
-#ifdef PSYQ_STD_NO_UNIQUE_PTR
+#include "./move.hpp"
+#include "./default_delete.hpp"
+
+#ifdef PSYQ_NO_STD_UNIQUE_PTR
 #define PSYQ_STD_UNIQUE_PTR_BASE boost::interprocess::unique_ptr
 #include <boost/interprocess/smart_ptr/unique_ptr.hpp>
 #else
 /// psyq::std_unique_ptr の基底クラステンプレート。
 #define PSYQ_STD_UNIQUE_PTR_BASE std::unique_ptr
 #include <memory>
-#endif // defined(PSYQ_STD_NO_UNIQUE_PTR)
+#endif // defined(PSYQ_NO_STD_UNIQUE_PTR)
 
 /// @cond
 namespace psyq
@@ -52,13 +53,13 @@ public PSYQ_STD_UNIQUE_PTR_BASE<template_element, template_deleter>
     /// @brief 空のスマートポインタを構築する。
     public: PSYQ_CONSTEXPR std_unique_ptr() PSYQ_NOEXCEPT {}
 
-#ifndef PSYQ_STD_NO_NULLPTR
+#ifndef PSYQ_NO_STD_NULLPTR
     /// @brief 空のスマートポインタを構築する。
     public: PSYQ_CONSTEXPR std_unique_ptr(psyq::std_nullptr_t const)
     PSYQ_NOEXCEPT:
     base_type(PSYQ_NULLPTR)
     {}
-#endif // !defined(PSYQ_STD_NO_NULLPTR)
+#endif // !defined(PSYQ_NO_STD_NULLPTR)
 
     /** @brief オブジェクトを所有するスマートポインタを構築する。
         @param[in] in_pointer 所有するオブジェクトを指すポインタ。
@@ -147,11 +148,11 @@ public PSYQ_STD_UNIQUE_PTR_BASE<template_element, template_deleter>
     public: this_type& operator=(psyq::std_nullptr_t const)
     PSYQ_NOEXCEPT
     {
-#ifdef PSYQ_STD_NO_NULLPTR
+#ifdef PSYQ_NO_STD_NULLPTR
         this->reset();
 #else
         this->base_type::operator=(PSYQ_NULLPTR);
-#endif // !defined(PSYQ_STD_NO_NULLPTR)
+#endif // !defined(PSYQ_NO_STD_NULLPTR)
         return *this;
     }
     //@}

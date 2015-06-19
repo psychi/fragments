@@ -678,6 +678,12 @@ WARN_LOGFILE           =
 # with spaces.
 
 INPUT                  = \
+                         ./assert.hpp \
+                         ./fnv_hash.hpp \
+                         ./bit_algorithm.hpp \
+                         ./static_deque.hpp \
+                         ./memory_arena.hpp \
+                         ./atomic_count.hpp \
                          ./std/config.hpp \
                          ./std/move.hpp \
                          ./std/array.hpp \
@@ -738,11 +744,6 @@ INPUT                  = \
                          ./scenario_engine/expression_builder.hpp \
                          ./scenario_engine/dispatcher.hpp \
                          ./scenario_engine/driver.hpp \
-                         ./static_deque.hpp \
-                         ./memory_arena.hpp \
-                         ./bit_algorithm.hpp \
-                         ./fnv_hash.hpp \
-                         ./assert.hpp \
                          ./message_pack/endianness.hpp \
                          ./message_pack/serializer.hpp \
                          ./message_pack/container.hpp \

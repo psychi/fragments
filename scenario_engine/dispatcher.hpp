@@ -184,6 +184,18 @@ class psyq::scenario_engine::dispatcher
         this->behavior_caches_.reserve(in_reserve_caches);
     }
 
+    /** @brief コピー構築子。
+        @param[in] in_source コピー元となるインスタンス。
+     */
+    public: dispatcher(this_type const& in_source):
+    expression_monitors_(in_source.expression_monitors_),
+    state_monitors_(in_source.state_monitors_),
+    behavior_caches_(in_source.behavior_caches_.get_allocator()),
+    dispatch_lock_(false)
+    {
+        this->behavior_caches_.reserve(in_source.behavior_caches_.capacity());
+    }
+
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元となるインスタンス。
         @note this_type::_dispatch 実行中はムーブできない。
@@ -194,6 +206,19 @@ class psyq::scenario_engine::dispatcher
     behavior_caches_(std::move(io_source.behavior_caches_)),
     dispatch_lock_((PSYQ_ASSERT(!io_source.dispatch_lock_), false))
     {}
+
+    /** @brief コピー代入演算子。
+        @param[in] in_source コピー元となるインスタンス。
+        @return *this
+     */
+    public: this_type& operator=(this_type const& in_source)
+    {
+        /// @note this_type::_dispatch 実行中はムーブできない。
+        PSYQ_ASSERT(!this->dispatch_lock_ && !in_source.dispatch_lock_);
+        this->expression_monitors_ = in_source.expression_monitors_;
+        this->state_monitors_ = in_source.state_monitors_;
+        return *this;
+    }
 
     /** @brief ムーブ代入演算子。
         @param[in,out] io_source ムーブ元となるインスタンス。
@@ -822,10 +847,6 @@ class psyq::scenario_engine::dispatcher
         PSYQ_ASSERT(local_set_value);
         return local_set_value;
     }
-
-    //-------------------------------------------------------------------------
-    private: dispatcher(this_type const&);
-    private: this_type& operator=(this_type const&);
 
     //-------------------------------------------------------------------------
     /// @brief 条件式監視器の辞書。

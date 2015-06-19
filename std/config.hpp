@@ -15,9 +15,9 @@
 //#define PSYQ_NO_STD_SHARED_PTR
 
 //-----------------------------------------------------------------------------
-#if defined(_MSC_VER) && _MSC_VER <= 1700
+#if defined(_MSC_VER) && _MSC_VER < 1900
 #   define PSYQ_NO_STD_DEFAULTED_FUNCTION
-#endif // defined(_MSC_VER) && _MSC_VER <= 1700
+#endif // defined(_MSC_VER) && _MSC_VER < 1900
 
 //-----------------------------------------------------------------------------
 #if defined(__clang__)

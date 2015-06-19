@@ -20,18 +20,9 @@ namespace psyq
 
     使い方の概略。
     - modifier::accumulate で、状態変更を予約する。
-    - modifier::modify で、状態変更を実際に適用する。
+    - modifier::_modify で、状態変更を実際に適用する。
 
     @tparam template_reservoir @copydoc modifier::reservoir
-
-    @note
-    1度の modifier::modify で、
-    1つの状態値に対して複数回の状態変更が行われないように、
-    状態変更のタイミングを遅延させている。
-    このため、1つの状態値に対してフレーム毎に this_type::accumulate
-    を呼び出すと、状態変更の予約がどんどん蓄積する危険があることに注意。
-    1つの状態値に対してフレーム毎に状態変更する場合は、
-    psyq::scenario_engine::reservoir::set_value で直接状態変更するほうが良い。
  */
 template<typename template_reservoir>
 class psyq::scenario_engine::modifier
@@ -50,46 +41,46 @@ class psyq::scenario_engine::modifier
         typename this_type::reservoir::allocator_type
         allocator_type;
 
-    /** @brief 状態変更の優先順位。
+    /** @brief 状態変更の遅延方法。
 
-        this_type::modify で状態変更を適用する際に、
-        すでに状態変更されていた場合の動作を決める。
+        this_type::_modify で状態変更を適用する際に、
+        すでに状態変更されていた場合の遅延方法を決める。
      */
-    public: enum priority: std::uint8_t
+    public: enum delay: std::uint8_t
     {
-        /// 次回以降の this_type::modify まで、状態変更を遅延する。
-        priority_NONE,
-        /// 以後にある全予約を、次回以降の this_type::modify まで遅延する。
-        priority_ORDERED,
+        /// 次回以降の this_type::_modify まで、状態変更を遅延する。
+        delay_NONBLOCK,
+        /// 以後にある全ての予約を、次回以降の this_type::_modify まで遅延する。
+        delay_BLOCK,
         /// 直前の予約と同じタイミングになるまで、状態変更を遅延する。
-        priority_CONTINUANCE,
+        delay_FOLLOW,
     };
 
-    /// @brief 状態変更のキャッシュ。
-    private: class state_cache
+    /// @brief 状態変更の予約。
+    private: class state_reservation
     {
-        public: state_cache(
+        public: state_reservation(
             typename modifier::reservoir::state_key const& in_key,
             typename modifier::reservoir::state_value const& in_value,
             bool const in_series,
-            bool const in_ordered)
+            bool const in_block)
         PSYQ_NOEXCEPT:
         value_(in_value),
         key_(in_key),
         series_(in_series),
-        ordered_(in_ordered)
+        block_(in_block)
         {}
 
         public: typename modifier::reservoir::state_value value_;
         public: typename modifier::reservoir::state_key key_;
         public: bool series_;
-        public: bool ordered_;
+        public: bool block_;
 
-    }; // class state_cache
+    }; // class state_reservation
 
     private: typedef
         std::vector<
-            typename this_type::state_cache,
+            typename this_type::state_reservation,
             typename this_type::allocator_type>
         state_container;
 
@@ -153,38 +144,46 @@ class psyq::scenario_engine::modifier
     //@{
     /** @brief 状態変更を予約する。
 
-        実際の状態変更は this_type::modify で適用される。
+        実際の状態変更は this_type::_modify で適用される。
 
         @param[in] in_state_key   変更する状態の識別値。
         @param[in] in_state_value 新たに設定する状態値。
-        @param[in] in_priority    状態変更の優先順位。
+        @param[in] in_delay       状態変更の遅延方法。
+
+        @note
+        1度の modifier::_modify で、
+        1つの状態値に対して複数回の状態変更が行われないように、
+        状態変更のタイミングを遅延させている。
+        このため、1つの状態値に対して1フレームに複数回の this_type::accumulate
+        を毎フレーム行うと、状態変更の予約が蓄積し増え続けることに注意。
+        1つの状態値に対して1フレーム毎に複数回の状態変更をする場合は、
+        psyq::scenario_engine::reservoir::set_value で直接状態変更するべき。
      */
     public: void accumulate(
         typename this_type::reservoir::state_key const& in_state_key,
         typename this_type::reservoir::state_value const& in_state_value,
-        typename this_type::priority const in_priority =
-            this_type::priority_NONE)
+        typename this_type::delay const in_delay = this_type::delay_NONBLOCK)
     {
         this->accumulated_states_.emplace_back(
             in_state_key,
             in_state_value,
             this->accumulated_states_.empty()
             || this->accumulated_states_.back().series_ ^ (
-                in_priority != this_type::priority_CONTINUANCE),
-            in_priority == this_type::priority_ORDERED);
+                in_delay != this_type::delay_FOLLOW),
+            in_delay == this_type::delay_BLOCK);
     }
 
-    /** @brief 状態変更の予約を適用する。
+    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
 
         this_type::accumulate で予約した状態変更を、実際に適用する。
 
-        1度の this_type::modify で、1つの状態値が複数回変更されることはない。
+        1度の this_type::_modify で、1つの状態値が複数回変更されることはない。
         すでに変更済みの状態値に対し、さらに状態変更の予約があった場合は、
-        次回以降の this_type::modify まで状態変更を遅延する。
+        次回以降の this_type::_modify まで状態変更を遅延する。
 
         @param[in,out] io_reservoir 状態変更を適用する状態貯蔵器。
      */
-    public: void modify(typename this_type::reservoir& io_reservoir)
+    public: void _modify(typename this_type::reservoir& io_reservoir)
     {
         auto const local_end(this->accumulated_states_.cend());
         for (auto i(this->accumulated_states_.cbegin()); i != local_end;)
@@ -222,19 +221,19 @@ class psyq::scenario_engine::modifier
                 auto const local_series(
                     this->pass_states_.empty()
                     || this->pass_states_.back().series_ == i->series_);
-                if (i->ordered_)
+                if (i->block_)
                 {
-                    // 順序つきの場合は、残り全部を次回以降に遅延する。
+                    // ブロックする場合は、残り全部を次回以降に遅延する。
                     j = local_end;
                 }
                 for (; i != j; ++i)
                 {
                     this->pass_states_.push_back(
-                        typename this_type::state_cache(
+                        typename this_type::state_reservation(
                             i->key_,
                             i->value_,
                             i->series_ ^ local_series,
-                            i->ordered_));
+                            i->block_));
                 }
             }
         }

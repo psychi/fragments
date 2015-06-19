@@ -51,7 +51,7 @@ class psyq::scenario_engine::_private::state_monitor
 
     /// @brief 条件式の識別値のコンテナの型。
     public: typedef
-        std::vector<typename template_expression_key, template_allocator>
+        std::vector<template_expression_key, template_allocator>
         expression_key_container;
 
     /** @brief 状態監視器を構築する。

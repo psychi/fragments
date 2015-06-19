@@ -279,19 +279,19 @@ class psyq::scenario_engine::_private::expression_monitor
     {
         // 関数オブジェクトのコンテナを走査し、検索対象を見つけながら、
         // 空になった要素を削除する。
+        bool local_erase;
         auto local_find(false);
         for (auto i(this->behaviors_.begin()); i != this->behaviors_.end();)
         {
             auto& local_function(i->function_);
-            bool local_erase;
-            if (!local_find && local_function.lock().get() == &in_function)
+            if (local_find || local_function.lock().get() != &in_function)
             {
-                local_find = true;
-                local_erase = in_erase;
+                local_erase = local_function.expired();
             }
             else
             {
-                local_erase = local_function.expired();
+                local_erase = in_erase;
+                local_find = true;
             }
             if (local_erase)
             {
@@ -341,7 +341,7 @@ class psyq::scenario_engine::_private::expression_monitor
             this->key_, local_evaluation, local_last_evaluation);
         for (auto i(this->behaviors_.begin()); i != this->behaviors_.end();)
         {
-            auto& local_behavior(*i);
+            auto const& local_behavior(*i);
             if (local_behavior.function_.expired())
             {
                 i = this->behaviors_.erase(i);
@@ -349,15 +349,15 @@ class psyq::scenario_engine::_private::expression_monitor
             else
             {
                 // 優先順位の昇順となるように、条件挙動キャッシュを挿入する。
-                io_behavior_caches.insert(
+                io_behavior_caches.emplace(
                     std::upper_bound(
-                        io_behavior_caches.begin(),
-                        io_behavior_caches.end(),
+                        io_behavior_caches.cbegin(),
+                        io_behavior_caches.cend(),
                         local_behavior.priority_,
                         psyq::scenario_engine::_private::key_less<
                             typename this_type::behavior_cache_key_getter>()),
-                    this_type::behavior_cache_container::value_type(
-                        local_behavior, local_cache));
+                    local_behavior,
+                    local_cache);
                 ++i;
             }
         }
@@ -397,11 +397,9 @@ class psyq::scenario_engine::_private::expression_monitor
         auto const local_evaluate_expression(
             in_evaluator.evaluate_expression(this->key_, in_reservoir));
         this->flags_.set(
-            this_type::flag_LAST_EVALUATION,
-            0 <= local_evaluate_expression);
+            this_type::flag_LAST_EVALUATION, 0 <= local_evaluate_expression);
         this->flags_.set(
-            this_type::flag_LAST_CONDITION,
-            0 < local_evaluate_expression);
+            this_type::flag_LAST_CONDITION, 0 < local_evaluate_expression);
         return this->get_last_evaluation(false);
     }
 
@@ -428,7 +426,7 @@ class psyq::scenario_engine::_private::expression_monitor
     /// @brief 条件挙動のコンテナ。
     public: typename this_type::behavior_container behaviors_;
     /// @brief 監視している条件式の識別値。
-    public: typename template_expression_key key_;
+    public: template_expression_key key_;
     /// @brief フラグの集合。
     public: std::bitset<8> flags_;
 

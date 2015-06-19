@@ -45,8 +45,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STRING_FLYWEIGHT_HPP_
 #define PSYQ_STRING_FLYWEIGHT_HPP_
 
-//#include "./view.hpp"
-//#include "./flyweight_factory.hpp"
+#include "./view.hpp"
+#include "./flyweight_factory.hpp"
 
 /// @brief フライ級文字列生成器の文字列チャンクのデフォルト容量。
 #ifndef PSYQ_STRING_FLYWEIGHT_CHUNK_SIZE_DEFAULT

@@ -6,6 +6,7 @@
 #define PSYQ_SCENARIO_ENGINE_STATE_VALUE_HPP_
 
 #include <type_traits>
+#include "../assert.hpp"
 
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_VALUE_EPSILON_MAG
 #define PSYQ_SCENARIO_ENGINE_STATE_VALUE_EPSILON_MAG 4

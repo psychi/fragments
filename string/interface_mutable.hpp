@@ -46,7 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STRING_MUTABLE_INTERFACE_HPP_
 #define PSYQ_STRING_MUTABLE_INTERFACE_HPP_
 
-//#include "string/interface_immutable.hpp"
+#include "./interface_immutable.hpp"
 
 /// @cond
 namespace psyq

@@ -7,17 +7,16 @@
 #define PSYQ_STD_CONFIG_HPP_
 
 //-----------------------------------------------------------------------------
+#if defined(_MSC_VER) && _MSC_VER < 1900
+#   define PSYQ_NO_STD_DEFAULTED_FUNCTION
+#endif // defined(_MSC_VER) && _MSC_VER < 1900
+
+//-----------------------------------------------------------------------------
 //#define PSYQ_NO_STD_MOVE
 //#define PSYQ_NO_STD_NULLPTR
 //#define PSYQ_NO_STD_ARRAY
 //#define PSYQ_NO_STD_DEFAULT_DELETE
-//#define PSYQ_NO_STD_UNIQUE_PTR
-//#define PSYQ_NO_STD_SHARED_PTR
-
-//-----------------------------------------------------------------------------
-#if defined(_MSC_VER) && _MSC_VER < 1900
-#   define PSYQ_NO_STD_DEFAULTED_FUNCTION
-#endif // defined(_MSC_VER) && _MSC_VER < 1900
+//#define PSYQ_NO_STD_SMART_PTR
 
 //-----------------------------------------------------------------------------
 #if defined(__clang__)

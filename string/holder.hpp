@@ -46,8 +46,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STRING_HOLDER_HPP_
 #define PSYQ_STRING_HOLDER_HPP_
 
-//#include "psyq/string/view.hpp"
-//#include "psyq/atomic_count.hpp"
+#include "../atomic_count.hpp"
+#include "./view.hpp"
 
 /// psyq::string::holder で使う、defaultのメモリ割当子の型。
 #ifndef PSYQ_STRING_HOLDER_ALLOCATOR_DEFAULT

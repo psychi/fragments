@@ -5,11 +5,10 @@
 #ifndef PSYQ_SCENARIO_ENGINE_RESERVOIR_HPP_
 #define PSYQ_SCENARIO_ENGINE_RESERVOIR_HPP_
 
-#include <vector>
-//#include "psyq/scenario_engine/key_less.hpp"
-//#include "psyq/scenario_engine/state_registry.hpp"
-//#include "psyq/scenario_engine/state_chunk.hpp"
-//#include "psyq/scenario_engine/state_value.hpp"
+#include "./key_less.hpp"
+#include "./state_registry.hpp"
+#include "./state_chunk.hpp"
+#include "./state_value.hpp"
 
 namespace psyq
 {
@@ -192,16 +191,14 @@ class psyq::scenario_engine::reservoir
         this->chunks_.reserve(in_reserve_chunks);
     }
 
+#ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
     public: reservoir(this_type&& io_source) PSYQ_NOEXCEPT:
     states_(std::move(io_source.states_)),
     chunks_(std::move(io_source.chunks_))
-    {
-        io_source.states_.clear();
-        io_source.chunks_.clear();
-    }
+    {}
 
     /** @brief ムーブ代入演算子。
         @param[in,out] io_source ムーブ元となるインスタンス。
@@ -209,15 +206,11 @@ class psyq::scenario_engine::reservoir
      */
     public: this_type& operator=(this_type&& io_source) PSYQ_NOEXCEPT
     {
-        if (this != &io_source)
-        {
-            this->states_ = std::move(io_source.states_);
-            this->chunks_ = std::move(io_source.chunks_);
-            io_source.states_.clear();
-            io_source.chunks_.clear();
-        }
+        this->states_ = std::move(io_source.states_);
+        this->chunks_ = std::move(io_source.chunks_);
         return *this;
     }
+#endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
     /** @brief 状態貯蔵器で使われているメモリ割当子を取得する。
         @return 状態貯蔵器で使われているメモリ割当子。

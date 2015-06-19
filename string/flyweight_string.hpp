@@ -45,7 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STRING_FLYWEIGHT_STRING_HPP_
 #define PSYQ_STRING_FLYWEIGHT_STRING_HPP_
 
-//#include "../atomic_count.hpp"
+#include "../atomic_count.hpp"
 
 /// @cond
 namespace psyq

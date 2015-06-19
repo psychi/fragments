@@ -5,6 +5,8 @@
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_CHUNK_HPP_
 #define PSYQ_SCENARIO_ENGINE_STATE_CHUNK_HPP_
 
+#include "../assert.hpp"
+
 /// @cond
 namespace psyq
 {
@@ -63,6 +65,7 @@ class psyq::scenario_engine::_private::state_chunk
     key_(std::move(in_key))
     {}
 
+#ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
@@ -70,10 +73,7 @@ class psyq::scenario_engine::_private::state_chunk
     blocks_(std::move(io_source.blocks_)),
     empty_fields_(std::move(io_source.empty_fields_)),
     key_(std::move(io_source.key_))
-    {
-        io_source.blocks_.clear();
-        io_source.empty_fields_.clear();
-    }
+    {}
 
     /** @brief ムーブ代入演算子。
         @param[in,out] io_source ムーブ元となるインスタンス。
@@ -81,16 +81,12 @@ class psyq::scenario_engine::_private::state_chunk
      */
     public: this_type& operator=(this_type&& io_source)
     {
-        if (this != &io_source)
-        {
-            this->blocks_ = std::move(io_source.blocks_);
-            this->empty_fields_ = std::move(io_source.empty_fields_);
-            this->key_ = std::move(io_source.key_);
-            io_source.blocks_.clear();
-            io_source.empty_fields_.clear();
-        }
+        this->blocks_ = std::move(io_source.blocks_);
+        this->empty_fields_ = std::move(io_source.empty_fields_);
+        this->key_ = std::move(io_source.key_);
         return *this;
     }
+#endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
     /** @brief 状態値を格納するビット領域を生成する。
         @param[in] in_size 生成するビット領域のビット数。

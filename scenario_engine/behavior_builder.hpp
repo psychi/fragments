@@ -5,7 +5,7 @@
 #ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_HPP_
 #define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_HPP_
 
-//#include "scenario_engine/dispatcher.hpp"
+#include "../assert.hpp"
 
 /// @cond
 namespace psyq

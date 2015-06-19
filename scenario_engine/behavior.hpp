@@ -5,9 +5,8 @@
 #ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_HPP_
 #define PSYQ_SCENARIO_ENGINE_BEHAVIOR_HPP_
 
-#if defined(_MSC_VER) && _MSC_VER <= 1700
-#define PSYQ_STD_NO_DEFAULTED_FUNCTION
-#endif // defined(_MSC_VER) && _MSC_VER <= 1700
+#include <functional>
+#include "../std/weak_ptr.hpp"
 
 /// @cond
 namespace psyq
@@ -54,12 +53,12 @@ class psyq::scenario_engine::_private::behavior
 
     /// @brief this_type::function の、所有権ありスマートポインタ。
     public: typedef
-        std::shared_ptr<typename this_type::function>
+        psyq::std_shared_ptr<typename this_type::function>
         function_shared_ptr;
 
     /// @brief this_type::function の、所有権なしスマートポインタ。
     public: typedef
-        std::weak_ptr<typename this_type::function>
+        psyq::std_weak_ptr<typename this_type::function>
         function_weak_ptr;
 
     /// @brief 条件式の評価結果のキャッシュ。
@@ -112,7 +111,7 @@ class psyq::scenario_engine::_private::behavior
     priority_(in_priority)
     {}
 
-#ifdef PSYQ_STD_NO_DEFAULTED_FUNCTION
+#ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
     public: behavior(this_type&& io_source):
     function_(std::move(io_source.function_)),
     priority_(std::move(io_source.priority_))
@@ -124,7 +123,7 @@ class psyq::scenario_engine::_private::behavior
         this->priority_ = std::move(io_source.priority_);
         return *this;
     }
-#endif // defined(PSYQ_STD_NO_DEFAULTED_FUNCTION)
+#endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
     //---------------------------------------------------------------------
     /// @brief 条件挙動関数を指すスマートポインタ。

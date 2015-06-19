@@ -5,6 +5,8 @@
 #ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_HPP_
 #define PSYQ_SCENARIO_ENGINE_EXPRESSION_HPP_
 
+#include "../assert.hpp"
+
 /// @cond
 namespace psyq
 {
@@ -277,6 +279,7 @@ class psyq::scenario_engine::_private::expression_chunk
     key_(std::move(in_key))
     {}
 
+#ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
@@ -309,6 +312,7 @@ class psyq::scenario_engine::_private::expression_chunk
         }
         return *this;
     }
+#endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
     /// @brief 複合条件式で使う要素条件のコンテナ。
     public: template_sub_expression_container sub_expressions_;

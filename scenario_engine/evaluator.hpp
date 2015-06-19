@@ -5,8 +5,7 @@
 #ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_HPP_
 #define PSYQ_SCENARIO_ENGINE_EVALUATOR_HPP_
 
-//#include "scenario_engine/reservoir.hpp"
-//#include "scenario_engine/expression.hpp"
+#include "./expression.hpp"
 
 /// @cond
 namespace psyq
@@ -158,16 +157,14 @@ class psyq::scenario_engine::evaluator
         this->chunks_.reserve(in_reserve_chunks);
     }
 
+#ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
     public: evaluator(this_type&& io_source):
     expressions_(std::move(io_source.expressions_)),
     chunks_(std::move(io_source.chunks_))
-    {
-        io_source.expressions_.clear();
-        io_source.chunks_.clear();
-    }
+    {}
 
     /** @brief ムーブ代入演算子。
         @param[in,out] io_source ムーブ元となるインスタンス。
@@ -175,15 +172,11 @@ class psyq::scenario_engine::evaluator
      */
     public: this_type& operator=(this_type&& io_source)
     {
-        if (this != &io_source)
-        {
-            this->expressions_ = std::move(io_source.expressions_);
-            this->chunks_ = std::move(io_source.chunks_);
-            io_source.expressions_.clear();
-            io_source.chunks_.clear();
-        }
+        this->expressions_ = std::move(io_source.expressions_);
+        this->chunks_ = std::move(io_source.chunks_);
         return *this;
     }
+#endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
     /** @brief 条件評価器で使われているメモリ割当子を取得する。
         @return 条件評価器で使われているメモリ割当子。
@@ -213,7 +206,7 @@ class psyq::scenario_engine::evaluator
     /** @brief 条件式を登録する。
 
         - this_type::evaluate_expression で、登録した条件式を評価できる。
-        - this_type::remove_chunk で、登録した条件式をチャンク単位で破棄できる。
+        - this_type::erase_chunk で、登録した条件式をチャンク単位で破棄できる。
 
         @param[in] in_chunk_key      登録する条件式が所属する要素条件チャンクの識別値。
         @param[in] in_expression_key 登録する条件式の識別値。
@@ -410,7 +403,7 @@ class psyq::scenario_engine::evaluator
         @retval true  成功。チャンクを破棄した。
         @retval false 失敗。識別値に対応するチャンクが存在しない。
      */
-    public: bool remove_chunk(
+    public: bool erase_chunk(
         typename this_type::reservoir::chunk_key const& in_chunk_key)
     {
         // 要素条件チャンクを削除する。

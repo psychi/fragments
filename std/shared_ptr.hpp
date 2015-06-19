@@ -13,16 +13,15 @@
 
 #include "./unique_ptr.hpp"
 
-#ifdef PSYQ_NO_STD_SHARED_PTR
-#define PSYQ_STD_SHARED_PTR_BASE boost::shared_ptr
-#include <boost/shared_ptr.hpp>
+#ifdef PSYQ_NO_STD_SMART_PTR
+#   define PSYQ_STD_SHARED_PTR_BASE boost::shared_ptr
+#   include <boost/shared_ptr.hpp>
 #else
-#define PSYQ_STD_SHARED_PTR_BASE std::shared_ptr
-#include <memory>
-#endif // defined(PSYQ_NO_STD_SHARED_PTR)
+#   define PSYQ_STD_SHARED_PTR_BASE std::shared_ptr
+#endif // defined(PSYQ_NO_STD_SMART_PTR)
 
 #ifndef PSYQ_STD_SHARED_PTR_DEFAULT_ALLOCATOR
-#define PSYQ_STD_SHARED_PTR_DEFAULT_ALLOCATOR std::allocator<void*>
+#   define PSYQ_STD_SHARED_PTR_DEFAULT_ALLOCATOR std::allocator<void*>
 #endif // !defined(PSYQ_STD_SHARED_PTR_DEFAULT_ALLOCATOR)
 
 /// @cond
@@ -56,7 +55,7 @@ public PSYQ_STD_SHARED_PTR_BASE<template_element>
 
 #ifndef PSYQ_NO_STD_NULLPTR
     /// @copydoc std_shared_ptr()
-    public: std_shared_ptr(psyq::std_nullptr_t const) PSYQ_NOEXCEPT:
+    public: std_shared_ptr(psyq::std_nullptr_t) PSYQ_NOEXCEPT:
     base_type(
         PSYQ_NULLPTR,
         psyq::std_default_delete<template_element>(),
@@ -171,6 +170,13 @@ public PSYQ_STD_SHARED_PTR_BASE<template_element>
     /** @brief スマートポインタをムーブ構築する。
         @param[in,out] io_source ムーブ元となるスマートポインタ。
      */
+    public: std_shared_ptr(PSYQ_RV_REF(base_type) io_source) PSYQ_NOEXCEPT:
+    base_type(PSYQ_MOVE(io_source))
+    {}
+
+    /** @brief スマートポインタをムーブ構築する。
+        @param[in,out] io_source ムーブ元となるスマートポインタ。
+     */
     public: template<typename template_hold_element>
     std_shared_ptr(
         PSYQ_RV_REF(std_shared_ptr<template_hold_element>) io_source)
@@ -189,14 +195,14 @@ public PSYQ_STD_SHARED_PTR_BASE<template_element>
             psyq::std_unique_ptr, template_hold_element, template_deleter)
                 io_source)
     :
-#ifdef PSYQ_NO_STD_UNIQUE_PTR
+#ifdef PSYQ_NO_STD_SMART_PTR
     base_type(
         io_source.release(),
         io_source.get_deleter(),
         typename this_type::default_allocator())
 #else
     base_type(PSYQ_MOVE(io_source))
-#endif // defined(PSYQ_NO_STD_UNIQUE_PTR)
+#endif // defined(PSYQ_NO_STD_SMART_PTR)
     {}
     //@}
     //-------------------------------------------------------------------------

@@ -48,7 +48,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #ifndef PSYQ_FNV_HASH_HPP_
 #define PSYQ_FNV_HASH_HPP_
+
 #include <cstdint>
+#include "./assert.hpp"
 
 namespace psyq
 {

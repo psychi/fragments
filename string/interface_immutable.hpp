@@ -46,8 +46,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STRING_INTERFACE_IMMUTABLE_HPP_
 #define PSYQ_STRING_INTERFACE_IMMUTABLE_HPP_
 
-//#include "string/reference_base.hpp"
-//#include "fnv_hash.hpp"
+#include "../fnv_hash.hpp"
+#include "./reference_base.hpp"
 
 #ifndef PSYQ_STRING_TRUE
 #define PSYQ_STRING_TRUE "TRUE"

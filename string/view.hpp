@@ -46,7 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STRING_VIEW_HPP_
 #define PSYQ_STRING_VIEW_HPP_
 
-//#include "string/interface_immutable.hpp"
+#include "./interface_immutable.hpp"
 
 /// psyq::string::view で使う、defaultの文字特性の型。
 #ifndef PSYQ_STRING_VIEW_TRAITS_DEFAULT

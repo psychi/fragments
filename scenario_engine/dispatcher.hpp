@@ -5,10 +5,8 @@
 #ifndef PSYQ_SCENARIO_ENGINE_DISPATCHER_HPP_
 #define PSYQ_SCENARIO_ENGINE_DISPATCHER_HPP_
 
-#include <bitset>
-#include <memory>
-#include <functional>
-//#include "./expression_monitor.hpp"
+#include "../assert.hpp"
+#include "./expression_monitor.hpp"
 
 /// @cond
 namespace psyq
@@ -66,15 +64,14 @@ class psyq::scenario_engine::_private::state_monitor
     key_(std::move(in_key))
     {}
 
+#ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
     public: state_monitor(this_type&& io_source):
     expression_keys_(std::move(io_source.expression_keys_)),
     key_(std::move(io_source.key_))
-    {
-        io_source.expression_keys_.clear();
-    }
+    {}
 
     /** @brief ムーブ代入演算子。
         @param[in,out] io_source ムーブ元となるインスタンス。
@@ -82,14 +79,11 @@ class psyq::scenario_engine::_private::state_monitor
      */
     public: this_type& operator=(this_type&& io_source)
     {
-        if (this != &io_source)
-        {
-            this->expression_keys_ = std::move(io_source.expression_keys_);
-            this->key_ = std::move(io_source.key_);
-            io_source.expression_keys_.clear();
-        }
+        this->expression_keys_ = std::move(io_source.expression_keys_);
+        this->key_ = std::move(io_source.key_);
         return *this;
     }
+#endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
     /// @brief 評価の更新を要求する条件式の識別値のコンテナ。
     public: typename this_type::expression_key_container expression_keys_;
@@ -192,19 +186,14 @@ class psyq::scenario_engine::dispatcher
 
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元となるインスタンス。
+        @note this_type::_dispatch 実行中はムーブできない。
      */
     public: dispatcher(this_type&& io_source):
     expression_monitors_(std::move(io_source.expression_monitors_)),
     state_monitors_(std::move(io_source.state_monitors_)),
     behavior_caches_(std::move(io_source.behavior_caches_)),
-    dispatch_lock_(false)
-    {
-        /// @note this_type::_dispatch 実行中はムーブできない。
-        PSYQ_ASSERT(!io_source.dispatch_lock_);
-        io_source.expression_monitors_.clear();
-        io_source.state_monitors_.clear();
-        io_source.behavior_caches_.clear();
-    }
+    dispatch_lock_((PSYQ_ASSERT(!io_source.dispatch_lock_), false))
+    {}
 
     /** @brief ムーブ代入演算子。
         @param[in,out] io_source ムーブ元となるインスタンス。
@@ -214,15 +203,9 @@ class psyq::scenario_engine::dispatcher
     {
         /// @note this_type::_dispatch 実行中はムーブできない。
         PSYQ_ASSERT(!this->dispatch_lock_ && !io_source.dispatch_lock_);
-        if (this != &io_source)
-        {
-            this->expression_monitors_ = std::move(io_source.expression_monitors_);
-            this->state_monitors_ = std::move(io_source.state_monitors_);
-            this->behavior_caches_ = std::move(io_source.behavior_caches_);
-            io_source.expression_monitors_.clear();
-            io_source.state_monitors_.clear();
-            io_source.behavior_caches_.clear();
-        }
+        this->expression_monitors_ = std::move(io_source.expression_monitors_);
+        this->state_monitors_ = std::move(io_source.state_monitors_);
+        this->behavior_caches_ = std::move(io_source.behavior_caches_);
         return *this;
     }
 
@@ -839,6 +822,10 @@ class psyq::scenario_engine::dispatcher
         PSYQ_ASSERT(local_set_value);
         return local_set_value;
     }
+
+    //-------------------------------------------------------------------------
+    private: dispatcher(this_type const&);
+    private: this_type& operator=(this_type const&);
 
     //-------------------------------------------------------------------------
     /// @brief 条件式監視器の辞書。

@@ -51,7 +51,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iterator>
 #include <algorithm>
 #include <cctype>
-//#include "psyq/assert.hpp"
+#include "../assert.hpp"
 
 namespace psyq
 {

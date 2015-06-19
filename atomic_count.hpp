@@ -12,6 +12,8 @@
 #include <atomic>
 #endif // PSYQ_ATOMIC_COUNT_ENABLE_THREADS
 
+#include "./std/config.hpp"
+
 namespace psyq
 {
     /// @cond

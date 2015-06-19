@@ -15,14 +15,14 @@
 #include "./move.hpp"
 #include "./default_delete.hpp"
 
-#ifdef PSYQ_NO_STD_UNIQUE_PTR
+#ifdef PSYQ_NO_STD_SMART_PTR
 #define PSYQ_STD_UNIQUE_PTR_BASE boost::interprocess::unique_ptr
 #include <boost/interprocess/smart_ptr/unique_ptr.hpp>
 #else
 /// psyq::std_unique_ptr の基底クラステンプレート。
 #define PSYQ_STD_UNIQUE_PTR_BASE std::unique_ptr
 #include <memory>
-#endif // defined(PSYQ_NO_STD_UNIQUE_PTR)
+#endif // defined(PSYQ_NO_STD_SMART_PTR)
 
 /// @cond
 namespace psyq

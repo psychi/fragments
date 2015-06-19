@@ -5,6 +5,9 @@
 #ifndef PSYQ_SCENARIO_ENGINE_MODIFIER_HPP_
 #define PSYQ_SCENARIO_ENGINE_MODIFIER_HPP_
 
+#include <vector>
+#include "../assert.hpp"
+
 /// @cond
 namespace psyq
 {
@@ -103,16 +106,14 @@ class psyq::scenario_engine::modifier
         this->pass_states_.reserve(in_reserve_states);
     }
 
+#ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
     public: modifier(this_type&& io_source):
     accumulated_states_(std::move(io_source.accumulated_states_)),
     pass_states_(std::move(io_source.pass_states_))
-    {
-        io_source.accumulated_states_.clear();
-        io_source.pass_states_.clear();
-    }
+    {}
 
     /** @brief ムーブ代入演算子。
         @param[in,out] io_source ムーブ元となるインスタンス。
@@ -120,15 +121,11 @@ class psyq::scenario_engine::modifier
      */
     public: this_type& operator=(this_type&& io_source)
     {
-        if (this != &io_source)
-        {
-            this->accumulated_states_ = std::move(io_source.accumulated_states_);
-            this->pass_states_ = std::move(io_source.pass_states_);
-            io_source.accumulated_states_.clear();
-            io_source.pass_states_.clear();
-        }
+        this->accumulated_states_ = std::move(io_source.accumulated_states_);
+        this->pass_states_ = std::move(io_source.pass_states_);
         return *this;
     }
+#endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
     /** @brief 状態変更器で使われているメモリ割当子を取得する。
         @return 状態変更器で使われているメモリ割当子。

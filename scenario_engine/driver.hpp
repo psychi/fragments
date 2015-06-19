@@ -5,8 +5,12 @@
 #ifndef PSYQ_SCENARIO_ENGINE_DRIVER_HPP_
 #define PSYQ_SCENARIO_ENGINE_DRIVER_HPP_
 
-//#include "scenario_engine/evaluator.hpp"
-//#include "scenario_engine/behavior.hpp"
+#include "../string/view.hpp"
+#include "./reservoir.hpp"
+#include "./modifier.hpp"
+#include "./evaluator.hpp"
+#include "./dispatcher.hpp"
+#include "./behavior_chunk.hpp"
 
 /// @cond
 namespace psyq
@@ -127,6 +131,7 @@ class psyq::scenario_engine::driver
         this->behavior_chunks_.reserve(in_reserve_chunks);
     }
 
+#ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
@@ -153,6 +158,7 @@ class psyq::scenario_engine::driver
         this->hash_function_ = std::move(io_source.hash_function_);
         return *this;
     }
+#endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
     /// @brief シナリオ駆動器を再構築し、メモリ領域を必要最小限にする。
     public: void shrink_to_fit()
@@ -324,7 +330,10 @@ class psyq::scenario_engine::driver
 }; // class psyq::scenario_engine::driver
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-#include <deque>
+#include "../string/csv_table.hpp"
+#include "./state_builder.hpp"
+#include "./expression_builder.hpp"
+#include "./behavior_builder.hpp"
 namespace psyq_test
 {
     inline void scenario_engine()

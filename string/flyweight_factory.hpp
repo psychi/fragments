@@ -45,7 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STRING_FLYWEIGHT_FACTORY_HPP_
 #define PSYQ_STRING_FLYWEIGHT_FACTORY_HPP_
 
-//#include "./flyweight_string.hpp"
+#include "./flyweight_string.hpp"
 
 /// @brief フライ級文字列生成器の文字列予約数のデフォルト値。
 #ifndef PSYQ_STRING_FLYWEIGHT_FACTORY_CAPACITY_DEFAULT

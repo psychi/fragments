@@ -5,7 +5,7 @@
 #ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_CHUNK_HPP_
 #define PSYQ_SCENARIO_ENGINE_BEHAVIOR_CHUNK_HPP_
 
-//#include "scenario_engine/dispatcher.hpp"
+#include "./dispatcher.hpp"
 
 /// @cond
 namespace psyq
@@ -61,6 +61,7 @@ class psyq::scenario_engine::_private::behavior_chunk
     //-------------------------------------------------------------------------
     /// @name 構築と代入
     //@{
+#ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
@@ -79,6 +80,7 @@ class psyq::scenario_engine::_private::behavior_chunk
         this->key_ = std::move(io_source.key_);
         return *this;
     }
+#endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
     //@}
     //-------------------------------------------------------------------------
     /// @name 条件挙動関数

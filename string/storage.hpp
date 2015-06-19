@@ -47,8 +47,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define PSYQ_STRING_STORAGE_HPP_
 
 #include<array>
-//#include "string/view.hpp"
-//#include "string/interface_mutable.hpp"
+#include "./view.hpp"
+#include "./interface_mutable.hpp"
 
 /// psyq::string::storage で使う、defaultの最大文字数。
 #ifndef PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT

@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <algorithm>
 #include <vector>
-//#include "string/view.hpp"
+#include "./view.hpp"
 
 /// @brief CSV文字列の列の区切り文字の有効判定。
 #define PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_VALIDATION(\

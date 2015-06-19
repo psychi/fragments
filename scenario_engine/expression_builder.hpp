@@ -5,7 +5,7 @@
 #ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_HPP_
 #define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_HPP_
 
-//#include "string/csv_table.hpp"
+#include "../assert.hpp"
 
 /// @cond
 namespace psyq

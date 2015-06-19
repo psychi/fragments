@@ -732,6 +732,7 @@ INPUT                  = \
                          ./scenario_engine/behavior.hpp \
                          ./scenario_engine/behavior_chunk.hpp \
                          ./scenario_engine/behavior_builder.hpp \
+                         ./scenario_engine/expression.hpp \
                          ./scenario_engine/expression_monitor.hpp \
                          ./scenario_engine/expression_builder.hpp \
                          ./scenario_engine/dispatcher.hpp \

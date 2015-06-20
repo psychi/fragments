@@ -46,7 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STRING_STORAGE_HPP_
 #define PSYQ_STRING_STORAGE_HPP_
 
-#include<array>
+#include "../std/array.hpp"
 #include "./view.hpp"
 #include "./interface_mutable.hpp"
 
@@ -60,11 +60,7 @@ namespace psyq
 {
     namespace string
     {
-        template<
-            typename template_char_type,
-            std::size_t = PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT,
-            typename = PSYQ_STRING_VIEW_TRAITS_DEFAULT>
-                class storage;
+        template<typename, std::size_t, typename> class storage;
 
         namespace _private
         {
@@ -86,9 +82,10 @@ namespace psyq
 template<typename template_char_traits, std::size_t template_max_size>
 class psyq::string::_private::storage_base
 {
-    private: typedef storage_base this_type; ///< thisが指す値の型。
+    /// @brief thisが指す値の型。
+    private: typedef storage_base this_type;
 
-    /// 文字特性の型。
+    /// @brief 文字特性の型。
     public: typedef template_char_traits traits_type;
 
     public: enum: std::size_t
@@ -96,9 +93,11 @@ class psyq::string::_private::storage_base
         MAX_SIZE = template_max_size, ///< 最大の要素数。
     };
 
-    private: typedef std::array<
-         typename this_type::traits_type::char_type, this_type::MAX_SIZE + 1>
-             char_array;
+    private: typedef
+         psyq::std_array<
+             typename this_type::traits_type::char_type,
+             this_type::MAX_SIZE + 1>
+         char_array;
 
     //-------------------------------------------------------------------------
     /// @brief 空の文字列を構築する。
@@ -434,9 +433,9 @@ class psyq::string::_private::storage_base
     }
 
     //-------------------------------------------------------------------------
-    /// 文字列の要素数。
+    /// @brief 文字列の要素数。
     private: std::size_t size_;
-    /// 文字列を保存する領域。
+    /// @brief 文字列を保存する領域。
     private: typename this_type::char_array storage_;
 
 }; // class psyq::string::_private::storage_base
@@ -454,20 +453,22 @@ class psyq::string::_private::storage_base
  */
 template<
     typename template_char_type,
-    std::size_t template_max_size,
-    typename template_char_traits>
+    std::size_t template_max_size = PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT,
+    typename template_char_traits = PSYQ_STRING_VIEW_TRAITS_DEFAULT>
 class psyq::string::storage:
 public psyq::string::_private::interface_mutable<
     psyq::string::_private::storage_base<
         template_char_traits, template_max_size>>
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef storage this_type;
-    /// this_type の基底型。
-    public: typedef psyq::string::_private::interface_mutable<
-        psyq::string::_private::storage_base<
-            template_char_traits, template_max_size>>
-                base_type;
+
+    /// @brief this_type の基底型。
+    public: typedef
+        psyq::string::_private::interface_mutable<
+            psyq::string::_private::storage_base<
+                template_char_traits, template_max_size>>
+        base_type;
 
     //-------------------------------------------------------------------------
     /// @name コンストラクタ
@@ -576,3 +577,4 @@ public psyq::string::_private::interface_mutable<
 }; // class psyq::string::storage
 
 #endif // !defined(PSYQ_STRING_STORAGE_HPP_)
+// vim: set expandtab:

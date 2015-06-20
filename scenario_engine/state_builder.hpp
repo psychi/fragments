@@ -195,7 +195,7 @@ class psyq::scenario_engine::state_builder
     {
         // 状態値のキーを取得する。
         auto const local_key_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.key_->column));
+            in_table.find_body_cell(in_row_index, in_attribute.key_->column_));
         if (local_key_cell.empty())
         {
             PSYQ_ASSERT(false);
@@ -216,8 +216,8 @@ class psyq::scenario_engine::state_builder
             io_reservoir,
             in_chunk_key,
             local_key,
-            in_table.find_body_cell(in_row_index, in_attribute.kind_->column),
-            in_table.find_body_cell(in_row_index, in_attribute.value_->column));
+            in_table.find_body_cell(in_row_index, in_attribute.kind_->column_),
+            in_table.find_body_cell(in_row_index, in_attribute.value_->column_));
     }
 
     /** @brief 状態値の型と初期値を解析して状態値を構築し、状態貯蔵器へ登録する。

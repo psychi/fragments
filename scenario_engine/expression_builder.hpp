@@ -212,7 +212,7 @@ class psyq::scenario_engine::expression_builder
 
         // 作業領域を確保する。
         typename this_type::workspace<template_evaluator> local_workspace(
-            local_attribute.element_->size, io_evaluator.get_allocator());
+            local_attribute.element_->size_, io_evaluator.get_allocator());
 
         // 文字列表を行ごとに解析し、条件式を構築して、条件評価器へ登録する。
         auto const local_row_count(in_table.get_row_count());
@@ -270,7 +270,7 @@ class psyq::scenario_engine::expression_builder
     {
         // 条件式キーを取得する。
         auto const local_key_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.key_->column));
+            in_table.find_body_cell(in_row_index, in_attribute.key_->column_));
         if (local_key_cell.empty())
         {
             return false;
@@ -286,7 +286,7 @@ class psyq::scenario_engine::expression_builder
 
         // 要素条件の論理演算子を取得する。
         auto const local_logic_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.logic_->column));
+            in_table.find_body_cell(in_row_index, in_attribute.logic_->column_));
         typename template_evaluator::expression::logic local_logic;
         if (local_logic_cell
             == PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_LOGIC_AND)
@@ -308,7 +308,7 @@ class psyq::scenario_engine::expression_builder
 
         // 条件式の種類ごとに、条件式の要素条件を構築する。
         auto const local_kind_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.kind_->column));
+            in_table.find_body_cell(in_row_index, in_attribute.kind_->column_));
         if (local_kind_cell
             == PSYQ_SCENARIO_ENGINE_EVALUATOR_EXPRESSION_KIND_SUB_EXPRESSION)
         {
@@ -441,9 +441,9 @@ class psyq::scenario_engine::expression_builder
     {
         unsigned const local_element_size(2);
         auto const local_element_column(
-            in_attribute.element_->column
+            in_attribute.element_->column_
             + in_element_count * local_element_size);
-        if (in_attribute.element_->column + in_attribute.element_->size
+        if (in_attribute.element_->column_ + in_attribute.element_->size_
             < local_element_column + local_element_size)
         {
             return false;
@@ -509,9 +509,9 @@ class psyq::scenario_engine::expression_builder
     {
         unsigned const local_element_size(1);
         auto const local_element_column(
-            in_attribute.element_->column
+            in_attribute.element_->column_
             + in_element_count * local_element_size);
-        if (in_attribute.element_->column + in_attribute.element_->size
+        if (in_attribute.element_->column_ + in_attribute.element_->size_
             < local_element_column + local_element_size)
         {
             return false;
@@ -560,9 +560,9 @@ class psyq::scenario_engine::expression_builder
     {
         unsigned const local_element_size(3);
         auto const local_element_column(
-            in_attribute.element_->column
+            in_attribute.element_->column_
             + in_element_count * local_element_size);
-        if (in_attribute.element_->column + in_attribute.element_->size
+        if (in_attribute.element_->column_ + in_attribute.element_->size_
             < local_element_column + local_element_size)
         {
             return false;

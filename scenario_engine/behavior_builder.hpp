@@ -214,7 +214,7 @@ class psyq::scenario_engine::behavior_builder
 
             // 条件式キーを取得する。
             auto const local_key_cell(
-                in_table.find_body_cell(i, local_attribute.key_->column));
+                in_table.find_body_cell(i, local_attribute.key_->column_));
             auto local_key(io_hasher(local_key_cell));
             if (local_key
                 == io_hasher(typename template_hasher::argument_type()))
@@ -228,7 +228,7 @@ class psyq::scenario_engine::behavior_builder
 
             // 条件挙動の優先順位を取得する。
             auto const local_priority_cell(
-                in_table.find_body_cell(i, local_attribute.priority_->column));
+                in_table.find_body_cell(i, local_attribute.priority_->column_));
             std::size_t local_rest_size;
             auto const local_priority(
                 local_priority_cell.template
@@ -289,7 +289,7 @@ class psyq::scenario_engine::behavior_builder
         // 挙動が起こる条件を取得する。
         auto const local_condition_cell(
             in_table.find_body_cell(
-                in_row_index, in_attribute.condition_->column));
+                in_row_index, in_attribute.condition_->column_));
         auto const local_bool_state(local_condition_cell.to_bool());
         if (local_bool_state < 0)
         {
@@ -301,7 +301,7 @@ class psyq::scenario_engine::behavior_builder
 
         // 条件挙動関数の種類を取得する。
         auto const local_kind_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.kind_->column));
+            in_table.find_body_cell(in_row_index, in_attribute.kind_->column_));
         if (local_kind_cell
             == PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_CSV_KIND_STATE)
         {
@@ -340,12 +340,12 @@ class psyq::scenario_engine::behavior_builder
         typename this_type::string_table::index_type const in_row_index,
         typename this_type::table_attribute const& in_attribute)
     {
-        PSYQ_ASSERT(2 <= in_attribute.argument_->size);
+        PSYQ_ASSERT(2 <= in_attribute.argument_->size_);
 
         // 状態キーを取得する。
         auto const local_key_cell(
             in_table.find_body_cell(
-                in_row_index, in_attribute.argument_->column));
+                in_row_index, in_attribute.argument_->column_));
         auto const local_key(io_hasher(local_key_cell));
         if (in_reservoir.get_variety(local_key)
             == template_reservoir::state_value::kind_NULL)
@@ -362,7 +362,7 @@ class psyq::scenario_engine::behavior_builder
                 local_operator,
                 in_reservoir,
                 in_table.find_body_cell(
-                    in_row_index, in_attribute.argument_->column + 1)));
+                    in_row_index, in_attribute.argument_->column_ + 1)));
         if (!local_get_operator)
         {
             PSYQ_ASSERT(false);
@@ -372,7 +372,7 @@ class psyq::scenario_engine::behavior_builder
         // 演算値を取得する。
         auto const local_value_cell(
             in_table.find_body_cell(
-                in_row_index, in_attribute.argument_->column + 2));
+                in_row_index, in_attribute.argument_->column_ + 2));
         auto const local_value(
             template_reservoir::state_value::make(local_value_cell));
         if (local_value.get_kind()

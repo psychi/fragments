@@ -80,10 +80,10 @@ namespace psyq
 template<typename template_string_type>
 class psyq::string::_private::interface_immutable: public template_string_type
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef interface_immutable this_type;
 
-    /// this_type の基底型。
+    /// @brief this_type の基底型。
     public: typedef template_string_type base_type;
 
     /** @brief 操作する文字列型。
@@ -115,44 +115,49 @@ class psyq::string::_private::interface_immutable: public template_string_type
     protected: typedef template_string_type string_type;
 
     //-------------------------------------------------------------------------
-    /// 文字の型。
+    /// @brief 文字の型。
     public: typedef typename base_type::traits_type::char_type value_type;
-    /// 文字数の型。
+    /// @brief 文字数の型。
     public: typedef std::size_t size_type;
-    /// 反復子の差を表す型。
+    /// @brief 反復子の差を表す型。
     public: typedef std::ptrdiff_t difference_type;
-    /// 文字へのpointer。
+    /// @brief 文字へのポインタ。
     public: typedef typename this_type::value_type const* const_pointer;
-    /// 文字へのpointer。
+    /// @brief 文字へのポインタ。
     public: typedef typename this_type::const_pointer pointer;
-    /// 文字への参照。
+    /// @brief 文字への参照。
     public: typedef typename this_type::value_type const& const_reference;
-    /// 文字への参照。
+    /// @brief 文字への参照。
     public: typedef typename this_type::const_reference reference;
-    /// 文字を指す反復子。
+    /// @brief 文字を指す反復子。
     public: typedef typename this_type::const_pointer const_iterator;
-    /// 文字を指す反復子。
+    /// @brief 文字を指す反復子。
     public: typedef typename this_type::const_iterator iterator;
-    /// 文字を指す逆反復子。
-    public: typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
-    /// 文字を指す逆反復子。
-    public: typedef typename this_type::const_reverse_iterator reverse_iterator;
+    /// @brief 文字を指す逆反復子。
+    public: typedef
+        std::reverse_iterator<const_iterator>
+        const_reverse_iterator;
+    /// @brief 文字を指す逆反復子。
+    public: typedef
+        typename this_type::const_reverse_iterator
+        reverse_iterator;
 
     //-------------------------------------------------------------------------
-    /// 文字列参照の型。
-    public: typedef psyq::string::view<
-        typename this_type::value_type, typename base_type::traits_type>
-            view;
+    /// @brief 文字列参照の型。
+    public: typedef
+        psyq::string::view<
+            typename this_type::value_type, typename base_type::traits_type>
+        view;
 
     //-------------------------------------------------------------------------
-    /// std::hash互換インターフェイスの、ハッシュ関数オブジェクト。
+    /// @brief std::hash互換インターフェイスの、ハッシュ関数オブジェクト。
     public: template<typename template_hash> struct hash: public template_hash
     {
-        /// 基底型。
+        /// @brief 基底型。
         typedef template_hash base_type;
-        /// ハッシュ値の型。
+        /// @brief ハッシュ値の型。
         typedef typename template_hash::value_type result_type;
-        /// ハッシュキーの型。
+        /// @brief ハッシュキーの型。
         typedef typename interface_immutable::view argument_type;
 
         /** @brief ハッシュキーに対応するハッシュ値を算出する。
@@ -167,13 +172,13 @@ class psyq::string::_private::interface_immutable: public template_string_type
                 local_data, local_data + in_string.size());
         }
     };
-    /// std::hash互換インターフェイスの、32ビットFNV-1形式ハッシュ関数オブジェクト。
+    /// @brief std::hash互換インターフェイスの、32ビットFNV-1形式ハッシュ関数オブジェクト。
     public: typedef typename this_type::hash<psyq::fnv1_hash32> fnv1_hash32;
-    /// std::hash互換インターフェイスの、64ビットFNV-1形式ハッシュ関数オブジェクト。
+    /// @brief std::hash互換インターフェイスの、64ビットFNV-1形式ハッシュ関数オブジェクト。
     public: typedef typename this_type::hash<psyq::fnv1_hash64> fnv1_hash64;
-    /// std::hash互換インターフェイスの、32ビットFNV-1a形式ハッシュ関数オブジェクト。
+    /// @brief std::hash互換インターフェイスの、32ビットFNV-1a形式ハッシュ関数オブジェクト。
     public: typedef typename this_type::hash<psyq::fnv1a_hash32> fnv1a_hash32;
-    /// std::hash互換インターフェイスの、64ビットFNV-1a形式ハッシュ関数オブジェクト。
+    /// @brief std::hash互換インターフェイスの、64ビットFNV-1a形式ハッシュ関数オブジェクト。
     public: typedef typename this_type::hash<psyq::fnv1a_hash64> fnv1a_hash64;
 
     //-------------------------------------------------------------------------

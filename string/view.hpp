@@ -89,9 +89,10 @@ public psyq::string::_private::interface_immutable<
     private: typedef view this_type;
 
     /// this_type の基底型。
-    public: typedef psyq::string::_private::interface_immutable<
-        psyq::string::_private::reference_base<template_char_traits>>
-            base_type;
+    public: typedef
+        psyq::string::_private::interface_immutable<
+            psyq::string::_private::reference_base<template_char_traits>>
+        base_type;
 
     //-------------------------------------------------------------------------
     /// @name コンストラクタ

@@ -103,22 +103,22 @@ template<typename template_string_type>
 class psyq::string::_private::interface_mutable:
 public psyq::string::_private::interface_immutable<template_string_type>
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef interface_mutable this_type;
 
-    /// this_type の基底型。
-    public: typedef psyq::string::_private::interface_immutable<
-        template_string_type>
-            base_type;
+    /// @brief this_type の基底型。
+    public: typedef
+        psyq::string::_private::interface_immutable<template_string_type>
+        base_type;
 
     //-------------------------------------------------------------------------
-    /// 文字へのpointer。
+    /// @brief 文字へのポインタ。
     public: typedef typename base_type::value_type* pointer;
-    /// 文字への参照。
+    /// @brief 文字への参照。
     public: typedef typename base_type::value_type& reference;
-    /// 文字を指す反復子。
+    /// @brief 文字を指す反復子。
     public: typedef typename this_type::pointer iterator;
-    /// 文字を指す逆反復子。
+    /// @brief 文字を指す逆反復子。
     public: typedef std::reverse_iterator<iterator> reverse_iterator;
 
     //-------------------------------------------------------------------------

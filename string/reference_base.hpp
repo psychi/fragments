@@ -78,9 +78,11 @@ namespace psyq
 template<typename template_char_traits>
 class psyq::string::_private::reference_base
 {
-    private: typedef reference_base this_type; ///< thisが指す値の型。
+    /// @brief thisが指す値の型。
+    private: typedef reference_base this_type;
 
-    public: typedef template_char_traits traits_type; ///< 文字特性の型。
+    /// @brief 文字特性の型。
+    public: typedef template_char_traits traits_type;
 
     //-------------------------------------------------------------------------
     /** @brief 文字列を参照する。
@@ -236,9 +238,9 @@ class psyq::string::_private::reference_base
     }
 
     //-------------------------------------------------------------------------
-    /// 文字列の要素数。
+    /// @brief 文字列の要素数。
     private: std::size_t size_;
-    /// 文字列の先頭位置。
+    /// @brief 文字列の先頭位置。
     private: typename this_type::traits_type::char_type const* data_;
 
 }; // class psyq::string::_private::reference_base

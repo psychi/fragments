@@ -19,6 +19,11 @@
 //#define PSYQ_NO_STD_SMART_PTR
 
 //-----------------------------------------------------------------------------
+#if defined(_MSC_VER) && _MSC_VER < 1800
+#   define PSYQ_NO_STD_INITIALIZER_LIST
+#endif // defined(_MSC_VER) && _MSC_VER < 1800
+
+//-----------------------------------------------------------------------------
 #if defined(__clang__)
 #   define PSYQ_NOEXCEPT noexcept
 #   define PSYQ_CONSTEXPR constexpr
@@ -34,6 +39,15 @@
 #   define PSYQ_NOEXCEPT noexcept
 #   define PSYQ_CONSTEXPR
 #endif
+
+//-----------------------------------------------------------------------------
+#ifndef PSYQ_ALIGNOF
+#   if defined(_MSC_VER)
+#       define PSYQ_ALIGNOF __alignof
+#   else
+#       define PSYQ_ALIGNOF alignof
+#   endif
+#endif // !defined(PSYQ_ALIGNOF)
 
 #endif // PSYQ_STD_CONFIG_HPP_
 // vim: set expandtab:

@@ -46,27 +46,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STATIC_DEQUE_HPP_
 #define PSYQ_STATIC_DEQUE_HPP_
 
-//#include "./assert.hpp"
+#include "./assert.hpp"
 
 #if defined(NDEBUG) && !defined(PSYQ_STATIC_DEQUE_NO_ARRAY_VIEW)
 #define PSYQ_STATIC_DEQUE_NO_ARRAY_VIEW
 #endif // !defined(NDEBUG) && !defined(PSYQ_STATIC_DEQUE_NO_ARRAY_VIEW)
 
-#if defined(_MSC_VER) && _MSC_VER <= 1700
-#define PSYQ_STD_NO_INITIALIZER_LIST
-#endif
-
-#ifndef PSYQ_STD_NO_INITIALIZER_LIST
+#ifndef PSYQ_NO_STD_INITIALIZER_LIST
 #include <initializer_list>
-#endif // PSYQ_STD_NO_INITIALIZER_LIST
-
-#ifndef PSYQ_ALIGNOF
-#   if defined(_MSC_VER)
-#       define PSYQ_ALIGNOF __alignof
-#   else
-#       define PSYQ_ALIGNOF alignof
-#   endif
-#endif // !defined(PSYQ_ALIGNOF)
+#endif // PSYQ_NO_STD_INITIALIZER_LIST
 
 /// @cond
 namespace psyq
@@ -99,31 +87,42 @@ class psyq::static_deque
         std::is_integral<template_difference>::value
         && std::is_signed<template_difference>::value,
         "'template_difference' is not signed integer type");
+
     /// @brief 要素の数を表す型。
-    public: typedef typename std::make_unsigned<template_difference>::type
+    public: typedef
+        typename std::make_unsigned<template_difference>::type
         size_type;
 
     //-------------------------------------------------------------------------
     public: class iterator;
     public: class const_iterator;
+
     /// @brief 要素を指す逆反復子を表す型。
-    public: typedef std::reverse_iterator<typename this_type::iterator>
+    public: typedef
+        std::reverse_iterator<typename this_type::iterator>
         reverse_iterator;
+
     /// @brief 読み取り専用要素を指す逆反復子を表す型。
-    public: typedef std::reverse_iterator<typename this_type::const_iterator>
+    public: typedef
+        std::reverse_iterator<typename this_type::const_iterator>
         reverse_const_iterator;
 
     //-------------------------------------------------------------------------
     /// @brief コンテナに格納する要素を表す型。
     public: typedef typename this_type::iterator::value_type value_type;
+
     /// @brief 要素を指すポインタを表す型。
     public: typedef typename this_type::iterator::pointer pointer;
+
     /// @brief 読み取り専用要素を指すポインタを表す型。
     public: typedef typename this_type::const_iterator::pointer const_pointer;
+
     /// @brief 要素への参照を表す型。
     public: typedef typename this_type::iterator::reference reference;
+
     /// @brief 読み取り専用要素への参照を表す型。
-    public: typedef typename this_type::const_iterator::reference
+    public: typedef
+        typename this_type::const_iterator::reference
         const_reference;
 
     /// @brief コンテナに格納できる要素の最大数。
@@ -138,11 +137,12 @@ class psyq::static_deque
 
     //-------------------------------------------------------------------------
     /// @brief コンテナとして使う固定長のメモリ領域を表す型。
-    private: typedef typename std::aligned_storage<
-        sizeof(template_value) * template_max_size,
-        PSYQ_ALIGNOF(template_value)>
-            ::type
-                storage;
+    private: typedef
+        typename std::aligned_storage<
+            sizeof(template_value) * template_max_size,
+            PSYQ_ALIGNOF(template_value)>
+                ::type
+        storage;
 
     /// @brief デバッグ時に、コンテナの内容を見るために使う。
     private: typedef template_value array_view[template_max_size];
@@ -215,7 +215,7 @@ class psyq::static_deque
             in_first, in_last, std::distance(in_first, in_last));
     }
 
-#ifndef PSYQ_STD_NO_INITIALIZER_LIST
+#ifndef PSYQ_NO_STD_INITIALIZER_LIST
     /** @brief コンテナをコピー構築する。
         @param[in] in_source コピー元となる初期化子リスト。
      */
@@ -228,7 +228,7 @@ class psyq::static_deque
     {
         this->copy_construct_deque(in_source);
     }
-#endif // !defined(PSYQ_STD_NO_INITIALIZER_LIST)
+#endif // !defined(PSYQ_NO_STD_INITIALIZER_LIST)
 
     /** @brief コンテナをコピー構築する。
         @param[in] in_source コピー元となるコンテナ。
@@ -277,7 +277,7 @@ class psyq::static_deque
         return *this;
     }
 
-#ifndef PSYQ_STD_NO_INITIALIZER_LIST
+#ifndef PSYQ_NO_STD_INITIALIZER_LIST
     /** @brief コンテナにコピー代入する。
         @param[in] in_source コピー元となる初期化子リスト。
         @return *this
@@ -288,7 +288,7 @@ class psyq::static_deque
         this->~this_type();
         return *new(this) this_type(in_source);
     }
-#endif // !defined(PSYQ_STD_NO_INITIALIZER_LIST)
+#endif // !defined(PSYQ_NO_STD_INITIALIZER_LIST)
 
     /** @brief コンテナにムーブ代入する。
         @param[in,out] io_source ムーブ元となるコンテナ。
@@ -340,7 +340,7 @@ class psyq::static_deque
         new(this) this_type(in_count, in_value);
     }
 
-#ifndef PSYQ_STD_NO_INITIALIZER_LIST
+#ifndef PSYQ_NO_STD_INITIALIZER_LIST
     /** @brief コンテナにコピー代入する。
         @param[in] in_source コピー元となる初期化子リスト。
         @return *this
@@ -350,7 +350,7 @@ class psyq::static_deque
     {
         this->operator=(in_source);
     }
-#endif // !defined(PSYQ_STD_NO_INITIALIZER_LIST)
+#endif // !defined(PSYQ_NO_STD_INITIALIZER_LIST)
 
     /// @brief コンテナを交換する。
     public: void swap(this_type& io_target)
@@ -654,7 +654,7 @@ class psyq::static_deque
         return this->insert(in_position, 1, in_value);
     }
 
-#ifndef PSYQ_STD_NO_INITIALIZER_LIST
+#ifndef PSYQ_NO_STD_INITIALIZER_LIST
     /** @brief コンテナに要素を挿入する。
         @param[in] in_position 要素を挿入する位置。
         @param[in] in_source   挿入する要素のコンテナ。
@@ -667,7 +667,7 @@ class psyq::static_deque
     {
         return this->insert(in_position, in_source.begin(), in_source.end());
     }
-#endif // !defined(PSYQ_STD_NO_INITIALIZER_LIST)
+#endif // !defined(PSYQ_NO_STD_INITIALIZER_LIST)
 
     /** @brief コンテナに要素を挿入する。
         @param[in] in_position 要素を挿入する位置。
@@ -1664,7 +1664,7 @@ namespace psyq_test
         float_deque local_deque_a;
         float_deque local_deque_b(5);
         float_deque local_deque_c(float_deque::MAX_SIZE, 0.5f);
-#ifdef PSYQ_STD_NO_INITIALIZER_LIST
+#ifdef PSYQ_NO_STD_INITIALIZER_LIST
         float const local_array[] = {1, 2, 3, 4};
         float_deque local_deque_d(std::begin(local_array), std::end(local_array));
 #else

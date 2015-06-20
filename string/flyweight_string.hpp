@@ -82,8 +82,8 @@ class psyq::string::_private::flyweight_string
             flyweight_string const& in_right)
         const PSYQ_NOEXCEPT
         {
-            return in_left.hash != in_right.hash?
-                in_left.hash < in_right.hash: in_left.size < in_right.size;
+            return in_left.hash_ != in_right.hash_?
+                in_left.hash_ < in_right.hash_: in_left.size_ < in_right.size_;
         }
 
         bool operator()(
@@ -114,16 +114,16 @@ class psyq::string::_private::flyweight_string
 
     //-------------------------------------------------------------------------
     /** @brief 文字列を構築する。
-        @param[in] in_size this_type::size の初期値。
-        @param[in] in_hash this_type::hash の初期値。
+        @param[in] in_size this_type::size_ の初期値。
+        @param[in] in_hash this_type::hash_ の初期値。
      */
     public: flyweight_string(
         typename this_type::view::size_type const in_size,
         template_hash_value const in_hash)
     PSYQ_NOEXCEPT:
-    reference_count(0),
-    size(in_size),
-    hash(in_hash)
+    reference_count_(0),
+    size_(in_size),
+    hash_(in_hash)
     {}
 
     /** @brief 文字列の先頭位置を取得する。
@@ -136,11 +136,11 @@ class psyq::string::_private::flyweight_string
 
     //-------------------------------------------------------------------------
     /// @brief 文字列の被参照数。
-    public: psyq::atomic_count reference_count;
+    public: psyq::atomic_count reference_count_;
     /// @brief 文字列の要素数。
-    public: typename this_type::view::size_type size;
+    public: typename this_type::view::size_type size_;
     /// @brief 文字列のハッシュ値。
-    public: template_hash_value hash;
+    public: template_hash_value hash_;
 
 }; // class psyq::string::_private::flyweight_string
 

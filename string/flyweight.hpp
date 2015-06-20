@@ -58,11 +58,7 @@ namespace psyq
 {
     namespace string
     {
-        template<
-            typename template_char_type,
-            typename = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
-            typename = std::allocator<void*>>
-                class flyweight;
+        template<typename, typename, typename> class flyweight;
     } // namespace string
 } // namespace psyq
 /// @endcond
@@ -78,8 +74,8 @@ namespace psyq
  */
 template<
     typename template_char_type,
-    typename template_char_traits,
-    typename template_allocator_type>
+    typename template_char_traits = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
+    typename template_allocator_type = std::allocator<void*>>
 class psyq::string::flyweight:
 public psyq::string::_private::interface_immutable<
     typename psyq::string::_private::flyweight_factory<
@@ -92,13 +88,14 @@ public psyq::string::_private::interface_immutable<
     private: typedef flyweight this_type;
 
     /// @brief this_type の基底型。
-    public: typedef psyq::string::_private::interface_immutable<
-        typename psyq::string::_private::flyweight_factory<
-            psyq::string::view<template_char_type, template_char_traits>,
-            psyq::fnv1a_hash32,
-            template_allocator_type>
-                ::_private_client>
-                    base_type;
+    public: typedef
+        psyq::string::_private::interface_immutable<
+            typename psyq::string::_private::flyweight_factory<
+                psyq::string::view<template_char_type, template_char_traits>,
+                psyq::fnv1a_hash32,
+                template_allocator_type>
+                    ::_private_client>
+        base_type;
 
     /** @brief 空の文字列を構築する。メモリ確保は行わない。
      */

@@ -45,6 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STRING_FLYWEIGHT_FACTORY_HPP_
 #define PSYQ_STRING_FLYWEIGHT_FACTORY_HPP_
 
+#include "../std/weak_ptr.hpp"
 #include "./flyweight_string.hpp"
 
 /// @brief フライ級文字列生成器の文字列予約数のデフォルト値。
@@ -86,48 +87,50 @@ class psyq::string::_private::flyweight_factory
     /// @brief メモリ割当子の型。
     public: typedef template_allocator_type allocator_type;
 
-    public: typedef std::shared_ptr<this_type> shared_ptr;
-    public: typedef std::weak_ptr<this_type> weak_ptr;
+    public: typedef psyq::std_shared_ptr<this_type> shared_ptr;
+    public: typedef psyq::std_weak_ptr<this_type> weak_ptr;
 
     //-------------------------------------------------------------------------
     /// @brief 生成するフライ級文字列の型。
-    private: typedef psyq::string::_private::flyweight_string<
-        template_string_view, typename this_type::hash::value_type>
-            string;
+    private: typedef
+        psyq::string::_private::flyweight_string<
+            template_string_view, typename this_type::hash::value_type>
+        string;
 
     /// @brief フライ級文字列のコンテナの型。
-    private: typedef std::vector<
-        typename this_type::string*,
-        typename this_type::allocator_type::template
-            rebind<typename this_type::string*>::other>
-                string_vector;
+    private: typedef
+        std::vector<
+            typename this_type::string*,
+            typename this_type::allocator_type::template
+                rebind<typename this_type::string*>::other>
+        string_vector;
 
     /// @brief 文字列チャンク連結リストのノードの型。
-    private: struct string_chunk
+    private: class string_chunk
     {
-        typedef string_chunk this_type;
+        private: typedef string_chunk this_type;
 
-        string_chunk(
+        public: string_chunk(
             this_type* const in_next_chunk,
             std::size_t const in_capacity)
         PSYQ_NOEXCEPT:
-        next_chunk(in_next_chunk),
-        capacity((
+        next_chunk_(in_next_chunk),
+        capacity_((
             PSYQ_ASSERT(sizeof(this_type) < in_capacity), in_capacity)),
-        front_string(
+        front_string_(
             this_type::compute_string_capacity(in_capacity),
             flyweight_factory::hash::traits_type::EMPTY)
         {}
 
-        bool is_empty() const PSYQ_NOEXCEPT
+        public: bool is_empty() const PSYQ_NOEXCEPT
         {
-            return this->front_string.hash
+            return this->front_string_.hash_
                    == flyweight_factory::hash::traits_type::EMPTY
-                && this->front_string.size
-                   == this_type::compute_string_capacity(this->capacity);
+                && this->front_string_.size_
+                   == this_type::compute_string_capacity(this->capacity_);
         }
 
-        static std::size_t compute_string_capacity(
+        public: static std::size_t compute_string_capacity(
             std::size_t const in_chunk_capacity)
         {
             return (in_chunk_capacity - sizeof(this_type)) /
@@ -135,11 +138,11 @@ class psyq::string::_private::flyweight_factory
         }
 
         /// @brief 次の文字列チャンクを指すポインタ。
-        this_type* next_chunk;
+        public: this_type* next_chunk_;
         /// @brief チャンクの大きさ。
-        std::size_t capacity;
+        public: std::size_t capacity_;
         /// @brief この文字列チャンクでの最初の文字列。
-        typename flyweight_factory::string front_string;
+        public: typename flyweight_factory::string front_string_;
 
     }; // struct string_chunk
 
@@ -184,18 +187,18 @@ class psyq::string::_private::flyweight_factory
                 *local_chunk, local_allocator))
         {
             // 文字列チャンクの中にある文字列を解体する。
-            auto local_string(&local_chunk->front_string);
+            auto local_string(&local_chunk->front_string_);
             auto const local_chunk_end(
                 reinterpret_cast<char const*>(local_chunk)
-                + local_chunk->capacity);
+                + local_chunk->capacity_);
             for (;;)
             {
                 // 文字列チャンクの先頭文字列以外を解体する。
                 auto const local_aligned_size(
-                    this_type::align_string_size(local_string->size));
+                    this_type::align_string_size(local_string->size_));
                 void const* const local_string_end(
                     local_string->data() + local_aligned_size);
-                if (local_string != &local_chunk->front_string)
+                if (local_string != &local_chunk->front_string_)
                 {
                     local_string->~string();
                 }
@@ -234,7 +237,7 @@ class psyq::string::_private::flyweight_factory
                     this->strings_.end(),
                     typename this_type::string(0, in_hash),
                     typename this_type::string::less()));
-            i != this->strings_.end() && in_hash == (**i).hash;
+            i != this->strings_.end() && in_hash == (**i).hash_;
             ++i)
         {
             ++local_count;
@@ -270,15 +273,15 @@ class psyq::string::_private::flyweight_factory
             {
                 // 文字列チャンクが空になったので、破棄する。
                 this_type::remove_string(
-                    this->strings_, local_chunk->front_string);
+                    this->strings_, local_chunk->front_string_);
                 local_chunk = this_type::destroy_chunk(
                     *local_chunk, local_allocator);
                 *local_chunk_link = local_chunk;
             }
             else
             {
-                local_chunk_link = &local_chunk->next_chunk;
-                local_chunk = local_chunk->next_chunk;
+                local_chunk_link = &local_chunk->next_chunk_;
+                local_chunk = local_chunk->next_chunk_;
             }
         }
 
@@ -297,19 +300,19 @@ class psyq::string::_private::flyweight_factory
         typename this_type::string_chunk& io_chunk,
         typename this_type::string_vector& io_strings)
     {
-        auto local_string(&io_chunk.front_string);
+        auto local_string(&io_chunk.front_string_);
         auto const local_chunk_end(
-            reinterpret_cast<char const*>(&io_chunk) + io_chunk.capacity);
+            reinterpret_cast<char const*>(&io_chunk) + io_chunk.capacity_);
         typename this_type::string* local_empty_string(nullptr);
         for (;;)
         {
             auto const local_aligned_size(
-                this_type::align_string_size(local_string->size));
+                this_type::align_string_size(local_string->size_));
             void const* const local_string_end(
                 local_string->data() + local_aligned_size);
 
             // 未参照文字列を、空文字列として回収する。
-            if (0 < local_string->reference_count.load())
+            if (0 < local_string->reference_count_.load())
             {
                 // 参照中の文字列なので何もしない。
                 local_empty_string = nullptr;
@@ -319,15 +322,15 @@ class psyq::string::_private::flyweight_factory
                 // 未参照文字列を解体し、直前の空文字列に追加する。
                 this_type::remove_string(io_strings, *local_string);
                 local_string->~string();
-                local_empty_string->size += local_aligned_size +
+                local_empty_string->size_ += local_aligned_size +
                     sizeof(typename this_type::string)
                     / sizeof(typename this_type::string::view::value_type);
             }
             else
             {
                 // 未参照文字列を空文字列にする。
-                local_string->size = local_aligned_size;
-                local_string->hash = this_type::hash::traits_type::EMPTY;
+                local_string->size_ = local_aligned_size;
+                local_string->hash_ = this_type::hash::traits_type::EMPTY;
                 local_empty_string = local_string;
             }
 
@@ -339,7 +342,7 @@ class psyq::string::_private::flyweight_factory
             {
                 if (local_empty_string != nullptr)
                 {
-                    local_empty_string->size += local_rest_size / sizeof(
+                    local_empty_string->size_ += local_rest_size / sizeof(
                         typename this_type::string::view::value_type);
                 }
                 break;
@@ -385,8 +388,8 @@ class psyq::string::_private::flyweight_factory
         // 等価な文字列が辞書になかったので、新たな文字列を用意する。
         auto& local_idle_string(
             this->make_idle_string(local_string_size + 1, in_chunk_size));
-        local_idle_string.size = local_string_size;
-        local_idle_string.hash = local_string_hash;
+        local_idle_string.size_ = local_string_size;
+        local_idle_string.hash_ = local_string_hash;
 
         // 文字列をコピーする。
         auto const local_idle_data(
@@ -427,8 +430,8 @@ class psyq::string::_private::flyweight_factory
             ++i)
         {
             auto& local_string(**i);
-            if (in_string_size != local_string.size
-                || in_string_hash != local_string.hash)
+            if (in_string_size != local_string.size_
+                || in_string_hash != local_string.hash_)
             {
                 break;
             }
@@ -499,18 +502,18 @@ class psyq::string::_private::flyweight_factory
             ++i)
         {
             auto& local_string(**i);
-            if (local_string.hash != this_type::hash::traits_type::EMPTY)
+            if (local_string.hash_ != this_type::hash::traits_type::EMPTY)
             {
                 break;
             }
-            if (0 < local_string.reference_count.load())
+            if (0 < local_string.reference_count_.load())
             {
                 continue;
             }
 
             // 同じ大きさの空文字列があるなら、
             // いったん辞書から削除してから利用する。
-            if (in_string_size == local_string.size)
+            if (in_string_size == local_string.size_)
             {
                 io_strings.erase(i);
                 return &local_string;
@@ -543,7 +546,7 @@ class psyq::string::_private::flyweight_factory
         // io_string の大きさが分割するのに足りてないか判定する。
         PSYQ_ASSERT(
             in_front_size == this_type::align_string_size(in_front_size)
-            && io_string.hash == this_type::hash::traits_type::EMPTY);
+            && io_string.hash_ == this_type::hash::traits_type::EMPTY);
         static_assert(
             0 == sizeof(typename this_type::string)
                 % sizeof(typename this_type::string::view::value_type),
@@ -551,7 +554,7 @@ class psyq::string::_private::flyweight_factory
         auto const local_divide_size(
             in_front_size + sizeof(typename this_type::string)
                 / sizeof(typename this_type::string::view::value_type));
-        if (io_string.size < local_divide_size)
+        if (io_string.size_ < local_divide_size)
         {
             return nullptr;
         }
@@ -562,9 +565,9 @@ class psyq::string::_private::flyweight_factory
                 io_string.data() + in_front_size));
         auto const local_empty_string(
             new(local_empty_block) typename this_type::string(
-                io_string.size - local_divide_size,
+                io_string.size_ - local_divide_size,
                 this_type::hash::traits_type::EMPTY));
-        io_string.size = in_front_size;
+        io_string.size_ = in_front_size;
         return local_empty_string;
     }
 
@@ -628,7 +631,7 @@ class psyq::string::_private::flyweight_factory
             typename this_type::string_chunk(
                 this->chunk_, local_chunk_capacity * local_header_size);
         PSYQ_ASSERT(this->chunk_ != nullptr);
-        return this->chunk_->front_string;
+        return this->chunk_->front_string_;
     }
 
     /** @brief 文字列チャンクを破棄する。
@@ -640,9 +643,9 @@ class psyq::string::_private::flyweight_factory
         typename this_type::string_chunk& io_chunk,
         typename this_type::chunk_allocator& io_allocator)
     {
-        auto const local_next_chunk(io_chunk.next_chunk);
+        auto const local_next_chunk(io_chunk.next_chunk_);
         auto const local_chunk_count(
-            io_chunk.capacity / sizeof(typename this_type::string_chunk));
+            io_chunk.capacity_ / sizeof(typename this_type::string_chunk));
         io_chunk.~string_chunk();
         io_allocator.deallocate(&io_chunk, local_chunk_count);
         return local_next_chunk;
@@ -720,7 +723,7 @@ class psyq::string::_private::flyweight_factory<
         {
             // 文字列の参照数を増やす。
             PSYQ_ASSERT(in_source.get_factory().get() != nullptr);
-            in_source.string_->reference_count.add(1);
+            in_source.string_->reference_count_.add(1);
         }
     }
 
@@ -741,7 +744,7 @@ class psyq::string::_private::flyweight_factory<
         if (in_factory.get() != nullptr)
         {
             // 文字列の参照数を増やす。
-            in_string.reference_count.add(1);
+            in_string.reference_count_.add(1);
             this->string_ = &in_string;
         }
         else
@@ -756,7 +759,7 @@ class psyq::string::_private::flyweight_factory<
         {
             // 文字列の参照数を減じる。
             PSYQ_ASSERT(this->get_factory().get() != nullptr);
-            this->string_->reference_count.sub(1);
+            this->string_->reference_count_.sub(1);
         }
     }
 
@@ -768,13 +771,13 @@ class psyq::string::_private::flyweight_factory<
             {
                 // 文字列の参照数を減じる。
                 PSYQ_ASSERT(this->get_factory().get() != nullptr);
-                this->string_->reference_count.sub(1);
+                this->string_->reference_count_.sub(1);
             }
             if (in_source.string_ != nullptr)
             {
                 // 文字列の参照数を増やす。
                 PSYQ_ASSERT(in_source.get_factory().get() != nullptr);
-                in_source.string_->reference_count.add(1);
+                in_source.string_->reference_count_.add(1);
                 this->string_ = in_source.string_;
                 this->factory_ = in_source.get_factory();
             }
@@ -795,7 +798,7 @@ class psyq::string::_private::flyweight_factory<
             {
                 // 文字列の参照数を減じる。
                 PSYQ_ASSERT(this->get_factory().get() != nullptr);
-                this->string_->reference_count.sub(1);
+                this->string_->reference_count_.sub(1);
             }
 
             // 文字列を移動する。
@@ -815,7 +818,7 @@ class psyq::string::_private::flyweight_factory<
         {
             // 文字列の参照数を減じる。
             PSYQ_ASSERT(this->get_factory().get() != nullptr);
-            this->string_->reference_count.sub(1);
+            this->string_->reference_count_.sub(1);
             this->factory_.reset();
         }
         this->string_ = nullptr;
@@ -835,7 +838,7 @@ class psyq::string::_private::flyweight_factory<
     const PSYQ_NOEXCEPT
     {
         return this->string_ != nullptr?
-            (PSYQ_ASSERT(this->get_factory().get() != nullptr), this->string_->size):
+            (PSYQ_ASSERT(this->get_factory().get() != nullptr), this->string_->size_):
             0;
     }
 
@@ -852,7 +855,7 @@ class psyq::string::_private::flyweight_factory<
     const PSYQ_NOEXCEPT
     {
         return this->string_ != nullptr?
-            (PSYQ_ASSERT(this->get_factory().get() != nullptr), this->string_->hash):
+            (PSYQ_ASSERT(this->get_factory().get() != nullptr), this->string_->hash_):
             this_type::factory::hash::traits_type::EMPTY;
     }
 

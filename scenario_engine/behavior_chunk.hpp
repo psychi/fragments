@@ -5,7 +5,7 @@
 #ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_CHUNK_HPP_
 #define PSYQ_SCENARIO_ENGINE_BEHAVIOR_CHUNK_HPP_
 
-#include "./dispatcher.hpp"
+#include "./key_less.hpp"
 
 /// @cond
 namespace psyq

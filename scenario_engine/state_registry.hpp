@@ -5,6 +5,8 @@
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_REGISTRY_HPP_
 #define PSYQ_SCENARIO_ENGINE_STATE_REGISTRY_HPP_
 
+#include <cstdint>
+
 /// @cond
 namespace psyq
 {

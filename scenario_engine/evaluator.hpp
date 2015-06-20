@@ -5,6 +5,7 @@
 #ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_HPP_
 #define PSYQ_SCENARIO_ENGINE_EVALUATOR_HPP_
 
+#include "./key_less.hpp"
 #include "./expression.hpp"
 
 /// @cond

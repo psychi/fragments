@@ -5,9 +5,11 @@
 #ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_MONITOR_HPP_
 #define PSYQ_SCENARIO_ENGINE_EXPRESSION_MONITOR_HPP_
 
+#include <cstdint>
 #include <bitset>
 #include <vector>
 #include "./behavior.hpp"
+#include "./key_less.hpp"
 
 /// @cond
 namespace psyq

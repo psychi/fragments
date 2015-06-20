@@ -5,6 +5,7 @@
 #ifndef PSYQ_SCENARIO_ENGINE_MODIFIER_HPP_
 #define PSYQ_SCENARIO_ENGINE_MODIFIER_HPP_
 
+#include <cstdint>
 #include <vector>
 #include "../assert.hpp"
 

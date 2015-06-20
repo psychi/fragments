@@ -5,7 +5,6 @@
 #ifndef PSYQ_SCENARIO_ENGINE_DISPATCHER_HPP_
 #define PSYQ_SCENARIO_ENGINE_DISPATCHER_HPP_
 
-#include "../assert.hpp"
 #include "./expression_monitor.hpp"
 
 /// @cond

@@ -60,11 +60,7 @@ namespace psyq
 {
     namespace string
     {
-        template<
-            typename template_char_type,
-            typename = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
-            typename = PSYQ_STRING_HOLDER_ALLOCATOR_DEFAULT>
-                class holder;
+        template<typename, typename, typename> class holder;
 
         namespace _private
         {
@@ -82,34 +78,40 @@ namespace psyq
 template<typename template_char_traits, typename template_allocator_type>
 class psyq::string::_private::holder_base
 {
-    private: typedef holder_base this_type; ///< thisが指す値の型。
+    /// @brief thisが指す値の型。
+    private: typedef holder_base this_type;
 
     //-------------------------------------------------------------------------
-    /// 文字特性の型。
+    /// @brief 文字特性の型。
     public: typedef template_char_traits traits_type;
-    /// メモリ割当子の型。
+
+    /// @brief メモリ割当子の型。
     public: typedef template_allocator_type allocator_type;
-    /// 文字列定数のヘッダ。
-    private: struct constant_header
+
+    /// @brief 文字列定数のヘッダ。
+    private: class constant_header
     {
         /// @param[in] in_size 文字列の要素数。
-        explicit constant_header(std::size_t const in_size) PSYQ_NOEXCEPT:
-        hold_count(1),
-        size(in_size)
+        public: explicit constant_header(std::size_t const in_size)
+        PSYQ_NOEXCEPT:
+        hold_count_(1),
+        size_(in_size)
         {}
 
-        psyq::atomic_count hold_count; ///< 文字列定数の被参照数。
-        std::size_t const size;        ///< 文字列定数の要素数。
-    };
+        public: psyq::atomic_count hold_count_; ///< 文字列定数の被参照数。
+        public: std::size_t const size_;        ///< 文字列定数の要素数。
+
+    }; // class constant_header
     static_assert(
         std::alignment_of<typename this_type::traits_type::char_type>::value
         <= std::alignment_of<typename this_type::constant_header>::value,
         "std::alignment_of<this_type::constant_header>::value is greater than "
         "std::alignment_of<this_type::traits_type::char_type>::value");
-    /// 文字列定数に使うメモリ割当子。
-    protected: typedef typename this_type::allocator_type::template
-        rebind<std::size_t>::other
-            constant_allocator;
+
+    /// @brief 文字列定数に使うメモリ割当子。
+    protected: typedef
+        typename this_type::allocator_type::template rebind<std::size_t>::other
+        constant_allocator;
 
     //-------------------------------------------------------------------------
     /// @copydoc psyq::string::holder::holder(this_type const&)
@@ -139,7 +141,7 @@ class psyq::string::_private::holder_base
     constant_allocator_(std::move(in_allocator))
     {}
 
-    /// @brief 文字列を解放する。
+    /// @brief 文字列を解体する。
     public: ~holder_base() PSYQ_NOEXCEPT
     {
         this->release_constant();
@@ -184,7 +186,7 @@ class psyq::string::_private::holder_base
     public: std::size_t size() const PSYQ_NOEXCEPT
     {
         return this->get_constant() != nullptr?
-            this->constant_header_->size: this->twice_size_ >> 1;
+            this->constant_header_->size_: this->twice_size_ >> 1;
     }
 
     /// @copydoc psyq::string::view::max_size()
@@ -244,7 +246,7 @@ class psyq::string::_private::holder_base
         auto const local_constant(this->get_constant());
         auto const local_size(
             local_constant != nullptr?
-                local_constant->size: this->twice_size_ >> 1);
+                local_constant->size_: this->twice_size_ >> 1);
         if (this->data() == in_data && local_size == in_size)
         {
             // 等値な文字列なので、何もしない。
@@ -528,7 +530,7 @@ class psyq::string::_private::holder_base
     private: static std::size_t hold_constant(
         typename this_type::constant_header& io_constant)
     {
-        auto const local_count(io_constant.hold_count.add(1));
+        auto const local_count(io_constant.hold_count_.add(1));
         PSYQ_ASSERT(0 < local_count);
         return local_count;
     }
@@ -552,7 +554,7 @@ class psyq::string::_private::holder_base
         {
             return;
         }
-        auto const local_count(io_constant->hold_count.sub(1));
+        auto const local_count(io_constant->hold_count_.sub(1));
         if (0 < local_count)
         {
             PSYQ_ASSERT(0 < local_count + 1);
@@ -560,7 +562,7 @@ class psyq::string::_private::holder_base
         }
         psyq::atomic_count::acquire_fence();
         auto const local_allocate_size(
-            this_type::count_allocate_size(io_constant->size));
+            this_type::count_allocate_size(io_constant->size_));
         io_constant->~constant_header();
         io_allocator.deallocate(
             reinterpret_cast<typename this_type::constant_allocator::pointer>(
@@ -624,20 +626,23 @@ class psyq::string::_private::holder_base
  */
 template<
     typename template_char_type,
-    typename template_char_traits,
-    typename template_allocator_type>
+    typename template_char_traits = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
+    typename template_allocator_type = PSYQ_STRING_HOLDER_ALLOCATOR_DEFAULT>
 class psyq::string::holder:
 public psyq::string::_private::interface_immutable<
     psyq::string::_private::holder_base<
         template_char_traits, template_allocator_type>>
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef holder this_type;
-    /// this_type の基底型。
-    public: typedef psyq::string::_private::interface_immutable<
-        psyq::string::_private::holder_base<
-            template_char_traits, template_allocator_type>>
-                base_type;
+
+    /// @brief this_type の基底型。
+    public: typedef
+        psyq::string::_private::interface_immutable<
+            psyq::string::_private::holder_base<
+                template_char_traits, template_allocator_type>>
+        base_type;
+
     private: typedef typename base_type::allocator_type base_allocator;
 
     //-------------------------------------------------------------------------
@@ -804,3 +809,4 @@ public psyq::string::_private::interface_immutable<
 }; // psyq::string::holder
 
 #endif // !defined(PSYQ_STRING_HOLDER_HPP_)
+// vim: set expandtab:

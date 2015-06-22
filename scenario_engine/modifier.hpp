@@ -1,5 +1,5 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::modifier
+    @brief @copybrief psyq::scenario_engine::_private::modifier
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_SCENARIO_ENGINE_MODIFIER_HPP_
@@ -14,7 +14,10 @@ namespace psyq
 {
     namespace scenario_engine
     {
-        template<typename> class modifier;
+        namespace _private
+        {
+            template<typename> class modifier;
+        } // namespace _private
     } // namespace scenario_engine
 } // namespace psyq
 /// @endcond
@@ -22,21 +25,21 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief シナリオ状態変更器。バッチ処理で状態値の変更を行う。
 
-    使い方の概略。
+    ### 使い方の概略
     - modifier::accumulate で、状態変更を予約する。
     - modifier::_modify で、状態変更を実際に適用する。
 
     @tparam template_reservoir @copydoc modifier::reservoir
  */
 template<typename template_reservoir>
-class psyq::scenario_engine::modifier
+class psyq::scenario_engine::_private::modifier
 {
     /// @brief thisが指す値の型。
     private: typedef modifier this_type;
 
     /** @brief 状態変更を適用する状態貯蔵器の型。
 
-        psyq::scenario_engine::reservoir と互換性があること。
+        psyq::scenario_engine::_private::reservoir と互換性があること。
      */
     public: typedef template_reservoir reservoir;
 
@@ -245,7 +248,7 @@ class psyq::scenario_engine::modifier
     /// @brief 次回に行う状態変更のコンテナ。
     private: typename this_type::state_container pass_states_;
 
-}; // class psyq::scenario_engine::modifier
+}; // class psyq::scenario_engine::_private::modifier
 
 #endif // !defined(PSYQ_SCENARIO_ENGINE_MODIFIER_HPP_)
 // vim: set expandtab:

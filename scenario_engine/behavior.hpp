@@ -26,7 +26,7 @@ namespace psyq
 
     @tparam template_expression_key @copydoc psyq::scenario_engine::_private::expression::key
     @tparam template_evaluation     @copydoc psyq::scenario_engine::_private::expression::evaluation
-    @tparam template_priority       @copydoc psyq::scenario_engine::dispatcher::function_priority
+    @tparam template_priority       @copydoc psyq::scenario_engine::_private::dispatcher::function_priority
  */
 template<
     typename template_expression_key,

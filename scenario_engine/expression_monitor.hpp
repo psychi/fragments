@@ -31,10 +31,10 @@ namespace psyq
     条件式の評価結果と、
     条件式の評価結果が変化した際に呼び出す条件挙動関数オブジェクトを保持する。
 
-    @tparam template_expression_key @copydoc psyq::scenario_engine::evaluator::expression::key
-    @tparam template_evaluation     @copydoc psyq::scenario_engine::_private::expression::evaluation
-    @tparam template_priority       @copydoc psyq::scenario_engine::dispatcher::function_priority
-    @tparam template_allocator      @copydoc psyq::scenario_engine::reservoir::allocator_type
+    @tparam template_expression_key @copydoc evaluator::expression::key
+    @tparam template_evaluation     @copydoc expression::evaluation
+    @tparam template_priority       @copydoc dispatcher::function_priority
+    @tparam template_allocator      @copydoc reservoir::allocator_type
  */
 template<
     typename template_expression_key,

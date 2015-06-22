@@ -194,7 +194,7 @@ class psyq::scenario_engine::_private::sub_expression
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 状態変化条件式の要素条件。
 
-    @tparam template_state_key @copydoc psyq::scenario_engine::reservoir::state_key
+    @tparam template_state_key @copydoc psyq::scenario_engine::_private::reservoir::state_key
  */
 template<typename template_state_key>
 class psyq::scenario_engine::_private::state_transition
@@ -216,7 +216,7 @@ class psyq::scenario_engine::_private::state_transition
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 状態比較条件式の要素条件。
 
-    @tparam template_state_key @copydoc psyq::scenario_engine::reservoir::state_key
+    @tparam template_state_key @copydoc psyq::scenario_engine::_private::reservoir::state_key
  */
 template<
     typename template_state_key,
@@ -252,10 +252,10 @@ class psyq::scenario_engine::_private::state_comparison
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 要素条件チャンク。
 
-    @tparam template_chunk_key                  @copydoc psyq::scenario_engine::reservoir::chunk_key
-    @tparam template_sub_expression_container   @copydoc psyq::scenario_engine::evaluator::sub_expression_container
-    @tparam template_state_transition_container @copydoc psyq::scenario_engine::evaluator::state_transition_container
-    @tparam template_state_comparison_container @copydoc psyq::scenario_engine::evaluator::state_comparison_container
+    @tparam template_chunk_key                  @copydoc reservoir::chunk_key
+    @tparam template_sub_expression_container   @copydoc evaluator::sub_expression_container
+    @tparam template_state_transition_container @copydoc evaluator::state_transition_container
+    @tparam template_state_comparison_container @copydoc evaluator::state_comparison_container
  */
 template<
     typename template_chunk_key,

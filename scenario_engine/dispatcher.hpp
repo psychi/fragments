@@ -1,5 +1,5 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::dispatcher
+    @brief @copybrief psyq::scenario_engine::_private::dispatcher
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_SCENARIO_ENGINE_DISPATCHER_HPP_
@@ -12,9 +12,9 @@ namespace psyq
 {
     namespace scenario_engine
     {
-        template<typename, typename> class dispatcher;
         namespace _private
         {
+            template<typename, typename> class dispatcher;
             template<typename, typename, typename> class state_monitor;
         } // namespace _private
     } // namespace scenario_engine
@@ -22,102 +22,33 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 状態監視器。
-
-    条件式の要素条件が参照する状態を監視し、
-    状態変化した際に、条件式の評価を更新するために使う。
- */
-template<
-    typename template_state_key,
-    typename template_expression_key,
-    typename template_allocator>
-class psyq::scenario_engine::_private::state_monitor
-{
-    /// @brief thisが指す値の型。
-    private: typedef state_monitor this_type;
-
-    /// @brief 状態監視器のコンテナ。
-    public: typedef std::vector<this_type, template_allocator> container;
-
-    /// @brief 状態監視器を状態値の識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
-    public: typedef
-        psyq::scenario_engine::_private::key_less<
-            psyq::scenario_engine::_private::object_key_getter<
-                this_type, template_state_key>>
-        key_less;
-
-    /// @brief 条件式の識別値のコンテナの型。
-    public: typedef
-        std::vector<template_expression_key, template_allocator>
-        expression_key_container;
-
-    /** @brief 状態監視器を構築する。
-        @param[in] in_key       状態値の識別値。
-        @param[in] in_allocator メモリ割当子の初期値。
-     */
-    public: state_monitor(
-        template_state_key in_key,
-        template_allocator const& in_allocator)
-    :
-    expression_keys_(in_allocator),
-    key_(std::move(in_key))
-    {}
-
-#ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
-    /** @brief ムーブ構築子。
-        @param[in,out] io_source ムーブ元となるインスタンス。
-     */
-    public: state_monitor(this_type&& io_source):
-    expression_keys_(std::move(io_source.expression_keys_)),
-    key_(std::move(io_source.key_))
-    {}
-
-    /** @brief ムーブ代入演算子。
-        @param[in,out] io_source ムーブ元となるインスタンス。
-        @return *this
-     */
-    public: this_type& operator=(this_type&& io_source)
-    {
-        this->expression_keys_ = std::move(io_source.expression_keys_);
-        this->key_ = std::move(io_source.key_);
-        return *this;
-    }
-#endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
-
-    /// @brief 評価の更新を要求する条件式の識別値のコンテナ。
-    public: typename this_type::expression_key_container expression_keys_;
-    /// @brief 状態値の識別値。
-    public: template_state_key key_;
-
-}; // class psyq::scenario_engine::_private::state_monitor
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief シナリオ条件挙動器。条件式の評価結果が変化すると、条件挙動関数を呼び出す。
 
-    使い方の概略。
-    - dispatcher::register_function を呼び出し、
+    ### 使い方の概略
+    - dispatcher::register_function で、
       条件式の評価結果が変化したときに呼び出す条件挙動関数を登録する。
-    - driver::update をフレーム毎に呼び出し、
-      条件式の評価結果が変化を検知して、条件挙動関数を呼び出す。
+    - dispatcher::_dispatch で、
+      条件式の評価結果の変化を検知した条件挙動関数を呼び出す。
 
     @tparam template_evaluator @copydoc dispatcher::evaluator
     @tparam template_priority  @copydoc dispatcher::function_priority
  */
-template<
-    typename template_evaluator,
-    typename template_priority = std::int32_t>
-class psyq::scenario_engine::dispatcher
+template<typename template_evaluator, typename template_priority>
+class psyq::scenario_engine::_private::dispatcher
 {
     /// @brief thisが指す値の型。
     private: typedef dispatcher this_type;
 
     /** @brief 条件挙動器で使う条件評価器の型。
 
-        psyq::scenario_engine::evaluator と互換性があること。
+        psyq::scenario_engine::_private::evaluator と互換性があること。
      */
     public: typedef template_evaluator evaluator;
 
-    /// @brief 条件挙動関数の呼び出し優先順位の型。
+    /** @brief 条件挙動関数の呼び出し優先順位の型。
+
+        条件挙動関数は、優先順位の昇順で呼び出される。
+     */
     public: typedef template_priority function_priority;
 
     /// @brief コンテナに用いるメモリ割当子の型。
@@ -861,7 +792,77 @@ class psyq::scenario_engine::dispatcher
     /// @brief 多重に条件挙動関数を呼び出さないためのロック。
     private: bool dispatch_lock_;
 
-}; // class psyq::scenario_engine::dispatcher
+}; // class psyq::scenario_engine::_private::dispatcher
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 状態監視器。
+
+    条件式の要素条件が参照する状態を監視し、
+    状態変化した際に、条件式の評価を更新するために使う。
+ */
+template<
+    typename template_state_key,
+    typename template_expression_key,
+    typename template_allocator>
+class psyq::scenario_engine::_private::state_monitor
+{
+    /// @brief thisが指す値の型。
+    private: typedef state_monitor this_type;
+
+    /// @brief 状態監視器のコンテナ。
+    public: typedef std::vector<this_type, template_allocator> container;
+
+    /// @brief 状態監視器を状態値の識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
+    public: typedef
+        psyq::scenario_engine::_private::key_less<
+            psyq::scenario_engine::_private::object_key_getter<
+                this_type, template_state_key>>
+        key_less;
+
+    /// @brief 条件式の識別値のコンテナの型。
+    public: typedef
+        std::vector<template_expression_key, template_allocator>
+        expression_key_container;
+
+    /** @brief 状態監視器を構築する。
+        @param[in] in_key       状態値の識別値。
+        @param[in] in_allocator メモリ割当子の初期値。
+     */
+    public: state_monitor(
+        template_state_key in_key,
+        template_allocator const& in_allocator)
+    :
+    expression_keys_(in_allocator),
+    key_(std::move(in_key))
+    {}
+
+#ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
+    /** @brief ムーブ構築子。
+        @param[in,out] io_source ムーブ元となるインスタンス。
+     */
+    public: state_monitor(this_type&& io_source):
+    expression_keys_(std::move(io_source.expression_keys_)),
+    key_(std::move(io_source.key_))
+    {}
+
+    /** @brief ムーブ代入演算子。
+        @param[in,out] io_source ムーブ元となるインスタンス。
+        @return *this
+     */
+    public: this_type& operator=(this_type&& io_source)
+    {
+        this->expression_keys_ = std::move(io_source.expression_keys_);
+        this->key_ = std::move(io_source.key_);
+        return *this;
+    }
+#endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
+
+    /// @brief 評価の更新を要求する条件式の識別値のコンテナ。
+    public: typename this_type::expression_key_container expression_keys_;
+    /// @brief 状態値の識別値。
+    public: template_state_key key_;
+
+}; // class psyq::scenario_engine::_private::state_monitor
 
 #endif // !defined(PSYQ_SCENARIO_ENGINE_DISPATCHER_HPP_)
 // vim: set expandtab:

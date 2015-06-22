@@ -1,5 +1,5 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::reservoir
+    @brief @copybrief psyq::scenario_engine::_private::reservoir
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_SCENARIO_ENGINE_RESERVOIR_HPP_
@@ -15,14 +15,11 @@ namespace psyq
     /// @brief ビデオゲームでのシナリオ進行を管理するための実装
     namespace scenario_engine
     {
-        /// @cond
-        template<typename, typename, typename, typename> class reservoir;
-        /// @endcond
-
         /// @brief psyq::scenario_engine の管理者以外は、直接アクセス禁止。
         namespace _private
         {
             /// @cond
+            template<typename, typename, typename, typename> class reservoir;
             template<typename template_float> union float_union {};
             template<> union float_union<float>
             {
@@ -42,7 +39,7 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief シナリオ状態貯蔵器。任意のビット長の状態値を管理する。
 
-    使い方の概略。
+    ### 使い方の概略
     - 以下の関数で、状態値を登録する。
       - reservoir::register_bool
       - reservoir::register_unsigned
@@ -58,11 +55,11 @@ namespace psyq
     @tparam template_allocator @copydoc reservoir::allocator_type
  */
 template<
-    typename template_float = float,
-    typename template_state_key = std::uint32_t,
-    typename template_chunk_key = template_state_key,
-    typename template_allocator = std::allocator<void*>>
-class psyq::scenario_engine::reservoir
+    typename template_float,
+    typename template_state_key,
+    typename template_chunk_key,
+    typename template_allocator>
+class psyq::scenario_engine::_private::reservoir
 {
     /// thisが指す値の型。
     private: typedef reservoir this_type;
@@ -1146,7 +1143,7 @@ class psyq::scenario_engine::reservoir
     /// @brief 状態値ビット列チャンクのコンテナ。
     private: typename this_type::chunk_container chunks_;
 
-}; // class psyq::scenario_engine::reservoir
+}; // class psyq::scenario_engine::_private::reservoir
 
 #endif // !defined(PSYQ_SCENARIO_ENGINE_RESERVOIR_HPP_)
 // vim: set expandtab:

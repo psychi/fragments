@@ -5,43 +5,43 @@
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_HPP_
 #define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_HPP_
 
-#include "../assert.hpp"
+#include "../string/csv_table.hpp"
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KEY
-#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KEY "KEY"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KEY)
+#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_COLUMN_KEY
+#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_COLUMN_KEY "KEY"
+#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_COLUMN_KEY)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KIND
-#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KIND "KIND"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KIND)
+#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_COLUMN_KIND
+#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_COLUMN_KIND "KIND"
+#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_COLUMN_KIND)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_VALUE
-#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_VALUE "VALUE"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_VALUE)
+#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_COLUMN_VALUE
+#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_COLUMN_VALUE "VALUE"
+#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_COLUMN_VALUE)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_BOOL
-#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_BOOL "BOOL"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_BOOL)
+#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_KIND_BOOL
+#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_KIND_BOOL "BOOL"
+#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_KIND_BOOL)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_UNSIGNED
-#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_UNSIGNED "UNSIGNED"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_UNSIGNED)
+#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_KIND_UNSIGNED
+#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_KIND_UNSIGNED "UNSIGNED"
+#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_KIND_UNSIGNED)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_SIGNED
-#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_SIGNED "SIGNED"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_SIGNED)
+#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_KIND_SIGNED
+#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_KIND_SIGNED "SIGNED"
+#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_KIND_SIGNED)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_FLOAT
-#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_FLOAT "FLOAT"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_FLOAT)
+#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_KIND_FLOAT
+#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_KIND_FLOAT "FLOAT"
+#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_KIND_FLOAT)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_INTEGER_SIZE_DEFAULT
-#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_INTEGER_SIZE_DEFAULT 32
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_INTEGER_SIZE_DEFAULT)
+#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_INTEGER_SIZE_DEFAULT
+#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_INTEGER_SIZE_DEFAULT 32
+#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_INTEGER_SIZE_DEFAULT)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_FLOAT_SIZE_DEFAULT
-#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_FLOAT_SIZE_DEFAULT 32
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_FLOAT_SIZE_DEFAULT)
+#ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_FLOAT_SIZE_DEFAULT
+#define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_FLOAT_SIZE_DEFAULT 32
+#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_BUILDER_FLOAT_SIZE_DEFAULT)
 
 /// @cond
 namespace psyq
@@ -56,9 +56,9 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 文字列表から状態値を構築する関数オブジェクト。
 
-    driver::add_chunk の引数として使う。
+    driver::extend_chunk の引数として使う。
 
-    @tparam template_string 文字列表で使う文字列の型。
+    @tparam template_string CSV文字列表で使う文字列の型。
  */
 template<typename template_string>
 class psyq::scenario_engine::state_builder
@@ -77,13 +77,13 @@ class psyq::scenario_engine::state_builder
         PSYQ_NOEXCEPT:
         key_(
             in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KEY)),
+                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_COLUMN_KEY)),
         kind_(
             in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_KIND)),
+                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_COLUMN_KIND)),
         value_(
             in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_COLUMN_VALUE))
+                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_COLUMN_VALUE))
         {}
 
         public: bool is_valid() const PSYQ_NOEXCEPT
@@ -237,13 +237,13 @@ class psyq::scenario_engine::state_builder
         typename this_type::string_table::string_view const& in_kind,
         typename this_type::string_table::string_view const& in_value)
     {
-        if (in_kind == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_BOOL)
+        if (in_kind == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_KIND_BOOL)
         {
             // 論理型の状態値を登録する。
             return this_type::register_bool(
                 io_reservoir, in_chunk_key, in_state_key, in_value);
         }
-        if (in_kind == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_FLOAT)
+        if (in_kind == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_KIND_FLOAT)
         {
             // 浮動小数点数型の状態値を登録する。
             return this_type::register_float(
@@ -253,7 +253,7 @@ class psyq::scenario_engine::state_builder
         auto const local_unsigned_size(
             this_type::get_integer_size(
                 in_kind,
-                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_UNSIGNED,
+                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_KIND_UNSIGNED,
                 local_default_size));
         if (0 < local_unsigned_size)
         {
@@ -268,7 +268,7 @@ class psyq::scenario_engine::state_builder
         auto const local_signed_size(
             this_type::get_integer_size(
                 in_kind,
-                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_CSV_KIND_SIGNED,
+                PSYQ_SCENARIO_ENGINE_STATE_BUILDER_KIND_SIGNED,
                 local_default_size));
         if (0 < local_signed_size)
         {

@@ -702,6 +702,7 @@ INPUT                  = \
                          ./string/flyweight.hpp \
                          ./string/table.hpp \
                          ./string/csv_table.hpp \
+                         ./string/relation_table.hpp \
                          ./any/rtti.hpp \
                          ./any/storage.hpp \
                          ./any/message/tag.hpp \

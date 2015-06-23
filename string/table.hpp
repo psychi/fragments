@@ -1,5 +1,5 @@
 ﻿/*
-Copyright (c) 2013, Hillco Psychi, All rights reserved.
+Copyright (c) 2015, Hillco Psychi, All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met: 
@@ -46,956 +46,396 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STRING_TABLE_HPP_
 #define PSYQ_STRING_TABLE_HPP_
 
-#include <unordered_map>
-//#include "psyq/string/holder.hpp"
+#include <vector>
+#include "./view.hpp"
 
+#ifndef PSYQ_STRING_TABLE_MAX_COLUMN_COUNT
+#define PSYQ_STRING_TABLE_MAX_COLUMN_COUNT 16384
+#endif // !defined(PSYQ_STRING_TABLE_MAX_COLUMN_COUNT)
+
+/// @cond
 namespace psyq
 {
     namespace string
     {
-        /// @cond
-        template<typename> class table;
-        /// @endcond
-
-        /// psyq::string::holder を使った、文字列の表。
-        typedef psyq::string::table<
-            std::unordered_map<std::size_t, psyq::string::holder<char>>>
-                holder_table;
-
-        //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-        namespace _private
-        {
-            /** @brief 文字列を解析し、数値に変換する。
-                @param[out] out_value
-                  - 文字列の解析に成功した場合、解析して取り出した値が代入される。
-                  - 文字列の解析に失敗した場合、代入は行われない。
-                @param[in]  in_string  解析する文字列。
-                @retval true  文字列の解析に成功した。
-                @retval false 文字列の解析に失敗した。
-             */
-            template<typename template_number_type, typename template_string_type>
-            bool deserialize_table_cell_number(
-                template_number_type& out_value,
-                template_string_type const* const in_string)
-            PSYQ_NOEXCEPT
-            {
-                if (in_string == nullptr)
-                {
-                    return false;
-                }
-
-                // 文字列の前後の空白を取り除く。
-                typedef psyq::string::view<
-                    typename template_string_type::value_type,
-                    typename template_string_type::traits_type>
-                        string_view;
-                auto const local_string(string_view(*in_string).trim());
-                if (local_string.empty())
-                {
-                    return false;
-                }
-
-                // 文字列を解析し、値を取り出す。
-                std::size_t local_rest_size(0);
-                auto const local_value(
-                    local_string.template to_real<double>(&local_rest_size));
-                if (0 < local_rest_size)
-                {
-                    return false;
-                }
-                out_value = static_cast<template_number_type>(local_value);
-                return true;
-            }
-
-            /** @brief 文字列を解析し、文字列に変換する。
-                @param[out] out_value
-                  - 文字列の解析に成功した場合、解析して取り出した値が代入される。
-                  - 文字列の解析に失敗した場合、代入は行われない。
-                @param[in]  in_string  解析する文字列。
-                @retval true  文字列の解析に成功した。
-                @retval false 文字列の解析に失敗した。
-             */
-            template<typename template_value_type, typename template_string_type>
-            bool deserialize_table_cell(
-                template_value_type& out_value,
-                template_string_type const* const in_string)
-            {
-                if (in_string == nullptr)
-                {
-                    return false;
-                }
-
-                // 文字列の前後の空白を取り除く。
-                typedef psyq::string::view<
-                    typename template_string_type::value_type,
-                    typename template_string_type::traits_type>
-                        string_view;
-                auto const local_string(string_view(*in_string).trim());
-                if (local_string.empty())
-                {
-                    return false;
-                }
-                out_value = local_string;
-                return true;
-            }
-
-            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
-            template<typename template_string_type>
-            bool deserialize_table_cell(
-                signed char& out_value,
-                template_string_type const* const in_string)
-            PSYQ_NOEXCEPT
-            {
-                return psyq::string::_private::deserialize_table_cell_number(
-                    out_value, in_string);
-            }
-
-            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
-            template<typename template_string_type>
-            bool deserialize_table_cell(
-                unsigned char& out_value,
-                template_string_type const* const in_string)
-            PSYQ_NOEXCEPT
-            {
-                return psyq::string::_private::deserialize_table_cell_number(
-                    out_value, in_string);
-            }
-
-            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
-            template<typename template_string_type>
-            bool deserialize_table_cell(
-                signed short& out_value,
-                template_string_type const* const in_string)
-            PSYQ_NOEXCEPT
-            {
-                return psyq::string::_private::deserialize_table_cell_number(
-                    out_value, in_string);
-            }
-
-            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
-            template<typename template_string_type>
-            bool deserialize_table_cell(
-                unsigned short& out_value,
-                template_string_type const* const in_string)
-            PSYQ_NOEXCEPT
-            {
-                return psyq::string::_private::deserialize_table_cell_number(
-                    out_value, in_string);
-            }
-
-            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
-            template<typename template_string_type>
-            bool deserialize_table_cell(
-                signed int& out_value,
-                template_string_type const* const in_string)
-            PSYQ_NOEXCEPT
-            {
-                return psyq::string::_private::deserialize_table_cell_number(
-                    out_value, in_string);
-            }
-
-            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
-            template<typename template_string_type>
-            bool deserialize_table_cell(
-                unsigned int& out_value,
-                template_string_type const* const in_string)
-            PSYQ_NOEXCEPT
-            {
-                return psyq::string::_private::deserialize_table_cell_number(
-                    out_value, in_string);
-            }
-
-            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
-            template<typename template_string_type>
-            bool deserialize_table_cell(
-                signed long& out_value,
-                template_string_type const* const in_string)
-            PSYQ_NOEXCEPT
-            {
-                return psyq::string::_private::deserialize_table_cell_number(
-                    out_value, in_string);
-            }
-
-            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
-            template<typename template_string_type>
-            bool deserialize_table_cell(
-                unsigned long& out_value,
-                template_string_type const* const in_string)
-            PSYQ_NOEXCEPT
-            {
-                return psyq::string::_private::deserialize_table_cell_number(
-                    out_value, in_string);
-            }
-
-            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
-            template<typename template_string_type>
-            bool deserialize_table_cell(
-                signed long long& out_value,
-                template_string_type const* const in_string)
-            PSYQ_NOEXCEPT
-            {
-                return psyq::string::_private::deserialize_table_cell_number(
-                    out_value, in_string);
-            }
-
-            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
-            template<typename template_string_type>
-            bool deserialize_table_cell(
-                unsigned long long& out_value,
-                template_string_type const* const in_string)
-            PSYQ_NOEXCEPT
-            {
-                return psyq::string::_private::deserialize_table_cell_number(
-                    out_value, in_string);
-            }
-
-            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
-            template<typename template_string_type>
-            bool deserialize_table_cell(
-                float& out_value,
-                template_string_type const* const in_string)
-            PSYQ_NOEXCEPT
-            {
-                return psyq::string::_private::deserialize_table_cell_number(
-                    out_value, in_string);
-            }
-
-            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
-            template<typename template_string_type>
-            bool deserialize_table_cell(
-                double& out_value,
-                template_string_type const* const in_string)
-            PSYQ_NOEXCEPT
-            {
-                return psyq::string::_private::deserialize_table_cell_number(
-                    out_value, in_string);
-            }
-
-            /// @copydoc psyq::string::_private::deserialize_table_cell_number()
-            template<typename template_string_type>
-            bool deserialize_table_cell(
-                long double& out_value,
-                template_string_type const* const in_string)
-            PSYQ_NOEXCEPT
-            {
-                return psyq::string::_private::deserialize_table_cell_number(
-                    out_value, in_string);
-            }
-        } // namespace _private
+        template<typename, typename> class table;
     } // namespace string
 } // namespace psyq
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 文字列の表。CSV形式の文字列から構築する。
-
-    使い方の概略。
-    -# this_type::make_column_map() で、列の辞書を構築する。
-    -# this_type::table() に列の辞書を渡し、文字列表を構築する。
-    -# this_type::deserialize_body_cell() で任意のcell文字列を解析し、値を取り出す。
-
-    @tparam template_cell_map @copydoc this_type::cell_map
- */
-template<typename template_cell_map>
+/** @brief 行番号と列番号で参照する、文字列の表。
+    @tparam template_string    @copybrief table::string
+    @tparam template_allocator @copybrief table::allocator_type
+*/
+template<
+    typename template_string = std::string,
+    typename template_allocator = typename template_string::allocator_type>
 class psyq::string::table
 {
     private: typedef table this_type; ///< thisが指す値の型。
 
-    /** @brief 文字列表のcellの辞書。
+    //-------------------------------------------------------------------------
+    /// @brief 文字列表で使う、std::basic_string互換の文字列型。
+    public: typedef template_string string;
 
-        - std::unordered_map 互換の型。
-        - this_type::cell_map::key_type は、文字列表の行の番号。
-        - this_type::cell_map::mapped_type は、文字列表のcell文字列となる、
-          psyq::basic_string_holder 相当の文字列。
-     */
-    public: typedef template_cell_map cell_map;
+    /// @brief メモリ割当子を表す型。
+    public: typedef template_allocator allocator_type;
 
-    /// @brief 文字列表の列辞書の要素。
-    private: typedef std::pair<
-        typename this_type::cell_map::key_type const, typename this_type::cell_map>
-            column_map_element;
+    /// @brief 文字列のメモリ割当子を表す型。
+    protected: typedef
+        typename this_type::string::allocator_type
+        string_allocator;
 
-    /** @brief 文字列表の列の辞書。
+    /// @brief 文字列表で使う、文字列参照の型。
+    public: typedef
+        psyq::string::view<
+            typename this_type::string::value_type,
+            typename this_type::string::traits_type> 
+        string_view;
 
-        - this_type::column_map::key_type は、文字列表の列の番号。
-        - this_type::column_map::mapped_type は、文字列表の列が持つ、cellの辞書。
-
-        @note 2014.04.05
-            文字列表では行の辞書を保持することも考えたが、
-            属性の追加や削除などといった表の編集を考えると、
-            列の辞書を保持したほうがいいように思う。
-     */
-    public: typedef std::unordered_map<
-        typename this_type::cell_map::key_type,
-        typename this_type::cell_map,
-        std::hash<typename this_type::cell_map::key_type>,
-        std::equal_to<typename this_type::cell_map::key_type>,
-        typename this_type::cell_map::allocator_type::template
-            rebind<typename this_type::column_map_element>::other>
-                column_map;
-
-    /// @brief 文字列表のcellとなる、 psyq::basic_string_holder 相当の文字列。
-    public: typedef typename this_type::cell_map::mapped_type cell;
-
-    /// @brief 文字列表のcell文字列への参照。
-    public: typedef psyq::string::view<
-        typename this_type::cell::value_type const,
-        typename this_type::cell::traits_type>
-            cell_view;
-
-    /// @brief 文字列表の列の属性。
-    public: struct attribute
+    public: enum: typename this_type::string::size_type
     {
-        PSYQ_CONSTEXPR attribute(
-            typename this_type::column_map::key_type const in_column,
-            typename this_type::column_map::key_type const in_size)
-        PSYQ_NOEXCEPT:
-            column(in_column),
-            size(in_size)
-        {}
-
-        typename this_type::column_map::key_type column; ///< 属性の列番号。
-        typename this_type::column_map::key_type size;   ///< 属性の要素数。
+        /// @brief 列の最大数。
+        MAX_COLUMN_COUNT = PSYQ_STRING_TABLE_MAX_COLUMN_COUNT,
+        /// @brief 行の最大数。
+        MAX_ROW_COUNT = this_type::string::npos / MAX_COLUMN_COUNT + 1,
     };
 
-    /// @brief 文字列表の列属性の辞書の要素。
-    private: typedef std::pair<
-        typename this_type::cell_view const, typename this_type::attribute>
-            attribute_map_element;
+    //-------------------------------------------------------------------------
+    /// @brief 文字列表のセル。
+    private: class cell
+    {
+        public: cell(
+            typename this_type::string::size_type const in_index,
+            typename this_type::string::size_type const in_offset,
+            typename this_type::string::size_type const in_size)
+        PSYQ_NOEXCEPT: index_(in_index), offset_(in_offset), size_(in_size)
+        {}
 
-    /** @brief 文字列表の列属性の辞書。
+        /// @brief セルのインデクス番号。
+        public: typename this_type::string::size_type index_;
+        /// @brief セル文字列のオフセット位置。
+        public: typename this_type::string::size_type offset_;
+        /// @brief セル文字列の要素数。
+        public: typename this_type::string::size_type size_;
 
-        - this_type::attribute_map::key_type は、文字列表の列属性の名前。
-        - this_type::attribute_map::mapped_type は、文字列表の列属性。
-     */
-    public: typedef std::unordered_map<
-        typename this_type::cell_view,
-        typename this_type::attribute,
-        typename this_type::cell_view::fnv1_hash32,
-        std::equal_to<typename this_type::cell_view>,
-        typename this_type::cell_map::allocator_type::template
-            rebind<typename this_type::attribute_map_element>::other>
-                attribute_map;
+    }; // class cell
+
+    /// @brief 文字列表のセルのコンテナ。
+    private: typedef
+        std::vector<
+            typename this_type::cell, typename this_type::allocator_type>
+        cell_container;
+
+    /// @brief セルのインデクス番号を比較する関数オブジェクト。
+    private: struct cell_index_less
+    {
+        bool operator()(
+            typename table::string::size_type const in_left_index,
+            typename table::cell_container::value_type const& in_right_cell)
+        const PSYQ_NOEXCEPT
+        {
+            return in_left_index < in_right_cell.index_;
+        }
+        bool operator()(
+            typename table::cell_container::value_type const& in_left_cell,
+            typename table::string::size_type const in_right_index)
+        const PSYQ_NOEXCEPT
+        {
+            return in_left_cell.index_ < in_right_index;
+        }
+    }; // struct cell_index_less
 
     //-------------------------------------------------------------------------
-    /// @name 文字列表の構築と破棄
+    /// @name 構築と代入
     //@{
-    /** @brief 列の辞書から文字列表を構築する。
-        @param[in] in_column_map
-            this_type::make_column_map() で構築した、列の辞書。
-        @param[in] in_attribute_row 文字列表の列属性として使う、行の番号。
+    /** @brief 文字列表をコピー構築する。
+        @param[in] in_source コピー元となる文字列表。
      */
-    public: table(
-        typename this_type::column_map in_column_map,
-        typename this_type::cell_map::key_type const in_attribute_row)
-    :
-        attribute_map_(
-            this_type::make_attribute_map(in_column_map, in_attribute_row)),
-        attribute_row_(in_attribute_row),
-        column_map_(std::move(in_column_map))
+    public: table(this_type const& in_source):
+    combined_string_(in_source.combined_string_),
+    cells_(in_source.cells_.cells_),
+    row_count_(in_source.get_row_count()),
+    column_count_(in_source.get_column_count())
     {}
 
-    /** @brief move構築子。
-        @param[in,out] io_source move元となる文字列表。
+    /** @brief 文字列表をムーブ構築する。
+        @param[in,out] io_source ムーブ元となる文字列表。
      */
     public: table(this_type&& io_source):
-        attribute_map_(std::move(io_source.attribute_map_)),
-        attribute_row_(std::move(io_source.attribute_row_)),
-        column_map_(std::move(io_source.column_map_))
+    combined_string_(std::move(io_source.combined_string_)),
+    cells_(std::move(io_source.cells_)),
+    row_count_(in_source.get_row_count()),
+    column_count_(in_source.get_column_count())
     {
-        if (this != &io_source)
-        {
-            io_source.clear();
-        }
+        io_source.row_count_ = 0;
+        io_source.column_count = 0;
     }
 
-    //public: this_type& operator=(this_type const& in_source) = default;
+    /** @brief 文字列表をコピー代入する。
+        @param[in] in_source コピー元となる文字列表。
+        @return *this
+     */
+    public: this_type& operator=(this_type const& in_source)
+    {
+        this->combined_string_ = in_source.combined_string_;
+        this->cells_ = in_source.cells_.cells_;
+        this->row_count_ = in_source.get_row_count();
+        this->column_count_ = in_source.get_column_count();
+        return *this;
+    }
 
-    /** @brief move代入演算子。
-        @param[in,out] io_source move元となる文字列表。
+    /** @brief 文字列表をムーブ代入する。
+        @param[in,out] io_source ムーブ元となる文字列表。
         @return *this
      */
     public: this_type& operator=(this_type&& io_source)
     {
         if (this != &io_source)
         {
-            this->attribute_map_ = std::move(io_source.attribute_map_);
-            this->attribute_row_ = std::move(io_source.attribute_row_);
-            this->column_map_ = std::move(io_source.column_map_);
-            io_source.clear();
+            this->combined_string_ = std::move(io_source.combined_string_);
+            this->cells_ = std::move(io_source.cells_.cells_);
+            this->row_count_ = io_source.get_row_count();
+            this->column_count_ = io_source.get_column_count();
+            io_source.row_count_ = 0;
+            io_source.column_count_ = 0;
         }
         return *this;
     }
 
-    /** @brief 文字列表を空にする。
-     */
-    public: void clear()
-    {
-        this->attribute_map_.clear();
-        this->attribute_row_ = 0;
-        this->column_map_.clear();
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name 文字列表の情報
-    //@{
-    /** @brief 文字列表の列の辞書を取得する。
-        @return @copydoc column_map
-     */
-    public: typename this_type::column_map const& get_column_map()
+    public: typename this_type::string::allocator_type get_string_allocator()
     const PSYQ_NOEXCEPT
     {
-        return this->column_map_;
+        return this->combined_string_.get_allocator();
     }
 
-    /** @brief 文字列表の列属性の辞書を取得する。
-        @return @copydoc attribute_map
-     */
-    public: typename this_type::attribute_map const& get_attribute_map()
+    public: typename this_type::allocator_type get_cell_allocator()
     const PSYQ_NOEXCEPT
     {
-        return this->attribute_map_;
+        return this->cells_.get_allocator();
     }
-
-    /** @brief 文字列表の列属性として使っている行の番号を取得する。
-        @return @copydoc attribute_row_
+    //@}
+    //-------------------------------------------------------------------------
+    /// @name セル
+    //@{
+    /** @brief 文字列表の行数を取得する。
+        @return 文字列表の行数。
      */
-    public: typename this_type::cell_map::key_type get_attribute_row()
+    public: typename this_type::string::size_type get_row_count()
     const PSYQ_NOEXCEPT
     {
-        return this->attribute_row_;
+        return this->row_count_;
+    }
+
+    /** @brief 文字列表の列数を取得する。
+        @return 文字列表の列数。
+     */
+    public: typename this_type::string::size_type get_column_count()
+    const PSYQ_NOEXCEPT
+    {
+        return this->column_count_;
+    }
+
+    /** @brief 行番号と属性から、文字列表の本体セルを検索する。
+        @param[in] in_row_index    検索する本体セルの行番号。
+        @param[in] in_column_index 検索する本体セルの列番号。
+        @return
+            行番号と列番号に対応する本体セルの文字列。
+            対応する本体セルがない場合は、空文字列を返す。
+     */
+    public: typename this_type::string_view find_cell(
+        typename this_type::string::size_type const in_row_index,
+        typename this_type::string::size_type const in_column_index)
+    const PSYQ_NOEXCEPT
+    {
+        if (in_column_index < this->get_column_count()
+            && in_row_index < this->get_row_count())
+        {
+            auto const local_cell_index(
+                this_type::compute_cell_index(in_row_index, in_column_index));
+            auto const local_lower_bound(
+                std::lower_bound(
+                    this->cells_.begin(),
+                    this->cells_.end(),
+                    local_cell_index,
+                    typename this_type::cell_index_less()));
+            if (local_lower_bound != this->cells_.end()
+                && local_lower_bound->first == local_cell_index)
+            {
+                return typename this_type::string_view(
+                    this->combined_string_.data() +
+                        local_lower_bound->second.offset_,
+                    local_lower_bound->second.size_);
+            }
+        }
+        return typename this_type::string_view();
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name cellの解析
-    //@{
-    /** @brief 文字列表の本体のcell文字列を解析し、値を取り出す。
-        @param[out] out_value
-          - cell文字列の解析に成功した場合、解析して取り出した値が代入される。
-          - cell文字列の解析に失敗した場合、代入は行われない。
-        @param[in] in_row_key         解析するcellの、行番号。
-        @param[in] in_attribute_key   解析するcellの、列属性の名前。
-        @param[in] in_attribute_index 解析するcellの、列属性のindex番号。
-        @retval true  cell文字列の解析に成功した。
-        @retval false cell文字列の解析に失敗した。
+    /** @brief 空の文字列表を構築する。
+        @param[in] in_string_allocator 文字列のメモリ割当子。
+        @param[in] in_cell_allocator   セルのメモリ割当子。
      */
-    public: template<typename template_value_type>
-    bool deserialize_body_cell(
-        template_value_type& out_value,
-        typename this_type::cell_map::key_type const in_row_key,
-        typename this_type::cell_view const& in_attribute_key,
-        typename this_type::column_map::key_type const in_attribute_index = 0)
-    const
-    {
-        return psyq::string::_private::deserialize_table_cell(
-            out_value,
-            this->find_body_cell(
-                in_row_key, in_attribute_key, in_attribute_index));
-    }
+    protected: explicit table(
+        typename this_type::string::allocator_type const& in_string_allocator,
+        typename this_type::allocator_type const& in_cell_allocator)
+    :
+    combined_string_(in_string_allocator),
+    cells_(in_cell_allocator),
+    row_count_(0),
+    column_count(0)
+    {}
 
-    /** @brief 文字列表の本体のcell文字列を解析し、値を取り出す。
-        @param[out] out_value
-          - cell文字列の解析に成功した場合、解析して取り出した値が代入される。
-          - cell文字列の解析に失敗した場合、代入は行われない。
-        @param[in] in_row_key    解析するcellの、行番号。
-        @param[in] in_column_key 解析するcellの、列番号。
-        @retval true  cell文字列の解析に成功した。
-        @retval false cell文字列の解析に失敗した。
+    /** @brief セルを置き換える。
+        @param[in] in_row_index    置き換えるセルの行番号。
+        @param[in] in_column_index 置き換えるセルの列番号。
+        @param[in] in_string       置き換えるセルの文字列。
      */
-    public: template<typename template_value_type>
-    bool deserialize_body_cell(
-        template_value_type& out_value,
-        typename this_type::cell_map::key_type const in_row_key,
-        typename this_type::column_map::key_type const in_column_key)
-    const
+    protected: void replace_cell(
+        typename this_type::string::size_type const in_row_index,
+        typename this_type::string::size_type const in_column_index,
+        typename this_type::string_view const& in_string)
     {
-        return psyq::string::_private::deserialize_table_cell(
-            out_value, this->find_body_cell(in_row_key, in_column_key));
-    }
-    //@}
-    //-------------------------------------------------------------------------
-    /// @name cellの取得
-    //@{
-    /** @brief 文字列表の本体を検索し、cell文字列を取得する。
-        @param[in] in_row_key         取得したいcellの、行番号。
-        @param[in] in_attribute_key   取得したいcellの、列属性の名前。
-        @param[in] in_attribute_index 取得したいcellの、列属性のindex番号。
-        @retval !=nullptr 見つかったcell文字列。
-        @retval ==nullptr 対応するcellが見つからなかった。
-     */
-    public: typename this_type::cell const* find_body_cell(
-        typename this_type::cell_map::key_type const in_row_key,
-        typename this_type::cell_view const& in_attribute_key,
-        typename this_type::column_map::key_type const in_attribute_index = 0)
-    const
-    {
-        return in_row_key != this->get_attribute_row()?
-            this_type::find_column_cell(
-                this->get_column_map(),
-                in_row_key,
-                this->get_attribute_map(),
-                in_attribute_key,
-                in_attribute_index):
-            nullptr;
-    }
-
-    /** @brief 文字列表の本体を検索し、cell文字列を取得する。
-        @param[in] in_row_key    取得したいcellの、行番号。
-        @param[in] in_column_key 取得したいcellの、列番号。
-        @retval !=nullptr 見つかったcell文字列。
-        @retval ==nullptr 対応するcellが見つからなかった。
-     */
-    public: typename this_type::cell const* find_body_cell(
-        typename this_type::cell_map::key_type const in_row_key,
-        typename this_type::column_map::key_type const in_column_key)
-    const
-    {
-        return in_row_key != this->get_attribute_row()?
-            this_type::find_column_cell(
-                this->get_column_map(), in_row_key, in_column_key):
-            nullptr;
-    }
-    //@}
-    /** @brief 列の辞書を検索し、cell文字列を取得する。
-        @param[in] in_column_map      検索する列の辞書。
-        @param[in] in_row_key         取得したいcellの、行番号。
-        @param[in] in_attribute_map   検索する列属性の辞書。
-        @param[in] in_attribute_key   取得したいcellの、列属性の名前。
-        @param[in] in_attribute_index 取得したいcellの、列属性のindex番号。
-        @retval !=nullptr 見つかったcell文字列。
-        @retval ==nullptr 対応するcellが見つからなかった。
-     */
-    public: static typename this_type::cell const* find_column_cell(
-        typename this_type::column_map const& in_column_map,
-        typename this_type::cell_map::key_type const in_row_key,
-        typename this_type::attribute_map const& in_attribute_map,
-        typename this_type::cell_view const& in_attribute_key,
-        typename this_type::column_map::key_type const in_attribute_index = 0)
-    {
-        auto const local_cell_map(
-            this_type::find_cell_map(
-                in_column_map,
-                in_attribute_map,
-                in_attribute_key,
-                in_attribute_index));
-        if (local_cell_map != nullptr)
+        // 最大行数か最大桁数を超えるセルは、追加できない。
+        if (this_type::MAX_ROW_COUNT <= in_row_index
+            || this_type::MAX_COLUMN_COUNT <= in_column_index)
         {
-            auto const local_row_iterator(local_cell_map->find(in_row_key));
-            if (local_row_iterator != local_cell_map->end())
-            {
-                return &local_row_iterator->second;
-            }
-        }
-        return nullptr;
-    }
-
-    /** @brief 列の辞書を検索し、cell文字列を取得する。
-        @param[in] in_column_map 検索する列の辞書。
-        @param[in] in_row_key    取得したいcellの、行番号。
-        @param[in] in_column_key 取得したいcellの、列番号。
-        @retval !=nullptr 見つかったcell文字列。
-        @retval ==nullptr 対応するcellが見つからなかった。
-     */
-    public: static typename this_type::cell const* find_column_cell(
-        typename this_type::column_map const& in_column_map,
-        typename this_type::cell_map::key_type const in_row_key,
-        typename this_type::column_map::key_type const in_column_key)
-    {
-        auto const local_cell_map(
-            this_type::find_cell_map(in_column_map, in_column_key));
-        if (local_cell_map != nullptr)
-        {
-            auto const local_row_iterator(local_cell_map->find(in_row_key));
-            if (local_row_iterator != local_cell_map->end())
-            {
-                return &local_row_iterator->second;
-            }
-        }
-        return nullptr;
-    }
-
-    //-------------------------------------------------------------------------
-    /// @name cellの辞書の取得
-    //@{
-    /** @brief 文字列表を検索し、cellの辞書を取得する。
-        @param[in] in_attribute_key   取得したいcellの辞書の、列属性の名前。
-        @param[in] in_attribute_index 取得したいcellの辞書の、列属性のindex番号。
-        @retval !=nullptr 見つかったcellの辞書。
-        @retval ==nullptr 対応するcellの辞書が見つからなかった。
-     */
-    public: typename this_type::cell_map const* find_cell_map(
-        typename this_type::cell_view const& in_attribute_key,
-        typename this_type::column_map::key_type const in_attribute_index = 0)
-    const
-    {
-        return this_type::find_cell_map(
-            this->get_column_map(),
-            this->get_attribute_map(),
-            in_attribute_key,
-            in_attribute_index);
-    }
-
-    /** @brief 文字列表を検索し、cellの辞書を取得する。
-        @param[in] in_column_key 取得したいcellの辞書の、列番号。
-        @retval !=nullptr 見つかったcellの辞書。
-        @retval ==nullptr 対応するcellの辞書が見つからなかった。
-     */
-    public: typename this_type::cell_map const* find_cell_map(
-        typename this_type::column_map::key_type const in_column_key)
-    const
-    {
-        return this_type::find_cell_map(this->get_column_map(), in_column_key);
-    }
-    //@}
-    /** @brief 列の辞書を検索し、cellの辞書を取得する。
-        @param[in] in_column_map      検索する列の辞書。
-        @param[in] in_attribute_map   検索する列属性の辞書。
-        @param[in] in_attribute_key   取得したいcellの辞書の、列属性の名前。
-        @param[in] in_attribute_index 取得したいcellの辞書の、列属性のindex番号。
-        @retval !=nullptr 見つかったcellの辞書。
-        @retval ==nullptr 対応するcellの辞書が見つからなかった。
-     */
-    public: static typename this_type::cell_map const* find_cell_map(
-        typename this_type::column_map const& in_column_map,
-        typename this_type::attribute_map const& in_attribute_map,
-        typename this_type::cell_view const& in_attribute_key,
-        typename this_type::column_map::key_type const in_attribute_index = 0)
-    {
-        auto const local_attribute_iterator(
-            in_attribute_map.find(
-                typename this_type::cell_view(in_attribute_key).trim()));
-        if (local_attribute_iterator != in_attribute_map.end())
-        {
-            auto& local_attribute(local_attribute_iterator->second);
-            if (in_attribute_index < local_attribute.size)
-            {
-                return this_type::find_cell_map(
-                    in_column_map,
-                    local_attribute.column + in_attribute_index);
-            }
-        }
-        return nullptr;
-    }
-
-    /** @brief 列の辞書を検索し、cellの辞書を取得する。
-        @param[in] in_column_map 検索する列の辞書。
-        @param[in] in_column_key 取得したいcellの辞書の、列番号。
-        @retval !=nullptr 見つかったcellの辞書。
-        @retval ==nullptr 対応するcellの辞書が見つからなかった。
-     */
-    public: static typename this_type::cell_map const* find_cell_map(
-        typename this_type::column_map const& in_column_map,
-        typename this_type::column_map::key_type const in_column_key)
-    {
-        auto const local_column_iterator(in_column_map.find(in_column_key));
-        return local_column_iterator != in_column_map.end()?
-            &local_column_iterator->second: nullptr;
-    }
-
-    //-------------------------------------------------------------------------
-    /** @brief 文字列表の列の辞書から、列属性の辞書を構築する。
-        @param[in] in_column_map    列の辞書。
-        @param[in] in_attribute_row 列属性として使う行の番号。
-     */
-    private: static typename this_type::attribute_map make_attribute_map(
-        typename this_type::column_map const& in_column_map,
-        typename this_type::column_map::key_type const in_attribute_row)
-    {
-        // 列属性の辞書を構築する。
-        typename this_type::attribute_map local_attribute_map(
-            in_column_map.get_allocator());
-        typename this_type::column_map::key_type local_column_max(0);
-        for (auto& local_column_value: in_column_map)
-        {
-            // 最大行を更新する。
-            if (local_column_max < local_column_value.first)
-            {
-                local_column_max = local_column_value.first;
-            }
-
-            // 属性行を取得する。
-            auto& local_cell_map(local_column_value.second);
-            auto const local_row_iterator(
-                local_cell_map.find(in_attribute_row));
-            if (local_row_iterator == local_cell_map.end())
-            {
-                continue; // 属性行ではなかった。
-            }
-
-            // 列属性の辞書を更新する。
-            auto const local_attribute_iterator(
-                local_attribute_map.find(
-                    typename this_type::attribute_map::key_type(
-                        local_row_iterator->second)));
-            if (local_attribute_iterator == local_attribute_map.end())
-            {
-                local_attribute_map.emplace(
-                    typename this_type::attribute_map::key_type(
-                        local_row_iterator->second).trim(),
-                    typename this_type::attribute_map::mapped_type(
-                        local_column_value.first, 0));
-            }
-            else
-            {
-                PSYQ_ASSERT(false); // 名前が重複する列属性がある。
-            }
-        }
-
-        // 属性ごとの要素数を決定する。
-        this_type::adjust_attribute_size(local_attribute_map, local_column_max);
-        return local_attribute_map;
-    }
-
-    /** @brief 列属性の要素数を決定する。
-        @param[in,out] io_attribute_map 要素数を決定する、列属性の辞書。
-        @param[in]     in_column_max    列番号の最大値。
-     */
-    private: static void adjust_attribute_size(
-        typename this_type::attribute_map& io_attribute_map,
-        typename this_type::column_map::key_type const in_column_max)
-    {
-        if (io_attribute_map.empty())
-        {
+            PSYQ_ASSERT(false);
             return;
         }
 
-        // 属性の配列を構築する。
-        typename this_type::attribute_map::allocator_type::template
-            rebind<typename this_type::attribute_map::value_type*>::other
-                local_allocator(io_attribute_map.get_allocator());
-        auto const local_attribute_begin(
-            local_allocator.allocate(io_attribute_map.size()));
-        PSYQ_ASSERT(local_attribute_begin != nullptr);
-        auto local_attribute_end(local_attribute_begin);
-        for (auto& local_attribute_value: io_attribute_map)
+        // セルの挿入位置を決定する。
+        auto const local_cell_index(
+            this_type::compute_cell_index(in_row_index, in_column_index));
+        auto const local_lower_bound(
+            std::lower_bound(
+                this->cells_.begin(),
+                this->cells_.end(),
+                local_cell_index,
+                typename this_type::cell_index_less()));
+        if (local_lower_bound == this->cells_.end()
+            || local_lower_bound->index_ != local_cell_index)
         {
-            *local_attribute_end = &local_attribute_value;
-            ++local_attribute_end;
+            // セルを追加する。
+            this->cells_.insert(
+                local_lower_bound,
+                typename this_type::cell(
+                    local_cell_index,
+                    this_type::equip_string(this->combined_string_, in_string),
+                    in_string.size()));
         }
-
-        // 属性の配列を、列番号でsortする。
-        std::sort(
-            local_attribute_begin,
-            local_attribute_end,
-            [](
-                typename this_type::attribute_map::value_type const* const in_left,
-                typename this_type::attribute_map::value_type const* const in_right)
-            ->bool
-            {
-                return in_left->second.column < in_right->second.column;
-            });
-
-        // 属性の要素数を決定する。
-        auto local_last_column(in_column_max + 1);
-        for (auto i(local_attribute_end - 1); local_attribute_begin <= i; --i)
+        else if (in_string.empty())
         {
-            auto& local_attribute((**i).second);
-            local_attribute.size = local_last_column - local_attribute.column;
-            local_last_column = local_attribute.column;
+            // 置き換える文字列が空なので、セルを削除する。
+            this->cells_.erase(local_lower_bound);
         }
-
-        // 属性の配列を破棄する。
-        local_allocator.deallocate(
-            local_attribute_begin, io_attribute_map.size());
+        else
+        {
+            // セルを書き換える。
+            local_lower_bound->offset_ = this_type::equip_string(
+                    this->combined_string_, in_string);
+            local_lower_bound->size_ = in_string.size();
+        }
     }
 
-    //-------------------------------------------------------------------------
-    /** @brief CSV形式の文字列を解析し、列の辞書を構築する。
-        @tparam template_string std::basic_string 互換の文字列型。
-        @param[in] in_csv_string       解析するCSV形式の文字列。
-        @param[in] in_column_ceparator 列の区切り文字。
-        @param[in] in_row_separator    行の区切り文字。
-        @param[in] in_quote_begin      引用符の開始文字。
-        @param[in] in_quote_end        引用符の終了文字。
-        @param[in] in_quote_escape     引用符のescape文字。
-        @return CSV形式の文字列を解析して構築した、列の辞書。
-     */
-    public: template<typename template_string>
-    static typename this_type::column_map make_column_map(
-        template_string const& in_csv_string,
-        typename template_string::value_type const in_column_ceparator = ',',
-        typename template_string::value_type const in_row_separator = '\n',
-        typename template_string::value_type const in_quote_begin = '"',
-        typename template_string::value_type const in_quote_end = '"',
-        typename template_string::value_type const in_quote_escape = '"')
+    protected: void set_size(
+        typename this_type::string::size_type const in_row_count,
+        typename this_type::string::size_type const in_column_count)
     {
-        PSYQ_ASSERT(in_quote_escape != 0);
-        bool local_quote(false);
-        typename this_type::cell_map::key_type local_row(0);
-        typename this_type::column_map::key_type local_column(0);
-        typename this_type::column_map::key_type local_max_column(0);
-        template_string local_cell(in_csv_string.get_allocator());
-        typename this_type::column_map local_column_map(
-            in_csv_string.get_allocator());
-        typename template_string::value_type local_last_char(0);
-        for (auto i(in_csv_string.begin()); i != in_csv_string.end(); ++i)
-        {
-            if (local_quote)
-            {
-                if (local_last_char != in_quote_escape)
-                {
-                    if (*i != in_quote_end)
-                    {
-                        if (*i != in_quote_escape)
-                        {
-                            local_cell.push_back(*i);
-                        }
-                        local_last_char = *i;
-                    }
-                    else
-                    {
-                        // 引用符を終了。
-                        local_quote = false;
-                        local_last_char = 0;
-                    }
-                }
-                else if (*i == in_quote_end)
-                {
-                    // 引用符の終了文字をescapeする。
-                    local_cell.push_back(*i);
-                    local_last_char = 0;
-                }
-                else if (local_last_char == in_quote_end)
-                {
-                    // 引用符を終了し、文字を巻き戻す。
-                    local_quote = false;
-                    --i;
-                    local_last_char = 0;
-                }
-                else
-                {
-                    local_cell.push_back(local_last_char);
-                    local_cell.push_back(*i);
-                    local_last_char = *i;
-                }
-            }
-            else if (*i == in_quote_begin)
-            {
-                // 引用符の開始。
-                local_quote = true;
-            }
-            else if (*i == in_column_ceparator)
-            {
-                // 列の区切り。
-                if (!local_cell.empty())
-                {
-                    local_column_map[local_column][local_row]
-                        = typename this_type::cell(local_cell);
-                    local_cell.clear();
-                }
-                ++local_column;
-            }
-            else if (*i == in_row_separator)
-            {
-                // 行の区切り。
-                if (!local_cell.empty())
-                {
-                    local_column_map[local_column][local_row]
-                        = typename this_type::cell(local_cell);
-                    local_cell.clear();
-                }
-                else if (0 < local_column)
-                {
-                    --local_column;
-                }
-                if (local_max_column < local_column)
-                {
-                    local_max_column = local_column;
-                }
-                local_column = 0;
-                ++local_row;
-            }
-            else
-            {
-                local_cell.push_back(*i);
-            }
-        }
+        this->row_count_ = (std::min)(in_row_count, this_type::MAX_ROW_COUNT);
+        this->column_count_ = (std::min)(
+            in_column_count, this_type::MAX_COLUMN_COUNT);
+    }
 
-        // 最終cellの処理。
-        if (local_quote)
-        {
-            // 引用符の開始はあったが、終了がなかった場合。
-            //local_cell.insert(local_cell.begin(), in_quote_begin);
-        }
-        if (!local_cell.empty())
-        {
-            local_column_map[local_column][local_row]
-                = typename this_type::cell(local_cell);
-        }
-        else if (0 < local_column)
-        {
-            --local_column;
-        }
-        if (local_max_column < local_column)
-        {
-            local_max_column = local_column;
-        }
-        return local_column_map;
+    protected: void shrink_to_fit()
+    {
+        this->combined_string_.shrink_to_fit();
+        this->cells_.shrink_to_fit();
+    }
+
+    /// @brief 文字列表を空にする。
+    protected: void clear_container()
+    {
+        this->combined_string_.clear();
+        this->cells_.clear();
+        this->row_count_ = 0;
+        this->column_count_ = 0;
+    }
+
+    protected: void reserve_container(
+        typename this_type::string::size_type const in_string_capacity,
+        typename this_type::cell_container::size_type const in_cell_capacity)
+    {
+        this->combined_string_.reserve(in_string_capacity);
+        this->cells_.reserve(in_cell_capacity);
     }
 
     //-------------------------------------------------------------------------
-    /// 文字列表の列属性の辞書。
-    private: typename this_type::attribute_map attribute_map_;
-    /// 文字列表の列属性として使っている行の番号。
-    private: typename this_type::cell_map::key_type attribute_row_;
-    /// 文字列表の列の辞書。
-    private: typename this_type::column_map column_map_;
+    private: static typename this_type::string::size_type equip_string(
+        typename this_type::string& io_combined_string,
+        typename this_type::string_view const& in_string)
+    {
+        auto local_position(
+            io_combined_string.find(in_string.data(), 0, in_string.size()));
+        if (local_position == this_type::string::npos)
+        {
+            local_position = io_combined_string.size();
+            io_combined_string.append(in_string.data(), in_string.size());
+        }
+        return local_position;
+    }
+
+    /** @brief セルのインデクス番号から、セルの行番号を算出する。
+        @param[in] in_cell_index セルのインデクス番号。
+        @return セルの行番号。
+     */
+    private: static typename this_type::string::size_type compute_row_index(
+        typename this_type::string::size_type const in_cell_index)
+    PSYQ_NOEXCEPT
+    {
+        return in_cell_index / this_type::MAX_COLUMN_COUNT;
+    }
+
+    /** @brief セルのインデクス番号から、セルの列番号を算出する。
+        @param[in] in_cell_index セルのインデクス番号。
+        @return セルの列番号。
+     */
+    private: static typename this_type::string::size_type compute_column_index(
+        typename this_type::string::size_type const in_cell_index)
+    PSYQ_NOEXCEPT
+    {
+        return in_cell_index % this_type::MAX_COLUMN_COUNT;
+    }
+
+    /** @brief セルの行番号と列番号から、セルのインデクス番号を算出する。
+        @param[in] in_row_index    セルの行番号。
+        @param[in] in_column_index セルの列番号。
+        @return セルのインデクス番号。
+     */
+    private: static typename this_type::string::size_type compute_cell_index(
+        typename this_type::string::size_type const in_row_index,
+        typename this_type::string::size_type const in_column_index)
+    PSYQ_NOEXCEPT
+    {
+        auto const local_cell_index(
+            in_row_index * this_type::MAX_COLUMN_COUNT + in_column_index);
+        PSYQ_ASSERT(
+            in_row_index == this_type::compute_row_index(local_cell_index));
+        return local_cell_index;
+    }
+
+    //-------------------------------------------------------------------------
+    /// @brief 文字列表のすべての文字列を連結した文字列。
+    private: typename this_type::string combined_string_;
+    /// @brief セルのインデクス番号でソートされたセルの辞書。
+    private: typename this_type::cell_container cells_;
+    /// @brief 文字列表の行数。
+    private: typename this_type::string::size_type row_count_;
+    /// @brief 文字列表の列数。
+    private: typename this_type::string::size_type column_count_;
 
 }; // class psyq::string::table
 
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-namespace psyq
-{
-    namespace test
-    {
-        inline void string_table()
-        {
-            psyq::string::holder_table const local_string_table(
-                psyq::string::holder_table::make_column_map(
-                    std::string(
-                        "name,   path,            count                \n"
-                        "taro,   taro.txt,        -12.34567890e+2, 3, 2\n"
-                        "yamada, data/yamada.txt, 1234567890           \n")),
-                0);
-
-            psyq::string::holder_table::cell_map::mapped_type
-                local_string_holder("abc");
-            local_string_holder.get_allocator();
-
-            psyq::string::holder_table::cell_map::mapped_type::view
-                local_name;
-            PSYQ_ASSERT(
-                local_string_table.deserialize_body_cell(
-                    local_name, 1, "name"));
-            PSYQ_ASSERT(local_name == "taro");
-            PSYQ_ASSERT(
-                local_string_table.deserialize_body_cell(
-                    local_name, 2, "  name  "));
-            PSYQ_ASSERT(local_name == "yamada");
-            PSYQ_ASSERT(
-                !local_string_table.deserialize_body_cell(
-                    local_name, 2, "name", 1));
-            PSYQ_ASSERT(local_name == "yamada");
-            PSYQ_ASSERT(
-                !local_string_table.deserialize_body_cell(
-                    local_name, 3, "name"));
-            PSYQ_ASSERT(local_name == "yamada");
-            PSYQ_ASSERT(
-                local_string_table.deserialize_body_cell(
-                    local_name, 1, "path"));
-            PSYQ_ASSERT(local_name == "taro.txt");
-            int local_integer;
-            PSYQ_ASSERT(
-                !local_string_table.deserialize_body_cell(
-                    local_integer, 1, "count", 0));
-            double local_real(0);
-            PSYQ_ASSERT(
-                local_string_table.deserialize_body_cell(
-                    local_real, 1, "count", 0));
-            PSYQ_ASSERT(
-                local_string_table.deserialize_body_cell(
-                    local_integer, 2, "count", 0));
-            PSYQ_ASSERT(local_integer == 1234567890);
-        }
-    }
-}
 #endif // !defined(PSYQ_STRING_TABLE_HPP_)
+// vim: set expandtab:

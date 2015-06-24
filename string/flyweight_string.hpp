@@ -47,6 +47,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "../atomic_count.hpp"
 
+// @copydoc psyq::string::_private::flyweight_string::data_
+#if defined(NDEBUG) && !defined(PSYQ_STRING_FLYWEIGHT_STRING_NO_VIEW)
+#define PSYQ_STRING_FLYWEIGHT_STRING_NO_VIEW
+#endif // defined(NDEBUG) || !defined(PSYQ_STRING_FLYWEIGHT_STRING_HPP_)
+
 /// @cond
 namespace psyq
 {
@@ -124,6 +129,9 @@ class psyq::string::_private::flyweight_string
     reference_count_(0),
     size_(in_size),
     hash_(in_hash)
+#ifndef PSYQ_STRING_FLYWEIGHT_STRING_NO_VIEW
+    , data_(this->data())
+#endif // !defined(PSYQ_STRING_FLYWEIGHT_STRING_NO_VIEW)
     {}
 
     /** @brief 文字列の先頭位置を取得する。
@@ -141,6 +149,10 @@ class psyq::string::_private::flyweight_string
     public: typename this_type::view::size_type size_;
     /// @brief 文字列のハッシュ値。
     public: template_hash_value hash_;
+#ifndef PSYQ_STRING_FLYWEIGHT_STRING_NO_VIEW
+    /// @brief デバッグ時に文字列の内容を確認するのに使う。
+    private: typename this_type::view::const_pointer data_;
+#endif // !defined(PSYQ_STRING_FLYWEIGHT_STRING_NO_VIEW)
 
 }; // class psyq::string::_private::flyweight_string
 

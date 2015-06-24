@@ -13,8 +13,8 @@ namespace psyq
 {
     namespace string
     {
-        template<typename, typename> class csv_table_builder;
-        template<typename, typename> class relation_table;
+        template<typename, typename, typename> class csv_table_builder;
+        template<typename, typename, typename> class relation_table;
     } // namespace string
 } // namespace psyq
 /// @endcond
@@ -25,43 +25,32 @@ namespace psyq
     @tparam template_allocator @copybrief psyq::string::csv_table::allocator_type
 */
 template<
-    typename template_string = PSYQ_STRING_TABLE_STRING_DEFAULT,
-    typename template_allocator = typename template_string::allocator_type>
+    typename template_char_type,
+    typename template_char_traits = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
+    typename template_allocator = PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT>
 class psyq::string::csv_table_builder:
-public psyq::string::table<template_string, template_allocator>
+public psyq::string::table<
+    template_char_type, template_char_traits, template_allocator>
 {
     /// @brief thisが指す値の型。
     private: typedef csv_table_builder this_type;
     /// @brief this_type の基底型。
     public: typedef
-        psyq::string::table<template_string, template_allocator>
+        psyq::string::table<
+            template_char_type, template_char_traits, template_allocator>
         base_type;
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
     //@{
     /** @brief 空のCSV文字列表を構築する。
+        @param[in] in_allocator メモリ割当子の初期値。
      */
-    public: csv_table_builder():
-    base_type(
-        typename base_type::string::allocator_type(),
-        typename base_type::allocator_type()),
-    row_separator_(PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT),
-    column_separator_(PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT),
-    quote_begin_(PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT),
-    quote_end_(PSYQ_STRING_CSV_TABLE_QUOTE_END_DEFAULT),
-    quote_escape_(PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT)
-    {}
-
-    /** @brief 空のCSV文字列表を構築する。
-        @param[in] in_string_allocator CSV文字列で使うメモリ割当子。
-        @param[in] in_cell_allocator   セルで使うメモリ割当子。
-     */
-    public: csv_table_builder(
-        typename base_type::string::allocator_type const& in_string_allocator,
-        typename base_type::allocator_type const& in_cell_allocator)
+    public: explicit csv_table_builder(
+        typename base_type::allocator_type const& in_allocator =
+            allocator_type())
     :
-    base_type(in_string_allocator, in_cell_allocator),
+    base_type(in_allocator),
     row_separator_(PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT),
     column_separator_(PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT),
     quote_begin_(PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT),
@@ -75,8 +64,7 @@ public psyq::string::table<template_string, template_allocator>
         @param[in] in_quote_begin      CSV文字列の引用符の開始文字。
         @param[in] in_quote_end        CSV文字列の引用符の終了文字。
         @param[in] in_quote_escape     CSV文字列の引用符のエスケープ文字。
-        @param[in] in_string_allocator CSV文字列で使うメモリ割当子。
-        @param[in] in_cell_allocator   セルで使うメモリ割当子。
+        @param[in] in_allocator        メモリ割当子の初期値。
      */
     public: csv_table_builder(
         typename base_type::string::value_type const in_row_separator,
@@ -84,10 +72,10 @@ public psyq::string::table<template_string, template_allocator>
         typename base_type::string::value_type const in_quote_begin,
         typename base_type::string::value_type const in_quote_end,
         typename base_type::string::value_type const in_quote_escape,
-        typename base_type::string::allocator_type const& in_string_allocator,
-        typename base_type::allocator_type const& in_cell_allocator)
+        typename base_type::allocator_type const& in_allocator =
+            allocator_type())
     :
-    base_type(in_string_allocator, in_cell_allocator),
+    base_type(in_allocator),
     row_separator_(in_row_separator),
     column_separator_((
         PSYQ_ASSERT(
@@ -163,17 +151,24 @@ public psyq::string::table<template_string, template_allocator>
         @param[in,out] io_workspace
             作業領域として使う文字列。
             std::string 互換のインターフェイスを持つこと。
+        @param[in] in_factory
+            フライ級文字列生成器を指すスマートポインタ。
+            スマートポインタが空ではないこと。
         @param[in] in_csv_string 解析するCSV形式の文字列。
      */
     public: template<typename template_workspace>
     void build(
         template_workspace& io_workspace,
-        typename base_type::string_view const& in_csv_string)
+        typename base_type::string::factory::shared_ptr const& in_factory,
+        typename base_type::string::view const& in_csv_string)
     {
+        if (in_factory.get() == nullptr)
+        {
+            PSYQ_ASSERT(false);
+            return;
+        }
         io_workspace.clear();
-        this->clear_container();
-        this->reserve_container(
-            in_csv_string.size(), in_csv_string.size() / 8);
+        this->clear_container(in_csv_string.size() / 8);
         bool local_quote(false);
         typename base_type::string::size_type local_row(0);
         typename base_type::string::size_type local_column(0);
@@ -241,8 +236,10 @@ public psyq::string::table<template_string, template_allocator>
                     this->replace_cell(
                         local_row,
                         local_column,
-                        typename base_type::string_view(
-                            io_workspace.data(), local_cell_size));
+                        typename base_type::string(
+                            typename base_type::string::view(
+                                io_workspace.data(), local_cell_size),
+                            in_factory));
                     io_workspace.clear();
                     local_cell_size = 0;
                 }
@@ -256,8 +253,10 @@ public psyq::string::table<template_string, template_allocator>
                     this->replace_cell(
                         local_row,
                         local_column,
-                        typename base_type::string_view(
-                            io_workspace.data(), local_cell_size));
+                        typename base_type::string(
+                            typename base_type::string::view(
+                                io_workspace.data(), local_cell_size),
+                            in_factory));
                     io_workspace.clear();
                     local_cell_size = 0;
                 }
@@ -301,8 +300,10 @@ public psyq::string::table<template_string, template_allocator>
             this->replace_cell(
                 local_row,
                 local_column,
-                typename base_type::string_view(
-                    io_workspace.data(), local_cell_size));
+                typename base_type::string(
+                    typename base_type::string::view(
+                        io_workspace.data(), local_cell_size),
+                    in_factory));
         }
         else if (0 < local_column)
         {
@@ -344,22 +345,24 @@ public psyq::string::table<template_string, template_allocator>
 }; // class psyq::string::csv_table_builder
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-#ifndef PSYQ_STRING_RELATION_TABLE_HPP_
 /** @brief 関係データベース的な文字列表。属性と主キーを持つ。
     @tparam template_string    @copybrief psyq::string::relation_table::string
     @tparam template_allocator @copybrief psyq::string::relation_table::allocator_type
 */
 template<
-    typename template_string = PSYQ_STRING_TABLE_STRING_DEFAULT,
-    typename template_allocator = typename template_string::allocator_type>
+    typename template_char_type,
+    typename template_char_traits = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
+    typename template_allocator = PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT>
 class psyq::string::relation_table:
-public psyq::string::table<template_string, template_allocator>
+public psyq::string::table<
+    template_char_type, template_char_traits, template_allocator>
 {
     /// @brief thisが指す値の型。
     private: typedef relation_table this_type;
     /// @brief this_type の基底型。
     public: typedef
-        psyq::string::table<template_string, template_allocator>
+        psyq::string::table<
+            template_char_type, template_char_traits, template_allocator>
         base_type;
 
     //-------------------------------------------------------------------------
@@ -367,9 +370,9 @@ public psyq::string::table<template_string, template_allocator>
     public: class attribute
     {
         public: attribute(
-            typename relation_table::string_view const& in_name,
-            typename relation_table::index_type const in_column,
-            typename relation_table::index_type const in_size)
+            typename relation_table::string::view const& in_name,
+            typename relation_table::string::size_type const in_column,
+            typename relation_table::string::size_type const in_size)
         PSYQ_NOEXCEPT:
         name_(in_name),
         column_(in_column),
@@ -377,7 +380,7 @@ public psyq::string::table<template_string, template_allocator>
         {}
 
         /// @brief 属性の名前。
-        public: typename relation_table::string_view name_;
+        public: typename relation_table::string::view name_;
         /// @brief 属性の列番号。
         public: typename relation_table::string::size_type column_;
         /// @brief 属性の要素数。
@@ -399,13 +402,13 @@ public psyq::string::table<template_string, template_allocator>
         }
         bool operator()(
             typename relation_table::attribute const& in_left,
-            typename relation_table::string_view const& in_right)
+            typename relation_table::string::view const& in_right)
         const PSYQ_NOEXCEPT
         {
             return in_left.name_ < in_right;
         }
         bool operator()(
-            typename relation_table::string_view const& in_left,
+            typename relation_table::string::view const& in_left,
             typename relation_table::attribute const& in_right)
         const PSYQ_NOEXCEPT
         {
@@ -431,7 +434,7 @@ public psyq::string::table<template_string, template_allocator>
     private: typedef
         std::vector<
             std::pair<
-                typename base_type::string_view,
+                typename base_type::string::view,
                 typename base_type::string::size_type>,
             typename base_type::allocator_type>
         key_container;
@@ -453,13 +456,13 @@ public psyq::string::table<template_string, template_allocator>
         bool operator()(
             typename relation_table::key_container::value_type const&
                 in_left,
-            typename relation_table::string_view const& in_right)
+            typename relation_table::string::view const& in_right)
         const PSYQ_NOEXCEPT
         {
             return in_left.first < in_right;
         }
         bool operator()(
-            typename relation_table::string_view const& in_left,
+            typename relation_table::string::view const& in_left,
             typename relation_table::key_container::value_type const&
                 in_right)
         const PSYQ_NOEXCEPT
@@ -475,11 +478,10 @@ public psyq::string::table<template_string, template_allocator>
     /** @brief RDB文字列表を構築する。
         @param[in] in_source 元となる文字列表。
      */
-    public: explicit relation_table(base_type in_source)
-    :
+    public: explicit relation_table(base_type in_source):
     base_type(std::move(in_source)),
-    attributes_(this->get_cell_allocator()),
-    keys_(this->get_cell_allocator()),
+    attributes_(this->get_allocator()),
+    keys_(this->get_allocator()),
     attribute_row_(base_type::string::npos),
     key_column_(base_type::string::npos)
     {}
@@ -529,7 +531,7 @@ public psyq::string::table<template_string, template_allocator>
         @retval ==NULL_INDEX 主キーに対応する行番号が存在しない。
      */
     public: typename base_type::string::size_type find_row_index(
-        typename base_type::string_view const& in_key)
+        typename base_type::string::view const& in_key)
     const PSYQ_NOEXCEPT
     {
         auto const local_key(
@@ -553,7 +555,7 @@ public psyq::string::table<template_string, template_allocator>
         @retval ==npos 属性名に対応する列番号が存在しない。
      */
     public: typename base_type::string::size_type find_column_index(
-        typename base_type::string_view const& in_attribute_name,
+        typename base_type::string::view const& in_attribute_name,
         typename base_type::string::size_type const in_attribute_index = 0)
     const PSYQ_NOEXCEPT
     {
@@ -572,14 +574,15 @@ public psyq::string::table<template_string, template_allocator>
             行番号と列番号に対応する本体セル。
             対応する本体セルがない場合は、空文字列を返す。
      */
-    public: typename base_type::string_view find_body_cell(
+    public: typename base_type::string const& find_body_cell(
         typename base_type::string::size_type const in_row_index,
         typename base_type::string::size_type const in_column_index)
     const PSYQ_NOEXCEPT
     {
-        return in_row_index != this->get_attribute_row()?
-            this->find_cell(in_row_index, in_column_index):
-            typename base_type::string_view();
+        this->find_cell(
+            in_row_index,
+            in_row_index != this->get_attribute_row()?
+                in_column_index: base_type::MAX_COLUMN_COUNT);
     }
     //@}
     //-------------------------------------------------------------------------
@@ -609,7 +612,7 @@ public psyq::string::table<template_string, template_allocator>
         }
         this->attribute_row_ = in_attribute_row;
         this->attributes_ = this_type::make_attribute_map(
-            this->cells_, this->get_attribute_row(), this->get_column_count());
+            this->get_cells(), this->get_attribute_row(), this->get_column_count());
         return true;
     }
 
@@ -627,7 +630,7 @@ public psyq::string::table<template_string, template_allocator>
         @retval ==nullptr 属性名に対応する属性が存在しない。
      */
     public: typename this_type::attribute const* find_attribute(
-        typename base_type::string_view const& in_attribute_name)
+        typename base_type::string::view const& in_attribute_name)
     const PSYQ_NOEXCEPT
     {
         auto const local_lower_bound(
@@ -663,7 +666,7 @@ public psyq::string::table<template_string, template_allocator>
         @retval false 失敗。
      */
     public: bool constraint_key(
-        typename base_type::string_view const& in_attribute_name,
+        typename base_type::string::view const& in_attribute_name,
         typename base_type::string::size_type const in_attribute_index = 0)
     {
         return this->constraint_key(
@@ -686,7 +689,7 @@ public psyq::string::table<template_string, template_allocator>
             static_cast<typename base_type::string::size_type>(in_column_index));
         auto local_keys(
             this_type::make_key_map(
-                this->cells_, local_column_index, this->get_attribute_row()));
+                this->get_cells(), local_column_index, this->get_attribute_row()));
         this->keys_.swap(local_keys);
         this->key_column_ = local_column_index;
         return true;
@@ -694,7 +697,7 @@ public psyq::string::table<template_string, template_allocator>
 
     /** @brief 主キー辞書を空にする。
      */
-    public: bool clear_key()
+    public: void clear_key()
     {
         this->keys_.clear();
         this->key_column_ = this_type::string::npos;
@@ -707,7 +710,7 @@ public psyq::string::table<template_string, template_allocator>
         @sa this_type::clear_key
      */
     public: typename base_type::string::size_type count_key(
-        typename base_type::string_view const& in_key)
+        typename base_type::string::view const& in_key)
     const PSYQ_NOEXCEPT
     {
         typename base_type::string::size_type local_count(0);
@@ -731,14 +734,28 @@ public psyq::string::table<template_string, template_allocator>
         @param[in] in_source コピー元となる文字列表。
         @todo 属性と主キーのコピーを実装すること。
      */
-    private: relation_table(this_type const& in_source);
+    private: relation_table(this_type const& in_source):
+    base_type(in_source),
+    attributes_(in_source.attributes_),
+    keys_(in_source.keys_),
+    attribute_row_(in_source.get_attribute_row()),
+    key_column_(in_source.get_key_column())
+    {}
 
     /** @brief 文字列表をコピー代入する。
         @param[in] in_source コピー元となる文字列表。
         @return *this
         @todo 属性と主キーのコピーを実装すること。
      */
-    private: this_type& operator=(this_type const& in_source);
+    private: this_type& operator=(this_type const& in_source)
+    {
+        this->base_type::operator=(in_source);
+        this->attributes_ = in_source.attributes_;
+        this->keys_ = in_source.keys_;
+        this->attribute_row_ = in_source.get_attribute_row();
+        this->key_column_ = in_source.get_key_column();
+        return *this;
+    }
 
     /** @brief 属性辞書を構築する。
         @param[in] in_cells         文字列表のセル辞書。
@@ -781,7 +798,7 @@ public psyq::string::table<template_string, template_allocator>
             }
             local_attributes.push_back(
                 typename this_type::attribute(
-                    i->second, local_column_index, 0));
+                    i->string_, local_column_index, 0));
         }
 
         // 属性配列を並び替え、属性辞書として正規化する。
@@ -846,7 +863,7 @@ public psyq::string::table<template_string, template_allocator>
             {
                 local_keys.push_back(
                     typename this_type::key_container::value_type(
-                        local_cell->second, local_row_index));
+                        local_cell->string_, local_row_index));
             }
             local_row_index =
                 base_type::compute_row_index(local_cell->index_) + 1;
@@ -872,7 +889,6 @@ public psyq::string::table<template_string, template_allocator>
     private: typename base_type::string::size_type key_column_;
 
 }; // class psyq::string::relation_table
-#endif // !defined(PSYQ_STRING_RELATION_TABLE_HPP_)
 
 #endif // !defined(PSYQ_STRING_RELATION_TABLE_HPP_)
 // vim: set expandtab:

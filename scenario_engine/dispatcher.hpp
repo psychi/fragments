@@ -730,7 +730,8 @@ class psyq::scenario_engine::_private::dispatcher
         @param[in] in_valid_transition        状態値があるかどうか。
      */
     private: static void notify_state_transition(
-        typename this_type::expression_monitor::container& io_expression_monitors,
+        typename this_type::expression_monitor::container&
+            io_expression_monitors,
         typename this_type::state_monitor::expression_key_container&
             io_expression_keys,
         bool const in_valid_transition)

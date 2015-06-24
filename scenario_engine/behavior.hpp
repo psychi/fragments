@@ -6,7 +6,7 @@
 #define PSYQ_SCENARIO_ENGINE_BEHAVIOR_HPP_
 
 #include <functional>
-#include "../std/weak_ptr.hpp"
+#include <memory>
 
 /// @cond
 namespace psyq
@@ -53,12 +53,12 @@ class psyq::scenario_engine::_private::behavior
 
     /// @brief this_type::function の、所有権ありスマートポインタ。
     public: typedef
-        psyq::std_shared_ptr<typename this_type::function>
+        std::shared_ptr<typename this_type::function>
         function_shared_ptr;
 
     /// @brief this_type::function の、所有権なしスマートポインタ。
     public: typedef
-        psyq::std_weak_ptr<typename this_type::function>
+        std::weak_ptr<typename this_type::function>
         function_weak_ptr;
 
     /// @brief 条件式の評価結果のキャッシュ。

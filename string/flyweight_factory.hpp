@@ -45,7 +45,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STRING_FLYWEIGHT_FACTORY_HPP_
 #define PSYQ_STRING_FLYWEIGHT_FACTORY_HPP_
 
-#include "../std/weak_ptr.hpp"
+#include <memory>
+#include <vector>
 #include "./flyweight_string.hpp"
 
 /// @brief フライ級文字列生成器の文字列予約数のデフォルト値。
@@ -87,8 +88,8 @@ class psyq::string::_private::flyweight_factory
     /// @brief メモリ割当子の型。
     public: typedef template_allocator_type allocator_type;
 
-    public: typedef psyq::std_shared_ptr<this_type> shared_ptr;
-    public: typedef psyq::std_weak_ptr<this_type> weak_ptr;
+    public: typedef std::shared_ptr<this_type> shared_ptr;
+    public: typedef std::weak_ptr<this_type> weak_ptr;
 
     //-------------------------------------------------------------------------
     /// @brief 生成するフライ級文字列の型。
@@ -103,7 +104,7 @@ class psyq::string::_private::flyweight_factory
             typename this_type::string*,
             typename this_type::allocator_type::template
                 rebind<typename this_type::string*>::other>
-        string_vector;
+        string_container;
 
     /// @brief 文字列チャンク連結リストのノードの型。
     private: class string_chunk
@@ -298,7 +299,7 @@ class psyq::string::_private::flyweight_factory
      */
     private: static void collect_chunk_garbage(
         typename this_type::string_chunk& io_chunk,
-        typename this_type::string_vector& io_strings)
+        typename this_type::string_container& io_strings)
     {
         auto local_string(&io_chunk.front_string_);
         auto const local_chunk_end(
@@ -387,17 +388,19 @@ class psyq::string::_private::flyweight_factory
 
         // 等価な文字列が辞書になかったので、新たな文字列を用意する。
         auto& local_idle_string(
-            this->make_idle_string(local_string_size + 1, in_chunk_size));
-        local_idle_string.size_ = local_string_size;
-        local_idle_string.hash_ = local_string_hash;
-
-        // 文字列をコピーする。
+            this->make_idle_string(local_string_size, in_chunk_size));
         auto const local_idle_data(
             const_cast<typename this_type::string::view::value_type*>(
                 local_idle_string.data()));
+        if (local_string_size < local_idle_string.size_)
+        {
+            // 終端文字を入れる余裕があれば、入れておく。
+            local_idle_data[local_string_size] = 0;
+        }
+        local_idle_string.size_ = local_string_size;
+        local_idle_string.hash_ = local_string_hash;
         this_type::string::view::traits_type::copy(
             local_idle_data, local_string_data, local_string_size);
-        local_idle_data[local_string_size] = 0;
 
         // 新たな文字列を辞書へ追加する。
         this_type::add_string(this->strings_, local_idle_string);
@@ -413,7 +416,7 @@ class psyq::string::_private::flyweight_factory
         @retval ==nullptr 等価な文字列が辞書になかった。
      */
     private: static typename this_type::string* find_string(
-        typename this_type::string_vector const& in_strings,
+        typename this_type::string_container const& in_strings,
         typename this_type::string::view::const_pointer const in_string_data,
         typename this_type::string::view::size_type const in_string_size,
         typename this_type::hash::value_type const in_string_hash)
@@ -486,7 +489,7 @@ class psyq::string::_private::flyweight_factory
         @retval ==nullptr 未使用文字列が見つからなかった。
      */
     private: static typename this_type::string* bring_idle_string(
-        typename this_type::string_vector& io_strings,
+        typename this_type::string_container& io_strings,
         typename this_type::string::view::size_type const in_string_size)
     {
         // in_string_size が収まる空文字列を検索する。
@@ -576,7 +579,7 @@ class psyq::string::_private::flyweight_factory
         @param[in] in_string      辞書に追加する文字列。
      */
     private: static void add_string(
-         typename this_type::string_vector& io_strings,
+         typename this_type::string_container& io_strings,
          typename this_type::string& in_string)
     {
         auto const local_lower_bound(
@@ -597,7 +600,7 @@ class psyq::string::_private::flyweight_factory
         @param[in] in_string      辞書から削除する文字列。
      */
     private: static void remove_string(
-        typename this_type::string_vector& io_strings,
+        typename this_type::string_container& io_strings,
         typename this_type::string const& in_string)
     {
         auto const local_find_iterator(
@@ -676,7 +679,7 @@ class psyq::string::_private::flyweight_factory
 
     //-------------------------------------------------------------------------
     /// @brief ハッシュ値をキーにソートされている、フライ級文字列の辞書。
-    private: typename this_type::string_vector strings_;
+    private: typename this_type::string_container strings_;
     /// @brief 文字列チャンク連結リストの先頭。
     private: typename this_type::string_chunk* chunk_;
 
@@ -707,9 +710,10 @@ class psyq::string::_private::flyweight_factory<
     public: typedef typename template_string_view::traits_type traits_type;
 
     /// @brief フライ級文字列の生成器を表す型。
-    public: typedef psyq::string::_private::flyweight_factory<
-        template_string_view, template_hash, template_allocator_type>
-            factory;
+    public: typedef
+        psyq::string::_private::flyweight_factory<
+            template_string_view, template_hash, template_allocator_type>
+        factory;
 
     //-------------------------------------------------------------------------
     private: _private_client() PSYQ_NOEXCEPT: string_(nullptr) {}
@@ -737,11 +741,11 @@ class psyq::string::_private::flyweight_factory<
     }
 
     private: _private_client(
-        typename this_type::factory::shared_ptr const& in_factory,
+        typename this_type::factory::shared_ptr in_factory,
         typename this_type::factory::string& in_string)
-    PSYQ_NOEXCEPT: factory_(in_factory)
+    PSYQ_NOEXCEPT: factory_(std::move(in_factory))
     {
-        if (in_factory.get() != nullptr)
+        if (this->get_factory().get() != nullptr)
         {
             // 文字列の参照数を増やす。
             in_string.reference_count_.add(1);
@@ -749,6 +753,7 @@ class psyq::string::_private::flyweight_factory<
         }
         else
         {
+            PSYQ_ASSERT(false);
             this->string_ = nullptr;
         }
     }
@@ -820,26 +825,32 @@ class psyq::string::_private::flyweight_factory<
             PSYQ_ASSERT(this->get_factory().get() != nullptr);
             this->string_->reference_count_.sub(1);
             this->factory_.reset();
+            this->string_ = nullptr;
         }
-        this->string_ = nullptr;
     }
 
     /// @copydoc psyq::string::view::data
     public: typename this_type::traits_type::char_type const* data()
     const PSYQ_NOEXCEPT
     {
-        return this->string_ != nullptr?
-            (PSYQ_ASSERT(this->get_factory().get() != nullptr), this->string_->data()):
-            nullptr;
+        if (this->string_ == nullptr)
+        {
+            return nullptr;
+        }
+        PSYQ_ASSERT(this->get_factory().get() != nullptr);
+        return this->string_->data();
     }
 
     /// @copydoc psyq::string::view::size
     public: typename this_type::factory::string::view::size_type size()
     const PSYQ_NOEXCEPT
     {
-        return this->string_ != nullptr?
-            (PSYQ_ASSERT(this->get_factory().get() != nullptr), this->string_->size_):
-            0;
+        if (this->string_ == nullptr)
+        {
+            return 0;
+        }
+        PSYQ_ASSERT(this->get_factory().get() != nullptr);
+        return this->string_->size_;
     }
 
     /// @copydoc psyq::string::view::max_size
@@ -854,9 +865,12 @@ class psyq::string::_private::flyweight_factory<
     public: typename this_type::factory::hash::value_type get_hash()
     const PSYQ_NOEXCEPT
     {
-        return this->string_ != nullptr?
-            (PSYQ_ASSERT(this->get_factory().get() != nullptr), this->string_->hash_):
-            this_type::factory::hash::traits_type::EMPTY;
+        if (this->string_ == nullptr)
+        {
+            return this_type::factory::hash::traits_type::EMPTY;
+        }
+        PSYQ_ASSERT(this->get_factory().get() != nullptr);
+        return this->string_->hash_;
     }
 
     /** @brief 参照しているフライ級文字列の生成器を取得する。
@@ -875,7 +889,7 @@ class psyq::string::_private::flyweight_factory<
     }
 
     protected: static this_type make(
-        typename this_type::factory::shared_ptr const& in_factory,
+        typename this_type::factory::shared_ptr in_factory,
         typename this_type::factory::string::view const& in_string,
         std::size_t const in_chunk_size)
     {
@@ -883,7 +897,7 @@ class psyq::string::_private::flyweight_factory<
         return in_string.empty() || local_factory == nullptr?
             this_type():
             this_type(
-                in_factory,
+                std::move(in_factory),
                 local_factory->equip_string(in_string, in_chunk_size));
     }
 

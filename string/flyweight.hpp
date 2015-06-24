@@ -48,6 +48,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "./view.hpp"
 #include "./flyweight_factory.hpp"
 
+/// @brief フライ級文字列生成器に適用するデフォルトのメモリ割当子の型
+#ifndef PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT
+#define PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT std::allocator<void*>
+#endif // PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT
+
 /// @brief フライ級文字列生成器の文字列チャンクのデフォルト容量。
 #ifndef PSYQ_STRING_FLYWEIGHT_CHUNK_SIZE_DEFAULT
 #define PSYQ_STRING_FLYWEIGHT_CHUNK_SIZE_DEFAULT 4096
@@ -75,7 +80,7 @@ namespace psyq
 template<
     typename template_char_type,
     typename template_char_traits = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
-    typename template_allocator_type = std::allocator<void*>>
+    typename template_allocator_type = PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT>
 class psyq::string::flyweight:
 public psyq::string::_private::interface_immutable<
     typename psyq::string::_private::flyweight_factory<
@@ -125,11 +130,13 @@ public psyq::string::_private::interface_immutable<
      */
     public: flyweight(
         typename base_type::view const& in_string,
-        typename base_type::base_type::factory::shared_ptr const& in_factory,
+        typename base_type::base_type::factory::shared_ptr in_factory,
         std::size_t const in_chunk_size =
             PSYQ_STRING_FLYWEIGHT_CHUNK_SIZE_DEFAULT)
     :
-    base_type(base_type::base_type::make(in_factory, in_string, in_chunk_size))
+    base_type(
+        base_type::base_type::make(
+            std::move(in_factory), in_string, in_chunk_size))
     {}
 
     /** @brief 文字列をコピー代入する。メモリ確保は行わない。

@@ -23,7 +23,7 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 行番号と列番号で参照する、文字列の表。
+/** @brief 行番号と列番号で参照する、フライ級文字列の表。
     @tparam template_char_type   @copybrief psyq::string::view::value_type
     @tparam template_char_traits @copybrief psyq::string::view::traits_type
     @tparam template_allocator   @copybrief table::allocator_type
@@ -34,7 +34,8 @@ template<
     typename template_allocator = PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT>
 class psyq::string::table
 {
-    private: typedef table this_type; ///< thisが指す値の型。
+    /// @brief thisが指す値の型。
+    private: typedef table this_type;
 
     //-------------------------------------------------------------------------
     /// @brief 使用するメモリ割当子を表す型。
@@ -57,65 +58,39 @@ class psyq::string::table
     };
 
     //-------------------------------------------------------------------------
-    /// @brief 文字列表のセル。
-    protected: class cell
-    {
-        public: cell(
-            typename table::string::size_type const in_index,
-            typename table::string io_string)
-        PSYQ_NOEXCEPT:
-        index_(in_index),
-        string_(std::move(io_string))
-        {}
+    /** @brief 文字列表のセルのコンテナ。
 
-#ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
-        public: cell(cell&& io_cell)
-        PSYQ_NOEXCEPT:
-        index_(io_cell.index_),
-        string_(std::move(io_cell.string_))
-        {}
-
-        public: cell& operator=(cell&& io_cell)
-        {
-            this->index_ = io_cell.index_;
-            this->string_ = std::move(io_cell.string_);
-            return *this;
-        }
-#endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
-
-        /// @brief セルのインデクス番号。
-        public: typename table::string::size_type index_;
-        /// @brief セルの文字列。
-        public: typename table::string string_;
-
-    }; // class cell
-
-    /// @brief 文字列表のセルのコンテナ。
+        - 要素の第1属性は、セル番号。
+        - 要素の第2属性は、セル文字列。
+     */
     protected: typedef
         std::vector<
-            typename this_type::cell, typename this_type::allocator_type>
+            std::pair<
+                typename this_type::string::size_type,
+                typename this_type::string>,
+            typename this_type::allocator_type>
         cell_container;
 
-    /// @brief セルのインデクス番号を比較する関数オブジェクト。
-    protected: struct cell_index_less
+    /// @brief セル番号を比較する関数オブジェクト。
+    protected: struct cell_number_less
     {
         bool operator()(
-            typename table::string::size_type const in_left_index,
+            typename table::string::size_type const in_left_number,
             typename table::cell_container::value_type const& in_right_cell)
         const PSYQ_NOEXCEPT
         {
-            return in_left_index < in_right_cell.index_;
+            return in_left_number < in_right_cell.first;
         }
 
         bool operator()(
             typename table::cell_container::value_type const& in_left_cell,
-            typename table::string::size_type const in_right_index)
+            typename table::string::size_type const in_right_number)
         const PSYQ_NOEXCEPT
         {
-            return in_left_cell.index_ < in_right_index;
+            return in_left_cell.first < in_right_number;
         }
 
-    }; // struct cell_index_less
+    }; // struct cell_number_less
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
@@ -124,7 +99,7 @@ class psyq::string::table
         @param[in] in_source コピー元となる文字列表。
      */
     public: table(this_type const& in_source):
-    cells_(in_source.cells_.cells_),
+    cells_(in_source.cells_),
     row_count_(in_source.get_row_count()),
     column_count_(in_source.get_column_count())
     {}
@@ -208,32 +183,32 @@ class psyq::string::table
     }
 
     /** @brief 行番号と属性から、文字列表のセルを検索する。
-        @param[in] in_row_index    検索するセルの行番号。
-        @param[in] in_column_index 検索するセルの列番号。
+        @param[in] in_row_number    検索するセルの行番号。
+        @param[in] in_column_number 検索するセルの列番号。
         @return
             行番号と列番号に対応するセルの文字列。
             対応するセルがない場合は、空文字列を返す。
      */
     public: typename this_type::string const& find_cell(
-        typename this_type::string::size_type const in_row_index,
-        typename this_type::string::size_type const in_column_index)
+        typename this_type::string::size_type const in_row_number,
+        typename this_type::string::size_type const in_column_number)
     const PSYQ_NOEXCEPT
     {
-        if (in_column_index < this->get_column_count()
-            && in_row_index < this->get_row_count())
+        if (in_column_number < this->get_column_count()
+            && in_row_number < this->get_row_count())
         {
-            auto const local_cell_index(
-                this_type::compute_cell_index(in_row_index, in_column_index));
+            auto const local_cell_number(
+                this_type::compute_cell_number(in_row_number, in_column_number));
             auto const local_lower_bound(
                 std::lower_bound(
                     this->cells_.begin(),
                     this->cells_.end(),
-                    local_cell_index,
-                    typename this_type::cell_index_less()));
+                    local_cell_number,
+                    typename this_type::cell_number_less()));
             if (local_lower_bound != this->cells_.end()
-                && local_lower_bound->index_ == local_cell_index)
+                && local_lower_bound->first == local_cell_number)
             {
-                return local_lower_bound->string_;
+                return local_lower_bound->second;
             }
         }
         static typename this_type::string const static_empty_string;
@@ -256,34 +231,34 @@ class psyq::string::table
     }
 
     /** @brief セルを置き換える。
-        @param[in] in_row_index    置き換えるセルの行番号。
-        @param[in] in_column_index 置き換えるセルの列番号。
-        @param[in] in_string       置き換えるセルの文字列。
+        @param[in] in_row_number    置き換えるセルの行番号。
+        @param[in] in_column_number 置き換えるセルの列番号。
+        @param[in] in_string        置き換えるセルの文字列。
      */
     protected: void replace_cell(
-        typename this_type::string::size_type const in_row_index,
-        typename this_type::string::size_type const in_column_index,
+        typename this_type::string::size_type const in_row_number,
+        typename this_type::string::size_type const in_column_number,
         typename this_type::string in_string)
     {
         // 最大行数か最大桁数を超えるセルは、追加できない。
-        if (this_type::MAX_ROW_COUNT <= in_row_index
-            || this_type::MAX_COLUMN_COUNT <= in_column_index)
+        if (this_type::MAX_ROW_COUNT <= in_row_number
+            || this_type::MAX_COLUMN_COUNT <= in_column_number)
         {
             PSYQ_ASSERT(false);
             return;
         }
 
         // セルの挿入位置を決定する。
-        auto const local_cell_index(
-            this_type::compute_cell_index(in_row_index, in_column_index));
+        auto const local_cell_number(
+            this_type::compute_cell_number(in_row_number, in_column_number));
         auto const local_lower_bound(
             std::lower_bound(
                 this->cells_.begin(),
                 this->cells_.end(),
-                local_cell_index,
-                typename this_type::cell_index_less()));
+                local_cell_number,
+                typename this_type::cell_number_less()));
         if (local_lower_bound != this->cells_.end()
-            && local_lower_bound->index_ == local_cell_index)
+            && local_lower_bound->first == local_cell_number)
         {
             if (in_string.empty())
             {
@@ -293,7 +268,7 @@ class psyq::string::table
             else
             {
                 // セル文字列を置き換える。
-                local_lower_bound->string_ = std::move(in_string);
+                local_lower_bound->second = std::move(in_string);
             }
         }
         else if (!in_string.empty())
@@ -301,8 +276,8 @@ class psyq::string::table
             // 新たにセルを追加する。
             this->cells_.insert(
                 local_lower_bound,
-                typename this_type::cell(
-                    local_cell_index, std::move(in_string)));
+                typename this_type::cell_container::value_type(
+                    local_cell_number, std::move(in_string)));
         }
     }
 
@@ -331,47 +306,49 @@ class psyq::string::table
         this->column_count_ = 0;
     }
 
-    /** @brief セルのインデクス番号から、セルの行番号を算出する。
-        @param[in] in_cell_index セルのインデクス番号。
+    /** @brief セル番号から、セルの行番号を算出する。
+        @param[in] in_cell_number セル番号。
         @return セルの行番号。
      */
-    protected: static typename this_type::string::size_type compute_row_index(
-        typename this_type::string::size_type const in_cell_index)
+    protected: static typename this_type::string::size_type compute_row_number(
+        typename this_type::string::size_type const in_cell_number)
     PSYQ_NOEXCEPT
     {
-        return in_cell_index / this_type::MAX_COLUMN_COUNT;
+        return in_cell_number / this_type::MAX_COLUMN_COUNT;
     }
 
-    /** @brief セルのインデクス番号から、セルの列番号を算出する。
-        @param[in] in_cell_index セルのインデクス番号。
+    /** @brief セル番号から、セルの列番号を算出する。
+        @param[in] in_cell_number セル番号。
         @return セルの列番号。
      */
-    protected: static typename this_type::string::size_type compute_column_index(
-        typename this_type::string::size_type const in_cell_index)
+    protected:
+    static typename this_type::string::size_type compute_column_number(
+        typename this_type::string::size_type const in_cell_number)
     PSYQ_NOEXCEPT
     {
-        return in_cell_index % this_type::MAX_COLUMN_COUNT;
+        return in_cell_number % this_type::MAX_COLUMN_COUNT;
     }
 
-    /** @brief セルの行番号と列番号から、セルのインデクス番号を算出する。
-        @param[in] in_row_index    セルの行番号。
-        @param[in] in_column_index セルの列番号。
-        @return セルのインデクス番号。
+    /** @brief セルの行番号と列番号から、セル番号を算出する。
+        @param[in] in_row_number    セルの行番号。
+        @param[in] in_column_number セルの列番号。
+        @return セル番号。
      */
-    protected: static typename this_type::string::size_type compute_cell_index(
-        typename this_type::string::size_type const in_row_index,
-        typename this_type::string::size_type const in_column_index)
+    protected:
+    static typename this_type::string::size_type compute_cell_number(
+        typename this_type::string::size_type const in_row_number,
+        typename this_type::string::size_type const in_column_number)
     PSYQ_NOEXCEPT
     {
-        auto const local_cell_index(
-            in_row_index * this_type::MAX_COLUMN_COUNT + in_column_index);
+        auto const local_cell_number(
+            in_row_number * this_type::MAX_COLUMN_COUNT + in_column_number);
         PSYQ_ASSERT(
-            in_row_index == this_type::compute_row_index(local_cell_index));
-        return local_cell_index;
+            in_row_number == this_type::compute_row_number(local_cell_number));
+        return local_cell_number;
     }
 
     //-------------------------------------------------------------------------
-    /// @brief セルのインデクス番号でソートされたセルの辞書。
+    /// @brief セル番号でソートされたセルの辞書。
     private: typename this_type::cell_container cells_;
     /// @brief 文字列表の行数。
     private: typename this_type::string::size_type row_count_;

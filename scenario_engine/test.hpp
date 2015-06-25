@@ -10,29 +10,27 @@
 #include "./expression_builder.hpp"
 #include "./behavior_builder.hpp"
 #include "../string/storage.hpp"
-#include "../string/relation_table.hpp"
+#include "../string/csv_table.hpp"
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq_test
 {
     inline void scenario_engine()
     {
+        // シナリオ駆動機を構築する。
         typedef psyq::scenario_engine::driver<> driver;
         driver local_driver(16, 16, 16);
-        auto const local_chunk_key(local_driver.hash_function_("chunk_0"));
 
-        typedef psyq::string::csv_table_builder<char> csv_table;
-        csv_table local_csv_table;
-        psyq::string::storage<csv_table::string::view::value_type>
-            local_csv_workspace;
-        auto const local_string_factory(
-            std::allocate_shared<typename csv_table::string::factory>(
-                local_csv_table.get_allocator(),
-                PSYQ_STRING_FLYWEIGHT_FACTORY_CAPACITY_DEFAULT,
-                local_csv_table.get_allocator()));
+        // 文字列表の構築に使うフライ級文字列生成器を構築する。
         typedef psyq::string::relation_table<char> relation_table;
+        auto const local_string_factory(
+            std::allocate_shared<typename relation_table::string::factory>(
+                relation_table::allocator_type(),
+                PSYQ_STRING_FLYWEIGHT_FACTORY_CAPACITY_DEFAULT,
+                relation_table::allocator_type()));
 
-        // 状態値テーブルを構築する。
+        // 状態値CSV文字列を構築する。
+        typedef psyq::string::csv_table<char> csv_table;
         csv_table::string::view const local_csv_state(
             "KEY,            KIND,      VALUE,\n"
             "state_bool,     BOOL,       TRUE,\n"
@@ -40,16 +38,8 @@ namespace psyq_test
             "state_signed,   SIGNED_13,   -20,\n"
             "state_float,    FLOAT,      1.25,\n"
             "");
-        local_csv_table.build(
-            local_csv_workspace, local_string_factory, local_csv_state);
-        relation_table local_state_relation(std::move(local_csv_table));
-        local_state_relation.constraint_attribute(0);
 
-        typedef psyq::string::csv_table<std::string> string_table;
-        string_table local_state_table(local_csv_state);
-        local_state_table.constraint_attribute(0);
-
-        // 条件式テーブルを構築する。
+        // 条件式CSV文字列を構築する。
         csv_table::string::view const local_csv_expression(
             "KEY,          LOGIC, KIND,             ELEMENT,\n"
             "expression_0, AND,   STATE_COMPARISON, state_bool,     ==, FALSE,\n"
@@ -63,15 +53,8 @@ namespace psyq_test
             "expression_8, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
             "expression_9, OR,    SUB_EXPRESSION,   expression_0, TRUE, expression_1, FALSE,\n"
             "");
-        local_csv_table.build(
-            local_csv_workspace, local_string_factory, local_csv_expression);
-        relation_table local_expression_relation(std::move(local_csv_table));
-        local_expression_relation.constraint_attribute(0);
 
-        string_table local_expression_table(local_csv_expression);
-        local_expression_table.constraint_attribute(0);
-
-        // 条件挙動テーブルを構築する。
+        // 条件挙動CSV文字列を構築する。
         csv_table::string::view const local_csv_behavior(
             "KEY         , CONDITION, PRIORITY, KIND, ARGUMENT\n"
             "expression_0, TRUE,      9,       STATE, state_unsigned, :=, 1\n"
@@ -84,24 +67,35 @@ namespace psyq_test
             "expression_7, TRUE,      2,       STATE, state_unsigned, ^=, 0\n"
             "expression_8, TRUE,      1,       STATE, state_unsigned, &=, 0\n"
             "");
-        local_csv_table.build(
-            local_csv_workspace, local_string_factory, local_csv_behavior);
-        relation_table local_behavior_relation(std::move(local_csv_table));
-        local_behavior_relation.constraint_attribute(0);
 
-        string_table local_behavior_table(local_csv_behavior);
-        local_behavior_table.constraint_attribute(0);
-
-        // シナリオ駆動機に登録する。
+        // シナリオ駆動機に条件挙動を登録する。
+        auto const local_chunk_key(local_driver.hash_function_("chunk_0"));
+        psyq::string::storage<csv_table::string::view::value_type>
+            local_csv_workspace;
         local_driver.extend_chunk(
             local_chunk_key,
-            psyq::scenario_engine::state_builder<string_table::string>(
-                std::move(local_state_table)),
-            psyq::scenario_engine::expression_builder<string_table::string>(
-                std::move(local_expression_table)),
+            psyq::scenario_engine::state_builder<relation_table>(
+                relation_table(
+                    csv_table(
+                        local_csv_workspace,
+                        local_csv_state,
+                        local_string_factory),
+                    0)),
+            psyq::scenario_engine::expression_builder<relation_table>(
+                relation_table(
+                    csv_table(
+                        local_csv_workspace,
+                        local_csv_expression,
+                        local_string_factory),
+                    0)),
             psyq::scenario_engine::behavior_builder<
-                string_table::string, driver::dispatcher>(
-                    std::move(local_behavior_table)));
+                relation_table, driver::dispatcher>(
+                    relation_table(
+                        csv_table(
+                            local_csv_workspace,
+                            local_csv_behavior,
+                            local_string_factory),
+                        0)));
         PSYQ_ASSERT(
             local_driver.reservoir_.register_value(
                 local_chunk_key,

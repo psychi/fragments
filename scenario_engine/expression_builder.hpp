@@ -1,11 +1,11 @@
 ﻿/** @file
-    @copydoc psyq::scenario_engine::expression_builder
+    @copybrief psyq::scenario_engine::expression_builder
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_HPP_
 #define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_HPP_
 
-#include "../string/csv_table.hpp"
+#include "../string/relation_table.hpp"
 
 /// @cond
 namespace psyq
@@ -82,22 +82,22 @@ namespace psyq
 
     driver::extend_chunk の引数として使う。
 
-    @tparam template_string CSV文字列表で使う文字列の型。
+    @tparam template_relation_table @copydoc expression_builder::relation_table
  */
-template<typename template_string>
+template<typename template_relation_table>
 class psyq::scenario_engine::expression_builder
 {
     /// @brief thisが指す値の型。
     private: typedef expression_builder this_type;
 
-    /// @brief 解析するCSV文字列表の型。
-    public: typedef psyq::string::csv_table<template_string> string_table;
+    /// @brief 解析する関係文字列表の型。
+    public: typedef template_relation_table relation_table;
 
     /// @brief CSV文字列表の属性。
     private: class table_attribute
     {
         public: explicit table_attribute(
-            typename expression_builder::string_table const& in_table)
+            typename expression_builder::relation_table const& in_table)
         PSYQ_NOEXCEPT:
         key_(
             in_table.find_attribute(
@@ -115,16 +115,16 @@ class psyq::scenario_engine::expression_builder
 
         public: bool is_valid() const PSYQ_NOEXCEPT
         {
-            return this->key_ != nullptr
-                && this->logic_ != nullptr
-                && this->kind_ != nullptr
-                && this->element_ != nullptr;
+            return 0 < this->key_.second
+                && 0 < this->logic_.second
+                && 0 < this->kind_.second
+                && 0 < this->element_.second;
         }
 
-        public: typename this_type::string_table::attribute const* key_;
-        public: typename this_type::string_table::attribute const* logic_;
-        public: typename this_type::string_table::attribute const* kind_;
-        public: typename this_type::string_table::attribute const* element_;
+        public: typename this_type::relation_table::attribute key_;
+        public: typename this_type::relation_table::attribute logic_;
+        public: typename this_type::relation_table::attribute kind_;
+        public: typename this_type::relation_table::attribute element_;
 
     }; // class table_attribute
 
@@ -158,9 +158,9 @@ class psyq::scenario_engine::expression_builder
         @param[in] in_table 解析する文字列表。
      */
     public: explicit expression_builder(
-        typename this_type::string_table in_table)
+        typename this_type::relation_table in_table)
     :
-    string_table_(std::move(in_table))
+    relation_table_(std::move(in_table))
     {}
 
     /** @brief 文字列表を解析して条件式を構築し、条件評価器に登録する。
@@ -183,7 +183,7 @@ class psyq::scenario_engine::expression_builder
             io_hasher,
             in_chunk_key,
             in_reservoir,
-            this->string_table_);
+            this->relation_table_);
     }
 
     /** @brief 文字列表を解析して条件式を構築し、条件評価器に登録する。
@@ -200,7 +200,7 @@ class psyq::scenario_engine::expression_builder
         template_hasher& io_hasher,
         typename template_evaluator::reservoir::chunk_key const& in_chunk_key,
         typename template_evaluator::reservoir const& in_reservoir,
-        typename this_type::string_table const& in_table)
+        typename this_type::relation_table const& in_table)
     {
         // 文字列表の属性を取得する。
         typename this_type::table_attribute const local_attribute(in_table);
@@ -212,13 +212,13 @@ class psyq::scenario_engine::expression_builder
 
         // 作業領域を確保する。
         typename this_type::workspace<template_evaluator> local_workspace(
-            local_attribute.element_->size_, io_evaluator.get_allocator());
+            local_attribute.element_.second, io_evaluator.get_allocator());
 
         // 文字列表を行ごとに解析し、条件式を構築して、条件評価器へ登録する。
         auto const local_row_count(in_table.get_row_count());
         std::size_t local_count(0);
         for (
-            typename this_type::string_table::index_type i(0);
+            typename this_type::relation_table::string::size_type i(0);
             i < local_row_count;
             ++i)
         {
@@ -264,13 +264,13 @@ class psyq::scenario_engine::expression_builder
         typename this_type::workspace<template_evaluator>& io_workspace,
         typename template_evaluator::reservoir::chunk_key const& in_chunk_key,
         typename template_evaluator::reservoir const& in_reservoir,
-        typename this_type::string_table const& in_table,
-        typename this_type::string_table::index_type const in_row_index,
+        typename this_type::relation_table const& in_table,
+        typename this_type::relation_table::string::size_type const in_row_index,
         typename this_type::table_attribute const& in_attribute)
     {
         // 条件式キーを取得する。
-        auto const local_key_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.key_->column_));
+        auto const& local_key_cell(
+            in_table.find_body_cell(in_row_index, in_attribute.key_.first));
         if (local_key_cell.empty())
         {
             return false;
@@ -285,8 +285,8 @@ class psyq::scenario_engine::expression_builder
         }
 
         // 要素条件の論理演算子を取得する。
-        auto const local_logic_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.logic_->column_));
+        auto const& local_logic_cell(
+            in_table.find_body_cell(in_row_index, in_attribute.logic_.first));
         typename template_evaluator::expression::logic local_logic;
         if (local_logic_cell
             == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_LOGIC_AND)
@@ -307,8 +307,8 @@ class psyq::scenario_engine::expression_builder
         }
 
         // 条件式の種類ごとに、条件式の要素条件を構築する。
-        auto const local_kind_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.kind_->column_));
+        auto const& local_kind_cell(
+            in_table.find_body_cell(in_row_index, in_attribute.kind_.first));
         if (local_kind_cell
             == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION)
         {
@@ -394,8 +394,8 @@ class psyq::scenario_engine::expression_builder
         typename template_evaluator::expression::key in_expression_key,
         typename template_evaluator::expression::logic const in_logic,
         template_element_server const& in_elements,
-        typename this_type::string_table const& in_table,
-        typename this_type::string_table::index_type const in_row_index,
+        typename this_type::relation_table const& in_table,
+        typename this_type::relation_table::string::size_type const in_row_index,
         typename this_type::table_attribute const& in_attribute)
     {
         // 要素条件のコンテナを構築し、条件式を条件評価器へ登録する。
@@ -434,23 +434,23 @@ class psyq::scenario_engine::expression_builder
         typename template_evaluator::sub_expression_container& io_elements,
         template_hasher& io_hasher,
         template_evaluator const& in_evaluator,
-        typename this_type::string_table const& in_table,
-        typename this_type::string_table::index_type const in_row_index,
+        typename this_type::relation_table const& in_table,
+        typename this_type::relation_table::string::size_type const in_row_index,
         typename this_type::table_attribute const& in_attribute,
         unsigned const in_element_count)
     {
         unsigned const local_element_size(2);
         auto const local_element_column(
-            in_attribute.element_->column_
+            in_attribute.element_.first
             + in_element_count * local_element_size);
-        if (in_attribute.element_->column_ + in_attribute.element_->size_
+        if (in_attribute.element_.first + in_attribute.element_.second
             < local_element_column + local_element_size)
         {
             return false;
         }
 
         // 複合条件式の下位条件式キーを取得する。
-        auto const local_sub_key_cell(
+        auto const& local_sub_key_cell(
             in_table.find_body_cell(in_row_index, local_element_column));
         if (local_sub_key_cell.empty())
         {
@@ -471,7 +471,7 @@ class psyq::scenario_engine::expression_builder
         }
 
         // 複合条件式の条件を取得する。
-        auto const local_condition_cell(
+        auto const& local_condition_cell(
             in_table.find_body_cell(in_row_index, local_element_column + 1));
         auto const local_bool_state(local_condition_cell.to_bool());
         if (local_bool_state < 0)
@@ -502,23 +502,23 @@ class psyq::scenario_engine::expression_builder
         typename template_evaluator::state_transition_container& io_elements,
         template_hasher& io_hasher,
         typename template_evaluator::reservoir const& in_reservoir,
-        typename this_type::string_table const& in_table,
-        typename this_type::string_table::index_type const in_row_index,
+        typename this_type::relation_table const& in_table,
+        typename this_type::relation_table::string::size_type const in_row_index,
         typename this_type::table_attribute const& in_attribute,
         unsigned const in_element_count)
     {
         unsigned const local_element_size(1);
         auto const local_element_column(
-            in_attribute.element_->column_
+            in_attribute.element_.first
             + in_element_count * local_element_size);
-        if (in_attribute.element_->column_ + in_attribute.element_->size_
+        if (in_attribute.element_.first + in_attribute.element_.second
             < local_element_column + local_element_size)
         {
             return false;
         }
 
         // 状態キーを取得する。
-        auto const local_state_key_cell(
+        auto const& local_state_key_cell(
             in_table.find_body_cell(in_row_index, local_element_column));
         if (local_state_key_cell.empty())
         {
@@ -553,23 +553,23 @@ class psyq::scenario_engine::expression_builder
         typename template_evaluator::state_comparison_container& io_elements,
         template_hasher& io_hasher,
         typename template_evaluator::reservoir const& in_reservoir,
-        typename this_type::string_table const& in_table,
-        typename this_type::string_table::index_type const in_row_index,
+        typename this_type::relation_table const& in_table,
+        typename this_type::relation_table::string::size_type const in_row_index,
         typename this_type::table_attribute const& in_attribute,
         unsigned const in_element_count)
     {
         unsigned const local_element_size(3);
         auto const local_element_column(
-            in_attribute.element_->column_
+            in_attribute.element_.first
             + in_element_count * local_element_size);
-        if (in_attribute.element_->column_ + in_attribute.element_->size_
+        if (in_attribute.element_.first + in_attribute.element_.second
             < local_element_column + local_element_size)
         {
             return false;
         }
 
         // 状態キーを取得する。
-        auto const local_state_key_cell(
+        auto const& local_state_key_cell(
             in_table.find_body_cell(in_row_index, local_element_column));
         if (local_state_key_cell.empty())
         {
@@ -622,7 +622,7 @@ class psyq::scenario_engine::expression_builder
     private: template<typename template_state_value>
     static bool get_comparison_operator(
         typename template_state_value::comparison& out_comparison,
-        typename this_type::string_table::string_view const& in_string)
+        typename this_type::relation_table::string::view const& in_string)
     {
         if (in_string
             == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_EQUAL)
@@ -670,7 +670,7 @@ class psyq::scenario_engine::expression_builder
 
     //-------------------------------------------------------------------------
     /// @brief 解析する文字列表。
-    private: typename this_type::string_table string_table_;
+    private: typename this_type::relation_table relation_table_;
 
 }; // class psyq::scenario_engine::expression_builder
 

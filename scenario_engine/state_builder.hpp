@@ -1,11 +1,11 @@
 ﻿/** @file
-    @copydoc psyq::scenario_engine::state_builder
+    @copybrief psyq::scenario_engine::state_builder
     @author Hillco Psychi (https://twitter.com/psychi)
  */
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_HPP_
 #define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_HPP_
 
-#include "../string/csv_table.hpp"
+#include "../string/relation_table.hpp"
 
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_COLUMN_KEY
 #define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_COLUMN_KEY "KEY"
@@ -58,22 +58,22 @@ namespace psyq
 
     driver::extend_chunk の引数として使う。
 
-    @tparam template_string CSV文字列表で使う文字列の型。
+    @tparam template_relation_table @copydoc state_builder::relation_table
  */
-template<typename template_string>
+template<typename template_relation_table>
 class psyq::scenario_engine::state_builder
 {
     /// @brief thisが指す値の型。
     private: typedef state_builder this_type;
 
-    /// @brief 解析する文字列表の型。
-    public: typedef psyq::string::csv_table<template_string> string_table;
+    /// @brief 解析する関係文字列表の型。
+    public: typedef template_relation_table relation_table;
 
     /// @brief 文字列表の属性。
     private: class table_attribute
     {
         public: explicit table_attribute(
-            typename state_builder::string_table const& in_table)
+            typename state_builder::relation_table const& in_table)
         PSYQ_NOEXCEPT:
         key_(
             in_table.find_attribute(
@@ -88,14 +88,14 @@ class psyq::scenario_engine::state_builder
 
         public: bool is_valid() const PSYQ_NOEXCEPT
         {
-            return this->key_ != nullptr
-                && this->kind_ != nullptr
-                && this->value_ != nullptr;
+            return 0 < this->key_.second
+                && 0 < this->kind_.second
+                && 0 < this->value_.second;
         }
 
-        public: typename this_type::string_table::attribute const* key_;
-        public: typename this_type::string_table::attribute const* kind_;
-        public: typename this_type::string_table::attribute const* value_;
+        public: typename this_type::relation_table::attribute key_;
+        public: typename this_type::relation_table::attribute kind_;
+        public: typename this_type::relation_table::attribute value_;
 
     }; // class table_attribute
 
@@ -103,8 +103,8 @@ class psyq::scenario_engine::state_builder
     /** @brief 文字列表から状態値を構築する関数オブジェクトを構築する。
         @param[in] in_table 解析する文字列表。
      */
-    public: explicit state_builder(typename this_type::string_table in_table):
-    string_table_(std::move(in_table))
+    public: explicit state_builder(typename this_type::relation_table in_table):
+    relation_table_(std::move(in_table))
     {}
 
     /** @brief 文字列表を解析して状態値を構築し、状態貯蔵器へ登録する。
@@ -121,7 +121,7 @@ class psyq::scenario_engine::state_builder
     const
     {
         return this_type::build(
-            io_reservoir, io_hasher, in_chunk_key, this->string_table_);
+            io_reservoir, io_hasher, in_chunk_key, this->relation_table_);
     }
 
     /** @brief 文字列表を解析して状態値を構築し、状態貯蔵器へ登録する。
@@ -136,7 +136,7 @@ class psyq::scenario_engine::state_builder
         template_reservoir& io_reservoir,
         template_hasher& io_hasher,
         typename template_reservoir::chunk_key const& in_chunk_key,
-        typename this_type::string_table const& in_table)
+        typename this_type::relation_table const& in_table)
     {
         // 文字列表の属性を取得する。
         typename this_type::table_attribute const local_attribute(in_table);
@@ -150,7 +150,7 @@ class psyq::scenario_engine::state_builder
         auto const local_row_count(in_table.get_row_count());
         std::size_t local_register_count(0);
         for (
-            typename this_type::string_table::index_type i(0);
+            typename this_type::relation_table::string::size_type i(0);
             i < local_row_count;
             ++i)
         {
@@ -189,13 +189,13 @@ class psyq::scenario_engine::state_builder
         template_reservoir& io_reservoir,
         template_hasher& io_hasher,
         typename template_reservoir::chunk_key const& in_chunk_key,
-        typename this_type::string_table const& in_table,
-        typename this_type::string_table::index_type const in_row_index,
+        typename this_type::relation_table const& in_table,
+        typename this_type::relation_table::string::size_type const in_row_index,
         typename this_type::table_attribute const& in_attribute)
     {
         // 状態値のキーを取得する。
-        auto const local_key_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.key_->column_));
+        auto const& local_key_cell(
+            in_table.find_body_cell(in_row_index, in_attribute.key_.first));
         if (local_key_cell.empty())
         {
             PSYQ_ASSERT(false);
@@ -216,8 +216,8 @@ class psyq::scenario_engine::state_builder
             io_reservoir,
             in_chunk_key,
             local_key,
-            in_table.find_body_cell(in_row_index, in_attribute.kind_->column_),
-            in_table.find_body_cell(in_row_index, in_attribute.value_->column_));
+            in_table.find_body_cell(in_row_index, in_attribute.kind_.first),
+            in_table.find_body_cell(in_row_index, in_attribute.value_.first));
     }
 
     /** @brief 状態値の型と初期値を解析して状態値を構築し、状態貯蔵器へ登録する。
@@ -234,8 +234,8 @@ class psyq::scenario_engine::state_builder
         template_reservoir& io_reservoir,
         typename template_reservoir::chunk_key const& in_chunk_key,
         typename template_reservoir::state_key const& in_state_key,
-        typename this_type::string_table::string_view const& in_kind,
-        typename this_type::string_table::string_view const& in_value)
+        typename this_type::relation_table::string::view const& in_kind,
+        typename this_type::relation_table::string::view const& in_value)
     {
         if (in_kind == PSYQ_SCENARIO_ENGINE_STATE_BUILDER_KIND_BOOL)
         {
@@ -299,7 +299,7 @@ class psyq::scenario_engine::state_builder
         template_reservoir& io_reservoir,
         typename template_reservoir::chunk_key const& in_chunk_key,
         typename template_reservoir::state_key const& in_state_key,
-        typename this_type::string_table::string_view const& in_value_cell)
+        typename this_type::relation_table::string::view const& in_value_cell)
     {
         auto const local_bool_state(in_value_cell.to_bool());
         if (local_bool_state < 0)
@@ -325,7 +325,7 @@ class psyq::scenario_engine::state_builder
         template_reservoir& io_reservoir,
         typename template_reservoir::chunk_key const& in_chunk_key,
         typename template_reservoir::state_key const& in_state_key,
-        typename this_type::string_table::string_view const& in_value_cell,
+        typename this_type::relation_table::string::view const& in_value_cell,
         std::size_t const in_size)
     {
         std::size_t local_rest_size;
@@ -357,7 +357,7 @@ class psyq::scenario_engine::state_builder
         template_reservoir& io_reservoir,
         typename template_reservoir::chunk_key const& in_chunk_key,
         typename template_reservoir::state_key const& in_state_key,
-        typename this_type::string_table::string_view const& in_value_cell,
+        typename this_type::relation_table::string::view const& in_value_cell,
         std::size_t const in_size)
     {
         std::size_t local_rest_size;
@@ -388,7 +388,7 @@ class psyq::scenario_engine::state_builder
         template_reservoir& io_reservoir,
         typename template_reservoir::chunk_key const& in_chunk_key,
         typename template_reservoir::state_key const& in_state_key,
-        typename this_type::string_table::string_view const& in_value_cell)
+        typename this_type::relation_table::string::view const& in_value_cell)
     {
         std::size_t local_rest_size;
         auto const local_value(
@@ -413,8 +413,8 @@ class psyq::scenario_engine::state_builder
         @return ==0 失敗。
      */
     private: static std::size_t get_integer_size(
-        typename this_type::string_table::string_view const& in_cell,
-        typename this_type::string_table::string_view const& in_kind,
+        typename this_type::relation_table::string::view const& in_cell,
+        typename this_type::relation_table::string::view const& in_kind,
         std::size_t const in_default_size)
     {
         PSYQ_ASSERT(!in_kind.empty());
@@ -443,7 +443,7 @@ class psyq::scenario_engine::state_builder
 
     //-------------------------------------------------------------------------
     /// @brief 解析する文字列表。
-    private: typename this_type::string_table string_table_;
+    private: typename this_type::relation_table relation_table_;
 
 }; // class psyq::scenario_engine::state_builder
 

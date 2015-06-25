@@ -73,20 +73,20 @@ namespace psyq
 
     base_type::base_type::factory を介して文字列を管理する。
 
-    @tparam template_char_type      @copydoc psyq::string::view::value_type
-    @tparam template_char_traits    @copydoc psyq::string::view::traits_type
-    @tparam template_allocator_type @copydoc psyq::string::_private::flyweight_factory::allocator_type
+    @tparam template_char_type   @copydoc psyq::string::view::value_type
+    @tparam template_char_traits @copydoc psyq::string::view::traits_type
+    @tparam template_allocator   @copydoc psyq::string::_private::flyweight_factory::allocator_type
  */
 template<
     typename template_char_type,
     typename template_char_traits = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
-    typename template_allocator_type = PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT>
+    typename template_allocator = PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT>
 class psyq::string::flyweight:
 public psyq::string::_private::interface_immutable<
     typename psyq::string::_private::flyweight_factory<
         psyq::string::view<template_char_type, template_char_traits>,
         psyq::fnv1a_hash32,
-        template_allocator_type>
+        template_allocator>
             ::_private_client>
 {
     /// @brief thisが指す値の型。
@@ -98,7 +98,7 @@ public psyq::string::_private::interface_immutable<
             typename psyq::string::_private::flyweight_factory<
                 psyq::string::view<template_char_type, template_char_traits>,
                 psyq::fnv1a_hash32,
-                template_allocator_type>
+                template_allocator>
                     ::_private_client>
         base_type;
 

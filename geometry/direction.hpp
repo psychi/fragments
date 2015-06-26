@@ -7,6 +7,8 @@
 #ifndef PSYQ_GEOMETRY_DIRECTION_HPP_
 #define PSYQ_GEOMETRY_DIRECTION_HPP_
 
+#include "./vector.hpp"
+
 /// @cond
 namespace psyq
 {

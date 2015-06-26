@@ -10,8 +10,8 @@
 #define PSYQ_GEOMETRY_MOSP_TREE_HPP_
 
 #include <unordered_map>
-//#include "../../memory_arena.hpp"
-//#include "./node.hpp"
+#include "../../memory_arena.hpp"
+#include "./node.hpp"
 
 
 #ifndef PSYQ_GEOMETRY_MOSP_TREE_ALLOCATOR_DEFAULT
@@ -64,7 +64,8 @@ template<
     typename template_allocator = PSYQ_GEOMETRY_MOSP_TREE_ALLOCATOR_DEFAULT>
 class psyq::geometry::mosp::tree
 {
-    private: typedef tree this_type; ///< *thisの型。
+    /// @brief thisが指す値の型。
+    private: typedef tree this_type;
 
     /** @brief 空間分割木で衝突判定を行う空間。
 
@@ -76,13 +77,14 @@ class psyq::geometry::mosp::tree
     /// @copydoc psyq::geometry::mosp::node::argument
     public: typedef template_argument argument;
 
-    /// 使用するメモリ割当子。
+    /// @brief 使用するメモリ割当子。
     public: typedef template_allocator allocator_type;
 
-    /// this_type に取りつけるノード。
-    public: typedef psyq::geometry::mosp::node<
-        template_argument, typename this_type::space::order>
-            node;
+    /// @brief this_type に取りつけるノード。
+    public: typedef
+        psyq::geometry::mosp::node<
+            template_argument, typename this_type::space::order>
+        node;
     /// @cond
     friend node;
     /// @endcond
@@ -96,13 +98,14 @@ class psyq::geometry::mosp::tree
     };
 
     /// モートン順序をキーとする、分割空間辞書。
-    public: typedef std::unordered_multimap<
-        typename this_type::space::order,
-        typename this_type::node*,
-        typename this_type::order_hash,
-        std::equal_to<typename this_type::space::order>,
-        template_allocator>
-            node_map;
+    public: typedef
+        std::unordered_multimap<
+            typename this_type::space::order,
+            typename this_type::node*,
+            typename this_type::order_hash,
+            std::equal_to<typename this_type::space::order>,
+            template_allocator>
+        node_map;
 
     /// 対応できる空間分割の限界深度。
     public: static unsigned const LEVEL_LIMIT =
@@ -191,12 +194,6 @@ class psyq::geometry::mosp::tree
         return *this;
     }
     //@}
-    /// コピー構築子は使用禁止。
-    private: tree(this_type const&);
-
-    /// コピー代入演算子は使用禁止。
-    private: this_type& operator=(this_type const&);
-
     //-------------------------------------------------------------------------
     /// @name 衝突判定
     //@{
@@ -320,6 +317,14 @@ class psyq::geometry::mosp::tree
         return true;
     }
     //@}
+    //-------------------------------------------------------------------------
+    /// @brief コピー構築子は使用禁止。
+    private: tree(this_type const&);
+
+    /// @brief コピー代入演算子は使用禁止。
+    private: this_type& operator=(this_type const&);
+
+    //-------------------------------------------------------------------------
     /** @brief 分割空間ノードに分割空間辞書を衝突させる。
 
         begin_detection と end_detection の間で呼び出すこと。
@@ -446,7 +451,7 @@ class psyq::geometry::mosp::tree
 
         // モートン順序に対応する分割空間のハンドルを用意する。
         auto const local_morton_order(
-            this_type::calc_order(this->level_cap_, this->space_, in_aabb));
+            this_type::compute_order(this->level_cap_, this->space_, in_aabb));
         auto const local_map_iterator(
             this->node_map_.emplace(local_morton_order, &in_node));
         return &(*local_map_iterator);
@@ -458,7 +463,7 @@ class psyq::geometry::mosp::tree
         @param[in] in_space     使用するモートン空間。
         @param[in] in_aabb      絶対座標系AABB。
      */
-    private: static typename this_type::space::order calc_order(
+    private: static typename this_type::space::order compute_order(
         unsigned const in_level_cap,
         typename this_type::space const& in_space,
         typename this_type::space::coordinate::aabb const& in_aabb)
@@ -472,9 +477,9 @@ class psyq::geometry::mosp::tree
         auto const local_axis_order_max(
             psyq::bitwise_shift_left_fast<unsigned>(1, in_level_cap) - 1);
         auto const local_min_morton(
-            in_space.calc_order(in_aabb.get_min(), local_axis_order_max));
+            in_space.compute_order(in_aabb.get_min(), local_axis_order_max));
         auto const local_max_morton(
-            in_space.calc_order(in_aabb.get_max(), local_axis_order_max));
+            in_space.compute_order(in_aabb.get_max(), local_axis_order_max));
         auto const local_morton_distance(local_max_morton ^ local_min_morton);
         unsigned local_level;
         if (local_morton_distance != 0)

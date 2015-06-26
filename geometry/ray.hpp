@@ -6,7 +6,7 @@
 #ifndef PSYQ_GEOMETRY_RAY_HPP_
 #define PSYQ_GEOMETRY_RAY_HPP_
 
-//#include "./line.hpp"
+#include "./line.hpp"
 
 /// @cond
 namespace psyq

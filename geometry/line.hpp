@@ -6,8 +6,8 @@
 #ifndef PSYQ_GEOMETRY_LINE_HPP_
 #define PSYQ_GEOMETRY_LINE_HPP_
 
-//#include "./direction.hpp"
-//#include "./point.hpp"
+#include "./direction.hpp"
+#include "./point.hpp"
 
 /// @cond
 namespace psyq
@@ -71,9 +71,9 @@ class psyq::geometry::line
     }
 
     //-------------------------------------------------------------------------
-    /// 直線の原点。
+    /// @brief 直線の原点。
     public: typename this_type::point origin_;
-    /// 直線の方向。
+    /// @brief 直線の方向。
     public: typename this_type::direction direction_;
 
 }; // namespace psyq::geometry::line
@@ -633,21 +633,21 @@ class psyq::geometry::line<template_coordinate>::line_collision
     {}
 
     //-------------------------------------------------------------------------
-    /// 左辺となる直線上にある最短点。
+    /// @brief 左辺となる直線上にある最短点。
     private: typename this_type::coordinate::vector source_point_;
-    /// 右辺となる直線上にある最短点。
+    /// @brief 右辺となる直線上にある最短点。
     private: typename this_type::coordinate::vector target_point_;
-    /// 左辺の最短点から右辺の最短点へのベクトル。
+    /// @brief 左辺の最短点から右辺の最短点へのベクトル。
     private: typename this_type::coordinate::vector point_difference_;
-    /// 左辺の原点から右辺の原点へのベクトル。
+    /// @brief 左辺の原点から右辺の原点へのベクトル。
     private: typename this_type::coordinate::vector origin_difference_;
-    /// 左辺となる直線上の、最短点の位置。
+    /// @brief 左辺となる直線上の、最短点の位置。
     private: typename this_type::coordinate::element source_position_;
-    /// 右辺となる直線上の、最短点の位置。
+    /// @brief 右辺となる直線上の、最短点の位置。
     private: typename this_type::coordinate::element target_position_;
-    /// 直線と直線の最短距離の自乗。
+    /// @brief 直線と直線の最短距離の自乗。
     private: typename this_type::coordinate::element square_distance_;
-    /// 左辺の方向と右辺の方向の内積。
+    /// @brief 左辺の方向と右辺の方向の内積。
     private: typename this_type::coordinate::element direction_dot_;
 
 }; // class psyq::geometry::line::line_collision

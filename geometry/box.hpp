@@ -6,6 +6,9 @@
 #ifndef PSYQ_GEOMETRY_BOX_HPP_
 #define PSYQ_GEOMETRY_BOX_HPP_
 
+#include <array>
+#include "./vector.hpp"
+
 /// @cond
 namespace psyq
 {
@@ -31,10 +34,11 @@ class psyq::geometry::box
     public: typedef template_coordinate coordinate;
 
     /// @brief 直方体の軸方向の単位ベクトルの配列。
-    public: typedef std::array<
-        typename this_type::coordinate::vector,
-        this_type::coordinate::DIMENSION>
-            axis_array;
+    public:
+        typedef std::array<
+            typename this_type::coordinate::vector,
+            this_type::coordinate::DIMENSION>
+        axis_array;
 
     //-------------------------------------------------------------------------
     /** @brief 直方体を構築する。

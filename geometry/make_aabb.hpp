@@ -6,11 +6,9 @@
 #ifndef PSYQ_GEOMETRY_MAKE_AABB_HPP_
 #define PSYQ_GEOMETRY_MAKE_AABB_HPP_
 
-//#include "./aabb.hpp"
-//#include "./line.hpp"
-//#include "./ray.hpp"
-//#include "./ball.hpp"
-//#include "./box.hpp"
+#include "./ray.hpp"
+#include "./ball.hpp"
+#include "./box.hpp"
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq

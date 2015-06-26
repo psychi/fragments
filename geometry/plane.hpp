@@ -6,7 +6,7 @@
 #ifndef PSYQ_GEOMETRY_PLANE_HPP_
 #define PSYQ_GEOMETRY_PLANE_HPP_
 
-//#include "./ray.hpp"
+#include "./ray.hpp"
 
 /// @cond
 namespace psyq

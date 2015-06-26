@@ -6,7 +6,7 @@
 #ifndef PSYQ_GEOMETRY_BALL_HPP_
 #define PSYQ_GEOMETRY_BALL_HPP_
 
-//#include "psyq/geometry/point.hpp"
+#include "./point.hpp"
 
 /// @cond
 namespace psyq

@@ -6,7 +6,7 @@
 #define PSYQ_GEOMETRY_D3DX_VECTOR_HPP_
 
 #include <d3dx9math.h>
-//#include "psyq/geometry/vector.hpp"
+#include "./vector.hpp"
 
 namespace psyq
 {
@@ -20,14 +20,14 @@ namespace vector
  */
 template<> class traits<D3DXVECTOR2>
 {
-    /// 幾何ベクトルの型。
+    /// @brief 幾何ベクトルの型。
     public: typedef D3DXVECTOR2 type;
-    /// 幾何ベクトルが持つ成分の型。
+    /// @brief 幾何ベクトルが持つ成分の型。
     public: typedef FLOAT element;
 
     public: enum: unsigned
     {
-        /// 幾何ベクトルが持つ成分の数。
+        /// @brief 幾何ベクトルが持つ成分の数。
         SIZE = 2,
     };
 };
@@ -79,14 +79,14 @@ inline D3DXVECTOR2 normalize(D3DXVECTOR2 const& in_vector)
  */
 template<> class traits<D3DXVECTOR3>
 {
-    /// 幾何ベクトルの型。
+    /// @brief 幾何ベクトルの型。
     public: typedef D3DXVECTOR3 type;
-    /// 幾何ベクトルが持つ成分の型。
+    /// @brief 幾何ベクトルが持つ成分の型。
     public: typedef FLOAT element;
 
     public: enum: unsigned
     {
-        /// 幾何ベクトルが持つ成分の数。
+        /// @brief 幾何ベクトルが持つ成分の数。
         SIZE = 3,
     };
 };
@@ -148,14 +148,14 @@ inline D3DXVECTOR3 normalize(D3DXVECTOR3 const& in_vector)
  */
 template<> class traits<D3DXVECTOR4>
 {
-    /// 幾何ベクトルの型。
+    /// @brief 幾何ベクトルの型。
     public: typedef D3DXVECTOR4 type;
-    /// 幾何ベクトルが持つ成分の型。
+    /// @brief 幾何ベクトルが持つ成分の型。
     public: typedef FLOAT element;
 
     public: enum: unsigned
     {
-        /// 幾何ベクトルが持つ成分の数。
+        /// @brief 幾何ベクトルが持つ成分の数。
         SIZE = 4,
     };
 };

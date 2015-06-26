@@ -7,7 +7,7 @@
 #define PSYQ_GEOMETRY_GLM_VECTOR_HPP_
 
 #include <glm/gtx/simd_vec4.hpp>
-//#include "psyq/geometry/vector.hpp"
+#include "./vector.hpp"
 
 namespace psyq
 {
@@ -23,15 +23,16 @@ namespace vector
 template<typename template_element, glm::precision template_precision>
 class traits<glm::detail::tvec2<template_element, template_precision>>
 {
-    /// 幾何ベクトルの型。
-    public: typedef glm::detail::tvec2<template_element, template_precision>
+    /// @brief 幾何ベクトルの型。
+    public: typedef
+        glm::detail::tvec2<template_element, template_precision>
         type;
-    /// 幾何ベクトルが持つ成分の型。
+    /// @brief 幾何ベクトルが持つ成分の型。
     public: typedef template_element element;
 
     public: enum: unsigned
     {
-        /// 幾何ベクトルが持つ成分の数。
+        /// @brief 幾何ベクトルが持つ成分の数。
         SIZE = 2,
     };
 };
@@ -81,10 +82,11 @@ inline glm::vec2 normalize(glm::vec2 const& in_vector)
 template<typename template_element, glm::precision template_precision>
 class traits<glm::detail::tvec3<template_element, template_precision>>
 {
-    /// 幾何ベクトルの型。
-    public: typedef glm::detail::tvec3<template_element, template_precision>
+    /// @brief 幾何ベクトルの型。
+    public: typedef
+        glm::detail::tvec3<template_element, template_precision>
         type;
-    /// 幾何ベクトルが持つ成分の型。
+    /// @brief 幾何ベクトルが持つ成分の型。
     public: typedef template_element element;
 
     public: enum: unsigned
@@ -147,15 +149,16 @@ inline glm::vec3 normalize(glm::vec3 const& in_vector)
 template<typename template_element, glm::precision template_precision>
 class traits<glm::detail::tvec4<template_element, template_precision>>
 {
-    /// 幾何ベクトルの型。
-    public: typedef glm::detail::tvec4<template_element, template_precision>
+    /// @brief 幾何ベクトルの型。
+    public: typedef
+        glm::detail::tvec4<template_element, template_precision>
         type;
-    /// 幾何ベクトルが持つ成分の型。
+    /// @brief 幾何ベクトルが持つ成分の型。
     public: typedef template_element element;
 
     public: enum: unsigned
     {
-        /// 幾何ベクトルが持つ成分の数。
+        /// @brief 幾何ベクトルが持つ成分の数。
         SIZE = 4,
     };
 };
@@ -206,14 +209,14 @@ inline glm::vec4 normalize(glm::vec4 const& in_vector)
 template<>
 class traits<glm::simdVec4>
 {
-    /// 幾何ベクトルの型。
+    /// @brief 幾何ベクトルの型。
     public: typedef glm::simdVec4 type;
-    /// 幾何ベクトルが持つ成分の型。
+    /// @brief 幾何ベクトルが持つ成分の型。
     public: typedef glm::f32 element;
 
     public: enum: unsigned
     {
-        /// 幾何ベクトルが持つ成分の数。
+        /// @brief 幾何ベクトルが持つ成分の数。
         SIZE = 4,
     };
 };

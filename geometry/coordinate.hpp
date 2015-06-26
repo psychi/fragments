@@ -7,9 +7,9 @@
 #ifndef PSYQ_GEOMETRY_COORDINATE_HPP_
 #define PSYQ_GEOMETRY_COORDINATE_HPP_
 
+#include <array>
 #include <type_traits>
-//#include "./vector.hpp"
-//#include "./aabb.hpp"
+#include "./aabb.hpp"
 
 /// @cond
 namespace psyq
@@ -41,7 +41,8 @@ class psyq::geometry::coordinate
         template_vector でテンプレート特殊化した
         psyq::geometry::vector::traits を用意しておくこと。
      */
-    public: typedef psyq::geometry::vector::traits<template_vector>
+    public: typedef
+        psyq::geometry::vector::traits<template_vector>
         vector_traits;
 
     /** @brief 座標を表す幾何ベクトルの型。
@@ -91,7 +92,7 @@ class psyq::geometry::coordinate
     /// @brief 座標を表す成分の配列の型。
     public: typedef
         std::array<typename this_type::element, this_type::DIMENSION>
-            element_array;
+        element_array;
 
     //-------------------------------------------------------------------------
     /** @brief 有効な座標を表す幾何ベクトルを構築する。

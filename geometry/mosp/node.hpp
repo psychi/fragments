@@ -5,6 +5,8 @@
 #ifndef PSYQ_GEOMETRY_MOSP_NODE_HPP_
 #define PSYQ_GEOMETRY_MOSP_NODE_HPP_
 
+#include "../../assert.hpp"
+
 /// @cond
 namespace psyq
 {
@@ -43,7 +45,7 @@ namespace psyq
 template<typename template_argument, typename template_morton_order>
 class psyq::geometry::mosp::node
 {
-    /// thisが指す値の型。
+    /// @brief thisが指す値の型。
     private: typedef node this_type;
 
     /** @brief psyq::geometry::mosp::tree::detect_collision
@@ -60,16 +62,16 @@ class psyq::geometry::mosp::node
         @param[in] in_argument 衝突関数に渡す引数。
      */
     public: explicit node(typename this_type::argument in_argument):
-        handle_(nullptr),
-        argument_(std::move(in_argument))
+    handle_(nullptr),
+    argument_(std::move(in_argument))
     {}
 
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元インスタンス。
      */
     public: node(this_type&& io_source):
-        handle_(io_source.handle_),
-        argument_(std::move(io_source.argument_))
+    handle_(io_source.handle_),
+    argument_(std::move(io_source.argument_))
     {
         if (this->handle_->second != nullptr)
         {
@@ -97,12 +99,6 @@ class psyq::geometry::mosp::node
         return *this;
     }
     //@}
-    /// コピー構築子は使用禁止。
-    private: node(this_type const&);
-
-    /// コピー代入演算子は使用禁止。
-    private: this_type& operator=(const this_type&);
-
     //-------------------------------------------------------------------------
     /// @name 空間分割木との連結
     //@{
@@ -169,6 +165,13 @@ class psyq::geometry::mosp::node
         return this->handle_ != nullptr;
     }
     //@}
+    //-------------------------------------------------------------------------
+    /// @brief コピー構築子は使用禁止。
+    private: node(this_type const&);
+
+    /// @brief コピー代入演算子は使用禁止。
+    private: this_type& operator=(const this_type&);
+
     //-------------------------------------------------------------------------
     /// *thisと連結している psyq::geometry::mosp::tree::node_map の要素。
     private: std::pair<template_morton_order const, this_type*>* handle_;

@@ -6,6 +6,8 @@
 #ifndef PSYQ_GEOMETRY_AABB_HPP_
 #define PSYQ_GEOMETRY_AABB_HPP_
 
+#include "./vector.hpp"
+
 /// @cond
 namespace psyq
 {

@@ -7,8 +7,8 @@
 #define PSYQ_GEOMETRY_MOSP_NUT_HPP_
 
 #include <bitset>
-//#include "../make_aabb.hpp"
-//#include "./node.hpp"
+#include "../make_aabb.hpp"
+#include "./tree.hpp"
 
 namespace psyq
 {
@@ -83,9 +83,10 @@ class psyq::geometry::mosp::nut
     public: typedef template_space space;
 
     /// @brief モートン空間分割木に取りつけるノードの型。
-    public: typedef psyq::geometry::mosp::node<
-        this_type*, typename this_type::space::order>
-            node;
+    public: typedef
+        psyq::geometry::mosp::node<
+            this_type*, typename this_type::space::order>
+        node;
 
     /// @brief 衝突判定ナットが所属する衝突判定のグループを表す型。
     public: typedef void const* group;
@@ -106,21 +107,23 @@ class psyq::geometry::mosp::nut
     //@{
     public: template<typename template_shape> class concrete;
     /// @brief モートン空間分割木に取付可能な、半直線の衝突判定ナット。
-    public: typedef concrete<
-        psyq::geometry::ray<typename this_type::space::coordinate>>
-            ray;
+    public: typedef
+        concrete<psyq::geometry::ray<typename this_type::space::coordinate>>
+        ray;
     /// @brief モートン空間分割木に取付可能な、線分の衝突判定ナット。
-    public: typedef concrete<
-        psyq::geometry::line_segment<typename this_type::space::coordinate>>
-            line_segment;
+    public: typedef
+        concrete<
+            psyq::geometry::line_segment<
+                typename this_type::space::coordinate>>
+        line_segment;
     /// @brief モートン空間分割木に取付可能な、球の衝突判定ナット。
-    public: typedef concrete<
-        psyq::geometry::ball<typename this_type::space::coordinate>>
-            ball;
+    public: typedef
+        concrete<psyq::geometry::ball<typename this_type::space::coordinate>>
+        ball;
     /// @brief モートン空間分割木に取付可能な、直方体の衝突判定ナット。
-    public: typedef concrete<
-        psyq::geometry::box<typename this_type::space::coordinate>>
-            box;
+    public: typedef
+        concrete<psyq::geometry::box<typename this_type::space::coordinate>>
+        box;
     //@}
     //-------------------------------------------------------------------------
     /** @brief 衝突判定ナットを構築する。
@@ -261,19 +264,20 @@ public psyq::geometry::mosp::tree<
     private: typedef tree this_type;
 
     /// @brief this_type の基底型。
-    public: typedef psyq::geometry::mosp::tree<
-        psyq::geometry::mosp::nut<template_space>*,
-        template_space,
-        template_allocator>
-            base_type;
+    public: typedef
+        psyq::geometry::mosp::tree<
+            psyq::geometry::mosp::nut<template_space>*,
+            template_space,
+            template_allocator>
+        base_type;
 
     /// @brief 扱う衝突判定ナットの基底型。
     private: typedef psyq::geometry::mosp::nut<template_space> nut;
 
     /// @brief 衝突判定ナットの所有権なしスマートポインタのコンテナ。
-    private: typedef std::vector<
-        typename this_type::nut::weak_ptr, template_allocator>
-            nut_vector;
+    private: typedef
+        std::vector<typename this_type::nut::weak_ptr, template_allocator>
+        nut_vector;
 
     //-------------------------------------------------------------------------
     /** @brief 空間分割木に衝突判定ナットを取りつける。
@@ -512,7 +516,8 @@ namespace psyq_test
     {
         typedef template_mosp_space psyq_mosp_space;
         typedef psyq::geometry::mosp::nut<psyq_mosp_space> psyq_mosp_nut;
-        typedef psyq::geometry::mosp::tree<psyq_mosp_nut*, template_mosp_space>
+        typedef
+            psyq::geometry::mosp::tree<psyq_mosp_nut*, template_mosp_space>
             psyq_mosp_tree;
         typename psyq_mosp_tree::node_map::allocator_type::arena::shared_ptr
             local_mosp_arena(

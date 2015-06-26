@@ -9,6 +9,7 @@
 #define PSYQ_GEOMETRY_VECTOR_HPP_
 
 #include <functional>
+#include "../assert.hpp"
 
 #ifndef PSYQ_GEOMETRY_NEARLY_SCALAR_EPSILON_MAG_DEFAULT
 #define PSYQ_GEOMETRY_NEARLY_SCALAR_EPSILON_MAG_DEFAULT 3

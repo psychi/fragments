@@ -6,7 +6,7 @@
 #ifndef PSYQ_GEOMETRY_POINT_HPP_
 #define PSYQ_GEOMETRY_POINT_HPP_
 
-//#include "./aabb.hpp"
+#include "./aabb.hpp"
 
 /// @cond
 namespace psyq

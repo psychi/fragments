@@ -5,7 +5,7 @@
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_HPP_
 #define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_HPP_
 
-#include "../string/relation_table.hpp"
+#include "../assert.hpp"
 
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_COLUMN_KEY
 #define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_COLUMN_KEY "KEY"
@@ -66,7 +66,10 @@ class psyq::scenario_engine::state_builder
     /// @brief thisが指す値の型。
     private: typedef state_builder this_type;
 
-    /// @brief 解析する関係文字列表の型。
+    /** @brief 解析する関係文字列表の型。
+
+        psyq::string::relation_table 互換のインターフェイスを持つこと。
+     */
     public: typedef template_relation_table relation_table;
 
     /// @brief 文字列表の属性。

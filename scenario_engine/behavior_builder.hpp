@@ -5,7 +5,7 @@
 #ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_HPP_
 #define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_HPP_
 
-#include "../string/relation_table.hpp"
+#include "../assert.hpp"
 
 /// @cond
 namespace psyq
@@ -93,15 +93,18 @@ class psyq::scenario_engine::behavior_builder
     /// @brief 条件挙動関数の登録先となる条件挙動器を表す型。
     public: typedef template_dispatcher dispatcher;
 
-    /// @brief 解析する関係文字列表の型。
-    public: typedef template_relation_table relation_table;
-
     /// @brief 条件挙動関数オブジェクトの、所有権ありスマートポインタのコンテナを表す型。
     public: typedef
         std::vector<
             typename this_type::dispatcher::function_shared_ptr,
             typename this_type::dispatcher::allocator_type>
         function_shared_ptr_container;
+
+    /** @brief 解析する関係文字列表の型。
+
+        psyq::string::relation_table 互換のインターフェイスを持つこと。
+     */
+    public: typedef template_relation_table relation_table;
 
     /// @brief 文字列表の属性。
     private: class table_attribute

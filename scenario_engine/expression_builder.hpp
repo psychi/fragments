@@ -5,7 +5,7 @@
 #ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_HPP_
 #define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_HPP_
 
-#include "../string/relation_table.hpp"
+#include "../assert.hpp"
 
 /// @cond
 namespace psyq
@@ -90,10 +90,13 @@ class psyq::scenario_engine::expression_builder
     /// @brief thisが指す値の型。
     private: typedef expression_builder this_type;
 
-    /// @brief 解析する関係文字列表の型。
+    /** @brief 解析する関係文字列表の型。
+
+        psyq::string::relation_table 互換のインターフェイスを持つこと。
+     */
     public: typedef template_relation_table relation_table;
 
-    /// @brief CSV文字列表の属性。
+    /// @brief 文字列表の属性。
     private: class table_attribute
     {
         public: explicit table_attribute(

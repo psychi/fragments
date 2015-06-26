@@ -6,11 +6,7 @@
 #define PSYQ_SCENARIO_ENGINE_TEST_HPP_
 
 #include "./driver.hpp"
-#include "./state_builder.hpp"
-#include "./expression_builder.hpp"
-#include "./behavior_builder.hpp"
 #include "../string/storage.hpp"
-#include "../string/csv_table.hpp"
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq_test
@@ -19,19 +15,18 @@ namespace psyq_test
     {
         // シナリオ駆動機を構築する。
         typedef psyq::scenario_engine::driver<> driver;
-        driver local_driver(16, 16, 16);
+        driver local_driver(256, 256, 256);
 
         // 文字列表の構築に使うフライ級文字列生成器を構築する。
-        typedef psyq::string::relation_table<char> relation_table;
+        typedef psyq::string::flyweight<char> flyweight_string;
         auto const local_string_factory(
-            std::allocate_shared<typename relation_table::string::factory>(
-                relation_table::allocator_type(),
+            std::allocate_shared<typename flyweight_string::factory>(
+                flyweight_string::allocator_type(),
                 PSYQ_STRING_FLYWEIGHT_FACTORY_CAPACITY_DEFAULT,
-                relation_table::allocator_type()));
+                flyweight_string::allocator_type()));
 
         // 状態値CSV文字列を構築する。
-        typedef psyq::string::csv_table<char> csv_table;
-        csv_table::string::view const local_csv_state(
+        flyweight_string::view const local_csv_state(
             "KEY,            KIND,      VALUE,\n"
             "state_bool,     BOOL,       TRUE,\n"
             "state_unsigned, UNSIGNED_7,   10,\n"
@@ -40,7 +35,7 @@ namespace psyq_test
             "");
 
         // 条件式CSV文字列を構築する。
-        csv_table::string::view const local_csv_expression(
+        flyweight_string::view const local_csv_expression(
             "KEY,          LOGIC, KIND,             ELEMENT,\n"
             "expression_0, AND,   STATE_COMPARISON, state_bool,     ==, FALSE,\n"
             "expression_1, AND,   STATE_COMPARISON, state_unsigned, <=, 10,\n"
@@ -55,7 +50,7 @@ namespace psyq_test
             "");
 
         // 条件挙動CSV文字列を構築する。
-        csv_table::string::view const local_csv_behavior(
+        flyweight_string::view const local_csv_behavior(
             "KEY         , CONDITION, PRIORITY, KIND, ARGUMENT\n"
             "expression_0, TRUE,      9,       STATE, state_unsigned, :=, 1\n"
             "expression_1, TRUE,      8,       STATE, state_unsigned, +=, 1\n"
@@ -68,34 +63,20 @@ namespace psyq_test
             "expression_8, TRUE,      1,       STATE, state_unsigned, &=, 0\n"
             "");
 
-        // シナリオ駆動機に条件挙動を登録する。
+        // 状態値と条件式と条件挙動を、シナリオ駆動機に登録する。
         auto const local_chunk_key(local_driver.hash_function_("chunk_0"));
-        psyq::string::storage<csv_table::string::view::value_type>
-            local_csv_workspace;
+        psyq::string::storage<flyweight_string::view::value_type>
+            local_workspace_string;
         local_driver.extend_chunk(
+            local_workspace_string,
+            local_string_factory,
             local_chunk_key,
-            psyq::scenario_engine::state_builder<relation_table>(
-                relation_table(
-                    csv_table(
-                        local_csv_workspace,
-                        local_csv_state,
-                        local_string_factory),
-                    0)),
-            psyq::scenario_engine::expression_builder<relation_table>(
-                relation_table(
-                    csv_table(
-                        local_csv_workspace,
-                        local_csv_expression,
-                        local_string_factory),
-                    0)),
-            psyq::scenario_engine::behavior_builder<
-                relation_table, driver::dispatcher>(
-                    relation_table(
-                        csv_table(
-                            local_csv_workspace,
-                            local_csv_behavior,
-                            local_string_factory),
-                        0)));
+            local_csv_state,
+            0,
+            local_csv_expression,
+            0,
+            local_csv_behavior,
+            0);
         PSYQ_ASSERT(
             local_driver.reservoir_.register_value(
                 local_chunk_key,
@@ -103,6 +84,7 @@ namespace psyq_test
                 driver::reservoir::state_value(10u)));
         PSYQ_ASSERT(!local_driver.extend_chunk(0, 0, nullptr));
         local_driver.shrink_to_fit();
+
         PSYQ_ASSERT(
             true == *local_driver.reservoir_.get_value(
                 local_driver.hash_function_("state_bool")).get_bool());
@@ -115,7 +97,6 @@ namespace psyq_test
         PSYQ_ASSERT(
             1.25 <= *local_driver.reservoir_.get_value(
                 local_driver.hash_function_("state_float")).get_float());
-
 
         local_driver.reservoir_.set_value(
             local_driver.hash_function_("state_bool"), false);

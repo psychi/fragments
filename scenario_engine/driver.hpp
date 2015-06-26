@@ -11,6 +11,11 @@
 #include "./evaluator.hpp"
 #include "./dispatcher.hpp"
 #include "./behavior_chunk.hpp"
+#include "./state_builder.hpp"
+#include "./expression_builder.hpp"
+#include "./behavior_builder.hpp"
+#include "../string/csv_table.hpp"
+#include "../string/relation_table.hpp"
 
 /// @cond
 namespace psyq
@@ -189,6 +194,79 @@ class psyq::scenario_engine::driver
     //-------------------------------------------------------------------------
     /// @name チャンク
     //@{
+    /** @brief 状態値と条件式と条件挙動関数を、チャンクへ追加する。
+        @param[out] out_workspace
+            文字列表の構築の作業領域として使う文字列。
+            std::string 互換のインターフェイスを持つこと。
+        @param[in] in_string_factory
+            文字列表の構築に使うフライ級文字列の生成器を指すスマートポインタ。
+            - psyq::string::flyweight::factory::shared_ptr
+              互換のインターフェイスを持つこと。
+            - 空のスマートポインタではないこと。
+        @param[in] in_chunk_key            追加するチャンクの識別値。
+        @param[in] in_state_csv            状態値CSV文字列。
+        @param[in] in_state_attribute      状態値CSVの属性の行番号。
+        @param[in] in_expression_csv       条件式CSV文字列。
+        @param[in] in_expression_attribute 条件式CSVの属性の行番号。
+        @param[in] in_behavior_csv         条件挙動CSV文字列。
+        @param[in] in_behavior_attribute   条件挙動CSVの属性の行番号。
+     */
+    public: template<
+        typename template_workspace_string,
+        typename template_shared_ptr,
+        typename template_string>
+    void extend_chunk(
+        template_workspace_string& out_workspace,
+        template_shared_ptr const& in_string_factory,
+        typename this_type::reservoir::chunk_key const& in_chunk_key,
+        template_string const& in_state_csv,
+        typename template_string::size_type const& in_state_attribute,
+        template_string const& in_expression_csv,
+        typename template_string::size_type const& in_expression_attribute,
+        template_string const& in_behavior_csv,
+        typename template_string::size_type const& in_behavior_attribute)
+    {
+        typedef
+            psyq::string::csv_table<
+                typename template_string::value_type,
+                typename template_string::traits_type,
+                typename template_shared_ptr::element_type::allocator_type>
+            csv_table;
+        typedef
+            psyq::string::relation_table<
+                typename template_string::value_type,
+                typename template_string::traits_type,
+                typename template_shared_ptr::element_type::allocator_type>
+            relation_table;
+        typedef
+            psyq::scenario_engine::state_builder<relation_table>
+            state_builder;
+        typedef
+            psyq::scenario_engine::expression_builder<relation_table>
+            expression_builder;
+        typedef
+            psyq::scenario_engine::behavior_builder<
+                relation_table, typename this_type::dispatcher>
+            behavior_builder;
+        this->extend_chunk(
+            in_chunk_key,
+            state_builder(
+                relation_table(
+                    csv_table(
+                        out_workspace, in_string_factory, in_state_csv),
+                    in_state_attribute)),
+            expression_builder(
+                relation_table(
+                    csv_table(
+                        out_workspace, in_string_factory, in_expression_csv),
+                    in_expression_attribute)),
+            behavior_builder(
+                relation_table(
+                    csv_table(
+                        out_workspace, in_string_factory, in_behavior_csv),
+                    in_behavior_attribute)));
+    }
+
     /** @brief 状態値と条件式と条件挙動関数を、チャンクへ追加する。
         @param[in] in_chunk_key 追加するチャンクの識別値。
         @param[in] in_state_builder

@@ -46,7 +46,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STRING_CSV_TABLE_HPP_
 #define PSYQ_STRING_CSV_TABLE_HPP_
 
-#include <vector>
 #include "./table.hpp"
 
 /// @brief CSV文字列の列の区切り文字の有効判定。
@@ -187,17 +186,17 @@ public psyq::string::table<
         @param[out] out_workspace
             作業領域として使う文字列。
             std::basic_string 互換のインターフェイスを持つこと。
-        @param[in] in_csv_string 解析するCSV形式の文字列。
         @param[in] in_string_factory
             フライ級文字列の生成器を指すスマートポインタ。
             空のスマートポインタではないこと。
+        @param[in] in_csv_string 解析するCSV形式の文字列。
      */
     public: template<typename template_workspace>
     csv_table(
         template_workspace& out_workspace,
-        typename base_type::string::view const& in_csv_string,
         typename base_type::string::factory::shared_ptr const&
-            in_string_factory)
+            in_string_factory,
+        typename base_type::string::view const& in_csv_string)
     :
     base_type((
         PSYQ_ASSERT(in_string_factory.get() != nullptr),

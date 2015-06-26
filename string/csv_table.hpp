@@ -1,4 +1,45 @@
-﻿/** @file
+﻿/*
+Copyright (c) 2015, Hillco Psychi, All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met: 
+ソースコード形式かバイナリ形式か、変更するかしないかを問わず、
+以下の条件を満たす場合に限り、再頒布および使用が許可されます。
+
+1. Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer. 
+   ソースコードを再頒布する場合、上記の著作権表示、本条件一覧、
+   および下記の免責条項を含めること。
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution. 
+   バイナリ形式で再頒布する場合、頒布物に付属のドキュメント等の資料に、
+   上記の著作権表示、本条件一覧、および下記の免責条項を含めること。
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+本ソフトウェアは、著作権者およびコントリビューターによって
+「現状のまま」提供されており、明示黙示を問わず、商業的な使用可能性、
+および特定の目的に対する適合性に関する暗黙の保証も含め、
+またそれに限定されない、いかなる保証もありません。
+著作権者もコントリビューターも、事由のいかんを問わず、
+損害発生の原因いかんを問わず、かつ責任の根拠が契約であるか厳格責任であるか
+（過失その他の）不法行為であるかを問わず、
+仮にそのような損害が発生する可能性を知らされていたとしても、
+本ソフトウェアの使用によって発生した（代替品または代用サービスの調達、
+使用の喪失、データの喪失、利益の喪失、業務の中断も含め、
+またそれに限定されない）直接損害、間接損害、偶発的な損害、特別損害、
+懲罰的損害、または結果損害について、一切責任を負わないものとします。
+ */
+/** @file
     @author Hillco Psychi (https://twitter.com/psychi)
     @brief @copybrief psyq::string::csv_table
 */
@@ -28,44 +69,21 @@
 #ifndef PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT
 #define PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT ','
 #endif // !defined(PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT)
-static_assert(
-    PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_VALIDATION(
-        PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT,
-        PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT),
-    "PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT is invalid.");
 
 /// @brief CSV文字列の引用符開始文字のデフォルト。
 #ifndef PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT
 #define PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT '"'
 #endif // !defined(PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT)
-static_assert(
-    PSYQ_STRING_CSV_TABLE_QUOTE_VALIDATION(
-        PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT,
-        PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT,
-        PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT),
-    "PSYQ_STRING_CSV_TABLE_QUOTE_BEGIN_DEFAULT is invalid.");
 
 /// @brief CSV文字列の引用符終了文字のデフォルト。
 #ifndef PSYQ_STRING_CSV_TABLE_QUOTE_END_DEFAULT
 #define PSYQ_STRING_CSV_TABLE_QUOTE_END_DEFAULT '"'
 #endif // !defined(PSYQ_STRING_CSV_TABLE_QUOTE_END_DEFAULT)
-static_assert(
-    PSYQ_STRING_CSV_TABLE_QUOTE_VALIDATION(
-        PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT,
-        PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT,
-        PSYQ_STRING_CSV_TABLE_QUOTE_END_DEFAULT),
-    "PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_END is invalid.");
 
 /// @brief CSV文字列の引用符エスケープ文字のデフォルト。
 #ifndef PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT
 #define PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT '"'
 #endif // !defined(PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT)
-static_assert(
-    PSYQ_STRING_CSV_TABLE_QUOTE_VALIDATION(
-        PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT,
-        PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT,
-        PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT),
-    "PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT is invalid.");
 
 /// @cond
 namespace psyq
@@ -165,51 +183,49 @@ public psyq::string::table<
         "this_type::delimiter_QUOTE_ESCAPE is invalid.");
 
     //-------------------------------------------------------------------------
-    /// @name 構築と代入
-    //@{
     /** @brief CSV形式の文字列を解析し、文字列表を構築する。
         @param[out] out_workspace
             作業領域として使う文字列。
             std::basic_string 互換のインターフェイスを持つこと。
         @param[in] in_csv_string 解析するCSV形式の文字列。
-        @param[in] in_factory
-            フライ級文字列生成器を指すスマートポインタ。
+        @param[in] in_string_factory
+            フライ級文字列の生成器を指すスマートポインタ。
             空のスマートポインタではないこと。
      */
     public: template<typename template_workspace>
     csv_table(
         template_workspace& out_workspace,
         typename base_type::string::view const& in_csv_string,
-        typename base_type::string::factory::shared_ptr const& in_factory)
+        typename base_type::string::factory::shared_ptr const&
+            in_string_factory)
     :
     base_type((
-        PSYQ_ASSERT(in_factory.get() != nullptr),
-        in_factory->get_allocator()))
+        PSYQ_ASSERT(in_string_factory.get() != nullptr),
+        in_string_factory->get_allocator()))
     {
         auto const local_build(
-            this->build(out_workspace, in_csv_string, in_factory));
+            this->build(out_workspace, in_csv_string, in_string_factory));
         PSYQ_ASSERT(local_build);
     }
-    //@}
+
     //-------------------------------------------------------------------------
-    /// @name CSV文字列の解析
-    //@{
     /** @brief CSV形式の文字列を解析し、文字列表を構築する。
         @param[out] out_workspace
             作業領域として使う文字列。
             std::basic_string 互換のインターフェイスを持つこと。
         @param[in] in_csv_string 解析するCSV形式の文字列。
-        @param[in] in_factory
-            フライ級文字列生成器を指すスマートポインタ。
+        @param[in] in_string_factory
+            フライ級文字列の生成器を指すスマートポインタ。
             スマートポインタが空ではないこと。
      */
-    public: template<typename template_workspace>
+    private: template<typename template_workspace>
     bool build(
         template_workspace& out_workspace,
         typename base_type::string::view const& in_csv_string,
-        typename base_type::string::factory::shared_ptr const& in_factory)
+        typename base_type::string::factory::shared_ptr const&
+            in_string_factory)
     {
-        if (in_factory.get() == nullptr)
+        if (in_string_factory.get() == nullptr)
         {
             return false;
         }
@@ -287,7 +303,7 @@ public psyq::string::table<
                         typename base_type::string(
                             typename base_type::string::view(
                                 out_workspace.data(), local_cell_size),
-                            in_factory));
+                            in_string_factory));
                     out_workspace.clear();
                     local_cell_size = 0;
                 }
@@ -304,7 +320,7 @@ public psyq::string::table<
                         typename base_type::string(
                             typename base_type::string::view(
                                 out_workspace.data(), local_cell_size),
-                            in_factory));
+                            in_string_factory));
                     out_workspace.clear();
                     local_cell_size = 0;
                 }
@@ -351,7 +367,7 @@ public psyq::string::table<
                 typename base_type::string(
                     typename base_type::string::view(
                         out_workspace.data(), local_cell_size),
-                    in_factory));
+                    in_string_factory));
         }
         else if (0 < local_column)
         {
@@ -378,7 +394,6 @@ public psyq::string::table<
         this->set_size(local_row + 1, local_column_max + 1);
         return true;
     }
-    //@}
 
 }; // class psyq::string::csv_table
 

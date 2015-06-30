@@ -5,7 +5,7 @@
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_HPP_
 #define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_HPP_
 
-#include "../assert.hpp"
+#include "../string/numeric_parser.hpp"
 
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_BUILDER_COLUMN_KEY
 #define PSYQ_SCENARIO_ENGINE_STATE_BUILDER_COLUMN_KEY "KEY"
@@ -331,19 +331,17 @@ class psyq::scenario_engine::state_builder
         typename this_type::relation_table::string::view const& in_value_cell,
         std::size_t const in_size)
     {
-        std::size_t local_rest_size;
-        auto const local_value(
-            in_value_cell.template
-                to_integer<typename template_reservoir::state_value::unsigned_type>(
-                    &local_rest_size));
-        if (local_rest_size != 0)
+        psyq::string::integer_parser<
+            typename template_reservoir::state_value::unsigned_type>
+                const local_parser(in_value_cell);
+        if (!local_parser.is_completed())
         {
             // 初期値セルを整数として解析しきれなかった。
             PSYQ_ASSERT(false);
             return false;
         }
         return io_reservoir.register_unsigned(
-            in_chunk_key, in_state_key, local_value, in_size);
+            in_chunk_key, in_state_key, local_parser.get_value(), in_size);
     }
 
     /** @brief 文字列を解析して符号あり整数型の状態値を構築し、状態貯蔵器へ登録する。
@@ -363,19 +361,17 @@ class psyq::scenario_engine::state_builder
         typename this_type::relation_table::string::view const& in_value_cell,
         std::size_t const in_size)
     {
-        std::size_t local_rest_size;
-        auto const local_value(
-            in_value_cell.template
-                to_integer<typename template_reservoir::state_value::signed_type>(
-                    &local_rest_size));
-        if (local_rest_size != 0)
+        psyq::string::integer_parser<
+            typename template_reservoir::state_value::signed_type>
+                const local_parser(in_value_cell);
+        if (!local_parser.is_completed())
         {
             // 初期値セルを整数として解析しきれなかった。
             PSYQ_ASSERT(false);
             return false;
         }
         return io_reservoir.register_signed(
-            in_chunk_key, in_state_key, local_value, in_size);
+            in_chunk_key, in_state_key, local_parser.get_value(), in_size);
     }
 
     /** @brief 文字列を解析して浮動小数点数型の状態値を構築し、状態貯蔵器へ登録する。
@@ -393,19 +389,17 @@ class psyq::scenario_engine::state_builder
         typename template_reservoir::state_key const& in_state_key,
         typename this_type::relation_table::string::view const& in_value_cell)
     {
-        std::size_t local_rest_size;
-        auto const local_value(
-            in_value_cell.template
-                to_real<typename template_reservoir::state_value::float_type>(
-                    &local_rest_size));
-        if (local_rest_size != 0)
+        psyq::string::real_parser<
+            typename template_reservoir::state_value::float_type>
+                const local_parser(in_value_cell);
+        if (!local_parser.is_completed())
         {
             // 初期値セルを実数として解析しきれなかった。
             PSYQ_ASSERT(false);
             return false;
         }
         return io_reservoir.register_float(
-            in_chunk_key, in_state_key, local_value);
+            in_chunk_key, in_state_key, local_parser.get_value());
     }
 
     /** @brief 整数型のビット数を取得する。
@@ -431,13 +425,11 @@ class psyq::scenario_engine::state_builder
             if (in_kind.size() + 2 <= in_cell.size()
                 && in_cell.at(in_kind.size()) == '_')
             {
-                std::size_t local_rest_size;
-                auto const local_size(
-                    in_cell.substr(in_kind.size() + 1).template
-                        to_integer<std::size_t>(&local_rest_size));
-                if (local_rest_size == 0)
+                psyq::string::integer_parser<std::size_t> const
+                    local_parser(in_cell.substr(in_kind.size() + 1));
+                if (local_parser.is_completed())
                 {
-                    return local_size;
+                    return local_parser.get_value();
                 }
             }
         }

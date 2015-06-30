@@ -5,9 +5,7 @@
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_VALUE_HPP_
 #define PSYQ_SCENARIO_ENGINE_STATE_VALUE_HPP_
 
-#include <type_traits>
-#include <cstdint>
-#include "../assert.hpp"
+#include "../string/numeric_parser.hpp"
 
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_VALUE_EPSILON_MAG
 #define PSYQ_SCENARIO_ENGINE_STATE_VALUE_EPSILON_MAG 4
@@ -674,57 +672,54 @@ class psyq::scenario_engine::_private::state_value
         PSYQ_ASSERT(in_kind != this_type::kind_BOOL);
 
         // 符号なし整数として構築する。
-        std::size_t local_rest_size;
-        auto const local_unsigned(
-            in_string.template to_integer<typename this_type::unsigned_type>(
-                &local_rest_size));
-        if (local_rest_size == 0)
+        psyq::string::integer_parser<typename this_type::unsigned_type> const
+            local_unsigned_parser(in_string);
+        if (local_unsigned_parser.is_completed())
         {
             switch (in_kind)
             {
                 case this_type::kind_FLOAT:
                 return this_type(
                     static_cast<typename this_type::float_type>(
-                        local_unsigned));
+                        local_unsigned_parser.get_value()));
 
                 case this_type::kind_SIGNED:
                 return this_type(
                     static_cast<typename this_type::signed_type>(
-                        local_unsigned));
+                        local_unsigned_parser.get_value()));
 
-                default: return this_type(local_unsigned);
+                default: return this_type(local_unsigned_parser.get_value());
             }
         }
 
         // 符号あり整数として構築する。
-        auto const local_signed(
-            in_string.template to_integer<typename this_type::signed_type>(
-                &local_rest_size));
-        if (local_rest_size == 0)
+        psyq::string::integer_parser<typename this_type::signed_type> const
+            local_signed_parser(in_string);
+        if (local_unsigned_parser.is_completed())
         {
             switch (in_kind)
             {
                 case this_type::kind_FLOAT:
                 return this_type(
-                    static_cast<typename this_type::float_type>(local_signed));
+                    static_cast<typename this_type::float_type>(
+                        local_signed_parser.get_value()));
 
                 case this_type::kind_UNSIGNED: return this_type();
 
-                default: return this_type(local_signed);
+                default: return this_type(local_signed_parser.get_value());
             }
         }
 
         // 浮動小数点数として構築する。
-        auto const local_float(
-            in_string.template to_real<typename this_type::float_type>(
-                &local_rest_size));
-        if (local_rest_size == 0)
+        psyq::string::real_parser<typename this_type::float_type> const
+            local_float_parser(in_string);
+        if (local_float_parser.is_completed())
         {
             switch (in_kind)
             {
                 case this_type::kind_NULL:
                 case this_type::kind_FLOAT:
-                return this_type(local_float);
+                return this_type(local_float_parser.get_value());
 
                 default: break;
             }

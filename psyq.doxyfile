@@ -703,6 +703,7 @@ INPUT                  = \
                          ./string/table.hpp \
                          ./string/csv_table.hpp \
                          ./string/relation_table.hpp \
+                         ./string/numeric_parser.hpp \
                          ./any/rtti.hpp \
                          ./any/storage.hpp \
                          ./any/message/tag.hpp \

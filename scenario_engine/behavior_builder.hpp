@@ -218,9 +218,9 @@ class psyq::scenario_engine::behavior_builder
             }
 
             // 条件式キーを取得する。
-            auto const& local_key_cell(
-                in_table.find_body_cell(i, local_attribute.key_.first));
-            auto local_key(io_hasher(local_key_cell));
+            auto const local_key(
+                io_hasher(
+                    in_table.find_body_cell(i, local_attribute.key_.first)));
             if (local_key
                 == io_hasher(typename template_hasher::argument_type()))
             {
@@ -232,14 +232,12 @@ class psyq::scenario_engine::behavior_builder
             PSYQ_ASSERT(in_evaluator._find_expression(local_key) != nullptr);
 
             // 条件挙動の優先順位を取得する。
-            auto const& local_priority_cell(
-                in_table.find_body_cell(i, local_attribute.priority_.first));
-            std::size_t local_rest_size;
-            auto const local_priority(
-                local_priority_cell.template
-                    to_integer<typename this_type::dispatcher::function_priority>(
-                        &local_rest_size));
-            if (local_rest_size != 0)
+            psyq::string::integer_parser<
+                typename this_type::dispatcher::function_priority>
+                    const local_priority_parser(
+                        in_table.find_body_cell(
+                            i, local_attribute.priority_.first));
+            if (!local_priority_parser.is_completed())
             {
                 // 優先順位として解析しきれなかった。
                 PSYQ_ASSERT(false);
@@ -257,7 +255,9 @@ class psyq::scenario_engine::behavior_builder
                     local_attribute));
             auto const local_register_function(
                 io_dispatcher.register_function(
-                    local_key, local_function, local_priority));
+                    local_key,
+                    local_function,
+                    local_priority_parser.get_value()));
             if (local_register_function)
             {
                 local_functions.push_back(std::move(local_function));

@@ -326,6 +326,7 @@ public psyq::string::table<
     {
         if (!in_key.empty())
         {
+            auto& local_cells(this->get_cells());
             auto const local_hash(
                 this_type::string::factory::compute_hash(in_key));
             auto const local_lower_bound(
@@ -333,11 +334,10 @@ public psyq::string::table<
                     this->keys_.begin(),
                     this->keys_.end(),
                     in_key,
-                    typename this_type::key_less(
-                        this->get_cells(), local_hash)));
+                    typename this_type::key_less(local_cells, local_hash)));
             if (local_lower_bound != this->keys_.end())
             {
-                auto& local_cell(this->get_cells().at(*local_lower_bound));
+                auto& local_cell(local_cells.at(*local_lower_bound));
                 if (local_cell.second.compare_fast(in_key, local_hash) == 0)
                 {
                     return this_type::compute_row_number(local_cell.first);
@@ -416,16 +416,9 @@ public psyq::string::table<
         {
             return false;
         }
-        this->attributes_.clear();
-        auto& local_cells(this->get_cells());
-        if (local_cells.empty())
-        {
-            this->attributes_.shrink_to_fit();
-            this->attribute_row_ = base_type::string::npos;
-            return true;
-        }
 
         // 属性行の先頭位置と末尾インデクスを決定する。
+        auto& local_cells(this->get_cells());
         auto const local_attribute_begin(
             std::lower_bound(
                 local_cells.begin(),
@@ -436,7 +429,9 @@ public psyq::string::table<
             base_type::compute_cell_number(in_attribute_row + 1, 0));
 
         // 属性行を読み取り、属性配列を構築する。
-        this->attributes_.reserve(this->get_column_count());
+        typename this_type::attribute_container local_attributes(
+            this->attributes_.get_allocator());
+        local_attributes.reserve(this->get_column_count());
         for (
             auto i(local_attribute_begin);
             i != local_cells.end() && i->first < local_attribute_end;
@@ -444,37 +439,36 @@ public psyq::string::table<
         {
             auto const local_column_number(
                 base_type::compute_column_number(i->first));
-            if (!this->attributes_.empty())
+            if (!local_attributes.empty())
             {
                 // 直前の属性の要素数を決定する。
-                auto& local_back(this->attributes_.back());
+                auto& local_back(local_attributes.back());
                 local_back.second = local_column_number - local_back.second;
             }
-            this->attributes_.push_back(
+            local_attributes.push_back(
                 typename this_type::attribute_container::value_type(
                     i->first, local_column_number));
         }
 
-        // 属性配列を並び替え、属性辞書として正規化する。
-        this->attributes_.shrink_to_fit();
-        if (this->attributes_.empty())
+        // 属性となるセルが1つも存在しなかったら、失敗とみなす。
+        if (local_attributes.empty())
         {
-            this->attribute_row_ = base_type::string::npos;
+            return false;
         }
-        else
-        {
-            // 末尾の属性の要素数を決定する。
-            auto& local_back(this->attributes_.back());
-            PSYQ_ASSERT(local_back.second < this->get_column_count());
-            local_back.second = this->get_column_count() - local_back.second;
-            this->attribute_row_ = in_attribute_row;
 
-            // 属性名で並び替える。
-            std::sort(
-                this->attributes_.begin(),
-                this->attributes_.end(),
-                typename this_type::attribute_name_less(local_cells, 0));
-        }
+        // 末尾の属性の要素数を決定する。
+        auto& local_back(local_attributes.back());
+        PSYQ_ASSERT(local_back.second < this->get_column_count());
+        local_back.second = this->get_column_count() - local_back.second;
+
+        // 属性名で並び替える。
+        std::sort(
+            local_attributes.begin(),
+            local_attributes.end(),
+            typename this_type::attribute_name_less(local_cells, 0));
+        this->attribute_row_ = in_attribute_row;
+        this->attributes_ = local_attributes;
+        this->attributes_.shrink_to_fit();
         return true;
     }
 
@@ -566,22 +560,16 @@ public psyq::string::table<
             return false;
         }
 
-        this->keys_.clear();
-        auto& local_cells(this->get_cells());
-        if (local_cells.empty())
-        {
-            this->key_column_ = base_type::string::npos;
-            this->keys_.shrink_to_fit();
-            return true;
-        }
-
         // セル辞書から主キー列のセルを読み取り、主キーの配列を構築する。
+        auto& local_cells(this->get_cells());
         auto local_row_number(
-            base_type::compute_row_number(this->get_cells().front().first));
+            base_type::compute_row_number(local_cells.front().first));
         auto const local_cell_begin(local_cells.begin());
         auto const local_cell_end(local_cells.end());
         auto local_cell(local_cell_begin);
-        this->keys_.reserve(this->get_row_count());
+        typename this_type::key_container local_keys(
+            this->keys_.get_allocator());
+        local_keys.reserve(this->get_row_count());
         for (;;)
         {
             if (local_row_number == this->get_attribute_row())
@@ -602,27 +590,27 @@ public psyq::string::table<
             if (base_type::compute_column_number(local_cell->first)
                 == in_key_column)
             {
-                this->keys_.push_back(local_cell - local_cell_begin);
-                PSYQ_ASSERT(this->keys_.back() < local_cells.size());
+                local_keys.push_back(local_cell - local_cell_begin);
+                PSYQ_ASSERT(local_keys.back() < local_cells.size());
             }
             local_row_number =
                 base_type::compute_row_number(local_cell->first) + 1;
         }
 
+        // 主キーとなるセルが1つも存在しなかったら、失敗とみなす。
+        if (local_keys.empty())
+        {
+            return false;
+        }
+
         // 主キーの配列を並び替え、主キーの辞書として正規化する。
+        std::sort(
+            local_keys.begin(),
+            local_keys.end(),
+            typename this_type::key_less(local_cells, 0));
+        this->key_column_ = in_key_column;
+        this->keys_ = local_keys;
         this->keys_.shrink_to_fit();
-        if (this->keys_.empty())
-        {
-            this->key_column_ = base_type::string::npos;
-        }
-        else
-        {
-            this->key_column_ = in_key_column;
-            std::sort(
-                this->keys_.begin(),
-                this->keys_.end(),
-                typename this_type::key_less(local_cells, 0));
-        }
         return true;
     }
 

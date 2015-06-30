@@ -69,8 +69,8 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_string_view を模した、immutableな文字列への参照。
 
-    - memory割り当てを一切行わない。
-    - 文字列の終端がnull文字となっている保証はない。
+    - 動的メモリ割当を一切行わない。
+    - 文字列の終端が空文字となっている保証はない。
 
     @warning
         文字の配列を単純にconst参照しているので、
@@ -98,31 +98,34 @@ public psyq::string::_private::interface_immutable<
     /// @name コンストラクタ
     //@{
     /// @brief 空の文字列を構築する。
-    public: view() PSYQ_NOEXCEPT:
-    base_type(base_type::string_type::make(nullptr, 0))
+    public: view()
+    PSYQ_NOEXCEPT: base_type(base_type::string_type::make(nullptr, 0))
     {}
 
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
      */
-    public: view(this_type const& in_string) PSYQ_NOEXCEPT:
+    public: view(this_type const& in_string)
+    PSYQ_NOEXCEPT:
     base_type(static_cast<typename base_type::string_type const&>(in_string))
     {}
 
     /** @brief 文字列を参照する。
         @param[in] in_string 参照する文字列。
      */
-    public: view(this_type&& in_string) PSYQ_NOEXCEPT:
+    public: view(this_type&& in_string)
+    PSYQ_NOEXCEPT:
     base_type(static_cast<typename base_type::string_type&&>(in_string))
     {}
 
     /** @brief 文字列リテラルを参照する。
         @param[in] in_literal 参照する文字列リテラル。
      */
-    public: template <std::size_t template_size>
-    view(typename base_type::traits_type::char_type const (&in_literal)[template_size])
-    PSYQ_NOEXCEPT:
-    base_type(base_type::string_type::make(in_literal))
+    public: template<std::size_t template_size>
+    view(
+        typename base_type::traits_type::char_type const
+            (&in_literal)[template_size])
+    PSYQ_NOEXCEPT: base_type(base_type::string_type::make(in_literal))
     {}
 
     /** @brief 任意型の文字列を参照する。
@@ -141,8 +144,7 @@ public psyq::string::_private::interface_immutable<
     public: template<typename template_other_type>
     view(template_other_type const& in_string)
     PSYQ_NOEXCEPT:
-    base_type(
-        base_type::string_type::make(in_string.data(), in_string.size()))
+    base_type(base_type::string_type::make(in_string.data(), in_string.size()))
     {}
 
     /** @brief 文字列を参照する。

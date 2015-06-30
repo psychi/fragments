@@ -3,6 +3,7 @@
 
 #include <array>
 #include <memory>
+#include "./assert.hpp"
 
 namespace psyq
 {
@@ -73,7 +74,8 @@ class psyq::memory_arena::allocator: public std::allocator<template_value>
     struct rebind
     {
         /// @brief 再定義したメモリ割当子の型。
-        typedef psyq::memory_arena::allocator<template_other, template_arena>
+        typedef
+            psyq::memory_arena::allocator<template_other, template_arena>
             other;
     };
 
@@ -143,8 +145,6 @@ class psyq::memory_arena::allocator: public std::allocator<template_value>
         return *this;
     }
     //@}
-    protected: allocator() PSYQ_NOEXCEPT {}
-
     //-------------------------------------------------------------------------
     /// @name メモリの確保と解放
     //@{
@@ -251,6 +251,9 @@ class psyq::memory_arena::allocator: public std::allocator<template_value>
     }
     //@}
     //-------------------------------------------------------------------------
+    protected: allocator() PSYQ_NOEXCEPT {}
+
+    //-------------------------------------------------------------------------
     /// @brief 実際にメモリを管理しているメモリアリーナ。
     private: typename this_type::arena::weak_ptr arena_;
 };
@@ -308,9 +311,9 @@ class psyq::memory_arena::fixed_pool
     public: explicit fixed_pool(
         typename this_type::allocator_type in_allocator = template_allocator())
     PSYQ_NOEXCEPT:
-        idle_block_(nullptr),
-        block_size_(sizeof(typename this_type::allocator_type::value_type)),
-        allocator_(std::move(in_allocator))
+    idle_block_(nullptr),
+    block_size_(sizeof(typename this_type::allocator_type::value_type)),
+    allocator_(std::move(in_allocator))
     {}
 
     /** @brief メモリアリーナを構築する。
@@ -321,28 +324,29 @@ class psyq::memory_arena::fixed_pool
         std::size_t const in_block_size,
         typename this_type::allocator_type in_allocator = template_allocator())
     PSYQ_NOEXCEPT:
-        idle_block_(nullptr),
-        block_size_(
-            (PSYQ_ASSERT(sizeof(void*) <= in_block_size), in_block_size)),
-        allocator_(std::move(in_allocator))
+    idle_block_(nullptr),
+    block_size_((PSYQ_ASSERT(sizeof(void*) <= in_block_size), in_block_size)),
+    allocator_(std::move(in_allocator))
     {}
 
     /** @brief コピー構築子。
         @param[in] in_source コピー元インスタンス。
      */
-    public: fixed_pool(this_type const& in_source) PSYQ_NOEXCEPT:
-        idle_block_(nullptr),
-        block_size_(in_source.get_block_size()),
-        allocator_(in_source.get_allocator())
+    public: fixed_pool(this_type const& in_source)
+    PSYQ_NOEXCEPT:
+    idle_block_(nullptr),
+    block_size_(in_source.get_block_size()),
+    allocator_(in_source.get_allocator())
     {}
 
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元インスタンス。
      */
-    public: fixed_pool(this_type&& io_source) PSYQ_NOEXCEPT:
-        idle_block_(io_source.idle_block_),
-        block_size_(io_source.get_block_size()),
-        allocator_(std::move(io_source.allocator_))
+    public: fixed_pool(this_type&& io_source)
+    PSYQ_NOEXCEPT:
+    idle_block_(io_source.idle_block_),
+    block_size_(io_source.get_block_size()),
+    allocator_(std::move(io_source.allocator_))
     {
         io_source.idle_block_ = nullptr;
     }
@@ -353,8 +357,6 @@ class psyq::memory_arena::fixed_pool
         this->release_idle_block();
     }
     //@}
-    private: this_type& operator=(this_type const& in_source);
-
     //-------------------------------------------------------------------------
     /// @name メモリの確保と解放
     //@{
@@ -417,7 +419,8 @@ class psyq::memory_arena::fixed_pool
         {
             // ブロックサイズより大きいサイズは、プールせずすぐに解放する。
             this->allocator_.deallocate(
-                static_cast<typename this_type::allocator_type::pointer>(in_block),
+                static_cast<typename this_type::allocator_type::pointer>(
+                    in_block),
                 in_size);
         }
         else if (in_block != nullptr)
@@ -499,6 +502,9 @@ class psyq::memory_arena::fixed_pool
         return this->block_size_;
     }
     //@}
+    //-------------------------------------------------------------------------
+    private: this_type& operator=(this_type const& in_source);
+
     private: static std::size_t calc_unit_size(std::size_t const in_byte_size)
     {
         return
@@ -544,9 +550,9 @@ class psyq::memory_arena::pool_table
         this_type::ARENA_COUNT * this_type::arena::UNIT_SIZE;
 
     /// @brief 固定長メモリアリーナの配列。
-    private: typedef std::array<
-        typename this_type::arena, this_type::ARENA_COUNT>
-            arena_array;
+    private: typedef
+        std::array<typename this_type::arena, this_type::ARENA_COUNT>
+        arena_array;
 
     //-------------------------------------------------------------------------
     /// @name メモリアリーナの構築

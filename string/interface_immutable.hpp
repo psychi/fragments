@@ -75,7 +75,7 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief std::basic_string_view を模した、immutableな文字列のインターフェイス。
-    @tparam template_string_type @copydoc interface_immutable::string_type
+    @tparam template_string_type @copydoc interface_immutable::base_type
  */
 template<typename template_string_type>
 class psyq::string::_private::interface_immutable: public template_string_type
@@ -83,10 +83,7 @@ class psyq::string::_private::interface_immutable: public template_string_type
     /// @brief thisが指す値の型。
     private: typedef interface_immutable this_type;
 
-    /// @brief this_type の基底型。
-    public: typedef template_string_type base_type;
-
-    /** @brief 操作する文字列型。
+    /** @brief this_type の基底型。
 
         - 文字列の先頭から末尾までのメモリ連続性が保証されてること。
         - コピー構築子とコピー代入演算子が使えること。
@@ -112,9 +109,12 @@ class psyq::string::_private::interface_immutable: public template_string_type
           std::size_t template_string_type::clear() noexcept
           @endcode
      */
-    protected: typedef template_string_type string_type;
+    public: typedef template_string_type base_type;
 
     //-------------------------------------------------------------------------
+    /** @name 文字列の型特性
+     *  @{
+     */
     /// @brief 文字の型。
     public: typedef typename base_type::traits_type::char_type value_type;
     /// @brief 文字数の型。
@@ -144,10 +144,10 @@ class psyq::string::_private::interface_immutable: public template_string_type
 
     public: enum: typename this_type::size_type
     {
-        /// 無効な位置を表す。 find() などで使われる。
+        /// @brief 文字の無効な位置を表す。 find() などで使われる。
         npos = static_cast<typename this_type::size_type>(-1)
     };
-
+    /// @}
     //-------------------------------------------------------------------------
     /// @brief 文字列参照の型。
     public: typedef
@@ -156,6 +156,9 @@ class psyq::string::_private::interface_immutable: public template_string_type
         view;
 
     //-------------------------------------------------------------------------
+    /** @name 文字列のハッシュ関数オブジェクト
+     *  @{
+     */
     /// @brief std::hash互換インターフェイスの、ハッシュ関数オブジェクト。
     public: template<typename template_hash> struct hash: public template_hash
     {
@@ -163,12 +166,12 @@ class psyq::string::_private::interface_immutable: public template_string_type
         typedef template_hash base_type;
         /// @brief ハッシュ値の型。
         typedef typename template_hash::value_type result_type;
-        /// @brief ハッシュキーの型。
+        /// @brief キーとなる文字列の型。
         typedef typename interface_immutable::view argument_type;
 
-        /** @brief ハッシュキーに対応するハッシュ値を算出する。
-            @param[in] in_string ハッシュキーとなる文字列。
-            @return ハッシュキーに対応するハッシュ値。
+        /** @brief 文字列に対応するハッシュ値を算出する。
+            @param[in] in_string キーとなる文字列。
+            @return 文字列に対応するハッシュ値。
          */
         result_type operator()(argument_type const& in_string)
         const PSYQ_NOEXCEPT
@@ -177,7 +180,9 @@ class psyq::string::_private::interface_immutable: public template_string_type
             return template_hash::compute(
                 local_data, local_data + in_string.size());
         }
-    };
+
+    }; // struct hash
+
     /// @brief std::hash互換インターフェイスの、32ビットFNV-1形式ハッシュ関数オブジェクト。
     public: typedef typename this_type::hash<psyq::fnv1_hash32> fnv1_hash32;
     /// @brief std::hash互換インターフェイスの、64ビットFNV-1形式ハッシュ関数オブジェクト。
@@ -186,10 +191,11 @@ class psyq::string::_private::interface_immutable: public template_string_type
     public: typedef typename this_type::hash<psyq::fnv1a_hash32> fnv1a_hash32;
     /// @brief std::hash互換インターフェイスの、64ビットFNV-1a形式ハッシュ関数オブジェクト。
     public: typedef typename this_type::hash<psyq::fnv1a_hash64> fnv1a_hash64;
-
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 文字列の変更
-    //@{
+    /** @name 文字列の変更
+        @{
+     */
     /** @brief 文字列を交換する。
         @param[in,out] io_target 交換する対象。
      */
@@ -199,10 +205,11 @@ class psyq::string::_private::interface_immutable: public template_string_type
         static_cast<base_type&>(io_target) = std::move(*this);
         static_cast<base_type&>(*this) = std::move(local_swap_temp);
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 文字列の要素を参照
-    //@{
+    /** @name 文字列の要素を参照
+        @{
+     */
     /** @brief 文字列が持つ文字を参照する。
         @param[in] in_index 文字のindex番号。
         @return 文字への参照。
@@ -289,10 +296,11 @@ class psyq::string::_private::interface_immutable: public template_string_type
         return *this != PSYQ_STRING_TRUE?
             (*this != PSYQ_STRING_FALSE? -1: 0): 1;
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 反復子の取得
-    //@{
+    /** @name 反復子の取得
+        @{
+     */
     /** @brief 文字列の先頭を指す反復子を取得する。
         @return 文字列の先頭を指す反復子。
      */
@@ -360,10 +368,11 @@ class psyq::string::_private::interface_immutable: public template_string_type
     {
         return this->rend();
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 文字列の長さ
-    //@{
+    /** @name 文字列の長さ
+        @{
+     */
     /** @brief 文字列が空か判定する。
         @retval true  文字列が空である。
         @retval false 文字列が空ではない。
@@ -381,128 +390,135 @@ class psyq::string::_private::interface_immutable: public template_string_type
     {
         return this->size();
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 文字列の比較
-    //@{
-    /// @copydoc psyq::string::view::operator==()
+    /** @name 文字列の比較
+        @{
+     */
+    /// @copydoc psyq::string::view::operator==
     public: bool operator==(typename this_type::view const& in_right)
     const PSYQ_NOEXCEPT
     {
         return in_right.operator==(*this);
     }
 
-    /// @copydoc psyq::string::view::operator!=()
+    /** @brief 文字列を非等価比較する。
+
+        *thisを左辺として、右辺の文字列と非等価比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @retval true  左辺と右辺は非等価。
+        @retval false 左辺と右辺は等価。
+     */
     public: bool operator!=(typename this_type::view const& in_right)
     const PSYQ_NOEXCEPT
     {
         return !this->operator==(in_right);
     }
 
-    /// @copydoc psyq::string::view::operator<()
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 < 右辺
+     */
     public: bool operator<(typename this_type::view const& in_right)
     const PSYQ_NOEXCEPT
     {
         return 0 < in_right.compare(*this);
     }
 
-    /// @copydoc psyq::string::view::operator<=()
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 <= 右辺
+     */
     public: bool operator<=(typename this_type::view const& in_right)
     const PSYQ_NOEXCEPT
     {
         return 0 <= in_right.compare(*this);
     }
 
-    /// @copydoc psyq::string::view::operator>()
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 > 右辺
+     */
     public: bool operator>(typename this_type::view const& in_right)
     const PSYQ_NOEXCEPT
     {
         return in_right.compare(*this) < 0;
     }
 
-    /// @copydoc psyq::string::view::operator>=()
+    /** @brief 文字列を比較する。
+
+        *thisを左辺として、右辺の文字列と比較する。
+
+        @param[in] in_right 右辺の文字列。
+        @return 左辺 >= 右辺
+     */
     public: bool operator>=(typename this_type::view const& in_right)
     const PSYQ_NOEXCEPT
     {
         return in_right.compare(*this) <= 0;
     }
 
-    /// @copydoc psyq::string::view::compare()
+    /// @copydoc psyq::string::view::compare(this_type const&) const
     public: int compare(typename this_type::view const& in_right)
     const PSYQ_NOEXCEPT
     {
-        return -(in_right.compare(*this));
+        return -in_right.compare(*this);
     }
 
-    /** @brief 文字列を比較する。
-        @param[in] in_left_offset 左辺の文字列の開始offset値。
-        @param[in] in_left_count  左辺の文字列の開始offset値からの文字数。
-        @param[in] in_right       右辺の文字列。
-        @retval - 右辺のほうが大きい。
-        @retval + 左辺のほうが大きい。
-        @retval 0 左辺と右辺は等価。
-     */
+    /// @copydoc psyq::string::view::compare(size_type, size_type, this_type const&) const
     public: int compare(
         typename this_type::size_type const in_left_offset,
         typename this_type::size_type const in_left_count,
         typename this_type::view const& in_right)
-    const PSYQ_NOEXCEPT
+    const
     {
-        auto const local_left(
-            typename this_type::view(*this).substr(
-                in_left_offset, in_left_count));
-        return local_left.compare(in_right);
+        return typename this_type::view(*this).compare(
+            in_left_offset, in_left_count, in_right);
     }
 
-    /** @brief 文字列を比較する。
-        @param[in] in_left_offset 左辺の文字列の開始offset値。
-        @param[in] in_left_count  左辺の文字列の開始offset値からの文字数。
-        @param[in] in_right_begin 右辺の文字列の先頭位置。
-        @param[in] in_right_size  右辺の文字列の要素数。
-        @retval - 右辺のほうが大きい。
-        @retval + 左辺のほうが大きい。
-        @retval 0 左辺と右辺は等価。
-     */
+    /// @copydoc psyq::string::view::compare(size_type, size_type, const_pointer, size_type) const
     public: int compare(
         typename this_type::size_type const in_left_offset,
         typename this_type::size_type const in_left_count,
         typename this_type::const_pointer const in_right_begin,
         typename this_type::size_type const in_right_size)
-    const PSYQ_NOEXCEPT
+    const
     {
-        this->compare(
+        return this->compare(
             in_left_offset,
             in_left_count,
             typename this_type::view(in_right_begin, in_right_size));
     }
 
-    /** @brief 文字列を比較する。
-        @param[in] in_left_offset  左辺の文字列の開始offset値。
-        @param[in] in_left_count   左辺の文字列の開始offset値からの文字数。
-        @param[in] in_right        右辺の文字列。
-        @param[in] in_right_offset 左辺の文字列の開始offset値。
-        @param[in] in_right_count  右辺の文字列の開始offset値からの文字数。
-        @retval - 右辺のほうが大きい。
-        @retval + 左辺のほうが大きい。
-        @retval 0 左辺と右辺は等価。
-     */
+    /// @copydoc psyq::string::view::compare(size_type, size_type, this_type const&, size_type, size_type) const
     public: int compare(
         typename this_type::size_type const in_left_offset,
         typename this_type::size_type const in_left_count,
         typename this_type::view const& in_right,
         typename this_type::size_type const in_right_offset,
         typename this_type::size_type const in_right_count)
-    const PSYQ_NOEXCEPT
+    const
     {
         return this->compare(
             in_left_offset,
             in_left_count,
             in_right.substr(in_right_offset, in_right_count));
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 指定文字列の前方検索
-    //@{
+    /** @name 指定文字列の前方検索
+        @{
+     */
     /** @brief 文字を検索する。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
@@ -595,10 +611,11 @@ class psyq::string::_private::interface_immutable: public template_string_type
         }
         return this_type::npos;
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 指定文字列の後方検索
-    //@{
+    /** @name 指定文字列の後方検索
+        @{
+     */
     /** @brief 後ろから文字を検索する。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
@@ -679,10 +696,11 @@ class psyq::string::_private::interface_immutable: public template_string_type
         }
         return this_type::npos;
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 指定文字の前方検索
-    //@{
+    /** @name 指定文字の前方検索
+        @{
+     */
     /** @brief 文字を検索する。
         @param[in] in_char   検索する文字。
         @param[in] in_offset 検索を開始する位置。
@@ -740,10 +758,11 @@ class psyq::string::_private::interface_immutable: public template_string_type
         }
         return this_type::npos;
     }
-    //@}
+    // @}
     //-------------------------------------------------------------------------
-    /// @name 指定文字の後方検索
-    //@{
+    /** @name 指定文字の後方検索
+        @{
+     */
     /** @brief 文字を後ろから検索する。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
@@ -808,15 +827,17 @@ class psyq::string::_private::interface_immutable: public template_string_type
         }
         return this_type::npos;
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 指定文字以外の前方検索
-    //@{
+    /** @name 指定文字以外の前方検索
+        @{
+     */
     /** @brief 検索文字以外の文字を検索する。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
         @return
-            検索文字以外の文字が現れた位置。現れない場合は this_type::npos を返す。
+            検索文字以外の文字が現れた位置。
+            現れない場合は this_type::npos を返す。
      */
     public: typename this_type::size_type find_first_not_of(
         typename this_type::value_type const in_char,
@@ -839,7 +860,8 @@ class psyq::string::_private::interface_immutable: public template_string_type
         @param[in] in_string 検索文字列。
         @param[in] in_offset 検索を開始する位置。
         @return
-            検索文字以外の文字が現れた位置。現れない場合は this_type::npos を返す。
+            検索文字以外の文字が現れた位置。
+            現れない場合は this_type::npos を返す。
      */
     public: typename this_type::size_type find_first_not_of(
         typename this_type::view const& in_string,
@@ -855,7 +877,8 @@ class psyq::string::_private::interface_immutable: public template_string_type
         @param[in] in_offset 検索を開始する位置。
         @param[in] in_size   検索文字列の要素数。
         @return
-           検索文字以外の文字が現れた位置。現れない場合は this_type::npos を返す。
+           検索文字以外の文字が現れた位置。
+           現れない場合は this_type::npos を返す。
      */
     public: typename this_type::size_type find_first_not_of(
         typename this_type::const_pointer const in_string,
@@ -881,15 +904,17 @@ class psyq::string::_private::interface_immutable: public template_string_type
         }
         return this_type::npos;
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 指定文字以外の後方検索
-    //@{
+    /** @name 指定文字以外の後方検索
+        @{
+     */
     /** @brief 検索文字以外の文字を、後ろから検索する。
         @param[in] in_char   検索文字。
         @param[in] in_offset 検索を開始する位置。
         @return
-            検索文字以外の文字が現れた位置。現れない場合は this_type::npos を返す。
+            検索文字以外の文字が現れた位置。
+            現れない場合は this_type::npos を返す。
      */
     public: typename this_type::size_type find_last_not_of(
         typename this_type::value_type const in_char,
@@ -920,7 +945,8 @@ class psyq::string::_private::interface_immutable: public template_string_type
         @param[in] in_string 検索文字列。
         @param[in] in_offset 検索を開始する位置。
         @return
-            検索文字以外の文字が現れた位置。現れない場合は this_type::npos を返す。
+            検索文字以外の文字が現れた位置。
+            現れない場合は this_type::npos を返す。
      */
     public: typename this_type::size_type find_last_not_of(
         typename this_type::view const& in_string,
@@ -936,7 +962,8 @@ class psyq::string::_private::interface_immutable: public template_string_type
         @param[in] in_offset 検索を開始する位置。
         @param[in] in_size   検索文字列の要素数。
         @return
-            検索文字以外の文字が現れた位置。現れない場合は this_type::npos を返す。
+            検索文字以外の文字が現れた位置。
+            現れない場合は this_type::npos を返す。
      */
     public: typename this_type::size_type find_last_not_of(
         typename this_type::const_pointer const in_string,
@@ -966,10 +993,11 @@ class psyq::string::_private::interface_immutable: public template_string_type
         }
         return this_type::npos;
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 構築
-    //@{
+    /** @name 構築
+        @{
+     */
     /** @brief 文字列をコピー構築する。
         @param[in] in_string コピー元となる文字列。
      */
@@ -997,7 +1025,7 @@ class psyq::string::_private::interface_immutable: public template_string_type
     protected: explicit interface_immutable(base_type&& io_string)
     PSYQ_NOEXCEPT: base_type(std::move(io_string))
     {}
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
     protected: template<typename template_pointer_type>
     static template_pointer_type get_char_pointer(
@@ -1006,7 +1034,8 @@ class psyq::string::_private::interface_immutable: public template_string_type
         typename this_type::size_type const in_index)
     {
         PSYQ_ASSERT_THROW(in_index < in_size, std::out_of_range);
-        return this_type::get_char_pointer_noexcept(in_begin, in_size, in_index);
+        return this_type::get_char_pointer_noexcept(
+            in_begin, in_size, in_index);
     }
 
     protected: template<typename template_pointer_type>
@@ -1042,8 +1071,9 @@ class psyq::string::_private::interface_immutable: public template_string_type
 //-----------------------------------------------------------------------------
 /** @note
     左辺に任意の文字列型を指定できる2項比較演算子を実装したいが、
-    psyq::string::_private::interface_immutable メンバ関数の比較演算子と衝突するため
-    コンパイルできない。今のところ回避策がないので、無効にしておく。
+    psyq::string::_private::interface_immutable
+    メンバ関数の比較演算子と衝突するためコンパイルできない。
+    今のところ回避策がないので、無効にしておく。
  */
 #define PSYQ_STRING_INTERFACE_IMMUTABLE_COMPARE_OPERATOR_2 0
 #if PSYQ_STRING_INTERFACE_IMMUTABLE_COMPARE_OPERATOR_2
@@ -1061,8 +1091,8 @@ template<
     typename template_right_string_type>
 bool operator==(
     template_left_string_type const& in_left,
-    psyq::string::_private::interface_immutable<template_right_string_type> const&
-        in_right)
+    psyq::string::_private::interface_immutable<template_right_string_type>
+        const& in_right)
 PSYQ_NOEXCEPT
 {
     return in_right.operator==(in_left);
@@ -1082,8 +1112,8 @@ template<
     typename template_right_string_type>
 bool operator!=(
     template_left_string_type const& in_left,
-    psyq::string::_private::interface_immutable<template_right_string_type> const&
-        in_right)
+    psyq::string::_private::interface_immutable<template_right_string_type>
+        const& in_right)
 PSYQ_NOEXCEPT
 {
     return in_right.operator!=(in_left);
@@ -1103,8 +1133,8 @@ template<
     typename template_right_string_type>
 bool operator<(
     template_left_string_type const& in_left,
-    psyq::string::_private::interface_immutable<template_right_string_type> const&
-        in_right)
+    psyq::string::_private::interface_immutable<template_right_string_type>
+        const& in_right)
 PSYQ_NOEXCEPT
 {
     return in_right.operator>(in_left);
@@ -1124,8 +1154,8 @@ template<
     typename template_right_string_type>
 bool operator<=(
     template_left_string_type const& in_left,
-    psyq::string::_private::interface_immutable<template_right_string_type> const&
-        in_right)
+    psyq::string::_private::interface_immutable<template_right_string_type>
+        const& in_right)
 PSYQ_NOEXCEPT
 {
     return in_right.operator>=(in_left);
@@ -1145,8 +1175,8 @@ template<
     typename template_right_string_type>
 bool operator>(
     template_left_string_type const& in_left,
-    psyq::string::_private::interface_immutable<template_right_string_type> const&
-        in_right)
+    psyq::string::_private::interface_immutable<template_right_string_type>
+        const& in_right)
 PSYQ_NOEXCEPT
 {
     return in_right.operator<(in_left);
@@ -1166,8 +1196,8 @@ template<
     typename template_right_string_type>
 bool operator>=(
     template_left_string_type const& in_left,
-    psyq::string::_private::interface_immutable<template_right_string_type> const&
-        in_right)
+    psyq::string::_private::interface_immutable<template_right_string_type>
+        const& in_right)
 PSYQ_NOEXCEPT
 {
     return in_right.operator<=(in_left);
@@ -1175,69 +1205,67 @@ PSYQ_NOEXCEPT
 #endif // PSYQ_STRING_INTERFACE_IMMUTABLE_COMPARE_OPERATOR_2
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-namespace psyq
+namespace psyq_test
 {
-    namespace test
+    template<typename template_string> void string()
     {
-        template<typename template_string> void string()
-        {
-            template_string local_string_0;
-            PSYQ_ASSERT(local_string_0.empty());
-            std::basic_string<
-                typename template_string::value_type,
-                typename template_string::traits_type>
-                    const local_std_string("std::string");
-            local_string_0 = local_std_string;
-            PSYQ_ASSERT(local_string_0 == local_std_string);
-            PSYQ_ASSERT(local_string_0 <= local_std_string);
-            PSYQ_ASSERT(local_string_0 >= local_std_string);
-            PSYQ_ASSERT(!(local_string_0 != local_std_string));
-            PSYQ_ASSERT(!(local_string_0 < local_std_string));
-            PSYQ_ASSERT(!(local_string_0 > local_std_string));
+        template_string local_string_0;
+        PSYQ_ASSERT(local_string_0.empty());
+        std::basic_string<
+            typename template_string::value_type,
+            typename template_string::traits_type>
+                const local_std_string("std::string");
+        local_string_0 = local_std_string;
+        PSYQ_ASSERT(local_string_0 == local_std_string);
+        PSYQ_ASSERT(local_string_0 <= local_std_string);
+        PSYQ_ASSERT(local_string_0 >= local_std_string);
+        PSYQ_ASSERT(!(local_string_0 != local_std_string));
+        PSYQ_ASSERT(!(local_string_0 < local_std_string));
+        PSYQ_ASSERT(!(local_string_0 > local_std_string));
 #if PSYQ_STRING_INTERFACE_IMMUTABLE_COMPARE_OPERATOR_2
-            PSYQ_ASSERT(local_std_string == local_string_0);
-            PSYQ_ASSERT(local_std_string <= local_string_0);
-            PSYQ_ASSERT(local_std_string >= local_string_0);
-            PSYQ_ASSERT(!(local_std_string != local_string_0));
-            PSYQ_ASSERT(!(local_std_string < local_string_0));
-            PSYQ_ASSERT(!(local_std_string > local_string_0));
+        PSYQ_ASSERT(local_std_string == local_string_0);
+        PSYQ_ASSERT(local_std_string <= local_string_0);
+        PSYQ_ASSERT(local_std_string >= local_string_0);
+        PSYQ_ASSERT(!(local_std_string != local_string_0));
+        PSYQ_ASSERT(!(local_std_string < local_string_0));
+        PSYQ_ASSERT(!(local_std_string > local_string_0));
 #endif // PSYQ_STRING_INTERFACE_IMMUTABLE_COMPARE_OPERATOR_2
 
-            typedef psyq::string::view<
+        typedef
+            psyq::string::view<
                 typename template_string::value_type,
                 typename template_string::traits_type>
-                    string_view;
-            string_view const local_string_view(local_string_0);
-            PSYQ_ASSERT(local_string_0 == local_string_view);
-            PSYQ_ASSERT(local_string_0 <= local_string_view);
-            PSYQ_ASSERT(local_string_0 >= local_string_view);
-            PSYQ_ASSERT(!(local_string_0 != local_string_view));
-            PSYQ_ASSERT(!(local_string_0 < local_string_view));
-            PSYQ_ASSERT(!(local_string_0 > local_string_view));
-            PSYQ_ASSERT(local_string_view == local_string_0);
-            PSYQ_ASSERT(local_string_view <= local_string_0);
-            PSYQ_ASSERT(local_string_view >= local_string_0);
-            PSYQ_ASSERT(!(local_string_view != local_string_0));
-            PSYQ_ASSERT(!(local_string_view < local_string_0));
-            PSYQ_ASSERT(!(local_string_view > local_string_0));
+            string_view;
+        string_view const local_string_view(local_string_0);
+        PSYQ_ASSERT(local_string_0 == local_string_view);
+        PSYQ_ASSERT(local_string_0 <= local_string_view);
+        PSYQ_ASSERT(local_string_0 >= local_string_view);
+        PSYQ_ASSERT(!(local_string_0 != local_string_view));
+        PSYQ_ASSERT(!(local_string_0 < local_string_view));
+        PSYQ_ASSERT(!(local_string_0 > local_string_view));
+        PSYQ_ASSERT(local_string_view == local_string_0);
+        PSYQ_ASSERT(local_string_view <= local_string_0);
+        PSYQ_ASSERT(local_string_view >= local_string_0);
+        PSYQ_ASSERT(!(local_string_view != local_string_0));
+        PSYQ_ASSERT(!(local_string_view < local_string_0));
+        PSYQ_ASSERT(!(local_string_view > local_string_0));
 
-            template_string const local_string_1(local_std_string);
-            local_string_0 = local_string_1;
-            PSYQ_ASSERT(local_string_0 == local_string_1);
-            PSYQ_ASSERT(local_string_0 <= local_string_1);
-            PSYQ_ASSERT(local_string_0 >= local_string_1);
-            PSYQ_ASSERT(!(local_string_0 != local_string_1));
-            PSYQ_ASSERT(!(local_string_0 < local_string_1));
-            PSYQ_ASSERT(!(local_string_0 > local_string_1));
-            template_string const local_string_2(local_string_1);
-            PSYQ_ASSERT(local_string_1 == local_string_2);
-            template_string const local_string_3("literal_string");
-            template_string const local_string_4(
-                local_string_3.data(), local_string_3.size());
-            PSYQ_ASSERT(local_string_3 == local_string_4);
-            template_string const local_string_5("literal_string");
-            PSYQ_ASSERT(local_string_3 == local_string_5);
-        }
+        template_string const local_string_1(local_std_string);
+        local_string_0 = local_string_1;
+        PSYQ_ASSERT(local_string_0 == local_string_1);
+        PSYQ_ASSERT(local_string_0 <= local_string_1);
+        PSYQ_ASSERT(local_string_0 >= local_string_1);
+        PSYQ_ASSERT(!(local_string_0 != local_string_1));
+        PSYQ_ASSERT(!(local_string_0 < local_string_1));
+        PSYQ_ASSERT(!(local_string_0 > local_string_1));
+        template_string const local_string_2(local_string_1);
+        PSYQ_ASSERT(local_string_1 == local_string_2);
+        template_string const local_string_3("literal_string");
+        template_string const local_string_4(
+            local_string_3.data(), local_string_3.size());
+        PSYQ_ASSERT(local_string_3 == local_string_4);
+        template_string const local_string_5("literal_string");
+        PSYQ_ASSERT(local_string_3 == local_string_5);
     }
 }
 

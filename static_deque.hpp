@@ -1345,7 +1345,7 @@ class psyq::static_deque
         {
             i = this->backward_offset(i, 1);
             this->get_pointer(i)->~value_type();
-            if (i <= in_first)
+            if (i == in_first)
             {
                 return;
             }
@@ -1662,6 +1662,11 @@ namespace psyq_test
     {
         typedef psyq::static_deque<float, 16, std::int8_t> float_deque;
         float_deque local_deque_a;
+        local_deque_a.push_back(1);
+        local_deque_a.push_back(2);
+        local_deque_a.push_front(3);
+        local_deque_a.push_front(4);
+        local_deque_a.clear();
         float_deque local_deque_b(5);
         float_deque local_deque_c(float_deque::MAX_SIZE, 0.5f);
 #ifdef PSYQ_NO_STD_INITIALIZER_LIST

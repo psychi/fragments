@@ -196,20 +196,16 @@ class psyq::scenario_engine::state_builder
         typename this_type::relation_table::string::size_type const in_row_index,
         typename this_type::table_attribute const& in_attribute)
     {
-        // 状態値のキーを取得する。
-        auto const& local_key_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.key_.first));
-        if (local_key_cell.empty())
-        {
-            PSYQ_ASSERT(false);
-            return false;
-        }
-        auto const local_key(io_hasher(local_key_cell));
+        // 状態値の識別値を取得する。
+        auto const local_key(
+            io_hasher(
+                in_table.find_body_cell(
+                    in_row_index, in_attribute.key_.first)));
         if (local_key == io_hasher(typename template_hasher::argument_type())
             || io_reservoir.get_variety(local_key)
                != template_reservoir::state_value::kind_NULL)
         {
-            // 条件キーが重複している。
+            // 状態値の識別値が空だったか、重複していた。
             PSYQ_ASSERT(false);
             return false;
         }

@@ -271,18 +271,15 @@ class psyq::scenario_engine::expression_builder
         typename this_type::relation_table::string::size_type const in_row_index,
         typename this_type::table_attribute const& in_attribute)
     {
-        // 条件式キーを取得する。
-        auto const& local_key_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.key_.first));
-        if (local_key_cell.empty())
-        {
-            return false;
-        }
-        auto local_key(io_hasher(local_key_cell));
+        // 条件式の識別値を取得する。
+        auto local_key(
+            io_hasher(
+                in_table.find_body_cell(
+                    in_row_index, in_attribute.key_.first)));
         if (local_key == io_hasher(typename template_hasher::argument_type())
             || io_evaluator._find_expression(local_key) != nullptr)
         {
-            // 条件キーが重複している。
+            // 条件式の識別値が空だったか、重複していた。
             PSYQ_ASSERT(false);
             return false;
         }

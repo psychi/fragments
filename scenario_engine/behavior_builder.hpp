@@ -217,14 +217,14 @@ class psyq::scenario_engine::behavior_builder
                 continue;
             }
 
-            // 条件式キーを取得する。
+            // 条件式の識別値を取得する。
             auto const local_key(
                 io_hasher(
                     in_table.find_body_cell(i, local_attribute.key_.first)));
             if (local_key
                 == io_hasher(typename template_hasher::argument_type()))
             {
-                // 条件式キーが正しくなかった。
+                // 条件式の識別値が正しくなかった。
                 PSYQ_ASSERT(false);
                 continue;
             }
@@ -347,15 +347,15 @@ class psyq::scenario_engine::behavior_builder
     {
         PSYQ_ASSERT(2 <= in_attribute.argument_.second);
 
-        // 状態キーを取得する。
-        auto const& local_key_cell(
-            in_table.find_body_cell(
-                in_row_index, in_attribute.argument_.first));
-        auto const local_key(io_hasher(local_key_cell));
+        // 状態値の識別値を取得する。
+        auto const local_key(
+            io_hasher(
+                in_table.find_body_cell(
+                    in_row_index, in_attribute.argument_.first)));
         if (in_reservoir.get_variety(local_key)
             == template_reservoir::state_value::kind_NULL)
         {
-            // 状態貯蔵器にキーが登録されていなかった。
+            // 状態貯蔵器に識別値が登録されていなかった。
             PSYQ_ASSERT(false);
             return typename this_type::dispatcher::function_shared_ptr();
         }
@@ -375,11 +375,10 @@ class psyq::scenario_engine::behavior_builder
         }
 
         // 演算値を取得する。
-        auto const& local_value_cell(
-            in_table.find_body_cell(
-                in_row_index, in_attribute.argument_.first + 2));
         auto const local_value(
-            template_reservoir::state_value::make(local_value_cell));
+            template_reservoir::state_value::make(
+                in_table.find_body_cell(
+                    in_row_index, in_attribute.argument_.first + 2)));
         if (local_value.get_kind()
             == template_reservoir::state_value::kind_NULL)
         {

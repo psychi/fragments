@@ -120,9 +120,8 @@ class psyq::string::_private::numeric_parser
         }
 
         // 符号を解析する。
-        auto const local_begin(in_string.data());
-        auto const local_end(local_begin + in_string.size());
-        auto local_iterator(local_begin);
+        auto local_iterator(in_string.data());
+        auto const local_end(local_iterator + in_string.size());
         auto const local_sign(this_type::read_sign(local_iterator, local_end));
         if (0 < local_sign || !std::is_unsigned<template_number>::value)
         {
@@ -159,9 +158,8 @@ class psyq::string::_private::numeric_parser
         template_string const& in_string)
     {
         // 符号を解析する。
-        auto const local_begin(in_string.data());
-        auto const local_end(local_begin + in_string.size());
-        auto local_iterator(local_begin);
+        auto local_iterator(in_string.data());
+        auto const local_end(local_iterator + in_string.size());
         auto const local_sign(this_type::read_sign(local_iterator, local_end));
         if (local_iterator < local_end)
         {

@@ -102,8 +102,9 @@ class psyq::scenario_engine::_private::evaluator
     //-------------------------------------------------------------------------
     /// @brief 状態比較条件式の要素条件。
     public: typedef
-        psyq::scenario_engine::_private::state_comparison<
+        psyq::scenario_engine::_private::state_operation<
             typename this_type::reservoir::state_key,
+            typename this_type::reservoir::state_value::comparison,
             typename this_type::reservoir::state_value>
         state_comparison;
 
@@ -139,8 +140,9 @@ class psyq::scenario_engine::_private::evaluator
          chunk_key_less;
 
     //-------------------------------------------------------------------------
-    /// @name 構築と代入
-    //@{
+    /** @name 構築と代入
+        @{
+     */
     /** @brief 空の条件評価器を構築する。
         @param[in] in_reserve_expressions 条件式の予約数。
         @param[in] in_reserve_chunks      要素条件チャンクの予約数。
@@ -201,10 +203,11 @@ class psyq::scenario_engine::_private::evaluator
             local_chunk.state_comparisons_.shrink_to_fit();
         }
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 条件式
-    //@{
+    /** @name 条件式
+        @{
+     */
     /** @brief 条件式を登録する。
 
         - this_type::evaluate_expression で、登録した条件式を評価できる。
@@ -285,7 +288,7 @@ class psyq::scenario_engine::_private::evaluator
         @retval 0  条件式の評価は偽となった。
         @retval 負 条件式の評価に失敗した。
      */
-    public: typename this_type::expression::evaluation evaluate_expression(
+    public: psyq::scenario_engine::evaluation evaluate_expression(
         typename this_type::expression::key const in_expression_key,
         typename this_type::reservoir const& in_reservoir)
     const PSYQ_NOEXCEPT
@@ -313,7 +316,7 @@ class psyq::scenario_engine::_private::evaluator
                 local_chunk->sub_expressions_,
                 [&, this](
                     typename this_type::sub_expression const& in_expression)
-                ->typename this_type::expression::evaluation
+                ->psyq::scenario_engine::evaluation
                 {
                     auto const local_evaluate_expression(
                         this->evaluate_expression(
@@ -323,33 +326,27 @@ class psyq::scenario_engine::_private::evaluator
                         return -1;
                     }
                     auto const local_condition(0 < local_evaluate_expression);
-                    return local_condition == in_expression.condition;
+                    return local_condition == in_expression.condition_;
                 });
 
             // 状態変化条件式を評価する。
             case this_type::expression::kind_STATE_TRANSITION:
             return local_expression->evaluate(
                 local_chunk->state_transitions_,
-                [&](typename this_type::state_transition const& in_state)
-                ->typename this_type::expression::evaluation
+                [&](typename this_type::state_transition const& in_transition)
+                ->psyq::scenario_engine::evaluation
                 {
-                    return in_reservoir._get_transition(in_state.key_);
+                    return in_reservoir._get_transition(in_transition.key_);
                 });
 
             // 状態比較条件式を評価する。
             case this_type::expression::kind_STATE_COMPARISON:
             return local_expression->evaluate(
                 local_chunk->state_comparisons_,
-                [&](typename this_type::state_comparison const& in_state)
-                ->typename this_type::expression::evaluation
+                [&](typename this_type::state_comparison const& in_comparison)
+                ->psyq::scenario_engine::evaluation
                 {
-                    /** @todo
-                        this_type::expression::kind_STATE_COMPARISON では、
-                        今のところ状態値と定数の比較しかできないが、
-                        状態値と状態値の比較をできるようにしたい。
-                     */
-                    return in_reservoir.get_value(in_state.key_).compare(
-                        in_state.comparison, in_state.value);
+                    return in_reservoir.compare_value(in_comparison);
                 });
 
             // 条件式の種別が未知だった。
@@ -374,10 +371,11 @@ class psyq::scenario_engine::_private::evaluator
         return this_type::expression_key_less::find_const_pointer(
             this->expressions_, in_expression_key);
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 要素条件チャンク
-    //@{
+    /** @name 要素条件チャンク
+        @{
+     */
     /** @brief 要素条件チャンクを予約する。
         @param[in] in_chunk_key 予約する要素条件チャンクに対応する識別値。
         @param[in] in_reserve_sub_expressions
@@ -453,7 +451,7 @@ class psyq::scenario_engine::_private::evaluator
         return this_type::chunk_key_less::find_const_pointer(
             this->chunks_, in_chunk_key);
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
     private: static std::pair<
          typename this_type::expression::kind,

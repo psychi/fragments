@@ -18,7 +18,6 @@ namespace psyq
             template<typename, typename, typename> class expression;
             template<typename> class sub_expression;
             template<typename> class state_transition;
-            template<typename, typename> class state_comparison;
             template<typename, typename, typename, typename>
                 class expression_chunk;
         } // namespace _private
@@ -49,14 +48,6 @@ class psyq::scenario_engine::_private::expression
 
     /// @brief 要素条件のインデクス番号を表す型。
     public: typedef template_element_index element_index;
-
-    /** @brief 条件式の評価結果。
-
-        - 正なら、条件式の評価は真。
-        - 0 なら、条件式の評価は偽。
-        - 負なら、条件式の評価に失敗。
-     */
-    public: typedef psyq::scenario_engine::_private::evaluation evaluation;
 
     /// @brief 条件式の要素条件を結合する論理演算子を表す列挙型。
     public: enum logic: std::uint8_t
@@ -110,7 +101,7 @@ class psyq::scenario_engine::_private::expression
     public: template<
         typename template_element_container,
         typename template_element_evaluator>
-    typename this_type::evaluation evaluate(
+    psyq::scenario_engine::evaluation evaluate(
         template_element_container const& in_elements,
         template_element_evaluator const& in_evaluator)
     const PSYQ_NOEXCEPT
@@ -181,13 +172,13 @@ class psyq::scenario_engine::_private::sub_expression
         bool const in_condition)
     PSYQ_NOEXCEPT:
     key_(std::move(in_key)),
-    condition(in_condition)
+    condition_(in_condition)
     {}
 
     /// @brief 結合する条件式の識別値。
     public: template_expression_key key_;
     /// @brief 結合する際の条件。
-    public: bool condition;
+    public: bool condition_;
 
 }; // class psyq::scenario_engine::_private::sub_expression
 
@@ -212,42 +203,6 @@ class psyq::scenario_engine::_private::state_transition
     public: template_state_key key_;
 
 }; // class psyq::scenario_engine::_private::state_transition
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 状態比較条件式の要素条件。
-
-    @tparam template_state_key @copydoc psyq::scenario_engine::_private::reservoir::state_key
- */
-template<
-    typename template_state_key,
-    typename template_state_value>
-class psyq::scenario_engine::_private::state_comparison
-{
-    private: typedef state_comparison this_type;
-
-    /** @brief 状態比較条件式の要素条件を構築する。
-        @param[in] in_key        this_type::key_ の初期値。
-        @param[in] in_comparison this_type::comparison の初期値。
-        @param[in] in_value      this_type::value の初期値。
-     */
-    public: state_comparison(
-        template_state_key in_key,
-        typename template_state_value::comparison const in_comparison,
-        template_state_value in_value)
-    PSYQ_NOEXCEPT:
-    value(std::move(in_value)),
-    key_(std::move(in_key)),
-    comparison(in_comparison)
-    {}
-
-    /// @brief 比較の右辺値となる値。
-    public: template_state_value value;
-    /// @brief 比較の左辺値となる状態値の識別値。
-    public: template_state_key key_;
-    /// @brief 比較演算子の種類。
-    typename template_state_value::comparison comparison;
-
-}; // class psyq::scenario_engine::_private::state_comparison
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 要素条件チャンク。

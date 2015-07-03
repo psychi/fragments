@@ -10,15 +10,13 @@
 #include "./state_chunk.hpp"
 #include "./state_value.hpp"
 
+/// @cond
 namespace psyq
 {
-    /// @brief ビデオゲームでのシナリオ進行を管理するための実装
     namespace scenario_engine
     {
-        /// @brief psyq::scenario_engine の管理者以外は、直接アクセス禁止。
         namespace _private
         {
-            /// @cond
             template<typename, typename, typename, typename> class reservoir;
             template<typename template_float> union float_union {};
             template<> union float_union<float>
@@ -31,10 +29,10 @@ namespace psyq
                 double value;
                 std::uint64_t bits;
             };
-            /// @endcond
         } // namespace _private
     } // namespace scenario_engine
 } // namespace psyq
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief シナリオ状態貯蔵器。任意のビット長の状態値を管理する。
@@ -118,6 +116,22 @@ class psyq::scenario_engine::_private::reservoir
             typename this_type::chunk::block, template_float>
         state_value;
 
+    /// @brief 状態値の比較式。
+    public: typedef
+        psyq::scenario_engine::_private::state_operation<
+            typename this_type::state_key,
+            typename this_type::state_value::comparison,
+            typename this_type::state_value>
+        state_comparison;
+
+    /// @brief 状態値の演算式。
+    public: typedef
+        psyq::scenario_engine::_private::state_operation<
+            typename this_type::state_key,
+            typename this_type::state_value::operation,
+            typename this_type::state_value>
+        state_operation;
+
     /// @brief 状態値登記のコンテナ。
     private: typedef
         std::vector<
@@ -168,8 +182,9 @@ class psyq::scenario_engine::_private::reservoir
         "");
 
     //-------------------------------------------------------------------------
-    /// @name 構築と代入
-    //@{
+    /** @name 構築と代入
+        @{
+     */
     /** @brief 空の状態貯蔵器を構築する。
         @param[in] in_reserve_states 状態値の予約数。
         @param[in] in_reserve_chunks 状態値ビット列チャンクの予約数。
@@ -254,10 +269,11 @@ class psyq::scenario_engine::_private::reservoir
             local_chunk.empty_fields_.shrink_to_fit();
         }
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 状態値の登録
-    //@{
+    /** @name 状態値の登録
+        @{
+     */
     /** @brief 論理型の状態値を登録する。
 
         - 登録した状態値は
@@ -459,10 +475,11 @@ class psyq::scenario_engine::_private::reservoir
         }
         return false;
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 状態値の取得と設定
-    //@{
+    /** @name 状態値の取得と設定
+        @{
+     */
     /** @brief 状態値の種別を取得する。
         @param[in] in_state_key 状態値に対応する識別値。
         @retval !=this_type::state_value::kind_NULL 状態値の種別。
@@ -700,7 +717,7 @@ class psyq::scenario_engine::_private::reservoir
         }
         return true;
     }
-    //@}
+    /// @}
     /** @brief 状態値の種別から、状態値のビット数を取得する。
         @param[in] in_variety 状態値の種別。
         @return 状態値のビット数。
@@ -748,10 +765,116 @@ class psyq::scenario_engine::_private::reservoir
                 this_type::state_value::kind_UNSIGNED;
         }
     }
-
     //-------------------------------------------------------------------------
-    /// @name 状態値の変化
-    //@{
+    /** @name 状態値の演算
+        @{
+     */
+    /** @brief 状態値を比較する。
+        @param[in] in_comparison 状態値の比較式。
+        @return 比較演算の評価結果。
+     */
+    public: psyq::scenario_engine::evaluation compare_value(
+        typename this_type::state_comparison const& in_comparison)
+    const PSYQ_NOEXCEPT
+    {
+        if (!in_comparison.right_state_)
+        {
+            return this->compare_value(
+                in_comparison.key_,
+                in_comparison.operator_,
+                in_comparison.value_);
+        }
+
+        // 右辺となる状態値を取得して演算する。
+        auto const local_right_unsigned(in_comparison.value_.get_unsigned());
+        if (local_right_unsigned != nullptr)
+        {
+            auto const local_right_key(
+                static_cast<this_type::state_key>(*local_right_unsigned));
+            if (local_right_key == *local_right_unsigned)
+            {
+                return this->compare_value(
+                    in_comparison.key_,
+                    in_comparison.operator_,
+                    this->get_value(local_right_key));
+            }
+        }
+        return -1;
+    }
+
+    /** @brief 状態値を比較する。
+        @param[in] in_left_key    左辺となる状態値の識別値。
+        @param[in] in_operator    適用する比較演算子。
+        @param[in] in_right_value 右辺となる値。
+        @return 比較演算の評価結果。
+     */
+    public: psyq::scenario_engine::evaluation compare_value(
+        typename this_type::state_key const& in_left_key,
+        typename this_type::state_value::comparison const in_operator,
+        typename this_type::state_value const& in_right_value)
+    const PSYQ_NOEXCEPT
+    {
+        return this->get_value(in_left_key).compare(
+            in_operator, in_right_value);
+    }
+
+    /** @brief 状態値を演算し、結果を格納する。
+        @param[in] in_operation 状態値の演算式。
+        @retval true  演算結果を状態値へ格納した。
+        @retval false 演算に失敗。状態値は変化しない。
+     */
+    public: bool compute_value(
+        typename this_type::state_operation const& in_operation)
+    {
+        if (!in_operation.right_state_)
+        {
+            return this->compute_state(
+                in_operation.key_,
+                in_operation.operator_,
+                in_operation.value_);
+        }
+
+        // 右辺となる状態値を取得して演算する。
+        auto const local_right_unsigned(in_operation.value_.get_unsigned());
+        if (local_right_unsigned != nullptr)
+        {
+            auto const local_right_key(
+                static_cast<this_type::state_key>(*local_right_unsigned));
+            if (local_right_key == *local_right_unsigned)
+            {
+                return this->compute_value(
+                    in_operation.key_,
+                    in_operation.operator_,
+                    this->get_value(local_right_key));
+            }
+        }
+        return false;
+    }
+
+    /** @brief 状態値を演算し、結果を格納する。
+        @param[in] in_left_key    左辺となる状態値の識別値。
+        @param[in] in_operator    適用する演算子。
+        @param[in] in_right_value 右辺となる値。
+        @retval true  演算結果を状態値へ格納した。
+        @retval false 演算に失敗。状態値は変化しない。
+     */
+    public: bool compute_value(
+        typename this_type::state_key const& in_left_key,
+        typename this_type::state_value::operation const in_operator,
+        typename this_type::state_value const& in_right_value)
+    {
+        auto local_state(this->get_value(in_right_key));
+        auto const local_set_value(
+            local_state.compute(in_operator, in_value)
+            && this->set_value(in_state_key, local_state));
+        PSYQ_ASSERT(local_set_value);
+        return local_set_value;
+    }
+    /// @}
+    //-------------------------------------------------------------------------
+    /** @name 状態値の変化
+        @{
+     */
     /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
 
         状態変化フラグを取得する。
@@ -784,10 +907,11 @@ class psyq::scenario_engine::_private::reservoir
             local_state.format_ &= local_transition_mask;
         }
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 状態値ビット列チャンク
-    //@{
+    /** @name 状態値ビット列チャンク
+        @{
+     */
     /** @brief 状態値ビット列チャンクを予約する。
         @param[in] in_chunk_key            予約する状態値ビット列チャンクの識別値。
         @param[in] in_reserve_blocks       予約しておくブロックの数。
@@ -858,7 +982,7 @@ class psyq::scenario_engine::_private::reservoir
     public: bool deserialize_chunk(
         typename this_type::chunk_key const& in_chunk_key,
         typename this_type::chunk::block_container const& in_serialized_chunk);
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
     /** @brief ビット領域の大きさの降順で並び替えた状態値のコンテナを作る。
      */

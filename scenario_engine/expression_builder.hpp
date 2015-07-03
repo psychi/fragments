@@ -612,10 +612,12 @@ class psyq::scenario_engine::expression_builder
         }
 
         // 要素条件を追加する。
+        /// @todo 右辺値を状態値から取得できるようにする。
         io_elements.emplace_back(
             std::move(local_state_key),
             local_state_comparison,
-            std::move(local_state_value));
+            std::move(local_state_value),
+            false);
         return true;
     }
 

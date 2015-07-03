@@ -69,7 +69,7 @@ class psyq::scenario_engine::_private::dispatcher
     private: typedef
         psyq::scenario_engine::_private::expression_monitor<
             typename this_type::evaluator::expression::key,
-            typename this_type::evaluator::expression::evaluation,
+            psyq::scenario_engine::evaluation,
             typename this_type::function_priority,
             typename this_type::allocator_type>
         expression_monitor;
@@ -90,8 +90,9 @@ class psyq::scenario_engine::_private::dispatcher
         function_weak_ptr;
 
     //-------------------------------------------------------------------------
-    /// @name 構築と代入
-    //@{
+    /** @name 構築と代入
+        @{
+     */
     /** @brief 空の条件挙動器を構築する。
         @param[in] in_reserve_expressions 監視する条件式の予約数。
         @param[in] in_reserve_states      監視する状態値の予約数。
@@ -188,10 +189,11 @@ class psyq::scenario_engine::_private::dispatcher
             this->state_monitors_, this->expression_monitors_);
         //this->behavior_caches_.shrink_to_fit();
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 条件挙動
-    //@{
+    /** @name 条件挙動
+        @{
+     */
     /** @brief 条件式に対応する条件挙動関数を登録する。
 
         this_type::_dispatch で条件式の評価が変化した際に呼び出す、
@@ -342,7 +344,7 @@ class psyq::scenario_engine::_private::dispatcher
         PSYQ_ASSERT(this->dispatch_lock_);
         this->dispatch_lock_ = false;
     }
-    //@}
+    /// @}
     /** @brief 状態値を操作する関数オブジェクトを生成する。
         @param[in,out] io_reservoir 関数から参照する状態貯蔵器。
         @param[in] in_condition     関数の起動条件。
@@ -372,10 +374,8 @@ class psyq::scenario_engine::_private::dispatcher
                 /// @todo io_reservoir を参照渡しするのは危険。対策を考えたい。
                 [=, &io_reservoir](
                     typename this_type::evaluator::expression::key const&,
-                    typename this_type::evaluator::expression::evaluation const
-                        in_evaluation,
-                    typename this_type::evaluator::expression::evaluation const
-                        in_last_evaluation)
+                    psyq::scenario_engine::evaluation const in_evaluation,
+                    psyq::scenario_engine::evaluation const in_last_evaluation)
                 {
                     // 条件と評価が合致すれば、状態値を書き換える。
                     if (0 <= in_last_evaluation

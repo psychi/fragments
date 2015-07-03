@@ -11,19 +11,29 @@
 #define PSYQ_SCENARIO_ENGINE_STATE_VALUE_EPSILON_MAG 4
 #endif // !default(PSYQ_SCENARIO_ENGINE_STATE_VALUE_EPSILON_MAG)
 
-/// @cond
 namespace psyq
 {
+    /// @brief ビデオゲームでのシナリオ進行を管理するための実装
     namespace scenario_engine
     {
+        /** @brief 式の評価結果。
+
+            - 正なら、式の評価は真だった。
+            - 0 なら、式の評価は偽だった。
+            - 負なら、式の評価に失敗した。
+         */
+        typedef std::int8_t evaluation;
+
+        /// @brief psyq::scenario_engine の管理者以外は、直接アクセス禁止。
         namespace _private
         {
+            /// @cond
             template<typename, typename> class state_value;
-            typedef std::int8_t evaluation;
+            template<typename, typename, typename> class state_operation;
+            /// @endcond
         } // namespace _private
     } // namespace scenario_engine
 } // namespace psyq
-/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 状態値。
@@ -386,7 +396,7 @@ class psyq::scenario_engine::_private::state_value
         @retval 0  比較演算の結果が偽だった。
         @retval 負 比較演算に失敗した。
      */
-    public: evaluation compare(
+    public: psyq::scenario_engine::evaluation compare(
         typename this_type::comparison const in_comparison,
         this_type const& in_right)
     {
@@ -926,6 +936,48 @@ class psyq::scenario_engine::_private::state_value
     private: typename this_type::kind kind_;    ///< 状態値の型の種類。
 
 }; // class psyq::scenario_engine::_private::state_value
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 状態値の演算式。
+    @tparam template_state_key   @copydoc psyq::scenario_engine::_private::reservoir::state_key
+    @tparam template_state_value @copydoc psyq::scenario_engine::_private::reservoir::state_value
+ */
+template<
+    typename template_state_key,
+    typename template_state_operator,
+    typename template_state_value>
+class psyq::scenario_engine::_private::state_operation
+{
+    private: typedef state_operation this_type;
+
+    /** @brief 状態値の演算式を構築する。
+        @param[in] in_key         this_type::key_ の初期値。
+        @param[in] in_operator    this_type::operator_ の初期値。
+        @param[in] in_value       this_type::value_ の初期値。
+        @param[in] in_right_state this_type::right_state_ の初期値。
+     */
+    public: state_operation(
+        template_state_key in_key,
+        template_state_operator const in_operator,
+        template_state_value in_value,
+        bool const in_right_state)
+    PSYQ_NOEXCEPT:
+    value_(std::move(in_value)),
+    key_(std::move(in_key)),
+    operator_(in_operator),
+    right_state_(in_right_state)
+    {}
+
+    /// @brief 演算の右辺値となる値。
+    public: template_state_value value_;
+    /// @brief 演算の左辺値となる状態値の識別値。
+    public: template_state_key key_;
+    /// @brief 演算子の種類。
+    public: template_state_operator operator_;
+    /// @brief 右辺値を状態値から取得するか。
+    public: bool right_state_;
+
+}; // class psyq::scenario_engine::_private::state_comparison
 
 #endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_VALUE_HPP_)
 // vim: set expandtab:

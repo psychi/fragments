@@ -32,7 +32,7 @@ namespace psyq
     条件式の評価結果が変化した際に呼び出す条件挙動関数オブジェクトを保持する。
 
     @tparam template_expression_key @copydoc evaluator::expression::key
-    @tparam template_evaluation     @copydoc expression::evaluation
+    @tparam template_evaluation     @copydoc psyq::scenario_engine::evaluation
     @tparam template_priority       @copydoc dispatcher::function_priority
     @tparam template_allocator      @copydoc reservoir::allocator_type
  */

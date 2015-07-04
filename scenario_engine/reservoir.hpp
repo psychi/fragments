@@ -43,9 +43,9 @@ namespace psyq
       - reservoir::register_unsigned
       - reservoir::register_signed
       - reservoir::register_float
-      - reservoir::register_value
-    - reservoir::get_value で、状態値を取得する。
-    - reservoir::set_value で、状態値を設定する。
+      - reservoir::register_state
+    - reservoir::get_state で、状態値を取得する。
+    - reservoir::set_state で、状態値を設定する。
 
     @tparam template_float     @copydoc reservoir::state_value::float_type
     @tparam template_state_key @copydoc reservoir::state_key
@@ -277,7 +277,7 @@ class psyq::scenario_engine::_private::reservoir
     /** @brief 論理型の状態値を登録する。
 
         - 登録した状態値は
-          this_type::get_value と this_type::set_value でアクセスできる。
+          this_type::get_state と this_type::set_state でアクセスできる。
         - 登録した状態値は this_type::erase_chunk でチャンク毎に削除できる。
 
         @param[in] in_chunk_key   登録する状態値を格納する状態値ビット列チャンクの識別値。
@@ -297,7 +297,7 @@ class psyq::scenario_engine::_private::reservoir
         auto& local_chunk(
             this_type::equip_chunk(this->chunks_, std::move(in_chunk_key)));
         auto const local_state(
-            this->register_state(
+            this->insert_state_registry(
                 local_chunk,
                 std::move(in_state_key),
                 this_type::state_value::kind_BOOL));
@@ -312,7 +312,7 @@ class psyq::scenario_engine::_private::reservoir
     /** @brief 符号なし整数型の状態値を登録する。
 
         - 登録した状態値は
-          this_type::get_value と this_type::set_value でアクセスできる。
+          this_type::get_state と this_type::set_state でアクセスできる。
         - 登録した状態値は this_type::erase_chunk で削除できる。
 
         @param[in] in_chunk_key   登録する状態値を格納する状態値ビット列チャンクの識別値。
@@ -345,7 +345,7 @@ class psyq::scenario_engine::_private::reservoir
         auto& local_chunk(
             this_type::equip_chunk(this->chunks_, std::move(in_chunk_key)));
         auto const local_state(
-            this->register_state(
+            this->insert_state_registry(
                 local_chunk, std::move(in_state_key), local_variety));
         if (local_state == nullptr)
         {
@@ -378,7 +378,7 @@ class psyq::scenario_engine::_private::reservoir
         auto& local_chunk(
             this_type::equip_chunk(this->chunks_, std::move(in_chunk_key)));
         auto const local_state(
-            this->register_state(
+            this->insert_state_registry(
                 local_chunk, std::move(in_state_key), local_variety));
         if (local_state == nullptr)
         {
@@ -415,7 +415,7 @@ class psyq::scenario_engine::_private::reservoir
         auto& local_chunk(
             this_type::equip_chunk(this->chunks_, std::move(in_chunk_key)));
         auto const local_state(
-            this->register_state(
+            this->insert_state_registry(
                 local_chunk,
                 std::move(in_state_key),
                 this_type::state_value::kind_FLOAT));
@@ -434,7 +434,7 @@ class psyq::scenario_engine::_private::reservoir
     /** @brief 状態値を登録する。
         @copydetails register_bool
      */
-    public: bool register_value(
+    public: bool register_state(
         typename this_type::chunk_key in_chunk_key,
         typename this_type::state_key in_state_key,
         typename this_type::state_value const& in_state_value)
@@ -509,10 +509,10 @@ class psyq::scenario_engine::_private::reservoir
         @sa this_type::register_unsigned
         @sa this_type::register_signed
         @sa this_type::register_float
-        @sa this_type::register_value
-        @sa this_type::set_value
+        @sa this_type::register_state
+        @sa this_type::set_state
      */
-    public: typename this_type::state_value get_value(
+    public: typename this_type::state_value get_state(
         typename this_type::state_key const& in_state_key)
     const PSYQ_NOEXCEPT
     {
@@ -595,10 +595,10 @@ class psyq::scenario_engine::_private::reservoir
         @sa this_type::register_unsigned
         @sa this_type::register_signed
         @sa this_type::register_float
-        @sa this_type::register_value
-        @sa this_type::get_value
+        @sa this_type::register_state
+        @sa this_type::get_state
      */
-    public: bool set_value(
+    public: bool set_state(
         typename this_type::state_key const& in_state_key,
         typename this_type::state_value const& in_state_value)
     PSYQ_NOEXCEPT
@@ -606,34 +606,34 @@ class psyq::scenario_engine::_private::reservoir
         auto const local_bool(in_state_value.get_bool());
         if (local_bool != nullptr)
         {
-            return this->set_value(in_state_key, *local_bool);
+            return this->set_state(in_state_key, *local_bool);
         }
         auto const local_unsigned(in_state_value.get_unsigned());
         if (local_unsigned != nullptr)
         {
-            return this->set_value(in_state_key, *local_unsigned);
+            return this->set_state(in_state_key, *local_unsigned);
         }
         auto const local_signed(in_state_value.get_signed());
         if (local_signed != nullptr)
         {
-            return this->set_value(in_state_key, *local_signed);
+            return this->set_state(in_state_key, *local_signed);
         }
         auto const local_float(in_state_value.get_float());
         if (local_float != nullptr)
         {
-            return this->set_value(in_state_key, *local_float);
+            return this->set_state(in_state_key, *local_float);
         }
         return false;
     }
 
-    /** @copydoc set_value
+    /** @copydoc set_state
         @note
             this_type::state_value::float_type より精度の高い浮動小数点数を
             浮動小数点数型の状態値へ設定しようとすると、
             コンパイル時にエラーか警告が発生する。
      */
     public: template<typename template_value>
-    bool set_value(
+    bool set_state(
         typename this_type::state_key const& in_state_key,
         template_value const in_state_value)
     PSYQ_NOEXCEPT
@@ -773,13 +773,13 @@ class psyq::scenario_engine::_private::reservoir
         @param[in] in_comparison 状態値の比較式。
         @return 比較演算の評価結果。
      */
-    public: psyq::scenario_engine::evaluation compare_value(
+    public: psyq::scenario_engine::evaluation compare_state(
         typename this_type::state_comparison const& in_comparison)
     const PSYQ_NOEXCEPT
     {
         if (!in_comparison.right_state_)
         {
-            return this->compare_value(
+            return this->compare_state(
                 in_comparison.key_,
                 in_comparison.operator_,
                 in_comparison.value_);
@@ -793,10 +793,10 @@ class psyq::scenario_engine::_private::reservoir
                 static_cast<this_type::state_key>(*local_right_unsigned));
             if (local_right_key == *local_right_unsigned)
             {
-                return this->compare_value(
+                return this->compare_state(
                     in_comparison.key_,
                     in_comparison.operator_,
-                    this->get_value(local_right_key));
+                    this->get_state(local_right_key));
             }
         }
         return -1;
@@ -808,13 +808,13 @@ class psyq::scenario_engine::_private::reservoir
         @param[in] in_right_value 右辺となる値。
         @return 比較演算の評価結果。
      */
-    public: psyq::scenario_engine::evaluation compare_value(
+    public: psyq::scenario_engine::evaluation compare_state(
         typename this_type::state_key const& in_left_key,
         typename this_type::state_value::comparison const in_operator,
         typename this_type::state_value const& in_right_value)
     const PSYQ_NOEXCEPT
     {
-        return this->get_value(in_left_key).compare(
+        return this->get_state(in_left_key).compare(
             in_operator, in_right_value);
     }
 
@@ -823,12 +823,12 @@ class psyq::scenario_engine::_private::reservoir
         @retval true  演算結果を状態値へ格納した。
         @retval false 演算に失敗。状態値は変化しない。
      */
-    public: bool compute_value(
+    public: bool operate_state(
         typename this_type::state_operation const& in_operation)
     {
         if (!in_operation.right_state_)
         {
-            return this->compute_state(
+            return this->operate_state(
                 in_operation.key_,
                 in_operation.operator_,
                 in_operation.value_);
@@ -842,10 +842,10 @@ class psyq::scenario_engine::_private::reservoir
                 static_cast<this_type::state_key>(*local_right_unsigned));
             if (local_right_key == *local_right_unsigned)
             {
-                return this->compute_value(
+                return this->operate_state(
                     in_operation.key_,
                     in_operation.operator_,
-                    this->get_value(local_right_key));
+                    this->get_state(local_right_key));
             }
         }
         return false;
@@ -858,17 +858,16 @@ class psyq::scenario_engine::_private::reservoir
         @retval true  演算結果を状態値へ格納した。
         @retval false 演算に失敗。状態値は変化しない。
      */
-    public: bool compute_value(
+    public: bool operate_state(
         typename this_type::state_key const& in_left_key,
         typename this_type::state_value::operation const in_operator,
         typename this_type::state_value const& in_right_value)
     {
-        auto local_state(this->get_value(in_right_key));
-        auto const local_set_value(
-            local_state.compute(in_operator, in_value)
-            && this->set_value(in_state_key, local_state));
-        PSYQ_ASSERT(local_set_value);
-        return local_set_value;
+        auto local_left_value(this->get_state(in_left_key));
+        auto const local_set_state(
+            local_left_value.operate(in_operator, in_right_value)
+            && this->set_state(in_left_key, local_left_value));
+        return local_set_state;
     }
     /// @}
     //-------------------------------------------------------------------------
@@ -1035,7 +1034,7 @@ class psyq::scenario_engine::_private::reservoir
             this_type::equip_chunk(this->chunks_, in_source_state.chunk_key_));
         auto const local_variety(in_source_state.get_variety());
         auto const local_target_state(
-            this->register_state(
+            this->insert_state_registry(
                 local_target_chunk, in_source_state.key_, local_variety));
         if (local_target_state == nullptr)
         {
@@ -1063,7 +1062,8 @@ class psyq::scenario_engine::_private::reservoir
             失敗。状態値を登録できなかった。
             - in_state_key に対応する状態値がすでに登録されていると失敗する。
      */
-    private: typename this_type::state_container::value_type* register_state(
+    private:
+    typename this_type::state_container::value_type* insert_state_registry(
         typename this_type::chunk& io_chunk,
         typename this_type::state_key in_state_key,
         typename this_type::state_registry::variety const in_variety)
@@ -1133,7 +1133,7 @@ class psyq::scenario_engine::_private::reservoir
         /** @note
             ここでコンパイルエラーか警告が出る場合は
             double から float への型変換が発生しているのが原因。
-            set_value の引数を手動で型変換すれば解決するはず。
+            set_state の引数を手動で型変換すれば解決するはず。
          */
         local_float.value = in_value;
         out_bits = local_float.bits;

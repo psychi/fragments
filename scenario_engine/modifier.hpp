@@ -92,8 +92,9 @@ class psyq::scenario_engine::_private::modifier
         state_container;
 
     //-------------------------------------------------------------------------
-    /// @name 構築と代入
-    //@{
+    /** @name 構築と代入
+        @{
+     */
     /** @brief 空の状態変更器を構築する。
         @param[in] in_reserve_states 状態値の予約数。
         @param[in] in_allocator      使用するメモリ割当子の初期値。
@@ -139,10 +140,11 @@ class psyq::scenario_engine::_private::modifier
     {
         return this->accumulated_states_.get_allocator();
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 状態変更
-    //@{
+    /** @name 状態変更
+        @{
+     */
     /** @brief 状態変更を予約する。
 
         実際の状態変更は this_type::_modify で適用される。
@@ -158,7 +160,7 @@ class psyq::scenario_engine::_private::modifier
         このため、1つの状態値に対して1フレームに複数回の this_type::accumulate
         を毎フレーム行うと、状態変更の予約が蓄積し増え続けることに注意。
         1つの状態値に対して1フレーム毎に複数回の状態変更をする場合は、
-        psyq::scenario_engine::reservoir::set_value で直接状態変更するべき。
+        psyq::scenario_engine::reservoir::set_state で直接状態変更するべき。
      */
     public: void accumulate(
         typename this_type::reservoir::state_key const& in_state_key,
@@ -206,7 +208,7 @@ class psyq::scenario_engine::_private::modifier
             {
                 for (; i != j; ++i)
                 {
-                    if (!io_reservoir.set_value(i->key_, i->value_))
+                    if (!io_reservoir.set_state(i->key_, i->value_))
                     {
                         /** @note
                             状態変更に失敗した場合、どう対応するのがよい？
@@ -241,7 +243,7 @@ class psyq::scenario_engine::_private::modifier
         this->accumulated_states_.clear();
         this->accumulated_states_.swap(this->pass_states_);
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
     /// @brief 予約された状態変更のコンテナ。
     private: typename this_type::state_container accumulated_states_;

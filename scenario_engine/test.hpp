@@ -40,19 +40,19 @@ namespace psyq_test
             "expression_0, AND,   STATE_COMPARISON, state_bool,     ==, FALSE,\n"
             "expression_1, AND,   STATE_COMPARISON, state_unsigned, <=, 10,\n"
             "expression_2, AND,   STATE_COMPARISON, state_signed,   >=, -20,\n"
-            "expression_3, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
-            "expression_4, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
-            "expression_5, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
-            "expression_6, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
-            "expression_7, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
-            "expression_8, AND,   STATE_COMPARISON, state_unsigned, ==, 0,\n"
+            "expression_3, AND,   STATE_COMPARISON, state_unsigned, ==, 30,\n"
+            "expression_4, AND,   STATE_COMPARISON, state_unsigned, ==, 40,\n"
+            "expression_5, AND,   STATE_COMPARISON, state_unsigned, ==, 50,\n"
+            "expression_6, AND,   STATE_COMPARISON, state_unsigned, ==, 60,\n"
+            "expression_7, AND,   STATE_COMPARISON, state_unsigned, ==, 70,\n"
+            "expression_8, AND,   STATE_COMPARISON, state_unsigned, ==, 80,\n"
             "expression_9, OR,    SUB_EXPRESSION,   expression_0, TRUE, expression_1, FALSE,\n"
             "");
 
         // 条件挙動CSV文字列を構築する。
         flyweight_string::view const local_csv_behavior(
             "KEY         , CONDITION, PRIORITY, KIND, ARGUMENT\n"
-            "expression_0, TRUE,      9,       STATE, state_unsigned, :=, 1\n"
+            "expression_0, TRUE,      9,       STATE, state_unsigned, :=, 1, state_unsigned, +=, 1\n"
             "expression_1, TRUE,      8,       STATE, state_unsigned, +=, 1\n"
             "expression_2, TRUE,      7,       STATE, state_unsigned, -=, 1\n"
             "expression_3, TRUE,      6,       STATE, state_unsigned, *=, 1\n"
@@ -78,7 +78,7 @@ namespace psyq_test
             local_csv_behavior,
             0);
         PSYQ_ASSERT(
-            local_driver.reservoir_.register_value(
+            local_driver.reservoir_.register_state(
                 local_chunk_key,
                 local_driver.hash_function_("10"),
                 driver::reservoir::state_value(10u)));
@@ -86,34 +86,35 @@ namespace psyq_test
         local_driver.shrink_to_fit();
 
         PSYQ_ASSERT(
-            true == *local_driver.reservoir_.get_value(
+            true == *local_driver.reservoir_.get_state(
                 local_driver.hash_function_("state_bool")).get_bool());
         PSYQ_ASSERT(
-            10 == *local_driver.reservoir_.get_value(
+            10 == *local_driver.reservoir_.get_state(
                 local_driver.hash_function_("state_unsigned")).get_unsigned());
         PSYQ_ASSERT(
-            -20 == *local_driver.reservoir_.get_value(
+            -20 == *local_driver.reservoir_.get_state(
                 local_driver.hash_function_("state_signed")).get_signed());
         PSYQ_ASSERT(
-            1.25 <= *local_driver.reservoir_.get_value(
+            1.25 <= *local_driver.reservoir_.get_state(
                 local_driver.hash_function_("state_float")).get_float());
+        local_driver.progress();
 
-        local_driver.reservoir_.set_value(
+        local_driver.reservoir_.set_state(
             local_driver.hash_function_("state_bool"), false);
-        local_driver.reservoir_.set_value(
+        local_driver.reservoir_.set_state(
             local_driver.hash_function_("state_unsigned"), 10);
-        local_driver.reservoir_.set_value(
+        local_driver.reservoir_.set_state(
             local_driver.hash_function_("state_signed"), -20);
-        local_driver.reservoir_.set_value(
+        local_driver.reservoir_.set_state(
             local_driver.hash_function_("state_float"), true);
-        local_driver.reservoir_.set_value(
+        local_driver.reservoir_.set_state(
             local_driver.hash_function_("state_float"), 0x20u);
-        local_driver.reservoir_.set_value(
+        local_driver.reservoir_.set_state(
             local_driver.hash_function_("state_float"), -10);
-        local_driver.reservoir_.set_value(
+        local_driver.reservoir_.set_state(
             local_driver.hash_function_("state_float"), 1.25f);
         auto const local_float_state(
-            local_driver.reservoir_.get_value(
+            local_driver.reservoir_.get_state(
                 local_driver.hash_function_("state_float")));
 
         local_driver.progress();

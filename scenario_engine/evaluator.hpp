@@ -102,10 +102,7 @@ class psyq::scenario_engine::_private::evaluator
     //-------------------------------------------------------------------------
     /// @brief 状態比較条件式の要素条件。
     public: typedef
-        psyq::scenario_engine::_private::state_operation<
-            typename this_type::reservoir::state_key,
-            typename this_type::reservoir::state_value::comparison,
-            typename this_type::reservoir::state_value>
+        typename this_type::reservoir::state_comparison
         state_comparison;
 
     /// @brief 状態比較条件式の要素条件のコンテナ。
@@ -346,7 +343,7 @@ class psyq::scenario_engine::_private::evaluator
                 [&](typename this_type::state_comparison const& in_comparison)
                 ->psyq::scenario_engine::evaluation
                 {
-                    return in_reservoir.compare_value(in_comparison);
+                    return in_reservoir.compare_state(in_comparison);
                 });
 
             // 条件式の種別が未知だった。

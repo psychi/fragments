@@ -157,31 +157,31 @@ class psyq::scenario_engine::behavior_builder
     /** @brief 文字列表を解析して状態値を構築し、状態貯蔵器へ登録する。
         @param[in,out] io_dispatcher 生成した条件挙動関数を登録する条件挙動器。
         @param[in,out] io_hasher     文字列からキーへ変換するハッシュ関数オブジェクト。
-        @param[in] in_evaluator      条件挙動関数から参照する条件評価器。
-        @param[in] in_reservoir      条件挙動関数から参照する状態貯蔵器。
+        @param[in,out] io_evaluator  条件挙動関数から参照する条件評価器。
+        @param[in,out] io_reservoir  条件挙動関数から参照する状態貯蔵器。
         @return 生成した条件挙動関数のコンテナ。
      */
     public: template<typename template_hasher, typename template_evaluator>
     typename this_type::function_shared_ptr_container operator()(
         typename this_type::dispatcher& io_dispatcher,
         template_hasher& io_hasher,
-        template_evaluator const& in_evaluator,
-        typename template_evaluator::reservoir const& in_reservoir)
+        template_evaluator& io_evaluator,
+        typename template_evaluator::reservoir& io_reservoir)
     const
     {
         return this_type::build(
             io_dispatcher,
             io_hasher,
-            in_evaluator,
-            in_reservoir,
+            io_evaluator,
+            io_reservoir,
             this->relation_table_);
     }
 
     /** @brief 文字列表から条件挙動関数を生成し、条件評価器へ登録する。
         @param[in,out] io_dispatcher 生成した条件挙動関数を登録する条件挙動器。
         @param[in,out] io_hasher     文字列からキーへ変換するハッシュ関数オブジェクト。
-        @param[in] in_evaluator      条件挙動関数から参照する条件評価器。
-        @param[in] in_reservoir      条件挙動関数から参照する状態貯蔵器。
+        @param[in,out] io_evaluator  条件挙動関数から参照する条件評価器。
+        @param[in,out] io_reservoir  条件挙動関数から参照する状態貯蔵器。
         @param[in] in_table          条件挙動の文字列表。
         @return 生成した条件挙動関数のコンテナ。
      */
@@ -189,8 +189,8 @@ class psyq::scenario_engine::behavior_builder
     static typename this_type::function_shared_ptr_container build(
         typename this_type::dispatcher& io_dispatcher,
         template_hasher& io_hasher,
-        template_evaluator const& in_evaluator,
-        typename template_evaluator::reservoir const& in_reservoir,
+        template_evaluator& io_evaluator,
+        typename template_evaluator::reservoir& io_reservoir,
         typename this_type::relation_table const& in_table)
     {
         typename this_type::function_shared_ptr_container
@@ -229,7 +229,7 @@ class psyq::scenario_engine::behavior_builder
                 continue;
             }
             // 条件評価器に条件式があることを確認する。
-            PSYQ_ASSERT(in_evaluator._find_expression(local_key) != nullptr);
+            PSYQ_ASSERT(io_evaluator._find_expression(local_key) != nullptr);
 
             // 条件挙動の優先順位を取得する。
             psyq::string::integer_parser<
@@ -248,8 +248,8 @@ class psyq::scenario_engine::behavior_builder
             auto local_function(
                 this_type::make_function(
                     io_hasher,
-                    in_evaluator,
-                    in_reservoir,
+                    io_evaluator,
+                    io_reservoir,
                     in_table,
                     i,
                     local_attribute));
@@ -265,7 +265,7 @@ class psyq::scenario_engine::behavior_builder
             else
             {
                 // 条件挙動関数の登録に失敗した。
-                PSYQ_ASSERT(false);
+                PSYQ_ASSERT(local_function.get() == nullptr);
             }
         }
         local_functions.shrink_to_fit();
@@ -274,19 +274,19 @@ class psyq::scenario_engine::behavior_builder
 
     //-------------------------------------------------------------------------
     /** @brief 文字列表から条件挙動関数を生成する。
-        @param[in,out] io_hasher 文字列からキーへ変換するハッシュ関数オブジェクト。
-        @param[in] in_evaluator  条件挙動関数から参照する条件評価器。
-        @param[in] in_reservoir  条件挙動関数から参照する状態貯蔵器。
-        @param[in] in_table      条件挙動の文字列表。
-        @param[in] in_row_index  文字列表の行番号。
-        @param[in] in_attribute  文字列表の属性。
+        @param[in,out] io_hasher    文字列からキーへ変換するハッシュ関数オブジェクト。
+        @param[in,out] io_evaluator 条件挙動関数から参照する条件評価器。
+        @param[in,out] io_reservoir 条件挙動関数から参照する状態貯蔵器。
+        @param[in] in_table         条件挙動の文字列表。
+        @param[in] in_row_index     文字列表の行番号。
+        @param[in] in_attribute     文字列表の属性。
         @return 生成した条件関数オブジェクト。
      */
     private: template<typename template_hasher, typename template_evaluator>
     static typename this_type::dispatcher::function_shared_ptr make_function(
         template_hasher& io_hasher,
-        template_evaluator const& in_evaluator,
-        typename template_evaluator::reservoir const& in_reservoir,
+        template_evaluator& io_evaluator,
+        typename template_evaluator::reservoir& io_reservoir,
         typename this_type::relation_table const& in_table,
         typename this_type::relation_table::string::size_type const in_row_index,
         typename this_type::table_attribute const& in_attribute)
@@ -312,7 +312,7 @@ class psyq::scenario_engine::behavior_builder
         {
             return this_type::make_state_operation_function(
                 io_hasher,
-                in_reservoir,
+                io_reservoir,
                 local_condition,
                 in_table,
                 in_row_index,
@@ -326,74 +326,130 @@ class psyq::scenario_engine::behavior_builder
         }
     }
 
-    /** @brief 文字列表から状態操作関数オブジェクトを生成する。
-        @param[in,out] io_hasher 文字列からキーへ変換するハッシュ関数オブジェクト。
-        @param[in] in_reservoir  条件挙動関数から参照する状態貯蔵器。
-        @param[in] in_condition  条件挙動関数を起動する条件。
-        @param[in] in_table      条件挙動の文字列表。
-        @param[in] in_row_index  文字列表の行番号。
-        @param[in] in_attribute  文字列表の属性。
+    /** @brief 文字列表から状態操作関数を生成する。
+        @param[in,out] io_hasher    文字列から識別値へ変換するハッシュ関数。
+        @param[in,out] io_reservoir 条件挙動関数から参照する状態貯蔵器。
+        @param[in] in_condition     条件挙動関数を起動する条件。
+        @param[in] in_table         条件挙動の文字列表。
+        @param[in] in_row_index     文字列表の行番号。
+        @param[in] in_attribute     文字列表の属性。
         @return 生成した条件関数オブジェクト。
      */
     private: template<typename template_hasher, typename template_reservoir>
     static typename this_type::dispatcher::function_shared_ptr
     make_state_operation_function(
         template_hasher& io_hasher,
-        template_reservoir const& in_reservoir,
+        template_reservoir& io_reservoir,
         bool const in_condition,
         typename this_type::relation_table const& in_table,
         typename this_type::relation_table::string::size_type const in_row_index,
         typename this_type::table_attribute const& in_attribute)
     {
-        PSYQ_ASSERT(2 <= in_attribute.argument_.second);
-
-        // 状態値の識別値を取得する。
-        auto const local_key(
-            io_hasher(
-                in_table.find_body_cell(
-                    in_row_index, in_attribute.argument_.first)));
-        if (in_reservoir.get_variety(local_key)
-            == template_reservoir::state_value::kind_NULL)
+        unsigned const local_unit_size(3);
+        PSYQ_ASSERT(in_attribute.argument_.second % local_unit_size == 0);
+        std::vector<
+            typename template_reservoir::state_operation,
+            typename template_reservoir::allocator_type>
+                local_state_operations(io_reservoir.get_allocator());
+        for (
+            auto i(local_unit_size);
+            i <= in_attribute.argument_.second;
+            i += local_unit_size)
         {
-            // 状態貯蔵器に識別値が登録されていなかった。
-            PSYQ_ASSERT(false);
-            return typename this_type::dispatcher::function_shared_ptr();
+            auto const local_unit_end_column(in_attribute.argument_.first + i);
+
+            // 状態値の識別値を取得する。
+            typename this_type::relation_table::string::view const
+                local_key_cell(
+                    in_table.find_body_cell(
+                        in_row_index, local_unit_end_column - 3));
+            auto const local_key(io_hasher(local_key_cell));
+            if (io_reservoir.get_variety(local_key)
+                == template_reservoir::state_value::kind_NULL)
+            {
+                PSYQ_ASSERT(local_key_cell.empty());
+                continue;
+            }
+
+            // 演算子を取得する。
+            typename template_reservoir::state_value::operation local_operator;
+            auto const local_get_operator(
+                this_type::get_operator(
+                    local_operator,
+                    io_reservoir,
+                    in_table.find_body_cell(
+                        in_row_index, local_unit_end_column - 2)));
+            if (!local_get_operator)
+            {
+                PSYQ_ASSERT(false);
+                continue;
+            }
+
+            // 演算値を取得する。
+            auto const local_value(
+                template_reservoir::state_value::make(
+                    in_table.find_body_cell(
+                        in_row_index, local_unit_end_column - 1)));
+            if (local_value.get_kind()
+                == template_reservoir::state_value::kind_NULL)
+            {
+                PSYQ_ASSERT(false);
+                continue;
+            }
+
+            local_state_operations.emplace_back(
+                local_key, local_operator, local_value, false);
         }
 
-        // 演算子を取得する。
-        typename template_reservoir::state_value::operation local_operator;
-        auto const local_get_operator(
-            this_type::get_operator(
-                local_operator,
-                in_reservoir,
-                in_table.find_body_cell(
-                    in_row_index, in_attribute.argument_.first + 1)));
-        if (!local_get_operator)
-        {
-            PSYQ_ASSERT(false);
-            return typename this_type::dispatcher::function_shared_ptr();
-        }
+        // 状態値を書き換える関数オブジェクトを生成する。
+        return this_type::make_state_operation_function(
+            io_reservoir, in_condition, local_state_operations);
+    }
 
-        // 演算値を取得する。
-        auto const local_value(
-            template_reservoir::state_value::make(
-                in_table.find_body_cell(
-                    in_row_index, in_attribute.argument_.first + 2)));
-        if (local_value.get_kind()
-            == template_reservoir::state_value::kind_NULL)
+    /** @brief 状態値を操作する条件挙動関数を生成する。
+        @param[in,out] io_reservoir 関数から参照する状態貯蔵器。
+        @param[in] in_condition     関数の呼び出し条件。
+        @param[in] in_operations    状態値の操作方法のコンテナ。
+        @return 生成した条件挙動関数。
+        @todo
+            psyq::scenario_engine::reservoir ではなく
+            psyq::scenario_engine::modifier を使うようにしたい。
+     */
+    private: template<typename template_reservoir, typename template_container>
+    static typename this_type::dispatcher::function_shared_ptr
+    make_state_operation_function(
+        template_reservoir& io_reservoir,
+        bool const in_condition,
+        template_container const& in_operations)
+    {
+        if (in_operations.empty())
         {
-            PSYQ_ASSERT(false);
             return typename this_type::dispatcher::function_shared_ptr();
         }
 
         // 状態値を書き換える関数オブジェクトを生成する。
-        return this_type::dispatcher::make_state_operation_function(
-            const_cast<template_reservoir&>(in_reservoir),
-            in_condition,
-            local_key,
-            local_operator,
-            local_value,
-            in_reservoir.get_allocator());
+        return std::allocate_shared<typename this_type::dispatcher::function>(
+            in_operations.get_allocator(),
+            typename this_type::dispatcher::function(
+                /// @todo io_reservoir を参照渡しするのは危険。対策を考えたい。
+                [=, &io_reservoir](
+                    typename this_type::dispatcher::evaluator::expression::key const&,
+                    psyq::scenario_engine::evaluation const in_evaluation,
+                    psyq::scenario_engine::evaluation const in_last_evaluation)
+                {
+                    // 条件と評価が合致すれば、状態値を書き換える。
+                    if (0 <= in_last_evaluation
+                        && 0 <= in_evaluation
+                        && in_condition == (0 < in_evaluation))
+                    {
+                        for (auto& local_operation: in_operations)
+                        {
+                            auto const local_operate_state(
+                                io_reservoir.operate_state(local_operation));
+                            PSYQ_ASSERT(local_operate_state);
+                        }
+                    }
+                }));
     }
 
     private: template<typename template_reservoir>

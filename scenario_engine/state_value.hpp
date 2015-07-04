@@ -562,7 +562,7 @@ class psyq::scenario_engine::_private::state_value
         @retval false 失敗。 *this は変化しない。
      */
     public: template<typename template_value>
-    bool compute(
+    bool operate(
         typename this_type::operation const in_operator,
         template_value const& in_right)
     PSYQ_NOEXCEPT
@@ -576,7 +576,7 @@ class psyq::scenario_engine::_private::state_value
         switch (local_kind)
         {
             case this_type::kind_UNSIGNED:
-            return this->compute_value(
+            return this->operate_value(
                 std::is_integral<template_value>(),
                 local_kind,
                 in_operator,
@@ -584,7 +584,7 @@ class psyq::scenario_engine::_private::state_value
                 in_right);
 
             case this_type::kind_SIGNED:
-            return this->compute_value(
+            return this->operate_value(
                 std::is_integral<template_value>(),
                 local_kind,
                 in_operator,
@@ -592,7 +592,7 @@ class psyq::scenario_engine::_private::state_value
                 in_right);
 
             case this_type::kind_FLOAT:
-            return this->compute_value(
+            return this->operate_value(
                 std::false_type(),
                 local_kind,
                 in_operator,
@@ -602,8 +602,8 @@ class psyq::scenario_engine::_private::state_value
             default: return false;
         }
     }
-    /// @copydoc compute
-    public: bool compute(
+    /// @copydoc operate
+    public: bool operate(
         typename this_type::operation const in_operator,
         this_type const& in_right)
     PSYQ_NOEXCEPT
@@ -611,22 +611,22 @@ class psyq::scenario_engine::_private::state_value
         switch (in_right.get_kind())
         {
             case this_type::kind_BOOL:
-            return this->compute(in_operator, in_right.bool_);
+            return this->operate(in_operator, in_right.bool_);
 
             case this_type::kind_UNSIGNED:
-            return this->compute(in_operator, in_right.unsigned_);
+            return this->operate(in_operator, in_right.unsigned_);
 
             case this_type::kind_SIGNED:
-            return this->compute(in_operator, in_right.signed_);
+            return this->operate(in_operator, in_right.signed_);
 
             case this_type::kind_FLOAT:
-            return this->compute(in_operator, in_right.float_);
+            return this->operate(in_operator, in_right.float_);
 
             default: return false;
         }
     }
-    /// @copydoc compute
-    public: bool compute(
+    /// @copydoc operate
+    public: bool operate(
         typename this_type::operation const in_operator,
         bool const in_right)
     PSYQ_NOEXCEPT
@@ -781,7 +781,7 @@ class psyq::scenario_engine::_private::state_value
         @retval false 失敗。 *this は変化しない。
      */
     private: template<typename template_left, typename template_right>
-    bool compute_value(
+    bool operate_value(
         std::true_type,
         typename this_type::kind const in_kind,
         typename this_type::operation const in_operator,
@@ -808,7 +808,7 @@ class psyq::scenario_engine::_private::state_value
             return this->set_value(in_left & in_right, in_kind);
 
             default:
-            return this->compute_value(
+            return this->operate_value(
                 std::false_type(), in_kind, in_operator, in_left, in_right);
         }
     }
@@ -821,7 +821,7 @@ class psyq::scenario_engine::_private::state_value
         @retval false 失敗。 *this は変化しない。
      */
     private: template<typename template_left, typename template_right>
-    bool compute_value(
+    bool operate_value(
         std::false_type,
         typename this_type::kind const in_kind,
         typename this_type::operation const in_operator,
@@ -977,7 +977,7 @@ class psyq::scenario_engine::_private::state_operation
     /// @brief 右辺値を状態値から取得するか。
     public: bool right_state_;
 
-}; // class psyq::scenario_engine::_private::state_comparison
+}; // class psyq::scenario_engine::_private::state_operation
 
 #endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_VALUE_HPP_)
 // vim: set expandtab:

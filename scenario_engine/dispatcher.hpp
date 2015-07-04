@@ -345,49 +345,6 @@ class psyq::scenario_engine::_private::dispatcher
         this->dispatch_lock_ = false;
     }
     /// @}
-    /** @brief 状態値を操作する関数オブジェクトを生成する。
-        @param[in,out] io_reservoir 関数から参照する状態貯蔵器。
-        @param[in] in_condition     関数の起動条件。
-        @param[in] in_state_key     操作する状態値の識別値。
-        @param[in] in_operator      状態値の操作で使う演算子。
-        @param[in] in_value         状態値の操作で使う演算値。
-        @param[in] in_allocator     生成に使うメモリ割当子。
-        @return 生成した条件挙動関数オブジェクト。
-        @todo
-            psyq::scenario_engine::reservoir ではなく
-            psyq::scenario_engine::modifier を使うようにしたい。
-     */
-    public: template<typename template_reservoir>
-    static typename this_type::function_shared_ptr
-    make_state_operation_function(
-        template_reservoir& io_reservoir,
-        bool const in_condition,
-        typename template_reservoir::state_key const& in_state_key,
-        typename template_reservoir::state_value::operation const in_operator,
-        typename template_reservoir::state_value const& in_value,
-        typename this_type::allocator_type const& in_allocator)
-    {
-        // 状態値を書き換える関数オブジェクトを生成する。
-        return std::allocate_shared<typename this_type::function>(
-            in_allocator,
-            typename this_type::function(
-                /// @todo io_reservoir を参照渡しするのは危険。対策を考えたい。
-                [=, &io_reservoir](
-                    typename this_type::evaluator::expression::key const&,
-                    psyq::scenario_engine::evaluation const in_evaluation,
-                    psyq::scenario_engine::evaluation const in_last_evaluation)
-                {
-                    // 条件と評価が合致すれば、状態値を書き換える。
-                    if (0 <= in_last_evaluation
-                        && 0 <= in_evaluation
-                        && in_condition == (0 < in_evaluation))
-                    {
-                        this_type::compute_state(
-                            io_reservoir, in_state_key, in_operator, in_value);
-                    }
-                }));
-    }
-
     //-------------------------------------------------------------------------
     /** @brief 条件式監視器を再構築する。
         @param[in,out] io_expression_monitors 再構築する条件式監視器のコンテナ。
@@ -760,28 +717,9 @@ class psyq::scenario_engine::_private::dispatcher
     }
 
     //-------------------------------------------------------------------------
-    private: template<typename template_reservoir>
-    static bool compute_state(
-        template_reservoir& io_reservoir,
-        typename template_reservoir::state_key const& in_state_key,
-        typename template_reservoir::state_value::operation const in_operator,
-        typename template_reservoir::state_value const& in_value)
-    {
-        /** @todo
-            今のところ状態値に定数を設定するしかできないが、
-            状態値に他の状態値を設定できるようにしたい。
-         */
-        auto local_state(io_reservoir.get_value(in_state_key));
-        auto const local_set_value(
-            local_state.compute(in_operator, in_value)
-            && io_reservoir.set_value(in_state_key, local_state));
-        PSYQ_ASSERT(local_set_value);
-        return local_set_value;
-    }
-
-    //-------------------------------------------------------------------------
     /// @brief 条件式監視器の辞書。
-    private: typename this_type::expression_monitor::container expression_monitors_;
+    private: typename this_type::expression_monitor::container
+         expression_monitors_;
 
     /// @brief 状態監視器の辞書。
     private: typename this_type::state_monitor::container state_monitors_;

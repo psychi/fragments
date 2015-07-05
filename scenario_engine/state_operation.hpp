@@ -67,6 +67,14 @@
 #define PSYQ_SCENARIO_ENGINE_STATE_OPERATION_BUILDER_AND "&="
 #endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_OPERATION_BUILDER_AND)
 
+#ifndef PSYQ_SCENARIO_ENGINE_STATE_OPERATION_RIGHT_STATE
+#define PSYQ_SCENARIO_ENGINE_STATE_OPERATION_RIGHT_STATE "STATE:"
+#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_OPERATION_RIGHT_STATE)
+
+#ifndef PSYQ_SCENARIO_ENGINE_STATE_OPERATION_RIGHT_HASH
+#define PSYQ_SCENARIO_ENGINE_STATE_OPERATION_RIGHT_HASH "HASH:"
+#endif // !define(PSYQ_SCENARIO_ENGINE_STATE_OPERATION_RIGHT_HASH)
+
 /// @cond
 namespace psyq
 {
@@ -82,8 +90,9 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 状態値を操作する。
-    @tparam template_state_key   @copydoc psyq::scenario_engine::_private::reservoir::state_key
-    @tparam template_state_value @copydoc psyq::scenario_engine::_private::reservoir::state_value
+    @tparam template_state_key      演算子の左辺値となる状態値の識別値の型。
+    @tparam template_state_operator 状態値を操作する演算子の型。
+    @tparam template_state_value    演算子の右辺値となる状態値の型。
  */
 template<
     typename template_state_key,
@@ -271,21 +280,20 @@ class psyq::scenario_engine::_private::state_operation
     {
         // 状態値の識別値を構築する。
         typename template_hasher::argument_type const local_state_header(
-            PSYQ_SCENARIO_ENGINE_STATE_VALUE_RIGHT_STATE); 
+            PSYQ_SCENARIO_ENGINE_STATE_OPERATION_RIGHT_STATE); 
         if (local_state_header.size() < in_string.size()
             && local_state_header == in_string.substr(0, local_state_header.size()))
         {
             return std::make_pair(
                 template_state_value(
                     static_cast<typename template_state_value::unsigned_type>(
-                        io_hasher(
-                            in_string.substr(local_state_header.size())))),
+                        io_hasher(in_string.substr(local_state_header.size())))),
                 true);
         }
 
         // ハッシュ値を構築する。
         typename template_hasher::argument_type const local_hash_header(
-            PSYQ_SCENARIO_ENGINE_STATE_VALUE_RIGHT_HASH); 
+            PSYQ_SCENARIO_ENGINE_STATE_OPERATION_RIGHT_HASH); 
         if (local_hash_header.size() < in_string.size()
             && local_hash_header == in_string.substr(0, local_hash_header.size()))
         {
@@ -294,8 +302,7 @@ class psyq::scenario_engine::_private::state_operation
             return std::make_pair(
                 template_state_value(
                     static_cast<typename template_state_value::unsigned_type>(
-                        io_hasher(
-                            in_string.substr(local_state_header.size())))),
+                        io_hasher(in_string.substr(local_state_header.size())))),
                 false);
         }
 

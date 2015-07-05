@@ -736,6 +736,7 @@ INPUT                  = \
                          ./scenario_engine/state_registry.hpp \
                          ./scenario_engine/state_chunk.hpp \
                          ./scenario_engine/state_value.hpp \
+                         ./scenario_engine/state_operation.hpp \
                          ./scenario_engine/state_builder.hpp \
                          ./scenario_engine/evaluator.hpp \
                          ./scenario_engine/behavior.hpp \

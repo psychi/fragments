@@ -5,17 +5,7 @@
 #ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_HPP_
 #define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_HPP_
 
-#include "../assert.hpp"
-
-/// @cond
-namespace psyq
-{
-    namespace scenario_engine
-    {
-        template<typename, typename> class behavior_builder;
-    } // namespace scenario_engine
-} // namespace psyq
-/// @endcond
+#include "../string/numeric_parser.hpp"
 
 #ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_KEY
 #define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_KEY "KEY"
@@ -41,41 +31,15 @@ namespace psyq
 #define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_ARGUMENT "ARGUMENT"
 #endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_ARGUMENT)
 
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_COPY
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_COPY ":="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_COPY)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_ADD
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_ADD "+="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_ADD)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_SUB
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_SUB "-="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_SUB)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_MULT
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_MULT "*="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_MULT)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_DIV
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_DIV "/="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_DIV)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_MOD
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_MOD "%="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_MOD)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_OR
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_OR "|="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_OR)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_XOR
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_XOR "^="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_XOR)
-
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_AND
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_AND "&="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_AND)
+/// @cond
+namespace psyq
+{
+    namespace scenario_engine
+    {
+        template<typename, typename> class behavior_builder;
+    } // namespace scenario_engine
+} // namespace psyq
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 文字列表から条件挙動関数を構築する関数オブジェクト。
@@ -346,7 +310,8 @@ class psyq::scenario_engine::behavior_builder
         typename this_type::table_attribute const& in_attribute)
     {
         // 状態操作のコンテナを構築する。
-        unsigned const local_unit_size(3);
+        typename this_type::relation_table::string::size_type const
+            local_unit_size(3);
         PSYQ_ASSERT(in_attribute.argument_.second % local_unit_size == 0);
         std::vector<
             typename template_reservoir::state_operation,
@@ -357,51 +322,16 @@ class psyq::scenario_engine::behavior_builder
             i <= in_attribute.argument_.second;
             i += local_unit_size)
         {
-            auto const local_unit_end_column(in_attribute.argument_.first + i);
-
-            // 操作する状態値の識別値を取得する。
-            typename this_type::relation_table::string::view const
-                local_key_cell(
-                    in_table.find_body_cell(
-                        in_row_index, local_unit_end_column - 3));
-            auto const local_key(io_hasher(local_key_cell));
-            if (io_reservoir.get_variety(local_key)
-                == template_reservoir::EMPTY_VARIETY)
-            {
-                PSYQ_ASSERT(local_key_cell.empty());
-                continue;
-            }
-
-            // 演算子を取得する。
-            typename template_reservoir::state_value::operation local_operator;
-            auto const local_get_operator(
-                this_type::get_operator(
-                    local_operator,
-                    io_reservoir,
-                    in_table.find_body_cell(
-                        in_row_index, local_unit_end_column - 2)));
-            if (!local_get_operator)
-            {
-                PSYQ_ASSERT(false);
-                continue;
-            }
-
-            // 演算子の右辺値を取得する。
-            auto const local_right_value(
-                template_reservoir::state_value::_make_right_value(
+            auto const local_operation(
+                template_reservoir::state_operation::_build(
                     io_hasher,
-                    in_table.find_body_cell(
-                        in_row_index, local_unit_end_column - 1)));
-            if (local_right_value.first.is_empty())
+                    in_table,
+                    in_row_index,
+                    in_attribute.argument_.first + i - local_unit_size));
+            if (!local_operation.value_.is_empty())
             {
-                PSYQ_ASSERT(false);
-                continue;
+                local_state_operations.push_back(local_operation);
             }
-            local_state_operations.emplace_back(
-                local_key,
-                local_operator,
-                local_right_value.first,
-                local_right_value.second);
         }
 
         // 状態値を書き換える関数オブジェクトを生成する。

@@ -9,6 +9,7 @@
 #include "./state_registry.hpp"
 #include "./state_chunk.hpp"
 #include "./state_value.hpp"
+#include "./state_operation.hpp"
 
 /// @cond
 namespace psyq

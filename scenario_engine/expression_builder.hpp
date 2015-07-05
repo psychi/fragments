@@ -33,30 +33,6 @@ namespace psyq
 #define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT "ELEMENT"
 #endif // !defined(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT)
 
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_EQUAL
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_EQUAL "=="
-#endif // !define(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_EQUAL)
-
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_NOT_EQUAL
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_NOT_EQUAL "!="
-#endif // !define(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_NOT_EQUAL)
-
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_LESS
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_LESS "<"
-#endif // !define(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_LESS)
-
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_LESS_EQUAL
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_LESS_EQUAL "<="
-#endif // !define(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_LESS_EQUAL)
-
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_GREATER
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_GREATER ">"
-#endif // !define(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_GREATER)
-
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_GREATER_EQUAL
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_GREATER_EQUAL ">="
-#endif // !define(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_GREATER_EQUAL)
-
 #ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_LOGIC_AND
 #define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_LOGIC_AND "AND"
 #endif // !defined(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_LOGIC_AND)
@@ -567,102 +543,14 @@ class psyq::scenario_engine::expression_builder
         {
             return false;
         }
-
-        // 状態キーを取得する。
-        typename this_type::relation_table::string::view const
-            local_state_key_cell(
-                in_table.find_body_cell(in_row_index, local_element_column));
-        auto local_state_key(io_hasher(local_state_key_cell));
-        if (local_state_key
-            == io_hasher(typename template_hasher::argument_type()))
+        auto const local_comparison(
+            template_evaluator::state_comparison::_build(
+                io_hasher, in_table, in_row_index, local_element_column));
+        if (local_comparison.value_.is_empty())
         {
-            PSYQ_ASSERT(local_state_key_cell.empty());
-            return true;
-        }
-
-        // 比較演算子を取得する。
-        typedef
-            typename template_evaluator::reservoir::state_value
-            state_value;
-        typename state_value::comparison local_state_comparison;
-        auto const local_get_comparison_operator(
-            this_type::get_comparison_operator<state_value>(
-                local_state_comparison,
-                in_table.find_body_cell(
-                    in_row_index, local_element_column + 1)));
-        if (!local_get_comparison_operator)
-        {
-            PSYQ_ASSERT(false);
-            return true;
-        }
-
-        // 比較演算子の右辺値を取得する。
-        auto const local_right_value(
-            state_value::_make_right_value(
-                io_hasher,
-                in_table.find_body_cell(
-                    in_row_index, local_element_column + 2)));
-        if (local_right_value.first.is_empty())
-        {
-            PSYQ_ASSERT(false);
-            return true;
-        }
-
-        // 要素条件を追加する。
-        io_elements.emplace_back(
-            std::move(local_state_key),
-            local_state_comparison,
-            local_right_value.first,
-            local_right_value.second);
-        return true;
-    }
-
-    private: template<typename template_state_value>
-    static bool get_comparison_operator(
-        typename template_state_value::comparison& out_comparison,
-        typename this_type::relation_table::string::view const& in_string)
-    {
-        if (in_string
-            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_EQUAL)
-        {
-            out_comparison = template_state_value::comparison_EQUAL;
-        }
-        else if (
-            in_string
-            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_NOT_EQUAL)
-        {
-            out_comparison = template_state_value::comparison_NOT_EQUAL;
-        }
-        else if (
-            in_string
-            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_LESS)
-        {
-            out_comparison = template_state_value::comparison_LESS;
-        }
-        else if (
-            in_string
-            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_LESS_EQUAL)
-        {
-            out_comparison = template_state_value::comparison_LESS_EQUAL;
-        }
-        else if (
-            in_string
-            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_GREATER)
-        {
-            out_comparison = template_state_value::comparison_GREATER;
-        }
-        else if (
-            in_string
-            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_OPERATOR_GREATER_EQUAL)
-        {
-            out_comparison = template_state_value::comparison_GREATER_EQUAL;
-        }
-        else
-        {
-            // 比較演算子が見つからなかった。
-            PSYQ_ASSERT(false);
             return false;
         }
+        io_elements.push_back(local_comparison);
         return true;
     }
 

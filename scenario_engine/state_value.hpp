@@ -5,7 +5,8 @@
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_VALUE_HPP_
 #define PSYQ_SCENARIO_ENGINE_STATE_VALUE_HPP_
 
-#include "../string/numeric_parser.hpp"
+#include <cstdint>
+#include "../assert.hpp"
 
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_VALUE_RIGHT_STATE
 #define PSYQ_SCENARIO_ENGINE_STATE_VALUE_RIGHT_STATE "STATE:"
@@ -37,7 +38,6 @@ namespace psyq
         {
             /// @cond
             template<typename, typename> class state_value;
-            template<typename, typename, typename> class state_operation;
             /// @endcond
         } // namespace _private
     } // namespace scenario_engine
@@ -674,151 +674,6 @@ class psyq::scenario_engine::_private::state_value
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
-        @param[in,out] io_hasher 文字列のハッシュ関数。
-        @param[in] in_string     解析する文字列。
-     */
-    public: template<typename template_hasher, typename template_string>
-    static std::pair<this_type, bool> _make_right_value(
-        template_hasher& io_hasher,
-        template_string const& in_string)
-    {
-        typedef
-            psyq::string::view<
-                typename template_string::value_type,
-                typename template_string::traits_type>
-            string_view;
-        string_view const local_cell(in_string);
-
-        // 状態値の識別値を構築する。
-        string_view const local_state_header(
-            PSYQ_SCENARIO_ENGINE_STATE_VALUE_RIGHT_STATE); 
-        if (local_state_header.size() < local_cell.size()
-            && local_state_header == local_cell.substr(
-                0, local_state_header.size()))
-        {
-            return std::make_pair(
-                this_type(
-                    static_cast<typename this_type::unsigned_type>(
-                        io_hasher(
-                            local_cell.substr(local_state_header.size())))),
-                    true);
-        }
-
-        // ハッシュ値を構築する。
-        string_view const local_hash_header(
-            PSYQ_SCENARIO_ENGINE_STATE_VALUE_RIGHT_HASH); 
-        if (local_hash_header.size() < local_cell.size()
-            && local_hash_header == local_cell.substr(
-                0, local_hash_header.size()))
-        {
-            static_assert(
-                std::is_unsigned<template_hasher::result_type>::value, "");
-            return std::make_pair(
-                this_type(
-                    static_cast<typename this_type::unsigned_type>(
-                        io_hasher(
-                            local_cell.substr(local_state_header.size())))),
-                    false);
-        }
-
-        return std::make_pair(this_type::_make(in_string), false);
-    }
-
-    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
-
-        文字列を解析し、状態値を構築する。
-
-        @param[in] in_string 解析する文字列。
-        @param[in] in_kind
-            構築する状態値の型。
-            this_type::kind_EMPTY の場合は、自動決定する。
-        @return
-           文字列を解析して構築した状態値。
-           ただし文字列の解析に失敗した場合は、空値を返す。
-     */
-    public: template<typename template_string>
-    static this_type _make(
-        template_string const& in_string,
-        typename this_type::kind const in_kind = this_type::kind_EMPTY)
-    {
-        if (in_string.empty())
-        {
-            return this_type();
-        }
-
-        // 論理値として構築する。
-        if (in_kind == this_type::kind_BOOL || in_kind == this_type::kind_EMPTY)
-        {
-            auto const local_bool_state(in_string.to_bool());
-            if (0 <= local_bool_state)
-            {
-                return this_type(local_bool_state != 0);
-            }
-            else if (in_kind == this_type::kind_BOOL)
-            {
-                return this_type();
-            }
-        }
-        PSYQ_ASSERT(in_kind != this_type::kind_BOOL);
-
-        // 符号なし整数として構築する。
-        psyq::string::integer_parser<typename this_type::unsigned_type> const
-            local_unsigned_parser(in_string);
-        if (local_unsigned_parser.is_completed())
-        {
-            switch (in_kind)
-            {
-                case this_type::kind_FLOAT:
-                return this_type(
-                    static_cast<typename this_type::float_type>(
-                        local_unsigned_parser.get_value()));
-
-                case this_type::kind_SIGNED:
-                return this_type(
-                    static_cast<typename this_type::signed_type>(
-                        local_unsigned_parser.get_value()));
-
-                default: return this_type(local_unsigned_parser.get_value());
-            }
-        }
-
-        // 符号あり整数として構築する。
-        psyq::string::integer_parser<typename this_type::signed_type> const
-            local_signed_parser(in_string);
-        if (local_unsigned_parser.is_completed())
-        {
-            switch (in_kind)
-            {
-                case this_type::kind_FLOAT:
-                return this_type(
-                    static_cast<typename this_type::float_type>(
-                        local_signed_parser.get_value()));
-
-                case this_type::kind_UNSIGNED: return this_type();
-
-                default: return this_type(local_signed_parser.get_value());
-            }
-        }
-
-        // 浮動小数点数として構築する。
-        psyq::string::real_parser<typename this_type::float_type> const
-            local_float_parser(in_string);
-        if (local_float_parser.is_completed())
-        {
-            switch (in_kind)
-            {
-                case this_type::kind_EMPTY:
-                case this_type::kind_FLOAT:
-                return this_type(local_float_parser.get_value());
-
-                default: break;
-            }
-        }
-        return this_type();
-    }
-
-    //-------------------------------------------------------------------------
     /** @brief 型の種類を決定する。
         @tparam template_value 型。
         @return 型の種類。
@@ -1018,47 +873,6 @@ class psyq::scenario_engine::_private::state_value
 
 }; // class psyq::scenario_engine::_private::state_value
 
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 状態値の演算式。
-    @tparam template_state_key   @copydoc psyq::scenario_engine::_private::reservoir::state_key
-    @tparam template_state_value @copydoc psyq::scenario_engine::_private::reservoir::state_value
- */
-template<
-    typename template_state_key,
-    typename template_state_operator,
-    typename template_state_value>
-class psyq::scenario_engine::_private::state_operation
-{
-    private: typedef state_operation this_type;
-
-    /** @brief 状態値の演算式を構築する。
-        @param[in] in_key         this_type::key_ の初期値。
-        @param[in] in_operator    this_type::operator_ の初期値。
-        @param[in] in_value       this_type::value_ の初期値。
-        @param[in] in_right_state this_type::right_state_ の初期値。
-     */
-    public: state_operation(
-        template_state_key in_key,
-        template_state_operator const in_operator,
-        template_state_value in_value,
-        bool const in_right_state)
-    PSYQ_NOEXCEPT:
-    value_(std::move(in_value)),
-    key_(std::move(in_key)),
-    operator_(in_operator),
-    right_state_(in_right_state)
-    {}
-
-    /// @brief 演算の右辺値となる値。
-    public: template_state_value value_;
-    /// @brief 演算の左辺値となる状態値の識別値。
-    public: template_state_key key_;
-    /// @brief 演算子の種類。
-    public: template_state_operator operator_;
-    /// @brief 右辺値を状態値から取得するか。
-    public: bool right_state_;
-
-}; // class psyq::scenario_engine::_private::state_operation
 
 #endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_VALUE_HPP_)
 // vim: set expandtab:

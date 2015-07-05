@@ -7,6 +7,14 @@
 
 #include "../string/numeric_parser.hpp"
 
+#ifndef PSYQ_SCENARIO_ENGINE_STATE_VALUE_RIGHT_STATE
+#define PSYQ_SCENARIO_ENGINE_STATE_VALUE_RIGHT_STATE "STATE:"
+#endif // !defined(PSYQ_SCENARIO_ENGINE_STATE_VALUE_RIGHT_STATE)
+
+#ifndef PSYQ_SCENARIO_ENGINE_STATE_VALUE_RIGHT_HASH
+#define PSYQ_SCENARIO_ENGINE_STATE_VALUE_RIGHT_HASH "HASH:"
+#endif // !define(PSYQ_SCENARIO_ENGINE_STATE_VALUE_RIGHT_HASH)
+
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_VALUE_EPSILON_MAG
 #define PSYQ_SCENARIO_ENGINE_STATE_VALUE_EPSILON_MAG 4
 #endif // !default(PSYQ_SCENARIO_ENGINE_STATE_VALUE_EPSILON_MAG)
@@ -69,7 +77,7 @@ class psyq::scenario_engine::_private::state_value
     {
         kind_SIGNED = -2, ///< 符号あり整数。
         kind_FLOAT,       ///< 浮動小数点数。
-        kind_NULL,        ///< 空。
+        kind_EMPTY,       ///< 空。
         kind_BOOL,        ///< 論理値。
         kind_UNSIGNED,    ///< 符号なし整数。
     };
@@ -113,11 +121,7 @@ class psyq::scenario_engine::_private::state_value
         @{
      */
     /// @brief 空の状態値を構築する。
-    public: state_value() PSYQ_NOEXCEPT:
-    kind_(this_type::kind_NULL)
-    {
-        this->empty_ = -1;
-    }
+    public: state_value() PSYQ_NOEXCEPT: kind_(this_type::kind_EMPTY) {}
 
     /** @brief 論理型の状態値を構築する。
         @param[in] in_bool 格納する論理値。
@@ -161,13 +165,13 @@ class psyq::scenario_engine::_private::state_value
     /** @brief 任意型の状態値を構築する。
         @param[in] in_value 格納する値。
         @param[in] in_kind
-            状態値の型。 this_type::kind_NULL の場合は、自動で決定する。
+            状態値の型。 this_type::kind_EMPTY の場合は、自動で決定する。
      */
     public: template<typename template_value>
-    state_value(
+    explicit state_value(
         template_value const& in_value,
-        typename this_type::kind const in_kind = this_type::kind_NULL)
-    PSYQ_NOEXCEPT: kind_(this_type::kind_NULL)
+        typename this_type::kind const in_kind = this_type::kind_EMPTY)
+    PSYQ_NOEXCEPT: kind_(this_type::kind_EMPTY)
     {
         this->set_value(in_value, in_kind);
     }
@@ -180,8 +184,7 @@ class psyq::scenario_engine::_private::state_value
      */
     public: bool is_empty() const PSYQ_NOEXCEPT
     {
-        //return this->get_kind() == this_type::kind_BOOL && this->empty_ < 0;
-        return this->get_kind() == this_type::kind_NULL;
+        return this->get_kind() == this_type::kind_EMPTY;
     }
 
     /** @brief 状態値の型の種類を取得する。
@@ -198,8 +201,7 @@ class psyq::scenario_engine::_private::state_value
      */
     public: bool const* get_bool() const PSYQ_NOEXCEPT
     {
-        return this->get_kind() == this_type::kind_BOOL && 0 <= this->empty_?
-            &this->bool_: nullptr;
+        return this->get_kind() == this_type::kind_BOOL? &this->bool_: nullptr;
     }
 
     /** @brief 符号なし整数値を取得する。
@@ -243,15 +245,14 @@ class psyq::scenario_engine::_private::state_value
      */
     public: void set_empty() PSYQ_NOEXCEPT
     {
-        this->empty_ = -1;
-        this->kind_ = this_type::kind_BOOL;
+        this->kind_ = this_type::kind_EMPTY;
     }
 
     /** @brief 状態値に値を設定する。
         @param[in] in_value 設定する値。
         @param[in] in_kind
             状態値に設定する型。
-            this_type::kind_NULL の場合は、自動で決定する。
+            this_type::kind_EMPTY の場合は、自動で決定する。
         @retval true 成功。 in_value を *this に設定した。
         @retval false
             失敗。 in_value を状態値に変換できなかった。 *this は変化しない。
@@ -259,9 +260,9 @@ class psyq::scenario_engine::_private::state_value
     public: template<typename template_value>
     bool set_value(
         template_value const& in_value,
-        typename this_type::kind in_kind = this_type::kind_NULL)
+        typename this_type::kind in_kind = this_type::kind_EMPTY)
     {
-        if (in_kind == this_type::kind_NULL)
+        if (in_kind == this_type::kind_EMPTY)
         {
             in_kind = this_type::template classify_kind<template_value>();
         }
@@ -277,10 +278,10 @@ class psyq::scenario_engine::_private::state_value
     /// @copydoc set_value
     public: bool set_value(
         this_type const& in_value,
-        typename this_type::kind const in_kind = this_type::kind_NULL)
+        typename this_type::kind const in_kind = this_type::kind_EMPTY)
     PSYQ_NOEXCEPT
     {
-        if (in_kind == this_type::kind_NULL)
+        if (in_kind == this_type::kind_EMPTY)
         {
             *this = in_value;
             return true;
@@ -312,7 +313,7 @@ class psyq::scenario_engine::_private::state_value
     {
         switch (in_kind)
         {
-            case this_type::kind_NULL:
+            case this_type::kind_EMPTY:
             case this_type::kind_BOOL:
             this->set_bool(in_value);
             return true;
@@ -673,19 +674,73 @@ class psyq::scenario_engine::_private::state_value
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @brief 文字列を解析し、状態値を構築する。
+    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
+        @param[in,out] io_hasher 文字列のハッシュ関数。
+        @param[in] in_string     解析する文字列。
+     */
+    public: template<typename template_hasher, typename template_string>
+    static std::pair<this_type, bool> _make_right_value(
+        template_hasher& io_hasher,
+        template_string const& in_string)
+    {
+        typedef
+            psyq::string::view<
+                typename template_string::value_type,
+                typename template_string::traits_type>
+            string_view;
+        string_view const local_cell(in_string);
+
+        // 状態値の識別値を構築する。
+        string_view const local_state_header(
+            PSYQ_SCENARIO_ENGINE_STATE_VALUE_RIGHT_STATE); 
+        if (local_state_header.size() < local_cell.size()
+            && local_state_header == local_cell.substr(
+                0, local_state_header.size()))
+        {
+            return std::make_pair(
+                this_type(
+                    static_cast<typename this_type::unsigned_type>(
+                        io_hasher(
+                            local_cell.substr(local_state_header.size())))),
+                    true);
+        }
+
+        // ハッシュ値を構築する。
+        string_view const local_hash_header(
+            PSYQ_SCENARIO_ENGINE_STATE_VALUE_RIGHT_HASH); 
+        if (local_hash_header.size() < local_cell.size()
+            && local_hash_header == local_cell.substr(
+                0, local_hash_header.size()))
+        {
+            static_assert(
+                std::is_unsigned<template_hasher::result_type>::value, "");
+            return std::make_pair(
+                this_type(
+                    static_cast<typename this_type::unsigned_type>(
+                        io_hasher(
+                            local_cell.substr(local_state_header.size())))),
+                    false);
+        }
+
+        return std::make_pair(this_type::_make(in_string), false);
+    }
+
+    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
+
+        文字列を解析し、状態値を構築する。
+
         @param[in] in_string 解析する文字列。
         @param[in] in_kind
             構築する状態値の型。
-            this_type::kind_NULL の場合は、自動決定する。
+            this_type::kind_EMPTY の場合は、自動決定する。
         @return
            文字列を解析して構築した状態値。
            ただし文字列の解析に失敗した場合は、空値を返す。
      */
     public: template<typename template_string>
-    static this_type make(
+    static this_type _make(
         template_string const& in_string,
-        typename this_type::kind const in_kind = this_type::kind_NULL)
+        typename this_type::kind const in_kind = this_type::kind_EMPTY)
     {
         if (in_string.empty())
         {
@@ -693,7 +748,7 @@ class psyq::scenario_engine::_private::state_value
         }
 
         // 論理値として構築する。
-        if (in_kind == this_type::kind_BOOL || in_kind == this_type::kind_NULL)
+        if (in_kind == this_type::kind_BOOL || in_kind == this_type::kind_EMPTY)
         {
             auto const local_bool_state(in_string.to_bool());
             if (0 <= local_bool_state)
@@ -753,7 +808,7 @@ class psyq::scenario_engine::_private::state_value
         {
             switch (in_kind)
             {
-                case this_type::kind_NULL:
+                case this_type::kind_EMPTY:
                 case this_type::kind_FLOAT:
                 return this_type(local_float_parser.get_value());
 
@@ -784,7 +839,7 @@ class psyq::scenario_engine::_private::state_value
             return std::is_unsigned<template_value>::value?
                 this_type::kind_UNSIGNED: this_type::kind_SIGNED;
         }
-        return this_type::kind_NULL;
+        return this_type::kind_EMPTY;
     }
 
     //-------------------------------------------------------------------------
@@ -954,7 +1009,6 @@ class psyq::scenario_engine::_private::state_value
     //-------------------------------------------------------------------------
     private: union
     {
-        std::int8_t empty_;
         bool bool_;                                  ///< 論理値。
         typename this_type::unsigned_type unsigned_; ///< 符号なし整数値。
         typename this_type::signed_type signed_;     ///< 符号あり整数値。

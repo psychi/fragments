@@ -569,17 +569,14 @@ class psyq::scenario_engine::expression_builder
         }
 
         // 状態キーを取得する。
-        auto const& local_state_key_cell(
-            in_table.find_body_cell(in_row_index, local_element_column));
-        if (local_state_key_cell.empty())
-        {
-            return true;
-        }
+        typename this_type::relation_table::string::view const
+            local_state_key_cell(
+                in_table.find_body_cell(in_row_index, local_element_column));
         auto local_state_key(io_hasher(local_state_key_cell));
         if (local_state_key
             == io_hasher(typename template_hasher::argument_type()))
         {
-            PSYQ_ASSERT(false);
+            PSYQ_ASSERT(local_state_key_cell.empty());
             return true;
         }
 
@@ -599,24 +596,24 @@ class psyq::scenario_engine::expression_builder
             return true;
         }
 
-        // 比較条件値を取得する。
-        auto local_state_value(
-            template_evaluator::reservoir::state_value::make(
+        // 比較演算子の右辺値を取得する。
+        auto const local_right_value(
+            state_value::_make_right_value(
+                io_hasher,
                 in_table.find_body_cell(
                     in_row_index, local_element_column + 2)));
-        if (local_state_value.is_empty())
+        if (local_right_value.first.is_empty())
         {
             PSYQ_ASSERT(false);
             return true;
         }
 
         // 要素条件を追加する。
-        /// @todo 右辺値を状態値から取得できるようにする。
         io_elements.emplace_back(
             std::move(local_state_key),
             local_state_comparison,
-            std::move(local_state_value),
-            false);
+            local_right_value.first,
+            local_right_value.second);
         return true;
     }
 

@@ -758,14 +758,11 @@ class psyq::scenario_engine::_private::reservoir
     {
         switch (in_variety)
         {
-            case this_type::state_registry::EMPTY_VARIETY:
-            PSYQ_ASSERT(false);
-            return this_type::state_value::kind_NULL:
-
+            case this_type::state_value::kind_EMPTY:
             case this_type::state_value::kind_BOOL:
             case this_type::state_value::kind_FLOAT:
-            return static_cast<typename this_type::state_value::kind>(
-                in_variety);
+            return
+                static_cast<typename this_type::state_value::kind>(in_variety);
 
             default:
             return in_variety < 0?

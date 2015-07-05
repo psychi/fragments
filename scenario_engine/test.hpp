@@ -39,7 +39,7 @@ namespace psyq_test
             "KEY,          LOGIC, KIND,             ELEMENT,\n"
             "expression_0, AND,   STATE_COMPARISON, state_bool,     ==, FALSE,\n"
             "expression_1, AND,   STATE_COMPARISON, state_unsigned, <=, 10,\n"
-            "expression_2, AND,   STATE_COMPARISON, state_signed,   >=, -20,\n"
+            "expression_2, AND,   STATE_COMPARISON, state_signed,   >=, STATE:state_unsigned,\n"
             "expression_3, AND,   STATE_COMPARISON, state_unsigned, ==, 30,\n"
             "expression_4, AND,   STATE_COMPARISON, state_unsigned, ==, 40,\n"
             "expression_5, AND,   STATE_COMPARISON, state_unsigned, ==, 50,\n"
@@ -52,7 +52,7 @@ namespace psyq_test
         // 条件挙動CSV文字列を構築する。
         flyweight_string::view const local_csv_behavior(
             "KEY         , CONDITION, PRIORITY, KIND, ARGUMENT\n"
-            "expression_0, TRUE,      9,       STATE, state_unsigned, :=, 1, state_unsigned, +=, 1\n"
+            "expression_0, TRUE,      9,       STATE, state_unsigned, :=, 1, state_unsigned, +=, STATE:state_unsigned\n"
             "expression_1, TRUE,      8,       STATE, state_unsigned, +=, 1\n"
             "expression_2, TRUE,      7,       STATE, state_unsigned, -=, 1\n"
             "expression_3, TRUE,      6,       STATE, state_unsigned, *=, 1\n"
@@ -81,7 +81,9 @@ namespace psyq_test
             local_driver.reservoir_.register_state(
                 local_chunk_key,
                 local_driver.hash_function_("10"),
-                driver::reservoir::state_value(10u)));
+                driver::reservoir::state_value(
+                    static_cast<driver::reservoir::state_value::unsigned_type>(
+                        10u))));
         PSYQ_ASSERT(!local_driver.extend_chunk(0, 0, nullptr));
         local_driver.shrink_to_fit();
 

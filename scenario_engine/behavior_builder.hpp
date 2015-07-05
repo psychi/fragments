@@ -386,19 +386,22 @@ class psyq::scenario_engine::behavior_builder
                 continue;
             }
 
-            // 演算値を取得する。
-            auto const local_value(
-                template_reservoir::state_value::make(
+            // 演算子の右辺値を取得する。
+            auto const local_right_value(
+                template_reservoir::state_value::_make_right_value(
+                    io_hasher,
                     in_table.find_body_cell(
                         in_row_index, local_unit_end_column - 1)));
-            if (local_value.is_empty())
+            if (local_right_value.first.is_empty())
             {
                 PSYQ_ASSERT(false);
                 continue;
             }
-
             local_state_operations.emplace_back(
-                local_key, local_operator, local_value, false);
+                local_key,
+                local_operator,
+                local_right_value.first,
+                local_right_value.second);
         }
 
         // 状態値を書き換える関数オブジェクトを生成する。

@@ -85,6 +85,11 @@ class psyq::scenario_engine::_private::reservoir
              std::uint8_t>
          state_registry;
 
+    public: enum: typename this_type::state_registry::variety
+    {
+        EMPTY_VARIETY = this_type::state_registry::EMPTY_VARIETY,
+    };
+
     //-------------------------------------------------------------------------
     /// @brief 状態値を格納するビット列のチャンク。
     private: typedef
@@ -155,15 +160,15 @@ class psyq::scenario_engine::_private::reservoir
          state_key_less;
 
     //-------------------------------------------------------------------------
-    public: enum: typename this_type::state_registry::bit_size
+    public: enum: typename this_type::state_registry::bit_width
     {
         /// @brief 浮動小数点数型のビット数。
-        FLOAT_SIZE = sizeof(template_float) *
+        FLOAT_WIDTH = sizeof(template_float) *
             psyq::scenario_engine::_private::BITS_PER_BYTE,
     };
     static_assert(
         // this_type::chunk::block に浮動小数点数が収まることを確認する。
-        this_type::FLOAT_SIZE <= this_type::chunk::BLOCK_SIZE,
+        this_type::FLOAT_WIDTH <= this_type::chunk::BLOCK_WIDTH,
         "");
     static_assert(
         // state_registry::bit_position に
@@ -174,10 +179,10 @@ class psyq::scenario_engine::_private::reservoir
             psyq::scenario_engine::_private::BITS_PER_BYTE,
         "");
     static_assert(
-        // state_registry::bit_size にビット数の最大値が収まることを確認する。
-        this_type::state_registry::format_SIZE_BACK -
-            this_type::state_registry::format_SIZE_FRONT
-        < sizeof(typename this_type::state_registry::bit_size) *
+        // state_registry::bit_width にビット数の最大値が収まることを確認する。
+        this_type::state_registry::format_WIDTH_BACK -
+            this_type::state_registry::format_WIDTH_FRONT
+        < sizeof(typename this_type::state_registry::bit_width) *
             psyq::scenario_engine::_private::BITS_PER_BYTE,
         "");
 
@@ -254,7 +259,7 @@ class psyq::scenario_engine::_private::reservoir
         }
 
         // 現在の状態貯蔵器をもとに、新たな状態貯蔵器を構築する。
-        for (auto local_state: this_type::sort_state_by_size(this->states_))
+        for (auto local_state: this_type::sort_state_by_width(this->states_))
         {
             local_reservoir.copy_state(*local_state, this->chunks_);
         }
@@ -318,24 +323,24 @@ class psyq::scenario_engine::_private::reservoir
         @param[in] in_chunk_key   登録する状態値を格納する状態値ビット列チャンクの識別値。
         @param[in] in_state_key   登録する状態値の識別番号。
         @param[in] in_state_value 登録する状態値の初期値。
-        @param[in] in_state_size  登録する状態値のビット数。
+        @param[in] in_state_width  登録する状態値のビット数。
         @retval true 成功。状態値を登録した。
         @retval false
             失敗。状態値を登録できなかった。
             - in_state_key に対応する状態値がすでに登録されていると失敗する。
-            - this_type::chunk::BLOKK_SIZE より in_state_size が大きければ失敗する。
+            - this_type::chunk::BLOKK_SIZE より in_state_width が大きければ失敗する。
      */
     public: bool register_unsigned(
         typename this_type::chunk_key in_chunk_key,
         typename this_type::state_key in_state_key,
         typename this_type::state_value::unsigned_type const in_state_value,
-        std::size_t const in_state_size)
+        std::size_t const in_state_width)
     {
         // 登録不可能な状態値か判定する。
         auto const local_variety(
             static_cast<typename this_type::state_registry::variety>(
-                in_state_size));
-        if (this_type::chunk::BLOCK_SIZE < in_state_size
+                in_state_width));
+        if (this_type::chunk::BLOCK_WIDTH < in_state_width
             || local_variety < this_type::state_value::kind_UNSIGNED)
         {
             return false;
@@ -352,7 +357,7 @@ class psyq::scenario_engine::_private::reservoir
             return false;
         }
         return 0 <= local_chunk.set_bits(
-            local_state->get_position(), in_state_size, in_state_value);
+            local_state->get_position(), in_state_width, in_state_value);
     }
 
     /** @brief 符号あり整数型の状態値を登録する。
@@ -362,13 +367,13 @@ class psyq::scenario_engine::_private::reservoir
         typename this_type::chunk_key in_chunk_key,
         typename this_type::state_key in_state_key,
         typename this_type::state_value::signed_type const in_state_value,
-        std::size_t const in_state_size)
+        std::size_t const in_state_width)
     {
         // 登録不可能な状態値か判定する。
         auto const local_variety(
             -static_cast<typename this_type::state_registry::variety>(
-                in_state_size));
-        if (this_type::chunk::BLOCK_SIZE < in_state_size
+                in_state_width));
+        if (this_type::chunk::BLOCK_WIDTH < in_state_width
             || this_type::state_value::kind_SIGNED < local_variety)
         {
             return false;
@@ -384,15 +389,15 @@ class psyq::scenario_engine::_private::reservoir
         {
             return false;
         }
-        auto const local_size(
-            static_cast<typename this_type::state_registry::bit_size>(
-                in_state_size));
+        auto const local_width(
+            static_cast<typename this_type::state_registry::bit_width>(
+                in_state_width));
         auto local_bits(
             static_cast<typename this_type::chunk::block>(in_state_value));
         if (in_state_value < 0)
         {
             auto const local_mask(
-                this_type::chunk::make_block_mask(local_size));
+                this_type::chunk::make_block_mask(local_width));
             if ((~local_mask & local_bits) != ~local_mask)
             {
                 return false;
@@ -400,7 +405,7 @@ class psyq::scenario_engine::_private::reservoir
             local_bits &= local_mask;
         }
         return 0 <= local_chunk.set_bits(
-            local_state->get_position(), local_size, local_bits);
+            local_state->get_position(), local_width, local_bits);
     }
 
     /** @brief 浮動小数点数型の状態値を登録する。
@@ -427,7 +432,7 @@ class psyq::scenario_engine::_private::reservoir
         local_float.value = in_state_value;
         return 0 <= local_chunk.set_bits(
             local_state->get_position(),
-            this_type::FLOAT_SIZE,
+            this_type::FLOAT_WIDTH,
             local_float.bits);
     }
 
@@ -480,10 +485,11 @@ class psyq::scenario_engine::_private::reservoir
     /** @name 状態値の取得と設定
         @{
      */
-    /** @brief 状態値の種別を取得する。
+    /** @brief 状態値の種類を取得する。
         @param[in] in_state_key 状態値に対応する識別値。
-        @retval !=this_type::state_value::kind_NULL 状態値の種別。
-        @retval ==this_type::state_value::kind_NULL in_state_key に対応する状態値がない。
+        @retval !=this_type::EMPTY_VARIETY 状態値の種類。
+        @retval ==this_type::EMPTY_VARIETY
+            in_state_key に対応する状態値がない。
      */
     public: typename this_type::state_registry::variety get_variety(
         typename this_type::state_key const& in_state_key)
@@ -493,7 +499,7 @@ class psyq::scenario_engine::_private::reservoir
             this_type::state_key_less::find_const_pointer(
                 this->states_, in_state_key));
         return local_state != nullptr?
-            local_state->get_variety(): this_type::state_value::kind_NULL;
+            local_state->get_variety(): this_type::EMPTY_VARIETY;
     }
 
     /** @brief 状態値を取得する。
@@ -503,8 +509,7 @@ class psyq::scenario_engine::_private::reservoir
         @param[in] in_state_key 取得する状態値に対応する識別値。
         @return
             取得した状態値。状態値の取得に失敗した場合は、
-            this_type::state_value::get_kind で
-            this_type::state_value::kind_NULL を返す。
+            this_type::state_value::is_empty で偽を返す。
         @sa this_type::register_bool
         @sa this_type::register_unsigned
         @sa this_type::register_signed
@@ -534,10 +539,10 @@ class psyq::scenario_engine::_private::reservoir
             return typename this_type::state_value();
         }
         auto const local_variety(local_state_registry->get_variety());
-        auto const local_size(this_type::get_size(local_variety));
+        auto const local_width(this_type::get_width(local_variety));
         auto const local_bits(
             local_chunk->get_bits(
-                local_state_registry->get_position(), local_size));
+                local_state_registry->get_position(), local_width));
 
         // 状態値の種別から、出力値のコピー処理を分岐する。
         switch (local_variety)
@@ -564,9 +569,9 @@ class psyq::scenario_engine::_private::reservoir
                     static_cast<typename this_type::state_value::signed_type>(
                         local_bits));
                 auto const local_minus(
-                    1 & (local_signed_bits >> (local_size - 1)));
+                    1 & (local_signed_bits >> (local_width - 1)));
                 return typename this_type::state_value(
-                    local_signed_bits | (-local_minus << local_size));
+                    local_signed_bits | (-local_minus << local_width));
             }
             else if (0 < local_variety)
             {
@@ -665,11 +670,11 @@ class psyq::scenario_engine::_private::reservoir
 
         // 状態値の種別から、設定するビット列とビット数を決定する。
         auto const local_variety(local_state->get_variety());
-        typename this_type::state_registry::bit_size local_size;
+        typename this_type::state_registry::bit_width local_width;
         typename this_type::chunk::block local_bits;
         switch (local_variety)
         {
-            case this_type::state_value::kind_NULL:
+            case this_type::state_registry::EMPTY_VARIETY:
             PSYQ_ASSERT(false);
             return false;
 
@@ -679,24 +684,24 @@ class psyq::scenario_engine::_private::reservoir
             {
                 return false;
             }
-            local_size = 1;
+            local_width = 1;
             local_bits = static_cast<typename this_type::chunk::block>(
                 in_state_value);
             break;
 
             // 浮動小数点数のビット列とビット数を決定する。
             case this_type::state_value::kind_FLOAT:
-            local_size = this_type::make_float_bits(
+            local_width = this_type::make_float_bits(
                 local_bits, in_state_value);
             break;
 
             // 整数のビット列とビット数を決定する。
             default:
-            local_size = this_type::make_integer_bits(
+            local_width = this_type::make_integer_bits(
                 local_bits, in_state_value, local_variety);
             break;
         }
-        if (local_size <= 0)
+        if (local_width <= 0)
         {
             return false;
         }
@@ -704,7 +709,7 @@ class psyq::scenario_engine::_private::reservoir
         // 状態値にビット列を設定する。
         auto const local_set_bits(
             local_chunk->set_bits(
-                local_state->get_position(), local_size, local_bits));
+                local_state->get_position(), local_width, local_bits));
         if (local_set_bits < 0)
         {
             return false;
@@ -723,20 +728,20 @@ class psyq::scenario_engine::_private::reservoir
         @return 状態値のビット数。
      */
     public:
-    static typename this_type::state_registry::bit_size get_size(
+    static typename this_type::state_registry::bit_width get_width(
         typename this_type::state_registry::variety const in_variety)
     PSYQ_NOEXCEPT
     {
         switch (in_variety)
         {
-            case this_type::state_value::kind_NULL:
+            case this_type::state_registry::EMPTY_VARIETY:
             return 0;
 
             case this_type::state_value::kind_BOOL:
             return 1;
 
             case this_type::state_value::kind_FLOAT:
-            return this_type::FLOAT_SIZE;
+            return this_type::FLOAT_WIDTH;
 
             default:
             return in_variety < 0? -in_variety: in_variety;
@@ -753,7 +758,10 @@ class psyq::scenario_engine::_private::reservoir
     {
         switch (in_variety)
         {
-            case this_type::state_value::kind_NULL:
+            case this_type::state_registry::EMPTY_VARIETY:
+            PSYQ_ASSERT(false);
+            return this_type::state_value::kind_NULL:
+
             case this_type::state_value::kind_BOOL:
             case this_type::state_value::kind_FLOAT:
             return static_cast<typename this_type::state_value::kind>(
@@ -986,7 +994,7 @@ class psyq::scenario_engine::_private::reservoir
     /** @brief ビット領域の大きさの降順で並び替えた状態値のコンテナを作る。
      */
     private:
-    static typename this_type::state_pointer_container sort_state_by_size(
+    static typename this_type::state_pointer_container sort_state_by_width(
         typename this_type::state_container const& in_states)
     {
         typename this_type::state_pointer_container local_states(
@@ -1003,11 +1011,11 @@ class psyq::scenario_engine::_private::reservoir
                 typename this_type::state_registry const* const in_right)
             const PSYQ_NOEXCEPT
             {
-                auto const local_left_size(
-                    this_type::get_size(in_left->get_variety()));
-                auto const local_right_size(
-                    this_type::get_size(in_right->get_variety()));
-                return local_right_size < local_left_size;
+                auto const local_left_width(
+                    this_type::get_width(in_left->get_variety()));
+                auto const local_right_width(
+                    this_type::get_width(in_right->get_variety()));
+                return local_right_width < local_left_width;
             }
         };
         std::sort(
@@ -1043,12 +1051,12 @@ class psyq::scenario_engine::_private::reservoir
         }
 
         // 状態値ビット列をコピーする。
-        auto const local_size(this_type::get_size(local_variety));
+        auto const local_width(this_type::get_width(local_variety));
         local_target_chunk.set_bits(
             local_target_state->get_position(),
-            local_size,
+            local_width,
             local_source_chunk->get_bits(
-                in_source_state.get_position(), local_size));
+                in_source_state.get_position(), local_width));
         local_target_state->copy_transition(in_source_state);
     }
 
@@ -1082,7 +1090,7 @@ class psyq::scenario_engine::_private::reservoir
         }
 
         // 状態登記を新たに追加し、状態値ビット列チャンクを用意する。
-        PSYQ_ASSERT(in_variety != this_type::state_value::kind_NULL);
+        PSYQ_ASSERT(in_variety != this_type::state_registry::EMPTY_VARIETY);
         auto& local_state(
             *this->states_.emplace(
                 local_state_iterator,
@@ -1095,7 +1103,7 @@ class psyq::scenario_engine::_private::reservoir
             local_state.set_position(
                 io_chunk.template
                     make_state_field<typename this_type::state_registry>(
-                        this_type::get_size(in_variety))));
+                        this_type::get_width(in_variety))));
         if (!local_set_position)
         {
             PSYQ_ASSERT(false);
@@ -1113,19 +1121,19 @@ class psyq::scenario_engine::_private::reservoir
         @retval ==0 失敗。
      */
     private:
-    static typename this_type::state_registry::bit_size make_float_bits(
+    static typename this_type::state_registry::bit_width make_float_bits(
         typename this_type::chunk::block& out_bits,
         float const in_value)
     {
         typename this_type::float_union local_float;
         local_float.value = in_value;
         out_bits = local_float.bits;
-        return this_type::FLOAT_SIZE;
+        return this_type::FLOAT_WIDTH;
     }
 
     /// @copydoc make_float_bits
     private:
-    static typename this_type::state_registry::bit_size make_float_bits(
+    static typename this_type::state_registry::bit_width make_float_bits(
         typename this_type::chunk::block& out_bits,
         double const in_value)
     {
@@ -1137,14 +1145,14 @@ class psyq::scenario_engine::_private::reservoir
          */
         local_float.value = in_value;
         out_bits = local_float.bits;
-        return this_type::FLOAT_SIZE;
+        return this_type::FLOAT_WIDTH;
     }
 
     /** @brief this_type::make_float_bits の真偽値のためのダミー関数。
         @return 必ず0。
      */
     private:
-    static typename this_type::state_registry::bit_size make_float_bits(
+    static typename this_type::state_registry::bit_width make_float_bits(
         typename this_type::chunk::block&,
         bool const)
     {
@@ -1158,7 +1166,7 @@ class psyq::scenario_engine::_private::reservoir
         @retval ==0 失敗。
      */
     private: template<typename template_value>
-    static typename this_type::state_registry::bit_size make_float_bits(
+    static typename this_type::state_registry::bit_width make_float_bits(
         typename this_type::chunk::block& out_bits,
         template_value const in_value)
     {
@@ -1171,7 +1179,7 @@ class psyq::scenario_engine::_private::reservoir
             return 0;
         }
         out_bits = local_float.bits;
-        return this_type::FLOAT_SIZE;
+        return this_type::FLOAT_WIDTH;
     }
 
     /** @brief 整数からビット列を取得する。
@@ -1182,7 +1190,7 @@ class psyq::scenario_engine::_private::reservoir
         @retval ==0 失敗。
      */
     private: template<typename template_value>
-    static typename this_type::state_registry::bit_size make_integer_bits(
+    static typename this_type::state_registry::bit_width make_integer_bits(
         typename this_type::chunk::block& out_bits,
         template_value const in_value,
         typename this_type::state_registry::variety const in_variety)
@@ -1198,8 +1206,8 @@ class psyq::scenario_engine::_private::reservoir
         }
 
         // 整数からビット列を取り出す。
-        auto const local_size(this_type::get_size(in_variety));
-        auto const local_mask(this_type::chunk::make_block_mask(local_size));
+        auto const local_width(this_type::get_width(in_variety));
+        auto const local_mask(this_type::chunk::make_block_mask(local_width));
         out_bits = static_cast<typename this_type::chunk::block>(local_signed);
         if (in_value < 0)
         {
@@ -1213,14 +1221,14 @@ class psyq::scenario_engine::_private::reservoir
         {
             return 0;
         }
-        return local_size;
+        return local_width;
     }
 
     /** @brief this_type::make_integer_bits の真偽値のためのダミー関数。
         @return 必ず0。
      */
     private:
-    static typename this_type::state_registry::bit_size make_integer_bits(
+    static typename this_type::state_registry::bit_width make_integer_bits(
         typename this_type::chunk::block&,
         bool const,
         typename this_type::state_registry::variety const)

@@ -345,6 +345,7 @@ class psyq::scenario_engine::behavior_builder
         typename this_type::relation_table::string::size_type const in_row_index,
         typename this_type::table_attribute const& in_attribute)
     {
+        // 状態操作のコンテナを構築する。
         unsigned const local_unit_size(3);
         PSYQ_ASSERT(in_attribute.argument_.second % local_unit_size == 0);
         std::vector<
@@ -358,14 +359,14 @@ class psyq::scenario_engine::behavior_builder
         {
             auto const local_unit_end_column(in_attribute.argument_.first + i);
 
-            // 状態値の識別値を取得する。
+            // 操作する状態値の識別値を取得する。
             typename this_type::relation_table::string::view const
                 local_key_cell(
                     in_table.find_body_cell(
                         in_row_index, local_unit_end_column - 3));
             auto const local_key(io_hasher(local_key_cell));
             if (io_reservoir.get_variety(local_key)
-                == template_reservoir::state_value::kind_NULL)
+                == template_reservoir::EMPTY_VARIETY)
             {
                 PSYQ_ASSERT(local_key_cell.empty());
                 continue;
@@ -390,8 +391,7 @@ class psyq::scenario_engine::behavior_builder
                 template_reservoir::state_value::make(
                     in_table.find_body_cell(
                         in_row_index, local_unit_end_column - 1)));
-            if (local_value.get_kind()
-                == template_reservoir::state_value::kind_NULL)
+            if (local_value.is_empty())
             {
                 PSYQ_ASSERT(false);
                 continue;

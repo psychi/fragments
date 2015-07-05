@@ -604,8 +604,7 @@ class psyq::scenario_engine::expression_builder
             template_evaluator::reservoir::state_value::make(
                 in_table.find_body_cell(
                     in_row_index, local_element_column + 2)));
-        if (local_state_value.get_kind()
-            == template_evaluator::reservoir::state_value::kind_NULL)
+        if (local_state_value.is_empty())
         {
             PSYQ_ASSERT(false);
             return true;

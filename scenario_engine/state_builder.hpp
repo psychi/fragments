@@ -203,7 +203,7 @@ class psyq::scenario_engine::state_builder
                     in_row_index, in_attribute.key_.first)));
         if (local_key == io_hasher(typename template_hasher::argument_type())
             || io_reservoir.get_variety(local_key)
-               != template_reservoir::state_value::kind_NULL)
+               != template_reservoir::EMPTY_VARIETY)
         {
             // 状態値の識別値が空だったか、重複していた。
             PSYQ_ASSERT(false);

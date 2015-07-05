@@ -109,10 +109,15 @@ class psyq::scenario_engine::_private::state_value
     };
 
     //-------------------------------------------------------------------------
-    /// @name 構築と代入
-    //@{
+    /** @name 構築と代入
+        @{
+     */
     /// @brief 空の状態値を構築する。
-    public: state_value() PSYQ_NOEXCEPT: kind_(this_type::kind_NULL) {}
+    public: state_value() PSYQ_NOEXCEPT:
+    kind_(this_type::kind_NULL)
+    {
+        this->empty_ = -1;
+    }
 
     /** @brief 論理型の状態値を構築する。
         @param[in] in_bool 格納する論理値。
@@ -166,10 +171,19 @@ class psyq::scenario_engine::_private::state_value
     {
         this->set_value(in_value, in_kind);
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 値の取得
-    //@{
+    /** @name 値の取得
+        @{
+     */
+    /** @brief 状態値が空か判定する。
+     */
+    public: bool is_empty() const PSYQ_NOEXCEPT
+    {
+        //return this->get_kind() == this_type::kind_BOOL && this->empty_ < 0;
+        return this->get_kind() == this_type::kind_NULL;
+    }
+
     /** @brief 状態値の型の種類を取得する。
         @return 状態値の型の種類。
      */
@@ -184,7 +198,8 @@ class psyq::scenario_engine::_private::state_value
      */
     public: bool const* get_bool() const PSYQ_NOEXCEPT
     {
-        return this->get_kind() == this_type::kind_BOOL? &this->bool_: nullptr;
+        return this->get_kind() == this_type::kind_BOOL && 0 <= this->empty_?
+            &this->bool_: nullptr;
     }
 
     /** @brief 符号なし整数値を取得する。
@@ -219,10 +234,19 @@ class psyq::scenario_engine::_private::state_value
         return this->get_kind() == this_type::kind_FLOAT?
             &this->float_: nullptr;
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 値の設定
-    //@{
+    /** @name 値の設定
+        @{
+     */
+    /** @brief 状態値を空にする。
+     */
+    public: void set_empty() PSYQ_NOEXCEPT
+    {
+        this->empty_ = -1;
+        this->kind_ = this_type::kind_BOOL;
+    }
+
     /** @brief 状態値に値を設定する。
         @param[in] in_value 設定する値。
         @param[in] in_kind
@@ -293,14 +317,8 @@ class psyq::scenario_engine::_private::state_value
             this->set_bool(in_value);
             return true;
 
-            return false;
+            default: return false;
         }
-    }
-
-    /// @brief 状態値を空にする。
-    public: void set_null() PSYQ_NOEXCEPT
-    {
-        this->kind_ = this_type::kind_NULL;
     }
 
     /** @brief 状態値に論理値を設定する。
@@ -385,10 +403,11 @@ class psyq::scenario_engine::_private::state_value
         }
         return false;
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 値の比較
-    //@{
+    /** @name 値の比較
+        @{
+     */
     /** @brief 状態値と状態値を比較する。
         @param[in] in_comparison 比較演算子の種類。
         @param[in] in_right      比較演算子の右辺値。
@@ -455,13 +474,19 @@ class psyq::scenario_engine::_private::state_value
     public: typename this_type::magnitude compare(bool const in_right)
     const PSYQ_NOEXCEPT
     {
-        if (this->get_kind() != this_type::kind_BOOL)
+        if (this->get_bool() == nullptr)
         {
             return this_type::magnitude_NONE;
         }
-        return this->bool_ == in_right?
-            this_type::magnitude_EQUAL:
-            (this->bool_? this_type::magnitude_GREATER: this_type::magnitude_LESS);
+        if (this->bool_ == in_right)
+        {
+            return this_type::magnitude_EQUAL;
+        }
+        if (this->bool_)
+        {
+            return this_type::magnitude_GREATER;
+        }
+        return this_type::magnitude_LESS;
     }
 
     /** @brief 状態値と符号なし整数を比較する。
@@ -551,10 +576,11 @@ class psyq::scenario_engine::_private::state_value
     {
         return this->compare(this_type(in_right));
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 値の演算
-    //@{
+    /** @name 値の操作
+        @{
+     */
     /** @brief 状態値を演算する。
         @param[in] in_operator 適用する演算子。
         @param[in] in_right    演算子の右辺。
@@ -645,7 +671,7 @@ class psyq::scenario_engine::_private::state_value
         }
         return true;
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
     /** @brief 文字列を解析し、状態値を構築する。
         @param[in] in_string 解析する文字列。
@@ -928,6 +954,7 @@ class psyq::scenario_engine::_private::state_value
     //-------------------------------------------------------------------------
     private: union
     {
+        std::int8_t empty_;
         bool bool_;                                  ///< 論理値。
         typename this_type::unsigned_type unsigned_; ///< 符号なし整数値。
         typename this_type::signed_type signed_;     ///< 符号あり整数値。

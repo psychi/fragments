@@ -6,6 +6,7 @@
 #define PSYQ_SCENARIO_ENGINE_STATE_REGISTRY_HPP_
 
 #include <cstdint>
+#include "../assert.hpp"
 
 /// @cond
 namespace psyq
@@ -32,13 +33,13 @@ namespace psyq
     @tparam template_key          @copydoc state_registry::key
     @tparam template_chunk_key    @copydoc state_registry::chunk_key
     @tparam template_bit_position @copydoc state_registry::bit_position
-    @tparam template_bit_size     @copydoc state_registry::bit_size
+    @tparam template_bit_width    @copydoc state_registry::bit_width
  */
 template<
     typename template_key,
     typename template_chunk_key,
     typename template_bit_position,
-    typename template_bit_size>
+    typename template_bit_width>
 class psyq::scenario_engine::_private::state_registry
 {
     /// @brief thisが指す値の型。
@@ -58,11 +59,11 @@ class psyq::scenario_engine::_private::state_registry
         "'template_bit_position' is not unsigned integer type");
 
     /// @brief 状態値のビット数を表す型。
-    public: typedef template_bit_size bit_size;
+    public: typedef template_bit_width bit_width;
     static_assert(
-        std::is_integral<template_bit_size>::value
-        && std::is_unsigned<template_bit_size>::value,
-        "'template_bit_size' is not unsigned integer type");
+        std::is_integral<template_bit_width>::value
+        && std::is_unsigned<template_bit_width>::value,
+        "'template_bit_width' is not unsigned integer type");
 
     /// @brief this_type::format のビット構成。
     public: enum: typename this_type::bit_position
@@ -76,20 +77,25 @@ class psyq::scenario_engine::_private::state_registry
         /// @brief 状態変化フラグの末尾ビット位置。
         format_TRANSITION_BACK = format_TRANSITION_FRONT,
         /// @brief 状態値のビット数の先頭ビット位置。
-        format_SIZE_FRONT,
+        format_WIDTH_FRONT,
         /// @brief 状態値のビット数の末尾ビット位置。
-        format_SIZE_BACK = 31,
+        format_WIDTH_BACK = 31,
         /// @brief 状態値が格納されているビット位置を取得するためのビットマスク。
         format_POSITION_MASK =
             (2 << (format_POSITION_BACK - format_POSITION_FRONT)) - 1,
         /// @brief 状態値のビット数を取得するためのビットマスク。
-        format_SIZE_MASK = (2 << (format_SIZE_BACK - format_SIZE_FRONT)) - 1,
+        format_WIDTH_MASK = (2 << (format_WIDTH_BACK - format_WIDTH_FRONT)) - 1,
     };
 
     /// @brief 状態値の種別を表す型。
     public: typedef
-        typename std::make_signed<typename this_type::bit_size>::type
+        typename std::make_signed<typename this_type::bit_width>::type
         variety;
+
+    public: enum: typename this_type::variety
+    {
+        EMPTY_VARIETY = 0,
+    };
 
     /// @brief 状態値のビット位置とビット数を表す型。
     public: typedef typename this_type::bit_position format;
@@ -110,8 +116,8 @@ class psyq::scenario_engine::_private::state_registry
     key_(std::move(in_state_key)),
     format_(
         (1 << this_type::format_TRANSITION_FRONT) | (
-            (in_variety & this_type::format_SIZE_MASK)
-            << this_type::format_SIZE_FRONT))
+            (in_variety & this_type::format_WIDTH_MASK)
+            << this_type::format_WIDTH_FRONT))
     {}
 
     /** @brief 状態値の種別を取得する。
@@ -119,15 +125,15 @@ class psyq::scenario_engine::_private::state_registry
      */
     public: typename this_type::variety get_variety() const PSYQ_NOEXCEPT
     {
-        auto const local_mod_size(
-            this_type::format_SIZE_BACK - this_type::format_SIZE_FRONT);
+        auto const local_mod_width(
+            this_type::format_WIDTH_BACK - this_type::format_WIDTH_FRONT);
         auto const local_minus(
             1 & static_cast<typename this_type::variety>(
-                this->format_ >> this_type::format_SIZE_BACK));
-        return (-local_minus << local_mod_size) |
+                this->format_ >> this_type::format_WIDTH_BACK));
+        return (-local_minus << local_mod_width) |
             static_cast<typename this_type::variety>(
-                this_type::format_SIZE_MASK & (
-                    this->format_ >> this_type::format_SIZE_FRONT));
+                this_type::format_WIDTH_MASK & (
+                    this->format_ >> this_type::format_WIDTH_FRONT));
     }
 
     /** @brief 状態値の種別を設定する。
@@ -136,11 +142,12 @@ class psyq::scenario_engine::_private::state_registry
     public: void set_variety(typename this_type::variety const in_variety)
     PSYQ_NOEXCEPT
     {
+        PSYQ_ASSERT(in_variety != this_type::EMPTY_VARIETY);
         typename this_type::format const local_variety(in_variety);
         auto const local_mask(
-            this_type::format_SIZE_MASK << this_type::format_SIZE_FRONT);
+            this_type::format_WIDTH_MASK << this_type::format_WIDTH_FRONT);
         this->format_ = (~local_mask & this->format_) |
-            (local_mask & (local_variety << this_type::format_SIZE_FRONT));
+            (local_mask & (local_variety << this_type::format_WIDTH_FRONT));
     }
 
     /** @brief 状態値のビット位置を取得する。
@@ -187,23 +194,23 @@ class psyq::scenario_engine::_private::state_registry
     /** @brief 状態値のビット数を取得する。
         @return 状態値のビット数。
      */
-    public: typename this_type::bit_size get_size()
+    public: typename this_type::bit_width get_width()
     const PSYQ_NOEXCEPT
     {
-        return this_type::get_size(this->format_);
+        return this_type::get_width(this->format_);
     }
 
     /** @brief ビット領域のビット数を取得する。
         @param[in] in_format ビット領域の構成。
         @return ビット領域のビット数。
      */
-    public: static typename this_type::bit_size get_size(
+    public: static typename this_type::bit_width get_width(
         typename this_type::format const in_format)
     PSYQ_NOEXCEPT
     {
-        return static_cast<typename this_type::bit_size>(
-            (in_format >> this_type::format_SIZE_FRONT)
-            & this_type::format_SIZE_MASK);
+        return static_cast<typename this_type::bit_width>(
+            (in_format >> this_type::format_WIDTH_FRONT)
+            & this_type::format_WIDTH_MASK);
     }
 
     /** @brief 状態変化フラグを取得する。
@@ -241,12 +248,12 @@ template<
     typename template_key,
     typename template_chunk_key,
     typename template_bit_position,
-    typename template_bit_size>
+    typename template_bit_width>
 struct psyq::scenario_engine::_private::state_registry<
     template_key,
     template_chunk_key,
     template_bit_position,
-    template_bit_size>
+    template_bit_width>
         ::format_less
 {
     bool operator()(
@@ -255,11 +262,11 @@ struct psyq::scenario_engine::_private::state_registry<
     const PSYQ_NOEXCEPT
     {
         // ビット領域のビット数で比較する。
-        auto const local_left_size(state_registry::get_size(in_left));
-        auto const local_right_size(state_registry::get_size(in_right));
-        if (local_left_size != local_right_size)
+        auto const local_left_width(state_registry::get_width(in_left));
+        auto const local_right_width(state_registry::get_width(in_right));
+        if (local_left_width != local_right_width)
         {
-            return local_left_size < local_right_size;
+            return local_left_width < local_right_width;
         }
 
         // ビット領域のビット位置で比較する。
@@ -270,22 +277,22 @@ struct psyq::scenario_engine::_private::state_registry<
 
     bool operator()(
         typename state_registry::format const in_left,
-        typename state_registry::bit_size const in_right)
+        typename state_registry::bit_width const in_right)
     const PSYQ_NOEXCEPT
     {
         // ビット領域のビット数で比較する。
-        auto const local_left_size(state_registry::get_size(in_left));
-        return local_left_size < in_right;
+        auto const local_left_width(state_registry::get_width(in_left));
+        return local_left_width < in_right;
     }
 
     bool operator()(
-        typename state_registry::bit_size const in_left,
+        typename state_registry::bit_width const in_left,
         typename state_registry::format const in_right)
     const PSYQ_NOEXCEPT
     {
         // ビット領域のビット数で比較する。
-        auto const local_right_size(state_registry::get_size(in_right));
-        return in_left < local_right_size;
+        auto const local_right_width(state_registry::get_width(in_right));
+        return in_left < local_right_width;
     }
 
 }; // struct psyq::scenario_engine::_private::state_registry::format_less

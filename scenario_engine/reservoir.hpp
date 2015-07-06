@@ -820,8 +820,8 @@ class psyq::scenario_engine::_private::reservoir
         typename this_type::state_value const& in_right_value)
     const PSYQ_NOEXCEPT
     {
-        return this->get_state(in_left_key).compare(
-            in_operator, in_right_value);
+        return
+            this->get_state(in_left_key).compare(in_operator, in_right_value);
     }
 
     /** @brief 状態値を演算し、結果を格納する。
@@ -870,10 +870,8 @@ class psyq::scenario_engine::_private::reservoir
         typename this_type::state_value const& in_right_value)
     {
         auto local_left_value(this->get_state(in_left_key));
-        auto const local_set_state(
-            local_left_value.operate(in_operator, in_right_value)
-            && this->set_state(in_left_key, local_left_value));
-        return local_set_state;
+        return local_left_value.operate(in_operator, in_right_value)
+            && this->set_state(in_left_key, local_left_value);
     }
     /// @}
     //-------------------------------------------------------------------------

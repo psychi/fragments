@@ -128,7 +128,7 @@ class psyq::scenario_engine::_private::state_operation
         @param[in,out] io_hasher   文字列からハッシュ値を作る関数オブジェクト。
         @param[in] in_table        解析する文字列表。
         @param[in] in_row_index    解析する文字列表の行番号。
-        @param[in] in_column_index 解析する文字列表の行番号。
+        @param[in] in_column_index 解析する文字列表の列番号。
      */
     public: template<typename template_hasher, typename template_table>
     static this_type _build(
@@ -137,28 +137,30 @@ class psyq::scenario_engine::_private::state_operation
         typename template_table::string::size_type const in_row_index,
         typename template_table::string::size_type const in_column_index)
     {
+        this_type local_operation;
+
         // 演算子の左辺となる状態値の識別値を取得する。
         typename template_hasher::argument_type const local_left_key_cell(
             in_table.find_body_cell(in_row_index, in_column_index));
-        auto const local_left_key(io_hasher(local_left_key_cell));
-        if (local_left_key == io_hasher(typename template_hasher::argument_type()))
+        local_operation.key_ = io_hasher(local_left_key_cell);
+        if (local_operation.key_
+            == io_hasher(typename template_hasher::argument_type()))
         {
             PSYQ_ASSERT(local_left_key_cell.empty());
-            return this_type();
+            return local_operation;
         }
 
         // 演算子を取得する。
-        template_state_operator local_operator;
         auto const local_build_operator(
             this_type::build_operator(
-                local_operator,
+                local_operation.operator_,
                 typename template_hasher::argument_type(
                     in_table.find_body_cell(
                         in_row_index, in_column_index + 1))));
         if (!local_build_operator)
         {
             PSYQ_ASSERT(false);
-            return this_type();
+            return local_operation;
         }
 
         // 演算子の右辺値を取得する。
@@ -166,20 +168,14 @@ class psyq::scenario_engine::_private::state_operation
             this_type::build_right_value(
                 io_hasher,
                 in_table.find_body_cell(in_row_index, in_column_index + 2)));
-        if (local_right_value.first.is_empty())
-        {
-            PSYQ_ASSERT(false);
-            return this_type();
-        }
-        return this_type(
-            local_left_key,
-            local_operator,
-            local_right_value.first,
-            local_right_value.second);
+        PSYQ_ASSERT(!local_right_value.first.is_empty());
+        local_operation.value_ = local_right_value.first;
+        local_operation.right_state_ = local_right_value.second;
+        return local_operation;
     }
 
     //-------------------------------------------------------------------------
-    private: state_operation() PSYQ_NOEXCEPT: key_(0), right_state_(false) {}
+    private: state_operation() PSYQ_NOEXCEPT {}
 
     private: template<typename template_string>
     static bool build_operator(
@@ -281,8 +277,7 @@ class psyq::scenario_engine::_private::state_operation
         // 状態値の識別値を構築する。
         typename template_hasher::argument_type const local_state_header(
             PSYQ_SCENARIO_ENGINE_STATE_OPERATION_RIGHT_STATE); 
-        if (local_state_header.size() < in_string.size()
-            && local_state_header == in_string.substr(0, local_state_header.size()))
+        if (local_state_header == in_string.substr(0, local_state_header.size()))
         {
             return std::make_pair(
                 template_state_value(
@@ -294,8 +289,7 @@ class psyq::scenario_engine::_private::state_operation
         // ハッシュ値を構築する。
         typename template_hasher::argument_type const local_hash_header(
             PSYQ_SCENARIO_ENGINE_STATE_OPERATION_RIGHT_HASH); 
-        if (local_hash_header.size() < in_string.size()
-            && local_hash_header == in_string.substr(0, local_hash_header.size()))
+        if (local_hash_header == in_string.substr(0, local_hash_header.size()))
         {
             static_assert(
                 std::is_unsigned<template_hasher::result_type>::value, "");

@@ -546,11 +546,10 @@ class psyq::scenario_engine::expression_builder
         auto const local_comparison(
             template_evaluator::state_comparison::_build(
                 io_hasher, in_table, in_row_index, local_element_column));
-        if (local_comparison.value_.is_empty())
+        if (!local_comparison.value_.is_empty())
         {
-            return false;
+            io_elements.push_back(local_comparison);
         }
-        io_elements.push_back(local_comparison);
         return true;
     }
 

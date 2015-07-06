@@ -55,11 +55,11 @@ class psyq::scenario_engine::_private::modifier
      */
     public: enum delay: std::uint8_t
     {
-        /// 次回以降の this_type::_modify まで、状態変更を遅延する。
+        /// @brief 次回以降の this_type::_modify まで、状態変更を遅延する。
         delay_NONBLOCK,
-        /// 以後にある全ての予約を、次回以降の this_type::_modify まで遅延する。
+        /// @brief 以後にある全ての予約を、次回以降の this_type::_modify まで遅延する。
         delay_BLOCK,
-        /// 直前の予約と同じタイミングになるまで、状態変更を遅延する。
+        /// @brief 直前の予約と同じタイミングになるまで、状態変更を遅延する。
         delay_FOLLOW,
     };
 
@@ -67,19 +67,16 @@ class psyq::scenario_engine::_private::modifier
     private: class state_reservation
     {
         public: state_reservation(
-            typename modifier::reservoir::state_key const& in_key,
-            typename modifier::reservoir::state_value const& in_value,
+            typename modifier::reservoir::state_assignment const& in_assignment,
             bool const in_series,
             bool const in_block)
         PSYQ_NOEXCEPT:
-        value_(in_value),
-        key_(in_key),
+        assignment_(in_assignment),
         series_(in_series),
         block_(in_block)
         {}
 
-        public: typename modifier::reservoir::state_value value_;
-        public: typename modifier::reservoir::state_key key_;
+        public: typename modifier::reservoir::state_assignment assignment_;
         public: bool series_;
         public: bool block_;
 
@@ -149,8 +146,7 @@ class psyq::scenario_engine::_private::modifier
 
         実際の状態変更は this_type::_modify で適用される。
 
-        @param[in] in_state_key   変更する状態の識別値。
-        @param[in] in_state_value 新たに設定する状態値。
+        @param[in] in_assignment  予約する状態変更。
         @param[in] in_delay       状態変更の遅延方法。
 
         @note
@@ -160,16 +156,14 @@ class psyq::scenario_engine::_private::modifier
         このため、1つの状態値に対して1フレームに複数回の this_type::accumulate
         を毎フレーム行うと、状態変更の予約が蓄積し増え続けることに注意。
         1つの状態値に対して1フレーム毎に複数回の状態変更をする場合は、
-        psyq::scenario_engine::reservoir::set_state で直接状態変更するべき。
+        psyq::scenario_engine::reservoir::assign_state で直接状態変更するべき。
      */
     public: void accumulate(
-        typename this_type::reservoir::state_key const& in_state_key,
-        typename this_type::reservoir::state_value const& in_state_value,
+        typename this_type::reservoir::state_assignment const& in_assignment,
         typename this_type::delay const in_delay = this_type::delay_NONBLOCK)
     {
         this->accumulated_states_.emplace_back(
-            in_state_key,
-            in_state_value,
+            in_assignment,
             this->accumulated_states_.empty()
             || this->accumulated_states_.back().series_ ^ (
                 in_delay != this_type::delay_FOLLOW),
@@ -180,8 +174,8 @@ class psyq::scenario_engine::_private::modifier
 
         this_type::accumulate で予約した状態変更を、実際に適用する。
 
-        1度の this_type::_modify で、1つの状態値が複数回変更されることはない。
-        すでに変更済みの状態値に対し、さらに状態変更の予約があった場合は、
+        1度の this_type::_modify で、1つの状態値が複数回操作されることはない。
+        すでに操作済みの状態値に対し、さらに状態変更の予約があった場合は、
         次回以降の this_type::_modify まで状態変更を遅延する。
 
         @param[in,out] io_reservoir 状態変更を適用する状態貯蔵器。
@@ -196,7 +190,8 @@ class psyq::scenario_engine::_private::modifier
             auto j(i);
             for (; j != local_end && i->series_ == j->series_; ++j)
             {
-                if (local_modify && 0 < io_reservoir._get_transition(j->key_))
+                if (local_modify
+                    && 0 < io_reservoir._get_transition(j->assignment_.key_))
                 {
                     // すでに状態変更されていたら、今回は状態変更しない。
                     local_modify = false;
@@ -208,7 +203,7 @@ class psyq::scenario_engine::_private::modifier
             {
                 for (; i != j; ++i)
                 {
-                    if (!io_reservoir.set_state(i->key_, i->value_))
+                    if (!io_reservoir.assign_state(i->assignment_))
                     {
                         /** @note
                             状態変更に失敗した場合、どう対応するのがよい？
@@ -233,8 +228,7 @@ class psyq::scenario_engine::_private::modifier
                 {
                     this->pass_states_.push_back(
                         typename this_type::state_reservation(
-                            i->key_,
-                            i->value_,
+                            i->assignment_,
                             i->series_ ^ local_series,
                             i->block_));
                 }

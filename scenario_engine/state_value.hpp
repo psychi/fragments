@@ -78,34 +78,34 @@ class psyq::scenario_engine::_private::state_value
     public: enum magnitude: std::int8_t
     {
         magnitude_NONE = -2, ///< 比較に失敗。
-        magnitude_LESS,        ///< 左辺のほうが小さい。
-        magnitude_EQUAL,       ///< 左辺と右辺は等価。
-        magnitude_GREATER,     ///< 左辺のほうが大きい。
+        magnitude_LESS,      ///< 左辺のほうが小さい。
+        magnitude_EQUAL,     ///< 左辺と右辺は等価。
+        magnitude_GREATER,   ///< 左辺のほうが大きい。
     };
 
     /// @brief 状態値を比較する演算子の種類。
     enum comparison: std::uint8_t
     {
-        comparison_EQUAL,         ///< 等価演算子。
-        comparison_NOT_EQUAL,     ///< 不等価演算子。
-        comparison_LESS,          ///< 小なり演算子。
-        comparison_LESS_EQUAL,    ///< 小なりイコール演算子。
-        comparison_GREATER,       ///< 大なり演算子。
-        comparison_GREATER_EQUAL, ///< 大なりイコール演算子。
+        comparison_EQUAL,         ///< 等価。
+        comparison_NOT_EQUAL,     ///< 非等価。
+        comparison_LESS,          ///< 小なり。
+        comparison_LESS_EQUAL,    ///< 以下。
+        comparison_GREATER,       ///< 大なり。
+        comparison_GREATER_EQUAL, ///< 以上。
     };
 
-    /// @brief 状態値を操作する演算子の種類。
-    public: enum operation: std::uint8_t
+    /// @brief 状態値を代入する演算子の種類。
+    public: enum assignment: std::uint8_t
     {
-        operation_COPY, ///< 代入。
-        operation_ADD,  ///< 加算。
-        operation_SUB,  ///< 減算。
-        operation_MULT, ///< 乗算。
-        operation_DIV,  ///< 除算。
-        operation_MOD,  ///< 除算の余り。
-        operation_OR,   ///< 論理和。
-        operation_XOR,  ///< 排他的論理和。
-        operation_AND,  ///< 論理積。
+        assignment_COPY, ///< 単純代入。
+        assignment_ADD,  ///< 加算代入。
+        assignment_SUB,  ///< 減算代入。
+        assignment_MULT, ///< 乗算代入。
+        assignment_DIV,  ///< 除算代入。
+        assignment_MOD,  ///< 除算の余りの代入。
+        assignment_OR,   ///< 論理和の代入。
+        assignment_XOR,  ///< 排他的論理和の代入。
+        assignment_AND,  ///< 論理積の代入。
     };
 
     //-------------------------------------------------------------------------
@@ -575,27 +575,27 @@ class psyq::scenario_engine::_private::state_value
         @{
      */
     /** @brief 状態値を演算する。
-        @param[in] in_operator 適用する演算子。
-        @param[in] in_right    演算子の右辺。
-        @retval true  成功。演算結果を *this に格納した。
+        @param[in] in_operator 適用する代入演算子。
+        @param[in] in_right    代入演算子の右辺。
+        @retval true  成功。演算結果を *this に代入した。
         @retval false 失敗。 *this は変化しない。
      */
     public: template<typename template_value>
-    bool operate(
-        typename this_type::operation const in_operator,
+    bool assign(
+        typename this_type::assignment const in_operator,
         template_value const& in_right)
     PSYQ_NOEXCEPT
     {
         static_assert(!std::is_same<template_value, bool>::value, "");
         auto const local_kind(this->get_kind());
-        if (in_operator == this_type::operation_COPY)
+        if (in_operator == this_type::assignment_COPY)
         {
             return this->set_value(in_right, local_kind);
         }
         switch (local_kind)
         {
             case this_type::kind_UNSIGNED:
-            return this->operate_value(
+            return this->assign_value(
                 std::is_integral<template_value>(),
                 local_kind,
                 in_operator,
@@ -603,7 +603,7 @@ class psyq::scenario_engine::_private::state_value
                 in_right);
 
             case this_type::kind_SIGNED:
-            return this->operate_value(
+            return this->assign_value(
                 std::is_integral<template_value>(),
                 local_kind,
                 in_operator,
@@ -611,7 +611,7 @@ class psyq::scenario_engine::_private::state_value
                 in_right);
 
             case this_type::kind_FLOAT:
-            return this->operate_value(
+            return this->assign_value(
                 std::false_type(),
                 local_kind,
                 in_operator,
@@ -621,32 +621,32 @@ class psyq::scenario_engine::_private::state_value
             default: return false;
         }
     }
-    /// @copydoc operate
-    public: bool operate(
-        typename this_type::operation const in_operator,
+    /// @copydoc assign
+    public: bool assign(
+        typename this_type::assignment const in_operator,
         this_type const& in_right)
     PSYQ_NOEXCEPT
     {
         switch (in_right.get_kind())
         {
             case this_type::kind_BOOL:
-            return this->operate(in_operator, in_right.bool_);
+            return this->assign(in_operator, in_right.bool_);
 
             case this_type::kind_UNSIGNED:
-            return this->operate(in_operator, in_right.unsigned_);
+            return this->assign(in_operator, in_right.unsigned_);
 
             case this_type::kind_SIGNED:
-            return this->operate(in_operator, in_right.signed_);
+            return this->assign(in_operator, in_right.signed_);
 
             case this_type::kind_FLOAT:
-            return this->operate(in_operator, in_right.float_);
+            return this->assign(in_operator, in_right.float_);
 
             default: return false;
         }
     }
-    /// @copydoc operate
-    public: bool operate(
-        typename this_type::operation const in_operator,
+    /// @copydoc assign
+    public: bool assign(
+        typename this_type::assignment const in_operator,
         bool const in_right)
     PSYQ_NOEXCEPT
     {
@@ -656,10 +656,10 @@ class psyq::scenario_engine::_private::state_value
         }
         switch (in_operator)
         {
-            case this_type::operation_COPY: this->bool_  = in_right; break;
-            case this_type::operation_OR:   this->bool_ |= in_right; break;
-            case this_type::operation_XOR:  this->bool_ ^= in_right; break;
-            case this_type::operation_AND:  this->bool_ &= in_right; break;
+            case this_type::assignment_COPY: this->bool_  = in_right; break;
+            case this_type::assignment_OR:   this->bool_ |= in_right; break;
+            case this_type::assignment_XOR:  this->bool_ ^= in_right; break;
+            case this_type::assignment_AND:  this->bool_ &= in_right; break;
             default: return false;
         }
         return true;
@@ -709,34 +709,34 @@ class psyq::scenario_engine::_private::state_value
         @retval false 失敗。 *this は変化しない。
      */
     private: template<typename template_left, typename template_right>
-    bool operate_value(
+    bool assign_value(
         std::true_type,
         typename this_type::kind const in_kind,
-        typename this_type::operation const in_operator,
+        typename this_type::assignment const in_operator,
         template_left const& in_left,
         template_right const& in_right)
     PSYQ_NOEXCEPT
     {
         switch (in_operator)
         {
-            case this_type::operation_MOD:
+            case this_type::assignment_MOD:
             if (in_right == 0)
             {
                 return false;
             }
             return this->set_value(in_left % in_right, in_kind);
 
-            case this_type::operation_OR:
+            case this_type::assignment_OR:
             return this->set_value(in_left | in_right, in_kind);
 
-            case this_type::operation_XOR:
+            case this_type::assignment_XOR:
             return this->set_value(in_left ^ in_right, in_kind);
 
-            case this_type::operation_AND:
+            case this_type::assignment_AND:
             return this->set_value(in_left & in_right, in_kind);
 
             default:
-            return this->operate_value(
+            return this->assign_value(
                 std::false_type(), in_kind, in_operator, in_left, in_right);
         }
     }
@@ -749,26 +749,26 @@ class psyq::scenario_engine::_private::state_value
         @retval false 失敗。 *this は変化しない。
      */
     private: template<typename template_left, typename template_right>
-    bool operate_value(
+    bool assign_value(
         std::false_type,
         typename this_type::kind const in_kind,
-        typename this_type::operation const in_operator,
+        typename this_type::assignment const in_operator,
         template_left const& in_left,
         template_right const& in_right)
     PSYQ_NOEXCEPT
     {
         switch (in_operator)
         {
-            case this_type::operation_ADD:
+            case this_type::assignment_ADD:
             return this->set_value(in_left + in_right, in_kind);
 
-            case this_type::operation_SUB:
+            case this_type::assignment_SUB:
             return this->set_value(in_left - in_right, in_kind);
 
-            case this_type::operation_MULT:
+            case this_type::assignment_MULT:
             return this->set_value(in_left * in_right, in_kind);
 
-            case this_type::operation_DIV:
+            case this_type::assignment_DIV:
             if (in_right == 0)
             {
                 return false;

@@ -122,7 +122,7 @@ class psyq::scenario_engine::_private::reservoir
             typename this_type::chunk::block, template_float>
         state_value;
 
-    /// @brief 状態値の比較式。
+    /// @brief 状態値の比較演算。
     public: typedef
         psyq::scenario_engine::_private::state_operation<
             typename this_type::state_key,
@@ -130,13 +130,13 @@ class psyq::scenario_engine::_private::reservoir
             typename this_type::state_value>
         state_comparison;
 
-    /// @brief 状態値の演算式。
+    /// @brief 状態値の代入演算。
     public: typedef
         psyq::scenario_engine::_private::state_operation<
             typename this_type::state_key,
-            typename this_type::state_value::operation,
+            typename this_type::state_value::assignment,
             typename this_type::state_value>
-        state_operation;
+        state_assignment;
 
     /// @brief 状態値登記のコンテナ。
     private: typedef
@@ -824,53 +824,53 @@ class psyq::scenario_engine::_private::reservoir
             this->get_state(in_left_key).compare(in_operator, in_right_value);
     }
 
-    /** @brief 状態値を演算し、結果を格納する。
-        @param[in] in_operation 状態値の演算式。
-        @retval true  演算結果を状態値へ格納した。
+    /** @brief 状態値を演算し、結果を代入する。
+        @param[in] in_assignment 状態値の代入式。
+        @retval true  演算結果を状態値へ代入した。
         @retval false 演算に失敗。状態値は変化しない。
      */
-    public: bool operate_state(
-        typename this_type::state_operation const& in_operation)
+    public: bool assign_state(
+        typename this_type::state_assignment const& in_assignment)
     {
-        if (!in_operation.right_state_)
+        if (!in_assignment.right_state_)
         {
-            return this->operate_state(
-                in_operation.key_,
-                in_operation.operator_,
-                in_operation.value_);
+            return this->assign_state(
+                in_assignment.key_,
+                in_assignment.operator_,
+                in_assignment.value_);
         }
 
         // 右辺となる状態値を取得して演算する。
-        auto const local_right_unsigned(in_operation.value_.get_unsigned());
+        auto const local_right_unsigned(in_assignment.value_.get_unsigned());
         if (local_right_unsigned != nullptr)
         {
             auto const local_right_key(
                 static_cast<this_type::state_key>(*local_right_unsigned));
             if (local_right_key == *local_right_unsigned)
             {
-                return this->operate_state(
-                    in_operation.key_,
-                    in_operation.operator_,
+                return this->assign_state(
+                    in_assignment.key_,
+                    in_assignment.operator_,
                     this->get_state(local_right_key));
             }
         }
         return false;
     }
 
-    /** @brief 状態値を演算し、結果を格納する。
+    /** @brief 状態値を演算し、結果を代入する。
         @param[in] in_left_key    左辺となる状態値の識別値。
-        @param[in] in_operator    適用する演算子。
+        @param[in] in_operator    適用する代入演算子。
         @param[in] in_right_value 右辺となる値。
-        @retval true  演算結果を状態値へ格納した。
+        @retval true  演算結果を状態値へ代入した。
         @retval false 演算に失敗。状態値は変化しない。
      */
-    public: bool operate_state(
+    public: bool assign_state(
         typename this_type::state_key const& in_left_key,
-        typename this_type::state_value::operation const in_operator,
+        typename this_type::state_value::assignment const in_operator,
         typename this_type::state_value const& in_right_value)
     {
         auto local_left_value(this->get_state(in_left_key));
-        return local_left_value.operate(in_operator, in_right_value)
+        return local_left_value.assign(in_operator, in_right_value)
             && this->set_state(in_left_key, local_left_value);
     }
     /// @}

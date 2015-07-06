@@ -208,9 +208,9 @@ class psyq::scenario_engine::behavior_builder
                 continue;
             }
 
-            // 条件挙動関数を生成し、条件監視器に登録する。
+            // 条件挙動関数を生成し、条件挙動器に登録する。
             auto local_function(
-                this_type::make_function(
+                this_type::create_function(
                     io_hasher,
                     io_evaluator,
                     io_reservoir,
@@ -247,7 +247,7 @@ class psyq::scenario_engine::behavior_builder
         @return 生成した条件関数オブジェクト。
      */
     private: template<typename template_hasher, typename template_evaluator>
-    static typename this_type::dispatcher::function_shared_ptr make_function(
+    static typename this_type::dispatcher::function_shared_ptr create_function(
         template_hasher& io_hasher,
         template_evaluator& io_evaluator,
         typename template_evaluator::reservoir& io_reservoir,
@@ -274,7 +274,7 @@ class psyq::scenario_engine::behavior_builder
         if (local_kind_cell
             == PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_KIND_STATE)
         {
-            return this_type::make_state_operation_function(
+            return this_type::create_state_assignment_function(
                 io_hasher,
                 io_reservoir,
                 local_condition,
@@ -290,18 +290,21 @@ class psyq::scenario_engine::behavior_builder
         }
     }
 
-    /** @brief 文字列表から状態操作関数を生成する。
+    /** @brief 状態値を操作する関数を、文字列表から生成する。
         @param[in,out] io_hasher    文字列から識別値へ変換するハッシュ関数。
         @param[in,out] io_reservoir 条件挙動関数から参照する状態貯蔵器。
         @param[in] in_condition     条件挙動関数を起動する条件。
         @param[in] in_table         条件挙動の文字列表。
         @param[in] in_row_index     文字列表の行番号。
         @param[in] in_attribute     文字列表の属性。
-        @return 生成した条件関数オブジェクト。
+        @return 生成した状態操作関数。
+        @todo
+            psyq::scenario_engine::reservoir ではなく
+            psyq::scenario_engine::modifier を使うようにしたい。
      */
     private: template<typename template_hasher, typename template_reservoir>
     static typename this_type::dispatcher::function_shared_ptr
-    make_state_operation_function(
+    create_state_assignment_function(
         template_hasher& io_hasher,
         template_reservoir& io_reservoir,
         bool const in_condition,
@@ -314,59 +317,40 @@ class psyq::scenario_engine::behavior_builder
             local_unit_size(3);
         PSYQ_ASSERT(in_attribute.argument_.second % local_unit_size == 0);
         std::vector<
-            typename template_reservoir::state_operation,
+            typename template_reservoir::state_assignment,
             typename template_reservoir::allocator_type>
-                local_state_operations(io_reservoir.get_allocator());
+                local_operations(io_reservoir.get_allocator());
+        local_operations.reserve(
+            in_attribute.argument_.second / local_unit_size);
         for (
             auto i(local_unit_size);
             i <= in_attribute.argument_.second;
             i += local_unit_size)
         {
             auto const local_operation(
-                template_reservoir::state_operation::_build(
+                template_reservoir::state_assignment::_build(
                     io_hasher,
                     in_table,
                     in_row_index,
                     in_attribute.argument_.first + i - local_unit_size));
             if (!local_operation.value_.is_empty())
             {
-                local_state_operations.push_back(local_operation);
+                local_operations.push_back(local_operation);
             }
         }
-
-        // 状態値を書き換える関数オブジェクトを生成する。
-        return this_type::make_state_operation_function(
-            io_reservoir, in_condition, local_state_operations);
-    }
-
-    /** @brief 状態値を操作する条件挙動関数を生成する。
-        @param[in,out] io_reservoir 関数から参照する状態貯蔵器。
-        @param[in] in_condition     関数の呼び出し条件。
-        @param[in] in_operations    状態値の操作方法のコンテナ。
-        @return 生成した条件挙動関数。
-        @todo
-            psyq::scenario_engine::reservoir ではなく
-            psyq::scenario_engine::modifier を使うようにしたい。
-     */
-    private: template<typename template_reservoir, typename template_container>
-    static typename this_type::dispatcher::function_shared_ptr
-    make_state_operation_function(
-        template_reservoir& io_reservoir,
-        bool const in_condition,
-        template_container const& in_operations)
-    {
-        if (in_operations.empty())
+        if (local_operations.empty())
         {
             return typename this_type::dispatcher::function_shared_ptr();
         }
 
-        // 状態値を書き換える関数オブジェクトを生成する。
+        // 状態値を操作する関数オブジェクトを生成する。
         return std::allocate_shared<typename this_type::dispatcher::function>(
-            in_operations.get_allocator(),
+            local_operations.get_allocator(),
             typename this_type::dispatcher::function(
                 /// @todo io_reservoir を参照渡しするのは危険。対策を考えたい。
                 [=, &io_reservoir](
-                    typename this_type::dispatcher::evaluator::expression::key const&,
+                    typename this_type::dispatcher::evaluator::expression::key
+                        const&,
                     psyq::scenario_engine::evaluation const in_evaluation,
                     psyq::scenario_engine::evaluation const in_last_evaluation)
                 {
@@ -375,82 +359,14 @@ class psyq::scenario_engine::behavior_builder
                         && 0 <= in_evaluation
                         && in_condition == (0 < in_evaluation))
                     {
-                        for (auto& local_operation: in_operations)
+                        for (auto const& local_operation: local_operations)
                         {
-                            auto const local_operate_state(
-                                io_reservoir.operate_state(local_operation));
-                            PSYQ_ASSERT(local_operate_state);
+                            auto const local_assign_state(
+                                io_reservoir.assign_state(local_operation));
+                            PSYQ_ASSERT(local_assign_state);
                         }
                     }
                 }));
-    }
-
-    private: template<typename template_reservoir>
-    static bool get_operator(
-        typename template_reservoir::state_value::operation& out_operator,
-        template_reservoir const&,
-        typename this_type::relation_table::string::view const& in_string)
-    {
-        if (in_string ==
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_COPY)
-        {
-            out_operator = template_reservoir::state_value::operation_COPY;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_ADD)
-        {
-            out_operator = template_reservoir::state_value::operation_ADD;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_SUB)
-        {
-            out_operator = template_reservoir::state_value::operation_SUB;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_MULT)
-        {
-            out_operator = template_reservoir::state_value::operation_MULT;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_DIV)
-        {
-            out_operator = template_reservoir::state_value::operation_DIV;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_MOD)
-        {
-            out_operator = template_reservoir::state_value::operation_MOD;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_OR)
-        {
-            out_operator = template_reservoir::state_value::operation_OR;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_XOR)
-        {
-            out_operator = template_reservoir::state_value::operation_XOR;
-        }
-        else if (
-            in_string ==
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_OPERATOR_AND)
-        {
-            out_operator = template_reservoir::state_value::operation_AND;
-        }
-        else
-        {
-            // 演算子が見つからなかった。
-            PSYQ_ASSERT(false);
-            return false;
-        }
-        return true;
     }
 
     //-------------------------------------------------------------------------

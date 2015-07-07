@@ -55,11 +55,19 @@ class psyq::scenario_engine::_private::modifier
      */
     public: enum delay: std::uint8_t
     {
-        /// @brief 次回以降の this_type::_modify まで、状態変更を遅延する。
+        /** 系列が切り替わり、以後の系列が切り替わるまでの状態変更予約の適用が、
+            次回以降の this_type::_modify まで遅延する。
+         */
         delay_NONBLOCK,
-        /// @brief 以後にある全ての予約を、次回以降の this_type::_modify まで遅延する。
+
+        /** 系列が切り替わり、以後にある全ての状態変更予約の適用が、
+            次回以降の this_type::_modify まで遅延する。
+         */
         delay_BLOCK,
-        /// @brief 直前の予約と同じタイミングになるまで、状態変更を遅延する。
+
+        /** 系列は切り替わらず、
+            直前の予約とタイミングになるまで状態変更予約の適用を遅延する。
+         */
         delay_FOLLOW,
     };
 
@@ -76,8 +84,11 @@ class psyq::scenario_engine::_private::modifier
         block_(in_block)
         {}
 
+        /// @brief 適用する代入演算。
         public: typename modifier::reservoir::state_assignment assignment_;
+        /// @brief 状態変更の系列の識別値。
         public: bool series_;
+        /// @brief 状態変更の遅延方法。
         public: bool block_;
 
     }; // class state_reservation
@@ -149,13 +160,12 @@ class psyq::scenario_engine::_private::modifier
         @param[in] in_assignment  予約する状態変更。
         @param[in] in_delay       状態変更の遅延方法。
 
-        @note
-        1度の modifier::_modify で、
-        1つの状態値に対して複数回の状態変更がされないように、
-        状態変更のタイミングを遅延させている。
-        このため、1つの状態値に対して1フレームに複数回の this_type::accumulate
-        を毎フレーム行うと、状態変更の予約が蓄積して増え続けることに注意。
-        1つの状態値に対して1フレーム毎に複数回の状態変更をする場合は、
+        @warning
+        this_type::_modify では、異なる系列での状態変更を重複させないために、
+        状態変更の適用を遅延させる場合がある。
+        このため1つの状態値に対し、異なる複数の系列から this_type::accumulate
+        を毎フレーム行うと、状態変更の予約が蓄積して増え続ける。
+        1つの状態値に対し、異なる系列から複数回の状態変更を毎フレームする場合は、
         reservoir::assign_state で直接状態変更するべき。
      */
     public: void accumulate(
@@ -174,9 +184,10 @@ class psyq::scenario_engine::_private::modifier
 
         this_type::accumulate で予約した状態変更を、実際に適用する。
 
-        1度の this_type::_modify で、1つの状態値が複数回操作されることはない。
-        すでに操作済みの状態値に対し、さらに状態変更の予約があった場合は、
-        次回以降の this_type::_modify まで状態変更を遅延する。
+        1度の this_type::_modify で、
+        1つの状態値に対して異なる複数の系列から状態変更の予約があった場合は、
+        最初の系列の状態変更のみが適用され、それより後の系列の状態変更の予約は、
+        次回以降の this_type::_modify まで遅延させる。
 
         @param[in,out] io_reservoir 状態変更を適用する状態貯蔵器。
      */

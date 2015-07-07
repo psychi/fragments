@@ -5,6 +5,7 @@
 #ifndef PSYQ_SCENARIO_ENGINE_STATE_CHUNK_HPP_
 #define PSYQ_SCENARIO_ENGINE_STATE_CHUNK_HPP_
 
+#include <cstdint>
 #include "../assert.hpp"
 
 /// @cond

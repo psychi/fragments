@@ -5,6 +5,7 @@
 #ifndef PSYQ_SCENARIO_ENGINE_RESERVOIR_HPP_
 #define PSYQ_SCENARIO_ENGINE_RESERVOIR_HPP_
 
+#include <vector>
 #include "./key_less.hpp"
 #include "./state_registry.hpp"
 #include "./state_chunk.hpp"

@@ -5,7 +5,8 @@
 #ifndef PSYQ_SCENARIO_ENGINE_DRIVER_HPP_
 #define PSYQ_SCENARIO_ENGINE_DRIVER_HPP_
 
-#include "../string/view.hpp"
+#include "../string/csv_table.hpp"
+#include "../string/relation_table.hpp"
 #include "./reservoir.hpp"
 #include "./modifier.hpp"
 #include "./evaluator.hpp"
@@ -14,8 +15,6 @@
 #include "./state_builder.hpp"
 #include "./expression_builder.hpp"
 #include "./behavior_builder.hpp"
-#include "../string/csv_table.hpp"
-#include "../string/relation_table.hpp"
 
 /// @cond
 namespace psyq

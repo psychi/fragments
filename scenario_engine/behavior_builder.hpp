@@ -121,40 +121,32 @@ class psyq::scenario_engine::behavior_builder
     /** @brief 文字列表を解析して状態値を構築し、状態貯蔵器へ登録する。
         @param[in,out] io_dispatcher 生成した条件挙動関数を登録する条件挙動器。
         @param[in,out] io_hasher     文字列からキーへ変換するハッシュ関数オブジェクト。
-        @param[in,out] io_evaluator  条件挙動関数から参照する条件評価器。
-        @param[in,out] io_reservoir  条件挙動関数から参照する状態貯蔵器。
+        @param[in,out] io_modifier   条件挙動関数で使う状態変更器。
         @return 生成した条件挙動関数のコンテナ。
      */
-    public: template<typename template_hasher, typename template_evaluator>
+    public: template<typename template_hasher, typename template_modifier>
     typename this_type::function_shared_ptr_container operator()(
         typename this_type::dispatcher& io_dispatcher,
         template_hasher& io_hasher,
-        template_evaluator& io_evaluator,
-        typename template_evaluator::reservoir& io_reservoir)
+        template_modifier& io_modifier)
     const
     {
         return this_type::build(
-            io_dispatcher,
-            io_hasher,
-            io_evaluator,
-            io_reservoir,
-            this->relation_table_);
+            io_dispatcher, io_hasher, io_modifier, this->relation_table_);
     }
 
     /** @brief 文字列表から条件挙動関数を生成し、条件評価器へ登録する。
         @param[in,out] io_dispatcher 生成した条件挙動関数を登録する条件挙動器。
         @param[in,out] io_hasher     文字列からキーへ変換するハッシュ関数オブジェクト。
-        @param[in,out] io_evaluator  条件挙動関数から参照する条件評価器。
-        @param[in,out] io_reservoir  条件挙動関数から参照する状態貯蔵器。
+        @param[in,out] io_modifier   条件挙動関数で使う状態変更器。
         @param[in] in_table          条件挙動の文字列表。
         @return 生成した条件挙動関数のコンテナ。
      */
-    public: template<typename template_hasher, typename template_evaluator>
+    public: template<typename template_hasher, typename template_modifier>
     static typename this_type::function_shared_ptr_container build(
         typename this_type::dispatcher& io_dispatcher,
         template_hasher& io_hasher,
-        template_evaluator& io_evaluator,
-        typename template_evaluator::reservoir& io_reservoir,
+        template_modifier& io_modifier,
         typename this_type::relation_table const& in_table)
     {
         typename this_type::function_shared_ptr_container
@@ -182,18 +174,16 @@ class psyq::scenario_engine::behavior_builder
             }
 
             // 条件式の識別値を取得する。
-            auto const local_key(
+            auto const local_expression_key(
                 io_hasher(
                     in_table.find_body_cell(i, local_attribute.key_.first)));
-            if (local_key
+            if (local_expression_key
                 == io_hasher(typename template_hasher::argument_type()))
             {
                 // 条件式の識別値が正しくなかった。
                 PSYQ_ASSERT(false);
                 continue;
             }
-            // 条件評価器に条件式があることを確認する。
-            PSYQ_ASSERT(io_evaluator._find_expression(local_key) != nullptr);
 
             // 条件挙動の優先順位を取得する。
             psyq::string::integer_parser<
@@ -210,16 +200,11 @@ class psyq::scenario_engine::behavior_builder
 
             // 条件挙動関数を生成し、条件挙動器に登録する。
             auto local_function(
-                this_type::create_function(
-                    io_hasher,
-                    io_evaluator,
-                    io_reservoir,
-                    in_table,
-                    i,
-                    local_attribute));
+                this_type::build_function(
+                    io_hasher, io_modifier, in_table, i, local_attribute));
             auto const local_register_function(
                 io_dispatcher.register_function(
-                    local_key,
+                    local_expression_key,
                     local_function,
                     local_priority_parser.get_value()));
             if (local_register_function)
@@ -229,7 +214,7 @@ class psyq::scenario_engine::behavior_builder
             else
             {
                 // 条件挙動関数の登録に失敗した。
-                PSYQ_ASSERT(local_function.get() == nullptr);
+                PSYQ_ASSERT(false);
             }
         }
         local_functions.shrink_to_fit();
@@ -237,25 +222,24 @@ class psyq::scenario_engine::behavior_builder
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列表から条件挙動関数を生成する。
-        @param[in,out] io_hasher    文字列からキーへ変換するハッシュ関数オブジェクト。
-        @param[in,out] io_evaluator 条件挙動関数から参照する条件評価器。
-        @param[in,out] io_reservoir 条件挙動関数から参照する状態貯蔵器。
-        @param[in] in_table         条件挙動の文字列表。
-        @param[in] in_row_index     文字列表の行番号。
-        @param[in] in_attribute     文字列表の属性。
-        @return 生成した条件関数オブジェクト。
+    /** @brief 文字列表から条件挙動関数を構築する。
+        @param[in,out] io_hasher   文字列からキーへ変換するハッシュ関数オブジェクト。
+        @param[in,out] io_modifier 条件挙動関数で使う状態変更器。
+        @param[in] in_table        条件挙動の文字列表。
+        @param[in] in_row_index    文字列表の行番号。
+        @param[in] in_attribute    文字列表の属性。
+        @return 構築した条件挙動関数オブジェクト。
      */
-    private: template<typename template_hasher, typename template_evaluator>
-    static typename this_type::dispatcher::function_shared_ptr create_function(
+    private: template<typename template_hasher, typename template_modifier>
+    static typename this_type::dispatcher::function_shared_ptr build_function(
         template_hasher& io_hasher,
-        template_evaluator& io_evaluator,
-        typename template_evaluator::reservoir& io_reservoir,
+        template_modifier& io_modifier,
         typename this_type::relation_table const& in_table,
-        typename this_type::relation_table::string::size_type const in_row_index,
+        typename this_type::relation_table::string::size_type const
+            in_row_index,
         typename this_type::table_attribute const& in_attribute)
     {
-        // 挙動が起こる条件を取得する。
+        // 挙動挙動関数を呼び出す条件を取得する。
         auto const& local_condition_cell(
             in_table.find_body_cell(
                 in_row_index, in_attribute.condition_.first));
@@ -274,13 +258,14 @@ class psyq::scenario_engine::behavior_builder
         if (local_kind_cell
             == PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_KIND_STATE)
         {
-            return this_type::create_state_assignment_function(
+            return this_type::build_state_assignment_function(
                 io_hasher,
-                io_reservoir,
+                io_modifier,
                 local_condition,
                 in_table,
                 in_row_index,
-                in_attribute);
+                in_attribute.argument_.first,
+                in_attribute.argument_.second);
         }
         else
         {
@@ -290,83 +275,117 @@ class psyq::scenario_engine::behavior_builder
         }
     }
 
-    /** @brief 状態値を操作する関数を、文字列表から生成する。
-        @param[in,out] io_hasher    文字列から識別値へ変換するハッシュ関数。
-        @param[in,out] io_reservoir 条件挙動関数から参照する状態貯蔵器。
-        @param[in] in_condition     条件挙動関数を起動する条件。
-        @param[in] in_table         条件挙動の文字列表。
-        @param[in] in_row_index     文字列表の行番号。
-        @param[in] in_attribute     文字列表の属性。
-        @return 生成した状態操作関数。
-        @todo
-            psyq::scenario_engine::reservoir ではなく
-            psyq::scenario_engine::modifier を使うようにしたい。
+    /** @brief 状態値を代入演算する関数を、文字列表から構築する。
+        @param[in,out] io_hasher   文字列から識別値へ変換するハッシュ関数。
+        @param[in,out] io_modifier 条件挙動関数で使う状態変更器。
+        @param[in] in_condition    条件挙動関数を呼び出す条件。
+        @param[in] in_table        条件挙動の文字列表。
+        @param[in] in_row_index    文字列表の行番号。
+        @param[in] in_column_index 文字列表の代入演算の列番号。
+        @param[in] in_column_count 文字列表の代入演算の列数。
+        @return 状態値を代入演算する関数オブジェクト。
      */
-    private: template<typename template_hasher, typename template_reservoir>
+    private: template<typename template_hasher, typename template_modifier>
     static typename this_type::dispatcher::function_shared_ptr
-    create_state_assignment_function(
+    build_state_assignment_function(
         template_hasher& io_hasher,
-        template_reservoir& io_reservoir,
+        template_modifier& io_modifier,
         bool const in_condition,
         typename this_type::relation_table const& in_table,
-        typename this_type::relation_table::string::size_type const in_row_index,
-        typename this_type::table_attribute const& in_attribute)
-    {
-        // 状態操作のコンテナを構築する。
         typename this_type::relation_table::string::size_type const
-            local_unit_size(3);
-        PSYQ_ASSERT(in_attribute.argument_.second % local_unit_size == 0);
+            in_row_index,
+        typename this_type::relation_table::string::size_type const
+            in_column_index,
+        typename this_type::relation_table::string::size_type const
+            in_column_count)
+    {
+        /// @todo 状態変更の遅延方法も、文字列表から取得すること。
+        auto const local_delay_first(template_modifier::delay_NONBLOCK);
+
+        // 状態値の代入演算のコンテナを構築する。
         std::vector<
-            typename template_reservoir::state_assignment,
-            typename template_reservoir::allocator_type>
-                local_operations(io_reservoir.get_allocator());
-        local_operations.reserve(
-            in_attribute.argument_.second / local_unit_size);
-        for (
-            auto i(local_unit_size);
-            i <= in_attribute.argument_.second;
-            i += local_unit_size)
-        {
-            auto const local_operation(
-                template_reservoir::state_assignment::_build(
-                    io_hasher,
-                    in_table,
-                    in_row_index,
-                    in_attribute.argument_.first + i - local_unit_size));
-            if (!local_operation.value_.is_empty())
-            {
-                local_operations.push_back(local_operation);
-            }
-        }
-        if (local_operations.empty())
+            typename template_modifier::reservoir::state_assignment,
+            typename template_modifier::allocator_type>
+                local_assignments(io_modifier.get_allocator());
+        this_type::build_assignment_container(
+            local_assignments,
+            io_hasher,
+            in_table,
+            in_row_index,
+            in_column_index,
+            in_column_count);
+        if (local_assignments.empty())
         {
             return typename this_type::dispatcher::function_shared_ptr();
         }
 
-        // 状態値を操作する関数オブジェクトを生成する。
+        // 状態値を代入演算する関数オブジェクトを生成する。
         return std::allocate_shared<typename this_type::dispatcher::function>(
-            local_operations.get_allocator(),
+            local_assignments.get_allocator(),
             typename this_type::dispatcher::function(
-                /// @todo io_reservoir を参照渡しするのは危険。対策を考えたい。
-                [=, &io_reservoir](
+                /// @todo io_modifier を参照渡しするのは危険。対策を考えたい。
+                [=, &io_modifier](
                     typename this_type::dispatcher::evaluator::expression::key
                         const&,
                     psyq::scenario_engine::evaluation const in_evaluation,
                     psyq::scenario_engine::evaluation const in_last_evaluation)
                 {
-                    // 条件と評価が合致すれば、状態値を書き換える。
+                    // 条件と評価が合致すれば、状態値を代入演算する。
                     if (0 <= in_last_evaluation
                         && 0 <= in_evaluation
                         && in_condition == (0 < in_evaluation))
                     {
-                        for (auto const& local_operation: local_operations)
+                        auto local_delay(local_delay_first);
+                        for (auto const& local_assignment: local_assignments)
                         {
-                            auto const local_assign_state(
-                                io_reservoir.assign_state(local_operation));
-                            PSYQ_ASSERT(local_assign_state);
+                            io_modifier.accumulate(
+                                local_assignment, local_delay);
+                            local_delay = template_modifier::delay_FOLLOW;
                         }
                     }
                 }));
+    }
+
+    /** @brief 状態値の代入演算のコンテナを、文字列表から生成する。
+        @param[in,out] io_assignments 状態値の代入演算のコンテナ。
+        @param[in,out] io_hasher      文字列から識別値へ変換するハッシュ関数。
+        @param[in] in_table           条件挙動の文字列表。
+        @param[in] in_row_index       文字列表の行番号。
+        @param[in] in_column_index    文字列表の代入演算の列番号。
+        @param[in] in_column_count    文字列表の代入演算の列数。
+     */
+    private: template<typename template_container, typename template_hasher>
+    static void build_assignment_container(
+        template_container& io_assignments,
+        template_hasher& io_hasher,
+        typename this_type::relation_table const& in_table,
+        typename this_type::relation_table::string::size_type const
+            in_row_index,
+        typename this_type::relation_table::string::size_type const
+            in_column_index,
+        typename this_type::relation_table::string::size_type const
+            in_column_count)
+    {
+        typename this_type::relation_table::string::size_type const
+            local_unit_size(3);
+        PSYQ_ASSERT(in_column_count % local_unit_size == 0);
+        io_assignments.reserve(in_column_count / local_unit_size);
+        for (
+            auto i(local_unit_size);
+            i <= in_column_count;
+            i += local_unit_size)
+        {
+            auto const local_assignment(
+                template_container::value_type::_build(
+                    io_hasher,
+                    in_table,
+                    in_row_index,
+                    in_column_index + i - local_unit_size));
+            if (!local_assignment.value_.is_empty())
+            {
+                io_assignments.push_back(local_assignment);
+            }
+        }
     }
 
     //-------------------------------------------------------------------------

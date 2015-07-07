@@ -88,35 +88,35 @@ namespace psyq_test
         local_driver.shrink_to_fit();
 
         PSYQ_ASSERT(
-            true == *local_driver.reservoir_.get_state(
+            true == *local_driver.reservoir_.find_state(
                 local_driver.hash_function_("state_bool")).get_bool());
         PSYQ_ASSERT(
-            10 == *local_driver.reservoir_.get_state(
+            10 == *local_driver.reservoir_.find_state(
                 local_driver.hash_function_("state_unsigned")).get_unsigned());
         PSYQ_ASSERT(
-            -20 == *local_driver.reservoir_.get_state(
+            -20 == *local_driver.reservoir_.find_state(
                 local_driver.hash_function_("state_signed")).get_signed());
         PSYQ_ASSERT(
-            1.25 <= *local_driver.reservoir_.get_state(
+            1.25 <= *local_driver.reservoir_.find_state(
                 local_driver.hash_function_("state_float")).get_float());
         local_driver.progress();
 
-        local_driver.reservoir_.set_state(
+        local_driver.reservoir_.assign_state(
             local_driver.hash_function_("state_bool"), false);
-        local_driver.reservoir_.set_state(
+        local_driver.reservoir_.assign_state(
             local_driver.hash_function_("state_unsigned"), 10);
-        local_driver.reservoir_.set_state(
+        local_driver.reservoir_.assign_state(
             local_driver.hash_function_("state_signed"), -20);
-        local_driver.reservoir_.set_state(
+        local_driver.reservoir_.assign_state(
             local_driver.hash_function_("state_float"), true);
-        local_driver.reservoir_.set_state(
+        local_driver.reservoir_.assign_state(
             local_driver.hash_function_("state_float"), 0x20u);
-        local_driver.reservoir_.set_state(
+        local_driver.reservoir_.assign_state(
             local_driver.hash_function_("state_float"), -10);
-        local_driver.reservoir_.set_state(
+        local_driver.reservoir_.assign_state(
             local_driver.hash_function_("state_float"), 1.25f);
         auto const local_float_state(
-            local_driver.reservoir_.get_state(
+            local_driver.reservoir_.find_state(
                 local_driver.hash_function_("state_float")));
 
         local_driver.progress();

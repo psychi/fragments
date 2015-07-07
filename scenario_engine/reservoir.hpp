@@ -45,8 +45,8 @@ namespace psyq
       - reservoir::register_signed
       - reservoir::register_float
       - reservoir::register_state
-    - reservoir::get_state で、状態値を取得する。
-    - reservoir::set_state で、状態値を設定する。
+    - reservoir::find_state で、状態値を取得する。
+    - reservoir::assign_state で、状態値に代入する。
 
     @tparam template_float     @copydoc reservoir::state_value::float_type
     @tparam template_state_key @copydoc reservoir::state_key
@@ -283,7 +283,7 @@ class psyq::scenario_engine::_private::reservoir
     /** @brief 論理型の状態値を登録する。
 
         - 登録した状態値は
-          this_type::get_state と this_type::set_state でアクセスできる。
+          this_type::find_state と this_type::assign_state でアクセスできる。
         - 登録した状態値は this_type::erase_chunk でチャンク毎に削除できる。
 
         @param[in] in_chunk_key   登録する状態値を格納する状態値ビット列チャンクの識別値。
@@ -318,7 +318,7 @@ class psyq::scenario_engine::_private::reservoir
     /** @brief 符号なし整数型の状態値を登録する。
 
         - 登録した状態値は
-          this_type::get_state と this_type::set_state でアクセスできる。
+          this_type::find_state と this_type::assign_state でアクセスできる。
         - 登録した状態値は this_type::erase_chunk で削除できる。
 
         @param[in] in_chunk_key   登録する状態値を格納する状態値ビット列チャンクの識別値。
@@ -483,26 +483,9 @@ class psyq::scenario_engine::_private::reservoir
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 状態値の取得と設定
+    /** @name 状態値の取得
         @{
      */
-    /** @brief 状態値の種類を取得する。
-        @param[in] in_state_key 状態値に対応する識別値。
-        @retval !=this_type::EMPTY_VARIETY 状態値の種類。
-        @retval ==this_type::EMPTY_VARIETY
-            in_state_key に対応する状態値がない。
-     */
-    public: typename this_type::state_registry::variety get_variety(
-        typename this_type::state_key const& in_state_key)
-    const PSYQ_NOEXCEPT
-    {
-        auto local_state(
-            this_type::state_key_less::find_const_pointer(
-                this->states_, in_state_key));
-        return local_state != nullptr?
-            local_state->get_variety(): this_type::EMPTY_VARIETY;
-    }
-
     /** @brief 状態値を取得する。
 
         すでに登録されている状態値から、値を取得する。
@@ -516,9 +499,9 @@ class psyq::scenario_engine::_private::reservoir
         @sa this_type::register_signed
         @sa this_type::register_float
         @sa this_type::register_state
-        @sa this_type::set_state
+        @sa this_type::assign_state
      */
-    public: typename this_type::state_value get_state(
+    public: typename this_type::state_value find_state(
         typename this_type::state_key const& in_state_key)
     const PSYQ_NOEXCEPT
     {
@@ -584,12 +567,132 @@ class psyq::scenario_engine::_private::reservoir
         }
     }
 
-    /** @brief 状態値を設定する。
+    /** @brief 状態値の種類を取得する。
+        @param[in] in_state_key 状態値に対応する識別値。
+        @retval !=this_type::EMPTY_VARIETY 状態値の種類。
+        @retval ==this_type::EMPTY_VARIETY
+            in_state_key に対応する状態値がない。
+     */
+    public: typename this_type::state_registry::variety find_variety(
+        typename this_type::state_key const& in_state_key)
+    const PSYQ_NOEXCEPT
+    {
+        auto local_state(
+            this_type::state_key_less::find_const_pointer(
+                this->states_, in_state_key));
+        return local_state != nullptr?
+            local_state->get_variety(): this_type::EMPTY_VARIETY;
+    }
+    /// @}
+    /** @brief 状態値の種別から、状態値のビット数を取得する。
+        @param[in] in_variety 状態値の種別。
+        @return 状態値のビット数。
+     */
+    public:
+    static typename this_type::state_registry::bit_width get_width(
+        typename this_type::state_registry::variety const in_variety)
+    PSYQ_NOEXCEPT
+    {
+        switch (in_variety)
+        {
+            case this_type::state_registry::EMPTY_VARIETY:
+            return 0;
 
-        すでに登録されている状態値に、値を設定する。
+            case this_type::state_value::kind_BOOL:
+            return 1;
 
-        @param[in] in_state_key   設定する状態値に対応する識別値。
-        @param[in] in_state_value 状態値に設定する値。
+            case this_type::state_value::kind_FLOAT:
+            return this_type::FLOAT_WIDTH;
+
+            default:
+            return in_variety < 0? -in_variety: in_variety;
+        }
+    }
+
+    /** @brief 状態値の種別から、状態値の型の種別を取得する。
+        @param[in] in_variety 状態値の種別。
+        @return 状態値の型の種別。
+     */
+    public: static typename this_type::state_value::kind get_kind(
+        typename this_type::state_registry::variety const in_variety)
+    PSYQ_NOEXCEPT
+    {
+        switch (in_variety)
+        {
+            case this_type::state_value::kind_EMPTY:
+            case this_type::state_value::kind_BOOL:
+            case this_type::state_value::kind_FLOAT:
+            return
+                static_cast<typename this_type::state_value::kind>(in_variety);
+
+            default:
+            return in_variety < 0?
+                this_type::state_value::kind_SIGNED:
+                this_type::state_value::kind_UNSIGNED;
+        }
+    }
+
+    //-------------------------------------------------------------------------
+    /** @name 状態値の比較
+        @{
+     */
+    /** @brief 状態値を比較する。
+        @param[in] in_comparison 状態値の比較式。
+        @return 比較演算の評価結果。
+     */
+    public: psyq::scenario_engine::evaluation compare_state(
+        typename this_type::state_comparison const& in_comparison)
+    const PSYQ_NOEXCEPT
+    {
+        auto const local_right_key_pointer(in_comparison.get_right_key());
+        if (local_right_key_pointer == nullptr)
+        {
+            return this->compare_state(
+                in_comparison.key_,
+                in_comparison.operator_,
+                in_comparison.value_);
+        }
+
+        // 右辺となる状態値を取得して演算する。
+        auto const local_right_key(
+            static_cast<typename this_type::state_key>(
+                *local_right_key_pointer));
+        if (local_right_key == *local_right_key_pointer)
+        {
+            return this->compare_state(
+                in_comparison.key_,
+                in_comparison.operator_,
+                this->find_state(local_right_key));
+        }
+        return -1;
+    }
+
+    /** @brief 状態値を比較する。
+        @param[in] in_left_key    左辺となる状態値の識別値。
+        @param[in] in_operator    適用する比較演算子。
+        @param[in] in_right_value 右辺となる値。
+        @return 比較演算の評価結果。
+     */
+    public: psyq::scenario_engine::evaluation compare_state(
+        typename this_type::state_key const& in_left_key,
+        typename this_type::state_value::comparison const in_operator,
+        typename this_type::state_value const& in_right_value)
+    const PSYQ_NOEXCEPT
+    {
+        return
+            this->find_state(in_left_key).compare(in_operator, in_right_value);
+    }
+    /// @}
+    //-------------------------------------------------------------------------
+    /** @name 状態値の代入
+        @{
+     */
+    /** @brief 状態値へ代入する。
+
+        すでに登録されている状態値に、値を代入する。
+
+        @param[in] in_state_key   代入先となる状態値に対応する識別値。
+        @param[in] in_state_value 状態値に代入する値。
         @retval true 成功。
         @retval false
             失敗。状態値は変化しない。
@@ -602,9 +705,9 @@ class psyq::scenario_engine::_private::reservoir
         @sa this_type::register_signed
         @sa this_type::register_float
         @sa this_type::register_state
-        @sa this_type::get_state
+        @sa this_type::find_state
      */
-    public: bool set_state(
+    public: bool assign_state(
         typename this_type::state_key const& in_state_key,
         typename this_type::state_value const& in_state_value)
     PSYQ_NOEXCEPT
@@ -612,34 +715,34 @@ class psyq::scenario_engine::_private::reservoir
         auto const local_bool(in_state_value.get_bool());
         if (local_bool != nullptr)
         {
-            return this->set_state(in_state_key, *local_bool);
+            return this->assign_state(in_state_key, *local_bool);
         }
         auto const local_unsigned(in_state_value.get_unsigned());
         if (local_unsigned != nullptr)
         {
-            return this->set_state(in_state_key, *local_unsigned);
+            return this->assign_state(in_state_key, *local_unsigned);
         }
         auto const local_signed(in_state_value.get_signed());
         if (local_signed != nullptr)
         {
-            return this->set_state(in_state_key, *local_signed);
+            return this->assign_state(in_state_key, *local_signed);
         }
         auto const local_float(in_state_value.get_float());
         if (local_float != nullptr)
         {
-            return this->set_state(in_state_key, *local_float);
+            return this->assign_state(in_state_key, *local_float);
         }
         return false;
     }
 
-    /** @copydoc set_state
+    /** @copydoc assign_state
         @note
             this_type::state_value::float_type より精度の高い浮動小数点数を
             浮動小数点数型の状態値へ設定しようとすると、
             コンパイル時にエラーか警告が発生する。
      */
     public: template<typename template_value>
-    bool set_state(
+    bool assign_state(
         typename this_type::state_key const& in_state_key,
         template_value const in_state_value)
     PSYQ_NOEXCEPT
@@ -723,116 +826,17 @@ class psyq::scenario_engine::_private::reservoir
         }
         return true;
     }
-    /// @}
-    /** @brief 状態値の種別から、状態値のビット数を取得する。
-        @param[in] in_variety 状態値の種別。
-        @return 状態値のビット数。
-     */
-    public:
-    static typename this_type::state_registry::bit_width get_width(
-        typename this_type::state_registry::variety const in_variety)
-    PSYQ_NOEXCEPT
-    {
-        switch (in_variety)
-        {
-            case this_type::state_registry::EMPTY_VARIETY:
-            return 0;
-
-            case this_type::state_value::kind_BOOL:
-            return 1;
-
-            case this_type::state_value::kind_FLOAT:
-            return this_type::FLOAT_WIDTH;
-
-            default:
-            return in_variety < 0? -in_variety: in_variety;
-        }
-    }
-
-    /** @brief 状態値の種別から、状態値の型の種別を取得する。
-        @param[in] in_variety 状態値の種別。
-        @return 状態値の型の種別。
-     */
-    public: static typename this_type::state_value::kind get_kind(
-        typename this_type::state_registry::variety const in_variety)
-    PSYQ_NOEXCEPT
-    {
-        switch (in_variety)
-        {
-            case this_type::state_value::kind_EMPTY:
-            case this_type::state_value::kind_BOOL:
-            case this_type::state_value::kind_FLOAT:
-            return
-                static_cast<typename this_type::state_value::kind>(in_variety);
-
-            default:
-            return in_variety < 0?
-                this_type::state_value::kind_SIGNED:
-                this_type::state_value::kind_UNSIGNED;
-        }
-    }
-    //-------------------------------------------------------------------------
-    /** @name 状態値の演算
-        @{
-     */
-    /** @brief 状態値を比較する。
-        @param[in] in_comparison 状態値の比較式。
-        @return 比較演算の評価結果。
-     */
-    public: psyq::scenario_engine::evaluation compare_state(
-        typename this_type::state_comparison const& in_comparison)
-    const PSYQ_NOEXCEPT
-    {
-        if (!in_comparison.right_state_)
-        {
-            return this->compare_state(
-                in_comparison.key_,
-                in_comparison.operator_,
-                in_comparison.value_);
-        }
-
-        // 右辺となる状態値を取得して演算する。
-        auto const local_right_unsigned(in_comparison.value_.get_unsigned());
-        if (local_right_unsigned != nullptr)
-        {
-            auto const local_right_key(
-                static_cast<this_type::state_key>(*local_right_unsigned));
-            if (local_right_key == *local_right_unsigned)
-            {
-                return this->compare_state(
-                    in_comparison.key_,
-                    in_comparison.operator_,
-                    this->get_state(local_right_key));
-            }
-        }
-        return -1;
-    }
-
-    /** @brief 状態値を比較する。
-        @param[in] in_left_key    左辺となる状態値の識別値。
-        @param[in] in_operator    適用する比較演算子。
-        @param[in] in_right_value 右辺となる値。
-        @return 比較演算の評価結果。
-     */
-    public: psyq::scenario_engine::evaluation compare_state(
-        typename this_type::state_key const& in_left_key,
-        typename this_type::state_value::comparison const in_operator,
-        typename this_type::state_value const& in_right_value)
-    const PSYQ_NOEXCEPT
-    {
-        return
-            this->get_state(in_left_key).compare(in_operator, in_right_value);
-    }
 
     /** @brief 状態値を演算し、結果を代入する。
-        @param[in] in_assignment 状態値の代入式。
+        @param[in] in_assignment 状態値の代入演算。
         @retval true  演算結果を状態値へ代入した。
-        @retval false 演算に失敗。状態値は変化しない。
+        @retval false 失敗。状態値は変化しない。
      */
     public: bool assign_state(
         typename this_type::state_assignment const& in_assignment)
     {
-        if (!in_assignment.right_state_)
+        auto const local_right_key_pointer(in_assignment.get_right_key());
+        if (local_right_key_pointer == nullptr)
         {
             return this->assign_state(
                 in_assignment.key_,
@@ -841,18 +845,15 @@ class psyq::scenario_engine::_private::reservoir
         }
 
         // 右辺となる状態値を取得して演算する。
-        auto const local_right_unsigned(in_assignment.value_.get_unsigned());
-        if (local_right_unsigned != nullptr)
+        auto const local_right_key(
+            static_cast<typename this_type::state_key>(
+                *local_right_key_pointer));
+        if (local_right_key == *local_right_key_pointer)
         {
-            auto const local_right_key(
-                static_cast<this_type::state_key>(*local_right_unsigned));
-            if (local_right_key == *local_right_unsigned)
-            {
-                return this->assign_state(
-                    in_assignment.key_,
-                    in_assignment.operator_,
-                    this->get_state(local_right_key));
-            }
+            return this->assign_state(
+                in_assignment.key_,
+                in_assignment.operator_,
+                this->find_state(local_right_key));
         }
         return false;
     }
@@ -862,16 +863,17 @@ class psyq::scenario_engine::_private::reservoir
         @param[in] in_operator    適用する代入演算子。
         @param[in] in_right_value 右辺となる値。
         @retval true  演算結果を状態値へ代入した。
-        @retval false 演算に失敗。状態値は変化しない。
+        @retval false 失敗。状態値は変化しない。
      */
     public: bool assign_state(
         typename this_type::state_key const& in_left_key,
         typename this_type::state_value::assignment const in_operator,
         typename this_type::state_value const& in_right_value)
     {
-        auto local_left_value(this->get_state(in_left_key));
-        return local_left_value.assign(in_operator, in_right_value)
-            && this->set_state(in_left_key, local_left_value);
+        auto local_left_value(this->find_state(in_left_key));
+        return !local_left_value.is_empty()
+            && local_left_value.assign(in_operator, in_right_value)
+            && this->assign_state(in_left_key, local_left_value);
     }
     /// @}
     //-------------------------------------------------------------------------
@@ -1137,7 +1139,7 @@ class psyq::scenario_engine::_private::reservoir
         /** @note
             ここでコンパイルエラーか警告が出る場合は
             double から float への型変換が発生しているのが原因。
-            set_state の引数を手動で型変換すれば解決するはず。
+            assign_state の引数を手動で型変換すれば解決するはず。
          */
         local_float.value = in_value;
         out_bits = local_float.bits;

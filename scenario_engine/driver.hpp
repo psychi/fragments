@@ -306,8 +306,7 @@ class psyq::scenario_engine::driver
             // @brief 条件挙動関数を条件挙動器に登録する。
             // @param[in,out] io_dispatcher 条件挙動関数を登録する条件挙動器。
             // @param[in,out] io_hasher     文字列から識別値を生成する関数オブジェクト。
-            // @param[in] in_evaluator      条件挙動関数で使う条件評価器。
-            // @param[in] in_reservoir      条件挙動関数で使う状態貯蔵器。
+            // @param[in,out] io_modifier   条件挙動関数で使う状態変更器。
             // @return
             //     条件挙動器に登録した条件挙動関数オブジェクトを指す、
             //     スマートポインタのコンテナ。
@@ -316,8 +315,7 @@ class psyq::scenario_engine::driver
             template_behavior_builder::operator()(
                 driver::dispatcher& io_dispatcher,
                 driver::hasher& io_hasher,
-                driver::evaluator const& in_evaluator,
-                driver::reservoir const& in_reservoir)
+                driver::modifier& io_modifier)
             const;
             @endcode
      */
@@ -342,10 +340,7 @@ class psyq::scenario_engine::driver
             this->behavior_chunks_,
             in_chunk_key,
             in_behavior_builder(
-                this->dispatcher_,
-                this->hash_function_,
-                this->evaluator_,
-                this->reservoir_));
+                this->dispatcher_, this->hash_function_, this->modifier_));
     }
 
     /** @brief 条件式に対応する条件挙動関数を、チャンクへ追加する。

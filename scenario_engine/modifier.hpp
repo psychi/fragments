@@ -151,12 +151,12 @@ class psyq::scenario_engine::_private::modifier
 
         @note
         1度の modifier::_modify で、
-        1つの状態値に対して複数回の状態変更が行われないように、
+        1つの状態値に対して複数回の状態変更がされないように、
         状態変更のタイミングを遅延させている。
         このため、1つの状態値に対して1フレームに複数回の this_type::accumulate
-        を毎フレーム行うと、状態変更の予約が蓄積し増え続けることに注意。
+        を毎フレーム行うと、状態変更の予約が蓄積して増え続けることに注意。
         1つの状態値に対して1フレーム毎に複数回の状態変更をする場合は、
-        psyq::scenario_engine::reservoir::assign_state で直接状態変更するべき。
+        reservoir::assign_state で直接状態変更するべき。
      */
     public: void accumulate(
         typename this_type::reservoir::state_assignment const& in_assignment,

@@ -93,7 +93,6 @@ namespace psyq
     @tparam template_state_key      演算子の左辺値となる状態値の識別値の型。
     @tparam template_state_operator 状態値を操作する演算子の型。
     @tparam template_state_value    演算子の右辺値となる状態値の型。
-    @note psyq::scenario_engine::modifier::accumulate の引数に使いたい。
  */
 template<
     typename template_state_key,
@@ -101,32 +100,66 @@ template<
     typename template_state_value>
 class psyq::scenario_engine::_private::state_operation
 {
+    /// @brief thisが指す値の型。
     private: typedef state_operation this_type;
 
     //-------------------------------------------------------------------------
     /** @brief 状態操作を構築する。
-        @param[in] in_key         this_type::key_ の初期値。
-        @param[in] in_operator    this_type::operator_ の初期値。
-        @param[in] in_value       this_type::value_ の初期値。
-        @param[in] in_right_state this_type::right_state_ の初期値。
+        @param[in] in_key      this_type::key_ の初期値。
+        @param[in] in_operator this_type::operator_ の初期値。
+        @param[in] in_value    this_type::value_ の初期値。
      */
     public: state_operation(
         template_state_key in_key,
         template_state_operator const in_operator,
-        template_state_value in_value,
-        bool const in_right_state)
+        template_state_value in_value)
     PSYQ_NOEXCEPT:
     value_(std::move(in_value)),
     key_(std::move(in_key)),
     operator_(in_operator),
-    right_state_(in_right_state)
+    right_key_(false)
     {}
+
+    /** @brief 状態操作を構築する。
+        @param[in] in_key       this_type::key_ の初期値。
+        @param[in] in_operator  this_type::operator_ の初期値。
+        @param[in] in_right_key 右辺値となる状態値の識別値。
+     */
+    public: state_operation(
+        template_state_key in_key,
+        template_state_operator const in_operator,
+        template_state_key const in_right_key)
+    PSYQ_NOEXCEPT:
+    value_(
+        static_cast<typename template_state_value::unsigned_type>(
+            in_right_key)),
+    key_(std::move(in_key)),
+    operator_(in_operator),
+    right_key_(true)
+    {}
+    static_assert(
+        sizeof(template_state_key)
+        <= sizeof(typename template_state_value::unsigned_type)
+        && std::is_unsigned<template_state_key>::value,
+        "");
+
+    /** @brief 右辺値となる状態値の識別値を取得する。
+        @retval !=nullptr
+            右辺値となる状態値の識別値が格納されている、
+            符号なし整数を指すポインタ。
+        @retval ==nullptr 右辺値は定数。
+     */
+    public: typename template_state_value::unsigned_type const* get_right_key()
+    const PSYQ_NOEXCEPT
+    {
+        return this->right_key_? this->value_.get_unsigned(): nullptr;
+    }
 
     /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
 
         文字列表を解析し、状態操作を構築する。
 
-        @param[in,out] io_hasher   文字列からハッシュ値を作る関数オブジェクト。
+        @param[in,out] io_hasher   文字列のハッシュ関数。
         @param[in] in_table        解析する文字列表。
         @param[in] in_row_index    解析する文字列表の行番号。
         @param[in] in_column_index 解析する文字列表の列番号。
@@ -165,19 +198,20 @@ class psyq::scenario_engine::_private::state_operation
         }
 
         // 演算子の右辺値を取得する。
-        auto const local_right_value(
-            this_type::make_right_value(
-                io_hasher,
-                in_table.find_body_cell(in_row_index, in_column_index + 2)));
-        PSYQ_ASSERT(!local_right_value.first.is_empty());
-        local_operation.value_ = local_right_value.first;
-        local_operation.right_state_ = local_right_value.second;
+        local_operation.make_right_value(
+            io_hasher,
+            in_table.find_body_cell(in_row_index, in_column_index + 2));
+        PSYQ_ASSERT(!local_operation.value_.is_empty());
         return local_operation;
     }
 
     //-------------------------------------------------------------------------
     private: state_operation() PSYQ_NOEXCEPT {}
 
+    /** @brief 文字列を解析し、比較演算子を構築する。
+        @param[out] out_operator 比較演算子の格納先。
+        @param[in] in_string     解析する文字列。
+     */
     private: template<typename template_string>
     static bool make_operator(
         typename template_state_value::comparison& out_operator,
@@ -216,6 +250,10 @@ class psyq::scenario_engine::_private::state_operation
         return true;
     }
 
+    /** @brief 文字列を解析し、代入演算子を構築する。
+        @param[out] out_operator 代入演算子の格納先。
+        @param[in] in_string     解析する文字列。
+     */
     private: template<typename template_string>
     static bool make_operator(
         typename template_state_value::assignment& out_operator,
@@ -266,44 +304,47 @@ class psyq::scenario_engine::_private::state_operation
         return true;
     }
 
-    /** @brief 文字列を解析し、演算子の右辺値を取得する。　
+    /** @brief 文字列を解析し、演算子の右辺値を構築する。
         @param[in,out] io_hasher 文字列のハッシュ関数。
         @param[in] in_string     解析する文字列。
      */
     private: template<typename template_hasher>
-    static std::pair<template_state_value, bool> make_right_value(
+    void make_right_value(
         template_hasher& io_hasher,
         typename template_hasher::argument_type const& in_string)
     {
-        // 状態値の識別値を構築する。
         typename template_hasher::argument_type const local_state_header(
             PSYQ_SCENARIO_ENGINE_STATE_OPERATION_RIGHT_STATE); 
         if (local_state_header == in_string.substr(0, local_state_header.size()))
         {
-            return std::make_pair(
-                template_state_value(
-                    static_cast<typename template_state_value::unsigned_type>(
-                        io_hasher(in_string.substr(local_state_header.size())))),
-                true);
+            // 状態値の識別値を構築する。
+            this->right_key_ = true;
+            this->value_ = template_state_value(
+                static_cast<typename template_state_value::unsigned_type>(
+                    io_hasher(in_string.substr(local_state_header.size()))));
+            return;
         }
 
-        // ハッシュ値を構築する。
+        this->right_key_ = false;
         typename template_hasher::argument_type const local_hash_header(
             PSYQ_SCENARIO_ENGINE_STATE_OPERATION_RIGHT_HASH); 
         if (local_hash_header == in_string.substr(0, local_hash_header.size()))
         {
+            // ハッシュ値を構築する。
             static_assert(
-                std::is_unsigned<typename template_hasher::result_type>::value,
+                sizeof(typename template_hasher::result_type)
+                <= sizeof(typename template_state_value::unsigned_type)
+                && std::is_unsigned<typename template_hasher::result_type>::value,
                 "");
-            return std::make_pair(
-                template_state_value(
-                    static_cast<typename template_state_value::unsigned_type>(
-                        io_hasher(in_string.substr(local_state_header.size())))),
-                false);
+            this->value_ = template_state_value(
+                static_cast<typename template_state_value::unsigned_type>(
+                    io_hasher(in_string.substr(local_state_header.size()))));
         }
-
-        // 定数を構築する。
-        return std::make_pair(this_type::make_state_value(in_string), false);
+        else
+        {
+            // 定数を構築する。
+            this->value_ = this_type::make_state_value(in_string);
+        }
     }
 
     /** @brief 文字列を解析し、状態値を構築する。
@@ -407,7 +448,7 @@ class psyq::scenario_engine::_private::state_operation
     /// @brief 演算子の種類。
     public: template_state_operator operator_;
     /// @brief 右辺値を状態値から取得するか。
-    public: bool right_state_;
+    private: bool right_key_;
 
 }; // class psyq::scenario_engine::_private::state_operation
 

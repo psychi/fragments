@@ -1,22 +1,22 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::_private::behavior_chunk
+    @brief @copybrief psyq::if_then_engine::_private::behavior_chunk
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_CHUNK_HPP_
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_CHUNK_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_BEHAVIOR_CHUNK_HPP_
+#define PSYQ_IF_THEN_ENGINE_BEHAVIOR_CHUNK_HPP_
 
 #include "./key_less.hpp"
 
 /// @cond
 namespace psyq
 {
-    namespace scenario_engine
+    namespace if_then_engine
     {
         namespace _private
         {
             template<typename> class behavior_chunk;
         } // namespace _private
-    } // namespace scenario_engine
+    } // namespace if_then_engine
 } // namespace psyq
 /// @endcond
 
@@ -25,7 +25,7 @@ namespace psyq
            条件式の評価が変化した際に呼び出す条件挙動関数を所有する。
  */
 template<typename template_dispatcher>
-class psyq::scenario_engine::_private::behavior_chunk
+class psyq::if_then_engine::_private::behavior_chunk
 {
     /// @brief thisが指す値の型。
     private: typedef behavior_chunk this_type;
@@ -46,8 +46,8 @@ class psyq::scenario_engine::_private::behavior_chunk
 
     /// @brief 条件挙動チャンクの識別値を比較する関数オブジェクト。
     public: typedef
-         psyq::scenario_engine::_private::key_less<
-             psyq::scenario_engine::_private::object_key_getter<
+         psyq::if_then_engine::_private::key_less<
+             psyq::if_then_engine::_private::object_key_getter<
                  this_type, typename this_type::key>>
          key_less;
 
@@ -201,7 +201,7 @@ class psyq::scenario_engine::_private::behavior_chunk
     /// @brief 条件挙動チャンクの識別値。
     public: typename this_type::key key_;
 
-}; // class psyq::scenario_engine::behavior_chunk
+}; // class psyq::if_then_engine::behavior_chunk
 
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_CHUNK_HPP_)
+#endif // !defined(PSYQ_IF_THEN_ENGINE_BEHAVIOR_CHUNK_HPP_)
 // vim: set expandtab:

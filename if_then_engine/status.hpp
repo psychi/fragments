@@ -1,21 +1,21 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::_private::status
+    @brief @copybrief psyq::if_then_engine::_private::status
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_HPP_
-#define PSYQ_SCENARIO_ENGINE_STATUS_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_HPP_
+#define PSYQ_IF_THEN_ENGINE_STATUS_HPP_
 
 #include <cstdint>
 #include "../assert.hpp"
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_EPSILON_MAG
-#define PSYQ_SCENARIO_ENGINE_STATUS_EPSILON_MAG 4
-#endif // !default(PSYQ_SCENARIO_ENGINE_STATUS_EPSILON_MAG)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_EPSILON_MAG
+#define PSYQ_IF_THEN_ENGINE_STATUS_EPSILON_MAG 4
+#endif // !default(PSYQ_IF_THEN_ENGINE_STATUS_EPSILON_MAG)
 
 namespace psyq
 {
-    /// @brief ビデオゲームでのシナリオ進行を管理するための実装
-    namespace scenario_engine
+    /// @brief if-then規則で駆動する有限状態機械。
+    namespace if_then_engine
     {
         /** @brief 式の評価結果。
 
@@ -25,14 +25,14 @@ namespace psyq
          */
         typedef std::int8_t evaluation;
 
-        /// @brief psyq::scenario_engine の管理者以外は、直接アクセス禁止。
+        /// @brief psyq::if_then_engine の管理者以外は、直接アクセス禁止。
         namespace _private
         {
             /// @cond
             template<typename, typename> class status;
             /// @endcond
         } // namespace _private
-    } // namespace scenario_engine
+    } // namespace if_then_engine
 } // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -41,7 +41,7 @@ namespace psyq
     @tparam template_float    @copydoc status::float_type
  */
 template<typename template_unsigned, typename template_float>
-class psyq::scenario_engine::_private::status
+class psyq::if_then_engine::_private::status
 {
     /// @brief thisが指す値の型。
     private: typedef status this_type;
@@ -241,7 +241,7 @@ class psyq::scenario_engine::_private::status
         @retval 負 比較演算に失敗した。
      */
     public: template<typename template_right>
-    psyq::scenario_engine::evaluation compare(
+    psyq::if_then_engine::evaluation compare(
         typename this_type::comparison const in_comparison,
         template_right const& in_right)
     {
@@ -514,7 +514,7 @@ class psyq::scenario_engine::_private::status
             static_cast<template_value>(local_float) - in_value);
         auto const local_epsilon(
             std::numeric_limits<typename this_type::float_type>::epsilon()
-            * PSYQ_SCENARIO_ENGINE_STATUS_EPSILON_MAG);
+            * PSYQ_IF_THEN_ENGINE_STATUS_EPSILON_MAG);
         if (-local_epsilon <= local_diff && local_diff <= local_epsilon)
         {
             this->float_ = local_float;
@@ -822,7 +822,7 @@ class psyq::scenario_engine::_private::status
         auto const local_diff(in_left - in_right);
         auto const local_epsilon(
             std::numeric_limits<typename this_type::float_type>::epsilon()
-            * PSYQ_SCENARIO_ENGINE_STATUS_EPSILON_MAG);
+            * PSYQ_IF_THEN_ENGINE_STATUS_EPSILON_MAG);
         return local_diff < -local_epsilon?
             this_type::order_LESS:
             (local_epsilon < local_diff?
@@ -888,8 +888,8 @@ class psyq::scenario_engine::_private::status
     };
     private: typename this_type::kind kind_;    ///< 状態値の型の種類。
 
-}; // class psyq::scenario_engine::_private::status
+}; // class psyq::if_then_engine::_private::status
 
 
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_HPP_)
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_HPP_)
 // vim: set expandtab:

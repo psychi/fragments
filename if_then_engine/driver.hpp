@@ -1,9 +1,9 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::driver
+    @brief @copybrief psyq::if_then_engine::driver
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_DRIVER_HPP_
-#define PSYQ_SCENARIO_ENGINE_DRIVER_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_DRIVER_HPP_
+#define PSYQ_IF_THEN_ENGINE_DRIVER_HPP_
 
 #include "../string/csv_table.hpp"
 #include "../string/relation_table.hpp"
@@ -19,19 +19,19 @@
 /// @cond
 namespace psyq
 {
-    namespace scenario_engine
+    namespace if_then_engine
     {
         template<typename, typename, typename, typename> class driver;
-    } // namespace scenario_engine
+    } // namespace if_then_engine
 } // namespace psyq
 /// @endcond
 
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief シナリオ駆動器。シナリオ進行の全体を統括して管理する。 
+/** @brief if-then規則による有限状態機械の駆動器。
 
     ### 使い方の概略
-    - driver::driver でシナリオ駆動機を構築する。
+    - driver::driver で駆動器を構築する。
     - driver::extend_chunk で、状態値と条件式と条件挙動関数を登録する。
     - driver::progress を時間フレーム毎に呼び出す。
       条件式の評価が変化していたら、条件挙動関数が呼び出される。
@@ -46,7 +46,7 @@ template<
     typename template_priority = std::int32_t,
     typename template_hasher = psyq::string::view<char>::fnv1_hash32,
     typename template_allocator = std::allocator<void*>>
-class psyq::scenario_engine::driver
+class psyq::if_then_engine::driver
 {
     /// @brief thisが指す値の型。
     private: typedef driver this_type;
@@ -68,44 +68,44 @@ class psyq::scenario_engine::driver
     /// @brief 各種コンテナに用いるメモリ割当子の型。
     public: typedef template_allocator allocator_type;
 
-    /// @brief シナリオ駆動器で用いる状態貯蔵器の型。
+    /// @brief 駆動器で用いる状態貯蔵器の型。
     public: typedef
-        psyq::scenario_engine::_private::reservoir<
+        psyq::if_then_engine::_private::reservoir<
             template_float,
             typename this_type::hasher::result_type,
             typename this_type::hasher::result_type,
             typename this_type::allocator_type>
         reservoir;
 
-    /// @brief シナリオ駆動器で用いる状態変更器の型。
+    /// @brief 駆動器で用いる状態変更器の型。
     public: typedef
-        psyq::scenario_engine::_private::modifier<
+        psyq::if_then_engine::_private::modifier<
             typename this_type::reservoir>
         modifier;
 
-    /// @brief シナリオ駆動器で用いる条件評価器の型。
+    /// @brief 駆動器で用いる条件評価器の型。
     public: typedef
-        psyq::scenario_engine::_private::evaluator<
+        psyq::if_then_engine::_private::evaluator<
             typename this_type::reservoir,
             typename this_type::hasher::result_type>
         evaluator;
 
-    /// @brief シナリオ駆動器で用いる条件挙動器の型。
+    /// @brief 駆動器で用いる条件挙動器の型。
     public: typedef
-        psyq::scenario_engine::_private::dispatcher<
+        psyq::if_then_engine::_private::dispatcher<
             typename this_type::evaluator, template_priority>
         dispatcher;
 
-    /// @brief シナリオ駆動器で用いる条件挙動チャンクの型。
+    /// @brief 駆動器で用いる条件挙動チャンクの型。
     private: typedef
-        psyq::scenario_engine::_private::behavior_chunk<
+        psyq::if_then_engine::_private::behavior_chunk<
             typename this_type::dispatcher>
         behavior_chunk;
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
     //@{
-    /** @brief 空のシナリオ駆動器を構築する。
+    /** @brief 空の駆動器を構築する。
         @param[in] in_reserve_chunks      チャンクの予約数。
         @param[in] in_reserve_statuses      状態値の予約数。
         @param[in] in_reserve_expressions 条件式の予約数。
@@ -165,7 +165,7 @@ class psyq::scenario_engine::driver
     }
 #endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
-    /// @brief シナリオ駆動器を再構築し、メモリ領域を必要最小限にする。
+    /// @brief 駆動器を再構築し、メモリ領域を必要最小限にする。
     public: void shrink_to_fit()
     {
         this->reservoir_.shrink_to_fit();
@@ -180,7 +180,7 @@ class psyq::scenario_engine::driver
     }
     //@}
     //-------------------------------------------------------------------------
-    /** @brief シナリオ進行を更新する。
+    /** @brief 進行を更新する。
 
         基本的には、フレーム毎に更新すること。
      */
@@ -238,13 +238,13 @@ class psyq::scenario_engine::driver
                 typename template_shared_ptr::element_type::allocator_type>
             relation_table;
         typedef
-            psyq::scenario_engine::status_builder<relation_table>
+            psyq::if_then_engine::status_builder<relation_table>
             status_builder;
         typedef
-            psyq::scenario_engine::expression_builder<relation_table>
+            psyq::if_then_engine::expression_builder<relation_table>
             expression_builder;
         typedef
-            psyq::scenario_engine::behavior_builder<
+            psyq::if_then_engine::behavior_builder<
                 relation_table, typename this_type::dispatcher>
             behavior_builder;
         this->extend_chunk(
@@ -382,20 +382,20 @@ class psyq::scenario_engine::driver
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @brief シナリオ駆動器で用いる状態貯蔵器。
+    /// @brief 駆動器で用いる状態貯蔵器。
     public: typename this_type::reservoir reservoir_;
-    /// @brief シナリオ駆動器で用いる状態変更器。
+    /// @brief 駆動器で用いる状態変更器。
     public: typename this_type::modifier modifier_;
-    /// @brief シナリオ駆動器で用いる条件評価器。
+    /// @brief 駆動器で用いる条件評価器。
     public: typename this_type::evaluator evaluator_;
-    /// @brief シナリオ駆動器で用いる条件挙動器。
+    /// @brief 駆動器で用いる条件挙動器。
     public: typename this_type::dispatcher dispatcher_;
-    /// @brief シナリオ駆動器で用いる条件挙動チャンクのコンテナ。
+    /// @brief 駆動器で用いる条件挙動チャンクのコンテナ。
     private: typename this_type::behavior_chunk::container behavior_chunks_;
-    /// @brief シナリオ駆動器で用いるハッシュ関数オブジェクト。
+    /// @brief 駆動器で用いるハッシュ関数オブジェクト。
     public: typename this_type::hasher hash_function_;
 
-}; // class psyq::scenario_engine::driver
+}; // class psyq::if_then_engine::driver
 
-#endif // !defined(PSYQ_SCENARIO_ENGINE_DRIVER_HPP_)
+#endif // !defined(PSYQ_IF_THEN_ENGINE_DRIVER_HPP_)
 // vim: set expandtab:

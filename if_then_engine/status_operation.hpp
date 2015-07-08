@@ -1,90 +1,90 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::_private::status_operation
+    @brief @copybrief psyq::if_then_engine::_private::status_operation
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_HPP_
-#define PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_HPP_
+#define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_HPP_
 
 #include "../string/numeric_parser.hpp"
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_EQUAL
-#define PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_EQUAL "=="
-#endif // !define(PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_EQUAL)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_EQUAL
+#define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_EQUAL "=="
+#endif // !define(PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_EQUAL)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_NOT_EQUAL
-#define PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_NOT_EQUAL "!="
-#endif // !define(PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_NOT_EQUAL)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_NOT_EQUAL
+#define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_NOT_EQUAL "!="
+#endif // !define(PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_NOT_EQUAL)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_LESS
-#define PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_LESS "<"
-#endif // !define(PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_LESS)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_LESS
+#define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_LESS "<"
+#endif // !define(PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_LESS)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_LESS_EQUAL
-#define PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_LESS_EQUAL "<="
-#endif // !define(PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_LESS_EQUAL)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_LESS_EQUAL
+#define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_LESS_EQUAL "<="
+#endif // !define(PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_LESS_EQUAL)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_GREATER
-#define PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_GREATER ">"
-#endif // !define(PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_GREATER)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_GREATER
+#define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_GREATER ">"
+#endif // !define(PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_GREATER)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_GREATER_EQUAL
-#define PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_GREATER_EQUAL ">="
-#endif // !define(PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_GREATER_EQUAL)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_GREATER_EQUAL
+#define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_GREATER_EQUAL ">="
+#endif // !define(PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_GREATER_EQUAL)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_COPY
-#define PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_COPY ":="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_COPY)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_COPY
+#define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_COPY ":="
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_COPY)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_ADD
-#define PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_ADD "+="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_ADD)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_ADD
+#define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_ADD "+="
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_ADD)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_SUB
-#define PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_SUB "-="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_SUB)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_SUB
+#define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_SUB "-="
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_SUB)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_MULT
-#define PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_MULT "*="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_MULT)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_MULT
+#define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_MULT "*="
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_MULT)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_DIV
-#define PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_DIV "/="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_DIV)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_DIV
+#define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_DIV "/="
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_DIV)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_MOD
-#define PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_MOD "%="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_MOD)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_MOD
+#define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_MOD "%="
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_MOD)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_OR
-#define PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_OR "|="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_OR)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_OR
+#define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_OR "|="
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_OR)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_XOR
-#define PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_XOR "^="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_XOR)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_XOR
+#define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_XOR "^="
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_XOR)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_AND
-#define PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_AND "&="
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_AND)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_AND
+#define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_AND "&="
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_AND)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_RIGHT_STATUS
-#define PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_RIGHT_STATUS "STATUS:"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_RIGHT_STATUS)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_RIGHT_STATUS
+#define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_RIGHT_STATUS "STATUS:"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_RIGHT_STATUS)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_RIGHT_HASH
-#define PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_RIGHT_HASH "HASH:"
-#endif // !define(PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_RIGHT_HASH)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_RIGHT_HASH
+#define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_RIGHT_HASH "HASH:"
+#endif // !define(PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_RIGHT_HASH)
 
 /// @cond
 namespace psyq
 {
-    namespace scenario_engine
+    namespace if_then_engine
     {
         namespace _private
         {
             template<typename, typename, typename> class status_operation;
         } // namespace _private
-    } // namespace scenario_engine
+    } // namespace if_then_engine
 } // namespace psyq
 /// @endcond
 
@@ -98,7 +98,7 @@ template<
     typename template_status_key,
     typename template_status_operator,
     typename template_status_value>
-class psyq::scenario_engine::_private::status_operation
+class psyq::if_then_engine::_private::status_operation
 {
     /// @brief thisが指す値の型。
     private: typedef status_operation this_type;
@@ -155,7 +155,7 @@ class psyq::scenario_engine::_private::status_operation
         return this->right_key_? this->value_.extract_unsigned(): nullptr;
     }
 
-    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
+    /** @brief psyq::if_then_engine 管理者以外は、この関数は使用禁止。
 
         文字列表を解析し、状態操作を構築する。
 
@@ -217,27 +217,27 @@ class psyq::scenario_engine::_private::status_operation
         typename template_status_value::comparison& out_operator,
         template_string const& in_string)
     {
-        if (in_string == PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_EQUAL)
+        if (in_string == PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_EQUAL)
         {
             out_operator = template_status_value::comparison_EQUAL;
         }
-        else if (in_string == PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_NOT_EQUAL)
+        else if (in_string == PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_NOT_EQUAL)
         {
             out_operator = template_status_value::comparison_NOT_EQUAL;
         }
-        else if (in_string == PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_LESS)
+        else if (in_string == PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_LESS)
         {
             out_operator = template_status_value::comparison_LESS;
         }
-        else if (in_string == PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_LESS_EQUAL)
+        else if (in_string == PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_LESS_EQUAL)
         {
             out_operator = template_status_value::comparison_LESS_EQUAL;
         }
-        else if (in_string == PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_GREATER)
+        else if (in_string == PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_GREATER)
         {
             out_operator = template_status_value::comparison_GREATER;
         }
-        else if (in_string == PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_GREATER_EQUAL)
+        else if (in_string == PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_GREATER_EQUAL)
         {
             out_operator = template_status_value::comparison_GREATER_EQUAL;
         }
@@ -259,39 +259,39 @@ class psyq::scenario_engine::_private::status_operation
         typename template_status_value::assignment& out_operator,
         template_string const& in_string)
     {
-        if (in_string == PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_COPY)
+        if (in_string == PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_COPY)
         {
             out_operator = template_status_value::assignment_COPY;
         }
-        else if (in_string == PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_ADD)
+        else if (in_string == PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_ADD)
         {
             out_operator = template_status_value::assignment_ADD;
         }
-        else if (in_string == PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_SUB)
+        else if (in_string == PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_SUB)
         {
             out_operator = template_status_value::assignment_SUB;
         }
-        else if (in_string == PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_MULT)
+        else if (in_string == PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_MULT)
         {
             out_operator = template_status_value::assignment_MULT;
         }
-        else if (in_string == PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_DIV)
+        else if (in_string == PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_DIV)
         {
             out_operator = template_status_value::assignment_DIV;
         }
-        else if (in_string == PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_MOD)
+        else if (in_string == PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_MOD)
         {
             out_operator = template_status_value::assignment_MOD;
         }
-        else if (in_string == PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_OR)
+        else if (in_string == PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_OR)
         {
             out_operator = template_status_value::assignment_OR;
         }
-        else if (in_string == PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_XOR)
+        else if (in_string == PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_XOR)
         {
             out_operator = template_status_value::assignment_XOR;
         }
-        else if (in_string == PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_BUILDER_AND)
+        else if (in_string == PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_AND)
         {
             out_operator = template_status_value::assignment_AND;
         }
@@ -314,7 +314,7 @@ class psyq::scenario_engine::_private::status_operation
         typename template_hasher::argument_type const& in_string)
     {
         typename template_hasher::argument_type const local_status_header(
-            PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_RIGHT_STATUS); 
+            PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_RIGHT_STATUS); 
         if (local_status_header == in_string.substr(0, local_status_header.size()))
         {
             // 状態値の識別値を構築する。
@@ -327,7 +327,7 @@ class psyq::scenario_engine::_private::status_operation
 
         this->right_key_ = false;
         typename template_hasher::argument_type const local_hash_header(
-            PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_RIGHT_HASH); 
+            PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_RIGHT_HASH); 
         if (local_hash_header == in_string.substr(0, local_hash_header.size()))
         {
             // ハッシュ値を構築する。
@@ -450,7 +450,7 @@ class psyq::scenario_engine::_private::status_operation
     /// @brief 右辺値を状態値から取得するか。
     private: bool right_key_;
 
-}; // class psyq::scenario_engine::_private::status_operation
+}; // class psyq::if_then_engine::_private::status_operation
 
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_OPERATION_HPP_)
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_HPP_)
 // vim: set expandtab:

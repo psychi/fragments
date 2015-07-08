@@ -1,9 +1,9 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::_private::evaluator
+    @brief @copybrief psyq::if_then_engine::_private::evaluator
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_EVALUATOR_HPP_
-#define PSYQ_SCENARIO_ENGINE_EVALUATOR_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_EVALUATOR_HPP_
+#define PSYQ_IF_THEN_ENGINE_EVALUATOR_HPP_
 
 #include <vector>
 #include "./key_less.hpp"
@@ -12,18 +12,18 @@
 /// @cond
 namespace psyq
 {
-    namespace scenario_engine
+    namespace if_then_engine
     {
         namespace _private
         {
             template<typename, typename> class evaluator;
         } // namespace _private
-    } // namespace scenario_engine
+    } // namespace if_then_engine
 } // namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief シナリオ条件評価器。条件式を保持し、評価する。
+/** @brief 条件評価器。条件式を保持し、評価する。
 
     ### 使い方の概略
     - evaluator::register_expression で、条件式を登録する。
@@ -33,14 +33,14 @@ namespace psyq
     @tparam template_expression_key @copydoc evaluator::expression::key
  */
 template<typename template_reservoir, typename template_expression_key>
-class psyq::scenario_engine::_private::evaluator
+class psyq::if_then_engine::_private::evaluator
 {
     /// @brief thisが指す値の型。
     private: typedef evaluator this_type;
 
     /** @brief 条件評価器で使う状態貯蔵器の型。
 
-        psyq::scenario_engine::_private::reservoir と互換性があること。
+        psyq::if_then_engine::_private::reservoir と互換性があること。
      */
     public: typedef template_reservoir reservoir;
 
@@ -52,7 +52,7 @@ class psyq::scenario_engine::_private::evaluator
     //-------------------------------------------------------------------------
     /// @brief 条件式
     public: typedef
-        psyq::scenario_engine::_private::expression<
+        psyq::if_then_engine::_private::expression<
             template_expression_key,
             typename template_reservoir::chunk_key,
             std::uint32_t>
@@ -66,8 +66,8 @@ class psyq::scenario_engine::_private::evaluator
 
     /// @brief 条件式を識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
     private: typedef
-        psyq::scenario_engine::_private::key_less<
-            psyq::scenario_engine::_private::object_key_getter<
+        psyq::if_then_engine::_private::key_less<
+            psyq::if_then_engine::_private::object_key_getter<
                 typename this_type::expression,
                 typename this_type::expression::key>>
         expression_key_less;
@@ -75,7 +75,7 @@ class psyq::scenario_engine::_private::evaluator
     //-------------------------------------------------------------------------
     /// @brief 複合条件式の要素条件。
     public: typedef
-        psyq::scenario_engine::_private::sub_expression<
+        psyq::if_then_engine::_private::sub_expression<
             typename this_type::expression::key>
         sub_expression;
 
@@ -89,7 +89,7 @@ class psyq::scenario_engine::_private::evaluator
     //-------------------------------------------------------------------------
     /// @brief 状態変化条件式の要素条件。
     public: typedef
-        psyq::scenario_engine::_private::status_transition<
+        psyq::if_then_engine::_private::status_transition<
             typename this_type::reservoir::status_key>
         status_transition;
 
@@ -116,7 +116,7 @@ class psyq::scenario_engine::_private::evaluator
     //-------------------------------------------------------------------------
     /// @brief 要素条件チャンク。
     public: typedef
-        psyq::scenario_engine::_private::expression_chunk<
+        psyq::if_then_engine::_private::expression_chunk<
             typename this_type::reservoir::chunk_key,
             typename this_type::sub_expression_container,
             typename this_type::status_transition_container,
@@ -131,8 +131,8 @@ class psyq::scenario_engine::_private::evaluator
 
     /// @brief 要素条件チャンクの識別値を比較する関数オブジェクト。
     private: typedef
-         psyq::scenario_engine::_private::key_less<
-             psyq::scenario_engine::_private::object_key_getter<
+         psyq::if_then_engine::_private::key_less<
+             psyq::if_then_engine::_private::object_key_getter<
                  typename this_type::chunk,
                  typename this_type::reservoir::chunk_key>>
          chunk_key_less;
@@ -286,7 +286,7 @@ class psyq::scenario_engine::_private::evaluator
         @retval 0  条件式の評価は偽となった。
         @retval 負 条件式の評価に失敗した。
      */
-    public: psyq::scenario_engine::evaluation evaluate_expression(
+    public: psyq::if_then_engine::evaluation evaluate_expression(
         typename this_type::expression::key const in_expression_key,
         typename this_type::reservoir const& in_reservoir)
     const PSYQ_NOEXCEPT
@@ -314,7 +314,7 @@ class psyq::scenario_engine::_private::evaluator
                 local_chunk->sub_expressions_,
                 [&, this](
                     typename this_type::sub_expression const& in_expression)
-                ->psyq::scenario_engine::evaluation
+                ->psyq::if_then_engine::evaluation
                 {
                     auto const local_evaluate_expression(
                         this->evaluate_expression(
@@ -332,7 +332,7 @@ class psyq::scenario_engine::_private::evaluator
             return local_expression->evaluate(
                 local_chunk->status_transitions_,
                 [&](typename this_type::status_transition const& in_transition)
-                ->psyq::scenario_engine::evaluation
+                ->psyq::if_then_engine::evaluation
                 {
                     return in_reservoir._get_transition(in_transition.key_);
                 });
@@ -342,7 +342,7 @@ class psyq::scenario_engine::_private::evaluator
             return local_expression->evaluate(
                 local_chunk->status_comparisons_,
                 [&](typename this_type::status_comparison const& in_comparison)
-                ->psyq::scenario_engine::evaluation
+                ->psyq::if_then_engine::evaluation
                 {
                     return in_reservoir.compare_status(in_comparison);
                 });
@@ -354,7 +354,7 @@ class psyq::scenario_engine::_private::evaluator
         }
     }
 
-    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
+    /** @brief psyq::if_then_engine 管理者以外は、この関数は使用禁止。
 
         条件式を取得する。
 
@@ -435,7 +435,7 @@ class psyq::scenario_engine::_private::evaluator
         return true;
     }
 
-    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
+    /** @brief psyq::if_then_engine 管理者以外は、この関数は使用禁止。
 
         要素条件チャンクを取得する。
 
@@ -554,7 +554,7 @@ class psyq::scenario_engine::_private::evaluator
     /// @brief 要素条件チャンクの辞書。
     private: typename this_type::chunk_container chunks_;
 
-}; // class psyq::scenario_engine::_private::evaluator
+}; // class psyq::if_then_engine::_private::evaluator
 
-#endif // !defined(PSYQ_SCENARIO_ENGINE_EVALUATOR_HPP_)
+#endif // !defined(PSYQ_IF_THEN_ENGINE_EVALUATOR_HPP_)
 // vim: set expandtab:

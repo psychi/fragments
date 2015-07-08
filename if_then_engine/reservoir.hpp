@@ -1,9 +1,9 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::_private::reservoir
+    @brief @copybrief psyq::if_then_engine::_private::reservoir
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_RESERVOIR_HPP_
-#define PSYQ_SCENARIO_ENGINE_RESERVOIR_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_RESERVOIR_HPP_
+#define PSYQ_IF_THEN_ENGINE_RESERVOIR_HPP_
 
 #include <vector>
 #include "./key_less.hpp"
@@ -15,7 +15,7 @@
 /// @cond
 namespace psyq
 {
-    namespace scenario_engine
+    namespace if_then_engine
     {
         namespace _private
         {
@@ -32,12 +32,12 @@ namespace psyq
                 std::uint64_t bits;
             };
         } // namespace _private
-    } // namespace scenario_engine
+    } // namespace if_then_engine
 } // namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief シナリオ状態貯蔵器。任意のビット長の状態値を管理する。
+/** @brief 状態貯蔵器。任意のビット長の状態値を保持する。
 
     ### 使い方の概略
     - 以下の関数で、状態値を登録する。
@@ -59,7 +59,7 @@ template<
     typename template_status_key,
     typename template_chunk_key,
     typename template_allocator>
-class psyq::scenario_engine::_private::reservoir
+class psyq::if_then_engine::_private::reservoir
 {
     /// thisが指す値の型。
     private: typedef reservoir this_type;
@@ -75,12 +75,12 @@ class psyq::scenario_engine::_private::reservoir
     public: typedef template_allocator allocator_type;
 
     private: typedef
-        psyq::scenario_engine::_private::float_union<template_float>
+        psyq::if_then_engine::_private::float_union<template_float>
         float_union;
 
     /// @brief 状態値の登記情報。
     private: typedef
-         psyq::scenario_engine::_private::status_summary<
+         psyq::if_then_engine::_private::status_summary<
              typename this_type::status_key,
              typename this_type::chunk_key,
              std::uint32_t,
@@ -90,7 +90,7 @@ class psyq::scenario_engine::_private::reservoir
     //-------------------------------------------------------------------------
     /// @brief 状態値を格納するビット列のチャンク。
     private: typedef
-        psyq::scenario_engine::_private::status_chunk<
+        psyq::if_then_engine::_private::status_chunk<
             typename this_type::chunk_key,
             std::vector<std::uint64_t, typename this_type::allocator_type>,
             std::vector<
@@ -106,21 +106,21 @@ class psyq::scenario_engine::_private::reservoir
 
     /// @brief チャンク識別値を比較する関数オブジェクト。
     private: typedef
-         psyq::scenario_engine::_private::key_less<
-             psyq::scenario_engine::_private::object_key_getter<
+         psyq::if_then_engine::_private::key_less<
+             psyq::if_then_engine::_private::object_key_getter<
                  typename this_type::chunk, typename this_type::chunk_key>>
          chunk_key_less;
 
     //-------------------------------------------------------------------------
     /// @brief 状態値。
     public: typedef
-        psyq::scenario_engine::_private::status<
+        psyq::if_then_engine::_private::status<
             typename this_type::chunk::block, template_float>
         status;
 
     /// @brief 状態値の比較演算。
     public: typedef
-        psyq::scenario_engine::_private::status_operation<
+        psyq::if_then_engine::_private::status_operation<
             typename this_type::status_key,
             typename this_type::status::comparison,
             typename this_type::status>
@@ -128,7 +128,7 @@ class psyq::scenario_engine::_private::reservoir
 
     /// @brief 状態値の代入演算。
     public: typedef
-        psyq::scenario_engine::_private::status_operation<
+        psyq::if_then_engine::_private::status_operation<
             typename this_type::status_key,
             typename this_type::status::assignment,
             typename this_type::status>
@@ -150,8 +150,8 @@ class psyq::scenario_engine::_private::reservoir
 
     /// @brief 状態値に対応する識別値を比較する関数オブジェクト。
     private: typedef
-         psyq::scenario_engine::_private::key_less<
-             psyq::scenario_engine::_private::object_key_getter<
+         psyq::if_then_engine::_private::key_less<
+             psyq::if_then_engine::_private::object_key_getter<
                  typename this_type::status_summary,
                  typename this_type::status_key>>
          status_key_less;
@@ -161,7 +161,7 @@ class psyq::scenario_engine::_private::reservoir
     {
         /// @brief 浮動小数点数型のビット数。
         FLOAT_WIDTH = sizeof(template_float) *
-            psyq::scenario_engine::_private::BITS_PER_BYTE,
+            psyq::if_then_engine::_private::BITS_PER_BYTE,
     };
     static_assert(
         // this_type::chunk::block に浮動小数点数が収まることを確認する。
@@ -173,14 +173,14 @@ class psyq::scenario_engine::_private::reservoir
         this_type::status_summary::format_POSITION_BACK -
             this_type::status_summary::format_POSITION_FRONT
         < sizeof(typename this_type::status_summary::bit_position) *
-            psyq::scenario_engine::_private::BITS_PER_BYTE,
+            psyq::if_then_engine::_private::BITS_PER_BYTE,
         "");
     static_assert(
         // status_summary::bit_width にビット数の最大値が収まることを確認する。
         this_type::status_summary::format_WIDTH_BACK -
             this_type::status_summary::format_WIDTH_FRONT
         < sizeof(typename this_type::status_summary::bit_width) *
-            psyq::scenario_engine::_private::BITS_PER_BYTE,
+            psyq::if_then_engine::_private::BITS_PER_BYTE,
         "");
 
     //-------------------------------------------------------------------------
@@ -455,7 +455,7 @@ class psyq::scenario_engine::_private::reservoir
                 std::move(in_status_key),
                 *local_unsigned,
                 sizeof(*local_unsigned) *
-                    psyq::scenario_engine::_private::BITS_PER_BYTE);
+                    psyq::if_then_engine::_private::BITS_PER_BYTE);
         }
         auto const local_signed(in_status_value.extract_signed());
         if (local_signed != nullptr)
@@ -465,7 +465,7 @@ class psyq::scenario_engine::_private::reservoir
                 std::move(in_status_key),
                 *local_signed,
                 sizeof(*local_signed) *
-                    psyq::scenario_engine::_private::BITS_PER_BYTE);
+                    psyq::if_then_engine::_private::BITS_PER_BYTE);
         }
         auto const local_float(in_status_value.extract_float());
         if (local_float != nullptr)
@@ -636,7 +636,7 @@ class psyq::scenario_engine::_private::reservoir
         @param[in] in_comparison 状態値の比較式。
         @return 比較演算の評価結果。
      */
-    public: psyq::scenario_engine::evaluation compare_status(
+    public: psyq::if_then_engine::evaluation compare_status(
         typename this_type::status_comparison const& in_comparison)
     const PSYQ_NOEXCEPT
     {
@@ -669,7 +669,7 @@ class psyq::scenario_engine::_private::reservoir
         @param[in] in_right_value 右辺となる値。
         @return 比較演算の評価結果。
      */
-    public: psyq::scenario_engine::evaluation compare_status(
+    public: psyq::if_then_engine::evaluation compare_status(
         typename this_type::status_key const& in_left_key,
         typename this_type::status::comparison const in_operator,
         typename this_type::status const& in_right_value)
@@ -876,7 +876,7 @@ class psyq::scenario_engine::_private::reservoir
     /** @name 状態値の変化
         @{
      */
-    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
+    /** @brief psyq::if_then_engine 管理者以外は、この関数は使用禁止。
 
         状態変化フラグを取得する。
 
@@ -895,7 +895,7 @@ class psyq::scenario_engine::_private::reservoir
         return local_status != nullptr? local_status->get_transition(): -1;
     }
 
-    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
+    /** @brief psyq::if_then_engine 管理者以外は、この関数は使用禁止。
 
         状態変化フラグを初期化する。
      */
@@ -1268,7 +1268,7 @@ class psyq::scenario_engine::_private::reservoir
     /// @brief 状態値ビット列チャンクのコンテナ。
     private: typename this_type::chunk_container chunks_;
 
-}; // class psyq::scenario_engine::_private::reservoir
+}; // class psyq::if_then_engine::_private::reservoir
 
-#endif // !defined(PSYQ_SCENARIO_ENGINE_RESERVOIR_HPP_)
+#endif // !defined(PSYQ_IF_THEN_ENGINE_RESERVOIR_HPP_)
 // vim: set expandtab:

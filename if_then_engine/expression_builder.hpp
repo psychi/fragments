@@ -1,57 +1,57 @@
 ﻿/** @file
-    @copybrief psyq::scenario_engine::expression_builder
+    @copybrief psyq::if_then_engine::expression_builder
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_HPP_
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_HPP_
+#define PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_HPP_
 
 #include "../assert.hpp"
 
 /// @cond
 namespace psyq
 {
-    namespace scenario_engine
+    namespace if_then_engine
     {
         template<typename> class expression_builder;
-    } // namespace scenario_engine
+    } // namespace if_then_engine
 } // namespace psyq
 /// @endcond
 
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_COLUMN_KEY
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_COLUMN_KEY "KEY"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_COLUMN_KEY)
+#ifndef PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KEY
+#define PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KEY "KEY"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KEY)
 
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC "LOGIC"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC)
+#ifndef PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC
+#define PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC "LOGIC"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC)
 
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND "KIND"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND)
+#ifndef PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND
+#define PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND "KIND"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND)
 
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT "ELEMENT"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT)
+#ifndef PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT
+#define PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT "ELEMENT"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT)
 
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_LOGIC_AND
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_LOGIC_AND "AND"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_LOGIC_AND)
+#ifndef PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_AND
+#define PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_AND "AND"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_AND)
 
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_LOGIC_OR
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_LOGIC_OR "OR"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_LOGIC_OR)
+#ifndef PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_OR
+#define PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_OR "OR"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_OR)
 
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION "SUB_EXPRESSION"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION)
+#ifndef PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION
+#define PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION "SUB_EXPRESSION"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION)
 
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION "STATUS_TRANSITION"
-#endif // !define(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION)
+#ifndef PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION
+#define PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION "STATUS_TRANSITION"
+#endif // !define(PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION)
 
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON "STATUS_COMPARISON"
-#endif // !define(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON)
+#ifndef PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON
+#define PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON "STATUS_COMPARISON"
+#endif // !define(PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON)
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 文字列表から条件式を構築する関数オブジェクト。
@@ -61,7 +61,7 @@ namespace psyq
     @tparam template_relation_table @copydoc expression_builder::relation_table
  */
 template<typename template_relation_table>
-class psyq::scenario_engine::expression_builder
+class psyq::if_then_engine::expression_builder
 {
     /// @brief thisが指す値の型。
     private: typedef expression_builder this_type;
@@ -80,16 +80,16 @@ class psyq::scenario_engine::expression_builder
         PSYQ_NOEXCEPT:
         key_(
             in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_COLUMN_KEY)),
+                PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KEY)),
         logic_(
             in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC)),
+                PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC)),
         kind_(
             in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND)),
+                PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND)),
         element_(
             in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT))
+                PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT))
         {}
 
         public: bool is_valid() const PSYQ_NOEXCEPT
@@ -265,13 +265,13 @@ class psyq::scenario_engine::expression_builder
             in_table.find_body_cell(in_row_index, in_attribute.logic_.first));
         typename template_evaluator::expression::logic local_logic;
         if (local_logic_cell
-            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_LOGIC_AND)
+            == PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_AND)
         {
             local_logic = template_evaluator::expression::logic_AND;
         }
         else if (
             local_logic_cell
-            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_LOGIC_OR)
+            == PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_OR)
         {
             local_logic = template_evaluator::expression::logic_OR;
         }
@@ -286,7 +286,7 @@ class psyq::scenario_engine::expression_builder
         auto const& local_kind_cell(
             in_table.find_body_cell(in_row_index, in_attribute.kind_.first));
         if (local_kind_cell
-            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION)
+            == PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION)
         {
             // 複合条件式の要素条件を構築する。
             return this_type::build_expression(
@@ -303,7 +303,7 @@ class psyq::scenario_engine::expression_builder
         }
         else if (
             local_kind_cell
-            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION)
+            == PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION)
         {
             // 状態変化条件式の要素条件を構築する。
             return this_type::build_expression(
@@ -320,7 +320,7 @@ class psyq::scenario_engine::expression_builder
         }
         else if (
             local_kind_cell
-            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON)
+            == PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON)
         {
             // 状態比較条件式の要素条件を構築する。
             return this_type::build_expression(
@@ -557,7 +557,7 @@ class psyq::scenario_engine::expression_builder
     /// @brief 解析する文字列表。
     private: typename this_type::relation_table relation_table_;
 
-}; // class psyq::scenario_engine::expression_builder
+}; // class psyq::if_then_engine::expression_builder
 
-#endif // !defined(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_HPP_)
+#endif // !defined(PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_HPP_)
 // vim: set expandtab:

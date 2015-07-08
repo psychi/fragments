@@ -1,9 +1,9 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::_private::expression_monitor
+    @brief @copybrief psyq::if_then_engine::_private::expression_monitor
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_MONITOR_HPP_
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_MONITOR_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_EXPRESSION_MONITOR_HPP_
+#define PSYQ_IF_THEN_ENGINE_EXPRESSION_MONITOR_HPP_
 
 #include <cstdint>
 #include <bitset>
@@ -14,14 +14,14 @@
 /// @cond
 namespace psyq
 {
-    namespace scenario_engine
+    namespace if_then_engine
     {
         namespace _private
         {
             template<typename, typename, typename, typename>
                 class expression_monitor;
         } // namespace _private
-    } // namespace scenario_engine
+    } // namespace if_then_engine
 } // namespace psyq
 /// @endcond
 
@@ -32,7 +32,7 @@ namespace psyq
     条件式の評価結果が変化した際に呼び出す条件挙動関数オブジェクトを保持する。
 
     @tparam template_expression_key @copydoc evaluator::expression::key
-    @tparam template_evaluation     @copydoc psyq::scenario_engine::evaluation
+    @tparam template_evaluation     @copydoc psyq::if_then_engine::evaluation
     @tparam template_priority       @copydoc dispatcher::function_priority
     @tparam template_allocator      @copydoc reservoir::allocator_type
  */
@@ -41,7 +41,7 @@ template<
     typename template_evaluation,
     typename template_priority,
     typename template_allocator>
-class psyq::scenario_engine::_private::expression_monitor
+class psyq::if_then_engine::_private::expression_monitor
 {
     /// @brief thisが指す値の型。
     private: typedef expression_monitor this_type;
@@ -62,14 +62,14 @@ class psyq::scenario_engine::_private::expression_monitor
 
     /// @brief 条件式監視器を条件式の識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
     public: typedef
-        psyq::scenario_engine::_private::key_less<
-            psyq::scenario_engine::_private::object_key_getter<
+        psyq::if_then_engine::_private::key_less<
+            psyq::if_then_engine::_private::object_key_getter<
                 this_type, template_expression_key>>
         key_less;
 
     /// @brief 条件挙動。
     public: typedef
-        psyq::scenario_engine::_private::behavior<
+        psyq::if_then_engine::_private::behavior<
             template_expression_key, template_evaluation, template_priority>
         behavior;
 
@@ -357,7 +357,7 @@ class psyq::scenario_engine::_private::expression_monitor
                         io_behavior_caches.cbegin(),
                         io_behavior_caches.cend(),
                         local_behavior.priority_,
-                        psyq::scenario_engine::_private::key_less<
+                        psyq::if_then_engine::_private::key_less<
                             typename this_type::behavior_cache_key_getter>()),
                     local_behavior,
                     local_cache);
@@ -433,7 +433,7 @@ class psyq::scenario_engine::_private::expression_monitor
     /// @brief フラグの集合。
     public: std::bitset<8> flags_;
 
-}; // class psyq::scenario_engine::_private::expression_monitor
+}; // class psyq::if_then_engine::_private::expression_monitor
 
-#endif // defined(PSYQ_SCENARIO_ENGINE_EXPRESSION_MONITOR_HPP_)
+#endif // defined(PSYQ_IF_THEN_ENGINE_EXPRESSION_MONITOR_HPP_)
 // vim: set expandtab:

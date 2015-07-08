@@ -1,9 +1,9 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::_private::status_summary
+    @brief @copybrief psyq::if_then_engine::_private::status_summary
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_SUMMARY_HPP_
-#define PSYQ_SCENARIO_ENGINE_STATUS_SUMMARY_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_SUMMARY_HPP_
+#define PSYQ_IF_THEN_ENGINE_STATUS_SUMMARY_HPP_
 
 #include <cstdint>
 #include "../assert.hpp"
@@ -11,7 +11,7 @@
 /// @cond
 namespace psyq
 {
-    namespace scenario_engine
+    namespace if_then_engine
     {
         namespace _private
         {
@@ -24,7 +24,7 @@ namespace psyq
                 class status_summary;
             template<typename, typename, typename> class status_chunk;
         } // namespace _private
-    } // namespace scenario_engine
+    } // namespace if_then_engine
 } // namespace psyq
 /// @endcond
 
@@ -40,7 +40,7 @@ template<
     typename template_chunk_key,
     typename template_bit_position,
     typename template_bit_width>
-class psyq::scenario_engine::_private::status_summary
+class psyq::if_then_engine::_private::status_summary
 {
     /// @brief thisが指す値の型。
     private: typedef status_summary this_type;
@@ -239,7 +239,7 @@ class psyq::scenario_engine::_private::status_summary
     /// @brief 状態値が格納されているビット領域。
     typename this_type::format format_;
 
-}; // class psyq::scenario_engine::_private::status_summary
+}; // class psyq::if_then_engine::_private::status_summary
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 空きビット領域を比較する関数オブジェクト。
@@ -248,7 +248,7 @@ template<
     typename template_chunk_key,
     typename template_bit_position,
     typename template_bit_width>
-struct psyq::scenario_engine::_private::status_summary<
+struct psyq::if_then_engine::_private::status_summary<
     template_key,
     template_chunk_key,
     template_bit_position,
@@ -294,7 +294,7 @@ struct psyq::scenario_engine::_private::status_summary<
         return in_left < local_right_width;
     }
 
-}; // struct psyq::scenario_engine::_private::status_summary::format_less
+}; // struct psyq::if_then_engine::_private::status_summary::format_less
 
-#endif // defined(PSYQ_SCENARIO_ENGINE_STATUS_SUMMARY_HPP_)
+#endif // defined(PSYQ_IF_THEN_ENGINE_STATUS_SUMMARY_HPP_)
 // vim: set expandtab:

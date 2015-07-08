@@ -1,55 +1,55 @@
 ﻿/** @file
-    @copybrief psyq::scenario_engine::status_builder
+    @copybrief psyq::if_then_engine::status_builder
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_HPP_
-#define PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_HPP_
+#define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_HPP_
 
 #include "../string/numeric_parser.hpp"
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_COLUMN_KEY
-#define PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_COLUMN_KEY "KEY"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_COLUMN_KEY)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_KEY
+#define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_KEY "KEY"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_KEY)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_COLUMN_KIND
-#define PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_COLUMN_KIND "KIND"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_COLUMN_KIND)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_KIND
+#define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_KIND "KIND"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_KIND)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_COLUMN_VALUE
-#define PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_COLUMN_VALUE "VALUE"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_COLUMN_VALUE)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_VALUE
+#define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_VALUE "VALUE"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_VALUE)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_KIND_BOOL
-#define PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_KIND_BOOL "BOOL"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_KIND_BOOL)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_BOOL
+#define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_BOOL "BOOL"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_BOOL)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_KIND_UNSIGNED
-#define PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_KIND_UNSIGNED "UNSIGNED"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_KIND_UNSIGNED)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_UNSIGNED
+#define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_UNSIGNED "UNSIGNED"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_UNSIGNED)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_KIND_SIGNED
-#define PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_KIND_SIGNED "SIGNED"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_KIND_SIGNED)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_SIGNED
+#define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_SIGNED "SIGNED"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_SIGNED)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_KIND_FLOAT
-#define PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_KIND_FLOAT "FLOAT"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_KIND_FLOAT)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_FLOAT
+#define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_FLOAT "FLOAT"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_FLOAT)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_INTEGER_SIZE_DEFAULT
-#define PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_INTEGER_SIZE_DEFAULT 32
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_INTEGER_SIZE_DEFAULT)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_INTEGER_SIZE_DEFAULT
+#define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_INTEGER_SIZE_DEFAULT 32
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_INTEGER_SIZE_DEFAULT)
 
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_FLOAT_SIZE_DEFAULT
-#define PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_FLOAT_SIZE_DEFAULT 32
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_FLOAT_SIZE_DEFAULT)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_FLOAT_SIZE_DEFAULT
+#define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_FLOAT_SIZE_DEFAULT 32
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_FLOAT_SIZE_DEFAULT)
 
 /// @cond
 namespace psyq
 {
-    namespace scenario_engine
+    namespace if_then_engine
     {
         template<typename> class status_builder;
-    } // namespace scenario_engine
+    } // namespace if_then_engine
 } // namespace psyq
 /// @endcond
 
@@ -61,7 +61,7 @@ namespace psyq
     @tparam template_relation_table @copydoc status_builder::relation_table
  */
 template<typename template_relation_table>
-class psyq::scenario_engine::status_builder
+class psyq::if_then_engine::status_builder
 {
     /// @brief thisが指す値の型。
     private: typedef status_builder this_type;
@@ -80,13 +80,13 @@ class psyq::scenario_engine::status_builder
         PSYQ_NOEXCEPT:
         key_(
             in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_COLUMN_KEY)),
+                PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_KEY)),
         kind_(
             in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_COLUMN_KIND)),
+                PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_KIND)),
         value_(
             in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_COLUMN_VALUE))
+                PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_VALUE))
         {}
 
         public: bool is_valid() const PSYQ_NOEXCEPT
@@ -236,13 +236,13 @@ class psyq::scenario_engine::status_builder
         typename this_type::relation_table::string::view const& in_kind,
         typename this_type::relation_table::string::view const& in_value)
     {
-        if (in_kind == PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_KIND_BOOL)
+        if (in_kind == PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_BOOL)
         {
             // 論理型の状態値を登録する。
             return this_type::register_bool(
                 io_reservoir, in_chunk_key, in_status_key, in_value);
         }
-        if (in_kind == PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_KIND_FLOAT)
+        if (in_kind == PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_FLOAT)
         {
             // 浮動小数点数型の状態値を登録する。
             return this_type::register_float(
@@ -252,7 +252,7 @@ class psyq::scenario_engine::status_builder
         auto const local_unsigned_size(
             this_type::get_integer_size(
                 in_kind,
-                PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_KIND_UNSIGNED,
+                PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_UNSIGNED,
                 local_default_size));
         if (0 < local_unsigned_size)
         {
@@ -267,7 +267,7 @@ class psyq::scenario_engine::status_builder
         auto const local_signed_size(
             this_type::get_integer_size(
                 in_kind,
-                PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_KIND_SIGNED,
+                PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_SIGNED,
                 local_default_size));
         if (0 < local_signed_size)
         {
@@ -436,7 +436,7 @@ class psyq::scenario_engine::status_builder
     /// @brief 解析する文字列表。
     private: typename this_type::relation_table relation_table_;
 
-}; // class psyq::scenario_engine::status_builder
+}; // class psyq::if_then_engine::status_builder
 
-#endif // !defined(PSYQ_SCENARIO_ENGINE_STATUS_BUILDER_HPP_)
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_HPP_)
 // vim: set expandtab:

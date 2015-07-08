@@ -1,43 +1,43 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::behavior_builder
+    @brief @copybrief psyq::if_then_engine::behavior_builder
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_HPP_
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_HPP_
+#define PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_HPP_
 
 #include "../string/numeric_parser.hpp"
 
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_KEY
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_KEY "KEY"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_KEY)
+#ifndef PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_KEY
+#define PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_KEY "KEY"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_KEY)
 
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_CONDITION
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_CONDITION "CONDITION"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_CONDITION)
+#ifndef PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_CONDITION
+#define PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_CONDITION "CONDITION"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_CONDITION)
 
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_PRIORITY
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_PRIORITY "PRIORITY"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_PRIORITY)
+#ifndef PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_PRIORITY
+#define PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_PRIORITY "PRIORITY"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_PRIORITY)
 
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_KIND
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_KIND "KIND"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_KIND)
+#ifndef PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_KIND
+#define PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_KIND "KIND"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_KIND)
 
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS "STATUS"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS)
+#ifndef PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS
+#define PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS "STATUS"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS)
 
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_ARGUMENT
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_ARGUMENT "ARGUMENT"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_ARGUMENT)
+#ifndef PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_ARGUMENT
+#define PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_ARGUMENT "ARGUMENT"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_ARGUMENT)
 
 /// @cond
 namespace psyq
 {
-    namespace scenario_engine
+    namespace if_then_engine
     {
         template<typename, typename> class behavior_builder;
-    } // namespace scenario_engine
+    } // namespace if_then_engine
 } // namespace psyq
 /// @endcond
 
@@ -50,7 +50,7 @@ namespace psyq
     @tparam template_dispatcher     @copydoc behavior_builder::dispatcher
  */
 template<typename template_relation_table, typename template_dispatcher>
-class psyq::scenario_engine::behavior_builder
+class psyq::if_then_engine::behavior_builder
 {
     private: typedef behavior_builder this_type;
 
@@ -77,19 +77,19 @@ class psyq::scenario_engine::behavior_builder
         PSYQ_NOEXCEPT:
         key_(
             in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_KEY)),
+                PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_KEY)),
         condition_(
             in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_CONDITION)),
+                PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_CONDITION)),
         priority_(
             in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_PRIORITY)),
+                PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_PRIORITY)),
         kind_(
             in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_KIND)),
+                PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_KIND)),
         argument_(
             in_table.find_attribute(
-                PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_ARGUMENT))
+                PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_ARGUMENT))
         {}
 
         bool is_valid() const PSYQ_NOEXCEPT
@@ -256,7 +256,7 @@ class psyq::scenario_engine::behavior_builder
         auto const& local_kind_cell(
             in_table.find_body_cell(in_row_index, in_attribute.kind_.first));
         if (local_kind_cell
-            == PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS)
+            == PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS)
         {
             return this_type::build_status_assignment_function(
                 io_hasher,
@@ -327,8 +327,8 @@ class psyq::scenario_engine::behavior_builder
                 [=, &io_modifier](
                     typename this_type::dispatcher::evaluator::expression::key
                         const&,
-                    psyq::scenario_engine::evaluation const in_evaluation,
-                    psyq::scenario_engine::evaluation const in_last_evaluation)
+                    psyq::if_then_engine::evaluation const in_evaluation,
+                    psyq::if_then_engine::evaluation const in_last_evaluation)
                 {
                     // 条件と評価が合致すれば、状態値を代入演算する。
                     if (0 <= in_last_evaluation
@@ -392,7 +392,7 @@ class psyq::scenario_engine::behavior_builder
     /// @brief 解析する文字列表。
     private: typename this_type::relation_table relation_table_;
 
-}; // class psyq::scenario_engine::behavior_builder
+}; // class psyq::if_then_engine::behavior_builder
 
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_HPP_)
+#endif // !defined(PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_HPP_)
 // vim: set expandtab:

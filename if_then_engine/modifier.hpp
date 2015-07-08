@@ -1,9 +1,9 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::_private::modifier
+    @brief @copybrief psyq::if_then_engine::_private::modifier
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_MODIFIER_HPP_
-#define PSYQ_SCENARIO_ENGINE_MODIFIER_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_MODIFIER_HPP_
+#define PSYQ_IF_THEN_ENGINE_MODIFIER_HPP_
 
 #include <cstdint>
 #include <vector>
@@ -12,18 +12,18 @@
 /// @cond
 namespace psyq
 {
-    namespace scenario_engine
+    namespace if_then_engine
     {
         namespace _private
         {
             template<typename> class modifier;
         } // namespace _private
-    } // namespace scenario_engine
+    } // namespace if_then_engine
 } // namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief シナリオ状態変更器。バッチ処理で状態値の変更を行う。
+/** @brief 状態変更器。バッチ処理で状態値の変更を行う。
 
     ### 使い方の概略
     - modifier::accumulate で、状態変更を予約する。
@@ -32,14 +32,14 @@ namespace psyq
     @tparam template_reservoir @copydoc modifier::reservoir
  */
 template<typename template_reservoir>
-class psyq::scenario_engine::_private::modifier
+class psyq::if_then_engine::_private::modifier
 {
     /// @brief thisが指す値の型。
     private: typedef modifier this_type;
 
     /** @brief 状態変更を適用する状態貯蔵器の型。
 
-        psyq::scenario_engine::_private::reservoir と互換性があること。
+        psyq::if_then_engine::_private::reservoir と互換性があること。
      */
     public: typedef template_reservoir reservoir;
 
@@ -180,7 +180,7 @@ class psyq::scenario_engine::_private::modifier
             in_delay == this_type::delay_BLOCK);
     }
 
-    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
+    /** @brief psyq::if_then_engine 管理者以外は、この関数は使用禁止。
 
         this_type::accumulate で予約した状態変更を、実際に適用する。
 
@@ -255,7 +255,7 @@ class psyq::scenario_engine::_private::modifier
     /// @brief 次回以降に遅延させる状態変更のコンテナ。
     private: typename this_type::status_container delay_statuses_;
 
-}; // class psyq::scenario_engine::_private::modifier
+}; // class psyq::if_then_engine::_private::modifier
 
-#endif // !defined(PSYQ_SCENARIO_ENGINE_MODIFIER_HPP_)
+#endif // !defined(PSYQ_IF_THEN_ENGINE_MODIFIER_HPP_)
 // vim: set expandtab:

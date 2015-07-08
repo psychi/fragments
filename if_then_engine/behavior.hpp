@@ -1,9 +1,9 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::_private::behavior
+    @brief @copybrief psyq::if_then_engine::_private::behavior
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_HPP_
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_BEHAVIOR_HPP_
+#define PSYQ_IF_THEN_ENGINE_BEHAVIOR_HPP_
 
 #include <functional>
 #include <memory>
@@ -11,28 +11,28 @@
 /// @cond
 namespace psyq
 {
-    namespace scenario_engine
+    namespace if_then_engine
     {
         namespace _private
         {
             template<typename, typename, typename> class behavior;
         } // namespace _private
-    } // namespace scenario_engine
+    } // namespace if_then_engine
 } // namespace psyq
 /// @endcond
 
 //-------------------------------------------------------------------------
 /** @brief 条件挙動。
 
-    @tparam template_expression_key @copydoc psyq::scenario_engine::_private::expression::key
-    @tparam template_evaluation     @copydoc psyq::scenario_engine::evaluation
-    @tparam template_priority       @copydoc psyq::scenario_engine::_private::dispatcher::function_priority
+    @tparam template_expression_key @copydoc psyq::if_then_engine::_private::expression::key
+    @tparam template_evaluation     @copydoc psyq::if_then_engine::evaluation
+    @tparam template_priority       @copydoc psyq::if_then_engine::_private::dispatcher::function_priority
  */
 template<
     typename template_expression_key,
     typename template_evaluation,
     typename template_priority>
-class psyq::scenario_engine::_private::behavior
+class psyq::if_then_engine::_private::behavior
 {
     /// @brief thisが指す値の型。
     private: typedef behavior this_type;
@@ -133,5 +133,5 @@ class psyq::scenario_engine::_private::behavior
 
 }; // class behavior
 
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_HPP_)
+#endif // !defined(PSYQ_IF_THEN_ENGINE_BEHAVIOR_HPP_)
 // vim: set expandtab:

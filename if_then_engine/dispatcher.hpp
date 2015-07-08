@@ -1,28 +1,28 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::_private::dispatcher
+    @brief @copybrief psyq::if_then_engine::_private::dispatcher
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_DISPATCHER_HPP_
-#define PSYQ_SCENARIO_ENGINE_DISPATCHER_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_DISPATCHER_HPP_
+#define PSYQ_IF_THEN_ENGINE_DISPATCHER_HPP_
 
 #include "./expression_monitor.hpp"
 
 /// @cond
 namespace psyq
 {
-    namespace scenario_engine
+    namespace if_then_engine
     {
         namespace _private
         {
             template<typename, typename> class dispatcher;
             template<typename, typename, typename> class status_monitor;
         } // namespace _private
-    } // namespace scenario_engine
+    } // namespace if_then_engine
 } // namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief シナリオ条件挙動器。条件式の評価結果が変化すると、条件挙動関数を呼び出す。
+/** @brief 条件挙動器。条件式の評価結果が変化すると、条件挙動関数を呼び出す。
 
     ### 使い方の概略
     - dispatcher::register_function で、
@@ -34,14 +34,14 @@ namespace psyq
     @tparam template_priority  @copydoc dispatcher::function_priority
  */
 template<typename template_evaluator, typename template_priority>
-class psyq::scenario_engine::_private::dispatcher
+class psyq::if_then_engine::_private::dispatcher
 {
     /// @brief thisが指す値の型。
     private: typedef dispatcher this_type;
 
     /** @brief 条件挙動器で使う条件評価器の型。
 
-        psyq::scenario_engine::_private::evaluator と互換性があること。
+        psyq::if_then_engine::_private::evaluator と互換性があること。
      */
     public: typedef template_evaluator evaluator;
 
@@ -59,7 +59,7 @@ class psyq::scenario_engine::_private::dispatcher
     //-------------------------------------------------------------------------
     /// @brief 状態監視器。
     private: typedef
-         psyq::scenario_engine::_private::status_monitor<
+         psyq::if_then_engine::_private::status_monitor<
              typename this_type::evaluator::reservoir::status_key,
              typename this_type::evaluator::expression::key,
              typename this_type::allocator_type>
@@ -67,9 +67,9 @@ class psyq::scenario_engine::_private::dispatcher
 
     /// @brief 条件式監視器。
     private: typedef
-        psyq::scenario_engine::_private::expression_monitor<
+        psyq::if_then_engine::_private::expression_monitor<
             typename this_type::evaluator::expression::key,
-            psyq::scenario_engine::evaluation,
+            psyq::if_then_engine::evaluation,
             typename this_type::function_priority,
             typename this_type::allocator_type>
         expression_monitor;
@@ -285,7 +285,7 @@ class psyq::scenario_engine::_private::dispatcher
         }
     }
 
-    /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
+    /** @brief psyq::if_then_engine 管理者以外は、この関数は使用禁止。
 
         条件式の評価が変化していれば、
         this_type::register_function で登録した条件挙動関数を呼び出す。
@@ -731,7 +731,7 @@ class psyq::scenario_engine::_private::dispatcher
     /// @brief 多重に条件挙動関数を呼び出さないためのロック。
     private: bool dispatch_lock_;
 
-}; // class psyq::scenario_engine::_private::dispatcher
+}; // class psyq::if_then_engine::_private::dispatcher
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 状態監視器。
@@ -743,7 +743,7 @@ template<
     typename template_status_key,
     typename template_expression_key,
     typename template_allocator>
-class psyq::scenario_engine::_private::status_monitor
+class psyq::if_then_engine::_private::status_monitor
 {
     /// @brief thisが指す値の型。
     private: typedef status_monitor this_type;
@@ -753,8 +753,8 @@ class psyq::scenario_engine::_private::status_monitor
 
     /// @brief 状態監視器を状態値の識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
     public: typedef
-        psyq::scenario_engine::_private::key_less<
-            psyq::scenario_engine::_private::object_key_getter<
+        psyq::if_then_engine::_private::key_less<
+            psyq::if_then_engine::_private::object_key_getter<
                 this_type, template_status_key>>
         key_less;
 
@@ -801,7 +801,7 @@ class psyq::scenario_engine::_private::status_monitor
     /// @brief 状態値の識別値。
     public: template_status_key key_;
 
-}; // class psyq::scenario_engine::_private::status_monitor
+}; // class psyq::if_then_engine::_private::status_monitor
 
-#endif // !defined(PSYQ_SCENARIO_ENGINE_DISPATCHER_HPP_)
+#endif // !defined(PSYQ_IF_THEN_ENGINE_DISPATCHER_HPP_)
 // vim: set expandtab:

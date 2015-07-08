@@ -1,9 +1,9 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::_private::expression
+    @brief @copybrief psyq::if_then_engine::_private::expression
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_HPP_
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_EXPRESSION_HPP_
+#define PSYQ_IF_THEN_ENGINE_EXPRESSION_HPP_
 
 #include <cstdint>
 #include "../assert.hpp"
@@ -11,7 +11,7 @@
 /// @cond
 namespace psyq
 {
-    namespace scenario_engine
+    namespace if_then_engine
     {
         namespace _private
         {
@@ -21,7 +21,7 @@ namespace psyq
             template<typename, typename, typename, typename>
                 class expression_chunk;
         } // namespace _private
-    } // namespace scenario_engine
+    } // namespace if_then_engine
 } // namespace psyq
 /// @endcond
 
@@ -35,7 +35,7 @@ template<
     typename template_key,
     typename template_chunk_key,
     typename template_element_index>
-class psyq::scenario_engine::_private::expression
+class psyq::if_then_engine::_private::expression
 {
     /// @brief thisが指す値の型。
     private: typedef expression this_type;
@@ -101,7 +101,7 @@ class psyq::scenario_engine::_private::expression
     public: template<
         typename template_element_container,
         typename template_element_evaluator>
-    psyq::scenario_engine::evaluation evaluate(
+    psyq::if_then_engine::evaluation evaluate(
         template_element_container const& in_elements,
         template_element_evaluator const& in_evaluator)
     const PSYQ_NOEXCEPT
@@ -151,15 +151,15 @@ class psyq::scenario_engine::_private::expression
     /// @brief 条件式の種類。
     public: typename this_type::kind kind_;
 
-}; // class psyq::scenario_engine::_private::expression
+}; // class psyq::if_then_engine::_private::expression
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 複合条件式の要素条件。
 
-    @tparam template_expression_key @copydoc psyq::scenario_engine::_private::expression::key
+    @tparam template_expression_key @copydoc psyq::if_then_engine::_private::expression::key
  */
 template<typename template_expression_key>
-class psyq::scenario_engine::_private::sub_expression
+class psyq::if_then_engine::_private::sub_expression
 {
     private: typedef sub_expression this_type;
 
@@ -180,15 +180,15 @@ class psyq::scenario_engine::_private::sub_expression
     /// @brief 結合する際の条件。
     public: bool condition_;
 
-}; // class psyq::scenario_engine::_private::sub_expression
+}; // class psyq::if_then_engine::_private::sub_expression
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 状態変化条件式の要素条件。
 
-    @tparam template_status_key @copydoc psyq::scenario_engine::_private::reservoir::status_key
+    @tparam template_status_key @copydoc psyq::if_then_engine::_private::reservoir::status_key
  */
 template<typename template_status_key>
-class psyq::scenario_engine::_private::status_transition
+class psyq::if_then_engine::_private::status_transition
 {
     private: typedef status_transition this_type;
 
@@ -202,7 +202,7 @@ class psyq::scenario_engine::_private::status_transition
     /// @brief 変化を検知する状態値の識別値。
     public: template_status_key key_;
 
-}; // class psyq::scenario_engine::_private::status_transition
+}; // class psyq::if_then_engine::_private::status_transition
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 要素条件チャンク。
@@ -217,7 +217,7 @@ template<
     typename template_sub_expression_container,
     typename template_status_transition_container,
     typename template_status_comparison_container>
-class psyq::scenario_engine::_private::expression_chunk
+class psyq::if_then_engine::_private::expression_chunk
 {
     private: typedef expression_chunk this_type;
 
@@ -279,7 +279,7 @@ class psyq::scenario_engine::_private::expression_chunk
     /// @brief この要素条件チャンクに対応する識別値。
     public: template_chunk_key key_;
 
-}; // class psyq::scenario_engine::_private::expression_chunk
+}; // class psyq::if_then_engine::_private::expression_chunk
 
-#endif // defined(PSYQ_SCENARIO_ENGINE_EXPRESSION_HPP_)
+#endif // defined(PSYQ_IF_THEN_ENGINE_EXPRESSION_HPP_)
 // vim: set expandtab:

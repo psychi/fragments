@@ -2,8 +2,8 @@
     @brief 
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_TEST_HPP_
-#define PSYQ_SCENARIO_ENGINE_TEST_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_TEST_HPP_
+#define PSYQ_IF_THEN_ENGINE_TEST_HPP_
 
 #include "./driver.hpp"
 #include "../string/storage.hpp"
@@ -11,10 +11,10 @@
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq_test
 {
-    inline void scenario_engine()
+    inline void if_then_engine()
     {
-        // シナリオ駆動機を構築する。
-        typedef psyq::scenario_engine::driver<> driver;
+        // 駆動機を構築する。
+        typedef psyq::if_then_engine::driver<> driver;
         driver local_driver(256, 256, 256);
 
         // 文字列表の構築に使うフライ級文字列生成器を構築する。
@@ -27,7 +27,7 @@ namespace psyq_test
 
         // 状態値CSV文字列を構築する。
         flyweight_string::view const local_csv_status(
-            "KEY,            KIND,      VALUE,\n"
+            "KEY,             KIND,      VALUE,\n"
             "status_bool,     BOOL,       TRUE,\n"
             "status_unsigned, UNSIGNED_7,   10,\n"
             "status_signed,   SIGNED_13,   -20,\n"
@@ -36,7 +36,7 @@ namespace psyq_test
 
         // 条件式CSV文字列を構築する。
         flyweight_string::view const local_csv_expression(
-            "KEY,          LOGIC, KIND,             ELEMENT,\n"
+            "KEY,          LOGIC, KIND,              ELEMENT,\n"
             "expression_0, AND,   STATUS_COMPARISON, status_bool,     ==, FALSE,\n"
             "expression_1, AND,   STATUS_COMPARISON, status_unsigned, <=, 10,\n"
             "expression_2, AND,   STATUS_COMPARISON, status_signed,   >=, STATUS:status_unsigned,\n"
@@ -63,7 +63,7 @@ namespace psyq_test
             "expression_8, TRUE,      1,      STATUS, status_unsigned, &=, 0\n"
             "");
 
-        // 状態値と条件式と条件挙動を、シナリオ駆動機に登録する。
+        // 状態値と条件式と条件挙動を、駆動器に登録する。
         auto const local_chunk_key(local_driver.hash_function_("chunk_0"));
         psyq::string::storage<flyweight_string::view::value_type>
             local_workspace_string;
@@ -132,5 +132,5 @@ namespace psyq_test
     }
 }
 
-#endif // defined(PSYQ_SCENARIO_ENGINE_TEST_HPP_)
+#endif // defined(PSYQ_IF_THEN_ENGINE_TEST_HPP_)
 // vim: set expandtab:

@@ -1,28 +1,28 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::_private::key_less
+    @brief @copybrief psyq::if_then_engine::_private::key_less
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_KEY_LESS_HPP_
-#define PSYQ_SCENARIO_ENGINE_KEY_LESS_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_KEY_LESS_HPP_
+#define PSYQ_IF_THEN_ENGINE_KEY_LESS_HPP_
 
 /// @cond
 namespace psyq
 {
-    namespace scenario_engine
+    namespace if_then_engine
     {
         namespace _private
         {
             template<typename, typename> struct object_key_getter;
             template<typename> struct key_less;
         } // namespace _private
-    } // namespace scenario_engine
+    } // namespace if_then_engine
 } // namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief オブジェクトからキーを取得する関数オブジェクト。
 template<typename template_object, typename template_key>
-struct psyq::scenario_engine::_private::object_key_getter
+struct psyq::if_then_engine::_private::object_key_getter
 {
     /// @brief オブジェクトの型。
     typedef template_object object;
@@ -43,7 +43,7 @@ struct psyq::scenario_engine::_private::object_key_getter
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 識別値を比較する関数オブジェクト。
 template<typename template_key_getter>
-struct psyq::scenario_engine::_private::key_less
+struct psyq::if_then_engine::_private::key_less
 {
     bool operator()(
         typename template_key_getter::object const& in_left,
@@ -143,7 +143,7 @@ struct psyq::scenario_engine::_private::key_less
             find_const_pointer(in_container, in_key));
     }
 
-}; // struct psyq::scenario_engine::_private::key_less
+}; // struct psyq::if_then_engine::_private::key_less
 
-#endif // defined(PSYQ_SCENARIO_ENGINE_KEY_LESS_HPP_)
+#endif // defined(PSYQ_IF_THEN_ENGINE_KEY_LESS_HPP_)
 // vim: set expandtab:

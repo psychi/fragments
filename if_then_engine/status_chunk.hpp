@@ -1,9 +1,9 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::_private::status_chunk
+    @brief @copybrief psyq::if_then_engine::_private::status_chunk
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_STATUS_CHUNK_HPP_
-#define PSYQ_SCENARIO_ENGINE_STATUS_CHUNK_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_CHUNK_HPP_
+#define PSYQ_IF_THEN_ENGINE_STATUS_CHUNK_HPP_
 
 #include <cstdint>
 #include "../assert.hpp"
@@ -11,13 +11,13 @@
 /// @cond
 namespace psyq
 {
-    namespace scenario_engine
+    namespace if_then_engine
     {
         namespace _private
         {
             template<typename, typename, typename> class status_chunk;
         } // namespace _private
-    } // namespace scenario_engine
+    } // namespace if_then_engine
 } // namespace psyq
 /// @endcond
 
@@ -31,7 +31,7 @@ template<
     typename template_key,
     typename template_block_container,
     typename template_field_container>
-class psyq::scenario_engine::_private::status_chunk
+class psyq::if_then_engine::_private::status_chunk
 {
     /// @brief thisが指す値の型。
     private: typedef status_chunk this_type;
@@ -52,7 +52,7 @@ class psyq::scenario_engine::_private::status_chunk
     {
         /// @brief 状態値ビット列ブロックのビット数。
         BLOCK_WIDTH = sizeof(typename this_type::block) *
-            psyq::scenario_engine::_private::BITS_PER_BYTE,
+            psyq::if_then_engine::_private::BITS_PER_BYTE,
     };
 
     //-------------------------------------------------------------------------
@@ -311,7 +311,7 @@ class psyq::scenario_engine::_private::status_chunk
     /// @brief key
     public: typename this_type::key key_;
 
-}; // class psyq::scenario_engine::_private::status_chunk
+}; // class psyq::if_then_engine::_private::status_chunk
 
-#endif // defined(PSYQ_SCENARIO_ENGINE_STATUS_CHUNK_HPP_)
+#endif // defined(PSYQ_IF_THEN_ENGINE_STATUS_CHUNK_HPP_)
 // vim: set expandtab:

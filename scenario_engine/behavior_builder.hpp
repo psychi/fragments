@@ -23,9 +23,9 @@
 #define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_KIND "KIND"
 #endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_KIND)
 
-#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_KIND_STATE
-#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_KIND_STATE "STATE"
-#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_KIND_STATE)
+#ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS
+#define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS "STATUS"
+#endif // !defined(PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS)
 
 #ifndef PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_ARGUMENT
 #define PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_COLUMN_ARGUMENT "ARGUMENT"
@@ -243,22 +243,22 @@ class psyq::scenario_engine::behavior_builder
         auto const& local_condition_cell(
             in_table.find_body_cell(
                 in_row_index, in_attribute.condition_.first));
-        auto const local_bool_state(local_condition_cell.to_bool());
-        if (local_bool_state < 0)
+        auto const local_bool_status(local_condition_cell.to_bool());
+        if (local_bool_status < 0)
         {
             // 未知の条件だった。
             PSYQ_ASSERT(false);
             return typename this_type::dispatcher::function_shared_ptr();
         }
-        bool const local_condition(local_bool_state != 0);
+        bool const local_condition(local_bool_status != 0);
 
         // 条件挙動関数の種類を取得する。
         auto const& local_kind_cell(
             in_table.find_body_cell(in_row_index, in_attribute.kind_.first));
         if (local_kind_cell
-            == PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_KIND_STATE)
+            == PSYQ_SCENARIO_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS)
         {
-            return this_type::build_state_assignment_function(
+            return this_type::build_status_assignment_function(
                 io_hasher,
                 io_modifier,
                 local_condition,
@@ -287,7 +287,7 @@ class psyq::scenario_engine::behavior_builder
      */
     private: template<typename template_hasher, typename template_modifier>
     static typename this_type::dispatcher::function_shared_ptr
-    build_state_assignment_function(
+    build_status_assignment_function(
         template_hasher& io_hasher,
         template_modifier& io_modifier,
         bool const in_condition,
@@ -304,7 +304,7 @@ class psyq::scenario_engine::behavior_builder
 
         // 状態値の代入演算のコンテナを構築する。
         std::vector<
-            typename template_modifier::reservoir::state_assignment,
+            typename template_modifier::reservoir::status_assignment,
             typename template_modifier::allocator_type>
                 local_assignments(io_modifier.get_allocator());
         this_type::build_assignment_container(

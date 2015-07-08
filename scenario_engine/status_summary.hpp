@@ -1,9 +1,9 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::_private::state_registry
+    @brief @copybrief psyq::scenario_engine::_private::status_summary
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_STATE_REGISTRY_HPP_
-#define PSYQ_SCENARIO_ENGINE_STATE_REGISTRY_HPP_
+#ifndef PSYQ_SCENARIO_ENGINE_STATUS_SUMMARY_HPP_
+#define PSYQ_SCENARIO_ENGINE_STATUS_SUMMARY_HPP_
 
 #include <cstdint>
 #include "../assert.hpp"
@@ -21,8 +21,8 @@ namespace psyq
                 BITS_PER_BYTE = 8,
             };
             template<typename, typename, typename, typename>
-                class state_registry;
-            template<typename, typename, typename> class state_chunk;
+                class status_summary;
+            template<typename, typename, typename> class status_chunk;
         } // namespace _private
     } // namespace scenario_engine
 } // namespace psyq
@@ -30,20 +30,20 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 状態値の登記情報。
-    @tparam template_key          @copydoc state_registry::key
-    @tparam template_chunk_key    @copydoc state_registry::chunk_key
-    @tparam template_bit_position @copydoc state_registry::bit_position
-    @tparam template_bit_width    @copydoc state_registry::bit_width
+    @tparam template_key          @copydoc status_summary::key
+    @tparam template_chunk_key    @copydoc status_summary::chunk_key
+    @tparam template_bit_position @copydoc status_summary::bit_position
+    @tparam template_bit_width    @copydoc status_summary::bit_width
  */
 template<
     typename template_key,
     typename template_chunk_key,
     typename template_bit_position,
     typename template_bit_width>
-class psyq::scenario_engine::_private::state_registry
+class psyq::scenario_engine::_private::status_summary
 {
     /// @brief thisが指す値の型。
-    private: typedef state_registry this_type;
+    private: typedef status_summary this_type;
 
     /// @brief 状態値に対応する識別値。
     public: typedef template_key key;
@@ -92,28 +92,23 @@ class psyq::scenario_engine::_private::state_registry
         typename std::make_signed<typename this_type::bit_width>::type
         variety;
 
-    public: enum: typename this_type::variety
-    {
-        EMPTY_VARIETY = 0,
-    };
-
     /// @brief 状態値のビット位置とビット数を表す型。
     public: typedef typename this_type::bit_position format;
     public: struct format_less;
 
     //-------------------------------------------------------------------------
     /** @brief 状態値登記を構築する。
-        @param[in] in_state_key this_type::key_ の初期値。
+        @param[in] in_status_key this_type::key_ の初期値。
         @param[in] in_chunk_key this_type::chunk_key_ の初期値。
         @param[in] in_variety   状態値の種別の初期値。
      */
-    public: state_registry(
-        typename this_type::key in_state_key,
+    public: status_summary(
+        typename this_type::key in_status_key,
         typename this_type::chunk_key in_chunk_key,
         typename this_type::variety const in_variety)
     PSYQ_NOEXCEPT:
     chunk_key_(std::move(in_chunk_key)),
-    key_(std::move(in_state_key)),
+    key_(std::move(in_status_key)),
     format_(
         (1 << this_type::format_TRANSITION_FRONT) | (
             (in_variety & this_type::format_WIDTH_MASK)
@@ -142,7 +137,11 @@ class psyq::scenario_engine::_private::state_registry
     public: void set_variety(typename this_type::variety const in_variety)
     PSYQ_NOEXCEPT
     {
-        PSYQ_ASSERT(in_variety != this_type::EMPTY_VARIETY);
+        enum: typename this_type::variety
+        {
+            EMPTY_VARIETY = 0,
+        };
+        PSYQ_ASSERT(in_variety != EMPTY_VARIETY);
         typename this_type::format const local_variety(in_variety);
         auto const local_mask(
             this_type::format_WIDTH_MASK << this_type::format_WIDTH_FRONT);
@@ -240,7 +239,7 @@ class psyq::scenario_engine::_private::state_registry
     /// @brief 状態値が格納されているビット領域。
     typename this_type::format format_;
 
-}; // class psyq::scenario_engine::_private::state_registry
+}; // class psyq::scenario_engine::_private::status_summary
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 空きビット領域を比較する関数オブジェクト。
@@ -249,7 +248,7 @@ template<
     typename template_chunk_key,
     typename template_bit_position,
     typename template_bit_width>
-struct psyq::scenario_engine::_private::state_registry<
+struct psyq::scenario_engine::_private::status_summary<
     template_key,
     template_chunk_key,
     template_bit_position,
@@ -257,45 +256,45 @@ struct psyq::scenario_engine::_private::state_registry<
         ::format_less
 {
     bool operator()(
-        typename state_registry::format const in_left,
-        typename state_registry::format const in_right)
+        typename status_summary::format const in_left,
+        typename status_summary::format const in_right)
     const PSYQ_NOEXCEPT
     {
         // ビット領域のビット数で比較する。
-        auto const local_left_width(state_registry::get_width(in_left));
-        auto const local_right_width(state_registry::get_width(in_right));
+        auto const local_left_width(status_summary::get_width(in_left));
+        auto const local_right_width(status_summary::get_width(in_right));
         if (local_left_width != local_right_width)
         {
             return local_left_width < local_right_width;
         }
 
         // ビット領域のビット位置で比較する。
-        auto const local_left_position(state_registry::get_position(in_left));
-        auto const local_right_position(state_registry::get_position(in_right));
+        auto const local_left_position(status_summary::get_position(in_left));
+        auto const local_right_position(status_summary::get_position(in_right));
         return local_left_position < local_right_position;
     }
 
     bool operator()(
-        typename state_registry::format const in_left,
-        typename state_registry::bit_width const in_right)
+        typename status_summary::format const in_left,
+        typename status_summary::bit_width const in_right)
     const PSYQ_NOEXCEPT
     {
         // ビット領域のビット数で比較する。
-        auto const local_left_width(state_registry::get_width(in_left));
+        auto const local_left_width(status_summary::get_width(in_left));
         return local_left_width < in_right;
     }
 
     bool operator()(
-        typename state_registry::bit_width const in_left,
-        typename state_registry::format const in_right)
+        typename status_summary::bit_width const in_left,
+        typename status_summary::format const in_right)
     const PSYQ_NOEXCEPT
     {
         // ビット領域のビット数で比較する。
-        auto const local_right_width(state_registry::get_width(in_right));
+        auto const local_right_width(status_summary::get_width(in_right));
         return in_left < local_right_width;
     }
 
-}; // struct psyq::scenario_engine::_private::state_registry::format_less
+}; // struct psyq::scenario_engine::_private::status_summary::format_less
 
-#endif // defined(PSYQ_SCENARIO_ENGINE_STATE_REGISTRY_HPP_)
+#endif // defined(PSYQ_SCENARIO_ENGINE_STATUS_SUMMARY_HPP_)
 // vim: set expandtab:

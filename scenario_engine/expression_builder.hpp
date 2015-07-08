@@ -45,13 +45,13 @@ namespace psyq
 #define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION "SUB_EXPRESSION"
 #endif // !defined(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION)
 
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATE_TRANSITION
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATE_TRANSITION "STATE_TRANSITION"
-#endif // !define(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATE_TRANSITION)
+#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION
+#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION "STATUS_TRANSITION"
+#endif // !define(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION)
 
-#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATE_COMPARISON
-#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATE_COMPARISON "STATE_COMPARISON"
-#endif // !define(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATE_COMPARISON)
+#ifndef PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON
+#define PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON "STATUS_COMPARISON"
+#endif // !define(PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON)
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 文字列表から条件式を構築する関数オブジェクト。
@@ -115,20 +115,20 @@ class psyq::scenario_engine::expression_builder
             std::size_t const in_capacity,
             typename template_evaluator::allocator_type const& in_allocator):
         sub_expressions_(in_allocator),
-        state_transitions_(in_allocator),
-        state_comparisons_(in_allocator)
+        status_transitions_(in_allocator),
+        status_comparisons_(in_allocator)
         {
             this->sub_expressions_.reserve(in_capacity);
-            this->state_transitions_.reserve(in_capacity);
-            this->state_comparisons_.reserve(in_capacity);
+            this->status_transitions_.reserve(in_capacity);
+            this->status_comparisons_.reserve(in_capacity);
         }
 
         public: typename template_evaluator::sub_expression_container
             sub_expressions_;
-        public: typename template_evaluator::state_transition_container
-            state_transitions_;
-        public: typename template_evaluator::state_comparison_container
-            state_comparisons_;
+        public: typename template_evaluator::status_transition_container
+            status_transitions_;
+        public: typename template_evaluator::status_comparison_container
+            status_comparisons_;
 
     }; // class workspace
 
@@ -303,13 +303,13 @@ class psyq::scenario_engine::expression_builder
         }
         else if (
             local_kind_cell
-            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATE_TRANSITION)
+            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION)
         {
             // 状態変化条件式の要素条件を構築する。
             return this_type::build_expression(
                 io_evaluator,
                 io_hasher,
-                io_workspace.state_transitions_,
+                io_workspace.status_transitions_,
                 in_chunk_key,
                 std::move(local_key),
                 local_logic,
@@ -320,13 +320,13 @@ class psyq::scenario_engine::expression_builder
         }
         else if (
             local_kind_cell
-            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATE_COMPARISON)
+            == PSYQ_SCENARIO_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON)
         {
             // 状態比較条件式の要素条件を構築する。
             return this_type::build_expression(
                 io_evaluator,
                 io_hasher,
-                io_workspace.state_comparisons_,
+                io_workspace.status_comparisons_,
                 in_chunk_key,
                 std::move(local_key),
                 local_logic,
@@ -449,8 +449,8 @@ class psyq::scenario_engine::expression_builder
         // 複合条件式の条件を取得する。
         auto const& local_condition_cell(
             in_table.find_body_cell(in_row_index, local_element_column + 1));
-        auto const local_bool_state(local_condition_cell.to_bool());
-        if (local_bool_state < 0)
+        auto const local_bool_status(local_condition_cell.to_bool());
+        if (local_bool_status < 0)
         {
             PSYQ_ASSERT(false);
             return true;
@@ -458,7 +458,7 @@ class psyq::scenario_engine::expression_builder
 
         // 複合条件式に要素条件を追加する。
         io_elements.emplace_back(
-            std::move(local_sub_key), local_bool_state != 0);
+            std::move(local_sub_key), local_bool_status != 0);
         return true;
     }
 
@@ -475,7 +475,7 @@ class psyq::scenario_engine::expression_builder
      */
     private: template<typename template_evaluator, typename template_hasher>
     static bool build_element(
-        typename template_evaluator::state_transition_container& io_elements,
+        typename template_evaluator::status_transition_container& io_elements,
         template_hasher& io_hasher,
         typename template_evaluator::reservoir const& in_reservoir,
         typename this_type::relation_table const& in_table,
@@ -494,14 +494,14 @@ class psyq::scenario_engine::expression_builder
         }
 
         // 状態キーを取得する。
-        auto const& local_state_key_cell(
+        auto const& local_status_key_cell(
             in_table.find_body_cell(in_row_index, local_element_column));
-        if (local_state_key_cell.empty())
+        if (local_status_key_cell.empty())
         {
             return true;
         }
-        auto local_state_key(io_hasher(local_state_key_cell));
-        if (local_state_key
+        auto local_status_key(io_hasher(local_status_key_cell));
+        if (local_status_key
             == io_hasher(typename template_hasher::argument_type()))
         {
             PSYQ_ASSERT(false);
@@ -509,7 +509,7 @@ class psyq::scenario_engine::expression_builder
         }
 
         // 状態変化条件式に要素条件を追加する。
-        io_elements.push_back(local_state_key);
+        io_elements.push_back(local_status_key);
         return true;
     }
 
@@ -526,7 +526,7 @@ class psyq::scenario_engine::expression_builder
      */
     private: template<typename template_evaluator, typename template_hasher>
     static bool build_element(
-        typename template_evaluator::state_comparison_container& io_elements,
+        typename template_evaluator::status_comparison_container& io_elements,
         template_hasher& io_hasher,
         typename template_evaluator::reservoir const& in_reservoir,
         typename this_type::relation_table const& in_table,
@@ -544,7 +544,7 @@ class psyq::scenario_engine::expression_builder
             return false;
         }
         auto const local_comparison(
-            template_evaluator::state_comparison::_build(
+            template_evaluator::status_comparison::_build(
                 io_hasher, in_table, in_row_index, local_element_column));
         if (!local_comparison.value_.is_empty())
         {

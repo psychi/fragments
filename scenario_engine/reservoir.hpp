@@ -7,10 +7,10 @@
 
 #include <vector>
 #include "./key_less.hpp"
-#include "./state_registry.hpp"
-#include "./state_chunk.hpp"
-#include "./state_value.hpp"
-#include "./state_operation.hpp"
+#include "./status.hpp"
+#include "./status_summary.hpp"
+#include "./status_chunk.hpp"
+#include "./status_operation.hpp"
 
 /// @cond
 namespace psyq
@@ -45,18 +45,18 @@ namespace psyq
       - reservoir::register_unsigned
       - reservoir::register_signed
       - reservoir::register_float
-      - reservoir::register_state
-    - reservoir::find_state で、状態値を取得する。
-    - reservoir::assign_state で、状態値に代入する。
+      - reservoir::register_status
+    - reservoir::extract_status で、状態値を取得する。
+    - reservoir::assign_status で、状態値に代入する。
 
-    @tparam template_float     @copydoc reservoir::state_value::float_type
-    @tparam template_state_key @copydoc reservoir::state_key
+    @tparam template_float     @copydoc reservoir::status::float_type
+    @tparam template_status_key @copydoc reservoir::status_key
     @tparam template_chunk_key @copydoc reservoir::chunk_key
     @tparam template_allocator @copydoc reservoir::allocator_type
  */
 template<
     typename template_float,
-    typename template_state_key,
+    typename template_status_key,
     typename template_chunk_key,
     typename template_allocator>
 class psyq::scenario_engine::_private::reservoir
@@ -66,7 +66,7 @@ class psyq::scenario_engine::_private::reservoir
 
     //-------------------------------------------------------------------------
     /// @brief 状態値を識別するための値を表す型。
-    public: typedef template_state_key state_key;
+    public: typedef template_status_key status_key;
 
     /// @brief チャンクを識別するための値を表す型。
     public: typedef template_chunk_key chunk_key;
@@ -80,26 +80,21 @@ class psyq::scenario_engine::_private::reservoir
 
     /// @brief 状態値の登記情報。
     private: typedef
-         psyq::scenario_engine::_private::state_registry<
-             typename this_type::state_key,
+         psyq::scenario_engine::_private::status_summary<
+             typename this_type::status_key,
              typename this_type::chunk_key,
              std::uint32_t,
              std::uint8_t>
-         state_registry;
-
-    public: enum: typename this_type::state_registry::variety
-    {
-        EMPTY_VARIETY = this_type::state_registry::EMPTY_VARIETY,
-    };
+         status_summary;
 
     //-------------------------------------------------------------------------
     /// @brief 状態値を格納するビット列のチャンク。
     private: typedef
-        psyq::scenario_engine::_private::state_chunk<
+        psyq::scenario_engine::_private::status_chunk<
             typename this_type::chunk_key,
             std::vector<std::uint64_t, typename this_type::allocator_type>,
             std::vector<
-                typename this_type::state_registry::format,
+                typename this_type::status_summary::format,
                 typename this_type::allocator_type>>
         chunk;
 
@@ -119,50 +114,50 @@ class psyq::scenario_engine::_private::reservoir
     //-------------------------------------------------------------------------
     /// @brief 状態値。
     public: typedef
-        psyq::scenario_engine::_private::state_value<
+        psyq::scenario_engine::_private::status<
             typename this_type::chunk::block, template_float>
-        state_value;
+        status;
 
     /// @brief 状態値の比較演算。
     public: typedef
-        psyq::scenario_engine::_private::state_operation<
-            typename this_type::state_key,
-            typename this_type::state_value::comparison,
-            typename this_type::state_value>
-        state_comparison;
+        psyq::scenario_engine::_private::status_operation<
+            typename this_type::status_key,
+            typename this_type::status::comparison,
+            typename this_type::status>
+        status_comparison;
 
     /// @brief 状態値の代入演算。
     public: typedef
-        psyq::scenario_engine::_private::state_operation<
-            typename this_type::state_key,
-            typename this_type::state_value::assignment,
-            typename this_type::state_value>
-        state_assignment;
+        psyq::scenario_engine::_private::status_operation<
+            typename this_type::status_key,
+            typename this_type::status::assignment,
+            typename this_type::status>
+        status_assignment;
 
     /// @brief 状態値登記のコンテナ。
     private: typedef
         std::vector<
-            typename this_type::state_registry,
+            typename this_type::status_summary,
             typename this_type::allocator_type>
-        state_container;
+        status_container;
 
     /// @brief 状態値登記ポインタのコンテナ。
     private: typedef
         std::vector<
-            typename this_type::state_registry const*,
+            typename this_type::status_summary const*,
             typename this_type::allocator_type>
-        state_pointer_container;
+        status_pointer_container;
 
     /// @brief 状態値に対応する識別値を比較する関数オブジェクト。
     private: typedef
          psyq::scenario_engine::_private::key_less<
              psyq::scenario_engine::_private::object_key_getter<
-                 typename this_type::state_registry,
-                 typename this_type::state_key>>
-         state_key_less;
+                 typename this_type::status_summary,
+                 typename this_type::status_key>>
+         status_key_less;
 
     //-------------------------------------------------------------------------
-    public: enum: typename this_type::state_registry::bit_width
+    public: enum: typename this_type::status_summary::bit_width
     {
         /// @brief 浮動小数点数型のビット数。
         FLOAT_WIDTH = sizeof(template_float) *
@@ -173,18 +168,18 @@ class psyq::scenario_engine::_private::reservoir
         this_type::FLOAT_WIDTH <= this_type::chunk::BLOCK_WIDTH,
         "");
     static_assert(
-        // state_registry::bit_position に
+        // status_summary::bit_position に
         // ビット位置の最大値が収まることを確認する。
-        this_type::state_registry::format_POSITION_BACK -
-            this_type::state_registry::format_POSITION_FRONT
-        < sizeof(typename this_type::state_registry::bit_position) *
+        this_type::status_summary::format_POSITION_BACK -
+            this_type::status_summary::format_POSITION_FRONT
+        < sizeof(typename this_type::status_summary::bit_position) *
             psyq::scenario_engine::_private::BITS_PER_BYTE,
         "");
     static_assert(
-        // state_registry::bit_width にビット数の最大値が収まることを確認する。
-        this_type::state_registry::format_WIDTH_BACK -
-            this_type::state_registry::format_WIDTH_FRONT
-        < sizeof(typename this_type::state_registry::bit_width) *
+        // status_summary::bit_width にビット数の最大値が収まることを確認する。
+        this_type::status_summary::format_WIDTH_BACK -
+            this_type::status_summary::format_WIDTH_FRONT
+        < sizeof(typename this_type::status_summary::bit_width) *
             psyq::scenario_engine::_private::BITS_PER_BYTE,
         "");
 
@@ -193,20 +188,20 @@ class psyq::scenario_engine::_private::reservoir
         @{
      */
     /** @brief 空の状態貯蔵器を構築する。
-        @param[in] in_reserve_states 状態値の予約数。
+        @param[in] in_reserve_statuses 状態値の予約数。
         @param[in] in_reserve_chunks 状態値ビット列チャンクの予約数。
         @param[in] in_allocator      使用するメモリ割当子の初期値。
      */
     public: reservoir(
-        std::size_t const in_reserve_states,
+        std::size_t const in_reserve_statuses,
         std::size_t const in_reserve_chunks,
         typename this_type::allocator_type const& in_allocator =
             this_type::allocator_type())
     :
-    states_(in_allocator),
+    statuses_(in_allocator),
     chunks_(in_allocator)
     {
-        this->states_.reserve(in_reserve_states);
+        this->statuses_.reserve(in_reserve_statuses);
         this->chunks_.reserve(in_reserve_chunks);
     }
 
@@ -215,7 +210,7 @@ class psyq::scenario_engine::_private::reservoir
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
     public: reservoir(this_type&& io_source) PSYQ_NOEXCEPT:
-    states_(std::move(io_source.states_)),
+    statuses_(std::move(io_source.statuses_)),
     chunks_(std::move(io_source.chunks_))
     {}
 
@@ -225,7 +220,7 @@ class psyq::scenario_engine::_private::reservoir
      */
     public: this_type& operator=(this_type&& io_source) PSYQ_NOEXCEPT
     {
-        this->states_ = std::move(io_source.states_);
+        this->statuses_ = std::move(io_source.statuses_);
         this->chunks_ = std::move(io_source.chunks_);
         return *this;
     }
@@ -237,7 +232,7 @@ class psyq::scenario_engine::_private::reservoir
     public: typename this_type::allocator_type get_allocator()
     const PSYQ_NOEXCEPT
     {
-        return this->states_.get_allocator();
+        return this->statuses_.get_allocator();
     }
 
     /// @brief 状態貯蔵器を再構築し、メモリ領域を必要最小限にする。
@@ -245,30 +240,30 @@ class psyq::scenario_engine::_private::reservoir
     {
         // 新たな状態貯蔵器を用意する。
         this_type local_reservoir(
-            this->states_.size(),
+            this->statuses_.size(),
             this->chunks_.size(),
-            this->states_.get_allocator());
+            this->statuses_.get_allocator());
         for (auto& local_old_chunk: this->chunks_)
         {
             auto& local_new_chunk(
                 *local_reservoir.chunks_.insert(
                     local_reservoir.chunks_.end(),
                     typename this_type::chunk_container::value_type(
-                        local_old_chunk.key_, this->states_.get_allocator())));
+                        local_old_chunk.key_, this->statuses_.get_allocator())));
             local_new_chunk.blocks_.reserve(local_old_chunk.blocks_.size());
             local_new_chunk.empty_fields_.reserve(
                 local_old_chunk.empty_fields_.size());
         }
 
         // 現在の状態貯蔵器をもとに、新たな状態貯蔵器を構築する。
-        for (auto local_state: this_type::sort_state_by_width(this->states_))
+        for (auto local_status: this_type::sort_status_by_width(this->statuses_))
         {
-            local_reservoir.copy_state(*local_state, this->chunks_);
+            local_reservoir.copy_status(*local_status, this->chunks_);
         }
 
         // 新たに構築した状態貯蔵器を移動して整理する。
         *this = std::move(local_reservoir);
-        this->states_.shrink_to_fit();
+        this->statuses_.shrink_to_fit();
         this->chunks_.shrink_to_fit();
         for (auto& local_chunk: this->chunks_)
         {
@@ -283,67 +278,67 @@ class psyq::scenario_engine::_private::reservoir
      */
     /** @brief 論理型の状態値を登録する。
 
-        - 登録した状態値は
-          this_type::find_state と this_type::assign_state でアクセスできる。
+        - 登録した状態値は this_type::extract_status と
+          this_type::assign_status でアクセスできる。
         - 登録した状態値は this_type::erase_chunk でチャンク毎に削除できる。
 
         @param[in] in_chunk_key   登録する状態値を格納する状態値ビット列チャンクの識別値。
-        @param[in] in_state_key   登録する状態値の識別番号。
-        @param[in] in_state_value 登録する状態値の初期値。
+        @param[in] in_status_key   登録する状態値の識別番号。
+        @param[in] in_status_value 登録する状態値の初期値。
         @retval true 成功。状態値を登録した。
         @retval false
             失敗。状態値を登録できなかった。
-            in_state_key に対応する状態値がすでに登録されていると失敗する。
+            in_status_key に対応する状態値がすでに登録されていると失敗する。
      */
     public: bool register_bool(
         typename this_type::chunk_key in_chunk_key,
-        typename this_type::state_key in_state_key,
-        bool const in_state_value)
+        typename this_type::status_key in_status_key,
+        bool const in_status_value)
     {
         // 状態値登記を登録した後、状態値に初期値を設定する。
         auto& local_chunk(
             this_type::equip_chunk(this->chunks_, std::move(in_chunk_key)));
-        auto const local_state(
-            this->insert_state_registry(
+        auto const local_status(
+            this->insert_status_summary(
                 local_chunk,
-                std::move(in_state_key),
-                this_type::state_value::kind_BOOL));
-        if (local_state == nullptr)
+                std::move(in_status_key),
+                this_type::status::kind_BOOL));
+        if (local_status == nullptr)
         {
             return false;
         }
         return 0 <= local_chunk.set_bits(
-            local_state->get_position(), 1, in_state_value);
+            local_status->get_position(), 1, in_status_value);
     }
 
     /** @brief 符号なし整数型の状態値を登録する。
 
-        - 登録した状態値は
-          this_type::find_state と this_type::assign_state でアクセスできる。
+        - 登録した状態値は this_type::extract_status と
+          this_type::assign_status でアクセスできる。
         - 登録した状態値は this_type::erase_chunk で削除できる。
 
         @param[in] in_chunk_key   登録する状態値を格納する状態値ビット列チャンクの識別値。
-        @param[in] in_state_key   登録する状態値の識別番号。
-        @param[in] in_state_value 登録する状態値の初期値。
-        @param[in] in_state_width  登録する状態値のビット数。
+        @param[in] in_status_key   登録する状態値の識別番号。
+        @param[in] in_status_value 登録する状態値の初期値。
+        @param[in] in_status_width  登録する状態値のビット数。
         @retval true 成功。状態値を登録した。
         @retval false
             失敗。状態値を登録できなかった。
-            - in_state_key に対応する状態値がすでに登録されていると失敗する。
-            - this_type::chunk::BLOKK_SIZE より in_state_width が大きければ失敗する。
+            - in_status_key に対応する状態値がすでに登録されていると失敗する。
+            - this_type::chunk::BLOKK_SIZE より in_status_width が大きければ失敗する。
      */
     public: bool register_unsigned(
         typename this_type::chunk_key in_chunk_key,
-        typename this_type::state_key in_state_key,
-        typename this_type::state_value::unsigned_type const in_state_value,
-        std::size_t const in_state_width)
+        typename this_type::status_key in_status_key,
+        typename this_type::status::unsigned_type const in_status_value,
+        std::size_t const in_status_width)
     {
         // 登録不可能な状態値か判定する。
         auto const local_variety(
-            static_cast<typename this_type::state_registry::variety>(
-                in_state_width));
-        if (this_type::chunk::BLOCK_WIDTH < in_state_width
-            || local_variety < this_type::state_value::kind_UNSIGNED)
+            static_cast<typename this_type::status_summary::variety>(
+                in_status_width));
+        if (this_type::chunk::BLOCK_WIDTH < in_status_width
+            || local_variety < this_type::status::kind_UNSIGNED)
         {
             return false;
         }
@@ -351,15 +346,15 @@ class psyq::scenario_engine::_private::reservoir
         // 状態値を登録した後、状態値に初期値を設定する。
         auto& local_chunk(
             this_type::equip_chunk(this->chunks_, std::move(in_chunk_key)));
-        auto const local_state(
-            this->insert_state_registry(
-                local_chunk, std::move(in_state_key), local_variety));
-        if (local_state == nullptr)
+        auto const local_status(
+            this->insert_status_summary(
+                local_chunk, std::move(in_status_key), local_variety));
+        if (local_status == nullptr)
         {
             return false;
         }
         return 0 <= local_chunk.set_bits(
-            local_state->get_position(), in_state_width, in_state_value);
+            local_status->get_position(), in_status_width, in_status_value);
     }
 
     /** @brief 符号あり整数型の状態値を登録する。
@@ -367,16 +362,16 @@ class psyq::scenario_engine::_private::reservoir
      */
     public: bool register_signed(
         typename this_type::chunk_key in_chunk_key,
-        typename this_type::state_key in_state_key,
-        typename this_type::state_value::signed_type const in_state_value,
-        std::size_t const in_state_width)
+        typename this_type::status_key in_status_key,
+        typename this_type::status::signed_type const in_status_value,
+        std::size_t const in_status_width)
     {
         // 登録不可能な状態値か判定する。
         auto const local_variety(
-            -static_cast<typename this_type::state_registry::variety>(
-                in_state_width));
-        if (this_type::chunk::BLOCK_WIDTH < in_state_width
-            || this_type::state_value::kind_SIGNED < local_variety)
+            -static_cast<typename this_type::status_summary::variety>(
+                in_status_width));
+        if (this_type::chunk::BLOCK_WIDTH < in_status_width
+            || this_type::status::kind_SIGNED < local_variety)
         {
             return false;
         }
@@ -384,19 +379,19 @@ class psyq::scenario_engine::_private::reservoir
         // 状態値を登録した後、状態値に初期値を設定する。
         auto& local_chunk(
             this_type::equip_chunk(this->chunks_, std::move(in_chunk_key)));
-        auto const local_state(
-            this->insert_state_registry(
-                local_chunk, std::move(in_state_key), local_variety));
-        if (local_state == nullptr)
+        auto const local_status(
+            this->insert_status_summary(
+                local_chunk, std::move(in_status_key), local_variety));
+        if (local_status == nullptr)
         {
             return false;
         }
         auto const local_width(
-            static_cast<typename this_type::state_registry::bit_width>(
-                in_state_width));
+            static_cast<typename this_type::status_summary::bit_width>(
+                in_status_width));
         auto local_bits(
-            static_cast<typename this_type::chunk::block>(in_state_value));
-        if (in_state_value < 0)
+            static_cast<typename this_type::chunk::block>(in_status_value));
+        if (in_status_value < 0)
         {
             auto const local_mask(
                 this_type::chunk::make_block_mask(local_width));
@@ -407,7 +402,7 @@ class psyq::scenario_engine::_private::reservoir
             local_bits &= local_mask;
         }
         return 0 <= local_chunk.set_bits(
-            local_state->get_position(), local_width, local_bits);
+            local_status->get_position(), local_width, local_bits);
     }
 
     /** @brief 浮動小数点数型の状態値を登録する。
@@ -415,25 +410,25 @@ class psyq::scenario_engine::_private::reservoir
      */
     public: bool register_float(
         typename this_type::chunk_key in_chunk_key,
-        typename this_type::state_key in_state_key,
-        typename this_type::state_value::float_type const in_state_value)
+        typename this_type::status_key in_status_key,
+        typename this_type::status::float_type const in_status_value)
     {
         // 状態値を登録した後、状態値に初期値を設定する。
         auto& local_chunk(
             this_type::equip_chunk(this->chunks_, std::move(in_chunk_key)));
-        auto const local_state(
-            this->insert_state_registry(
+        auto const local_status(
+            this->insert_status_summary(
                 local_chunk,
-                std::move(in_state_key),
-                this_type::state_value::kind_FLOAT));
-        if (local_state == nullptr)
+                std::move(in_status_key),
+                this_type::status::kind_FLOAT));
+        if (local_status == nullptr)
         {
             return false;
         }
         typename this_type::float_union local_float;
-        local_float.value = in_state_value;
+        local_float.value = in_status_value;
         return 0 <= local_chunk.set_bits(
-            local_state->get_position(),
+            local_status->get_position(),
             this_type::FLOAT_WIDTH,
             local_float.bits);
     }
@@ -441,43 +436,43 @@ class psyq::scenario_engine::_private::reservoir
     /** @brief 状態値を登録する。
         @copydetails register_bool
      */
-    public: bool register_state(
+    public: bool register_status(
         typename this_type::chunk_key in_chunk_key,
-        typename this_type::state_key in_state_key,
-        typename this_type::state_value const& in_state_value)
+        typename this_type::status_key in_status_key,
+        typename this_type::status const& in_status_value)
     {
-        auto const local_bool(in_state_value.get_bool());
+        auto const local_bool(in_status_value.extract_bool());
         if (local_bool != nullptr)
         {
             return this->register_bool(
-                std::move(in_chunk_key), std::move(in_state_key), *local_bool);
+                std::move(in_chunk_key), std::move(in_status_key), *local_bool);
         }
-        auto const local_unsigned(in_state_value.get_unsigned());
+        auto const local_unsigned(in_status_value.extract_unsigned());
         if (local_unsigned != nullptr)
         {
             return this->register_unsigned(
                 std::move(in_chunk_key),
-                std::move(in_state_key),
+                std::move(in_status_key),
                 *local_unsigned,
                 sizeof(*local_unsigned) *
                     psyq::scenario_engine::_private::BITS_PER_BYTE);
         }
-        auto const local_signed(in_state_value.get_signed());
+        auto const local_signed(in_status_value.extract_signed());
         if (local_signed != nullptr)
         {
             return this->register_signed(
                 std::move(in_chunk_key),
-                std::move(in_state_key),
+                std::move(in_status_key),
                 *local_signed,
                 sizeof(*local_signed) *
                     psyq::scenario_engine::_private::BITS_PER_BYTE);
         }
-        auto const local_float(in_state_value.get_float());
+        auto const local_float(in_status_value.extract_float());
         if (local_float != nullptr)
         {
             return this->register_float(
                 std::move(in_chunk_key),
-                std::move(in_state_key),
+                std::move(in_status_key),
                 *local_float);
         }
         return false;
@@ -491,58 +486,58 @@ class psyq::scenario_engine::_private::reservoir
 
         すでに登録されている状態値から、値を取得する。
 
-        @param[in] in_state_key 取得する状態値に対応する識別値。
+        @param[in] in_status_key 取得する状態値に対応する識別値。
         @return
             取得した状態値。状態値の取得に失敗した場合は、
-            this_type::state_value::is_empty で偽を返す。
+            this_type::status::is_empty で偽を返す。
         @sa this_type::register_bool
         @sa this_type::register_unsigned
         @sa this_type::register_signed
         @sa this_type::register_float
-        @sa this_type::register_state
-        @sa this_type::assign_state
+        @sa this_type::register_status
+        @sa this_type::assign_status
      */
-    public: typename this_type::state_value find_state(
-        typename this_type::state_key const& in_state_key)
+    public: typename this_type::status extract_status(
+        typename this_type::status_key const& in_status_key)
     const PSYQ_NOEXCEPT
     {
         // 状態値登記を検索し、状態値ビット列チャンクから状態値のビット列を取得する。
-        auto const local_state_registry(
-            this_type::state_key_less::find_const_pointer(
-                this->states_, in_state_key));
-        if (local_state_registry == nullptr)
+        auto const local_status_summary(
+            this_type::status_key_less::find_const_pointer(
+                this->statuses_, in_status_key));
+        if (local_status_summary == nullptr)
         {
-            return typename this_type::state_value();
+            return typename this_type::status();
         }
         auto const local_chunk(
             this_type::chunk_key_less::find_const_pointer(
-                this->chunks_, local_state_registry->chunk_key_));
+                this->chunks_, local_status_summary->chunk_key_));
         if (local_chunk == nullptr)
         {
             // 状態値登記があれば、対応する状態値ビット列チャンクもあるはず。
             PSYQ_ASSERT(false);
-            return typename this_type::state_value();
+            return typename this_type::status();
         }
-        auto const local_variety(local_state_registry->get_variety());
+        auto const local_variety(local_status_summary->get_variety());
         auto const local_width(this_type::get_width(local_variety));
         auto const local_bits(
             local_chunk->get_bits(
-                local_state_registry->get_position(), local_width));
+                local_status_summary->get_position(), local_width));
 
         // 状態値の種別から、出力値のコピー処理を分岐する。
         switch (local_variety)
         {
             // 真偽値を取得する。
-            case this_type::state_value::kind_BOOL:
-            return typename this_type::state_value(local_bits != 0);
+            case this_type::status::kind_BOOL:
+            return typename this_type::status(local_bits != 0);
 
             // 浮動小数点数を取得する。
-            case this_type::state_value::kind_FLOAT:
+            case this_type::status::kind_FLOAT:
             {
                 typename this_type::float_union local_float;
                 local_float.bits =
                     static_cast<decltype(local_float.bits)>(local_bits);
-                return typename this_type::state_value(local_float.value);
+                return typename this_type::status(local_float.value);
             }
 
             // 整数を取得する。
@@ -551,38 +546,38 @@ class psyq::scenario_engine::_private::reservoir
             {
                 // 符号あり整数を取得する。
                 auto const local_signed_bits(
-                    static_cast<typename this_type::state_value::signed_type>(
+                    static_cast<typename this_type::status::signed_type>(
                         local_bits));
                 auto const local_minus(
                     1 & (local_signed_bits >> (local_width - 1)));
-                return typename this_type::state_value(
+                return typename this_type::status(
                     local_signed_bits | (-local_minus << local_width));
             }
             else if (0 < local_variety)
             {
                 // 符号なし整数を取得する。
-                return typename this_type::state_value(local_bits);
+                return typename this_type::status(local_bits);
             }
             PSYQ_ASSERT(false);
-            return typename this_type::state_value();
+            return typename this_type::status();
         }
     }
 
     /** @brief 状態値の種類を取得する。
-        @param[in] in_state_key 状態値に対応する識別値。
-        @retval !=this_type::EMPTY_VARIETY 状態値の種類。
-        @retval ==this_type::EMPTY_VARIETY
-            in_state_key に対応する状態値がない。
+        @param[in] in_status_key 状態値に対応する識別値。
+        @retval !=this_type::status::kind_EMPTY 状態値の種類。
+        @retval ==this_type::status::kind_EMPTY
+            in_status_key に対応する状態値がない。
      */
-    public: typename this_type::state_registry::variety find_variety(
-        typename this_type::state_key const& in_state_key)
+    public: typename this_type::status_summary::variety extract_variety(
+        typename this_type::status_key const& in_status_key)
     const PSYQ_NOEXCEPT
     {
-        auto local_state(
-            this_type::state_key_less::find_const_pointer(
-                this->states_, in_state_key));
-        return local_state != nullptr?
-            local_state->get_variety(): this_type::EMPTY_VARIETY;
+        auto local_status(
+            this_type::status_key_less::find_const_pointer(
+                this->statuses_, in_status_key));
+        return local_status != nullptr?
+            local_status->get_variety(): this_type::status::kind_EMPTY;
     }
     /// @}
     /** @brief 状態値の種別から、状態値のビット数を取得する。
@@ -590,19 +585,19 @@ class psyq::scenario_engine::_private::reservoir
         @return 状態値のビット数。
      */
     public:
-    static typename this_type::state_registry::bit_width get_width(
-        typename this_type::state_registry::variety const in_variety)
+    static typename this_type::status_summary::bit_width get_width(
+        typename this_type::status_summary::variety const in_variety)
     PSYQ_NOEXCEPT
     {
         switch (in_variety)
         {
-            case this_type::state_registry::EMPTY_VARIETY:
+            case this_type::status::kind_EMPTY:
             return 0;
 
-            case this_type::state_value::kind_BOOL:
+            case this_type::status::kind_BOOL:
             return 1;
 
-            case this_type::state_value::kind_FLOAT:
+            case this_type::status::kind_FLOAT:
             return this_type::FLOAT_WIDTH;
 
             default:
@@ -614,22 +609,22 @@ class psyq::scenario_engine::_private::reservoir
         @param[in] in_variety 状態値の種別。
         @return 状態値の型の種別。
      */
-    public: static typename this_type::state_value::kind get_kind(
-        typename this_type::state_registry::variety const in_variety)
+    public: static typename this_type::status::kind get_kind(
+        typename this_type::status_summary::variety const in_variety)
     PSYQ_NOEXCEPT
     {
         switch (in_variety)
         {
-            case this_type::state_value::kind_EMPTY:
-            case this_type::state_value::kind_BOOL:
-            case this_type::state_value::kind_FLOAT:
+            case this_type::status::kind_EMPTY:
+            case this_type::status::kind_BOOL:
+            case this_type::status::kind_FLOAT:
             return
-                static_cast<typename this_type::state_value::kind>(in_variety);
+                static_cast<typename this_type::status::kind>(in_variety);
 
             default:
             return in_variety < 0?
-                this_type::state_value::kind_SIGNED:
-                this_type::state_value::kind_UNSIGNED;
+                this_type::status::kind_SIGNED:
+                this_type::status::kind_UNSIGNED;
         }
     }
 
@@ -641,14 +636,14 @@ class psyq::scenario_engine::_private::reservoir
         @param[in] in_comparison 状態値の比較式。
         @return 比較演算の評価結果。
      */
-    public: psyq::scenario_engine::evaluation compare_state(
-        typename this_type::state_comparison const& in_comparison)
+    public: psyq::scenario_engine::evaluation compare_status(
+        typename this_type::status_comparison const& in_comparison)
     const PSYQ_NOEXCEPT
     {
         auto const local_right_key_pointer(in_comparison.get_right_key());
         if (local_right_key_pointer == nullptr)
         {
-            return this->compare_state(
+            return this->compare_status(
                 in_comparison.key_,
                 in_comparison.operator_,
                 in_comparison.value_);
@@ -656,14 +651,14 @@ class psyq::scenario_engine::_private::reservoir
 
         // 右辺となる状態値を取得して演算する。
         auto const local_right_key(
-            static_cast<typename this_type::state_key>(
+            static_cast<typename this_type::status_key>(
                 *local_right_key_pointer));
         if (local_right_key == *local_right_key_pointer)
         {
-            return this->compare_state(
+            return this->compare_status(
                 in_comparison.key_,
                 in_comparison.operator_,
-                this->find_state(local_right_key));
+                this->extract_status(local_right_key));
         }
         return -1;
     }
@@ -674,14 +669,14 @@ class psyq::scenario_engine::_private::reservoir
         @param[in] in_right_value 右辺となる値。
         @return 比較演算の評価結果。
      */
-    public: psyq::scenario_engine::evaluation compare_state(
-        typename this_type::state_key const& in_left_key,
-        typename this_type::state_value::comparison const in_operator,
-        typename this_type::state_value const& in_right_value)
+    public: psyq::scenario_engine::evaluation compare_status(
+        typename this_type::status_key const& in_left_key,
+        typename this_type::status::comparison const in_operator,
+        typename this_type::status const& in_right_value)
     const PSYQ_NOEXCEPT
     {
-        return
-            this->find_state(in_left_key).compare(in_operator, in_right_value);
+        return this->extract_status(in_left_key).compare(
+            in_operator, in_right_value);
     }
     /// @}
     //-------------------------------------------------------------------------
@@ -692,60 +687,60 @@ class psyq::scenario_engine::_private::reservoir
 
         すでに登録されている状態値に、値を代入する。
 
-        @param[in] in_state_key   代入先となる状態値に対応する識別値。
-        @param[in] in_state_value 状態値に代入する値。
+        @param[in] in_status_key   代入先となる状態値に対応する識別値。
+        @param[in] in_status_value 状態値に代入する値。
         @retval true 成功。
         @retval false
             失敗。状態値は変化しない。
-            - in_state_key に対応する状態値がない場合は失敗する。
-            - in_state_value を状態値の型へ変換できない場合は失敗する。
+            - in_status_key に対応する状態値がない場合は失敗する。
+            - in_status_value を状態値の型へ変換できない場合は失敗する。
             - 論理型以外の値を論理型の状態値へ設定しようとすると失敗する。
             - 論理型の値を論理型以外の状態値へ設定しようとすると失敗する。
         @sa this_type::register_bool
         @sa this_type::register_unsigned
         @sa this_type::register_signed
         @sa this_type::register_float
-        @sa this_type::register_state
-        @sa this_type::find_state
+        @sa this_type::register_status
+        @sa this_type::extract_status
      */
-    public: bool assign_state(
-        typename this_type::state_key const& in_state_key,
-        typename this_type::state_value const& in_state_value)
+    public: bool assign_status(
+        typename this_type::status_key const& in_status_key,
+        typename this_type::status const& in_status_value)
     PSYQ_NOEXCEPT
     {
-        auto const local_bool(in_state_value.get_bool());
+        auto const local_bool(in_status_value.extract_bool());
         if (local_bool != nullptr)
         {
-            return this->assign_state(in_state_key, *local_bool);
+            return this->assign_status(in_status_key, *local_bool);
         }
-        auto const local_unsigned(in_state_value.get_unsigned());
+        auto const local_unsigned(in_status_value.extract_unsigned());
         if (local_unsigned != nullptr)
         {
-            return this->assign_state(in_state_key, *local_unsigned);
+            return this->assign_status(in_status_key, *local_unsigned);
         }
-        auto const local_signed(in_state_value.get_signed());
+        auto const local_signed(in_status_value.extract_signed());
         if (local_signed != nullptr)
         {
-            return this->assign_state(in_state_key, *local_signed);
+            return this->assign_status(in_status_key, *local_signed);
         }
-        auto const local_float(in_state_value.get_float());
+        auto const local_float(in_status_value.extract_float());
         if (local_float != nullptr)
         {
-            return this->assign_state(in_state_key, *local_float);
+            return this->assign_status(in_status_key, *local_float);
         }
         return false;
     }
 
-    /** @copydoc assign_state
+    /** @copydoc assign_status
         @note
-            this_type::state_value::float_type より精度の高い浮動小数点数を
+            this_type::status::float_type より精度の高い浮動小数点数を
             浮動小数点数型の状態値へ設定しようとすると、
             コンパイル時にエラーか警告が発生する。
      */
     public: template<typename template_value>
-    bool assign_state(
-        typename this_type::state_key const& in_state_key,
-        template_value const in_state_value)
+    bool assign_status(
+        typename this_type::status_key const& in_status_key,
+        template_value const in_status_value)
     PSYQ_NOEXCEPT
     {
         static_assert(
@@ -754,10 +749,10 @@ class psyq::scenario_engine::_private::reservoir
             "'template_value' is not an integer or floating-point number.");
 
         // 状態値登記を検索する。
-        auto const local_state(
-            this_type::state_key_less::find_pointer(
-                this->states_, in_state_key));
-        if (local_state == nullptr)
+        auto const local_status(
+            this_type::status_key_less::find_pointer(
+                this->statuses_, in_status_key));
+        if (local_status == nullptr)
         {
             return false;
         }
@@ -765,7 +760,7 @@ class psyq::scenario_engine::_private::reservoir
         // 状態値を設定する状態値ビット列チャンクを決定する。
         auto const local_chunk(
             this_type::chunk_key_less::find_pointer(
-                this->chunks_, local_state->chunk_key_));
+                this->chunks_, local_status->chunk_key_));
         if (local_chunk == nullptr)
         {
             // 状態値の登記があるなら、状態値ビット列チャンクもあるはず。
@@ -774,36 +769,36 @@ class psyq::scenario_engine::_private::reservoir
         }
 
         // 状態値の種別から、設定するビット列とビット数を決定する。
-        auto const local_variety(local_state->get_variety());
-        typename this_type::state_registry::bit_width local_width;
+        auto const local_variety(local_status->get_variety());
+        typename this_type::status_summary::bit_width local_width;
         typename this_type::chunk::block local_bits;
         switch (local_variety)
         {
-            case this_type::state_registry::EMPTY_VARIETY:
+            case this_type::status::kind_EMPTY:
             PSYQ_ASSERT(false);
             return false;
 
             // 真偽値のビット列とビット数を決定する。
-            case this_type::state_value::kind_BOOL:
+            case this_type::status::kind_BOOL:
             if (!std::is_same<bool, template_value>::value)
             {
                 return false;
             }
             local_width = 1;
             local_bits = static_cast<typename this_type::chunk::block>(
-                in_state_value);
+                in_status_value);
             break;
 
             // 浮動小数点数のビット列とビット数を決定する。
-            case this_type::state_value::kind_FLOAT:
+            case this_type::status::kind_FLOAT:
             local_width = this_type::make_float_bits(
-                local_bits, in_state_value);
+                local_bits, in_status_value);
             break;
 
             // 整数のビット列とビット数を決定する。
             default:
             local_width = this_type::make_integer_bits(
-                local_bits, in_state_value, local_variety);
+                local_bits, in_status_value, local_variety);
             break;
         }
         if (local_width <= 0)
@@ -814,7 +809,7 @@ class psyq::scenario_engine::_private::reservoir
         // 状態値にビット列を設定する。
         auto const local_set_bits(
             local_chunk->set_bits(
-                local_state->get_position(), local_width, local_bits));
+                local_status->get_position(), local_width, local_bits));
         if (local_set_bits < 0)
         {
             return false;
@@ -822,8 +817,8 @@ class psyq::scenario_engine::_private::reservoir
         else if (0 < local_set_bits)
         {
             // 状態値の変更を記録する。
-            local_state->format_ |=
-                1 << this_type::state_registry::format_TRANSITION_FRONT;
+            local_status->format_ |=
+                1 << this_type::status_summary::format_TRANSITION_FRONT;
         }
         return true;
     }
@@ -833,13 +828,13 @@ class psyq::scenario_engine::_private::reservoir
         @retval true  演算結果を状態値へ代入した。
         @retval false 失敗。状態値は変化しない。
      */
-    public: bool assign_state(
-        typename this_type::state_assignment const& in_assignment)
+    public: bool assign_status(
+        typename this_type::status_assignment const& in_assignment)
     {
         auto const local_right_key_pointer(in_assignment.get_right_key());
         if (local_right_key_pointer == nullptr)
         {
-            return this->assign_state(
+            return this->assign_status(
                 in_assignment.key_,
                 in_assignment.operator_,
                 in_assignment.value_);
@@ -847,14 +842,14 @@ class psyq::scenario_engine::_private::reservoir
 
         // 右辺となる状態値を取得して演算する。
         auto const local_right_key(
-            static_cast<typename this_type::state_key>(
+            static_cast<typename this_type::status_key>(
                 *local_right_key_pointer));
         if (local_right_key == *local_right_key_pointer)
         {
-            return this->assign_state(
+            return this->assign_status(
                 in_assignment.key_,
                 in_assignment.operator_,
-                this->find_state(local_right_key));
+                this->extract_status(local_right_key));
         }
         return false;
     }
@@ -866,15 +861,15 @@ class psyq::scenario_engine::_private::reservoir
         @retval true  演算結果を状態値へ代入した。
         @retval false 失敗。状態値は変化しない。
      */
-    public: bool assign_state(
-        typename this_type::state_key const& in_left_key,
-        typename this_type::state_value::assignment const in_operator,
-        typename this_type::state_value const& in_right_value)
+    public: bool assign_status(
+        typename this_type::status_key const& in_left_key,
+        typename this_type::status::assignment const in_operator,
+        typename this_type::status const& in_right_value)
     {
-        auto local_left_value(this->find_state(in_left_key));
+        auto local_left_value(this->extract_status(in_left_key));
         return !local_left_value.is_empty()
             && local_left_value.assign(in_operator, in_right_value)
-            && this->assign_state(in_left_key, local_left_value);
+            && this->assign_status(in_left_key, local_left_value);
     }
     /// @}
     //-------------------------------------------------------------------------
@@ -885,19 +880,19 @@ class psyq::scenario_engine::_private::reservoir
 
         状態変化フラグを取得する。
 
-        @param[in] in_state_key 変化フラグを取得する状態値に対応する識別値。
+        @param[in] in_status_key 変化フラグを取得する状態値に対応する識別値。
         @retval 正 状態変化フラグは真。
         @retval 0  状態変化フラグは偽。
         @retval 負 状態値がない。
      */
     public: std::int8_t _get_transition(
-        typename this_type::state_key const& in_state_key)
+        typename this_type::status_key const& in_status_key)
     const PSYQ_NOEXCEPT
     {
-        auto local_state(
-            this_type::state_key_less::find_const_pointer(
-                this->states_, in_state_key));
-        return local_state != nullptr? local_state->get_transition(): -1;
+        auto local_status(
+            this_type::status_key_less::find_const_pointer(
+                this->statuses_, in_status_key));
+        return local_status != nullptr? local_status->get_transition(): -1;
     }
 
     /** @brief psyq::scenario_engine 管理者以外は、この関数は使用禁止。
@@ -906,11 +901,11 @@ class psyq::scenario_engine::_private::reservoir
      */
     public: void _reset_transition()
     {
-        typename this_type::state_registry::format const local_transition_mask(
-            ~(1 << this_type::state_registry::format_TRANSITION_FRONT));
-        for (auto& local_state: this->states_)
+        typename this_type::status_summary::format const local_transition_mask(
+            ~(1 << this_type::status_summary::format_TRANSITION_FRONT));
+        for (auto& local_status: this->statuses_)
         {
-            local_state.format_ &= local_transition_mask;
+            local_status.format_ &= local_transition_mask;
         }
     }
     /// @}
@@ -957,7 +952,7 @@ class psyq::scenario_engine::_private::reservoir
         this->chunks_.erase(local_lower_bound);
 
         // 状態値を削除する。
-        for (auto i(this->states_.begin()); i != this->states_.end();)
+        for (auto i(this->statuses_.begin()); i != this->statuses_.end();)
         {
             if (in_chunk_key != i->chunk_key_)
             {
@@ -965,7 +960,7 @@ class psyq::scenario_engine::_private::reservoir
             }
             else
             {
-                i = this->states_.erase(i);
+                i = this->statuses_.erase(i);
             }
         }
         return true;
@@ -993,21 +988,21 @@ class psyq::scenario_engine::_private::reservoir
     /** @brief ビット領域の大きさの降順で並び替えた状態値のコンテナを作る。
      */
     private:
-    static typename this_type::state_pointer_container sort_state_by_width(
-        typename this_type::state_container const& in_states)
+    static typename this_type::status_pointer_container sort_status_by_width(
+        typename this_type::status_container const& in_statuses)
     {
-        typename this_type::state_pointer_container local_states(
-            in_states.get_allocator());
-        local_states.reserve(in_states.size());
-        for (auto& local_state: in_states)
+        typename this_type::status_pointer_container local_statuses(
+            in_statuses.get_allocator());
+        local_statuses.reserve(in_statuses.size());
+        for (auto& local_status: in_statuses)
         {
-            local_states.push_back(&local_state);
+            local_statuses.push_back(&local_status);
         }
-        struct state_size_greater
+        struct status_size_greater
         {
             bool operator()(
-                typename this_type::state_registry const* const in_left,
-                typename this_type::state_registry const* const in_right)
+                typename this_type::status_summary const* const in_left,
+                typename this_type::status_summary const* const in_right)
             const PSYQ_NOEXCEPT
             {
                 auto const local_left_width(
@@ -1018,18 +1013,18 @@ class psyq::scenario_engine::_private::reservoir
             }
         };
         std::sort(
-            local_states.begin(), local_states.end(), state_size_greater());
-        return local_states;
+            local_statuses.begin(), local_statuses.end(), status_size_greater());
+        return local_statuses;
     }
 
-    private: void copy_state(
-        typename this_type::state_registry const& in_source_state,
+    private: void copy_status(
+        typename this_type::status_summary const& in_source_status,
         typename this_type::chunk_container const& in_source_chunks)
     {
         // コピー元となる状態値ビット列チャンクを取得する。
         auto const local_source_chunk(
             this_type::chunk_key_less::find_const_pointer(
-                in_source_chunks, in_source_state.chunk_key_));
+                in_source_chunks, in_source_status.chunk_key_));
         if (local_source_chunk == nullptr)
         {
             PSYQ_ASSERT(false);
@@ -1038,12 +1033,12 @@ class psyq::scenario_engine::_private::reservoir
 
         // コピー先となる状態値を用意する。
         auto& local_target_chunk(
-            this_type::equip_chunk(this->chunks_, in_source_state.chunk_key_));
-        auto const local_variety(in_source_state.get_variety());
-        auto const local_target_state(
-            this->insert_state_registry(
-                local_target_chunk, in_source_state.key_, local_variety));
-        if (local_target_state == nullptr)
+            this_type::equip_chunk(this->chunks_, in_source_status.chunk_key_));
+        auto const local_variety(in_source_status.get_variety());
+        auto const local_target_status(
+            this->insert_status_summary(
+                local_target_chunk, in_source_status.key_, local_variety));
+        if (local_target_status == nullptr)
         {
             PSYQ_ASSERT(false);
             return;
@@ -1052,64 +1047,64 @@ class psyq::scenario_engine::_private::reservoir
         // 状態値ビット列をコピーする。
         auto const local_width(this_type::get_width(local_variety));
         local_target_chunk.set_bits(
-            local_target_state->get_position(),
+            local_target_status->get_position(),
             local_width,
             local_source_chunk->get_bits(
-                in_source_state.get_position(), local_width));
-        local_target_state->copy_transition(in_source_state);
+                in_source_status.get_position(), local_width));
+        local_target_status->copy_transition(in_source_status);
     }
 
     //-------------------------------------------------------------------------
     /** @brief 状態値を登録する。
         @param[in,out] io_chunk 登録する状態値が所属する状態値ビット列チャンク。
-        @param[in] in_state_key 登録する状態値に対応する識別値。
+        @param[in] in_status_key 登録する状態値に対応する識別値。
         @param[in] in_variety   登録する状態値の種別。
         @retval !=nullptr 成功。登録した状態登記。
         @retval ==nullptr
             失敗。状態値を登録できなかった。
-            - in_state_key に対応する状態値がすでに登録されていると失敗する。
+            - in_status_key に対応する状態値がすでに登録されていると失敗する。
      */
     private:
-    typename this_type::state_container::value_type* insert_state_registry(
+    typename this_type::status_container::value_type* insert_status_summary(
         typename this_type::chunk& io_chunk,
-        typename this_type::state_key in_state_key,
-        typename this_type::state_registry::variety const in_variety)
+        typename this_type::status_key in_status_key,
+        typename this_type::status_summary::variety const in_variety)
     {
-        // in_state_key と同じ状態登記がないことを確認する。
-        auto const local_state_iterator(
+        // in_status_key と同じ状態登記がないことを確認する。
+        auto const local_status_iterator(
             std::lower_bound(
-                this->states_.begin(),
-                this->states_.end(),
-                in_state_key,
-                typename this_type::state_key_less()));
-        if (local_state_iterator != this->states_.end()
-            && local_state_iterator->key_ == in_state_key)
+                this->statuses_.begin(),
+                this->statuses_.end(),
+                in_status_key,
+                typename this_type::status_key_less()));
+        if (local_status_iterator != this->statuses_.end()
+            && local_status_iterator->key_ == in_status_key)
         {
             return nullptr;
         }
 
         // 状態登記を新たに追加し、状態値ビット列チャンクを用意する。
-        PSYQ_ASSERT(in_variety != this_type::state_registry::EMPTY_VARIETY);
-        auto& local_state(
-            *this->states_.emplace(
-                local_state_iterator,
-                std::move(in_state_key),
+        PSYQ_ASSERT(in_variety != this_type::status::kind_EMPTY);
+        auto& local_status(
+            *this->statuses_.emplace(
+                local_status_iterator,
+                std::move(in_status_key),
                 io_chunk.key_,
                 in_variety));
 
         // 状態値のビット位置を決定する。
         auto const local_set_position(
-            local_state.set_position(
+            local_status.set_position(
                 io_chunk.template
-                    make_state_field<typename this_type::state_registry>(
+                    make_status_field<typename this_type::status_summary>(
                         this_type::get_width(in_variety))));
         if (!local_set_position)
         {
             PSYQ_ASSERT(false);
-            local_state.format_ = 0;
+            local_status.format_ = 0;
             return nullptr;
         }
-        return &local_state;
+        return &local_status;
     }
 
     //-------------------------------------------------------------------------
@@ -1120,7 +1115,7 @@ class psyq::scenario_engine::_private::reservoir
         @retval ==0 失敗。
      */
     private:
-    static typename this_type::state_registry::bit_width make_float_bits(
+    static typename this_type::status_summary::bit_width make_float_bits(
         typename this_type::chunk::block& out_bits,
         float const in_value)
     {
@@ -1132,7 +1127,7 @@ class psyq::scenario_engine::_private::reservoir
 
     /// @copydoc make_float_bits
     private:
-    static typename this_type::state_registry::bit_width make_float_bits(
+    static typename this_type::status_summary::bit_width make_float_bits(
         typename this_type::chunk::block& out_bits,
         double const in_value)
     {
@@ -1140,7 +1135,7 @@ class psyq::scenario_engine::_private::reservoir
         /** @note
             ここでコンパイルエラーか警告が出る場合は
             double から float への型変換が発生しているのが原因。
-            assign_state の引数を手動で型変換すれば解決するはず。
+            assign_status の引数を手動で型変換すれば解決するはず。
          */
         local_float.value = in_value;
         out_bits = local_float.bits;
@@ -1151,7 +1146,7 @@ class psyq::scenario_engine::_private::reservoir
         @return 必ず0。
      */
     private:
-    static typename this_type::state_registry::bit_width make_float_bits(
+    static typename this_type::status_summary::bit_width make_float_bits(
         typename this_type::chunk::block&,
         bool const)
     {
@@ -1165,14 +1160,14 @@ class psyq::scenario_engine::_private::reservoir
         @retval ==0 失敗。
      */
     private: template<typename template_value>
-    static typename this_type::state_registry::bit_width make_float_bits(
+    static typename this_type::status_summary::bit_width make_float_bits(
         typename this_type::chunk::block& out_bits,
         template_value const in_value)
     {
         // 整数を浮動小数点数に変換して、桁あふれが起きてないか判定する。
         typename this_type::float_union local_float;
         local_float.value =
-            static_cast<typename this_type::state_value::float_type>(in_value);
+            static_cast<typename this_type::status::float_type>(in_value);
         if (static_cast<template_value>(local_float.value) != in_value)
         {
             return 0;
@@ -1189,16 +1184,15 @@ class psyq::scenario_engine::_private::reservoir
         @retval ==0 失敗。
      */
     private: template<typename template_value>
-    static typename this_type::state_registry::bit_width make_integer_bits(
+    static typename this_type::status_summary::bit_width make_integer_bits(
         typename this_type::chunk::block& out_bits,
         template_value const in_value,
-        typename this_type::state_registry::variety const in_variety)
+        typename this_type::status_summary::variety const in_variety)
     PSYQ_NOEXCEPT
     {
         // 整数に変換して、桁あふれが起きてないか判定する。
         auto const local_signed(
-            static_cast<typename this_type::state_value::signed_type>(
-                in_value));
+            static_cast<typename this_type::status::signed_type>(in_value));
         if (static_cast<template_value>(local_signed) != in_value)
         {
             return 0;
@@ -1227,10 +1221,10 @@ class psyq::scenario_engine::_private::reservoir
         @return 必ず0。
      */
     private:
-    static typename this_type::state_registry::bit_width make_integer_bits(
+    static typename this_type::status_summary::bit_width make_integer_bits(
         typename this_type::chunk::block&,
         bool const,
-        typename this_type::state_registry::variety const)
+        typename this_type::status_summary::variety const)
     {
         return 0;
     }
@@ -1270,7 +1264,7 @@ class psyq::scenario_engine::_private::reservoir
 
     //-------------------------------------------------------------------------
     /// @brief 状態値登記のコンテナ。
-    private: typename this_type::state_container states_;
+    private: typename this_type::status_container statuses_;
     /// @brief 状態値ビット列チャンクのコンテナ。
     private: typename this_type::chunk_container chunks_;
 

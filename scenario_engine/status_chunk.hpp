@@ -1,9 +1,9 @@
 ﻿/** @file
-    @brief @copybrief psyq::scenario_engine::_private::state_registry
+    @brief @copybrief psyq::scenario_engine::_private::status_chunk
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_SCENARIO_ENGINE_STATE_CHUNK_HPP_
-#define PSYQ_SCENARIO_ENGINE_STATE_CHUNK_HPP_
+#ifndef PSYQ_SCENARIO_ENGINE_STATUS_CHUNK_HPP_
+#define PSYQ_SCENARIO_ENGINE_STATUS_CHUNK_HPP_
 
 #include <cstdint>
 #include "../assert.hpp"
@@ -15,7 +15,7 @@ namespace psyq
     {
         namespace _private
         {
-            template<typename, typename, typename> class state_chunk;
+            template<typename, typename, typename> class status_chunk;
         } // namespace _private
     } // namespace scenario_engine
 } // namespace psyq
@@ -23,18 +23,18 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 状態値を格納するビット列のチャンク。
-    @tparam template_key             @copydoc state_chunk::key
-    @tparam template_block_container @copydoc state_chunk::block_container
-    @tparam template_field_container @copydoc state_chunk::field_container
+    @tparam template_key             @copydoc status_chunk::key
+    @tparam template_block_container @copydoc status_chunk::block_container
+    @tparam template_field_container @copydoc status_chunk::field_container
 */
 template<
     typename template_key,
     typename template_block_container,
     typename template_field_container>
-class psyq::scenario_engine::_private::state_chunk
+class psyq::scenario_engine::_private::status_chunk
 {
     /// @brief thisが指す値の型。
-    private: typedef state_chunk this_type;
+    private: typedef status_chunk this_type;
 
     /// @brief チャンクの識別値。
     public: typedef template_key key;
@@ -57,7 +57,7 @@ class psyq::scenario_engine::_private::state_chunk
 
     //-------------------------------------------------------------------------
     public: template<typename template_allocator>
-    state_chunk(
+    status_chunk(
         typename this_type::key in_key,
         template_allocator const& in_allocator)
     :
@@ -70,7 +70,7 @@ class psyq::scenario_engine::_private::state_chunk
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
-    public: state_chunk(this_type&& io_source):
+    public: status_chunk(this_type&& io_source):
     blocks_(std::move(io_source.blocks_)),
     empty_fields_(std::move(io_source.empty_fields_)),
     key_(std::move(io_source.key_))
@@ -93,9 +93,9 @@ class psyq::scenario_engine::_private::state_chunk
         @param[in] in_width 生成するビット領域のビット数。
         @return 生成したビット領域の、ビット列ブロックでのビット位置。
      */
-    public: template<typename template_state>
-    std::size_t make_state_field(
-        typename template_state::bit_width const in_width)
+    public: template<typename template_status>
+    std::size_t make_status_field(
+        typename template_status::bit_width const in_width)
     {
         // 状態値を格納するビット領域を用意する。
         auto const local_empty_field(
@@ -103,17 +103,17 @@ class psyq::scenario_engine::_private::state_chunk
                 this->empty_fields_.begin(),
                 this->empty_fields_.end(),
                 in_width,
-                typename template_state::format_less()));
+                typename template_status::format_less()));
         if (local_empty_field != this->empty_fields_.end())
         {
             // 既存の空き領域を再利用する。
-            return this->reuse_empty_field<template_state>(
+            return this->reuse_empty_field<template_status>(
                 in_width, local_empty_field);
         }
         else
         {
             // 新たな領域を追加する。
-            return this->add_state_field<template_state>(in_width);
+            return this->add_status_field<template_status>(in_width);
         }
     }
 
@@ -221,21 +221,21 @@ class psyq::scenario_engine::_private::state_chunk
         return local_last_block != local_block;
     }
 
-    private: template<typename template_state>
+    private: template<typename template_status>
     std::size_t reuse_empty_field(
-        typename template_state::bit_width const in_width,
+        typename template_status::bit_width const in_width,
         typename this_type::field_container::iterator const in_empty_field)
     {
         // 既存の空き領域を再利用する。
         auto const local_empty_position(
-            template_state::get_position(*in_empty_field));
+            template_status::get_position(*in_empty_field));
 
         // 空き領域を更新する。
-        auto const local_empty_width(template_state::get_width(*in_empty_field));
+        auto const local_empty_width(template_status::get_width(*in_empty_field));
         this->empty_fields_.erase(in_empty_field);
         if (in_width < local_empty_width)
         {
-            this_type::add_empty_field<template_state>(
+            this_type::add_empty_field<template_status>(
                 this->empty_fields_,
                 local_empty_position + in_width,
                 local_empty_width - in_width);
@@ -243,14 +243,14 @@ class psyq::scenario_engine::_private::state_chunk
         return local_empty_position;
     }
 
-    private: template<typename template_state>
-    std::size_t add_state_field(
-        typename template_state::bit_width const in_width)
+    private: template<typename template_status>
+    std::size_t add_status_field(
+        typename template_status::bit_width const in_width)
     {
         // 新たにビット列ブロックを追加する。
         auto const local_position(
             this->blocks_.size() * this_type::BLOCK_WIDTH);
-        if (local_position <= template_state::format_POSITION_MASK)
+        if (local_position <= template_status::format_POSITION_MASK)
         {
             auto const local_add_block_width(
                 (in_width + this_type::BLOCK_WIDTH - 1)
@@ -263,7 +263,7 @@ class psyq::scenario_engine::_private::state_chunk
                 local_add_block_width * this_type::BLOCK_WIDTH);
             if (in_width < local_add_width)
             {
-                this_type::add_empty_field<template_state>(
+                this_type::add_empty_field<template_status>(
                     this->empty_fields_,
                     local_position + in_width,
                     local_add_width - in_width);
@@ -276,25 +276,25 @@ class psyq::scenario_engine::_private::state_chunk
         return local_position;
     }
 
-    private: template<typename template_state>
+    private: template<typename template_status>
     static void add_empty_field(
         typename this_type::field_container& io_empty_fields,
         std::size_t const in_position,
         std::size_t const in_width)
     {
-        if (in_position <= template_state::format_POSITION_MASK
-            && in_width <= template_state::format_WIDTH_MASK)
+        if (in_position <= template_status::format_POSITION_MASK
+            && in_width <= template_status::format_WIDTH_MASK)
         {
             auto const local_empty_field(
-               static_cast<typename template_state::format>(
-                   (in_width << template_state::format_WIDTH_FRONT)
-                   | (in_position << template_state::format_POSITION_FRONT)));
+               static_cast<typename template_status::format>(
+                   (in_width << template_status::format_WIDTH_FRONT)
+                   | (in_position << template_status::format_POSITION_FRONT)));
             io_empty_fields.insert(
                 std::lower_bound(
                     io_empty_fields.begin(),
                     io_empty_fields.end(),
                     local_empty_field,
-                    typename template_state::format_less()),
+                    typename template_status::format_less()),
                 local_empty_field);
         }
         else
@@ -311,7 +311,7 @@ class psyq::scenario_engine::_private::state_chunk
     /// @brief key
     public: typename this_type::key key_;
 
-}; // class psyq::scenario_engine::_private::state_chunk
+}; // class psyq::scenario_engine::_private::status_chunk
 
-#endif // defined(PSYQ_SCENARIO_ENGINE_STATE_CHUNK_HPP_)
+#endif // defined(PSYQ_SCENARIO_ENGINE_STATUS_CHUNK_HPP_)
 // vim: set expandtab:

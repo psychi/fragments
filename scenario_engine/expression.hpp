@@ -17,7 +17,7 @@ namespace psyq
         {
             template<typename, typename, typename> class expression;
             template<typename> class sub_expression;
-            template<typename> class state_transition;
+            template<typename> class status_transition;
             template<typename, typename, typename, typename>
                 class expression_chunk;
         } // namespace _private
@@ -185,38 +185,38 @@ class psyq::scenario_engine::_private::sub_expression
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 状態変化条件式の要素条件。
 
-    @tparam template_state_key @copydoc psyq::scenario_engine::_private::reservoir::state_key
+    @tparam template_status_key @copydoc psyq::scenario_engine::_private::reservoir::status_key
  */
-template<typename template_state_key>
-class psyq::scenario_engine::_private::state_transition
+template<typename template_status_key>
+class psyq::scenario_engine::_private::status_transition
 {
-    private: typedef state_transition this_type;
+    private: typedef status_transition this_type;
 
     /** @brief 状態変化条件式の要素条件を構築する。
         @param[in] in_key this_type::key_ の初期値。
      */
-    public: state_transition(template_state_key in_key)
+    public: status_transition(template_status_key in_key)
     PSYQ_NOEXCEPT: key_(std::move(in_key))
     {}
 
     /// @brief 変化を検知する状態値の識別値。
-    public: template_state_key key_;
+    public: template_status_key key_;
 
-}; // class psyq::scenario_engine::_private::state_transition
+}; // class psyq::scenario_engine::_private::status_transition
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 要素条件チャンク。
 
     @tparam template_chunk_key                  @copydoc reservoir::chunk_key
     @tparam template_sub_expression_container   @copydoc evaluator::sub_expression_container
-    @tparam template_state_transition_container @copydoc evaluator::state_transition_container
-    @tparam template_state_comparison_container @copydoc evaluator::state_comparison_container
+    @tparam template_status_transition_container @copydoc evaluator::status_transition_container
+    @tparam template_status_comparison_container @copydoc evaluator::status_comparison_container
  */
 template<
     typename template_chunk_key,
     typename template_sub_expression_container,
-    typename template_state_transition_container,
-    typename template_state_comparison_container>
+    typename template_status_transition_container,
+    typename template_status_comparison_container>
 class psyq::scenario_engine::_private::expression_chunk
 {
     private: typedef expression_chunk this_type;
@@ -230,8 +230,8 @@ class psyq::scenario_engine::_private::expression_chunk
         typename template_sub_expression_container::allocator_type const& in_allocator)
     :
     sub_expressions_(in_allocator),
-    state_transitions_(in_allocator),
-    state_comparisons_(in_allocator),
+    status_transitions_(in_allocator),
+    status_comparisons_(in_allocator),
     key_(std::move(in_key))
     {}
 
@@ -241,13 +241,13 @@ class psyq::scenario_engine::_private::expression_chunk
      */
     public: expression_chunk(this_type&& io_source):
     sub_expressions_(std::move(io_source.sub_expressions_)),
-    state_transitions_(std::move(io_source.state_transitions_)),
-    state_comparisons_(std::move(io_source.state_comparisons_)),
+    status_transitions_(std::move(io_source.status_transitions_)),
+    status_comparisons_(std::move(io_source.status_comparisons_)),
     key_(std::move(io_source.key_))
     {
         io_source.sub_expressions_.clear();
-        io_source.state_comparisons_.clear();
-        io_source.state_comparisons_.clear();
+        io_source.status_comparisons_.clear();
+        io_source.status_comparisons_.clear();
     }
 
     /** @brief ムーブ代入演算子。
@@ -259,12 +259,12 @@ class psyq::scenario_engine::_private::expression_chunk
         if (this != &io_source)
         {
             this->sub_expressions_ = std::move(io_source.sub_expressions_);
-            this->state_transitions_ = std::move(io_source.state_transitions_);
-            this->state_comparisons_ = std::move(io_source.state_comparisons_);
+            this->status_transitions_ = std::move(io_source.status_transitions_);
+            this->status_comparisons_ = std::move(io_source.status_comparisons_);
             this->key_ = std::move(io_source.key_);
             io_source.sub_expressions_.clear();
-            io_source.state_comparisons_.clear();
-            io_source.state_comparisons_.clear();
+            io_source.status_comparisons_.clear();
+            io_source.status_comparisons_.clear();
         }
         return *this;
     }
@@ -273,9 +273,9 @@ class psyq::scenario_engine::_private::expression_chunk
     /// @brief 複合条件式で使う要素条件のコンテナ。
     public: template_sub_expression_container sub_expressions_;
     /// @brief 状態変化条件式で使う要素条件のコンテナ。
-    public: template_state_transition_container state_transitions_;
+    public: template_status_transition_container status_transitions_;
     /// @brief 状態比較条件式で使う要素条件のコンテナ。
-    public: template_state_comparison_container state_comparisons_;
+    public: template_status_comparison_container status_comparisons_;
     /// @brief この要素条件チャンクに対応する識別値。
     public: template_chunk_key key_;
 

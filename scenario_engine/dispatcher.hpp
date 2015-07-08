@@ -15,7 +15,7 @@ namespace psyq
         namespace _private
         {
             template<typename, typename> class dispatcher;
-            template<typename, typename, typename> class state_monitor;
+            template<typename, typename, typename> class status_monitor;
         } // namespace _private
     } // namespace scenario_engine
 } // namespace psyq
@@ -59,11 +59,11 @@ class psyq::scenario_engine::_private::dispatcher
     //-------------------------------------------------------------------------
     /// @brief 状態監視器。
     private: typedef
-         psyq::scenario_engine::_private::state_monitor<
-             typename this_type::evaluator::reservoir::state_key,
+         psyq::scenario_engine::_private::status_monitor<
+             typename this_type::evaluator::reservoir::status_key,
              typename this_type::evaluator::expression::key,
              typename this_type::allocator_type>
-         state_monitor;
+         status_monitor;
 
     /// @brief 条件式監視器。
     private: typedef
@@ -95,23 +95,23 @@ class psyq::scenario_engine::_private::dispatcher
      */
     /** @brief 空の条件挙動器を構築する。
         @param[in] in_reserve_expressions 監視する条件式の予約数。
-        @param[in] in_reserve_states      監視する状態値の予約数。
+        @param[in] in_reserve_statuses      監視する状態値の予約数。
         @param[in] in_reserve_caches      条件挙動キャッシュの予約数。
         @param[in] in_allocator           メモリ割当子の初期値。
      */
     public: dispatcher(
         std::size_t const in_reserve_expressions,
-        std::size_t const in_reserve_states,
+        std::size_t const in_reserve_statuses,
         std::size_t const in_reserve_caches,
         typename this_type::allocator_type const& in_allocator)
     :
     expression_monitors_(in_allocator),
-    state_monitors_(in_allocator),
+    status_monitors_(in_allocator),
     behavior_caches_(in_allocator),
     dispatch_lock_(false)
     {
         this->expression_monitors_.reserve(in_reserve_expressions);
-        this->state_monitors_.reserve(in_reserve_states);
+        this->status_monitors_.reserve(in_reserve_statuses);
         this->behavior_caches_.reserve(in_reserve_caches);
     }
 
@@ -120,7 +120,7 @@ class psyq::scenario_engine::_private::dispatcher
      */
     public: dispatcher(this_type const& in_source):
     expression_monitors_(in_source.expression_monitors_),
-    state_monitors_(in_source.state_monitors_),
+    status_monitors_(in_source.status_monitors_),
     behavior_caches_(in_source.behavior_caches_.get_allocator()),
     dispatch_lock_(false)
     {
@@ -133,7 +133,7 @@ class psyq::scenario_engine::_private::dispatcher
      */
     public: dispatcher(this_type&& io_source):
     expression_monitors_(std::move(io_source.expression_monitors_)),
-    state_monitors_(std::move(io_source.state_monitors_)),
+    status_monitors_(std::move(io_source.status_monitors_)),
     behavior_caches_(std::move(io_source.behavior_caches_)),
     dispatch_lock_((PSYQ_ASSERT(!io_source.dispatch_lock_), false))
     {}
@@ -147,7 +147,7 @@ class psyq::scenario_engine::_private::dispatcher
         /// @note this_type::_dispatch 実行中はムーブできない。
         PSYQ_ASSERT(!this->dispatch_lock_ && !in_source.dispatch_lock_);
         this->expression_monitors_ = in_source.expression_monitors_;
-        this->state_monitors_ = in_source.state_monitors_;
+        this->status_monitors_ = in_source.status_monitors_;
         return *this;
     }
 
@@ -160,7 +160,7 @@ class psyq::scenario_engine::_private::dispatcher
         /// @note this_type::_dispatch 実行中はムーブできない。
         PSYQ_ASSERT(!this->dispatch_lock_ && !io_source.dispatch_lock_);
         this->expression_monitors_ = std::move(io_source.expression_monitors_);
-        this->state_monitors_ = std::move(io_source.state_monitors_);
+        this->status_monitors_ = std::move(io_source.status_monitors_);
         this->behavior_caches_ = std::move(io_source.behavior_caches_);
         return *this;
     }
@@ -185,8 +185,8 @@ class psyq::scenario_engine::_private::dispatcher
     public: void shrink_to_fit()
     {
         this_type::rebuild_expression_monitor(this->expression_monitors_);
-        this_type::rebuild_state_monitor(
-            this->state_monitors_, this->expression_monitors_);
+        this_type::rebuild_status_monitor(
+            this->status_monitors_, this->expression_monitors_);
         //this->behavior_caches_.shrink_to_fit();
     }
     /// @}
@@ -319,8 +319,8 @@ class psyq::scenario_engine::_private::dispatcher
         this->register_expressions(in_evaluator, in_reserve_expressions);
 
         // 状態変化を検知し、条件式監視器へ知らせる。
-        this_type::detect_state_transition(
-            this->expression_monitors_, this->state_monitors_, io_reservoir);
+        this_type::detect_status_transition(
+            this->expression_monitors_, this->status_monitors_, io_reservoir);
 
         // 状態変化した条件式を評価し、条件挙動関数をキャッシュに貯める。
         this->behavior_caches_.clear();
@@ -383,15 +383,15 @@ class psyq::scenario_engine::_private::dispatcher
     }
 
     /** @brief 状態監視器を再構築する。
-        @param[in,out] io_state_monitors  再構築する状態監視器のコンテナ。
+        @param[in,out] io_status_monitors  再構築する状態監視器のコンテナ。
         @param[in] in_expression_monitors 状態監視器が使っている条件式監視器のコンテナ。
      */
-    private: static void rebuild_state_monitor(
-        typename this_type::state_monitor::container& io_state_monitors,
+    private: static void rebuild_status_monitor(
+        typename this_type::status_monitor::container& io_status_monitors,
         typename this_type::expression_monitor::container const& in_expression_monitors)
     {
         /// @note std::vector なら、逆順で走査したほうが効率いいかも。
-        for (auto i(io_state_monitors.begin()); i != io_state_monitors.end();)
+        for (auto i(io_status_monitors.begin()); i != io_status_monitors.end();)
         {
             auto& local_expression_keys(i->expression_keys_);
             for (
@@ -412,7 +412,7 @@ class psyq::scenario_engine::_private::dispatcher
             }
             if (local_expression_keys.empty())
             {
-                i = io_state_monitors.erase(i);
+                i = io_status_monitors.erase(i);
             }
             else
             {
@@ -421,7 +421,7 @@ class psyq::scenario_engine::_private::dispatcher
             }
             local_expression_keys.shrink_to_fit();
         }
-        io_state_monitors.shrink_to_fit();
+        io_status_monitors.shrink_to_fit();
     }
 
     //-------------------------------------------------------------------------
@@ -506,19 +506,19 @@ class psyq::scenario_engine::_private::dispatcher
 
             case this_type::evaluator::expression::kind_STATE_TRANSITION:
             this_type::register_expression(
-                this->state_monitors_,
+                this->status_monitors_,
                 in_register_key,
                 *local_expression,
-                local_chunk->state_transitions_,
+                local_chunk->status_transitions_,
                 in_reserve_expressions);
             return -1;
 
             case this_type::evaluator::expression::kind_STATE_COMPARISON:
             this_type::register_expression(
-                this->state_monitors_,
+                this->status_monitors_,
                 in_register_key,
                 *local_expression,
-                local_chunk->state_comparisons_,
+                local_chunk->status_comparisons_,
                 in_reserve_expressions);
             return 1;
 
@@ -530,7 +530,7 @@ class psyq::scenario_engine::_private::dispatcher
     }
 
     /** @brief 状態変化を検知する条件式を、状態監視器へ登録する。
-        @param[in,out] io_state_monitors 条件式を登録する状態監視器のコンテナ。
+        @param[in,out] io_status_monitors 条件式を登録する状態監視器のコンテナ。
         @param[in] in_register_key       登録する条件式の識別値。
         @param[in] in_expression         走査する条件式。
         @param[in] in_elements           条件式が参照する要素条件のコンテナ。
@@ -539,7 +539,7 @@ class psyq::scenario_engine::_private::dispatcher
      */
     private: template<typename template_element_container>
     static void register_expression(
-        typename this_type::state_monitor::container& io_state_monitors,
+        typename this_type::status_monitor::container& io_status_monitors,
         typename this_type::evaluator::expression::key const& in_register_key,
         typename this_type::evaluator::expression const& in_expression,
         template_element_container const& in_elements,
@@ -552,26 +552,26 @@ class psyq::scenario_engine::_private::dispatcher
         for (auto i(local_begin + in_expression.begin_); i != local_end; ++i)
         {
             // 条件式を登録する状態監視器を取得する。
-            auto const& local_state_key(i->key_);
-            auto local_state_monitor(
+            auto const& local_status_key(i->key_);
+            auto local_status_monitor(
                 std::lower_bound(
-                    io_state_monitors.begin(),
-                    io_state_monitors.end(),
-                    local_state_key,
-                    typename this_type::state_monitor::key_less()));
-            if (local_state_monitor == io_state_monitors.end()
-                || local_state_monitor->key_ != local_state_key)
+                    io_status_monitors.begin(),
+                    io_status_monitors.end(),
+                    local_status_key,
+                    typename this_type::status_monitor::key_less()));
+            if (local_status_monitor == io_status_monitors.end()
+                || local_status_monitor->key_ != local_status_key)
             {
                 // 要素条件に対応する状態監視器がなかったので、
                 // 状態監視器を新たに生成する。
-                local_state_monitor = io_state_monitors.insert(
-                    local_state_monitor,
-                    typename this_type::state_monitor(
-                        local_state_key, io_state_monitors.get_allocator()));
+                local_status_monitor = io_status_monitors.insert(
+                    local_status_monitor,
+                    typename this_type::status_monitor(
+                        local_status_key, io_status_monitors.get_allocator()));
             }
 
             // 条件式の識別値を、状態監視器へ登録する。
-            auto& local_expression_keys(local_state_monitor->expression_keys_);
+            auto& local_expression_keys(local_status_monitor->expression_keys_);
             local_expression_keys.reserve(in_reserve_expressions);
             auto const local_lower_bound(
                 std::lower_bound(
@@ -645,35 +645,35 @@ class psyq::scenario_engine::_private::dispatcher
 
     /** @brief 状態変化を検知し、条件式監視器へ知らせる。
         @param[in,out] io_expression_monitors 条件式監視器のコンテナ。
-        @param[in,out] io_state_monitors      状態監視器のコンテナ。
+        @param[in,out] io_status_monitors      状態監視器のコンテナ。
         @param[in] in_reservoir               変化を検知する状態貯蔵器。
      */
     private: template<typename template_reservoir>
-    static void detect_state_transition(
+    static void detect_status_transition(
         typename this_type::expression_monitor::container& io_expression_monitors,
-        typename this_type::state_monitor::container& io_state_monitors,
+        typename this_type::status_monitor::container& io_status_monitors,
         template_reservoir const& in_reservoir)
     {
         // 状態監視器のコンテナを走査しつつ、
         // 不要になった要素を削除し、状態監視器のコンテナを整理する。
-        for (auto i(io_state_monitors.begin()); i != io_state_monitors.end();)
+        for (auto i(io_status_monitors.begin()); i != io_status_monitors.end();)
         {
             // 状態変化を検知したら、条件式監視器へ知らせる。
-            auto& local_state_monitor(*i);
-            auto const local_state_transition(
-                in_reservoir._get_transition(local_state_monitor.key_));
-            if (local_state_transition != 0)
+            auto& local_status_monitor(*i);
+            auto const local_status_transition(
+                in_reservoir._get_transition(local_status_monitor.key_));
+            if (local_status_transition != 0)
             {
-                this_type::notify_state_transition(
+                this_type::notify_status_transition(
                     io_expression_monitors,
-                    local_state_monitor.expression_keys_,
-                    0 <= local_state_transition);
+                    local_status_monitor.expression_keys_,
+                    0 <= local_status_transition);
 
                 // 状態監視器に対応する条件式監視器がなくなったら、
                 // 状態監視器を削除する。
-                if (local_state_monitor.expression_keys_.empty())
+                if (local_status_monitor.expression_keys_.empty())
                 {
-                    i = io_state_monitors.erase(i);
+                    i = io_status_monitors.erase(i);
                     continue;
                 }
             }
@@ -686,10 +686,10 @@ class psyq::scenario_engine::_private::dispatcher
         @param[in,out] io_expression_keys     状態変化を知らせる条件式の識別値のコンテナ。
         @param[in] in_valid_transition        状態値があるかどうか。
      */
-    private: static void notify_state_transition(
+    private: static void notify_status_transition(
         typename this_type::expression_monitor::container&
             io_expression_monitors,
-        typename this_type::state_monitor::expression_key_container&
+        typename this_type::status_monitor::expression_key_container&
             io_expression_keys,
         bool const in_valid_transition)
     {
@@ -722,7 +722,7 @@ class psyq::scenario_engine::_private::dispatcher
          expression_monitors_;
 
     /// @brief 状態監視器の辞書。
-    private: typename this_type::state_monitor::container state_monitors_;
+    private: typename this_type::status_monitor::container status_monitors_;
 
     /// @brief 条件挙動キャッシュのコンテナ。
     private: typename this_type::expression_monitor::behavior_cache_container
@@ -740,13 +740,13 @@ class psyq::scenario_engine::_private::dispatcher
     状態変化した際に、条件式の評価を更新するために使う。
  */
 template<
-    typename template_state_key,
+    typename template_status_key,
     typename template_expression_key,
     typename template_allocator>
-class psyq::scenario_engine::_private::state_monitor
+class psyq::scenario_engine::_private::status_monitor
 {
     /// @brief thisが指す値の型。
-    private: typedef state_monitor this_type;
+    private: typedef status_monitor this_type;
 
     /// @brief 状態監視器のコンテナ。
     public: typedef std::vector<this_type, template_allocator> container;
@@ -755,7 +755,7 @@ class psyq::scenario_engine::_private::state_monitor
     public: typedef
         psyq::scenario_engine::_private::key_less<
             psyq::scenario_engine::_private::object_key_getter<
-                this_type, template_state_key>>
+                this_type, template_status_key>>
         key_less;
 
     /// @brief 条件式の識別値のコンテナの型。
@@ -767,8 +767,8 @@ class psyq::scenario_engine::_private::state_monitor
         @param[in] in_key       状態値の識別値。
         @param[in] in_allocator メモリ割当子の初期値。
      */
-    public: state_monitor(
-        template_state_key in_key,
+    public: status_monitor(
+        template_status_key in_key,
         template_allocator const& in_allocator)
     :
     expression_keys_(in_allocator),
@@ -779,7 +779,7 @@ class psyq::scenario_engine::_private::state_monitor
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
-    public: state_monitor(this_type&& io_source):
+    public: status_monitor(this_type&& io_source):
     expression_keys_(std::move(io_source.expression_keys_)),
     key_(std::move(io_source.key_))
     {}
@@ -799,9 +799,9 @@ class psyq::scenario_engine::_private::state_monitor
     /// @brief 評価の更新を要求する条件式の識別値のコンテナ。
     public: typename this_type::expression_key_container expression_keys_;
     /// @brief 状態値の識別値。
-    public: template_state_key key_;
+    public: template_status_key key_;
 
-}; // class psyq::scenario_engine::_private::state_monitor
+}; // class psyq::scenario_engine::_private::status_monitor
 
 #endif // !defined(PSYQ_SCENARIO_ENGINE_DISPATCHER_HPP_)
 // vim: set expandtab:

@@ -12,7 +12,7 @@
 #include "./evaluator.hpp"
 #include "./dispatcher.hpp"
 #include "./behavior_chunk.hpp"
-#include "./state_builder.hpp"
+#include "./status_builder.hpp"
 #include "./expression_builder.hpp"
 #include "./behavior_builder.hpp"
 
@@ -36,7 +36,7 @@ namespace psyq
     - driver::progress を時間フレーム毎に呼び出す。
       条件式の評価が変化していたら、条件挙動関数が呼び出される。
 
-    @tparam template_float     @copydoc reservoir::state_value::float_type
+    @tparam template_float     @copydoc reservoir::status::float_type
     @tparam template_priority  @copydoc dispatcher::function_priority
     @tparam template_hasher    @copydoc hasher
     @tparam template_allocator @copydoc allocator_type
@@ -107,7 +107,7 @@ class psyq::scenario_engine::driver
     //@{
     /** @brief 空のシナリオ駆動器を構築する。
         @param[in] in_reserve_chunks      チャンクの予約数。
-        @param[in] in_reserve_states      状態値の予約数。
+        @param[in] in_reserve_statuses      状態値の予約数。
         @param[in] in_reserve_expressions 条件式の予約数。
         @param[in] in_reserve_caches      条件挙動キャッシュの予約数。
         @param[in] in_hash_function       ハッシュ関数オブジェクトの初期値。
@@ -115,19 +115,19 @@ class psyq::scenario_engine::driver
      */
     public: driver(
         std::size_t const in_reserve_chunks,
-        std::size_t const in_reserve_states,
+        std::size_t const in_reserve_statuses,
         std::size_t const in_reserve_expressions,
         std::size_t const in_reserve_caches = 16,
         typename this_type::hasher in_hash_function = this_type::hasher(),
         typename this_type::allocator_type const& in_allocator =
             this_type::allocator_type())
     :
-    reservoir_(in_reserve_states, in_reserve_chunks, in_allocator),
+    reservoir_(in_reserve_statuses, in_reserve_chunks, in_allocator),
     modifier_(in_reserve_caches, in_allocator),
     evaluator_(in_reserve_expressions, in_reserve_chunks, in_allocator),
     dispatcher_(
         in_reserve_expressions,
-        in_reserve_states,
+        in_reserve_statuses,
         in_reserve_caches,
         in_allocator),
     behavior_chunks_(in_allocator),
@@ -203,8 +203,8 @@ class psyq::scenario_engine::driver
               互換のインターフェイスを持つこと。
             - 空のスマートポインタではないこと。
         @param[in] in_chunk_key            追加するチャンクの識別値。
-        @param[in] in_state_csv            状態値CSV文字列。
-        @param[in] in_state_attribute      状態値CSVの属性の行番号。
+        @param[in] in_status_csv            状態値CSV文字列。
+        @param[in] in_status_attribute      状態値CSVの属性の行番号。
         @param[in] in_expression_csv       条件式CSV文字列。
         @param[in] in_expression_attribute 条件式CSVの属性の行番号。
         @param[in] in_behavior_csv         条件挙動CSV文字列。
@@ -218,8 +218,8 @@ class psyq::scenario_engine::driver
         template_workspace_string& out_workspace,
         template_shared_ptr const& in_string_factory,
         typename this_type::reservoir::chunk_key const& in_chunk_key,
-        template_string const& in_state_csv,
-        typename template_string::size_type const& in_state_attribute,
+        template_string const& in_status_csv,
+        typename template_string::size_type const& in_status_attribute,
         template_string const& in_expression_csv,
         typename template_string::size_type const& in_expression_attribute,
         template_string const& in_behavior_csv,
@@ -238,8 +238,8 @@ class psyq::scenario_engine::driver
                 typename template_shared_ptr::element_type::allocator_type>
             relation_table;
         typedef
-            psyq::scenario_engine::state_builder<relation_table>
-            state_builder;
+            psyq::scenario_engine::status_builder<relation_table>
+            status_builder;
         typedef
             psyq::scenario_engine::expression_builder<relation_table>
             expression_builder;
@@ -249,11 +249,11 @@ class psyq::scenario_engine::driver
             behavior_builder;
         this->extend_chunk(
             in_chunk_key,
-            state_builder(
+            status_builder(
                 relation_table(
                     csv_table(
-                        out_workspace, in_string_factory, in_state_csv),
-                    in_state_attribute)),
+                        out_workspace, in_string_factory, in_status_csv),
+                    in_status_attribute)),
             expression_builder(
                 relation_table(
                     csv_table(
@@ -268,7 +268,7 @@ class psyq::scenario_engine::driver
 
     /** @brief 状態値と条件式と条件挙動関数を、チャンクへ追加する。
         @param[in] in_chunk_key 追加するチャンクの識別値。
-        @param[in] in_state_builder
+        @param[in] in_status_builder
             状態値を状態貯蔵器に登録する関数オブジェクト。
             以下に相当するメンバ関数を使えること。
             @code
@@ -276,7 +276,7 @@ class psyq::scenario_engine::driver
             // @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
             // @param[in,out] io_hasher    文字列から識別値を生成する関数オブジェクト。
             // @param[in] in_chunk_key     状態値を登録するチャンクを表す識別値。
-            void template_state_builder::operator()(
+            void template_status_builder::operator()(
                 driver::reservoir& io_reservoir,
                 driver::hasher& io_hasher,
                 driver::reservoir::chunk_key const& in_chunk_key)
@@ -319,16 +319,16 @@ class psyq::scenario_engine::driver
             @endcode
      */
     public: template<
-        typename template_state_builder,
+        typename template_status_builder,
         typename template_expression_builder,
         typename template_behavior_builder>
     void extend_chunk(
         typename this_type::reservoir::chunk_key const& in_chunk_key,
-        template_state_builder const& in_state_builder,
+        template_status_builder const& in_status_builder,
         template_expression_builder const& in_expression_builder,
         template_behavior_builder const& in_behavior_builder) 
     {
-        in_state_builder(
+        in_status_builder(
             this->reservoir_, this->hash_function_, in_chunk_key);
         in_expression_builder(
             this->evaluator_,

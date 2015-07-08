@@ -89,29 +89,29 @@ class psyq::scenario_engine::_private::evaluator
     //-------------------------------------------------------------------------
     /// @brief 状態変化条件式の要素条件。
     public: typedef
-        psyq::scenario_engine::_private::state_transition<
-            typename this_type::reservoir::state_key>
-        state_transition;
+        psyq::scenario_engine::_private::status_transition<
+            typename this_type::reservoir::status_key>
+        status_transition;
 
     /// @brief 状態変化条件式の要素条件のコンテナ。
     public: typedef
         std::vector<
-            typename this_type::state_transition,
+            typename this_type::status_transition,
             typename this_type::allocator_type>
-        state_transition_container;
+        status_transition_container;
 
     //-------------------------------------------------------------------------
     /// @brief 状態比較条件式の要素条件。
     public: typedef
-        typename this_type::reservoir::state_comparison
-        state_comparison;
+        typename this_type::reservoir::status_comparison
+        status_comparison;
 
     /// @brief 状態比較条件式の要素条件のコンテナ。
     public: typedef
         std::vector<
-            typename this_type::state_comparison,
+            typename this_type::status_comparison,
             typename this_type::allocator_type>
-        state_comparison_container;
+        status_comparison_container;
 
     //-------------------------------------------------------------------------
     /// @brief 要素条件チャンク。
@@ -119,8 +119,8 @@ class psyq::scenario_engine::_private::evaluator
         psyq::scenario_engine::_private::expression_chunk<
             typename this_type::reservoir::chunk_key,
             typename this_type::sub_expression_container,
-            typename this_type::state_transition_container,
-            typename this_type::state_comparison_container>
+            typename this_type::status_transition_container,
+            typename this_type::status_comparison_container>
         chunk;
 
     /// @brief 要素条件チャンクのコンテナ。
@@ -197,8 +197,8 @@ class psyq::scenario_engine::_private::evaluator
         for (auto& local_chunk: this->chunks_)
         {
             local_chunk.sub_expressions_.shrink_to_fit();
-            local_chunk.state_transitions_.shrink_to_fit();
-            local_chunk.state_comparisons_.shrink_to_fit();
+            local_chunk.status_transitions_.shrink_to_fit();
+            local_chunk.status_comparisons_.shrink_to_fit();
         }
     }
     /// @}
@@ -330,8 +330,8 @@ class psyq::scenario_engine::_private::evaluator
             // 状態変化条件式を評価する。
             case this_type::expression::kind_STATE_TRANSITION:
             return local_expression->evaluate(
-                local_chunk->state_transitions_,
-                [&](typename this_type::state_transition const& in_transition)
+                local_chunk->status_transitions_,
+                [&](typename this_type::status_transition const& in_transition)
                 ->psyq::scenario_engine::evaluation
                 {
                     return in_reservoir._get_transition(in_transition.key_);
@@ -340,11 +340,11 @@ class psyq::scenario_engine::_private::evaluator
             // 状態比較条件式を評価する。
             case this_type::expression::kind_STATE_COMPARISON:
             return local_expression->evaluate(
-                local_chunk->state_comparisons_,
-                [&](typename this_type::state_comparison const& in_comparison)
+                local_chunk->status_comparisons_,
+                [&](typename this_type::status_comparison const& in_comparison)
                 ->psyq::scenario_engine::evaluation
                 {
-                    return in_reservoir.compare_state(in_comparison);
+                    return in_reservoir.compare_status(in_comparison);
                 });
 
             // 条件式の種別が未知だった。
@@ -378,22 +378,22 @@ class psyq::scenario_engine::_private::evaluator
         @param[in] in_chunk_key 予約する要素条件チャンクに対応する識別値。
         @param[in] in_reserve_sub_expressions
             複合条件式の要素条件の予約数。
-        @param[in] in_reserve_state_transitions
+        @param[in] in_reserve_status_transitions
             状態変更条件式の要素条件の予約数。
-        @param[in] in_reserve_state_comparisons
+        @param[in] in_reserve_status_comparisons
             状態比較条件式の要素条件の予約数。
      */
     public: void reserve_chunk(
         typename this_type::reservoir::chunk_key const& in_chunk_key,
         std::size_t const in_reserve_sub_expressions,
-        std::size_t const in_reserve_state_transitions,
-        std::size_t const in_reserve_state_comparisons)
+        std::size_t const in_reserve_status_transitions,
+        std::size_t const in_reserve_status_comparisons)
     {
         auto& local_chunk(
             this_type::equip_chunk(this->chunks_, in_chunk_key));
         local_chunk.sub_expressions_.reserve(in_reserve_sub_expressions);
-        local_chunk.state_transitions_.reserve(in_reserve_state_transitions);
-        local_chunk.state_comparisons_.reserve(in_reserve_state_comparisons);
+        local_chunk.status_transitions_.reserve(in_reserve_status_transitions);
+        local_chunk.status_comparisons_.reserve(in_reserve_status_comparisons);
     }
 
     /** @brief 要素条件チャンクと、それを使っている条件式を破棄する。
@@ -465,26 +465,26 @@ class psyq::scenario_engine::_private::evaluator
 
     private: static std::pair<
          typename this_type::expression::kind,
-         typename this_type::state_transition_container*>
+         typename this_type::status_transition_container*>
     make_element_kind(
         typename this_type::chunk& in_chunk,
-        typename this_type::state_transition_container::value_type const&)
+        typename this_type::status_transition_container::value_type const&)
     {
         return std::make_pair(
             this_type::expression::kind_STATE_TRANSITION,
-            &in_chunk.state_transitions_);
+            &in_chunk.status_transitions_);
     }
 
     private: static std::pair<
          typename this_type::expression::kind,
-         typename this_type::state_comparison_container*>
+         typename this_type::status_comparison_container*>
     make_element_kind(
         typename this_type::chunk& in_chunk,
-        typename this_type::state_comparison_container::value_type const&)
+        typename this_type::status_comparison_container::value_type const&)
     {
         return std::make_pair(
             this_type::expression::kind_STATE_COMPARISON,
-            &in_chunk.state_comparisons_);
+            &in_chunk.status_comparisons_);
     }
 
     //-------------------------------------------------------------------------

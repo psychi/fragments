@@ -447,7 +447,8 @@ public psyq::string::table<
             }
             local_attributes.push_back(
                 typename this_type::attribute_container::value_type(
-                    i->first, local_column_number));
+                    std::distance(local_cells.begin(), i),
+                    local_column_number));
         }
 
         // 属性となるセルが1つも存在しなかったら、失敗とみなす。
@@ -492,25 +493,24 @@ public psyq::string::table<
         {
             auto const local_hash(
                 this_type::string::factory::compute_hash(in_attribute_name));
+            auto const& local_cells(this->get_cells());
             auto const local_lower_bound(
                 std::lower_bound(
                     this->attributes_.begin(),
                     this->attributes_.end(),
                     in_attribute_name,
                     typename this_type::attribute_name_less(
-                        this->get_cells(), local_hash)));
+                        local_cells, local_hash)));
             if (local_lower_bound != this->attributes_.end())
             {
-                auto& local_cell(
-                    this->get_cells().at(local_lower_bound->first));
+                auto& local_cell(local_cells.at(local_lower_bound->first));
                 auto const local_compare(
                     local_cell.second.compare_fast(
                         in_attribute_name, local_hash));
                 if (local_compare == 0)
                 {
                     return typename this_type::attribute(
-                        base_type::compute_column_number(
-                            local_lower_bound->first),
+                        base_type::compute_column_number(local_cell.first),
                         local_lower_bound->second);
                 }
             }

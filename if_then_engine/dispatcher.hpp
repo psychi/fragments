@@ -7,6 +7,11 @@
 
 #include "./expression_monitor.hpp"
 
+/// @brief 挙動関数の呼び出し優先順位のデフォルト値。
+#ifndef PSYQ_IF_THEN_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT
+#define PSYQ_IF_THEN_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT 0
+#endif // !defined(PSYQ_IF_THEN_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT)
+
 /// @cond
 namespace psyq
 {
@@ -22,13 +27,13 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 条件挙動器。条件式の評価結果が変化すると、条件挙動関数を呼び出す。
+/** @brief 条件挙動器。条件式の評価が変化条件と合致すると、挙動関数を呼び出す。
 
     ### 使い方の概略
     - dispatcher::register_function で、
-      条件式の評価結果が変化したときに呼び出す条件挙動関数を登録する。
-    - dispatcher::_dispatch で、
-      条件式の評価結果の変化を検知した条件挙動関数を呼び出す。
+      変化条件が一致した際に呼び出す挙動関数を登録する。
+    - dispatcher::_dispatch で条件式の評価の変化を検知し、
+      変化後条件に合致する挙動関数を呼び出す。
 
     @tparam template_evaluator @copydoc dispatcher::evaluator
     @tparam template_priority  @copydoc dispatcher::function_priority
@@ -45,9 +50,9 @@ class psyq::if_then_engine::_private::dispatcher
      */
     public: typedef template_evaluator evaluator;
 
-    /** @brief 条件挙動関数の呼び出し優先順位の型。
+    /** @brief 挙動関数の呼び出し優先順位の型。
 
-        条件挙動関数は、優先順位の昇順で呼び出される。
+        挙動関数は、優先順位の昇順で呼び出される。
      */
     public: typedef template_priority function_priority;
 
@@ -74,6 +79,12 @@ class psyq::if_then_engine::_private::dispatcher
             typename this_type::allocator_type>
         expression_monitor;
 
+    //-------------------------------------------------------------------------
+    /// @copydoc expression_monitor::condition
+    public: typedef
+        typename this_type::expression_monitor::condition
+        condition;
+
     /// @copydoc expression_monitor::behavior::function
     public: typedef
         typename this_type::expression_monitor::behavior::function
@@ -95,7 +106,7 @@ class psyq::if_then_engine::_private::dispatcher
      */
     /** @brief 空の条件挙動器を構築する。
         @param[in] in_reserve_expressions 監視する条件式の予約数。
-        @param[in] in_reserve_statuses      監視する状態値の予約数。
+        @param[in] in_reserve_statuses    監視する状態値の予約数。
         @param[in] in_reserve_caches      条件挙動キャッシュの予約数。
         @param[in] in_allocator           メモリ割当子の初期値。
      */
@@ -194,48 +205,52 @@ class psyq::if_then_engine::_private::dispatcher
     /** @name 条件挙動
         @{
      */
-    /** @brief 条件式に対応する条件挙動関数を登録する。
+    /** @brief 条件式に対応する挙動関数を登録する。
 
-        this_type::_dispatch で条件式の評価が変化した際に呼び出す、
-        条件挙動関数を登録する。
+        this_type::_dispatch で変化条件が合致した際に呼び出す挙動関数を登録する。
 
-        登録された条件挙動関数は、スマートポインタが空になると、
-        自動的に取り除かれる。明示的に条件挙動関数を取り除くには、
+        登録された挙動関数は、スマートポインタが空になると、
+        自動的に取り除かれる。明示的に挙動関数を取り除くには、
         this_type::unregister_function を呼び出す。
 
         @param[in] in_expression_key 評価に用いる条件式の識別値。
-        @param[in] in_function
-            登録する条件挙動関数オブジェクトを指すスマートポインタ。
-        @param[in] in_priority 条件挙動関数の呼び出し優先順位。
+        @param[in] in_condition
+            this_type::make_condition から取得した、挙動関数を呼び出す変化条件。
+        @param[in] in_function 登録する挙動関数を指すスマートポインタ。
+        @param[in] in_priority
+            挙動関数の呼び出し優先順位。優先順位の昇順に呼び出される。
         @param[in] in_reserve_functions
-            条件式監視器が持つ条件挙動関数オブジェクトコンテナの予約容量。
-        @retval true 成功。条件挙動関数オブジェクトを登録した。
+            条件式監視器が持つ挙動関数コンテナの予約容量。
+        @retval true 成功。挙動関数を登録した。
         @retval false
-            失敗。条件挙動関数オブジェクトは登録されなかった。
-            条件挙動関数を指すスマートポインタが空だったか、
-            同じ条件式に同じ条件挙動関数がすでに登録されていたのが原因。
+            失敗。挙動関数は登録されなかった。
+            挙動関数を指すスマートポインタが空だったか、
+            同じ条件式に同じ挙動関数がすでに登録されていたのが原因。
      */
     public: bool register_function(
         typename this_type::evaluator::expression::key const& in_expression_key,
+        typename this_type::condition const in_condition,
         typename this_type::function_shared_ptr const& in_function,
-        typename this_type::function_priority const in_priority = 0,
+        typename this_type::function_priority const in_priority =
+            PSYQ_IF_THEN_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT,
         std::size_t const in_reserve_functions = 1)
     {
         return this_type::expression_monitor::register_function(
             this->expression_monitors_,
             in_expression_key,
+            in_condition,
             in_function,
             in_priority,
             in_reserve_functions);
     }
 
-    /** @brief 条件式に対応する条件挙動関数を取り除く。
+    /** @brief 条件式に対応する挙動関数を取り除く。
 
-        this_type::register_function で登録した条件挙動関数を、
+        this_type::register_function で登録した挙動関数を、
         条件式監視器から取り除く。
 
         @param[in] in_expression_key 条件式の識別値。
-        @param[in] in_function       取り除く条件挙動関数。
+        @param[in] in_function       取り除く挙動関数。
      */
     public: void unregister_function(
         typename this_type::evaluator::expression::key const& in_expression_key,
@@ -250,10 +265,10 @@ class psyq::if_then_engine::_private::dispatcher
         }
     }
 
-    /** @brief 条件式に対応する条件挙動関数をすべて取り除く。
+    /** @brief 条件式に対応する挙動関数をすべて取り除く。
 
         条件式監視器を削除し、 this_type::register_function
-        で同じ条件式に登録した条件挙動関数を、すべて取り除く。
+        で同じ条件式に登録した挙動関数を、すべて取り除く。
 
         @param[in] in_expression_key 条件式の識別値。
      */
@@ -269,12 +284,12 @@ class psyq::if_then_engine::_private::dispatcher
         }
     }
 
-    /** @brief 条件挙動関数を取り除く。
+    /** @brief 挙動関数を取り除く。
 
-        this_type::register_function で登録した条件挙動関数を、
+        this_type::register_function で登録した挙動関数を、
         すべての条件式監視器から取り除く。
 
-        @param[in] in_function 削除する条件挙動関数。
+        @param[in] in_function 削除する挙動関数。
      */
     public: void unregister_function(
         typename this_type::function const& in_function)
@@ -287,20 +302,21 @@ class psyq::if_then_engine::_private::dispatcher
 
     /** @brief psyq::if_then_engine 管理者以外は、この関数は使用禁止。
 
-        条件式の評価が変化していれば、
-        this_type::register_function で登録した条件挙動関数を呼び出す。
+        前回の this_type::_dispatch と今回の this_type::_dispatch
+        で条件式の評価が異なっている場合に、 this_type::register_function
+        で指定した変化条件と合致していると、挙動関数を呼び出す。
 
         @param[in] in_evaluator     条件式の評価に使う条件評価器。
         @param[in,out] io_reservoir 条件式の評価に使う状態貯蔵器。
         @param[in] in_reserve_expressions
             状態監視器で使う条件式識別値コンテナの予約容量。
 
-        @note
-        前回の this_type::_dispatch と今回の this_type::_dispatch
-        で条件式の評価が違った場合に、条件挙動関数を呼び出す。
-        このため、前回から今回の間（基本的には1フレームの間）で条件式の評価が
-        true → false → true と変化した場合、
-        条件挙動関数を呼び出さないことに注意。
+        @warning
+        前回から今回の間（基本的には1フレームの間）で条件式の評価が変化しても、
+        前回の時点と今回の時点の評価が同じ場合は、挙動関数が呼び出されない。
+        たとえば、前回から今回の間で条件式の評価が
+        「true（前回）／false（前回と今回の間）／true（今回）」
+        と変化した場合、挙動関数は呼び出されない。
      */
     public: void _dispatch(
         typename this_type::evaluator const& in_evaluator,
@@ -322,7 +338,7 @@ class psyq::if_then_engine::_private::dispatcher
         this_type::detect_status_transition(
             this->expression_monitors_, this->status_monitors_, io_reservoir);
 
-        // 状態変化した条件式を評価し、条件挙動関数をキャッシュに貯める。
+        // 状態変化した条件式を評価し、挙動関数をキャッシュに貯める。
         this->behavior_caches_.clear();
         this_type::expression_monitor::cache_behaviors(
             this->behavior_caches_,
@@ -333,24 +349,69 @@ class psyq::if_then_engine::_private::dispatcher
         // 条件式の評価が済んだので、状態変化フラグを初期化する。
         io_reservoir._reset_transition();
 
-        // キャッシュに貯まった条件挙動関数を呼び出す。
+        // キャッシュに貯まった挙動関数を呼び出す。
         for (auto const& local_cache: this->behavior_caches_)
         {
             local_cache.second.call_function(local_cache.first);
         }
 
-        // 条件挙動関数のキャッシュを片づける。
+        // 挙動関数のキャッシュを片づける。
         this->behavior_caches_.clear();
         PSYQ_ASSERT(this->dispatch_lock_);
         this->dispatch_lock_ = false;
     }
     /// @}
+    /** @brief 挙動関数を呼び出す変化条件を作る。
+        @param[in] in_now_true    条件式の最新の評価が、真に変化したことが条件。
+        @param[in] in_now_false   条件式の最新の評価が、偽に変化したことが条件。
+        @param[in] in_now_failed  条件式の最新の評価が、失敗に変化したことが条件。
+        @param[in] in_last_true   条件式の前回の評価が、真だったことが条件。
+        @param[in] in_last_false  条件式の前回の評価が、偽だったことが条件。
+        @param[in] in_last_failed 条件式の前回の評価が、失敗だったことが条件。
+        @return 挙動関数を呼び出す変化条件。
+     */
+    public: static typename this_type::condition make_condition(
+        bool const in_now_true,
+        bool const in_now_false,
+        bool const in_now_failed,
+        bool const in_last_true,
+        bool const in_last_false,
+        bool const in_last_failed)
+    PSYQ_NOEXCEPT
+    {
+        return static_cast<typename this_type::condition>(in_now_failed)
+            | (in_now_false << 1)
+            | (in_now_true << 2)
+            | (in_last_failed << this_type::expression_monitor::CONDITION_BIT_WIDTH)
+            | (in_last_false << (this_type::expression_monitor::CONDITION_BIT_WIDTH + 1))
+            | (in_last_true << (this_type::expression_monitor::CONDITION_BIT_WIDTH + 2));
+    }
+
+    /** @brief 挙動関数を呼び出す変化条件を作る。
+        @param[in] in_now_evaluation  条件式の最新の評価。
+        @param[in] in_last_evaluation 条件式の前回の評価。
+        @return 挙動関数を呼び出す変化条件。
+     */
+    public: static typename this_type::condition make_condition(
+        psyq::if_then_engine::evaluation const in_now_evaluation,
+        psyq::if_then_engine::evaluation const in_last_evaluation)
+    {
+        return this_type::make_condition(
+            0 < in_now_evaluation,
+            in_now_evaluation == 0,
+            in_now_evaluation < 0,
+            0 < in_last_evaluation,
+            in_last_evaluation == 0,
+            in_last_evaluation < 0);
+    }
+
     //-------------------------------------------------------------------------
     /** @brief 条件式監視器を再構築する。
         @param[in,out] io_expression_monitors 再構築する条件式監視器のコンテナ。
      */
     private: static void rebuild_expression_monitor(
-        typename this_type::expression_monitor::container& io_expression_monitors)
+        typename this_type::expression_monitor::container&
+            io_expression_monitors)
     {
         /// @note std::vector なら、逆順で走査したほうが効率いいかも。
         for (
@@ -728,7 +789,7 @@ class psyq::if_then_engine::_private::dispatcher
     private: typename this_type::expression_monitor::behavior_cache_container
         behavior_caches_;
 
-    /// @brief 多重に条件挙動関数を呼び出さないためのロック。
+    /// @brief 多重に挙動関数を呼び出さないためのロック。
     private: bool dispatch_lock_;
 
 }; // class psyq::if_then_engine::_private::dispatcher

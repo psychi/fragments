@@ -29,7 +29,7 @@ namespace psyq
 /** @brief 条件式監視器。
 
     条件式の評価結果と、
-    条件式の評価結果が変化した際に呼び出す条件挙動関数オブジェクトを保持する。
+    条件式の評価結果が変化した際に呼び出す挙動関数オブジェクトを保持する。
 
     @tparam template_expression_key @copydoc evaluator::expression::key
     @tparam template_evaluation     @copydoc psyq::if_then_engine::evaluation
@@ -46,14 +46,25 @@ class psyq::if_then_engine::_private::expression_monitor
     /// @brief thisが指す値の型。
     private: typedef expression_monitor this_type;
 
+    /** @brief 挙動関数を呼び出す変化条件を表す型。
+
+        dispatcher::make_condition で変化条件を作る。
+     */
+    public: typedef std::uint8_t condition;
+
+    public: enum: std::uint8_t
+    {
+        CONDITION_BIT_WIDTH = 3, ///< 変化条件に使うビット数。
+    };
+
     /// @brief フラグの位置。
     public: enum flag: std::uint8_t
     {
         flag_VALID_TRANSITION,   ///< 状態変化の取得に成功。
         flag_INVALID_TRANSITION, ///< 状態変化の取得に失敗。
-        flag_LAST_EVALUATION,    ///< 条件の前回の評価の成功／失敗。
-        flag_LAST_CONDITION,     ///< 条件の前回の評価。
-        flag_FLUSH_CONDITION,    ///< 条件の前回の評価を無視する。
+        flag_LAST_EVALUATION,    ///< 条件式の前回の評価の成功／失敗。
+        flag_LAST_CONDITION,     ///< 条件式の前回の評価。
+        flag_FLUSH_CONDITION,    ///< 条件式の前回の評価を無視する。
         flag_REGISTERED,         ///< 条件式の登録済みフラグ。
     };
 
@@ -113,14 +124,18 @@ class psyq::if_then_engine::_private::expression_monitor
     //-------------------------------------------------------------------------
     /** @brief 条件式監視器を構築する。
         @param[in] in_key       監視する条件式の識別値。
+        @param[in] in_condition
+            dispatcher::make_condition から取得した、挙動関数を呼び出す変化条件。
         @param[in] in_allocator メモリ割当子の初期値。
      */
     public: expression_monitor(
         template_expression_key in_key,
+        typename this_type::condition const in_condition,
         template_allocator const& in_allocator)
     :
     key_(std::move(in_key)),
-    behaviors_(in_allocator)
+    behaviors_(in_allocator),
+    condition_(in_condition)
     {}
 
     /** @brief ムーブ構築子。
@@ -129,6 +144,7 @@ class psyq::if_then_engine::_private::expression_monitor
     public: expression_monitor(this_type&& io_source):
     behaviors_(std::move(io_source.behaviors_)),
     key_(std::move(io_source.key_)),
+    condition_(std::move(io_source.condition_)),
     flags_(std::move(io_source.flags_))
     {
         io_source.behaviors_.clear();
@@ -144,35 +160,40 @@ class psyq::if_then_engine::_private::expression_monitor
         {
             this->behaviors_ = std::move(io_source.behaviors_);
             this->key_ = std::move(io_source.key_);
+            this->condition_ = std::move(io_source.condition_);
             this->flags_ = std::move(io_source.flags_);
             io_source.behaviors_.clear();
         }
         return *this;
     }
 
-    /** @brief 条件式に対応する条件挙動関数を登録する。
+    /** @brief 条件式に対応する挙動関数を登録する。
 
-        登録された条件挙動関数は、スマートポインタが空になると、
-        自動的に取り除かれる。明示的に条件挙動関数を取り除くには、
+        登録された挙動関数は、スマートポインタが空になると、
+        自動的に取り除かれる。明示的に挙動関数を取り除くには、
         this_type::remove_function を呼び出す。
 
         @param[in,out] io_expression_monitors
-            条件挙動を登録する条件式監視器のコンテナ。
+            挙動関数を登録する条件式監視器のコンテナ。
         @param[in] in_expression_key 評価に用いる条件式の識別値。
+        @param[in] in_condition
+            dispatcher::make_condition から取得した、挙動関数を呼び出す変化条件。
         @param[in] in_function
-            登録する条件挙動関数を指すスマートポインタ。
-        @param[in] in_priority 条件挙動の優先順位。
+            登録する挙動関数を指すスマートポインタ。
+        @param[in] in_priority
+            挙動関数の呼び出し優先順位。優先順位の昇順に呼び出される。
         @param[in] in_reserve_behaviors
             条件式監視器が持つ条件挙動コンテナの予約容量。
-        @retval true 成功。条件挙動関数を登録した。
+        @retval true 成功。挙動関数を登録した。
         @retval false
-            失敗。条件挙動関数は登録されなかった。
-            条件挙動関数を指すスマートポインタが空だったか、
-            同じ条件式に同じ条件挙動関数がすでに登録されていたのが原因。
+            失敗。挙動関数は登録されなかった。
+            挙動関数を指すスマートポインタが空だったか、
+            同じ条件式に同じ挙動関数がすでに登録されていたのが原因。
      */
     public: static bool register_function(
         typename this_type::container& io_expression_monitors,
         template_expression_key const& in_expression_key,
+        typename this_type::condition const in_condition,
         typename this_type::behavior::function_shared_ptr const& in_function,
         template_priority const in_priority,
         std::size_t const in_reserve_behaviors)
@@ -209,6 +230,7 @@ class psyq::if_then_engine::_private::expression_monitor
                 local_expression_monitor,
                 this_type(
                     in_expression_key,
+                    in_condition,
                     io_expression_monitors.get_allocator()));
         }
 
@@ -259,7 +281,7 @@ class psyq::if_then_engine::_private::expression_monitor
                     io_behavior_caches, in_evaluator, in_reservoir);
                 if (local_expression_monitor.behaviors_.empty())
                 {
-                    // 条件挙動関数のコンテナが空になったら、
+                    // 挙動関数のコンテナが空になったら、
                     // 条件式監視器を削除する。
                     i = io_expression_monitors.erase(i);
                     continue;
@@ -308,16 +330,16 @@ class psyq::if_then_engine::_private::expression_monitor
         return local_find;
     }
 
-    /** @brief 条件式を評価し、条件挙動関数をキャッシュに貯める。
+    /** @brief 変化条件に合致する挙動関数をキャッシュに貯める。
 
-        条件式を評価し、前回の結果と異なるなら、 this_type::register_function
-        で登録された条件挙動関数をキャッシュに貯める。
+        条件式を評価し、変化条件に合致するなら、
+        this_type::register_function で登録された挙動関数をキャッシュに貯める。
 
         @param[in,out] io_behavior_caches 条件挙動キャッシュのコンテナ。
         @param[in] in_evaluator           評価に用いる条件評価器。
         @param[in] in_reservoir           評価に用いる状態貯蔵器。
-        @retval true  条件挙動関数をキャッシュに貯めた。
-        @retval false 条件挙動関数をキャッシュに貯めなかった。
+        @retval true  挙動関数をキャッシュに貯めた。
+        @retval false 挙動関数をキャッシュに貯めなかった。
      */
     private: template<typename template_evaluator>
     bool cache_behavior(
@@ -325,7 +347,7 @@ class psyq::if_then_engine::_private::expression_monitor
         template_evaluator const& in_evaluator,
         typename template_evaluator::reservoir const& in_reservoir)
     {
-        // 条件式を評価し、評価結果が前回と同じか判定する。
+        // 条件式を評価し、変化条件と合致するか判定する。
         auto const local_flush_condition(
             this->flags_.test(this_type::flag_FLUSH_CONDITION));
         auto const local_last_evaluation(
@@ -333,13 +355,12 @@ class psyq::if_then_engine::_private::expression_monitor
         auto const local_evaluation(
             this->evaluate_expression(
                 in_evaluator, in_reservoir, local_flush_condition));
-        if (local_evaluation == local_last_evaluation)
-            //|| 0 < local_evaluation * local_last_evaluation)
+        if (!this->is_matched_condition(local_evaluation, local_last_evaluation))
         {
             return false;
         }
 
-        // 条件式の評価結果が前回と違うので、条件挙動関数をキャッシュに貯める。
+        // 変化条件に合致したので、挙動関数をキャッシュに貯める。
         typename this_type::behavior::cache const local_cache(
             this->key_, local_evaluation, local_last_evaluation);
         for (auto i(this->behaviors_.begin()); i != this->behaviors_.end();)
@@ -425,11 +446,38 @@ class psyq::if_then_engine::_private::expression_monitor
             !in_flush && this->flags_.test(this_type::flag_LAST_CONDITION): -1;
     }
 
+    /** @brief 挙動関数を呼び出す変化条件と条件式の評価が一致するか判定する。
+        @param[in] in_evaluation      条件式の最新の評価結果。
+        @param[in] in_last_evaluation 条件式の前回の評価結果。
+        @retval true  変化条件が一致した。
+        @retval false 変化条件が一致しなかった。
+     */
+    private: bool is_matched_condition(
+        template_evaluation const in_evaluation,
+        template_evaluation const in_last_evaluation)
+    const PSYQ_NOEXCEPT
+    {
+        // 最新と前回で条件式の評価が変わってなければ、条件判定しない。
+        if (in_evaluation == in_last_evaluation)
+        {
+            return false;
+        }
+
+        // 変化条件に合致するか判定する。
+        auto const local_condition(
+            (1 << ((0 <= in_evaluation) + (0 < in_evaluation))) | (
+                (1 << this_type::CONDITION_BIT_WIDTH)
+                << ((0 <= in_last_evaluation) + (0 < in_last_evaluation))));
+        return local_condition == (local_condition & this->condition_);
+    }
+
     //-------------------------------------------------------------------------
     /// @brief 条件挙動のコンテナ。
     public: typename this_type::behavior_container behaviors_;
     /// @brief 監視している条件式の識別値。
     public: template_expression_key key_;
+    /// @brief 挙動関数を呼び出す変化条件。
+    public: typename this_type::condition condition_;
     /// @brief フラグの集合。
     public: std::bitset<8> flags_;
 

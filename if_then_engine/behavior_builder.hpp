@@ -205,6 +205,11 @@ class psyq::if_then_engine::behavior_builder
             auto const local_register_function(
                 io_dispatcher.register_function(
                     local_expression_key,
+                    this_type::build_condition(
+                        in_table,
+                        i,
+                        local_attribute.condition_.first,
+                        local_attribute.condition_.second),
                     local_function,
                     local_priority_parser.get_value()));
             if (local_register_function)
@@ -222,6 +227,39 @@ class psyq::if_then_engine::behavior_builder
     }
 
     //-------------------------------------------------------------------------
+    private: static typename this_type::dispatcher::condition build_condition(
+        typename this_type::relation_table const& in_table,
+        typename this_type::relation_table::string::size_type const
+            in_row_index,
+        typename this_type::relation_table::string::size_type const
+            in_column_index,
+        typename this_type::relation_table::string::size_type const
+            in_column_count)
+    {
+        enum: std::size_t {CONDITION_COUNT = 6};
+        std::array<bool, CONDITION_COUNT> local_conditions = {};
+        PSYQ_ASSERT(CONDITION_COUNT <= in_column_count);
+        auto const local_max(
+            std::min<std::size_t>(CONDITION_COUNT, in_column_count));
+        for (std::size_t i(0); i < local_max; ++i)
+        {
+            auto const& local_cell(
+                in_table.find_body_cell(in_row_index, in_column_index + i));
+            if (!local_cell.empty())
+            {
+                auto const local_bool_status(local_cell.to_bool());
+                local_conditions.at(i) = 0 < local_bool_status;
+            }
+        }
+        return this_type::dispatcher::make_condition(
+            local_conditions.at(0),
+            local_conditions.at(1),
+            local_conditions.at(2),
+            local_conditions.at(3),
+            local_conditions.at(4),
+            local_conditions.at(5));
+    }
+
     /** @brief 文字列表から条件挙動関数を構築する。
         @param[in,out] io_hasher   文字列からキーへ変換するハッシュ関数オブジェクト。
         @param[in,out] io_modifier 条件挙動関数で使う状態変更器。
@@ -239,19 +277,6 @@ class psyq::if_then_engine::behavior_builder
             in_row_index,
         typename this_type::table_attribute const& in_attribute)
     {
-        // 挙動挙動関数を呼び出す条件を取得する。
-        auto const& local_condition_cell(
-            in_table.find_body_cell(
-                in_row_index, in_attribute.condition_.first));
-        auto const local_bool_status(local_condition_cell.to_bool());
-        if (local_bool_status < 0)
-        {
-            // 未知の条件だった。
-            PSYQ_ASSERT(false);
-            return typename this_type::dispatcher::function_shared_ptr();
-        }
-        bool const local_condition(local_bool_status != 0);
-
         // 条件挙動関数の種類を取得する。
         auto const& local_kind_cell(
             in_table.find_body_cell(in_row_index, in_attribute.kind_.first));
@@ -261,7 +286,6 @@ class psyq::if_then_engine::behavior_builder
             return this_type::build_status_assignment_function(
                 io_hasher,
                 io_modifier,
-                local_condition,
                 in_table,
                 in_row_index,
                 in_attribute.argument_.first,
@@ -278,7 +302,6 @@ class psyq::if_then_engine::behavior_builder
     /** @brief 状態値を代入演算する関数を、文字列表から構築する。
         @param[in,out] io_hasher   文字列から識別値へ変換するハッシュ関数。
         @param[in,out] io_modifier 条件挙動関数で使う状態変更器。
-        @param[in] in_condition    条件挙動関数を呼び出す条件。
         @param[in] in_table        条件挙動の文字列表。
         @param[in] in_row_index    文字列表の行番号。
         @param[in] in_column_index 文字列表の代入演算の列番号。
@@ -290,7 +313,6 @@ class psyq::if_then_engine::behavior_builder
     build_status_assignment_function(
         template_hasher& io_hasher,
         template_modifier& io_modifier,
-        bool const in_condition,
         typename this_type::relation_table const& in_table,
         typename this_type::relation_table::string::size_type const
             in_row_index,
@@ -327,21 +349,16 @@ class psyq::if_then_engine::behavior_builder
                 [=, &io_modifier](
                     typename this_type::dispatcher::evaluator::expression::key
                         const&,
-                    psyq::if_then_engine::evaluation const in_evaluation,
-                    psyq::if_then_engine::evaluation const in_last_evaluation)
+                    psyq::if_then_engine::evaluation const,
+                    psyq::if_then_engine::evaluation const)
                 {
-                    // 条件と評価が合致すれば、状態値を代入演算する。
-                    if (0 <= in_last_evaluation
-                        && 0 <= in_evaluation
-                        && in_condition == (0 < in_evaluation))
+                    // 条件に合致したので、状態値を代入演算する。
+                    auto local_delay(local_delay_first);
+                    for (auto const& local_assignment: local_assignments)
                     {
-                        auto local_delay(local_delay_first);
-                        for (auto const& local_assignment: local_assignments)
-                        {
-                            io_modifier.accumulate(
-                                local_assignment, local_delay);
-                            local_delay = template_modifier::delay_FOLLOW;
-                        }
+                        io_modifier.accumulate(
+                            local_assignment, local_delay);
+                        local_delay = template_modifier::delay_FOLLOW;
                     }
                 }));
     }

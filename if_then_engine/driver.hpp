@@ -32,9 +32,9 @@ namespace psyq
 
     ### 使い方の概略
     - driver::driver で駆動器を構築する。
-    - driver::extend_chunk で、状態値と条件式と条件挙動関数を登録する。
+    - driver::extend_chunk で、状態値と条件式と挙動関数を登録する。
     - driver::progress を時間フレーム毎に呼び出す。
-      条件式の評価が変化していたら、条件挙動関数が呼び出される。
+      条件式の評価が変化していたら、挙動関数が呼び出される。
 
     @tparam template_float     @copydoc reservoir::status::float_type
     @tparam template_priority  @copydoc dispatcher::function_priority
@@ -193,7 +193,7 @@ class psyq::if_then_engine::driver
     //-------------------------------------------------------------------------
     /// @name チャンク
     //@{
-    /** @brief 状態値と条件式と条件挙動関数を、チャンクへ追加する。
+    /** @brief 状態値と条件式と挙動関数を、チャンクへ追加する。
         @param[out] out_workspace
             文字列表の構築の作業領域として使う文字列。
             std::string 互換のインターフェイスを持つこと。
@@ -266,7 +266,7 @@ class psyq::if_then_engine::driver
                     in_behavior_attribute)));
     }
 
-    /** @brief 状態値と条件式と条件挙動関数を、チャンクへ追加する。
+    /** @brief 状態値と条件式と挙動関数を、チャンクへ追加する。
         @param[in] in_chunk_key 追加するチャンクの識別値。
         @param[in] in_status_builder
             状態値を状態貯蔵器に登録する関数オブジェクト。
@@ -299,15 +299,15 @@ class psyq::if_then_engine::driver
             const;
             @endcode
         @param[in] in_behavior_builder
-            条件挙動関数を条件挙動器に登録する関数オブジェクト。
+            挙動関数を条件挙動器に登録する関数オブジェクト。
             以下に相当するメンバ関数を使えること。
             @code
-            // @brief 条件挙動関数を条件挙動器に登録する。
-            // @param[in,out] io_dispatcher 条件挙動関数を登録する条件挙動器。
+            // @brief 挙動関数を条件挙動器に登録する。
+            // @param[in,out] io_dispatcher 挙動関数を登録する条件挙動器。
             // @param[in,out] io_hasher     文字列から識別値を生成する関数オブジェクト。
-            // @param[in,out] io_modifier   条件挙動関数で使う状態変更器。
+            // @param[in,out] io_modifier   挙動関数で使う状態変更器。
             // @return
-            //     条件挙動器に登録した条件挙動関数オブジェクトを指す、
+            //     条件挙動器に登録した挙動関数オブジェクトを指す、
             //     スマートポインタのコンテナ。
             template<typename template_function_shared_ptr_container>
             template_function_shared_ptr_container
@@ -342,29 +342,36 @@ class psyq::if_then_engine::driver
                 this->dispatcher_, this->hash_function_, this->modifier_));
     }
 
-    /** @brief 条件式に対応する条件挙動関数を、チャンクへ追加する。
-        @param[in] in_chunk_key      条件挙動関数を追加するチャンクの識別値。
+    /** @brief 条件式に対応する挙動関数を、チャンクへ追加する。
+        @param[in] in_chunk_key      挙動関数を追加するチャンクの識別値。
         @param[in] in_expression_key 評価に用いる条件式の識別値。
+        @param[in] in_condition
+            挙動関数を呼び出す条件。 dispatcher::make_condition で構築する。
         @param[in] in_function
-            追加する条件挙動関数を指すスマートポインタ。
+            追加する挙動関数を指すスマートポインタ。
+        @param[in] in_priority
+            挙動関数の呼び出し優先順位。優先順位の昇順に呼び出される。
         @retval true  成功。
         @retval false 失敗。
      */
     public: bool extend_chunk(
         typename this_type::reservoir::chunk_key const& in_chunk_key,
         typename this_type::evaluator::expression::key const& in_expression_key,
-        typename this_type::dispatcher::function_shared_ptr const& in_function)
+        typename this_type::dispatcher::condition const in_condition,
+        typename this_type::dispatcher::function_shared_ptr const& in_function,
+        typename this_type::dispatcher::function_priority const in_priority =
+            PSYQ_IF_THEN_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT)
     {
-        // 条件挙動関数を条件挙動器へ登録する。
+        // 挙動関数を条件挙動器へ登録する。
         auto const local_register_function(
             this->dispatcher_.register_function(
-                in_expression_key, in_function));
+                in_expression_key, in_condition, in_function, in_priority));
         if (!local_register_function)
         {
             return false;
         }
 
-        // 条件挙動関数を条件挙動関数チャンクへ追加する。
+        // 挙動関数を挙動関数チャンクへ追加する。
         this_type::behavior_chunk::extend(
             this->behavior_chunks_, in_chunk_key, std::move(in_function));
         return true;

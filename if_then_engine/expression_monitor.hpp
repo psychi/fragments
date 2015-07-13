@@ -198,6 +198,10 @@ class psyq::if_then_engine::_private::expression_monitor
         template_priority const in_priority,
         std::size_t const in_reserve_behaviors)
     {
+        if (in_condition == 0)
+        {
+            return false;
+        }
         auto const local_function(in_function.get());
         if (local_function == nullptr)
         {

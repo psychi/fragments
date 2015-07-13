@@ -340,7 +340,7 @@ class psyq::if_then_engine::_private::dispatcher
 
         // 状態変化を検知し、条件式監視器へ知らせる。
         this_type::detect_status_transition(
-            this->expression_monitors_, this->status_monitors_, io_reservoir);
+            this->status_monitors_, this->expression_monitors_, io_reservoir);
 
         // 状態変化した条件式を評価し、挙動関数をキャッシュに貯める。
         this->behavior_caches_.clear();
@@ -732,15 +732,14 @@ class psyq::if_then_engine::_private::dispatcher
     }
 
     /** @brief 状態変化を検知し、条件式監視器へ知らせる。
-        @param[in,out] io_expression_monitors 条件式監視器のコンテナ。
         @param[in,out] io_status_monitors     状態監視器のコンテナ。
+        @param[in,out] io_expression_monitors 条件式監視器のコンテナ。
         @param[in] in_reservoir               変化を検知する状態貯蔵器。
      */
-    private: template<typename template_reservoir>
-    static void detect_status_transition(
-        typename this_type::expression_monitor::container& io_expression_monitors,
+    private: static void detect_status_transition(
         typename this_type::status_monitor::container& io_status_monitors,
-        template_reservoir const& in_reservoir)
+        typename this_type::expression_monitor::container& io_expression_monitors,
+        typename this_type::evaluator::reservoir const& in_reservoir)
     {
         // 状態監視器のコンテナを走査しつつ、
         // 不要になった要素を削除し、状態監視器のコンテナを整理する。

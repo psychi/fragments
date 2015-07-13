@@ -331,10 +331,10 @@ class psyq::if_then_engine::_private::dispatcher
         }
         this->dispatch_lock_ = true;
 
-        // 条件式から参照する状態値を、状態監視器へ登録する。
+        // 条件式を状態監視器へ登録する。
         this_type::register_expressions(
-            this->expression_monitors_,
             this->status_monitors_,
+            this->expression_monitors_,
             in_evaluator,
             in_reserve_expressions);
 
@@ -490,23 +490,23 @@ class psyq::if_then_engine::_private::dispatcher
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 条件式を、条件式監視器と状態監視器へ登録する。
-        @param[in,out] io_expression_monitors
-            条件式の評価の変化を挙動関数へ知らせる、条件式監視器。
+    /** @brief 条件式を状態監視器へ登録する。
         @param[in,out] io_status_monitors
             状態変化を条件式監視器に知らせる、状態監視器。
+        @param[in,out] io_expression_monitors
+            条件式の評価の変化を挙動関数へ知らせる、条件式監視器。
         @param[in] in_evaluator 登録する条件式を持つ条件評価器。
         @param[in] in_reserve_expressions
             状態監視器が持つ条件式識別値コンテナの予約容量。
      */
     private: static void register_expressions(
-        typename this_type::expression_monitor::container& io_expression_monitors,
         typename this_type::status_monitor::container& io_status_monitors,
+        typename this_type::expression_monitor::container& io_expression_monitors,
         typename this_type::evaluator const& in_evaluator,
         std::size_t const in_reserve_expressions)
     {
         // 条件式監視器のコンテナを走査し、
-        // 登録が完了してないものは、状態監視器に条件式を登録する。
+        // 登録が完了してないものは、状態監視器へ登録する。
         for (auto& local_expression_monitor: io_expression_monitors)
         {
             auto const local_registered(
@@ -516,8 +516,8 @@ class psyq::if_then_engine::_private::dispatcher
             {
                 auto const local_register_expression(
                     this_type::register_expression(
-                        io_expression_monitors,
                         io_status_monitors,
+                        io_expression_monitors,
                         local_expression_monitor.key_,
                         local_expression_monitor.key_,
                         in_evaluator,
@@ -534,11 +534,11 @@ class psyq::if_then_engine::_private::dispatcher
         }
     }
 
-    /** @brief 条件式を、条件式監視器と状態監視器へ登録する。
-        @param[in,out] io_expression_monitors
-            条件式の評価の変化を挙動関数へ知らせる、条件式監視器。
+    /** @brief 条件式を状態監視器へ登録する。
         @param[in,out] io_status_monitors
             状態変化を条件式監視器に知らせる、状態監視器。
+        @param[in] in_expression_monitors
+            条件式の評価の変化を挙動関数へ知らせる、条件式監視器。
         @param[in] in_register_key 登録する条件式の識別値。
         @param[in] in_scan_key     走査する条件式の識別値。
         @param[in] in_evaluator    走査する条件式を持つ条件評価器。
@@ -549,8 +549,8 @@ class psyq::if_then_engine::_private::dispatcher
         @retval 0  失敗。
      */
     private: static std::int8_t register_expression(
-        typename this_type::expression_monitor::container& io_expression_monitors,
         typename this_type::status_monitor::container& io_status_monitors,
+        typename this_type::expression_monitor::container const& in_expression_monitors,
         typename this_type::evaluator::expression::key const& in_register_key,
         typename this_type::evaluator::expression::key const& in_scan_key,
         typename this_type::evaluator const& in_evaluator,
@@ -576,8 +576,8 @@ class psyq::if_then_engine::_private::dispatcher
         {
             case this_type::evaluator::expression::kind_SUB_EXPRESSION:
             return this_type::register_compound_expression(
-                io_expression_monitors,
                 io_status_monitors,
+                in_expression_monitors,
                 in_register_key,
                 *local_expression,
                 local_chunk->sub_expressions_,
@@ -609,7 +609,7 @@ class psyq::if_then_engine::_private::dispatcher
         }
     }
 
-    /** @brief 条件式を、状態監視器へ登録する。
+    /** @brief 条件式を状態監視器へ登録する。
         @param[in,out] io_status_monitors
             状態変化を条件式監視器に知らせる、状態監視器。
         @param[in] in_register_key 登録する条件式の識別値。
@@ -668,11 +668,11 @@ class psyq::if_then_engine::_private::dispatcher
         }
     }
 
-    /** @brief 複合条件式を、条件式監視器と状態監視器へ登録する。
-        @param[in,out] io_expression_monitors
-            条件式の評価の変化を挙動関数へ知らせる、条件式監視器。
+    /** @brief 複合条件式を状態監視器へ登録する。
         @param[in,out] io_status_monitors
             状態変化を条件式監視器に知らせる、状態監視器。
+        @param[in] in_expression_monitors
+            条件式の評価の変化を挙動関数へ知らせる、条件式監視器。
         @param[in] in_register_key 登録する複合条件式の識別値。
         @param[in] in_expression   走査する条件式。
         @param[in] in_sub_expressions
@@ -685,8 +685,8 @@ class psyq::if_then_engine::_private::dispatcher
         @retval 0  失敗。
      */
     private: static std::int8_t register_compound_expression(
-        typename this_type::expression_monitor::container& io_expression_monitors,
         typename this_type::status_monitor::container& io_status_monitors,
+        typename this_type::expression_monitor::container const& in_expression_monitors,
         typename this_type::evaluator::expression::key const& in_register_key,
         typename this_type::evaluator::expression const& in_expression,
         typename this_type::evaluator::sub_expression_container const& in_sub_expressions,
@@ -702,15 +702,15 @@ class psyq::if_then_engine::_private::dispatcher
             auto const& local_sub_key(i->key_);
             auto const local_expression_monitor(
                 this_type::expression_monitor::key_less::find_const_pointer(
-                    io_expression_monitors, local_sub_key));
+                    in_expression_monitors, local_sub_key));
             if (local_expression_monitor == nullptr
                 || !local_expression_monitor->flags_.test(
                     this_type::expression_monitor::flag_REGISTERED))
             {
                 auto const local_register_expression(
                     this_type::register_expression(
-                        io_expression_monitors,
                         io_status_monitors,
+                        in_expression_monitors,
                         in_register_key,
                         local_sub_key,
                         in_evaluator,

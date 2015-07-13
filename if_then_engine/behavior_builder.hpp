@@ -23,9 +23,10 @@
 #define PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_KIND "KIND"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_KIND)
 
-#ifndef PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS
-#define PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS "STATUS"
-#endif // !defined(PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS)
+#ifndef PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS_ASSIGNMENT
+#define PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS_ASSIGNMENT\
+    "STATUS_ASSIGNMENT"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS_ASSIGNMENT)
 
 #ifndef PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_ARGUMENT
 #define PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_ARGUMENT "ARGUMENT"
@@ -42,7 +43,7 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 文字列表から条件挙動関数を構築する関数オブジェクト。
+/** @brief 文字列表から条件挙動を構築する関数オブジェクト。
 
     driver::extend_chunk の引数として使う。
 
@@ -52,12 +53,13 @@ namespace psyq
 template<typename template_relation_table, typename template_dispatcher>
 class psyq::if_then_engine::behavior_builder
 {
+    /// @brief thisが指す値の型。
     private: typedef behavior_builder this_type;
 
-    /// @brief 条件挙動関数の登録先となる条件挙動器を表す型。
+    /// @brief 条件挙動を登録する条件挙動器を表す型。
     public: typedef template_dispatcher dispatcher;
 
-    /// @brief 条件挙動関数オブジェクトの、所有権ありスマートポインタのコンテナを表す型。
+    /// @brief 挙動関数の、所有権ありスマートポインタのコンテナを表す型。
     public: typedef
         std::vector<
             typename this_type::dispatcher::function_shared_ptr,
@@ -70,7 +72,7 @@ class psyq::if_then_engine::behavior_builder
      */
     public: typedef template_relation_table relation_table;
 
-    /// @brief 文字列表の属性。
+    /// @brief 条件挙動の構築に使う文字列表の属性。
     private: class table_attribute
     {
         public: table_attribute(relation_table const& in_table)
@@ -101,16 +103,21 @@ class psyq::if_then_engine::behavior_builder
                 && 0 < this->argument_.second;
         }
 
+        /// @brief 条件挙動で使う条件式の識別値。
         public: typename behavior_builder::relation_table::attribute key_;
+        /// @brief 条件挙動の変化条件。
         public: typename behavior_builder::relation_table::attribute condition_;
+        /// @brief 条件挙動の優先順位。
         public: typename behavior_builder::relation_table::attribute priority_;
+        /// @brief 条件挙動で使う挙動関数の種類。
         public: typename behavior_builder::relation_table::attribute kind_;
+        /// @brief 条件挙動で使う挙動関数の引数。
         public: typename behavior_builder::relation_table::attribute argument_;
 
     }; // class table_attribute
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列表から状態値を構築する関数オブジェクトを構築する。
+    /** @brief 文字列表から条件挙動を構築する関数オブジェクトを構築する。
         @param[in] in_table 解析する文字列表。
      */
     public: explicit behavior_builder(
@@ -118,11 +125,11 @@ class psyq::if_then_engine::behavior_builder
     relation_table_(std::move(in_table))
     {}
 
-    /** @brief 文字列表を解析して状態値を構築し、状態貯蔵器へ登録する。
-        @param[in,out] io_dispatcher 生成した条件挙動関数を登録する条件挙動器。
-        @param[in,out] io_hasher     文字列からキーへ変換するハッシュ関数オブジェクト。
-        @param[in,out] io_modifier   条件挙動関数で使う状態変更器。
-        @return 生成した条件挙動関数のコンテナ。
+    /** @brief 文字列表から条件挙動を構築し、条件挙動器へ登録する。
+        @param[in,out] io_dispatcher 条件挙動を登録する条件挙動器。
+        @param[in,out] io_hasher     文字列のハッシュ関数。
+        @param[in,out] io_modifier   挙動関数で使う状態変更器。
+        @return 構築した挙動関数のコンテナ。
      */
     public: template<typename template_hasher, typename template_modifier>
     typename this_type::function_shared_ptr_container operator()(
@@ -135,12 +142,12 @@ class psyq::if_then_engine::behavior_builder
             io_dispatcher, io_hasher, io_modifier, this->relation_table_);
     }
 
-    /** @brief 文字列表から条件挙動関数を生成し、条件評価器へ登録する。
-        @param[in,out] io_dispatcher 生成した条件挙動関数を登録する条件挙動器。
-        @param[in,out] io_hasher     文字列からキーへ変換するハッシュ関数オブジェクト。
-        @param[in,out] io_modifier   条件挙動関数で使う状態変更器。
-        @param[in] in_table          条件挙動の文字列表。
-        @return 生成した条件挙動関数のコンテナ。
+    /** @brief 文字列表から条件挙動を構築し、条件挙動器へ登録する。
+        @param[in,out] io_dispatcher 条件挙動を登録する条件挙動器。
+        @param[in,out] io_hasher     文字列のハッシュ関数。
+        @param[in,out] io_modifier   挙動関数で使う状態変更器。
+        @param[in] in_table          解析する文字列表。
+        @return 構築した挙動関数のコンテナ。
      */
     public: template<typename template_hasher, typename template_modifier>
     static typename this_type::function_shared_ptr_container build(
@@ -152,7 +159,7 @@ class psyq::if_then_engine::behavior_builder
         typename this_type::function_shared_ptr_container
             local_functions(io_dispatcher.get_allocator());
 
-        // 文字列表の属性の桁を取得する。
+        // 文字列表の属性を取得する。
         typename this_type::table_attribute const local_attribute(in_table);
         if (!local_attribute.is_valid())
         {
@@ -160,7 +167,9 @@ class psyq::if_then_engine::behavior_builder
             return local_functions;
         }
 
-        // 文字列表を解析し、条件挙動関数の一覧を構築する。
+        // 文字列表を解析し、条件挙動を構築する。
+        auto const local_empty_key(
+            io_hasher(typename template_hasher::argument_type()));
         auto const local_row_count(in_table.get_row_count());
         local_functions.reserve(local_row_count);
         for (
@@ -177,8 +186,7 @@ class psyq::if_then_engine::behavior_builder
             auto const local_expression_key(
                 io_hasher(
                     in_table.find_body_cell(i, local_attribute.key_.first)));
-            if (local_expression_key
-                == io_hasher(typename template_hasher::argument_type()))
+            if (local_expression_key == local_empty_key)
             {
                 // 条件式の識別値が正しくなかった。
                 PSYQ_ASSERT(false);
@@ -198,7 +206,7 @@ class psyq::if_then_engine::behavior_builder
                 continue;
             }
 
-            // 条件挙動関数を生成し、条件挙動器に登録する。
+            // 挙動関数を構築し、条件挙動器に登録する。
             auto local_function(
                 this_type::build_function(
                     io_hasher, io_modifier, in_table, i, local_attribute));
@@ -227,6 +235,13 @@ class psyq::if_then_engine::behavior_builder
     }
 
     //-------------------------------------------------------------------------
+    /** @brief 文字列表を解析し、変化条件を構築する。
+        @param[in] in_table        解析する文字列表。
+        @param[in] in_row_index    解析する文字列表の行番号。
+        @param[in] in_column_index 変化条件の属性の列番号。
+        @param[in] in_column_count 変化条件の属性の列数。
+        @return 構築した変化条件。
+     */
     private: static typename this_type::dispatcher::condition build_condition(
         typename this_type::relation_table const& in_table,
         typename this_type::relation_table::string::size_type const
@@ -239,33 +254,35 @@ class psyq::if_then_engine::behavior_builder
         enum: std::size_t {CONDITION_COUNT = 6};
         std::array<bool, CONDITION_COUNT> local_conditions = {};
         PSYQ_ASSERT(CONDITION_COUNT <= in_column_count);
-        auto const local_max(
-            std::min<std::size_t>(CONDITION_COUNT, in_column_count));
-        for (std::size_t i(0); i < local_max; ++i)
+        auto const local_end(
+            in_column_index
+            + std::min<std::size_t>(CONDITION_COUNT, in_column_count));
+        for (auto i(in_column_index); i < local_end; ++i)
         {
-            auto const& local_cell(
-                in_table.find_body_cell(in_row_index, in_column_index + i));
-            if (!local_cell.empty())
-            {
-                auto const local_bool_status(local_cell.to_bool());
-                local_conditions.at(i) = 0 < local_bool_status;
-            }
+            typename this_type::relation_table::string::view const local_cell(
+                in_table.find_body_cell(in_row_index, i));
+            auto const local_bool_status(local_cell.to_bool());
+            PSYQ_ASSERT(0 <= local_bool_status || local_cell.empty());
+            local_conditions.at(i - in_column_index) = 0 < local_bool_status;
         }
-        return this_type::dispatcher::make_condition(
-            local_conditions.at(0),
-            local_conditions.at(1),
-            local_conditions.at(2),
-            local_conditions.at(3),
-            local_conditions.at(4),
-            local_conditions.at(5));
+        auto const local_condition(
+            this_type::dispatcher::make_condition(
+                local_conditions.at(0),
+                local_conditions.at(1),
+                local_conditions.at(2),
+                local_conditions.at(3),
+                local_conditions.at(4),
+                local_conditions.at(5)));
+        PSYQ_ASSERT(local_condition != 0);
+        return local_condition;
     }
 
-    /** @brief 文字列表から条件挙動関数を構築する。
-        @param[in,out] io_hasher   文字列からキーへ変換するハッシュ関数オブジェクト。
-        @param[in,out] io_modifier 条件挙動関数で使う状態変更器。
-        @param[in] in_table        条件挙動の文字列表。
-        @param[in] in_row_index    文字列表の行番号。
-        @param[in] in_attribute    文字列表の属性。
+    /** @brief 文字列表を解析し、挙動関数を構築する。
+        @param[in,out] io_hasher   文字列のハッシュ関数。
+        @param[in,out] io_modifier 挙動関数で使う状態変更器。
+        @param[in] in_table        解析する文字列表。
+        @param[in] in_row_index    解析する文字列表の行番号。
+        @param[in] in_attribute    条件挙動で使う文字列表の属性。
         @return 構築した条件挙動関数オブジェクト。
      */
     private: template<typename template_hasher, typename template_modifier>
@@ -277,11 +294,11 @@ class psyq::if_then_engine::behavior_builder
             in_row_index,
         typename this_type::table_attribute const& in_attribute)
     {
-        // 条件挙動関数の種類を取得する。
-        auto const& local_kind_cell(
+        // 挙動関数の種類を取得する。
+        typename this_type::relation_table::string::view const local_kind_cell(
             in_table.find_body_cell(in_row_index, in_attribute.kind_.first));
         if (local_kind_cell
-            == PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS)
+            == PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS_ASSIGNMENT)
         {
             return this_type::build_status_assignment_function(
                 io_hasher,
@@ -302,8 +319,8 @@ class psyq::if_then_engine::behavior_builder
     /** @brief 状態値を代入演算する関数を、文字列表から構築する。
         @param[in,out] io_hasher   文字列から識別値へ変換するハッシュ関数。
         @param[in,out] io_modifier 条件挙動関数で使う状態変更器。
-        @param[in] in_table        条件挙動の文字列表。
-        @param[in] in_row_index    文字列表の行番号。
+        @param[in] in_table        解析する文字列表。
+        @param[in] in_row_index    解析する文字列表の行番号。
         @param[in] in_column_index 文字列表の代入演算の列番号。
         @param[in] in_column_count 文字列表の代入演算の列数。
         @return 状態値を代入演算する関数オブジェクト。
@@ -338,6 +355,7 @@ class psyq::if_then_engine::behavior_builder
             in_column_count);
         if (local_assignments.empty())
         {
+            PSYQ_ASSERT(false);
             return typename this_type::dispatcher::function_shared_ptr();
         }
 
@@ -363,11 +381,11 @@ class psyq::if_then_engine::behavior_builder
                 }));
     }
 
-    /** @brief 状態値の代入演算のコンテナを、文字列表から生成する。
-        @param[in,out] io_assignments 状態値の代入演算のコンテナ。
-        @param[in,out] io_hasher      文字列から識別値へ変換するハッシュ関数。
-        @param[in] in_table           条件挙動の文字列表。
-        @param[in] in_row_index       文字列表の行番号。
+    /** @brief 状態値の代入演算のコンテナを、文字列表から構築する。
+        @param[in,out] io_assignments 状態値の代入演算のコンテナの格納先。
+        @param[in,out] io_hasher      文字列のハッシュ関数。
+        @param[in] in_table           解析する文字列表。
+        @param[in] in_row_index       解析する文字列表の行番号。
         @param[in] in_column_index    文字列表の代入演算の列番号。
         @param[in] in_column_count    文字列表の代入演算の列数。
      */

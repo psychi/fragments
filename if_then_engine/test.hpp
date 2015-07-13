@@ -51,16 +51,16 @@ namespace psyq_test
 
         // 条件挙動CSV文字列を構築する。
         flyweight_string::view const local_csv_behavior(
-            "KEY         , CONDITION,,,,,, PRIORITY, KIND, ARGUMENT\n"
-            "expression_0, TRUE,,,,TRUE,,  9,      STATUS, status_unsigned, :=, 1, status_unsigned, +=, STATUS:status_unsigned\n"
-            "expression_1, TRUE,,,,TRUE,,  8,      STATUS, status_unsigned, +=, 1\n"
-            "expression_2, TRUE,,,,TRUE,,  7,      STATUS, status_unsigned, -=, 1\n"
-            "expression_3, TRUE,,,,TRUE,,  6,      STATUS, status_unsigned, *=, 1\n"
-            "expression_4, TRUE,,,,TRUE,,  5,      STATUS, status_unsigned, /=, 1\n"
-            "expression_5, TRUE,,,,TRUE,,  4,      STATUS, status_unsigned, %=, 1\n"
-            "expression_6, TRUE,,,,TRUE,,  3,      STATUS, status_unsigned, |=, 1\n"
-            "expression_7, TRUE,,,,TRUE,,  2,      STATUS, status_unsigned, ^=, 0\n"
-            "expression_8, TRUE,,,,TRUE,,  1,      STATUS, status_unsigned, &=, 0\n"
+            "KEY         , CONDITION,,,,,, PRIORITY,       KIND, ARGUMENT\n"
+            "expression_0, TRUE,,,, TRUE,, 9, STATUS_ASSIGNMENT, status_unsigned, :=, 1, status_unsigned, +=, STATUS:status_unsigned\n"
+            "expression_1, TRUE,,,, TRUE,, 8, STATUS_ASSIGNMENT, status_unsigned, +=, 1\n"
+            "expression_2, TRUE,,,, TRUE,, 7, STATUS_ASSIGNMENT, status_unsigned, -=, 1\n"
+            "expression_3, TRUE,,,, TRUE,, 6, STATUS_ASSIGNMENT, status_unsigned, *=, 1\n"
+            "expression_4, TRUE,,,, TRUE,, 5, STATUS_ASSIGNMENT, status_unsigned, /=, 1\n"
+            "expression_5, TRUE,,,, TRUE,, 4, STATUS_ASSIGNMENT, status_unsigned, %=, 1\n"
+            "expression_6, TRUE,,,, TRUE,, 3, STATUS_ASSIGNMENT, status_unsigned, |=, 1\n"
+            "expression_7, TRUE,,,, TRUE,, 2, STATUS_ASSIGNMENT, status_unsigned, ^=, 0\n"
+            "expression_8, TRUE,,,, TRUE,, 1, STATUS_ASSIGNMENT, status_unsigned, &=, 0\n"
             "");
 
         // 状態値と条件式と条件挙動を、駆動器に登録する。

@@ -138,6 +138,7 @@ class psyq::if_then_engine::_private::expression_monitor
     condition_(in_condition)
     {}
 
+#ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
     /** @brief ムーブ構築子。
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
@@ -146,9 +147,7 @@ class psyq::if_then_engine::_private::expression_monitor
     key_(std::move(io_source.key_)),
     condition_(std::move(io_source.condition_)),
     flags_(std::move(io_source.flags_))
-    {
-        io_source.behaviors_.clear();
-    }
+    {}
 
     /** @brief ムーブ代入演算子。
         @param[in,out] io_source ムーブ元となるインスタンス。
@@ -162,10 +161,10 @@ class psyq::if_then_engine::_private::expression_monitor
             this->key_ = std::move(io_source.key_);
             this->condition_ = std::move(io_source.condition_);
             this->flags_ = std::move(io_source.flags_);
-            io_source.behaviors_.clear();
         }
         return *this;
     }
+#endif // !defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
     /** @brief 条件式に対応する挙動関数を登録する。
 
@@ -220,8 +219,10 @@ class psyq::if_then_engine::_private::expression_monitor
         {
             // 同じ関数オブジェクトがすでに登録済みなら、失敗する。
             auto const local_find_function(
-                local_expression_monitor->find_function(
-                    *local_function, false));
+                this_type::find_function(
+                    local_expression_monitor->behaviors_,
+                    *local_function,
+                    false));
             if (local_find_function)
             {
                 return false;
@@ -253,7 +254,7 @@ class psyq::if_then_engine::_private::expression_monitor
     public: bool remove_function(
         typename this_type::behavior::function const& in_function)
     {
-        this->find_function(in_function, true);
+        return this_type::find_function(this->behaviors_, in_function, true);
     }
 
     /** @brief 条件式を評価し、条件挙動をキャッシュに貯める。
@@ -273,7 +274,8 @@ class psyq::if_then_engine::_private::expression_monitor
         template_evaluator const& in_evaluator,
         typename template_evaluator::reservoir const& in_reservoir)
     {
-        // 条件式監視器のコンテナを走査し、評価要求があれば、条件式を評価する。
+        // io_expression_monitors 走査し、評価要求があれば条件式を評価しつつ、
+        // 空になった条件式監視器を削除する。
         for (
             auto i(io_expression_monitors.begin());
             i != io_expression_monitors.end();)
@@ -297,34 +299,35 @@ class psyq::if_then_engine::_private::expression_monitor
 
     //-------------------------------------------------------------------------
     /** @brief 関数オブジェクトを検索しつつ、コンテナを整理する。
-        @param[in] in_function 検索する関数オブジェクト。
-        @param[in] in_erase    検索する関数オブジェクトを削除するかどうか。
-        @retval true  検索対象がコンテナから見つかった。
-        @retval false 検索対象がコンテナから見つからなかった。
+        @param[in,out] io_behaviors 走査する条件挙動のコンテナ。
+        @param[in] in_function      検索する関数オブジェクト。
+        @param[in] in_erase         検索する関数オブジェクトを削除するかどうか。
+        @retval true  io_behaviors から in_function が見つかった。
+        @retval false io_behaviors から in_function が見つからなかった。
      */
-    private: bool find_function(
+    private: static bool find_function(
+        typename this_type::behavior_container& io_behaviors,
         typename this_type::behavior::function const& in_function,
         bool const in_erase)
     {
-        // 関数オブジェクトのコンテナを走査し、検索対象を見つけながら、
-        // 空になった要素を削除する。
-        bool local_erase;
         auto local_find(false);
-        for (auto i(this->behaviors_.begin()); i != this->behaviors_.end();)
+        for (auto i(io_behaviors.begin()); i != io_behaviors.end();)
         {
-            auto& local_function(i->function_);
-            if (local_find || local_function.lock().get() != &in_function)
+            auto& local_observer(i->function_);
+            bool local_erase;
+            if (local_find)
             {
-                local_erase = local_function.expired();
+                local_erase = local_observer.expired();
             }
             else
             {
-                local_erase = in_erase;
-                local_find = true;
+                auto const local_pointer(local_observer.lock().get());
+                local_find = local_pointer == &in_function;
+                local_erase = local_find? in_erase: local_pointer == nullptr;
             }
             if (local_erase)
             {
-                i = this->behaviors_.erase(i);
+                i = io_behaviors.erase(i);
             }
             else
             {
@@ -359,7 +362,8 @@ class psyq::if_then_engine::_private::expression_monitor
         auto const local_evaluation(
             this->evaluate_expression(
                 in_evaluator, in_reservoir, local_flush_condition));
-        if (!this->is_matched_condition(local_evaluation, local_last_evaluation))
+        if (!this->is_matched_condition(
+                local_evaluation, local_last_evaluation))
         {
             return false;
         }
@@ -439,8 +443,8 @@ class psyq::if_then_engine::_private::expression_monitor
 
     /** @brief 監視している条件式の前回の評価を取得する。
         @param[in] in_flush 前回の評価を無視する。
-        @retval 正 条件式の評価は true となった。
-        @retval  0 条件式の評価は false となった。
+        @retval 正 条件式の評価は真となった。
+        @retval  0 条件式の評価は偽となった。
         @retval 負 条件式の評価に失敗した。
      */
     private: template_evaluation get_last_evaluation(bool const in_flush)

@@ -228,7 +228,8 @@ class psyq::if_then_engine::_private::dispatcher
             同じ条件式に同じ挙動関数がすでに登録されていたのが原因。
      */
     public: bool register_function(
-        typename this_type::evaluator::expression::key const& in_expression_key,
+        typename this_type::evaluator::expression::key const&
+            in_expression_key,
         typename this_type::condition const in_condition,
         typename this_type::function_shared_ptr const& in_function,
         typename this_type::function_priority const in_priority =
@@ -253,7 +254,8 @@ class psyq::if_then_engine::_private::dispatcher
         @param[in] in_function       取り除く挙動関数。
      */
     public: void unregister_function(
-        typename this_type::evaluator::expression::key const& in_expression_key,
+        typename this_type::evaluator::expression::key const&
+            in_expression_key,
         typename this_type::function const& in_function)
     {
         auto const local_expression_monitor(
@@ -273,7 +275,8 @@ class psyq::if_then_engine::_private::dispatcher
         @param[in] in_expression_key 条件式の識別値。
      */
     public: void unregister_function(
-        typename this_type::evaluator::expression::key const& in_expression_key)
+        typename this_type::evaluator::expression::key const&
+            in_expression_key)
     {
         auto const local_expression_monitor(
             this_type::expression_monitor::key_less::find_const_iterator(
@@ -317,6 +320,10 @@ class psyq::if_then_engine::_private::dispatcher
         たとえば、前回から今回の間で条件式の評価が
         「true（前回）／false（前回と今回の間）／true（今回）」
         と変化した場合、挙動関数は呼び出されない。
+
+        @note
+        状態値が削除された場合は detect_status_transition で検知できるが、
+        条件式が削除された場合を検知してない。検知すべき？
      */
     public: void _dispatch(
         typename this_type::evaluator const& in_evaluator,
@@ -453,7 +460,8 @@ class psyq::if_then_engine::_private::dispatcher
      */
     private: static void rebuild_status_monitor(
         typename this_type::status_monitor::container& io_status_monitors,
-        typename this_type::expression_monitor::container const& in_expression_monitors)
+        typename this_type::expression_monitor::container const&
+            in_expression_monitors)
     {
         /// @note std::vector なら、逆順で走査したほうが効率いいかも。
         for (auto i(io_status_monitors.begin()); i != io_status_monitors.end();)
@@ -501,7 +509,8 @@ class psyq::if_then_engine::_private::dispatcher
      */
     private: static void register_expressions(
         typename this_type::status_monitor::container& io_status_monitors,
-        typename this_type::expression_monitor::container& io_expression_monitors,
+        typename this_type::expression_monitor::container&
+            io_expression_monitors,
         typename this_type::evaluator const& in_evaluator,
         std::size_t const in_reserve_expressions)
     {
@@ -550,14 +559,16 @@ class psyq::if_then_engine::_private::dispatcher
      */
     private: static std::int8_t register_expression(
         typename this_type::status_monitor::container& io_status_monitors,
-        typename this_type::expression_monitor::container const& in_expression_monitors,
+        typename this_type::expression_monitor::container const&
+            in_expression_monitors,
         typename this_type::evaluator::expression::key const& in_register_key,
         typename this_type::evaluator::expression::key const& in_scan_key,
         typename this_type::evaluator const& in_evaluator,
         std::size_t const in_reserve_expressions)
     {
-        // 条件式と要素条件チャンクを検索する。
-        auto const local_expression(in_evaluator._find_expression(in_scan_key));
+        // in_scan_key に対応する条件式と要素条件チャンクを取得する。
+        auto const local_expression(
+            in_evaluator._find_expression(in_scan_key));
         if (local_expression == nullptr)
         {
             return 0;
@@ -571,7 +582,8 @@ class psyq::if_then_engine::_private::dispatcher
             return 0;
         }
 
-        // 条件式の種類によって、追加先を選択する。
+        // in_scan_key に対応する条件式の種類によって、
+        // in_register_key の登録先を選択する。
         switch (local_expression->kind_)
         {
             case this_type::evaluator::expression::kind_SUB_EXPRESSION:
@@ -626,14 +638,12 @@ class psyq::if_then_engine::_private::dispatcher
         template_element_container const& in_elements,
         std::size_t const in_reserve_expressions)
     {
-        // 条件式が使う要素条件を走査し、
-        // 要素条件ごとに状態監視器へ条件式を登録する。
-        auto const local_begin(in_elements.begin());
-        auto const local_end(local_begin + in_expression.end_);
-        for (auto i(local_begin + in_expression.begin_); i != local_end; ++i)
+        // in_expression が使う要素条件を走査し、
+        // in_register_key を要素条件ごとに状態監視器へ登録する。
+        for (auto i(in_expression.begin_); i < in_expression.end_; ++i)
         {
-            // 条件式を登録する状態監視器を取得する。
-            auto const& local_status_key(i->key_);
+            // in_register_key を登録する状態監視器を取得する。
+            auto const& local_status_key(in_elements.at(i).key_);
             auto local_status_monitor(
                 std::lower_bound(
                     io_status_monitors.begin(),
@@ -651,8 +661,9 @@ class psyq::if_then_engine::_private::dispatcher
                         local_status_key, io_status_monitors.get_allocator()));
             }
 
-            // 条件式の識別値を、状態監視器へ登録する。
-            auto& local_expression_keys(local_status_monitor->expression_keys_);
+            // in_register_key を状態監視器へ登録する。
+            auto& local_expression_keys(
+                local_status_monitor->expression_keys_);
             local_expression_keys.reserve(in_reserve_expressions);
             auto const local_lower_bound(
                 std::lower_bound(
@@ -674,7 +685,7 @@ class psyq::if_then_engine::_private::dispatcher
         @param[in] in_expression_monitors
             条件式の評価の変化を挙動関数へ知らせる、条件式監視器。
         @param[in] in_register_key 登録する複合条件式の識別値。
-        @param[in] in_expression   走査する条件式。
+        @param[in] in_expression   走査する複合条件式。
         @param[in] in_sub_expressions
             登録する複合条件式が参照する要素条件コンテナ。
         @param[in] in_evaluator    登録する条件式を持つ条件評価器。
@@ -686,46 +697,38 @@ class psyq::if_then_engine::_private::dispatcher
      */
     private: static std::int8_t register_compound_expression(
         typename this_type::status_monitor::container& io_status_monitors,
-        typename this_type::expression_monitor::container const& in_expression_monitors,
+        typename this_type::expression_monitor::container const&
+            in_expression_monitors,
         typename this_type::evaluator::expression::key const& in_register_key,
         typename this_type::evaluator::expression const& in_expression,
-        typename this_type::evaluator::sub_expression_container const& in_sub_expressions,
+        typename this_type::evaluator::sub_expression_container const&
+            in_sub_expressions,
         typename this_type::evaluator const& in_evaluator,
         std::size_t const in_reserve_expressions)
     {
-        // 複合条件式の要素条件を走査し、状態監視器に条件式を登録する。
-        auto const local_begin(in_sub_expressions.begin());
-        auto const local_end(local_begin + in_expression.end_);
+        // in_expression の要素条件を走査し、
+        // in_register_key を状態監視器へ登録する。
         std::int8_t local_result(1);
-        for (auto i(local_begin + in_expression.begin_); i != local_end; ++i)
+        for (auto i(in_expression.begin_); i < in_expression.end_; ++i)
         {
-            auto const& local_sub_key(i->key_);
-            auto const local_expression_monitor(
-                this_type::expression_monitor::key_less::find_const_pointer(
-                    in_expression_monitors, local_sub_key));
-            if (local_expression_monitor == nullptr
-                || !local_expression_monitor->flags_.test(
-                    this_type::expression_monitor::flag_REGISTERED))
+            auto const local_register_expression(
+                this_type::register_expression(
+                    io_status_monitors,
+                    in_expression_monitors,
+                    in_register_key,
+                    in_sub_expressions.at(i).key_,
+                    in_evaluator,
+                    in_reserve_expressions));
+            if (local_register_expression == 0)
             {
-                auto const local_register_expression(
-                    this_type::register_expression(
-                        io_status_monitors,
-                        in_expression_monitors,
-                        in_register_key,
-                        local_sub_key,
-                        in_evaluator,
-                        in_reserve_expressions));
-                if (local_register_expression == 0)
-                {
-                    // 無限ループを防ぐため、
-                    // まだ存在しない条件式を複合条件式で使うのは禁止する。
-                    PSYQ_ASSERT(false);
-                    return 0;
-                }
-                else if (local_register_expression < 0)
-                {
-                    local_result = -1;
-                }
+                // 無限ループを防ぐため、
+                // まだ存在しない条件式を複合条件式で使うのは禁止する。
+                PSYQ_ASSERT(false);
+                return 0;
+            }
+            else if (local_register_expression < 0)
+            {
+                local_result = -1;
             }
         }
         return local_result;
@@ -734,18 +737,31 @@ class psyq::if_then_engine::_private::dispatcher
     /** @brief 状態変化を検知し、条件式監視器へ知らせる。
         @param[in,out] io_status_monitors     状態監視器のコンテナ。
         @param[in,out] io_expression_monitors 条件式監視器のコンテナ。
-        @param[in] in_reservoir               変化を検知する状態貯蔵器。
+        @param[in] in_reservoir               状態変化を把握している状態貯蔵器。
      */
     private: static void detect_status_transition(
         typename this_type::status_monitor::container& io_status_monitors,
-        typename this_type::expression_monitor::container& io_expression_monitors,
+        typename this_type::expression_monitor::container&
+            io_expression_monitors,
         typename this_type::evaluator::reservoir const& in_reservoir)
     {
-        // 状態監視器のコンテナを走査しつつ、
-        // 不要になった要素を削除し、状態監視器のコンテナを整理する。
-        for (auto i(io_status_monitors.begin()); i != io_status_monitors.end();)
+        // io_status_monitors を走査しつつ、
+        // 不要になった要素を削除してコンテナを整理する。
+        for (
+            auto i(io_status_monitors.begin());
+            i != io_status_monitors.end();)
         {
             // 状態変化を検知したら、条件式監視器へ知らせる。
+            /** @note
+                reservoir::_get_transition は二分探索を行うが、
+                監視しているすべての状態値に対し二分探索を毎回行うのは、
+                計算量として問題にならないか気になる。計算量が問題になるなら、
+                reservoir::status_container にハッシュ辞書を使うべきか。
+
+                @todo
+                状態値が存在しない場合、状態変化の通知を毎回行ってしまう。
+                状態値が存在しなくなった瞬間を検知できるようにしたい。
+             */
             auto& local_status_monitor(*i);
             auto const local_status_transition(
                 in_reservoir._get_transition(local_status_monitor.key_));
@@ -782,7 +798,9 @@ class psyq::if_then_engine::_private::dispatcher
     {
         // 条件式識別値のコンテナを走査しつつ、
         // 不要になった要素を削除し、条件識別値コンテナを整理する。
-        for (auto i(io_expression_keys.begin()); i != io_expression_keys.end();)
+        for (
+            auto i(io_expression_keys.begin());
+            i != io_expression_keys.end();)
         {
             auto const local_expression_monitor(
                 this_type::expression_monitor::key_less::find_pointer(

@@ -331,8 +331,8 @@ class psyq::if_then_engine::_private::dispatcher
         }
         this->dispatch_lock_ = true;
 
-        // 条件式監視器を更新する。
-        this_type::update_expression_monitors(
+        // 条件式を状態監視器へ登録する。
+        this_type::register_expressions(
             this->status_monitors_,
             this->expression_monitors_,
             in_evaluator,
@@ -489,7 +489,7 @@ class psyq::if_then_engine::_private::dispatcher
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 条件式監視器を更新する。
+    /** @brief 条件式を状態監視器へ登録する。
         @param[in,out] io_status_monitors
             条件式を登録する状態監視器のコンテナ。
         @param[in,out] io_expression_monitors
@@ -498,7 +498,7 @@ class psyq::if_then_engine::_private::dispatcher
         @param[in] in_reserve_expressions
             状態監視器が持つ条件式識別値コンテナの予約容量。
      */
-    private: static void update_expression_monitors(
+    private: static void register_expressions(
         typename this_type::status_monitor::container& io_status_monitors,
         typename this_type::expression_monitor::container& io_expression_monitors,
         typename this_type::evaluator const& in_evaluator,
@@ -506,31 +506,9 @@ class psyq::if_then_engine::_private::dispatcher
     {
         for (auto& local_expression_monitor: io_expression_monitors)
         {
-            PSYQ_ASSERT(
-                !local_expression_monitor.flags_.test(
-                    this_type::expression_monitor::flag_INVALID_TRANSITION)
-                && !local_expression_monitor.flags_.test(
-                    this_type::expression_monitor::flag_VALID_TRANSITION));
-            if (local_expression_monitor.flags_.test(
+            if (!local_expression_monitor.flags_.test(
                     this_type::expression_monitor::flag_REGISTERED))
             {
-                // 条件式の削除を検知する。
-                /** @note
-                    evaluator::_find_expression は二分探索を行うが、
-                    監視しているすべての条件式に対し二分探索を毎回行うのは、
-                    計算量として問題にならないか気になる。計算量が問題なら、
-                    evaluator::expression_container をハッシュ辞書にするべき？
-                 */
-                local_expression_monitor.flags_.set(
-                    this_type::expression_monitor::flag_INVALID_TRANSITION,
-                    local_expression_monitor.flags_.test(
-                        this_type::expression_monitor::flag_LAST_EVALUATION)
-                    && nullptr == in_evaluator._find_expression(
-                        local_expression_monitor.key_));
-            }
-            else
-            {
-                // 条件式を状態監視器へ登録する。
                 auto const local_register_expression(
                     this_type::register_expression(
                         io_status_monitors,
@@ -553,7 +531,7 @@ class psyq::if_then_engine::_private::dispatcher
 
     /** @brief 条件式を状態監視器へ登録する。
         @param[in,out] io_status_monitors
-            状態変化を条件式監視器に知らせる、状態監視器。
+            条件式を登録する状態監視器。
         @param[in] in_expression_monitors
             条件式の評価の変化を挙動関数へ知らせる、条件式監視器。
         @param[in] in_register_key 登録する条件式の識別値。
@@ -755,25 +733,13 @@ class psyq::if_then_engine::_private::dispatcher
             i != io_status_monitors.end();)
         {
             // 状態変化を検知したら、条件式監視器へ知らせる。
-            /** @note
-                reservoir::_get_transition は二分探索を行うが、
-                監視しているすべての状態値に対し二分探索を毎回行うのは、
-                計算量として問題にならないか気になる。計算量が問題なら、
-                reservoir::status_container をハッシュ辞書にするべき？
-
-                @todo
-                状態値が存在しない場合、状態変化の通知を毎回行ってしまう。
-                状態値が存在しなくなった瞬間を検知できるようにしたい。
-             */
             auto& local_status_monitor(*i);
-            auto const local_status_transition(
-                in_reservoir._get_transition(local_status_monitor.key_));
-            if (local_status_transition != 0)
+            if (local_status_monitor.detect_transition(in_reservoir))
             {
                 this_type::notify_status_transition(
                     io_expression_monitors,
                     local_status_monitor.expression_keys_,
-                    0 <= local_status_transition);
+                    local_status_monitor.last_existence_);
 
                 // 状態監視器に対応する条件式監視器がなくなったら、
                 // 状態監視器を削除する。
@@ -790,12 +756,12 @@ class psyq::if_then_engine::_private::dispatcher
     /** @brief 状態変化を条件式監視器へ知らせる。
         @param[in,out] io_expression_monitors 条件式監視器のコンテナ。
         @param[in,out] io_expression_keys     状態変化を知らせる条件式の識別値のコンテナ。
-        @param[in] in_valid_transition        状態値があるかどうか。
+        @param[in] in_status_existence        状態値があるかどうか。
      */
     private: static void notify_status_transition(
         typename this_type::expression_monitor::container& io_expression_monitors,
         typename this_type::status_monitor::expression_key_container& io_expression_keys,
-        bool const in_valid_transition)
+        bool const in_status_existence)
     {
         // 条件式識別値のコンテナを走査しつつ、
         // 不要になった要素を削除し、条件識別値コンテナを整理する。
@@ -806,21 +772,16 @@ class psyq::if_then_engine::_private::dispatcher
             auto const local_expression_monitor(
                 this_type::expression_monitor::key_less::find_pointer(
                     io_expression_monitors, *i));
-            if (local_expression_monitor == nullptr)
+            if (local_expression_monitor != nullptr)
+            {
+                local_expression_monitor->
+                    receive_status_transition(in_status_existence);
+                ++i;
+            }
+            else
             {
                 i = io_expression_keys.erase(i);
-                continue;
             }
-            if (local_expression_monitor->flags_.test(
-                    this_type::expression_monitor::flag_REGISTERED))
-            {
-                // 状態変化を条件式監視器へ知らせる。
-                local_expression_monitor->flags_.set(
-                    in_valid_transition?
-                        this_type::expression_monitor::flag_VALID_TRANSITION:
-                        this_type::expression_monitor::flag_INVALID_TRANSITION);
-            }
-            ++i;
         }
     }
 
@@ -879,7 +840,8 @@ class psyq::if_then_engine::_private::status_monitor
         template_allocator const& in_allocator)
     :
     expression_keys_(in_allocator),
-    key_(std::move(in_key))
+    key_(std::move(in_key)),
+    last_existence_(false)
     {}
 
 #ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
@@ -888,7 +850,8 @@ class psyq::if_then_engine::_private::status_monitor
      */
     public: status_monitor(this_type&& io_source):
     expression_keys_(std::move(io_source.expression_keys_)),
-    key_(std::move(io_source.key_))
+    key_(std::move(io_source.key_)),
+    last_existence_(std::move(io_source.last_existence_))
     {}
 
     /** @brief ムーブ代入演算子。
@@ -899,14 +862,36 @@ class psyq::if_then_engine::_private::status_monitor
     {
         this->expression_keys_ = std::move(io_source.expression_keys_);
         this->key_ = std::move(io_source.key_);
+        this->last_existence_ = std::move(io_source.last_existence_);
         return *this;
     }
 #endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
+
+    /** @brief 状態値の変化を検知する。
+        @param[in] in_reservoir 状態変化を把握している状態貯蔵器。
+     */
+    public: template<typename template_reservoir>
+    bool detect_transition(template_reservoir const& in_reservoir)
+    {
+        /** @note
+            reservoir::_get_transition は二分探索を行うが、
+            監視しているすべての状態値に対し二分探索を毎回行うのは、
+            計算量として問題にならないか気になる。計算量が問題なら、
+            reservoir::status_container をハッシュ辞書にするべき？
+         */
+        auto const local_transition(in_reservoir._get_transition(this->key_));
+        auto const local_last_existence(this->last_existence_);
+        this->last_existence_ = (0 <= local_transition);
+        return 0 < local_transition
+            || local_last_existence != this->last_existence_;
+    }
 
     /// @brief 評価の更新を要求する条件式の識別値のコンテナ。
     public: typename this_type::expression_key_container expression_keys_;
     /// @brief 状態値の識別値。
     public: template_status_key key_;
+    /// @brief 前回の状態値が存在したか。
+    public: bool last_existence_;
 
 }; // class psyq::if_then_engine::_private::status_monitor
 

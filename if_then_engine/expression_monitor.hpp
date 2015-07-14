@@ -257,6 +257,20 @@ class psyq::if_then_engine::_private::expression_monitor
         return this_type::find_function(this->behaviors_, in_function, true);
     }
 
+    /** @brief 条件式が参照している状態値が存在するかの通知を受け取る。
+     */
+    public: void receive_status_transition(bool const in_status_existence)
+    {
+        if (this->flags_.test(this_type::flag_REGISTERED))
+        {
+            // 状態変化を条件式監視器へ知らせる。
+            this->flags_.set(
+                in_status_existence?
+                    this_type::flag_VALID_TRANSITION:
+                    this_type::flag_INVALID_TRANSITION);
+        }
+    }
+
     /** @brief 条件式を評価し、条件挙動をキャッシュに貯める。
 
         条件式監視器のコンテナを走査し、条件式の結果によって、
@@ -281,7 +295,7 @@ class psyq::if_then_engine::_private::expression_monitor
             i != io_expression_monitors.end();)
         {
             auto& local_expression_monitor(*i);
-            if (local_expression_monitor.get_evaluation_request())
+            if (local_expression_monitor.detect_transition(in_evaluator))
             {
                 local_expression_monitor.cache_behavior(
                     io_behavior_caches, in_evaluator, in_reservoir);
@@ -435,10 +449,34 @@ class psyq::if_then_engine::_private::expression_monitor
         return this->get_last_evaluation(false);
     }
 
-    private: bool get_evaluation_request() const PSYQ_NOEXCEPT
+    /** @brief 条件式の評価要求を検知する。
+     */
+    private: template<typename template_evaluator>
+    bool detect_transition(template_evaluator const& in_evaluator)
+    PSYQ_NOEXCEPT
     {
-        return this->flags_.test(this_type::flag_VALID_TRANSITION)
-            || this->flags_.test(this_type::flag_INVALID_TRANSITION);
+        auto local_invalid(this->flags_.test(this_type::flag_INVALID_TRANSITION));
+        auto local_valid(this->flags_.test(this_type::flag_VALID_TRANSITION));
+        if (local_invalid || local_valid)
+        {
+            return true;
+        }
+
+        // 条件式の削除を検知する。
+        /** @note
+            evaluator::_find_expression は二分探索を行うが、
+            監視しているすべての条件式に対し二分探索を毎回行うのは、
+            計算量として問題にならないか気になる。計算量が問題なら、
+            evaluator::expression_container をハッシュ辞書にするべき？
+         */
+        auto const local_expression(in_evaluator._find_expression(this->key_));
+        auto const local_last_evaluation(
+            this->flags_.test(this_type::flag_LAST_EVALUATION));
+        local_invalid |= (local_expression == nullptr && local_last_evaluation);
+        local_valid |= (local_expression != nullptr && !local_last_evaluation);
+        this->flags_.set(this_type::flag_INVALID_TRANSITION, local_invalid);
+        this->flags_.set(this_type::flag_VALID_TRANSITION, local_valid);
+        return local_invalid || local_valid;
     }
 
     /** @brief 監視している条件式の前回の評価を取得する。

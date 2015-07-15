@@ -257,17 +257,42 @@ class psyq::if_then_engine::_private::expression_monitor
         return this_type::find_function(this->behaviors_, in_function, true);
     }
 
-    /** @brief 条件式が参照している状態値が存在するかの通知を受け取る。
+    /** @brief 状態変化を条件式監視器へ通知する。
+        @param[in,out] io_expression_monitors
+            状態変化の通知を受け取る条件式監視器のコンテナ。
+        @param[in,out] io_expression_keys
+            状態変化の通知を受け取る条件式の識別値のコンテナ。
+        @param[in] in_status_existence 状態値が存在するかどうか。
      */
-    public: void receive_status_transition(bool const in_status_existence)
+    public: template<typename template_container>
+    static void notify_status_transition(
+        typename this_type::container& io_expression_monitors,
+        template_container& io_expression_keys,
+        bool const in_status_existence)
     {
-        if (this->flags_.test(this_type::flag_REGISTERED))
+        for (auto i(io_expression_keys.begin()); i != io_expression_keys.end();)
         {
+            // 状態変化を通知する条件式監視器を取得する。
+            auto const local_expression_monitor(
+                this_type::key_less::find_pointer(io_expression_monitors, *i));
+            if (local_expression_monitor == nullptr)
+            {
+                // 存在しない条件式を削除し、コンテナを整理する。
+                /// @todo 存在しない条件式の監視器を削除すべきか、要検討。
+                i = io_expression_keys.erase(i);
+                continue;
+            }
+            ++i;
+
             // 状態変化を条件式監視器へ知らせる。
-            this->flags_.set(
-                in_status_existence?
-                    this_type::flag_VALID_TRANSITION:
-                    this_type::flag_INVALID_TRANSITION);
+            auto& local_flags(local_expression_monitor->flags_);
+            if (local_flags.test(this_type::flag_REGISTERED))
+            {
+                local_flags.set(
+                    in_status_existence?
+                        this_type::flag_VALID_TRANSITION:
+                        this_type::flag_INVALID_TRANSITION);
+            }
         }
     }
 
@@ -376,8 +401,7 @@ class psyq::if_then_engine::_private::expression_monitor
         auto const local_evaluation(
             this->evaluate_expression(
                 in_evaluator, in_reservoir, local_flush_condition));
-        if (!this->is_matched_condition(
-                local_evaluation, local_last_evaluation))
+        if (!this->is_matched_condition(local_evaluation, local_last_evaluation))
         {
             return false;
         }
@@ -430,7 +454,7 @@ class psyq::if_then_engine::_private::expression_monitor
         this->flags_.reset(this_type::flag_VALID_TRANSITION);
         this->flags_.reset(this_type::flag_INVALID_TRANSITION);
 
-        // 状態値の取得に失敗していたら、条件式の評価も失敗とみなす。
+        // 状態変化に失敗していたら、条件式の評価も失敗とみなす。
         if (local_invalid_transition)
         //if (in_flush && local_invalid_transition)
         {
@@ -450,6 +474,7 @@ class psyq::if_then_engine::_private::expression_monitor
     }
 
     /** @brief 条件式の評価要求を検知する。
+        @param[in] in_evaluator 条件式の評価に使う条件評価器。
      */
     private: template<typename template_evaluator>
     bool detect_transition(template_evaluator const& in_evaluator)
@@ -463,11 +488,11 @@ class psyq::if_then_engine::_private::expression_monitor
         }
 
         // 条件式の削除を検知する。
-        /** @note
+        /** @todo
             evaluator::_find_expression は二分探索を行うが、
             監視しているすべての条件式に対し二分探索を毎回行うのは、
             計算量として問題にならないか気になる。計算量が問題なら、
-            evaluator::expression_container をハッシュ辞書にするべき？
+            evaluator::expression_container をハッシュ辞書にすべきか、要検討。
          */
         auto const local_expression(in_evaluator._find_expression(this->key_));
         auto const local_last_evaluation(

@@ -738,6 +738,7 @@ INPUT                  = \
                          ./if_then_engine/status_chunk.hpp \
                          ./if_then_engine/status_operation.hpp \
                          ./if_then_engine/status_builder.hpp \
+                         ./if_then_engine/status_monitor.hpp \
                          ./if_then_engine/evaluator.hpp \
                          ./if_then_engine/behavior.hpp \
                          ./if_then_engine/behavior_chunk.hpp \

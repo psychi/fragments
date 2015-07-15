@@ -377,7 +377,7 @@ class psyq::string::_private::storage_base
         template_iterator const in_end)
     PSYQ_NOEXCEPT
     {
-        PSYQ_ASSERT(&(*in_begin) != nullptr || in_begin != in_end);
+        PSYQ_ASSERT(&(*in_begin) != nullptr || in_begin == in_end);
         PSYQ_ASSERT(
             in_offset + std::distance(in_begin, in_end) <= this->size());
         auto local_last(this->begin() + in_offset);

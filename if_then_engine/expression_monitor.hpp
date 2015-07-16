@@ -170,7 +170,7 @@ class psyq::if_then_engine::_private::expression_monitor
 
         登録された挙動関数は、スマートポインタが空になると、
         自動的に取り除かれる。明示的に挙動関数を取り除くには、
-        this_type::remove_function を呼び出す。
+        this_type::remove_behavior を呼び出す。
 
         @param[in,out] io_expression_monitors
             挙動関数を登録する条件式監視器のコンテナ。
@@ -189,7 +189,7 @@ class psyq::if_then_engine::_private::expression_monitor
             挙動関数を指すスマートポインタが空だったか、
             同じ条件式に同じ挙動関数がすでに登録されていたのが原因。
      */
-    public: static bool register_function(
+    public: static bool insert_behavior(
         typename this_type::container& io_expression_monitors,
         template_expression_key const& in_expression_key,
         typename this_type::condition const in_condition,
@@ -218,12 +218,12 @@ class psyq::if_then_engine::_private::expression_monitor
             && local_expression_monitor->key_ == in_expression_key)
         {
             // 同じ関数オブジェクトがすでに登録済みなら、失敗する。
-            auto const local_find_function(
-                this_type::find_function(
+            auto const local_find_behavior(
+                this_type::find_behavior(
                     local_expression_monitor->behaviors_,
                     *local_function,
                     false));
-            if (local_find_function)
+            if (local_find_behavior)
             {
                 return false;
             }
@@ -246,22 +246,31 @@ class psyq::if_then_engine::_private::expression_monitor
         return true;
     }
 
-    /** @brief 関数オブジェクトを削除しつつ、コンテナを整理する。
-        @param[in] in_function 削除する関数オブジェクト。
+    /** @brief 条件挙動を削除しつつ、コンテナを整理する。
+        @param[in] in_function 削除する挙動関数。
         @retval true  削除対象がコンテナから見つかった。
         @retval false 削除対象がコンテナから見つからなかった。
      */
-    public: bool remove_function(
+    public: bool erase_behavior(
         typename this_type::behavior::function const& in_function)
     {
-        return this_type::find_function(this->behaviors_, in_function, true);
+        return this_type::find_behavior(this->behaviors_, in_function, true);
+    }
+
+    /** @brief 条件挙動を整理する。
+        @retval true  条件挙動が空になった。
+        @retval false 条件挙動は空になってない。
+     */
+    public: bool shrink_behaviors()
+    {
+        return this_type::shrink_behaviors(this->behaviors_);
     }
 
     /** @brief 状態変化を条件式監視器へ通知する。
         @param[in,out] io_expression_monitors
             状態変化の通知を受け取る条件式監視器のコンテナ。
         @param[in,out] io_expression_keys
-            状態変化の通知を受け取る条件式の識別値のコンテナ。
+            状態変化を通知する条件式の識別値のコンテナ。
         @param[in] in_status_existence 状態値が存在するかどうか。
      */
     public: template<typename template_container>
@@ -270,6 +279,10 @@ class psyq::if_then_engine::_private::expression_monitor
         template_container& io_expression_keys,
         bool const in_status_existence)
     {
+        auto const local_flag_key(
+            in_status_existence?
+                this_type::flag_VALID_TRANSITION:
+                this_type::flag_INVALID_TRANSITION);
         for (auto i(io_expression_keys.begin()); i != io_expression_keys.end();)
         {
             // 状態変化を通知する条件式監視器を取得する。
@@ -277,21 +290,18 @@ class psyq::if_then_engine::_private::expression_monitor
                 this_type::key_less::find_pointer(io_expression_monitors, *i));
             if (local_expression_monitor == nullptr)
             {
-                // 存在しない条件式を削除し、コンテナを整理する。
-                /// @todo 存在しない条件式の監視器を削除すべきか、要検討。
+                // 監視器のない条件式を削除し、コンテナを整理する。
                 i = io_expression_keys.erase(i);
-                continue;
             }
-            ++i;
-
-            // 状態変化を条件式監視器へ知らせる。
-            auto& local_flags(local_expression_monitor->flags_);
-            if (local_flags.test(this_type::flag_REGISTERED))
+            else
             {
-                local_flags.set(
-                    in_status_existence?
-                        this_type::flag_VALID_TRANSITION:
-                        this_type::flag_INVALID_TRANSITION);
+                ++i;
+                // 状態変化を条件式監視器へ知らせる。
+                auto& local_flags(local_expression_monitor->flags_);
+                if (local_flags.test(this_type::flag_REGISTERED))
+                {
+                    local_flags.set(local_flag_key);
+                }
             }
         }
     }
@@ -299,7 +309,7 @@ class psyq::if_then_engine::_private::expression_monitor
     /** @brief 条件式を評価し、条件挙動をキャッシュに貯める。
 
         条件式監視器のコンテナを走査し、条件式の結果によって、
-        dispacher::register_function で登録された条件挙動をキャッシュに貯める。
+        this_type::insert_behavior で登録された条件挙動をキャッシュに貯める。
 
         @param[in,out] io_behavior_caches     条件挙動キャッシュのコンテナ。
         @param[in,out] io_expression_monitors 条件式監視器のコンテナ。
@@ -326,8 +336,7 @@ class psyq::if_then_engine::_private::expression_monitor
                     io_behavior_caches, in_evaluator, in_reservoir);
                 if (local_expression_monitor.behaviors_.empty())
                 {
-                    // 挙動関数のコンテナが空になったら、
-                    // 条件式監視器を削除する。
+                    // 条件挙動コンテナが空になったら、条件式監視器を削除する。
                     i = io_expression_monitors.erase(i);
                     continue;
                 }
@@ -337,14 +346,37 @@ class psyq::if_then_engine::_private::expression_monitor
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 関数オブジェクトを検索しつつ、コンテナを整理する。
+    /** @brief 条件挙動コンテナを整理する。
+        @param[in,out] io_behaviors 整理する条件挙動コンテナ。
+        @retval true  条件挙動コンテナが空になった。
+        @retval false 条件挙動コンテナは空になってない。
+     */
+    private: static bool shrink_behaviors(
+        typename this_type::behavior_container& io_behaviors)
+    {
+        for (auto i(io_behaviors.begin()); i != io_behaviors.end();)
+        {
+            if (i->function_.expired())
+            {
+                i = io_behaviors.erase(i);
+            }
+            else
+            {
+                ++i;
+            }
+        }
+        io_behaviors.shrink_to_fit();
+        return io_behaviors.empty();
+    }
+
+    /** @brief 条件挙動を検索しつつ、コンテナを整理する。
         @param[in,out] io_behaviors 走査する条件挙動のコンテナ。
-        @param[in] in_function      検索する関数オブジェクト。
-        @param[in] in_erase         検索する関数オブジェクトを削除するかどうか。
+        @param[in] in_function      検索する挙動関数。
+        @param[in] in_erase         検索する挙動関数を削除するかどうか。
         @retval true  io_behaviors から in_function が見つかった。
         @retval false io_behaviors から in_function が見つからなかった。
      */
-    private: static bool find_function(
+    private: static bool find_behavior(
         typename this_type::behavior_container& io_behaviors,
         typename this_type::behavior::function const& in_function,
         bool const in_erase)
@@ -379,7 +411,7 @@ class psyq::if_then_engine::_private::expression_monitor
     /** @brief 変化条件に合致する挙動関数をキャッシュに貯める。
 
         条件式を評価し、変化条件に合致するなら、
-        this_type::register_function で登録された挙動関数をキャッシュに貯める。
+        this_type::insert_behavior で登録された条件挙動をキャッシュに貯める。
 
         @param[in,out] io_behavior_caches 条件挙動キャッシュのコンテナ。
         @param[in] in_evaluator           評価に用いる条件評価器。
@@ -415,21 +447,20 @@ class psyq::if_then_engine::_private::expression_monitor
             if (local_behavior.function_.expired())
             {
                 i = this->behaviors_.erase(i);
+                continue;
             }
-            else
-            {
-                // 優先順位の昇順となるように、条件挙動キャッシュを挿入する。
-                io_behavior_caches.emplace(
-                    std::upper_bound(
-                        io_behavior_caches.cbegin(),
-                        io_behavior_caches.cend(),
-                        local_behavior.priority_,
-                        psyq::if_then_engine::_private::key_less<
-                            typename this_type::behavior_cache_key_getter>()),
-                    local_behavior,
-                    local_cache);
-                ++i;
-            }
+            ++i;
+
+            // 優先順位の昇順となるように、条件挙動キャッシュを挿入する。
+            io_behavior_caches.emplace(
+                std::upper_bound(
+                    io_behavior_caches.cbegin(),
+                    io_behavior_caches.cend(),
+                    local_behavior.priority_,
+                    psyq::if_then_engine::_private::key_less<
+                        typename this_type::behavior_cache_key_getter>()),
+                local_behavior,
+                local_cache);
         }
         return true;
     }
@@ -544,11 +575,11 @@ class psyq::if_then_engine::_private::expression_monitor
 
     //-------------------------------------------------------------------------
     /// @brief 条件挙動のコンテナ。
-    public: typename this_type::behavior_container behaviors_;
+    private: typename this_type::behavior_container behaviors_;
     /// @brief 監視している条件式の識別値。
     public: template_expression_key key_;
     /// @brief 挙動関数を呼び出す変化条件。
-    public: typename this_type::condition condition_;
+    private: typename this_type::condition condition_;
     /// @brief フラグの集合。
     public: std::bitset<8> flags_;
 

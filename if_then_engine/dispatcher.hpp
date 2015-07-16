@@ -235,7 +235,7 @@ class psyq::if_then_engine::_private::dispatcher
             PSYQ_IF_THEN_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT,
         std::size_t const in_reserve_functions = 1)
     {
-        return this_type::expression_monitor::register_function(
+        return this_type::expression_monitor::insert_behavior(
             this->expression_monitors_,
             in_expression_key,
             in_condition,
@@ -246,23 +246,23 @@ class psyq::if_then_engine::_private::dispatcher
 
     /** @brief 条件式に対応する挙動関数を取り除く。
 
-        this_type::register_function で登録した挙動関数を、
-        条件式監視器から取り除く。
+        this_type::register_function
+        で登録した挙動関数を、条件式監視器から取り除く。
 
         @param[in] in_expression_key 条件式の識別値。
         @param[in] in_function       取り除く挙動関数。
+        @retval true  挙動関数を取り除いた。
+        @retval false 該当する挙動関数が見つからなかった。
      */
-    public: void unregister_function(
+    public: bool unregister_function(
         typename this_type::evaluator::expression::key const& in_expression_key,
         typename this_type::function const& in_function)
     {
         auto const local_expression_monitor(
             this_type::expression_monitor::key_less::find_pointer(
                 this->expression_monitors_, in_expression_key));
-        if (local_expression_monitor != nullptr)
-        {
-            local_expression_monitor->remove_function(in_function);
-        }
+        return local_expression_monitor != nullptr?
+            local_expression_monitor->erase_behavior(in_function): false;
     }
 
     /** @brief 条件式に対応する挙動関数をすべて取り除く。
@@ -270,34 +270,41 @@ class psyq::if_then_engine::_private::dispatcher
         条件式監視器を削除し、 this_type::register_function
         で同じ条件式に登録した挙動関数を、すべて取り除く。
 
-        @param[in] in_expression_key 条件式の識別値。
+        @param[in] in_expression_key 取り除く条件式の識別値。
+        @retval true  挙動関数を取り除いた。
+        @retval false 該当する挙動関数が見つからなかった。
      */
-    public: void unregister_function(
+    public: bool unregister_function(
         typename this_type::evaluator::expression::key const& in_expression_key)
     {
         auto const local_expression_monitor(
             this_type::expression_monitor::key_less::find_const_iterator(
                 this->expression_monitors_, in_expression_key));
-        if (local_expression_monitor != this->expression_monitors_.end())
+        if (local_expression_monitor == this->expression_monitors_.end())
         {
-            this->expression_monitors_.erase(local_expression_monitor);
+            return false;
         }
+        this->expression_monitors_.erase(local_expression_monitor);
+        return true;
     }
 
     /** @brief 挙動関数を取り除く。
 
-        this_type::register_function で登録した挙動関数を、
-        すべての条件式監視器から取り除く。
+        this_type::register_function
+        で登録した挙動関数を、すべての条件式監視器から取り除く。
 
-        @param[in] in_function 削除する挙動関数。
+        @param[in] in_function 取り除く挙動関数。
+        @return 取り除いた数。
      */
-    public: void unregister_function(
+    public: std::size_t unregister_function(
         typename this_type::function const& in_function)
     {
+        std::size_t local_count(0);
         for (auto& local_expression_monitor: this->expression_monitors_)
         {
-            local_expression_monitor.remove_function(in_function);
+            local_count += local_expression_monitor.erase_behavior(in_function);
         }
+        return local_count;
     }
 
     /** @brief psyq::if_then_engine 管理者以外は、この関数は使用禁止。
@@ -421,25 +428,12 @@ class psyq::if_then_engine::_private::dispatcher
             auto i(io_expression_monitors.begin());
             i != io_expression_monitors.end();)
         {
-            auto& local_behaviors(i->behaviors_);
-            for (auto j(local_behaviors.begin()); j != local_behaviors.end();)
-            {
-                if (j->function_.expired())
-                {
-                    j = local_behaviors.erase(j);
-                }
-                else
-                {
-                    ++j;
-                }
-            }
-            if (local_behaviors.empty())
+            if (i->shrink_behaviors())
             {
                 i = io_expression_monitors.erase(i);
             }
             else
             {
-                local_behaviors.shrink_to_fit();
                 ++i;
             }
         }
@@ -457,33 +451,14 @@ class psyq::if_then_engine::_private::dispatcher
         /// @note std::vector なら、逆順で走査したほうが効率いいかも。
         for (auto i(io_status_monitors.begin()); i != io_status_monitors.end();)
         {
-            auto& local_expression_keys(i->expression_keys_);
-            for (
-                auto j(local_expression_keys.begin());
-                j != local_expression_keys.end();)
-            {
-                auto const local_expression_monitor(
-                    this_type::expression_monitor::key_less::find_const_pointer(
-                        in_expression_monitors, *j));
-                if (local_expression_monitor == nullptr)
-                {
-                    j = local_expression_keys.erase(j);
-                }
-                else
-                {
-                    ++j;
-                }
-            }
-            if (local_expression_keys.empty())
+            if (i->shrink_expression_keys(in_expression_monitors))
             {
                 i = io_status_monitors.erase(i);
             }
             else
             {
-                local_expression_keys.shrink_to_fit();
                 ++i;
             }
-            local_expression_keys.shrink_to_fit();
         }
         io_status_monitors.shrink_to_fit();
     }
@@ -606,6 +581,10 @@ class psyq::if_then_engine::_private::dispatcher
     }
 
     /** @brief 条件式を状態監視器へ登録する。
+
+        in_expression が使う要素条件を走査し、要素条件が参照する状態値ごとに
+        in_register_key を状態監視器へ登録する。
+
         @param[in,out] io_status_monitors
             状態変化を条件式監視器に知らせる、状態監視器。
         @param[in] in_register_key 登録する条件式の識別値。
@@ -622,45 +601,45 @@ class psyq::if_then_engine::_private::dispatcher
         template_element_container const& in_elements,
         std::size_t const in_reserve_expressions)
     {
-        // in_expression が使う要素条件を走査し、
-        // in_register_key を要素条件ごとに状態監視器へ登録する。
         for (auto i(in_expression.begin_); i < in_expression.end_; ++i)
         {
-            // in_register_key を登録する状態監視器を取得する。
-            auto const& local_status_key(in_elements.at(i).key_);
-            auto local_status_monitor(
-                std::lower_bound(
-                    io_status_monitors.begin(),
-                    io_status_monitors.end(),
-                    local_status_key,
-                    typename this_type::status_monitor::key_less()));
-            if (local_status_monitor == io_status_monitors.end()
-                || local_status_monitor->key_ != local_status_key)
-            {
-                // 要素条件に対応する状態監視器がなかったので、
-                // 状態監視器を新たに生成する。
-                local_status_monitor = io_status_monitors.insert(
-                    local_status_monitor,
-                    typename this_type::status_monitor(
-                        local_status_key, io_status_monitors.get_allocator()));
-            }
-
-            // in_register_key を状態監視器へ登録する。
-            auto& local_expression_keys(
-                local_status_monitor->expression_keys_);
-            local_expression_keys.reserve(in_reserve_expressions);
-            auto const local_lower_bound(
-                std::lower_bound(
-                    local_expression_keys.begin(),
-                    local_expression_keys.end(),
-                    in_register_key));
-            if (local_lower_bound == local_expression_keys.end()
-                || *local_lower_bound != in_register_key)
-            {
-                local_expression_keys.insert(
-                    local_lower_bound, in_register_key);
-            }
+            // 要素条件が参照する状態値の監視器を取得し、
+            // in_register_key を状態監視器に登録する。
+            this_type::equip_status_monitor(
+                io_status_monitors, in_elements.at(i).key_)
+                    .insert_expression_key(
+                        in_register_key, in_reserve_expressions);
         }
+    }
+
+    /** @brief 状態の識別値に対応する状態監視器を用意する。
+        @param[in,out] io_status_monitors 状態監視器のコンテナ。
+        @param[in] in_status_key          状態の識別値。
+        @return 状態の識別値に対応する状態監視器。
+     */
+    private: static typename this_type::status_monitor& equip_status_monitor(
+        typename this_type::status_monitor::container& io_status_monitors,
+        typename this_type::evaluator::reservoir::status_key const& in_status_key)
+    {
+        // in_status_key に対応する状態監視器を検索する。
+        auto const local_lower_bound(
+            std::lower_bound(
+                io_status_monitors.begin(),
+                io_status_monitors.end(),
+                in_status_key,
+                typename this_type::status_monitor::key_less()));
+        if (local_lower_bound != io_status_monitors.end()
+            && local_lower_bound->key_ == in_status_key)
+        {
+            return *local_lower_bound;
+        }
+
+        // in_status_key に対応する状態監視器がなかったので、
+        // 状態監視器を新たに生成する。
+        return *io_status_monitors.emplace(
+            local_lower_bound,
+            in_status_key,
+            io_status_monitors.get_allocator());
     }
 
     /** @brief 複合条件式を状態監視器へ登録する。

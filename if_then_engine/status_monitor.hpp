@@ -117,9 +117,97 @@ class psyq::if_then_engine::_private::status_monitor
         return this->expression_keys_.empty();
     }
 
+    /** @brief 状態変化を通知する条件式を登録する。
+        @param[in] in_register_key 状態変化を通知する条件式の識別値。
+        @param[in] in_reserve_expressions
+            状態監視器が持つ条件式識別値コンテナの予約容量。
+        @retval true 条件式を登録した。
+        @retval false
+            同じ識別値の条件式がすでに登録されていたので、何もしなかった。
+     */
+    public: bool insert_expression_key(
+        template_expression_key const& in_register_key,
+        std::size_t const in_reserve_expressions)
+    {
+        return this_type::insert_expression_key(
+            this->expression_keys_, in_register_key, in_reserve_expressions);
+    }
+
+    /** @brief 状態変化を通知する条件式を登録する。
+        @param[in,out] io_expression_keys
+            状態変化を通知する条件式の識別値を挿入するコンテナ。
+        @param[in] in_register_key 状態変化を通知する条件式の識別値。
+        @param[in] in_reserve_expressions
+            状態監視器が持つ条件式識別値コンテナの予約容量。
+        @retval true 条件式を登録した。
+        @retval false
+            同じ識別値の条件式がすでに登録されていたので、何もしなかった。
+     */
+    private: static bool insert_expression_key(
+        typename this_type::expression_key_container& io_expression_keys,
+        template_expression_key const& in_register_key,
+        std::size_t const in_reserve_expressions)
+    {
+        io_expression_keys.reserve(in_reserve_expressions);
+        auto const local_lower_bound(
+            std::lower_bound(
+                io_expression_keys.begin(),
+                io_expression_keys.end(),
+                in_register_key));
+        if (local_lower_bound != io_expression_keys.end()
+            && *local_lower_bound == in_register_key)
+        {
+            return false;
+        }
+        io_expression_keys.insert(local_lower_bound, in_register_key);
+        return true;
+    }
+
+    /** @brief 条件式識別値コンテナを整理する。
+        @param[in] in_expression_monitors 参照する条件式監視器のコンテナ。
+        @retval true  条件式識別値コンテナが空になった。
+        @retval false 条件式識別値コンテナは空になってない。
+     */
+    public: template<typename template_container>
+    bool shrink_expression_keys(
+        template_container const& in_expression_monitors)
+    {
+        return this_type::shrink_expression_keys(
+            this->expression_keys_, in_expression_monitors);
+    }
+
+    /** @brief 条件式識別値コンテナを整理する。
+        @param[in,out] io_expression_keys 整理する条件式識別値のコンテナ。
+        @param[in] in_expression_monitors 参照する条件式監視器のコンテナ。
+        @retval true  条件式識別値コンテナが空になった。
+        @retval false 条件式識別値コンテナは空になってない。
+     */
+    private: template<typename template_container>
+    static bool shrink_expression_keys(
+         typename this_type::expression_key_container& io_expression_keys,
+         template_container const& in_expression_monitors)
+    {
+        for (auto i(io_expression_keys.begin()); i != io_expression_keys.end();)
+        {
+            auto const local_expression_monitor(
+                template_container::value_type::key_less::find_const_pointer(
+                    in_expression_monitors, *i));
+            if (local_expression_monitor == nullptr)
+            {
+                i = io_expression_keys.erase(i);
+            }
+            else
+            {
+                ++i;
+            }
+        }
+        io_expression_keys.shrink_to_fit();
+        return io_expression_keys.empty();
+    }
+
     //-------------------------------------------------------------------------
     /// @brief 評価の更新を要求する条件式の識別値のコンテナ。
-    public: typename this_type::expression_key_container expression_keys_;
+    private: typename this_type::expression_key_container expression_keys_;
     /// @brief 監視する状態値の識別値。
     public: template_status_key key_;
     /// @brief 前回の notify_transition で、状態値が存在したか。

@@ -55,8 +55,7 @@ namespace psyq
 {
     namespace string
     {
-        template<typename> class integer_parser;
-        template<typename> class real_parser;
+        template<typename, typename> class numeric_parser;
         namespace _private
         {
             template<typename> class numeric_parser;
@@ -104,6 +103,10 @@ class psyq::string::_private::numeric_parser
     //-------------------------------------------------------------------------
     protected: numeric_parser() PSYQ_NOEXCEPT: value_(0), rest_(1) {}
 
+    protected: explicit numeric_parser(typename this_type::value_type in_default)
+    PSYQ_NOEXCEPT: value_(std::move(in_default)), rest_(0)
+    {}
+
     /** @brief 文字列を解析し、整数を構築する。
         @param[out] out_number 文字列を解析して構築した整数値の出力先。
         @param[in] in_string   解析する文字列。
@@ -133,11 +136,15 @@ class psyq::string::_private::numeric_parser
                 if (local_iterator < local_end)
                 {
                     // 数字を解析する。
-                    auto const local_numbers(
-                        this_type::read_numbers(
+                    auto const local_number(
+                        local_sign * this_type::read_numbers(
                             local_iterator, local_end, local_radix));
-                    out_number = static_cast<template_number>(
-                        local_numbers * local_sign);
+                    out_number = static_cast<template_number>(local_number);
+                    if (local_iterator == local_end
+                        && local_number - out_number != 0)
+                    {
+                        return 1; // 桁あふれした。
+                    }
                 }
             }
         }
@@ -244,6 +251,9 @@ class psyq::string::_private::numeric_parser
         }
         switch (*io_iterator)
         {
+            case '.':
+            return 10;
+
             case 'x':
             case 'X':
             ++io_iterator;
@@ -493,58 +503,25 @@ class psyq::string::_private::numeric_parser
 }; // class psyq::string::_private::numeric_parser
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 文字列から整数を構築する。
-    @tparam template_value @copydoc integer_parser::value_type
+/** @brief 文字列から数値を構築する。
+    @tparam template_value       @copydoc base_type::value_type
+    @tparam template_is_integral 整数のみを解析するかどうか。
  */
-template<typename template_value>
-class psyq::string::integer_parser:
+template<
+    typename template_value,
+    typename template_is_integral = std::is_integral<template_value>>
+class psyq::string::numeric_parser:
 public psyq::string::_private::numeric_parser<template_value>
 {
     /// @brief thisが指す値の型。
-    private: typedef integer_parser this_type;
+    private: typedef numeric_parser this_type;
 
     /// @brief this_type の基底型。
     public: typedef
         psyq::string::_private::numeric_parser<template_value>
         base_type;
 
-    /** @brief 文字列を解析し、整数を構築する。
-        @param[in] in_string
-            解析する文字列。
-            - 文字列の先頭から末尾までのメモリ連続性が保証されてること。
-            - 文字列の先頭位置を取得するため、以下のpublicメンバ関数が使えること。
-              @code
-              template_string::traits_type::char_type const* template_string::data() const noexcept
-              @endcode
-            - 文字列の要素数を取得するため、以下のpublicメンバ関数が使えること。
-              @code
-              std::size_t template_string::size() const noexcept
-              @endcode
-     */
-    public: template<typename template_string>
-    explicit integer_parser(template_string const& in_string)
-    {
-        this->rest_ = base_type::to_integer(this->value_, in_string);
-    }
-
-}; // class psyq::string::integer_parser
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 文字列から実数を構築する。
-    @tparam template_value @copydoc real_parser::value_type
- */
-template<typename template_value>
-class psyq::string::real_parser:
-public psyq::string::_private::numeric_parser<template_value>
-{
-    /// @brief thisが指す値の型。
-    private: typedef real_parser this_type;
-
-    /// @brief this_type の基底型。
-    public: typedef
-        psyq::string::_private::numeric_parser<template_value>
-        base_type;
-
+    //-------------------------------------------------------------------------
     /** @brief 文字列を解析し、実数を構築する。
         @param[in] in_string
             解析する文字列。
@@ -559,9 +536,45 @@ public psyq::string::_private::numeric_parser<template_value>
               @endcode
      */
     public: template<typename template_string>
-    explicit real_parser(template_string const& in_string)
+    explicit numeric_parser(template_string const& in_string)
     {
-        this->rest_ = base_type::to_real(this->value_, in_string);
+        this->rest_ = this_type::to_number(
+            this->value_, in_string, template_is_integral());
+    }
+
+    /** @copydoc numeric_parser
+        @param[in] in_default in_string が空の場合に使うデフォルト値。
+     */
+    public: template<typename template_string>
+    numeric_parser(
+        template_string const& in_string,
+        typename base_type::value_type in_default)
+    PSYQ_NOEXCEPT: base_type(std::move(in_default))
+    {
+        if (!in_string.empty())
+        {
+            this->rest_ = this_type::to_number(
+                this->value_, in_string, template_is_integral());
+        }
+    }
+
+    //-------------------------------------------------------------------------
+    private: template<typename template_string>
+    static std::size_t to_number(
+        template_value& out_number,
+        template_string const& in_string,
+        std::true_type const&)
+    {
+        return base_type::to_integer(out_number, in_string);
+    }
+
+    private: template<typename template_string>
+    static std::size_t to_number(
+        template_value& out_number,
+        template_string const& in_string,
+        std::false_type const&)
+    {
+        return base_type::to_real(out_number, in_string);
     }
 
 }; // class psyq::string::real_parser

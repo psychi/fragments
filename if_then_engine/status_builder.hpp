@@ -327,7 +327,7 @@ class psyq::if_then_engine::status_builder
         typename this_type::relation_table::string::view const& in_value_cell,
         std::size_t const in_size)
     {
-        psyq::string::integer_parser<
+        psyq::string::numeric_parser<
             typename template_reservoir::status::unsigned_type>
                 const local_parser(in_value_cell);
         if (!local_parser.is_completed())
@@ -357,7 +357,7 @@ class psyq::if_then_engine::status_builder
         typename this_type::relation_table::string::view const& in_value_cell,
         std::size_t const in_size)
     {
-        psyq::string::integer_parser<
+        psyq::string::numeric_parser<
             typename template_reservoir::status::signed_type>
                 const local_parser(in_value_cell);
         if (!local_parser.is_completed())
@@ -385,7 +385,7 @@ class psyq::if_then_engine::status_builder
         typename template_reservoir::status_key const& in_status_key,
         typename this_type::relation_table::string::view const& in_value_cell)
     {
-        psyq::string::real_parser<
+        psyq::string::numeric_parser<
             typename template_reservoir::status::float_type>
                 const local_parser(in_value_cell);
         if (!local_parser.is_completed())
@@ -421,7 +421,7 @@ class psyq::if_then_engine::status_builder
             if (in_kind.size() + 2 <= in_cell.size()
                 && in_cell.at(in_kind.size()) == '_')
             {
-                psyq::string::integer_parser<std::size_t> const
+                psyq::string::numeric_parser<std::size_t> const
                     local_parser(in_cell.substr(in_kind.size() + 1));
                 if (local_parser.is_completed())
                 {

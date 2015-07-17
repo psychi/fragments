@@ -380,7 +380,7 @@ class psyq::if_then_engine::_private::status_operation
         PSYQ_ASSERT(in_kind != template_status_value::kind_BOOL);
 
         // 符号なし整数として構築する。
-        psyq::string::integer_parser<
+        psyq::string::numeric_parser<
             typename template_status_value::unsigned_type>
                 const local_unsigned_parser(in_string);
         if (local_unsigned_parser.is_completed())
@@ -403,7 +403,7 @@ class psyq::if_then_engine::_private::status_operation
         }
 
         // 符号あり整数として構築する。
-        psyq::string::integer_parser<
+        psyq::string::numeric_parser<
             typename template_status_value::signed_type>
                 const local_signed_parser(in_string);
         if (local_unsigned_parser.is_completed())
@@ -424,7 +424,7 @@ class psyq::if_then_engine::_private::status_operation
         }
 
         // 浮動小数点数として構築する。
-        psyq::string::real_parser<typename template_status_value::float_type>
+        psyq::string::numeric_parser<typename template_status_value::float_type>
             const local_float_parser(in_string);
         if (local_float_parser.is_completed())
         {

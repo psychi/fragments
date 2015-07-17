@@ -194,7 +194,7 @@ class psyq::if_then_engine::behavior_builder
             }
 
             // 条件挙動の優先順位を取得する。
-            psyq::string::integer_parser<
+            psyq::string::numeric_parser<
                 typename this_type::dispatcher::function_priority>
                     const local_priority_parser(
                         in_table.find_body_cell(

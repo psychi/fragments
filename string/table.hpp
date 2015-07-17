@@ -134,6 +134,36 @@ class psyq::string::table
     }; // struct cell_number_less
 
     //-------------------------------------------------------------------------
+    private: template<
+        bool template_is_bool,
+        bool template_is_unsigned,
+        bool template_is_signed,
+        bool template_is_float,
+        bool template_is_string>
+    struct type_category_base
+    {
+        enum: bool
+        {
+            IS_BOOL = template_is_bool,
+            IS_UNSIGNED = template_is_unsigned,
+            IS_SIGNED = template_is_signed,
+            IS_FLOAT = template_is_float,
+            IS_STRING = template_is_string
+        };
+    };
+
+    private: template<typename template_value>
+    struct type_category: public type_category_base<
+        std::is_same<template_value, bool>::value,
+        std::is_integral<template_value>::value
+            & std::is_unsigned<template_value>::value,
+        std::is_integral<template_value>::value
+            & std::is_signed<template_value>::value,
+        std::is_floating_point<template_value>::value,
+        std::is_same<template_value, string>::value>
+    {};
+
+    //-------------------------------------------------------------------------
     /// @name 構築と代入
     //@{
     /** @brief 文字列表をコピー構築する。
@@ -254,6 +284,34 @@ class psyq::string::table
         }
         static typename this_type::string const static_empty_string;
         return static_empty_string;
+    }
+
+    /** @brief セル文字列を解析し、値を抽出する。
+        @param[out] out_value          抽出した値の格納先。
+        @param[in] in_row_number       解析するセルの行番号。
+        @param[in] in_column_number    解析するセルの列番号。
+        @param[in] in_empty_permission 空セルを許容するか。
+        @retval true 
+            成功。 out_value へ抽出した値を格納した。
+            ただし in_empty_permission が真で、セルが空だった場合は、
+            out_value は変化しない。
+        @retval false 失敗。 out_value は変化しない。
+     */
+    public: template<typename template_value>
+    bool parse_cell(
+        template_value& out_value,
+        typename this_type::string::size_type const in_row_number,
+        typename this_type::string::size_type const in_column_number,
+        bool const in_empty_permission)
+    const
+    {
+        auto const& local_cell(this->find_cell(in_row_number, in_column_number));
+        if (in_empty_permission && local_cell.empty())
+        {
+            return true;
+        }
+        return this_type::parse_string(
+            out_value, local_cell, typename type_category<template_value>());
     }
     //@}
     //-------------------------------------------------------------------------
@@ -386,6 +444,49 @@ class psyq::string::table
         PSYQ_ASSERT(
             in_row_number == this_type::compute_row_number(local_cell_number));
         return local_cell_number;
+    }
+
+    //-------------------------------------------------------------------------
+    private: static bool parse_string(
+        bool& out_value,
+        typename this_type::string::view const& in_string,
+        typename this_type::type_category<bool> const&)
+    {
+        auto const local_bool_status(in_cell.to_bool());
+        if (local_bool_status < 0)
+        {
+            return false;
+        }
+        out_value = (0 < local_bool_status);
+        return true;
+    }
+
+    private: static bool parse_string(
+        typename this_type::string& out_value,
+        typename this_type::string const& in_string,
+        typename this_type::type_category<typename this_type::string> const&)
+    {
+        if (in_string.empty())
+        {
+            return false;
+        }
+        out_value = in_string;
+        return true;
+    }
+
+    private: template<typename template_value>
+    static bool parse_string(
+        template_value& out_value,
+        typename this_type::string::view const& in_string,
+        typename this_type::type_category<template_value> const&)
+    {
+        psyq::string::numeric_parser<template_value> const local_parser(in_string);
+        if (!local_parser.is_completed())
+        {
+            return false;
+        }
+        out_value = local_parser.get_value();
+        return true;
     }
 
     //-------------------------------------------------------------------------

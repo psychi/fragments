@@ -449,8 +449,9 @@ class psyq::if_then_engine::expression_builder
         // 複合条件式の条件を取得する。
         auto const& local_condition_cell(
             in_table.find_body_cell(in_row_index, local_element_column + 1));
-        auto const local_bool_status(local_condition_cell.to_bool());
-        if (local_bool_status < 0)
+        psyq::string::numeric_parser<bool> const local_condition_parser(
+            local_condition_cell);
+        if (!local_condition_parser.is_completed())
         {
             PSYQ_ASSERT(false);
             return true;
@@ -458,7 +459,7 @@ class psyq::if_then_engine::expression_builder
 
         // 複合条件式に要素条件を追加する。
         io_elements.emplace_back(
-            std::move(local_sub_key), local_bool_status != 0);
+            std::move(local_sub_key), local_condition_parser.get_value());
         return true;
     }
 

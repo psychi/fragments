@@ -367,10 +367,10 @@ class psyq::if_then_engine::_private::status_operation
         if (in_kind == template_status_value::kind_BOOL
             || in_kind == template_status_value::kind_EMPTY)
         {
-            auto const local_bool_status(in_string.to_bool());
-            if (0 <= local_bool_status)
+            psyq::string::numeric_parser<bool> const local_bool_parser(in_string);
+            if (local_bool_parser.is_completed())
             {
-                return template_status_value(local_bool_status != 0);
+                return template_status_value(local_bool_parser.get_value());
             }
             else if (in_kind == template_status_value::kind_BOOL)
             {

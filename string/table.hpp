@@ -47,6 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define PSYQ_STRING_TABLE_HPP_
 
 #include "./flyweight.hpp"
+#include "../string/numeric_parser.hpp"
 
 /// @copydoc psyq::string::table::MAX_COLUMN_COUNT
 #ifndef PSYQ_STRING_TABLE_MAX_COLUMN_COUNT
@@ -132,36 +133,6 @@ class psyq::string::table
         }
 
     }; // struct cell_number_less
-
-    //-------------------------------------------------------------------------
-    private: template<
-        bool template_is_bool,
-        bool template_is_unsigned,
-        bool template_is_signed,
-        bool template_is_float,
-        bool template_is_string>
-    struct type_category_base
-    {
-        enum: bool
-        {
-            IS_BOOL = template_is_bool,
-            IS_UNSIGNED = template_is_unsigned,
-            IS_SIGNED = template_is_signed,
-            IS_FLOAT = template_is_float,
-            IS_STRING = template_is_string
-        };
-    };
-
-    private: template<typename template_value>
-    struct type_category: public type_category_base<
-        std::is_same<template_value, bool>::value,
-        std::is_integral<template_value>::value
-            & std::is_unsigned<template_value>::value,
-        std::is_integral<template_value>::value
-            & std::is_signed<template_value>::value,
-        std::is_floating_point<template_value>::value,
-        std::is_same<template_value, string>::value>
-    {};
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
@@ -287,14 +258,24 @@ class psyq::string::table
     }
 
     /** @brief セル文字列を解析し、値を抽出する。
-        @param[out] out_value          抽出した値の格納先。
-        @param[in] in_row_number       解析するセルの行番号。
-        @param[in] in_column_number    解析するセルの列番号。
-        @param[in] in_empty_permission 空セルを許容するか。
+        @tparam template_value
+            セル文字列から抽出する値の型。以下の型の値を抽出できる。
+            - bool 型。
+            - sizeof(std::uint64_t) 以下の大きさの、組み込み符号なし整数型。
+            - sizeof(std::int64_t) 以下の大きさの、組み込み符号あり整数型。
+            - sizeof(double) 以下の大きさの、組み込み浮動小数点数型。
+            - this_type::string 型。
+        @param[out] out_value       抽出した値の代入先。
+        @param[in] in_row_number    解析するセルの行番号。
+        @param[in] in_column_number 解析するセルの列番号。
+        @param[in] in_empty_permission
+           セル文字列が空の場合…
+           - この引数が真の場合は、成功と判定する。
+           - この引数が偽の場合は、失敗と判定する。
         @retval true 
-            成功。 out_value へ抽出した値を格納した。
-            ただし in_empty_permission が真で、セルが空だった場合は、
-            out_value は変化しない。
+            成功。セル文字列から抽出した値が out_value へ代入された。
+            ただし in_empty_permission が真で、セル文字列が空の場合は、
+            out_value への代入は行われず、変化しない。
         @retval false 失敗。 out_value は変化しない。
      */
     public: template<typename template_value>
@@ -306,12 +287,8 @@ class psyq::string::table
     const
     {
         auto const& local_cell(this->find_cell(in_row_number, in_column_number));
-        if (in_empty_permission && local_cell.empty())
-        {
-            return true;
-        }
-        return this_type::parse_string(
-            out_value, local_cell, typename type_category<template_value>());
+        return (in_empty_permission && local_cell.empty())
+            || this_type::parse_string(out_value, local_cell);
     }
     //@}
     //-------------------------------------------------------------------------
@@ -447,45 +424,36 @@ class psyq::string::table
     }
 
     //-------------------------------------------------------------------------
-    private: static bool parse_string(
-        bool& out_value,
-        typename this_type::string::view const& in_string,
-        typename this_type::type_category<bool> const&)
+    /** @brief 文字列を解析し、値を抽出する。
+        @param[out] out_value 抽出した値の代入先。
+        @param[in] in_string  解析する文字列。
+        @retval true  成功。文字列を解析して抽出した値を out_value へ代入した。
+        @retval false 失敗。 out_value は変化しない。
+     */
+    private: template<typename template_value>
+    static bool parse_string(
+        template_value& out_value,
+        typename this_type::string::view const& in_string)
     {
-        auto const local_bool_status(in_cell.to_bool());
-        if (local_bool_status < 0)
+        psyq::string::numeric_parser<template_value> const local_parser(
+            in_string);
+        if (!local_parser.is_completed())
         {
             return false;
         }
-        out_value = (0 < local_bool_status);
+        out_value = local_parser.get_value();
         return true;
     }
 
     private: static bool parse_string(
         typename this_type::string& out_value,
-        typename this_type::string const& in_string,
-        typename this_type::type_category<typename this_type::string> const&)
+        typename this_type::string const& in_string)
     {
         if (in_string.empty())
         {
             return false;
         }
         out_value = in_string;
-        return true;
-    }
-
-    private: template<typename template_value>
-    static bool parse_string(
-        template_value& out_value,
-        typename this_type::string::view const& in_string,
-        typename this_type::type_category<template_value> const&)
-    {
-        psyq::string::numeric_parser<template_value> const local_parser(in_string);
-        if (!local_parser.is_completed())
-        {
-            return false;
-        }
-        out_value = local_parser.get_value();
         return true;
     }
 

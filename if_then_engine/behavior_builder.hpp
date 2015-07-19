@@ -5,8 +5,6 @@
 #ifndef PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_HPP_
 #define PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_HPP_
 
-#include "../string/numeric_parser.hpp"
-
 #ifndef PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_KEY
 #define PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_KEY "KEY"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_COLUMN_KEY)
@@ -96,11 +94,11 @@ class psyq::if_then_engine::behavior_builder
 
         bool is_valid() const PSYQ_NOEXCEPT
         {
-            return 0 < this->key_.second
-                && 0 < this->condition_.second
-                && 0 < this->priority_.second
-                && 0 < this->kind_.second
-                && 0 < this->argument_.second;
+            return 1 <= this->key_.second
+                && 1 <= this->condition_.second
+                && 1 <= this->priority_.second
+                && 1 <= this->kind_.second
+                && 1 <= this->argument_.second;
         }
 
         /// @brief 条件挙動で使う条件式の識別値。
@@ -194,12 +192,9 @@ class psyq::if_then_engine::behavior_builder
             }
 
             // 条件挙動の優先順位を取得する。
-            psyq::string::numeric_parser<
-                typename this_type::dispatcher::function_priority>
-                    const local_priority_parser(
-                        in_table.find_body_cell(
-                            i, local_attribute.priority_.first));
-            if (!local_priority_parser.is_completed())
+            typename this_type::dispatcher::function_priority local_priority(0);
+            if (!in_table.parse_cell(
+                    local_priority, i, local_attribute.priority_.first, true))
             {
                 // 優先順位として解析しきれなかった。
                 PSYQ_ASSERT(false);
@@ -210,8 +205,7 @@ class psyq::if_then_engine::behavior_builder
             auto local_function(
                 this_type::build_function(
                     io_hasher, io_modifier, in_table, i, local_attribute));
-            auto const local_register_function(
-                io_dispatcher.register_function(
+            if (io_dispatcher.register_function(
                     local_expression_key,
                     this_type::build_condition(
                         in_table,
@@ -219,8 +213,7 @@ class psyq::if_then_engine::behavior_builder
                         local_attribute.condition_.first,
                         local_attribute.condition_.second),
                     local_function,
-                    local_priority_parser.get_value()));
-            if (local_register_function)
+                    local_priority))
             {
                 local_functions.push_back(std::move(local_function));
             }
@@ -259,11 +252,13 @@ class psyq::if_then_engine::behavior_builder
             + std::min<std::size_t>(CONDITION_COUNT, in_column_count));
         for (auto i(in_column_index); i < local_end; ++i)
         {
-            typename this_type::relation_table::string::view const local_cell(
-                in_table.find_body_cell(in_row_index, i));
-            auto const local_bool_status(local_cell.to_bool());
-            PSYQ_ASSERT(0 <= local_bool_status || local_cell.empty());
-            local_conditions.at(i - in_column_index) = 0 < local_bool_status;
+            auto const local_parse_bool(
+                in_table.parse_cell(
+                    local_conditions.at(i - in_column_index),
+                    in_row_index,
+                    i,
+                    true));
+            PSYQ_ASSERT(local_parse_bool);
         }
         auto const local_condition(
             this_type::dispatcher::make_condition(

@@ -35,13 +35,9 @@
 #define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_FLOAT "FLOAT"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_FLOAT)
 
-#ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_INTEGER_SIZE_DEFAULT
-#define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_INTEGER_SIZE_DEFAULT 32
-#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_INTEGER_SIZE_DEFAULT)
-
-#ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_FLOAT_SIZE_DEFAULT
-#define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_FLOAT_SIZE_DEFAULT 32
-#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_FLOAT_SIZE_DEFAULT)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_INTEGER_WIDTH_DEFAULT
+#define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_INTEGER_WIDTH_DEFAULT 8
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_INTEGER_WIDTH_DEFAULT)
 
 /// @cond
 namespace psyq
@@ -91,9 +87,9 @@ class psyq::if_then_engine::status_builder
 
         public: bool is_valid() const PSYQ_NOEXCEPT
         {
-            return 0 < this->key_.second
-                && 0 < this->kind_.second
-                && 0 < this->value_.second;
+            return 1 <= this->key_.second
+                && 1 <= this->kind_.second
+                && 1 <= this->value_.second;
         }
 
         public: typename this_type::relation_table::attribute key_;
@@ -197,87 +193,66 @@ class psyq::if_then_engine::status_builder
         typename this_type::table_attribute const& in_attribute)
     {
         // 状態値の識別値を取得する。
-        auto const local_key(
+        auto const local_status_key(
             io_hasher(
                 in_table.find_body_cell(
                     in_row_index, in_attribute.key_.first)));
-        if (local_key == io_hasher(typename template_hasher::argument_type())
-            || io_reservoir.extract_variety(local_key) !=
-                template_reservoir::status::kind_EMPTY)
+        if (local_status_key == io_hasher(
+                typename template_hasher::argument_type())
+            || io_reservoir.extract_variety(local_status_key)
+                != template_reservoir::status::kind_EMPTY)
         {
             // 状態値の識別値が空だったか、重複していた。
             PSYQ_ASSERT(false);
             return false;
         }
 
-        // 状態値の種類と初期値を取得し、状態値を登録する。
-        return this_type::register_status(
-            io_reservoir,
-            in_chunk_key,
-            local_key,
-            in_table.find_body_cell(in_row_index, in_attribute.kind_.first),
+        // 状態値の型と初期値を取得し、状態値を登録する。
+        typename this_type::relation_table::string::view const local_kind_cell(
+            in_table.find_body_cell(in_row_index, in_attribute.kind_.first));
+        typename this_type::relation_table::string::view const local_value_cell(
             in_table.find_body_cell(in_row_index, in_attribute.value_.first));
-    }
-
-    /** @brief 状態値の型と初期値を解析して状態値を構築し、状態貯蔵器へ登録する。
-        @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
-        @param[in] in_chunk_key     状態値を登録するチャンクの識別値。
-        @param[in] in_status_key     登録する状態値の識別値。
-        @param[in] in_kind          登録する状態値の型を表す文字列。
-        @param[in] in_value         登録する状態値の初期値を表す文字列。
-        @retval true  成功。構築した状態値を状態貯蔵器へ登録した。
-        @retval false 失敗。状態値は状態貯蔵器へ登録されなかった。
-     */
-    private: template<typename template_reservoir>
-    static bool register_status(
-        template_reservoir& io_reservoir,
-        typename template_reservoir::chunk_key const& in_chunk_key,
-        typename template_reservoir::status_key const& in_status_key,
-        typename this_type::relation_table::string::view const& in_kind,
-        typename this_type::relation_table::string::view const& in_value)
-    {
-        if (in_kind == PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_BOOL)
+        if (local_kind_cell == PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_BOOL)
         {
             // 論理型の状態値を登録する。
             return this_type::register_bool(
-                io_reservoir, in_chunk_key, in_status_key, in_value);
+                io_reservoir, in_chunk_key, local_status_key, local_value_cell);
         }
-        if (in_kind == PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_FLOAT)
+        if (local_kind_cell == PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_FLOAT)
         {
             // 浮動小数点数型の状態値を登録する。
             return this_type::register_float(
-                io_reservoir, in_chunk_key, in_status_key, in_value);
+                io_reservoir, in_chunk_key, local_status_key, local_value_cell);
         }
-        std::size_t const local_default_size(8);
-        auto const local_unsigned_size(
-            this_type::get_integer_size(
-                in_kind,
+        auto const local_unsigned_width(
+            this_type::fetch_integer_width(
+                local_kind_cell,
                 PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_UNSIGNED,
-                local_default_size));
-        if (0 < local_unsigned_size)
+                PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_INTEGER_WIDTH_DEFAULT));
+        if (0 < local_unsigned_width)
         {
             // 符号なし整数型の状態値を登録する。
             return this_type::register_unsigned(
                 io_reservoir,
                 in_chunk_key,
-                in_status_key,
-                in_value,
-                local_unsigned_size);
+                local_status_key,
+                local_value_cell,
+                local_unsigned_width);
         }
-        auto const local_signed_size(
-            this_type::get_integer_size(
-                in_kind,
+        auto const local_signed_width(
+            this_type::fetch_integer_width(
+                local_kind_cell,
                 PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_SIGNED,
-                local_default_size));
-        if (0 < local_signed_size)
+                PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_INTEGER_WIDTH_DEFAULT));
+        if (0 < local_signed_width)
         {
             // 符号あり整数型の状態値を登録する。
             return this_type::register_signed(
                 io_reservoir,
                 in_chunk_key,
-                in_status_key,
-                in_value,
-                local_signed_size);
+                local_status_key,
+                local_value_cell,
+                local_signed_width);
         }
 
         // 適切な型が見つからなかった。
@@ -288,7 +263,7 @@ class psyq::if_then_engine::status_builder
     /** @brief 文字列を解析して論理型の状態値を構築し、状態貯蔵器へ登録する。
         @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
         @param[in] in_chunk_key     状態値を登録するチャンクの識別値。
-        @param[in] in_status_key     登録する状態値に対応する識別値。
+        @param[in] in_status_key    登録する状態値に対応する識別値。
         @param[in] in_value_cell    解析する状態値の文字列。
         @retval true  成功。構築した状態値を状態貯蔵器へ登録した。
         @retval false 失敗。状態値は状態貯蔵器へ登録されなかった。
@@ -300,20 +275,20 @@ class psyq::if_then_engine::status_builder
         typename template_reservoir::status_key const& in_status_key,
         typename this_type::relation_table::string::view const& in_value_cell)
     {
-        auto const local_bool_status(in_value_cell.to_bool());
-        if (local_bool_status < 0)
+        psyq::string::numeric_parser<bool> const local_parser(in_value_cell);
+        if (!local_parser.is_completed())
         {
             PSYQ_ASSERT(false);
             return false;
         }
         return io_reservoir.register_bool(
-            in_chunk_key, in_status_key, local_bool_status != 0);
+            in_chunk_key, in_status_key, local_parser.get_value());
     }
 
     /** @brief 文字列を解析して符号なし整数型の状態値を構築し、状態貯蔵器へ登録する。
         @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
         @param[in] in_chunk_key     状態値を登録するチャンクの識別値。
-        @param[in] in_status_key     登録する状態値に対応する識別値。
+        @param[in] in_status_key    登録する状態値に対応する識別値。
         @param[in] in_value_cell    解析する状態値の文字列。
         @param[in] in_size          状態値のビット数。
         @retval true  成功。構築した状態値を状態貯蔵器へ登録した。
@@ -343,7 +318,7 @@ class psyq::if_then_engine::status_builder
     /** @brief 文字列を解析して符号あり整数型の状態値を構築し、状態貯蔵器へ登録する。
         @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
         @param[in] in_chunk_key     状態値を登録するチャンクの識別値。
-        @param[in] in_status_key     登録する状態値に対応する識別値。
+        @param[in] in_status_key    登録する状態値に対応する識別値。
         @param[in] in_value_cell    解析する状態値の文字列。
         @param[in] in_size          状態値のビット数。
         @retval true  成功。構築した状態値を状態貯蔵器へ登録した。
@@ -373,7 +348,7 @@ class psyq::if_then_engine::status_builder
     /** @brief 文字列を解析して浮動小数点数型の状態値を構築し、状態貯蔵器へ登録する。
         @param[in,out] io_reservoir 状態値を登録する状態貯蔵器。
         @param[in] in_chunk_key     状態値を登録するチャンクの識別値。
-        @param[in] in_status_key     登録する状態値に対応する識別値。
+        @param[in] in_status_key    登録する状態値に対応する識別値。
         @param[in] in_value_cell    解析する状態値の文字列。
         @retval true  成功。構築した状態値を状態貯蔵器へ登録した。
         @retval false 失敗。状態値は状態貯蔵器へ登録されなかった。
@@ -405,7 +380,7 @@ class psyq::if_then_engine::status_builder
         @return !=0 成功。整数型のビット数。
         @return ==0 失敗。
      */
-    private: static std::size_t get_integer_size(
+    private: static std::size_t fetch_integer_width(
         typename this_type::relation_table::string::view const& in_cell,
         typename this_type::relation_table::string::view const& in_kind,
         std::size_t const in_default_size)

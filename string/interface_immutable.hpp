@@ -49,14 +49,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "../fnv_hash.hpp"
 #include "./reference_base.hpp"
 
-#ifndef PSYQ_STRING_TRUE
-#define PSYQ_STRING_TRUE "TRUE"
-#endif // !defined(PSYQ_STRING_TRUE)
-
-#ifndef PSYQ_STRING_FALSE
-#define PSYQ_STRING_FALSE "FALSE"
-#endif // !defined(PSYQ_STRING_FALSE)
-
 /// @cond
 namespace psyq
 {
@@ -284,17 +276,6 @@ class psyq::string::_private::interface_immutable: public template_string_type
         base_type::traits_type::copy(
             out_string, this->data() + in_offset, local_size);
         return local_size;
-    }
-
-    /** @brief 文字列を解析し、真偽値を取得する
-        @retval 正 文字列から true を取得した。
-        @retval 0  文字列から false を取得した。
-        @retval 負 文字列から真偽値を取得できなかった。
-     */
-    public: int to_bool() const PSYQ_NOEXCEPT
-    {
-        return *this != PSYQ_STRING_TRUE?
-            (*this != PSYQ_STRING_FALSE? -1: 0): 1;
     }
     /// @}
     //-------------------------------------------------------------------------

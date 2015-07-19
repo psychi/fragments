@@ -194,9 +194,7 @@ class psyq::if_then_engine::status_builder
     {
         // 状態値の識別値を取得する。
         auto const local_status_key(
-            io_hasher(
-                in_table.find_body_cell(
-                    in_row_index, in_attribute.key_.first)));
+            io_hasher(in_table.find_cell(in_row_index, in_attribute.key_.first)));
         if (local_status_key == io_hasher(
                 typename template_hasher::argument_type())
             || io_reservoir.extract_variety(local_status_key)
@@ -209,9 +207,9 @@ class psyq::if_then_engine::status_builder
 
         // 状態値の型と初期値を取得し、状態値を登録する。
         typename this_type::relation_table::string::view const local_kind_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.kind_.first));
+            in_table.find_cell(in_row_index, in_attribute.kind_.first));
         typename this_type::relation_table::string::view const local_value_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.value_.first));
+            in_table.find_cell(in_row_index, in_attribute.value_.first));
         if (local_kind_cell == PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_BOOL)
         {
             // 論理型の状態値を登録する。

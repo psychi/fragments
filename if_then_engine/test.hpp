@@ -47,6 +47,24 @@ namespace tesv
 #define TESV_FOOD_EFFECT_TABLE_COLUMN_STAMINA "STAMINA"
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+#ifdef TABLE_ATTRIBUTE
+class table_attribute
+{
+    public:
+    explicit table_attribute(RELATION_TABLE const& in_table) PSYQ_NOEXCEPT:
+    ATTRIBUTE_0(in_table.find_attribute(#ATTRIBUTE_0)),
+    ATTRIBUTE_1(in_table.find_attribute(#ATTRIBUTE_1)),
+    ATTRIBUTE_2(in_table.find_attribute(#ATTRIBUTE_2)),
+    ATTRIBUTE_3(in_table.find_attribute(#ATTRIBUTE_3))
+    {}
+    RELATION_TABLE ::attribute ATTRIBUTE_0;
+    RELATION_TABLE ::attribute ATTRIBUTE_1;
+    RELATION_TABLE ::attribute ATTRIBUTE_2;
+    RELATION_TABLE ::attribute ATTRIBUTE_3;
+};
+#endif
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 class tesv::asset::item_property
 {
     private: typedef item_property this_type;
@@ -190,7 +208,7 @@ class tesv::asset::item_property
         this_type::table_attribute const& in_attribute)
     {
         // アイテム識別名を取得する。
-        out_instance.key_ = in_table.find_body_cell(
+        out_instance.key_ = in_table.find_cell(
             in_row_index, in_attribute.key_.first);
         if (out_instance.key_.empty())
         {
@@ -199,7 +217,7 @@ class tesv::asset::item_property
         }
 
         // カテゴリ識別名を取得する。
-        out_instance.category_ = in_table.find_body_cell(
+        out_instance.category_ = in_table.find_cell(
             in_row_index, in_attribute.category_.first);
         if (out_instance.category_.empty())
         {
@@ -396,7 +414,7 @@ class tesv::asset::food_potency
         this_type::table_attribute const& in_attribute)
     {
         // アイテム識別名を取得する。
-        out_instance.key_ = in_table.find_body_cell(
+        out_instance.key_ = in_table.find_cell(
             in_row_index, in_attribute.key_.first);
         if (out_instance.key_.empty())
         {

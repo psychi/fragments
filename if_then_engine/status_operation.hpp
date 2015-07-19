@@ -171,11 +171,12 @@ class psyq::if_then_engine::_private::status_operation
         typename template_table::string::size_type const in_row_index,
         typename template_table::string::size_type const in_column_index)
     {
+        PSYQ_ASSERT(in_row_index != in_table.get_attribute_row());
         this_type local_operation;
 
         // 演算子の左辺となる状態値の識別値を取得する。
         typename template_hasher::argument_type const local_left_key_cell(
-            in_table.find_body_cell(in_row_index, in_column_index));
+            in_table.find_cell(in_row_index, in_column_index));
         local_operation.key_ = io_hasher(local_left_key_cell);
         if (local_operation.key_
             == io_hasher(typename template_hasher::argument_type()))
@@ -189,8 +190,7 @@ class psyq::if_then_engine::_private::status_operation
             this_type::make_operator(
                 local_operation.operator_,
                 typename template_hasher::argument_type(
-                    in_table.find_body_cell(
-                        in_row_index, in_column_index + 1))));
+                    in_table.find_cell(in_row_index, in_column_index + 1))));
         if (!local_make_operator)
         {
             PSYQ_ASSERT(false);
@@ -200,7 +200,7 @@ class psyq::if_then_engine::_private::status_operation
         // 演算子の右辺値を取得する。
         local_operation.make_right_value(
             io_hasher,
-            in_table.find_body_cell(in_row_index, in_column_index + 2));
+            in_table.find_cell(in_row_index, in_column_index + 2));
         PSYQ_ASSERT(!local_operation.value_.is_empty());
         return local_operation;
     }

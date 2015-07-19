@@ -249,9 +249,7 @@ class psyq::if_then_engine::expression_builder
     {
         // 条件式の識別値を取得する。
         auto local_key(
-            io_hasher(
-                in_table.find_body_cell(
-                    in_row_index, in_attribute.key_.first)));
+            io_hasher(in_table.find_cell(in_row_index, in_attribute.key_.first)));
         if (local_key == io_hasher(typename template_hasher::argument_type())
             || io_evaluator._find_expression(local_key) != nullptr)
         {
@@ -262,7 +260,7 @@ class psyq::if_then_engine::expression_builder
 
         // 要素条件の論理演算子を取得する。
         auto const& local_logic_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.logic_.first));
+            in_table.find_cell(in_row_index, in_attribute.logic_.first));
         typename template_evaluator::expression::logic local_logic;
         if (local_logic_cell
             == PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_AND)
@@ -284,7 +282,7 @@ class psyq::if_then_engine::expression_builder
 
         // 条件式の種類ごとに、条件式の要素条件を構築する。
         auto const& local_kind_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.kind_.first));
+            in_table.find_cell(in_row_index, in_attribute.kind_.first));
         if (local_kind_cell
             == PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION)
         {
@@ -427,7 +425,7 @@ class psyq::if_then_engine::expression_builder
 
         // 複合条件式の下位条件式キーを取得する。
         auto const& local_sub_key_cell(
-            in_table.find_body_cell(in_row_index, local_element_column));
+            in_table.find_cell(in_row_index, local_element_column));
         if (local_sub_key_cell.empty())
         {
             return true;
@@ -448,7 +446,7 @@ class psyq::if_then_engine::expression_builder
 
         // 複合条件式の条件を取得する。
         auto const& local_condition_cell(
-            in_table.find_body_cell(in_row_index, local_element_column + 1));
+            in_table.find_cell(in_row_index, local_element_column + 1));
         psyq::string::numeric_parser<bool> const local_condition_parser(
             local_condition_cell);
         if (!local_condition_parser.is_completed())
@@ -496,7 +494,7 @@ class psyq::if_then_engine::expression_builder
 
         // 状態キーを取得する。
         auto const& local_status_key_cell(
-            in_table.find_body_cell(in_row_index, local_element_column));
+            in_table.find_cell(in_row_index, local_element_column));
         if (local_status_key_cell.empty())
         {
             return true;

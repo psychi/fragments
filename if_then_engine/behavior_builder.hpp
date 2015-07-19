@@ -182,8 +182,7 @@ class psyq::if_then_engine::behavior_builder
 
             // 条件式の識別値を取得する。
             auto const local_expression_key(
-                io_hasher(
-                    in_table.find_body_cell(i, local_attribute.key_.first)));
+                io_hasher(in_table.find_cell(i, local_attribute.key_.first)));
             if (local_expression_key == local_empty_key)
             {
                 // 条件式の識別値が正しくなかった。
@@ -291,7 +290,7 @@ class psyq::if_then_engine::behavior_builder
     {
         // 挙動関数の種類を取得する。
         typename this_type::relation_table::string::view const local_kind_cell(
-            in_table.find_body_cell(in_row_index, in_attribute.kind_.first));
+            in_table.find_cell(in_row_index, in_attribute.kind_.first));
         if (local_kind_cell
             == PSYQ_IF_THEN_ENGINE_BEHAVIOR_BUILDER_KIND_STATUS_ASSIGNMENT)
         {

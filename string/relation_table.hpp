@@ -310,88 +310,6 @@ public psyq::string::table<
     }
     //@}
     //-------------------------------------------------------------------------
-    /// @name セル
-    //@{
-    /** @brief 主キーから、行番号を検索する。
-
-        this_type::constraint_key で、事前に主キーの辞書を構築をしておくこと。
-
-        @param[in] in_key  検索する主キー。
-        @retval !=npos 主キーに対応する行番号。
-        @retval ==npos 主キーに対応する行番号が存在しない。
-     */
-    public: typename base_type::string::size_type find_row_number(
-        typename base_type::string::view const& in_key)
-    const PSYQ_NOEXCEPT
-    {
-        if (!in_key.empty())
-        {
-            auto& local_cells(this->get_cells());
-            auto const local_hash(
-                this_type::string::factory::compute_hash(in_key));
-            auto const local_lower_bound(
-                std::lower_bound(
-                    this->keys_.begin(),
-                    this->keys_.end(),
-                    in_key,
-                    typename this_type::key_less(local_cells, local_hash)));
-            if (local_lower_bound != this->keys_.end())
-            {
-                auto& local_cell(local_cells.at(*local_lower_bound));
-                if (local_cell.second.compare_fast(in_key, local_hash) == 0)
-                {
-                    return this_type::compute_row_number(local_cell.first);
-                }
-            }
-        }
-        return base_type::string::npos;
-    }
-
-    /** @brief 属性名から、列番号を検索する。
-
-        this_type::constraint_attribute で、事前に属性の辞書を構築しておくこと。
-
-        @param[in] in_attribute_name  検索する属性の名前。
-        @param[in] in_attribute_index 検索する属性のインデクス番号。
-        @retval !=npos 属性名に対応する列番号。
-        @retval ==npos 属性名に対応する列番号が存在しない。
-     */
-    public: typename base_type::string::size_type find_column_number(
-        typename base_type::string::view const& in_attribute_name,
-        typename base_type::string::size_type const in_attribute_index = 0)
-    const PSYQ_NOEXCEPT
-    {
-        if (!in_attribute_name.empty())
-        {
-            auto const local_attribute(
-                this->find_attribute(in_attribute_name));
-            if (in_attribute_index < local_attribute.second)
-            {
-                return local_attribute.first + in_attribute_index;
-            }
-        }
-        return base_type::string::npos;
-    }
-
-    /** @brief 行番号と属性から、文字列表の本体セルを検索する。
-        @param[in] in_row_number    検索する本体セルの行番号。
-        @param[in] in_column_number 検索する本体セルの列番号。
-        @return
-            行番号と列番号に対応する本体セル。
-            対応する本体セルがない場合は、空文字列を返す。
-     */
-    public: typename base_type::string const& find_body_cell(
-        typename base_type::string::size_type const in_row_number,
-        typename base_type::string::size_type const in_column_number)
-    const PSYQ_NOEXCEPT
-    {
-        return this->find_cell(
-            in_row_number,
-            in_row_number != this->get_attribute_row()?
-                in_column_number: base_type::MAX_COLUMN_COUNT);
-    }
-    //@}
-    //-------------------------------------------------------------------------
     /// @name 属性
     //@{
     /** @brief 属性の行番号を取得する。
@@ -516,6 +434,32 @@ public psyq::string::table<
             }
         }
         return typename this_type::attribute(base_type::string::npos, 0);
+    }
+
+    /** @brief 属性名から、列番号を検索する。
+
+        this_type::constraint_attribute で、事前に属性の辞書を構築しておくこと。
+
+        @param[in] in_attribute_name  検索する属性の名前。
+        @param[in] in_attribute_index 検索する属性のインデクス番号。
+        @retval !=npos 属性名に対応する列番号。
+        @retval ==npos 属性名に対応する列番号が存在しない。
+     */
+    public: typename base_type::string::size_type find_column_number(
+        typename base_type::string::view const& in_attribute_name,
+        typename base_type::string::size_type const in_attribute_index = 0)
+    const PSYQ_NOEXCEPT
+    {
+        if (!in_attribute_name.empty())
+        {
+            auto const local_attribute(
+                this->find_attribute(in_attribute_name));
+            if (in_attribute_index < local_attribute.second)
+            {
+                return local_attribute.first + in_attribute_index;
+            }
+        }
+        return base_type::string::npos;
     }
     //@}
     //-------------------------------------------------------------------------
@@ -654,6 +598,41 @@ public psyq::string::table<
             ++local_count;
         }
         return local_count;
+    }
+
+    /** @brief 主キーから、行番号を検索する。
+
+        this_type::constraint_key で、事前に主キーの辞書を構築をしておくこと。
+
+        @param[in] in_key  検索する主キー。
+        @retval !=npos 主キーに対応する行番号。
+        @retval ==npos 主キーに対応する行番号が存在しない。
+     */
+    public: typename base_type::string::size_type find_row_number(
+        typename base_type::string::view const& in_key)
+    const PSYQ_NOEXCEPT
+    {
+        if (!in_key.empty())
+        {
+            auto& local_cells(this->get_cells());
+            auto const local_hash(
+                this_type::string::factory::compute_hash(in_key));
+            auto const local_lower_bound(
+                std::lower_bound(
+                    this->keys_.begin(),
+                    this->keys_.end(),
+                    in_key,
+                    typename this_type::key_less(local_cells, local_hash)));
+            if (local_lower_bound != this->keys_.end())
+            {
+                auto& local_cell(local_cells.at(*local_lower_bound));
+                if (local_cell.second.compare_fast(in_key, local_hash) == 0)
+                {
+                    return this_type::compute_row_number(local_cell.first);
+                }
+            }
+        }
+        return base_type::string::npos;
     }
     //@}
     //-------------------------------------------------------------------------

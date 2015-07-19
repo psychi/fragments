@@ -259,8 +259,10 @@ class psyq::if_then_engine::_private::dispatcher
         typename this_type::function const& in_function)
     {
         auto const local_expression_monitor(
-            this_type::expression_monitor::key_less::find_pointer(
-                this->expression_monitors_, in_expression_key));
+            this_type::expression_monitor::key_comparison::find_pointer(
+                this->expression_monitors_,
+                in_expression_key,
+                this_type::expression_monitor::make_key_less()));
         return local_expression_monitor != nullptr?
             local_expression_monitor->erase_behavior(in_function): false;
     }
@@ -278,8 +280,10 @@ class psyq::if_then_engine::_private::dispatcher
         typename this_type::evaluator::expression::key const& in_expression_key)
     {
         auto const local_expression_monitor(
-            this_type::expression_monitor::key_less::find_const_iterator(
-                this->expression_monitors_, in_expression_key));
+            this_type::expression_monitor::key_comparison::find_iterator(
+                this->expression_monitors_,
+                in_expression_key,
+                this_type::expression_monitor::make_key_less()));
         if (local_expression_monitor == this->expression_monitors_.end())
         {
             return false;
@@ -358,7 +362,7 @@ class psyq::if_then_engine::_private::dispatcher
             io_reservoir);
 
         // 条件式の評価が済んだので、状態変化フラグを初期化する。
-        io_reservoir._reset_transition();
+        io_reservoir._reset_transitions();
 
         // キャッシュに貯まった挙動関数を呼び出す。
         for (auto const& local_cache: this->behavior_caches_)
@@ -488,8 +492,8 @@ class psyq::if_then_engine::_private::dispatcher
                     this_type::register_expression(
                         io_status_monitors,
                         io_expression_monitors,
-                        local_expression_monitor.key_,
-                        local_expression_monitor.key_,
+                        local_expression_monitor.get_key(),
+                        local_expression_monitor.get_key(),
                         in_evaluator,
                         in_reserve_expressions));
                 if (local_register_expression != 0)
@@ -533,7 +537,7 @@ class psyq::if_then_engine::_private::dispatcher
             return 0;
         }
         auto const local_chunk(
-            in_evaluator._find_chunk(local_expression->chunk_key_));
+            in_evaluator._find_chunk(local_expression->get_chunk_key()));
         if (local_chunk == nullptr)
         {
             // 条件式があれば、要素条件チャンクもあるはず。
@@ -543,7 +547,7 @@ class psyq::if_then_engine::_private::dispatcher
 
         // in_scan_key に対応する条件式の種類によって、
         // in_register_key の登録先を選択する。
-        switch (local_expression->kind_)
+        switch (local_expression->get_kind())
         {
             case this_type::evaluator::expression::kind_SUB_EXPRESSION:
             return this_type::register_compound_expression(
@@ -601,12 +605,15 @@ class psyq::if_then_engine::_private::dispatcher
         template_element_container const& in_elements,
         std::size_t const in_reserve_expressions)
     {
-        for (auto i(in_expression.begin_); i < in_expression.end_; ++i)
+        for (
+            auto i(in_expression.get_begin_element());
+            i < in_expression.get_end_element();
+            ++i)
         {
             // 要素条件が参照する状態値の監視器を取得し、
             // in_register_key を状態監視器に登録する。
             this_type::equip_status_monitor(
-                io_status_monitors, in_elements.at(i).key_)
+                io_status_monitors, in_elements.at(i).get_key())
                     .insert_expression_key(
                         in_register_key, in_reserve_expressions);
         }
@@ -627,9 +634,9 @@ class psyq::if_then_engine::_private::dispatcher
                 io_status_monitors.begin(),
                 io_status_monitors.end(),
                 in_status_key,
-                typename this_type::status_monitor::key_less()));
+                this_type::status_monitor::make_key_less()));
         if (local_lower_bound != io_status_monitors.end()
-            && local_lower_bound->key_ == in_status_key)
+            && local_lower_bound->get_key() == in_status_key)
         {
             return *local_lower_bound;
         }
@@ -670,14 +677,17 @@ class psyq::if_then_engine::_private::dispatcher
         // in_expression の要素条件を走査し、
         // in_register_key を状態監視器へ登録する。
         std::int8_t local_result(1);
-        for (auto i(in_expression.begin_); i < in_expression.end_; ++i)
+        for (
+            auto i(in_expression.get_begin_element());
+            i < in_expression.get_end_element();
+            ++i)
         {
             auto const local_register_expression(
                 this_type::register_expression(
                     io_status_monitors,
                     in_expression_monitors,
                     in_register_key,
-                    in_sub_expressions.at(i).key_,
+                    in_sub_expressions.at(i).get_key(),
                     in_evaluator,
                     in_reserve_expressions));
             if (local_register_expression == 0)

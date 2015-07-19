@@ -143,6 +143,24 @@ class psyq::if_then_engine::_private::status_operation
         && std::is_unsigned<template_status_key>::value,
         "");
 
+    /** @brief 左辺値となる状態値に対応する識別値を取得する。
+        @return @copydoc this_type::key_
+     */
+    public: template_status_key const& get_key() const PSYQ_NOEXCEPT
+    {
+        return this->key_;
+    }
+
+    public: template_status_operator const& get_operator() const PSYQ_NOEXCEPT
+    {
+        return this->operator_;
+    }
+
+    public: template_status_value const& get_value() const PSYQ_NOEXCEPT
+    {
+        return this->value_;
+    }
+
     /** @brief 右辺値となる状態値の識別値を取得する。
         @retval !=nullptr
             右辺値となる状態値の識別値が格納されている、
@@ -442,11 +460,11 @@ class psyq::if_then_engine::_private::status_operation
 
     //-------------------------------------------------------------------------
     /// @brief 演算の右辺値となる値。
-    public: template_status_value value_;
+    private: template_status_value value_;
     /// @brief 演算の左辺値となる状態値の識別値。
-    public: template_status_key key_;
+    private: template_status_key key_;
     /// @brief 演算子の種類。
-    public: template_status_operator operator_;
+    private: template_status_operator operator_;
     /// @brief 右辺値を状態値から取得するか。
     private: bool right_key_;
 

@@ -410,7 +410,7 @@ class psyq::if_then_engine::behavior_builder
                     in_table,
                     in_row_index,
                     in_column_index + i - local_unit_size));
-            if (!local_assignment.value_.is_empty())
+            if (!local_assignment.get_value().is_empty())
             {
                 io_assignments.push_back(local_assignment);
             }

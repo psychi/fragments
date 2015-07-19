@@ -9,7 +9,7 @@
 #include <bitset>
 #include <vector>
 #include "./behavior.hpp"
-#include "./key_less.hpp"
+#include "../member_comparison.hpp"
 
 /// @cond
 namespace psyq
@@ -71,13 +71,25 @@ class psyq::if_then_engine::_private::expression_monitor
     /// @brief 条件式監視器のコンテナ。
     public: typedef std::vector<this_type, template_allocator> container;
 
-    /// @brief 条件式監視器を条件式の識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
-    public: typedef
-        psyq::if_then_engine::_private::key_less<
-            psyq::if_then_engine::_private::object_key_getter<
-                this_type, template_expression_key>>
-        key_less;
+    //-------------------------------------------------------------------------
+    /// @brief 条件式監視器の識別値を取得する関数オブジェクト。
+    public: struct key_fetcher
+    {
+        public: template_expression_key const& operator()(
+            this_type const& in_expression_monitor)
+        const PSYQ_NOEXCEPT
+        {
+            return in_expression_monitor.get_key();
+        }
 
+    }; // struct key_fetcher
+
+    /// @brief 条件式監視器の識別値を比較する関数オブジェクト。
+    public: typedef
+         psyq::member_comparison<this_type, template_expression_key>
+         key_comparison;
+
+    //-------------------------------------------------------------------------
     /// @brief 条件挙動。
     public: typedef
         psyq::if_then_engine::_private::behavior<
@@ -98,28 +110,29 @@ class psyq::if_then_engine::_private::expression_monitor
             template_allocator>
         behavior_cache_container;
 
-    //-------------------------------------------------------------------------
     /// @brief 条件挙動キャッシュから優先順位を取得する関数オブジェクト。
-    private: struct behavior_cache_key_getter
+    private: struct behavior_cache_priority_fetcher
     {
-        /// @brief オブジェクトの型。
-        typedef
-            typename expression_monitor::behavior_cache_container::value_type
-            object;
-
-        /// @brief オブジェクトから取り出すキーの型。
-        typedef template_priority key;
-
         /** @brief 条件挙動キャッシュから優先順位を取得する。
             @param[in] in_behavior_cache 優先順位を取得する条件挙動キャッシュ。
             @return 条件挙動の優先順位。
          */
-        static key const& get(object const& in_behavior_cache) PSYQ_NOEXCEPT
+        template_priority const& operator()(
+            typename expression_monitor::behavior_cache_container::value_type
+                const& in_behavior_cache)
+        const PSYQ_NOEXCEPT
         {
             return in_behavior_cache.first.priority_;
         }
 
     }; // struct behavior_cache_key_getter
+
+    /// @brief 条件式挙動キャッシュの優先順位を比較する関数オブジェクト。
+    private: typedef
+         psyq::member_comparison<
+             typename this_type::behavior_cache_container::value_type,
+             template_priority>
+         behavior_cache_priority_comparison;
 
     //-------------------------------------------------------------------------
     /** @brief 条件式監視器を構築する。
@@ -165,6 +178,14 @@ class psyq::if_then_engine::_private::expression_monitor
         return *this;
     }
 #endif // !defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
+
+    /** @brief 監視している条件式に対応する識別値を取得する。
+        @return @copydoc this_type::key_
+     */
+    public: template_expression_key const& get_key() const PSYQ_NOEXCEPT
+    {
+        return this->key_;
+    }
 
     /** @brief 条件式に対応する挙動関数を登録する。
 
@@ -213,7 +234,7 @@ class psyq::if_then_engine::_private::expression_monitor
                 io_expression_monitors.begin(),
                 io_expression_monitors.end(),
                 in_expression_key,
-                typename this_type::key_less()));
+                this_type::make_key_less()));
         if (local_expression_monitor != io_expression_monitors.end()
             && local_expression_monitor->key_ == in_expression_key)
         {
@@ -287,7 +308,8 @@ class psyq::if_then_engine::_private::expression_monitor
         {
             // 状態変化を通知する条件式監視器を取得する。
             auto const local_expression_monitor(
-                this_type::key_less::find_pointer(io_expression_monitors, *i));
+                this_type::key_comparison::find_pointer(
+                    io_expression_monitors, *i, this_type::make_key_less()));
             if (local_expression_monitor == nullptr)
             {
                 // 監視器のない条件式を削除し、コンテナを整理する。
@@ -343,6 +365,15 @@ class psyq::if_then_engine::_private::expression_monitor
             }
             ++i;
         }
+    }
+
+    public: static typename this_type::key_comparison::template function<
+        typename this_type::key_fetcher, std::less<template_expression_key>>
+    make_key_less()
+    {
+        return this_type::key_comparison::make_function(
+            typename this_type::key_fetcher(),
+            std::less<template_expression_key>());
     }
 
     //-------------------------------------------------------------------------
@@ -457,8 +488,7 @@ class psyq::if_then_engine::_private::expression_monitor
                     io_behavior_caches.cbegin(),
                     io_behavior_caches.cend(),
                     local_behavior.priority_,
-                    psyq::if_then_engine::_private::key_less<
-                        typename this_type::behavior_cache_key_getter>()),
+                    this_type::make_beharior_cache_priority_less()),
                 local_behavior,
                 local_cache);
         }
@@ -573,11 +603,22 @@ class psyq::if_then_engine::_private::expression_monitor
         return local_condition == (local_condition & this->condition_);
     }
 
+    private: static
+    typename this_type::behavior_cache_priority_comparison::template function<
+        typename this_type::behavior_cache_priority_fetcher,
+        std::less<template_priority>>
+    make_beharior_cache_priority_less()
+    {
+        return this_type::behavior_cache_priority_comparison::make_function(
+            typename this_type::behavior_cache_priority_fetcher(),
+            std::less<template_priority>());
+    }
+
     //-------------------------------------------------------------------------
     /// @brief 条件挙動のコンテナ。
     private: typename this_type::behavior_container behaviors_;
     /// @brief 監視している条件式の識別値。
-    public: template_expression_key key_;
+    private: template_expression_key key_;
     /// @brief 挙動関数を呼び出す変化条件。
     private: typename this_type::condition condition_;
     /// @brief フラグの集合。

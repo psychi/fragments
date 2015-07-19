@@ -6,7 +6,6 @@
 #define PSYQ_IF_THEN_ENGINE_EVALUATOR_HPP_
 
 #include <vector>
-#include "./key_less.hpp"
 #include "./expression.hpp"
 
 /// @cond
@@ -64,14 +63,6 @@ class psyq::if_then_engine::_private::evaluator
             typename this_type::expression, typename this_type::allocator_type>
         expression_container;
 
-    /// @brief 条件式を識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
-    private: typedef
-        psyq::if_then_engine::_private::key_less<
-            psyq::if_then_engine::_private::object_key_getter<
-                typename this_type::expression,
-                typename this_type::expression::key>>
-        expression_key_less;
-
     //-------------------------------------------------------------------------
     /// @brief 複合条件式の要素条件。
     public: typedef
@@ -128,14 +119,6 @@ class psyq::if_then_engine::_private::evaluator
          std::vector<
              typename this_type::chunk, typename this_type::allocator_type>
          chunk_container;
-
-    /// @brief 要素条件チャンクの識別値を比較する関数オブジェクト。
-    private: typedef
-         psyq::if_then_engine::_private::key_less<
-             psyq::if_then_engine::_private::object_key_getter<
-                 typename this_type::chunk,
-                 typename this_type::reservoir::chunk_key>>
-         chunk_key_less;
 
     //-------------------------------------------------------------------------
     /** @name 構築と代入
@@ -238,9 +221,9 @@ class psyq::if_then_engine::_private::evaluator
                 this->expressions_.begin(),
                 this->expressions_.end(),
                 in_expression_key,
-                typename this_type::expression_key_less()));
+                this_type::expression::make_key_less()));
         if (local_lower_bound != this->expressions_.end()
-            && local_lower_bound->key_ == in_expression_key)
+            && local_lower_bound->get_key() == in_expression_key)
         {
             // 同じ識別値の条件式がすでに登録されていた。
             return false;
@@ -297,7 +280,8 @@ class psyq::if_then_engine::_private::evaluator
         {
             return -1;
         }
-        auto const local_chunk(this->_find_chunk(local_expression->chunk_key_));
+        auto const local_chunk(
+            this->_find_chunk(local_expression->get_chunk_key()));
         if (local_chunk == nullptr)
         {
             // 条件式があれば、要素条件チャンクもあるはず。
@@ -306,7 +290,7 @@ class psyq::if_then_engine::_private::evaluator
         }
 
         // 条件式の種別によって評価方法を分岐する。
-        switch (local_expression->kind_)
+        switch (local_expression->get_kind())
         {
             // 複合条件式を評価する。
             case this_type::expression::kind_SUB_EXPRESSION:
@@ -318,13 +302,13 @@ class psyq::if_then_engine::_private::evaluator
                 {
                     auto const local_evaluate_expression(
                         this->evaluate_expression(
-                            in_expression.key_, in_reservoir));
+                            in_expression.get_key(), in_reservoir));
                     if (local_evaluate_expression < 0)
                     {
                         return -1;
                     }
-                    auto const local_condition(0 < local_evaluate_expression);
-                    return local_condition == in_expression.condition_;
+                    return in_expression.compare_condition(
+                        0 < local_evaluate_expression);
                 });
 
             // 状態変化条件式を評価する。
@@ -334,7 +318,7 @@ class psyq::if_then_engine::_private::evaluator
                 [&](typename this_type::status_transition const& in_transition)
                 ->psyq::if_then_engine::evaluation
                 {
-                    return in_reservoir._get_transition(in_transition.key_);
+                    return in_reservoir._get_transition(in_transition.get_key());
                 });
 
             // 状態比較条件式を評価する。
@@ -366,8 +350,10 @@ class psyq::if_then_engine::_private::evaluator
         typename this_type::expression::key const& in_expression_key)
     const PSYQ_NOEXCEPT
     {
-        return this_type::expression_key_less::find_const_pointer(
-            this->expressions_, in_expression_key);
+        return this_type::expression::key_comparison::find_pointer(
+            this->expressions_,
+            in_expression_key,
+            this_type::expression::make_key_less());
     }
     /// @}
     //-------------------------------------------------------------------------
@@ -410,9 +396,9 @@ class psyq::if_then_engine::_private::evaluator
                 this->chunks_.begin(),
                 this->chunks_.end(),
                 in_chunk_key,
-                typename this_type::chunk_key_less()));
+                this_type::chunk::make_key_less()));
         if (local_lower_bound == this->chunks_.end()
-            || local_lower_bound->key_ != in_chunk_key)
+            || local_lower_bound->get_key() != in_chunk_key)
         {
             return false;
         }
@@ -423,7 +409,7 @@ class psyq::if_then_engine::_private::evaluator
             auto i(this->expressions_.begin());
             i != this->expressions_.end();)
         {
-            if (in_chunk_key != i->chunk_key_)
+            if (in_chunk_key != i->get_chunk_key())
             {
                 ++i;
             }
@@ -446,8 +432,8 @@ class psyq::if_then_engine::_private::evaluator
         typename this_type::reservoir::chunk_key const& in_chunk_key)
     const PSYQ_NOEXCEPT
     {
-        return this_type::chunk_key_less::find_const_pointer(
-            this->chunks_, in_chunk_key);
+        return this_type::chunk::key_comparison::find_pointer(
+            this->chunks_, in_chunk_key, this_type::chunk::make_key_less());
     }
     /// @}
     //-------------------------------------------------------------------------
@@ -512,8 +498,8 @@ class psyq::if_then_engine::_private::evaluator
             std::binary_search(
                 in_expressions.begin(),
                 in_expressions.end(),
-                in_element.key_,
-                typename this_type::expression_key_less()));
+                in_element.get_key(),
+                this_type::expression::make_key_less()));
         PSYQ_ASSERT(local_validation);
         return local_validation;
     }
@@ -536,9 +522,9 @@ class psyq::if_then_engine::_private::evaluator
                 io_chunks.begin(),
                 io_chunks.end(),
                 in_chunk_key,
-                typename this_type::chunk_key_less()));
+                this_type::chunk::make_key_less()));
         if (local_lower_bound != io_chunks.end()
-            && local_lower_bound->key_ == in_chunk_key)
+            && local_lower_bound->get_key() == in_chunk_key)
         {
             return *local_lower_bound;
         }

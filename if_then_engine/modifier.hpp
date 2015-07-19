@@ -202,7 +202,7 @@ class psyq::if_then_engine::_private::modifier
             for (; j != local_end && i->series_ == j->series_; ++j)
             {
                 if (local_modify
-                    && 0 < io_reservoir._get_transition(j->assignment_.key_))
+                    && 0 < io_reservoir._get_transition(j->assignment_.get_key()))
                 {
                     // すでに状態変更されていたら、今回は状態変更しない。
                     local_modify = false;

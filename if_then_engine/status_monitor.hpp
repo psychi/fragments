@@ -6,7 +6,7 @@
 #define PSYQ_IF_THEN_ENGINE_STATUS_MONITOR_HPP_
 
 #include <vector>
-#include "./key_less.hpp"
+#include "../member_comparison.hpp"
 
 /// @cond
 namespace psyq
@@ -39,17 +39,27 @@ class psyq::if_then_engine::_private::status_monitor
     /// @brief 状態監視器のコンテナ。
     public: typedef std::vector<this_type, template_allocator> container;
 
-    /// @brief 状態監視器を状態値の識別値の昇順で並び替えるのに使う、比較関数オブジェクト。
-    public: typedef
-        psyq::if_then_engine::_private::key_less<
-            psyq::if_then_engine::_private::object_key_getter<
-                this_type, template_status_key>>
-        key_less;
-
     /// @brief 条件式の識別値のコンテナの型。
     public: typedef
         std::vector<template_expression_key, template_allocator>
         expression_key_container;
+
+    /// @brief 状態監視器の識別値を取得する関数オブジェクト。
+    public: struct key_fetcher
+    {
+        public: typename template_status_key const& operator()(
+            this_type const& in_status_monitor)
+        const PSYQ_NOEXCEPT
+        {
+            return in_status_monitor.get_key();
+        }
+
+    }; // struct key_fetcher
+
+    /// @brief 状態監視器の識別値を比較する関数オブジェクト。
+    public: typedef
+         psyq::member_comparison<this_type, template_status_key>
+         key_comparison;
 
     //-------------------------------------------------------------------------
     /** @brief 状態監視器を構築する。
@@ -86,6 +96,14 @@ class psyq::if_then_engine::_private::status_monitor
         return *this;
     }
 #endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
+
+    /** @brief 監視している状態値に対応する識別値を取得する。
+        @return @copydoc this_type::key_
+     */
+    public: typename template_status_key const& get_key() const PSYQ_NOEXCEPT
+    {
+        return this->key_;
+    }
 
     /** @brief 状態変化を検知し、条件式監視器へ通知する。
         @param[in,out] io_expression_monitors
@@ -133,6 +151,29 @@ class psyq::if_then_engine::_private::status_monitor
             this->expression_keys_, in_register_key, in_reserve_expressions);
     }
 
+    /** @brief 条件式識別値コンテナを整理する。
+        @param[in] in_expression_monitors 参照する条件式監視器のコンテナ。
+        @retval true  条件式識別値コンテナが空になった。
+        @retval false 条件式識別値コンテナは空になってない。
+     */
+    public: template<typename template_container>
+    bool shrink_expression_keys(
+        template_container const& in_expression_monitors)
+    {
+        return this_type::shrink_expression_keys(
+            this->expression_keys_, in_expression_monitors);
+    }
+
+    public: static typename this_type::key_comparison::template function<
+        typename this_type::key_fetcher, std::less<template_status_key>>
+    make_key_less()
+    {
+        return this_type::key_comparison::make_function(
+            typename this_type::key_fetcher(),
+            std::less<template_status_key>());
+    }
+
+    //-------------------------------------------------------------------------
     /** @brief 状態変化を通知する条件式を登録する。
         @param[in,out] io_expression_keys
             状態変化を通知する条件式の識別値を挿入するコンテナ。
@@ -164,19 +205,6 @@ class psyq::if_then_engine::_private::status_monitor
     }
 
     /** @brief 条件式識別値コンテナを整理する。
-        @param[in] in_expression_monitors 参照する条件式監視器のコンテナ。
-        @retval true  条件式識別値コンテナが空になった。
-        @retval false 条件式識別値コンテナは空になってない。
-     */
-    public: template<typename template_container>
-    bool shrink_expression_keys(
-        template_container const& in_expression_monitors)
-    {
-        return this_type::shrink_expression_keys(
-            this->expression_keys_, in_expression_monitors);
-    }
-
-    /** @brief 条件式識別値コンテナを整理する。
         @param[in,out] io_expression_keys 整理する条件式識別値のコンテナ。
         @param[in] in_expression_monitors 参照する条件式監視器のコンテナ。
         @retval true  条件式識別値コンテナが空になった。
@@ -190,8 +218,10 @@ class psyq::if_then_engine::_private::status_monitor
         for (auto i(io_expression_keys.begin()); i != io_expression_keys.end();)
         {
             auto const local_expression_monitor(
-                template_container::value_type::key_less::find_const_pointer(
-                    in_expression_monitors, *i));
+                template_container::value_type::key_comparison::find_pointer(
+                    in_expression_monitors,
+                    *i,
+                    template_container::value_type::make_key_less()));
             if (local_expression_monitor == nullptr)
             {
                 i = io_expression_keys.erase(i);
@@ -209,7 +239,7 @@ class psyq::if_then_engine::_private::status_monitor
     /// @brief 評価の更新を要求する条件式の識別値のコンテナ。
     private: typename this_type::expression_key_container expression_keys_;
     /// @brief 監視する状態値の識別値。
-    public: template_status_key key_;
+    private: template_status_key key_;
     /// @brief 前回の notify_transition で、状態値が存在したか。
     private: bool last_existence_;
 

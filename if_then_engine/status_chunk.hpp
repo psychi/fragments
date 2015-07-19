@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include "../assert.hpp"
+#include "../member_comparison.hpp"
 
 /// @cond
 namespace psyq
@@ -54,6 +55,22 @@ class psyq::if_then_engine::_private::status_chunk
         BLOCK_WIDTH = sizeof(typename this_type::block) *
             psyq::if_then_engine::_private::BITS_PER_BYTE,
     };
+
+    /// @brief チャンクの識別値を取得する関数オブジェクト。
+    public: struct key_fetcher
+    {
+        public: typename this_type::key const& operator()(this_type const& in_chunk)
+        const PSYQ_NOEXCEPT
+        {
+            return in_chunk.key_;
+        }
+
+    }; // struct key_fetcher
+
+    /// @brief チャンクの識別値を比較する関数オブジェクト。
+    public: typedef
+         psyq::member_comparison<this_type, typename this_type::key>
+         key_comparison;
 
     //-------------------------------------------------------------------------
     public: template<typename template_allocator>
@@ -170,14 +187,22 @@ class psyq::if_then_engine::_private::status_chunk
             this->blocks_, in_position, in_width, in_value);
     }
 
-    public:
-    static typename this_type::block make_block_mask(
+    public: static typename this_type::block make_block_mask(
         std::size_t const in_width)
     PSYQ_NOEXCEPT
     {
         auto const local_max((std::numeric_limits<block>::max)());
         return in_width < this_type::BLOCK_WIDTH?
             ~(local_max << in_width): local_max;
+    }
+
+    public: static typename this_type::key_comparison::template function<
+        typename this_type::key_fetcher, std::less<typename this_type::key>>
+    make_key_less()
+    {
+        return this_type::key_comparison::make_function(
+            typename this_type::key_fetcher(),
+            std::less<typename this_type::key>());
     }
 
     //-------------------------------------------------------------------------

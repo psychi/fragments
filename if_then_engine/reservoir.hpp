@@ -6,7 +6,6 @@
 #define PSYQ_IF_THEN_ENGINE_RESERVOIR_HPP_
 
 #include <vector>
-#include "./key_less.hpp"
 #include "./status.hpp"
 #include "./status_summary.hpp"
 #include "./status_chunk.hpp"
@@ -104,13 +103,6 @@ class psyq::if_then_engine::_private::reservoir
              typename this_type::chunk, typename this_type::allocator_type>
          chunk_container;
 
-    /// @brief チャンク識別値を比較する関数オブジェクト。
-    private: typedef
-         psyq::if_then_engine::_private::key_less<
-             psyq::if_then_engine::_private::object_key_getter<
-                 typename this_type::chunk, typename this_type::chunk_key>>
-         chunk_key_less;
-
     //-------------------------------------------------------------------------
     /// @brief 状態値。
     public: typedef
@@ -147,14 +139,6 @@ class psyq::if_then_engine::_private::reservoir
             typename this_type::status_summary const*,
             typename this_type::allocator_type>
         status_pointer_container;
-
-    /// @brief 状態値に対応する識別値を比較する関数オブジェクト。
-    private: typedef
-         psyq::if_then_engine::_private::key_less<
-             psyq::if_then_engine::_private::object_key_getter<
-                 typename this_type::status_summary,
-                 typename this_type::status_key>>
-         status_key_less;
 
     //-------------------------------------------------------------------------
     public: enum: typename this_type::status_summary::bit_width
@@ -503,15 +487,20 @@ class psyq::if_then_engine::_private::reservoir
     {
         // 状態値登記を検索し、状態値ビット列チャンクから状態値のビット列を取得する。
         auto const local_status_summary(
-            this_type::status_key_less::find_const_pointer(
-                this->statuses_, in_status_key));
+            this_type::status_summary::key_comparison::find_pointer(
+                this->statuses_,
+                in_status_key,
+                this_type::status_summary::make_key_less()));
         if (local_status_summary == nullptr)
         {
             return typename this_type::status();
         }
+
         auto const local_chunk(
-            this_type::chunk_key_less::find_const_pointer(
-                this->chunks_, local_status_summary->chunk_key_));
+            this_type::chunk::key_comparison::find_pointer(
+                this->chunks_,
+                local_status_summary->get_chunk_key(),
+                this_type::chunk::make_key_less()));
         if (local_chunk == nullptr)
         {
             // 状態値登記があれば、対応する状態値ビット列チャンクもあるはず。
@@ -574,8 +563,10 @@ class psyq::if_then_engine::_private::reservoir
     const PSYQ_NOEXCEPT
     {
         auto local_status(
-            this_type::status_key_less::find_const_pointer(
-                this->statuses_, in_status_key));
+            this_type::status_summary::key_comparison::find_pointer(
+                this->statuses_,
+                in_status_key,
+                this_type::status_summary::make_key_less()));
         return local_status != nullptr?
             local_status->get_variety(): this_type::status::kind_EMPTY;
     }
@@ -644,9 +635,9 @@ class psyq::if_then_engine::_private::reservoir
         if (local_right_key_pointer == nullptr)
         {
             return this->compare_status(
-                in_comparison.key_,
-                in_comparison.operator_,
-                in_comparison.value_);
+                in_comparison.get_key(),
+                in_comparison.get_operator(),
+                in_comparison.get_value());
         }
 
         // 右辺となる状態値を取得して演算する。
@@ -656,8 +647,8 @@ class psyq::if_then_engine::_private::reservoir
         if (local_right_key == *local_right_key_pointer)
         {
             return this->compare_status(
-                in_comparison.key_,
-                in_comparison.operator_,
+                in_comparison.get_key(),
+                in_comparison.get_operator(),
                 this->extract_status(local_right_key));
         }
         return -1;
@@ -750,8 +741,10 @@ class psyq::if_then_engine::_private::reservoir
 
         // 状態値登記を検索する。
         auto const local_status(
-            this_type::status_key_less::find_pointer(
-                this->statuses_, in_status_key));
+            this_type::status_summary::key_comparison::find_pointer(
+                this->statuses_,
+                in_status_key,
+                this_type::status_summary::make_key_less()));
         if (local_status == nullptr)
         {
             return false;
@@ -759,8 +752,10 @@ class psyq::if_then_engine::_private::reservoir
 
         // 状態値を設定する状態値ビット列チャンクを決定する。
         auto const local_chunk(
-            this_type::chunk_key_less::find_pointer(
-                this->chunks_, local_status->chunk_key_));
+            this_type::chunk::key_comparison::find_pointer(
+                this->chunks_,
+                local_status->get_chunk_key(),
+                this_type::chunk::make_key_less()));
         if (local_chunk == nullptr)
         {
             // 状態値の登記があるなら、状態値ビット列チャンクもあるはず。
@@ -817,8 +812,7 @@ class psyq::if_then_engine::_private::reservoir
         else if (0 < local_set_bits)
         {
             // 状態値の変更を記録する。
-            local_status->format_ |=
-                1 << this_type::status_summary::format_TRANSITION_FRONT;
+            local_status->set_transition();
         }
         return true;
     }
@@ -835,9 +829,9 @@ class psyq::if_then_engine::_private::reservoir
         if (local_right_key_pointer == nullptr)
         {
             return this->assign_status(
-                in_assignment.key_,
-                in_assignment.operator_,
-                in_assignment.value_);
+                in_assignment.get_key(),
+                in_assignment.get_operator(),
+                in_assignment.get_value());
         }
 
         // 右辺となる状態値を取得して演算する。
@@ -847,8 +841,8 @@ class psyq::if_then_engine::_private::reservoir
         if (local_right_key == *local_right_key_pointer)
         {
             return this->assign_status(
-                in_assignment.key_,
-                in_assignment.operator_,
+                in_assignment.get_key(),
+                in_assignment.get_operator(),
                 this->extract_status(local_right_key));
         }
         return false;
@@ -890,8 +884,10 @@ class psyq::if_then_engine::_private::reservoir
     const PSYQ_NOEXCEPT
     {
         auto local_status(
-            this_type::status_key_less::find_const_pointer(
-                this->statuses_, in_status_key));
+            this_type::status_summary::key_comparison::find_pointer(
+                this->statuses_,
+                in_status_key,
+                this_type::status_summary::make_key_less()));
         return local_status != nullptr? local_status->get_transition(): -1;
     }
 
@@ -899,13 +895,13 @@ class psyq::if_then_engine::_private::reservoir
 
         状態変化フラグを初期化する。
      */
-    public: void _reset_transition()
+    public: void _reset_transitions()
     {
         typename this_type::status_summary::format const local_transition_mask(
             ~(1 << this_type::status_summary::format_TRANSITION_FRONT));
         for (auto& local_status: this->statuses_)
         {
-            local_status.format_ &= local_transition_mask;
+            local_status.reset_transition();
         }
     }
     /// @}
@@ -943,7 +939,7 @@ class psyq::if_then_engine::_private::reservoir
                 this->chunks_.begin(),
                 this->chunks_.end(),
                 in_chunk_key,
-                typename this_type::chunk_key_less()));
+                this_type::chunk::make_key_less()));
         if (local_lower_bound == this->chunks_.end()
             || local_lower_bound->key_ != in_chunk_key)
         {
@@ -954,7 +950,7 @@ class psyq::if_then_engine::_private::reservoir
         // 状態値を削除する。
         for (auto i(this->statuses_.begin()); i != this->statuses_.end();)
         {
-            if (in_chunk_key != i->chunk_key_)
+            if (in_chunk_key != i->get_chunk_key())
             {
                 ++i;
             }
@@ -1023,8 +1019,10 @@ class psyq::if_then_engine::_private::reservoir
     {
         // コピー元となる状態値ビット列チャンクを取得する。
         auto const local_source_chunk(
-            this_type::chunk_key_less::find_const_pointer(
-                in_source_chunks, in_source_status.chunk_key_));
+            this_type::chunk::key_comparison::find_pointer(
+                in_source_chunks,
+                in_source_status.get_chunk_key(),
+                this_type::chunk::make_key_less()));
         if (local_source_chunk == nullptr)
         {
             PSYQ_ASSERT(false);
@@ -1033,11 +1031,12 @@ class psyq::if_then_engine::_private::reservoir
 
         // コピー先となる状態値を用意する。
         auto& local_target_chunk(
-            this_type::equip_chunk(this->chunks_, in_source_status.chunk_key_));
+            this_type::equip_chunk(
+                this->chunks_, in_source_status.get_chunk_key()));
         auto const local_variety(in_source_status.get_variety());
         auto const local_target_status(
             this->insert_status_summary(
-                local_target_chunk, in_source_status.key_, local_variety));
+                local_target_chunk, in_source_status.get_key(), local_variety));
         if (local_target_status == nullptr)
         {
             PSYQ_ASSERT(false);
@@ -1076,9 +1075,9 @@ class psyq::if_then_engine::_private::reservoir
                 this->statuses_.begin(),
                 this->statuses_.end(),
                 in_status_key,
-                typename this_type::status_key_less()));
+                this_type::status_summary::make_key_less()));
         if (local_status_iterator != this->statuses_.end()
-            && local_status_iterator->key_ == in_status_key)
+            && local_status_iterator->get_key() == in_status_key)
         {
             return nullptr;
         }
@@ -1101,7 +1100,6 @@ class psyq::if_then_engine::_private::reservoir
         if (!local_set_position)
         {
             PSYQ_ASSERT(false);
-            local_status.format_ = 0;
             return nullptr;
         }
         return &local_status;
@@ -1250,7 +1248,7 @@ class psyq::if_then_engine::_private::reservoir
                 io_chunks.begin(),
                 io_chunks.end(),
                 in_chunk_key,
-                typename this_type::chunk_key_less()));
+                this_type::chunk::make_key_less()));
         if (local_lower_bound != io_chunks.end()
             && local_lower_bound->key_ == in_chunk_key)
         {

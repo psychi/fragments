@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include "../assert.hpp"
+#include "../member_comparison.hpp"
 
 /// @cond
 namespace psyq
@@ -49,6 +50,23 @@ class psyq::if_then_engine::_private::expression
     /// @brief 要素条件のインデクス番号を表す型。
     public: typedef template_element_index element_index;
 
+    /// @brief 条件式の識別値を取得する関数オブジェクト。
+    public: struct key_fetcher
+    {
+        public: typename this_type::key const& operator()(
+            this_type const& in_expression)
+        const PSYQ_NOEXCEPT
+        {
+            return in_expression.key_;
+        }
+
+    }; // struct key_fetcher
+
+    /// @brief 条件式の識別値を比較する関数オブジェクト。
+    public: typedef
+         psyq::member_comparison<this_type, typename this_type::key>
+         key_comparison;
+
     /// @brief 条件式の要素条件を結合する論理演算子を表す列挙型。
     public: enum logic: std::uint8_t
     {
@@ -89,6 +107,46 @@ class psyq::if_then_engine::_private::expression
     kind_(in_kind)
     {
         PSYQ_ASSERT(in_element_begin < in_element_end);
+    }
+
+    /** @brief 条件式に対応する識別値を取得する。
+        @return @copydoc this_type::key_
+     */
+    public: typename this_type::key const& get_key() const PSYQ_NOEXCEPT
+    {
+        return this->key_;
+    }
+
+    /** @brief 条件式が格納されている要素条件チャンクの識別値を取得する。
+        @return @copydoc this_type::chunk_key_
+     */
+    public: typename this_type::chunk_key const& get_chunk_key() const PSYQ_NOEXCEPT
+    {
+        return this->chunk_key_;
+    }
+
+    /** @brief 条件式が使う要素条件チャンクの先頭インデクス番号を取得する。
+        @return @copydoc this_type::begin_
+     */
+    public: typename this_type::element_index get_begin_element() const PSYQ_NOEXCEPT
+    {
+        return this->begin_;
+    }
+
+    /** @brief 条件式が使う要素条件チャンクの末尾インデクス番号を取得する。
+        @return @copydoc this_type::end_
+     */
+    public: typename this_type::element_index get_end_element() const PSYQ_NOEXCEPT
+    {
+        return this->end_;
+    }
+
+    /** @brief 条件式の種類を取得する。
+        @return @copydoc this_type::kind_
+     */
+    public: typename this_type::kind get_kind() const PSYQ_NOEXCEPT
+    {
+        return this->kind_;
     }
 
     /** @brief 条件式を評価する。
@@ -137,19 +195,28 @@ class psyq::if_then_engine::_private::expression
         return local_and;
     }
 
+    public: static typename this_type::key_comparison::template function<
+        typename this_type::key_fetcher, std::less<typename this_type::key>>
+    make_key_less()
+    {
+        return this_type::key_comparison::make_function(
+            typename this_type::key_fetcher(),
+            std::less<typename this_type::key>());
+    }
+
     //-------------------------------------------------------------------------
     /// @brief 要素条件チャンクに対応する識別値。
-    public: typename this_type::chunk_key chunk_key_;
+    private: typename this_type::chunk_key chunk_key_;
     /// @brief 条件式に対応する識別値。
-    public: typename this_type::key key_;
+    private: typename this_type::key key_;
     /// @brief 条件式が使う要素条件の先頭インデクス番号。
-    public: typename this_type::element_index begin_;
+    private: typename this_type::element_index begin_;
     /// @brief 条件式が使う要素条件の末尾インデクス番号。
-    public: typename this_type::element_index end_;
+    private: typename this_type::element_index end_;
     /// @brief 条件式の要素条件を結合する論理演算子。
-    public: typename this_type::logic logic_;
+    private: typename this_type::logic logic_;
     /// @brief 条件式の種類。
-    public: typename this_type::kind kind_;
+    private: typename this_type::kind kind_;
 
 }; // class psyq::if_then_engine::_private::expression
 
@@ -175,10 +242,20 @@ class psyq::if_then_engine::_private::sub_expression
     condition_(in_condition)
     {}
 
+    public: template_expression_key const& get_key() const PSYQ_NOEXCEPT
+    {
+        return this->key_;
+    }
+
+    public: bool compare_condition(bool in_condition) const PSYQ_NOEXCEPT
+    {
+        return in_condition == this->condition_;
+    }
+
     /// @brief 結合する条件式の識別値。
-    public: template_expression_key key_;
+    private: template_expression_key key_;
     /// @brief 結合する際の条件。
-    public: bool condition_;
+    private: bool condition_;
 
 }; // class psyq::if_then_engine::_private::sub_expression
 
@@ -199,16 +276,21 @@ class psyq::if_then_engine::_private::status_transition
     PSYQ_NOEXCEPT: key_(std::move(in_key))
     {}
 
+    public: template_status_key const& get_key() const PSYQ_NOEXCEPT
+    {
+        return this->key_;
+    }
+
     /// @brief 変化を検知する状態値の識別値。
-    public: template_status_key key_;
+    private: template_status_key key_;
 
 }; // class psyq::if_then_engine::_private::status_transition
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 要素条件チャンク。
 
-    @tparam template_chunk_key                  @copydoc reservoir::chunk_key
-    @tparam template_sub_expression_container   @copydoc evaluator::sub_expression_container
+    @tparam template_chunk_key                   @copydoc reservoir::chunk_key
+    @tparam template_sub_expression_container    @copydoc evaluator::sub_expression_container
     @tparam template_status_transition_container @copydoc evaluator::status_transition_container
     @tparam template_status_comparison_container @copydoc evaluator::status_comparison_container
  */
@@ -221,12 +303,33 @@ class psyq::if_then_engine::_private::expression_chunk
 {
     private: typedef expression_chunk this_type;
 
+    /// @brief @copydoc reservoir::chunk_key
+    public: typedef template_chunk_key key;
+
+    /// @brief 要素条件チャンクの識別値を取得する関数オブジェクト。
+    public: struct key_fetcher
+    {
+        public: typename this_type::key const& operator()(
+            this_type const& in_chunk)
+        const PSYQ_NOEXCEPT
+        {
+            return in_chunk.key_;
+        }
+
+    }; // struct key_fetcher
+
+    /// @brief 要素条件チャンクの識別値を比較する関数オブジェクト。
+    public: typedef
+         psyq::member_comparison<this_type, typename this_type::key>
+         key_comparison;
+
+    //-------------------------------------------------------------------------
     /** @brief チャンクを構築する。
         @param[in] in_key       チャンクの識別値。
         @param[in] in_allocator メモリ割当子の初期値。
      */
     public: expression_chunk(
-        template_chunk_key in_key,
+        typename this_type::key in_key,
         typename template_sub_expression_container::allocator_type const& in_allocator)
     :
     sub_expressions_(in_allocator),
@@ -270,6 +373,21 @@ class psyq::if_then_engine::_private::expression_chunk
     }
 #endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
+    public: typename this_type::key const& get_key() const PSYQ_NOEXCEPT
+    {
+        return this->key_;
+    }
+
+    public: static typename this_type::key_comparison::template function<
+        typename this_type::key_fetcher, std::less<typename this_type::key>>
+    make_key_less()
+    {
+        return this_type::key_comparison::make_function(
+            typename this_type::key_fetcher(),
+            std::less<typename this_type::key>());
+    }
+
+    //-------------------------------------------------------------------------
     /// @brief 複合条件式で使う要素条件のコンテナ。
     public: template_sub_expression_container sub_expressions_;
     /// @brief 状態変化条件式で使う要素条件のコンテナ。
@@ -277,7 +395,7 @@ class psyq::if_then_engine::_private::expression_chunk
     /// @brief 状態比較条件式で使う要素条件のコンテナ。
     public: template_status_comparison_container status_comparisons_;
     /// @brief この要素条件チャンクに対応する識別値。
-    public: template_chunk_key key_;
+    private: typename this_type::key key_;
 
 }; // class psyq::if_then_engine::_private::expression_chunk
 

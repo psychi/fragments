@@ -684,6 +684,7 @@ INPUT                  = \
                          ./static_deque.hpp \
                          ./memory_arena.hpp \
                          ./atomic_count.hpp \
+                         ./member_comparison.hpp \
                          ./std/config.hpp \
                          ./std/move.hpp \
                          ./std/array.hpp \
@@ -730,7 +731,6 @@ INPUT                  = \
                          ./geometry/mosp/node.hpp \
                          ./geometry/mosp/tree.hpp \
                          ./geometry/mosp/nut.hpp \
-                         ./if_then_engine/key_less.hpp \
                          ./if_then_engine/reservoir.hpp \
                          ./if_then_engine/modifier.hpp \
                          ./if_then_engine/status.hpp \

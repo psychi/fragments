@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include "../assert.hpp"
+#include "../member_comparison.hpp"
 
 /// @cond
 namespace psyq
@@ -22,7 +23,6 @@ namespace psyq
             };
             template<typename, typename, typename, typename>
                 class status_summary;
-            template<typename, typename, typename> class status_chunk;
         } // namespace _private
     } // namespace if_then_engine
 } // namespace psyq
@@ -96,6 +96,22 @@ class psyq::if_then_engine::_private::status_summary
     public: typedef typename this_type::bit_position format;
     public: struct format_less;
 
+    /// @brief 状態値の識別値を取得する関数オブジェクト。
+    public: struct key_fetcher
+    {
+        public: typename this_type::key const& operator()(this_type const& in_status)
+        const PSYQ_NOEXCEPT
+        {
+            return in_status.get_key();
+        }
+
+    }; // struct key_fetcher
+
+    /// @brief 状態値の識別値を比較する関数オブジェクト。
+    public: typedef
+         psyq::member_comparison<this_type, typename this_type::key>
+         key_comparison;
+
     //-------------------------------------------------------------------------
     /** @brief 状態値登記を構築する。
         @param[in] in_status_key this_type::key_ の初期値。
@@ -114,6 +130,22 @@ class psyq::if_then_engine::_private::status_summary
             (in_variety & this_type::format_WIDTH_MASK)
             << this_type::format_WIDTH_FRONT))
     {}
+
+    /** @brief 状態値に対応する識別値を取得する。
+        @return @copydoc this_type::key_
+     */
+    public: typename this_type::key const& get_key() const PSYQ_NOEXCEPT
+    {
+        return this->key_;
+    }
+
+    /** @brief 状態値が格納されているビット列チャンクの識別値を取得する。
+        @return @copydoc this_type::chunk_key_
+     */
+    public: typename this_type::chunk_key const& get_chunk_key() const PSYQ_NOEXCEPT
+    {
+        return this->chunk_key_;
+    }
 
     /** @brief 状態値の種別を取得する。
         @return 状態値の種別。
@@ -227,17 +259,36 @@ class psyq::if_then_engine::_private::status_summary
     {
         typename this_type::format const local_transition_mask(
             1 << this_type::format_TRANSITION_FRONT);
-        this->format_ = (~local_transition_mask & this->format_) |
-            (local_transition_mask & in_source.format_);
+        this->format_ = (~local_transition_mask & this->format_)
+            | (local_transition_mask & in_source.format_);
+    }
+
+    public: void reset_transition()
+    {
+        this->format_ &= ~(1 << this_type::format_TRANSITION_FRONT);
+    }
+
+    public: void set_transition()
+    {
+        this->format_ |= 1 << this_type::format_TRANSITION_FRONT;
+    }
+
+    public: static typename this_type::key_comparison::template function<
+        typename this_type::key_fetcher, std::less<typename this_type::key>>
+    make_key_less()
+    {
+        return this_type::key_comparison::make_function(
+            typename this_type::key_fetcher(),
+            std::less<typename this_type::key>());
     }
 
     //-------------------------------------------------------------------------
     /// @brief 状態値が格納されているビット列チャンクの識別値。
-    typename this_type::chunk_key chunk_key_;
+    private: typename this_type::chunk_key chunk_key_;
     /// @brief 状態値に対応する識別値。
-    typename this_type::key key_;
+    private: typename this_type::key key_;
     /// @brief 状態値が格納されているビット領域。
-    typename this_type::format format_;
+    private: typename this_type::format format_;
 
 }; // class psyq::if_then_engine::_private::status_summary
 

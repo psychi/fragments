@@ -5,7 +5,7 @@
 #ifndef PSYQ_IF_THEN_ENGINE_BEHAVIOR_CHUNK_HPP_
 #define PSYQ_IF_THEN_ENGINE_BEHAVIOR_CHUNK_HPP_
 
-#include "./key_less.hpp"
+#include "../member_comparison.hpp"
 
 /// @cond
 namespace psyq
@@ -44,19 +44,29 @@ class psyq::if_then_engine::_private::behavior_chunk
         typename this_type::dispatcher::evaluator::reservoir::chunk_key
         key;
 
-    /// @brief 条件挙動チャンクの識別値を比較する関数オブジェクト。
-    public: typedef
-         psyq::if_then_engine::_private::key_less<
-             psyq::if_then_engine::_private::object_key_getter<
-                 this_type, typename this_type::key>>
-         key_less;
-
     /// @brief 条件挙動関数オブジェクトの所有権ありスマートポインタのコンテナを表す型。
     private: typedef
         std::vector<
             typename template_dispatcher::function_shared_ptr,
             typename template_dispatcher::allocator_type>
         function_shared_ptr_container;
+
+    /// @brief 条件挙動チャンクの識別値を取得する関数オブジェクト。
+    private: struct key_fetcher
+    {
+        public: typename this_type::key const& operator()(
+            this_type const& in_chunk)
+        const PSYQ_NOEXCEPT
+        {
+            return in_chunk.key_;
+        }
+
+    }; // struct key_fetcher
+
+    /// @brief 条件挙動チャンクの識別値を比較する関数オブジェクト。
+    private: typedef
+         psyq::member_comparison<this_type, typename this_type::key>
+         key_comparison;
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
@@ -155,7 +165,8 @@ class psyq::if_then_engine::_private::behavior_chunk
         typename this_type::key const& in_key)
     {
         auto const local_iterator(
-            this_type::key_less::find_const_iterator(io_chunks, in_key));
+            this_type::key_comparison::find_iterator(
+                io_chunks, in_key, this_type::make_key_less()));
         auto const local_find(local_iterator != io_chunks.end());
         if (local_find)
         {
@@ -175,7 +186,8 @@ class psyq::if_then_engine::_private::behavior_chunk
     {
         // 条件挙動関数を追加する条件挙動チャンクを用意する。
         auto const local_iterator(
-            this_type::key_less::find_iterator(io_chunks, in_key));
+            this_type::key_comparison::find_iterator(
+                io_chunks, in_key, this_type::make_key_less()));
         return local_iterator != io_chunks.end()?
             *local_iterator:
             *io_chunks.insert(
@@ -194,6 +206,15 @@ class psyq::if_then_engine::_private::behavior_chunk
     functions_(in_allocator),
     key_(std::move(in_key))
     {}
+
+    private: static typename this_type::key_comparison::template function<
+        typename this_type::key_fetcher, std::less<typename this_type::key>>
+    make_key_less()
+    {
+        return this_type::key_comparison::make_function(
+            typename this_type::key_fetcher(),
+            std::less<typename this_type::key>());
+    }
 
     //-------------------------------------------------------------------------
     /// @brief 条件挙動関数のコンテナ。

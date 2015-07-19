@@ -545,7 +545,7 @@ class psyq::if_then_engine::expression_builder
         auto const local_comparison(
             template_evaluator::status_comparison::_build(
                 io_hasher, in_table, in_row_index, local_element_column));
-        if (!local_comparison.value_.is_empty())
+        if (!local_comparison.get_value().is_empty())
         {
             io_elements.push_back(local_comparison);
         }

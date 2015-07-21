@@ -47,7 +47,7 @@ class psyq::if_then_engine::_private::status_monitor
     /// @brief 状態監視器の識別値を取得する関数オブジェクト。
     public: struct key_fetcher
     {
-        public: typename template_status_key const& operator()(
+        public: template_status_key const& operator()(
             this_type const& in_status_monitor)
         const PSYQ_NOEXCEPT
         {
@@ -100,7 +100,7 @@ class psyq::if_then_engine::_private::status_monitor
     /** @brief 監視している状態値に対応する識別値を取得する。
         @return @copydoc this_type::key_
      */
-    public: typename template_status_key const& get_key() const PSYQ_NOEXCEPT
+    public: template_status_key const& get_key() const PSYQ_NOEXCEPT
     {
         return this->key_;
     }
@@ -165,7 +165,7 @@ class psyq::if_then_engine::_private::status_monitor
     }
 
     public: static typename this_type::key_comparison::template function<
-        typename this_type::key_fetcher, std::less<template_status_key>>
+        typename this_type::key_fetcher, std::less<template_status_key> >
     make_key_less()
     {
         return this_type::key_comparison::make_function(

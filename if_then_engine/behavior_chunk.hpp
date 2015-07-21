@@ -208,7 +208,7 @@ class psyq::if_then_engine::_private::behavior_chunk
     {}
 
     private: static typename this_type::key_comparison::template function<
-        typename this_type::key_fetcher, std::less<typename this_type::key>>
+        typename this_type::key_fetcher, std::less<typename this_type::key> >
     make_key_less()
     {
         return this_type::key_comparison::make_function(

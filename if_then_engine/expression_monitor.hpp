@@ -84,7 +84,7 @@ class psyq::if_then_engine::_private::expression_monitor
 
     }; // struct key_fetcher
 
-    /// @brief 条件式監視器の識別値を比較する関数オブジェクト。
+    /// @brief 条件式監視器を比較する関数オブジェクト。
     public: typedef
          psyq::member_comparison<this_type, template_expression_key>
          key_comparison;
@@ -368,7 +368,7 @@ class psyq::if_then_engine::_private::expression_monitor
     }
 
     public: static typename this_type::key_comparison::template function<
-        typename this_type::key_fetcher, std::less<template_expression_key>>
+        typename this_type::key_fetcher, std::less<template_expression_key> >
     make_key_less()
     {
         return this_type::key_comparison::make_function(
@@ -606,7 +606,7 @@ class psyq::if_then_engine::_private::expression_monitor
     private: static
     typename this_type::behavior_cache_priority_comparison::template function<
         typename this_type::behavior_cache_priority_fetcher,
-        std::less<template_priority>>
+        std::less<template_priority> >
     make_beharior_cache_priority_less()
     {
         return this_type::behavior_cache_priority_comparison::make_function(

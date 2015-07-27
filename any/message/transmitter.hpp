@@ -11,8 +11,8 @@
 #include <unordered_map>
 #include <thread>
 #include <mutex>
-//#include "psyq/any/message/suite.hpp"
-//#include "psyq/any/message/receiver.hpp"
+#include "./suite.hpp"
+#include "./receiver.hpp"
 
 /// @cond
 namespace psyq
@@ -25,11 +25,167 @@ namespace psyq
                 typename = psyq::any::message::suite<std::uint32_t, std::uint32_t, std::uint32_t>,
                 typename = std::allocator<void*>>
                     class zone;
+            template<typename, typename> class listener;
+            template<typename, typename> class dispatcher;
             template<typename, typename> class transmitter;
         } // namespace message
     } // namespace any
 } // namespace psyq
 /// @endcond
+
+#ifdef PSYQ_ANY_MESSAGE_DISPATCHER_HPP_
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template<typename template_base_suite, typename template_allocator>
+class psyq::any::message::listener
+{
+    private: typedef listener this_type; ///< thisが指す値の型。
+
+    //-------------------------------------------------------------------------
+    public: typedef std::shared_ptr<this_type> shared_ptr;
+    public: typedef std::weak_ptr<this_type> weak_ptr;
+
+    /// @brief メッセージ一式を保持するパケットの基底型。
+    public: typedef psyq::any::message::packet<template_base_suite> packet;
+
+    /// @brief this_type で使うメモリ割当子。
+    public: typedef template_allocator allocator_type;
+
+    /// @brief メッセージ受信関数の型。
+    public: typedef std::function<void(typename this_type::packet const&)> function;
+
+    /// @brief 呼び出す関数の識別値。
+    public: typedef typename this_type::packet::suite::call function_key;
+
+    /// @brief メッセージ受信器の識別値。
+    public: typedef typename this_type::packet::suite::tag key;
+
+    private: typedef
+        std::unordered_map<
+            typename this_type::function_key,
+            typename this_type::function,
+            std::hash<typename this_type::function_key>,
+            std::equal_to<typename this_type::function_key>,
+            typename this_type::allocator_type>
+        function_map;
+
+    //-------------------------------------------------------------------------
+    public: listener(
+        typename this_type::key in_key,
+        typename this_type::allocator_type const& in_allocator):
+    key_(std::move(in_key)),
+    functions_(in_allocator)
+    {}
+
+    public: bool register_function(
+        typename this_type::function_key in_function_key,
+        typename this_type::function in_function)
+    {
+        return static_cast<bool>(in_function)
+            && this->functions_.emplace(
+                std::move(in_function_key), std::move(in_function)).second;
+    }
+
+    public: typename this_type::function unregister_function(
+        typename this_type::function_key const& in_function_key)
+    {
+        auto const local_find(this->functions_.find(in_function_key));
+        if (local_find == this->functions_.end())
+        {
+            return typename this_type::function();
+        }
+        auto const local_function(std::move(local_find->second));
+        this->functions_.erase(local_find);
+        return local_function;
+    }
+
+    public: bool call_function(
+        typename this_type::function_key const in_function_key,
+        typename this_type::packet const& in_packet)
+    {
+        auto const local_find(this->functions_.find(in_function_key));
+        if (local_find == this->functions_.end())
+        {
+            return false;
+        }
+        local_find->second(in_packet);
+        return true;
+    }
+
+    public: typename this_type::function const* find_function(
+        typename this_type::function_key const in_function_key)
+    const PSYQ_NOEXCEPT
+    {
+        auto const local_find(this->functions_.find(in_function_key));
+        return local_find != this->functions_.end()?
+            &local_find->second: nullptr;
+    }
+
+    //-------------------------------------------------------------------------
+    private: typename this_type::key key_;
+    private: typename this_type::function_map functions_;
+
+}; // class psyq::any::message::listener
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+template<typename template_base_suite, typename template_allocator>
+class psyq::any::message::dispatcher
+{
+    private: typedef dispatcher this_type; ///< thisが指す値の型。
+
+    //-------------------------------------------------------------------------
+    /// @brief メッセージ一式を保持するパケットの基底型。
+    public: typedef psyq::any::message::packet<template_base_suite> packet;
+
+    /// @brief メッセージ受信先の識別値。
+    public: typedef typename this_type::packet::suite::tag receiver_key;
+
+    /// @brief メッセージ受信関数の型。
+    public: typedef
+        std::function<void(typename this_type::packet const&)>
+        function;
+
+    /// @brief メッセージ受信関数の所有権ありスマートポインタの型。
+    public: typedef
+        std::shared_ptr<typename this_type::function>
+        function_shared_ptr;
+
+    /// @brief メッセージ受信関数の所有権なしスマートポインタの型。
+    public: typedef
+        std::weak_ptr<typename this_type::function>
+        function_weak_ptr;
+
+    /// @brief メッセージ受信関数の識別値。
+    public: typedef typename this_type::packet::suite::call function_key;
+
+    public: typedef std::int32_t function_priority;
+
+    //-------------------------------------------------------------------------
+    public: bool register_function(
+        typename this_type::receiver_key const in_receiver_key,
+        typename this_type::function_key const in_function_key,
+        typename this_type::function_shared_ptr const& in_function,
+        typename this_type::function_priority const in_priority)
+    {
+        auto const local_receiver(in_receiver.get());
+        if (local_receiver == nullptr || !this->agree_this_thread())
+        {
+            return false;
+        }
+        auto const local_iterator(
+            this_type::find_receiver_iterator(
+                this->receiver_map_, *local_receiver, in_method));
+        if (local_iterator != this->receiver_map_.end()
+            && local_iterator->first == in_method)
+        {
+            // 等価な組み合わせがすでに登録されていた。
+            return false;
+        }
+        this->receiver_map_.emplace(in_method, in_receiver);
+        return true;
+    }
+
+}; // class psyq::any::message::dispatcher
+#endif // !defined(PSYQ_ANY_MESSAGE_DISPATCHER_HPP_)
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief スレッド別のRPCメッセージ伝送器。
@@ -81,47 +237,26 @@ class psyq::any::message::transmitter
     };
 
     /// @copydoc receiver_map_
-    private: typedef std::unordered_multimap<
-        typename this_type::receiver::call::key,
-        typename this_type::receiver::weak_ptr,
-        typename this_type::method_hash,
-        std::equal_to<typename this_type::receiver::call::key>,
-        typename this_type::allocator_type>
-            receiver_map;
+    private: typedef
+        std::unordered_multimap<
+            typename this_type::receiver::call::key,
+            typename this_type::receiver::weak_ptr,
+            typename this_type::method_hash,
+            std::equal_to<typename this_type::receiver::call::key>,
+            typename this_type::allocator_type>
+        receiver_map;
 
     /// this_type::receiver::packet 保持子のコンテナ。
-    private: typedef std::vector<
-        typename this_type::receiver::packet::shared_ptr,
-        typename this_type::allocator_type>
-            shared_packet_container;
+    private: typedef
+        std::vector<
+            typename this_type::receiver::packet::shared_ptr,
+            typename this_type::allocator_type>
+        shared_packet_container;
 
     //-------------------------------------------------------------------------
-    /** @brief this_type を構築する。
-        @param[in] in_thread_id       *thisに対応するスレッドの識別子。
-        @param[in] in_message_address *thisのメッセージ送受信アドレス。
-        @param[in] in_allocator       *thisが使うメモリ割当子の初期値。
+    /** @name this_type::receiver の登録
+        @{
      */
-    private: transmitter(
-        std::thread::id in_thread_id,
-        typename this_type::receiver::tag::key const in_message_address,
-        typename this_type::allocator_type const& in_allocator)
-    :
-        receiver_map_(in_allocator),
-        export_packets_(in_allocator),
-        import_packets_(in_allocator),
-        delivery_packets_(in_allocator),
-        thread_id_(std::move(in_thread_id)),
-        message_address_(in_message_address)
-    {}
-
-    /// コピー構築子は使用禁止。
-    private: transmitter(this_type const&);
-    /// コピー代入演算子は使用禁止。
-    private: this_type& operator=(this_type const&);
-
-    //-------------------------------------------------------------------------
-    /// @name this_type::receiver の登録
-    //@{
     /** @brief this_type::receiver を登録する。
 
         - 登録に成功した後は、
@@ -162,9 +297,7 @@ class psyq::any::message::transmitter
             // 等価な組み合わせがすでに登録されていた。
             return false;
         }
-        this->receiver_map_.emplace(
-            typename this_type::receiver_map::value_type(
-                in_method, in_receiver));
+        this->receiver_map_.emplace(in_method, in_receiver);
         return true;
     }
 
@@ -222,53 +355,11 @@ class psyq::any::message::transmitter
         }
         return local_receiver;
     }
-    //@}
-    /** @brief this_type::receiver を辞書から検索する。
-        @return 検索した位置。
-        @param[in] in_receiver_map 検索範囲となる this_type::receiver の辞書。
-        @param[in] in_receiver     検索する this_type::receiver 。
-        @param[in] in_method       検索する this_type::receiver のメソッド種別。
-     */
-    private: static typename this_type::receiver_map::const_iterator
-    find_receiver_iterator(
-        typename this_type::receiver_map const& in_receiver_map,
-        typename this_type::receiver const& in_receiver,
-        typename this_type::receiver::call::key const in_method)
-    PSYQ_NOEXCEPT
-    {
-        auto local_iterator(in_receiver_map.find(in_method));
-        while (
-            local_iterator != in_receiver_map.end()
-            && local_iterator->first == in_method
-            && local_iterator->second.lock().get() != &in_receiver)
-        {
-            ++local_iterator;
-        }
-        return local_iterator;
-    }
-
-    /** @brief 解放された this_type::receiver を辞書から削除する。
-        @param[in,out] io_receivers this_type::receiver が削除される辞書。
-     */
-    private: static void remove_empty_receiver(
-        typename this_type::receiver_map& io_receivers)
-    {
-        for (auto i(io_receivers.begin()); i != io_receivers.end();)
-        {
-            if (i->second.expired())
-            {
-                i = io_receivers.erase(i);
-            }
-            else
-            {
-                ++i;
-            }
-        }
-    }
-
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name メッセージパケットの送受信
-    //@{
+    /** @name メッセージパケットの送受信
+        @{
+     */
     /** @interface interface_post_message
         @brief post_message() と post_zonal_message() に共通する説明。
 
@@ -482,7 +573,120 @@ class psyq::any::message::transmitter
             this->delivery_packets_, this->delivery_packets_.size());
         return true;
     }
-    //@}
+    /// @}
+    //-------------------------------------------------------------------------
+    /** @name this_type のプロパティ
+        @{
+     */
+    /** @brief *thisが使うメモリ割当子を取得する。
+        @return *thisが使うメモリ割当子。
+     */
+    public: PSYQ_CONSTEXPR typename this_type::allocator_type get_allocator()
+    const PSYQ_NOEXCEPT
+    {
+        return this->receiver_map_.get_allocator();
+    }
+
+    /** @brief *thisに合致するスレッドの識別子を取得する。
+        @return *thisに合致するスレッドの識別子。
+     */
+    public: PSYQ_CONSTEXPR std::thread::id const& get_thread_id()
+    const PSYQ_NOEXCEPT
+    {
+        return this->thread_id_;
+    }
+
+    /** @brief *thisのメッセージ送信アドレスを取得する。
+        @return *thisのメッセージ送信アドレス。
+     */
+    public: PSYQ_CONSTEXPR typename this_type::receiver::tag::key const
+    get_message_address() const PSYQ_NOEXCEPT
+    {
+        return this->message_address_;
+    }
+
+    /** @brief *thisから送信するメッセージの荷札を構築する。
+        @param[in] in_receiver_address メッセージ受信アドレス。
+        @param[in] in_receiver_mask    メッセージ受信マスク。
+     */
+    public: PSYQ_CONSTEXPR typename this_type::receiver::tag make_receiver_tag(
+        typename this_type::receiver::tag::key const in_receiver_address,
+        typename this_type::receiver::tag::key const in_receiver_mask =
+            ~this_type::receiver::tag::key(0))
+    const PSYQ_NOEXCEPT
+    {
+        return typename this_type::receiver::tag(
+            this->get_message_address(), in_receiver_address, in_receiver_mask);
+    }
+    /// @}
+    //-------------------------------------------------------------------------
+    /** @brief this_type を構築する。
+        @param[in] in_thread_id       *thisに対応するスレッドの識別子。
+        @param[in] in_message_address *thisのメッセージ送受信アドレス。
+        @param[in] in_allocator       *thisが使うメモリ割当子の初期値。
+     */
+    private: transmitter(
+        std::thread::id in_thread_id,
+        typename this_type::receiver::tag::key const in_message_address,
+        typename this_type::allocator_type const& in_allocator):
+    receiver_map_(in_allocator),
+    export_packets_(in_allocator),
+    import_packets_(in_allocator),
+    delivery_packets_(in_allocator),
+    thread_id_(std::move(in_thread_id)),
+    message_address_(in_message_address)
+    {}
+
+    /// @brief コピー構築子は使用禁止。
+    private: transmitter(this_type const&);
+    /// @brief コピー代入演算子は使用禁止。
+    private: this_type& operator=(this_type const&);
+
+    //-------------------------------------------------------------------------
+    /** @brief this_type::receiver を辞書から検索する。
+        @return 検索した位置。
+        @param[in] in_receiver_map 検索範囲となる this_type::receiver の辞書。
+        @param[in] in_receiver     検索する this_type::receiver 。
+        @param[in] in_method       検索する this_type::receiver のメソッド種別。
+     */
+    private: static typename this_type::receiver_map::const_iterator
+    find_receiver_iterator(
+        typename this_type::receiver_map const& in_receiver_map,
+        typename this_type::receiver const& in_receiver,
+        typename this_type::receiver::call::key const in_method)
+    PSYQ_NOEXCEPT
+    {
+        auto local_iterator(in_receiver_map.find(in_method));
+        while (
+            local_iterator != in_receiver_map.end()
+            && local_iterator->first == in_method
+            && local_iterator->second.lock().get() != &in_receiver)
+        {
+            ++local_iterator;
+        }
+        return local_iterator;
+    }
+
+    /** @brief 解放された this_type::receiver を辞書から削除する。
+        @param[in,out] io_receivers this_type::receiver が削除される辞書。
+     */
+    private: static void remove_empty_receiver(
+        typename this_type::receiver_map& io_receivers)
+    {
+        for (auto i(io_receivers.begin()); i != io_receivers.end();)
+        {
+            if (i->second.expired())
+            {
+                i = io_receivers.erase(i);
+            }
+            else
+            {
+                ++i;
+            }
+        }
+    }
+
+    //-------------------------------------------------------------------------
     /** @brief メッセージパケットの送信を予約する。
 
         @copydetails interface_post_message
@@ -678,50 +882,6 @@ class psyq::any::message::transmitter
         }
     }
 
-    //-------------------------------------------------------------------------
-    /// @name this_type のプロパティ
-    //@{
-    /** @brief *thisが使うメモリ割当子を取得する。
-        @return *thisが使うメモリ割当子。
-     */
-    public: PSYQ_CONSTEXPR typename this_type::allocator_type get_allocator()
-    const PSYQ_NOEXCEPT
-    {
-        return this->receiver_map_.get_allocator();
-    }
-
-    /** @brief *thisに合致するスレッドの識別子を取得する。
-        @return *thisに合致するスレッドの識別子。
-     */
-    public: PSYQ_CONSTEXPR std::thread::id const& get_thread_id()
-    const PSYQ_NOEXCEPT
-    {
-        return this->thread_id_;
-    }
-
-    /** @brief *thisのメッセージ送信アドレスを取得する。
-        @return *thisのメッセージ送信アドレス。
-     */
-    public: PSYQ_CONSTEXPR typename this_type::receiver::tag::key const
-    get_message_address() const PSYQ_NOEXCEPT
-    {
-        return this->message_address_;
-    }
-
-    /** @brief *thisから送信するメッセージの荷札を構築する。
-        @param[in] in_receiver_address メッセージ受信アドレス。
-        @param[in] in_receiver_mask    メッセージ受信マスク。
-     */
-    public: PSYQ_CONSTEXPR typename this_type::receiver::tag make_receiver_tag(
-        typename this_type::receiver::tag::key const in_receiver_address,
-        typename this_type::receiver::tag::key const in_receiver_mask =
-            ~this_type::receiver::tag::key(0))
-    const PSYQ_NOEXCEPT
-    {
-        return typename this_type::receiver::tag(
-            this->get_message_address(), in_receiver_address, in_receiver_mask);
-    }
-    //@}
     /** @brief 現在のスレッドが処理が許可されているスレッドか判定する。
         @retval true  現在のスレッドは、処理が許可されている。
         @retval false 現在のスレッドは、処理が許可されてない。
@@ -753,3 +913,4 @@ class psyq::any::message::transmitter
 }; // class psyq::any::message::transmitter
 
 #endif // !defined(PSYQ_ANY_MESSAGE_TRANSMITTER_HPP_)
+// vim: set expandtab:

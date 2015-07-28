@@ -4,14 +4,8 @@
 #ifndef PSYQ_ANY_MESSAGE_TRANSMITTER_HPP_
 #define PSYQ_ANY_MESSAGE_TRANSMITTER_HPP_
 
-#ifdef _MSC_VER
-#include <eh.h>
-#endif // _MSC_VER
-#include <vector>
 #include <unordered_map>
-#include <thread>
-#include <mutex>
-#include "./suite.hpp"
+#include "./dispatcher.hpp"
 #include "./receiver.hpp"
 
 /// @cond
@@ -21,171 +15,11 @@ namespace psyq
     {
         namespace message
         {
-            template<
-                typename = psyq::any::message::suite<std::uint32_t, std::uint32_t, std::uint32_t>,
-                typename = std::allocator<void*>>
-                    class zone;
-            template<typename, typename> class listener;
-            template<typename, typename> class dispatcher;
             template<typename, typename> class transmitter;
         } // namespace message
     } // namespace any
 } // namespace psyq
 /// @endcond
-
-#ifdef PSYQ_ANY_MESSAGE_DISPATCHER_HPP_
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template<typename template_base_suite, typename template_allocator>
-class psyq::any::message::listener
-{
-    private: typedef listener this_type; ///< thisが指す値の型。
-
-    //-------------------------------------------------------------------------
-    public: typedef std::shared_ptr<this_type> shared_ptr;
-    public: typedef std::weak_ptr<this_type> weak_ptr;
-
-    /// @brief メッセージ一式を保持するパケットの基底型。
-    public: typedef psyq::any::message::packet<template_base_suite> packet;
-
-    /// @brief this_type で使うメモリ割当子。
-    public: typedef template_allocator allocator_type;
-
-    /// @brief メッセージ受信関数の型。
-    public: typedef std::function<void(typename this_type::packet const&)> function;
-
-    /// @brief 呼び出す関数の識別値。
-    public: typedef typename this_type::packet::suite::call function_key;
-
-    /// @brief メッセージ受信器の識別値。
-    public: typedef typename this_type::packet::suite::tag key;
-
-    private: typedef
-        std::unordered_map<
-            typename this_type::function_key,
-            typename this_type::function,
-            std::hash<typename this_type::function_key>,
-            std::equal_to<typename this_type::function_key>,
-            typename this_type::allocator_type>
-        function_map;
-
-    //-------------------------------------------------------------------------
-    public: listener(
-        typename this_type::key in_key,
-        typename this_type::allocator_type const& in_allocator):
-    key_(std::move(in_key)),
-    functions_(in_allocator)
-    {}
-
-    public: bool register_function(
-        typename this_type::function_key in_function_key,
-        typename this_type::function in_function)
-    {
-        return static_cast<bool>(in_function)
-            && this->functions_.emplace(
-                std::move(in_function_key), std::move(in_function)).second;
-    }
-
-    public: typename this_type::function unregister_function(
-        typename this_type::function_key const& in_function_key)
-    {
-        auto const local_find(this->functions_.find(in_function_key));
-        if (local_find == this->functions_.end())
-        {
-            return typename this_type::function();
-        }
-        auto const local_function(std::move(local_find->second));
-        this->functions_.erase(local_find);
-        return local_function;
-    }
-
-    public: bool call_function(
-        typename this_type::function_key const in_function_key,
-        typename this_type::packet const& in_packet)
-    {
-        auto const local_find(this->functions_.find(in_function_key));
-        if (local_find == this->functions_.end())
-        {
-            return false;
-        }
-        local_find->second(in_packet);
-        return true;
-    }
-
-    public: typename this_type::function const* find_function(
-        typename this_type::function_key const in_function_key)
-    const PSYQ_NOEXCEPT
-    {
-        auto const local_find(this->functions_.find(in_function_key));
-        return local_find != this->functions_.end()?
-            &local_find->second: nullptr;
-    }
-
-    //-------------------------------------------------------------------------
-    private: typename this_type::key key_;
-    private: typename this_type::function_map functions_;
-
-}; // class psyq::any::message::listener
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template<typename template_base_suite, typename template_allocator>
-class psyq::any::message::dispatcher
-{
-    private: typedef dispatcher this_type; ///< thisが指す値の型。
-
-    //-------------------------------------------------------------------------
-    /// @brief メッセージ一式を保持するパケットの基底型。
-    public: typedef psyq::any::message::packet<template_base_suite> packet;
-
-    /// @brief メッセージ受信先の識別値。
-    public: typedef typename this_type::packet::suite::tag receiver_key;
-
-    /// @brief メッセージ受信関数の型。
-    public: typedef
-        std::function<void(typename this_type::packet const&)>
-        function;
-
-    /// @brief メッセージ受信関数の所有権ありスマートポインタの型。
-    public: typedef
-        std::shared_ptr<typename this_type::function>
-        function_shared_ptr;
-
-    /// @brief メッセージ受信関数の所有権なしスマートポインタの型。
-    public: typedef
-        std::weak_ptr<typename this_type::function>
-        function_weak_ptr;
-
-    /// @brief メッセージ受信関数の識別値。
-    public: typedef typename this_type::packet::suite::call function_key;
-
-    public: typedef std::int32_t function_priority;
-
-    //-------------------------------------------------------------------------
-    public: bool register_function(
-        typename this_type::receiver_key const in_receiver_key,
-        typename this_type::function_key const in_function_key,
-        typename this_type::function_shared_ptr const& in_function,
-        typename this_type::function_priority const in_priority)
-    {
-        auto const local_receiver(in_receiver.get());
-        if (local_receiver == nullptr || !this->agree_this_thread())
-        {
-            return false;
-        }
-        auto const local_iterator(
-            this_type::find_receiver_iterator(
-                this->receiver_map_, *local_receiver, in_method));
-        if (local_iterator != this->receiver_map_.end()
-            && local_iterator->first == in_method)
-        {
-            // 等価な組み合わせがすでに登録されていた。
-            return false;
-        }
-        this->receiver_map_.emplace(in_method, in_receiver);
-        return true;
-    }
-
-}; // class psyq::any::message::dispatcher
-#endif // !defined(PSYQ_ANY_MESSAGE_DISPATCHER_HPP_)
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief スレッド別のRPCメッセージ伝送器。

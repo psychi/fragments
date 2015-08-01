@@ -67,14 +67,14 @@ class psyq::if_then_engine::_private::dispatcher
     private: typedef
          psyq::if_then_engine::_private::status_monitor<
              typename this_type::evaluator::reservoir::status_key,
-             typename this_type::evaluator::expression::key,
+             typename this_type::evaluator::expression_key,
              typename this_type::allocator_type>
          status_monitor;
 
     /// @brief 条件式監視器。
     private: typedef
         psyq::if_then_engine::_private::expression_monitor<
-            typename this_type::evaluator::expression::key,
+            typename this_type::evaluator::expression_key,
             psyq::if_then_engine::evaluation,
             typename this_type::function_priority,
             typename this_type::allocator_type>
@@ -228,7 +228,7 @@ class psyq::if_then_engine::_private::dispatcher
             同じ条件式に同じ挙動関数がすでに登録されていたのが原因。
      */
     public: bool register_function(
-        typename this_type::evaluator::expression::key const& in_expression_key,
+        typename this_type::evaluator::expression_key const& in_expression_key,
         typename this_type::condition const in_condition,
         typename this_type::function_shared_ptr const& in_function,
         typename this_type::function_priority const in_priority =
@@ -255,7 +255,7 @@ class psyq::if_then_engine::_private::dispatcher
         @retval false 該当する挙動関数が見つからなかった。
      */
     public: bool unregister_function(
-        typename this_type::evaluator::expression::key const& in_expression_key,
+        typename this_type::evaluator::expression_key const& in_expression_key,
         typename this_type::function const& in_function)
     {
         auto const local_expression_monitor(
@@ -277,7 +277,7 @@ class psyq::if_then_engine::_private::dispatcher
         @retval false 該当する挙動関数が見つからなかった。
      */
     public: bool unregister_function(
-        typename this_type::evaluator::expression::key const& in_expression_key)
+        typename this_type::evaluator::expression_key const& in_expression_key)
     {
         auto const local_expression_monitor(
             this_type::expression_monitor::key_comparison::find_iterator(
@@ -525,8 +525,8 @@ class psyq::if_then_engine::_private::dispatcher
     private: static std::int8_t register_expression(
         typename this_type::status_monitor::container& io_status_monitors,
         typename this_type::expression_monitor::container const& in_expression_monitors,
-        typename this_type::evaluator::expression::key const& in_register_key,
-        typename this_type::evaluator::expression::key const& in_scan_key,
+        typename this_type::evaluator::expression_key const& in_register_key,
+        typename this_type::evaluator::expression_key const& in_scan_key,
         typename this_type::evaluator const& in_evaluator,
         std::size_t const in_reserve_expressions)
     {
@@ -600,7 +600,7 @@ class psyq::if_then_engine::_private::dispatcher
     private: template<typename template_element_container>
     static void register_expression(
         typename this_type::status_monitor::container& io_status_monitors,
-        typename this_type::evaluator::expression::key const& in_register_key,
+        typename this_type::evaluator::expression_key const& in_register_key,
         typename this_type::evaluator::expression const& in_expression,
         template_element_container const& in_elements,
         std::size_t const in_reserve_expressions)
@@ -668,7 +668,7 @@ class psyq::if_then_engine::_private::dispatcher
     private: static std::int8_t register_compound_expression(
         typename this_type::status_monitor::container& io_status_monitors,
         typename this_type::expression_monitor::container const& in_expression_monitors,
-        typename this_type::evaluator::expression::key const& in_register_key,
+        typename this_type::evaluator::expression_key const& in_register_key,
         typename this_type::evaluator::expression const& in_expression,
         typename this_type::evaluator::sub_expression_container const& in_sub_expressions,
         typename this_type::evaluator const& in_evaluator,
@@ -719,7 +719,11 @@ class psyq::if_then_engine::_private::dispatcher
     {
         for (auto i(io_status_monitors.begin()); i != io_status_monitors.end();)
         {
-            if (i->notify_transition(io_expression_monitors, in_reservoir))
+            auto& local_status_monitor(*i);
+            if (local_status_monitor.notify_transition(
+                    io_expression_monitors,
+                    in_reservoir._get_transition(
+                        local_status_monitor.get_key())))
             {
                 i = io_status_monitors.erase(i);
             }
@@ -732,7 +736,8 @@ class psyq::if_then_engine::_private::dispatcher
 
     //-------------------------------------------------------------------------
     /// @brief 条件式監視器の辞書。
-    private: typename this_type::expression_monitor::container expression_monitors_;
+    private: typename this_type::expression_monitor::container
+        expression_monitors_;
 
     /// @brief 状態監視器の辞書。
     private: typename this_type::status_monitor::container status_monitors_;

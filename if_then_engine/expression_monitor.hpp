@@ -31,7 +31,7 @@ namespace psyq
     条件式の評価結果と、
     条件式の評価結果が変化した際に呼び出す挙動関数オブジェクトを保持する。
 
-    @tparam template_expression_key @copydoc evaluator::expression::key
+    @tparam template_expression_key @copydoc evaluator::expression_key
     @tparam template_evaluation     @copydoc psyq::if_then_engine::evaluation
     @tparam template_priority       @copydoc dispatcher::function_priority
     @tparam template_allocator      @copydoc reservoir::allocator_type
@@ -549,12 +549,6 @@ class psyq::if_then_engine::_private::expression_monitor
         }
 
         // 条件式の削除を検知する。
-        /** @todo
-            evaluator::_find_expression は二分探索を行うが、
-            監視しているすべての条件式に対し二分探索を毎回行うのは、
-            計算量として問題にならないか気になる。計算量が問題なら、
-            evaluator::expression_container をハッシュ辞書にすべきか、要検討。
-         */
         auto const local_expression(in_evaluator._find_expression(this->key_));
         auto const local_last_evaluation(
             this->flags_.test(this_type::flag_LAST_EVALUATION));

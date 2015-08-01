@@ -16,11 +16,10 @@ namespace psyq
     {
         namespace _private
         {
-            template<typename, typename, typename> class expression;
+            template<typename, typename> class expression;
             template<typename> class sub_expression;
             template<typename> class status_transition;
-            template<typename, typename, typename, typename>
-                class expression_chunk;
+            template<typename, typename, typename> class expression_chunk;
         } // namespace _private
     } // namespace if_then_engine
 } // namespace psyq
@@ -28,44 +27,20 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 条件式。
-    @tparam template_key           @copydoc expression::key
     @tparam template_chunk_key     @copydoc expression::chunk_key
     @tparam template_element_index @copydoc expression::element_index
  */
-template<
-    typename template_key,
-    typename template_chunk_key,
-    typename template_element_index>
+template<typename template_chunk_key, typename template_element_index>
 class psyq::if_then_engine::_private::expression
 {
     /// @brief thisが指す値の型。
     private: typedef expression this_type;
-
-    /// @brief 条件式の識別値を表す型。
-    public: typedef template_key key;
 
     /// @brief 要素条件チャンクの識別値を表す型。
     public: typedef template_chunk_key chunk_key;
 
     /// @brief 要素条件のインデクス番号を表す型。
     public: typedef template_element_index element_index;
-
-    /// @brief 条件式の識別値を取得する関数オブジェクト。
-    public: struct key_fetcher
-    {
-        public: typename this_type::key const& operator()(
-            this_type const& in_expression)
-        const PSYQ_NOEXCEPT
-        {
-            return in_expression.key_;
-        }
-
-    }; // struct key_fetcher
-
-    /// @brief 条件式の識別値を比較する関数オブジェクト。
-    public: typedef
-         psyq::member_comparison<this_type, typename this_type::key>
-         key_comparison;
 
     /// @brief 条件式の要素条件を結合する論理演算子を表す列挙型。
     public: enum logic: std::uint8_t
@@ -84,37 +59,26 @@ class psyq::if_then_engine::_private::expression
 
     //-------------------------------------------------------------------------
     /** @brief 条件式を構築する。
-        @param[in] in_chunk_key      this_type::chunk_key_ の初期値。
-        @param[in] in_expression_key this_type::key_ の初期値。
-        @param[in] in_logic          this_type::logic_ の初期値。
-        @param[in] in_kind           this_type::kind_ の初期値。
-        @param[in] in_element_begin  this_type::begin_ の初期値。
-        @param[in] in_element_end    this_type::end_ の初期値。
+        @param[in] in_chunk_key     this_type::chunk_key_ の初期値。
+        @param[in] in_logic         this_type::logic_ の初期値。
+        @param[in] in_kind          this_type::kind_ の初期値。
+        @param[in] in_element_begin this_type::begin_ の初期値。
+        @param[in] in_element_end   this_type::end_ の初期値。
      */
     public: expression(
         typename this_type::chunk_key in_chunk_key,
-        typename this_type::key in_expression_key,
         typename this_type::logic const in_logic,
         typename this_type::kind const in_kind,
         typename this_type::element_index const in_element_begin,
         typename this_type::element_index const in_element_end)
     PSYQ_NOEXCEPT:
     chunk_key_(std::move(in_chunk_key)),
-    key_(std::move(in_expression_key)),
     begin_(in_element_begin),
     end_(in_element_end),
     logic_(in_logic),
     kind_(in_kind)
     {
         PSYQ_ASSERT(in_element_begin < in_element_end);
-    }
-
-    /** @brief 条件式に対応する識別値を取得する。
-        @return @copydoc this_type::key_
-     */
-    public: typename this_type::key const& get_key() const PSYQ_NOEXCEPT
-    {
-        return this->key_;
     }
 
     /** @brief 条件式が格納されている要素条件チャンクの識別値を取得する。
@@ -195,20 +159,9 @@ class psyq::if_then_engine::_private::expression
         return local_and;
     }
 
-    public: static typename this_type::key_comparison::template function<
-        typename this_type::key_fetcher, std::less<typename this_type::key> >
-    make_key_less()
-    {
-        return this_type::key_comparison::make_function(
-            typename this_type::key_fetcher(),
-            std::less<typename this_type::key>());
-    }
-
     //-------------------------------------------------------------------------
     /// @brief 要素条件チャンクに対応する識別値。
     private: typename this_type::chunk_key chunk_key_;
-    /// @brief 条件式に対応する識別値。
-    private: typename this_type::key key_;
     /// @brief 条件式が使う要素条件の先頭インデクス番号。
     private: typename this_type::element_index begin_;
     /// @brief 条件式が使う要素条件の末尾インデクス番号。
@@ -223,7 +176,7 @@ class psyq::if_then_engine::_private::expression
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 複合条件式の要素条件。
 
-    @tparam template_expression_key @copydoc psyq::if_then_engine::_private::expression::key
+    @tparam template_expression_key @copydoc psyq::if_then_engine::_private::evaluator::expression_key
  */
 template<typename template_expression_key>
 class psyq::if_then_engine::_private::sub_expression
@@ -289,13 +242,11 @@ class psyq::if_then_engine::_private::status_transition
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 要素条件チャンク。
 
-    @tparam template_chunk_key                   @copydoc reservoir::chunk_key
     @tparam template_sub_expression_container    @copydoc evaluator::sub_expression_container
     @tparam template_status_transition_container @copydoc evaluator::status_transition_container
     @tparam template_status_comparison_container @copydoc evaluator::status_comparison_container
  */
 template<
-    typename template_chunk_key,
     typename template_sub_expression_container,
     typename template_status_transition_container,
     typename template_status_comparison_container>
@@ -303,39 +254,16 @@ class psyq::if_then_engine::_private::expression_chunk
 {
     private: typedef expression_chunk this_type;
 
-    /// @brief @copydoc reservoir::chunk_key
-    public: typedef template_chunk_key key;
-
-    /// @brief 要素条件チャンクの識別値を取得する関数オブジェクト。
-    public: struct key_fetcher
-    {
-        public: typename this_type::key const& operator()(
-            this_type const& in_chunk)
-        const PSYQ_NOEXCEPT
-        {
-            return in_chunk.key_;
-        }
-
-    }; // struct key_fetcher
-
-    /// @brief 要素条件チャンクの識別値を比較する関数オブジェクト。
-    public: typedef
-         psyq::member_comparison<this_type, typename this_type::key>
-         key_comparison;
-
     //-------------------------------------------------------------------------
     /** @brief チャンクを構築する。
-        @param[in] in_key       チャンクの識別値。
         @param[in] in_allocator メモリ割当子の初期値。
      */
-    public: expression_chunk(
-        typename this_type::key in_key,
-        typename template_sub_expression_container::allocator_type const& in_allocator)
-    :
+    public: explicit expression_chunk(
+        typename template_sub_expression_container::allocator_type const&
+            in_allocator):
     sub_expressions_(in_allocator),
     status_transitions_(in_allocator),
-    status_comparisons_(in_allocator),
-    key_(std::move(in_key))
+    status_comparisons_(in_allocator)
     {}
 
 #ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
@@ -345,13 +273,8 @@ class psyq::if_then_engine::_private::expression_chunk
     public: expression_chunk(this_type&& io_source):
     sub_expressions_(std::move(io_source.sub_expressions_)),
     status_transitions_(std::move(io_source.status_transitions_)),
-    status_comparisons_(std::move(io_source.status_comparisons_)),
-    key_(std::move(io_source.key_))
-    {
-        io_source.sub_expressions_.clear();
-        io_source.status_comparisons_.clear();
-        io_source.status_comparisons_.clear();
-    }
+    status_comparisons_(std::move(io_source.status_comparisons_))
+    {}
 
     /** @brief ムーブ代入演算子。
         @param[in,out] io_source ムーブ元となるインスタンス。
@@ -364,38 +287,20 @@ class psyq::if_then_engine::_private::expression_chunk
             this->sub_expressions_ = std::move(io_source.sub_expressions_);
             this->status_transitions_ = std::move(io_source.status_transitions_);
             this->status_comparisons_ = std::move(io_source.status_comparisons_);
-            this->key_ = std::move(io_source.key_);
-            io_source.sub_expressions_.clear();
-            io_source.status_comparisons_.clear();
-            io_source.status_comparisons_.clear();
         }
         return *this;
     }
 #endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
-    public: typename this_type::key const& get_key() const PSYQ_NOEXCEPT
-    {
-        return this->key_;
-    }
-
-    public: static typename this_type::key_comparison::template function<
-        typename this_type::key_fetcher, std::less<typename this_type::key> >
-    make_key_less()
-    {
-        return this_type::key_comparison::make_function(
-            typename this_type::key_fetcher(),
-            std::less<typename this_type::key>());
-    }
-
     //-------------------------------------------------------------------------
     /// @brief 複合条件式で使う要素条件のコンテナ。
     public: template_sub_expression_container sub_expressions_;
+
     /// @brief 状態変化条件式で使う要素条件のコンテナ。
     public: template_status_transition_container status_transitions_;
+
     /// @brief 状態比較条件式で使う要素条件のコンテナ。
     public: template_status_comparison_container status_comparisons_;
-    /// @brief この要素条件チャンクに対応する識別値。
-    private: typename this_type::key key_;
 
 }; // class psyq::if_then_engine::_private::expression_chunk
 

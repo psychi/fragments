@@ -605,7 +605,7 @@ namespace psyq_test
                     static_cast<driver::reservoir::status_value::unsigned_type>(
                         10u))));
         //PSYQ_ASSERT(!local_driver.extend_chunk(0, 0, nullptr));
-        local_driver.shrink_to_fit();
+        local_driver.rebuild(1024, 1024, 1024);
 
         PSYQ_ASSERT(
             0 < local_driver.reservoir_.extract_status(

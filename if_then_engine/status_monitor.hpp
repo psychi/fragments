@@ -108,25 +108,18 @@ class psyq::if_then_engine::_private::status_monitor
     /** @brief 状態変化を検知し、条件式監視器へ通知する。
         @param[in,out] io_expression_monitors
             状態変化を通知する条件式監視器のコンテナ。
-        @param[in] in_reservoir 状態変化を把握している状態貯蔵器。
+        @param[in] in_transition reservoir::_get_transition の戻り値。
         @retval true  状態監視器が空になった。
         @retval false 状態監視器が空ではない。
      */
-    public: template<typename template_container, typename template_reservoir>
+    public: template<typename template_container>
     bool notify_transition(
         template_container& io_expression_monitors,
-        template_reservoir const& in_reservoir)
+        std::int8_t const in_transition)
     {
         // 状態変化を検知する。
-        /** @todo
-            reservoir::_get_transition は二分探索を行うが、
-            監視しているすべての状態値に対し二分探索を毎回行うのは、
-            計算量として問題にならないか気になる。計算量が問題なら、
-            reservoir::status_container をハッシュ辞書にすべきか、要検討。
-         */
-        auto const local_transition(in_reservoir._get_transition(this->key_));
-        auto const local_existence(0 <= local_transition);
-        if (0 < local_transition || local_existence != this->last_existence_)
+        auto const local_existence(0 <= in_transition);
+        if (0 < in_transition || local_existence != this->last_existence_)
         {
             template_container::value_type::notify_status_transition(
                 io_expression_monitors, this->expression_keys_, local_existence);

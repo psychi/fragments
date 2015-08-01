@@ -168,24 +168,24 @@ class psyq::if_then_engine::_private::reservoir
         @{
      */
     /** @brief 空の状態貯蔵器を構築する。
-        @param[in] in_reserve_properties 状態値プロパティ辞書のバケット数。
-        @param[in] in_reserve_chunks     状態値ビット列チャンク辞書のバケット数。
-        @param[in] in_allocator          使用するメモリ割当子の初期値。
+        @param[in] in_chunk_buckets    チャンク辞書のバケット数。
+        @param[in] in_property_buckets 状態値プロパティ辞書のバケット数。
+        @param[in] in_allocator        使用するメモリ割当子の初期値。
      */
     public: reservoir(
-        std::size_t const in_reserve_properties,
-        std::size_t const in_reserve_chunks,
+        std::size_t const in_chunk_buckets,
+        std::size_t const in_property_buckets,
         typename this_type::allocator_type const& in_allocator =
             this_type::allocator_type()):
-    properties_(
-        in_reserve_properties,
-        typename this_type::property_map::hasher(),
-        typename this_type::property_map::key_equal(),
-        in_allocator),
     chunks_(
-        in_reserve_chunks,
+        in_chunk_buckets,
         typename this_type::chunk_map::hasher(),
         typename this_type::chunk_map::key_equal(),
+        in_allocator),
+    properties_(
+        in_property_buckets,
+        typename this_type::property_map::hasher(),
+        typename this_type::property_map::key_equal(),
         in_allocator)
     {}
 
@@ -194,8 +194,8 @@ class psyq::if_then_engine::_private::reservoir
         @param[in,out] io_source ムーブ元となるインスタンス。
      */
     public: reservoir(this_type&& io_source) PSYQ_NOEXCEPT:
-    properties_(std::move(io_source.properties_)),
-    chunks_(std::move(io_source.chunks_))
+    chunks_(std::move(io_source.chunks_)),
+    properties_(std::move(io_source.properties_))
     {}
 
     /** @brief ムーブ代入演算子。
@@ -204,8 +204,8 @@ class psyq::if_then_engine::_private::reservoir
      */
     public: this_type& operator=(this_type&& io_source) PSYQ_NOEXCEPT
     {
-        this->properties_ = std::move(io_source.properties_);
         this->chunks_ = std::move(io_source.chunks_);
+        this->properties_ = std::move(io_source.properties_);
         return *this;
     }
 #endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
@@ -219,25 +219,29 @@ class psyq::if_then_engine::_private::reservoir
         return this->properties_.get_allocator();
     }
 
-    /// @brief 状態貯蔵器を再構築し、メモリ領域を必要最小限にする。
-    public: void shrink_to_fit()
+    /** @brief 状態貯蔵器を再構築する。
+        @param[in] in_chunk_buckets  チャンク辞書のバケット数。
+        @param[in] in_status_buckets 状態値プロパティ辞書のバケット数。
+     */
+    public: void rebuild(
+        std::size_t const in_chunk_buckets,
+        std::size_t const in_status_buckets)
     {
         // 新たな状態値ビット列チャンク辞書を用意する。
         typename this_type::chunk_map local_chunks(
-            this->chunks_.bucket_count(),
+            in_chunk_buckets,
             this->chunks_.hash_function(),
             this->chunks_.key_eq(),
             this->chunks_.get_allocator());
         for (auto& local_old_chunk: this->chunks_)
         {
-            auto const local_insert(
-                local_chunks.insert(
-                    typename this_type::chunk_map::value_type(
-                        local_old_chunk.first,
-                        typename this_type::chunk_map::mapped_type(
-                            local_old_chunk.second.bit_blocks_.get_allocator()))));
-            PSYQ_ASSERT(local_insert.second);
-            auto& local_new_chunk(local_insert.first->second);
+            auto const local_emplace(
+                local_chunks.emplace(
+                    local_old_chunk.first,
+                    typename this_type::chunk_map::mapped_type(
+                        local_old_chunk.second.bit_blocks_.get_allocator())));
+            PSYQ_ASSERT(local_emplace.second);
+            auto& local_new_chunk(local_emplace.first->second);
             local_new_chunk.bit_blocks_.reserve(
                 local_old_chunk.second.bit_blocks_.size());
             local_new_chunk.empty_fields_.reserve(
@@ -246,7 +250,7 @@ class psyq::if_then_engine::_private::reservoir
 
         // 現在の辞書をコピーして整理し、新たな辞書を構築する。
         typename this_type::property_map local_properties(
-            this->properties_.bucket_count(),
+            in_status_buckets,
             this->properties_.hash_function(),
             this->properties_.key_eq(),
             this->properties_.get_allocator());
@@ -1066,19 +1070,18 @@ class psyq::if_then_engine::_private::reservoir
         PSYQ_ASSERT(in_format != this_type::status_value::kind_EMPTY);
 
         // 状態値プロパティを追加する。
-        auto const local_insert(
-            io_properties.insert(
-                typename this_type::property_map::value_type(
-                    in_status_key,
-                    typename this_type::property_map::mapped_type(
-                        io_chunk.first, in_format))));
-        if (!local_insert.second)
+        auto const local_emplace(
+            io_properties.emplace(
+                in_status_key,
+                typename this_type::property_map::mapped_type(
+                    io_chunk.first, in_format)));
+        if (!local_emplace.second)
         {
             return nullptr;
         }
 
         // 状態値のビット位置を決定する。
-        auto& local_property(*local_insert.first);
+        auto& local_property(*local_emplace.first);
         if (!local_property.second.set_bit_position(
                 io_chunk.second.make_status_field(
                     this_type::get_bit_width(in_format))))
@@ -1230,21 +1233,20 @@ class psyq::if_then_engine::_private::reservoir
         typename this_type::chunk_map& io_chunks,
         typename this_type::chunk_key const& in_chunk_key)
     {
-        auto const local_insert(
-            io_chunks.insert(
-                typename this_type::chunk_map::value_type(
-                    in_chunk_key,
-                    typename this_type::chunk_map::mapped_type(
-                        io_chunks.get_allocator()))));
-        return *local_insert.first;
+        auto const local_emplace(
+            io_chunks.emplace(
+                in_chunk_key,
+                typename this_type::chunk_map::mapped_type(
+                    io_chunks.get_allocator())));
+        return *local_emplace.first;
     }
 
     //-------------------------------------------------------------------------
-    /// @brief 状態値プロパティの辞書。
-    private: typename this_type::property_map properties_;
-
     /// @brief 状態値ビット列チャンクの辞書。
     private: typename this_type::chunk_map chunks_;
+
+    /// @brief 状態値プロパティの辞書。
+    private: typename this_type::property_map properties_;
 
 }; // class psyq::if_then_engine::_private::reservoir
 

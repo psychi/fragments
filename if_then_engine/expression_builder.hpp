@@ -219,7 +219,6 @@ class psyq::if_then_engine::expression_builder
                 }
             }
         }
-        io_evaluator.shrink_to_fit();
         return local_count;
     }
 
@@ -248,7 +247,7 @@ class psyq::if_then_engine::expression_builder
         typename this_type::table_attribute const& in_attribute)
     {
         // 条件式の識別値を取得する。
-        auto local_key(
+        auto const local_key(
             io_hasher(in_table.find_cell(in_row_index, in_attribute.key_.first)));
         if (local_key == io_hasher(typename template_hasher::argument_type())
             || io_evaluator._find_expression(local_key) != nullptr)
@@ -292,7 +291,7 @@ class psyq::if_then_engine::expression_builder
                 io_hasher,
                 io_workspace.sub_expressions_,
                 in_chunk_key,
-                std::move(local_key),
+                local_key,
                 local_logic,
                 io_evaluator,
                 in_table,
@@ -309,7 +308,7 @@ class psyq::if_then_engine::expression_builder
                 io_hasher,
                 io_workspace.status_transitions_,
                 in_chunk_key,
-                std::move(local_key),
+                local_key,
                 local_logic,
                 in_reservoir,
                 in_table,
@@ -326,7 +325,7 @@ class psyq::if_then_engine::expression_builder
                 io_hasher,
                 io_workspace.status_comparisons_,
                 in_chunk_key,
-                std::move(local_key),
+                local_key,
                 local_logic,
                 in_reservoir,
                 in_table,
@@ -364,8 +363,8 @@ class psyq::if_then_engine::expression_builder
         template_evaluator& io_evaluator,
         template_hasher& io_hasher,
         template_element_container& io_elements,
-        typename template_evaluator::reservoir::chunk_key in_chunk_key,
-        typename template_evaluator::expression::key in_expression_key,
+        typename template_evaluator::reservoir::chunk_key const& in_chunk_key,
+        typename template_evaluator::expression_key const& in_expression_key,
         typename template_evaluator::expression::logic const in_logic,
         template_element_server const& in_elements,
         typename this_type::relation_table const& in_table,
@@ -386,10 +385,7 @@ class psyq::if_then_engine::expression_builder
                 i);
             ++i);
         return io_evaluator.register_expression(
-            std::move(in_chunk_key),
-            std::move(in_expression_key),
-            in_logic,
-            io_elements);
+            in_chunk_key, in_expression_key, in_logic, io_elements);
     }
 
     /** @brief 文字列表を解析し、複合条件式の要素条件を構築する。
@@ -430,7 +426,7 @@ class psyq::if_then_engine::expression_builder
         {
             return true;
         }
-        auto local_sub_key(io_hasher(local_sub_key_cell));
+        auto const local_sub_key(io_hasher(local_sub_key_cell));
         PSYQ_ASSERT(
             /** @note
                 無限ループを防ぐため、複合条件式で使う下位の条件式は、
@@ -457,7 +453,7 @@ class psyq::if_then_engine::expression_builder
 
         // 複合条件式に要素条件を追加する。
         io_elements.emplace_back(
-            std::move(local_sub_key), local_condition_parser.get_value());
+            local_sub_key, local_condition_parser.get_value());
         return true;
     }
 

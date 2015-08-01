@@ -24,7 +24,7 @@ namespace psyq
 //-------------------------------------------------------------------------
 /** @brief 条件挙動。
 
-    @tparam template_expression_key @copydoc psyq::if_then_engine::_private::expression::key
+    @tparam template_expression_key @copydoc psyq::if_then_engine::_private::evaluator::expression_key
     @tparam template_evaluation     @copydoc psyq::if_then_engine::evaluation
     @tparam template_priority       @copydoc psyq::if_then_engine::_private::dispatcher::function_priority
  */

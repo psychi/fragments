@@ -36,7 +36,7 @@ namespace psyq
     - driver::progress を時間フレーム毎に呼び出す。
       条件式の評価が変化していたら、挙動関数が呼び出される。
 
-    @tparam template_float     @copydoc reservoir::status::float_type
+    @tparam template_float     @copydoc reservoir::status_value::float_type
     @tparam template_priority  @copydoc dispatcher::function_priority
     @tparam template_hasher    @copydoc hasher
     @tparam template_allocator @copydoc allocator_type
@@ -107,7 +107,7 @@ class psyq::if_then_engine::driver
     //@{
     /** @brief 空の駆動器を構築する。
         @param[in] in_reserve_chunks      チャンクの予約数。
-        @param[in] in_reserve_statuses      状態値の予約数。
+        @param[in] in_reserve_statuses    状態値の予約数。
         @param[in] in_reserve_expressions 条件式の予約数。
         @param[in] in_reserve_caches      条件挙動キャッシュの予約数。
         @param[in] in_hash_function       ハッシュ関数オブジェクトの初期値。
@@ -122,9 +122,9 @@ class psyq::if_then_engine::driver
         typename this_type::allocator_type const& in_allocator =
             this_type::allocator_type())
     :
-    reservoir_(in_reserve_statuses, in_reserve_chunks, in_allocator),
+    reservoir_(in_reserve_chunks, in_reserve_statuses, in_allocator),
     modifier_(in_reserve_caches, in_allocator),
-    evaluator_(in_reserve_expressions, in_reserve_chunks, in_allocator),
+    evaluator_(in_reserve_chunks, in_reserve_expressions, in_allocator),
     dispatcher_(
         in_reserve_expressions,
         in_reserve_statuses,
@@ -165,12 +165,16 @@ class psyq::if_then_engine::driver
     }
 #endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
-    /// @brief 駆動器を再構築し、メモリ領域を必要最小限にする。
-    public: void shrink_to_fit()
+    /** @brief 駆動器を再構築し、メモリ領域を必要最小限にする。
+     */
+    public: void rebuild(
+        std::size_t const in_chunk_buckets,
+        std::size_t const in_status_buckets,
+        std::size_t const in_expression_buckets)
     {
-        this->reservoir_.shrink_to_fit();
+        this->reservoir_.rebuild(in_chunk_buckets, in_status_buckets);
         //this->modifier_.shrink_to_fit();
-        this->evaluator_.shrink_to_fit();
+        this->evaluator_.rebuild(in_chunk_buckets, in_expression_buckets);
         this->dispatcher_.shrink_to_fit();
         this->behavior_chunks_.shrink_to_fit();
         for (auto& local_behavior_chunk: this->behavior_chunks_)
@@ -356,7 +360,7 @@ class psyq::if_then_engine::driver
      */
     public: bool extend_chunk(
         typename this_type::reservoir::chunk_key const& in_chunk_key,
-        typename this_type::evaluator::expression::key const& in_expression_key,
+        typename this_type::evaluator::expression_key const& in_expression_key,
         typename this_type::dispatcher::condition const in_condition,
         typename this_type::dispatcher::function_shared_ptr const& in_function,
         typename this_type::dispatcher::function_priority const in_priority =

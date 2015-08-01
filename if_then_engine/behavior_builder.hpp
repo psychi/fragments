@@ -359,7 +359,7 @@ class psyq::if_then_engine::behavior_builder
             typename this_type::dispatcher::function(
                 /// @todo io_modifier を参照渡しするのは危険。対策を考えたい。
                 [=, &io_modifier](
-                    typename this_type::dispatcher::evaluator::expression::key
+                    typename this_type::dispatcher::evaluator::expression_key
                         const&,
                     psyq::if_then_engine::evaluation const,
                     psyq::if_then_engine::evaluation const)

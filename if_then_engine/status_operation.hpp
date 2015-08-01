@@ -89,10 +89,10 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 状態値を操作する。
-    @tparam template_status_key      演算子の左辺値となる状態値の識別値の型。
+/** @brief 状態値を操作するための引数の集合。
+    @tparam template_status_key      状態値を操作する演算子の左辺値となる状態値の識別値の型。
     @tparam template_status_operator 状態値を操作する演算子の型。
-    @tparam template_status_value    演算子の右辺値となる状態値の型。
+    @tparam template_status_value    状態値を操作する演算子の右辺値となる状態値の型。
  */
 template<
     typename template_status_key,
@@ -104,37 +104,35 @@ class psyq::if_then_engine::_private::status_operation
     private: typedef status_operation this_type;
 
     //-------------------------------------------------------------------------
-    /** @brief 状態操作を構築する。
+    /** @brief 状態操作引数を構築する。
         @param[in] in_key      this_type::key_ の初期値。
         @param[in] in_operator this_type::operator_ の初期値。
         @param[in] in_value    this_type::value_ の初期値。
      */
     public: status_operation(
         template_status_key in_key,
-        template_status_operator const in_operator,
+        template_status_operator in_operator,
         template_status_value in_value)
     PSYQ_NOEXCEPT:
     value_(std::move(in_value)),
     key_(std::move(in_key)),
-    operator_(in_operator),
+    operator_(std::move(in_operator)),
     right_key_(false)
     {}
 
-    /** @brief 状態操作を構築する。
+    /** @brief 状態操作引数を構築する。
         @param[in] in_key       this_type::key_ の初期値。
         @param[in] in_operator  this_type::operator_ の初期値。
         @param[in] in_right_key 右辺値となる状態値の識別値。
      */
     public: status_operation(
         template_status_key in_key,
-        template_status_operator const in_operator,
+        template_status_operator in_operator,
         template_status_key const in_right_key)
     PSYQ_NOEXCEPT:
-    value_(
-        static_cast<typename template_status_value::unsigned_type>(
-            in_right_key)),
+    value_(static_cast<typename template_status_value::unsigned_type>(in_right_key)),
     key_(std::move(in_key)),
-    operator_(in_operator),
+    operator_(std::move(in_operator)),
     right_key_(true)
     {}
     static_assert(
@@ -175,7 +173,7 @@ class psyq::if_then_engine::_private::status_operation
 
     /** @brief psyq::if_then_engine 管理者以外は、この関数は使用禁止。
 
-        文字列表を解析し、状態操作を構築する。
+        文字列表を解析し、状態操作引数を構築する。
 
         @param[in,out] io_hasher   文字列のハッシュ関数。
         @param[in] in_table        解析する文字列表。
@@ -331,11 +329,11 @@ class psyq::if_then_engine::_private::status_operation
         template_hasher& io_hasher,
         typename template_hasher::argument_type const& in_string)
     {
+        // 状態値の接頭辞があるなら、状態値の識別値を構築する。
         typename template_hasher::argument_type const local_status_header(
             PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_RIGHT_STATUS); 
         if (local_status_header == in_string.substr(0, local_status_header.size()))
         {
-            // 状態値の識別値を構築する。
             this->right_key_ = true;
             this->value_ = template_status_value(
                 static_cast<typename template_status_value::unsigned_type>(
@@ -343,12 +341,12 @@ class psyq::if_then_engine::_private::status_operation
             return;
         }
 
+        // ハッシュ値の接頭辞があるなら、ハッシュ値を構築する。
         this->right_key_ = false;
         typename template_hasher::argument_type const local_hash_header(
             PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_RIGHT_HASH); 
         if (local_hash_header == in_string.substr(0, local_hash_header.size()))
         {
-            // ハッシュ値を構築する。
             static_assert(
                 sizeof(typename template_hasher::result_type)
                 <= sizeof(typename template_status_value::unsigned_type)
@@ -461,10 +459,13 @@ class psyq::if_then_engine::_private::status_operation
     //-------------------------------------------------------------------------
     /// @brief 演算の右辺値となる値。
     private: template_status_value value_;
+
     /// @brief 演算の左辺値となる状態値の識別値。
     private: template_status_key key_;
+
     /// @brief 演算子の種類。
     private: template_status_operator operator_;
+
     /// @brief 右辺値を状態値から取得するか。
     private: bool right_key_;
 

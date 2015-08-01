@@ -197,8 +197,8 @@ class psyq::if_then_engine::status_builder
             io_hasher(in_table.find_cell(in_row_index, in_attribute.key_.first)));
         if (local_status_key == io_hasher(
                 typename template_hasher::argument_type())
-            || io_reservoir.extract_variety(local_status_key)
-                != template_reservoir::status::kind_EMPTY)
+            || io_reservoir.extract_format(local_status_key)
+                != template_reservoir::status_value::kind_EMPTY)
         {
             // 状態値の識別値が空だったか、重複していた。
             PSYQ_ASSERT(false);
@@ -301,7 +301,7 @@ class psyq::if_then_engine::status_builder
         std::size_t const in_size)
     {
         psyq::string::numeric_parser<
-            typename template_reservoir::status::unsigned_type>
+            typename template_reservoir::status_value::unsigned_type>
                 const local_parser(in_value_cell);
         if (!local_parser.is_completed())
         {
@@ -331,7 +331,7 @@ class psyq::if_then_engine::status_builder
         std::size_t const in_size)
     {
         psyq::string::numeric_parser<
-            typename template_reservoir::status::signed_type>
+            typename template_reservoir::status_value::signed_type>
                 const local_parser(in_value_cell);
         if (!local_parser.is_completed())
         {
@@ -359,7 +359,7 @@ class psyq::if_then_engine::status_builder
         typename this_type::relation_table::string::view const& in_value_cell)
     {
         psyq::string::numeric_parser<
-            typename template_reservoir::status::float_type>
+            typename template_reservoir::status_value::float_type>
                 const local_parser(in_value_cell);
         if (!local_parser.is_completed())
         {

@@ -7,6 +7,7 @@
 
 #include "./driver.hpp"
 #include "../string/storage.hpp"
+#include "../static_deque.hpp"
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace tesv
@@ -32,9 +33,11 @@ namespace tesv
 
     namespace asset
     {
+        class efficacy_property;
         class item_property;
+        class item_efficacy;
         class cooking_recipi;
-        class food_potency;
+        class food_efficacy;
     } // namespace item
 } // namespace tesv
 
@@ -101,47 +104,31 @@ class tesv::asset::item_property
     {
         return
             "WEIGHT, PRICE, CATEGORY,    KEY,\n"
-            "   0.2,     3, Raw Meat,    Chicken Breast,\n"
-            "   0.1,     0, Raw Meat,    Clam Meat,\n"
-            "   0.2,     3, Raw Meat,    Dog Meat,\n"
-            "   3  ,     6, Raw Meat,    Freash Meat,\n"
-            "   1  ,     3, Raw Meat,    Horker Meat,\n"
-            "   2  ,     3, Raw Meat,    Horse Meat,\n"
-            "   1  ,     3, Raw Meat,    Leg of Goat,\n"
-            "   3  ,     6, Raw Meat,    Mammoth Snout,\n"
-            "   0.1,     3, Raw Meat,    Mudcrab Legs,\n"
-            "   0.2,     3, Raw Meat,    Pheasant Breast,\n"
-            "   0.2,     4, Raw Meat,    Raw Beaf,\n"
-            "   0.1,     2, Raw Meat,    Raw Rabbit Leg,\n"
-            "   0.1,     3, Raw Meat,    Salmon Meat,\n"
-            "   2  ,     4, Raw Meat,    Venison,\n"
-            "   0.25,    2, Vegetables,  Cabbage,\n"
-            "   0.1,     1, Vegetables,  Carrot,\n"
-            "   0.2,     1, Vegetables,  Gourd,\n"
-            "   0.1,     3, Vegetables,  Green Apple,\n"
-            "   0.1,     1, Vegetables,  Leek,\n"
-            "   0.1,     1, Vegetables,  Potato,\n"
-            "   0.1,     3, Vegetables,  Red Apple,\n"
-            "   0.1,     4, Vegetables,  Tomato,\n"
-            "   0.1,     1, Baking Food, Butter,\n"
-            "   1  ,     2, Baking Food, Jug of Milk,\n"
-            "   0.5,     1, Baking Food, Sack of Flour,\n"
-            //
-            "   0.5,     8, FOOD,     Apple Cabbage Stew,\n"
-            "   0.5,     5, FOOD,     Apple Pie,\n"
-            "   1  ,     2, FOOD,     Ash Hopper Leg,\n"
-            "   0.5,     2, FOOD,     Ash Hopper Meet,\n"
-            "   0.1,     1, FOOD,     Ash Yam,\n"
-            "   0.1,     2, FOOD,     Baked Potatoes,\n"
-            "   0.5,     8, FOOD,     Beef Stew,\n"
-            "   1  ,     2, FOOD,     Boar Meat,\n"
-            "   0.2,     2, FOOD,     Bread,\n"
-
-            "   0.5,     8, FOOD,     Horker Stew,\n"
-
-            "   0.5,     5, FOOD,     Vegetable Soup,\n"
-            "   2  ,     5, FOOD,     Venison Chop,\n"
-            "   0.5,     8, FOOD,     Venison Stew,\n"
+            "   0.2,     3, raw meat,    chicken breast,\n"
+            "   0.1,     0, raw meat,    clam meat,\n"
+            "   0.2,     3, raw meat,    dog meat,\n"
+            "   3  ,     6, raw meat,    freash meat,\n"
+            "   1  ,     3, raw meat,    horker meat,\n"
+            "   2  ,     3, raw meat,    horse meat,\n"
+            "   1  ,     3, raw meat,    leg of goat,\n"
+            "   3  ,     6, raw meat,    mammoth snout,\n"
+            "   0.1,     3, raw meat,    mudcrab legs,\n"
+            "   0.2,     3, raw meat,    pheasant breast,\n"
+            "   0.2,     4, raw meat,    raw beaf,\n"
+            "   0.1,     2, raw meat,    raw rabbit leg,\n"
+            "   0.1,     3, raw meat,    salmon meat,\n"
+            "   2  ,     4, raw meat,    venison,\n"
+            "   0.25,    2, vegetables,  cabbage,\n"
+            "   0.1,     1, vegetables,  carrot,\n"
+            "   0.2,     1, vegetables,  gourd,\n"
+            "   0.1,     3, vegetables,  green apple,\n"
+            "   0.1,     1, vegetables,  leek,\n"
+            "   0.1,     1, vegetables,  potato,\n"
+            "   0.1,     3, vegetables,  red apple,\n"
+            "   0.1,     4, vegetables,  tomato,\n"
+            "   0.1,     1, baking food, butter,\n"
+            "   1  ,     2, baking food, jug of milk,\n"
+            "   0.5,     1, baking food, sack of flour,\n"
             "";
     }
 
@@ -269,26 +256,56 @@ class tesv::asset::cooking_recipi
 {
     private: typedef cooking_recipi this_type;
 
+    public: enum: std::uint8_t
+    {
+        MAX_INGREDIENTS = 4, ///< レシピで使う食材の最大数。
+    };
+
+    public: typedef
+        psyq::static_deque<tesv::flyweight_string, this_type::MAX_INGREDIENTS>
+        ingredient_container;
+
     public: static tesv::string_view csv_string()
     {
         return
-            "KEY,                 RESOURCE,\n"
-            "Apple Cabbage Stew,  Salt Pile,          Red Apple,  Cabbage,\n"
-            "Beef Stew,           Raw Beef,           Carrot,     Salt Pile, Garlic,\n"
-            "Cabbage Potate Soup, Potate,             Salt Pile,  Leek,      Cabbage,\n"
-            "Cooked Beef,         Salt Pile,          Raw Beef,\n"
-            "Elsweyr Fondue,      Eidar Cheese Wheel, Moon Sugar, Ale,\n"
+            "KEY,                      INGREDIENT,\n"
+            "apple cabbage stew,       cabbage,         red apple,          salt pile,\n"
+            "beef stew,                carrot,          garlic,             raw beef,    salt pile,\n"
+            "cabbage potate soup,      cabbage,         leek,               potate,      salt pile,\n"
+            "cabbage soup,             cabbage,         salt pile,\n"
+            "clam chawder,             clam meat,       potate,             jug of milk, butter,\n"
+            "cooked beef,              raw beef,        salt pile,\n"
+            "elsweyr fondue,           ale,             eidar cheese wheel, moon sugar,\n"
+            "grilled chicken breast,   chiken breast,   salt pile,\n"
+            "horker and ash yam stew,  ash yam,         horker meat,        garlic,\n"
+            "horker loaf,              horker meat,     salt pile,\n"
+            "horker stew,              garlic,          horker meat,        lavender,    tomato,\n"
+            "horse haunch,             horse meat,      salt pile,\n"
+            "leg of goat roast,        leg of goat,     salt pile,\n"
+            "mammoth staek,            mammoth snout,   salt pile,\n"
+            "pheasant roast,           pheasant breast, salt pile,\n"
+            "potate soup,              potate,          salt pile,\n"
+            "rabbit haunch,            raw rabbit leg,  salt pile,\n"
+            "salmon steak,             salmon meat,     salt pile,\n"
+            "steamed mudcrab legs,     mudclab legs,    butter,\n"
+            "tomato soup,              garlic,          leek,               salt pile,   tomato,\n"
+            "vegetable soup,           cabbage,         leek,               potate,      tomato,\n"
+            "venison chop,             salt pile,       venison,\n"
+            "venison stew,             leek,            potate,             salt pile,   venison,\n"
             "";
     }
+
+    public: tesv::flyweight_string key_;
+    public: this_type::ingredient_container ingredients_;
 
 }; // class tesv::asset::cooking_recipi
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 食料の効能。
  */
-class tesv::asset::food_potency
+class tesv::asset::food_efficacy
 {
-    private: typedef food_potency this_type;
+    private: typedef food_efficacy this_type;
 
     /// @brief 食料使用時の回復効果。
     public: class recovery
@@ -331,23 +348,23 @@ class tesv::asset::food_potency
     {
         return
             "HEALTH,,,   STAMINA,,,  KEY,\n"
-            "10,  ,    , 15,  ,    , Apple Cabbage Stew,\n"
-            "10,  ,    ,   ,  ,    , Apple Pie,\n"
-            " 2,  ,    ,   ,  ,    , Ash Hopper Leg,\n"
+            "10,  ,    , 15,  ,    , apple cabbage stew,\n"
+            "10,  ,    ,   ,  ,    , apple Pie,\n"
+            " 2,  ,    ,   ,  ,    , Ash Hopper leg,\n"
             " 2,  ,    ,   ,  ,    , Ash Hopper Meet,\n"
             " 1,  ,    ,   ,  ,    , Ash Yam,\n"
             " 5,  ,    ,   ,  ,    , Baked Potatoes,\n"
-            "  ,  ,    ,   , 2, 720, Beef Stew,\n"
-            " 2,  ,    ,   ,  ,    , Boar Meat,\n"
+            "  ,  ,    ,   , 2, 720, Beef stew,\n"
+            " 2,  ,    ,   ,  ,    , Boar meat,\n"
             " 2,  ,    ,   ,  ,    , Bread,\n"
 
-            " 1,  ,    ,   ,  ,    , Horker Meat,\n"
-            "15, 1, 720, 15,  ,    , Horker Stew,\n"
+            " 1,  ,    ,   ,  ,    , horker meat,\n"
+            "15, 1, 720, 15,  ,    , horker stew,\n"
 
-            "  , 1, 720,   , 1, 720, Vegetable Soup,\n"
-            " 2,  ,    ,   ,  ,    , Venison,\n"
-            " 5,  ,    ,   ,  ,    , Venison Chop,\n"
-            "  , 1, 720, 15, 1, 720, Venison Stew,\n"
+            "  , 1, 720,   , 1, 720, vegetable Soup,\n"
+            " 2,  ,    ,   ,  ,    , venison,\n"
+            " 5,  ,    ,   ,  ,    , venison Chop,\n"
+            "  , 1, 720, 15, 1, 720, venison stew,\n"
             "";
     }
 
@@ -397,7 +414,7 @@ class tesv::asset::food_potency
     }
 
     //-------------------------------------------------------------------------
-    private: food_potency() PSYQ_NOEXCEPT {}
+    private: food_efficacy() PSYQ_NOEXCEPT {}
 
     /** @brief 文字列表を解析し、食料効能を構築する。
         @param[out] out_instance 構築した食料効能の出力先。
@@ -458,10 +475,8 @@ class tesv::asset::food_potency
     {
         // 即効性の回復量を取得する。
         out_recovery.point_ = 0;
-        auto const local_parse_point(
-            in_table.parse_cell(
-                out_recovery.point_, in_row_index, in_column_index, true));
-        if (!local_parse_point)
+        if (!in_table.parse_cell(
+                out_recovery.point_, in_row_index, in_column_index, true))
         {
             PSYQ_ASSERT(false);
             return false;
@@ -469,10 +484,8 @@ class tesv::asset::food_potency
 
         // 時限制の回復量を取得する。
         out_recovery.time_point_ = 0;
-        auto const local_parse_time_point(
-            in_table.parse_cell(
-                out_recovery.time_point_, in_row_index, in_column_index + 1, true));
-        if (!local_parse_time_point)
+        if (!in_table.parse_cell(
+                out_recovery.time_point_, in_row_index, in_column_index + 1, true))
         {
             PSYQ_ASSERT(false);
             return false;
@@ -480,10 +493,8 @@ class tesv::asset::food_potency
 
         // 時限制の回復時間を取得する。
         out_recovery.time_ = 0;
-        auto const local_parse_time(
-            in_table.parse_cell(
-                out_recovery.time_, in_row_index, in_column_index + 2, true));
-        if (!local_parse_time)
+        if (!in_table.parse_cell(
+                out_recovery.time_, in_row_index, in_column_index + 2, true))
         {
             PSYQ_ASSERT(false);
             return false;
@@ -500,7 +511,7 @@ class tesv::asset::food_potency
     /// @brief 使用時のスタミナ回復料。
     public: this_type::recovery stamina_;
 
-}; // class tesv::asset::food_potency
+}; // class tesv::asset::food_efficacy
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq_test
@@ -529,9 +540,9 @@ namespace psyq_test
                 tesv::asset::item_property::csv_string(),
                 tesv::void_allocator()));
         auto const local_food_potencies(
-            tesv::asset::food_potency::build(
+            tesv::asset::food_efficacy::build(
                 local_string_factory,
-                tesv::asset::food_potency::csv_string(),
+                tesv::asset::food_efficacy::csv_string(),
                 tesv::void_allocator()));
 
         // 状態値CSV文字列を構築する。
@@ -590,8 +601,8 @@ namespace psyq_test
             local_driver.reservoir_.register_status(
                 local_chunk_key,
                 local_driver.hash_function_("10"),
-                driver::reservoir::status(
-                    static_cast<driver::reservoir::status::unsigned_type>(
+                driver::reservoir::status_value(
+                    static_cast<driver::reservoir::status_value::unsigned_type>(
                         10u))));
         //PSYQ_ASSERT(!local_driver.extend_chunk(0, 0, nullptr));
         local_driver.shrink_to_fit();
@@ -599,22 +610,22 @@ namespace psyq_test
         PSYQ_ASSERT(
             0 < local_driver.reservoir_.extract_status(
                 local_driver.hash_function_("status_bool")).compare(
-                    driver::reservoir::status::comparison_EQUAL,
+                    driver::reservoir::status_value::comparison_EQUAL,
                     true));
         PSYQ_ASSERT(
             0 < local_driver.reservoir_.extract_status(
                 local_driver.hash_function_("status_unsigned")).compare(
-                    driver::reservoir::status::comparison_EQUAL,
+                    driver::reservoir::status_value::comparison_EQUAL,
                     10u));
         PSYQ_ASSERT(
             0 < local_driver.reservoir_.extract_status(
                 local_driver.hash_function_("status_signed")).compare(
-                    driver::reservoir::status::comparison_EQUAL,
+                    driver::reservoir::status_value::comparison_EQUAL,
                     -20));
         PSYQ_ASSERT(
             0 < local_driver.reservoir_.extract_status(
                 local_driver.hash_function_("status_float")).compare(
-                    driver::reservoir::status::comparison_GREATER_EQUAL,
+                    driver::reservoir::status_value::comparison_GREATER_EQUAL,
                     1.25));
         local_driver.progress();
 

@@ -1,16 +1,16 @@
 ﻿/** @file
-    @brief @copybrief psyq::if_then_engine::_private::status
+    @brief @copybrief psyq::if_then_engine::_private::status_value
     @author Hillco Psychi (https://twitter.com/psychi)
  */
-#ifndef PSYQ_IF_THEN_ENGINE_STATUS_HPP_
-#define PSYQ_IF_THEN_ENGINE_STATUS_HPP_
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_VALUE_HPP_
+#define PSYQ_IF_THEN_ENGINE_STATUS_VALUE_HPP_
 
 #include <cstdint>
 #include "../assert.hpp"
 
-#ifndef PSYQ_IF_THEN_ENGINE_STATUS_EPSILON_MAG
-#define PSYQ_IF_THEN_ENGINE_STATUS_EPSILON_MAG 4
-#endif // !default(PSYQ_IF_THEN_ENGINE_STATUS_EPSILON_MAG)
+#ifndef PSYQ_IF_THEN_ENGINE_STATUS_VALUE_EPSILON_MAG
+#define PSYQ_IF_THEN_ENGINE_STATUS_VALUE_EPSILON_MAG 4
+#endif // !default(PSYQ_IF_THEN_ENGINE_STATUS_VALUE_EPSILON_MAG)
 
 namespace psyq
 {
@@ -29,7 +29,7 @@ namespace psyq
         namespace _private
         {
             /// @cond
-            template<typename, typename> class status;
+            template<typename, typename> class status_value;
             /// @endcond
         } // namespace _private
     } // namespace if_then_engine
@@ -37,14 +37,14 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /** @brief 状態値のやりとりに使う容れ物。
-    @tparam template_unsigned @copydoc status::unsigned_type
-    @tparam template_float    @copydoc status::float_type
+    @tparam template_unsigned @copydoc status_value::unsigned_type
+    @tparam template_float    @copydoc status_value::float_type
  */
 template<typename template_unsigned, typename template_float>
-class psyq::if_then_engine::_private::status
+class psyq::if_then_engine::_private::status_value
 {
     /// @brief thisが指す値の型。
-    private: typedef status this_type;
+    private: typedef status_value this_type;
 
     /// @brief 状態値で扱う符号なし整数の型。
     public: typedef template_unsigned unsigned_type;
@@ -113,12 +113,12 @@ class psyq::if_then_engine::_private::status
         @{
      */
     /// @brief 空値を構築する。
-    public: status() PSYQ_NOEXCEPT: kind_(this_type::kind_EMPTY) {}
+    public: status_value() PSYQ_NOEXCEPT: kind_(this_type::kind_EMPTY) {}
 
     /** @brief 論理型の値を構築する。
         @param[in] in_bool 初期値となる論理値。
      */
-    public: explicit status(bool const in_bool)
+    public: explicit status_value(bool const in_bool)
     PSYQ_NOEXCEPT: kind_(this_type::kind_BOOL)
     {
         this->bool_ = in_bool;
@@ -127,7 +127,7 @@ class psyq::if_then_engine::_private::status
     /** @brief 符号なし整数型の値を構築する。
         @param[in] in_unsigned 初期値となる符号なし整数。
      */
-    public: explicit status(
+    public: explicit status_value(
         typename this_type::unsigned_type const& in_unsigned)
     PSYQ_NOEXCEPT: kind_(this_type::kind_UNSIGNED)
     {
@@ -137,7 +137,7 @@ class psyq::if_then_engine::_private::status
     /** @brief 符号あり整数型の値を構築する。
         @param[in] in_signed 初期値となる符号あり整数。
      */
-    public: explicit status(
+    public: explicit status_value(
         typename this_type::signed_type const& in_signed)
     PSYQ_NOEXCEPT: kind_(this_type::kind_SIGNED)
     {
@@ -147,7 +147,7 @@ class psyq::if_then_engine::_private::status
     /** @brief 浮動小数点数型の値を構築する。
         @param[in] in_float 初期値となる浮動小数点数。
      */
-    public: explicit status(
+    public: explicit status_value(
         typename this_type::float_type const& in_float)
     PSYQ_NOEXCEPT: kind_(this_type::kind_FLOAT)
     {
@@ -160,7 +160,7 @@ class psyq::if_then_engine::_private::status
             値の型。 this_type::kind_EMPTY の場合は、自動で決定する。
      */
     public: template<typename template_value>
-    explicit status(
+    explicit status_value(
         template_value const& in_value,
         typename this_type::kind const in_kind = this_type::kind_EMPTY)
     PSYQ_NOEXCEPT: kind_(this_type::kind_EMPTY)
@@ -514,7 +514,7 @@ class psyq::if_then_engine::_private::status
             static_cast<template_value>(local_float) - in_value);
         auto const local_epsilon(
             std::numeric_limits<typename this_type::float_type>::epsilon()
-            * PSYQ_IF_THEN_ENGINE_STATUS_EPSILON_MAG);
+            * PSYQ_IF_THEN_ENGINE_STATUS_VALUE_EPSILON_MAG);
         if (-local_epsilon <= local_diff && local_diff <= local_epsilon)
         {
             this->float_ = local_float;
@@ -822,7 +822,7 @@ class psyq::if_then_engine::_private::status
         auto const local_diff(in_left - in_right);
         auto const local_epsilon(
             std::numeric_limits<typename this_type::float_type>::epsilon()
-            * PSYQ_IF_THEN_ENGINE_STATUS_EPSILON_MAG);
+            * PSYQ_IF_THEN_ENGINE_STATUS_VALUE_EPSILON_MAG);
         return local_diff < -local_epsilon?
             this_type::order_LESS:
             (local_epsilon < local_diff?
@@ -888,8 +888,8 @@ class psyq::if_then_engine::_private::status
     };
     private: typename this_type::kind kind_;    ///< 状態値の型の種類。
 
-}; // class psyq::if_then_engine::_private::status
+}; // class psyq::if_then_engine::_private::status_value
 
 
-#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_HPP_)
+#endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_VALUE_HPP_)
 // vim: set expandtab:

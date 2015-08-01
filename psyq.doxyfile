@@ -712,6 +712,7 @@ INPUT                  = \
                          ./any/message/suite.hpp \
                          ./any/message/packet.hpp \
                          ./any/message/receiver.hpp \
+                         ./any/message/dispatcher.hpp \
                          ./any/message/transmitter.hpp \
                          ./any/message/zone.hpp \
                          ./geometry/vector.hpp \
@@ -733,8 +734,8 @@ INPUT                  = \
                          ./geometry/mosp/nut.hpp \
                          ./if_then_engine/reservoir.hpp \
                          ./if_then_engine/modifier.hpp \
-                         ./if_then_engine/status.hpp \
-                         ./if_then_engine/status_summary.hpp \
+                         ./if_then_engine/status_value.hpp \
+                         ./if_then_engine/status_property.hpp \
                          ./if_then_engine/status_chunk.hpp \
                          ./if_then_engine/status_operation.hpp \
                          ./if_then_engine/status_builder.hpp \

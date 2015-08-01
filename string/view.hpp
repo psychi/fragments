@@ -372,26 +372,20 @@ public psyq::string::_private::interface_immutable<
          typename base_type::size_type const in_right_size)
     PSYQ_NOEXCEPT
     {
-        int local_compare_size;
-        if (in_left_size != in_right_size)
-        {
-            local_compare_size = 1 - 2 * (in_left_size < in_right_size);
-        }
-        else if (in_left_data != in_right_data)
-        {
-            local_compare_size = 0;
-        }
-        else
-        {
-            return 0;
-        }
-        int const local_compare_string(
+        auto const local_compare_string(
             base_type::traits_type::compare(
                 in_left_data,
                 in_right_data,
-                local_compare_size < 0? in_left_size: in_right_size));
-        return local_compare_string != 0?
-            local_compare_string: local_compare_size;
+                (std::min)(in_left_size, in_right_size)));
+        if (local_compare_string != 0)
+        {
+            return local_compare_string;
+        }
+        if (in_left_size < in_right_size)
+        {
+            return -1;
+        }
+        return in_left_size != in_right_size;
     }
 
 }; // class psyq::string::view

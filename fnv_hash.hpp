@@ -54,7 +54,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace psyq
 {
-    /// psyq 管理者以外が、この名前空間を直接accessするのは禁止。
+    template<typename> struct integer_hash;
+
+    /// @brief psyq 管理者以外が、この名前空間を直接アクセスするのは禁止。
     namespace _private
     {
         /// @cond
@@ -65,25 +67,33 @@ namespace psyq
         /// @endcond
     }
 
-    /// 32bit FNV-1形式のhash計算機。
-    typedef psyq::_private::fnv_hash<
-        psyq::_private::fnv1_algorithm, psyq::_private::fnv_traits<std::uint32_t>>
-            fnv1_hash32;
+    /// @brief 32bit FNV-1形式のhash計算機。
+    typedef
+        psyq::_private::fnv_hash<
+            psyq::_private::fnv1_algorithm,
+            psyq::_private::fnv_traits<std::uint32_t> >
+        fnv1_hash32;
 
-    /// 64bit FNV-1形式のhash計算機。
-    typedef psyq::_private::fnv_hash<
-        psyq::_private::fnv1_algorithm, psyq::_private::fnv_traits<std::uint64_t>>
-            fnv1_hash64;
+    /// @brief 64bit FNV-1形式のhash計算機。
+    typedef
+        psyq::_private::fnv_hash<
+            psyq::_private::fnv1_algorithm,
+            psyq::_private::fnv_traits<std::uint64_t> >
+        fnv1_hash64;
 
-    /// 32bit FNV-1a形式のhash計算機。
-    typedef psyq::_private::fnv_hash<
-        psyq::_private::fnv1a_algorithm, psyq::_private::fnv_traits<std::uint32_t>>
-            fnv1a_hash32;
+    /// @brief 32bit FNV-1a形式のhash計算機。
+    typedef
+        psyq::_private::fnv_hash<
+            psyq::_private::fnv1a_algorithm,
+            psyq::_private::fnv_traits<std::uint32_t> >
+        fnv1a_hash32;
 
-    /// 64bit FNV-1a形式のhash計算機。
-    typedef psyq::_private::fnv_hash<
-        psyq::_private::fnv1a_algorithm, psyq::_private::fnv_traits<std::uint64_t>>
-            fnv1a_hash64;
+    /// @brief 64bit FNV-1a形式のhash計算機。
+    typedef
+        psyq::_private::fnv_hash<
+            psyq::_private::fnv1a_algorithm,
+            psyq::_private::fnv_traits<std::uint64_t> >
+        fnv1a_hash64;
 }
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -94,19 +104,19 @@ namespace psyq
 template<typename template_hash_algorithm, typename template_hash_traits>
 struct psyq::_private::fnv_hash
 {
-    /// thisの指す値の型。
+    /// @brief thisの指す値の型。
     typedef psyq::_private::fnv_hash<
         template_hash_algorithm, template_hash_traits>
             this_type;
 
     //-------------------------------------------------------------------------
-    /// FNV-hashの算法。
+    /// @brief FNV-hashの算法。
     typedef template_hash_algorithm algorithm;
 
-    /// FNV-hashの型特性。
+    /// @brief FNV-hashの型特性。
     typedef template_hash_traits traits_type;
 
-    /// FNV-hash値の型。
+    /// @brief FNV-hash値の型。
     typedef typename this_type::traits_type::value_type value_type;
 
     //-------------------------------------------------------------------------
@@ -244,7 +254,7 @@ template<> struct psyq::_private::fnv_traits<std::uint32_t>
     typedef std::uint32_t value_type; ///< hash値の型。
     enum: value_type
     {
-        EMPTY = 0x811c9dc5, ///< 空hash値。
+        EMPTY = 0x811C9DC5, ///< 空hash値。
         PRIME = 0x1000193,  ///< FNV-hash素数。
     };
 };
@@ -256,9 +266,41 @@ template<> struct psyq::_private::fnv_traits<std::uint64_t>
     typedef std::uint64_t value_type;  ///< hash値の型。
     enum: value_type
     {
-        EMPTY = 0xcbf29ce484222325ULL, ///< 空hash値。
-        PRIME = 0x100000001b3ULL,      ///< FNV-hash素数。
+        EMPTY = 0xCBF29CE484222325ull, ///< 空hash値。
+        PRIME = 0x100000001B3ull,      ///< FNV-hash素数。
     };
 };
 
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 整数値をそのまま使う、 std::hash 互換のハッシュ関数オブジェクト。
+    @tparam template_iterator @copydoc argument_type
+ */
+template<typename template_integer>
+struct psyq::integer_hash
+{
+    private: typedef integer_hash this_type;
+
+    /// @brief ハッシュ関数の引数となる整数の型。
+    public: typedef template_integer argument_type;
+    static_assert(
+        std::is_integral<template_integer>::value,
+        "'template_integer' is not integral type.");
+
+    /// @brief ハッシュ関数の戻り値の型。
+    public: typedef std::size_t result_type;
+
+    /** @brief キーに対応するハッシュ値を取得する。
+        @param[in] in_key ハッシュ値のキー。
+        @return in_key に対応するハッシュ値。
+     */
+    public: typename this_type::result_type operator()(
+        typename this_type::argument_type const in_key)
+    const PSYQ_NOEXCEPT
+    {
+        return static_cast<typename this_type::result_type>(in_key);
+    }
+
+}; // struct psyq::integer_hash
+
 #endif // !defined(PSYQ_FNV_HASH_HPP_)
+// vim: set expandtab:

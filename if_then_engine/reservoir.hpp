@@ -144,20 +144,6 @@ class psyq::if_then_engine::_private::reservoir
         // this_type::status_chunk::bit_block に収まることを確認する。
         this_type::FLOAT_WIDTH <= this_type::status_chunk::BLOCK_WIDTH,
         "");
-    static_assert(
-        // ビット位置の最大値が
-        // status_property::bit_position に収まることを確認する。
-        this_type::status_property::pack_POSITION_BACK -
-            this_type::status_property::pack_POSITION_FRONT
-        < sizeof(typename this_type::status_property::bit_position) *
-            psyq::if_then_engine::_private::BITS_PER_BYTE,
-        "");
-    static_assert(
-        // status_chunk::BLOCK_WIDTH が
-        // status_property::pack_FORMAT_MASK に収まることを確認する。
-        this_type::status_chunk::BLOCK_WIDTH
-        <= this_type::status_property::pack_FORMAT_MASK,
-        "");
 
     private: typedef
         psyq::if_then_engine::_private::float_union<template_float>

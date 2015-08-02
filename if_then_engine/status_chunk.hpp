@@ -67,6 +67,11 @@ class psyq::if_then_engine::_private::status_chunk
         BLOCK_WIDTH = sizeof(typename this_type::bit_block)
             * psyq::if_then_engine::_private::BITS_PER_BYTE,
     };
+    static_assert(
+        // this_type::BLOCK_WIDTH が
+        // this_type::status_property::pack_FORMAT_MASK に収まることを確認する。
+        this_type::BLOCK_WIDTH <= this_type::status_property::pack_FORMAT_MASK,
+        "");
 
     //-------------------------------------------------------------------------
     /** @brief 空の状態値ビット列チャンクを構築する。
@@ -106,23 +111,18 @@ class psyq::if_then_engine::_private::status_chunk
     public: std::size_t make_status_field(
         typename this_type::status_property::bit_width const in_bit_width)
     {
-        // 状態値を格納するビット領域を用意する。
+        // 状態値を格納できるビット領域を、空きビット領域から取得する。
         auto const local_empty_field(
             std::lower_bound(
                 this->empty_fields_.begin(),
                 this->empty_fields_.end(),
                 in_bit_width,
                 typename this_type::empty_field_less()));
-        if (local_empty_field != this->empty_fields_.end())
-        {
+        return local_empty_field != this->empty_fields_.end()?
             // 既存の空き領域を再利用する。
-            return this->reuse_empty_field(in_bit_width, local_empty_field);
-        }
-        else
-        {
-            // 新たな領域を追加する。
-            return this->add_status_field(in_bit_width);
-        }
+            this->reuse_empty_field(in_bit_width, local_empty_field):
+            // 適切な空き領域がないので、新たな領域を追加する。
+            this->add_status_field(in_bit_width);
     }
 
     /** @brief ビット列から値を取得する。
@@ -229,9 +229,9 @@ class psyq::if_then_engine::_private::status_chunk
     }
 
     /** @brief 空きビット領域を再利用する。
-        @param[in] in_bit_width   再利用する領域のビット幅。
+        @param[in] in_bit_width   再利用したい領域のビット幅。
         @param[in] in_empty_field 再利用する空きビット領域のプロパティを指す反復子。
-        @return 再利用するビット領域のビット位置。
+        @return 再利用したビット領域のビット位置。
      */
     private: std::size_t reuse_empty_field(
         typename this_type::status_property::bit_width const in_bit_width,
@@ -240,17 +240,18 @@ class psyq::if_then_engine::_private::status_chunk
         // 既存の空き領域を再利用する。
         auto const local_empty_position(
             this_type::status_property::get_bit_position(*in_empty_field));
-
-        // 空き領域を更新する。
         auto const local_empty_format(
             this_type::status_property::get_format(*in_empty_field));
         PSYQ_ASSERT(0 < local_empty_format);
         auto const local_empty_width(
             static_cast<typename this_type::status_property::bit_width>(
                 local_empty_format));
+
+        // 再利用する空き領域を削除する。
         this->empty_fields_.erase(in_empty_field);
         if (in_bit_width < local_empty_width)
         {
+            // 余りを空き領域として追加する。
             this_type::add_empty_field(
                 this->empty_fields_,
                 local_empty_position + in_bit_width,
@@ -266,31 +267,38 @@ class psyq::if_then_engine::_private::status_chunk
     private: std::size_t add_status_field(
         typename this_type::status_property::bit_width const in_bit_width)
     {
+        if (in_bit_width <= 0)
+        {
+            PSYQ_ASSERT(false);
+            return 0;
+        }
+        PSYQ_ASSERT(
+            in_bit_width <= this_type::status_property::pack_FORMAT_MASK);
+
         // 新たにビット列ブロックを追加する。
         auto const local_position(
             this->bit_blocks_.size() * this_type::BLOCK_WIDTH);
-        if (local_position <= this_type::status_property::pack_POSITION_MASK)
+        if (this_type::status_property::pack_POSITION_MASK < local_position)
         {
-            auto const local_add_block_width(
-                (in_bit_width + this_type::BLOCK_WIDTH - 1)
-                / this_type::BLOCK_WIDTH);
-            this->bit_blocks_.insert(
-                this->bit_blocks_.end(), local_add_block_width, 0);
-
-            // 空きビット領域を追加する。
-            auto const local_add_width(
-                local_add_block_width * this_type::BLOCK_WIDTH);
-            if (in_bit_width < local_add_width)
-            {
-                this_type::add_empty_field(
-                    this->empty_fields_,
-                    local_position + in_bit_width,
-                    local_add_width - in_bit_width);
-            }
-        }
-        else
-        {
+            // ビット位置の最大値を超過した。
             PSYQ_ASSERT(false);
+            return ~0;
+        }
+        auto const local_add_block_width(
+            (in_bit_width + this_type::BLOCK_WIDTH - 1)
+            / this_type::BLOCK_WIDTH);
+        this->bit_blocks_.insert(
+            this->bit_blocks_.end(), local_add_block_width, 0);
+
+        // 余りを空きビット領域に追加する。
+        auto const local_add_width(
+            local_add_block_width * this_type::BLOCK_WIDTH);
+        if (in_bit_width < local_add_width)
+        {
+            this_type::add_empty_field(
+                this->empty_fields_,
+                local_position + in_bit_width,
+                local_add_width - in_bit_width);
         }
         return local_position;
     }

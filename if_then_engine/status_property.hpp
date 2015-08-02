@@ -90,6 +90,13 @@ class psyq::if_then_engine::_private::status_property
         pack_FORMAT_MASK =
             (2 << (pack_FORMAT_BACK - pack_FORMAT_FRONT)) - 1,
     };
+    static_assert(
+        // ビット位置の最大値が
+        // status_property::bit_position に収まることを確認する。
+        this_type::pack_POSITION_BACK - this_type::pack_POSITION_FRONT
+        < sizeof(typename this_type::bit_position) *
+            psyq::if_then_engine::_private::BITS_PER_BYTE,
+        "");
 
     /// @brief 状態値のビット構成を表す型。
     public: typedef

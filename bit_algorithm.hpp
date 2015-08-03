@@ -48,7 +48,7 @@
 
 #include <algorithm>
 #include <cstdint>
-//#include "./assert.hpp"
+#include "./assert.hpp"
 
 #if defined(__alpha__) || defined(__ia64__) || defined(__x86_64__) || defined(_WIN64) || defined(__LP64__) || defined(__LLP64__)
 #   define PSYQ_BIT_ALGORITHM_INTRINSIC_SIZE 64
@@ -81,6 +81,38 @@
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq
 {
+    enum: std::uint8_t
+    {
+        /// @brief char値1つあたりのビット幅。
+        CHAR_BIT_WIDTH = 8,
+    };
+    static_assert(
+        char(1 << (CHAR_BIT_WIDTH - 1)) < 0,
+        "'CHAR_BIT_WIDTH' is not bit width of char.");
+
+    //-------------------------------------------------------------------------
+    /** @brief 符号あり整数の絶対値を取得する。
+
+        条件分岐の代わりにビット演算を使い、整数の絶対値を算出する。
+
+        @param[in] in_value 絶対値を求める符号あり整数。
+        @return in_value の絶対値。
+     */
+    template<typename template_integer>
+    template_integer abs_integer(template_integer const in_value)
+    PSYQ_NOEXCEPT
+    {
+        static_assert(
+            std::is_integral<template_integer>::value
+            && std::is_signed<template_integer>::value,
+            "'template_integer' is not signed integer type.");
+        auto const local_sign_bit_position(
+            psyq::CHAR_BIT_WIDTH * sizeof(template_integer) - 1);
+        template_integer const local_mask(
+            -((in_value >> local_sign_bit_position) & 1));
+        return (in_value ^ local_mask) - local_mask;
+    }
+
     //-------------------------------------------------------------------------
     /** @brief 整数を左ビットシフトする。
         @param[in] in_bits  ビットシフトする値。
@@ -88,13 +120,14 @@ namespace psyq
         @return 左ビットシフトした値。
      */
     template<typename template_bits>
-    PSYQ_CONSTEXPR template_bits bitwise_shift_left(
+    PSYQ_CONSTEXPR template_bits shift_left_bitwise(
         template_bits const in_bits,
         unsigned const      in_shift)
     PSYQ_NOEXCEPT
     {
         return static_cast<template_bits>(
-            in_shift < sizeof(in_bits) * 8? in_bits << in_shift: 0);
+            in_shift < sizeof(in_bits) * psyq::CHAR_BIT_WIDTH?
+                in_bits << in_shift: 0);
     }
 
     /** @brief 整数を左ビットシフトする。
@@ -106,13 +139,13 @@ namespace psyq
             http://hexadrive.sblo.jp/article/56575654.html
      */
     template<typename template_bits>
-    PSYQ_CONSTEXPR template_bits bitwise_shift_left_fast(
+    PSYQ_CONSTEXPR template_bits shift_left_bitwise_fast(
         template_bits const in_bits,
         unsigned const      in_shift)
     PSYQ_NOEXCEPT
     {
         return (
-            PSYQ_ASSERT(in_shift < sizeof(in_bits) * 8),
+            PSYQ_ASSERT(in_shift < sizeof(in_bits) * psyq::CHAR_BIT_WIDTH),
             in_bits << in_shift);
     }
 
@@ -122,16 +155,18 @@ namespace psyq
         @return 右ビットシフトした値。
      */
     template<typename template_bits>
-    PSYQ_CONSTEXPR template_bits bitwise_shift_right(
+    PSYQ_CONSTEXPR template_bits shift_right_bitwise(
         template_bits const in_bits,
         unsigned const      in_shift)
     PSYQ_NOEXCEPT
     {
-        return static_cast<template_bits>(
-            in_bits
-            >> (std::min)(
-                in_shift,
-                static_cast<template_bits>(sizeof(in_bits) * 8 - 1)));
+        return std::is_unsigned<template_bits>::value?
+            static_cast<template_bits>(
+                in_shift < sizeof(in_bits) * psyq::CHAR_BIT_WIDTH?
+                    in_bits >> in_shift: 0):
+            static_cast<template_bits>(
+                in_bits >> (std::min)(
+                    in_shift, sizeof(in_bits) * psyq::CHAR_BIT_WIDTH - 1));
     }
 
     /** @brief 整数を右ビットシフトする。
@@ -143,13 +178,13 @@ namespace psyq
             http://hexadrive.sblo.jp/article/56575654.html
      */
     template<typename template_bits>
-    PSYQ_CONSTEXPR template_bits bitwise_shift_right_fast(
+    PSYQ_CONSTEXPR template_bits shift_right_bitwise_fast(
         template_bits const in_bits,
         unsigned const      in_shift)
     PSYQ_NOEXCEPT
     {
         return (
-            PSYQ_ASSERT(in_shift < sizeof(in_bits) * 8),
+            PSYQ_ASSERT(in_shift < sizeof(in_bits) * psyq::CHAR_BIT_WIDTH),
             in_bits >> in_shift);
     }
 
@@ -169,7 +204,7 @@ namespace psyq
         std::size_t   const in_position)
     PSYQ_NOEXCEPT
     {
-        return (psyq::bitwise_shift_right(in_bits, in_position) & 1) != 0;
+        return (psyq::shift_right_bitwise(in_bits, in_position) & 1) != 0;
     }
 
     /** @brief 指定された位置のビット値を取得する。
@@ -185,7 +220,7 @@ namespace psyq
         std::size_t   const in_position)
     PSYQ_NOEXCEPT
     {
-        return (psyq::bitwise_shift_right_fast(in_bits, in_position) & 1) != 0;
+        return (psyq::shift_right_bitwise_fast(in_bits, in_position) & 1) != 0;
     }
 
     /** @brief 指定された位置にビット値として0を設定する。
@@ -202,7 +237,7 @@ namespace psyq
         std::size_t   const in_position)
     PSYQ_NOEXCEPT
     {
-        return ~psyq::bitwise_shift_left<template_bits>(1, in_position)
+        return ~psyq::shift_left_bitwise<template_bits>(1, in_position)
             & in_bits;
     }
 
@@ -219,7 +254,7 @@ namespace psyq
         std::size_t   const in_position)
     PSYQ_NOEXCEPT
     {
-        return ~psyq::bitwise_shift_left_fast<template_bits>(1, in_position)
+        return ~psyq::shift_left_bitwise_fast<template_bits>(1, in_position)
             & in_bits;
     }
 
@@ -237,8 +272,8 @@ namespace psyq
         std::size_t   const in_position)
     PSYQ_NOEXCEPT
     {
-        return psyq::bitwise_shift_left<template_bits>(1, in_position)
-            |  in_bits;
+        return psyq::shift_left_bitwise<template_bits>(1, in_position)
+            | in_bits;
     }
 
     /** @brief 指定された位置にビット値として1を設定する。
@@ -254,8 +289,8 @@ namespace psyq
         std::size_t   const in_position)
     PSYQ_NOEXCEPT
     {
-        return psyq::bitwise_shift_left_fast<template_bits>(1, in_position)
-            |  in_bits;
+        return psyq::shift_left_bitwise_fast<template_bits>(1, in_position)
+            | in_bits;
     }
 
     /** @brief 指定された位置にビット値を設定する。
@@ -275,7 +310,7 @@ namespace psyq
     PSYQ_NOEXCEPT
     {
         return psyq::reset_bit(in_bits, in_position)
-            |  psyq::bitwise_shift_left<template_bits>(in_value, in_position);
+            | psyq::shift_left_bitwise<template_bits>(in_value, in_position);
     }
 
     /** @brief 指定された位置にビット値を設定する。
@@ -294,7 +329,7 @@ namespace psyq
     PSYQ_NOEXCEPT
     {
         return psyq::reset_bit_fast(in_bits, in_position)
-            |  psyq::bitwise_shift_left_fast<template_bits>(
+            | psyq::shift_left_bitwise_fast<template_bits>(
                 in_value, in_position);
     }
 
@@ -312,7 +347,7 @@ namespace psyq
         std::size_t   const in_position)
     PSYQ_NOEXCEPT
     {
-        return psyq::bitwise_shift_left<template_bits>(1, in_position)
+        return psyq::shift_left_bitwise<template_bits>(1, in_position)
             ^ in_bits;
     }
 
@@ -329,8 +364,105 @@ namespace psyq
         std::size_t   const in_position)
     PSYQ_NOEXCEPT
     {
-        return psyq::bitwise_shift_left_fast<template_bits>(1, in_position)
+        return psyq::shift_left_bitwise_fast<template_bits>(1, in_position)
             ^ in_bits;
+    }
+
+    //-------------------------------------------------------------------------
+    template<typename template_bits>
+    PSYQ_CONSTEXPR template_bits make_bit_mask(
+        std::size_t const in_bit_width)
+    {
+        return ~(
+            PSYQ_ASSERT(
+                in_bit_width <= sizeof(template_bits) * psyq::CHAR_BIT_WIDTH),
+            in_bit_width < sizeof(template_bits) * psyq::CHAR_BIT_WIDTH?
+                ~template_bits(0) << in_bit_width: 0);
+    }
+
+    /** @brief 指定されたビット範囲を取得する。
+        @param[in] in_bits         ビット集合として扱う整数値。
+        @param[in] in_bit_position 取得するビット範囲のビット位置。
+        @param[in] in_bit_width    取得するビット範囲のビット幅。
+        @return ビット範囲。
+     */
+    template<typename template_bits>
+    PSYQ_CONSTEXPR template_bits extract_bitset(
+        template_bits const in_bits,
+        std::size_t   const in_bit_position,
+        std::size_t   const in_bit_width)
+    {
+        return (
+            PSYQ_ASSERT(
+                in_bit_position + in_bit_width
+                <= sizeof(template_bits) * psyq::CHAR_BIT_WIDTH),
+            psyq::shift_left_bitwise_fast(
+                psyq::make_bit_mask<template_bits>(in_bit_width),
+                in_bit_position)
+            & in_bits);
+    }
+
+    /** @brief 指定されたビット範囲の値を取得する。
+        @param[in] in_bits         ビット集合として扱う整数値。
+        @param[in] in_bit_position 取得するビット範囲のビット位置。
+        @param[in] in_bit_width    取得するビット範囲のビット幅。
+        @return ビット範囲の値。
+     */
+    template<typename template_bits>
+    PSYQ_CONSTEXPR template_bits extract_bitset_value(
+        template_bits const in_bits,
+        std::size_t   const in_bit_position,
+        std::size_t   const in_bit_width)
+    {
+        return (
+            PSYQ_ASSERT(
+                in_bit_position + in_bit_width
+                <= sizeof(template_bits) * psyq::CHAR_BIT_WIDTH),
+            psyq::make_bit_mask<template_bits>(in_bit_width)
+            & psyq::shift_right_bitwise_fast(in_bits, in_bit_position));
+    }
+
+    /** @brief 指定されたビット範囲を0にする。
+        @param[in] in_bits         ビット集合として扱う整数値。
+        @param[in] in_bit_position 設定するビット範囲のビット位置。
+        @param[in] in_bit_width    設定するビット範囲のビット幅。
+        @return 指定されたビット範囲を0にした整数値。
+     */
+    template<typename template_bits>
+    PSYQ_CONSTEXPR template_bits reset_bitset(
+        template_bits const in_bits,
+        std::size_t   const in_bit_position,
+        std::size_t   const in_bit_width)
+    {
+        return (
+            PSYQ_ASSERT(
+                in_bit_position + in_bit_width
+                <= sizeof(template_bits) * psyq::CHAR_BIT_WIDTH),
+            in_bits & ~psyq::shift_left_bitwise_fast(
+                psyq::make_bit_mask<template_bits>(in_bit_width),
+                in_bit_position));
+    }
+
+    /** @brief 指定されたビット範囲に値を埋め込む。
+        @param[in] in_bits         ビット集合として扱う整数値。
+        @param[in] in_bit_position 埋め込むビット範囲のビット位置。
+        @param[in] in_bit_width    埋め込むビット範囲のビット幅。
+        @param[in] in_value        埋め込む値。
+        @return 指定されたビット位置に in_value を埋め込んだ整数値。
+     */
+    template<typename template_bits>
+    PSYQ_CONSTEXPR template_bits embed_bitset(
+        template_bits const in_bits,
+        std::size_t   const in_bit_position,
+        std::size_t   const in_bit_width,
+        template_bits const in_value)
+    PSYQ_NOEXCEPT
+    {
+        return (
+            PSYQ_ASSERT(
+                psyq::shift_right_bitwise(in_value, in_bit_width) == 0),
+            psyq::reset_bitset(in_bits, in_bit_position, in_bit_width)
+            | psyq::shift_left_bitwise_fast<template_bits>(in_value, in_bit_position));
     }
 
     //-------------------------------------------------------------------------
@@ -406,7 +538,7 @@ namespace psyq
         {
             return count_1bits_by_table(static_cast<std::uint8_t>(in_bits))
                 + count_1bits_by_table(
-                    static_cast<std::uint8_t>(in_bits >> 8));
+                    static_cast<std::uint8_t>(in_bits >> psyq::CHAR_BIT_WIDTH));
         }
 
         /// @copydoc count_1bits_by_table()
@@ -442,7 +574,7 @@ namespace psyq
             unsigned local_bits(in_bits);
             local_bits = (local_bits & 0x55) + ((local_bits >> 1) & 0x55);
             local_bits = (local_bits & 0x33) + ((local_bits >> 2) & 0x33);
-            local_bits = (local_bits & 0x0f) + ((local_bits >> 4) & 0x0f);
+            local_bits = (local_bits & 0x0F) + ((local_bits >> 4) & 0x0F);
             return local_bits;
         }
 
@@ -453,8 +585,8 @@ namespace psyq
             unsigned local_bits(in_bits);
             local_bits = (local_bits & 0x5555) + ((local_bits >> 1) & 0x5555);
             local_bits = (local_bits & 0x3333) + ((local_bits >> 2) & 0x3333);
-            local_bits = (local_bits & 0x0f0f) + ((local_bits >> 4) & 0x0f0f);
-            local_bits = (local_bits & 0x00ff) + ((local_bits >> 8) & 0x00ff);
+            local_bits = (local_bits & 0x0F0F) + ((local_bits >> 4) & 0x0F0F);
+            local_bits = (local_bits & 0x00FF) + ((local_bits >> 8) & 0x00FF);
             return local_bits;
         }
 
@@ -467,12 +599,12 @@ namespace psyq
                 + ((local_bits >> 1) & 0x55555555);
             local_bits = (local_bits & 0x33333333)
                 + ((local_bits >> 2) & 0x33333333);
-            local_bits = (local_bits & 0x0f0f0f0f)
-                + ((local_bits >> 4) & 0x0f0f0f0f);
-            local_bits = (local_bits & 0x00ff00ff)
-                + ((local_bits >> 8) & 0x00ff00ff);
-            local_bits = (local_bits & 0x0000ffff)
-                + ((local_bits >>16) & 0x0000ffff);
+            local_bits = (local_bits & 0x0F0F0F0F)
+                + ((local_bits >> 4) & 0x0F0F0F0F);
+            local_bits = (local_bits & 0x00FF00FF)
+                + ((local_bits >> 8) & 0x00FF00FF);
+            local_bits = (local_bits & 0x0000FFFF)
+                + ((local_bits >>16) & 0x0000FFFF);
             return local_bits;
         }
 
@@ -485,14 +617,14 @@ namespace psyq
                 + ((local_bits >> 1) & 0x5555555555555555);
             local_bits = (local_bits & 0x3333333333333333)
                 + ((local_bits >> 2) & 0x3333333333333333);
-            local_bits = (local_bits & 0x0f0f0f0f0f0f0f0f)
-                + ((local_bits >> 4) & 0x0f0f0f0f0f0f0f0f);
-            local_bits = (local_bits & 0x00ff00ff00ff00ff)
-                + ((local_bits >> 8) & 0x00ff00ff00ff00ff);
-            local_bits = (local_bits & 0x0000ffff0000ffff)
-                + ((local_bits >>16) & 0x0000ffff0000ffff);
-            local_bits = (local_bits & 0x00000000ffffffff)
-                + ((local_bits >>32) & 0x00000000ffffffff);
+            local_bits = (local_bits & 0x0F0F0F0F0F0F0F0F)
+                + ((local_bits >> 4) & 0x0F0F0F0F0F0F0F0F);
+            local_bits = (local_bits & 0x00FF00FF00FF00FF)
+                + ((local_bits >> 8) & 0x00FF00FF00FF00FF);
+            local_bits = (local_bits & 0x0000FFFF0000FFFF)
+                + ((local_bits >>16) & 0x0000FFFF0000FFFF);
+            local_bits = (local_bits & 0x00000000FFFFFFFF)
+                + ((local_bits >>32) & 0x00000000FFFFFFFF);
             return static_cast<std::size_t>(local_bits);
         }
 
@@ -541,9 +673,9 @@ namespace psyq
             return local_high_count + local_low_count;
 #elif defined(PSYQ_BIT_ALGORITHM_FOR_MSC)
             return __popcnt64(in_bits);
-#elif defined(PSYQ_BIT_ALGORITHM_FOR_GNUC) && ULONG_MAX == 0xffffffffffffffff
+#elif defined(PSYQ_BIT_ALGORITHM_FOR_GNUC) && ULONG_MAX == 0xFFFFFFFFFFFFFFFF
             return __builtin_popcountl(in_bits);
-#elif defined(PSYQ_BIT_ALGORITHM_FOR_GNUC) && ULLONG_MAX == 0xffffffffffffffff
+#elif defined(PSYQ_BIT_ALGORITHM_FOR_GNUC) && ULLONG_MAX == 0xFFFFFFFFFFFFFFFF
             return __builtin_popcountll(in_bits);
 #else
             return psyq::_private::count_1bits_by_table(in_bits);
@@ -670,9 +802,9 @@ namespace psyq
                 FLT_RADIX == 2, "Floating point radix must be 2.");
             static_assert(
                 // in_bits のビット数は、FLT_MANT_DIG未満であること。
-                sizeof(in_bits) * 8 < FLT_MANT_DIG,
+                sizeof(in_bits) * psyq::CHAR_BIT_WIDTH < FLT_MANT_DIG,
                 "Bit size of 'in_bits' must be less than FLT_MANT_DIG.");
-            return sizeof(in_bits) * 8 + (1 - FLT_MIN_EXP) - (
+            return sizeof(in_bits) * psyq::CHAR_BIT_WIDTH + (1 - FLT_MIN_EXP) - (
                 psyq::_private::get_float_bit_value(in_bits + 0.5f)
                 >> (FLT_MANT_DIG - 1));
         }
@@ -686,9 +818,9 @@ namespace psyq
                 FLT_RADIX == 2, "Floating point radix must be 2.");
             static_assert(
                 // in_bits のビット数は、DBL_MANT_DIG未満であること。
-                sizeof(in_bits) * 8 < DBL_MANT_DIG,
+                sizeof(in_bits) * psyq::CHAR_BIT_WIDTH < DBL_MANT_DIG,
                 "Bit size of 'in_bits' must be less than DBL_MANT_DIG.");
-            return sizeof(in_bits) * 8 + (1 - DBL_MIN_EXP) - (
+            return sizeof(in_bits) * psyq::CHAR_BIT_WIDTH + (1 - DBL_MIN_EXP) - (
                 psyq::_private::get_float_bit_value(in_bits + 0.5)
                 >> (DBL_MANT_DIG - 1));
         }
@@ -711,7 +843,7 @@ namespace psyq
                 "'in_bits' must be unsigned integer type.");
             enum: unsigned
             {
-                BIT_SIZE = sizeof(in_bits) * 8,
+                BIT_SIZE = sizeof(in_bits) * psyq::CHAR_BIT_WIDTH,
                 SIZE_DIFF = 32 - BIT_SIZE,
             };
 #if defined(PSYQ_BIT_ALGORITHM_FOR_MSC) && defined(BitScanReverse)
@@ -750,7 +882,7 @@ namespace psyq
             if ((in_bits >> (DBL_MANT_DIG - 1)) == 0)
             {
                 // 浮動小数点を利用し、最上位ビットから0が連続する数を数える。
-                return sizeof(in_bits) * 8 + (1 - DBL_MIN_EXP) - (
+                return sizeof(in_bits) * psyq::CHAR_BIT_WIDTH + (1 - DBL_MIN_EXP) - (
                     psyq::_private::get_float_bit_value(in_bits + 0.5)
                     >> (DBL_MANT_DIG - 1));
             }
@@ -788,9 +920,9 @@ namespace psyq
             return 63 - local_index;
 #elif defined(PSYQ_BIT_ALGORITHM_FOR_MSC) && defined(CountLeadingZeros64)
             return CountLeadingZeros64(in_bits);
-#elif defined(PSYQ_BIT_ALGORITHM_FOR_GNUC) && ULONG_MAX == 0xffffffffffffffff
+#elif defined(PSYQ_BIT_ALGORITHM_FOR_GNUC) && ULONG_MAX == 0xFFFFFFFFFFFFFFFF
             return in_bits != 0? __builtin_clzl(in_bits): 64;
-#elif defined(PSYQ_BIT_ALGORITHM_FOR_GNUC) && ULLONG_MAX == 0xffffffffffffffff
+#elif defined(PSYQ_BIT_ALGORITHM_FOR_GNUC) && ULLONG_MAX == 0xFFFFFFFFFFFFFFFF
             return in_bits != 0? __builtin_clzll(in_bits): 64;
 #else
             return psyq::_private::count_leading_0bits_by_logical(in_bits);
@@ -831,13 +963,14 @@ namespace psyq
 #if defined(PSYQ_BIT_ALGORITHM_FOR_MSC) && defined(BitScanForward)
             if (in_bits == 0)
             {
-                return sizeof(in_bits) * 8;
+                return sizeof(in_bits) * psyq::CHAR_BIT_WIDTH;
             }
             unsigned long local_index;
             BitScanForward(&local_index, in_bits);
             return local_index;
 #elif defined(PSYQ_BIT_ALGORITHM_FOR_GNUC)
-            return in_bits != 0? __builtin_ctz(in_bits): sizeof(in_bits) * 8;
+            return in_bits != 0?
+                __builtin_ctz(in_bits): sizeof(in_bits) * psyq::CHAR_BIT_WIDTH;
 #else
             return psyq::_private::count_trailing_0bits_by_logical(in_bits);
 #endif
@@ -869,9 +1002,9 @@ namespace psyq
             unsigned long local_index;
             BitScanForward64(&local_index, in_bits);
             return local_index;
-#elif defined(PSYQ_BIT_ALGORITHM_FOR_GNUC) && ULONG_MAX == 0xffffffffffffffff
+#elif defined(PSYQ_BIT_ALGORITHM_FOR_GNUC) && ULONG_MAX == 0xFFFFFFFFFFFFFFFF
             return in_bits != 0? __builtin_ctzl(in_bits): 64;
-#elif defined(PSYQ_BIT_ALGORITHM_FOR_GNUC) && ULLONG_MAX == 0xffffffffffffffff
+#elif defined(PSYQ_BIT_ALGORITHM_FOR_GNUC) && ULLONG_MAX == 0xFFFFFFFFFFFFFFFF
             return in_bits != 0? __builtin_ctzll(in_bits): 64;
 #else
             return psyq::_private::count_trailing_0bits_by_logical(in_bits);
@@ -942,7 +1075,7 @@ namespace psyq_test
     {
         template_value local_bits(0);
         PSYQ_ASSERT(psyq::count_1bits(local_bits) == 0);
-        for (unsigned i(0); i < sizeof(template_value) * 8; ++i)
+        for (unsigned i(0); i < sizeof(template_value) * psyq::CHAR_BIT_WIDTH; ++i)
         {
             local_bits = (local_bits << 1) | 1;
             PSYQ_ASSERT(i + 1 == psyq::count_1bits(local_bits));
@@ -955,7 +1088,7 @@ namespace psyq_test
         psyq_test::count_1bits<short>();
         psyq_test::count_1bits<int>();
         psyq_test::count_1bits<long>();
-#if ULLONG_MAX <= 0xffffffffffffffff
+#if ULLONG_MAX <= 0xFFFFFFFFFFFFFFFF
         psyq_test::count_1bits<long long>();
 #endif
     }
@@ -964,13 +1097,15 @@ namespace psyq_test
     {
         PSYQ_ASSERT(
             psyq::count_leading_0bits(template_value(0))
-            == sizeof(template_value) * 8);
-        for (unsigned i(0); i < sizeof(template_value) * 8; ++i)
+            == sizeof(template_value) * psyq::CHAR_BIT_WIDTH);
+        for (unsigned i(0); i < sizeof(template_value) * psyq::CHAR_BIT_WIDTH; ++i)
         {
             auto const local_clz(
                 psyq::count_leading_0bits(
                     template_value(template_value(1) << i)));
-            PSYQ_ASSERT(local_clz + i == sizeof(template_value) * 8 - 1);
+            PSYQ_ASSERT(
+                local_clz + i
+                == sizeof(template_value) * psyq::CHAR_BIT_WIDTH - 1);
         }
     }
 
@@ -980,7 +1115,7 @@ namespace psyq_test
         psyq_test::count_leading_0bits<short>();
         psyq_test::count_leading_0bits<int>();
         psyq_test::count_leading_0bits<long>();
-#if ULLONG_MAX <= 0xffffffffffffffff
+#if ULLONG_MAX <= 0xFFFFFFFFFFFFFFFF
         psyq_test::count_leading_0bits<long long>();
 #endif
     }
@@ -989,8 +1124,8 @@ namespace psyq_test
     {
         PSYQ_ASSERT(
             psyq::count_trailing_0bits(template_value(0))
-            == sizeof(template_value) * 8);
-        for (unsigned i(0); i < sizeof(template_value) * 8; ++i)
+            == sizeof(template_value) * psyq::CHAR_BIT_WIDTH);
+        for (unsigned i(0); i < sizeof(template_value) * psyq::CHAR_BIT_WIDTH; ++i)
         {
             auto const local_ctz(
                 psyq::count_trailing_0bits(
@@ -1005,7 +1140,7 @@ namespace psyq_test
         psyq_test::count_trailing_0bits<short>();
         psyq_test::count_trailing_0bits<int>();
         psyq_test::count_trailing_0bits<long>();
-#if ULLONG_MAX <= 0xffffffffffffffff
+#if ULLONG_MAX <= 0xFFFFFFFFFFFFFFFF
         psyq_test::count_trailing_0bits<long long>();
 #endif
     }

@@ -13,7 +13,7 @@
 #include "../../memory_arena.hpp"
 #include "./node.hpp"
 
-
+/// @brief psyq::geometry::mosp::tree で使う、デフォルトのメモリ割当子の型。
 #ifndef PSYQ_GEOMETRY_MOSP_TREE_ALLOCATOR_DEFAULT
 #define PSYQ_GEOMETRY_MOSP_TREE_ALLOCATOR_DEFAULT\
     psyq::memory_arena::allocator<\
@@ -475,7 +475,7 @@ class psyq::geometry::mosp::tree
 
         // 衝突物体のAABBを包む、最小の分割空間のモートン順序を算出する。
         auto const local_axis_order_max(
-            psyq::bitwise_shift_left_fast<unsigned>(1, in_level_cap) - 1);
+			psyq::shift_left_bitwise_fast<unsigned>(1, in_level_cap) - 1);
         auto const local_min_morton(
             in_space.compute_order(in_aabb.get_min(), local_axis_order_max));
         auto const local_max_morton(
@@ -494,11 +494,11 @@ class psyq::geometry::mosp::tree
             local_level = 1;
         }
         auto const local_partition_count(
-            psyq::bitwise_shift_left_fast<unsigned>(
+			psyq::shift_left_bitwise_fast<unsigned>(
                 1, (in_level_cap - local_level) * this_type::space::DIMENSION));
         auto const local_order(
             (local_partition_count - 1) / ((1 << this_type::space::DIMENSION) - 1));
-        return local_order + psyq::bitwise_shift_right_fast(
+		return local_order + psyq::shift_right_bitwise_fast(
             local_max_morton, local_level * this_type::space::DIMENSION);
     }
 

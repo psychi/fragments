@@ -5,8 +5,7 @@
 #ifndef PSYQ_IF_THEN_ENGINE_STATUS_PROPERTY_HPP_
 #define PSYQ_IF_THEN_ENGINE_STATUS_PROPERTY_HPP_
 
-#include <cstdint>
-#include "../assert.hpp"
+#include "../bit_algorithm.hpp"
 
 /// @cond
 namespace psyq
@@ -15,12 +14,8 @@ namespace psyq
     {
         namespace _private
         {
-            enum: std::uint8_t
-            {
-                /// @brief 1バイトあたりのビット数。
-                BITS_PER_BYTE = 8,
-            };
             template<typename, typename, typename> class status_property;
+
         } // namespace _private
     } // namespace if_then_engine
 } // namespace psyq
@@ -51,7 +46,7 @@ class psyq::if_then_engine::_private::status_property
         && std::is_unsigned<template_pack>::value,
         "'template_pack' is not unsigned integer type");
 
-    /// @brief 状態値のビット数を表す型。
+    /// @brief 状態値のビット幅を表す型。
     public: typedef template_bit_width bit_width;
     static_assert(
         std::is_integral<template_bit_width>::value
@@ -91,11 +86,13 @@ class psyq::if_then_engine::_private::status_property
             (2 << (pack_FORMAT_BACK - pack_FORMAT_FRONT)) - 1,
     };
     static_assert(
+        this_type::pack_FORMAT_BACK < sizeof(template_pack) * psyq::CHAR_BIT_WIDTH,
+        "Bit width of template_pack is not greater than pack_FORMAT_BACK.");
+    static_assert(
         // ビット位置の最大値が
         // status_property::bit_position に収まることを確認する。
         this_type::pack_POSITION_BACK - this_type::pack_POSITION_FRONT
-        < sizeof(typename this_type::bit_position) *
-            psyq::if_then_engine::_private::BITS_PER_BYTE,
+        < sizeof(typename this_type::bit_position) * psyq::CHAR_BIT_WIDTH,
         "");
 
     /// @brief 状態値のビット構成を表す型。
@@ -168,10 +165,9 @@ class psyq::if_then_engine::_private::status_property
         auto const local_minus(
             1 & static_cast<typename this_type::format>(
                 in_pack >> this_type::pack_FORMAT_BACK));
-        auto const local_mod_width(
-            this_type::pack_FORMAT_BACK - this_type::pack_FORMAT_FRONT);
-        return this_type::get_format_bits(in_pack)
-            | (-local_minus << local_mod_width);
+        return this_type::get_format_bits(in_pack) | (
+            -local_minus << (
+                this_type::pack_FORMAT_BACK - this_type::pack_FORMAT_FRONT));
     }
 
     /** @brief 状態値のビット構成を設定する。

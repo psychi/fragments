@@ -197,8 +197,7 @@ class psyq::if_then_engine::status_builder
             io_hasher(in_table.find_cell(in_row_index, in_attribute.key_.first)));
         if (local_status_key == io_hasher(
                 typename template_hasher::argument_type())
-            || io_reservoir.extract_format(local_status_key)
-                != template_reservoir::status_value::kind_EMPTY)
+            || io_reservoir.extract_bit_width(local_status_key) != 0)
         {
             // 状態値の識別値が空だったか、重複していた。
             PSYQ_ASSERT(false);

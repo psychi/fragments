@@ -5,9 +5,8 @@
 #ifndef PSYQ_IF_THEN_ENGINE_STATUS_CHUNK_HPP_
 #define PSYQ_IF_THEN_ENGINE_STATUS_CHUNK_HPP_
 
-#include <cstdint>
 #include <vector>
-#include "../assert.hpp"
+#include "../bit_algorithm.hpp"
 
 /// @cond
 namespace psyq
@@ -64,13 +63,13 @@ class psyq::if_then_engine::_private::status_chunk
     public: enum: std::uint8_t
     {
         /// @brief 状態値ビット列ブロックのビット数。
-        BLOCK_WIDTH = sizeof(typename this_type::bit_block)
-            * psyq::if_then_engine::_private::BITS_PER_BYTE,
+        BLOCK_BIT_WIDTH = sizeof(typename this_type::bit_block)
+            * psyq::CHAR_BIT_WIDTH,
     };
     static_assert(
-        // this_type::BLOCK_WIDTH が
+        // this_type::BLOCK_BIT_WIDTH が
         // this_type::status_property::pack_FORMAT_MASK に収まることを確認する。
-        this_type::BLOCK_WIDTH <= this_type::status_property::pack_FORMAT_MASK,
+        this_type::BLOCK_BIT_WIDTH <= this_type::status_property::pack_FORMAT_MASK,
         "");
 
     //-------------------------------------------------------------------------
@@ -132,17 +131,17 @@ class psyq::if_then_engine::_private::status_chunk
             ビット列から取得した値。
             ただし、該当する値がない場合は、0を返す。
      */
-    public: typename this_type::bit_block get_bits(
+    public: typename this_type::bit_block extract_bitset_value(
         std::size_t const in_bit_position,
         std::size_t const in_bit_width)
     const PSYQ_NOEXCEPT
     {
-        if (this_type::BLOCK_WIDTH < in_bit_width)
+        if (this_type::BLOCK_BIT_WIDTH < in_bit_width)
         {
             PSYQ_ASSERT(false);
             return 0;
         }
-        auto const local_block_index(in_bit_position / this_type::BLOCK_WIDTH);
+        auto const local_block_index(in_bit_position / this_type::BLOCK_BIT_WIDTH);
         if (this->bit_blocks_.size() <= local_block_index)
         {
             PSYQ_ASSERT(false);
@@ -150,84 +149,49 @@ class psyq::if_then_engine::_private::status_chunk
         }
 
         // ビット列ブロックでのビット位置を決定し、値を取り出す。
-        auto const local_position(
-            in_bit_position - local_block_index * this_type::BLOCK_WIDTH);
-        PSYQ_ASSERT(
-            (in_bit_width == this_type::BLOCK_WIDTH && local_position == 0)
-            || (in_bit_width < this_type::BLOCK_WIDTH
-                && local_position < this_type::BLOCK_WIDTH));
-        return (this->bit_blocks_.at(local_block_index) >> local_position) &
-            this_type::make_block_mask(in_bit_width);
+        return psyq::extract_bitset_value(
+            this->bit_blocks_.at(local_block_index),
+            in_bit_position - local_block_index * this_type::BLOCK_BIT_WIDTH,
+            in_bit_width);
     }
 
     /** @brief ビット列に値を設定する。
-        @retval 正 元とは異なる値を設定した。
-        @retval 0  元と同じ値を設定した。
-        @retval 負 失敗。値を設定できなかった。
         @param[in] in_bit_position 値を設定するビット列のビット位置。
         @param[in] in_bit_width    値を設定するビット列のビット数。
         @param[in] in_value        設定する値。
+        @retval 正 元とは異なる値を設定した。
+        @retval 0  元と同じ値を設定した。
+        @retval 負 失敗。値を設定できなかった。
      */
-    public: std::int8_t set_bits(
+    public: std::int8_t embed_bitset(
         std::size_t const in_bit_position,
         std::size_t const in_bit_width,
         typename this_type::bit_block const in_value)
     PSYQ_NOEXCEPT
     {
-        return this_type::set_bits(
-            this->bit_blocks_, in_bit_position, in_bit_width, in_value);
-    }
-
-    public: static typename this_type::bit_block make_block_mask(
-        std::size_t const in_bit_width)
-    PSYQ_NOEXCEPT
-    {
-        auto const local_max((std::numeric_limits<bit_block>::max)());
-        return in_bit_width < this_type::BLOCK_WIDTH?
-            ~(local_max << in_bit_width): local_max;
-    }
-
-    //-------------------------------------------------------------------------
-    /** @brief ビット列に値を設定する。
-        @retval 正 元とは異なる値を設定した。
-        @retval 0  元と同じ値を設定した。
-        @retval 負 失敗。値を設定できなかった。
-        @param[in,out] io_blocks   値を設定するビット列のコンテナ。
-        @param[in] in_bit_position 値を設定するビット列のビット位置。
-        @param[in] in_bit_width    値を設定するビット列のビット数。
-        @param[in] in_value        設定する値。
-     */
-    private: static std::int8_t set_bits(
-        typename this_type::bit_block_container& io_blocks,
-        std::size_t const in_bit_position,
-        std::size_t const in_bit_width,
-        typename this_type::bit_block const in_value)
-    PSYQ_NOEXCEPT
-    {
-        auto const local_mask(this_type::make_block_mask(in_bit_width));
-        if ((~local_mask & in_value) != 0)
+        if (psyq::shift_right_bitwise(in_value, in_bit_width) != 0)
         {
-            PSYQ_ASSERT(false);
             return -1;
         }
-        auto const local_block_index(in_bit_position / this_type::BLOCK_WIDTH);
-        if (io_blocks.size() <= local_block_index)
+        auto const local_block_index(in_bit_position / this_type::BLOCK_BIT_WIDTH);
+        if (this->bit_blocks_.size() <= local_block_index)
         {
             PSYQ_ASSERT(false);
             return -1;
         }
 
         // ビット列ブロックでのビット位置を決定し、値を埋め込む。
-        auto const local_position(
-            in_bit_position - local_block_index * this_type::BLOCK_WIDTH);
-        PSYQ_ASSERT(local_position + in_bit_width <= this_type::BLOCK_WIDTH);
-        auto& local_block(io_blocks.at(local_block_index));
+        auto& local_block(this->bit_blocks_.at(local_block_index));
         auto const local_last_block(local_block);
-        local_block = (~(local_mask << local_position) & local_block)
-            | ((in_value & local_mask) << local_position);
+        local_block = psyq::embed_bitset(
+            local_block,
+            in_bit_position - local_block_index * this_type::BLOCK_BIT_WIDTH,
+            in_bit_width,
+            in_value);
         return local_last_block != local_block;
     }
 
+    //-------------------------------------------------------------------------
     /** @brief 空きビット領域を再利用する。
         @param[in] in_bit_width   再利用したい領域のビット幅。
         @param[in] in_empty_field 再利用する空きビット領域のプロパティを指す反復子。
@@ -277,7 +241,7 @@ class psyq::if_then_engine::_private::status_chunk
 
         // 新たにビット列ブロックを追加する。
         auto const local_position(
-            this->bit_blocks_.size() * this_type::BLOCK_WIDTH);
+            this->bit_blocks_.size() * this_type::BLOCK_BIT_WIDTH);
         if (this_type::status_property::pack_POSITION_MASK < local_position)
         {
             // ビット位置の最大値を超過した。
@@ -285,14 +249,14 @@ class psyq::if_then_engine::_private::status_chunk
             return ~0;
         }
         auto const local_add_block_width(
-            (in_bit_width + this_type::BLOCK_WIDTH - 1)
-            / this_type::BLOCK_WIDTH);
+            (in_bit_width + this_type::BLOCK_BIT_WIDTH - 1)
+            / this_type::BLOCK_BIT_WIDTH);
         this->bit_blocks_.insert(
             this->bit_blocks_.end(), local_add_block_width, 0);
 
         // 余りを空きビット領域に追加する。
         auto const local_add_width(
-            local_add_block_width * this_type::BLOCK_WIDTH);
+            local_add_block_width * this_type::BLOCK_BIT_WIDTH);
         if (in_bit_width < local_add_width)
         {
             this_type::add_empty_field(

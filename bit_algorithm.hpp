@@ -91,6 +91,34 @@ namespace psyq
         "'CHAR_BIT_WIDTH' is not bit width of char.");
 
     //-------------------------------------------------------------------------
+    namespace _private
+    {
+        template<typename template_bits>
+        bool is_valid_bit_shift(std::size_t const in_bit_shift) PSYQ_NOEXCEPT
+        {
+            return in_bit_shift < sizeof(template_bits) * psyq::CHAR_BIT_WIDTH;
+        }
+
+        template<typename template_bits>
+        bool is_valid_bit_width(std::size_t const in_bit_width) PSYQ_NOEXCEPT
+        {
+            return in_bit_width <= sizeof(template_bits) * psyq::CHAR_BIT_WIDTH;
+        }
+
+        template<typename template_bits>
+        bool is_valid_bit_width(
+            std::size_t const in_bit_position,
+            std::size_t const in_bit_width)
+        PSYQ_NOEXCEPT
+        {
+            return is_valid_bit_width<template_bits>(in_bit_position)
+                && is_valid_bit_width<template_bits>(in_bit_width)
+                && is_valid_bit_width<template_bits>(
+                    in_bit_position + in_bit_width);
+        }
+    }
+
+    //-------------------------------------------------------------------------
     /** @brief 符号あり整数の絶対値を取得する。
 
         条件分岐の代わりにビット演算を使い、整数の絶対値を算出する。
@@ -108,8 +136,9 @@ namespace psyq
             "'template_integer' is not signed integer type.");
         auto const local_sign_bit_position(
             psyq::CHAR_BIT_WIDTH * sizeof(template_integer) - 1);
-        template_integer const local_mask(
-            -((in_value >> local_sign_bit_position) & 1));
+        auto const local_mask(
+            -static_cast<template_integer>(
+                1 & (in_value >> local_sign_bit_position)));
         return (in_value ^ local_mask) - local_mask;
     }
 
@@ -122,11 +151,11 @@ namespace psyq
     template<typename template_bits>
     PSYQ_CONSTEXPR template_bits shift_left_bitwise(
         template_bits const in_bits,
-        unsigned const      in_shift)
+        std::size_t const in_shift)
     PSYQ_NOEXCEPT
     {
         return static_cast<template_bits>(
-            in_shift < sizeof(in_bits) * psyq::CHAR_BIT_WIDTH?
+            psyq::_private::is_valid_bit_shift<template_bits>(in_shift)?
                 in_bits << in_shift: 0);
     }
 
@@ -141,11 +170,12 @@ namespace psyq
     template<typename template_bits>
     PSYQ_CONSTEXPR template_bits shift_left_bitwise_fast(
         template_bits const in_bits,
-        unsigned const      in_shift)
+        std::size_t const in_shift)
     PSYQ_NOEXCEPT
     {
-        return (
-            PSYQ_ASSERT(in_shift < sizeof(in_bits) * psyq::CHAR_BIT_WIDTH),
+        return static_cast<template_bits>(
+            PSYQ_ASSERT(
+                psyq::_private::is_valid_bit_shift<template_bits>(in_shift)),
             in_bits << in_shift);
     }
 
@@ -157,15 +187,15 @@ namespace psyq
     template<typename template_bits>
     PSYQ_CONSTEXPR template_bits shift_right_bitwise(
         template_bits const in_bits,
-        unsigned const      in_shift)
+        std::size_t const in_shift)
     PSYQ_NOEXCEPT
     {
         return std::is_unsigned<template_bits>::value?
             static_cast<template_bits>(
-                in_shift < sizeof(in_bits) * psyq::CHAR_BIT_WIDTH?
+                psyq::_private::is_valid_bit_shift<template_bits>(in_shift)?
                     in_bits >> in_shift: 0):
             static_cast<template_bits>(
-                in_bits >> (std::min)(
+                in_bits >> (std::min<std::size_t>)(
                     in_shift, sizeof(in_bits) * psyq::CHAR_BIT_WIDTH - 1));
     }
 
@@ -180,11 +210,12 @@ namespace psyq
     template<typename template_bits>
     PSYQ_CONSTEXPR template_bits shift_right_bitwise_fast(
         template_bits const in_bits,
-        unsigned const      in_shift)
+        std::size_t const in_shift)
     PSYQ_NOEXCEPT
     {
-        return (
-            PSYQ_ASSERT(in_shift < sizeof(in_bits) * psyq::CHAR_BIT_WIDTH),
+        return static_cast<template_bits>(
+            PSYQ_ASSERT(
+                psyq::_private::is_valid_bit_shift<template_bits>(in_shift)),
             in_bits >> in_shift);
     }
 
@@ -201,7 +232,7 @@ namespace psyq
     template<typename template_bits>
     PSYQ_CONSTEXPR bool get_bit(
         template_bits const in_bits,
-        std::size_t   const in_position)
+        std::size_t const in_position)
     PSYQ_NOEXCEPT
     {
         return (psyq::shift_right_bitwise(in_bits, in_position) & 1) != 0;
@@ -217,7 +248,7 @@ namespace psyq
     template<typename template_bits>
     PSYQ_CONSTEXPR bool get_bit_fast(
         template_bits const in_bits,
-        std::size_t   const in_position)
+        std::size_t const in_position)
     PSYQ_NOEXCEPT
     {
         return (psyq::shift_right_bitwise_fast(in_bits, in_position) & 1) != 0;
@@ -234,10 +265,10 @@ namespace psyq
     template<typename template_bits>
     PSYQ_CONSTEXPR template_bits reset_bit(
         template_bits const in_bits,
-        std::size_t   const in_position)
+        std::size_t const in_position)
     PSYQ_NOEXCEPT
     {
-        return ~psyq::shift_left_bitwise<template_bits>(1, in_position)
+        return ~psyq::shift_left_bitwise(template_bits(1), in_position)
             & in_bits;
     }
 
@@ -251,10 +282,10 @@ namespace psyq
     template<typename template_bits>
     PSYQ_CONSTEXPR template_bits reset_bit_fast(
         template_bits const in_bits,
-        std::size_t   const in_position)
+        std::size_t const in_position)
     PSYQ_NOEXCEPT
     {
-        return ~psyq::shift_left_bitwise_fast<template_bits>(1, in_position)
+        return ~psyq::shift_left_bitwise_fast(template_bits(1), in_position)
             & in_bits;
     }
 
@@ -269,10 +300,10 @@ namespace psyq
     template<typename template_bits>
     PSYQ_CONSTEXPR template_bits set_bit(
         template_bits const in_bits,
-        std::size_t   const in_position)
+        std::size_t const in_position)
     PSYQ_NOEXCEPT
     {
-        return psyq::shift_left_bitwise<template_bits>(1, in_position)
+        return psyq::shift_left_bitwise(template_bits(1), in_position)
             | in_bits;
     }
 
@@ -286,10 +317,10 @@ namespace psyq
     template<typename template_bits>
     PSYQ_CONSTEXPR template_bits set_bit_fast(
         template_bits const in_bits,
-        std::size_t   const in_position)
+        std::size_t const in_position)
     PSYQ_NOEXCEPT
     {
-        return psyq::shift_left_bitwise_fast<template_bits>(1, in_position)
+        return psyq::shift_left_bitwise_fast(template_bits(1), in_position)
             | in_bits;
     }
 
@@ -305,8 +336,8 @@ namespace psyq
     template<typename template_bits>
     PSYQ_CONSTEXPR template_bits set_bit(
         template_bits const in_bits,
-        std::size_t   const in_position,
-        bool          const in_value)
+        std::size_t const in_position,
+        bool const in_value)
     PSYQ_NOEXCEPT
     {
         return psyq::reset_bit(in_bits, in_position)
@@ -347,7 +378,7 @@ namespace psyq
         std::size_t   const in_position)
     PSYQ_NOEXCEPT
     {
-        return psyq::shift_left_bitwise<template_bits>(1, in_position)
+        return psyq::shift_left_bitwise(template_bits(1), in_position)
             ^ in_bits;
     }
 
@@ -364,7 +395,7 @@ namespace psyq
         std::size_t   const in_position)
     PSYQ_NOEXCEPT
     {
-        return psyq::shift_left_bitwise_fast<template_bits>(1, in_position)
+        return psyq::shift_left_bitwise_fast(template_bits(1), in_position)
             ^ in_bits;
     }
 
@@ -373,11 +404,7 @@ namespace psyq
     PSYQ_CONSTEXPR template_bits make_bit_mask(
         std::size_t const in_bit_width)
     {
-        return ~(
-            PSYQ_ASSERT(
-                in_bit_width <= sizeof(template_bits) * psyq::CHAR_BIT_WIDTH),
-            in_bit_width < sizeof(template_bits) * psyq::CHAR_BIT_WIDTH?
-                ~template_bits(0) << in_bit_width: 0);
+        return ~psyq::shift_left_bitwise(~template_bits(0), in_bit_width);
     }
 
     /** @brief 指定されたビット範囲を取得する。
@@ -387,15 +414,15 @@ namespace psyq
         @return ビット範囲。
      */
     template<typename template_bits>
-    PSYQ_CONSTEXPR template_bits extract_bitset(
+    PSYQ_CONSTEXPR template_bits emboss_bitset(
         template_bits const in_bits,
-        std::size_t   const in_bit_position,
-        std::size_t   const in_bit_width)
+        std::size_t const in_bit_position,
+        std::size_t const in_bit_width)
     {
         return (
             PSYQ_ASSERT(
-                in_bit_position + in_bit_width
-                <= sizeof(template_bits) * psyq::CHAR_BIT_WIDTH),
+                psyq::_private::is_valid_bit_width<template_bits>(
+                    in_bit_position, in_bit_width)),
             psyq::shift_left_bitwise_fast(
                 psyq::make_bit_mask<template_bits>(in_bit_width),
                 in_bit_position)
@@ -409,15 +436,15 @@ namespace psyq
         @return ビット範囲の値。
      */
     template<typename template_bits>
-    PSYQ_CONSTEXPR template_bits extract_bitset_value(
+    PSYQ_CONSTEXPR template_bits get_bitset(
         template_bits const in_bits,
-        std::size_t   const in_bit_position,
-        std::size_t   const in_bit_width)
+        std::size_t const in_bit_position,
+        std::size_t const in_bit_width)
     {
         return (
             PSYQ_ASSERT(
-                in_bit_position + in_bit_width
-                <= sizeof(template_bits) * psyq::CHAR_BIT_WIDTH),
+                psyq::_private::is_valid_bit_width<template_bits>(
+                    in_bit_position, in_bit_width)),
             psyq::make_bit_mask<template_bits>(in_bit_width)
             & psyq::shift_right_bitwise_fast(in_bits, in_bit_position));
     }
@@ -431,13 +458,13 @@ namespace psyq
     template<typename template_bits>
     PSYQ_CONSTEXPR template_bits reset_bitset(
         template_bits const in_bits,
-        std::size_t   const in_bit_position,
-        std::size_t   const in_bit_width)
+        std::size_t const in_bit_position,
+        std::size_t const in_bit_width)
     {
         return (
             PSYQ_ASSERT(
-                in_bit_position + in_bit_width
-                <= sizeof(template_bits) * psyq::CHAR_BIT_WIDTH),
+                psyq::_private::is_valid_bit_width<template_bits>(
+                    in_bit_position, in_bit_width)),
             in_bits & ~psyq::shift_left_bitwise_fast(
                 psyq::make_bit_mask<template_bits>(in_bit_width),
                 in_bit_position));
@@ -451,7 +478,7 @@ namespace psyq
         @return 指定されたビット位置に in_value を埋め込んだ整数値。
      */
     template<typename template_bits>
-    PSYQ_CONSTEXPR template_bits embed_bitset(
+    PSYQ_CONSTEXPR template_bits set_bitset(
         template_bits const in_bits,
         std::size_t   const in_bit_position,
         std::size_t   const in_bit_width,
@@ -462,7 +489,7 @@ namespace psyq
             PSYQ_ASSERT(
                 psyq::shift_right_bitwise(in_value, in_bit_width) == 0),
             psyq::reset_bitset(in_bits, in_bit_position, in_bit_width)
-            | psyq::shift_left_bitwise_fast<template_bits>(in_value, in_bit_position));
+            | psyq::shift_left_bitwise_fast(in_value, in_bit_position));
     }
 
     //-------------------------------------------------------------------------

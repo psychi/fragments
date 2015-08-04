@@ -210,7 +210,7 @@ class psyq::if_then_engine::_private::evaluator
     /** @brief 条件式を登録する。
 
         - this_type::evaluate_expression で、登録した条件式を評価できる。
-        - this_type::erase_chunk で、登録した条件式をチャンク単位で破棄できる。
+        - this_type::erase_chunk で、登録した条件式をチャンク単位で削除できる。
 
         @param[in] in_chunk_key      登録する条件式が所属する要素条件チャンクの識別値。
         @param[in] in_expression_key 登録する条件式の識別値。

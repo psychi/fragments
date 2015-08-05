@@ -132,7 +132,7 @@ class psyq::if_then_engine::_private::status_chunk
             ビット列から取得した値。
             ただし、該当する値がない場合は、0を返す。
      */
-    public: typename this_type::bit_block get_bitset(
+    public: typename this_type::bit_block get_bit_field(
         std::size_t const in_bit_position,
         std::size_t const in_bit_width)
     const PSYQ_NOEXCEPT
@@ -151,7 +151,7 @@ class psyq::if_then_engine::_private::status_chunk
         }
 
         // ビット列ブロックでのビット位置を決定し、値を取り出す。
-        return psyq::get_bitset(
+        return psyq::get_bit_field(
             this->bit_blocks_.at(local_block_index),
             in_bit_position - local_block_index * this_type::BLOCK_BIT_WIDTH,
             in_bit_width);
@@ -165,17 +165,18 @@ class psyq::if_then_engine::_private::status_chunk
         @retval 0  元と同じ値を設定した。
         @retval 負 失敗。値を設定できなかった。
      */
-    public: std::int8_t set_bitset(
+    public: std::int8_t set_bit_field(
         std::size_t const in_bit_position,
         std::size_t const in_bit_width,
-        typename this_type::bit_block const in_value)
+        typename this_type::bit_block const& in_value)
     PSYQ_NOEXCEPT
     {
         if (psyq::shift_right_bitwise(in_value, in_bit_width) != 0)
         {
             return -1;
         }
-        auto const local_block_index(in_bit_position / this_type::BLOCK_BIT_WIDTH);
+        auto const local_block_index(
+            in_bit_position / this_type::BLOCK_BIT_WIDTH);
         if (this->bit_blocks_.size() <= local_block_index)
         {
             PSYQ_ASSERT(false);
@@ -185,7 +186,7 @@ class psyq::if_then_engine::_private::status_chunk
         // ビット列ブロックでのビット位置を決定し、値を埋め込む。
         auto& local_block(this->bit_blocks_.at(local_block_index));
         auto const local_last_block(local_block);
-        local_block = psyq::set_bitset(
+        local_block = psyq::set_bit_field(
             local_block,
             in_bit_position - local_block_index * this_type::BLOCK_BIT_WIDTH,
             in_bit_width,
@@ -283,8 +284,13 @@ class psyq::if_then_engine::_private::status_chunk
             && in_bit_width <= this_type::status_property::pack_FORMAT_MASK)
         {
             auto const local_empty_field(
-               (in_bit_position << this_type::status_property::pack_POSITION_FRONT)
-               | (static_cast<typename this_type::status_property::pack>(in_bit_width)
+               (
+                   static_cast<typename this_type::status_property::pack>(
+                       in_bit_position)
+                   << this_type::status_property::pack_POSITION_FRONT)
+               | (
+                   static_cast<typename this_type::status_property::pack>(
+                       in_bit_width)
                    << this_type::status_property::pack_FORMAT_FRONT));
             io_empty_fields.insert(
                 std::lower_bound(
@@ -324,8 +330,8 @@ struct psyq::if_then_engine::_private::status_chunk<
     const PSYQ_NOEXCEPT
     {
         // ビット領域のビット数で比較する。
-        auto const local_left(status_property::get_format_bitset(in_left));
-        auto const local_right(status_property::get_format_bitset(in_right));
+        auto const local_left(status_property::get_format_field(in_left));
+        auto const local_right(status_property::get_format_field(in_right));
         if (local_left != local_right)
         {
             return local_left < local_right;
@@ -342,7 +348,7 @@ struct psyq::if_then_engine::_private::status_chunk<
     const PSYQ_NOEXCEPT
     {
         // ビット領域のビット数で比較する。
-        return status_property::get_format_bitset(in_left) < in_right;
+        return status_property::get_format_field(in_left) < in_right;
     }
 
     bool operator()(
@@ -351,7 +357,7 @@ struct psyq::if_then_engine::_private::status_chunk<
     const PSYQ_NOEXCEPT
     {
         // ビット領域のビット数で比較する。
-        return in_left < status_property::get_format_bitset(in_right);
+        return in_left < status_property::get_format_field(in_right);
     }
 
 }; // struct psyq::if_then_engine::_private::status_chunk::empty_field_less

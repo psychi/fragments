@@ -414,7 +414,7 @@ namespace psyq
         @return ビット範囲。
      */
     template<typename template_bits>
-    PSYQ_CONSTEXPR template_bits emboss_bitset(
+    PSYQ_CONSTEXPR template_bits emboss_bit_field(
         template_bits const in_bits,
         std::size_t const in_bit_position,
         std::size_t const in_bit_width)
@@ -436,7 +436,7 @@ namespace psyq
         @return ビット範囲の値。
      */
     template<typename template_bits>
-    PSYQ_CONSTEXPR template_bits get_bitset(
+    PSYQ_CONSTEXPR template_bits get_bit_field(
         template_bits const in_bits,
         std::size_t const in_bit_position,
         std::size_t const in_bit_width)
@@ -456,7 +456,7 @@ namespace psyq
         @return 指定されたビット範囲を0にした整数値。
      */
     template<typename template_bits>
-    PSYQ_CONSTEXPR template_bits reset_bitset(
+    PSYQ_CONSTEXPR template_bits reset_bit_field(
         template_bits const in_bits,
         std::size_t const in_bit_position,
         std::size_t const in_bit_width)
@@ -478,7 +478,7 @@ namespace psyq
         @return 指定されたビット位置に in_value を埋め込んだ整数値。
      */
     template<typename template_bits>
-    PSYQ_CONSTEXPR template_bits set_bitset(
+    PSYQ_CONSTEXPR template_bits set_bit_field(
         template_bits const in_bits,
         std::size_t   const in_bit_position,
         std::size_t   const in_bit_width,
@@ -488,7 +488,7 @@ namespace psyq
         return (
             PSYQ_ASSERT(
                 psyq::shift_right_bitwise(in_value, in_bit_width) == 0),
-            psyq::reset_bitset(in_bits, in_bit_position, in_bit_width)
+            psyq::reset_bit_field(in_bits, in_bit_position, in_bit_width)
             | psyq::shift_left_bitwise_fast(in_value, in_bit_position));
     }
 

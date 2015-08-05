@@ -164,7 +164,7 @@ class psyq::if_then_engine::_private::status_property
         this->pack_ = this_type::set_format(this->pack_, in_format);
     }
     /// @}
-    public: static typename this_type::format get_format_bitset(
+    public: static typename this_type::format get_format_field(
         typename this_type::pack const& in_pack)
     PSYQ_NOEXCEPT
     {
@@ -184,7 +184,7 @@ class psyq::if_then_engine::_private::status_property
         auto const local_minus(
             1 & static_cast<typename this_type::format>(
                 in_pack >> this_type::pack_FORMAT_BACK));
-        return this_type::get_format_bitset(in_pack) | (
+        return this_type::get_format_field(in_pack) | (
             -local_minus << (
                 this_type::pack_FORMAT_BACK - this_type::pack_FORMAT_FRONT));
     }

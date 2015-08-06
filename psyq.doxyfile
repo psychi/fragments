@@ -733,7 +733,7 @@ INPUT                  = \
                          ./geometry/mosp/tree.hpp \
                          ./geometry/mosp/nut.hpp \
                          ./if_then_engine/reservoir.hpp \
-                         ./if_then_engine/modifier.hpp \
+                         ./if_then_engine/accumulator.hpp \
                          ./if_then_engine/status_value.hpp \
                          ./if_then_engine/status_property.hpp \
                          ./if_then_engine/status_chunk.hpp \

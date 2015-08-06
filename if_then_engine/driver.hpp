@@ -8,7 +8,7 @@
 #include "../string/csv_table.hpp"
 #include "../string/relation_table.hpp"
 #include "./reservoir.hpp"
-#include "./modifier.hpp"
+#include "./accumulator.hpp"
 #include "./evaluator.hpp"
 #include "./dispatcher.hpp"
 #include "./behavior_chunk.hpp"
@@ -79,9 +79,9 @@ class psyq::if_then_engine::driver
 
     /// @brief 駆動器で用いる状態変更器の型。
     public: typedef
-        psyq::if_then_engine::_private::modifier<
+        psyq::if_then_engine::_private::accumulator<
             typename this_type::reservoir>
-        modifier;
+        accumulator;
 
     /// @brief 駆動器で用いる条件評価器の型。
     public: typedef
@@ -103,8 +103,9 @@ class psyq::if_then_engine::driver
         behavior_chunk;
 
     //-------------------------------------------------------------------------
-    /// @name 構築と代入
-    //@{
+    /** @name 構築と代入
+        @{
+     */
     /** @brief 空の駆動器を構築する。
         @param[in] in_reserve_chunks      チャンクの予約数。
         @param[in] in_reserve_statuses    状態値の予約数。
@@ -123,7 +124,7 @@ class psyq::if_then_engine::driver
             this_type::allocator_type())
     :
     reservoir_(in_reserve_chunks, in_reserve_statuses, in_allocator),
-    modifier_(in_reserve_caches, in_allocator),
+    accumulator_(in_reserve_caches, in_allocator),
     evaluator_(in_reserve_chunks, in_reserve_expressions, in_allocator),
     dispatcher_(
         in_reserve_expressions,
@@ -142,7 +143,7 @@ class psyq::if_then_engine::driver
      */
     public: driver(this_type&& io_source):
     reservoir_(std::move(io_source.reservoir_)),
-    modifier_(std::move(io_source.modifier_)),
+    accumulator_(std::move(io_source.accumulator_)),
     evaluator_(std::move(io_source.evaluator_)),
     dispatcher_(std::move(io_source.dispatcher_)),
     behavior_chunks_(std::move(io_source.behavior_chunks_)),
@@ -156,7 +157,7 @@ class psyq::if_then_engine::driver
     public: this_type& operator=(this_type&& io_source)
     {
         this->reservoir_ = std::move(io_source.reservoir_);
-        this->modifier_ = std::move(io_source.modifier_);
+        this->accumulator_ = std::move(io_source.accumulator_);
         this->evaluator_ = std::move(io_source.evaluator_);
         this->dispatcher_ = std::move(io_source.dispatcher_);
         this->behavior_chunks_ = std::move(io_source.behavior_chunks_);
@@ -173,7 +174,7 @@ class psyq::if_then_engine::driver
         std::size_t const in_expression_buckets)
     {
         this->reservoir_.rebuild(in_chunk_buckets, in_status_buckets);
-        //this->modifier_.shrink_to_fit();
+        //this->accumulator_.shrink_to_fit();
         this->evaluator_.rebuild(in_chunk_buckets, in_expression_buckets);
         this->dispatcher_.shrink_to_fit();
         this->behavior_chunks_.shrink_to_fit();
@@ -182,7 +183,7 @@ class psyq::if_then_engine::driver
             local_behavior_chunk.functions_.shrink_to_fit();
         }
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
     /** @brief 進行を更新する。
 
@@ -190,13 +191,14 @@ class psyq::if_then_engine::driver
      */
     public: void progress()
     {
-        this->modifier_._modify(this->reservoir_);
+        this->accumulator_._flush(this->reservoir_);
         this->dispatcher_._dispatch(this->evaluator_, this->reservoir_);
     }
 
     //-------------------------------------------------------------------------
-    /// @name チャンク
-    //@{
+    /** @name チャンク
+        @{
+     */
     /** @brief 状態値と条件式と挙動関数を、チャンクへ追加する。
         @param[out] out_workspace
             文字列表の構築の作業領域として使う文字列。
@@ -309,7 +311,7 @@ class psyq::if_then_engine::driver
             // @brief 挙動関数を条件挙動器に登録する。
             // @param[in,out] io_dispatcher 挙動関数を登録する条件挙動器。
             // @param[in,out] io_hasher     文字列から識別値を生成する関数オブジェクト。
-            // @param[in,out] io_modifier   挙動関数で使う状態変更器。
+            // @param[in,out] io_accumulator   挙動関数で使う状態変更器。
             // @return
             //     条件挙動器に登録した挙動関数オブジェクトを指す、
             //     スマートポインタのコンテナ。
@@ -318,7 +320,7 @@ class psyq::if_then_engine::driver
             template_behavior_builder::operator()(
                 driver::dispatcher& io_dispatcher,
                 driver::hasher& io_hasher,
-                driver::modifier& io_modifier)
+                driver::accumulator& io_accumulator)
             const;
             @endcode
      */
@@ -343,7 +345,7 @@ class psyq::if_then_engine::driver
             this->behavior_chunks_,
             in_chunk_key,
             in_behavior_builder(
-                this->dispatcher_, this->hash_function_, this->modifier_));
+                this->dispatcher_, this->hash_function_, this->accumulator_));
     }
 
     /** @brief 条件式に対応する挙動関数を、チャンクへ追加する。
@@ -362,7 +364,7 @@ class psyq::if_then_engine::driver
         typename this_type::reservoir::chunk_key const& in_chunk_key,
         typename this_type::evaluator::expression_key const& in_expression_key,
         typename this_type::dispatcher::condition const in_condition,
-        typename this_type::dispatcher::function_shared_ptr const& in_function,
+        typename this_type::dispatcher::function_shared_ptr in_function,
         typename this_type::dispatcher::function_priority const in_priority =
             PSYQ_IF_THEN_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT)
     {
@@ -391,12 +393,47 @@ class psyq::if_then_engine::driver
         this->evaluator_.erase_chunk(in_chunk);
         this_type::behavior_chunk::erase(this->behavior_chunks_, in_chunk);
     }
-    //@}
+    /// @}
+    //-------------------------------------------------------------------------
+    /** @name 状態値
+        @{
+     */
+    /** @brief 状態貯蔵器を取得する。
+        @return 状態貯蔵器。
+     */
+    public: typename this_type::reservoir const& get_reservoir() const
+    {
+        return this->reservoir_;
+    }
+
+    /// @copydoc reservoir::register_status(typename this_type::chunk_key const&, typename this_type::status_key const&, template_value const);
+    public: template<typename template_value>
+    bool register_status(
+        typename this_type::reservoir::chunk_key const& in_chunk_key,
+        typename this_type::reservoir::status_key const& in_status_key,
+        template_value const in_value)
+    {
+        return this->reservoir_.register_status(
+            in_chunk_key, in_status_key, in_value);
+    }
+
+    /// @copydoc reservoir::register_status(typename this_type::chunk_key const&, typename this_type::status_key const&, template_value const, std::size_t const);
+    public: template<typename template_value>
+    bool register_status(
+        typename this_type::reservoir::chunk_key const& in_chunk_key,
+        typename this_type::reservoir::status_key const& in_status_key,
+        template_value const in_value,
+        std::size_t const in_bit_width)
+    {
+        return this->reservoir_.register_status(
+            in_chunk_key, in_status_key, in_value, in_bit_width);
+    }
+    /// @}
     //-------------------------------------------------------------------------
     /// @brief 駆動器で用いる状態貯蔵器。
-    public: typename this_type::reservoir reservoir_;
+    private: typename this_type::reservoir reservoir_;
     /// @brief 駆動器で用いる状態変更器。
-    public: typename this_type::modifier modifier_;
+    public: typename this_type::accumulator accumulator_;
     /// @brief 駆動器で用いる条件評価器。
     public: typename this_type::evaluator evaluator_;
     /// @brief 駆動器で用いる条件挙動器。

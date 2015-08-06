@@ -40,12 +40,7 @@ namespace psyq
 /** @brief 状態貯蔵器。任意のビット長の状態値を保持する。
 
     ### 使い方の概略
-    - 以下の関数で、状態値を登録する。
-      - reservoir::register_bool
-      - reservoir::register_unsigned
-      - reservoir::register_signed
-      - reservoir::register_float
-      - reservoir::register_status
+    - reservoir::register_status で、状態値を登録する。
     - reservoir::extract_status で、状態値を取得する。
     - reservoir::assign_status で、状態値に代入する。
 
@@ -258,7 +253,7 @@ class psyq::if_then_engine::_private::reservoir
     /** @name 状態値の登録
         @{
      */
-    /** @brief 論理型の状態値を登録する。
+    /** @brief 状態値を登録する。
 
         @param[in] in_chunk_key  登録する状態値を格納する状態値ビット列チャンクの識別値。
         @param[in] in_status_key 登録する状態値の識別番号。
@@ -267,14 +262,95 @@ class psyq::if_then_engine::_private::reservoir
         @retval true 成功。状態値を登録した。
         @retval false
             失敗。状態値を登録できなかった。
-            in_status_key に対応する状態値がすでに登録されていると失敗する。
+            - in_status_key に対応する状態値がすでに登録されていると失敗する。
 
         @sa
         - this_type::extract_status と this_type::assign_status
           で、登録した状態値にアクセスできる。
         - this_type::erase_chunk で、登録した状態値をチャンク毎に削除できる。
      */
-    public: bool register_bool(
+    public: template<typename template_value>
+    bool register_status(
+        typename this_type::chunk_key const& in_chunk_key,
+        typename this_type::status_key const& in_status_key,
+        template_value const in_value)
+    {
+        return std::is_floating_point<template_value>::value?
+            this->register_status(
+                in_chunk_key,
+                in_status_key,
+                static_cast<typename this_type::status_value::float_type>(
+                    in_value)):
+            this->register_status(
+                in_chunk_key,
+                in_status_key,
+                in_value,
+                std::is_same<bool, template_value>::value?
+                    1: psyq::CHAR_BIT_WIDTH * sizeof(template_value));
+    }
+
+    /** @brief 整数型の状態値を登録する。
+
+        @param[in] in_chunk_key  登録する状態値を格納する状態値ビット列チャンクの識別値。
+        @param[in] in_status_key 登録する状態値の識別番号。
+        @param[in] in_value      登録する状態値の初期値。
+        @param[in] in_bit_width  登録する状態値のビット幅。
+
+        @retval true 成功。状態値を登録した。
+        @retval false
+            失敗。状態値を登録できなかった。
+            - in_status_key に対応する状態値がすでに登録されていると失敗する。
+            - in_value のビット幅が in_bit_width を超えていると失敗する。
+            - this_type::status_chunk::BLOCK_BIT_WIDTH より
+              in_bit_width が大きければ失敗する。
+
+        @sa
+        - this_type::extract_status と this_type::assign_status
+          で、登録した状態値にアクセスできる。
+        - this_type::erase_chunk で、登録した状態値をチャンク毎に削除できる。
+     */
+    public: template<typename template_value>
+    bool register_status(
+        typename this_type::chunk_key const& in_chunk_key,
+        typename this_type::status_key const& in_status_key,
+        template_value const in_value,
+        std::size_t const in_bit_width)
+    {
+        if (!std::is_integral<template_value>::value)
+        {}
+        else if (std::is_same<bool, template_value>::value)
+        {
+            if (in_bit_width == 1)
+            {
+                return this->register_status(
+                    in_chunk_key, in_status_key, in_value != 0);
+            }
+        }
+        else if (std::is_signed<template_value>::value)
+        {
+            return this->register_status(
+                in_chunk_key,
+                in_status_key,
+                static_cast<typename this_type::status_value::signed_type>(
+                    in_value),
+                in_bit_width);
+        }
+        else if (std::is_unsigned<template_value>::value)
+        {
+            return this->register_status(
+                in_chunk_key,
+                in_status_key,
+                static_cast<typename this_type::status_value::unsigned_type>(
+                    in_value),
+                in_bit_width);
+        }
+        return false;
+    }
+
+    /** @brief 論理型の状態値を登録する。
+        @copydetails register_status(typename this_type::chunk_key const&, typename this_type::status_key const&, template_value const);
+     */
+    public: bool register_status(
         typename this_type::chunk_key const& in_chunk_key,
         typename this_type::status_key const& in_status_key,
         bool const in_value)
@@ -293,38 +369,17 @@ class psyq::if_then_engine::_private::reservoir
     }
 
     /** @brief 符号なし整数型の状態値を登録する。
-
-        @param[in] in_chunk_key  登録する状態値を格納する状態値ビット列チャンクの識別値。
-        @param[in] in_status_key 登録する状態値の識別番号。
-        @param[in] in_value      登録する状態値の初期値。
-        @param[in] in_bit_width  登録する状態値のビット幅。
-
-        @retval true 成功。状態値を登録した。
-        @retval false
-            失敗。状態値を登録できなかった。
-            - in_status_key に対応する状態値がすでに登録されていると失敗する。
-            - in_value のビット幅が in_bit_width を超えていると失敗する。
-            - in_bit_width が1以下だと失敗する。
-            - this_type::status_chunk::BLOCK_BIT_WIDTH より
-              in_bit_width が大きければ失敗する。
-
-        @sa
-        - this_type::extract_status と this_type::assign_status
-          で、登録した状態値にアクセスできる。
-        - this_type::erase_chunk で、登録した状態値をチャンク毎に削除できる。
+        @copydetails register_status(typename this_type::chunk_key const&, typename this_type::status_key const&, template_value const, std::size_t);
      */
-    public: bool register_unsigned(
+    public: bool register_status(
         typename this_type::chunk_key const& in_chunk_key,
         typename this_type::status_key const& in_status_key,
-        typename this_type::status_value::unsigned_type const in_value,
+        typename this_type::status_value::unsigned_type const& in_value,
         std::size_t const in_bit_width)
     {
         // 登録不可能な状態値か判定する。
-        auto const local_format(
-            static_cast<typename this_type::status_property::format>(
-                in_bit_width));
         if (this_type::status_chunk::BLOCK_BIT_WIDTH < in_bit_width
-            || local_format < this_type::status_value::kind_UNSIGNED
+            || in_bit_width < 2
             || psyq::shift_right_bitwise(in_value, in_bit_width) != 0)
         {
             return false;
@@ -334,7 +389,11 @@ class psyq::if_then_engine::_private::reservoir
         auto& local_chunk(this_type::equip_chunk(this->chunks_, in_chunk_key));
         auto const local_property(
             this_type::insert_status(
-                this->properties_, local_chunk, in_status_key, local_format));
+                this->properties_,
+                local_chunk,
+                in_status_key,
+                static_cast<typename this_type::status_property::format>(
+                    in_bit_width)));
         return local_property != nullptr
             && 0 <= local_chunk.second.set_bit_field(
                 local_property->second.get_bit_position(),
@@ -343,20 +402,17 @@ class psyq::if_then_engine::_private::reservoir
     }
 
     /** @brief 符号あり整数型の状態値を登録する。
-        @copydetails register_unsigned
+        @copydetails register_status(typename this_type::chunk_key const&, typename this_type::status_key const&, template_value const, std::size_t);
      */
-    public: bool register_signed(
+    public: bool register_status(
         typename this_type::chunk_key const& in_chunk_key,
         typename this_type::status_key const& in_status_key,
-        typename this_type::status_value::signed_type const in_value,
+        typename this_type::status_value::signed_type const& in_value,
         std::size_t const in_bit_width)
     {
         // 登録不可能な状態値か判定する。
-        auto const local_format(
-            -static_cast<typename this_type::status_property::format>(
-                in_bit_width));
         if (this_type::status_chunk::BLOCK_BIT_WIDTH < in_bit_width
-            || this_type::status_value::kind_SIGNED < local_format)
+            || in_bit_width < 2)
         {
             return false;
         }
@@ -369,14 +425,12 @@ class psyq::if_then_engine::_private::reservoir
             static_cast<typename this_type::status_chunk::bit_block>(in_value));
         if (in_value < 0)
         {
-            auto const local_mask(
-                psyq::make_bit_mask<typename this_type::status_chunk::bit_block>(
-                    local_bit_width));
-            if ((~local_mask & local_bit_field) != ~local_mask)
+            if (psyq::shift_right_bitwise(-in_value, in_bit_width) != 0)
             {
                 return false;
             }
-            local_bit_field &= local_mask;
+            local_bit_field &= psyq::make_bit_mask<decltype(local_bit_field)>(
+                local_bit_width);
         }
         else if (psyq::shift_right_bitwise(in_value, in_bit_width) != 0)
         {
@@ -387,7 +441,11 @@ class psyq::if_then_engine::_private::reservoir
         auto& local_chunk(this_type::equip_chunk(this->chunks_, in_chunk_key));
         auto const local_property(
             this_type::insert_status(
-                this->properties_, local_chunk, in_status_key, local_format));
+                this->properties_,
+                local_chunk,
+                in_status_key,
+                -static_cast<typename this_type::status_property::format>(
+                    in_bit_width)));
         return local_property != nullptr
             && 0 <= local_chunk.second.set_bit_field(
                 local_property->second.get_bit_position(),
@@ -396,12 +454,12 @@ class psyq::if_then_engine::_private::reservoir
     }
 
     /** @brief 浮動小数点数型の状態値を登録する。
-        @copydetails register_bool
+        @copydetails register_status(typename this_type::chunk_key const&, typename this_type::status_key const&, bool);
      */
-    public: bool register_float(
+    public: bool register_status(
         typename this_type::chunk_key const& in_chunk_key,
         typename this_type::status_key const& in_status_key,
-        typename this_type::status_value::float_type const in_value)
+        typename this_type::status_value::float_type const& in_value)
     {
         // 状態値を登録した後、状態値に初期値を設定する。
         auto& local_chunk(this_type::equip_chunk(this->chunks_, in_chunk_key));
@@ -424,7 +482,7 @@ class psyq::if_then_engine::_private::reservoir
     }
 
     /** @brief 状態値を登録する。
-        @copydetails register_bool
+        @copydetails register_status(typename this_type::chunk_key const&, typename this_type::status_key const&, bool);
      */
     public: bool register_status(
         typename this_type::chunk_key const& in_chunk_key,
@@ -434,13 +492,13 @@ class psyq::if_then_engine::_private::reservoir
         auto const local_bool(in_value.extract_bool());
         if (local_bool != nullptr)
         {
-            return this->register_bool(
+            return this->register_status(
                 in_chunk_key, in_status_key, *local_bool);
         }
         auto const local_unsigned(in_value.extract_unsigned());
         if (local_unsigned != nullptr)
         {
-            return this->register_unsigned(
+            return this->register_status(
                 in_chunk_key,
                 in_status_key,
                 *local_unsigned,
@@ -449,7 +507,7 @@ class psyq::if_then_engine::_private::reservoir
         auto const local_signed(in_value.extract_signed());
         if (local_signed != nullptr)
         {
-            return this->register_signed(
+            return this->register_status(
                 in_chunk_key,
                 in_status_key,
                 *local_signed,
@@ -458,7 +516,7 @@ class psyq::if_then_engine::_private::reservoir
         auto const local_float(in_value.extract_float());
         if (local_float != nullptr)
         {
-            return this->register_float(
+            return this->register_status(
                 in_chunk_key, in_status_key, *local_float);
         }
         return false;
@@ -470,12 +528,8 @@ class psyq::if_then_engine::_private::reservoir
      */
     /** @brief 状態値を取得する。
 
-        in_status_key に対応する状態値が、以下の関数で登録されていること。
-        - this_type::register_bool
-        - this_type::register_unsigned
-        - this_type::register_signed
-        - this_type::register_float
-        - this_type::register_status
+        in_status_key に対応する状態値が、
+        this_type::register_status で登録されていること。
 
         @param[in] in_status_key 取得する状態値に対応する識別値。
 
@@ -638,12 +692,8 @@ class psyq::if_then_engine::_private::reservoir
      */
     /** @brief 状態値へ代入する。
 
-        in_status_key に対応する状態値が、以下の関数で登録されていること。
-        - this_type::register_bool
-        - this_type::register_unsigned
-        - this_type::register_signed
-        - this_type::register_float
-        - this_type::register_status
+        in_status_key に対応する状態値が、
+        this_type::register_status で登録されていること。
 
         @param[in] in_status_key 代入先となる状態値に対応する識別値。
         @param[in] in_value      状態値に代入する値。

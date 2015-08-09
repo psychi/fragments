@@ -133,6 +133,12 @@ class psyq::if_then_engine::_private::reservoir
 
     private: typedef psyq::float_bit_field<template_float> float_bit_field;
 
+    private: typedef
+         std::pair<
+             typename this_type::status_chunk::bit_block,
+             typename this_type::status_property::bit_width>
+         bit_field_width;
+
     //-------------------------------------------------------------------------
     /** @name 構築と代入
         @{
@@ -261,18 +267,40 @@ class psyq::if_then_engine::_private::reservoir
         typename this_type::status_key const& in_status_key,
         template_value const in_value)
     {
-        return std::is_floating_point<template_value>::value?
-            this->register_status(
+        if (std::is_floating_point<template_value>::value)
+        {
+            // 浮動小数点数型の状態値を登録する。
+            /** @note
+                コンパイル時にここで警告かエラーが発生する場合は、
+                template_value が double 型で
+                this_type::float_bit_field::float_type が float 型なのが原因。
+             */
+            typename this_type::float_bit_field::float_type const
+                local_float(in_value);
+            return this->register_status_bit_field(
                 in_chunk_key,
                 in_status_key,
-                static_cast<typename this_type::status_value::float_type>(
-                    in_value)):
-            this->register_status(
+                typename this_type::float_bit_field(local_float).bit_field_,
+                this_type::status_value::kind_FLOAT);
+        }
+        else if (std::is_same<bool, template_value>::value)
+        {
+            // 論理型の状態値を登録する。
+            return this->register_status_bit_field(
+                in_chunk_key,
+                in_status_key,
+                in_value != 0,
+                this_type::status_value::kind_BOOL);
+        }
+        else
+        {
+            // 整数型の状態値を登録する。
+            return this->register_status(
                 in_chunk_key,
                 in_status_key,
                 in_value,
-                std::is_same<bool, template_value>::value?
-                    1: psyq::CHAR_BIT_WIDTH * sizeof(template_value));
+                psyq::CHAR_BIT_WIDTH * sizeof(template_value));
+        }
     }
 
     /** @brief 整数型の状態値を登録する。
@@ -288,7 +316,8 @@ class psyq::if_then_engine::_private::reservoir
             - in_status_key に対応する状態値がすでに登録されていると失敗する。
             - in_value のビット幅が in_bit_width を超えていると失敗する。
             - this_type::status_chunk::BLOCK_BIT_WIDTH より
-              in_bit_width が大きければ失敗する。
+              in_bit_width が大きいと失敗する。
+            - in_bit_width が2未満だと失敗する。
 
         @sa
         - this_type::extract_status と this_type::assign_status
@@ -302,155 +331,43 @@ class psyq::if_then_engine::_private::reservoir
         template_value const in_value,
         std::size_t const in_bit_width)
     {
-        if (!std::is_integral<template_value>::value)
-        {}
-        else if (std::is_same<bool, template_value>::value)
+        typedef typename this_type::status_property::format format;
+        typedef typename this_type::status_chunk::bit_block bit_block;
+        if(!std::is_integral<template_value>::value
+            || std::is_same<bool, template_value>::value
+            || this_type::status_chunk::BLOCK_BIT_WIDTH < in_bit_width
+            || in_bit_width < 2)
         {
-            if (in_bit_width == 1)
-            {
-                return this->register_status(
-                    in_chunk_key, in_status_key, in_value != 0);
-            }
+            // 適切な整数型ではないので、登録に失敗する。
+            return false;
         }
         else if (std::is_signed<template_value>::value)
         {
-            return this->register_status(
-                in_chunk_key,
-                in_status_key,
-                static_cast<typename this_type::status_value::signed_type>(
-                    in_value),
-                in_bit_width);
+            // 符号あり整数型の状態値を登録する。
+            typedef typename this_type::status_value::signed_type signed_type;
+            auto const local_value(static_cast<signed_type>(in_value));
+            return !this_type::is_overflow(local_value, in_bit_width)
+                && this->register_status_bit_field(
+                    in_chunk_key,
+                    in_status_key,
+                    psyq::make_bit_mask<bit_block>(in_bit_width) & local_value,
+                    -static_cast<format>(in_bit_width));
         }
-        else if (std::is_unsigned<template_value>::value)
+        else //if (std::is_unsigned<template_value>::value)
         {
-            return this->register_status(
-                in_chunk_key,
-                in_status_key,
-                static_cast<typename this_type::status_value::unsigned_type>(
-                    in_value),
-                in_bit_width);
+            // 符号なし整数型の状態値を登録する。
+            auto const local_value(static_cast<bit_block>(in_value));
+            return !this_type::is_overflow(local_value, in_bit_width)
+                && this->register_status_bit_field(
+                    in_chunk_key,
+                    in_status_key,
+                    local_value,
+                    static_cast<format>(in_bit_width));
         }
-        return false;
-    }
-
-    /** @brief 論理型の状態値を登録する。
-        @copydetails register_status(typename this_type::chunk_key const&, typename this_type::status_key const&, template_value const);
-     */
-    public: bool register_status(
-        typename this_type::chunk_key const& in_chunk_key,
-        typename this_type::status_key const& in_status_key,
-        bool const in_value)
-    {
-        // 状態値を登録した後、状態値に初期値を設定する。
-        auto& local_chunk(this_type::equip_chunk(this->chunks_, in_chunk_key));
-        auto const local_property(
-            this_type::allocate_status(
-                this->properties_,
-                local_chunk,
-                in_status_key,
-                this_type::status_value::kind_BOOL));
-        return local_property != nullptr
-            && 0 <= local_chunk.second.set_bit_field(
-                local_property->second.get_bit_position(), 1, in_value);
-    }
-
-    /** @brief 符号なし整数型の状態値を登録する。
-        @copydetails register_status(typename this_type::chunk_key const&, typename this_type::status_key const&, template_value const, std::size_t);
-     */
-    public: bool register_status(
-        typename this_type::chunk_key const& in_chunk_key,
-        typename this_type::status_key const& in_status_key,
-        typename this_type::status_value::unsigned_type const& in_value,
-        std::size_t const in_bit_width)
-    {
-        // 登録不可能な状態値か判定する。
-        if (this_type::status_chunk::BLOCK_BIT_WIDTH < in_bit_width
-            || in_bit_width < 2
-            || this_type::is_overflow(in_value, in_bit_width))
-        {
-            return false;
-        }
-
-        // 状態値を登録する。
-        auto& local_chunk(this_type::equip_chunk(this->chunks_, in_chunk_key));
-        auto const local_property(
-            this_type::allocate_status(
-                this->properties_,
-                local_chunk,
-                in_status_key,
-                static_cast<typename this_type::status_property::format>(
-                    in_bit_width)));
-
-        // 状態値に初期値を設定する。
-        return local_property != nullptr
-            && 0 <= local_chunk.second.set_bit_field(
-                local_property->second.get_bit_position(),
-                in_bit_width,
-                in_value);
-    }
-
-    /** @brief 符号あり整数型の状態値を登録する。
-        @copydetails register_status(typename this_type::chunk_key const&, typename this_type::status_key const&, template_value const, std::size_t);
-     */
-    public: bool register_status(
-        typename this_type::chunk_key const& in_chunk_key,
-        typename this_type::status_key const& in_status_key,
-        typename this_type::status_value::signed_type const& in_value,
-        std::size_t const in_bit_width)
-    {
-        // 登録不可能な状態値か判定する。
-        if (this_type::status_chunk::BLOCK_BIT_WIDTH < in_bit_width
-            || in_bit_width < 2
-            || this_type::is_overflow(in_value, in_bit_width))
-        {
-            return false;
-        }
-
-        // 状態値を登録する。
-        auto& local_chunk(this_type::equip_chunk(this->chunks_, in_chunk_key));
-        auto const local_property(
-            this_type::allocate_status(
-                this->properties_,
-                local_chunk,
-                in_status_key,
-                -static_cast<typename this_type::status_property::format>(
-                    in_bit_width)));
-
-        // 状態値に初期値を設定する。
-        typedef typename this_type::status_chunk::bit_block bit_block;
-        return local_property != nullptr
-            && 0 <= local_chunk.second.set_bit_field(
-                local_property->second.get_bit_position(),
-                in_bit_width,
-                static_cast<bit_block>(
-                    psyq::make_bit_mask<bit_block>(in_bit_width) & in_value));
-    }
-
-    /** @brief 浮動小数点数型の状態値を登録する。
-        @copydetails register_status(typename this_type::chunk_key const&, typename this_type::status_key const&, bool);
-     */
-    public: bool register_status(
-        typename this_type::chunk_key const& in_chunk_key,
-        typename this_type::status_key const& in_status_key,
-        typename this_type::status_value::float_type const& in_value)
-    {
-        // 状態値を登録した後、状態値に初期値を設定する。
-        auto& local_chunk(this_type::equip_chunk(this->chunks_, in_chunk_key));
-        auto const local_property(
-            this_type::allocate_status(
-                this->properties_,
-                local_chunk,
-                in_status_key,
-                this_type::status_value::kind_FLOAT));
-        return local_property != nullptr
-            && 0 <= local_chunk.second.set_bit_field(
-                local_property->second.get_bit_position(),
-                this_type::FLOAT_BIT_WIDTH,
-                typename this_type::float_bit_field(in_value).bit_field_);
     }
 
     /** @brief 状態値を登録する。
-        @copydetails register_status(typename this_type::chunk_key const&, typename this_type::status_key const&, bool);
+        @copydetails register_status(typename this_type::chunk_key const&, typename this_type::status_key const&, template_value);
      */
     public: bool register_status(
         typename this_type::chunk_key const& in_chunk_key,
@@ -548,26 +465,23 @@ class psyq::if_then_engine::_private::reservoir
         else if (local_format == this_type::status_value::kind_FLOAT)
         {
             // 浮動小数点数を取得する。
+            typedef typename this_type::float_bit_field float_bit_field;
+            typedef typename this_type::float_bit_field::bit_field bit_field;
             return typename this_type::status_value(
-                typename this_type::float_bit_field(
-                    static_cast<typename this_type::float_bit_field::bit_field>(
-                        local_bit_field)).float_);
+                float_bit_field(static_cast<bit_field>(local_bit_field)).float_);
         }
         else if (local_format < 0)
         {
             // 符号あり整数を取得する。
-            auto local_signed_bit_field(
-                static_cast<typename this_type::status_value::signed_type>(
-                    local_bit_field));
-            if (local_bit_width != this_type::status_chunk::BLOCK_BIT_WIDTH)
-            {
-                auto const local_sign_bit(
-                    1 & psyq::shift_right_bitwise_fast(
-                        local_signed_bit_field, local_bit_width - 1));
-                local_signed_bit_field |= psyq::shift_left_bitwise_fast(
-                    -local_sign_bit, local_bit_width);
-            }
-            return typename this_type::status_value(local_signed_bit_field);
+            typedef typename this_type::status_value::signed_type signed_type;
+            auto const local_rest_bit_width(
+                this_type::status_chunk::BLOCK_BIT_WIDTH - local_bit_width);
+            return typename this_type::status_value(
+                psyq::shift_right_bitwise_fast(
+                    psyq::shift_left_bitwise_fast(
+                        static_cast<signed_type>(local_bit_field),
+                        local_rest_bit_width),
+                    local_rest_bit_width));
         }
         else
         {
@@ -698,7 +612,7 @@ class psyq::if_then_engine::_private::reservoir
         template_value const& in_value)
     PSYQ_NOEXCEPT
     {
-        return this->rewrite_status(in_status_key, in_value, false);
+        return this->assign_status_bit_field(in_status_key, in_value, false);
     }
 
     /** @brief 状態値を演算し、結果を代入する。
@@ -744,7 +658,7 @@ class psyq::if_then_engine::_private::reservoir
         auto local_left_value(this->extract_status(in_left_key));
         return !local_left_value.is_empty()
             && local_left_value.assign(in_operator, in_right_value)
-            && this->rewrite_status(
+            && this->assign_status_bit_field(
                 in_left_key,
                 local_left_value,
                 in_operator != this_type::status_value::assignment_COPY);
@@ -924,8 +838,10 @@ class psyq::if_then_engine::_private::reservoir
 
         // コピー先となる状態値を用意する。
         auto& local_target_chunk(
-            this_type::equip_chunk(
-                io_chunks, in_property.second.get_chunk_key()));
+            *io_chunks.emplace(
+                in_property.second.get_chunk_key(),
+                typename this_type::chunk_map::mapped_type(
+                    io_chunks.get_allocator())).first);
         auto const local_format(in_property.second.get_format());
         auto const local_target_property(
             this_type::allocate_status(
@@ -950,7 +866,7 @@ class psyq::if_then_engine::_private::reservoir
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 状態値を追加する。
+    /** @brief 状態値を登録する。
         @param[in,out] io_properties 状態値を追加する状態値プロパティの辞書。
         @param[in,out] io_chunk      状態値を追加する状態値ビット列チャンク。
         @param[in] in_status_key     追加する状態値に対応する識別値。
@@ -967,30 +883,66 @@ class psyq::if_then_engine::_private::reservoir
         typename this_type::status_key const& in_status_key,
         typename this_type::status_property::format const in_format)
     {
-        PSYQ_ASSERT(in_format != this_type::status_value::kind_EMPTY);
-
         // 状態値プロパティを追加する。
+        PSYQ_ASSERT(in_format != this_type::status_value::kind_EMPTY);
         auto const local_emplace(
             io_properties.emplace(
                 in_status_key,
                 typename this_type::property_map::mapped_type(
                     io_chunk.first, in_format)));
-        if (!local_emplace.second)
+        if (local_emplace.second)
         {
-            return nullptr;
-        }
-
-        // 状態値のビット位置を決定する。
-        auto& local_property(*local_emplace.first);
-        if (!local_property.second.set_bit_position(
-                io_chunk.second.make_status_field(
-                    this_type::get_bit_width(in_format))))
-        {
+            // 状態値のビット位置を決定する。
+            auto& local_property(*local_emplace.first);
+            if (local_property.second.set_bit_position(
+                    io_chunk.second.make_status_field(
+                        this_type::get_bit_width(in_format))))
+            {
+                PSYQ_ASSERT(in_format == local_property.second.get_format());
+                return &local_property;
+            }
             PSYQ_ASSERT(false);
-            return nullptr;
         }
-        PSYQ_ASSERT(in_format == local_property.second.get_format());
-        return &local_property;
+        return nullptr;
+    }
+
+    /** @brief 状態値を登録する。
+
+        @param[in] in_chunk_key  登録する状態値を格納する状態値ビット列チャンクの識別値。
+        @param[in] in_status_key 登録する状態値の識別番号。
+        @param[in] in_bit_field  登録する状態値の初期値となるビット列。
+        @param[in] in_format     登録する状態値のビット構成。
+
+        @retval true 成功。状態値を登録した。
+        @retval false
+            失敗。状態値を登録できなかった。
+            - in_status_key に対応する状態値がすでに登録されていると失敗する。
+
+        @sa
+        - this_type::extract_status と this_type::assign_status
+          で、登録した状態値にアクセスできる。
+        - this_type::erase_chunk で、登録した状態値をチャンク毎に削除できる。
+     */
+    private: bool register_status_bit_field(
+        typename this_type::chunk_key const& in_chunk_key,
+        typename this_type::status_key const& in_status_key,
+        typename this_type::status_chunk::bit_block const& in_bit_field,
+        typename this_type::status_property::format const in_format)
+    {
+        // 状態値を登録した後、状態値に初期値を設定する。
+        auto& local_chunk(
+            *this->chunks_.emplace(
+                in_chunk_key,
+                typename this_type::chunk_map::mapped_type(
+                    this->chunks_.get_allocator())).first);
+        auto const local_property(
+            this_type::allocate_status(
+                this->properties_, local_chunk, in_status_key, in_format));
+        return local_property != nullptr
+            && 0 <= local_chunk.second.set_bit_field(
+                local_property->second.get_bit_position(),
+                this_type::get_bit_width(in_format),
+                in_bit_field);
     }
 
     /** @brief 状態値へ値を代入する。
@@ -1012,7 +964,7 @@ class psyq::if_then_engine::_private::reservoir
 
         @sa this_type::extract_status で、代入した値を取得できる。
      */
-    private: bool rewrite_status(
+    private: bool assign_status_bit_field(
         typename this_type::status_key const& in_status_key,
         typename this_type::status_value const& in_value,
         bool const in_mask)
@@ -1021,34 +973,38 @@ class psyq::if_then_engine::_private::reservoir
         auto const local_bool(in_value.get_bool());
         if (local_bool != nullptr)
         {
-            return this->rewrite_status(in_status_key, *local_bool, in_mask);
+            return this->assign_status_bit_field(
+                in_status_key, *local_bool, in_mask);
         }
         auto const local_unsigned(in_value.get_unsigned());
         if (local_unsigned != nullptr)
         {
-            return this->rewrite_status(in_status_key, *local_unsigned, in_mask);
+            return this->assign_status_bit_field(
+                in_status_key, *local_unsigned, in_mask);
         }
         auto const local_signed(in_value.get_signed());
         if (local_signed != nullptr)
         {
-            return this->rewrite_status(in_status_key, *local_signed, in_mask);
+            return this->assign_status_bit_field(
+                in_status_key, *local_signed, in_mask);
         }
         auto const local_float(in_value.get_float());
         if (local_float != nullptr)
         {
-            return this->rewrite_status(in_status_key, *local_float, in_mask);
+            return this->assign_status_bit_field(
+                in_status_key, *local_float, in_mask);
         }
         return false;
     }
 
-    /** @copydoc rewrite_status
+    /** @copydoc assign_status_bit_field
         @note
             this_type::status_value::float_type より精度の高い浮動小数点数を
             浮動小数点数型の状態値へ設定しようとすると、
             コンパイル時にエラーか警告が発生する。
      */
     private: template<typename template_value>
-    bool rewrite_status(
+    bool assign_status_bit_field(
         typename this_type::status_key const& in_status_key,
         template_value const& in_value,
         bool const in_mask)
@@ -1068,28 +1024,10 @@ class psyq::if_then_engine::_private::reservoir
         auto& local_property(local_property_iterator->second);
 
         // 状態値のビット構成から、設定するビット列とビット幅を決定する。
-        auto const local_format(local_property.get_format());
-        typename this_type::status_property::bit_width local_bit_width;
-        typename this_type::status_chunk::bit_block local_bit_field;
-        switch (local_format)
-        {
-            case this_type::status_value::kind_EMPTY:
-            PSYQ_ASSERT(false);
-            return false;
-
-            // 浮動小数点数のビット列とビット幅を決定する。
-            case this_type::status_value::kind_FLOAT:
-            local_bit_width = this_type::make_float_field(
-                local_bit_field, in_value);
-            break;
-
-            // 論理値または整数のビット列とビット幅を決定する。
-            default:
-            local_bit_width = this_type::make_integer_field(
-                local_bit_field, in_value, local_format, in_mask);
-            break;
-        }
-        if (local_bit_width <= 0)
+        auto const local_bit_field_width(
+            this_type::make_bit_field_width(
+                in_value, local_property.get_format()));
+        if (local_bit_field_width.second <= 0)
         {
             return false;
         }
@@ -1106,8 +1044,8 @@ class psyq::if_then_engine::_private::reservoir
         auto const local_set_bit_field(
             local_chunk_iterator->second.set_bit_field(
                 local_property.get_bit_position(),
-                local_bit_width,
-                local_bit_field));
+                local_bit_field_width.second,
+                local_bit_field_width.first));
         if (local_set_bit_field < 0)
         {
             return false;
@@ -1186,153 +1124,66 @@ class psyq::if_then_engine::_private::reservoir
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 浮動小数点数からビット列を構築する。
-        @param[out] out_bit_field 構築したビット列を出力する。
-        @param[in] in_value       ビット列の元になる浮動小数点数。
-        @retval !=0 成功。構築したビット列のビット幅。
-        @retval ==0 失敗。
-     */
-    private:
-    static typename this_type::status_property::bit_width make_float_field(
-        typename this_type::status_chunk::bit_block& out_bit_field,
-        float const in_value)
-    {
-        out_bit_field =
-            typename this_type::float_bit_field(in_value).bit_field_;
-        return this_type::FLOAT_BIT_WIDTH;
-    }
-
-    /// @copydoc make_float_field
-    private:
-    static typename this_type::status_property::bit_width make_float_field(
-        typename this_type::status_chunk::bit_block& out_bit_field,
-        double const in_value)
-    {
-        /** @note
-            ここでコンパイルエラーか警告が出る場合は
-            double から float への型変換が発生しているのが原因。
-            assign_status の引数を手動で型変換すれば解決するはず。
-         */
-        out_bit_field =
-            typename this_type::float_bit_field(in_value).bit_field_;
-        return this_type::FLOAT_BIT_WIDTH;
-    }
-
-    /** @brief this_type::make_float_field の真偽値のためのダミー関数。
-        @return 必ず0。
-     */
-    private:
-    static typename this_type::status_property::bit_width make_float_field(
-        typename this_type::status_chunk::bit_block&,
-        bool const)
-    {
-        return 0;
-    }
-
-    /** @brief 数値から浮動小数点数のビット列を構築する。
-        @param[out] out_bit_field 構築したビット列を出力する。
-        @param[in] in_value       ビット列の元になる整数。
-        @retval !=0 成功。構築したビット列のビット幅。
-        @retval ==0 失敗。
-     */
     private: template<typename template_value>
-    static typename this_type::status_property::bit_width make_float_field(
-        typename this_type::status_chunk::bit_block& out_bit_field,
-        template_value const in_value)
+    static typename this_type::bit_field_width make_bit_field_width(
+        template_value const& in_value,
+        typename this_type::status_property::format const in_format)
     {
-        // 整数を浮動小数点数に変換し、桁落ちと桁あふれが起きてないか判定する。
-        typename this_type::float_bit_field const local_union(
-            static_cast<typename this_type::float_bit_field::float_type>(
-                in_value));
-        if (in_value != static_cast<template_value>(local_union.float_))
-        {
-            return 0;
-        }
-        out_bit_field = local_union.bit_field_;
-        return this_type::FLOAT_BIT_WIDTH;
-    }
-
-    //-------------------------------------------------------------------------
-    /** @brief 数値から整数のビット列を構築する。
-        @param[out] out_bit_field 構築したビット列を出力する。
-        @param[in] in_value       ビット列の元になる数値。
-        @param[in] in_format      構築するビット列のビット構成。
-        @param[in] in_mask        ビット幅からあふれた場合にマスクするか。
-        @retval !=0 成功。構築したビット列のビット幅。
-        @retval ==0 失敗。
-     */
-    private: template<typename template_value>
-    static typename this_type::status_property::bit_width make_integer_field(
-        typename this_type::status_chunk::bit_block& out_bit_field,
-        template_value const in_value,
-        typename this_type::status_property::format const in_format,
-        bool const in_mask)
-    PSYQ_NOEXCEPT
-    {
+        typedef typename this_type::status_property::bit_width bit_width;
+        typedef typename this_type::status_chunk::bit_block bit_block;
         if (in_format == this_type::status_value::kind_BOOL)
         {
-            return 0;
-        }
-        PSYQ_ASSERT(
-            in_format != this_type::status_value::kind_EMPTY
-            && in_format != this_type::status_value::kind_FLOAT);
-
-        // 整数に変換し、桁落ちと桁あふれが起きてないか判定する。
-        auto const local_signed(
-            static_cast<typename this_type::status_value::signed_type>(
-                in_value));
-        if (static_cast<template_value>(local_signed) != in_value)
-        {
-            return 0;
-        }
-
-        // 指定されたビット幅で桁あふれが起きてないか判定する。
-        auto const local_bit_width(
-            static_cast<typename this_type::status_property::bit_width>(
-                psyq::abs_integer(in_format)));
-        out_bit_field =
-            static_cast<typename this_type::status_chunk::bit_block>(
-                local_signed);
-        if (in_mask) {}
-        else if (in_format < 0)
-        {
-            if (this_type::is_overflow(local_signed, local_bit_width))
+            // 論理値のビット列を構築する。
+            if (std::is_same<template_value, bool>::value)
             {
-                return 0;
+                return typename this_type::bit_field_width(in_value != 0, 1);
             }
         }
-        else if (this_type::is_overflow(out_bit_field, local_bit_width))
+        else if (in_format == this_type::status_value::kind_FLOAT)
         {
-            return 0;
+            // 浮動小数点数のビット列を構築する。
+            typedef typename this_type::float_bit_field float_bit_field;
+            typedef typename float_bit_field::float_type float_type;
+            return typename this_type::bit_field_width(
+                float_bit_field(static_cast<float_type>(in_value)).bit_field_,
+                this_type::FLOAT_BIT_WIDTH);
         }
-
-        // ビット列を取り出す。
-        out_bit_field &=
-            psyq::make_bit_mask<typename this_type::status_chunk::bit_block>(
-                local_bit_width);
-        return local_bit_width;
+        else if (in_format < 0)
+        {
+            // 符号あり整数のビット列を構築する。
+            typedef typename this_type::status_value::signed_type signed_type;
+            return this_type::make_bit_field_width<signed_type>(
+                in_value, static_cast<bit_width>(-in_format));
+        }
+        else if (0 < in_format)
+        {
+            // 符号なし整数のビット列を構築する。
+            return this_type::make_bit_field_width<bit_block>(
+                in_value, static_cast<bit_width>(in_format));
+        }
+        return typename this_type::bit_field_width(0, 0);
     }
 
-    /** @brief 論理値からビット列を取得する。
-        @param[out] out_bit_field 論理値のビット列を出力する。
-        @param[in] in_value       ビット列を取り出す論理値。
-        @param[in] in_format      取り出すビット列のビット構成。
-        @retval !=0 成功。ビット列のビット幅。
-        @retval ==0 失敗。
-     */
-    private:
-    static typename this_type::status_property::bit_width make_integer_field(
-        typename this_type::status_chunk::bit_block& out_bit_field,
-        bool const in_value,
-        typename this_type::status_property::format const in_format,
-        bool const)
+    private: template<typename template_integer, typename template_value>
+    static typename this_type::bit_field_width make_bit_field_width(
+        template_value const& in_value,
+        typename this_type::status_property::bit_width const in_bit_width)
     {
-        if (in_format != this_type::status_value::kind_BOOL)
+        auto const local_integer(static_cast<template_integer>(in_value));
+        if (this_type::is_overflow(local_integer, in_bit_width)
+            || in_value != static_cast<template_value>(local_integer))
         {
-            return 0;
+            return typename this_type::bit_field_width(0, 0);
         }
-        out_bit_field = in_value;
-        return 1;
+        return typename this_type::bit_field_width(local_integer, in_bit_width);
+    }
+
+    private: template<typename template_integer>
+    static typename this_type::bit_field_width make_bit_field_width(
+        bool, typename this_type::status_property::bit_width)
+    {
+        // bool型の値を他の型へ変換できないようにする。
+        return typename this_type::bit_field_width(0, 0);
     }
 
     //-------------------------------------------------------------------------
@@ -1370,31 +1221,6 @@ class psyq::if_then_engine::_private::reservoir
                         sizeof(in_integer) * psyq::CHAR_BIT_WIDTH - 1)),
                 in_bit_width - 1));
         return local_rest_field != local_rest_mask;
-    }
-
-    //-------------------------------------------------------------------------
-    /** @brief 識別値に対応する状態値ビット列チャンクを用意する。
-
-        識別値に対応する状態値ビット列チャンクを、コンテナに用意する。
-        同じ識別値のチャンクがすでにコンテナにあれば、それを返す。
-        同じ識別値のチャンクがコンテナになければ、新たにチャンクを生成する。
-
-        @param[in,out] io_chunks チャンクを用意する辞書。
-        @param[in] in_chunk_key  用意するチャンクに対応する識別値。
-
-        @return 用意したチャンクへの参照。
-     */
-    private:
-    static typename this_type::chunk_map::value_type& equip_chunk(
-        typename this_type::chunk_map& io_chunks,
-        typename this_type::chunk_key const& in_chunk_key)
-    {
-        auto const local_emplace(
-            io_chunks.emplace(
-                in_chunk_key,
-                typename this_type::chunk_map::mapped_type(
-                    io_chunks.get_allocator())));
-        return *local_emplace.first;
     }
 
     //-------------------------------------------------------------------------

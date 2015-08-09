@@ -236,7 +236,10 @@ class psyq::if_then_engine::_private::status_value
             return this->bool_;
 
             case this_type::kind_FLOAT:
-            return;
+            typedef
+                psyq::float_bit_field<typename this_type::float_type>
+                float_bit_field;
+            return float_bit_field(this->float_).bit_field_;
 
             default:
             return this->unsigned_;

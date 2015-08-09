@@ -168,7 +168,7 @@ class psyq::if_then_engine::_private::status_operation
     public: typename template_status_value::unsigned_type const* get_right_key()
     const PSYQ_NOEXCEPT
     {
-        return this->right_key_? this->value_.extract_unsigned(): nullptr;
+        return this->right_key_? this->value_.get_unsigned(): nullptr;
     }
 
     /** @brief psyq::if_then_engine 管理者以外は、この関数は使用禁止。

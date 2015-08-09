@@ -63,6 +63,9 @@ class psyq::if_then_engine::_private::status_value
     static_assert(
         std::is_floating_point<template_float>::value,
         "'template_float' is not floating-point number.");
+    static_assert(
+         sizeof(template_float) <= sizeof(template_unsigned),
+         "");
 
     /// @brief 状態値の型の種別。
     public: enum kind: std::int8_t
@@ -183,7 +186,7 @@ class psyq::if_then_engine::_private::status_value
         @retval !=nullptr 論理値を指すポインタ。
         @retval ==nullptr 格納値が論理型ではない。
      */
-    public: bool const* extract_bool() const PSYQ_NOEXCEPT
+    public: bool const* get_bool() const PSYQ_NOEXCEPT
     {
         return this->get_kind() == this_type::kind_BOOL? &this->bool_: nullptr;
     }
@@ -192,7 +195,7 @@ class psyq::if_then_engine::_private::status_value
         @retval !=nullptr 符号なし整数値を指すポインタ。
         @retval ==nullptr 格納値が符号なし整数型ではない。
      */
-    public: typename this_type::unsigned_type const* extract_unsigned()
+    public: typename this_type::unsigned_type const* get_unsigned()
     const PSYQ_NOEXCEPT
     {
         return this->get_kind() == this_type::kind_UNSIGNED?
@@ -203,7 +206,7 @@ class psyq::if_then_engine::_private::status_value
         @retval !=nullptr 符号あり整数値を指すポインタ。
         @retval ==nullptr 格納値が符号あり整数型ではない。
      */
-    public: typename this_type::signed_type const* extract_signed()
+    public: typename this_type::signed_type const* get_signed()
     const PSYQ_NOEXCEPT
     {
         return this->get_kind() == this_type::kind_SIGNED?
@@ -214,11 +217,30 @@ class psyq::if_then_engine::_private::status_value
         @retval !=nullptr 浮動小数点数値を指すポインタ。
         @retval ==nullptr 格納値が浮動小数点数型ではない。
      */
-    public: typename this_type::float_type const* extract_float()
+    public: typename this_type::float_type const* get_float()
     const PSYQ_NOEXCEPT
     {
         return this->get_kind() == this_type::kind_FLOAT?
             &this->float_: nullptr;
+    }
+
+    public: typename this_type::unsigned_type get_bit_field()
+    const PSYQ_NOEXCEPT
+    {
+        switch (this->get_kind())
+        {
+            case this_type::kind_EMPTY:
+            return 0;
+
+            case this_type::kind_BOOL:
+            return this->bool_;
+
+            case this_type::kind_FLOAT:
+            return;
+
+            default:
+            return this->unsigned_;
+        }
     }
 
     /** @brief 格納値の型の種類を取得する。
@@ -300,7 +322,7 @@ class psyq::if_then_engine::_private::status_value
     public: typename this_type::order compare(bool const in_right)
     const PSYQ_NOEXCEPT
     {
-        if (this->extract_bool() == nullptr)
+        if (this->get_bool() == nullptr)
         {
             return this_type::order_NONE;
         }

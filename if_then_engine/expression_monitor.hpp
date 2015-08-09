@@ -223,7 +223,7 @@ class psyq::if_then_engine::_private::expression_monitor
             return false;
         }
         auto const local_function(in_function.get());
-        if (local_function == nullptr)
+        if (local_function == nullptr && !static_cast<bool>(*local_function))
         {
             return false;
         }

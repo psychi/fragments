@@ -48,6 +48,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <type_traits>
 #include "./assert.hpp"
 
 #if defined(__alpha__) || defined(__ia64__) || defined(__x86_64__) || defined(_WIN64) || defined(__LP64__) || defined(__LLP64__)
@@ -77,6 +78,59 @@
 #   define PSYQ_BIT_ALGORITHM_FOR_GHS
 #   include <ppc_ghs.h>
 #endif
+
+/// @cond
+namespace psyq
+{
+    template<typename> union float_bit_field;
+}
+/// @endcond
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/** @brief 浮動小数点数とビット列の変換に使う共用体。
+
+    @note
+    strict-aliasing ruleに抵触しないように、共用体を使う。
+    http://homepage1.nifty.com/herumi/diary/0911.html#10
+ */
+template<typename template_float>
+union psyq::float_bit_field
+{
+    private: typedef float_bit_field this_type;
+
+    public:
+    typedef template_float float_type;
+    static_assert(
+        std::is_floating_point<template_float>::value,
+        "'template_float' is not float type.");
+
+    typedef
+        typename std::conditional<
+            std::is_same<template_float, float>::value,
+            std::uint32_t,
+            std::uint64_t>
+                ::type
+        bit_field;
+    static_assert(
+        sizeof(template_float) == sizeof(bit_field),
+        "sizeof(template_float) is not equal sizeof(bit_field).");
+
+    explicit float_bit_field(typename this_type::float_type const in_float)
+    PSYQ_NOEXCEPT
+    {
+        this->float_ = in_float;
+    }
+
+    explicit float_bit_field(typename this_type::bit_field const in_bit_field)
+    PSYQ_NOEXCEPT
+    {
+        this->bit_field_ = in_bit_field;
+    }
+
+    typename this_type::float_type float_;
+    typename this_type::bit_field bit_field_;
+
+}; // union psyq::float_bit_field
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq
@@ -710,39 +764,6 @@ namespace psyq
         }
 
         //---------------------------------------------------------------------
-        /** @brief 浮動小数点実数のビット値を取得する。
-
-            strict-aliasing ruleに抵触しないように、unionを使って取得する。
-            http://homepage1.nifty.com/herumi/diary/0911.html#10
-
-            @param[in] in_float ビット値を取得するする浮動小数点実数。
-            @return 浮動小数点実数のビット値。
-         */
-        inline uint32_t get_float_bit_value(float const in_float) PSYQ_NOEXCEPT
-        {
-            union
-            {
-                float         value;
-                std::uint32_t bit_value;
-            } local_float;
-            local_float.value = in_float;
-            return local_float.bit_value;
-        }
-
-        /// @copydoc get_float_bit_value()
-        inline std::uint64_t get_float_bit_value(double const in_float)
-        PSYQ_NOEXCEPT
-        {
-            union
-            {
-                double        value;
-                std::uint64_t bit_value;
-            } local_float;
-            local_float.value = in_float;
-            return local_float.bit_value;
-        }
-
-        //---------------------------------------------------------------------
         /** @brief 無符号整数の最上位ビットから、0が連続する数を数える。
 
             以下のウェブページを参考にした。
@@ -831,9 +852,10 @@ namespace psyq
                 // in_bits のビット数は、FLT_MANT_DIG未満であること。
                 sizeof(in_bits) * psyq::CHAR_BIT_WIDTH < FLT_MANT_DIG,
                 "Bit size of 'in_bits' must be less than FLT_MANT_DIG.");
-            return sizeof(in_bits) * psyq::CHAR_BIT_WIDTH + (1 - FLT_MIN_EXP) - (
-                psyq::_private::get_float_bit_value(in_bits + 0.5f)
-                >> (FLT_MANT_DIG - 1));
+            return sizeof(in_bits) * psyq::CHAR_BIT_WIDTH
+                + (1 - FLT_MIN_EXP) - (
+                    psyq::float_bit_field<float>(in_bits + 0.5f).bit_field_
+                    >> (FLT_MANT_DIG - 1));
         }
 
         /// @copydoc count_leading_0bits_by_float()
@@ -847,9 +869,10 @@ namespace psyq
                 // in_bits のビット数は、DBL_MANT_DIG未満であること。
                 sizeof(in_bits) * psyq::CHAR_BIT_WIDTH < DBL_MANT_DIG,
                 "Bit size of 'in_bits' must be less than DBL_MANT_DIG.");
-            return sizeof(in_bits) * psyq::CHAR_BIT_WIDTH + (1 - DBL_MIN_EXP) - (
-                psyq::_private::get_float_bit_value(in_bits + 0.5)
-                >> (DBL_MANT_DIG - 1));
+            return sizeof(in_bits) * psyq::CHAR_BIT_WIDTH
+                + (1 - DBL_MIN_EXP) - (
+                    psyq::float_bit_field<double>(in_bits + 0.5).bit_field_
+                    >> (DBL_MANT_DIG - 1));
         }
 
         //---------------------------------------------------------------------
@@ -909,9 +932,10 @@ namespace psyq
             if ((in_bits >> (DBL_MANT_DIG - 1)) == 0)
             {
                 // 浮動小数点を利用し、最上位ビットから0が連続する数を数える。
-                return sizeof(in_bits) * psyq::CHAR_BIT_WIDTH + (1 - DBL_MIN_EXP) - (
-                    psyq::_private::get_float_bit_value(in_bits + 0.5)
-                    >> (DBL_MANT_DIG - 1));
+                return sizeof(in_bits) * psyq::CHAR_BIT_WIDTH
+                    + (1 - DBL_MIN_EXP) - (
+                        psyq::float_bit_field<double>(in_bits + 0.5).bit_field_
+                        >> (DBL_MANT_DIG - 1));
             }
             else
             {

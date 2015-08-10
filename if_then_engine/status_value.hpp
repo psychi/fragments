@@ -6,7 +6,7 @@
 #define PSYQ_IF_THEN_ENGINE_STATUS_VALUE_HPP_
 
 #include <cstdint>
-#include "../assert.hpp"
+#include "../bit_algorithm.hpp"
 
 #ifndef PSYQ_IF_THEN_ENGINE_STATUS_VALUE_EPSILON_MAG
 #define PSYQ_IF_THEN_ENGINE_STATUS_VALUE_EPSILON_MAG 4
@@ -578,13 +578,12 @@ class psyq::if_then_engine::_private::status_value
     /// @copydoc assign
     public: bool assign(
         this_type const& in_value,
-        typename this_type::kind const in_kind = this_type::kind_EMPTY)
+        typename this_type::kind in_kind = this_type::kind_EMPTY)
     PSYQ_NOEXCEPT
     {
         if (in_kind == this_type::kind_EMPTY)
         {
-            *this = in_value;
-            return true;
+            in_kind = in_value.get_kind();
         }
         switch (in_value.get_kind())
         {

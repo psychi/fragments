@@ -238,7 +238,11 @@ class psyq::if_then_engine::_private::reservoir
 
         @param[in] in_chunk_key  登録する状態値を格納する状態値ビット列チャンクの識別値。
         @param[in] in_status_key 登録する状態値の識別番号。
-        @param[in] in_value      登録する状態値の初期値。
+        @param[in] in_value
+            登録する状態値の初期値。以下の型の値を登録できる。
+            - bool 型。
+            - C++ 組み込み整数型。
+            - C++ 組み込み浮動小数点数型。
 
         @retval true 成功。状態値を登録した。
         @retval false
@@ -296,7 +300,7 @@ class psyq::if_then_engine::_private::reservoir
 
         @param[in] in_chunk_key  登録する状態値を格納する状態値ビット列チャンクの識別値。
         @param[in] in_status_key 登録する状態値の識別番号。
-        @param[in] in_value      登録する状態値の初期値。
+        @param[in] in_value      登録する状態値の初期値。 C++ 組み込み整数型であること。
         @param[in] in_bit_width  登録する状態値のビット幅。
 
         @retval true 成功。状態値を登録した。
@@ -307,6 +311,7 @@ class psyq::if_then_engine::_private::reservoir
             - this_type::status_chunk::BLOCK_BIT_WIDTH より
               in_bit_width が大きいと失敗する。
             - in_bit_width が2未満だと失敗する。
+              1ビットの値は論理型として登録すること。
 
         @sa
         - this_type::extract_status と this_type::assign_status
@@ -480,22 +485,10 @@ class psyq::if_then_engine::_private::reservoir
         }
     }
 
-    /** @brief 状態値のビット数を取得する。
-        @param[in] in_status_key 状態値に対応する識別値。
-        @retval !=0 状態値のビット数。
-        @retval ==0 in_status_key に対応する状態値がない。
-     */
-    public: std::size_t extract_bit_width(
-        typename this_type::status_key const& in_status_key)
-    const PSYQ_NOEXCEPT
-    {
-        return this_type::get_bit_width(this->extract_format(in_status_key));
-    }
-
-    /** @brief 状態値の種別を取得する。
+    /** @brief 状態値の型の種別を取得する。
         @param[in] in_status_key 状態値に対応する識別値。
         @return
-            in_status_key に対応する状態値の種別。
+            in_status_key に対応する状態値の型の種別。
             in_status_key に対応する状態値がない場合は、 
             this_type::status_value::kind_EMPTY を返す。
      */
@@ -504,6 +497,18 @@ class psyq::if_then_engine::_private::reservoir
     const PSYQ_NOEXCEPT
     {
         return this_type::get_kind(this->extract_format(in_status_key));
+    }
+
+    /** @brief 状態値のビット幅を取得する。
+        @param[in] in_status_key 状態値に対応する識別値。
+        @retval !=0 状態値のビット幅。
+        @retval ==0 in_status_key に対応する状態値がない。
+     */
+    public: std::size_t extract_bit_width(
+        typename this_type::status_key const& in_status_key)
+    const PSYQ_NOEXCEPT
+    {
+        return this_type::get_bit_width(this->extract_format(in_status_key));
     }
     /// @}
     //-------------------------------------------------------------------------
@@ -580,18 +585,28 @@ class psyq::if_then_engine::_private::reservoir
     /** @brief 状態値へ値を代入する。
 
         @param[in] in_status_key 代入先となる状態値に対応する識別値。
-        @param[in] in_value      状態値へ代入する値。
+        @param[in] in_value
+            状態値へ代入する値。以下の型の値を代入できる。
+            - bool 型。
+            - C++ 組み込み整数型。
+            - C++ 組み込み浮動小数点数型。
+            - this_type::status_value 型。
 
-        @retval true 成功。
+        @retval true 成功。 in_value を状態値へ代入した。
         @retval false
             失敗。状態値は変化しない。
             - in_status_key に対応する状態値が
-              this_type::register_status で登録されてない場合は失敗する。
-            - in_status_key に対応する状態値のビット幅より
-              大きい値を代入しようとすると失敗する。
-            - in_value を状態値の型へ変換できない場合は失敗する。
-            - 論理型以外の値を論理型の状態値へ代入しようとすると失敗する。
-            - 論理型の値を論理型以外の状態値へ代入しようとすると失敗する。
+              this_type::register_status で登録されてないと、失敗する。
+            - in_value の値が
+              in_status_key に対応する状態値のビット幅を超えていると、失敗する。
+            - in_value が論理型以外で、
+              in_status_key に対応する状態値が論理型だと、失敗する。
+            - in_value が論理型で、
+              in_status_key に対応する状態値が論理型以外だと、失敗する。
+            - in_value が負の数で、
+              in_status_key に対応する状態値が符号なし整数型だと、失敗する。
+            - in_value が整数ではない浮動小数点数で、
+              in_status_key に対応する状態値が整数型だと、失敗する。
 
         @sa this_type::extract_status で、代入した値を取得できる。
      */
@@ -601,13 +616,32 @@ class psyq::if_then_engine::_private::reservoir
         template_value const& in_value)
     PSYQ_NOEXCEPT
     {
-        return this->assign_status_bit_field(in_status_key, in_value, false);
+        auto const local_property_iterator(
+            this->properties_.find(in_status_key));
+        if (local_property_iterator == this->properties_.end())
+        {
+            return false;
+        }
+        /** @note
+            in_value が状態値のビット幅を超えている場合、
+            失敗となるように実装しておく。
+            失敗とせず、ビット列をマスクして代入する実装も可能。どちらが良い？
+         */
+        auto const local_mask(false);
+        auto& local_property(local_property_iterator->second);
+        return this_type::assign_status_bit_field(
+            local_property,
+            this->chunks_,
+            this_type::make_bit_field_width(
+                in_value, local_property.get_format(), local_mask));
     }
 
     /** @brief 状態値を演算し、結果を代入する。
         @param[in] in_assignment 状態値の代入演算。
-        @retval true  演算結果を状態値へ代入した。
-        @retval false 失敗。状態値は変化しない。
+        @retval true 成功。演算結果を状態値へ代入した。
+        @retval false
+            失敗。状態値は変化しない。
+            失敗する要因は this_type::assign_status を参照。
      */
     public: bool assign_status(
         typename this_type::status_assignment const& in_assignment)
@@ -636,8 +670,10 @@ class psyq::if_then_engine::_private::reservoir
         @param[in] in_left_key    代入演算子の左辺となる状態値の識別値。
         @param[in] in_operator    適用する代入演算子。
         @param[in] in_right_value 代入演算子の右辺となる値。
-        @retval true  演算結果を状態値へ代入した。
-        @retval false 失敗。状態値は変化しない。
+        @retval true 成功。演算結果を状態値へ代入した。
+        @retval false
+            失敗。状態値は変化しない。
+            失敗する要因は this_type::assign_status を参照。
      */
     public: bool assign_status(
         typename this_type::status_key const& in_left_key,
@@ -646,21 +682,21 @@ class psyq::if_then_engine::_private::reservoir
     {
         if (in_operator == this_type::status_value::assignment_COPY)
         {
-            return this->assign_status_bit_field(
-                in_left_key, in_right_value, false);
+            return this->assign_status(in_left_key, in_right_value);
         }
         auto local_left_value(this->extract_status(in_left_key));
         return local_left_value.assign(in_operator, in_right_value)
-            && this->assign_status_bit_field(
-                in_left_key, local_left_value, true);
+            && this->assign_status(in_left_key, local_left_value);
     }
 
     /** @brief 状態値を演算し、結果を代入する。
         @param[in] in_left_key  代入演算子の左辺となる状態値の識別値。
         @param[in] in_operator  適用する代入演算子。
         @param[in] in_right_key 代入演算子の右辺となる状態値の識別値。
-        @retval true  演算結果を状態値へ代入した。
-        @retval false 失敗。状態値は変化しない。
+        @retval true 成功。演算結果を状態値へ代入した。
+        @retval false
+            失敗。状態値は変化しない。
+            失敗する要因は this_type::assign_status を参照。
      */
     public: bool assign_status(
         typename this_type::status_key const& in_left_key,
@@ -775,6 +811,29 @@ class psyq::if_then_engine::_private::reservoir
             this_type::status_value::kind_EMPTY;
     }
 
+    /** @brief 状態値のビット構成から、状態値の型の種別を取得する。
+        @param[in] in_format 状態値のビット構成。
+        @return 状態値の型の種別。
+     */
+    private: static typename this_type::status_value::kind get_kind(
+        typename this_type::status_property::format const in_format)
+    PSYQ_NOEXCEPT
+    {
+        switch (in_format)
+        {
+            case this_type::status_value::kind_EMPTY:
+            case this_type::status_value::kind_BOOL:
+            case this_type::status_value::kind_FLOAT:
+            return
+                static_cast<typename this_type::status_value::kind>(in_format);
+
+            default:
+            return in_format < 0?
+                this_type::status_value::kind_SIGNED:
+                this_type::status_value::kind_UNSIGNED;
+        }
+    }
+
     /** @brief 状態値のビット構成から、状態値のビット幅を取得する。
         @param[in] in_format 状態値のビット構成。
         @return 状態値のビット幅。
@@ -798,29 +857,6 @@ class psyq::if_then_engine::_private::reservoir
                 * psyq::CHAR_BIT_WIDTH;
 
             default: return psyq::abs_integer(in_format);
-        }
-    }
-
-    /** @brief 状態値のビット構成から、状態値の型の種別を取得する。
-        @param[in] in_format 状態値のビット構成。
-        @return 状態値の型の種別。
-     */
-    private: static typename this_type::status_value::kind get_kind(
-        typename this_type::status_property::format const in_format)
-    PSYQ_NOEXCEPT
-    {
-        switch (in_format)
-        {
-            case this_type::status_value::kind_EMPTY:
-            case this_type::status_value::kind_BOOL:
-            case this_type::status_value::kind_FLOAT:
-            return
-                static_cast<typename this_type::status_value::kind>(in_format);
-
-            default:
-            return in_format < 0?
-                this_type::status_value::kind_SIGNED:
-                this_type::status_value::kind_UNSIGNED;
         }
     }
 
@@ -1017,44 +1053,16 @@ class psyq::if_then_engine::_private::reservoir
     }
 
     /** @brief 状態値へ値を代入する。
-
-        @param[in] in_status_key 代入先となる状態値に対応する識別値。
-        @param[in] in_value      状態値へ代入する値。
-        @param[in] in_mask       状態値のビット幅に収まるようマスクするか。
-
-        @retval true 成功。
-        @retval false
+        @param[in,out] io_property    代入先となる状態値のプロパティ。
+        @param[in,out] io_chunks      ビット列チャンクのコンテナ。
+        @param[in] in_bit_field_width 代入する値のビット列とビット幅。
+        @retval true  成功。状態値へ値を代入した。
+        @retval false 失敗。
             失敗。状態値は変化しない。
-            - in_status_key に対応する状態値が
-              this_type::register_status で登録されてない場合は失敗する。
-            - in_status_key に対応する状態値のビット幅より
-              大きい値を代入しようとすると失敗する。
-            - in_value を状態値の型へ変換できない場合は失敗する。
-            - 論理型以外の値を論理型の状態値へ代入しようとすると失敗する。
-            - 論理型の値を論理型以外の状態値へ代入しようとすると失敗する。
-
-        @sa this_type::extract_status で、代入した値を取得できる。
+            - 代入する値のビット幅が0だと失敗する。
+            - 代入する値のビット幅が状態値のビット幅を超えると失敗する。
+            - 状態値の格納先となるビット列が存在しないと失敗する。
      */
-    private: template<typename template_value>
-    bool assign_status_bit_field(
-        typename this_type::status_key const& in_status_key,
-        template_value const& in_value,
-        bool const in_mask)
-    PSYQ_NOEXCEPT
-    {
-        auto const local_property_iterator(this->properties_.find(in_status_key));
-        if (local_property_iterator == this->properties_.end())
-        {
-            return false;
-        }
-        auto& local_property(local_property_iterator->second);
-        return this_type::assign_status_bit_field(
-            local_property,
-            this->chunks_,
-            this_type::make_bit_field_width(
-                in_value, local_property.get_format(), in_mask));
-    }
-
     private: static bool assign_status_bit_field(
         typename this_type::status_property& io_property,
         typename this_type::chunk_map& io_chunks,
@@ -1257,7 +1265,7 @@ class psyq::if_then_engine::_private::reservoir
         @param[in] in_bit_width ビット幅。
      */
     private: static bool is_overflow(
-        typename this_type::status_value::unsigned_type const& in_integer,
+        typename this_type::status_chunk::bit_block const& in_integer,
         std::size_t const in_bit_width)
     PSYQ_NOEXCEPT
     {
@@ -1273,14 +1281,13 @@ class psyq::if_then_engine::_private::reservoir
         std::size_t const in_bit_width)
     PSYQ_NOEXCEPT
     {
+        typedef typename this_type::status_chunk::bit_block bit_block;
         auto const local_rest_field(
             psyq::shift_right_bitwise_fast(
-                static_cast<typename this_type::status_value::unsigned_type>(
-                    in_integer),
-                in_bit_width - 1));
+                static_cast<bit_block>(in_integer), in_bit_width - 1));
         auto const local_rest_mask(
             psyq::shift_right_bitwise_fast(
-                static_cast<typename this_type::status_value::unsigned_type>(
+                static_cast<bit_block>(
                     psyq::shift_right_bitwise_fast(
                         in_integer,
                         sizeof(in_integer) * psyq::CHAR_BIT_WIDTH - 1)),

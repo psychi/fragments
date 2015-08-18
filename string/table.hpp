@@ -69,7 +69,7 @@ namespace psyq
     @tparam template_char_type   @copybrief psyq::string::view::value_type
     @tparam template_char_traits @copybrief psyq::string::view::traits_type
     @tparam template_allocator   @copybrief table::allocator_type
-*/
+ */
 template<
     typename template_char_type,
     typename template_char_traits = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
@@ -80,24 +80,27 @@ class psyq::string::table
     private: typedef table this_type;
 
     //-------------------------------------------------------------------------
-    /// @brief 使用するメモリ割当子を表す型。
+    /// @brief 文字列表で使うメモリ割当子を表す型。
     public: typedef template_allocator allocator_type;
+
+    /// @brief 文字列表で使う番号を表す型。
+    public: typedef std::size_t number;
+
+    public: enum: typename this_type::number
+    {
+        /// @brief 文字列表の無効な番号。
+        INVALID_NUMBER = static_cast<typename this_type::number>(-1),
+        /// @brief 文字列表の列の最大数。
+        MAX_COLUMN_COUNT = PSYQ_STRING_TABLE_MAX_COLUMN_COUNT,
+        /// @brief 文字列表の行の最大数。
+        MAX_ROW_COUNT = 1 + INVALID_NUMBER / MAX_COLUMN_COUNT,
+    };
 
     /// @brief 文字列表で使う、フライ級文字列の型。
     public: typedef
         psyq::string::flyweight<
             template_char_type, template_char_traits, template_allocator>
         string;
-
-    public: enum: typename this_type::string::size_type
-    {
-        /// @brief 文字列表の列の最大数。
-        MAX_COLUMN_COUNT = PSYQ_STRING_TABLE_MAX_COLUMN_COUNT,
-        /// @brief 文字列表の行の最大数。
-        MAX_ROW_COUNT = 1 +
-            static_cast<typename this_type::string::size_type>(-1)
-            / MAX_COLUMN_COUNT,
-    };
 
     //-------------------------------------------------------------------------
     /** @brief 文字列表のセルのコンテナ。
@@ -107,9 +110,7 @@ class psyq::string::table
      */
     protected: typedef
         std::vector<
-            std::pair<
-                typename this_type::string::size_type,
-                typename this_type::string>,
+            std::pair<typename this_type::number, typename this_type::string>,
             typename this_type::allocator_type>
         cell_container;
 
@@ -117,7 +118,7 @@ class psyq::string::table
     protected: struct cell_number_less
     {
         bool operator()(
-            typename table::string::size_type const in_left_number,
+            typename table::number const in_left_number,
             typename table::cell_container::value_type const& in_right_cell)
         const PSYQ_NOEXCEPT
         {
@@ -126,7 +127,7 @@ class psyq::string::table
 
         bool operator()(
             typename table::cell_container::value_type const& in_left_cell,
-            typename table::string::size_type const in_right_number)
+            typename table::number const in_right_number)
         const PSYQ_NOEXCEPT
         {
             return in_left_cell.first < in_right_number;
@@ -137,19 +138,19 @@ class psyq::string::table
     //-------------------------------------------------------------------------
     /// @name 構築と代入
     //@{
-    /** @brief 文字列表をコピー構築する。
-        @param[in] in_source コピー元となる文字列表。
-     */
-    public: table(this_type const& in_source):
+    /// @brief 文字列表をコピー構築する。
+    public: table(
+        /// [in] in_source コピー元となる文字列表。
+        this_type const& in_source):
     cells_(in_source.cells_),
     row_count_(in_source.get_row_count()),
     column_count_(in_source.get_column_count())
     {}
 
-    /** @brief 文字列表をムーブ構築する。
-        @param[in,out] io_source ムーブ元となる文字列表。
-     */
-    public: table(this_type&& io_source):
+    /// @brief 文字列表をムーブ構築する。
+    public: table(
+        /// [in,out] ムーブ元となる文字列表。
+        this_type&& io_source):
     cells_(std::move(io_source.cells_)),
     row_count_(io_source.get_row_count()),
     column_count_(io_source.get_column_count())
@@ -158,10 +159,11 @@ class psyq::string::table
     }
 
     /** @brief 文字列表をコピー代入する。
-        @param[in] in_source コピー元となる文字列表。
         @return *this
      */
-    public: this_type& operator=(this_type const& in_source)
+    public: this_type& operator=(
+        /// [in] コピー元となる文字列表。
+        this_type const& in_source)
     {
         this->cells_ = in_source.cells_;
         this->set_size(
@@ -170,10 +172,11 @@ class psyq::string::table
     }
 
     /** @brief 文字列表をムーブ代入する。
-        @param[in,out] io_source ムーブ元となる文字列表。
         @return *this
      */
-    public: this_type& operator=(this_type&& io_source)
+    public: this_type& operator=(
+        /// [in,out] io_source ムーブ元となる文字列表。
+        this_type&& io_source)
     {
         if (this != &io_source)
         {
@@ -209,8 +212,7 @@ class psyq::string::table
     /** @brief 文字列表の行数を取得する。
         @return 文字列表の行数。
      */
-    public: typename this_type::string::size_type get_row_count()
-    const PSYQ_NOEXCEPT
+    public: typename this_type::number get_row_count() const PSYQ_NOEXCEPT
     {
         return this->row_count_;
     }
@@ -218,22 +220,21 @@ class psyq::string::table
     /** @brief 文字列表の列数を取得する。
         @return 文字列表の列数。
      */
-    public: typename this_type::string::size_type get_column_count()
-    const PSYQ_NOEXCEPT
+    public: typename this_type::number get_column_count() const PSYQ_NOEXCEPT
     {
         return this->column_count_;
     }
 
     /** @brief 行番号と属性から、文字列表のセルを検索する。
-        @param[in] in_row_number    検索するセルの行番号。
-        @param[in] in_column_number 検索するセルの列番号。
         @return
             行番号と列番号に対応するセルの文字列。
             対応するセルがない場合は、空文字列を返す。
      */
     public: typename this_type::string const& find_cell(
-        typename this_type::string::size_type const in_row_number,
-        typename this_type::string::size_type const in_column_number)
+        /// [in] 検索するセルの行番号。
+        typename this_type::number const in_row_number,
+        /// [in] 検索するセルの列番号。
+        typename this_type::number const in_column_number)
     const PSYQ_NOEXCEPT
     {
         if (in_column_number < this->get_column_count()
@@ -258,6 +259,11 @@ class psyq::string::table
     }
 
     /** @brief セル文字列を解析し、値を抽出する。
+        @retval true
+            成功。セル文字列から抽出した値が out_value へ代入された。
+            ただし in_empty_permission が真で、セル文字列が空の場合は、
+            out_value への代入は行われず、変化しない。
+        @retval false 失敗。 out_value は変化しない。
         @tparam template_value
             セル文字列から抽出する値の型。以下の型の値を抽出できる。
             - bool 型。
@@ -265,24 +271,19 @@ class psyq::string::table
             - sizeof(std::int64_t) 以下の大きさの、組み込み符号あり整数型。
             - sizeof(double) 以下の大きさの、組み込み浮動小数点数型。
             - this_type::string 型。
-        @param[out] out_value       抽出した値の代入先。
-        @param[in] in_row_number    解析するセルの行番号。
-        @param[in] in_column_number 解析するセルの列番号。
-        @param[in] in_empty_permission
-           セル文字列が空の場合…
-           - この引数が真の場合は、成功と判定する。
-           - この引数が偽の場合は、失敗と判定する。
-        @retval true 
-            成功。セル文字列から抽出した値が out_value へ代入された。
-            ただし in_empty_permission が真で、セル文字列が空の場合は、
-            out_value への代入は行われず、変化しない。
-        @retval false 失敗。 out_value は変化しない。
      */
     public: template<typename template_value>
     bool parse_cell(
+        /// [out] 抽出した値の代入先。
         template_value& out_value,
-        typename this_type::string::size_type const in_row_number,
-        typename this_type::string::size_type const in_column_number,
+        /// [in] 解析するセルの行番号。
+        typename this_type::number const in_row_number,
+        /// [in] 解析するセルの列番号。
+        typename this_type::number const in_column_number,
+        /** [in] セル文字列が空の場合…
+            - この引数が真の場合は、成功と判定する。
+            - この引数が偽の場合は、失敗と判定する。
+         */
         bool const in_empty_permission)
     const
     {
@@ -292,10 +293,9 @@ class psyq::string::table
     }
     //@}
     //-------------------------------------------------------------------------
-    /** @brief 空の文字列表を構築する。
-        @param[in] in_allocator メモリ割当子の初期値。
-     */
+    /// @brief 空の文字列表を構築する。
     protected: explicit table(
+        /// [in] メモリ割当子の初期値。
         typename this_type::allocator_type const& in_allocator)
     : cells_(in_allocator), row_count_(0), column_count_(0)
     {}
@@ -306,14 +306,13 @@ class psyq::string::table
         return this->cells_;
     }
 
-    /** @brief セルを置き換える。
-        @param[in] in_row_number    置き換えるセルの行番号。
-        @param[in] in_column_number 置き換えるセルの列番号。
-        @param[in] in_string        置き換えるセルの文字列。
-     */
+    /// @brief セルを置き換える。
     protected: void replace_cell(
-        typename this_type::string::size_type const in_row_number,
-        typename this_type::string::size_type const in_column_number,
+        /// [in] 置き換えるセルの行番号。
+        typename this_type::number const in_row_number,
+        /// [in] 置き換えるセルの列番号。
+        typename this_type::number const in_column_number,
+        /// [in] 置き換えるセルの文字列。
         typename this_type::string in_string)
     {
         // 最大行数か最大桁数を超えるセルは、追加できない。
@@ -358,12 +357,12 @@ class psyq::string::table
     }
 
     protected: void set_size(
-        typename this_type::string::size_type const in_row_count,
-        typename this_type::string::size_type const in_column_count)
+        typename this_type::number const in_row_count,
+        typename this_type::number const in_column_count)
     {
-        this->row_count_ = (std::min<typename this_type::string::size_type>)(
+        this->row_count_ = (std::min<typename this_type::number>)(
             in_row_count, this_type::MAX_ROW_COUNT);
-        this->column_count_ = (std::min<typename this_type::string::size_type>)(
+        this->column_count_ = (std::min<typename this_type::number>)(
             in_column_count, this_type::MAX_COLUMN_COUNT);
     }
 
@@ -383,37 +382,35 @@ class psyq::string::table
     }
 
     /** @brief セル番号から、セルの行番号を算出する。
-        @param[in] in_cell_number セル番号。
         @return セルの行番号。
      */
-    protected: static typename this_type::string::size_type compute_row_number(
-        typename this_type::string::size_type const in_cell_number)
+    protected: static typename this_type::number compute_row_number(
+        /// [in] セル番号。
+        typename this_type::number const in_cell_number)
     PSYQ_NOEXCEPT
     {
         return in_cell_number / this_type::MAX_COLUMN_COUNT;
     }
 
     /** @brief セル番号から、セルの列番号を算出する。
-        @param[in] in_cell_number セル番号。
         @return セルの列番号。
      */
-    protected:
-    static typename this_type::string::size_type compute_column_number(
-        typename this_type::string::size_type const in_cell_number)
+    protected: static typename this_type::number compute_column_number(
+        /// [in] セル番号。
+        typename this_type::number const in_cell_number)
     PSYQ_NOEXCEPT
     {
         return in_cell_number % this_type::MAX_COLUMN_COUNT;
     }
 
     /** @brief セルの行番号と列番号から、セル番号を算出する。
-        @param[in] in_row_number    セルの行番号。
-        @param[in] in_column_number セルの列番号。
         @return セル番号。
      */
-    protected:
-    static typename this_type::string::size_type compute_cell_number(
-        typename this_type::string::size_type const in_row_number,
-        typename this_type::string::size_type const in_column_number)
+    protected: static typename this_type::number compute_cell_number(
+        /// [in] セルの行番号。
+        typename this_type::number const in_row_number,
+        /// [in] セルの列番号。
+        typename this_type::number const in_column_number)
     PSYQ_NOEXCEPT
     {
         auto const local_cell_number(
@@ -425,14 +422,14 @@ class psyq::string::table
 
     //-------------------------------------------------------------------------
     /** @brief 文字列を解析し、値を抽出する。
-        @param[out] out_value 抽出した値の代入先。
-        @param[in] in_string  解析する文字列。
         @retval true  成功。文字列を解析して抽出した値を out_value へ代入した。
         @retval false 失敗。 out_value は変化しない。
      */
     private: template<typename template_value>
     static bool parse_string(
+        /// [out] 抽出した値の代入先。
         template_value& out_value,
+        /// [in] 解析する文字列。
         typename this_type::string::view const& in_string)
     {
         psyq::string::numeric_parser<template_value> const local_parser(
@@ -461,9 +458,9 @@ class psyq::string::table
     /// @brief セル番号でソートされたセルの辞書。
     private: typename this_type::cell_container cells_;
     /// @brief 文字列表の行数。
-    private: typename this_type::string::size_type row_count_;
+    private: typename this_type::number row_count_;
     /// @brief 文字列表の列数。
-    private: typename this_type::string::size_type column_count_;
+    private: typename this_type::number column_count_;
 
 }; // class psyq::string::table
 

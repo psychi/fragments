@@ -89,9 +89,7 @@ public psyq::string::table<
         - 第2属性は、属性の要素数。
      */
     public: typedef
-        std::pair<
-            typename base_type::string::size_type,
-            typename base_type::string::size_type>
+        std::pair<typename base_type::number, typename base_type::number>
         attribute;
 
     /** @brief 属性の辞書。
@@ -101,9 +99,7 @@ public psyq::string::table<
      */
     private: typedef
         std::vector<
-            std::pair<
-                typename base_type::string::size_type,
-                typename base_type::string::size_type>,
+            std::pair<typename base_type::number, typename base_type::number>,
             typename base_type::allocator_type>
         attribute_container;
 
@@ -162,8 +158,7 @@ public psyq::string::table<
      */
     private: typedef
         std::vector<
-            typename base_type::string::size_type,
-            typename base_type::allocator_type>
+            typename base_type::number, typename base_type::allocator_type>
         key_container;
 
     /// @brief 関係文字列表の主キーを比較する関数オブジェクト。
@@ -213,36 +208,35 @@ public psyq::string::table<
     }; // class key_less
 
     //-------------------------------------------------------------------------
-    /// @name 構築と代入
-    //@{
-    /** @brief 関係文字列表を構築する。
-        @param[in] in_source 元となる文字列表。
-        @param[in] in_attribute_row
-            属性として使う行の番号。
-            base_type::string::npos の場合は、属性の辞書を構築しない。
-        @param[in] in_attribute_key
-            主キーとして使う属性の名前。
-            空文字列の場合は、主キーの辞書を構築しない。
-        @param[in] in_attribute_index 主キーとして使う属性のインデクス番号。
+    /** @name 構築と代入
+        @{
      */
+    /// @brief 関係文字列表を構築する。
     public: explicit relation_table(
+        /// [in] 元となる文字列表。
         base_type in_source,
-        typename base_type::string::size_type const in_attribute_row =
-            base_type::string::npos,
+        /** [in] 属性として使う行の番号。
+            base_type::INVALID_NUMBER の場合は、属性の辞書を構築しない。
+         */
+        typename base_type::number const in_attribute_row =
+            base_type::INVALID_NUMBER,
+        /** [in] 主キーとして使う属性の名前。
+            空文字列の場合は、主キーの辞書を構築しない。
+         */
         typename base_type::string::view const& in_attribute_key =
             string_view(),
-        typename base_type::string::size_type const in_attribute_index = 0)
-    :
+        /// [in] 主キーとして使う属性のインデクス番号。
+        typename base_type::number const in_attribute_index = 0):
     base_type(std::move(in_source)),
     attributes_(this->get_allocator()),
     keys_(this->get_allocator()),
-    attribute_row_(base_type::string::npos),
-    key_column_(base_type::string::npos)
+    attribute_row_(base_type::INVALID_NUMBER),
+    key_column_(base_type::INVALID_NUMBER)
     {
         if (!this->constraint_attribute(in_attribute_row))
         {
             PSYQ_ASSERT(
-                in_attribute_row == base_type::string::npos
+                in_attribute_row == base_type::INVALID_NUMBER
                 && in_attribute_key.empty());
         }
         else if (!this->constraint_key(in_attribute_key, in_attribute_index))
@@ -251,10 +245,10 @@ public psyq::string::table<
         }
     }
 
-    /** @brief 関係文字列表をコピー構築する。
-        @param[in] in_source コピー元となる文字列表。
-     */
-    public: relation_table(this_type const& in_source):
+    /// @brief 関係文字列表をコピー構築する。
+    public: relation_table(
+        /// [in] コピー元となる文字列表。
+        this_type const& in_source):
     base_type(in_source),
     attributes_(in_source.attributes_),
     keys_(in_source.keys_),
@@ -262,25 +256,26 @@ public psyq::string::table<
     key_column_(in_source.get_key_column())
     {}
 
-    /** @brief 関係文字列表をムーブ構築する。
-        @param[in,out] io_source ムーブ元となる文字列表。
-     */
-    public: relation_table(this_type&& io_source):
+    /// @brief 関係文字列表をムーブ構築する。
+    public: relation_table(
+        /// [in,out] ムーブ元となる文字列表。
+        this_type&& io_source):
     base_type(std::move(io_source)),
     attributes_(std::move(io_source.attributes_)),
     keys_(std::move(io_source.keys_)),
     attribute_row_(io_source.get_attribute_row()),
     key_column_(io_source.get_key_column())
     {
-        io_source.attribute_row_ = base_type::string::npos;
-        io_source.key_column_ = base_type::string::npos;
+        io_source.attribute_row_ = base_type::INVALID_NUMBER;
+        io_source.key_column_ = base_type::INVALID_NUMBER;
     }
 
     /** @brief 関係文字列表をコピー代入する。
-        @param[in] in_source コピー元となる文字列表。
         @return *this
      */
-    public: this_type& operator=(this_type const& in_source)
+    public: this_type& operator=(
+        /// [in] コピー元となる文字列表。
+        this_type const& in_source)
     {
         this->base_type::operator=(in_source);
         this->attributes_ = in_source.attributes_;
@@ -291,10 +286,11 @@ public psyq::string::table<
     }
 
     /** @brief 関係文字列表をムーブ代入する。
-        @param[in,out] io_source ムーブ元となる文字列表。
         @return *this
      */
-    public: this_type& operator=(this_type&& io_source)
+    public: this_type& operator=(
+        /// [in,out] ムーブ元となる文字列表。
+        this_type&& io_source)
     {
         if (this != &io_source)
         {
@@ -303,32 +299,32 @@ public psyq::string::table<
             this->keys_ = std::move(io_source.keys_);
             this->attribute_row_ = io_source.get_attribute_row();
             this->key_column_ = io_source.get_key_column();
-            io_source.attribute_row_ = base_type::string::npos;
-            io_source.key_column_ = base_type::string::npos;
+            io_source.attribute_row_ = base_type::INVALID_NUMBER;
+            io_source.key_column_ = base_type::INVALID_NUMBER;
         }
         return *this;
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 属性
-    //@{
-    /** @brief 属性の行番号を取得する。
-        @retval !=npos 属性の行番号。
-        @retval ==npos 属性の辞書が構築されてない。
+    /** @name 属性
+        @{
      */
-    public: typename base_type::string::size_type get_attribute_row()
-    const PSYQ_NOEXCEPT
+    /** @brief 属性の行番号を取得する。
+        @retval !=base_type::INVALID_NUMBER 属性の行番号。
+        @retval ==base_type::INVALID_NUMBER 属性の辞書が構築されてない。
+     */
+    public: typename base_type::number get_attribute_row() const PSYQ_NOEXCEPT
     {
         return this->attribute_row_;
     }
 
     /** @brief 属性の辞書を構築する。
-        @param[in] in_attribute_row 属性の行番号。
         @retval true  成功。
         @retval false 失敗。
      */
     public: bool constraint_attribute(
-        typename base_type::string::size_type const in_attribute_row)
+        /// [in] 属性の行番号。
+        typename base_type::number const in_attribute_row)
     {
         if (this->get_row_count() <= in_attribute_row)
         {
@@ -391,19 +387,18 @@ public psyq::string::table<
         return true;
     }
 
-    /** @brief 属性の辞書を削除する。
-     */
+    /// @brief 属性の辞書を削除する。
     public: void clear_attribute()
     {
         this->attributes_.clear();
-        this->attribute_row_ = base_type::string::npos;
+        this->attribute_row_ = base_type::INVALID_NUMBER;
     }
 
     /** @brief 属性名から、文字列表の属性を検索する。
-        @param[in] in_attribute_name 検索する属性の名前。
         @return 属性の列番号と要素数のペア。
      */
     public: typename this_type::attribute find_attribute(
+        /// [in] 検索する属性の名前。
         typename base_type::string::view const& in_attribute_name)
     const PSYQ_NOEXCEPT
     {
@@ -433,71 +428,70 @@ public psyq::string::table<
                 }
             }
         }
-        return typename this_type::attribute(base_type::string::npos, 0);
+        return typename this_type::attribute(base_type::INVALID_NUMBER, 0);
     }
 
     /** @brief 属性名から、列番号を検索する。
 
         this_type::constraint_attribute で、事前に属性の辞書を構築しておくこと。
 
-        @param[in] in_attribute_name  検索する属性の名前。
-        @param[in] in_attribute_index 検索する属性のインデクス番号。
-        @retval !=npos 属性名に対応する列番号。
-        @retval ==npos 属性名に対応する列番号が存在しない。
+        @retval !=base_type::INVALID_NUMBER 属性名に対応する列番号。
+        @retval ==base_type::INVALID_NUMBER 属性名に対応する列番号が存在しない。
      */
-    public: typename base_type::string::size_type find_column_number(
+    public: typename base_type::number find_column_number(
+        /// [in] 検索する属性の名前。
         typename base_type::string::view const& in_attribute_name,
-        typename base_type::string::size_type const in_attribute_index = 0)
+        /// [in] 検索する属性のインデクス番号。
+        typename base_type::number const in_attribute_index = 0)
     const PSYQ_NOEXCEPT
     {
         if (!in_attribute_name.empty())
         {
-            auto const local_attribute(
-                this->find_attribute(in_attribute_name));
+            auto const local_attribute(this->find_attribute(in_attribute_name));
             if (in_attribute_index < local_attribute.second)
             {
                 return local_attribute.first + in_attribute_index;
             }
         }
-        return base_type::string::npos;
+        return base_type::INVALID_NUMBER;
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /// @name 主キー
-    //@{
+    /** @name 主キー
+        @{
+     */
     /** @brief 主キーの列番号を取得する。
-        @retval !=npos 主キーの列番号。
-        @retval ==npos 主キーの辞書が構築されてない。
+        @retval !=base_type::INVALID_NUMBER 主キーの列番号。
+        @retval ==base_type::INVALID_NUMBER 主キーの辞書が構築されてない。
         @sa this_type::constraint_key
         @sa this_type::clear_key
      */
-    public: typename base_type::string::size_type get_key_column()
-    const PSYQ_NOEXCEPT
+    public: typename base_type::number get_key_column() const PSYQ_NOEXCEPT
     {
         return this->key_column_;
     }
 
     /** @brief 主キーの辞書を構築する。
-        @param[in] in_attribute_name  主キーとする属性の名前。
-        @param[in] in_attribute_index 主キーとする属性のインデクス番号。
         @retval true  成功。
         @retval false 失敗。
      */
     public: bool constraint_key(
+        /// [in] 主キーとする属性の名前。
         typename base_type::string::view const& in_attribute_name,
-        typename base_type::string::size_type const in_attribute_index = 0)
+        /// [in] 主キーとする属性のインデクス番号。
+        typename base_type::number const in_attribute_index = 0)
     {
         return this->constraint_key(
             this->find_column_number(in_attribute_name, in_attribute_index));
     }
 
     /** @brief 主キーの辞書を構築する。
-        @param[in] in_key_column 主キーとする列番号。
         @retval true  成功。
         @retval false 失敗。
      */
     public: bool constraint_key(
-        typename base_type::string::size_type const in_key_column)
+        /// [in] 主キーとする列番号。
+        typename base_type::number const in_key_column)
     {
         if (this->get_column_count() <= in_key_column)
         {
@@ -558,27 +552,26 @@ public psyq::string::table<
         return true;
     }
 
-    /** @brief 主キーの辞書を削除する。
-     */
+    /// @brief 主キーの辞書を削除する。
     public: void clear_key()
     {
         this->keys_.clear();
-        this->key_column_ = this_type::string::npos;
+        this->key_column_ = this_type::INVALID_NUMBER;
     }
 
     /** @brief 等価な主キーを数える。
-        @param[in] in_key 検索する主キー。
         @return in_key と等価な主キーの数。
         @sa this_type::constraint_key
         @sa this_type::clear_key
      */
-    public: typename base_type::string::size_type count_key(
+    public: typename base_type::number count_key(
+        /// [in] 検索する主キー。
         typename base_type::string::view const& in_key)
     const PSYQ_NOEXCEPT
     {
         auto const local_hash(
             this_type::string::factory::compute_hash(in_key));
-        typename base_type::string::size_type local_count(0);
+        typename base_type::number local_count(0);
         for (
             auto i(
                 std::lower_bound(
@@ -604,11 +597,11 @@ public psyq::string::table<
 
         this_type::constraint_key で、事前に主キーの辞書を構築をしておくこと。
 
-        @param[in] in_key  検索する主キー。
-        @retval !=npos 主キーに対応する行番号。
-        @retval ==npos 主キーに対応する行番号が存在しない。
+        @retval "!= base_type::INVALID_NUMBER" 主キーに対応する行番号。
+        @retval "== base_type::INVALID_NUMBER" 主キーに対応する行番号が存在しない。
      */
-    public: typename base_type::string::size_type find_row_number(
+    public: typename base_type::number find_row_number(
+        /// [in] 検索する主キー。
         typename base_type::string::view const& in_key)
     const PSYQ_NOEXCEPT
     {
@@ -632,18 +625,18 @@ public psyq::string::table<
                 }
             }
         }
-        return base_type::string::npos;
+        return base_type::INVALID_NUMBER;
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
     /// @brief 属性名でソート済の属性の辞書。
     private: typename this_type::attribute_container attributes_;
     /// @brief 主キーでソート済の主キーの辞書。
     private: typename this_type::key_container keys_;
     /// @brief 属性として使っている行の番号。
-    private: typename base_type::string::size_type attribute_row_;
+    private: typename base_type::number attribute_row_;
     /// @brief 主キーとして使っている列の番号。
-    private: typename base_type::string::size_type key_column_;
+    private: typename base_type::number key_column_;
 
 }; // class psyq::string::relation_table
 

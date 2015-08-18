@@ -76,6 +76,7 @@ namespace psyq
     @tparam template_char_type   @copydoc psyq::string::view::value_type
     @tparam template_char_traits @copydoc psyq::string::view::traits_type
     @tparam template_allocator   @copydoc psyq::string::_private::flyweight_factory::allocator_type
+    @ingroup psyq_string
  */
 template<
     typename template_char_type,
@@ -102,58 +103,56 @@ public psyq::string::_private::interface_immutable<
                     ::_private_client>
         base_type;
 
-    /** @brief 空の文字列を構築する。メモリ確保は行わない。
-     */
+    /// @brief 空の文字列を構築する。メモリ確保は行わない。
     public: flyweight()
     PSYQ_NOEXCEPT: base_type(base_type::base_type::make())
     {}
 
-    /** @brief 文字列をコピー構築する。メモリ確保は行わない。
-        @param[in] in_source コピー元となる文字列。
-     */
-    public: flyweight(this_type const& in_source)
+    /// @brief 文字列をコピー構築する。メモリ確保は行わない。
+    public: flyweight(
+        /// [in] コピー元となる文字列。
+        this_type const& in_source)
     PSYQ_NOEXCEPT: base_type(in_source)
     {}
 
-    /** @brief 文字列をムーブ構築する。メモリ確保は行わない。
-        @param[in,out] io_source ムーブ元となる文字列。
-     */
-    public: flyweight(this_type&& io_source)
+    /// @brief 文字列をムーブ構築する。メモリ確保は行わない。
+    public: flyweight(
+        /// [in,out] ムーブ元となる文字列。
+        this_type&& io_source)
     PSYQ_NOEXCEPT: base_type(std::move(io_source))
     {}
 
-    /** @brief 文字列を構築する。メモリ確保を行う場合ある。
-        @param[in] in_string  コピー元となる文字列。
-        @param[in] in_factory 文字列生成器。
-        @param[in] in_chunk_size
-            文字列チャンクを生成する場合の、デフォルトのチャンク容量。
-     */
+    /// @brief 文字列を構築する。メモリ確保を行う場合ある。
     public: flyweight(
+        /// [in] コピー元となる文字列。
         typename base_type::view const& in_string,
+        /// [in] 文字列生成器。
         typename base_type::base_type::factory::shared_ptr in_factory,
+        /// [in] 文字列チャンクを生成する場合の、デフォルトのチャンク容量。
         std::size_t const in_chunk_size =
-            PSYQ_STRING_FLYWEIGHT_CHUNK_SIZE_DEFAULT)
-    :
+            PSYQ_STRING_FLYWEIGHT_CHUNK_SIZE_DEFAULT):
     base_type(
         base_type::base_type::make(
             std::move(in_factory), in_string, in_chunk_size))
     {}
 
     /** @brief 文字列をコピー代入する。メモリ確保は行わない。
-        @param[in] in_source コピー元となる文字列。
         @return *this
      */
-    public: this_type& operator=(this_type const& in_source)
+    public: this_type& operator=(
+        /// [in] コピー元となる文字列。
+        this_type const& in_source)
     {
         this->base_type::base_type::operator=(in_source);
         return *this;
     }
 
     /** @brief 文字列をムーブ代入する。メモリ確保は行わない。
-        @param[in,out] io_source ムーブ元となる文字列。
         @return *this
      */
-    public: this_type& operator=(this_type&& io_source)
+    public: this_type& operator=(
+        /// [in,out] ムーブ元となる文字列。
+        this_type&& io_source)
     {
         this->base_type::base_type::operator=(std::move(io_source));
         return *this;

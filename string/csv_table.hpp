@@ -182,20 +182,19 @@ public psyq::string::table<
         "this_type::delimiter_QUOTE_ESCAPE is invalid.");
 
     //-------------------------------------------------------------------------
-    /** @brief CSV形式の文字列を解析し、文字列表を構築する。
-        @param[out] out_workspace
-            作業領域として使う文字列。
-            std::basic_string 互換のインターフェイスを持つこと。
-        @param[in] in_string_factory
-            フライ級文字列の生成器を指すスマートポインタ。
-            空のスマートポインタではないこと。
-        @param[in] in_csv_string 解析するCSV形式の文字列。
-     */
+    /// @brief CSV形式の文字列を解析し、文字列表を構築する。
     public: template<typename template_workspace>
     csv_table(
+        /** [out] 作業領域として使う文字列。
+            std::basic_string 互換のインターフェイスを持つこと。
+         */
         template_workspace& out_workspace,
+        /** [in] フライ級文字列の生成器を指すスマートポインタ。
+            空のスマートポインタではないこと。
+         */
         typename base_type::string::factory::shared_ptr const&
             in_string_factory,
+        /// [in] 解析するCSV形式の文字列。
         typename base_type::string::view const& in_csv_string)
     :
     base_type((
@@ -208,19 +207,18 @@ public psyq::string::table<
     }
 
     //-------------------------------------------------------------------------
-    /** @brief CSV形式の文字列を解析し、文字列表を構築する。
-        @param[out] out_workspace
-            作業領域として使う文字列。
-            std::basic_string 互換のインターフェイスを持つこと。
-        @param[in] in_csv_string 解析するCSV形式の文字列。
-        @param[in] in_string_factory
-            フライ級文字列の生成器を指すスマートポインタ。
-            スマートポインタが空ではないこと。
-     */
+    /// @brief CSV形式の文字列を解析し、文字列表を構築する。
     private: template<typename template_workspace>
     bool build(
+        /** [out] 作業領域として使う文字列。
+            std::basic_string 互換のインターフェイスを持つこと。
+         */
         template_workspace& out_workspace,
+        /// [in] 解析するCSV形式の文字列。
         typename base_type::string::view const& in_csv_string,
+        /** [in] フライ級文字列の生成器を指すスマートポインタ。
+            スマートポインタが空ではないこと。
+         */
         typename base_type::string::factory::shared_ptr const&
             in_string_factory)
     {
@@ -231,9 +229,9 @@ public psyq::string::table<
         out_workspace.clear();
         this->clear_container(in_csv_string.size() / 8);
         bool local_quote(false);
-        typename base_type::string::size_type local_row(0);
-        typename base_type::string::size_type local_column(0);
-        typename base_type::string::size_type local_column_max(0);
+        typename base_type::number local_row(0);
+        typename base_type::number local_column(0);
+        typename base_type::number local_column_max(0);
         typename base_type::string::value_type local_last_char(0);
         typename base_type::string::size_type local_cell_size(0);
         for (auto i(in_csv_string.begin()); i != in_csv_string.end(); ++i)

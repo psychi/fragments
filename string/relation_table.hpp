@@ -39,10 +39,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 またそれに限定されない）直接損害、間接損害、偶発的な損害、特別損害、
 懲罰的損害、または結果損害について、一切責任を負わないものとします。
  */
-/** @file
-    @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::string::table
- */
+/// @file
+/// @author Hillco Psychi (https://twitter.com/psychi)
+/// @brief @copybrief psyq::string::table
 #ifndef PSYQ_STRING_RELATION_TABLE_HPP_
 #define PSYQ_STRING_RELATION_TABLE_HPP_
 
@@ -53,62 +52,54 @@ namespace psyq
 {
     namespace string
     {
-        template<typename, typename, typename> class relation_table;
+        template<typename, typename, typename, typename> class relation_table;
     } // namespace string
 } // namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 関係データベース的なフライ級文字列表。属性と主キーを持つ。
-    @tparam template_char_type   @copybrief psyq::string::view::value_type
-    @tparam template_char_traits @copybrief psyq::string::view::traits_type
-    @tparam template_allocator   @copybrief table::allocator_type
-*/
+/// @brief 関係データベース的なフライ級文字列表。属性と主キーを持つ。
+/// @tparam template_number      @copydoc table::number
+/// @tparam template_char_type   @copydoc psyq::string::view::value_type
+/// @tparam template_char_traits @copydoc psyq::string::view::traits_type
+/// @tparam template_allocator   @copydoc table::allocator_type
 template<
+    typename template_number,
     typename template_char_type,
     typename template_char_traits = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
     typename template_allocator = PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT>
 class psyq::string::relation_table:
 public psyq::string::table<
-    template_char_type, template_char_traits, template_allocator>
+    template_number, template_char_type, template_char_traits, template_allocator>
 {
-    /// @brief thisが指す値の型。
-    private: typedef relation_table this_type;
-    /// @brief this_type の基底型。
-    public: typedef
-        psyq::string::table<
-            template_char_type, template_char_traits, template_allocator>
-        base_type;
-
-    private: typedef typename base_type::string::view string_view;
+    /// @brief relation_table の基底型。
+    public: typedef this_type base_type;
+    /// @brief this が指す値の型。
+    protected: typedef relation_table this_type;
 
     //-------------------------------------------------------------------------
-    /** @brief 関係文字列表の属性。
-
-        - 第1属性は、属性セルの列番号。
-        - 第2属性は、属性の要素数。
-     */
+    /// @brief 関係文字列表の属性。
+    /// @details
+    /// - 第1属性は、属性セルの列番号。
+    /// - 第2属性は、属性の要素数。
     public: typedef
         std::pair<typename base_type::number, typename base_type::number>
         attribute;
-
-    /** @brief 属性の辞書。
-
-        - 要素の第1属性は、属性セルの配列インデクス番号。
-        - 要素の第2属性は、属性の要素数。
-     */
+    /// @brief 属性の辞書。
+    /// @details
+    /// - 要素の第1属性は、属性セルの配列インデクス番号。
+    /// - 要素の第2属性は、属性の要素数。
     private: typedef
         std::vector<
             std::pair<typename base_type::number, typename base_type::number>,
             typename base_type::allocator_type>
         attribute_container;
-
     /// @brief 属性を名前で比較する関数オブジェクト。
     private: class attribute_name_less
     {
         public: attribute_name_less(
             typename relation_table::cell_container const& in_cells,
-            typename relation_table::string::factory::hash::value_type const
+            typename relation_table::string::factory::hasher::result_type const
                 in_hash)
         PSYQ_NOEXCEPT: cells_(in_cells), hash_(in_hash)
         {}
@@ -132,7 +123,7 @@ public psyq::string::table<
         const PSYQ_NOEXCEPT
         {
             auto& local_left(this->cells_.at(in_left.first).second);
-            return local_left.compare_fast(in_right, this->hash_) < 0;
+            return local_left._compare_fast(in_right, this->hash_) < 0;
         }
 
         public: bool operator()(
@@ -142,31 +133,28 @@ public psyq::string::table<
         const PSYQ_NOEXCEPT
         {
             auto& local_right(this->cells_.at(in_right.first).second);
-            return 0 < local_right.compare_fast(in_left, this->hash_);
+            return 0 < local_right._compare_fast(in_left, this->hash_);
         }
 
         private: typename relation_table::cell_container const& cells_;
         private:
-        typename relation_table::string::factory::hash::value_type hash_;
+        typename relation_table::string::factory::hasher::result_type hash_;
 
     }; // class attribute_name_less
 
     //-------------------------------------------------------------------------
-    /** @brief 関係文字列表の主キーのコンテナ。
-
-        要素は、主キーとなるセルの配列インデクス番号。
-     */
+    /// @brief 関係文字列表の主キーのコンテナ。
+    /// @details 要素は、主キーとなるセルの配列インデクス番号。
     private: typedef
         std::vector<
             typename base_type::number, typename base_type::allocator_type>
         key_container;
-
     /// @brief 関係文字列表の主キーを比較する関数オブジェクト。
     private: class key_less
     {
         public: key_less(
             typename relation_table::cell_container const& in_cells,
-            typename relation_table::string::factory::hash::value_type const
+            typename relation_table::string::factory::hasher::result_type const
                 in_hash)
         PSYQ_NOEXCEPT: cells_(in_cells), hash_(in_hash)
         {}
@@ -189,7 +177,7 @@ public psyq::string::table<
         const PSYQ_NOEXCEPT
         {
             auto& local_left(this->cells_.at(in_left).second);
-            return local_left.compare_fast(in_right, this->hash_) < 0;
+            return local_left._compare_fast(in_right, this->hash_) < 0;
         }
 
         public: bool operator()(
@@ -198,31 +186,31 @@ public psyq::string::table<
         const PSYQ_NOEXCEPT
         {
             auto& local_right(this->cells_.at(in_right).second);
-            return 0 < local_right.compare_fast(in_left, this->hash_);
+            return 0 < local_right._compare_fast(in_left, this->hash_);
         }
 
         private: typename relation_table::cell_container const& cells_;
         private:
-        typename relation_table::string::factory::hash::value_type hash_;
+        typename relation_table::string::factory::hasher::result_type hash_;
 
     }; // class key_less
 
+    private: typedef typename base_type::string::view string_view;
+
     //-------------------------------------------------------------------------
-    /** @name 構築と代入
-        @{
-     */
+    /// @name 構築と代入
+    /// @{
+
     /// @brief 関係文字列表を構築する。
     public: explicit relation_table(
         /// [in] 元となる文字列表。
         base_type in_source,
-        /** [in] 属性として使う行の番号。
-            base_type::INVALID_NUMBER の場合は、属性の辞書を構築しない。
-         */
+        /// [in] 属性として使う行の番号。
+        /// base_type::INVALID_NUMBER の場合は、属性の辞書を構築しない。
         typename base_type::number const in_attribute_row =
             base_type::INVALID_NUMBER,
-        /** [in] 主キーとして使う属性の名前。
-            空文字列の場合は、主キーの辞書を構築しない。
-         */
+        /// [in] 主キーとして使う属性の名前。
+        /// 空文字列の場合は、主キーの辞書を構築しない。
         typename base_type::string::view const& in_attribute_key =
             string_view(),
         /// [in] 主キーとして使う属性のインデクス番号。
@@ -233,13 +221,13 @@ public psyq::string::table<
     attribute_row_(base_type::INVALID_NUMBER),
     key_column_(base_type::INVALID_NUMBER)
     {
-        if (!this->constraint_attribute(in_attribute_row))
+        if (!this->build_attributes(in_attribute_row))
         {
             PSYQ_ASSERT(
                 in_attribute_row == base_type::INVALID_NUMBER
                 && in_attribute_key.empty());
         }
-        else if (!this->constraint_key(in_attribute_key, in_attribute_index))
+        else if (!this->build_keys(in_attribute_key, in_attribute_index))
         {
             PSYQ_ASSERT(in_attribute_key.empty());
         }
@@ -270,9 +258,8 @@ public psyq::string::table<
         io_source.key_column_ = base_type::INVALID_NUMBER;
     }
 
-    /** @brief 関係文字列表をコピー代入する。
-        @return *this
-     */
+    /// @brief 関係文字列表をコピー代入する。
+    /// @return *this
     public: this_type& operator=(
         /// [in] コピー元となる文字列表。
         this_type const& in_source)
@@ -285,9 +272,8 @@ public psyq::string::table<
         return *this;
     }
 
-    /** @brief 関係文字列表をムーブ代入する。
-        @return *this
-     */
+    /// @brief 関係文字列表をムーブ代入する。
+    /// @return *this
     public: this_type& operator=(
         /// [in,out] ムーブ元となる文字列表。
         this_type&& io_source)
@@ -306,23 +292,24 @@ public psyq::string::table<
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 属性
-        @{
-     */
-    /** @brief 属性の行番号を取得する。
-        @retval !=base_type::INVALID_NUMBER 属性の行番号。
-        @retval ==base_type::INVALID_NUMBER 属性の辞書が構築されてない。
-     */
+    /// @name 属性
+    /// @{
+
+    /// @brief 属性の行番号を取得する。
+    /// @return 属性の行番号。属性の辞書がない場合は、
+    /// base_type::INVALID_NUMBER を返す。
+    /// @sa this_type::relation_table か this_type::build_attributes
+    /// で、属性の辞書を構築できる。
     public: typename base_type::number get_attribute_row() const PSYQ_NOEXCEPT
     {
         return this->attribute_row_;
     }
 
-    /** @brief 属性の辞書を構築する。
-        @retval true  成功。
-        @retval false 失敗。
-     */
-    public: bool constraint_attribute(
+    /// @brief 属性の辞書を構築する。
+    /// @retval true  成功。属性の辞書を構築した。
+    /// @retval false 失敗。 *this は変化しない。
+    /// @sa this_type::clear_attributes で、属性の辞書を削除できる。
+    public: bool build_attributes(
         /// [in] 属性の行番号。
         typename base_type::number const in_attribute_row)
     {
@@ -388,15 +375,15 @@ public psyq::string::table<
     }
 
     /// @brief 属性の辞書を削除する。
-    public: void clear_attribute()
+    /// @sa this_type::build_attributes で、属性の辞書を構築できる。
+    public: void clear_attributes()
     {
         this->attributes_.clear();
         this->attribute_row_ = base_type::INVALID_NUMBER;
     }
 
-    /** @brief 属性名から、文字列表の属性を検索する。
-        @return 属性の列番号と要素数のペア。
-     */
+    /// @brief 属性名から、文字列表の属性を検索する。
+    /// @return 属性の列番号と要素数のペア。
     public: typename this_type::attribute find_attribute(
         /// [in] 検索する属性の名前。
         typename base_type::string::view const& in_attribute_name)
@@ -405,7 +392,7 @@ public psyq::string::table<
         if (!in_attribute_name.empty())
         {
             auto const local_hash(
-                this_type::string::factory::compute_hash(in_attribute_name));
+                this_type::string::_compute_hash(in_attribute_name));
             auto const& local_cells(this->get_cells());
             auto const local_lower_bound(
                 std::lower_bound(
@@ -418,7 +405,7 @@ public psyq::string::table<
             {
                 auto& local_cell(local_cells.at(local_lower_bound->first));
                 auto const local_compare(
-                    local_cell.second.compare_fast(
+                    local_cell.second._compare_fast(
                         in_attribute_name, local_hash));
                 if (local_compare == 0)
                 {
@@ -431,13 +418,11 @@ public psyq::string::table<
         return typename this_type::attribute(base_type::INVALID_NUMBER, 0);
     }
 
-    /** @brief 属性名から、列番号を検索する。
-
-        this_type::constraint_attribute で、事前に属性の辞書を構築しておくこと。
-
-        @retval !=base_type::INVALID_NUMBER 属性名に対応する列番号。
-        @retval ==base_type::INVALID_NUMBER 属性名に対応する列番号が存在しない。
-     */
+    /// @brief 属性名から、列番号を検索する。
+    /// @return in_attribute_name と in_attribute_index に対応する列番号。
+    /// 該当する列番号がない場合は、 base_type::INVALID_NUMBER を返す。
+    /// @sa this_type::relation_table か this_type::build_attributes
+    /// で、属性の辞書を構築できる。
     public: typename base_type::number find_column_number(
         /// [in] 検索する属性の名前。
         typename base_type::string::view const& in_attribute_name,
@@ -457,39 +442,38 @@ public psyq::string::table<
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 主キー
-        @{
-     */
-    /** @brief 主キーの列番号を取得する。
-        @retval !=base_type::INVALID_NUMBER 主キーの列番号。
-        @retval ==base_type::INVALID_NUMBER 主キーの辞書が構築されてない。
-        @sa this_type::constraint_key
-        @sa this_type::clear_key
-     */
+    /// @name 主キー
+    /// @{
+
+    /// @brief 主キーの列番号を取得する。
+    /// @return 主キーの列番号。主キーの辞書が構築されてない場合は、
+    /// base_type::INVALID_NUMBER を返す。
+    /// @sa this_type::relation_table か this_type::build_keys
+    /// で、主キーの辞書を構築できる。
     public: typename base_type::number get_key_column() const PSYQ_NOEXCEPT
     {
         return this->key_column_;
     }
 
-    /** @brief 主キーの辞書を構築する。
-        @retval true  成功。
-        @retval false 失敗。
-     */
-    public: bool constraint_key(
+    /// @brief 主キーの辞書を構築する。
+    /// @retval true  成功。主キーの辞書を構築した。
+    /// @retval false 失敗。 *this は変化しない。
+    /// @sa this_type::clear_keys で、主キーの辞書を削除できる。
+    public: bool build_keys(
         /// [in] 主キーとする属性の名前。
         typename base_type::string::view const& in_attribute_name,
         /// [in] 主キーとする属性のインデクス番号。
         typename base_type::number const in_attribute_index = 0)
     {
-        return this->constraint_key(
+        return this->build_keys(
             this->find_column_number(in_attribute_name, in_attribute_index));
     }
 
-    /** @brief 主キーの辞書を構築する。
-        @retval true  成功。
-        @retval false 失敗。
-     */
-    public: bool constraint_key(
+    /// @brief 主キーの辞書を構築する。
+    /// @retval true  成功。主キーの辞書を構築した。
+    /// @retval false 失敗。 *this は変化しない。
+    /// @sa this_type::clear_keys で、主キーの辞書を削除できる。
+    public: bool build_keys(
         /// [in] 主キーとする列番号。
         typename base_type::number const in_key_column)
     {
@@ -553,24 +537,22 @@ public psyq::string::table<
     }
 
     /// @brief 主キーの辞書を削除する。
-    public: void clear_key()
+    public: void clear_keys()
     {
         this->keys_.clear();
         this->key_column_ = this_type::INVALID_NUMBER;
     }
 
-    /** @brief 等価な主キーを数える。
-        @return in_key と等価な主キーの数。
-        @sa this_type::constraint_key
-        @sa this_type::clear_key
-     */
+    /// @brief 等価な主キーを数える。
+    /// @return in_key と等価な主キーの数。
+    /// @sa this_type::relation_table か this_type::build_keys
+    /// で、主キーの辞書を構築できる。
     public: typename base_type::number count_key(
         /// [in] 検索する主キー。
         typename base_type::string::view const& in_key)
     const PSYQ_NOEXCEPT
     {
-        auto const local_hash(
-            this_type::string::factory::compute_hash(in_key));
+        auto const local_hash(this_type::string::_compute_hash(in_key));
         typename base_type::number local_count(0);
         for (
             auto i(
@@ -584,7 +566,7 @@ public psyq::string::table<
             ++i)
         {
             auto& local_cell(this->get_cells().at(*i));
-            if (local_cell.second.compare_fast(in_key, local_hash) != 0)
+            if (local_cell.second._compare_fast(in_key, local_hash) != 0)
             {
                 break;
             }
@@ -593,13 +575,11 @@ public psyq::string::table<
         return local_count;
     }
 
-    /** @brief 主キーから、行番号を検索する。
-
-        this_type::constraint_key で、事前に主キーの辞書を構築をしておくこと。
-
-        @retval "!= base_type::INVALID_NUMBER" 主キーに対応する行番号。
-        @retval "== base_type::INVALID_NUMBER" 主キーに対応する行番号が存在しない。
-     */
+    /// @brief 主キーから、行番号を検索する。
+    /// @return in_key に対応する行番号。該当する行番号がない場合は、
+    /// base_type::INVALID_NUMBER を返す。
+    /// @sa this_type::relation_table か this_type::build_keys
+    /// で、主キーの辞書を構築できる。
     public: typename base_type::number find_row_number(
         /// [in] 検索する主キー。
         typename base_type::string::view const& in_key)
@@ -608,8 +588,7 @@ public psyq::string::table<
         if (!in_key.empty())
         {
             auto& local_cells(this->get_cells());
-            auto const local_hash(
-                this_type::string::factory::compute_hash(in_key));
+            auto const local_hash(this_type::string::_compute_hash(in_key));
             auto const local_lower_bound(
                 std::lower_bound(
                     this->keys_.begin(),
@@ -619,7 +598,7 @@ public psyq::string::table<
             if (local_lower_bound != this->keys_.end())
             {
                 auto& local_cell(local_cells.at(*local_lower_bound));
-                if (local_cell.second.compare_fast(in_key, local_hash) == 0)
+                if (local_cell.second._compare_fast(in_key, local_hash) == 0)
                 {
                     return this_type::compute_row_number(local_cell.first);
                 }

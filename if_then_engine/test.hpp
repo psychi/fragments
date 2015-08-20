@@ -14,18 +14,20 @@ namespace tesv
 {
     typedef psyq::string::flyweight<char> flyweight_string;
     typedef tesv::flyweight_string::view string_view;
-    typedef tesv::flyweight_string::factory::hash string_hash;
+    typedef tesv::flyweight_string::factory::hasher string_hash;
     typedef psyq::string::storage<tesv::string_view::value_type> string_storage;
     typedef float float32_t;
     typedef std::allocator<void*> void_allocator;
     typedef
         psyq::string::csv_table<
+            std::size_t,
             tesv::string_view::value_type,
             tesv::string_view::traits_type,
             tesv::void_allocator>
         csv_table;
     typedef
         psyq::string::relation_table<
+            std::size_t,
             tesv::string_view::value_type,
             tesv::string_view::traits_type,
             tesv::void_allocator>
@@ -601,7 +603,7 @@ namespace psyq_test
             local_driver.register_status(
                 local_chunk_key,
                 local_driver.hash_function_("10"),
-                char(32)));
+                32.5f));
         //PSYQ_ASSERT(!local_driver.extend_chunk(0, 0, nullptr));
         local_driver.rebuild(1024, 1024, 1024);
 
@@ -630,7 +632,14 @@ namespace psyq_test
         local_driver.accumulator_.accumulate(
             local_driver.hash_function_("status_bool"), false);
         local_driver.accumulator_.accumulate(
-            local_driver.hash_function_("status_unsigned"), char(10));
+            driver::reservoir::status_assignment(
+                local_driver.hash_function_("status_unsigned"),
+                driver::reservoir::status_value::assignment_ADD,
+                driver::reservoir::status_value(char(10))));
+        local_driver.accumulator_.accumulate(
+            local_driver.hash_function_("status_signed"), 2.0);
+        local_driver.accumulator_.accumulate(
+            local_driver.hash_function_("status_float"), 0.5f);
         /*
         local_driver.reservoir_.assign_status(
             local_driver.hash_function_("status_signed"), -20);

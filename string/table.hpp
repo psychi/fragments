@@ -39,10 +39,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 またそれに限定されない）直接損害、間接損害、偶発的な損害、特別損害、
 懲罰的損害、または結果損害について、一切責任を負わないものとします。
  */
-/** @file
-    @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::string::table
- */
+/// @file
+/// @author Hillco Psychi (https://twitter.com/psychi)
+/// @brief @copybrief psyq::string::table
 #ifndef PSYQ_STRING_TABLE_HPP_
 #define PSYQ_STRING_TABLE_HPP_
 
@@ -59,33 +58,37 @@ namespace psyq
 {
     namespace string
     {
-        template<typename, typename, typename> class table;
+        template<typename, typename, typename, typename> class table;
     } // namespace string
 } // namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 行番号と列番号で参照する、フライ級文字列の表。
-    @tparam template_char_type   @copybrief psyq::string::view::value_type
-    @tparam template_char_traits @copybrief psyq::string::view::traits_type
-    @tparam template_allocator   @copybrief table::allocator_type
- */
+/// @brief 行番号と列番号で参照する、フライ級文字列の表。
+/// @tparam template_number      @copydoc table::number
+/// @tparam template_char_type   @copydoc psyq::string::view::value_type
+/// @tparam template_char_traits @copydoc psyq::string::view::traits_type
+/// @tparam template_allocator   @copydoc table::allocator_type
 template<
+    typename template_number,
     typename template_char_type,
     typename template_char_traits = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
     typename template_allocator = PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT>
 class psyq::string::table
 {
     /// @brief thisが指す値の型。
-    private: typedef table this_type;
+    protected: typedef table this_type;
 
     //-------------------------------------------------------------------------
     /// @brief 文字列表で使うメモリ割当子を表す型。
     public: typedef template_allocator allocator_type;
-
     /// @brief 文字列表で使う番号を表す型。
-    public: typedef std::size_t number;
-
+    public: typedef template_number number;
+    /// @brief 文字列表で使う、フライ級文字列の型。
+    public: typedef
+        psyq::string::flyweight<
+            template_char_type, template_char_traits, template_allocator>
+        string;
     public: enum: typename this_type::number
     {
         /// @brief 文字列表の無効な番号。
@@ -96,24 +99,16 @@ class psyq::string::table
         MAX_ROW_COUNT = 1 + INVALID_NUMBER / MAX_COLUMN_COUNT,
     };
 
-    /// @brief 文字列表で使う、フライ級文字列の型。
-    public: typedef
-        psyq::string::flyweight<
-            template_char_type, template_char_traits, template_allocator>
-        string;
-
     //-------------------------------------------------------------------------
-    /** @brief 文字列表のセルのコンテナ。
-
-        - 要素の第1属性は、セル番号。
-        - 要素の第2属性は、セル文字列。
-     */
+    /// @brief 文字列表のセルのコンテナ。
+    /// @details
+    /// - 要素の第1属性は、セル番号。
+    /// - 要素の第2属性は、セル文字列。
     protected: typedef
         std::vector<
             std::pair<typename this_type::number, typename this_type::string>,
             typename this_type::allocator_type>
         cell_container;
-
     /// @brief セル番号を比較する関数オブジェクト。
     protected: struct cell_number_less
     {
@@ -137,7 +132,8 @@ class psyq::string::table
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
-    //@{
+    /// @{
+
     /// @brief 文字列表をコピー構築する。
     public: table(
         /// [in] in_source コピー元となる文字列表。
@@ -158,9 +154,8 @@ class psyq::string::table
         io_source.set_size(0, 0);
     }
 
-    /** @brief 文字列表をコピー代入する。
-        @return *this
-     */
+    /// @brief 文字列表をコピー代入する。
+    /// @return *this
     public: this_type& operator=(
         /// [in] コピー元となる文字列表。
         this_type const& in_source)
@@ -171,9 +166,8 @@ class psyq::string::table
         return *this;
     }
 
-    /** @brief 文字列表をムーブ代入する。
-        @return *this
-     */
+    /// @brief 文字列表をムーブ代入する。
+    /// @return *this
     public: this_type& operator=(
         /// [in,out] io_source ムーブ元となる文字列表。
         this_type&& io_source)
@@ -188,48 +182,43 @@ class psyq::string::table
         return *this;
     }
 
-    /** @brief メモリ割当子を取得する。
-        @return メモリ割当子。
-     */
+    /// @brief メモリ割当子を取得する。
+    /// @return メモリ割当子。
     public: typename this_type::allocator_type get_allocator()
     const PSYQ_NOEXCEPT
     {
         return this->cells_.get_allocator();
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
     /// @name セル
-    //@{
-    /** @brief 文字列表が空か判定する。
-        @retval true  文字列表は空だった。
-        @retval false 文字列表は空ではなかった。
-     */
+    /// @{
+
+    /// @brief 文字列表が空か判定する。
+    /// @retval true  文字列表は空。
+    /// @retval false 文字列表は空ではない。
     public: bool is_empty() const PSYQ_NOEXCEPT
     {
         return this->cells_.empty();
     }
 
-    /** @brief 文字列表の行数を取得する。
-        @return 文字列表の行数。
-     */
+    /// @brief 文字列表の行数を取得する。
+    /// @return 文字列表の行数。
     public: typename this_type::number get_row_count() const PSYQ_NOEXCEPT
     {
         return this->row_count_;
     }
 
-    /** @brief 文字列表の列数を取得する。
-        @return 文字列表の列数。
-     */
+    /// @brief 文字列表の列数を取得する。
+    /// @return 文字列表の列数。
     public: typename this_type::number get_column_count() const PSYQ_NOEXCEPT
     {
         return this->column_count_;
     }
 
-    /** @brief 行番号と属性から、文字列表のセルを検索する。
-        @return
-            行番号と列番号に対応するセルの文字列。
-            対応するセルがない場合は、空文字列を返す。
-     */
+    /// @brief 行番号と属性から、文字列表のセルを検索する。
+    /// @return 行番号と列番号に対応するセルの文字列。
+    /// 対応するセルがない場合は、空文字列を返す。
     public: typename this_type::string const& find_cell(
         /// [in] 検索するセルの行番号。
         typename this_type::number const in_row_number,
@@ -258,20 +247,19 @@ class psyq::string::table
         return static_empty_string;
     }
 
-    /** @brief セル文字列を解析し、値を抽出する。
-        @retval true
-            成功。セル文字列から抽出した値が out_value へ代入された。
-            ただし in_empty_permission が真で、セル文字列が空の場合は、
-            out_value への代入は行われず、変化しない。
-        @retval false 失敗。 out_value は変化しない。
-        @tparam template_value
-            セル文字列から抽出する値の型。以下の型の値を抽出できる。
-            - bool 型。
-            - sizeof(std::uint64_t) 以下の大きさの、組み込み符号なし整数型。
-            - sizeof(std::int64_t) 以下の大きさの、組み込み符号あり整数型。
-            - sizeof(double) 以下の大きさの、組み込み浮動小数点数型。
-            - this_type::string 型。
-     */
+    /// @brief セル文字列を解析し、値を抽出する。
+    /// @retval true
+    /// 成功。セル文字列から抽出した値が out_value へ代入された。
+    /// ただし in_empty_permission が真で、セル文字列が空の場合は、
+    /// out_value への代入は行われずに変化しない。
+    /// @retval false 失敗。 out_value は変化しない。
+    /// @tparam template_value
+    /// セル文字列から抽出する値の型。以下の型の値を抽出できる。
+    /// - bool 型。
+    /// - sizeof(std::uint64_t) 以下の大きさの、組み込み符号なし整数型。
+    /// - sizeof(std::int64_t) 以下の大きさの、組み込み符号あり整数型。
+    /// - sizeof(double) 以下の大きさの、組み込み浮動小数点数型。
+    /// - this_type::string 型。
     public: template<typename template_value>
     bool parse_cell(
         /// [out] 抽出した値の代入先。
@@ -280,10 +268,9 @@ class psyq::string::table
         typename this_type::number const in_row_number,
         /// [in] 解析するセルの列番号。
         typename this_type::number const in_column_number,
-        /** [in] セル文字列が空の場合…
-            - この引数が真の場合は、成功と判定する。
-            - この引数が偽の場合は、失敗と判定する。
-         */
+        /// [in] セル文字列が空の場合…
+        /// - この引数が真の場合は、成功と判定する。
+        /// - この引数が偽の場合は、失敗と判定する。
         bool const in_empty_permission)
     const
     {
@@ -291,13 +278,13 @@ class psyq::string::table
         return (in_empty_permission && local_cell.empty())
             || this_type::parse_string(out_value, local_cell);
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
     /// @brief 空の文字列表を構築する。
     protected: explicit table(
         /// [in] メモリ割当子の初期値。
-        typename this_type::allocator_type const& in_allocator)
-    : cells_(in_allocator), row_count_(0), column_count_(0)
+        typename this_type::allocator_type const& in_allocator):
+    cells_(in_allocator), row_count_(0), column_count_(0)
     {}
 
     protected: typename this_type::cell_container const& get_cells()
@@ -381,31 +368,28 @@ class psyq::string::table
         this->column_count_ = 0;
     }
 
-    /** @brief セル番号から、セルの行番号を算出する。
-        @return セルの行番号。
-     */
+    /// @brief セル番号から、行番号を算出する。
+    /// @return in_cell_number の行番号。
     protected: static typename this_type::number compute_row_number(
-        /// [in] セル番号。
+        /// [in] 行番号を算出するセル番号。
         typename this_type::number const in_cell_number)
     PSYQ_NOEXCEPT
     {
         return in_cell_number / this_type::MAX_COLUMN_COUNT;
     }
 
-    /** @brief セル番号から、セルの列番号を算出する。
-        @return セルの列番号。
-     */
+    /// @brief セル番号から、列番号を算出する。
+    /// @return in_cell_number の列番号。
     protected: static typename this_type::number compute_column_number(
-        /// [in] セル番号。
+        /// [in] 列番号を算出するセル番号。
         typename this_type::number const in_cell_number)
     PSYQ_NOEXCEPT
     {
         return in_cell_number % this_type::MAX_COLUMN_COUNT;
     }
 
-    /** @brief セルの行番号と列番号から、セル番号を算出する。
-        @return セル番号。
-     */
+    /// @brief セルの行番号と列番号から、セル番号を算出する。
+    /// @return セル番号。
     protected: static typename this_type::number compute_cell_number(
         /// [in] セルの行番号。
         typename this_type::number const in_row_number,
@@ -421,10 +405,9 @@ class psyq::string::table
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 文字列を解析し、値を抽出する。
-        @retval true  成功。文字列を解析して抽出した値を out_value へ代入した。
-        @retval false 失敗。 out_value は変化しない。
-     */
+    /// @brief 文字列を解析し、値を抽出する。
+    /// @retval true  成功。文字列を解析して抽出した値を out_value へ代入した。
+    /// @retval false 失敗。 out_value は変化しない。
     private: template<typename template_value>
     static bool parse_string(
         /// [out] 抽出した値の代入先。

@@ -39,10 +39,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 またそれに限定されない）直接損害、間接損害、偶発的な損害、特別損害、
 懲罰的損害、または結果損害について、一切責任を負わないものとします。
  */
-/** @file
-    @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::string::csv_table
-*/
+/// @file
+/// @author Hillco Psychi (https://twitter.com/psychi)
+/// @brief @copybrief psyq::string::csv_table
 #ifndef PSYQ_STRING_CSV_TABLE_HPP_
 #define PSYQ_STRING_CSV_TABLE_HPP_
 
@@ -89,24 +88,25 @@ namespace psyq
 {
     namespace string
     {
-        template<typename, typename, typename, int, int, int, int, int>
+        template<typename, typename, typename, typename, int, int, int, int, int>
             class csv_table;
     } // namespace string
 } // namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief CSV形式の文字列から構築する、フライ級文字列表。
-    @tparam template_char_type        @copydoc psyq::string::view::value_type
-    @tparam template_char_traits      @copydoc psyq::string::view::traits_type
-    @tparam template_allocator        @copydoc table::allocator_type
-    @tparam template_row_separator    @copydoc csv_table::delimiter_ROW_SEPARATOR
-    @tparam template_column_separator @copydoc csv_table::delimiter_COLUMN_SEPARATOR
-    @tparam template_quote_begin      @copydoc csv_table::delimiter_QUOTE_BEGIN
-    @tparam template_quote_end        @copydoc csv_table::delimiter_QUOTE_END
-    @tparam template_quote_escape     @copydoc csv_table::delimiter_QUOTE_ESCAPE
-*/
+/// @brief CSV形式の文字列から構築する、フライ級文字列表。
+/// @tparam template_number           @copydoc table::number
+/// @tparam template_char_type        @copydoc psyq::string::view::value_type
+/// @tparam template_char_traits      @copydoc psyq::string::view::traits_type
+/// @tparam template_allocator        @copydoc table::allocator_type
+/// @tparam template_row_separator    @copydoc csv_table::delimiter_ROW_SEPARATOR
+/// @tparam template_column_separator @copydoc csv_table::delimiter_COLUMN_SEPARATOR
+/// @tparam template_quote_begin      @copydoc csv_table::delimiter_QUOTE_BEGIN
+/// @tparam template_quote_end        @copydoc csv_table::delimiter_QUOTE_END
+/// @tparam template_quote_escape     @copydoc csv_table::delimiter_QUOTE_ESCAPE
 template<
+    typename template_number,
     typename template_char_type,
     typename template_char_traits = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
     typename template_allocator = PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT,
@@ -117,18 +117,12 @@ template<
     int template_quote_escape = PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT>
 class psyq::string::csv_table:
 public psyq::string::table<
-    template_char_type, template_char_traits, template_allocator>
+    template_number, template_char_type, template_char_traits, template_allocator>
 {
-    /// @brief thisが指す値の型。
-    private: typedef csv_table this_type;
-
-    /// @brief this_type の基底型。
-    public: typedef
-        psyq::string::table<
-            template_char_type, template_char_traits, template_allocator>
-        base_type;
-
-    private: typedef typename base_type::allocator_type cell_allocator;
+    /// @brief csv_table の基底型。
+    public: typedef this_type base_type;
+    /// @brief this が指す値の型。
+    protected: typedef csv_table this_type;
 
     //-------------------------------------------------------------------------
     /// @brief CSV文字列の区切り文字。
@@ -185,18 +179,15 @@ public psyq::string::table<
     /// @brief CSV形式の文字列を解析し、文字列表を構築する。
     public: template<typename template_workspace>
     csv_table(
-        /** [out] 作業領域として使う文字列。
-            std::basic_string 互換のインターフェイスを持つこと。
-         */
+        /// [out] 作業領域として使う文字列。
+        /// std::basic_string 互換のインターフェイスを持つこと。
         template_workspace& out_workspace,
-        /** [in] フライ級文字列の生成器を指すスマートポインタ。
-            空のスマートポインタではないこと。
-         */
+        /// [in] フライ級文字列の生成器を指すスマートポインタ。
+        /// 空のスマートポインタではないこと。
         typename base_type::string::factory::shared_ptr const&
             in_string_factory,
         /// [in] 解析するCSV形式の文字列。
-        typename base_type::string::view const& in_csv_string)
-    :
+        typename base_type::string::view const& in_csv_string):
     base_type((
         PSYQ_ASSERT(in_string_factory.get() != nullptr),
         in_string_factory->get_allocator()))
@@ -210,15 +201,13 @@ public psyq::string::table<
     /// @brief CSV形式の文字列を解析し、文字列表を構築する。
     private: template<typename template_workspace>
     bool build(
-        /** [out] 作業領域として使う文字列。
-            std::basic_string 互換のインターフェイスを持つこと。
-         */
+        /// [out] 作業領域として使う文字列。
+        /// std::basic_string 互換のインターフェイスを持つこと。
         template_workspace& out_workspace,
         /// [in] 解析するCSV形式の文字列。
         typename base_type::string::view const& in_csv_string,
-        /** [in] フライ級文字列の生成器を指すスマートポインタ。
-            スマートポインタが空ではないこと。
-         */
+        /// [in] フライ級文字列の生成器を指すスマートポインタ。
+        /// スマートポインタが空ではないこと。
         typename base_type::string::factory::shared_ptr const&
             in_string_factory)
     {

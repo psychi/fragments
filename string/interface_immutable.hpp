@@ -39,10 +39,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 またそれに限定されない）直接損害、間接損害、偶発的な損害、特別損害、
 懲罰的損害、または結果損害について、一切責任を負わないものとします。
  */
-/** @file
-    @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::string::_private::interface_immutable
- */
+/// @file
+/// @author Hillco Psychi (https://twitter.com/psychi)
+/// @brief @copybrief psyq::string::_private::interface_immutable
 #ifndef PSYQ_STRING_INTERFACE_IMMUTABLE_HPP_
 #define PSYQ_STRING_INTERFACE_IMMUTABLE_HPP_
 
@@ -66,47 +65,44 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string_view を模した、immutableな文字列のインターフェイス。
-    @tparam template_string_type @copydoc interface_immutable::base_type
- */
+/// @brief std::basic_string_view を模した、immutableな文字列のインターフェイス。
+/// @tparam template_string_type @copydoc interface_immutable::base_type
 template<typename template_string_type>
 class psyq::string::_private::interface_immutable: public template_string_type
 {
-    /// @brief thisが指す値の型。
-    private: typedef interface_immutable this_type;
-
-    /** @brief this_type の基底型。
-
-        - 文字列の先頭から末尾までのメモリ連続性が保証されてること。
-        - コピー構築子とコピー代入演算子が使えること。
-        - ムーブ構築子とムーブ代入演算子が使えて、例外を投げないこと。
-        - std::char_traits 互換の文字特性の型として、以下の型を使えること。
-          @code
-          template_string_type::traits_type
-          @endcode
-        - 文字列の先頭位置を取得するため、以下のpublicメンバ関数が使えること。
-          @code
-          template_string_type::traits_type::char_type const* template_string_type::data() const noexcept
-          @endcode
-        - 文字列の要素数を取得するため、以下のpublicメンバ関数が使えること。
-          @code
-          std::size_t template_string_type::size() const noexcept
-          @endcode
-        - 文字列の最大要素数を取得するため、以下のpublicメンバ関数が使えること。
-          @code
-          std::size_t template_string_type::max_size() const noexcept
-          @endcode
-        - 文字列を空にするため、以下のpublicメンバ関数が使えること。
-          @code
-          std::size_t template_string_type::clear() noexcept
-          @endcode
-     */
+    /// @brief interface_immutable の基底型。
+    /// @details
+    /// - 文字列の先頭から末尾までのメモリ連続性が保証されてること。
+    /// - コピー構築子とコピー代入演算子が使えること。
+    /// - ムーブ構築子とムーブ代入演算子が使えて、例外を投げないこと。
+    /// - std::char_traits 互換の文字特性の型として、以下の型を使えること。
+    ///   @code
+    ///   template_string_type::traits_type
+    ///   @endcode
+    /// - 文字列の先頭位置を取得するため、以下のpublicメンバ関数が使えること。
+    ///   @code
+    ///   template_string_type::traits_type::char_type const* template_string_type::data() const noexcept
+    ///   @endcode
+    /// - 文字列の要素数を取得するため、以下のpublicメンバ関数が使えること。
+    ///   @code
+    ///   std::size_t template_string_type::size() const noexcept
+    ///   @endcode
+    /// - 文字列の最大要素数を取得するため、以下のpublicメンバ関数が使えること。
+    ///   @code
+    ///   std::size_t template_string_type::max_size() const noexcept
+    ///   @endcode
+    /// - 文字列を空にするため、以下のpublicメンバ関数が使えること。
+    ///   @code
+    ///   std::size_t template_string_type::clear() noexcept
+    ///   @endcode
     public: typedef template_string_type base_type;
+    /// @brief this が指す値の型。
+    protected: typedef interface_immutable this_type;
 
     //-------------------------------------------------------------------------
-    /** @name 文字列の型特性
-     *  @{
-     */
+    /// @name 文字列の型特性
+    /// @{
+
     /// @brief 文字の型。
     public: typedef typename base_type::traits_type::char_type value_type;
     /// @brief 文字数の型。
@@ -148,9 +144,9 @@ class psyq::string::_private::interface_immutable: public template_string_type
         view;
 
     //-------------------------------------------------------------------------
-    /** @name 文字列のハッシュ関数オブジェクト
-     *  @{
-     */
+    /// @name 文字列のハッシュ関数オブジェクト
+    /// @{
+
     /// @brief std::hash互換インターフェイスの、ハッシュ関数オブジェクト。
     public: template<typename template_hash> struct hash: public template_hash
     {
@@ -158,14 +154,15 @@ class psyq::string::_private::interface_immutable: public template_string_type
         typedef template_hash base_type;
         /// @brief ハッシュ値の型。
         typedef typename template_hash::value_type result_type;
+        static_assert(sizeof(result_type) <= sizeof(std::size_t), "");
         /// @brief キーとなる文字列の型。
         typedef typename interface_immutable::view argument_type;
 
-        /** @brief 文字列に対応するハッシュ値を算出する。
-            @param[in] in_string キーとなる文字列。
-            @return 文字列に対応するハッシュ値。
-         */
-        result_type operator()(argument_type const& in_string)
+        /// @brief 文字列に対応するハッシュ値を算出する。
+        /// @return 文字列に対応するハッシュ値。
+        result_type operator()(
+            /// [in] キーとなる文字列。
+            argument_type const& in_string)
         const PSYQ_NOEXCEPT
         {
             auto const local_data(in_string.data());
@@ -174,7 +171,6 @@ class psyq::string::_private::interface_immutable: public template_string_type
         }
 
     }; // struct hash
-
     /// @brief std::hash互換インターフェイスの、32ビットFNV-1形式ハッシュ関数オブジェクト。
     public: typedef typename this_type::hash<psyq::fnv1_hash32> fnv1_hash32;
     /// @brief std::hash互換インターフェイスの、64ビットFNV-1形式ハッシュ関数オブジェクト。
@@ -199,14 +195,13 @@ class psyq::string::_private::interface_immutable: public template_string_type
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 文字列の要素を参照
-        @{
-     */
-    /** @brief 文字列が持つ文字を参照する。
-        @param[in] in_index 文字のindex番号。
-        @return 文字への参照。
-     */
+    /// @name 文字列の要素を参照
+    /// @{
+
+    /// @brief 文字列の要素を参照する。
+    /// @return 要素への参照。
     public: typename this_type::const_reference at(
+        /// [in] 参照する要素のインデクス番号。
         typename this_type::size_type const in_index)
     const
     {
@@ -214,11 +209,10 @@ class psyq::string::_private::interface_immutable: public template_string_type
             this->data(), this->size(), in_index);
     }
 
-    /** @brief 文字列が持つ文字を参照する。
-        @param[in] in_index 文字のindex番号。
-        @return 文字への参照。
-     */
+    /// @brief 文字列の要素を参照する。
+    /// @return 要素への参照。
     public: typename this_type::const_reference operator[](
+        /// [in] 参照する要素のインデクス番号。
         typename this_type::size_type const in_index)
     const PSYQ_NOEXCEPT
     {
@@ -226,34 +220,29 @@ class psyq::string::_private::interface_immutable: public template_string_type
             this->data(), this->size(), in_index);
     }
 
-    /** @brief 文字列の最初の文字を参照する。
-        @return 文字列の最初の文字への参照。
-     */
+    /// @brief 文字列の最初の文字を参照する。
+    /// @return 文字列の最初の文字への参照。
     public: typename this_type::const_reference front() const
     {
         return this->at(0);
     }
 
-    /** @brief 文字列の最後の文字を参照する。
-        @return 文字列の最後の文字への参照。
-     */
+    /// @brief 文字列の最後の文字を参照する。
+    /// @return 文字列の最後の文字への参照。
     public: typename this_type::const_reference back() const
     {
         return this->at(this->size() - 1);
     }
 
-    /** @brief *thisの部分文字列をコピーする。
-
-        コピー先の文字列に、終端文字は追加されない。
-
-        @param[out] out_string コピー先の先頭位置。
-        @param[in]  in_size    コピーする要素数。
-        @param[in]  in_offset  部分文字列の開始オフセット値。
-        @return コピーした要素数。
-     */
+    /// @brief *this の部分文字列をコピーする。
+    /// @details コピー先の文字列に、終端文字は追加されない。
+    /// @return コピーした要素数。
     public: typename this_type::size_type copy(
+        /// [out] コピー先の先頭位置。
         typename base_type::traits_type::char_type* const out_string,
+        /// [in] コピーする要素数。
         typename this_type::size_type const in_size,
+        /// [in] 部分文字列の開始オフセット値。
         typename this_type::size_type const in_offset = 0)
     const
     {
@@ -279,71 +268,63 @@ class psyq::string::_private::interface_immutable: public template_string_type
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 反復子の取得
-        @{
-     */
-    /** @brief 文字列の先頭を指す反復子を取得する。
-        @return 文字列の先頭を指す反復子。
-     */
+    /// @name 反復子の取得
+    /// @{
+
+    /// @brief 文字列の先頭を指す反復子を取得する。
+    /// @return 文字列の先頭を指す反復子。
     public: typename this_type::const_iterator begin() const PSYQ_NOEXCEPT
     {
         return this->data();
     }
 
-    /** @brief 文字列の末尾を指す反復子を取得する。
-        @return 文字列の末尾を指す反復子。
-     */
+    /// @brief 文字列の末尾を指す反復子を取得する。
+    /// @return 文字列の末尾を指す反復子。
     public: typename this_type::const_iterator end() const PSYQ_NOEXCEPT
     {
         return this->begin() + this->size();
     }
 
-    /** @brief 文字列の先頭を指す反復子を取得する。
-        @return 文字列の先頭を指す反復子。
-     */
+    /// @brief 文字列の先頭を指す反復子を取得する。
+    /// @return 文字列の先頭を指す反復子。
     public: typename this_type::const_iterator cbegin() const PSYQ_NOEXCEPT
     {
         return this->begin();
     }
 
-    /** @brief 文字列の末尾を指す反復子を取得する。
-        @return 文字列の末尾を指す反復子。
-     */
+    /// @brief 文字列の末尾を指す反復子を取得する。
+    /// @return 文字列の末尾を指す反復子。
     public: typename this_type::const_iterator cend() const PSYQ_NOEXCEPT
     {
         return this->end();
     }
 
-    /** @brief 文字列の末尾を指す逆反復子を取得する。
-        @return 文字列の末尾を指す逆反復子。
-     */
+    /// @brief 文字列の末尾を指す逆反復子を取得する。
+    /// @return 文字列の末尾を指す逆反復子。
     public: typename this_type::const_reverse_iterator rbegin()
     const PSYQ_NOEXCEPT
     {
         return typename this_type::const_reverse_iterator(this->end());
     }
 
-    /** @brief 文字列の先頭を指す逆反復子を取得する。
-        @return 文字列の先頭を指す逆反復子。
-     */
+    /// @brief 文字列の先頭を指す逆反復子を取得する。
+    /// @return 文字列の先頭を指す逆反復子。
     public: typename this_type::const_reverse_iterator rend()
     const PSYQ_NOEXCEPT
     {
         return typename this_type::const_reverse_iterator(this->begin());
     }
 
-    /** @brief 文字列の末尾を指す逆反復子を取得する。
-        @return 文字列の末尾を指す逆反復子。
-     */
+    /// @brief 文字列の末尾を指す逆反復子を取得する。
+    /// @return 文字列の末尾を指す逆反復子。
     public: typename this_type::const_reverse_iterator crbegin()
     const PSYQ_NOEXCEPT
     {
         return this->rbegin();
     }
 
-    /** @brief 文字列の先頭を指す逆反復子を取得する。
-        @return 文字列の先頭を指す逆反復子。
-     */
+    /// @brief 文字列の先頭を指す逆反復子を取得する。
+    /// @return 文字列の先頭を指す逆反復子。
     public: typename this_type::const_reverse_iterator crend()
     const PSYQ_NOEXCEPT
     {
@@ -351,21 +332,19 @@ class psyq::string::_private::interface_immutable: public template_string_type
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 文字列の長さ
-        @{
-     */
-    /** @brief 文字列が空か判定する。
-        @retval true  文字列が空である。
-        @retval false 文字列が空ではない。
-     */
+    /// @name 文字列の長さ
+    /// @{
+
+    /// @brief 文字列が空か判定する。
+    /// @retval true  文字列は空。
+    /// @retval false 文字列は空ではない。
     public: bool empty() const PSYQ_NOEXCEPT
     {
         return this->size() <= 0;
     }
 
-    /** @brief 文字列の要素数を取得する。 base_type::size() と同じ機能。
-        @return 文字列の要素数。
-     */
+    /// @brief 文字列の要素数を取得する。 base_type::size と同じ機能。
+    /// @return 文字列の要素数。
     public: typename this_type::size_type length()
     const PSYQ_NOEXCEPT
     {
@@ -373,77 +352,69 @@ class psyq::string::_private::interface_immutable: public template_string_type
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 文字列の比較
-        @{
-     */
+    /// @name 文字列の比較
+    /// @{
+
     /// @copydoc psyq::string::view::operator==
-    public: bool operator==(typename this_type::view const& in_right)
+    public: bool operator==(
+        /// [in] 右辺の文字列。
+        typename this_type::view const& in_right)
     const PSYQ_NOEXCEPT
     {
         return in_right.operator==(*this);
     }
 
-    /** @brief 文字列を非等価比較する。
-
-        *thisを左辺として、右辺の文字列と非等価比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @retval true  左辺と右辺は非等価。
-        @retval false 左辺と右辺は等価。
-     */
-    public: bool operator!=(typename this_type::view const& in_right)
+    /// @brief 文字列を非等価比較する。
+    /// @details *this を左辺として、右辺の文字列と非等価比較する。
+    /// @retval true  左辺と右辺は非等価。
+    /// @retval false 左辺と右辺は等価。
+    public: bool operator!=(
+        /// [in] 右辺の文字列。
+        typename this_type::view const& in_right)
     const PSYQ_NOEXCEPT
     {
         return !this->operator==(in_right);
     }
 
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 < 右辺
-     */
-    public: bool operator<(typename this_type::view const& in_right)
+    /// @brief 文字列を比較する。
+    /// @details *this を左辺として、右辺の文字列と比較する。
+    /// @return 左辺 < 右辺
+    public: bool operator<(
+        /// [in] 右辺の文字列。
+        typename this_type::view const& in_right)
     const PSYQ_NOEXCEPT
     {
         return 0 < in_right.compare(*this);
     }
 
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 <= 右辺
-     */
-    public: bool operator<=(typename this_type::view const& in_right)
+    /// @brief 文字列を比較する。
+    /// @details *thisを左辺として、右辺の文字列と比較する。
+    /// @return 左辺 <= 右辺
+    public: bool operator<=(
+        /// [in] 右辺の文字列。
+        typename this_type::view const& in_right)
     const PSYQ_NOEXCEPT
     {
         return 0 <= in_right.compare(*this);
     }
 
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 > 右辺
-     */
-    public: bool operator>(typename this_type::view const& in_right)
+    /// @brief 文字列を比較する。
+    /// @details *thisを左辺として、右辺の文字列と比較する。
+    /// @return 左辺 > 右辺
+    public: bool operator>(
+        /// [in] 右辺の文字列。
+        typename this_type::view const& in_right)
     const PSYQ_NOEXCEPT
     {
         return in_right.compare(*this) < 0;
     }
 
-    /** @brief 文字列を比較する。
-
-        *thisを左辺として、右辺の文字列と比較する。
-
-        @param[in] in_right 右辺の文字列。
-        @return 左辺 >= 右辺
-     */
-    public: bool operator>=(typename this_type::view const& in_right)
+    /// @brief 文字列を比較する。
+    /// @details *thisを左辺として、右辺の文字列と比較する。
+    /// @return 左辺 >= 右辺
+    public: bool operator>=(
+        /// [in] 右辺の文字列。
+        typename this_type::view const& in_right)
     const PSYQ_NOEXCEPT
     {
         return in_right.compare(*this) <= 0;
@@ -497,16 +468,15 @@ class psyq::string::_private::interface_immutable: public template_string_type
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 指定文字列の前方検索
-        @{
-     */
-    /** @brief 文字を検索する。
-        @param[in] in_char   検索文字。
-        @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が現れた位置。現れない場合は this_type::npos を返す。
-     */
+    /// @name 指定文字列の前方検索
+    /// @{
+
+    /// @brief 文字を検索する。
+    /// @return in_char が現れた位置。現れない場合は this_type::npos を返す。
     public: typename this_type::size_type find(
+        /// [in] 検索する文字。
         typename this_type::value_type const in_char,
+        /// [in] 検索を開始する位置。
         typename this_type::size_type const in_offset = 0)
     const PSYQ_NOEXCEPT
     {
@@ -527,28 +497,26 @@ class psyq::string::_private::interface_immutable: public template_string_type
         return this_type::npos;
     }
 
-    /** @brief 文字列を検索する。
-        @param[in] in_string 検索文字列。
-        @param[in] in_offset 検索を開始する位置。
-        @return 検索文字列が現れた位置。現れない場合は this_type::npos を返す。
-     */
+    /// @brief 文字列を検索する。
+    /// @return in_string が現れた位置。現れない場合は this_type::npos を返す。
     public: typename this_type::size_type find(
+        /// [in] 検索する文字列。
         typename this_type::view const& in_string,
+        /// [in] 検索を開始する位置。
         typename this_type::size_type in_offset = 0)
     const PSYQ_NOEXCEPT
     {
         return this->find(in_string.data(), in_offset, in_string.size());
     }
 
-    /** @brief 文字列を検索する。
-        @param[in] in_string 検索文字列の先頭位置。
-        @param[in] in_offset 検索を開始する位置。
-        @param[in] in_size   検索文字列の要素数。
-        @return 検索文字列が現れた位置。現れない場合は this_type::npos を返す。
-     */
+    /// @brief 文字列を検索する。
+    /// @return 検索文字列が現れた位置。現れない場合は this_type::npos を返す。
     public: typename this_type::size_type find(
+        /// [in] 検索文字列の先頭位置。
         typename this_type::const_pointer const in_string,
+        /// [in] 検索を開始する位置。
         typename this_type::size_type const in_offset,
+        /// [in] 検索文字列の要素数。
         typename this_type::size_type const in_size)
     const PSYQ_NOEXCEPT
     {
@@ -594,16 +562,15 @@ class psyq::string::_private::interface_immutable: public template_string_type
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 指定文字列の後方検索
-        @{
-     */
-    /** @brief 後ろから文字を検索する。
-        @param[in] in_char   検索文字。
-        @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が現れた位置。現れない場合は this_type::npos を返す。
-     */
+    /// @name 指定文字列の後方検索
+    /// @{
+
+    /// @brief 後ろから文字を検索する。
+    /// @return in_char が現れた位置。現れない場合は this_type::npos を返す。
     public: typename this_type::size_type rfind(
+        /// [in] 検索する文字。
         typename this_type::value_type const in_char,
+        /// [in] 検索を開始する位置。
         typename this_type::size_type const in_offset = this_type::npos)
     const PSYQ_NOEXCEPT
     {
@@ -626,28 +593,26 @@ class psyq::string::_private::interface_immutable: public template_string_type
         return this_type::npos;
     }
 
-    /** @brief 後ろから文字列を検索する。
-        @param[in] in_string 検索文字列。
-        @param[in] in_offset 検索を開始する位置。
-        @return 検索文字列が現れた位置。現れない場合は this_type::npos を返す。
-     */
+    /// @brief 後ろから文字列を検索する。
+    /// @return in_string が現れた位置。現れない場合は this_type::npos を返す。
     public: typename this_type::size_type rfind(
+        /// [in] 検索する文字列。
         typename this_type::view const& in_string,
+        /// [in] 検索を開始する位置。
         typename this_type::size_type const in_offset = this_type::npos)
     const PSYQ_NOEXCEPT
     {
         return this->rfind(in_string.data(), in_offset, in_string.size());
     }
 
-    /** @brief 後ろから文字列を検索する。
-        @param[in] in_string 検索文字列の先頭位置。
-        @param[in] in_offset 検索を開始する位置。
-        @param[in] in_size   検索文字列の要素数。
-        @return 検索文字列が現れた位置。現れない場合は this_type::npos を返す。
-     */
+    /// @brief 後ろから文字列を検索する。
+    /// @return 検索文字列が現れた位置。現れない場合は this_type::npos を返す。
     public: typename this_type::size_type rfind(
+        /// [in] 検索文字列の先頭位置。
         typename this_type::const_pointer const in_string,
+        /// [in] 検索を開始する位置。
         typename this_type::size_type const in_offset,
+        /// [in] 検索文字列の要素数。
         typename this_type::size_type const in_size)
     const PSYQ_NOEXCEPT
     {
@@ -679,29 +644,28 @@ class psyq::string::_private::interface_immutable: public template_string_type
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 指定文字の前方検索
-        @{
-     */
-    /** @brief 文字を検索する。
-        @param[in] in_char   検索する文字。
-        @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が見つけた位置。現れない場合は this_type::npos を返す。
-     */
+    /// @name 指定文字の前方検索
+    /// @{
+
+    /// @brief 文字を検索する。
+    /// @return in_char が表れた位置。現れない場合は this_type::npos を返す。
     public: typename this_type::size_type find_first_of(
+        /// [in] 検索する文字。
         typename this_type::value_type const in_char,
+        /// [in] 検索を開始する位置。
         typename this_type::size_type const in_offset = 0)
     const PSYQ_NOEXCEPT
     {
         return this->find(in_char, in_offset);
     }
 
-    /** @brief 検索文字列に含まれるいずれかの文字を検索する。
-        @param[in] in_string 検索文字列。
-        @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が現れた位置。現れない場合は this_type::npos を返す。
-     */
+    /// @brief 検索文字列に含まれるいずれかの文字を検索する。
+    /// @return in_string に含まれるいずれかの文字が現れた位置。
+    /// 現れない場合は this_type::npos を返す。
     public: typename this_type::size_type find_first_of(
+        /// [in] 検索文字列。
         typename this_type::view const& in_string,
+        /// [in] 検索を開始する位置。
         typename this_type::size_type const in_offset = 0)
     const PSYQ_NOEXCEPT
     {
@@ -709,15 +673,15 @@ class psyq::string::_private::interface_immutable: public template_string_type
             in_string.data(), in_offset, in_string.size());
     }
 
-    /** @brief 検索文字列に含まれるいずれかの文字を検索する。
-        @param[in] in_string 検索文字列の先頭位置。
-        @param[in] in_offset 検索を開始する位置。
-        @param[in] in_size   検索文字列の要素数。
-        @return 検索文字が現れた位置。現れない場合は this_type::npos を返す。
-     */
+    /// @brief 検索文字列に含まれるいずれかの文字を検索する。
+    /// @return 検索文字列に含まれるいずれかの文字が現れた位置。
+    /// 現れない場合は this_type::npos を返す。
     public: typename this_type::size_type find_first_of(
+        /// [in] 検索文字列の先頭位置。
         typename this_type::const_pointer const in_string,
+        /// [in] 検索を開始する位置。
         typename this_type::size_type const in_offset,
+        /// [in] 検索文字列の要素数。
         typename this_type::size_type const in_size)
     const PSYQ_NOEXCEPT
     {
@@ -739,31 +703,30 @@ class psyq::string::_private::interface_immutable: public template_string_type
         }
         return this_type::npos;
     }
-    // @}
+    /// @}
     //-------------------------------------------------------------------------
-    /** @name 指定文字の後方検索
-        @{
-     */
-    /** @brief 文字を後ろから検索する。
-        @param[in] in_char   検索文字。
-        @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が現れた位置。現れない場合は this_type::npos を返す。
-     */
+    /// @name 指定文字の後方検索
+    /// @{
+
+    /// @brief 文字を後ろから検索する。
+    /// @return in_char が現れた位置。現れない場合は this_type::npos を返す。
     public: typename this_type::size_type find_last_of(
+        /// [in] 検索文字。
         typename this_type::value_type const in_char,
+        /// [in] 検索を開始する位置。
         typename this_type::size_type const in_offset = this_type::npos)
     const PSYQ_NOEXCEPT
     {
         return this->rfind(in_char, in_offset);
     }
 
-    /** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索する。
-        @param[in] in_string 検索文字列。
-        @param[in] in_offset 検索を開始する位置。
-        @return 検索文字が現れた位置。現れない場合は this_type::npos を返す。
-     */
+    /// @brief 検索文字列に含まれるいずれかの文字を、後ろから検索する。
+    /// @return in_string に含まれるいずれかの文字が現れた位置。
+    /// 現れない場合は this_type::npos を返す。
     public: typename this_type::size_type find_last_of(
+        /// [in] 検索文字列。
         typename this_type::view const& in_string,
+        /// [in] 検索を開始する位置。
         typename this_type::size_type const in_offset = this_type::npos)
     const PSYQ_NOEXCEPT
     {
@@ -771,15 +734,15 @@ class psyq::string::_private::interface_immutable: public template_string_type
             in_string.data(), in_offset, in_string.size());
     }
 
-    /** @brief 検索文字列に含まれるいずれかの文字を、後ろから検索する。
-        @param[in] in_string 検索文字列の先頭位置。
-        @param[in] in_offset 検索を開始する位置。
-        @param[in] in_size   検索文字列の要素数。
-        @return 検索文字が現れた位置。現れない場合は this_type::npos を返す。
-     */
+    /// @brief 検索文字列に含まれるいずれかの文字を、後ろから検索する。
+    /// @return 検索文字列に含まれる何れかの文字が現れた位置。
+    /// 現れない場合は this_type::npos を返す。
     public: typename this_type::size_type find_last_of(
+        /// [in] 検索文字列の先頭位置。
         typename this_type::const_pointer const in_string,
+        /// [in] 検索を開始する位置。
         typename this_type::size_type const in_offset,
+        /// [in] 検索文字列の要素数。
         typename this_type::size_type const in_size)
     const PSYQ_NOEXCEPT
     {
@@ -810,18 +773,16 @@ class psyq::string::_private::interface_immutable: public template_string_type
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 指定文字以外の前方検索
-        @{
-     */
-    /** @brief 検索文字以外の文字を検索する。
-        @param[in] in_char   検索文字。
-        @param[in] in_offset 検索を開始する位置。
-        @return
-            検索文字以外の文字が現れた位置。
-            現れない場合は this_type::npos を返す。
-     */
+    /// @name 指定文字以外の前方検索
+    /// @{
+
+    /// @brief 検索文字以外の文字を検索する。
+    /// @return in_char 以外の文字が現れた位置。
+    /// 現れない場合は this_type::npos を返す。
     public: typename this_type::size_type find_first_not_of(
+        /// [in] 検索文字。
         typename this_type::value_type const in_char,
+        /// [in] 検索を開始する位置。
         typename this_type::size_type const in_offset = 0)
     const PSYQ_NOEXCEPT
     {
@@ -837,15 +798,13 @@ class psyq::string::_private::interface_immutable: public template_string_type
         return this_type::npos;
     }
 
-    /** @brief 検索文字列に含まれない文字を検索する。
-        @param[in] in_string 検索文字列。
-        @param[in] in_offset 検索を開始する位置。
-        @return
-            検索文字以外の文字が現れた位置。
-            現れない場合は this_type::npos を返す。
-     */
+    /// @brief 検索文字列に含まれない文字を検索する。
+    /// @return in_string に含まれない文字が現れた位置。
+    /// 現れない場合は this_type::npos を返す。
     public: typename this_type::size_type find_first_not_of(
+        /// [in] 検索文字列。
         typename this_type::view const& in_string,
+        /// [in] 検索を開始する位置。
         typename this_type::size_type const in_offset = 0)
     const PSYQ_NOEXCEPT
     {
@@ -853,17 +812,15 @@ class psyq::string::_private::interface_immutable: public template_string_type
             in_string.data(), in_offset, in_string.size());
     }
 
-    /** @brief 検索文字列に含まれない文字を検索する。
-        @param[in] in_string 検索文字列の先頭位置。
-        @param[in] in_offset 検索を開始する位置。
-        @param[in] in_size   検索文字列の要素数。
-        @return
-           検索文字以外の文字が現れた位置。
-           現れない場合は this_type::npos を返す。
-     */
+    /// @brief 検索文字列に含まれない文字を検索する。
+    /// @return 検索文字列に含まれない文字が現れた位置。
+    /// 現れない場合は this_type::npos を返す。
     public: typename this_type::size_type find_first_not_of(
+        /// [in] 検索文字列の先頭位置。
         typename this_type::const_pointer const in_string,
+        /// [in] 検索を開始する位置。
         typename this_type::size_type const in_offset,
+        /// [in] 検索文字列の要素数。
         typename this_type::size_type const in_size)
     const PSYQ_NOEXCEPT
     {
@@ -887,18 +844,16 @@ class psyq::string::_private::interface_immutable: public template_string_type
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 指定文字以外の後方検索
-        @{
-     */
-    /** @brief 検索文字以外の文字を、後ろから検索する。
-        @param[in] in_char   検索文字。
-        @param[in] in_offset 検索を開始する位置。
-        @return
-            検索文字以外の文字が現れた位置。
-            現れない場合は this_type::npos を返す。
-     */
+    /// @name 指定文字以外の後方検索
+    /// @{
+
+    /// @brief 検索文字以外の文字を、後ろから検索する。
+    /// @return in_char 以外の文字が現れた位置。
+    /// 現れない場合は this_type::npos を返す。
     public: typename this_type::size_type find_last_not_of(
+        /// [in] 検索文字。
         typename this_type::value_type const in_char,
+        /// [in] 検索を開始する位置。
         typename this_type::size_type const in_offset = this_type::npos)
     const PSYQ_NOEXCEPT
     {
@@ -922,15 +877,13 @@ class psyq::string::_private::interface_immutable: public template_string_type
         return this_type::npos;
     }
 
-    /** @brief 検索文字列に含まれない文字を検索する。
-        @param[in] in_string 検索文字列。
-        @param[in] in_offset 検索を開始する位置。
-        @return
-            検索文字以外の文字が現れた位置。
-            現れない場合は this_type::npos を返す。
-     */
+    /// @brief 検索文字列に含まれない文字を検索する。
+    /// @return in_string に含まれない文字が現れた位置。
+    /// 現れない場合は this_type::npos を返す。
     public: typename this_type::size_type find_last_not_of(
+        /// [in] 検索文字列。
         typename this_type::view const& in_string,
+        /// [in] 検索を開始する位置。
         typename this_type::size_type const in_offset = this_type::npos)
     const PSYQ_NOEXCEPT
     {
@@ -938,17 +891,15 @@ class psyq::string::_private::interface_immutable: public template_string_type
             in_string.data(), in_offset, in_string.size());
     }
 
-    /** @brief 検索文字列に含まれない文字を、後ろから検索する。
-        @param[in] in_string 検索文字列の先頭位置。
-        @param[in] in_offset 検索を開始する位置。
-        @param[in] in_size   検索文字列の要素数。
-        @return
-            検索文字以外の文字が現れた位置。
-            現れない場合は this_type::npos を返す。
-     */
+    /// @brief 検索文字列に含まれない文字を、後ろから検索する。
+    /// @return 検索文字列に含まれない文字が現れた位置。
+    /// 現れない場合は this_type::npos を返す。
     public: typename this_type::size_type find_last_not_of(
+        /// [in] 検索文字列の先頭位置。
         typename this_type::const_pointer const in_string,
+        /// [in] 検索を開始する位置。
         typename this_type::size_type const in_offset,
+        /// [in] 検索文字列の要素数。
         typename this_type::size_type const in_size)
     const PSYQ_NOEXCEPT
     {
@@ -976,34 +927,34 @@ class psyq::string::_private::interface_immutable: public template_string_type
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 構築
-        @{
-     */
-    /** @brief 文字列をコピー構築する。
-        @param[in] in_string コピー元となる文字列。
-     */
-    protected: interface_immutable(this_type const& in_string):
+    /// @name 構築
+    /// @{
+
+    /// @brief 文字列をコピー構築する。
+    protected: interface_immutable(
+        /// [in] コピー元となる文字列。
+        this_type const& in_string):
     base_type(in_string)
     {}
 
-    /** @brief 文字列をムーブ構築する。
-        @param[in,out] io_string ムーブ元となる文字列。
-     */
-    protected: interface_immutable(this_type&& io_string)
+    /// @brief 文字列をムーブ構築する。
+    protected: interface_immutable(
+        /// [in,out] ムーブ元となる文字列。
+        this_type&& io_string)
     PSYQ_NOEXCEPT: base_type(std::move(io_string))
     {}
 
-    /** @brief 文字列をコピー構築する。
-        @param[in] in_string コピー元となる文字列。
-     */
-    protected: explicit interface_immutable(base_type const& in_string):
+    /// @brief 文字列をコピー構築する。
+    protected: explicit interface_immutable(
+        /// [in] コピー元となる文字列。
+        base_type const& in_string):
     base_type(in_string)
     {}
 
-    /** @brief 文字列をムーブ構築する。
-        @param[in,out] io_string ムーブ元となる文字列。
-     */
-    protected: explicit interface_immutable(base_type&& io_string)
+    /// @brief 文字列をムーブ構築する。
+    protected: explicit interface_immutable(
+        /// [in,out] ムーブ元となる文字列。
+        base_type&& io_string)
     PSYQ_NOEXCEPT: base_type(std::move(io_string))
     {}
     /// @}
@@ -1050,28 +1001,22 @@ class psyq::string::_private::interface_immutable: public template_string_type
 }; // class psyq::string::_private::interface_immutable
 
 //-----------------------------------------------------------------------------
-/** @note
-    左辺に任意の文字列型を指定できる2項比較演算子を実装したいが、
-    psyq::string::_private::interface_immutable
-    メンバ関数の比較演算子と衝突するためコンパイルできない。
-    今のところ回避策がないので、無効にしておく。
- */
+/// @note 左辺に任意の文字列型を指定できる2項比較演算子を実装したいが、
+/// psyq::string::_private::interface_immutable
+/// メンバ関数の比較演算子と衝突するためコンパイルできない。
+/// 今のところ回避策がないので、無効にしておく。
 #define PSYQ_STRING_INTERFACE_IMMUTABLE_COMPARE_OPERATOR_2 0
 #if PSYQ_STRING_INTERFACE_IMMUTABLE_COMPARE_OPERATOR_2
-/** @brief 文字列を比較する。
-    @tparam template_left_string_type
-        @copydoc psyq::string::_private::interface_immutable::base_type
-    @tparam template_right_string_type
-        @copydoc psyq::string::_private::interface_immutable::base_type
-    @param[in] in_left  左辺の文字列。
-    @param[in] in_right 右辺の文字列。
-    @return 左辺 == 右辺
- */
-template<
-    typename template_left_string_type,
-    typename template_right_string_type>
+
+/// @brief 文字列を比較する。
+/// @tparam template_left_string_type  @copydoc psyq::string::_private::interface_immutable::base_type
+/// @tparam template_right_string_type @copydoc psyq::string::_private::interface_immutable::base_type
+/// @return 左辺 == 右辺
+template<typename template_left_string_type, typename template_right_string_type>
 bool operator==(
+    /// [in] 左辺の文字列。
     template_left_string_type const& in_left,
+    /// [in] 右辺の文字列。
     psyq::string::_private::interface_immutable<template_right_string_type>
         const& in_right)
 PSYQ_NOEXCEPT
@@ -1079,20 +1024,15 @@ PSYQ_NOEXCEPT
     return in_right.operator==(in_left);
 }
 
-/** @brief 文字列を比較する。
-    @tparam template_left_string_type
-        @copydoc psyq::string::_private::interface_immutable::base_type
-    @tparam template_right_string_type
-        @copydoc psyq::string::_private::interface_immutable::base_type
-    @param[in] in_left  左辺の文字列。
-    @param[in] in_right 右辺の文字列。
-    @return 左辺 != 右辺
- */
-template<
-    typename template_left_string_type,
-    typename template_right_string_type>
+/// @brief 文字列を比較する。
+/// @tparam template_left_string_type  @copydoc psyq::string::_private::interface_immutable::base_type
+/// @tparam template_right_string_type @copydoc psyq::string::_private::interface_immutable::base_type
+/// @return 左辺 != 右辺
+template<typename template_left_string_type, typename template_right_string_type>
 bool operator!=(
+    /// [in] 左辺の文字列。
     template_left_string_type const& in_left,
+    /// [in] 右辺の文字列。
     psyq::string::_private::interface_immutable<template_right_string_type>
         const& in_right)
 PSYQ_NOEXCEPT
@@ -1100,20 +1040,15 @@ PSYQ_NOEXCEPT
     return in_right.operator!=(in_left);
 }
 
-/** @brief 文字列を比較する。
-    @tparam template_left_string_type
-        @copydoc psyq::string::_private::interface_immutable::base_type
-    @tparam template_right_string_type
-        @copydoc psyq::string::_private::interface_immutable::base_type
-    @param[in] in_left  左辺の文字列。
-    @param[in] in_right 右辺の文字列。
-    @return 左辺 < 右辺
- */
-template<
-    typename template_left_string_type,
-    typename template_right_string_type>
+/// @brief 文字列を比較する。
+/// @tparam template_left_string_type  @copydoc psyq::string::_private::interface_immutable::base_type
+/// @tparam template_right_string_type @copydoc psyq::string::_private::interface_immutable::base_type
+/// @return 左辺 < 右辺
+template<typename template_left_string_type, typename template_right_string_type>
 bool operator<(
+    /// [in] 左辺の文字列。
     template_left_string_type const& in_left,
+    /// [in] 右辺の文字列。
     psyq::string::_private::interface_immutable<template_right_string_type>
         const& in_right)
 PSYQ_NOEXCEPT
@@ -1121,20 +1056,15 @@ PSYQ_NOEXCEPT
     return in_right.operator>(in_left);
 }
 
-/** @brief 文字列を比較する。
-    @tparam template_left_string_type
-        @copydoc psyq::string::_private::interface_immutable::base_type
-    @tparam template_right_string_type
-        @copydoc psyq::string::_private::interface_immutable::base_type
-    @param[in] in_left  左辺の文字列。
-    @param[in] in_right 右辺の文字列。
-    @return 左辺 <= 右辺
- */
-template<
-    typename template_left_string_type,
-    typename template_right_string_type>
+/// @brief 文字列を比較する。
+/// @tparam template_left_string_type  @copydoc psyq::string::_private::interface_immutable::base_type
+/// @tparam template_right_string_type @copydoc psyq::string::_private::interface_immutable::base_type
+/// @return 左辺 <= 右辺
+template<typename template_left_string_type, typename template_right_string_type>
 bool operator<=(
+    /// [in] 左辺の文字列。
     template_left_string_type const& in_left,
+    /// [in] 右辺の文字列。
     psyq::string::_private::interface_immutable<template_right_string_type>
         const& in_right)
 PSYQ_NOEXCEPT
@@ -1142,20 +1072,15 @@ PSYQ_NOEXCEPT
     return in_right.operator>=(in_left);
 }
 
-/** @brief 文字列を比較する。
-    @tparam template_left_string_type
-        @copydoc psyq::string::_private::interface_immutable::base_type
-    @tparam template_right_string_type
-        @copydoc psyq::string::_private::interface_immutable::base_type
-    @param[in] in_left  左辺の文字列。
-    @param[in] in_right 右辺の文字列。
-    @return 左辺 > 右辺
- */
-template<
-    typename template_left_string_type,
-    typename template_right_string_type>
+/// @brief 文字列を比較する。
+/// @tparam template_left_string_type  @copydoc psyq::string::_private::interface_immutable::base_type
+/// @tparam template_right_string_type @copydoc psyq::string::_private::interface_immutable::base_type
+/// @return 左辺 > 右辺
+template<typename template_left_string_type, typename template_right_string_type>
 bool operator>(
+    /// [in] 左辺の文字列。
     template_left_string_type const& in_left,
+    /// [in] 右辺の文字列。
     psyq::string::_private::interface_immutable<template_right_string_type>
         const& in_right)
 PSYQ_NOEXCEPT
@@ -1163,20 +1088,15 @@ PSYQ_NOEXCEPT
     return in_right.operator<(in_left);
 }
 
-/** @brief 文字列を比較する。
-    @tparam template_left_string_type
-        @copydoc psyq::string::_private::interface_immutable::base_type
-    @tparam template_right_string_type
-        @copydoc psyq::string::_private::interface_immutable::base_type
-    @param[in] in_left  左辺の文字列。
-    @param[in] in_right 右辺の文字列。
-    @return 左辺 >= 右辺
- */
-template<
-    typename template_left_string_type,
-    typename template_right_string_type>
+/// @brief 文字列を比較する。
+/// @tparam template_left_string_type  @copydoc psyq::string::_private::interface_immutable::base_type
+/// @tparam template_right_string_type @copydoc psyq::string::_private::interface_immutable::base_type
+/// @return 左辺 >= 右辺
+template<typename template_left_string_type, typename template_right_string_type>
 bool operator>=(
+    /// [in] 左辺の文字列。
     template_left_string_type const& in_left,
+    /// [in] 右辺の文字列。
     psyq::string::_private::interface_immutable<template_right_string_type>
         const& in_right)
 PSYQ_NOEXCEPT

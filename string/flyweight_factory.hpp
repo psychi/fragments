@@ -39,9 +39,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 またそれに限定されない）直接損害、間接損害、偶発的な損害、特別損害、
 懲罰的損害、または結果損害について、一切責任を負わないものとします。
  */
-/** @file
-    @author Hillco Psychi (https://twitter.com/psychi)
- */
+/// @file
+/// @brief @copybrief psyq::string::_private::flyweight_factory
+/// @author Hillco Psychi (https://twitter.com/psychi)
 #ifndef PSYQ_STRING_FLYWEIGHT_FACTORY_HPP_
 #define PSYQ_STRING_FLYWEIGHT_FACTORY_HPP_
 
@@ -61,49 +61,50 @@ namespace psyq
     {
         namespace _private
         {
-            template<typename, typename, typename> class flyweight_factory;
+            template<typename, typename> class flyweight_factory;
         } // namespace
     } // namespace string
 } // namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief フライ級文字列の生成器。
-    @tparam template_string_view @copydoc flyweight_factory::string::view
-    @tparam template_hasher      @copydoc flyweight_factory::hash
-    @tparam template_allocator   @copydoc flyweight_factory::allocator_type
- */
-template<
-    typename template_string_view,
-    typename template_hash,
-    typename template_allocator>
+/// @brief フライ級文字列の生成器。
+/// @tparam template_hasher    @copydoc flyweight_factory::hasher
+/// @tparam template_allocator @copydoc flyweight_factory::allocator_type
+template<typename template_hasher, typename template_allocator>
 class psyq::string::_private::flyweight_factory
 {
-    /// @brief thisが指す値の型。
-    private: typedef flyweight_factory this_type;
+    /// @brief this が指す値の型。
+    protected: typedef flyweight_factory this_type;
 
-    /// @brief 文字列のハッシュ計算機。
-    public: typedef template_hash hash;
-
+    //-------------------------------------------------------------------------
+    public: class _string_holder;
+    /// @brief 文字列からハッシュ値を生成する、ハッシュ関数オブジェクトの型。
+    /// @details
+    /// - std::hash 互換インターフェイスを持つこと。
+    /// - hasher::argument_type
+    ///   が文字列型で、以下に相当するメンバ関数を使えること。
+    ///   @code
+    ///   // 文字列の先頭位置を取得する。
+    ///   hasher::argument_type::const_pointer hasher::argument_type::data() const;
+    ///   // 文字列の要素数を取得する。
+    ///   std::size_t hasher::argument_type::size() const;
+    ///   @endcode
+    public: typedef template_hasher hasher;
     /// @brief メモリ割当子の型。
     public: typedef template_allocator allocator_type;
-
     /// @brief this_type を指す、所有権ありスマートポインタ。
     public: typedef std::shared_ptr<this_type> shared_ptr;
-
     /// @brief this_type を指す、所有権なしスマートポインタ。
     public: typedef std::weak_ptr<this_type> weak_ptr;
 
     //-------------------------------------------------------------------------
-    /// @copydoc psyq::string::view::traits_type
-    public: typedef typename template_string_view::traits_type traits_type;
-
     /// @brief 生成するフライ級文字列の型。
     private: typedef
         psyq::string::_private::flyweight_string<
-            template_string_view, typename this_type::hash::value_type>
+            typename this_type::hasher::argument_type,
+            typename this_type::hasher::result_type>
         string;
-
     /// @brief フライ級文字列のコンテナの型。
     private: typedef
         std::vector<
@@ -111,7 +112,6 @@ class psyq::string::_private::flyweight_factory
             typename this_type::allocator_type::template
                 rebind<typename this_type::string*>::other>
         string_container;
-
     /// @brief 文字列チャンク連結リストのノードの型。
     private: class string_chunk
     {
@@ -126,13 +126,13 @@ class psyq::string::_private::flyweight_factory
             PSYQ_ASSERT(sizeof(this_type) < in_capacity), in_capacity)),
         front_string_(
             this_type::compute_string_capacity(in_capacity),
-            flyweight_factory::hash::traits_type::EMPTY)
+            flyweight_factory::hasher::traits_type::EMPTY)
         {}
 
         public: bool is_empty() const PSYQ_NOEXCEPT
         {
             return this->front_string_.hash_
-                   == flyweight_factory::hash::traits_type::EMPTY
+                   == flyweight_factory::hasher::traits_type::EMPTY
                 && this->front_string_.size_
                    == this_type::compute_string_capacity(this->capacity_);
         }
@@ -152,33 +152,29 @@ class psyq::string::_private::flyweight_factory
         public: typename flyweight_factory::string front_string_;
 
     }; // struct string_chunk
-
     private: typedef typename this_type::allocator_type::template
         rebind<typename this_type::string_chunk>::other
             chunk_allocator;
 
-    public: class _private_client;
-
     //-------------------------------------------------------------------------
     /// @name 構築
-    //@{
-    /** @brief フライ級文字列の生成器を構築する。
-        @param[in] in_reserved_strings フライ級文字列の予約数。
-        @param[in] in_allocator        メモリ割当子の初期値。
-     */
+    /// @{
+
+    /// @brief フライ級文字列の生成器を構築する。
     public: explicit flyweight_factory(
+        /// [in] フライ級文字列の予約数。
         std::size_t const in_reserved_strings =
             PSYQ_STRING_FLYWEIGHT_FACTORY_CAPACITY_DEFAULT,
+        /// [in] メモリ割当子の初期値。
         typename this_type::allocator_type const& in_allocator =
-            allocator_type())
-    :
+            allocator_type()):
     strings_(in_allocator),
     chunk_(nullptr)
     {
         this->strings_.reserve(in_reserved_strings);
     }
 
-    /// @brief thisを解体する。
+    /// @brief *this を解体する。
     public: ~flyweight_factory()
     {
         // 文字列チャンク連結リストを走査し、すべて破棄する。
@@ -222,20 +218,26 @@ class psyq::string::_private::flyweight_factory
         }
     }
 
-    /** @brief メモリ割当子を取得する。
-        @return メモリ割当子。
-     */
+    /// @brief メモリ割当子を取得する。
+    /// @return メモリ割当子。
     public: typename this_type::allocator_type get_allocator()
     const PSYQ_NOEXCEPT
     {
         return this->strings_.get_allocator();
     }
-    //@}
+
+    /// @brief ハッシュ関数を取得する。
+    /// @return フライ級文字列生成器のハッシュ関数。
+    public: typename this_type::hasher hash_function() const
+    {
+        return typename this_type::hasher();
+    }
+    /// @}
     //-------------------------------------------------------------------------
     /// @name 文字列
-    //@{
-    /** @brief 参照されてない文字列を削除する。
-     */
+    /// @{
+
+    /// @brief 参照されてない文字列を削除する。
     public: void collect_garbage()
     {
         // 文字列チャンク連結リストを走査し、未参照の文字列を片づける。
@@ -268,17 +270,16 @@ class psyq::string::_private::flyweight_factory
             typename this_type::string::less());
     }
 
-    /** @brief 同じハッシュ値を持つ文字列を数える。
-        @param[in] in_hash 対象となるハッシュ値。
-        @return in_hash と同じハッシュ値を持つ文字列の数。
-     */
+    /// @brief 同じハッシュ値を持つ文字列を数える。
+    /// @return in_hash と同じハッシュ値を持つ文字列の数。
     public: std::size_t count_hash(
-        typename this_type::hash::value_type const in_hash)
+        /// [in] 数える対象となるハッシュ値。
+        typename this_type::hasher::result_type const in_hash)
     const PSYQ_NOEXCEPT
     {
         std::size_t local_count(
             // 空文字列のハッシュ値は予約済なので、必ず1以上となる。
-            in_hash == this_type::hash::traits_type::EMPTY);
+            in_hash == this_type::hasher::traits_type::EMPTY);
         for (
             auto i(
                 std::lower_bound(
@@ -293,27 +294,13 @@ class psyq::string::_private::flyweight_factory
         }
         return local_count;
     }
-    //@}
-    /** @brief 文字列のハッシュ値を算出する。
-        @param[in] in_string ハッシュ値を算出する文字列。
-        @return 文字列のハッシュ値。
-     */
-    public: static typename this_type::hash::value_type compute_hash(
-        typename this_type::string::view const& in_string)
-    PSYQ_NOEXCEPT
-    {
-        auto const local_data(in_string.data());
-        return this_type::hash::compute(
-            local_data, local_data + in_string.size());
-    }
-
+    /// @}
     //-------------------------------------------------------------------------
-    /** @brief 文字列チャンクにある未参照の文字列を空にする。
-        @param[in,out] io_chunk   未参照文字列を片づける文字列チャンク。
-        @param[in,out] io_strings 未参照文字列を片づける文字列の辞書。
-     */
+    /// @brief 文字列チャンクにある未参照の文字列を空にする。
     private: static void collect_chunk_garbage(
+        /// [in,out] 未参照文字列を片づける文字列チャンク。
         typename this_type::string_chunk& io_chunk,
+        /// [in,out] 未参照文字列を片づける文字列の辞書。
         typename this_type::string_container& io_strings)
     {
         auto local_string(&io_chunk.front_string_);
@@ -346,7 +333,7 @@ class psyq::string::_private::flyweight_factory
             {
                 // 未参照文字列を空文字列にする。
                 local_string->size_ = local_aligned_size;
-                local_string->hash_ = this_type::hash::traits_type::EMPTY;
+                local_string->hash_ = this_type::hasher::traits_type::EMPTY;
                 local_empty_string = local_string;
             }
 
@@ -368,17 +355,16 @@ class psyq::string::_private::flyweight_factory
         }
     }
 
-    /** @brief 文字列を辞書に用意する。
-
-        用意する文字列と等価な文字列がすでに存在するなら、
-        既存の文字列を再利用する。
-
-        @param[in] in_string 辞書に用意する文字列。
-        @param[in] in_chunk_size
-            文字列チャンクを生成する場合の、デフォルトのチャンク容量。
-     */
+    /// @brief 文字列を辞書に用意する。
+    /// @details
+    /// - in_string と等価な文字列が辞書に存在するなら、
+    ///   既存の文字列を再利用する。動的メモリ割当は行わない。
+    /// - in_string と等価な文字列が辞書に存在しないなら、
+    ///   新たな文字列を構築子辞書に追加する。動的メモリ割当を行う場合がある。
     private: typename this_type::string& equip_string(
+        /// [in] 辞書に用意する文字列。
         typename this_type::string::view const& in_string,
+        /// [in] 文字列チャンクを生成する場合の、デフォルトのチャンク容量。
         std::size_t const in_chunk_size)
     {
         // in_string と等価な文字列を、辞書から探す。
@@ -386,7 +372,7 @@ class psyq::string::_private::flyweight_factory
         auto const local_string_data(in_string.data());
         auto const local_string_size(in_string.size());
         auto const local_string_hash(
-            this_type::hash::compute(
+            this_type::hasher::compute(
                 local_string_data, local_string_data + local_string_size));
         auto const local_existing_string(
             this_type::find_string(
@@ -401,39 +387,38 @@ class psyq::string::_private::flyweight_factory
         }
 
         // 等価な文字列が辞書になかったので、新たな文字列を用意する。
-        auto& local_idle_string(
+        auto& local_new_string(
             this->make_idle_string(local_string_size, in_chunk_size));
-        auto const local_idle_data(
+        auto const local_new_data(
             const_cast<typename this_type::string::view::value_type*>(
-                local_idle_string.data()));
-        if (local_string_size < local_idle_string.size_)
+                local_new_string.data()));
+        if (local_string_size < local_new_string.size_)
         {
             // 終端文字を入れる余裕があれば、入れておく。
-            local_idle_data[local_string_size] = 0;
+            local_new_data[local_string_size] = 0;
         }
-        local_idle_string.size_ = local_string_size;
-        local_idle_string.hash_ = local_string_hash;
+        local_new_string.size_ = local_string_size;
+        local_new_string.hash_ = local_string_hash;
         this_type::string::view::traits_type::copy(
-            local_idle_data, local_string_data, local_string_size);
+            local_new_data, local_string_data, local_string_size);
 
         // 新たな文字列を辞書へ追加する。
-        this_type::add_string(this->strings_, local_idle_string);
-        return local_idle_string;
+        this_type::add_string(this->strings_, local_new_string);
+        return local_new_string;
     }
 
-    /** @brief 辞書から文字列を探す。
-        @param[in] in_strings 文字列の辞書。
-        @param[in] in_string_data 探す文字列の先頭位置。
-        @param[in] in_string_size 探す文字列の要素数。
-        @param[in] in_string_hash 探す文字列のハッシュ値。
-        @retval !=nullptr 辞書にある文字列。
-        @retval ==nullptr 等価な文字列が辞書になかった。
-     */
+    /// @brief 辞書から文字列を探す。
+    /// @return 辞書にある該当文字列を指すポインタ。
+    /// ただし該当文字列が辞書にない場合は、 nullptr を返す。
     private: static typename this_type::string* find_string(
+        /// [in] 文字列の辞書。
         typename this_type::string_container const& in_strings,
+        /// [in] 探す文字列の先頭位置。
         typename this_type::string::view::const_pointer const in_string_data,
+        /// [in] 探す文字列の要素数。
         typename this_type::string::view::size_type const in_string_size,
-        typename this_type::hash::value_type const in_string_hash)
+        /// [in] 探す文字列のハッシュ値。
+        typename this_type::hasher::result_type const in_string_hash)
     PSYQ_NOEXCEPT
     {
         for (
@@ -463,47 +448,45 @@ class psyq::string::_private::flyweight_factory
         return nullptr;
     }
 
-    /** @brief 未使用の文字列を作る。
-        @param[in] in_string_size 未使用文字列の要素数。
-        @param[in] in_chunk_size
-            文字列チャンクを生成する場合の、デフォルトのチャンク容量。
-        @return 未使用文字列。
-     */
+    /// @brief 未使用の文字列を作る。
+    /// @return 未使用文字列。
     private: typename this_type::string& make_idle_string(
+        /// [in] 未使用文字列の要素数。
         typename this_type::string::view::size_type const in_string_size,
+        /// [in] 文字列チャンクを生成する場合の、デフォルトのチャンク容量。
         std::size_t const in_chunk_size)
     {
-        // in_string_size が収まる空文字列を、動的メモリ割当てをせずに作る。
+        // in_string_size が収まる空文字列を、動的メモリ割当せず用意する。
         auto const local_required_size(
             this_type::align_string_size(in_string_size));
-        auto const local_bring_string(
-            this_type::bring_idle_string(this->strings_, local_required_size));
-        if (local_bring_string != nullptr)
+        auto const local_distributed_string(
+            this_type::distribute_idle_string(
+                this->strings_, local_required_size));
+        if (local_distributed_string != nullptr)
         {
-            return *local_bring_string;
+            return *local_distributed_string;
         }
 
         // 適切な空文字列がなかったので、
         // 文字列チャンクを新たに生成し、未使用文字列を構築する。
-        auto& local_idle_string(
+        auto& local_new_string(
             this->create_chunk(in_string_size, in_chunk_size));
         auto const local_empty_string(
-            this_type::divide_string(local_idle_string, local_required_size));
+            this_type::divide_string(local_new_string, local_required_size));
         if (local_empty_string != nullptr)
         {
             this_type::add_string(this->strings_, *local_empty_string);
         }
-        return local_idle_string;
+        return local_new_string;
     }
 
-    /** @brief 動的メモリ割当てをせずに、未使用の文字列を作る。
-        @param[in,out] io_strings 文字列の辞書。
-        @param[in] in_string_size 未使用文字列の要素数。
-        @retval !=nullptr 未使用文字列を指すポインタ。
-        @retval ==nullptr 未使用文字列が見つからなかった。
-     */
-    private: static typename this_type::string* bring_idle_string(
+    /// @brief 動的メモリ割当てをせずに、未使用の文字列を作る。
+    /// @return 未使用文字列を指すポインタ。
+    /// 未使用文字列が見つからなかった場合は nullptr を返す。
+    private: static typename this_type::string* distribute_idle_string(
+        /// [in,out] 文字列の辞書。
         typename this_type::string_container& io_strings,
+        /// [in] 未使用文字列の要素数。
         typename this_type::string::view::size_type const in_string_size)
     {
         // in_string_size が収まる空文字列を検索する。
@@ -513,13 +496,13 @@ class psyq::string::_private::flyweight_factory
                     io_strings.begin(),
                     io_strings.end(),
                     typename this_type::string(
-                        in_string_size, this_type::hash::traits_type::EMPTY),
+                        in_string_size, this_type::hasher::traits_type::EMPTY),
                     typename this_type::string::less()));
             i != io_strings.end();
             ++i)
         {
             auto& local_string(**i);
-            if (local_string.hash_ != this_type::hash::traits_type::EMPTY)
+            if (local_string.hash_ != this_type::hasher::traits_type::EMPTY)
             {
                 break;
             }
@@ -550,20 +533,19 @@ class psyq::string::_private::flyweight_factory
         return nullptr;
     }
 
-    /** @brief 空文字列を2つに分割する。
-        @param[in,out] io_string 分割する空文字列。
-        @param[in] in_front_size 前側の空文字列に割り当てる要素数。
-        @retval !=nullptr 分割した後側の文字列。
-        @retval ==nullptr 失敗。分割できなかった。
-     */
+    /// @brief 空文字列を2つに分割する。
+    /// @return 分割した後側の文字列を指すポインタ。
+    /// 分割に失敗した場合は nullptr を返す。
     private: static typename this_type::string* divide_string(
+        /// [in,out] 分割する空文字列。
         typename this_type::string& io_string,
+        /// [in] 前側の空文字列に割り当てる要素数。
         typename this_type::string::view::size_type const in_front_size)
     {
         // io_string の大きさが分割するのに足りてないか判定する。
         PSYQ_ASSERT(
             in_front_size == this_type::align_string_size(in_front_size)
-            && io_string.hash_ == this_type::hash::traits_type::EMPTY);
+            && io_string.hash_ == this_type::hasher::traits_type::EMPTY);
         static_assert(
             0 == sizeof(typename this_type::string)
                 % sizeof(typename this_type::string::view::value_type),
@@ -583,18 +565,17 @@ class psyq::string::_private::flyweight_factory
         auto const local_empty_string(
             new(local_empty_block) typename this_type::string(
                 io_string.size_ - local_divide_size,
-                this_type::hash::traits_type::EMPTY));
+                this_type::hasher::traits_type::EMPTY));
         io_string.size_ = in_front_size;
         return local_empty_string;
     }
 
-    /** @brief 文字列を辞書に追加する。
-        @param[in,out] io_strings 文字列を追加する辞書。
-        @param[in] in_string      辞書に追加する文字列。
-     */
+    /// @brief 文字列を辞書に追加する。
     private: static void add_string(
-         typename this_type::string_container& io_strings,
-         typename this_type::string& in_string)
+        /// [in,out] 文字列を追加する辞書。
+        typename this_type::string_container& io_strings,
+        /// [in] 辞書に追加する文字列。
+        typename this_type::string& in_string)
     {
         auto const local_lower_bound(
             std::lower_bound(
@@ -609,12 +590,11 @@ class psyq::string::_private::flyweight_factory
         io_strings.insert(local_lower_bound, &in_string);
     }
 
-    /** @brief 文字列を辞書から削除する。
-        @param[in,out] io_strings 文字列を削除する辞書。
-        @param[in] in_string      辞書から削除する文字列。
-     */
+    /// @brief 文字列を辞書から削除する。
     private: static void remove_string(
+        /// [in,out] 文字列を削除する辞書。
         typename this_type::string_container& io_strings,
+        /// [in] 辞書から削除する文字列。
         typename this_type::string const& in_string)
     {
         auto const local_find_iterator(
@@ -623,13 +603,12 @@ class psyq::string::_private::flyweight_factory
         io_strings.erase(local_find_iterator);
     }
 
-    /** @brief 文字列チャンクを生成し、空文字列を構築する。
-        @param[in] in_string_size 空文字列の容量。
-        @param[in] in_chunk_size  文字列チャンクのデフォルトのチャンク容量。
-        @return 文字列チャンクの先頭の空文字列。
-     */
+    /// @brief 文字列チャンクを生成し、空文字列を構築する。
+    /// @return 文字列チャンクの先頭の空文字列。
     private: typename this_type::string& create_chunk(
+        /// [in] 空文字列の容量。
         typename this_type::string::view::size_type const in_string_size,
+        /// [in] 文字列チャンクのデフォルトのチャンク容量。
         std::size_t const in_chunk_size)
     {
         // 文字列チャンクの容量を決定する。
@@ -651,13 +630,12 @@ class psyq::string::_private::flyweight_factory
         return this->chunk_->front_string_;
     }
 
-    /** @brief 文字列チャンクを破棄する。
-        @param[in,out] io_chunk     破棄する文字列チャンク。
-        @param[in,out] io_allocator 破棄に使うメモリ割当子。
-        @return 次の文字列チャンクを指すポインタ。
-     */
+    /// @brief 文字列チャンクを破棄する。
+    /// @return 次の文字列チャンクを指すポインタ。
     private: static typename this_type::string_chunk* destroy_chunk(
+        /// [in,out] 破棄する文字列チャンク。
         typename this_type::string_chunk& io_chunk,
+        /// [in,out] 破棄に使うメモリ割当子。
         typename this_type::chunk_allocator& io_allocator)
     {
         auto const local_next_chunk(io_chunk.next_chunk_);
@@ -669,23 +647,17 @@ class psyq::string::_private::flyweight_factory
     }
 
     /** @brief this_type::string のメモリ境界に接するように、文字列の要素数を調整する。
-        @param[in] in_string_size 調整前の文字列の要素数。
         @return 調整後の文字列の要素数。
      */
     private:
     static typename this_type::string::view::size_type align_string_size(
+        /// [in] 調整前の文字列の要素数。
         typename this_type::string::view::size_type const in_string_size)
     PSYQ_NOEXCEPT
     {
         auto const local_size(
             sizeof(typename this_type::string::view::value_type));
-        auto const local_align(
-#ifdef _MSC_VER
-            __alignof(typename this_type::string)
-#else
-            alignof(typename this_type::string)
-#endif // defined(_MSC_VER)
-            );
+        auto const local_align(PSYQ_ALIGNOF(typename this_type::string));
         auto const local_count(
             (in_string_size * local_size + local_align - 1) / local_align);
         return (local_count * local_align + local_size - 1) / local_size;
@@ -706,50 +678,46 @@ class psyq::string::_private::flyweight_factory
 }; // class psyq::string::_private::flyweight_factory
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief フライ級文字列クライアントの基底型。
-    @note psyq::string::_private::flyweight_factory 管理者以外は、使用禁止。
-    @tparam template_string_view @copydoc flyweight_factory::string::view
-    @tparam template_hasher      @copydoc flyweight_factory::hash
-    @tparam template_allocator   @copydoc flyweight_factory::allocator_type
- */
-template<
-    typename template_string_view,
-    typename template_hash,
-    typename template_allocator>
+/// @brief フライ級文字列の保持子。
+/// @warning psyq::string 管理者以外がこのクラスに直接アクセスするのは禁止。
+/// @tparam template_hasher    @copydoc flyweight_factory::hasher
+/// @tparam template_allocator @copydoc flyweight_factory::allocator_type
+template<typename template_hasher, typename template_allocator>
 class psyq::string::_private::flyweight_factory<
-    template_string_view, template_hash, template_allocator>
-        ::_private_client
+    template_hasher, template_allocator>
+::_string_holder
 {
-    /// @brief thisが指す値の型。
-    private: typedef _private_client this_type;
+    /// @brief this が指す値の型。
+    protected: typedef _string_holder this_type;
 
-    /// @brief フライ級文字列で使う文字列参照の型。
-    public: typedef template_string_view view;
-
-    /// @brief 文字特性の型。
-    public: typedef typename template_string_view::traits_type traits_type;
-
+    //-------------------------------------------------------------------------
     /// @brief メモリ割当子の型。
     public: typedef template_allocator allocator_type;
-
     /// @brief フライ級文字列の生成器を表す型。
     public: typedef
         psyq::string::_private::flyweight_factory<
-            template_string_view, template_hash, template_allocator>
+            template_hasher, template_allocator>
         factory;
+    /// @brief フライ級文字列で使う文字列参照の型。
+    public: typedef typename this_type::factory::string::view view;
+    /// @brief 文字特性の型。
+    public: typedef typename this_type::view::traits_type traits_type;
 
     //-------------------------------------------------------------------------
-    public: ~_private_client()
+    /// @name 代入と解体
+    /// @{
+
+    /// @brief フライ級文字列を解放する。
+    public: ~_string_holder()
     {
-        if (this->string_ != nullptr)
-        {
-            // 文字列の参照数を減じる。
-            PSYQ_ASSERT(this->get_factory().get() != nullptr);
-            this->string_->reference_count_.sub(1);
-        }
+        this->clear();
     }
 
-    public: this_type& operator=(this_type const& in_source)
+    /// @brief コピー代入演算子。
+    /// @return *this
+    public: this_type& operator=(
+        /// [in] コピー元となるインスタンス。
+        this_type const& in_source)
     {
         if (this->string_ != in_source.string_)
         {
@@ -776,7 +744,11 @@ class psyq::string::_private::flyweight_factory<
         return *this;
     }
 
-    public: this_type& operator=(this_type&& io_source)
+    /// @brief ムーブ代入演算子。
+    /// @return *this
+    public: this_type& operator=(
+        /// [in,out] ムーブ元となるインスタンス。
+        this_type&& io_source)
     {
         if (this->string_ != io_source.string_)
         {
@@ -796,8 +768,7 @@ class psyq::string::_private::flyweight_factory<
         return *this;
     }
 
-    //-------------------------------------------------------------------------
-    /// @copydoc psyq::string::view::clear
+    /// @brief フライ級文字列を解放し、保持子を空にする。
     public: void clear() PSYQ_NOEXCEPT
     {
         if (this->string_ != nullptr)
@@ -809,6 +780,10 @@ class psyq::string::_private::flyweight_factory<
             this->string_ = nullptr;
         }
     }
+    /// @}
+    //-------------------------------------------------------------------------
+    /// @name 文字列のプロパティ
+    /// @{
 
     /// @copydoc psyq::string::view::data
     public: typename this_type::traits_type::char_type const* data()
@@ -840,91 +815,135 @@ class psyq::string::_private::flyweight_factory<
         return (std::numeric_limits<std::size_t>::max)();
     }
 
-    /** @brief 文字列のハッシュ値を取得する。
-        @return フライ級文字列辞書で使われているハッシュ値。
-     */
-    public: typename this_type::factory::hash::value_type get_hash()
+    /// @brief 保持しているフライ級文字列のハッシュ値を取得する。
+    /// @return 保持しているフライ級文字列のハッシュ値。
+    public: typename this_type::factory::hasher::result_type get_hash()
     const PSYQ_NOEXCEPT
     {
         if (this->string_ == nullptr)
         {
-            return this_type::factory::hash::traits_type::EMPTY;
+            return this_type::factory::hasher::traits_type::EMPTY;
         }
         PSYQ_ASSERT(this->get_factory().get() != nullptr);
         return this->string_->hash_;
     }
 
-    /** @brief 参照しているフライ級文字列の生成器を取得する。
-        @return 参照しているフライ級文字列の生成器。
-     */
+    /// @brief 保持しているフライ級文字列の生成器を取得する。
+    /// @return 保持しているフライ級文字列の生成器。
     public: typename this_type::factory::shared_ptr const& get_factory()
     const PSYQ_NOEXCEPT
     {
         return this->factory_;
     }
+    /// @}
+
+    /// @brief 文字列のハッシュ値を算出する。
+    /// @warning psyq::string 管理者以外は、この関数は使用禁止。
+    /// @return 文字列のハッシュ値。
+    public: static typename this_type::factory::hasher::result_type _compute_hash(
+        /// [in] ハッシュ値を算出する文字列。
+        typename this_type::view const& in_string)
+    PSYQ_NOEXCEPT
+    {
+        return typename this_type::factory::hasher()(in_string);
+    }
 
     //-------------------------------------------------------------------------
-    /** @brief ハッシュ値つきの文字列を比較する。
-        @param[in] in_right 右辺の文字列。
-        @retval 負 右辺のほうが大きい。
-        @retval 正 左辺のほうが大きい。
-        @retval 0  左辺と右辺は等価。
-     */
-    public: int compare_fast(this_type const& in_right) const PSYQ_NOEXCEPT
+    /// @name 文字列の比較
+    /// @{
+
+    /// @brief ハッシュ値を基準に文字列を比較する。
+    /// @retval 負 右辺のほうが大きい。
+    /// @retval 正 左辺のほうが大きい。
+    /// @retval 0  左辺と右辺は等価。
+    public: int compare_fast(
+        /// [in] 右辺の文字列。
+        this_type const& in_right)
+    const PSYQ_NOEXCEPT
     {
-        return this_type::compare_fast(
+        return this_type::_compare_fast(
             *this, this->get_hash(), in_right, in_right.get_hash());
     }
 
     /// @copydoc compare_fast
     public: int compare_fast(
+        /// [in] 右辺の文字列。
         typename this_type::factory::string::view const& in_right)
     const PSYQ_NOEXCEPT
     {
-        return this_type::compare_fast(
+        return this_type::_compare_fast(
             *this,
             this->get_hash(),
             in_right,
-            this_type::factory::compute_hash(in_right));
+            this_type::_compute_hash(in_right));
     }
 
-    /** @brief ハッシュ値つきの文字列を比較する。
-        @param[in] in_right_string 右辺の文字列。
-        @param[in] in_right_hash   右辺の文字列のハッシュ値。
-        @retval 負 右辺のほうが大きい。
-        @retval 正 左辺のほうが大きい。
-        @retval 0  左辺と右辺は等価。
-     */
-    public: int compare_fast(
+    /// @brief ハッシュ値を基準に文字列を比較する。
+    /// @warning psyq::string 管理者以外は、この関数は使用禁止。
+    /// @retval 負 右辺のほうが大きい。
+    /// @retval 正 左辺のほうが大きい。
+    /// @retval 0  左辺と右辺は等価。
+    public: int _compare_fast(
+        /// [in] 右辺の文字列。
         typename this_type::factory::string::view const& in_right_string,
-        typename this_type::factory::hash::value_type const in_right_hash)
+        /// [in] 右辺の文字列のハッシュ値。
+        typename this_type::factory::hasher::result_type const in_right_hash)
     const PSYQ_NOEXCEPT
     {
-        return this_type::compare_fast(
+        return this_type::_compare_fast(
             *this, this->get_hash(), in_right_string, in_right_hash);
     }
+    /// @}
 
-    /** @brief ハッシュ値つきの文字列を比較する。
-        @param[in] in_left  左辺の文字列。
-        @param[in] in_right 右辺の文字列。
-        @retval 負 右辺のほうが大きい。
-        @retval 正 左辺のほうが大きい。
-        @retval 0  左辺と右辺は等価。
-     */
-    public: static int compare_fast(
+    /// @copydoc _compare_fast
+    public: static int _compare_fast(
+        /// [in] 左辺の文字列。
         typename this_type::factory::string::view const& in_left,
+        /// [in] 右辺の文字列。
         typename this_type::factory::string::view const& in_right)
     PSYQ_NOEXCEPT
     {
-        return this_type::compare_fast(
+        return this_type::_compare_fast(
             in_left,
-            this_type::factory::compute_hash(in_left),
+            this_type::_compute_hash(in_left),
             in_right,
-            this_type::factory::compute_hash(in_right));
+            this_type::_compute_hash(in_right));
+    }
+
+    /// @copydoc _compare_fast
+    public: static int _compare_fast(
+        /// [in] 左辺の文字列。
+        typename this_type::factory::string::view const& in_left_string,
+        /// [in] 左辺の文字列のハッシュ値。
+        typename this_type::factory::hasher::result_type const in_left_hash,
+        /// [in] 右辺の文字列。
+        typename this_type::factory::string::view const& in_right_string,
+        /// [in] 右辺の文字列のハッシュ値。
+        typename this_type::factory::hasher::result_type const in_right_hash)
+    PSYQ_NOEXCEPT
+    {
+        PSYQ_ASSERT(
+            in_right_hash == this_type::_compute_hash(in_right_string)
+            && in_left_hash == this_type::_compute_hash(in_left_string));
+        if (in_left_hash != in_right_hash)
+        {
+            return in_left_hash < in_right_hash? -1: 1;
+        }
+        auto const local_left_size(in_left_string.size());
+        auto const local_right_size(in_right_string.size());
+        if (local_left_size != local_right_size)
+        {
+            return local_left_size < local_right_size? -1: 1;
+        }
+        return this_type::factory::string::view::traits_type::compare(
+            in_left_string.data(), in_right_string.data(), local_right_size);
     }
 
     //-------------------------------------------------------------------------
-    protected: _private_client(this_type const& in_source)
+    /// @brief コピー構築子。
+    protected: _string_holder(
+        /// [in] コピー元となるインスタンス。
+        this_type const& in_source)
     PSYQ_NOEXCEPT:
     factory_(in_source.get_factory()),
     string_(in_source.string_)
@@ -937,7 +956,10 @@ class psyq::string::_private::flyweight_factory<
         }
     }
 
-    protected: _private_client(this_type&& io_source)
+    /// @brief ムーブ構築子。
+    protected: _string_holder(
+        /// [in] ムーブ元となるインスタンス。
+        this_type&& io_source)
     PSYQ_NOEXCEPT:
     factory_(std::move(io_source.factory_)),
     string_(std::move(io_source.string_))
@@ -946,14 +968,19 @@ class psyq::string::_private::flyweight_factory<
         io_source.string_ = nullptr;
     }
 
+    /// @brief 空の保持子を作る。
     protected: static this_type make() PSYQ_NOEXCEPT
     {
         return this_type();
     }
 
+    /// @brief フライ級文字列を用意して保持する。
     protected: static this_type make(
+        /// [in] フライ級文字列の生成器。
         typename this_type::factory::shared_ptr in_factory,
+        /// [in] 保持する文字列と等価な文字列。
         typename this_type::factory::string::view const& in_string,
+        /// [in] 文字列チャンクを生成する場合の、デフォルトのチャンク容量。
         std::size_t const in_chunk_size)
     {
         auto const local_factory(in_factory.get());
@@ -965,10 +992,14 @@ class psyq::string::_private::flyweight_factory<
     }
 
     //-------------------------------------------------------------------------
-    private: _private_client() PSYQ_NOEXCEPT: string_(nullptr) {}
+    /// @brief 空の保持子を構築する。
+    private: _string_holder() PSYQ_NOEXCEPT: string_(nullptr) {}
 
-    private: _private_client(
+    /// @brief フライ級文字列を保持する。
+    private: _string_holder(
+        /// [in] フライ級文字列を保持している生成器。
         typename this_type::factory::shared_ptr in_factory,
+        /// [in] 保持するフライ級文字列。
         typename this_type::factory::string& in_string)
     PSYQ_NOEXCEPT: factory_(std::move(in_factory))
     {
@@ -985,47 +1016,13 @@ class psyq::string::_private::flyweight_factory<
         }
     }
 
-    /** @brief ハッシュ値つきの文字列を比較する。
-
-        @param[in] in_left_string  左辺の文字列。
-        @param[in] in_left_hash    左辺の文字列のハッシュ値。
-        @param[in] in_right_string 右辺の文字列。
-        @param[in] in_right_hash   右辺の文字列のハッシュ値。
-        @retval 負 右辺のほうが大きい。
-        @retval 正 左辺のほうが大きい。
-        @retval 0  左辺と右辺は等価。
-     */
-    private: static int compare_fast(
-        typename this_type::factory::string::view const& in_left_string,
-        typename this_type::factory::hash::value_type const in_left_hash,
-        typename this_type::factory::string::view const& in_right_string,
-        typename this_type::factory::hash::value_type const in_right_hash)
-    PSYQ_NOEXCEPT
-    {
-        PSYQ_ASSERT(
-            in_right_hash == this_type::factory::compute_hash(in_right_string)
-            && in_left_hash == this_type::factory::compute_hash(in_left_string));
-        if (in_left_hash != in_right_hash)
-        {
-            return 1 - 2 * (in_left_hash < in_right_hash);
-        }
-        auto const local_left_size(in_left_string.size());
-        auto const local_right_size(in_right_string.size());
-        if (local_left_size != local_right_size)
-        {
-            return 1 - 2 * (local_left_size < local_right_size);
-        }
-        return this_type::factory::string::view::traits_type::compare(
-            in_left_string.data(), in_right_string.data(), local_right_size);
-    }
-
     //-------------------------------------------------------------------------
-    /// @brief 文字列を所有するフライ級文字列生成器。
+    /// @brief 保持しているフライ級文字列の生成器。
     private: typename this_type::factory::shared_ptr factory_;
-    /// @brief フライ級文字列。
+    /// @brief 保持しているフライ級文字列を指すポインタ。
     private: typename this_type::factory::string* string_;
 
-}; // class psyq::string::_private::flyweight_factory::_private_client
+}; // class psyq::string::_private::flyweight_factory::_string_holder
 
 #endif // !PSYQ_STRING_FLYWEIGHT_FACTORY_HPP_
 // vim: set expandtab:

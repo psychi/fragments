@@ -39,9 +39,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 またそれに限定されない）直接損害、間接損害、偶発的な損害、特別損害、
 懲罰的損害、または結果損害について、一切責任を負わないものとします。
  */
-/** @file
-    @author Hillco Psychi (https://twitter.com/psychi)
- */
+/// @file
+/// @author Hillco Psychi (https://twitter.com/psychi)
 #ifndef PSYQ_STRING_FLYWEIGHT_HPP_
 #define PSYQ_STRING_FLYWEIGHT_HPP_
 
@@ -69,15 +68,12 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string_view を模した、flyweightパターンの文字列。
-
-    base_type::base_type::factory を介して文字列を管理する。
-
-    @tparam template_char_type   @copydoc psyq::string::view::value_type
-    @tparam template_char_traits @copydoc psyq::string::view::traits_type
-    @tparam template_allocator   @copydoc psyq::string::_private::flyweight_factory::allocator_type
-    @ingroup psyq_string
- */
+/// @brief std::basic_string_view を模した、flyweightパターンの文字列。
+/// @details base_type::base_type::factory を介して文字列を管理する。
+/// @tparam template_char_type   @copydoc psyq::string::view::value_type
+/// @tparam template_char_traits @copydoc psyq::string::view::traits_type
+/// @tparam template_allocator   @copydoc psyq::string::_private::flyweight_factory::allocator_type
+/// @ingroup psyq_string
 template<
     typename template_char_type,
     typename template_char_traits = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
@@ -85,48 +81,44 @@ template<
 class psyq::string::flyweight:
 public psyq::string::_private::interface_immutable<
     typename psyq::string::_private::flyweight_factory<
-        psyq::string::view<template_char_type, template_char_traits>,
-        psyq::fnv1a_hash32,
+        typename psyq::string::view<template_char_type, template_char_traits>
+        ::fnv1_hash32,
         template_allocator>
-            ::_private_client>
+    ::_string_holder>
 {
-    /// @brief thisが指す値の型。
-    private: typedef flyweight this_type;
+    /// @brief flyweight の基底型。
+    public: typedef this_type base_type;
+    /// @brief this が指す値の型。
+    protected: typedef flyweight this_type;
 
-    /// @brief this_type の基底型。
-    public: typedef
-        psyq::string::_private::interface_immutable<
-            typename psyq::string::_private::flyweight_factory<
-                psyq::string::view<template_char_type, template_char_traits>,
-                psyq::fnv1a_hash32,
-                template_allocator>
-                    ::_private_client>
-        base_type;
-
-    /// @brief 空の文字列を構築する。メモリ確保は行わない。
+    //-------------------------------------------------------------------------
+    /// @brief 空の文字列を構築する。動的メモリ割当は行わない。
     public: flyweight()
     PSYQ_NOEXCEPT: base_type(base_type::base_type::make())
     {}
 
-    /// @brief 文字列をコピー構築する。メモリ確保は行わない。
+    /// @brief 文字列をコピー構築する。動的メモリ割当は行わない。
     public: flyweight(
         /// [in] コピー元となる文字列。
         this_type const& in_source)
     PSYQ_NOEXCEPT: base_type(in_source)
     {}
 
-    /// @brief 文字列をムーブ構築する。メモリ確保は行わない。
+    /// @brief 文字列をムーブ構築する。動的メモリ割当は行わない。
     public: flyweight(
         /// [in,out] ムーブ元となる文字列。
         this_type&& io_source)
     PSYQ_NOEXCEPT: base_type(std::move(io_source))
     {}
 
-    /// @brief 文字列を構築する。メモリ確保を行う場合ある。
+    /// @brief 文字列を構築する。動的メモリ割当を行う場合ある。
+    /// @details in_string と等価な文字列が in_factory に…
+    /// - あれば、動的メモリ割当てを行わない。
+    /// - なければ、動的メモリ割当てを行う場合がある。
     public: flyweight(
         /// [in] コピー元となる文字列。
         typename base_type::view const& in_string,
-        /// [in] 文字列生成器。
+        /// [in] フライ級文字列の生成器。
         typename base_type::base_type::factory::shared_ptr in_factory,
         /// [in] 文字列チャンクを生成する場合の、デフォルトのチャンク容量。
         std::size_t const in_chunk_size =
@@ -134,11 +126,12 @@ public psyq::string::_private::interface_immutable<
     base_type(
         base_type::base_type::make(
             std::move(in_factory), in_string, in_chunk_size))
-    {}
+    {
+        PSYQ_ASSERT(in_string.empty() || !this->empty());
+    }
 
-    /** @brief 文字列をコピー代入する。メモリ確保は行わない。
-        @return *this
-     */
+    /// @brief 文字列をコピー代入する。動的メモリ割当は行わない。
+    /// @return *this
     public: this_type& operator=(
         /// [in] コピー元となる文字列。
         this_type const& in_source)
@@ -147,9 +140,8 @@ public psyq::string::_private::interface_immutable<
         return *this;
     }
 
-    /** @brief 文字列をムーブ代入する。メモリ確保は行わない。
-        @return *this
-     */
+    /// @brief 文字列をムーブ代入する。動的メモリ割当は行わない。
+    /// @return *this
     public: this_type& operator=(
         /// [in,out] ムーブ元となる文字列。
         this_type&& io_source)

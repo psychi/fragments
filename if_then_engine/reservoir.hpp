@@ -1,7 +1,6 @@
-﻿/** @file
-    @brief @copybrief psyq::if_then_engine::_private::reservoir
-    @author Hillco Psychi (https://twitter.com/psychi)
- */
+﻿/// @file
+/// @brief @copybrief psyq::if_then_engine::_private::reservoir
+/// @author Hillco Psychi (https://twitter.com/psychi)
 #ifndef PSYQ_IF_THEN_ENGINE_RESERVOIR_HPP_
 #define PSYQ_IF_THEN_ENGINE_RESERVOIR_HPP_
 
@@ -25,18 +24,15 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 状態貯蔵器。任意のビット長の状態値を保持する。
-
-    ### 使い方の概略
-    - reservoir::register_status で、状態値を登録する。
-    - reservoir::extract_status で、状態値を取得する。
-    - reservoir::assign_status で、状態値に代入する。
-
-    @tparam template_float      @copydoc reservoir::status_value::float_type
-    @tparam template_status_key @copydoc reservoir::status_key
-    @tparam template_chunk_key  @copydoc reservoir::chunk_key
-    @tparam template_allocator  @copydoc reservoir::allocator_type
- */
+/// @brief 状態貯蔵器。任意のビット長の状態値を保持する。
+/// @details ### 使い方の概略
+/// - reservoir::register_status で、状態値を登録する。
+/// - reservoir::extract_status で、状態値を取得する。
+/// - reservoir::assign_status で、状態値に代入する。
+/// @tparam template_float      @copydoc reservoir::status_value::float_type
+/// @tparam template_status_key @copydoc reservoir::status_key
+/// @tparam template_chunk_key  @copydoc reservoir::chunk_key
+/// @tparam template_allocator  @copydoc reservoir::allocator_type
 template<
     typename template_float,
     typename template_status_key,
@@ -50,12 +46,31 @@ class psyq::if_then_engine::_private::reservoir
     //-------------------------------------------------------------------------
     /// @brief 状態値を識別するための値を表す型。
     public: typedef template_status_key status_key;
-
     /// @brief チャンクを識別するための値を表す型。
     public: typedef template_chunk_key chunk_key;
-
     /// @brief 各種コンテナに用いるメモリ割当子の型。
     public: typedef template_allocator allocator_type;
+
+    //-------------------------------------------------------------------------
+    /// @brief 状態値。
+    public: typedef
+        psyq::if_then_engine::_private::status_value<
+            std::uint64_t, template_float>
+        status_value;
+    /// @brief 状態値の比較演算の引数。
+    public: typedef
+        psyq::if_then_engine::_private::status_operation<
+            typename this_type::status_key,
+            typename this_type::status_value::comparison,
+            typename this_type::status_value>
+        status_comparison;
+    /// @brief 状態値の代入演算の引数。
+    public: typedef
+        psyq::if_then_engine::_private::status_operation<
+            typename this_type::status_key,
+            typename this_type::status_value::assignment,
+            typename this_type::status_value>
+        status_assignment;
 
     //-------------------------------------------------------------------------
     /// @brief 状態値のプロパティ情報。
@@ -66,7 +81,6 @@ class psyq::if_then_engine::_private::reservoir
              std::uint32_t,
              std::uint8_t>
          status_property;
-
     /// @brief 状態値プロパティの辞書。
     private: typedef
          std::unordered_map<
@@ -82,10 +96,9 @@ class psyq::if_then_engine::_private::reservoir
     private: typedef
         psyq::if_then_engine::_private::status_chunk<
             typename this_type::status_property,
-            std::uint64_t,
+            typename this_type::status_value::unsigned_type,
             typename this_type::allocator_type>
         status_chunk;
-
     /// @brief 状態値ビット列チャンクの辞書。
     private: typedef
          std::unordered_map<
@@ -97,31 +110,9 @@ class psyq::if_then_engine::_private::reservoir
          chunk_map;
 
     //-------------------------------------------------------------------------
-    /// @brief 状態値。
-    public: typedef
-        psyq::if_then_engine::_private::status_value<
-            typename this_type::status_chunk::bit_block, template_float>
-        status_value;
-
-    /// @brief 状態値の比較演算の引数。
-    public: typedef
-        psyq::if_then_engine::_private::status_operation<
-            typename this_type::status_key,
-            typename this_type::status_value::comparison,
-            typename this_type::status_value>
-        status_comparison;
-
-    /// @brief 状態値の代入演算の引数。
-    public: typedef
-        psyq::if_then_engine::_private::status_operation<
-            typename this_type::status_key,
-            typename this_type::status_value::assignment,
-            typename this_type::status_value>
-        status_assignment;
-
-    //-------------------------------------------------------------------------
+    /// @brief 浮動小数点数とビット列を変換する。
     private: typedef psyq::float_bit_field<template_float> float_bit_field;
-
+    /// @brief ビット列とビット幅のペア。
     private: typedef
          std::pair<
              typename this_type::status_chunk::bit_block,
@@ -129,17 +120,16 @@ class psyq::if_then_engine::_private::reservoir
          bit_field_width;
 
     //-------------------------------------------------------------------------
-    /** @name 構築と代入
-        @{
-     */
-    /** @brief 空の状態貯蔵器を構築する。
-        @param[in] in_chunk_buckets    チャンク辞書のバケット数。
-        @param[in] in_property_buckets 状態値プロパティ辞書のバケット数。
-        @param[in] in_allocator        使用するメモリ割当子の初期値。
-     */
+    /// @name 構築と代入
+    /// @{
+
+    /// @brief 空の状態貯蔵器を構築する。
     public: reservoir(
+        /// [in] チャンク辞書のバケット数。
         std::size_t const in_chunk_buckets,
+        /// [in] 状態値プロパティ辞書のバケット数。
         std::size_t const in_property_buckets,
+        /// [in] 使用するメモリ割当子の初期値。
         typename this_type::allocator_type const& in_allocator =
             this_type::allocator_type()):
     chunks_(
@@ -155,19 +145,21 @@ class psyq::if_then_engine::_private::reservoir
     {}
 
 #ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
-    /** @brief ムーブ構築子。
-        @param[in,out] io_source ムーブ元となるインスタンス。
-     */
-    public: reservoir(this_type&& io_source) PSYQ_NOEXCEPT:
+    /// @brief ムーブ構築子。
+    public: reservoir(
+        /// [in,out] ムーブ元となるインスタンス。
+        this_type&& io_source)
+    PSYQ_NOEXCEPT:
     chunks_(std::move(io_source.chunks_)),
     properties_(std::move(io_source.properties_))
     {}
 
-    /** @brief ムーブ代入演算子。
-        @param[in,out] io_source ムーブ元となるインスタンス。
-        @return *this
-     */
-    public: this_type& operator=(this_type&& io_source) PSYQ_NOEXCEPT
+    /// @brief ムーブ代入演算子。
+    /// @return *this
+    public: this_type& operator=(
+        /// [in,out] ムーブ元となるインスタンス。
+        this_type&& io_source)
+    PSYQ_NOEXCEPT
     {
         this->chunks_ = std::move(io_source.chunks_);
         this->properties_ = std::move(io_source.properties_);
@@ -175,26 +167,24 @@ class psyq::if_then_engine::_private::reservoir
     }
 #endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
-    /** @brief 状態貯蔵器で使われているメモリ割当子を取得する。
-        @return 状態貯蔵器で使われているメモリ割当子。
-     */
+    /// @brief 状態貯蔵器で使われているメモリ割当子を取得する。
+    /// @return 状態貯蔵器で使われているメモリ割当子。
     public: typename this_type::allocator_type get_allocator()
     const PSYQ_NOEXCEPT
     {
         return this->properties_.get_allocator();
     }
 
-    /** @brief 状態貯蔵器を再構築する。
-        @param[in] in_chunk_buckets  チャンク辞書のバケット数。
-        @param[in] in_status_buckets 状態値プロパティ辞書のバケット数。
-     */
+    /// @brief 状態貯蔵器を再構築する。
     public: void rebuild(
-        std::size_t const in_chunk_buckets,
-        std::size_t const in_status_buckets)
+        /// [in] チャンク辞書のバケット数。
+        std::size_t const in_chunk_bucket_count,
+        /// [in] 状態値辞書のバケット数。
+        std::size_t const in_status_bucket_count)
     {
         // 新たな状態値ビット列チャンク辞書を用意する。
         typename this_type::chunk_map local_chunks(
-            in_chunk_buckets,
+            in_chunk_bucket_count,
             this->chunks_.hash_function(),
             this->chunks_.key_eq(),
             this->chunks_.get_allocator());
@@ -215,7 +205,7 @@ class psyq::if_then_engine::_private::reservoir
 
         // 現在の辞書をコピーして整理し、新たな辞書を構築する。
         typename this_type::property_map local_properties(
-            in_status_buckets,
+            in_status_bucket_count,
             this->properties_.hash_function(),
             this->properties_.key_eq(),
             this->properties_.get_allocator());
@@ -231,43 +221,35 @@ class psyq::if_then_engine::_private::reservoir
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 状態値の登録
-        @{
-     */
-    /** @brief 状態値を登録する。
+    /// @name 状態値の登録
+    /// @{
 
-        @param[in] in_chunk_key  登録する状態値を格納する状態値ビット列チャンクの識別値。
-        @param[in] in_status_key 登録する状態値の識別番号。
-        @param[in] in_value
-            登録する状態値の初期値。以下の型の値を登録できる。
-            - bool 型。
-            - C++ 組み込み整数型。
-            - C++ 組み込み浮動小数点数型。
-
-        @retval true 成功。状態値を登録した。
-        @retval false
-            失敗。状態値を登録できなかった。
-            - in_status_key に対応する状態値がすでに登録されていると失敗する。
-
-        @sa
-        - this_type::extract_status と this_type::assign_status
-          で、登録した状態値にアクセスできる。
-        - this_type::erase_chunk で、登録した状態値をチャンク毎に削除できる。
-     */
+    /// @brief 状態値を登録する。
+    /// @retval true  成功。状態値を登録した。
+    /// @retval false 失敗。状態値を登録できなかった。
+    /// - in_status_key に対応する状態値がすでに登録されていると失敗する。
+    /// @sa
+    /// - this_type::extract_status と this_type::assign_status
+    ///   で、登録した状態値にアクセスできる。
+    /// - this_type::erase_chunk で、登録した状態値をチャンク毎に削除できる。
     public: template<typename template_value>
     bool register_status(
+        /// [in] 登録する状態値を格納する状態値ビット列チャンクの識別値。
         typename this_type::chunk_key const& in_chunk_key,
+        /// [in] 登録する状態値の識別番号。
         typename this_type::status_key const& in_status_key,
+        /// [in] 登録する状態値の初期値。以下の型の値を登録できる。
+        /// - bool 型。
+        /// - C++ 組み込み整数型。
+        /// - C++ 組み込み浮動小数点数型。
         template_value const in_value)
     {
         if (std::is_floating_point<template_value>::value)
         {
             // 浮動小数点数型の状態値を登録する。
-            /** @note
-                コンパイル時にここで警告かエラーが発生する場合は、
-                template_value が double 型で
-                this_type::float_bit_field::float_type が float 型なのが原因。
-             */
+            /// @note コンパイル時にここで警告かエラーが発生する場合は、
+            /// template_value が double 型で
+            /// this_type::float_bit_field::float_type が float 型なのが原因。
             typename this_type::float_bit_field::float_type const
                 local_float(in_value);
             return this->register_status_bit_field(
@@ -296,33 +278,28 @@ class psyq::if_then_engine::_private::reservoir
         }
     }
 
-    /** @brief 整数型の状態値を登録する。
-
-        @param[in] in_chunk_key  登録する状態値を格納する状態値ビット列チャンクの識別値。
-        @param[in] in_status_key 登録する状態値の識別番号。
-        @param[in] in_value      登録する状態値の初期値。 C++ 組み込み整数型であること。
-        @param[in] in_bit_width  登録する状態値のビット幅。
-
-        @retval true 成功。状態値を登録した。
-        @retval false
-            失敗。状態値を登録できなかった。
-            - in_status_key に対応する状態値がすでに登録されていると失敗する。
-            - in_value のビット幅が in_bit_width を超えていると失敗する。
-            - this_type::status_chunk::BLOCK_BIT_WIDTH より
-              in_bit_width が大きいと失敗する。
-            - in_bit_width が2未満だと失敗する。
-              1ビットの値は論理型として登録すること。
-
-        @sa
-        - this_type::extract_status と this_type::assign_status
-          で、登録した状態値にアクセスできる。
-        - this_type::erase_chunk で、登録した状態値をチャンク毎に削除できる。
-     */
+    /// @brief 整数型の状態値を登録する。
+    /// @retval true  成功。状態値を登録した。
+    /// @retval false 失敗。状態値を登録できなかった。
+    /// - in_status_key に対応する状態値がすでに登録されていると失敗する。
+    /// - in_value のビット幅が in_bit_width を超えていると失敗する。
+    /// - this_type::status_chunk::BLOCK_BIT_WIDTH より
+    ///   in_bit_width が大きいと失敗する。
+    /// - in_bit_width が2未満だと失敗する。
+    ///   1ビットの値は論理型として登録すること。
+    /// @sa
+    /// - this_type::extract_status と this_type::assign_status
+    ///   で、登録した状態値にアクセスできる。
+    /// - this_type::erase_chunk で、登録した状態値をチャンク毎に削除できる。
     public: template<typename template_value>
     bool register_status(
+        /// [in] 登録する状態値を格納する状態値ビット列チャンクの識別値。
         typename this_type::chunk_key const& in_chunk_key,
+        /// [in] 登録する状態値の識別番号。
         typename this_type::status_key const& in_status_key,
+        /// [in] 登録する状態値の初期値。 C++ 組み込み整数型であること。
         template_value const in_value,
+        /// [in] 登録する状態値のビット幅。
         std::size_t const in_bit_width)
     {
         typedef typename this_type::status_property::format format;
@@ -359,66 +336,19 @@ class psyq::if_then_engine::_private::reservoir
                     static_cast<format>(in_bit_width));
         }
     }
-
-    /** @brief 状態値を登録する。
-        @copydetails register_status(typename this_type::chunk_key const&, typename this_type::status_key const&, template_value);
-     */
-    public: bool register_status(
-        typename this_type::chunk_key const& in_chunk_key,
-        typename this_type::status_key const& in_status_key,
-        typename this_type::status_value const& in_value)
-    {
-        auto const local_bool(in_value.get_bool());
-        if (local_bool != nullptr)
-        {
-            return this->register_status(
-                in_chunk_key, in_status_key, *local_bool);
-        }
-        auto const local_unsigned(in_value.get_unsigned());
-        if (local_unsigned != nullptr)
-        {
-            return this->register_status(
-                in_chunk_key,
-                in_status_key,
-                *local_unsigned,
-                sizeof(*local_unsigned) * psyq::CHAR_BIT_WIDTH);
-        }
-        auto const local_signed(in_value.get_signed());
-        if (local_signed != nullptr)
-        {
-            return this->register_status(
-                in_chunk_key,
-                in_status_key,
-                *local_signed,
-                sizeof(*local_signed) * psyq::CHAR_BIT_WIDTH);
-        }
-        auto const local_float(in_value.get_float());
-        if (local_float != nullptr)
-        {
-            return this->register_status(
-                in_chunk_key, in_status_key, *local_float);
-        }
-        return false;
-    }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 状態値の取得
-        @{
-     */
-    /** @brief 状態値を取得する。
+    /// @name 状態値の取得
+    /// @{
 
-        in_status_key に対応する状態値が、
-        this_type::register_status で登録されていること。
-
-        @param[in] in_status_key 取得する状態値に対応する識別値。
-
-        @return
-            取得した状態値。状態値の取得に失敗した場合は、
-            this_type::status_value::is_empty が真となる値を返す。
-
-        @sa this_type::assign_status で、状態値を書き換えできる。
-     */
+    /// @brief 状態値を取得する。
+    /// @details in_status_key に対応する状態値が、
+    /// this_type::register_status で登録されていること。
+    /// @return 取得した状態値。状態値の取得に失敗した場合は、
+    /// this_type::status_value::is_empty が真となる値を返す。
+    /// @sa this_type::assign_status で、状態値を書き換えできる。
     public: typename this_type::status_value extract_status(
+        /// [in] 取得する状態値に対応する識別値。
         typename this_type::status_key const& in_status_key)
     const PSYQ_NOEXCEPT
     {
@@ -485,41 +415,51 @@ class psyq::if_then_engine::_private::reservoir
         }
     }
 
-    /** @brief 状態値の型の種別を取得する。
-        @param[in] in_status_key 状態値に対応する識別値。
-        @return
-            in_status_key に対応する状態値の型の種別。
-            in_status_key に対応する状態値がない場合は、 
-            this_type::status_value::kind_EMPTY を返す。
-     */
+    /// @brief 状態値の型の種別を取得する。
+    /// @return in_status_key に対応する状態値の型の種別。
+    /// in_status_key に対応する状態値がない場合は、 
+    /// this_type::status_value::kind_EMPTY を返す。
     public: typename this_type::status_value::kind extract_kind(
+        /// [in] 状態値に対応する識別値。
         typename this_type::status_key const& in_status_key)
     const PSYQ_NOEXCEPT
     {
         return this_type::get_kind(this->extract_format(in_status_key));
     }
 
-    /** @brief 状態値のビット幅を取得する。
-        @param[in] in_status_key 状態値に対応する識別値。
-        @retval !=0 状態値のビット幅。
-        @retval ==0 in_status_key に対応する状態値がない。
-     */
+    /// @brief 状態値のビット幅を取得する。
+    /// @retval !=0 状態値のビット幅。
+    /// @retval ==0 in_status_key に対応する状態値がない。
     public: std::size_t extract_bit_width(
+        /// [in] 状態値に対応する識別値。
         typename this_type::status_key const& in_status_key)
     const PSYQ_NOEXCEPT
     {
         return this_type::get_bit_width(this->extract_format(in_status_key));
     }
+
+    /// @brief 状態値が格納されているチャンクの識別値を取得する。
+    /// @return in_status_key に対応する状態値が格納されている
+    /// チャンクの識別値を指すポインタ。
+    /// 該当する状態値がない場合は nullptr を返す。
+    public: typename this_type::chunk_key const* extract_chunk_key(
+        /// [in] 状態値に対応する識別値。
+        typename this_type::status_key const& in_status_key)
+    const PSYQ_NOEXCEPT
+    {
+        auto const local_iterator(this->properties_.find(in_status_key));
+        return local_iterator != this->properties_.end()?
+            &local_iterator->second.get_chunk_key(): nullptr;
+    }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 状態値の比較
-        @{
-     */
-    /** @brief 状態値を比較する。
-        @param[in] in_comparison 状態値の比較式。
-        @return 比較演算の評価結果。
-     */
+    /// @name 状態値の比較
+    /// @{
+
+    /// @brief 状態値を比較する。
+    /// @return 比較演算の評価結果。
     public: psyq::if_then_engine::evaluation compare_status(
+        /// [in] 状態値の比較式。
         typename this_type::status_comparison const& in_comparison)
     const PSYQ_NOEXCEPT
     {
@@ -546,15 +486,14 @@ class psyq::if_then_engine::_private::reservoir
         return -1;
     }
 
-    /** @brief 状態値を比較する。
-        @param[in] in_left_key    左辺となる状態値の識別値。
-        @param[in] in_operator    適用する比較演算子。
-        @param[in] in_right_value 右辺となる値。
-        @return 比較演算の評価結果。
-     */
+    /// @brief 状態値を比較する。
+    /// @return 比較演算の評価結果。
     public: psyq::if_then_engine::evaluation compare_status(
+        /// [in] 左辺となる状態値の識別値。
         typename this_type::status_key const& in_left_key,
+        /// [in] 適用する比較演算子。
         typename this_type::status_value::comparison const in_operator,
+        /// [in] 右辺となる値。
         typename this_type::status_value const& in_right_value)
     const PSYQ_NOEXCEPT
     {
@@ -562,15 +501,14 @@ class psyq::if_then_engine::_private::reservoir
             in_operator, in_right_value);
     }
 
-    /** @brief 状態値を比較する。
-        @param[in] in_left_key  左辺となる状態値の識別値。
-        @param[in] in_operator  適用する比較演算子。
-        @param[in] in_right_key 右辺となる状態値の識別値。
-        @return 比較演算の評価結果。
-     */
+    /// @brief 状態値を比較する。
+    /// @return 比較演算の評価結果。
     public: psyq::if_then_engine::evaluation compare_status(
+        /// [in] 左辺となる状態値の識別値。
         typename this_type::status_key const& in_left_key,
+        /// [in] 適用する比較演算子。
         typename this_type::status_value::comparison const in_operator,
+        /// [in] 右辺となる状態値の識別値。
         typename this_type::status_key const& in_right_key)
     const PSYQ_NOEXCEPT
     {
@@ -579,40 +517,34 @@ class psyq::if_then_engine::_private::reservoir
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 状態値の代入
-        @{
-     */
-    /** @brief 状態値へ値を代入する。
+    /// @name 状態値の代入
+    /// @{
 
-        @param[in] in_status_key 代入先となる状態値に対応する識別値。
-        @param[in] in_value
-            状態値へ代入する値。以下の型の値を代入できる。
-            - bool 型。
-            - C++ 組み込み整数型。
-            - C++ 組み込み浮動小数点数型。
-            - this_type::status_value 型。
-
-        @retval true 成功。 in_value を状態値へ代入した。
-        @retval false
-            失敗。状態値は変化しない。
-            - in_status_key に対応する状態値が
-              this_type::register_status で登録されてないと、失敗する。
-            - in_value の値が
-              in_status_key に対応する状態値のビット幅を超えていると、失敗する。
-            - in_value が論理型以外で、
-              in_status_key に対応する状態値が論理型だと、失敗する。
-            - in_value が論理型で、
-              in_status_key に対応する状態値が論理型以外だと、失敗する。
-            - in_value が負の数で、
-              in_status_key に対応する状態値が符号なし整数型だと、失敗する。
-            - in_value が整数ではない浮動小数点数で、
-              in_status_key に対応する状態値が整数型だと、失敗する。
-
-        @sa this_type::extract_status で、代入した値を取得できる。
-     */
+    /// @brief 状態値へ値を代入する。
+    /// @retval true  成功。 in_value を状態値へ代入した。
+    /// @retval false 失敗。状態値は変化しない。
+    /// - in_status_key に対応する状態値が
+    ///   this_type::register_status で登録されてないと、失敗する。
+    /// - in_value の値が
+    ///   in_status_key に対応する状態値のビット幅を超えていると、失敗する。
+    /// - in_value が論理型以外で、
+    ///   in_status_key に対応する状態値が論理型だと、失敗する。
+    /// - in_value が論理型で、
+    ///   in_status_key に対応する状態値が論理型以外だと、失敗する。
+    /// - in_value が負の数で、
+    ///   in_status_key に対応する状態値が符号なし整数型だと、失敗する。
+    /// - in_value が整数ではない浮動小数点数で、
+    ///   in_status_key に対応する状態値が整数型だと、失敗する。
+    /// @sa this_type::extract_status で、代入した値を取得できる。
     public: template<typename template_value>
     bool assign_status(
+        /// [in] 代入先となる状態値に対応する識別値。
         typename this_type::status_key const& in_status_key,
+        /// [in] 状態値へ代入する値。以下の型の値を代入できる。
+        /// - bool 型。
+        /// - C++ 組み込み整数型。
+        /// - C++ 組み込み浮動小数点数型。
+        /// - this_type::status_value 型。
         template_value const& in_value)
     PSYQ_NOEXCEPT
     {
@@ -622,11 +554,9 @@ class psyq::if_then_engine::_private::reservoir
         {
             return false;
         }
-        /** @note
-            in_value が状態値のビット幅を超えている場合、
-            失敗となるように実装しておく。
-            失敗とせず、ビット列をマスクして代入する実装も可能。どちらが良い？
-         */
+        /// @note in_value が状態値のビット幅を超えている場合、
+        /// 失敗となるように実装しておく。
+        /// 失敗とせず、ビット列をマスクして代入する実装も可能。どちらが良い？
         auto const local_mask(false);
         auto& local_property(local_property_iterator->second);
         return this_type::assign_status_bit_field(
@@ -636,14 +566,12 @@ class psyq::if_then_engine::_private::reservoir
                 in_value, local_property.get_format(), local_mask));
     }
 
-    /** @brief 状態値を演算し、結果を代入する。
-        @param[in] in_assignment 状態値の代入演算。
-        @retval true 成功。演算結果を状態値へ代入した。
-        @retval false
-            失敗。状態値は変化しない。
-            失敗する要因は this_type::assign_status を参照。
-     */
+    /// @brief 状態値を演算し、結果を代入する。
+    /// @retval true  成功。演算結果を状態値へ代入した。
+    /// @retval false 失敗。状態値は変化しない。
+    /// 失敗する要因は this_type::assign_status を参照。
     public: bool assign_status(
+        /// [in] 状態値の代入演算。
         typename this_type::status_assignment const& in_assignment)
     {
         auto const local_right_key_pointer(in_assignment.get_right_key());
@@ -666,18 +594,16 @@ class psyq::if_then_engine::_private::reservoir
                 local_right_key);
     }
 
-    /** @brief 状態値を演算し、結果を代入する。
-        @param[in] in_left_key    代入演算子の左辺となる状態値の識別値。
-        @param[in] in_operator    適用する代入演算子。
-        @param[in] in_right_value 代入演算子の右辺となる値。
-        @retval true 成功。演算結果を状態値へ代入した。
-        @retval false
-            失敗。状態値は変化しない。
-            失敗する要因は this_type::assign_status を参照。
-     */
+    /// @brief 状態値を演算し、結果を代入する。
+    /// @retval true  成功。演算結果を状態値へ代入した。
+    /// @retval false 失敗。状態値は変化しない。
+    /// 失敗する要因は this_type::assign_status を参照。
     public: bool assign_status(
+        /// [in] 代入演算子の左辺となる状態値の識別値。
         typename this_type::status_key const& in_left_key,
+        /// [in] 適用する代入演算子。
         typename this_type::status_value::assignment const in_operator,
+        /// [in] 代入演算子の右辺となる値。
         typename this_type::status_value const& in_right_value)
     {
         if (in_operator == this_type::status_value::assignment_COPY)
@@ -689,18 +615,16 @@ class psyq::if_then_engine::_private::reservoir
             && this->assign_status(in_left_key, local_left_value);
     }
 
-    /** @brief 状態値を演算し、結果を代入する。
-        @param[in] in_left_key  代入演算子の左辺となる状態値の識別値。
-        @param[in] in_operator  適用する代入演算子。
-        @param[in] in_right_key 代入演算子の右辺となる状態値の識別値。
-        @retval true 成功。演算結果を状態値へ代入した。
-        @retval false
-            失敗。状態値は変化しない。
-            失敗する要因は this_type::assign_status を参照。
-     */
+    /// @brief 状態値を演算し、結果を代入する。
+    /// @retval true  成功。演算結果を状態値へ代入した。
+    /// @retval false 失敗。状態値は変化しない。
+    /// 失敗する要因は this_type::assign_status を参照。
     public: bool assign_status(
+        /// [in] 代入演算子の左辺となる状態値の識別値。
         typename this_type::status_key const& in_left_key,
+        /// [in] 適用する代入演算子。
         typename this_type::status_value::assignment const in_operator,
+        /// [in] 代入演算子の右辺となる状態値の識別値。
         typename this_type::status_key const& in_right_key)
     {
         return this->assign_status(
@@ -708,20 +632,16 @@ class psyq::if_then_engine::_private::reservoir
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 状態値の変化
-        @{
-     */
-    /** @brief psyq::if_then_engine 管理者以外は、この関数は使用禁止。
+    /// @name 状態値の変化
+    /// @{
 
-        状態変化フラグを取得する。
-
-        @param[in] in_status_key 変化フラグを取得する状態値に対応する識別値。
-
-        @retval 正 状態変化フラグは真。
-        @retval 0  状態変化フラグは偽。
-        @retval 負 状態値がない。
-     */
+    /// @brief 状態変化フラグを取得する。
+    /// @warning psyq::if_then_engine 管理者以外は、この関数は使用禁止。
+    /// @retval 正 状態変化フラグは真。
+    /// @retval 0  状態変化フラグは偽。
+    /// @retval 負 状態値がない。
     public: std::int8_t _get_transition(
+        /// [in] 変化フラグを取得する状態値に対応する識別値。
         typename this_type::status_key const& in_status_key)
     const PSYQ_NOEXCEPT
     {
@@ -730,10 +650,8 @@ class psyq::if_then_engine::_private::reservoir
             local_iterator->second.get_transition(): -1;
     }
 
-    /** @brief psyq::if_then_engine 管理者以外は、この関数は使用禁止。
-
-        状態変化フラグを初期化する。
-     */
+    /// @brief 状態変化フラグを初期化する。
+    /// @warning psyq::if_then_engine 管理者以外は、この関数は使用禁止。
     public: void _reset_transitions()
     {
         for (auto& local_property: this->properties_)
@@ -743,15 +661,15 @@ class psyq::if_then_engine::_private::reservoir
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 状態値ビット列チャンク
-        @{
-     */
-    /** @brief 状態値ビット列チャンクを削除する。
-        @param[in] in_chunk_key 削除する状態値ビット列チャンクの識別値。
-        @retval true  成功。チャンクを削除した。
-        @retval false 失敗。識別値に対応するチャンクがない。
-     */
-    public: bool erase_chunk(typename this_type::chunk_key const& in_chunk_key)
+    /// @name 状態値ビット列チャンク
+    /// @{
+
+    /// @brief 状態値ビット列チャンクを削除する。
+    /// @retval true  成功。チャンクを削除した。
+    /// @retval false 失敗。識別値に対応するチャンクがない。
+    public: bool erase_chunk(
+        /// [in] 削除する状態値ビット列チャンクの識別値。
+        typename this_type::chunk_key const& in_chunk_key)
     {
         // 状態値ビット列チャンクを削除する。
         if (this->chunks_.erase(in_chunk_key) == 0)
@@ -774,34 +692,30 @@ class psyq::if_then_engine::_private::reservoir
         return true;
     }
 
-    /** @brief 状態値ビット列チャンクをシリアル化する。
-        @param[in] in_chunk_key シリアル化する状態値ビット列チャンクの識別番号。
-        @return シリアル化した状態値ビット列チャンク。
-        @todo 未実装。
-     */
+    /// @brief 状態値ビット列チャンクをシリアル化する。
+    /// @return シリアル化した状態値ビット列チャンク。
+    /// @todo 未実装。
     public: typename this_type::status_chunk::bit_block_container serialize_chunk(
+        /// [in] シリアル化する状態値ビット列チャンクの識別番号。
         typename this_type::chunk_key const& in_chunk_key)
     const;
 
-    /** @brief シリアル化された状態値ビット列チャンクを復元する。
-        @param[in] in_chunk_key        復元する状態値ビット列チャンクの識別値。
-        @param[in] in_serialized_chunk シリアル化された状態値ビット列チャンク。
-        @todo 未実装。
-     */
+    /// @brief シリアル化された状態値ビット列チャンクを復元する。
+    /// @todo 未実装。
     public: bool deserialize_chunk(
+        /// [in] 復元する状態値ビット列チャンクの識別値。
         typename this_type::chunk_key const& in_chunk_key,
+        /// [in] シリアル化された状態値ビット列チャンク。
         typename this_type::status_chunk::bit_block_container const&
             in_serialized_chunk);
     /// @}
     //-------------------------------------------------------------------------
-    /** @brief 状態値のビット構成を取得する。
-        @param[in] in_status_key 状態値に対応する識別値。
-        @return
-            in_status_key に対応する状態値のビット構成。
-            in_status_key に対応する状態値がない場合は、 
-            this_type::status_value::kind_EMPTY を返す。
-     */
+    /// @brief 状態値のビット構成を取得する。
+    /// @return in_status_key に対応する状態値のビット構成。
+    /// in_status_key に対応する状態値がない場合は、 
+    /// this_type::status_value::kind_EMPTY を返す。
     private: typename this_type::status_property::format extract_format(
+        /// [in] 状態値に対応する識別値。
         typename this_type::status_key const& in_status_key)
     const PSYQ_NOEXCEPT
     {
@@ -811,11 +725,10 @@ class psyq::if_then_engine::_private::reservoir
             this_type::status_value::kind_EMPTY;
     }
 
-    /** @brief 状態値のビット構成から、状態値の型の種別を取得する。
-        @param[in] in_format 状態値のビット構成。
-        @return 状態値の型の種別。
-     */
+    /// @brief 状態値のビット構成から、状態値の型の種別を取得する。
+    /// @return 状態値の型の種別。
     private: static typename this_type::status_value::kind get_kind(
+        /// [in] 状態値のビット構成。
         typename this_type::status_property::format const in_format)
     PSYQ_NOEXCEPT
     {
@@ -834,11 +747,10 @@ class psyq::if_then_engine::_private::reservoir
         }
     }
 
-    /** @brief 状態値のビット構成から、状態値のビット幅を取得する。
-        @param[in] in_format 状態値のビット構成。
-        @return 状態値のビット幅。
-     */
+    /// @brief 状態値のビット構成から、状態値のビット幅を取得する。
+    /// @return 状態値のビット幅。
     private: static typename this_type::status_property::bit_width get_bit_width(
+        /// [in] 状態値のビット構成。
         typename this_type::status_property::format const in_format)
     PSYQ_NOEXCEPT
     {
@@ -861,16 +773,15 @@ class psyq::if_then_engine::_private::reservoir
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 状態値をコピーして整理する。
-        @param[in,out] io_properties コピー先となる状態値プロパティ辞書。
-        @param[in,out] io_chunks     コピー先となる状態値ビット列チャンク辞書。
-        @param[in] in_properties     コピー元となる状態値プロパティ辞書。
-        @param[in] in_chunks         コピー元となる状態値ビット列チャンク辞書。
-     */
+    /// @brief 状態値をコピーして整理する。
     private: static void copy_statuses(
+        /// [in,out] コピー先となる状態値プロパティ辞書。
         typename this_type::property_map& io_properties,
+        /// [in,out] コピー先となる状態値ビット列チャンク辞書。
         typename this_type::chunk_map& io_chunks,
+        /// [in] コピー元となる状態値プロパティ辞書。
         typename this_type::property_map const& in_properties,
+        /// [in] コピー元となる状態値ビット列チャンク辞書。
         typename this_type::chunk_map const& in_chunks)
     {
         // 状態値プロパティのポインタのコンテナを構築する。
@@ -908,16 +819,15 @@ class psyq::if_then_engine::_private::reservoir
         }
     }
 
-    /** @brief 状態値をコピーする。
-        @param[in,out] io_properties コピー先となる状態値プロパティ辞書。
-        @param[in,out] io_chunks     コピー先となる状態値ビット列チャンク辞書。
-        @param[in] in_property       コピー元となる状態値プロパティ。
-        @param[in] in_chunks         コピー元となる状態値ビット列チャンク辞書。
-     */
+    /// @brief 状態値をコピーする。
     private: static void copy_status(
+        ///[in,out] コピー先となる状態値プロパティ辞書。
         typename this_type::property_map& io_properties,
+        /// [in,out] コピー先となる状態値ビット列チャンク辞書。
         typename this_type::chunk_map& io_chunks,
+        /// [in] コピー元となる状態値プロパティ。
         typename this_type::property_map::value_type const& in_property,
+        /// [in] コピー元となる状態値ビット列チャンク辞書。
         typename this_type::chunk_map const& in_chunks)
     {
         // コピー元となる状態値ビット列チャンクを取得する。
@@ -960,27 +870,22 @@ class psyq::if_then_engine::_private::reservoir
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 状態値を登録する。
-
-        @param[in] in_chunk_key  登録する状態値を格納する状態値ビット列チャンクの識別値。
-        @param[in] in_status_key 登録する状態値の識別番号。
-        @param[in] in_bit_field  登録する状態値の初期値となるビット列。
-        @param[in] in_format     登録する状態値のビット構成。
-
-        @retval true 成功。状態値を登録した。
-        @retval false
-            失敗。状態値を登録できなかった。
-            - in_status_key に対応する状態値がすでに登録されていると失敗する。
-
-        @sa
-        - this_type::extract_status と this_type::assign_status
-          で、登録した状態値にアクセスできる。
-        - this_type::erase_chunk で、登録した状態値をチャンク毎に削除できる。
-     */
+    /// @brief 状態値を登録する。
+    /// @retval true  成功。状態値を登録した。
+    /// @retval false 失敗。状態値を登録できなかった。
+    /// - in_status_key に対応する状態値がすでに登録されていると失敗する。
+    /// @sa
+    /// - this_type::extract_status と this_type::assign_status
+    ///   で、登録した状態値にアクセスできる。
+    /// - this_type::erase_chunk で、登録した状態値をチャンク毎に削除できる。
     private: bool register_status_bit_field(
+        /// [in] 登録する状態値を格納する状態値ビット列チャンクの識別値。
         typename this_type::chunk_key const& in_chunk_key,
+        /// [in] 登録する状態値の識別番号。
         typename this_type::status_key const& in_status_key,
+        /// [in] 登録する状態値の初期値となるビット列。
         typename this_type::status_chunk::bit_block const& in_bit_field,
+        /// [in] 登録する状態値のビット構成。
         typename this_type::status_property::format const in_format)
     {
         // 状態値を登録するビット列チャンクを用意する。
@@ -1003,21 +908,19 @@ class psyq::if_then_engine::_private::reservoir
                 in_bit_field);
     }
 
-    /** @brief 状態値を登録する。
-        @param[in,out] io_properties 状態値を登録する状態値プロパティの辞書。
-        @param[in,out] io_chunk      状態値を登録する状態値ビット列チャンク。
-        @param[in] in_status_key     登録する状態値に対応する識別値。
-        @param[in] in_format         登録する状態値のビット構成。
-        @retval !=nullptr 成功。     登録した状態値のプロパティを指すポインタ。
-        @retval ==nullptr
-            失敗。状態値を登録できなかった。
-            - in_status_key に対応する状態値がすでに追加されていると失敗する。
-     */
+    /// @brief 状態値を登録する。
+    /// @return 登録した状態値のプロパティを指すポインタ。
+    /// 状態値を登録できなかった場合は、 nullptr を返す。
+    /// in_status_key に対応する状態値がすでに追加されていると失敗する。
     private: static typename this_type::property_map::value_type*
     allocate_status_bit_field(
+        /// [in,out] 状態値を登録する状態値プロパティの辞書。
         typename this_type::property_map& io_properties,
+        /// [in,out] 状態値を登録する状態値ビット列チャンク。
         typename this_type::chunk_map::value_type& io_chunk,
+        /// [in] 登録する状態値に対応する識別値。
         typename this_type::status_key const& in_status_key,
+        /// [in] 登録する状態値のビット構成。
         typename this_type::status_property::format const in_format)
     {
         if (in_format != this_type::status_value::kind_EMPTY)
@@ -1052,20 +955,18 @@ class psyq::if_then_engine::_private::reservoir
         return nullptr;
     }
 
-    /** @brief 状態値へ値を代入する。
-        @param[in,out] io_property    代入先となる状態値のプロパティ。
-        @param[in,out] io_chunks      ビット列チャンクのコンテナ。
-        @param[in] in_bit_field_width 代入する値のビット列とビット幅。
-        @retval true  成功。状態値へ値を代入した。
-        @retval false 失敗。
-            失敗。状態値は変化しない。
-            - 代入する値のビット幅が0だと失敗する。
-            - 代入する値のビット幅が状態値のビット幅を超えると失敗する。
-            - 状態値の格納先となるビット列が存在しないと失敗する。
-     */
+    /// @brief 状態値へ値を代入する。
+    /// @retval true  成功。状態値へ値を代入した。
+    /// @retval false 失敗。状態値は変化しない。
+    /// - 代入する値のビット幅が0だと失敗する。
+    /// - 代入する値のビット幅が状態値のビット幅を超えると失敗する。
+    /// - 状態値の格納先となるビット列が存在しないと失敗する。
     private: static bool assign_status_bit_field(
+        /// [in,out] 代入先となる状態値のプロパティ。
         typename this_type::status_property& io_property,
+        /// [in,out] ビット列チャンクのコンテナ。
         typename this_type::chunk_map& io_chunks,
+        /// [in] 代入する値のビット列とビット幅。
         typename this_type::bit_field_width const& in_bit_field_width)
     PSYQ_NOEXCEPT
     {
@@ -1101,17 +1002,15 @@ class psyq::if_then_engine::_private::reservoir
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 数値からビット列を構築する。
-        @param[in] in_value  ビット列の元となる数値。
-        @param[in] in_format 構築するビット列の構成。
-        @param[in] in_mask   指定のビット幅に収まるようマスクするか。
-        @return
-            値から構築したビット列とビット幅のペア。
-            構築に失敗した場合は、ビット幅が0となる。
-     */
+    /// @brief 数値からビット列を構築する。
+    /// @return 値から構築したビット列とビット幅のペア。
+    /// 構築に失敗した場合は、ビット幅が0となる。
     private: static typename this_type::bit_field_width make_bit_field_width(
+        /// [in] ビット列の元となる数値。
         typename this_type::status_value const& in_value,
+        /// [in] 構築するビット列の構成。
         typename this_type::status_property::format const in_format,
+        /// [in] 指定のビット幅に収まるようマスクするか。
         bool const in_mask)
     {
         // 入力値のビット列を取得する。
@@ -1164,18 +1063,16 @@ class psyq::if_then_engine::_private::reservoir
         }
     }
 
-    /** @brief 数値からビット列を構築する。
-        @param[in] in_value  ビット列の元となる数値。
-        @param[in] in_format 構築するビット列の構成。
-        @param[in] in_mask   指定のビット幅に収まるようマスクするか。
-        @return
-            値から構築したビット列とビット幅のペア。
-            構築に失敗した場合は、ビット幅が0となる。
-     */
+    /// @brief 数値からビット列を構築する。
+    /// @return 値から構築したビット列とビット幅のペア。
+    /// 構築に失敗した場合は、ビット幅が0となる。
     private: template<typename template_value>
     static typename this_type::bit_field_width make_bit_field_width(
+        /// [in] ビット列の元となる数値。
         template_value const& in_value,
+        /// [in] 構築するビット列の構成。
         typename this_type::status_property::format const in_format,
+        /// [in] 指定のビット幅に収まるようマスクするか。
         bool const in_mask)
     {
         typedef typename this_type::status_property::bit_width bit_width;
@@ -1218,18 +1115,16 @@ class psyq::if_then_engine::_private::reservoir
         }
     }
 
-    /** @brief 数値を整数に変換してからビット列を構築する。
-        @param[in] in_value     ビット列の元となる数値。
-        @param[in] in_bit_width 構築するビット列の幅。
-        @param[in] in_mask      指定のビット幅に収まるようマスクするか。
-        @return
-            数値から構築したビット列とビット幅のペア。
-            構築に失敗した場合は、ビット幅が0となる。
-     */
+    /// @brief 数値を整数に変換してからビット列を構築する。
+    /// @return 数値から構築したビット列とビット幅のペア。
+    /// 構築に失敗した場合は、ビット幅が0となる。
     private: template<typename template_integer, typename template_value>
     static typename this_type::bit_field_width make_bit_field_width(
+        /// [in] ビット列の元となる数値。
         template_value const& in_value,
+        /// [in] 構築するビット列の幅。
         typename this_type::status_property::bit_width in_bit_width,
+        /// [in] 指定のビット幅に収まるようマスクするか。
         bool const in_mask)
     {
         auto local_integer(static_cast<template_integer>(in_value));
@@ -1249,8 +1144,7 @@ class psyq::if_then_engine::_private::reservoir
         return typename this_type::bit_field_width(local_integer, in_bit_width);
     }
 
-    /** @brief 論理値を整数に変換してビット列を構築させないためのダミー関数。
-     */
+    /// @brief 論理値を整数に変換してビット列を構築させないためのダミー関数。
     private: template<typename template_integer>
     static typename this_type::bit_field_width make_bit_field_width(
         bool, typename this_type::status_property::bit_width, bool)
@@ -1260,24 +1154,22 @@ class psyq::if_then_engine::_private::reservoir
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 符号なし整数がビット幅からあふれているか判定する。
-        @param[in] in_integer   判定する整数。
-        @param[in] in_bit_width ビット幅。
-     */
+    /// @brief 符号なし整数がビット幅からあふれているか判定する。
     private: static bool is_overflow(
+        /// [in] 判定する整数。
         typename this_type::status_chunk::bit_block const& in_integer,
+        /// [in] 許容するビット幅。
         std::size_t const in_bit_width)
     PSYQ_NOEXCEPT
     {
         return psyq::shift_right_bitwise(in_integer, in_bit_width) != 0;
     }
 
-    /** @brief 符号あり整数がビット幅からあふれているか判定する。
-        @param[in] in_integer   判定する整数。
-        @param[in] in_bit_width ビット幅。
-     */
+    /// @brief 符号あり整数がビット幅からあふれているか判定する。
     private: static bool is_overflow(
+        /// [in] 判定する整数。
         typename this_type::status_value::signed_type const& in_integer,
+        /// [in] 許容するビット幅。
         std::size_t const in_bit_width)
     PSYQ_NOEXCEPT
     {
@@ -1298,7 +1190,6 @@ class psyq::if_then_engine::_private::reservoir
     //-------------------------------------------------------------------------
     /// @brief 状態値ビット列チャンクの辞書。
     private: typename this_type::chunk_map chunks_;
-
     /// @brief 状態値プロパティの辞書。
     private: typename this_type::property_map properties_;
 

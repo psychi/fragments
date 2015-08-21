@@ -77,7 +77,7 @@ template<
 class psyq::string::table
 {
     /// @brief thisが指す値の型。
-    protected: typedef table this_type;
+    private: typedef table this_type;
 
     //-------------------------------------------------------------------------
     /// @brief 文字列表で使うメモリ割当子を表す型。

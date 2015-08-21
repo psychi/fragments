@@ -70,6 +70,8 @@ namespace psyq
 template<typename template_string_type>
 class psyq::string::_private::interface_immutable: public template_string_type
 {
+    /// @brief this が指す値の型。
+    private: typedef interface_immutable this_type;
     /// @brief interface_immutable の基底型。
     /// @details
     /// - 文字列の先頭から末尾までのメモリ連続性が保証されてること。
@@ -96,8 +98,6 @@ class psyq::string::_private::interface_immutable: public template_string_type
     ///   std::size_t template_string_type::clear() noexcept
     ///   @endcode
     public: typedef template_string_type base_type;
-    /// @brief this が指す値の型。
-    protected: typedef interface_immutable this_type;
 
     //-------------------------------------------------------------------------
     /// @name 文字列の型特性

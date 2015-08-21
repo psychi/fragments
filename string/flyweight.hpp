@@ -86,10 +86,18 @@ public psyq::string::_private::interface_immutable<
         template_allocator>
     ::_string_holder>
 {
-    /// @brief flyweight の基底型。
-    public: typedef this_type base_type;
     /// @brief this が指す値の型。
-    protected: typedef flyweight this_type;
+    private: typedef flyweight this_type;
+    /// @brief this_type の基底型。
+    public: typedef
+        psyq::string::_private::interface_immutable<
+            typename psyq::string::_private::flyweight_factory<
+                typename psyq::string::view<
+                    template_char_type, template_char_traits>
+                ::fnv1_hash32,
+                template_allocator>
+            ::_string_holder>
+        base_type;
 
     //-------------------------------------------------------------------------
     /// @brief 空の文字列を構築する。動的メモリ割当は行わない。

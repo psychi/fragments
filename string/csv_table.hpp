@@ -119,10 +119,16 @@ class psyq::string::csv_table:
 public psyq::string::table<
     template_number, template_char_type, template_char_traits, template_allocator>
 {
-    /// @brief csv_table の基底型。
-    public: typedef this_type base_type;
     /// @brief this が指す値の型。
-    protected: typedef csv_table this_type;
+    private: typedef csv_table this_type;
+    /// @brief this_type の基底型。
+    public: typedef
+        psyq::string::table<
+            template_number,
+            template_char_type,
+            template_char_traits,
+            template_allocator>
+        base_type;
 
     //-------------------------------------------------------------------------
     /// @brief CSV文字列の区切り文字。

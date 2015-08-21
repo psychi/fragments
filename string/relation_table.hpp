@@ -72,10 +72,16 @@ class psyq::string::relation_table:
 public psyq::string::table<
     template_number, template_char_type, template_char_traits, template_allocator>
 {
-    /// @brief relation_table の基底型。
-    public: typedef this_type base_type;
     /// @brief this が指す値の型。
-    protected: typedef relation_table this_type;
+    private: typedef relation_table this_type;
+    /// @brief this_type の基底型。
+    public: typedef
+        psyq::string::table<
+            template_number,
+            template_char_type,
+            template_char_traits,
+            template_allocator>
+        base_type;
 
     //-------------------------------------------------------------------------
     /// @brief 関係文字列表の属性。

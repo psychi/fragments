@@ -604,26 +604,32 @@ namespace psyq_test
                 local_chunk_key,
                 local_driver.hash_function_("10"),
                 32.5f));
+        local_driver.evaluator_.register_expression(
+            local_driver.get_reservoir(),
+            local_driver.hash_function_("status_bool"),
+            local_driver.hash_function_("status_bool"),
+            true);
         //PSYQ_ASSERT(!local_driver.extend_chunk(0, 0, nullptr));
         local_driver.rebuild(1024, 1024, 1024);
 
+
         PSYQ_ASSERT(
-            0 < local_driver.get_reservoir().extract_status(
+            0 < local_driver.get_reservoir().find_status(
                 local_driver.hash_function_("status_bool")).compare(
                     driver::reservoir::status_value::comparison_EQUAL,
                     true));
         PSYQ_ASSERT(
-            0 < local_driver.get_reservoir().extract_status(
+            0 < local_driver.get_reservoir().find_status(
                 local_driver.hash_function_("status_unsigned")).compare(
                     driver::reservoir::status_value::comparison_EQUAL,
                     10u));
         PSYQ_ASSERT(
-            0 < local_driver.get_reservoir().extract_status(
+            0 < local_driver.get_reservoir().find_status(
                 local_driver.hash_function_("status_signed")).compare(
                     driver::reservoir::status_value::comparison_EQUAL,
                     -20));
         PSYQ_ASSERT(
-            0 < local_driver.get_reservoir().extract_status(
+            0 < local_driver.get_reservoir().find_status(
                 local_driver.hash_function_("status_float")).compare(
                     driver::reservoir::status_value::comparison_GREATER_EQUAL,
                     1.25));
@@ -654,7 +660,7 @@ namespace psyq_test
          */
         local_driver.progress();
         auto const local_float_status(
-            local_driver.get_reservoir().extract_status(
+            local_driver.get_reservoir().find_status(
                 local_driver.hash_function_("status_float")));
 
         local_driver.erase_chunk(local_chunk_key);

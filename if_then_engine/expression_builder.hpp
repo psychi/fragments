@@ -493,7 +493,7 @@ class psyq::if_then_engine::expression_builder
         typename this_type::relation_table::number const in_column_number)
     {
         auto const local_comparison(
-            template_evaluator::status_comparison::_build(
+            template_evaluator::status_comparison_container::value_type::_build(
                 io_hasher, in_table, in_row_number, in_column_number));
         if (!local_comparison.get_value().is_empty())
         {

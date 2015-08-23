@@ -100,6 +100,31 @@ class psyq::if_then_engine::_private::handler
         last_evaluation_(in_last_evaluation)
         {}
 
+#ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
+        /// @brief ムーブ構築子。
+        public: cache(
+            /// [in,out] ムーブ元となるインスタンス。
+            this_type&& io_source):
+        base_type(std::move(io_source)),
+        expression_key_(std::move(io_source.expression_key_)),
+        evaluation_(std::move(io_source.evaluation_)),
+        last_evaluation_(std::move(io_source.last_evaluation_))
+        {}
+
+        /// @brief ムーブ代入演算子。
+        /// @return *this
+        public: this_type& operator=(
+            /// [in,out] ムーブ元となるインスタンス。
+            this_type&& io_source)
+        {
+            this->base_type::operator=(std::move(io_source));
+            this->expression_key_ = std::move(io_source.expression_key_);
+            this->evaluation_ = std::move(io_source.evaluation_);
+            this->last_evaluation_ = std::move(io_source.last_evaluation_);
+            return *this;
+        }
+#endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
+
         /// @brief handler::function を呼び出す。
         public: void call_function() const
         {

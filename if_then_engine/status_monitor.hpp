@@ -14,7 +14,7 @@ namespace psyq
     {
         namespace _private
         {
-            template<typename, typename> class status_monitor;
+            template<typename> class status_monitor;
         } // namespace _private
     } // namespace if_then_engine
 } // namespace psyq
@@ -23,7 +23,7 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 状態監視器。条件式の要素条件が参照する状態値を監視する。
 /// @details 状態値が変化した際に、条件式の評価を更新するために使う。
-template<typename template_expression_key, typename template_allocator>
+template<typename template_expression_key_container>
 class psyq::if_then_engine::_private::status_monitor
 {
     /// @brief thisが指す値の型。
@@ -31,15 +31,14 @@ class psyq::if_then_engine::_private::status_monitor
 
     //-------------------------------------------------------------------------
     /// @brief 条件式の識別値のコンテナの型。
-    public: typedef
-        std::vector<template_expression_key, template_allocator>
-        expression_key_container;
+    public: typedef template_expression_key_container expression_key_container;
 
     //-------------------------------------------------------------------------
     /// @brief 状態監視器を構築する。
     public: explicit status_monitor(
         /// [in] メモリ割当子の初期値。
-        template_allocator const& in_allocator):
+        typename this_type::expression_key_container::allocator_type const&
+            in_allocator):
     expression_keys_(in_allocator),
     last_existence_(false)
     {}
@@ -65,13 +64,12 @@ class psyq::if_then_engine::_private::status_monitor
     }
 #endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
-    /** @brief 条件式識別値コンテナを整理する。
-        @param[in] in_expression_monitors 参照する条件式監視器のコンテナ。
-        @retval true  条件式識別値コンテナが空になった。
-        @retval false 条件式識別値コンテナは空になってない。
-     */
+    /// @brief 条件式識別値コンテナを整理する。
+    /// @retval true  条件式識別値コンテナが空になった。
+    /// @retval false 条件式識別値コンテナは空になってない。
     public: template<typename template_container>
     bool shrink_expression_keys(
+        /// [in] 参照する条件式監視器のコンテナ。
         template_container const& in_expression_monitors)
     {
         return this_type::shrink_expression_keys(
@@ -86,14 +84,14 @@ class psyq::if_then_engine::_private::status_monitor
     /// @warning psyq::if_then_engine 管理者以外は、この関数は使用禁止。
     public: template<
         typename template_status_monitor_map,
-        typename template_expression_key,
         typename template_expression,
         typename template_expression_element_container>
     static void register_expression(
         /// [in,out] 状態変化を条件式監視器に知らせる、状態監視器の辞書。
         template_status_monitor_map& io_status_monitors,
         /// [in] 登録する条件式の識別値。
-        template_expression_key const& in_expression_key,
+        typename this_type::expression_key_container::value_type const&
+            in_expression_key,
         /// [in] 要素条件を走査する条件式。
         template_expression const& in_expression,
         /// [in] 条件式が参照する要素条件のコンテナ。
@@ -153,7 +151,8 @@ class psyq::if_then_engine::_private::status_monitor
         /// [in,out] 状態変化を通知する条件式の識別値を挿入するコンテナ。
         typename this_type::expression_key_container& io_expression_keys,
         /// [in] 状態変化を通知する条件式の識別値。
-        template_expression_key const& in_expression_key)
+        typename this_type::expression_key_container::value_type const&
+            in_expression_key)
     {
         auto const local_lower_bound(
             std::lower_bound(

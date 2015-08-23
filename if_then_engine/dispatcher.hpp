@@ -60,30 +60,38 @@ class psyq::if_then_engine::_private::dispatcher
          handler;
 
     //-------------------------------------------------------------------------
-    /// @brief 状態値監視器の辞書。
+    /// @copydoc this_type::status_monitors_
     private: typedef
          std::unordered_map<
              typename this_type::evaluator::reservoir::status_key,
              psyq::if_then_engine::_private::status_monitor<
-                 typename this_type::evaluator::expression_key,
-                 typename this_type::allocator_type>,
+                 std::vector<
+                     typename this_type::evaluator::expression_key,
+                     typename this_type::allocator_type> >,
              psyq::integer_hash<
                  typename this_type::evaluator::reservoir::status_key>,
              std::equal_to<
                  typename this_type::evaluator::reservoir::status_key>,
              typename this_type::allocator_type>
          status_monitor_map;
-    /// @brief 条件式監視器の辞書。
+    /// @copydoc this_type::expression_monitors_
     private: typedef
          std::unordered_map<
              typename this_type::evaluator::expression_key,
              psyq::if_then_engine::_private::expression_monitor<
-                 typename this_type::handler,
-                 typename this_type::allocator_type>,
+                std::vector<
+                    typename this_type::handler,
+                    typename this_type::allocator_type> >,
              psyq::integer_hash<typename this_type::evaluator::expression_key>,
              std::equal_to<typename this_type::evaluator::expression_key>,
              typename this_type::allocator_type>
          expression_monitor_map;
+    /// @copydoc this_type::cached_handlers_
+    private: typedef
+        std::vector<
+            typename this_type::handler::cache,
+            typename this_type::allocator_type>
+        handler_cache_container;
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
@@ -352,9 +360,11 @@ class psyq::if_then_engine::_private::dispatcher
             this->status_monitors_, this->expression_monitors_, io_reservoir);
 
         // 変化した状態値を参照する条件式を評価し、条件挙動をキャッシュに貯める。
+        auto local_cached_handlers(std::move(this->cached_handlers_));
         this->cached_handlers_.clear();
+        local_cached_handlers.clear();
         this_type::expression_monitor_map::mapped_type::cache_handlers(
-            this->cached_handlers_,
+            local_cached_handlers,
             this->expression_monitors_,
             io_reservoir,
             in_evaluator);
@@ -363,13 +373,18 @@ class psyq::if_then_engine::_private::dispatcher
         io_reservoir._reset_transitions();
 
         // キャッシュに貯まった関数を呼び出す。
-        for (auto const& local_cached_handler: this->cached_handlers_)
+        for (auto const& local_cached_handler: local_cached_handlers)
         {
             local_cached_handler.call_function();
         }
 
         // 挙動挙動キャッシュを片づける。
-        this->cached_handlers_.clear();
+        PSYQ_ASSERT(this->cached_handlers_.empty());
+        if (this->cached_handlers_.capacity() <= 0)
+        {
+            local_cached_handlers.clear();
+            this->cached_handlers_ = std::move(local_cached_handlers);
+        }
         PSYQ_ASSERT(this->dispatch_lock_);
         this->dispatch_lock_ = false;
     }
@@ -402,14 +417,13 @@ class psyq::if_then_engine::_private::dispatcher
     }
 
     //-------------------------------------------------------------------------
-    /// @brief 状態監視器の辞書。
+    /// @brief status_monitor の辞書。
     private: typename this_type::status_monitor_map status_monitors_;
-    /// @brief 条件式監視器の辞書。
+    /// @brief expression_monitor の辞書。
     private: typename this_type::expression_monitor_map expression_monitors_;
-    /// @brief 条件挙動キャッシュのコンテナ。
-    private: typename this_type::expression_monitor_map::mapped_type::handler_cache_container
-         cached_handlers_;
-    /// @brief 多重に _dispatch しないためのロック。
+    /// @brief this_type::handler::cache のコンテナ。
+    private: typename this_type::handler_cache_container cached_handlers_;
+    /// @brief 多重に this_type::_dispatch しないためのロック。
     private: bool dispatch_lock_;
 
 }; // class psyq::if_then_engine::_private::dispatcher

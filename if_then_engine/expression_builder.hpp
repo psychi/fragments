@@ -248,7 +248,7 @@ class psyq::if_then_engine::expression_builder
         auto const local_key(
             io_hasher(in_table.find_cell(in_row_number, in_attribute.key_.first)));
         if (local_key == io_hasher(typename template_hasher::argument_type())
-            || io_evaluator._find_expression(local_key) != nullptr)
+            || io_evaluator.find_expression(local_key) != nullptr)
         {
             // 条件式の識別値が空だったか、重複していた。
             PSYQ_ASSERT(false);
@@ -387,7 +387,7 @@ class psyq::if_then_engine::expression_builder
                 in_table,
                 in_row_number,
                 i));
-        return io_evaluator.register_expression(
+        return nullptr != io_evaluator.register_expression(
             in_chunk_key, in_expression_key, in_logic, io_elements);
     }
 
@@ -416,7 +416,7 @@ class psyq::if_then_engine::expression_builder
         {
             /// @note 無限ループを防ぐため、複合条件式で使う下位条件式は、
             /// 条件評価器で定義済みのものしか使わないようにする。
-            PSYQ_ASSERT(in_evaluator._find_expression(local_sub_key) != nullptr);
+            PSYQ_ASSERT(in_evaluator.find_expression(local_sub_key) != nullptr);
 
             // 複合条件式の条件を取得する。
             auto const& local_condition_cell(

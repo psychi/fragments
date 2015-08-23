@@ -1,9 +1,8 @@
-﻿/** @file
-    @brief @copybrief psyq::if_then_engine::_private::behavior_chunk
-    @author Hillco Psychi (https://twitter.com/psychi)
- */
-#ifndef PSYQ_IF_THEN_ENGINE_BEHAVIOR_CHUNK_HPP_
-#define PSYQ_IF_THEN_ENGINE_BEHAVIOR_CHUNK_HPP_
+﻿/// @file
+/// @brief @copybrief psyq::if_then_engine::_private::handler_chunk
+/// @author Hillco Psychi (https://twitter.com/psychi)
+#ifndef PSYQ_IF_THEN_ENGINE_HANDLER_CHUNK_HPP_
+#define PSYQ_IF_THEN_ENGINE_HANDLER_CHUNK_HPP_
 
 #include "../member_comparison.hpp"
 
@@ -14,23 +13,22 @@ namespace psyq
     {
         namespace _private
         {
-            template<typename> class behavior_chunk;
+            template<typename> class handler_chunk;
         } // namespace _private
     } // namespace if_then_engine
 } // namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 条件挙動チャンク。
-           条件式の評価が変化した際に呼び出す条件挙動関数を所有する。
- */
+/// @brief 条件挙動チャンク。条件式の評価が変化した際に呼び出す関数を保持する。
 template<typename template_dispatcher>
-class psyq::if_then_engine::_private::behavior_chunk
+class psyq::if_then_engine::_private::handler_chunk
 {
-    /// @brief thisが指す値の型。
-    private: typedef behavior_chunk this_type;
+    /// @brief this が指す値の型。
+    private: typedef handler_chunk this_type;
 
-    /// @brief 条件挙動関数を登録する条件挙動器を表す型。
+    //-------------------------------------------------------------------------
+    /// @brief 条件挙動ハンドラを登録する条件挙動器を表す型。
     public: typedef template_dispatcher dispatcher;
 
     /// @brief 条件挙動チャンクのコンテナを表す型。
@@ -39,15 +37,15 @@ class psyq::if_then_engine::_private::behavior_chunk
         container;
 
     /// @brief 条件挙動チャンクの識別値を表す型。
-    /// @note ここは条件式キーでなくて、チャンクキーにしないと。
     public: typedef
         typename this_type::dispatcher::evaluator::reservoir::chunk_key
         key;
 
-    /// @brief 条件挙動関数オブジェクトの所有権ありスマートポインタのコンテナを表す型。
+    //-------------------------------------------------------------------------
+    /// @brief 条件挙動関数オブジェクトのスマートポインタのコンテナを表す型。
     private: typedef
         std::vector<
-            typename template_dispatcher::function_shared_ptr,
+            typename template_dispatcher::handler::function_shared_ptr,
             typename template_dispatcher::allocator_type>
         function_shared_ptr_container;
 
@@ -70,45 +68,43 @@ class psyq::if_then_engine::_private::behavior_chunk
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
-    //@{
+    /// @{
 #ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
-    /** @brief ムーブ構築子。
-        @param[in,out] io_source ムーブ元となるインスタンス。
-     */
-    public: behavior_chunk(this_type&& io_source):
+    /// @brief ムーブ構築子。
+    public: handler_chunk(
+        /// [in,out] ムーブ元となるインスタンス。
+        this_type&& io_source):
     functions_(std::move(io_source.functions_)),
     key_(std::move(io_source.key_))
     {}
 
     /** @brief ムーブ代入演算子。
-        @param[in,out] io_source ムーブ元となるインスタンス。
         @return *this
      */
-    public: this_type& operator=(this_type&& io_source)
+    public: this_type& operator=(
+        /// [in,out] ムーブ元となるインスタンス。
+        this_type&& io_source)
     {
         this->functions_ = std::move(io_source.functions_);
         this->key_ = std::move(io_source.key_);
         return *this;
     }
 #endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
     /// @name 条件挙動関数
-    //@{
-    /** @brief 条件挙動チャンクに条件挙動関数を追加する。
-        @param[in,out] io_chunks
-            条件挙動関数を追加する条件挙動チャンクのコンテナ。
-        @param[in] in_key
-            条件挙動関数を追加する条件挙動チャンクの識別値。
-        @param[in] in_function
-            条件挙動チャンクに追加する条件挙動関数を指すスマートポインタ。
-        @retval true  成功。条件挙動関数を追加した。
-        @retval false 失敗。条件挙動関数を追加しなかった。
-     */
+    /// @{
+
+    /// @brief 条件挙動チャンクに条件挙動関数を追加する。
+    /// @retval true  成功。条件挙動関数を追加した。
+    /// @retval false 失敗。条件挙動関数を追加しなかった。
     public: static bool extend(
+        /// [in,out] 条件挙動関数を追加する条件挙動チャンクのコンテナ。
         typename this_type::container& io_chunks,
+        /// [in] 条件挙動関数を追加する条件挙動チャンクの識別値。
         typename this_type::key const& in_key,
-        typename this_type::dispatcher::function_shared_ptr in_function)
+        /// [in] 条件挙動チャンクに追加する条件挙動関数を指すスマートポインタ。
+        typename this_type::dispatcher::handler::function_shared_ptr in_function)
     {
         if (in_function.get() == nullptr)
         {
@@ -121,20 +117,15 @@ class psyq::if_then_engine::_private::behavior_chunk
         return true;
     }
 
-    /** @brief 条件挙動チャンクに条件挙動関数を追加する。
-        @param[in,out] io_chunks
-            条件挙動関数を追加する条件挙動チャンクのコンテナ。
-        @param[in] in_key
-            条件挙動関数を追加する条件挙動チャンクの識別値。
-        @param[in] in_functions
-            条件挙動チャンクに追加する条件挙動関数の、
-            スマートポインタのコンテナ。
-        @return 追加した条件挙動関数の数。
-     */
+    /// @brief 条件挙動チャンクに条件挙動関数を追加する。
+    /// @return 追加した条件挙動関数の数。
     public: template<typename template_function_container>
     static std::size_t extend(
+        /// [in,out] 条件挙動関数を追加する条件挙動チャンクのコンテナ。
         typename this_type::container& io_chunks,
+        /// [in] 条件挙動関数を追加する条件挙動チャンクの識別値。
         typename this_type::key const& in_key,
+        /// [in] 条件挙動チャンクに追加する条件挙動関数の、スマートポインタのコンテナ。
         template_function_container in_functions)
     {
         // 条件挙動関数を条件挙動チャンクに追加する。
@@ -154,14 +145,13 @@ class psyq::if_then_engine::_private::behavior_chunk
         return local_count;
     }
 
-    /** @brief コンテナから条件挙動チャンクを削除する。
-        @param[in,out] io_chunks 条件挙動チャンクを削除するコンテナ。
-        @param[in] in_key        削除する条件挙動チャンクの識別値。
-        @retval true  in_key に対応する条件挙動チャンクを削除した。
-        @retval false in_key に対応する条件挙動チャンクがコンテナになかった。
-     */
+    /// @brief コンテナから条件挙動チャンクを削除する。
+    /// @retval true  in_key に対応する条件挙動チャンクを削除した。
+    /// @retval false in_key に対応する条件挙動チャンクがコンテナになかった。
     public: static bool erase(
+        /// [in,out] 条件挙動チャンクを削除するコンテナ。
         typename this_type::container& io_chunks,
+        /// [in] 削除する条件挙動チャンクの識別値。
         typename this_type::key const& in_key)
     {
         auto const local_iterator(
@@ -193,16 +183,14 @@ class psyq::if_then_engine::_private::behavior_chunk
             *io_chunks.insert(
                 local_iterator, this_type(in_key, io_chunks.get_allocator()));
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /** @brief 空の条件挙動チャンクを構築する。
-        @param[in] in_key       条件挙動チャンクの識別値。
-        @param[in] in_allocator メモリ割当子の初期値。
-     */
-    private: behavior_chunk(
+    /// @brief 空の条件挙動チャンクを構築する。
+    private: handler_chunk(
+        /// [in] 条件挙動チャンクの識別値。
         typename this_type::key in_key,
-        typename this_type::dispatcher::allocator_type const& in_allocator)
-    :
+        /// [in] メモリ割当子の初期値。
+        typename this_type::dispatcher::allocator_type const& in_allocator):
     functions_(in_allocator),
     key_(std::move(in_key))
     {}
@@ -222,7 +210,7 @@ class psyq::if_then_engine::_private::behavior_chunk
     /// @brief 条件挙動チャンクの識別値。
     public: typename this_type::key key_;
 
-}; // class psyq::if_then_engine::behavior_chunk
+}; // class psyq::if_then_engine::handler_chunk
 
-#endif // !defined(PSYQ_IF_THEN_ENGINE_BEHAVIOR_CHUNK_HPP_)
+#endif // !defined(PSYQ_IF_THEN_ENGINE_HANDLER_CHUNK_HPP_)
 // vim: set expandtab:

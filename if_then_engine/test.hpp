@@ -600,7 +600,7 @@ namespace psyq_test
             local_csv_behavior,
             0);
         PSYQ_ASSERT(
-            local_driver.register_status(
+            nullptr != local_driver.register_status(
                 local_chunk_key,
                 local_driver.hash_function_("10"),
                 32.5f));
@@ -610,30 +610,29 @@ namespace psyq_test
             local_driver.hash_function_("status_bool"),
             true);
         //PSYQ_ASSERT(!local_driver.extend_chunk(0, 0, nullptr));
-        local_driver.rebuild(1024, 1024, 1024);
-
 
         PSYQ_ASSERT(
-            0 < local_driver.get_reservoir().find_status(
+            0 < local_driver.get_reservoir().extract_status(
                 local_driver.hash_function_("status_bool")).compare(
                     driver::reservoir::status_value::comparison_EQUAL,
                     true));
         PSYQ_ASSERT(
-            0 < local_driver.get_reservoir().find_status(
+            0 < local_driver.get_reservoir().extract_status(
                 local_driver.hash_function_("status_unsigned")).compare(
                     driver::reservoir::status_value::comparison_EQUAL,
                     10u));
         PSYQ_ASSERT(
-            0 < local_driver.get_reservoir().find_status(
+            0 < local_driver.get_reservoir().extract_status(
                 local_driver.hash_function_("status_signed")).compare(
                     driver::reservoir::status_value::comparison_EQUAL,
                     -20));
         PSYQ_ASSERT(
-            0 < local_driver.get_reservoir().find_status(
+            0 < local_driver.get_reservoir().extract_status(
                 local_driver.hash_function_("status_float")).compare(
                     driver::reservoir::status_value::comparison_GREATER_EQUAL,
                     1.25));
         local_driver.progress();
+        local_driver.rebuild(1024, 1024, 1024);
 
         local_driver.accumulator_.accumulate(
             local_driver.hash_function_("status_bool"), false);
@@ -660,7 +659,7 @@ namespace psyq_test
          */
         local_driver.progress();
         auto const local_float_status(
-            local_driver.get_reservoir().find_status(
+            local_driver.get_reservoir().extract_status(
                 local_driver.hash_function_("status_float")));
 
         local_driver.erase_chunk(local_chunk_key);

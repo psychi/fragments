@@ -23,8 +23,7 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 条件評価器。条件式を保持し、評価する。
-/// @details
-/// ### 使い方の概略
+/// @par 使い方の概略
 /// - evaluator::register_expression で、条件式を登録する。
 /// - evaluator::evaluate_expression で、条件式を評価する。
 /// @tparam template_reservoir      @copydoc evaluator::reservoir
@@ -52,6 +51,8 @@ class psyq::if_then_engine::_private::evaluator
         psyq::if_then_engine::_private::expression<
             typename template_reservoir::chunk_key, std::uint32_t>
         expression;
+    /// @copydoc psyq::if_then_engine::evaluation
+    public: typedef psyq::if_then_engine::evaluation evaluation;
 
     //-------------------------------------------------------------------------
     /// @brief 複合条件式の要素条件のコンテナ。
@@ -81,6 +82,8 @@ class psyq::if_then_engine::_private::evaluator
             typename this_type::status_transition_container,
             typename this_type::status_comparison_container>
         chunk;
+    /// @brief 要素条件チャンクの識別値。
+    public: typedef typename this_type::reservoir::chunk_key chunk_key;
 
     //-------------------------------------------------------------------------
     /// @brief 条件式の辞書を表す型。
@@ -95,10 +98,10 @@ class psyq::if_then_engine::_private::evaluator
     /// @brief 要素条件チャンクの辞書。
     private: typedef
         std::unordered_map<
-            typename this_type::reservoir::chunk_key,
+            typename this_type::chunk_key,
             typename this_type::chunk,
-            psyq::integer_hash<typename this_type::reservoir::chunk_key>,
-            std::equal_to<typename this_type::reservoir::chunk_key>,
+            psyq::integer_hash<typename this_type::chunk_key>,
+            std::equal_to<typename this_type::chunk_key>,
             typename this_type::allocator_type>
         chunk_map;
 
@@ -109,19 +112,19 @@ class psyq::if_then_engine::_private::evaluator
     /// @brief 空の条件評価器を構築する。
     public: evaluator(
         /// [in] チャンク辞書のバケット数。
-        std::size_t const in_chunk_buckets,
+        std::size_t const in_chunk_count,
         ///[in] 条件式辞書のバケット数。
-        std::size_t const in_expression_buckets,
+        std::size_t const in_expression_count,
         /// [in] メモリ割当子の初期値。
         typename this_type::allocator_type const& in_allocator =
             typename this_type::allocator_type()):
     chunks_(
-        in_chunk_buckets,
+        in_chunk_count,
         typename this_type::chunk_map::hasher(),
         typename this_type::chunk_map::key_equal(),
         in_allocator),
     expressions_(
-        in_expression_buckets,
+        in_expression_count,
         typename this_type::expression_map::hasher(),
         typename this_type::expression_map::key_equal(),
         in_allocator)
@@ -159,12 +162,12 @@ class psyq::if_then_engine::_private::evaluator
     /// @brief 条件評価器を再構築する。
     public: void rebuild(
         /// [in] チャンク辞書のバケット数。
-        std::size_t const in_chunk_bucket_count,
+        std::size_t const in_chunk_count,
         /// [in] 条件式辞書のバケット数。
-        std::size_t const in_expression_bucket_count)
+        std::size_t const in_expression_count)
     {
-        this->expressions_.rehash(in_expression_bucket_count);
-        this->chunks_.rehash(in_chunk_bucket_count);
+        this->expressions_.rehash(in_expression_count);
+        this->chunks_.rehash(in_chunk_count);
         for (auto& local_chunk: this->chunks_)
         {
             local_chunk.second.sub_expressions_.shrink_to_fit();
@@ -178,15 +181,17 @@ class psyq::if_then_engine::_private::evaluator
     /// @{
 
     /// @brief 条件式を登録する。
-    /// @details
+    /// @par
     /// - this_type::evaluate_expression で、登録した条件式を評価できる。
     /// - this_type::erase_chunk で、登録した条件式をチャンク単位で削除できる。
-    /// @retval true  成功。条件式を登録した。
-    /// @retval false 失敗。条件式は登録されなかった。
+    /// @return
+    /// 登録した条件式を指すポインタ。登録に失敗した場合は nullptr を返す。
+    /// - in_expression_key に対応する条件式が既にあると失敗する。
+    /// - in_elements が空だと失敗する。
     public: template<typename template_element_container>
-    bool register_expression(
+    typename this_type::expression const* register_expression(
         /// [in] 登録する条件式が所属する要素条件チャンクの識別値。
-        typename this_type::reservoir::chunk_key const& in_chunk_key,
+        typename this_type::chunk_key const& in_chunk_key,
         /// [in] 登録する条件式の識別値。
         typename this_type::expression_key const& in_expression_key,
         /// [in] 登録する条件式の論理演算子。
@@ -200,15 +205,20 @@ class psyq::if_then_engine::_private::evaluator
             this_type::is_valid_elements(
                 local_elements_begin, local_elements_end, this->expressions_));
         if (local_elements_begin == local_elements_end
-            || this->_find_expression(in_expression_key) != nullptr)
+            || this->find_expression(in_expression_key) != nullptr)
         {
-            return false;
+            return nullptr;
         }
 
         // 要素条件の種類を決定し、要素条件を追加する。
-        auto& local_chunk(this_type::equip_chunk(this->chunks_, in_chunk_key));
+        auto const local_emplace_chunk(
+            this->chunks_.emplace(
+                in_chunk_key,
+                typename this_type::chunk_map::mapped_type(
+                    this->chunks_.get_allocator())));
         auto const local_element_kind(
-            this_type::make_element_kind(local_chunk, *local_elements_begin));
+            this_type::make_element_kind(
+                local_emplace_chunk.first->second, *local_elements_begin));
         auto& local_elements(*local_element_kind.second);
         auto const local_begin_index(
             static_cast<typename this_type::expression::element_index>(
@@ -231,14 +241,21 @@ class psyq::if_then_engine::_private::evaluator
                     local_element_kind.first,
                     local_begin_index,
                     local_end_index)));
-        PSYQ_ASSERT(local_emplace.second);
-        return local_emplace.second;
+        if (local_emplace.second)
+        {
+            return &local_emplace.first->second;
+        }
+        PSYQ_ASSERT(false);
+        return nullptr;
     }
 
     /// @brief 状態値を比較する条件式を登録する。
-    /// @retval true  成功。条件式を登録した。
-    /// @retval false 失敗。条件式は登録されなかった。
-    public: bool register_expression(
+    /// @return
+    /// 登録した条件式を指すポインタ。登録に失敗した場合は nullptr を返す。
+    /// - in_expression_key に対応する条件式が既にあると失敗する。
+    /// - in_comparison.get_key() に対応する状態値が
+    ///   in_reservoir にないと失敗する。
+    public: typename this_type::expression const* register_expression(
         /// [in] 条件式が参照する状態貯蔵器。
         typename this_type::reservoir const& in_reservoir,
         /// [in] 登録する条件式の識別値。
@@ -247,10 +264,10 @@ class psyq::if_then_engine::_private::evaluator
         typename this_type::reservoir::status_comparison const& in_comparison)
     {
         auto const local_status_property(
-            in_reservoir.find_property(in_comparison.get_key()));
+            in_reservoir.find_status(in_comparison.get_key()));
         if (local_status_property == nullptr)
         {
-            return false;
+            return nullptr;
         }
         typename this_type::reservoir::status_comparison const
             local_comparisons[1] = {in_comparison};
@@ -262,9 +279,11 @@ class psyq::if_then_engine::_private::evaluator
     }
 
     /// @brief 論理型の状態値を比較する条件式を登録する。
-    /// @retval true  成功。条件式を登録した。
-    /// @retval false 失敗。条件式は登録されなかった。
-    public: bool register_expression(
+    /// @return
+    /// 登録した条件式を指すポインタ。登録に失敗した場合は nullptr を返す。
+    /// - in_expression_key に対応する条件式が既にあると失敗する。
+    /// - in_status_key に対応する状態値が論理型以外だと失敗する。
+    public: typename this_type::expression const* register_expression(
         /// [in] 条件式が参照する状態貯蔵器。
         typename this_type::reservoir const& in_reservoir,
         /// [in] 登録する条件式の識別値。
@@ -274,18 +293,34 @@ class psyq::if_then_engine::_private::evaluator
         /// [in] 条件となる論理値。
         bool const in_condition)
     {
-        return
-            in_reservoir.find_kind(in_status_key) ==
-                this_type::reservoir::status_value::kind_BOOL
-            && this->register_expression(
-                in_reservoir,
-                in_expression_key,
-                typename this_type::reservoir::status_comparison(
-                    in_status_key,
-                    in_condition?
-                        this_type::reservoir::status_value::comparison_NOT_EQUAL:
-                        this_type::reservoir::status_value::comparison_EQUAL,
-                    typename this_type::reservoir::status_value(false)));
+        if (in_reservoir.find_kind(in_status_key) !=
+                this_type::reservoir::status_value::kind_BOOL)
+        {
+            return nullptr;
+        }
+        return this->register_expression(
+            in_reservoir,
+            in_expression_key,
+            typename this_type::reservoir::status_comparison(
+                in_status_key,
+                in_condition?
+                    this_type::reservoir::status_value::comparison_NOT_EQUAL:
+                    this_type::reservoir::status_value::comparison_EQUAL,
+                typename this_type::reservoir::status_value(false)));
+    }
+
+    /// @brief 条件式を取得する。
+    /// @return
+    /// in_expression_key に対応する条件式を指すポインタ。
+    /// 該当する条件式がない場合は nullptr を返す。
+    public: typename this_type::expression const* find_expression(
+        /// [in] 取得する条件式に対応する識別値。
+        typename this_type::expression_key const& in_expression_key)
+    const
+    {
+        auto const local_find(this->expressions_.find(in_expression_key));
+        return local_find != this->expressions_.end()?
+            &local_find->second: nullptr;
     }
 
     /// @brief 登録されている条件式を評価する。
@@ -295,15 +330,15 @@ class psyq::if_then_engine::_private::evaluator
     /// - 条件式が登録されていないと、失敗する。
     /// - 条件式が参照する状態値が登録されていないと、失敗する。
     /// @sa this_type::register_expression で条件式を登録できる。
-    public: psyq::if_then_engine::evaluation evaluate_expression(
+    public: typename this_type::evaluation evaluate_expression(
         /// [in] 評価する条件式に対応する識別値。
         typename this_type::expression_key const in_expression_key,
         /// [in] 条件式が参照する状態貯蔵器。
         typename this_type::reservoir const& in_reservoir)
-    const PSYQ_NOEXCEPT
+    const
     {
         // 条件式の辞書から、該当する条件式を検索する。
-        auto const local_expression(this->_find_expression(in_expression_key));
+        auto const local_expression(this->find_expression(in_expression_key));
         if (local_expression == nullptr)
         {
             return -1;
@@ -370,42 +405,40 @@ class psyq::if_then_engine::_private::evaluator
             return -1;
         }
     }
-
-    /// @brief 条件式を取得する。
-    /// @warning psyq::if_then_engine 管理者以外は、この関数は使用禁止。
-    /// @return
-    /// in_expression_key に対応する条件式を指すポインタ。
-    /// 該当する条件式がない場合は nullptr を返す。
-    public: typename this_type::expression const* _find_expression(
-        /// [in] 取得する条件式に対応する識別値。
-        typename this_type::expression_key const& in_expression_key)
-    const PSYQ_NOEXCEPT
-    {
-        auto const local_iterator(this->expressions_.find(in_expression_key));
-        return local_iterator != this->expressions_.end()?
-            &local_iterator->second: nullptr;
-    }
     /// @}
     //-------------------------------------------------------------------------
     /// @name 要素条件チャンク
     /// @{
 
+    /// @brief 要素条件チャンクが登録されているか判定する。
+    /// @retval true
+    /// in_chunk_key に対応する要素条件チャンクが登録されている。
+    /// @retval false 該当する要素条件チャンクがない。
+    public: bool is_chunk_exist(
+        /// [in] 判定する要素条件チャンクに対応する識別値。
+        typename this_type::chunk_key const& in_chunk_key)
+    const
+    {
+        return this->chunks_.find(in_chunk_key) != this->chunks_.end();
+    }
+
     /// @brief 要素条件チャンクを予約する。
     public: void reserve_chunk(
         /// [in] 予約する要素条件チャンクに対応する識別値。
-        typename this_type::reservoir::chunk_key const& in_chunk_key,
+        typename this_type::chunk_key const& in_chunk_key,
         /// [in] 複合条件式の要素条件の予約数。
-        std::size_t const in_reserve_sub_expressions,
+        std::size_t const in_sub_expression_capacity,
         /// [in] 状態変更条件式の要素条件の予約数。
-        std::size_t const in_reserve_status_transitions,
+        std::size_t const in_status_transition_capacity,
         /// [in] 状態比較条件式の要素条件の予約数。
-        std::size_t const in_reserve_status_comparisons)
+        std::size_t const in_status_comparison_capacity)
     {
-        auto& local_chunk(
-            this_type::equip_chunk(this->chunks_, in_chunk_key));
-        local_chunk.sub_expressions_.reserve(in_reserve_sub_expressions);
-        local_chunk.status_transitions_.reserve(in_reserve_status_transitions);
-        local_chunk.status_comparisons_.reserve(in_reserve_status_comparisons);
+        this_type::reserve_chunk(
+            this->chunks_,
+            in_chunk_key,
+            in_sub_expression_capacity,
+            in_status_transition_capacity,
+            in_status_comparison_capacity);
     }
 
     /// @brief 要素条件チャンクと、それを使っている条件式を破棄する。
@@ -413,7 +446,7 @@ class psyq::if_then_engine::_private::evaluator
     /// @retval false 失敗。 in_chunk_key に対応するチャンクがない。
     public: bool erase_chunk(
         /// [in] 破棄する要素条件チャンクに対応する識別値。
-        typename this_type::reservoir::chunk_key const& in_chunk_key)
+        typename this_type::chunk_key const& in_chunk_key)
     {
         // 要素条件チャンクを削除する。
         if (this->chunks_.erase(in_chunk_key) == 0)
@@ -445,8 +478,8 @@ class psyq::if_then_engine::_private::evaluator
     /// 該当する要素条件チャンクがない場合は nullptr を返す。
     public: typename this_type::chunk const* _find_chunk(
         /// [in] 取得する要素条件チャンクに対応する識別値。
-        typename this_type::reservoir::chunk_key const& in_chunk_key)
-    const PSYQ_NOEXCEPT
+        typename this_type::chunk_key const& in_chunk_key)
+    const
     {
         auto const local_iterator(this->chunks_.find(in_chunk_key));
         return local_iterator != this->chunks_.end()?
@@ -529,16 +562,29 @@ class psyq::if_then_engine::_private::evaluator
     }
 
     //-------------------------------------------------------------------------
-    private: static typename this_type::chunk& equip_chunk(
+    /// @brief 要素条件チャンクを予約する。
+    private: static typename this_type::chunk& reserve_chunk(
+        /// [in] 予約する要素条件チャンクの辞書。
         typename this_type::chunk_map& io_chunks,
-        typename this_type::reservoir::chunk_key const& in_chunk_key)
+        /// [in] 予約するチャンクに対応する識別値。
+        typename this_type::chunk_key const& in_chunk_key,
+        /// [in] 複合条件式の要素条件の予約数。
+        std::size_t const in_sub_expression_capacity,
+        /// [in] 状態変更条件式の要素条件の予約数。
+        std::size_t const in_status_transition_capacity,
+        /// [in] 状態比較条件式の要素条件の予約数。
+        std::size_t const in_status_comparison_capacity)
     {
         auto const local_emplace(
             io_chunks.emplace(
                 in_chunk_key,
                 typename this_type::chunk_map::mapped_type(
                     io_chunks.get_allocator())));
-        return local_emplace.first->second;
+        auto& local_chunk(local_emplace.first->second);
+        local_chunk.sub_expressions_.reserve(in_sub_expression_capacity);
+        local_chunk.status_transitions_.reserve(in_status_transition_capacity);
+        local_chunk.status_comparisons_.reserve(in_status_comparison_capacity);
+        return local_chunk;
     }
 
     //-------------------------------------------------------------------------

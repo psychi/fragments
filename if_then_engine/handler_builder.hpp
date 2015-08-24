@@ -185,7 +185,8 @@ class psyq::if_then_engine::handler_builder
             }
 
             // 条件挙動の優先順位を取得する。
-            typename this_type::dispatcher::handler::priority local_priority(0);
+            typename this_type::dispatcher::handler::priority local_priority(
+                PSYQ_IF_THEN_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT);
             if (!in_table.parse_cell(
                     local_priority, i, local_attribute.priority_.first, true))
             {

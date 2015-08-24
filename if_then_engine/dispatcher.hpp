@@ -44,19 +44,18 @@ class psyq::if_then_engine::_private::dispatcher
     private: typedef dispatcher this_type;
 
     //-------------------------------------------------------------------------
-    /// @brief dispather で使う条件評価器の型。
-    /// @details psyq::if_then_engine::_private::evaluator と互換性があること。
+    /// @brief 条件挙動器で使う _private::evaluator 。
     public: typedef template_evaluator evaluator;
-    /// @brief コンテナに用いるメモリ割当子の型。
+    /// @brief コンテナで使うメモリ割当子の型。
     public:
         typedef typename this_type::evaluator::allocator_type
         allocator_type;
-    /// @brief dispather で使う条件挙動ハンドラの型。
+    /// @brief 条件挙動器で使う条件挙動ハンドラ。
     public: typedef 
          psyq::if_then_engine::_private::handler<
              typename this_type::evaluator::expression_key,
              typename this_type::evaluator::evaluation,
-             typename template_priority>
+             template_priority>
          handler;
 
     //-------------------------------------------------------------------------
@@ -67,7 +66,7 @@ class psyq::if_then_engine::_private::dispatcher
              psyq::if_then_engine::_private::status_monitor<
                  std::vector<
                      typename this_type::evaluator::expression_key,
-                     typename this_type::allocator_type> >,
+                     typename this_type::allocator_type>>,
              psyq::integer_hash<
                  typename this_type::evaluator::reservoir::status_key>,
              std::equal_to<
@@ -81,7 +80,7 @@ class psyq::if_then_engine::_private::dispatcher
              psyq::if_then_engine::_private::expression_monitor<
                 std::vector<
                     typename this_type::handler,
-                    typename this_type::allocator_type> >,
+                    typename this_type::allocator_type>>,
              psyq::integer_hash<typename this_type::evaluator::expression_key>,
              std::equal_to<typename this_type::evaluator::expression_key>,
              typename this_type::allocator_type>
@@ -158,7 +157,7 @@ class psyq::if_then_engine::_private::dispatcher
         PSYQ_ASSERT(!this->dispatch_lock_ && !in_source.dispatch_lock_);
         this->status_monitors_ = in_source.status_monitors_;
         this->expression_monitors_ = in_source.expression_monitors_;
-        this->cached_handlers_.reserve(io_source.cached_handlers_.capacity());
+        this->cached_handlers_.reserve(in_source.cached_handlers_.capacity());
         return *this;
     }
 
@@ -200,27 +199,28 @@ class psyq::if_then_engine::_private::dispatcher
         /// [in] 条件挙動キャッシュの予約数。
         std::size_t const in_cache_capacity)
     {
+        typedef
+            typename this_type::status_monitor_map::mapped_type
+            status_monitor;
         this_type::rebuild_monitors(
             this->status_monitors_,
             in_status_count,
-            [this](
-                typename this_type::status_monitor_map::mapped_type&
-                    io_status_monitor)
-            ->bool
+            [this](status_monitor& io_status_monitor)->bool
             {
                 return io_status_monitor.shrink_expression_keys(
                     this->expression_monitors_);
             });
+        typedef
+            typename this_type::expression_monitor_map::mapped_type
+            expression_monitor;
         this_type::rebuild_monitors(
             this->expression_monitors_,
             in_expression_count,
-            [](
-                typename this_type::expression_monitor_map::mapped_type&
-                    io_expression_monitor)
-            ->bool
+            [](expression_monitor& io_expression_monitor)->bool
             {
                 return io_expression_monitor.shrink_handlers();
             });
+        PSYQ_ASSERT(this->cached_handlers_.empty());
         this->cached_handlers_ = decltype(this->cached_handlers_)(
             this->cached_handlers_.get_allocator());
         this->cached_handlers_.reserve(in_cache_capacity);
@@ -232,20 +232,24 @@ class psyq::if_then_engine::_private::dispatcher
 
     /// @brief 条件式に対応する条件挙動ハンドラを登録する。
     /// @details
-    /// this_type::_dispatch で条件が合致した際に呼び出す関数を登録する。
-    /// 登録された関数は、スマートポインタが空になると、自動的に取り除かれる。
-    /// 明示的に関数を取り除くには、 this_type::unregister_handler を呼び出す。
+    /// this_type::_dispatch で条件が合致した際に、呼び出す関数に対応する
+    /// 条件挙動ハンドラを登録する。
     /// @return
     /// 登録した条件挙動ハンドラを指すポインタ。失敗した場合は nullptr を返す。
     /// - in_function が空だと失敗する。
-    /// - in_function と同じ関数が同じ条件式に既に登録されていると失敗する。
+    /// - in_function に対応する条件挙動ハンドラが、
+    ///   同じ条件式に既に登録されていると、失敗する。
+    /// @sa
+    /// 登録した条件挙動ハンドラは、 in_function
+    /// の指す関数オブジェクトが解体されると、自動的に取り除かれる。
+    /// 明示的に取り除くには this_type::unregister_handler を使う。
     public: typename this_type::handler const* register_handler(
-        /// [in] 評価に使う条件式の識別値。
+        /// [in] 登録する条件挙動ハンドラに対応する条件式の識別値。
         typename this_type::evaluator::expression_key const& in_expression_key,
         /// [in] 関数を呼び出す条件となる、条件式の評価の変化。
         /// this_type::handler::make_condition から作る。
         typename this_type::handler::condition const in_condition,
-        /// [in] 登録する関数を指すスマートポインタ。
+        /// [in] 条件と合致した際に呼び出す関数を指すスマートポインタ。
         typename this_type::handler::function_shared_ptr const& in_function,
         /// [in] 関数の呼び出し優先順位。優先順位の昇順に呼び出される。
         typename this_type::handler::priority const in_priority =
@@ -259,16 +263,16 @@ class psyq::if_then_engine::_private::dispatcher
             in_priority);
     }
 
-    /// @brief 条件式に対応する条件挙動を取り除く。
+    /// @brief 条件式に対応する条件挙動ハンドラを取り除く。
     /// @details
     /// this_type::register_handler
-    /// で登録した条件挙動ハンドラを、条件式監視器から取り除く。
+    /// で登録した条件挙動ハンドラを、条件挙動器から取り除く。
     /// @retval true  条件挙動ハンドラを取り除いた。
     /// @retval false 該当する条件挙動ハンドラが見つからなかった。
     public: bool unregister_handler(
-        /// [in] 取り除く条件挙動に対応する条件式の識別値。
+        /// [in] 取り除く条件挙動ハンドラに対応する条件式の識別値。
         typename this_type::evaluator::expression_key const& in_expression_key,
-        /// [in] 取り除く条件挙動に対応する挙動関数。
+        /// [in] 取り除く条件挙動ハンドラに対応する関数。
         typename this_type::handler::function const& in_function)
     {
         auto const local_find(this->expression_monitors_.find(in_expression_key));
@@ -278,8 +282,8 @@ class psyq::if_then_engine::_private::dispatcher
 
     /// @brief 条件式に対応する条件挙動ハンドラをすべて取り除く。
     /// @retval true  in_expression_key に対応する条件挙動ハンドラを取り除いた。
-    /// @retval false 該当する条件挙動がなかった。
-    public: bool unregister_handler(
+    /// @retval false 該当する条件挙動ハンドラがなかった。
+    public: bool unregister_handlers(
         /// [in] 取り除く条件挙動ハンドラに対応する条件式の識別値。
         typename this_type::evaluator::expression_key const& in_expression_key)
     {
@@ -288,8 +292,8 @@ class psyq::if_then_engine::_private::dispatcher
 
     /// @brief 関数に対応する条件挙動ハンドラをすべて取り除く。
     /// @return 取り除いた条件挙動ハンドラの数。
-    public: std::size_t unregister_handler(
-        /// [in] 取り除く条件挙動ハンドラに対応する挙動関数。
+    public: std::size_t unregister_handlers(
+        /// [in] 取り除く条件挙動ハンドラに対応する関数。
         typename this_type::handler::function const& in_function)
     {
         std::size_t local_count(0);
@@ -329,8 +333,8 @@ class psyq::if_then_engine::_private::dispatcher
     /// @brief psyq::if_then_engine 管理者以外は、この関数は使用禁止。
     /// @details
     /// 前回の this_type::_dispatch と今回の this_type::_dispatch
-    /// で条件式の評価が異なっている場合に、 this_type::register_handler
-    /// で指定した条件と合致していれば、関数を呼び出す。
+    /// で条件式の評価が異なる場合に、 this_type::register_handler
+    /// で指定した条件と合致していれば、条件挙動ハンドラの関数を呼び出す。
     /// @warning
     /// 前回から今回の間（基本的には1フレームの間）で条件式の評価が変化しても、
     /// 前回の時点と今回の時点の評価が同じ場合は、関数が呼び出されない。
@@ -338,7 +342,7 @@ class psyq::if_then_engine::_private::dispatcher
     /// 「true（前回）／false（前回と今回の間）／true（今回）」
     /// と変化した場合、関数は呼び出されない。
     public: void _dispatch(
-        /// [in,out] 条件式の評価に使う状態貯蔵器。
+        /// [in,out] 条件式の評価で参照する状態貯蔵器。
         typename this_type::evaluator::reservoir& io_reservoir,
         /// [in] 条件式の評価に使う条件評価器。
         typename this_type::evaluator const& in_evaluator)
@@ -359,10 +363,11 @@ class psyq::if_then_engine::_private::dispatcher
         this_type::status_monitor_map::mapped_type::notify_status_transitions(
             this->status_monitors_, this->expression_monitors_, io_reservoir);
 
-        // 変化した状態値を参照する条件式を評価し、条件挙動をキャッシュに貯める。
-        auto local_cached_handlers(std::move(this->cached_handlers_));
-        this->cached_handlers_.clear();
-        local_cached_handlers.clear();
+        // 変化した状態値を参照する条件式を評価し、
+        // 条件に合致した条件挙動ハンドラをキャッシュに貯める。
+        decltype(this->cached_handlers_) local_cached_handlers(
+            this->cached_handlers_.get_allocator());
+        this->cached_handlers_.swap(local_cached_handlers);
         this_type::expression_monitor_map::mapped_type::cache_handlers(
             local_cached_handlers,
             this->expression_monitors_,
@@ -372,15 +377,18 @@ class psyq::if_then_engine::_private::dispatcher
         // 条件式の評価が済んだので、状態変化フラグを初期化する。
         io_reservoir._reset_transitions();
 
-        // キャッシュに貯まった関数を呼び出す。
+        // キャッシュに貯まった条件挙動ハンドラの関数を呼び出す。
         for (auto const& local_cached_handler: local_cached_handlers)
         {
             local_cached_handler.call_function();
         }
 
-        // 挙動挙動キャッシュを片づける。
-        PSYQ_ASSERT(this->cached_handlers_.empty());
-        if (this->cached_handlers_.capacity() <= 0)
+        // 条件挙動キャッシュを片づける。
+        if (0 < this->cached_handlers_.capacity())
+        {
+            PSYQ_ASSERT(this->cached_handlers_.empty());
+        }
+        else
         {
             local_cached_handlers.clear();
             this->cached_handlers_ = std::move(local_cached_handlers);
@@ -400,11 +408,11 @@ class psyq::if_then_engine::_private::dispatcher
         /// [in] 辞書のバケット数。
         std::size_t const in_bucket_count,
         /// [in] 監視器を再構築する関数。
-        template_rebuild_function const& in_rebuild)
+        template_rebuild_function const& in_rebuild_function)
     {
         for (auto i(io_monitors.begin()); i != io_monitors.end();)
         {
-            if (in_rebuild(i->second))
+            if (in_rebuild_function(i->second))
             {
                 i = io_monitors.erase(i);
             }

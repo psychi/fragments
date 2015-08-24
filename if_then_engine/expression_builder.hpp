@@ -1,7 +1,6 @@
-﻿/** @file
-    @copybrief psyq::if_then_engine::expression_builder
-    @author Hillco Psychi (https://twitter.com/psychi)
- */
+﻿/// @file
+/// @copybrief psyq::if_then_engine::expression_builder
+/// @author Hillco Psychi (https://twitter.com/psychi)
 #ifndef PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_HPP_
 #define PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_HPP_
 
@@ -69,12 +68,11 @@ namespace psyq
 template<typename template_relation_table>
 class psyq::if_then_engine::expression_builder
 {
-    /// @brief thisが指す値の型。
+    /// @brief this が指す値の型。
     private: typedef expression_builder this_type;
 
     //-------------------------------------------------------------------------
-    /// @brief 解析する関係文字列表の型。
-    /// @details psyq::string::relation_table 互換のインターフェイスを持つこと。
+    /// @brief 解析する psyq::string::relation_table の型。
     public: typedef template_relation_table relation_table;
 
     //-------------------------------------------------------------------------
@@ -113,31 +111,6 @@ class psyq::if_then_engine::expression_builder
 
     }; // class table_attribute
 
-    /// @brief 要素条件の構築に使う作業領域。
-    private: template<typename template_evaluator>
-    class workspace
-    {
-        public: explicit workspace(
-            std::size_t const in_capacity,
-            typename template_evaluator::allocator_type const& in_allocator):
-        sub_expressions_(in_allocator),
-        status_transitions_(in_allocator),
-        status_comparisons_(in_allocator)
-        {
-            this->sub_expressions_.reserve(in_capacity);
-            this->status_transitions_.reserve(in_capacity);
-            this->status_comparisons_.reserve(in_capacity);
-        }
-
-        public: typename template_evaluator::sub_expression_container
-            sub_expressions_;
-        public: typename template_evaluator::status_transition_container
-            status_transitions_;
-        public: typename template_evaluator::status_comparison_container
-            status_comparisons_;
-
-    }; // class workspace
-
     //-------------------------------------------------------------------------
     /// @brief 文字列表から条件式を構築する関数オブジェクトを構築する。
     public: explicit expression_builder(
@@ -150,15 +123,13 @@ class psyq::if_then_engine::expression_builder
     /// @return 登録した条件式の数。
     public: template<typename template_evaluator, typename template_hasher>
     typename this_type::relation_table::number operator()(
-        /// [in,out] 構築した条件式を登録する条件評価器。
-        /// psyq::if_then_engine::driver::evaluator 互換のインターフェイスを持つこと。
+        /// [in,out] 構築した条件式を登録する driver::evaluator 。
         template_evaluator& io_evaluator,
-        /// [in,out] 文字列からハッシュ値を作る関数オブジェクト。
-        /// psyq::if_then_engine::driver::hasher 互換のインターフェイスを持つこと。
+        /// [in,out] 文字列からハッシュ値を作る driver::hasher 。
         template_hasher& io_hasher,
         /// [in] 条件式を登録するチャンクの識別値。
-        typename template_evaluator::reservoir::chunk_key const& in_chunk_key,
-        /// [in] 条件式が参照する状態貯蔵器。
+        typename template_evaluator::chunk_key const& in_chunk_key,
+        /// [in] 条件式が参照する driver::reservoir 。
         typename template_evaluator::reservoir const& in_reservoir)
     const
     {
@@ -174,15 +145,13 @@ class psyq::if_then_engine::expression_builder
     /// @return 登録した条件式の数。
     public: template<typename template_evaluator, typename template_hasher>
     static typename this_type::relation_table::number build(
-        /// [in,out] 構築した条件式を登録する条件評価器。
-        /// psyq::if_then_engine::driver::evaluator 互換のインターフェイスを持つこと。
+        /// [in,out] 構築した条件式を登録する driver::evaluator 。
         template_evaluator& io_evaluator,
-        /// [in,out] 文字列からハッシュ値を作る関数オブジェクト。
-        /// psyq::if_then_engine::driver::hasher 互換のインターフェイスを持つこと。
+        /// [in,out] 文字列からハッシュ値を作る driver::hasher 。
         template_hasher& io_hasher,
         /// [in] 条件式を登録するチャンクの識別値。
-        typename template_evaluator::reservoir::chunk_key const& in_chunk_key,
-        /// [in] 条件式が参照する状態貯蔵器。
+        typename template_evaluator::chunk_key const& in_chunk_key,
+        /// [in] 条件式が参照する driver::reservoir 。
         typename template_evaluator::reservoir const& in_reservoir,
         /// [in] 条件式が記述されている文字列表。
         typename this_type::relation_table const& in_table)
@@ -196,8 +165,11 @@ class psyq::if_then_engine::expression_builder
         }
 
         // 作業領域を確保する。
-        typename this_type::workspace<template_evaluator> local_workspace(
-            local_attribute.element_.second, io_evaluator.get_allocator());
+        typename template_evaluator::chunk local_workspace(
+            io_evaluator.get_allocator());
+        local_workspace.sub_expressions_.reserve(local_attribute.element_.second);
+        local_workspace.status_transitions_.reserve(local_attribute.element_.second);
+        local_workspace.status_comparisons_.reserve(local_attribute.element_.second);
 
         // 文字列表を行ごとに解析し、条件式を構築して、条件評価器へ登録する。
         auto const local_row_count(in_table.get_row_count());
@@ -227,15 +199,15 @@ class psyq::if_then_engine::expression_builder
     /// @retval false 失敗。条件式を登録できなかった。
     private: template<typename template_evaluator, typename template_hasher>
     static bool register_expression(
-        /// [in,out] 構築した条件式を追加する条件評価器。
+        /// [in,out] 構築した条件式を追加する driver::evaluator 。
         template_evaluator& io_evaluator,
-        /// [in,out] 文字列からハッシュ値を生成する関数オブジェクト。
+        /// [in,out] 文字列からハッシュ値を生成する driver::hasher 。
         template_hasher& io_hasher,
-        /// [in,out] 作業領域。
-        typename this_type::workspace<template_evaluator>& io_workspace,
+        /// [in,out] 作業領域として使う driver::evaluator::chunk 。
+        typename template_evaluator::chunk& io_workspace,
         /// [in] 条件式を登録するチャンクの識別値。
-        typename template_evaluator::reservoir::chunk_key const& in_chunk_key,
-        /// [in] 条件式が参照する状態貯蔵器。
+        typename template_evaluator::chunk_key const& in_chunk_key,
+        /// [in] 条件式が参照する driver::reservoir 。
         typename template_evaluator::reservoir const& in_reservoir,
         /// [in] 解析する文字列表。
         typename this_type::relation_table const& in_table,
@@ -352,14 +324,14 @@ class psyq::if_then_engine::expression_builder
         typename template_hasher,
         typename template_element_server>
     static bool register_expression(
-        /// [in,out] 条件式を登録する条件評価器。
+        /// [in,out] 条件式を登録する driver::evaluator 。
         template_evaluator& io_evaluator,
-        /// [in,out] 文字列からハッシュ値を生成する関数オブジェクト。
+        /// [in,out] 文字列からハッシュ値を生成する driver::hasher 。
         template_hasher& io_hasher,
         /// [in,out] 条件式の構築に使う要素条件の作業領域。
         template_element_container& io_elements,
         /// [in] 条件式を登録するチャンクの識別値。
-        typename template_evaluator::reservoir::chunk_key const& in_chunk_key,
+        typename template_evaluator::chunk_key const& in_chunk_key,
         /// [in] 登録する条件式の識別値。
         typename template_evaluator::expression_key const& in_expression_key,
         /// [in] 登録する条件式で用いる論理演算子。
@@ -395,11 +367,12 @@ class psyq::if_then_engine::expression_builder
     /// @return 解析した列の数。
     private: template<typename template_evaluator, typename template_hasher>
     static typename this_type::relation_table::number build_element(
-        /// [in,out] 構築した要素条件を追加するコンテナ。
-        typename template_evaluator::sub_expression_container& io_elements,
-        /// [in,out] 文字列からハッシュ値を生成する関数オブジェクト。
+        /// [in,out] 構築した要素条件を追加する
+        /// driver::evaluator::chunk::sub_expression_container 。
+        typename template_evaluator::chunk::sub_expression_container& io_elements,
+        /// [in,out] 文字列からハッシュ値を生成する driver::hasher 。
         template_hasher& io_hasher,
-        /// [in] 複合条件式を追加する条件評価器。
+        /// [in] 複合条件式を追加する driver::evaluator 。
         template_evaluator const& in_evaluator,
         /// [in] 解析する文字列表。
         typename this_type::relation_table const& in_table,
@@ -445,11 +418,13 @@ class psyq::if_then_engine::expression_builder
     /// @return 解析した列の数。
     private: template<typename template_evaluator, typename template_hasher>
     static typename this_type::relation_table::number build_element(
-        /// [in,out] 構築した要素条件を追加するコンテナ。
-        typename template_evaluator::status_transition_container& io_elements,
-        /// [in,out] 文字列からハッシュ値を生成する関数オブジェクト。
+        /// [in,out] 構築した要素条件を追加する
+        /// driver::evaluator::chunk::status_transition_container 。
+        typename template_evaluator::chunk::status_transition_container&
+            io_elements,
+        /// [in,out] 文字列からハッシュ値を生成する driver::hasher 。
         template_hasher& io_hasher,
-        /// [in] 条件式が参照する状態貯蔵器。
+        /// [in] 条件式が参照する driver::reservoir 。
         typename template_evaluator::reservoir const& in_reservoir,
         /// [in] 解析する文字列表。
         typename this_type::relation_table const& in_table,
@@ -479,11 +454,12 @@ class psyq::if_then_engine::expression_builder
     /// @return 解析した列の数。
     private: template<typename template_evaluator, typename template_hasher>
     static typename this_type::relation_table::number build_element(
-        /// [in,out] 構築した要素条件を追加するコンテナ。
-        typename template_evaluator::status_comparison_container& io_elements,
-        /// [in,out] 文字列からハッシュ値を生成する関数オブジェクト。
+        /// [in,out] 構築した要素条件を追加する
+        /// driver::evaluator::chunk::status_comparison_container 。
+        typename template_evaluator::chunk::status_comparison_container& io_elements,
+        /// [in,out] 文字列からハッシュ値を生成する driver::hasher 。
         template_hasher& io_hasher,
-        /// [in] 条件式が参照する状態貯蔵器。
+        /// [in] 条件式が参照する driver::reservoir 。
         typename template_evaluator::reservoir const& in_reservoir,
         /// [in] 解析する文字列表。
         typename this_type::relation_table const& in_table,
@@ -493,8 +469,8 @@ class psyq::if_then_engine::expression_builder
         typename this_type::relation_table::number const in_column_number)
     {
         auto const local_comparison(
-            template_evaluator::status_comparison_container::value_type::_build(
-                io_hasher, in_table, in_row_number, in_column_number));
+            template_evaluator::chunk::status_comparison_container::value_type
+            ::_build(io_hasher, in_table, in_row_number, in_column_number));
         if (!local_comparison.get_value().is_empty())
         {
             io_elements.push_back(local_comparison);

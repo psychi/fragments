@@ -35,18 +35,17 @@ class psyq::if_then_engine::_private::evaluator
     private: typedef evaluator this_type;
 
     //-------------------------------------------------------------------------
-    /// @brief 条件評価器で使う状態貯蔵器の型。
-    /// @details psyq::if_then_engine::_private::reservoir と互換性があること。
+    /// @brief 条件評価器で使う _private::reservoir 。
     public: typedef template_reservoir reservoir;
-    /// @brief 条件評価器で使うメモリ割当子の型。
+    /// @brief 条件評価器で使うメモリ割当子。
     public: typedef
         typename this_type::reservoir::allocator_type
         allocator_type;
 
     //-------------------------------------------------------------------------
-    /// @brief 条件式の識別値。
+    /// @brief 条件評価器で使う条件式の識別値。
     public: typedef template_expression_key expression_key;
-    /// @brief 条件式
+    /// @brief 条件評価器で使う条件式。
     public: typedef
         psyq::if_then_engine::_private::expression<
             typename template_reservoir::chunk_key, std::uint32_t>
@@ -55,38 +54,26 @@ class psyq::if_then_engine::_private::evaluator
     public: typedef psyq::if_then_engine::evaluation evaluation;
 
     //-------------------------------------------------------------------------
-    /// @brief 複合条件式の要素条件のコンテナ。
-    public: typedef
-        std::vector<
-            psyq::if_then_engine::_private::sub_expression<
-                typename this_type::expression_key>,
-            typename evaluator::allocator_type>
-        sub_expression_container;
-    /// @brief 状態変化条件式の要素条件のコンテナ。
-    public: typedef
-        std::vector<
-            psyq::if_then_engine::_private::status_transition<
-                typename this_type::reservoir::status_key>,
-            typename this_type::allocator_type>
-        status_transition_container;
-    /// @brief 状態比較条件式の要素条件のコンテナ。
-    public: typedef
-        std::vector<
-            typename this_type::reservoir::status_comparison,
-            typename this_type::allocator_type>
-        status_comparison_container;
-    /// @brief 要素条件チャンク。
+    /// @brief 条件式が参照する要素条件チャンク。
     public: typedef
         psyq::if_then_engine::_private::expression_chunk<
-            typename this_type::sub_expression_container,
-            typename this_type::status_transition_container,
-            typename this_type::status_comparison_container>
+            std::vector<
+                psyq::if_then_engine::_private::sub_expression<
+                    typename this_type::expression_key>,
+                typename evaluator::allocator_type>,
+            std::vector<
+                psyq::if_then_engine::_private::status_transition<
+                    typename this_type::reservoir::status_key>,
+                typename this_type::allocator_type>,
+            std::vector<
+                typename this_type::reservoir::status_comparison,
+                typename this_type::allocator_type>>
         chunk;
     /// @brief 要素条件チャンクの識別値。
     public: typedef typename this_type::reservoir::chunk_key chunk_key;
 
     //-------------------------------------------------------------------------
-    /// @brief 条件式の辞書を表す型。
+    /// @brief 条件式の辞書。
     private: typedef
         std::unordered_map<
             typename this_type::expression_key,
@@ -161,7 +148,7 @@ class psyq::if_then_engine::_private::evaluator
 
     /// @brief 条件評価器を再構築する。
     public: void rebuild(
-        /// [in] チャンク辞書のバケット数。
+        /// [in] 要素条件チャンク辞書のバケット数。
         std::size_t const in_chunk_count,
         /// [in] 条件式辞書のバケット数。
         std::size_t const in_expression_count)
@@ -190,13 +177,14 @@ class psyq::if_then_engine::_private::evaluator
     /// - in_elements が空だと失敗する。
     public: template<typename template_element_container>
     typename this_type::expression const* register_expression(
-        /// [in] 登録する条件式が所属する要素条件チャンクの識別値。
+        /// [in] 登録する条件式から参照する要素条件チャンクの識別値。
         typename this_type::chunk_key const& in_chunk_key,
         /// [in] 登録する条件式の識別値。
         typename this_type::expression_key const& in_expression_key,
         /// [in] 登録する条件式の論理演算子。
         typename this_type::expression::logic const in_logic,
         /// [in] 登録する条件式の要素条件のコンテナ。
+        /// std::begin と std::end の引数として使えること。
         template_element_container const& in_elements)
     {
         auto const local_elements_begin(std::begin(in_elements));
@@ -357,12 +345,13 @@ class psyq::if_then_engine::_private::evaluator
         {
             // 複合条件式を評価する。
             case this_type::expression::kind_SUB_EXPRESSION:
+            typedef
+                typename this_type::chunk::sub_expression_container::value_type
+                sub_expression;
             return local_expression->evaluate(
                 local_chunk->sub_expressions_,
-                [&in_reservoir, this](
-                    typename this_type::sub_expression_container::value_type
-                        const& in_expression)
-                ->psyq::if_then_engine::evaluation
+                [&in_reservoir, this](sub_expression const& in_expression)
+                ->typename this_type::evaluation
                 {
                     auto const local_evaluate_expression(
                         this->evaluate_expression(
@@ -377,24 +366,26 @@ class psyq::if_then_engine::_private::evaluator
 
             // 状態変化条件式を評価する。
             case this_type::expression::kind_STATE_TRANSITION:
+            typedef
+                typename this_type::chunk::status_transition_container::value_type
+                status_transition;
             return local_expression->evaluate(
                 local_chunk->status_transitions_,
-                [&in_reservoir](
-                    typename this_type::status_transition_container::value_type
-                        const& in_transition)
-                ->psyq::if_then_engine::evaluation
+                [&in_reservoir](status_transition const& in_transition)
+                ->typename this_type::evaluation
                 {
                     return in_reservoir.find_transition(in_transition.get_key());
                 });
 
             // 状態比較条件式を評価する。
             case this_type::expression::kind_STATE_COMPARISON:
+            typedef
+                typename this_type::chunk::status_comparison_container::value_type
+                status_comparison;
             return local_expression->evaluate(
                 local_chunk->status_comparisons_,
-                [&in_reservoir](
-                    typename this_type::status_comparison_container::value_type
-                        const& in_comparison)
-                ->psyq::if_then_engine::evaluation
+                [&in_reservoir](status_comparison const& in_comparison)
+                ->typename this_type::evaluation
                 {
                     return in_reservoir.compare_status(in_comparison);
                 });
@@ -489,10 +480,10 @@ class psyq::if_then_engine::_private::evaluator
     //-------------------------------------------------------------------------
     private: static std::pair<
          typename this_type::expression::kind,
-         typename this_type::sub_expression_container*>
+         typename this_type::chunk::sub_expression_container*>
     make_element_kind(
         typename this_type::chunk& in_chunk,
-        typename this_type::sub_expression_container::value_type const&)
+        typename this_type::chunk::sub_expression_container::value_type const&)
     {
         return std::make_pair(
             this_type::expression::kind_SUB_EXPRESSION,
@@ -501,10 +492,10 @@ class psyq::if_then_engine::_private::evaluator
 
     private: static std::pair<
          typename this_type::expression::kind,
-         typename this_type::status_transition_container*>
+         typename this_type::chunk::status_transition_container*>
     make_element_kind(
         typename this_type::chunk& in_chunk,
-        typename this_type::status_transition_container::value_type const&)
+        typename this_type::chunk::status_transition_container::value_type const&)
     {
         return std::make_pair(
             this_type::expression::kind_STATE_TRANSITION,
@@ -513,10 +504,10 @@ class psyq::if_then_engine::_private::evaluator
 
     private: static std::pair<
          typename this_type::expression::kind,
-         typename this_type::status_comparison_container*>
+         typename this_type::chunk::status_comparison_container*>
     make_element_kind(
         typename this_type::chunk& in_chunk,
-        typename this_type::status_comparison_container::value_type const&)
+        typename this_type::chunk::status_comparison_container::value_type const&)
     {
         return std::make_pair(
             this_type::expression::kind_STATE_COMPARISON,
@@ -541,7 +532,7 @@ class psyq::if_then_engine::_private::evaluator
     }
 
     private: static bool is_valid_element(
-        typename this_type::sub_expression_container::value_type const&
+        typename this_type::chunk::sub_expression_container::value_type const&
             in_sub_expression,
         typename this_type::expression_map const& in_expressions)
     {

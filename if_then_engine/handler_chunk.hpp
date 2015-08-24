@@ -4,8 +4,6 @@
 #ifndef PSYQ_IF_THEN_ENGINE_HANDLER_CHUNK_HPP_
 #define PSYQ_IF_THEN_ENGINE_HANDLER_CHUNK_HPP_
 
-#include "../member_comparison.hpp"
-
 /// @cond
 namespace psyq
 {
@@ -21,6 +19,7 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 条件挙動チャンク。条件式の評価が変化した際に呼び出す関数を保持する。
+/// @tparam handler_chunk::dispatcher
 template<typename template_dispatcher>
 class psyq::if_then_engine::_private::handler_chunk
 {
@@ -28,47 +27,54 @@ class psyq::if_then_engine::_private::handler_chunk
     private: typedef handler_chunk this_type;
 
     //-------------------------------------------------------------------------
-    /// @brief 条件挙動ハンドラを登録する条件挙動器を表す型。
+    /// @brief _private::dispatcher を表す型。
     public: typedef template_dispatcher dispatcher;
-
     /// @brief 条件挙動チャンクのコンテナを表す型。
     public: typedef
         std::vector<this_type, typename this_type::dispatcher::allocator_type>
         container;
-
     /// @brief 条件挙動チャンクの識別値を表す型。
     public: typedef
         typename this_type::dispatcher::evaluator::reservoir::chunk_key
         key;
 
     //-------------------------------------------------------------------------
-    /// @brief 条件挙動関数オブジェクトのスマートポインタのコンテナを表す型。
+    /// @copydoc functions_
     private: typedef
         std::vector<
             typename template_dispatcher::handler::function_shared_ptr,
             typename template_dispatcher::allocator_type>
         function_shared_ptr_container;
-
-    /// @brief 条件挙動チャンクの識別値を取得する関数オブジェクト。
-    private: struct key_fetcher
+    /// @brief 条件挙動チャンクの識別値を比較する関数オブジェクト。
+    private: struct key_less
     {
-        public: typename this_type::key const& operator()(
-            this_type const& in_chunk)
+        bool operator()(
+            handler_chunk const& in_left,
+            handler_chunk const& in_right)
         const PSYQ_NOEXCEPT
         {
-            return in_chunk.key_;
+            return in_left.key_ < in_right.key_;
         }
 
-    }; // struct key_fetcher
+        bool operator()(
+            handler_chunk const& in_left,
+            typename handler_chunk::key const& in_right)
+        const PSYQ_NOEXCEPT
+        {
+            return in_left.key_ < in_right;
+        }
 
-    /// @brief 条件挙動チャンクの識別値を比較する関数オブジェクト。
-    private: typedef
-         psyq::member_comparison<this_type, typename this_type::key>
-         key_comparison;
+        bool operator()(
+            typename handler_chunk::key const& in_left,
+            handler_chunk const& in_right)
+        const PSYQ_NOEXCEPT
+        {
+            return in_left < in_right.key_;
+        }
+
+    }; // struct priority_less
 
     //-------------------------------------------------------------------------
-    /// @name 構築と代入
-    /// @{
 #ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
     /// @brief ムーブ構築子。
     public: handler_chunk(
@@ -90,20 +96,23 @@ class psyq::if_then_engine::_private::handler_chunk
         return *this;
     }
 #endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
-    /// @}
-    //-------------------------------------------------------------------------
-    /// @name 条件挙動関数
-    /// @{
 
-    /// @brief 条件挙動チャンクに条件挙動関数を追加する。
-    /// @retval true  成功。条件挙動関数を追加した。
-    /// @retval false 失敗。条件挙動関数を追加しなかった。
+    /// @brief 条件挙動関数のコンテナを整理する。
+    public: void shrink_to_fit()
+    {
+        this->functions_.shrink_to_fit();
+    }
+
+    //-------------------------------------------------------------------------
+    /// @brief 条件挙動チャンクに handler::function を追加する。
+    /// @retval true  成功。 handler::function を追加した。
+    /// @retval false 失敗。 handler::function を追加しなかった。
     public: static bool extend(
-        /// [in,out] 条件挙動関数を追加する条件挙動チャンクのコンテナ。
+        /// [in,out] handler::function を追加する条件挙動チャンクのコンテナ。
         typename this_type::container& io_chunks,
-        /// [in] 条件挙動関数を追加する条件挙動チャンクの識別値。
+        /// [in] handler::function を追加する条件挙動チャンクの識別値。
         typename this_type::key const& in_key,
-        /// [in] 条件挙動チャンクに追加する条件挙動関数を指すスマートポインタ。
+        /// [in] 条件挙動チャンクに追加する handler::function_shared_ptr 。
         typename this_type::dispatcher::handler::function_shared_ptr in_function)
     {
         if (in_function.get() == nullptr)
@@ -117,15 +126,16 @@ class psyq::if_then_engine::_private::handler_chunk
         return true;
     }
 
-    /// @brief 条件挙動チャンクに条件挙動関数を追加する。
-    /// @return 追加した条件挙動関数の数。
+    /// @brief 条件挙動チャンクに handler::function を追加する。
+    /// @return 追加した handler::function の数。
     public: template<typename template_function_container>
     static std::size_t extend(
-        /// [in,out] 条件挙動関数を追加する条件挙動チャンクのコンテナ。
+        /// [in,out] handler::function を追加する条件挙動チャンクのコンテナ。
         typename this_type::container& io_chunks,
-        /// [in] 条件挙動関数を追加する条件挙動チャンクの識別値。
+        /// [in] handler::function を追加する条件挙動チャンクの識別値。
         typename this_type::key const& in_key,
-        /// [in] 条件挙動チャンクに追加する条件挙動関数の、スマートポインタのコンテナ。
+        /// [in] 条件挙動チャンクに追加する
+        /// handler::function_shared_ptr のコンテナ。
         template_function_container in_functions)
     {
         // 条件挙動関数を条件挙動チャンクに追加する。
@@ -154,61 +164,60 @@ class psyq::if_then_engine::_private::handler_chunk
         /// [in] 削除する条件挙動チャンクの識別値。
         typename this_type::key const& in_key)
     {
-        auto const local_iterator(
-            this_type::key_comparison::find_iterator(
-                io_chunks, in_key, this_type::make_key_less()));
-        auto const local_find(local_iterator != io_chunks.end());
-        if (local_find)
+        auto const local_lower_bound(
+            std::lower_bound(
+                io_chunks.begin(),
+                io_chunks.end(),
+                in_key,
+                typename this_type::key_less()));
+        if (local_lower_bound == io_chunks.end()
+            || local_lower_bound->key_ != in_key)
         {
-            io_chunks.erase(local_iterator);
+            return false;
         }
-        return local_find;
+        io_chunks.erase(local_lower_bound);
+        return true;
     }
 
-    /** @brief 条件挙動チャンクを用意する。
-        @param[in,out] io_chunks 条件挙動チャンクのコンテナ。
-        @param[in] in_key        用意する条件挙動チャンクの識別値。
-        @return 用意した条件挙動チャンク。
-     */
-    private: static this_type& equip(
-        typename this_type::container& io_chunks,
-        typename this_type::key const& in_key)
-    {
-        // 条件挙動関数を追加する条件挙動チャンクを用意する。
-        auto const local_iterator(
-            this_type::key_comparison::find_iterator(
-                io_chunks, in_key, this_type::make_key_less()));
-        return local_iterator != io_chunks.end()?
-            *local_iterator:
-            *io_chunks.insert(
-                local_iterator, this_type(in_key, io_chunks.get_allocator()));
-    }
-    /// @}
     //-------------------------------------------------------------------------
     /// @brief 空の条件挙動チャンクを構築する。
     private: handler_chunk(
         /// [in] 条件挙動チャンクの識別値。
-        typename this_type::key in_key,
+        typename this_type::key const& in_key,
         /// [in] メモリ割当子の初期値。
         typename this_type::dispatcher::allocator_type const& in_allocator):
     functions_(in_allocator),
-    key_(std::move(in_key))
+    key_(in_key)
     {}
 
-    private: static typename this_type::key_comparison::template function<
-        typename this_type::key_fetcher, std::less<typename this_type::key> >
-    make_key_less()
+    /// @brief 条件挙動チャンクを用意する。
+    /// @return 用意した条件挙動チャンク。
+    private: static this_type& equip(
+        /// [in,out] 条件挙動チャンクのコンテナ。
+        typename this_type::container& io_chunks,
+        /// [in] 用意する条件挙動チャンクの識別値。
+        typename this_type::key const& in_key)
     {
-        return this_type::key_comparison::make_function(
-            typename this_type::key_fetcher(),
-            std::less<typename this_type::key>());
+        // 条件挙動関数を追加する条件挙動チャンクを用意する。
+        auto const local_lower_bound(
+            std::lower_bound(
+                io_chunks.begin(),
+                io_chunks.end(),
+                in_key,
+                typename this_type::key_less()));
+        return local_lower_bound != io_chunks.end()
+        && local_lower_bound->key_ == in_key?
+            *local_lower_bound:
+            *io_chunks.insert(
+                local_lower_bound,
+                this_type(in_key, io_chunks.get_allocator()));
     }
 
     //-------------------------------------------------------------------------
-    /// @brief 条件挙動関数のコンテナ。
-    public: typename this_type::function_shared_ptr_container functions_;
+    /// @brief handler::function_shared_ptr のコンテナ。
+    private: typename this_type::function_shared_ptr_container functions_;
     /// @brief 条件挙動チャンクの識別値。
-    public: typename this_type::key key_;
+    private: typename this_type::key key_;
 
 }; // class psyq::if_then_engine::handler_chunk
 

@@ -959,8 +959,8 @@ class psyq::if_then_engine::_private::reservoir
             local_properties.begin(),
             local_properties.end(),
             [](
-                property_container::value_type const& in_left,
-                property_container::value_type const& in_right)
+                typename property_container::value_type const& in_left,
+                typename property_container::value_type const& in_right)
             ->bool
             {
                 return in_right.first < in_left.first;

@@ -40,11 +40,11 @@ class psyq::if_then_engine::_private::handler
     public: typedef template_expression_key expression_key;
     /// @copydoc psyq::if_then_engine::evaluation
     public: typedef template_evaluation evaluation;
-    /// @brief this_type::function の呼び出し優先順位の型。
-    /// @details 関数は、優先順位の昇順で呼び出される。
+    /// @brief handler::function の呼び出し優先順位の型。
+    /// @details 優先順位の昇順で呼び出される。
     public: typedef template_priority priority;
-    /// @brief this_type::function を呼び出す、条件式の評価の変化の条件を表す型。
-    /// @details dispatcher::make_condition で条件を作る。
+    /// @brief handler::function を呼び出す、条件式の評価の変化の条件を表す型。
+    /// @details handler::make_condition で条件を作る。
     public: typedef std::uint8_t condition;
 
     //-------------------------------------------------------------------------
@@ -60,11 +60,11 @@ class psyq::if_then_engine::_private::handler
                 typename this_type::evaluation const,
                 typename this_type::evaluation const)>
         function;
-    /// @brief this_type::function の、所有権ありスマートポインタ。
+    /// @brief handler::function の、所有権ありスマートポインタ。
     public: typedef
         std::shared_ptr<typename this_type::function>
         function_shared_ptr;
-    /// @brief this_type::function の、所有権なしスマートポインタ。
+    /// @brief handler::function の、所有権なしスマートポインタ。
     public: typedef
         std::weak_ptr<typename this_type::function>
         function_weak_ptr;
@@ -151,11 +151,11 @@ class psyq::if_then_engine::_private::handler
     //---------------------------------------------------------------------
     /// @brief 条件挙動ハンドラを構築する。
     public: handler(
-        /// [in] this_type::condition_ の初期値。
+        /// [in] handler::condition_ の初期値。
         typename this_type::condition const in_condition,
-        /// [in] this_type::function_ の初期値。
+        /// [in] handler::function_ の初期値。
         typename this_type::function_weak_ptr in_function,
-        /// [in] this_type::priority_ の初期値。
+        /// [in] handler::priority_ の初期値。
         typename this_type::priority const in_priority):
     function_(std::move(in_function)),
     priority_(in_priority),
@@ -187,15 +187,15 @@ class psyq::if_then_engine::_private::handler
 
     //-------------------------------------------------------------------------
     /// @brief 関数を呼び出す条件となる、条件式の評価の変化を取得する。
-    /// @return @copydoc this_type::condition_
-    /// @sa this_type::make_condition で、条件を構築できる。
+    /// @return @copydoc handler::condition_
+    /// @sa handler::make_condition で、条件を構築できる。
     public: typename this_type::condition get_condition() const PSYQ_NOEXCEPT
     {
         return this->condition_;
     }
 
     /// @brief 条件と合致した際に呼び出す関数を取得する。
-    /// @return @copydoc this_type::function_
+    /// @return @copydoc handler::function_
     public: typename this_type::function_weak_ptr const& get_function()
     const PSYQ_NOEXCEPT
     {
@@ -203,7 +203,7 @@ class psyq::if_then_engine::_private::handler
     }
 
     /// @brief 条件と合致した際の、関数を呼び出す優先順位を取得する。
-    /// @return @copydoc this_type::priority_
+    /// @return @copydoc handler::priority_
     public: typename this_type::priority get_priority() const PSYQ_NOEXCEPT
     {
         return this->priority_;
@@ -215,23 +215,23 @@ class psyq::if_then_engine::_private::handler
     /// @retval false 合致しなかった。
     public: static bool is_matched_condition(
         /// [in] 条件となる評価の変化。
-        /// this_type::make_condition で構築できる。
+        /// handler::make_condition で構築できる。
         typename this_type::condition const in_condition,
         /// [in] 条件式の最新の評価結果。
-        typename this_type::evaluation const in_evaluation,
+        typename this_type::evaluation const in_now_evaluation,
         /// [in] 条件式の前回の評価結果。
         typename this_type::evaluation const in_last_evaluation)
     PSYQ_NOEXCEPT
     {
         // 評価変化条件に合致するか判定する。
         auto const local_make_condition(
-            [](typename this_type::evaluation const in_eval)
+            [](typename this_type::evaluation const in_evaluation)
             ->typename this_type::evaluation
             {
-                return in_eval < 0? 1: (in_eval <= 0? 2: 4);
+                return in_evaluation < 0? 1: (in_evaluation <= 0? 2: 4);
             });
         auto const local_condition(
-            local_make_condition(in_evaluation) | (
+            local_make_condition(in_now_evaluation) | (
                 local_make_condition(in_last_evaluation)
                 << this_type::CONDITION_BIT_WIDTH));
         return local_condition == (local_condition & in_condition);

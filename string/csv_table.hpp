@@ -298,6 +298,10 @@ public psyq::string::table<
                             in_string_factory));
                     out_workspace.clear();
                     local_cell_size = 0;
+                    if (local_column_max < local_column)
+                    {
+                        local_column_max = local_column;
+                    }
                 }
                 ++local_column;
             }
@@ -315,14 +319,10 @@ public psyq::string::table<
                             in_string_factory));
                     out_workspace.clear();
                     local_cell_size = 0;
-                }
-                else if (0 < local_column)
-                {
-                    --local_column;
-                }
-                if (local_column_max < local_column)
-                {
-                    local_column_max = local_column;
+                    if (local_column_max < local_column)
+                    {
+                        local_column_max = local_column;
+                    }
                 }
                 local_column = 0;
                 ++local_row;
@@ -379,11 +379,14 @@ public psyq::string::table<
         this->shrink_to_fit();
 
         // 文字列表の大きさを決定する。
-        if (local_column_max < local_column)
+        if (!this->is_empty())
         {
-            local_column_max = local_column;
+            if (local_column_max < local_column)
+            {
+                local_column_max = local_column;
+            }
+            this->set_size(local_row + 1, local_column_max + 1);
         }
-        this->set_size(local_row + 1, local_column_max + 1);
         return true;
     }
 

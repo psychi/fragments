@@ -67,8 +67,7 @@ class psyq::if_then_engine::status_builder
     private: typedef status_builder this_type;
 
     //-------------------------------------------------------------------------
-    /// @brief 解析する関係文字列表の型。
-    /// @details psyq::string::relation_table 互換のインターフェイスを持つこと。
+    /// @brief 解析する psyq::string::relation_table 。
     public: typedef template_relation_table relation_table;
 
     //-------------------------------------------------------------------------
@@ -96,54 +95,52 @@ class psyq::if_then_engine::status_builder
                 && 1 <= this->value_.second;
         }
 
+        /// @brief 状態値の識別値となる文字列の列番号と列数。
         public: typename this_type::relation_table::attribute key_;
+        /// @brief 状態値の種別の列番号と列数。
         public: typename this_type::relation_table::attribute kind_;
+        /// @brief 状態値の初期値の列番号と列数。
         public: typename this_type::relation_table::attribute value_;
 
     }; // class table_attribute
 
     //-------------------------------------------------------------------------
-    /// @brief 文字列表から状態値を構築する関数オブジェクトを構築する。
-    public: explicit status_builder(
-        /// [in] 解析する文字列表。
-        typename this_type::relation_table in_table):
-    relation_table_(std::move(in_table))
-    {}
-
     /// @brief 文字列表を解析して状態値を構築し、状態貯蔵器へ登録する。
     /// @return 登録した状態値の数。
     public: template<typename template_reservoir, typename template_hasher>
     std::size_t operator()(
-        /// [in,out] 状態値を登録する状態貯蔵器。
+        /// [in,out] 状態値を登録する driver::reservoir 。
         template_reservoir& io_reservoir,
-        /// [in,out] 文字列からハッシュ値を作る関数オブジェクト。
+        /// [in,out] 文字列からハッシュ値を作る driver::hasher 。
         template_hasher& io_hasher,
         /// [in] 状態値を登録するチャンクの識別値。
-        typename template_reservoir::chunk_key const& in_chunk_key)
+        typename template_reservoir::chunk_key const& in_chunk_key,
+        /// [in] 状態値が記述されている文字列表。空の場合は、状態値は登録されない。
+        typename this_type::relation_table const& in_table)
     const
     {
-        return this_type::build(
-            io_reservoir, io_hasher, in_chunk_key, this->relation_table_);
+        return this_type::register_statuses(
+            io_reservoir, io_hasher, in_chunk_key, in_table);
     }
 
     /// @brief 文字列表を解析して状態値を構築し、状態貯蔵器へ登録する。
     /// @return 登録した状態値の数。
     public: template<typename template_reservoir, typename template_hasher>
-    static std::size_t build(
-        /// [in,out] 状態値を登録する状態貯蔵器。
+    static std::size_t register_statuses(
+        /// [in,out] 状態値を登録する driver::reservoir 。
         template_reservoir& io_reservoir,
-        /// [in,out] 文字列からハッシュ値を作る関数オブジェクト。
+        /// [in,out] 文字列からハッシュ値を作る driver::hasher 。
         template_hasher& io_hasher,
         /// [in] 状態値を登録するチャンクの識別値。
         typename template_reservoir::chunk_key const& in_chunk_key,
-        /// [in] 解析する文字列表。
+        /// [in] 状態値が記述されている文字列表。空の場合は、状態値は登録されない。
         typename this_type::relation_table const& in_table)
     {
         // 文字列表の属性を取得する。
         typename this_type::table_attribute const local_attribute(in_table);
         if (!local_attribute.is_valid())
         {
-            PSYQ_ASSERT(false);
+            PSYQ_ASSERT(in_table.is_empty());
             return 0;
         }
 
@@ -350,10 +347,6 @@ class psyq::if_then_engine::status_builder
         }
         return 0;
     }
-
-    //-------------------------------------------------------------------------
-    /// @brief 解析する文字列表。
-    private: typename this_type::relation_table relation_table_;
 
 }; // class psyq::if_then_engine::status_builder
 

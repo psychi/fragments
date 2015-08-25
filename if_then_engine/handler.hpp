@@ -22,7 +22,7 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief 条件式挙動ハンドラ。条件式の評価の変化を検知した際に呼び出す関数を保持する。
+/// @brief 条件挙動ハンドラ。呼び出される関数と、呼び出される条件を保持する。
 /// @tparam template_expression_key @copydoc handler::expression_key
 /// @tparam template_evaluation     @copydoc handler::evaluation
 /// @tparam template_priority       @copydoc handler::priority
@@ -40,15 +40,37 @@ class psyq::if_then_engine::_private::handler
     public: typedef template_expression_key expression_key;
     /// @copydoc psyq::if_then_engine::evaluation
     public: typedef template_evaluation evaluation;
-    /// @brief handler::function の呼び出し優先順位の型。
+    /// @brief handler::function の呼び出し優先順位。
     /// @details 優先順位の昇順で呼び出される。
     public: typedef template_priority priority;
-    /// @brief handler::function を呼び出す、条件式の評価の変化の条件を表す型。
+    /// @brief handler::function が呼び出される条件となる、条件式の評価の変化を表す。
     /// @details handler::make_condition で条件を作る。
     public: typedef std::uint8_t condition;
+    /// @brief handler::condition を構成する単位となる条件。
+    /// @details handler::make_condition で条件を作る引数として使う。
+    public: enum unit_condition: typename this_type::condition
+    {
+        /// @brief 無効な条件。
+        INVALID_UNIT_CONDITION = 0,
+        /// @brief 条件式の評価に失敗していることが条件。
+        unit_condition_NULL = 1,
+        /// @brief 条件式の評価が偽であることが条件。
+        unit_condition_FALSE = 2,
+        /// @brief 条件式の評価が真であることが条件。
+        unit_condition_TRUE = 4,
+        /// @brief 条件式の評価に失敗してないことが条件。
+        unit_condition_NOT_NULL = unit_condition_FALSE | unit_condition_TRUE,
+        /// @brief 条件式の評価が偽以外であることが条件。
+        unit_condition_NOT_FALSE = unit_condition_NULL | unit_condition_TRUE,
+        /// @brief 条件式の評価が真以外であることが条件。
+        unit_condition_NOT_TRUE = unit_condition_FALSE | unit_condition_NULL,
+        /// @brief 条件式の評価を問わない。
+        unit_condition_ANY =
+            unit_condition_NULL | unit_condition_FALSE | unit_condition_TRUE,
+    };
 
     //-------------------------------------------------------------------------
-    /// @brief 条件式の評価が条件と合致した際に呼び出す、関数オブジェクトの型。
+    /// @brief 条件挙動関数。条件式の評価が条件と合致した際に呼び出される。
     /// @details
     /// - 引数#0は、評価した条件式の識別値。
     /// - 引数#1は、 evaluator::evaluate_expression の今回の戻り値。
@@ -72,7 +94,7 @@ class psyq::if_then_engine::_private::handler
     //-------------------------------------------------------------------------
     private: enum: std::uint8_t
     {
-        CONDITION_BIT_WIDTH = 3, ///< 変化条件に使うビット数。
+        UNIT_CONDITION_BIT_WIDTH = 3, ///< 単位条件に使うビット幅。
     };
 
     //-------------------------------------------------------------------------
@@ -151,7 +173,7 @@ class psyq::if_then_engine::_private::handler
     //---------------------------------------------------------------------
     /// @brief 条件挙動ハンドラを構築する。
     public: handler(
-        /// [in] handler::condition_ の初期値。
+        /// [in] handler::condition_ の初期値。 handler::make_condition で作る。
         typename this_type::condition const in_condition,
         /// [in] handler::function_ の初期値。
         typename this_type::function_weak_ptr in_function,
@@ -186,7 +208,7 @@ class psyq::if_then_engine::_private::handler
 #endif // defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
     //-------------------------------------------------------------------------
-    /// @brief 関数を呼び出す条件となる、条件式の評価の変化を取得する。
+    /// @brief 関数が呼び出される条件となる、条件式の評価の変化を取得する。
     /// @return @copydoc handler::condition_
     /// @sa handler::make_condition で、条件を構築できる。
     public: typename this_type::condition get_condition() const PSYQ_NOEXCEPT
@@ -194,7 +216,7 @@ class psyq::if_then_engine::_private::handler
         return this->condition_;
     }
 
-    /// @brief 条件と合致した際に呼び出す関数を取得する。
+    /// @brief 条件と合致した際に呼び出される関数を取得する。
     /// @return @copydoc handler::function_
     public: typename this_type::function_weak_ptr const& get_function()
     const PSYQ_NOEXCEPT
@@ -214,8 +236,7 @@ class psyq::if_then_engine::_private::handler
     /// @retval true  合致した。
     /// @retval false 合致しなかった。
     public: static bool is_matched_condition(
-        /// [in] 条件となる評価の変化。
-        /// handler::make_condition で構築できる。
+        /// [in] handler::make_condition で作った、条件式の評価の変化。
         typename this_type::condition const in_condition,
         /// [in] 条件式の最新の評価結果。
         typename this_type::evaluation const in_now_evaluation,
@@ -223,71 +244,55 @@ class psyq::if_then_engine::_private::handler
         typename this_type::evaluation const in_last_evaluation)
     PSYQ_NOEXCEPT
     {
-        // 評価変化条件に合致するか判定する。
+        // 条件式の評価を単位条件に変換し、条件と合致するか判定する。
         auto const local_make_condition(
             [](typename this_type::evaluation const in_evaluation)
             ->typename this_type::evaluation
             {
-                return in_evaluation < 0? 1: (in_evaluation <= 0? 2: 4);
+                return in_evaluation < 0?
+                    this_type::unit_condition_NULL:
+                    (in_evaluation <= 0?
+                        this_type::unit_condition_FALSE:
+                        this_type::unit_condition_TRUE);
             });
         auto const local_condition(
             local_make_condition(in_now_evaluation) | (
                 local_make_condition(in_last_evaluation)
-                << this_type::CONDITION_BIT_WIDTH));
+                << this_type::UNIT_CONDITION_BIT_WIDTH));
         return local_condition == (local_condition & in_condition);
     }
 
-    /// @brief 関数を呼び出す条件を作る。
-    /// @return 関数を呼び出す条件。
+    /// @brief 関数が呼び出される条件を作る。
+    /// @return
+    /// 関数が呼び出される条件。無効な条件の場合は
+    /// this_type::INVALID_UNIT_CONDITION を返す。
     public: static typename this_type::condition make_condition(
-        /// [in] 条件式の最新の評価が、真に変化したことが条件。
-        bool const in_now_true,
-        /// [in] 条件式の最新の評価が、偽に変化したことが条件。
-        bool const in_now_false,
-        /// [in] 条件式の最新の評価が、失敗に変化したことが条件。
-        bool const in_now_failed,
-        /// [in] 条件式の前回の評価が、真だったことが条件。
-        bool const in_last_true,
-        /// [in] 条件式の前回の評価が、偽だったことが条件。
-        bool const in_last_false,
-        /// [in] 条件式の前回の評価が、失敗だったことが条件。
-        bool const in_last_failed)
-    PSYQ_NOEXCEPT
+        /// [in] 条件となる、最新の条件式の評価。
+        typename this_type::unit_condition const in_now_condition,
+        /// [in] 条件となる、前回の条件式の評価。
+        typename this_type::unit_condition const in_last_condition)
     {
-        return static_cast<typename this_type::condition>(in_now_failed)
-            | (in_now_false << 1)
-            | (in_now_true << 2)
-            | (in_last_failed << this_type::CONDITION_BIT_WIDTH)
-            | (in_last_false << (this_type::CONDITION_BIT_WIDTH + 1))
-            | (in_last_true << (this_type::CONDITION_BIT_WIDTH + 2));
-    }
-
-    /// @brief 関数を呼び出す条件を作る。
-    /// @return 関数を呼び出す条件。
-    public: static typename this_type::condition make_condition(
-        /// [in] 条件式の最新の評価。
-        typename this_type::evaluation const in_now_evaluation,
-        /// [in] 条件式の前回の評価。
-        typename this_type::evaluation const in_last_evaluation)
-    {
-        return this_type::make_condition(
-            0 < in_now_evaluation,
-            in_now_evaluation == 0,
-            in_now_evaluation < 0,
-            0 < in_last_evaluation,
-            in_last_evaluation == 0,
-            in_last_evaluation < 0);
+        if (in_now_condition == this_type::INVALID_UNIT_CONDITION
+            || in_last_condition == this_type::INVALID_UNIT_CONDITION
+            || (in_now_condition == in_last_condition
+                // 2のべき乗か判定する。
+                && (in_now_condition & (in_now_condition - 1)) == 0))
+        {
+            return this_type::INVALID_UNIT_CONDITION;
+        }
+        return in_now_condition
+            | (in_last_condition << this_type::UNIT_CONDITION_BIT_WIDTH);
     }
 
     //---------------------------------------------------------------------
-    /// @brief 条件と合致した際に呼び出す関数を指すスマートポインタ。
+    /// @brief 条件と合致した際に呼び出される関数を指すスマートポインタ。
     private: typename this_type::function_weak_ptr function_;
     /// @brief 条件と合致した際に、関数を呼び出す優先順位。昇順に呼び出される。
     private: typename this_type::priority priority_;
-    /// @brief 関数を呼び出す条件となる、条件式の評価の変化。
+    /// @brief 関数が呼び出される条件となる、条件式の評価の変化。
     private: typename this_type::condition condition_;
 
-}; // class handler
+}; // class psyq::if_then_engine::_private::handler
 
 #endif // !defined(PSYQ_IF_THEN_ENGINE_HANDLER_HPP_)
 // vim: set expandtab:

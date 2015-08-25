@@ -10,6 +10,29 @@
 #include "../static_deque.hpp"
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/*
+配置表
+　配置の識別名
+　配置の条件
+　配置決定時の状態値の書き換え
+　撤去の条件
+　撤去決定時の状態値の書き換え
+　status表
+　expression表
+　handler表
+　locator表
+　collision表
+　actor行動表
+　gadget配置表
+　script表
+　　スクリプト名
+　　待機の条件
+　　待機決定時の状態値の書き換え
+　　起動の条件
+　　起動決定時の状態値の書き換え
+　　途中終了の条件
+　　終了決定時の状態値の書き換え
+*/
 namespace tesv
 {
     typedef psyq::string::flyweight<char> flyweight_string;
@@ -573,16 +596,16 @@ namespace psyq_test
 
         // 条件挙動CSV文字列を構築する。
         flyweight_string::view const local_csv_behavior(
-            "KEY         , CONDITION,,,,,, PRIORITY,       KIND, ARGUMENT\n"
-            "expression_0, TRUE,,,, TRUE,, 9, STATUS_ASSIGNMENT, status_unsigned, :=, 1, status_unsigned, +=, STATUS:status_unsigned\n"
-            "expression_1, TRUE,,,, TRUE,, 8, STATUS_ASSIGNMENT, status_unsigned, +=, 1\n"
-            "expression_2, TRUE,,,, TRUE,, 7, STATUS_ASSIGNMENT, status_unsigned, -=, 1\n"
-            "expression_3, TRUE,,,, TRUE,, 6, STATUS_ASSIGNMENT, status_unsigned, *=, 1\n"
-            "expression_4, TRUE,,,, TRUE,, 5, STATUS_ASSIGNMENT, status_unsigned, /=, 1\n"
-            "expression_5, TRUE,,,, TRUE,, 4, STATUS_ASSIGNMENT, status_unsigned, %=, 1\n"
-            "expression_6, TRUE,,,, TRUE,, 3, STATUS_ASSIGNMENT, status_unsigned, |=, 1\n"
-            "expression_7, TRUE,,,, TRUE,, 2, STATUS_ASSIGNMENT, status_unsigned, ^=, 0\n"
-            "expression_8, TRUE,,,, TRUE,, 1, STATUS_ASSIGNMENT, status_unsigned, &=, 0\n"
+            "KEY         , CONDITION,, PRIORITY,       KIND, ARGUMENT\n"
+            "expression_0, FALSE, TRUE,   9, STATUS_ASSIGNMENT, status_unsigned, :=, 1, status_unsigned, +=, STATUS:status_unsigned\n"
+            "expression_1, FALSE, NULL,   8, STATUS_ASSIGNMENT, status_unsigned, +=, 1\n"
+            "expression_2, FALSE, ANY,    7, STATUS_ASSIGNMENT, status_unsigned, -=, 1\n"
+            "expression_3, FALSE, !FALSE, 6, STATUS_ASSIGNMENT, status_unsigned, *=, 1\n"
+            "expression_4, TRUE,  NULL,   5, STATUS_ASSIGNMENT, status_unsigned, /=, 1\n"
+            "expression_5, TRUE,  FALSE,  4, STATUS_ASSIGNMENT, status_unsigned, %=, 1\n"
+            "expression_6, TRUE,  !TRUE,  3, STATUS_ASSIGNMENT, status_unsigned, |=, 1\n"
+            "expression_7, TRUE,  ANY,    2, STATUS_ASSIGNMENT, status_unsigned, ^=, 0\n"
+            "expression_8, TRUE,  !NULL,  1, STATUS_ASSIGNMENT, status_unsigned, &=, 0\n"
             "");
 
         // 状態値と条件式と条件挙動を、駆動器に登録する。

@@ -62,7 +62,7 @@ namespace psyq
 #endif // !define(PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON)
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief 文字列表から条件式を構築する関数オブジェクト。
+/// @brief 文字列表から条件式を構築して登録する関数オブジェクト。
 /// @details psyq::if_then_engine::driver::extend_chunk の引数として使う。
 /// @tparam template_relation_table @copydoc expression_builder::relation_table
 template<typename template_relation_table>
@@ -72,7 +72,7 @@ class psyq::if_then_engine::expression_builder
     private: typedef expression_builder this_type;
 
     //-------------------------------------------------------------------------
-    /// @brief 解析する psyq::string::relation_table の型。
+    /// @brief 解析する psyq::string::relation_table 。
     public: typedef template_relation_table relation_table;
 
     //-------------------------------------------------------------------------
@@ -91,34 +91,31 @@ class psyq::if_then_engine::expression_builder
         kind_(
             in_table.find_attribute(
                 PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND)),
-        element_(
+        elements_(
             in_table.find_attribute(
                 PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT))
         {}
 
         public: bool is_valid() const PSYQ_NOEXCEPT
         {
-            return 0 < this->key_.second
-                && 0 < this->logic_.second
-                && 0 < this->kind_.second
-                && 0 < this->element_.second;
+            return 1 <= this->key_.second
+                && 1 <= this->logic_.second
+                && 1 <= this->kind_.second
+                && 1 <= this->elements_.second;
         }
 
+        /// @brief 条件式の識別値の列番号と列数。
         public: typename this_type::relation_table::attribute key_;
+        /// @brief 論理演算子の列番号と列数。
         public: typename this_type::relation_table::attribute logic_;
+        /// @brief 条件式の種別の列番号と列数。
         public: typename this_type::relation_table::attribute kind_;
-        public: typename this_type::relation_table::attribute element_;
+        /// @brief 条件式の要素条件の列番号と列数。
+        public: typename this_type::relation_table::attribute elements_;
 
     }; // class table_attribute
 
     //-------------------------------------------------------------------------
-    /// @brief 文字列表から条件式を構築する関数オブジェクトを構築する。
-    public: explicit expression_builder(
-        /// [in] 解析する文字列表。
-        typename this_type::relation_table in_table):
-    relation_table_(std::move(in_table))
-    {}
-
     /// @brief 文字列表を解析して条件式を構築し、条件評価器に登録する。
     /// @return 登録した条件式の数。
     public: template<typename template_evaluator, typename template_hasher>
@@ -130,106 +127,127 @@ class psyq::if_then_engine::expression_builder
         /// [in] 条件式を登録するチャンクの識別値。
         typename template_evaluator::chunk_key const& in_chunk_key,
         /// [in] 条件式が参照する driver::reservoir 。
-        typename template_evaluator::reservoir const& in_reservoir)
+        typename template_evaluator::reservoir const& in_reservoir,
+        /// [in] 条件式が記述されている文字列表。空の場合は、条件式は登録されない。
+        typename this_type::relation_table const& in_table)
     const
     {
-        return this_type::build(
-            io_evaluator,
-            io_hasher,
-            in_chunk_key,
-            in_reservoir,
-            this->relation_table_);
+        return this_type::register_expressions(
+            io_evaluator, io_hasher, in_chunk_key, in_reservoir, in_table);
     }
 
     /// @brief 文字列表を解析して条件式を構築し、条件評価器に登録する。
     /// @return 登録した条件式の数。
     public: template<typename template_evaluator, typename template_hasher>
-    static typename this_type::relation_table::number build(
-        /// [in,out] 構築した条件式を登録する driver::evaluator 。
+    static typename this_type::relation_table::number register_expressions(
+        /// [in,out] 文字列表から構築した条件式を登録する driver::evaluator 。
         template_evaluator& io_evaluator,
         /// [in,out] 文字列からハッシュ値を作る driver::hasher 。
         template_hasher& io_hasher,
-        /// [in] 条件式を登録するチャンクの識別値。
+        /// [in] 条件式を登録する要素条件チャンクの識別値。
         typename template_evaluator::chunk_key const& in_chunk_key,
         /// [in] 条件式が参照する driver::reservoir 。
         typename template_evaluator::reservoir const& in_reservoir,
-        /// [in] 条件式が記述されている文字列表。
+        /// [in] 条件式が記述されている文字列表。空の場合は、条件式は登録されない。
         typename this_type::relation_table const& in_table)
     {
         // 文字列表の属性を取得する。
         typename this_type::table_attribute const local_attribute(in_table);
         if (!local_attribute.is_valid())
         {
-            PSYQ_ASSERT(false);
+            PSYQ_ASSERT(in_table.is_empty());
             return 0;
         }
 
         // 作業領域を確保する。
         typename template_evaluator::chunk local_workspace(
             io_evaluator.get_allocator());
-        local_workspace.sub_expressions_.reserve(local_attribute.element_.second);
-        local_workspace.status_transitions_.reserve(local_attribute.element_.second);
-        local_workspace.status_comparisons_.reserve(local_attribute.element_.second);
+        local_workspace.sub_expressions_.reserve(
+            local_attribute.elements_.second);
+        local_workspace.status_transitions_.reserve(
+            local_attribute.elements_.second);
+        local_workspace.status_comparisons_.reserve(
+            local_attribute.elements_.second);
 
         // 文字列表を行ごとに解析し、条件式を構築して、条件評価器へ登録する。
+        auto const local_empty_key(
+            io_hasher(typename template_hasher::argument_type()));
         auto const local_row_count(in_table.get_row_count());
         decltype(in_table.get_row_count()) local_count(0);
-        for (decltype(local_count) i(0); i < local_row_count; ++i)
+        for (
+            typename this_type::relation_table::number i(0);
+            i < local_row_count;
+            ++i)
         {
-            if (i != in_table.get_attribute_row()
-                && this_type::register_expression(
+            if (i == in_table.get_attribute_row())
+            {
+                continue;
+            }
+            auto const local_expression_key(
+                io_hasher(
+                    in_table.find_cell(i, local_attribute.key_.first)));
+            if (local_expression_key != local_empty_key
+                && nullptr == io_evaluator.find_expression(local_expression_key)
+                && nullptr != this_type::register_expression(
                     io_evaluator,
                     io_hasher,
                     local_workspace,
                     in_chunk_key,
+                    local_expression_key,
                     in_reservoir,
                     in_table,
                     i,
-                    local_attribute))
+                    local_attribute.logic_,
+                    local_attribute.kind_,
+                    local_attribute.elements_))
             {
                 ++local_count;
+            }
+            else
+            {
+                // 条件式の識別値が空だったか、重複していた。
+                PSYQ_ASSERT(false);
             }
         }
         return local_count;
     }
 
-    //-------------------------------------------------------------------------
-    /// @brief 文字列表を解析して条件式を構築し、条件評価器へ登録する。
-    /// @retval true  成功。条件式を構築して io_evaluator に登録した。
-    /// @retval false 失敗。条件式を登録できなかった。
-    private: template<typename template_evaluator, typename template_hasher>
-    static bool register_expression(
-        /// [in,out] 構築した条件式を追加する driver::evaluator 。
+    /// @brief 文字列表の行を解析して条件式を構築し、条件評価器へ登録する。
+    /// @return
+    /// 登録した条件式を指すポインタ。登録に失敗した場合は nullptr を返す。
+    public: template<typename template_evaluator, typename template_hasher>
+    static typename template_evaluator::expression const* register_expression(
+        /// [in,out] 文字列表から構築した条件式を登録する driver::evaluator 。
         template_evaluator& io_evaluator,
         /// [in,out] 文字列からハッシュ値を生成する driver::hasher 。
         template_hasher& io_hasher,
         /// [in,out] 作業領域として使う driver::evaluator::chunk 。
         typename template_evaluator::chunk& io_workspace,
-        /// [in] 条件式を登録するチャンクの識別値。
+        /// [in] 条件式を登録する要素条件チャンクの識別値。
         typename template_evaluator::chunk_key const& in_chunk_key,
+        /// [in] 登録する条件式の識別値。
+        typename template_evaluator::expression_key const& in_expression_key,
         /// [in] 条件式が参照する driver::reservoir 。
         typename template_evaluator::reservoir const& in_reservoir,
         /// [in] 解析する文字列表。
         typename this_type::relation_table const& in_table,
-        /// [in] 解析する文字列表の行番号。
+        /// [in] 解析する文字列表の、行番号。
         typename this_type::relation_table::number const in_row_number,
-        /// [in] 文字列表の属性。
-        typename this_type::table_attribute const& in_attribute)
+        /// [in] 解析する文字列表の、論理演算子の列番号と列数。
+        typename this_type::relation_table::attribute const& in_logic,
+        /// [in] 解析する文字列表の、条件式の種別の列番号と列数。
+        typename this_type::relation_table::attribute const& in_kind,
+        /// [in] 解析する文字列表の、要素条件の列番号と列数。
+        typename this_type::relation_table::attribute const& in_elements)
     {
-        // 条件式の識別値を取得する。
-        auto const local_key(
-            io_hasher(in_table.find_cell(in_row_number, in_attribute.key_.first)));
-        if (local_key == io_hasher(typename template_hasher::argument_type())
-            || io_evaluator.find_expression(local_key) != nullptr)
+        if (in_logic.second < 1 || in_kind.second < 1 || in_elements.second < 1)
         {
-            // 条件式の識別値が空だったか、重複していた。
-            PSYQ_ASSERT(false);
-            return false;
+            return nullptr;
         }
 
-        // 要素条件の論理演算子を取得する。
+        // 要素条件の論理演算子を、文字列表から取得する。
         auto const& local_logic_cell(
-            in_table.find_cell(in_row_number, in_attribute.logic_.first));
+            in_table.find_cell(in_row_number, in_logic.first));
         typename template_evaluator::expression::logic local_logic;
         if (local_logic_cell ==
                 PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_AND)
@@ -244,16 +262,16 @@ class psyq::if_then_engine::expression_builder
         }
         else
         {
-            // 未知の要素条件結合種別だった。
+            // 未知の論理演算子だった。
             PSYQ_ASSERT(false);
-            return false;
+            return nullptr;
         }
 
-        // 条件式の種類ごとに、条件式の要素条件を構築して登録する。
+        // 条件式の種別を文字列表から取得し、
+        // 種別ごとに条件式の要素条件を構築して登録する。
         auto const& local_kind_cell(
-            in_table.find_cell(in_row_number, in_attribute.kind_.first));
-        auto const local_elements_end(
-            in_attribute.element_.first + in_attribute.element_.second);
+            in_table.find_cell(in_row_number, in_kind.first));
+        auto const local_elements_end(in_elements.first + in_elements.second);
         if (local_kind_cell ==
                 PSYQ_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION)
         {
@@ -263,12 +281,12 @@ class psyq::if_then_engine::expression_builder
                 io_hasher,
                 io_workspace.sub_expressions_,
                 in_chunk_key,
-                local_key,
+                in_expression_key,
                 local_logic,
                 io_evaluator,
                 in_table,
                 in_row_number,
-                in_attribute.element_.first,
+                in_elements.first,
                 local_elements_end);
         }
         else if (
@@ -281,12 +299,12 @@ class psyq::if_then_engine::expression_builder
                 io_hasher,
                 io_workspace.status_transitions_,
                 in_chunk_key,
-                local_key,
+                in_expression_key,
                 local_logic,
                 in_reservoir,
                 in_table,
                 in_row_number,
-                in_attribute.element_.first,
+                in_elements.first,
                 local_elements_end);
         }
         else if (
@@ -299,31 +317,30 @@ class psyq::if_then_engine::expression_builder
                 io_hasher,
                 io_workspace.status_comparisons_,
                 in_chunk_key,
-                local_key,
+                in_expression_key,
                 local_logic,
                 in_reservoir,
                 in_table,
                 in_row_number,
-                in_attribute.element_.first,
+                in_elements.first,
                 local_elements_end);
         }
         else
         {
             // 未知の条件式種別だった。
             PSYQ_ASSERT(false);
-            return false;
+            return nullptr;
         }
     }
 
-    /// @brief 文字列表を解析して条件式を構築し、条件評価器へ登録する。
-    /// @retval true  成功。条件式を構築して io_evaluator に登録した。
-    /// @retval false 失敗。条件式を登録できなかった。
+    //-------------------------------------------------------------------------
+    /// @copydoc this_type::register_expression
     private: template<
         typename template_evaluator,
         typename template_element_container,
         typename template_hasher,
         typename template_element_server>
-    static bool register_expression(
+    static typename template_evaluator::expression const* register_expression(
         /// [in,out] 条件式を登録する driver::evaluator 。
         template_evaluator& io_evaluator,
         /// [in,out] 文字列からハッシュ値を生成する driver::hasher 。
@@ -359,7 +376,7 @@ class psyq::if_then_engine::expression_builder
                 in_table,
                 in_row_number,
                 i));
-        return nullptr != io_evaluator.register_expression(
+        return io_evaluator.register_expression(
             in_chunk_key, in_expression_key, in_logic, io_elements);
     }
 
@@ -477,10 +494,6 @@ class psyq::if_then_engine::expression_builder
         }
         return 3;
     }
-
-    //-------------------------------------------------------------------------
-    /// @brief 解析する文字列表。
-    private: typename this_type::relation_table relation_table_;
 
 }; // class psyq::if_then_engine::expression_builder
 

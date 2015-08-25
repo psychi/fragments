@@ -12,6 +12,14 @@
 #define PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_CONDITION "CONDITION"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_CONDITION)
 
+#ifndef PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_NULL
+#define PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_NULL "NULL"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT)
+
+#ifndef PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_ANY
+#define PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_ANY "ANY"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT)
+
 #ifndef PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_PRIORITY
 #define PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_PRIORITY "PRIORITY"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_PRIORITY)
@@ -40,7 +48,7 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief 文字列表から条件挙動を構築する関数オブジェクト。
+/// @brief 文字列表から条件挙動ハンドラを構築して登録する関数オブジェクト。
 /// @details driver::extend_chunk の引数として使う。
 /// @tparam template_relation_table @copydoc handler_builder::relation_table
 /// @tparam template_dispatcher     @copydoc handler_builder::dispatcher
@@ -52,22 +60,21 @@ class psyq::if_then_engine::handler_builder
     private: typedef handler_builder this_type;
 
     //-------------------------------------------------------------------------
-    /// @brief 条件挙動を登録する条件挙動器を表す型。
+    /// @brief 条件挙動ハンドラを登録する driver::dispatcher 。
     public: typedef template_dispatcher dispatcher;
 
-    /// @brief 挙動関数の、所有権ありスマートポインタのコンテナを表す型。
+    /// @brief 条件挙動ハンドラが使う関数のスマートポインタのコンテナ。
     public: typedef
         std::vector<
             typename this_type::dispatcher::handler::function_shared_ptr,
             typename this_type::dispatcher::allocator_type>
         function_shared_ptr_container;
 
-    /// @brief 解析する関係文字列表の型。
-    /// @details psyq::string::relation_table 互換のインターフェイスを持つこと。
+    /// @brief 解析する psyq::string::relation_table 。
     public: typedef template_relation_table relation_table;
 
     //-------------------------------------------------------------------------
-    /// @brief 条件挙動の構築に使う文字列表の属性。
+    /// @brief 条件挙動ハンドラの構築に使う文字列表の属性。
     private: class table_attribute
     {
         public: table_attribute(relation_table const& in_table)
@@ -98,54 +105,51 @@ class psyq::if_then_engine::handler_builder
                 && 1 <= this->argument_.second;
         }
 
-        /// @brief 条件挙動で使う条件式の識別値。
+        /// @brief 条件挙動ハンドラに対応する条件式の識別値の列番号と列数。
         public: typename handler_builder::relation_table::attribute key_;
-        /// @brief 条件挙動の変化条件。
+        /// @brief 挙動条件の列番号と列数。
         public: typename handler_builder::relation_table::attribute condition_;
-        /// @brief 条件挙動の優先順位。
+        /// @brief 条件挙動関数の呼び出し優先順位の列番号と列数。
         public: typename handler_builder::relation_table::attribute priority_;
-        /// @brief 条件挙動で使う挙動関数の種類。
+        /// @brief 条件挙動関数の種類の列番号と列数。
         public: typename handler_builder::relation_table::attribute kind_;
-        /// @brief 条件挙動で使う挙動関数の引数。
+        /// @brief 条件挙動関数の引数の列番号と列数。
         public: typename handler_builder::relation_table::attribute argument_;
 
     }; // class table_attribute
 
     //-------------------------------------------------------------------------
-    /// @brief 文字列表から条件挙動を構築する関数オブジェクトを構築する。
-    public: explicit handler_builder(
-        /// [in] 解析する文字列表。
-        typename this_type::relation_table in_table):
-    relation_table_(std::move(in_table))
-    {}
-
-    /// @brief 文字列表から条件挙動を構築し、条件挙動器へ登録する。
-    /// @return 構築した条件挙動関数のコンテナ。
-    public: template<typename template_hasher, typename template_modifier>
+    /// @brief 文字列表から条件挙動ハンドラを構築し、条件挙動器へ登録する。
+    /// @return 構築した条件挙動ハンドラの関数を保持するコンテナ。
+    public: template<typename template_hasher, typename template_accumulator>
     typename this_type::function_shared_ptr_container operator()(
-        /// [in,out] 条件挙動を登録する条件挙動器。
+        /// [in,out] 条件挙動ハンドラを登録する条件挙動器。
         typename this_type::dispatcher& io_dispatcher,
-        /// [in,out] 文字列のハッシュ関数。
+        /// [in,out] 文字列からハッシュ値を作る driver::hasher 。
         template_hasher& io_hasher,
-        /// [in,out] 挙動関数で使う状態変更器。
-        template_modifier& io_modifier)
+        /// [in,out] 条件挙動ハンドラの関数で使う driver::accumulator 。
+        template_accumulator& io_accumulator,
+        /// [in] 条件挙動ハンドラが記述されている文字列表。
+        /// 空の場合は、条件挙動ハンドラは登録されない。
+        typename this_type::relation_table const& in_table)
     const
     {
-        return this_type::build(
-            io_dispatcher, io_hasher, io_modifier, this->relation_table_);
+        return this_type::register_handlers(
+            io_dispatcher, io_hasher, io_accumulator, in_table);
     }
 
-    /// @brief 文字列表から条件挙動を構築し、条件挙動器へ登録する。
-    /// @return 構築した条件挙動関数のコンテナ。
-    public: template<typename template_hasher, typename template_modifier>
-    static typename this_type::function_shared_ptr_container build(
-        /// [in,out] 条件挙動を登録する条件挙動器。
+    /// @brief 文字列表から条件挙動ハンドラを構築し、条件挙動器へ登録する。
+    /// @return 構築した条件挙動ハンドラの関数を保持するコンテナ。
+    public: template<typename template_hasher, typename template_accumulator>
+    static typename this_type::function_shared_ptr_container register_handlers(
+        /// [in,out] 条件挙動ハンドラを登録する条件挙動器。
         typename this_type::dispatcher& io_dispatcher,
-        /// [in,out] 文字列のハッシュ関数。
+        /// [in,out] 文字列からハッシュ値を作る driver::hasher 。
         template_hasher& io_hasher,
-        /// [in,out] 挙動関数で使う状態変更器。
-        template_modifier& io_modifier,
-        /// [in] 解析する文字列表。
+        /// [in,out] 条件挙動ハンドラの関数で使う driver::accumulator 。
+        template_accumulator& io_accumulator,
+        /// [in] 条件挙動ハンドラが記述されている文字列表。
+        /// 空の場合は、条件挙動ハンドラは登録されない。
         typename this_type::relation_table const& in_table)
     {
         typename this_type::function_shared_ptr_container
@@ -155,11 +159,11 @@ class psyq::if_then_engine::handler_builder
         typename this_type::table_attribute const local_attribute(in_table);
         if (!local_attribute.is_valid())
         {
-            PSYQ_ASSERT(false);
+            PSYQ_ASSERT(in_table.is_empty());
             return local_functions;
         }
 
-        // 文字列表を解析し、条件挙動を構築する。
+        // 文字列表を解析し、条件挙動ハンドラを登録する。
         auto const local_empty_key(
             io_hasher(typename template_hasher::argument_type()));
         auto const local_row_count(in_table.get_row_count());
@@ -184,7 +188,7 @@ class psyq::if_then_engine::handler_builder
                 continue;
             }
 
-            // 条件挙動の優先順位を取得する。
+            // 条件挙動関数の優先順位を取得する。
             typename this_type::dispatcher::handler::priority local_priority(
                 PSYQ_IF_THEN_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT);
             if (!in_table.parse_cell(
@@ -195,17 +199,17 @@ class psyq::if_then_engine::handler_builder
                 continue;
             }
 
-            // 挙動関数を構築し、条件挙動器に登録する。
+            // 条件挙動関数を構築し、条件挙動ハンドラを条件挙動器に登録する。
             auto local_function(
                 this_type::build_function(
-                    io_hasher, io_modifier, in_table, i, local_attribute));
-            if (io_dispatcher.register_handler(
+                    io_hasher, io_accumulator, in_table, i, local_attribute));
+            auto const local_condition(
+                this_type::build_condition(
+                    in_table, i, local_attribute.condition_));
+            PSYQ_ASSERT(local_condition != 0);
+            if (nullptr != io_dispatcher.register_handler(
                     local_expression_key,
-                    this_type::build_condition(
-                        in_table,
-                        i,
-                        local_attribute.condition_.first,
-                        local_attribute.condition_.second),
+                    local_condition,
                     local_function,
                     local_priority))
             {
@@ -213,7 +217,7 @@ class psyq::if_then_engine::handler_builder
             }
             else
             {
-                // 条件挙動関数の登録に失敗した。
+                // 条件挙動ハンドラの登録に失敗した。
                 PSYQ_ASSERT(false);
             }
         }
@@ -221,77 +225,122 @@ class psyq::if_then_engine::handler_builder
         return local_functions;
     }
 
-    //-------------------------------------------------------------------------
-    /// @brief 文字列表を解析し、変化条件を構築する。
-    /// @return 構築した変化条件。
-    private:
+    /// @brief 文字列表を解析し、挙動条件を構築する。
+    /// @return
+    /// 文字列表から構築した挙動条件。構築に失敗した場合は
+    /// driver::dispatcher::handler::INVALID_UNIT_CONDITION を返す。
+    public:
     static typename this_type::dispatcher::handler::condition build_condition(
         /// [in] 解析する文字列表。
         typename this_type::relation_table const& in_table,
         /// [in] 解析する文字列表の行番号。
-        typename this_type::relation_table::number const in_row_index,
-        /// [in] 変化条件の属性の列番号。
-        typename this_type::relation_table::number const in_column_index,
-        /// [in] 変化条件の属性の列数。
-        typename this_type::relation_table::number const in_column_count)
+        typename this_type::relation_table::number const in_row_number,
+        /// [in] 挙動条件の属性の列番号と列数。
+        typename this_type::relation_table::attribute const& in_attribute)
     {
-        enum: std::size_t {CONDITION_COUNT = 6};
-        std::array<bool, CONDITION_COUNT> local_conditions = {};
-        PSYQ_ASSERT(CONDITION_COUNT <= in_column_count);
-        auto const local_end(
-            in_column_index
-            + std::min<std::size_t>(CONDITION_COUNT, in_column_count));
-        for (auto i(in_column_index); i < local_end; ++i)
+        if (in_attribute.second < 2)
         {
-            auto const local_parse_bool(
-                in_table.parse_cell(
-                    local_conditions.at(i - in_column_index),
-                    in_row_index,
-                    i,
-                    true));
-            PSYQ_ASSERT(local_parse_bool);
+            PSYQ_ASSERT(false);
         }
-        auto const local_condition(
-            this_type::dispatcher::handler::make_condition(
-                local_conditions.at(0),
-                local_conditions.at(1),
-                local_conditions.at(2),
-                local_conditions.at(3),
-                local_conditions.at(4),
-                local_conditions.at(5)));
-        PSYQ_ASSERT(local_condition != 0);
-        return local_condition;
+        else
+        {
+            auto const local_last_condition(
+                this_type::make_unit_condition(
+                    in_table.find_cell(in_row_number, in_attribute.first)));
+            auto const local_now_condition(
+                this_type::make_unit_condition(
+                    in_table.find_cell(in_row_number, in_attribute.first + 1)));
+            auto const local_condition(
+                this_type::dispatcher::handler::make_condition(
+                    local_now_condition, local_last_condition));
+            if (local_condition !=
+                    this_type::dispatcher::handler::INVALID_UNIT_CONDITION)
+            {
+                return local_condition;
+            }
+            PSYQ_ASSERT(false);
+        }
+        return this_type::dispatcher::handler::INVALID_UNIT_CONDITION;
     }
 
+    /// @brief 文字列を解析し、単位条件を取得する。
+    /// @return
+    /// 文字列から取得した driver::dispatcher::handler::unit_condition 。
+    /// 取得に失敗した場合は
+    /// driver::dispatcher::handler::INVALID_UNIT_CONDITION を返す。
+    public: static typename this_type::dispatcher::handler::unit_condition
+    make_unit_condition(
+        /// [in] 解析する文字列。
+        typename this_type::relation_table::string::view const& in_string)
+    {
+        if (!in_string.empty())
+        {
+            auto const local_not(in_string.at(0) == '!');
+            auto const local_string(in_string.substr(local_not? 1: 0));
+            psyq::string::numeric_parser<bool> const local_parser(local_string);
+            if (local_parser.is_completed())
+            {
+                if (local_parser.get_value())
+                {
+                    return local_not?
+                        this_type::dispatcher::handler::unit_condition_NOT_TRUE:
+                        this_type::dispatcher::handler::unit_condition_TRUE;
+                }
+                else
+                {
+                    return local_not?
+                        this_type::dispatcher::handler::unit_condition_NOT_FALSE:
+                        this_type::dispatcher::handler::unit_condition_FALSE;
+                }
+            }
+            else if (
+                local_string ==
+                    PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_NULL)
+            {
+                return local_not?
+                    this_type::dispatcher::handler::unit_condition_NOT_NULL:
+                    this_type::dispatcher::handler::unit_condition_NULL;
+            }
+            else if (
+                !local_not
+                && local_string ==
+                    PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_ANY)
+            {
+                return this_type::dispatcher::handler::unit_condition_ANY;
+            }
+        }
+        return this_type::dispatcher::handler::INVALID_UNIT_CONDITION;
+    }
+
+    //-------------------------------------------------------------------------
     /// @brief 文字列表を解析し、条件挙動関数を構築する。
     /// @return 構築した条件挙動関数オブジェクト。
-    private: template<typename template_hasher, typename template_modifier>
+    private: template<typename template_hasher, typename template_accumulator>
     static typename this_type::dispatcher::handler::function_shared_ptr
     build_function(
-        /// [in,out] 文字列のハッシュ関数。
+        /// [in,out] 文字列からハッシュ値を作る driver::hasher 。
         template_hasher& io_hasher,
-        /// [in,out] 条件挙動関数で使う状態変更器。
-        template_modifier& io_modifier,
+        /// [in,out] 条件挙動で使う driver::accumulator 。
+        template_accumulator& io_accumulator,
         /// [in] 解析する文字列表。
         typename this_type::relation_table const& in_table,
         /// [in] 解析する文字列表の行番号。
-        typename this_type::relation_table::number const in_row_index,
+        typename this_type::relation_table::number const in_row_number,
         /// [in] 条件挙動で使う文字列表の属性。
         typename this_type::table_attribute const& in_attribute)
     {
         // 挙動関数の種類を取得する。
         typename this_type::relation_table::string::view const local_kind_cell(
-            in_table.find_cell(in_row_index, in_attribute.kind_.first));
+            in_table.find_cell(in_row_number, in_attribute.kind_.first));
         if (local_kind_cell
             == PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_KIND_STATUS_ASSIGNMENT)
         {
             return this_type::build_status_assignment_function(
                 io_hasher,
-                io_modifier,
+                io_accumulator,
                 in_table,
-                in_row_index,
-                in_attribute.argument_.first,
-                in_attribute.argument_.second);
+                in_row_number,
+                in_attribute.argument_);
         }
         else
         {
@@ -303,40 +352,37 @@ class psyq::if_then_engine::handler_builder
 
     /// @brief 状態値を代入演算する関数を、文字列表から構築する。
     /// @return 状態値を代入演算する関数オブジェクト。
-    private: template<typename template_hasher, typename template_modifier>
+    private: template<typename template_hasher, typename template_accumulator>
     static typename this_type::dispatcher::handler::function_shared_ptr
     build_status_assignment_function(
-        /// [in,out] 文字列から識別値へ変換するハッシュ関数。
+        /// [in,out] 文字列からハッシュ値を作る driver::hasher 。
         template_hasher& io_hasher,
-        /// [in,out] 条件挙動関数で使う状態変更器。
-        template_modifier& io_modifier,
+        /// [in,out] 条件挙動で使う driver::accumulator 。
+        template_accumulator& io_accumulator,
         /// [in] 解析する文字列表。
         typename this_type::relation_table const& in_table,
         /// [in] 解析する文字列表の行番号。
-        typename this_type::relation_table::number const in_row_index,
-        /// [in] 文字列表の代入演算の列番号。
-        typename this_type::relation_table::number const in_column_index,
-        /// [in] 文字列表の代入演算の列数。
-        typename this_type::relation_table::number const in_column_count)
+        typename this_type::relation_table::number const in_row_number,
+        /// [in] 文字列表の代入演算の列番号と列数。
+        typename this_type::relation_table::attribute const& in_attribute)
     {
         /// @todo 状態変更の遅延方法も、文字列表から取得すること。
-        auto const local_delay_first(template_modifier::delay_NONBLOCK);
+        auto const local_delay_first(template_accumulator::delay_NONBLOCK);
 
         // 状態値の代入演算のコンテナを構築する。
         std::vector<
-            typename template_modifier::reservoir::status_assignment,
-            typename template_modifier::allocator_type>
-                local_assignments(io_modifier.get_allocator());
-        this_type::build_assignment_container(
+            typename template_accumulator::reservoir::status_assignment,
+            typename template_accumulator::allocator_type>
+                local_assignments(io_accumulator.get_allocator());
+        template_accumulator::reservoir::status_assignment::_build_container(
             local_assignments,
             io_hasher,
             in_table,
-            in_row_index,
-            in_column_index,
-            in_column_count);
+            in_row_number,
+            in_attribute.first,
+            in_attribute.second);
         if (local_assignments.empty())
         {
-            PSYQ_ASSERT(false);
             return typename this_type::dispatcher::handler::function_shared_ptr();
         }
 
@@ -344,10 +390,9 @@ class psyq::if_then_engine::handler_builder
         return std::allocate_shared<typename this_type::dispatcher::handler::function>(
             local_assignments.get_allocator(),
             typename this_type::dispatcher::handler::function(
-                /// @todo io_modifier を参照渡しするのは危険。対策を考えたい。
-                [=, &io_modifier](
-                    typename this_type::dispatcher::evaluator::expression_key
-                        const&,
+                /// @todo io_accumulator を参照渡しするのは危険。対策を考えたい。
+                [=, &io_accumulator](
+                    typename this_type::dispatcher::evaluator::expression_key const&,
                     psyq::if_then_engine::evaluation const,
                     psyq::if_then_engine::evaluation const)
                 {
@@ -355,54 +400,12 @@ class psyq::if_then_engine::handler_builder
                     auto local_delay(local_delay_first);
                     for (auto const& local_assignment: local_assignments)
                     {
-                        io_modifier.accumulate(
+                        io_accumulator.accumulate(
                             local_assignment, local_delay);
-                        local_delay = template_modifier::delay_FOLLOW;
+                        local_delay = template_accumulator::delay_FOLLOW;
                     }
                 }));
     }
-
-    /// @brief 状態値の代入演算のコンテナを、文字列表から構築する。
-    private: template<typename template_container, typename template_hasher>
-    static void build_assignment_container(
-        /// [in,out] 状態値の代入演算のコンテナの格納先。
-        template_container& io_assignments,
-        /// [in,out] 文字列のハッシュ関数。
-        template_hasher& io_hasher,
-        /// [in] 解析する文字列表。
-        typename this_type::relation_table const& in_table,
-        /// [in] 解析する文字列表の行番号。
-        typename this_type::relation_table::number const in_row_index,
-        /// [in] 文字列表の代入演算の列番号。
-        typename this_type::relation_table::number const in_column_index,
-        /// [in] 文字列表の代入演算の列数。
-        typename this_type::relation_table::number const in_column_count)
-    {
-        typename this_type::relation_table::string::size_type const
-            local_unit_size(3);
-        PSYQ_ASSERT(in_column_count % local_unit_size == 0);
-        io_assignments.reserve(in_column_count / local_unit_size);
-        for (
-            auto i(local_unit_size);
-            i <= in_column_count;
-            i += local_unit_size)
-        {
-            auto const local_assignment(
-                template_container::value_type::_build(
-                    io_hasher,
-                    in_table,
-                    in_row_index,
-                    in_column_index + i - local_unit_size));
-            if (!local_assignment.get_value().is_empty())
-            {
-                io_assignments.push_back(local_assignment);
-            }
-        }
-    }
-
-    //-------------------------------------------------------------------------
-    /// @brief 解析する文字列表。
-    private: typename this_type::relation_table relation_table_;
 
 }; // class psyq::if_then_engine::handler_builder
 

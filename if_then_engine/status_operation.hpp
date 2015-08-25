@@ -1,7 +1,6 @@
-﻿/** @file
-    @brief @copybrief psyq::if_then_engine::_private::status_operation
-    @author Hillco Psychi (https://twitter.com/psychi)
- */
+﻿/// @file
+/// @brief @copybrief psyq::if_then_engine::_private::status_operation
+/// @author Hillco Psychi (https://twitter.com/psychi)
 #ifndef PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_HPP_
 #define PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_HPP_
 
@@ -89,29 +88,27 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 状態値を操作するための引数の集合。
-    @tparam template_status_key      状態値を操作する演算子の左辺値となる状態値の識別値の型。
-    @tparam template_status_operator 状態値を操作する演算子の型。
-    @tparam template_status_value    状態値を操作する演算子の右辺値となる状態値の型。
- */
+/// @brief 状態値を操作するための引数の集合。
+/// @tparam template_status_key      状態値を操作する演算子の左辺値となる状態値の識別値の型。
+/// @tparam template_status_operator 状態値を操作する演算子の型。
+/// @tparam template_status_value    状態値を操作する演算子の右辺値となる状態値の型。
 template<
     typename template_status_key,
     typename template_status_operator,
     typename template_status_value>
 class psyq::if_then_engine::_private::status_operation
 {
-    /// @brief thisが指す値の型。
+    /// @brief this が指す値の型。
     private: typedef status_operation this_type;
 
     //-------------------------------------------------------------------------
-    /** @brief 状態操作引数を構築する。
-        @param[in] in_key      this_type::key_ の初期値。
-        @param[in] in_operator this_type::operator_ の初期値。
-        @param[in] in_value    this_type::value_ の初期値。
-     */
+    /// @brief 状態操作引数を構築する。
     public: status_operation(
+        /// [in] this_type::key_ の初期値。
         template_status_key in_key,
+        /// [in] this_type::operator_ の初期値。
         template_status_operator in_operator,
+        /// [in] this_type::value_ の初期値。
         template_status_value in_value)
     PSYQ_NOEXCEPT:
     value_(std::move(in_value)),
@@ -120,14 +117,13 @@ class psyq::if_then_engine::_private::status_operation
     right_key_(false)
     {}
 
-    /** @brief 状態操作引数を構築する。
-        @param[in] in_key       this_type::key_ の初期値。
-        @param[in] in_operator  this_type::operator_ の初期値。
-        @param[in] in_right_key 右辺値となる状態値の識別値。
-     */
+    /// @brief 状態操作引数を構築する。
     public: status_operation(
+        /// [in] this_type::key_ の初期値。
         template_status_key in_key,
+        /// [in] this_type::operator_ の初期値。
         template_status_operator in_operator,
+        /// [in] 右辺値となる状態値の識別値。
         template_status_key const in_right_key)
     PSYQ_NOEXCEPT:
     value_(static_cast<typename template_status_value::unsigned_type>(in_right_key)),
@@ -141,9 +137,8 @@ class psyq::if_then_engine::_private::status_operation
         && std::is_unsigned<template_status_key>::value,
         "");
 
-    /** @brief 左辺値となる状態値に対応する識別値を取得する。
-        @return @copydoc this_type::key_
-     */
+    /// @brief 左辺値となる状態値に対応する識別値を取得する。
+    /// @return @copydoc this_type::key_
     public: template_status_key const& get_key() const PSYQ_NOEXCEPT
     {
         return this->key_;
@@ -159,40 +154,74 @@ class psyq::if_then_engine::_private::status_operation
         return this->value_;
     }
 
-    /** @brief 右辺値となる状態値の識別値を取得する。
-        @retval !=nullptr
-            右辺値となる状態値の識別値が格納されている、
-            符号なし整数を指すポインタ。
-        @retval ==nullptr 右辺値は定数。
-     */
+    /// @brief 右辺値となる状態値の識別値を取得する。
+    /// @return 
+    /// 右辺値となる状態値の識別値が格納されている、符号なし整数を指すポインタ。
+    /// 右辺値が定数の場合は nullptr を返す。
     public: typename template_status_value::unsigned_type const* get_right_key()
     const PSYQ_NOEXCEPT
     {
         return this->right_key_? this->value_.get_unsigned(): nullptr;
     }
 
-    /** @brief psyq::if_then_engine 管理者以外は、この関数は使用禁止。
+    //-------------------------------------------------------------------------
+    /// @brief 文字列表を解析して status_operation を構築し、コンテナに追加する。
+    /// @warning psyq::if_then_engine 管理者以外は、この関数は使用禁止。
+    public: template<
+        typename template_container,
+        typename template_hasher,
+        typename template_table>
+    static void _build_container(
+        /// [in,out] 構築した状態操作引数を格納するコンテナ。
+        template_container& io_operations,
+        /// [in,out] 文字列からハッシュ値を作る関数オブジェクト。
+        template_hasher& io_hasher,
+        /// [in] 解析する psyq::string::table 。
+        template_table const& in_table,
+        /// [in] 解析する psyq::string::table の行番号。
+        typename template_table::number const in_row_number,
+        /// [in] 解析する psyq::string::table の属性の列番号。
+        typename template_table::number const in_column_number,
+        /// [in] 解析する psyq::string::table の属性の列数。
+        typename template_table::number const in_column_count)
+    {
+        typename template_table::number const local_unit_size(3);
+        io_operations.reserve(
+            io_operations.size() + in_column_count / local_unit_size);
+        for (auto i(local_unit_size); i <= in_column_count; i += local_unit_size)
+        {
+            auto const local_operation(
+                this_type::_build(
+                    io_hasher,
+                    in_table,
+                    in_row_number,
+                    in_column_number + i - local_unit_size));
+            if (!local_operation.get_value().is_empty())
+            {
+                io_operations.push_back(local_operation);
+            }
+        }
+    }
 
-        文字列表を解析し、状態操作引数を構築する。
-
-        @param[in,out] io_hasher   文字列のハッシュ関数。
-        @param[in] in_table        解析する文字列表。
-        @param[in] in_row_index    解析する文字列表の行番号。
-        @param[in] in_column_index 解析する文字列表の列番号。
-     */
+    /// @brief 文字列表を解析し、状態操作引数を構築する。
+    /// @warning psyq::if_then_engine 管理者以外は、この関数は使用禁止。
     public: template<typename template_hasher, typename template_table>
     static this_type _build(
+        /// [in,out] 文字列からハッシュ値を作る関数オブジェクト。
         template_hasher& io_hasher,
+        /// [in] 解析する psyq::string::table 。
         template_table const& in_table,
-        typename template_table::string::size_type const in_row_index,
-        typename template_table::string::size_type const in_column_index)
+        /// [in] 解析する psyq::string::table の行番号。
+        typename template_table::number const in_row_number,
+        /// [in] 解析する psyq::string::table の列番号。
+        typename template_table::number const in_column_number)
     {
-        PSYQ_ASSERT(in_row_index != in_table.get_attribute_row());
+        PSYQ_ASSERT(in_row_number != in_table.get_attribute_row());
         this_type local_operation;
 
         // 演算子の左辺となる状態値の識別値を取得する。
         typename template_hasher::argument_type const local_left_key_cell(
-            in_table.find_cell(in_row_index, in_column_index));
+            in_table.find_cell(in_row_number, in_column_number));
         local_operation.key_ = io_hasher(local_left_key_cell);
         if (local_operation.key_
             == io_hasher(typename template_hasher::argument_type()))
@@ -206,7 +235,7 @@ class psyq::if_then_engine::_private::status_operation
             this_type::make_operator(
                 local_operation.operator_,
                 typename template_hasher::argument_type(
-                    in_table.find_cell(in_row_index, in_column_index + 1))));
+                    in_table.find_cell(in_row_number, in_column_number + 1))));
         if (!local_make_operator)
         {
             PSYQ_ASSERT(false);
@@ -216,7 +245,7 @@ class psyq::if_then_engine::_private::status_operation
         // 演算子の右辺値を取得する。
         local_operation.make_right_value(
             io_hasher,
-            in_table.find_cell(in_row_index, in_column_index + 2));
+            in_table.find_cell(in_row_number, in_column_number + 2));
         PSYQ_ASSERT(!local_operation.value_.is_empty());
         return local_operation;
     }
@@ -224,13 +253,12 @@ class psyq::if_then_engine::_private::status_operation
     //-------------------------------------------------------------------------
     private: status_operation() PSYQ_NOEXCEPT {}
 
-    /** @brief 文字列を解析し、比較演算子を構築する。
-        @param[out] out_operator 比較演算子の格納先。
-        @param[in] in_string     解析する文字列。
-     */
+    /// @brief 文字列を解析し、比較演算子を構築する。
     private: template<typename template_string>
     static bool make_operator(
+        /// [out] 比較演算子の格納先。
         typename template_status_value::comparison& out_operator,
+        /// [in] 解析する文字列。
         template_string const& in_string)
     {
         if (in_string == PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_EQUAL)
@@ -266,13 +294,12 @@ class psyq::if_then_engine::_private::status_operation
         return true;
     }
 
-    /** @brief 文字列を解析し、代入演算子を構築する。
-        @param[out] out_operator 代入演算子の格納先。
-        @param[in] in_string     解析する文字列。
-     */
+    /// @brief 文字列を解析し、代入演算子を構築する。
     private: template<typename template_string>
     static bool make_operator(
+        /// [out] 代入演算子の格納先。
         typename template_status_value::assignment& out_operator,
+        /// [in] 解析する文字列。
         template_string const& in_string)
     {
         if (in_string == PSYQ_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_COPY)
@@ -320,13 +347,12 @@ class psyq::if_then_engine::_private::status_operation
         return true;
     }
 
-    /** @brief 文字列を解析し、演算子の右辺値を構築する。
-        @param[in,out] io_hasher 文字列のハッシュ関数。
-        @param[in] in_string     解析する文字列。
-     */
+    /// @brief 文字列を解析し、演算子の右辺値を構築する。
     private: template<typename template_hasher>
     void make_right_value(
+        /// [in,out] 文字列のハッシュ関数。
         template_hasher& io_hasher,
+        /// [in] 解析する文字列。
         typename template_hasher::argument_type const& in_string)
     {
         // 状態値の接頭辞があるなら、状態値の識別値を構築する。
@@ -363,19 +389,15 @@ class psyq::if_then_engine::_private::status_operation
         }
     }
 
-    /** @brief 文字列を解析し、状態値を構築する。
-
-        @param[in] in_string 解析する文字列。
-        @param[in] in_kind
-            構築する状態値の型。
-            template_status_value::kind_EMPTY の場合は、自動決定する。
-        @return
-           文字列を解析して構築した状態値。
-           ただし文字列の解析に失敗した場合は、空値を返す。
-     */
+    /// @brief 文字列を解析し、状態値を構築する。
+    /// @return
+    /// in_string を解析して構築した状態値。解析に失敗した場合は、空値を返す。
     private: template<typename template_string>
     static template_status_value make_status_value(
+        /// [in] 解析する文字列。
         template_string const& in_string,
+        /// [in] 構築する状態値の型。
+        /// status_value::kind_EMPTY の場合は、自動決定する。
         typename template_status_value::kind const in_kind =
             template_status_value::kind_EMPTY)
     {
@@ -459,13 +481,10 @@ class psyq::if_then_engine::_private::status_operation
     //-------------------------------------------------------------------------
     /// @brief 演算の右辺値となる値。
     private: template_status_value value_;
-
     /// @brief 演算の左辺値となる状態値の識別値。
     private: template_status_key key_;
-
     /// @brief 演算子の種類。
     private: template_status_operator operator_;
-
     /// @brief 右辺値を状態値から取得するか。
     private: bool right_key_;
 

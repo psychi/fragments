@@ -199,7 +199,8 @@ class psyq::if_then_engine::driver
     public: template<
         typename template_status_builder,
         typename template_expression_builder,
-        typename template_handler_builder>
+        typename template_handler_builder,
+        typename template_relation_table>
     void extend_chunk(
         /// [in] 追加するチャンクの識別値。
         typename this_type::chunk_key const& in_chunk_key,
@@ -207,22 +208,27 @@ class psyq::if_then_engine::driver
         /// [in] 状態値を状態貯蔵器に登録する関数オブジェクト。
         /// 以下に相当するメンバ関数を使えること。
         /// @code
-        /// // brief 状態値を状態貯蔵器に登録する。
+        /// // brief 文字列表を解析して状態値を構築し、状態貯蔵器に登録する。
         /// void template_status_builder::operator()(
         ///     // [in,out] 状態値を登録する状態貯蔵器。
         ///     driver::reservoir& io_reservoir,
         ///     // [in,out] 文字列から識別値を生成する関数オブジェクト。
         ///     driver::hasher& io_hasher,
         ///     // [in] 状態値を登録するチャンクを表す識別値。
-        ///     driver::reservoir::chunk_key const& in_chunk_key)
+        ///     driver::reservoir::chunk_key const& in_chunk_key,
+        ///     // [in] 解析する文字列表。
+        ///     template_relation_table const& in_table)
         /// const;
         /// @endcode
         template_status_builder const& in_status_builder,
+        /// [in] 状態値が記述されている psyq::string::relation_table 。
+        /// 文字列表が空の場合は、状態値を追加しない。
+        template_relation_table const& in_status_table,
 
         /// [in] 条件式を条件評価器に登録する関数オブジェクト。
         /// 以下に相当するメンバ関数を使えること。
         /// @code
-        /// // brief 条件式を条件評価器に登録する。
+        /// // brief 文字列表を解析して条件式を構築し、条件評価器に登録する。
         /// void template_expression_builder::operator()(
         ///     // [in,out] 条件式を登録する条件評価器。
         ///     driver::evaluator& io_evaluator,
@@ -231,15 +237,20 @@ class psyq::if_then_engine::driver
         ///     // [in] 条件式を登録するチャンクを表す識別値。
         ///     driver::evaluator::chunk_key const& in_chunk_key,
         ///     // [in] 条件式で使う状態貯蔵器。
-        ///     driver::reservoir const& in_reservoir)
+        ///     driver::reservoir const& in_reservoir,
+        ///     // [in] 解析する文字列表。
+        ///     template_relation_table const& in_table)
         /// const;
         /// @endcode
         template_expression_builder const& in_expression_builder,
+        /// [in] 条件式が記述されている psyq::string::relation_table 。
+        /// 文字列表が空の場合は、条件式を追加しない。
+        template_relation_table const& in_expression_table,
 
         /// [in] 条件挙動ハンドラを条件挙動器に登録する関数オブジェクト。
         /// 以下に相当するメンバ関数を使えること。
         /// @code
-        /// // brief 条件挙動ハンドラを条件挙動器に登録する。
+        /// // brief 文字列表から条件挙動ハンドラを構築し、条件挙動器に登録する。
         /// // return
         /// // 条件挙動器に登録した条件挙動ハンドラに対応する関数を指す、
         /// // スマートポインタのコンテナ。
@@ -250,23 +261,35 @@ class psyq::if_then_engine::driver
         ///     // [in,out] 文字列から識別値を生成する関数オブジェクト。
         ///     driver::hasher& io_hasher,
         ///     // [in,out] 条件挙動ハンドラで使う状態変更器。
-        ///     driver::accumulator& io_accumulator)
+        ///     driver::accumulator& io_accumulator,
+        ///     // [in] 解析する文字列表。
+        ///     template_relation_table const& in_table)
         /// const;
         /// @endcode
-        template_handler_builder const& in_handler_builder) 
+        template_handler_builder const& in_handler_builder,
+        /// [in] 条件挙動ハンドラが記述されている psyq::string::relation_table 。
+        /// 文字列表が空の場合は、条件挙動ハンドラを追加しない。
+        template_relation_table const& in_handler_table)
     {
         in_status_builder(
-            this->reservoir_, this->hash_function_, in_chunk_key);
+            this->reservoir_,
+            this->hash_function_,
+            in_chunk_key,
+            in_status_table);
         in_expression_builder(
             this->evaluator_,
             this->hash_function_,
             in_chunk_key,
-            this->reservoir_);
+            this->reservoir_,
+            in_expression_table);
         this_type::handler_chunk::extend(
             this->handler_chunks_,
             in_chunk_key,
             in_handler_builder(
-                this->dispatcher_, this->hash_function_, this->accumulator_));
+                this->dispatcher_,
+                this->hash_function_,
+                this->accumulator_,
+                in_handler_table));
     }
 
     /// @brief 状態値と条件式と条件挙動ハンドラを、チャンクへ追加する。
@@ -281,19 +304,19 @@ class psyq::if_then_engine::driver
         /// [in] 文字列表の構築に使うフライ級文字列の生成器を指すスマートポインタ。
         /// - psyq::string::flyweight::factory::shared_ptr
         ///   互換のインタフェイスを持つこと。
-        /// - 空のスマートポインタではないこと。
+        /// - 空ではないこと。
         template_shared_ptr const& in_string_factory,
         /// [in] 追加するチャンクの識別値。
         typename this_type::chunk_key const& in_chunk_key,
-        /// [in] 状態値CSV文字列。
+        /// [in] 状態値CSV文字列。空文字列の場合は、状態値を追加しない。
         template_string const& in_status_csv,
         /// [in] 状態値CSVの属性の行番号。
         std::size_t const in_status_attribute,
-        /// [in] 条件式CSV文字列。
+        /// [in] 条件式CSV文字列。空文字列の場合は、条件式を追加しない。
         template_string const& in_expression_csv,
         /// [in] 条件式CSVの属性の行番号。
         std::size_t const in_expression_attribute,
-        /// [in] 条件挙動CSV文字列。
+        /// [in] 条件挙動CSV文字列。空文字列の場合は、条件挙動ハンドラを追加しない。
         template_string const& in_handler_csv,
         /// [in] 条件挙動CSVの属性の行番号。
         std::size_t const in_handler_attribute)
@@ -312,35 +335,25 @@ class psyq::if_then_engine::driver
                 typename template_string::traits_type,
                 typename template_shared_ptr::element_type::allocator_type>
             relation_table;
-        typedef
-            psyq::if_then_engine::status_builder<relation_table>
-            status_builder;
-        typedef
-            psyq::if_then_engine::expression_builder<relation_table>
-            expression_builder;
-        typedef
-            psyq::if_then_engine::handler_builder<
-                relation_table, typename this_type::dispatcher>
-            handler_builder;
         this->extend_chunk(
             in_chunk_key,
-            status_builder(
-                relation_table(
-                    csv_table(
-                        out_workspace, in_string_factory, in_status_csv),
-                    in_status_attribute)),
-            expression_builder(
-                relation_table(
-                    csv_table(
-                        out_workspace, in_string_factory, in_expression_csv),
-                    in_expression_attribute)),
-            handler_builder(
-                relation_table(
-                    csv_table(
-                        out_workspace, in_string_factory, in_handler_csv),
-                    in_handler_attribute)));
+            psyq::if_then_engine::status_builder<relation_table>(),
+            relation_table(
+                csv_table(out_workspace, in_string_factory, in_status_csv),
+                in_status_csv.empty()?
+                    relation_table::INVALID_NUMBER: in_status_attribute),
+            psyq::if_then_engine::expression_builder<relation_table>(),
+            relation_table(
+                csv_table(out_workspace, in_string_factory, in_expression_csv),
+                in_expression_csv.empty()?
+                    relation_table::INVALID_NUMBER: in_expression_attribute),
+            psyq::if_then_engine::handler_builder<
+                relation_table, typename this_type::dispatcher>(),
+            relation_table(
+                csv_table(out_workspace, in_string_factory, in_handler_csv),
+                in_handler_csv.empty()?
+                    relation_table::INVALID_NUMBER: in_handler_attribute));
     }
-
 
     /// @brief チャンクを削除する。
     public: void erase_chunk(

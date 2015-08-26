@@ -245,10 +245,10 @@ class psyq::if_then_engine::handler_builder
         else
         {
             auto const local_last_condition(
-                this_type::make_unit_condition(
+                this_type::parse_unit_condition(
                     in_table.find_cell(in_row_number, in_attribute.first)));
             auto const local_now_condition(
-                this_type::make_unit_condition(
+                this_type::parse_unit_condition(
                     in_table.find_cell(in_row_number, in_attribute.first + 1)));
             auto const local_condition(
                 this_type::dispatcher::handler::make_condition(
@@ -269,7 +269,7 @@ class psyq::if_then_engine::handler_builder
     /// 取得に失敗した場合は
     /// driver::dispatcher::handler::INVALID_UNIT_CONDITION を返す。
     public: static typename this_type::dispatcher::handler::unit_condition
-    make_unit_condition(
+    parse_unit_condition(
         /// [in] 解析する文字列。
         typename this_type::relation_table::string::view const& in_string)
     {
@@ -392,9 +392,9 @@ class psyq::if_then_engine::handler_builder
             typename this_type::dispatcher::handler::function(
                 /// @todo io_accumulator を参照渡しするのは危険。対策を考えたい。
                 [=, &io_accumulator](
-                    typename this_type::dispatcher::evaluator::expression_key const&,
-                    psyq::if_then_engine::evaluation const,
-                    psyq::if_then_engine::evaluation const)
+                    typename this_type::dispatcher::handler::expression_key const&,
+                    typename this_type::dispatcher::handler::evaluation const,
+                    typename this_type::dispatcher::handler::evaluation const)
                 {
                     // 条件に合致したので、状態値を代入演算する。
                     auto local_delay(local_delay_first);

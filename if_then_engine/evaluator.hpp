@@ -48,10 +48,10 @@ class psyq::if_then_engine::_private::evaluator
     /// @brief 条件評価器で使う条件式。
     public: typedef
         psyq::if_then_engine::_private::expression<
-            typename template_reservoir::chunk_key, std::uint32_t>
+            typename template_reservoir::status_value::evaluation,
+            typename template_reservoir::chunk_key,
+            std::uint32_t>
         expression;
-    /// @copydoc psyq::if_then_engine::evaluation
-    public: typedef psyq::if_then_engine::evaluation evaluation;
 
     //-------------------------------------------------------------------------
     /// @brief 条件式が参照する要素条件チャンク。
@@ -318,7 +318,7 @@ class psyq::if_then_engine::_private::evaluator
     /// - 条件式が登録されていないと、失敗する。
     /// - 条件式が参照する状態値が登録されていないと、失敗する。
     /// @sa this_type::register_expression で条件式を登録できる。
-    public: typename this_type::evaluation evaluate_expression(
+    public: typename this_type::expression::evaluation evaluate_expression(
         /// [in] 評価する条件式に対応する識別値。
         typename this_type::expression_key const in_expression_key,
         /// [in] 条件式が参照する状態貯蔵器。
@@ -351,7 +351,7 @@ class psyq::if_then_engine::_private::evaluator
             return local_expression->evaluate(
                 local_chunk->sub_expressions_,
                 [&in_reservoir, this](sub_expression const& in_expression)
-                ->typename this_type::evaluation
+                ->typename this_type::expression::evaluation
                 {
                     auto const local_evaluate_expression(
                         this->evaluate_expression(
@@ -372,7 +372,7 @@ class psyq::if_then_engine::_private::evaluator
             return local_expression->evaluate(
                 local_chunk->status_transitions_,
                 [&in_reservoir](status_transition const& in_transition)
-                ->typename this_type::evaluation
+                ->typename this_type::expression::evaluation
                 {
                     return in_reservoir.find_transition(in_transition.get_key());
                 });
@@ -385,7 +385,7 @@ class psyq::if_then_engine::_private::evaluator
             return local_expression->evaluate(
                 local_chunk->status_comparisons_,
                 [&in_reservoir](status_comparison const& in_comparison)
-                ->typename this_type::evaluation
+                ->typename this_type::expression::evaluation
                 {
                     return in_reservoir.compare_status(in_comparison);
                 });

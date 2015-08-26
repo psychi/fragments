@@ -15,7 +15,7 @@ namespace psyq
     {
         namespace _private
         {
-            template<typename, typename> class expression;
+            template<typename, typename, typename> class expression;
             template<typename> class sub_expression;
             template<typename> class status_transition;
             template<typename, typename, typename> class expression_chunk;
@@ -26,15 +26,29 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 条件式。
+/// @tparam template_evaluation    @copydoc expression::evaluation
 /// @tparam template_chunk_key     @copydoc expression::chunk_key
 /// @tparam template_element_index @copydoc expression::element_index
-template<typename template_chunk_key, typename template_element_index>
+template<
+    typename template_evaluation,
+    typename template_chunk_key,
+    typename template_element_index>
 class psyq::if_then_engine::_private::expression
 {
     /// @brief thisが指す値の型。
     private: typedef expression this_type;
 
     //-------------------------------------------------------------------------
+    /// @brief 条件式の評価結果。
+    /// @details
+    /// - 正なら、条件式の評価は真だった。
+    /// - 0 なら、条件式の評価は偽だった。
+    /// - 負なら、条件式の評価に失敗した。
+    public: typedef template_evaluation evaluation;
+    static_assert(
+        std::is_signed<template_evaluation>::value
+        && std::is_integral<template_evaluation>::value,
+        "template_evaluation is not signed integer type.");
     /// @brief 要素条件チャンクの識別値を表す型。
     public: typedef template_chunk_key chunk_key;
     /// @brief 要素条件のインデクス番号を表す型。
@@ -42,8 +56,9 @@ class psyq::if_then_engine::_private::expression
     /// @brief 条件式の要素条件を結合する論理演算子を表す列挙型。
     public: enum logic: std::uint8_t
     {
-        logic_AND, ///< 論理積。
-        logic_OR,  ///< 論理和。
+        INVALID_LOGIC, ///< 無効な論理演算子。
+        logic_OR,      ///< 論理和。
+        logic_AND,     ///< 論理積。
     };
     /// @brief 条件式の種類を表す列挙型。
     public: enum kind: std::uint8_t
@@ -105,13 +120,13 @@ class psyq::if_then_engine::_private::expression
     }
 
     /// @brief 条件式を評価する。
-    /// @retval 正 条件式の評価は真となった。
-    /// @retval 0  条件式の評価は偽となった。
-    /// @retval 負 条件式の評価に失敗した。
+    /// @retval 正 条件式の評価は真。
+    /// @retval 0  条件式の評価は偽。
+    /// @retval 負 条件式の評価に失敗。
     public: template<
         typename template_element_container,
         typename template_element_evaluator>
-    psyq::if_then_engine::evaluation evaluate(
+    typename this_type::evaluation evaluate(
         /// [in] 評価に用いる要素条件のコンテナ。
         template_element_container const& in_elements,
         /// [in] 要素条件を評価する関数オブジェクト。

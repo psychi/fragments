@@ -474,8 +474,10 @@ class psyq::if_then_engine::_private::reservoir
     /// @{
 
     /// @brief 状態値を比較する。
-    /// @return 比較演算の評価結果。
-    public: psyq::if_then_engine::evaluation compare_status(
+    /// @retval 正 比較式の評価は真。
+    /// @retval 0  比較式の評価は偽。
+    /// @retval 負 比較式の評価に失敗。
+    public: typename this_type::status_value::evaluation compare_status(
         /// [in] 状態値の比較式。
         typename this_type::status_comparison const& in_comparison)
     const
@@ -489,7 +491,7 @@ class psyq::if_then_engine::_private::reservoir
                 in_comparison.get_value());
         }
 
-        // 右辺となる状態値を取得して演算する。
+        // 右辺となる状態値を取得して式を評価する。
         auto const local_right_key(
             static_cast<typename this_type::status_key>(
                 *local_right_key_pointer));
@@ -504,8 +506,10 @@ class psyq::if_then_engine::_private::reservoir
     }
 
     /// @brief 状態値を比較する。
-    /// @return 比較演算の評価結果。
-    public: psyq::if_then_engine::evaluation compare_status(
+    /// @retval 正 比較式の評価は真。
+    /// @retval 0  比較式の評価は偽。
+    /// @retval 負 比較式の評価に失敗。
+    public: typename this_type::status_value::evaluation compare_status(
         /// [in] 左辺となる状態値の識別値。
         typename this_type::status_key const& in_left_key,
         /// [in] 適用する比較演算子。
@@ -519,8 +523,10 @@ class psyq::if_then_engine::_private::reservoir
     }
 
     /// @brief 状態値を比較する。
-    /// @return 比較演算の評価結果。
-    public: psyq::if_then_engine::evaluation compare_status(
+    /// @retval 正 比較式の評価は真。
+    /// @retval 0  比較式の評価は偽。
+    /// @retval 負 比較式の評価に失敗。
+    public: typename this_type::status_value::evaluation compare_status(
         /// [in] 左辺となる状態値の識別値。
         typename this_type::status_key const& in_left_key,
         /// [in] 適用する比較演算子。

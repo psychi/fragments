@@ -1,7 +1,6 @@
-﻿/** @file
-    @brief @copybrief psyq::if_then_engine::_private::status_value
-    @author Hillco Psychi (https://twitter.com/psychi)
- */
+﻿/// @file
+/// @brief @copybrief psyq::if_then_engine::_private::status_value
+/// @author Hillco Psychi (https://twitter.com/psychi)
 #ifndef PSYQ_IF_THEN_ENGINE_STATUS_VALUE_HPP_
 #define PSYQ_IF_THEN_ENGINE_STATUS_VALUE_HPP_
 
@@ -17,14 +16,6 @@ namespace psyq
     /// @brief if-then規則で駆動する有限状態機械。
     namespace if_then_engine
     {
-        /** @brief 式の評価結果。
-
-            - 正なら、式の評価は真だった。
-            - 0 なら、式の評価は偽だった。
-            - 負なら、式の評価に失敗した。
-         */
-        typedef std::int8_t evaluation;
-
         /// @brief psyq::if_then_engine の管理者以外は、直接アクセス禁止。
         namespace _private
         {
@@ -36,28 +27,27 @@ namespace psyq
 } // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 状態値のやりとりに使う容れ物。
-    @tparam template_unsigned @copydoc status_value::unsigned_type
-    @tparam template_float    @copydoc status_value::float_type
- */
+/// @brief 状態値のやりとりに使う容れ物。
+/// @tparam template_unsigned @copydoc status_value::unsigned_type
+/// @tparam template_float    @copydoc status_value::float_type
 template<typename template_unsigned, typename template_float>
 class psyq::if_then_engine::_private::status_value
 {
     /// @brief thisが指す値の型。
     private: typedef status_value this_type;
 
+    //-------------------------------------------------------------------------
     /// @brief 状態値で扱う符号なし整数の型。
+    /// @details この型の大きさを超える型は、状態値で扱えない。
     public: typedef template_unsigned unsigned_type;
     static_assert(
         std::is_integral<template_unsigned>::value
         && std::is_unsigned<template_unsigned>::value,
         "'template_unsigned' is not unsigned integer.");
-
     /// @brief 状態値で扱う符号あり整数の型。
     public: typedef
         typename std::make_signed<typename this_type::unsigned_type>::type
         signed_type;
-
     /// @brief 状態値で扱う浮動小数点数の型。
     public: typedef template_float float_type;
     static_assert(
@@ -65,8 +55,7 @@ class psyq::if_then_engine::_private::status_value
         "'template_float' is not floating-point number.");
     static_assert(
          sizeof(template_float) <= sizeof(template_unsigned),
-         "");
-
+         "sizeof(template_float) is greater than sizeof(template_unsigned).");
     /// @brief 状態値の型の種別。
     public: enum kind: std::int8_t
     {
@@ -77,6 +66,13 @@ class psyq::if_then_engine::_private::status_value
         kind_UNSIGNED,    ///< 符号なし整数。
     };
 
+    //-------------------------------------------------------------------------
+    /// @brief 比較式の評価。
+    /// @details
+    /// - 正なら、比較式の評価は真。
+    /// - 0 なら、比較式の評価は偽。
+    /// - 負なら、比較式の評価に失敗。
+    public: typedef std::int8_t evaluation;
     /// @brief 値の大小関係。
     public: enum order: std::int8_t
     {
@@ -85,7 +81,6 @@ class psyq::if_then_engine::_private::status_value
         order_EQUAL,     ///< 左辺と右辺は等価。
         order_GREATER,   ///< 左辺のほうが大きい。
     };
-
     /// @brief 状態値を比較する演算子の種類。
     enum comparison: std::uint8_t
     {
@@ -96,7 +91,6 @@ class psyq::if_then_engine::_private::status_value
         comparison_GREATER,       ///< 大なり。
         comparison_GREATER_EQUAL, ///< 以上。
     };
-
     /// @brief 状態値を代入する演算子の種類。
     public: enum assignment: std::uint8_t
     {
@@ -112,59 +106,54 @@ class psyq::if_then_engine::_private::status_value
     };
 
     //-------------------------------------------------------------------------
-    /** @name 構築
-        @{
-     */
+    /// @name 構築
+    /// @{
+
     /// @brief 空値を構築する。
     public: status_value() PSYQ_NOEXCEPT: kind_(this_type::kind_EMPTY) {}
 
-    /** @brief 論理型の値を構築する。
-        @param[in] in_bool 初期値となる論理値。
-     */
-    public: explicit status_value(bool const in_bool)
+    /// @brief 論理型の値を構築する。
+    public: explicit status_value(
+        /// [in] 初期値となる論理値。
+        bool const in_bool)
     PSYQ_NOEXCEPT: kind_(this_type::kind_BOOL)
     {
         this->bool_ = in_bool;
     }
 
-    /** @brief 符号なし整数型の値を構築する。
-        @param[in] in_unsigned 初期値となる符号なし整数。
-     */
+    /// @brief 符号なし整数型の値を構築する。
     public: explicit status_value(
+        /// [in] 初期値となる符号なし整数。
         typename this_type::unsigned_type const& in_unsigned)
     PSYQ_NOEXCEPT: kind_(this_type::kind_UNSIGNED)
     {
         this->unsigned_ = in_unsigned;
     }
 
-    /** @brief 符号あり整数型の値を構築する。
-        @param[in] in_signed 初期値となる符号あり整数。
-     */
+    /// @brief 符号あり整数型の値を構築する。
     public: explicit status_value(
+        /// [in] 初期値となる符号あり整数。
         typename this_type::signed_type const& in_signed)
     PSYQ_NOEXCEPT: kind_(this_type::kind_SIGNED)
     {
         this->signed_ = in_signed;
     }
 
-    /** @brief 浮動小数点数型の値を構築する。
-        @param[in] in_float 初期値となる浮動小数点数。
-     */
+    /// @brief 浮動小数点数型の値を構築する。
     public: explicit status_value(
+        /// [in] 初期値となる浮動小数点数。
         typename this_type::float_type const& in_float)
     PSYQ_NOEXCEPT: kind_(this_type::kind_FLOAT)
     {
         this->float_ = in_float;
     }
 
-    /** @brief 任意型の値を構築する。
-        @param[in] in_value 初期値。
-        @param[in] in_kind
-            値の型。 this_type::kind_EMPTY の場合は、自動で決定する。
-     */
+    /// @brief 任意型の値を構築する。
     public: template<typename template_value>
     explicit status_value(
+        /// [in] 初期値。
         template_value const& in_value,
+        /// [in] 値の型。 this_type::kind_EMPTY の場合は、自動で決定する。
         typename this_type::kind const in_kind = this_type::kind_EMPTY)
     PSYQ_NOEXCEPT: kind_(this_type::kind_EMPTY)
     {
@@ -172,29 +161,26 @@ class psyq::if_then_engine::_private::status_value
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 値の取得
-        @{
-     */
-    /** @brief 値が空か判定する。
-     */
+    /// @name 値の取得
+    /// @{
+
+    /// @brief 値が空か判定する。
     public: bool is_empty() const PSYQ_NOEXCEPT
     {
         return this->get_kind() == this_type::kind_EMPTY;
     }
 
-    /** @brief 論理値を取得する。
-        @retval !=nullptr 論理値を指すポインタ。
-        @retval ==nullptr 格納値が論理型ではない。
-     */
+    /// @brief 論理値を取得する。
+    /// @return 論理値を指すポインタ。論理値が格納されてない場合は nullptr を返す。
     public: bool const* get_bool() const PSYQ_NOEXCEPT
     {
         return this->get_kind() == this_type::kind_BOOL? &this->bool_: nullptr;
     }
 
-    /** @brief 符号なし整数値を取得する。
-        @retval !=nullptr 符号なし整数値を指すポインタ。
-        @retval ==nullptr 格納値が符号なし整数型ではない。
-     */
+    /// @brief 符号なし整数値を取得する。
+    /// @return
+    /// 符号なし整数値を指すポインタ。
+    /// 符号なし整数値が格納されてない場合は nullptr を返す。
     public: typename this_type::unsigned_type const* get_unsigned()
     const PSYQ_NOEXCEPT
     {
@@ -202,10 +188,10 @@ class psyq::if_then_engine::_private::status_value
             &this->unsigned_: nullptr;
     }
 
-    /** @brief 符号あり整数値を取得する。
-        @retval !=nullptr 符号あり整数値を指すポインタ。
-        @retval ==nullptr 格納値が符号あり整数型ではない。
-     */
+    /// @brief 符号あり整数値を取得する。
+    /// @return
+    /// 符号あり整数値を指すポインタ。
+    /// 符号あり整数値が格納されてない場合は nullptr を返す。
     public: typename this_type::signed_type const* get_signed()
     const PSYQ_NOEXCEPT
     {
@@ -213,10 +199,10 @@ class psyq::if_then_engine::_private::status_value
             &this->signed_: nullptr;
     }
 
-    /** @brief 浮動小数点数値を取得する。
-        @retval !=nullptr 浮動小数点数値を指すポインタ。
-        @retval ==nullptr 格納値が浮動小数点数型ではない。
-     */
+    /// @brief 浮動小数点数値を取得する。
+    /// @return
+    /// 浮動小数点数値を指すポインタ。
+    /// 浮動小数点数値が格納されてない場合は nullptr を返す。
     public: typename this_type::float_type const* get_float()
     const PSYQ_NOEXCEPT
     {
@@ -246,28 +232,26 @@ class psyq::if_then_engine::_private::status_value
         }
     }
 
-    /** @brief 格納値の型の種類を取得する。
-        @return 格納値の型の種類。
-     */
+    /// @brief 格納値の型の種類を取得する。
+    /// @return 格納値の型の種類。
     public: typename this_type::kind get_kind() const PSYQ_NOEXCEPT
     {
         return this->kind_;
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 値の比較
-        @{
-     */
-    /** @brief 値を比較する。
-        @param[in] in_comparison 比較演算子の種類。
-        @param[in] in_right      比較演算子の右辺値。
-        @retval 正 比較演算の結果が真だった。
-        @retval 0  比較演算の結果が偽だった。
-        @retval 負 比較演算に失敗した。
-     */
+    /// @name 値の比較
+    /// @{
+
+    /// @brief 比較式を評価する。
+    /// @retval 正 比較式の評価は真。
+    /// @retval 0  比較式の評価は偽。
+    /// @retval 負 比較式の評価に失敗。
     public: template<typename template_right>
-    psyq::if_then_engine::evaluation compare(
+    typename this_type::evaluation compare(
+        /// [in] 比較演算子の種類。
         typename this_type::comparison const in_comparison,
+        /// [in] 比較演算子の右辺値。
         template_right const& in_right)
     {
         auto const local_order(this->compare(in_right));
@@ -301,11 +285,11 @@ class psyq::if_then_engine::_private::status_value
         return -1;
     }
 
-    /** @brief 値を比較する。
-        @param[in] in_right 右辺値。
-        @return *this を左辺値とした比較結果。
-     */
-    public: typename this_type::order compare(this_type const& in_right)
+    /// @brief 値を比較する。
+    /// @return *this を左辺値とした比較結果。
+    public: typename this_type::order compare(
+        /// [in] 右辺値。
+        this_type const& in_right)
     const PSYQ_NOEXCEPT
     {
         switch (in_right.get_kind())
@@ -318,11 +302,11 @@ class psyq::if_then_engine::_private::status_value
         }
     }
 
-    /** @brief 論理値と比較する。
-        @param[in] in_right 右辺値となる論理値。
-        @return *this を左辺値とした比較結果。
-     */
-    public: typename this_type::order compare(bool const in_right)
+    /// @brief 論理値と比較する。
+    /// @return *this を左辺値とした比較結果。
+    public: typename this_type::order compare(
+        /// [in] 右辺値となる論理値。
+        bool const in_right)
     const PSYQ_NOEXCEPT
     {
         if (this->get_bool() == nullptr)
@@ -340,11 +324,10 @@ class psyq::if_then_engine::_private::status_value
         return this_type::order_LESS;
     }
 
-    /** @brief 符号なし整数と比較する。
-        @param[in] in_right 右辺値となる符号なし整数。
-        @return *this を左辺値とした比較結果。
-     */
+    /// @brief 符号なし整数と比較する。
+    /// @return *this を左辺値とした比較結果。
     public: typename this_type::order compare(
+        /// [in] 右辺値となる符号なし整数。
         typename this_type::unsigned_type const& in_right)
     const PSYQ_NOEXCEPT
     {
@@ -365,11 +348,10 @@ class psyq::if_then_engine::_private::status_value
         }
     }
 
-    /** @brief 符号あり整数と比較する。
-        @param[in] in_right 右辺値となる符号あり整数。
-        @return *this を左辺値とした比較結果。
-     */
+    /// @brief 符号あり整数と比較する。
+    /// @return *this を左辺値とした比較結果。
     public: typename this_type::order compare(
+        /// [in] 右辺値となる符号あり整数。
         typename this_type::signed_type const& in_right)
     const PSYQ_NOEXCEPT
     {
@@ -392,11 +374,10 @@ class psyq::if_then_engine::_private::status_value
         }
     }
 
-    /** @brief 浮動小数点数と比較する。
-        @param[in] in_right 右辺値となる浮動小数点数。
-        @return *this を左辺値とした比較結果。
-     */
+    /// @brief 浮動小数点数と比較する。
+    /// @return *this を左辺値とした比較結果。
     public: typename this_type::order compare(
+        /// [in] 右辺値となる浮動小数点数。
         typename this_type::float_type const& in_right)
     const PSYQ_NOEXCEPT
     {
@@ -417,12 +398,12 @@ class psyq::if_then_engine::_private::status_value
         }
     }
 
-    /** @brief 値を比較する。
-        @param[in] in_right 右辺値。
-        @return *this を左辺値とした比較結果。
-     */
+    /// @brief 値を比較する。
+    /// @return *this を左辺値とした比較結果。
     public: template<typename template_right>
-    typename this_type::order compare(template_right const& in_right)
+    typename this_type::order compare(
+        /// [in] 右辺値。
+        template_right const& in_right)
     const PSYQ_NOEXCEPT
     {
         if (std::is_floating_point<template_right>::value)
@@ -456,34 +437,34 @@ class psyq::if_then_engine::_private::status_value
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 値の代入
-        @{
-     */
-    /** @brief 状態値を空にする。
-     */
+    /// @name 値の代入
+    /// @{
+    
+    /// @brief 状態値を空にする。
     public: void assign_empty() PSYQ_NOEXCEPT
     {
         this->kind_ = this_type::kind_EMPTY;
     }
 
-    /** @brief 論理値を代入する。
-        @param[in] in_value 代入する論理値。
-     */
-    public: void assign_bool(bool const in_value) PSYQ_NOEXCEPT
+    /// @brief 論理値を代入する。
+    public: void assign_bool(
+        /// [in] 代入する論理値。
+        bool const in_value)
+    PSYQ_NOEXCEPT
     {
         this->bool_ = in_value;
         this->kind_ = this_type::kind_BOOL;
     }
 
-    /** @brief 符号なし整数を代入する。
-        @param[in] in_value 代入する値。
-        @retval true 成功。 in_value を *this に設定した。
-        @retval false
-            失敗。
-            in_value を符号なし整数に変換できなかった。 *this は変化しない。
-     */
+    /// @brief 符号なし整数を代入する。
+    /// @retval true 成功。 in_value を *this に設定した。
+    /// @retval false
+    /// 失敗。in_value を符号なし整数に変換できなかった。 *this は変化しない。
     public: template<typename template_value>
-    bool assign_unsigned(template_value const& in_value) PSYQ_NOEXCEPT
+    bool assign_unsigned(
+        /// [in] 代入する値。
+        template_value const& in_value)
+    PSYQ_NOEXCEPT
     {
         if (0 <= in_value)
         {
@@ -499,15 +480,15 @@ class psyq::if_then_engine::_private::status_value
         return false;
     }
 
-    /** @brief 符号あり整数を代入する。
-        @param[in] in_value 代入する値。
-        @retval true 成功。 in_value を *this に代入した。
-        @retval false
-            失敗。
-            in_value を符号あり整数に変換できなかった。 *this は変化しない。
-     */
+    /// @brief 符号あり整数を代入する。
+    /// @retval true 成功。 in_value を *this に代入した。
+    /// @retval false
+    /// 失敗。 in_value を符号あり整数に変換できなかった。 *this は変化しない。
     public: template<typename template_value>
-    bool assign_signed(template_value const& in_value) PSYQ_NOEXCEPT
+    bool assign_signed(
+        /// [in] 代入する値。
+        template_value const& in_value)
+    PSYQ_NOEXCEPT
     {
         auto const local_signed(
             static_cast<typename this_type::signed_type>(in_value));
@@ -523,15 +504,15 @@ class psyq::if_then_engine::_private::status_value
         return false;
     }
 
-    /** @brief 浮動小数点数を代入する。
-        @param[in] in_value 代入する値。
-        @retval true 成功。 in_value を *this に代入した。
-        @retval false
-            失敗。
-            in_value を浮動小数点数に変換できなかった。 *this は変化しない。
-     */
+    /// @brief 浮動小数点数を代入する。
+    /// @retval true 成功。 in_value を *this に代入した。
+    /// @retval false
+    /// 失敗。 in_value を浮動小数点数に変換できなかった。 *this は変化しない。
     public: template<typename template_value>
-    bool assign_float(template_value const& in_value) PSYQ_NOEXCEPT
+    bool assign_float(
+        /// [in] 代入する値。
+        template_value const& in_value)
+    PSYQ_NOEXCEPT
     {
         auto const local_float(
             static_cast<typename this_type::float_type>(in_value));
@@ -549,17 +530,15 @@ class psyq::if_then_engine::_private::status_value
         return false;
     }
 
-    /** @brief 値を代入する。
-        @param[in] in_value 代入する値。
-        @param[in] in_kind
-            代入する型。 this_type::kind_EMPTY の場合は、自動で決定する。
-        @retval true 成功。 in_value を *this に代入した。
-        @retval false
-            失敗。 in_value を状態値に変換できなかった。 *this は変化しない。
-     */
+    /// @brief 値を代入する。
+    /// @retval true 成功。 in_value を *this に代入した。
+    /// @retval false
+    /// 失敗。 in_value を状態値に変換できなかった。 *this は変化しない。
     public: template<typename template_value>
     bool assign(
+        /// [in] 代入する値。
         template_value const& in_value,
+        /// [in] 代入する型。 this_type::kind_EMPTY の場合は、自動で決定する。
         typename this_type::kind in_kind = this_type::kind_EMPTY)
     {
         if (in_kind == this_type::kind_EMPTY)
@@ -621,15 +600,14 @@ class psyq::if_then_engine::_private::status_value
         }
     }
 
-    /** @brief 代入演算する。
-        @param[in] in_operator 適用する代入演算子。
-        @param[in] in_right    代入演算子の右辺。
-        @retval true  成功。演算結果を *this に代入した。
-        @retval false 失敗。 *this は変化しない。
-     */
+    /// @brief 代入演算する。
+    /// @retval true  成功。演算結果を *this に代入した。
+    /// @retval false 失敗。 *this は変化しない。
     public: template<typename template_value>
     bool assign(
+        /// [in] 適用する代入演算子。
         typename this_type::assignment const in_operator,
+        /// [in] 代入演算子の右辺。
         template_value const& in_right)
     PSYQ_NOEXCEPT
     {
@@ -715,10 +693,9 @@ class psyq::if_then_engine::_private::status_value
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @brief 型の種類を決定する。
-        @tparam template_value 型。
-        @return 型の種類。
-     */
+    /// @brief 型の種類を決定する。
+    /// @tparam template_value 型。
+    /// @return 型の種類。
     private: template<typename template_value>
     static typename this_type::kind classify_kind() PSYQ_NOEXCEPT
     {
@@ -741,28 +718,25 @@ class psyq::if_then_engine::_private::status_value
     //-------------------------------------------------------------------------
     /// @brief this_type::assign_unsigned で論理値を設定させないためのダミー関数。
     private: bool assign_unsigned(bool const) PSYQ_NOEXCEPT;
-
     /// @brief this_type::assign_signed で論理値を設定させないためのダミー関数。
     private: bool assign_signed(bool const) PSYQ_NOEXCEPT;
-
     /// @brief this_type::assign_float で論理値を設定させないためのダミー関数。
     private: bool assign_float(bool const) PSYQ_NOEXCEPT;
 
     //-------------------------------------------------------------------------
-    /** @brief 整数の演算を行い、結果を状態値へ格納する。
-        @param[in] in_kind     演算した結果の型。
-        @param[in] in_operator 適用する演算子。
-        @param[in] in_left     演算子の左辺となる整数値。
-        @param[in] in_right    演算子の左辺となる整数値。
-        @retval true  成功。 演算結果を *this に格納した。
-        @retval false 失敗。 *this は変化しない。
-     */
+    /// @brief 整数の演算を行い、結果を状態値へ格納する。
+    /// @retval true  成功。 演算結果を *this に格納した。
+    /// @retval false 失敗。 *this は変化しない。
     private: template<typename template_left, typename template_right>
     bool assign_value(
         std::true_type,
+        /// [in] 演算した結果の型。
         typename this_type::kind const in_kind,
+        /// [in] 適用する演算子。
         typename this_type::assignment const in_operator,
+        /// [in] 演算子の左辺となる整数値。
         template_left const& in_left,
+        /// [in] 演算子の左辺となる整数値。
         template_right const& in_right)
     PSYQ_NOEXCEPT
     {
@@ -789,20 +763,20 @@ class psyq::if_then_engine::_private::status_value
                 std::false_type(), in_kind, in_operator, in_left, in_right);
         }
     }
-    /** @brief 実数の演算を行い、結果を状態値へ格納する。
-        @param[in] in_kind     演算した結果の型。
-        @param[in] in_operator 適用する演算子。
-        @param[in] in_left     演算子の左辺となる実数値。
-        @param[in] in_right    演算子の左辺となる実数値。
-        @retval true  成功。 演算結果を *this に格納した。
-        @retval false 失敗。 *this は変化しない。
-     */
+
+    /// @brief 実数の演算を行い、結果を状態値へ格納する。
+    /// @retval true  成功。 演算結果を *this に格納した。
+    /// @retval false 失敗。 *this は変化しない。
     private: template<typename template_left, typename template_right>
     bool assign_value(
         std::false_type,
+        /// [in] 演算した結果の型。
         typename this_type::kind const in_kind,
+        /// [in] 適用する演算子。
         typename this_type::assignment const in_operator,
+        /// [in] 演算子の左辺となる実数値。
         template_left const& in_left,
+        /// [in] 演算子の左辺となる実数値。
         template_right const& in_right)
     PSYQ_NOEXCEPT
     {
@@ -829,13 +803,12 @@ class psyq::if_then_engine::_private::status_value
     }
 
     //-------------------------------------------------------------------------
-    /** @brief 浮動小数点数を比較する。
-        @param[in] in_left  左辺の浮動小数点数。
-        @param[in] in_right 右辺の浮動小数点数。
-        @return 比較結果。
-     */
+    /// @brief 浮動小数点数を比較する。
+    /// @return 比較結果。
     private: static typename this_type::order compare_float(
+        /// [in] 左辺の浮動小数点数。
         typename this_type::float_type const& in_left,
+        /// [in] 右辺の浮動小数点数。
         typename this_type::float_type const& in_right)
     {
 #if 0
@@ -854,14 +827,13 @@ class psyq::if_then_engine::_private::status_value
 #endif
     }
 
-    /** @brief 浮動小数点数と値を比較する。
-        @param[in] in_left  左辺の浮動小数点数。
-        @param[in] in_right 右辺の値。
-        @return 比較結果。
-     */
+    // @brief 浮動小数点数と値を比較する。
+    /// @return 比較結果。
     private: template<typename template_value>
     static typename this_type::order compare_float_left(
+        /// [in] 左辺の浮動小数点数。
         typename this_type::float_type const& in_left,
+        /// [in] 右辺の値。
         template_value const& in_right)
     {
         this_type const local_right(in_right, this_type::kind_FLOAT);
@@ -870,14 +842,13 @@ class psyq::if_then_engine::_private::status_value
             this_type::compare_float(in_left, local_right.float_);
     }
 
-    /** @brief 値と浮動小数点数を比較する。
-        @param[in] in_left  左辺の値。
-        @param[in] in_right 右辺の浮動小数点数。
-        @return 比較結果。
-     */
+    /// @brief 値と浮動小数点数を比較する。
+    /// @return 比較結果。
     private: template<typename template_value>
     static typename this_type::order compare_float_right(
+        /// [in] 左辺の値。
         template_value const& in_left,
+        /// [in] 右辺の浮動小数点数。
         typename this_type::float_type const& in_right)
     {
         this_type const local_left(in_left, this_type::kind_FLOAT);
@@ -886,14 +857,13 @@ class psyq::if_then_engine::_private::status_value
             this_type::compare_float(local_left.float_, in_right);
     }
 
-    /** @brief 値を比較する。
-        @param[in] in_left  左辺の値。
-        @param[in] in_right 右辺の値。
-        @return 比較結果。
-     */
+    /// @brief 値を比較する。
+    /// @return 比較結果。
     private: template<typename template_value>
     static typename this_type::order compare_value(
+        /// [in] 左辺の値。
         template_value const& in_left,
+        /// [in] 右辺の値。
         template_value const& in_right)
     {
         return in_left < in_right?
@@ -910,7 +880,7 @@ class psyq::if_then_engine::_private::status_value
         typename this_type::signed_type signed_;     ///< 符号あり整数値。
         typename this_type::float_type float_;       ///< 浮動小数点数値。
     };
-    private: typename this_type::kind kind_;    ///< 状態値の型の種類。
+    private: typename this_type::kind kind_;         ///< 状態値の型の種類。
 
 }; // class psyq::if_then_engine::_private::status_value
 

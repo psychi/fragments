@@ -22,7 +22,7 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief 条件式監視器。条件式の評価結果の変化を検知し、条件挙動ハンドラに通知する。
+/// @brief 条件式監視器。条件式の評価の変化を検知し、条件挙動ハンドラに通知する。
 /// @tparam template_handler_container @copydoc expression_monitor::handler_container
 template<typename template_handler_container>
 class psyq::if_then_engine::_private::expression_monitor
@@ -31,7 +31,7 @@ class psyq::if_then_engine::_private::expression_monitor
     private: typedef expression_monitor this_type;
 
     //-------------------------------------------------------------------------
-    /// @copydoc this_type::handlers_
+    /// @brief 条件式監視器で保持する _private::handler のコンテナ。
     public: typedef template_handler_container handler_container;
     /// @brief 条件式監視器で保持する _private::handler 。
     public: typedef typename template_handler_container::value_type handler;
@@ -109,30 +109,37 @@ class psyq::if_then_engine::_private::expression_monitor
 #endif // !defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
     //-------------------------------------------------------------------------
-    /// @brief 条件式に対応する条件挙動ハンドラを登録する。
-    /// @return
-    /// 登録した条件挙動ハンドラを指すポインタ。失敗した場合は nullptr を返す。
-    /// - in_function が空だと失敗する。
-    /// - in_function に対応する条件挙動ハンドラが、
-    ///   同じ条件式に既に登録されていると、失敗する。
+    /// @brief 条件式に対応する条件挙動関数を登録して参照する。
+    /// @details
+    /// in_expression_key に対応する条件式の評価が変化した際に、
+    /// in_condition に合致すると呼び出される条件挙動関数を参照する
+    /// this_type::handler を構築し、 io_expression_monitors に登録する。
     /// @sa
-    /// 登録した条件挙動ハンドラは、 in_function
-    /// の指す関数オブジェクトが解体されると、自動的に取り除かれる。
-    /// 明示的に取り除くには this_type::unregister_handler を使う。
+    /// in_function の指す条件挙動関数が解体されると、
+    /// in_function に対応する this_type::handler は自動的に削除される。
+    /// 明示的に削除するには this_type::unregister_handler を使う。
+    /// @return
+    /// in_expression_key と in_function に対応する、
+    /// this_type::handler を指すポインタ。失敗した場合は nullptr を返す。
+    /// - in_function が空だと失敗する。
+    /// - in_expression_key と対応する expression_monitor に
+    ///   in_function が既に登録されていると、失敗する。
     public: template<typename template_expression_monitor_map>
     static typename this_type::handler* register_handler(
-        /// [in,out] 条件挙動ハンドラを登録する expression_monitor の辞書。
+        /// [in,out] this_type::handler を登録する expression_monitor の辞書。
         template_expression_monitor_map& io_expression_monitors,
-        /// [in] 登録する条件挙動ハンドラに対応する条件式の識別値。
+        /// [in] 登録する this_type::handler に対応する条件式の識別値。
         typename this_type::handler::expression_key const& in_expression_key,
-        /// [in] 関数を呼び出す条件となる、条件式の評価の変化。
+        /// [in] in_function を呼び出す挙動条件。
+        /// this_type::handler::make_condition から作る。
         typename this_type::handler::condition const in_condition,
-        /// [in] 条件と合致した際に呼び出す関数を指すスマートポインタ。
+        /// [in] 条件挙動関数を指すスマートポインタ。
+        /// 条件式の評価が変化した際に in_condition と合致すると呼び出される。
         typename this_type::handler::function_shared_ptr const& in_function,
-        /// [in] 条件と合致した際に、関数を呼び出す優先順位。昇順に呼び出される。
+        /// [in] in_function の呼び出し優先順位。昇順に呼び出される。
         typename this_type::handler::priority const in_priority)
     {
-        if (in_condition == 0)
+        if (in_condition == this_type::handler::INVALID_UNIT_CONDITION)
         {
             return nullptr;
         }
@@ -160,22 +167,22 @@ class psyq::if_then_engine::_private::expression_monitor
         return &local_handlers.back();
     }
 
-    /// @brief 関数に対応する条件挙動ハンドラを削除する。
-    /// @retval true  in_function に対応する条件挙動ハンドラを削除した。
-    /// @retval false 該当する条件挙動ハンドラがない。
+    /// @brief 条件挙動関数に対応する条件挙動ハンドラを削除する。
+    /// @retval true  in_function に対応する this_type::handler を削除した。
+    /// @retval false 該当する this_type::handler がない。
     public: bool unregister_handler(
-        /// [in] 削除する条件挙動ハンドラに対応する関数。
+        /// [in] 削除する this_type::handler に対応する条件挙動関数。
         typename this_type::handler::function const& in_function)
     {
         return this_type::trim_handlers(this->handlers_, &in_function, true);
     }
 
-    /// @brief 条件挙動ハンドラを取得する。
+    /// @brief 登録されている条件挙動ハンドラを取得する。
     /// @return
-    /// this_type::register_handler で登録した条件挙動ハンドラを指すポインタ。
-    /// 該当する条件挙動ハンドラがない場合は nullptr を返す。
+    /// this_type::register_handler で登録した this_type::handler を指すポインタ。
+    /// 該当する this_type::handler がない場合は nullptr を返す。
     public: typename this_type::handler const* find_handler(
-        /// [in] 取得する条件挙動ハンドラに対応する関数。
+        /// [in] 取得する this_type::handler に対応する条件挙動関数。
         typename this_type::handler::function const& in_function)
     const PSYQ_NOEXCEPT
     {
@@ -191,8 +198,8 @@ class psyq::if_then_engine::_private::expression_monitor
     }
 
     /// @brief 条件挙動ハンドラを整理する。
-    /// @retval true  条件挙動ハンドラが空になった。
-    /// @retval false 条件挙動は空になってない。
+    /// @retval true  this_type::handler がなくなった。
+    /// @retval false this_type::handler はまだある。
     public: bool shrink_handlers()
     {
         this_type::trim_handlers(this->handlers_, nullptr, false);
@@ -279,11 +286,11 @@ class psyq::if_then_engine::_private::expression_monitor
         }
     }
 
-    /// @brief 条件式を評価し、条件挙動ハンドラをキャッシュに貯める。
+    /// @brief 条件式の評価の変化を検知し、条件挙動ハンドラをキャッシュに貯める。
     /// @details
-    /// io_expression_monitors を走査し、条件式の評価結果の変化によって、
-    /// this_type::register_handler で登録された条件挙動ハンドラを
-    /// io_cached_handlers に貯める。
+    /// 条件式の評価が前回と最新で異なっており、且つ、
+    /// this_type::register_handler で登録した挙動条件と合致するなら、
+    /// this_type::handler を io_cached_handlers に貯める。
     public: template<
         typename template_handler_cache_container,
         typename template_expression_monitor_map,
@@ -298,17 +305,17 @@ class psyq::if_then_engine::_private::expression_monitor
         /// [in] 評価する条件式を持つ _private::evaluator 。
         template_evaluator const& in_evaluator)
     {
-        // io_expression_monitors を走査し、評価要求があれば条件式を評価しつつ、
-        // 空になった expression_monitor を削除する。
         for (
             auto i(io_expression_monitors.begin());
             i != io_expression_monitors.end();)
         {
+            // 条件式の評価の要求を検知する。
             auto& local_expression_key(i->first);
             auto& local_expression_monitor(i->second);
             if (local_expression_monitor.detect_transition(
                     in_evaluator, local_expression_key))
             {
+                // 条件挙動ハンドラをキャッシュに貯める。
                 local_expression_monitor.cache_handlers(
                     io_cached_handlers,
                     in_reservoir,
@@ -488,11 +495,7 @@ class psyq::if_then_engine::_private::expression_monitor
         return local_find && in_function != nullptr;
     }
 
-    /// @brief 条件に合致する条件挙動をキャッシュに貯める。
-    /// @details
-    /// 条件式を評価して条件と合致するなら、
-    /// this_type::register_handler で登録された条件挙動ハンドラを
-    /// io_cached_handlers に貯める。
+    /// @copydoc this_type::cache_handlers
     private: template<
         typename template_handler_cache_container, typename template_evaluator>
     void cache_handlers(
@@ -505,24 +508,25 @@ class psyq::if_then_engine::_private::expression_monitor
         /// [in] 評価する条件式の識別値。
         typename template_evaluator::expression_key const& in_expression_key)
     {
-        // 条件式を評価し、変化条件と合致するか判定する。
+        // 条件式を評価し、結果が前回から変化してないか判定する。
         auto const local_flush_condition(
             this->flags_.test(this_type::flag_FLUSH_CONDITION));
         auto const local_last_evaluation(
             this->get_last_evaluation(local_flush_condition));
-        auto const local_evaluation(
+        auto const local_current_evaluation(
             this->evaluate_expression(
                 in_reservoir,
                 in_evaluator,
                 in_expression_key,
                 local_flush_condition));
-        if (local_last_evaluation == local_evaluation)
+        if (local_last_evaluation == local_current_evaluation)
         {
-            // 前回と今回で条件式の評価結果が同じなら、何もしない。
+            // 前回と今回で評価結果が同じなら、何もしない。
             return;
         }
 
-        // 評価の変化条件が合致すれば、挙動関数をキャッシュに貯める。
+        // 条件式の評価の変化が挙動条件と合致すれば、
+        // 条件挙動ハンドラをキャッシュに貯める。
         for (auto i(this->handlers_.begin()); i != this->handlers_.end();)
         {
             auto const& local_handler(*i);
@@ -534,7 +538,7 @@ class psyq::if_then_engine::_private::expression_monitor
             ++i;
             if (this_type::handler::is_matched_condition(
                     local_handler.get_condition(),
-                    local_evaluation,
+                    local_current_evaluation,
                     local_last_evaluation))
             {
                 // 優先順位の昇順となるよう、条件挙動キャッシュを挿入する。
@@ -546,7 +550,7 @@ class psyq::if_then_engine::_private::expression_monitor
                         typename this_type::handler_priority_less()),
                     local_handler,
                     in_expression_key,
-                    local_evaluation,
+                    local_current_evaluation,
                     local_last_evaluation);
             }
         }
@@ -632,7 +636,7 @@ class psyq::if_then_engine::_private::expression_monitor
     }
 
     //-------------------------------------------------------------------------
-    /// @brief 条件式監視器で保持する _private::handler のコンテナ。
+    /// @copydoc this_type::handler_container
     private: typename this_type::handler_container handlers_;
     /// @brief 条件式の評価結果を記録するフラグの集合。
     private: std::bitset<8> flags_;

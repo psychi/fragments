@@ -33,9 +33,16 @@ namespace psyq
 /// @brief if-then規則による有限状態機械の駆動器。
 /// @par 使い方の概略
 /// - driver::driver で駆動器を構築する。
-/// - driver::extend_chunk で、状態値と条件式と条件挙動ハンドラを登録する。
-/// - driver::progress を時間フレーム毎に呼び出す。
-///   状態値が更新され、条件挙動ハンドラの関数が呼び出される。
+/// - driver::extend_chunk で、状態値と条件式と条件挙動関数を登録する。
+///   - 状態値の登録のみしたい場合は driver::register_status を呼び出す。
+///   - 条件式の登録のみしたい場合は driver::evaluator_ に対して
+///     evaluator::register_expression を呼び出す。
+///   - 条件挙動関数の登録のみしたい場合は driver::register_handler を呼び出す。
+/// - driver::accumulator_ に対して
+///   accumulator::accumulate を呼び出し、状態値の変更を予約する。
+/// - driver::progress
+///   を時間フレーム毎に呼び出す。状態値の変更と条件式の評価が行われ、
+///   挙動条件に合致する条件挙動関数が呼び出される。
 /// @tparam template_unsigned  @copydoc reservoir::status_value::unsigned_type
 /// @tparam template_float     @copydoc reservoir::status_value::float_type
 /// @tparam template_priority  @copydoc dispatcher::handler::priority
@@ -364,36 +371,53 @@ class psyq::if_then_engine::driver
         this->evaluator_.erase_chunk(in_chunk_key);
         this_type::handler_chunk::erase(this->handler_chunks_, in_chunk_key);
     }
+    /// @}
+    //-------------------------------------------------------------------------
+    /// @name 条件挙動
+    /// @{
 
-    /// @brief 条件式に対応する条件挙動ハンドラを、チャンクへ追加する。
-    /// @retval true  成功。
-    /// @retval false 失敗。
-    public: bool register_handler(
-        /// [in] 関数を追加するチャンクの識別値。
+    /// @brief 条件式に対応する条件挙動関数を登録して保持する。
+    /// @details
+    /// in_expression_key に対応する条件式の評価が変化した際に、
+    /// in_condition に合致すると呼び出される条件挙動関数を
+    /// this_type::dispatcher_ に登録し、チャンクへ追加して保持する。
+    /// @sa
+    /// in_function の指す条件挙動関数が解体されると、
+    /// in_function に対応する dispatcher::handler は自動的に削除される。
+    /// 明示的に削除するには dispatcher::unregister_handler を使う。
+    /// @return
+    /// in_expression_key と in_function に対応する、
+    /// dispatcher::handler を指すポインタ。失敗した場合は nullptr を返す。
+    /// - in_function が空だと失敗する。
+    /// - in_expression_key と対応する dispatcher::handler に
+    ///   in_function が既に登録されていると、失敗する。
+    public: typename this_type::dispatcher::handler const* register_handler(
+        /// [in] 条件挙動関数を追加するチャンクの識別値。
         typename this_type::chunk_key const& in_chunk_key,
-        /// [in] 登録する条件挙動ハンドラにと対応する条件式の識別値。
+        /// [in] 登録する dispatcher::handler に対応する条件式の識別値。
         typename this_type::evaluator::expression_key const& in_expression_key,
-        /// [in] 関数を呼び出す条件。 dispatcher::make_condition で構築する。
+        /// [in] in_function を呼び出す挙動条件。
+        /// dispatcher::handler::make_condition から作る。
         typename this_type::dispatcher::handler::condition const in_condition,
-        /// [in] 条件と合致した際に呼び出す関数を指すスマートポインタ。
+        /// [in] 条件挙動関数を指すスマートポインタ。
+        /// in_expression_key に対応する条件式の評価が変化した際に、条件式の評価が
+        /// in_condition に合致すると、呼び出される。
         typename this_type::dispatcher::handler::function_shared_ptr in_function,
-        /// [in] 関数の呼び出し優先順位。優先順位の昇順に呼び出される。
+        /// [in] in_function の呼び出し優先順位。昇順に呼び出される。
         typename this_type::dispatcher::handler::priority const in_priority =
             PSYQ_IF_THEN_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT)
     {
-        // 条件挙動ハンドラを条件挙動器へ登録する。
-        auto const local_register_handler(
+        // 条件挙動関数を条件挙動器へ登録する。
+        auto const local_handler(
             this->dispatcher_.register_handler(
                 in_expression_key, in_condition, in_function, in_priority));
-        if (!local_register_handler)
+        if (local_handler != nullptr)
         {
-            return false;
+            // 条件挙動関数を条件挙動チャンクへ追加する。
+            this_type::handler_chunk::extend(
+                this->handler_chunks_, in_chunk_key, std::move(in_function));
         }
-
-        // 条件挙動関数を条件挙動チャンクへ追加する。
-        this_type::handler_chunk::extend(
-            this->handler_chunks_, in_chunk_key, std::move(in_function));
-        return true;
+        return local_handler;
     }
     /// @}
     //-------------------------------------------------------------------------
@@ -430,7 +454,7 @@ class psyq::if_then_engine::driver
             in_chunk_key, in_status_key, in_value, in_bit_width);
     }
 
-    /// @brief 状態値を更新し、条件挙動ハンドラの関数を呼び出す。
+    /// @brief 状態値を更新し、条件式を評価して、条件挙動関数を呼び出す。
     /// @details 基本的には、時間フレーム毎に呼び出すこと。
     public: void progress()
     {

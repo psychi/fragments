@@ -172,9 +172,9 @@ class psyq::if_then_engine::_private::status_operation
         typename template_hasher,
         typename template_table>
     static void _build_container(
-        /// [in,out] 構築した状態操作引数を格納するコンテナ。
+        /// [in,out] 構築した status_operation を格納するコンテナ。
         template_container& io_operations,
-        /// [in,out] 文字列からハッシュ値を作る関数オブジェクト。
+        /// [in,out] 文字列からハッシュ値を作る std::hash 。
         template_hasher& io_hasher,
         /// [in] 解析する psyq::string::table 。
         template_table const& in_table,
@@ -185,17 +185,19 @@ class psyq::if_then_engine::_private::status_operation
         /// [in] 解析する psyq::string::table の属性の列数。
         typename template_table::number const in_column_count)
     {
-        typename template_table::number const local_unit_size(3);
-        io_operations.reserve(
-            io_operations.size() + in_column_count / local_unit_size);
-        for (auto i(local_unit_size); i <= in_column_count; i += local_unit_size)
+        typename template_table::number const local_unit_count(3);
+        auto const local_operation_count(in_column_count / local_unit_count);
+        if (local_operation_count < 1)
+        {
+            return;
+        }
+        io_operations.reserve(io_operations.size() + local_operation_count);
+        auto const local_column_end(
+            in_column_number + in_column_count - local_unit_count);
+        for (auto i(in_column_number); i <= local_column_end; i += local_unit_count)
         {
             auto const local_operation(
-                this_type::_build(
-                    io_hasher,
-                    in_table,
-                    in_row_number,
-                    in_column_number + i - local_unit_size));
+                this_type::_build(io_hasher, in_table, in_row_number, i));
             if (!local_operation.get_value().is_empty())
             {
                 io_operations.push_back(local_operation);

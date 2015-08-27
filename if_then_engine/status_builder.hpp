@@ -279,7 +279,7 @@ class psyq::if_then_engine::status_builder
             in_value_cell);
         if (local_parser.is_completed())
         {
-            return nullptr != io_reservoir.register_status(
+            return io_reservoir.register_status(
                 in_chunk_key, in_status_key, local_parser.get_value());
         }
         PSYQ_ASSERT(false);
@@ -306,7 +306,7 @@ class psyq::if_then_engine::status_builder
             in_value_cell);
         if (local_parser.is_completed())
         {
-            return nullptr != io_reservoir.register_status(
+            return io_reservoir.register_status(
                 in_chunk_key,
                 in_status_key,
                 local_parser.get_value(),

@@ -126,7 +126,7 @@ class psyq::if_then_engine::driver
         /// [in] キャッシュの予約数。
         std::size_t const in_cache_capacity =
             PSYQ_IF_THEN_ENGINE_DRIVER_CACHE_CAPACITY_DEFAULT,
-        /// [in] ハッシュ関数オブジェクトの初期値。
+        /// [in] 文字列ハッシュ関数オブジェクトの初期値。
         typename this_type::hasher in_hash_function = this_type::hasher(),
         /// [in] メモリ割当子の初期値。
         typename this_type::allocator_type const& in_allocator =
@@ -376,48 +376,53 @@ class psyq::if_then_engine::driver
     /// @name 条件挙動
     /// @{
 
-    /// @brief 条件式に対応する条件挙動関数を登録して保持する。
-    /// @details
-    /// in_expression_key に対応する条件式の評価が変化した際に、
-    /// in_condition に合致すると呼び出される条件挙動関数を
-    /// this_type::dispatcher_ に登録し、チャンクへ追加して保持する。
+    /// @brief 条件式に対応する条件挙動関数を登録して強参照する。
+    /// @sa
+    /// this_type::progress で、 in_expression_key に対応する条件式の評価が変化し
+    /// in_condition と合致すると、 in_function の指す条件挙動関数が呼び出される。
     /// @sa
     /// in_function の指す条件挙動関数が解体されると、
     /// in_function に対応する dispatcher::handler は自動的に削除される。
     /// 明示的に削除するには dispatcher::unregister_handler を使う。
-    /// @return
-    /// in_expression_key と in_function に対応する、
-    /// dispatcher::handler を指すポインタ。失敗した場合は nullptr を返す。
-    /// - in_function が空だと失敗する。
+    /// @retval true
+    /// 成功。 in_function の指す条件挙動関数を弱参照する
+    /// dispatcher::handler を構築して this_type::dispatcher_
+    /// に登録し、登録した条件挙動関数の強参照をチャンクに追加した。
+    /// @retval false
+    /// 失敗。条件挙動関数は登録されず、
+    /// 条件挙動関数の強参照はチャンクに追加されなかった。
+    /// - in_condition が dispatcher::handler::INVALID_CONDITION だと失敗する。
+    /// - in_function が空か、空の関数を指していると失敗する。
     /// - in_expression_key と対応する dispatcher::handler に
     ///   in_function が既に登録されていると、失敗する。
-    public: typename this_type::dispatcher::handler const* register_handler(
-        /// [in] 条件挙動関数を追加するチャンクの識別値。
+    public: bool register_handler(
+        /// [in] 条件挙動関数を保持させるチャンクの識別値。
         typename this_type::chunk_key const& in_chunk_key,
-        /// [in] 登録する dispatcher::handler に対応する条件式の識別値。
+        /// [in] in_function の指す条件挙動関数に対応する条件式の識別値。
         typename this_type::evaluator::expression_key const& in_expression_key,
-        /// [in] in_function を呼び出す挙動条件。
+        /// [in] in_function の指す条件挙動関数を呼び出す挙動条件。
         /// dispatcher::handler::make_condition から作る。
         typename this_type::dispatcher::handler::condition const in_condition,
-        /// [in] 条件挙動関数を指すスマートポインタ。
-        /// in_expression_key に対応する条件式の評価が変化した際に、条件式の評価が
+        /// [in] 登録する条件挙動関数を指すスマートポインタ。
+        /// in_expression_key に対応する条件式の評価が変化して
         /// in_condition に合致すると、呼び出される。
         typename this_type::dispatcher::handler::function_shared_ptr in_function,
-        /// [in] in_function の呼び出し優先順位。昇順に呼び出される。
+        /// [in] in_function の指す条件挙動関数の呼び出し優先順位。
+        /// 昇順に呼び出される。
         typename this_type::dispatcher::handler::priority const in_priority =
             PSYQ_IF_THEN_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT)
     {
         // 条件挙動関数を条件挙動器へ登録する。
-        auto const local_handler(
+        auto const local_register_handler(
             this->dispatcher_.register_handler(
                 in_expression_key, in_condition, in_function, in_priority));
-        if (local_handler != nullptr)
+        if (local_register_handler)
         {
             // 条件挙動関数を条件挙動チャンクへ追加する。
             this_type::handler_chunk::extend(
                 this->handler_chunks_, in_chunk_key, std::move(in_function));
         }
-        return local_handler;
+        return local_register_handler;
     }
     /// @}
     //-------------------------------------------------------------------------
@@ -431,23 +436,56 @@ class psyq::if_then_engine::driver
         return this->reservoir_;
     }
 
-    /// @copydoc reservoir::register_status(typename this_type::chunk_key const&, typename this_type::status_key const&, template_value const);
+    /// @brief 状態値を登録する。
+    /// @sa
+    /// - 登録した状態値を取得するには、 this_type::get_reservoir から
+    ///   reservoir::find_status を呼び出す。
+    /// - 状態値の変更は this_type::accumulator_ から
+    ///   accumulator::accumulate を呼び出して行う。
+    /// - this_type::erase_chunk で、登録した状態値をチャンク毎に削除できる。
+    /// @retval true  成功。状態値を登録した。
+    /// @retval false 失敗。状態値は登録されなかった。
+    /// - in_status_key に対応する状態値がすでに登録されていると失敗する。
     public: template<typename template_value>
-    typename this_type::reservoir::status_property const* register_status(
+    bool register_status(
+        /// [in] 登録する状態値を格納する状態値ビット列チャンクの識別値。
         typename this_type::chunk_key const& in_chunk_key,
+        /// [in] 登録する状態値の識別値。
         typename this_type::reservoir::status_key const& in_status_key,
+        /// [in] 登録する状態値の初期値。以下の型の値を登録できる。
+        /// - bool 型。
+        /// - C++ 組み込み整数型。
+        /// - C++ 組み込み浮動小数点数型。
         template_value const in_value)
     {
         return this->reservoir_.register_status(
             in_chunk_key, in_status_key, in_value);
     }
 
-    /// @copydoc reservoir::register_status(typename this_type::chunk_key const&, typename this_type::status_key const&, template_value const, std::size_t const);
+    /// @brief 整数型の状態値を登録する。
+    /// @sa
+    /// - 登録した状態値を取得するには、 this_type::get_reservoir から
+    ///   reservoir::find_status を呼び出す。
+    /// - 登録した状態値を書き換えるには、 this_type::accumulator_ から
+    ///   accumulator::accumulate を呼び出す。
+    /// - this_type::erase_chunk で、登録した状態値をチャンク毎に削除できる。
+    /// @retval true  成功。状態値を登録した。
+    /// @retval false 失敗。状態値は登録されなかった。
+    /// - in_status_key に対応する状態値がすでに登録されていると失敗する。
+    /// - in_value のビット幅が in_bit_width を超えていると失敗する。
+    /// - reservoir::status_chunk::BLOCK_BIT_WIDTH より
+    ///   in_bit_width が大きいと失敗する。
+    /// - in_bit_width が2未満だと失敗する。
+    ///   1ビットの値は論理型として登録すること。
     public: template<typename template_value>
-    typename this_type::reservoir::status_property const* register_status(
+    bool register_status(
+        /// [in] 登録する状態値を格納する状態値ビット列チャンクの識別値。
         typename this_type::chunk_key const& in_chunk_key,
+        /// [in] 登録する状態値の識別値。
         typename this_type::reservoir::status_key const& in_status_key,
+        /// [in] 登録する状態値の初期値。 C++ 組み込み整数型であること。
         template_value const in_value,
+        /// [in] 登録する状態値のビット幅。
         std::size_t const in_bit_width)
     {
         return this->reservoir_.register_status(
@@ -473,7 +511,7 @@ class psyq::if_then_engine::driver
     public: typename this_type::dispatcher dispatcher_;
     /// @brief 駆動器で用いる条件挙動チャンクのコンテナ。
     private: typename this_type::handler_chunk::container handler_chunks_;
-    /// @brief 駆動器で用いるハッシュ関数オブジェクト。
+    /// @brief 駆動器で用いる文字列ハッシュ関数オブジェクト。
     public: typename this_type::hasher hash_function_;
 
 }; // class psyq::if_then_engine::driver

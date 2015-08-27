@@ -187,8 +187,8 @@ class psyq::if_then_engine::expression_builder
                 io_hasher(
                     in_table.find_cell(i, local_attribute.key_.first)));
             if (local_expression_key != local_empty_key
-                && nullptr == io_evaluator.find_expression(local_expression_key)
-                && nullptr != this_type::register_expression(
+                && !io_evaluator.is_registered(local_expression_key)
+                && this_type::register_expression(
                     io_evaluator,
                     io_hasher,
                     local_workspace,
@@ -213,10 +213,12 @@ class psyq::if_then_engine::expression_builder
     }
 
     /// @brief 文字列表の行を解析して条件式を構築し、条件評価器へ登録する。
-    /// @return
-    /// 登録した条件式を指すポインタ。登録に失敗した場合は nullptr を返す。
+    /// @retval true  成功。条件式を io_evaluator に登録した。
+    /// @retval false 失敗。条件式は登録されなかった。
+    /// - in_expression_key に対応する条件式が既にあると失敗する。
+    /// - in_elements が空だと失敗する。
     public: template<typename template_evaluator, typename template_hasher>
-    static typename template_evaluator::expression const* register_expression(
+    static bool register_expression(
         /// [in,out] 文字列表から構築した条件式を登録する driver::evaluator 。
         template_evaluator& io_evaluator,
         /// [in,out] 文字列からハッシュ値を生成する driver::hasher 。
@@ -340,18 +342,18 @@ class psyq::if_then_engine::expression_builder
         typename template_element_container,
         typename template_hasher,
         typename template_element_server>
-    static typename template_evaluator::expression const* register_expression(
+    static bool register_expression(
         /// [in,out] 条件式を登録する driver::evaluator 。
         template_evaluator& io_evaluator,
         /// [in,out] 文字列からハッシュ値を生成する driver::hasher 。
         template_hasher& io_hasher,
-        /// [in,out] 条件式の構築に使う要素条件の作業領域。
+        /// [in,out] 条件式の要素条件を構築する作業領域として使うコンテナ。
         template_element_container& io_elements,
         /// [in] 条件式を登録するチャンクの識別値。
         typename template_evaluator::chunk_key const& in_chunk_key,
         /// [in] 登録する条件式の識別値。
         typename template_evaluator::expression_key const& in_expression_key,
-        /// [in] 登録する条件式で用いる論理演算子。
+        /// [in] 登録する条件式の論理演算子。
         typename template_evaluator::expression::logic const in_logic,
         /// [in] 要素条件が参照する値。
         template_element_server const& in_elements,
@@ -406,7 +408,7 @@ class psyq::if_then_engine::expression_builder
         {
             /// @note 無限ループを防ぐため、複合条件式で使う下位条件式は、
             /// 条件評価器で定義済みのものしか使わないようにする。
-            PSYQ_ASSERT(in_evaluator.find_expression(local_sub_key) != nullptr);
+            PSYQ_ASSERT(in_evaluator.is_registered(local_sub_key));
 
             // 複合条件式の条件を取得する。
             auto const& local_condition_cell(

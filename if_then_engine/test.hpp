@@ -12,11 +12,9 @@
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /*
 配置表
-　配置の識別名
-　配置の条件
-　配置決定時の状態値の書き換え
-　撤去の条件
-　撤去決定時の状態値の書き換え
+　配置条件式（条件式が真になれば配置を開始し、偽になれば撤去を開始する）
+　配置完了時の状態値の書き換え
+　撤去完了時の状態値の書き換え
 　status表
 　expression表
 　handler表
@@ -24,6 +22,13 @@
 　collision表
 　actor行動表
 　gadget配置表
+　　配置の条件
+　　配置決定時の状態値の書き換え
+　　配置する位置のlocator識別名
+　　配置するモデルの識別名
+　　配置する状態値コリジョン
+　　状態値コリジョンに触れた瞬間の状態値の書き換え
+　　状態値コリジョンから離れた瞬間の状態値の書き換え
 　script表
 　　スクリプト名
 　　待機の条件
@@ -33,6 +38,47 @@
 　　途中終了の条件
 　　終了決定時の状態値の書き換え
 */
+template<typename template_if_then_driver>
+class stage_loader
+{
+    private: typedef stage_loader this_type;
+
+    //-------------------------------------------------------------------------
+    public: typedef std::string string;
+    public: typedef template_if_then_driver if_then_driver;
+
+    //-------------------------------------------------------------------------
+    private: typedef
+        std::vector<
+            typename this_type::if_then_driver::reservoir::status_assignment,
+            typename this_type::if_then_driver::allocator_type>
+        status_assignment_container;
+
+    //-------------------------------------------------------------------------
+    /// @brief 配置の条件式。
+    private: typename this_type::if_then_driver::evaluator::expression_key
+         load_expression_key_;
+    /// @brief 配置完了時に行う状態値の代入演算式のコンテナ。
+    private: typename this_type::status_assignment_container
+         load_status_assignments_;
+    /// @brief 撤去完了時に行う状態値の代入演算式のコンテナ。
+    private: typename this_type::status_assignment_container
+         unload_status_assignments_;
+
+    /// @brief 状態値CSVファイルのパス名。
+    private: typename this_type::string status_csv_path_;
+    /// @brief 条件式CSVファイルのパス名。
+    private: typename this_type::string expresion_csv_path_;
+    /// @brief 条件挙動ハンドラCSVファイルのパス名。
+    private: typename this_type::string handler_csv_path_;
+    /// @brief ガジェットCSVファイルのパス名。
+    private: typename this_type::string gadget_csv_path_;
+    /// @brief スクリプトCSVファイルのパス名。
+    private: typename this_type::string script_csv_path_;
+
+}; // class stage_loader
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace tesv
 {
     typedef psyq::string::flyweight<char> flyweight_string;
@@ -623,7 +669,7 @@ namespace psyq_test
             local_csv_behavior,
             0);
         PSYQ_ASSERT(
-            nullptr != local_driver.register_status(
+            local_driver.register_status(
                 local_chunk_key,
                 local_driver.hash_function_("10"),
                 32.5f));
@@ -635,22 +681,22 @@ namespace psyq_test
         //PSYQ_ASSERT(!local_driver.extend_chunk(0, 0, nullptr));
 
         PSYQ_ASSERT(
-            0 < local_driver.get_reservoir().extract_status(
+            0 < local_driver.get_reservoir().find_status(
                 local_driver.hash_function_("status_bool")).compare(
                     driver::reservoir::status_value::comparison_EQUAL,
                     true));
         PSYQ_ASSERT(
-            0 < local_driver.get_reservoir().extract_status(
+            0 < local_driver.get_reservoir().find_status(
                 local_driver.hash_function_("status_unsigned")).compare(
                     driver::reservoir::status_value::comparison_EQUAL,
                     10u));
         PSYQ_ASSERT(
-            0 < local_driver.get_reservoir().extract_status(
+            0 < local_driver.get_reservoir().find_status(
                 local_driver.hash_function_("status_signed")).compare(
                     driver::reservoir::status_value::comparison_EQUAL,
                     -20));
         PSYQ_ASSERT(
-            0 < local_driver.get_reservoir().extract_status(
+            0 < local_driver.get_reservoir().find_status(
                 local_driver.hash_function_("status_float")).compare(
                     driver::reservoir::status_value::comparison_GREATER_EQUAL,
                     1.25));
@@ -682,7 +728,7 @@ namespace psyq_test
          */
         local_driver.progress();
         auto const local_float_status(
-            local_driver.get_reservoir().extract_status(
+            local_driver.get_reservoir().find_status(
                 local_driver.hash_function_("status_float")));
 
         local_driver.erase_chunk(local_chunk_key);

@@ -183,7 +183,7 @@ class psyq::if_then_engine::_private::dispatcher
     }
 
     /// @brief 条件挙動器で使われているメモリ割当子を取得する。
-    /// @return *this で使われているメモリ割当子。
+    /// @return *this で使われているメモリ割当子のコピー。
     public: typename this_type::allocator_type get_allocator()
     const PSYQ_NOEXCEPT
     {
@@ -230,32 +230,50 @@ class psyq::if_then_engine::_private::dispatcher
     /// @name 条件挙動
     /// @{
 
-    /// @brief 条件式に対応する条件挙動関数を登録して参照する。
-    /// @details
-    /// in_expression_key に対応する条件式の評価が変化した際に、
-    /// in_condition に合致すると呼び出される条件挙動関数を参照する
-    /// this_type::handler を構築し、 *this に登録する。
+    /// @brief 条件挙動ハンドラが登録されているか判定する。
+    /// @retval true
+    /// in_expression_key と in_function の両方に対応する
+    /// this_type::handler が *this に登録されている。
+    /// @retval false 該当する this_type::handler は *this に登録されてない。
+    public: bool is_registered(
+        /// [in] 検索する this_type::handler に対応する条件式の識別値。
+        typename this_type::evaluator::expression_key const& in_expression_key,
+        /// [in] 検索する this_type::handler に対応する条件挙動関数。
+        typename this_type::handler::function const* const in_function)
+    const
+    {
+        return this->find_handler_ptr(in_expression_key, in_function) != nullptr;
+    }
+
+    /// @brief 条件式に対応する条件挙動関数を登録して弱参照する。
+    /// @sa
+    /// this_type::_dispatch で、 in_expression_key に対応する条件式の評価が変化し
+    /// in_condition と合致すると、 in_function の指す条件挙動関数が呼び出される。
     /// @sa
     /// in_function の指す条件挙動関数が解体されると、
     /// in_function に対応する this_type::handler は自動的に削除される。
     /// 明示的に削除するには this_type::unregister_handler を使う。
-    /// @return
-    /// in_expression_key と in_function に対応する、
-    /// this_type::handler を指すポインタ。失敗した場合は nullptr を返す。
-    /// - in_function が空だと失敗する。
+    /// @retval true
+    /// 成功。 in_function の指す条件挙動関数を弱参照する
+    /// this_type::handler を構築し、 *this に登録した。
+    /// @retval false
+    /// 失敗。 this_type::handler は構築されなかった。
+    /// - in_condition が this_type::handler::INVALID_CONDITION だと失敗する。
+    /// - in_function が空か、空の関数を指していると失敗する。
     /// - in_expression_key と対応する this_type::handler に
     ///   in_function が既に登録されていると、失敗する。
-    public: typename this_type::handler const* register_handler(
-        /// [in] in_function に対応する条件式の識別値。
+    public: bool register_handler(
+        /// [in] in_function の指す条件挙動関数に対応する条件式の識別値。
         typename this_type::evaluator::expression_key const& in_expression_key,
-        /// [in] in_function を呼び出す挙動条件。
+        /// [in] in_function の指す条件挙動関数を呼び出す挙動条件。
         /// this_type::handler::make_condition から作る。
         typename this_type::handler::condition const in_condition,
-        /// [in] 条件挙動関数を指すスマートポインタ。
-        /// in_expression_key に対応する条件式の評価が変化した際に、条件式の評価が
-        /// in_condition に合致すると、呼び出される。
+        /// [in] 登録する条件挙動関数を指すスマートポインタ。
+        /// in_expression_key に対応する条件式の評価が変化して
+        /// in_condition に合致すると、条件挙動関数が呼び出される。
         typename this_type::handler::function_shared_ptr const& in_function,
-        /// [in] in_function の呼び出し優先順位。昇順に呼び出される。
+        /// [in] in_function の指す条件挙動関数の呼び出し優先順位。
+        /// 昇順に呼び出される。
         typename this_type::handler::priority const in_priority =
             PSYQ_IF_THEN_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT)
     {
@@ -302,7 +320,7 @@ class psyq::if_then_engine::_private::dispatcher
     /// @brief 条件挙動関数に対応する条件挙動ハンドラをすべて削除する。
     /// @details
     /// this_type::register_handler で登録した this_type::handler のうち、
-    //  in_function に対応するものをすべて削除する。
+    /// in_function に対応するものをすべて削除する。
     /// @retval true  in_function に対応する this_type::handler をすべて削除した。
     /// @retval false 該当する this_type::handler がなかった。
     public: bool unregister_handlers(
@@ -321,26 +339,29 @@ class psyq::if_then_engine::_private::dispatcher
     }
 
     /// @brief 登録されている条件挙動ハンドラを取得する。
+    /// @details 
+    /// this_type::register_handler で *this に登録した this_type::handler のうち、
+    /// in_expression_key と in_function の両方に対応するものを取得する。
     /// @return
-    /// this_type::register_handler で登録した this_type::handler を指すポインタ。
-    /// 該当する this_type::handler がない場合は nullptr を返す。
-    public: typename this_type::handler const* find_handler(
+    /// in_expression_key と in_function の両方に対応する
+    /// this_type::handler のコピー。該当する this_type::handler がない場合は
+    /// this_type::handler::get_condition が
+    /// this_type::handler::INVALID_CONDITION となる値を返す。
+    public: typename this_type::handler find_handler(
         /// [in] 取得する this_type::handler に対応する条件式の識別値。
         typename this_type::evaluator::expression_key const& in_expression_key,
         /// [in] 取得する this_type::handler に対応する条件挙動関数。
         typename this_type::handler::function const* const in_function)
     const
     {
-        if (in_function != nullptr)
-        {
-            auto const local_find(
-                this->expression_monitors_.find(in_expression_key));
-            if (local_find != this->expression_monitors_.end())
-            {
-                return local_find->second.find_handler(*in_function);
-            }
-        }
-        return nullptr;
+        auto const local_handler(
+            this->find_handler_ptr(in_expression_key, in_function));
+        return local_handler != nullptr?
+            *local_handler:
+            typename this_type::handler(
+                this_type::handler::INVALID_CONDITION,
+                typename this_type::handler::function_weak_ptr(),
+                typename this_type::handler::priority());
     }
 
     /// @brief psyq::if_then_engine 管理者以外は、この関数は使用禁止。
@@ -413,6 +434,30 @@ class psyq::if_then_engine::_private::dispatcher
     /// @}
 
     //-------------------------------------------------------------------------
+    /// @brief 登録されている条件挙動ハンドラを取得する。
+    /// @return
+    /// in_expression_key と in_function に対応する
+    /// this_type::handler を指すポインタ。
+    /// 該当する this_type::handler がない場合は nullptr を返す。
+    private: typename this_type::handler const* find_handler_ptr(
+        /// [in] 取得する this_type::handler に対応する条件式の識別値。
+        typename this_type::evaluator::expression_key const& in_expression_key,
+        /// [in] 取得する this_type::handler に対応する条件挙動関数。
+        typename this_type::handler::function const* const in_function)
+    const
+    {
+        if (in_function != nullptr)
+        {
+            auto const local_find(
+                this->expression_monitors_.find(in_expression_key));
+            if (local_find != this->expression_monitors_.end())
+            {
+                return local_find->second._find_handler_ptr(*in_function);
+            }
+        }
+        return nullptr;
+    }
+
     /// @brief 監視器を再構築する。
     private: template<
          typename template_monitor_map, typename template_rebuild_function>

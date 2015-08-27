@@ -207,7 +207,7 @@ class psyq::if_then_engine::handler_builder
                 this_type::build_condition(
                     in_table, i, local_attribute.condition_));
             PSYQ_ASSERT(local_condition != 0);
-            if (nullptr != io_dispatcher.register_handler(
+            if (io_dispatcher.register_handler(
                     local_expression_key,
                     local_condition,
                     local_function,
@@ -228,7 +228,7 @@ class psyq::if_then_engine::handler_builder
     /// @brief 文字列表を解析し、挙動条件を構築する。
     /// @return
     /// 文字列表から構築した挙動条件。構築に失敗した場合は
-    /// driver::dispatcher::handler::INVALID_UNIT_CONDITION を返す。
+    /// driver::dispatcher::handler::INVALID_CONDITION を返す。
     public:
     static typename this_type::dispatcher::handler::condition build_condition(
         /// [in] 解析する文字列表。
@@ -254,20 +254,20 @@ class psyq::if_then_engine::handler_builder
                 this_type::dispatcher::handler::make_condition(
                     local_now_condition, local_last_condition));
             if (local_condition !=
-                    this_type::dispatcher::handler::INVALID_UNIT_CONDITION)
+                    this_type::dispatcher::handler::INVALID_CONDITION)
             {
                 return local_condition;
             }
             PSYQ_ASSERT(false);
         }
-        return this_type::dispatcher::handler::INVALID_UNIT_CONDITION;
+        return this_type::dispatcher::handler::INVALID_CONDITION;
     }
 
     /// @brief 文字列を解析し、単位条件を取得する。
     /// @return
     /// 文字列から取得した driver::dispatcher::handler::unit_condition 。
     /// 取得に失敗した場合は
-    /// driver::dispatcher::handler::INVALID_UNIT_CONDITION を返す。
+    /// driver::dispatcher::handler::INVALID_CONDITION を返す。
     public: static typename this_type::dispatcher::handler::unit_condition
     parse_unit_condition(
         /// [in] 解析する文字列。
@@ -309,7 +309,7 @@ class psyq::if_then_engine::handler_builder
                 return this_type::dispatcher::handler::unit_condition_ANY;
             }
         }
-        return this_type::dispatcher::handler::INVALID_UNIT_CONDITION;
+        return this_type::dispatcher::handler::INVALID_CONDITION;
     }
 
     //-------------------------------------------------------------------------

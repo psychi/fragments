@@ -109,62 +109,60 @@ class psyq::if_then_engine::_private::expression_monitor
 #endif // !defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
     //-------------------------------------------------------------------------
-    /// @brief 条件式に対応する条件挙動関数を登録して参照する。
-    /// @details
-    /// in_expression_key に対応する条件式の評価が変化した際に、
-    /// in_condition に合致すると呼び出される条件挙動関数を参照する
-    /// this_type::handler を構築し、 io_expression_monitors に登録する。
+    /// @brief 条件式に対応する条件挙動関数を登録して弱参照する。
+    /// @sa
+    /// dispatcher::_dispatch で、 in_expression_key に対応する条件式の評価が変化し
+    /// in_condition と合致すると、 in_function の指す条件挙動関数が呼び出される。
     /// @sa
     /// in_function の指す条件挙動関数が解体されると、
     /// in_function に対応する this_type::handler は自動的に削除される。
     /// 明示的に削除するには this_type::unregister_handler を使う。
-    /// @return
-    /// in_expression_key と in_function に対応する、
-    /// this_type::handler を指すポインタ。失敗した場合は nullptr を返す。
-    /// - in_function が空だと失敗する。
-    /// - in_expression_key と対応する expression_monitor に
+    /// @retval true
+    /// 成功。 in_function の指す条件挙動関数を弱参照する
+    /// this_type::handler を構築し、 io_expression_monitors に登録した。
+    /// @retval false
+    /// 失敗。 this_type::handler は構築されなかった。
+    /// - in_condition が handler::INVALID_CONDITION だと失敗する。
+    /// - in_function が空か、空の関数を指していると失敗する。
+    /// - in_expression_key と対応する this_type::handler に
     ///   in_function が既に登録されていると、失敗する。
     public: template<typename template_expression_monitor_map>
-    static typename this_type::handler* register_handler(
+    static bool register_handler(
         /// [in,out] this_type::handler を登録する expression_monitor の辞書。
         template_expression_monitor_map& io_expression_monitors,
-        /// [in] 登録する this_type::handler に対応する条件式の識別値。
+        /// [in] in_function の指す条件挙動関数に対応する条件式の識別値。
         typename this_type::handler::expression_key const& in_expression_key,
-        /// [in] in_function を呼び出す挙動条件。
-        /// this_type::handler::make_condition から作る。
+        /// [in] in_function の指す条件挙動関数を呼び出す挙動条件。
+        /// handler::make_condition から作る。
         typename this_type::handler::condition const in_condition,
-        /// [in] 条件挙動関数を指すスマートポインタ。
-        /// 条件式の評価が変化した際に in_condition と合致すると呼び出される。
+        /// [in] 登録する条件挙動関数を指すスマートポインタ。
+        /// in_expression_key に対応する条件式の評価が変化して
+        /// in_condition に合致すると、条件挙動関数が呼び出される。
         typename this_type::handler::function_shared_ptr const& in_function,
-        /// [in] in_function の呼び出し優先順位。昇順に呼び出される。
+        /// [in] in_function の指す条件挙動関数の呼び出し優先順位。
+        /// 昇順に呼び出される。
         typename this_type::handler::priority const in_priority)
     {
-        if (in_condition == this_type::handler::INVALID_UNIT_CONDITION)
-        {
-            return nullptr;
-        }
         auto const local_function(in_function.get());
-        if (local_function == nullptr || !static_cast<bool>(*local_function))
+        if (in_condition != this_type::handler::INVALID_CONDITION
+            && local_function != nullptr
+            && static_cast<bool>(*local_function))
         {
-            return nullptr;
+            // 条件式監視器を用意し、同じ関数が登録されてないか判定する。
+            auto const local_emplace(
+                io_expression_monitors.emplace(
+                    in_expression_key,
+                    this_type(io_expression_monitors.get_allocator())));
+            auto& local_handlers(local_emplace.first->second.handlers_);
+            if (local_emplace.second
+                || !this_type::trim_handlers(local_handlers, local_function, false))
+            {
+                // 条件式監視器へ条件挙動ハンドラを追加する。
+                local_handlers.emplace_back(in_condition, in_function, in_priority);
+                return true;
+            }
         }
-
-        // 条件式監視器を用意する。
-        auto const local_emplace(
-            io_expression_monitors.emplace(
-                in_expression_key,
-                this_type(io_expression_monitors.get_allocator())));
-        auto& local_handlers(local_emplace.first->second.handlers_);
-        if (!local_emplace.second
-            && this_type::trim_handlers(local_handlers, local_function, false))
-        {
-            // 同じ関数が既に登録済みなら、失敗とする。
-            return nullptr;
-        }
-
-        // 条件挙動を条件式監視器へ追加する。
-        local_handlers.emplace_back(in_condition, in_function, in_priority);
-        return &local_handlers.back();
+        return false;
     }
 
     /// @brief 条件挙動関数に対応する条件挙動ハンドラを削除する。
@@ -175,26 +173,6 @@ class psyq::if_then_engine::_private::expression_monitor
         typename this_type::handler::function const& in_function)
     {
         return this_type::trim_handlers(this->handlers_, &in_function, true);
-    }
-
-    /// @brief 登録されている条件挙動ハンドラを取得する。
-    /// @return
-    /// this_type::register_handler で登録した this_type::handler を指すポインタ。
-    /// 該当する this_type::handler がない場合は nullptr を返す。
-    public: typename this_type::handler const* find_handler(
-        /// [in] 取得する this_type::handler に対応する条件挙動関数。
-        typename this_type::handler::function const& in_function)
-    const PSYQ_NOEXCEPT
-    {
-        for (auto& local_handler: this->handlers_)
-        {
-            if (!local_handler.expired()
-                && local_handler.lock().get() == &in_function)
-            {
-                return &local_handler;
-            }
-        }
-        return nullptr;
     }
 
     /// @brief 条件挙動ハンドラを整理する。
@@ -355,12 +333,12 @@ class psyq::if_then_engine::_private::expression_monitor
     {
         // in_scan_key に対応する条件式と要素条件チャンクを取得する。
         auto const local_expression(in_evaluator.find_expression(in_scan_key));
-        if (local_expression == nullptr)
+        if (local_expression.is_empty())
         {
             return 0;
         }
         auto const local_chunk(
-            in_evaluator._find_chunk(local_expression->get_chunk_key()));
+            in_evaluator._find_chunk(local_expression.get_chunk_key()));
         if (local_chunk == nullptr)
         {
             // 条件式があれば、要素条件チャンクもあるはず。
@@ -370,14 +348,14 @@ class psyq::if_then_engine::_private::expression_monitor
 
         // in_scan_key に対応する条件式の種類によって、
         // in_register_key の登録先を選択する。
-        switch (local_expression->get_kind())
+        switch (local_expression.get_kind())
         {
             case template_evaluator::expression::kind_SUB_EXPRESSION:
             return this_type::register_compound_expression(
                 io_status_monitors,
                 in_expression_monitors,
                 in_register_key,
-                *local_expression,
+                local_expression,
                 local_chunk->sub_expressions_,
                 in_evaluator);
 
@@ -385,7 +363,7 @@ class psyq::if_then_engine::_private::expression_monitor
             template_status_monitor_map::mapped_type::register_expression(
                 io_status_monitors,
                 in_register_key,
-                *local_expression,
+                local_expression,
                 local_chunk->status_transitions_);
             return -1;
 
@@ -393,7 +371,7 @@ class psyq::if_then_engine::_private::expression_monitor
             template_status_monitor_map::mapped_type::register_expression(
                 io_status_monitors,
                 in_register_key,
-                *local_expression,
+                local_expression,
                 local_chunk->status_comparisons_);
             return 1;
 
@@ -611,8 +589,7 @@ class psyq::if_then_engine::_private::expression_monitor
         }
 
         // 条件式の生成と削除を検知する。
-        auto const local_exist(
-            in_evaluator.find_expression(in_expression_key) != nullptr);
+        auto const local_exist(in_evaluator.is_registered(in_expression_key));
         auto const local_last_evaluation(
             this->flags_.test(this_type::flag_LAST_EVALUATION));
         auto const local_invalid(!local_exist && local_last_evaluation);
@@ -633,6 +610,27 @@ class psyq::if_then_engine::_private::expression_monitor
     {
         return this->flags_.test(this_type::flag_LAST_EVALUATION)?
             !in_flush && this->flags_.test(this_type::flag_LAST_CONDITION): -1;
+    }
+
+    /// @brief 登録されている条件挙動ハンドラを取得する。
+    /// @warning psyq::if_then_engine 管理者以外は使用禁止。
+    /// @return
+    /// in_function に対応する this_type::handler を指すポインタ。
+    /// 該当する this_type::handler がない場合は nullptr を返す。
+    public: typename this_type::handler const* _find_handler_ptr(
+        /// [in] 取得する this_type::handler に対応する条件挙動関数。
+        typename this_type::handler::function const& in_function)
+    const PSYQ_NOEXCEPT
+    {
+        for (auto& local_handler: this->handlers_)
+        {
+            if (!local_handler.expired()
+                && local_handler.lock().get() == &in_function)
+            {
+                return &local_handler;
+            }
+        }
+        return nullptr;
     }
 
     //-------------------------------------------------------------------------

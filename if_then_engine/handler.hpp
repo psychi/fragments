@@ -57,7 +57,7 @@ class psyq::if_then_engine::_private::handler
     public: enum unit_condition: typename this_type::condition
     {
         /// @brief 無効な条件。
-        INVALID_UNIT_CONDITION = 0,
+        INVALID_CONDITION = 0,
         /// @brief 条件式の評価に失敗していることが条件。
         unit_condition_NULL = 1,
         /// @brief 条件式の評価が偽であることが条件。
@@ -281,20 +281,20 @@ class psyq::if_then_engine::_private::handler
     /// @endcode
     /// @return
     /// 関数が呼び出される挙動条件。単位条件の組み合わせが無効な場合は
-    /// this_type::INVALID_UNIT_CONDITION を返す。
+    /// this_type::INVALID_CONDITION を返す。
     public: static typename this_type::condition make_condition(
         /// [in] 条件となる、最新の条件式の評価。
         typename this_type::unit_condition const in_now_condition,
         /// [in] 条件となる、前回の条件式の評価。
         typename this_type::unit_condition const in_last_condition)
     {
-        if (in_now_condition == this_type::INVALID_UNIT_CONDITION
-            || in_last_condition == this_type::INVALID_UNIT_CONDITION
+        if (in_now_condition == this_type::INVALID_CONDITION
+            || in_last_condition == this_type::INVALID_CONDITION
             || (in_now_condition == in_last_condition
                 // 2のべき乗か判定する。
                 && (in_now_condition & (in_now_condition - 1)) == 0))
         {
-            return this_type::INVALID_UNIT_CONDITION;
+            return this_type::INVALID_CONDITION;
         }
         return in_now_condition
             | (in_last_condition << this_type::UNIT_CONDITION_BIT_WIDTH);

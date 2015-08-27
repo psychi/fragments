@@ -68,6 +68,14 @@ class psyq::if_then_engine::_private::status_property
     /// @name 状態値のプロパティ
     /// @{
 
+    /// @brief 状態値のプロパティが空か判定する。
+    /// @retval true  *this は空。
+    /// @retval false *this は空ではない。
+    public: bool is_empty() const PSYQ_NOEXCEPT
+    {
+        return this->format_ == 0;
+    }
+
     /// @brief 状態値が格納されているビット列チャンクの識別値を取得する。
     /// @return @copydoc this_type::chunk_key_
     public: typename this_type::chunk_key const& get_chunk_key()

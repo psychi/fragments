@@ -56,7 +56,6 @@ class psyq::if_then_engine::_private::expression
     /// @brief 条件式の要素条件を結合する論理演算子を表す列挙型。
     public: enum logic: std::uint8_t
     {
-        INVALID_LOGIC, ///< 無効な論理演算子。
         logic_OR,      ///< 論理和。
         logic_AND,     ///< 論理積。
     };
@@ -83,12 +82,18 @@ class psyq::if_then_engine::_private::expression
         typename this_type::element_index const in_element_end)
     PSYQ_NOEXCEPT:
     chunk_key_(std::move(in_chunk_key)),
-    begin_(in_element_begin),
+    begin_((PSYQ_ASSERT(in_element_begin <= in_element_end), in_element_begin)),
     end_(in_element_end),
     logic_(in_logic),
     kind_(in_kind)
+    {}
+
+    /// @brief 空の条件式か判定する。
+    /// @retval true  *this は空の条件式。
+    /// @retval false *this は空の条件式ではない。
+    public: bool is_empty() const PSYQ_NOEXCEPT
     {
-        PSYQ_ASSERT(in_element_begin < in_element_end);
+        return this->get_begin_element() == this->get_end_element();
     }
 
     /// @brief 条件式が格納されている要素条件チャンクの識別値を取得する。
@@ -133,11 +138,12 @@ class psyq::if_then_engine::_private::expression
         template_element_evaluator const& in_evaluator)
     const PSYQ_NOEXCEPT
     {
-        if (in_elements.size() <= this->begin_
-            || in_elements.size() < this->end_)
+        if (this->is_empty()
+            || in_elements.size() <= this->get_begin_element()
+            || in_elements.size() < this->get_end_element())
         {
-            // 条件式が範囲外の要素条件を参照している。
-            PSYQ_ASSERT(false);
+            // 条件式が空か、範囲外の要素条件を参照している。
+            PSYQ_ASSERT(this->is_empty());
             return -1;
         }
         auto const local_end(in_elements.begin() + this->end_);

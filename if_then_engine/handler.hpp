@@ -22,7 +22,7 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief 条件挙動ハンドラ。関数を呼び出す条件を保持し、呼び出される関数を参照する。
+/// @brief 条件挙動ハンドラ。関数を呼び出す条件を保持し、呼び出される関数を弱参照する。
 /// @tparam template_expression_key @copydoc handler::expression_key
 /// @tparam template_evaluation     @copydoc handler::evaluation
 /// @tparam template_priority       @copydoc handler::priority
@@ -90,11 +90,11 @@ class psyq::if_then_engine::_private::handler
                 typename this_type::evaluation const,
                 typename this_type::evaluation const)>
         function;
-    /// @brief handler::function の、所有権ありスマートポインタ。
+    /// @brief handler::function の強参照スマートポインタ。
     public: typedef
         std::shared_ptr<typename this_type::function>
         function_shared_ptr;
-    /// @brief handler::function の、所有権なしスマートポインタ。
+    /// @brief handler::function の弱参照スマートポインタ。
     public: typedef
         std::weak_ptr<typename this_type::function>
         function_weak_ptr;
@@ -305,7 +305,7 @@ class psyq::if_then_engine::_private::handler
     private: typename this_type::function_weak_ptr function_;
     /// @brief 条件挙動関数の呼び出し優先順位。
     private: typename this_type::priority priority_;
-    /// @brief 挙動条件。
+    /// @brief 条件挙動関数を呼び出す挙動条件。
     private: typename this_type::condition condition_;
 
 }; // class psyq::if_then_engine::_private::handler

@@ -9,7 +9,6 @@
 #endif // !defined(PSYQ_IF_THEN_ENGINE_DRIVER_CACHE_CAPACITY_DEFAULT)
 
 #include "../string/csv_table.hpp"
-#include "../string/relation_table.hpp"
 #include "./reservoir.hpp"
 #include "./accumulator.hpp"
 #include "./evaluator.hpp"
@@ -30,7 +29,7 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief if-then規則による有限状態機械の駆動器。
+/// @brief if-then 規則による有限状態機械の駆動器。
 /// @par 使い方の概略
 /// - driver::driver で駆動器を構築する。
 /// - driver::extend_chunk で、状態値と条件式と条件挙動関数を登録する。
@@ -308,10 +307,8 @@ class psyq::if_then_engine::driver
         /// [out] 文字列表の構築の作業領域として使う文字列。
         /// std::basic_string 互換のインタフェイスを持つこと。
         template_workspace_string& out_workspace,
-        /// [in] 文字列表の構築に使うフライ級文字列の生成器を指すスマートポインタ。
-        /// - psyq::string::flyweight::factory::shared_ptr
-        ///   互換のインタフェイスを持つこと。
-        /// - 空ではないこと。
+        /// [in] 文字列表の構築に使う
+        /// psyq::string::flyweight::factory の強参照。空ではないこと。
         template_shared_ptr const& in_string_factory,
         /// [in] 追加するチャンクの識別値。
         typename this_type::chunk_key const& in_chunk_key,
@@ -335,31 +332,26 @@ class psyq::if_then_engine::driver
                 typename template_string::traits_type,
                 typename template_shared_ptr::element_type::allocator_type>
             csv_table;
-        typedef
-            psyq::string::relation_table<
-                std::size_t,
-                typename template_string::value_type,
-                typename template_string::traits_type,
-                typename template_shared_ptr::element_type::allocator_type>
-            relation_table;
         this->extend_chunk(
             in_chunk_key,
-            psyq::if_then_engine::status_builder<relation_table>(),
-            relation_table(
-                csv_table(out_workspace, in_string_factory, in_status_csv),
-                in_status_csv.empty()?
-                    relation_table::INVALID_NUMBER: in_status_attribute),
-            psyq::if_then_engine::expression_builder<relation_table>(),
-            relation_table(
-                csv_table(out_workspace, in_string_factory, in_expression_csv),
-                in_expression_csv.empty()?
-                    relation_table::INVALID_NUMBER: in_expression_attribute),
-            psyq::if_then_engine::handler_builder<
-                relation_table, typename this_type::dispatcher>(),
-            relation_table(
-                csv_table(out_workspace, in_string_factory, in_handler_csv),
-                in_handler_csv.empty()?
-                    relation_table::INVALID_NUMBER: in_handler_attribute));
+            psyq::if_then_engine::status_builder(),
+            csv_table::build_relation_table(
+                out_workspace,
+                in_string_factory,
+                in_status_csv,
+                in_status_attribute),
+            psyq::if_then_engine::expression_builder(),
+            csv_table::build_relation_table(
+                out_workspace,
+                in_string_factory,
+                in_expression_csv,
+                in_expression_attribute),
+            psyq::if_then_engine::handler_builder(),
+            csv_table::build_relation_table(
+                out_workspace,
+                in_string_factory,
+                in_handler_csv,
+                in_handler_attribute));
     }
 
     /// @brief チャンクを削除する。
@@ -373,37 +365,38 @@ class psyq::if_then_engine::driver
     }
     /// @}
     //-------------------------------------------------------------------------
-    /// @name 条件挙動
+    /// @name 条件挙動ハンドラ
     /// @{
 
-    /// @brief 条件式に対応する条件挙動関数を登録して強参照する。
+    /// @brief 条件挙動ハンドラを登録し、条件挙動関数を強参照する。
     /// @sa
     /// this_type::progress で、 in_expression_key に対応する条件式の評価が変化し
     /// in_condition と合致すると、 in_function の指す条件挙動関数が呼び出される。
     /// @sa
-    /// in_function の指す条件挙動関数が解体されると、
-    /// in_function に対応する dispatcher::handler は自動的に削除される。
-    /// 明示的に削除するには dispatcher::unregister_handler を使う。
+    /// in_function の指す条件挙動関数が解体されると、それを弱参照している
+    /// dispatcher::handler は自動的に削除される。明示的に削除するには、
+    /// this_type::dispatcher_ に対して dispatcher::unregister_handler を使う。
     /// @retval true
     /// 成功。 in_function の指す条件挙動関数を弱参照する
     /// dispatcher::handler を構築して this_type::dispatcher_
     /// に登録し、登録した条件挙動関数の強参照をチャンクに追加した。
     /// @retval false
-    /// 失敗。条件挙動関数は登録されず、
+    /// 失敗。 dispatcher::handler は構築されず、
     /// 条件挙動関数の強参照はチャンクに追加されなかった。
-    /// - in_condition が dispatcher::handler::INVALID_CONDITION だと失敗する。
-    /// - in_function が空か、空の関数を指していると失敗する。
-    /// - in_expression_key と対応する dispatcher::handler に
-    ///   in_function が既に登録されていると、失敗する。
+    /// - in_condition が dispatcher::handler::INVALID_CONDITION だと、失敗する。
+    /// - in_function が空か、空の関数を指していると、失敗する。
+    /// - in_expression_key と対応する dispatcher::handler に、
+    ///   in_function の指す条件挙動関数が既に登録されていると、失敗する。
     public: bool register_handler(
-        /// [in] 条件挙動関数を保持させるチャンクの識別値。
+        /// [in] 条件挙動関数を追加するチャンクの識別値。
         typename this_type::chunk_key const& in_chunk_key,
-        /// [in] in_function の指す条件挙動関数に対応する条件式の識別値。
+        /// [in] in_function の指す条件挙動関数に対応する
+        /// evaluator::expression の識別値。
         typename this_type::evaluator::expression_key const& in_expression_key,
         /// [in] in_function の指す条件挙動関数を呼び出す挙動条件。
         /// dispatcher::handler::make_condition から作る。
         typename this_type::dispatcher::handler::condition const in_condition,
-        /// [in] 登録する条件挙動関数を指すスマートポインタ。
+        /// [in] 登録する dispatcher::handler::function を指すスマートポインタ。
         /// in_expression_key に対応する条件式の評価が変化して
         /// in_condition に合致すると、呼び出される。
         typename this_type::dispatcher::handler::function_shared_ptr in_function,
@@ -431,7 +424,8 @@ class psyq::if_then_engine::driver
 
     /// @brief 状態貯蔵器を取得する。
     /// @return *this が持つ状態貯蔵器。
-    public: typename this_type::reservoir const& get_reservoir() const
+    public: typename this_type::reservoir const& get_reservoir()
+    const PSYQ_NOEXCEPT
     {
         return this->reservoir_;
     }

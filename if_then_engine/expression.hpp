@@ -63,8 +63,8 @@ class psyq::if_then_engine::_private::expression
     public: enum kind: std::uint8_t
     {
         kind_SUB_EXPRESSION,   ///< 複合条件式。
-        kind_STATE_TRANSITION, ///< 状態変化条件式。
-        kind_STATE_COMPARISON, ///< 状態比較条件式。
+        kind_STATUS_TRANSITION, ///< 状態変化条件式。
+        kind_STATUS_COMPARISON, ///< 状態比較条件式。
     };
 
     //-------------------------------------------------------------------------

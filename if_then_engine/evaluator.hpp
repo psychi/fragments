@@ -382,7 +382,7 @@ class psyq::if_then_engine::_private::evaluator
                 });
 
             // 状態変化条件式を評価する。
-            case this_type::expression::kind_STATE_TRANSITION:
+            case this_type::expression::kind_STATUS_TRANSITION:
             typedef
                 typename this_type::chunk::status_transition_container::value_type
                 status_transition;
@@ -395,7 +395,7 @@ class psyq::if_then_engine::_private::evaluator
                 });
 
             // 状態比較条件式を評価する。
-            case this_type::expression::kind_STATE_COMPARISON:
+            case this_type::expression::kind_STATUS_COMPARISON:
             typedef
                 typename this_type::chunk::status_comparison_container::value_type
                 status_comparison;
@@ -503,7 +503,7 @@ class psyq::if_then_engine::_private::evaluator
         typename this_type::chunk::status_transition_container::value_type const&)
     {
         return std::make_pair(
-            this_type::expression::kind_STATE_TRANSITION,
+            this_type::expression::kind_STATUS_TRANSITION,
             &in_chunk.status_transitions_);
     }
 
@@ -515,7 +515,7 @@ class psyq::if_then_engine::_private::evaluator
         typename this_type::chunk::status_comparison_container::value_type const&)
     {
         return std::make_pair(
-            this_type::expression::kind_STATE_COMPARISON,
+            this_type::expression::kind_STATUS_COMPARISON,
             &in_chunk.status_comparisons_);
     }
 

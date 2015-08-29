@@ -1,42 +1,70 @@
 ﻿/// @file
-/// @copybrief psyq::if_then_engine::status_builder
+/// @brief @copybrief psyq::if_then_engine::status_builder
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_HPP_
 #define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_HPP_
 
 #include "../string/numeric_parser.hpp"
 
-/// 文字列表で、状態値の識別値として解析する属性の名前。
+/// @brief 文字列表で、状態値の識別値が記述されている属性の名前。
+/// @details
+/// psyq::if_then_engine::status_builder で解析する文字列表で、
+/// psyq::if_then_engine::driver::reservoir::status_key
+/// の初期値として解析する属性の名前。
 #ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_KEY
 #define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_KEY "KEY"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_KEY)
 
-/// 文字列表で、状態値の型の種別として解析する属性の名前。
+/// @brief 文字列表で、状態値の種別が記述されている属性の名前。
+/// @details
+/// psyq::if_then_engine::status_builder で解析する文字列表で、
+/// psyq::if_then_engine::driver::reservoir::status_value::kind
+/// の初期値として解析する属性の名前。
 #ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_KIND
 #define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_KIND "KIND"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_KIND)
 
-/// 文字列表で、状態値の初期値として解析する属性の名前。
+/// @brief 文字列表で、状態値の初期値が記述されている属性の名前。
+/// @details
+/// psyq::if_then_engine::status_builder で解析する文字列表で、
+/// psyq::if_then_engine::driver::reservoir::status_value
+/// の初期値として解析する属性の名前。
 #ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_VALUE
 #define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_VALUE "VALUE"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_COLUMN_VALUE)
 
-/// 文字列表で、論理型として解析する属性の名前。
+/// @brief 文字列表で、状態値の種別が論理型と対応する文字列。
+/// @details
+/// psyq::if_then_engine::status_builder で解析する文字列表で、
+/// psyq::if_then_engine::driver::reservoir::status_value::kind_BOOL
+/// として解析する属性の名前。
 #ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_BOOL
 #define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_BOOL "BOOL"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_BOOL)
 
-/// 文字列表で、符号なし整数型として解析する属性の名前。
+/// @brief 文字列表で、状態値の種別が符号なし整数型と対応する文字列。
+/// @details
+/// psyq::if_then_engine::status_builder で解析する文字列表で、
+/// psyq::if_then_engine::driver::reservoir::status_value::kind_UNSIGNED
+/// として解析する属性の名前。
 #ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_UNSIGNED
 #define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_UNSIGNED "UNSIGNED"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_UNSIGNED)
 
-/// 文字列表で、符号あり整数型として解析する属性の名前。
+/// @brief 文字列表で、状態値の種別が符号あり整数型と対応する文字列。
+/// @details
+/// psyq::if_then_engine::status_builder で解析する文字列表で、
+/// psyq::if_then_engine::driver::reservoir::status_value::kind_SIGNED
+/// として解析する属性の名前。
 #ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_SIGNED
 #define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_SIGNED "SIGNED"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_SIGNED)
 
-/// 文字列表で、浮動小数点数型として解析する属性の名前。
+/// @brief 文字列表で、状態値の種別が浮動小数点数型と対応する文字列。
+/// @details
+/// psyq::if_then_engine::status_builder で解析する文字列表で、
+/// psyq::if_then_engine::driver::reservoir::status_value::kind_FLOAT
+/// として解析する属性の名前。
 #ifndef PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_FLOAT
 #define PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_FLOAT "FLOAT"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_FLOAT)
@@ -51,7 +79,7 @@ namespace psyq
 {
     namespace if_then_engine
     {
-        template<typename> class status_builder;
+        class status_builder;
     } // namespace if_then_engine
 } // namespace psyq
 /// @endcond
@@ -59,23 +87,18 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 文字列表から状態値を構築する関数オブジェクト。
 /// @details  driver::extend_chunk の引数として使う。
-/// @tparam template_relation_table @copydoc status_builder::relation_table
-template<typename template_relation_table>
 class psyq::if_then_engine::status_builder
 {
     /// @brief this が指す値の型。
     private: typedef status_builder this_type;
 
     //-------------------------------------------------------------------------
-    /// @brief 解析する psyq::string::relation_table 。
-    public: typedef template_relation_table relation_table;
-
-    //-------------------------------------------------------------------------
-    /// @brief 文字列表の属性。
-    private: class table_attribute
+    /// @brief 状態値の文字列表で使う属性。
+    private: template<typename template_relation_table>
+    class table_attribute
     {
         public: explicit table_attribute(
-            typename status_builder::relation_table const& in_table)
+            template_relation_table const& in_table)
         PSYQ_NOEXCEPT:
         key_(
             in_table.find_attribute(
@@ -95,19 +118,22 @@ class psyq::if_then_engine::status_builder
                 && 1 <= this->value_.second;
         }
 
-        /// @brief 状態値の識別値となる文字列の列番号と列数。
-        public: typename this_type::relation_table::attribute key_;
-        /// @brief 状態値の種別の列番号と列数。
-        public: typename this_type::relation_table::attribute kind_;
-        /// @brief 状態値の初期値の列番号と列数。
-        public: typename this_type::relation_table::attribute value_;
+        /// @brief 文字列表で状態値の識別値が記述されている属性の列番号と列数。
+        public: typename template_relation_table::attribute key_;
+        /// @brief 文字列表で状態値の種別が記述されている属性の列番号と列数。
+        public: typename template_relation_table::attribute kind_;
+        /// @brief 文字列表で状態値の初期値が記述されている属性の列番号と列数。
+        public: typename template_relation_table::attribute value_;
 
     }; // class table_attribute
 
     //-------------------------------------------------------------------------
     /// @brief 文字列表を解析して状態値を構築し、状態貯蔵器へ登録する。
     /// @return 登録した状態値の数。
-    public: template<typename template_reservoir, typename template_hasher>
+    public: template<
+        typename template_reservoir,
+        typename template_hasher,
+        typename template_relation_table>
     std::size_t operator()(
         /// [in,out] 状態値を登録する driver::reservoir 。
         template_reservoir& io_reservoir,
@@ -115,8 +141,9 @@ class psyq::if_then_engine::status_builder
         template_hasher& io_hasher,
         /// [in] 状態値を登録するチャンクの識別値。
         typename template_reservoir::chunk_key const& in_chunk_key,
-        /// [in] 状態値が記述されている文字列表。空の場合は、状態値は登録されない。
-        typename this_type::relation_table const& in_table)
+        /// [in] 状態値が記述されている psyq::string::relation_table 。
+        /// 空の場合は、状態値は登録されない。
+        template_relation_table const& in_table)
     const
     {
         return this_type::register_statuses(
@@ -125,7 +152,10 @@ class psyq::if_then_engine::status_builder
 
     /// @brief 文字列表を解析して状態値を構築し、状態貯蔵器へ登録する。
     /// @return 登録した状態値の数。
-    public: template<typename template_reservoir, typename template_hasher>
+    public: template<
+        typename template_reservoir,
+        typename template_hasher,
+        typename template_relation_table>
     static std::size_t register_statuses(
         /// [in,out] 状態値を登録する driver::reservoir 。
         template_reservoir& io_reservoir,
@@ -133,11 +163,13 @@ class psyq::if_then_engine::status_builder
         template_hasher& io_hasher,
         /// [in] 状態値を登録するチャンクの識別値。
         typename template_reservoir::chunk_key const& in_chunk_key,
-        /// [in] 状態値が記述されている文字列表。空の場合は、状態値は登録されない。
-        typename this_type::relation_table const& in_table)
+        /// [in] 状態値が記述されている psyq::string::relation_table 。
+        /// 空の場合は、状態値は登録されない。
+        template_relation_table const& in_table)
     {
         // 文字列表の属性を取得する。
-        typename this_type::table_attribute const local_attribute(in_table);
+        this_type::table_attribute<template_relation_table> const
+            local_attribute(in_table);
         if (!local_attribute.is_valid())
         {
             PSYQ_ASSERT(in_table.is_empty());
@@ -148,7 +180,7 @@ class psyq::if_then_engine::status_builder
         auto const local_row_count(in_table.get_row_count());
         std::size_t local_register_count(0);
         for (
-            typename this_type::relation_table::string::size_type i(0);
+            typename template_relation_table::number i(0);
             i < local_row_count;
             ++i)
         {
@@ -171,7 +203,10 @@ class psyq::if_then_engine::status_builder
     /// @brief 文字列表を解析して状態値を構築し、状態貯蔵器へ登録する。
     /// @retval true  成功。構築した状態値を状態貯蔵器へ登録した。
     /// @retval false 失敗。状態値は状態貯蔵器へ登録されなかった。
-    private: template<typename template_reservoir, typename template_hasher>
+    private: template<
+        typename template_reservoir,
+        typename template_hasher,
+        typename template_relation_table>
     static bool register_status(
         /// [in,out] 状態値を登録する状態貯蔵器。
         template_reservoir& io_reservoir,
@@ -179,16 +214,17 @@ class psyq::if_then_engine::status_builder
         template_hasher& io_hasher,
         /// [in] 状態値を登録するチャンクの識別値。
         typename template_reservoir::chunk_key const& in_chunk_key,
-        /// [in] 解析する文字列表。
-        typename this_type::relation_table const& in_table,
-        /// [in] 解析する文字列表の行番号。
-        typename this_type::relation_table::string::size_type const in_row_index,
-        /// [in] 文字列表の属性。
-        typename this_type::table_attribute const& in_attribute)
+        /// [in] 解析する psyq::string::relation_table 。
+        template_relation_table const& in_table,
+        /// [in] 解析する in_table の行番号。
+        typename template_relation_table::number const in_row_number,
+        /// [in] in_table の属性。
+        typename this_type::table_attribute<template_relation_table> const&
+            in_attribute)
     {
         // 状態値の識別値を取得する。
         auto const local_status_key(
-            io_hasher(in_table.find_cell(in_row_index, in_attribute.key_.first)));
+            io_hasher(in_table.find_cell(in_row_number, in_attribute.key_.first)));
         if (local_status_key == io_hasher(
                 typename template_hasher::argument_type())
             || 0 < io_reservoir.find_bit_width(local_status_key))
@@ -199,10 +235,11 @@ class psyq::if_then_engine::status_builder
         }
 
         // 状態値の型と初期値を取得し、状態値を登録する。
-        typename this_type::relation_table::string::view const local_kind_cell(
-            in_table.find_cell(in_row_index, in_attribute.kind_.first));
-        typename this_type::relation_table::string::view const local_value_cell(
-            in_table.find_cell(in_row_index, in_attribute.value_.first));
+        typedef template_relation_table::string::view string_view;
+        typename string_view const local_kind_cell(
+            in_table.find_cell(in_row_number, in_attribute.kind_.first));
+        typename string_view const local_value_cell(
+            in_table.find_cell(in_row_number, in_attribute.value_.first));
         if (local_kind_cell == PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_BOOL)
         {
             // 論理型の状態値を登録する。
@@ -221,7 +258,7 @@ class psyq::if_then_engine::status_builder
         auto const local_unsigned_width(
             this_type::fetch_integer_width(
                 local_kind_cell,
-                PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_UNSIGNED,
+                string_view(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_UNSIGNED),
                 PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_INTEGER_WIDTH_DEFAULT));
         if (0 < local_unsigned_width)
         {
@@ -239,7 +276,7 @@ class psyq::if_then_engine::status_builder
         auto const local_signed_width(
             this_type::fetch_integer_width(
                 local_kind_cell,
-                PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_SIGNED,
+                string_view(PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_SIGNED),
                 PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_INTEGER_WIDTH_DEFAULT));
         if (0 < local_signed_width)
         {
@@ -264,7 +301,10 @@ class psyq::if_then_engine::status_builder
     /// @retval true  成功。構築した状態値を状態貯蔵器へ登録した。
     /// @retval false 失敗。状態値は状態貯蔵器へ登録されなかった。
     /// @tparam template_value 構築する状態値の型。
-    private: template<typename template_value, typename template_reservoir>
+    private: template<
+        typename template_value,
+        typename template_reservoir,
+        typename template_string>
     static bool register_status(
         /// [in,out] 状態値を登録する状態貯蔵器。
         template_reservoir& io_reservoir,
@@ -273,7 +313,7 @@ class psyq::if_then_engine::status_builder
         /// [in] 登録する状態値に対応する識別値。
         typename template_reservoir::status_key const& in_status_key,
         /// [in] 解析する状態値の文字列。
-        typename this_type::relation_table::string::view const& in_value_cell)
+        template_string const& in_value_cell)
     {
         psyq::string::numeric_parser<template_value> const local_parser(
             in_value_cell);
@@ -289,7 +329,10 @@ class psyq::if_then_engine::status_builder
     /// @brief 文字列を解析して整数型の状態値を構築し、状態貯蔵器へ登録する。
     /// @retval true  成功。構築した状態値を状態貯蔵器へ登録した。
     /// @retval false 失敗。状態値は状態貯蔵器へ登録されなかった。
-    private: template<typename template_value, typename template_reservoir>
+    private: template<
+        typename template_value,
+        typename template_reservoir,
+        typename template_string>
     static bool register_status(
         /// [in,out] 状態値を登録する状態貯蔵器。
         template_reservoir& io_reservoir,
@@ -298,7 +341,7 @@ class psyq::if_then_engine::status_builder
         /// [in] 登録する状態値に対応する識別値。
         typename template_reservoir::status_key const& in_status_key,
         /// [in] 解析する状態値の文字列。
-        typename this_type::relation_table::string::view const& in_value_cell,
+        template_string const& in_value_cell,
         /// [in] 状態値のビット幅。
         std::size_t const in_bit_width)
     {
@@ -318,11 +361,12 @@ class psyq::if_then_engine::status_builder
 
     /// @brief 整数型のビット数を取得する。
     /// @return 整数型のビット数。失敗した場合は0を返す。
-    private: static std::size_t fetch_integer_width(
+    private: template<typename template_string>
+    static std::size_t fetch_integer_width(
         /// [in] セルの文字列。
-        typename this_type::relation_table::string::view const& in_cell,
+        template_string const& in_cell,
         /// [in] 整数型を表す文字列。
-        typename this_type::relation_table::string::view const& in_kind,
+        template_string const& in_kind,
         /// [in] ビット数がない場合のデフォルト値。
         std::size_t const in_default_size)
     {

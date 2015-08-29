@@ -45,7 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PSYQ_STRING_CSV_TABLE_HPP_
 #define PSYQ_STRING_CSV_TABLE_HPP_
 
-#include "./table.hpp"
+#include "./relation_table.hpp"
 
 /// @brief CSV文字列の列の区切り文字の有効判定。
 #define PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_VALIDATION(\
@@ -182,14 +182,20 @@ public psyq::string::table<
         "this_type::delimiter_QUOTE_ESCAPE is invalid.");
 
     //-------------------------------------------------------------------------
+    /// @brief 空のCSV文字列表を構築する。
+    public: explicit csv_table(
+        /// [in] メモリ割当子の初期値。
+        typename base_type::allocator_type const& in_allocator):
+    base_type(in_allocator)
+    {}
+
     /// @brief CSV形式の文字列を解析し、文字列表を構築する。
     public: template<typename template_workspace>
     csv_table(
-        /// [out] 作業領域として使う文字列。
-        /// std::basic_string 互換のインターフェイスを持つこと。
+        /// [out] 作業領域として使う std::basic_string 互換の文字列。
+        /// 入力した値は破壊され、出力される値には意味がない。
         template_workspace& out_workspace,
-        /// [in] フライ級文字列の生成器を指すスマートポインタ。
-        /// 空のスマートポインタではないこと。
+        /// psyq::string::flyweight::factory の強参照。空ではないこと。
         typename base_type::string::factory::shared_ptr const&
             in_string_factory,
         /// [in] 解析するCSV形式の文字列。
@@ -203,19 +209,66 @@ public psyq::string::table<
         PSYQ_ASSERT(local_build);
     }
 
+    /// @brief CSV文字列から関係文字列表を作る。
+    /// @return
+    /// in_csv_string から作った psyq::string::relation_table 。
+    /// in_csv_string が空の場合は、関係文字列表も空となる。
+    template<typename template_workspace_string>
+    static psyq::string::relation_table<
+        typename base_type::number,
+        typename base_type::string::value_type,
+        typename base_type::string::traits_type,
+        typename base_type::allocator_type>
+    build_relation_table(
+        /// [out] 作業領域として使う std::basic_string 互換の文字列。
+        /// 入力した値は破壊され、出力される値には意味がない。
+        template_workspace_string& out_workspace,
+        /// [in] CSV文字列表の構築に使う
+        /// psyq::string::flyweight::factory の強参照。空ではないこと。
+        typename base_type::string::factory::shared_ptr const& in_string_factory,
+        /// [in] 解析するCSV形式の文字列。空の場合は、空の表が構築される。
+        typename base_type::string::view const& in_csv_string,
+        /// [in] 関係文字列表の属性に使う行の番号。
+        /// base_type::INVALID_NUMBER の場合は、属性の辞書を構築しない。
+        typename base_type::number const in_attribute_row,
+        /// [in] 関係文字列表の主キーに使う属性の文字列。
+        /// 空の場合は、主キーの辞書を構築しない。
+        typename base_type::string::view const& in_attribute_key =
+            typename base_type::string::view(),
+        /// [in] 関係文字列表の主キーに使う属性のインデクス番号。
+        typename base_type::number const in_attribute_index = 0)
+    {
+        typedef
+            psyq::string::relation_table<
+                typename base_type::number,
+                typename base_type::string::value_type,
+                typename base_type::string::traits_type,
+                typename base_type::allocator_type>
+            relation_table;
+        return in_csv_string.empty()?
+            relation_table(
+                in_string_factory.get() != nullptr?
+                    in_string_factory->get_allocator():
+                    (PSYQ_ASSERT(false), typename base_type::allocator_type())):
+            relation_table(
+                this_type(out_workspace, in_string_factory, in_csv_string),
+                in_attribute_row,
+                in_attribute_key,
+                in_attribute_index);
+    }
+
     //-------------------------------------------------------------------------
     /// @brief CSV形式の文字列を解析し、文字列表を構築する。
-    private: template<typename template_workspace>
+    private: template<typename template_workspace_string>
     bool build(
         /// [out] 作業領域として使う文字列。
         /// std::basic_string 互換のインターフェイスを持つこと。
-        template_workspace& out_workspace,
+        template_workspace_string& out_workspace,
         /// [in] 解析するCSV形式の文字列。
         typename base_type::string::view const& in_csv_string,
         /// [in] フライ級文字列の生成器を指すスマートポインタ。
         /// スマートポインタが空ではないこと。
-        typename base_type::string::factory::shared_ptr const&
-            in_string_factory)
+        typename base_type::string::factory::shared_ptr const& in_string_factory)
     {
         if (in_string_factory.get() == nullptr)
         {

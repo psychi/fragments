@@ -59,6 +59,9 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 関係データベース的なフライ級文字列表。属性と主キーを持つ。
+/// @sa
+/// psyq::string::csv_table::build_relation_table を使って、
+/// CSV形式の文字列から psyq::string::relation_table を構築できる。
 /// @tparam template_number      @copydoc table::number
 /// @tparam template_char_type   @copydoc psyq::string::view::value_type
 /// @tparam template_char_traits @copydoc psyq::string::view::traits_type
@@ -86,15 +89,15 @@ public psyq::string::table<
     //-------------------------------------------------------------------------
     /// @brief 関係文字列表の属性。
     /// @details
-    /// - 第1属性は、属性セルの列番号。
-    /// - 第2属性は、属性の要素数。
+    /// - std::pair::first は、属性セルの列番号。
+    /// - std::pair::second は、属性の要素数。
     public: typedef
         std::pair<typename base_type::number, typename base_type::number>
         attribute;
     /// @brief 属性の辞書。
     /// @details
-    /// - 要素の第1属性は、属性セルの配列インデクス番号。
-    /// - 要素の第2属性は、属性の要素数。
+    /// - 辞書要素の std::pair::first は、属性セルの配列インデクス番号。
+    /// - 辞書要素の std::pair::second は、属性の要素数。
     private: typedef
         std::vector<
             std::pair<typename base_type::number, typename base_type::number>,
@@ -207,6 +210,13 @@ public psyq::string::table<
     /// @name 構築と代入
     /// @{
 
+    /// @brief 空の関係文字列表を構築する。
+    public: explicit relation_table(
+        /// [in] メモリ割当子の初期値。
+        typename base_type::allocator_type const& in_allocator):
+    base_type(in_allocator)
+    {}
+
     /// @brief 関係文字列表を構築する。
     public: explicit relation_table(
         /// [in] 元となる文字列表。
@@ -216,7 +226,7 @@ public psyq::string::table<
         typename base_type::number const in_attribute_row =
             base_type::INVALID_NUMBER,
         /// [in] 主キーとして使う属性の名前。
-        /// 空文字列の場合は、主キーの辞書を構築しない。
+        /// 空の場合は、主キーの辞書を構築しない。
         typename base_type::string::view const& in_attribute_key =
             string_view(),
         /// [in] 主キーとして使う属性のインデクス番号。

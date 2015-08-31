@@ -44,8 +44,16 @@ class stage_loader
     private: typedef stage_loader this_type;
 
     //-------------------------------------------------------------------------
-    public: typedef std::string string;
     public: typedef template_if_then_driver if_then_driver;
+
+    public: typedef psyq::string::flyweight<char> string;
+    public: typedef
+        psyq::string::relation_table<
+            std::size_t,
+            typename this_type::string::value_type,
+            typename this_type::string::traits_type,
+            typename this_type::string::allocator_type>
+        relation_table;
 
     //-------------------------------------------------------------------------
     private: typedef
@@ -53,17 +61,132 @@ class stage_loader
             typename this_type::if_then_driver::reservoir::status_assignment,
             typename this_type::if_then_driver::allocator_type>
         status_assignment_container;
+    private: class table_attribute
+    {
+        public: table_attribute(
+            typename stage_loader::relation_table const& in_table)
+        PSYQ_NOEXCEPT:
+        loading_expression_key_(in_table.find_attribute("LOADING_EXPRESSION")),
+        loaded_status_assignemnts_(in_table.find_attribute("LOADED_STATUS")),
+        unloaded_status_assignemnts_(in_table.find_attribute("UNLOADED_STATUS"))
+        {}
+
+        bool is_valid() const PSYQ_NOEXCEPT
+        {
+            return 1 <= this->loading_expression_key_.second
+                && 1 <= this->loaded_status_assignemnts_.second
+                && 1 <= this->unloaded_status_assignemnts_.second;
+        }
+
+        public: typename stage_loader::relation_table::attribute
+            loading_expression_key_;
+        public: typename stage_loader::relation_table::attribute
+            loaded_status_assignemnts_;
+        public: typename stage_loader::relation_table::attribute
+            unloaded_status_assignemnts_;
+
+    }; // class table_attribute
 
     //-------------------------------------------------------------------------
-    /// @brief 配置の条件式。
+    public: template<typename template_stage_loader_container>
+    static void register_handlers(
+        template_stage_loader_container& io_stage_loaders,
+        typename this_type::if_then_driver& io_driver,
+        typename this_type::relation_table const& in_table)
+    {
+        // 文字列表の属性を取得する。
+        typename this_type::table_attribute const local_attribute(in_table);
+        if (!local_attribute.is_valid())
+        {
+            PSYQ_ASSERT(in_table.is_empty());
+            return;
+        }
+
+        auto const local_row_count(in_table.get_row_count());
+        auto const local_dispatch_condition(
+            this_type::if_then_driver::dispatcher::handler::make_condition(
+                this_type::if_then_driver::dispatcher::handler::unit_condition_ANY,
+                this_type::if_then_driver::dispatcher::handler::unit_condition_ANY));
+        auto const local_allocator(io_driver.dispatcher_.get_allocator());
+        for (
+            typename this_type::relation_table::number i(0);
+            i < local_row_count;
+            ++i)
+        {
+            if (i == in_table.get_attribute_row())
+            {
+                continue;
+            }
+            io_stage_loaders.emplace_back(
+                this_type(
+                    io_driver.hash_function_,
+                    local_allocator,
+                    in_table,
+                    i,
+                    local_attribute));
+            auto& local_stage_loader(io_stage_loaders.back());
+            io_driver.dispatcher_.register_handler(
+                local_stage_loader.loading_expression_key_,
+                local_dispatch_condition,
+                local_stage_loader.loading_function_,
+                local_stage_loader.loading_priority_);
+        }
+    }
+
+    //-------------------------------------------------------------------------
+    private: stage_loader(
+        typename this_type::if_then_driver::hasher& io_hasher,
+        typename this_type::if_then_driver::allocator_type const& in_allocator,
+        typename this_type::relation_table const& in_table,
+        typename this_type::relation_table::number const in_row_number,
+        typename this_type::table_attribute const& in_attribute)
+    {
+        // 配置条件式の識別値を取得する。
+        this->loading_expression_key_ = io_hasher(
+            in_table.find_cell(
+                in_row_number, in_attribute.loading_expression_key_.first));
+        PSYQ_ASSERT(
+            this->loading_expression_key_ != io_hasher(
+                typename this_type::if_then_driver::hasher::argument_type()));
+
+        // 配置と撤去をする条件挙動関数を構築して登録する。
+        typedef this_type::if_then_driver::dispatcher::handler handler;
+        this->loading_function_ = std::allocate_shared<typename handler::function>(
+            in_allocator,
+            typename handler::function(
+                [this](
+                    typename handler::expression_key const&,
+                    typename handler::evaluation const in_current_evaluation,
+                    typename handler::evaluation const in_last_evaluation)
+                {
+                    if (0 < in_current_evaluation)
+                    {
+                        PSYQ_ASSERT(in_last_evaluation <= 0);
+                        this->load_start();
+                    }
+                    else if (0 < in_last_evaluation)
+                    {
+                        this->unload();
+                    }
+                }));
+    }
+
+    private: void load_start() {}
+    private: void unload() {}
+
+    //-------------------------------------------------------------------------
+    /// @brief 配置条件式に対応する識別値。
     private: typename this_type::if_then_driver::evaluator::expression_key
-         load_expression_key_;
-    /// @brief 配置完了時に行う状態値の代入演算式のコンテナ。
+         loading_expression_key_;
+    /// @brief 配置条件式に対応する条件挙動関数。
+    private: typename this_type::if_then_driver::dispatcher::handler::function_shared_ptr
+         loading_function_;
+    private: typename this_type::if_then_driver::dispatcher::handler::priority
+         loading_priority_;
     private: typename this_type::status_assignment_container
-         load_status_assignments_;
-    /// @brief 撤去完了時に行う状態値の代入演算式のコンテナ。
+         loaded_status_assignments_;
     private: typename this_type::status_assignment_container
-         unload_status_assignments_;
+         unloaded_status_assignments_;
 
     /// @brief 状態値CSVファイルのパス名。
     private: typename this_type::string status_csv_path_;
@@ -615,6 +738,12 @@ namespace psyq_test
                 local_string_factory,
                 tesv::asset::food_efficacy::csv_string(),
                 tesv::void_allocator()));
+
+        std::vector<stage_loader<driver>, driver::allocator_type> local_stages;
+        stage_loader<driver>::register_handlers(
+            local_stages,
+            local_driver,
+            psyq::string::relation_table<std::size_t, char>(local_stages.get_allocator()));
 
         // 状態値CSV文字列を構築する。
         flyweight_string::view const local_csv_status(

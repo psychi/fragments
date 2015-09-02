@@ -150,7 +150,7 @@ class stage_loader
                 typename this_type::if_then_driver::hasher::argument_type()));
 
         // 配置と撤去をする条件挙動関数を構築して登録する。
-        typedef this_type::if_then_driver::dispatcher::handler handler;
+        typedef typename this_type::if_then_driver::dispatcher::handler handler;
         this->loading_function_ = std::allocate_shared<typename handler::function>(
             in_allocator,
             typename handler::function(
@@ -771,16 +771,16 @@ namespace psyq_test
 
         // 条件挙動CSV文字列を構築する。
         flyweight_string::view const local_csv_behavior(
-            "KEY         , CONDITION,, PRIORITY,       KIND, ARGUMENT\n"
-            "expression_0, FALSE, TRUE,   9, STATUS_ASSIGNMENT, status_unsigned, :=, 1, status_unsigned, +=, STATUS:status_unsigned\n"
-            "expression_1, FALSE, NULL,   8, STATUS_ASSIGNMENT, status_unsigned, +=, 1\n"
-            "expression_2, FALSE, ANY,    7, STATUS_ASSIGNMENT, status_unsigned, -=, 1\n"
-            "expression_3, FALSE, !FALSE, 6, STATUS_ASSIGNMENT, status_unsigned, *=, 1\n"
-            "expression_4, TRUE,  NULL,   5, STATUS_ASSIGNMENT, status_unsigned, /=, 1\n"
-            "expression_5, TRUE,  FALSE,  4, STATUS_ASSIGNMENT, status_unsigned, %=, 1\n"
-            "expression_6, TRUE,  !TRUE,  3, STATUS_ASSIGNMENT, status_unsigned, |=, 1\n"
-            "expression_7, TRUE,  ANY,    2, STATUS_ASSIGNMENT, status_unsigned, ^=, 0\n"
-            "expression_8, TRUE,  !NULL,  1, STATUS_ASSIGNMENT, status_unsigned, &=, 0\n"
+            "KEY         , CONDITION,, PRIORITY,          KIND, ARGUMENT\n"
+            "expression_0, FALSE, TRUE,   9, STATUS_ASSIGNMENT, YIELD, status_unsigned, :=, 1, status_unsigned, +=, STATUS:status_unsigned\n"
+            "expression_1, FALSE, NULL,   8, STATUS_ASSIGNMENT, YIELD, status_unsigned, +=, 1\n"
+            "expression_2, FALSE, ANY,    7, STATUS_ASSIGNMENT, YIELD, status_unsigned, -=, 1\n"
+            "expression_3, FALSE, !FALSE, 6, STATUS_ASSIGNMENT, YIELD, status_unsigned, *=, 1\n"
+            "expression_4, TRUE,  NULL,   5, STATUS_ASSIGNMENT, YIELD, status_unsigned, /=, 1\n"
+            "expression_5, TRUE,  FALSE,  4, STATUS_ASSIGNMENT, YIELD, status_unsigned, %=, 1\n"
+            "expression_6, TRUE,  !TRUE,  3, STATUS_ASSIGNMENT, YIELD, status_unsigned, |=, 1\n"
+            "expression_7, TRUE,  ANY,    2, STATUS_ASSIGNMENT, YIELD, status_unsigned, ^=, 0\n"
+            "expression_8, TRUE,  !NULL,  1, STATUS_ASSIGNMENT, YIELD, status_unsigned, &=, 0\n"
             "");
 
         // 状態値と条件式と条件挙動を、駆動器に登録する。
@@ -833,16 +833,23 @@ namespace psyq_test
         local_driver.rebuild(1024, 1024, 1024);
 
         local_driver.accumulator_.accumulate(
-            local_driver.hash_function_("status_bool"), false);
+            local_driver.hash_function_("status_bool"),
+            false,
+            driver::accumulator::delay_YIELD);
         local_driver.accumulator_.accumulate(
             driver::reservoir::status_assignment(
                 local_driver.hash_function_("status_unsigned"),
                 driver::reservoir::status_value::assignment_ADD,
-                driver::reservoir::status_value(char(10))));
+                driver::reservoir::status_value(char(10))),
+            driver::accumulator::delay_YIELD);
         local_driver.accumulator_.accumulate(
-            local_driver.hash_function_("status_signed"), 2.0);
+            local_driver.hash_function_("status_signed"),
+            2.0,
+            driver::accumulator::delay_YIELD);
         local_driver.accumulator_.accumulate(
-            local_driver.hash_function_("status_float"), 0.5f);
+            local_driver.hash_function_("status_float"),
+            0.5f,
+            driver::accumulator::delay_YIELD);
         /*
         local_driver.reservoir_.assign_status(
             local_driver.hash_function_("status_signed"), -20);

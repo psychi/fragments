@@ -23,9 +23,13 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 状態変更器。バッチ処理で状態値の変更を行う。
-/// @details ### 使い方の概略
-/// - accumulator::accumulate で、状態変更を予約する。
-/// - accumulator::_flush で、状態変更を実際に適用する。
+/// @par 使い方の概略
+/// - accumulator::accumulate で、状態変更と遅延方法を予約する。
+/// - accumulator::_flush で、予約した状態変更を適用する。
+///   - この時、今回の this_type::_flush
+///     でひとつの状態値に対して複数回の変更が予約されていた場合、
+///     初回の状態変更のみ適用され、以後の状態変更が次回の this_type::_flush
+///     まで遅延することがある。
 /// @tparam template_reservoir @copydoc accumulator::reservoir
 template<typename template_reservoir>
 class psyq::if_then_engine::_private::accumulator
@@ -34,8 +38,7 @@ class psyq::if_then_engine::_private::accumulator
     private: typedef accumulator this_type;
 
     //-------------------------------------------------------------------------
-    /// @brief 状態変更を適用する状態貯蔵器の型。
-    /// @details psyq::if_then_engine::_private::reservoir と互換性があること。
+    /// @brief 状態変更を適用する _private::reservoir 。
     public: typedef template_reservoir reservoir;
 
     /// @brief 状態変更器で使うメモリ割当子の型。
@@ -44,47 +47,39 @@ class psyq::if_then_engine::_private::accumulator
         allocator_type;
 
     /// @brief 状態変更の予約系列と遅延方法。
-    /// @details this_type::_flush で状態変更を適用する際に、
+    /// @details
+    /// this_type::_flush で状態変更を適用する際に、
     /// 異なる予約系列からすでに状態変更されていた場合の遅延方法を決める。
+    /// delay_YIELD と delay_FOLLOW の2つのみ使うことを推奨する。。
+    /// @warning
+    /// delay_BLOCK を this_type::accumulate に渡すと、
+    /// 以後に予約されている状態変更が蓄積する場合もあるので、注意すること。
+    /// @warning
+    /// delay_NONBLOCK を this_type::accumulate に渡すと、
+    /// それ以前の状態値の変化を検知できない場合があるので、注意すること。
     public: enum delay: std::uint8_t
     {
-        /// 予約系列を切り替え、以後、同じ予約系列の状態変更の適用が、
-        /// 次回以降の this_type::_flush まで遅延する。
-        delay_NONBLOCK,
-        /// 予約系列を切り替え、以後にある全ての状態変更の適用が、
-        /// 次回以降の this_type::_flush まで遅延する。
-        delay_BLOCK,
         /// 予約系列を切り替えず、直前の予約系列と同じタイミングになるまで、
         /// 状態変更の適用を遅延する。
         delay_FOLLOW,
+        /// 予約系列を切り替え、以後、同じ予約系列の状態変更の適用が、
+        /// 次回以降の this_type::_flush まで遅延する。
+        delay_YIELD,
+        /// 予約系列を切り替え、以後にある全ての状態変更の適用が、
+        /// 次回以降の this_type::_flush まで遅延する。
+        delay_BLOCK,
+        /// 予約系列を切り替え、以後、同じ予約系列の状態変更の適用が
+        /// 遅延せず行われる。
+        delay_NONBLOCK,
     };
 
     //-------------------------------------------------------------------------
-    /// @brief 状態変更の予約。
-    private: class status_accumulation
-    {
-        public: status_accumulation(
-            typename accumulator::reservoir::status_assignment in_assignment,
-            bool const in_series,
-            bool const in_block)
-        PSYQ_NOEXCEPT:
-        assignment_(std::move(in_assignment)),
-        series_(in_series),
-        block_(in_block)
-        {}
-
-        /// @brief 適用する代入演算。
-        public: typename accumulator::reservoir::status_assignment assignment_;
-        /// @brief 状態変更の系列の識別値。
-        public: bool series_;
-        /// @brief 状態変更の遅延方法。
-        public: bool block_;
-
-    }; // class status_accumulation
-
+    /// @brief 状態変更予約のコンテナ。
     private: typedef
         std::vector<
-            typename this_type::status_accumulation,
+            std::pair<
+                typename this_type::reservoir::status_assignment,
+                typename this_type::delay>,
             typename this_type::allocator_type>
         status_container;
 
@@ -140,51 +135,51 @@ class psyq::if_then_engine::_private::accumulator
     /// @name 状態変更
     /// @{
 
-    /// @brief 累積している状態変更の数を取得する。
-    /// @return 累積している状態変更の数。
+    /// @brief 状態変更の予約数を取得する。
+    /// @return 状態変更の予約数。
     public: std::size_t count_accumulation() const PSYQ_NOEXCEPT
     {
         return this->accumulated_statuses_.size();
     }
 
     /// @brief 状態変更を予約する。
-    /// @details 実際の状態変更は this_type::_flush で適用される。
-    /// @return 累積している状態変更の数。
-    /// @warning
-    /// this_type::_flush では、異なる予約系列からの状態変更を重複させないため、
-    /// 状態変更の適用を遅延させる場合がある。このため、1つの状態値に対し、
-    /// 異なる複数の予約系列からの this_type::accumulate を毎フレーム行うと、
-    /// 状態変更の予約が蓄積して増え続ける。1つの状態値に対し、
-    /// 異なる複数の予約系列からの状態変更を毎フレーム行いたい場合は、
-    /// reservoir::assign_status で直接状態変更するほうが良い。
-    public: std::size_t accumulate(
+    /// @sa 実際の状態変更は this_type::_flush で適用される。
+    public: void accumulate(
         /// [in] 予約する状態変更。
-        typename this_type::reservoir::status_assignment in_assignment,
-        /// [in] 予約系列と遅延方法の指定。
-        typename this_type::delay const in_delay = this_type::delay_NONBLOCK)
+        typename this_type::reservoir::status_assignment const& in_assignment,
+        /// [in] 予約系列と遅延方法。
+        typename this_type::delay const in_delay)
     {
-        this->accumulated_statuses_.emplace_back(
-            std::move(in_assignment),
-            this->accumulated_statuses_.empty()
-            || this->accumulated_statuses_.back().series_ ^ (
-                in_delay != this_type::delay_FOLLOW),
-            in_delay == this_type::delay_BLOCK);
-        return this->count_accumulation();
+        this->accumulated_statuses_.emplace_back(in_assignment, in_delay);
     }
 
-    /// @brief 状態変更を予約する。
-    /// @details 実際の状態変更は this_type::_flush で適用される。
-    /// @return 累積している状態変更の数。
+    /// @copydoc this_type::accumulate
+    public: template<typename template_container>
+    void accumulate(
+        /// [in] 予約する reservoir::status_assignment のコンテナ。
+        template_container const& in_assignments,
+        /// [in] 予約系列と遅延方法。
+        typename this_type::delay const in_delay)
+    {
+        auto local_delay(in_delay);
+        for (auto& local_assignment: in_assignments)
+        {
+            this->accumulate(local_assignment, local_delay);
+            local_delay = this_type::delay_FOLLOW;
+        }
+    }
+
+    /// @copydoc this_type::accumulate
     public: template<typename template_value>
-    std::size_t accumulate(
+    void accumulate(
         /// [in] 変更する状態値の識別値。
         typename this_type::reservoir::status_key const& in_key,
         /// [in] 状態値に設定する値。
         template_value in_value,
-        /// [in] 予約系列と遅延方法の指定。
-        typename this_type::delay const in_delay = this_type::delay_NONBLOCK)
+        /// [in] 予約系列と遅延方法。
+        typename this_type::delay const in_delay)
     {
-        return this->accumulate(
+        this->accumulate(
             typename this_type::reservoir::status_assignment(
                 in_key,
                 this_type::reservoir::status_value::assignment_COPY,
@@ -192,21 +187,19 @@ class psyq::if_then_engine::_private::accumulator
             in_delay);
     }
 
-    /// @brief 状態変更を予約する。
-    /// @details 実際の状態変更は this_type::_flush で適用される。
-    /// @return 累積している状態変更の数。
+    /// @copydoc this_type::accumulate
     public: template<typename template_value>
-    std::size_t accumulate(
+    void accumulate(
         /// [in] 変更する状態値の識別値。
         typename this_type::reservoir::status_key const& in_key,
         /// [in] 代入演算子の種別。
         typename this_type::reservoir::status_value::assignment const in_operator,
         /// [in] 代入演算子の右辺。
         template_value in_value,
-        /// [in] 予約系列と遅延方法の指定。
-        typename this_type::delay const in_delay = this_type::delay_NONBLOCK)
+        /// [in] 予約系列と遅延方法。
+        typename this_type::delay const in_delay)
     {
-        return this->accumulate(
+        this->accumulate(
             typename this_type::reservoir::status_assignment(
                 in_key,
                 in_operator,
@@ -215,11 +208,19 @@ class psyq::if_then_engine::_private::accumulator
     }
 
     /// @brief psyq::if_then_engine 管理者以外は、この関数は使用禁止。
-    /// @details this_type::accumulate で予約した状態変更を、実際に適用する。
+    /// @details
+    /// this_type::accumulate で予約した状態変更を、実際に適用する。
+    /// @warning
+    /// this_type::accumulate で遅延方法に
+    /// this_type::delay_NONBLOCK 以外が指定されると、
     /// 1度の this_type::_flush で、1つの状態値に対し、
     /// 異なる複数の予約系列から状態変更がある場合は、
     /// 最初の予約系列の状態変更のみが適用される。
     /// それより後の予約系列の適用は、次回の this_type::_flush まで遅延する。
+    /// @warning
+    /// this_type::accumulate で遅延方法に
+    /// this_type::delay_NONBLOCK が指定されると状態変更が必ず適用されるが、
+    /// 同じ状態値に対するそれ以前の変更を検知できない場合がある。
     public: void _flush(
         /// [in,out] 状態変更を適用する状態貯蔵器。
         typename this_type::reservoir& io_reservoir)
@@ -228,54 +229,48 @@ class psyq::if_then_engine::_private::accumulator
         for (auto i(this->accumulated_statuses_.cbegin()); i != local_end;)
         {
             // 同じ予約系列の末尾を決定する。
-            auto local_flush(true);
+            auto const local_delay(i->second != this_type::delay_NONBLOCK);
+            auto local_flush(local_delay);
             auto j(i);
-            for (; j != local_end && i->series_ == j->series_; ++j)
+            for (;;)
             {
                 if (local_flush
-                    && 0 < io_reservoir.find_transition(j->assignment_.get_key()))
+                    && 0 < io_reservoir.find_transition(j->first.get_key()))
                 {
                     // すでに状態変更されていたら、今回は状態変更しない。
                     local_flush = false;
                 }
+                ++j;
+                if (j == local_end || j->second != this_type::delay_FOLLOW)
+                {
+                    break;
+                }
             }
 
-            // 同系列の状態変更をまとめて適用する。
-            if (local_flush)
+            // 同じ予約系列の状態変更をまとめて適用する。
+            if (!local_delay || local_flush)
             {
                 for (; i != j; ++i)
                 {
-                    if (!io_reservoir.assign_status(i->assignment_))
+                    if (!io_reservoir.assign_status(i->first))
                     {
-                        /** @note
-                            状態変更に失敗した場合、どう対応するのがよい？
-                            とりえあえずassertしておく。
-                            失敗したら同じ予約系列の状態変更は
-                            そこで中止する方向で実装したい。
-                         */
-                        PSYQ_ASSERT(false);
+                        // 状態変更に失敗した場合は、
+                        // 同じ予約系列の以後の状態変更を行わない。
+                        i = j;
+                        break;
                     }
                 }
             }
             else
             {
-                // 状態変更を次回まで遅延するす。
-                auto const local_series(
-                    this->delay_statuses_.empty()
-                    || this->delay_statuses_.back().series_ == i->series_);
-                if (i->block_)
+                // 状態変更を次回まで遅延する。
+                if (i->second == this_type::delay_BLOCK)
                 {
                     // ブロックする場合は、残り全部を次回以降に遅延する。
                     j = local_end;
                 }
-                for (; i != j; ++i)
-                {
-                    this->delay_statuses_.push_back(
-                        typename this_type::status_accumulation(
-                            i->assignment_,
-                            i->series_ ^ local_series,
-                            i->block_));
-                }
+                this->delay_statuses_.insert(this->delay_statuses_.end(), i, j);
+                i = j;
             }
         }
         this->accumulated_statuses_.clear();

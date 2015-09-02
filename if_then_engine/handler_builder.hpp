@@ -59,6 +59,33 @@
 #define PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT "ARGUMENT"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT)
 
+/// @brief 文字列表で、遅延種別をYIELDとして解析する文字列。
+/// @details
+/// psyq::if_then_engine::handler_builder で解析する文字列表で、
+/// psyq::if_then_engine::driver::accumulator::delay_YIELD
+/// として解析する文字列。
+#ifndef PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_YIELD
+#define PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_YIELD "YIELD"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_YIELD)
+
+/// @brief 文字列表で、遅延種別をBLOCKとして解析する文字列。
+/// @details
+/// psyq::if_then_engine::handler_builder で解析する文字列表で、
+/// psyq::if_then_engine::driver::accumulator::delay_BLOCK
+/// として解析する文字列。
+#ifndef PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_BLOCK
+#define PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_BLOCK "BLOCK"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_BLOCK)
+
+/// @brief 文字列表で、遅延種別をNONBLOCKとして解析する文字列。
+/// @details
+/// psyq::if_then_engine::handler_builder で解析する文字列表で、
+/// psyq::if_then_engine::driver::accumulator::delay_NONBLOCK
+/// として解析する文字列。
+#ifndef PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_NONBLOCK
+#define PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_NONBLOCK "NONBLOCK"
+#endif // !defined(PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_NONBLOCK)
+
 /// @cond
 namespace psyq
 {
@@ -372,9 +399,6 @@ class psyq::if_then_engine::handler_builder
         template_hasher& io_hasher,
         /// [in,out] 条件挙動関数から使う driver::accumulator 。
         template_accumulator& io_accumulator,
-        /// [in] 先頭の代入演算の driver::accumulator::accumulate に渡す、
-        /// driver::accumulator::delay 。
-        typename template_accumulator::delay const in_front_delay,
         /// [in] 解析する psyq::string::relation_table 。
         template_relation_table const& in_table,
         /// [in] in_table の解析する行の番号。
@@ -392,10 +416,14 @@ class psyq::if_then_engine::handler_builder
             io_hasher,
             in_table,
             in_row_number,
-            in_assignments.first,
-            in_assignments.second);
+            in_assignments.first + 1,
+            in_assignments.second - 1);
         return this_type::create_status_assignment_function<template_handler>(
-            io_accumulator, in_front_delay, local_assignments);
+            io_accumulator,
+            this_type::parse_delay<template_accumulator>(
+                typename template_relation_table::string::view(
+                    in_table.find_cell(in_row_number, in_assignments.first))),
+            local_assignments);
     }
 
     /// @brief 状態値を代入演算する条件挙動関数を構築する。
@@ -429,13 +457,7 @@ class psyq::if_then_engine::handler_builder
                         typename template_handler::evaluation const,
                         typename template_handler::evaluation const)
                     {
-                        auto local_delay(in_front_delay);
-                        for (auto const& local_assignment: in_assignments)
-                        {
-                            io_accumulator.accumulate(
-                                local_assignment, local_delay);
-                            local_delay = template_accumulator::delay_FOLLOW;
-                        }
+                        io_accumulator.accumulate(in_assignments, in_front_delay);
                     })):
             typename template_handler::function_shared_ptr();
     }
@@ -470,12 +492,9 @@ class psyq::if_then_engine::handler_builder
         if (local_kind_cell
             == PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_KIND_STATUS_ASSIGNMENT)
         {
-            /// @todo 状態変更の遅延方法も、文字列表から取得すること。
-            auto const local_front_delay(template_accumulator::delay_NONBLOCK);
             return this_type::build_status_assignment_function<template_handler>(
                 io_hasher,
                 io_accumulator,
-                local_front_delay,
                 in_table,
                 in_row_number,
                 in_attribute.argument_);
@@ -486,6 +505,22 @@ class psyq::if_then_engine::handler_builder
             PSYQ_ASSERT(false);
             return typename template_handler::function_shared_ptr();
         }
+    }
+
+    private: template<typename template_accumulator, typename template_string>
+    static typename template_accumulator::delay parse_delay(
+        template_string const& in_string)
+    {
+        if (in_string == PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_BLOCK)
+        {
+            return template_accumulator::delay_BLOCK;
+        }
+        if (in_string == PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_NONBLOCK)
+        {
+            return template_accumulator::delay_NONBLOCK;
+        }
+        PSYQ_ASSERT(in_string == PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_YIELD);
+        return template_accumulator::delay_YIELD;
     }
 
 }; // class psyq::if_then_engine::handler_builder

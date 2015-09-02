@@ -235,10 +235,10 @@ class psyq::if_then_engine::status_builder
         }
 
         // 状態値の型と初期値を取得し、状態値を登録する。
-        typedef template_relation_table::string::view string_view;
-        typename string_view const local_kind_cell(
+        typedef typename template_relation_table::string::view string_view;
+        string_view const local_kind_cell(
             in_table.find_cell(in_row_number, in_attribute.kind_.first));
-        typename string_view const local_value_cell(
+        string_view const local_value_cell(
             in_table.find_cell(in_row_number, in_attribute.value_.first));
         if (local_kind_cell == PSYQ_IF_THEN_ENGINE_STATUS_BUILDER_KIND_BOOL)
         {

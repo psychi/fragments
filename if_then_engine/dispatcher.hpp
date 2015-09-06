@@ -67,7 +67,7 @@ class psyq::if_then_engine::_private::dispatcher
                  std::vector<
                      typename this_type::evaluator::expression_key,
                      typename this_type::allocator_type>>,
-             psyq::integer_hash<
+             psyq::hash::numeric_hash<
                  typename this_type::evaluator::reservoir::status_key>,
              std::equal_to<
                  typename this_type::evaluator::reservoir::status_key>,
@@ -81,7 +81,8 @@ class psyq::if_then_engine::_private::dispatcher
                 std::vector<
                     typename this_type::handler,
                     typename this_type::allocator_type>>,
-             psyq::integer_hash<typename this_type::evaluator::expression_key>,
+             psyq::hash::numeric_hash<
+                 typename this_type::evaluator::expression_key>,
              std::equal_to<typename this_type::evaluator::expression_key>,
              typename this_type::allocator_type>
          expression_monitor_map;
@@ -200,6 +201,16 @@ class psyq::if_then_engine::_private::dispatcher
         std::size_t const in_cache_capacity)
     {
         typedef
+            typename this_type::expression_monitor_map::mapped_type
+            expression_monitor;
+        this_type::rebuild_monitors(
+            this->expression_monitors_,
+            in_expression_count,
+            [](expression_monitor& io_expression_monitor)->bool
+            {
+                return io_expression_monitor.shrink_handlers();
+            });
+        typedef
             typename this_type::status_monitor_map::mapped_type
             status_monitor;
         this_type::rebuild_monitors(
@@ -209,16 +220,6 @@ class psyq::if_then_engine::_private::dispatcher
             {
                 return io_status_monitor.shrink_expression_keys(
                     this->expression_monitors_);
-            });
-        typedef
-            typename this_type::expression_monitor_map::mapped_type
-            expression_monitor;
-        this_type::rebuild_monitors(
-            this->expression_monitors_,
-            in_expression_count,
-            [](expression_monitor& io_expression_monitor)->bool
-            {
-                return io_expression_monitor.shrink_handlers();
             });
         PSYQ_ASSERT(this->cached_handlers_.empty());
         this->cached_handlers_ = decltype(this->cached_handlers_)(

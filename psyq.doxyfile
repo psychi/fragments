@@ -705,6 +705,10 @@ INPUT                  = \
                          ./string/csv_table.hpp \
                          ./string/relation_table.hpp \
                          ./string/numeric_parser.hpp \
+                         ./hash/numeric.hpp \
+                         ./hash/proxy.hpp \
+                         ./hash/fnv.hpp \
+                         ./hash/murmur3.hpp \
                          ./any/rtti.hpp \
                          ./any/storage.hpp \
                          ./any/message/tag.hpp \

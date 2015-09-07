@@ -79,12 +79,12 @@ class psyq::if_then_engine::_private::status_chunk
     {
         /// @brief ビット列単位のビット数。
         BLOCK_BIT_WIDTH = static_cast<typename this_type::bit_width>(
-            sizeof(typename this_type::bit_block) * psyq::CHAR_BIT_WIDTH),
+            sizeof(typename this_type::bit_block) * CHAR_BIT),
     };
     static_assert(
         // this_type::BLOCK_BIT_WIDTH が this_type::bit_width に収まるのを確認する。
         this_type::BLOCK_BIT_WIDTH < (
-            1 << (sizeof(this_type::bit_width) * psyq::CHAR_BIT_WIDTH - 1)),
+            1 << (sizeof(this_type::bit_width) * CHAR_BIT - 1)),
         "this_type::BLOCK_BIT_WIDTH is overflow.");
 
     //-------------------------------------------------------------------------

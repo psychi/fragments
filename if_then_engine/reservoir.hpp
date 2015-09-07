@@ -279,7 +279,7 @@ class psyq::if_then_engine::_private::reservoir
                 in_chunk_key,
                 in_status_key,
                 in_value,
-                sizeof(template_value) * psyq::CHAR_BIT_WIDTH);
+                sizeof(template_value) * CHAR_BIT);
         }
     }
 
@@ -785,7 +785,7 @@ class psyq::if_then_engine::_private::reservoir
 
             case this_type::status_value::kind_FLOAT:
             return sizeof(typename this_type::status_value::float_type)
-                * psyq::CHAR_BIT_WIDTH;
+                * CHAR_BIT;
 
             default: return psyq::abs_integer(in_format);
         }
@@ -1082,7 +1082,7 @@ class psyq::if_then_engine::_private::reservoir
                 local_bit_field,
                 static_cast<bit_width>(
                     sizeof(typename this_type::status_value::float_type)
-                    * psyq::CHAR_BIT_WIDTH));
+                    * CHAR_BIT));
         }
         else if (in_format < 0)
         {
@@ -1133,7 +1133,7 @@ class psyq::if_then_engine::_private::reservoir
             return typename this_type::bit_field_width(
                 float_bit_field(static_cast<float_type>(in_value)).bit_field_,
                 static_cast<bit_width>(
-                    sizeof(float_type) * psyq::CHAR_BIT_WIDTH));
+                    sizeof(float_type) * CHAR_BIT));
         }
         else if (in_format < 0)
         {
@@ -1223,7 +1223,7 @@ class psyq::if_then_engine::_private::reservoir
                 static_cast<bit_block>(
                     psyq::shift_right_bitwise_fast(
                         in_integer,
-                        sizeof(in_integer) * psyq::CHAR_BIT_WIDTH - 1)),
+                        sizeof(in_integer) * CHAR_BIT - 1)),
                 in_bit_width - 1));
         return local_rest_field != local_rest_mask;
     }

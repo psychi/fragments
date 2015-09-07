@@ -75,7 +75,7 @@ class psyq::hash::_private::basic_bytes_hash_proxy
 /// // param[in] in_data バイト列の先頭位置。
 /// // param[in] in_size バイト列のバイト数。
 /// // return バイト列のハッシュ値。
-/// result_type template_bytes_hasher::operator()(unsigned char const* const in_data, std::size_t const in_size) noexcept;
+/// result_type template_bytes_hasher::operator()(unsigned char const* const in_data, std::size_t const in_size) const noexcept;
 /// @endcode
 template<typename template_bytes_hasher>
 class psyq::hash::_private::seedless_bytes_hash_proxy:
@@ -111,6 +111,7 @@ public psyq::hash::_private::basic_bytes_hash_proxy<
         void const* const in_begin,
         /// [in] バイト列の末尾位置。
         void const* const in_end)
+    const PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(in_begin <= in_end);
         auto const local_begin(static_cast<unsigned char const*>(in_begin));
@@ -126,6 +127,7 @@ public psyq::hash::_private::basic_bytes_hash_proxy<
         unsigned char const* const in_bytes,
         /// [in] バイト列のバイト数。
         std::size_t const in_size)
+    const PSYQ_NOEXCEPT
     {
         return this->hasher_(in_bytes, in_size);
     }
@@ -143,7 +145,7 @@ public psyq::hash::_private::basic_bytes_hash_proxy<
 /// // param[in] in_size バイト列のバイト数。
 /// // param[in] in_seed ハッシュ関数のシード値。
 /// // return バイト列のハッシュ値。
-/// result_type template_bytes_hasher::operator()(unsigned char const* const in_data, std::size_t const in_size, template_seed const& in_seed) noexcept;
+/// result_type template_bytes_hasher::operator()(unsigned char const* const in_data, std::size_t const in_size, template_seed const& in_seed) const noexcept;
 /// @endcode
 /// @tparam template_seed       @copydoc seeding_bytes_hash_proxy::seed
 /// @tparam template_seed_value ハッシュ関数のシード値。
@@ -192,6 +194,7 @@ public psyq::hash::_private::basic_bytes_hash_proxy<
         void const* const in_begin,
         /// [in] バイト列の末尾位置。
         void const* const in_end)
+    const PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(in_begin <= in_end);
         auto const local_begin(static_cast<unsigned char const*>(in_begin));
@@ -207,6 +210,7 @@ public psyq::hash::_private::basic_bytes_hash_proxy<
         unsigned char const* const in_bytes,
         /// [in] バイト列のバイト数。
         std::size_t const in_size)
+    const PSYQ_NOEXCEPT
     {
         return this->hasher_(in_bytes, in_size, this_type::get_seed());
     }
@@ -270,6 +274,7 @@ public psyq::hash::_private::basic_bytes_hash_proxy<
         void const* const in_begin,
         /// [in] バイト列の末尾位置。
         void const* const in_end)
+    const PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(in_begin <= in_end);
         auto const local_begin(static_cast<unsigned char const*>(in_begin));
@@ -285,6 +290,7 @@ public psyq::hash::_private::basic_bytes_hash_proxy<
         unsigned char const* const in_bytes,
         /// [in] バイト列のバイト数。
         std::size_t const in_size)
+    const PSYQ_NOEXCEPT
     {
         return this->hasher_(in_bytes, in_size, this->get_seed());
     }
@@ -346,6 +352,7 @@ class psyq::hash::_private::string_hash_proxy
     public: typename this_type::result_type operator()(
         /// [in] ハッシュ値を算出する文字列。
         typename this_type::argument_type const& in_string)
+    const PSYQ_NOEXCEPT
     {
         auto const local_data(in_string.data());
         return (*this)(local_data, local_data + in_string.size());
@@ -358,6 +365,7 @@ class psyq::hash::_private::string_hash_proxy
         void const* const in_begin,
         /// [in] バイト列の末尾位置。
         void const* const in_end)
+    const PSYQ_NOEXCEPT
     {
         PSYQ_ASSERT(in_begin <= in_end);
         auto const local_begin(static_cast<unsigned char const*>(in_begin));
@@ -373,6 +381,7 @@ class psyq::hash::_private::string_hash_proxy
         unsigned char const* const in_bytes,
         /// [in] バイト列のバイト数。
         std::size_t const in_size)
+    const PSYQ_NOEXCEPT
     {
         return static_cast<typename this_type::result_type>(
             this->hasher_(in_bytes, in_size));

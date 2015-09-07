@@ -14,10 +14,10 @@ namespace psyq
 {
     namespace hash
     {
-        template<typename> class fnv1_string_hash32;
-        template<typename> class fnv1_string_hash64;
-        template<typename> class fnv1a_string_hash32;
-        template<typename> class fnv1a_string_hash64;
+        template<typename, typename> class fnv1_string_hash32;
+        template<typename, typename> class fnv1_string_hash64;
+        template<typename, typename> class fnv1a_string_hash32;
+        template<typename, typename> class fnv1a_string_hash64;
 
         namespace _private
         {
@@ -190,17 +190,20 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief FNV-1形式の文字列32ビットハッシュ関数オブジェクト。
 /// @tparam template_string @copydoc psyq::hash::_private::string_hash_proxy::argument_type
-template<typename template_string>
+/// @tparam template_result @copydoc _private::string_hash_proxy::result_type
+template<typename template_string, typename template_result = std::size_t>
 class psyq::hash::fnv1_string_hash32:
 public psyq::hash::_private::string_hash_proxy<
-    psyq::hash::_private::fnv1_hash32_proxy, template_string>
+    psyq::hash::_private::fnv1_hash32_proxy, template_string, template_result>
 {
     /// @copydoc psyq::string::view::this_type
     private: typedef fnv1_string_hash32 this_type;
     /// @copydoc psyq::string::view::base_type
     public: typedef
         psyq::hash::_private::string_hash_proxy<
-            psyq::hash::_private::fnv1_hash32_proxy, template_string>
+            psyq::hash::_private::fnv1_hash32_proxy,
+            template_string,
+            template_result>
         base_type;
 
     /// @brief 文字列ハッシュ関数オブジェクトを構築する。
@@ -213,17 +216,20 @@ public psyq::hash::_private::string_hash_proxy<
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief FNV-1形式の文字列64ビットハッシュ関数オブジェクト。
 /// @tparam template_string @copydoc psyq::hash::_private::string_hash_proxy::argument_type
-template<typename template_string>
+/// @tparam template_result @copydoc _private::string_hash_proxy::result_type
+template<typename template_string, typename template_result = std::size_t>
 class psyq::hash::fnv1_string_hash64:
 public psyq::hash::_private::string_hash_proxy<
-    psyq::hash::_private::fnv1_hash64_proxy, template_string>
+    psyq::hash::_private::fnv1_hash64_proxy, template_string, template_result>
 {
     /// @copydoc psyq::string::view::this_type
     private: typedef fnv1_string_hash64 this_type;
     /// @copydoc psyq::string::view::base_type
     public: typedef
         psyq::hash::_private::string_hash_proxy<
-            psyq::hash::_private::fnv1_hash64_proxy, template_string>
+            psyq::hash::_private::fnv1_hash64_proxy,
+            template_string,
+            template_result>
         base_type;
 
     /// @brief 文字列ハッシュ関数オブジェクトを構築する。
@@ -236,17 +242,20 @@ public psyq::hash::_private::string_hash_proxy<
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief FNV-1a形式の文字列32ビットハッシュ関数オブジェクト。
 /// @tparam template_string @copydoc psyq::hash::_private::string_hash_proxy::argument_type
-template<typename template_string>
+/// @tparam template_result @copydoc _private::string_hash_proxy::result_type
+template<typename template_string, typename template_result = std::size_t>
 class psyq::hash::fnv1a_string_hash32:
 public psyq::hash::_private::string_hash_proxy<
-    psyq::hash::_private::fnv1a_hash32_proxy, template_string>
+    psyq::hash::_private::fnv1a_hash32_proxy, template_string, template_result>
 {
     /// @copydoc psyq::string::view::this_type
     private: typedef fnv1a_string_hash32 this_type;
     /// @copydoc psyq::string::view::base_type
     public: typedef
         psyq::hash::_private::string_hash_proxy<
-            psyq::hash::_private::fnv1a_hash32_proxy, template_string>
+            psyq::hash::_private::fnv1a_hash32_proxy,
+            template_string,
+            template_result>
         base_type;
 
     /// @brief 文字列ハッシュ関数オブジェクトを構築する。
@@ -259,17 +268,20 @@ public psyq::hash::_private::string_hash_proxy<
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief FNV-1a形式の文字列64ビットハッシュ関数オブジェクト。
 /// @tparam template_string @copydoc psyq::hash::_private::string_hash_proxy::argument_type
-template<typename template_string>
+/// @tparam template_result @copydoc _private::string_hash_proxy::result_type
+template<typename template_string, typename template_result = std::size_t>
 class psyq::hash::fnv1a_string_hash64:
 public psyq::hash::_private::string_hash_proxy<
-    psyq::hash::_private::fnv1a_hash64_proxy, template_string>
+    psyq::hash::_private::fnv1a_hash64_proxy, template_string, template_result>
 {
     /// @copydoc psyq::string::view::this_type
     private: typedef fnv1a_string_hash64 this_type;
     /// @copydoc psyq::string::view::base_type
     public: typedef
         psyq::hash::_private::string_hash_proxy<
-            psyq::hash::_private::fnv1a_hash64_proxy, template_string>
+            psyq::hash::_private::fnv1a_hash64_proxy,
+            template_string,
+            template_result>
         base_type;
 
     /// @brief 文字列ハッシュ関数オブジェクトを構築する。

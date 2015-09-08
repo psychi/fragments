@@ -5,7 +5,9 @@
 #define PSYQ_HASH_TEST_HPP_
 
 #include <cstdio>
+#include <unordered_map>
 #include "../bit_algorithm.hpp"
+#include "./primitive_bits.hpp"
 #include "./fnv.hpp"
 #include "./murmur3.hpp"
 
@@ -116,15 +118,24 @@ namespace psyq_test
 
     inline void hash()
     {
-        hash_verification<psyq::hash::_private::murmur3_hash32, std::uint32_t>(
+        hash_verification<psyq::hash::_private::murmur3a, std::uint32_t>(
             PSYQ_BIG_ENDIAN_4BYTES(std::uint32_t, 0xE3, 0x7E, 0xF5, 0xB0),
             false);
-        hash_verification<psyq::hash::_private::murmur3_hash128, std::uint32_t>(
+        hash_verification<psyq::hash::_private::murmur3c, std::uint32_t>(
             PSYQ_BIG_ENDIAN_4BYTES(std::uint32_t, 0x2A, 0xE6, 0xEC, 0xB3),
             false);
-        hash_verification<psyq::hash::_private::murmur3_hash128, std::uint64_t>(
+        hash_verification<psyq::hash::_private::murmur3f, std::uint64_t>(
             PSYQ_BIG_ENDIAN_4BYTES(std::uint32_t, 0x69, 0xBA, 0x84, 0x63),
             false);
+
+        psyq::hash::primitive_bits<int> local_primitive_hash;
+        local_primitive_hash(0);
+        std::unordered_map<
+            std::string,
+            std::uint32_t,
+            psyq::hash::string_murmur3f<std::string>>
+                local_map;
+        local_map.emplace("string", 0);
     }
 
 } // namespace psyq_test

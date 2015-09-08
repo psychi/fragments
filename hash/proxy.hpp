@@ -1,5 +1,5 @@
 ﻿/// @file
-/// @brief ハッシュ関数オブジェクトの代理オブジェクト。
+/// @brief ハッシュ関数の代理オブジェクト。
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #ifndef PSYQ_HASH_PROXY_HPP_
 #define PSYQ_HASH_PROXY_HPP_
@@ -15,27 +15,28 @@ namespace psyq
         /// @brief psyq::hash 管理者以外がこの名前空間に直接アクセスするのは禁止。
         namespace _private
         {
-            template<typename, typename> class basic_bytes_hash_proxy;
-            template<typename> class seedless_bytes_hash_proxy;
+            /// @cond
+            template<typename, typename> class array_proxy_base;
+            template<typename> class array_seedless_proxy;
             template<typename, typename template_seed, template_seed>
-                class seeding_bytes_hash_proxy;
-            template<typename, typename>
-                class runtime_seeding_bytes_hash_proxy;
-            template<typename, typename, typename> class string_hash_proxy;
+                class array_seeding_proxy;
+            template<typename, typename> class array_runtime_seeding_proxy;
+            template<typename, typename, typename> class string_proxy;
+            /// @endcond
 
         } // namespace _private
     } // namespace hash
 } // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief バイト列ハッシュ関数代理オブジェクトの基底型。
-/// @tparam template_bytes_hasher @copydoc basic_bytes_hash_proxy::hasher
-/// @tparam template_result       @copydoc basic_bytes_hash_proxy::result_type
+/// @brief 配列ハッシュ関数オブジェクトの基底型。
+/// @tparam template_bytes_hasher @copydoc array_proxy_base::hasher
+/// @tparam template_result       @copydoc array_proxy_base::result_type
 template<typename template_bytes_hasher, typename template_result>
-class psyq::hash::_private::basic_bytes_hash_proxy
+class psyq::hash::_private::array_proxy_base
 {
     /// @copydoc psyq::string::view::this_type
-    private: typedef basic_bytes_hash_proxy this_type;
+    private: typedef array_proxy_base this_type;
 
     //-------------------------------------------------------------------------
     /// @brief 委譲先となるバイト列ハッシュ関数オブジェクト。
@@ -52,8 +53,8 @@ class psyq::hash::_private::basic_bytes_hash_proxy
     }
 
     //-------------------------------------------------------------------------
-    /// バイト列ハッシュ関数オブジェクトを構築する。
-    protected: explicit basic_bytes_hash_proxy(
+    /// 配列ハッシュ関数オブジェクトを構築する。
+    protected: explicit array_proxy_base(
         /// @[in] 委譲先となるバイト列ハッシュ関数オブジェクト。
         typename this_type::hasher in_hasher):
     hasher_(std::move(in_hasher))
@@ -61,35 +62,38 @@ class psyq::hash::_private::basic_bytes_hash_proxy
 
     //-------------------------------------------------------------------------
     /// @brief @copybrief hasher
-    protected: typename this_type::hasher hasher_;
+    private: typename this_type::hasher hasher_;
 
-}; // class psyq::hash::_private::basic_bytes_hash_proxy
+}; // class psyq::hash::_private::array_proxy_base
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief バイト列ハッシュ関数代理オブジェクト。
+/// @brief シード値のない、配列ハッシュ関数オブジェクト。
 /// @tparam template_bytes_hasher
 /// 委譲先となるバイト列ハッシュ関数オブジェクト。
 /// 以下に相当するメンバ関数が実装されていること。
 /// @code
 /// // brief バイト列のハッシュ値を算出する。
-/// // param[in] in_data バイト列の先頭位置。
-/// // param[in] in_size バイト列のバイト数。
 /// // return バイト列のハッシュ値。
-/// result_type template_bytes_hasher::operator()(unsigned char const* const in_data, std::size_t const in_size) const noexcept;
+/// template_bytes_hasher::result_type template_bytes_hasher::operator()(
+///     // [in] バイト列の先頭位置。
+///     unsigned char const* const in_data,
+///     // [in] バイト列のバイト数。
+///     std::size_t const in_size)
+/// const noexcept;
 /// @endcode
 template<typename template_bytes_hasher>
-class psyq::hash::_private::seedless_bytes_hash_proxy:
-public psyq::hash::_private::basic_bytes_hash_proxy<
+class psyq::hash::_private::array_seedless_proxy:
+public psyq::hash::_private::array_proxy_base<
     template_bytes_hasher,
     typename std::result_of<
         template_bytes_hasher(unsigned char const* const, std::size_t const)>
     ::type>
 {
     /// @copydoc psyq::string::view::this_type
-    private: typedef seedless_bytes_hash_proxy this_type;
+    private: typedef array_seedless_proxy this_type;
     /// @copydoc psyq::string::view::base_type
     public: typedef 
-        psyq::hash::_private::basic_bytes_hash_proxy<
+        psyq::hash::_private::array_proxy_base<
             template_bytes_hasher,
             typename std::result_of<
                 template_bytes_hasher(unsigned char const* const, std::size_t const)>
@@ -97,64 +101,55 @@ public psyq::hash::_private::basic_bytes_hash_proxy<
         base_type;
 
     //-------------------------------------------------------------------------
-    /// バイト列ハッシュ関数オブジェクトを構築する。
-    public: explicit seedless_bytes_hash_proxy(
-        /// @[in] 委譲先となるバイト列ハッシュ関数オブジェクト。
+    /// 配列ハッシュ関数オブジェクトを構築する。
+    public: explicit array_seedless_proxy(
+        /// [in] 委譲先となるバイト列ハッシュ関数オブジェクト。
         typename base_type::hasher in_hasher):
     base_type(std::move(in_hasher))
     {}
 
-    /// @brief バイト列のハッシュ値を算出する。
-    /// @return バイト列のハッシュ値。
-    public: typename base_type::result_type operator()(
-        /// [in] バイト列の先頭位置。
-        void const* const in_begin,
-        /// [in] バイト列の末尾位置。
-        void const* const in_end)
-    const PSYQ_NOEXCEPT
-    {
-        PSYQ_ASSERT(in_begin <= in_end);
-        auto const local_begin(static_cast<unsigned char const*>(in_begin));
-        return (*this)(
-            local_begin,
-            static_cast<unsigned char const*>(in_end) - local_begin);
-    }
-
-    /// @brief バイト列のハッシュ値を算出する。
-    /// @return バイト列のハッシュ値。
-    public: typename base_type::result_type operator()(
-        /// [in] バイト列の先頭位置。
-        unsigned char const* const in_bytes,
-        /// [in] バイト列のバイト数。
+    /// @brief 配列のハッシュ値を算出する。
+    /// @return 配列のハッシュ値。
+    public: template<typename template_value>
+    typename base_type::result_type operator()(
+        /// [in] キーとなる配列の先頭要素を指すポインタ。
+        template_value const* const in_data,
+        /// [in] キーとなる配列の要素数。
         std::size_t const in_size)
     const PSYQ_NOEXCEPT
     {
-        return this->hasher_(in_bytes, in_size);
+        return this->get_hasher()(
+            reinterpret_cast<unsigned char const*>(in_data),
+            in_size * sizeof(template_value));
     }
 
-}; // class psyq::hash::_private::seedless_bytes_hash_proxy
+}; // class psyq::hash::_private::array_seedless_proxy
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief シード値つきバイト列ハッシュ関数代理オブジェクト。
+/// @brief シード値のある、配列ハッシュ関数オブジェクト。
 /// @tparam template_bytes_hasher
 /// 委譲先となるバイト列ハッシュ関数オブジェクト。
 /// 以下に相当するメンバ関数が実装されていること。
 /// @code
 /// // brief バイト列のハッシュ値を算出する。
-/// // param[in] in_data バイト列の先頭位置。
-/// // param[in] in_size バイト列のバイト数。
-/// // param[in] in_seed ハッシュ関数のシード値。
 /// // return バイト列のハッシュ値。
-/// result_type template_bytes_hasher::operator()(unsigned char const* const in_data, std::size_t const in_size, template_seed const& in_seed) const noexcept;
+/// template_bytes_hasher::result_type template_bytes_hasher::operator()(
+///     // [in] バイト列の先頭位置。
+///     unsigned char const* const in_data,
+///     // [in] バイト列のバイト数。
+///     std::size_t const in_size,
+///     // [in] ハッシュ関数のシード値。
+///     template_seed const& in_seed)
+/// const noexcept;
 /// @endcode
-/// @tparam template_seed       @copydoc seeding_bytes_hash_proxy::seed
+/// @tparam template_seed       @copydoc array_seeding_proxy::seed
 /// @tparam template_seed_value ハッシュ関数のシード値。
 template<
     typename template_bytes_hasher,
     typename template_seed,
     template_seed template_seed_value>
-class psyq::hash::_private::seeding_bytes_hash_proxy:
-public psyq::hash::_private::basic_bytes_hash_proxy<
+class psyq::hash::_private::array_seeding_proxy:
+public psyq::hash::_private::array_proxy_base<
     template_bytes_hasher,
     typename std::result_of<
         template_bytes_hasher(
@@ -164,10 +159,10 @@ public psyq::hash::_private::basic_bytes_hash_proxy<
     ::type>
 {
     /// @copydoc psyq::string::view::this_type
-    private: typedef seeding_bytes_hash_proxy this_type;
+    private: typedef array_seeding_proxy this_type;
     /// @copydoc psyq::string::view::base_type
     public: typedef 
-        psyq::hash::_private::basic_bytes_hash_proxy<
+        psyq::hash::_private::array_proxy_base<
             template_bytes_hasher,
             typename std::result_of<
                 template_bytes_hasher(
@@ -180,39 +175,27 @@ public psyq::hash::_private::basic_bytes_hash_proxy<
     public: typedef template_seed seed;
 
     //-------------------------------------------------------------------------
-    /// バイト列ハッシュ関数オブジェクトを構築する。
-    public: explicit seeding_bytes_hash_proxy(
+    /// 配列ハッシュ関数オブジェクトを構築する。
+    public: explicit array_seeding_proxy(
         /// @[in] 委譲先となるバイト列ハッシュ関数オブジェクト。
         typename base_type::hasher in_hasher):
     base_type(std::move(in_hasher))
     {}
 
-    /// @brief バイト列のハッシュ値を算出する。
-    /// @return バイト列のハッシュ値。
-    public: typename base_type::result_type operator()(
-        /// [in] バイト列の先頭位置。
-        void const* const in_begin,
-        /// [in] バイト列の末尾位置。
-        void const* const in_end)
-    const PSYQ_NOEXCEPT
-    {
-        PSYQ_ASSERT(in_begin <= in_end);
-        auto const local_begin(static_cast<unsigned char const*>(in_begin));
-        return (*this)(
-            local_begin,
-            static_cast<unsigned char const*>(in_end) - local_begin);
-    }
-
-    /// @brief バイト列のハッシュ値を算出する。
-    /// @return バイト列のハッシュ値。
-    public: typename base_type::result_type operator()(
-        /// [in] バイト列の先頭位置。
-        unsigned char const* const in_bytes,
-        /// [in] バイト列のバイト数。
+    /// @brief 配列のハッシュ値を算出する。
+    /// @return 配列のハッシュ値。
+    public: template<typename template_value>
+    typename base_type::result_type operator()(
+        /// [in] キーとなる配列の先頭要素を指すポインタ。
+        template_value const* const in_data,
+        /// [in] キーとなる配列の要素数。
         std::size_t const in_size)
     const PSYQ_NOEXCEPT
     {
-        return this->hasher_(in_bytes, in_size, this_type::get_seed());
+        return this->get_hasher()(
+            reinterpret_cast<unsigned char const*>(in_data),
+            in_size * sizeof(template_value),
+            this_type::get_seed());
     }
 
     /// @brief ハッシュ関数のシード値を参照する。
@@ -223,15 +206,29 @@ public psyq::hash::_private::basic_bytes_hash_proxy<
         return static_seed;
     }
 
-}; // class psyq::hash::_private::seeding_bytes_hash_proxy
+}; // class psyq::hash::_private::array_seeding_proxy
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief 実行時にシード値を決める、バイト列ハッシュ関数代理オブジェクト。
-/// @tparam template_bytes_hasher @copydoc seeding_bytes_hash_proxy::hasher
-/// @tparam template_seed         @copydoc seeding_bytes_hash_proxy::seed
+/// @brief 実行時にシード値を決める、配列ハッシュ関数オブジェクト。
+/// @tparam template_bytes_hasher
+/// 委譲先となるバイト列ハッシュ関数オブジェクト。
+/// 以下に相当するメンバ関数が実装されていること。
+/// @code
+/// // brief バイト列のハッシュ値を算出する。
+/// // return バイト列のハッシュ値。
+/// template_bytes_hasher::result_type template_bytes_hasher::operator()(
+///     // [in] バイト列の先頭位置。
+///     unsigned char const* const in_data,
+///     // [in] バイト列のバイト数。
+///     std::size_t const in_size,
+///     // [in] ハッシュ関数のシード値。
+///     template_seed const& in_seed)
+/// const noexcept;
+/// @endcode
+/// @tparam template_seed @copydoc array_seeding_proxy::seed
 template<typename template_bytes_hasher, typename template_seed>
-class psyq::hash::_private::runtime_seeding_bytes_hash_proxy:
-public psyq::hash::_private::basic_bytes_hash_proxy<
+class psyq::hash::_private::array_runtime_seeding_proxy:
+public psyq::hash::_private::array_proxy_base<
     template_bytes_hasher,
     typename std::result_of<
         template_bytes_hasher(
@@ -241,10 +238,10 @@ public psyq::hash::_private::basic_bytes_hash_proxy<
     ::type>
 {
     /// @copydoc psyq::string::view::this_type
-    private: typedef runtime_seeding_bytes_hash_proxy this_type;
+    private: typedef array_runtime_seeding_proxy this_type;
     /// @copydoc psyq::string::view::base_type
     public: typedef
-        psyq::hash::_private::basic_bytes_hash_proxy<
+        psyq::hash::_private::array_proxy_base<
             template_bytes_hasher,
             typename std::result_of<
                 template_bytes_hasher(
@@ -253,12 +250,12 @@ public psyq::hash::_private::basic_bytes_hash_proxy<
                     template_seed const&)>
             ::type>
         base_type;
-    /// @copydoc seeding_bytes_hash_proxy::seed
+    /// @copydoc array_seeding_proxy::seed
     public: typedef template_seed seed;
 
     //-------------------------------------------------------------------------
-    /// バイト列ハッシュ関数オブジェクトを構築する。
-    public: runtime_seeding_bytes_hash_proxy(
+    /// 配列ハッシュ関数オブジェクトを構築する。
+    public: array_runtime_seeding_proxy(
         /// [in] 委譲先となるバイト列ハッシュ関数オブジェクト。
         typename base_type::hasher in_hasher,
         /// [in] ハッシュ関数のシード値。
@@ -267,32 +264,20 @@ public psyq::hash::_private::basic_bytes_hash_proxy<
     seed_(std::move(in_seed))
     {}
 
-    /// @brief バイト列のハッシュ値を算出する。
-    /// @return バイト列のハッシュ値。
-    public: typename base_type::result_type operator()(
-        /// [in] バイト列の先頭位置。
-        void const* const in_begin,
-        /// [in] バイト列の末尾位置。
-        void const* const in_end)
-    const PSYQ_NOEXCEPT
-    {
-        PSYQ_ASSERT(in_begin <= in_end);
-        auto const local_begin(static_cast<unsigned char const*>(in_begin));
-        return (*this)(
-            local_begin,
-            static_cast<unsigned char const*>(in_end) - local_begin);
-    }
-
-    /// @brief バイト列のハッシュ値を算出する。
-    /// @return バイト列のハッシュ値。
-    public: typename base_type::result_type operator()(
-        /// [in] バイト列の先頭位置。
-        unsigned char const* const in_bytes,
-        /// [in] バイト列のバイト数。
+    /// @brief 配列のハッシュ値を算出する。
+    /// @return 配列のハッシュ値。
+    public: template<typename template_value>
+    typename base_type::result_type operator()(
+        /// [in] キーとなる配列の先頭要素を指すポインタ。
+        template_value const* const in_data,
+        /// [in] キーとなる配列の要素数。
         std::size_t const in_size)
     const PSYQ_NOEXCEPT
     {
-        return this->hasher_(in_bytes, in_size, this->get_seed());
+        return this->get_hasher()(
+            reinterpret_cast<unsigned char const*>(in_data),
+            in_size * sizeof(template_value),
+            this->get_seed());
     }
 
     /// @brief ハッシュ関数のシード値を参照する。
@@ -306,22 +291,42 @@ public psyq::hash::_private::basic_bytes_hash_proxy<
     /// @brief ハッシュ関数のシード値。
     private: typename this_type::seed seed_;
 
-}; // class psyq::hash::_private::runtime_seeding_bytes_hash_proxy
+}; // class psyq::hash::_private::array_runtime_seeding_proxy
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief std::hash 互換の、文字列ハッシュ関数代理オブジェクト。
-/// @tparam template_bytes_hasher @copydoc string_hash_proxy::hasher
-/// @tparam template_string       @copydoc string_hash_proxy::argument_type
-/// @tparam template_result       @copydoc string_hash_proxy::result_type
+/// @brief 文字列ハッシュ関数オブジェクト。
+/// @tparam template_array_hasher @copydoc string_proxy::hasher
+/// @tparam template_result       @copydoc string_proxy::result_type
+/// @tparam template_string       @copydoc string_proxy::argument_type
 template<
-    typename template_bytes_hasher,
-    typename template_string,
-    typename template_result>
-class psyq::hash::_private::string_hash_proxy
+    typename template_array_hasher,
+    typename template_result,
+    typename template_string>
+class psyq::hash::_private::string_proxy
 {
     /// @copydoc psyq::string::view::this_type
-    private: typedef string_hash_proxy this_type;
+    private: typedef string_proxy this_type;
 
+    /// @brief 委譲先となる配列ハッシュ関数オブジェクト。
+    /// @details 以下に相当するメンバ関数が実装されていること。
+    /// @code
+    /// // brief 配列のハッシュ値を算出する。
+    /// // return 配列のハッシュ値。
+    /// template_array_hasher::result_type template_array_hasher::operator()(
+    ///     // [in] キーとなる配列の先頭要素を指すポインタ。
+    ///     template_string::value_type const* const in_data,
+    ///     // [in] キーとなる配列の要素数。
+    ///     std::size_t const in_size)
+    /// const noexcept;
+    /// @endcode
+    /// template_array_hasher::operator() の戻り値から
+    /// this_type::result_type へ static_cast できること。
+    public: typedef template_array_hasher hasher;
+    /// @brief 文字列ハッシュ関数の戻り値。
+    /// @details
+    /// template_array_hasher::operator() の戻り値から
+    /// this_type::result_type へ static_cast できること。
+    public: typedef template_result result_type;
     /// @brief ハッシュ値を算出する文字列。
     /// @details
     /// 以下に相当するメンバ関数が実装されていること。
@@ -334,71 +339,38 @@ class psyq::hash::_private::string_hash_proxy
     /// std::size_t template_string::size() const;
     /// @endcode
     public: typedef template_string argument_type;
-    /// @copydoc psyq::hash::_private::basic_bytes_hash_proxy::hasher
-    public: typedef template_bytes_hasher hasher;
-    /// @copydoc psyq::hash::numeric_hash::result_type
-    public: typedef typename template_result result_type;
 
     //-------------------------------------------------------------------------
     /// 文字列ハッシュ関数オブジェクトを構築する。
-    public: explicit string_hash_proxy(
-        /// [in] 委譲先となるバイト列ハッシュ関数オブジェクト。
+    public: explicit string_proxy(
+        /// [in] 委譲先となる配列ハッシュ関数オブジェクト。
         typename this_type::hasher in_hasher):
     hasher_(std::move(in_hasher))
     {}
 
     /// @brief 文字列のハッシュ値を算出する。
-    /// @return 文字列のハッシュ値。
+    /// @return in_string のハッシュ値。
     public: typename this_type::result_type operator()(
-        /// [in] ハッシュ値を算出する文字列。
+        /// [in] キーとなる文字列。
         typename this_type::argument_type const& in_string)
     const PSYQ_NOEXCEPT
     {
-        auto const local_data(in_string.data());
-        return (*this)(local_data, local_data + in_string.size());
-    }
-
-    /// @brief バイト列のハッシュ値を算出する。
-    /// @return バイト列のハッシュ値。
-    public: typename this_type::result_type operator()(
-        /// [in] バイト列の先頭位置。
-        void const* const in_begin,
-        /// [in] バイト列の末尾位置。
-        void const* const in_end)
-    const PSYQ_NOEXCEPT
-    {
-        PSYQ_ASSERT(in_begin <= in_end);
-        auto const local_begin(static_cast<unsigned char const*>(in_begin));
-        return (*this)(
-            local_begin,
-            static_cast<unsigned char const*>(in_end) - local_begin);
-    }
-
-    /// @brief バイト列のハッシュ値を算出する。
-    /// @return バイト列のハッシュ値。
-    public: typename this_type::result_type operator()(
-        /// [in] バイト列の先頭位置。
-        unsigned char const* const in_bytes,
-        /// [in] バイト列のバイト数。
-        std::size_t const in_size)
-    const PSYQ_NOEXCEPT
-    {
         return static_cast<typename this_type::result_type>(
-            this->hasher_(in_bytes, in_size));
+            this->get_hasher()(in_string.data(), in_string.size()));
     }
 
-    /// @brief 委譲先のバイト列ハッシュ関数オブジェクトを参照する。
-    /// @return 委譲先のバイト列ハッシュ関数オブジェクトへの参照。
+    /// @brief 委譲先の配列ハッシュ関数オブジェクトを参照する。
+    /// @return 委譲先の配列ハッシュ関数オブジェクトへの参照。
     public: typename this_type::hasher const& get_hasher() const PSYQ_NOEXCEPT
     {
         return this->hasher_;
     }
 
     //-------------------------------------------------------------------------
-    /// @brief @copybrief hasher
-    protected: typename this_type::hasher hasher_;
+    /// @brief @copybrief this_type::hasher
+    private: typename this_type::hasher hasher_;
 
-}; // class psyq::hash::_private::string_hash_proxy
+}; // class psyq::hash::_private::string_proxy
 
 #endif // !defined(PSYQ_HASH_PROXY_HPP_)
 // vim: set expandtab:

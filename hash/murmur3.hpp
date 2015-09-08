@@ -7,207 +7,165 @@
 #ifndef PSYQ_HASH_MURMUR3_HPP_
 #define PSYQ_HASH_MURMUR3_HPP_
 
-#include "./proxy.hpp"
 #include <cstdint>
+#include "./proxy.hpp"
 
-/// @brief MurmurHash3A形式32ビットハッシュ関数のデフォルトのシード値。
-#ifndef PSYQ_HASH_MURMUR3_HASH32_SEED_DEFAULT
-#define PSYQ_HASH_MURMUR3_HASH32_SEED_DEFAULT 0xB0F57EE3
-#endif // !defined(PSYQ_HASH_MURMUR3_HASH32_SEED_DEFAULT)
+/// @brief Murmur3A形式ハッシュ関数のデフォルトのシード値。
+#ifndef PSYQ_HASH_MURMUR3A_SEED_DEFAULT
+#define PSYQ_HASH_MURMUR3A_SEED_DEFAULT 0xB0F57EE3
+#endif // !defined(PSYQ_HASH_MURMUR3A_SEED_DEFAULT)
 
-/// @brief MurmurHash3C形式128ビットハッシュ関数のデフォルトの32ビットシード値。
-#ifndef PSYQ_HASH_MURMUR3_HASH128_SEED32_DEFAULT
-#define PSYQ_HASH_MURMUR3_HASH128_SEED32_DEFAULT 0xB3ECE62A
-#endif // !defined(PSYQ_HASH_MURMUR3_HASH128_SEED32_DEFAULT)
+/// @brief Murmur3C形式ハッシュ関数のデフォルトのシード値。
+#ifndef PSYQ_HASH_MURMUR3C_SEED_DEFAULT
+#define PSYQ_HASH_MURMUR3C_SEED_DEFAULT 0xB3ECE62A
+#endif // !defined(PSYQ_HASH_MURMUR3C_SEED_DEFAULT)
 
-/// @brief MurmurHash3F形式128ビットハッシュ関数のデフォルトの64ビットシード値。
-#ifndef PSYQ_HASH_MURMUR3_HASH128_SEED64_DEFAULT
-#define PSYQ_HASH_MURMUR3_HASH128_SEED64_DEFAULT 0x6384BA69ull
-#endif // !defined(PSYQ_HASH_MURMUR3_HASH128_SEED64_DEFAULT)
+/// @brief Murmur3F形式ハッシュ関数のデフォルトのシード値。
+#ifndef PSYQ_HASH_MURMUR3F_SEED_DEFAULT
+#define PSYQ_HASH_MURMUR3F_SEED_DEFAULT 0x6384BA69ull
+#endif // !defined(PSYQ_HASH_MURMUR3F_SEED_DEFAULT)
 
 namespace psyq
 {
     namespace hash
     {
-        template<typename, typename> class murmur3_string_hash32;
-        template<typename, typename> class murmur3_string_hash128;
-        template<typename, typename> class murmur3_string_hash128_seed32;
-        template<typename, typename> class murmur3_string_hash128_seed64;
+        /// @cond
+        template<typename, typename> class string_murmur3a;
+        template<typename, typename> class string_murmur3c;
+        template<typename, typename> class string_murmur3f;
+        /// @endcond
 
         namespace _private
         {
-            class murmur3_hash32;
-            class murmur3_hash128;
+            /// @cond
+            class murmur3a;
+            class murmur3c;
+            class murmur3f;
+            /// @endcond
 
-            /// @brief MurmurHash3A形式の32ビットハッシュ関数代理オブジェクト。
+            /// @brief Murmur3A形式の配列ハッシュ関数オブジェクト。
             typedef
-                runtime_seeding_bytes_hash_proxy<murmur3_hash32, std::uint32_t>
-                murmur3_hash32_proxy;
-            /// @brief MurmurHash3形式の128ビットハッシュ関数代理オブジェクト。
+                array_runtime_seeding_proxy<murmur3a, std::uint32_t>
+                array_murmur3a;
+            /// @brief Murmur3C形式の配列ハッシュ関数オブジェクト。
             typedef
-                runtime_seeding_bytes_hash_proxy<murmur3_hash128, std::size_t>
-                murmur3_hash128_proxy;
-            /// @brief MurmurHash3C形式の128ビットハッシュ関数代理オブジェクト。
+                array_runtime_seeding_proxy<murmur3c, std::uint32_t>
+                array_murmur3c;
+            /// @brief Murmur3F形式の配列ハッシュ関数オブジェクト。
             typedef
-                runtime_seeding_bytes_hash_proxy<murmur3_hash128, std::uint32_t>
-                murmur3_hash128_seed32_proxy;
-            /// @brief MurmurHash3F形式の128ビットハッシュ関数代理オブジェクト。
-            typedef
-                runtime_seeding_bytes_hash_proxy<murmur3_hash128, std::uint64_t>
-                murmur3_hash128_seed64_proxy;
+                array_runtime_seeding_proxy<murmur3f, std::uint64_t>
+                array_murmur3f;
 
         } // namespace _private
     } // namespace hash
 } // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief MurmurHash3A形式の、文字列32ビットハッシュ関数オブジェクト。
-/// @tparam template_string @copydoc _private::string_hash_proxy::argument_type
-/// @tparam template_result @copydoc _private::string_hash_proxy::result_type
+/// @brief Murmur3A形式の文字列ハッシュ関数オブジェクト。
+/// @tparam template_string @copydoc _private::string_proxy::argument_type
+/// @tparam template_result @copydoc primitive_bits::result_type
 template<typename template_string, typename template_result = std::size_t>
-class psyq::hash::murmur3_string_hash32:
-public psyq::hash::_private::string_hash_proxy<
-    psyq::hash::_private::murmur3_hash32_proxy,
-    template_string,
-    template_result>
+class psyq::hash::string_murmur3a:
+public psyq::hash::_private::string_proxy<
+    psyq::hash::_private::array_murmur3a, template_result, template_string>
 {
     /// @copydoc psyq::string::view::this_type
-    private: typedef murmur3_string_hash32 this_type;
+    private: typedef string_murmur3a this_type;
     /// @copydoc psyq::string::view::base_type
     public: typedef
-        psyq::hash::_private::string_hash_proxy<
-            psyq::hash::_private::murmur3_hash32_proxy,
-            template_string,
-            template_result>
+        psyq::hash::_private::string_proxy<
+            psyq::hash::_private::array_murmur3a,
+            template_result,
+            template_string>
         base_type;
 
     /// @brief 文字列ハッシュ関数オブジェクトを構築する。
-    public: explicit murmur3_string_hash32(
+    public: explicit string_murmur3a(
         /// [in] in_seed ハッシュ関数のシード値。
         typename base_type::hasher::seed in_seed =
-            PSYQ_HASH_MURMUR3_HASH32_SEED_DEFAULT):
+            PSYQ_HASH_MURMUR3A_SEED_DEFAULT):
     base_type(
         typename base_type::hasher(
             typename base_type::hasher::hasher(), std::move(in_seed)))
     {}
 
-}; // class psyq::hash::murmur3_string_hash32
+}; // class psyq::hash::string_murmur3a
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief MurmurHash3形式の文字列128ビットハッシュ関数オブジェクト。
-/// @tparam template_string @copydoc _private::string_hash_proxy::argument_type
-/// @tparam template_result @copydoc _private::string_hash_proxy::result_type
+/// @brief Murmur3C形式の文字列ハッシュ関数オブジェクト。
+/// @tparam template_string @copydoc _private::string_proxy::argument_type
+/// @tparam template_result @copydoc primitive_bits::result_type
 template<typename template_string, typename template_result = std::size_t>
-class psyq::hash::murmur3_string_hash128:
-public psyq::hash::_private::string_hash_proxy<
-    psyq::hash::_private::murmur3_hash128_proxy,
-    template_string,
-    template_result>
+class psyq::hash::string_murmur3c:
+public psyq::hash::_private::string_proxy<
+    psyq::hash::_private::array_murmur3c, template_result, template_string>
 {
     /// @copydoc psyq::string::view::this_type
-    private: typedef murmur3_string_hash128 this_type;
+    private: typedef string_murmur3c this_type;
     /// @copydoc psyq::string::view::base_type
     public: typedef
-        psyq::hash::_private::string_hash_proxy<
-            psyq::hash::_private::murmur3_hash128_proxy,
-            template_string,
-            template_result>
+        psyq::hash::_private::string_proxy<
+            psyq::hash::_private::array_murmur3c,
+            template_result,
+            template_string>
         base_type;
 
     /// @brief 文字列ハッシュ関数オブジェクトを構築する。
-    public: explicit murmur3_string_hash128(
-        /// [in] in_seed ハッシュ関数のシード値。
-        typename base_type::hasher::seed in_seed = std::integral_constant<
-            typename base_type::hasher::seed,
-            sizeof(typename base_type::hasher::seed) < sizeof(std::uint64_t)?
-                PSYQ_HASH_MURMUR3_HASH128_SEED32_DEFAULT:
-                PSYQ_HASH_MURMUR3_HASH128_SEED64_DEFAULT>::value):
-    base_type(
-        typename base_type::hasher(
-            typename base_type::hasher::hasher(), std::move(in_seed)))
-    {}
-
-}; // class psyq::hash::murmur3_string_hash128
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief MurmurHash3C形式の、文字列128ビットハッシュ関数オブジェクト。
-/// @tparam template_string @copydoc _private::string_hash_proxy::argument_type
-/// @tparam template_result @copydoc _private::string_hash_proxy::result_type
-template<typename template_string, typename template_result = std::size_t>
-class psyq::hash::murmur3_string_hash128_seed32:
-public psyq::hash::_private::string_hash_proxy<
-    psyq::hash::_private::murmur3_hash128_seed32_proxy,
-    template_string,
-    template_result>
-{
-    /// @copydoc psyq::string::view::this_type
-    private: typedef murmur3_string_hash128_seed32 this_type;
-    /// @copydoc psyq::string::view::base_type
-    public: typedef
-        psyq::hash::_private::string_hash_proxy<
-            psyq::hash::_private::murmur3_hash128_seed32_proxy,
-            template_string,
-            template_result>
-        base_type;
-
-    /// @brief 文字列ハッシュ関数オブジェクトを構築する。
-    public: explicit murmur3_string_hash128_seed32(
+    public: explicit string_murmur3c(
         /// [in] in_seed ハッシュ関数のシード値。
         typename base_type::hasher::seed in_seed =
-            PSYQ_HASH_MURMUR3_HASH128_SEED32_DEFAULT):
+            PSYQ_HASH_MURMUR3C_SEED_DEFAULT):
     base_type(
         typename base_type::hasher(
             typename base_type::hasher::hasher(), std::move(in_seed)))
     {}
 
-}; // class psyq::hash::murmur3_string_hash128_seed32
+}; // class psyq::hash::string_murmur3c
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief MurmurHash3F形式の、文字列128ビットハッシュ関数オブジェクト。
-/// @tparam template_string @copydoc _private::string_hash_proxy::argument_type
-/// @tparam template_result @copydoc _private::string_hash_proxy::result_type
+/// @brief Murmur3F形式の文字列ハッシュ関数オブジェクト。
+/// @tparam template_string @copydoc _private::string_proxy::argument_type
+/// @tparam template_result @copydoc primitive_bits::result_type
 template<typename template_string, typename template_result = std::size_t>
-class psyq::hash::murmur3_string_hash128_seed64:
-public psyq::hash::_private::string_hash_proxy<
-    psyq::hash::_private::murmur3_hash128_seed64_proxy,
-    template_string,
-    template_result>
+class psyq::hash::string_murmur3f:
+public psyq::hash::_private::string_proxy<
+    psyq::hash::_private::array_murmur3f, template_result, template_string>
 {
     /// @copydoc psyq::string::view::this_type
-    private: typedef murmur3_string_hash128_seed64 this_type;
+    private: typedef string_murmur3f this_type;
     /// @copydoc psyq::string::view::base_type
     public: typedef
-        psyq::hash::_private::string_hash_proxy<
-            psyq::hash::_private::murmur3_hash128_seed64_proxy,
-            template_string,
-            template_result>
+        psyq::hash::_private::string_proxy<
+            psyq::hash::_private::array_murmur3f,
+            template_result,
+            template_string>
         base_type;
 
     /// @brief 文字列ハッシュ関数オブジェクトを構築する。
-    public: explicit murmur3_string_hash128_seed64(
+    public: explicit string_murmur3f(
         /// [in] in_seed ハッシュ関数のシード値。
         typename base_type::hasher::seed in_seed =
-            PSYQ_HASH_MURMUR3_HASH128_SEED64_DEFAULT):
+            PSYQ_HASH_MURMUR3F_SEED_DEFAULT):
     base_type(
         typename base_type::hasher(
             typename base_type::hasher::hasher(), std::move(in_seed)))
     {}
 
-}; // class psyq::hash::murmur3_string_hash128_seed64
+}; // class psyq::hash::string_murmur3f
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief MurmurHash3A形式の32ビットハッシュ関数オブジェクト。
-class psyq::hash::_private::murmur3_hash32
+/// @brief Murmur3A形式のバイト列ハッシュ関数オブジェクト。
+class psyq::hash::_private::murmur3a
 {
     /// @copydoc psyq::string::view::this_type
-    private: typedef murmur3_hash32 this_type;
+    private: typedef murmur3a this_type;
 
     //-------------------------------------------------------------------------
     /// @copydoc this_type::hash
     public: std::uint32_t operator()(
-        /// [in] バイト列の先頭要素を指すポインタ。
+        /// [in] キーとなるバイト列の先頭要素を指すポインタ。
         unsigned char const* const in_bytes,
-        /// [in] バイト列のバイト数。
+        /// [in] キーとなるバイト列のバイト数。
         std::size_t const in_length,
         /// [in] ハッシュ関数のシード値。
         std::uint32_t const& in_seed)
@@ -216,12 +174,12 @@ class psyq::hash::_private::murmur3_hash32
         return this_type::hash(in_bytes, in_length, in_seed);
     }
 
-    /// @brief バイト列のハッシュ値を、MurmurHash3A形式で算出する。
+    /// @brief Murmur3A形式でバイト列のハッシュ値を算出する。
     /// @return バイト列のハッシュ値。
     public: static std::uint32_t hash(
-        /// [in] バイト列の先頭要素を指すポインタ。
+        /// [in] キーとなるバイト列の先頭要素を指すポインタ。
         unsigned char const* const in_bytes,
-        /// [in] バイト列のバイト数。
+        /// [in] キーとなるバイト列のバイト数。
         std::size_t const in_length,
         /// [in] ハッシュ関数のシード値。
         std::uint32_t const in_seed)
@@ -306,17 +264,17 @@ class psyq::hash::_private::murmur3_hash32
         return local_1 ^ (local_1 >> 16);
     }
 
-}; // class psyq::string_hash::murmur3_hash32
+}; // class psyq::string_hash::murmur3a
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief MurmurHash3形式の128ビットハッシュ関数オブジェクト。
-class psyq::hash::_private::murmur3_hash128:
-protected psyq::hash::_private::murmur3_hash32
+/// @brief Murmur3C形式のバイト列ハッシュ関数オブジェクト。
+class psyq::hash::_private::murmur3c:
+public psyq::hash::_private::murmur3a
 {
     /// @copydoc psyq::string::view::this_type
-    private: typedef murmur3_hash128 this_type;
+    private: typedef murmur3c this_type;
     /// @copydoc psyq::string::view::base_type
-    protected: typedef psyq::hash::_private::murmur3_hash32 base_type;
+    public: typedef psyq::hash::_private::murmur3a base_type;
 
     //-------------------------------------------------------------------------
     /// @brief ハッシュ関数の戻り値。
@@ -413,11 +371,11 @@ protected psyq::hash::_private::murmur3_hash32
     };
 
     //-------------------------------------------------------------------------
-    /// @copydoc this_type::hash(unsigned char const*, std::size_t, std::uint32_t);
+    /// @copydoc this_type::hash
     public: this_type::result_type operator()(
-        /// [in] バイト列の先頭要素を指すポインタ。
+        /// [in] キーとなるバイト列の先頭要素を指すポインタ。
         unsigned char const* const in_bytes,
-        /// [in] バイト列のバイト数。
+        /// [in] キーとなるバイト列のバイト数。
         std::size_t const in_length,
         /// [in] ハッシュ関数のシード値。
         std::uint32_t const& in_seed)
@@ -426,25 +384,11 @@ protected psyq::hash::_private::murmur3_hash32
         return this_type::hash(in_bytes, in_length, in_seed);
     }
 
-    /// @copydoc this_type::hash(unsigned char const*, std::size_t, std::uint64_t);
-    public: this_type::result_type operator()(
-        /// [in] バイト列の先頭要素を指すポインタ。
-        unsigned char const* const in_bytes,
-        /// [in] バイト列のバイト数。
-        std::size_t const in_length,
-        /// [in] ハッシュ関数のシード値。
-        std::uint64_t const& in_seed)
-    const PSYQ_NOEXCEPT
-    {
-        return this_type::hash(in_bytes, in_length, in_seed);
-    }
-
-    //-------------------------------------------------------------------------
-    /// @brief バイト列のハッシュ値を、MurmurHash3C形式で算出する。
+    /// @brief Murmur3C形式でバイト列のハッシュ値を算出する。
     public: static this_type::result_type hash(
-        /// [in] バイト列の先頭要素を指すポインタ。
+        /// [in] キーとなるバイト列の先頭要素を指すポインタ。
         unsigned char const* const in_bytes,
-        /// [in] バイト列のバイト数。
+        /// [in] キーとなるバイト列のバイト数。
         std::size_t const in_length,
         /// [in] ハッシュ関数のシード値。
         std::uint32_t in_seed)
@@ -549,12 +493,37 @@ protected psyq::hash::_private::murmur3_hash32
             local_hash0 + local_hash3);
     }
 
+}; // class psyq::string_hash::_private::murmur3c
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief Murmur3F形式のバイト列ハッシュ関数オブジェクト。
+class psyq::hash::_private::murmur3f:
+public psyq::hash::_private::murmur3c
+{
+    /// @copydoc psyq::string::view::this_type
+    private: typedef murmur3f this_type;
+    /// @copydoc psyq::string::view::base_type
+    public: typedef psyq::hash::_private::murmur3c base_type;
+
     //-------------------------------------------------------------------------
-    /// @brief バイト列のハッシュ値を、MurmurHash3F形式で算出する。
-    public: static this_type::result_type hash(
-        /// [in] バイト列の先頭要素を指すポインタ。
+    /// @copydoc this_type::hash
+    public: base_type::result_type operator()(
+        /// [in] キーとなるバイト列の先頭要素を指すポインタ。
         unsigned char const* const in_bytes,
-        /// [in] バイト列のバイト数。
+        /// [in] キーとなるバイト列のバイト数。
+        std::size_t const in_length,
+        /// [in] ハッシュ関数のシード値。
+        std::uint64_t const& in_seed)
+    const PSYQ_NOEXCEPT
+    {
+        return this_type::hash(in_bytes, in_length, in_seed);
+    }
+
+    /// @brief Murmur3F形式でバイト列のハッシュ値を算出する。
+    public: static base_type::result_type hash(
+        /// [in] キーとなるバイト列の先頭要素を指すポインタ。
+        unsigned char const* const in_bytes,
+        /// [in] キーとなるバイト列のバイト数。
         std::size_t const in_length,
         /// [in] ハッシュ関数のシード値。
         std::uint64_t const in_seed)
@@ -625,7 +594,7 @@ protected psyq::hash::_private::murmur3_hash32
         local_hash1 = this_type::final_mix(local_hash1);
 
         local_hash0 += local_hash1;
-        return this_type::result_type(local_hash0, local_hash0 + local_hash1);
+        return base_type::result_type(local_hash0, local_hash0 + local_hash1);
     }
 
     //-------------------------------------------------------------------------
@@ -638,7 +607,7 @@ protected psyq::hash::_private::murmur3_hash32
             | (static_cast<std::uint64_t>(base_type::get_block(in_bytes + 4)) << 32);
 #else
         return *reinterpret_cast<std::uint64_t const*>(in_bytes);
-#endif // defined(PSYQ_UNALIGNED_SAFE)
+#endif // __BYTE_ORDER == __BIG_ENDIAN || !defined(PSYQ_PLATFORM_X86)
     }
 
     protected: static std::uint64_t rotl(
@@ -653,18 +622,15 @@ protected psyq::hash::_private::murmur3_hash32
 #endif // defined(_MSC_VER)
     }
 
-    protected: static std::uint64_t final_mix(std::uint64_t in_hash)
+    protected: static std::uint64_t final_mix(std::uint64_t const in_hash)
     PSYQ_NOEXCEPT
     {
-        in_hash ^= in_hash >> 33;
-        in_hash *= 0xFF51AFD7ED558CCDull;
-        in_hash ^= in_hash >> 33;
-        in_hash *= 0xC4CEB9FE1A85EC53ull;
-        in_hash ^= in_hash >> 33;
-        return in_hash;
+        auto const local_0(0xFF51AFD7ED558CCDull * (in_hash ^ (in_hash >> 33)));
+        auto const local_1(0xC4CEB9FE1A85EC53ull * (local_0 ^ (local_0 >> 33)));
+        return local_1 ^ (local_1 >> 33);
     }
 
-}; // class psyq::string_hash::_private::murmur3_hash128
+}; // class psyq::hash::_private::murmur3f
 
 #endif // !defined(PSYQ_HASH_MURMUR3_HPP_)
 // vim: set expandtab:

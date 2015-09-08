@@ -5,6 +5,7 @@
 #define PSYQ_IF_THEN_ENGINE_DISPATCHER_HPP_
 
 #include <unordered_map>
+#include "../hash/primitive_bits.hpp"
 #include "./status_monitor.hpp"
 #include "./expression_monitor.hpp"
 #include "./handler.hpp"
@@ -67,7 +68,7 @@ class psyq::if_then_engine::_private::dispatcher
                  std::vector<
                      typename this_type::evaluator::expression_key,
                      typename this_type::allocator_type>>,
-             psyq::hash::numeric_hash<
+             psyq::hash::primitive_bits<
                  typename this_type::evaluator::reservoir::status_key>,
              std::equal_to<
                  typename this_type::evaluator::reservoir::status_key>,
@@ -81,7 +82,7 @@ class psyq::if_then_engine::_private::dispatcher
                 std::vector<
                     typename this_type::handler,
                     typename this_type::allocator_type>>,
-             psyq::hash::numeric_hash<
+             psyq::hash::primitive_bits<
                  typename this_type::evaluator::expression_key>,
              std::equal_to<typename this_type::evaluator::expression_key>,
              typename this_type::allocator_type>

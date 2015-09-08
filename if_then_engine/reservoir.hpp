@@ -5,11 +5,11 @@
 #define PSYQ_IF_THEN_ENGINE_RESERVOIR_HPP_
 
 #include <unordered_map>
+#include "../hash/primitive_bits.hpp"
 #include "./status_value.hpp"
 #include "./status_property.hpp"
 #include "./status_chunk.hpp"
 #include "./status_operation.hpp"
-#include "../hash/numeric.hpp"
 
 /// @cond
 namespace psyq
@@ -87,7 +87,7 @@ class psyq::if_then_engine::_private::reservoir
          std::unordered_map<
              typename this_type::status_key,
              typename this_type::status_property,
-             psyq::hash::numeric_hash<typename this_type::status_key>,
+             psyq::hash::primitive_bits<typename this_type::status_key>,
              std::equal_to<typename this_type::status_key>,
              typename this_type::allocator_type>
          property_map;
@@ -105,7 +105,7 @@ class psyq::if_then_engine::_private::reservoir
          std::unordered_map<
              typename this_type::chunk_key,
              typename this_type::status_chunk,
-             psyq::hash::numeric_hash<typename this_type::chunk_key>,
+             psyq::hash::primitive_bits<typename this_type::chunk_key>,
              std::equal_to<typename this_type::chunk_key>,
              typename this_type::allocator_type>
          chunk_map;

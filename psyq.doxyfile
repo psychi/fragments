@@ -705,7 +705,7 @@ INPUT                  = \
                          ./string/csv_table.hpp \
                          ./string/relation_table.hpp \
                          ./string/numeric_parser.hpp \
-                         ./hash/numeric.hpp \
+                         ./hash/primitive_bits.hpp \
                          ./hash/proxy.hpp \
                          ./hash/fnv.hpp \
                          ./hash/murmur3.hpp \

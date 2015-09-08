@@ -6,6 +6,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include "../hash/primitive_bits.hpp"
 #include "./expression.hpp"
 
 /// @cond
@@ -78,7 +79,7 @@ class psyq::if_then_engine::_private::evaluator
         std::unordered_map<
             typename this_type::expression_key,
             typename this_type::expression,
-            psyq::hash::numeric_hash<typename this_type::expression_key>,
+            psyq::hash::primitive_bits<typename this_type::expression_key>,
             std::equal_to<typename this_type::expression_key>,
             typename this_type::allocator_type>
         expression_map;
@@ -87,7 +88,7 @@ class psyq::if_then_engine::_private::evaluator
         std::unordered_map<
             typename this_type::chunk_key,
             typename this_type::chunk,
-            psyq::hash::numeric_hash<typename this_type::chunk_key>,
+            psyq::hash::primitive_bits<typename this_type::chunk_key>,
             std::equal_to<typename this_type::chunk_key>,
             typename this_type::allocator_type>
         chunk_map;

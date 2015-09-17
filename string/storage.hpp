@@ -39,10 +39,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 またそれに限定されない）直接損害、間接損害、偶発的な損害、特別損害、
 懲罰的損害、または結果損害について、一切責任を負わないものとします。
  */
-/** @file
-    @author Hillco Psychi (https://twitter.com/psychi)
-    @brief @copybrief psyq::string::storage
- */
+/// @file
+/// @brief @copybrief psyq::string::storage
+/// @author Hillco Psychi (https://twitter.com/psychi)
 #ifndef PSYQ_STRING_STORAGE_HPP_
 #define PSYQ_STRING_STORAGE_HPP_
 
@@ -50,12 +49,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "./view.hpp"
 #include "./interface_mutable.hpp"
 
-/// psyq::string::storage で使う、defaultの最大文字数。
+/// psyq::string::storage で使う、最大要素数のデフォルト値。
 #ifndef PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT
 #define PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT 99
 #endif // !defined(PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT)
 
-/// @cond
 namespace psyq
 {
     namespace string
@@ -64,35 +62,37 @@ namespace psyq
 
         namespace _private
         {
+            /// @cond
             template<typename, std::size_t> class storage_base;
+            /// @endcond
         } // namespace _private
     } // namespace string
 } // namespace psyq
-/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 文字の固定長領域を使った文字列の基底型。
-
-    - this_type::MAX_SIZE より多い文字数は保持できない。
-    - 動的memory割り当てを一切行わない。
-
-    @tparam template_char_traits @copydoc this_type::traits_type
-    @tparam template_max_size    @copydoc this_type::MAX_SIZE
- */
+/// @brief 固定長領域を使った文字列の基底型。
+/// @details
+/// - this_type::MAX_SIZE より多い文字数は保持できない。
+/// - 動的メモリ割当を一切行わない。
+/// @tparam template_char_traits @copydoc this_type::traits_type
+/// @tparam template_max_size    @copydoc this_type::MAX_SIZE
 template<typename template_char_traits, std::size_t template_max_size>
 class psyq::string::_private::storage_base
 {
-    /// @brief thisが指す値の型。
+    /// @copydoc psyq::string::view::this_type
     private: typedef storage_base this_type;
 
+    //-------------------------------------------------------------------------
     /// @brief 文字特性の型。
     public: typedef template_char_traits traits_type;
 
     public: enum: std::size_t
     {
-        MAX_SIZE = template_max_size, ///< 最大の要素数。
+        MAX_SIZE = template_max_size, ///< 文字列の最大要素数。
     };
 
+    //-------------------------------------------------------------------------
+    /// @brief 文字列を格納する領域として使う配列。
     private: typedef
          std::array<
              typename this_type::traits_type::char_type,
@@ -100,12 +100,11 @@ class psyq::string::_private::storage_base
          char_array;
 
     //-------------------------------------------------------------------------
-    /** @name 文字列のプロパティ
-        @{
-     */
-    /** @brief 文字列の先頭文字へのpointerを取得する。
-        @return 終端がnull文字となっている文字列の、先頭文字へのpointer。
-     */
+    /// @name 文字列のプロパティ
+    /// @{
+
+    /// @brief 文字列の先頭要素へのポインタを取得する。
+    /// @return 終端が空文字となっている文字列の、先頭要素へのポインタ。
     public: typename this_type::traits_type::char_type const* c_str()
     const PSYQ_NOEXCEPT
     {
@@ -125,9 +124,8 @@ class psyq::string::_private::storage_base
         return this->size_;
     }
 
-    /** @brief メモリを再確保せずに格納できる最大の要素数を取得する。
-        @return メモリを再確保せずに格納できる最大の要素数。
-     */
+    /// @brief メモリ割当せずに格納できる最大の要素数を取得する。
+    /// @return メモリ割当せずに格納できる最大の要素数。
     public: std::size_t capacity() const PSYQ_NOEXCEPT
     {
         return this_type::MAX_SIZE;
@@ -140,9 +138,9 @@ class psyq::string::_private::storage_base
     }
     /// @}
     //-------------------------------------------------------------------------
-    /** @name 文字列の変更
-        @{
-     */
+    /// @name 文字列の変更
+    /// @{
+
     /// @brief 文字列を空にする。
     public: void clear() PSYQ_NOEXCEPT
     {
@@ -150,64 +148,50 @@ class psyq::string::_private::storage_base
         this->storage_[0] = 0;
     }
 
-    /** @brief std::basic_string::reserve と互換性を保つためのダミー関数。
-
-        実際は何もしない。
-     */
+    /// @brief std::basic_string::reserve と互換性を保つためのダミー関数。
+    /// @details 実際は何もしない。
     public: void reserve(std::size_t const in_capacity)
     {
         PSYQ_ASSERT_THROW(
             in_capacity <= this_type::MAX_SIZE, std::out_of_range);
     }
 
-    /** @brief std::basic_string::shrink_to_fit と互換性を保つためのダミー関数。
-
-        実際は何もしない。
-     */
+    /// @brief std::basic_string::shrink_to_fit と互換性を保つためのダミー関数。
+    /// @details 実際は何もしない。
     public: void shrink_to_fit() PSYQ_NOEXCEPT {}
     /// @}
     //-------------------------------------------------------------------------
-    /** @brief 文字列をコピー構築する。
-        @param[in] in_string コピー元となる文字列。
-     */
-    protected: storage_base(this_type const& in_string) PSYQ_NOEXCEPT
+    /// @brief 文字列をコピー構築する。
+    protected: storage_base(
+        /// [in] コピー元となる文字列。
+        this_type const& in_string)
+    PSYQ_NOEXCEPT
     {
         this->assign_external_noexcept(
             in_string.data(), in_string.data() + in_string.size());
     }
 
-    /** @copydoc storage_base(this_type const&)
-        @return *this
-     */
+    /// @copydoc storage_base(this_type const&)
+    /// @return *this
     protected: this_type& operator=(this_type const& in_string) PSYQ_NOEXCEPT
     {
         return *new(this) this_type(in_string);
     }
 
-    /** @brief 空の文字列を構築する。
-        @return 空の文字列。
-     */
+    /// @brief 空の文字列を構築する。
+    /// @return 空の文字列。
     protected: static this_type make() PSYQ_NOEXCEPT
     {
         return this_type();
     }
 
-    /// @copydoc this_type::c_str()
-    protected: typename this_type::traits_type::char_type* begin()
-    PSYQ_NOEXCEPT
-    {
-        return const_cast<typename this_type::traits_type::char_type*>(
-            this->c_str());
-    }
-
-    /** @brief 文字を挿入する。
-        @param[in] in_offset 文字を挿入するオフセット位置。
-        @param[in] in_count  挿入する文字の数。
-        @param[in] in_char   挿入する文字。
-     */
+    /// @brief 要素を挿入する。
     protected: void insert(
+        /// [in] 要素を挿入するオフセット位置。
         std::size_t const in_offset,
+        /// [in] 挿入する要素の数。
         std::size_t const in_count,
+        /// [in] 挿入する要素。
         typename this_type::traits_type::char_type const in_char)
     {
         auto const local_gap(this->make_gap(in_offset, in_count));
@@ -215,21 +199,20 @@ class psyq::string::_private::storage_base
             this->begin() + local_gap.first, local_gap.second, in_char);
     }
 
-    /** @brief 文字列を挿入する。
-        @param[in] in_position 文字列を挿入する位置。
-        @param[in] in_begin    挿入する文字列の先頭を指す反復子。
-        @param[in] in_end      挿入する文字列の末尾を指す反復子。
-     */
+    /// @brief 文字列を挿入する。
+    /// @return 挿入した文字列の最初の要素を指すポインタ。
     protected: template<typename template_iterator>
     typename this_type::traits_type::char_type* insert(
+        /// [in] 文字列を挿入する位置。
         typename this_type::traits_type::char_type const* const in_position,
+        /// [in] 挿入する文字列の先頭を指す反復子。
         template_iterator const in_begin,
+        /// [in] 挿入する文字列の末尾を指す反復子。
         template_iterator const in_end)
     {
         if (in_begin == in_end || &(*in_begin) == nullptr)
         {
-            PSYQ_ASSERT_THROW(
-                &(*in_begin) != nullptr, std::invalid_argument);
+            PSYQ_ASSERT_THROW(in_begin == in_end, std::invalid_argument);
             return this->begin() + this->size();
         }
         else if (this->is_included(this_type::MAX_SIZE, &(*in_begin)))
@@ -249,13 +232,12 @@ class psyq::string::_private::storage_base
         }
     }
 
-    /** @brief 文字列の要素を削除する。
-        @param[in] in_begin 削除範囲の先頭を指す反復子。
-        @param[in] in_end   削除範囲の末尾を指す反復子。
-        @return 最後に削除した要素の次を指す反復子。
-     */
+    /// @brief 文字列の要素を削除する。
+    /// @return 最後に削除した要素の次を指す反復子。
     protected: typename this_type::traits_type::char_type* erase(
+        /// [in] 削除範囲の先頭を指す反復子。
         typename this_type::traits_type::char_type const* in_begin,
+        /// [in] 削除範囲の末尾を指す反復子。
         typename this_type::traits_type::char_type const* in_end)
     {
         auto const local_end(this->data() + this->size());
@@ -297,13 +279,12 @@ class psyq::string::_private::storage_base
         return const_cast<typename this_type::traits_type::char_type*>(in_begin);
     }
 
-    /** @brief 外部の文字列をコピーする。
-        @param[in] in_begin コピー元となる文字列の先頭位置。
-        @param[in] in_end   コピー元となる文字列の末尾位置。
-     */
+    /// @brief 外部の文字列をコピーする。
     protected: template<typename template_iterator>
     void assign_external(
+        /// [in] コピー元となる文字列の先頭位置。
         template_iterator const in_begin,
+        /// [in] コピー元となる文字列の末尾位置。
         template_iterator const in_end)
     {
         if (in_begin != in_end)
@@ -324,15 +305,20 @@ class psyq::string::_private::storage_base
         this->storage_[0] = 0;
     }
 
-    /** @brief 外部の文字列を挿入する。
-        @param[in] in_position 文字列を挿入する位置。
-        @param[in] in_begin    挿入する文字列の先頭位置。
-        @param[in] in_end      挿入する文字列の末尾位置。
-     */
+    /// @copydoc this_type::c_str()
+    private: typename this_type::traits_type::char_type* begin() PSYQ_NOEXCEPT
+    {
+        return const_cast<typename this_type::traits_type::char_type*>(this->data());
+    }
+
+    /// @brief 外部の文字列を挿入する。
     private: template<typename template_iterator>
     typename this_type::traits_type::char_type* insert_external(
+        /// [in] 文字列を挿入する位置。
         typename this_type::traits_type::char_type const* const in_position,
+        /// [in] 挿入する文字列の先頭位置。
         template_iterator const in_begin,
+        /// [in] 挿入する文字列の末尾位置。
         template_iterator const in_end)
     {
         std::size_t local_offset;
@@ -393,8 +379,12 @@ class psyq::string::_private::storage_base
         }
     }
 
+    /// @brief 文字列に隙間を作る。
+    /// @return 隙間の先頭位置と要素数のペア。
     private: std::pair<std::size_t, std::size_t> make_gap(
+        /// [in] 隙間の位置。
         std::size_t const in_offset,
+        /// [in] 隙間の要素数。
         std::size_t const in_size)
     {
         // 挿入する文字列の要素数を決定する。
@@ -444,16 +434,14 @@ class psyq::string::_private::storage_base
 }; // class psyq::string::_private::storage_base
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief std::basic_string を模した、固定長領域を使った文字列。
-
-    - base_type::MAX_SIZE より多い文字数は保持できない。
-    - 動的memory割り当てを一切行わない。
-
-    @tparam template_char_type   @copydoc base_type::value_type
-    @tparam template_max_size    @copydoc base_type::MAX_SIZE
-    @tparam template_char_traits @copydoc base_type::traits_type
-    @ingroup psyq_string
- */
+/// @brief std::basic_string を模した、固定長領域を使った文字列。
+/// @details
+/// - base_type::MAX_SIZE より多い文字数は保持できない。
+/// - 動的メモリ割当を一切行わない。
+/// @tparam template_char_type   @copydoc base_type::value_type
+/// @tparam template_max_size    @copydoc base_type::MAX_SIZE
+/// @tparam template_char_traits @copydoc base_type::traits_type
+/// @ingroup psyq_string
 template<
     typename template_char_type,
     std::size_t template_max_size = PSYQ_STRING_STORAGE_MAX_SIZE_DEFAULT,
@@ -463,10 +451,9 @@ public psyq::string::_private::interface_mutable<
     psyq::string::_private::storage_base<
         template_char_traits, template_max_size>>
 {
-    /// @brief thisが指す値の型。
+    /// @copydoc psyq::string::view::this_type
     private: typedef storage this_type;
-
-    /// @brief this_type の基底型。
+    /// @copydoc psyq::string::view::base_type
     public: typedef
         psyq::string::_private::interface_mutable<
             psyq::string::_private::storage_base<
@@ -474,68 +461,60 @@ public psyq::string::_private::interface_mutable<
         base_type;
 
     //-------------------------------------------------------------------------
-    /// @name コンストラクタ
-    //@{
-    /** @brief 空文字列を構築する。
-     */
-    public: storage() PSYQ_NOEXCEPT:
-    base_type(base_type::base_type::make())
+    /// @name 文字列の構築
+    /// @{
+
+    /// @brief 空文字列を構築する。
+    public: storage() PSYQ_NOEXCEPT: base_type(base_type::base_type::make()) {}
+
+    /// @brief 文字列をコピーして構築する。
+    public: storage(
+        /// [in] コピー元の文字列。
+        this_type const& in_string)
+    PSYQ_NOEXCEPT: base_type(in_string)
     {}
 
-    /** @brief 文字列をコピーして構築する。
-        @param[in] in_string コピー元の文字列。
-     */
-    public: storage(this_type const& in_string) PSYQ_NOEXCEPT:
-    base_type(in_string)
-    {}
-
-    /** @brief 文字列をコピーして構築する。
-        @param[in] in_string コピー元の文字列。
-     */
-    public: storage(typename base_type::view const& in_string):
+    /// @brief 文字列をコピーして構築する。
+    public: storage(
+        /// [in] コピー元の文字列。
+        typename base_type::view const& in_string):
     base_type(base_type::base_type::make())
     {
         this->assign_external(in_string.begin(), in_string.end());
     }
 
-    /** @brief 文字列をコピーして構築する。
-        @param[in] in_data コピー元の文字列の先頭位置。
-        @param[in] in_size 
-            コピー元の文字列の要素数。 base_type::npos が指定された場合は、
-            null文字を検索して自動で要素数を決定する。
-     */
+    /// @brief 文字列をコピーして構築する。
     public: storage(
+        /// [in] コピー元の文字列の先頭位置。
         typename base_type::const_pointer const in_data,
-        typename base_type::size_type const in_size)
-    :
+        /// [in] コピー元の文字列の要素数。 base_type::npos
+        /// が指定された場合は空文字を検索し、空文字までを要素数とする。
+        typename base_type::size_type const in_size):
     base_type(base_type::base_type::make())
     {
         this->assign_external(
             in_data, in_data + base_type::adjust_size(in_data, in_size));
     }
 
-    /** @brief 文字列をコピーして構築する。
-        @param[in] in_begin コピー元の文字列の先頭位置。
-        @param[in] in_end   コピー元の文字列の末尾位置。
-     */
+    /// @brief 文字列をコピーして構築する。
     public: template<typename template_iterator>
     storage(
+        /// [in] コピー元の文字列の先頭位置。
         template_iterator const in_begin,
-        template_iterator const in_end)
-    :
+        /// [in] コピー元の文字列の末尾位置。
+        template_iterator const in_end):
     base_type(base_type::base_type::make())
     {
         this->assign_external(in_begin, in_end);
     }
 
-    /** @brief 文字列の一部をコピーして構築する。
-        @param[in] in_string コピーする文字列。
-        @param[in] in_offset コピーする文字列の開始オフセット位置。
-        @param[in] in_count  コピーする要素数。
-     */
+    /// @brief 文字列の一部をコピーして構築する。
     public: storage(
+        /// [in] コピーする文字列。
         typename base_type::view const& in_string,
+        /// [in] コピーする文字列の開始オフセット位置。
         typename base_type::size_type const in_offset,
+        /// [in] コピーする要素数。
         typename base_type::size_type const in_count = base_type::npos)
     :
     base_type(base_type::base_type::make())
@@ -544,39 +523,37 @@ public psyq::string::_private::interface_mutable<
         this->assign_external(local_substr.begin(), local_substr.end());
     }
 
-    /** @brief 文字を繰り返す文字列を構築する。
-        @param[in] in_char  繰り返す文字。
-        @param[in] in_count 文字を繰り返す回数。
-     */
+    /// @brief 要素を繰り返す文字列を構築する。
     public: storage(
+        /// [in] 繰り返す要素。
         typename base_type::traits_type::char_type const in_char,
+        /// [in] 要素を繰り返す回数。
         typename base_type::size_type const in_count)
     :
     base_type(base_type::base_type::make())
     {
         this->insert(0, in_count, in_char);
     }
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
     /// @name 文字列の代入
-    //@{
-    /** @copydoc storage(this_type const&)
-        @return *this
-     */
+    /// @{
+
+    /// @copydoc storage(this_type const&)
+    /// @return *this
     public: this_type& operator=(this_type const& in_string) PSYQ_NOEXCEPT
     {
         this->base_type::base_type::operator=(in_string);
         return *this;
     }
 
-    /** @copydoc storage(typename base_type::view const&)
-        @return *this
-     */
+    /// @copydoc storage(typename base_type::view const&)
+    /// @return *this
     public: this_type& operator=(typename base_type::view const& in_string)
     {
         return *new(this) this_type(in_string);
     }
-    //@}
+    /// @}
 }; // class psyq::string::storage
 
 #endif // !defined(PSYQ_STRING_STORAGE_HPP_)

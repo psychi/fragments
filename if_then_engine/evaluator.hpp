@@ -25,8 +25,8 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 条件評価器。条件式を保持し、評価する。
 /// @par 使い方の概略
-/// - evaluator::register_expression で、条件式を登録する。
-/// - evaluator::evaluate_expression で、条件式を評価する。
+///   - evaluator::register_expression で、条件式を登録する。
+///   - evaluator::evaluate_expression で、条件式を評価する。
 /// @tparam template_reservoir      @copydoc evaluator::reservoir
 /// @tparam template_expression_key @copydoc evaluator::expression_key
 template<typename template_reservoir, typename template_expression_key>
@@ -101,7 +101,7 @@ class psyq::if_then_engine::_private::evaluator
     public: evaluator(
         /// [in] チャンク辞書のバケット数。
         std::size_t const in_chunk_count,
-        ///[in] 条件式辞書のバケット数。
+        /// [in] 条件式辞書のバケット数。
         std::size_t const in_expression_count,
         /// [in] メモリ割当子の初期値。
         typename this_type::allocator_type const& in_allocator =
@@ -176,42 +176,41 @@ class psyq::if_then_engine::_private::evaluator
         typename this_type::expression_key const& in_expression_key)
     const
     {
-        return this->expressions_.find(in_expression_key) !=
-            this->expressions_.end();
+        return this->expressions_.find(in_expression_key)
+            != this->expressions_.end();
     }
 
     /// @brief 条件式を登録する。
-    /// @par
-    /// - this_type::evaluate_expression で、登録した条件式を評価できる。
-    /// - this_type::erase_chunk で、登録した条件式をチャンク単位で削除できる。
-    /// @retval true  成功。条件式を *this に登録した。
-    /// @retval false 失敗。条件式は登録されなかった。
-    /// - in_expression_key に対応する条件式が既にあると失敗する。
-    /// - in_elements が空だと失敗する。
-    public: template<typename template_element_container>
+    /// @sa this_type::evaluate_expression で、登録した条件式を評価できる。
+    /// @sa this_type::erase_chunk で、登録した条件式をチャンク単位で削除できる。
+    /// @retval true 成功。条件式を *this に登録した。
+    /// @retval false
+    ///   失敗。条件式は登録されなかった。
+    ///   - in_expression_key に対応する条件式が既にあると失敗する。
+    ///   - in_elements_begin と in_elements_end が等価だと失敗する。
+    public: template<typename template_iterator>
     bool register_expression(
-        /// [in] 登録する条件式から参照する要素条件チャンクの識別値。
+        /// [in] 条件式を登録する要素条件チャンクの識別値。
         typename this_type::chunk_key const& in_chunk_key,
         /// [in] 登録する条件式の識別値。
         typename this_type::expression_key const& in_expression_key,
-        /// [in] 登録する条件式の論理演算子。
+        /// [in] 要素条件を結合する論理演算子。
         typename this_type::expression::logic const in_logic,
-        /// [in] 登録する条件式の要素条件のコンテナ。
-        /// std::begin と std::end の引数として使えること。
-        template_element_container const& in_elements)
+        /// [in] 登録する条件式の要素条件コンテナの先頭を指す反復子。
+        template_iterator const& in_elements_begin,
+        /// [in] 登録する条件式の要素条件コンテナの末尾を指す反復子。
+        template_iterator const& in_elements_end)
     {
-        auto const local_elements_begin(std::begin(in_elements));
-        auto const local_elements_end(std::end(in_elements));
         PSYQ_ASSERT(
             this_type::is_valid_elements(
-                local_elements_begin, local_elements_end, this->expressions_));
-        if (local_elements_begin == local_elements_end
+                in_elements_begin, in_elements_end, this->expressions_));
+        if (in_elements_begin == in_elements_end
             || this->is_registered(in_expression_key))
         {
             return false;
         }
 
-        // 要素条件の種類を決定し、要素条件を追加する。
+        // 要素条件の種類を判定する。
         auto const local_emplace_chunk(
             this->chunks_.emplace(
                 in_chunk_key,
@@ -219,23 +218,19 @@ class psyq::if_then_engine::_private::evaluator
                     this->chunks_.get_allocator())));
         auto const local_element_kind(
             this_type::make_element_kind(
-                local_emplace_chunk.first->second, *local_elements_begin));
+                local_emplace_chunk.first->second, *in_elements_begin));
+
+        // 要素条件を挿入する。
         auto& local_elements(*local_element_kind.second);
         auto const local_begin_index(
             static_cast<typename this_type::expression::element_index>(
                 local_elements.size()));
         PSYQ_ASSERT(local_begin_index == local_elements.size());
         local_elements.insert(
-            local_elements.end(), local_elements_begin, local_elements_end);
-        auto const local_end_index(
-            static_cast<typename this_type::expression::element_index>(
-                local_elements.size()));
-        PSYQ_ASSERT(
-            local_begin_index < local_end_index
-            && local_end_index == local_elements.size());
+            local_elements.end(), in_elements_begin, in_elements_end);
 
-        // 条件式を辞書に挿入する。
-        auto const local_emplace(
+        // 条件式を挿入する。
+        auto const local_emplace_expression(
             this->expressions_.emplace(
                 in_expression_key,
                 typename this_type::expression_map::mapped_type(
@@ -243,17 +238,56 @@ class psyq::if_then_engine::_private::evaluator
                     in_logic,
                     local_element_kind.first,
                     local_begin_index,
-                    local_end_index)));
-        PSYQ_ASSERT(local_emplace.second);
-        return local_emplace.second;
+                    static_cast<typename this_type::expression::element_index>(
+                        local_elements.size()))));
+        PSYQ_ASSERT(
+            local_emplace_expression.second
+            && local_emplace_expression.first->second.get_end_element()
+                == local_elements.size()
+            && local_begin_index
+                < local_emplace_expression.first->second.get_end_element());
+        return local_emplace_expression.second;
+    }
+
+    /// @brief 条件式を登録する。
+    /// @sa this_type::evaluate_expression で、登録した条件式を評価できる。
+    /// @sa this_type::erase_chunk で、登録した条件式をチャンク単位で削除できる。
+    /// @retval true 成功。条件式を *this に登録した。
+    /// @retval false
+    ///   失敗。条件式は登録されなかった。
+    ///   - in_expression_key に対応する条件式が既にあると失敗する。
+    ///   - in_elements が空だと失敗する。
+    public: template<typename template_element_container>
+    bool register_expression(
+        /// [in] 条件式を登録する要素条件チャンクの識別値。
+        typename this_type::chunk_key const& in_chunk_key,
+        /// [in] 登録する条件式の識別値。
+        typename this_type::expression_key const& in_expression_key,
+        /// [in] 要素条件を結合する論理演算子。
+        typename this_type::expression::logic const in_logic,
+        /// [in] 登録する条件式の要素条件コンテナ。
+        template_element_container const& in_elements)
+    {
+        return this->register_expression(
+            in_chunk_key,
+            in_expression_key,
+            in_logic,
+            std::begin(in_elements),
+            std::end(in_elements));
     }
 
     /// @brief 状態値を比較する条件式を登録する。
-    /// @retval true  成功。条件式を *this に登録した。
-    /// @retval false 失敗。条件式は登録されなかった。
-    /// - in_expression_key に対応する条件式が既にあると失敗する。
-    /// - in_comparison.get_key() に対応する状態値が
-    ///   in_reservoir にないと失敗する。
+    /// @sa this_type::evaluate_expression で、登録した条件式を評価できる。
+    /// @sa this_type::erase_chunk で、登録した条件式をチャンク単位で削除できる。
+    /// @retval true
+    ///   成功。条件式を *this に登録した。
+    ///   条件式を登録した要素条件チャンクの識別値は、 in_comparison.get_key()
+    ///   に対応する状態値が登録されている状態値ビット列チャンクの識別値と同じ。
+    /// @retval false
+    ///   失敗。条件式は登録されなかった。
+    ///   - in_expression_key に対応する条件式が既にあると失敗する。
+    ///   - in_comparison.get_key() に対応する状態値が
+    ///     in_reservoir にないと失敗する。
     public: bool register_expression(
         /// [in] 条件式が参照する状態貯蔵器。
         typename this_type::reservoir const& in_reservoir,
@@ -264,24 +298,26 @@ class psyq::if_then_engine::_private::evaluator
     {
         auto const local_status_property(
             in_reservoir.find_property(in_comparison.get_key()));
-        if (local_status_property.is_empty())
-        {
-            return false;
-        }
-        typename this_type::reservoir::status_comparison const
-            local_comparisons[1] = {in_comparison};
-        return this->register_expression(
-            local_status_property.get_chunk_key(),
-            in_expression_key,
-            this_type::expression::logic_AND,
-            local_comparisons);
+        return !local_status_property.is_empty()
+            && this->register_expression(
+                local_status_property.get_chunk_key(),
+                in_expression_key,
+                this_type::expression::logic_AND,
+                &in_comparison,
+                &in_comparison + 1);
     }
 
     /// @brief 論理型の状態値を比較する条件式を登録する。
-    /// @retval true  成功。条件式を *this に登録した。
-    /// @retval false 失敗。条件式は登録されなかった。
-    /// - in_expression_key に対応する条件式が既にあると失敗する。
-    /// - in_status_key に対応する状態値が論理型以外だと失敗する。
+    /// @sa this_type::evaluate_expression で、登録した条件式を評価できる。
+    /// @sa this_type::erase_chunk で、登録した条件式をチャンク単位で削除できる。
+    /// @retval true
+    ///   成功。条件式を *this に登録した。
+    ///   条件式を登録した要素条件チャンクの識別値は、 in_status_key
+    ///   に対応する状態値が登録されている状態値ビット列チャンクの識別値と同じ。
+    /// @retval false
+    ///   失敗。条件式は登録されなかった。
+    ///   - in_expression_key に対応する条件式が既にあると失敗する。
+    ///   - in_status_key に対応する状態値が論理型以外だと失敗する。
     public: bool register_expression(
         /// [in] 条件式が参照する状態貯蔵器。
         typename this_type::reservoir const& in_reservoir,
@@ -308,9 +344,9 @@ class psyq::if_then_engine::_private::evaluator
 
     /// @brief 条件式を取得する。
     /// @return
-    /// in_expression_key に対応する this_type::expression のコピー。
-    /// 該当する条件式がない場合は
-    /// this_type::expression::is_empty が真となる値を返す。
+    ///   in_expression_key に対応する this_type::expression のコピー。
+    ///   該当する条件式がない場合は this_type::expression::is_empty
+    ///   が真となる値を返す。
     public: typename this_type::expression find_expression(
         /// [in] 取得する条件式に対応する識別値。
         typename this_type::expression_key const& in_expression_key)
@@ -328,12 +364,12 @@ class psyq::if_then_engine::_private::evaluator
     }
 
     /// @brief 登録されている条件式を評価する。
+    /// @sa this_type::register_expression で、条件式を登録できる。
     /// @retval 正 条件式の評価は真となった。
     /// @retval 0  条件式の評価は偽となった。
     /// @retval 負 条件式の評価に失敗した。
-    /// - 条件式が登録されていないと、失敗する。
-    /// - 条件式が参照する状態値が登録されていないと、失敗する。
-    /// @sa this_type::register_expression で条件式を登録できる。
+    ///   - 条件式が登録されていないと、失敗する。
+    ///   - 条件式が参照する状態値が登録されていないと、失敗する。
     public: typename this_type::expression::evaluation evaluate_expression(
         /// [in] 評価する条件式に対応する識別値。
         typename this_type::expression_key const in_expression_key,

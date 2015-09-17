@@ -406,6 +406,11 @@ class psyq::if_then_engine::handler_builder
         /// [in] in_table で代入演算が記述されている属性の列番号と列数。
         typename template_relation_table::attribute const& in_assignments)
     {
+        if (in_assignments.second < 1)
+        {
+            return typename template_handler::function_shared_ptr();
+        }
+
         // 状態値の代入演算のコンテナを構築する。
         std::vector<
             typename template_accumulator::reservoir::status_assignment,
@@ -450,15 +455,14 @@ class psyq::if_then_engine::handler_builder
         return std::begin(in_assignments) != std::end(in_assignments)?
             std::allocate_shared<typename template_handler::function>(
                 in_assignments.get_allocator(),
-                typename template_handler::function(
-                    /// @todo io_accumulator を参照渡しするのは危険。対策を考えたい。
-                    [=, &io_accumulator](
-                        typename template_handler::expression_key const&,
-                        typename template_handler::evaluation const,
-                        typename template_handler::evaluation const)
-                    {
-                        io_accumulator.accumulate(in_assignments, in_front_delay);
-                    })):
+                /// @todo io_accumulator を参照渡しするのは危険。対策を考えたい。
+                [=, &io_accumulator](
+                    typename template_handler::expression_key const&,
+                    typename template_handler::evaluation const,
+                    typename template_handler::evaluation const)
+                {
+                    io_accumulator.accumulate(in_assignments, in_front_delay);
+                }):
             typename template_handler::function_shared_ptr();
     }
     /// @}

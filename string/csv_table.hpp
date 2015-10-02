@@ -88,7 +88,7 @@ namespace psyq
 {
     namespace string
     {
-        template<typename, typename, typename, typename, int, int, int, int, int>
+        template<typename, typename, typename, int, int, int, int, int>
             class csv_table;
     } // namespace string
 } // namespace psyq
@@ -97,8 +97,7 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief CSV形式の文字列から構築する、フライ級文字列表。
 /// @tparam template_number           @copydoc table::number
-/// @tparam template_char_type        @copydoc psyq::string::view::value_type
-/// @tparam template_char_traits      @copydoc psyq::string::view::traits_type
+/// @tparam template_hasher           @copydoc psyq::string::_private::flyweight_factory::hasher
 /// @tparam template_allocator        @copydoc table::allocator_type
 /// @tparam template_row_separator    @copydoc csv_table::delimiter_ROW_SEPARATOR
 /// @tparam template_column_separator @copydoc csv_table::delimiter_COLUMN_SEPARATOR
@@ -107,8 +106,7 @@ namespace psyq
 /// @tparam template_quote_escape     @copydoc csv_table::delimiter_QUOTE_ESCAPE
 template<
     typename template_number,
-    typename template_char_type,
-    typename template_char_traits = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
+    typename template_hasher = PSYQ_STRING_FLYWEIGHT_HASHER_DEFAULT,
     typename template_allocator = PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT,
     int template_row_separator = PSYQ_STRING_CSV_TABLE_ROW_SEPARATOR_DEFAULT,
     int template_column_separator = PSYQ_STRING_CSV_TABLE_COLUMN_SEPARATOR_DEFAULT,
@@ -116,39 +114,39 @@ template<
     int template_quote_end = PSYQ_STRING_CSV_TABLE_QUOTE_END_DEFAULT,
     int template_quote_escape = PSYQ_STRING_CSV_TABLE_QUOTE_ESCAPE_DEFAULT>
 class psyq::string::csv_table:
-public psyq::string::table<
-    template_number, template_char_type, template_char_traits, template_allocator>
+public psyq::string::table<template_number, template_hasher, template_allocator>
 {
-    /// @brief this が指す値の型。
+    /// @copydoc psyq::string::view::this_type
     private: typedef csv_table this_type;
-    /// @brief this_type の基底型。
+    /// @copydoc psyq::string::view::base_type
     public: typedef
-        psyq::string::table<
-            template_number,
-            template_char_type,
-            template_char_traits,
-            template_allocator>
+        psyq::string::table<template_number, template_hasher, template_allocator>
         base_type;
 
     //-------------------------------------------------------------------------
     /// @brief CSV文字列の区切り文字。
-    public: enum delimiter: template_char_type
+    public: enum delimiter: typename template_hasher::argument_type::value_type
     {
         /// @brief CSV文字列の行の区切り文字。
         delimiter_ROW_SEPARATOR =
-            static_cast<template_char_type>(template_row_separator),
+            static_cast<typename template_hasher::argument_type::value_type>(
+                template_row_separator),
         /// @brief CSV文字列の列の区切り文字。
         delimiter_COLUMN_SEPARATOR =
-            static_cast<template_char_type>(template_column_separator),
+            static_cast<typename template_hasher::argument_type::value_type>(
+                template_column_separator),
         /// @brief CSV文字列の引用符の開始文字。
         delimiter_QUOTE_BEGIN =
-            static_cast<template_char_type>(template_quote_begin),
+            static_cast<typename template_hasher::argument_type::value_type>(
+                template_quote_begin),
         /// @brief CSV文字列の引用符の終了文字。
         delimiter_QUOTE_END =
-            static_cast<template_char_type>(template_quote_end),
+            static_cast<typename template_hasher::argument_type::value_type>(
+                template_quote_end),
         /// @brief CSV文字列の引用符のエスケープ文字。
         delimiter_QUOTE_ESCAPE =
-            static_cast<template_char_type>(template_quote_escape),
+            static_cast<typename template_hasher::argument_type::value_type>(
+                template_quote_escape),
     };
     static_assert(
         this_type::delimiter_ROW_SEPARATOR == template_row_separator,
@@ -213,16 +211,15 @@ public psyq::string::table<
     /// @return
     /// in_csv_string から作った psyq::string::relation_table 。
     /// in_csv_string が空の場合は、関係文字列表も空となる。
-    template<typename template_workspace_string>
+    template<typename template_string>
     static psyq::string::relation_table<
         typename base_type::number,
-        typename base_type::string::value_type,
-        typename base_type::string::traits_type,
+        typename base_type::string::hasher,
         typename base_type::allocator_type>
     build_relation_table(
         /// [out] 作業領域として使う std::basic_string 互換の文字列。
         /// 入力した値は破壊され、出力される値には意味がない。
-        template_workspace_string& out_workspace,
+        template_string& out_workspace,
         /// [in] CSV文字列表の構築に使う
         /// psyq::string::flyweight::factory の強参照。空ではないこと。
         typename base_type::string::factory::shared_ptr const& in_string_factory,
@@ -241,8 +238,7 @@ public psyq::string::table<
         typedef
             psyq::string::relation_table<
                 typename base_type::number,
-                typename base_type::string::value_type,
-                typename base_type::string::traits_type,
+                typename base_type::string::hasher,
                 typename base_type::allocator_type>
             relation_table;
         return in_csv_string.empty()?
@@ -259,11 +255,11 @@ public psyq::string::table<
 
     //-------------------------------------------------------------------------
     /// @brief CSV形式の文字列を解析し、文字列表を構築する。
-    private: template<typename template_workspace_string>
+    private: template<typename template_string>
     bool build(
         /// [out] 作業領域として使う文字列。
         /// std::basic_string 互換のインターフェイスを持つこと。
-        template_workspace_string& out_workspace,
+        template_string& out_workspace,
         /// [in] 解析するCSV形式の文字列。
         typename base_type::string::view const& in_csv_string,
         /// [in] フライ級文字列の生成器を指すスマートポインタ。

@@ -51,7 +51,7 @@ template<
     typename template_unsigned = std::uint64_t,
     typename template_float = float,
     typename template_priority = std::int32_t,
-    typename template_hasher = psyq::string::view<char>::fnv1_hash32,
+    typename template_hasher = PSYQ_STRING_FLYWEIGHT_HASHER_DEFAULT,
     typename template_allocator = std::allocator<void*>>
 class psyq::if_then_engine::driver
 {
@@ -59,17 +59,7 @@ class psyq::if_then_engine::driver
     protected: typedef driver this_type;
 
     //-------------------------------------------------------------------------
-    /// @brief 文字列からハッシュ値を生成する、ハッシュ関数オブジェクトの型。
-    /// @details
-    /// - std::hash 互換インターフェイスを持つこと。
-    /// - hasher::argument_type
-    ///   が文字列型で、以下に相当するメンバ関数を使えること。
-    ///   @code
-    ///   // brief 文字列の先頭位置を取得する。
-    ///   hasher::argument_type::const_pointer hasher::argument_type::data() const;
-    ///   // brief 文字列の要素数を取得する。
-    ///   std::size_t hasher::argument_type::size() const;
-    ///   @endcode
+    /// @copydoc psyq::string::_private::flyweight_factory::hasher
     public: typedef template_hasher hasher;
     /// @brief 各種コンテナに用いるメモリ割当子の型。
     public: typedef template_allocator allocator_type;
@@ -299,38 +289,46 @@ class psyq::if_then_engine::driver
     }
 
     /// @brief 状態値と条件式と条件挙動ハンドラを、チャンクへ追加する。
-    public: template<
-        typename template_workspace_string,
-        typename template_shared_ptr,
-        typename template_string>
+    public: template<typename template_string>
     void extend_chunk(
         /// [out] 文字列表の構築の作業領域として使う文字列。
         /// std::basic_string 互換のインタフェイスを持つこと。
-        template_workspace_string& out_workspace,
+        template_string& out_workspace,
         /// [in] 文字列表の構築に使う
         /// psyq::string::flyweight::factory の強参照。空ではないこと。
-        template_shared_ptr const& in_string_factory,
+        typename psyq::string::flyweight<
+            typename this_type::hasher, typename this_type::allocator_type>
+        ::factory::shared_ptr
+            const& in_string_factory,
         /// [in] 追加するチャンクの識別値。
         typename this_type::chunk_key const& in_chunk_key,
         /// [in] 状態値CSV文字列。空文字列の場合は、状態値を追加しない。
-        template_string const& in_status_csv,
+        psyq::string::view<
+            typename template_string::value_type,
+            typename template_string::traits_type>
+                const& in_status_csv,
         /// [in] 状態値CSVの属性の行番号。
         std::size_t const in_status_attribute,
         /// [in] 条件式CSV文字列。空文字列の場合は、条件式を追加しない。
-        template_string const& in_expression_csv,
+        psyq::string::view<
+            typename template_string::value_type,
+            typename template_string::traits_type>
+                const& in_expression_csv,
         /// [in] 条件式CSVの属性の行番号。
         std::size_t const in_expression_attribute,
         /// [in] 条件挙動CSV文字列。空文字列の場合は、条件挙動ハンドラを追加しない。
-        template_string const& in_handler_csv,
+        psyq::string::view<
+            typename template_string::value_type,
+            typename template_string::traits_type>
+                const& in_handler_csv,
         /// [in] 条件挙動CSVの属性の行番号。
         std::size_t const in_handler_attribute)
     {
         typedef
             psyq::string::csv_table<
-                std::size_t,
-                typename template_string::value_type,
-                typename template_string::traits_type,
-                typename template_shared_ptr::element_type::allocator_type>
+                std::size_t, 
+                typename this_type::hasher,
+                typename this_type::allocator_type>
             csv_table;
         this->extend_chunk(
             in_chunk_key,

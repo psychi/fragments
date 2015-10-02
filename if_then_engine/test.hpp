@@ -46,12 +46,11 @@ class stage_loader
     //-------------------------------------------------------------------------
     public: typedef template_if_then_driver if_then_driver;
 
-    public: typedef psyq::string::flyweight<char> string;
+    public: typedef psyq::string::flyweight<> string;
     public: typedef
         psyq::string::relation_table<
             std::size_t,
-            typename this_type::string::value_type,
-            typename this_type::string::traits_type,
+            typename this_type::string::hasher,
             typename this_type::string::allocator_type>
         relation_table;
 
@@ -204,24 +203,22 @@ class stage_loader
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace tesv
 {
-    typedef psyq::string::flyweight<char> flyweight_string;
+    typedef psyq::string::flyweight<> flyweight_string;
     typedef tesv::flyweight_string::view string_view;
-    typedef tesv::flyweight_string::factory::hasher string_hash;
+    typedef tesv::flyweight_string::hasher string_hash;
     typedef psyq::string::storage<tesv::string_view::value_type> string_storage;
     typedef float float32_t;
     typedef std::allocator<void*> void_allocator;
     typedef
         psyq::string::csv_table<
             std::size_t,
-            tesv::string_view::value_type,
-            tesv::string_view::traits_type,
+            string_hash,
             tesv::void_allocator>
         csv_table;
     typedef
         psyq::string::relation_table<
             std::size_t,
-            tesv::string_view::value_type,
-            tesv::string_view::traits_type,
+            string_hash,
             tesv::void_allocator>
         relation_table;
 
@@ -721,7 +718,7 @@ namespace psyq_test
         driver local_driver(256, 256, 256);
 
         // 文字列表の構築に使うフライ級文字列生成器を構築する。
-        typedef psyq::string::flyweight<char> flyweight_string;
+        typedef psyq::string::flyweight<> flyweight_string;
         auto const local_string_factory(
             std::allocate_shared<typename flyweight_string::factory>(
                 flyweight_string::allocator_type(),
@@ -743,7 +740,7 @@ namespace psyq_test
         stage_loader<driver>::register_handlers(
             local_stages,
             local_driver,
-            psyq::string::relation_table<std::size_t, char>(local_stages.get_allocator()));
+            psyq::string::relation_table<std::size_t>(local_stages.get_allocator()));
 
         // 状態値CSV文字列を構築する。
         flyweight_string::view const local_csv_status(

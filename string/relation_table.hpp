@@ -52,38 +52,31 @@ namespace psyq
 {
     namespace string
     {
-        template<typename, typename, typename, typename> class relation_table;
+        template<typename, typename, typename> class relation_table;
     } // namespace string
 } // namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief 関係データベース的なフライ級文字列表。属性と主キーを持つ。
+/// @brief 関係データベース的なフライ級文字列の表。属性と主キーを持つ。
 /// @sa
 /// psyq::string::csv_table::build_relation_table を使って、
 /// CSV形式の文字列から psyq::string::relation_table を構築できる。
-/// @tparam template_number      @copydoc table::number
-/// @tparam template_char_type   @copydoc psyq::string::view::value_type
-/// @tparam template_char_traits @copydoc psyq::string::view::traits_type
-/// @tparam template_allocator   @copydoc table::allocator_type
+/// @tparam template_number    @copydoc table::number
+/// @tparam template_hasher    @copydoc psyq::string::_private::flyweight_factory::hasher
+/// @tparam template_allocator @copydoc table::allocator_type
 template<
     typename template_number,
-    typename template_char_type,
-    typename template_char_traits = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
+    typename template_hasher = PSYQ_STRING_FLYWEIGHT_HASHER_DEFAULT,
     typename template_allocator = PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT>
 class psyq::string::relation_table:
-public psyq::string::table<
-    template_number, template_char_type, template_char_traits, template_allocator>
+public psyq::string::table<template_number, template_hasher, template_allocator>
 {
-    /// @brief this が指す値の型。
+    /// @copydoc psyq::string::view::this_type
     private: typedef relation_table this_type;
-    /// @brief this_type の基底型。
+    /// @copydoc psyq::string::view::base_type
     public: typedef
-        psyq::string::table<
-            template_number,
-            template_char_type,
-            template_char_traits,
-            template_allocator>
+        psyq::string::table<template_number, template_hasher, template_allocator>
         base_type;
 
     //-------------------------------------------------------------------------
@@ -108,7 +101,7 @@ public psyq::string::table<
     {
         public: attribute_name_less(
             typename relation_table::cell_container const& in_cells,
-            typename relation_table::string::factory::hasher::result_type const
+            typename relation_table::string::hasher::result_type const
                 in_hash)
         PSYQ_NOEXCEPT: cells_(in_cells), hash_(in_hash)
         {}
@@ -147,7 +140,7 @@ public psyq::string::table<
 
         private: typename relation_table::cell_container const& cells_;
         private:
-        typename relation_table::string::factory::hasher::result_type hash_;
+        typename relation_table::string::hasher::result_type hash_;
 
     }; // class attribute_name_less
 
@@ -163,7 +156,7 @@ public psyq::string::table<
     {
         public: key_less(
             typename relation_table::cell_container const& in_cells,
-            typename relation_table::string::factory::hasher::result_type const
+            typename relation_table::string::hasher::result_type const
                 in_hash)
         PSYQ_NOEXCEPT: cells_(in_cells), hash_(in_hash)
         {}
@@ -199,8 +192,7 @@ public psyq::string::table<
         }
 
         private: typename relation_table::cell_container const& cells_;
-        private:
-        typename relation_table::string::factory::hasher::result_type hash_;
+        private: typename relation_table::string::hasher::result_type hash_;
 
     }; // class key_less
 
@@ -408,7 +400,7 @@ public psyq::string::table<
         if (!in_attribute_name.empty())
         {
             auto const local_hash(
-                this_type::string::_compute_hash(in_attribute_name));
+                this_type::string::factory::_compute_hash(in_attribute_name));
             auto const& local_cells(this->get_cells());
             auto const local_lower_bound(
                 std::lower_bound(
@@ -568,7 +560,7 @@ public psyq::string::table<
         typename base_type::string::view const& in_key)
     const PSYQ_NOEXCEPT
     {
-        auto const local_hash(this_type::string::_compute_hash(in_key));
+        auto const local_hash(this_type::string::factory::_compute_hash(in_key));
         typename base_type::number local_count(0);
         for (
             auto i(
@@ -604,7 +596,8 @@ public psyq::string::table<
         if (!in_key.empty())
         {
             auto& local_cells(this->get_cells());
-            auto const local_hash(this_type::string::_compute_hash(in_key));
+            auto const local_hash(
+                this_type::string::factory::_compute_hash(in_key));
             auto const local_lower_bound(
                 std::lower_bound(
                     this->keys_.begin(),

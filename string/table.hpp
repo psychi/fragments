@@ -46,7 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define PSYQ_STRING_TABLE_HPP_
 
 #include "./flyweight.hpp"
-#include "../string/numeric_parser.hpp"
+#include "./numeric_parser.hpp"
 
 /// @copydoc psyq::string::table::MAX_COLUMN_COUNT
 #ifndef PSYQ_STRING_TABLE_MAX_COLUMN_COUNT
@@ -58,25 +58,23 @@ namespace psyq
 {
     namespace string
     {
-        template<typename, typename, typename, typename> class table;
+        template<typename, typename, typename> class table;
     } // namespace string
 } // namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 行番号と列番号で参照する、フライ級文字列の表。
-/// @tparam template_number      @copydoc table::number
-/// @tparam template_char_type   @copydoc psyq::string::view::value_type
-/// @tparam template_char_traits @copydoc psyq::string::view::traits_type
-/// @tparam template_allocator   @copydoc table::allocator_type
+/// @tparam template_number    @copydoc table::number
+/// @tparam template_hasher    @copydoc psyq::string::_private::flyweight_factory::hasher
+/// @tparam template_allocator @copydoc table::allocator_type
 template<
     typename template_number,
-    typename template_char_type,
-    typename template_char_traits = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
+    typename template_hasher = PSYQ_STRING_FLYWEIGHT_HASHER_DEFAULT,
     typename template_allocator = PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT>
 class psyq::string::table
 {
-    /// @brief thisが指す値の型。
+    /// @copydoc psyq::string::view::this_type
     private: typedef table this_type;
 
     //-------------------------------------------------------------------------
@@ -86,8 +84,7 @@ class psyq::string::table
     public: typedef template_number number;
     /// @brief 文字列表で使う、フライ級文字列の型。
     public: typedef
-        psyq::string::flyweight<
-            template_char_type, template_char_traits, template_allocator>
+        psyq::string::flyweight<template_hasher, template_allocator>
         string;
     public: enum: typename this_type::number
     {

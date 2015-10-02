@@ -46,6 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "./view.hpp"
 #include "./flyweight_factory.hpp"
+#include "../hash/murmur3.hpp"
 
 /// @brief フライ級文字列生成器に適用するデフォルトのメモリ割当子の型
 #ifndef PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT
@@ -57,12 +58,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define PSYQ_STRING_FLYWEIGHT_CHUNK_SIZE_DEFAULT 4096
 #endif // !defined(PSYQ_STRING_FLYWEIGHT_CHUNK_SIZE_DEFAULT)
 
+#ifndef PSYQ_STRING_FLYWEIGHT_HASHER_DEFAULT
+#define PSYQ_STRING_FLYWEIGHT_HASHER_DEFAULT\
+    psyq::hash::string_murmur3a<psyq::string::view<char> >
+#endif // !defined(PSYQ_STRING_FLYWEIGHT_HASHER_DEFAULT)
+
+#ifndef PSYQ_STRING_FLYWEIGHT_WEAK
+#define PSYQ_STRING_FLYWEIGHT_WEAK true
+#endif // !defined(PSYQ_STRING_FLYWEIGHT_WEAK)
+
 /// @cond
 namespace psyq
 {
     namespace string
     {
-        template<typename, typename, typename> class flyweight;
+        template<typename, typename> class flyweight;
     } // namespace string
 } // namespace psyq
 /// @endcond
@@ -70,33 +80,26 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief std::basic_string_view を模した、flyweightパターンの文字列。
 /// @details base_type::base_type::factory を介して文字列を管理する。
-/// @tparam template_char_type   @copydoc psyq::string::view::value_type
-/// @tparam template_char_traits @copydoc psyq::string::view::traits_type
-/// @tparam template_allocator   @copydoc psyq::string::_private::flyweight_factory::allocator_type
+/// @tparam template_hasher    @copydoc psyq::string::_private::flyweight_factory::hasher
+/// @tparam template_allocator @copydoc psyq::string::_private::flyweight_factory::allocator_type
 /// @ingroup psyq_string
 template<
-    typename template_char_type,
-    typename template_char_traits = PSYQ_STRING_VIEW_TRAITS_DEFAULT,
+    typename template_hasher = PSYQ_STRING_FLYWEIGHT_HASHER_DEFAULT,
     typename template_allocator = PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT>
 class psyq::string::flyweight:
 public psyq::string::_private::interface_immutable<
     typename psyq::string::_private::flyweight_factory<
-        typename psyq::string::view<template_char_type, template_char_traits>
-        ::fnv1_hash32,
-        template_allocator>
-    ::_string_holder>
+        template_hasher, template_allocator>
+    ::template _string_handle<PSYQ_STRING_FLYWEIGHT_WEAK> >
 {
-    /// @brief this が指す値の型。
+    /// @copydoc psyq::string::view::this_type
     private: typedef flyweight this_type;
-    /// @brief this_type の基底型。
+    /// @copydoc psyq::string::view::base_type
     public: typedef
         psyq::string::_private::interface_immutable<
             typename psyq::string::_private::flyweight_factory<
-                typename psyq::string::view<
-                    template_char_type, template_char_traits>
-                ::fnv1_hash32,
-                template_allocator>
-            ::_string_holder>
+                template_hasher, template_allocator>
+            ::template _string_handle<PSYQ_STRING_FLYWEIGHT_WEAK> >
         base_type;
 
     //-------------------------------------------------------------------------
@@ -120,20 +123,20 @@ public psyq::string::_private::interface_immutable<
     {}
 
     /// @brief 文字列を構築する。動的メモリ割当を行う場合ある。
-    /// @details in_string と等価な文字列が in_factory に…
-    /// - あれば、動的メモリ割当てを行わない。
-    /// - なければ、動的メモリ割当てを行う場合がある。
+    /// @details
+    ///   in_string と等価な文字列が in_factory に…
+    ///   - あれば、動的メモリ割当てを行わない。
+    ///   - なければ、動的メモリ割当てを行う場合がある。
     public: flyweight(
         /// [in] コピー元となる文字列。
         typename base_type::view const& in_string,
         /// [in] フライ級文字列の生成器。
-        typename base_type::base_type::factory::shared_ptr in_factory,
+        typename base_type::base_type::factory_smart_ptr const& in_factory,
         /// [in] 文字列チャンクを生成する場合の、デフォルトのチャンク容量。
         std::size_t const in_chunk_size =
             PSYQ_STRING_FLYWEIGHT_CHUNK_SIZE_DEFAULT):
     base_type(
-        base_type::base_type::make(
-            std::move(in_factory), in_string, in_chunk_size))
+        base_type::base_type::make(in_factory, in_string, in_chunk_size))
     {
         PSYQ_ASSERT(in_string.empty() || !this->empty());
     }
@@ -165,7 +168,7 @@ namespace psyq_test
 {
     inline void flyweight_string()
     {
-        typedef psyq::string::flyweight<char> string;
+        typedef psyq::string::flyweight<> string;
         string::factory::shared_ptr const local_factory(new string::factory);
         string local_string("stringstringstring", local_factory, 0);
         PSYQ_ASSERT(local_factory->count_hash(local_string.get_hash()) == 1);

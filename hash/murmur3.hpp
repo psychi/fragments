@@ -30,9 +30,9 @@ namespace psyq
     namespace hash
     {
         /// @cond
-        template<typename, typename> class string_murmur3a;
-        template<typename, typename> class string_murmur3c;
-        template<typename, typename> class string_murmur3f;
+        template<typename, std::uint32_t, typename> class string_murmur3a;
+        template<typename, std::uint32_t, typename> class string_murmur3c;
+        template<typename, std::uint64_t, typename> class string_murmur3f;
         /// @endcond
 
         namespace _private
@@ -43,19 +43,6 @@ namespace psyq
             class murmur3f;
             /// @endcond
 
-            /// @brief Murmur3A形式の配列ハッシュ関数オブジェクト。
-            typedef
-                array_runtime_seeding_proxy<murmur3a, std::uint32_t>
-                array_murmur3a;
-            /// @brief Murmur3C形式の配列ハッシュ関数オブジェクト。
-            typedef
-                array_runtime_seeding_proxy<murmur3c, std::uint32_t>
-                array_murmur3c;
-            /// @brief Murmur3F形式の配列ハッシュ関数オブジェクト。
-            typedef
-                array_runtime_seeding_proxy<murmur3f, std::uint64_t>
-                array_murmur3f;
-
         } // namespace _private
     } // namespace hash
 } // namespace psyq
@@ -63,30 +50,33 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief Murmur3A形式の文字列ハッシュ関数オブジェクト。
 /// @tparam template_string @copydoc _private::string_proxy::argument_type
+/// @tparam template_seed   ハッシュ関数のシード値。
 /// @tparam template_result @copydoc primitive_bits::result_type
-template<typename template_string, typename template_result = std::size_t>
+template<
+    typename template_string,
+    std::uint32_t template_seed = PSYQ_HASH_MURMUR3A_SEED_DEFAULT,
+    typename template_result = std::size_t>
 class psyq::hash::string_murmur3a:
 public psyq::hash::_private::string_proxy<
-    psyq::hash::_private::array_murmur3a, template_result, template_string>
+    psyq::hash::_private::array_seeding_proxy<
+        psyq::hash::_private::murmur3a, std::uint32_t, template_seed>,
+    template_result,
+    template_string>
 {
     /// @copydoc psyq::string::view::this_type
     private: typedef string_murmur3a this_type;
     /// @copydoc psyq::string::view::base_type
     public: typedef
         psyq::hash::_private::string_proxy<
-            psyq::hash::_private::array_murmur3a,
+            psyq::hash::_private::array_seeding_proxy<
+                psyq::hash::_private::murmur3a, std::uint32_t, template_seed>,
             template_result,
             template_string>
         base_type;
 
     /// @brief 文字列ハッシュ関数オブジェクトを構築する。
-    public: explicit string_murmur3a(
-        /// [in] in_seed ハッシュ関数のシード値。
-        typename base_type::hasher::seed in_seed =
-            PSYQ_HASH_MURMUR3A_SEED_DEFAULT):
-    base_type(
-        typename base_type::hasher(
-            typename base_type::hasher::hasher(), std::move(in_seed)))
+    public: explicit string_murmur3a():
+    base_type(typename base_type::hasher(typename base_type::hasher::hasher()))
     {}
 
 }; // class psyq::hash::string_murmur3a
@@ -94,30 +84,33 @@ public psyq::hash::_private::string_proxy<
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief Murmur3C形式の文字列ハッシュ関数オブジェクト。
 /// @tparam template_string @copydoc _private::string_proxy::argument_type
+/// @tparam template_seed   ハッシュ関数のシード値。
 /// @tparam template_result @copydoc primitive_bits::result_type
-template<typename template_string, typename template_result = std::size_t>
+template<
+    typename template_string,
+    std::uint32_t template_seed = PSYQ_HASH_MURMUR3C_SEED_DEFAULT,
+    typename template_result = std::size_t>
 class psyq::hash::string_murmur3c:
 public psyq::hash::_private::string_proxy<
-    psyq::hash::_private::array_murmur3c, template_result, template_string>
+    psyq::hash::_private::array_seeding_proxy<
+        psyq::hash::_private::murmur3c, std::uint32_t, template_seed>,
+    template_result,
+    template_string>
 {
     /// @copydoc psyq::string::view::this_type
     private: typedef string_murmur3c this_type;
     /// @copydoc psyq::string::view::base_type
     public: typedef
         psyq::hash::_private::string_proxy<
-            psyq::hash::_private::array_murmur3c,
+            psyq::hash::_private::array_seeding_proxy<
+                psyq::hash::_private::murmur3c, std::uint32_t, template_seed>,
             template_result,
             template_string>
         base_type;
 
     /// @brief 文字列ハッシュ関数オブジェクトを構築する。
-    public: explicit string_murmur3c(
-        /// [in] in_seed ハッシュ関数のシード値。
-        typename base_type::hasher::seed in_seed =
-            PSYQ_HASH_MURMUR3C_SEED_DEFAULT):
-    base_type(
-        typename base_type::hasher(
-            typename base_type::hasher::hasher(), std::move(in_seed)))
+    public: explicit string_murmur3c():
+    base_type(typename base_type::hasher(typename base_type::hasher::hasher()))
     {}
 
 }; // class psyq::hash::string_murmur3c
@@ -125,30 +118,33 @@ public psyq::hash::_private::string_proxy<
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief Murmur3F形式の文字列ハッシュ関数オブジェクト。
 /// @tparam template_string @copydoc _private::string_proxy::argument_type
+/// @tparam template_seed   ハッシュ関数のシード値。
 /// @tparam template_result @copydoc primitive_bits::result_type
-template<typename template_string, typename template_result = std::size_t>
+template<
+    typename template_string,
+    std::uint64_t template_seed = PSYQ_HASH_MURMUR3F_SEED_DEFAULT,
+    typename template_result = std::size_t>
 class psyq::hash::string_murmur3f:
 public psyq::hash::_private::string_proxy<
-    psyq::hash::_private::array_murmur3f, template_result, template_string>
+    psyq::hash::_private::array_seeding_proxy<
+        psyq::hash::_private::murmur3f, std::uint64_t, template_seed>,
+    template_result,
+    template_string>
 {
     /// @copydoc psyq::string::view::this_type
     private: typedef string_murmur3f this_type;
     /// @copydoc psyq::string::view::base_type
     public: typedef
         psyq::hash::_private::string_proxy<
-            psyq::hash::_private::array_murmur3f,
+            psyq::hash::_private::array_seeding_proxy<
+                psyq::hash::_private::murmur3f, std::uint64_t, template_seed>,
             template_result,
             template_string>
         base_type;
 
     /// @brief 文字列ハッシュ関数オブジェクトを構築する。
-    public: explicit string_murmur3f(
-        /// [in] in_seed ハッシュ関数のシード値。
-        typename base_type::hasher::seed in_seed =
-            PSYQ_HASH_MURMUR3F_SEED_DEFAULT):
-    base_type(
-        typename base_type::hasher(
-            typename base_type::hasher::hasher(), std::move(in_seed)))
+    public: explicit string_murmur3f():
+    base_type(typename base_type::hasher(typename base_type::hasher::hasher()))
     {}
 
 }; // class psyq::hash::string_murmur3f
@@ -196,11 +192,11 @@ class psyq::hash::_private::murmur3a
         // body
         for (auto i(in_bytes); i < local_tail; i += 4)
         {
-            auto const local_k(this_type::get_block(i));
-            auto const local_x(
-                local_c1 * this_type::rotl(local_c0 * local_k, 15));
-            local_hash =
-                0xE6546B64 + 5 * this_type::rotl(local_hash ^ local_x, 13);
+            local_hash = 0xE6546B64 + 5 * this_type::rotl(
+                local_hash ^ (
+                    local_c1 * this_type::rotl(
+                        local_c0 * this_type::get_block(i), 15)),
+                13);
         }
 
         //----------
@@ -409,29 +405,30 @@ public psyq::hash::_private::murmur3a
         // body
         for (auto i(in_bytes); i < local_tail; i += 16)
         {
-            auto const local_k0(base_type::get_block(i));
-            auto const local_x0(
-                local_c1 * base_type::rotl(local_c0 * local_k0, 15));
             local_hash0 = 0x561CCD1B + 5 * (
-                local_hash1 + base_type::rotl(local_hash0 ^ local_x0, 19));
-
-            auto const local_k1(base_type::get_block(i + 4));
-            auto const local_x1(
-                local_c2 * base_type::rotl(local_c1 * local_k1, 16));
+                local_hash1 + base_type::rotl(
+                    local_hash0 ^ (
+                        local_c1 * base_type::rotl(
+                            local_c0 * base_type::get_block(i), 15)),
+                    19));
             local_hash1 = 0x0BCAA747 + 5 * (
-                local_hash2 + base_type::rotl(local_hash1 ^ local_x1, 17));
-
-            auto const local_k2(base_type::get_block(i + 8));
-            auto const local_x2(
-                local_c3 * base_type::rotl(local_c2 * local_k2, 17));
+                local_hash2 + base_type::rotl(
+                    local_hash1 ^ (
+                        local_c2 * base_type::rotl(
+                            local_c1 * base_type::get_block(i + 4), 16)),
+                    17));
             local_hash2 = 0x96CD1C35 + 5 * (
-                local_hash3 + base_type::rotl(local_hash2 ^ local_x2, 15));
-
-            auto const local_k3(base_type::get_block(i + 12));
-            auto const local_x3(
-                local_c0 * base_type::rotl(local_c3 * local_k3, 18));
+                local_hash3 + base_type::rotl(
+                    local_hash2 ^ (
+                        local_c3 * base_type::rotl(
+                            local_c2 * base_type::get_block(i + 8), 17)),
+                    15));
             local_hash3 = 0x32AC3B17 + 5 * (
-                local_hash0 + base_type::rotl(local_hash3 ^ local_x3, 13));
+                local_hash0 + base_type::rotl(
+                    local_hash3 ^ (
+                        local_c0 * base_type::rotl(
+                            local_c3 * base_type::get_block(i + 12), 18)),
+                    13));
         }
 
         //----------
@@ -541,17 +538,18 @@ public psyq::hash::_private::murmur3c
         // body
         for (auto i(in_bytes); i < local_tail; i += 16)
         {
-            auto const local_k0(this_type::get_block(i));
-            auto const local_x0(
-                local_c1 * this_type::rotl(local_k0 * local_c0, 31));
             local_hash0 = 0x52DCE729 + 5 * (
-                local_hash1 + this_type::rotl(local_hash0 ^ local_x0, 27));
-
-            auto const local_k1(this_type::get_block(i + 8));
-            auto const local_x1(
-                local_c0 * this_type::rotl(local_k1 * local_c1, 33));
+                local_hash1 + this_type::rotl(
+                    local_hash0 ^ (
+                        local_c1 * this_type::rotl(
+                            local_c0 * this_type::get_block(i), 31)),
+                    27));
             local_hash1 = 0x38495AB5 + 5 * (
-                local_hash0 + this_type::rotl(local_hash1 ^ local_x1, 31));
+                local_hash0 + this_type::rotl(
+                    local_hash1 ^ (
+                        local_c0 * this_type::rotl(
+                            local_c1 * this_type::get_block(i + 8), 33)),
+                    31));
         }
 
         //----------

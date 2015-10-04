@@ -681,7 +681,6 @@ INPUT                  = \
                          ./assert.hpp \
                          ./fnv_hash.hpp \
                          ./bit_algorithm.hpp \
-                         ./static_deque.hpp \
                          ./memory_arena.hpp \
                          ./atomic_count.hpp \
                          ./member_comparison.hpp \
@@ -698,13 +697,17 @@ INPUT                  = \
                          ./string/view.hpp \
                          ./string/storage.hpp \
                          ./string/holder.hpp \
-                         ./string/flyweight_string.hpp \
+                         ./string/flyweight_placeholder.hpp \
                          ./string/flyweight_factory.hpp \
+                         ./string/flyweight_handle.hpp \
                          ./string/flyweight.hpp \
                          ./string/table.hpp \
                          ./string/csv_table.hpp \
                          ./string/relation_table.hpp \
                          ./string/numeric_parser.hpp \
+                         ./static_deque.hpp \
+                         ./container/static_container.hpp \
+                         ./container/static_vector.hpp \
                          ./hash/primitive_bits.hpp \
                          ./hash/proxy.hpp \
                          ./hash/fnv.hpp \

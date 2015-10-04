@@ -1,5 +1,5 @@
 ﻿/*
-Copyright (c) 2013, Hillco Psychi, All rights reserved.
+Copyright (c) 2015, Hillco Psychi, All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met: 
@@ -40,13 +40,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 懲罰的損害、または結果損害について、一切責任を負わないものとします。
  */
 /// @file
+/// @brief @copybrief psyq::string::flyweight
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #ifndef PSYQ_STRING_FLYWEIGHT_HPP_
 #define PSYQ_STRING_FLYWEIGHT_HPP_
 
-#include "./view.hpp"
-#include "./flyweight_factory.hpp"
 #include "../hash/murmur3.hpp"
+#include "./view.hpp"
+#include "./flyweight_handle.hpp"
 
 /// @brief フライ級文字列生成器に適用するデフォルトのメモリ割当子の型
 #ifndef PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT
@@ -60,7 +61,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef PSYQ_STRING_FLYWEIGHT_HASHER_DEFAULT
 #define PSYQ_STRING_FLYWEIGHT_HASHER_DEFAULT\
-    psyq::hash::string_murmur3a<psyq::string::view<char> >
+    psyq::hash::string_murmur3a<psyq::string::view<char>>
 #endif // !defined(PSYQ_STRING_FLYWEIGHT_HASHER_DEFAULT)
 
 #ifndef PSYQ_STRING_FLYWEIGHT_WEAK
@@ -80,26 +81,24 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief std::basic_string_view を模した、flyweightパターンの文字列。
 /// @details base_type::base_type::factory を介して文字列を管理する。
-/// @tparam template_hasher    @copydoc psyq::string::_private::flyweight_factory::hasher
-/// @tparam template_allocator @copydoc psyq::string::_private::flyweight_factory::allocator_type
+/// @tparam template_hasher    @copydoc _private::flyweight_handle::hasher
+/// @tparam template_allocator @copydoc _private::flyweight_handle::allocator_type
 /// @ingroup psyq_string
 template<
     typename template_hasher = PSYQ_STRING_FLYWEIGHT_HASHER_DEFAULT,
     typename template_allocator = PSYQ_STRING_FLYWEIGHT_ALLOCATOR_DEFAULT>
 class psyq::string::flyweight:
 public psyq::string::_private::interface_immutable<
-    typename psyq::string::_private::flyweight_factory<
-        template_hasher, template_allocator>
-    ::template _string_handle<PSYQ_STRING_FLYWEIGHT_WEAK> >
+    typename psyq::string::_private::flyweight_handle<
+        template_hasher, template_allocator, PSYQ_STRING_FLYWEIGHT_WEAK>>
 {
     /// @copydoc psyq::string::view::this_type
     private: typedef flyweight this_type;
     /// @copydoc psyq::string::view::base_type
     public: typedef
         psyq::string::_private::interface_immutable<
-            typename psyq::string::_private::flyweight_factory<
-                template_hasher, template_allocator>
-            ::template _string_handle<PSYQ_STRING_FLYWEIGHT_WEAK> >
+            typename psyq::string::_private::flyweight_handle<
+                template_hasher, template_allocator, PSYQ_STRING_FLYWEIGHT_WEAK>>
         base_type;
 
     //-------------------------------------------------------------------------
@@ -163,24 +162,5 @@ public psyq::string::_private::interface_immutable<
 
 }; // class psyq::string::flyweight
 
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-namespace psyq_test
-{
-    inline void flyweight_string()
-    {
-        typedef psyq::string::flyweight<> string;
-        string::factory::shared_ptr const local_factory(new string::factory);
-        string local_string("stringstringstring", local_factory, 0);
-        PSYQ_ASSERT(local_factory->count_hash(local_string.get_hash()) == 1);
-        local_string.data();
-        local_string = string("abcdefg", local_factory);
-        local_string.data();
-        local_string = string("string", local_factory);
-        local_string.data();
-        local_string.clear();
-        local_factory->collect_garbage();
-    }
-}
-
-#endif // !PSYQ_STRING_FLYWEIGHT_HPP_
+#endif // !defined(PSYQ_STRING_FLYWEIGHT_HPP_)
 // vim: set expandtab:

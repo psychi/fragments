@@ -56,6 +56,9 @@ namespace psyq
     namespace container
     {
         /// @cond
+        template<typename, typename> struct map_value_compare;
+        template<typename, typename> class sorted_map;
+        template<typename, typename> class sorted_multimap;
         template<typename, typename> class sorted_set;
         template<typename, typename> class sorted_multiset;
         /// @endcond
@@ -71,12 +74,244 @@ namespace psyq
 } // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-template<typename template_container, typename template_compare>
+/// @brief std::pair::first を比較する関数オブジェクト。
+/// @tparam template_pair    std::pair 型。
+/// @tparam template_compare std::pair::first_type を比較する関数オブジェクト。
+template<
+    typename template_pair,
+    typename template_compare = std::less<typename template_pair::first_type>>
+struct psyq::container::map_value_compare: public template_compare
+{
+    /// @copydoc psyq::string::view::this_type
+    private: typedef map_value_compare this_type;
+    /// @copydoc psyq::string::view::base_type
+    public: typedef template_compare base_type;
+
+    //-------------------------------------------------------------------------
+    public: typedef template_pair first_argument_type;
+    public: typedef template_pair second_argument_type;
+
+    //-------------------------------------------------------------------------
+    public: bool operator()(
+        typename this_type::first_argument_type const& in_left,
+        typename this_type::second_argument_type const& in_right)
+    const
+    {
+        return (*this)(in_left.first, in_right.first);
+    }
+
+    public: bool operator()(
+        typename this_type::first_argument_type const& in_left,
+        typename this_type::second_argument_type::first_type const& in_right)
+    const
+    {
+        return (*this)(in_left.first, in_right);
+    }
+
+    public: bool operator()(
+        typename this_type::first_argument_type::first_type const& in_left,
+        typename this_type::second_argument_type const& in_right)
+    const
+    {
+        return (*this)(in_left, in_right.first);
+    }
+
+    public: bool operator()(
+        typename this_type::first_argument_type::first_type const& in_left,
+        typename this_type::second_argument_type::first_type const& in_right)
+    const
+    {
+        return static_cast<base_type const&>(*this)(in_left, in_right);
+    }
+
+}; // struct psyq::container::map_value_compare
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief ソート済コンテナを用いた、 std::map を模した辞書。
+/// @tparam template_container @copydoc _private::sorted_container::base_container
+/// @tparam template_compare   @copydoc _private::sorted_container::value_compare
+template<
+    typename template_container,
+    typename template_compare
+        = psyq::container::map_value_compare<
+            typename template_container::value_type>>
+class psyq::container::sorted_map:
+public psyq::container::_private::sorted_container<
+    template_container, template_compare, false>
+{
+    /// @copydoc psyq::string::view::this_type
+    private: typedef sorted_map this_type;
+    /// @copydoc psyq::string::view::base_type
+    public: typedef
+        psyq::container::_private::sorted_container<
+            template_container, template_compare, false>
+        base_type;
+
+    //-------------------------------------------------------------------------
+    /// @brief キーの型。
+    public: typedef typename base_type::value_type::first_type key_type;
+    /// @brief キーに対応する値の型。
+    public: typedef typename base_type::value_type::second_type mapped_type;
+
+    //-------------------------------------------------------------------------
+    /// @name 構築
+    /// @{
+
+    /// @brief ソート済辞書を構築する。
+    public: explicit sorted_map(
+        /// [in] 元となるコンテナ。
+        typename base_type::base_container in_source = template_container(),
+        /// [in] コンテナ要素を比較する関数オブジェクト。
+        typename base_type::value_compare in_compare = template_compare()):
+    base_type(std::move(in_source), std::move(in_compare))
+    {}
+
+    /// @brief ソート済辞書をコピー構築する。
+    public: sorted_map(
+        /// [in] コピー元となるソート済辞書。
+        this_type const& in_source):
+    base_type(in_source)
+    {}
+
+    /// @brief ソート済辞書をムーブ構築する。
+    public: sorted_map(
+        /// [in] ムーブ元となるソート済辞書。
+        this_type&& io_source):
+    base_type(std::move(io_source))
+    {}
+    /// @}
+    //-------------------------------------------------------------------------
+    /// @name 要素の参照
+    /// @{
+
+    /// @brief キーに対応する要素を参照する。
+    /// @details in_key に対応する要素がない場合は std::out_of_range を投げる。
+    /// @return in_key に対応する要素。
+    public: typename base_type::value_type const& at(
+        /// [in] 要素に対応するキー。
+        typename this_type::key_type const& in_key)
+    const
+    {
+        return *this_type::at(*this, in_key);
+    }
+
+    /// @brief キーに対応する要素を参照する。
+    /// @details in_key に対応する要素がない場合は std::out_of_range を投げる。
+    /// @return in_key に対応する要素。
+    public: typename base_type::value_type& at(
+        /// [in] 要素に対応するキー。
+        typename this_type::key_type const& in_key)
+    {
+        return *this_type::at(*this, in_key);
+    }
+
+    /// @brief キーに対応する要素を参照する。
+    /// @details
+    ///   in_key に対応する要素がない場合は、
+    ///   対応する要素を構築して挿入する。
+    /// @return in_key に対応する要素。
+    public: typename base_type::value_type& operator[](
+        /// [in] 要素に対応するキー。
+        typename this_type::key_type const& in_key)
+    {
+        auto const local_lower_bound(this->lower_bound(in_key));
+        return std::end(*this) == local_lower_bound
+            && this->compare_(*local_lower_bound, in_key)?
+                *this->insert(
+                    local_lower_bound,
+                    typename base_type::value_type(
+                        in_key, typename this_type::mapped_type())):
+                *local_lower_bound;
+    }
+    /// @}
+    //-------------------------------------------------------------------------
+    private: template<typename template_sorted_container>
+    static auto at(
+        template_sorted_container& in_container,
+        typename this_type::key_type const& in_key)
+    ->decltype(*std::begin(in_container))
+    {
+        auto const local_lower_bound(in_container.lower_bound(in_key));
+        PSYQ_ASSERT_THROW(
+            std::end(in_container) != local_lower_bound
+            && !in_container.compare_(*local_lower_bound, in_key),
+            std::out_of_range);
+        return *local_lower_bound;
+    }
+
+}; // class psyq::container::sorted_map:
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief ソート済コンテナを用いた、 std::multimap を模した辞書。
+/// @tparam template_container @copydoc _private::sorted_container::base_container
+/// @tparam template_compare   @copydoc _private::sorted_container::value_compare
+template<
+    typename template_container,
+    typename template_compare
+        = psyq::container::map_value_compare<
+            typename template_container::value_type>>
+class psyq::container::sorted_multimap:
+public psyq::container::_private::sorted_container<
+    template_container, template_compare, true>
+{
+    /// @copydoc psyq::string::view::this_type
+    private: typedef sorted_multimap this_type;
+    /// @copydoc psyq::string::view::base_type
+    public: typedef
+        psyq::container::_private::sorted_container<
+            template_container, template_compare, true>
+        base_type;
+
+    //-------------------------------------------------------------------------
+    /// @copydoc sorted_map::key_type
+    public: typedef typename base_type::value_type::first_type key_type;
+    /// @copydoc sorted_map::mapped_type
+    public: typedef typename base_type::value_type::second_type mapped_type;
+
+    //-------------------------------------------------------------------------
+    /// @name 構築
+    /// @{
+
+    /// @brief ソート済辞書を構築する。
+    public: explicit sorted_multimap(
+        /// [in] 元となるコンテナ。
+        typename base_type::base_container in_source = template_container(),
+        /// [in] コンテナ要素を比較する関数オブジェクト。
+        typename base_type::value_compare in_compare = template_compare()):
+    base_type(std::move(in_source), std::move(in_compare))
+    {}
+
+    /// @brief ソート済辞書をコピー構築する。
+    public: sorted_multimap(
+        /// [in] コピー元となるソート済辞書。
+        this_type const& in_source):
+    base_type(in_source)
+    {}
+
+    /// @brief ソート済辞書をムーブ構築する。
+    public: sorted_multimap(
+        /// [in] ムーブ元となるソート済辞書。
+        this_type&& io_source):
+    base_type(std::move(io_source))
+    {}
+    /// @}
+}; // class psyq::container::sorted_multimap:
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief ソート済コンテナを用いた、 std::set を模した集合。
+/// @tparam template_container @copydoc _private::sorted_container::base_container
+/// @tparam template_compare   @copydoc _private::sorted_container::value_compare
+template<
+    typename template_container,
+    typename template_compare
+        = std::less<typename template_container::value_type>>
 class psyq::container::sorted_set:
 public psyq::container::_private::sorted_container<
     template_container, template_compare, false>
 {
+    /// @copydoc psyq::string::view::this_type
     private: typedef sorted_set this_type;
+    /// @copydoc psyq::string::view::base_type
     public: typedef
         psyq::container::_private::sorted_container<
             template_container, template_compare, false>
@@ -89,9 +324,9 @@ public psyq::container::_private::sorted_container<
     /// @brief ソート済集合を構築する。
     public: explicit sorted_set(
         /// [in] 元となるコンテナ。
-        typename base_type::base_container in_source,
+        typename base_type::base_container in_source = template_container(),
         /// [in] コンテナ要素を比較する関数オブジェクト。
-        typename base_type::value_compare in_compare = value_compare()):
+        typename base_type::value_compare in_compare = template_compare()):
     base_type(std::move(in_source), std::move(in_compare))
     {}
 
@@ -112,14 +347,64 @@ public psyq::container::_private::sorted_container<
 }; // class psyq::container::sorted_set:
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief ソート済コンテナを用いた、 std::multiset を模した集合。
+/// @tparam template_container @copydoc _private::sorted_container::base_container
+/// @tparam template_compare   @copydoc _private::sorted_container::value_compare
+template<
+    typename template_container,
+    typename template_compare
+        = std::less<typename template_container::value_type>>
+class psyq::container::sorted_multiset:
+public psyq::container::_private::sorted_container<
+    template_container, template_compare, true>
+{
+    /// @copydoc psyq::string::view::this_type
+    private: typedef sorted_multiset this_type;
+    /// @copydoc psyq::string::view::base_type
+    public: typedef
+        psyq::container::_private::sorted_container<
+            template_container, template_compare, true>
+        base_type;
+
+    //-------------------------------------------------------------------------
+    /// @name 構築
+    /// @{
+
+    /// @brief ソート済集合を構築する。
+    public: explicit sorted_multiset(
+        /// [in] 元となるコンテナ。
+        typename base_type::base_container in_source = template_container(),
+        /// [in] コンテナ要素を比較する関数オブジェクト。
+        typename base_type::value_compare in_compare = template_compare()):
+    base_type(std::move(in_source), std::move(in_compare))
+    {}
+
+    /// @brief ソート済集合をコピー構築する。
+    public: sorted_multiset(
+        /// [in] コピー元となるソート済集合。
+        this_type const& in_source):
+    base_type(in_source)
+    {}
+
+    /// @brief ソート済集合をムーブ構築する。
+    public: sorted_multiset(
+        /// [in] ムーブ元となるソート済集合。
+        this_type&& io_source):
+    base_type(std::move(io_source))
+    {}
+    /// @}
+}; // class psyq::container::sorted_multiset:
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 要素の重複を許可しないコンテナのソート処理。
 template<> class psyq::container::_private::container_sorter<false>
 {
+    /// @copydoc psyq::string::view::this_type
     private: typedef container_sorter this_type;
 
-    /// @copydoc sorted_container::is_sorted_position
+    /// @copydoc sorted_container::is_insert_position
     public: template<typename template_container, typename template_compare>
-    static bool is_sorted_position(
+    static bool is_insert_position(
         template_container const& in_container,
         template_compare const& in_compare,
         typename template_container::const_iterator const& in_position,
@@ -167,7 +452,7 @@ template<> class psyq::container::_private::container_sorter<false>
 
         // 重複する要素を削除する。
         auto local_next(std::prev(std::end(io_container)));
-        for (auto i(std::prev(local_next); i != std::begin(io_container);)
+        for (auto i(std::prev(local_next)); i != std::begin(io_container);)
         {
             if (in_compare(*i, *local_next))
             {
@@ -192,12 +477,18 @@ template<> class psyq::container::_private::container_sorter<false>
         /// [in] 要素を比較する関数オブジェクト。
         template_compare const& in_compare,
         /// [in] 要素を挿入する位置。
-        typename template_container::const_iterator in_position,
+        typename template_container::iterator in_position,
         /// [in] 挿入する要素の初期値。
         typename template_container::value_type in_value)
     {
+        PSYQ_ASSERT(
+             std::begin(io_container) == in_position
+             || in_compare(*std::prev(in_position), in_value));
+        PSYQ_ASSERT(
+             std::end(io_container) == in_position
+             || !in_compare(*in_position, in_value));
         auto const local_insert(
-            this_type::is_sorted_position(
+            this_type::is_insert_position(
                 io_container, in_compare, in_position, in_value));
         return std::make_pair(
             local_insert?
@@ -215,9 +506,9 @@ template<> class psyq::container::_private::container_sorter<true>
 {
     private: typedef container_sorter this_type;
 
-    /// @copydoc sorted_container::is_sorted_position
+    /// @copydoc sorted_container::is_insert_position
     public: template<typename template_container, typename template_compare>
-    static bool is_sorted_position(
+    static bool is_insert_position(
         template_container const& in_container,
         template_compare const& in_compare,
         typename template_container::const_iterator const& in_position,
@@ -267,7 +558,7 @@ template<> class psyq::container::_private::container_sorter<true>
         typename template_container::value_type in_value)
     {
         PSYQ_ASSERT(
-            this_type::is_sorted_position(
+            this_type::is_insert_position(
                 io_container, in_compare, in_position, in_value));
         return io_container.insert(std::move(in_position), std::move(in_value));
     }
@@ -276,8 +567,8 @@ template<> class psyq::container::_private::container_sorter<true>
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief ソート済コンテナの基底型。
-/// @tparam template_container @copydoc base_container
-/// @tparam template_compare   @copydoc value_compare
+/// @tparam template_container @copydoc sorted_container::base_container
+/// @tparam template_compare   @copydoc sorted_container::value_compare
 /// @tparam template_multi     重複する要素を許可するかどうか。
 template<
     typename template_container,
@@ -285,35 +576,40 @@ template<
     bool template_multi>
 class psyq::container::_private::sorted_container: private template_container
 {
+    /// @copydoc psyq::string::view::this_type
     private: typedef sorted_container this_type;
+    /// @copydoc psyq::string::view::base_type
     private: typedef template_container base_type;
 
     //-------------------------------------------------------------------------
-    /// @brief 扱うコンテナの型。
+    /// @brief ソートするコンテナの型。
     public: typedef template_container base_container;
-    /// @brief 要素を比較する関数オブジェクト。
+    /// @brief 値を比較する関数オブジェクト。
     public: typedef template_compare value_compare;
+    /// @brief キーを比較する関数オブジェクト。
     public: typedef template_compare key_compare;
+    /// @brief キーの型。
     public: typedef typename base_type::value_type key_type;
 
+    /// @brief 使用するソート処理。
     private: typedef
          psyq::container::_private::container_sorter<template_multi>
          sorter;
 
     //-------------------------------------------------------------------------
-    public: using base_type::value_type;
-    public: using base_type::size_type;
-    public: using base_type::difference_type;
+    public: using typename base_type::value_type;
+    public: using typename base_type::size_type;
+    public: using typename base_type::difference_type;
 
-    public: using base_type::reference;
-    public: using base_type::pointer;
-    public: using base_type::iterator;
-    public: using base_type::reverse_iterator;
+    public: using typename base_type::reference;
+    public: using typename base_type::pointer;
+    public: using typename base_type::iterator;
+    public: using typename base_type::reverse_iterator;
 
-    public: using base_type::const_reference;
-    public: using base_type::const_pointer;
-    public: using base_type::const_iterator;
-    public: using base_type::const_reverse_iterator;
+    public: using typename base_type::const_reference;
+    public: using typename base_type::const_pointer;
+    public: using typename base_type::const_iterator;
+    public: using typename base_type::const_reverse_iterator;
 
     public: using base_type::begin;
     public: using base_type::rbegin;
@@ -334,11 +630,11 @@ class psyq::container::_private::sorted_container: private template_container
     /// @name 構築
     /// @{
 
-    /// @brief ソート済コンテナを構築する。
+    /// @brief コンテナをソートし、ソート済コンテナを構築する。
     public: explicit sorted_container(
-        /// [in] 元となるコンテナ。
+        /// [in] ソートするコンテナ。
         typename this_type::base_container in_source,
-        /// [in] コンテナ要素を比較する関数オブジェクト。
+        /// [in] 値を比較する関数オブジェクト。
         typename this_type::value_compare in_compare = value_compare()):
     base_type(std::move(in_source)),
     compare_(std::move(in_compare))
@@ -393,7 +689,7 @@ class psyq::container::_private::sorted_container: private template_container
     {
         PSYQ_ASSERT(in_source.is_sorted());
         this->compare_ = std::move(in_source.compare_);
-        *static_cast<base_type*>(this) = std::move(in_source);
+        this->get_mutable_container() = std::move(in_source);
     }
 
     /// @brief コンテナを代入してソートする。
@@ -401,7 +697,7 @@ class psyq::container::_private::sorted_container: private template_container
         /// @brief 代入するコンテナ。
         typename this_type::base_container in_source)
     {
-        *static_cast<base_type*>(this) = std::move(in_source);
+        this->get_mutable_container() = std::move(in_source);
         this->sort();
     }
 
@@ -437,60 +733,93 @@ class psyq::container::_private::sorted_container: private template_container
     }
     /// @}
     //-------------------------------------------------------------------------
-    /// @name コンテナの比較
+    /// @name 比較
     /// @{
 
     /// @brief 等価なコンテナか判定する。
-    public: bool operator==(this_type const& in_right) const
+    /// @return *this == in_right
+    public: bool operator==(
+        /// [in] 比較演算子の右辺となるコンテナ。
+        this_type const& in_right) const
     {
         return this->get_container() == in_right.get_container();
     }
 
     /// @brief 不等価なコンテナか判定する。
-    public: bool operator!=(this_type const& in_right) const
+    /// @return *this != in_right
+    public: bool operator!=(
+        /// [in] 比較演算子の右辺となるコンテナ。
+        this_type const& in_right) const
     {
         return this->get_container() != in_right.get_container();
     }
 
-    public: bool operator<(this_type const& in_right) const
+    /// @brief より大きいコンテナか判定する。
+    /// @return *this < in_right
+    public: bool operator<(
+        /// [in] 比較演算子の右辺となるコンテナ。
+        this_type const& in_right) const
     {
         return this->get_container() < in_right.get_container();
     }
 
-    public: bool operator<=(this_type const& in_right) const
+    /// @brief より大きい、または等価なコンテナか判定する。
+    /// @return *this <= in_right
+    public: bool operator<=(
+        /// [in] 比較演算子の右辺となるコンテナ。
+        this_type const& in_right) const
     {
         return this->get_container() <= in_right.get_container();
     }
 
-    public: bool operator>(this_type const& in_right) const
+    /// @brief より小さいコンテナか判定する。
+    /// @return *this > in_right
+    public: bool operator>(
+        /// [in] 比較演算子の右辺となるコンテナ。
+        this_type const& in_right) const
     {
         return this->get_container() > in_right.get_container();
     }
 
-    public: bool operator>=(this_type const& in_right) const
+    /// @brief より小さい、または等価なコンテナか判定する。
+    /// @return *this >= in_right
+    public: bool operator>=(
+        /// [in] 比較演算子の右辺となるコンテナ。
+        this_type const& in_right) const
     {
         return this->get_container() >= in_right.get_container();
     }
     /// @}
     //-------------------------------------------------------------------------
-    public: typename this_type::value_compare const& key_comp()
+    /// @name コンテナのプロパティ
+    /// @{
+
+    /// @brief キーを比較する関数オブジェクトを取得する。
+    /// @return キーを比較する関数オブジェクト。
+    public: typename this_type::key_compare const& key_comp()
     const PSYQ_NOEXCEPT
     {
         return this->value_comp();
     }
 
+    /// @brief 値を比較する関数オブジェクトを取得する。
+    /// @return 値を比較する関数オブジェクト。
     public: typename this_type::value_compare const& value_comp()
     const PSYQ_NOEXCEPT
     {
         return this->compare_;
     }
 
+    /// @brief コンテナを取得する。
+    /// @return *this が使用しているコンテナ。
     public: typename this_type::base_container const& get_container()
     const PSYQ_NOEXCEPT
     {
         return *this;
     }
 
+    /// @brief コンテナを取り出し、 *this を空にする。
+    /// @return *this が使用していたコンテナ。
     public: typename this_type::base_container remove_container()
     {
         auto const local_container(std::move(this->container_));
@@ -498,13 +827,16 @@ class psyq::container::_private::sorted_container: private template_container
         return local_container;
     }
 
-    //-------------------------------------------------------------------------
-    public: bool is_sorted_position(
+    /// @brief 値を挿入するのに適切な位置か判定する。
+    /// @return 値を挿入するのに適切な位置かどうか。
+    public: bool is_insert_position(
+        /// [in] 挿入する位置。
         typename base_type::const_iterator const& in_position,
+        /// [in] 挿入する値。
         typename base_type::value_type const& in_value)
     const
     {
-        return this_type::sorter::is_sorted_position(
+        return this_type::sorter::is_insert_position(
             this->get_container(), this->value_comp(), in_position, in_value);
     }
 
@@ -523,9 +855,9 @@ class psyq::container::_private::sorted_container: private template_container
     public: bool sort()
     {
         return this_type::sorter::sort(
-            *static_cast<base_type*>(this), this->value_comp());
+            this->get_mutable_container(), this->value_comp());
     }
-
+    /// @}
     //-------------------------------------------------------------------------
     /// @name 要素の検索
     /// @{
@@ -537,11 +869,7 @@ class psyq::container::_private::sorted_container: private template_container
         /// [in] 基準となるキー。
         template_key const& in_key)
     {
-        auto const local_lower_bound(this->lower_bound(in_key));
-        auto const local_end(this->end());
-        return local_lower_bound != local_end
-            && !this->compare_(in_key, *local_lower_bound)?
-                local_lower_bound: local_end;
+        return this_type::find(*this, in_key);
     }
 
     /// @copydoc find
@@ -551,7 +879,7 @@ class psyq::container::_private::sorted_container: private template_container
         template_key const& in_key)
     const
     {
-        return const_cast<this_type*>(this)->find(in_key);
+        return this_type::find(*this, in_key);
     }
 
     /// @brief 指定されたキー以上の要素の位置を取得する。
@@ -561,9 +889,7 @@ class psyq::container::_private::sorted_container: private template_container
         /// [in] 基準となるキー。
         template_key const& in_key)
     {
-        PSYQ_ASSERT(this->is_sorted());
-        return std::lower_bound(
-            std::begin(*this), std::end(*this), in_key, this->value_comp());
+        return this_type::lower_bound(*this, in_key);
     }
 
     /// @copydoc lower_bound
@@ -573,7 +899,7 @@ class psyq::container::_private::sorted_container: private template_container
         template_key const& in_key)
     const
     {
-        return const_cast<this_type*>(this)->lower_bound(in_key);
+        return this_type::lower_bound(*this, in_key);
     }
 
     /// @brief 指定されたキーより大きい要素の位置を取得する。
@@ -583,9 +909,7 @@ class psyq::container::_private::sorted_container: private template_container
         /// [in] 基準となるキー。
         template_key const& in_key)
     {
-        PSYQ_ASSERT(this->is_sorted());
-        return std::upper_bound(
-            std::begin(*this), std::end(*this), in_key, this->value_comp());
+        return this_type::upper_bound(*this, in_key);
     }
 
     /// @copydoc upper_bound
@@ -595,7 +919,7 @@ class psyq::container::_private::sorted_container: private template_container
         template_key const& in_key)
     const
     {
-        return const_cast<this_type*>(this)->upper_bound(in_key);
+        return this_type::upper_bound(*this, in_key);
     }
 
     /// @brief 指定されたキーと等価な範囲を取得する。
@@ -606,8 +930,7 @@ class psyq::container::_private::sorted_container: private template_container
         /// [in] 基準となるキー。
         template_key const& in_key)
     {
-        return std::equal_range(
-            std::begin(*this), std::end(*this), in_key, this->value_comp());
+        return this_type::equal_range(*this, in_key);
     }
 
     /// @copydoc equal_range
@@ -619,8 +942,7 @@ class psyq::container::_private::sorted_container: private template_container
         template_key const& in_key)
     const
     {
-        return std::equal_range(
-            std::begin(*this), std::end(*this), in_key, this->value_comp());
+        return this_type::equal_range(*this, in_key);
     }
 
     /// @brief キーと合致する要素を数える。
@@ -641,20 +963,20 @@ class psyq::container::_private::sorted_container: private template_container
 
     /// @brief 要素を挿入する。
     /// @return 挿入した要素を指す反復子。
-    public: std::result_of<
-        this_type::sorter::insert(
-            base_type&,
-            typename this_type::value_compare const&,
-            typename base_type::const_iterator,
-            typename base_type::value_type)>
-    ::type insert(
+    public: auto insert(
         /// [in] 挿入する要素の初期値。
         typename base_type::value_type in_value)
+    ->decltype(
+        this_type::sorter::insert(
+            *static_cast<base_type*>(nullptr),
+            *static_cast<typename this_type::value_compare*>(nullptr),
+            *static_cast<typename base_type::iterator*>(nullptr),
+            *static_cast<typename base_type::value_type*>(nullptr)))
     {
         return this_type::sorter::insert(
-            *static_cast<base_type*>(this),
+            this->get_mutable_container(),
             this->value_comp(),
-            this->upper_bound(in_value),
+            this->find_insert_position(in_value),
             std::move(in_value));
     }
 
@@ -666,7 +988,10 @@ class psyq::container::_private::sorted_container: private template_container
         /// [in] 挿入する要素の初期値。
         typename base_type::value_type in_value)
     {
-        PSYQ_ASSERT(this->is_sorted_position(in_position, in_value));
+        if (!this->is_insert_position(in_position, in_value))
+        {
+            in_position = this->find_insert_position(in_value);
+        }
         return this->base_type::insert(
             std::move(in_position), std::move(in_value));
     }
@@ -735,10 +1060,124 @@ class psyq::container::_private::sorted_container: private template_container
     }
     /// @}
     //-------------------------------------------------------------------------
+    /// @copydoc get_container
+    private: typename this_type::base_container& get_mutable_container()
+    PSYQ_NOEXCEPT
+    {
+        return *this;
+    }
+
+    private: typename base_type::iterator find_insert_position(
+        /// [in] 挿入する値。
+        typename base_type::value_type const& in_value)
+    {
+        return template_multi?
+            this->upper_bound(in_value): this->lower_bound(in_value);
+    }
+
+    /// @copydoc find
+    private: template<typename template_sorted_container, typename template_key>
+    static auto find(
+        /// [in] 要素を検索するソート済コンテナ。
+        template_sorted_container& in_container,
+        /// [in] 基準となるキー。
+        template_key const& in_key)
+    ->decltype(std::begin(in_container))
+    {
+        auto const local_end(std::end(in_container));
+        auto const local_lower_bound(this_type::lower_bound(in_container, in_key));
+        return local_lower_bound != local_end
+            && !in_container.compare_(in_key, *local_lower_bound)?
+                local_lower_bound: local_end;
+    }
+
+    /// @copydoc lower_bound
+    private: template<typename template_sorted_container, typename template_key>
+    static auto lower_bound(
+        /// [in] 要素を検索するソート済コンテナ。
+        template_sorted_container& in_container,
+        /// [in] 基準となるキー。
+        template_key const& in_key)
+    ->decltype(std::begin(in_container))
+    {
+        PSYQ_ASSERT(in_container.is_sorted());
+        return std::lower_bound(
+            std::begin(in_container),
+            std::end(in_container),
+            in_key,
+            in_container.value_comp());
+    }
+
+    /// @copydoc upper_bound
+    private: template<typename template_sorted_container, typename template_key>
+    static auto upper_bound(
+        /// [in] 要素を検索するソート済コンテナ。
+        template_sorted_container& in_container,
+        /// [in] 基準となるキー。
+        template_key const& in_key)
+    ->decltype(std::begin(in_container))
+    {
+        PSYQ_ASSERT(in_container.is_sorted());
+        return std::upper_bound(
+            std::begin(in_container),
+            std::end(in_container),
+            in_key,
+            in_container.value_comp());
+    }
+
+    /// @copydoc equal_range
+    private: template<typename template_sorted_container, typename template_key>
+    static auto equal_range(
+        /// [in] 要素を検索するソート済コンテナ。
+        template_sorted_container& in_container,
+        /// [in] 基準となるキー。
+        template_key const& in_key)
+    ->std::pair<
+        decltype(std::begin(in_container)),
+        decltype(std::begin(in_container))>
+    {
+        PSYQ_ASSERT(in_container.is_sorted());
+        if (template_multi)
+        {
+            return std::equal_range(
+                std::begin(in_container),
+                std::end(in_container),
+                in_key,
+                in_container.value_comp());
+        }
+        else
+        {
+            auto const local_lower_bound(in_container.lower_bound(in_key));
+            return std::make_pair(
+                local_lower_bound,
+                local_lower_bound == std::end(in_container)
+                || in_container.compare_(in_key, *local_lower_bound)?
+                    local_lower_bound: std::next(local_lower_bound));
+        }
+    }
+
+    //-------------------------------------------------------------------------
     /// @brief 要素を比較する関数オブジェクト。
     private: typename this_type::value_compare compare_;
 
 }; // class psyq::container::sorted_container
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+namespace psyq_test
+{
+    inline void sorted_container()
+    {
+        typedef psyq::container::sorted_set<std::vector<int>> set;
+        set local_set;
+        PSYQ_ASSERT(local_set.insert(30).second);
+        PSYQ_ASSERT(local_set.insert(10).second);
+        PSYQ_ASSERT(local_set.insert(20).second);
+        PSYQ_ASSERT(!local_set.insert(10).second);
+        PSYQ_ASSERT(local_set.count(10) == 1);
+        PSYQ_ASSERT(local_set.count(15) == 0);
+        local_set.size();
+    }
+}
 
 #endif // !defined(PSYQ_CONTAINER_SORTED_CONTAINER_HPP_)
 // vim: set expandtab:

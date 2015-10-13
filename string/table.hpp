@@ -47,6 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "./flyweight.hpp"
 #include "./numeric_parser.hpp"
+#include "../container/sorted_sequence.hpp"
 
 /// @copydoc psyq::string::table::MAX_COLUMN_COUNT
 #ifndef PSYQ_STRING_TABLE_MAX_COLUMN_COUNT
@@ -67,7 +68,7 @@ namespace psyq
 /// @brief 行番号と列番号で参照する、フライ級文字列の表。
 /// @tparam template_number    @copydoc table::number
 /// @tparam template_hasher    @copydoc psyq::string::_private::flyweight_factory::hasher
-/// @tparam template_allocator @copydoc table::allocator_type
+/// @tparam template_allocator @copydoc _private::flyweight_handle::allocator_type
 template<
     typename template_number,
     typename template_hasher = PSYQ_STRING_FLYWEIGHT_HASHER_DEFAULT,
@@ -78,14 +79,20 @@ class psyq::string::table
     private: typedef table this_type;
 
     //-------------------------------------------------------------------------
-    /// @brief 文字列表で使うメモリ割当子を表す型。
-    public: typedef template_allocator allocator_type;
     /// @brief 文字列表で使う番号を表す型。
     public: typedef template_number number;
     /// @brief 文字列表で使う、フライ級文字列の型。
     public: typedef
         psyq::string::flyweight<template_hasher, template_allocator>
         string;
+    /// @brief セル番号をキーとする、文字列表のセルの辞書。
+    public: typedef
+        psyq::container::sequence_map<
+            std::vector<
+                std::pair<
+                    typename this_type::number, typename this_type::string>,
+                template_allocator>>
+        cell_map;
     public: enum: typename this_type::number
     {
         /// @brief 文字列表の無効な番号。
@@ -95,37 +102,6 @@ class psyq::string::table
         /// @brief 文字列表の行の最大数。
         MAX_ROW_COUNT = 1 + INVALID_NUMBER / MAX_COLUMN_COUNT,
     };
-
-    //-------------------------------------------------------------------------
-    /// @brief 文字列表のセルのコンテナ。
-    /// @details
-    /// - 要素の第1属性は、セル番号。
-    /// - 要素の第2属性は、セル文字列。
-    protected: typedef
-        std::vector<
-            std::pair<typename this_type::number, typename this_type::string>,
-            typename this_type::allocator_type>
-        cell_container;
-    /// @brief セル番号を比較する関数オブジェクト。
-    protected: struct cell_number_less
-    {
-        bool operator()(
-            typename table::number const in_left_number,
-            typename table::cell_container::value_type const& in_right_cell)
-        const PSYQ_NOEXCEPT
-        {
-            return in_left_number < in_right_cell.first;
-        }
-
-        bool operator()(
-            typename table::cell_container::value_type const& in_left_cell,
-            typename table::number const in_right_number)
-        const PSYQ_NOEXCEPT
-        {
-            return in_left_cell.first < in_right_number;
-        }
-
-    }; // struct cell_number_less
 
     //-------------------------------------------------------------------------
     /// @name 構築と代入
@@ -148,7 +124,7 @@ class psyq::string::table
     row_count_(io_source.get_row_count()),
     column_count_(io_source.get_column_count())
     {
-        io_source.set_size(0, 0);
+        io_source.clear();
     }
 
     /// @brief 文字列表をコピー代入する。
@@ -157,9 +133,10 @@ class psyq::string::table
         /// [in] コピー元となる文字列表。
         this_type const& in_source)
     {
-        this->cells_ = in_source.cells_;
-        this->set_size(
-            in_source.get_row_count(), in_source.get_column_count());
+        this->assign_cells(
+            in_source.get_cells().get_sequence(),
+            in_source.get_row_count(),
+            in_source.get_column_count());
         return *this;
     }
 
@@ -171,32 +148,24 @@ class psyq::string::table
     {
         if (this != &io_source)
         {
-            this->cells_ = std::move(io_source.cells_);
-            this->set_size(
-                io_source.get_row_count(), io_source.get_column_count());
-            io_source.set_size(0, 0);
+            this->assign_cells(
+                io_source.cells_.remove_sequence(),
+                io_source.get_row_count(),
+                io_source.get_column_count());
+            io_source.clear();
         }
         return *this;
-    }
-
-    /// @brief メモリ割当子を取得する。
-    /// @return メモリ割当子。
-    public: typename this_type::allocator_type get_allocator()
-    const PSYQ_NOEXCEPT
-    {
-        return this->cells_.get_allocator();
     }
     /// @}
     //-------------------------------------------------------------------------
     /// @name セル
     /// @{
 
-    /// @brief 文字列表が空か判定する。
-    /// @retval true  文字列表は空。
-    /// @retval false 文字列表は空ではない。
-    public: bool is_empty() const PSYQ_NOEXCEPT
+    /// @brief 文字列表のセルの辞書を取得する。
+    /// @return 文字列表のセルの辞書。
+    public: typename this_type::cell_map const& get_cells() const PSYQ_NOEXCEPT
     {
-        return this->cells_.empty();
+        return this->cells_;
     }
 
     /// @brief 文字列表の行数を取得する。
@@ -227,14 +196,11 @@ class psyq::string::table
             && in_row_number < this->get_row_count())
         {
             auto const local_cell_number(
-                this_type::compute_cell_number(in_row_number, in_column_number));
+                this_type::compute_cell_number(
+                    in_row_number, in_column_number));
             auto const local_lower_bound(
-                std::lower_bound(
-                    this->cells_.begin(),
-                    this->cells_.end(),
-                    local_cell_number,
-                    typename this_type::cell_number_less()));
-            if (local_lower_bound != this->cells_.end()
+                this->cells_.lower_bound(local_cell_number));
+            if (local_lower_bound != std::end(this->cells_)
                 && local_lower_bound->first == local_cell_number)
             {
                 return local_lower_bound->second;
@@ -271,103 +237,16 @@ class psyq::string::table
         bool const in_empty_permission)
     const
     {
-        auto const& local_cell(this->find_cell(in_row_number, in_column_number));
+        auto const& local_cell(
+            this->find_cell(in_row_number, in_column_number));
         return (in_empty_permission && local_cell.empty())
             || this_type::parse_string(out_value, local_cell);
     }
     /// @}
-    //-------------------------------------------------------------------------
-    /// @brief 空の文字列表を構築する。
-    protected: explicit table(
-        /// [in] メモリ割当子の初期値。
-        typename this_type::allocator_type const& in_allocator):
-    cells_(in_allocator), row_count_(0), column_count_(0)
-    {}
-
-    protected: typename this_type::cell_container const& get_cells()
-    const PSYQ_NOEXCEPT
-    {
-        return this->cells_;
-    }
-
-    /// @brief セルを置き換える。
-    protected: void replace_cell(
-        /// [in] 置き換えるセルの行番号。
-        typename this_type::number const in_row_number,
-        /// [in] 置き換えるセルの列番号。
-        typename this_type::number const in_column_number,
-        /// [in] 置き換えるセルの文字列。
-        typename this_type::string in_string)
-    {
-        // 最大行数か最大桁数を超えるセルは、追加できない。
-        if (this_type::MAX_ROW_COUNT <= in_row_number
-            || this_type::MAX_COLUMN_COUNT <= in_column_number)
-        {
-            PSYQ_ASSERT(false);
-            return;
-        }
-
-        // セルの挿入位置を決定する。
-        auto const local_cell_number(
-            this_type::compute_cell_number(in_row_number, in_column_number));
-        auto const local_lower_bound(
-            std::lower_bound(
-                this->cells_.begin(),
-                this->cells_.end(),
-                local_cell_number,
-                typename this_type::cell_number_less()));
-        if (local_lower_bound != this->cells_.end()
-            && local_lower_bound->first == local_cell_number)
-        {
-            if (in_string.empty())
-            {
-                // 置き換える文字列が空なので、セルを削除する。
-                this->cells_.erase(local_lower_bound);
-            }
-            else
-            {
-                // セル文字列を置き換える。
-                local_lower_bound->second = std::move(in_string);
-            }
-        }
-        else if (!in_string.empty())
-        {
-            // 新たにセルを追加する。
-            this->cells_.insert(
-                local_lower_bound,
-                typename this_type::cell_container::value_type(
-                    local_cell_number, std::move(in_string)));
-        }
-    }
-
-    protected: void set_size(
-        typename this_type::number const in_row_count,
-        typename this_type::number const in_column_count)
-    {
-        this->row_count_ = (std::min<typename this_type::number>)(
-            in_row_count, this_type::MAX_ROW_COUNT);
-        this->column_count_ = (std::min<typename this_type::number>)(
-            in_column_count, this_type::MAX_COLUMN_COUNT);
-    }
-
-    protected: void shrink_to_fit()
-    {
-        this->cells_.shrink_to_fit();
-    }
-
-    /// @brief 文字列表を空にする。
-    protected: void clear_container(
-        typename this_type::cell_container::size_type const in_cell_capacity)
-    {
-        this->cells_.clear();
-        this->cells_.reserve(in_cell_capacity);
-        this->row_count_ = 0;
-        this->column_count_ = 0;
-    }
 
     /// @brief セル番号から、行番号を算出する。
     /// @return in_cell_number の行番号。
-    protected: static typename this_type::number compute_row_number(
+    public: static typename this_type::number compute_row_number(
         /// [in] 行番号を算出するセル番号。
         typename this_type::number const in_cell_number)
     PSYQ_NOEXCEPT
@@ -377,7 +256,7 @@ class psyq::string::table
 
     /// @brief セル番号から、列番号を算出する。
     /// @return in_cell_number の列番号。
-    protected: static typename this_type::number compute_column_number(
+    public: static typename this_type::number compute_column_number(
         /// [in] 列番号を算出するセル番号。
         typename this_type::number const in_cell_number)
     PSYQ_NOEXCEPT
@@ -387,7 +266,7 @@ class psyq::string::table
 
     /// @brief セルの行番号と列番号から、セル番号を算出する。
     /// @return セル番号。
-    protected: static typename this_type::number compute_cell_number(
+    public: static typename this_type::number compute_cell_number(
         /// [in] セルの行番号。
         typename this_type::number const in_row_number,
         /// [in] セルの列番号。
@@ -402,6 +281,53 @@ class psyq::string::table
     }
 
     //-------------------------------------------------------------------------
+    /// @brief 空の文字列表を構築する。
+    protected: explicit table(
+        /// [in] メモリ割当子の初期値。
+        template_allocator const& in_allocator):
+    cells_(typename this_type::cell_map::sequence(in_allocator)),
+    row_count_(0),
+    column_count_(0)
+    {}
+
+    /// @brief 文字列表を再構築する。
+    protected: bool assign_cells(
+        /// [in] ソート済のセルのコンテナ。
+        typename this_type::cell_map::sequence in_cells,
+        /// [in] 文字列表の行数。
+        typename this_type::number const in_row_count,
+        /// [in] 文字列表の列数。
+        typename this_type::number const in_column_count)
+    {
+        if (!this->cells_.assign(std::move(in_cells)))
+        {
+            PSYQ_ASSERT(false);
+            return false;
+        }
+        this->set_size(in_row_count, in_column_count);
+        return true;
+    }
+
+    //-------------------------------------------------------------------------
+    private: void clear()
+    {
+        this->cells_.clear();
+        this->set_size(0, 0);
+    }
+
+    /// @brief 文字列表の大きさを決定する。
+    private: void set_size(
+        /// [in] 文字列表の行数。
+        typename this_type::number const in_row_count,
+        /// [in] 文字列表の列数。
+        typename this_type::number const in_column_count)
+    {
+        this->row_count_ = (std::min<typename this_type::number>)(
+            in_row_count, this_type::MAX_ROW_COUNT);
+        this->column_count_ = (std::min<typename this_type::number>)(
+            in_column_count, this_type::MAX_COLUMN_COUNT);
+    }
+
     /// @brief 文字列を解析し、値を抽出する。
     /// @retval true  成功。文字列を解析して抽出した値を out_value へ代入した。
     /// @retval false 失敗。 out_value は変化しない。
@@ -436,7 +362,7 @@ class psyq::string::table
 
     //-------------------------------------------------------------------------
     /// @brief セル番号でソートされたセルの辞書。
-    private: typename this_type::cell_container cells_;
+    private: typename this_type::cell_map cells_;
     /// @brief 文字列表の行数。
     private: typename this_type::number row_count_;
     /// @brief 文字列表の列数。

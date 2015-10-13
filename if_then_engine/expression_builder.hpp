@@ -195,7 +195,7 @@ class psyq::if_then_engine::expression_builder
             local_attribute(in_table);
         if (!local_attribute.is_valid())
         {
-            PSYQ_ASSERT(in_table.is_empty());
+            PSYQ_ASSERT(in_table.get_cells().empty());
             return 0;
         }
 

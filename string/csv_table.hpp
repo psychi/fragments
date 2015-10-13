@@ -97,8 +97,8 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief CSV形式の文字列から構築する、フライ級文字列表。
 /// @tparam template_number           @copydoc table::number
-/// @tparam template_hasher           @copydoc psyq::string::_private::flyweight_factory::hasher
-/// @tparam template_allocator        @copydoc table::allocator_type
+/// @tparam template_hasher           @copydoc _private::flyweight_factory::hasher
+/// @tparam template_allocator        @copydoc _private::flyweight_handle::allocator_type
 /// @tparam template_row_separator    @copydoc csv_table::delimiter_ROW_SEPARATOR
 /// @tparam template_column_separator @copydoc csv_table::delimiter_COLUMN_SEPARATOR
 /// @tparam template_quote_begin      @copydoc csv_table::delimiter_QUOTE_BEGIN
@@ -183,7 +183,7 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
     /// @brief 空のCSV文字列表を構築する。
     public: explicit csv_table(
         /// [in] メモリ割当子の初期値。
-        typename base_type::allocator_type const& in_allocator):
+        template_allocator const& in_allocator):
     base_type(in_allocator)
     {}
 
@@ -215,7 +215,7 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
     static psyq::string::relation_table<
         typename base_type::number,
         typename base_type::string::hasher,
-        typename base_type::allocator_type>
+        template_allocator>
     build_relation_table(
         /// [out] 作業領域として使う std::basic_string 互換の文字列。
         /// 入力した値は破壊され、出力される値には意味がない。
@@ -239,13 +239,13 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
             psyq::string::relation_table<
                 typename base_type::number,
                 typename base_type::string::hasher,
-                typename base_type::allocator_type>
+                template_allocator>
             relation_table;
         return in_csv_string.empty()?
             relation_table(
                 in_string_factory.get() != nullptr?
                     in_string_factory->get_allocator():
-                    (PSYQ_ASSERT(false), typename base_type::allocator_type())):
+                    (PSYQ_ASSERT(false), template_allocator())):
             relation_table(
                 this_type(out_workspace, in_string_factory, in_csv_string),
                 in_attribute_row,
@@ -271,7 +271,9 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
             return false;
         }
         out_workspace.clear();
-        this->clear_container(in_csv_string.size() / 8);
+        typename base_type::cell_map::sequence local_cells(
+            in_string_factory->get_allocator());
+        local_cells.reserve(in_csv_string.size() / 8);
         bool local_quote(false);
         typename base_type::number local_row(0);
         typename base_type::number local_column(0);
@@ -338,13 +340,13 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
                 // 列の区切り。
                 if (!out_workspace.empty())
                 {
-                    this->replace_cell(
+                    this_type::add_cell(
+                        local_cells,
                         local_row,
                         local_column,
-                        typename base_type::string(
-                            typename base_type::string::view(
-                                out_workspace.data(), local_cell_size),
-                            in_string_factory));
+                        out_workspace.data(),
+                        local_cell_size,
+                        in_string_factory);
                     out_workspace.clear();
                     local_cell_size = 0;
                     if (local_column_max < local_column)
@@ -359,13 +361,13 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
                 // 行の区切り。
                 if (!out_workspace.empty())
                 {
-                    this->replace_cell(
+                    this_type::add_cell(
+                        local_cells,
                         local_row,
                         local_column,
-                        typename base_type::string(
-                            typename base_type::string::view(
-                                out_workspace.data(), local_cell_size),
-                            in_string_factory));
+                        out_workspace.data(),
+                        local_cell_size,
+                        in_string_factory);
                     out_workspace.clear();
                     local_cell_size = 0;
                     if (local_column_max < local_column)
@@ -402,13 +404,14 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
 #endif // 0
         if (!out_workspace.empty())
         {
-            this->replace_cell(
+            this_type::add_cell(
+                local_cells,
                 local_row,
                 local_column,
-                typename base_type::string(
-                    typename base_type::string::view(
-                        out_workspace.data(), local_cell_size),
-                    in_string_factory));
+                out_workspace.data(),
+                local_cell_size,
+                in_string_factory);
+            out_workspace.clear();
         }
         else if (0 < local_column)
         {
@@ -418,26 +421,42 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
         {
             --local_row;
         }
-        else
-        {
-            out_workspace.clear();
-            this->shrink_to_fit();
-            return true;
-        }
-        out_workspace.clear();
-        this->shrink_to_fit();
 
         // 文字列表の大きさを決定する。
-        if (!this->is_empty())
+        if (0 < local_row || 0 < local_column)
         {
-            if (local_column_max < local_column)
-            {
-                local_column_max = local_column;
-            }
-            this->set_size(local_row + 1, local_column_max + 1);
+            PSYQ_ASSERT(!local_cells.empty());
+            ++local_row;
+            local_column = (std::max)(local_column, local_column_max) + 1;
         }
-        return true;
+        else
+        {
+            PSYQ_ASSERT(local_cells.empty());
+        }
+        return this->assign_cells(local_cells, local_row, local_column);
     }
+
+     private: static void add_cell(
+        typename base_type::cell_map::sequence& io_sequence,
+        typename base_type::number const in_row_number,
+        typename base_type::number const in_column_number,
+        typename base_type::string::value_type const* const in_string_data,
+        typename base_type::string::size_type const in_string_lendth,
+        typename base_type::string::factory::shared_ptr const& in_string_factory)
+     {
+        // 最大行数か最大桁数を超えるセルは、追加できない。
+        if (base_type::MAX_ROW_COUNT <= in_row_number
+            || base_type::MAX_COLUMN_COUNT <= in_column_number)
+        {
+            PSYQ_ASSERT(false);
+            return;
+        }
+        io_sequence.emplace_back(
+            base_type::compute_cell_number(in_row_number, in_column_number),
+            typename base_type::string(
+                typename base_type::string::view(in_string_data, in_string_lendth),
+                in_string_factory));
+     }
 
 }; // class psyq::string::csv_table
 

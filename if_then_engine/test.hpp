@@ -97,7 +97,7 @@ class stage_loader
         typename this_type::table_attribute const local_attribute(in_table);
         if (!local_attribute.is_valid())
         {
-            PSYQ_ASSERT(in_table.is_empty());
+            PSYQ_ASSERT(in_table.get_cells().empty());
             return;
         }
 
@@ -864,6 +864,7 @@ namespace psyq_test
             local_driver.get_reservoir().find_status(
                 local_driver.hash_function_("status_float")));
 
+        local_string_factory->shrink_to_fit();
         local_driver.erase_chunk(local_chunk_key);
     }
 }

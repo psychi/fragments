@@ -706,7 +706,7 @@ INPUT                  = \
                          ./string/relation_table.hpp \
                          ./string/numeric_parser.hpp \
                          ./static_deque.hpp \
-                         ./container/sorted_container.hpp \
+                         ./container/sorted_sequence.hpp \
                          ./container/static_container.hpp \
                          ./container/static_vector.hpp \
                          ./hash/primitive_bits.hpp \

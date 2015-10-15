@@ -271,7 +271,7 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
             return false;
         }
         out_workspace.clear();
-        typename base_type::cell_map::sequence local_cells(
+        typename base_type::cell_map::container_type local_cells(
             in_string_factory->get_allocator());
         local_cells.reserve(in_csv_string.size() / 8);
         bool local_quote(false);
@@ -437,7 +437,7 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
     }
 
      private: static void add_cell(
-        typename base_type::cell_map::sequence& io_sequence,
+        typename base_type::cell_map::container_type& io_container,
         typename base_type::number const in_row_number,
         typename base_type::number const in_column_number,
         typename base_type::string::value_type const* const in_string_data,
@@ -451,7 +451,7 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
             PSYQ_ASSERT(false);
             return;
         }
-        io_sequence.emplace_back(
+        io_container.emplace_back(
             base_type::compute_cell_number(in_row_number, in_column_number),
             typename base_type::string(
                 typename base_type::string::view(in_string_data, in_string_lendth),

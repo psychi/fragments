@@ -100,7 +100,7 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
     private: class attribute_name_less
     {
         public: attribute_name_less(
-            typename relation_table::cell_map::sequence const& in_cells,
+            typename relation_table::cell_map::container_type const& in_cells,
             typename relation_table::string::hasher::result_type const
                 in_hash)
         PSYQ_NOEXCEPT: cells_(in_cells), hash_(in_hash)
@@ -138,7 +138,7 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
             return 0 < local_right._compare_fast(in_left, this->hash_);
         }
 
-        private: typename relation_table::cell_map::sequence const& cells_;
+        private: typename relation_table::cell_map::container_type const& cells_;
         private: typename relation_table::string::hasher::result_type hash_;
 
     }; // class attribute_name_less
@@ -153,7 +153,7 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
     private: class key_less
     {
         public: key_less(
-            typename relation_table::cell_map::sequence const& in_cells,
+            typename relation_table::cell_map::container_type const& in_cells,
             typename relation_table::string::hasher::result_type const
                 in_hash)
         PSYQ_NOEXCEPT: cells_(in_cells), hash_(in_hash)
@@ -189,7 +189,7 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
             return 0 < local_right._compare_fast(in_left, this->hash_);
         }
 
-        private: typename relation_table::cell_map::sequence const& cells_;
+        private: typename relation_table::cell_map::container_type const& cells_;
         private: typename relation_table::string::hasher::result_type hash_;
 
     }; // class key_less
@@ -222,8 +222,8 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
         /// [in] 主キーとして使う属性のインデクス番号。
         typename base_type::number const in_attribute_index = 0):
     base_type(std::move(in_source)),
-    attributes_(this->get_cells().get_sequence().get_allocator()),
-    keys_(this->get_cells().get_sequence().get_allocator()),
+    attributes_(this->get_cells().get_container().get_allocator()),
+    keys_(this->get_cells().get_container().get_allocator()),
     attribute_row_(base_type::INVALID_NUMBER),
     key_column_(base_type::INVALID_NUMBER)
     {
@@ -370,10 +370,9 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
             std::begin(local_attributes),
             std::end(local_attributes),
             typename this_type::attribute_name_less(
-                this->get_cells().get_sequence(), 0));
+                this->get_cells().get_container(), 0));
         this->attribute_row_ = in_attribute_row;
         this->attributes_ = local_attributes;
-        this->attributes_.shrink_to_fit();
         return true;
     }
 
@@ -381,8 +380,9 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
     /// @sa this_type::build_attributes で、属性の辞書を構築できる。
     public: void clear_attributes()
     {
-        this->attributes_.clear();
         this->attribute_row_ = base_type::INVALID_NUMBER;
+        this->attributes_ = typename this_type::attribute_container(
+            this->attributes_.get_allocator());
     }
 
     /// @brief 属性名から、文字列表の属性を検索する。
@@ -402,12 +402,12 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
                     std::end(this->attributes_),
                     in_attribute_name,
                     typename this_type::attribute_name_less(
-                        this->get_cells().get_sequence(),
+                        this->get_cells().get_container(),
                         local_attribute_hash)));
             if (local_lower_bound != std::end(this->attributes_))
             {
                 auto& local_cell(
-                    this->get_cells().get_sequence().at(
+                    this->get_cells().get_container().at(
                         local_lower_bound->first));
                 auto const local_compare(
                     local_cell.second._compare_fast(
@@ -490,9 +490,9 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
         // セル辞書から主キー列のセルを読み取り、主キーの配列を構築する。
         auto local_row_number(
             base_type::compute_row_number(
-                this->get_cells().get_sequence().front().first));
-        auto const local_cells_begin(std::begin(this->get_cells().get_sequence()));
-        auto const local_cells_end(std::end(this->get_cells().get_sequence()));
+                this->get_cells().get_container().front().first));
+        auto const local_cells_begin(std::begin(this->get_cells().get_container()));
+        auto const local_cells_end(std::end(this->get_cells().get_container()));
         auto local_cell(local_cells_begin);
         typename this_type::key_container local_keys(
             this->keys_.get_allocator());
@@ -534,18 +534,18 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
         std::sort(
             std::begin(local_keys),
             std::end(local_keys),
-            typename this_type::key_less(this->get_cells().get_sequence(), 0));
+            typename this_type::key_less(this->get_cells().get_container(), 0));
         this->key_column_ = in_key_column;
         this->keys_ = local_keys;
-        this->keys_.shrink_to_fit();
         return true;
     }
 
     /// @brief 主キーの辞書を削除する。
     public: void clear_keys()
     {
-        this->keys_.clear();
         this->key_column_ = this_type::INVALID_NUMBER;
+        this->keys_ = typename this_type::key_container(
+            this->keys_.get_allocator());
     }
 
     /// @brief 等価な主キーを数える。
@@ -566,11 +566,11 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
                     std::end(this->keys_),
                     in_key,
                     typename this_type::key_less(
-                        this->get_cells().get_sequence(), local_hash)));
+                        this->get_cells().get_container(), local_hash)));
             i != std::end(this->keys_);
             ++i)
         {
-            auto& local_cell(this->get_cells().get_sequence().at(*i));
+            auto& local_cell(this->get_cells().get_container().at(*i));
             if (local_cell.second._compare_fast(in_key, local_hash) != 0)
             {
                 break;
@@ -600,11 +600,11 @@ public psyq::string::table<template_number, template_hasher, template_allocator>
                     std::end(this->keys_),
                     in_key,
                     typename this_type::key_less(
-                        this->get_cells().get_sequence(), local_hash)));
+                        this->get_cells().get_container(), local_hash)));
             if (local_lower_bound != std::end(this->keys_))
             {
                 auto& local_cell(
-                    this->get_cells().get_sequence().at(*local_lower_bound));
+                    this->get_cells().get_container().at(*local_lower_bound));
                 if (local_cell.second._compare_fast(in_key, local_hash) == 0)
                 {
                     return this_type::compute_row_number(local_cell.first);

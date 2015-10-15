@@ -111,7 +111,7 @@ class psyq::string::table
     public: table(
         /// [in] in_source コピー元となる文字列表。
         this_type const& in_source):
-    cells_(in_source.cells_),
+    cells_(in_source.get_cells()),
     row_count_(in_source.get_row_count()),
     column_count_(in_source.get_column_count())
     {}
@@ -124,7 +124,8 @@ class psyq::string::table
     row_count_(io_source.get_row_count()),
     column_count_(io_source.get_column_count())
     {
-        io_source.clear();
+        io_source.cells_.clear();
+        io_source.set_size(0, 0);
     }
 
     /// @brief 文字列表をコピー代入する。
@@ -133,10 +134,9 @@ class psyq::string::table
         /// [in] コピー元となる文字列表。
         this_type const& in_source)
     {
-        this->assign_cells(
-            in_source.get_cells().get_sequence(),
-            in_source.get_row_count(),
-            in_source.get_column_count());
+        this->cells_ = in_source.get_cells();
+        this->set_size(
+            in_source.get_row_count(), in_source.get_column_count());
         return *this;
     }
 
@@ -148,11 +148,11 @@ class psyq::string::table
     {
         if (this != &io_source)
         {
-            this->assign_cells(
-                io_source.cells_.remove_sequence(),
-                io_source.get_row_count(),
-                io_source.get_column_count());
-            io_source.clear();
+            this->cells_ = std::move(io_source.cells_);
+            this->set_size(
+                io_source.get_row_count(), io_source.get_column_count());
+            io_source.cells_.clear();
+            io_source.set_size(0, 0);
         }
         return *this;
     }
@@ -183,8 +183,9 @@ class psyq::string::table
     }
 
     /// @brief 行番号と属性から、文字列表のセルを検索する。
-    /// @return 行番号と列番号に対応するセルの文字列。
-    /// 対応するセルがない場合は、空文字列を返す。
+    /// @return
+    ///   行番号と列番号に対応するセルの文字列。
+    ///   対応するセルがない場合は、空文字列を返す。
     public: typename this_type::string const& find_cell(
         /// [in] 検索するセルの行番号。
         typename this_type::number const in_row_number,
@@ -195,15 +196,13 @@ class psyq::string::table
         if (in_column_number < this->get_column_count()
             && in_row_number < this->get_row_count())
         {
-            auto const local_cell_number(
-                this_type::compute_cell_number(
-                    in_row_number, in_column_number));
-            auto const local_lower_bound(
-                this->cells_.lower_bound(local_cell_number));
-            if (local_lower_bound != std::end(this->cells_)
-                && local_lower_bound->first == local_cell_number)
+            auto const local_find(
+                this->get_cells().find(
+                    this_type::compute_cell_number(
+                        in_row_number, in_column_number)));
+            if (local_find != std::end(this->get_cells()))
             {
-                return local_lower_bound->second;
+                return local_find->second;
             }
         }
         static typename this_type::string const static_empty_string;
@@ -212,17 +211,17 @@ class psyq::string::table
 
     /// @brief セル文字列を解析し、値を抽出する。
     /// @retval true
-    /// 成功。セル文字列から抽出した値が out_value へ代入された。
-    /// ただし in_empty_permission が真で、セル文字列が空の場合は、
-    /// out_value への代入は行われずに変化しない。
+    ///   成功。セル文字列から抽出した値が out_value へ代入された。
+    ///   ただし in_empty_permission が真で、セル文字列が空の場合は、
+    ///   out_value への代入は行われずに変化しない。
     /// @retval false 失敗。 out_value は変化しない。
     /// @tparam template_value
-    /// セル文字列から抽出する値の型。以下の型の値を抽出できる。
-    /// - bool 型。
-    /// - sizeof(std::uint64_t) 以下の大きさの、組み込み符号なし整数型。
-    /// - sizeof(std::int64_t) 以下の大きさの、組み込み符号あり整数型。
-    /// - sizeof(double) 以下の大きさの、組み込み浮動小数点数型。
-    /// - this_type::string 型。
+    ///   セル文字列から抽出する値の型。以下の型の値を抽出できる。
+    ///   - bool 型。
+    ///   - sizeof(std::uint64_t) 以下の大きさの、組み込み符号なし整数型。
+    ///   - sizeof(std::int64_t) 以下の大きさの、組み込み符号あり整数型。
+    ///   - sizeof(double) 以下の大きさの、組み込み浮動小数点数型。
+    ///   - this_type::string 型。
     public: template<typename template_value>
     bool parse_cell(
         /// [out] 抽出した値の代入先。
@@ -285,7 +284,7 @@ class psyq::string::table
     protected: explicit table(
         /// [in] メモリ割当子の初期値。
         template_allocator const& in_allocator):
-    cells_(typename this_type::cell_map::sequence(in_allocator)),
+    cells_(typename this_type::cell_map::container_type(in_allocator)),
     row_count_(0),
     column_count_(0)
     {}
@@ -293,7 +292,7 @@ class psyq::string::table
     /// @brief 文字列表を再構築する。
     protected: bool assign_cells(
         /// [in] ソート済のセルのコンテナ。
-        typename this_type::cell_map::sequence in_cells,
+        typename this_type::cell_map::container_type in_cells,
         /// [in] 文字列表の行数。
         typename this_type::number const in_row_count,
         /// [in] 文字列表の列数。
@@ -309,12 +308,6 @@ class psyq::string::table
     }
 
     //-------------------------------------------------------------------------
-    private: void clear()
-    {
-        this->cells_.clear();
-        this->set_size(0, 0);
-    }
-
     /// @brief 文字列表の大きさを決定する。
     private: void set_size(
         /// [in] 文字列表の行数。

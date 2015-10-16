@@ -68,7 +68,7 @@ namespace psyq
         {
             /// @cond
             template<bool> class sequence_sorter;
-            template<typename, typename, bool> class sorted_sequence;
+            template<typename, typename, bool, bool> class sorted_sequence;
             /// @endcond
         } // namespace _private
     } // namespace container
@@ -76,6 +76,9 @@ namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief std::map を模した、ソート済シーケンスコンテナを用いた辞書。
+/// @warning
+///   コンテナの要素となっている値の template_container::value_type::first
+///   を書き換えるのは禁止。ソート済でなくなる可能性があるため。
 /// @tparam template_container
 ///   - base_type::container_type の条件を満たしていること。
 ///   - template_container::value_type が std::pair 互換の型であること。
@@ -105,14 +108,14 @@ template<
             std::less<typename template_container::value_type::first_type>>>
 class psyq::container::sequence_map:
 public psyq::container::_private::sorted_sequence<
-    template_container, template_compare, false>
+    template_container, template_compare, false, true>
 {
     /// @copydoc psyq::string::view::this_type
     private: typedef sequence_map this_type;
     /// @copydoc psyq::string::view::base_type
     public: typedef
         psyq::container::_private::sorted_sequence<
-            template_container, template_compare, false>
+            template_container, template_compare, false, true>
         base_type;
 
     //-------------------------------------------------------------------------
@@ -128,8 +131,8 @@ public psyq::container::_private::sorted_sequence<
     /// @brief 空のソート済シーケンス辞書を構築する。
     public: explicit sequence_map(
         /// [in] 値を比較する関数オブジェクトの初期値。
-        typename base_type::value_compare io_compare = template_compare()):
-    base_type(std::move(io_compare))
+        typename base_type::value_compare in_compare = template_compare()):
+    base_type(std::move(in_compare))
     {}
 
     /// @brief ソート済シーケンス辞書をコピー構築する。
@@ -140,7 +143,8 @@ public psyq::container::_private::sorted_sequence<
         /// [in] コピー元となるソート済シーケンスコンテナ。
         typename base_type::container_type const& in_container,
         /// [in] 値を比較する関数オブジェクトの初期値。
-        typename base_type::value_compare const& in_compare = template_compare()):
+        typename base_type::value_compare const& in_compare
+            = template_compare()):
     base_type(in_container, in_compare)
     {}
 
@@ -177,55 +181,54 @@ public psyq::container::_private::sorted_sequence<
     /// @brief キーに対応する要素を参照する。
     /// @warning in_key に対応する要素がない場合 std::out_of_range 例外を投げる。
     /// @return in_key に対応する要素。
-    public: typename base_type::value_type const& at(
+    public: template<typename template_key>
+    typename this_type::mapped_type const& at(
         /// [in] 要素に対応するキー。
-        typename this_type::key_type const& in_key)
+        template_key const& in_key)
     const
     {
-        return *this_type::at(*this, in_key);
+        return this_type::at(*this, in_key);
     }
 
     /// @copydoc at
-    public: typename base_type::value_type& at(
+    public: template<typename template_key>
+    typename this_type::mapped_type& at(
         /// [in] 要素に対応するキー。
-        typename this_type::key_type const& in_key)
+        template_key const& in_key)
     {
-        return *this_type::at(*this, in_key);
+        return this_type::at(*this, in_key);
     }
 
     /// @brief キーに対応する要素を参照する。
     /// @details in_key に対応する要素がない場合は、対応する要素を構築して挿入する。
     /// @return in_key に対応する要素。
-    public: typename base_type::value_type& operator[](
+    public: typename this_type::mapped_type& operator[](
         /// [in] 要素に対応するキー。
-        typename this_type::key_type const& in_key)
+        typename base_type::key_type const& in_key)
     {
         auto const local_lower_bound(this->lower_bound(in_key));
         return std::end(*this) == local_lower_bound
             && this->compare_(*local_lower_bound, in_key)?
-                *this->insert(
+                this->insert(
                     local_lower_bound,
                     typename base_type::value_type(
-                        in_key, typename this_type::mapped_type())):
-                *local_lower_bound;
+                        in_key, typename this_type::mapped_type()))->second:
+                local_lower_bound->second;
     }
     /// @}
     //-------------------------------------------------------------------------
     /// @copydoc at
-    private: template<typename template_sequence_map>
+    private: template<typename template_sequence_map, typename template_key>
     static auto at(
-        /// [in] 参照する要素を持つコンテナ。
+        /// [in] 参照する要素を持つ辞書。
         template_sequence_map& in_map,
         /// [in] 要素に対応するキー。
-        typename this_type::key_type const& in_key)
-    ->decltype(*std::begin(in_container))
+        template_key const& in_key)
+    ->decltype((std::begin(in_map)->second))
     {
-        auto const local_lower_bound(in_map.lower_bound(in_key));
-        PSYQ_ASSERT_THROW(
-            std::end(in_container) != local_lower_bound
-            && !in_container.compare_(*local_lower_bound, in_key),
-            std::out_of_range);
-        return *local_lower_bound;
+        auto const local_find(in_map.find(in_key));
+        PSYQ_ASSERT_THROW(std::end(in_map) != local_find, std::out_of_range);
+        return local_find->second;
     }
 
 }; // class psyq::container::sequence_map:
@@ -241,14 +244,14 @@ template<
             std::less<typename template_container::value_type::first_type>>>
 class psyq::container::sequence_multimap:
 public psyq::container::_private::sorted_sequence<
-    template_container, template_compare, true>
+    template_container, template_compare, true, true>
 {
     /// @copydoc psyq::string::view::this_type
     private: typedef sequence_multimap this_type;
     /// @copydoc psyq::string::view::base_type
     public: typedef
         psyq::container::_private::sorted_sequence<
-            template_container, template_compare, true>
+            template_container, template_compare, true, true>
         base_type;
 
     //-------------------------------------------------------------------------
@@ -264,8 +267,8 @@ public psyq::container::_private::sorted_sequence<
     /// @brief 空のソート済シーケンス辞書を構築する。
     public: explicit sequence_multimap(
         /// [in] 値を比較する関数オブジェクトの初期値。
-        typename base_type::value_compare io_compare = template_compare()):
-    base_type(std::move(io_compare))
+        typename base_type::value_compare in_compare = template_compare()):
+    base_type(std::move(in_compare))
     {}
 
     /// @brief ソート済シーケンス辞書をコピー構築する。
@@ -276,7 +279,8 @@ public psyq::container::_private::sorted_sequence<
         /// [in] コピー元となるソート済シーケンスコンテナ。
         typename base_type::container_type const& in_container,
         /// [in] 値を比較する関数オブジェクトの初期値。
-        typename base_type::value_compare const& in_compare = template_compare()):
+        typename base_type::value_compare const& in_compare
+            = template_compare()):
     base_type(in_container, in_compare)
     {}
 
@@ -318,14 +322,14 @@ template<
         = std::less<typename template_container::value_type>>
 class psyq::container::sequence_set:
 public psyq::container::_private::sorted_sequence<
-    template_container, template_compare, false>
+    template_container, template_compare, false, false>
 {
     /// @copydoc psyq::string::view::this_type
     private: typedef sequence_set this_type;
     /// @copydoc psyq::string::view::base_type
     public: typedef
         psyq::container::_private::sorted_sequence<
-            template_container, template_compare, false>
+            template_container, template_compare, false, false>
         base_type;
 
     //-------------------------------------------------------------------------
@@ -335,8 +339,8 @@ public psyq::container::_private::sorted_sequence<
     /// @brief 空のソート済シーケンス集合を構築する。
     public: explicit sequence_set(
         /// [in] 値を比較する関数オブジェクトの初期値。
-        typename base_type::value_compare io_compare = template_compare()):
-    base_type(std::move(io_compare))
+        typename base_type::value_compare in_compare = template_compare()):
+    base_type(std::move(in_compare))
     {}
 
     /// @brief ソート済シーケンス集合をコピー構築する。
@@ -347,7 +351,8 @@ public psyq::container::_private::sorted_sequence<
         /// [in] コピー元となるソート済シーケンスコンテナ。
         typename base_type::container_type const& in_container,
         /// [in] 値を比較する関数オブジェクトの初期値。
-        typename base_type::value_compare const& in_compare = template_compare()):
+        typename base_type::value_compare const& in_compare
+            = template_compare()):
     base_type(in_container, in_compare)
     {}
 
@@ -388,14 +393,14 @@ template<
         = std::less<typename template_container::value_type>>
 class psyq::container::sequence_multiset:
 public psyq::container::_private::sorted_sequence<
-    template_container, template_compare, true>
+    template_container, template_compare, true, false>
 {
     /// @copydoc psyq::string::view::this_type
     private: typedef sequence_multiset this_type;
     /// @copydoc psyq::string::view::base_type
     public: typedef
         psyq::container::_private::sorted_sequence<
-            template_container, template_compare, true>
+            template_container, template_compare, true, false>
         base_type;
 
     //-------------------------------------------------------------------------
@@ -405,8 +410,8 @@ public psyq::container::_private::sorted_sequence<
     /// @brief 空のソート済シーケンス集合を構築する。
     public: explicit sequence_multiset(
         /// [in] 値を比較する関数オブジェクトの初期値。
-        typename base_type::value_compare io_compare = template_compare()):
-    base_type(std::move(io_compare))
+        typename base_type::value_compare in_compare = template_compare()):
+    base_type(std::move(in_compare))
     {}
 
     /// @brief ソート済シーケンス集合をコピー構築する。
@@ -417,7 +422,8 @@ public psyq::container::_private::sorted_sequence<
         /// [in] コピー元となるソート済シーケンスコンテナ。
         typename base_type::container_type const& in_container,
         /// [in] 値を比較する関数オブジェクトの初期値。
-        typename base_type::value_compare const& in_compare = template_compare()):
+        typename base_type::value_compare const& in_compare
+            = template_compare()):
     base_type(in_container, in_compare)
     {}
 
@@ -579,14 +585,17 @@ template<> class psyq::container::_private::sequence_sorter<false>
 
     /// @brief コンテナに要素を挿入する。
     /// @return 要素の位置と挿入したかどうかのペア。
-    public: template<typename template_container, typename template_compare>
-    static std::pair<typename template_container::iterator, bool> insert(
+    public: template<
+        typename template_container,
+        typename template_compare,
+        typename template_iterator>
+    static std::pair<template_iterator, bool> insert(
         /// [in] 要素を挿入するコンテナ。
         template_container& io_container,
         /// [in] 要素を比較する関数オブジェクト。
         template_compare const& in_compare,
         /// [in] 要素を挿入する位置。
-        typename template_container::iterator in_position,
+        template_iterator in_position,
         /// [in] 挿入する要素の初期値。
         typename template_container::value_type const& in_value)
     {
@@ -601,14 +610,17 @@ template<> class psyq::container::_private::sequence_sorter<false>
     }
 
     /// @copydoc insert
-    public: template<typename template_container, typename template_compare>
-    static std::pair<typename template_container::iterator, bool> insert(
+    public: template<
+        typename template_container,
+        typename template_compare,
+        typename template_iterator>
+    static std::pair<template_iterator, bool> insert(
         /// [in] 要素を挿入するコンテナ。
         template_container& io_container,
         /// [in] 要素を比較する関数オブジェクト。
         template_compare const& in_compare,
         /// [in] 要素を挿入する位置。
-        typename template_container::iterator in_position,
+        template_iterator in_position,
         /// [in] 挿入する要素の初期値。
         typename template_container::value_type&& io_value)
     {
@@ -617,7 +629,9 @@ template<> class psyq::container::_private::sequence_sorter<false>
                 io_container, in_compare, in_position, io_value));
         return std::make_pair(
             local_insert?
-                io_container.insert(std::move(in_position), std::move(io_value)):
+                static_cast<template_iterator>(
+                    io_container.insert(
+                        std::move(in_position), std::move(io_value))):
                 in_position,
             local_insert);
     }
@@ -629,7 +643,7 @@ template<> class psyq::container::_private::sequence_sorter<false>
         /// [in] 要素を比較する関数オブジェクト。
         template_compare const& in_compare,
         /// [in] 要素を挿入する位置。
-        typename template_container::iterator const& in_position,
+        typename template_container::const_iterator const& in_position,
         /// [in] 挿入する要素の初期値。
         typename template_container::value_type const& in_value)
     {
@@ -684,14 +698,17 @@ template<> class psyq::container::_private::sequence_sorter<true>
 
     /// @brief コンテナに要素を挿入する。
     /// @return 挿入した要素を指す反復子。
-    public: template<typename template_container, typename template_compare>
-    static typename template_container::iterator insert(
+    public: template<
+        typename template_container,
+        typename template_compare,
+        typename template_iterator>
+    static template_iterator insert(
         /// [in] 要素を挿入するコンテナ。
         template_container& io_container,
         /// [in] 要素を比較する関数オブジェクト。
         template_compare const& in_compare,
         /// [in] 要素を挿入する位置。
-        typename template_container::const_iterator in_position,
+        template_iterator in_position,
         /// [in] 挿入する要素の初期値。
         typename template_container::value_type const& in_value)
     {
@@ -702,21 +719,25 @@ template<> class psyq::container::_private::sequence_sorter<true>
     }
 
     /// @copydoc insert
-    public: template<typename template_container, typename template_compare>
-    static typename template_container::iterator insert(
+    public: template<
+        typename template_container,
+        typename template_compare,
+        typename template_iterator>
+    static template_iterator insert(
         /// [in] 要素を挿入するコンテナ。
         template_container& io_container,
         /// [in] 要素を比較する関数オブジェクト。
         template_compare const& in_compare,
         /// [in] 要素を挿入する位置。
-        typename template_container::const_iterator in_position,
+        template_iterator in_position,
         /// [in] 挿入する要素の初期値。
         typename template_container::value_type&& io_value)
     {
         PSYQ_ASSERT(
             this_type::is_insert_position(
                 io_container, in_compare, in_position, io_value));
-        return io_container.insert(std::move(in_position), std::move(io_value));
+        return io_container.insert(
+            std::move(in_position), std::move(io_value));
     }
 
 }; // class psyq::container::_private::sequence_sorter<true>
@@ -725,12 +746,14 @@ template<> class psyq::container::_private::sequence_sorter<true>
 /// @brief ソート済シーケンスコンテナを用いた連想コンテナの基底型。
 /// @tparam template_container @copydoc sorted_sequence::container_type
 /// @tparam template_compare   @copydoc sorted_sequence::value_compare
-/// @tparam template_multi     重複する要素を許可するかどうか。
+/// @tparam template_multi     重複する要素を許可するかの区別。
+/// @tparam template_map       辞書か集合かの区別。
 template<
     typename template_container,
     typename template_compare,
-    bool template_multi>
-class psyq::container::_private::sorted_sequence: protected template_container
+    bool template_multi,
+    bool template_map>
+class psyq::container::_private::sorted_sequence: private template_container
 {
     /// @copydoc psyq::string::view::this_type
     private: typedef sorted_sequence this_type;
@@ -740,7 +763,7 @@ class psyq::container::_private::sorted_sequence: protected template_container
     //-------------------------------------------------------------------------
     /// @brief 扱うシーケンスコンテナの型。
     /// @details
-    ///   以下の型が定義されていること。
+    ///   以下のメンバ型が使えること。
     ///   - template_container::value_type
     ///   - template_container::size_type
     ///   - template_container::difference_type
@@ -754,43 +777,56 @@ class psyq::container::_private::sorted_sequence: protected template_container
     ///   - template_container::const_reverse_iterator
     ///   .
     ///   また、以下に相当するメンバ関数が使えること。
-    ///   -  template_container::iterator template_container::begin()
-    ///   -  template_container::const_iterator template_container::begin() const
-    ///   -  template_container::reverse_iterator template_container::rbegin()
-    ///   -  template_container::const_reverse_iterator template_container::rbegin() const
-    ///   -  template_container::const_iterator template_container::cbegin() const
-    ///   -  template_container::const_reverse_iterator template_container::crbegin() const
-    ///   -  template_container::iterator template_container::end()
-    ///   -  template_container::const_iterator template_container::end() const
-    ///   -  template_container::reverse_iterator template_container::rend()
-    ///   -  template_container::const_reverse_iterator template_container::rend() const
-    ///   -  template_container::const_iterator template_container::cend() const
-    ///   -  template_container::const_reverse_iterator template_container::crend() const
-    ///   -  template_container::iterator template_container::insert(
-    ///        template_container::const_iterator,
-    ///        template_container::value_type const&)
-    ///   -  template_container::iterator template_container::insert(
-    ///        template_container::const_iterator,
-    ///        template_container::value_type&&)
-    ///   -  template_container::iterator template_container::erase(
-    ///        template_container::const_iterator)
-    ///   -  void template_container::clear()
-    ///   -  bool template_container::empty() const
-    ///   -  template_container::size_type template_container::size() const
-    ///   -  template_container::size_type template_container::max_size() const
+    ///   - bool template_container::empty() const
+    ///   - template_container::size_type template_container::size() const
+    ///   - template_container::size_type template_container::max_size() const
+    ///   - template_container::iterator template_container::begin()
+    ///   - template_container::const_iterator template_container::begin() const
+    ///   - template_container::iterator template_container::end()
+    ///   - template_container::const_iterator template_container::end() const
+    ///   - template_container::reverse_iterator template_container::rbegin()
+    ///   - template_container::const_reverse_iterator template_container::rbegin() const
+    ///   - template_container::reverse_iterator template_container::rend()
+    ///   - template_container::const_reverse_iterator template_container::rend() const
+    ///   - template_container::const_iterator template_container::cbegin() const
+    ///   - template_container::const_iterator template_container::cend() const
+    ///   - template_container::const_reverse_iterator template_container::crbegin() const
+    ///   - template_container::const_reverse_iterator template_container::crend() const
+    ///   - template_container::iterator template_container::insert(
+    ///       template_container::const_iterator,
+    ///       template_container::value_type)
+    ///   - template_container::iterator template_container::erase(
+    ///       template_container::const_iterator)
+    ///   - void template_container::clear()
     public: typedef template_container container_type;
     /// @brief 値を比較する関数オブジェクト。
     /// @details
-    ///   以下のメンバ関数が使えること。
+    ///   以下に相当するメンバ関数が使えること。
     ///   - bool template_compare::operator()(
     ///       template_container::value_type const&,
     ///       template_container::value_type const&)
     ///     const
     public: typedef template_compare value_compare;
+    /// @brief コンテナの要素の型。
+    public: typedef typename base_type::value_type value_type;
     /// @brief キーを比較する関数オブジェクト。
     public: typedef template_compare key_compare;
-    /// @copydoc psyq::container::sequence_map::key_type
+    /// @brief キーの型。
     public: typedef typename base_type::value_type key_type;
+    /// @brief コンテナの要素を指す、反復子の型。
+    public: typedef
+        typename std::conditional<
+            template_map,
+            typename base_type::iterator,
+            typename base_type::const_iterator>::type
+        iterator;
+    /// @brief コンテナの要素を指す、逆反復子の型。
+    public: typedef
+        typename std::conditional<
+            template_map,
+            typename base_type::reverse_iterator,
+            typename base_type::const_reverse_iterator>::type
+        reverse_iterator;
 
     //-------------------------------------------------------------------------
     /// @brief ソート済シーケンスコンテナの選別器。
@@ -804,106 +840,29 @@ class psyq::container::_private::sorted_sequence: protected template_container
             this_type::sorter::insert(
                 *static_cast<base_type*>(nullptr),
                 *static_cast<typename this_type::value_compare*>(nullptr),
-                *static_cast<typename base_type::iterator*>(nullptr),
+                *static_cast<typename this_type::iterator*>(nullptr),
                 *static_cast<typename base_type::value_type*>(nullptr)))
         insert_result;
 
     //-------------------------------------------------------------------------
-    public: using typename base_type::value_type;
     public: using typename base_type::size_type;
     public: using typename base_type::difference_type;
-
     public: using typename base_type::reference;
     public: using typename base_type::pointer;
-    public: using typename base_type::iterator;
-    public: using typename base_type::reverse_iterator;
-
     public: using typename base_type::const_reference;
     public: using typename base_type::const_pointer;
     public: using typename base_type::const_iterator;
     public: using typename base_type::const_reverse_iterator;
 
-    public: using base_type::begin;
-    public: using base_type::rbegin;
     public: using base_type::cbegin;
-    public: using base_type::crbegin;
-
-    public: using base_type::end;
-    public: using base_type::rend;
     public: using base_type::cend;
+    public: using base_type::crbegin;
     public: using base_type::crend;
-
     public: using base_type::size;
     public: using base_type::max_size;
     public: using base_type::empty;
     public: using base_type::clear;
 
-    //-------------------------------------------------------------------------
-    /// @name 構築
-    /// @{
-
-    /// @brief 空のソート済シーケンスコンテナを構築する。
-    public: explicit sorted_sequence(
-        /// [in] 値を比較する関数オブジェクト。
-        typename this_type::value_compare&& io_compare):
-    base_type(), compare_(std::move(io_compare))
-    {}
-
-    /// @brief ソート済シーケンスコンテナをコピー構築する。
-    /// @warning
-    ///   in_container がソートされてなかった場合 *this は空となり、
-    ///   std::invalid_argument 例外を投げる。
-    public: sorted_sequence(
-        /// [in] コピー元となるソート済シーケンスコンテナ。
-        typename this_type::container_type const& in_container,
-        /// [in] 値を比較する関数オブジェクト。
-        typename this_type::value_compare const& in_compare):
-    base_type(in_container),
-    compare_(in_compare)
-    {
-        if (!this->is_sorted())
-        {
-            this->clear();
-            PSYQ_ASSERT_THROW(false, std::invalid_argument);
-        }
-    }
-
-    /// @brief ソート済シーケンスコンテナをムーブ構築する。
-    /// @warning
-    ///   io_container がソートされてなかった場合 *this は空となり、
-    ///   std::invalid_argument 例外を投げる。
-    public: sorted_sequence(
-        /// [in] ムーブ元となるソート済シーケンスコンテナ。
-        typename this_type::container_type&& io_container,
-        /// [in] 値を比較する関数オブジェクト。
-        typename this_type::value_compare&& io_compare):
-    base_type(std::move(io_container)),
-    compare_(std::move(io_compare))
-    {
-        if (!this->is_sorted())
-        {
-            io_container = std::move(this->get_mutable_container());
-            this->clear();
-            PSYQ_ASSERT_THROW(false, std::invalid_argument);
-        }
-    }
-
-    /// @brief ソート済シーケンスコンテナをコピー構築する。
-    public: sorted_sequence(
-        /// [in] コピー元となるソート済シーケンスコンテナ。
-        this_type const& in_source):
-    base_type((PSYQ_ASSERT(in_source.is_sorted()), in_source)),
-    compare_(in_source.value_comp())
-    {}
-
-    /// @brief ソート済シーケンスコンテナをムーブ構築する。
-    public: sorted_sequence(
-        /// [in] ムーブ元となるソート済シーケンスコンテナ。
-        this_type&& io_source):
-    base_type((PSYQ_ASSERT(io_source.is_sorted()), std::move(io_source))),
-    compare_(std::move(io_source.compare_))
-    {}
-    /// @}
     //-------------------------------------------------------------------------
     /// @name 代入
     /// @{
@@ -949,15 +908,17 @@ class psyq::container::_private::sorted_sequence: protected template_container
     }
 
     /// @brief ソート済シーケンスコンテナをコピー代入する。
-    /// @retval true  成功。 in_source を代入した。
-    /// @retval false 失敗。 in_source がソートされてなかったため、代入しなかった。
+    /// @retval true  成功。 in_source を *this へ代入した。
+    /// @retval false 失敗。 in_source がソートされてなかった。 *this は変化しない。
     public: bool assign(
         /// [in] コピー元となるソート済シーケンスコンテナ。
         typename this_type::container_type const& in_source)
     {
         auto const local_sorted(
             this_type::sorter::is_sorted(
-                std::begin(in_source), std::end(in_source), this->value_comp()));
+                std::begin(in_source),
+                std::end(in_source),
+                this->value_comp()));
         if (local_sorted)
         {
             this->get_mutable_container() = in_source;
@@ -966,15 +927,17 @@ class psyq::container::_private::sorted_sequence: protected template_container
     }
 
     /// @brief ソート済シーケンスコンテナをムーブ代入する。
-    /// @retval true  成功。 io_source を代入した。
-    /// @retval false 失敗。 io_source がソートされてなかったため、代入しなかった。
+    /// @retval true  成功。 io_source を *this へ代入した。
+    /// @retval false 失敗。 io_source がソートされてなかった。 *this は変化しない。
     public: bool assign(
         /// [in] ムーブ元となるソート済シーケンスコンテナ。
         typename this_type::container_type&& io_source)
     {
         auto const local_sorted(
             this_type::sorter::is_sorted(
-                std::begin(io_source), std::end(io_source), this->value_comp()));
+                std::begin(io_source),
+                std::end(io_source),
+                this->value_comp()));
         if (local_sorted)
         {
             this->get_mutable_container() = std::move(io_source);
@@ -991,7 +954,8 @@ class psyq::container::_private::sorted_sequence: protected template_container
         template_iterator in_end)
     {
         auto const local_sorted(
-            this_type::sorter::is_sorted(in_begin, in_end, this->value_comp()));
+            this_type::sorter::is_sorted(
+                in_begin, in_end, this->value_comp()));
         if (local_sorted)
         {
             this->base_type::assign(std::move(in_begin), std::move(in_end));
@@ -1017,7 +981,8 @@ class psyq::container::_private::sorted_sequence: protected template_container
     /// @return *this == in_right
     public: bool operator==(
         /// [in] 比較演算子の右辺となるコンテナ。
-        this_type const& in_right) const
+        this_type const& in_right)
+    const
     {
         return this->get_container() == in_right.get_container();
     }
@@ -1026,7 +991,8 @@ class psyq::container::_private::sorted_sequence: protected template_container
     /// @return *this != in_right
     public: bool operator!=(
         /// [in] 比較演算子の右辺となるコンテナ。
-        this_type const& in_right) const
+        this_type const& in_right)
+    const
     {
         return this->get_container() != in_right.get_container();
     }
@@ -1035,7 +1001,8 @@ class psyq::container::_private::sorted_sequence: protected template_container
     /// @return *this < in_right
     public: bool operator<(
         /// [in] 比較演算子の右辺となるコンテナ。
-        this_type const& in_right) const
+        this_type const& in_right)
+    const
     {
         return this->get_container() < in_right.get_container();
     }
@@ -1044,7 +1011,8 @@ class psyq::container::_private::sorted_sequence: protected template_container
     /// @return *this <= in_right
     public: bool operator<=(
         /// [in] 比較演算子の右辺となるコンテナ。
-        this_type const& in_right) const
+        this_type const& in_right)
+    const
     {
         return this->get_container() <= in_right.get_container();
     }
@@ -1053,7 +1021,8 @@ class psyq::container::_private::sorted_sequence: protected template_container
     /// @return *this > in_right
     public: bool operator>(
         /// [in] 比較演算子の右辺となるコンテナ。
-        this_type const& in_right) const
+        this_type const& in_right)
+    const
     {
         return this->get_container() > in_right.get_container();
     }
@@ -1062,7 +1031,8 @@ class psyq::container::_private::sorted_sequence: protected template_container
     /// @return *this >= in_right
     public: bool operator>=(
         /// [in] 比較演算子の右辺となるコンテナ。
-        this_type const& in_right) const
+        this_type const& in_right)
+    const
     {
         return this->get_container() >= in_right.get_container();
     }
@@ -1105,13 +1075,69 @@ class psyq::container::_private::sorted_sequence: protected template_container
     }
     /// @}
     //-------------------------------------------------------------------------
+    /// @name 反復子の取得
+    /// @{
+
+    /// @brief コンテナの先頭要素を指す反復子を取得する。
+    /// @return *this の先頭要素を指す反復子。
+    public: typename this_type::iterator begin()
+    {
+        return std::begin(this->get_mutable_container());
+    }
+
+    /// @copydoc begin
+    public: typename base_type::const_iterator begin() const
+    {
+        return std::begin(this->get_container());
+    }
+
+    /// @brief コンテナの末尾要素の次を指す反復子を取得する。
+    /// @return *this の末尾要素の次を指す反復子。
+    public: typename this_type::iterator end()
+    {
+        return std::end(this->get_mutable_container());
+    }
+
+    /// @copydoc end
+    public: typename base_type::const_iterator end() const
+    {
+        return std::end(this->get_container());
+    }
+
+    /// @brief コンテナの先頭要素の前を指す逆反復子を取得する。
+    /// @return *this の先頭要素の前を指す逆反復子。
+    public: typename this_type::reverse_iterator rbegin()
+    {
+        return this->base_type::rbegin();
+    }
+
+    /// @copydoc rbegin
+    public: typename base_type::const_reverse_iterator rbegin() const
+    {
+        return this->base_type::rbegin();
+    }
+
+    /// @brief コンテナの末尾要素を指す逆反復子を取得する。
+    /// @return *this の末尾要素を指す逆反復子。
+    public: typename this_type::reverse_iterator rend()
+    {
+        return this->base_type::rend();
+    }
+
+    /// @copydoc rend
+    public: typename base_type::const_reverse_iterator rend() const
+    {
+        return this->base_type::rend();
+    }
+    /// @}
+    //-------------------------------------------------------------------------
     /// @name 要素の検索
     /// @{
 
     /// @brief 指定されたキーの位置を取得する。
     /// @return in_key に対応する要素が最初に現れる位置。
     public: template<typename template_key>
-    typename base_type::iterator find(
+    typename this_type::iterator find(
         /// [in] 基準となるキー。
         template_key const& in_key)
     {
@@ -1131,7 +1157,7 @@ class psyq::container::_private::sorted_sequence: protected template_container
     /// @brief 指定されたキー以上の要素の位置を取得する。
     /// @return in_key 以上の要素が最初に現れる位置。
     public: template<typename template_key>
-    typename base_type::iterator lower_bound(
+    typename this_type::iterator lower_bound(
         /// [in] 基準となるキー。
         template_key const& in_key)
     {
@@ -1151,7 +1177,7 @@ class psyq::container::_private::sorted_sequence: protected template_container
     /// @brief 指定されたキーより大きい要素の位置を取得する。
     /// @return in_key より大きい要素が最初に現れる位置。
     public: template<typename template_key>
-    typename base_type::iterator upper_bound(
+    typename this_type::iterator upper_bound(
         /// [in] 基準となるキー。
         template_key const& in_key)
     {
@@ -1171,7 +1197,7 @@ class psyq::container::_private::sorted_sequence: protected template_container
     /// @brief 指定されたキーと等価な範囲を取得する。
     /// @return in_key と等価な範囲。
     public: template<typename template_key>
-    std::pair<typename base_type::iterator, typename base_type::iterator>
+    std::pair<typename this_type::iterator, typename this_type::iterator>
     equal_range(
         /// [in] 基準となるキー。
         template_key const& in_key)
@@ -1251,7 +1277,7 @@ class psyq::container::_private::sorted_sequence: protected template_container
 
     /// @brief 要素を挿入する。
     /// @return 挿入した要素を指す反復子。
-    public: typename base_type::iterator insert(
+    public: typename this_type::iterator insert(
         /// [in] 要素を挿入する位置のヒント。
         typename base_type::const_iterator in_position,
         /// [in] 挿入する要素の初期値。
@@ -1265,7 +1291,7 @@ class psyq::container::_private::sorted_sequence: protected template_container
 
     /// @brief 要素を挿入する。
     /// @return 挿入した要素を指す反復子。
-    public: typename base_type::iterator insert(
+    public: typename this_type::iterator insert(
         /// [in] 要素を挿入する位置のヒント。
         typename base_type::const_iterator in_position,
         /// [in] 挿入する要素の初期値。
@@ -1307,7 +1333,7 @@ class psyq::container::_private::sorted_sequence: protected template_container
 
     /// @brief 要素を削除する。
     /// @return 削除した要素の次の要素を指す反復子。
-    public: typename base_type::iterator erase(
+    public: typename this_type::iterator erase(
         /// [in] 削除する要素を指す反復子。
         typename base_type::const_iterator in_position)
     {
@@ -1316,7 +1342,7 @@ class psyq::container::_private::sorted_sequence: protected template_container
 
     /// @brief 要素を削除する。
     /// @return 削除した範囲の次の要素を指す反復子。
-    public: typename base_type::iterator erase(
+    public: typename this_type::iterator erase(
         /// [in] 削除する範囲の先頭位置。
         typename base_type::const_iterator in_begin,
         /// [in] 削除する範囲の末尾位置。
@@ -1339,6 +1365,72 @@ class psyq::container::_private::sorted_sequence: protected template_container
             std::move(local_range.first), std::move(local_range.second));
         return local_count;
     }
+    /// @}
+    //-------------------------------------------------------------------------
+    /// @name 構築
+    /// @{
+
+    /// @brief 空のソート済シーケンスコンテナを構築する。
+    protected: explicit sorted_sequence(
+        /// [in] 値を比較する関数オブジェクト。
+        typename this_type::value_compare&& io_compare):
+    base_type(), compare_(std::move(io_compare))
+    {}
+
+    /// @brief ソート済シーケンスコンテナをコピー構築する。
+    /// @warning
+    ///   in_container がソートされてなかった場合 *this は空となり、
+    ///   std::invalid_argument 例外を投げる。
+    protected: sorted_sequence(
+        /// [in] コピー元となるソート済シーケンスコンテナ。
+        typename this_type::container_type const& in_container,
+        /// [in] 値を比較する関数オブジェクト。
+        typename this_type::value_compare const& in_compare):
+    base_type(in_container),
+    compare_(in_compare)
+    {
+        if (!this->is_sorted())
+        {
+            this->clear();
+            PSYQ_ASSERT_THROW(false, std::invalid_argument);
+        }
+    }
+
+    /// @brief ソート済シーケンスコンテナをムーブ構築する。
+    /// @warning
+    ///   io_container がソートされてなかった場合 *this は空となり、
+    ///   std::invalid_argument 例外を投げる。
+    protected: sorted_sequence(
+        /// [in] ムーブ元となるソート済シーケンスコンテナ。
+        typename this_type::container_type&& io_container,
+        /// [in] 値を比較する関数オブジェクト。
+        typename this_type::value_compare&& io_compare):
+    base_type(std::move(io_container)),
+    compare_(std::move(io_compare))
+    {
+        if (!this->is_sorted())
+        {
+            io_container = std::move(this->get_mutable_container());
+            this->clear();
+            PSYQ_ASSERT_THROW(false, std::invalid_argument);
+        }
+    }
+
+    /// @brief ソート済シーケンスコンテナをコピー構築する。
+    protected: sorted_sequence(
+        /// [in] コピー元となるソート済シーケンスコンテナ。
+        this_type const& in_source):
+    base_type((PSYQ_ASSERT(in_source.is_sorted()), in_source)),
+    compare_(in_source.value_comp())
+    {}
+
+    /// @brief ソート済シーケンスコンテナをムーブ構築する。
+    protected: sorted_sequence(
+        /// [in] ムーブ元となるソート済シーケンスコンテナ。
+        this_type&& io_source):
+    base_type((PSYQ_ASSERT(io_source.is_sorted()), std::move(io_source))),
+    compare_(std::move(io_source.compare_))
+    {}
     /// @}
     //-------------------------------------------------------------------------
     /// @copydoc get_container
@@ -1369,7 +1461,7 @@ class psyq::container::_private::sorted_sequence: protected template_container
             this->get_container(), this->value_comp(), in_position, in_value);
     }
 
-    private: typename base_type::iterator find_insert_position(
+    private: typename this_type::iterator find_insert_position(
         /// [in] 挿入する値。
         typename base_type::value_type const& in_value)
     {
@@ -1387,7 +1479,8 @@ class psyq::container::_private::sorted_sequence: protected template_container
     ->decltype(std::begin(in_container))
     {
         auto const local_end(std::end(in_container));
-        auto const local_lower_bound(this_type::lower_bound(in_container, in_key));
+        auto const local_lower_bound(
+            this_type::lower_bound(in_container, in_key));
         return local_lower_bound != local_end
             && !in_container.compare_(in_key, *local_lower_bound)?
                 local_lower_bound: local_end;

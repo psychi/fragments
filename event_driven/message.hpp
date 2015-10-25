@@ -172,6 +172,20 @@ class psyq::event_driven::message
     parameter_size_(0)
     {}
     /// @}
+
+    /// @brief 引数を持つメッセージを構築する。
+    /// @return 構築したメッセージ。
+    public: template<typename template_parameter>
+    static typename this_type::parametric<template_parameter> construct(
+        /// [in] メッセージの送り状。
+        typename this_type::tag const& in_tag,
+        /// [in] メッセージの引数。
+        template_parameter&& io_parameter)
+    {
+        return typename this_type::parametric<template_parameter>(
+            in_tag, std::move(io_parameter));
+    }
+
     //-------------------------------------------------------------------------
     /// @name メッセージのプロパティ
     /// @{

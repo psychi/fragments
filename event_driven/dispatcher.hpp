@@ -17,12 +17,14 @@
 ///        インスタンスから psyq::event_driven::dispatcher::dispatch を定期的に呼び出す。
 ///   -# 現在のスレッドに適合する psyq::event_driven::dispatcher
 ///      インスタンスから以下のいずれかの関数を呼び出し、メッセージを送信する。
+///      - 構築済みのメッセージパケットを送るなら、
+///        psyq::event_driven::dispatcher::post を呼び出す。
 ///      - メッセージゾーンの内と外にメッセージを送るなら、
-///        psyq::event_driven::dispatcher::post_message を呼び出す。
+///        psyq::event_driven::dispatcher::post_external を呼び出す。
 ///      - メッセージゾーンの内にのみメッセージを送るなら、
-///        psyq::event_driven::dispatcher::post_zonal_message を呼び出す。
+///        psyq::event_driven::dispatcher::post_zonal を呼び出す。
 ///      - 現在のスレッドにのみメッセージを送るなら、
-///        psyq::event_driven::dispatcher::send_local_message を呼び出す。
+///        psyq::event_driven::dispatcher::send_local を呼び出す。
 ///   -# psyq::event_driven::dispatcher::register_receiving_function
 ///      で登録したメッセージ受信関数が呼び出される。
 #ifndef PSYQ_EVENT_DRIVEN_DISPATCHER_HPP_
@@ -52,11 +54,11 @@ namespace psyq
 /// @par 使い方の概略
 ///   - zone::equip_dispatcher で、 dispatcher を用意する。
 ///   - dispatcher::register_receiving_function で、メッセージ受信関数を登録する。
-///   - dispatcher::post_message や
-///     dispatcher::post_zonal_message で、メッセージを送信する。
+///   - dispatcher::post_external や
+///     dispatcher::post_zonal で、メッセージを送信する。
 ///   - zone::dispatch で、 dispatcher の持つメッセージパケットが集配される。
 ///   - dispatcher::dispatch で、
-///     dispatcher が持つメッセージパケットをメッセージ受信関数へ配信する。
+///     dispatcher が持つメッセージパケットをメッセージ受信関数へ配送する。
 /// @tparam template_base_message @copydoc packet::message
 /// @tparam template_priority     @copydoc dispatcher::priority
 /// @tparam template_allocator    @copydoc dispatcher::allocator_type
@@ -424,7 +426,7 @@ class psyq::event_driven::dispatcher
 
     /// @brief メッセージ転送関数を登録する。
     /// @todo 未実装
-    public: bool register_forwarging_function(
+    private: bool register_forwarging_function(
         /// [in] 登録するメッセージ転送関数に対応する、
         /// メッセージ受信オブジェクトの識別値。
         typename this_type::tag::key_type const in_receiver_key,
@@ -435,14 +437,14 @@ class psyq::event_driven::dispatcher
 
     /// @brief メッセージ転送関数を取り除く。
     /// @todo 未実装
-    public: typename this_type::function_weak_ptr unregister_forwarding_function(
+    private: typename this_type::function_weak_ptr unregister_forwarding_function(
         /// [in] 取り除くメッセージ転送関数に対応する、
         /// メッセージ受信オブジェクトの識別値。
         typename this_type::tag::key_type const in_receiver_key);
 
     /// @brief メッセージ転送関数を検索する。
     /// @todo 未実装
-    public: typename this_type::function_weak_ptr find_forwarding_function(
+    private: typename this_type::function_weak_ptr find_forwarding_function(
         /// [in] 検索するメッセージ転送関数に対応する、
         /// メッセージ受信オブジェクトの識別値。
         typename this_type::tag::key_type const in_receiver_key);
@@ -456,229 +458,123 @@ class psyq::event_driven::dispatcher
     ///   - 引数を持たないメッセージパケットを動的メモリ割当して構築し、
     ///     メッセージゾーンの内と外への送信を予約する。
     ///   - この関数では、メッセージ送信の予約のみを行う。
-    ///     実際のメッセージ送信処理は、この関数の呼び出し後、
+    ///     メッセージを実際に送信する処理は、この関数の呼び出し後、
     ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
-    ///   - メッセージ受信処理は、送信処理が行われた後、
+    ///   - メッセージ受信処理は、メッセージパケットの送信が行われた後、
     ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
     ///   - 同一スレッドで送信を予約したメッセージの受信順序は、
     ///     送信予約順序と同じになる。
     /// .
     /// @sa
+    ///   - 構築済のメッセージパケットを送信するには、 this_type::post を使う。
     ///   - メッセージゾーン内にだけメッセージを送信するには、
-    ///     this_type::post_zonal_message を使う。
+    ///     this_type::post_zonal を使う。
     ///   - *this に登録されているメッセージ受信関数にのみメッセージを送信するには、
-    ///     this_type::send_local_message を使う。
+    ///     this_type::send_local を使う。
     /// @retval true 成功。メッセージ送信を予約した。
     /// @retval false
     ///   失敗。メッセージ送信を予約しなかった。 this_type::get_thread_id
     ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
     /// @todo メッセージゾーンの外へ送信する処理は未実装。
-    public: bool post_message(
+    public: bool post_external(
         /// [in] 送信するメッセージの送り状。
         typename this_type::tag const& in_tag)
     {
-        return this->add_export_packet(
-            this_type::create_external_packet(
+        return this->post(
+            this_type::packet::create_external(
                 typename this_type::packet::message(in_tag),
                 this->get_allocator()));
     }
 
-    /// @brief メッセージゾーンの内と外へのメッセージの送信を予約する。
-    /// @details
-    ///   - POD型の引数を持つメッセージパケットを動的メモリ割当して構築し、
-    ///     メッセージゾーンの内と外への送信を予約する。
-    ///   - この関数では、メッセージ送信の予約のみを行う。
-    ///     実際のメッセージ送信処理は、この関数の呼び出し後、
-    ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
-    ///   - メッセージ受信処理は、送信処理が行われた後、
-    ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
-    ///   - 同一スレッドで送信を予約したメッセージの受信順序は、
-    ///     送信予約順序と同じになる。
-    /// .
-    /// @sa
-    ///   - メッセージゾーン内にだけメッセージを送信するには、
-    ///     this_type::post_zonal_message を使う。
-    ///   - *this に登録されているメッセージ受信関数にのみメッセージを送信するには、
-    ///     this_type::send_local_message を使う。
-    /// @retval true 成功。メッセージ送信を予約した。
-    /// @retval false
-    ///   失敗。メッセージ送信を予約しなかった。 this_type::get_thread_id
-    ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
-    /// @todo 未実装。
+    /// @copydoc this_type::post_external
+    /// @todo メッセージゾーンの内へ送信する処理も未実装。
     public: template<typename template_parameter>
-    bool post_message(
+    bool post_external(
         /// [in] 送信するメッセージの送り状。
         typename this_type::tag const& in_tag,
         /// [in] 送信するメッセージの引数。必ずPOD型。
-        template_parameter in_parameter);
+        template_parameter&& io_parameter);
 
     /// @brief メッセージゾーン内へのメッセージの送信を予約する。
     /// @details
     ///   - 引数を持たないメッセージパケットを動的メモリ割当して構築し、
     ///     メッセージゾーン内への送信を予約する。
     ///   - この関数では、メッセージ送信の予約のみを行う。
-    ///     実際のメッセージ送信処理は、この関数の呼び出し後、
+    ///     メッセージを実際に送信する処理は、この関数の呼び出し後、
     ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
-    ///   - メッセージ受信処理は、送信処理が行われた後、
+    ///   - メッセージ受信処理は、メッセージパケットの送信が行われた後、
     ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
     ///   - 同一スレッドで送信を予約したメッセージの受信順序は、
     ///     送信予約順序と同じになる。
     /// .
     /// @sa
+    ///   - 構築済のメッセージパケットを送信するには、 this_type::post を使う。
     ///   - メッセージゾーンの内と外にメッセージを送信するには、
-    ///     this_type::post_message を使う。
+    ///     this_type::post_external を使う。
     ///   - *this に登録されているメッセージ受信関数にのみメッセージを送信するには、
-    ///     this_type::send_local_message を使う。
+    ///     this_type::send_local を使う。
     /// @retval true 成功。メッセージ送信を予約した。
     /// @retval false
     ///   失敗。メッセージ送信を予約しなかった。 this_type::get_thread_id
     ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
-    public: bool post_zonal_message(
+    public: bool post_zonal(
         /// [in] 送信するメッセージの送り状。
         typename this_type::tag const& in_tag)
     {
-        return this->add_export_packet(
-            this_type::create_zonal_packet(
+        return this->post(
+            this_type::packet::create_zonal(
                 typename this_type::packet::message(in_tag),
                 this->get_allocator()));
     }
 
-    /// @brief メッセージゾーン内へのメッセージの送信を予約する。
+    /// @copydoc this_type::post_zonal
+    public: template<typename template_parameter>
+    bool post_zonal(
+        /// [in] 送信するメッセージの送り状。
+        typename this_type::tag const& in_tag,
+        /// [in] 送信するメッセージの引数。
+        template_parameter&& io_parameter)
+    {
+        return this->post(
+            this_type::packet::create_zonal(
+                this_type::message::construct(in_tag, std::move(io_parameter)),
+                this->get_allocator()));
+    }
+
+    /// @brief メッセージの送信を予約する。
     /// @details
-    ///   - 任意型の引数を持つメッセージパケットを動的メモリ割当して構築し、
-    ///     メッセージゾーン内への送信を予約する。
     ///   - この関数では、メッセージ送信の予約のみを行う。
-    ///     実際のメッセージ送信処理は、この関数の呼び出し後、
+    ///     メッセージを実際に送信する処理は、この関数の呼び出し後、
     ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
-    ///   - メッセージ受信処理は、送信処理が行われた後、
+    ///   - メッセージ受信処理は、メッセージの送信が行われた後、
     ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
     ///   - 同一スレッドで送信を予約したメッセージの受信順序は、
     ///     送信予約順序と同じになる。
     /// .
-    /// @sa
-    ///   - メッセージゾーンの内と外にメッセージを送信するには、
-    ///     this_type::post_message を使う。
-    ///   - *this に登録されているメッセージ受信関数にのみメッセージを送信するには、
-    ///     this_type::send_local_message を使う。
-    /// @retval true 成功。メッセージ送信を予約した。
-    /// @retval false
-    ///   失敗。メッセージ送信を予約しなかった。 this_type::get_thread_id
-    ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
-    public: template<typename template_parameter>
-    bool post_zonal_message(
-        /// [in] 送信するメッセージの送り状。
-        typename this_type::tag const& in_tag,
-        /// [in] 送信するメッセージの引数。
-        template_parameter in_parameter)
+    /// @retval true  成功。メッセージの送信を予約した。
+    /// @retval false 失敗。メッセージの送信を予約しなかった。
+    public: bool post(
+        /// [in] 送信するメッセージを持つメッセージパケット。
+        typename this_type::packet::shared_ptr in_packet)
     {
-        typedef
-            typename this_type::packet::message::template
-                parametric<template_parameter>
-            message;
-        return this->add_export_packet(
-            this_type::create_zonal_packet(
-                message(in_tag, std::move(in_parameter)),
-                this->get_allocator()));
-    }
-
-    /// @brief 現在のスレッドにだけ、メッセージを送信する。
-    /// @details
-    ///   *this に登録されているメッセージ受信関数にだけメッセージを送信し、
-    ///   メッセージ受信関数が終了するまでブロックする。
-    /// @sa
-    ///   - *this にメッセージ受信関数を登録するには、
-    ///     this_type::register_receiving_function を使う。
-    ///   - メッセージゾーンの内と外にメッセージを送信するには、
-    ///     this_type::post_message を使う。
-    ///   - メッセージゾーン内にだけメッセージを送信するには、
-    ///     this_type::post_zonal_message を使う。
-    /// @retval true 成功。メッセージを送信した。
-    /// @retval false
-    ///   失敗。メッセージを送信しなかった。 this_type::get_thread_id
-    ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
-    public: bool send_local_message(
-        /// [in] 送信するメッセージパケット。
-        typename this_type::packet const& in_packet)
-    {
-        if (!this->verify_thread())
+        if (in_packet.get() == nullptr || !this->verify_thread())
         {
             return false;
         }
-        this_type::deliver_packet(
-            this->function_caches_,
-            this->receiving_hooks_,
-            this->forwarding_hooks_,
-            in_packet);
+        this->export_packets_.emplace_back(std::move(in_packet));
         return true;
     }
 
-    /// @brief 現在のスレッドにだけ、引数を持たないメッセージを送信する。
-    /// @details
-    ///   *this に登録されているメッセージ受信関数にだけ、
-    ///   引数を持たないメッセージを送信し、
-    ///   メッセージ受信関数が終了するまでブロックする。
-    /// @sa
-    ///   - *this にメッセージ受信関数を登録するには、
-    ///     this_type::register_receiving_function を使う。
-    ///   - メッセージゾーンの内と外にメッセージを送信するには、
-    ///     this_type::post_message を使う。
-    ///   - メッセージゾーン内にだけメッセージを送信するには、
-    ///     this_type::post_zonal_message を使う。
-    /// @retval true 成功。メッセージを送信した。
-    /// @retval false
-    ///   失敗。メッセージを送信しなかった。 this_type::get_thread_id
-    ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
-    public: bool send_local_message(
-        /// [in] 送信するメッセージの送り状。
-        typename this_type::tag const& in_tag)
-    {
-        typedef typename this_type::packet::message message;
-        return this->send_local_message(
-            typename this_type::packet::template zonal<message>(message(in_tag)));
-    }
-
-    /// @brief 現在のスレッドにだけ、任意型の引数を持つメッセージを送信する。
-    /// @details
-    ///   *this に登録されているメッセージ受信関数にだけ、
-    ///   任意型の引数を持つメッセージを送信し、
-    ///   メッセージ受信関数が終了するまでブロックする。
-    /// @sa
-    ///   - *this にメッセージ受信関数を登録するには、
-    ///     this_type::register_receiving_function を使う。
-    ///   - メッセージゾーンの内と外にメッセージを送信するには、
-    ///     this_type::post_message を使う。
-    ///   - メッセージゾーン内にだけメッセージを送信するには、
-    ///     this_type::post_zonal_message を使う。
-    /// @retval true 成功。メッセージを送信した。
-    /// @retval false
-    ///   失敗。メッセージを送信しなかった。 this_type::get_thread_id
-    ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
-    public: template<typename template_parameter>
-    bool send_local_message(
-        /// [in] 送信するメッセージの送り状。
-        typename this_type::tag const& in_tag,
-        /// [in] 送信するメッセージの引数。
-        template_parameter in_parameter)
-    {
-        typedef
-            typename this_type::packet::message::template
-                parametric<template_parameter>
-            message;
-        return this->send_local_message(
-            typename this_type::packet::template
-                zonal<message>(message(in_tag, std::move(in_parameter))));
-    }
-
-    /// @brief メッセージパケットをメッセージ受信関数へ配信する。
+    /// @brief メッセージパケットをメッセージ受信関数へ配送する。
     /// @details
     ///   この関数と zone::dispatch
-    ///   を定期的に呼び出し、メッセージパケットを循環させること。
+    ///   をメッセージループで定期的に呼び出し、メッセージパケットを循環させること。
     /// @sa
     ///   *this にメッセージ受信関数を登録するには、
     ///   this_type::register_receiving_function を使う。
-    /// @retval true 成功。メッセージパケットを配信した。
+    /// @retval true 成功。メッセージパケットを配送した。
     /// @retval false
-    ///   失敗。メッセージパケットを配信しなかった。 this_type::get_thread_id
+    ///   失敗。メッセージパケットを配送しなかった。 this_type::get_thread_id
     ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
     public: bool dispatch()
     {
@@ -687,7 +583,7 @@ class psyq::event_driven::dispatcher
             return false;
         }
 
-        // 配信するメッセージパケットを取得する。
+        // 配送するメッセージパケットを取得する。
         {
             std::lock_guard<psyq::spinlock> const local_lock(this->lock_);
             this->delivery_packets_.swap(this->import_packets_);
@@ -695,7 +591,7 @@ class psyq::event_driven::dispatcher
         this_type::remove_empty_hook(this->receiving_hooks_);
         this_type::remove_empty_hook(this->forwarding_hooks_);
 
-        // メッセージパケットを、メッセージ受信関数へ配信する。
+        // メッセージパケットを、メッセージ受信関数へ配送する。
         this_type::deliver_packets(
             this->function_caches_,
             this->receiving_hooks_,
@@ -741,6 +637,99 @@ class psyq::event_driven::dispatcher
             std::this_thread::get_id() == this->get_thread_id());
         PSYQ_ASSERT(local_verify);
         return local_verify;
+    }
+
+    //-------------------------------------------------------------------------
+    /// @brief 現在のスレッドにだけ、メッセージを送信する。
+    /// @details
+    ///   *this に登録されているメッセージ受信関数にだけメッセージを送信し、
+    ///   メッセージ受信関数が終了するまでブロックする。
+    /// @sa
+    ///   - *this にメッセージ受信関数を登録するには、
+    ///     this_type::register_receiving_function を使う。
+    ///   - メッセージゾーンの内と外にメッセージを送信するには、
+    ///     this_type::post_external を使う。
+    ///   - メッセージゾーン内にだけメッセージを送信するには、
+    ///     this_type::post_zonal を使う。
+    /// @note
+    ///   以下の問題を解決したなら public にすること。
+    ///   - send_local の中から send_local されるとダメ。
+    ///   - send_local の中から register_receiving_function されるとダメ。
+    /// @retval true 成功。メッセージを送信した。
+    /// @retval false
+    ///   失敗。メッセージを送信しなかった。 this_type::get_thread_id
+    ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
+    private: bool send_local(
+        /// [in] 送信するメッセージパケット。
+        typename this_type::packet const& in_packet)
+    {
+        if (!this->verify_thread())
+        {
+            return false;
+        }
+        this_type::deliver_packet(
+            this->function_caches_,
+            this->receiving_hooks_,
+            this->forwarding_hooks_,
+            in_packet);
+        return true;
+    }
+
+    /// @brief 現在のスレッドにだけ、引数を持たないメッセージを送信する。
+    /// @details
+    ///   *this に登録されているメッセージ受信関数にだけ、
+    ///   引数を持たないメッセージを送信し、
+    ///   メッセージ受信関数が終了するまでブロックする。
+    /// @sa
+    ///   - *this にメッセージ受信関数を登録するには、
+    ///     this_type::register_receiving_function を使う。
+    ///   - メッセージゾーンの内と外にメッセージを送信するには、
+    ///     this_type::post_external を使う。
+    ///   - メッセージゾーン内にだけメッセージを送信するには、
+    ///     this_type::post_zonal を使う。
+    /// @retval true 成功。メッセージを送信した。
+    /// @retval false
+    ///   失敗。メッセージを送信しなかった。 this_type::get_thread_id
+    ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
+    private: bool send_local(
+        /// [in] 送信するメッセージの送り状。
+        typename this_type::tag const& in_tag)
+    {
+        typedef typename this_type::packet::message message;
+        return this->send_local(
+            typename this_type::packet::template zonal<message>(message(in_tag)));
+    }
+
+    /// @brief 現在のスレッドにだけ、任意型の引数を持つメッセージを送信する。
+    /// @details
+    ///   *this に登録されているメッセージ受信関数にだけ、
+    ///   任意型の引数を持つメッセージを送信し、
+    ///   メッセージ受信関数が終了するまでブロックする。
+    /// @sa
+    ///   - *this にメッセージ受信関数を登録するには、
+    ///     this_type::register_receiving_function を使う。
+    ///   - メッセージゾーンの内と外にメッセージを送信するには、
+    ///     this_type::post_external を使う。
+    ///   - メッセージゾーン内にだけメッセージを送信するには、
+    ///     this_type::post_zonal を使う。
+    /// @retval true 成功。メッセージを送信した。
+    /// @retval false
+    ///   失敗。メッセージを送信しなかった。 this_type::get_thread_id
+    ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
+    private: template<typename template_parameter>
+    bool send_local(
+        /// [in] 送信するメッセージの送り状。
+        typename this_type::tag const& in_tag,
+        /// [in] 送信するメッセージの引数。
+        template_parameter in_parameter)
+    {
+        typedef
+            typename this_type::packet::message::template
+                parametric<template_parameter>
+            message;
+        return this->send_local(
+            typename this_type::packet::template
+                zonal<message>(message(in_tag, std::move(in_parameter))));
     }
 
     //-------------------------------------------------------------------------
@@ -794,73 +783,7 @@ class psyq::event_driven::dispatcher
     }
 
     //-------------------------------------------------------------------------
-    /// @brief メッセージパケットの送信を予約する。
-    /// @retval true  成功。メッセージパケットの送信を予約した。
-    /// @retval false 失敗。メッセージパケットの送信を予約しなかった。
-    private: bool add_export_packet(
-        /// [in] 送信するメッセージパケット。
-        typename this_type::packet::shared_ptr in_packet)
-    {
-        auto const local_add(in_packet.get() != nullptr && this->verify_thread());
-        if (local_add)
-        {
-            this->export_packets_.emplace_back(std::move(in_packet));
-        }
-        return local_add;
-    }
-
-    /// @brief メッセージゾーン外パケットを生成する。
-    /// @return
-    ///   生成したメッセージパケットを指すスマートポインタ。
-    ///   生成に失敗した場合は、スマートポインタは空となる。
-    private: template<typename template_message>
-    static typename this_type::packet::shared_ptr create_external_packet(
-        /// [in,out] パケットに設定するメッセージ。
-        template_message&& io_message,
-        /// [in] 使用するメモリ割当子。
-        typename this_type::allocator_type const& in_allocator)
-    {
-        typedef
-            typename this_type::packet::template external<template_message>
-            external_packet;
-        return this_type::create_packet<external_packet>(
-            std::move(io_message), in_allocator);
-    }
-
-    /// @brief メッセージゾーン内パケットを生成する。
-    /// @return
-    ///   生成したメッセージパケットを指すスマートポインタ。
-    ///   生成に失敗した場合は、スマートポインタは空となる。
-    private: template<typename template_message>
-    static typename this_type::packet::shared_ptr create_zonal_packet(
-        /// [in,out] パケットに設定するメッセージ。
-        template_message&& io_message,
-        /// [in] 使用するメモリ割当子。
-        typename this_type::allocator_type const& in_allocator)
-    {
-        typedef
-            typename this_type::packet::template zonal<template_message>
-            zonal_packet;
-        return this_type::create_packet<zonal_packet>(
-            std::move(io_message), in_allocator);
-    }
-
-    /// @brief メッセージパケットを生成する。
-    /// @return
-    ///   生成したメッセージパケットを指すスマートポインタ。
-    ///   生成に失敗した場合は、スマートポインタは空となる。
-    private: template<typename template_packet>
-    static typename this_type::packet::shared_ptr create_packet(
-        /// [in,out] パケットに設定するメッセージ。
-        typename template_packet::message&& io_message,
-        /// [in] 使用するメモリ割当子。
-        typename this_type::allocator_type const& in_allocator)
-    {
-        return std::allocate_shared<template_packet>(
-            in_allocator, std::move(io_message));
-    }
-
-    /// @brief メッセージパケットを、メッセージ受信関数へ配信する。
+    /// @brief メッセージパケットを、メッセージ受信関数へ配送する。
     private: static void deliver_packets(
         /// [in,out] メッセージ受信関数のキャッシュに使うコンテナ。
         typename this_type::function_shared_ptr_container& io_functions,
@@ -868,7 +791,7 @@ class psyq::event_driven::dispatcher
         typename this_type::receiving_hook::container const& in_receiving_hooks,
         /// [in] メッセージ転送フックの辞書。
         typename this_type::forwarding_hook::container const& in_forwarding_hooks,
-        /// [in] 配信するメッセージパケットのコンテナ。
+        /// [in] 配送するメッセージパケットのコンテナ。
         typename this_type::packet_shared_ptr_container const& in_packets)
     {
         // メッセージパケットを走査し、メッセージ受信フックの辞書へ中継する。
@@ -879,7 +802,7 @@ class psyq::event_driven::dispatcher
             if (local_packet_pointer != nullptr)
             {
                 // メッセージ受信関数の識別値が一致するメッセージ受信フックに
-                // メッセージパケットを配信する。
+                // メッセージパケットを配送する。
                 this_type::deliver_packet(
                     io_functions,
                     in_receiving_hooks,
@@ -893,7 +816,7 @@ class psyq::event_driven::dispatcher
         }
     }
 
-    /// @brief メッセージパケットを、メッセージ受信関数へ配信する。
+    /// @brief メッセージパケットを、メッセージ受信関数へ配送する。
     private: static void deliver_packet(
         /// [in,out] メッセージ受信関数のキャッシュに使うコンテナ。
         typename this_type::function_shared_ptr_container& io_functions,
@@ -901,7 +824,7 @@ class psyq::event_driven::dispatcher
         typename this_type::receiving_hook::container const& in_receiving_hooks,
         /// [in] メッセージ転送フックの辞書。
         typename this_type::forwarding_hook::container const& in_forwarding_hooks,
-        /// [in] 配信するメッセージパケット。
+        /// [in] 配送するメッセージパケット。
         typename this_type::packet const& in_packet)
     {
         PSYQ_ASSERT(io_functions.empty());
@@ -917,13 +840,13 @@ class psyq::event_driven::dispatcher
         io_functions.clear();
     }
 
-    /// @brief メッセージパケットを配信するメッセージ受信関数を貯める。
+    /// @brief メッセージパケットを配送するメッセージ受信関数を貯める。
     private: static void cache_receiving_functions(
         /// [in,out] メッセージ受信関数のキャッシュに使うコンテナ。
         typename this_type::function_shared_ptr_container& io_functions,
         /// [in] メッセージ受信フックの辞書。
         typename this_type::receiving_hook::container const& in_hooks,
-        /// [in] 配信するメッセージパケットの送り状。
+        /// [in] 配送するメッセージパケットの送り状。
         typename this_type::tag const& in_tag)
     {
         // メッセージ受信フックの辞書を走査し、
@@ -957,7 +880,7 @@ class psyq::event_driven::dispatcher
         }
     }
 
-    /// @brief メッセージパケットを配信するメッセージ転送関数を貯める。
+    /// @brief メッセージパケットを配送するメッセージ転送関数を貯める。
     private: static void cache_forwarding_functions(
         typename this_type::function_shared_ptr_container& io_functions,
         typename this_type::forwarding_hook::container const& in_hooks,
@@ -1023,7 +946,7 @@ class psyq::event_driven::dispatcher
     private: typename this_type::packet_shared_ptr_container import_packets_;
     /// @brief 外部へ輸出するメッセージパケットのコンテナ。
     private: typename this_type::packet_shared_ptr_container export_packets_;
-    /// @brief メッセージ受信関数へ配信するメッセージパケット。
+    /// @brief メッセージ受信関数へ配送するメッセージパケット。
     private: typename this_type::packet_shared_ptr_container delivery_packets_;
     /// @brief メッセージ受信関数のキャッシュ。
     private: typename this_type::function_shared_ptr_container function_caches_;

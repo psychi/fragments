@@ -92,7 +92,7 @@ class psyq::event_driven::dispatcher<
             this_type::find_dispatcher(this->dispatchers_, in_thread_id));
         return local_dispatcher.get() != nullptr?
             local_dispatcher:
-            this_type::make_dispatcher(this->dispatchers_, in_thread_id);
+            this_type::create_dispatcher(this->dispatchers_, in_thread_id);
     }
 
     //-------------------------------------------------------------------------
@@ -128,7 +128,7 @@ class psyq::event_driven::dispatcher<
     /// @return
     ///   生成した this_type::dispatcher を強参照するスマートポインタ。
     ///   生成に失敗した場合、スマートポインタは空となる。
-    private: static typename this_type::dispatcher::shared_ptr make_dispatcher(
+    private: static typename this_type::dispatcher::shared_ptr create_dispatcher(
         /// [in,out] 生成した this_type::dispatcher を追加するコンテナ。
         typename this_type::weak_dispatcher_container& io_dispatchers,
         /// [in] 生成する this_type::dispatcher に対応するスレッドの識別子。
@@ -185,7 +185,7 @@ class psyq::event_driven::dispatcher<
         /// [in,out] this_type::dispatcher へ配ったメッセージパケットのコンテナ。
         typename this_type::dispatcher::packet_shared_ptr_container& io_import_packets)
     {
-        // 配信済コンテナを空にしてから交換する。
+        // 配送済コンテナを空にしてから交換する。
         this_type::dispatcher::clear_packet_container(
             io_import_packets, io_export_packets.size());
         io_export_packets.swap(io_import_packets);
@@ -203,7 +203,7 @@ class psyq::event_driven::dispatcher<
     /// @brief 排他的処理に使うロックオブジェクト。
     private: psyq::spinlock lock_;
 
-}; // class psyq::event_driven::zone
+}; // class psyq::event_driven::dispatcher::zone
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq_test
@@ -264,17 +264,19 @@ namespace psyq_test
             RECEIVER_KEY, METHOD_PARAMETER_VOID, 0, local_method_a);
         local_dispatcher.register_receiving_function(
             RECEIVER_KEY, METHOD_PARAMETER_DOUBLE, 0, local_method_b);
-        local_dispatcher.send_local_message(
+        /*
+        local_dispatcher.send_local(
             message_dispatcher::tag(
                 SENDER_KEY, RECEIVER_KEY, ~0, METHOD_PARAMETER_VOID));
-        local_dispatcher.send_local_message(
+        local_dispatcher.send_local(
             message_dispatcher::tag(
                 SENDER_KEY, RECEIVER_KEY, ~0, METHOD_PARAMETER_DOUBLE),
             psyq_test::floating_wrapper(local_double));
-        local_dispatcher.post_message(
+         */
+        local_dispatcher.post_external(
             message_dispatcher::tag(
                 SENDER_KEY, RECEIVER_KEY, ~0, METHOD_PARAMETER_VOID));
-        local_dispatcher.post_zonal_message(
+        local_dispatcher.post_zonal(
             message_dispatcher::tag(
                 SENDER_KEY, RECEIVER_KEY, ~0, METHOD_PARAMETER_DOUBLE),
             psyq_test::floating_wrapper(local_double));

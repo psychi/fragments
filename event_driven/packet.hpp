@@ -44,7 +44,7 @@ class psyq::event_driven::packet
     public: virtual ~packet() PSYQ_NOEXCEPT {}
     /// @}
     //-------------------------------------------------------------------------
-    /// @name this_type のプロパティ
+    /// @name パケットのプロパティ
     /// @{
 
     /// @brief 保持しているメッセージを取得する。
@@ -81,6 +81,39 @@ class psyq::event_driven::packet
             this->get_parameter_data(psyq::any::rtti::find<template_type>()));
     }
     /// @}
+    //-------------------------------------------------------------------------
+    /// @brief メッセージゾーン内パケットを生成する。
+    /// @return
+    ///   生成したメッセージパケットを指すスマートポインタ。
+    ///   生成に失敗した場合は、スマートポインタは空となる。
+    public: template<typename template_message, typename template_allocator>
+    static typename this_type::shared_ptr create_zonal(
+        /// [in,out] パケットに設定するメッセージ。
+        template_message&& io_message,
+        /// [in] 使用するメモリ割当子。
+        template_allocator const& in_allocator)
+    {
+        return std::allocate_shared<
+            typename this_type::zonal<template_message>>(
+                in_allocator, std::move(io_message));
+    }
+
+    /// @brief メッセージゾーン外パケットを生成する。
+    /// @return
+    ///   生成したメッセージパケットを指すスマートポインタ。
+    ///   生成に失敗した場合は、スマートポインタは空となる。
+    public: template<typename template_message, typename template_allocator>
+    static typename this_type::shared_ptr create_external(
+        /// [in,out] パケットに設定するメッセージ。
+        template_message&& io_message,
+        /// [in] 使用するメモリ割当子。
+        template_allocator const& in_allocator)
+    {
+        return std::allocate_shared<
+            typename this_type::external<template_message>>(
+                in_allocator, std::move(io_message));
+    }
+
     //-------------------------------------------------------------------------
     protected: packet() PSYQ_NOEXCEPT {}
 

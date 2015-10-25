@@ -1,7 +1,32 @@
 ﻿/// @file
 /// @author Hillco Psychi (https://twitter.com/psychi)
-#ifndef PSYQ_ANY_MESSAGE_DISPATCHER_HPP_
-#define PSYQ_ANY_MESSAGE_DISPATCHER_HPP_
+/// @namespace psyq::event_driven
+/// @brief 任意の引数を持つメッセージを送信できる、イベント駆動フレームワーク。
+/// @par 初期化の手順
+///   -# psyq::event_driven::dispatcher::zone インスタンスを用意する。
+///   -# psyq::event_driven::dispatcher::zone::equip_dispatcher で、スレッドごとに
+///      psyq::event_driven::dispatcher インスタンスを用意する。
+///   -# 現在のスレッドに適合する psyq::event_driven::dispatcher インスタンスから
+///      psyq::event_driven::dispatcher::register_receiving_function
+///      を呼び出し、メッセージ受信関数を登録する。
+/// @par メッセージ送受信の手順
+///   -# メッセージループをまわしておく。
+///      - psyq::event_driven::dispatcher::zone::dispatch
+///        を、メインスレッドから定期的に呼び出す。
+///      - それぞれのスレッドに適合する psyq::event_driven::dispatcher
+///        インスタンスから psyq::event_driven::dispatcher::dispatch を定期的に呼び出す。
+///   -# 現在のスレッドに適合する psyq::event_driven::dispatcher
+///      インスタンスから以下のいずれかの関数を呼び出し、メッセージを送信する。
+///      - メッセージゾーンの内と外にメッセージを送るなら、
+///        psyq::event_driven::dispatcher::post_message を呼び出す。
+///      - メッセージゾーンの内にのみメッセージを送るなら、
+///        psyq::event_driven::dispatcher::post_zonal_message を呼び出す。
+///      - 現在のスレッドにのみメッセージを送るなら、
+///        psyq::event_driven::dispatcher::send_local_message を呼び出す。
+///   -# psyq::event_driven::dispatcher::register_receiving_function
+///      で登録したメッセージ受信関数が呼び出される。
+#ifndef PSYQ_EVENT_DRIVEN_DISPATCHER_HPP_
+#define PSYQ_EVENT_DRIVEN_DISPATCHER_HPP_
 
 #ifdef _MSC_VER
 #include <eh.h>
@@ -9,78 +34,83 @@
 #include <vector>
 #include <thread>
 #include <mutex>
-#include "../rtti.hpp"
-#include "./suite.hpp"
+#include "./message.hpp"
 #include "./packet.hpp"
 
 /// @cond
 namespace psyq
 {
-    namespace any
+    namespace event_driven
     {
-        namespace message
-        {
-            template<
-                typename = psyq::any::message::suite<std::uint32_t, std::uint32_t>,
-                typename = std::allocator<void*>>
-            class zone;
-            template<typename, typename, typename> class dispatcher;
-        } // namespace message
-    } // namespace any
+        template<typename, typename, typename> class dispatcher;
+    } // namespace event_driven
 } // namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief スレッド別のRPCメッセージ分配器。
+/// @brief スレッド別のメッセージ配送器。
 /// @par 使い方の概略
 ///   - zone::equip_dispatcher で、 dispatcher を用意する。
 ///   - dispatcher::register_receiving_function で、メッセージ受信関数を登録する。
 ///   - dispatcher::post_message や
 ///     dispatcher::post_zonal_message で、メッセージを送信する。
-///   - zone::flush で、 dispatcher の持つメッセージパケットが集配される。
-///   - dispatcher::flush で、
+///   - zone::dispatch で、 dispatcher の持つメッセージパケットが集配される。
+///   - dispatcher::dispatch で、
 ///     dispatcher が持つメッセージパケットをメッセージ受信関数へ配信する。
-/// @tparam template_base_suite @copydoc packet::suite
-/// @tparam template_priority   @copydoc dispatcher::priority
-/// @tparam template_allocator  @copydoc dispatcher::allocator_type
+/// @tparam template_base_message @copydoc packet::message
+/// @tparam template_priority     @copydoc dispatcher::priority
+/// @tparam template_allocator    @copydoc dispatcher::allocator_type
 template<
-    typename template_base_suite,
-    typename template_priority,
-    typename template_allocator>
-class psyq::any::message::dispatcher
+    typename template_base_message = psyq::event_driven::message<
+        std::uint32_t, std::uint32_t>,
+    typename template_priority = std::int32_t,
+    typename template_allocator = std::allocator<void*>>
+class psyq::event_driven::dispatcher
 {
     /// @copydoc psyq::string::view::this_type
     private: typedef dispatcher this_type;
 
     //-------------------------------------------------------------------------
-    /// @brief メッセージ一式を保持するパケットの基底型。
-    public: typedef psyq::any::message::packet<template_base_suite> packet;
-    /// @brief メッセージの送り状の型。
-    public: typedef typename this_type::packet::suite::invoice invoice;
+    /// this_type を強参照するスマートポインタ。
+    public: typedef std::shared_ptr<this_type> shared_ptr;
+    /// this_type を弱参照するスマートポインタ。
+    public: typedef std::weak_ptr<this_type> weak_ptr;
     /// @brief メッセージの優先順位。
     public: typedef template_priority priority;
     /// @brief this_type で使うメモリ割当子。
     public: typedef template_allocator allocator_type;
+
+    //-------------------------------------------------------------------------
+    public: class zone;
+    /// @brief メッセージパケットの基底型。
+    public: typedef psyq::event_driven::packet<template_base_message> packet;
+    /// @brief メッセージの基底型。
+    public: typedef typename this_type::packet::message message;
+    /// @brief メッセージの送り状の型。
+    public: typedef typename this_type::message::tag tag;
+
+    //-------------------------------------------------------------------------
     /// @brief メッセージ受信関数。
     public: typedef
         std::function<void(typename this_type::packet const&)>
         function;
-    /// @brief メッセージ受信関数の強参照スマートポインタの型。
+    /// @brief メッセージ受信関数を強参照するスマートポインタ。
     public: typedef
         std::shared_ptr<typename this_type::function>
         function_shared_ptr;
-    /// @brief メッセージ受信関数の弱参照スマートポインタの型。
+    /// @brief メッセージ受信関数を弱参照するスマートポインタ。
     public: typedef
         std::weak_ptr<typename this_type::function>
         function_weak_ptr;
 
     //-------------------------------------------------------------------------
+    /// this_type::function_shared_ptr のコンテナ。
     private: typedef
         std::vector<
             typename this_type::function_shared_ptr,
             typename this_type::allocator_type>
         function_shared_ptr_container;
-    /// this_type::packet 保持子のコンテナ。
+    /// this_type::packet::shared_ptr のコンテナ。
     private: typedef
         std::vector<
             typename this_type::packet::shared_ptr,
@@ -107,14 +137,14 @@ class psyq::any::message::dispatcher
 
             bool operator()(
                 typename dispatcher::receiving_hook const& in_left,
-                typename dispatcher::invoice::key_type const& in_right)
+                typename dispatcher::tag::key_type const& in_right)
             const PSYQ_NOEXCEPT
             {
                 return in_left.selector_key_ < in_right;
             }
 
             bool operator()(
-                typename dispatcher::invoice::key_type const& in_left,
+                typename dispatcher::tag::key_type const& in_left,
                 typename dispatcher::receiving_hook const& in_right)
             const PSYQ_NOEXCEPT
             {
@@ -127,8 +157,8 @@ class psyq::any::message::dispatcher
             container;
 
         public: receiving_hook(
-            typename dispatcher::invoice::key_type const in_receiver_key,
-            typename dispatcher::invoice::key_type const in_selector_key,
+            typename dispatcher::tag::key_type const in_receiver_key,
+            typename dispatcher::tag::key_type const in_selector_key,
             typename dispatcher::priority const in_priority,
             typename dispatcher::function_weak_ptr in_function):
         function_(std::move(in_function)),
@@ -163,8 +193,8 @@ class psyq::any::message::dispatcher
 #endif // !defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
         public: typename dispatcher::function_weak_ptr function_;
-        public: typename dispatcher::invoice::key_type receiver_key_;
-        public: typename dispatcher::invoice::key_type selector_key_;
+        public: typename dispatcher::tag::key_type receiver_key_;
+        public: typename dispatcher::tag::key_type selector_key_;
         public: typename dispatcher::priority priority_;
 
     }; // class receiving_hook
@@ -189,14 +219,14 @@ class psyq::any::message::dispatcher
 
             bool operator()(
                 typename dispatcher::forwarding_hook const& in_left,
-                typename dispatcher::invoice::key_type const& in_right)
+                typename dispatcher::tag::key_type const& in_right)
             const PSYQ_NOEXCEPT
             {
                 return in_left.receiver_key_ < in_right;
             }
 
             bool operator()(
-                typename dispatcher::invoice::key_type const& in_left,
+                typename dispatcher::tag::key_type const& in_left,
                 typename dispatcher::forwarding_hook const& in_right)
             const PSYQ_NOEXCEPT
             {
@@ -209,7 +239,7 @@ class psyq::any::message::dispatcher
             container;
 
         public: typename dispatcher::function_weak_ptr function_;
-        public: typename dispatcher::invoice::key_type receiver_key_;
+        public: typename dispatcher::tag::key_type receiver_key_;
         public: typename dispatcher::priority priority_;
 
     }; // class forwarding_hook
@@ -239,8 +269,8 @@ class psyq::any::message::dispatcher
     ///   - 登録に成功した後は、 in_receiver_key / in_selector_key
     ///     の組み合わせと合致するメッセージを受信するたび、
     ///     in_function が呼び出される。
-    ///   - 登録した in_function は this_type::function_weak_ptr
-    ///     で弱参照しているだけで、 this_type は所有権を持たない。
+    ///   - 登録した in_function は弱参照しているだけで、
+    ///     this_type は所有権を持たない。
     ///     in_function の所有権は、ユーザーが管理すること。
     ///   - in_function を強参照するスマートポインタがなくなると、
     ///     this_type から自動で取り外される。手動で取り外す場合は、
@@ -254,20 +284,19 @@ class psyq::any::message::dispatcher
     ///     - in_receiver_key / in_selector_key の組み合わせが同じ
     ///       メッセージ受信関数がすでに追加されていると、失敗する。
     ///     - in_function が空だと、失敗する。
-    ///
     public: bool register_receiving_function(
         /// [in] 登録するメッセージ受信関数に対応する、
         /// メッセージ受信オブジェクトの識別値。
-        typename this_type::invoice::key_type const in_receiver_key,
+        typename this_type::tag::key_type const in_receiver_key,
         /// [in] 登録するメッセージ受信関数の識別値。
-        typename this_type::invoice::key_type const in_selector_key,
+        typename this_type::tag::key_type const in_selector_key,
         /// [in] メッセージを受信する優先順位。
         typename this_type::priority const in_priority,
         /// [in] 登録するメッセージ受信関数。
         typename this_type::function_shared_ptr const& in_function)
     {
         if (in_function.get() == nullptr
-            || static_cast<bool>(*in_function)
+            || !static_cast<bool>(*in_function)
             || !this->verify_thread())
         {
             return false;
@@ -314,25 +343,27 @@ class psyq::any::message::dispatcher
     public: typename this_type::function_weak_ptr unregister_receiving_function(
         /// [in] 除去するメッセージ受信関数に対応する
         /// メッセージ受信オブジェクトの識別値。
-        typename this_type::invoice::key_type const in_receiver_key,
+        typename this_type::tag::key_type const in_receiver_key,
         /// [in] 除去するメッセージ受信関数の識別値。
-        typename this_type::invoice::key_type const in_selector_key)
+        typename this_type::tag::key_type const in_selector_key)
     {
-        std::lock_guard<psyq::spinlock> const local_lock(this->lock_);
-        auto const local_end(std::end(this->receiving_hooks_));
-        auto const local_find(
-            this_type::find_receiving_hook_iterator(
-                std::begin(this->receiving_hooks_),
-                local_end,
-                in_receiver_key,
-                in_selector_key));
-        if (local_find == local_end)
+        if (this->verify_thread())
         {
-            return typename this_type::function_weak_ptr();
+            auto const local_end(std::end(this->receiving_hooks_));
+            auto const local_find(
+                this_type::find_receiving_hook_iterator(
+                    std::begin(this->receiving_hooks_),
+                    local_end,
+                    in_receiver_key,
+                    in_selector_key));
+            if (local_find != local_end)
+            {
+                auto const local_function(std::move(local_find->function_));
+                local_find->function_.reset();
+                return local_function;
+            }
         }
-        auto const local_function(std::move(local_find->function_));
-        local_find->function_.reset();
-        return local_function;
+        return typename this_type::function_weak_ptr();
     }
 
     /// @brief メッセージ受信関数を取り除く。
@@ -340,17 +371,19 @@ class psyq::any::message::dispatcher
     public: std::size_t unregister_receiving_function(
         /// [in] 取り除くメッセージ受信関数に対応する
         /// メッセージ受信オブジェクトの識別値。
-        typename this_type::invoice::key_type const in_receiver_key)
+        typename this_type::tag::key_type const in_receiver_key)
     {
-        std::lock_guard<psyq::spinlock> const local_lock(this->lock_);
         std::size_t local_count(0);
-        for (auto& local_hook: this->receiving_hooks_)
+        if (this->verify_thread())
         {
-            if (local_hook.receiver_key_ == in_receiver_key 
-                && !local_hook.function_.expired())
+            for (auto& local_hook: this->receiving_hooks_)
             {
-                ++local_count;
-                local_hook.function_.reset();
+                if (local_hook.receiver_key_ == in_receiver_key 
+                    && !local_hook.function_.expired())
+                {
+                    ++local_count;
+                    local_hook.function_.reset();
+                }
             }
         }
         return local_count;
@@ -363,24 +396,26 @@ class psyq::any::message::dispatcher
     public: typename this_type::function_weak_ptr find_receiving_function(
         /// [in] 検索するメッセージ受信関数に対応する
         /// メッセージ受信オブジェクトの識別値。
-        typename this_type::invoice::key_type const in_receiver_key,
+        typename this_type::tag::key_type const in_receiver_key,
         /// [in] 検索するメッセージ受信関数の識別値。
-        typename this_type::invoice::key_type const in_selector_key)
+        typename this_type::tag::key_type const in_selector_key)
     const PSYQ_NOEXCEPT
     {
-        std::lock_guard<psyq::spinlock> const local_lock(this->lock_);
-        auto const local_end(std::end(this->receiving_hooks_));
-        auto const local_find(
-            this_type::find_receiving_hook_iterator(
-                std::begin(this->receiving_hooks_),
-                local_end,
-                in_receiver_key,
-                in_selector_key));
-        if (local_find == local_end)
+        if (this->verify_thread())
         {
-            return typename this_type::function_weak_ptr();
+            auto const local_end(std::end(this->receiving_hooks_));
+            auto const local_find(
+                this_type::find_receiving_hook_iterator(
+                    std::begin(this->receiving_hooks_),
+                    local_end,
+                    in_receiver_key,
+                    in_selector_key));
+            if (local_find != local_end)
+            {
+                return local_find->function_;
+            }
         }
-        return local_find->function_;
+        return typename this_type::function_weak_ptr();
     }
     /// @}
     //-------------------------------------------------------------------------
@@ -392,7 +427,7 @@ class psyq::any::message::dispatcher
     public: bool register_forwarging_function(
         /// [in] 登録するメッセージ転送関数に対応する、
         /// メッセージ受信オブジェクトの識別値。
-        typename this_type::invoice::key_type const in_receiver_key,
+        typename this_type::tag::key_type const in_receiver_key,
         /// [in] メッセージを転送する優先順位。
         typename this_type::priority const in_priority,
         /// [in] 登録するメッセージ転送関数。
@@ -403,14 +438,14 @@ class psyq::any::message::dispatcher
     public: typename this_type::function_weak_ptr unregister_forwarding_function(
         /// [in] 取り除くメッセージ転送関数に対応する、
         /// メッセージ受信オブジェクトの識別値。
-        typename this_type::invoice::key_type const in_receiver_key);
+        typename this_type::tag::key_type const in_receiver_key);
 
     /// @brief メッセージ転送関数を検索する。
     /// @todo 未実装
     public: typename this_type::function_weak_ptr find_forwarding_function(
         /// [in] 検索するメッセージ転送関数に対応する、
         /// メッセージ受信オブジェクトの識別値。
-        typename this_type::invoice::key_type const in_receiver_key);
+        typename this_type::tag::key_type const in_receiver_key);
     /// @}
     //-------------------------------------------------------------------------
     /// @name メッセージの送受信
@@ -422,9 +457,9 @@ class psyq::any::message::dispatcher
     ///     メッセージゾーンの内と外への送信を予約する。
     ///   - この関数では、メッセージ送信の予約のみを行う。
     ///     実際のメッセージ送信処理は、この関数の呼び出し後、
-    ///     zone::flush / this_type::flush の順に呼び出すことで行なわれる。
+    ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
     ///   - メッセージ受信処理は、送信処理が行われた後、
-    ///     zone::flush / this_type::flush の順に呼び出すことで行なわれる。
+    ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
     ///   - 同一スレッドで送信を予約したメッセージの受信順序は、
     ///     送信予約順序と同じになる。
     /// .
@@ -440,11 +475,11 @@ class psyq::any::message::dispatcher
     /// @todo メッセージゾーンの外へ送信する処理は未実装。
     public: bool post_message(
         /// [in] 送信するメッセージの送り状。
-        typename this_type::invoice const& in_invoice)
+        typename this_type::tag const& in_tag)
     {
         return this->add_export_packet(
             this_type::create_external_packet(
-                typename this_type::packet::suite(in_invoice),
+                typename this_type::packet::message(in_tag),
                 this->get_allocator()));
     }
 
@@ -454,9 +489,9 @@ class psyq::any::message::dispatcher
     ///     メッセージゾーンの内と外への送信を予約する。
     ///   - この関数では、メッセージ送信の予約のみを行う。
     ///     実際のメッセージ送信処理は、この関数の呼び出し後、
-    ///     zone::flush / this_type::flush の順に呼び出すことで行なわれる。
+    ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
     ///   - メッセージ受信処理は、送信処理が行われた後、
-    ///     zone::flush / this_type::flush の順に呼び出すことで行なわれる。
+    ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
     ///   - 同一スレッドで送信を予約したメッセージの受信順序は、
     ///     送信予約順序と同じになる。
     /// .
@@ -473,7 +508,7 @@ class psyq::any::message::dispatcher
     public: template<typename template_parameter>
     bool post_message(
         /// [in] 送信するメッセージの送り状。
-        typename this_type::invoice const& in_invoice,
+        typename this_type::tag const& in_tag,
         /// [in] 送信するメッセージの引数。必ずPOD型。
         template_parameter in_parameter);
 
@@ -483,9 +518,9 @@ class psyq::any::message::dispatcher
     ///     メッセージゾーン内への送信を予約する。
     ///   - この関数では、メッセージ送信の予約のみを行う。
     ///     実際のメッセージ送信処理は、この関数の呼び出し後、
-    ///     zone::flush / this_type::flush の順に呼び出すことで行なわれる。
+    ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
     ///   - メッセージ受信処理は、送信処理が行われた後、
-    ///     zone::flush / this_type::flush の順に呼び出すことで行なわれる。
+    ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
     ///   - 同一スレッドで送信を予約したメッセージの受信順序は、
     ///     送信予約順序と同じになる。
     /// .
@@ -500,11 +535,11 @@ class psyq::any::message::dispatcher
     ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
     public: bool post_zonal_message(
         /// [in] 送信するメッセージの送り状。
-        typename this_type::invoice const& in_invoice)
+        typename this_type::tag const& in_tag)
     {
         return this->add_export_packet(
             this_type::create_zonal_packet(
-                typename this_type::packet::suite(in_invoice),
+                typename this_type::packet::message(in_tag),
                 this->get_allocator()));
     }
 
@@ -514,9 +549,9 @@ class psyq::any::message::dispatcher
     ///     メッセージゾーン内への送信を予約する。
     ///   - この関数では、メッセージ送信の予約のみを行う。
     ///     実際のメッセージ送信処理は、この関数の呼び出し後、
-    ///     zone::flush / this_type::flush の順に呼び出すことで行なわれる。
+    ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
     ///   - メッセージ受信処理は、送信処理が行われた後、
-    ///     zone::flush / this_type::flush の順に呼び出すことで行なわれる。
+    ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
     ///   - 同一スレッドで送信を予約したメッセージの受信順序は、
     ///     送信予約順序と同じになる。
     /// .
@@ -532,23 +567,23 @@ class psyq::any::message::dispatcher
     public: template<typename template_parameter>
     bool post_zonal_message(
         /// [in] 送信するメッセージの送り状。
-        typename this_type::invoice const& in_invoice,
+        typename this_type::tag const& in_tag,
         /// [in] 送信するメッセージの引数。
         template_parameter in_parameter)
     {
         typedef
-            typename this_type::packet::suite::template
+            typename this_type::packet::message::template
                 parametric<template_parameter>
-            suite;
+            message;
         return this->add_export_packet(
             this_type::create_zonal_packet(
-                suite(in_invoice, std::move(in_parameter)),
+                message(in_tag, std::move(in_parameter)),
                 this->get_allocator()));
     }
 
-    /// @brief メッセージを送信する。
+    /// @brief 現在のスレッドにだけ、メッセージを送信する。
     /// @details
-    ///   *this に挿入されているメッセージ受信関数にだけメッセージを送信し、
+    ///   *this に登録されているメッセージ受信関数にだけメッセージを送信し、
     ///   メッセージ受信関数が終了するまでブロックする。
     /// @sa
     ///   - *this にメッセージ受信関数を登録するには、
@@ -562,25 +597,25 @@ class psyq::any::message::dispatcher
     ///   失敗。メッセージを送信しなかった。 this_type::get_thread_id
     ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
     public: bool send_local_message(
-        /// [in] 送信するメッセージのパケット。
+        /// [in] 送信するメッセージパケット。
         typename this_type::packet const& in_packet)
     {
-        auto const local_verify_thread(this->verify_thread());
-        if (local_verify_thread)
+        if (!this->verify_thread())
         {
-            this_type::deliver_packet(
-                this->function_caches_,
-                this->receiving_hooks_,
-                this->forwarding_hooks_,
-                in_packet);
+            return false;
         }
-        return local_verify_thread;
+        this_type::deliver_packet(
+            this->function_caches_,
+            this->receiving_hooks_,
+            this->forwarding_hooks_,
+            in_packet);
+        return true;
     }
 
-    /// @brief 引数を持たないメッセージを送信する。
+    /// @brief 現在のスレッドにだけ、引数を持たないメッセージを送信する。
     /// @details
-    ///   引数を持たないメッセージを
-    ///   *this に登録されているメッセージ受信関数にだけ送信し、
+    ///   *this に登録されているメッセージ受信関数にだけ、
+    ///   引数を持たないメッセージを送信し、
     ///   メッセージ受信関数が終了するまでブロックする。
     /// @sa
     ///   - *this にメッセージ受信関数を登録するには、
@@ -595,17 +630,17 @@ class psyq::any::message::dispatcher
     ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
     public: bool send_local_message(
         /// [in] 送信するメッセージの送り状。
-        typename this_type::invoice const& in_invoice)
+        typename this_type::tag const& in_tag)
     {
-        typedef typename this_type::packet::suite suite;
+        typedef typename this_type::packet::message message;
         return this->send_local_message(
-            typename this_type::packet::template zonal<suite>(suite(in_invoice)));
+            typename this_type::packet::template zonal<message>(message(in_tag)));
     }
 
-    /// @brief 任意型の引数を持つメッセージを送信する。
+    /// @brief 現在のスレッドにだけ、任意型の引数を持つメッセージを送信する。
     /// @details
-    ///   任意型の引数を持つメッセージを、
-    ///   *this に登録されているメッセージ受信関数にだけ送信し、
+    ///   *this に登録されているメッセージ受信関数にだけ、
+    ///   任意型の引数を持つメッセージを送信し、
     ///   メッセージ受信関数が終了するまでブロックする。
     /// @sa
     ///   - *this にメッセージ受信関数を登録するには、
@@ -621,23 +656,23 @@ class psyq::any::message::dispatcher
     public: template<typename template_parameter>
     bool send_local_message(
         /// [in] 送信するメッセージの送り状。
-        typename this_type::invoice const& in_invoice,
+        typename this_type::tag const& in_tag,
         /// [in] 送信するメッセージの引数。
         template_parameter in_parameter)
     {
         typedef
-            typename this_type::packet::suite::template
+            typename this_type::packet::message::template
                 parametric<template_parameter>
-            suite;
+            message;
         return this->send_local_message(
             typename this_type::packet::template
-                zonal<suite>(suite(in_invoice, std::move(in_parameter))));
+                zonal<message>(message(in_tag, std::move(in_parameter))));
     }
 
-    /// @brief メッセージパケットを、メッセージ受信関数へ配信する。
+    /// @brief メッセージパケットをメッセージ受信関数へ配信する。
     /// @details
-    ///   zone::flush とこの関数を定期的に呼び出し、
-    ///   メッセージパケットを循環させること。
+    ///   この関数と zone::dispatch
+    ///   を定期的に呼び出し、メッセージパケットを循環させること。
     /// @sa
     ///   *this にメッセージ受信関数を登録するには、
     ///   this_type::register_receiving_function を使う。
@@ -645,7 +680,7 @@ class psyq::any::message::dispatcher
     /// @retval false
     ///   失敗。メッセージパケットを配信しなかった。 this_type::get_thread_id
     ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
-    public: bool flush()
+    public: bool dispatch()
     {
         if (!this->verify_thread())
         {
@@ -653,7 +688,10 @@ class psyq::any::message::dispatcher
         }
 
         // 配信するメッセージパケットを取得する。
-        this->delivery_packets_.swap(this->import_packets_);
+        {
+            std::lock_guard<psyq::spinlock> const local_lock(this->lock_);
+            this->delivery_packets_.swap(this->import_packets_);
+        }
         this_type::remove_empty_hook(this->receiving_hooks_);
         this_type::remove_empty_hook(this->forwarding_hooks_);
 
@@ -670,7 +708,8 @@ class psyq::any::message::dispatcher
     /// @}
     //-------------------------------------------------------------------------
     /// @brief this_type を構築する。
-    private: dispatcher(
+    /// @warning psyq::event_driven の管理者以外は、この関数は使用禁止。
+    public: dispatcher(
         /// [in] *this に対応するスレッドの識別子。
         std::thread::id in_thread_id,
         /// [in] *this が使うメモリ割当子の初期値。
@@ -686,13 +725,10 @@ class psyq::any::message::dispatcher
 
     /// @brief コピー構築子は使用禁止。
     private: dispatcher(this_type const&);
-
     /// @brief ムーブ構築子は使用禁止。
     private: dispatcher(this_type&&);
-
     /// @brief コピー代入演算子は使用禁止。
     private: this_type& operator=(this_type const&);
-
     /// @brief ムーブ代入演算子は使用禁止。
     private: this_type& operator=(this_type&&);
 
@@ -702,7 +738,7 @@ class psyq::any::message::dispatcher
     private: bool verify_thread() const PSYQ_NOEXCEPT
     {
         auto const local_verify(
-            std::this_thread::get_id() == this->thread_id_);
+            std::this_thread::get_id() == this->get_thread_id());
         PSYQ_ASSERT(local_verify);
         return local_verify;
     }
@@ -712,8 +748,8 @@ class psyq::any::message::dispatcher
     static template_iterator find_receiving_hook_iterator(
         template_iterator const in_begin,
         template_iterator const in_end,
-        typename this_type::invoice::key_type const in_receiver_key,
-        typename this_type::invoice::key_type const in_selector_key)
+        typename this_type::tag::key_type const in_receiver_key,
+        typename this_type::tag::key_type const in_selector_key)
     {
         for (
             auto i(
@@ -777,36 +813,36 @@ class psyq::any::message::dispatcher
     /// @return
     ///   生成したメッセージパケットを指すスマートポインタ。
     ///   生成に失敗した場合は、スマートポインタは空となる。
-    private: template<typename template_suite>
+    private: template<typename template_message>
     static typename this_type::packet::shared_ptr create_external_packet(
-        /// [in,out] パケットに設定するメッセージ一式。
-        template_suite&& io_suite,
+        /// [in,out] パケットに設定するメッセージ。
+        template_message&& io_message,
         /// [in] 使用するメモリ割当子。
         typename this_type::allocator_type const& in_allocator)
     {
         typedef
-            typename this_type::packet::template external<template_suite>
+            typename this_type::packet::template external<template_message>
             external_packet;
         return this_type::create_packet<external_packet>(
-            std::move(io_suite), in_allocator);
+            std::move(io_message), in_allocator);
     }
 
     /// @brief メッセージゾーン内パケットを生成する。
     /// @return
     ///   生成したメッセージパケットを指すスマートポインタ。
     ///   生成に失敗した場合は、スマートポインタは空となる。
-    private: template<typename template_suite>
+    private: template<typename template_message>
     static typename this_type::packet::shared_ptr create_zonal_packet(
-        /// [in,out] パケットに設定するメッセージ一式。
-        template_suite&& io_suite,
+        /// [in,out] パケットに設定するメッセージ。
+        template_message&& io_message,
         /// [in] 使用するメモリ割当子。
         typename this_type::allocator_type const& in_allocator)
     {
         typedef
-            typename this_type::packet::template zonal<template_suite>
+            typename this_type::packet::template zonal<template_message>
             zonal_packet;
         return this_type::create_packet<zonal_packet>(
-            std::move(io_suite), in_allocator);
+            std::move(io_message), in_allocator);
     }
 
     /// @brief メッセージパケットを生成する。
@@ -815,35 +851,13 @@ class psyq::any::message::dispatcher
     ///   生成に失敗した場合は、スマートポインタは空となる。
     private: template<typename template_packet>
     static typename this_type::packet::shared_ptr create_packet(
-        /// [in,out] パケットに設定するメッセージ一式。
-        typename template_packet::suite&& io_suite,
+        /// [in,out] パケットに設定するメッセージ。
+        typename template_packet::message&& io_message,
         /// [in] 使用するメモリ割当子。
         typename this_type::allocator_type const& in_allocator)
     {
-        // メッセージパケットに割り当てるメモリ領域を動的割当する。
-        typename this_type::allocator_type::template
-            rebind<template_packet>::other
-                local_allocator(in_allocator);
-        auto const local_storage(local_allocator.allocate(1));
-        if (local_storage == nullptr)
-        {
-            PSYQ_ASSERT(false);
-            return typename this_type::packet::shared_ptr();
-        }
-
-        // メッセージパケットのスマートポインタを構築する。
-        return typename this_type::packet::shared_ptr(
-            new(local_storage) template_packet(std::move(io_suite)),
-            [=](template_packet* const io_packet)
-            {
-                if (io_packet != nullptr)
-                {
-                    auto local_deallocator(local_allocator);
-                    local_deallocator.destroy(io_packet);
-                    local_deallocator.deallocate(io_packet, 1);
-                }
-            },
-            local_allocator);
+        return std::allocate_shared<template_packet>(
+            in_allocator, std::move(io_message));
     }
 
     /// @brief メッセージパケットを、メッセージ受信関数へ配信する。
@@ -891,11 +905,11 @@ class psyq::any::message::dispatcher
         typename this_type::packet const& in_packet)
     {
         PSYQ_ASSERT(io_functions.empty());
-        auto& local_invoice(in_packet.get_suite().get_invoice());
+        auto& local_tag(in_packet.get_message().get_tag());
         this_type::cache_receiving_functions(
-            io_functions, in_receiving_hooks, local_invoice);
+            io_functions, in_receiving_hooks, local_tag);
         this_type::cache_forwarding_functions(
-            io_functions, in_forwarding_hooks, local_invoice);
+            io_functions, in_forwarding_hooks, local_tag);
         for (auto const& local_function: io_functions)
         {
             (*local_function)(in_packet);
@@ -910,29 +924,29 @@ class psyq::any::message::dispatcher
         /// [in] メッセージ受信フックの辞書。
         typename this_type::receiving_hook::container const& in_hooks,
         /// [in] 配信するメッセージパケットの送り状。
-        typename this_type::invoice const& in_invoice)
+        typename this_type::tag const& in_tag)
     {
         // メッセージ受信フックの辞書を走査し、
         // メッセージ受信関数の識別値が一致するメッセージ受信フックを検索する。
         auto const local_end(std::end(in_hooks));
         for (
             auto i(
-                this_type::find_receiving_hook_iterator(
+                std::lower_bound(
                     std::begin(in_hooks),
                     local_end,
-                    in_invoice.get_selector_key(),
+                    in_tag.get_selector_key(),
                     typename this_type::receiving_hook::less()));
             i != local_end;
             ++i)
         {
             auto& local_hook(*i);
-            if (local_hook.selector_key_ != in_invoice.get_selector_key())
+            if (local_hook.selector_key_ != in_tag.get_selector_key())
             {
                 break;
             }
 
             // メッセージ受信関数をキャッシュに貯める。
-            if (in_invoice.verify_receiver_key(local_hook.receiver_key_))
+            if (in_tag.verify_receiver_key(local_hook.receiver_key_))
             {
                 auto local_function(local_hook.function_.lock());
                 if (local_function.get() != nullptr)
@@ -947,11 +961,11 @@ class psyq::any::message::dispatcher
     private: static void cache_forwarding_functions(
         typename this_type::function_shared_ptr_container& io_functions,
         typename this_type::forwarding_hook::container const& in_hooks,
-        typename this_type::invoice const& in_invoice)
+        typename this_type::tag const& in_tag)
     {
         for (auto& local_hook: in_hooks)
         {
-            if (in_invoice.verify_receiver_key(local_hook.receiver_key_))
+            if (in_tag.verify_receiver_key(local_hook.receiver_key_))
             {
                 /// @todo 未実装
             }
@@ -968,7 +982,7 @@ class psyq::any::message::dispatcher
     {
         std::lock_guard<psyq::spinlock> const local_lock(this->lock_);
 
-        // パケットを輸出する。
+        // メッセージパケットを輸出する。
         io_export_packets.reserve(
             io_export_packets.size() + this->export_packets_.size());
         for (auto& local_packet_holder: this->export_packets_)
@@ -978,7 +992,7 @@ class psyq::any::message::dispatcher
         this_type::clear_packet_container(
             this->export_packets_, this->export_packets_.size());
 
-        // パケットを輸入する。
+        // メッセージパケットを輸入する。
         this->import_packets_.insert(
             std::end(this->import_packets_),
             std::begin(in_import_packets),
@@ -1018,7 +1032,8 @@ class psyq::any::message::dispatcher
     /// @brief *this に合致するスレッドの識別子。
     private: std::thread::id const thread_id_;
 
-}; // class psyq::any::message::dispatcher
+}; // class psyq::event_driven::dispatcher
 
-#endif // !defined(PSYQ_ANY_MESSAGE_DISPATCHER_HPP_)
+#include "./zone.hpp"
+#endif // !defined(PSYQ_EVENT_DRIVEN_DISPATCHER_HPP_)
 // vim: set expandtab:

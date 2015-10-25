@@ -715,14 +715,10 @@ INPUT                  = \
                          ./hash/murmur3.hpp \
                          ./any/rtti.hpp \
                          ./any/storage.hpp \
-                         ./any/message/tag.hpp \
-                         ./any/message/call.hpp \
-                         ./any/message/suite.hpp \
-                         ./any/message/packet.hpp \
-                         ./any/message/receiver.hpp \
-                         ./any/message/dispatcher.hpp \
-                         ./any/message/transmitter.hpp \
-                         ./any/message/zone.hpp \
+                         ./event_driven/message.hpp \
+                         ./event_driven/packet.hpp \
+                         ./event_driven/dispatcher.hpp \
+                         ./event_driven/zone.hpp \
                          ./geometry/vector.hpp \
                          ./geometry/glm_vector.hpp \
                          ./geometry/d3dx_vector.hpp \

@@ -17,7 +17,7 @@ namespace psyq
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief メッセージを保持するパケットの基底型。
+/// @brief 送受信するメッセージを内包するパケットの基底型。
 /// @tparam template_base_message @copydoc packet::message
 template<typename template_base_message>
 class psyq::event_driven::packet
@@ -32,7 +32,7 @@ class psyq::event_driven::packet
     public: typedef std::shared_ptr<this_type> shared_ptr;
     /// @brief this_type を弱参照するスマートポインタ。
     public: typedef std::weak_ptr<this_type> weak_ptr;
-    /// @brief 保持しているメッセージの基底型。
+    /// @brief 送受信するメッセージの基底型。
     /// @details event_driven::message 互換であること。
     public: typedef template_base_message message;
 
@@ -105,6 +105,7 @@ class psyq::event_driven::packet
     public: template<typename template_message, typename template_allocator>
     static typename this_type::shared_ptr create_external(
         /// [in,out] パケットに設定するメッセージ。
+        /// template_message::parameter が、void型かPOD型であること。
         template_message&& io_message,
         /// [in] 使用するメモリ割当子。
         template_allocator const& in_allocator)
@@ -144,8 +145,8 @@ public psyq::event_driven::packet<template_base_message>
     /// @brief メッセージパケットを構築する。
     public: explicit zonal(
         /// [in] this_type::message_ の初期値。
-        typename this_type::message in_message)
-    PSYQ_NOEXCEPT: message_(std::move(in_message))
+        typename this_type::message&& io_message)
+    PSYQ_NOEXCEPT: message_(std::move(io_message))
     {}
     /// @}
     //-------------------------------------------------------------------------
@@ -199,8 +200,13 @@ class psyq::event_driven::packet<template_base_message>::external:
     public: typedef psyq::event_driven::packet<template_base_message> base_type;
 
     //-------------------------------------------------------------------------
+    /// @brief 送受信するメッセージの型。
+    /// @details template_message::parameter が、void型かPOD型であること。
     public: typedef template_message message;
-    public: typedef std::unique_ptr<template_message> message_unique_ptr;
+    static_assert(
+        std::is_void<typename template_message::parameter>::value
+        || std::is_pod<typename template_message::parameter>::value,
+        "template_message::parameter is not POD type.");
 
     //-------------------------------------------------------------------------
     /// @name 構築
@@ -209,8 +215,8 @@ class psyq::event_driven::packet<template_base_message>::external:
     /// @brief this_type を構築する。
     public: explicit external(
         /// [in] this_type::message_ の初期値。
-        typename this_type::message in_message)
-    PSYQ_NOEXCEPT: message_(std::move(in_message))
+        typename this_type::message&& io_message)
+    PSYQ_NOEXCEPT: message_(std::move(io_message))
     {}
     /// @}
     //-------------------------------------------------------------------------

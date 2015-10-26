@@ -6,6 +6,10 @@
 
 #include "../assert.hpp"
 
+#ifndef PSYQ_EVENT_DRIVEN_MESSAGE_TAG_RECEIVER_MASK_DEFAULT
+#define PSYQ_EVENT_DRIVEN_MESSAGE_TAG_RECEIVER_MASK_DEFAULT (~0)
+#endif // !defined(PSYQ_EVENT_DRIVEN_MESSAGE_TAG_RECEIVER_MASK_DEFAULT)
+
 /// @cond
 namespace psyq
 {
@@ -40,10 +44,11 @@ class psyq::event_driven::tag
         typename this_type::key_type const in_sender_key,
         /// [in] メッセージ受信オブジェクトの識別値。
         typename this_type::key_type const in_receiver_key,
-        /// [in] メッセージ受信オブジェクトの識別値マスク。
-        typename this_type::key_type const in_receiver_mask,
         /// [in] メッセージ受信関数の識別値。
-        typename this_type::key_type const in_selector_key)
+        typename this_type::key_type const in_selector_key,
+        /// [in] メッセージ受信オブジェクトの識別値マスク。
+        typename this_type::key_type const in_receiver_mask
+            = PSYQ_EVENT_DRIVEN_MESSAGE_TAG_RECEIVER_MASK_DEFAULT)
     PSYQ_NOEXCEPT:
     sender_key_(in_sender_key),
     zone_key_(0),
@@ -278,10 +283,10 @@ public psyq::event_driven::message<template_key, template_size>
         /// [in] メッセージの送り状。
         typename base_type::tag const& in_tag,
         /// [in] メッセージの引数。
-        typename this_type::parameter in_parameter)
+        typename this_type::parameter&& io_parameter)
     PSYQ_NOEXCEPT:
     base_type(in_tag, &this->parameter_, sizeof(this_type)),
-    parameter_(std::move(in_parameter))
+    parameter_(std::move(io_parameter))
     {}
 
 #ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION

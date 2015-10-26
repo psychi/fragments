@@ -5,10 +5,9 @@
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief メッセージを送受信する範囲の単位。
-/// @details
+/// @par 使い方の概略
 ///   - zone::equip_dispatcher で、 zone::dispatcher を用意する。
 ///   - zone::dispatch で、 zone::dispatcher が持つメッセージパケットを集配する。
-///   .
 /// @tparam template_base_message @copydoc packet::message
 /// @tparam template_priority     @copydoc dispatcher::priority
 /// @tparam template_allocator    @copydoc zone::allocator_type
@@ -58,10 +57,11 @@ class psyq::event_driven::dispatcher<
         return this->dispatchers_.get_allocator();
     }
 
-    /// @brief メッセージパケットを集配する。
+    /// @brief this_type::dispatcher からメッセージパケットを集配する。
     /// @details
-    ///   - this_type::dispatcher::dispatch とこの関数を定期的に実行し、
-    ///     メッセージパケットを循環させること。
+    ///   - この関数と、 this_type::equip_dispatcher からスレッドごとに取得した
+    ///     this_type::dispatcher インスタンスの this_type::dispatcher::dispatch
+    ///     を定期的に呼び出し、メッセージパケットを循環させること。
     ///   - this_type::lock_ でロックの獲得を待ってから実行される。
     ///     ロックを獲得している他のスレッドからブロックされることに注意。
     public: void dispatch()
@@ -77,11 +77,12 @@ class psyq::event_driven::dispatcher<
     /// @details
     ///   - スレッドに合致する this_type::dispatcher を検索する。
     ///     存在しないなら、動的メモリ割当して生成する。
+    ///   - 用意した this_type::dispatcher は、 this_type からは
+    ///     this_type::dispatcher::weak_ptr で弱参照しており、所有権を持たない。
+    ///     this_type::dispatcher の所有権は、ユーザーが管理すること。
     ///   - this_type::lock_ でロックの獲得を待ってから実行される。
     ///     ロックを獲得している他のスレッドからブロックされることに注意。
-    ///   - 用意した this_type::dispatcher は this_type::dispatcher::weak_ptr
-    ///     で弱参照するだけで、*thisでは所有権を持たない。
-    ///     this_type::dispatcher の所有権は、ユーザーが管理すること。
+    /// .
     /// @return in_thread_id に合致する this_type::dispatcher 。
     public: typename this_type::dispatcher::shared_ptr equip_dispatcher(
         /// [in] 用意するメッセージ配送器のスレッド識別子。
@@ -260,34 +261,34 @@ namespace psyq_test
             METHOD_PARAMETER_VOID = 1,
             METHOD_PARAMETER_DOUBLE,
         };
-        local_dispatcher.register_receiving_function(
-            RECEIVER_KEY, METHOD_PARAMETER_VOID, 0, local_method_a);
-        local_dispatcher.register_receiving_function(
-            RECEIVER_KEY, METHOD_PARAMETER_DOUBLE, 0, local_method_b);
+        local_dispatcher.register_receiver(
+            RECEIVER_KEY, METHOD_PARAMETER_VOID, local_method_a);
+        local_dispatcher.register_receiver(
+            RECEIVER_KEY, METHOD_PARAMETER_DOUBLE, local_method_b);
         /*
         local_dispatcher.send_local(
             message_dispatcher::tag(
-                SENDER_KEY, RECEIVER_KEY, ~0, METHOD_PARAMETER_VOID));
+                SENDER_KEY, RECEIVER_KEY, METHOD_PARAMETER_VOID));
         local_dispatcher.send_local(
             message_dispatcher::tag(
-                SENDER_KEY, RECEIVER_KEY, ~0, METHOD_PARAMETER_DOUBLE),
+                SENDER_KEY, RECEIVER_KEY, METHOD_PARAMETER_DOUBLE),
             psyq_test::floating_wrapper(local_double));
          */
         local_dispatcher.post_external(
             message_dispatcher::tag(
-                SENDER_KEY, RECEIVER_KEY, ~0, METHOD_PARAMETER_VOID));
+                SENDER_KEY, RECEIVER_KEY, METHOD_PARAMETER_VOID));
         local_dispatcher.post_zonal(
             message_dispatcher::tag(
-                SENDER_KEY, RECEIVER_KEY, ~0, METHOD_PARAMETER_DOUBLE),
+                SENDER_KEY, RECEIVER_KEY, METHOD_PARAMETER_DOUBLE),
             psyq_test::floating_wrapper(local_double));
         local_zone.dispatch();
         local_dispatcher.dispatch();
         local_zone.dispatch();
         local_dispatcher.dispatch();
-        local_dispatcher.unregister_receiving_function(
+        local_dispatcher.unregister_receiver(
             RECEIVER_KEY, METHOD_PARAMETER_VOID);
         PSYQ_ASSERT(
-            local_dispatcher.unregister_receiving_function(RECEIVER_KEY) == 1);
+            local_dispatcher.unregister_receiver(RECEIVER_KEY) == 1);
     }
 }
 

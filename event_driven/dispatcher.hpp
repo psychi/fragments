@@ -7,14 +7,15 @@
 ///   -# psyq::event_driven::dispatcher::zone::equip_dispatcher で、スレッドごとに
 ///      psyq::event_driven::dispatcher インスタンスを用意する。
 ///   -# 現在のスレッドに適合する psyq::event_driven::dispatcher インスタンスから
-///      psyq::event_driven::dispatcher::register_receiving_function
+///      psyq::event_driven::dispatcher::register_receiver
 ///      を呼び出し、メッセージ受信関数を登録する。
 /// @par メッセージ送受信の手順
 ///   -# メッセージループをまわしておく。
 ///      - psyq::event_driven::dispatcher::zone::dispatch
 ///        を、メインスレッドから定期的に呼び出す。
-///      - それぞれのスレッドに適合する psyq::event_driven::dispatcher
-///        インスタンスから psyq::event_driven::dispatcher::dispatch を定期的に呼び出す。
+///      - それぞれのスレッドに適合する
+///        psyq::event_driven::dispatcher インスタンスから、
+///        psyq::event_driven::dispatcher::dispatch を定期的に呼び出す。
 ///   -# 現在のスレッドに適合する psyq::event_driven::dispatcher
 ///      インスタンスから以下のいずれかの関数を呼び出し、メッセージを送信する。
 ///      - 構築済みのメッセージパケットを送るなら、
@@ -25,8 +26,8 @@
 ///        psyq::event_driven::dispatcher::post_zonal を呼び出す。
 ///      - 現在のスレッドにのみメッセージを送るなら、
 ///        psyq::event_driven::dispatcher::send_local を呼び出す。
-///   -# psyq::event_driven::dispatcher::register_receiving_function
-///      で登録したメッセージ受信関数が呼び出される。
+///   -# psyq::event_driven::dispatcher::register_receiver
+///      から登録したメッセージ受信関数が呼び出される。
 #ifndef PSYQ_EVENT_DRIVEN_DISPATCHER_HPP_
 #define PSYQ_EVENT_DRIVEN_DISPATCHER_HPP_
 
@@ -38,6 +39,28 @@
 #include <mutex>
 #include "./message.hpp"
 #include "./packet.hpp"
+
+#ifndef PSYQ_EVENT_DRIVEN_DISPATCHER_PACKET_DEFAULT
+#define PSYQ_EVENT_DRIVEN_DISPATCHER_PACKET_DEFAULT\
+    psyq::event_driven::packet<\
+        psyq::event_driven::message<std::uint32_t, std::uint32_t>>
+#endif // !defined(PSYQ_EVENT_DRIVEN_DISPATCHER_PACKET_DEFAULT)
+
+#ifndef PSYQ_EVENT_DRIVEN_DISPATCHER_PRIORITY_DEFAULT
+#define PSYQ_EVENT_DRIVEN_DISPATCHER_PRIORITY_DEFAULT std::int32_t
+#endif // !defined(PSYQ_EVENT_DRIVEN_DISPATCHER_PRIORITY_DEFAULT)
+
+#ifndef PSYQ_EVENT_DRIVEN_DISPATCHER_ALLOCATOR_DEFAULT
+#define PSYQ_EVENT_DRIVEN_DISPATCHER_ALLOCATOR_DEFAULT std::allocator<void*>
+#endif // !defined(PSYQ_EVENT_DRIVEN_DISPATCHER_ALLOCATOR_DEFAULT)
+
+#ifndef PSYQ_EVENT_DRIVEN_RECEIVER_PRIORITY_DEFAULT
+#define PSYQ_EVENT_DRIVEN_RECEIVER_PRIORITY_DEFAULT 0
+#endif // !defined(PSYQ_EVENT_DRIVEN_RECEIVER_PRIORITY_DEFAULT)
+
+#ifndef PSYQ_EVENT_DRIVEN_FORWARDER_PRIORITY_DEFAULT
+#define PSYQ_EVENT_DRIVEN_FORWARDER_PRIORITY_DEFAULT 0
+#endif // !defined(PSYQ_EVENT_DRIVEN_FORWARDER_PRIORITY_DEFAULT)
 
 /// @cond
 namespace psyq
@@ -52,21 +75,19 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief スレッド別のメッセージ配送器。
 /// @par 使い方の概略
-///   - zone::equip_dispatcher で、 dispatcher を用意する。
-///   - dispatcher::register_receiving_function で、メッセージ受信関数を登録する。
-///   - dispatcher::post_external や
-///     dispatcher::post_zonal で、メッセージを送信する。
-///   - zone::dispatch で、 dispatcher の持つメッセージパケットが集配される。
+///   - zone::equip_dispatcher で、 dispatcher インスタンスを用意する。
+///   - dispatcher::register_receiver で、メッセージ受信関数を登録する。
+///   - dispatcher::post で、メッセージを送信する。
+///   - zone::dispatch で、 dispatcher が持つメッセージパケットを集配する。
 ///   - dispatcher::dispatch で、
 ///     dispatcher が持つメッセージパケットをメッセージ受信関数へ配送する。
-/// @tparam template_base_message @copydoc packet::message
-/// @tparam template_priority     @copydoc dispatcher::priority
-/// @tparam template_allocator    @copydoc dispatcher::allocator_type
+/// @tparam template_packet    @copydoc dispatcher::packet
+/// @tparam template_priority  @copydoc dispatcher::priority
+/// @tparam template_allocator @copydoc dispatcher::allocator_type
 template<
-    typename template_base_message = psyq::event_driven::message<
-        std::uint32_t, std::uint32_t>,
-    typename template_priority = std::int32_t,
-    typename template_allocator = std::allocator<void*>>
+    typename template_packet = PSYQ_EVENT_DRIVEN_DISPATCHER_PACKET_DEFAULT,
+    typename template_priority = PSYQ_EVENT_DRIVEN_DISPATCHER_PRIORITY_DEFAULT,
+    typename template_allocator = PSYQ_EVENT_DRIVEN_DISPATCHER_ALLOCATOR_DEFAULT>
 class psyq::event_driven::dispatcher
 {
     /// @copydoc psyq::string::view::this_type
@@ -77,15 +98,16 @@ class psyq::event_driven::dispatcher
     public: typedef std::shared_ptr<this_type> shared_ptr;
     /// this_type を弱参照するスマートポインタ。
     public: typedef std::weak_ptr<this_type> weak_ptr;
-    /// @brief メッセージの優先順位。
+    /// @brief メッセージ受信関数の優先順位。
     public: typedef template_priority priority;
     /// @brief this_type で使うメモリ割当子。
     public: typedef template_allocator allocator_type;
 
     //-------------------------------------------------------------------------
     public: class zone;
-    /// @brief メッセージパケットの基底型。
-    public: typedef psyq::event_driven::packet<template_base_message> packet;
+    /// @brief 送受信するメッセージパケットの基底型。
+    /// @details event_driven::packet 互換のインタフェイスを持つこと。
+    public: typedef template_packet packet;
     /// @brief メッセージの基底型。
     public: typedef typename this_type::packet::message message;
     /// @brief メッセージの送り状の型。
@@ -170,21 +192,21 @@ class psyq::event_driven::dispatcher
         {}
 
 #ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
-        /** @brief ムーブ構築子。
-            @param[in,out] io_source ムーブ元となるインスタンス。
-         */
-        public: receiving_hook(this_type&& io_source):
+        /// @brief ムーブ構築子。
+        public: receiving_hook(
+            /// [in,out] ムーブ元となるインスタンス。
+            this_type&& io_source):
         function_(std::move(io_source.function_)),
         receiver_key_(std::move(io_source.receiver_key_)),
         selector_key_(std::move(io_source.selector_key_)),
         priority_(std::move(io_source.priority_))
         {}
 
-        /** @brief ムーブ代入演算子。
-            @param[in,out] io_source ムーブ元となるインスタンス。
-            @return *this
-         */
-        public: this_type& operator=(this_type&& io_source)
+        /// @brief ムーブ代入演算子。
+        /// @return *this
+        public: this_type& operator=(
+            /// [in,out] ムーブ元となるインスタンス。
+            this_type&& io_source)
         {
             this->function_ = std::move(io_source.function_);
             this->receiver_key_ = std::move(io_source.receiver_key_);
@@ -276,7 +298,7 @@ class psyq::event_driven::dispatcher
     ///     in_function の所有権は、ユーザーが管理すること。
     ///   - in_function を強参照するスマートポインタがなくなると、
     ///     this_type から自動で取り外される。手動で取り外す場合は、
-    ///     this_type::unregister_receiving_function を呼び出す。
+    ///     this_type::unregister_receiver を呼び出す。
     /// .
     /// @retval true 成功。 in_function を登録した。
     /// @retval false
@@ -286,16 +308,17 @@ class psyq::event_driven::dispatcher
     ///     - in_receiver_key / in_selector_key の組み合わせが同じ
     ///       メッセージ受信関数がすでに追加されていると、失敗する。
     ///     - in_function が空だと、失敗する。
-    public: bool register_receiving_function(
+    public: bool register_receiver(
         /// [in] 登録するメッセージ受信関数に対応する、
         /// メッセージ受信オブジェクトの識別値。
         typename this_type::tag::key_type const in_receiver_key,
         /// [in] 登録するメッセージ受信関数の識別値。
         typename this_type::tag::key_type const in_selector_key,
-        /// [in] メッセージを受信する優先順位。
-        typename this_type::priority const in_priority,
         /// [in] 登録するメッセージ受信関数。
-        typename this_type::function_shared_ptr const& in_function)
+        typename this_type::function_shared_ptr const& in_function,
+        /// [in] メッセージを受信する優先順位。
+        typename this_type::priority const in_priority
+            = PSYQ_EVENT_DRIVEN_RECEIVER_PRIORITY_DEFAULT)
     {
         if (in_function.get() == nullptr
             || !static_cast<bool>(*in_function)
@@ -342,7 +365,7 @@ class psyq::event_driven::dispatcher
     /// @return
     ///   取り除いたメッセージ受信関数を指すスマートポインタ。
     ///   該当するメッセージ受信関数がない場合は、空となる。
-    public: typename this_type::function_weak_ptr unregister_receiving_function(
+    public: typename this_type::function_weak_ptr unregister_receiver(
         /// [in] 除去するメッセージ受信関数に対応する
         /// メッセージ受信オブジェクトの識別値。
         typename this_type::tag::key_type const in_receiver_key,
@@ -370,7 +393,7 @@ class psyq::event_driven::dispatcher
 
     /// @brief メッセージ受信関数を取り除く。
     /// @return 取り除いたメッセージ受信関数の数。
-    public: std::size_t unregister_receiving_function(
+    public: std::size_t unregister_receiver(
         /// [in] 取り除くメッセージ受信関数に対応する
         /// メッセージ受信オブジェクトの識別値。
         typename this_type::tag::key_type const in_receiver_key)
@@ -395,7 +418,7 @@ class psyq::event_driven::dispatcher
     /// @return
     ///   検索したメッセージ受信関数を指すスマートポインタ。
     ///   該当するメッセージ受信関数が見つからなかった場合は、空となる。
-    public: typename this_type::function_weak_ptr find_receiving_function(
+    public: typename this_type::function_weak_ptr find_receiver(
         /// [in] 検索するメッセージ受信関数に対応する
         /// メッセージ受信オブジェクトの識別値。
         typename this_type::tag::key_type const in_receiver_key,
@@ -426,25 +449,26 @@ class psyq::event_driven::dispatcher
 
     /// @brief メッセージ転送関数を登録する。
     /// @todo 未実装
-    private: bool register_forwarging_function(
+    private: bool register_forwarder(
         /// [in] 登録するメッセージ転送関数に対応する、
         /// メッセージ受信オブジェクトの識別値。
         typename this_type::tag::key_type const in_receiver_key,
-        /// [in] メッセージを転送する優先順位。
-        typename this_type::priority const in_priority,
         /// [in] 登録するメッセージ転送関数。
-        typename this_type::function_shared_ptr const& in_function);
+        typename this_type::function_shared_ptr const& in_function,
+        /// [in] メッセージを転送する優先順位。
+        typename this_type::priority const in_priority
+            = PSYQ_EVENT_DRIVEN_FORWARDER_PRIORITY_DEFAULT);
 
     /// @brief メッセージ転送関数を取り除く。
     /// @todo 未実装
-    private: typename this_type::function_weak_ptr unregister_forwarding_function(
+    private: typename this_type::function_weak_ptr unregister_forwarder(
         /// [in] 取り除くメッセージ転送関数に対応する、
         /// メッセージ受信オブジェクトの識別値。
         typename this_type::tag::key_type const in_receiver_key);
 
     /// @brief メッセージ転送関数を検索する。
     /// @todo 未実装
-    private: typename this_type::function_weak_ptr find_forwarding_function(
+    private: typename this_type::function_weak_ptr find_forwarder(
         /// [in] 検索するメッセージ転送関数に対応する、
         /// メッセージ受信オブジェクトの識別値。
         typename this_type::tag::key_type const in_receiver_key);
@@ -487,13 +511,18 @@ class psyq::event_driven::dispatcher
     }
 
     /// @copydoc this_type::post_external
-    /// @todo メッセージゾーンの内へ送信する処理も未実装。
     public: template<typename template_parameter>
     bool post_external(
         /// [in] 送信するメッセージの送り状。
         typename this_type::tag const& in_tag,
-        /// [in] 送信するメッセージの引数。必ずPOD型。
-        template_parameter&& io_parameter);
+        /// [in] 送信するメッセージの引数。POD型であること。
+        template_parameter&& io_parameter)
+    {
+        return this->post(
+            this_type::packet::create_external(
+                this_type::message::construct(in_tag, std::move(io_parameter)),
+                this->get_allocator()));
+    }
 
     /// @brief メッセージゾーン内へのメッセージの送信を予約する。
     /// @details
@@ -571,7 +600,7 @@ class psyq::event_driven::dispatcher
     ///   をメッセージループで定期的に呼び出し、メッセージパケットを循環させること。
     /// @sa
     ///   *this にメッセージ受信関数を登録するには、
-    ///   this_type::register_receiving_function を使う。
+    ///   this_type::register_receiver を使う。
     /// @retval true 成功。メッセージパケットを配送した。
     /// @retval false
     ///   失敗。メッセージパケットを配送しなかった。 this_type::get_thread_id
@@ -646,7 +675,7 @@ class psyq::event_driven::dispatcher
     ///   メッセージ受信関数が終了するまでブロックする。
     /// @sa
     ///   - *this にメッセージ受信関数を登録するには、
-    ///     this_type::register_receiving_function を使う。
+    ///     this_type::register_receiver を使う。
     ///   - メッセージゾーンの内と外にメッセージを送信するには、
     ///     this_type::post_external を使う。
     ///   - メッセージゾーン内にだけメッセージを送信するには、
@@ -654,7 +683,7 @@ class psyq::event_driven::dispatcher
     /// @note
     ///   以下の問題を解決したなら public にすること。
     ///   - send_local の中から send_local されるとダメ。
-    ///   - send_local の中から register_receiving_function されるとダメ。
+    ///   - send_local の中から register_receiver されるとダメ。
     /// @retval true 成功。メッセージを送信した。
     /// @retval false
     ///   失敗。メッセージを送信しなかった。 this_type::get_thread_id
@@ -682,7 +711,7 @@ class psyq::event_driven::dispatcher
     ///   メッセージ受信関数が終了するまでブロックする。
     /// @sa
     ///   - *this にメッセージ受信関数を登録するには、
-    ///     this_type::register_receiving_function を使う。
+    ///     this_type::register_receiver を使う。
     ///   - メッセージゾーンの内と外にメッセージを送信するには、
     ///     this_type::post_external を使う。
     ///   - メッセージゾーン内にだけメッセージを送信するには、
@@ -707,7 +736,7 @@ class psyq::event_driven::dispatcher
     ///   メッセージ受信関数が終了するまでブロックする。
     /// @sa
     ///   - *this にメッセージ受信関数を登録するには、
-    ///     this_type::register_receiving_function を使う。
+    ///     this_type::register_receiver を使う。
     ///   - メッセージゾーンの内と外にメッセージを送信するには、
     ///     this_type::post_external を使う。
     ///   - メッセージゾーン内にだけメッセージを送信するには、
@@ -829,9 +858,9 @@ class psyq::event_driven::dispatcher
     {
         PSYQ_ASSERT(io_functions.empty());
         auto& local_tag(in_packet.get_message().get_tag());
-        this_type::cache_receiving_functions(
+        this_type::cache_receivers(
             io_functions, in_receiving_hooks, local_tag);
-        this_type::cache_forwarding_functions(
+        this_type::cache_forwarders(
             io_functions, in_forwarding_hooks, local_tag);
         for (auto const& local_function: io_functions)
         {
@@ -841,7 +870,7 @@ class psyq::event_driven::dispatcher
     }
 
     /// @brief メッセージパケットを配送するメッセージ受信関数を貯める。
-    private: static void cache_receiving_functions(
+    private: static void cache_receivers(
         /// [in,out] メッセージ受信関数のキャッシュに使うコンテナ。
         typename this_type::function_shared_ptr_container& io_functions,
         /// [in] メッセージ受信フックの辞書。
@@ -881,7 +910,7 @@ class psyq::event_driven::dispatcher
     }
 
     /// @brief メッセージパケットを配送するメッセージ転送関数を貯める。
-    private: static void cache_forwarding_functions(
+    private: static void cache_forwarders(
         typename this_type::function_shared_ptr_container& io_functions,
         typename this_type::forwarding_hook::container const& in_hooks,
         typename this_type::tag const& in_tag)
@@ -932,7 +961,8 @@ class psyq::event_driven::dispatcher
         }
         else
         {
-            io_container = typename this_type::packet_shared_ptr_container();
+            io_container = typename this_type::packet_shared_ptr_container(
+                io_container.get_allocator());
             io_container.reserve(in_last_size * 2);
         }
     }

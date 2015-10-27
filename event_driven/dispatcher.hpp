@@ -1,58 +1,15 @@
 ﻿/// @file
 /// @author Hillco Psychi (https://twitter.com/psychi)
-/// @namespace psyq::event_driven
-/// @brief 任意の引数を持つメッセージを送信できる、イベント駆動フレームワーク。
-/// @par 初期化の手順
-///   -# psyq::event_driven::dispatcher::zone インスタンスを用意する。
-///   -# psyq::event_driven::dispatcher::zone::equip_dispatcher で、スレッドごとに
-///      psyq::event_driven::dispatcher インスタンスを用意する。
-///   -# 現在のスレッドに適合する psyq::event_driven::dispatcher インスタンスから
-///      psyq::event_driven::dispatcher::register_receiver
-///      を呼び出し、メッセージ受信関数を登録する。
-/// @par メッセージ送受信の手順
-///   -# メッセージループをまわしておく。
-///      - psyq::event_driven::dispatcher::zone::dispatch
-///        を、メインスレッドから定期的に呼び出す。
-///      - それぞれのスレッドに適合する
-///        psyq::event_driven::dispatcher インスタンスから、
-///        psyq::event_driven::dispatcher::dispatch を定期的に呼び出す。
-///   -# 現在のスレッドに適合する psyq::event_driven::dispatcher
-///      インスタンスから以下のいずれかの関数を呼び出し、メッセージを送信する。
-///      - 構築済みのメッセージパケットを送るなら、
-///        psyq::event_driven::dispatcher::post を呼び出す。
-///      - メッセージゾーンの内と外にメッセージを送るなら、
-///        psyq::event_driven::dispatcher::post_external を呼び出す。
-///      - メッセージゾーンの内にのみメッセージを送るなら、
-///        psyq::event_driven::dispatcher::post_zonal を呼び出す。
-///      - 現在のスレッドにのみメッセージを送るなら、
-///        psyq::event_driven::dispatcher::send_local を呼び出す。
-///   -# psyq::event_driven::dispatcher::register_receiver
-///      から登録したメッセージ受信関数が呼び出される。
 #ifndef PSYQ_EVENT_DRIVEN_DISPATCHER_HPP_
 #define PSYQ_EVENT_DRIVEN_DISPATCHER_HPP_
 
-#ifdef _MSC_VER
-#include <eh.h>
-#endif // defined(_MSC_VER)
-#include <vector>
-#include <thread>
-#include <mutex>
-#include "./message.hpp"
-#include "./packet.hpp"
+#ifndef PSYQ_EVENT_DRIVEN_DISPATCHER_RECEIVER_CAPACITY_DEFFAULT
+#define PSYQ_EVENT_DRIVEN_DISPATCHER_RECEIVER_CAPACITY_DEFFAULT 32
+#endif // !defined(PSYQ_EVENT_DRIVEN_DISPATCHER_RECEIVER_CAPACITY_DEFFAULT)
 
-#ifndef PSYQ_EVENT_DRIVEN_DISPATCHER_PACKET_DEFAULT
-#define PSYQ_EVENT_DRIVEN_DISPATCHER_PACKET_DEFAULT\
-    psyq::event_driven::packet<\
-        psyq::event_driven::message<std::uint32_t, std::uint32_t>>
-#endif // !defined(PSYQ_EVENT_DRIVEN_DISPATCHER_PACKET_DEFAULT)
-
-#ifndef PSYQ_EVENT_DRIVEN_DISPATCHER_PRIORITY_DEFAULT
-#define PSYQ_EVENT_DRIVEN_DISPATCHER_PRIORITY_DEFAULT std::int32_t
-#endif // !defined(PSYQ_EVENT_DRIVEN_DISPATCHER_PRIORITY_DEFAULT)
-
-#ifndef PSYQ_EVENT_DRIVEN_DISPATCHER_ALLOCATOR_DEFAULT
-#define PSYQ_EVENT_DRIVEN_DISPATCHER_ALLOCATOR_DEFAULT std::allocator<void*>
-#endif // !defined(PSYQ_EVENT_DRIVEN_DISPATCHER_ALLOCATOR_DEFAULT)
+#ifndef PSYQ_EVENT_DRIVEN_DISPATCHER_FORWARDER_CAPACITY_DEFFAULT
+#define PSYQ_EVENT_DRIVEN_DISPATCHER_FORWARDER_CAPACITY_DEFFAULT 0
+#endif // !defined(PSYQ_EVENT_DRIVEN_DISPATCHER_FORWARDER_CAPACITY_DEFFAULT)
 
 #ifndef PSYQ_EVENT_DRIVEN_RECEIVER_PRIORITY_DEFAULT
 #define PSYQ_EVENT_DRIVEN_RECEIVER_PRIORITY_DEFAULT 0
@@ -67,6 +24,7 @@ namespace psyq
 {
     namespace event_driven
     {
+        template<typename, typename, typename> class zone;
         template<typename, typename, typename> class dispatcher;
     } // namespace event_driven
 } // namespace psyq
@@ -75,43 +33,41 @@ namespace psyq
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief スレッド別のメッセージ配送器。
 /// @par 使い方の概略
-///   - zone::equip_dispatcher で、 dispatcher インスタンスを用意する。
+///   - zone::equip_dispatcher
+///     で、スレッドごとにメッセージ配送器のインスタンスを用意する。
 ///   - dispatcher::register_receiver で、メッセージ受信関数を登録する。
-///   - dispatcher::post で、メッセージを送信する。
-///   - zone::dispatch で、 dispatcher が持つメッセージパケットを集配する。
-///   - dispatcher::dispatch で、
-///     dispatcher が持つメッセージパケットをメッセージ受信関数へ配送する。
+///   - 以下のいずれかの関数で、メッセージを送信する。
+///     - zone::post_external
+///     - zone::post_zonal
+///     - zone::post
+///   - zone::dispatch
+///     で、メッセージゾーンが持つメッセージパケットをメッセージ配送器へ配送する。
+///   - dispatcher::dispatch
+///     で、メッセージ配送器が持つメッセージパケットをメッセージ受信関数へ配送する。
 /// @tparam template_packet    @copydoc dispatcher::packet
-/// @tparam template_priority  @copydoc dispatcher::priority
+/// @tparam template_priority  @copydoc dispatcher::function_priority
 /// @tparam template_allocator @copydoc dispatcher::allocator_type
 template<
-    typename template_packet = PSYQ_EVENT_DRIVEN_DISPATCHER_PACKET_DEFAULT,
-    typename template_priority = PSYQ_EVENT_DRIVEN_DISPATCHER_PRIORITY_DEFAULT,
-    typename template_allocator = PSYQ_EVENT_DRIVEN_DISPATCHER_ALLOCATOR_DEFAULT>
+    typename template_packet,
+    typename template_priority,
+    typename template_allocator>
 class psyq::event_driven::dispatcher
 {
     /// @copydoc psyq::string::view::this_type
     private: typedef dispatcher this_type;
+    friend class psyq::event_driven::zone<
+        template_packet, template_priority, template_allocator>;
 
     //-------------------------------------------------------------------------
     /// this_type を強参照するスマートポインタ。
     public: typedef std::shared_ptr<this_type> shared_ptr;
     /// this_type を弱参照するスマートポインタ。
     public: typedef std::weak_ptr<this_type> weak_ptr;
-    /// @brief メッセージ受信関数の優先順位。
-    public: typedef template_priority priority;
-    /// @brief this_type で使うメモリ割当子。
-    public: typedef template_allocator allocator_type;
-
-    //-------------------------------------------------------------------------
-    public: class zone;
     /// @brief 送受信するメッセージパケットの基底型。
     /// @details event_driven::packet 互換のインタフェイスを持つこと。
     public: typedef template_packet packet;
-    /// @brief メッセージの基底型。
-    public: typedef typename this_type::packet::message message;
-    /// @brief メッセージの送り状の型。
-    public: typedef typename this_type::message::tag tag;
+    /// @brief this_type で使うメモリ割当子。
+    public: typedef template_allocator allocator_type;
 
     //-------------------------------------------------------------------------
     /// @brief メッセージ受信関数。
@@ -126,6 +82,8 @@ class psyq::event_driven::dispatcher
     public: typedef
         std::weak_ptr<typename this_type::function>
         function_weak_ptr;
+    /// @brief メッセージ受信関数の優先順位。
+    public: typedef template_priority function_priority;
 
     //-------------------------------------------------------------------------
     /// this_type::function_shared_ptr のコンテナ。
@@ -142,63 +100,61 @@ class psyq::event_driven::dispatcher
         packet_shared_ptr_container;
 
     //-------------------------------------------------------------------------
-    /// @brief メッセージ受信フック。
-    private: class receiving_hook
+    /// @brief メッセージ転送フック。
+    private: class forwarding_hook
     {
-        private: typedef receiving_hook this_type;
-
-        public: struct less
-        {
-            bool operator()(
-                typename dispatcher::receiving_hook const& in_left,
-                typename dispatcher::receiving_hook const& in_right)
-            const PSYQ_NOEXCEPT
-            {
-                return in_left.selector_key_ != in_right.selector_key_?
-                    in_left.selector_key_ < in_right.selector_key_:
-                    in_left.priority_ < in_right.priority_;
-            }
-
-            bool operator()(
-                typename dispatcher::receiving_hook const& in_left,
-                typename dispatcher::tag::key_type const& in_right)
-            const PSYQ_NOEXCEPT
-            {
-                return in_left.selector_key_ < in_right;
-            }
-
-            bool operator()(
-                typename dispatcher::tag::key_type const& in_left,
-                typename dispatcher::receiving_hook const& in_right)
-            const PSYQ_NOEXCEPT
-            {
-                return in_left < in_right.selector_key_;
-            }
-        };
+        private: typedef forwarding_hook this_type;
 
         public: typedef
             std::vector<this_type, typename dispatcher::allocator_type>
             container;
 
-        public: receiving_hook(
-            typename dispatcher::tag::key_type const in_receiver_key,
-            typename dispatcher::tag::key_type const in_selector_key,
-            typename dispatcher::priority const in_priority,
-            typename dispatcher::function_weak_ptr in_function):
-        function_(std::move(in_function)),
+        public: struct less
+        {
+            bool operator()(
+                this_type const& in_left,
+                this_type const& in_right)
+            const PSYQ_NOEXCEPT
+            {
+                return in_left.receiver_key_ != in_right.receiver_key_?
+                    in_left.receiver_key_ < in_right.receiver_key_:
+                    in_left.priority_ < in_right.priority_;
+            }
+
+            bool operator()(
+                this_type const& in_left,
+                typename dispatcher::packet::message::tag::key_type const& in_right)
+            const PSYQ_NOEXCEPT
+            {
+                return in_left.receiver_key_ < in_right;
+            }
+
+            bool operator()(
+                typename dispatcher::packet::message::tag::key_type const& in_left,
+                this_type const& in_right)
+            const PSYQ_NOEXCEPT
+            {
+                return in_left < in_right.receiver_key_;
+            }
+
+        }; // struct less
+
+        public: forwarding_hook(
+            typename dispatcher::packet::message::tag::key_type const in_receiver_key,
+            typename dispatcher::function_weak_ptr&& io_function,
+            typename dispatcher::function_priority const in_priority):
+        function_(std::move(io_function)),
         receiver_key_(in_receiver_key),
-        selector_key_(in_selector_key),
         priority_(in_priority)
         {}
 
 #ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
         /// @brief ムーブ構築子。
-        public: receiving_hook(
+        public: forwarding_hook(
             /// [in,out] ムーブ元となるインスタンス。
             this_type&& io_source):
         function_(std::move(io_source.function_)),
         receiver_key_(std::move(io_source.receiver_key_)),
-        selector_key_(std::move(io_source.selector_key_)),
         priority_(std::move(io_source.priority_))
         {}
 
@@ -210,63 +166,91 @@ class psyq::event_driven::dispatcher
         {
             this->function_ = std::move(io_source.function_);
             this->receiver_key_ = std::move(io_source.receiver_key_);
-            this->selector_key_ = std::move(io_source.selector_key_);
             this->priority_ = std::move(io_source.priority_);
             return *this;
         }
 #endif // !defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
 
         public: typename dispatcher::function_weak_ptr function_;
-        public: typename dispatcher::tag::key_type receiver_key_;
-        public: typename dispatcher::tag::key_type selector_key_;
-        public: typename dispatcher::priority priority_;
+        public: typename dispatcher::packet::message::tag::key_type receiver_key_;
+        public: typename dispatcher::function_priority priority_;
 
-    }; // class receiving_hook
+    }; // class forwarding_hook
 
     //-------------------------------------------------------------------------
-    /// @brief メッセージ転送フック。
-    private: class forwarding_hook
+    /// @brief メッセージ受信フック。
+    private: class receiving_hook: public forwarding_hook
     {
-        private: typedef forwarding_hook this_type;
-
-        public: struct less
-        {
-            bool operator()(
-                typename dispatcher::forwarding_hook const& in_left,
-                typename dispatcher::forwarding_hook const& in_right)
-            const PSYQ_NOEXCEPT
-            {
-                return in_left.receiver_key_ != in_right.selector_key_?
-                    in_left.receiver_key_ < in_right.selector_key_:
-                    in_left.priority_ < in_right.priority_;
-            }
-
-            bool operator()(
-                typename dispatcher::forwarding_hook const& in_left,
-                typename dispatcher::tag::key_type const& in_right)
-            const PSYQ_NOEXCEPT
-            {
-                return in_left.receiver_key_ < in_right;
-            }
-
-            bool operator()(
-                typename dispatcher::tag::key_type const& in_left,
-                typename dispatcher::forwarding_hook const& in_right)
-            const PSYQ_NOEXCEPT
-            {
-                return in_left < in_right.receiver_key_;
-            }
-        };
+        private: typedef receiving_hook this_type;
+        public: typedef forwarding_hook base_type;
 
         public: typedef
             std::vector<this_type, typename dispatcher::allocator_type>
             container;
 
-        public: typename dispatcher::function_weak_ptr function_;
-        public: typename dispatcher::tag::key_type receiver_key_;
-        public: typename dispatcher::priority priority_;
+        public: struct less
+        {
+            bool operator()(
+                this_type const& in_left,
+                this_type const& in_right)
+            const PSYQ_NOEXCEPT
+            {
+                return in_left.selector_key_ != in_right.selector_key_?
+                    in_left.selector_key_ < in_right.selector_key_:
+                    in_left.priority_ < in_right.priority_;
+            }
 
-    }; // class forwarding_hook
+            bool operator()(
+                this_type const& in_left,
+                typename dispatcher::packet::message::tag::key_type const& in_right)
+            const PSYQ_NOEXCEPT
+            {
+                return in_left.selector_key_ < in_right;
+            }
+
+            bool operator()(
+                typename dispatcher::packet::message::tag::key_type const& in_left,
+                this_type const& in_right)
+            const PSYQ_NOEXCEPT
+            {
+                return in_left < in_right.selector_key_;
+            }
+
+        }; // struct less
+
+        public: receiving_hook(
+            typename dispatcher::packet::message::tag::key_type const in_receiver_key,
+            typename dispatcher::packet::message::tag::key_type const in_selector_key,
+            typename dispatcher::function_weak_ptr&& io_function,
+            typename dispatcher::function_priority const in_priority):
+        base_type(in_receiver_key, std::move(io_function), in_priority),
+        selector_key_(in_selector_key)
+        {}
+
+#ifdef PSYQ_NO_STD_DEFAULTED_FUNCTION
+        /// @brief ムーブ構築子。
+        public: receiving_hook(
+            /// [in,out] ムーブ元となるインスタンス。
+            this_type&& io_source):
+        base_type(std::move(io_source)),
+        selector_key_(std::move(io_source.selector_key_))
+        {}
+
+        /// @brief ムーブ代入演算子。
+        /// @return *this
+        public: this_type& operator=(
+            /// [in,out] ムーブ元となるインスタンス。
+            this_type&& io_source)
+        {
+            static_cast<base_type&>(*this) = std::move(io_source);
+            this->selector_key_ = std::move(io_source.selector_key_);
+            return *this;
+        }
+#endif // !defined(PSYQ_NO_STD_DEFAULTED_FUNCTION)
+
+        public: typename dispatcher::packet::message::tag::key_type selector_key_;
+
+    }; // class receiving_hook
 
     //-------------------------------------------------------------------------
     /// @brief *this が使うメモリ割当子を取得する。
@@ -279,14 +263,67 @@ class psyq::event_driven::dispatcher
 
     /// @brief *this に合致するスレッドの識別子を取得する。
     /// @return *this に合致するスレッドの識別子。
-    public: std::thread::id get_thread_id() const PSYQ_NOEXCEPT
+    public: std::thread::id const& get_thread_id() const PSYQ_NOEXCEPT
     {
         return this->thread_id_;
     }
 
     //-------------------------------------------------------------------------
-    /// @name メッセージ受信関数
+    /// @name メッセージの受信
     /// @{
+
+    /// @brief メッセージ受信関数へメッセージパケットを配送する。
+    /// @details
+    ///   この関数と zone::dispatch
+    ///   をメッセージループで定期的に呼び出し、メッセージパケットを循環させること。
+    /// @sa
+    ///   *this にメッセージ受信関数を登録するには、
+    ///   this_type::register_receiver を使う。
+    /// @retval true 成功。メッセージパケットを配送した。
+    /// @retval false
+    ///   失敗。メッセージパケットを配送しなかった。 this_type::get_thread_id
+    ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
+    public: bool dispatch(
+        /// [in] メッセージパケットの予約数。
+        std::size_t const in_capacity = 0,
+        /// [in] コンテナを再構築するか。
+        bool const in_rebuild = false)
+    {
+        if (!this->verify_thread())
+        {
+            return false;
+        }
+
+        // 配送するメッセージパケットを取得する。
+        PSYQ_ASSERT(this->delivery_packets_.empty());
+        {
+            std::lock_guard<psyq::spinlock> const local_lock(this->lock_);
+            this->delivery_packets_.swap(this->receiving_packets_);
+            this_type::clear_packets(
+                this->receiving_packets_, in_capacity, in_rebuild);
+        }
+
+        // メッセージ受信関数へメッセージパケットを配送する。
+        this_type::remove_empty_hook(this->receiving_hooks_);
+        this_type::remove_empty_hook(this->forwarding_hooks_);
+        this_type::deliver_packets(
+            this->function_caches_,
+            this->receiving_hooks_,
+            this->forwarding_hooks_,
+            this->delivery_packets_);
+
+        // コンテナを整理する。
+        this_type::clear_packets(
+            this->delivery_packets_, in_capacity, in_rebuild);
+        if (in_rebuild)
+        {
+            this->receiving_hooks_.shrink_to_fit();
+            this->forwarding_hooks_.shrink_to_fit();
+            this->function_caches_.shrink_to_fit();
+            this->function_caches_.reserve(this->receiving_hooks_.capacity());
+        }
+        return true;
+    }
 
     /// @brief メッセージ受信関数を登録する。
     /// @details
@@ -311,13 +348,13 @@ class psyq::event_driven::dispatcher
     public: bool register_receiver(
         /// [in] 登録するメッセージ受信関数に対応する、
         /// メッセージ受信オブジェクトの識別値。
-        typename this_type::tag::key_type const in_receiver_key,
+        typename this_type::packet::message::tag::key_type const in_receiver_key,
         /// [in] 登録するメッセージ受信関数の識別値。
-        typename this_type::tag::key_type const in_selector_key,
+        typename this_type::packet::message::tag::key_type const in_selector_key,
         /// [in] 登録するメッセージ受信関数。
         typename this_type::function_shared_ptr const& in_function,
         /// [in] メッセージを受信する優先順位。
-        typename this_type::priority const in_priority
+        typename this_type::function_priority const in_priority
             = PSYQ_EVENT_DRIVEN_RECEIVER_PRIORITY_DEFAULT)
     {
         if (in_function.get() == nullptr
@@ -356,8 +393,8 @@ class psyq::event_driven::dispatcher
             local_lower_bound,
             in_receiver_key,
             in_selector_key,
-            in_priority,
-            in_function);
+            typename this_type::function_weak_ptr(in_function),
+            in_priority);
         return true;
     }
 
@@ -368,9 +405,9 @@ class psyq::event_driven::dispatcher
     public: typename this_type::function_weak_ptr unregister_receiver(
         /// [in] 除去するメッセージ受信関数に対応する
         /// メッセージ受信オブジェクトの識別値。
-        typename this_type::tag::key_type const in_receiver_key,
+        typename this_type::packet::message::tag::key_type const in_receiver_key,
         /// [in] 除去するメッセージ受信関数の識別値。
-        typename this_type::tag::key_type const in_selector_key)
+        typename this_type::packet::message::tag::key_type const in_selector_key)
     {
         if (this->verify_thread())
         {
@@ -396,7 +433,7 @@ class psyq::event_driven::dispatcher
     public: std::size_t unregister_receiver(
         /// [in] 取り除くメッセージ受信関数に対応する
         /// メッセージ受信オブジェクトの識別値。
-        typename this_type::tag::key_type const in_receiver_key)
+        typename this_type::packet::message::tag::key_type const in_receiver_key)
     {
         std::size_t local_count(0);
         if (this->verify_thread())
@@ -421,9 +458,9 @@ class psyq::event_driven::dispatcher
     public: typename this_type::function_weak_ptr find_receiver(
         /// [in] 検索するメッセージ受信関数に対応する
         /// メッセージ受信オブジェクトの識別値。
-        typename this_type::tag::key_type const in_receiver_key,
+        typename this_type::packet::message::tag::key_type const in_receiver_key,
         /// [in] 検索するメッセージ受信関数の識別値。
-        typename this_type::tag::key_type const in_selector_key)
+        typename this_type::packet::message::tag::key_type const in_selector_key)
     const PSYQ_NOEXCEPT
     {
         if (this->verify_thread())
@@ -444,7 +481,7 @@ class psyq::event_driven::dispatcher
     }
     /// @}
     //-------------------------------------------------------------------------
-    /// @name メッセージ転送関数
+    /// @name メッセージの転送
     /// @{
 
     /// @brief メッセージ転送関数を登録する。
@@ -452,11 +489,11 @@ class psyq::event_driven::dispatcher
     private: bool register_forwarder(
         /// [in] 登録するメッセージ転送関数に対応する、
         /// メッセージ受信オブジェクトの識別値。
-        typename this_type::tag::key_type const in_receiver_key,
+        typename this_type::packet::message::tag::key_type const in_receiver_key,
         /// [in] 登録するメッセージ転送関数。
         typename this_type::function_shared_ptr const& in_function,
         /// [in] メッセージを転送する優先順位。
-        typename this_type::priority const in_priority
+        typename this_type::function_priority const in_priority
             = PSYQ_EVENT_DRIVEN_FORWARDER_PRIORITY_DEFAULT);
 
     /// @brief メッセージ転送関数を取り除く。
@@ -464,189 +501,42 @@ class psyq::event_driven::dispatcher
     private: typename this_type::function_weak_ptr unregister_forwarder(
         /// [in] 取り除くメッセージ転送関数に対応する、
         /// メッセージ受信オブジェクトの識別値。
-        typename this_type::tag::key_type const in_receiver_key);
+        typename this_type::packet::message::tag::key_type const in_receiver_key);
 
     /// @brief メッセージ転送関数を検索する。
     /// @todo 未実装
     private: typename this_type::function_weak_ptr find_forwarder(
         /// [in] 検索するメッセージ転送関数に対応する、
         /// メッセージ受信オブジェクトの識別値。
-        typename this_type::tag::key_type const in_receiver_key);
-    /// @}
-    //-------------------------------------------------------------------------
-    /// @name メッセージの送受信
-    /// @{
-
-    /// @brief メッセージゾーンの内と外へのメッセージの送信を予約する。
-    /// @details
-    ///   - 引数を持たないメッセージパケットを動的メモリ割当して構築し、
-    ///     メッセージゾーンの内と外への送信を予約する。
-    ///   - この関数では、メッセージ送信の予約のみを行う。
-    ///     メッセージを実際に送信する処理は、この関数の呼び出し後、
-    ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
-    ///   - メッセージ受信処理は、メッセージパケットの送信が行われた後、
-    ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
-    ///   - 同一スレッドで送信を予約したメッセージの受信順序は、
-    ///     送信予約順序と同じになる。
-    /// .
-    /// @sa
-    ///   - 構築済のメッセージパケットを送信するには、 this_type::post を使う。
-    ///   - メッセージゾーン内にだけメッセージを送信するには、
-    ///     this_type::post_zonal を使う。
-    ///   - *this に登録されているメッセージ受信関数にのみメッセージを送信するには、
-    ///     this_type::send_local を使う。
-    /// @retval true 成功。メッセージ送信を予約した。
-    /// @retval false
-    ///   失敗。メッセージ送信を予約しなかった。 this_type::get_thread_id
-    ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
-    /// @todo メッセージゾーンの外へ送信する処理は未実装。
-    public: bool post_external(
-        /// [in] 送信するメッセージの送り状。
-        typename this_type::tag const& in_tag)
-    {
-        return this->post(
-            this_type::packet::create_external(
-                typename this_type::packet::message(in_tag),
-                this->get_allocator()));
-    }
-
-    /// @copydoc this_type::post_external
-    public: template<typename template_parameter>
-    bool post_external(
-        /// [in] 送信するメッセージの送り状。
-        typename this_type::tag const& in_tag,
-        /// [in] 送信するメッセージの引数。POD型であること。
-        template_parameter&& io_parameter)
-    {
-        return this->post(
-            this_type::packet::create_external(
-                this_type::message::construct(in_tag, std::move(io_parameter)),
-                this->get_allocator()));
-    }
-
-    /// @brief メッセージゾーン内へのメッセージの送信を予約する。
-    /// @details
-    ///   - 引数を持たないメッセージパケットを動的メモリ割当して構築し、
-    ///     メッセージゾーン内への送信を予約する。
-    ///   - この関数では、メッセージ送信の予約のみを行う。
-    ///     メッセージを実際に送信する処理は、この関数の呼び出し後、
-    ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
-    ///   - メッセージ受信処理は、メッセージパケットの送信が行われた後、
-    ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
-    ///   - 同一スレッドで送信を予約したメッセージの受信順序は、
-    ///     送信予約順序と同じになる。
-    /// .
-    /// @sa
-    ///   - 構築済のメッセージパケットを送信するには、 this_type::post を使う。
-    ///   - メッセージゾーンの内と外にメッセージを送信するには、
-    ///     this_type::post_external を使う。
-    ///   - *this に登録されているメッセージ受信関数にのみメッセージを送信するには、
-    ///     this_type::send_local を使う。
-    /// @retval true 成功。メッセージ送信を予約した。
-    /// @retval false
-    ///   失敗。メッセージ送信を予約しなかった。 this_type::get_thread_id
-    ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
-    public: bool post_zonal(
-        /// [in] 送信するメッセージの送り状。
-        typename this_type::tag const& in_tag)
-    {
-        return this->post(
-            this_type::packet::create_zonal(
-                typename this_type::packet::message(in_tag),
-                this->get_allocator()));
-    }
-
-    /// @copydoc this_type::post_zonal
-    public: template<typename template_parameter>
-    bool post_zonal(
-        /// [in] 送信するメッセージの送り状。
-        typename this_type::tag const& in_tag,
-        /// [in] 送信するメッセージの引数。
-        template_parameter&& io_parameter)
-    {
-        return this->post(
-            this_type::packet::create_zonal(
-                this_type::message::construct(in_tag, std::move(io_parameter)),
-                this->get_allocator()));
-    }
-
-    /// @brief メッセージの送信を予約する。
-    /// @details
-    ///   - この関数では、メッセージ送信の予約のみを行う。
-    ///     メッセージを実際に送信する処理は、この関数の呼び出し後、
-    ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
-    ///   - メッセージ受信処理は、メッセージの送信が行われた後、
-    ///     zone::dispatch / this_type::dispatch の順に呼び出すことで行なわれる。
-    ///   - 同一スレッドで送信を予約したメッセージの受信順序は、
-    ///     送信予約順序と同じになる。
-    /// .
-    /// @retval true  成功。メッセージの送信を予約した。
-    /// @retval false 失敗。メッセージの送信を予約しなかった。
-    public: bool post(
-        /// [in] 送信するメッセージを持つメッセージパケット。
-        typename this_type::packet::shared_ptr in_packet)
-    {
-        if (in_packet.get() == nullptr || !this->verify_thread())
-        {
-            return false;
-        }
-        this->export_packets_.emplace_back(std::move(in_packet));
-        return true;
-    }
-
-    /// @brief メッセージパケットをメッセージ受信関数へ配送する。
-    /// @details
-    ///   この関数と zone::dispatch
-    ///   をメッセージループで定期的に呼び出し、メッセージパケットを循環させること。
-    /// @sa
-    ///   *this にメッセージ受信関数を登録するには、
-    ///   this_type::register_receiver を使う。
-    /// @retval true 成功。メッセージパケットを配送した。
-    /// @retval false
-    ///   失敗。メッセージパケットを配送しなかった。 this_type::get_thread_id
-    ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
-    public: bool dispatch()
-    {
-        if (!this->verify_thread())
-        {
-            return false;
-        }
-
-        // 配送するメッセージパケットを取得する。
-        {
-            std::lock_guard<psyq::spinlock> const local_lock(this->lock_);
-            this->delivery_packets_.swap(this->import_packets_);
-        }
-        this_type::remove_empty_hook(this->receiving_hooks_);
-        this_type::remove_empty_hook(this->forwarding_hooks_);
-
-        // メッセージパケットを、メッセージ受信関数へ配送する。
-        this_type::deliver_packets(
-            this->function_caches_,
-            this->receiving_hooks_,
-            this->forwarding_hooks_,
-            this->delivery_packets_);
-        this_type::clear_packet_container(
-            this->delivery_packets_, this->delivery_packets_.size());
-        return true;
-    }
+        typename this_type::packet::message::tag::key_type const in_receiver_key);
     /// @}
     //-------------------------------------------------------------------------
     /// @brief this_type を構築する。
     /// @warning psyq::event_driven の管理者以外は、この関数は使用禁止。
     public: dispatcher(
         /// [in] *this に対応するスレッドの識別子。
-        std::thread::id in_thread_id,
+        std::thread::id const& in_thread_id,
+        /// [in] メッセージパケットの予約数。
+        std::size_t const in_packet_capacity,
+        /// [in] メッセージ受信関数の予約数。
+        std::size_t const in_receiver_capacity,
+        /// [in] メッセージ転送関数の予約数。
+        std::size_t const in_forwarder_capacity,
         /// [in] *this が使うメモリ割当子の初期値。
         typename this_type::allocator_type const& in_allocator):
     receiving_hooks_(in_allocator),
     forwarding_hooks_(in_allocator),
-    import_packets_(in_allocator),
-    export_packets_(in_allocator),
+    receiving_packets_(in_allocator),
     delivery_packets_(in_allocator),
     function_caches_(in_allocator),
-    thread_id_(std::move(in_thread_id))
-    {}
+    thread_id_(in_thread_id)
+    {
+        this->receiving_hooks_.reserve(in_receiver_capacity);
+        this->forwarding_hooks_.reserve(in_forwarder_capacity);
+        this->receiving_packets_.reserve(in_packet_capacity);
+        this->delivery_packets_.reserve(in_packet_capacity);
+        this->function_caches_.reserve(in_receiver_capacity);
+    }
 
     /// @brief コピー構築子は使用禁止。
     private: dispatcher(this_type const&);
@@ -722,7 +612,7 @@ class psyq::event_driven::dispatcher
     ///   と合致しないスレッドからこの関数を呼び出すと、失敗する。
     private: bool send_local(
         /// [in] 送信するメッセージの送り状。
-        typename this_type::tag const& in_tag)
+        typename this_type::packet::message::tag const& in_tag)
     {
         typedef typename this_type::packet::message message;
         return this->send_local(
@@ -748,7 +638,7 @@ class psyq::event_driven::dispatcher
     private: template<typename template_parameter>
     bool send_local(
         /// [in] 送信するメッセージの送り状。
-        typename this_type::tag const& in_tag,
+        typename this_type::packet::message::tag const& in_tag,
         /// [in] 送信するメッセージの引数。
         template_parameter in_parameter)
     {
@@ -766,8 +656,8 @@ class psyq::event_driven::dispatcher
     static template_iterator find_receiving_hook_iterator(
         template_iterator const in_begin,
         template_iterator const in_end,
-        typename this_type::tag::key_type const in_receiver_key,
-        typename this_type::tag::key_type const in_selector_key)
+        typename this_type::packet::message::tag::key_type const in_receiver_key,
+        typename this_type::packet::message::tag::key_type const in_selector_key)
     {
         for (
             auto i(
@@ -812,7 +702,37 @@ class psyq::event_driven::dispatcher
     }
 
     //-------------------------------------------------------------------------
-    /// @brief メッセージパケットを、メッセージ受信関数へ配送する。
+    /// @brief 外部からメッセージパケットを受信する。
+    private: void receive_packets(
+        /// [in] 受信するメッセージパケットのコンテナ。
+        typename this_type::packet_shared_ptr_container const&
+            in_receiving_packets)
+    {
+        std::lock_guard<psyq::spinlock> const local_lock(this->lock_);
+        this->receiving_packets_.insert(
+            std::end(this->receiving_packets_),
+            std::begin(in_receiving_packets),
+            std::end(in_receiving_packets));
+    }
+
+    private: static void clear_packets(
+        typename this_type::packet_shared_ptr_container& io_packets,
+        std::size_t const in_capacity,
+        bool const in_rebuild)
+    {
+        if (in_rebuild)
+        {
+            io_packets = typename this_type::packet_shared_ptr_container(
+                io_packets.get_allocator());
+        }
+        else
+        {
+            io_packets.clear();
+        }
+        io_packets.reserve(in_capacity);
+    }
+
+    /// @brief メッセージ受信関数へメッセージパケットを配送する。
     private: static void deliver_packets(
         /// [in,out] メッセージ受信関数のキャッシュに使うコンテナ。
         typename this_type::function_shared_ptr_container& io_functions,
@@ -876,7 +796,7 @@ class psyq::event_driven::dispatcher
         /// [in] メッセージ受信フックの辞書。
         typename this_type::receiving_hook::container const& in_hooks,
         /// [in] 配送するメッセージパケットの送り状。
-        typename this_type::tag const& in_tag)
+        typename this_type::packet::message::tag const& in_tag)
     {
         // メッセージ受信フックの辞書を走査し、
         // メッセージ受信関数の識別値が一致するメッセージ受信フックを検索する。
@@ -913,7 +833,7 @@ class psyq::event_driven::dispatcher
     private: static void cache_forwarders(
         typename this_type::function_shared_ptr_container& io_functions,
         typename this_type::forwarding_hook::container const& in_hooks,
-        typename this_type::tag const& in_tag)
+        typename this_type::packet::message::tag const& in_tag)
     {
         for (auto& local_hook: in_hooks)
         {
@@ -925,58 +845,13 @@ class psyq::event_driven::dispatcher
     }
 
     //-------------------------------------------------------------------------
-    /// @brief 外部とメッセージパケットを交換する。
-    private: void trade_packet_container(
-        /// [in,out] 輸出するメッセージパケットのコンテナ。
-        typename this_type::packet_shared_ptr_container& io_export_packets,
-        /// [in] 輸入するメッセージパケットのコンテナ。
-        typename this_type::packet_shared_ptr_container const& in_import_packets)
-    {
-        std::lock_guard<psyq::spinlock> const local_lock(this->lock_);
-
-        // メッセージパケットを輸出する。
-        io_export_packets.reserve(
-            io_export_packets.size() + this->export_packets_.size());
-        for (auto& local_packet_holder: this->export_packets_)
-        {
-            io_export_packets.emplace_back(std::move(local_packet_holder));
-        }
-        this_type::clear_packet_container(
-            this->export_packets_, this->export_packets_.size());
-
-        // メッセージパケットを輸入する。
-        this->import_packets_.insert(
-            std::end(this->import_packets_),
-            std::begin(in_import_packets),
-            std::end(in_import_packets));
-    }
-
-    private: static void clear_packet_container(
-        typename this_type::packet_shared_ptr_container& io_container,
-        std::size_t const in_last_size)
-    {
-        if (in_last_size < 16 || io_container.capacity() < in_last_size * 2)
-        {
-            io_container.clear();
-        }
-        else
-        {
-            io_container = typename this_type::packet_shared_ptr_container(
-                io_container.get_allocator());
-            io_container.reserve(in_last_size * 2);
-        }
-    }
-
-    //-------------------------------------------------------------------------
     /// @brief メッセージ受信フックの辞書。
     private: typename this_type::receiving_hook::container receiving_hooks_;
     /// @brief メッセージ転送フックの辞書。
     private: typename this_type::forwarding_hook::container forwarding_hooks_;
-    /// @brief 外部から輸入したメッセージパケットのコンテナ。
-    private: typename this_type::packet_shared_ptr_container import_packets_;
-    /// @brief 外部へ輸出するメッセージパケットのコンテナ。
-    private: typename this_type::packet_shared_ptr_container export_packets_;
-    /// @brief メッセージ受信関数へ配送するメッセージパケット。
+    /// @brief 外部から受信したメッセージパケットのコンテナ。
+    private: typename this_type::packet_shared_ptr_container receiving_packets_;
+    /// @brief メッセージ受信関数へ配送するメッセージパケットのコンテナ。
     private: typename this_type::packet_shared_ptr_container delivery_packets_;
     /// @brief メッセージ受信関数のキャッシュ。
     private: typename this_type::function_shared_ptr_container function_caches_;
@@ -987,6 +862,5 @@ class psyq::event_driven::dispatcher
 
 }; // class psyq::event_driven::dispatcher
 
-#include "./zone.hpp"
 #endif // !defined(PSYQ_EVENT_DRIVEN_DISPATCHER_HPP_)
 // vim: set expandtab:

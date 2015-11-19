@@ -49,6 +49,7 @@
 #include <cstdint>
 #include <climits>
 #include <type_traits>
+#include <array>
 #include "./assert.hpp"
 
 #if defined(__alpha__) || defined(__ia64__) || defined(__x86_64__) || defined(_WIN64) || defined(__LP64__) || defined(__LLP64__)
@@ -91,6 +92,11 @@
 namespace psyq
 {
     template<typename> union float_bit_field;
+
+    namespace _private
+    {
+        class trailing_0bits;
+    } // namespace _private
 }
 /// @endcond
 
@@ -138,6 +144,50 @@ union psyq::float_bit_field
 
 }; // union psyq::float_bit_field
 
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief 無符号64ビット整数の最下位ビットから、0が連続する数を数える。
+/// @note
+///   以下のウェブページを参考にした。
+///   http://d.hatena.ne.jp/siokoshou/20090704#p1
+class psyq::_private::trailing_0bits
+{
+    private: typedef trailing_0bits this_type;
+
+    private: enum: std::uint64_t {HASH = 0x03F566ED27179461ul};
+
+    public: trailing_0bits()
+    {
+        std::uint64_t local_hash(this_type::HASH);
+        for (std::uint8_t i(0); i < this->counts_.size(); ++i)
+        {
+            this->counts_[local_hash >> 58] = i;
+            local_hash <<= 1;
+        }
+    }
+
+    /// @brief 整数の最下位ビットから、0が連続する数を数える。
+    /// @return in_value の最下位ビットから、0が連続する数。
+    public: template<typename template_value>
+    std::uint8_t count(
+        /// [in] 対象となる整数。
+        template_value const in_value)
+    const
+    {
+        return in_value != 0?
+            this->counts_[this_type::compute_index(in_value)]:
+            sizeof(template_value) * CHAR_BIT;
+    }
+
+    private: static unsigned compute_index(std::int64_t const in_value)
+    {
+        return static_cast<unsigned>(
+            (static_cast<std::uint64_t>(in_value & -in_value) * this_type::HASH)
+            >> 58);
+    }
+
+    private: std::array<std::uint8_t, 64> counts_;
+
+}; // class psyq::_private::trailing_0bits
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace psyq
@@ -951,17 +1001,22 @@ namespace psyq
 
         //---------------------------------------------------------------------
         /// @brief 無符号整数の最下位ビットから、0が連続する数を数える。
-        /// @details
-        /// 以下のウェブページを参考にした。
-        /// http://www.nminoru.jp/~nminoru/programming/bitcount.html
         /// @return 最下位ビットから、0が連続する数。
         template<typename template_bits>
         std::size_t count_trailing_0bits_by_logical(
             /// [in] 数える整数の値。
             template_bits const in_bits)
         {
+#if 1
+            static psyq::_private::trailing_0bits const static_trailing_0bits;
+            return static_trailing_0bits.count(in_bits);
+#else
+            /// @note
+            ///   以下のウェブページを参考にした。
+            ///   http://www.nminoru.jp/~nminoru/programming/bitcount.html
             return psyq::_private::count_1bits_of_uint(
                 static_cast<template_bits>((~in_bits) & (in_bits - 1)));
+#endif
         }
 
         /// @brief 無符号整数の最下位ビットから、0が連続する数を数える。

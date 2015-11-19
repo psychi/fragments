@@ -1,8 +1,7 @@
-﻿/** @file
-    @brief モートン空間分割木に取りつける、衝突判定オブジェクトの実装。
-    @author Hillco Psychi (https://twitter.com/psychi)
-    @ingroup psyq_geometry_mosp
- */
+﻿/// @file
+/// @brief モートン空間分割木に取りつける、衝突判定オブジェクトの実装。
+/// @author Hillco Psychi (https://twitter.com/psychi)
+/// @ingroup psyq_geometry_mosp
 #ifndef PSYQ_GEOMETRY_MOSP_NUT_HPP_
 #define PSYQ_GEOMETRY_MOSP_NUT_HPP_
 
@@ -14,43 +13,40 @@ namespace psyq
 {
 namespace geometry
 {
-/** @brief モートン順序を用いた空間分割木による衝突判定の実装。
-
-    ### 使い方の概要
-    -# 使用する幾何ベクトル型でテンプレート特殊化した
-       psyq::geometry::vector::traits の実装を用意する。
-    -# psyq::geometry::mosp::nut インスタンスを用意する。
-       - psyq::geometry::mosp::nut::space には、
-         モートン順序による空間分割木を使った衝突判定を行う空間を適用する。
-         - 空間分割木が2次元（4分木）なら、
-           psyq::geometry::mosp::space_2d を適用する。
-         - 空間分割木が3次元（8分木）なら、
-           psyq::geometry::mosp::space_3d を適用する。
-       - psyq::geometry::mosp::nut は抽象型なので、実際には
-         psyq::geometry::mosp::nut::ball などの
-         具象型のインスタンスを用意することになる。
-    -# psyq::geometry::mosp::tree インスタンスを用意する。
-       - psyq::geometry::mosp::tree::argument には、
-         psyq::geometry::mosp::nut* を適用する。
-       - psyq::geometry::mosp::tree::space には、
-         psyq::geometry::mosp::nut::space を適用する。
-       - psyq::geometry::mosp::tree::allocator_type には、
-         std::allocator 互換の任意のメモリ割当子を適用する。
-         - 高速なメモリ管理を求めるので、
-           psyq::memory_arena::fixed_pool を適用した
-           psyq::memory_arena::allocator を推奨する。
-    -# psyq::geometry::mosp::nut::attach_tree で、
-       psyq::geometry::mosp::nut インスタンス を
-       psyq::geometry::mosp::tree インスタンスに取りつける。
-    -# psyq::geometry::mosp::tree::detect_collision で、
-       psyq::geometry::mosp::tree インスタンスに取りつけられているすべての
-       psyq::geometry::mosp::nut インスタンスで衝突判定を行う。
-       - 2つの psyq::geometry::mosp::nut インスタンスの、
-         それぞれが所属している分割空間が衝突していると、それら2つの
-         psyq::geometry::mosp::nut* を引数に、衝突関数が呼び出される。
-
-    @ingroup psyq_geometry_mosp
- */
+/// @brief モートン順序を用いた空間分割木による衝突判定の実装。
+/// @par 使い方の概要
+/// -# 使用する幾何ベクトル型でテンプレート特殊化した
+///    psyq::geometry::vector::traits の実装を用意する。
+/// -# psyq::geometry::mosp::nut インスタンスを用意する。
+///    - psyq::geometry::mosp::nut::space には、
+///      モートン順序による空間分割木を使った衝突判定を行う空間を適用する。
+///      - 空間分割木が2次元（4分木）なら、
+///        psyq::geometry::mosp::space_2d を適用する。
+///      - 空間分割木が3次元（8分木）なら、
+///        psyq::geometry::mosp::space_3d を適用する。
+///    - psyq::geometry::mosp::nut は抽象型なので、実際には
+///      psyq::geometry::mosp::nut::ball などの
+///      具象型のインスタンスを用意することになる。
+/// -# psyq::geometry::mosp::tree インスタンスを用意する。
+///    - psyq::geometry::mosp::tree::argument には、
+///      psyq::geometry::mosp::nut* を適用する。
+///    - psyq::geometry::mosp::tree::space には、
+///      psyq::geometry::mosp::nut::space を適用する。
+///    - psyq::geometry::mosp::tree::allocator_type には、
+///      std::allocator 互換の任意のメモリ割当子を適用する。
+///      - 高速なメモリ管理を求めるので、
+///        psyq::memory_arena::fixed_pool を適用した
+///        psyq::memory_arena::allocator を推奨する。
+/// -# psyq::geometry::mosp::nut::attach_tree で、
+///    psyq::geometry::mosp::nut インスタンス を
+///    psyq::geometry::mosp::tree インスタンスに取りつける。
+/// -# psyq::geometry::mosp::tree::detect_collision で、
+///    psyq::geometry::mosp::tree インスタンスに取りつけられているすべての
+///    psyq::geometry::mosp::nut インスタンスで衝突判定を行う。
+///    - 2つの psyq::geometry::mosp::nut インスタンスの、
+///      それぞれが所属している分割空間が衝突していると、それら2つの
+///      psyq::geometry::mosp::nut* を引数に、衝突関数が呼び出される。
+/// @ingroup psyq_geometry_mosp
 namespace mosp
 {
     /// @cond
@@ -61,50 +57,40 @@ namespace mosp
 } // namespace psyq
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 衝突判定ナット。
-           モートン空間分割木に取りつける、衝突判定形状の基底型。
-    @copydetails psyq::geometry::mosp
-
-    @tparam template_space @copydoc nut::space
-    @ingroup psyq_geometry_mosp
- */
+/// @brief 衝突判定ナット。モートン空間分割木に取りつける、衝突判定形状の基底型。
+/// @copydetails psyq::geometry::mosp
+/// @tparam template_space @copydoc nut::space
+/// @ingroup psyq_geometry_mosp
 template<typename template_space>
 class psyq::geometry::mosp::nut
 {
-    /// @brief thisが指す値の型。
+    /// @copydoc psyq::string::view::this_type
     private: typedef nut this_type;
 
     //-------------------------------------------------------------------------
-    /** @brief this_type で使うモートン空間の型。
-
-        psyq::geometry::mosp::space_2d か psyq::geometry::mosp::space_3d
-        と互換性のあるインターフェイスを持っている必要がある。
-     */
+    public: template<typename template_allocator> class tree;
+    /// @brief this_type で使うモートン空間の型。
+    /// @details
+    ///   psyq::geometry::mosp::space_2d か psyq::geometry::mosp::space_3d
+    ///   と互換性のあるインターフェイスを持っている必要がある。
     public: typedef template_space space;
-
     /// @brief モートン空間分割木に取りつけるノードの型。
     public: typedef
         psyq::geometry::mosp::node<
             this_type*, typename this_type::space::order>
         node;
-
     /// @brief 衝突判定ナットが所属する衝突判定のグループを表す型。
     public: typedef void const* group;
-
     /// @brief 衝突判定ナットが所属する衝突判定の位相を表す型。
     public: typedef std::bitset<32> topology;
-
-    /// @brief this_type の所有権ありスマートポインタ。
+    /// @brief this_type を強参照するスマートポインタ。
     public: typedef std::shared_ptr<this_type> shared_ptr;
-
-    /// @brief this_type の所有権なしスマートポインタ。
+    /// @brief this_type を弱参照するスマートポインタ。
     public: typedef std::weak_ptr<this_type> weak_ptr;
-
-    public: template<typename template_allocator> class tree;
 
     //-------------------------------------------------------------------------
     /// @name 衝突判定形状
-    //@{
+    /// @{
     public: template<typename template_shape> class concrete;
     /// @brief モートン空間分割木に取付可能な、半直線の衝突判定ナット。
     public: typedef
@@ -124,18 +110,16 @@ class psyq::geometry::mosp::nut
     public: typedef
         concrete<psyq::geometry::box<typename this_type::space::coordinate>>
         box;
-    //@}
+    /// @}
     //-------------------------------------------------------------------------
-    /** @brief 衝突判定ナットを構築する。
-        @param[in] in_group           所属する衝突判定グループ。
-        @param[in] in_topology        所属する衝突判定位相。
-        @param[in] in_target_topology 衝突する衝突判定位相。
-     */
+    /// @brief 衝突判定ナットを構築する。
     protected: explicit nut(
+        /// [in] 所属する衝突判定グループ。
         typename this_type::group const in_group,
+        /// [in] 所属する衝突判定位相。
         typename this_type::topology const& in_topology,
-        typename this_type::topology const& in_target_topology)
-    :
+        /// [in] 衝突する衝突判定位相。
+        typename this_type::topology const& in_target_topology):
     aabb_(
         typename this_type::space::coordinate::aabb(
             this_type::space::coordinate::make_filled(0),
@@ -146,23 +130,22 @@ class psyq::geometry::mosp::nut
     target_topology_(in_target_topology)
     {}
 
-    private: nut(this_type const&);
-    private: this_type& operator=(this_type const&);
-
     //-------------------------------------------------------------------------
-    /** @brief モートン空間分割木に取りつける。
+    /// @name 空間分割木との連結
+    /// @{
 
-        現在取りつけられているモートン空間分割木から*thisを取り外し、
-        新しいモートン空間分割木に*thisを取りつける。
-
-        @tparam template_tree
-            *thisを取りつけるモートン空間分割木の型。
-            psyq::geometry::mosp::tree 互換のインターフェイスを持っている必要がある。
-        @param[in,out] io_tree *thisを取りつけるモートン空間分割木。
-        @sa this_type::detach_tree
-     */
+    /// @brief モートン空間分割木に取りつける。
+    /// @details
+    ///   現在取りつけられているモートン空間分割木から*thisを取り外し、
+    ///   新しいモートン空間分割木に*thisを取りつける。
+    /// @tparam template_tree
+    ///   *thisを取りつけるモートン空間分割木の型。
+    ///   psyq::geometry::mosp::tree 互換のインターフェイスを持っている必要がある。
+    /// @sa this_type::detach_tree
     public: template<typename template_tree>
-    void attach_tree(template_tree& io_tree)
+    void attach_tree(
+        /// [in,out] *thisを取りつけるモートン空間分割木。
+        template_tree& io_tree)
     {
         // AABBを更新してから取りつける。
         if (!this->get_node().is_attached())
@@ -178,80 +161,75 @@ class psyq::geometry::mosp::nut
         this->node_.detach_tree();
     }
 
-    /** @brief *thisの this_type::node を取得する。
-        @return @copydoc this_type::node_
-     */
+    /// @brief *thisの this_type::node を取得する。
+    /// @return @copydoc this_type::node_
     public: typename this_type::node const& get_node() const PSYQ_NOEXCEPT
     {
         return this->node_;
     }
 
-    /** @brief *thisのAABBを取得する。
-        @return @copydoc this_type::aabb_
-     */
+    /// @brief *thisのAABBを取得する。
+    /// @return @copydoc this_type::aabb_
     public: typename this_type::space::coordinate::aabb const& get_aabb()
     const PSYQ_NOEXCEPT
     {
         return this->aabb_;
     }
-
-    /** @brief *thisが持つAABBを更新する。
-     */
-    protected: virtual void update_aabb() = 0;
-
+    /// @}
     //-------------------------------------------------------------------------
     /// @name 衝突判定の位相
-    //@{
-    /** @brief 所属する衝突判定グループを取得する。
-        @return 所属する衝突判定グループの識別値。
-     */
+    /// @{
+
+    /// @brief 所属する衝突判定グループを取得する。
+    /// @return 所属する衝突判定グループの識別値。
     public: typename this_type::group get_group() const PSYQ_NOEXCEPT
     {
         return this->group_;
     }
 
-    /** @brief 所属する衝突判定の位相を取得する。
-        @return 所属する衝突判定の位相。
-     */
+    /// @brief 所属する衝突判定の位相を取得する。
+    /// @return 所属する衝突判定の位相。
     public: typename this_type::topology const& get_topology()
     const PSYQ_NOEXCEPT
     {
         return this->topology_;
     }
 
-    /** @brief 衝突する衝突判定の位相を取得する。
-        @return 衝突する衝突判定の位相。
-     */
+    /// @brief 衝突する衝突判定の位相を取得する。
+    /// @return 衝突する衝突判定の位相。
     public: typename this_type::topology const& get_target_topology()
     const PSYQ_NOEXCEPT
     {
         return this->target_topology_;
     }
-    //@}
+    /// @}
+    //-------------------------------------------------------------------------
+    /// @brief *thisが持つAABBを更新する。
+    protected: virtual void update_aabb() = 0;
+
+    //-------------------------------------------------------------------------
+    private: nut(this_type const&);
+    private: this_type& operator=(this_type const&);
+
     //-------------------------------------------------------------------------
     /// @brief 衝突判定形状の絶対座標系AABB。
     protected: typename this_type::space::coordinate::aabb aabb_;
-
     /// @brief 衝突判定形状に対応する分割空間ノード。
     private: typename this_type::node node_;
-
     /// @brief 衝突判定グループの識別値。同じグループとは衝突しない。
     private: typename this_type::group group_;
-
     /// @brief 所属する衝突判定の位相。
     private: typename this_type::topology topology_;
-
     /// @brief 衝突する衝突判定の位相。
     private: typename this_type::topology target_topology_;
 
 }; // class psyq::geometry::mosp::nut
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief 衝突判定ナットを取りつける空間分割木。
-
-    @tparam template_space     @copydoc nut::space
-    @tparam template_allocator @copydoc tree::allocator_type
- */
+/// @brief 衝突判定ナットを取りつける空間分割木。
+/// @tparam template_space     @copydoc nut::space
+/// @tparam template_allocator @copydoc tree::allocator_type
+/// @note 実装途中
 template<typename template_space>
 template<typename template_allocator>
 class psyq::geometry::mosp::nut<template_space>::tree:
@@ -260,10 +238,9 @@ public psyq::geometry::mosp::tree<
     template_space,
     template_allocator>
 {
-    /// @brief thisが指す値の型。
+    /// @copydoc psyq::string::view::this_type
     private: typedef tree this_type;
-
-    /// @brief this_type の基底型。
+    /// @copydoc psyq::string::view::base_type
     public: typedef
         psyq::geometry::mosp::tree<
             psyq::geometry::mosp::nut<template_space>*,
@@ -271,21 +248,21 @@ public psyq::geometry::mosp::tree<
             template_allocator>
         base_type;
 
+    //-------------------------------------------------------------------------
     /// @brief 扱う衝突判定ナットの基底型。
     private: typedef psyq::geometry::mosp::nut<template_space> nut;
-
     /// @brief 衝突判定ナットの所有権なしスマートポインタのコンテナ。
     private: typedef
         std::vector<typename this_type::nut::weak_ptr, template_allocator>
         nut_vector;
 
     //-------------------------------------------------------------------------
-    /** @brief 空間分割木に衝突判定ナットを取りつける。
-        @param[in] in_nut 登録する衝突判定ナットを指すスマートポインタ。
-        @retval true  成功。空間分割木に衝突判定ナットを登録した。
-        @retval false 失敗。
-     */
-    public: bool register_nut(typename this_type::nut::shared_ptr const& in_nut)
+    /// @brief 空間分割木に衝突判定ナットを取りつける。
+    /// @retval true  成功。空間分割木に衝突判定ナットを登録した。
+    /// @retval false 失敗。
+    public: bool register_nut(
+        /// [in] 登録する衝突判定ナットを指すスマートポインタ。
+        typename this_type::nut::shared_ptr const& in_nut)
     {
         auto const local_nut(in_nut.get());
         if (local_nut == nullptr ||
@@ -297,12 +274,12 @@ public psyq::geometry::mosp::tree<
         return true;
     }
 
-    /** @brief 空間分割木から衝突判定ナットを取りはずす。
-        @param[in] in_nut 取り外す衝突判定ナットを指すポインタ。
-        @retval true  成功。空間分割木から衝突判定ナットを取り外した。
-        @retval false 失敗。
-     */
-    public: bool unregister_nut(typename this_type::nut const* const in_nut)
+    /// @brief 空間分割木から衝突判定ナットを取りはずす。
+    /// @retval true  成功。空間分割木から衝突判定ナットを取り外した。
+    /// @retval false 失敗。
+    public: bool unregister_nut(
+        /// [in] 取り外す衝突判定ナットを指すポインタ。
+        typename this_type::nut const* const in_nut)
     {
         if (in_nut != nullptr)
         {
@@ -316,19 +293,6 @@ public psyq::geometry::mosp::tree<
         return false;
     }
 
-    private: std::size_t find_nut_index(typename this_type::nut const& in_nut)
-    const PSYQ_NOEXCEPT
-    {
-        for (std::size_t i(0); i < this->nuts_.size(); ++i)
-        {
-            if (this->nuts_.at(i).lock().get() == &in_nut)
-            {
-                return i;
-            }
-        }
-        return this->nuts_.size();
-    };
-
     //-------------------------------------------------------------------------
     public: bool begin_detection(
         typename this_type::nut::topology const& in_target_topology)
@@ -341,7 +305,7 @@ public psyq::geometry::mosp::tree<
             {
                 // 衝突判定ナットが衝突位相と重なる場合にのみ、
                 // 衝突判定ナットを空間分割木へ取りつける。
-                if ((in_target_topology & local_nut.get_topology()).any())
+                if ((in_target_topology & local_nut->get_topology()).any())
                 {
                     local_nut->attach_tree(*this);
                 }
@@ -359,13 +323,10 @@ public psyq::geometry::mosp::tree<
         return this->base_type::begin_detection();
     }
 
-    /** @brief 分割空間辞書の要素同士で衝突しているか判定する。
-
-        this_type::begin_detection と this_type::end_detection の間で呼び出すこと。
-
-        @param[in] in_offset 衝突判定を開始する分割空間辞書の要素の開始オフセット値。
-        @param[in] in_step   衝突判定をする分割空間辞書の要素の間隔。
-     */
+    /// @brief 分割空間辞書の要素同士で衝突しているか判定する。
+    /// @details this_type::begin_detection と base_type::end_detection の間で呼び出すこと。
+    /// @param[in] in_offset 衝突判定を開始する分割空間辞書の要素の開始オフセット値。
+    /// @param[in] in_step   衝突判定をする分割空間辞書の要素の間隔。
     public: void detect_collision(
         std::size_t const in_offset,
         std::size_t const in_step)
@@ -381,15 +342,45 @@ public psyq::geometry::mosp::tree<
             in_step);
     }
 
-    /** @brief 衝突判定ナットのAABBが衝突しているか判定する。
-        @param[in] in_nut_0 衝突判定ナット#0。
-        @param[in] in_nut_1 衝突判定ナット#1。
-        @return
-            - in_nut_0 が in_nut_1 に衝突していたら、ビット#0が1となる。
-            - in_nut_1 が in_nut_0 に衝突していたら、ビット#1が1となる。
-     */
+    public: bool detect_collision_batch(
+        typename this_type::nut::topology const& in_target_topology)
+    {
+        // 衝突判定を開始する。
+        if (!this->begin_detection(in_target_topology))
+        {
+            return false;
+        }
+
+        // 衝突判定を行う。
+        this->detect_collision(0, 1);
+
+        // 衝突判定を終了する。
+        this->end_detection();
+        return true;
+    }
+
+    //-------------------------------------------------------------------------
+    private: std::size_t find_nut_index(typename this_type::nut const& in_nut)
+    const PSYQ_NOEXCEPT
+    {
+        for (std::size_t i(0); i < this->nuts_.size(); ++i)
+        {
+            if (this->nuts_.at(i).lock().get() == &in_nut)
+            {
+                return i;
+            }
+        }
+        return this->nuts_.size();
+    };
+
+    /// @brief 衝突判定ナットのAABBが衝突しているか判定する。
+    /// @return
+    ///   - in_nut_0 が in_nut_1 に衝突していたら、ビット#0が1となる。
+    ///   - in_nut_1 が in_nut_0 に衝突していたら、ビット#1が1となる。
     private: static void detect_aabb_collision(
+        /// [in] 衝突判定ナット#0。
         typename this_type::nut const& in_nut_0,
+        /// [in] 衝突判定ナット#1。
         typename this_type::nut const& in_nut_1)
     {
         if (in_nut_0.get_group() != in_nut_1.get_group())
@@ -400,7 +391,8 @@ public psyq::geometry::mosp::tree<
                 (in_nut_1.get_target_topology() & in_nut_0.get_topology()).any());
             if (local_collision_0 | local_collision_1)
             {
-                typedef typename this_type::space::coordinate::aabb::aabb_collision
+                typedef
+                    typename this_type::space::coordinate::aabb::aabb_collision
                     collision;
                 if (collision::detect(in_nut_0.get_aabb(), in_nut_1.get_aabb()))
                 {
@@ -423,72 +415,64 @@ public psyq::geometry::mosp::tree<
 }; // class psyq::geometry::mosp::nut::tree
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/** @brief  モートン空間分割木に取りつける、衝突判定オブジェクトの具象型。
-    @tparam template_space @copydoc psyq::geometry::mosp::nut::space
-    @tparam template_shape @copydoc psyq::geometry::mosp::nut::concrete::shape
- */
+/// @brief  モートン空間分割木に取りつける、衝突判定オブジェクトの具象型。
+/// @tparam template_space @copydoc nut::space
+/// @tparam template_shape @copydoc nut::concrete::shape
 template<typename template_space>
 template<typename template_shape>
 class psyq::geometry::mosp::nut<template_space>::concrete:
 public psyq::geometry::mosp::nut<template_space>
 {
-    /// @brief thisが指す値の型。
+    /// @copydoc psyq::string::view::this_type
     private: typedef concrete this_type;
-
-    /// @brief this_type の基底型。
+    /// @copydoc psyq::string::view::base_type
     public: typedef psyq::geometry::mosp::nut<template_space> base_type;
 
+    //-------------------------------------------------------------------------
     /// @brief 衝突判定オブジェクトの幾何形状の型。
     public: typedef template_shape shape;
 
     //-------------------------------------------------------------------------
-    /** @brief 衝突判定に使う形状を構築する。
-        @param[in] in_topology        所属する衝突判定位相。
-        @param[in] in_target_topology 衝突する衝突判定位相。
-        @param[in] in_shape           衝突判定に使う形状の初期値。
-     */
+    /// @brief 衝突判定に使う形状を構築する。
     public: concrete(
+        /// [in] 所属する衝突判定位相。
         typename base_type::topology const& in_topology,
+        /// [in] 衝突する衝突判定位相。
         typename base_type::topology const& in_target_topology,
-        typename this_type::shape const& in_shape)
-    :
+        /// [in] 衝突判定に使う形状の初期値。
+        typename this_type::shape const& in_shape):
     base_type(this, in_topology, in_target_topology),
     shape_(in_shape)
     {}
 
-    /** @brief 衝突判定に使う形状を構築する。
-        @param[in] in_group           所属する衝突判定グループ。
-        @param[in] in_topology        所属する衝突判定位相。
-        @param[in] in_target_topology 衝突する衝突判定位相。
-        @param[in] in_shape           衝突判定に使う形状の初期値。
-     */
+    /// @brief 衝突判定に使う形状を構築する。
     public: concrete(
+        /// [in] 所属する衝突判定グループ。
         typename base_type::group const in_group,
+        /// [in] 所属する衝突判定位相。
         typename base_type::topology const& in_topology,
+        /// [in] 衝突する衝突判定位相。
         typename base_type::topology const& in_target_topology,
-        typename this_type::shape const& in_shape)
-    :
+        /// [in] 衝突判定に使う形状の初期値。
+        typename this_type::shape const& in_shape):
     base_type(in_group, in_topology, in_target_topology),
     shape_(in_shape)
     {}
 
     //-------------------------------------------------------------------------
-    /** @brief 衝突判定に使う形状を取得する。
-        @return 衝突判定に使う形状。
-     */
+    /// @brief 衝突判定に使う形状を取得する。
+    /// @return 衝突判定に使う形状。
     public: typename this_type::shape const& get_shape() const PSYQ_NOEXCEPT
     {
         return this->shape_;
     }
 
-    /** @brief モートン空間分割木から取り外し、衝突判定に使う形状を取得する。
-
-        衝突判定に使う幾何形状を更新したい場合は、
-        この関数の戻り値が参照する幾何形状を書き換えた後、
-        base_type::attach_tree でモートン空間分割木に取りつける。
-
-        @return 衝突判定に使う形状。
-     */
+    /// @brief モートン空間分割木から取り外し、衝突判定に使う形状を取得する。
+    /// @details
+    ///   衝突判定に使う幾何形状を更新したい場合は、
+    ///   この関数の戻り値が参照する幾何形状を書き換えた後、
+    ///   base_type::attach_tree でモートン空間分割木に取りつける。
+    /// @return 衝突判定に使う形状。
     public: typename this_type::shape& fetch_shape()
     {
         this->detach_tree();

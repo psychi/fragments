@@ -265,8 +265,8 @@ public psyq::geometry::mosp::tree<
         typename this_type::nut::shared_ptr const& in_nut)
     {
         auto const local_nut(in_nut.get());
-        if (local_nut == nullptr ||
-            this->find_nut_index(*local_nut) < this->nuts_.size())
+        if (local_nut == nullptr
+            || this->find_nut_index(*local_nut) < this->nuts_.size())
         {
             return false;
         }
@@ -374,9 +374,6 @@ public psyq::geometry::mosp::tree<
     };
 
     /// @brief 衝突判定ナットのAABBが衝突しているか判定する。
-    /// @return
-    ///   - in_nut_0 が in_nut_1 に衝突していたら、ビット#0が1となる。
-    ///   - in_nut_1 が in_nut_0 に衝突していたら、ビット#1が1となる。
     private: static void detect_aabb_collision(
         /// [in] 衝突判定ナット#0。
         typename this_type::nut const& in_nut_0,
@@ -389,22 +386,18 @@ public psyq::geometry::mosp::tree<
                 (in_nut_0.get_target_topology() & in_nut_1.get_topology()).any());
             auto const local_collision_1(
                 (in_nut_1.get_target_topology() & in_nut_0.get_topology()).any());
-            if (local_collision_0 | local_collision_1)
+            typedef
+                typename this_type::space::coordinate::aabb::aabb_collision
+                collision;
+            if ((local_collision_0 | local_collision_1)
+                && collision::detect(in_nut_0.get_aabb(), in_nut_1.get_aabb()))
             {
-                typedef
-                    typename this_type::space::coordinate::aabb::aabb_collision
-                    collision;
-                if (collision::detect(in_nut_0.get_aabb(), in_nut_1.get_aabb()))
-                {
-                    if (local_collision_0)
-                    {
-                        /// @todo 衝突コンテナに追加する。
-                    }
-                    if (local_collision_1)
-                    {
-                        /// @todo 衝突コンテナに追加する。
-                    }
-                }
+                /// @todo 衝突コンテナに追加する。
+                std::make_pair(
+                    local_collision_0?
+                        std::make_pair(&in_nut_0, &in_nut_1):
+                        std::make_pair(&in_nut_1, &in_nut_0),
+                    local_collision_0 & local_collision_1);
             }
         }
     }

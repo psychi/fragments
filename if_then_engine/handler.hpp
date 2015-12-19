@@ -36,7 +36,7 @@ class psyq::if_then_engine::_private::handler
     private: typedef handler this_type;
 
     //-------------------------------------------------------------------------
-    /// @copydoc psyq::if_then_engine::_private::evaluator::expression_key
+    /// @copydoc evaluator::expression_key
     public: typedef template_expression_key expression_key;
     /// @copydoc expression::evaluation
     public: typedef template_evaluation evaluation;
@@ -45,12 +45,11 @@ class psyq::if_then_engine::_private::handler
     public: typedef template_priority priority;
     /// @brief 挙動条件。条件挙動関数を呼び出す条件。
     /// @details
-    /// expression_monitor::cache_handlers で条件式の評価の変化を検知した際に、
-    /// 挙動条件と条件式の評価が合致すると、 handler::function が呼び出される。
+    ///   expression_monitor::cache_handlers で条件式の評価の変化を検知した際に、
+    ///   挙動条件と条件式の評価が合致すると、 handler::function が呼び出される。
     /// @sa
-    /// handler::make_condition で、条件式の最新の評価の
-    /// this_type::unit_condition と、前回の評価の
-    /// this_type::unit_condition を組み合わせて作る。
+    ///   handler::make_condition
+    ///   で、条件式の最新の評価と前回の評価を組み合わせて作る。
     public: typedef std::uint8_t condition;
     /// @brief 単位条件。 handler::condition を構成する単位となる条件。
     /// @details handler::make_condition で条件を作る引数として使う。
@@ -78,11 +77,11 @@ class psyq::if_then_engine::_private::handler
     //-------------------------------------------------------------------------
     /// @brief 条件挙動関数。挙動条件に合致すると呼び出される関数。
     /// @details
-    /// expression_monitor::cache_handlers で条件式の評価の変化を検知した際に、
-    /// handler::condition と条件式の評価が合致すると、呼び出される関数。
-    /// - 引数#0は、評価が変化した条件式の識別値。
-    /// - 引数#1は、 evaluator::evaluate_expression の最新の戻り値。
-    /// - 引数#2は、 evaluator::evaluate_expression の前回の戻り値。
+    ///   expression_monitor::cache_handlers で条件式の評価の変化を検知した際に、
+    ///   handler::condition と条件式の評価が合致すると、呼び出される関数。
+    ///   - 引数#0は、評価が変化した条件式の識別値。
+    ///   - 引数#1は、 evaluator::evaluate_expression の最新の戻り値。
+    ///   - 引数#2は、 evaluator::evaluate_expression の前回の戻り値。
     public: typedef
         std::function<
             void (
@@ -239,65 +238,103 @@ class psyq::if_then_engine::_private::handler
     }
 
     //-------------------------------------------------------------------------
-    /// @brief 挙動条件と条件式の評価結果が合致するか判定する。
-    /// @retval true  合致した。
-    /// @retval false 合致しなかった。
-    public: static bool is_matched_condition(
-        /// [in] 挙動条件。
-        typename this_type::condition const in_condition,
-        /// [in] 条件式の最新の評価結果。
-        typename this_type::evaluation const in_current_evaluation,
-        /// [in] 条件式の前回の評価結果。
-        typename this_type::evaluation const in_last_evaluation)
-    PSYQ_NOEXCEPT
+    /// @brief 条件式の評価の遷移と挙動条件が合致するか判定する。
+    public: bool is_matched(
+        /// [in] 条件式の評価の、最新と前回を合成した値。
+        typename this_type::condition const in_transition)
+    const
     {
-        // 条件式の評価を単位条件に変換し、挙動条件と合致するか判定する。
-        auto const local_make_condition(
-            [](typename this_type::evaluation const in_evaluation)
-            ->typename this_type::evaluation
-            {
-                return in_evaluation < 0?
-                    this_type::unit_condition_NULL:
-                    (in_evaluation <= 0?
-                        this_type::unit_condition_FALSE:
-                        this_type::unit_condition_TRUE);
-            });
-        auto const local_condition(
-            local_make_condition(in_current_evaluation) | (
-                local_make_condition(in_last_evaluation)
-                << this_type::UNIT_CONDITION_BIT_WIDTH));
-        return local_condition == (local_condition & in_condition);
+        return (
+            PSYQ_ASSERT(in_transition != this_type::INVALID_CONDITION),
+            in_transition == (in_transition & this->get_condition()));
     }
 
-    /// @brief 挙動条件を作る。
+    /// @brief 単位条件を合成して挙動条件を作る。
     /// @warning
-    /// 条件式の評価結果が前回と最新で同じ場合は、
-    /// expression_monitor::cache_handlers で挙動条件の判定が行われない。
-    /// このため以下の単位条件の組み合わせは無効となることに注意。
-    /// @code
-    /// make_condition(handler::unit_condition_NULL, handler::unit_condition_NULL);
-    /// make_condition(handler::unit_condition_FALSE, handler::unit_condition_FALSE);
-    /// make_condition(handler::unit_condition_TRUE, handler::unit_condition_TRUE);
-    /// @endcode
+    ///   条件式の評価が最新と前回で同じ場合は、
+    ///   expression_monitor::cache_handlers で挙動条件の判定が行われない。
+    ///   このため、以下の単位条件の組み合わせは無効となることに注意。
+    ///   @code
+    ///   make_condition(handler::unit_condition_NULL, handler::unit_condition_NULL);
+    ///   make_condition(handler::unit_condition_FALSE, handler::unit_condition_FALSE);
+    ///   make_condition(handler::unit_condition_TRUE, handler::unit_condition_TRUE);
+    ///   @endcode
     /// @return
-    /// 関数が呼び出される挙動条件。単位条件の組み合わせが無効な場合は
-    /// this_type::INVALID_CONDITION を返す。
+    ///   関数が呼び出される挙動条件。単位条件の組み合わせが無効な場合は
+    ///   this_type::INVALID_CONDITION を返す。
     public: static typename this_type::condition make_condition(
+        /// [in] 条件式の、最新の評価の単位条件。
+        typename this_type::unit_condition const in_now_condition,
+        /// [in] 条件式の、前回の評価の単位条件。
+        typename this_type::unit_condition const in_last_condition)
+    {
+        return this_type::mix_unit_condition(
+            in_now_condition != this_type::INVALID_CONDITION
+                && in_last_condition != this_type::INVALID_CONDITION
+                && (in_now_condition != in_last_condition
+                    // 2のべき乗か判定する。
+                    || (in_now_condition & (in_now_condition - 1)) != 0),
+            in_now_condition,
+            in_last_condition);
+    }
+
+    /// @brief 条件式の評価を合成して挙動条件を作る。
+    /// @warning
+    ///   条件式の評価が最新と前回で同じ場合は、
+    ///   expression_monitor::cache_handlers で挙動条件の判定が行われない。
+    ///   このため、以下の評価の組み合わせは無効となることに注意。
+    ///   @code
+    ///   // NとMは、それぞれ任意の正の整数。
+    ///   make_condition(N, M);
+    ///   make_condition(0, 0);
+    ///   make_condition(-N, -M);
+    ///   @endcode
+    /// @return
+    ///   関数が呼び出される挙動条件。評価の組み合わせが無効な場合は
+    ///   this_type::INVALID_CONDITION を返す。
+    public: static typename this_type::condition make_condition(
+        /// [in] 条件となる、条件式の最新の評価。
+        typename this_type::evaluation const in_now_evaluation,
+        /// [in] 条件となる、条件式の前回の評価。
+        typename this_type::evaluation const in_last_evaluation)
+    {
+        auto const local_now_condition(
+            this_type::make_unit_condition(in_now_evaluation));
+        auto const local_last_condition(
+            this_type::make_unit_condition(in_last_evaluation));
+        return this_type::mix_unit_condition(
+            local_now_condition != local_last_condition,
+            local_now_condition,
+            local_last_condition);
+    }
+
+    /// @brief 条件式の評価から単位条件を作る。
+    public: static typename this_type::unit_condition make_unit_condition(
+        /// [in] 条件式の評価。
+        typename this_type::evaluation const in_evaluation)
+    {
+        return 0 < in_evaluation?
+            this_type::unit_condition_TRUE:
+            in_evaluation < 0?
+                this_type::unit_condition_NULL:
+                this_type::unit_condition_FALSE;
+    }
+
+
+    /// @brief 単位条件を合成して挙動条件を作る。
+    /// @return 挙動条件。
+    private: static typename this_type::condition mix_unit_condition(
+        /// [in] 合成可能かどうか。
+        bool const in_mix,
         /// [in] 条件となる、最新の条件式の評価。
         typename this_type::unit_condition const in_now_condition,
         /// [in] 条件となる、前回の条件式の評価。
         typename this_type::unit_condition const in_last_condition)
     {
-        if (in_now_condition == this_type::INVALID_CONDITION
-            || in_last_condition == this_type::INVALID_CONDITION
-            || (in_now_condition == in_last_condition
-                // 2のべき乗か判定する。
-                && (in_now_condition & (in_now_condition - 1)) == 0))
-        {
-            return this_type::INVALID_CONDITION;
-        }
-        return in_now_condition
-            | (in_last_condition << this_type::UNIT_CONDITION_BIT_WIDTH);
+        return in_mix?
+            in_now_condition | (
+                in_last_condition << this_type::UNIT_CONDITION_BIT_WIDTH):
+            this_type::INVALID_CONDITION;
     }
 
     //---------------------------------------------------------------------

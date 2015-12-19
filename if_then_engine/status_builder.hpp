@@ -317,13 +317,10 @@ class psyq::if_then_engine::status_builder
     {
         psyq::string::numeric_parser<template_value> const local_parser(
             in_value_cell);
-        if (local_parser.is_completed())
-        {
-            return io_reservoir.register_status(
-                in_chunk_key, in_status_key, local_parser.get_value());
-        }
-        PSYQ_ASSERT(false);
-        return false;
+        return local_parser.is_completed()?
+            io_reservoir.register_status(
+                in_chunk_key, in_status_key, local_parser.get_value()):
+            (PSYQ_ASSERT(false), false);
     }
 
     /// @brief 文字列を解析して整数型の状態値を構築し、状態貯蔵器へ登録する。
@@ -347,16 +344,13 @@ class psyq::if_then_engine::status_builder
     {
         psyq::string::numeric_parser<template_value> const local_parser(
             in_value_cell);
-        if (local_parser.is_completed())
-        {
-            return io_reservoir.register_status(
+        return local_parser.is_completed()?
+            io_reservoir.register_status(
                 in_chunk_key,
                 in_status_key,
                 local_parser.get_value(),
-                in_bit_width);
-        }
-        PSYQ_ASSERT(false);
-        return false;
+                in_bit_width):
+            (PSYQ_ASSERT(false), false);
     }
 
     /// @brief 整数型のビット数を取得する。
@@ -371,22 +365,22 @@ class psyq::if_then_engine::status_builder
         std::size_t const in_default_size)
     {
         PSYQ_ASSERT(!in_kind.empty());
-        if (in_kind.size() <= in_cell.size()
-            && in_kind == in_cell.substr(0, in_kind.size()))
+        if (in_cell.size() < in_kind.size()
+            || in_kind != in_cell.substr(0, in_kind.size()))
+        {}
+        else if (in_kind.size() == in_cell.size())
         {
-            if (in_kind.size() == in_cell.size())
+            return in_default_size;
+        }
+        else if (
+            in_kind.size() + 2 <= in_cell.size()
+            && in_cell.at(in_kind.size()) == '_')
+        {
+            psyq::string::numeric_parser<std::size_t> const
+                local_parser(in_cell.substr(in_kind.size() + 1));
+            if (local_parser.is_completed())
             {
-                return in_default_size;
-            }
-            if (in_kind.size() + 2 <= in_cell.size()
-                && in_cell.at(in_kind.size()) == '_')
-            {
-                psyq::string::numeric_parser<std::size_t> const
-                    local_parser(in_cell.substr(in_kind.size() + 1));
-                if (local_parser.is_completed())
-                {
-                    return local_parser.get_value();
-                }
+                return local_parser.get_value();
             }
         }
         return 0;

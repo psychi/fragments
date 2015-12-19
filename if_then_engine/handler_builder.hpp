@@ -6,8 +6,8 @@
 
 /// @brief 文字列表で、条件式の識別値が記述されている属性の名前。
 /// @details
-/// psyq::if_then_engine::handler_builder で解析する文字列表で、
-/// psyq::if_then_engine::evaluation::expression_key として解析する属性の名前。
+///   psyq::if_then_engine::handler_builder で解析する文字列表で、
+///   psyq::if_then_engine::evaluation::expression_key として解析する属性の名前。
 #ifndef PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_KEY
 #define PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_KEY "KEY"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_KEY)
@@ -19,27 +19,27 @@
 
 /// @brief 文字列表で、NULL条件が記述されている属性の名前。
 /// @details
-/// psyq::if_then_engine::handler_builder で解析する文字列表で、
-/// psyq::if_then_engine::driver::dispatcher::handler::unit_condition_NULL
-/// として解析する文字列。
+///   psyq::if_then_engine::handler_builder で解析する文字列表で、
+///   psyq::if_then_engine::driver::dispatcher::handler::unit_condition_NULL
+///   として解析する文字列。
 #ifndef PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_NULL
 #define PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_NULL "NULL"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT)
 
 /// @brief 文字列表で、ANY条件が記述されている属性の名前。
 /// @details
-/// psyq::if_then_engine::handler_builder で解析する文字列表で、
-/// psyq::if_then_engine::driver::dispatcher::handler::unit_condition_ANY
-/// として解析する文字列。
+///   psyq::if_then_engine::handler_builder で解析する文字列表で、
+///   psyq::if_then_engine::driver::dispatcher::handler::unit_condition_ANY
+///   として解析する文字列。
 #ifndef PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_ANY
 #define PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_ANY "ANY"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT)
 
 /// @brief 文字列表で、条件挙動関数の優先順位が記述されている属性の名前。
 /// @details
-/// psyq::if_then_engine::handler_builder で解析する文字列表で、
-/// psyq::if_then_engine::driver::dispatcher::handler::priority
-/// として解析する属性の名前。
+///   psyq::if_then_engine::handler_builder で解析する文字列表で、
+///   psyq::if_then_engine::driver::dispatcher::handler::priority
+///   として解析する属性の名前。
 #ifndef PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_PRIORITY
 #define PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_PRIORITY "PRIORITY"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_PRIORITY)
@@ -61,9 +61,9 @@
 
 /// @brief 文字列表で、遅延種別をYIELDとして解析する文字列。
 /// @details
-/// psyq::if_then_engine::handler_builder で解析する文字列表で、
-/// psyq::if_then_engine::driver::accumulator::delay_YIELD
-/// として解析する文字列。
+///   psyq::if_then_engine::handler_builder で解析する文字列表で、
+///   psyq::if_then_engine::driver::accumulator::delay_YIELD
+///   として解析する文字列。
 #ifndef PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_YIELD
 #define PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_YIELD "YIELD"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_YIELD)
@@ -79,9 +79,9 @@
 
 /// @brief 文字列表で、遅延種別をNONBLOCKとして解析する文字列。
 /// @details
-/// psyq::if_then_engine::handler_builder で解析する文字列表で、
-/// psyq::if_then_engine::driver::accumulator::delay_NONBLOCK
-/// として解析する文字列。
+///   psyq::if_then_engine::handler_builder で解析する文字列表で、
+///   psyq::if_then_engine::driver::accumulator::delay_NONBLOCK
+///   として解析する文字列。
 #ifndef PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_NONBLOCK
 #define PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_NONBLOCK "NONBLOCK"
 #endif // !defined(PSYQ_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_NONBLOCK)
@@ -178,9 +178,9 @@ class psyq::if_then_engine::handler_builder
 
     /// @brief 文字列表から条件挙動ハンドラを構築し、条件挙動器へ登録する。
     /// @details
-    /// in_table から driver::dispatcher::handler::function
-    /// を構築し、それを弱参照する driver::dispatcher::handler を
-    /// io_dispatcher へ登録する。
+    ///   in_table から driver::dispatcher::handler::function
+    ///   を構築し、それを弱参照する driver::dispatcher::handler を
+    ///   io_dispatcher へ登録する。
     /// @return 構築した driver::dispatcher::handler::function の強参照のコンテナ。
     public: template<
         typename template_dispatcher,
@@ -256,13 +256,10 @@ class psyq::if_then_engine::handler_builder
             auto local_function(
                 this_type::build_function<handler>(
                     io_hasher, io_accumulator, in_table, i, local_attribute));
-            auto const local_condition(
-                this_type::build_condition<handler>(
-                    in_table, i, local_attribute.condition_));
-            PSYQ_ASSERT(local_condition != handler::INVALID_CONDITION);
             if (io_dispatcher.register_handler(
                     local_expression_key,
-                    local_condition,
+                    this_type::build_condition<handler>(
+                        in_table, i, local_attribute.condition_),
                     local_function,
                     local_priority))
             {
@@ -284,10 +281,10 @@ class psyq::if_then_engine::handler_builder
 
     /// @brief 文字列表の行を解析し、挙動条件を構築する。
     /// @return
-    /// 文字列表から構築した挙動条件。構築に失敗した場合は
-    /// driver::dispatcher::handler::INVALID_CONDITION を返す。
+    ///   文字列表から構築した挙動条件。構築に失敗した場合は
+    ///   driver::dispatcher::handler::INVALID_CONDITION を返す。
     /// @tparam template_handler
-    /// 構築した挙動条件を使う driver::dispatcher::handler 。
+    ///   構築した挙動条件を使う driver::dispatcher::handler 。
     public: template<typename template_handler, typename template_relation_table>
     static typename template_handler::condition build_condition(
         /// [in] 解析する psyq::string::relation_table 。
@@ -300,34 +297,25 @@ class psyq::if_then_engine::handler_builder
         if (in_attribute.second < 2)
         {
             PSYQ_ASSERT(false);
+            return template_handler::INVALID_CONDITION;
         }
-        else
-        {
-            auto const local_last_condition(
+        auto const local_condition(
+            template_handler::make_condition(
                 this_type::parse_unit_condition<template_handler>(
-                        in_table.find_cell(in_row_number, in_attribute.first)));
-            auto const local_current_condition(
+                    in_table.find_cell(in_row_number, in_attribute.first + 1)),
                 this_type::parse_unit_condition<template_handler>(
-                        in_table.find_cell(in_row_number, in_attribute.first + 1)));
-            auto const local_condition(
-                template_handler::make_condition(
-                    local_current_condition, local_last_condition));
-            if (local_condition != template_handler::INVALID_CONDITION)
-            {
-                return local_condition;
-            }
-            PSYQ_ASSERT(false);
-        }
-        return template_handler::INVALID_CONDITION;
+                    in_table.find_cell(in_row_number, in_attribute.first))));
+        PSYQ_ASSERT(local_condition != template_handler::INVALID_CONDITION);
+        return local_condition;
     }
 
     /// @brief 文字列を解析し、単位条件を取得する。
     /// @return
-    /// 文字列から取得した driver::dispatcher::handler::unit_condition 。
-    /// 取得に失敗した場合は
-    /// driver::dispatcher::handler::INVALID_CONDITION を返す。
+    ///   文字列から取得した driver::dispatcher::handler::unit_condition 。
+    ///   取得に失敗した場合は
+    ///   driver::dispatcher::handler::INVALID_CONDITION を返す。
     /// @tparam template_handler
-    /// 構築した単位条件を使う driver::dispatcher::handler 。
+    ///   構築した単位条件を使う driver::dispatcher::handler 。
     public: template<typename template_handler, typename template_string>
     static typename template_handler::unit_condition parse_unit_condition(
         /// [in] 解析する std::basic_string_view 互換の文字列。
@@ -384,10 +372,10 @@ class psyq::if_then_engine::handler_builder
 
     /// @brief 文字列表の行を解析し、状態値を代入演算する条件挙動関数を構築する。
     /// @return
-    /// 状態値を代入演算する driver::dispatcher::handler::function 。
-    /// 代入演算が記述されてない場合は、空となる。
+    ///   状態値を代入演算する driver::dispatcher::handler::function 。
+    ///   代入演算が記述されてない場合は、空となる。
     /// @tparam template_handler
-    /// 構築した条件挙動関数を使う driver::dispatcher::handler 。
+    ///   構築した条件挙動関数を使う driver::dispatcher::handler 。
     public: template<
         typename template_handler,
         typename template_hasher,
@@ -433,10 +421,10 @@ class psyq::if_then_engine::handler_builder
 
     /// @brief 状態値を代入演算する条件挙動関数を構築する。
     /// @return
-    /// 状態値を代入演算する driver::dispatcher::handler::function 。
-    /// in_assignments が空の場合は空を返す。
+    ///   状態値を代入演算する driver::dispatcher::handler::function 。
+    ///   in_assignments が空の場合は空を返す。
     /// @tparam template_handler
-    /// 構築した条件挙動関数を使う driver::dispatcher::handler 。
+    ///   構築した条件挙動関数を使う driver::dispatcher::handler 。
     public: template<
         typename template_handler,
         typename template_accumulator,
@@ -470,7 +458,7 @@ class psyq::if_then_engine::handler_builder
     /// @brief 文字列表を解析し、条件挙動関数を構築する。
     /// @return 構築した条件挙動関数。
     /// @tparam template_handler
-    /// 構築した条件挙動関数を使う driver::dispatcher::handler 。
+    ///   構築した条件挙動関数を使う driver::dispatcher::handler 。
     private: template<
         typename template_handler,
         typename template_hasher,

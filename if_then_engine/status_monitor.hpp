@@ -80,8 +80,8 @@ class psyq::if_then_engine::_private::status_monitor
     //-------------------------------------------------------------------------
     /// @brief 条件式を状態監視器へ登録する。
     /// @details
-    /// in_expression が使う要素条件を走査し、要素条件が参照する状態値ごとに、
-    /// in_expression_key を status_monitor へ登録する。
+    ///   in_expression が使う要素条件を走査し、要素条件が参照する状態値ごとに、
+    ///   in_expression_key を status_monitor へ登録する。
     public: template<
         typename template_status_monitor_map,
         typename template_expression,
@@ -131,9 +131,9 @@ class psyq::if_then_engine::_private::status_monitor
         for (auto i(io_status_monitors.begin()); i != io_status_monitors.end();)
         {
             auto& local_status_monitor(i->second);
-            if (local_status_monitor.notify_transition(
-                    io_expression_monitors,
-                    in_reservoir.find_transition(i->first)))
+            local_status_monitor.notify_transition(
+                io_expression_monitors, in_reservoir.find_transition(i->first));
+            if (local_status_monitor.expression_keys_.empty())
             {
                 i = io_status_monitors.erase(i);
             }
@@ -195,10 +195,8 @@ class psyq::if_then_engine::_private::status_monitor
     }
 
     /// @brief 状態変化を検知し、条件式監視器へ通知する。
-    /// @retval true  状態監視器が空になった。
-    /// @retval false 状態監視器が空ではない。
     private: template<typename template_expression_monitor_map>
-    bool notify_transition(
+    void notify_transition(
         /// [in,out] 状態変化を通知する expression_monitor の辞書。
         template_expression_monitor_map& io_expression_monitors,
         /// [in] reservoir::find_transition の戻り値。
@@ -212,7 +210,6 @@ class psyq::if_then_engine::_private::status_monitor
                 io_expression_monitors, this->expression_keys_, local_existence);
         }
         this->last_existence_ = local_existence;
-        return this->expression_keys_.empty();
     }
 
     //-------------------------------------------------------------------------

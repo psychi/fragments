@@ -29,7 +29,7 @@ namespace Psyque
 /// @brief 状態貯蔵器。任意のビット長の状態値を保持する。
 /// @par 使い方の概略
 /// - TReservoir::register_status で、状態値を登録する。
-/// - TReservoir::find_status で、状態値を取得する。
+/// - TReservoir::FindStatus で、状態値を取得する。
 /// - TReservoir::assign_status で、状態値に代入する。
 /// @tparam TemplateUnsigned  @copydoc TReservoir::StatusValue::UnsignedType
 /// @tparam TemplateFloat     @copydoc TReservoir::StatusValue::FloatType
@@ -187,7 +187,7 @@ class Psyque::RuleEngine::_private::TReservoir
 
 	/// @brief 状態値を登録する。
 	/// @sa
-	/// - This::find_status と
+	/// - This::FindStatus と
 	///   This::assign_status で、登録した状態値にアクセスできる。
 	/// - This::erase_chunk で、登録した状態値をチャンク毎に削除できる。
 	/// @retval true  成功。状態値を登録した。
@@ -241,7 +241,7 @@ class Psyque::RuleEngine::_private::TReservoir
 
 	/// @brief 整数型の状態値を登録する。
 	/// @sa
-	/// - This::find_status と This::assign_status
+	/// - This::FindStatus と This::assign_status
 	///   で、登録した状態値にアクセスできる。
 	/// - This::erase_chunk で、登録した状態値をチャンク毎に削除できる。
 	/// @retval true  成功。状態値を登録した。
@@ -301,113 +301,109 @@ class Psyque::RuleEngine::_private::TReservoir
 	//-------------------------------------------------------------------------
 	/// @name 状態値の取得
 	/// @{
-
+	public:
 	/// @brief 状態値のプロパティを取得する。
 	/// @return
-	/// InStatusKey に対応する状態値のプロパティのコピー。
-	/// 該当する状態値がない場合は
-	/// This::StatusProperty::IsEmpty が真となる値を返す。
-	public: typename This::StatusProperty find_property(
+	///   InStatusKey に対応する状態値のプロパティのコピー。
+	///    該当する状態値がない場合は
+	///    This::StatusProperty::IsEmpty が真となる値を返す。
+	typename This::StatusProperty FindProperty(
 		/// [in] 取得する状態値プロパティに対応する識別値。
 		typename This::StatusKey const InStatusKey)
 	const
 	{
-		auto const local_find(this->Properties.find(InStatusKey));
-		return local_find != this->Properties.end()?
-			local_find->second:
-			typename This::StatusProperty(
-				typename This::ChunkKey(), 0, 0);
+		auto const LocalProperty(this->Properties.Find(InStatusKey));
+		return LocalProperty != nullptr?
+			*LocalProperty:
+			typename This::StatusProperty(typename This::ChunkKey(), 0, 0);
 	}
 
 	/// @brief 状態値の型の種別を取得する。
 	/// @return
-	/// InStatusKey に対応する状態値の型の種別。該当する状態値がない場合は
-	/// This::StatusValue::EKind::EMPTY を返す。
-	public: typename This::StatusValue::EKind find_kind(
+	///   InStatusKey に対応する状態値の型の種別。該当する状態値がない場合は
+	///   This::StatusValue::EKind::EMPTY を返す。
+	typename This::StatusValue::EKind FindKind(
 		/// [in] 状態値に対応する識別値。
 		typename This::StatusKey const InStatusKey)
 	const
 	{
-		auto const local_find(this->Properties.find(InStatusKey));
-		return local_find != this->Properties.end()?
-			This::GetKind(local_find->second.get_format()):
+		auto const LocalProperty(this->Properties.Find(InStatusKey));
+		return LocalProperty != nullptr?
+			This::GetKind(LocalProperty->GetFormat()):
 			This::StatusValue::EKind::EMPTY;
 	}
 
 	/// @brief 状態値のビット幅を取得する。
 	/// @return
-	/// InStatusKey に対応する状態値のビット幅。
-	/// 該当する状態値がない場合は0を返す。
-	public: SIZE_T find_BitWidth(
+	///   InStatusKey に対応する状態値のビット幅。
+	///   該当する状態値がない場合は0を返す。
+	SIZE_T FindBitWidth(
 		/// [in] 状態値に対応する識別値。
 		typename This::StatusKey const InStatusKey)
 	const
 	{
-		auto const local_find(this->Properties.find(InStatusKey));
-		return local_find != this->Properties.end()?
-			This::GetBitWidth(local_find->second.get_format()): 0;
+		auto const LocalProperty(this->Properties.Find(InStatusKey));
+		return LocalProperty != nullptr?
+			This::GetBitWidth(LocalProperty->GetFormat()): 0;
 	}
 
 	/// @brief 状態変化フラグを取得する。
 	/// @retval 正 状態変化フラグは真。
 	/// @retval 0  状態変化フラグは偽。
 	/// @retval 負 InStatusKey に対応する状態値がない。
-	public: std::int8_t find_transition(
+	int8 FindTransition(
 		/// [in] 状態変化フラグを取得する状態値に対応する識別値。
 		typename This::StatusKey const InStatusKey)
 	const
 	{
-		auto const local_find(this->Properties.find(InStatusKey));
-		return local_find != this->Properties.end()?
-			local_find->second.get_transition(): -1;
+		auto const LocalProperty(this->Properties.Find(InStatusKey));
+		return LocalProperty != nullptr? LocalProperty->HasTransited(): -1;
 	}
 
 	/// @brief 状態値を取得する。
 	/// @return
-	/// 取得した状態値。 InStatusKey に対応する状態値がない場合は、
-	/// This::StatusValue::IsEmpty が真となる値を返す。
+	///   取得した状態値。 InStatusKey に対応する状態値がない場合は、
+	///   This::StatusValue::IsEmpty が真となる値を返す。
 	/// @sa
 	/// - This::register_status で、状態値を登録できる。
 	/// - This::assign_status で、状態値を書き換えできる。
-	public: typename This::StatusValue find_status(
+	typename This::StatusValue FindStatus(
 		/// [in] 取得する状態値に対応する識別値。
 		typename This::StatusKey const InStatusKey)
 	const
 	{
 		// 状態値プロパティを取得する、
-		auto const local_property_iterator(this->Properties.find(InStatusKey));
-		if (local_property_iterator == this->Properties.end())
+		auto const LocalProperty(this->Properties.Find(InStatusKey));
+		if (LocalProperty == nullptr)
 		{
 			return typename This::StatusValue();
 		}
-		auto const& local_property(local_property_iterator->second);
 
 		// 状態値ビット列チャンクから状態値のビット列を取得する。
-		auto const LocalChunk_iterator(
-			this->Chunks.find(local_property.get_chunk_key()));
-		if (LocalChunk_iterator == this->Chunks.end())
+		auto const LocalChunk(this->Chunks.Find(LocalProperty->GetChunkKey()));
+		if (LocalChunk == nullptr)
 		{
 			// 状態値プロパティがあれば、
 			// 対応する状態値ビット列チャンクもあるはず。
 			check(false);
 			return typename This::StatusValue();
 		}
-		auto const local_format(local_property.get_format());
-		auto const local_BitWidth(This::GetBitWidth(local_format));
+		auto const LocalFormat(LocalProperty->GetFormat());
+		auto const LocalBitWidth(This::GetBitWidth(LocalFormat));
 		auto const LocalBitField(
-			LocalChunk_iterator->second.GetBitField(
-				local_property.get_bit_position(), local_BitWidth));
+			LocalChunk->GetBitField(
+				LocalProperty->GetBitPosition(), LocalBitWidth));
 
 		// 状態値のビット構成から、構築する状態値の型を分ける。
-		if (0 < local_format)
+		if (0 < LocalFormat)
 		{
-			return local_format == This::StatusValue::EKind::BOOL?
+			return LocalFormat == This::StatusValue::EKind::BOOL?
 				// 論理型の状態値を構築する。
 				typename This::StatusValue(LocalBitField != 0):
 				// 符号なし整数型の状態値を構築する。
 				typename This::StatusValue(LocalBitField);
 		}
-		else if (local_format == This::StatusValue::EKind::FLOAT)
+		else if (LocalFormat == This::StatusValue::EKind::FLOAT)
 		{
 			// 浮動小数点数型の状態値を構築する。
 			typedef typename This::FloatBitField FloatBitField;
@@ -415,18 +411,18 @@ class Psyque::RuleEngine::_private::TReservoir
 			return typename This::StatusValue(
 				FloatBitField(static_cast<BitField>(LocalBitField)).Float);
 		}
-		else if (local_format < 0)
+		else if (LocalFormat < 0)
 		{
 			// 符号あり整数型の状態値を構築する。
 			typedef typename This::StatusValue::SignedType SignedType;
-			auto const local_rest_BitWidth(
-				This::StatusChunk::BLOCK_BIT_WIDTH - local_BitWidth);
+			auto const LocalRestBitWidth(
+				This::StatusChunk::BLOCK_BIT_WIDTH - LocalBitWidth);
 			return typename This::StatusValue(
 				Psyque::ShiftRightBitwiseFast(
 					Psyque::ShiftLeftBitwiseFast(
 						static_cast<SignedType>(LocalBitField),
-						local_rest_BitWidth),
-					local_rest_BitWidth));
+						LocalRestBitWidth),
+					LocalRestBitWidth));
 		}
 		else
 		{
@@ -485,7 +481,7 @@ class Psyque::RuleEngine::_private::TReservoir
 		typename This::StatusValue const& in_right_value)
 	const
 	{
-		return this->find_status(in_left_key).compare(
+		return this->FindStatus(in_left_key).compare(
 			in_operator, in_right_value);
 	}
 
@@ -502,8 +498,8 @@ class Psyque::RuleEngine::_private::TReservoir
 		typename This::StatusKey const in_right_key)
 	const
 	{
-		return this->find_status(in_left_key).compare(
-			in_operator, this->find_status(in_right_key));
+		return this->FindStatus(in_left_key).compare(
+			in_operator, this->FindStatus(in_right_key));
 	}
 	/// @}
 	//-------------------------------------------------------------------------
@@ -525,7 +521,7 @@ class Psyque::RuleEngine::_private::TReservoir
 	///   InStatusKey に対応する状態値が符号なし整数型だと、失敗する。
 	/// - InValue が整数ではない浮動小数点数で、
 	///   InStatusKey に対応する状態値が整数型だと、失敗する。
-	/// @sa This::find_status で、代入した値を取得できる。
+	/// @sa This::FindStatus で、代入した値を取得できる。
 	public: template<typename TemplateValue>
 	bool assign_status(
 		/// [in] 代入先となる状態値に対応する識別値。
@@ -552,7 +548,7 @@ class Psyque::RuleEngine::_private::TReservoir
 			local_property,
 			this->Chunks,
 			This::MakeBitFieldWidth(
-				InValue, local_property.get_format(), local_mask));
+				InValue, local_property.GetFormat(), local_mask));
 	}
 
 	/// @brief 状態値を演算し、結果を代入する。
@@ -599,7 +595,7 @@ class Psyque::RuleEngine::_private::TReservoir
 		{
 			return this->assign_status(in_left_key, in_right_value);
 		}
-		auto local_left_value(this->find_status(in_left_key));
+		auto local_left_value(this->FindStatus(in_left_key));
 		return local_left_value.assign(in_operator, in_right_value)
 			&& this->assign_status(in_left_key, local_left_value);
 	}
@@ -617,7 +613,7 @@ class Psyque::RuleEngine::_private::TReservoir
 		typename This::StatusKey const in_right_key)
 	{
 		return this->assign_status(
-			in_left_key, in_operator, this->find_status(in_right_key));
+			in_left_key, in_operator, this->FindStatus(in_right_key));
 	}
 
 	/// @brief 状態変化フラグを初期化する。
@@ -670,7 +666,7 @@ class Psyque::RuleEngine::_private::TReservoir
 		// 状態値プロパティを削除する。
 		for (auto i(this->Properties.begin()); i != this->Properties.end();)
 		{
-			if (InChunkKey != i->second.get_chunk_key())
+			if (InChunkKey != i->second.GetChunkKey())
 			{
 				++i;
 			}
@@ -752,7 +748,7 @@ class Psyque::RuleEngine::_private::TReservoir
 	/// 登録に失敗した場合は nullptr を返す。
 	/// - InStatusKey に対応する状態値がすでに登録されていると失敗する。
 	/// @sa
-	/// - This::find_status と This::assign_status
+	/// - This::FindStatus と This::assign_status
 	///   で、登録した状態値にアクセスできる。
 	/// - This::erase_chunk で、登録した状態値をチャンク毎に削除できる。
 	private: typename This::StatusProperty const* register_bit_field(
@@ -781,7 +777,7 @@ class Psyque::RuleEngine::_private::TReservoir
 		// 状態値に初期値を設定する。
 		if (local_property != nullptr
 			&& 0 <= LocalChunk.second.set_bit_field(
-				local_property->second.get_bit_position(),
+				local_property->second.GetBitPosition(),
 				This::GetBitWidth(InFormat),
 				in_bit_field))
 		{
@@ -809,9 +805,9 @@ class Psyque::RuleEngine::_private::TReservoir
 		if (InFormat != This::StatusValue::EKind::EMPTY)
 		{
 			// 状態値のビット領域を生成する。
-			auto const local_BitWidth(This::GetBitWidth(InFormat));
+			auto const LocalBitWidth(This::GetBitWidth(InFormat));
 			auto const local_bit_position(
-				io_chunk.second.allocate_bit_field(local_BitWidth));
+				io_chunk.second.allocate_bit_field(LocalBitWidth));
 			if (local_bit_position != This::StatusChunk::INVALID_BIT_POSITION)
 			{
 				// 状態値プロパティを生成する。
@@ -858,12 +854,12 @@ class Psyque::RuleEngine::_private::TReservoir
 		{
 			// 状態値にビット列を設定する。
 			auto const LocalChunk_iterator(
-				OutChunks.find(io_property.get_chunk_key()));
+				OutChunks.find(io_property.GetChunkKey()));
 			if (LocalChunk_iterator != OutChunks.end())
 			{
 				auto const local_set_bit_field(
 					LocalChunk_iterator->second.set_bit_field(
-						io_property.get_bit_position(),
+						io_property.GetBitPosition(),
 						in_BitFieldWidth.second,
 						in_BitFieldWidth.first));
 				if (0 <= local_set_bit_field)
@@ -892,7 +888,7 @@ class Psyque::RuleEngine::_private::TReservoir
 		/// [in,out] コピー先となる状態値ビット列チャンク辞書。
 		typename This::ChunkMap& OutChunks,
 		/// [in] コピー元となる状態値プロパティ辞書。
-		typename This::PropertyMap const& in_properties,
+		typename This::PropertyMap const& InProperties,
 		/// [in] コピー元となる状態値ビット列チャンク辞書。
 		typename This::ChunkMap const& InChunks)
 	{
@@ -904,12 +900,12 @@ class Psyque::RuleEngine::_private::TReservoir
 					typename This::PropertyMap::value_type const*>,
 				typename This::Allocator>
 			property_container;
-		property_container LocalProperties(in_properties.get_allocator());
-		LocalProperties.reserve(in_properties.size());
-		for (auto& local_property: in_properties)
+		property_container LocalProperties(InProperties.get_allocator());
+		LocalProperties.reserve(InProperties.size());
+		for (auto& local_property: InProperties)
 		{
 			LocalProperties.emplace_back(
-				This::GetBitWidth(local_property.second.get_format()),
+				This::GetBitWidth(local_property.second.GetFormat()),
 				&local_property);
 		}
 
@@ -940,41 +936,40 @@ class Psyque::RuleEngine::_private::TReservoir
 		/// [in,out] コピー先となる状態値ビット列チャンク辞書。
 		typename This::ChunkMap& OutChunks,
 		/// [in] コピー元となる状態値プロパティ。
-		typename This::PropertyMap::value_type const& InProperty,
+		typename This::PropertyMap::PairType const& InProperty,
 		/// [in] コピー元となる状態値ビット列チャンク辞書。
 		typename This::ChunkMap const& InChunks)
 	{
 		// コピー元となる状態値ビット列チャンクを取得する。
-		auto const local_source_chunk_iterator(
-			InChunks.find(InProperty.second.get_chunk_key()));
-		if (local_source_chunk_iterator == InChunks.end())
+		auto const LocalSourceChunk(
+			InChunks.Find(InProperty.Value.GetChunkKey()));
+		if (LocalSourceChunk == nullptr)
 		{
 			check(false);
 			return;
 		}
-		auto const& local_source_chunk(local_source_chunk_iterator->second);
 
 		// コピー先となる状態値を用意する。
 		auto const local_emplace(
 			OutChunks.emplace(
-				InProperty.second.get_chunk_key(),
-				typename This::ChunkMap::mapped_type(
-					OutChunks.get_allocator())));
+				InProperty.Value.GetChunkKey(),
+				LocalSourceChunk->BitBlocks.Num(),
+				LocalSourceChunk->EmptyFields.Num()));
 		auto& local_target_chunk(*local_emplace.first);
 		if (local_emplace.second)
 		{
 			local_target_chunk.second.BitBlocks.reserve(
-				local_source_chunk.BitBlocks.size());
+				LocalSourceChunk->BitBlocks.size());
 			local_target_chunk.second.EmptyFields.reserve(
-				local_source_chunk.EmptyFields.size());
+				LocalSourceChunk->EmptyFields.size());
 		}
-		auto const local_format(InProperty.second.get_format());
+		auto const LocalFormat(InProperty.Value.GetFormat());
 		auto const local_target_property(
 			This::allocate_bit_field(
 				OutProperties,
 				local_target_chunk,
-				InProperty.first,
-				local_format));
+				InProperty.Key,
+				LocalFormat));
 		if (local_target_property == nullptr)
 		{
 			check(false);
@@ -982,14 +977,14 @@ class Psyque::RuleEngine::_private::TReservoir
 		}
 
 		// 状態値のビット領域をコピーする。
-		auto const local_BitWidth(This::GetBitWidth(local_format));
+		auto const LocalBitWidth(This::GetBitWidth(LocalFormat));
 		local_target_chunk.second.set_bit_field(
-			local_target_property->second.get_bit_position(),
-			local_BitWidth,
-			local_source_chunk.GetBitField(
-				InProperty.second.get_bit_position(), local_BitWidth));
+			local_target_property->second.GetBitPosition(),
+			LocalBitWidth,
+			LocalSourceChunk->GetBitField(
+				InProperty.Value.GetBitPosition(), LocalBitWidth));
 		local_target_property->second.set_transition(
-			InProperty.second.get_transition());
+			InProperty.Value.HasTransited());
 	}
 
 	//-------------------------------------------------------------------------

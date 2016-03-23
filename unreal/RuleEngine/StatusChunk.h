@@ -89,12 +89,13 @@ class Psyque::RuleEngine::_private::TStatusChunk
 	//-------------------------------------------------------------------------
 	public:
 	/// @brief 空のビット領域チャンクを構築する。
-	explicit TStatusChunk(
-		/// [in] コンテナが使うメモリ割当子の初期値。
-		typename This::Allocator const& InAllocator):
-	BitBlocks(InAllocator),
-	EmptyFields(InAllocator)
-	{}
+	TStatusChunk(
+		int32 const InBlockCount,
+		int32 const InEmptyCount)
+	{
+		this->BitBlocks.Reserve(InBlockCount);
+		this->EmptyFields.Reserve(InFieldCount);
+	}
 
 	/// @brief 状態値を格納するビット領域を生成する。
 	/// @return

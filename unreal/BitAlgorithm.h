@@ -531,26 +531,26 @@ namespace Psyque
 	namespace _private
 	{
 		/// @brief 組み込み整数型から、同じ大きさのuint*型に変換する。
-		/// @tparam template_type 元となる型。
-		template<typename template_type> struct MakeUint
+		/// @tparam TemplateType 元となる型。
+		template<typename TemplateType> struct MakeUint
 		{
-			/// @brief template_type型から変換した、std::uint*_t型。
+			/// @brief TemplateType型から変換した、std::uint*_t型。
 			/// @details 変換できない場合は、void型となる。
 			typedef
 				typename std::conditional<
-					!std::is_integral<template_type>::value,
+					!std::is_integral<TemplateType>::value,
 					void,
 				typename std::conditional<
-					sizeof(template_type) == sizeof(uint8),
+					sizeof(TemplateType) == sizeof(uint8),
 					uint8,
 				typename std::conditional<
-					sizeof(template_type) == sizeof(uint16),
+					sizeof(TemplateType) == sizeof(uint16),
 					uint16,
 				typename std::conditional<
-					sizeof(template_type) == sizeof(uint32),
+					sizeof(TemplateType) == sizeof(uint32),
 					uint32,
 				typename std::conditional<
-					sizeof(template_type) == sizeof(uint64),
+					sizeof(TemplateType) == sizeof(uint64),
 					uint64,
 					void
 				>::type>::type>::type>::type>::type
@@ -1161,8 +1161,6 @@ namespace PsyqueTest
 		PsyqueTest::Count1Bits();
 		PsyqueTest::CountLeading0Bits();
 		PsyqueTest::CountTrailing0Bits();
-
-		Psyque::ShiftLeftBitwiseFast(10, 65);
 	}
 }
 

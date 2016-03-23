@@ -5,8 +5,8 @@
 #pragma once
 
 //-----------------------------------------------------------------------------
-/// @brief 自動定義される特殊メンバ関数に default / delete 宣言できないかどうか。
 #if defined(_MSC_VER) && _MSC_VER < 1900
+///	@brief 自動定義される特殊メンバ関数に default / delete 宣言できないかどうか。
 #	define PSYQUE_NO_STD_DEFAULTED_FUNCTION
 #endif // defined(_MSC_VER) && _MSC_VER < 1900
 
@@ -23,6 +23,10 @@
 #endif // defined(_MSC_VER) && _MSC_VER < 1800
 
 //-----------------------------------------------------------------------------
+/// @def PSYQUE_NOEXCEPT
+/// @brief C++予約語「noexcept」の代替語。
+/// @def PSYQUE_CONSTEXPR
+/// @brief C++予約語「constexpr」の代替語。
 #if defined(__clang__)
 #	define PSYQUE_NOEXCEPT noexcept
 #	define PSYQUE_CONSTEXPR constexpr
@@ -41,6 +45,7 @@
 #	endif
 #	if 1900 <= _MSC_VER
 #		define PSYQUE_NOEXCEPT noexcept
+#		define PSYQUE_CONSTEXPR constexpr
 #	else
 #		define PSYQUE_NOEXCEPT throw()
 #	endif
@@ -56,6 +61,7 @@
 #endif
 
 //-----------------------------------------------------------------------------
+/// @brief C++予約語「alignof」の代替語。
 #ifndef PSYQUE_ALIGNOF
 #	if defined(_MSC_VER) && _MSC_VER < 1900
 #		define PSYQUE_ALIGNOF __alignof
@@ -66,12 +72,14 @@
 
 //-----------------------------------------------------------------------------
 // Convention is to define __BYTE_ORDER == to one of these values.
+/// @cond
 #if !defined(__BIG_ENDIAN)
 #	define __BIG_ENDIAN 4321
 #endif
 #if !defined(__LITTLE_ENDIAN)
 #	define __LITTLE_ENDIAN 1234
 #endif
+/// @endcond
 
 // I386
 #if defined(_M_X64) || defined(_M_AMD64) || defined(_M_IX86) || defined(__i386__) || defined(__i386) || defined(i386)

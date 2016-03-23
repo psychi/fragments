@@ -1,77 +1,57 @@
-﻿// Copyright 2016 Hillco Psychi All Rights Reserved.
+﻿// Copyright (c) 2016, Hillco Psychi, All rights reserved.
 /// @file
+/// @brief constexpr関数でも使用できるassertion。
 /// @author Hillco Psychi (https://twitter.com/psychi)
-/// @brief constexpr関数でも使用可能なassertion判定。
 #pragma once
 
-#include "Misc/AssertionMacros.h"
 #include "./Config.h"
 
-#define PSYQUE_PP_STRINGIZE(define_text) PSYQUE_INTERNAL_PP_STRINGIZE(define_text)
-#define PSYQUE_INTERNAL_PP_STRINGIZE(define_text) #define_text
-
-#ifndef PSYQUE_ASSERTION_FAILED_STRING
-#	define PSYQUE_ASSERTION_FAILED_STRING(\
-		define_expression, define_file, define_line)\
-			"psyq assertion failed: " #define_expression\
-			", file " define_file\
-			", line " PSYQUE_PP_STRINGIZE(define_line)
-#endif // !define_file(PSYQUE_ASSERTION_FAILED_STRING)
-
-#if defined(PSYQUE_DISABLE_ASSERT) || defined(NDEBUG)
-#	define PSYQUE_ASSERT(define_expression) ((void)0)
+#if defined(PSYQUE_DISABLE_ASSERT) || !(DO_CHECK)
+#	define PSYQUE_ASSERT(DefineExpression) ((void)0)
 #else
-#	include <cstdlib>
-#	include <iostream>
-#	define PSYQUE_ASSERT(define_expression) (\
-		(void)psyq::_private::AssertionCheck(\
-			(define_expression),\
-			PSYQUE_ASSERTION_FAILED_STRING(\
-				define_expression, __FILE__, __LINE__)))
-namespace psyq
+#	include "Misc/AssertionMacros.h"
+#	define PSYQUE_ASSERT(DefineExpression) (\
+		(void)Psyque::_private::CheckAssertion(\
+			(DefineExpression), #DefineExpression, __FILE__, __LINE__))
+namespace Psyque
 {
 	namespace _private
 	{
-		/// @brief assertionしたときに呼び出される。
+		/// @brief assertionに失敗したときに呼び出される。
 		/// @return false
-		inline bool AssertionFailed(
-			/// @param[in] assertionしたとき、consoleに出力する文字列。
-			char const* const in_message)
+		inline bool FailAssertion(
+			/// [in] 判定式として出力する文字列。
+			ANSICHAR const* const InExpression,
+			/// [in] 判定式の記述されていたファイルの名前。
+			ANSICHAR const* const InFilename,
+			/// [in] 判定式の記述されていたファイルの行番号。
+			uint32 const InLine)
 		{
-			return
-				(std::cerr << in_message << std::endl), std::abort(), false;
-			if(!(expr))
-			{
-				FDebug::LogAssertFailedMessage(in_message, __FILE__, __LINE__);
-				_DebugBreakAndPromptForRemote();
-				FDebug::AssertFailed(in_message, __FILE__, __LINE__);
-				CA_ASSUME(expr);
-			}
+			FDebug::LogAssertFailedMessage(InExpression, InFilename, InLine);
+			_DebugBreakAndPromptForRemote();
+			FDebug::AssertFailed(InExpression, InFilename, InLine);
+			CA_ASSUME(InExpression);
+			return false;
 		}
 
-		/// @brief assertionしないか判定する。
-		/// @retval true  assertionしなかった。
-		/// @retval false assertionした。
-		inline PSYQUE_CONSTEXPR bool AssertionCheck(
-			/// @param[in] assertionしないかどうか。
-			bool const in_condition,
-			/// @param[in] assertionしたとき、consoleに出力する文字列。
-			char const* const in_message)
+		/// @brief assertionに成功したか判定する。
+		/// @retval true  assertionに成功した。
+		/// @retval false assertionに失敗した。
+		inline PSYQUE_CONSTEXPR bool CheckAssertion(
+			/// [in] assertionに成功したかどうか。
+			bool const InCondition,
+			/// [in] 判定式として出力する文字列。
+			ANSICHAR const* const InExpression,
+			/// [in] 判定式の記述されていたファイルの名前。
+			ANSICHAR const* const InFilename,
+			/// [in] 判定式の記述されていたファイルの行番号。
+			uint32 const InLine)
 		{
-			return in_condition? true: AssertionFailed(in_message);
+			return InCondition?
+				true: FailAssertion(InExpression, InFilename, InLine);
 		}
 	}
 }
-#endif // defined(PSYQUE_DISABLE_ASSERT) || defined(NDEBUG)
+#endif // defined(PSYQUE_DISABLE_ASSERT) || !(DO_CHECK)
 
-#ifdef PSYQUE_ENABLE_EXCEPTION
-#	define PSYQUE_ASSERT_THROW(define_expression, define_exception)\
-		if (!(define_expression))\
-			throw define_exception(\
-				PSYQUE_ASSERTION_FAILED_STRING(\
-					define_expression, __FILE__, __LINE__))
-#else
-#	define PSYQUE_ASSERT_THROW(define_expression, define_exception)\
-		PSYQUE_ASSERT(define_expression)
-#endif // define(PSYQUE_ENABLE_EXCEPTION)
 // vim: set noexpandtab:

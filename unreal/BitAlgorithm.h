@@ -5,10 +5,10 @@
 #pragma once
 
 #include <algorithm>
-#include <cstdint>
 #include <climits>
 #include <type_traits>
 #include <array>
+#include "GenericPlatform/GenericPlatform.h"
 #include "./Assert.h"
 
 #if defined(__alpha__) || defined(__ia64__) || defined(__x86_64__) || defined(_WIN64) || defined(__LP64__) || defined(__LLP64__)
@@ -48,7 +48,7 @@
 		| (static_cast<define_type>(static_cast<unsigned char>(define_3)) << (CHAR_BIT * 3)))
 
 /// @cond
-namespace psyque
+namespace Psyque
 {
 	template<typename> union TFloatBitField;
 
@@ -65,11 +65,11 @@ namespace psyque
 ///   strict-aliasing ruleに抵触しないように、共用体を使う。
 ///   http://homepage1.nifty.com/herumi/diary/0911.html#10
 template<typename TemplateFloat>
-union psyque::TFloatBitField
+union Psyque::TFloatBitField
 {
 	typedef TFloatBitField This;
 
-public:
+	public:
 	typedef TemplateFloat FloatType;
 	static_assert(
 		std::is_floating_point<TemplateFloat>::value,
@@ -98,20 +98,20 @@ public:
 	typename This::FloatType Float;
 	typename This::BitFieldType BitField;
 
-}; // union psyque::TFloatBitField
+}; // union Psyque::TFloatBitField
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 無符号64ビット整数の最下位ビットから、0が連続する数を数える。
 /// @note
 ///   以下のウェブページを参考にした。
 ///   http://d.hatena.ne.jp/siokoshou/20090704#p1
-class psyque::_private::FTrailing0Bits
+class Psyque::_private::FTrailing0Bits
 {
 	typedef FTrailing0Bits This;
 
 	enum: uint64 {HASH = 0x03F566ED27179461ul};
 
-public:
+	public:
 	FTrailing0Bits()
 	{
 		uint64 LocalHash(This::HASH);
@@ -135,38 +135,40 @@ public:
 			sizeof(TemplateValue) * CHAR_BIT;
 	}
 
-private:
+	private:
 	static unsigned ComputeIndex(int64 const InValue)
 	{
 		return static_cast<unsigned>(
 			(static_cast<uint64>(InValue & -InValue) * This::HASH) >> 58);
 	}
 
-private:
+	private:
 	std::array<uint8, 64> Counts;
 
-}; // class psyque::_private::FTrailing0Bits
+}; // class Psyque::_private::FTrailing0Bits
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-namespace psyque
+namespace Psyque
 {
 	//-------------------------------------------------------------------------
 	namespace _private
 	{
 		template<typename TemplateBits>
-		bool IsValidBitShift(SIZE_T const InBitShift) PSYQUE_NOEXCEPT
+		PSYQUE_CONSTEXPR bool IsValidBitShift(SIZE_T const InBitShift)
+		PSYQUE_NOEXCEPT
 		{
 			return InBitShift < sizeof(TemplateBits) * CHAR_BIT;
 		}
 
 		template<typename TemplateBits>
-		bool IsValidBitWidth(SIZE_T const InBitWidth) PSYQUE_NOEXCEPT
+		PSYQUE_CONSTEXPR bool IsValidBitWidth(SIZE_T const InBitWidth)
+		PSYQUE_NOEXCEPT
 		{
 			return InBitWidth <= sizeof(TemplateBits) * CHAR_BIT;
 		}
 
 		template<typename TemplateBits>
-		bool IsValidBitWidth(
+		PSYQUE_CONSTEXPR bool IsValidBitWidth(
 			SIZE_T const InBitPosition,
 			SIZE_T const InBitWidth)
 		PSYQUE_NOEXCEPT
@@ -211,7 +213,7 @@ namespace psyque
 	PSYQUE_NOEXCEPT
 	{
 		return static_cast<TemplateBits>(
-			psyque::_private::IsValidBitShift<TemplateBits>(InShift)?
+			Psyque::_private::IsValidBitShift<TemplateBits>(InShift)?
 				InBits << InShift: 0);
 	}
 
@@ -230,7 +232,7 @@ namespace psyque
 	{
 		return static_cast<TemplateBits>(
 			PSYQUE_ASSERT(
-				psyque::_private::IsValidBitShift<TemplateBits>(InShift)),
+				Psyque::_private::IsValidBitShift<TemplateBits>(InShift)),
 			InBits << InShift);
 	}
 
@@ -246,7 +248,7 @@ namespace psyque
 	{
 		return std::is_unsigned<TemplateBits>::value?
 			static_cast<TemplateBits>(
-				psyque::_private::IsValidBitShift<TemplateBits>(InShift)?
+				Psyque::_private::IsValidBitShift<TemplateBits>(InShift)?
 					InBits >> InShift: 0):
 			static_cast<TemplateBits>(
 				InBits >> (std::min<SIZE_T>)(
@@ -255,8 +257,8 @@ namespace psyque
 
 	/// @brief 整数を右ビットシフトする。
 	/// @note
-	/// bit数以上のbit-shift演算は、C言語の仕様として未定義の動作となる。
-	/// http://hexadrive.sblo.jp/article/56575654.html
+	///   bit数以上のbit-shift演算は、C言語の仕様として未定義の動作となる。
+	///   http://hexadrive.sblo.jp/article/56575654.html
 	/// @return 右ビットシフトした値。
 	template<typename TemplateBits>
 	PSYQUE_CONSTEXPR TemplateBits ShiftRightBitwiseFast(
@@ -268,7 +270,7 @@ namespace psyque
 	{
 		return static_cast<TemplateBits>(
 			PSYQUE_ASSERT(
-				psyque::_private::IsValidBitShift<TemplateBits>(InShift)),
+				Psyque::_private::IsValidBitShift<TemplateBits>(InShift)),
 			InBits >> InShift);
 	}
 
@@ -287,7 +289,7 @@ namespace psyque
 		SIZE_T const InPosition)
 	PSYQUE_NOEXCEPT
 	{
-		return (psyque::ShiftRightBitwise(InBits, InPosition) & 1) != 0;
+		return (Psyque::ShiftRightBitwise(InBits, InPosition) & 1) != 0;
 	}
 
 	/// @brief 指定された位置のビット値を取得する。
@@ -302,7 +304,7 @@ namespace psyque
 		SIZE_T const InPosition)
 	PSYQUE_NOEXCEPT
 	{
-		return (psyque::ShiftRightBitwiseFast(InBits, InPosition) & 1) != 0;
+		return (Psyque::ShiftRightBitwiseFast(InBits, InPosition) & 1) != 0;
 	}
 
 	/// @brief 指定された位置にビット値として0を設定する。
@@ -318,7 +320,7 @@ namespace psyque
 		SIZE_T const InPosition)
 	PSYQUE_NOEXCEPT
 	{
-		return ~psyque::ShiftLeftBitwise(TemplateBits(1), InPosition) & InBits;
+		return ~Psyque::ShiftLeftBitwise(TemplateBits(1), InPosition) & InBits;
 	}
 
 	/// @brief 指定された位置にビット値として0を設定する。
@@ -333,7 +335,7 @@ namespace psyque
 		SIZE_T const InPosition)
 	PSYQUE_NOEXCEPT
 	{
-		return ~psyque::ShiftLeftBitwiseFast(TemplateBits(1), InPosition)
+		return ~Psyque::ShiftLeftBitwiseFast(TemplateBits(1), InPosition)
 			& InBits;
 	}
 
@@ -350,7 +352,7 @@ namespace psyque
 		SIZE_T const InPosition)
 	PSYQUE_NOEXCEPT
 	{
-		return psyque::ShiftLeftBitwise(TemplateBits(1), InPosition) | InBits;
+		return Psyque::ShiftLeftBitwise(TemplateBits(1), InPosition) | InBits;
 	}
 
 	/// @brief 指定された位置にビット値として1を設定する。
@@ -365,7 +367,7 @@ namespace psyque
 		SIZE_T const InPosition)
 	PSYQUE_NOEXCEPT
 	{
-		return psyque::ShiftLeftBitwiseFast(TemplateBits(1), InPosition)
+		return Psyque::ShiftLeftBitwiseFast(TemplateBits(1), InPosition)
 			| InBits;
 	}
 
@@ -384,8 +386,8 @@ namespace psyque
 		bool const InValue)
 	PSYQUE_NOEXCEPT
 	{
-		return psyque::ResetBit(InBits, InPosition)
-			| psyque::ShiftLeftBitwise<TemplateBits>(InValue, InPosition);
+		return Psyque::ResetBit(InBits, InPosition)
+			| Psyque::ShiftLeftBitwise<TemplateBits>(InValue, InPosition);
 	}
 
 	/// @brief 指定された位置にビット値を設定する。
@@ -402,8 +404,8 @@ namespace psyque
 		bool const InValue)
 	PSYQUE_NOEXCEPT
 	{
-		return psyque::ResetBitFast(InBits, InPosition)
-			| psyque::ShiftLeftBitwiseFast<TemplateBits>(InValue, InPosition);
+		return Psyque::ResetBitFast(InBits, InPosition)
+			| Psyque::ShiftLeftBitwiseFast<TemplateBits>(InValue, InPosition);
 	}
 
 	/// @brief 指定された位置のビット値を反転する。
@@ -419,7 +421,7 @@ namespace psyque
 		SIZE_T const InPosition)
 	PSYQUE_NOEXCEPT
 	{
-		return psyque::ShiftLeftBitwise(TemplateBits(1), InPosition) ^ InBits;
+		return Psyque::ShiftLeftBitwise(TemplateBits(1), InPosition) ^ InBits;
 	}
 
 	/// @brief 指定された位置のビット値を反転する。
@@ -434,7 +436,7 @@ namespace psyque
 		SIZE_T const InPosition)
 	PSYQUE_NOEXCEPT
 	{
-		return psyque::ShiftLeftBitwiseFast(TemplateBits(1), InPosition)
+		return Psyque::ShiftLeftBitwiseFast(TemplateBits(1), InPosition)
 			^ InBits;
 	}
 
@@ -442,7 +444,7 @@ namespace psyque
 	template<typename TemplateBits>
 	PSYQUE_CONSTEXPR TemplateBits MakeBitMask(SIZE_T const InBitWidth)
 	{
-		return ~psyque::ShiftLeftBitwise(~TemplateBits(0), InBitWidth);
+		return ~Psyque::ShiftLeftBitwise(~TemplateBits(0), InBitWidth);
 	}
 
 	/// @brief 指定されたビット範囲を取得する。
@@ -458,10 +460,10 @@ namespace psyque
 	{
 		return (
 			PSYQUE_ASSERT(
-				psyque::_private::IsValidBitWidth<TemplateBits>(
+				Psyque::_private::IsValidBitWidth<TemplateBits>(
 					InBitPosition, InBitWidth)),
-			psyque::ShiftLeftBitwiseFast(
-				psyque::MakeBitMask<TemplateBits>(InBitWidth), InBitPosition)
+			Psyque::ShiftLeftBitwiseFast(
+				Psyque::MakeBitMask<TemplateBits>(InBitWidth), InBitPosition)
 			& InBits);
 	}
 
@@ -478,10 +480,10 @@ namespace psyque
 	{
 		return (
 			PSYQUE_ASSERT(
-				psyque::_private::IsValidBitWidth<TemplateBits>(
+				Psyque::_private::IsValidBitWidth<TemplateBits>(
 					InBitPosition, InBitWidth)),
-			psyque::MakeBitMask<TemplateBits>(InBitWidth)
-			& psyque::ShiftRightBitwiseFast(InBits, InBitPosition));
+			Psyque::MakeBitMask<TemplateBits>(InBitWidth)
+			& Psyque::ShiftRightBitwiseFast(InBits, InBitPosition));
 	}
 
 	/// @brief 指定されたビット範囲を0にする。
@@ -497,10 +499,10 @@ namespace psyque
 	{
 		return (
 			PSYQUE_ASSERT(
-				psyque::_private::IsValidBitWidth<TemplateBits>(
+				Psyque::_private::IsValidBitWidth<TemplateBits>(
 					InBitPosition, InBitWidth)),
-			InBits & ~psyque::ShiftLeftBitwiseFast(
-				psyque::MakeBitMask<TemplateBits>(InBitWidth),
+			InBits & ~Psyque::ShiftLeftBitwiseFast(
+				Psyque::MakeBitMask<TemplateBits>(InBitWidth),
 				InBitPosition));
 	}
 
@@ -520,9 +522,9 @@ namespace psyque
 	{
 		return (
 			PSYQUE_ASSERT(
-				psyque::ShiftRightBitwise(InValue, InBitWidth) == 0),
-			psyque::ResetBitField(InBits, InBitPosition, InBitWidth)
-			| psyque::ShiftLeftBitwiseFast(InValue, InBitPosition));
+				Psyque::ShiftRightBitwise(InValue, InBitWidth) == 0),
+			Psyque::ResetBitField(InBits, InBitPosition, InBitWidth)
+			| Psyque::ShiftLeftBitwiseFast(InValue, InBitPosition));
 	}
 
 	//-------------------------------------------------------------------------
@@ -696,7 +698,7 @@ namespace psyque
 #elif defined(PSYQUE_BIT_ALGORITHM_FOR_GNUC)
 			return __builtin_popcount(InBits);
 #else
-			return psyque::_private::Count1BitsByTable(InBits);
+			return Psyque::_private::Count1BitsByTable(InBits);
 #endif
 		}
 
@@ -710,10 +712,10 @@ namespace psyque
 #if PSYQUE_BIT_ALGORITHM_INTRINSIC_SIZE < 64
 			// 上位32ビットと下位32ビットに分ける。
 			auto const LocalHighCount(
-				psyque::_private::Count1BitsOfUint(
+				Psyque::_private::Count1BitsOfUint(
 					static_cast<uint32>(InBits >> 32)));
 			auto const LocalLowCount(
-				psyque::_private::Count1BitsOfUint(
+				Psyque::_private::Count1BitsOfUint(
 					static_cast<uint32>(InBits)));
 			return LocalHighCount + LocalLowCount;
 #elif defined(PSYQUE_BIT_ALGORITHM_FOR_MSC)
@@ -723,7 +725,7 @@ namespace psyque
 #elif defined(PSYQUE_BIT_ALGORITHM_FOR_GNUC) && ULLONG_MAX == 0xFFFFFFFFFFFFFFFF
 			return __builtin_popcountll(InBits);
 #else
-			return psyque::_private::Count1BitsByTable(InBits);
+			return Psyque::_private::Count1BitsByTable(InBits);
 #endif
 		}
 
@@ -742,7 +744,7 @@ namespace psyque
 			LocalBits = LocalBits | (LocalBits >> 1);
 			LocalBits = LocalBits | (LocalBits >> 2);
 			LocalBits = LocalBits | (LocalBits >> 4);
-			return psyque::_private::Count1BitsOfUint(
+			return Psyque::_private::Count1BitsOfUint(
 				static_cast<uint8>(~LocalBits));
 		}
 
@@ -756,7 +758,7 @@ namespace psyque
 			LocalBits = LocalBits | (LocalBits >> 2);
 			LocalBits = LocalBits | (LocalBits >> 4);
 			LocalBits = LocalBits | (LocalBits >> 8);
-			return psyque::_private::Count1BitsOfUint(
+			return Psyque::_private::Count1BitsOfUint(
 				static_cast<uint16>(~LocalBits));
 		}
 
@@ -771,7 +773,7 @@ namespace psyque
 			LocalBits = LocalBits | (LocalBits >> 4);
 			LocalBits = LocalBits | (LocalBits >> 8);
 			LocalBits = LocalBits | (LocalBits >>16);
-			return psyque::_private::Count1BitsOfUint(
+			return Psyque::_private::Count1BitsOfUint(
 				static_cast<uint32>(~LocalBits));
 		}
 
@@ -787,7 +789,7 @@ namespace psyque
 			LocalBits = LocalBits | (LocalBits >> 8);
 			LocalBits = LocalBits | (LocalBits >>16);
 			LocalBits = LocalBits | (LocalBits >>32);
-			return psyque::_private::Count1BitsOfUint(~LocalBits);
+			return Psyque::_private::Count1BitsOfUint(~LocalBits);
 		}
 
 		//---------------------------------------------------------------------
@@ -816,7 +818,7 @@ namespace psyque
 				"Bit size of 'InBits' must be less than FLT_MANT_DIG.");
 			return sizeof(InBits) * CHAR_BIT
 				+ (1 - FLT_MIN_EXP) - (
-					psyque::TFloatBitField<float>(InBits + 0.5f).BitField
+					Psyque::TFloatBitField<float>(InBits + 0.5f).BitField
 					>> (FLT_MANT_DIG - 1));
 		}
 
@@ -832,7 +834,7 @@ namespace psyque
 				"Bit size of 'InBits' must be less than DBL_MANT_DIG.");
 			return sizeof(InBits) * CHAR_BIT
 				+ (1 - DBL_MIN_EXP) - (
-					psyque::TFloatBitField<double>(InBits + 0.5).BitField
+					Psyque::TFloatBitField<double>(InBits + 0.5).BitField
 					>> (DBL_MANT_DIG - 1));
 		}
 
@@ -875,9 +877,9 @@ namespace psyque
 #elif defined(PSYQUE_BIT_ALGORITHM_FOR_GHS)
 			return InBits != 0? __CLZ(InBits) - SIZE_DIFF: BIT_SIZE;
 #elif defined(PSYQUE_COUNT_LEADING_0BITS_BY_FLOAT)
-			return psyque::_private::CountLeading0BitsByFloat(InBits);
+			return Psyque::_private::CountLeading0BitsByFloat(InBits);
 #else
-			return psyque::_private::CountLeading0BitsByLogical(InBits);
+			return Psyque::_private::CountLeading0BitsByLogical(InBits);
 #endif
 		}
 
@@ -894,7 +896,7 @@ namespace psyque
 				// 浮動小数点を利用し、最上位ビットから0が連続する数を数える。
 				return sizeof(InBits) * CHAR_BIT
 					+ (1 - DBL_MIN_EXP) - (
-						psyque::TFloatBitField<double>(InBits + 0.5).BitField
+						Psyque::TFloatBitField<double>(InBits + 0.5).BitField
 						>> (DBL_MANT_DIG - 1));
 			}
 			else
@@ -903,7 +905,7 @@ namespace psyque
 					// DBL_MANT_DIGは、48より大きいこと。
 					48 < DBL_MANT_DIG,
 					"DBL_MANT_DIG must be greater than 48.");
-				return psyque::_private::CountLeading0BitsByFloat(
+				return Psyque::_private::CountLeading0BitsByFloat(
 					static_cast<uint16>(InBits >> 48));
 			}
 #	elif 1
@@ -912,14 +914,14 @@ namespace psyque
 				static_cast<uint32>(InBits >> 32));
 			if (local_high_bits != 0)
 			{
-				return psyque::_private::CountLeading0BitsByLogical(
+				return Psyque::_private::CountLeading0BitsByLogical(
 					local_high_bits);
 			}
-			return 32 + psyque::_private::CountLeading0BitsByLogical(
+			return 32 + Psyque::_private::CountLeading0BitsByLogical(
 				static_cast<uint32>(InBits));
 #	else
 			// 64ビットのまま処理する。
-			return psyque::_private::CountLeading0BitsByLogical(InBits);
+			return Psyque::_private::CountLeading0BitsByLogical(InBits);
 #	endif
 #elif defined(PSYQUE_BIT_ALGORITHM_FOR_MSC) && defined(BitScanReverse64)
 			if (InBits == 0)
@@ -936,7 +938,7 @@ namespace psyque
 #elif defined(PSYQUE_BIT_ALGORITHM_FOR_GNUC) && ULLONG_MAX == 0xFFFFFFFFFFFFFFFF
 			return InBits != 0? __builtin_clzll(InBits): 64;
 #else
-			return psyque::_private::CountLeading0BitsByLogical(InBits);
+			return Psyque::_private::CountLeading0BitsByLogical(InBits);
 #endif
 		}
 
@@ -949,13 +951,13 @@ namespace psyque
 			TemplateBits const InBits)
 		{
 #if 1
-			static psyque::_private::FTrailing0Bits const StaticTrailing0Bits;
+			static Psyque::_private::FTrailing0Bits const StaticTrailing0Bits;
 			return StaticTrailing0Bits.Count(InBits);
 #else
 			/// @note
 			///   以下のウェブページを参考にした。
 			///   http://www.nminoru.jp/~nminoru/programming/bitcount.html
-			return psyque::_private::Count1BitsOfUint(
+			return Psyque::_private::Count1BitsOfUint(
 				static_cast<TemplateBits>((~InBits) & (InBits - 1)));
 #endif
 		}
@@ -987,7 +989,7 @@ namespace psyque
 			return InBits != 0?
 				__builtin_ctz(InBits): sizeof(InBits) * CHAR_BIT;
 #else
-			return psyque::_private::CountTrailing0BitsByLogical(InBits);
+			return Psyque::_private::CountTrailing0BitsByLogical(InBits);
 #endif
 		}
 
@@ -1000,13 +1002,13 @@ namespace psyque
 #if PSYQUE_BIT_ALGORITHM_INTRINSIC_SIZE < 64
 			// 上位32ビットと下位32ビットに分ける。
 			auto const LocalLowCount(
-				psyque::_private::CountTrailing0BitsOfUint(
+				Psyque::_private::CountTrailing0BitsOfUint(
 					static_cast<uint32>(InBits)));
 			if (LocalLowCount < 32)
 			{
 				return LocalLowCount;
 			}
-			return 32 + psyque::_private::CountTrailing0BitsOfUint(
+			return 32 + Psyque::_private::CountTrailing0BitsOfUint(
 				static_cast<uint32>(InBits >> 32));
 #elif defined(PSYQUE_BIT_ALGORITHM_FOR_MSC) && defined(BitScanForward64)
 			if (InBits == 0)
@@ -1021,7 +1023,7 @@ namespace psyque
 #elif defined(PSYQUE_BIT_ALGORITHM_FOR_GNUC) && ULLONG_MAX == 0xFFFFFFFFFFFFFFFF
 			return InBits != 0? __builtin_ctzll(InBits): 64;
 #else
-			return psyque::_private::CountTrailing0BitsByLogical(InBits);
+			return Psyque::_private::CountTrailing0BitsByLogical(InBits);
 #endif
 		}
 	}
@@ -1034,12 +1036,12 @@ namespace psyque
 		/// [in] ビットを数える整数の値。
 		TemplateBits const InBits)
 	{
-		typedef typename psyque::_private::MakeUint<TemplateBits>::Type Uint;
+		typedef typename Psyque::_private::MakeUint<TemplateBits>::Type Uint;
 		static_assert(
 			// TemplateBits は、64ビット以下の整数型であること。
 			std::is_unsigned<Uint>::value,
 			"'TemplateBits' must be integer type of 64bits or less.");
-		return psyque::_private::Count1BitsOfUint(static_cast<Uint>(InBits));
+		return Psyque::_private::Count1BitsOfUint(static_cast<Uint>(InBits));
 	}
 
 	//-------------------------------------------------------------------------
@@ -1050,12 +1052,12 @@ namespace psyque
 		/// [in] ビットを数える整数の値。
 		TemplateBits const InBits)
 	{
-		typedef typename psyque::_private::MakeUint<TemplateBits>::Type Uint;
+		typedef typename Psyque::_private::MakeUint<TemplateBits>::Type Uint;
 		static_assert(
 			// TemplateBits は、64ビット以下の整数型であること。
 			std::is_unsigned<Uint>::value,
 			"'TemplateBits' must be integer type of 64bits or less.");
-		return psyque::_private::CountLeading0BitsOfUint(
+		return Psyque::_private::CountLeading0BitsOfUint(
 			static_cast<Uint>(InBits));
 	}
 
@@ -1067,91 +1069,101 @@ namespace psyque
 		///[in] ビットを数える整数の値。
 		TemplateBits const InBits)
 	{
-		typedef typename psyque::_private::MakeUint<TemplateBits>::Type Uint;
+		typedef typename Psyque::_private::MakeUint<TemplateBits>::Type Uint;
 		static_assert(
 			// TemplateBits は、64ビット以下の整数型であること。
 			std::is_unsigned<Uint>::value,
 			"'TemplateBits' must be integer type of 64bits or less.");
-		return psyque::_private::CountTrailing0BitsOfUint(
+		return Psyque::_private::CountTrailing0BitsOfUint(
 			static_cast<Uint>(InBits));
 	}
 
-} // namespace psyque
+} // namespace Psyque
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief 単体テストに使う。この名前空間をuserが直接accessするのは禁止。
-namespace psyq_test
+/// @brief 単体テストに使う。この名前空間をユーザーが直接アクセスするのは禁止。
+namespace PsyqueTest
 {
 	template<typename TemplateValue> void Count1Bits()
 	{
 		TemplateValue LocalBits(0);
-		check(psyque::Count1Bits(LocalBits) == 0);
+		check(Psyque::Count1Bits(LocalBits) == 0);
 		for (unsigned i(0); i < sizeof(TemplateValue) * CHAR_BIT; ++i)
 		{
-			LocalBits = (LocalBits << 1) | 1;
-			check(i + 1 == psyque::Count1Bits(LocalBits));
+			LocalBits = Psyque::ShiftLeftBitwiseFast(LocalBits, 1) | 1;
+			check(i + 1 == Psyque::Count1Bits(LocalBits));
 		}
 	}
 
 	inline void Count1Bits()
 	{
-		psyq_test::Count1Bits<char>();
-		psyq_test::Count1Bits<short>();
-		psyq_test::Count1Bits<int>();
-		psyq_test::Count1Bits<long>();
+		PsyqueTest::Count1Bits<char>();
+		PsyqueTest::Count1Bits<short>();
+		PsyqueTest::Count1Bits<int>();
+		PsyqueTest::Count1Bits<long>();
 #if ULLONG_MAX <= 0xFFFFFFFFFFFFFFFF
-		psyq_test::Count1Bits<long long>();
+		PsyqueTest::Count1Bits<long long>();
 #endif
 	}
 
 	template<typename TemplateValue> void CountLeading0Bits()
 	{
 		check(
-			psyque::CountLeading0Bits(TemplateValue(0))
+			Psyque::CountLeading0Bits(TemplateValue(0))
 			== sizeof(TemplateValue) * CHAR_BIT);
 		for (unsigned i(0); i < sizeof(TemplateValue) * CHAR_BIT; ++i)
 		{
 			auto const LocalClz(
-				psyque::CountLeading0Bits(
-					TemplateValue(TemplateValue(1) << i)));
+				Psyque::CountLeading0Bits(
+					Psyque::ShiftLeftBitwiseFast(TemplateValue(1), i)));
 			check(LocalClz + i == sizeof(TemplateValue) * CHAR_BIT - 1);
 		}
 	}
 
 	inline void CountLeading0Bits()
 	{
-		psyq_test::CountLeading0Bits<char>();
-		psyq_test::CountLeading0Bits<short>();
-		psyq_test::CountLeading0Bits<int>();
-		psyq_test::CountLeading0Bits<long>();
+		PsyqueTest::CountLeading0Bits<char>();
+		PsyqueTest::CountLeading0Bits<short>();
+		PsyqueTest::CountLeading0Bits<int>();
+		PsyqueTest::CountLeading0Bits<long>();
 #if ULLONG_MAX <= 0xFFFFFFFFFFFFFFFF
-		psyq_test::CountLeading0Bits<long long>();
+		PsyqueTest::CountLeading0Bits<long long>();
 #endif
 	}
 
 	template<typename TemplateValue> void CountTrailing0Bits()
 	{
 		check(
-			psyque::CountTrailing0Bits(TemplateValue(0))
+			Psyque::CountTrailing0Bits(TemplateValue(0))
 			== sizeof(TemplateValue) * CHAR_BIT);
 		for (unsigned i(0); i < sizeof(TemplateValue) * CHAR_BIT; ++i)
 		{
 			auto const LocalCtz(
-				psyque::CountTrailing0Bits(
-					TemplateValue(TemplateValue(1) << i)));
+				Psyque::CountTrailing0Bits(
+					Psyque::ShiftLeftBitwiseFast(TemplateValue(1), i)));
 			check(LocalCtz == i);
 		}
 	}
 
 	inline void CountTrailing0Bits()
 	{
-		psyq_test::CountTrailing0Bits<char>();
-		psyq_test::CountTrailing0Bits<short>();
-		psyq_test::CountTrailing0Bits<int>();
-		psyq_test::CountTrailing0Bits<long>();
+		PsyqueTest::CountTrailing0Bits<char>();
+		PsyqueTest::CountTrailing0Bits<short>();
+		PsyqueTest::CountTrailing0Bits<int>();
+		PsyqueTest::CountTrailing0Bits<long>();
 #if ULLONG_MAX <= 0xFFFFFFFFFFFFFFFF
-		psyq_test::CountTrailing0Bits<long long>();
+		PsyqueTest::CountTrailing0Bits<long long>();
 #endif
 	}
+
+	inline void BitAlgorithm()
+	{
+		PsyqueTest::Count1Bits();
+		PsyqueTest::CountLeading0Bits();
+		PsyqueTest::CountTrailing0Bits();
+
+		Psyque::ShiftLeftBitwiseFast(10, 65);
+	}
 }
+
 // vim: set noexpandtab:

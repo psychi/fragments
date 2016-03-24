@@ -10,7 +10,6 @@
 #define PSYQUE_RULE_ENGINE_STATUS_VALUE_EPSILON_MAG 4
 #endif // !default(PSYQUE_RULE_ENGINE_STATUS_VALUE_EPSILON_MAG)
 
-/// @brief Unreal Engine 4 で動作する、ビデオゲーム開発のためのライブラリ。
 namespace Psyque
 {
 	/// @brief if-then規則で駆動する有限状態機械。
@@ -34,23 +33,21 @@ template<typename TemplateUnsigned, typename TemplateFloat>
 class Psyque::RuleEngine::_private::TStatusValue
 {
 	/// @brief thisが指す値の型。
-	typedef TStatusValue This;
+	using This = TStatusValue;
 
 	//-------------------------------------------------------------------------
 	public:
 	/// @brief 状態値で扱う符号なし整数の型。
 	/// @details この型の大きさを超える型は、状態値で扱えない。
-	typedef TemplateUnsigned UnsignedType;
+	using UnsignedType = TemplateUnsigned;
 	static_assert(
 		std::is_integral<TemplateUnsigned>::value
 		&& std::is_unsigned<TemplateUnsigned>::value,
 		"'TemplateUnsigned' is not unsigned integer.");
 	/// @brief 状態値で扱う符号あり整数の型。
-	typedef
-		typename std::make_signed<typename This::UnsignedType>::type
-		SignedType;
+	using SignedType = typename std::make_signed<TemplateUnsigned>::type;
 	/// @brief 状態値で扱う浮動小数点数の型。
-	typedef TemplateFloat FloatType;
+	using FloatType = TemplateFloat;
 	static_assert(
 		std::is_floating_point<TemplateFloat>::value,
 		"'TemplateFloat' is not floating-point number.");
@@ -71,10 +68,10 @@ class Psyque::RuleEngine::_private::TStatusValue
 	public:
 	/// @brief 比較式の評価。
 	/// @details
-	///   - 正なら、比較式の評価は真。
-	///   - 0 なら、比較式の評価は偽。
-	///   - 負なら、比較式の評価に失敗。
-	typedef int8 Evaluation;
+	/// - 正なら、比較式の評価は真。
+	/// - 0 なら、比較式の評価は偽。
+	/// - 負なら、比較式の評価に失敗。
+	using Evaluation = int8;
 	/// @brief 値の大小関係。
 	enum class EOrder: int8
 	{
@@ -127,7 +124,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 	/// @brief 符号なし整数型の値を構築する。
 	explicit TStatusValue(
 		/// [in] 初期値となる符号なし整数。
-		typename This::UnsignedType const InUnsigned)
+		TemplateUnsigned const InUnsigned)
 	PSYQUE_NOEXCEPT: Kind(This::EKind::UNSIGNED)
 	{
 		this->Unsigned = InUnsigned;
@@ -145,7 +142,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 	/// @brief 浮動小数点数型の値を構築する。
 	explicit TStatusValue(
 		/// [in] 初期値となる浮動小数点数。
-		typename This::FloatType const InFloat)
+		TemplateFloat const InFloat)
 	PSYQUE_NOEXCEPT: Kind(This::EKind::FLOAT)
 	{
 		this->Float = InFloat;
@@ -174,17 +171,17 @@ class Psyque::RuleEngine::_private::TStatusValue
 	}
 
 	/// @brief 論理値を取得する。
-	/// @return 論理値を指すポインタ。論理値が格納されてない場合は nullptr を返す。
+	/// @return 論理値を指すポインタ。
+	/// 論理値が格納されてない場合は nullptr を返す。
 	PSYQUE_CONSTEXPR bool const* GetBool() const PSYQUE_NOEXCEPT
 	{
 		return this->GetKind() == This::EKind::BOOL? &this->Bool: nullptr;
 	}
 
 	/// @brief 符号なし整数値を取得する。
-	/// @return
-	/// 符号なし整数値を指すポインタ。
+	/// @return 符号なし整数値を指すポインタ。
 	/// 符号なし整数値が格納されてない場合は nullptr を返す。
-	PSYQUE_CONSTEXPR typename This::UnsignedType const* GetUnsigned()
+	PSYQUE_CONSTEXPR TemplateUnsigned const* GetUnsigned()
 	const PSYQUE_NOEXCEPT
 	{
 		return this->GetKind() == This::EKind::UNSIGNED?
@@ -192,45 +189,34 @@ class Psyque::RuleEngine::_private::TStatusValue
 	}
 
 	/// @brief 符号あり整数値を取得する。
-	/// @return
-	/// 符号あり整数値を指すポインタ。
+	/// @return 符号あり整数値を指すポインタ。
 	/// 符号あり整数値が格納されてない場合は nullptr を返す。
 	PSYQUE_CONSTEXPR typename This::SignedType const* GetSigned()
 	const PSYQUE_NOEXCEPT
 	{
-		return this->GetKind() == This::EKind::SIGNED?
-			&this->Signed: nullptr;
+		return this->GetKind() == This::EKind::SIGNED? &this->Signed: nullptr;
 	}
 
 	/// @brief 浮動小数点数値を取得する。
-	/// @return
-	/// 浮動小数点数値を指すポインタ。
+	/// @return 浮動小数点数値を指すポインタ。
 	/// 浮動小数点数値が格納されてない場合は nullptr を返す。
-	PSYQUE_CONSTEXPR typename This::FloatType const* GetFloat()
+	PSYQUE_CONSTEXPR TemplateFloat const* GetFloat()
 	const PSYQUE_NOEXCEPT
 	{
-		return this->GetKind() == This::EKind::FLOAT?
-			&this->Float: nullptr;
+		return this->GetKind() == This::EKind::FLOAT? &this->Float: nullptr;
 	}
 
-	typename This::UnsignedType GetBitField() const PSYQUE_NOEXCEPT
+	/// @brief 状態値のビット列を取得する。
+	/// @return 状態値のビット列。
+	TemplateUnsigned GetBitset() const PSYQUE_NOEXCEPT
 	{
+		using FloatBitset = Psyque::FloatBitset<TemplateFloat>;
 		switch (this->GetKind())
 		{
-			case This::EKind::EMPTY:
-			return 0;
-
-			case This::EKind::BOOL:
-			return this->Bool;
-
-			case This::EKind::FLOAT:
-			typedef
-				Psyque::FloatBitField<typename This::FloatType>
-				FloatBitField;
-			return FloatBitField(this->Float).BitField;
-
-			default:
-			return this->Unsigned;
+			case This::EKind::EMPTY: return 0;
+			case This::EKind::BOOL:  return this->Bool;
+			case This::EKind::FLOAT: return FloatBitset(this->Float).Bitset;
+			default:                 return this->Unsigned;
 		}
 	}
 
@@ -317,21 +303,14 @@ class Psyque::RuleEngine::_private::TStatusValue
 		{
 			return This::EOrder::EQUAL;
 		}
-		else if (this->Bool)
-		{
-			return This::EOrder::GREATER;
-		}
-		else
-		{
-			return This::EOrder::LESS;
-		}
+		return InRight? This::EOrder::LESS: This::EOrder::GREATER;
 	}
 
 	/// @brief 符号なし整数と比較する。
 	/// @return *this を左辺値とした比較結果。
 	typename This::EOrder Compare(
 		/// [in] 右辺値となる符号なし整数。
-		typename This::UnsignedType const InRight)
+		TemplateUnsigned const InRight)
 	const PSYQUE_NOEXCEPT
 	{
 		switch (this->GetKind())
@@ -364,8 +343,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 			return InRight < 0?
 				This::EOrder::GREATER:
 				This::CompareValue(
-					this->Unsigned,
-					static_cast<typename This::UnsignedType>(InRight));
+					this->Unsigned, static_cast<TemplateUnsigned>(InRight));
 
 			case This::EKind::SIGNED:
 			return This::CompareValue(this->Signed, InRight);
@@ -381,7 +359,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 	/// @return *this を左辺値とした比較結果。
 	typename This::EOrder Compare(
 		/// [in] 右辺値となる浮動小数点数。
-		typename This::FloatType const InRight)
+		TemplateFloat const InRight)
 	const PSYQUE_NOEXCEPT
 	{
 		switch (this->GetKind())
@@ -411,8 +389,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 	{
 		if (std::is_floating_point<TemplateRight>::value)
 		{
-			auto const LocalRight(
-				static_cast<typename This::FloatType>(InRight));
+			auto const LocalRight(static_cast<TemplateFloat>(InRight));
 			if (LocalRight == InRight)
 			{
 				return this->Compare(LocalRight);
@@ -429,8 +406,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 		}
 		else if (std::is_unsigned<TemplateRight>::value)
 		{
-			auto const LocalRight(
-				static_cast<typename This::UnsignedType>(InRight));
+			auto const LocalRight(static_cast<TemplateUnsigned>(InRight));
 			if (LocalRight == InRight)
 			{
 				return this->Compare(LocalRight);
@@ -460,9 +436,9 @@ class Psyque::RuleEngine::_private::TStatusValue
 	}
 
 	/// @brief 符号なし整数を代入する。
-	/// @retval true 成功。 InValue を *this に設定した。
-	/// @retval false
-	///   失敗。InValue を符号なし整数に変換できなかった。 *this は変化しない。
+	/// @retval true  成功。 InValue を *this に設定した。
+	/// @retval false 失敗。 InValue を符号なし整数に変換できなかった。
+	/// *this は変化しない。
 	template<typename TemplateValue>
 	bool AssignUnsigned(
 		/// [in] 代入する値。
@@ -471,8 +447,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 	{
 		if (0 <= InValue)
 		{
-			auto const LocalUnsigned(
-				static_cast<typename This::UnsignedType>(InValue));
+			auto const LocalUnsigned(static_cast<TemplateUnsigned>(InValue));
 			if (static_cast<TemplateValue>(LocalUnsigned) == InValue)
 			{
 				this->Unsigned = LocalUnsigned;
@@ -484,9 +459,9 @@ class Psyque::RuleEngine::_private::TStatusValue
 	}
 
 	/// @brief 符号あり整数を代入する。
-	/// @retval true 成功。 InValue を *this に代入した。
-	/// @retval false
-	///   失敗。 InValue を符号あり整数に変換できなかった。 *this は変化しない。
+	/// @retval true  成功。 InValue を *this に代入した。
+	/// @retval false 失敗。 InValue を符号あり整数に変換できなかった。
+	/// *this は変化しない。
 	template<typename TemplateValue>
 	bool AssignSigned(
 		/// [in] 代入する値。
@@ -508,21 +483,19 @@ class Psyque::RuleEngine::_private::TStatusValue
 	}
 
 	/// @brief 浮動小数点数を代入する。
-	/// @retval true 成功。 InValue を *this に代入した。
-	/// @retval false
-	///   失敗。 InValue を浮動小数点数に変換できなかった。 *this は変化しない。
+	/// @retval true  成功。 InValue を *this に代入した。
+	/// @retval false 失敗。 InValue を浮動小数点数に変換できなかった。
+	/// *this は変化しない。
 	template<typename TemplateValue>
 	bool AssignFloat(
 		/// [in] 代入する値。
 		TemplateValue const& InValue)
 	PSYQUE_NOEXCEPT
 	{
-		auto const LocalFloat(
-			static_cast<typename This::FloatType>(InValue));
-		auto const LocalDiff(
-			static_cast<TemplateValue>(LocalFloat) - InValue);
+		auto const LocalFloat(static_cast<TemplateFloat>(InValue));
+		auto const LocalDiff(static_cast<TemplateValue>(LocalFloat) - InValue);
 		auto const LocalEpsilon(
-			std::numeric_limits<typename This::FloatType>::epsilon()
+			std::numeric_limits<TemplateFloat>::epsilon()
 			* PSYQUE_RULE_ENGINE_STATUS_VALUE_EPSILON_MAG);
 		if (-LocalEpsilon <= LocalDiff && LocalDiff <= LocalEpsilon)
 		{
@@ -814,9 +787,9 @@ class Psyque::RuleEngine::_private::TStatusValue
 	/// @return 比較結果。
 	static typename This::EOrder CompareFloat(
 		/// [in] 左辺の浮動小数点数。
-		typename This::FloatType const& InLeft,
+		TemplateFloat const& InLeft,
 		/// [in] 右辺の浮動小数点数。
-		typename This::FloatType const& InRight)
+		TemplateFloat const& InRight)
 	{
 #if 0
 		/// @note 浮動小数点数の誤差を考慮せずに比較する。
@@ -825,7 +798,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 		/// @note 浮動小数点数の誤差を考慮して比較する。
 		auto const LocalDiff(InLeft - InRight);
 		auto const LocalEpsilon(
-			std::numeric_limits<typename This::FloatType>::epsilon()
+			std::numeric_limits<TemplateFloat>::epsilon()
 			* PSYQUE_RULE_ENGINE_STATUS_VALUE_EPSILON_MAG);
 		return LocalDiff < -LocalEpsilon?
 			This::EOrder::LESS:
@@ -839,14 +812,13 @@ class Psyque::RuleEngine::_private::TStatusValue
 	template<typename TemplateValue>
 	static typename This::EOrder CompareFloatLeft(
 		/// [in] 左辺の浮動小数点数。
-		typename This::FloatType const& InLeft,
+		TemplateFloat const& InLeft,
 		/// [in] 右辺の値。
 		TemplateValue const& InRight)
 	{
 		This const LocalRight(InRight, This::EKind::FLOAT);
 		return LocalRight.GetKind() != This::EKind::FLOAT?
-			This::EOrder::NONE:
-			This::CompareFloat(InLeft, LocalRight.Float);
+			This::EOrder::NONE: This::CompareFloat(InLeft, LocalRight.Float);
 	}
 
 	/// @brief 値と浮動小数点数を比較する。
@@ -856,12 +828,11 @@ class Psyque::RuleEngine::_private::TStatusValue
 		/// [in] 左辺の値。
 		TemplateValue const& InLeft,
 		/// [in] 右辺の浮動小数点数。
-		typename This::FloatType const& InRight)
+		TemplateFloat const& InRight)
 	{
 		This const local_left(InLeft, This::EKind::FLOAT);
 		return local_left.GetKind() != This::EKind::FLOAT?
-			This::EOrder::NONE:
-			This::CompareFloat(local_left.Float, InRight);
+			This::EOrder::NONE: This::CompareFloat(local_left.Float, InRight);
 	}
 
 	/// @brief 値を比較する。
@@ -875,18 +846,17 @@ class Psyque::RuleEngine::_private::TStatusValue
 	{
 		return InLeft < InRight?
 			This::EOrder::LESS:
-			(InRight < InLeft?
-				This::EOrder::GREATER: This::EOrder::EQUAL);
+			InRight < InLeft? This::EOrder::GREATER: This::EOrder::EQUAL;
 	}
 
 private:
 	//-------------------------------------------------------------------------
 	union
 	{
-		bool Bool;                            ///< 論理値。
-		typename This::UnsignedType Unsigned; ///< 符号なし整数値。
-		typename This::SignedType Signed;     ///< 符号あり整数値。
-		typename This::FloatType Float;       ///< 浮動小数点数値。
+		bool Bool;                        ///< 論理値。
+		TemplateUnsigned Unsigned;        ///< 符号なし整数値。
+		typename This::SignedType Signed; ///< 符号あり整数値。
+		TemplateFloat Float;              ///< 浮動小数点数値。
 	};
 	typename This::EKind Kind; ///< 状態値の型の種類。
 

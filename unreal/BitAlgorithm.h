@@ -11,6 +11,7 @@
 #include "GenericPlatform/GenericPlatform.h"
 #include "./Assert.h"
 
+/// @cond
 #if defined(__alpha__) || defined(__ia64__) || defined(__x86_64__) || defined(_WIN64) || defined(__LP64__) || defined(__LLP64__)
 #	define PSYQUE_BIT_ALGORITHM_INTRINSIC_SIZE 64
 #else
@@ -38,6 +39,7 @@
 #	define PSYQUE_BIT_ALGORITHM_FOR_GHS
 #	include <ppc_ghs.h>
 #endif
+/// @endcond
 
 /// @brief バイト値をビッグエンディアン形式で合成する。
 #define PSYQUE_BIG_ENDIAN_4BYTES(define_type, define_0, define_1, define_2, define_3)\
@@ -47,67 +49,66 @@
 		| (static_cast<define_type>(static_cast<unsigned char>(define_2)) << (CHAR_BIT * 2))\
 		| (static_cast<define_type>(static_cast<unsigned char>(define_3)) << (CHAR_BIT * 3)))
 
-/// @cond
+/// @brief Unreal Engine 4 で動作する、ビデオゲーム開発のためのライブラリ。
 namespace Psyque
 {
-	template<typename> union TFloatBitField;
+	template<typename> union TFloatBitset;
 
+	/// @brief Psyque の管理者以外は、直接アクセス禁止。
 	namespace _private
 	{
 		class FTrailing0Bits;
 	} // namespace _private
 }
-/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 浮動小数点数とビット列の変換に使う共用体。
-/// @note
-///   strict-aliasing ruleに抵触しないように、共用体を使う。
-///   http://homepage1.nifty.com/herumi/diary/0911.html#10
+/// @note strict-aliasing ruleに抵触しないために、共用体を使う。
+/// http://homepage1.nifty.com/herumi/diary/0911.html#10
 template<typename TemplateFloat>
-union Psyque::TFloatBitField
+union Psyque::TFloatBitset
 {
-	typedef TFloatBitField This;
+	private:
+	using This = TFloatBitset;
 
 	public:
-	typedef TemplateFloat FloatType;
+	/// @brief 浮動小数点数の型。
+	using FloatType = TemplateFloat;
 	static_assert(
 		std::is_floating_point<TemplateFloat>::value,
 		"'TemplateFloat' is not float type.");
 
-	typedef
-		typename std::conditional<
-			std::is_same<TemplateFloat, float>::value, uint32, uint64>::type
-		BitFieldType;
+	/// @brief 符号なし整数型をビット列として扱う。
+	using BitsetType = typename std::conditional<
+		std::is_same<TemplateFloat, float>::value, uint32, uint64>::type;
 	static_assert(
-		sizeof(TemplateFloat) == sizeof(BitFieldType),
-		"sizeof(TemplateFloat) is not equal sizeof(BitFieldType).");
+		sizeof(TemplateFloat) == sizeof(BitsetType),
+		"sizeof(TemplateFloat) is not equal sizeof(BitsetType).");
 
-	explicit TFloatBitField(typename This::FloatType const InFloat)
+	explicit TFloatBitset(typename This::FloatType const InFloat)
 	PSYQUE_NOEXCEPT
 	{
 		this->Float = InFloat;
 	}
 
-	explicit TFloatBitField(typename This::BitFieldType const InBitField)
+	explicit TFloatBitset(typename This::BitsetType const InBitset)
 	PSYQUE_NOEXCEPT
 	{
-		this->BitField = InBitField;
+		this->Bitset = InBitset;
 	}
 
-	typename This::FloatType Float;
-	typename This::BitFieldType BitField;
+	typename This::FloatType Float;   ///< 浮動小数点数の値。
+	typename This::BitsetType Bitset; ///< 浮動小数点数のビット列。
 
-}; // union Psyque::TFloatBitField
+}; // union Psyque::TFloatBitset
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 無符号64ビット整数の最下位ビットから、0が連続する数を数える。
-/// @note
-///   以下のウェブページを参考にした。
-///   http://d.hatena.ne.jp/siokoshou/20090704#p1
+/// @note 以下のウェブページを参考にした。
+/// http://d.hatena.ne.jp/siokoshou/20090704#p1
 class Psyque::_private::FTrailing0Bits
 {
-	typedef FTrailing0Bits This;
+	using This = FTrailing0Bits;
 
 	enum: uint64 {HASH = 0x03F566ED27179461ul};
 
@@ -202,6 +203,9 @@ namespace Psyque
 	}
 
 	//-------------------------------------------------------------------------
+	/// @name ビットシフト演算
+	/// @{
+
 	/// @brief 整数を左ビットシフトする。
 	/// @return 左ビットシフトした値。
 	template<typename TemplateBits>
@@ -218,9 +222,9 @@ namespace Psyque
 	}
 
 	/// @brief 整数を左ビットシフトする。
-	/// @note
-	///   ビット数以上のビットシフト演算は、C言語の仕様として未定義の動作となる。
-	///   http://hexadrive.sblo.jp/article/56575654.html
+	/// @note ビット数以上のビットシフト演算は、
+	/// C言語の仕様として未定義の動作となる。
+	/// http://hexadrive.sblo.jp/article/56575654.html
 	/// @return 左ビットシフトした値。
 	template<typename TemplateBits>
 	PSYQUE_CONSTEXPR TemplateBits ShiftLeftBitwiseFast(
@@ -256,9 +260,8 @@ namespace Psyque
 	}
 
 	/// @brief 整数を右ビットシフトする。
-	/// @note
-	///   bit数以上のbit-shift演算は、C言語の仕様として未定義の動作となる。
-	///   http://hexadrive.sblo.jp/article/56575654.html
+	/// @note bit数以上のbit-shift演算は、C言語の仕様として未定義の動作となる。
+	/// http://hexadrive.sblo.jp/article/56575654.html
 	/// @return 右ビットシフトした値。
 	template<typename TemplateBits>
 	PSYQUE_CONSTEXPR TemplateBits ShiftRightBitwiseFast(
@@ -273,43 +276,13 @@ namespace Psyque
 				Psyque::_private::IsValidBitShift<TemplateBits>(InShift)),
 			InBits >> InShift);
 	}
-
+	/// @}
 	//-------------------------------------------------------------------------
-	/// @brief 指定された位置のビット値を取得する。
-	/// @return
-	/// 指定された位置のビット値。
-	/// ただし InPosition が sizeof(int) 以上だった場合…
-	/// - InBits が有符号整数型なら、符号ビットを返す。
-	/// - InBits が無符号整数型なら、falseを返す。
-	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR bool Is1Bit(
-		/// [in] ビット集合として扱う整数値。
-		TemplateBits const InBits,
-		/// [in] 取得するビットの位置。
-		SIZE_T const InPosition)
-	PSYQUE_NOEXCEPT
-	{
-		return (Psyque::ShiftRightBitwise(InBits, InPosition) & 1) != 0;
-	}
-
-	/// @brief 指定された位置のビット値を取得する。
-	/// @return
-	///   指定された位置のビット値。
-	///   ただし InPosition が sizeof(int) 以上だった場合、未定義。
-	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR bool Is1BitFast(
-		/// [in] ビット集合として扱う整数値。
-		TemplateBits const InBits,
-		/// [in] 取得するビットの位置。
-		SIZE_T const InPosition)
-	PSYQUE_NOEXCEPT
-	{
-		return (Psyque::ShiftRightBitwiseFast(InBits, InPosition) & 1) != 0;
-	}
+	/// @name 1ビット単位の操作
+	/// @{
 
 	/// @brief 指定された位置にビット値として0を設定する。
-	/// @return
-	/// 指定されたビット位置に0を設定した整数値。
+	/// @return 指定されたビット位置に0を設定した整数値。
 	/// ただし InPosition がsizeof(int)以上だった場合、
 	/// InBits をそのまま返す。
 	template<typename TemplateBits>
@@ -439,104 +412,17 @@ namespace Psyque
 		return Psyque::ShiftLeftBitwiseFast(TemplateBits(1), InPosition)
 			^ InBits;
 	}
-
-	//-------------------------------------------------------------------------
-	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits MakeBitMask(SIZE_T const InBitWidth)
-	{
-		return ~Psyque::ShiftLeftBitwise(~TemplateBits(0), InBitWidth);
-	}
-
-	/// @brief 指定されたビット範囲を取得する。
-	/// @return ビット範囲。
-	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits EmbossBitField(
-		/// [in] ビット集合として扱う整数値。
-		TemplateBits const InBits,
-		/// [in] 取得するビット範囲のビット位置。
-		SIZE_T const InBitPosition,
-		/// [in] 取得するビット範囲のビット幅。
-		SIZE_T const InBitWidth)
-	{
-		return (
-			PSYQUE_ASSERT(
-				Psyque::_private::IsValidBitWidth<TemplateBits>(
-					InBitPosition, InBitWidth)),
-			Psyque::ShiftLeftBitwiseFast(
-				Psyque::MakeBitMask<TemplateBits>(InBitWidth), InBitPosition)
-			& InBits);
-	}
-
-	/// @brief 指定されたビット範囲の値を取得する。
-	/// @return ビット範囲の値。
-	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits GetBitField(
-		/// [in] ビット集合として扱う整数値。
-		TemplateBits const InBits,
-		/// [in] 取得するビット範囲のビット位置。
-		SIZE_T const InBitPosition,
-		/// [in] 取得するビット範囲のビット幅。
-		SIZE_T const InBitWidth)
-	{
-		return (
-			PSYQUE_ASSERT(
-				Psyque::_private::IsValidBitWidth<TemplateBits>(
-					InBitPosition, InBitWidth)),
-			Psyque::MakeBitMask<TemplateBits>(InBitWidth)
-			& Psyque::ShiftRightBitwiseFast(InBits, InBitPosition));
-	}
-
-	/// @brief 指定されたビット範囲を0にする。
-	/// @return 指定されたビット範囲を0にした整数値。
-	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits ResetBitField(
-		/// [in] InBits		 ビット集合として扱う整数値。
-		TemplateBits const InBits,
-		/// [in] 設定するビット範囲のビット位置。
-		SIZE_T const InBitPosition,
-		/// [in] 設定するビット範囲のビット幅。
-		SIZE_T const InBitWidth)
-	{
-		return (
-			PSYQUE_ASSERT(
-				Psyque::_private::IsValidBitWidth<TemplateBits>(
-					InBitPosition, InBitWidth)),
-			InBits & ~Psyque::ShiftLeftBitwiseFast(
-				Psyque::MakeBitMask<TemplateBits>(InBitWidth),
-				InBitPosition));
-	}
-
-	/// @brief 指定されたビット範囲に値を埋め込む。
-	/// @return 指定されたビット位置に InValue を埋め込んだ整数値。
-	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits SetBitField(
-		/// [in] ビット集合として扱う整数値。
-		TemplateBits const InBits,
-		/// [in] 埋め込むビット範囲のビット位置。
-		SIZE_T const InBitPosition,
-		/// [in] 埋め込むビット範囲のビット幅。
-		SIZE_T const InBitWidth,
-		/// [in] 埋め込む値。
-		TemplateBits const InValue)
-	PSYQUE_NOEXCEPT
-	{
-		return (
-			PSYQUE_ASSERT(
-				Psyque::ShiftRightBitwise(InValue, InBitWidth) == 0),
-			Psyque::ResetBitField(InBits, InBitPosition, InBitWidth)
-			| Psyque::ShiftLeftBitwiseFast(InValue, InBitPosition));
-	}
-
+	/// @}
 	//-------------------------------------------------------------------------
 	namespace _private
 	{
 		/// @brief 組み込み整数型から、同じ大きさのuint*型に変換する。
 		/// @tparam TemplateType 元となる型。
-		template<typename TemplateType> struct MakeUint
+		template<typename TemplateType> struct TMakeUint
 		{
 			/// @brief TemplateType型から変換した、std::uint*_t型。
 			/// @details 変換できない場合は、void型となる。
-			typedef
+			using Type =
 				typename std::conditional<
 					!std::is_integral<TemplateType>::value,
 					void,
@@ -553,15 +439,13 @@ namespace Psyque
 					sizeof(TemplateType) == sizeof(uint64),
 					uint64,
 					void
-				>::type>::type>::type>::type>::type
-				Type;
+				>::type>::type>::type>::type>::type;
 		};
 
 		//---------------------------------------------------------------------
 		/// @brief 無符号整数で、1になっているビットを数える。
-		/// @details
-		///   以下のウェブページを参考にした。
-		///   http://www.nminoru.jp/~nminoru/programming/bitcount.html
+		/// @details 以下のウェブページを参考にした。
+		/// http://www.nminoru.jp/~nminoru/programming/bitcount.html
 		/// @return 1になっているビットの数。
 		inline SIZE_T Count1BitsByTable(
 			/// [in] ビットを数える無符号整数の値。
@@ -613,9 +497,8 @@ namespace Psyque
 
 		//---------------------------------------------------------------------
 		/// @brief 無符号整数で、1になっているビットを数える。
-		/// @details
-		///   以下のウェブページを参考にした。
-		///   http://www.nminoru.jp/~nminoru/programming/bitcount.html
+		/// @details 以下のウェブページを参考にした。
+		/// http://www.nminoru.jp/~nminoru/programming/bitcount.html
 		/// @return 1になっているビットの数。
 		inline SIZE_T Count1BitsByLogical(
 			/// [in] ビットを数える無符号整数の値。
@@ -731,9 +614,8 @@ namespace Psyque
 
 		//---------------------------------------------------------------------
 		/// @brief 無符号整数の最上位ビットから、0が連続する数を数える。
-		/// @details
-		///   以下のウェブページを参考にした。
-		///   http://www.nminoru.jp/~nminoru/programming/bitcount.html
+		/// @details 以下のウェブページを参考にした。
+		/// http://www.nminoru.jp/~nminoru/programming/bitcount.html
 		/// @return 最上位ビットから0が連続する数。
 		inline SIZE_T CountLeading0BitsByLogical(
 			/// [in] ビットを数える無符号整数の値。
@@ -793,12 +675,10 @@ namespace Psyque
 		}
 
 		//---------------------------------------------------------------------
-		/// @brief
-		///   浮動小数点のビットパターンを使って、
-		///   無符号整数の最上位ビットから0が連続する数を数える。
-		/// @details
-		///   以下のウェブページを参考にした。
-		///   http://www.nminoru.jp/~nminoru/programming/bitcount.html
+		/// @brief 浮動小数点のビットパターンを使って、
+		/// 無符号整数の最上位ビットから0が連続する数を数える。
+		/// @details 以下のウェブページを参考にした。
+		/// http://www.nminoru.jp/~nminoru/programming/bitcount.html
 		/// @return 最上位ビットから0が連続する数。
 		template<typename TemplateBits>
 		SIZE_T CountLeading0BitsByFloat(
@@ -818,7 +698,7 @@ namespace Psyque
 				"Bit size of 'InBits' must be less than FLT_MANT_DIG.");
 			return sizeof(InBits) * CHAR_BIT
 				+ (1 - FLT_MIN_EXP) - (
-					Psyque::TFloatBitField<float>(InBits + 0.5f).BitField
+					Psyque::TFloatBitset<float>(InBits + 0.5f).Bitset
 					>> (FLT_MANT_DIG - 1));
 		}
 
@@ -834,7 +714,7 @@ namespace Psyque
 				"Bit size of 'InBits' must be less than DBL_MANT_DIG.");
 			return sizeof(InBits) * CHAR_BIT
 				+ (1 - DBL_MIN_EXP) - (
-					Psyque::TFloatBitField<double>(InBits + 0.5).BitField
+					Psyque::TFloatBitset<double>(InBits + 0.5).Bitset
 					>> (DBL_MANT_DIG - 1));
 		}
 
@@ -896,7 +776,7 @@ namespace Psyque
 				// 浮動小数点を利用し、最上位ビットから0が連続する数を数える。
 				return sizeof(InBits) * CHAR_BIT
 					+ (1 - DBL_MIN_EXP) - (
-						Psyque::TFloatBitField<double>(InBits + 0.5).BitField
+						Psyque::TFloatBitset<double>(InBits + 0.5).Bitset
 						>> (DBL_MANT_DIG - 1));
 			}
 			else
@@ -954,9 +834,8 @@ namespace Psyque
 			static Psyque::_private::FTrailing0Bits const StaticTrailing0Bits;
 			return StaticTrailing0Bits.Count(InBits);
 #else
-			/// @note
-			///   以下のウェブページを参考にした。
-			///   http://www.nminoru.jp/~nminoru/programming/bitcount.html
+			/// @note 以下のウェブページを参考にした。
+			/// http://www.nminoru.jp/~nminoru/programming/bitcount.html
 			return Psyque::_private::Count1BitsOfUint(
 				static_cast<TemplateBits>((~InBits) & (InBits - 1)));
 #endif
@@ -1029,6 +908,40 @@ namespace Psyque
 	}
 
 	//-------------------------------------------------------------------------
+	/// @name 1ビット単位の参照
+	/// @{
+
+	/// @brief 指定された位置のビット値を取得する。
+	/// @return
+	/// 指定された位置のビット値。
+	/// ただし InPosition が sizeof(int) 以上だった場合…
+	/// - InBits が有符号整数型なら、符号ビットを返す。
+	/// - InBits が無符号整数型なら、falseを返す。
+	template<typename TemplateBits>
+	PSYQUE_CONSTEXPR bool Is1Bit(
+		/// [in] ビット集合として扱う整数値。
+		TemplateBits const InBits,
+		/// [in] 取得するビットの位置。
+		SIZE_T const InPosition)
+	PSYQUE_NOEXCEPT
+	{
+		return (Psyque::ShiftRightBitwise(InBits, InPosition) & 1) != 0;
+	}
+
+	/// @brief 指定された位置のビット値を取得する。
+	/// @return 指定された位置のビット値。
+	/// ただし InPosition が sizeof(int) 以上だった場合、未定義。
+	template<typename TemplateBits>
+	PSYQUE_CONSTEXPR bool Is1BitFast(
+		/// [in] ビット集合として扱う整数値。
+		TemplateBits const InBits,
+		/// [in] 取得するビットの位置。
+		SIZE_T const InPosition)
+	PSYQUE_NOEXCEPT
+	{
+		return (Psyque::ShiftRightBitwiseFast(InBits, InPosition) & 1) != 0;
+	}
+
 	/// @brief 整数で、1になっているビットを数える。
 	/// @return 1になっているビットの数。
 	template<typename TemplateBits>
@@ -1036,7 +949,7 @@ namespace Psyque
 		/// [in] ビットを数える整数の値。
 		TemplateBits const InBits)
 	{
-		typedef typename Psyque::_private::MakeUint<TemplateBits>::Type Uint;
+		using Uint = typename Psyque::_private::TMakeUint<TemplateBits>::Type;
 		static_assert(
 			// TemplateBits は、64ビット以下の整数型であること。
 			std::is_unsigned<Uint>::value,
@@ -1044,7 +957,6 @@ namespace Psyque
 		return Psyque::_private::Count1BitsOfUint(static_cast<Uint>(InBits));
 	}
 
-	//-------------------------------------------------------------------------
 	/// @brief 整数の最上位ビットから、0が連続する数を数える。
 	/// @return 最上位ビットから0が連続する数。
 	template<typename TemplateBits>
@@ -1052,7 +964,7 @@ namespace Psyque
 		/// [in] ビットを数える整数の値。
 		TemplateBits const InBits)
 	{
-		typedef typename Psyque::_private::MakeUint<TemplateBits>::Type Uint;
+		using Uint = typename Psyque::_private::TMakeUint<TemplateBits>::Type;
 		static_assert(
 			// TemplateBits は、64ビット以下の整数型であること。
 			std::is_unsigned<Uint>::value,
@@ -1061,7 +973,6 @@ namespace Psyque
 			static_cast<Uint>(InBits));
 	}
 
-	//-------------------------------------------------------------------------
 	/// @brief 整数の最下位ビットから、0が連続する数を数える。
 	/// @return 最下位ビットから0が連続する数。
 	template<typename TemplateBits>
@@ -1069,7 +980,7 @@ namespace Psyque
 		///[in] ビットを数える整数の値。
 		TemplateBits const InBits)
 	{
-		typedef typename Psyque::_private::MakeUint<TemplateBits>::Type Uint;
+		using Uint = typename Psyque::_private::TMakeUint<TemplateBits>::Type;
 		static_assert(
 			// TemplateBits は、64ビット以下の整数型であること。
 			std::is_unsigned<Uint>::value,
@@ -1077,7 +988,101 @@ namespace Psyque
 		return Psyque::_private::CountTrailing0BitsOfUint(
 			static_cast<Uint>(InBits));
 	}
+	/// @}
+	//-------------------------------------------------------------------------
+	/// @name ビット範囲の操作
+	/// @{
 
+	/// @brief ビットマスクを作る。
+	/// @return ビット幅が InBitWidth のビットマスク。
+	template<typename TemplateBits>
+	PSYQUE_CONSTEXPR TemplateBits MakeBitMask(
+		/// [in] ビットマスクのビット幅。
+		SIZE_T const InBitWidth)
+	{
+		return ~Psyque::ShiftLeftBitwise(~TemplateBits(0), InBitWidth);
+	}
+
+	/// @brief 指定されたビット範囲を取得する。
+	/// @return ビット範囲。
+	template<typename TemplateBits>
+	PSYQUE_CONSTEXPR TemplateBits EmbossBitField(
+		/// [in] ビット集合として扱う整数値。
+		TemplateBits const InBits,
+		/// [in] 取得するビット範囲のビット位置。
+		SIZE_T const InBitPosition,
+		/// [in] 取得するビット範囲のビット幅。
+		SIZE_T const InBitWidth)
+	{
+		return (
+			PSYQUE_ASSERT(
+				Psyque::_private::IsValidBitWidth<TemplateBits>(
+					InBitPosition, InBitWidth)),
+			Psyque::ShiftLeftBitwiseFast(
+				Psyque::MakeBitMask<TemplateBits>(InBitWidth), InBitPosition)
+			& InBits);
+	}
+
+	/// @brief 指定されたビット範囲の値を取得する。
+	/// @return ビット範囲の値。
+	template<typename TemplateBits>
+	PSYQUE_CONSTEXPR TemplateBits GetBitset(
+		/// [in] ビット集合として扱う整数値。
+		TemplateBits const InBits,
+		/// [in] 取得するビット範囲のビット位置。
+		SIZE_T const InBitPosition,
+		/// [in] 取得するビット範囲のビット幅。
+		SIZE_T const InBitWidth)
+	{
+		return (
+			PSYQUE_ASSERT(
+				Psyque::_private::IsValidBitWidth<TemplateBits>(
+					InBitPosition, InBitWidth)),
+			Psyque::MakeBitMask<TemplateBits>(InBitWidth)
+			& Psyque::ShiftRightBitwiseFast(InBits, InBitPosition));
+	}
+
+	/// @brief 指定されたビット範囲を0にする。
+	/// @return 指定されたビット範囲を0にした整数値。
+	template<typename TemplateBits>
+	PSYQUE_CONSTEXPR TemplateBits ResetBitField(
+		/// [in] InBits		 ビット集合として扱う整数値。
+		TemplateBits const InBits,
+		/// [in] 設定するビット範囲のビット位置。
+		SIZE_T const InBitPosition,
+		/// [in] 設定するビット範囲のビット幅。
+		SIZE_T const InBitWidth)
+	{
+		return (
+			PSYQUE_ASSERT(
+				Psyque::_private::IsValidBitWidth<TemplateBits>(
+					InBitPosition, InBitWidth)),
+			InBits & ~Psyque::ShiftLeftBitwiseFast(
+				Psyque::MakeBitMask<TemplateBits>(InBitWidth),
+				InBitPosition));
+	}
+
+	/// @brief 指定されたビット範囲に値を埋め込む。
+	/// @return 指定されたビット位置に InValue を埋め込んだ整数値。
+	template<typename TemplateBits>
+	PSYQUE_CONSTEXPR TemplateBits SetBitset(
+		/// [in] ビット集合として扱う整数値。
+		TemplateBits const InBits,
+		/// [in] 埋め込むビット範囲のビット位置。
+		SIZE_T const InBitPosition,
+		/// [in] 埋め込むビット範囲のビット幅。
+		SIZE_T const InBitWidth,
+		/// [in] 埋め込む値。
+		TemplateBits const InValue)
+	PSYQUE_NOEXCEPT
+	{
+		return (
+			PSYQUE_ASSERT(
+				Psyque::ShiftRightBitwise(InValue, InBitWidth) == 0),
+			Psyque::ResetBitField(InBits, InBitPosition, InBitWidth)
+			| Psyque::ShiftLeftBitwiseFast(InValue, InBitPosition));
+	}
+	/// @}
 } // namespace Psyque
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ

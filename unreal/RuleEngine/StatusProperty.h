@@ -22,29 +22,28 @@ namespace Psyque
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 状態値が格納されているビット領域を指す型。
-/// @tparam TemplateChunkKey    @copydoc TStatusProperty::ChunkKeyType
-/// @tparam TemplateBitPosition @copydoc TStatusProperty::BitPositionType
-/// @tparam TemplateFormat      @copydoc TStatusProperty::FormatType
+/// @tparam TemplateChunkKey    @copydoc TStatusProperty::FChunkKey
+/// @tparam TemplateBitPosition @copydoc TStatusProperty::FBitPosition
+/// @tparam TemplateFormat      @copydoc TStatusProperty::FFormat
 template<
 	typename TemplateChunkKey,
 	typename TemplateBitPosition,
 	typename TemplateFormat>
 class Psyque::RuleEngine::_private::TStatusProperty
 {
-	/// @brief this が指す値の型。
-	using This = TStatusProperty;
+	using This = TStatusProperty; ///< @copydoc TReservoir::This
 
 	//-------------------------------------------------------------------------
 	public:
 	/// @brief 状態値が格納されているビット領域チャンクの識別値を表す型。
-	using ChunkKeyType = TemplateChunkKey;
+	using FChunkKey = TemplateChunkKey;
 	/// @brief 状態値が格納されているビット位置を表す型。
-	using BitPositionType = TemplateBitPosition;
+	using FBitPosition = TemplateBitPosition;
 	static_assert(
 		std::is_integral<TemplateBitPosition>::value,
 		"TemplateBitPosition is not integer type.");
 	/// @brief 状態値のビット構成を表す型。
-	using FormatType = TemplateFormat;
+	using FFormat = TemplateFormat;
 	static_assert(
 		std::is_integral<TemplateFormat>::value,
 		"'TemplateFormat' is not integer type.");
@@ -54,11 +53,11 @@ class Psyque::RuleEngine::_private::TStatusProperty
 	/// @brief 状態値プロパティを構築する。
 	PSYQUE_CONSTEXPR TStatusProperty(
 		/// [in] This::ChunkKey の初期値。
-		typename This::ChunkKeyType const InChunkKey,
+		typename This::FChunkKey const InChunkKey,
 		/// [in] This::BitPosition の初期値。
-		typename This::BitPositionType const InBitPosition,
+		typename This::FBitPosition const InBitPosition,
 		/// [in] This::Format の初期値。
-		typename This::FormatType const InFormat)
+		typename This::FFormat const InFormat)
 	PSYQUE_NOEXCEPT:
 	ChunkKey(InChunkKey),
 	BitPosition(InBitPosition),
@@ -80,7 +79,7 @@ class Psyque::RuleEngine::_private::TStatusProperty
 
 	/// @brief 状態値が格納されているビット列チャンクの識別値を取得する。
 	/// @return @copydoc This::ChunkKey
-	PSYQUE_CONSTEXPR typename This::ChunkKeyType const GetChunkKey()
+	PSYQUE_CONSTEXPR typename This::FChunkKey const GetChunkKey()
 	const PSYQUE_NOEXCEPT
 	{
 		return this->ChunkKey;
@@ -88,7 +87,7 @@ class Psyque::RuleEngine::_private::TStatusProperty
 
 	/// @brief 状態値のビット位置を取得する。
 	/// @return 状態値のビット位置。
-	PSYQUE_CONSTEXPR typename This::BitPositionType GetBitPosition()
+	PSYQUE_CONSTEXPR typename This::FBitPosition GetBitPosition()
 	const PSYQUE_NOEXCEPT
 	{
 		return this->BitPosition;
@@ -96,7 +95,7 @@ class Psyque::RuleEngine::_private::TStatusProperty
 
 	/// @brief 状態値のビット構成を取得する。
 	/// @return 状態値のビット構成。
-	PSYQUE_CONSTEXPR typename This::FormatType GetFormat() const PSYQUE_NOEXCEPT
+	PSYQUE_CONSTEXPR typename This::FFormat GetFormat() const PSYQUE_NOEXCEPT
 	{
 		return this->Format;
 	}
@@ -108,7 +107,11 @@ class Psyque::RuleEngine::_private::TStatusProperty
 		return this->bHasTransited;
 	}
 
-	void Transit(bool const InTransition) PSYQUE_NOEXCEPT
+	/// @brief 状態変化フラグを設定する。
+	void Transit(
+		/// [in] 状態変化フラグに設定する値。
+		bool const InTransition)
+	PSYQUE_NOEXCEPT
 	{
 		this->bHasTransited = InTransition;
 	}
@@ -116,11 +119,11 @@ class Psyque::RuleEngine::_private::TStatusProperty
 	//-------------------------------------------------------------------------
 	private:
 	/// @brief 状態値が格納されているビット領域チャンクの識別値。
-	typename This::ChunkKeyType ChunkKey;
+	typename This::FChunkKey ChunkKey;
 	/// @brief 状態値が格納されているビット領域のビット位置。
-	typename This::BitPositionType BitPosition;
+	typename This::FBitPosition BitPosition;
 	/// @brief 状態値のビット構成。
-	typename This::FormatType Format;
+	typename This::FFormat Format;
 	/// @brief 状態変化フラグ。
 	bool bHasTransited;
 

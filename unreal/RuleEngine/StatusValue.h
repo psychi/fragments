@@ -27,8 +27,8 @@ namespace Psyque
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 状態値のやりとりに使う容れ物。
-/// @tparam TemplateUnsigned @copydoc TStatusValue::UnsignedType
-/// @tparam TemplateFloat    @copydoc TStatusValue::FloatType
+/// @tparam TemplateUnsigned @copydoc TStatusValue::FUnsigned
+/// @tparam TemplateFloat    @copydoc TStatusValue::FFloat
 template<typename TemplateUnsigned, typename TemplateFloat>
 class Psyque::RuleEngine::_private::TStatusValue
 {
@@ -39,15 +39,15 @@ class Psyque::RuleEngine::_private::TStatusValue
 	public:
 	/// @brief 状態値で扱う符号なし整数の型。
 	/// @details この型の大きさを超える型は、状態値で扱えない。
-	using UnsignedType = TemplateUnsigned;
+	using FUnsigned = TemplateUnsigned;
 	static_assert(
 		std::is_integral<TemplateUnsigned>::value
 		&& std::is_unsigned<TemplateUnsigned>::value,
 		"'TemplateUnsigned' is not unsigned integer.");
 	/// @brief 状態値で扱う符号あり整数の型。
-	using SignedType = typename std::make_signed<TemplateUnsigned>::type;
+	using FSigned = typename std::make_signed<TemplateUnsigned>::type;
 	/// @brief 状態値で扱う浮動小数点数の型。
-	using FloatType = TemplateFloat;
+	using FFloat = TemplateFloat;
 	static_assert(
 		std::is_floating_point<TemplateFloat>::value,
 		"'TemplateFloat' is not floating-point number.");
@@ -71,7 +71,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 	/// - 正なら、比較式の評価は真。
 	/// - 0 なら、比較式の評価は偽。
 	/// - 負なら、比較式の評価に失敗。
-	using Evaluation = int8;
+	using FEvaluation = int8;
 	/// @brief 値の大小関係。
 	enum class EOrder: int8
 	{
@@ -109,8 +109,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 	/// @{
 	public:
 	/// @brief 空値を構築する。
-	PSYQUE_CONSTEXPR TStatusValue()
-	PSYQUE_NOEXCEPT: Kind(This::EKind::EMPTY) {}
+	TStatusValue() PSYQUE_NOEXCEPT: Kind(This::EKind::EMPTY) {}
 
 	/// @brief 論理型の値を構築する。
 	explicit TStatusValue(
@@ -133,7 +132,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 	/// @brief 符号あり整数型の値を構築する。
 	explicit TStatusValue(
 		/// [in] 初期値となる符号あり整数。
-		typename This::SignedType const InSigned)
+		typename This::FSigned const InSigned)
 	PSYQUE_NOEXCEPT: Kind(This::EKind::SIGNED)
 	{
 		this->Signed = InSigned;
@@ -191,7 +190,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 	/// @brief 符号あり整数値を取得する。
 	/// @return 符号あり整数値を指すポインタ。
 	/// 符号あり整数値が格納されてない場合は nullptr を返す。
-	PSYQUE_CONSTEXPR typename This::SignedType const* GetSigned()
+	PSYQUE_CONSTEXPR typename This::FSigned const* GetSigned()
 	const PSYQUE_NOEXCEPT
 	{
 		return this->GetKind() == This::EKind::SIGNED? &this->Signed: nullptr;
@@ -210,12 +209,12 @@ class Psyque::RuleEngine::_private::TStatusValue
 	/// @return 状態値のビット列。
 	TemplateUnsigned GetBitset() const PSYQUE_NOEXCEPT
 	{
-		using FloatBitset = Psyque::FloatBitset<TemplateFloat>;
+		using FFloatBitset = Psyque::TFloatBitset<TemplateFloat>;
 		switch (this->GetKind())
 		{
 			case This::EKind::EMPTY: return 0;
 			case This::EKind::BOOL:  return this->Bool;
-			case This::EKind::FLOAT: return FloatBitset(this->Float).Bitset;
+			case This::EKind::FLOAT: return FFloatBitset(this->Float).Bitset;
 			default:                 return this->Unsigned;
 		}
 	}
@@ -236,11 +235,12 @@ class Psyque::RuleEngine::_private::TStatusValue
 	/// @retval 0  比較式の評価は偽。
 	/// @retval 負 比較式の評価に失敗。
 	template<typename TemplateRight>
-	typename This::Evaluation Compare(
+	typename This::FEvaluation Compare(
 		/// [in] 比較演算子の種類。
 		typename This::EComparison const InComparison,
 		/// [in] 比較演算子の右辺値。
 		TemplateRight const& InRight)
+	const PSYQUE_NOEXCEPT
 	{
 		auto const LocalOrder(this->Compare(InRight));
 		if (LocalOrder != This::EOrder::NONE)
@@ -334,7 +334,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 	/// @return *this を左辺値とした比較結果。
 	typename This::EOrder Compare(
 		/// [in] 右辺値となる符号あり整数。
-		typename This::SignedType const InRight)
+		typename This::FSigned const InRight)
 	const PSYQUE_NOEXCEPT
 	{
 		switch (this->GetKind())
@@ -398,7 +398,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 		else if (std::is_signed<TemplateRight>::value)
 		{
 			auto const LocalRight(
-				static_cast<typename This::SignedType>(InRight));
+				static_cast<typename This::FSigned>(InRight));
 			if (LocalRight == InRight)
 			{
 				return this->Compare(LocalRight);
@@ -469,7 +469,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 	PSYQUE_NOEXCEPT
 	{
 		auto const LocalSigned(
-			static_cast<typename This::SignedType>(InValue));
+			static_cast<typename This::FSigned>(InValue));
 		if (InValue <= 0 || 0 <= LocalSigned)
 		{
 			if (static_cast<TemplateValue>(LocalSigned) == InValue)
@@ -853,10 +853,10 @@ private:
 	//-------------------------------------------------------------------------
 	union
 	{
-		bool Bool;                        ///< 論理値。
-		TemplateUnsigned Unsigned;        ///< 符号なし整数値。
-		typename This::SignedType Signed; ///< 符号あり整数値。
-		TemplateFloat Float;              ///< 浮動小数点数値。
+		bool Bool;                     ///< 論理値。
+		TemplateUnsigned Unsigned;     ///< 符号なし整数値。
+		typename This::FSigned Signed; ///< 符号あり整数値。
+		TemplateFloat Float;           ///< 浮動小数点数値。
 	};
 	typename This::EKind Kind; ///< 状態値の型の種類。
 

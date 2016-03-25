@@ -98,8 +98,7 @@ template<
 	typename TemplateStatusValue>
 class Psyque::RuleEngine::_private::TStatusOperation
 {
-	/// @copydoc TStatusValue::This
-	typedef TStatusOperation This;
+	typedef TStatusOperation This; ///< @copydoc TReservoir::This
 
 	//-------------------------------------------------------------------------
 	public:
@@ -115,7 +114,7 @@ class Psyque::RuleEngine::_private::TStatusOperation
 	Value(MoveTemp(InValue)),
 	Key(MoveTemp(InKey)),
 	Operator(MoveTemp(InOperator)),
-	right_key_(false)
+	bIsValidRightKey(false)
 	{}
 
 	/// @brief 状態操作引数を構築する。
@@ -125,16 +124,16 @@ class Psyque::RuleEngine::_private::TStatusOperation
 		/// [in] This::Operator の初期値。
 		TemplateStatusOperator InOperator,
 		/// [in] 右辺値となる状態値の識別値。
-		TemplateStatusKey const in_right_key)
+		TemplateStatusKey const InRightKey)
 	PSYQUE_NOEXCEPT:
-	Value(static_cast<typename TemplateStatusValue::UnsignedType>(in_right_key)),
+	Value(static_cast<typename TemplateStatusValue::FUnsigned>(InRightKey)),
 	Key(MoveTemp(InKey)),
 	Operator(MoveTemp(InOperator)),
-	right_key_(true)
+	bIsValidRightKey(true)
 	{}
 	static_assert(
 		sizeof(TemplateStatusKey)
-		<= sizeof(typename TemplateStatusValue::UnsignedType)
+		<= sizeof(typename TemplateStatusValue::FUnsigned)
 		&& std::is_unsigned<TemplateStatusKey>::value,
 		"");
 
@@ -151,19 +150,19 @@ class Psyque::RuleEngine::_private::TStatusOperation
 		return this->Operator;
 	}
 
-	PSYQUE_CONSTEXPR TemplateStatusValue const& GetValue() const PSYQUE_NOEXCEPT
+	PSYQUE_CONSTEXPR TemplateStatusValue const& GetValue()
+	const PSYQUE_NOEXCEPT
 	{
 		return this->Value;
 	}
 
 	/// @brief 右辺値となる状態値の識別値を取得する。
-	/// @return 
-	/// 右辺値となる状態値の識別値が格納されている、符号なし整数を指すポインタ。
-	/// 右辺値が定数の場合は nullptr を返す。
-	typename TemplateStatusValue::UnsignedType const* GetRightKey()
+	/// @return 右辺値となる状態値の識別値が格納されている、
+	/// 符号なし整数を指すポインタ。右辺値が定数の場合は nullptr を返す。
+	typename TemplateStatusValue::FUnsigned const* GetRightKey()
 	const PSYQUE_NOEXCEPT
 	{
-		return this->right_key_? this->Value.get_unsigned(): nullptr;
+		return this->bIsValidRightKey? this->Value.GetUnsigned(): nullptr;
 	}
 
 	//-------------------------------------------------------------------------
@@ -365,26 +364,26 @@ class Psyque::RuleEngine::_private::TStatusOperation
 			PSYQUE_RULE_ENGINE_STATUS_OPERATION_RIGHT_STATUS); 
 		if (local_status_header == InString.substr(0, local_status_header.size()))
 		{
-			this->right_key_ = true;
+			this->bIsValidRightKey = true;
 			this->Value = TemplateStatusValue(
-				static_cast<typename TemplateStatusValue::UnsignedType>(
+				static_cast<typename TemplateStatusValue::Type>(
 					io_hasher(InString.substr(local_status_header.size()))));
 			return;
 		}
 
 		// ハッシュ値の接頭辞があるなら、ハッシュ値を構築する。
-		this->right_key_ = false;
+		this->bIsValidRightKey = false;
 		typename template_hasher::argument_type const local_hash_header(
 			PSYQUE_RULE_ENGINE_STATUS_OPERATION_RIGHT_HASH); 
 		if (local_hash_header == InString.substr(0, local_hash_header.size()))
 		{
 			static_assert(
 				sizeof(typename template_hasher::result_type)
-				<= sizeof(typename TemplateStatusValue::UnsignedType)
+				<= sizeof(typename TemplateStatusValue::Type)
 				&& std::is_unsigned<typename template_hasher::result_type>::value,
 				"");
 			this->Value = TemplateStatusValue(
-				static_cast<typename TemplateStatusValue::UnsignedType>(
+				static_cast<typename TemplateStatusValue::Type>(
 					io_hasher(InString.substr(local_status_header.size()))));
 		}
 		else
@@ -403,7 +402,7 @@ class Psyque::RuleEngine::_private::TStatusOperation
 		TemplateString const& InString,
 		/// [in] 構築する状態値の型。
 		/// TStatusValue::EKind::EMPTY の場合は、自動決定する。
-		typename TemplateStatusValue::kind const in_kind =
+		typename TemplateStatusValue::EKind const in_kind =
 			TemplateStatusValue::EKind::EMPTY)
 	{
 		// 論理値として構築する。
@@ -424,7 +423,7 @@ class Psyque::RuleEngine::_private::TStatusOperation
 
 		// 符号なし整数として構築する。
 		Psyque::string::numeric_parser<
-			typename TemplateStatusValue::UnsignedType>
+			typename TemplateStatusValue::Type>
 				const local_unsigned_parser(InString);
 		if (local_unsigned_parser.is_completed())
 		{
@@ -432,12 +431,12 @@ class Psyque::RuleEngine::_private::TStatusOperation
 			{
 				case TemplateStatusValue::EKind::FLOAT:
 				return TemplateStatusValue(
-					static_cast<typename TemplateStatusValue::float_type>(
+					static_cast<typename TemplateStatusValue::FloatType>(
 						local_unsigned_parser.GetValue()));
 
 				case TemplateStatusValue::EKind::SIGNED:
 				return TemplateStatusValue(
-					static_cast<typename TemplateStatusValue::signed_type>(
+					static_cast<typename TemplateStatusValue::SignedType>(
 						local_unsigned_parser.GetValue()));
 
 				default:
@@ -447,7 +446,7 @@ class Psyque::RuleEngine::_private::TStatusOperation
 
 		// 符号あり整数として構築する。
 		Psyque::string::numeric_parser<
-			typename TemplateStatusValue::signed_type>
+			typename TemplateStatusValue::SignedType>
 				const local_signed_parser(InString);
 		if (local_unsigned_parser.is_completed())
 		{
@@ -455,7 +454,7 @@ class Psyque::RuleEngine::_private::TStatusOperation
 			{
 				case TemplateStatusValue::EKind::FLOAT:
 				return TemplateStatusValue(
-					static_cast<typename TemplateStatusValue::float_type>(
+					static_cast<typename TemplateStatusValue::FloatType>(
 						local_signed_parser.GetValue()));
 
 				case TemplateStatusValue::EKind::UNSIGNED:
@@ -467,7 +466,7 @@ class Psyque::RuleEngine::_private::TStatusOperation
 		}
 
 		// 浮動小数点数として構築する。
-		Psyque::string::numeric_parser<typename TemplateStatusValue::float_type>
+		Psyque::string::numeric_parser<typename TemplateStatusValue::FloatType>
 			const local_float_parser(InString);
 		if (local_float_parser.is_completed())
 		{
@@ -485,14 +484,10 @@ class Psyque::RuleEngine::_private::TStatusOperation
 
 	//-------------------------------------------------------------------------
 	private:
-	/// @brief 演算の右辺値となる値。
-	TemplateStatusValue Value;
-	/// @brief 演算の左辺値となる状態値の識別値。
-	TemplateStatusKey Key;
-	/// @brief 演算子の種類。
-	TemplateStatusOperator Operator;
-	/// @brief 右辺値を状態値から取得するか。
-	bool right_key_;
+	TemplateStatusValue Value;       ///< 演算の右辺値となる値。
+	TemplateStatusKey Key;           ///< 演算の左辺値となる状態値の識別値。
+	TemplateStatusOperator Operator; ///< 演算子の種類。
+	bool bIsValidRightKey;           ///< 右辺値を状態値から取得するか。
 
 }; // class Psyque::RuleEngine::_private::TStatusOperation
 

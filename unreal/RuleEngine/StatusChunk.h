@@ -114,10 +114,10 @@ namespace Psyque
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 状態値を格納するビット領域のコンテナ。
-/// @tparam TemplateBitBlock    @copydoc TStatusChunk::BitBlock
-/// @tparam TemplateBitPosition @copydoc TStatusChunk::BitPosition
-/// @tparam TemplateBitWidth    @copydoc TStatusChunk::BitWidth
-/// @tparam TemplateAllocator   @copydoc TStatusChunk::Allocator
+/// @tparam TemplateBitBlock    @copydoc TStatusChunk::FBitBlock
+/// @tparam TemplateBitPosition @copydoc TStatusChunk::FBitPosition
+/// @tparam TemplateBitWidth    @copydoc TStatusChunk::FBitWidth
+/// @tparam TemplateAllocator   @copydoc TStatusChunk::FHeapAllocator
 template<
 	typename TemplateBitBlock,
 	typename TemplateBitPosition,
@@ -125,35 +125,34 @@ template<
 	typename TemplateAllocator>
 class Psyque::RuleEngine::_private::TStatusChunk
 {
-	/// @brief thisが指す値の型。
-	using This = TStatusChunk;
+	using This = TStatusChunk; ///< @copydoc TReservoir::This
 
 	//-------------------------------------------------------------------------
 	public:
 	/// @brief ビット列の単位を表す型。
-	using BitBlock = TemplateBitBlock;
+	using FBitBlock = TemplateBitBlock;
 	static_assert(
 		std::is_unsigned<TemplateBitBlock>::value,
 		"TemplateBitBlock is not unsigned integer type.");
 	/// @brief ビット列のビット位置を表す型。
-	using BitPosition = TemplateBitPosition;
+	using FBitPosition = TemplateBitPosition;
 	static_assert(
 		std::is_unsigned<TemplateBitPosition>::value,
 		"TemplateBitPosition is not unsigned integer type.");
 	/// @brief ビット列のビット幅を表す型。
-	using BitWidth = TemplateBitWidth;
+	using FBitWidth = TemplateBitWidth;
 	static_assert(
 		std::is_unsigned<TemplateBitWidth>::value,
 		"TemplateBitWidth is not unsigned integer type.");
 	/// @brief コンテナに用いる、 FHeapAllocator 互換のメモリ割当子の型 。
-	using Allocator = TemplateAllocator;
+	using FHeapAllocator = TemplateAllocator;
 	/// @copydoc This::BitBlocks
-	using BitBlockArray = TArray<TemplateBitBlock, TemplateAllocator>;
+	using FBitBlockArray = TArray<TemplateBitBlock, TemplateAllocator>;
 	/// @copybrief This::EmptyBitsets
 	/// @details
 	/// - first は、空きビット領域のビット幅。
 	/// - second は、空きビット領域のビット位置。
-	using EmptyBitsetArray = TArray<
+	using FEmptyBitsetArray = TArray<
 		std::pair<TemplateBitWidth, TemplateBitPosition>, TemplateAllocator>;
 	enum: TemplateBitPosition
 	{
@@ -167,9 +166,9 @@ class Psyque::RuleEngine::_private::TStatusChunk
 			sizeof(TemplateBitBlock) * CHAR_BIT),
 	};
 	static_assert(
-		// This::BLOCK_BIT_WIDTH が This::BitWidth に収まるのを確認する。
+		// This::BLOCK_BIT_WIDTH が This::FBitWidth に収まるのを確認する。
 		This::BLOCK_BIT_WIDTH < (
-			1 << (sizeof(This::BitWidth) * CHAR_BIT - 1)),
+			1 << (sizeof(This::FBitWidth) * CHAR_BIT - 1)),
 		"This::BLOCK_BIT_WIDTH is overflow.");
 
 	//-------------------------------------------------------------------------
@@ -188,7 +187,7 @@ class Psyque::RuleEngine::_private::TStatusChunk
 		auto const LocalEmptyIndex(
 			Psyque::_private::LowerBound(
 				this->EmptyBitsets,
-				typename This::EmptyBitsetArray::ElementType(InBitWidth, 0)));
+				typename This::FEmptyBitsetArray::ElementType(InBitWidth, 0)));
 		return LocalEmptyIndex < this->EmptyBitsets.Num()?
 			// 既存の空き領域を再利用する。
 			this->ReallocateBitset(InBitWidth, LocalEmptyIndex):
@@ -234,10 +233,10 @@ class Psyque::RuleEngine::_private::TStatusChunk
 		/// [in] 値を設定するビット領域のビット幅。
 		TemplateBitWidth const InBitWidth,
 		/// [in] ビット領域に設定する値。
-		TemplateBitBlock const InValue)
+		TemplateBitBlock const InBitset)
 	PSYQUE_NOEXCEPT
 	{
-		if (Psyque::ShiftRightBitwise(InValue, InBitWidth) != 0)
+		if (Psyque::ShiftRightBitwise(InBitset, InBitWidth) != 0)
 		{
 			return -1;
 		}
@@ -255,8 +254,18 @@ class Psyque::RuleEngine::_private::TStatusChunk
 			LocalBlock,
 			InBitPosition - LocalBlockIndex * This::BLOCK_BIT_WIDTH,
 			InBitWidth,
-			InValue);
+			InBitset);
 		return LocalLastBlock != LocalBlock;
+	}
+
+	void Reserve(
+		/// [in] 予約するビット列コンテナの容量。
+		int32 const InReserveBlocks,
+		/// [in] 予約する空きビット領域コンテナの容量。
+		int32 const InReserveEmpties)
+	{
+		this->BitBlocks.Reserve(InReserveBlocks);
+		this->EmptyBitsets.Reserve(InReserveEmpties);
 	}
 
 	//-------------------------------------------------------------------------
@@ -335,16 +344,16 @@ class Psyque::RuleEngine::_private::TStatusChunk
 	/// @brief 空きビット領域を追加する。
 	static void AddEmptyBitset(
 		/// [in,out] 空きビット領域情報を追加するコンテナ。
-		typename This::EmptyBitsetArray& OutEmptyBitsets,
+		typename This::FEmptyBitsetArray& OutEmptyBitsets,
 		/// [in] 追加する空きビット領域のビット位置。
 		TemplateBitPosition const InBitPosition,
 		/// [in] 追加する空きビット領域のビット幅。
-		std::size_t const InBitWidth)
+		SIZE_T const InBitWidth)
 	{
-		using EmptyBitset = typename This::EmptyBitsetArray::ElementType;
-		EmptyBitset const LocalEmptyBitset(
-			static_cast<typename EmptyBitset::first_type>(InBitWidth),
-			static_cast<typename EmptyBitset::second_type>(InBitPosition));
+		using FEmptyBitset = typename This::FEmptyBitsetArray::ElementType;
+		FEmptyBitset const LocalEmptyBitset(
+			static_cast<typename FEmptyBitset::first_type>(InBitWidth),
+			static_cast<typename FEmptyBitset::second_type>(InBitPosition));
 		if (InBitPosition == LocalEmptyBitset.second
 			&& InBitWidth == LocalEmptyBitset.first)
 		{
@@ -359,9 +368,9 @@ class Psyque::RuleEngine::_private::TStatusChunk
 	//-------------------------------------------------------------------------
 	public:
 	/// @brief ビット列のコンテナ。
-	typename This::BitBlockArray BitBlocks;
+	typename This::FBitBlockArray BitBlocks;
 	/// @brief 空きビット領域情報のコンテナ。
-	typename This::EmptyBitsetArray EmptyBitsets;
+	typename This::FEmptyBitsetArray EmptyBitsets;
 
 }; // class Psyque::RuleEngine::_private::TStatusChunk
 

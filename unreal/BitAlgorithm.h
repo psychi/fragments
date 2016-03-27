@@ -73,32 +73,32 @@ union Psyque::TFloatBitset
 
 	public:
 	/// @brief 浮動小数点数の型。
-	using FloatType = TemplateFloat;
+	using FFloat = TemplateFloat;
 	static_assert(
 		std::is_floating_point<TemplateFloat>::value,
 		"'TemplateFloat' is not float type.");
 
 	/// @brief 符号なし整数型をビット列として扱う。
-	using BitsetType = typename std::conditional<
+	using FBitset = typename std::conditional<
 		std::is_same<TemplateFloat, float>::value, uint32, uint64>::type;
 	static_assert(
-		sizeof(TemplateFloat) == sizeof(BitsetType),
-		"sizeof(TemplateFloat) is not equal sizeof(BitsetType).");
+		sizeof(TemplateFloat) == sizeof(FBitset),
+		"sizeof(TemplateFloat) is not equal sizeof(FBitset).");
 
-	explicit TFloatBitset(typename This::FloatType const InFloat)
+	explicit TFloatBitset(typename This::FFloat const InFloat)
 	PSYQUE_NOEXCEPT
 	{
 		this->Float = InFloat;
 	}
 
-	explicit TFloatBitset(typename This::BitsetType const InBitset)
+	explicit TFloatBitset(typename This::FBitset const InBitset)
 	PSYQUE_NOEXCEPT
 	{
 		this->Bitset = InBitset;
 	}
 
-	typename This::FloatType Float;   ///< 浮動小数点数の値。
-	typename This::BitsetType Bitset; ///< 浮動小数点数のビット列。
+	typename This::FFloat Float;   ///< 浮動小数点数の値。
+	typename This::FBitset Bitset; ///< 浮動小数点数のビット列。
 
 }; // union Psyque::TFloatBitset
 

@@ -4,10 +4,11 @@
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
-#include "Containers/Map.h"
-#include "./StatusChunk.h"
-#include "./StatusProperty.h"
+#include <unordered_map>
+#include "../PrimitiveBits.h"
 #include "./StatusValue.h"
+#include "./StatusProperty.h"
+#include "./StatusChunk.h"
 #include "./StatusOperation.h"
 
 /// @cond
@@ -30,115 +31,169 @@ namespace Psyque
 /// - TReservoir::RegisterStatus で、状態値を登録する。
 /// - TReservoir::FindStatus で、状態値を取得する。
 /// - TReservoir::AssignStatus で、状態値に代入する。
-/// @tparam TemplateUnsigned     @copydoc TReservoir::FStatusValue::FUnsigned
-/// @tparam TemplateFloat        @copydoc TReservoir::FStatusValue::FFloat
-/// @tparam TemplateStatusKey    @copydoc TReservoir::FStatusKey
-/// @tparam TemplateChunkKey     @copydoc TReservoir::FChunkKey
-/// @tparam TemplateSetAllocator @copydoc TReservoir::FSetAllocator
+/// .
+/// @tparam TemplateUnsigned  @copydoc TReservoir::FStatusValue::FUnsigned
+/// @tparam TemplateFloat     @copydoc TReservoir::FStatusValue::FFloat
+/// @tparam TemplateStatusKey @copydoc TReservoir::FStatusKey
+/// @tparam TemplateChunkKey  @copydoc TReservoir::FChunkKey
+/// @tparam TemplateAllocator @copydoc TReservoir::FAllocator
 template<
 	typename TemplateUnsigned,
 	typename TemplateFloat,
 	typename TemplateStatusKey,
 	typename TemplateChunkKey,
-	typename TemplateSetAllocator>
+	typename TemplateAllocator>
 class Psyque::RuleEngine::_private::TReservoir
 {
-	/// @brief this が指す値の型。
-	using This = TReservoir;
+	private: using This = TReservoir; ///< @copydoc RuleEngine::TDriver::This
 
 	//-------------------------------------------------------------------------
-	public:
 	/// @brief 状態値を識別するための値を表す型。
-	using FStatusKey = TemplateStatusKey;
+	public: using FStatusKey = TemplateStatusKey;
 	/// @brief チャンクを識別するための値を表す型。
-	using FChunkKey = TemplateChunkKey;
-	/// @brief TSet に適用する、 TSetAllocator 互換のメモリ割当子の型 。
-	using FSetAllocator = TemplateSetAllocator;
-	/// @copybrief TStatusValue
-	using FStatusValue = Psyque::RuleEngine::_private::TStatusValue<
-		TemplateUnsigned, TemplateFloat>;
-	/// @copybrief TStatusProperty
-	using FStatusProperty = Psyque::RuleEngine::_private::TStatusProperty<
-		 TemplateChunkKey, uint32, int8>;
-	/// @brief 状態値の比較演算の引数。
-	using FStatusComparison = Psyque::RuleEngine::_private::TStatusOperation<
-		TemplateStatusKey,
-		typename This::FStatusValue::EComparison,
-		typename This::FStatusValue>;
-	/// @brief 状態値の代入演算の引数。
-	using FStatusAssignment = Psyque::RuleEngine::_private::TStatusOperation<
-		TemplateStatusKey,
-		typename This::FStatusValue::EAssignment,
-		typename This::FStatusValue>;
+	public: using FChunkKey = TemplateChunkKey;
+	/// @brief 各種コンテナに用いるメモリ割当子の型。
+	public: using FAllocator = TemplateAllocator;
 
 	//-------------------------------------------------------------------------
-	private:
-	/// @copybrief TStatusChunk
-	using FStatusChunk = Psyque::RuleEngine::_private::TStatusChunk<
-		TemplateUnsigned,
+	/// @brief 状態値。
+	public: using FStatusValue = Psyque::RuleEngine::_private::TStatusValue<
+		TemplateUnsigned, TemplateFloat>;
+	/// @brief 状態値が格納されているビット領域を示す。
+	public: using FStatusProperty =
+		Psyque::RuleEngine::_private::TStatusProperty<
+			typename This::FChunkKey, uint32, int8>;
+	/// @brief 状態値の比較演算の引数。
+	public: using FStatusComparison =
+		Psyque::RuleEngine::_private::TStatusOperation<
+			typename This::FStatusKey,
+			typename This::FStatusValue::EComparison::Type,
+			typename This::FStatusValue>;
+	/// @brief 状態値の代入演算の引数。
+	public: using FStatusAssignment =
+		Psyque::RuleEngine::_private::TStatusOperation<
+			typename This::FStatusKey,
+			typename This::FStatusValue::EAssignment::Type,
+			typename This::FStatusValue>;
+
+	//-------------------------------------------------------------------------
+	/// @brief 状態値プロパティの辞書。
+	private: using FPropertyMap = std::unordered_map<
+		 typename This::FStatusKey,
+		 typename This::FStatusProperty,
+		 Psyque::Hash::TPrimitiveBits<typename This::FStatusKey>,
+		 std::equal_to<typename This::FStatusKey>,
+		 typename This::FAllocator>;
+	/// @brief 状態値を格納するビット領域のコンテナ。
+	private: using FStatusChunk = Psyque::RuleEngine::_private::TStatusChunk<
+		typename This::FStatusValue::FUnsigned,
 		typename This::FStatusProperty::FBitPosition,
 		typename std::make_unsigned<
 			typename This::FStatusProperty::FFormat>::type,
-		typename TemplateSetAllocator::SparseArrayAllocator::ElementAllocator>;
+		typename This::FAllocator>;
 	/// @brief 状態値ビット列チャンクの辞書。
-	using FChunkMap = TMap<
-		TemplateChunkKey, typename This::FStatusChunk, TemplateSetAllocator>;
-	/// @brief 状態値プロパティの辞書。
-	using FPropertyMap = TMap<
-		TemplateStatusKey,
-		typename This::FStatusProperty,
-		TemplateSetAllocator>;
+	private: using FChunkMap = std::unordered_map<
+		 typename This::FChunkKey,
+		 typename This::FStatusChunk,
+		 Psyque::Hash::TPrimitiveBits<typename This::FChunkKey>,
+		 std::equal_to<typename This::FChunkKey>,
+		 typename This::FAllocator>;
+
+	//-------------------------------------------------------------------------
 	/// @brief 浮動小数点数とビット列を変換する。
-	using FFloatBitset = Psyque::TFloatBitset<TemplateFloat>;
+	private: using FFloatBitset = Psyque::TFloatBitset<TemplateFloat>;
 	/// @brief ビット列とビット幅のペア。
-	using FStatusBitset = std::pair<
+	private: using FBitset = std::pair<
 		 typename This::FStatusChunk::FBitBlock,
 		 typename This::FStatusChunk::FBitWidth>;
 
 	//-------------------------------------------------------------------------
-	/// @name 構築
+	/// @name 構築と代入
 	/// @{
-	public:
+
 	/// @brief 空の状態貯蔵器を構築する。
-	TReservoir(
-		/// [in] チャンクの予約容量。
-		int32 const InChunkCapacity,
-		/// [in] 状態値の予約容量。
-		int32 const InStatusCapacity)
+	public: TReservoir(
+		/// [in] チャンク辞書のバケット数。
+		std::size_t const InChunkCapacity,
+		/// [in] 状態値プロパティ辞書のバケット数。
+		std::size_t const InStatusCapacity,
+		/// [in] 使用するメモリ割当子の初期値。
+		typename This::FAllocator const& InAllocator = This::FAllocator()):
+	Chunks(
+		InChunkCapacity,
+		typename This::FChunkMap::hasher(),
+		typename This::FChunkMap::key_equal(),
+		InAllocator),
+	Properties(
+		InStatusCapacity,
+		typename This::FPropertyMap::hasher(),
+		typename This::FPropertyMap::key_equal(),
+		InAllocator)
+	{}
+
+#ifdef PSYQUE_NO_STD_DEFAULTED_FUNCTION
+	/// @brief ムーブ構築子。
+	public: TReservoir(
+		/// [in,out] ムーブ元となるインスタンス。
+		This&& OutSource):
+	Chunks(MoveTemp(OutSource.Chunks)),
+	Properties(MoveTemp(OutSource.Properties))
+	{}
+
+	/// @brief ムーブ代入演算子。
+	/// @return *this
+	public: This& operator=(
+		/// [in,out] ムーブ元となるインスタンス。
+		This&& OutSource)
 	{
-		this->Chunks.Reserve(InChunkCapacity);
-		this->Properties.Reserve(InStatusCapacity);
+		this->Chunks = MoveTemp(OutSource.Chunks);
+		this->Properties = MoveTemp(OutSource.Properties);
+		return *this;
+	}
+#endif // defined(PSYQUE_NO_STD_DEFAULTED_FUNCTION)
+
+	/// @brief 状態貯蔵器で使われているメモリ割当子を取得する。
+	/// @return *this で使われているメモリ割当子のコピー。
+	public: typename This::FAllocator get_allocator()
+	const PSYQUE_NOEXCEPT
+	{
+		return this->Properties.get_allocator();
 	}
 
 	/// @brief 状態貯蔵器を再構築する。
-	void Rebuild(
-		/// [in] チャンクの予約容量。
-		int32 const InChunkCapacity,
-		/// [in] 状態値の予約容量。
-		int32 const InStatusCapacity)
+	public: void Rebuild(
+		/// [in] 状態値ビット列チャンク辞書のバケット数。
+		std::size_t const InChunkCapacity,
+		/// [in] 状態値プロパティ辞書のバケット数。
+		std::size_t const InStatusCapacity)
 	{
 		// 新たな辞書を用意する。
-		typename This::FChunkMap LocalChunks;
-		LocalChunks.Reserve(InChunkCapacity);
-		typename This::FPropertyMap LocalProperties;
-		LocalProperties.Reserve(InStatusCapacity);
+		typename This::FChunkMap LocalChunks(
+			InChunkCapacity,
+			this->Chunks.hash_function(),
+			this->Chunks.key_eq(),
+			this->Chunks.get_allocator());
+		typename This::FPropertyMap LocalProperties(
+			InStatusCapacity,
+			this->Properties.hash_function(),
+			this->Properties.key_eq(),
+			this->Properties.get_allocator());
 
 		// 現在の辞書を新たな辞書にコピーして整理する。
 		This::CopyBitsets(
 			LocalProperties, LocalChunks, this->Properties, this->Chunks);
-		for (auto i(LocalChunks.CreateIterator()); i; ++i)
+		for (auto i(LocalChunks.begin()); i != LocalChunks.end();)
 		{
-			auto& LocalChunk(i.Value());
-			if (0 < LocalChunk.BitBlocks.Num())
+			auto& LocalChunk(i->second);
+			if (LocalChunk.BitBlocks.empty())
 			{
-				LocalChunk.BitBlocks.Shrink();
-				LocalChunk.EmptyBitsets.Shrink();
+				i = LocalChunks.erase(i);
 			}
 			else
 			{
-				/// @note コンテナ要素を削除しても、反復子は有効らしい。
-				/// https://docs.unrealengine.com/latest/JPN/Programming/Introduction/index.html
-				i.RemoveCurrent();
+				LocalChunk.BitBlocks.shrink_to_fit();
+				LocalChunk.EmptyBitsets.shrink_to_fit();
+				++i;
 			}
 		}
 		this->Properties = MoveTemp(LocalProperties);
@@ -148,7 +203,18 @@ class Psyque::RuleEngine::_private::TReservoir
 	//-------------------------------------------------------------------------
 	/// @name 状態値の登録
 	/// @{
-	public:
+
+	/// @brief 状態値が登録されているか判定する。
+	/// @retval true  InStatusKey に対応する状態値が *this に登録されている。
+	/// @retval false InStatusKey に対応する状態値は *this に登録されてない。
+	public: bool IsRegistered(
+		/// [in] 判定する状態値に対応する識別値。
+		typename This::FStatusKey const InStatusKey)
+	const
+	{
+		return this->Properties.find(InStatusKey) != this->Properties.end();
+	}
+
 	/// @brief 状態値を登録する。
 	/// @sa
 	/// - This::FindStatus と
@@ -160,28 +226,28 @@ class Psyque::RuleEngine::_private::TReservoir
 	public: template<typename TemplateValue>
 	bool RegisterStatus(
 		/// [in] 登録する状態値を格納する状態値ビット列チャンクの識別値。
-		TemplateChunkKey const InChunkKey,
+		typename This::FChunkKey const InChunkKey,
 		/// [in] 登録する状態値の識別値。
-		TemplateStatusKey const InStatusKey,
+		typename This::FStatusKey const InStatusKey,
 		/// [in] 登録する状態値の初期値。以下の型の値を登録できる。
 		/// - bool 型。
 		/// - C++ 組み込み整数型。
 		/// - C++ 組み込み浮動小数点数型。
 		TemplateValue const InValue)
 	{
-		using FFormat = typename This::FStatusProperty::FFormat;
 		if (std::is_floating_point<TemplateValue>::value)
 		{
 			// 浮動小数点数型の状態値を登録する。
 			/// @note コンパイル時にここで警告かエラーが発生する場合は、
 			/// TemplateValue が double 型で
-			/// TemplateFloat が float 型なのが原因。
-			TemplateFloat const LocalFloat(InValue);
+			/// This::FFloatBitset::FFloat が float 型なのが原因。
+			typename This::FFloatBitset::FFloat const
+				LocalFloat(InValue);
 			return nullptr != this->RegisterBitset(
 				InChunkKey,
 				InStatusKey,
 				typename This::FFloatBitset(LocalFloat).Bitset,
-				static_cast<FFormat>(This::FStatusValue::EKind::FLOAT));
+				This::FStatusValue::EKind::Float);
 		}
 		else if (std::is_same<bool, TemplateValue>::value)
 		{
@@ -190,7 +256,7 @@ class Psyque::RuleEngine::_private::TReservoir
 				InChunkKey,
 				InStatusKey,
 				InValue != 0,
-				static_cast<FFormat>(This::FStatusValue::EKind::BOOL));
+				This::FStatusValue::EKind::Bool);
 		}
 		else
 		{
@@ -216,16 +282,16 @@ class Psyque::RuleEngine::_private::TReservoir
 	///   InBitWidth が大きいと失敗する。
 	/// - InBitWidth が2未満だと失敗する。
 	///   1ビットの値は論理型として登録すること。
-	template<typename TemplateValue>
+	public: template<typename TemplateValue>
 	bool RegisterStatus(
 		/// [in] 登録する状態値を格納する状態値ビット列チャンクの識別値。
-		TemplateChunkKey const InChunkKey,
+		typename This::FChunkKey const InChunkKey,
 		/// [in] 登録する状態値の識別番号。
-		TemplateStatusKey const InStatusKey,
+		typename This::FStatusKey const InStatusKey,
 		/// [in] 登録する状態値の初期値。 C++ 組み込み整数型であること。
 		TemplateValue const InValue,
 		/// [in] 登録する状態値のビット幅。
-		SIZE_T const InBitWidth)
+		std::size_t const InBitWidth)
 	{
 		using FFormat = typename This::FStatusProperty::FFormat;
 		using FBitBlock = typename This::FStatusChunk::FBitBlock;
@@ -265,166 +331,154 @@ class Psyque::RuleEngine::_private::TReservoir
 	//-------------------------------------------------------------------------
 	/// @name 状態値の取得
 	/// @{
-	public:
-	/// @brief 状態値の数を取得する。
-	/// @return 状態貯蔵器が保持している状態値の数。
-	int32 GetStatusCount() const
-	{
-		return this->Properties.Num();
-	}
-
-	/// @brief 状態値が登録されているか判定する。
-	/// @retval true  InStatusKey に対応する状態値が *this に登録されている。
-	/// @retval false InStatusKey に対応する状態値は *this に登録されてない。
-	bool IsRegisterd(
-		/// [in] 判定する状態値に対応する識別値。
-		TemplateStatusKey const InStatusKey)
-	const
-	{
-		return this->Properties.Contains(InStatusKey);
-	}
-
-	/// @brief 状態値を取得する。
-	/// @return 取得した状態値。 InStatusKey に対応する状態値がない場合は、
-	/// This::FStatusValue::IsEmpty が真となる値を返す。
-	/// @sa
-	/// - This::RegisterStatus で、状態値を登録できる。
-	/// - This::AssignStatus で、状態値を書き換えできる。
-	typename This::FStatusValue FindStatus(
-		/// [in] 取得する状態値に対応する識別値。
-		TemplateStatusKey const InStatusKey)
-	const
-	{
-		// 状態値プロパティを取得する、
-		auto const LocalProperty(this->Properties.Find(InStatusKey));
-		if (LocalProperty != nullptr)
-		{
-			// 状態値ビット列チャンクから状態値のビット列を取得する。
-			auto const LocalChunk(
-				this->Chunks.Find(LocalProperty->GetChunkKey()));
-			if (LocalChunk != nullptr)
-			{
-				auto const LocalFormat(LocalProperty->GetFormat());
-				check(LocalFormat != 0);
-				auto const LocalFBitWidth(This::GetBitWidth(LocalFormat));
-				auto const LocalBitset(
-					LocalChunk->GetBitset(
-						LocalProperty->GetBitPosition(), LocalFBitWidth));
-
-				// 状態値のビット構成から、構築する状態値の型を分ける。
-				if (LocalFormat == static_cast<decltype(LocalFormat)>(
-						This::FStatusValue::EKind::FLOAT))
-				{
-					// 浮動小数点数型の状態値を構築する。
-					typename This::FFloatBitset const LocalValue(
-						static_cast<typename This::FFloatBitset::BitsetType>(
-							LocalBitset));
-					return typename This::FStatusValue(LocalValue.Float);
-				}
-				else if (
-					LocalFormat == static_cast<decltype(LocalFormat)>(
-						This::FStatusValue::EKind::BOOL))
-				{
-					// 論理型の状態値を構築する。
-					return typename This::FStatusValue(LocalBitset != 0);
-				}
-				else if (0 < LocalFormat)
-				{
-					// 符号なし整数型の状態値を構築する。
-					return typename This::FStatusValue(LocalBitset);
-				}
-				else if (LocalFormat < 0)
-				{
-					// ビット幅より上位のビットを符号ビットで埋め、
-					// 符号あり整数型の状態値を構築する。
-					using FSigned = typename This::FStatusValue::FSigned;
-					auto const LocalRestFBitWidth(
-						This::FStatusChunk::BLOCK_BIT_WIDTH - LocalFBitWidth);
-					return typename This::FStatusValue(
-						Psyque::ShiftRightBitwiseFast(
-							Psyque::ShiftLeftBitwiseFast(
-								static_cast<FSigned>(LocalBitset),
-								LocalRestFBitWidth),
-							LocalRestFBitWidth));
-				}
-			}
-			// 状態値プロパティがあれば、
-			// 対応する状態値ビット列チャンクもあるはず。
-			else {check(false);}
-		}
-		return typename This::FStatusValue();
-	}
 
 	/// @brief 状態値のプロパティを取得する。
-	/// @return InStatusKey に対応する状態値のプロパティのコピー。
+	/// @return
+	/// InStatusKey に対応する状態値のプロパティのコピー。
 	/// 該当する状態値がない場合は
 	/// This::FStatusProperty::IsEmpty が真となる値を返す。
-	typename This::FStatusProperty FindProperty(
+	public: typename This::FStatusProperty FindProperty(
 		/// [in] 取得する状態値プロパティに対応する識別値。
-		TemplateStatusKey const InStatusKey)
+		typename This::FStatusKey const InStatusKey)
 	const
 	{
-		auto const LocalProperty(this->Properties.Find(InStatusKey));
-		return LocalProperty != nullptr?
-			*LocalProperty:
-			typename This::FStatusProperty(TemplateChunkKey(), 0, 0);
+		auto const LocalFind(this->Properties.find(InStatusKey));
+		return LocalFind != this->Properties.end()?
+			LocalFind->second:
+			typename This::FStatusProperty(
+				typename This::FChunkKey(), 0, 0);
 	}
 
 	/// @brief 状態値の型の種別を取得する。
-	/// @return InStatusKey に対応する状態値の型の種別。
-	/// 該当する状態値がない場合は This::FStatusValue::EKind::EMPTY を返す。
-	typename This::FStatusValue::EKind FindKind(
+	/// @return
+	/// InStatusKey に対応する状態値の型の種別。該当する状態値がない場合は
+	/// This::FStatusValue::EKind::Empty を返す。
+	public: typename This::FStatusValue::EKind::Type FindKind(
 		/// [in] 状態値に対応する識別値。
-		TemplateStatusKey const InStatusKey)
+		typename This::FStatusKey const InStatusKey)
 	const
 	{
-		auto const LocalProperty(this->Properties.Find(InStatusKey));
-		return LocalProperty != nullptr?
-			This::GetKind(LocalProperty->GetFormat()):
-			This::FStatusValue::EKind::EMPTY;
+		auto const LocalFind(this->Properties.find(InStatusKey));
+		return LocalFind != this->Properties.end()?
+			This::GetKind(LocalFind->second.GetFormat()):
+			This::FStatusValue::EKind::Empty;
 	}
 
 	/// @brief 状態値のビット幅を取得する。
-	/// @return InStatusKey に対応する状態値のビット幅。
+	/// @return
+	/// InStatusKey に対応する状態値のビット幅。
 	/// 該当する状態値がない場合は0を返す。
-	typename This::FStatusChunk::FBitWidth FindBitWidth(
+	public: std::size_t FindBitWidth(
 		/// [in] 状態値に対応する識別値。
-		TemplateStatusKey const InStatusKey)
+		typename This::FStatusKey const InStatusKey)
 	const
 	{
-		auto const LocalProperty(this->Properties.Find(InStatusKey));
-		return LocalProperty != nullptr?
-			This::GetBitWidth(LocalProperty->GetFormat()): 0;
+		auto const LocalFind(this->Properties.find(InStatusKey));
+		return LocalFind != this->Properties.end()?
+			This::GetBitWidth(LocalFind->second.GetFormat()): 0;
 	}
 
 	/// @brief 状態変化フラグを取得する。
 	/// @retval 正 状態変化フラグは真。
 	/// @retval 0  状態変化フラグは偽。
 	/// @retval 負 InStatusKey に対応する状態値がない。
-	int8 FindTransition(
+	public: int8 FindTransition(
 		/// [in] 状態変化フラグを取得する状態値に対応する識別値。
-		TemplateStatusKey const InStatusKey)
+		typename This::FStatusKey const InStatusKey)
 	const
 	{
-		auto const LocalProperty(this->Properties.Find(InStatusKey));
-		return LocalProperty != nullptr? LocalProperty->HasTransited(): -1;
+		auto const LocalFind(this->Properties.find(InStatusKey));
+		return LocalFind != this->Properties.end()?
+			LocalFind->second.GetTransition(): -1;
+	}
+
+	/// @brief 状態値を取得する。
+	/// @return
+	///   取得した状態値。 InStatusKey に対応する状態値がない場合は、
+	///   This::FStatusValue::IsEmpty が真となる値を返す。
+	/// @sa
+	/// - This::RegisterStatus で、状態値を登録できる。
+	/// - This::AssignStatus で、状態値を書き換えできる。
+	public: typename This::FStatusValue FindStatus(
+		/// [in] 取得する状態値に対応する識別値。
+		typename This::FStatusKey const InStatusKey)
+	const
+	{
+		// 状態値プロパティを取得する、
+		auto const local_property_iterator(this->Properties.find(InStatusKey));
+		if (local_property_iterator == this->Properties.end())
+		{
+			return typename This::FStatusValue();
+		}
+		auto const& LocalProperty(local_property_iterator->second);
+
+		// 状態値ビット列チャンクから状態値のビット列を取得する。
+		auto const local_chunk_iterator(
+			this->Chunks.find(LocalProperty.GetChunkKey()));
+		if (local_chunk_iterator == this->Chunks.end())
+		{
+			// 状態値プロパティがあれば、
+			// 対応する状態値ビット列チャンクもあるはず。
+			check(false);
+			return typename This::FStatusValue();
+		}
+		auto const LocalFormat(LocalProperty.GetFormat());
+		auto const LocalBitWidth(This::GetBitWidth(LocalFormat));
+		auto const LocalBitset(
+			local_chunk_iterator->second.GetBitset(
+				LocalProperty.GetBitPosition(), LocalBitWidth));
+
+		// 状態値のビット構成から、構築する状態値の型を分ける。
+		if (0 < LocalFormat)
+		{
+			return LocalFormat == This::FStatusValue::EKind::Bool?
+				// 論理型の状態値を構築する。
+				typename This::FStatusValue(LocalBitset != 0):
+				// 符号なし整数型の状態値を構築する。
+				typename This::FStatusValue(LocalBitset);
+		}
+		else if (LocalFormat == This::FStatusValue::EKind::Float)
+		{
+			// 浮動小数点数型の状態値を構築する。
+			using FBitset = typename This::FFloatBitset::FBitset;
+			return typename This::FStatusValue(
+				This::FFloatBitset(static_cast<FBitset>(LocalBitset)).Float);
+		}
+		else if (LocalFormat < 0)
+		{
+			// 符号あり整数型の状態値を構築する。
+			using FSigned = typename This::FStatusValue::FSigned;
+			auto const LocalRestBitWidth(
+				This::FStatusChunk::BLOCK_BIT_WIDTH - LocalBitWidth);
+			return typename This::FStatusValue(
+				Psyque::ShiftRightBitwiseFast(
+					Psyque::ShiftLeftBitwiseFast(
+						static_cast<FSigned>(LocalBitset), LocalRestBitWidth),
+					LocalRestBitWidth));
+		}
+		else
+		{
+			// 空の状態値は登録できないはず。
+			check(false);
+			return typename This::FStatusValue();
+		}
 	}
 	/// @}
 	//-------------------------------------------------------------------------
 	/// @name 状態値の比較
 	/// @{
-	public:
+
 	/// @brief 状態値を比較する。
 	/// @retval 正 比較式の評価は真。
 	/// @retval 0  比較式の評価は偽。
 	/// @retval 負 比較式の評価に失敗。
-	typename This::FStatusValue::FEvaluation CompareStatus(
+	public: typename This::FStatusValue::FEvaluation CompareStatus(
 		/// [in] 状態値の比較式。
 		typename This::FStatusComparison const& InComparison)
 	const
 	{
-		auto const LocalRightKeyPointer(InComparison.GetRightKey());
-		if (LocalRightKeyPointer == nullptr)
+		auto const local_right_key_pointer(InComparison.GetRightKey());
+		if (local_right_key_pointer == nullptr)
 		{
 			return this->CompareStatus(
 				InComparison.GetKey(),
@@ -433,14 +487,15 @@ class Psyque::RuleEngine::_private::TReservoir
 		}
 
 		// 右辺となる状態値を取得して式を評価する。
-		auto const LocalRightKey(
-			static_cast<TemplateStatusKey>(*LocalRightKeyPointer));
-		if (LocalRightKey == *LocalRightKeyPointer)
+		auto const local_right_key(
+			static_cast<typename This::FStatusKey>(
+				*local_right_key_pointer));
+		if (local_right_key == *local_right_key_pointer)
 		{
 			return this->CompareStatus(
 				InComparison.GetKey(),
 				InComparison.GetOperator(),
-				LocalRightKey);
+				local_right_key);
 		}
 		return -1;
 	}
@@ -449,29 +504,30 @@ class Psyque::RuleEngine::_private::TReservoir
 	/// @retval 正 比較式の評価は真。
 	/// @retval 0  比較式の評価は偽。
 	/// @retval 負 比較式の評価に失敗。
-	typename This::FStatusValue::FEvaluation CompareStatus(
+	public: typename This::FStatusValue::FEvaluation CompareStatus(
 		/// [in] 左辺となる状態値の識別値。
-		TemplateStatusKey const InLeftKey,
+		typename This::FStatusKey const InLeftKey,
 		/// [in] 適用する比較演算子。
-		typename This::FStatusValue::EComparison const InOperator,
+		typename This::FStatusValue::EComparison::Type const InOperator,
 		/// [in] 右辺となる値。
 		typename This::FStatusValue const& InRightValue)
 	const
 	{
-		return this->FindStatus(InLeftKey).Compare(InOperator, InRightValue);
+		return this->FindStatus(InLeftKey).Compare(
+			InOperator, InRightValue);
 	}
 
 	/// @brief 状態値を比較する。
 	/// @retval 正 比較式の評価は真。
 	/// @retval 0  比較式の評価は偽。
 	/// @retval 負 比較式の評価に失敗。
-	typename This::FStatusValue::FEvaluation CompareStatus(
+	public: typename This::FStatusValue::FEvaluation CompareStatus(
 		/// [in] 左辺となる状態値の識別値。
-		TemplateStatusKey const InLeftKey,
+		typename This::FStatusKey const InLeftKey,
 		/// [in] 適用する比較演算子。
-		typename This::FStatusValue::EComparison const InOperator,
+		typename This::FStatusValue::EComparison::Type const InOperator,
 		/// [in] 右辺となる状態値の識別値。
-		TemplateStatusKey const InRightKey)
+		typename This::FStatusKey const InRightKey)
 	const
 	{
 		return this->FindStatus(InLeftKey).Compare(
@@ -481,7 +537,7 @@ class Psyque::RuleEngine::_private::TReservoir
 	//-------------------------------------------------------------------------
 	/// @name 状態値の代入
 	/// @{
-	public:
+
 	/// @brief 状態値へ値を代入する。
 	/// @retval true  成功。 InValue を状態値へ代入した。
 	/// @retval false 失敗。状態値は変化しない。
@@ -498,10 +554,10 @@ class Psyque::RuleEngine::_private::TReservoir
 	/// - InValue が整数ではない浮動小数点数で、
 	///   InStatusKey に対応する状態値が整数型だと、失敗する。
 	/// @sa This::FindStatus で、代入した値を取得できる。
-	template<typename TemplateValue>
+	public: template<typename TemplateValue>
 	bool AssignStatus(
 		/// [in] 代入先となる状態値に対応する識別値。
-		TemplateStatusKey const InStatusKey,
+		typename This::FStatusKey const InStatusKey,
 		/// [in] 状態値へ代入する値。以下の型の値を代入できる。
 		/// - bool 型。
 		/// - C++ 組み込み整数型。
@@ -509,61 +565,65 @@ class Psyque::RuleEngine::_private::TReservoir
 		/// - This::FStatusValue 型。
 		TemplateValue const& InValue)
 	{
-		auto const LocalProperty(this->Properties.Find(InStatusKey));
-		if (LocalProperty == nullptr)
+		auto const local_property_iterator(
+			this->Properties.find(InStatusKey));
+		if (local_property_iterator == this->Properties.end())
 		{
 			return false;
 		}
 		/// @note InValue が状態値のビット幅を超えている場合、
 		/// 失敗となるように実装しておく。
 		/// 失敗とせず、ビット列をマスクして代入する実装も可能。どちらが良い？
-		auto const LocalMask(false);
+		auto const local_mask(false);
+		auto& LocalProperty(local_property_iterator->second);
 		return This::AssignBitset(
-			*LocalProperty,
+			LocalProperty,
 			this->Chunks,
-			This::MakeBitset(InValue, LocalProperty->GetFormat(), LocalMask));
+			This::MakeBitsetWidth(
+				InValue, LocalProperty.GetFormat(), local_mask));
 	}
 
 	/// @brief 状態値を演算し、結果を代入する。
 	/// @retval true  成功。演算結果を状態値へ代入した。
 	/// @retval false 失敗。状態値は変化しない。
 	/// 失敗する要因は This::AssignStatus を参照。
-	bool AssignStatus(
+	public: bool AssignStatus(
 		/// [in] 状態値の代入演算。
-		typename This::FStatusAssignment const& InAssignment)
+		typename This::FStatusAssignment const& in_assignment)
 	{
-		auto const LocalRightKeyPointer(InAssignment.GetRightKey());
-		if (LocalRightKeyPointer == nullptr)
+		auto const local_right_key_pointer(in_assignment.GetRightKey());
+		if (local_right_key_pointer == nullptr)
 		{
 			return this->AssignStatus(
-				InAssignment.GetKey(),
-				InAssignment.GetOperator(),
-				InAssignment.GetValue());
+				in_assignment.GetKey(),
+				in_assignment.GetOperator(),
+				in_assignment.GetValue());
 		}
 
 		// 右辺となる状態値を取得して演算する。
-		auto const LocalRightKey(
-			static_cast<TemplateStatusKey>(*LocalRightKeyPointer));
-		return LocalRightKey == *LocalRightKeyPointer
+		auto const local_right_key(
+			static_cast<typename This::FStatusKey>(
+				*local_right_key_pointer));
+		return local_right_key == *local_right_key_pointer
 			&& this->AssignStatus(
-				InAssignment.GetKey(),
-				InAssignment.GetOperator(),
-				LocalRightKey);
+				in_assignment.GetKey(),
+				in_assignment.GetOperator(),
+				local_right_key);
 	}
 
 	/// @brief 状態値を演算し、結果を代入する。
 	/// @retval true  成功。演算結果を状態値へ代入した。
 	/// @retval false 失敗。状態値は変化しない。
 	/// 失敗する要因は This::AssignStatus を参照。
-	bool AssignStatus(
+	public: bool AssignStatus(
 		/// [in] 代入演算子の左辺となる状態値の識別値。
-		TemplateStatusKey const InLeftKey,
+		typename This::FStatusKey const InLeftKey,
 		/// [in] 適用する代入演算子。
-		typename This::FStatusValue::EAssignment const InOperator,
+		typename This::FStatusValue::EAssignment::Type const InOperator,
 		/// [in] 代入演算子の右辺となる値。
 		typename This::FStatusValue const& InRightValue)
 	{
-		if (InOperator == This::FStatusValue::EAssignment::COPY)
+		if (InOperator == This::FStatusValue::EAssignment::Copy)
 		{
 			return this->AssignStatus(InLeftKey, InRightValue);
 		}
@@ -576,71 +636,75 @@ class Psyque::RuleEngine::_private::TReservoir
 	/// @retval true  成功。演算結果を状態値へ代入した。
 	/// @retval false 失敗。状態値は変化しない。
 	/// 失敗する要因は This::AssignStatus を参照。
-	bool AssignStatus(
+	public: bool AssignStatus(
 		/// [in] 代入演算子の左辺となる状態値の識別値。
-		TemplateStatusKey const InLeftKey,
+		typename This::FStatusKey const InLeftKey,
 		/// [in] 適用する代入演算子。
-		typename This::FStatusValue::EAssignment const InOperator,
+		typename This::FStatusValue::EAssignment::Type const InOperator,
 		/// [in] 代入演算子の右辺となる状態値の識別値。
-		TemplateStatusKey const InRightKey)
+		typename This::FStatusKey const InRightKey)
 	{
 		return this->AssignStatus(
 			InLeftKey, InOperator, this->FindStatus(InRightKey));
 	}
 
-	/// @brief Psyque::RuleEngine 管理者以外は、この関数は使用禁止。
-	/// @details 状態変化フラグを初期化する。
-	void _reset_transitions()
+	/// @brief 状態変化フラグを初期化する。
+	/// @warning Psyque::RuleEngine 管理者以外は、この関数は使用禁止。
+	public: void _reset_transitions()
 	{
 		for (auto& LocalProperty: this->Properties)
 		{
-			LocalProperty.Value.Transit(false);
+			LocalProperty.second.SetTransition(false);
 		}
 	}
 	/// @}
 	//-------------------------------------------------------------------------
 	/// @name 状態値ビット列チャンク
 	/// @{
-	public:
-	/// @brief 状態値ビット列チャンクの数を取得する。
-	/// @return 状態貯蔵器が保持している状態値ビット列チャンクの数。
-	int32 GetChunkCount() const
-	{
-		return this->Chunks.Num();
-	}
 
 	/// @brief 状態値ビット列チャンクを予約する。
-	void ReserveChunk(
+	public: void ReserveChunk(
 		/// [in] 予約する状態値ビット列チャンクに対応する識別値。
-		TemplateChunkKey const InChunkKey,
+		typename This::FChunkKey const InChunkKey,
 		/// [in] 予約するビット列コンテナの容量。
-		int32 const InReserveBlocks,
+		std::size_t const InBlockCapacity,
 		/// [in] 予約する空きビット領域コンテナの容量。
-		int32 const InReserveEmpties)
+		std::size_t const InEmptyCapacity)
 	{
-		auto& LocalChunk(this->Chunks.FindOrAdd(InChunkKey));
-		LocalChunk.Reserve(InReserveBlocks, InReserveEmpties);
+		// 状態値を登録する状態値ビット列チャンクを用意する。
+		auto const LocalEmplace(
+			this->Chunks.emplace(
+				InChunkKey,
+				typename This::FChunkMap::mapped_type(
+					this->Chunks.get_allocator())));
+		auto& LocalChunk(*LocalEmplace.first);
+		LocalChunk.second.BitBlocks.reserve(InBlockCapacity);
+		LocalChunk.second.EmptyBitsets.reserve(InEmptyCapacity);
 	}
 
 	/// @brief 状態値ビット列チャンクを削除する。
 	/// @retval true  成功。 InChunkKey に対応するチャンクを削除した。
 	/// @retval false 失敗。該当するチャンクがない。
-	bool RemoveChunk(
+	public: bool RemoveChunk(
 		/// [in] 削除する状態値ビット列チャンクの識別値。
-		TemplateChunkKey const InChunkKey)
+		typename This::FChunkKey const InChunkKey)
 	{
 		// 状態値ビット列チャンクを削除する。
-		if (this->Chunks.Remove(InChunkKey) == 0)
+		if (this->Chunks.erase(InChunkKey) == 0)
 		{
 			return false;
 		}
 
 		// 状態値プロパティを削除する。
-		for (auto i(this->Properties.CreateIterator()); i; ++i)
+		for (auto i(this->Properties.begin()); i != this->Properties.end();)
 		{
-			if (InChunkKey == i.Value().GetChunkKey())
+			if (InChunkKey != i->second.GetChunkKey())
 			{
-				i.RemoveCurrent();
+				++i;
+			}
+			else
+			{
+				i = this->Properties.erase(i);
 			}
 		}
 		return true;
@@ -649,148 +713,158 @@ class Psyque::RuleEngine::_private::TReservoir
 	/// @brief 状態値ビット列チャンクをシリアル化する。
 	/// @return シリアル化した状態値ビット列チャンク。
 	/// @todo 未実装。
-	typename This::FStatusChunk::FBitBlockArray SerializeChunk(
+	public: typename This::FStatusChunk::FBitBlockArray serialize_chunk(
 		/// [in] シリアル化する状態値ビット列チャンクの識別番号。
-		TemplateChunkKey const InChunkKey)
+		typename This::FChunkKey const InChunkKey)
 	const;
 
 	/// @brief シリアル化された状態値ビット列チャンクを復元する。
 	/// @todo 未実装。
-	bool DeserializeChunk(
+	public: bool deserialize_chunk(
 		/// [in] 復元する状態値ビット列チャンクの識別値。
-		TemplateChunkKey const InChunkKey,
+		typename This::FChunkKey const InChunkKey,
 		/// [in] シリアル化された状態値ビット列チャンク。
-		typename This::FStatusChunk::FBitBlockArray const& InSerializedChunk);
+		typename This::FStatusChunk::FBitBlockArray const&
+			in_serialized_chunk);
 	/// @}
 	//-------------------------------------------------------------------------
-	public:
 	/// @brief 状態値のビット構成から、状態値の型の種別を取得する。
 	/// @return 状態値の型の種別。
-	static typename This::FStatusValue::EKind GetKind(
+	public: static typename This::FStatusValue::EKind::Type GetKind(
 		/// [in] 状態値のビット構成。
 		typename This::FStatusProperty::FFormat const InFormat)
 	PSYQUE_NOEXCEPT
 	{
 		switch (InFormat)
 		{
-			case This::FStatusValue::EKind::EMPTY:
-			case This::FStatusValue::EKind::BOOL:
-			case This::FStatusValue::EKind::FLOAT:
-			return static_cast<typename This::FStatusValue::EKind>(InFormat);
+			case This::FStatusValue::EKind::Empty:
+			case This::FStatusValue::EKind::Bool:
+			case This::FStatusValue::EKind::Float:
+			return
+				static_cast<typename This::FStatusValue::EKind::Type>(InFormat);
 
 			default:
 			return InFormat < 0?
-				This::FStatusValue::EKind::SIGNED:
-				This::FStatusValue::EKind::UNSIGNED;
+				This::FStatusValue::EKind::Signed:
+				This::FStatusValue::EKind::Unsigned;
 		}
 	}
 
 	/// @brief 状態値のビット構成から、状態値のビット幅を取得する。
 	/// @return 状態値のビット幅。
-	static typename This::FStatusChunk::FBitWidth GetBitWidth(
+	public: static typename This::FStatusChunk::FBitWidth GetBitWidth(
 		/// [in] 状態値のビット構成。
 		typename This::FStatusProperty::FFormat const InFormat)
 	PSYQUE_NOEXCEPT
 	{
 		switch (InFormat)
 		{
-			case This::FStatusValue::EKind::EMPTY:
-			case This::FStatusValue::EKind::BOOL:
+			case This::FStatusValue::EKind::Empty:
+			case This::FStatusValue::EKind::Bool:
 			static_assert(
-				static_cast<unsigned>(This::FStatusValue::EKind::EMPTY) == 0
-				&& static_cast<unsigned>(This::FStatusValue::EKind::BOOL) == 1,
+				This::FStatusValue::EKind::Empty == 0
+				&& This::FStatusValue::EKind::Bool == 1,
 				"");
 			return InFormat;
 
-			case This::FStatusValue::EKind::FLOAT:
-			return sizeof(TemplateFloat) * CHAR_BIT;
+			case This::FStatusValue::EKind::Float:
+			return sizeof(typename This::FStatusValue::FFloat)
+				* CHAR_BIT;
 
 			default: return Psyque::AbsInteger(InFormat);
 		}
 	}
 
 	//-------------------------------------------------------------------------
-	private:
 	/// @brief 状態値を登録する。
-	/// @return 登録した状態値のプロパティを指すポインタ。
+	/// @return
+	/// 登録した状態値のプロパティを指すポインタ。
 	/// 登録に失敗した場合は nullptr を返す。
 	/// - InStatusKey に対応する状態値がすでに登録されていると失敗する。
 	/// @sa
 	/// - This::FindStatus と This::AssignStatus
 	///   で、登録した状態値にアクセスできる。
 	/// - This::RemoveChunk で、登録した状態値をチャンク毎に削除できる。
-	typename This::FStatusProperty const* RegisterBitset(
+	private: typename This::FStatusProperty const* RegisterBitset(
 		/// [in] 登録する状態値を格納する状態値ビット列チャンクの識別値。
-		TemplateChunkKey const InChunkKey,
+		typename This::FChunkKey const InChunkKey,
 		/// [in] 登録する状態値の識別番号。
-		TemplateStatusKey const InStatusKey,
+		typename This::FStatusKey const InStatusKey,
 		/// [in] 登録する状態値の初期値となるビット列。
-		typename This::FStatusChunk::FBitBlock const InBitset,
+		typename This::FStatusChunk::FBitBlock const& InBitset,
 		/// [in] 登録する状態値のビット構成。
 		typename This::FStatusProperty::FFormat const InFormat)
 	{
-		auto const LocalFBitWidth(This::GetBitWidth(InFormat));
-		if (Psyque::ShiftRightBitwise(InBitset, LocalFBitWidth) == 0)
-		{
-			// 状態値を登録する状態値ビット列チャンクを用意する。
-			auto& LocalChunk(this->Chunks.FindOrAdd(InChunkKey));
+		// 状態値を登録する状態値ビット列チャンクを用意する。
+		auto const LocalEmplace(
+			this->Chunks.emplace(
+				InChunkKey,
+				typename This::FChunkMap::mapped_type(
+					this->Chunks.get_allocator())));
+		auto& LocalChunk(*LocalEmplace.first);
 
-			// 状態値を登録して値を設定する。
-			auto const LocalProperty(
-				This::AddProperty(
-					this->Properties,
-					InChunkKey,
-					LocalChunk,
-					InStatusKey,
-					InFormat));
-			if (LocalProperty != nullptr
-				&& 0 <= LocalChunk.SetBitset(
-					LocalProperty->GetBitPosition(),
-					LocalFBitWidth,
-					InBitset))
-			{
-				return LocalProperty;
-			}
+		// 状態値を登録する。
+		auto const LocalProperty(
+			This::AllocateBitset(
+				this->Properties, LocalChunk, InStatusKey, InFormat));
+
+		// 状態値に初期値を設定する。
+		if (LocalProperty != nullptr
+			&& 0 <= LocalChunk.second.SetBitset(
+				LocalProperty->second.GetBitPosition(),
+				This::GetBitWidth(InFormat),
+				InBitset))
+		{
+			return &LocalProperty->second;
 		}
-		else {check(false);}
 		return nullptr;
 	}
 
-	/// @brief 状態値のプロパティを登録する。
-	/// @return 登録した状態値のプロパティを指すポインタ。
-	/// 登録できなかった場合は nullptr を返す。
+	/// @brief 状態値を登録する。
+	/// @return
+	/// 登録した状態値のプロパティを指すポインタ。
+	/// 状態値を登録できなかった場合は nullptr を返す。
 	/// - InStatusKey に対応する状態値がすでに追加されていると失敗する。
-	static typename This::FStatusProperty* AddProperty(
+	private: static typename This::FPropertyMap::value_type* AllocateBitset(
 		/// [in,out] 状態値を登録する状態値プロパティの辞書。
 		typename This::FPropertyMap& OutProperties,
-		/// [in] 状態値を登録する状態値ビット列チャンクの識別値。
-		TemplateChunkKey const InChunkKey,
 		/// [in,out] 状態値を登録する状態値ビット列チャンク。
-		typename This::FStatusChunk& OutChunk,
+		typename This::FChunkMap::value_type& OutChunk,
 		/// [in] 登録する状態値に対応する識別値。
-		TemplateStatusKey const InStatusKey,
+		typename This::FStatusKey const InStatusKey,
 		/// [in] 登録する状態値のビット構成。
 		typename This::FStatusProperty::FFormat const InFormat)
 	{
-		auto const LocalDifferentFormat(
-			InFormat != static_cast<decltype(InFormat)>(
-				This::FStatusValue::EKind::EMPTY));
-		if (LocalDifferentFormat && !OutProperties.Contains(InStatusKey))
+		if (InFormat != This::FStatusValue::EKind::Empty)
 		{
 			// 状態値のビット領域を生成する。
-			auto const LocalBitPosition(
-				OutChunk.AddBitset(This::GetBitWidth(InFormat)));
-			if (LocalBitPosition != This::FStatusChunk::INVALID_BIT_POSITION)
+			auto const LocalBitWidth(This::GetBitWidth(InFormat));
+			auto const local_bit_position(
+				OutChunk.second.AllocateBitset(LocalBitWidth));
+			if (local_bit_position != This::FStatusChunk::INVALID_BIT_POSITION)
 			{
 				// 状態値プロパティを生成する。
-				return &OutProperties.Emplace(
-					InStatusKey,
-					typename This::FStatusProperty(
-						InChunkKey, LocalBitPosition, InFormat));
+				auto const LocalEmplace(
+					OutProperties.emplace(
+						InStatusKey,
+						typename This::FPropertyMap::mapped_type(
+							OutChunk.first, local_bit_position, InFormat)));
+				if (LocalEmplace.second)
+				{
+					auto& LocalProperty(*LocalEmplace.first);
+					return &LocalProperty;
+				}
+				check(false);
 			}
-			else {check(false);}
+			else
+			{
+				check(false);
+			}
 		}
-		else {check(false);}
+		else
+		{
+			check(false);
+		}
 		return nullptr;
 	}
 
@@ -800,44 +874,49 @@ class Psyque::RuleEngine::_private::TReservoir
 	/// - 代入する値のビット幅が0だと失敗する。
 	/// - 代入する値のビット幅が状態値のビット幅を超えると失敗する。
 	/// - 状態値を格納する状態値ビット列チャンクがないと失敗する。
-	static bool AssignBitset(
+	private: static bool AssignBitset(
 		/// [in,out] 代入先となる状態値のプロパティ。
 		typename This::FStatusProperty& OutProperty,
 		/// [in,out] 状態値ビット列チャンクのコンテナ。
 		typename This::FChunkMap& OutChunks,
 		/// [in] 代入する状態値のビット列とビット幅。
-		typename This::FStatusBitset const& InBitSet)
+		typename This::FBitset const& InBitset)
 	PSYQUE_NOEXCEPT
 	{
-		if (0 < InBitSet.second)
+		if (0 < InBitset.second)
 		{
 			// 状態値にビット列を設定する。
-			auto const LocalChunk(OutChunks.Find(OutProperty.GetChunkKey()));
-			if (LocalChunk != nullptr)
+			auto const local_chunk_iterator(
+				OutChunks.find(OutProperty.GetChunkKey()));
+			if (local_chunk_iterator != OutChunks.end())
 			{
-				auto const LocalSetBitset(
-					LocalChunk->SetBitset(
+				auto const local_set_bit_field(
+					local_chunk_iterator->second.SetBitset(
 						OutProperty.GetBitPosition(),
-						InBitSet.second,
-						InBitSet.first));
-				if (0 <= LocalSetBitset)
+						InBitset.second,
+						InBitset.first));
+				if (0 <= local_set_bit_field)
 				{
-					if (0 < LocalSetBitset)
+					if (0 < local_set_bit_field)
 					{
 						// 状態値の変更を記録する。
-						OutProperty.Transit(true);
+						OutProperty.SetTransition(true);
 					}
 					return true;
 				}
 			}
-			// 状態値プロパティがあるなら、状態値ビット列チャンクもあるはず。
-			else {check(false);}
+			else
+			{
+				// 状態値プロパティがあるなら、状態値ビット列チャンクもあるはず。
+				check(false);
+			}
 		}
 		return false;
 	}
 
-	/// @brief 状態値のビット列をコピーして整理する。
-	static void CopyBitsets(
+	//-------------------------------------------------------------------------
+	/// @brief 状態値をコピーして整理する。
+	private: static void CopyBitsets(
 		/// [in,out] コピー先となる状態値プロパティ辞書。
 		typename This::FPropertyMap& OutProperties,
 		/// [in,out] コピー先となる状態値ビット列チャンク辞書。
@@ -847,93 +926,106 @@ class Psyque::RuleEngine::_private::TReservoir
 		/// [in] コピー元となる状態値ビット列チャンク辞書。
 		typename This::FChunkMap const& InChunks)
 	{
-		// 状態値プロパティをビット幅の降順に並び替える。
-		using FPropertyArray = TArray<
+		// 状態値プロパティのポインタのコンテナを構築する。
+		using FPropertyArray = std::vector<
 			std::pair<
 				typename This::FStatusChunk::FBitWidth,
-				This::FPropertyMap::TConstIterator>>;
-		FPropertyArray LocalProperties;
-		LocalProperties.Reserve(InProperties.Num());
-		for (auto i(InProperties.CreateConstIterator()); i; ++i)
+				typename This::FPropertyMap::value_type const*>,
+			typename This::FAllocator>;
+		FPropertyArray LocalProperties(InProperties.get_allocator());
+		LocalProperties.reserve(InProperties.size());
+		for (auto& LocalProperty: InProperties)
 		{
-			LocalProperties.Emplace(
-				This::GetBitWidth(i.Value().GetFormat()), i);
+			LocalProperties.emplace_back(
+				This::GetBitWidth(LocalProperty.second.GetFormat()),
+				&LocalProperty);
 		}
-		LocalProperties.Sort(
+
+		// 状態値プロパティをビット幅の降順に並び替える。
+		std::sort(
+			LocalProperties.begin(),
+			LocalProperties.end(),
 			[](
-				FPropertyArray::ElementType const& InLeft,
-				FPropertyArray::ElementType const& InRight)
+				typename FPropertyArray::value_type const& InLeft,
+				typename FPropertyArray::value_type const& InRight)
 			->bool
 			{
 				return InRight.first < InLeft.first;
 			});
 
 		// 状態値をコピーする。
-		check(OutProperties.Num() == 0 && OutChunks.Num() == 0);
-		for (auto const& LocalProperty: LocalProperties)
+		for (auto& LocalProperty: LocalProperties)
 		{
 			This::CopyBitset(
-				OutProperties, OutChunks, LocalProperty.second, InChunks);
+				OutProperties, OutChunks, *LocalProperty.second, InChunks);
 		}
 	}
 
-	/// @brief 状態値のビット列をコピーする。
-	static void CopyBitset(
+	/// @brief 状態値をコピーする。
+	private: static void CopyBitset(
 		///[in,out] コピー先となる状態値プロパティ辞書。
 		typename This::FPropertyMap& OutProperties,
 		/// [in,out] コピー先となる状態値ビット列チャンク辞書。
 		typename This::FChunkMap& OutChunks,
-		/// [in] コピー元となる状態値プロパティを指す反復子。
-		typename This::FPropertyMap::TConstIterator const& InProperty,
+		/// [in] コピー元となる状態値プロパティ。
+		typename This::FPropertyMap::value_type const& InProperty,
 		/// [in] コピー元となる状態値ビット列チャンク辞書。
 		typename This::FChunkMap const& InChunks)
 	{
 		// コピー元となる状態値ビット列チャンクを取得する。
-		auto const LocalSourceChunk(
-			InChunks.Find(InProperty.Value().GetChunkKey()));
-		if (LocalSourceChunk == nullptr)
+		auto const local_source_chunk_iterator(
+			InChunks.find(InProperty.second.GetChunkKey()));
+		if (local_source_chunk_iterator == InChunks.end())
+		{
+			check(false);
+			return;
+		}
+		auto const& local_source_chunk(local_source_chunk_iterator->second);
+
+		// コピー先となる状態値を用意する。
+		auto const LocalEmplace(
+			OutChunks.emplace(
+				InProperty.second.GetChunkKey(),
+				typename This::FChunkMap::mapped_type(
+					OutChunks.get_allocator())));
+		auto& local_target_chunk(*LocalEmplace.first);
+		if (LocalEmplace.second)
+		{
+			local_target_chunk.second.BitBlocks.reserve(
+				local_source_chunk.BitBlocks.size());
+			local_target_chunk.second.EmptyBitsets.reserve(
+				local_source_chunk.EmptyBitsets.size());
+		}
+		auto const LocalFormat(InProperty.second.GetFormat());
+		auto const local_target_property(
+			This::AllocateBitset(
+				OutProperties,
+				local_target_chunk,
+				InProperty.first,
+				LocalFormat));
+		if (local_target_property == nullptr)
 		{
 			check(false);
 			return;
 		}
 
-		// コピー先となる状態値を用意する。
-		auto& LocalTargetChunk(
-			OutChunks.FindOrAdd(InProperty.Value().GetChunkKey()));
-		LocalTargetChunk.Reserve(
-			LocalSourceChunk->BitBlocks.Num(),
-			LocalSourceChunk->EmptyBitsets.Num());
-		auto const LocalFormat(InProperty.Value().GetFormat());
-		auto const LocalTargetProperty(
-			This::AddProperty(
-				OutProperties,
-				InProperty.Value().GetChunkKey(),
-				LocalTargetChunk,
-				InProperty.Key(),
-				LocalFormat));
-		if (LocalTargetProperty != nullptr)
-		{
-			// 状態値のビット領域をコピーする。
-			auto const LocalFBitWidth(This::GetBitWidth(LocalFormat));
-			LocalTargetChunk.SetBitset(
-				LocalTargetProperty->GetBitPosition(),
-				LocalFBitWidth,
-				LocalSourceChunk->GetBitset(
-					InProperty.Value().GetBitPosition(), LocalFBitWidth));
-			LocalTargetProperty->Transit(InProperty.Value().HasTransited());
-		}
-		else {check(false);}
+		// 状態値のビット領域をコピーする。
+		auto const LocalBitWidth(This::GetBitWidth(LocalFormat));
+		local_target_chunk.second.SetBitset(
+			local_target_property->second.GetBitPosition(),
+			LocalBitWidth,
+			local_source_chunk.GetBitset(
+				InProperty.second.GetBitPosition(), LocalBitWidth));
+		local_target_property->second.SetTransition(
+			InProperty.second.GetTransition());
 	}
 
 	//-------------------------------------------------------------------------
-	/// @name ビット操作
-	/// @{
-	private:
-	/// @brief 数値から This::FStatusBitset を構築する。
+	/// @brief 数値からビット列を構築する。
 	/// @return
 	/// 値から構築したビット列とビット幅のペア。
 	/// 構築に失敗した場合は、ビット幅が0となる。
-	static typename This::FStatusBitset MakeBitset(
+	private: static typename This::FBitset MakeBitsetWidth(
 		/// [in] ビット列の元となる数値。
 		typename This::FStatusValue const& InValue,
 		/// [in] 構築するビット列の構成。
@@ -949,7 +1041,7 @@ class Psyque::RuleEngine::_private::TReservoir
 			typename This::FStatusValue const LocalValue(InValue, LocalKind);
 			if (LocalValue.IsEmpty())
 			{
-				return typename This::FStatusBitset(0, 0);
+				return typename This::FBitset(0, 0);
 			}
 			LocalBitset = LocalValue.GetBitset();
 		}
@@ -959,85 +1051,97 @@ class Psyque::RuleEngine::_private::TReservoir
 		}
 
 		// ビット列とビット幅を構築する。
-		/// @note 以下の処理は、テンプレート版の This::MakeBitset とまとめたい。
-		using FBitWidth = typename This::FStatusChunk::BitWidth;
-		if (InFormat == This::FStatusValue::EKind::BOOL)
+		using FBitWidth = typename This::FStatusChunk::FBitWidth;
+		if (InFormat == This::FStatusValue::EKind::Bool)
 		{
-			return typename This::FStatusBitset(LocalBitet, 1);
+			return typename This::FBitset(LocalBitset, 1);
 		}
-		else if (InFormat == This::FStatusValue::EKind::FLOAT)
+		else if (InFormat == This::FStatusValue::EKind::Float)
 		{
-			return typename This::FStatusBitset(
+			return typename This::FBitset(
 				LocalBitset,
-				static_cast<FBitWidth>(sizeof(TemplateFloat) * CHAR_BIT));
+				static_cast<FBitWidth>(
+					sizeof(typename This::FStatusValue::FFloat)
+					* CHAR_BIT));
 		}
 		else if (InFormat < 0)
 		{
-			return This::MakeIntegerBitset<typename This::FStatusValue::FSigned>(
+			using FSigned = typename This::FStatusValue::FSigned;
+			return This::MakeBitsetWidth<FSigned>(
 				LocalBitset, static_cast<FBitWidth>(-InFormat), InMask);
 		}
 		else if (0 < InFormat)
 		{
-			return This::MakeIntegerBitset<TemplateUnsigned>(
+			return This::MakeBitsetWidth<decltype(LocalBitset)>(
 				LocalBitset, static_cast<FBitWidth>(InFormat), InMask);
 		}
-		check(false);
-		return typename This::FStatusBitset(0, 0);
+		else
+		{
+			check(false);
+			return typename This::FBitset(0, 0);
+		}
 	}
 
-	/// @brief 数値から This::FStatusBitset を構築する。
-	/// @return 値から構築したビット列とビット幅のペア。
+	/// @brief 数値からビット列を構築する。
+	/// @return
+	/// 値から構築したビット列とビット幅のペア。
 	/// 構築に失敗した場合は、ビット幅が0となる。
-	template<typename TemplateValue>
-	static typename This::FStatusBitset MakeBitset(
+	private: template<typename TemplateValue>
+	static typename This::FBitset MakeBitsetWidth(
 		/// [in] ビット列の元となる数値。
-		TemplateValue const InValue,
+		TemplateValue const& InValue,
 		/// [in] 構築するビット列の構成。
 		typename This::FStatusProperty::FFormat const InFormat,
 		/// [in] 指定のビット幅に収まるようマスクするか。
 		bool const InMask)
 	{
-		using FBitWidth = typename This::FStatusChunk::BitWidth;
-		if (InFormat == This::FStatusValue::EKind::BOOL)
+		using FBitWidth = typename This::FStatusChunk::FBitWidth;
+		using FBitBlock = typename This::FStatusChunk::FBitBlock;
+		if (InFormat == This::FStatusValue::EKind::Bool)
 		{
 			// 論理値のビット列を構築する。
 			if (std::is_same<TemplateValue, bool>::value)
 			{
-				return typename This::FStatusBitset(InValue != 0, 1);
+				return typename This::FBitset(InValue != 0, 1);
 			}
 		}
-		else if (InFormat == This::FStatusValue::EKind::FLOAT)
+		else if (InFormat == This::FStatusValue::EKind::Float)
 		{
 			// 浮動小数点数のビット列を構築する。
-			typename This::FFloatBitset const LocalValue(
-				static_cast<TemplateFloat>(InValue));
-			return typename This::FStatusBitset(
-				LocalValue.Bitset,
-				static_cast<FBitWidth>(sizeof(TemplateFloat) * CHAR_BIT));
+			using FFloatBitset = typename This::FFloatBitset;
+			using FFloat = typename FFloatBitset::FFloat;
+			return typename This::FBitset(
+				FFloatBitset(static_cast<FFloat>(InValue)).Bitset,
+				static_cast<FBitWidth>(sizeof(FFloat) * CHAR_BIT));
 		}
 		else if (InFormat < 0)
 		{
 			// 符号あり整数のビット列を構築する。
-			return This::MakeIntegerBitset<typename This::FStatusValue::FSigned>(
+			using FSigned = typename This::FStatusValue::FSigned;
+			return This::MakeBitsetWidth<FSigned>(
 				InValue, static_cast<FBitWidth>(-InFormat), InMask);
 		}
 		else if (0 < InFormat)
 		{
 			// 符号なし整数のビット列を構築する。
-			return This::MakeIntegerBitset<TemplateUnsigned>(
+			return This::MakeBitsetWidth<FBitBlock>(
 				InValue, static_cast<FBitWidth>(InFormat), InMask);
 		}
-		check(false);
-		return typename This::FStatusBitset(0, 0);
+		else
+		{
+			check(false);
+			return typename This::FBitset(0, 0);
+		}
 	}
 
-	/// @brief 数値を整数に変換してから This::FStatusBitset を構築する。
-	/// @return 数値から構築したビット列とビット幅のペア。
+	/// @brief 数値を整数に変換してからビット列を構築する。
+	/// @return
+	/// 数値から構築したビット列とビット幅のペア。
 	/// 構築に失敗した場合は、ビット幅が0となる。
-	template<typename TemplateInteger, typename TemplateValue>
-	static typename This::FStatusBitset MakeIntegerBitset(
+	private: template<typename TemplateInteger, typename TemplateValue>
+	static typename This::FBitset MakeBitsetWidth(
 		/// [in] ビット列の元となる数値。
-		TemplateValue const InValue,
+		TemplateValue const& InValue,
 		/// [in] 構築するビット列の幅。
 		typename This::FStatusChunk::FBitWidth InBitWidth,
 		/// [in] 指定のビット幅に収まるようマスクするか。
@@ -1056,55 +1160,57 @@ class Psyque::RuleEngine::_private::TReservoir
 		{
 			InBitWidth = 0;
 		}
-		return typename This::FStatusBitset(LocalInteger, InBitWidth);
+		return typename This::FBitset(LocalInteger, InBitWidth);
 	}
 
-	/// @brief 論理値を整数に変換して
-	/// This::FStatusBitset を構築させないためのダミー関数。
-	template<typename TemplateInteger>
-	static typename This::FStatusBitset MakeIntegerBitset(
+	/// @brief 論理値を整数に変換してビット列を構築させないためのダミー関数。
+	private: template<typename TemplateInteger>
+	static typename This::FBitset MakeBitsetWidth(
 		bool, typename This::FStatusChunk::FBitWidth, bool)
 	{
 		// bool型の値を他の型へ変換できないようにする。
-		return typename This::FStatusBitset(0, 0);
+		return typename This::FBitset(0, 0);
 	}
 
+	//-------------------------------------------------------------------------
 	/// @brief 符号なし整数がビット幅からあふれているか判定する。
-	static bool IsOverflow(
-		/// [in] 判定する符号なし整数。
-		TemplateUnsigned const InInteger,
+	private: static bool IsOverflow(
+		/// [in] 判定する整数。
+		typename This::FStatusChunk::FBitBlock const& InInteger,
 		/// [in] 許容するビット幅。
-		SIZE_T const InBitWidth)
+		std::size_t const InBitWidth)
 	PSYQUE_NOEXCEPT
 	{
 		return Psyque::ShiftRightBitwise(InInteger, InBitWidth) != 0;
 	}
 
 	/// @brief 符号あり整数がビット幅からあふれているか判定する。
-	static bool IsOverflow(
-		/// [in] 判定する符号あり整数。
-		typename This::FStatusValue::FSigned const InInteger,
+	private: static bool IsOverflow(
+		/// [in] 判定する整数。
+		typename This::FStatusValue::FSigned const& InInteger,
 		/// [in] 許容するビット幅。
-		SIZE_T const InBitWidth)
+		std::size_t const InBitWidth)
 	PSYQUE_NOEXCEPT
 	{
 		using FBitBlock = typename This::FStatusChunk::FBitBlock;
-		auto const LocalRestField(
+		auto const LocalRestBitset(
 			Psyque::ShiftRightBitwiseFast(
 				static_cast<FBitBlock>(InInteger), InBitWidth - 1));
 		auto const LocalRestMask(
 			Psyque::ShiftRightBitwiseFast(
 				static_cast<FBitBlock>(
 					Psyque::ShiftRightBitwiseFast(
-						InInteger, sizeof(InInteger) * CHAR_BIT - 1)),
+						InInteger,
+						sizeof(InInteger) * CHAR_BIT - 1)),
 				InBitWidth - 1));
-		return LocalRestField != LocalRestMask;
+		return LocalRestBitset != LocalRestMask;
 	}
-	/// @}
+
 	//-------------------------------------------------------------------------
-	private:
-	typename This::FChunkMap Chunks;        ///< 状態値ビット列チャンクの辞書。
-	typename This::FPropertyMap Properties; ///< 状態値プロパティの辞書。
+	/// @brief 状態値ビット列チャンクの辞書。
+	private: typename This::FChunkMap Chunks;
+	/// @brief 状態値プロパティの辞書。
+	private: typename This::FPropertyMap Properties;
 
 }; // class Psyque::RuleEngine::_private::TReservoir
 

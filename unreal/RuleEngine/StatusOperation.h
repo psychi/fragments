@@ -4,75 +4,75 @@
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
-//#include "../string/numeric_parser.hpp"
+//#include "../string/numeric_parser.h"
 
-#ifndef PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_EQUAL
-#define PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_EQUAL "=="
-#endif // !define(PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_EQUAL)
+#ifndef PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_EQUAL
+#define PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_EQUAL "=="
+#endif // !define(PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_EQUAL)
 
-#ifndef PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_NOT_EQUAL
-#define PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_NOT_EQUAL "!="
-#endif // !define(PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_NOT_EQUAL)
+#ifndef PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_NOT_EQUAL
+#define PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_NOT_EQUAL "!="
+#endif // !define(PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_NOT_EQUAL)
 
-#ifndef PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_LESS
-#define PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_LESS "<"
-#endif // !define(PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_LESS)
+#ifndef PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_LESS
+#define PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_LESS "<"
+#endif // !define(PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_LESS)
 
-#ifndef PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_LESS_EQUAL
-#define PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_LESS_EQUAL "<="
-#endif // !define(PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_LESS_EQUAL)
+#ifndef PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_LESS_EQUAL
+#define PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_LESS_EQUAL "<="
+#endif // !define(PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_LESS_EQUAL)
 
-#ifndef PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_GREATER
-#define PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_GREATER ">"
-#endif // !define(PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_GREATER)
+#ifndef PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_GREATER
+#define PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_GREATER ">"
+#endif // !define(PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_GREATER)
 
-#ifndef PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_GREATER_EQUAL
-#define PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_GREATER_EQUAL ">="
-#endif // !define(PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_GREATER_EQUAL)
+#ifndef PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_GREATER_EQUAL
+#define PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_GREATER_EQUAL ">="
+#endif // !define(PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_GREATER_EQUAL)
 
-#ifndef PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_COPY
-#define PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_COPY ":="
-#endif // !defined(PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_COPY)
+#ifndef PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_COPY
+#define PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_COPY ":="
+#endif // !defined(PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_COPY)
 
-#ifndef PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_ADD
-#define PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_ADD "+="
-#endif // !defined(PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_ADD)
+#ifndef PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_ADD
+#define PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_ADD "+="
+#endif // !defined(PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_ADD)
 
-#ifndef PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_SUB
-#define PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_SUB "-="
-#endif // !defined(PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_SUB)
+#ifndef PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_SUB
+#define PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_SUB "-="
+#endif // !defined(PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_SUB)
 
-#ifndef PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_MULT
-#define PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_MULT "*="
-#endif // !defined(PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_MULT)
+#ifndef PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_MULT
+#define PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_MULT "*="
+#endif // !defined(PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_MULT)
 
-#ifndef PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_DIV
-#define PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_DIV "/="
-#endif // !defined(PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_DIV)
+#ifndef PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_DIV
+#define PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_DIV "/="
+#endif // !defined(PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_DIV)
 
-#ifndef PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_MOD
-#define PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_MOD "%="
-#endif // !defined(PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_MOD)
+#ifndef PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_MOD
+#define PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_MOD "%="
+#endif // !defined(PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_MOD)
 
-#ifndef PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_OR
-#define PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_OR "|="
-#endif // !defined(PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_OR)
+#ifndef PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_OR
+#define PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_OR "|="
+#endif // !defined(PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_OR)
 
-#ifndef PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_XOR
-#define PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_XOR "^="
-#endif // !defined(PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_XOR)
+#ifndef PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_XOR
+#define PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_XOR "^="
+#endif // !defined(PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_XOR)
 
-#ifndef PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_AND
-#define PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_AND "&="
-#endif // !defined(PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_AND)
+#ifndef PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_AND
+#define PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_AND "&="
+#endif // !defined(PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_AND)
 
-#ifndef PSYQUE_RULE_ENGINE_STATUS_OPERATION_RIGHT_STATUS
-#define PSYQUE_RULE_ENGINE_STATUS_OPERATION_RIGHT_STATUS "STATUS:"
-#endif // !defined(PSYQUE_RULE_ENGINE_STATUS_OPERATION_RIGHT_STATUS)
+#ifndef PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_RIGHT_STATUS
+#define PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_RIGHT_STATUS "STATUS:"
+#endif // !defined(PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_RIGHT_STATUS)
 
-#ifndef PSYQUE_RULE_ENGINE_STATUS_OPERATION_RIGHT_HASH
-#define PSYQUE_RULE_ENGINE_STATUS_OPERATION_RIGHT_HASH "HASH:"
-#endif // !define(PSYQUE_RULE_ENGINE_STATUS_OPERATION_RIGHT_HASH)
+#ifndef PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_RIGHT_HASH
+#define PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_RIGHT_HASH "HASH:"
+#endif // !define(PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_RIGHT_HASH)
 
 /// @cond
 namespace Psyque
@@ -89,7 +89,7 @@ namespace Psyque
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 状態値を操作するための引数の集合。
-/// @tparam TemplateStatusKey      状態値を操作する演算子の左辺値となる状態値の識別値の型。
+/// @tparam TemplateStatusKey	   状態値を操作する演算子の左辺値となる状態値の識別値の型。
 /// @tparam TemplateStatusOperator 状態値を操作する演算子の型。
 /// @tparam TemplateStatusValue    状態値を操作する演算子の右辺値となる状態値の型。
 template<
@@ -98,12 +98,11 @@ template<
 	typename TemplateStatusValue>
 class Psyque::RuleEngine::_private::TStatusOperation
 {
-	typedef TStatusOperation This; ///< @copydoc TReservoir::This
+	private: using This = TStatusOperation; ///< @copydoc TReservoir::This
 
 	//-------------------------------------------------------------------------
-	public:
 	/// @brief 状態操作引数を構築する。
-	PSYQUE_CONSTEXPR TStatusOperation(
+	public: TStatusOperation(
 		/// [in] This::Key の初期値。
 		TemplateStatusKey InKey,
 		/// [in] This::Operator の初期値。
@@ -114,11 +113,11 @@ class Psyque::RuleEngine::_private::TStatusOperation
 	Value(MoveTemp(InValue)),
 	Key(MoveTemp(InKey)),
 	Operator(MoveTemp(InOperator)),
-	bIsValidRightKey(false)
+	RightKey(false)
 	{}
 
 	/// @brief 状態操作引数を構築する。
-	PSYQUE_CONSTEXPR TStatusOperation(
+	public: TStatusOperation(
 		/// [in] This::Key の初期値。
 		TemplateStatusKey InKey,
 		/// [in] This::Operator の初期値。
@@ -129,7 +128,7 @@ class Psyque::RuleEngine::_private::TStatusOperation
 	Value(static_cast<typename TemplateStatusValue::FUnsigned>(InRightKey)),
 	Key(MoveTemp(InKey)),
 	Operator(MoveTemp(InOperator)),
-	bIsValidRightKey(true)
+	RightKey(true)
 	{}
 	static_assert(
 		sizeof(TemplateStatusKey)
@@ -139,54 +138,53 @@ class Psyque::RuleEngine::_private::TStatusOperation
 
 	/// @brief 左辺値となる状態値に対応する識別値を取得する。
 	/// @return @copydoc This::Key
-	PSYQUE_CONSTEXPR TemplateStatusKey const& GetKey() const PSYQUE_NOEXCEPT
+	public: TemplateStatusKey const GetKey() const PSYQUE_NOEXCEPT
 	{
 		return this->Key;
 	}
 
-	PSYQUE_CONSTEXPR TemplateStatusOperator const& GetOperator()
-	const PSYQUE_NOEXCEPT
+	public: TemplateStatusOperator const GetOperator() const PSYQUE_NOEXCEPT
 	{
 		return this->Operator;
 	}
 
-	PSYQUE_CONSTEXPR TemplateStatusValue const& GetValue()
-	const PSYQUE_NOEXCEPT
+	public: TemplateStatusValue const& GetValue() const PSYQUE_NOEXCEPT
 	{
 		return this->Value;
 	}
 
 	/// @brief 右辺値となる状態値の識別値を取得する。
-	/// @return 右辺値となる状態値の識別値が格納されている、
-	/// 符号なし整数を指すポインタ。右辺値が定数の場合は nullptr を返す。
-	typename TemplateStatusValue::FUnsigned const* GetRightKey()
+	/// @return 
+	/// 右辺値となる状態値の識別値が格納されている、符号なし整数を指すポインタ。
+	/// 右辺値が定数の場合は nullptr を返す。
+	public: typename TemplateStatusValue::FUnsigned const* GetRightKey()
 	const PSYQUE_NOEXCEPT
 	{
-		return this->bIsValidRightKey? this->Value.GetUnsigned(): nullptr;
+		return this->RightKey? this->Value.GetUnsigned(): nullptr;
 	}
 
 	//-------------------------------------------------------------------------
 	/// @brief 文字列表を解析して TStatusOperation を構築し、コンテナに追加する。
 	/// @warning Psyque::RuleEngine 管理者以外は、この関数は使用禁止。
 	public: template<
-		typename template_container,
-		typename template_hasher,
-		typename template_table>
+		typename TemplateContainer,
+		typename TemplateHasher,
+		typename TemplateTable>
 	static void _build_container(
 		/// [in,out] 構築した TStatusOperation を格納するコンテナ。
-		template_container& io_operations,
+		TemplateContainer& io_operations,
 		/// [in,out] 文字列からハッシュ値を作る std::hash 。
-		template_hasher& io_hasher,
+		TemplateHasher& OutHashFunction,
 		/// [in] 解析する Psyque::string::table 。
-		template_table const& in_table,
+		TemplateTable const& InTable,
 		/// [in] 解析する Psyque::string::table の行番号。
-		typename template_table::number const in_row_number,
+		typename TemplateTable::FNumber const InRowNumber,
 		/// [in] 解析する Psyque::string::table の属性の列番号。
-		typename template_table::number const in_column_number,
+		typename TemplateTable::FNumber const InColumnNumber,
 		/// [in] 解析する Psyque::string::table の属性の列数。
-		typename template_table::number const in_column_count)
+		typename TemplateTable::FNumber const in_column_count)
 	{
-		typename template_table::number const local_unit_count(3);
+		typename TemplateTable::FNumber const local_unit_count(3);
 		auto const local_operation_count(in_column_count / local_unit_count);
 		if (local_operation_count < 1)
 		{
@@ -194,12 +192,12 @@ class Psyque::RuleEngine::_private::TStatusOperation
 		}
 		io_operations.reserve(io_operations.size() + local_operation_count);
 		auto const local_column_end(
-			in_column_number + in_column_count - local_unit_count);
-		for (auto i(in_column_number); i <= local_column_end; i += local_unit_count)
+			InColumnNumber + in_column_count - local_unit_count);
+		for (auto i(InColumnNumber); i <= local_column_end; i += local_unit_count)
 		{
 			auto const local_operation(
-				This::_build(io_hasher, in_table, in_row_number, i));
-			if (!local_operation.GetValue().is_empty())
+				This::_build(OutHashFunction, InTable, InRowNumber, i));
+			if (!local_operation.GetValue().IsEmpty())
 			{
 				io_operations.push_back(local_operation);
 			}
@@ -208,38 +206,38 @@ class Psyque::RuleEngine::_private::TStatusOperation
 
 	/// @brief 文字列表を解析し、状態操作引数を構築する。
 	/// @warning Psyque::RuleEngine 管理者以外は、この関数は使用禁止。
-	public: template<typename template_hasher, typename template_table>
+	public: template<typename TemplateHasher, typename TemplateTable>
 	static This _build(
 		/// [in,out] 文字列からハッシュ値を作る関数オブジェクト。
-		template_hasher& io_hasher,
+		TemplateHasher& OutHashFunction,
 		/// [in] 解析する Psyque::string::table 。
-		template_table const& in_table,
+		TemplateTable const& InTable,
 		/// [in] 解析する Psyque::string::table の行番号。
-		typename template_table::number const in_row_number,
+		typename TemplateTable::FNumber const InRowNumber,
 		/// [in] 解析する Psyque::string::table の列番号。
-		typename template_table::number const in_column_number)
+		typename TemplateTable::FNumber const InColumnNumber)
 	{
-		check(in_row_number != in_table.get_attribute_row());
+		check(InRowNumber != InTable.GetAttributeRow());
 		This local_operation;
 
 		// 演算子の左辺となる状態値の識別値を取得する。
-		typename template_hasher::argument_type const local_left_key_cell(
-			in_table.find_cell(in_row_number, in_column_number));
-		local_operation.Key = io_hasher(local_left_key_cell);
+		typename TemplateHasher::argument_type const local_left_key_cell(
+			InTable.FindCell(InRowNumber, InColumnNumber));
+		local_operation.Key = OutHashFunction(local_left_key_cell);
 		if (local_operation.Key
-			== io_hasher(typename template_hasher::argument_type()))
+			== OutHashFunction(typename TemplateHasher::argument_type()))
 		{
 			check(local_left_key_cell.empty());
 			return local_operation;
 		}
 
 		// 演算子を取得する。
-		auto const LocalMakeOperator(
+		auto const local_make_operator(
 			This::MakeOperator(
 				local_operation.Operator,
-				typename template_hasher::argument_type(
-					in_table.find_cell(in_row_number, in_column_number + 1))));
-		if (!LocalMakeOperator)
+				typename TemplateHasher::argument_type(
+					InTable.FindCell(InRowNumber, InColumnNumber + 1))));
+		if (!local_make_operator)
 		{
 			check(false);
 			return local_operation;
@@ -247,47 +245,46 @@ class Psyque::RuleEngine::_private::TStatusOperation
 
 		// 演算子の右辺値を取得する。
 		local_operation.make_right_value(
-			io_hasher,
-			in_table.find_cell(in_row_number, in_column_number + 2));
-		check(!local_operation.Value.is_empty());
+			OutHashFunction,
+			InTable.FindCell(InRowNumber, InColumnNumber + 2));
+		check(!local_operation.Value.IsEmpty());
 		return local_operation;
 	}
 
 	//-------------------------------------------------------------------------
-	private:
-	PSYQUE_CONSTEXPR TStatusOperation() PSYQUE_NOEXCEPT {}
+	private: TStatusOperation() PSYQUE_NOEXCEPT = default;
 
 	/// @brief 文字列を解析し、比較演算子を構築する。
-	template<typename TemplateString>
+	private: template<typename TemplateString>
 	static bool MakeOperator(
 		/// [out] 比較演算子の格納先。
-		typename TemplateStatusValue::EComparison& OutOperator,
+		typename TemplateStatusValue::EComparison::Type& out_operator,
 		/// [in] 解析する文字列。
 		TemplateString const& InString)
 	{
-		if (InString == PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_EQUAL)
+		if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_EQUAL)
 		{
-			OutOperator = TemplateStatusValue::EComparison::EQUAL;
+			out_operator = TemplateStatusValue::EComparison::Equal;
 		}
-		else if (InString == PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_NOT_EQUAL)
+		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_NOT_EQUAL)
 		{
-			OutOperator = TemplateStatusValue::EComparison::NOT_EQUAL;
+			out_operator = TemplateStatusValue::EComparison::NotEqual;
 		}
-		else if (InString == PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_LESS)
+		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_LESS)
 		{
-			OutOperator = TemplateStatusValue::EComparison::LESS;
+			out_operator = TemplateStatusValue::EComparison::Less;
 		}
-		else if (InString == PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_LESS_EQUAL)
+		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_LESS_EQUAL)
 		{
-			OutOperator = TemplateStatusValue::EComparison::LESS_EQUAL;
+			out_operator = TemplateStatusValue::EComparison::LessEqual;
 		}
-		else if (InString == PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_GREATER)
+		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_GREATER)
 		{
-			OutOperator = TemplateStatusValue::EComparison::GREATER;
+			out_operator = TemplateStatusValue::EComparison::Greater;
 		}
-		else if (InString == PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_GREATER_EQUAL)
+		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_GREATER_EQUAL)
 		{
-			OutOperator = TemplateStatusValue::EComparison::GREATER_EQUAL;
+			out_operator = TemplateStatusValue::EComparison::GreaterEqual;
 		}
 		else
 		{
@@ -302,45 +299,45 @@ class Psyque::RuleEngine::_private::TStatusOperation
 	private: template<typename TemplateString>
 	static bool MakeOperator(
 		/// [out] 代入演算子の格納先。
-		typename TemplateStatusValue::EAssignment& OutOperator,
+		typename TemplateStatusValue::EAssignment::Type& out_operator,
 		/// [in] 解析する文字列。
 		TemplateString const& InString)
 	{
-		if (InString == PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_COPY)
+		if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_COPY)
 		{
-			OutOperator = TemplateStatusValue::EAssignment::COPY;
+			out_operator = TemplateStatusValue::EAssignment::Copy;
 		}
-		else if (InString == PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_ADD)
+		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_ADD)
 		{
-			OutOperator = TemplateStatusValue::EAssignment::ADD;
+			out_operator = TemplateStatusValue::EAssignment::Add;
 		}
-		else if (InString == PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_SUB)
+		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_SUB)
 		{
-			OutOperator = TemplateStatusValue::EAssignment::SUB;
+			out_operator = TemplateStatusValue::EAssignment::Sub;
 		}
-		else if (InString == PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_MULT)
+		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_MULT)
 		{
-			OutOperator = TemplateStatusValue::EAssignment::MULT;
+			out_operator = TemplateStatusValue::EAssignment::Mul;
 		}
-		else if (InString == PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_DIV)
+		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_DIV)
 		{
-			OutOperator = TemplateStatusValue::EAssignment::DIV;
+			out_operator = TemplateStatusValue::EAssignment::Div;
 		}
-		else if (InString == PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_MOD)
+		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_MOD)
 		{
-			OutOperator = TemplateStatusValue::EAssignment::MOD;
+			out_operator = TemplateStatusValue::EAssignment::Mod;
 		}
-		else if (InString == PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_OR)
+		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_OR)
 		{
-			OutOperator = TemplateStatusValue::EAssignment::OR;
+			out_operator = TemplateStatusValue::EAssignment::Or;
 		}
-		else if (InString == PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_XOR)
+		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_XOR)
 		{
-			OutOperator = TemplateStatusValue::EAssignment::XOR;
+			out_operator = TemplateStatusValue::EAssignment::Xor;
 		}
-		else if (InString == PSYQUE_RULE_ENGINE_STATUS_OPERATION_BUILDER_AND)
+		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_AND)
 		{
-			OutOperator = TemplateStatusValue::EAssignment::AND;
+			out_operator = TemplateStatusValue::EAssignment::And;
 		}
 		else
 		{
@@ -352,39 +349,39 @@ class Psyque::RuleEngine::_private::TStatusOperation
 	}
 
 	/// @brief 文字列を解析し、演算子の右辺値を構築する。
-	private: template<typename template_hasher>
+	private: template<typename TemplateHasher>
 	void make_right_value(
 		/// [in,out] 文字列のハッシュ関数。
-		template_hasher& io_hasher,
+		TemplateHasher& OutHashFunction,
 		/// [in] 解析する文字列。
-		typename template_hasher::argument_type const& InString)
+		typename TemplateHasher::argument_type const& InString)
 	{
 		// 状態値の接頭辞があるなら、状態値の識別値を構築する。
-		typename template_hasher::argument_type const local_status_header(
-			PSYQUE_RULE_ENGINE_STATUS_OPERATION_RIGHT_STATUS); 
+		typename TemplateHasher::argument_type const local_status_header(
+			PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_RIGHT_STATUS); 
 		if (local_status_header == InString.substr(0, local_status_header.size()))
 		{
-			this->bIsValidRightKey = true;
+			this->RightKey = true;
 			this->Value = TemplateStatusValue(
-				static_cast<typename TemplateStatusValue::Type>(
-					io_hasher(InString.substr(local_status_header.size()))));
+				static_cast<typename TemplateStatusValue::FUnsigned>(
+					OutHashFunction(InString.substr(local_status_header.size()))));
 			return;
 		}
 
 		// ハッシュ値の接頭辞があるなら、ハッシュ値を構築する。
-		this->bIsValidRightKey = false;
-		typename template_hasher::argument_type const local_hash_header(
-			PSYQUE_RULE_ENGINE_STATUS_OPERATION_RIGHT_HASH); 
+		this->RightKey = false;
+		typename TemplateHasher::argument_type const local_hash_header(
+			PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_RIGHT_HASH); 
 		if (local_hash_header == InString.substr(0, local_hash_header.size()))
 		{
 			static_assert(
-				sizeof(typename template_hasher::result_type)
-				<= sizeof(typename TemplateStatusValue::Type)
-				&& std::is_unsigned<typename template_hasher::result_type>::value,
+				sizeof(typename TemplateHasher::result_type)
+				<= sizeof(typename TemplateStatusValue::FUnsigned)
+				&& std::is_unsigned<typename TemplateHasher::result_type>::value,
 				"");
 			this->Value = TemplateStatusValue(
-				static_cast<typename TemplateStatusValue::Type>(
-					io_hasher(InString.substr(local_status_header.size()))));
+				static_cast<typename TemplateStatusValue::FUnsigned>(
+					OutHashFunction(InString.substr(local_status_header.size()))));
 		}
 		else
 		{
@@ -401,42 +398,42 @@ class Psyque::RuleEngine::_private::TStatusOperation
 		/// [in] 解析する文字列。
 		TemplateString const& InString,
 		/// [in] 構築する状態値の型。
-		/// TStatusValue::EKind::EMPTY の場合は、自動決定する。
-		typename TemplateStatusValue::EKind const in_kind =
-			TemplateStatusValue::EKind::EMPTY)
+		/// FStatusValue::EKind::Empty の場合は、自動決定する。
+		typename TemplateStatusValue::EKind const InKind =
+			TemplateStatusValue::EKind::Empty)
 	{
 		// 論理値として構築する。
-		if (in_kind == TemplateStatusValue::EKind::BOOL
-			|| in_kind == TemplateStatusValue::EKind::EMPTY)
+		if (InKind == TemplateStatusValue::EKind::Bool
+			|| InKind == TemplateStatusValue::EKind::Empty)
 		{
 			Psyque::string::numeric_parser<bool> const local_bool_parser(InString);
-			if (local_bool_parser.is_completed())
+			if (local_bool_parser.IsCompleted())
 			{
 				return TemplateStatusValue(local_bool_parser.GetValue());
 			}
-			else if (in_kind == TemplateStatusValue::EKind::BOOL)
+			else if (InKind == TemplateStatusValue::EKind::Bool)
 			{
 				return TemplateStatusValue();
 			}
 		}
-		check(in_kind != TemplateStatusValue::EKind::BOOL);
+		check(InKind != TemplateStatusValue::EKind::Bool);
 
 		// 符号なし整数として構築する。
 		Psyque::string::numeric_parser<
-			typename TemplateStatusValue::Type>
+			typename TemplateStatusValue::FUnsigned>
 				const local_unsigned_parser(InString);
-		if (local_unsigned_parser.is_completed())
+		if (local_unsigned_parser.IsCompleted())
 		{
-			switch (in_kind)
+			switch (InKind)
 			{
-				case TemplateStatusValue::EKind::FLOAT:
+				case TemplateStatusValue::EKind::Float:
 				return TemplateStatusValue(
-					static_cast<typename TemplateStatusValue::FloatType>(
+					static_cast<typename TemplateStatusValue::FFloat>(
 						local_unsigned_parser.GetValue()));
 
-				case TemplateStatusValue::EKind::SIGNED:
+				case TemplateStatusValue::EKind::Signed:
 				return TemplateStatusValue(
-					static_cast<typename TemplateStatusValue::SignedType>(
+					static_cast<typename TemplateStatusValue::FSigned>(
 						local_unsigned_parser.GetValue()));
 
 				default:
@@ -446,18 +443,18 @@ class Psyque::RuleEngine::_private::TStatusOperation
 
 		// 符号あり整数として構築する。
 		Psyque::string::numeric_parser<
-			typename TemplateStatusValue::SignedType>
+			typename TemplateStatusValue::FSigned>
 				const local_signed_parser(InString);
-		if (local_unsigned_parser.is_completed())
+		if (local_unsigned_parser.IsCompleted())
 		{
-			switch (in_kind)
+			switch (InKind)
 			{
-				case TemplateStatusValue::EKind::FLOAT:
+				case TemplateStatusValue::EKind::Float:
 				return TemplateStatusValue(
-					static_cast<typename TemplateStatusValue::FloatType>(
+					static_cast<typename TemplateStatusValue::FFloat>(
 						local_signed_parser.GetValue()));
 
-				case TemplateStatusValue::EKind::UNSIGNED:
+				case TemplateStatusValue::EKind::Unsigned:
 				return TemplateStatusValue();
 
 				default:
@@ -466,14 +463,14 @@ class Psyque::RuleEngine::_private::TStatusOperation
 		}
 
 		// 浮動小数点数として構築する。
-		Psyque::string::numeric_parser<typename TemplateStatusValue::FloatType>
+		Psyque::string::numeric_parser<typename TemplateStatusValue::FFloat>
 			const local_float_parser(InString);
-		if (local_float_parser.is_completed())
+		if (local_float_parser.IsCompleted())
 		{
-			switch (in_kind)
+			switch (InKind)
 			{
-				case TemplateStatusValue::EKind::EMPTY:
-				case TemplateStatusValue::EKind::FLOAT:
+				case TemplateStatusValue::EKind::Empty:
+				case TemplateStatusValue::EKind::Float:
 				return TemplateStatusValue(local_float_parser.GetValue());
 
 				default: break;
@@ -483,11 +480,14 @@ class Psyque::RuleEngine::_private::TStatusOperation
 	}
 
 	//-------------------------------------------------------------------------
-	private:
-	TemplateStatusValue Value;       ///< 演算の右辺値となる値。
-	TemplateStatusKey Key;           ///< 演算の左辺値となる状態値の識別値。
-	TemplateStatusOperator Operator; ///< 演算子の種類。
-	bool bIsValidRightKey;           ///< 右辺値を状態値から取得するか。
+	/// @brief 演算の右辺値となる値。
+	private: TemplateStatusValue Value;
+	/// @brief 演算の左辺値となる状態値の識別値。
+	private: TemplateStatusKey Key;
+	/// @brief 演算子の種類。
+	private: TemplateStatusOperator Operator;
+	/// @brief 右辺値を状態値から取得するか。
+	private: bool RightKey;
 
 }; // class Psyque::RuleEngine::_private::TStatusOperation
 

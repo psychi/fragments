@@ -3,6 +3,8 @@
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
+#include "Dom/JsonValue.h"
+#include "Serialization/JsonSerializer.h"
 #include "../Assert.h"
 
 /// @brief 文字列表で、条件式の識別値が記述されている属性の名前。
@@ -92,6 +94,7 @@ namespace Psyque
 	namespace RuleEngine
 	{
 		class TExpressionBuilder;
+		class TExpressionBuilder_;
 	} // namespace RuleEngine
 } // namespace Psyque
 /// @endcond
@@ -102,6 +105,82 @@ namespace Psyque
 class Psyque::RuleEngine::TExpressionBuilder
 {
 	private: using This = TExpressionBuilder; ///< @copydoc TDriver::This
+
+	//-------------------------------------------------------------------------
+	/// @brief 中間表現を解析して条件式を構築し、条件評価器に登録する。
+	/// @return 登録した条件式の数。
+	public: template<
+		typename TemplateEvaluator,
+		typename TemplateHasher,
+		typename TemplateIntermediation>
+	typename std::size_t operator()(
+		/// [in,out] 構築した条件式を登録する TDriver::FEvaluator インスタンス。
+		TemplateEvaluator& OutEvaluator,
+		/// [in] 文字列からハッシュ値を作る TDriver::FHasher インスタンス。
+		TemplateHasher const& InHashFunction,
+		/// [in] 条件式を登録するチャンクの識別値。
+		typename TemplateEvaluator::FChunkKey const InChunkKey,
+		/// [in] 条件式が参照する TDriver::FReservoir インスタンス。
+		typename TemplateEvaluator::FReservoir const& InReservoir,
+		/// [in] 解析する中間表現。
+		TemplateIntermediation const& InIntermediation)
+	const
+	{
+		return This::RegisterExpressions(
+			OutEvaluator,
+			InHashFunction,
+			InChunkKey,
+			InReservoir,
+			InIntermediation);
+	}
+
+	/// @brief 中間表現を解析して条件式を構築し、条件評価器に登録する。
+	/// @return 登録した条件式の数。
+	public: template<
+		typename TemplateEvaluator,
+		typename TemplateHasher,
+		typename TemplateIntermediation,
+		typename TemplateChar>
+	static typename std::size_t RegisterExpressions(
+		/// [in,out] 構築した条件式を登録する TDriver::FEvaluator インスタンス。
+		TemplateEvaluator& OutEvaluator,
+		/// [in] 文字列からハッシュ値を作る TDriver::FHasher インスタンス。
+		TemplateHasher const& InHashFunction,
+		/// [in] 条件式を登録するチャンクの識別値。
+		typename TemplateEvaluator::FChunkKey const InChunkKey,
+		/// [in] 条件式が参照する TDriver::FReservoir インスタンス。
+		typename TemplateEvaluator::FReservoir const& InReservoir,
+		/// [in] 状態値が記述されているJSON解析器。
+		TSharedRef<TJsonReader<TemplateChar>> const& InJsonReader)
+	{
+		TArray<TSharedPtr<FJsonValue>> LocalJsonArray;
+		if (!FJsonSerializer::Deserialize(InJsonReader, LocalJsonArray))
+		{
+			//UE_LOG();
+			return 0;
+		}
+		std::size_t LocalCount(0);
+		for (auto const& LocalJsonValue: LocalJsonArray)
+		{
+			// 下位要素が要素数2以上の配列か判定する。
+			auto const LocalRow(LocalJsonValue.Get());
+			if (LocalRow == nullptr || LocalRow->Type != EJson::Array)
+			{
+				check(LocalRow != nullptr);
+				continue;
+			}
+		}
+		return LocalCount;
+	}
+
+}; // class Psyque::RuleEngine::TExpressionBuilder
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief 文字列表から条件式を構築して登録する関数オブジェクト。
+/// @details Psyque::RuleEngine::TDriver::ExtendChunk の引数として使う。
+class Psyque::RuleEngine::TExpressionBuilder_
+{
+	private: using This = TExpressionBuilder_; ///< @copydoc TDriver::This
 
 	//-------------------------------------------------------------------------
 	/// @brief 条件式の文字列表の属性。
@@ -145,28 +224,31 @@ class Psyque::RuleEngine::TExpressionBuilder
 	}; // class FTableAttribute
 
 	//-------------------------------------------------------------------------
-	/// @brief 文字列表を解析して条件式を構築し、条件評価器に登録する。
+	/// @brief 中間表現を解析して条件式を構築し、条件評価器に登録する。
 	/// @return 登録した条件式の数。
 	public: template<
 		typename TemplateEvaluator,
 		typename TemplateHasher,
-		typename TemplateRelationTable>
-	typename TemplateRelationTable::FNumber operator()(
-		/// [in,out] 構築した条件式を登録する TDriver::FEvaluator 。
+		typename TemplateIntermediation>
+	typename std::size_t operator()(
+		/// [in,out] 構築した条件式を登録する TDriver::FEvaluator インスタンス。
 		TemplateEvaluator& OutEvaluator,
-		/// [in,out] 文字列からハッシュ値を作る TDriver::FHasher 。
+		/// [in] 文字列からハッシュ値を作る TDriver::FHasher インスタンス。
 		TemplateHasher const& InHashFunction,
 		/// [in] 条件式を登録するチャンクの識別値。
 		typename TemplateEvaluator::FChunkKey const& InChunkKey,
-		/// [in] 条件式が参照する TDriver::FReservoir 。
+		/// [in] 条件式が参照する TDriver::FReservoir インスタンス。
 		typename TemplateEvaluator::FReservoir const& InReservoir,
-		/// [in] 条件式が記述されている Psyque::string::TRelationTable 。
-		/// 空の場合は、条件式は登録されない。
-		TemplateRelationTable const& InTable)
+		/// [in] 解析する中間表現。
+		TemplateIntermediation const& InIntermediation)
 	const
 	{
 		return This::RegisterExpressions(
-			OutEvaluator, InHashFunction, InChunkKey, InReservoir, InTable);
+			OutEvaluator,
+			InHashFunction,
+			InChunkKey,
+			InReservoir,
+			InIntermediation);
 	}
 
 	/// @brief 文字列表を解析して条件式を構築し、条件評価器に登録する。
@@ -175,7 +257,7 @@ class Psyque::RuleEngine::TExpressionBuilder
 		typename TemplateEvaluator,
 		typename TemplateHasher,
 		typename TemplateRelationTable>
-	static typename TemplateRelationTable::FNumber RegisterExpressions(
+	static typename std::size_t RegisterExpressions(
 		/// [in,out] 文字列表から構築した条件式を登録する TDriver::FEvaluator 。
 		TemplateEvaluator& OutEvaluator,
 		/// [in,out] 文字列からハッシュ値を作る TDriver::FHasher 。
@@ -389,7 +471,7 @@ class Psyque::RuleEngine::TExpressionBuilder
 		/// [in,out] 文字列からハッシュ値を生成する TDriver::FHasher 。
 		TemplateHasher const& InHashFunction,
 		/// [in,out] 条件式の要素条件を構築する作業領域として使うコンテナ。
-		template_element_container& io_elements,
+		template_element_container& OutElements,
 		/// [in] 条件式を登録する要素条件チャンクの識別値。
 		typename TemplateEvaluator::FChunkKey const& InChunkKey,
 		/// [in] 登録する条件式の識別値。
@@ -408,19 +490,19 @@ class Psyque::RuleEngine::TExpressionBuilder
 		typename TemplateRelationTable::FNumber const in_column_end)
 	{
 		// 要素条件のコンテナを構築し、条件式を条件評価器へ登録する。
-		io_elements.clear();
+		OutElements.clear();
 		for (
 			auto i(in_column_begin);
 			i < in_column_end;
 			i += This::build_element<TemplateEvaluator>(
-				io_elements,
+				OutElements,
 				InHashFunction,
 				InElements,
 				InTable,
 				InRowNumber,
 				i));
 		return OutEvaluator.RegisterExpression(
-			InChunkKey, InExpressionKey, InLogic, io_elements);
+			InChunkKey, InExpressionKey, InLogic, OutElements);
 	}
 
 	/// @brief 文字列表を解析し、複合条件式の要素条件を構築する。
@@ -432,7 +514,7 @@ class Psyque::RuleEngine::TExpressionBuilder
 	static typename TemplateRelationTable::FNumber build_element(
 		/// [in,out] 構築した要素条件を追加する
 		/// TDriver::FEvaluator::FChunk::FSubExpressionArray 。
-		typename TemplateEvaluator::FChunk::FSubExpressionArray& io_elements,
+		typename TemplateEvaluator::FChunk::FSubExpressionArray& OutElements,
 		/// [in,out] 文字列からハッシュ値を生成する TDriver::FHasher 。
 		TemplateHasher const& InHashFunction,
 		/// [in] 複合条件式を追加する TDriver::FEvaluator 。
@@ -462,7 +544,7 @@ class Psyque::RuleEngine::TExpressionBuilder
 			if (local_condition_parser.IsCompleted())
 			{
 				// 複合条件式に要素条件を追加する。
-				io_elements.emplace_back(
+				OutElements.emplace_back(
 					local_sub_key, local_condition_parser.GetValue());
 			}
 			else
@@ -487,7 +569,7 @@ class Psyque::RuleEngine::TExpressionBuilder
 		/// [in,out] 構築した要素条件を追加する
 		/// TDriver::FEvaluator::FChunk::FStatusTransitionArray 。
 		typename TemplateEvaluator::FChunk::FStatusTransitionArray&
-			io_elements,
+			OutElements,
 		/// [in,out] 文字列からハッシュ値を生成する TDriver::FHasher 。
 		TemplateHasher const& InHashFunction,
 		/// [in] 条件式が参照する TDriver::FReservoir 。
@@ -507,7 +589,7 @@ class Psyque::RuleEngine::TExpressionBuilder
 				InHashFunction(typename TemplateHasher::argument_type()))
 		{
 			// 状態変化条件式に要素条件を追加する。
-			io_elements.push_back(LocalStatusKey);
+			OutElements.push_back(LocalStatusKey);
 		}
 		else
 		{
@@ -525,7 +607,7 @@ class Psyque::RuleEngine::TExpressionBuilder
 	static typename TemplateRelationTable::FNumber build_element(
 		/// [in,out] 構築した要素条件を追加する
 		/// TDriver::FEvaluator::FChunk::FStatusComparisonArray 。
-		typename TemplateEvaluator::FChunk::FStatusComparisonArray& io_elements,
+		typename TemplateEvaluator::FChunk::FStatusComparisonArray& OutElements,
 		/// [in,out] 文字列からハッシュ値を生成する TDriver::FHasher 。
 		TemplateHasher const& InHashFunction,
 		/// [in] 条件式が参照する TDriver::FReservoir 。
@@ -542,7 +624,7 @@ class Psyque::RuleEngine::TExpressionBuilder
 			::_build(InHashFunction, InTable, InRowNumber, InColumnNumber));
 		if (!LocalComparison.GetValue().IsEmpty())
 		{
-			io_elements.push_back(LocalComparison);
+			OutElements.push_back(LocalComparison);
 		}
 		return 3;
 	}

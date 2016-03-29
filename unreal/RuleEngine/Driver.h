@@ -14,9 +14,9 @@
 #include "./Evaluator.h"
 #include "./Dispatcher.h"
 #include "./HandlerChunk.h"
-//#include "./HandlerBuilder.h"
+#include "./HandlerBuilder.h"
 #include "./StatusBuilder.h"
-//#include "./ExpressionBuilder.h"
+#include "./ExpressionBuilder.h"
 
 /// @cond
 namespace Psyque
@@ -512,53 +512,39 @@ namespace PsyqueTest
 {
 	inline void RuleEngine()
 	{
+		using FDriver = Psyque::RuleEngine::TDriver<>;
+		FDriver LocalDriver(256, 256, 256);
+
 		auto const LocalStatusJson(
 			StaticCastSharedRef<TJsonReader<>>(
 				FJsonStringReader::Create(
 					TEXT(
-						"{"
-						"  \"bool\": \"TRUE\","
-						"  \"signed\": -12,"
-						"  \"unsigned\": 12,"
-						"  \"float\": 0.5,"
-						"}"))));
-
-		using FDriver = Psyque::RuleEngine::TDriver<>;
-		FDriver LocalDriver(256, 256, 256);
-
+						"["
+						"  [\"status_bool\",     true],"
+						"  [\"status_signed\",   -128, -8],"
+						"  [\"status_unsigned\", 1023, 10],"
+						"  [\"status_float\",     0.5]"
+						"]"))));
+		auto const LocalExpressionJson(
+			StaticCastSharedRef<TJsonReader<>>(
+				FJsonStringReader::Create(
+					TEXT(
+						"["
+						"  [\"expression#0\", \"AND\", \"STATUS_COMPARISON\"],"
+						"  [\"expression#1\", \"OR\",  \"STATUS_COMPARISON\"]"
+						"]"))));
+		auto const LocalHandlerJson(
+			StaticCastSharedRef<TJsonReader<>>(
+				FJsonStringReader::Create(TEXT("DUMMY"))));
 		FName const LocalChunkName(TEXT("PsyqueTest"));
 		LocalDriver.ExtendChunk(
 			LocalDriver.HashFunction(LocalChunkName),
 			Psyque::RuleEngine::TStatusBuilder(),
 			LocalStatusJson,
+			Psyque::RuleEngine::TExpressionBuilder(),
+			LocalExpressionJson,
 			Psyque::RuleEngine::TStatusBuilder(),
-			*LocalStatusJson,
-			Psyque::RuleEngine::TStatusBuilder(),
-			*LocalStatusJson);
-
-		FName const LocalBoolName(TEXT("Bool"));
-		auto const LocalBool(true);
-		check(
-			LocalDriver.RegisterStatus(
-				LocalDriver.HashFunction(LocalChunkName),
-				LocalDriver.HashFunction(LocalBoolName),
-				LocalBool));
-
-		FName const LocalIntegerName(TEXT("Integer"));
-		uint8 const LocalInteger(10);
-		check(
-			LocalDriver.RegisterStatus(
-				LocalDriver.HashFunction(LocalChunkName),
-				LocalDriver.HashFunction(LocalIntegerName),
-				LocalInteger));
-
-		FName const LocalFloatName(TEXT("Float"));
-		auto const LocalFloat(0.5f);
-		check(
-			LocalDriver.RegisterStatus(
-				LocalDriver.HashFunction(LocalChunkName),
-				LocalDriver.HashFunction(LocalFloatName),
-				LocalFloat));
+			LocalHandlerJson);
 
 		auto const LocalEmpyStatus(
 			LocalDriver.GetReservoir().FindStatus(
@@ -567,27 +553,31 @@ namespace PsyqueTest
 
 		auto const LocalBoolStatus(
 			LocalDriver.GetReservoir().FindStatus(
-				LocalDriver.HashFunction(LocalBoolName)));
+				LocalDriver.HashFunction(TEXT("status_bool"))));
 		check(
 			0 < LocalBoolStatus.Compare(
-				FDriver::FReservoir::FStatusValue::EComparison::Equal,
-				LocalBool));
+				FDriver::FReservoir::FStatusValue::EComparison::Equal, true));
 
-		auto const LocalIntegerStatus(
+		auto const LocalSignedStatus(
 			LocalDriver.GetReservoir().FindStatus(
-				LocalDriver.HashFunction(LocalIntegerName)));
+				LocalDriver.HashFunction(TEXT("status_signed"))));
 		check(
-			0 < LocalIntegerStatus.Compare(
-				FDriver::FReservoir::FStatusValue::EComparison::Equal,
-				LocalInteger));
+			0 < LocalSignedStatus.Compare(
+				FDriver::FReservoir::FStatusValue::EComparison::Equal, -128));
+
+		auto const LocalUnsignedStatus(
+			LocalDriver.GetReservoir().FindStatus(
+				LocalDriver.HashFunction(TEXT("status_unsigned"))));
+		check(
+			0 < LocalUnsignedStatus.Compare(
+				FDriver::FReservoir::FStatusValue::EComparison::Equal, 1023));
 
 		auto const LocalFloatStatus(
 			LocalDriver.GetReservoir().FindStatus(
-				LocalDriver.HashFunction(LocalFloatName)));
+				LocalDriver.HashFunction(TEXT("status_float"))));
 		check(
 			0 < LocalFloatStatus.Compare(
-				FDriver::FReservoir::FStatusValue::EComparison::Equal,
-				LocalFloat));
+				FDriver::FReservoir::FStatusValue::EComparison::Equal, 0.5f));
 
 		LocalDriver.Tick();
 		LocalDriver.RemoveChunk(LocalDriver.HashFunction(LocalChunkName));

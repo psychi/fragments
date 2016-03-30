@@ -327,7 +327,7 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 		// InRegisterKey の登録先を選択する。
 		switch (LocalExpression.GetKind())
 		{
-			case TemplateEvaluator::FExpression::EKind::SubExpression:
+			case EExpressionKind::SubExpression:
 			return This::RegisterCompoundExpression(
 				OutStatusMonitors,
 				InExpressionMonitors,
@@ -336,7 +336,7 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 				LocalChunk->SubExpressions,
 				InEvaluator);
 
-			case TemplateEvaluator::FExpression::EKind::StatusTransition:
+			case EExpressionKind::StatusTransition:
 			TemplateStatusMonitorMap::mapped_type::RegisterExpression(
 				OutStatusMonitors,
 				InRegisterKey,
@@ -344,7 +344,7 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 				LocalChunk->StatusTransitions);
 			return -1;
 
-			case TemplateEvaluator::FExpression::EKind::StatusComparison:
+			case EExpressionKind::StatusComparison:
 			TemplateStatusMonitorMap::mapped_type::RegisterExpression(
 				OutStatusMonitors,
 				InRegisterKey,
@@ -509,7 +509,7 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 	/// @retval 0  条件式の評価は偽となった。
 	/// @retval 負 条件式の評価に失敗した。
 	private: template<typename TemplateEvaluator>
-	typename This::FHandler::FEvaluation EvaluateExpression(
+	typename Psyque::ETernary EvaluateExpression(
 		/// [in] 条件式から参照する TReservoir インスタンス。
 		typename TemplateEvaluator::FReservoir const& InReservoir,
 		/// [in] 評価する条件式を持つ TEvaluator インスタンス。
@@ -531,16 +531,18 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 		{
 			this->Flags.reset(This::EFlag::LastEvaluation);
 			this->Flags.reset(This::EFlag::LastCondition);
-			return -1;
+			return Psyque::ETernary::Unknown;
 		}
 
 		// 条件式を評価し、結果を記録する。
 		auto const LocalEvaluateExpression(
 			InEvaluator.EvaluateExpression(InExpressionKey, InReservoir));
 		this->Flags.set(
-			This::EFlag::LastEvaluation, 0 <= LocalEvaluateExpression);
+			This::EFlag::LastEvaluation,
+			LocalEvaluateExpression != Psyque::ETernary::Unknown);
 		this->Flags.set(
-			This::EFlag::LastCondition, 0 < LocalEvaluateExpression);
+			This::EFlag::LastCondition,
+			LocalEvaluateExpression == Psyque::ETernary::True);
 		return this->GetLastEvaluation(false);
 	}
 
@@ -573,13 +575,15 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 	/// @retval 正 条件式の評価は真となった。
 	/// @retval 0  条件式の評価は偽となった。
 	/// @retval 負 条件式の評価に失敗した。
-	private: typename This::FHandler::FEvaluation GetLastEvaluation(
+	private: Psyque::ETernary GetLastEvaluation(
 		/// [in] 前回の評価を無視する。
 		bool const InFlush)
 	const PSYQUE_NOEXCEPT
 	{
 		return this->Flags.test(This::EFlag::LastEvaluation)?
-			!InFlush && this->Flags.test(This::EFlag::LastCondition): -1;
+			static_cast<Psyque::ETernary>(
+				!InFlush && this->Flags.test(This::EFlag::LastCondition)):
+			Psyque::ETernary::Unknown;
 	}
 
 	/// @brief Psyque::RuleEngine 管理者以外は使用禁止。

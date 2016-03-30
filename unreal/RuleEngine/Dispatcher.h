@@ -50,9 +50,7 @@ class Psyque::RuleEngine::_private::TDispatcher
 	public: using FAllocator = typename This::FEvaluator::FAllocator;
 	/// @brief 条件挙動器で使う条件挙動ハンドラ。
 	public: using FHandler = Psyque::RuleEngine::_private::THandler<
-		typename This::FEvaluator::FExpressionKey,
-		typename This::FEvaluator::FExpression::FEvaluation,
-		TemplatePriority>;
+		typename This::FEvaluator::FExpressionKey, TemplatePriority>;
 
 	//-------------------------------------------------------------------------
 	/// @copydoc This::StatusMonitors

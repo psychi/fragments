@@ -4,26 +4,25 @@
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
+#include "./Enum.h"
 #include "../BitAlgorithm.h"
 
 #ifndef PSYQUE_IF_THEN_ENGINE_STATUS_VALUE_EPSILON_MAG
 #define PSYQUE_IF_THEN_ENGINE_STATUS_VALUE_EPSILON_MAG 4
 #endif // !default(PSYQUE_IF_THEN_ENGINE_STATUS_VALUE_EPSILON_MAG)
 
+/// @cond
 namespace Psyque
 {
-	/// @brief if-then規則で駆動する有限状態機械。
 	namespace RuleEngine
 	{
-		/// @brief Psyque::RuleEngine の管理者以外は、直接アクセス禁止。
 		namespace _private
 		{
-			/// @cond
 			template<typename, typename> class TStatusValue;
-			/// @endcond
 		} // namespace _private
 	} // namespace RuleEngine
 } // namespace Psyque
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 状態値のやりとりに使う容れ物。
@@ -53,88 +52,29 @@ class Psyque::RuleEngine::_private::TStatusValue
 	static_assert(
 		 sizeof(TemplateFloat) <= sizeof(TemplateUnsigned),
 		 "sizeof(TemplateFloat) is greater than sizeof(TemplateUnsigned).");
-	/// @brief 状態値の型の種別。
-	public: struct EKind
-	{
-		enum Type: int8
-		{
-			Signed = -2, ///< 符号あり整数。
-			Float,		 ///< 浮動小数点数。
-			Empty,		 ///< 空。
-			Bool,		 ///< 論理値。
-			Unsigned,	 ///< 符号なし整数。
-		};
-	};
-
-	//-------------------------------------------------------------------------
-	/// @brief 比較式の評価。
-	/// @details
-	/// - 正なら、比較式の評価は真。
-	/// - 0 なら、比較式の評価は偽。
-	/// - 負なら、比較式の評価に失敗。
-	public: using FEvaluation = int8;
-	/// @brief 値の大小関係。
-	public: struct EOrder
-	{
-		enum Type: int8
-		{
-			None = -2, ///< 比較に失敗。
-			Less,      ///< 左辺のほうが小さい。
-			Equal,     ///< 左辺と右辺は等価。
-			Greater,   ///< 左辺のほうが大きい。
-		};
-	};
-	/// @brief 状態値を比較する演算子の種類。
-	public: struct EComparison
-	{
-		enum Type: uint8
-		{
-			Equal,        ///< 等価。
-			NotEqual,     ///< 非等価。
-			Less,         ///< 小なり。
-			LessEqual,    ///< 以下。
-			Greater,      ///< 大なり。
-			GreaterEqual, ///< 以上。
-		};
-	};
-	/// @brief 状態値を代入する演算子の種類。
-	public: struct EAssignment
-	{
-		enum Type: uint8
-		{
-			Copy, ///< 単純代入。
-			Add,  ///< 加算代入。
-			Sub,  ///< 減算代入。
-			Mul,  ///< 乗算代入。
-			Div,  ///< 除算代入。
-			Mod,  ///< 除算の余りの代入。
-			Or,   ///< 論理和の代入。
-			Xor,  ///< 排他的論理和の代入。
-			And,  ///< 論理積の代入。
-		};
-	};
 
 	//-------------------------------------------------------------------------
 	/// @name 構築
 	/// @{
 
 	/// @brief 空値を構築する。
-	public: TStatusValue() PSYQUE_NOEXCEPT: Kind(This::EKind::Empty) {}
+	public: TStatusValue() PSYQUE_NOEXCEPT:
+	Kind(RuleEngine::EStatusKind::Empty) {}
 
 	/// @brief 論理型の値を構築する。
 	public: explicit TStatusValue(
 		/// [in] 初期値となる論理値。
-		bool const in_bool)
-	PSYQUE_NOEXCEPT: Kind(This::EKind::Bool)
+		bool const InBool)
+	PSYQUE_NOEXCEPT: Kind(RuleEngine::EStatusKind::Bool)
 	{
-		this->Bool = in_bool;
+		this->Bool = InBool;
 	}
 
 	/// @brief 符号なし整数型の値を構築する。
 	public: explicit TStatusValue(
 		/// [in] 初期値となる符号なし整数。
 		typename This::FUnsigned const& InUnsigned)
-	PSYQUE_NOEXCEPT: Kind(This::EKind::Unsigned)
+	PSYQUE_NOEXCEPT: Kind(RuleEngine::EStatusKind::Unsigned)
 	{
 		this->Unsigned = InUnsigned;
 	}
@@ -143,7 +83,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 	public: explicit TStatusValue(
 		/// [in] 初期値となる符号あり整数。
 		typename This::FSigned const& InSigned)
-	PSYQUE_NOEXCEPT: Kind(This::EKind::Signed)
+	PSYQUE_NOEXCEPT: Kind(RuleEngine::EStatusKind::Signed)
 	{
 		this->Signed = InSigned;
 	}
@@ -152,7 +92,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 	public: explicit TStatusValue(
 		/// [in] 初期値となる浮動小数点数。
 		typename This::FFloat const& InFloat)
-	PSYQUE_NOEXCEPT: Kind(This::EKind::Float)
+	PSYQUE_NOEXCEPT: Kind(RuleEngine::EStatusKind::Float)
 	{
 		this->Float = InFloat;
 	}
@@ -162,9 +102,9 @@ class Psyque::RuleEngine::_private::TStatusValue
 	explicit TStatusValue(
 		/// [in] 初期値。
 		TemplateValue const& InValue,
-		/// [in] 値の型。 This::EKind::Empty の場合は、自動で決定する。
-		typename This::EKind::Type const InKind = This::EKind::Empty)
-	PSYQUE_NOEXCEPT: Kind(This::EKind::Empty)
+		/// [in] 値の型。 RuleEngine::EStatusKind::Empty の場合は、自動で決定する。
+		RuleEngine::EStatusKind const InKind = RuleEngine::EStatusKind::Empty)
+	PSYQUE_NOEXCEPT: Kind(RuleEngine::EStatusKind::Empty)
 	{
 		this->Assign(InValue, InKind);
 	}
@@ -176,14 +116,15 @@ class Psyque::RuleEngine::_private::TStatusValue
 	/// @brief 値が空か判定する。
 	public: bool IsEmpty() const PSYQUE_NOEXCEPT
 	{
-		return this->GetKind() == This::EKind::Empty;
+		return this->GetKind() == RuleEngine::EStatusKind::Empty;
 	}
 
 	/// @brief 論理値を取得する。
 	/// @return 論理値を指すポインタ。論理値が格納されてない場合は nullptr を返す。
 	public: bool const* GetBool() const PSYQUE_NOEXCEPT
 	{
-		return this->GetKind() == This::EKind::Bool? &this->Bool: nullptr;
+		return this->GetKind() == RuleEngine::EStatusKind::Bool?
+			&this->Bool: nullptr;
 	}
 
 	/// @brief 符号なし整数値を取得する。
@@ -193,7 +134,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 	public: typename This::FUnsigned const* GetUnsigned()
 	const PSYQUE_NOEXCEPT
 	{
-		return this->GetKind() == This::EKind::Unsigned?
+		return this->GetKind() == RuleEngine::EStatusKind::Unsigned?
 			&this->Unsigned: nullptr;
 	}
 
@@ -203,7 +144,8 @@ class Psyque::RuleEngine::_private::TStatusValue
 	/// 符号あり整数値が格納されてない場合は nullptr を返す。
 	public: typename This::FSigned const* GetSigned() const PSYQUE_NOEXCEPT
 	{
-		return this->GetKind() == This::EKind::Signed? &this->Signed: nullptr;
+		return this->GetKind() == RuleEngine::EStatusKind::Signed?
+			&this->Signed: nullptr;
 	}
 
 	/// @brief 浮動小数点数値を取得する。
@@ -212,20 +154,21 @@ class Psyque::RuleEngine::_private::TStatusValue
 	/// 浮動小数点数値が格納されてない場合は nullptr を返す。
 	public: typename This::FFloat const* GetFloat() const PSYQUE_NOEXCEPT
 	{
-		return this->GetKind() == This::EKind::Float? &this->Float: nullptr;
+		return this->GetKind() == RuleEngine::EStatusKind::Float?
+			&this->Float: nullptr;
 	}
 
 	public: typename This::FUnsigned GetBitset() const PSYQUE_NOEXCEPT
 	{
 		switch (this->GetKind())
 		{
-			case This::EKind::Empty:
+			case RuleEngine::EStatusKind::Empty:
 			return 0;
 
-			case This::EKind::Bool:
+			case RuleEngine::EStatusKind::Bool:
 			return this->Bool;
 
-			case This::EKind::Float:
+			case RuleEngine::EStatusKind::Float:
 			using FFloatBitset = Psyque::TFloatBitset<typename This::FFloat>;
 			return FFloatBitset(this->Float).Bitset;
 
@@ -236,7 +179,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 
 	/// @brief 格納値の型の種類を取得する。
 	/// @return 格納値の型の種類。
-	public: typename This::EKind::Type GetKind() const PSYQUE_NOEXCEPT
+	public: RuleEngine::EStatusKind GetKind() const PSYQUE_NOEXCEPT
 	{
 		return this->Kind;
 	}
@@ -250,161 +193,176 @@ class Psyque::RuleEngine::_private::TStatusValue
 	/// @retval 0  比較式の評価は偽。
 	/// @retval 負 比較式の評価に失敗。
 	public: template<typename TemplateRight>
-	typename This::FEvaluation Compare(
+	Psyque::ETernary Compare(
 		/// [in] 比較演算子の種類。
-		typename This::EComparison::Type const InComparison,
+		RuleEngine::EStatusComparison const InComparison,
 		/// [in] 比較演算子の右辺値。
 		TemplateRight const& InRight)
 	const PSYQUE_NOEXCEPT
 	{
 		auto const LocalOrder(this->Compare(InRight));
-		if (LocalOrder != This::EOrder::None)
+		if (LocalOrder != RuleEngine::EStatusOrder::Failed)
 		{
 			switch (InComparison)
 			{
-				case This::EComparison::Equal:
-				return LocalOrder == This::EOrder::Equal;
+				case RuleEngine::EStatusComparison::Equal:
+				return static_cast<Psyque::ETernary>(
+					LocalOrder == RuleEngine::EStatusOrder::Equal);
 
-				case This::EComparison::NotEqual:
-				return LocalOrder != This::EOrder::Equal;
+				case RuleEngine::EStatusComparison::NotEqual:
+				return static_cast<Psyque::ETernary>(
+					LocalOrder != RuleEngine::EStatusOrder::Equal);
 
-				case This::EComparison::Less:
-				return LocalOrder == This::EOrder::Less;
+				case RuleEngine::EStatusComparison::Less:
+				return static_cast<Psyque::ETernary>(
+					LocalOrder == RuleEngine::EStatusOrder::Less);
 
-				case This::EComparison::LessEqual:
-				return LocalOrder != This::EOrder::Greater;
+				case RuleEngine::EStatusComparison::LessEqual:
+				return static_cast<Psyque::ETernary>(
+					LocalOrder != RuleEngine::EStatusOrder::Greater);
 
-				case This::EComparison::Greater:
-				return LocalOrder == This::EOrder::Greater;
+				case RuleEngine::EStatusComparison::Greater:
+				return static_cast<Psyque::ETernary>(
+					LocalOrder == RuleEngine::EStatusOrder::Greater);
 
-				case This::EComparison::GreaterEqual:
-				return LocalOrder != This::EOrder::Less;
+				case RuleEngine::EStatusComparison::GreaterEqual:
+				return static_cast<Psyque::ETernary>(
+					LocalOrder != RuleEngine::EStatusOrder::Less);
 
 				default:
 				check(false);
 				break;
 			}
 		}
-		return -1;
+		return Psyque::ETernary::Unknown;
 	}
 
 	/// @brief 値を比較する。
 	/// @return *this を左辺値とした比較結果。
-	public: typename This::EOrder::Type Compare(
+	public: RuleEngine::EStatusOrder Compare(
 		/// [in] 右辺値。
 		This const& InRight)
 	const PSYQUE_NOEXCEPT
 	{
 		switch (InRight.GetKind())
 		{
-			case This::EKind::Bool:		return this->Compare(InRight.Bool);
-			case This::EKind::Unsigned: return this->Compare(InRight.Unsigned);
-			case This::EKind::Signed:	return this->Compare(InRight.Signed);
-			case This::EKind::Float:	return this->Compare(InRight.Float);
-			default:					return This::EOrder::None;
+			case RuleEngine::EStatusKind::Bool:
+			return this->Compare(InRight.Bool);
+
+			case RuleEngine::EStatusKind::Unsigned:
+			return this->Compare(InRight.Unsigned);
+
+			case RuleEngine::EStatusKind::Signed:
+			return this->Compare(InRight.Signed);
+
+			case RuleEngine::EStatusKind::Float:
+			return this->Compare(InRight.Float);
+
+			default:
+			return RuleEngine::EStatusOrder::Failed;
 		}
 	}
 
 	/// @brief 論理値と比較する。
 	/// @return *this を左辺値とした比較結果。
-	public: typename This::EOrder::Type Compare(
+	public: RuleEngine::EStatusOrder Compare(
 		/// [in] 右辺値となる論理値。
 		bool const InRight)
 	const PSYQUE_NOEXCEPT
 	{
 		if (this->GetBool() == nullptr)
 		{
-			return This::EOrder::None;
+			return RuleEngine::EStatusOrder::Failed;
 		}
 		if (this->Bool == InRight)
 		{
-			return This::EOrder::Equal;
+			return RuleEngine::EStatusOrder::Equal;
 		}
 		if (this->Bool)
 		{
-			return This::EOrder::Greater;
+			return RuleEngine::EStatusOrder::Greater;
 		}
-		return This::EOrder::Less;
+		return RuleEngine::EStatusOrder::Less;
 	}
 
 	/// @brief 符号なし整数と比較する。
 	/// @return *this を左辺値とした比較結果。
-	public: typename This::EOrder::Type Compare(
+	public: RuleEngine::EStatusOrder Compare(
 		/// [in] 右辺値となる符号なし整数。
 		typename This::FUnsigned const& InRight)
 	const PSYQUE_NOEXCEPT
 	{
 		switch (this->GetKind())
 		{
-			case This::EKind::Unsigned:
+			case RuleEngine::EStatusKind::Unsigned:
 			return This::CompareValue(this->Unsigned, InRight);
 
-			case This::EKind::Signed:
+			case RuleEngine::EStatusKind::Signed:
 			return this->Signed < 0?
-				This::EOrder::Less:
+				RuleEngine::EStatusOrder::Less:
 				This::CompareValue(this->Unsigned, InRight);
 
-			case This::EKind::Float:
+			case RuleEngine::EStatusKind::Float:
 			return This::CompareFloatLeft(this->Float, InRight);
 
-			default: return This::EOrder::None;
+			default: return RuleEngine::EStatusOrder::Failed;
 		}
 	}
 
 	/// @brief 符号あり整数と比較する。
 	/// @return *this を左辺値とした比較結果。
-	public: typename This::EOrder::Type Compare(
+	public: RuleEngine::EStatusOrder Compare(
 		/// [in] 右辺値となる符号あり整数。
 		typename This::FSigned const& InRight)
 	const PSYQUE_NOEXCEPT
 	{
 		switch (this->GetKind())
 		{
-			case This::EKind::Unsigned:
+			case RuleEngine::EStatusKind::Unsigned:
 			return InRight < 0?
-				This::EOrder::Greater:
+				RuleEngine::EStatusOrder::Greater:
 				This::CompareValue(
 					this->Unsigned,
 					static_cast<typename This::FUnsigned>(InRight));
 
-			case This::EKind::Signed:
+			case RuleEngine::EStatusKind::Signed:
 			return This::CompareValue(this->Signed, InRight);
 
-			case This::EKind::Float:
+			case RuleEngine::EStatusKind::Float:
 			return This::CompareFloatLeft(this->Float, InRight);
 
-			default: return This::EOrder::None;
+			default: return RuleEngine::EStatusOrder::Failed;
 		}
 	}
 
 	/// @brief 浮動小数点数と比較する。
 	/// @return *this を左辺値とした比較結果。
-	public: typename This::EOrder::Type Compare(
+	public: RuleEngine::EStatusOrder Compare(
 		/// [in] 右辺値となる浮動小数点数。
 		typename This::FFloat const& InRight)
 	const PSYQUE_NOEXCEPT
 	{
 		switch (this->GetKind())
 		{
-			case This::EKind::Unsigned:
+			case RuleEngine::EStatusKind::Unsigned:
 			return InRight < 0?
-				This::EOrder::Greater:
+				RuleEngine::EStatusOrder::Greater:
 				This::CompareFloatRight(this->Unsigned, InRight);
 
-			case This::EKind::Signed:
+			case RuleEngine::EStatusKind::Signed:
 			return This::CompareFloatRight(this->Signed, InRight);
 
-			case This::EKind::Float:
+			case RuleEngine::EStatusKind::Float:
 			return This::CompareFloat(this->Float, InRight);
 
-			default: return This::EOrder::None;
+			default: return RuleEngine::EStatusOrder::Failed;
 		}
 	}
 
 	/// @brief 値を比較する。
 	/// @return *this を左辺値とした比較結果。
 	public: template<typename TemplateRight>
-	typename This::EOrder::Type Compare(
+	RuleEngine::EStatusOrder Compare(
 		/// [in] 右辺値。
 		TemplateRight const& InRight)
 	const PSYQUE_NOEXCEPT
@@ -436,7 +394,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 				return this->Compare(LocalRight);
 			}
 		}
-		return This::EOrder::None;
+		return RuleEngine::EStatusOrder::Failed;
 	}
 	/// @}
 	//-------------------------------------------------------------------------
@@ -446,7 +404,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 	/// @brief 状態値を空にする。
 	public: void AssignEmpty() PSYQUE_NOEXCEPT
 	{
-		this->Kind = This::EKind::Empty;
+		this->Kind = RuleEngine::EStatusKind::Empty;
 	}
 
 	/// @brief 論理値を代入する。
@@ -456,7 +414,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 	PSYQUE_NOEXCEPT
 	{
 		this->Bool = InValue;
-		this->Kind = This::EKind::Bool;
+		this->Kind = RuleEngine::EStatusKind::Bool;
 	}
 
 	/// @brief 符号なし整数を代入する。
@@ -476,7 +434,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 			if (static_cast<TemplateValue>(local_unsigned) == InValue)
 			{
 				this->Unsigned = local_unsigned;
-				this->Kind = This::EKind::Unsigned;
+				this->Kind = RuleEngine::EStatusKind::Unsigned;
 				return true;
 			}
 		}
@@ -499,7 +457,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 			if (static_cast<TemplateValue>(LocalSigned) == InValue)
 			{
 				this->Signed = LocalSigned;
-				this->Kind = This::EKind::Signed;
+				this->Kind = RuleEngine::EStatusKind::Signed;
 				return true;
 			}
 		}
@@ -526,7 +484,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 		if (-LocalEpsilon <= LocalDiff && LocalDiff <= LocalEpsilon)
 		{
 			this->Float = LocalFloat;
-			this->Kind = This::EKind::Float;
+			this->Kind = RuleEngine::EStatusKind::Float;
 			return true;
 		}
 		return false;
@@ -540,44 +498,51 @@ class Psyque::RuleEngine::_private::TStatusValue
 	bool Assign(
 		/// [in] 代入する値。
 		TemplateValue const& InValue,
-		/// [in] 代入する型。 This::EKind::Empty の場合は、自動で決定する。
-		typename This::EKind::Type InKind = This::EKind::Empty)
+		/// [in] 代入する型。 RuleEngine::EStatusKind::Empty の場合は、自動で決定する。
+		RuleEngine::EStatusKind InKind = RuleEngine::EStatusKind::Empty)
 	{
-		if (InKind == This::EKind::Empty)
+		if (InKind == RuleEngine::EStatusKind::Empty)
 		{
 			InKind = This::template classify_kind<TemplateValue>();
 		}
 		switch (InKind)
 		{
-			case This::EKind::Unsigned: return this->AssignUnsigned(InValue);
-			case This::EKind::Signed:	return this->AssignSigned(InValue);
-			case This::EKind::Float:	return this->AssignFloat(InValue);
-			default:					   return false;
+			case RuleEngine::EStatusKind::Unsigned:
+			return this->AssignUnsigned(InValue);
+
+			case RuleEngine::EStatusKind::Signed:
+			return this->AssignSigned(InValue);
+
+			case RuleEngine::EStatusKind::Float:
+			return this->AssignFloat(InValue);
+
+			default:
+			return false;
 		}
 	}
 
 	/// @copydoc Assign
 	public: bool Assign(
 		This const& InValue,
-		typename This::EKind::Type InKind = This::EKind::Empty)
+		RuleEngine::EStatusKind InKind = RuleEngine::EStatusKind::Empty)
 	PSYQUE_NOEXCEPT
 	{
-		if (InKind == This::EKind::Empty)
+		if (InKind == RuleEngine::EStatusKind::Empty)
 		{
 			InKind = InValue.GetKind();
 		}
 		switch (InValue.GetKind())
 		{
-			case This::EKind::Bool:
+			case RuleEngine::EStatusKind::Bool:
 			return this->Assign(InValue.Bool, InKind);
 
-			case This::EKind::Unsigned:
+			case RuleEngine::EStatusKind::Unsigned:
 			return this->Assign(InValue.Unsigned, InKind);
 
-			case This::EKind::Signed:
+			case RuleEngine::EStatusKind::Signed:
 			return this->Assign(InValue.Signed, InKind);
 
-			case This::EKind::Float:
+			case RuleEngine::EStatusKind::Float:
 			return this->Assign(InValue.Float, InKind);
 
 			default:
@@ -589,12 +554,12 @@ class Psyque::RuleEngine::_private::TStatusValue
 	/// @copydoc Assign
 	public: bool Assign(
 		bool const InValue,
-		typename This::EKind::Type const InKind = This::EKind::Bool)
+		RuleEngine::EStatusKind const InKind = RuleEngine::EStatusKind::Bool)
 	{
 		switch (InKind)
 		{
-			case This::EKind::Empty:
-			case This::EKind::Bool:
+			case RuleEngine::EStatusKind::Empty:
+			case RuleEngine::EStatusKind::Bool:
 			this->AssignBool(InValue);
 			return true;
 
@@ -608,20 +573,20 @@ class Psyque::RuleEngine::_private::TStatusValue
 	public: template<typename TemplateValue>
 	bool Assign(
 		/// [in] 適用する代入演算子。
-		typename This::EAssignment::Type const InOperator,
+		RuleEngine::EStatusAssignment const InOperator,
 		/// [in] 代入演算子の右辺。
 		TemplateValue const& InRight)
 	PSYQUE_NOEXCEPT
 	{
 		static_assert(!std::is_same<TemplateValue, bool>::value, "");
 		auto const LocalKind(this->GetKind());
-		if (InOperator == This::EAssignment::Copy)
+		if (InOperator == RuleEngine::EStatusAssignment::Copy)
 		{
 			return this->Assign(InRight, LocalKind);
 		}
 		switch (LocalKind)
 		{
-			case This::EKind::Unsigned:
+			case RuleEngine::EStatusKind::Unsigned:
 			return this->AssignValue(
 				std::is_integral<TemplateValue>(),
 				LocalKind,
@@ -629,7 +594,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 				this->Unsigned,
 				InRight);
 
-			case This::EKind::Signed:
+			case RuleEngine::EStatusKind::Signed:
 			return this->AssignValue(
 				std::is_integral<TemplateValue>(),
 				LocalKind,
@@ -637,7 +602,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 				this->Signed,
 				InRight);
 
-			case This::EKind::Float:
+			case RuleEngine::EStatusKind::Float:
 			return this->AssignValue(
 				std::false_type(),
 				LocalKind,
@@ -649,46 +614,58 @@ class Psyque::RuleEngine::_private::TStatusValue
 		}
 	}
 
-	/// @copydoc Assign(This::EAssignment::Type const, TemplateValue const&)
+	/// @copydoc Assign(RuleEngine::EStatusAssignment const, TemplateValue const&)
 	public: bool Assign(
-		typename This::EAssignment::Type const InOperator,
+		RuleEngine::EStatusAssignment const InOperator,
 		This const& InRight)
 	PSYQUE_NOEXCEPT
 	{
 		switch (InRight.GetKind())
 		{
-			case This::EKind::Bool:
+			case RuleEngine::EStatusKind::Bool:
 			return this->Assign(InOperator, InRight.Bool);
 
-			case This::EKind::Unsigned:
+			case RuleEngine::EStatusKind::Unsigned:
 			return this->Assign(InOperator, InRight.Unsigned);
 
-			case This::EKind::Signed:
+			case RuleEngine::EStatusKind::Signed:
 			return this->Assign(InOperator, InRight.Signed);
 
-			case This::EKind::Float:
+			case RuleEngine::EStatusKind::Float:
 			return this->Assign(InOperator, InRight.Float);
 
 			default: return false;
 		}
 	}
 
-	/// @copydoc Assign(This::EAssignment::Type const, TemplateValue const&)
+	/// @copydoc Assign(RuleEngine::EStatusAssignment const, TemplateValue const&)
 	public: bool Assign(
-		typename This::EAssignment::Type const InOperator,
+		RuleEngine::EStatusAssignment const InOperator,
 		bool const InRight)
 	PSYQUE_NOEXCEPT
 	{
-		if (this->GetKind() != This::EKind::Bool)
+		if (this->GetKind() != RuleEngine::EStatusKind::Bool)
 		{
 			return false;
 		}
 		switch (InOperator)
 		{
-			case This::EAssignment::Copy: this->Bool  = InRight; break;
-			case This::EAssignment::Or:   this->Bool |= InRight; break;
-			case This::EAssignment::Xor:  this->Bool ^= InRight; break;
-			case This::EAssignment::And:  this->Bool &= InRight; break;
+			case RuleEngine::EStatusAssignment::Copy:
+			this->Bool  = InRight;
+			break;
+
+			case RuleEngine::EStatusAssignment::Or:
+			this->Bool |= InRight;
+			break;
+
+			case RuleEngine::EStatusAssignment::Xor:
+			this->Bool ^= InRight;
+			break;
+
+			case RuleEngine::EStatusAssignment::And:
+			this->Bool &= InRight;
+			break;
+
 			default: return false;
 		}
 		return true;
@@ -699,22 +676,23 @@ class Psyque::RuleEngine::_private::TStatusValue
 	/// @tparam TemplateValue 型。
 	/// @return 型の種類。
 	private: template<typename TemplateValue>
-	static typename This::EKind::Type classify_kind() PSYQUE_NOEXCEPT
+	static RuleEngine::EStatusKind classify_kind() PSYQUE_NOEXCEPT
 	{
 		if (std::is_same<TemplateValue, bool>::value)
 		{
-			return This::EKind::Bool;
+			return RuleEngine::EStatusKind::Bool;
 		}
 		else if (std::is_floating_point<TemplateValue>::value)
 		{
-			return This::EKind::Float;
+			return RuleEngine::EStatusKind::Float;
 		}
 		else if (std::is_integral<TemplateValue>::value)
 		{
 			return std::is_unsigned<TemplateValue>::value?
-				This::EKind::Unsigned: This::EKind::Signed;
+				RuleEngine::EStatusKind::Unsigned:
+				RuleEngine::EStatusKind::Signed;
 		}
-		return This::EKind::Empty;
+		return RuleEngine::EStatusKind::Empty;
 	}
 
 	//-------------------------------------------------------------------------
@@ -733,9 +711,9 @@ class Psyque::RuleEngine::_private::TStatusValue
 	bool AssignValue(
 		std::true_type,
 		/// [in] 演算した結果の型。
-		typename This::EKind::Type const InKind,
+		RuleEngine::EStatusKind const InKind,
 		/// [in] 適用する演算子。
-		typename This::EAssignment::Type const InOperator,
+		RuleEngine::EStatusAssignment const InOperator,
 		/// [in] 演算子の左辺となる整数値。
 		TemplateLeft const& InLeft,
 		/// [in] 演算子の左辺となる整数値。
@@ -744,20 +722,20 @@ class Psyque::RuleEngine::_private::TStatusValue
 	{
 		switch (InOperator)
 		{
-			case This::EAssignment::Mod:
+			case RuleEngine::EStatusAssignment::Mod:
 			if (InRight == 0)
 			{
 				return false;
 			}
 			return this->Assign(InLeft % InRight, InKind);
 
-			case This::EAssignment::Or:
+			case RuleEngine::EStatusAssignment::Or:
 			return this->Assign(InLeft | InRight, InKind);
 
-			case This::EAssignment::Xor:
+			case RuleEngine::EStatusAssignment::Xor:
 			return this->Assign(InLeft ^ InRight, InKind);
 
-			case This::EAssignment::And:
+			case RuleEngine::EStatusAssignment::And:
 			return this->Assign(InLeft & InRight, InKind);
 
 			default:
@@ -773,9 +751,9 @@ class Psyque::RuleEngine::_private::TStatusValue
 	bool AssignValue(
 		std::false_type,
 		/// [in] 演算した結果の型。
-		typename This::EKind::Type const InKind,
+		RuleEngine::EStatusKind const InKind,
 		/// [in] 適用する演算子。
-		typename This::EAssignment::Type const InOperator,
+		RuleEngine::EStatusAssignment const InOperator,
 		/// [in] 演算子の左辺となる実数値。
 		TemplateLeft const& InLeft,
 		/// [in] 演算子の左辺となる実数値。
@@ -784,16 +762,16 @@ class Psyque::RuleEngine::_private::TStatusValue
 	{
 		switch (InOperator)
 		{
-			case This::EAssignment::Add:
+			case RuleEngine::EStatusAssignment::Add:
 			return this->Assign(InLeft + InRight, InKind);
 
-			case This::EAssignment::Sub:
+			case RuleEngine::EStatusAssignment::Sub:
 			return this->Assign(InLeft - InRight, InKind);
 
-			case This::EAssignment::Mul:
+			case RuleEngine::EStatusAssignment::Mul:
 			return this->Assign(InLeft * InRight, InKind);
 
-			case This::EAssignment::Div:
+			case RuleEngine::EStatusAssignment::Div:
 			if (InRight == 0)
 			{
 				return false;
@@ -807,7 +785,7 @@ class Psyque::RuleEngine::_private::TStatusValue
 	//-------------------------------------------------------------------------
 	/// @brief 浮動小数点数を比較する。
 	/// @return 比較結果。
-	private: static typename This::EOrder::Type CompareFloat(
+	private: static RuleEngine::EStatusOrder CompareFloat(
 		/// [in] 左辺の浮動小数点数。
 		typename This::FFloat const& InLeft,
 		/// [in] 右辺の浮動小数点数。
@@ -824,45 +802,49 @@ class Psyque::RuleEngine::_private::TStatusValue
 			std::numeric_limits<typename This::FFloat>::epsilon()
 			* PSYQUE_IF_THEN_ENGINE_STATUS_VALUE_EPSILON_MAG);
 		return LocalDiff < -LocalEpsilon?
-			This::EOrder::Less:
-			LocalEpsilon < LocalDiff? This::EOrder::Greater: This::EOrder::Equal;
+			RuleEngine::EStatusOrder::Less:
+			LocalEpsilon < LocalDiff?
+				RuleEngine::EStatusOrder::Greater:
+				RuleEngine::EStatusOrder::Equal;
 #endif
 	}
 
 	// @brief 浮動小数点数と値を比較する。
 	/// @return 比較結果。
 	private: template<typename TemplateValue>
-	static typename This::EOrder::Type CompareFloatLeft(
+	static RuleEngine::EStatusOrder CompareFloatLeft(
 		/// [in] 左辺の浮動小数点数。
 		typename This::FFloat const& InLeft,
 		/// [in] 右辺の値。
 		TemplateValue const& InRight)
 	PSYQUE_NOEXCEPT
 	{
-		This const LocalRight(InRight, This::EKind::Float);
-		return LocalRight.GetKind() != This::EKind::Float?
-			This::EOrder::None: This::CompareFloat(InLeft, LocalRight.Float);
+		This const LocalRight(InRight, RuleEngine::EStatusKind::Float);
+		return LocalRight.GetKind() != RuleEngine::EStatusKind::Float?
+			RuleEngine::EStatusOrder::Failed:
+			This::CompareFloat(InLeft, LocalRight.Float);
 	}
 
 	/// @brief 値と浮動小数点数を比較する。
 	/// @return 比較結果。
 	private: template<typename TemplateValue>
-	static typename This::EOrder::Type CompareFloatRight(
+	static RuleEngine::EStatusOrder CompareFloatRight(
 		/// [in] 左辺の値。
 		TemplateValue const& InLeft,
 		/// [in] 右辺の浮動小数点数。
 		typename This::FFloat const& InRight)
 	PSYQUE_NOEXCEPT
 	{
-		This const LocalLeft(InLeft, This::EKind::Float);
-		return LocalLeft.GetKind() != This::EKind::Float?
-			This::EOrder::None: This::CompareFloat(LocalLeft.Float, InRight);
+		This const LocalLeft(InLeft, RuleEngine::EStatusKind::Float);
+		return LocalLeft.GetKind() != RuleEngine::EStatusKind::Float?
+			RuleEngine::EStatusOrder::Failed:
+			This::CompareFloat(LocalLeft.Float, InRight);
 	}
 
 	/// @brief 値を比較する。
 	/// @return 比較結果。
 	private: template<typename TemplateValue>
-	static typename This::EOrder::Type CompareValue(
+	static RuleEngine::EStatusOrder CompareValue(
 		/// [in] 左辺の値。
 		TemplateValue const& InLeft,
 		/// [in] 右辺の値。
@@ -870,19 +852,21 @@ class Psyque::RuleEngine::_private::TStatusValue
 	PSYQUE_NOEXCEPT
 	{
 		return InLeft < InRight?
-			This::EOrder::Less:
-			InRight < InLeft? This::EOrder::Greater: This::EOrder::Equal;
+			RuleEngine::EStatusOrder::Less:
+			InRight < InLeft?
+				RuleEngine::EStatusOrder::Greater:
+				RuleEngine::EStatusOrder::Equal;
 	}
 
 	//-------------------------------------------------------------------------
 	private: union
 	{
-		bool Bool;						   ///< 論理値。
+		bool Bool;                         ///< 論理値。
 		typename This::FUnsigned Unsigned; ///< 符号なし整数値。
-		typename This::FSigned Signed;	   ///< 符号あり整数値。
-		typename This::FFloat Float;	   ///< 浮動小数点数値。
+		typename This::FSigned Signed;     ///< 符号あり整数値。
+		typename This::FFloat Float;       ///< 浮動小数点数値。
 	};
-	private: typename This::EKind::Type Kind; ///< 状態値の型の種類。
+	private: RuleEngine::EStatusKind Kind; ///< 状態値の型の種類。
 
 }; // class Psyque::RuleEngine::_private::TStatusValue
 

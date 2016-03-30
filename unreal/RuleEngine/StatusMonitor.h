@@ -129,10 +129,10 @@ class Psyque::RuleEngine::_private::TStatusMonitor
 	{
 		for (auto i(OutStatusMonitors.begin()); i != OutStatusMonitors.end();)
 		{
-			auto& local_status_monitor(i->second);
-			local_status_monitor.notify_transition(
+			auto& LocalStatusMonitor(i->second);
+			LocalStatusMonitor.NotifyTransition(
 				OutExpressionMonitors, InReservoir.FindTransition(i->first));
-			if (local_status_monitor.ExpressionKeys.empty())
+			if (LocalStatusMonitor.ExpressionKeys.empty())
 			{
 				i = OutStatusMonitors.erase(i);
 			}
@@ -195,15 +195,16 @@ class Psyque::RuleEngine::_private::TStatusMonitor
 
 	/// @brief 状態変化を検知し、条件式監視器へ通知する。
 	private: template<typename TemplateExpressionMonitorMap>
-	void notify_transition(
+	void NotifyTransition(
 		/// [in,out] 状態変化を通知する FExpressionMonitor の辞書。
 		TemplateExpressionMonitorMap& OutExpressionMonitors,
 		/// [in] FReservoir::FindTransition の戻り値。
-		int8 const InTransition)
+		Psyque::ETernary const InTransition)
 	{
 		// 状態変化を検知する。
-		auto const LocalExistence(0 <= InTransition);
-		if (0 < InTransition || LocalExistence != this->LastExistence)
+		auto const LocalExistence(InTransition != Psyque::ETernary::Unknown);
+		if (InTransition == Psyque::ETernary::True
+			|| LocalExistence != this->LastExistence)
 		{
 			TemplateExpressionMonitorMap::mapped_type::NotifyStatusTransition(
 				OutExpressionMonitors, this->ExpressionKeys, LocalExistence);
@@ -212,9 +213,9 @@ class Psyque::RuleEngine::_private::TStatusMonitor
 	}
 
 	//-------------------------------------------------------------------------
-	/// @brief 評価の更新を要求する FEvaluator::FExpressionKey のコンテナ。
+	/// @brief 評価の更新を要求する TEvaluator::FExpressionKey のコンテナ。
 	private: typename This::FExpressionKeyArray ExpressionKeys;
-	/// @brief 前回の notify_transition で、状態値が存在したか。
+	/// @brief 前回の NotifyTransition で、状態値が存在したか。
 	private: bool LastExistence;
 
 }; // class Psyque::RuleEngine::_private::TStatusMonitor

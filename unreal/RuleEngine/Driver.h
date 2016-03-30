@@ -555,29 +555,29 @@ namespace PsyqueTest
 			LocalDriver.GetReservoir().FindStatus(
 				LocalDriver.HashFunction(TEXT("status_bool"))));
 		check(
-			0 < LocalBoolStatus.Compare(
-				FDriver::FReservoir::FStatusValue::EComparison::Equal, true));
+			Psyque::ETernary::True == LocalBoolStatus.Compare(
+				Psyque::RuleEngine::EStatusComparison::Equal, true));
 
 		auto const LocalSignedStatus(
 			LocalDriver.GetReservoir().FindStatus(
 				LocalDriver.HashFunction(TEXT("status_signed"))));
 		check(
-			0 < LocalSignedStatus.Compare(
-				FDriver::FReservoir::FStatusValue::EComparison::Equal, -128));
+			Psyque::ETernary::True == LocalSignedStatus.Compare(
+				Psyque::RuleEngine::EStatusComparison::Equal, -128));
 
 		auto const LocalUnsignedStatus(
 			LocalDriver.GetReservoir().FindStatus(
 				LocalDriver.HashFunction(TEXT("status_unsigned"))));
 		check(
-			0 < LocalUnsignedStatus.Compare(
-				FDriver::FReservoir::FStatusValue::EComparison::Equal, 1023));
+			Psyque::ETernary::True == LocalUnsignedStatus.Compare(
+				Psyque::RuleEngine::EStatusComparison::Equal, 1023));
 
 		auto const LocalFloatStatus(
 			LocalDriver.GetReservoir().FindStatus(
 				LocalDriver.HashFunction(TEXT("status_float"))));
 		check(
-			0 < LocalFloatStatus.Compare(
-				FDriver::FReservoir::FStatusValue::EComparison::Equal, 0.5f));
+			Psyque::ETernary::True == LocalFloatStatus.Compare(
+				Psyque::RuleEngine::EStatusComparison::Equal, 0.5f));
 
 		LocalDriver.Tick();
 		LocalDriver.RemoveChunk(LocalDriver.HashFunction(LocalChunkName));

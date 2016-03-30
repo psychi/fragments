@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include "../Assert.h"
+#include "./Enum.h"
 
 /// @cond
 namespace Psyque
@@ -14,7 +15,7 @@ namespace Psyque
 	{
 		namespace _private
 		{
-			template<typename, typename, typename> class TExpression;
+			template<typename, typename> class TExpression;
 			template<typename> class TSubExpression;
 			template<typename> class TStatusTransition;
 			template<typename, typename, typename> class TExpressionChunk;
@@ -25,51 +26,18 @@ namespace Psyque
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 条件式。
-/// @tparam TemplateEvaluation   @copydoc TExpression::FEvaluation
 /// @tparam TemplateChunkKey     @copydoc TExpression::FChunkKey
 /// @tparam TemplateElementIndex @copydoc TExpression::FElementIndex
-template<
-	typename TemplateEvaluation,
-	typename TemplateChunkKey,
-	typename TemplateElementIndex>
+template<typename TemplateChunkKey, typename TemplateElementIndex>
 class Psyque::RuleEngine::_private::TExpression
 {
 	private: using This = TExpression; ///< @copydoc TEvaluator::This
 
 	//-------------------------------------------------------------------------
-	/// @brief 条件式の評価結果。
-	/// @details
-	///   - 正なら、条件式の評価は真だった。
-	///   - 0 なら、条件式の評価は偽だった。
-	///   - 負なら、条件式の評価に失敗した。
-	public: using FEvaluation = TemplateEvaluation;
-	static_assert(
-		std::is_signed<TemplateEvaluation>::value
-		&& std::is_integral<TemplateEvaluation>::value,
-		"TemplateEvaluation is not signed integer type.");
 	/// @brief 要素条件チャンクの識別値を表す型。
 	public: using FChunkKey = TemplateChunkKey;
 	/// @brief 要素条件のインデクス番号を表す型。
 	public: using FElementIndex = TemplateElementIndex;
-	/// @brief 条件式の要素条件を結合する論理演算子を表す列挙型。
-	public: struct ELogic
-	{
-		enum Type: uint8
-		{
-			Or,  ///< 論理和。
-			And, ///< 論理積。
-		};
-	};
-	/// @brief 条件式の種類を表す列挙型。
-	public: struct EKind
-	{
-		enum Type: uint8
-		{
-			SubExpression,	  ///< 複合条件式。
-			StatusTransition, ///< 状態変化条件式。
-			StatusComparison, ///< 状態比較条件式。
-		};
-	};
 
 	//-------------------------------------------------------------------------
 	/// @brief 条件式を構築する。
@@ -77,9 +45,9 @@ class Psyque::RuleEngine::_private::TExpression
 		/// [in] This::ChunkKey の初期値。
 		typename This::FChunkKey InChunkKey,
 		/// [in] This::Logic の初期値。
-		typename This::ELogic::Type const InLogic,
+		RuleEngine::EExpressionLogic const InLogic,
 		/// [in] This::Kind の初期値。
-		typename This::EKind::Type const InKind,
+		RuleEngine::EExpressionKind const InKind,
 		/// [in] This::BeginIndex の初期値。
 		typename This::FElementIndex const InBeginIndex,
 		/// [in] This::EndIndex の初期値。
@@ -123,7 +91,7 @@ class Psyque::RuleEngine::_private::TExpression
 
 	/// @brief 条件式の種類を取得する。
 	/// @return @copydoc This::Kind
-	public: typename This::EKind::Type GetKind() const PSYQUE_NOEXCEPT
+	public: RuleEngine::EExpressionKind GetKind() const PSYQUE_NOEXCEPT
 	{
 		return this->Kind;
 	}
@@ -135,7 +103,7 @@ class Psyque::RuleEngine::_private::TExpression
 	public: template<
 		typename TemplateElementArray,
 		typename TemplateElementEvaluator>
-	typename This::FEvaluation Evaluate(
+	Psyque::ETernary Evaluate(
 		/// [in] 評価に用いる要素条件のコンテナ。
 		TemplateElementArray const& InElements,
 		/// [in] 要素条件を評価する関数オブジェクト。
@@ -148,30 +116,30 @@ class Psyque::RuleEngine::_private::TExpression
 		{
 			// 条件式が空か、範囲外の要素条件を参照している。
 			check(this->IsEmpty());
-			return -1;
+			return Psyque::ETernary::Unknown;
 		}
 		auto const LocalEnd(InElements.begin() + this->EndIndex);
-		auto const LocalAnd(this->Logic == This::ELogic::And);
+		auto const LocalAnd(this->Logic == RuleEngine::EExpressionLogic::And);
 		for (auto i(InElements.begin() + this->BeginIndex); i != LocalEnd; ++i)
 		{
 			auto const LocalEvaluation(InEvaluator(*i));
-			if (LocalEvaluation < 0)
+			if (LocalEvaluation == Psyque::ETernary::Unknown)
 			{
-				return -1;
+				return Psyque::ETernary::Unknown;
 			}
-			else if (0 < LocalEvaluation)
+			else if (LocalEvaluation == Psyque::ETernary::True)
 			{
 				if (!LocalAnd)
 				{
-					return 1;
+					return Psyque::ETernary::True;
 				}
 			}
 			else if (LocalAnd)
 			{
-				return 0;
+				return Psyque::ETernary::False;
 			}
 		}
-		return LocalAnd;
+		return static_cast<Psyque::ETernary>(LocalAnd);
 	}
 
 	//-------------------------------------------------------------------------
@@ -182,9 +150,9 @@ class Psyque::RuleEngine::_private::TExpression
 	/// @brief 条件式が使う要素条件の末尾インデクス番号。
 	private: typename This::FElementIndex EndIndex;
 	/// @brief 条件式の要素条件を結合する論理演算子。
-	private: typename This::ELogic::Type Logic;
+	private: RuleEngine::EExpressionLogic Logic;
 	/// @brief 条件式の種類。
-	private: typename This::EKind::Type Kind;
+	private: RuleEngine::EExpressionKind Kind;
 
 }; // class Psyque::RuleEngine::_private::TExpression
 

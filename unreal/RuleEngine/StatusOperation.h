@@ -258,33 +258,33 @@ class Psyque::RuleEngine::_private::TStatusOperation
 	private: template<typename TemplateString>
 	static bool MakeOperator(
 		/// [out] 比較演算子の格納先。
-		typename TemplateStatusValue::EComparison::Type& out_operator,
+		RuleEngine::EStatusComparison& OutOperator,
 		/// [in] 解析する文字列。
 		TemplateString const& InString)
 	{
 		if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_EQUAL)
 		{
-			out_operator = TemplateStatusValue::EComparison::Equal;
+			OutOperator = RuleEngine::EStatusComparison::Equal;
 		}
 		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_NOT_EQUAL)
 		{
-			out_operator = TemplateStatusValue::EComparison::NotEqual;
+			OutOperator = RuleEngine::EStatusComparison::NotEqual;
 		}
 		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_LESS)
 		{
-			out_operator = TemplateStatusValue::EComparison::Less;
+			OutOperator = RuleEngine::EStatusComparison::Less;
 		}
 		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_LESS_EQUAL)
 		{
-			out_operator = TemplateStatusValue::EComparison::LessEqual;
+			OutOperator = RuleEngine::EStatusComparison::LessEqual;
 		}
 		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_GREATER)
 		{
-			out_operator = TemplateStatusValue::EComparison::Greater;
+			OutOperator = RuleEngine::EStatusComparison::Greater;
 		}
 		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_GREATER_EQUAL)
 		{
-			out_operator = TemplateStatusValue::EComparison::GreaterEqual;
+			OutOperator = RuleEngine::EStatusComparison::GreaterEqual;
 		}
 		else
 		{
@@ -299,45 +299,45 @@ class Psyque::RuleEngine::_private::TStatusOperation
 	private: template<typename TemplateString>
 	static bool MakeOperator(
 		/// [out] 代入演算子の格納先。
-		typename TemplateStatusValue::EAssignment::Type& out_operator,
+		RuleEngine::EStatusAssignment& OutOperator,
 		/// [in] 解析する文字列。
 		TemplateString const& InString)
 	{
 		if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_COPY)
 		{
-			out_operator = TemplateStatusValue::EAssignment::Copy;
+			OutOperator = RuleEngine::EStatusAssignment::Copy;
 		}
 		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_ADD)
 		{
-			out_operator = TemplateStatusValue::EAssignment::Add;
+			OutOperator = RuleEngine::EStatusAssignment::Add;
 		}
 		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_SUB)
 		{
-			out_operator = TemplateStatusValue::EAssignment::Sub;
+			OutOperator = RuleEngine::EStatusAssignment::Sub;
 		}
 		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_MULT)
 		{
-			out_operator = TemplateStatusValue::EAssignment::Mul;
+			OutOperator = RuleEngine::EStatusAssignment::Mul;
 		}
 		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_DIV)
 		{
-			out_operator = TemplateStatusValue::EAssignment::Div;
+			OutOperator = RuleEngine::EStatusAssignment::Div;
 		}
 		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_MOD)
 		{
-			out_operator = TemplateStatusValue::EAssignment::Mod;
+			OutOperator = RuleEngine::EStatusAssignment::Mod;
 		}
 		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_OR)
 		{
-			out_operator = TemplateStatusValue::EAssignment::Or;
+			OutOperator = RuleEngine::EStatusAssignment::Or;
 		}
 		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_XOR)
 		{
-			out_operator = TemplateStatusValue::EAssignment::Xor;
+			OutOperator = RuleEngine::EStatusAssignment::Xor;
 		}
 		else if (InString == PSYQUE_IF_THEN_ENGINE_STATUS_OPERATION_BUILDER_AND)
 		{
-			out_operator = TemplateStatusValue::EAssignment::And;
+			OutOperator = RuleEngine::EStatusAssignment::And;
 		}
 		else
 		{
@@ -398,25 +398,24 @@ class Psyque::RuleEngine::_private::TStatusOperation
 		/// [in] 解析する文字列。
 		TemplateString const& InString,
 		/// [in] 構築する状態値の型。
-		/// FStatusValue::EKind::Empty の場合は、自動決定する。
-		typename TemplateStatusValue::EKind const InKind =
-			TemplateStatusValue::EKind::Empty)
+		/// RuleEngine::EStatusKind::Empty の場合は、自動決定する。
+		RuleEngine::EStatusKind const InKind = RuleEngine::EStatusKind::Empty)
 	{
 		// 論理値として構築する。
-		if (InKind == TemplateStatusValue::EKind::Bool
-			|| InKind == TemplateStatusValue::EKind::Empty)
+		if (InKind == RuleEngine::EStatusKind::Bool
+			|| InKind == RuleEngine::EStatusKind::Empty)
 		{
 			Psyque::string::numeric_parser<bool> const local_bool_parser(InString);
 			if (local_bool_parser.IsCompleted())
 			{
 				return TemplateStatusValue(local_bool_parser.GetValue());
 			}
-			else if (InKind == TemplateStatusValue::EKind::Bool)
+			else if (InKind == RuleEngine::EStatusKind::Bool)
 			{
 				return TemplateStatusValue();
 			}
 		}
-		check(InKind != TemplateStatusValue::EKind::Bool);
+		check(InKind !=RuleEngine::EStatusKind::Bool);
 
 		// 符号なし整数として構築する。
 		Psyque::string::numeric_parser<
@@ -426,12 +425,12 @@ class Psyque::RuleEngine::_private::TStatusOperation
 		{
 			switch (InKind)
 			{
-				case TemplateStatusValue::EKind::Float:
+				case RuleEngine::EStatusKind::Float:
 				return TemplateStatusValue(
 					static_cast<typename TemplateStatusValue::FFloat>(
 						local_unsigned_parser.GetValue()));
 
-				case TemplateStatusValue::EKind::Signed:
+				case RuleEngine::EStatusKind::Signed:
 				return TemplateStatusValue(
 					static_cast<typename TemplateStatusValue::FSigned>(
 						local_unsigned_parser.GetValue()));
@@ -449,12 +448,12 @@ class Psyque::RuleEngine::_private::TStatusOperation
 		{
 			switch (InKind)
 			{
-				case TemplateStatusValue::EKind::Float:
+				case RuleEngine::EStatusKind::Float:
 				return TemplateStatusValue(
 					static_cast<typename TemplateStatusValue::FFloat>(
 						local_signed_parser.GetValue()));
 
-				case TemplateStatusValue::EKind::Unsigned:
+				case RuleEngine::EStatusKind::Unsigned:
 				return TemplateStatusValue();
 
 				default:
@@ -469,8 +468,8 @@ class Psyque::RuleEngine::_private::TStatusOperation
 		{
 			switch (InKind)
 			{
-				case TemplateStatusValue::EKind::Empty:
-				case TemplateStatusValue::EKind::Float:
+				case RuleEngine::EStatusKind::Empty:
+				case RuleEngine::EStatusKind::Float:
 				return TemplateStatusValue(local_float_parser.GetValue());
 
 				default: break;

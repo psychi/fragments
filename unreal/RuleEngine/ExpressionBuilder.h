@@ -19,7 +19,7 @@
 /// @brief 文字列表で、条件式の論理演算子が記述されている属性の名前。
 /// @details
 /// Psyque::RuleEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RuleEngine::TDriver::FEvaluator::FExpression::ELogic
+/// Psyque::RuleEngine::EExpressionLogic
 /// として解析する属性の名前。
 #ifndef PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC
 #define PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC "LOGIC"
@@ -28,7 +28,7 @@
 /// @brief 文字列表で、条件式の種別が記述されている属性の名前。
 /// @details
 /// Psyque::RuleEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RuleEngine::TDriver::FEvaluator::FExpression::EKind
+/// Psyque::RuleEngine::EExpressionKind
 /// として解析する属性の名前。
 #ifndef PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND
 #define PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND "KIND"
@@ -46,7 +46,7 @@
 /// @brief 文字列表で、条件式の論理和演算子に対応する文字列。
 /// @details
 /// Psyque::RuleEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RuleEngine::TDriver::FEvaluator::FExpression::ELogic::Or
+/// Psyque::RuleEngine::EExpressionLogic::Or
 /// として解析する文字列。
 #ifndef PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_OR
 #define PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_OR "Or"
@@ -55,7 +55,7 @@
 /// @brief 文字列表で、条件式の論理積演算子に対応する文字列。
 /// @details
 /// Psyque::RuleEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RuleEngine::TDriver::FEvaluator::FExpression::ELogic::And
+/// Psyque::RuleEngine::EExpressionLogic::And
 /// として解析する文字列。
 #ifndef PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_AND
 #define PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_AND "And"
@@ -64,7 +64,7 @@
 /// @brief 文字列表で、複合条件式の種別に対応する文字列。
 /// @details
 /// Psyque::RuleEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RuleEngine::TDriver::FEvaluator::FExpression::EKind::SubExpression
+/// Psyque::RuleEngine::EExpressionKind::SubExpression
 /// として解析する文字列。
 #ifndef PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION
 #define PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION "SubExpression"
@@ -73,7 +73,7 @@
 /// @brief 文字列表で、状態変化条件式の種別に対応する文字列。
 /// @details
 /// Psyque::RuleEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RuleEngine::TDriver::FEvaluator::FExpression::EKind::StatusTransition
+/// Psyque::RuleEngine::EExpressionKind::StatusTransition
 /// として解析する文字列。
 #ifndef PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION
 #define PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION "StatusTransition"
@@ -82,7 +82,7 @@
 /// @brief 文字列表で、状態比較条件式の種別に対応する文字列。
 /// @details
 /// Psyque::RuleEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RuleEngine::TDriver::FEvaluator::FExpression::EKind::StatusComparison
+/// Psyque::RuleEngine::EExpressionKind::StatusComparison
 /// として解析する文字列。
 #ifndef PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON
 #define PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON "StatusComparison"
@@ -372,17 +372,17 @@ class Psyque::RuleEngine::TExpressionBuilder_
 		// 要素条件の論理演算子を、文字列表から取得する。
 		auto const& local_logic_cell(
 			InTable.FindCell(InRowNumber, InLogic.first));
-		typename TemplateEvaluator::FExpression::ELogic::Type local_logic;
+		RuleEngine::EExpressionLogic local_logic;
 		if (local_logic_cell ==
 				PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_AND)
 		{
-			local_logic = TemplateEvaluator::FExpression::ELogic::And;
+			local_logic = RuleEngine::EExpressionLogic::And;
 		}
 		else if (
 			local_logic_cell ==
 				PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_OR)
 		{
-			local_logic = TemplateEvaluator::FExpression::ELogic::Or;
+			local_logic = RuleEngine::EExpressionLogic::Or;
 		}
 		else
 		{
@@ -476,8 +476,8 @@ class Psyque::RuleEngine::TExpressionBuilder_
 		typename TemplateEvaluator::FChunkKey const& InChunkKey,
 		/// [in] 登録する条件式の識別値。
 		typename TemplateEvaluator::FExpressionKey const& InExpressionKey,
-		/// [in] 登録する条件式の TDriver::FEvaluator::FExpression::ELogic 。
-		typename TemplateEvaluator::FExpression::ELogic::Type const InLogic,
+		/// [in] 登録する条件式の RuleEngine::EExpressionLogic 。
+		RuleEngine::EExpressionLogic const InLogic,
 		/// [in] 要素条件が参照する値。
 		template_element_server const& InElements,
 		/// [in] 解析する Psyque::string::TRelationTable 。

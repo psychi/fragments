@@ -6,7 +6,7 @@
 /// @brief 文字列表で、条件式の識別値が記述されている属性の名前。
 /// @details
 ///   Psyque::RuleEngine::THandlerBuilder で解析する文字列表で、
-///   Psyque::RuleEngine::FEvaluation::FExpressionKey として解析する属性の名前。
+///   Psyque::RuleEngine::TDriver::FEvaluator::FExpressionKey として解析する属性の名前。
 #ifndef PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_KEY
 #define PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_KEY "KEY"
 #endif // !defined(PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_KEY)
@@ -19,7 +19,7 @@
 /// @brief 文字列表で、NULL条件が記述されている属性の名前。
 /// @details
 ///   Psyque::RuleEngine::THandlerBuilder で解析する文字列表で、
-///   Psyque::RuleEngine::TDriver::TDispatcher::FHandler::EUnitCondition::Failed
+///   Psyque::RuleEngine::TDriver::FDispatcher::FHandler::EUnitCondition::Failed
 ///   として解析する文字列。
 #ifndef PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_NULL
 #define PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_NULL "NULL"
@@ -28,7 +28,7 @@
 /// @brief 文字列表で、Any条件が記述されている属性の名前。
 /// @details
 ///   Psyque::RuleEngine::THandlerBuilder で解析する文字列表で、
-///   Psyque::RuleEngine::TDriver::TDispatcher::FHandler::EUnitCondition::Any
+///   Psyque::RuleEngine::TDriver::FDispatcher::FHandler::EUnitCondition::Any
 ///   として解析する文字列。
 #ifndef PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_ANY
 #define PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_ANY "Any"
@@ -37,7 +37,7 @@
 /// @brief 文字列表で、条件挙動関数の優先順位が記述されている属性の名前。
 /// @details
 ///   Psyque::RuleEngine::THandlerBuilder で解析する文字列表で、
-///   Psyque::RuleEngine::TDriver::TDispatcher::FHandler::FPriority
+///   Psyque::RuleEngine::TDriver::FDispatcher::FHandler::FPriority
 ///   として解析する属性の名前。
 #ifndef PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_PRIORITY
 #define PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_PRIORITY "PRIORITY"
@@ -61,8 +61,7 @@
 /// @brief 文字列表で、遅延種別をYieldとして解析する文字列。
 /// @details
 ///   Psyque::RuleEngine::THandlerBuilder で解析する文字列表で、
-///   Psyque::RuleEngine::TDriver::TAccumulator::EDelay::Yield
-///   として解析する文字列。
+///   Psyque::RuleEngine::EAccumulationDelay::Yield として解析する文字列。
 #ifndef PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_YIELD
 #define PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_YIELD "Yield"
 #endif // !defined(PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_YIELD)
@@ -70,8 +69,7 @@
 /// @brief 文字列表で、遅延種別をBlockとして解析する文字列。
 /// @details
 /// Psyque::RuleEngine::THandlerBuilder で解析する文字列表で、
-/// Psyque::RuleEngine::TDriver::TAccumulator::EDelay::Block
-/// として解析する文字列。
+/// Psyque::RuleEngine::EAccumulationDelay::Block として解析する文字列。
 #ifndef PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_BLOCK
 #define PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_BLOCK "Block"
 #endif // !defined(PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_BLOCK)
@@ -79,8 +77,7 @@
 /// @brief 文字列表で、遅延種別をNonblockとして解析する文字列。
 /// @details
 ///   Psyque::RuleEngine::THandlerBuilder で解析する文字列表で、
-///   Psyque::RuleEngine::TDriver::TAccumulator::EDelay::Nonblock
-///   として解析する文字列。
+///   Psyque::RuleEngine::EAccumulationDelay::Nonblock として解析する文字列。
 #ifndef PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_NONBLOCK
 #define PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_NONBLOCK "Nonblock"
 #endif // !defined(PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_NONBLOCK)
@@ -434,7 +431,7 @@ class Psyque::RuleEngine::THandlerBuilder
 		TemplateAccumulator& OutAccumulator,
 		/// [in] in_assignments の先頭要素の TDriver::TAccumulator::Accumulate
 		/// に渡す、 TDriver::TAccumulator::EDelay::Type 。
-		typename TemplateAccumulator::EDelay::Type const in_front_delay,
+		typename TemplateAccumulator::EDelay::Type const InFrontDelay,
 		/// [in] 条件挙動関数から呼び出す TDriver::TAccumulator::Accumulate
 		/// に渡す、 TDriver::FReservoir::FStatusAssignment のコンテナ。
 		template_assignment_container const& in_assignments)
@@ -445,10 +442,10 @@ class Psyque::RuleEngine::THandlerBuilder
 				/// @todo OutAccumulator を参照渡しするのは危険。対策を考えたい。
 				[=, &OutAccumulator](
 					typename TemplateHandler::FExpressionKey const&,
-					typename TemplateHandler::FEvaluation const,
-					typename TemplateHandler::FEvaluation const)
+					Psyque::ETernary const,
+					Psyque::ETernary const)
 				{
-					OutAccumulator.Accumulate(in_assignments, in_front_delay);
+					OutAccumulator.Accumulate(in_assignments, InFrontDelay);
 				}):
 			typename TemplateHandler::FFunctionSharedPtr();
 	}

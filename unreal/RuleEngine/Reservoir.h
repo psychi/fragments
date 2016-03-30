@@ -67,13 +67,13 @@ class Psyque::RuleEngine::_private::TReservoir
 	public: using FStatusComparison =
 		Psyque::RuleEngine::_private::TStatusOperation<
 			typename This::FStatusKey,
-			typename This::FStatusValue::EComparison::Type,
+			EStatusComparison,
 			typename This::FStatusValue>;
 	/// @brief 状態値の代入演算の引数。
 	public: using FStatusAssignment =
 		Psyque::RuleEngine::_private::TStatusOperation<
 			typename This::FStatusKey,
-			typename This::FStatusValue::EAssignment::Type,
+			typename RuleEngine::EStatusAssignment,
 			typename This::FStatusValue>;
 
 	//-------------------------------------------------------------------------
@@ -247,7 +247,7 @@ class Psyque::RuleEngine::_private::TReservoir
 				InChunkKey,
 				InStatusKey,
 				typename This::FFloatBitset(LocalFloat).Bitset,
-				This::FStatusValue::EKind::Float);
+				static_cast<int8>(RuleEngine::EStatusKind::Float));
 		}
 		else if (std::is_same<bool, TemplateValue>::value)
 		{
@@ -256,7 +256,7 @@ class Psyque::RuleEngine::_private::TReservoir
 				InChunkKey,
 				InStatusKey,
 				InValue != 0,
-				This::FStatusValue::EKind::Bool);
+				static_cast<int8>(RuleEngine::EStatusKind::Bool));
 		}
 		else
 		{
@@ -352,8 +352,8 @@ class Psyque::RuleEngine::_private::TReservoir
 	/// @brief 状態値の型の種別を取得する。
 	/// @return
 	/// InStatusKey に対応する状態値の型の種別。該当する状態値がない場合は
-	/// This::FStatusValue::EKind::Empty を返す。
-	public: typename This::FStatusValue::EKind::Type FindKind(
+	/// RuleEngine::EStatusKind::Empty を返す。
+	public: RuleEngine::EStatusKind FindKind(
 		/// [in] 状態値に対応する識別値。
 		typename This::FStatusKey const InStatusKey)
 	const
@@ -361,7 +361,7 @@ class Psyque::RuleEngine::_private::TReservoir
 		auto const LocalFind(this->Properties.find(InStatusKey));
 		return LocalFind != this->Properties.end()?
 			This::GetKind(LocalFind->second.GetFormat()):
-			This::FStatusValue::EKind::Empty;
+			RuleEngine::EStatusKind::Empty;
 	}
 
 	/// @brief 状態値のビット幅を取得する。
@@ -379,17 +379,15 @@ class Psyque::RuleEngine::_private::TReservoir
 	}
 
 	/// @brief 状態変化フラグを取得する。
-	/// @retval 正 状態変化フラグは真。
-	/// @retval 0  状態変化フラグは偽。
-	/// @retval 負 InStatusKey に対応する状態値がない。
-	public: int8 FindTransition(
+	public: Psyque::ETernary FindTransition(
 		/// [in] 状態変化フラグを取得する状態値に対応する識別値。
 		typename This::FStatusKey const InStatusKey)
 	const
 	{
 		auto const LocalFind(this->Properties.find(InStatusKey));
 		return LocalFind != this->Properties.end()?
-			LocalFind->second.GetTransition(): -1;
+			static_cast<Psyque::ETernary>(LocalFind->second.GetTransition()):
+			Psyque::ETernary::Unknown;
 	}
 
 	/// @brief 状態値を取得する。
@@ -431,13 +429,13 @@ class Psyque::RuleEngine::_private::TReservoir
 		// 状態値のビット構成から、構築する状態値の型を分ける。
 		if (0 < LocalFormat)
 		{
-			return LocalFormat == This::FStatusValue::EKind::Bool?
+			return LocalFormat == static_cast<int8>(RuleEngine::EStatusKind::Bool)?
 				// 論理型の状態値を構築する。
 				typename This::FStatusValue(LocalBitset != 0):
 				// 符号なし整数型の状態値を構築する。
 				typename This::FStatusValue(LocalBitset);
 		}
-		else if (LocalFormat == This::FStatusValue::EKind::Float)
+		else if (LocalFormat == static_cast<int8>(RuleEngine::EStatusKind::Float))
 		{
 			// 浮動小数点数型の状態値を構築する。
 			using FBitset = typename This::FFloatBitset::FBitset;
@@ -472,13 +470,13 @@ class Psyque::RuleEngine::_private::TReservoir
 	/// @retval 正 比較式の評価は真。
 	/// @retval 0  比較式の評価は偽。
 	/// @retval 負 比較式の評価に失敗。
-	public: typename This::FStatusValue::FEvaluation CompareStatus(
+	public: Psyque::ETernary CompareStatus(
 		/// [in] 状態値の比較式。
 		typename This::FStatusComparison const& InComparison)
 	const
 	{
-		auto const local_right_key_pointer(InComparison.GetRightKey());
-		if (local_right_key_pointer == nullptr)
+		auto const LocalRightKeyPointer(InComparison.GetRightKey());
+		if (LocalRightKeyPointer == nullptr)
 		{
 			return this->CompareStatus(
 				InComparison.GetKey(),
@@ -487,45 +485,41 @@ class Psyque::RuleEngine::_private::TReservoir
 		}
 
 		// 右辺となる状態値を取得して式を評価する。
-		auto const local_right_key(
+		auto const LocalRightKey(
 			static_cast<typename This::FStatusKey>(
-				*local_right_key_pointer));
-		if (local_right_key == *local_right_key_pointer)
+				*LocalRightKeyPointer));
+		if (LocalRightKey == *LocalRightKeyPointer)
 		{
 			return this->CompareStatus(
 				InComparison.GetKey(),
 				InComparison.GetOperator(),
-				local_right_key);
+				LocalRightKey);
 		}
-		return -1;
+		return Psyque::ETernary::Unknown;
 	}
 
 	/// @brief 状態値を比較する。
 	/// @retval 正 比較式の評価は真。
 	/// @retval 0  比較式の評価は偽。
 	/// @retval 負 比較式の評価に失敗。
-	public: typename This::FStatusValue::FEvaluation CompareStatus(
+	public: Psyque::ETernary CompareStatus(
 		/// [in] 左辺となる状態値の識別値。
 		typename This::FStatusKey const InLeftKey,
 		/// [in] 適用する比較演算子。
-		typename This::FStatusValue::EComparison::Type const InOperator,
+		RuleEngine::EStatusComparison const InOperator,
 		/// [in] 右辺となる値。
 		typename This::FStatusValue const& InRightValue)
 	const
 	{
-		return this->FindStatus(InLeftKey).Compare(
-			InOperator, InRightValue);
+		return this->FindStatus(InLeftKey).Compare(InOperator, InRightValue);
 	}
 
 	/// @brief 状態値を比較する。
-	/// @retval 正 比較式の評価は真。
-	/// @retval 0  比較式の評価は偽。
-	/// @retval 負 比較式の評価に失敗。
-	public: typename This::FStatusValue::FEvaluation CompareStatus(
+	public: Psyque::ETernary CompareStatus(
 		/// [in] 左辺となる状態値の識別値。
 		typename This::FStatusKey const InLeftKey,
 		/// [in] 適用する比較演算子。
-		typename This::FStatusValue::EComparison::Type const InOperator,
+		RuleEngine::EStatusComparison const InOperator,
 		/// [in] 右辺となる状態値の識別値。
 		typename This::FStatusKey const InRightKey)
 	const
@@ -589,26 +583,26 @@ class Psyque::RuleEngine::_private::TReservoir
 	/// 失敗する要因は This::AssignStatus を参照。
 	public: bool AssignStatus(
 		/// [in] 状態値の代入演算。
-		typename This::FStatusAssignment const& in_assignment)
+		typename This::FStatusAssignment const& InAssignment)
 	{
-		auto const local_right_key_pointer(in_assignment.GetRightKey());
-		if (local_right_key_pointer == nullptr)
+		auto const LocalRightKeyPointer(InAssignment.GetRightKey());
+		if (LocalRightKeyPointer == nullptr)
 		{
 			return this->AssignStatus(
-				in_assignment.GetKey(),
-				in_assignment.GetOperator(),
-				in_assignment.GetValue());
+				InAssignment.GetKey(),
+				InAssignment.GetOperator(),
+				InAssignment.GetValue());
 		}
 
 		// 右辺となる状態値を取得して演算する。
-		auto const local_right_key(
+		auto const LocalRightKey(
 			static_cast<typename This::FStatusKey>(
-				*local_right_key_pointer));
-		return local_right_key == *local_right_key_pointer
+				*LocalRightKeyPointer));
+		return LocalRightKey == *LocalRightKeyPointer
 			&& this->AssignStatus(
-				in_assignment.GetKey(),
-				in_assignment.GetOperator(),
-				local_right_key);
+				InAssignment.GetKey(),
+				InAssignment.GetOperator(),
+				LocalRightKey);
 	}
 
 	/// @brief 状態値を演算し、結果を代入する。
@@ -619,11 +613,11 @@ class Psyque::RuleEngine::_private::TReservoir
 		/// [in] 代入演算子の左辺となる状態値の識別値。
 		typename This::FStatusKey const InLeftKey,
 		/// [in] 適用する代入演算子。
-		typename This::FStatusValue::EAssignment::Type const InOperator,
+		typename RuleEngine::EStatusAssignment const InOperator,
 		/// [in] 代入演算子の右辺となる値。
 		typename This::FStatusValue const& InRightValue)
 	{
-		if (InOperator == This::FStatusValue::EAssignment::Copy)
+		if (InOperator == RuleEngine::EStatusAssignment::Copy)
 		{
 			return this->AssignStatus(InLeftKey, InRightValue);
 		}
@@ -640,7 +634,7 @@ class Psyque::RuleEngine::_private::TReservoir
 		/// [in] 代入演算子の左辺となる状態値の識別値。
 		typename This::FStatusKey const InLeftKey,
 		/// [in] 適用する代入演算子。
-		typename This::FStatusValue::EAssignment::Type const InOperator,
+		typename RuleEngine::EStatusAssignment const InOperator,
 		/// [in] 代入演算子の右辺となる状態値の識別値。
 		typename This::FStatusKey const InRightKey)
 	{
@@ -730,23 +724,22 @@ class Psyque::RuleEngine::_private::TReservoir
 	//-------------------------------------------------------------------------
 	/// @brief 状態値のビット構成から、状態値の型の種別を取得する。
 	/// @return 状態値の型の種別。
-	public: static typename This::FStatusValue::EKind::Type GetKind(
+	public: static RuleEngine::EStatusKind GetKind(
 		/// [in] 状態値のビット構成。
 		typename This::FStatusProperty::FFormat const InFormat)
 	PSYQUE_NOEXCEPT
 	{
-		switch (InFormat)
+		switch (static_cast<uint8>(InFormat))
 		{
-			case This::FStatusValue::EKind::Empty:
-			case This::FStatusValue::EKind::Bool:
-			case This::FStatusValue::EKind::Float:
-			return
-				static_cast<typename This::FStatusValue::EKind::Type>(InFormat);
+			case RuleEngine::EStatusKind::Empty:
+			case RuleEngine::EStatusKind::Bool:
+			case RuleEngine::EStatusKind::Float:
+			return static_cast<typename RuleEngine::EStatusKind>(InFormat);
 
 			default:
 			return InFormat < 0?
-				This::FStatusValue::EKind::Signed:
-				This::FStatusValue::EKind::Unsigned;
+				RuleEngine::EStatusKind::Signed:
+				RuleEngine::EStatusKind::Unsigned;
 		}
 	}
 
@@ -757,17 +750,17 @@ class Psyque::RuleEngine::_private::TReservoir
 		typename This::FStatusProperty::FFormat const InFormat)
 	PSYQUE_NOEXCEPT
 	{
-		switch (InFormat)
+		switch (static_cast<uint8>(InFormat))
 		{
-			case This::FStatusValue::EKind::Empty:
-			case This::FStatusValue::EKind::Bool:
+			case RuleEngine::EStatusKind::Empty:
+			case RuleEngine::EStatusKind::Bool:
 			static_assert(
-				This::FStatusValue::EKind::Empty == 0
-				&& This::FStatusValue::EKind::Bool == 1,
+				static_cast<int8>(RuleEngine::EStatusKind::Empty) == 0
+				&& static_cast<int8>(RuleEngine::EStatusKind::Bool) == 1,
 				"");
 			return InFormat;
 
-			case This::FStatusValue::EKind::Float:
+			case RuleEngine::EStatusKind::Float:
 			return sizeof(typename This::FStatusValue::FFloat)
 				* CHAR_BIT;
 
@@ -835,20 +828,20 @@ class Psyque::RuleEngine::_private::TReservoir
 		/// [in] 登録する状態値のビット構成。
 		typename This::FStatusProperty::FFormat const InFormat)
 	{
-		if (InFormat != This::FStatusValue::EKind::Empty)
+		if (InFormat != static_cast<int8>(RuleEngine::EStatusKind::Empty))
 		{
 			// 状態値のビット領域を生成する。
 			auto const LocalBitWidth(This::GetBitWidth(InFormat));
-			auto const local_bit_position(
+			auto const LocalBitPosition(
 				OutChunk.second.AllocateBitset(LocalBitWidth));
-			if (local_bit_position != This::FStatusChunk::INVALID_BIT_POSITION)
+			if (LocalBitPosition != This::FStatusChunk::INVALID_BIT_POSITION)
 			{
 				// 状態値プロパティを生成する。
 				auto const LocalEmplace(
 					OutProperties.emplace(
 						InStatusKey,
 						typename This::FPropertyMap::mapped_type(
-							OutChunk.first, local_bit_position, InFormat)));
+							OutChunk.first, LocalBitPosition, InFormat)));
 				if (LocalEmplace.second)
 				{
 					auto& LocalProperty(*LocalEmplace.first);
@@ -1052,11 +1045,11 @@ class Psyque::RuleEngine::_private::TReservoir
 
 		// ビット列とビット幅を構築する。
 		using FBitWidth = typename This::FStatusChunk::FBitWidth;
-		if (InFormat == This::FStatusValue::EKind::Bool)
+		if (InFormat == static_cast<int8>(RuleEngine::EStatusKind::Bool))
 		{
 			return typename This::FBitset(LocalBitset, 1);
 		}
-		else if (InFormat == This::FStatusValue::EKind::Float)
+		else if (InFormat == static_cast<int8>(RuleEngine::EStatusKind::Float))
 		{
 			return typename This::FBitset(
 				LocalBitset,
@@ -1097,7 +1090,7 @@ class Psyque::RuleEngine::_private::TReservoir
 	{
 		using FBitWidth = typename This::FStatusChunk::FBitWidth;
 		using FBitBlock = typename This::FStatusChunk::FBitBlock;
-		if (InFormat == This::FStatusValue::EKind::Bool)
+		if (InFormat == static_cast<int8>(RuleEngine::EStatusKind::Bool))
 		{
 			// 論理値のビット列を構築する。
 			if (std::is_same<TemplateValue, bool>::value)
@@ -1105,7 +1098,7 @@ class Psyque::RuleEngine::_private::TReservoir
 				return typename This::FBitset(InValue != 0, 1);
 			}
 		}
-		else if (InFormat == This::FStatusValue::EKind::Float)
+		else if (InFormat == static_cast<int8>(RuleEngine::EStatusKind::Float))
 		{
 			// 浮動小数点数のビット列を構築する。
 			using FFloatBitset = typename This::FFloatBitset;

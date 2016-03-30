@@ -15,7 +15,7 @@ namespace Psyque
 	{
 		namespace _private
 		{
-			template<typename, typename, typename> class THandler;
+			template<typename, typename> class THandler;
 		} // namespace _private
 	} // namespace RuleEngine
 } // namespace Psyque
@@ -24,12 +24,8 @@ namespace Psyque
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 条件挙動ハンドラ。関数を呼び出す条件を保持し、呼び出される関数を弱参照する。
 /// @tparam TemplateExpressionKey @copydoc THandler::FExpressionKey
-/// @tparam TemplateEvaluation    @copydoc THandler::FEvaluation
 /// @tparam TemplatePriority      @copydoc THandler::FPriority
-template<
-	typename TemplateExpressionKey,
-	typename TemplateEvaluation,
-	typename TemplatePriority>
+template<typename TemplateExpressionKey, typename TemplatePriority>
 class Psyque::RuleEngine::_private::THandler
 {
 	private: using This = THandler; ///< @copydoc TDispatcher::This
@@ -37,8 +33,6 @@ class Psyque::RuleEngine::_private::THandler
 	//-------------------------------------------------------------------------
 	/// @copydoc TEvaluator::FExpressionKey
 	public: using FExpressionKey = TemplateExpressionKey;
-	/// @copydoc TExpression::FEvaluation
-	public: using FEvaluation = TemplateEvaluation;
 	/// @brief THandler::FFunction の呼び出し優先順位。
 	/// @details 優先順位の昇順で呼び出される。
 	public: using FPriority = TemplatePriority;
@@ -86,8 +80,8 @@ class Psyque::RuleEngine::_private::THandler
 	public: using FFunction = std::function<
 		void (
 			typename This::FExpressionKey const&,
-			typename This::FEvaluation const,
-			typename This::FEvaluation const)>;
+			Psyque::ETernary const,
+			Psyque::ETernary const)>;
 	/// @brief THandler::FFunction の強参照スマートポインタ。
 	public: using FFunctionSharedPtr = std::shared_ptr<
 		typename This::FFunction>;
@@ -114,12 +108,12 @@ class Psyque::RuleEngine::_private::THandler
 			/// [in] This::ExpressionKey の初期値。
 			typename Super::FExpressionKey InExpressionKey,
 			/// [in] This::CurrentEvaluation の初期値。
-			typename Super::FEvaluation const in_current_evaluation,
+			Psyque::ETernary const InCurrentEvaluation,
 			/// [in] This::LastEvaluation の初期値。
-			typename Super::FEvaluation const InLastEvaluation):
+			Psyque::ETernary const InLastEvaluation):
 		Super(InHandler),
 		ExpressionKey(MoveTemp(InExpressionKey)),
-		CurrentEvaluation(in_current_evaluation),
+		CurrentEvaluation(InCurrentEvaluation),
 		LastEvaluation(InLastEvaluation)
 		{}
 
@@ -165,9 +159,9 @@ class Psyque::RuleEngine::_private::THandler
 		/// @brief 条件式の識別値。
 		private: typename Super::FExpressionKey ExpressionKey;
 		/// @brief 条件式の最新の評価結果。
-		private: typename Super::FEvaluation CurrentEvaluation;
+		private: Psyque::ETernary CurrentEvaluation;
 		/// @brief 条件式の前回の評価結果。
-		private: typename Super::FEvaluation LastEvaluation;
+		private: Psyque::ETernary LastEvaluation;
 
 	}; // class FCache
 
@@ -288,9 +282,9 @@ class Psyque::RuleEngine::_private::THandler
 	///   This::EUnitCondition::Invalid を返す。
 	public: static typename This::FCondition MakeCondition(
 		/// [in] 条件となる、条件式の最新の評価。
-		typename This::FEvaluation const InNowEvaluation,
+		Psyque::ETernary const InNowEvaluation,
 		/// [in] 条件となる、条件式の前回の評価。
-		typename This::FEvaluation const InLastEvaluation)
+		Psyque::ETernary const InLastEvaluation)
 	{
 		auto const LocalNowCondition(
 			This::MakeUnitCondition(InNowEvaluation));
@@ -305,13 +299,13 @@ class Psyque::RuleEngine::_private::THandler
 	/// @brief 条件式の評価から単位条件を作る。
 	public: static typename This::EUnitCondition::Type MakeUnitCondition(
 		/// [in] 条件式の評価。
-		typename This::FEvaluation const InEvaluation)
+		Psyque::ETernary const InEvaluation)
 	{
-		return 0 < InEvaluation?
+		return InEvaluation == Psyque::ETernary::True?
 			This::EUnitCondition::True:
-			InEvaluation < 0?
-				This::EUnitCondition::Failed:
-				This::EUnitCondition::False;
+			InEvaluation == Psyque::ETernary::False?
+				This::EUnitCondition::False:
+				This::EUnitCondition::Failed;
 	}
 
 	/// @brief 単位条件を合成して挙動条件を作る。
